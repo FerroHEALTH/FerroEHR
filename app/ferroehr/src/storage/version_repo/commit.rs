@@ -47,11 +47,11 @@ pub struct AuditRow<'a> {
     pub system_id: &'a str,
     /// The numeric `audit_change_type` group code.
     pub change_type: &'a str,
-    /// The canonical `DV_TEXT` fragment of `AUDIT_DETAILS.description`, when
+    /// The canonical `DV_TEXT` JSON text of `AUDIT_DETAILS.description`, when
     /// the committer supplied one.
-    pub description: Option<Value>,
-    /// The canonical `PARTY_PROXY` JSON of the committer.
-    pub committer: Value,
+    pub description: Option<String>,
+    /// The canonical `PARTY_PROXY` JSON text of the committer.
+    pub committer: String,
     /// The canonical fragment of the `ATTESTATION`-declared attributes when
     /// this commit audit is an `ATTESTATION` (master06 §Attestation), else
     /// `None`.
@@ -379,7 +379,7 @@ fn folded_statement(shape: Shape) -> String {
         "WITH a AS ( \
              INSERT INTO commit_audit (system_id, change_type, description, committer, \
                                        attestation{audit_time}) \
-             VALUES ($1, $2, $3, $4, $5{audit_time_value}) RETURNING id, time_committed \
+             VALUES ($1, $2, $3::jsonb, $4::jsonb, $5{audit_time_value}) RETURNING id, time_committed \
          ){contribution_cte}{version_cte}{select}"
     )
 }

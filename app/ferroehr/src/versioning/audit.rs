@@ -301,33 +301,21 @@ impl AuditInput {
         }
     }
 
-    /// The commit audit of a stored version-metadata row: the three jsonb
-    /// columns decoded back into the RM values they hold.
+    /// The commit audit of a stored version-metadata row
+    /// ([`StoredAudit::decode`]).
     ///
     /// # Errors
-    /// [`ServiceError::Unprocessable`] when a stored fragment is not the RM
-    /// value its column holds — the [`party_proxy`] / [`decode_description`]
-    /// rejections, or the
-    /// [`crate::versioning::attestation::AttestationParts::decode`] ones.
+    /// As [`StoredAudit::decode`].
     pub(crate) fn from_meta(
         meta: &crate::storage::version_repo::meta::VersionMeta,
     ) -> Result<Self, ServiceError> {
-        Ok(Self {
-            system_id: meta.audit_system_id.clone(),
-            change_type: meta.audit_change_type.clone(),
-            description: meta
-                .audit_description
-                .as_ref()
-                .map(decode_description)
-                .transpose()?,
-            committer: party_proxy(&meta.audit_committer)?,
-            attestation: meta
-                .audit_attestation
-                .as_ref()
-                .map(AttestationParts::decode)
-                .transpose()?
-                .map(Box::new),
-        })
+        decoded(
+            &meta.audit_system_id,
+            &meta.audit_change_type,
+            meta.audit_description.as_ref(),
+            &meta.audit_committer,
+            meta.audit_attestation.as_ref(),
+        )
     }
 
     /// The storage row shape ([`crate::storage::version_repo::commit::AuditRow`])
@@ -342,8 +330,8 @@ impl AuditInput {
             description: self
                 .description
                 .as_ref()
-                .map(openehr_its::json::to_canonical_value),
-            committer: openehr_its::json::to_canonical_value(&self.committer),
+                .map(openehr_its::json::to_canonical_json),
+            committer: openehr_its::json::to_canonical_json(&self.committer),
             attestation: self.attestation.as_ref().map(|parts| parts.fragment()),
         }
     }
@@ -394,6 +382,61 @@ impl AuditInput {
     pub(crate) fn canonical(&self, time_committed: &jiff::Timestamp) -> Value {
         openehr_its::json::to_canonical_value(&self.typed(time_committed))
     }
+}
+
+/// A commit audit as its stored columns hold it, decoded when a reader asks
+/// for it: a read that serves the stored body alone never does.
+#[derive(Debug, Clone)]
+pub(crate) struct StoredAudit {
+    /// `AUDIT_DETAILS.system_id`.
+    pub(crate) system_id: String,
+    /// The numeric `audit_change_type` group code.
+    pub(crate) change_type: String,
+    /// The canonical `DV_TEXT` fragment of the description, when one was given.
+    pub(crate) description: Option<Value>,
+    /// The canonical `PARTY_PROXY` of the committer.
+    pub(crate) committer: Value,
+    /// The canonical fragment of the `ATTESTATION`-declared attributes.
+    pub(crate) attestation: Option<Value>,
+}
+
+impl StoredAudit {
+    /// The three jsonb columns decoded into the RM values they hold.
+    ///
+    /// # Errors
+    /// [`ServiceError::Unprocessable`] when a stored fragment is not the RM
+    /// value its column holds: the [`party_proxy`] and [`decode_description`]
+    /// rejections, or the
+    /// [`crate::versioning::attestation::AttestationParts::decode`] ones.
+    pub(crate) fn decode(&self) -> Result<AuditInput, ServiceError> {
+        decoded(
+            &self.system_id,
+            &self.change_type,
+            self.description.as_ref(),
+            &self.committer,
+            self.attestation.as_ref(),
+        )
+    }
+}
+
+/// The commit audit the stored audit columns hold.
+fn decoded(
+    system_id: &str,
+    change_type: &str,
+    description: Option<&Value>,
+    committer: &Value,
+    attestation: Option<&Value>,
+) -> Result<AuditInput, ServiceError> {
+    Ok(AuditInput {
+        system_id: system_id.to_owned(),
+        change_type: change_type.to_owned(),
+        description: description.map(decode_description).transpose()?,
+        committer: party_proxy(committer)?,
+        attestation: attestation
+            .map(AttestationParts::decode)
+            .transpose()?
+            .map(Box::new),
+    })
 }
 
 /// Decode a stored/wire `AUDIT_DETAILS.description` fragment into its RM type,

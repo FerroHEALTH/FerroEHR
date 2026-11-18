@@ -677,7 +677,7 @@ fn original_version_envelope(
         }
         .canonical(&time_committed);
         (
-            contribution_ref(v.contribution_id),
+            openehr_its::json::to_canonical_value(&contribution_ref(v.contribution_id)),
             commit_audit,
             v.signature.clone(),
         )

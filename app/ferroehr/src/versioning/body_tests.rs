@@ -5,8 +5,13 @@ use openehr_base::prelude::ObjectVersionId;
 use serde_json::{Value, json};
 
 use super::{Body, decode_member};
+use crate::ids::VoId;
 use crate::versioning::Kind;
+use crate::versioning::audit::AuditInput;
 use crate::versioning::change::stamp_uid_value;
+use crate::versioning::integrity::{Signed, signed_form};
+use crate::versioning::object_version_id::TreeId;
+use crate::versioning::wire::{OriginalVersionParts, build_original_version, contribution_ref};
 
 /// Every document in the repository's corpora whose root is a versioned
 /// kind and that reads as strict typed RM, with its kind, its typed body and
@@ -83,15 +88,51 @@ fn canonical_path(view: &Value) -> (String, [u8; 32]) {
     )
 }
 
-/// The envelope a signed version joins its data to.
-fn envelope(uid: &ObjectVersionId) -> Value {
-    json!({
-        "_type": "ORIGINAL_VERSION",
-        "uid": { "_type": "OBJECT_VERSION_ID", "value": uid.value() },
-        "contribution": { "id": { "_type": "HIER_OBJECT_ID", "value": "c" }, "namespace": "local", "type": "CONTRIBUTION" },
-        "lifecycle_state": { "value": "complete", "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" } },
-        "signature": "left out",
-    })
+/// The parts of the version `uid` names, with a predecessor, the merge
+/// inputs `others` and the `contribution` and `commit_audit` given.
+fn parts<'a, C, A>(
+    uid: &'a ObjectVersionId,
+    contribution: C,
+    commit_audit: A,
+    others: &'a [String],
+    signature: Option<&'a str>,
+) -> OriginalVersionParts<'a, C, A> {
+    OriginalVersionParts {
+        creating_system_id: "cdr.example",
+        vo_id: VoId(uid.object_id().value().parse().unwrap()),
+        tree: TreeId::trunk(2),
+        preceding_version_uid: Some("8849182c-82ad-4088-a07f-48ead4180515::other.example::1"),
+        other_input_version_uids: others,
+        contribution,
+        commit_audit,
+        lifecycle_state: "532",
+        data: &Value::Null,
+        attestations: &[],
+        signature,
+    }
+}
+
+/// A commit audit with a coded description and an identified committer.
+fn audit() -> AuditInput {
+    AuditInput {
+        system_id: "cdr.example".to_owned(),
+        change_type: "249".to_owned(),
+        description: Some(
+            crate::versioning::audit::decode_description(&json!({
+                "_type": "DV_CODED_TEXT",
+                "value": "Größe",
+                "defining_code": { "terminology_id": { "value": "local" }, "code_string": "at0001" }
+            }))
+            .unwrap(),
+        ),
+        committer: crate::versioning::audit::party_proxy(&json!({
+            "_type": "PARTY_IDENTIFIED",
+            "name": "Dr. Ærø",
+            "identifiers": [{ "id": "1", "issuer": "i", "assigner": "a", "type": "t" }]
+        }))
+        .unwrap(),
+        attestation: None,
+    }
 }
 
 /// The typed commit writes the `version.body` bytes, the content digest and
@@ -101,8 +142,20 @@ fn envelope(uid: &ObjectVersionId) -> Value {
 #[test]
 fn the_typed_commit_writes_and_signs_the_bytes_the_canonical_one_did() {
     let documents = corpus();
-    let uid = ObjectVersionId::new("8849182c-82ad-4088-a07f-48ead4180515::cdr.example::1").unwrap();
-    let envelope = envelope(&uid);
+    let uid = ObjectVersionId::new("8849182c-82ad-4088-a07f-48ead4180515::cdr.example::2").unwrap();
+    let audit = audit();
+    let at: jiff::Timestamp = "2026-11-18T10:11:12.123456Z".parse().unwrap();
+    let contribution = uuid::Uuid::from_u128(7);
+    let others = ["8849182c-82ad-4088-a07f-48ead4180515::third.example::4".to_owned()];
+    // The envelope a read rebuilds to verify the signature, from canonical values.
+    let envelope = build_original_version(parts(
+        &uid,
+        openehr_its::json::to_canonical_value(&contribution_ref(contribution)),
+        audit.canonical(&at),
+        &others,
+        Some("left out"),
+    ))
+    .unwrap();
     let mut counts = std::collections::BTreeMap::<&str, usize>::new();
     for (path, kind, mut body, _) in documents {
         *counts.entry(kind.as_str()).or_default() += 1;
@@ -119,7 +172,12 @@ fn the_typed_commit_writes_and_signs_the_bytes_the_canonical_one_did() {
             "{path}"
         );
         assert_eq!(
-            crate::versioning::integrity::typed_canonical_form(&envelope, &body).unwrap(),
+            signed_form(
+                parts(&uid, contribution_ref(contribution), audit.typed(&at), &others, None),
+                Signed::Typed(&body)
+            )
+            .unwrap()
+            .unwrap(),
             openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json_with_data(
                 &envelope, &view
             )
