@@ -19,10 +19,13 @@
 //! form; how they are stored is our own design, and no openEHR spec governs
 //! it.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "the stored parts are computed over the entry's canonical ITS-JSON value (#1694 \
-              boundary class: canonical form)"
+#![cfg_attr(
+    test,
+    expect(
+        clippy::disallowed_types,
+        reason = "the reference split is computed over the entry's canonical ITS-JSON value \
+                  (#1694 boundary class: canonical form)"
+    )
 )]
 
 #[cfg(test)]
@@ -179,9 +182,11 @@ fn split_details(tree: Map<String, Value>) -> (Map<String, Value>, Vec<Value>) {
 /// was written (#5784).
 #[must_use]
 pub fn column_uuid(text: &str) -> Option<uuid::Uuid> {
-    uuid::Uuid::parse_str(text)
-        .ok()
-        .filter(|id| id.hyphenated().to_string() == text)
+    uuid::Uuid::parse_str(text).ok().filter(|id| {
+        id.hyphenated()
+            .encode_lower(&mut uuid::Uuid::encode_buffer())
+            == text
+    })
 }
 
 /// Whether the `timestamptz` column keeps the instant `text` of an entry so

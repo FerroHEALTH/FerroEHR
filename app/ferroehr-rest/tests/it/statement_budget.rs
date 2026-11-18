@@ -34,6 +34,7 @@ use crate::access_evaluator_http::{app, ehr_with_composition, send};
 use crate::common::BASE;
 use ferroehr::db::pool::SESSION_SETUP_SPAN;
 
+mod entry;
 mod intake;
 mod paths;
 mod wal;

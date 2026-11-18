@@ -71,8 +71,13 @@ impl<'w> Cut<'w> {
     /// # Errors
     /// A [`serde_json::Error`] when the access details do not read back.
     pub fn parts(&self) -> Result<(String, Option<String>), serde_json::Error> {
-        let mut row = Object::default();
-        let mut shared = Object::default();
+        let size: usize = self
+            .top
+            .iter()
+            .map(|(name, value)| name.len() + value.len() + 2)
+            .sum();
+        let mut row = Object::with_capacity(size);
+        let mut shared = Object::with_capacity(size);
         for &(name, value) in &self.top {
             if SHARED.iter().any(|kept| is_name(name, kept)) {
                 shared.push(name, value);
@@ -129,16 +134,12 @@ impl<'w> Cut<'w> {
         for step in rest {
             // NOTE: a step into a value that is no object, or to an absent
             // member, finds no text, as a JSON pointer reads it.
-            let Some(found) = members(value).and_then(|members| last_named(&members, step)) else {
+            let Some(found) = member(value, step) else {
                 return Ok(None);
             };
             value = found;
         }
-        if value.starts_with('"') {
-            serde_json::from_str(value).map(Some)
-        } else {
-            Ok(None)
-        }
+        string_text(value)
     }
 }
 
@@ -153,7 +154,7 @@ impl<'w> Cut<'w> {
 /// A [`serde_json::Error`] when `row` is no canonical object.
 pub fn without_columns(row: &str) -> Result<String, serde_json::Error> {
     let members = members(row).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))?;
-    let mut kept = Object::default();
+    let mut kept = Object::with_capacity(row.len());
     for (name, value) in members {
         if !column_member(name, value) {
             kept.push(name, value);
@@ -181,11 +182,115 @@ fn column_member(name: &str, value: &str) -> bool {
 /// The `value` of the canonical object `text` when it holds that string and
 /// a `_type` of `kind` and nothing else.
 fn typed_value(text: &str, kind: &str) -> Option<String> {
-    let object: serde_json::Map<String, serde_json::Value> = serde_json::from_str(text).ok()?;
-    if object.len() != 2 || object.get("_type")?.as_str()? != kind {
+    let mut found = (None, None);
+    let mut count = 0_usize;
+    let mut members = Members::of(text)?;
+    for (name, value) in members.by_ref() {
+        count += 1;
+        if is_name(name, "_type") {
+            found.0 = Some(value);
+        } else if is_name(name, "value") {
+            found.1 = Some(value);
+        }
+    }
+    if !members.complete || count != 2 {
         return None;
     }
-    object.get("value")?.as_str().map(str::to_owned)
+    let kind_text = found.0?;
+    if kind_text
+        .strip_prefix('"')
+        .and_then(|k| k.strip_suffix('"'))
+        != Some(kind)
+    {
+        return None;
+    }
+    string_text(found.1?).ok().flatten()
+}
+
+/// The string the canonical value `value` holds; `None` when it holds no
+/// string.
+///
+/// # Errors
+/// A [`serde_json::Error`] when an escaped string does not read back.
+fn string_text(value: &str) -> Result<Option<String>, serde_json::Error> {
+    match value
+        .strip_prefix('"')
+        .and_then(|inner| inner.strip_suffix('"'))
+    {
+        Some(inner) if !inner.contains('\\') => Ok(Some(inner.to_owned())),
+        Some(_) => serde_json::from_str(value).map(Some),
+        None => Ok(None),
+    }
+}
+
+/// The value of the last member named `plain` of the canonical object
+/// `object`, read without collecting its members; `None` when it has none
+/// or is no object.
+fn member<'t>(object: &'t str, plain: &str) -> Option<&'t str> {
+    let mut members = Members::of(object)?;
+    let mut found = None;
+    for (name, value) in members.by_ref() {
+        if is_name(name, plain) {
+            found = Some(value);
+        }
+    }
+    members.complete.then_some(found).flatten()
+}
+
+/// The members of a canonical object, read one at a time: each its quoted
+/// name and its value's text. `complete` says whether the object read to its
+/// closing brace.
+struct Members<'t> {
+    text: &'t str,
+    at: usize,
+    done: bool,
+    complete: bool,
+}
+
+impl<'t> Members<'t> {
+    /// The members of `text`; `None` when it does not open an object.
+    fn of(text: &'t str) -> Option<Self> {
+        let bytes = text.as_bytes();
+        if bytes.first() != Some(&b'{') {
+            return None;
+        }
+        let empty = bytes.get(1) == Some(&b'}');
+        Some(Self {
+            text,
+            at: 1,
+            done: empty,
+            complete: empty && bytes.len() == 2,
+        })
+    }
+}
+
+impl<'t> Iterator for Members<'t> {
+    type Item = (&'t str, &'t str);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.done {
+            return None;
+        }
+        self.done = true;
+        let bytes = self.text.as_bytes();
+        let name_end = string_end(bytes, self.at)?;
+        let name = self.text.get(self.at..name_end)?;
+        if bytes.get(name_end) != Some(&b':') {
+            return None;
+        }
+        let value_start = name_end + 1;
+        let value_end = value_end(bytes, value_start)?;
+        let value = self.text.get(value_start..value_end)?;
+        match bytes.get(value_end) {
+            Some(b',') => {
+                self.at = value_end + 1;
+                self.done = false;
+            }
+            Some(b'}') if value_end + 1 == bytes.len() => self.complete = true,
+            _ => {}
+        }
+        Some((name, value))
+    }
 }
 
 /// The value of the last member of `members` named `plain`.
@@ -218,7 +323,11 @@ fn details(tree: &[(&str, &str)]) -> Option<(String, String)> {
         }
     }
     let common = array(&common);
-    let mut envelope = Object::default();
+    let size: usize = tree
+        .iter()
+        .map(|(name, value)| name.len() + value.len() + 2)
+        .sum();
+    let mut envelope = Object::with_capacity(size);
     let mut placed = false;
     for (name, value) in tree {
         if is_name(name, ITEMS) {
@@ -233,8 +342,9 @@ fn details(tree: &[(&str, &str)]) -> Option<(String, String)> {
     if !placed {
         envelope.push_named(ITEMS, &common);
     }
-    let mut kept = Object::default();
-    kept.push_named(ITEMS, &array(&own));
+    let own = array(&own);
+    let mut kept = Object::with_capacity(own.len() + 12);
+    kept.push_named(ITEMS, &own);
     Some((envelope.finish(), kept.finish()))
 }
 
@@ -269,7 +379,14 @@ fn name_order(name: &str, plain: &str) -> Option<Ordering> {
 
 /// The canonical array of the canonical forms `elements`.
 fn array(elements: &[&str]) -> String {
-    let mut out = String::from("[");
+    let mut out = String::with_capacity(
+        elements
+            .iter()
+            .map(|element| element.len() + 1)
+            .sum::<usize>()
+            + 2,
+    );
+    out.push('[');
     for (index, element) in elements.iter().enumerate() {
         if index > 0 {
             out.push(',');
@@ -288,6 +405,13 @@ struct Object {
 }
 
 impl Object {
+    /// An object whose text takes `capacity` bytes before it grows.
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            out: String::with_capacity(capacity),
+        }
+    }
+
     /// Adds the member whose canonical name, quotes included, is `name`.
     fn push(&mut self, name: &str, value: &str) {
         self.out.push(if self.out.is_empty() { '{' } else { ',' });
@@ -323,30 +447,10 @@ impl Object {
 /// The members of the canonical object `text`, each as its quoted name and
 /// its value's text; `None` when `text` is no object.
 fn members(text: &str) -> Option<Vec<(&str, &str)>> {
-    let bytes = text.as_bytes();
-    if bytes.first() != Some(&b'{') {
-        return None;
-    }
-    let mut members = Vec::new();
-    let mut at = 1;
-    if bytes.get(at) == Some(&b'}') {
-        return (at + 1 == bytes.len()).then_some(members);
-    }
-    loop {
-        let name_end = string_end(bytes, at)?;
-        let name = text.get(at..name_end)?;
-        if bytes.get(name_end) != Some(&b':') {
-            return None;
-        }
-        let value_start = name_end + 1;
-        let value_end = value_end(bytes, value_start)?;
-        members.push((name, text.get(value_start..value_end)?));
-        match bytes.get(value_end) {
-            Some(b',') => at = value_end + 1,
-            Some(b'}') if value_end + 1 == bytes.len() => return Some(members),
-            _ => return None,
-        }
-    }
+    let mut members = Members::of(text)?;
+    let mut collected: Vec<(&str, &str)> = Vec::with_capacity(16);
+    collected.extend(members.by_ref());
+    members.complete.then_some(collected)
 }
 
 /// The elements of the canonical array `text`; `None` when `text` is no
