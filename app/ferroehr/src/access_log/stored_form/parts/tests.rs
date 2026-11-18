@@ -214,6 +214,10 @@ pub(crate) fn event() -> impl Strategy<Value = AuditEvent> {
             proptest::option::of(text()),
             proptest::option::of(text()),
             proptest::option::of(any::<u64>()),
+            proptest::option::of(prop_oneof![
+                Just("8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::1".to_owned()),
+                text(),
+            ]),
         ),
         (
             proptest::collection::vec(text(), 0..3),
@@ -226,7 +230,7 @@ pub(crate) fn event() -> impl Strategy<Value = AuditEvent> {
             |(
                 (action, object, outcome),
                 (user, issuer, token),
-                (purpose, request, count),
+                (purpose, request, count, object_id),
                 more,
             )| {
                 let (roles, origins, query, emergency) = more;
@@ -236,8 +240,7 @@ pub(crate) fn event() -> impl Strategy<Value = AuditEvent> {
                 event.issuer = issuer;
                 event.token_id = token;
                 event.ehr_id = Some("7d44b88c-4199-4bad-97dc-d78268e01398".to_owned());
-                event.object_id =
-                    Some("8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::1".to_owned());
+                event.object_id = object_id;
                 event.purpose = purpose;
                 event.request_id = request;
                 event.result_count = count;
@@ -305,18 +308,34 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(4096))]
 
     /// An entry's stored parts and columns assemble back into the exact
-    /// canonical form its content digest was computed over.
+    /// canonical form its content digest was computed over, whatever its
+    /// index columns hold: the request and object of its event, as the
+    /// writer indexes them, or any other text.
     #[test]
-    fn an_entrys_parts_assemble_into_its_canonical_form(event in event()) {
+    fn an_entrys_parts_assemble_into_its_canonical_form(
+        event in event(),
+        indexed in any::<bool>(),
+        request_id in proptest::option::of("[ -~é]{0,8}"),
+        resource_id in proptest::option::of(prop_oneof![
+            Just("8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::1".to_owned()),
+            "[ -~é]{0,8}",
+        ]),
+    ) {
         let retention = stated(Some(jiff::civil::date(2031, 11, 8)), &LogRetention::default());
         if let Some(entry) = entry_of(&event, None, "cdr.example.org", retention) {
-            let written = parts(&entry, &[LINK]).expect("the parts write");
-            let row = super::without_columns(&written.row).expect("the row part reads");
-            let (record_type, uid, time_recorded, ehr_id) = columns_of(&written.whole);
-            let columns = super::RowColumns { record_type: &record_type, uid, time_recorded, ehr_id };
-            let assembled = super::whole(&row, written.shared.as_deref(), &columns)
-                .expect("the parts assemble");
-            prop_assert_eq!(assembled, written.whole);
+            let index = if indexed {
+                super::IndexColumns {
+                    request_id: event.request_id.as_deref(),
+                    resource_id: event.object_id.as_deref(),
+                }
+            } else {
+                super::IndexColumns {
+                    request_id: request_id.as_deref(),
+                    resource_id: resource_id.as_deref(),
+                }
+            };
+            let (joined, whole) = assembled(&entry, index);
+            prop_assert_eq!(joined, whole);
         }
     }
 }
@@ -348,21 +367,58 @@ fn read_entry() -> openehr_rm::draft::access_log::access_log::access_log_entry::
         .expect("a read writes an entry")
 }
 
-/// The canonical form of `record` and the form its stored parts and the
-/// columns of its row assemble into.
-fn assembled<T: serde::Serialize>(record: &T) -> (String, String) {
+/// The form `record`'s stored parts, the columns of its row and the index
+/// columns `index` assemble into, and its canonical form.
+fn assembled<T: serde::Serialize>(record: &T, index: super::IndexColumns<'_>) -> (String, String) {
     let written = parts(record, &[LINK]).expect("the parts write");
-    let row = super::without_columns(&written.row).expect("the row part reads");
+    let row = super::without_columns(&written.row, &index).expect("the row part reads");
     let (record_type, uid, time_recorded, ehr_id) = columns_of(&written.whole);
     let columns = super::RowColumns {
         record_type: &record_type,
         uid,
         time_recorded,
         ehr_id,
+        index,
     };
     let whole =
         super::whole(&row, written.shared.as_deref(), &columns).expect("the parts assemble");
     (whole, written.whole)
+}
+
+/// The index columns the writer keeps for `read_entry`.
+const READ_INDEX: super::IndexColumns<'static> = super::IndexColumns {
+    request_id: Some("d44e8723-cf7e-4b37-8f52-60e1b3cd5f88"),
+    resource_id: Some("8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::1"),
+};
+
+/// The row part leaves the channel's request and the item's version to the
+/// index columns that hold them, and names a member `null` a reader would
+/// otherwise give back.
+#[test]
+fn the_row_part_leaves_the_request_and_version_to_their_columns() {
+    let entry = read_entry();
+    let written = parts(&entry, &[LINK]).expect("the parts write");
+    let row = super::without_columns(&written.row, &READ_INDEX).expect("the row part reads");
+    assert!(written.row.contains("d44e8723") && written.row.contains("48ead4180515"));
+    assert!(
+        !row.contains("d44e8723") && !row.contains("48ead4180515") && !row.contains("null"),
+        "{row}"
+    );
+    assert_eq!(assembled(&entry, READ_INDEX).0, written.whole);
+    let other = super::IndexColumns {
+        request_id: Some("another-request"),
+        resource_id: Some("another::system::1"),
+    };
+    let kept = super::without_columns(&written.row, &other).expect("the row part reads");
+    assert!(kept.contains("d44e8723") && kept.contains("48ead4180515"), "{kept}");
+    let mut unversioned = read_entry();
+    if let Some(item) = unversioned.items.as_mut().and_then(|items| items.first_mut()) {
+        item.version_id = None;
+    }
+    let written = parts(&unversioned, &[LINK]).expect("the parts write");
+    let row = super::without_columns(&written.row, &READ_INDEX).expect("the row part reads");
+    assert!(row.contains("\"version_id\":null"), "{row}");
+    assert_eq!(assembled(&unversioned, READ_INDEX).0, written.whole);
 }
 
 /// The access details of both parts merge by their at-codes, `outcome` and
@@ -377,7 +433,7 @@ fn the_columns_and_both_parts_assemble_back() {
         "{}",
         written.row
     );
-    let (whole, original) = assembled(&entry);
+    let (whole, original) = assembled(&entry, READ_INDEX);
     assert_eq!(whole, original);
 }
 
@@ -393,7 +449,7 @@ fn a_member_the_row_part_keeps_replaces_the_columns() {
         &"2026-11-18T09:11:12Z".parse().expect("an instant"),
     );
     "2026-11-18T10:11:12+01:00".clone_into(&mut entry.time_recorded.value);
-    let (whole, original) = assembled(&entry);
+    let (whole, original) = assembled(&entry, READ_INDEX);
     assert_eq!(whole, original);
 }
 
@@ -411,7 +467,7 @@ fn a_tombstone_assembles_from_its_row() {
     );
     let written = parts(&tombstone, &[LINK]).expect("the parts write");
     assert_eq!(written.shared, None);
-    let (whole, original) = assembled(&tombstone);
+    let (whole, original) = assembled(&tombstone, READ_INDEX);
     assert_eq!(whole, original);
 }
 

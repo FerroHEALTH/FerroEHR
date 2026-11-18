@@ -432,12 +432,16 @@ impl Builder<'_> {
 /// row part for one only the row keeps, and the record as one document
 /// (`audit.access_log_document`) for a member both parts or the columns
 /// hold, `outcome`, `query`, the access details, `_type`, `uid`,
-/// `time_recorded` and `ehr_id` (#6005).
+/// `time_recorded` and `ehr_id`, and the row part with the members its
+/// index columns give back for `channel` and `items` (#6005).
 fn holder(first: Option<&str>) -> &'static str {
     const DOCUMENT: &str = "audit.access_log_document(r.content, sh.content, r.record_type, \
-                            r.uid, r.time_recorded, r.ehr_id)";
+                            r.uid, r.time_recorded, r.ehr_id, r.request_id, r.resource_id)";
+    const ROW_PART: &str =
+        "audit.access_log_row_part(r.content::jsonb, r.request_id, r.resource_id)";
     match first {
         Some(name) if crate::access_log::stored_form::SHARED.contains(&name) => "sh.content::jsonb",
+        Some("channel" | "items") => ROW_PART,
         Some(
             "outcome" | "query" | "other_details" | "_type" | "uid" | "time_recorded" | "ehr_id",
         )

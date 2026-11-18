@@ -170,7 +170,7 @@ pub(crate) async fn stored(
     loop {
         let rows: Vec<String> = sqlx::query_scalar::<_, String>(
             "SELECT audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
-         r.time_recorded, r.ehr_id)::text FROM audit.access_log_record r \
+         r.time_recorded, r.ehr_id, r.request_id, r.resource_id)::text FROM audit.access_log_record r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
              WHERE r.record_type = 'ACCESS_LOG_ENTRY' ORDER BY r.chain_seq",
         )

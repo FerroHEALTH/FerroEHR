@@ -171,7 +171,7 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
         assert_eq!(read, Some(AccessLogRecord::AccessLogEntry(entry.clone())));
         let (own, document): (String, String) = sqlx::query_as(
             "SELECT r.content, audit.access_log_document(r.content, sh.content, r.record_type, \
-             r.uid, r.time_recorded, r.ehr_id)::text FROM audit.access_log_record r \
+             r.uid, r.time_recorded, r.ehr_id, r.request_id, r.resource_id)::text FROM audit.access_log_record r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
              WHERE r.chain_seq = $1",
         )

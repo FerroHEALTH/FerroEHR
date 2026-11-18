@@ -174,7 +174,7 @@ async fn an_erasure_writes_its_tombstone_and_its_entry_together() {
         .expect("the erasure");
     let recorded: Vec<(String, Option<String>)> = sqlx::query_as::<_, (String, Option<String>)>(
         "SELECT audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
-         r.time_recorded, r.ehr_id)::text, r.action_code FROM audit.access_log_record r \
+         r.time_recorded, r.ehr_id, r.request_id, r.resource_id)::text, r.action_code FROM audit.access_log_record r \
          LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
          WHERE r.record_type = 'ACCESS_LOG_ENTRY'",
     )
