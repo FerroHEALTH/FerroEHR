@@ -27,7 +27,7 @@ psql -h localhost -U openehr -d postgres -v ON_ERROR_STOP=1 \
   -c "ALTER SYSTEM SET full_page_writes = off" \
   -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'" \
   -c "ALTER SYSTEM SET pg_stat_statements.track = 'all'" \
-  -c "ALTER SYSTEM SET pg_stat_statements.max = 20000" >/dev/null
+  -c "ALTER SYSTEM SET pg_stat_statements.max = 100000" >/dev/null
 docker restart "$container" >/dev/null
 for _ in $(seq 1 60); do
   if pg_isready -h localhost -U openehr -q; then

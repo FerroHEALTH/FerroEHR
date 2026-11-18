@@ -286,6 +286,7 @@ impl Checkpoints {
             )?],
             &[],
             None,
+            &std::collections::BTreeSet::new(),
         )
         .await?;
         // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's

@@ -138,7 +138,14 @@ async fn flushed(pool: &PgPool, to: &str) {
 }
 
 /// The row records between `from` and `to` that touch a relation of the
-/// test's database, by relation: name, record bytes and records.
+/// test's database outside the system catalogs, by relation: name, record
+/// bytes and records.
+///
+/// A record counts only when it names a relation the database's own catalog
+/// holds, a table, index or TOAST table of a schema of the server's: the
+/// statistics and catalog rows autovacuum and autoanalyze write when a
+/// parallel run's timing puts them in the window are left out, as are the
+/// records of the shared catalogs and of every other database.
 ///
 /// Only the records a statement writes for each row count: a heap insert,
 /// update, delete or lock, a B-tree leaf insert and a GIN pending-list insert.
@@ -148,7 +155,7 @@ async fn flushed(pool: &PgPool, to: &str) {
 /// move between runs, so it is left out.
 async fn by_relation(pool: &PgPool, from: &str, to: &str) -> Vec<(String, u64, u64)> {
     let rows: Vec<(String, i64, i64)> = sqlx::query_as(
-        "SELECT /* statement_budget_own */ coalesce(c.relname, b.relfilenode::text), \
+        "SELECT /* statement_budget_own */ c.relname, \
                 sum(b.record_length)::bigint, count(*) \
            FROM (SELECT DISTINCT ON (start_lsn, relfilenode) start_lsn, relfilenode, record_length \
                    FROM pg_get_wal_block_info($1::pg_lsn, $2::pg_lsn) \
@@ -159,7 +166,10 @@ async fn by_relation(pool: &PgPool, from: &str, to: &str) -> Vec<(String, u64, u
                       OR (resource_manager = 'Heap2' AND record_type LIKE 'MULTI_INSERT%') \
                       OR (resource_manager = 'Btree' AND record_type = 'INSERT_LEAF') \
                       OR (resource_manager = 'Gin' AND record_type = 'UPDATE_META_PAGE'))) b \
-           LEFT JOIN pg_class c ON c.relfilenode = b.relfilenode \
+           JOIN pg_class c ON pg_relation_filenode(c.oid) = b.relfilenode \
+           LEFT JOIN pg_class owner ON owner.reltoastrelid = c.oid \
+          WHERE coalesce(owner.relnamespace, c.relnamespace) NOT IN \
+                ('pg_catalog'::regnamespace, 'information_schema'::regnamespace) \
           GROUP BY 1 ORDER BY 2 DESC, 1",
     )
     .bind(from)
@@ -408,7 +418,7 @@ async fn a_composition_commit_stays_within_its_wal_ceiling() {
         for (ehr, _) in &made {
             commit(ehr.clone()).await;
         }
-        let relations = commit_window(&pool, async {
+        let (relations, evicted) = commit_window(&pool, async {
             for (_, (ehr, _)) in (0..REQUESTS).zip(made.iter().cycle()) {
                 commit(ehr.clone()).await;
             }
@@ -421,6 +431,9 @@ async fn a_composition_commit_stays_within_its_wal_ceiling() {
             .sum();
         let per_commit = commits.div_euclid(REQUESTS);
         let nested = nested_calls(&pool).await.div_euclid(REQUESTS);
+        testkit::assert_statements_kept(&pool, evicted)
+            .await
+            .expect("no statement evicted while the test counted them");
         writeln!(
             report,
             "{}: {REQUESTS} commits wrote {commits} bytes of row records, {per_commit} per \
@@ -476,19 +489,15 @@ async fn commit_fixture(app: &Router, pool: &PgPool) -> Vec<(String, String)> {
 
 /// The write-ahead log by relation that `commits` writes, with the
 /// statement counts reset before it and a temporary slot keeping the
-/// window's WAL.
+/// window's WAL, and the statement table's evictions when the count began.
 async fn commit_window(
     pool: &PgPool,
     commits: impl Future<Output = ()>,
-) -> Vec<(String, u64, u64)> {
+) -> (Vec<(String, u64, u64)>, i64) {
     drained(pool).await;
-    sqlx::query(
-        "SELECT pg_stat_statements_reset(0, \
-         (SELECT oid FROM pg_database WHERE datname = current_database()), 0)",
-    )
-    .execute(pool)
-    .await
-    .expect("the statement counts reset");
+    let evicted = testkit::statement_window(pool)
+        .await
+        .expect("the statement counts reset");
     let mut keeper = ferroehr::db::acquire::acquire(pool)
         .await
         .expect("a connection for the slot");
@@ -513,7 +522,7 @@ async fn commit_window(
     .await
     .expect("the slot drops");
     drop(keeper);
-    relations
+    (relations, evicted)
 }
 
 /// The calls of the statements `PostgreSQL` ran nested in the test's

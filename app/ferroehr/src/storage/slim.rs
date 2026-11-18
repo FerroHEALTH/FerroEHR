@@ -155,7 +155,7 @@ pub fn rebuild(
 }
 
 /// The canonical JSON of a typed value, as `ext.node_value` builds it.
-fn rebuild_value(v: &TypedValue) -> Option<Value> {
+pub(crate) fn rebuild_value(v: &TypedValue) -> Option<Value> {
     let text = || v.text.clone().map_or(Value::Null, Value::from);
     let num = || -> Option<Value> {
         let parsed: Value = serde_json::from_str(v.num.as_deref()?).ok()?;

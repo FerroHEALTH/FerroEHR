@@ -92,71 +92,143 @@ impl FragmentPath {
     /// Every item the path selects in `root`, in document order.
     #[must_use]
     pub fn all<'a>(&self, root: &'a Value) -> Vec<&'a Value> {
-        let mut items = vec![root];
-        for step in &self.steps {
-            let mut next = Vec::new();
-            for item in items {
-                member(item, &step.member, &mut next);
-            }
-            if step.multi {
-                next = next.into_iter().flat_map(elements).collect();
-            }
-            if !step.filter.is_empty() {
-                next = next
-                    .into_iter()
-                    .flat_map(elements)
-                    .filter(|item| step.filter.iter().all(|cond| cond.holds(item)))
-                    .collect();
-            }
-            items = next;
-            if items.is_empty() {
-                break;
-            }
-        }
-        items
+        let mut out = Vec::new();
+        self.walk(root, 0, &mut |found| {
+            out.push(found);
+            false
+        });
+        out
     }
 
     /// The first item the path selects in `root`, as
     /// `jsonb_path_query_first` answers it.
     #[must_use]
     pub fn first<'a>(&self, root: &'a Value) -> Option<&'a Value> {
-        self.all(root).into_iter().next()
+        let mut first = None;
+        self.walk(root, 0, &mut |found| {
+            first = Some(found);
+            true
+        });
+        first
+    }
+
+    /// Whether the path is exactly the plain member steps `names`, with no
+    /// list step and no filter.
+    #[must_use]
+    pub fn is_exactly(&self, names: &[&str]) -> bool {
+        self.steps.len() == names.len()
+            && self
+                .steps
+                .iter()
+                .zip(names)
+                .all(|(step, name)| step.member == *name && !step.multi && step.filter.is_empty())
+    }
+
+    /// The member the path's first step reads, `None` for the bare path.
+    #[must_use]
+    pub fn first_member(&self) -> Option<&str> {
+        self.steps.first().map(|step| step.member.as_str())
+    }
+
+    /// Every item the path selects in a root whose first-step member is
+    /// `reached` and that has no other member, in document order: what
+    /// [`Self::all`] answers when only that member can matter.
+    #[must_use]
+    pub fn all_below<'a>(&self, reached: &'a Value) -> Vec<&'a Value> {
+        let mut out = Vec::new();
+        self.walk_reached(reached, 0, &mut |found| {
+            out.push(found);
+            false
+        });
+        out
+    }
+
+    /// The first item of [`Self::all_below`].
+    #[must_use]
+    pub fn first_below<'a>(&self, reached: &'a Value) -> Option<&'a Value> {
+        let mut first = None;
+        self.walk_reached(reached, 0, &mut |found| {
+            first = Some(found);
+            true
+        });
+        first
+    }
+
+    /// Visits every item steps `at..` select from `item` in document order,
+    /// depth first, which is the order PostgreSQL's sequence of items takes;
+    /// stops, and returns `true`, once `found` does.
+    fn walk<'a>(
+        &self,
+        item: &'a Value,
+        at: usize,
+        found: &mut dyn FnMut(&'a Value) -> bool,
+    ) -> bool {
+        let Some(step) = self.steps.get(at) else {
+            return found(item);
+        };
+        member(item, &step.member).any(|reached| self.walk_reached(reached, at, found))
+    }
+
+    /// [`Self::walk`] from a value step `at`'s member access reached.
+    fn walk_reached<'a>(
+        &self,
+        reached: &'a Value,
+        at: usize,
+        found: &mut dyn FnMut(&'a Value) -> bool,
+    ) -> bool {
+        let Some(step) = self.steps.get(at) else {
+            return found(reached);
+        };
+        let mut visit = |candidate: &'a Value| -> bool {
+            if step.filter.is_empty() {
+                return self.walk(candidate, at + 1, found);
+            }
+            elements(candidate).any(|next| {
+                step.filter.iter().all(|cond| cond.holds(next)) && self.walk(next, at + 1, found)
+            })
+        };
+        if step.multi {
+            elements(reached).any(&mut visit)
+        } else {
+            visit(reached)
+        }
     }
 }
 
 impl Condition {
     /// Whether some item of the operand compares true with the value.
     fn holds(&self, item: &Value) -> bool {
-        let mut operand = vec![item];
-        for part in &self.path {
-            let mut next = Vec::new();
-            for item in operand {
-                member(item, part, &mut next);
-            }
-            operand = next;
+        self.operand(item, 0)
+    }
+
+    /// Whether some item the operand path selects from `item`, from part
+    /// `at` on, compares true.
+    fn operand(&self, item: &Value, at: usize) -> bool {
+        match self.path.get(at) {
+            None => elements(item).any(|left| compare(left, &self.value, self.op)),
+            Some(part) => member(item, part).any(|next| self.operand(next, at + 1)),
         }
-        operand
-            .into_iter()
-            .flat_map(elements)
-            .any(|left| compare(left, &self.value, self.op))
     }
 }
 
 /// Lax member access: an object's member, or each array element's.
-fn member<'a>(item: &'a Value, name: &str, out: &mut Vec<&'a Value>) {
-    match item {
-        Value::Object(map) => out.extend(map.get(name)),
-        Value::Array(array) => out.extend(array.iter().filter_map(|e| e.as_object()?.get(name))),
-        _ => {}
-    }
+fn member<'a, 'n>(item: &'a Value, name: &'n str) -> impl Iterator<Item = &'a Value> + use<'a, 'n> {
+    let (one, many): (Option<&Value>, &[Value]) = match item {
+        Value::Object(map) => (map.get(name), &[]),
+        Value::Array(array) => (None, array.as_slice()),
+        _ => (None, &[]),
+    };
+    one.into_iter()
+        .chain(many.iter().filter_map(move |e| e.as_object()?.get(name)))
 }
 
 /// Lax `[*]`: an array's elements, or the item itself.
-fn elements(item: &Value) -> Vec<&Value> {
-    match item {
-        Value::Array(array) => array.iter().collect(),
-        other => vec![other],
-    }
+fn elements(item: &Value) -> impl Iterator<Item = &Value> {
+    let (one, many): (Option<&Value>, &[Value]) = match item {
+        Value::Array(array) => (None, array.as_slice()),
+        other => (Some(other), &[]),
+    };
+    one.into_iter().chain(many.iter())
 }
 
 /// A SQL/JSON path comparison: `true` only when the two items are of one
@@ -224,7 +296,7 @@ pub fn write_jsonb(value: &Value, out: &mut String) {
                 if i > 0 {
                     out.push(',');
                 }
-                write_scalar(&Value::String(key.clone()), out);
+                write_string(key, out);
                 out.push(':');
                 write_jsonb(member, out);
             }
@@ -246,8 +318,40 @@ pub fn write_jsonb(value: &Value, out: &mut String) {
 
 /// Writes a JSON scalar as `serde_json` does.
 fn write_scalar(value: &Value, out: &mut String) {
-    // NOTE: serde_json::to_string of a scalar cannot fail, so an empty write is unreachable.
-    out.push_str(&serde_json::to_string(value).unwrap_or_default());
+    match value {
+        Value::Null => out.push_str("null"),
+        Value::Bool(true) => out.push_str("true"),
+        Value::Bool(false) => out.push_str("false"),
+        Value::Number(number) => {
+            let _ = write!(out, "{number}");
+        }
+        Value::String(text) => write_string(text, out),
+        // NOTE: write_jsonb writes arrays and objects itself, so no other value reaches here.
+        Value::Array(_) | Value::Object(_) => {}
+    }
+}
+
+/// Writes `text` as a JSON string, escaped as `serde_json` escapes it: `"`,
+/// `\\` and the control characters, the short forms where JSON has them.
+pub(crate) fn write_string(text: &str, out: &mut String) {
+    out.reserve(text.len() + 2);
+    out.push('"');
+    for c in text.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\u{08}' => out.push_str("\\b"),
+            '\u{0C}' => out.push_str("\\f"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if u32::from(c) < 0x20 => {
+                let _ = write!(out, "\\u{:04x}", u32::from(c));
+            }
+            c => out.push(c),
+        }
+    }
+    out.push('"');
 }
 
 #[cfg(test)]
@@ -307,6 +411,27 @@ mod tests {
         assert!(!compare(&json!(null), &json!("a"), CompOp::Eq));
         assert!(!compare(&json!({"a": 1}), &json!("a"), CompOp::Ne));
         assert!(compare(&json!(1.5), &json!(1), CompOp::Gt));
+    }
+
+    #[test]
+    fn scalars_are_written_as_serde_json_writes_them() {
+        for value in [
+            json!("plain"),
+            json!(
+                "quote \" slash \\ / tab \t nl \n cr \r bs \u{8} ff \u{c} nul \u{0} esc \u{1b} é ✓"
+            ),
+            json!(1.5),
+            json!(-0.0),
+            json!(1e300),
+            json!(12_345_678_901_234_u64),
+            json!(-7),
+            json!(true),
+            json!(null),
+        ] {
+            let mut out = String::new();
+            write_jsonb(&value, &mut out);
+            assert_eq!(out, serde_json::to_string(&value).unwrap(), "{value:?}");
+        }
     }
 
     #[test]

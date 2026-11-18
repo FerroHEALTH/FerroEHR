@@ -3,14 +3,7 @@
 
 //! The RM type of a node's `name` against the template's constraint on it.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "canonical JSON / Simplified Formats operate on the wire value by definition \
-              (ITS-JSON; ITS-REST Simplified Formats) — serde_json::Value IS the subject matter \
-              (#1694)"
-)]
-
-use serde_json::Value;
+use crate::flat::instance::Instance;
 
 use super::{Validator, subtype};
 use crate::flat::webtemplate::model::WebTemplateNode;
@@ -23,15 +16,19 @@ impl Validator {
     /// a `C_COMPLEX_OBJECT` constrains an object of its `rm_type_name`, and
     /// `valid_value` tests the object for conformance). `holder` is the
     /// LOCATABLE the name belongs to, at `path`.
-    pub(super) fn check_name_type(&mut self, holder: &Value, wt: &WebTemplateNode, path: &str) {
+    pub(super) fn check_name_type<'i, I: Instance<'i>>(
+        &mut self,
+        holder: I,
+        wt: &WebTemplateNode,
+        path: &str,
+    ) {
         let Some(want) = wt.name_rm_type.as_deref() else {
             return;
         };
         let Some(found) = holder
-            .get("name")
-            .and_then(|n| n.get("_type"))
-            .and_then(Value::as_str)
-            .or_else(|| holder.get("name").map(|_| "DV_TEXT"))
+            .attr("name")
+            .and_then(Instance::rm_type)
+            .or_else(|| holder.attr("name").map(|_| "DV_TEXT"))
         else {
             return;
         };

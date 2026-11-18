@@ -5,14 +5,7 @@
 //! existence check refuses on a mandatory attribute, and the presence the
 //! prohibition check refuses on an attribute the template prohibits.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "canonical JSON / Simplified Formats operate on the wire value by definition \
-              (ITS-JSON; ITS-REST Simplified Formats) — serde_json::Value IS the subject matter \
-              (#1694)"
-)]
-
-use serde_json::Value;
+use crate::flat::instance::Instance;
 
 use super::Validator;
 use crate::flat::webtemplate::model::WebTemplateNode;
@@ -26,18 +19,17 @@ use crate::rm_instance::ValidationKind;
 /// existence "whether the container object will be there (at all)" and leaves
 /// how many members it holds to cardinality ([`super::Validator`]'s
 /// cardinality check).
-pub(super) fn attr_absent(node: &Value, attr: &str) -> bool {
-    matches!(node.get(attr), None | Some(Value::Null))
+pub(super) fn attr_absent<'i, I: Instance<'i>>(node: I, attr: &str) -> bool {
+    !node.is_present(attr)
 }
 
 /// Whether an RM attribute field carries content: present, not `null`, and,
 /// for a list, with at least one member. An empty list of a prohibited
 /// attribute carries nothing, so the prohibition check reads it as absent.
-fn attr_has_content(node: &Value, attr: &str) -> bool {
-    match node.get(attr) {
-        None | Some(Value::Null) => false,
-        Some(Value::Array(a)) => !a.is_empty(),
-        Some(_) => true,
+fn attr_has_content<'i, I: Instance<'i>>(node: I, attr: &str) -> bool {
+    match node.members(attr) {
+        Some(members) => !members.is_empty(),
+        None => node.is_present(attr),
     }
 }
 
@@ -45,7 +37,11 @@ impl Validator {
     /// Refuse every attribute of `instance` its template node prohibits
     /// (existence `0..0`: AOM 1.4 `master04-constraint_model_package.adoc`
     /// §existence, AOM2 `master03-archetype_package.adoc` §C_ATTRIBUTE).
-    pub(super) fn check_prohibited(&mut self, instance: &Value, wt: &WebTemplateNode) {
+    pub(super) fn check_prohibited<'i, I: Instance<'i>>(
+        &mut self,
+        instance: I,
+        wt: &WebTemplateNode,
+    ) {
         for attribute in &wt.prohibited_attributes {
             if attr_has_content(instance, attribute) {
                 self.push(

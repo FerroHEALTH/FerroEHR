@@ -47,6 +47,7 @@ mod spec_vectors;
 mod string_pattern;
 mod structured;
 mod template_navigation;
+mod typed_conformance_parity;
 mod typed_validation_parity;
 mod untagged_nodes;
 mod validation;
