@@ -67,6 +67,7 @@ pub(super) fn decode_body<T: serde::de::DeserializeOwned>(
     body: &bytes::Bytes,
 ) -> Result<T, RestError> {
     let value = negotiate::decode::json_value(h, body).map_err(RestError::from)?;
+    ferroehr::telemetry::conversion::record("value_to_dto");
     serde_json::from_value(value).map_err(|e| {
         RestError::from(ApiError::BadRequest(format!(
             "invalid query request body: {e}"
@@ -204,6 +205,8 @@ pub(super) fn respond_result_set(headers: &HeaderMap, result_set: &serde_json::V
 /// queries may coincidentally return the same rows and are not the same result
 /// set.
 fn result_set_etag(result_set: &serde_json::Value) -> String {
+    ferroehr::telemetry::conversion::record("etag_identity_clone");
+    ferroehr::telemetry::conversion::record("value_to_text");
     let identity = serde_json::json!({
         "name": result_set.get("name"),
         "q": result_set.get("q"),

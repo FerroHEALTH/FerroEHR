@@ -45,20 +45,23 @@ pub(crate) fn respond<T: Serialize>(
     // service already produced (already canonical), or an application DTO with
     // its own serde. These are not RM spec types, so they serialize via serde
     // (not the RM canonical codec — that path is `respond_rm`/`json_response`).
-    match resolve_accept(
+    if resolve_accept(
         headers,
         &[WireFormat::CanonicalJson],
         WireFormat::CanonicalJson,
-    ) {
-        Some(_) => match serde_json::to_string(value) {
-            Ok(json) => body(status, APPLICATION_JSON, json),
-            Err(e) => crate::overview::error::internal_fault("serialize the JSON response", &e)
-                .into_response_body(),
-        },
-        None => ApiError::NotAcceptable(
+    )
+    .is_none()
+    {
+        return ApiError::NotAcceptable(
             "this response is available as application/json only".to_owned(),
         )
-        .into_response_body(),
+        .into_response_body();
+    }
+    ferroehr::telemetry::conversion::record("value_to_text");
+    match serde_json::to_string(value) {
+        Ok(json) => body(status, APPLICATION_JSON, json),
+        Err(e) => crate::overview::error::internal_fault("serialize the JSON response", &e)
+            .into_response_body(),
     }
 }
 

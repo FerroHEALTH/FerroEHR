@@ -180,6 +180,7 @@ impl std::error::Error for JsonParseError {}
     reason = "`serde_json::to_string` can only fail on an I/O error (the writer is an in-memory String), a non-string map key, or a `Serialize` impl that returns Err; the emitted spec-type impls key every map with `String` and never return Err, so the Err variant is unreachable here — the Book ch9 sanctioned escape for a logically-impossible Err"
 )]
 pub fn to_canonical_json<T: Serialize + ?Sized>(value: &T) -> String {
+    crate::conversion::record::<T>("to_canonical_json");
     serde_json::to_string(value).expect("an openEHR spec value should always serialize")
 }
 
@@ -200,6 +201,7 @@ pub fn to_canonical_json<T: Serialize + ?Sized>(value: &T) -> String {
     reason = "`serde_json::to_value` fails only on a non-string map key or a `Serialize` impl that returns Err; the emitted spec-type impls do neither, so the Err variant is unreachable here — the Book ch9 sanctioned escape for a logically-impossible Err"
 )]
 pub fn to_canonical_value<T: Serialize + ?Sized>(value: &T) -> serde_json::Value {
+    crate::conversion::record::<T>("to_canonical_value");
     serde_json::to_value(value).expect("an openEHR spec value should always serialize")
 }
 
@@ -214,6 +216,7 @@ pub fn to_canonical_value<T: Serialize + ?Sized>(value: &T) -> serde_json::Value
 /// # Errors
 /// Returns a [`JsonParseError`] carrying the JSON path to the offending node.
 pub fn from_canonical_json<T: DeserializeOwned>(json: &str) -> Result<T, JsonParseError> {
+    crate::conversion::record::<T>("from_canonical_json");
     // The happy path reads WITHOUT the path tracker: `serde_path_to_error`
     // wraps every key and value seed, and on this corpus that costs ~60% of
     // total read time. A failed read re-runs the same deterministic decode WITH
@@ -246,6 +249,7 @@ fn located_in_str<T: DeserializeOwned>(json: &str, plain: &serde_json::Error) ->
 pub fn from_canonical_value<T: DeserializeOwned>(
     value: &serde_json::Value,
 ) -> Result<T, JsonParseError> {
+    crate::conversion::record::<T>("from_canonical_value");
     // Same two-phase shape as [`from_canonical_json`]: the untracked read on
     // the happy path, the tracked re-read only to describe a failure.
     match T::deserialize(value) {

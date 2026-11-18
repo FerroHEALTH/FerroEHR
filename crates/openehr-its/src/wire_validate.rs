@@ -200,6 +200,7 @@ pub fn validate_rm_value(value: &Value, out: &mut Vec<InvariantViolation>) {
 /// it, so the violation appears exactly once. Closing it out in this tier — not
 /// above both — keeps the fast-vs-typed equivalence exact.
 pub fn validate_rm_value_typed(ty: &str, value: &Value, out: &mut Vec<InvariantViolation>) {
+    crate::conversion::record::<Value>("decode_value_node");
     // Raised again ahead of the decode so this tier's verdict does not depend
     // on WHERE the offending member sits: the reader streams members in
     // document order, so a node that is both structurally defective and carries
