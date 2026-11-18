@@ -11,6 +11,7 @@
 )]
 
 use axum::response::{IntoResponse, Response};
+use ferroehr::service::response::ReadBody;
 use http::{HeaderMap, HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
 use openehr_its::xml::runtime::{Namespace, ToXml};
@@ -45,20 +46,23 @@ pub(crate) fn respond<T: Serialize>(
     // service already produced (already canonical), or an application DTO with
     // its own serde. These are not RM spec types, so they serialize via serde
     // (not the RM canonical codec — that path is `respond_rm`/`json_response`).
-    match resolve_accept(
+    if resolve_accept(
         headers,
         &[WireFormat::CanonicalJson],
         WireFormat::CanonicalJson,
-    ) {
-        Some(_) => match serde_json::to_string(value) {
-            Ok(json) => body(status, APPLICATION_JSON, json),
-            Err(e) => crate::overview::error::internal_fault("serialize the JSON response", &e)
-                .into_response_body(),
-        },
-        None => ApiError::NotAcceptable(
+    )
+    .is_none()
+    {
+        return ApiError::NotAcceptable(
             "this response is available as application/json only".to_owned(),
         )
-        .into_response_body(),
+        .into_response_body();
+    }
+    ferroehr::telemetry::conversion::record("value_to_text");
+    match serde_json::to_string(value) {
+        Ok(json) => body(status, APPLICATION_JSON, json),
+        Err(e) => crate::overview::error::internal_fault("serialize the JSON response", &e)
+            .into_response_body(),
     }
 }
 
@@ -90,17 +94,6 @@ where
             if value.is_null() {
                 return empty(status);
             }
-            // The lineage is read off the winning XML media range; an
-            // unrecognized `version` is an aspect of the request the service
-            // cannot fulfill → 406 (Resources.md §XML Format).
-            let Some(ns) = accept_xml_namespace(headers) else {
-                return ApiError::NotAcceptable(
-                    "canonical XML is served in the openEHR ITS-XML lineages \
-                     `version=1` and `version=2` (default)"
-                        .to_owned(),
-                )
-                .into_response_body();
-            };
             let typed: T = match openehr_its::json::from_canonical_value(value) {
                 Ok(t) => t,
                 Err(e) => {
@@ -111,17 +104,7 @@ where
                     .into_response_body();
                 }
             };
-            let serialized = match openehr_its::xml::declared_abstract_root_type(root_tag) {
-                Some(declared) => {
-                    openehr_its::xml::runtime::to_xml_declared(&typed, root_tag, declared, ns)
-                }
-                None => openehr_its::xml::runtime::to_xml(&typed, root_tag, ns),
-            };
-            match serialized {
-                Ok(xml) => body(status, xml_media(ns), xml),
-                Err(e) => crate::overview::error::internal_fault("serialize the XML response", &e)
-                    .into_response_body(),
-            }
+            respond_xml(headers, status, &typed, root_tag)
         }
         // Any other allowed format is impossible for `CANONICAL`; an
         // unsatisfiable `Accept` is a `406` (Resources.md §Simplified Formats).
@@ -129,6 +112,80 @@ where
             "this resource is available as application/json or application/xml".to_owned(),
         )
         .into_response_body(),
+    }
+}
+
+/// Render a read body of the spec-typed RM object `T`, honouring `Accept` as
+/// [`respond_rm`] does, without a parse the format does not need.
+///
+/// The stored canonical text is served verbatim for canonical JSON, and read
+/// straight into `T` for canonical XML; a parsed value renders as
+/// [`respond_rm`] renders it. The stored text is the compact serialization of
+/// the canonical value, so the JSON bytes are the ones a re-render would write.
+pub(crate) fn respond_read<T>(
+    headers: &HeaderMap,
+    status: StatusCode,
+    read: ReadBody,
+    root_tag: &str,
+) -> Response
+where
+    T: DeserializeOwned + ToXml,
+{
+    let text = match read {
+        ReadBody::RawJson(text) => text,
+        ReadBody::Value(value) => return respond_rm::<T>(headers, status, &value, root_tag),
+    };
+    match resolve_accept(headers, CANONICAL, WireFormat::CanonicalJson) {
+        Some(WireFormat::CanonicalJson) => body(status, APPLICATION_JSON, text),
+        Some(WireFormat::CanonicalXml) => {
+            match openehr_its::json::from_canonical_json::<T>(&text) {
+                Ok(typed) => respond_xml(headers, status, &typed, root_tag),
+                Err(e) => crate::overview::error::internal_fault(
+                    "re-type the stored canonical JSON for the XML response",
+                    &format!("<{root_tag}>: {e}"),
+                )
+                .into_response_body(),
+            }
+        }
+        _ => ApiError::NotAcceptable(
+            "this resource is available as application/json or application/xml".to_owned(),
+        )
+        .into_response_body(),
+    }
+}
+
+/// Render the typed RM object `typed` as a canonical-XML response in the
+/// ITS-XML lineage `Accept` names, under the root element `root_tag`.
+///
+/// A `root_tag` whose published XSD type is abstract
+/// ([`openehr_its::xml::declared_abstract_root_type`]) is serialized through
+/// the declared-type entry point, so the root names its concrete class with
+/// `xsi:type` as the schema requires.
+pub(crate) fn respond_xml<T: ToXml>(
+    headers: &HeaderMap,
+    status: StatusCode,
+    typed: &T,
+    root_tag: &str,
+) -> Response {
+    // The lineage is read off the winning XML media range; an unrecognized
+    // `version` is an aspect of the request the service cannot fulfill → 406
+    // (Resources.md §XML Format).
+    let Some(ns) = accept_xml_namespace(headers) else {
+        return ApiError::NotAcceptable(
+            "canonical XML is served in the openEHR ITS-XML lineages \
+             `version=1` and `version=2` (default)"
+                .to_owned(),
+        )
+        .into_response_body();
+    };
+    let serialized = match openehr_its::xml::declared_abstract_root_type(root_tag) {
+        Some(declared) => openehr_its::xml::runtime::to_xml_declared(typed, root_tag, declared, ns),
+        None => openehr_its::xml::runtime::to_xml(typed, root_tag, ns),
+    };
+    match serialized {
+        Ok(xml) => body(status, xml_media(ns), xml),
+        Err(e) => crate::overview::error::internal_fault("serialize the XML response", &e)
+            .into_response_body(),
     }
 }
 

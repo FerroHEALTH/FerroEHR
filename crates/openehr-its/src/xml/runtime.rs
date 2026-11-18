@@ -307,6 +307,7 @@ pub fn to_xml<T: ToXml + ?Sized>(
     root_tag: &str,
     ns: Namespace,
 ) -> Result<String, XmlError> {
+    crate::conversion::record::<T>("to_xml");
     let mut w = XmlWriter::new();
     w.set_root_namespace(ns);
     value.write_xml(&mut w, root_tag, None)?;
@@ -328,6 +329,7 @@ pub fn to_xml_declared<T: ToXml + ?Sized>(
     declared: &str,
     ns: Namespace,
 ) -> Result<String, XmlError> {
+    crate::conversion::record::<T>("to_xml");
     let mut w = XmlWriter::new();
     w.set_root_namespace(ns);
     value.write_xml(&mut w, root_tag, Some(declared))?;
@@ -1037,6 +1039,7 @@ fn to_start_tag(e: &BytesStart<'_>) -> Result<StartTag, XmlError> {
 /// # Errors
 /// Propagates parse errors.
 pub fn from_xml<T: FromXml>(xml: &str) -> Result<T, XmlError> {
+    crate::conversion::record::<T>("from_xml");
     let mut reader = XmlReader::new(xml);
     loop {
         match reader.read()? {
@@ -1058,6 +1061,7 @@ pub fn from_xml<T: FromXml>(xml: &str) -> Result<T, XmlError> {
 /// [`XmlError::UnexpectedRoot`] for another root element, and the parse
 /// errors of [`from_xml`].
 pub fn from_xml_rooted<T: FromXml>(xml: &str, root: &str) -> Result<T, XmlError> {
+    crate::conversion::record::<T>("from_xml");
     let mut reader = XmlReader::new(xml);
     loop {
         match reader.read()? {

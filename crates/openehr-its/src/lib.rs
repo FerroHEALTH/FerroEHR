@@ -65,6 +65,8 @@ pub mod aom2;
 #[cfg(feature = "xml")]
 pub mod aom2_model;
 #[cfg(feature = "json")]
+pub mod conversion;
+#[cfg(feature = "json")]
 pub mod json;
 #[cfg(feature = "json")]
 pub mod json_codec;

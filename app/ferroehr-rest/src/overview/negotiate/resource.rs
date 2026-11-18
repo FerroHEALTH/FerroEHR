@@ -12,9 +12,9 @@ use openehr_its::rest::runtime::ApiError;
 use openehr_its::xml::runtime::ToXml;
 use serde::de::DeserializeOwned;
 
-use ferroehr::service::response::{ResourceMeta, ServiceResponse};
+use ferroehr::service::response::{ReadBody, ResourceMeta, ServiceResponse};
 
-use super::body::{empty, respond, respond_rm};
+use super::body::{empty, respond, respond_read, respond_rm};
 use super::prefer::write_negotiated;
 
 /// Format an HTTP-date (RFC 7231 IMF-fixdate, always GMT) for `Last-Modified`.
@@ -174,6 +174,32 @@ where
     if let Some(meta) = &resp.meta {
         set_resource_headers(&mut out, base_path, Tree::Ehr, segment, meta);
     }
+    out
+}
+
+/// As [`write_rm`], over a read body that may still be the stored canonical
+/// text ([`respond_read`]).
+pub(crate) fn write_read_rm<T>(
+    headers: &HeaderMap,
+    base_path: &str,
+    statuses: (StatusCode, StatusCode),
+    segment: Option<&str>,
+    meta: &ResourceMeta,
+    read: ReadBody,
+    root_tag: &str,
+) -> Response
+where
+    T: DeserializeOwned + ToXml,
+{
+    let (minimal_status, repr_status) = statuses;
+    let mut out = write_negotiated(
+        headers,
+        minimal_status,
+        repr_status,
+        Some(meta.uid.as_str()),
+        |status| respond_read::<T>(headers, status, read, root_tag),
+    );
+    set_resource_headers(&mut out, base_path, Tree::Ehr, segment, meta);
     out
 }
 

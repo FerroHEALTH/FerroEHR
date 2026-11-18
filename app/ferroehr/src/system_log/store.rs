@@ -116,7 +116,7 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, reserved_b
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
 #[cfg(feature = "fhir")]
-const RECORD_COLUMNS: [&str; 41] = [
+const RECORD_COLUMNS: [&str; 45] = [
     "chain",
     "chain_seq",
     "recorded_at",
@@ -153,7 +153,11 @@ const RECORD_COLUMNS: [&str; 41] = [
     "category_content",
     "render_policy",
     "token_attributes",
-    "document",
+    "row_part",
+    "shared_part",
+    "entry_type",
+    "entry_uid",
+    "entry_ehr",
     "algorithm",
     "previous_digest",
     "content_digest",

@@ -30,6 +30,7 @@ use sqlx::PgConnection;
 use crate::access_log::chain::ALGORITHM;
 use crate::access_log::store::AccessLogError;
 use crate::access_log::stored_form;
+use crate::access_log::stored_form::parts::Derived;
 use crate::db::acquire::acquire;
 use crate::digest::sha256_hex;
 use crate::system_log::token_digest::token_digest;
@@ -74,22 +75,6 @@ pub struct IntakeEntry {
     index: Option<IndexRow>,
 }
 
-/// The columns the log derives from an entry's content, as text the database
-/// casts.
-#[derive(Debug, Default, PartialEq, Eq)]
-struct Derived {
-    record_type: Option<String>,
-    uid: Option<String>,
-    time_recorded: Option<String>,
-    ehr_id: Option<String>,
-    action_terminology: Option<String>,
-    action_code: Option<String>,
-    result_terminology: Option<String>,
-    result_code: Option<String>,
-    party_id: Option<String>,
-    retain_until: Option<String>,
-}
-
 impl IntakeEntry {
     /// `entry` as the intake keeps it, with `index` when it is indexed.
     ///
@@ -121,39 +106,13 @@ impl IntakeEntry {
         let cut = stored_form::parts::Cut::of(&whole).map_err(AccessLogError::Canonical)?;
         let (row, shared) = cut.parts().map_err(AccessLogError::Canonical)?;
         let row = stored_form::parts::without_columns(&row).map_err(AccessLogError::Canonical)?;
-        let derived = Derived::of(&cut)?;
+        let derived = Derived::of(&cut).map_err(AccessLogError::Canonical)?;
         Ok(Self {
             content_digest: sha256_hex(&whole),
             row,
             shared: shared.map(|text| (sha256_hex(&text), text)),
             derived,
             index,
-        })
-    }
-}
-
-impl Derived {
-    /// The derived columns of the entry whose canonical form `cut` read, at
-    /// the paths `audit.access_log_entry_derive` reads.
-    fn of(cut: &stored_form::parts::Cut<'_>) -> Result<Self, AccessLogError> {
-        let text = |path: &[&str]| cut.text_at(path).map_err(AccessLogError::Canonical);
-        Ok(Self {
-            record_type: text(&["_type"])?,
-            uid: text(&["uid", "value"])?,
-            time_recorded: text(&["time_recorded", "value"])?,
-            ehr_id: text(&["ehr_id", "value"])?,
-            action_terminology: text(&["action", "defining_code", "terminology_id", "value"])?,
-            action_code: text(&["action", "defining_code", "code_string"])?,
-            result_terminology: text(&[
-                "outcome",
-                "result",
-                "defining_code",
-                "terminology_id",
-                "value",
-            ])?,
-            result_code: text(&["outcome", "result", "defining_code", "code_string"])?,
-            party_id: text(&["accessor", "party", "external_ref", "id", "value"])?,
-            retain_until: text(&["retention", "retain_until", "value"])?,
         })
     }
 }

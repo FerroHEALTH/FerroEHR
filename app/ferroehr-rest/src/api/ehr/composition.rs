@@ -273,12 +273,15 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     let expand = params::query_param(q, "expand_multimedia").as_deref() == Some("true");
     let accept = negotiate::resolve_accept(h, COMPOSITION_FORMATS, WireFormat::CanonicalJson);
     let mut body = match body {
-        ReadBody::RawJson(text) if !expand && accept == Some(WireFormat::CanonicalJson) => {
-            let mut out = negotiate::body::body(ok, negotiate::APPLICATION_JSON, text);
-            if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-            }
-            return Ok(out);
+        raw @ ReadBody::RawJson(_)
+            if !expand
+                && matches!(
+                    accept,
+                    Some(WireFormat::CanonicalJson | WireFormat::CanonicalXml)
+                ) =>
+        {
+            let out = negotiate::body::respond_read::<Composition>(h, ok, raw, "composition");
+            return Ok(versioned(out, meta.as_ref()));
         }
         other => stored_body(other)?,
     };
@@ -293,21 +296,14 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     // representations carry the version-identity headers too.
     match accept {
         Some(WireFormat::Flat) => {
-            let mut out =
+            let out =
                 crate::formats::dispatch::composition_flat_response(&state, ok, &body).await?;
-            if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-            }
-            return Ok(out);
+            return Ok(versioned(out, meta.as_ref()));
         }
         Some(WireFormat::Structured) => {
-            let mut out =
-                crate::formats::dispatch::composition_structured_response(&state, ok, &body)
-                    .await?;
-            if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-            }
-            return Ok(out);
+            let out = crate::formats::dispatch::composition_structured_response(&state, ok, &body)
+                .await?;
+            return Ok(versioned(out, meta.as_ref()));
         }
         _ => {}
     }
@@ -319,6 +315,14 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
         &resp,
         "composition",
     ))
+}
+
+/// `out` with the version-identity headers of `meta`, when the read has one.
+fn versioned(mut out: Response, meta: Option<&ResourceMeta>) -> Response {
+    if let Some(meta) = meta {
+        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
+    }
+    out
 }
 
 /// `composition_update` — commit a new version of a COMPOSITION.
@@ -639,26 +643,23 @@ async fn composition_write_response(
         negotiate::prefer::set_preference_applied(&mut out, AppliedPreference::Representation);
         return Ok(out);
     }
-    let body = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
+    let read = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
         let ovid = parse_version_uid(&meta.uid)?;
-        stored_body(
-            state
-                .backend()
-                .composition_at_version(ehr_id, ovid)
-                .await?
-                .body,
-        )?
+        state
+            .backend()
+            .composition_at_version(ehr_id, ovid)
+            .await?
+            .body
     } else {
-        Value::Null
+        ReadBody::Value(Value::Null)
     };
-    let resp = ServiceResponse::new(body, meta);
-    Ok(negotiate::resource::write_rm::<Composition>(
+    Ok(negotiate::resource::write_read_rm::<Composition>(
         h,
         base,
-        minimal,
-        repr,
+        (minimal, repr),
         Some("composition"),
-        &resp,
+        &meta,
+        read,
         "composition",
     ))
 }
