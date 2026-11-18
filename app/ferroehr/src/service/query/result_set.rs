@@ -199,7 +199,6 @@ fn with_rows<T: serde::Serialize>(
     envelope: &T,
     rows: Vec<Vec<Value>>,
 ) -> Result<Value, ResultSetError> {
-    crate::telemetry::conversion::record("envelope_to_value");
     let mut envelope = serde_json::to_value(envelope).map_err(ResultSetError::Serialise)?;
     let Value::Object(map) = &mut envelope else {
         return Err(ResultSetError::NotAnObject);

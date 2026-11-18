@@ -115,8 +115,9 @@ where
         }
         Some(WireFormat::CanonicalXml) => {
             require_known_xml_lineage(headers)?;
-            let xml = text_body(body)?;
-            openehr_its::xml::from_canonical_xml(&xml)
+            let xml = std::str::from_utf8(body)
+                .map_err(|e| ApiError::BadRequest(format!("body is not UTF-8: {e}")))?;
+            openehr_its::xml::from_canonical_xml(xml)
                 .map_err(|e| ApiError::BadRequest(format!("invalid canonical XML body: {e}")))
         }
         _ => Err(ApiError::UnsupportedMediaType(format!(
