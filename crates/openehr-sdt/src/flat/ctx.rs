@@ -13,8 +13,8 @@
 //!
 //! [`resolve`] parses the `ctx` child of a parsed simplified document into a
 //! typed [`CtxDefaults`] carrying **ready typed RM pieces** the composition
-//! builder drops into place; [`emit`] is the reverse (a COMPOSITION, typed or
-//! canonical JSON, → the `ctx/` keys).
+//! builder drops into place; [`crate::flat::ctx_emit::emit`] is the reverse
+//! (a COMPOSITION, typed or canonical JSON, → the `ctx/` keys).
 //!
 //! Terminology-coded shortcuts (`setting`, `action_ism_transition_current_state`)
 //! accept either a code or a display value (master06 §§setting,

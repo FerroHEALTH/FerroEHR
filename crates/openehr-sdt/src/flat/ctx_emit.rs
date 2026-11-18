@@ -19,9 +19,10 @@ use crate::flat::sim::SimNode;
 /// Derive the `ctx/` keys from a canonical COMPOSITION onto `out` (the `ctx`
 /// SimNode). The bidirectional shortcuts (master06 §§"Language and Territory",
 /// Composer, time, setting, location, health_care_facility, Participation) are
-/// symmetric with [`resolve`]; the per-ENTRY input-only defaults (provider,
-/// workflow id, ISM state, timing, narrative, links) keep their structural home
-/// on output and are not emitted here (master06 frames them as input shortcuts).
+/// symmetric with [`crate::flat::ctx::resolve`]; the per-ENTRY input-only
+/// defaults (provider, workflow id, ISM state, timing, narrative, links) keep
+/// their structural home on output and are not emitted here (master06 frames
+/// them as input shortcuts).
 pub(crate) fn emit<'a, I: Instance<'a>>(composition: I, out: &mut SimNode) {
     if let Some(code) = composition
         .attr("language")
