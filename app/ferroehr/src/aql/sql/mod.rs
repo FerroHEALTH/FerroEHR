@@ -50,6 +50,7 @@
 //! test rather than a runtime SQL error.
 
 mod access;
+mod anchor;
 mod archetype;
 mod attestation;
 mod coerce;
@@ -467,6 +468,8 @@ struct Builder<'a> {
     /// then JOIN instead of adding comma-separated FROM items, or a later
     /// `LATERAL` could no longer reference them (SQL join-tree scoping).
     streaming: bool,
+    /// How the anchor of a range comparison enters the statement.
+    range_entry: anchor::RangeEntry,
     /// Whether a whole-object read only has to say that the object is there:
     /// set while a plain `COUNT` lowers its argument, so the row stands for
     /// its rebuilt fragment, which is never `NULL` (`crate::storage::slim`).
@@ -515,6 +518,7 @@ impl<'a> Builder<'a> {
             branch_roots: Vec::new(),
             sub_ctr: 0,
             streaming: false,
+            range_entry: anchor::RangeEntry::default(),
             presence_only: false,
             gates: gates::Gates::current(
                 ir.domain,
@@ -598,25 +602,6 @@ impl<'a> Builder<'a> {
             }
         }
     }
-}
-
-/// Whether the LIMIT-streaming FROM shape may apply to a population query.
-/// QUERY master03 §LIMIT: without `ORDER BY`, "deterministic behavior" is
-/// explicitly not required — which rows return is unconstrained, so a lazy
-/// streaming scan is conformant. With `ORDER BY`, `DISTINCT`, or aggregates
-/// the full row set is needed anyway, and a population query keeps the flat
-/// shape for it. A population query that only counts its root objects takes
-/// the streaming shape for its version spine
-/// ([`stream::StreamPlan::counts_roots`]).
-fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
-    ctx.limit.is_some()
-        && ctx.ehr_ids.is_empty()
-        && ir.order_by.is_empty()
-        && !ir.distinct
-        && !ir
-            .select
-            .iter()
-            .any(|c| matches!(c.value, super::ir::SelectValue::Aggregate { .. }))
 }
 
 /// The EHR id every row of a query belongs to, or `None`.
@@ -746,12 +731,19 @@ impl Builder<'_> {
         // so it streams whatever its clauses: the flat shape left the planner a
         // join search that cost 40 to 60 ms against a 1 ms execution (#5076).
         let plan = stream::streaming_plan(ir).filter(|plan| {
-            streaming_eligible(ir, ctx)
+            stream::streaming_eligible(ir, ctx)
                 || ctx.names_ehrs()
                 || (ctx.ehr_ids.is_empty() && (plan.counts_roots(ir) || plan.pins_one_ehr(ir)))
         });
         match plan {
-            Some(plan) => b.build_from_streaming(&plan)?,
+            Some(plan) => {
+                b.range_entry = if stream::streaming_eligible(ir, ctx) && !plan.pins_one_ehr(ir) {
+                    anchor::RangeEntry::Leading
+                } else {
+                    anchor::RangeEntry::Off
+                };
+                b.build_from_streaming(&plan)?;
+            }
             None => b.build_from(&ir.contains)?,
         }
         let clinical = ir.domain == QueryDomain::Clinical;

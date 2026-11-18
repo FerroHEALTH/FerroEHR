@@ -109,6 +109,11 @@ pub const NODE_LEAN: &str = include_str!("../../migrations/templates/node_lean.s
 /// history row as an indexed column an AQL filter enters through (#6022).
 pub const NODE_EVENT_TIME: &str = include_str!("../../migrations/templates/node_event_time.sql.in");
 
+/// The template that indexes the magnitude of an ELEMENT value, which an AQL
+/// range filter enters through (#6022).
+pub const NODE_VALUE_MAGNITUDE: &str =
+    include_str!("../../migrations/templates/node_value_magnitude.sql.in");
+
 /// The marker opening a block rendered only for a domain that owns an `ehr`
 /// relation.
 const EHR_BEGIN: &str = "--@ehr-begin";
@@ -280,6 +285,16 @@ mod tests {
             "migrations/party/0055_node_event_time.sql",
             PARTY,
             NODE_EVENT_TIME,
+        ),
+        (
+            "migrations/clinical/0054_node_value_magnitude.sql",
+            CLINICAL,
+            NODE_VALUE_MAGNITUDE,
+        ),
+        (
+            "migrations/party/0056_node_value_magnitude.sql",
+            PARTY,
+            NODE_VALUE_MAGNITUDE,
         ),
     ];
 

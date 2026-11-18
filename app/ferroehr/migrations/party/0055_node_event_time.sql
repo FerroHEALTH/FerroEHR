@@ -18,7 +18,7 @@
 -- `time` (POINT_EVENT, INTERVAL_EVENT) or `origin` (HISTORY) in event_time,
 -- as it stores context_start, and the AQL engine adds, to such a comparison,
 -- the condition that some row of the same version carries a time the
--- comparison keeps (crate::aql::sql::condition), which the index serves. A
+-- comparison keeps (crate::aql::sql::anchor), which the index serves. A
 -- time the function reads as NULL stays out of the index and matches
 -- nothing, as before. The UPDATEs fill the rows stored before this
 -- migration from the same expression.
