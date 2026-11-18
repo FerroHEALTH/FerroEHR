@@ -14,14 +14,15 @@
 //!   `ISM_TRANSITION`, `INSTRUCTION_DETAILS`, and the `_`-prefixed optional
 //!   RM-attribute families (master04 §"RM Attributes prefix").
 //!
-//! The codecs read and write the canonical openEHR JSON
-//! ([`serde_json::Value`], `_type`-self-tagged) that the rest of the platform
-//! stores and serves — this layer never re-models an RM type.
+//! The builders write typed RM through the reflective accessor
+//! ([`crate::flat::typed`], #6003) and the emitters read any
+//! [`crate::flat::instance::Instance`] (typed RM, or the canonical-JSON value a
+//! `553|incomplete|` commit keeps) — this layer never re-models an RM type.
 //!
 //! ## The four entry points
 //!
-//! The RM⇄sim walkers call exactly [`data_values::emit_leaf`] / [`build_leaf`] for a single
-//! `DATA_VALUE` leaf and [`structures::emit_rm_attrs`] / [`build_rm_attr`] for the
+//! The RM⇄sim walkers call exactly [`emit::emit_leaf`] / [`build_leaf`] for a single
+//! `DATA_VALUE` leaf and [`emit::emit_rm_attrs`] / [`build_rm_attr`] for the
 //! `_`-prefixed optional RM-attribute families. The walker owns the tree
 //! structure and the template resolution; this layer owns the per-datum shape.
 //!
@@ -33,12 +34,12 @@
 //! too, so a walker may route them either way, but never the same `_`-segment to
 //! both.
 //!
-//! [`data_values::emit_leaf`] writes a leaf's datum attrs only (the `|suffix`
+//! [`emit::emit_leaf`] writes a leaf's datum attrs only (the `|suffix`
 //! keys of master05, plus the bare `""` value where the type has one).
 //! `list_open` is the `DV_CODED_TEXT` open-value-set marker from the
 //! web-template input (`None` = not coded or unknown): a `DV_TEXT` value in an
 //! open slot is emitted via `|other` (master04 §"Open Value-Sets and the
-//! `|other` Suffix"). [`structures::emit_rm_attrs`] writes the `_`-prefixed
+//! `|other` Suffix"). [`emit::emit_rm_attrs`] writes the `_`-prefixed
 //! families present on an RM value (master04 §"RM Attributes prefix" and the
 //! per-class `_`-rows of master05); field presence and `_type` decide which
 //! family applies, so one entry point serves every node kind.
@@ -51,14 +52,18 @@
 )]
 
 pub(crate) mod data_values;
+pub(crate) mod emit;
 pub(crate) mod parties;
 pub(crate) mod structures;
 
+use openehr_rm::v1_2::access::{RmObject, RmValue};
 use openehr_rm::v1_2::typing::base_name;
-use serde_json::{Map, Value, json};
+use serde_json::Value;
 
 use crate::flat::error::FlatError;
+use crate::flat::instance::Instance;
 use crate::flat::sim::{SimChild, SimNode};
+use crate::flat::typed::{self, Build, Obj, o};
 use crate::flat::webtemplate::model::{WebTemplateCodedValue, WebTemplateNode};
 
 /// Datum parts of `node` (+ its value-internal `_`-prefixed structural children:
@@ -88,7 +93,7 @@ pub(crate) fn build_leaf(
     rm_type: &str,
     wt_node: Option<&WebTemplateNode>,
     path: &str,
-) -> Result<Value, FlatError> {
+) -> Result<Obj, FlatError> {
     let base = base_name(rm_type);
 
     // `|raw` bypass (master04 §"Raw canonical JSON"): the value is embedded
@@ -96,12 +101,7 @@ pub(crate) fn build_leaf(
     // a value no master05 table can express (a `DV_STATE`, a non-conforming
     // stored value).
     if let Some(raw) = node.attrs.get("raw") {
-        if raw.get("_type").and_then(Value::as_str).is_some() {
-            return Ok(raw.clone());
-        }
-        return Err(FlatError::RawWithoutType {
-            path: path.to_owned(),
-        });
+        return typed::decode_raw(raw, path);
     }
 
     // NOTE: simplified_formats master05-rm_mapping has no DV_STATE table, so
@@ -129,15 +129,18 @@ pub(crate) fn build_leaf(
         if list_open_of(wt_node) == Some(false) {
             return Err(FlatError::OtherOnClosedValueSet(path.to_owned()));
         }
-        return Ok(json!({"_type": "DV_TEXT", "value": other.clone()}));
+        let mut text = typed::new("DV_TEXT")?;
+        text.put_datum("value", other)?;
+        return Ok(text);
     }
 
-    let built =
-        data_values::build_leaf(node, rm_type, wt_node).ok_or_else(|| FlatError::InvalidValue {
+    let built = data_values::build_leaf(node, rm_type, wt_node)?.ok_or_else(|| {
+        FlatError::InvalidValue {
             path: path.to_owned(),
             reason: format!("the datum parts do not form a valid {base}"),
-        })?;
-    check_proportion_magnitude(node, &built, path)?;
+        }
+    })?;
+    check_proportion_magnitude(node, &*built, path)?;
     Ok(built)
 }
 
@@ -150,16 +153,21 @@ pub(crate) fn build_leaf(
 /// would otherwise be dropped with no trace.
 // NOTE: no specification says how close an input magnitude must be; our own
 // design accepts one that equals the quotient to the decimals the client wrote.
-fn check_proportion_magnitude(node: &SimNode, built: &Value, path: &str) -> Result<(), FlatError> {
+fn check_proportion_magnitude(
+    node: &SimNode,
+    built: &dyn RmObject,
+    path: &str,
+) -> Result<(), FlatError> {
     let Some(given) = node.attrs.get("") else {
         return Ok(());
     };
-    if built.get("_type").and_then(Value::as_str) != Some("DV_PROPORTION") {
+    if built.rm_type() != "DV_PROPORTION" {
         return Ok(());
     }
+    let built = typed::view(built);
     let quotient = match (
-        built.get("numerator").and_then(Value::as_f64),
-        built.get("denominator").and_then(Value::as_f64),
+        built.attr("numerator").and_then(Instance::as_f64),
+        built.attr("denominator").and_then(Instance::as_f64),
     ) {
         (Some(n), Some(d)) if d != 0.0 => n / d,
         _ => return Ok(()),
@@ -200,7 +208,7 @@ pub(crate) fn apply_container_datum_attrs(
     node: &WebTemplateNode,
     sim: &SimNode,
     path: &str,
-    obj: &mut Map<String, Value>,
+    obj: &mut dyn RmObject,
 ) -> Result<(), FlatError> {
     if sim.attrs.contains_key("") {
         let alternatives = if node.rm_type == "ELEMENT" {
@@ -215,11 +223,6 @@ pub(crate) fn apply_container_datum_attrs(
         });
     }
     let host = base_name(&node.rm_type);
-    for (chain, datum) in &sim.attrs {
-        if let Some(attr) = container_datum_attr(host, chain) {
-            obj.insert(attr.to_owned(), datum.clone());
-        }
-    }
     if let Some((chain, _)) = sim
         .attrs
         .iter()
@@ -230,6 +233,11 @@ pub(crate) fn apply_container_datum_attrs(
             suffix: chain.clone(),
             path: path.to_owned(),
         });
+    }
+    for (chain, datum) in &sim.attrs {
+        if let Some(attr) = container_datum_attr(host, chain) {
+            obj.put_datum(attr, datum)?;
+        }
     }
     Ok(())
 }
@@ -255,9 +263,9 @@ fn container_datum_attr(host: &str, suffix: &str) -> Option<&'static str> {
     }
 }
 
-/// One `_`-segment child of a sim node → `(rm_attribute_name, canonical JSON
-/// value)` for the RM object under construction, or `None` when the occurrences
-/// carry nothing usable.
+/// One `_`-segment child of a sim node → `(rm_attribute_name, value)` for the
+/// RM object under construction, or `None` when the occurrences carry nothing
+/// usable.
 ///
 /// `seg` is the segment name **with** its leading underscore (`"_link"`,
 /// `"_normal_range"`); `occurrences` is the [`SimChild`] occurrence list (one
@@ -274,8 +282,61 @@ pub(crate) fn build_rm_attr(
     occurrences: &[SimNode],
     host_rm_type: &str,
     path: &str,
-) -> Result<Option<(String, Value)>, FlatError> {
+) -> Result<Option<(&'static str, Attr)>, FlatError> {
     structures::build_rm_attr(seg, occurrences, base_name(host_rm_type), path)
+}
+
+/// The value one `_`-segment family writes into its RM attribute.
+#[derive(Debug)]
+pub(crate) enum Attr {
+    /// A single object or primitive.
+    One(RmValue),
+    /// The members of a container attribute, in order.
+    Many(Vec<Obj>),
+    /// A client datum the attribute's primitive reads.
+    Datum(Value),
+}
+
+impl Attr {
+    /// Write the value into `attr` of `obj`.
+    ///
+    /// # Errors
+    /// [`FlatError::Rm`] when the class refuses the attribute or the value.
+    pub(crate) fn write(self, obj: &mut dyn RmObject, attr: &str) -> Result<(), FlatError> {
+        match self {
+            Self::One(value) => obj.put(attr, value),
+            Self::Many(members) => {
+                for member in members {
+                    obj.push_obj(attr, member)?;
+                }
+                Ok(())
+            }
+            Self::Datum(value) => obj.put_datum(attr, &value),
+        }
+    }
+
+    /// A single object.
+    pub(crate) fn object(object: Obj) -> Self {
+        Self::One(o(object))
+    }
+
+    /// The canonical JSON of the value, for a test to read.
+    #[cfg(test)]
+    pub(crate) fn canonical(self) -> Value {
+        let one = |value: RmValue| match value {
+            RmValue::Object(object) => typed::canonical_of(&*object).unwrap_or(Value::Null),
+            RmValue::String(s) => Value::from(s),
+            RmValue::Integer(i) => Value::from(i),
+            RmValue::Real(r) => Value::from(r),
+            RmValue::Boolean(b) => Value::from(b),
+            RmValue::Character(c) => Value::from(c.to_string()),
+        };
+        match self {
+            Self::One(value) => one(value),
+            Self::Many(members) => Value::Array(members.into_iter().map(|m| one(o(m))).collect()),
+            Self::Datum(value) => value,
+        }
+    }
 }
 
 /// The canonical-JSON value `node` carries whole under `|raw` (master04 §Raw
@@ -293,7 +354,7 @@ pub(crate) fn raw_value(
     node: &SimNode,
     path: &str,
     types: &[&str],
-) -> Option<Result<Value, FlatError>> {
+) -> Option<Result<Obj, FlatError>> {
     let raw = node.attrs.get("raw")?;
     let invalid = |reason: String| FlatError::InvalidRaw {
         path: path.to_owned(),
@@ -316,7 +377,7 @@ pub(crate) fn raw_value(
                 .to_owned(),
         )));
     }
-    Some(Ok(raw.clone()))
+    Some(typed::decode_raw(raw, path))
 }
 
 /// The concrete `PARTY_PROXY` classes (RM common `generic` package §PARTY_PROXY
@@ -326,34 +387,22 @@ pub(crate) const PARTY_PROXY_CLASSES: &[&str] =
 
 // ── shared helpers (visible to the sibling map submodules) ────────────────────
 
-/// A `CODE_PHRASE` (RM data_types §CODE_PHRASE): `terminology_id.value` +
-/// `code_string`.
-pub(super) fn code_phrase(terminology: &str, code: &str) -> Value {
-    json!({
-        "_type": "CODE_PHRASE",
-        "terminology_id": {"_type": "TERMINOLOGY_ID", "value": terminology},
-        "code_string": code,
-    })
-}
-
 /// A `CODE_PHRASE` from an owned code value + terminology, with an optional
 /// `preferred_term` (master05 §CODE_PHRASE).
 pub(super) fn code_phrase_obj(
-    code: Value,
+    code: &Value,
     terminology: &str,
-    preferred_term: Option<Value>,
-) -> Value {
-    let mut o = Map::new();
-    o.insert("_type".to_owned(), json!("CODE_PHRASE"));
-    o.insert(
-        "terminology_id".to_owned(),
-        json!({"_type": "TERMINOLOGY_ID", "value": terminology}),
-    );
-    o.insert("code_string".to_owned(), code);
+    preferred_term: Option<&Value>,
+) -> Result<Obj, FlatError> {
+    let mut cp = typed::make(
+        "CODE_PHRASE",
+        [("terminology_id", o(typed::terminology_id(terminology)?))],
+    )?;
+    cp.put_datum("code_string", code)?;
     if let Some(pt) = preferred_term {
-        o.insert("preferred_term".to_owned(), pt);
+        cp.put_datum("preferred_term", pt)?;
     }
-    Value::Object(o)
+    Ok(cp)
 }
 
 /// The occurrences of the single `_`-family child `name` on `node`, if any.
@@ -371,7 +420,7 @@ pub(super) fn family<'a>(node: &'a SimNode, name: &str) -> Option<&'a SimChild> 
 /// matching concept rubric → its id is the code; else the token stands as both
 /// (an unknown code the validation layer will flag, never a fabricated valid
 /// code).
-pub(crate) fn coded_from_group(group_id: &str, token: &str) -> Value {
+pub(crate) fn coded_from_group(group_id: &str, token: &str) -> Result<Obj, FlatError> {
     let term = openehr_term::bundle::openehr();
     if term.is_valid_code(group_id, token) {
         let value = term.rubric(group_id, token, "en").unwrap_or(token);
@@ -388,12 +437,8 @@ pub(crate) fn coded_from_group(group_id: &str, token: &str) -> Value {
 }
 
 /// A `DV_CODED_TEXT` from its display value + `(terminology, code)`.
-pub(super) fn coded_text(terminology: &str, code: &str, value: &str) -> Value {
-    json!({
-        "_type": "DV_CODED_TEXT",
-        "value": value,
-        "defining_code": code_phrase(terminology, code),
-    })
+pub(super) fn coded_text(terminology: &str, code: &str, value: &str) -> Result<Obj, FlatError> {
+    typed::dv_coded_text(value, terminology, code)
 }
 
 /// The `listOpen` marker from the first web-template input that carries one
@@ -550,11 +595,11 @@ mod tests {
     fn raw_bypass_returns_verbatim() {
         let node = leaf(&[(
             "raw",
-            json!({"_type": "DV_QUANTITY", "magnitude": 120, "unit": "mm[Hg]"}),
+            json!({"_type": "DV_QUANTITY", "magnitude": 120.0, "units": "mm[Hg]"}),
         )]);
-        let v = build_leaf(&node, "DV_TEXT", None, "p").unwrap();
+        let v = typed::canonical_of(&*build_leaf(&node, "DV_TEXT", None, "p").unwrap()).unwrap();
         assert_eq!(v["_type"], "DV_QUANTITY");
-        assert_eq!(v["magnitude"], 120);
+        assert_eq!(v["magnitude"], 120.0);
     }
 
     // master04 §"Raw canonical JSON": the payload MUST carry `_type`.

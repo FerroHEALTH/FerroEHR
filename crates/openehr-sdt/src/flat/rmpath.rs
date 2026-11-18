@@ -50,6 +50,23 @@ pub(crate) fn relative(parent_aql: &str, child_aql: &str) -> Vec<PathSegment> {
     }
 }
 
+/// The segments from `parent` to its child `index` (`child`), as [`relative`]
+/// gives them, read from the parent's prepared walk plan when it has one.
+pub(crate) fn child_segments<'a>(
+    parent: &'a crate::flat::webtemplate::model::WebTemplateNode,
+    index: usize,
+    child: &crate::flat::webtemplate::model::WebTemplateNode,
+) -> std::borrow::Cow<'a, [PathSegment]> {
+    match parent
+        .walk
+        .as_ref()
+        .and_then(|plan| plan.segments_of(parent, index, child))
+    {
+        Some(cached) => std::borrow::Cow::Borrowed(cached),
+        None => std::borrow::Cow::Owned(relative(&parent.aql_path, &child.aql_path)),
+    }
+}
+
 /// Follow `segs` from each of `roots`, returning the reached nodes in document
 /// order. Each step is [`openehr_rm::v1_2::paths::select_children`], so array
 /// attributes branch (filtered by the segment predicate) and single-valued

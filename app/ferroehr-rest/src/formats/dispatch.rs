@@ -13,9 +13,9 @@
 //! template id from the `openehr-template-id` request header — the mechanism for
 //! a simplified COMPOSITION commit, since the payload carries no
 //! `archetype_details.template_id` (`Requests_and_responses.md`
-//! §openehr-template-id) — and builds the canonical-JSON COMPOSITION. On a
-//! response it serializes a stored canonical COMPOSITION into the negotiated
-//! form, reading its template id from `archetype_details/template_id`.
+//! §openehr-template-id) — and builds the typed COMPOSITION. On a response it
+//! serializes a stored COMPOSITION into the negotiated form, reading its
+//! template id from `archetype_details/template_id`.
 //! `WebTemplate` resolution is the service's concern, reached through
 //! `state.backend().web_template(..)`.
 //!
@@ -37,6 +37,7 @@ use serde_json::{Map, Value};
 
 use openehr_its::rest::generated::ehr::NewContribution;
 use openehr_its::rest::runtime::ApiError;
+use openehr_rm::prelude::Composition;
 
 use crate::negotiate;
 use crate::negotiate::WireFormat;
@@ -126,13 +127,14 @@ fn flat_output_err(e: &openehr_sdt::flat::error::FlatError) -> RestError {
 
 // ── COMPOSITION: request side ──────────────────────────────────────────────
 
-/// Parse a FLAT request body into a canonical-JSON COMPOSITION, driven by the
-/// template named in the `openehr-template-id` header.
+/// Parse a FLAT request body into the typed COMPOSITION the commit seam takes,
+/// driven by the template named in the `openehr-template-id` header: one parse
+/// of the FLAT text, one build into typed RM (#6003).
 pub(crate) async fn composition_from_flat(
     state: &AppState,
     headers: &HeaderMap,
     body: &Bytes,
-) -> Result<Value, RestError> {
+) -> Result<Composition, RestError> {
     let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
     ferroehr::telemetry::conversion::record("text_to_flat");
     let flat: Map<String, Value> = serde_json::from_slice(body)
@@ -142,17 +144,18 @@ pub(crate) async fn composition_from_flat(
         .web_template(&template_id)
         .await
         .map_err(RestError::from)?;
-    ferroehr::telemetry::conversion::record("flat_to_value");
-    openehr_sdt::flat::convert::submitted_composition_from_flat(&flat, &wt, &now())
+    ferroehr::telemetry::conversion::record("flat_to_rm");
+    openehr_sdt::flat::convert::submitted_rm_from_flat(&flat, &wt, &now())
         .map_err(|e| flat_input_err(&e))
 }
 
-/// Parse a STRUCTURED request body into a canonical-JSON COMPOSITION.
+/// Parse a STRUCTURED request body into the typed COMPOSITION the commit seam
+/// takes.
 pub(crate) async fn composition_from_structured(
     state: &AppState,
     headers: &HeaderMap,
     body: &Bytes,
-) -> Result<Value, RestError> {
+) -> Result<Composition, RestError> {
     let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
     ferroehr::telemetry::conversion::record("text_to_structured");
     let structured: Value = serde_json::from_slice(body).map_err(|e| {
@@ -165,8 +168,8 @@ pub(crate) async fn composition_from_structured(
         .web_template(&template_id)
         .await
         .map_err(RestError::from)?;
-    ferroehr::telemetry::conversion::record("structured_to_value");
-    openehr_sdt::flat::convert::submitted_composition_from_structured(&structured, &wt, &now())
+    ferroehr::telemetry::conversion::record("structured_to_rm");
+    openehr_sdt::flat::convert::submitted_rm_from_structured(&structured, &wt, &now())
         .map_err(|e| flat_input_err(&e))
 }
 
@@ -215,6 +218,69 @@ pub(crate) fn composition_flat_response_with(
         negotiate::APPLICATION_WT_FLAT_JSON,
         json,
     ))
+}
+
+/// Render a stored COMPOSITION read in a Simplified Format: the stored
+/// canonical text read once into typed RM and flattened from it (#6003); a
+/// stored body the strict reader does not read (a `553|incomplete|` commit's)
+/// is flattened from its canonical-JSON value.
+pub(crate) async fn composition_simplified_read(
+    state: &AppState,
+    status: StatusCode,
+    read: ferroehr::service::response::ReadBody,
+    format: WireFormat,
+) -> Result<Response, RestError> {
+    use ferroehr::service::response::ReadBody;
+    let value = match read {
+        ReadBody::RawJson(text) => {
+            // NOTE: a stored body the strict reader refuses is a `553|incomplete|` commit's, read as its value.
+            if let Ok(typed) = openehr_its::json::from_canonical_json::<Composition>(&text) {
+                return composition_simplified_typed(state, status, &typed, format).await;
+            }
+            ferroehr::telemetry::conversion::record("stored_text_to_value");
+            serde_json::from_str::<Value>(&text)
+                .map_err(|e| internal(format!("re-parse the stored composition body: {e}")))?
+        }
+        ReadBody::Value(value) => value,
+    };
+    match format {
+        WireFormat::Structured => composition_structured_response(state, status, &value).await,
+        _ => composition_flat_response(state, status, &value).await,
+    }
+}
+
+/// Render a typed COMPOSITION as a FLAT or STRUCTURED response, flattened
+/// from typed RM with no canonical-JSON value.
+pub(crate) async fn composition_simplified_typed(
+    state: &AppState,
+    status: StatusCode,
+    comp: &Composition,
+    format: WireFormat,
+) -> Result<Response, RestError> {
+    let template_id = comp
+        .archetype_details
+        .as_ref()
+        .and_then(|ad| ad.template_id.as_ref())
+        .map(|t| t.value.clone())
+        .ok_or_else(|| internal("composition has no archetype_details/template_id"))?;
+    let wt = state
+        .backend()
+        .web_template(&template_id)
+        .await
+        .map_err(RestError::from)?;
+    let (json, media) = if format == WireFormat::Structured {
+        ferroehr::telemetry::conversion::record("rm_to_structured");
+        let structured = openehr_sdt::flat::convert::rm_to_structured(comp, &wt);
+        let json = serde_json::to_string(&structured)
+            .map_err(|e| internal(format!("STRUCTURED serialization: {e}")))?;
+        (json, negotiate::APPLICATION_WT_STRUCTURED_JSON)
+    } else {
+        ferroehr::telemetry::conversion::record("rm_to_flat_text");
+        let json = openehr_sdt::flat::convert::rm_to_flat_text(comp, &wt)
+            .map_err(|e| internal(format!("FLAT serialization: {e}")))?;
+        (json, negotiate::APPLICATION_WT_FLAT_JSON)
+    };
+    Ok(negotiate::body::body(status, media, json))
 }
 
 /// Render a canonical-JSON COMPOSITION as a STRUCTURED

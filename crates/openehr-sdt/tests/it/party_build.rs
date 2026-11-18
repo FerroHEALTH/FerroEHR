@@ -424,7 +424,9 @@ fn the_flat_builder_stamps_the_chosen_rm_version_on_every_archetype_root() {
     let doc = minimal_flat(&wt);
     let tree = parse_flat(&doc).expect("parse FLAT");
     let options = BuildOptions::default().with_rm_version("1.1.0");
-    let built = build_composition_with(&tree, &wt, NOW, &options).expect("FLAT build");
+    let built = openehr_its::json::to_canonical_value(
+        &build_composition_with(&tree, &wt, NOW, &options).expect("FLAT build"),
+    );
     let versions = rm_versions(&built);
     assert!(!versions.is_empty(), "the build stamps archetype roots");
     assert!(versions.iter().all(|v| v == "1.1.0"), "{versions:?}");

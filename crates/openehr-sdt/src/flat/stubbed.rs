@@ -4,17 +4,13 @@
 //! The RM-mandatory structural attributes a node's folded descendants get from
 //! the structural stubs the compactor re-homed onto it.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "canonical JSON / Simplified Formats operate on the wire value by definition \
-              (ITS-JSON; ITS-REST Simplified Formats) — serde_json::Value IS the subject matter \
-              (#1694)"
-)]
-
+use openehr_rm::v1_2::access::RmObject;
 use openehr_rm::v1_2::paths::PathSegment;
-use serde_json::{Map, Value};
 
+use crate::flat::error::FlatError;
+use crate::flat::instance::matches;
 use crate::flat::rmpath;
+use crate::flat::typed::{Build, o, view};
 use crate::flat::webtemplate::model::WebTemplateNode;
 
 /// Fills an RM-mandatory structural attribute of `node` or of a descendant the
@@ -24,7 +20,10 @@ use crate::flat::webtemplate::model::WebTemplateNode;
 /// AOM 1.4 `master04-constraint_model_package.adoc` §`Valid_value`: a filler
 /// must carry the constrained `archetype_node_id`, so the RM-default `at0001`
 /// placeholder `complete_tree` writes is left for an unconstrained attribute.
-pub(crate) fn fill_stubbed_descendants(obj: &mut Map<String, Value>, node: &WebTemplateNode) {
+pub(crate) fn fill_stubbed_descendants(
+    obj: &mut dyn RmObject,
+    node: &WebTemplateNode,
+) -> Result<(), FlatError> {
     for stub in &node.structural_stubs {
         let Some(owner) = stub
             .path
@@ -35,47 +34,47 @@ pub(crate) fn fill_stubbed_descendants(obj: &mut Map<String, Value>, node: &WebT
         };
         let segments = rmpath::relative(&node.aql_path, owner);
         let mut owners = Vec::new();
-        objects_at_mut(obj, &segments, &mut owners);
-        for o in owners {
-            let Some(ty) = o.get("_type").and_then(Value::as_str) else {
-                continue;
-            };
+        objects_at_mut(&mut *obj, &segments, &mut owners);
+        for o_ in owners {
+            let ty = o_.rm_type();
             let rm_mandatory = match stub.attr.as_str() {
                 "data" => matches!(ty, "POINT_EVENT" | "INTERVAL_EVENT" | "EVENT"),
                 "description" => ty == "ACTIVITY",
                 _ => false,
             };
-            if rm_mandatory && !o.contains_key(&stub.attr) {
-                o.insert(
-                    stub.attr.clone(),
-                    crate::flat::build::structural_from(stub, "Tree"),
-                );
+            if rm_mandatory && !o_.is_set(&stub.attr) {
+                o_.put(
+                    &stub.attr,
+                    o(crate::flat::build::structural_from(stub, "Tree")?),
+                )?;
             }
         }
     }
+    Ok(())
 }
 
-/// Every object `segments` reach from `obj`, each step keeping the children
-/// whose node id and name the segment's predicate matches.
+/// Collects the objects `segments` reach from `obj`, each step through the
+/// members (or the single value) of its attribute that the step's predicate
+/// matches (BASE `master11-paths` §"Predicate Expressions").
 fn objects_at_mut<'a>(
-    obj: &'a mut Map<String, Value>,
+    obj: &'a mut dyn RmObject,
     segments: &[PathSegment],
-    out: &mut Vec<&'a mut Map<String, Value>>,
+    out: &mut Vec<&'a mut dyn RmObject>,
 ) {
     let Some((segment, rest)) = segments.split_first() else {
         out.push(obj);
         return;
     };
-    let children: Vec<&mut Value> = match obj.get_mut(&segment.attribute) {
-        Some(Value::Array(items)) => items.iter_mut().collect(),
-        Some(single) => vec![single],
-        None => Vec::new(),
+    let children: Vec<&'a mut dyn RmObject> = if obj.items(&segment.attribute).is_some() {
+        obj.items_mut(&segment.attribute)
+            .map(Iterator::collect)
+            .unwrap_or_default()
+    } else {
+        obj.object_mut(&segment.attribute).into_iter().collect()
     };
     for child in children {
-        if segment.predicate.matches(child)
-            && let Value::Object(m) = child
-        {
-            objects_at_mut(m, rest, out);
+        if matches(&segment.predicate, view(&*child)) {
+            objects_at_mut(child, rest, out);
         }
     }
 }
