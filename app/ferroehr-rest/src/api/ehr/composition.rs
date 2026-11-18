@@ -72,12 +72,15 @@ const COMPOSITION_FORMATS: &[WireFormat] = &[
 /// `415` (Resources.md §Simplified Formats MUST).
 async fn decode_composition_body(
     state: &AppState,
-    h: &http::HeaderMap,
-    body: &bytes::Bytes,
+    parts: &RequestParts,
 ) -> Result<Composition, RestError> {
+    let (h, body) = (&parts.headers, &parts.body);
     match negotiate::content_type_format(h) {
         Some(WireFormat::CanonicalJson | WireFormat::CanonicalXml) => {
-            Ok(negotiate::decode::rm_value::<Composition>(h, body)?)
+            match parts.composition.take() {
+                Some(kept) => Ok(kept),
+                None => Ok(negotiate::decode::rm_value::<Composition>(h, body)?),
+            }
         }
         // The converted fragment re-enters through the same strict reader as a
         // canonical body: one decode, one refusal class.
@@ -127,7 +130,7 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
         CompositionCreateParams::PARAMS,
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
-    let body = decode_composition_body(&state, h, &parts.body).await?;
+    let body = decode_composition_body(&state, &parts).await?;
     let uv = crate::overview::committal::write_request(
         h,
         ferroehr::versioning::committer::request_committer(),
@@ -341,7 +344,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let uid = parse_uid_based_id(&p.uid_based_id)?;
-    let body = decode_composition_body(&state, h, &parts.body).await?;
+    let body = decode_composition_body(&state, &parts).await?;
     // A body `uid` must name the same versioned object as the path.
     // NOTE: OAS-grounded (docs text silent) with no assigned status; the
     // fitting released row is 422 (Requests_and_responses.md §HTTP status codes).

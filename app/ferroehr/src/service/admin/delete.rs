@@ -94,8 +94,9 @@ impl FerroEhrService {
     /// The sequence, in order, is the erasure reach: one clinical transaction,
     /// then the object store.
     ///
-    /// 1. `DELETE FROM ehr` cascades through `vo_head`, `version` (both tier
-    ///    partitions), `node`, `vo_attestation`, `contribution`,
+    /// 1. `DELETE FROM ehr` deletes the versions' `node` rows in the same
+    ///    statement and cascades through `vo_head`, `version` (both tier
+    ///    partitions), `vo_attestation`, `contribution`,
     ///    `commit_audit`, `item_tag`, `ehr_folder`, `restriction`,
     ///    `retention_anchor`, `blob_ref` and the EHR's `event_outbox` rows.
     ///    The `commit_audit` rows are the exception: nothing references `ehr`
@@ -218,8 +219,8 @@ impl FerroEhrService {
     /// 1. The audit ids the EHRs' versions and contributions reference are
     ///    captured over both storage tiers, before the cascade deletes the
     ///    rows that name them.
-    /// 2. `DELETE FROM ehr` cascades through the foreign-key graph and across
-    ///    both tier partitions.
+    /// 2. `DELETE FROM ehr` deletes the node rows and cascades through the
+    ///    foreign-key graph, across both tier partitions.
     /// 3. The captured audit rows, now unreferenced, are removed.
     /// 4. One erasure tombstone per erased EHR is appended.
     ///

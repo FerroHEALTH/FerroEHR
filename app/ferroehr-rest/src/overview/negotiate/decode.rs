@@ -130,6 +130,10 @@ where
 /// The refusal of a canonical-JSON body the strict typed reader could not
 /// decode: `422` when it parses and the ITS-JSON schema admits it, else `400`.
 pub(crate) fn canonical_json_refusal(json: &str, error: &JsonParseError) -> ApiError {
+    // NOTE: our own design (#5997), a document past the nesting limit cannot be read at all.
+    if error.is_too_deep() {
+        return ApiError::BadRequest(format!("invalid canonical JSON body: {error}"));
+    }
     let admitted = serde_json::from_str::<serde_json::Value>(json)
         .is_ok_and(|value| ferroehr::error::its_json_admits(&value));
     if admitted {

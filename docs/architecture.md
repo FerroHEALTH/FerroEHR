@@ -185,10 +185,21 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
 - **Tiers are partitions.** `version`, `node` and `vo_attestation` are each
   `PARTITION BY LIST (tier)` with a `hot` and a `cold` partition and no default
   partition. Archiving an EHR is `UPDATE version SET tier = 'cold' WHERE
-  ehr_id = $1`; PostgreSQL moves the rows between partitions and the `node` and
-  `vo_attestation` foreign keys carry their rows across with `ON UPDATE
+  ehr_id = $1`; PostgreSQL moves the rows between partitions and the
+  `vo_attestation` foreign key carries its rows across with `ON UPDATE
   CASCADE` — verified first-hand on PostgreSQL 18.6, since the documentation
-  neither permits nor forbids it. What that buys over the former mirror tables:
+  neither permits nor forbids it. `node` has no foreign key into `version`
+  (#5969): its referential trigger ran once per row, 402 nested statements on
+  an IPS commit. Every node row is written in its version's transaction, the
+  tier moves and the deletes name the node rows in the version's statement,
+  the storage-parity sweep reports a row set no version reads
+  (`orphan_nodes`), and `node_version_integrity` holds the invariant across
+  commit, delete, archive, erasure and decommissioning. The per-EHR class index
+  `idx_node_hot_ehr_type` leaves out the ELEMENT rows, which are reached
+  through the nested-set range of the primary key, and the subsumption index
+  `idx_node_hot_arch_subsume` keeps only the rows with a parsed archetype id;
+  the AQL emitter writes RM types as literals so a generic plan proves the
+  partial predicates. What partitions buy over the former mirror tables:
   one relation, so foreign keys hold across the tier and every read path and
   every future column reaches cold without a view rebuild; and AQL excludes
   cold by writing `tier = 'hot'` as a literal, which the planner prunes at plan
