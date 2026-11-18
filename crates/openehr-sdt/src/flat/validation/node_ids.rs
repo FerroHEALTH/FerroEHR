@@ -13,6 +13,7 @@
     reason = "canonical JSON is the instance the archetype-conformance walk reads (#1694)"
 )]
 
+#[cfg(test)]
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 
@@ -44,7 +45,7 @@ pub(super) fn run<'i, I: Instance<'i>>(
 /// interface id it maps to: the reading [`as_template_node_ids`] gives a JSON
 /// value by rewriting a copy, here with no copy.
 #[derive(Debug, Clone, Copy)]
-enum Mapped<'i, I> {
+pub(crate) enum Mapped<'i, I> {
     /// A node or value of the instance.
     Node(I, &'i BTreeMap<String, String>),
     /// A mapped `archetype_node_id`.
@@ -119,11 +120,21 @@ impl<'i, I: Instance<'i>> Instance<'i> for Mapped<'i, I> {
             Self::Id(_) => Vec::new(),
         }
     }
+    fn to_value(self) -> Option<Value> {
+        match self {
+            Self::Node(n, refs) => n.to_value().map(|mut v| {
+                to_template_node_ids(&mut v, refs);
+                v
+            }),
+            Self::Id(s) => Some(Value::from(s)),
+        }
+    }
 }
 
 /// `composition` with every archetype root it records by a full reference in
 /// [`WebTemplate::archetype_refs`] read under the interface id of its template
 /// node; borrowed unchanged when it records none.
+#[cfg(test)]
 pub(crate) fn as_template_node_ids<'a>(composition: &'a Value, wt: &WebTemplate) -> Cow<'a, Value> {
     match &wt.archetype_refs {
         Some(refs) if records_any_ref(composition, refs) => {
@@ -137,6 +148,7 @@ pub(crate) fn as_template_node_ids<'a>(composition: &'a Value, wt: &WebTemplate)
 
 /// Whether any LOCATABLE in `value` records one of `refs` as its
 /// `archetype_node_id`.
+#[cfg(test)]
 fn records_any_ref(value: &Value, refs: &BTreeMap<String, String>) -> bool {
     match value {
         Value::Object(o) => {

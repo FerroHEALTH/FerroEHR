@@ -143,6 +143,38 @@ pub const MAX_INSTANCE_INDEX: u32 = 65_535;
 /// followed by anything non-numeric is malformed — node ids cannot contain
 /// `:` (`master04 §Node ID Generation Rules` limits ids to alphabetics,
 /// digits, `_`, `.`, `-`).
+/// The name and index of one `name[:i]` part as [`split_index`] reads it, or
+/// `None` where [`split_index`] refuses it; allocates nothing.
+pub(crate) fn name_of(raw: &str) -> Option<&str> {
+    if raw.is_empty() {
+        return None;
+    }
+    match raw.split_once(':') {
+        None => Some(raw),
+        Some((name, idx)) => (!name.is_empty()
+            && idx.parse::<u32>().is_ok_and(|i| i <= MAX_INSTANCE_INDEX))
+        .then_some(name),
+    }
+}
+
+/// The name and index of one `name[:i]` part of a key [`well_formed`]
+/// accepts; allocates nothing.
+pub(crate) fn split_name_index(raw: &str) -> (&str, Option<u32>) {
+    match raw.split_once(':') {
+        None => (raw, None),
+        Some((name, idx)) => (name, idx.parse::<u32>().ok()),
+    }
+}
+
+/// Whether [`FlatKey::parse`] reads `key`; allocates nothing.
+pub(crate) fn well_formed(key: &str) -> bool {
+    let mut pipe_parts = key.split('|');
+    let segment_part = pipe_parts.next().unwrap_or_default();
+    !key.is_empty()
+        && segment_part.split('/').all(|raw| name_of(raw).is_some())
+        && pipe_parts.all(|raw| name_of(raw).is_some())
+}
+
 fn split_index<'a>(raw: &'a str, whole_key: &str) -> Result<(&'a str, Option<u32>), FlatError> {
     match raw.split_once(':') {
         None => Ok((raw, None)),

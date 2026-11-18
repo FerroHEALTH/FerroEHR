@@ -82,38 +82,20 @@ async fn decode_composition_body(
                 None => Ok(negotiate::decode::rm_value::<Composition>(h, body)?),
             }
         }
-        // The converted fragment re-enters through the same strict reader as a
-        // canonical body: one decode, one refusal class.
-        Some(WireFormat::Flat) => typed_composition(
-            &crate::formats::dispatch::composition_from_flat(state, h, body).await?,
-        ),
-        Some(WireFormat::Structured) => typed_composition(
-            &crate::formats::dispatch::composition_from_structured(state, h, body).await?,
-        ),
+        // The simplified body builds the typed COMPOSITION directly; a refusal
+        // of the built RM is the template-mediated 422 (master04 §Validation).
+        Some(WireFormat::Flat) => {
+            crate::formats::dispatch::composition_from_flat(state, h, body).await
+        }
+        Some(WireFormat::Structured) => {
+            crate::formats::dispatch::composition_from_structured(state, h, body).await
+        }
         _ => Err(RestError::from(ApiError::UnsupportedMediaType(
             "a COMPOSITION is committed as application/json, application/xml, \
              application/openehr.wt.flat+json, or application/openehr.wt.structured+json"
                 .to_owned(),
         ))),
     }
-}
-
-/// Re-types a converted Simplified-Formats body as the RM `COMPOSITION` the
-/// commit seam takes.
-fn typed_composition(value: &Value) -> Result<Composition, RestError> {
-    // NOTE: a post-conversion strict-reader refusal is the template-mediated
-    // 422 class (master04 §Validation; `responses/422.yaml`).
-    openehr_its::json::from_canonical_value(value).map_err(|e| {
-        let detail = e.to_string();
-        let hint = if detail.contains("invalid type") {
-            " (value does not match the expected data type for the field)"
-        } else {
-            ""
-        };
-        RestError::from(ApiError::Unprocessable(format!(
-            "the simplified-format body did not convert to a valid COMPOSITION: {detail}{hint}"
-        )))
-    })
 }
 
 /// `composition_create` — commit a new COMPOSITION into an EHR.
@@ -290,6 +272,16 @@ async fn render_read(
     // bytes verbatim (the body is uid-stamped at commit); the rest parse.
     let expand = params::query_param(q, "expand_multimedia").as_deref() == Some("true");
     let accept = negotiate::resolve_accept(h, COMPOSITION_FORMATS, WireFormat::CanonicalJson);
+    // A simplified accept with no multimedia expansion reads the stored text
+    // straight into typed RM and flattens it (#6003).
+    if let Some(fmt @ (WireFormat::Flat | WireFormat::Structured)) = accept
+        && !expand
+        && !body.is_null()
+    {
+        let out =
+            crate::formats::dispatch::composition_simplified_read(state, ok, body, fmt).await?;
+        return Ok(versioned(out, meta.as_ref()));
+    }
     let mut body = match body {
         raw @ ReadBody::RawJson(_)
             if !expand
@@ -632,18 +624,13 @@ async fn composition_write_response(
         negotiate::resolve_accept(h, COMPOSITION_FORMATS, WireFormat::CanonicalJson)
     {
         let ovid = parse_version_uid(&meta.uid)?;
-        let body = stored_body(
-            state
-                .backend()
-                .composition_at_version(ehr_id, ovid)
-                .await?
-                .body,
-        )?;
-        let mut out = if fmt == WireFormat::Structured {
-            crate::formats::dispatch::composition_structured_response(state, repr, &body).await?
-        } else {
-            crate::formats::dispatch::composition_flat_response(state, repr, &body).await?
-        };
+        let body = state
+            .backend()
+            .composition_at_version(ehr_id, ovid)
+            .await?
+            .body;
+        let mut out =
+            crate::formats::dispatch::composition_simplified_read(state, repr, body, fmt).await?;
         // `Location` is required on a `201` regardless of body form
         // (RFC 7231 §6.3.2), so the simplified representations get the same
         // version-identity headers.

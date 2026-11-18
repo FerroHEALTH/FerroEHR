@@ -17,43 +17,39 @@
 /// other than a synthesized canonical shape, each with the reason.
 const ALLOWLIST: &[(&str, &str)] = &[
     (
-        "flat/build.rs",
-        "the FLAT engine's tree builder synthesizes canonical nodes \
-         COMPOSITIONALLY — partial fragments grown leaf-first from flat keys, \
-         which the typed model cannot represent mid-build; wire fidelity is \
-         pinned by the simplified-formats corpus + round-trip gates",
+        "flat/legacy/build.rs",
+        "the frozen canonical-JSON builder the typed one is proven equal to \
+         (#6003), read only by the equality test until it is deleted",
     ),
     (
-        "flat/identity.rs",
-        "the identity half of that tree builder: the `name` and \
-         `archetype_details` fragments stamped onto a node still being built",
+        "flat/legacy/ctx.rs",
+        "the frozen canonical-JSON builder the typed one is proven equal to \
+         (#6003), read only by the equality test until it is deleted",
     ),
     (
-        "flat/map/data_values.rs",
-        "leaf DV_* fragments grown attribute-by-attribute from flat suffixes \
-         (a suffix set is an OPEN partial shape until the merge completes)",
+        "flat/legacy/identity.rs",
+        "the frozen canonical-JSON builder the typed one is proven equal to \
+         (#6003), read only by the equality test until it is deleted",
     ),
     (
-        "flat/ctx.rs",
-        "the ctx/ header family synthesizes partial EVENT_CONTEXT/PARTICIPATION \
-         fragments merged into the tree after the walk",
+        "flat/legacy/map/data_values.rs",
+        "the frozen canonical-JSON builder the typed one is proven equal to \
+         (#6003), read only by the equality test until it is deleted",
     ),
     (
-        "flat/map/structures.rs",
-        "partial structure nodes (ITEM_TREE members, FEEDER_AUDIT halves) \
-         grown compositionally; the complete-shape LINK builder is typed \
-         construction (#2444); uid_value stays a literal deliberately — the \
-         typed ids validate at construction, an acceptance change the flat \
-         surface has not adjudicated",
+        "flat/legacy/map/mod.rs",
+        "the frozen canonical-JSON builder the typed one is proven equal to \
+         (#6003), read only by the equality test until it is deleted",
     ),
     (
-        "flat/map/parties.rs",
-        "partial PARTY_PROXY/PARTY_IDENTIFIED fragments grown from flat \
-         suffix sets",
+        "flat/legacy/map/parties.rs",
+        "the frozen canonical-JSON builder the typed one is proven equal to \
+         (#6003), read only by the equality test until it is deleted",
     ),
     (
-        "flat/map/mod.rs",
-        "the shared node-seed helpers for the compositional builders above",
+        "flat/legacy/map/structures.rs",
+        "the frozen canonical-JSON builder the typed one is proven equal to \
+         (#6003), read only by the equality test until it is deleted",
     ),
     (
         "flat/example.rs",

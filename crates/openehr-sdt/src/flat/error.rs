@@ -188,6 +188,22 @@ pub enum FlatError {
         reason: String,
     },
 
+    /// The built RM refuses an attribute or a value, or a mandatory attribute
+    /// is left unset (#6003): the template-mediated 422 class.
+    #[error("the simplified document does not build a valid RM instance: {0}")]
+    Rm(#[from] openehr_rm::v1_2::access::AccessError),
+
+    /// A `|raw` canonical-JSON fragment the strict canonical reader refuses
+    /// (master04 §Raw canonical JSON).
+    #[error("invalid |raw payload at {path}")]
+    RawDecode {
+        /// The simplified path of the fragment.
+        path: String,
+        /// The reader's refusal.
+        #[source]
+        source: openehr_its::json::JsonParseError,
+    },
+
     /// The input or produced structure is not the shape the converter
     /// expects (e.g. the RM value at a template path is not the declared RM
     /// type, or a STRUCTURED document is not a JSON object).
@@ -234,15 +250,16 @@ pub enum FlatError {
     )]
     ContextOnParty,
 
-    /// A built party does not decode as its root class; the strict canonical
-    /// reader's refusal is the source.
+    /// A built party is not an instance of its root class; the refusal (the
+    /// typed finish's, or the strict canonical reader's for a canonical-JSON
+    /// party) is the source.
     #[error("the built party does not decode as {class}")]
     PartyDecode {
         /// The party class the build targeted.
         class: String,
         /// The canonical-JSON reader's refusal.
         #[source]
-        source: openehr_its::json::JsonParseError,
+        source: Box<dyn std::error::Error + Send + Sync>,
     },
 }
 

@@ -50,6 +50,10 @@ pub(crate) trait Instance<'a>: Copy {
     /// The names of the attributes this object holds a value for, `_type`
     /// excluded.
     fn keys(self) -> Vec<&'a str>;
+    /// This value as canonical JSON, the form a FLAT or STRUCTURED datum (or
+    /// a `|raw` object, master04 §Raw canonical JSON) carries; `None` for a
+    /// null.
+    fn to_value(self) -> Option<Value>;
 
     /// The string at attribute `name`.
     fn str_at(self, name: &str) -> Option<&'a str> {
@@ -102,6 +106,9 @@ impl<'a> Instance<'a> for &'a Value {
     }
     fn render(self) -> String {
         self.to_string()
+    }
+    fn to_value(self) -> Option<Value> {
+        (!self.is_null()).then(|| self.clone())
     }
     fn keys(self) -> Vec<&'a str> {
         self.as_object().map_or_else(Vec::new, |o| {
@@ -183,6 +190,17 @@ impl<'a> Instance<'a> for RmRef<'a> {
             RmRef::Object(o) => o.rm_type().to_owned(),
         }
     }
+    fn to_value(self) -> Option<Value> {
+        Some(match self {
+            RmRef::String(s) => Value::from(s),
+            RmRef::Integer(i) => Value::from(i),
+            RmRef::Real(r) => Value::from(r),
+            RmRef::Boolean(b) => Value::from(b),
+            RmRef::Character(c) => Value::from(c.to_string()),
+            // NOTE: a typed object outside the |raw carriers renders as nothing, never as a stand-in.
+            RmRef::Object(o) => return crate::flat::typed::canonical_of(o).ok(),
+        })
+    }
     fn keys(self) -> Vec<&'a str> {
         match self {
             RmRef::Object(o) => openehr_rm::v1_2::access::schema::attribute_names(o.rm_type())
@@ -192,6 +210,11 @@ impl<'a> Instance<'a> for RmRef<'a> {
             _ => Vec::new(),
         }
     }
+}
+
+/// The value the single-valued attribute path `steps` reaches below `node`.
+pub(crate) fn at<'a, I: Instance<'a>>(node: I, steps: &[&str]) -> Option<I> {
+    steps.iter().try_fold(node, |cur, step| cur.attr(step))
 }
 
 /// Whether `node` satisfies the attribute-based conjuncts of `predicate`
