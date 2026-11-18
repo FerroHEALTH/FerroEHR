@@ -383,7 +383,7 @@ fn corpus(file: &str) -> String {
 /// its index and the magnitude index (#6022) brought them to 237,374 and
 /// 10,092: the IPS ceiling holds, and the lab ceiling is that measurement, 2%
 /// above, since two of a lab commit's ten node rows are an event and a
-/// history (orchestrator decision of 2026-11-18 on #6022).
+/// history (the decision of 2026-11-18 on #6022).
 const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
     [(Fixture::Ips, 237_945, 8), (Fixture::Lab, 10_293, 8)];
 

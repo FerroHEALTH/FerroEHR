@@ -271,7 +271,7 @@ fn root_node_referenced(ir: &QueryIr, root: usize) -> bool {
 /// the full row set is needed anyway, and a population query keeps the flat
 /// shape for it. A population query that only counts its root objects takes
 /// the streaming shape for its version spine
-/// ([`stream::StreamPlan::counts_roots`]).
+/// ([`StreamPlan::counts_roots`]).
 pub(super) fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
     ctx.limit.is_some()
         && ctx.ehr_ids.is_empty()
