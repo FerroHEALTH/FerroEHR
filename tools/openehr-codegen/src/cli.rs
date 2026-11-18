@@ -850,7 +850,7 @@ pub(crate) fn render_validate_files() -> Result<Vec<EmittedFile>, Box<dyn std::e
             g.spec.module,
         )));
         out.extend(rm_crate_files(prefix_gen_files(
-            walk_files(g, unit, &aug),
+            walk_files(g, unit, &aug, released_generation(&rm.generations)?),
             g.spec.module,
         )));
     }
@@ -861,7 +861,12 @@ pub(crate) fn render_validate_files() -> Result<Vec<EmittedFile>, Box<dyn std::e
 /// ([`crate::render::emit_walk`]): its own classes named under the generation
 /// module, and the BASE classes its types reach named through the paired BASE
 /// generation.
-fn walk_files(g: &ComposedGeneration, unit: &ComposedUnit, aug: &BmmSchema) -> Vec<GenFile> {
+fn walk_files(
+    g: &ComposedGeneration,
+    unit: &ComposedUnit,
+    aug: &BmmSchema,
+    released: Option<(&ComposedGeneration, &ComposedUnit)>,
+) -> Vec<GenFile> {
     let module = g.spec.module;
     let base_external = crate::analyze::External::default();
     let mut schemas = vec![crate::render::emit_walk::WalkSchema {
@@ -886,8 +891,30 @@ fn walk_files(g: &ComposedGeneration, unit: &ComposedUnit, aug: &BmmSchema) -> V
             &unit.model,
             &schemas,
         ));
+        if let Some((rg, ru)) = released {
+            files.extend(crate::render::emit_released::emit_files(
+                &unit.model,
+                &ru.model,
+                rg.spec.module,
+                &schemas,
+            ));
+        }
     }
     files
+}
+
+/// The released generation of the RM: the newest generation older than the
+/// current one (the table lists generations oldest first).
+fn released_generation(
+    generations: &[ComposedGeneration],
+) -> Result<Option<(&ComposedGeneration, &ComposedUnit)>, Box<dyn std::error::Error>> {
+    let Some(current) = generations.iter().position(|g| g.spec.current) else {
+        return Ok(None);
+    };
+    match current.checked_sub(1).and_then(|i| generations.get(i)) {
+        Some(g) => Ok(Some((g, g.unit()?))),
+        None => Ok(None),
+    }
 }
 
 /// Prefix every generated file path with the generation module directory
@@ -1176,7 +1203,10 @@ fn render_crate_files(
             );
             inject_validate(
                 &mut files,
-                prefix_gen_files(walk_files(g, unit, aug), module),
+                prefix_gen_files(
+                    walk_files(g, unit, aug, released_generation(&c.generations)?),
+                    module,
+                ),
             );
         }
     }

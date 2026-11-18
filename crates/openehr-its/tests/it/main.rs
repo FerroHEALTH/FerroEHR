@@ -44,6 +44,7 @@ mod opt14_ordinal_symbol;
 mod opt14_unknown_xsi_type;
 mod opt14_v1_4_divergence;
 mod opt14_writer;
+mod released_expressible;
 mod rest_client;
 mod rest_client_runtime;
 mod rest_contract;

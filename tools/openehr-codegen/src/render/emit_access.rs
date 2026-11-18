@@ -28,14 +28,14 @@ use crate::render::naming;
 
 /// What a field holds.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Holds {
+pub(crate) enum Holds {
     Object,
     Primitive(Prim),
     Other,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Prim {
+pub(crate) enum Prim {
     String,
     Integer,
     Integer64,
@@ -45,14 +45,14 @@ enum Prim {
     Character,
 }
 
-struct Field {
-    wire: String,
-    ident: String,
-    holds: Holds,
-    optional: bool,
-    list: bool,
-    non_empty: bool,
-    default: Option<String>,
+pub(crate) struct Field {
+    pub(crate) wire: String,
+    pub(crate) ident: String,
+    pub(crate) holds: Holds,
+    pub(crate) optional: bool,
+    pub(crate) list: bool,
+    pub(crate) non_empty: bool,
+    pub(crate) default: Option<String>,
 }
 
 fn prim(head: &str) -> Option<Prim> {
@@ -68,7 +68,7 @@ fn prim(head: &str) -> Option<Prim> {
     }
 }
 
-fn walkable(model: &Model) -> BTreeSet<String> {
+pub(crate) fn walkable(model: &Model) -> BTreeSet<String> {
     let used = model.used_as_type();
     let mut out = BTreeSet::new();
     for (name, class) in model.class_iter() {
@@ -86,7 +86,7 @@ fn walkable(model: &Model) -> BTreeSet<String> {
     out
 }
 
-fn fields(
+pub(crate) fn fields(
     model: &Model,
     class: &BmmClass,
     generics: &[String],
