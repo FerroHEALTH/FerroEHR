@@ -76,6 +76,68 @@ pub async fn parity_page(
     .await?)
 }
 
+/// The node row sets of `scope` that no version reaches, as `(vo_id,
+/// sys_version, kind)`, in `(vo_id, sys_version)` order.
+///
+/// A row set is reached when a version of the same tier and object reads it
+/// through its content key; the node rows carry no foreign key into `version`
+/// (#5969), so this is the check that takes its place. The kind is the RM
+/// type of the set's root row, empty when the set has none. A
+/// `committed_since` bound selects nothing here, since a row set without a
+/// version has no commit time to compare.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn unreached_node_sets(
+    pool: &PgPool,
+    scope: StorageParityScope,
+) -> Result<Vec<(Uuid, i32, String)>, StorageError> {
+    if scope.committed_since.is_some() {
+        return Ok(Vec::new());
+    }
+    Ok(sqlx::query_as(
+        "SELECT n.vo_id, n.sys_version, \
+                coalesce(max(n.rm_type) FILTER (WHERE n.num = 0), '') \
+         FROM node n \
+         WHERE ($1::uuid IS NULL OR n.ehr_id = $1::uuid) \
+           AND ($2::uuid IS NULL OR n.vo_id = $2::uuid) \
+           AND ($2::uuid IS NULL OR $3::int IS NULL OR n.sys_version = $3::int) \
+           AND NOT EXISTS (SELECT 1 FROM version v \
+                           WHERE v.tier = n.tier AND v.vo_id = n.vo_id \
+                             AND v.content_key = n.sys_version) \
+         GROUP BY n.vo_id, n.sys_version \
+         ORDER BY n.vo_id, n.sys_version",
+    )
+    .bind(scope.ehr_id)
+    .bind(scope.vo_id)
+    .bind(scope.sys_version)
+    .fetch_all(&mut *acquire(pool).await?)
+    .await?)
+}
+
+/// Delete the node rows of `(vo_id, sys_version)` in every tier that no
+/// version of the same tier reads, returning how many went.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn delete_unreached_nodes(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+    sys_version: i32,
+) -> Result<u64, StorageError> {
+    Ok(sqlx::query(
+        "DELETE FROM node n WHERE n.vo_id = $1 AND n.sys_version = $2 \
+         AND NOT EXISTS (SELECT 1 FROM version v \
+                         WHERE v.tier = n.tier AND v.vo_id = n.vo_id \
+                           AND v.content_key = n.sys_version)",
+    )
+    .bind(vo_id)
+    .bind(sys_version)
+    .execute(tx)
+    .await?
+    .rows_affected())
+}
+
 /// The stored bodies of the `(vo_ids[i], sys_versions[i])` versions in one
 /// statement, as `(vo_id, sys_version, body)`; a version with no body, or one
 /// gone since its page was read, is absent.
