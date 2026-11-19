@@ -119,6 +119,12 @@ pub fn query(key: &str) -> Option<String> {
     query_in(query, key)
 }
 
+/// The headers of the request being drawn, empty outside a request.
+#[must_use]
+pub fn headers() -> http::HeaderMap {
+    crate::scope::with(|scope| scope.parts.headers.clone()).unwrap_or_default()
+}
+
 /// The request's `Cookie` header, empty for none.
 #[must_use]
 pub fn cookies() -> String {

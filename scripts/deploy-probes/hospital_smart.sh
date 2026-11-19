@@ -276,14 +276,14 @@ hs_system_token() {
 # The value of the attribute `$3` in the first tag of `$1` that `$2` matches,
 # with the HTML entities of a URL decoded.
 hs_attribute() {
-  grep -oE "$2" <<<"$1" | head -1 | grep -oE "$3=\"[^\"]*\"" | head -1 |
+  grep -oE "$2" <<<"$1" | sed -n 1p | grep -oE "$3=\"[^\"]*\"" | sed -n 1p |
     sed -E "s/^$3=\"//; s/\"$//; s/&amp;/\\&/g; s/&#x2F;/\\//g; s/&#47;/\\//g; s/&#61;/=/g"
 }
 
 # The query parameter `$1` of the URL `$2`, decoded.
 hs_param() {
   local value
-  value="$(tr '&' '\n' <<<"${2#*\?}" | sed -n "s/^$1=//p" | head -1)"
+  value="$(tr '&' '\n' <<<"${2#*\?}" | sed -n "s/^$1=//p" | sed -n 1p)"
   value="${value//+/ }"
   printf '%b' "${value//%/\\x}"
 }

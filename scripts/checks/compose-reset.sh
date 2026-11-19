@@ -40,14 +40,18 @@ reset_keys() {
 }
 
 # check <service> <keys file> <compose args…>: 0 when the merged model's
-# environment of <service> holds none of the keys.
+# environment of <service> holds none of the keys, and no key that names a
+# property of the service itself (`ports`) holds a value.
 check() {
   local service="$1" keys="$2" model held
   shift 2
   model="$(docker compose "$@" config --format json)"
   held="$(jq -r --arg s "$service" --rawfile k "$keys" '
     ($k | split("\n") | map(select(length > 0))) as $keys
-    | (.services[$s].environment // {}) | keys | map(select(. as $n | $keys | index($n))) | join(" ")
+    | .services[$s] as $svc
+    | (($svc.environment // {}) | keys | map(select(. as $n | $keys | index($n))))
+      + ($keys | map(select(. as $n | ($svc | has($n)) and (($svc[$n] // []) | length) > 0)))
+    | unique | join(" ")
   ' <<<"$model")"
   if [[ -n "$held" ]]; then
     echo "compose-reset: the merged model still sets $held on $service, which the overlay resets" >&2
@@ -73,6 +77,20 @@ stack_of() {
         echo -f
         echo "$file"
       done < <(cnf_compose_files 1 "$ROOT")
+      ;;
+    docker-compose.ferrosmart.yml)
+      # The viewer joins the issuer's network namespace, so its own ports go.
+      echo ferroehr-viewer
+      echo -p
+      echo ferroehr
+      echo --project-directory
+      echo "$ROOT"
+      echo --profile
+      echo viewer
+      echo -f
+      echo docker-compose.yml
+      echo -f
+      echo docker-compose.ferrosmart.yml
       ;;
     *) return 1 ;;
   esac

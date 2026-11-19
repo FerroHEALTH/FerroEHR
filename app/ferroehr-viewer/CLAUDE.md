@@ -73,6 +73,14 @@ crate lacks is a FerroSMART issue, never a local copy.
   API with the viewer's `private_key_jwt` key, held server-side, and answers
   `303` to the app (`crate::request::launch_away`); every other redirect
   stays on the viewer's own pages. The app origins join `form-action`.
+- **A SMART launch Task launches only a configured app** (`crate::launch_tasks`,
+  `pages::ehr::launch_tasks`, #5930): with `[launch] fhir_base` set, an EHR
+  whose subject namespace is in `patient_namespaces` lists the patient's
+  Tasks read at the facade with the person's own token
+  (`ferrohealth-session` `Sessions::token_for`, RFC 8707 `resource` on
+  refresh). The post names only the Task's id; the Task is read again, its
+  `for` must be the EHR's subject, and the browser goes to the configured
+  `launch_url`, never to a URL the Task carries.
 - **A dead session ends the page:** a refused session or a CDR `401` is
   noted in the scope (`session_client::note_if_over`) and the page answers
   with the sign-in page.

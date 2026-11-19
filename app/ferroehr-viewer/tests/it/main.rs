@@ -16,6 +16,7 @@ mod cdr_record;
 mod common;
 mod config_redaction;
 mod launch;
+mod launch_tasks;
 
 mod sandbox_posture;
 mod serving;

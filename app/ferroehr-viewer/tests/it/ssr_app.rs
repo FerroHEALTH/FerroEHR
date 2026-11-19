@@ -74,16 +74,22 @@ pub(crate) fn id(key: &str) -> String {
         .to_owned()
 }
 
-/// Whether a request carries the recording's own credential.
+/// The access token the test OpenID Provider issues for the CDR, which the
+/// replayed CDR accepts as it accepts the recording's own credential.
+pub(crate) const CDR_BEARER: &str = "synthetic-cdr-access";
+
+/// Whether a request carries the recording's own credential, or the CDR
+/// token of an OpenID Connect sign-in.
 fn signed(headers: &http::HeaderMap) -> bool {
     let expected = format!(
         "Basic {}",
         base64::engine::general_purpose::STANDARD.encode("ferroehr:ferroehr")
     );
+    let bearer = format!("Bearer {CDR_BEARER}");
     headers
         .get(http::header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
-        .is_none_or(|value| value == expected)
+        .is_none_or(|value| value == expected || value == bearer)
 }
 
 /// The recorded exchange that answers a request, by the rules the module
@@ -256,7 +262,7 @@ impl Answer {
     }
 
     /// The cookies it sets, as `name=value` pairs.
-    fn cookies(&self) -> Vec<String> {
+    pub(crate) fn cookies(&self) -> Vec<String> {
         self.headers
             .get_all(http::header::SET_COOKIE)
             .iter()
@@ -293,6 +299,50 @@ impl Viewer {
         let cdr = replayed_cdr_with(Vec::new()).await;
         Self {
             service: ferroehr_viewer::server::router(app_state_launching(&cdr, launch)),
+        }
+    }
+
+    /// The viewer over a fresh replayed CDR, signing in at the OpenID
+    /// Provider `oidc` names over a memory session store, and launching the
+    /// apps `launch` names.
+    pub(crate) async fn start_signing_in(
+        oidc: ferrohealth_session::config::OidcSection,
+        launch: ferroehr_viewer::launch::LaunchSection,
+    ) -> Self {
+        let cdr = replayed_cdr_with(Vec::new()).await;
+        let defaults = ferroehr_viewer::config::ViewerConfig::default();
+        let settings = oidc
+            .check_with_tls(&ferrohealth_smart::config::ServerTls)
+            .expect("the test provider's [oidc] is valid");
+        let party = settings
+            .relying_party()
+            .await
+            .expect("the test provider's endpoints are all given");
+        let config = ferroehr_viewer::config::ViewerConfig {
+            cdr: ferroehr_viewer::config::CdrConfig {
+                base_url: cdr.clone(),
+                management_base_url: format!("{cdr}/management"),
+                ..Default::default()
+            },
+            auth: ferroehr_viewer::config::AuthConfig {
+                oidc_enabled: true,
+                ..defaults.auth.clone()
+            },
+            oidc,
+            // The memory store keeps the refresh token a facade token comes from.
+            session: ferrohealth_session::config::SessionSection {
+                store: ferrohealth_session::config::StoreKind::Memory,
+                ..defaults.session.clone()
+            },
+            launch,
+            ..defaults
+        };
+        let client = ferroehr_viewer::cdr::CdrClient::new(&config.cdr)
+            .expect("the CDR client should build from a well-formed base URL");
+        let state = ferroehr_viewer::state::AppState::new(config, client, Some(party))
+            .expect("the memory session store should build");
+        Self {
+            service: ferroehr_viewer::server::router(state),
         }
     }
 

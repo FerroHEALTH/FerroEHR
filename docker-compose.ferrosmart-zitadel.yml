@@ -53,6 +53,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+    # The entrypoint starts as root to own the data directory, then drops to
+    # the postgres user, so it keeps the capabilities that hand-over needs.
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
   ferrosmart-zitadel:
@@ -91,6 +97,12 @@ services:
         target: /zitadel/bootstrap
         bind:
           create_host_path: true
+    # It writes the bootstrap tokens into the host directory as
+    # FERROSMART_ZITADEL_UID, root by default, which needs DAC_OVERRIDE alone.
+    cap_drop: [ALL]
+    cap_add: [DAC_OVERRIDE]
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "/app/zitadel", "ready"]
@@ -117,6 +129,9 @@ services:
         source: ${FERROSMART_ZITADEL_DIR:-./secrets/ferrosmart/zitadel}
         target: /zitadel/bootstrap
         read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
   ferrosmart-zitadel-bootstrap:
@@ -148,6 +163,12 @@ services:
       - type: bind
         source: ${FERROSMART_ZITADEL_DIR:-./secrets/ferrosmart/zitadel}
         target: /zitadel/bootstrap
+    # It writes the FerroSMART configuration into the host directory as
+    # FERROSMART_ZITADEL_UID, root by default, which needs DAC_OVERRIDE alone.
+    cap_drop: [ALL]
+    cap_add: [DAC_OVERRIDE]
+    security_opt:
+      - no-new-privileges:true
     restart: "no"
 
   ferrosmart:

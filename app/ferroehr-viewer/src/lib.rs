@@ -30,6 +30,7 @@ pub mod error;
 pub mod example_options;
 pub mod format;
 pub mod launch;
+pub mod launch_tasks;
 pub mod locale;
 pub mod management;
 // NOTE: no openEHR spec governs this — our own design; the viewer links no
