@@ -104,6 +104,11 @@ pub enum Group {
     /// `care relationship`: the demographic relationships that put a caller
     /// in care of a subject.
     CareRelationship,
+    /// `care relationship element`: the elements in the `details` of an
+    /// `under_care_of` relationship.
+    CareRelationshipElement,
+    /// `care basis`: who wrote a care relationship.
+    CareBasis,
     /// `group kind`: what kind of group a demographic `GROUP` is.
     GroupKind,
     /// `record subject`: the demographic element naming an EHR subject
@@ -135,7 +140,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 20] = [
+    pub const ALL: [Self; 22] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -145,6 +150,8 @@ impl Group {
         Self::AccessConflict,
         Self::AccessValueSetBinding,
         Self::CareRelationship,
+        Self::CareRelationshipElement,
+        Self::CareBasis,
         Self::GroupKind,
         Self::RecordSubject,
         Self::Representation,
@@ -171,6 +178,8 @@ impl Group {
             Self::AccessConflict => "access conflict",
             Self::AccessValueSetBinding => "access value set binding",
             Self::CareRelationship => "care relationship",
+            Self::CareRelationshipElement => "care relationship element",
+            Self::CareBasis => "care basis",
             Self::GroupKind => "group kind",
             Self::RecordSubject => "record subject",
             Self::Representation => "representation",
@@ -199,6 +208,8 @@ impl Group {
             Self::AccessConflict => phrases::<Conflict>(),
             Self::AccessValueSetBinding => phrases::<ValueSetBinding>(),
             Self::CareRelationship => phrases::<CareRelationship>(),
+            Self::CareRelationshipElement => phrases::<CareElement>(),
+            Self::CareBasis => phrases::<CareBasis>(),
             Self::GroupKind => phrases::<GroupKind>(),
             Self::RecordSubject => phrases::<RecordSubject>(),
             Self::Representation => phrases::<Representation>(),
@@ -515,6 +526,34 @@ group! {
         /// A patient's `PERSON` is under the care of a team `GROUP` or an
         /// organisational unit.
         UnderCareOf => "under_care_of",
+    }
+}
+
+group! {
+    /// The elements in the `details` of an `under_care_of` relationship,
+    /// coded in each `ELEMENT`'s `name`.
+    CareElement in CareRelationshipElement {
+        /// The part the target plays in the care of the subject, of the value
+        /// set bound for `care_role`.
+        CareRole => "care_role",
+        /// The healthcare provider in whose care the relationship is.
+        Provider => "provider",
+        /// The carer the target replaces for the period of the relationship.
+        CoversFor => "covers_for",
+        /// The episode, referral or case the relationship belongs to.
+        Context => "context",
+        /// Who wrote the relationship, of the `care basis` group.
+        Basis => "basis",
+    }
+}
+
+group! {
+    /// Who wrote a care relationship, the value of its `basis` element.
+    CareBasis in CareBasis {
+        /// The care delivery environment wrote it; the default when absent.
+        Assigned => "assigned",
+        /// The professional it names wrote it.
+        SelfDeclared => "self_declared",
     }
 }
 
