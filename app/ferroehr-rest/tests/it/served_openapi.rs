@@ -1451,8 +1451,9 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
             "/ferroehr/rest/extensions/v1/admin/query/",
         ],
         flag: "no its-rest operation governs this",
-        // The sixth is the binding-key re-key of #5013.
-        operations: 6,
+        // The fifth is the binding-key re-key of #5013; the protected-identifier
+        // read went with the protection (#6092).
+        operations: 5,
     },
     NonSpecFamily {
         // The four statistics calls; the released Admin API is the two EHR
