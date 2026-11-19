@@ -4,7 +4,8 @@
 # Vendor the SMART App Launch 2.2.0 Task launch profiles into
 # docs/specs/smart-app-launch/: the two StructureDefinitions of the Task
 # profile for requesting a SMART launch, their two published examples, the
-# smart-codes CodeSystem they bind, and the package manifest.
+# smart-codes CodeSystem they bind. The package manifest stays out: a
+# committed FHIR manifest is refused (scripts/checks/fhir-package-manifests.sh).
 #
 # The source is the FHIR package hl7.fhir.uv.smart-app-launch 2.2.0 from the
 # FHIR package registry, its tarball pinned by sha256. The files are taken
@@ -27,7 +28,6 @@ RETRIEVED="2026-11-19"
 
 # The files taken from the package, by their path inside it.
 FILES=(
-  package/package.json
   package/StructureDefinition-task-ehr-launch.json
   package/StructureDefinition-task-standalone-launch.json
   package/CodeSystem-smart-codes.json
@@ -62,10 +62,11 @@ cat >"$work/tree/PROVENANCE.md" <<PROV
   other bytes
 - Document: the Task profile for requesting a SMART launch
   (\`task-ehr-launch\`, \`task-standalone-launch\`), its two published
-  examples, the \`smart-codes\` CodeSystem the profiles' codes come from, and
-  the package manifest
+  examples and the \`smart-codes\` CodeSystem the profiles' codes come from;
+  the package manifest is left out, as no FHIR manifest is committed
+  (\`scripts/checks/fhir-package-manifests.sh\`)
 - Retrieved: ${RETRIEVED}
-- Upstream licence: CC-BY-4.0, the \`license\` of \`package/package.json\`:
+- Upstream licence: CC-BY-4.0, the \`license\` the package manifest declares:
   SMART App Launch 2.2.0 by HL7 International / FHIR Infrastructure,
   licensed CC BY 4.0, vendored unchanged. \`REUSE.toml\` declares the tree
   \`CC-BY-4.0\`.

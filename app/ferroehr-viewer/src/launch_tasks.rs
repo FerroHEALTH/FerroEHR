@@ -26,6 +26,12 @@ use fhir_types::r4::task::{Task, TaskInputValue};
 /// The SMART codes system of the profiles' codes and input types.
 pub const SMART_CODES: &str = "http://hl7.org/fhir/smart-app-launch/CodeSystem/smart-codes";
 
+/// The FHIR resource type of a launch Task, its REST path segment.
+const TASK: &str = "Task";
+
+/// The FHIR resource type of a search answer.
+const BUNDLE: &str = "Bundle";
+
 /// How many pages of one search the viewer follows before it refuses the
 /// rest rather than drop it silently.
 const MAX_PAGES: usize = 20;
@@ -231,7 +237,7 @@ pub async fn search(
     token: &str,
     patient: &str,
 ) -> Result<Vec<Result<LaunchTask, TaskError>>, FacadeError> {
-    let mut url = under(base, "Task")?;
+    let mut url = under(base, TASK)?;
     // NOTE: FHIR R4, Task, Search Parameters: `patient` and `code`, the code a
     // token list with the system (search.html §3.1.1.4.9).
     url.query_pairs_mut()
@@ -249,7 +255,7 @@ pub async fn search(
         if pages > MAX_PAGES {
             return Err(FacadeError::TooManyPages);
         }
-        let bundle: Bundle = get(http, page, token, "Bundle").await?;
+        let bundle: Bundle = get(http, page, token, BUNDLE).await?;
         for entry in &bundle.entry {
             // NOTE: FHIR R4, Bundle, search.mode: an `include` entry is no match.
             let mode = entry
@@ -290,14 +296,11 @@ pub async fn read(
     token: &str,
     id: &str,
 ) -> Result<Result<LaunchTask, TaskError>, FacadeError> {
-    let encoded = urlencoding::encode(id);
-    let task: Task = get(
-        http,
-        under(base, &format!("Task/{encoded}"))?,
-        token,
-        "Task",
-    )
-    .await?;
+    let mut url = under(base, TASK)?;
+    url.path_segments_mut()
+        .map_err(|()| FacadeError::Link)?
+        .push(id);
+    let task: Task = get(http, url, token, TASK).await?;
     Ok(read_task(&task))
 }
 

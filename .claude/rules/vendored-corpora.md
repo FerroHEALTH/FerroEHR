@@ -45,7 +45,7 @@ commit the result.
 | IHE Basic Audit Log Patterns 1.1.4 (Volume 1, the content profiles, the `AuditEvent` profile sources), at the `IHE/ITI.BasicAudit` tag | `scripts/vendor/ihe-balp.sh` | `docs/specs/ihe-balp/` |
 | FHIR R4 and R5 `AuditEvent` pages (resource, definitions, mappings, licence) | `scripts/vendor/fhir-auditevent.sh` | `docs/specs/fhir-auditevent/` |
 | FHIR R4 and R5 `Consent` (resource, definitions, StructureDefinition, the bound value sets, the examples in JSON, licence) | `scripts/vendor/fhir-consent.sh` | `docs/specs/fhir-consent/` |
-| SMART App Launch 2.2.0 Task launch profiles (the two StructureDefinitions, their examples, `smart-codes`, the package manifest) | `scripts/vendor/smart-app-launch.sh` | `docs/specs/smart-app-launch/` |
+| SMART App Launch 2.2.0 Task launch profiles (the two StructureDefinitions, their examples, `smart-codes`) | `scripts/vendor/smart-app-launch.sh` | `docs/specs/smart-app-launch/` |
 | IHE BPPC (ITI TF-1 ch. 19, ITI TF-3 §5.1, HTML Technical Framework) and the APPC supplement Rev. 1.4, with the General Introduction's copyright chapter | `scripts/vendor/ihe-consents.sh` | `docs/specs/ihe-consents/` |
 | OASIS XACML 2.0 core specification (OASIS Standard, 1 Feb 2005) | `scripts/vendor/xacml.sh` | `docs/specs/xacml/` |
 | DICOM PS3.15 2026c Annex A.5, cache only (NEMA copyright, no redistribution grant) | `scripts/vendor/dicom-ps3-15.sh` | record `docs/specs/dicom-ps3-15/`, cache `.vendor-cache/dicom-ps3-15/` |

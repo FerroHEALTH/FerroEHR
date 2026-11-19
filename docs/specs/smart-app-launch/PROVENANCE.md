@@ -7,10 +7,11 @@
   other bytes
 - Document: the Task profile for requesting a SMART launch
   (`task-ehr-launch`, `task-standalone-launch`), its two published
-  examples, the `smart-codes` CodeSystem the profiles' codes come from, and
-  the package manifest
+  examples and the `smart-codes` CodeSystem the profiles' codes come from;
+  the package manifest is left out, as no FHIR manifest is committed
+  (`scripts/checks/fhir-package-manifests.sh`)
 - Retrieved: 2026-11-19
-- Upstream licence: CC-BY-4.0, the `license` of `package/package.json`:
+- Upstream licence: CC-BY-4.0, the `license` the package manifest declares:
   SMART App Launch 2.2.0 by HL7 International / FHIR Infrastructure,
   licensed CC BY 4.0, vendored unchanged. `REUSE.toml` declares the tree
   `CC-BY-4.0`.
@@ -20,7 +21,6 @@
 
 | File | sha256 |
 |---|---|
-| `package/package.json` | `c5eed262734ac36b9677e041be3e76723098f97e68519c6bf21c57337fd0d159` |
 | `package/StructureDefinition-task-ehr-launch.json` | `be11ce822660e9f06282372a18d9672bf458efce8c6e3c0cd34edac8752597e0` |
 | `package/StructureDefinition-task-standalone-launch.json` | `6a21d0ddfedc3ef9bc06e37ccc65099a29e8647234800fbde24289e6f4dfc5ad` |
 | `package/CodeSystem-smart-codes.json` | `64cc1466d906189e5ea0d14b6c3cf9427a958615ff538a85d7b0b4fc913ddf7e` |
