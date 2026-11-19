@@ -8,10 +8,10 @@
 //! key, as two instances behind a load balancer do. Both commit EHRs, record
 //! accesses to them in the access log, write records of the system chain and
 //! seal both chains concurrently; every writer of a chain serialises on its
-//! head row in PostgreSQL, and every append of the access log seals itself in
-//! its own transaction, so afterwards the access log, the system chain, every
-//! checkpoint and every seal verify, whichever replica made them. No openEHR spec governs the process model or audit
-//! storage: our own design (#5589).
+//! head row in PostgreSQL, and a chainer seals its round or, once it rests,
+//! the head (#5770), so afterwards the access log, the system chain, every
+//! checkpoint and every seal verify, whichever replica made them. No openEHR
+//! spec governs the process model or audit storage: our own design (#5589).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -33,7 +33,7 @@ const ROUNDS: usize = 12;
 
 /// The phases of concurrent work. Each ends with every record sealed, so the
 /// log holds at least one checkpoint a phase however fast the host is: one
-/// append seals every entry that waits, and on a slow host a single append
+/// round seals every entry that waits, and on a slow host a single round
 /// took all 48 of a single phase (#6020).
 const PHASES: usize = 2;
 
@@ -86,7 +86,7 @@ async fn replica(pool: &sqlx::PgPool, signer: &Arc<Signer>) -> Replica {
 }
 
 /// `ROUNDS` rounds of the work of one replica: commit an EHR, record a read
-/// of it in the access log, which its append seals, write a record of the
+/// of it in the access log, which a chainer links and seals, write a record of the
 /// system chain, and every third round seal the system chain.
 async fn work(replica: &Replica) {
     for round in 0..ROUNDS {
@@ -126,32 +126,33 @@ async fn work(replica: &Replica) {
 }
 
 /// Waits until the access log holds `expected` records and a checkpoint
-/// seals each of them.
+/// seals each of them: a round under load leaves its links to the checkpoint
+/// of the chainer's rest, which follows the records (#6050).
 async fn sealed(pool: &sqlx::PgPool, expected: usize) {
     let expected = i64::try_from(expected).expect("a count");
     let deadline = std::time::Instant::now() + Duration::from_secs(30);
     loop {
-        let entries: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_record")
-            .fetch_one(pool)
-            .await
-            .expect("the access log is counted");
-        if entries == expected {
+        let (entries, unsealed): (i64, i64) = sqlx::query_as(
+            "SELECT count(*), count(*) FILTER (WHERE NOT EXISTS \
+             (SELECT 1 FROM audit.access_log_checkpoint c WHERE c.sequence >= r.chain_seq)) \
+             FROM audit.access_log_record r",
+        )
+        .fetch_one(pool)
+        .await
+        .expect("the access log is counted");
+        if entries == expected && unsealed == 0 {
             break;
         }
         assert!(
-            entries < expected && std::time::Instant::now() < deadline,
+            entries <= expected,
             "every read of both replicas is one entry: {entries} of {expected}"
+        );
+        assert!(
+            std::time::Instant::now() < deadline,
+            "every record is chained and sealed: {entries} of {expected}, {unsealed} unsealed"
         );
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
-    let unsealed: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM audit.access_log_record r WHERE NOT EXISTS \
-         (SELECT 1 FROM audit.access_log_checkpoint c WHERE c.sequence >= r.chain_seq)",
-    )
-    .fetch_one(pool)
-    .await
-    .expect("the unsealed records are counted");
-    assert_eq!(unsealed, 0, "every record is sealed by its own append");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -219,4 +220,37 @@ async fn two_replicas_writing_at_once_leave_every_chain_verifying() {
             .expect("the system chain is verified");
         assert!(seals.intact(), "replica {name}: {seals:?}");
     }
+}
+
+/// A replica that stops between a round that left its links to a later
+/// checkpoint and that checkpoint leaves the head unsealed; the chainer of
+/// the next replica to start seals it with nothing to chain, so no record
+/// waits for a later access to be sealed (#6050).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_starting_replica_seals_the_head_a_stopped_one_left() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let signer =
+        crate::access_log_checkpoint::keyring(&crate::access_log_checkpoint::generate_key());
+    crate::audit_intake::write(&pool, 0..3).await;
+    crate::access_log_checkpoint::checkpoints(&pool, SYSTEM, Arc::clone(&signer))
+        .store()
+        .chain_round(
+            64,
+            ferroehr::access_log::chainer::Owed::default(),
+            ferroehr::access_log::chainer::Seal::Later,
+            &[],
+        )
+        .await
+        .expect("the stopped replica's last round");
+    let checkpoints = || async {
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM audit.access_log_checkpoint")
+            .fetch_one(&pool)
+            .await
+            .expect("the checkpoints are counted")
+    };
+    assert_eq!(checkpoints().await, 0, "the stopped replica sealed nothing");
+    let _started = replica(&pool, &signer).await;
+    sealed(&pool, 3).await;
+    assert_eq!(checkpoints().await, 1, "one checkpoint of the head");
 }

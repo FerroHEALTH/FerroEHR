@@ -1001,6 +1001,7 @@ async fn every_hot_path_stays_within_its_budget() {
         .execute(&pool)
         .await
         .expect("pg_walinspect: a contrib module the server ships");
+    super::wal::kept(&pool).await;
     let world = World::build(&app).await;
     let mut report = String::from(
         "path | conversions | audit renders | allocations | alloc KiB | peak KiB | round trips | nested | WAL B\n",

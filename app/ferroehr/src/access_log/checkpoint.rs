@@ -282,9 +282,9 @@ impl Checkpoints {
     /// The checkpoint of the head of the access log, stored and returned;
     /// `None` while the log is empty.
     ///
-    /// A head already sealed, as every append made while the keyring held a
-    /// key seals its own, returns its stored checkpoint, so this writes only
-    /// for a head appended while the keyring held none.
+    /// A head already sealed, as the chainer seals the head it rests on while
+    /// the keyring holds a key, returns its stored checkpoint, so this writes
+    /// only for a head the chainer has not sealed yet.
     ///
     /// # Errors
     /// [`AccessLogError::Sign`] when the keyring holds no `OpenPGP` key or

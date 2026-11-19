@@ -4,7 +4,7 @@
 //! The publication of the access log's checkpoints outside the database
 //! (#5704).
 //!
-//! Every append seals itself in a checkpoint stored beside the log. Someone
+//! The chainer seals what it appends in checkpoints stored beside the log. Someone
 //! who can write the database can still remove the newest entries together
 //! with the checkpoints that seal them, and nothing left in the database
 //! shows it. A copy of the checkpoints kept where that person cannot write

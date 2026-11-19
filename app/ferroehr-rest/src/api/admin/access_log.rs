@@ -171,9 +171,9 @@ guarded_handler! {
         post, path = "/admin/access-log/checkpoint", tag = "admin-access-log",
         responses(
             (status = 200, description = "The checkpoint of the head of the chain, as its \
-                                          ITS-JSON `ACCESS_LOG_CHECKPOINT`. Every append made \
-                                          while the keyring holds a key seals itself, so a \
-                                          head already sealed answers its stored checkpoint.",
+                                          ITS-JSON `ACCESS_LOG_CHECKPOINT`. The chainer seals \
+                                          the head it rests on while the keyring holds a key, \
+                                          so a head already sealed answers its stored checkpoint.",
              body = serde_json::Value),
             (status = 404, description = "The chain is empty.", body = serde_json::Value),
             (status = 409, description = "The keyring holds no OpenPGP key to sign with.",

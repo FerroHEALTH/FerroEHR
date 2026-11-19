@@ -111,6 +111,27 @@ impl Kind {
     }
 }
 
+/// Refuses a server that keeps less than 1 GB of past WAL: a checkpoint during
+/// a parallel run then removes a segment between a window's two positions,
+/// and `pg_walinspect` cannot read it (`58P01`, #6035). The testkit container
+/// and CI's server set it (`tools/testkit/src/server_settings.rs`,
+/// `scripts/lib/test-postgres.sh`).
+pub(super) async fn kept(pool: &PgPool) {
+    let kept: i64 = sqlx::query_scalar(
+        "SELECT /* statement_budget_own */ pg_size_bytes(current_setting('wal_keep_size'))",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("wal_keep_size reads");
+    assert!(
+        kept >= 1 << 30,
+        "the test server keeps {kept} bytes of past WAL, so a checkpoint can remove a segment a \
+         WAL budget reads: start it with wal_keep_size=1GB (remove a testkit container started \
+         before #6035, `docker rm -f -v ferroehr-testkit-pg18`, and the next run starts one that \
+         does)"
+    );
+}
+
 /// The current WAL insert position, as text.
 pub(super) async fn insert_lsn(pool: &PgPool) -> String {
     sqlx::query_scalar("SELECT /* statement_budget_own */ pg_current_wal_insert_lsn()::text")
@@ -255,6 +276,7 @@ async fn an_access_log_entry_stays_within_its_wal_ceiling() {
         .execute(&pool)
         .await
         .expect("pg_walinspect: a contrib module the server ships");
+    kept(&pool).await;
     let full_pages: String = sqlx::query_scalar("SELECT current_setting('full_page_writes')")
         .fetch_one(&pool)
         .await
@@ -485,6 +507,7 @@ async fn commit_fixture(app: &Router, pool: &PgPool) -> Vec<(String, String)> {
         .await
         .expect("the server loads the extension");
     }
+    kept(pool).await;
     let (status, body) = send(
         app,
         "POST",

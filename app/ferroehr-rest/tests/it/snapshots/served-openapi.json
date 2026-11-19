@@ -708,7 +708,7 @@
         "operationId": "admin_seal_access_log_checkpoint",
         "responses": {
           "200": {
-            "description": "The checkpoint of the head of the chain, as its ITS-JSON `ACCESS_LOG_CHECKPOINT`. Every append made while the keyring holds a key seals itself, so a head already sealed answers its stored checkpoint.",
+            "description": "The checkpoint of the head of the chain, as its ITS-JSON `ACCESS_LOG_CHECKPOINT`. The chainer seals the head it rests on while the keyring holds a key, so a head already sealed answers its stored checkpoint.",
             "content": {
               "application/json": {
                 "schema": {}

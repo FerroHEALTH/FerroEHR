@@ -27,7 +27,7 @@ const EHR: &str = "7d44b88c-4199-4bad-97dc-0000000000e1";
     clippy::disallowed_methods,
     reason = "a test reads the database on a raw pool connection, outside any request"
 )]
-async fn write(pool: &PgPool, numbers: impl Iterator<Item = u32>) {
+pub(crate) async fn write(pool: &PgPool, numbers: impl Iterator<Item = u32>) {
     for n in numbers {
         let mut conn = pool.acquire().await.expect("a connection");
         let mut tx = conn.begin().await.expect("begin");
@@ -228,6 +228,47 @@ async fn unsealed_rounds_are_covered_by_one_checkpoint_of_the_head() {
         .await
         .expect("the checkpoint");
     assert_eq!(head, 15, "the checkpoint seals the last link");
+    let verification = log.verify(None).await.expect("verify the checkpoint");
+    assert!(verification.intact(), "{verification:?}");
+}
+
+/// A round that seals and finds nothing to chain seals a head no checkpoint
+/// covers, as a chainer that stopped after a round that left its links to a
+/// later checkpoint leaves it, and a second such round stores no second
+/// checkpoint; an empty log has no head to seal (#6050).
+#[tokio::test]
+async fn a_sealing_round_with_nothing_to_chain_seals_an_unsealed_head() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let log = checkpoints(&pool, SYSTEM, keyring(&generate_key()));
+    let sealed = || async {
+        sqlx::query_scalar::<_, i64>("SELECT sequence FROM audit.access_log_checkpoint")
+            .fetch_all(&pool)
+            .await
+            .expect("the checkpoints")
+    };
+    let idle = || async {
+        let round = log
+            .store()
+            .chain_round(64, Owed::default(), Seal::Now, &[])
+            .await
+            .expect("a round");
+        assert!(
+            matches!(round, Round::Chained { entries: 0, .. }),
+            "{round:?}"
+        );
+    };
+    idle().await;
+    assert_eq!(sealed().await, [0_i64; 0], "an empty log has no head");
+    write(&pool, 0..5).await;
+    log.store()
+        .chain_round(64, Owed::default(), Seal::Later, &[])
+        .await
+        .expect("a round that leaves its links unsealed");
+    assert_eq!(sealed().await, [0_i64; 0], "the round sealed nothing");
+    idle().await;
+    idle().await;
+    assert_eq!(sealed().await, [5], "one checkpoint of the head");
     let verification = log.verify(None).await.expect("verify the checkpoint");
     assert!(verification.intact(), "{verification:?}");
 }

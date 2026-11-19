@@ -5,7 +5,8 @@
 //!
 //! One run per [`INTERVAL`] seals the head of the system chain when it moved
 //! since its last seal, whenever the keyring holds an `OpenPGP` key (#5562).
-//! The access log needs no schedule: every append seals itself (#5704).
+//! The access log needs no schedule: its chainer seals every round or the
+//! head it comes to rest on, and the head another left unsealed (#5770, #6050).
 //!
 //! Each run is timed under `audit_seal_duration`; one that cannot seal logs at
 //! `ERROR`, counts as `failed` there and leaves `audit_seal_last_success`; the
