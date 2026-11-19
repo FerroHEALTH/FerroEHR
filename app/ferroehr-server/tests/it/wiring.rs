@@ -292,6 +292,27 @@ fn db_erase_parses_as_a_dry_run_or_with_a_confirmation() -> Result<(), clap::Err
     Ok(())
 }
 
+/// `ferroehr db sweep-blobs` lists unless `--apply` is given (#5957): deleting
+/// is never the default.
+#[test]
+fn db_sweep_blobs_lists_unless_told_to_apply() -> Result<(), clap::Error> {
+    let listed = Cli::try_parse_from(["ferroehr", "db", "sweep-blobs"])?;
+    assert!(
+        format!("{listed:?}").contains("SweepBlobs { apply: false }"),
+        "no --apply deletes nothing: {listed:?}"
+    );
+    let applied = Cli::try_parse_from(["ferroehr", "db", "sweep-blobs", "--apply"])?;
+    assert!(
+        format!("{applied:?}").contains("SweepBlobs { apply: true }"),
+        "--apply deletes: {applied:?}"
+    );
+    assert!(
+        Cli::try_parse_from(["ferroehr", "db", "sweep-blobs", "--apply=maybe"]).is_err(),
+        "--apply takes no value"
+    );
+    Ok(())
+}
+
 /// An unknown subcommand is rejected rather than silently falling through to
 /// the serve path.
 #[test]
