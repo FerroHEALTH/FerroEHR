@@ -45,7 +45,7 @@ fn access(code: &str) -> Value {
 
 /// [`policy`] with every care fact the policy stores, its kinship coded
 /// `kinship` and unbound.
-fn with_care(kinship: Value) -> Value {
+fn with_care(kinship: &Value) -> Value {
     let mut body = policy(true);
     body["self_declared_care"] = json!({ "_type": "DV_DURATION", "value": "P1D" });
     body["attested_care"] = json!([{ "_type": "DV_IDENTIFIER", "issuer": "Regional exchange",
@@ -150,7 +150,7 @@ async fn every_care_fact_round_trips_through_put_and_get() {
     let (_db, pool) = common::migrated_pool().await;
     let (_svc, app) = replica(&pool, None).await;
     let written = binding(
-        with_care(coded("openehr", "10")),
+        with_care(&coded("openehr", "10")),
         "care_role",
         "http://terminology.example/ValueSet/care-role",
     );
@@ -178,7 +178,7 @@ async fn a_code_outside_its_value_set_is_refused_naming_the_attribute() {
 
     let bound = |kinship| {
         binding(
-            with_care(coded("urn:example:kinship", kinship)),
+            with_care(&coded("urn:example:kinship", kinship)),
             "kinship",
             KINSHIP_VS,
         )
@@ -186,17 +186,17 @@ async fn a_code_outside_its_value_set_is_refused_naming_the_attribute() {
     let (status, answer) = replace(&app, &first, &bound("SIS")).await;
     names(status, &answer, "/conflict_rules/0/kinships/0");
 
-    let (status, answer) = replace(&app, &first, &with_care(coded("openehr", "999"))).await;
+    let (status, answer) = replace(&app, &first, &with_care(&coded("openehr", "999"))).await;
     names(status, &answer, "/conflict_rules/0/kinships/0");
     let (status, answer) = replace(
         &app,
         &first,
-        &with_care(coded("urn:example:kinship", "BRO")),
+        &with_care(&coded("urn:example:kinship", "BRO")),
     )
     .await;
     names(status, &answer, "/conflict_rules/0/kinships/0");
 
-    let mut unknown_level = with_care(coded("openehr", "10"));
+    let mut unknown_level = with_care(&coded("openehr", "10"));
     unknown_level["concealed_confidentialities"] = json!([coded("HL7_Confidentiality", "X")]);
     let (status, answer) = replace(&app, &first, &unknown_level).await;
     names(status, &answer, "/concealed_confidentialities/0");
@@ -214,7 +214,7 @@ async fn a_bound_code_no_terminology_server_can_check_is_refused() {
     let (_db, pool) = common::migrated_pool().await;
     let (_svc, app) = replica(&pool, None).await;
     let body = binding(
-        with_care(coded("urn:example:kinship", "BRO")),
+        with_care(&coded("urn:example:kinship", "BRO")),
         "kinship",
         KINSHIP_VS,
     );
@@ -229,9 +229,9 @@ async fn a_policy_that_breaks_the_draft_model_stays_bad_request() {
     let (_db, pool) = common::migrated_pool().await;
     let (_svc, app) = replica(&pool, None).await;
     let first = create(&app, &policy(false)).await;
-    let mut self_with_kinships = with_care(coded("openehr", "10"));
+    let mut self_with_kinships = with_care(&coded("openehr", "10"));
     self_with_kinships["conflict_rules"][0]["conflict"] = access("self");
-    let mut instant_self_declared = with_care(coded("openehr", "10"));
+    let mut instant_self_declared = with_care(&coded("openehr", "10"));
     instant_self_declared["self_declared_care"]["value"] = json!("PT0S");
     for body in [self_with_kinships, instant_self_declared] {
         let (status, answer) = replace(&app, &first, &body).await;
@@ -287,7 +287,7 @@ async fn a_policy_is_checked_against_the_template_it_names() {
     let (status, answer) = replace(
         &app,
         &first,
-        &under(with_care(coded("openehr", "10")), template),
+        &under(with_care(&coded("openehr", "10")), template),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{answer}");

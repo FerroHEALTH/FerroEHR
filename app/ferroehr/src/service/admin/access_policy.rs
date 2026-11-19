@@ -15,8 +15,9 @@
 //! version is refused (`412`) rather than overwriting a change it never saw.
 //! A body that does not hold as a model is refused whole (`400`), and one
 //! that breaks its template or a value set it binds is refused whole (`422`);
-//! neither reaches the request path. A write that changes the restrictions of the access log's
-//! subject view (EHDS Art. 9(3)) changes what the log means, so it writes an
+//! neither reaches the request path. A write that changes the restrictions
+//! of the access log's subject view (EHDS Art. 9(3)) changes what the log
+//! means, so it writes an
 //! access-log entry naming the write and a record naming the version (the
 //! access log's recording rule 7).
 //! The draft access control package is no openEHR release and ITS-REST
