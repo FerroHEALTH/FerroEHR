@@ -1,5 +1,5 @@
 ---
-paths: ["app/ferroehr/src/service/demographic/**", "app/ferroehr/src/service/linkage/**", "app/ferroehr/migrations/demographic/**", "app/ferroehr*/src/**/identifier_scan*", "app/ferroehr*/src/**/outbox*"]
+paths: ["app/ferroehr/src/service/demographic/**", "app/ferroehr/src/service/linkage/**", "app/ferroehr/migrations/demographic/**", "app/ferroehr*/src/**/outbox*"]
 ---
 
 # Personal data and the pseudonymisation boundary
@@ -7,7 +7,7 @@ paths: ["app/ferroehr/src/service/demographic/**", "app/ferroehr/src/service/lin
 The server keeps clinical content and the identities it belongs to in separate
 schemas, reachable by separate database roles. The paths this rule is scoped to
 are the boundary itself: the demographic schema, the services over it and the
-crossings between the domains, the identifier scanner, and the outbox payload builders that carry data
+crossings between the domains, and the outbox payload builders that carry data
 out of the process. A change here is a change to what can be re-identified, and
 GDPR Art. 25 makes that a design-time duty
 (https://eur-lex.europa.eu/eli/reg/2016/679/oj). No openEHR spec governs any of

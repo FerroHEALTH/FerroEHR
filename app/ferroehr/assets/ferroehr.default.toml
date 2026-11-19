@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 857 keys. A deployment that holds real data sets the 10
+# This file lists 854 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -1782,20 +1782,6 @@ subject_namespaces = []
 # in clinical content (`FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR`).
 # Optional (trust).
 #? allow_identified_parties_in_ehr = false
-
-# The identifier scanner.
-#? [privacy.identifier_scan]
-# `strict` (refuse) or `warn` (accept and record)
-# (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE`). Optional (trust).
-#? mode = "strict"
-# The national personal-identifier rules this deployment scans for, by rule key
-# (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__RULES`, comma-separated in the
-# environment). An unknown key is a boot error naming it. Optional (trust).
-#? rules = ["ch-ahvn13", "ch-epd-pid", "de-kvnr", "fi-hetu", "gb-nhs-number", "nl-bsn", "no-fodselsnummer", "se-personnummer"]
-# Extra identifier patterns this deployment refuses, as Rust regular
-# expressions (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__PATTERNS`, comma-separated
-# in the environment). Optional (trust).
-#? patterns = []
 
 # The national-identifier protection of the demographic domain; absent, off.
 #? [privacy.identifier_protection]

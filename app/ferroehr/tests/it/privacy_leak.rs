@@ -12,12 +12,7 @@
 //! The tests are written so they FAIL on a regression rather than passing
 //! vacuously: the fixture deliberately carries identifying values that the
 //! policy must strip or refuse, and each sink is asserted to be non-empty
-//! before it is scanned. Sinks the server itself authors — the outbox
-//! envelope and the two audit renderings — are scanned with the same detectors
-//! the write path uses ([`ferroehr::privacy::detect`]) plus the fixture's own
-//! values; the trace records, which are dominated by another crate's
-//! telemetry, are scanned for the fixture's values alone (the reason is at
-//! that test).
+//! before it is scanned for the fixture's own values.
 
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
@@ -41,14 +36,14 @@ use crate::fixtures::uv;
 const PSEUDONYM_NS: &str = "urn:ferroehr:pseudonym";
 const OPAQUE_SUBJECT: &str = "018f3c2a-7b41-7c2e-9a55-6d1e4f80b2c3";
 
-/// Values a leak would carry, one per shipped jurisdiction plus a name. All
+/// Values a leak would carry, national-identifier shapes and a name. All
 /// synthetic, each constructed by running a published algorithm forward.
 const FORBIDDEN: &[&str] = &[
-    "111222333",   // privacy-allow: synthetic, claimed by nl-bsn
-    "15038545660", // claimed by no-fodselsnummer
-    "9001011239",  // claimed by se-personnummer
-    "9434767016",  // claimed by gb-nhs-number
-    "010100A123D", // claimed by fi-hetu
+    "111222333",   // privacy-allow: synthetic, passes the eleven-test
+    "15038545660", // synthetic
+    "9001011239",  // synthetic
+    "9434767016",  // synthetic
+    "010100A123D", // synthetic
     "Dr Sybrand Veenstra",
 ];
 
@@ -67,8 +62,8 @@ fn audit_context() -> AuditContext {
 
 /// Refuses any of the fixture's deliberately-identifying strings.
 ///
-/// This half of the gate is EXACT: the values are known up front, so only a
-/// real leak can trigger it, and it therefore runs over every sink verbatim.
+/// The gate is EXACT: the values are known up front, so only a real leak can
+/// trigger it, and it therefore runs over every sink verbatim.
 fn assert_no_forbidden_literal(sink: &str, text: &str) {
     for forbidden in FORBIDDEN {
         assert!(
@@ -78,29 +73,11 @@ fn assert_no_forbidden_literal(sink: &str, text: &str) {
     }
 }
 
-/// Refuses any text a shipped identifier rule claims, and any of the fixture's
-/// deliberately-identifying strings.
-///
-/// The opaque pseudonym is the ONE subject identifier that may appear. The
-/// scanner's own ruleset is what does the looking, so a rule added for a new
-/// jurisdiction widens this gate with no edit here.
-fn assert_no_identifier_but_the_pseudonym(sink: &str, text: &str) {
-    for rule in ferroehr::privacy::detect::built_in_rules() {
-        assert!(
-            !rule.matches(text),
-            "{sink} carries a value the `{}` rule claims: {text}",
-            rule.key
-        );
-    }
-    assert_no_forbidden_literal(sink, text);
-}
-
 fn enforcing_service(db: &testkit::TestDb) -> FerroEhrService {
-    let policy = PrivacyPolicy::compile(&PrivacyConfig {
+    let policy = PrivacyPolicy::from(&PrivacyConfig {
         subject_namespaces: vec![PSEUDONYM_NS.to_owned()],
         ..PrivacyConfig::default()
-    })
-    .expect("the deployment policy compiles");
+    });
     FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_privacy(Arc::new(policy))
 }
@@ -169,7 +146,7 @@ async fn the_outbox_envelope_carries_no_subject_identifier() {
     for row in &rows {
         let envelope: Value = row.get("envelope");
         let text = serde_json::to_string(&envelope).expect("serialize the envelope");
-        assert_no_identifier_but_the_pseudonym("the outbox envelope", &text);
+        assert_no_forbidden_literal("the outbox envelope", &text);
         // The envelope names the EHR by its own id and never by its subject:
         // even the opaque pseudonym has no business on a broker topic.
         assert!(
@@ -227,7 +204,7 @@ async fn the_atna_records_carry_the_opaque_pseudonym_and_nothing_else() {
         xml.contains(&format!("ParticipantObjectID=\"{OPAQUE_SUBJECT}\"")),
         "the Patient-Number participant must carry the pseudonym: {xml}"
     );
-    assert_no_identifier_but_the_pseudonym("the ATNA audit message", &xml);
+    assert_no_forbidden_literal("the ATNA audit message", &xml);
 
     let rendered = fhir::to_fhir(&event, &ctx, resolved.as_deref()).expect("the FHIR AuditEvent");
     let text = serde_json::to_string(&rendered).expect("serialize the AuditEvent");
@@ -235,7 +212,7 @@ async fn the_atna_records_carry_the_opaque_pseudonym_and_nothing_else() {
         text.contains(OPAQUE_SUBJECT),
         "the BALP patient entity must carry the pseudonym: {text}"
     );
-    assert_no_identifier_but_the_pseudonym("the FHIR AuditEvent", &text);
+    assert_no_forbidden_literal("the FHIR AuditEvent", &text);
 }
 
 /// A `tracing` writer that collects everything the run emits into one buffer.
@@ -302,13 +279,6 @@ async fn the_commit_traces_carry_no_subject_identifier() {
         "the gate must scan something: the commit emitted no trace record"
     );
 
-    // The exact scan, not the checksum ruleset, is this sink's instrument.
-    // The records are dominated by the database driver's own telemetry, and
-    // every rule publishes the rate at which random digit runs satisfy its
-    // arithmetic (`detect::IdentifierRule::collision`, one in eleven for the
-    // elfproef) — a stream of `elapsed_secs` values would be measured, not the
-    // policy. The fixture's identifying values are known up front, so a
-    // substring match catches the leak and nothing else can trigger it.
     assert_no_forbidden_literal("the commit traces", &text);
     assert!(
         !text.contains(OPAQUE_SUBJECT),

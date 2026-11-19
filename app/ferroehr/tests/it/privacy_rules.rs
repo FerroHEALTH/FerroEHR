@@ -8,8 +8,8 @@
 use serde_json::{Value, json};
 
 use crate::fixtures::committer;
-use ferroehr::privacy::config::{IdentifierScanConfig, PrivacyConfig, ScanMode};
-use ferroehr::privacy::{Finding, FindingClass, PrivacyPolicy};
+use ferroehr::privacy::config::PrivacyConfig;
+use ferroehr::privacy::{Finding, PrivacyPolicy};
 
 /// A pseudonym namespace and an opaque subject, the shape the boundary
 /// mandates.
@@ -20,7 +20,7 @@ const PSEUDONYM_NS: &str = "urn:ferroehr:pseudonym";
 const OPAQUE_SUBJECT: &str = "018f3c2a-7b41-7c2e-9a55-6d1e4f80b2c3";
 
 fn policy(config: &PrivacyConfig) -> PrivacyPolicy {
-    PrivacyPolicy::compile(config).expect("the test policy compiles")
+    PrivacyPolicy::from(config)
 }
 
 fn enforcing() -> PrivacyPolicy {
@@ -55,23 +55,18 @@ fn paths(findings: &[Finding]) -> Vec<&str> {
 // ── the shipped default ───────────────────────────────────────────────────────
 
 /// The shipped default is the minimising posture: the identified-party opt-in
-/// off (which half of that rule bites is the matrix below), the scanner
-/// strict, and the subject rule waiting for a deployment fact.
+/// off (which half of that rule bites is the matrix below) and the subject
+/// rule waiting for a deployment fact.
 #[test]
-fn the_configuration_default_is_the_minimising_posture_and_scans_strictly() {
+fn the_configuration_default_is_the_minimising_posture() {
     let default = PrivacyConfig::default();
     assert!(!default.allow_identified_parties_in_ehr);
-    assert_eq!(default.identifier_scan.mode, ScanMode::Strict);
-    assert!(
-        !default.identifier_scan.rules.is_empty(),
-        "the shipped default scans for every rule the build carries"
-    );
     // The subject rule is the one that waits for a deployment fact: there is no
     // pseudonym namespace a server could invent for an operator.
     assert_eq!(default.subject_namespaces, Vec::<String>::new());
     let compiled = policy(&default);
     assert!(!compiled.subject_rule_in_force());
-    assert_eq!(compiled.scan_mode(), Some(ScanMode::Strict));
+    assert!(compiled.reads_content());
 }
 
 // ── rule 1: the subject reference ─────────────────────────────────────────────
@@ -95,7 +90,6 @@ fn an_unconfigured_namespace_is_refused() {
         paths(&findings),
         ["EHR_STATUS/subject/external_ref/namespace"]
     );
-    assert_eq!(findings[0].class, FindingClass::Refusal);
 }
 
 #[test]
@@ -104,14 +98,10 @@ fn a_non_uuid_subject_id_is_refused_and_the_value_never_travels() {
         "EHR_STATUS",
         &status_with_subject(PSEUDONYM_NS, "111222333"), // privacy-allow: synthetic, and the refusal must not echo it
     );
-    // Two rules see it at once: the subject rule (not a UUID) and the scanner
-    // (a value shaped like a BSN). Both report the same path, neither the value.
-    let refusals: Vec<_> = findings
-        .iter()
-        .filter(|f| f.class == FindingClass::Refusal)
-        .collect();
-    assert_eq!(refusals.len(), 1, "{findings:?}");
-    assert_eq!(refusals[0].path, "EHR_STATUS/subject/external_ref/id/value");
+    assert_eq!(
+        paths(&findings),
+        ["EHR_STATUS/subject/external_ref/id/value"]
+    );
     for finding in &findings {
         assert!(
             !finding.message.contains("111222333"), // privacy-allow: synthetic, asserted ABSENT
@@ -209,24 +199,6 @@ fn formal_identifiers_on_a_party_identified_are_accepted_by_default() {
     assert!(findings.is_empty(), "{findings:?}");
 }
 
-/// A national identifier as a `DV_IDENTIFIER` value is still refused, by the
-/// identifier scanner, whichever party proxy carries it: the class rule
-/// admits the slot, never the subject's number.
-#[test]
-fn a_national_identifier_value_in_identifiers_is_refused_by_the_scanner() {
-    let composition = json!({
-        "_type": "COMPOSITION",
-        "composer": {
-            "_type": "PARTY_IDENTIFIED",
-            "name": "Dr Author",
-            "identifiers": [{ "_type": "DV_IDENTIFIER", "id": "111222333", "issuer": "RvIG" }] // privacy-allow: synthetic
-        }
-    });
-    let findings = policy(&PrivacyConfig::default()).findings("COMPOSITION", &composition);
-    assert_eq!(paths(&findings), ["COMPOSITION/composer/identifiers[0]/id"]);
-    assert_eq!(findings[0].class, FindingClass::IdentifierShape);
-}
-
 /// A `PARTY_RELATED` whose relationship names a third party keeps its name.
 ///
 /// The class is "Proxy type for identifying a party and its relationship to
@@ -299,7 +271,6 @@ fn a_named_party_related_coded_self_is_refused_by_default() {
             paths(&findings),
             ["COMPOSITION/content[0]/other_participations[0]/performer/name"]
         );
-        assert_eq!(findings[0].class, FindingClass::Refusal);
     }
 }
 
@@ -400,203 +371,23 @@ fn a_party_self_carries_no_name_slot_and_is_untouched() {
     );
 }
 
-// ── rule 3: the identifier scanner ────────────────────────────────────────────
-
-#[test]
-fn a_bsn_in_free_text_is_a_finding() {
-    let composition = json!({
-        "_type": "COMPOSITION",
-        "content": [{ "_type": "EVALUATION", "data": { "_type": "ITEM_TREE", "items": [
-            { "_type": "ELEMENT", "value": { "_type": "DV_TEXT",
-              "value": "referral for 111222333" } } // privacy-allow: synthetic, passes the eleven-test
-        ] } }]
-    });
-    let findings = policy(&PrivacyConfig::default()).findings("COMPOSITION", &composition);
-    assert_eq!(
-        paths(&findings),
-        ["COMPOSITION/content[0]/data/items[0]/value/value"]
-    );
-    assert_eq!(findings[0].class, FindingClass::IdentifierShape);
-}
-
-#[test]
-fn a_terminology_code_that_satisfies_a_checksum_by_chance_is_not_a_finding() {
-    // The measured false-positive class, and the reason the carve-out is a
-    // structural one. 288526004 is a real SNOMED CT concept id from the
-    // vendored OPT fixtures and satisfies the Dutch elfproef by chance; 27 of
-    // the 30 nine-digit passers in this repository are SNOMED codes. Every
-    // checksum rule has this exposure to some code system, so the carve-out
-    // names an RM slot rather than a country: `code_string` is CODE_PHRASE's
-    // only string attribute and no other RM class declares it.
-    let composition = json!({
-        "_type": "COMPOSITION",
-        "category": { "_type": "DV_CODED_TEXT", "value": "event", "defining_code": {
-            "_type": "CODE_PHRASE",
-            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "SNOMED-CT" },
-            "code_string": "288526004" } } // privacy-allow: a terminology code from the vendored fixtures
-    });
-    assert_eq!(
-        policy(&PrivacyConfig::default()).findings("COMPOSITION", &composition),
-        Vec::<Finding>::new()
-    );
-    // The same digits in a free-text slot are still a finding: the carve-out is
-    // the slot, so it cannot blind the scanner anywhere else.
-    let narrative = json!({
-        "_type": "COMPOSITION",
-        "name": { "_type": "DV_TEXT", "value": "note 288526004" } // privacy-allow: a SNOMED CT identifier, deliberately outside the coded slot
-    });
-    assert_eq!(
-        paths(&policy(&PrivacyConfig::default()).findings("COMPOSITION", &narrative)),
-        ["COMPOSITION/name/value"]
-    );
-}
-
-#[test]
-fn an_object_version_id_and_an_archetype_id_are_not_findings() {
-    // The technical identifiers every stored instance carries: a UUID has no
-    // delimited nine-digit run, and neither does an archetype identifier.
-    let composition = json!({
-        "_type": "COMPOSITION",
-        "uid": { "_type": "OBJECT_VERSION_ID",
-                 "value": "018f3c2a-7b41-7c2e-9a55-6d1e4f80b2c3::ferroehr.local::1" },
-        "archetype_node_id": "openEHR-EHR-COMPOSITION.encounter.v1"
-    });
-    assert_eq!(
-        policy(&PrivacyConfig::default()).findings("COMPOSITION", &composition),
-        Vec::<Finding>::new()
-    );
-}
-
-#[test]
-fn a_configured_pattern_is_a_finding_and_names_itself() {
-    let with_pattern = policy(&PrivacyConfig {
-        identifier_scan: IdentifierScanConfig {
-            patterns: vec![r"\bMRN-[0-9]{6}\b".to_owned()],
-            ..IdentifierScanConfig::default()
-        },
-        ..PrivacyConfig::default()
-    });
-    let composition = json!({
-        "_type": "COMPOSITION",
-        "name": { "_type": "DV_TEXT", "value": "chart MRN-004221" }
-    });
-    let findings = with_pattern.findings("COMPOSITION", &composition);
-    assert_eq!(paths(&findings), ["COMPOSITION/name/value"]);
-    assert!(findings[0].message.contains(r"\bMRN-[0-9]{6}\b"));
-}
-
-#[test]
-fn an_uncompilable_pattern_fails_the_policy_build_naming_the_pattern() {
-    let error = PrivacyPolicy::compile(&PrivacyConfig {
-        identifier_scan: IdentifierScanConfig {
-            patterns: vec!["[unclosed".to_owned()],
-            ..IdentifierScanConfig::default()
-        },
-        ..PrivacyConfig::default()
-    })
-    .expect_err("an invalid pattern is a configuration error");
-    assert!(error.to_string().contains("[unclosed"));
-}
-
-#[test]
-fn an_unknown_rule_key_fails_the_policy_build_listing_the_shipped_rules() {
-    let error = PrivacyPolicy::compile(&PrivacyConfig {
-        identifier_scan: IdentifierScanConfig {
-            rules: vec!["zz-invented".to_owned()],
-            ..IdentifierScanConfig::default()
-        },
-        ..PrivacyConfig::default()
-    })
-    .expect_err("an unknown rule key is a configuration error");
-    let rendered = error.to_string();
-    assert!(rendered.contains("zz-invented"), "{rendered}");
-    assert!(rendered.contains("nl-bsn"), "{rendered}");
-}
-
-#[test]
-fn every_shipped_jurisdiction_is_scanned_by_the_default_policy() {
-    // The point of the ruleset: an identifier from any shipped jurisdiction is
-    // caught, not only the one the build was written in.
-    let default = policy(&PrivacyConfig::default());
-    for (key, value) in [
-        ("nl-bsn", "111222333"), // privacy-allow: synthetic, from the published algorithm
-        ("no-fodselsnummer", "15038545660"),
-        ("se-personnummer", "9001011239"),
-        ("gb-nhs-number", "9434767016"),
-        ("fi-hetu", "010100A123D"),
-    ] {
-        let composition = json!({
-            "_type": "COMPOSITION",
-            "name": { "_type": "DV_TEXT", "value": format!("note {value}") }
-        });
-        let findings = default.findings("COMPOSITION", &composition);
-        assert_eq!(
-            paths(&findings),
-            ["COMPOSITION/name/value"],
-            "{key} was not caught by the default policy"
-        );
-        assert!(
-            findings[0].message.contains(key),
-            "the finding must name the rule that claimed it: {}",
-            findings[0].message
-        );
-    }
-}
-
-#[test]
-fn narrowing_the_rule_list_narrows_what_is_caught() {
-    let nl_only = policy(&PrivacyConfig {
-        identifier_scan: IdentifierScanConfig {
-            rules: vec!["nl-bsn".to_owned()],
-            ..IdentifierScanConfig::default()
-        },
-        ..PrivacyConfig::default()
-    });
-    let norwegian = json!({
-        "_type": "COMPOSITION",
-        "name": { "_type": "DV_TEXT", "value": "note 15038545660" }
-    });
-    assert_eq!(
-        nl_only.findings("COMPOSITION", &norwegian),
-        Vec::<Finding>::new()
-    );
-    assert_eq!(
-        paths(&policy(&PrivacyConfig::default()).findings("COMPOSITION", &norwegian)),
-        ["COMPOSITION/name/value"]
-    );
-}
-
 /// The library default is the refusing posture the shipped configuration
-/// compiles to (#3243): a service built without an explicit policy scans with
-/// every rule in `strict` mode, never a more permissive shape than the binary.
+/// builds (#3243): a service built without an explicit policy refuses a
+/// subject's own name on a `self` party, never a more permissive shape than
+/// the binary.
 #[test]
 fn the_default_policy_is_the_refusing_posture() {
     let composition = json!({
         "_type": "COMPOSITION",
-        "composer": committer("Dr Author"),
-        "name": { "_type": "DV_TEXT", "value": "111222333" } // privacy-allow: synthetic, passes the eleven-test
+        "composer": {
+            "_type": "PARTY_RELATED",
+            "name": "The Patient",
+            "relationship": { "_type": "DV_CODED_TEXT", "value": "self" }
+        }
     });
     let findings = PrivacyPolicy::default().findings("COMPOSITION", &composition);
-    assert_eq!(paths(&findings), ["COMPOSITION/name/value"]);
-    assert_eq!(PrivacyPolicy::default().scan_mode(), Some(ScanMode::Strict));
-}
-
-#[test]
-fn warn_mode_still_reports_the_finding_and_keeps_its_class() {
-    let warning = policy(&PrivacyConfig {
-        identifier_scan: IdentifierScanConfig {
-            mode: ScanMode::Warn,
-            ..IdentifierScanConfig::default()
-        },
-        ..PrivacyConfig::default()
-    });
-    let composition = json!({
-        "_type": "COMPOSITION",
-        "name": { "_type": "DV_TEXT", "value": "111222333" } // privacy-allow: synthetic, passes the eleven-test
-    });
-    let findings = warning.findings("COMPOSITION", &composition);
-    assert_eq!(findings.len(), 1);
-    assert_eq!(findings[0].class, FindingClass::IdentifierShape);
+    assert_eq!(paths(&findings), ["COMPOSITION/composer/name"]);
+    assert!(PrivacyPolicy::default().reads_content());
 }
 
 #[test]
@@ -622,94 +413,20 @@ fn a_uuid_subject_is_accepted_in_either_case() {
     }
 }
 
-/// The false-positive measurement: the full default ruleset over every
-/// vendored clinical document in the shared corpus.
-///
-/// Each rule accepts some fraction of random digit runs by its own published
-/// arithmetic — one in eleven for the elfproef — so the question a deployment
-/// actually asks is not whether a collision is possible but whether real
-/// clinical content trips one. The corpus is the closest thing this repository
-/// has to that content: the CKM-derived template example instances and every
-/// fixture body the service and REST suites commit. The scan runs with every
-/// shipped jurisdiction active at once, which is stricter than any single
-/// deployment, and only the scanner's own findings count — a corpus
-/// composition naming its composer is the identified-party rule doing its job,
-/// not a false positive.
-///
-/// Measured 258 documents, zero findings, and the reason is worth stating so
-/// nobody reads more into this gate than it carries: the corpus contains no
-/// delimited nine-, ten- or eleven-digit run in any scanned string leaf at
-/// all, so a rule that stopped discriminating entirely would still pass here.
-/// The gate that catches THAT is the collision measurement beside the rules
-/// themselves (`privacy::detect`), which fails when a rule drifts from the
-/// rate it publishes. This one answers the other half: real clinical content
-/// carries no shape the shipped ruleset claims.
-#[test]
-fn the_shipped_ruleset_finds_nothing_in_the_vendored_corpus() {
-    let policy = policy(&PrivacyConfig::default());
-    let corpus = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../corpus")
-        .canonicalize()
-        .expect("the shared corpus tree");
+// ── clinical digit runs ───────────────────────────────────────────────────────
 
-    let mut scanned = 0_usize;
-    let mut hits: Vec<String> = Vec::new();
-    let mut pending = vec![corpus];
-    while let Some(dir) = pending.pop() {
-        let entries = std::fs::read_dir(&dir).expect("read the corpus directory");
-        for entry in entries {
-            let path = entry.expect("a corpus directory entry").path();
-            if path.is_dir() {
-                pending.push(path);
-                continue;
-            }
-            if path.extension().is_none_or(|ext| ext != "json") {
-                continue;
-            }
-            let text = std::fs::read_to_string(&path).expect("read a corpus document");
-            let Ok(body) = serde_json::from_str::<Value>(&text) else {
-                // The corpus carries deliberately malformed bytes for the
-                // reader's refusal gates; they never reach a commit.
-                continue;
-            };
-            let root = body
-                .get("_type")
-                .and_then(Value::as_str)
-                .unwrap_or("COMPOSITION")
-                .to_owned();
-            scanned += 1;
-            hits.extend(
-                policy
-                    .findings(&root, &body)
-                    .into_iter()
-                    .filter(|finding| finding.class == FindingClass::IdentifierShape)
-                    .map(|finding| {
-                        format!("{}: {} {}", path.display(), finding.path, finding.message)
-                    }),
-            );
-        }
-    }
-
-    assert!(
-        scanned >= 200,
-        "the gate must scan something: only {scanned} corpus documents parsed"
-    );
-    assert!(
-        hits.is_empty(),
-        "the shipped ruleset claims {} value(s) in the vendored corpus:\n{}",
-        hits.len(),
-        hits.join("\n")
-    );
-}
-
-// ── typed identifiers ─────────────────────────────────────────────────────────
-
-/// Two laboratory filler order numbers that pass the NHS Number modulus 11 by
-/// chance, as a Dutch laboratory deployment reported them.
-const ORDER_NUMBERS: [&str; 2] = ["8412501861", "8372500932"]; // privacy-allow: lab order numbers, not person identifiers
-
-/// A value the `gb-nhs-number` rule claims. Synthetic.
-const SYNTHETIC_NHS_NUMBER: &str = "9434767016"; // privacy-allow: synthetic, from the published algorithm
+/// Digit runs a laboratory carries that pass a national checksum by chance:
+/// the filler order number a partner reported (ten digits, a YYMMDD reading
+/// and a Luhn pass), two order numbers passing the NHS Number modulus 11, and
+/// runs passing the eleven-test and the Swiss GS1 check. Not one names a
+/// person, and the policy guesses nothing from a value's shape (#6081).
+const CHECKSUM_VALID_RUNS: [&str; 5] = [
+    "9702311805", // privacy-allow: a laboratory filler order number, not a person identifier
+    "8412501861", // privacy-allow: a laboratory order number, not a person identifier
+    "8372500932", // privacy-allow: a laboratory order number, not a person identifier
+    "123456782",  // privacy-allow: synthetic, built to satisfy the eleven-test
+    "7561234567897", // privacy-allow: synthetic, built to satisfy the GS1 modulo-10 check
+];
 
 /// A `DV_IDENTIFIER` with an optional `type`, as canonical JSON.
 fn identifier(id: &str, kind: Option<&str>) -> Value {
@@ -721,148 +438,23 @@ fn identifier(id: &str, kind: Option<&str>) -> Value {
     }
 }
 
-/// A lab result whose order numbers sit where one carries them: the feeder
-/// audit's originating-system item ids and an identifier element in the
-/// protocol, under a name that declares no kind (#5291).
-fn lab_result(order: &str, order_type: Option<&str>) -> Value {
-    let mut placer = identifier("CL2509-0042", Some("placer_order_number"));
-    if let Some(object) = placer.as_object_mut() {
-        object.remove("_type");
-    }
+/// A `laboratory_test_result.v1` observation carrying `order` where a
+/// laboratory carries it: the feeder audit's item ids, the protocol's
+/// "Receiver order identifier" element (at0063), a provider's formal
+/// identifier and the free-text name.
+fn laboratory_result(order: &str, order_type: Option<&str>) -> Value {
     json!({
         "_type": "COMPOSITION",
-        "name": { "_type": "DV_TEXT", "value": "laboratory result" },
+        "name": { "_type": "DV_TEXT", "value": format!("laboratory report {order}") },
+        "composer": {
+            "_type": "PARTY_IDENTIFIED",
+            "name": "Dr Author",
+            "identifiers": [identifier(order, None)]
+        },
         "feeder_audit": {
             "originating_system_audit": { "system_id": "lab.example" },
-            "originating_system_item_ids": [placer, identifier(order, order_type)]
+            "originating_system_item_ids": [identifier(order, order_type)]
         },
-        "content": [{
-            "_type": "OBSERVATION",
-            "name": { "_type": "DV_TEXT", "value": "laboratory test result" },
-            "protocol": {
-                "_type": "ITEM_TREE",
-                "name": { "_type": "DV_TEXT", "value": "tree" },
-                "items": [{
-                    "_type": "CLUSTER",
-                    "name": { "_type": "DV_TEXT", "value": "order details" },
-                    "items": [{
-                        "_type": "ELEMENT",
-                        "name": { "_type": "DV_TEXT", "value": "reference" },
-                        "value": identifier(order, order_type)
-                    }]
-                }]
-            }
-        }]
-    })
-}
-
-#[test]
-fn an_order_number_typed_as_one_is_not_a_finding() {
-    let default = policy(&PrivacyConfig::default());
-    for order in ORDER_NUMBERS {
-        for kind in [
-            "filler_order_number",
-            "Filler Order Number",
-            "fillerOrderNumber",
-        ] {
-            assert_eq!(
-                paths(&default.findings("COMPOSITION", &lab_result(order, Some(kind)))),
-                Vec::<&str>::new(),
-                "{kind} declares an order identifier, not a person identifier"
-            );
-        }
-    }
-}
-
-#[test]
-fn an_untyped_item_id_in_the_feeder_audit_is_not_a_finding_but_one_in_content_is() {
-    let default = policy(&PrivacyConfig::default());
-    for order in ORDER_NUMBERS {
-        assert_eq!(
-            paths(&default.findings("COMPOSITION", &lab_result(order, None))),
-            ["COMPOSITION/content[0]/protocol/items[0]/items[0]/value/id"],
-            "FEEDER_AUDIT.originating_system_item_ids identify the item, an untyped \
-             DV_IDENTIFIER elsewhere under a name that declares no kind is still scanned"
-        );
-    }
-}
-
-#[test]
-fn a_person_identifier_is_refused_whatever_slot_or_type_it_sits_in() {
-    let default = policy(&PrivacyConfig::default());
-    for kind in [
-        "NHS Number",
-        "nhs_number",
-        "patient order number",
-        "Social Security Number",
-    ] {
-        let findings =
-            default.findings("COMPOSITION", &lab_result(SYNTHETIC_NHS_NUMBER, Some(kind)));
-        assert_eq!(
-            paths(&findings),
-            [
-                "COMPOSITION/feeder_audit/originating_system_item_ids[1]/id",
-                "COMPOSITION/content[0]/protocol/items[0]/items[0]/value/id",
-            ],
-            "{kind} names a person identifier, so its value is scanned"
-        );
-        assert!(findings[0].message.contains("gb-nhs-number"));
-    }
-    let unknown = default.findings(
-        "COMPOSITION",
-        &lab_result(SYNTHETIC_NHS_NUMBER, Some("reference")),
-    );
-    assert_eq!(
-        paths(&unknown),
-        ["COMPOSITION/content[0]/protocol/items[0]/items[0]/value/id"],
-        "a type that names no kind this scan knows proves nothing outside the item-id slot"
-    );
-}
-
-#[test]
-fn an_order_number_in_free_text_is_still_claimed_by_the_rules_in_force() {
-    let text = json!({
-        "_type": "COMPOSITION",
-        "name": { "_type": "DV_TEXT", "value": format!("order {}", ORDER_NUMBERS[0]) }
-    });
-    assert_eq!(
-        paths(&policy(&PrivacyConfig::default()).findings("COMPOSITION", &text)),
-        ["COMPOSITION/name/value"],
-        "free text declares no type, so the default rule set still claims the run"
-    );
-    let dutch = policy(&PrivacyConfig {
-        identifier_scan: IdentifierScanConfig {
-            rules: vec!["nl-bsn".to_owned()],
-            ..IdentifierScanConfig::default()
-        },
-        ..PrivacyConfig::default()
-    });
-    assert_eq!(
-        dutch.findings("COMPOSITION", &text),
-        Vec::<Finding>::new(),
-        "a deployment that does not enable gb-nhs-number never claims an NHS Number"
-    );
-}
-
-// ── identifiers read by their element's name ─────────────────────────────────
-
-/// The node names of `openEHR-EHR-OBSERVATION.laboratory_test_result.v1`'s
-/// protocol (`corpus/archetypes/ckm/adl14/`): the "Test request details"
-/// cluster (at0094) and its two order identifier elements (at0062, at0063).
-const TEST_REQUEST_DETAILS: &str = "Test request details";
-const REQUESTER_ORDER_IDENTIFIER: &str = "Requester order identifier";
-const RECEIVER_ORDER_IDENTIFIER: &str = "Receiver order identifier";
-
-/// Where the reported order id sits: the second element of "Test request
-/// details", "Receiver order identifier" (at0063).
-const ORDER_ID_PATH: &str = "COMPOSITION/content[0]/protocol/items[0]/items[1]/value/id";
-
-/// A `laboratory_test_result.v1` observation whose second "Test request
-/// details" element, named `element_name`, carries `order` typed `order_type`.
-fn laboratory_test_result(order: &str, order_type: Option<&str>, element_name: &str) -> Value {
-    json!({
-        "_type": "COMPOSITION",
-        "name": { "_type": "DV_TEXT", "value": "laboratory report" },
         "content": [{
             "_type": "OBSERVATION",
             "archetype_node_id": "openEHR-EHR-OBSERVATION.laboratory_test_result.v1",
@@ -874,16 +466,11 @@ fn laboratory_test_result(order: &str, order_type: Option<&str>, element_name: &
                 "items": [{
                     "_type": "CLUSTER",
                     "archetype_node_id": "at0094",
-                    "name": { "_type": "DV_TEXT", "value": TEST_REQUEST_DETAILS },
+                    "name": { "_type": "DV_TEXT", "value": "Test request details" },
                     "items": [{
                         "_type": "ELEMENT",
-                        "archetype_node_id": "at0062",
-                        "name": { "_type": "DV_TEXT", "value": REQUESTER_ORDER_IDENTIFIER },
-                        "value": identifier("CL2509-0042", None)
-                    }, {
-                        "_type": "ELEMENT",
                         "archetype_node_id": "at0063",
-                        "name": { "_type": "DV_TEXT", "value": element_name },
+                        "name": { "_type": "DV_TEXT", "value": "Receiver order identifier" },
                         "value": identifier(order, order_type)
                     }]
                 }]
@@ -893,85 +480,15 @@ fn laboratory_test_result(order: &str, order_type: Option<&str>, element_name: &
 }
 
 #[test]
-fn an_untyped_order_number_under_an_order_identifier_element_is_not_a_finding() {
+fn a_checksum_valid_digit_run_in_laboratory_content_is_not_a_finding() {
     let default = policy(&PrivacyConfig::default());
-    for order in ORDER_NUMBERS {
-        for name in [RECEIVER_ORDER_IDENTIFIER, REQUESTER_ORDER_IDENTIFIER] {
+    for order in CHECKSUM_VALID_RUNS {
+        for kind in [None, Some("filler_order_number"), Some("NHS Number")] {
             assert_eq!(
-                paths(&default.findings("COMPOSITION", &laboratory_test_result(order, None, name))),
-                Vec::<&str>::new(),
-                "with no type, the element name {name} declares an order identifier"
+                default.findings("COMPOSITION", &laboratory_result(order, kind)),
+                Vec::<Finding>::new(),
+                "{kind:?}"
             );
         }
     }
-}
-
-#[test]
-fn an_untyped_nhs_number_under_an_element_named_for_a_person_is_a_finding() {
-    let default = policy(&PrivacyConfig::default());
-    for name in [
-        "NHS number",
-        "Patient identifier",
-        "Patient order identifier",
-    ] {
-        let findings = default.findings(
-            "COMPOSITION",
-            &laboratory_test_result(SYNTHETIC_NHS_NUMBER, None, name),
-        );
-        assert_eq!(
-            paths(&findings),
-            [ORDER_ID_PATH],
-            "{name} names a person identifier, so its value is scanned"
-        );
-        assert!(findings[0].message.contains("gb-nhs-number"));
-    }
-    assert_eq!(
-        paths(&default.findings(
-            "COMPOSITION",
-            &laboratory_test_result(SYNTHETIC_NHS_NUMBER, None, "Laboratory internal identifier")
-        )),
-        [ORDER_ID_PATH],
-        "an element name that declares no kind proves nothing"
-    );
-}
-
-#[test]
-fn a_declared_type_takes_precedence_over_the_element_name() {
-    let default = policy(&PrivacyConfig::default());
-    for kind in ["NHS Number", "Social Security Number"] {
-        assert_eq!(
-            paths(&default.findings(
-                "COMPOSITION",
-                &laboratory_test_result(
-                    SYNTHETIC_NHS_NUMBER,
-                    Some(kind),
-                    RECEIVER_ORDER_IDENTIFIER
-                )
-            )),
-            [ORDER_ID_PATH],
-            "a type naming a person keeps the value scanned under an order element"
-        );
-    }
-    for order in ORDER_NUMBERS {
-        assert_eq!(
-            paths(&default.findings(
-                "COMPOSITION",
-                &laboratory_test_result(order, Some("filler_order_number"), "Patient identifier")
-            )),
-            Vec::<&str>::new(),
-            "a type naming an item is read before the element name"
-        );
-    }
-    assert_eq!(
-        paths(&default.findings(
-            "COMPOSITION",
-            &laboratory_test_result(
-                ORDER_NUMBERS[0],
-                Some("reference"),
-                RECEIVER_ORDER_IDENTIFIER
-            )
-        )),
-        Vec::<&str>::new(),
-        "a type naming neither kind falls back to the element name"
-    );
 }

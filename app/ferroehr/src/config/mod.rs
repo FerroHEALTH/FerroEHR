@@ -831,8 +831,8 @@ mod tests {
         assert_eq!(c.database.max_connections, Some(7));
     }
 
-    /// The `[privacy]` section is reachable from the environment, both scalars
-    /// and both lists, and its semantic validation runs.
+    /// The `[privacy]` section is reachable from the environment, its list
+    /// and its flag, and its semantic validation runs.
     #[test]
     fn the_privacy_section_maps_from_the_environment() {
         let c = assemble_ok(
@@ -843,18 +843,9 @@ mod tests {
                     "urn:ferroehr:pseudonym,mpi.example",
                 ),
                 ("FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR", "true"),
-                ("FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE", "warn"),
                 // The explicit standalone opt-in, without which the default
                 // IHE provider refuses for want of an endpoint.
                 ("FERROEHR__RECORD__SUBJECT_INDEX", "local"),
-                (
-                    "FERROEHR__PRIVACY__IDENTIFIER_SCAN__RULES",
-                    "nl-bsn,gb-nhs-number",
-                ),
-                (
-                    "FERROEHR__PRIVACY__IDENTIFIER_SCAN__PATTERNS",
-                    r"MRN-[0-9]{6},PAT[0-9]{8}",
-                ),
             ]),
             &[],
         );
@@ -866,18 +857,6 @@ mod tests {
             ]
         );
         assert!(c.privacy.allow_identified_parties_in_ehr);
-        assert_eq!(
-            c.privacy.identifier_scan.mode,
-            crate::privacy::config::ScanMode::Warn
-        );
-        assert_eq!(
-            c.privacy.identifier_scan.rules,
-            vec!["nl-bsn".to_owned(), "gb-nhs-number".to_owned()]
-        );
-        assert_eq!(
-            c.privacy.identifier_scan.patterns,
-            vec!["MRN-[0-9]{6}".to_owned(), "PAT[0-9]{8}".to_owned()]
-        );
         c.validate()
             .expect("a well-formed privacy section validates");
     }
@@ -1064,57 +1043,31 @@ mod tests {
         );
     }
 
-    /// A pattern that does not compile is a BOOT error naming the pattern, not
-    /// a scanner that silently runs one rule short.
+    /// The identifier scanner is gone (#6081): a tree that still sets
+    /// `[privacy.identifier_scan]` meets the unknown-key refusal, which names
+    /// the key, in the file and in the environment alike.
     #[test]
-    fn an_uncompilable_scan_pattern_is_a_boot_error() {
-        let c = assemble_ok(
+    fn the_removed_identifier_scan_section_is_an_unknown_key() {
+        for body in [
+            "[privacy.identifier_scan]\nmode = \"warn\"\n",
+            "[privacy.identifier_scan]\nrules = []\n",
+            "[privacy]\nidentifier_scan = { patterns = [] }\n",
+        ] {
+            let file = toml_file(body);
+            let err = assemble(Some(file.path()), &env(&[]), &[])
+                .expect_err("the removed section must be refused");
+            assert!(err.to_string().contains("identifier_scan"), "{body}: {err}");
+        }
+        let err = assemble(
             None,
-            &env(&[("FERROEHR__PRIVACY__IDENTIFIER_SCAN__PATTERNS", "[unclosed")]),
+            &env(&[("FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE", "strict")]),
             &[],
-        );
-        let errors = c
-            .validate()
-            .expect_err("an invalid pattern must refuse boot");
+        )
+        .expect_err("the removed variable must be refused");
         assert!(
-            errors.to_string().contains("[unclosed"),
-            "the refusal must name the pattern: {errors}"
-        );
-    }
-
-    /// An identifier rule this build does not ship is a BOOT error listing the
-    /// rules it does — never a jurisdiction the operator believes is covered
-    /// and is not.
-    #[test]
-    fn an_unknown_identifier_rule_is_a_boot_error_listing_the_shipped_rules() {
-        let c = assemble_ok(
-            None,
-            &env(&[(
-                "FERROEHR__PRIVACY__IDENTIFIER_SCAN__RULES",
-                "nl-bsn,zz-invented",
-            )]),
-            &[],
-        );
-        let errors = c
-            .validate()
-            .expect_err("an unknown rule key must refuse boot");
-        let rendered = errors.to_string();
-        assert!(rendered.contains("zz-invented"), "{rendered}");
-        assert!(rendered.contains("gb-nhs-number"), "{rendered}");
-    }
-
-    /// The shipped default activates every rule the build carries, derived from
-    /// the registry rather than restated — a rule added without reaching the
-    /// default would protect nobody.
-    #[test]
-    fn the_default_rule_set_is_every_shipped_rule() {
-        let default: Vec<String> = crate::privacy::detect::built_in_rules()
-            .iter()
-            .map(|rule| rule.key.to_owned())
-            .collect();
-        assert_eq!(
-            FerroEhrConfig::default().privacy.identifier_scan.rules,
-            default
+            err.to_string()
+                .contains("FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE"),
+            "{err}"
         );
     }
 

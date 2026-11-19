@@ -16,8 +16,7 @@ Closes #<!-- tracker issue number — the merge into main auto-closes it -->
 ## Privacy boundary
 
 <!-- Required when this change touches the party migrations,
-`service::demographic`, `service::linkage`, the identifier scanner, the
-access-event model or an outbox payload builder; the privacy-boundary-guard job
+`service::demographic`, `service::linkage`, the access-event model or an outbox payload builder; the privacy-boundary-guard job
 checks it then. Rules: CONTRIBUTING.md § Personal data. -->
 
 - [ ] The data flow is described above: what personal data this change reads, writes or exports, and where it goes

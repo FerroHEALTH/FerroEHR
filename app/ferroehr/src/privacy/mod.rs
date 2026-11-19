@@ -22,8 +22,7 @@
 //! (<https://wetten.overheid.nl/BWBR0040940>,
 //! <https://wetten.overheid.nl/BWBR0023864>).
 //!
-//! Three rules, all evaluated over the canonical JSON of a clinical commit
-//! body before it is stored:
+//! Two rules, both evaluated over a clinical commit body before it is stored:
 //!
 //! 1. **The subject reference.** `EHR_STATUS.subject.external_ref` must name a
 //!    configured pseudonym namespace and carry a UUID. In force only once the
@@ -36,79 +35,26 @@
 //!    `PARTY_RELATED`, unless its relationship codes `self`, where the party
 //!    IS the subject and both are refused. The deployment can opt in to the
 //!    `self` case. `Basic_validity` is satisfied by `external_ref` alone, so
-//!    the refused proxy stays expressible; a subject's identifier VALUE is
-//!    the scanner's job (rule 3) wherever it sits.
-//! 3. **The identifier scanner.** No string leaf may carry a value one of the
-//!    active identifier rules claims. The rules are keyed by jurisdiction and
-//!    each transcribes the checksum its own issuing register publishes; a
-//!    deployment selects which are active and adds patterns for the local
-//!    kinds no build can ship a rule for ([`detect`]). A `DV_IDENTIFIER`
-//!    whose `type` declares an item rather than a person, and one in a
-//!    feeder audit's item-id lists that declares no person, is not scanned
-//!    (`identifier_kind`). One with no `type`, or a type naming neither
-//!    kind, is read by the `name` of the `ELEMENT` that holds it instead.
+//!    the refused proxy stays expressible.
+//!
+//! Both rules read the RM structure and never guess from a string's shape
+//! whether it identifies a person: a clinical value such as a laboratory
+//! order number is stored as written (#6081).
 //!
 //! A finding never carries the offending VALUE, only its RM path and the rule
 //! that matched: a refusal travels into an error body, an access log and a
-//! trace, and echoing a national identifier into all three to complain about it
-//! would be the leak the rule exists to prevent.
+//! trace, and echoing an identifier into all three to complain about it would
+//! be the leak the rule exists to prevent.
 
 pub mod config;
-pub mod detect;
-mod identifier_kind;
 
 use std::fmt::Write as _;
 
 use openehr_base::validate::InvariantViolation;
 
 use crate::error::ServiceError;
-use crate::privacy::config::{PrivacyConfig, ScanMode};
-use crate::privacy::detect::{CustomPattern, IdentifierRule};
-use crate::privacy::identifier_kind::{DeclaredKind, declared_kind};
+use crate::privacy::config::PrivacyConfig;
 use crate::versioning::tree::{Shape, Tree};
-
-/// The JSON key whose value is a terminology code by construction, and which
-/// the identifier scanner therefore skips.
-///
-/// `code_string` is the only string attribute of `CODE_PHRASE` (BASE `base_types`
-/// `master06-terminology_package.adoc` §Class Definitions; `terminology_id` is
-/// an object), and no other RM class declares an attribute of that name, so
-/// the key alone identifies the slot. Every checksum rule accepts some fraction
-/// of random digit runs, and a terminology code system's identifiers are digit
-/// runs by construction, so this one slot is where the collision is systematic
-/// rather than incidental. The carve-out is structural and jurisdiction-neutral:
-/// it names an RM slot, not a country.
-pub(crate) const TERMINOLOGY_CODE_KEY: &str = "code_string";
-
-/// The `FEEDER_AUDIT` attributes whose `DV_IDENTIFIER`s identify the content
-/// item: "Identifiers used for the item in the originating system, e.g. filler
-/// and placer ids", and the same in the feeder system (RM common
-/// `UML/classes/org.openehr.rm.common.feeder_audit.adoc` §Attributes).
-const ITEM_ID_KEYS: [&str; 2] = ["originating_system_item_ids", "feeder_system_item_ids"];
-
-/// Where in the RM the walk is, as far as the identifier scanner cares.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Slot {
-    /// Any attribute.
-    Content,
-    /// An element of one of the [`ITEM_ID_KEYS`] lists.
-    ItemIds,
-}
-
-/// The walk's position: the [`Slot`] and, for the `value` of an `ELEMENT`,
-/// the kind that element's `name` declares.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Position {
-    slot: Slot,
-    element_name: DeclaredKind,
-}
-
-impl Position {
-    const CONTENT: Self = Self {
-        slot: Slot::Content,
-        element_name: DeclaredKind::Undeclared,
-    };
-}
 
 /// What a clinical commit body carried that the policy refuses.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -117,118 +63,32 @@ pub struct Finding {
     pub path: String,
     /// What is wrong, naming the shape and never the value.
     pub message: String,
-    /// Whether this finding is a refusal or, under
-    /// [`ScanMode::Warn`], a recorded warning.
-    pub class: FindingClass,
 }
 
-/// Which rule produced a [`Finding`], and therefore whether the scan mode
-/// applies to it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FindingClass {
-    /// The subject-reference rule or the identified-party rule: an
-    /// unconditional refusal whenever the rule is in force.
-    Refusal,
-    /// The identifier scanner: refused under [`ScanMode::Strict`], recorded as
-    /// an audit warning under [`ScanMode::Warn`].
-    IdentifierShape,
-}
-
-/// The compiled runtime form of [`PrivacyConfig`].
+/// The runtime form of [`PrivacyConfig`], built once at boot and held by the
+/// service.
 ///
-/// Built once at boot (the MRN patterns are compiled there, so an uncompilable
-/// one is a configuration error rather than a per-write surprise) and held by
-/// the service.
-#[derive(Debug, Clone)]
+/// The [`Default`] is the refusing posture [`PrivacyConfig::default`] builds:
+/// identified `self` parties refused and no namespace declared (#3243). A
+/// `FerroEhrService` built without
+/// [`crate::service::FerroEhrService::with_privacy`] therefore runs the
+/// posture the shipped binary runs, never a more permissive one.
+#[derive(Debug, Clone, Default)]
 pub struct PrivacyPolicy {
     subject_namespaces: Vec<String>,
     allow_identified_parties: bool,
-    scan_mode: Option<ScanMode>,
-    rules: Vec<&'static IdentifierRule>,
-    patterns: Vec<CustomPattern>,
 }
 
-impl Default for PrivacyPolicy {
-    /// The refusing posture, the same one [`PrivacyConfig::default`] compiles
-    /// to: identified `self` parties refused, every shipped identifier rule in
-    /// `strict` mode, no namespaces declared (#3243).
-    ///
-    /// A `FerroEhrService` built without [`crate::service::FerroEhrService::with_privacy`]
-    /// therefore runs the posture the shipped binary runs, never a more
-    /// permissive one: a test or an embedding host that means to accept more
-    /// installs the policy that says so.
-    fn default() -> Self {
+impl From<&PrivacyConfig> for PrivacyPolicy {
+    fn from(config: &PrivacyConfig) -> Self {
         Self {
-            subject_namespaces: Vec::new(),
-            allow_identified_parties: false,
-            scan_mode: Some(ScanMode::Strict),
-            rules: detect::built_in_rules().iter().collect(),
-            patterns: Vec::new(),
+            subject_namespaces: config.subject_namespaces.clone(),
+            allow_identified_parties: config.allow_identified_parties_in_ehr,
         }
     }
-}
-
-/// A `[privacy.identifier_scan]` entry the policy cannot be built from.
-#[derive(Debug, thiserror::Error)]
-pub enum PolicyError {
-    /// A configured pattern that is not a valid regular expression.
-    #[error("privacy.identifier_scan.patterns: `{pattern}` is not a valid regular expression")]
-    Pattern {
-        /// The pattern as the operator wrote it.
-        pattern: String,
-        /// The compile failure.
-        #[source]
-        source: regex::Error,
-    },
-    /// A rule key this build ships no rule for.
-    #[error(
-        "privacy.identifier_scan.rules: `{key}` is not an identifier rule this build ships; \
-         the rules are {available}"
-    )]
-    UnknownRule {
-        /// The key as the operator wrote it.
-        key: String,
-        /// Every key this build does ship, comma-separated.
-        available: String,
-    },
 }
 
 impl PrivacyPolicy {
-    /// Compile the configured policy.
-    ///
-    /// # Errors
-    /// [`PolicyError`] naming the first unknown rule key or uncompilable
-    /// pattern.
-    pub fn compile(config: &PrivacyConfig) -> Result<Self, PolicyError> {
-        let mut rules = Vec::with_capacity(config.identifier_scan.rules.len());
-        for key in &config.identifier_scan.rules {
-            let resolved = detect::rule(key).ok_or_else(|| PolicyError::UnknownRule {
-                key: key.clone(),
-                available: detect::built_in_rules()
-                    .iter()
-                    .map(|rule| rule.key)
-                    .collect::<Vec<_>>()
-                    .join(", "),
-            })?;
-            rules.push(resolved);
-        }
-        let mut patterns = Vec::with_capacity(config.identifier_scan.patterns.len());
-        for pattern in &config.identifier_scan.patterns {
-            let compiled = CustomPattern::new(pattern).map_err(|source| PolicyError::Pattern {
-                pattern: pattern.clone(),
-                source,
-            })?;
-            patterns.push(compiled);
-        }
-        Ok(Self {
-            subject_namespaces: config.subject_namespaces.clone(),
-            allow_identified_parties: config.allow_identified_parties_in_ehr,
-            scan_mode: Some(config.identifier_scan.mode),
-            rules,
-            patterns,
-        })
-    }
-
     /// The pseudonym namespaces this deployment declared, in configuration
     /// order; the first is the one the server mints into (#3232).
     #[must_use]
@@ -254,25 +114,19 @@ impl PrivacyPolicy {
         self.subject_namespaces.iter().any(|n| n == namespace) && is_uuid(id)
     }
 
-    /// The scanner's mode, or `None` when no scanner is installed (the
-    /// unenforced [`Default`]).
-    #[must_use]
-    pub fn scan_mode(&self) -> Option<ScanMode> {
-        self.scan_mode
-    }
-
     /// Whether the pass reads anything of a body other than an `EHR_STATUS`:
-    /// the identified-party rule or the identifier scanner is in force.
+    /// the identified-party rule is in force.
     #[must_use]
     pub fn reads_content(&self) -> bool {
-        !self.allow_identified_parties || self.scan_mode.is_some()
+        !self.allow_identified_parties
     }
 
     /// Every finding in a clinical commit body, in document order.
     ///
     /// `root` names the RM type the body is (`COMPOSITION`, `EHR_STATUS`, …)
     /// and heads every reported path. The subject rule applies to an
-    /// `EHR_STATUS` body only; the other two apply to every clinical kind.
+    /// `EHR_STATUS` body only; the identified-party rule to every clinical
+    /// kind.
     /// The body is read through either shape ([`crate::versioning::tree`]).
     #[must_use]
     pub fn findings<'a, T: Tree<'a>>(&self, root: &str, body: T) -> Vec<Finding> {
@@ -280,7 +134,9 @@ impl PrivacyPolicy {
         if root == "EHR_STATUS" && self.subject_rule_in_force() {
             self.check_subject(root, body, &mut findings);
         }
-        self.walk(&mut root.to_owned(), body, Position::CONTENT, &mut findings);
+        if self.reads_content() {
+            walk(&mut root.to_owned(), body, &mut findings);
+        }
         findings
     }
 
@@ -288,10 +144,8 @@ impl PrivacyPolicy {
     /// type `rm_type`, rendered the one way every write path answers it.
     ///
     /// Refusals (the subject-reference rule and the identified-party rule)
-    /// are unconditional whenever their rule is in force. Identifier-shape
-    /// findings follow the configured scan mode: `strict` joins them to the
-    /// refusal, `warn` records each one and lets the write through. A finding
-    /// never carries the offending value, so nothing identifying reaches the
+    /// are unconditional whenever their rule is in force. A finding never
+    /// carries the offending value, so nothing identifying reaches the
     /// response body, the access log or the trace.
     ///
     /// The commit path runs it, and so do the verbatim-replay paths
@@ -308,39 +162,14 @@ impl PrivacyPolicy {
     ///
     /// # Errors
     /// [`ServiceError::ValidationFailed`] carrying one entry per refused finding,
-    /// each keyed by its own RM path (→ 422). Under `identifier_scan.mode =
-    /// "warn"` an identifier-shaped finding is logged and metered instead.
+    /// each keyed by its own RM path (→ 422).
     /// The body is read through either shape ([`crate::versioning::tree`]).
     pub(crate) fn enforce<'a, T: Tree<'a>>(
         &self,
         rm_type: &str,
         data: T,
     ) -> Result<(), ServiceError> {
-        let findings = self.findings(rm_type, data);
-        if findings.is_empty() {
-            return Ok(());
-        }
-        let warn_only = self.scan_mode() == Some(ScanMode::Warn);
-        let (warned, refused): (Vec<_>, Vec<_>) = findings
-            .into_iter()
-            .partition(|finding| warn_only && finding.class == FindingClass::IdentifierShape);
-        for finding in &warned {
-            tracing::warn!(
-                rm_type = rm_type,
-                path = %finding.path,
-                detail = %finding.message,
-                "privacy.identifier_scan is in `warn` mode: a clinical write carried an \
-                 identifier-shaped value and was accepted"
-            );
-        }
-        if !warned.is_empty() {
-            crate::telemetry::metrics::metrics()
-                .validation_failures
-                .add(
-                    u64::try_from(warned.len()).unwrap_or(u64::MAX),
-                    &[opentelemetry::KeyValue::new("pass", "privacy_warn")],
-                );
-        }
+        let refused = self.findings(rm_type, data);
         if refused.is_empty() {
             return Ok(());
         }
@@ -380,12 +209,10 @@ impl PrivacyPolicy {
                      this deployment declared (privacy.subject_namespaces)",
                     self.subject_namespaces.join(", ")
                 ),
-                class: FindingClass::Refusal,
             }),
             None => findings.push(Finding {
                 path: format!("{at}/namespace"),
                 message: "is mandatory once privacy.subject_namespaces is configured".to_owned(),
-                class: FindingClass::Refusal,
             }),
         }
         let id_value = external_ref.get("id").and_then(|id| id.get_text("value"));
@@ -396,149 +223,43 @@ impl PrivacyPolicy {
                           pseudonym, never a national identifier, a medical-record number \
                           or a name (privacy.subject_namespaces is configured)"
                     .to_owned(),
-                class: FindingClass::Refusal,
             });
         }
     }
+}
 
-    /// The identified-party rule and the identifier scanner, over every node of
-    /// the body. `at` is the path of `node`, one buffer the walk extends and
-    /// restores around each child, so a path is copied only into a finding.
-    fn walk<'a, T: Tree<'a>>(
-        &self,
-        at: &mut String,
-        node: T,
-        position: Position,
-        findings: &mut Vec<Finding>,
-    ) {
-        match node.shape() {
-            Shape::Object => {
-                let map = node;
-                if !self.allow_identified_parties {
-                    check_party(at, map, findings);
+/// The identified-party rule over every object of the body. `at` is the path
+/// of `node`, one buffer the walk extends and restores around each child, so a
+/// path is copied only into a finding. String leaves are never read.
+fn walk<'a, T: Tree<'a>>(at: &mut String, node: T, findings: &mut Vec<Finding>) {
+    match node.shape() {
+        Shape::Object => {
+            check_party(at, node, findings);
+            node.each_member(&mut |key, child| {
+                if !matches!(child.shape(), Shape::Object | Shape::Array) {
+                    return;
                 }
-                let unscanned_id = names_no_person(map, position);
-                let element_name = element_name_kind(map);
-                map.each_member(&mut |key, child| {
-                    if key == TERMINOLOGY_CODE_KEY || (unscanned_id && key == "id") {
-                        return;
-                    }
-                    let slot = if ITEM_ID_KEYS.contains(&key) {
-                        Slot::ItemIds
-                    } else {
-                        Slot::Content
-                    };
-                    let element_name = match element_name {
-                        Some(kind) if key == "value" => kind,
-                        _ => DeclaredKind::Undeclared,
-                    };
-                    let child_position = Position { slot, element_name };
-                    let len = at.len();
-                    at.push('/');
-                    at.push_str(key);
-                    self.walk(at, child, child_position, findings);
-                    at.truncate(len);
-                });
-            }
-            Shape::Array => {
-                let mut index = 0_usize;
-                node.each_item(&mut |child| {
+                let len = at.len();
+                at.push('/');
+                at.push_str(key);
+                walk(at, child, findings);
+                at.truncate(len);
+            });
+        }
+        Shape::Array => {
+            let mut index = 0_usize;
+            node.each_item(&mut |child| {
+                if matches!(child.shape(), Shape::Object | Shape::Array) {
                     let len = at.len();
                     let _ = write!(at, "[{index}]");
-                    self.walk(at, child, position, findings);
+                    walk(at, child, findings);
                     at.truncate(len);
-                    index = index.saturating_add(1);
-                });
-            }
-            Shape::String => {
-                if let Some(text) = node.text() {
-                    self.scan_text(at, &text, findings);
                 }
-            }
-            Shape::Other => {}
-        }
-    }
-
-    /// Run the active identifier rules over one string leaf.
-    fn scan_text(&self, at: &str, text: &str, findings: &mut Vec<Finding>) {
-        if self.scan_mode.is_none() {
-            return;
-        }
-        let mut report = |claim: String| {
-            findings.push(Finding {
-                path: at.to_owned(),
-                message: format!(
-                    "carries a value {claim}; the clinical side holds no identifying data \
-                     (privacy.identifier_scan)"
-                ),
-                class: FindingClass::IdentifierShape,
+                index = index.saturating_add(1);
             });
-        };
-        for rule in &self.rules {
-            if rule.matches(text) {
-                report(format!(
-                    "the `{}` rule claims — a {} {} ({})",
-                    rule.key, rule.jurisdiction, rule.label, rule.source
-                ));
-            }
         }
-        for pattern in &self.patterns {
-            if pattern.is_match(text) {
-                report(format!(
-                    "matching the configured pattern `{}` \
-                     (privacy.identifier_scan.patterns)",
-                    pattern.source()
-                ));
-            }
-        }
+        Shape::String | Shape::Other => {}
     }
-}
-
-/// Whether `map` is a `DV_IDENTIFIER` whose `id` the identifier scanner
-/// leaves alone: its `type` declares an item, or it declares no kind and the
-/// enclosing `ELEMENT`'s `name` declares an item, or it sits in a feeder
-/// audit's item-id list and neither declares a person.
-///
-/// A declared `type` takes precedence over the element name, so a value typed
-/// as a person identifier is scanned under any name, and one typed as an item
-/// is left alone under any name.
-///
-/// A list element may omit `_type` where the static type is concrete, and
-/// `DV_IDENTIFIER` is the only RM 1.2.0 class with a `String` attribute named
-/// `id` (`PARTY_REF.id` and `OBJECT_REF.id` are objects), so an untyped object
-/// with a string `id` is one too.
-fn names_no_person<'a, T: Tree<'a>>(map: T, position: Position) -> bool {
-    let is_identifier = match map.get_text("_type") {
-        Some(rm_type) => rm_type == "DV_IDENTIFIER",
-        None => map.get("id").is_some_and(|id| id.shape() == Shape::String),
-    };
-    if !is_identifier {
-        return false;
-    }
-    let kind = match declared_kind(map.get_text("type").as_deref()) {
-        DeclaredKind::Undeclared => position.element_name,
-        declared => declared,
-    };
-    match kind {
-        DeclaredKind::Item => true,
-        DeclaredKind::Undeclared => position.slot == Slot::ItemIds,
-        DeclaredKind::Person => false,
-    }
-}
-
-/// The kind an `ELEMENT`'s `name` declares for its `value`, or `None` when
-/// `map` is not an `ELEMENT`.
-fn element_name_kind<'a, T: Tree<'a>>(map: T) -> Option<DeclaredKind> {
-    // NOTE: RM common `org.openehr.rm.common.locatable.adoc` §Attributes: an ELEMENT's `name`
-    // is "the original label by which this entry was known to end users", so it names its value.
-    if map.get_text("_type").as_deref() != Some("ELEMENT") {
-        return None;
-    }
-    Some(declared_kind(
-        map.get("name")
-            .and_then(|name| name.get_text("value"))
-            .as_deref(),
-    ))
 }
 
 /// Refuse the party-proxy attributes that identify the record's subject.
@@ -556,8 +277,7 @@ fn element_name_kind<'a, T: Tree<'a>>(map: T) -> Option<DeclaredKind> {
 /// a clinician's registration number is its paradigm case, and the Simplified
 /// Formats build exactly that from `ctx/participation_identifiers`
 /// (ITS-REST `simplified_formats` master06 §Participation). The SUBJECT's
-/// identifier is what the boundary keeps off the clinical side, and a national
-/// identifier VALUE is the scanner's job (rule 3) wherever it sits (#3254).
+/// identifier is what the boundary keeps off the clinical side (#3254).
 ///
 /// Both `name` and `identifiers` are refused only where the party IS the subject. The
 /// class is "Proxy type for identifying a party **and its relationship to the
@@ -573,8 +293,8 @@ fn element_name_kind<'a, T: Tree<'a>>(map: T) -> Option<DeclaredKind> {
 /// the missing 1..1 attribute on its own. `Basic_validity` is satisfied by
 /// `external_ref` alone, so every refused proxy stays expressible.
 ///
-/// A free function rather than a method: the caller has already decided the
-/// rule is in force, so this reads no policy state.
+/// The caller has already decided the rule is in force, so this reads no
+/// policy state.
 fn check_party<'a, T: Tree<'a>>(at: &str, map: T, findings: &mut Vec<Finding>) {
     let related = match map.get_text("_type").as_deref() {
         Some("PARTY_RELATED") => true,
@@ -591,7 +311,6 @@ fn check_party<'a, T: Tree<'a>>(at: &str, map: T, findings: &mut Vec<Finding>) {
                       the subject. external_ref alone satisfies Basic_validity. Set \
                       privacy.allow_identified_parties_in_ehr to accept it."
                 .to_owned(),
-            class: FindingClass::Refusal,
         });
     }
     if related && present("identifiers") && relationship_is_self(map.get("relationship")) {
@@ -605,7 +324,6 @@ fn check_party<'a, T: Tree<'a>>(at: &str, map: T, findings: &mut Vec<Finding>) {
                       subject. external_ref alone satisfies Basic_validity. Set \
                       privacy.allow_identified_parties_in_ehr to accept it."
                 .to_owned(),
-            class: FindingClass::Refusal,
         });
     }
 }
@@ -646,42 +364,4 @@ fn relationship_is_self<'a, T: Tree<'a>>(relationship: Option<T>) -> bool {
 fn is_uuid(value: &str) -> bool {
     uuid::Uuid::try_parse(value)
         .is_ok_and(|parsed| parsed.hyphenated().to_string().eq_ignore_ascii_case(value))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{PrivacyPolicy, detect};
-    use crate::privacy::config::{IdentifierScanConfig, PrivacyConfig};
-
-    /// The shipped default keeps identified parties out and scans for every
-    /// rule the build carries.
-    #[test]
-    fn the_configuration_default_admits_no_identified_party_and_every_rule() {
-        let compiled = PrivacyPolicy::compile(&PrivacyConfig::default()).expect("compiles");
-        assert!(!compiled.allow_identified_parties);
-        assert_eq!(compiled.rules.len(), detect::built_in_rules().len());
-    }
-
-    #[test]
-    fn narrowing_the_rule_list_keeps_the_named_rule_only() {
-        let nl_only = PrivacyPolicy::compile(&PrivacyConfig {
-            identifier_scan: IdentifierScanConfig {
-                rules: vec!["nl-bsn".to_owned()],
-                ..IdentifierScanConfig::default()
-            },
-            ..PrivacyConfig::default()
-        })
-        .expect("compiles");
-        assert_eq!(nl_only.rules.len(), 1);
-    }
-
-    #[test]
-    fn the_default_policy_carries_every_shipped_rule() {
-        let configured = PrivacyPolicy::compile(&PrivacyConfig::default()).expect("compiles");
-        assert_eq!(
-            PrivacyPolicy::default().rules.len(),
-            configured.rules.len(),
-            "the default carries every shipped rule, as the default configuration does"
-        );
-    }
 }
