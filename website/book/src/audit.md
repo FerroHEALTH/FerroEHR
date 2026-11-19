@@ -911,7 +911,7 @@ API's and ISO 8601 date-times.
 
 | Method and path | Who | What |
 |---|---|---|
-| `GET /ehr/{ehr_id}/access_log` | the subject of care, their representative, a reviewer | The entries of one EHR, newest first. Filters: `from`, `to`, `action`, `outcome`, `accessor_kind` (each a term by its coded content, the token `terminology_id\|code`, such as `audit-event-action\|R`, `openehr_access\|refused` or `extra-security-role-type\|datasubject`; a rubric or a bare code is a `400`), `emergency`, `include_self`; `offset`, `fetch` (1 to 1000, default 100). |
+| `GET /ehr/{ehr_id}/access_log` | the subject of care, their representative, a reviewer | The entries of one EHR, newest first. Filters: `from`, `to`, `action`, `outcome`, `accessor_kind` (each a term by its coded content, the token `terminology_id\|code`, such as `HL7_AuditEventAction\|R`, `openehr_access\|refused` or `HL7_SecurityRoleType\|datasubject`; a rubric or a bare code is a `400`), `emergency`, `include_self`; `offset`, `fetch` (1 to 1000, default 100). |
 | `GET /ehr/{ehr_id}/access_log/{uid}` | as above | One entry. |
 | `GET /admin/access-log` | a reviewer | Records across EHRs, entries and tombstones. Filters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`; `offset`, `fetch`. |
 | `GET /admin/access-log/chain` | a reviewer | The `uid` and `link` of each record from `from_sequence` to `to_sequence` (at most 10000), without content, and the `gaps` of folded tombstones between, for verification. |
@@ -960,7 +960,7 @@ the restriction in the controller's
 [access policy](operational-policy.md), never in `ferroehr.toml`: each entry
 of `log_restrictions` names the accessor kinds it applies to (the `accessor
 kind` terms of the log, such as `person` or `external person` of
-`openehr_access`, or `datasubject` of `extra-security-role-type` for the
+`openehr_access`, or `datasubject` of `HL7_SecurityRoleType` for the
 subject of care), the
 accessor members the subject view withholds (`accessor_party`,
 `accessor_provider`, `accessor_roles`, `accessor_groups`, in

@@ -1,0 +1,10 @@
+[source,json]
+--------
+{
+  "name": "VERSIONED_PARTY_RELATIONSHIP",
+  "documentation": "Version container for one `PARTY_RELATIONSHIP` stored on its own, such as a care relationship, committed in contributions with their audit like any other versioned object.",
+  "ancestors": [
+    "VERSIONED_OBJECT"
+  ]
+}
+--------

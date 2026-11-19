@@ -10,10 +10,10 @@ Six groups are added to the draft `openehr_access` terminology, which the Access
 |===
 |Terminology identifier |Canonical URI
 
-|`audit-event-action`
+|`HL7_AuditEventAction`
 |`http://hl7.org/fhir/audit-event-action`
 
-|`extra-security-role-type`
+|`HL7_SecurityRoleType`
 |`http://terminology.hl7.org/CodeSystem/extra-security-role-type`
 |===
 
@@ -24,13 +24,13 @@ The terms are:
 |Group |Terms
 
 |access action
-|`audit-event-action::R` (read), query, `audit-event-action::C` (create), `audit-event-action::U` (update), `audit-event-action::D` (delete), export, import
+|`HL7_AuditEventAction::R` (read), query, `HL7_AuditEventAction::C` (create), `HL7_AuditEventAction::U` (update), `HL7_AuditEventAction::D` (delete), export, import
 
 |access outcome
 |granted, partially granted, refused, failed
 
 |accessor kind
-|person, delegated person, `extra-security-role-type::datasubject` (subject of care), representative, external person, organisation, system
+|person, delegated person, `HL7_SecurityRoleType::datasubject` (subject of care), representative, external person, organisation, system
 
 |access authorisation
 |role, treatment relationship, agreement, consent, permit, emergency, subject of care, representation, legal obligation
@@ -54,31 +54,31 @@ A draft code whose closest standard code is broader or narrower stays in `openeh
 
 |access action
 |query
-|`audit-event-action::E`
+|`HL7_AuditEventAction::E`
 |`<`
 
 |access outcome
 |failed
-|`audit-event-outcome::8` (serious failure)
+|`HL7_AuditEventOutcome::8` (serious failure)
 |`>`
 
 |accessor kind
 |person
-|`extra-security-role-type::humanuser`
+|`HL7_SecurityRoleType::humanuser`
 |`>`
 
 |accessor kind
 |delegated person
-|`v3-RoleCode::DELEGATEE`
+|`HL7_RoleCode::DELEGATEE`
 |`>`
 
 |accessor kind
 |representative
-|`v3-RoleCode::RESPRSN`
+|`HL7_RoleCode::RESPRSN`
 |`>`
 |===
 
-`audit-event-outcome` is `http://terminology.hl7.org/CodeSystem/audit-event-outcome` and `v3-RoleCode` is `http://terminology.hl7.org/CodeSystem/v3-RoleCode`.
+`HL7_AuditEventOutcome` is `http://terminology.hl7.org/CodeSystem/audit-event-outcome` and `HL7_RoleCode` is `http://terminology.hl7.org/CodeSystem/v3-RoleCode`.
 
 == Retention Grounds
 

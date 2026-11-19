@@ -17,11 +17,24 @@ h|*1..1*
 |*data*: `xref:access_control:access_control_package.adoc#_access_data_scope_class[ACCESS_DATA_SCOPE]`
 a|The kind of data the rule classifies. It names no individual object.
 
-h|*1..1*
+h|*0..1*
 |*sensitivities*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
 a|The sensitivity codes the data carry.
 
+h|*0..1*
+|*confidentiality*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|The confidentiality the data carry, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted).
+
 h|*Invariants*
 2+a|__No_objects__: `data.objects = Void`
+
+h|
+2+a|__Not_empty__: `sensitivities /= Void or confidentiality /= Void`
+
+h|
+2+a|__Sensitivities_valid__: `sensitivities /= Void implies not sensitivities.is_empty`
+
+h|
+2+a|__Confidentiality_valid__: `confidentiality /= Void implies confidentiality.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)`
 
 |===

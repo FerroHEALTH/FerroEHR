@@ -18,22 +18,31 @@ A deployment combines every attribute the model has (scope, exception, effect, t
 == Three Sets of Facts
 
 ----
- caller facts                       EHR facts                          controller facts
- (Demographic IM)                   (EHR_ACCESS, per EHR)              (ACCESS_POLICY, per controller)
+ caller and subject facts           EHR facts                          controller facts
+ (relationship store)               (EHR_ACCESS, per EHR)              (ACCESS_POLICY, per controller)
 
  PERSON/AGENT --performs--> ROLE    EHR_ACCESS                         ACCESS_POLICY
      |                  name (role)   settings: ACCESS_DIRECTIVE_         controller -> ORGANISATION
      |                  +-CAPABILITY    SETTINGS                          classifications
-     +--member of--> GROUP            default_access                    care_relationship_required
-                       ^              gate_keepers                      relationship_grace
- subject PERSON --under care of--+    directives (+ exceptions)         purpose_required
-     ^                                labels                            rules (+ exceptions)
-     +--represents-- PERSON           evidence -> ADMIN_ENTRY           catalogue
+     +--MBR--> GROUP / unit             marking (N, R, V)                 rules (+ exceptions)
+                 ^  (one level)         exclusions                        care_relationship_required
+ subject --under_care_of--+ role,       default_access                    relationship_grace
+   ^         provider, covers_for       gate_keepers                      care_purposes, validity
+   |         (direct, team)             directives (+ exceptions)         writers, team_targets
+   +--represents-- PERSON (basis,       labels                            conflict_rules, value_sets
+   |                provider)           evidence -> ADMIN_ENTRY           catalogue
+   +--related_to-- PERSON (kinship)
 ----
 
-* *Per EHR*, `ACCESS_DIRECTIVE_SETTINGS` in `EHR_ACCESS._settings_`: the default disposition, the gate-keepers, the subject's directives and sensitivity labels on single objects. It is versioned with the EHR and travels in an EHR Extract.
-* *Per caller*, the Demographic IM as it stands: the `ROLE`s a caller performs, each named by its role (`PARTY.type()`), the operation codes their `CAPABILITY._credentials_` carry, and `PARTY_RELATIONSHIP` instances for care-team membership and for the subject being under the care of a team or a unit. This follows The Problem of Roles: the care delivery environment evaluates "care deliverer", and the EHR system reads the outcome. The package adds no demographic class.
-* *Per controller*, `ACCESS_POLICY`: the classification of kinds of data into sensitivities, whether clinical access needs a care relationship and a declared purpose, the controller's rules on which roles and callers may perform which operations on which kinds of data (EHDS Art 11(3)), and a catalogue of named directives a subject accepts by reference. The role is the assignment and the rule is the permission, the split the XACML Hierarchical RBAC Profile draws between a Role Enablement Authority and a permission policy. It is not about one EHR and it is not a party, so it is a versioned root of its own, `VERSIONED_ACCESS_POLICY`.
+* *Per EHR*, `CONFIDENTIALITY_SETTINGS` or its subtype `ACCESS_DIRECTIVE_SETTINGS` in `EHR_ACCESS._settings_`: the controller's marking of the whole record and its exclusions, and, in the subtype, the default disposition, the gate-keepers, the subject's directives and labels on single objects. It is versioned with the EHR and travels in an EHR Extract.
+* *Per caller and per subject*, relationships the care delivery environment writes, each stored on its own: the `ROLE`s a caller performs, each named by its role (`PARTY.type()`), the operation codes their `CAPABILITY._credentials_` carry, memberships of care teams and units, the subject's care relationships with the role, the provider and the period of each, representations with their basis and provider, and kinship. This follows The Problem of Roles: the care delivery environment evaluates "care deliverer", and the EHR system reads the outcome. The package adds no demographic class; it codes `PARTY_RELATIONSHIP` and versions each relationship on its own.
+* *Per controller*, `ACCESS_POLICY`: the classification of kinds of data into sensitivities and confidentialities, whether clinical access needs a care relationship and a declared purpose, the controller's rules on which roles, relationships and callers may perform which operations on which kinds of data (EHDS Art 11(3)), how care relationships are bounded and written, the value sets the deployment binds, and a catalogue of named directives a subject accepts by reference. The role is the assignment and the rule is the permission, the split the XACML Hierarchical RBAC Profile draws between a Role Enablement Authority and a permission policy. It is not about one EHR and it is not a party, so it is a versioned root of its own, `VERSIONED_ACCESS_POLICY`.
+
+== Relationships as Facts
+
+A care relationship is a stored fact between a subject and a carer, with a role, a provider, a period and an author, read through a closed set of paths. This is the discipline of relationship-based access control (P. Fong, "Relationship-based access control: protection model and policy language", ACM CODASPY 2011; R. Pang et al., "Zanzibar: Google's Consistent, Global Authorization System", USENIX ATC 2019) without a general graph language: the stored relationships are the relation tuples, the fixed paths (`direct`, `team`, `self_declared`, `attested`) are the rewrites, and the caseload is the reverse reading of the same facts. It answers what role- and attribute-based control cannot: "may this professional read this patient's record" as a stored fact about the pair, "which patients may this professional read" as the reverse reading, and "through what did the access come" as the path the access log records.
+
+The costs the literature names are answered in the procedure. A decision on a relationship that has just been removed admits someone it should not (Zanzibar §2.2), so a system confirms every relationship it decides on to be current. A relationship nobody ends is a standing grant, so the policy bounds every relationship's period and scopes who may write one. Deep group nesting makes a check a graph walk, so the paths allow one level. The reverse query is the expensive one, so it is a condition inside the query rather than a list of identifiers.
 
 == Placement of the Controller Policy
 
@@ -43,20 +52,24 @@ Two homes were weighed for the controller's facts. The `_details_` of the contro
 
 == Package Structure
 
-The `{pkg}` package sits in the RM beside `ehr` and `demographic`. It depends on `common.archetyped` (`LOCATABLE`), `common.change_control` (`VERSIONED_OBJECT`), `common.generic` (`PARTY_PROXY`), `ehr` (`ACCESS_CONTROL_SETTINGS`), `data_types`, `data_structures` and the BASE identification classes, and changes no existing class.
+The `{pkg}` package sits in the RM beside `ehr` and `demographic`. It depends on `common.archetyped` (`LOCATABLE`), `common.change_control` (`VERSIONED_OBJECT`), `common.generic` (`PARTY_PROXY`), `ehr` (`ACCESS_CONTROL_SETTINGS`), `demographic` (`PARTY_RELATIONSHIP`), `data_types`, `data_structures` and the BASE identification classes, and changes no existing class.
 
 ----
 ACCESS_CONTROL_SETTINGS (ehr, abstract)
-  └── ACCESS_DIRECTIVE_SETTINGS
+  └── CONFIDENTIALITY_SETTINGS
+        └── ACCESS_DIRECTIVE_SETTINGS
 LOCATABLE (common.archetyped)
   ├── ACCESS_DIRECTIVE
   ├── ACCESS_POLICY
   └── ACCESS_CLASSIFICATION
 VERSIONED_OBJECT<T> (common.change_control)
-  └── VERSIONED_ACCESS_POLICY
-ACCESS_ACTOR_SCOPE, ACCESS_DATA_SCOPE, ACCESS_LABEL
+  ├── VERSIONED_ACCESS_POLICY
+  └── VERSIONED_PARTY_RELATIONSHIP
+CONFIDENTIALITY_MARKING, ACCESS_ACTOR_SCOPE, ACCESS_DATA_SCOPE, ACCESS_LABEL,
+ACCESS_RELATIONSHIP_VALIDITY, ACCESS_RELATIONSHIP_WRITER, ACCESS_CONFLICT_RULE,
+ACCESS_REPRESENTATION_BAND, ACCESS_VALUE_SET
 ----
 
-`ACCESS_DIRECTIVE`, `ACCESS_POLICY` and `ACCESS_CLASSIFICATION` are `LOCATABLE`, so archetypes name directives and classifications in a deployment's language and add `_details_`. `ACCESS_POLICY` is an archetype root. The procedure never reads an archetype identifier: it reads the typed attributes and their codes, so a deployment's own archetypes are read the same way as any other.
+`ACCESS_DIRECTIVE`, `ACCESS_POLICY` and `ACCESS_CLASSIFICATION` are `LOCATABLE`, so archetypes name directives and classifications in a deployment's language and add `_details_`. `ACCESS_POLICY` is an archetype root, and a jurisdiction's profile is a template of its archetype. The procedure never reads an archetype identifier: it reads the typed attributes and their codes, so a deployment's own archetypes are read the same way as any other.
 
 The computable form of the package is `computable/BMM/openehr_access_control_0.1.0.bmm.json`, a BMM 2.4 schema that includes `openehr_rm_1.2.0`. Its UML diagram and the Effective and UML tabs of each class are generated from it by bmm-publisher.

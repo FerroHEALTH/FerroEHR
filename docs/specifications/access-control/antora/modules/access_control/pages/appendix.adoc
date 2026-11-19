@@ -11,10 +11,10 @@ include::partial$draft_notice.adoc[]
 |Point |A conforming system
 
 |AC-1 Settings
-|stores `ACCESS_DIRECTIVE_SETTINGS` in `EHR_ACCESS._settings_`, checks every version against the invariants and the terminology groups, and refuses a failing version whole.
+|stores `CONFIDENTIALITY_SETTINGS` or `ACCESS_DIRECTIVE_SETTINGS` in `EHR_ACCESS._settings_`, checks every version against the invariants and the terminology groups, and refuses a failing version whole.
 
 |AC-2 Decision
-|decides every access to an EHR whose scheme is `access_directives` by xref:decision_procedure.adoc#_procedure[the procedure], queries included.
+|decides every access to an EHR whose scheme is `confidentiality` or `access_directives` by xref:decision_procedure.adoc#_procedure[the procedure], queries included.
 
 |AC-3 Invisibility
 |answers an opted-out EHR and restricted data as absent, and never shows the refusal (xref:decision_procedure.adoc#_refusals[Refusals]).
@@ -27,6 +27,109 @@ include::partial$draft_notice.adoc[]
 
 |AC-6 Exchange
 |exports and imports the `EHR_ACCESS` versions in an EHR Extract.
+
+|AC-7 Relationship store
+|stores care relationships, memberships, representations and subject facts one by one as versioned objects, addressed by subject reference, and reads them only through the paths of xref:decision_procedure.adoc#_holding_a_care_relationship[Holding a Care Relationship], confirmed current for each decision.
+
+|AC-8 Demographic
+|meets AC-7 and also shows the relationships in the parties of its demographic service.
+
+|AC-9 Writers
+|admits relationship writes by xref:decision_procedure.adoc#_writing_relationships[Writing Relationships].
+
+|AC-10 Caseload
+|narrows a query to the caller's caseload by xref:its_rest.adoc#_queries_and_the_caseload[Queries and the Caseload].
+
+|AC-11 Optional paths
+|states which of the paths `self_declared` and `attested` it implements; a path it does not implement matches no caller whatever the policy sets.
+|===
+
+== Who Sees What (informative)
+
+One patient, P1, under the care of one hospital, the provider H, under a policy with a `_relationship_grace_` of 30 days and these four rules:
+
+. Clinical access needs a care relationship: `_care_relationship_required_` holds (step 7).
+. A record at `R` is read in care, for treatment: a permit rule whose actor scope names `care` and whose data scope names the confidentiality `R`, for the purpose `TREAT`.
+. A record at `V` is read only by the responsible or attending practitioner, directly, for treatment: a permit rule naming `care`, the roles `RESP` and `ATND`, the path `direct`, the confidentiality `V` and the purpose `TREAT`, with `_emergency_override_`.
+. Only the responsible practitioner signs the discharge summary: a deny rule for writing the discharge summary template, with a permit exception naming `care`, the role `RESP` and the path `direct`.
+
+The relationships of P1, in relation-tuple notation (`object#relation@user`):
+
+----
+patient:P1#care[RESP]@person:jansen              provider H, valid 2026-11-01..
+patient:P1#care[SPRF]@person:bakker              provider H, valid 2026-11-10..
+patient:P1#care[CON]@person:visser               provider H, valid 2026-11-19..2026-12-03
+patient:P1#care[PART]@group:cardiology#member    provider H, valid 2026-11-18..   (the admission)
+patient:P1#care[RESP]@person:meijer              provider H, valid 2026-11-21..2026-11-23, covers_for person:jansen
+group:cardiology#member@person:devries
+group:ccu#member@group:cardiology                (a sub-team)
+----
+
+The same record at the three levels, each caller acting for H:
+
+[cols="2,2,2,2,2", options="header"]
+|===
+|Caller |Relationship to P1 |At `N` |At `R` |At `V`
+
+|Dr. Jansen, responsible
+|`RESP`, `direct`
+|admitted
+|admitted for `TREAT`
+|admitted for `TREAT`
+
+|Dr. Bakker, second in chain
+|`SPRF`, `direct`
+|admitted
+|admitted for `TREAT`
+|`refused-confidentiality`
+
+|Dr. Visser, consultant
+|`CON`, `direct`, 14 days
+|admitted until 2026-12-03 plus grace
+|admitted for `TREAT`, same period
+|`refused-confidentiality`
+
+|Nurse De Vries
+|member of cardiology; P1 under cardiology as `PART`
+|admitted
+|admitted for `TREAT`
+|`refused-confidentiality` (the path is `team`)
+
+|Dr. Meijer, covering for Dr. Jansen
+|`RESP`, `direct`, 21 to 23 November
+|admitted those days plus grace
+|admitted for `TREAT`
+|admitted for `TREAT`
+
+|Dr. Smit
+|none
+|`refused-no-care-relationship`
+|`refused-confidentiality`
+|`refused-confidentiality`
+
+|Dr. Jansen, acting for another provider
+|none for that provider
+|`refused-no-care-relationship`
+|`refused-confidentiality`
+|`refused-confidentiality`
+
+|Any clinician declaring an emergency
+|none
+|admitted, marked
+|admitted, marked
+|admitted where the rule sets `_emergency_override_`, marked
+
+|A researcher, population query
+|none
+|by the policy
+|record left out, counts agree
+|record left out, counts agree
+
+|The patient
+|the subject
+|admitted
+|admitted
+|admitted
 |===
 
 == Example (informative)
@@ -47,7 +150,7 @@ A restriction of mental health data with one exception for the subject's psychia
     "kind": {"_type": "DV_CODED_TEXT", "value": "restriction",
       "defining_code": {"terminology_id": {"value": "openehr_access"}, "code_string": "restriction"}},
     "effect": {"_type": "DV_CODED_TEXT", "value": "deny",
-      "defining_code": {"terminology_id": {"value": "consent-provision-type"}, "code_string": "deny"}},
+      "defining_code": {"terminology_id": {"value": "HL7_ConsentProvisionType"}, "code_string": "deny"}},
     "applies_to": [{"_type": "ACCESS_ACTOR_SCOPE",
       "caller_kind": {"_type": "DV_CODED_TEXT", "value": "professional",
         "defining_code": {"terminology_id": {"value": "openehr_access"}, "code_string": "professional"}}}],
@@ -62,7 +165,7 @@ A restriction of mental health data with one exception for the subject's psychia
       "kind": {"_type": "DV_CODED_TEXT", "value": "consent",
         "defining_code": {"terminology_id": {"value": "openehr_access"}, "code_string": "consent"}},
       "effect": {"_type": "DV_CODED_TEXT", "value": "permit",
-        "defining_code": {"terminology_id": {"value": "consent-provision-type"}, "code_string": "permit"}},
+        "defining_code": {"terminology_id": {"value": "HL7_ConsentProvisionType"}, "code_string": "permit"}},
       "applies_to": [{"_type": "ACCESS_ACTOR_SCOPE",
         "party": {"_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
           "id": {"_type": "HIER_OBJECT_ID", "value": "6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5"}}}],
@@ -76,7 +179,7 @@ A restriction of mental health data with one exception for the subject's psychia
 }
 ----
 
-The draft codes are of `openehr_access`, and the effects are HL7 FHIR `consent-provision-type` codes (xref:terminology.adoc[Terminology]). The exception is a `consent` permit, since `Restriction_denies` makes every restriction a deny and `Exceptions_opposite` gives an exception the opposite effect of its parent.
+The draft codes are of `openehr_access`, and the effects are HL7 FHIR `HL7_ConsentProvisionType` codes (xref:terminology.adoc[Terminology]). The exception is a `consent` permit, since `Restriction_denies` makes every restriction a deny and `Exceptions_opposite` gives an exception the opposite effect of its parent.
 
 == Change Requests
 

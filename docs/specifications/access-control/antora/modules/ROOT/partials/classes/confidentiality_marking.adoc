@@ -1,0 +1,13 @@
+=== CONFIDENTIALITY_MARKING Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/confidentiality_marking.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/confidentiality_marking.adoc[]
+
+====

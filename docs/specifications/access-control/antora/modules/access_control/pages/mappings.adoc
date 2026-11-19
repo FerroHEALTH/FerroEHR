@@ -113,3 +113,49 @@ A rule of `ACCESS_POLICY._rules_` belongs to the controller, not to the subject,
 |Art 11(3) categories of professionals and data
 |`ACCESS_POLICY._rules_`, scoped by role and by the sensitivities the classifications assign, with `_legal_grounds_` naming the Member State's rule.
 |===
+
+== Care Relationships
+
+HL7 models the relationship between a patient and a professional as a care provision act (the ActClass `PCPR`, "taking on whole or partial responsibility for, or attention to, safety and well-being of a subject of care"), and the professional's part in it as a participation type, the code system of the `care_role` default. The sources below map to a care relationship with the role shown; the provider is the organisation the source system acts for, and the period comes from the source.
+
+[cols="2,3", options="header"]
+|===
+|Source |Care relationship
+
+|HL7 v2 `PV1-7` attending doctor, `PV1-9` consulting doctor, `PV1-8` referring doctor, `PV1-17` admitting doctor
+|role `ATND`, `CON`, `REF`, `ADM`; the period of the visit
+
+|HL7 v2 `ROL-3` (table 0443) and `ROL-5`, `ROL-6`
+|`AT` to `ATND`, `CP` to `CON`, `RP` to `REF`, `AD` to `ADM`, `PP` and `FHCP` to `RESP`; the period from Role Begin and End Date/Time
+
+|HL7 v2 `PRT-4` role of participation
+|the participation type it carries; the period from `PRT-11` and `PRT-12`
+
+|HL7 v2 `PD1-4` patient primary care provider (v2.5 and earlier; withdrawn in v2.9.1)
+|role `RESP`, an open period where the policy allows one
+
+|FHIR `Patient.generalPractitioner`
+|role `RESP`, target the practitioner or the organisation
+
+|FHIR `EpisodeOfCare.careManager`, `.team` (R4), `.careTeam` (R5)
+|`RESP` for the care manager, the team as a `team` target for the rest; period and `context` from the episode
+
+|FHIR `Encounter.participant`
+|role from `type` (R4 binds the same participation types), period from `period` or from the encounter
+
+|FHIR `CareTeam.participant`
+|a membership of the team's `GROUP`, `period` its validity
+
+|FHIR `RelatedPerson` with a `relationship` of `HL7_RoleCode`
+|a `related_to` kinship, or a `represents` relationship where the code is a basis of representation
+|===
+
+Where `HL7_ParticipationFunction` refines a role (`PCP`, "the healthcare provider that holds primary responsibility for the overall care of a patient"), a jurisdiction may add the code to its `care_role` value set; the default maps it to `RESP`.
+
+== Confidentiality
+
+`CONFIDENTIALITY_MARKING._confidentiality_` is an `HL7_Confidentiality` code, and FHIR `meta.security` and the IHE XDS `confidentialityCode` carry the same code system, so a record's marking and an object's label map to and from them with no table. An export of a record marked above `N` carries the marking on every resource or document it writes. FHIR R5 `Permission` (trial use) is no mapping target; `Consent` stays the exchange form for directives.
+
+== Access Log
+
+An access admitted on a care relationship is projected to a FHIR `AuditEvent` (IHE BALP) with the relationship's role as an `agent.role` coding beside the professional's structural roles, and `agent.policy` naming the `ACCESS_POLICY` version and the rule that named the relationship.

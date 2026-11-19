@@ -62,15 +62,15 @@ pub const DEFINITIONS: [(&str, &str); 9] = [
         ),
     ),
     (
-        "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls",
+        "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.1.adls",
         include_str!(
-            "../../../../deploy/definitions/care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls"
+            "../../../../deploy/definitions/care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.1.adls"
         ),
     ),
     (
-        "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0.adls",
+        "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.1.adls",
         include_str!(
-            "../../../../deploy/definitions/care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0.adls"
+            "../../../../deploy/definitions/care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.1.adls"
         ),
     ),
     (

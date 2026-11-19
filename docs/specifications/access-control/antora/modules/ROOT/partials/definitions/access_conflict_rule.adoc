@@ -1,0 +1,34 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_CONFLICT_RULE*
+
+h|*Description*
+2+a|A conflict of interest the controller allows through the professional path, for the callers named. An access admitted under it is marked in the access log.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*conflict*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|The conflict, coded in the `access conflict` group: `self` (the caller is the subject) or `related` (the caller is related to the subject).
+
+h|*0..1*
+|*applies_to*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_actor_scope_class[ACCESS_ACTOR_SCOPE]>`
+a|The callers the allowance covers. Void means every professional.
+
+h|*0..1*
+|*kinships*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|For `related`, the kinship codes the allowance covers. Void means every kinship.
+
+h|*Invariants*
+2+a|__Conflict_valid__: `terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_conflict, conflict.defining_code)`
+
+h|
+2+a|__Applies_to_valid__: `applies_to /= Void implies not applies_to.is_empty`
+
+h|
+2+a|__Kinships_valid__: `kinships /= Void implies (not kinships.is_empty and conflict.defining_code.code_string.is_equal ("related"))`
+
+|===

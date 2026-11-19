@@ -6,9 +6,83 @@ include::partial$draft_notice.adoc[]
 
 == Overview
 
-An `ACCESS_DIRECTIVE_SETTINGS` is the `_settings_` of one `EHR_ACCESS`, and `EHR_ACCESS.scheme()` returns `access_directives` for it. It holds the default disposition of the EHR, the gate-keepers, the `ACCESS_DIRECTIVE` instances the subject gave and the `ACCESS_LABEL` instances on single objects. An `ACCESS_POLICY`, kept in a `VERSIONED_ACCESS_POLICY`, holds the controller's facts, its own rules for every EHR and the restrictions of the access log's subject view among them. `ACCESS_ACTOR_SCOPE` and `ACCESS_DATA_SCOPE` describe callers and data, and are used by directives, labels and classifications alike.
+A `CONFIDENTIALITY_SETTINGS` is the `_settings_` of one `EHR_ACCESS`, and `EHR_ACCESS.scheme()` returns `confidentiality` for it. It holds the controller's facts about that EHR: the confidentiality of the whole record, as a `CONFIDENTIALITY_MARKING`, and the named parties excluded from it. `ACCESS_DIRECTIVE_SETTINGS` inherits it and is the scheme `access_directives`: it adds the default disposition of the EHR, the gate-keepers, the `ACCESS_DIRECTIVE` instances the subject gave and the `ACCESS_LABEL` instances on single objects. `EHR_ACCESS._settings_` is 0..1 (RM EHR IM, `EHR_ACCESS`), so an EHR holds one settings object, and the directive scheme carries the controller's facts with it. An `ACCESS_POLICY`, kept in a `VERSIONED_ACCESS_POLICY`, holds the controller's facts for every EHR it keeps: its own rules, the restrictions of the access log's subject view, and the facts about care relationships and representation. `ACCESS_ACTOR_SCOPE` and `ACCESS_DATA_SCOPE` describe callers and data, and are used by directives, labels, classifications and rules alike. Care relationships, memberships and representations are coded `PARTY_RELATIONSHIP` instances, each stored on its own in a `VERSIONED_PARTY_RELATIONSHIP`.
+
+----
+ACCESS_CONTROL_SETTINGS (RM ehr, abstract)
+  └─ CONFIDENTIALITY_SETTINGS          scheme "confidentiality": marking, exclusions
+       └─ ACCESS_DIRECTIVE_SETTINGS    scheme "access_directives": default_access, gate_keepers, directives, labels
+----
+
+A system that implements only `CONFIDENTIALITY_SETTINGS` interoperates with one that implements the directives for the part they share.
 
 == Design
+
+=== Confidentiality of a Record
+
+The Security Policy names "malicious theft of or access to health data (e.g. of a celebrity or politician)" as a threat (xref:BASE:architecture_overview:security.adoc[Security and Confidentiality], Threats to Security and Privacy), and the HL7 confidentiality codes give the levels for it: `R` restricted, whose examples include "a patient's standing as an employee or a celebrity", and `V` very restricted, for example "information about a victim of abuse" (`HL7_Confidentiality` 5.0.0). `CONFIDENTIALITY_SETTINGS._marking_` puts one level on the whole record, with `_set_by_`, `_set_at_` and a `_reason_` written for the subject to read. The marking has its own `_set_by_` and `_set_at_` because `EHR_ACCESS` is versioned: a later version committed by another party for another reason, such as the subject adding a directive, carries the marking forward unchanged, and the marking keeps who set it. An explicit `N` records a deliberate reset with its reason; a void marking also reads as `N`.
+
+The levels are ordered `N` < `R` < `V` (xref:terminology.adoc#_codes_from_other_terminologies[Terminology]), so a permit that names a level clears the levels below it. The confidentiality of a datum is the highest of the marking of its EHR, the marking of an `ACCESS_LABEL` on its object, and the confidentiality the policy's classifications give its kind, and the procedure decides on that one level at step 6 (xref:decision_procedure.adoc[The Decision Procedure]).
+
+=== Exclusions
+
+`CONFIDENTIALITY_SETTINGS._exclusions_` holds denies the controller sets for this EHR alone, each an `ACCESS_DIRECTIVE` of kind `exclusion` with the effect `deny`, naming the parties it keeps out by `_applies_to_` (by `party` or by `relationship`), with `_instructed_by_`, `_time_validity_`, `_legal_grounds_` and a reason in `_details_`. An exclusion keeps a named person out of one record whatever else admits them: the parent whose authority stands and who must still be kept out, or a professional with a known conflict. It binds a representative and a gate-keeper, never the subject, and only the controller reads and writes it. A national law that lets a provider decline to treat a person as a representative, for example in a case of abuse or endangerment, is carried by an exclusion.
+
+=== Care Relationships
+
+The Security Policy limits access by relevance: "the overriding principle of access control must be 'relevance' both in terms of user identity (who is delivering care to the patient) and time" (xref:BASE:architecture_overview:security.adoc[Security and Confidentiality], Security Policy, Access list), and puts the evaluation of a care deliverer "in each care delivery environment, not in the EHR" (The Problem of Roles). Regulation (EU) 2025/327 Art 11(1) gives health professionals access to the data "of natural persons under their treatment", and defines neither the treatment nor a professional's part in it. The package records that fact as a care relationship the care delivery environment writes, and reads it through a closed set of paths (xref:decision_procedure.adoc#_holding_a_care_relationship[Holding a Care Relationship]).
+
+A care relationship is a `PARTY_RELATIONSHIP` (RM Demographic IM, Party Relationships) whose `_name_` is the code `under_care_of` (invariant `type = name`), whose `_source_` is the subject of care and whose `_target_` is the carer: a `PERSON`, a `ROLE` a professional performs, a `GROUP` (a care team) or an `ORGANISATION` unit. Its `_time_validity_` is the period of the care: an admission, an episode, a registration with a practice, a consultation, a period of cover. Its `_details_` hold elements named by the codes of the `care relationship element` group:
+
+[cols="2,1,2,4", options="header"]
+|===
+|Element |Occurrences |Value |Meaning
+
+|`care_role`
+|1..1
+|`DV_CODED_TEXT`, of the value set bound for `care_role`
+|The part the target plays in the care of the subject. A writer that knows no role writes `HL7_ParticipationType::PART`.
+
+|`provider`
+|1..1
+|`DV_IDENTIFIER`
+|The healthcare provider in whose care the relationship is, an `ORGANISATION`: `_issuer_` is its reference's namespace, `_id_` its id and `_type_` `ORGANISATION`. A caller holds the relationship only while it acts for that provider or one of its units. A deployment with one provider writes the same value every time.
+
+|`covers_for`
+|0..1
+|`DV_IDENTIFIER`
+|The carer the target replaces for the period of this relationship, in the same form; never the target itself.
+
+|`context`
+|0..1
+|`DV_IDENTIFIER`
+|The episode, referral or case the relationship belongs to, as the care delivery environment identifies it.
+
+|`basis`
+|0..1
+|`DV_CODED_TEXT`, of the `care basis` group
+|`assigned` (the default when absent): written by the care delivery environment. `self_declared`: written by the professional it names, admitted only where the policy allows it.
+|===
+
+A relationship is ended by closing `_time_validity_`, never by removal, so a grace period can apply and the history stays readable. `_time_validity_` is `DV_INTERVAL<DV_DATE>`, so a relationship is bounded in days, read in the policy's time zone. Cover is a relationship of its own: the covering professional holds a relationship of the role they cover, for the period of the cover, with `covers_for` naming the professional they replace (The Problem of Roles: "temporary replacements due to illness or holiday"). Whole-practice cover is a membership of the practice for the period. A night or weekend shift is who is on duty, which the rostering system keeps current as team membership.
+
+A *membership* is a `PARTY_RELATIONSHIP` named `HL7_RoleClass::MBR` whose `_source_` is the member (a professional's `PERSON`, or a `GROUP` or unit that is part of another) and whose `_target_` is the `GROUP` or `ORGANISATION` unit, with its own `_time_validity_`. A membership may also come from the caller's verified credential, as a group claim the system documents.
+
+A *representation* is a `PARTY_RELATIONSHIP` named `represents` whose `_source_` acts for its `_target_`, the subject. Its `_details_` hold `basis` (1..1, `DV_CODED_TEXT` of the value set bound for `representation_basis`), why the source may act for the subject, `provider` (1..1, `DV_IDENTIFIER`, as for a care relationship), and `evidence` (0..1, `DV_IDENTIFIER`), the court order, register entry or written authorisation; its `_time_validity_` is the period of the representation. The writer decides that the source represents the subject, under the law that applies to it, and stores the fact; the system decides a representative's access on that fact and records it, and never derives a representation from an age, a capacity or a legal-basis table (<<The Representation as a Stored Fact>>).
+
+A *kinship* completes the core: a `related_to` relationship records a kinship between two persons: `kinship` (1..1, `DV_CODED_TEXT` of the value set bound for `kinship`, by default the openEHR Terminology group `subject relationship`). Kinship never grants access. It can refuse it, as a conflict of interest (step 5 of the procedure).
+
+An archetype may constrain any of these relationships; the procedure reads the codes of `_name_` and of each element's `_name_`, never an archetype identifier or a path.
+
+=== The Relationship Store
+
+The normative unit is the single relationship. Each care relationship, membership, representation and subject fact is its own versioned object, a `VERSIONED_PARTY_RELATIONSHIP`, committed in contributions with its own `AUDIT_DETAILS`, so every change to it is audit-trailed with who made it (Security Policy, Audit trailing) and a hospital patient's relationships do not rewrite one another. A relationship is addressed by its uid and by the reference of its source, so a system without a demographic service holds relationships whose `_source_` and `_target_` are `PARTY_REF`s in any namespace, such as the `EHR_STATUS._subject_` reference. A system with a demographic service MAY also show a party's relationships in `PARTY._relationships_`, read from the same store. A relationship past its end, its grace and the access log's review age may leave the current set; its history stays.
+
+A conforming system states which of two levels it meets: *relationship store* (the relationships, addressed by subject reference) or *demographic* (the same, also shown in the parties of a demographic service).
+
+=== The Care Path in a Rule
+
+`ACCESS_ACTOR_SCOPE._relationship_` `care` names the callers that hold a live care relationship to the subject. `_care_roles_` narrows it to relationships in one of the roles listed, and `_care_path_` to one path: `direct`, `team`, `self_declared` or `attested`. A rule of the controller can then say "only the responsible practitioner signs the discharge summary" (a deny with a permit exception whose actor scope names `RESP` and `direct`), or "a record at `V` is read only by the responsible or attending practitioner, directly, for treatment" (a permit naming `RESP` and `ATND`, `direct`, the purpose `TREAT` and the confidentiality `V`). RBAC, ABAC and relationship-based control thus sit in one actor scope: `_role_` reads the `ROLE` a caller performs, `_organisation_type_` and `_caller_kind_` with a directive's `_purposes_` and `_data_` read attributes of caller, request and data, and `_relationship_`, `_care_roles_` and `_care_path_` read the relationships between caller and subject.
 
 === The Default and the Gate-keepers
 
@@ -51,11 +125,86 @@ The kinds carry the rights of the subject:
 
 === Labels and Classifications
 
-`ACCESS_LABEL` puts sensitivity codes on one versioned object of the EHR. `ACCESS_CLASSIFICATION`, held by the policy, gives every datum a scope describes the same codes: "psychiatric notes are `PSY`". A classification names no single object. The codes come from the terminology the jurisdiction names, such as the HL7 v3 confidentiality and sensitivity codes, so the privacy levels are "defined by standards or agreements within jurisdictions of use" (Security Policy, Privacy).
+`ACCESS_LABEL` puts sensitivity codes, a confidentiality marking, or both on one versioned object of the EHR: a safety assessment in a case of abuse can be `R` while the rest of the record stays `N`. `ACCESS_CLASSIFICATION`, held by the policy, gives every datum a scope describes the same codes and a confidentiality: "psychiatric notes are `PSY`". A classification names no single object. The sensitivity codes come from the terminology the jurisdiction names, such as the `HL7_ActCode` sensitivity policy codes, so the privacy levels are "defined by standards or agreements within jurisdictions of use" (Security Policy, Privacy); the confidentiality is always an `HL7_Confidentiality` code, whose order the package fixes.
 
 === The Controller Policy
 
 `ACCESS_POLICY._controller_` names the `ORGANISATION` whose policy it is. `_care_relationship_required_` makes a professional's clinical access depend on a live care relationship to the subject, and `_relationship_grace_` extends the relationship after it ends for follow-up (Security Policy, "Time-limitation of access"). `_purpose_required_` makes a declared purpose of use mandatory. `_catalogue_` lists named directives a subject accepts by an identifier, such as an IHE BPPC policy or a national consent choice; accepting one copies its directive into the subject's settings, with the signed acknowledgement as `_evidence_`.
+
+=== The Controller's Facts about Care Relationships
+
+The policy states how the controller's care relationships are read and written:
+
+[cols="2,4,2", options="header"]
+|===
+|Attribute |Meaning |When void
+
+|`_time_zone_`
+|The time zone the days of a relationship are read in.
+|UTC
+
+|`_care_purposes_`
+|The purposes for which a relationship is a ground. A relationship is a ground for primary use only; secondary use runs through the permits and requests of EHDS Chapter IV, never through a care relationship.
+|`HL7_ActReason` `TREAT`, `ETREAT`, `CAREMGT`
+
+|`_relationship_validity_`
+|The default and maximum periods, by role and provider type. The Security Policy asks for "the interval of the episode of care in an institution plus some further time to cover follow-up"; a missed discharge must not leave a relationship open for ever.
+|every relationship is written with an end
+
+|`_relationship_writers_`
+|The writers that may state a relationship to a subject whose record is marked `R` or `V`.
+|none
+
+|`_team_targets_`
+|The `ORGANISATION` units a relationship may name as its target.
+|none: a team target is a `GROUP`
+
+|`_self_declared_care_`
+|The longest period of a self-declared relationship.
+|off
+
+|`_attested_care_`
+|The agreements under which a caller's verified credential may attest a relationship.
+|off
+
+|`_caseload_`
+|Whether a query may be narrowed to the caller's caseload.
+|true
+
+|`_conflict_rules_`
+|The conflicts of interest allowed through the professional path, and for whom.
+|none: both conflicts refuse
+
+|`_concealed_confidentialities_`
+|The levels whose refused records read as absent.
+|refused records read as forbidden
+
+|`_value_sets_`
+|The value sets, on a terminology server, that the coded attributes are bound to.
+|the package's defaults
+|===
+
+Each default is the strictest reading, so a controller that sets nothing gets a system that admits least.
+
+=== Profiles
+
+The content these attributes take (value sets, periods, purposes) belongs to the deployment and its jurisdiction, and the package ships none. A deployment that wants to fix it for many controllers writes a *profile*: an openEHR template of the controller's `ACCESS_POLICY` archetype that fixes some attributes and leaves the controller the rest, with the value sets it binds held on a terminology server. A committed policy validates against its template as any archetyped data does. The profile adds no class, no step and no rule language. A fictional example, the profile of the imaginary state of Arcadia:
+
+----
+template  Arcadia hospital access policy   (specialises openEHR-EHR-ACCESS_POLICY.controller.v1)
+  time_zone              = "Europe/Arcadia"        (fixed)
+  care_purposes          = HL7_ActReason TREAT, ETREAT     (fixed)
+  relationship_validity  = [ roles: any, default_period: P30D, max_period: P180D ]   (fixed)
+  value_sets             = [ care_role -> http://terminology.arcadia.example/ValueSet/care-role ]   (fixed)
+  rules                  = (left to the controller)
+----
+
+
+=== The Representation as a Stored Fact
+
+EHDS Art 4(2) lets a natural person authorise others and leaves the acts of legal representatives to national law; GDPR Art 8(1), for information society services offered directly to a child, asks for consent "given or authorised by the holder of parental responsibility over the child". Who holds that responsibility, from which age a minor decides alone, and whether a person can decide for themselves are questions of national law and of the care delivery environment (xref:BASE:architecture_overview:security.adoc[Security], The Problem of Roles). The package therefore holds no age band, no capacity rule and no legal-basis table: the writer stores a `represents` relationship with its basis, its provider and its period, ends it when the representation ends, and the system decides a representative's request on that stored fact, as it decides a care relationship, and records which representation it rested on.
+
+A per-service confidentiality that binds a representative, such as a service a minor lawfully consented to alone, is a fact of the object: a `restriction` of the subject whose `_applies_to_` names the representative relationship, or a label at `R` under a rule for representatives.
 
 === The Controller's Rules
 
@@ -79,6 +228,10 @@ A system writes each access-log entry with the period and grounds of the policy 
 
 == Class Descriptions
 
+include::ROOT:partial$classes/confidentiality_settings.adoc[]
+
+include::ROOT:partial$classes/confidentiality_marking.adoc[]
+
 include::ROOT:partial$classes/access_directive_settings.adoc[]
 
 include::ROOT:partial$classes/access_directive.adoc[]
@@ -93,6 +246,14 @@ include::ROOT:partial$classes/access_policy.adoc[]
 
 include::ROOT:partial$classes/access_classification.adoc[]
 
+include::ROOT:partial$classes/access_relationship_validity.adoc[]
+
+include::ROOT:partial$classes/access_relationship_writer.adoc[]
+
+include::ROOT:partial$classes/access_conflict_rule.adoc[]
+
+include::ROOT:partial$classes/access_value_set.adoc[]
+
 include::ROOT:partial$classes/access_log_restriction.adoc[]
 
 include::ROOT:partial$classes/access_log_retention.adoc[]
@@ -100,3 +261,5 @@ include::ROOT:partial$classes/access_log_retention.adoc[]
 include::ROOT:partial$classes/access_retention_bound.adoc[]
 
 include::ROOT:partial$classes/versioned_access_policy.adoc[]
+
+include::ROOT:partial$classes/versioned_party_relationship.adoc[]

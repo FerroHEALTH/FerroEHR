@@ -51,7 +51,7 @@ fn term(code: &str) -> Value {
         "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY }, "code_string": code } })
 }
 
-/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+/// An `access effect`: a code of HL7 FHIR `HL7_ConsentProvisionType`.
 fn provision(code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code, "defining_code": { "_type": "CODE_PHRASE",
         "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY_ID_CONSENT_PROVISION_TYPE },

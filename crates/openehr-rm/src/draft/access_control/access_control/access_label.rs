@@ -6,18 +6,21 @@
 //! The openEHR `ACCESS_LABEL` spec class, generated from the vendored BMM
 //! meta-model.
 
+use crate::draft::access_control::access_control::confidentiality_marking::ConfidentialityMarking;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use crate::v1_2::data_types::text::dv_text::DvText;
 use openehr_base::v1_3::base_types::identification::object_ref::ObjectRef;
 
-/// Sensitivity labels on one versioned object of the EHR. A caller reads labelled data only when a capability clears every label, a permit directive names the label, or an emergency override applies.
+/// Labels on one versioned object of the EHR: sensitivity codes, a confidentiality, or both. A caller reads labelled data only when a permit clears every label, or an emergency override applies.
 #[doc(alias = "ACCESS_LABEL")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessLabel {
     /// The versioned object the labels apply to.
     pub target: ObjectRef,
     /// The sensitivity codes the object carries.
-    pub sensitivities: openehr_base::containers::NonEmptyVec<DvCodedText>,
+    pub sensitivities: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
+    /// The confidentiality of the object. The confidentiality of a datum is the highest of this marking, the marking of its EHR and the confidentiality its classifications give it.
+    pub confidentiality: Option<ConfidentialityMarking>,
     /// Why the object is labelled, never clinical content.
     pub reason: Option<DvText>,
 }

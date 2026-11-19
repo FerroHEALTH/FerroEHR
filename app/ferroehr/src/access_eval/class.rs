@@ -465,7 +465,13 @@ impl Walk {
             let Some(vo_id) = object_id(&label.target) else {
                 continue;
             };
-            for (position, coded) in label.sensitivities.iter().enumerate() {
+            for (position, coded) in label
+                .sensitivities
+                .as_deref()
+                .unwrap_or_default()
+                .iter()
+                .enumerate()
+            {
                 let Ok(code) = ForeignCode::read(ForeignKind::Sensitivity, coded) else {
                     continue;
                 };

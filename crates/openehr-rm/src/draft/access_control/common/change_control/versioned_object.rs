@@ -7,6 +7,7 @@
 //! meta-model.
 
 use crate::draft::access_control::access_control::versioned_access_policy::VersionedAccessPolicy;
+use crate::draft::access_control::access_control::versioned_party_relationship::VersionedPartyRelationship;
 use crate::v1_2::common::directory::versioned_folder::VersionedFolder;
 use crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 use crate::v1_2::demographic::versioned_party::VersionedParty;
@@ -48,6 +49,8 @@ pub enum VersionedObject {
     VersionedFolder(VersionedFolder),
     /// The `VERSIONED_PARTY` subtype of `VERSIONED_OBJECT`.
     VersionedParty(VersionedParty),
+    /// The `VERSIONED_PARTY_RELATIONSHIP` subtype of `VERSIONED_OBJECT`.
+    VersionedPartyRelationship(VersionedPartyRelationship),
     /// An instance of `VERSIONED_OBJECT` itself (its own, least-rich form).
     VersionedObject(VersionedObjectData),
 }
@@ -85,6 +88,12 @@ impl From<VersionedFolder> for VersionedObject {
 impl From<VersionedParty> for VersionedObject {
     fn from(value: VersionedParty) -> Self {
         Self::VersionedParty(value)
+    }
+}
+
+impl From<VersionedPartyRelationship> for VersionedObject {
+    fn from(value: VersionedPartyRelationship) -> Self {
+        Self::VersionedPartyRelationship(value)
     }
 }
 

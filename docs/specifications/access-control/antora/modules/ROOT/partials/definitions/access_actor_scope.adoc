@@ -20,7 +20,15 @@ a|A role the caller performs: the caller matches when it is the `performer` of a
 
 h|*0..1*
 |*relationship*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
-a|A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship), `representative` or `proxy`.
+a|A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship, narrowed by `_care_roles_` and `_care_path_`), `representative` or `proxy`.
+
+h|*0..1*
+|*care_roles*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The roles in a care relationship the scope names: a caller matches when it holds a live care relationship to the subject whose `care_role` has the terminology and code of one of them. Void means any role. No role implies another.
+
+h|*0..1*
+|*care_path*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|How the care relationship reaches the caller, coded in the `care path` group: `direct`, `team`, `attested` or `self_declared`. Void means `direct` or `team`, and `attested` or `self_declared` only where the policy admits that path.
 
 h|*0..1*
 |*organisation_type*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
@@ -38,5 +46,11 @@ h|
 
 h|
 2+a|__Caller_kind_valid__: `caller_kind /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)`
+
+h|
+2+a|__Care_roles_valid__: `care_roles /= Void implies (not care_roles.is_empty and relationship /= Void and then relationship.defining_code.code_string.is_equal ("care"))`
+
+h|
+2+a|__Care_path_valid__: `care_path /= Void implies (relationship /= Void and then relationship.defining_code.code_string.is_equal ("care") and terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_care_path, care_path.defining_code))`
 
 |===

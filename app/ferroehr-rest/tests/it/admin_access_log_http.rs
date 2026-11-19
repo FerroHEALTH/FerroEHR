@@ -46,7 +46,7 @@ fn entry(system_id: &str) -> AccessLogEntry {
         "uid": { "_type": "HIER_OBJECT_ID", "value": "0193f1a2-7c1e-7b4a-9f00-2c6d1e8b5a01" },
         "system_id": system_id,
         "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-07T09:14:03.120Z" },
-        "action": in_terminology("audit-event-action", "R"),
+        "action": in_terminology("HL7_AuditEventAction", "R"),
         "outcome": { "_type": "ACCESS_OUTCOME", "result": coded("granted") },
         "accessor": { "_type": "ACCESSOR", "kind": coded("person"),
             "party": { "_type": "PARTY_IDENTIFIED", "name": "a professional" } },

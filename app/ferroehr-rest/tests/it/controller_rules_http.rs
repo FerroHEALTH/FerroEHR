@@ -40,7 +40,7 @@ fn term(code: &str) -> Value {
     coded(TERMINOLOGY_ID_ACCESS, code)
 }
 
-/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+/// An `access effect`: a code of HL7 FHIR `HL7_ConsentProvisionType`.
 fn provision(code: &str) -> Value {
     coded(
         openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,

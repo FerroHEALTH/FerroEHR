@@ -47,7 +47,7 @@ fn term(rubric: &str) -> Value {
                 "code_string": rubric } })
 }
 
-/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+/// An `access effect`: a code of HL7 FHIR `HL7_ConsentProvisionType`.
 fn effect(code: &str) -> Value {
     coded(TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, code, code)
 }
@@ -174,9 +174,9 @@ fn psychiatry_rule() -> Value {
             "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
                 "role": coded("urn:example:roles", "psychiatrist", "PSYCHIATRIST") }],
             "operations": [term("read")],
-            "purposes": [coded("v3-ActReason", "treatment", "TREAT")],
+            "purposes": [coded("HL7_ActReason", "treatment", "TREAT")],
             "data": [{ "_type": "ACCESS_DATA_SCOPE",
-                "sensitivities": [coded("v3-ActCode", "PSY", "PSY")] }]
+                "sensitivities": [coded("HL7_ActCode", "PSY", "PSY")] }]
         }),
     )
 }
@@ -196,7 +196,7 @@ fn settings() -> Value {
         "labels": [{ "_type": "ACCESS_LABEL",
             "target": { "_type": "OBJECT_REF", "namespace": "local", "type": "VERSIONED_COMPOSITION",
                 "id": { "_type": "HIER_OBJECT_ID", "value": "8849182c-82ad-4088-a07f-48ead4180515" } },
-            "sensitivities": [coded("v3-ActCode", "HIV", "HIV")],
+            "sensitivities": [coded("HL7_ActCode", "HIV", "HIV")],
             "reason": { "_type": "DV_TEXT", "value": "requested by the subject" } }]
     })
 }
@@ -269,7 +269,7 @@ fn policy() -> Value {
             "classifications": [{ "_type": "ACCESS_CLASSIFICATION",
                 "name": { "_type": "DV_TEXT", "value": "HIV results" }, "archetype_node_id": "at0002",
                 "data": { "_type": "ACCESS_DATA_SCOPE", "templates": ["lab_hiv.v1"] },
-                "sensitivities": [coded("v3-ActCode", "HIV", "HIV")] }],
+                "sensitivities": [coded("HL7_ActCode", "HIV", "HIV")] }],
             "care_relationship_required": true,
             "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" },
             "purpose_required": true,

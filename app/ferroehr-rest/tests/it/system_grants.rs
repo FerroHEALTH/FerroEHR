@@ -158,7 +158,7 @@ pub(crate) async fn provider_organisation(
                         "name": { "_type": "DV_CODED_TEXT", "value": "member of",
                             "defining_code": { "_type": "CODE_PHRASE",
                                 "terminology_id": { "_type": "TERMINOLOGY_ID",
-                                    "value": "v3-RoleClass" },
+                                    "value": "HL7_RoleClass" },
                                 "code_string": "MBR" } },
                         "source": reference("ORGANISATION", hospital),
                         "target": reference("GROUP", *group) })

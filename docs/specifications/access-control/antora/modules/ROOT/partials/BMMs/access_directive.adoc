@@ -10,7 +10,7 @@
     "kind": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "kind",
-      "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
+      "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`, `exclusion` for a controller's exclusion of a named party from one EHR (`CONFIDENTIALITY_SETTINGS._exclusions_`). The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
       "is_mandatory": true,
       "type": "DV_CODED_TEXT"
     },
@@ -194,6 +194,14 @@
         "_type": "P_BMM_SIMPLE_TYPE",
         "type": "Boolean"
       }
+    },
+    "is_exclusion": {
+      "name": "is_exclusion",
+      "documentation": "True when `_kind_` is the `exclusion` code of the `access directive kind` group.",
+      "result": {
+        "_type": "P_BMM_SIMPLE_TYPE",
+        "type": "Boolean"
+      }
     }
   },
   "invariants": {
@@ -209,7 +217,8 @@
     "Exceptions_valid": "exceptions /= Void implies not exceptions.is_empty",
     "Legal_grounds_valid": "legal_grounds /= Void implies not legal_grounds.is_empty",
     "Evidence_valid": "evidence /= Void implies not evidence.is_empty",
-    "Identifiers_valid": "identifiers /= Void implies not identifiers.is_empty"
+    "Identifiers_valid": "identifiers /= Void implies not identifiers.is_empty",
+    "Exclusion_denies": "is_exclusion implies (is_deny and exceptions = Void)"
   }
 }
 --------

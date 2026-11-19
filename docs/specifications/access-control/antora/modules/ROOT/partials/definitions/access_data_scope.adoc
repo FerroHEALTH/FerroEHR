@@ -28,7 +28,11 @@ a|Categories of the data, such as the EHDS priority categories, coded in a termi
 
 h|*0..1*
 |*sensitivities*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
-a|Sensitivity codes, matched against the labels the data carry, coded in a terminology the system documents (such as the HL7 v3 confidentiality and sensitivity codes).
+a|Sensitivity codes, matched against the labels the data carry, coded in a terminology the jurisdiction names (such as the `HL7_ActCode` sensitivity policy codes).
+
+h|*0..1*
+|*confidentialities*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|Confidentiality levels, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted): the data whose confidentiality is one of these levels or a lower one.
 
 h|*0..1*
 |*origins*: `xref:{class_list}[List]<xref:{class_string}[String]>`
@@ -39,7 +43,7 @@ h|*0..1*
 a|When the data were committed.
 
 h|*Invariants*
-2+a|__Not_empty__: `objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or origins /= Void or recorded /= Void`
+2+a|__Not_empty__: `objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or confidentialities /= Void or origins /= Void or recorded /= Void`
 
 h|
 2+a|__Objects_valid__: `objects /= Void implies not objects.is_empty`
@@ -55,6 +59,9 @@ h|
 
 h|
 2+a|__Sensitivities_valid__: `sensitivities /= Void implies not sensitivities.is_empty`
+
+h|
+2+a|__Confidentialities_valid__: `confidentialities /= Void implies (not confidentialities.is_empty and confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)))`
 
 h|
 2+a|__Origins_valid__: `origins /= Void implies not origins.is_empty`

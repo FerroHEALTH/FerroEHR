@@ -19,7 +19,26 @@
     "relationship": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "relationship",
-      "documentation": "A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship), `representative` or `proxy`.",
+      "documentation": "A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship, narrowed by `_care_roles_` and `_care_path_`), `representative` or `proxy`.",
+      "type": "DV_CODED_TEXT"
+    },
+    "care_roles": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "care_roles",
+      "documentation": "The roles in a care relationship the scope names: a caller matches when it holds a live care relationship to the subject whose `care_role` has the terminology and code of one of them. Void means any role. No role implies another.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "care_path": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "care_path",
+      "documentation": "How the care relationship reaches the caller, coded in the `care path` group: `direct`, `team`, `attested` or `self_declared`. Void means `direct` or `team`, and `attested` or `self_declared` only where the policy admits that path.",
       "type": "DV_CODED_TEXT"
     },
     "organisation_type": {
@@ -38,7 +57,9 @@
   "invariants": {
     "Not_empty": "party /= Void or role /= Void or organisation_type /= Void or relationship /= Void or caller_kind /= Void",
     "Relationship_valid": "relationship /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)",
-    "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)"
+    "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)",
+    "Care_roles_valid": "care_roles /= Void implies (not care_roles.is_empty and relationship /= Void and then relationship.defining_code.code_string.is_equal (\"care\"))",
+    "Care_path_valid": "care_path /= Void implies (relationship /= Void and then relationship.defining_code.code_string.is_equal (\"care\") and terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_care_path, care_path.defining_code))"
   }
 }
 --------

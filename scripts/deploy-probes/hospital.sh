@@ -269,13 +269,13 @@ j_coded() {
 # A term of the draft openehr_access groups.
 j_term() { j_coded "$H_TERM" "$1"; }
 
-# An access effect: a code of HL7 FHIR consent-provision-type.
-j_effect() { j_coded consent-provision-type "$1"; }
+# An access effect: a code of HL7 FHIR HL7_ConsentProvisionType.
+j_effect() { j_coded HL7_ConsentProvisionType "$1"; }
 
 # A care relationship code: a membership is HL7 v3 RoleClass MBR, any other
 # care code a term of openehr_access.
 j_care_code() {
-  if [[ "$1" == member ]]; then j_coded v3-RoleClass MBR; else j_term "$1"; fi
+  if [[ "$1" == member ]]; then j_coded HL7_RoleClass MBR; else j_term "$1"; fi
 }
 
 # A PARTY_REF to the party `id` of RM type `type`.
@@ -763,12 +763,12 @@ hospital_setup() {
 # ── The controller's policy and Eva's directives ──────────────────────────────
 
 # A sensitivity of the HL7 v3 Confidentiality codes.
-j_sensitivity() { j_coded v3-Confidentiality "$1"; }
+j_sensitivity() { j_coded HL7_Confidentiality "$1"; }
 # A role of the hospital's role code system.
 j_role_code() { j_coded "$H_ROLES" "$1"; }
 
 # A controller rule (`ACCESS_POLICY.rules`, #5621) named `name`, of `effect`
-# (consent-provision-type), with the directive members `members`.
+# (HL7_ConsentProvisionType), with the directive members `members`.
 j_rule() {
   jq -nc --arg n "$1" --argjson k "$(j_term controller_rule)" --argjson e "$(j_effect "$2")" \
     --argjson m "$3" '{_type:"ACCESS_DIRECTIVE",name:{_type:"DV_TEXT",value:$n},
@@ -794,7 +794,7 @@ j_rules() {
       '{applies_to:[$p],data:[{_type:"ACCESS_DATA_SCOPE",sensitivities:[$s]}]}')")" \
     --argjson emergency "$(j_rule "Emergency treatment under break-glass alone" deny "$(jq -nc \
       --argjson pro "$(j_term professional)" --argjson sys "$(j_term system)" \
-      --argjson e "$(j_coded v3-ActReason ETREAT)" \
+      --argjson e "$(j_coded HL7_ActReason ETREAT)" \
       '{applies_to:[{_type:"ACCESS_ACTOR_SCOPE",caller_kind:$pro},{_type:"ACCESS_ACTOR_SCOPE",caller_kind:$sys}],
         purposes:[$e],emergency_override:true}')")" \
     --argjson nurse "$(j_rule "Nurses do not record diagnoses" deny "$(jq -nc \
@@ -880,7 +880,7 @@ j_eva_settings() {
       --argjson x "$(j_directive consent permit "Dr. Smit" "{\"applies_to\":$(j_naming PERSON "$(hv person_carla)")}")" \
       '{data:[{templates:[$t]}],exceptions:[$x]}')")"
     "$(j_directive consent permit "Regional sharing" "$(jq -nc --argjson g "$(j_naming GROUP "$(hv region)")" \
-      --argjson p "$(j_coded v3-ActReason TREAT)" \
+      --argjson p "$(j_coded HL7_ActReason TREAT)" \
       --argjson v "$(j_instants "$consent_from" "$consent_to")" \
       '{applies_to:$g,purposes:[$p],time_validity:$v,emergency_override:false,
         identifiers:[{_type:"DV_IDENTIFIER",issuer:"urn:oid:2.999.7.1",id:"regional-opt-in",type:"BPPC"}]}')")"

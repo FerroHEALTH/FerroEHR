@@ -562,7 +562,7 @@ external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
 display_name = "/identities[id4]/details[id5]/items[id6]"
 
 [authz.party_binding.membership]
-archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0"
+archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.1"
 "#;
 
 /// [`full`] with [`MAPPING`], `old` replaced by `new` in the mapping.

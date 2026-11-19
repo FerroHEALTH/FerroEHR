@@ -1,0 +1,47 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_CONFLICT_RULE",
+  "documentation": "A conflict of interest the controller allows through the professional path, for the callers named. An access admitted under it is marked in the access log.",
+  "properties": {
+    "conflict": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "conflict",
+      "documentation": "The conflict, coded in the `access conflict` group: `self` (the caller is the subject) or `related` (the caller is related to the subject).",
+      "is_mandatory": true,
+      "type": "DV_CODED_TEXT"
+    },
+    "applies_to": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "applies_to",
+      "documentation": "The callers the allowance covers. Void means every professional.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_ACTOR_SCOPE"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "kinships": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "kinships",
+      "documentation": "For `related`, the kinship codes the allowance covers. Void means every kinship.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    }
+  },
+  "invariants": {
+    "Conflict_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_conflict, conflict.defining_code)",
+    "Applies_to_valid": "applies_to /= Void implies not applies_to.is_empty",
+    "Kinships_valid": "kinships /= Void implies (not kinships.is_empty and conflict.defining_code.code_string.is_equal (\"related\"))"
+  }
+}
+--------

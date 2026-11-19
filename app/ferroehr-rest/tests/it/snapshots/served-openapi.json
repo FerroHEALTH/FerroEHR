@@ -6966,7 +6966,7 @@
           {
             "name": "action",
             "in": "query",
-            "description": "A term of the `access action` group by its coded content, the token `terminology_id|code`, such as `audit-event-action|R` or `openehr_access|query`.",
+            "description": "A term of the `access action` group by its coded content, the token `terminology_id|code`, such as `HL7_AuditEventAction|R` or `openehr_access|query`.",
             "required": false,
             "schema": {
               "type": "string"
@@ -6984,7 +6984,7 @@
           {
             "name": "accessor_kind",
             "in": "query",
-            "description": "A term of the `accessor kind` group by its coded content, the token `terminology_id|code`, such as `extra-security-role-type|datasubject`.",
+            "description": "A term of the `accessor kind` group by its coded content, the token `terminology_id|code`, such as `HL7_SecurityRoleType|datasubject`.",
             "required": false,
             "schema": {
               "type": "string"

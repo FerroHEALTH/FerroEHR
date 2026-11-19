@@ -60,9 +60,9 @@ pub(super) const OBJECT: &str = "8849182c-82ad-4088-a07f-48ead4180515";
 pub(super) const OTHER: &str = "8849182c-82ad-4088-a07f-48ead4180516";
 
 /// The jurisdiction's sensitivity code system.
-pub(super) const CONFIDENTIALITY: &str = "v3-ActCode";
+pub(super) const CONFIDENTIALITY: &str = "HL7_ActCode";
 /// The jurisdiction's purpose of use code system.
-pub(super) const PURPOSE: &str = "v3-ActReason";
+pub(super) const PURPOSE: &str = "HL7_ActReason";
 /// The jurisdiction's role code system.
 pub(super) const ROLES: &str = "urn:example:roles";
 /// The national category system of the test map.
@@ -92,7 +92,7 @@ pub(super) fn term(code: &str) -> Value {
     coded(TERMINOLOGY, code)
 }
 
-/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+/// An `access effect`: a code of HL7 FHIR `HL7_ConsentProvisionType`.
 pub(super) fn provision(code: &str) -> Value {
     coded(
         openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,

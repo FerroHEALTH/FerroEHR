@@ -1,0 +1,42 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*CONFIDENTIALITY_SETTINGS*
+
+h|*Description*
+2+a|The concrete `ACCESS_CONTROL_SETTINGS` that holds the controller's facts about one EHR: the confidentiality of the whole record and the named parties excluded from it. The simplest concrete scheme; `ACCESS_DIRECTIVE_SETTINGS` inherits from it, so an EHR holds one settings object (`EHR_ACCESS._settings_` 0..1). `EHR_ACCESS.scheme()` returns `confidentiality` for an instance of this class.
+
+h|*Inherit*
+2+|`xref:ehr:ehr_package.adoc#_access_control_settings_class[ACCESS_CONTROL_SETTINGS]`
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*0..1*
+|*marking*: `xref:access_control:access_control_package.adoc#_confidentiality_marking_class[CONFIDENTIALITY_MARKING]`
+a|The confidentiality of the whole EHR. Void reads as `N`. Set only by the controller; a version committed by anyone else carries it unchanged.
+
+h|*0..1*
+|*exclusions*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_directive_class[ACCESS_DIRECTIVE]>`
+a|Denies the controller sets for this EHR alone, each of kind `exclusion` naming the parties it keeps out. Read and written only by the controller; a version committed by anyone else carries them unchanged.
+
+h|*Functions*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*scheme* (): `xref:{class_string}[String]`
+a|The name of this scheme, `confidentiality`, which `EHR_ACCESS.scheme()` returns.
+
+h|*1..1*
+|*is_normal* (): `xref:{class_boolean}[Boolean]`
+a|True when `_marking_` is Void or its `level()` is 0.
+
+h|*Invariants*
+2+a|__Exclusions_valid__: `exclusions /= Void implies not exclusions.is_empty`
+
+h|
+2+a|__Exclusions_kind__: `exclusions /= Void implies exclusions.for_all (e | e.is_exclusion)`
+
+|===

@@ -40,5 +40,7 @@ pub struct AccessClassification {
     /// The kind of data the rule classifies. It names no individual object.
     pub data: AccessDataScope,
     /// The sensitivity codes the data carry.
-    pub sensitivities: openehr_base::containers::NonEmptyVec<DvCodedText>,
+    pub sensitivities: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
+    /// The confidentiality the data carry, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted).
+    pub confidentiality: Option<DvCodedText>,
 }

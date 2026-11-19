@@ -1,0 +1,47 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_RELATIONSHIP_VALIDITY*
+
+h|*Description*
+2+a|The default and maximum period of the care relationships one entry covers. A relationship written without an end takes the default period from its start; one longer than the maximum is refused. An entry with neither period lets the relationships it covers stay open.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*0..1*
+|*roles*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The `care_role` codes the entry covers. Void means every role.
+
+h|*0..1*
+|*organisation_types*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The types of the relationship's `provider` the entry covers, matched as `ACCESS_ACTOR_SCOPE._organisation_type_` is. Void means every type.
+
+h|*0..1*
+|*default_period*: `xref:data_types:date_time_package.adoc#_dv_duration_class[DV_DURATION]`
+a|The period a relationship written without an end takes.
+
+h|*0..1*
+|*max_period*: `xref:data_types:date_time_package.adoc#_dv_duration_class[DV_DURATION]`
+a|The longest period a relationship may have.
+
+h|*Invariants*
+2+a|__Roles_valid__: `roles /= Void implies not roles.is_empty`
+
+h|
+2+a|__Organisation_types_valid__: `organisation_types /= Void implies not organisation_types.is_empty`
+
+h|
+2+a|__Default_valid__: `default_period /= Void implies default_period.magnitude > 0`
+
+h|
+2+a|__Max_valid__: `max_period /= Void implies max_period.magnitude > 0`
+
+h|
+2+a|__Default_within_max__: `(default_period /= Void and max_period /= Void) implies default_period.magnitude <= max_period.magnitude`
+
+h|
+2+a|__Bounded_together__: `default_period /= Void implies max_period /= Void`
+
+|===

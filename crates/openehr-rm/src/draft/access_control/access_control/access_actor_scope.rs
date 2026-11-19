@@ -17,8 +17,16 @@ pub struct AccessActorScope {
     pub party: Option<PartyRef>,
     /// A role the caller performs: the caller matches when it is the `performer` of a `ROLE` in force (its `time_validity` holds the date of the access and its versioned object is not deleted) whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code, or when the verified credential of a caller from outside the system, admitted under an agreement, attests a professional role with the same terminology and code.
     pub role: Option<DvCodedText>,
-    /// A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship), `representative` or `proxy`.
+    /// A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship, narrowed by `_care_roles_` and `_care_path_`), `representative` or `proxy`.
     pub relationship: Option<DvCodedText>,
+    /// The roles in a care relationship the scope names: a caller matches when it holds a live care relationship to the subject whose `care_role` has the terminology and code of one of them.
+    ///
+    /// Void means any role. No role implies another.
+    pub care_roles: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
+    /// How the care relationship reaches the caller, coded in the `care path` group: `direct`, `team`, `attested` or `self_declared`.
+    ///
+    /// Void means `direct` or `team`, and `attested` or `self_declared` only where the policy admits that path.
+    pub care_path: Option<DvCodedText>,
     /// A type of organisation the caller acts for: the caller matches when it acts for an `ORGANISATION` whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code, or when the verified credential of a caller from outside the system, admitted under an agreement, attests a type of its healthcare facility with the same terminology and code.
     pub organisation_type: Option<DvCodedText>,
     /// The kind of caller, coded in the `access caller kind` group: `professional`, `access_service`, `subject`, `representative` or `system`.

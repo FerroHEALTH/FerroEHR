@@ -27,7 +27,51 @@ a|Whether a professional's clinical access to an EHR needs a live care relations
 
 h|*0..1*
 |*relationship_grace*: `xref:data_types:date_time_package.adoc#_dv_duration_class[DV_DURATION]`
-a|How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access).
+a|How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access). Grace never extends a team membership.
+
+h|*0..1*
+|*time_zone*: `xref:{class_string}[String]`
+a|The time zone, as an IANA time zone name, in which the dates of a relationship's `time_validity` are read. Void means UTC.
+
+h|*0..1*
+|*care_purposes*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The purposes of use for which a care relationship is a ground. Void means the `HL7_ActReason` codes `TREAT`, `ETREAT` and `CAREMGT`. An access that declares another purpose is not admitted by a relationship.
+
+h|*0..1*
+|*relationship_validity*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_relationship_validity_class[ACCESS_RELATIONSHIP_VALIDITY]>`
+a|The default and maximum periods of care relationships, by role and organisation type. A relationship no entry covers must be written with an end.
+
+h|*0..1*
+|*relationship_writers*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_relationship_writer_class[ACCESS_RELATIONSHIP_WRITER]>`
+a|The writers that may state a care relationship to a subject whose EHR is marked above `N`. Void means none.
+
+h|*0..1*
+|*team_targets*: `xref:{class_list}[List]<xref:{class_party_ref}[PARTY_REF]>`
+a|The `ORGANISATION` units a care relationship may name as its target. Void means none: a team target is then a `GROUP`.
+
+h|*0..1*
+|*self_declared_care*: `xref:data_types:date_time_package.adoc#_dv_duration_class[DV_DURATION]`
+a|The longest period of a self-declared care relationship. Void means a self-declared relationship is refused at write.
+
+h|*0..1*
+|*attested_care*: `xref:{class_list}[List]<xref:data_types:basic_package.adoc#_dv_identifier_class[DV_IDENTIFIER]>`
+a|The agreements under which a caller's verified credential may attest a care relationship. Void means no attested relationship is admitted.
+
+h|*0..1*
+|*caseload*: `xref:{class_boolean}[Boolean]`
+a|Whether a query may be narrowed to the caller's caseload and the caseload resource answers. Void means true.
+
+h|*0..1*
+|*conflict_rules*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_conflict_rule_class[ACCESS_CONFLICT_RULE]>`
+a|The conflicts of interest the controller allows through the professional path. Void allows none: a professional who is the subject, or is related to the subject, is refused.
+
+h|*0..1*
+|*concealed_confidentialities*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The confidentiality levels whose refused records are answered as absent. Void answers every refused named record as forbidden.
+
+h|*0..1*
+|*value_sets*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_value_set_class[ACCESS_VALUE_SET]>`
+a|The value sets the controller binds the coded attributes of care relationships, representations and rules to, held on a terminology server. A binding left out uses the default value set of the package.
 
 h|*1..1*
 |*purpose_required*: `xref:{class_boolean}[Boolean]`
@@ -78,6 +122,33 @@ h|
 2+a|__Rules_kind__: `rules /= Void implies rules.for_all (r | r.is_controller_rule and (r.exceptions = Void or r.exceptions.for_all (e | e.is_controller_rule)))`
 
 h|
-2+a|__Catalogue_not_controller_rules__: `catalogue /= Void implies catalogue.for_all (d | not d.is_controller_rule and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule)))`
+2+a|__Catalogue_not_controller_rules__: `catalogue /= Void implies catalogue.for_all (d | not d.is_controller_rule and not d.is_exclusion and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule and not e.is_exclusion)))`
+
+h|
+2+a|__Care_purposes_valid__: `care_purposes /= Void implies not care_purposes.is_empty`
+
+h|
+2+a|__Relationship_validity_valid__: `relationship_validity /= Void implies not relationship_validity.is_empty`
+
+h|
+2+a|__Relationship_writers_valid__: `relationship_writers /= Void implies not relationship_writers.is_empty`
+
+h|
+2+a|__Team_targets_valid__: `team_targets /= Void implies (not team_targets.is_empty and team_targets.for_all (t | t.type.is_equal ("ORGANISATION")))`
+
+h|
+2+a|__Self_declared_valid__: `self_declared_care /= Void implies self_declared_care.magnitude > 0`
+
+h|
+2+a|__Attested_care_valid__: `attested_care /= Void implies not attested_care.is_empty`
+
+h|
+2+a|__Conflict_rules_valid__: `conflict_rules /= Void implies not conflict_rules.is_empty`
+
+h|
+2+a|__Concealed_valid__: `concealed_confidentialities /= Void implies (not concealed_confidentialities.is_empty and concealed_confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)))`
+
+h|
+2+a|__Value_sets_valid__: `value_sets /= Void implies not value_sets.is_empty`
 
 |===

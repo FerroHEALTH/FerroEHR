@@ -46,7 +46,7 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
-/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+/// An `access effect`: a code of HL7 FHIR `HL7_ConsentProvisionType`.
 fn provision(code: &str) -> Value {
     let mut value = term(code);
     value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
@@ -107,7 +107,7 @@ fn purpose_required() -> AccessPolicy {
     let mut only = rule("System readers declare operations only", "deny");
     only["applies_to"] = json!([{ "caller_kind": coded(TERMINOLOGY_ID_ACCESS, "system") }]);
     let mut operations = rule("Operations", "permit");
-    operations["purposes"] = json!([coded("v3-ActReason", PURPOSE)]);
+    operations["purposes"] = json!([coded("HL7_ActReason", PURPOSE)]);
     only["exceptions"] = json!([operations]);
     let policy = json!({
         "_type": "ACCESS_POLICY",

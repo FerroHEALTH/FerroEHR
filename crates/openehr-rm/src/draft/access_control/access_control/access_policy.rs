@@ -7,14 +7,20 @@
 //! meta-model.
 
 use crate::draft::access_control::access_control::access_classification::AccessClassification;
+use crate::draft::access_control::access_control::access_conflict_rule::AccessConflictRule;
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
 use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use crate::draft::access_control::access_control::access_log_retention::AccessLogRetention;
+use crate::draft::access_control::access_control::access_relationship_validity::AccessRelationshipValidity;
+use crate::draft::access_control::access_control::access_relationship_writer::AccessRelationshipWriter;
+use crate::draft::access_control::access_control::access_value_set::AccessValueSet;
 use crate::v1_2::common::archetyped::archetyped::Archetyped;
 use crate::v1_2::common::archetyped::feeder_audit::FeederAudit;
 use crate::v1_2::common::archetyped::link::Link;
 use crate::v1_2::data_structures::item_structure::item_structure::ItemStructure;
+use crate::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration;
+use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use crate::v1_2::data_types::text::dv_text::DvText;
 use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
 use openehr_base::v1_3::base_types::identification::uid_based_id::UidBasedId;
@@ -50,8 +56,36 @@ pub struct AccessPolicy {
     pub classifications: Option<openehr_base::containers::NonEmptyVec<AccessClassification>>,
     /// Whether a professional's clinical access to an EHR needs a live care relationship to its subject, beyond the operation the caller's capability grants.
     pub care_relationship_required: bool,
-    /// How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access).
+    /// How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access). Grace never extends a team membership.
     pub relationship_grace: Option<DvDuration>,
+    /// The time zone, as an IANA time zone name, in which the dates of a relationship's `time_validity` are read. Void means UTC.
+    pub time_zone: Option<String>,
+    /// The purposes of use for which a care relationship is a ground.
+    ///
+    /// Void means the `HL7_ActReason` codes `TREAT`, `ETREAT` and `CAREMGT`. An access that declares another purpose is not admitted by a relationship.
+    pub care_purposes: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
+    /// The default and maximum periods of care relationships, by role and organisation type. A relationship no entry covers must be written with an end.
+    pub relationship_validity:
+        Option<openehr_base::containers::NonEmptyVec<AccessRelationshipValidity>>,
+    /// The writers that may state a care relationship to a subject whose EHR is marked above `N`. Void means none.
+    pub relationship_writers:
+        Option<openehr_base::containers::NonEmptyVec<AccessRelationshipWriter>>,
+    /// The `ORGANISATION` units a care relationship may name as its target. Void means none: a team target is then a `GROUP`.
+    pub team_targets: Option<openehr_base::containers::NonEmptyVec<PartyRef>>,
+    /// The longest period of a self-declared care relationship. Void means a self-declared relationship is refused at write.
+    pub self_declared_care: Option<DvDuration>,
+    /// The agreements under which a caller's verified credential may attest a care relationship. Void means no attested relationship is admitted.
+    pub attested_care: Option<openehr_base::containers::NonEmptyVec<DvIdentifier>>,
+    /// Whether a query may be narrowed to the caller's caseload and the caseload resource answers. Void means true.
+    pub caseload: Option<bool>,
+    /// The conflicts of interest the controller allows through the professional path. Void allows none: a professional who is the subject, or is related to the subject, is refused.
+    pub conflict_rules: Option<openehr_base::containers::NonEmptyVec<AccessConflictRule>>,
+    /// The confidentiality levels whose refused records are answered as absent. Void answers every refused named record as forbidden.
+    pub concealed_confidentialities: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
+    /// The value sets the controller binds the coded attributes of care relationships, representations and rules to, held on a terminology server.
+    ///
+    /// A binding left out uses the default value set of the package.
+    pub value_sets: Option<openehr_base::containers::NonEmptyVec<AccessValueSet>>,
     /// Whether an access to clinical data must declare a purpose of use. An access without one is refused before the controller's rules are read, whatever rules the policy holds.
     pub purpose_required: bool,
     /// The controller's rules for every EHR it keeps: which callers may perform which operations on which kinds of data, such as the rules a Member State lays down under EHDS Art.

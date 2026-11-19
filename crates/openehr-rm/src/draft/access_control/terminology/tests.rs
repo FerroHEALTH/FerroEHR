@@ -94,10 +94,10 @@ fn a_foreign_code_is_of_another_terminology() {
     assert_eq!(
         ForeignCode::read(
             ForeignKind::Sensitivity,
-            &coded_text("v3-Confidentiality", "R", "R")
+            &coded_text("HL7_Confidentiality", "R", "R")
         ),
         Ok(ForeignCode {
-            terminology: "v3-Confidentiality".to_owned(),
+            terminology: "HL7_Confidentiality".to_owned(),
             code: "R".to_owned()
         })
     );

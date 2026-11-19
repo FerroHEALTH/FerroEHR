@@ -1,0 +1,53 @@
+[source,json]
+--------
+{
+  "name": "CONFIDENTIALITY_SETTINGS",
+  "documentation": "The concrete `ACCESS_CONTROL_SETTINGS` that holds the controller's facts about one EHR: the confidentiality of the whole record and the named parties excluded from it. The simplest concrete scheme; `ACCESS_DIRECTIVE_SETTINGS` inherits from it, so an EHR holds one settings object (`EHR_ACCESS._settings_` 0..1). `EHR_ACCESS.scheme()` returns `confidentiality` for an instance of this class.",
+  "ancestors": [
+    "ACCESS_CONTROL_SETTINGS"
+  ],
+  "properties": {
+    "marking": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "marking",
+      "documentation": "The confidentiality of the whole EHR. Void reads as `N`. Set only by the controller; a version committed by anyone else carries it unchanged.",
+      "type": "CONFIDENTIALITY_MARKING"
+    },
+    "exclusions": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "exclusions",
+      "documentation": "Denies the controller sets for this EHR alone, each of kind `exclusion` naming the parties it keeps out. Read and written only by the controller; a version committed by anyone else carries them unchanged.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_DIRECTIVE"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    }
+  },
+  "functions": {
+    "scheme": {
+      "name": "scheme",
+      "documentation": "The name of this scheme, `confidentiality`, which `EHR_ACCESS.scheme()` returns.",
+      "result": {
+        "_type": "P_BMM_SIMPLE_TYPE",
+        "type": "String"
+      }
+    },
+    "is_normal": {
+      "name": "is_normal",
+      "documentation": "True when `_marking_` is Void or its `level()` is 0.",
+      "result": {
+        "_type": "P_BMM_SIMPLE_TYPE",
+        "type": "Boolean"
+      }
+    }
+  },
+  "invariants": {
+    "Exclusions_valid": "exclusions /= Void implies not exclusions.is_empty",
+    "Exclusions_kind": "exclusions /= Void implies exclusions.for_all (e | e.is_exclusion)"
+  }
+}
+--------

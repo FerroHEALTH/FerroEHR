@@ -8,7 +8,7 @@
 //! Each group is a closed set of terms. A term is a code of
 //! [`TERMINOLOGY_ID_ACCESS`], the draft `openehr_access` terminology both
 //! draft packages propose, or, where an HL7 code system publishes a code
-//! of the same meaning, that system's code under its HL7 code system id,
+//! of the same meaning, that system's code under its `HL7_<name>` identifier,
 //! such as [`TERMINOLOGY_ID_CONSENT_PROVISION_TYPE`]. Each draft code is its
 //! rubric until codes are assigned. A coded value is read into its group's
 //! type with [`Term::read`]: a value of a terminology the group holds no
@@ -36,21 +36,25 @@ use log::{AccessorKind, Action, Authorisation, CredentialBinding, Outcome, Refus
 /// which holds the access groups' own codes until openEHR adopts them.
 pub const TERMINOLOGY_ID_ACCESS: &str = "openehr_access";
 
-/// HL7 FHIR `http://hl7.org/fhir/consent-provision-type`, by its code system
-/// id: the `permit` and `deny` of a consent provision.
-pub const TERMINOLOGY_ID_CONSENT_PROVISION_TYPE: &str = "consent-provision-type";
+/// HL7 FHIR `http://hl7.org/fhir/consent-provision-type`, by its terminology
+/// identifier `HL7_` and its code system name: the `permit` and `deny` of a
+/// consent provision.
+pub const TERMINOLOGY_ID_CONSENT_PROVISION_TYPE: &str = "HL7_ConsentProvisionType";
 
 /// HL7 Terminology `http://terminology.hl7.org/CodeSystem/extra-security-role-type`,
-/// by its code system id: its `datasubject` is the subject of the data.
-pub const TERMINOLOGY_ID_SECURITY_ROLE_TYPE: &str = "extra-security-role-type";
+/// by its terminology identifier `HL7_` and its code system name: its
+/// `datasubject` is the subject of the data.
+pub const TERMINOLOGY_ID_SECURITY_ROLE_TYPE: &str = "HL7_SecurityRoleType";
 
 /// HL7 Terminology `http://terminology.hl7.org/CodeSystem/v3-RoleClass`, by its
-/// code system id: its `MBR` is the member of a group.
-pub const TERMINOLOGY_ID_ROLE_CLASS: &str = "v3-RoleClass";
+/// terminology identifier `HL7_` and its code system name: its `MBR` is the
+/// member of a group.
+pub const TERMINOLOGY_ID_ROLE_CLASS: &str = "HL7_RoleClass";
 
-/// HL7 FHIR `http://hl7.org/fhir/audit-event-action`, by its code system id:
-/// the create, read, update and delete of an audited access.
-pub const TERMINOLOGY_ID_AUDIT_EVENT_ACTION: &str = "audit-event-action";
+/// HL7 FHIR `http://hl7.org/fhir/audit-event-action`, by its terminology
+/// identifier `HL7_` and its code system name: the create, read, update and
+/// delete of an audited access.
+pub const TERMINOLOGY_ID_AUDIT_EVENT_ACTION: &str = "HL7_AuditEventAction";
 
 /// A `DV_CODED_TEXT` of `code` in `terminology`, displayed as `rubric`.
 #[must_use]
@@ -401,10 +405,10 @@ group! {
     /// Whether a directive permits or denies (`ACCESS_DIRECTIVE.effect`).
     Effect in AccessEffect {
         /// The directive admits what it covers: HL7 FHIR
-        /// `consent-provision-type#permit`.
+        /// `HL7_ConsentProvisionType#permit`.
         Permit => "permit" of TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, "permit",
         /// The directive refuses what it covers; a deny overrides a permit:
-        /// HL7 FHIR `consent-provision-type#deny`.
+        /// HL7 FHIR `HL7_ConsentProvisionType#deny`.
         Deny => "deny" of TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, "deny",
     }
 }
@@ -431,7 +435,7 @@ group! {
         /// An EHDS Art. 4 and 12 access service: a caller holding the
         /// `access_service` grant.
         AccessService => "access_service",
-        /// The subject of the EHR: HL7 `extra-security-role-type#datasubject`.
+        /// The subject of the EHR: HL7 `HL7_SecurityRoleType#datasubject`.
         Subject => "datasubject" of TERMINOLOGY_ID_SECURITY_ROLE_TYPE, "subject",
         /// A representative or proxy of the subject.
         Representative => "representative",

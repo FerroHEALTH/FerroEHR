@@ -1,0 +1,13 @@
+=== VERSIONED_PARTY_RELATIONSHIP Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/versioned_party_relationship.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/versioned_party_relationship.adoc[]
+
+====

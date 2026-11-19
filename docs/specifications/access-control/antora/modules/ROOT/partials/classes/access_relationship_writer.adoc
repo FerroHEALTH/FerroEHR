@@ -1,0 +1,13 @@
+=== ACCESS_RELATIONSHIP_WRITER Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_relationship_writer.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_relationship_writer.adoc[]
+
+====

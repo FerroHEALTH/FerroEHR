@@ -7,6 +7,7 @@
 
 pub mod access_actor_scope;
 pub mod access_classification;
+pub mod access_conflict_rule;
 pub mod access_data_scope;
 pub mod access_directive;
 pub mod access_directive_settings;
@@ -14,5 +15,11 @@ pub mod access_label;
 pub mod access_log_restriction;
 pub mod access_log_retention;
 pub mod access_policy;
+pub mod access_relationship_validity;
+pub mod access_relationship_writer;
 pub mod access_retention_bound;
+pub mod access_value_set;
+pub mod confidentiality_marking;
+pub mod confidentiality_settings;
 pub mod versioned_access_policy;
+pub mod versioned_party_relationship;

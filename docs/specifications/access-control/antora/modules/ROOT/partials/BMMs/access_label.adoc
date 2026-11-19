@@ -2,7 +2,7 @@
 --------
 {
   "name": "ACCESS_LABEL",
-  "documentation": "Sensitivity labels on one versioned object of the EHR. A caller reads labelled data only when a capability clears every label, a permit directive names the label, or an emergency override applies.",
+  "documentation": "Labels on one versioned object of the EHR: sensitivity codes, a confidentiality, or both. A caller reads labelled data only when a permit clears every label, or an emergency override applies.",
   "properties": {
     "target": {
       "_type": "P_BMM_SINGLE_PROPERTY",
@@ -15,15 +15,20 @@
       "_type": "P_BMM_CONTAINER_PROPERTY",
       "name": "sensitivities",
       "documentation": "The sensitivity codes the object carries.",
-      "is_mandatory": true,
       "type_def": {
         "container_type": "List",
         "type": "DV_CODED_TEXT"
       },
       "cardinality": {
-        "lower": 1,
+        "lower": 0,
         "upper_unbounded": true
       }
+    },
+    "confidentiality": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "confidentiality",
+      "documentation": "The confidentiality of the object. The confidentiality of a datum is the highest of this marking, the marking of its EHR and the confidentiality its classifications give it.",
+      "type": "CONFIDENTIALITY_MARKING"
     },
     "reason": {
       "_type": "P_BMM_SINGLE_PROPERTY",
@@ -31,6 +36,10 @@
       "documentation": "Why the object is labelled, never clinical content.",
       "type": "DV_TEXT"
     }
+  },
+  "invariants": {
+    "Not_empty": "sensitivities /= Void or confidentiality /= Void",
+    "Sensitivities_valid": "sensitivities /= Void implies not sensitivities.is_empty"
   }
 }
 --------

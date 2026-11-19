@@ -89,8 +89,8 @@ fn a_granted_read_names_the_version_the_party_and_the_request() {
             entry.action.defining_code.terminology_id.value.as_str(),
             entry.action.defining_code.code_string.as_str()
         ),
-        ("audit-event-action", "R"),
-        "a read is HL7 FHIR audit-event-action#R"
+        ("HL7_AuditEventAction", "R"),
+        "a read is HL7 FHIR HL7_AuditEventAction#R"
     );
     assert_eq!(entry.outcome.result.value, "granted");
     assert_eq!(

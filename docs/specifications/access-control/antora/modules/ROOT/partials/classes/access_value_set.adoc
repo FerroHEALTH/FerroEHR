@@ -1,0 +1,13 @@
+=== ACCESS_VALUE_SET Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_value_set.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_value_set.adoc[]
+
+====

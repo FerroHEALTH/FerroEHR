@@ -24,8 +24,10 @@ pub struct AccessDataScope {
     pub archetypes: Option<openehr_base::containers::NonEmptyVec<ArchetypeId>>,
     /// Categories of the data, such as the EHDS priority categories, coded in a terminology the jurisdiction names.
     pub categories: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
-    /// Sensitivity codes, matched against the labels the data carry, coded in a terminology the system documents (such as the HL7 v3 confidentiality and sensitivity codes).
+    /// Sensitivity codes, matched against the labels the data carry, coded in a terminology the jurisdiction names (such as the `HL7_ActCode` sensitivity policy codes).
     pub sensitivities: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
+    /// Confidentiality levels, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted): the data whose confidentiality is one of these levels or a lower one.
+    pub confidentialities: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
     /// The systems the data came from, as `FEEDER_AUDIT_DETAILS._system_id_` or the committing system's `_system_id_` records them.
     pub origins: Option<openehr_base::containers::NonEmptyVec<String>>,
     /// When the data were committed.

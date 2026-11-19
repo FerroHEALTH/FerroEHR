@@ -31,7 +31,7 @@ use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
 /// The HL7 v3 `ActCode` sensitivity terminology id.
-const ACT_CODE: &str = "v3-ActCode";
+const ACT_CODE: &str = "HL7_ActCode";
 /// The jurisdiction's role code system.
 const ROLES: &str = "urn:example:roles";
 
@@ -78,7 +78,7 @@ fn party_ref(kind: &str, id: VoId) -> Value {
 }
 
 /// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
-const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
+const MEMBER: (&str, &str) = ("HL7_RoleClass", "MBR");
 /// A patient under the care of a team or unit.
 const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
 

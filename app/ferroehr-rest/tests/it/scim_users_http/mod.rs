@@ -70,7 +70,7 @@ const EMAIL_PATH: &str = "/contacts[id10]/addresses[id11]/details[id12]/items[id
 /// The group template, the membership archetype and the identifier issuers
 /// of each client's Groups' `externalId`s.
 const GROUP: &str = "openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0";
-const MEMBERSHIP_HRID: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0";
+const MEMBERSHIP_HRID: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.1";
 /// The archetype id each membership's `archetype_node_id` carries, its
 /// interface form (AM 2 Identification §Archetype Identifiers).
 const MEMBERSHIP: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1";

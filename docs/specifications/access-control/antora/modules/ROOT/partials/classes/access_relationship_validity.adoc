@@ -1,0 +1,13 @@
+=== ACCESS_RELATIONSHIP_VALIDITY Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_relationship_validity.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_relationship_validity.adoc[]
+
+====

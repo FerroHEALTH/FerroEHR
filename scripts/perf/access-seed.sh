@@ -31,11 +31,11 @@ readonly EXT=/ferroehr/rest/extensions/v1
 # shellcheck disable=SC2034 # read by gate.sh, which sources this file
 readonly CLINICIAN_AUTH="Basic Y2xpbmljaWFuOmNsaW5pY2lhbg=="
 # The access-control codes and the grant operations (openehr_access), the
-# effect of a directive (HL7 FHIR consent-provision-type) and a membership
+# effect of a directive (HL7 FHIR HL7_ConsentProvisionType) and a membership
 # of a care team (HL7 v3 RoleClass MBR), as openehr-rm's terminology names them.
 readonly ACCESS_TERMINOLOGY=openehr_access
-readonly PROVISION_TERMINOLOGY=consent-provision-type
-readonly ROLE_CLASS_TERMINOLOGY=v3-RoleClass
+readonly PROVISION_TERMINOLOGY=HL7_ConsentProvisionType
+readonly ROLE_CLASS_TERMINOLOGY=HL7_RoleClass
 readonly ACT_CODE=2.16.840.1.113883.5.25
 readonly ACT_REASON=2.16.840.1.113883.5.8
 # The code system and code of the clinician's functional role.

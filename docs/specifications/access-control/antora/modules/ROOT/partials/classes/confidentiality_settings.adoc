@@ -1,0 +1,13 @@
+=== CONFIDENTIALITY_SETTINGS Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/confidentiality_settings.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/confidentiality_settings.adoc[]
+
+====
