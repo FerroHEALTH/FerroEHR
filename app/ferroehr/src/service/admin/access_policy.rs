@@ -240,8 +240,7 @@ impl FerroEhrService {
     ///   or another one than the policy's; or `If-Match` is no
     ///   `OBJECT_VERSION_ID`.
     /// - `validation_failed` (`422`) — the policy breaks the template it
-    ///   names, or names a code outside a value set it binds
-    ///   ([`Self::access_policy_content`]).
+    ///   names, or names a code outside a value set it binds.
     /// - `version_mismatch` (`412`) — `precondition` does not hold.
     /// - `service_overloaded` (`503`) — the policy store does not answer, or
     ///   the write changes the access log's restrictions and its access-log

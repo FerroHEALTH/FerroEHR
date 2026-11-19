@@ -43,6 +43,7 @@
               (#1694)"
 )]
 
+mod declared;
 pub(crate) mod leaf;
 mod name_type;
 pub(crate) mod node_ids;
@@ -62,6 +63,7 @@ use crate::flat::path;
 use crate::flat::rmpath;
 use crate::flat::sim::{SimDocument, SimNode, is_present};
 use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
+use declared::rm_declares_attribute;
 use plan::{ChildGroup, NodeWalk};
 
 /// Validate only the archetype-conformance pass against a resolved
@@ -467,31 +469,6 @@ struct Validator {
     bindings: Vec<ConstraintBindingCheck>,
     /// Whether [`WebTemplate::archetype_refs`] is set (an OPT2 template).
     slot_fills_enumerated: bool,
-}
-
-/// Does the generated RM model, or a class of FerroEHR's draft packages that
-/// extend it, declare an attribute named `attr` on ANY class?
-///
-/// Name-only by design: an OPT constrains attributes at several RM levels and
-/// the walker does not carry the declaring class here, while the defect this
-/// answers — a constraint on an attribute NO RM class declares — is fully
-/// decided by the name. With the `draft` feature, a template of a draft
-/// class, such as an `ACCESS_POLICY` profile, constrains the draft's
-/// attributes, which the RM adapted by the draft class tables declares (AOM2
-/// `master11-rm_adaptation.adoc`).
-fn rm_declares_attribute(attr: &str) -> bool {
-    static DECLARED: std::sync::LazyLock<std::collections::BTreeSet<&str>> =
-        std::sync::LazyLock::new(|| {
-            let classes = openehr_rm::v1_2::model::classes();
-            #[cfg(feature = "draft")]
-            let classes = classes
-                .chain(openehr_rm::draft::access_control::model::CLASSES)
-                .chain(openehr_rm::draft::access_log::model::CLASSES);
-            classes
-                .flat_map(|c| c.attributes.iter().map(|a| a.name))
-                .collect()
-        });
-    DECLARED.contains(attr)
 }
 
 /// Why a template constraint cannot be evaluated against any instance.
@@ -1936,28 +1913,6 @@ mod tests {
             msgs.iter()
                 .any(|m| m.kind == ValidationKind::Required && m.path.ends_with("/value")),
             "expected a Required existence violation for the missing value, got {msgs:?}"
-        );
-    }
-
-    #[cfg(feature = "draft")]
-    #[test]
-    fn existence_of_a_draft_class_attribute_is_enforced() {
-        // An ACCESS_POLICY profile requiring `self_declared_care`, an attribute
-        // only the draft access control class table declares.
-        let mut n = node("ACCESS_POLICY", "");
-        n.existence = vec![WebTemplateExistence {
-            min: 1,
-            max: 1,
-            path: "/self_declared_care".to_owned(),
-        }];
-        let inst = json!({"_type": "ACCESS_POLICY",
-            "name": {"_type": "DV_TEXT", "value": "policy"}});
-        let msgs = walk_only(&inst, &n);
-        assert!(
-            msgs.iter()
-                .any(|m| m.kind == ValidationKind::Required
-                    && m.path.ends_with("/self_declared_care")),
-            "expected a Required existence violation, got {msgs:?}"
         );
     }
 
