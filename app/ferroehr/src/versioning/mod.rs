@@ -70,6 +70,7 @@ pub mod change;
 pub mod committer;
 pub(crate) mod content_facts;
 pub(crate) mod contribution;
+pub mod envelope;
 pub(crate) mod external;
 pub(crate) mod import;
 pub(crate) mod integrity;

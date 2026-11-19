@@ -37,6 +37,7 @@ use crate::versioning::audit::{
     validate_commit_audit,
 };
 use crate::versioning::change::Change;
+use crate::versioning::envelope::{Member, MemberData};
 use crate::versioning::lifecycle::{
     lifecycle_rubric, lifecycle_state_code, resolve_lifecycle, state,
 };
@@ -264,8 +265,9 @@ pub(crate) struct PlannedVersion {
     pub(crate) action: Action,
     /// The parsed `preceding_version_uid` target (modify/delete/attest).
     pub(crate) target: Option<(VoId, TreeId)>,
-    /// `data` (`null` ≙ absent — the deleted-version shape).
-    pub(crate) data: Option<Value>,
+    /// `data` (`null` ≙ absent — the deleted-version shape), with its root
+    /// read.
+    pub(crate) data: Option<Member>,
     pub(crate) audit: AuditInput,
     /// The `lifecycle_state` code the member states (`UPDATE_VERSION.lifecycle_state`,
     /// a required `DV_CODED_TEXT`).
@@ -484,8 +486,8 @@ pub(crate) fn parse_contribution_audit(
 /// `version_lifecycle_state` group; [`ServiceError::precondition`] for an
 /// member-borne `uid`, `contribution` or foreign `_type` ([`read_undeclared_members`]) or a
 /// `commit_audit` that is an `UPDATE_ATTESTATION` ([`plain_audit`]).
-pub(crate) fn plan_version(
-    version: UpdateVersion<Value>,
+pub(crate) fn plan_version<D: Into<MemberData>>(
+    version: UpdateVersion<D>,
     index: usize,
     contrib_system_id: &str,
 ) -> Result<PlannedVersion, ServiceError> {
@@ -546,6 +548,10 @@ pub(crate) fn plan_version(
         .flatten()
         .map(AttestationInput::from_update)
         .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.for_version_member(index))?;
+    let data = data
+        .map(|data| Member::read(data.into()))
+        .transpose()
         .map_err(|e| e.for_version_member(index))?;
     Ok(PlannedVersion {
         index,
@@ -688,11 +694,8 @@ pub(crate) fn plan_writes_content_without_reactivating(plan: &[PlannedVersion]) 
         }
         match v.data.as_ref() {
             None => carries_content = true,
-            Some(data) => match data_kind(data) {
-                Ok(Kind::EhrStatus) => {
-                    reactivates |=
-                        data.pointer("/is_modifiable").and_then(Value::as_bool) == Some(true);
-                }
+            Some(member) => match data_kind(&member.rm_type) {
+                Ok(Kind::EhrStatus) => reactivates |= member.is_modifiable == Some(true),
                 Ok(_) => carries_content = true,
                 Err(_) => {}
             },
@@ -813,11 +816,7 @@ fn reject_contradictory_delete_lifecycle(declared: Option<&str>) -> Result<(), S
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] when the `_type` is not a versioned root.
-pub(crate) fn data_kind(data: &Value) -> Result<Kind, ServiceError> {
-    let rm_type = data
-        .get("_type")
-        .and_then(Value::as_str)
-        .unwrap_or_default();
+pub(crate) fn data_kind(rm_type: &str) -> Result<Kind, ServiceError> {
     Kind::from_type(rm_type).ok_or_else(|| {
         ServiceError::content_invalid(
             Violation::new(format!(
