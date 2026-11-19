@@ -798,11 +798,10 @@ async fn a_record_subject_decides_the_next_request_on_another_replica() {
 async fn a_record_subject_is_refused_unless_it_is_a_persons_own_and_its_writer_may() {
     let db = testkit::db().await.expect("testkit database");
     let policy =
-        ferroehr::privacy::PrivacyPolicy::compile(&ferroehr::privacy::config::PrivacyConfig {
+        ferroehr::privacy::PrivacyPolicy::from(&ferroehr::privacy::config::PrivacyConfig {
             subject_namespaces: vec![PIXM.to_owned()],
             ..Default::default()
-        })
-        .expect("the privacy policy compiles");
+        });
     let svc = replica(&db.pool())
         .await
         .with_privacy(std::sync::Arc::new(policy));

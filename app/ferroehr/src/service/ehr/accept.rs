@@ -70,7 +70,7 @@ impl FerroEhrService {
     /// As [`Self::validate_for_commit`].
     async fn validate_typed_for_commit(&self, kind: Kind, body: &Body) -> Result<(), ServiceError> {
         if !kind.is_demographic()
-            && self.privacy.reads_content()
+            && self.privacy.applies_to(kind.as_str())
             && let Some(rm) = body.as_rm()
         {
             self.privacy

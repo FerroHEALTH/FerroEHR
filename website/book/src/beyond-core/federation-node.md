@@ -43,8 +43,8 @@ over PIXm, or the `EHR_STATUS` subject of the node's own EHRs
 
 **A node does not have to store a directly identifying identifier** in
 `EHR_STATUS.subject` (N5). With `[privacy] subject_namespaces` it keeps only a
-pseudonym, and the identifier scanner refuses a national identifier where it
-is configured ([Privacy & data minimisation](../installation/config-privacy.md)).
+pseudonym, and a party proxy that is the subject by name or identifier is
+refused ([Privacy & data minimisation](../installation/config-privacy.md)).
 
 **Every version keeps its identity across nodes** (N21, N22, N36). An
 `OBJECT_VERSION_ID` is `object_id::creating_system_id::version_tree_id` (RM

@@ -201,8 +201,7 @@ fn the_typed_commit_writes_and_signs_the_bytes_the_canonical_one_did() {
 const SYNTHETIC_BSN: &str = "123456782"; // privacy-allow: synthetic, built to satisfy the published arithmetic
 
 /// `composition` with the record's subject as its composer, by name and by a
-/// formal identifier, and an identifier-shaped name: what the
-/// data-minimisation pass refuses.
+/// formal identifier: what the data-minimisation pass refuses.
 fn identifying(composition: &Value) -> Value {
     let mut planted = composition.clone();
     planted["composer"] = json!({
@@ -219,7 +218,6 @@ fn identifying(composition: &Value) -> Value {
             }
         }
     });
-    planted["name"]["value"] = json!(SYNTHETIC_BSN);
     planted
 }
 
@@ -229,7 +227,7 @@ fn identifying(composition: &Value) -> Value {
 /// every COMPOSITION of them made to identify its subject (#6038).
 #[test]
 fn the_typed_reading_of_a_body_is_its_canonical_json() {
-    let policy = PrivacyPolicy::compile(&PrivacyConfig::default()).expect("compiles");
+    let policy = PrivacyPolicy::from(&PrivacyConfig::default());
     let mut found = 0;
     let mut read = 0;
     for (path, kind, body, value) in corpus() {

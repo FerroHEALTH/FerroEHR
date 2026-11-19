@@ -410,11 +410,7 @@ fn assemble_service(
     deployment: DeploymentPosture,
     ehr_index: EhrIndexProvider,
 ) -> anyhow::Result<FerroEhrService> {
-    // The MRN patterns compiled here; `FerroEhrConfig::validate` already
-    // refused an uncompilable one at boot, so this cannot be the first place a
-    // bad pattern is noticed.
-    let privacy = ferroehr::privacy::PrivacyPolicy::compile(&config.privacy)
-        .context("compiling the [privacy] policy")?;
+    let privacy = ferroehr::privacy::PrivacyPolicy::from(&config.privacy);
     // The identifier-protection engine, when the deployment configured one. A
     // key that cannot be parsed is a boot error: a server that believes it
     // seals national identifiers and does not is the failure this refuses to
@@ -657,30 +653,6 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
              the national-identifier slot, and a party named in relation to the subject \
              re-identifies the subject — GDPR Art. 25(2) data minimisation is on this \
              deployment to justify."
-        );
-    }
-    if config.privacy.identifier_scan.mode == ferroehr::privacy::config::ScanMode::Warn {
-        tracing::warn!(
-            "[privacy.identifier_scan].mode is `warn`: a clinical write carrying a value one \
-             of the active rules claims is ACCEPTED and recorded, not refused. Set it to \
-             `strict` once the recorded findings are down to none."
-        );
-    }
-    // Which jurisdictions are actually covered is the one fact an operator
-    // cannot infer, and believing a jurisdiction is scanned when it is not is
-    // the failure this line exists to prevent.
-    if config.privacy.identifier_scan.rules.is_empty() {
-        tracing::warn!(
-            "[privacy.identifier_scan].rules is empty: NO national identifier rule is active, \
-             so the scanner checks only the configured patterns. Name the rules this \
-             deployment's content could carry."
-        );
-    } else {
-        tracing::info!(
-            rules = %config.privacy.identifier_scan.rules.join(", "),
-            patterns = config.privacy.identifier_scan.patterns.len(),
-            mode = config.privacy.identifier_scan.mode.as_str(),
-            "clinical writes are scanned for national identifiers"
         );
     }
     if config.privacy.subject_namespaces.is_empty() {

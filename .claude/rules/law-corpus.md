@@ -127,14 +127,12 @@ Regulation 2019/1020 on market surveillance,
 Regulation 765/2008 on accreditation and the CE marking, MDR) applies to every
 EU deployment and is written once. Each country is one section on top of it,
 in the shape of the Dutch one, read only by a deployment in that country: the
-national acts as a four-column table, the national standards
-(the NEN section shape; a paywalled standard gets a record, never text), and,
-where the country issues a personal identifier with a published algorithm, a
-rule in the identifier scanner citing the register that defines it.
+national acts as a four-column table and the national standards
+(the NEN section shape; a paywalled standard gets a record, never text). The
+product ships no country content, so a country adds no code.
 Switzerland is not an EU member state: its section stands on the DSG, not on
 the GDPR, and says so. Adding a country starts from the regulation issue
-form and ends with the act vendored, the section written and the scanner rule
-filed, in that order.
+form and ends with the act vendored and the section written, in that order.
 
 ## The audit record (what `/compliance-audit` leaves behind)
 

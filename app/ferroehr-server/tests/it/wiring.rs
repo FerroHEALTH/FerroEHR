@@ -616,7 +616,7 @@ fn seed_web_template() -> openehr_sdt::flat::webtemplate::model::WebTemplate {
 /// platform suites build the service with `FerroEhrService::new()`, which
 /// carries the unenforced [`ferroehr::privacy::PrivacyPolicy`] default, and
 /// only the binary compiles `[privacy]` and installs it
-/// ([`ferroehr::privacy::PrivacyPolicy::compile`] + `with_privacy`). A default
+/// ([`ferroehr::privacy::PrivacyPolicy::from`] + `with_privacy`). A default
 /// posture that refuses `ctx/composer_name` therefore looks green everywhere
 /// except in a real deployment.
 #[test]
@@ -626,8 +626,7 @@ fn the_shipped_privacy_default_accepts_this_servers_own_example_composition() {
         !config.privacy.allow_identified_parties_in_ehr,
         "the shipped default must stay the minimising posture"
     );
-    let policy = ferroehr::privacy::PrivacyPolicy::compile(&config.privacy)
-        .expect("the shipped [privacy] section compiles");
+    let policy = ferroehr::privacy::PrivacyPolicy::from(&config.privacy);
     let wt = seed_web_template();
     for (label, level) in [
         (

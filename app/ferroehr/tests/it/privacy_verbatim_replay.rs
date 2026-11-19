@@ -3,15 +3,14 @@
 
 //! The clinical-side data-minimisation pass reaches the two write paths that
 //! replay content verbatim (#3237): EHR-Extract import and the admin archive
-//! load. Both store a record exactly as received, so a body carrying an
-//! identifier can only be REFUSED, never rewritten; these tests prove the
+//! load. Both store a record exactly as received, so a body identifying its
+//! subject can only be REFUSED, never rewritten; these tests prove the
 //! refusal, and that nothing of the refused record lands.
 //!
-//! The source repository runs an explicitly permissive policy (no rules, the
-//! identified-party opt-in), so it will hold a FOLDER whose name is a synthetic
-//! national identifier; the target runs the configuration default, every
-//! shipped rule in `strict` mode. The library default is the refusing posture
-//! (#3243), so the permissive side has to say so.
+//! The source repository runs the identified-party opt-in, so it will hold a
+//! COMPOSITION whose composer is the subject by name; the target runs the
+//! configuration default, which refuses it. The library default is the
+//! refusing posture (#3243), so the permissive side has to say so.
 
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Invalid;
@@ -22,7 +21,7 @@ use sqlx::PgPool;
 
 use ferroehr::ids::EhrId;
 use ferroehr::privacy::PrivacyPolicy;
-use ferroehr::privacy::config::{IdentifierScanConfig, PrivacyConfig, ScanMode};
+use ferroehr::privacy::config::PrivacyConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::types::ExportSpec;
 use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
@@ -30,59 +29,49 @@ use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
 use crate::admin_fixture::archive_dir;
 use crate::fixtures::uv;
 
-/// A synthetic BSN that passes the eleven-test, so the shipped `nl-bsn` rule
-/// matches it.
-const SYNTHETIC_BSN: &str = "111222333"; // privacy-allow: synthetic
+/// The subject's name, synthetic, which the refusal must never echo.
+const SUBJECT_NAME: &str = "Sybrand Veenstra";
 
-/// A repository that accepts anything: the source side, which has to hold the
-/// identifier the target refuses.
+/// A repository that accepts identified parties: the source side, which has to
+/// hold the content the target refuses.
 fn permissive(pool: &PgPool) -> FerroEhrService {
-    let policy = PrivacyPolicy::compile(&PrivacyConfig {
+    let policy = PrivacyPolicy::from(&PrivacyConfig {
         allow_identified_parties_in_ehr: true,
-        identifier_scan: IdentifierScanConfig {
-            mode: ScanMode::Warn,
-            rules: Vec::new(),
-            patterns: Vec::new(),
-        },
         ..PrivacyConfig::default()
-    })
-    .expect("the permissive policy compiles");
+    });
     FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
         .with_privacy(Arc::new(policy))
 }
 
-/// A repository under the configuration default: every rule, `strict`.
+/// A repository under the configuration default, refusing identified parties.
 fn strict(pool: &PgPool) -> FerroEhrService {
-    let policy =
-        PrivacyPolicy::compile(&PrivacyConfig::default()).expect("the default policy compiles");
+    let policy = PrivacyPolicy::from(&PrivacyConfig::default());
     FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
         .with_privacy(Arc::new(policy))
 }
 
-/// An EHR whose directory FOLDER is named with the synthetic identifier,
-/// seeded through a repository that scans nothing.
-async fn seed_ehr_with_identifier_in_folder(source: &FerroEhrService) -> EhrId {
+/// An EHR holding a COMPOSITION whose composer is the record's subject by
+/// name, a `PARTY_RELATED` coded `self`, seeded through the opt-in.
+async fn seed_ehr_with_named_subject(source: &FerroEhrService) -> EhrId {
     let ehr = crate::fixtures::create_ehr(source).await;
+    let mut composition = crate::fixtures::composition("subject named");
+    composition["composer"] = json!({
+        "_type": "PARTY_RELATED",
+        "name": SUBJECT_NAME,
+        "relationship": {
+            "_type": "DV_CODED_TEXT",
+            "value": "self",
+            "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": "0"
+            }
+        }
+    });
     source
-        .create_directory(
-            ehr,
-            uv(
-                &json!({
-                    "_type": "FOLDER",
-                    "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
-                    "archetype_details": {
-                        "_type": "ARCHETYPED",
-                        "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
-                        "rm_version": "1.1.0"
-                    },
-                    "name": { "_type": "DV_TEXT", "value": SYNTHETIC_BSN }
-                }),
-                "249",
-                None,
-            ),
-        )
+        .create_composition(ehr, uv(&composition, "249", None))
         .await
-        .expect("directory with the identifier in its name");
+        .expect("the opt-in stores the named subject");
     ehr
 }
 
@@ -94,17 +83,17 @@ async fn version_rows(pool: &PgPool, ehr: EhrId) -> i64 {
         .expect("count")
 }
 
-/// An EHR-Extract whose FOLDER names a national identifier is refused by the
+/// An EHR-Extract whose COMPOSITION names its subject is refused by the
 /// import with the commit path's own `422`, naming the RM path, and the target
 /// holds nothing of it.
 #[tokio::test]
-async fn an_extract_carrying_an_identifier_is_refused_on_import() {
+async fn an_extract_naming_its_subject_is_refused_on_import() {
     let source_db = testkit::db().await.expect("testkit database");
     let source = permissive(&source_db.pool());
     let target_db = testkit::db().await.expect("testkit database");
     let target = strict(&target_db.pool());
 
-    let ehr = seed_ehr_with_identifier_in_folder(&source).await;
+    let ehr = seed_ehr_with_named_subject(&source).await;
     let mut extracts = source.extract_ehrs(ehr).await.expect("export");
     let extract: Extract =
         openehr_its::json::from_canonical_value(&extracts.remove(0)).expect("EXTRACT deserializes");
@@ -112,7 +101,7 @@ async fn an_extract_carrying_an_identifier_is_refused_on_import() {
     let refused = target
         .import_ehr(None, extract)
         .await
-        .expect_err("the identifier in the FOLDER name refuses the import");
+        .expect_err("the named subject refuses the import");
     assert!(
         matches!(
             &refused,
@@ -124,12 +113,12 @@ async fn an_extract_carrying_an_identifier_is_refused_on_import() {
         "{refused}"
     );
     assert!(
-        refused.message().contains("FOLDER") && refused.message().contains("name"),
+        refused.message().contains("composer/name"),
         "the refusal names the RM path: {refused}"
     );
     assert!(
-        !refused.message().contains(SYNTHETIC_BSN),
-        "the refusal never carries the identifier itself: {refused}"
+        !refused.message().contains(SUBJECT_NAME),
+        "the refusal never carries the name itself: {refused}"
     );
     assert_eq!(
         version_rows(&target_db.pool(), ehr).await,
@@ -138,16 +127,16 @@ async fn an_extract_carrying_an_identifier_is_refused_on_import() {
     );
 }
 
-/// An archive whose FOLDER names a national identifier is refused by the load
+/// An archive whose COMPOSITION names its subject is refused by the load
 /// for that EHR, reported rather than fatal, and the target holds nothing of it.
 #[tokio::test]
-async fn an_archive_carrying_an_identifier_is_refused_on_load() {
+async fn an_archive_naming_its_subject_is_refused_on_load() {
     let source_db = testkit::db().await.expect("testkit database");
     let source = permissive(&source_db.pool());
     let target_db = testkit::db().await.expect("testkit database");
     let target = strict(&target_db.pool());
 
-    let ehr = seed_ehr_with_identifier_in_folder(&source).await;
+    let ehr = seed_ehr_with_named_subject(&source).await;
     let dir = archive_dir();
     source
         .export_ehrs(dir.clone(), ExportSpec::canonical_json(1024))
@@ -168,12 +157,12 @@ async fn an_archive_carrying_an_identifier_is_refused_on_load() {
         .as_deref()
         .expect("with the refusal as its error");
     assert!(
-        error.contains("FOLDER") && error.contains("name"),
+        error.contains("composer/name"),
         "the refusal names the RM path: {error}"
     );
     assert!(
-        !error.contains(SYNTHETIC_BSN),
-        "the report never carries the identifier: {error}"
+        !error.contains(SUBJECT_NAME),
+        "the report never carries the name: {error}"
     );
     assert_eq!(
         version_rows(&target_db.pool(), ehr).await,

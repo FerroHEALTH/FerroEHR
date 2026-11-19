@@ -92,8 +92,8 @@ without meaning to. Four rules hold everywhere in this repository:
   pseudonymisation domains, never a second. A migration that grants across them
   rejoins the identities to the records the split exists to separate.
 - **A review step at the boundary:** a change touching the demographic
-  migrations, `service::demographic`, `service::linkage`, the identifier
-  scanner, the access-event model or an outbox payload builder describes its
+  migrations, `service::demographic`, `service::linkage`, the access-event
+  model or an outbox payload builder describes its
   data flow, names the roles involved, and ticks the "Privacy boundary"
   checklist in the pull request template.
 
