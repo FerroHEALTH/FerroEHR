@@ -313,6 +313,58 @@ fn db_sweep_blobs_lists_unless_told_to_apply() -> Result<(), clap::Error> {
     Ok(())
 }
 
+/// Runs `ferroehr db sweep-blobs` in this process against `toml`, returning
+/// the error chain it fails with.
+#[cfg(feature = "multimedia")]
+async fn sweep_blobs_failure(toml: &str) -> String {
+    let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("a temp config path");
+    file.write_str(toml).expect("write the config");
+    let failure = ferroehr_server::db_cmd::run(
+        &ferroehr_server::db_cmd::DbCmd::SweepBlobs { apply: false },
+        Some(file.path()),
+        &[],
+    )
+    .await
+    .expect_err("the sweep cannot run against this configuration");
+    format!("{failure:#}")
+}
+
+/// `ferroehr db sweep-blobs` refuses a configuration that names no blob store
+/// (#5957), and says so before it opens a database connection: the database
+/// of this configuration is unreachable, and the refusal does not name it.
+#[cfg(feature = "multimedia")]
+#[tokio::test]
+async fn db_sweep_blobs_refuses_a_configuration_without_a_blob_store() {
+    let failure = sweep_blobs_failure(
+        "[database]\nurl = \"postgres://sweep@127.0.0.1:1/ferroehr\"\n\
+         [record]\nsubject_index = \"local\"\n",
+    )
+    .await;
+    assert!(
+        failure.contains("[record.multimedia] names no blob store"),
+        "{failure}"
+    );
+    assert!(!failure.contains("PostgreSQL"), "{failure}");
+}
+
+/// With a blob store named, the sweep needs the database that says which
+/// blobs a version references (#5957): an unreachable one fails the command,
+/// naming the step, and nothing is listed or deleted.
+#[cfg(feature = "multimedia")]
+#[tokio::test]
+async fn db_sweep_blobs_fails_when_the_database_is_unreachable() {
+    let failure = sweep_blobs_failure(
+        "[database]\nurl = \"postgres://sweep@127.0.0.1:1/ferroehr\"\n\
+         acquire_timeout = \"1s\"\n\
+         [record]\nsubject_index = \"local\"\n\
+         [record.multimedia]\nenabled = true\n\
+         [record.multimedia.s3]\nurl = \"http://127.0.0.1:1\"\nbucket = \"sweep\"\n\
+         access_key_id = \"sweep\"\nsecret_access_key = \"synthetic-sweep-secret\"\n",
+    )
+    .await;
+    assert!(failure.contains("connecting to PostgreSQL"), "{failure}");
+}
+
 /// An unknown subcommand is rejected rather than silently falling through to
 /// the serve path.
 #[test]
