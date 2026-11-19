@@ -9,7 +9,8 @@
 # #3161" about pages that release had published. This guard reads every
 # `#NNNN` issue reference on the book's pages, fetches the issues' states in
 # one call, and fails when a status word beside the reference contradicts the
-# tracker. The EHDS status source moved to the FerroHEALTH book with the EHR
+# tracker; a `FerroHEALTH/<repo>#NNN` reference is read against that
+# repository's tracker. The EHDS status source moved to the FerroHEALTH book with the EHR
 # system's documents (#3705), whose own check reads it.
 #
 # What counts as a contradiction, per LINE (a table row or a sentence):
@@ -47,21 +48,48 @@ BOOK=website/book/src
 PLANNED='planned|not yet|upcoming|in progress|partly shipped|partial|remains open|is tracked|tracked (on|in)|to be done|pending|not planned|not (yet )?built|still to come|(until|once|when) .* lands|yet to land'
 SHIPPED='shipped|landed|closed in|closed by|delivered'
 
-# Every issue number referenced on a page (excluding the generated page),
-# resolved once.
+# A reference is `#N`, an issue of this repository, or `FerroHEALTH/<repo>#N`, an
+# issue of another FerroHEALTH tracker, resolved there.
+CROSS='FerroHEALTH/[A-Za-z0-9_.-]+#[0-9]+'
+# refs: every reference on stdin, one per line, `N` or `FerroHEALTH/<repo>#N`.
+refs() {
+  local text
+  text="$(cat)"
+  grep -oE "$CROSS" <<<"$text" || true
+  sed -E "s|$CROSS||g" <<<"$text" | grep -oE '#[0-9]{3,5}\b' | tr -d '#' || true
+}
+
+# Every issue referenced on a page (excluding the generated page), resolved
+# once.
 pages=()
 while IFS= read -r page; do pages+=("$page"); done < <(git ls-files "$BOOK" | grep -E '\.md$' \
   | grep -v -E '/control-matrix\.md$')
-numbers="$(grep -ohE '#[0-9]{3,5}\b' "${pages[@]}" 2>/dev/null | tr -d '#' | sort -un)"
-[[ -n "$numbers" ]] || { echo "tracker-status: no issue references found"; exit 0; }
+all="$(cat "${pages[@]}" | refs | sort -u)"
+numbers="$(grep -vE '/' <<<"$all" | sort -un || true)"
+[[ -n "$all" ]] || { echo "tracker-status: no issue references found"; exit 0; }
 
 repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
-# One GraphQL call for the whole set (aliases), never one call per issue.
-query="query(\$owner:String!,\$name:String!){repository(owner:\$owner,name:\$name){"
-for n in $numbers; do query+="i$n: issue(number:$n){number state} "; done
-query+="}}"
-states="$(gh api graphql -f owner="${repo%%/*}" -f name="${repo##*/}" -f query="$query" \
-  --jq '.data.repository | to_entries | map(select(.value != null)) | map({(.value.number|tostring): .value.state}) | add // {}')"
+# states_of <owner/repo> <prefix> <numbers…>: one GraphQL call for the set
+# (aliases), never one call per issue, keyed `<prefix>N`.
+states_of() {
+  local target="$1" prefix="$2" query n
+  shift 2
+  [[ $# -gt 0 ]] || { echo '{}'; return; }
+  query="query(\$owner:String!,\$name:String!){repository(owner:\$owner,name:\$name){"
+  for n in "$@"; do query+="i$n: issue(number:$n){number state} "; done
+  query+="}}"
+  gh api graphql -f owner="${target%%/*}" -f name="${target##*/}" -f query="$query" \
+    --jq '.data.repository | to_entries | map(select(.value != null)) | map({(.value.number|tostring): .value.state}) | add // {}' \
+    | jq --arg p "$prefix" 'with_entries(.key = $p + .key)'
+}
+# shellcheck disable=SC2086 # the numbers are one word each, on purpose
+states="$(states_of "$repo" "" $numbers)"
+while IFS= read -r other; do
+  [[ -n "$other" ]] || continue
+  # shellcheck disable=SC2046 # the numbers are one word each, on purpose
+  more="$(states_of "$other" "$other#" $(awk -F'#' -v o="$other" '$1 == o { print $2 }' <<<"$all" | sort -un))"
+  states="$(jq -s 'add' <<<"$states $more")"
+done < <(grep -E '/' <<<"$all" | sed -E 's/#[0-9]+$//' | sort -u || true)
 # The issues the reviewed PR closes read as CLOSED, so a same-PR "shipped, #N"
 # is not refused while the merge that closes #N is the very thing under review.
 closing="$(grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+' <<<"${PR_BODY:-}" | grep -oE '[0-9]+$' | sort -u || true)"
@@ -81,15 +109,16 @@ for page in "${pages[@]}"; do
     grep -qiE "$PLANNED" <<<"$lower" && has_planned=1
     # "partly shipped" is a planned status, not a shipped one.
     grep -qiE "$SHIPPED" <<<"${lower//partly shipped/}" && has_shipped=1
-    for n in $(grep -oE '#[0-9]{3,5}\b' <<<"$text" | tr -d '#' | sort -u); do
+    for n in $(refs <<<"$text" | sort -u); do
       st="$(state_of "$n")"
+      [[ "$n" == */* ]] && shown="$n" || shown="#$n"
       if [[ "$st" == CLOSED && $has_planned -eq 1 && $has_shipped -eq 0 ]]; then
-        report "$page:$lineno says a planned/open status beside #$n, which is CLOSED — rewrite it to what shipped"
+        report "$page:$lineno says a planned/open status beside $shown, which is CLOSED — rewrite it to what shipped"
       elif [[ "$st" == OPEN && $has_shipped -eq 1 && $has_planned -eq 0 ]]; then
-        report "$page:$lineno says shipped beside #$n, which is still OPEN"
+        report "$page:$lineno says shipped beside $shown, which is still OPEN"
       fi
     done
-  done < <(grep -nE '#[0-9]{3,5}\b' "$page" || true)
+  done < <(grep -nE '#[0-9]+\b' "$page" || true)
 done
 
 if [[ $fail -ne 0 ]]; then
