@@ -41,7 +41,7 @@ runs() {
   if [[ -n "${CI_RUNS_STUB:-}" ]]; then
     awk -v sha="$sha" '$1 == "push" && $2 == sha { print $3 }' "$CI_RUNS_STUB/runs"
   else
-    gh api "repos/$REPO/actions/workflows/ci.yml/runs?event=push&head_sha=$sha&per_page=20" \
+    gh_retry gh api "repos/$REPO/actions/workflows/ci.yml/runs?event=push&head_sha=$sha&per_page=20" \
       --jq '.workflow_runs[] | select(.status == "completed") | .id'
   fi
   awk -v tree="$tree" '$1 == tree { print $2 }' "$QUEUE_INDEX"
