@@ -15,7 +15,9 @@ reverse, zero re-exports.
 **Features (`default = ["full"]`, `full = ["flat", "cache"]`).** `flat` pulls
 `openehr-its` with `opt14` (canonical JSON, canonical XML, the OPT 1.4
 reader) plus the five generated spec crates and the regex/serde
-stack; `cache` adds `moka` for `flat::cache`. The SMART on openEHR scope
+stack; `cache` adds `moka` for `flat::cache`; `draft` adds the class
+tables of FerroEHR's draft packages (`openehr-rm/draft`), so a template of
+a draft class has its attribute existence enforced. The SMART on openEHR scope
 grammar lives in `ferrohealth-smart` (`openehr::smart_scopes`). A new
 dependency is optional and joins the `flat` layer or above. CI checks
 `--no-default-features --features flat` on `wasm32-unknown-unknown`.

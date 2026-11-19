@@ -475,16 +475,19 @@ struct Validator {
 /// Name-only by design: an OPT constrains attributes at several RM levels and
 /// the walker does not carry the declaring class here, while the defect this
 /// answers — a constraint on an attribute NO RM class declares — is fully
-/// decided by the name. A template of a draft class, such as an
-/// `ACCESS_POLICY` profile, constrains the draft's attributes, which the RM
-/// adapted by the draft class tables declares (AOM2
+/// decided by the name. With the `draft` feature, a template of a draft
+/// class, such as an `ACCESS_POLICY` profile, constrains the draft's
+/// attributes, which the RM adapted by the draft class tables declares (AOM2
 /// `master11-rm_adaptation.adoc`).
 fn rm_declares_attribute(attr: &str) -> bool {
     static DECLARED: std::sync::LazyLock<std::collections::BTreeSet<&str>> =
         std::sync::LazyLock::new(|| {
-            openehr_rm::v1_2::model::classes()
+            let classes = openehr_rm::v1_2::model::classes();
+            #[cfg(feature = "draft")]
+            let classes = classes
                 .chain(openehr_rm::draft::access_control::model::CLASSES)
-                .chain(openehr_rm::draft::access_log::model::CLASSES)
+                .chain(openehr_rm::draft::access_log::model::CLASSES);
+            classes
                 .flat_map(|c| c.attributes.iter().map(|a| a.name))
                 .collect()
         });
@@ -1936,6 +1939,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "draft")]
     #[test]
     fn existence_of_a_draft_class_attribute_is_enforced() {
         // An ACCESS_POLICY profile requiring `self_declared_care`, an attribute

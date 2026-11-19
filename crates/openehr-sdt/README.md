@@ -42,7 +42,8 @@ implementation is used as an oracle.
 | (none) | nothing | nothing |
 | `flat` | `flat`, `rm_instance` | `openehr-its` with `opt14`, the five generated spec crates, serde, `serde_json`, `thiserror`, `indexmap`, `regex`, `fancy-regex` |
 | `cache` | `flat::cache` (the async Web Template cache) | `flat` + `moka` |
-| `full` (default) | everything above | `flat` + `cache` |
+| `draft` | existence checks on the attributes of FerroEHR's draft classes, such as `ACCESS_POLICY` | `flat` + `openehr-rm/draft` |
+| `full` (default) | `flat` and `cache` | `flat` + `cache` |
 
 The SMART on openEHR scope grammar is `ferrohealth_smart::openehr::smart_scopes`
 (the `ferrohealth-smart` crate), which a browser client builds with its
