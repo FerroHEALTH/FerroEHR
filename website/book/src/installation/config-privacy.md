@@ -215,85 +215,37 @@ outbox carries no subject at all. Both are covered by a CI test that fails when
 any subject identifier other than the opaque UUID appears in an outbox payload,
 an ATNA message or a trace record.
 
-## Protecting national identifiers in the demographic domain
+## National identifiers belong in the master patient index
 
-The rules above keep national identifiers off the **clinical** side. The
-demographic side is where a party's identifiers legitimately live, and
-`[privacy.identifier_protection]` decides how they are held there.
+The rules above keep national identifiers off the clinical side, and the
+demographic side holds none either. A national identifier such as the Dutch
+BSN lives in the master patient index of your deployment (FerroPIX, over IHE
+PIX/PDQ and PIXm), never in the CDR. The CDR knows the subject only as a
+pseudonym: `EHR_STATUS.subject.external_ref` names a configured pseudonym
+namespace and carries a UUID, which the subject rule above enforces.
 
-With the table present, an identifier of a configured scheme never sits in the versioned
-body. The value moves to `party.national_identifier`, sealed with
-AES-256-GCM under a key derived per domain, and the body keeps a reference in
-its place. Beside the ciphertext sits an HMAC-SHA-256 digest of the value, which
-is what makes "which party holds this identifier" answerable without decrypting
-anything — and, because it is keyed, what stops the database, a backup or a read
-replica from reversing a nine-digit space.
+The server stores a party exactly as it was committed. An identifier you put in
+a `PARTY_IDENTITY` or a `PARTY.details` structure is part of the version body,
+its content digest and its signature, and every read serves it. It does not
+seal an identifier, and it ships no registry of national identifier schemes.
+Keep national identifiers out of the parties you write, and resolve a person to
+their pseudonym through the master patient index.
 
-```toml
-#? [privacy.identifier_protection]
-#? schemes = ["nl-bsn"]
-#? key_file = "/run/secrets/ferroehr-identifier-key"
-```
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | bool | `false` | Whether protection is in force. Off leaves identifiers stored as written. |
-| `schemes` | list of string | `["nl-bsn"]` | The `DV_IDENTIFIER.type` values to protect. Each must exist in the `party.identifier_scheme` registry; with protection on, the server refuses to boot when one does not. |
-| `key` | secret | unset | The root key, 64 hex characters. Prefer `key_file`. |
-| `key_file` | path | unset | A file holding the root key, read at boot. |
-
-Turning it on with no key, with an empty `schemes` list, or with a scheme the
-registry does not hold, is a **boot error**.
-A server that believes it seals national identifiers and does not is worse than
-one that never claimed to.
-
-Four properties worth knowing before you enable it:
-
-- **The stored, signed and served body are the same form.** Sealing runs before
-  the body is decomposed and signed, exactly like the multimedia offload, so a
-  signature still verifies against the bytes the server holds. What a reader
-  receives carries the reference; the value is available through the admin
-  read below. A create or update response serves the stored form as well, so
-  the value you submitted does not come back in it.
-- **Each party version keeps its own sealed rows.** A later version retires
-  the rows of the one before it without rewriting them, so an older version
-  still expands to the value it committed. Only live rows take part in the
-  one-party-per-value rule.
-- **Nothing resolves an identifier to a party.** The server offers no lookup
-  from an identifier value to the party that holds it. The keyed digest keeps a
-  value live for at most one party at a time.
-- **Reading a value back is audited and needs its own grant.**
-  `GET /ferroehr/rest/extensions/v1/admin/party/identifiers` serves a party version with its values
-  put back, for a caller holding both the admin role and a `read_identifiers`
-  grant in the CDR, and records each scheme it expands
-  ([reading a party's protected identifiers](../operations-admin-apis.md#reading-a-partys-protected-identifiers)).
-- **The key is load-bearing and rotation is a re-encryption.** The runbook is in
-  [Operations](../operations.md#rotating-the-national-identifier-key).
-
-Only the demographic writer role reaches the sealed value. The read-only twin
-sees that a party holds a protected identifier and which party it is, and is
-refused the ciphertext and the digest by column-level grant; the clinical roles
-are refused the table outright.
+The databases hold every party and every clinical record, so encrypt the
+database volumes and every backup at rest. The
+[go-live checklist](../security/go-live-checklist.md) makes this a requirement.
 
 ### The care projection
 
-The same root key also drives the care projection the access evaluator reads.
 A clinical query that names no EHR asks, for each EHR it reads, whether one of
-your care teams cares for the EHR's subject. With protection on, each replica
-keeps a copy of the care relationships in the clinical database
-(`clinical.access_care`). It holds only the patient's and the team's container
-UUIDs, the care dates, and an HMAC-SHA-256 digest of each subject reference
-under the clinical lookup subkey. The `ehr` row holds the same digest of its
-own subject. The key never reaches the database, so the digests name nobody to
-a reader of the database, a backup or a replica.
+your care teams cares for the EHR's subject. Each replica keeps a copy of the
+care relationships in the clinical database (`clinical.access_care`). It holds
+only the patient's and the team's container UUIDs, the care dates, and the
+SHA-256 digest of each subject reference. The `ehr` row holds the same digest
+of its own subject. A subject reference is a pseudonym, so its digest needs no
+key.
 
 A replica reads the projection only while it is as recent as the care facts
 the replica holds. A discharge, a removed membership or an erasure is never
 granted from a stale row: until the projector catches up, the query sends the
-list of every patient in your teams' care, as it did before. With protection
-off, the projection is not written and every query sends that list, which
-grows with the patients in your teams' care. A production deployment
-configures `[privacy.identifier_protection]` for this reason as well as for
-the identifiers it seals; the census without it is a fallback for a sandbox or
-a deployment that has not set the key yet. Rotating the key rebuilds the
-projection and the digests on the next projector run.
+list of every patient in your teams' care.

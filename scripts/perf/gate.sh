@@ -183,11 +183,8 @@ signing_key() {
   printf perf >"$OUT/signing/passphrase"
   GNUPGHOME="$home" gpgconf --kill gpg-agent 2>/dev/null || true
   rm -rf "$home"
-  # The identifier-protection root key, whose clinical lookup subkey digests
-  # the subject references of the care projection (#5699), generated per run.
-  od -An -tx1 -N32 /dev/urandom | tr -d ' \n' >"$OUT/signing/identifier-key"
   # The container runs as the distroless nonroot uid.
-  chmod 644 "$OUT/signing/signing.asc" "$OUT/signing/passphrase" "$OUT/signing/identifier-key"
+  chmod 644 "$OUT/signing/signing.asc" "$OUT/signing/passphrase"
   echo "$algorithm" >"$OUT/signing/algorithm"
 }
 
@@ -232,8 +229,7 @@ up() {
     -v "$tree/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
     -v "$tree/deploy/definitions/professional:/etc/ferroehr/definitions:ro"
     -v "$OUT/signing/signing.asc:/etc/ferroehr/signing.asc:ro"
-    -v "$OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro"
-    -v "$OUT/signing/identifier-key:/etc/ferroehr/identifier-key:ro")
+    -v "$OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro")
   # A base tree whose configuration still names the professional templates
   # predates the default party mapping, and its server stores no default
   # definitions, so they are stored before serve; a newer server stores them
@@ -714,7 +710,6 @@ base_config_tree() {
     -v "$ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro" \
     -v "$OUT/signing/signing.asc:/etc/ferroehr/signing.asc:ro" \
     -v "$OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro" \
-    -v "$OUT/signing/identifier-key:/etc/ferroehr/identifier-key:ro" \
     "$1" config check >/dev/null 2>&1; then
     echo "perf gate: the base runs under this tree's configuration" >&2
     echo "$ROOT"

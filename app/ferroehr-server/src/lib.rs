@@ -411,17 +411,6 @@ fn assemble_service(
     ehr_index: EhrIndexProvider,
 ) -> anyhow::Result<FerroEhrService> {
     let privacy = ferroehr::privacy::PrivacyPolicy::from(&config.privacy);
-    // The identifier-protection engine, when the deployment configured one. A
-    // key that cannot be parsed is a boot error: a server that believes it
-    // seals national identifiers and does not is the failure this refuses to
-    // start into.
-    let protection = config.privacy.identifier_protection.as_ref();
-    let identifiers = ferroehr::identifier_protection::engine::IdentifierProtection::from_config(
-        protection,
-        protection.and_then(|protection| protection.key.as_ref()),
-        pools.party.clone(),
-    )
-    .context("building the [privacy.identifier_protection] engine")?;
 
     // The licence in force: the configured token, else the one the build
     // embeds. Never a boot failure; the outcome is logged once, served on
@@ -439,7 +428,6 @@ fn assemble_service(
         .with_skip_identical_resend(config.record.versioning.idempotent_resend)
         .with_privacy(Arc::new(privacy))
         .with_cohort(config.privacy.cohort.clone())
-        .with_identifier_protection_opt(identifiers.map(Arc::new))
         .with_query_config(&config.record.query)
         .with_required_category_map(DeploymentPosture::requires_category_map(config))
         .with_ehr_index(ehr_index)
@@ -920,15 +908,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
             access_log.seals(),
             publication,
         )));
-    }
-
-    // The schemas are prepared by now, so a configured identifier scheme the
-    // registry does not hold is refused here, not at its first party commit.
-    if let Some(engine) = service.identifier_protection() {
-        engine.verify_registered().await.context(
-            "[privacy.identifier_protection].schemes names a scheme the identifier_scheme \
-             registry does not hold",
-        )?;
     }
 
     let binding_lease = party_binding::prepare(&service, &config).await?;

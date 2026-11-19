@@ -438,9 +438,6 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/ehr-access"),
     // The EHDS Art. 3(3) access-delay register (#4351).
     ("GET", "/admin/access-delay"),
-    // The audited read of a party's protected national identifiers (#3776). It
-    // also needs a `read_identifiers` grant, checked in its handler.
-    ("GET", "/admin/party/identifiers"),
     // The outbox feed read (#4786); a read moves no cursor.
     ("GET", "/admin/outbox/{reader}"),
     // The refused PMIR feed messages, by ids and counts (#5725).

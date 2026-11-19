@@ -318,9 +318,6 @@ enum CareForm {
 /// Every care form, each of which must read the same rows.
 const CARE_FORMS: [CareForm; 3] = [CareForm::Census, CareForm::Ehrs, CareForm::Projected];
 
-/// The root key of the test deployment's identifier protection, synthetic.
-const TEST_ROOT_KEY: &str = "5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ff";
-
 /// The care team the projected care is written under.
 const TEAM: uuid::Uuid = uuid::Uuid::from_u128(0x0199_0000_0000_7000_8000_0000_0000_0001);
 
@@ -330,24 +327,8 @@ fn own() -> String {
     ferroehr::config::binding::PartyBindingConfig::default().namespace
 }
 
-/// The identifier-protection engine of the test deployment.
-fn engine(pool: &sqlx::PgPool) -> ferroehr::identifier_protection::engine::IdentifierProtection {
-    use ferroehr::identifier_protection::config::IdentifierProtectionConfig;
-    ferroehr::identifier_protection::engine::IdentifierProtection::from_config(
-        Some(&IdentifierProtectionConfig {
-            schemes: vec!["nl-bsn".to_owned()],
-            key: None,
-            key_file: None,
-        }),
-        Some(&ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
-        pool.clone(),
-    )
-    .expect("the engine builds")
-    .expect("protection is enabled")
-}
-
 /// Write the care projection of `cared`, each relationship from `from` until
-/// `until`, under [`TEAM`], and every EHR row's keyed digest: what the care
+/// `until`, under [`TEAM`], and every EHR row's digest: what the care
 /// projector writes from the party domain.
 #[expect(
     clippy::disallowed_methods,
@@ -361,9 +342,8 @@ async fn project(
         Option<jiff::civil::Date>,
     )],
 ) {
-    use ferroehr::storage::access_care::{self, CareRow, cared_key, subject_key};
+    use ferroehr::storage::access_care::{self, CareRow, cared_key, subject_digest, subject_key};
     let pool = world.db.pool();
-    let engine = engine(&pool);
     let mut conn = pool.acquire().await.expect("a connection");
     let mut tx = sqlx::Connection::begin(&mut *conn)
         .await
@@ -372,7 +352,7 @@ async fn project(
     let rows: Vec<CareRow> = cared
         .iter()
         .map(|(subject, from, until)| CareRow {
-            digest: engine.care_subject_digest(&cared_key(subject)),
+            digest: subject_digest(&cared_key(subject)),
             person: subject.id.parse().unwrap_or(uuid::Uuid::nil()),
             team: TEAM,
             from: *from,
@@ -391,7 +371,7 @@ async fn project(
     let digests: Vec<_> = undigested
         .into_iter()
         .map(|(ehr, subject)| {
-            let digest = engine.care_subject_digest(&subject_key(&own(), &subject));
+            let digest = subject_digest(&subject_key(&own(), &subject));
             (ehr, subject, digest)
         })
         .collect();

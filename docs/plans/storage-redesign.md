@@ -585,7 +585,7 @@ registered reader (#3330).
 | `wrapped_original`, `preceding_version_uid`, per-version `creating_system_id` | keep | RM master06 §The Copy Operation, §Moving Version Containers |
 | Server-set `committed_at`, one transaction per Contribution | keep | master06 §Committal and Audits |
 | `FORCE ROW LEVEL SECURITY` tenancy, the GUC, the tenant registry, per-tenant reader cursors | remove | the FerroHEALTH drawing (owner 2026-09-14): multi-tenancy is achieved by running separate instances; #3378 |
-| Sealed national identifiers in `party` | keep | report 1 §13.2: pgcrypto is the documented wrong tool for a distrusted DBA |
+| Sealed national identifiers in `party` | removed (#6092) | national identifiers belong in the master patient index; encryption at rest of volumes and backups is a deployment requirement |
 | LOGGED tables everywhere | keep | owner ruling 2026-08-25 (#2698) |
 | Schema-per-domain in one database as the DEFAULT | keep, generalised | the per-domain DSN makes cluster-per-domain a configuration, not a fork |
 | Migration immutability | scoped to shipped files (owner 2026-09-15) | immutable = present at the latest release tag; unreleased files are fixed in place; the rule re-arms at the v4.3.1 cut (#3400) |

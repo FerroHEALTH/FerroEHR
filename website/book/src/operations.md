@@ -792,61 +792,6 @@ version. The functions are described in PostgreSQL 18 docs,
 [pg-reindex]: https://www.postgresql.org/docs/18/sql-reindex.html#SQL-REINDEX-CONCURRENTLY
 [pg-dbobj]: https://www.postgresql.org/docs/18/functions-admin.html#FUNCTIONS-ADMIN-DBOBJECT
 
-## Rotating the national-identifier key
-
-Only relevant when `[privacy.identifier_protection]` is on. With it on, a
-national identifier of a configured scheme never sits in the versioned body:
-the value lives in `party.national_identifier`, sealed with AES-256-GCM under a
-key derived per domain from your root key, with an HMAC-SHA-256 digest beside it
-so an identifier can be looked up without decrypting anything.
-
-**The root key is load-bearing.** Lose it and the sealed identifiers cannot be
-read back by anything, including you. Hold it the way you hold the database
-credentials: in your secret manager, injected as `key_file`, never in the TOML
-you commit.
-
-Rotation re-encrypts; it is not an edit. Both keys have to be present while it
-runs, because every row is opened under the old key and sealed under the new
-one, and the lookup digest changes with the key too — so the rotation rewrites
-the digest column and every stored reference keeps pointing at the same row.
-The rotation has to cover retired rows as well as live ones: every party version
-keeps rows of its own, and an older version opens its value from a retired
-row.
-
-The procedure:
-
-1. Generate the new key: `openssl rand -hex 32`, or any source of 32 random
-   bytes rendered as hex.
-2. Take a backup and verify it restores. A rotation rewrites every row in the
-   table; a half-finished one you cannot roll back is the failure mode here.
-3. Stop writes to the demographic domain, or accept that identifiers written
-   during the rotation are sealed under whichever key that write saw. A short
-   maintenance window is simpler than reasoning about the alternative.
-4. Run the rotation under the migrator role, which is the only identity with
-   rights on the whole table.
-5. Swap `key_file` to the new key and restart. Verify by resolving one known
-   identifier and reading one party back.
-6. Destroy the old key once step 5 is verified, not before.
-
-The same key binds the
-[admin dump archives](operations-admin-apis.md#dump-and-load). A dump carries the sealed rows as
-ciphertext, so restoring it needs the root key the rows were sealed under.
-An archive dumped before a rotation holds rows sealed under the old key, so
-step 6 also leaves the identifiers in those archives unreadable. Keep the old
-key for as long as you may restore one of them.
-
-> [!WARNING]
-> There is no automated rotation command yet. Until there is, the rotation is a
-> scripted job you run against the demographic database with both keys
-> available, and this page is the procedure it has to follow. Treat the absence
-> of a command as a reason to rehearse the rotation on a copy first.
-
-The subkeys are derived from the root key rather than stored, so rotating the
-root rotates all of them together. The pseudonymisation domain is part of that
-derivation: a subkey derived for the clinical domain opens nothing in the party
-one, so the per-schema backups above are separate artefacts under separate keys
-even where one root key is configured.
-
 ## The container image and pod hardening
 
 The published image is distroless and non-root (shell-less, with no package

@@ -197,6 +197,6 @@ mod tests {
     #[test]
     fn an_unknown_predicate_key_is_not_in_the_closed_set() {
         assert!(PREDICATE_KEYS.contains(&"city"));
-        assert!(!PREDICATE_KEYS.contains(&"national_identifier"));
+        assert!(!PREDICATE_KEYS.contains(&"passport_number"));
     }
 }

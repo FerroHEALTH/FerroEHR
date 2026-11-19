@@ -258,6 +258,25 @@ rate.
 - [ ] Somebody has read
       [what the software cannot do for a data subject](../compliance/shared-responsibility.md).
 
+## 9. The database volumes and backups are encrypted at rest
+
+FerroEHR stores queryable JSONB and encrypts no field before it reaches
+PostgreSQL: the party store, the clinical store and the audit trail sit in the
+database as written. GDPR Art. 32(1)(a) names encryption as a measure for this
+risk, and the layer that carries it is the storage under the database. Encrypt
+every volume a database cluster writes to, its WAL and replicas included, and
+every backup and dump, with keys held outside the database host.
+
+National identifiers are not among what the CDR holds: they belong in the
+master patient index, and the CDR holds the subject only as a pseudonym
+([Privacy & data minimisation](../installation/config-privacy.md#national-identifiers-belong-in-the-master-patient-index)).
+
+- [ ] Every volume of every database cluster, primary and replica, is encrypted
+      at rest.
+- [ ] Every backup and dump volume or object store is encrypted at rest.
+- [ ] The keys are held outside the database hosts, and who can use them is
+      recorded.
+
 ## What this checklist does not cover
 
 - **Your identity provider.** Every authorization stage reads claims it
@@ -266,8 +285,5 @@ rate.
 - **The platform.** Host hardening, network policy, image admission and secret
   management are
   [Cluster hardening](../installation/kubernetes-hardening.md).
-- **Encryption at rest.** FerroEHR stores queryable JSONB and does not encrypt
-  clinical payload before it reaches PostgreSQL. That is the database
-  operator's layer.
 - **Clinical governance.** Validation checks structure, invariants and
   terminology bindings. It does not know whether a recorded fact is true.

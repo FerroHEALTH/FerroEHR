@@ -204,7 +204,7 @@ dumps the `backup` profile wrote are in `./backups/` next to the compose file.
 
 Delete the files the instance read: `ferroehr.toml`, the files the `*_file`
 and `*_path` keys point at (DSNs, TLS keys, the OIDC secret, the signing key
-and its passphrase, the national-identifier key, the multimedia secret key),
+and its passphrase, the multimedia secret key),
 the licence token, and any `.env` file. Remove the `FERROEHR__…` variables from your service definitions
 and your secret store. Revoke the credentials themselves where they live: the
 database passwords, the object-store access key, the OIDC client and the

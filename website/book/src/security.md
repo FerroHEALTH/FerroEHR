@@ -1090,7 +1090,6 @@ error naming the pair:
 | the PGP signing-key passphrase | `record.signing.key_passphrase_file` |
 | a terminology OAuth2 client secret | `[terminology].oauth.client_secret_file` |
 | the object-store secret key | `multimedia.secret_access_key_file` |
-| the national-identifier root key | `privacy.identifier_protection.key_file` |
 
 (The TLS `certificate_file` / `client_ca_file` settings and a static key
 set's `auth.jwks_file` are paths by nature and have no inline form at all,
@@ -1171,7 +1170,7 @@ Two domains hold the two parts, each behind its own role:
 flowchart LR
     server["FerroEHR server"]
     server -->|ferroehr_clinical| ehr[("clinical<br/>versions and nodes,<br/>keyed by an opaque subject pseudonym")]
-    server -->|ferroehr_party| demo[("party<br/>parties, and national identifiers<br/>sealed under a per-domain key")]
+    server -->|ferroehr_party| demo[("party<br/>parties, with no<br/>national identifier")]
     server -->|audit writer| audit[("audit<br/>ATNA record repository")]
     ehr -. barred .- demo
 ```
@@ -1200,6 +1199,20 @@ schema split by default: giving the demographic domain its own
 deployment step described in
 [Operations](operations.md#database-roles-and-least-privilege).
 
+### Encryption at rest is a deployment requirement
+
+FerroEHR encrypts no field before it reaches PostgreSQL. A national identifier
+belongs in the master patient index, never in the CDR, which knows the subject
+only as a pseudonym
+([Privacy & data minimisation](installation/config-privacy.md#national-identifiers-belong-in-the-master-patient-index)),
+so the server holds no identifier to seal. What it does hold, every party and
+every clinical record, sits in the database as written. GDPR Art. 32(1)(a)
+names encryption as a measure for that risk: encrypt every database volume,
+replicas and WAL archives included, and every backup and dump at rest, with the
+keys outside the database hosts. The
+[go-live checklist](security/go-live-checklist.md#9-the-database-volumes-and-backups-are-encrypted-at-rest)
+checks it before real data arrives.
+
 ### Resolving across the boundary
 
 One question needs both domains at once: *which record belongs to this
@@ -1209,8 +1222,9 @@ in the database. An EHR names its subject in its own
 subject columns on every EHR create and `EHR_STATUS` update. A cohort and the
 AQL demographic join read the parties on the `party` connection and the EHRs whose subject names them on the `clinical` connection,
 with a second search path and, when `[database.party] url` is set, a second
-database role. FerroEHR matches, links and merges no patients, and offers no
-lookup from a national identifier to its party.
+database role. FerroEHR matches, links and merges no patients, and holds no
+national identifier: resolving a person to their pseudonym is the master
+patient index's job.
 
 **No statement performs the join, because no credential could**: the
 clinical role holds no grant in `party` and the party role holds none in

@@ -27,7 +27,6 @@ const CLIENT_SECRET: &str = "CLIENT_SECRET_SENTINEL_2a6d";
 const PASSPHRASE: &str = "PASSPHRASE_SENTINEL_7f3b";
 const KEY_MATERIAL: &str = "SIGNING_KEY_MATERIAL_SENTINEL_1c9e";
 const LICENCE_MATERIAL: &str = "LICENCE_MATERIAL_SENTINEL_6d4a";
-const IDENTIFIER_KEY: &str = "IDENTIFIER_KEY_SENTINEL_4e8b";
 const S3_SECRET: &str = "S3_SECRET_SENTINEL_0b5c";
 const ISSUER_PW: &str = "ISSUER_PW_SENTINEL_9c1d";
 
@@ -85,12 +84,6 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
     config.record.signing.key_file = Some(key.path().to_path_buf());
     config.record.signing.key_passphrase = Some(Secret::new(PASSPHRASE));
     config.deployment.licence_file = Some(token.path().to_path_buf());
-    config.privacy.identifier_protection = Some(
-        ferroehr::identifier_protection::config::IdentifierProtectionConfig {
-            key: Some(Secret::new(IDENTIFIER_KEY)),
-            ..ferroehr::identifier_protection::config::IdentifierProtectionConfig::default()
-        },
-    );
     config.record.multimedia.s3.secret_access_key = Some(Secret::new(S3_SECRET));
     config
 }
@@ -122,7 +115,6 @@ async fn no_credential_reaches_the_report() {
         PASSPHRASE,
         KEY_MATERIAL,
         LICENCE_MATERIAL,
-        IDENTIFIER_KEY,
         S3_SECRET,
         ISSUER_PW,
     ] {

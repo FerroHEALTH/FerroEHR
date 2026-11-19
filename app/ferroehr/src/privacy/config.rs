@@ -58,10 +58,6 @@ pub struct PrivacyConfig {
     /// "Typically for health care providers". `Basic_validity` is satisfied by
     /// `external_ref` alone, so the refused shapes stay expressible.
     pub allow_identified_parties_in_ehr: bool,
-    /// `[privacy.identifier_protection]` — the national-identifier
-    /// protection of the demographic domain; absent, off.
-    pub identifier_protection:
-        Option<crate::identifier_protection::config::IdentifierProtectionConfig>,
     /// `[privacy.cohort]` — the cross-domain cohort-query allow-list and
     /// limits.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]

@@ -18,7 +18,6 @@ use uuid::Uuid;
 
 use super::body::SubjectRef;
 use super::{Identifier, Refusal};
-use crate::identifier_protection::engine::IdentifierProtection;
 use crate::party_binding::grants::caller::patient::{self, CarriedRow};
 use crate::storage::error::StorageError;
 
@@ -67,33 +66,15 @@ pub(super) async fn identity_of(
     )
 }
 
-/// The lookup digests of `value` in each protected scheme; none without
-/// identifier protection.
-pub(super) fn digests(
-    engine: Option<&IdentifierProtection>,
-    value: &str,
-) -> Vec<(String, Vec<u8>)> {
-    engine
-        .map(|engine| engine.lookup_digests(value))
-        .unwrap_or_default()
-}
-
 /// The rows of every `PERSON` that carries `identifier`, split or not.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub(super) async fn carried(
     conn: &mut PgConnection,
-    engine: Option<&IdentifierProtection>,
     identifier: &Identifier,
 ) -> Result<Vec<CarriedRow>, StorageError> {
-    patient::carried(
-        conn,
-        &identifier.system,
-        &identifier.value,
-        &digests(engine, &identifier.value),
-    )
-    .await
+    patient::carried(conn, &identifier.system, &identifier.value).await
 }
 
 /// The `PERSON` the identity `known` with `identifiers` is bound to: its
@@ -105,7 +86,6 @@ pub(super) async fn carried(
 /// [`Resolved::Storage`].
 pub(super) async fn resolve(
     conn: &mut PgConnection,
-    engine: Option<&IdentifierProtection>,
     known: Option<&Identity>,
     identifiers: &[Identifier],
     exclude: Option<Uuid>,
@@ -115,7 +95,7 @@ pub(super) async fn resolve(
     }
     let mut holders = BTreeSet::new();
     for identifier in identifiers {
-        for row in carried(conn, engine, identifier).await? {
+        for row in carried(conn, identifier).await? {
             if Some(row.holder) != exclude {
                 holders.insert(row.holder);
             }
@@ -150,49 +130,28 @@ pub(super) struct Row {
     pub(super) identifier_type: String,
 }
 
-/// The patient identifier rows of `person` that match none of `announced`,
-/// by value or, for a protected scheme, by its lookup digest; every row for
-/// an empty `announced`.
+/// The patient identifier rows of `person` that match none of `announced`
+/// by value; every row for an empty `announced`.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub(super) async fn unannounced(
     conn: &mut PgConnection,
-    engine: Option<&IdentifierProtection>,
     person: Uuid,
     announced: &[Identifier],
 ) -> Result<Vec<Row>, StorageError> {
     let issuers: Vec<&str> = announced.iter().map(|i| i.system.as_str()).collect();
     let values: Vec<&str> = announced.iter().map(|i| i.value.as_str()).collect();
-    let mut digest_issuers = Vec::new();
-    let mut schemes = Vec::new();
-    let mut digest_values = Vec::new();
-    for identifier in announced {
-        for (scheme, digest) in digests(engine, &identifier.value) {
-            digest_issuers.push(identifier.system.as_str());
-            schemes.push(scheme);
-            digest_values.push(digest);
-        }
-    }
     let rows: Vec<(String, String, String)> = sqlx::query_as(
         "SELECT b.issuer, b.value, b.identifier_type FROM binding_patient_identifier b \
          WHERE b.holder_id = $1 \
            AND NOT EXISTS (SELECT 1 FROM unnest($2::text[], $3::text[]) AS a(issuer, value) \
              WHERE a.issuer = b.issuer AND a.value = b.value) \
-           AND NOT EXISTS (SELECT 1 \
-             FROM unnest($4::text[], $5::text[], $6::bytea[]) AS d(issuer, scheme, digest) \
-             JOIN national_identifier n ON n.scheme = d.scheme AND n.lookup_digest = d.digest \
-               AND n.retired_at IS NULL \
-             WHERE n.party_id = b.holder_id AND d.issuer = b.issuer \
-               AND b.identifier_type = n.scheme) \
          ORDER BY b.ordinal",
     )
     .bind(person)
     .bind(&issuers)
     .bind(&values)
-    .bind(&digest_issuers)
-    .bind(&schemes)
-    .bind(&digest_values)
     .fetch_all(&mut *conn)
     .await?;
     Ok(rows
@@ -258,7 +217,7 @@ pub(super) async fn standing_merge(
 
 /// The one `DV_IDENTIFIER.type` the patient `PERSON`s carry identifiers of
 /// `issuer` with, so a linked identifier is written as its domain's others
-/// are and a protected scheme stays protected; `None` when they carry none
+/// are; `None` when they carry none
 /// or more than one.
 ///
 /// # Errors

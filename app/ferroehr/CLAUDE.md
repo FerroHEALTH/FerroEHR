@@ -22,8 +22,7 @@ engine), `versioning` (change control + VERSION `signature` signing),
 and cache reports its bytes by, #5926), `system_log` (IHE ATNA, including the
 scheduled hash-chain check `chain_check`), `support` (the release's support
 period, embedded from the changelog by `build.rs`), `privacy`,
-`identifier_protection` (national identifiers sealed out of party bodies and
-expanded for an authorised reader), `party_binding` (the local party source
+`party_binding` (the local party source
 of the login binding: the binding side table derived in each party commit
 with its selector unique indexes, the protection of the parties it relies on
 judged in that commit (`protect`), the first fill and refill under the

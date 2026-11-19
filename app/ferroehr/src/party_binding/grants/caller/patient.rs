@@ -13,9 +13,7 @@
 //! domain, so no country-specific rule reads it.
 //!
 //! The rows are projected into `binding_patient_identifier` in each commit's
-//! transaction beside the record subjects. A protected national identifier is
-//! held as the reference the stored body carries and found through the
-//! lookup digest of `national_identifier`. The projection and the lookup are
+//! transaction beside the record subjects. The projection and the lookup are
 //! governed by no openEHR spec: our own design.
 
 use sqlx::PgConnection;
@@ -25,32 +23,19 @@ use crate::party_binding::grants::store::GrantHead;
 use crate::storage::error::StorageError;
 
 /// The patient identifier rows of the identifier `$2` under the issuer
-/// `$1`, by value or, for a protected scheme, by one of the schemes `$3`
-/// with the lookup digest `$4` of the value: each holder, the issuer and the
-/// id as the stored body carries it.
+/// `$1`: each holder, the issuer and the id as the stored body carries it.
 macro_rules! carried_rows {
     () => {
         "SELECT b.holder_id, b.issuer, b.value, b.identifier_type \
          FROM binding_patient_identifier b \
-         WHERE b.issuer = $1 AND b.value = $2 AND b.lifecycle_state IN ('532', '553') \
-         UNION \
-         SELECT b.holder_id, b.issuer, b.value, b.identifier_type \
-         FROM unnest($3::text[], $4::bytea[]) AS d(scheme, digest) \
-         JOIN national_identifier n \
-           ON n.scheme = d.scheme AND n.lookup_digest = d.digest AND n.retired_at IS NULL \
-         JOIN binding_patient_identifier b \
-           ON b.holder_id = n.party_id AND b.issuer = $1 AND b.identifier_type = n.scheme \
-          AND b.lifecycle_state IN ('532', '553')"
+         WHERE b.issuer = $1 AND b.value = $2 AND b.lifecycle_state IN ('532', '553')"
     };
 }
 
 /// The patient `PERSON`s that carry the identifier `value` under `issuer`
-/// while their head is `complete` or `incomplete`: by the value as written,
-/// or, for an identifier of a protected scheme, by one of `protected`, each
-/// a scheme with the lookup digest of `value` in it, unless a received PMIR
-/// message has split the identifier off the `PERSON`. Both arms are indexed
-/// reads: `ix_binding_patient_identifier_value`, and
-/// `uq_national_identifier_value` with the primary key.
+/// while their head is `complete` or `incomplete`, unless a received PMIR
+/// message has split the identifier off the `PERSON`: an indexed read of
+/// `ix_binding_patient_identifier_value`.
 const CARRYING: &str = concat!(
     "SELECT DISTINCT c.holder_id FROM (",
     carried_rows!(),
@@ -70,8 +55,7 @@ pub(crate) struct CarriedRow {
     pub(crate) holder: Uuid,
     /// The `DV_IDENTIFIER` issuer.
     pub(crate) issuer: String,
-    /// The id as the stored body carries it: the value, or a protected
-    /// scheme's reference.
+    /// The id as the stored body carries it.
     pub(crate) value: String,
     /// The `DV_IDENTIFIER` type, empty when it names none.
     pub(crate) identifier_type: String,
@@ -121,9 +105,7 @@ pub(crate) async fn replace(
 }
 
 /// The patient `PERSON`s that carry the identifier `value` under `issuer`,
-/// read on `conn`, sorted: by the value as written, or by one of
-/// `protected`, each a protected scheme with the lookup digest of `value` in
-/// it.
+/// read on `conn`, sorted.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -131,21 +113,17 @@ pub(crate) async fn carrying(
     conn: &mut PgConnection,
     issuer: &str,
     value: &str,
-    protected: &[(String, Vec<u8>)],
 ) -> Result<Vec<Uuid>, StorageError> {
-    let (schemes, digests) = split(protected);
     Ok(sqlx::query_scalar(CARRYING)
         .bind(issuer)
         .bind(value)
-        .bind(&schemes)
-        .bind(&digests)
         .fetch_all(&mut *conn)
         .await?)
 }
 
 /// The rows of every patient `PERSON` that carries the identifier `value`
-/// under `issuer`, by value or by one of `protected`, whether or not a
-/// received PMIR message has split it off, read on `conn`.
+/// under `issuer`, whether or not a received PMIR message has split it off,
+/// read on `conn`.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -153,14 +131,10 @@ pub(crate) async fn carried(
     conn: &mut PgConnection,
     issuer: &str,
     value: &str,
-    protected: &[(String, Vec<u8>)],
 ) -> Result<Vec<CarriedRow>, StorageError> {
-    let (schemes, digests) = split(protected);
     let rows: Vec<(Uuid, String, String, String)> = sqlx::query_as(CARRIED)
         .bind(issuer)
         .bind(value)
-        .bind(&schemes)
-        .bind(&digests)
         .fetch_all(&mut *conn)
         .await?;
     Ok(rows
@@ -172,14 +146,6 @@ pub(crate) async fn carried(
             identifier_type,
         })
         .collect())
-}
-
-/// The schemes and the lookup digests of `protected`, as two bind arrays.
-fn split(protected: &[(String, Vec<u8>)]) -> (Vec<&str>, Vec<&[u8]>) {
-    protected
-        .iter()
-        .map(|(scheme, digest)| (scheme.as_str(), digest.as_slice()))
-        .unzip()
 }
 
 /// Deletes the patient identifiers of every `PERSON` of `vo_ids`, on the

@@ -200,8 +200,6 @@ pub enum Operation {
     /// Act as an EHDS Article 10 access service, held to a subject's
     /// opt-out.
     AccessService,
-    /// Read a party's protected national identifiers.
-    ReadIdentifiers,
     /// Be an origin of data (EHDS Annex II 3.4): the grant's `origin`
     /// element is the id the party's data carry, which a retention period
     /// and an access rule may name, and the origin its direct commits are
@@ -251,7 +249,7 @@ pub enum Operation {
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 22] = [
+    pub const ALL: [Self; 21] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -260,7 +258,6 @@ impl Operation {
         Self::FederatedOrganisationAccess,
         Self::ReadSubjectAudit,
         Self::AccessService,
-        Self::ReadIdentifiers,
         Self::DataOrigin,
         Self::ReadChangeFeed,
         Self::ScimProvision,
@@ -288,7 +285,6 @@ impl Operation {
             Self::FederatedOrganisationAccess => "federated_organisation_access",
             Self::ReadSubjectAudit => "read_subject_audit",
             Self::AccessService => "access_service",
-            Self::ReadIdentifiers => "read_identifiers",
             Self::DataOrigin => "data_origin",
             Self::ReadChangeFeed => "read_change_feed",
             Self::ScimProvision => "scim_provision",
@@ -446,9 +442,9 @@ mod tests {
     fn the_ceiling_allows_only_what_it_names() {
         let ceiling = GrantCeiling::new([Operation::CommitComposition]);
         assert!(ceiling.allows(Operation::CommitComposition));
-        assert!(!ceiling.allows(Operation::ReadIdentifiers));
+        assert!(!ceiling.allows(Operation::ReadSubjectAudit));
         assert!(ceiling.allows_code("commit_composition"));
-        assert!(!ceiling.allows_code("read_identifiers"));
+        assert!(!ceiling.allows_code("read_subject_audit"));
         assert!(!GrantCeiling::new(Operation::ALL).allows_code("import_everything"));
     }
 }

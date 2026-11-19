@@ -39,8 +39,9 @@ the Art. 30 fields, in
 2. **Versioning and change control**: every write commits a contribution and
    an audit entry in the same transaction, and no version is overwritten.
 3. **Query** over stored content, in AQL.
-4. **Identity and linkage**: parties, protected national identifiers, and the
-   resolution of a party or a subject to the EHRs whose `EHR_STATUS` names it.
+4. **Identity and linkage**: parties, and the resolution of a party or a
+   subject to the EHRs whose `EHR_STATUS` names it. National identifiers are
+   not processed here: they belong in the master patient index.
 5. **Access logging**: one record per access, in DICOM PS3.15 and FHIR
    `AuditEvent` renderings.
 6. **Change-event feed**: a PHI-free envelope per commit, served to the
@@ -60,7 +61,7 @@ clinical record and the identities. Each schema is a separate category of data w
 | Schema | Personal data it holds | GDPR category |
 |---|---|---|
 | `clinical` | Clinical content: compositions, EHR status, folders, contributions, attestations, item tags. The subject appears as `EHR_STATUS.subject.external_ref`, which is an opaque pseudonym once `[privacy] subject_namespaces` is declared | Art. 9 special-category health data |
-| `party` | Parties: persons, organisations, groups, agents, roles and their relationships, with names, addresses and contacts as the operational template defines them. Protected national identifiers live in `national_identifier`, sealed under a per-domain key with a keyed digest beside them | Art. 4(1) personal data; a national identifier is Art. 87 national identification number |
+| `party` | Parties: persons, organisations, groups, agents, roles and their relationships, with names, addresses and contacts as the operational template defines them. A national identifier (Art. 87) belongs in the master patient index and is not held here | Art. 4(1) personal data |
 | `audit` | One record per access: who, from which organisation, under which roles, what they read or wrote, the declared purpose, the outcome and the time | Art. 4(1) personal data about both the subject and the accessing person |
 | `ext` | No personal data. Helper functions, the runtime roles and the deployment posture | — |
 
@@ -84,7 +85,7 @@ flowchart LR
     subject(["The person"])
     subgraph dom ["The pseudonymisation domain"]
         clin[("clinical<br/>clinical record,<br/>keyed by an opaque pseudonym")]
-        demo[("party<br/>the person, and sealed<br/>national identifiers")]
+        demo[("party<br/>the person, with no<br/>national identifier")]
     end
     aud[("audit<br/>who reached what, when")]
     subject -.-> demo
@@ -133,8 +134,8 @@ assessment has to size.
 | # | Risk | Shipped control | What remains |
 |---|---|---|---|
 | R1 | A clinical record and the identity of its subject are held together, so one credential re-identifies everyone | Two schemas, four `NOINHERIT` roles, explicit revokes in both directions, and a boot self-check that refuses to serve when a role can read across | With every `[database.<domain>] url` unset, all three pools use one credential and the split is a schema split. A superuser and a cluster-wide restore span everything |
-| R2 | A national identifier is written into clinical content | The subject rule; the refusal of a party proxy that is the subject by name or identifier; the demographic domain's sealing of national identifiers (`[privacy.identifier_protection]`); and a database trigger on `ehr` once the namespaces are declared | No pass reads a value's shape, so an identifier written into free text or an unconstrained `DV_IDENTIFIER` is stored; the controller's templates and feeds keep it out. `subject_namespaces` is empty by default, which leaves the subject rule and the trigger out of force |
-| R3 | A national identifier is readable in the party store, in a backup or on a replica | AES-256-GCM per record with the scheme bound in, a keyed HMAC-SHA-256 digest for lookup, per-domain subkeys, and a `SECURITY DEFINER` resolve function only the party role may execute | Protection is off by default. An identifier whose scheme is not configured stays in the versioned body. The root key held beside a dump defeats all of it |
+| R2 | A national identifier is written into clinical content | The subject rule; the refusal of a party proxy that is the subject by name or identifier; and a database trigger on `ehr` once the namespaces are declared | No pass reads a value's shape, so an identifier written into free text or an unconstrained `DV_IDENTIFIER` is stored; the controller's templates and feeds keep it out. `subject_namespaces` is empty by default, which leaves the subject rule and the trigger out of force |
+| R3 | Personal data is readable in the party store, in a backup or on a replica | National identifiers belong in the master patient index, and the CDR holds the subject only as a pseudonym; encryption at rest of every database volume and backup is a deployment requirement the [go-live checklist](go-live-checklist.md#9-the-database-volumes-and-backups-are-encrypted-at-rest) checks | The server stores a party as committed, so an identifier a client writes into a party is held in clear in the database; the encryption at rest and its keys are the operator's |
 | R4 | Someone re-identifies a record and nobody can tell afterwards | Every resolution of a party or a subject to its EHRs writes a `linkage`-domain access record naming the actor, purpose and outcome, including a miss | Recording is not prevention. An actor entitled to the crossing re-identifies by design |
 | R5 | Content identifies a person without carrying an identifier | Small-cell suppression on the cohort query: a result serving fewer distinct EHRs than `privacy.cohort.small_cell_threshold` (default `5`) withholds its rows and says so | A rare diagnosis with a date and a place identifies without any identifier field. The threshold covers the cohort query alone; an ordinary AQL execution takes none |
 | R6 | One organisation reads another's rows | One instance per organisation: its own database, its own domain roles, and no relation, policy or session setting that two organisations could share. openEHR puts multi-tenancy at the layer hosting several systems rather than inside one (BASE `architecture_overview` `master06-design_of_the_ehr.adoc` §The EHR System) | The separation is now a deployment property, so two organisations pointed at one instance share everything and nothing in the software will catch it |
@@ -161,7 +162,7 @@ control is irrelevant to that source.
 |---|---|---|---|---|---|
 | Demographic parties in their own schema under a non-overlapping runtime role | [#3153](https://github.com/FerroHEALTH/FerroEHR/issues/3153) | Art. 4(5), Art. 32(1)(a) | pseudonymisation domain | — | — |
 | The clinical side refuses identifying data; the subject reference is constrained to a pseudonym namespace | [#3154](https://github.com/FerroHEALTH/FerroEHR/issues/3154) | Art. 4(5), Art. 25(2) | — | — | — |
-| National identifiers sealed, with a keyed digest that keeps a value live for one party at a time | [#3155](https://github.com/FerroHEALTH/FerroEHR/issues/3155) | Art. 32(1)(a) | — | — | NEN 7510-2 cryptographic controls |
+| National identifiers held only in the master patient index, and encryption at rest of the database volumes and backups a deployment requirement | [#6092](https://github.com/FerroHEALTH/FerroEHR/issues/6092) | Art. 32(1)(a) | — | — | — |
 | Per-domain access logging for reads and queries | [#3156](https://github.com/FerroHEALTH/FerroEHR/issues/3156) | — | — | Art. 9 | NEN 7513 event content |
 | Separate encryption keys and per-schema backup handling | [#3157](https://github.com/FerroHEALTH/FerroEHR/issues/3157) | Art. 4(5), Art. 32(1)(c) | — | — | — |
 | The declared deployment profile: `production` refuses what it cannot prove | [#3226](https://github.com/FerroHEALTH/FerroEHR/issues/3226) | Art. 32(1) | — | — | — |

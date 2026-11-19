@@ -520,8 +520,8 @@ async fn demographic_operations_are_fully_documented() {
         assert!(
             op["responses"]["409"]["description"]
                 .as_str()
-                .is_some_and(|d| d.contains("national-identifier protection")),
-            "POST {path} 409 must state the protected-identifier conflict"
+                .is_some_and(|d| d.contains("record subject reference")),
+            "POST {path} 409 must state the identifier conflicts"
         );
         let headers = header_names(&op, "201");
         for want in [
@@ -603,8 +603,8 @@ async fn demographic_operations_are_fully_documented() {
         assert!(
             op["responses"]["409"]["description"]
                 .as_str()
-                .is_some_and(|d| d.contains("national-identifier protection")),
-            "PUT {path} 409 must state the protected-identifier conflict"
+                .is_some_and(|d| d.contains("record subject reference")),
+            "PUT {path} 409 must state the identifier conflicts"
         );
         assert!(
             documented_params(&op, "header")

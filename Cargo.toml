@@ -371,12 +371,7 @@ yasna = "0.6.0"                    # DER reading and writing in the server TLS t
 # only when pgp does.
 rand = "0.10.1"
 sha2 = "0.11.0"
-# National-identifier protection (#3155): AES-256-GCM for the ciphertext and
-# HMAC-SHA-256 for the blind-lookup column and the per-tenant key derivation.
-# AES-GCM over ChaCha20-Poly1305 because NIST names it (SP 800-38D) and the
-# control answers to GDPR Art. 32(1)(a) and NEN 7510-2 reviewers; both are
-# pure-Rust RustCrypto AEADs, so either fits the no-OpenSSL stack.
-aes-gcm = "0.11.1"
+# HMAC-SHA-256 for the licence identifier stamp key (`licence::stamp`).
 hmac = "0.13.0"
 opendal = { version = "0.59.5", default-features = false, features = [
   "services-s3", "layers-retry", "layers-timeout", "layers-concurrent-limit",

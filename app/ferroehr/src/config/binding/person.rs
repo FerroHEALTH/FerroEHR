@@ -273,16 +273,14 @@ impl Sections<'_> {
     /// its key.
     ///
     /// `key_issuers` are the `identifier_issuer`s of the `[[auth.party]]`
-    /// tables, and `protected_schemes` the identifier schemes whose value
-    /// leaves the body (`[privacy.identifier_protection] schemes` while
-    /// it is enabled).
+    /// tables.
     #[must_use]
-    pub fn errors(&self, key_issuers: &[String], protected_schemes: &[String]) -> Vec<String> {
+    pub fn errors(&self, key_issuers: &[String]) -> Vec<String> {
         let mut errors = Vec::new();
         if self.is_empty() {
             return errors;
         }
-        self.template_errors(key_issuers, protected_schemes, &mut errors);
+        self.template_errors(key_issuers, &mut errors);
         self.attribute_errors(&mut errors);
         if let Some(role) = self.professional_role
             && role.template_id.trim().is_empty()
@@ -314,12 +312,7 @@ impl Sections<'_> {
     }
 
     /// The refusals of the person templates.
-    fn template_errors(
-        &self,
-        key_issuers: &[String],
-        protected_schemes: &[String],
-        errors: &mut Vec<String>,
-    ) {
+    fn template_errors(&self, key_issuers: &[String], errors: &mut Vec<String>) {
         let templates = &self.person.template;
         if !templates.is_empty() && templates.iter().filter(|t| t.default).count() != 1 {
             errors.push(
@@ -364,14 +357,6 @@ impl Sections<'_> {
                          ({BSN_OID}), which a professional's template never carries"
                     ));
                 }
-            }
-            if protected_schemes.contains(&template.key.identifier_type) {
-                errors.push(format!(
-                    "{at} key: the scheme {:?} is protected \
-                     ([privacy.identifier_protection]), so its value leaves the body and \
-                     cannot be a binding key",
-                    template.key.identifier_type
-                ));
             }
         }
     }

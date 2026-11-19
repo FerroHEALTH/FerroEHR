@@ -131,9 +131,10 @@ identifier is matched against the identifiers the patient's `PERSON` carries
 at the `[authz.party_binding.patient] identifier` path, by issuer and value,
 and its EHRs are the ones that `PERSON`'s references name. FerroEHR projects
 those identifiers into the party table `binding_patient_identifier` at the
-commit of the `PERSON`. An identifier of a protected scheme
-(`[privacy.identifier_protection]`) is held there as the stored reference, and
-FerroEHR finds it through its lookup digest. So the registering system writes
+commit of the `PERSON`, each value as the `PERSON` carries it. A national
+identifier is not among them: it belongs in the master patient index, which
+answers it with the patient's pseudonym, and the CDR holds the pseudonym
+only. So the registering system writes
 the patient's identifiers in the same contribution as its record subjects,
 and a merge contribution moves both onto the survivor's `PERSON`. No request
 of a contact point waits on the PIX Manager, and an unavailable PIX Manager

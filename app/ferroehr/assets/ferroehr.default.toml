@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 854 keys. A deployment that holds real data sets the 10
+# This file lists 851 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -1771,7 +1771,7 @@ system_id = "ferroehr.local"
 #? trusted_key_files = []
 
 # The data-minimisation policy: the subject namespaces, the identified parties,
-# the identifier protection, the cohort query and the access delay.
+# the cohort query and the access delay.
 [privacy]
 # The namespaces an `EHR_STATUS.subject.external_ref` may name
 # (`FERROEHR__PRIVACY__SUBJECT_NAMESPACES`, comma-separated in the environment)
@@ -1782,20 +1782,6 @@ subject_namespaces = []
 # in clinical content (`FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR`).
 # Optional (trust).
 #? allow_identified_parties_in_ehr = false
-
-# The national-identifier protection of the demographic domain; absent, off.
-#? [privacy.identifier_protection]
-# The scheme codes to protect
-# (`FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__SCHEMES`). Optional (trust).
-#? schemes = ["nl-bsn"]
-# The root key, 64 hex characters
-# (`FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__KEY`), or its `key_file` sibling.
-# Optional, unset by default (trust).
-#? key = ""
-# A file holding the root key, read at boot
-# (`FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__KEY_FILE`). Optional, unset by
-# default (trust).
-#? key_file = ""
 
 # The cross-domain cohort-query allow-list and limits.
 #? [privacy.cohort]
@@ -3079,6 +3065,6 @@ subject_namespaces = []
 # The domain's `Identifier.system`, the `DV_IDENTIFIER.issuer` its identifiers
 # are carried under, such as `urn:oid:2.999.1.1`. Optional (infrastructure).
 #? system = ""
-# The `DV_IDENTIFIER.type` they are written with, such as `MR`; a protected
-# scheme's code keeps the identifier sealed. Optional (infrastructure).
+# The `DV_IDENTIFIER.type` they are written with, such as `MR`. Optional
+# (infrastructure).
 #? identifier_type = ""

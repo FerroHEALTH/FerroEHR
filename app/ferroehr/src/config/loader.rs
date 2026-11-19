@@ -224,14 +224,6 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
         signing.key_passphrase_file.take().as_deref(),
         errors,
     );
-    if let Some(protection) = config.privacy.identifier_protection.as_mut() {
-        resolve(
-            "privacy.identifier_protection.key",
-            &mut protection.key,
-            protection.key_file.take().as_deref(),
-            errors,
-        );
-    }
     let s3 = &mut config.record.multimedia.s3;
     resolve(
         "record.multimedia.s3.secret_access_key",

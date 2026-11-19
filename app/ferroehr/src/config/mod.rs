@@ -100,8 +100,7 @@ pub struct FerroEhrConfig {
     /// Repository + the syslog and FHIR-feed forwarding sinks).
     pub audit: crate::system_log::config::AuditConfig,
     /// `[privacy]` — the data-minimisation policy: the subject namespaces,
-    /// the identified parties, the identifier protection, the cohort query and
-    /// the access delay.
+    /// the identified parties, the cohort query and the access delay.
     pub privacy: crate::privacy::config::PrivacyConfig,
     /// `[record]` — the record itself: the subject index, versioning,
     /// signing, the query engine, the change feed and multimedia.
@@ -1006,40 +1005,41 @@ mod tests {
         );
     }
 
-    /// The national-identifier protection section maps from the environment,
-    /// and the key never renders.
+    /// The national-identifier protection is gone (#6092): a tree that still
+    /// sets `[privacy.identifier_protection]` meets the unknown-key refusal,
+    /// which names the key, in the file and in the environment alike.
     #[test]
-    fn the_demographic_section_maps_from_the_environment() {
-        let c = assemble_ok(
+    fn the_removed_identifier_protection_section_is_an_unknown_key() {
+        for body in [
+            "[privacy.identifier_protection]\nschemes = [\"x\"]\n",
+            "[privacy.identifier_protection]\nkey_file = \"/run/secrets/key\"\n",
+            "[privacy]\nidentifier_protection = {}\n",
+        ] {
+            let file = toml_file(body);
+            let err = assemble(Some(file.path()), &env(&[]), &[])
+                .expect_err("the removed section must be refused");
+            assert!(
+                err.to_string().contains("identifier_protection"),
+                "{body}: {err}"
+            );
+        }
+        let err = assemble(
             None,
-            &env(&[
-                (
-                    "FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__SCHEMES",
-                    "nl-bsn,se-personnummer",
-                ),
-                (
-                    "FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__KEY",
-                    "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
-                ),
-            ]),
+            &env(&[(
+                "FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__KEY",
+                "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            )]),
             &[],
-        );
-        let protection = c
-            .privacy
-            .identifier_protection
-            .as_ref()
-            .expect("the table is present");
-        assert_eq!(
-            protection.schemes,
-            vec!["nl-bsn".to_owned(), "se-personnummer".to_owned()]
-        );
-        assert!(protection.key.is_some(), "the root key binds from the env");
-        // The key is a secret: rendering the effective configuration must not
-        // print it, which is the property the admin config endpoint relies on.
-        let rendered = serde_json::to_string(&c).expect("the config renders");
+        )
+        .expect_err("the removed variable must be refused");
         assert!(
-            !rendered.contains("000102030405"),
-            "the root key must never render into the effective configuration"
+            err.to_string()
+                .contains("FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__KEY"),
+            "{err}"
+        );
+        assert!(
+            !err.to_string().contains("000102030405"),
+            "the refusal never prints the value: {err}"
         );
     }
 
@@ -1123,7 +1123,7 @@ mod tests {
         );
 
         for (key, binding, expected) in [
-            ("national_identifier", good(), "national_identifier"),
+            ("passport_number", good(), "passport_number"),
             (
                 "city",
                 PredicateBinding {

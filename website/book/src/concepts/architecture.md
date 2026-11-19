@@ -116,7 +116,7 @@ flowchart LR
         ehrsvc["service::ehr · query · admin<br/>definition · message · validity"]
     end
     subgraph dem ["identity module"]
-        demsvc["service::demographic<br/>(parties, sealed identifiers)"]
+        demsvc["service::demographic<br/>(parties)"]
     end
     subgraph lnk ["crossings"]
         lnksvc["service::linkage<br/>(cohort, AQL demographic join)"]

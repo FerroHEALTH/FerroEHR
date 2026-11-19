@@ -176,7 +176,6 @@ impl Work<'_> {
     /// A merge of `event.id` into the identity its `replaced-by` link names:
     /// the merged `PERSON`'s record subjects move onto the survivor's.
     async fn merge(&mut self, tx: &mut PgConnection, event: &FeedEvent) -> Result<(), ApplyError> {
-        let engine = self.service.identifiers.as_deref();
         let Some(survivor) = event
             .replaced_by
             .clone()
@@ -195,24 +194,18 @@ impl Work<'_> {
         {
             return Err(ApplyError::Refused(Refusal::Survivor));
         }
-        let named = plan::resolve(tx, engine, known.as_ref(), &event.identifiers, None).await?;
+        let named = plan::resolve(tx, known.as_ref(), &event.identifiers, None).await?;
         let survivor_identifiers = self
             .announcement(&survivor)
             .map(|announced| announced.identifiers.clone())
             .unwrap_or_default();
-        let survivor_person = plan::resolve(
-            tx,
-            engine,
-            survivor_known.as_ref(),
-            &survivor_identifiers,
-            named,
-        )
-        .await?;
+        let survivor_person =
+            plan::resolve(tx, survivor_known.as_ref(), &survivor_identifiers, named).await?;
         // NOTE: PMIR 1.6.0 §2:3.93.4.1.2.4, the deprecated Patient may carry none of its former
         // identifiers; the survivor's announcement does, on a PERSON other than the survivor's.
         let merged = match (named, survivor_person) {
             (None, Some(survivor)) => {
-                plan::resolve(tx, engine, None, &survivor_identifiers, Some(survivor)).await?
+                plan::resolve(tx, None, &survivor_identifiers, Some(survivor)).await?
             }
             (named, _) => named,
         };
@@ -283,10 +276,8 @@ impl Work<'_> {
         tx: &mut PgConnection,
         event: &FeedEvent,
     ) -> Result<(), ApplyError> {
-        let engine = self.service.identifiers.as_deref();
         let known = plan::identity(tx, &event.id).await?;
-        let Some(holder) =
-            plan::resolve(tx, engine, known.as_ref(), &event.identifiers, None).await?
+        let Some(holder) = plan::resolve(tx, known.as_ref(), &event.identifiers, None).await?
         else {
             Self::bind(tx, &event.id, None, None).await?;
             return Ok(());
@@ -295,7 +286,7 @@ impl Work<'_> {
             ChangeKind::Delete => &[],
             _ => &event.identifiers,
         };
-        for row in plan::unannounced(tx, engine, holder, announced).await? {
+        for row in plan::unannounced(tx, holder, announced).await? {
             self.remove(holder, &row.issuer, &row.value, &row.identifier_type)
                 .await?;
         }
@@ -346,12 +337,11 @@ impl Work<'_> {
         holder: Uuid,
         identifier: &Identifier,
     ) -> Result<(), ApplyError> {
-        let engine = self.service.identifiers.as_deref();
         let key = (holder, identifier.system.clone(), identifier.value.clone());
         if self.added.contains(&key) {
             return Ok(());
         }
-        let rows: Vec<_> = plan::carried(tx, engine, identifier)
+        let rows: Vec<_> = plan::carried(tx, identifier)
             .await?
             .into_iter()
             .filter(|row| {

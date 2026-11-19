@@ -103,7 +103,6 @@ uuid = { workspace = true, features = ["v7", "fast-rng"] }   # ids are uuidv7 (d
 # ferroehr-signing crate): OpenPGP (rPGP) detached signatures + SHA-256 digest mode.
 pgp.workspace = true
 sha2.workspace = true
-aes-gcm.workspace = true
 hmac.workspace = true
 base64.workspace = true
 # `service::admin::dump_load`: the `zip` compression format of our own dump/load

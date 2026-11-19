@@ -88,38 +88,11 @@ pseudonym, or an identified party the deployment does not permit, with the same
 [Privacy & data minimisation](../installation/config-privacy.md), and they
 apply to the admin archive load for the same reason.
 
-### Protected national identifiers do not travel in an extract
-
-With [national-identifier protection](../installation/config-privacy.md#protecting-national-identifiers-in-the-demographic-domain)
-on, a party's versioned body carries a reference where each protected
-identifier stood, and the value lives in a sealed row under that deployment's
-own root key. An extract carries the versions and never the sealed rows, so the
-identifier cannot cross from one FerroEHR to another in an extract:
-
-- **A party with a plaintext protected value is refused.** An imported version
-  is a faithful copy that is never modified (RM common `master06` §Copying), so
-  the receiving deployment cannot seal it on the way in.
-- **A party with another deployment's sealed reference is refused.** The row it
-  names is not held here, so it could never be read back, and the refusal
-  (`422`) says so.
-
-This is a decided refusal, not a gap waiting for a key exchange. Re-wrapping
-the sealed rows for the receiving deployment would hand one organisation's key
-material, or a wrapped copy of every value, to another, and no openEHR
-specification defines such an exchange. Move a record this way instead:
-
-1. Export the EHR and import the extract without the party. The clinical side
-   holds pseudonyms and never a national identifier, so the clinical content
-   moves unchanged.
-2. Register the person in the receiving deployment through its own party API
-   (`POST {base}/demographic/person`), with the identifier the receiving
-   organisation holds for the person. The receiving deployment seals it under
-   its own key.
-3. Link the party to the EHR in the receiving deployment.
-
-Between two deployments of **one** organisation that share the root key, the
-admin [dump and load](../operations-admin-apis.md#dump-and-load) carries the
-sealed rows as ciphertext and restores them.
+A party travels in an extract as it was committed, identifiers included. A
+national identifier belongs in the master patient index, never in the CDR
+([Privacy & data minimisation](../installation/config-privacy.md#national-identifiers-belong-in-the-master-patient-index)),
+so an extract between two CDRs carries pseudonyms, and each organisation
+resolves them through its own master patient index.
 
 When ATNA auditing is enabled (it is on by default, see
 [Security](../security.md#atna-audit-trail)) each completed

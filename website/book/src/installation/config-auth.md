@@ -396,8 +396,7 @@ two selectors. The key's `[[auth.party]] identifier_type` is `guid`, so a
 key differing only in case binds one login.
 
 Boot refuses, naming the key: no or two `default` tables; a selector path
-that does not compile; two equal selectors; a key whose scheme
-`[privacy.identifier_protection]` protects; any selector under the Dutch
+that does not compile; two equal selectors; any selector under the Dutch
 BSN namespace (OID `2.16.840.1.113883.2.4.6.3`); a key fed by an email
 address, a phone number, `preferred_username`, `name`, `upn` or
 `unique_name`; a template that is absent, rooted at another class or lacks
@@ -662,9 +661,9 @@ still holds it is refused at boot as an unknown key.
 | `ehr_access_default` | enum{open,restricted} | `open` | What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits. `restricted` is object-level default-deny: only `admin_role` reaches a setting-less EHR, so an operator can still author the settings that open it. It is enforced whether `enabled` is on or off. With `[auth] enabled = false` nothing could enforce `restricted`, so that combination is a boot error. See [Security](../security.md#per-ehr-access-control-ehr_access). |
 
 Reading one subject's access log, acting as an EHDS Art. 10 access service,
-importing an EHR or an extract, and reading a party's protected identifiers
-have no key here: each is a grant in the CDR (`read_subject_audit`,
-`access_service`, `import_ehr` and `import_ehr_extract`, `read_identifiers`),
+and importing an EHR or an extract have no key here: each is a grant in the
+CDR (`read_subject_audit`, `access_service`, `import_ehr` and
+`import_ehr_extract`),
 under `[authz.grants] allowed`. The keys that named a role for them before
 5.7.1 are unknown keys, and the server refuses to start with one
 ([What the grants decide](../operational-policy.md#what-the-grants-decide)).

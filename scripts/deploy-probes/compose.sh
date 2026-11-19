@@ -575,7 +575,7 @@ YAML
 # is barred from.
 PROBE_DOMAINS=(
   "clinical|ferroehr_clinical ferroehr_clinical_reader|clinical|clinical version"
-  "party|ferroehr_party ferroehr_party_reader|party|party version;party national_identifier"
+  "party|ferroehr_party ferroehr_party_reader|party|party version"
 )
 
 # Field <n> of a domain record.

@@ -256,11 +256,11 @@ mod tests {
                 .any(|p| p.contains("pixm.endpoint"))
         );
         let not_a_uri = PixmConfig {
-            assigning_authority: "nl-bsn".to_owned(),
+            assigning_authority: "national-number".to_owned(),
             ..pixm()
         };
         assert!(
-            problems(index, Some(&not_a_uri), &["nl-bsn".to_owned()])
+            problems(index, Some(&not_a_uri), &["national-number".to_owned()])
                 .iter()
                 .any(|p| p.contains("absolute URI"))
         );

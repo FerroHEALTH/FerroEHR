@@ -439,16 +439,11 @@ impl crate::config::FerroEhrConfig {
             return errors;
         }
         errors.extend(self::errors(&self.authz, &resolved));
-        let protected: &[String] = self
-            .privacy
-            .identifier_protection
-            .as_ref()
-            .map_or(&[], |protection| protection.schemes.as_slice());
         errors.extend(
             self.authz
                 .party_binding
                 .sections()
-                .errors(&key_issuers(&resolved), protected),
+                .errors(&key_issuers(&resolved)),
         );
         errors
     }

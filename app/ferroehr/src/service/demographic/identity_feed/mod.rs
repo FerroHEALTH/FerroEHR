@@ -164,10 +164,6 @@ pub enum Refusal {
     /// itself merged.
     #[error("a merge names a survivor that is unknown or itself merged")]
     Survivor,
-    /// A merged `PERSON`'s protected identifier cannot be moved: the message
-    /// carries its value nowhere.
-    #[error("a protected identifier cannot be moved: the message does not carry its value")]
-    Unmovable,
     /// A linked identifier's domain has no `DV_IDENTIFIER` type: no
     /// `[[pix.identifier_domain]]` entry names it and the patient `PERSON`s
     /// carry it with none or more than one.
@@ -187,7 +183,6 @@ impl Refusal {
             Self::Ambiguous => "ambiguous",
             Self::Contested => "contested",
             Self::Survivor => "survivor",
-            Self::Unmovable => "unmovable",
             Self::UnknownDomainType => "unknown-domain-type",
             Self::Commit => "commit",
         }
