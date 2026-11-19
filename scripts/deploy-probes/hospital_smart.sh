@@ -293,8 +293,28 @@ hs_param() {
   printf '%b' "${value//%/\\x}"
 }
 
-# The location the request answers with, or nothing.
-hs_redirect() { curl -sS -c "$HS_JAR" -b "$HS_JAR" -o /dev/null -w '%{redirect_url}' "$@"; }
+# The location the request answers with, or nothing; the status and the page
+# of the answer stay beside the cookie jar for hs_answered.
+hs_redirect() {
+  local out
+  out="$(curl -sS -c "$HS_JAR" -b "$HS_JAR" -o "$HS_JAR.page" -w '%{http_code} %{redirect_url}' "$@")"
+  printf '%s' "${out%% *}" > "$HS_JAR.status"
+  printf '%s' "${out#* }"
+}
+
+# Says what the last request of hs_redirect answered when it sent the
+# browser nowhere: its status, the page's title and message, and FerroSMART's
+# last log lines.
+hs_answered() {
+  local page
+  page="$(tr -s '\n' ' ' < "$HS_JAR.page" 2>/dev/null)"
+  echo "      FerroSMART answered $(cat "$HS_JAR.status" 2>/dev/null): $(sed -nE 's/.*<title>([^<]*)<\/title>.*/\1/p' <<<"$page")" >&2
+  echo "        $(sed -E 's/.*<body[^>]*>//; s/<[^>]*>/ /g; s/ +/ /g' <<<"$page" | cut -c1-400)" >&2
+  if [[ -s "$HS_JAR.picker" ]]; then
+    echo "        the picker page before it: $(tr -s '\n' ' ' < "$HS_JAR.picker" | sed -E 's/.*<body[^>]*>//; s/<[^>]*>/ /g; s/ +/ /g' | cut -c1-400)" >&2
+  fi
+  hdc logs --no-color --tail 15 ferrosmart 2>&1 | sed 's/^/        /' >&2
+}
 
 # Takes the person `user` through FerroSMART's authorization request `url`:
 # the provider's login, FerroSMART's picker (choosing the EHR `ehr` of the
@@ -331,12 +351,13 @@ hs_authorize() {
   location="$(hs_redirect "$location")"
   if [[ "$location" == "$HS_ISSUER"/picker* ]]; then
     page="$(curl -sS -c "$HS_JAR" -b "$HS_JAR" -G "$HS_ISSUER/picker" --data-urlencode "subject_id=$subject")"
+    printf '%s' "$page" > "$HS_JAR.picker"
     form_token="$(hs_attribute "$page" '<input[^>]*name="form_token"[^>]*>' value)"
     location="$(hs_redirect --data-urlencode "form_token=$form_token" --data-urlencode "subject_id=$subject" \
       --data-urlencode "ehr_id=$ehr" "$HS_ISSUER/picker")"
   fi
   case "$location" in "$HS_ISSUER"/consent*) ;; *)
-    echo "      FerroSMART did not ask $user for consent: ${location:0:200}" >&2; return 1 ;; esac
+    echo "      FerroSMART did not ask $user for consent: ${location:0:200}" >&2; hs_answered; return 1 ;; esac
   page="$(curl -sS -c "$HS_JAR" -b "$HS_JAR" "$location")"
   form_token="$(hs_attribute "$page" '<input[^>]*name="form_token"[^>]*>' value)"
   local -a approve=(--data-urlencode "form_token=$form_token" --data-urlencode "decision=approve")
@@ -360,8 +381,8 @@ hs_code_flow() {
   url+="&scope=$(jq -rn --arg v "$scope" '$v|@uri')&state=$state&aud=$(jq -rn --arg v "$HS_BASE" '$v|@uri')"
   url+="&code_challenge=$challenge&code_challenge_method=S256"
   [[ -n "$launch" ]] && url+="&launch=$(jq -rn --arg v "$launch" '$v|@uri')"
-  location="$(hs_authorize "$user" "$url" "$subject" "$ehr")" || { rm -f "$HS_JAR"; return 1; }
-  rm -f "$HS_JAR"
+  location="$(hs_authorize "$user" "$url" "$subject" "$ehr")" || { rm -f "$HS_JAR" "$HS_JAR".*; return 1; }
+  rm -f "$HS_JAR" "$HS_JAR".*
   [[ "$(hs_param state "$location")" = "$state" ]] || { echo "      the state came back changed: $location" >&2; return 1; }
   code="$(hs_param code "$location")"
   [[ -n "$code" ]] || { echo "      no code for $user: $(hs_param error "$location")" >&2; return 1; }
