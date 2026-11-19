@@ -165,6 +165,14 @@ struct Budget {
 /// The commits of a body the data-minimisation pass reads have since lost
 /// their second render and the pass's own allocations (#6038): 18,841
 /// allocations on the JSON commit against 33,307, measured over three runs.
+/// The WAL figure has since been the row records a request writes, read with
+/// `pg_walinspect` as `statement_budget::wal` reads them, with the chain
+/// heads and page maintenance left out and the lower-quartile request judged
+/// (#6035): the sum `pg_stat_statements` gave moved with the chainer's
+/// passes, and a read measured 2,248 to 2,325 bytes between runs. Twelve of
+/// the sixteen paths now measure the same figure in every one of seven runs,
+/// one of them beside 175 other tests, and the other four within 64 bytes,
+/// so the ceilings are the largest of the seven plus 1%.
 const BUDGETS: [Budget; 16] = [
     Budget {
         path: Path::CommitJson,
@@ -173,7 +181,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 1_530_778,
         round_trips: 14,
         nested: 13,
-        wal: 249_452,
+        wal: 242_593,
     },
     Budget {
         path: Path::CommitXml,
@@ -182,7 +190,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 1_533_031,
         round_trips: 14,
         nested: 14,
-        wal: 250_543,
+        wal: 242_671,
     },
     Budget {
         path: Path::CommitFlat,
@@ -191,7 +199,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 1_528_525,
         round_trips: 14,
         nested: 13,
-        wal: 252_220,
+        wal: 242_645,
     },
     Budget {
         path: Path::ReadJson,
@@ -200,7 +208,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 617_268,
         round_trips: 7,
         nested: 2,
-        wal: 2874,
+        wal: 2773,
     },
     Budget {
         path: Path::ReadXml,
@@ -209,7 +217,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 1_017_140,
         round_trips: 7,
         nested: 2,
-        wal: 2890,
+        wal: 2773,
     },
     Budget {
         path: Path::ReadFlat,
@@ -218,7 +226,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 1_634_407,
         round_trips: 7,
         nested: 2,
-        wal: 2849,
+        wal: 2773,
     },
     Budget {
         path: Path::EhrRead,
@@ -227,7 +235,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 100_250,
         round_trips: 7,
         nested: 2,
-        wal: 2098,
+        wal: 1989,
     },
     Budget {
         path: Path::AqlSingle,
@@ -236,7 +244,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 118_273,
         round_trips: 10,
         nested: 2,
-        wal: 4566,
+        wal: 4439,
     },
     Budget {
         path: Path::AqlPopulation,
@@ -245,7 +253,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 158_823,
         round_trips: 8,
         nested: 2,
-        wal: 11_916,
+        wal: 11_380,
     },
     Budget {
         path: Path::Iti81,
@@ -254,7 +262,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 624_026,
         round_trips: 6,
         nested: 2,
-        wal: 2316,
+        wal: 1852,
     },
     Budget {
         path: Path::PartyRead,
@@ -263,7 +271,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 78_848,
         round_trips: 11,
         nested: 6,
-        wal: 2097,
+        wal: 2070,
     },
     Budget {
         path: Path::CommitContribution,
@@ -272,7 +280,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 3_678_823,
         round_trips: 18,
         nested: 14,
-        wal: 251_382,
+        wal: 243_169,
     },
     Budget {
         path: Path::ReadAtTime,
@@ -281,7 +289,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 701_748,
         round_trips: 7,
         nested: 2,
-        wal: 3255,
+        wal: 2773,
     },
     Budget {
         path: Path::CommitStatus,
@@ -290,7 +298,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 144_180,
         round_trips: 19,
         nested: 11,
-        wal: 6624,
+        wal: 6213,
     },
     Budget {
         path: Path::ReadStatus,
@@ -299,7 +307,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 102_503,
         round_trips: 7,
         nested: 2,
-        wal: 2183,
+        wal: 2102,
     },
     Budget {
         path: Path::CommitParty,
@@ -308,7 +316,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 117_146,
         round_trips: 32,
         nested: 19,
-        wal: 8330,
+        wal: 7864,
     },
 ];
 
@@ -720,7 +728,11 @@ struct Measure {
     each: Vec<Allocated>,
     round_trips: u64,
     nested: u64,
+    /// The row records of the lower-quartile request.
     wal: u64,
+    /// The row records of each request and of the window by relation, with
+    /// the chain heads' the figure leaves out.
+    wal_ledger: String,
     /// The statements `PostgreSQL` ran nested, and the chainer's rounds the
     /// count leaves out.
     statements: String,
@@ -770,18 +782,100 @@ impl Measure {
     }
 }
 
-/// The write-ahead log of the test database's top-level statements since the
-/// last reset, its own reads left out.
-async fn wal_bytes(pool: &PgPool) -> u64 {
-    let bytes: Option<i64> = sqlx::query_scalar(
-        "SELECT /* statement_budget_own */ sum(wal_bytes)::bigint FROM pg_stat_statements \
-         WHERE toplevel AND dbid = (SELECT oid FROM pg_database WHERE datname = current_database()) \
-         AND query NOT LIKE '%pg_stat_statements%' AND query NOT LIKE '%statement_budget_own%'",
+/// Whether `relation` is a chain head: the access log's and the system
+/// audit trail's, which a chainer pass writes once whatever it links, so how
+/// often depends on how the passes fall among the requests.
+fn head_relation(relation: &str) -> bool {
+    super::wal::pass_relation(relation) || relation == "audit_chain_state"
+}
+
+/// The row records of the lower-quartile request, and the ledger of the
+/// window: `marks` are the WAL positions before the first request and after
+/// each one, taken once the chainer had moved that request's entries.
+///
+/// The figure is what [`super::wal`] counts for an access-log entry: the
+/// records a statement writes for each row of the test's own database, read
+/// with `pg_walinspect`. Page maintenance and the records of the chain heads
+/// are left out, since both fall on a request by timing (#6035).
+///
+/// A low request is judged, the third smallest of ten, because timing still
+/// moves single requests. An update that finds no room on its row's page
+/// writes the whole row, a lock record and an entry in each index, and
+/// whether it does depends on what pruning could clear, so on the oldest
+/// transaction open on the shared server: beside the other budget tests a
+/// window of ten `EHR_STATUS` commits wrote 1,550 bytes more. An index insert
+/// that splits its page is logged as the split and leaves the count. What a
+/// request itself writes more, every request writes more.
+async fn row_records(pool: &PgPool, marks: &[String]) -> (u64, String) {
+    let (Some(from), Some(to)) = (marks.first(), marks.last()) else {
+        return (0, String::new());
+    };
+    super::wal::flushed(pool, to).await;
+    let mut each = Vec::new();
+    for pair in marks.windows(2) {
+        let [before, after] = pair else { continue };
+        each.push(
+            super::wal::by_relation(pool, before, after)
+                .await
+                .into_iter()
+                .filter(|(relation, _, _)| !head_relation(relation))
+                .map(|(_, bytes, _)| bytes)
+                .sum::<u64>(),
+        );
+    }
+    let mut ledger = format!("  each request: {each:?}\n");
+    for (relation, bytes, records) in super::wal::by_relation(pool, from, to).await {
+        let head = head_relation(&relation);
+        writeln!(
+            ledger,
+            "  {bytes:>8} B {records:>5}  {relation}{}",
+            if head {
+                "  (a chain head, left out)"
+            } else {
+                ""
+            }
+        )
+        .unwrap();
+    }
+    writeln!(
+        ledger,
+        "  {} rows updated in place",
+        updates_in_place(pool, from, to).await
     )
+    .unwrap();
+    each.sort_unstable();
+    let judged = each.get(each.len().div_euclid(4)).copied().unwrap_or(0);
+    (judged, ledger)
+}
+
+/// The rows the window updated in place, outside the chain heads and the
+/// catalogs.
+///
+/// An update is the one row record whose size is not the statement's alone:
+/// it is short while the new version fits the old one's page, and where it
+/// does not it carries the whole row, a lock record before it and an entry in
+/// each index. Which it is depends on the room pruning has left on the page,
+/// and so on how long the oldest transaction of the server has been open. The
+/// report prints the count so a path's ceiling can be read against it.
+async fn updates_in_place(pool: &PgPool, from: &str, to: &str) -> u64 {
+    let updates: i64 = sqlx::query_scalar(
+        "SELECT /* statement_budget_own */ count(DISTINCT b.start_lsn) \
+           FROM pg_get_wal_block_info($1::pg_lsn, $2::pg_lsn) b \
+           JOIN pg_class c ON pg_relation_filenode(c.oid) = b.relfilenode \
+          WHERE b.reldatabase = (SELECT oid FROM pg_database WHERE datname = current_database()) \
+            AND b.resource_manager = 'Heap' \
+            AND split_part(b.record_type, '+', 1) IN ('UPDATE', 'HOT_UPDATE') \
+            AND c.relkind = 'r' \
+            AND c.relname NOT IN ('access_log_chain_state', 'audit_chain_state') \
+            AND c.relnamespace NOT IN \
+                ('pg_catalog'::regnamespace, 'information_schema'::regnamespace)",
+    )
+    .bind(from)
+    .bind(to)
     .fetch_one(pool)
     .await
-    .expect("pg_stat_statements reads");
-    bytes.map_or(0, |b| u64::try_from(b).expect("a byte count"))
+    .expect("pg_walinspect reads");
+    u64::try_from(updates).expect("a count")
 }
 
 /// Measures [`REQUESTS`] requests of `path`.
@@ -803,6 +897,7 @@ async fn measure(
         .await
         .expect("the statement counts reset");
     *counter.0.lock().unwrap() = Counts::default();
+    let mut marks = vec![super::wal::insert_lsn(pool).await];
     let mut out = Measure::default();
     for n in 0..REQUESTS {
         let n = usize::try_from(WARM + n).unwrap();
@@ -823,8 +918,9 @@ async fn measure(
         );
         world.observe(path, n, &headers);
         out.each.push(allocated);
+        drained(pool).await;
+        marks.push(super::wal::insert_lsn(pool).await);
     }
-    drained(pool).await;
     let statements = counted(pool).await;
     let nested: u64 = statements
         .iter()
@@ -843,7 +939,7 @@ async fn measure(
     out.round_trips = counts.round_trips.div_euclid(REQUESTS);
     out.nested = nested.saturating_sub(chainer).div_euclid(REQUESTS);
     out.statements = nested_ledger(&statements, nested, chainer);
-    out.wal = wal_bytes(pool).await.div_euclid(REQUESTS);
+    (out.wal, out.wal_ledger) = row_records(pool, &marks).await;
     testkit::statements::assert_statements_kept(pool, evicted)
         .await
         .expect("no statement evicted while the test counted them");
@@ -884,6 +980,10 @@ async fn every_hot_path_stays_within_its_budget() {
         .execute(&pool)
         .await
         .expect("pg_stat_statements: the server loads it (shared_preload_libraries)");
+    sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_walinspect")
+        .execute(&pool)
+        .await
+        .expect("pg_walinspect: a contrib module the server ships");
     let world = World::build(&app).await;
     let mut report = String::from(
         "path | conversions | audit renders | allocations | alloc KiB | peak KiB | round trips | nested | WAL B\n",
@@ -931,10 +1031,11 @@ async fn every_hot_path_stays_within_its_budget() {
         writeln!(ledger, "{}: {}", path.name(), ops.join(", ")).unwrap();
         writeln!(
             statements,
-            "{}: allocations and peak of each request {:?}\n{}",
+            "{}: allocations and peak of each request {:?}\n{}row records by relation:\n{}",
             path.name(),
             m.requests(),
-            m.statements
+            m.statements,
+            m.wal_ledger
         )
         .unwrap();
     }
