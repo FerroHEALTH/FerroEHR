@@ -22,6 +22,7 @@
 use crate::ids::EhrId;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use openehr_its::rest::generated::ehr::NewContribution;
+use serde_json::value::RawValue;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
@@ -30,7 +31,8 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::service::FerroEhrService;
 use crate::service::contribution::commit_version_set;
-use crate::versioning::contribution::{decode_new_contribution, get_contribution};
+use crate::versioning::contribution::get_contribution;
+use crate::versioning::envelope::{self, ContributionText, Parts};
 
 impl FerroEhrService {
     /// `POST /ehr/{ehr_id}/contribution` — commit a raw wire CONTRIBUTION body
@@ -49,10 +51,10 @@ impl FerroEhrService {
     pub async fn create_ehr_contribution(
         &self,
         ehr_id: EhrId,
-        body: Value,
+        body: impl Into<ContributionText>,
     ) -> Result<ServiceResponse, ServiceError> {
         let committed = self
-            .commit_wire_contribution(ehr_id, &body)
+            .commit_wire_contribution(ehr_id, &body.into())
             .await
             .map_err(ServiceError::flattened)?;
         let body = self.ehr_contribution(ehr_id, committed.id, false).await?;
@@ -71,16 +73,13 @@ impl FerroEhrService {
     async fn commit_wire_contribution(
         &self,
         ehr_id: EhrId,
-        body: &Value,
+        body: &ContributionText,
     ) -> Result<crate::versioning::change::CommittedContribution, ServiceError> {
-        // NOTE: ITS-REST `schemas/ehr/NewContribution.yaml` leaves `additionalProperties` open
-        // (`ItemTag.yaml` closes its object with `false`), so an undeclared member is ignored.
-        let NewContribution {
+        let Parts {
             uid,
             versions,
             audit,
-            additional_properties: _,
-        } = decode_new_contribution::<NewContribution<Value>>(body)?;
+        } = envelope::read::<NewContribution<Box<RawValue>>, NewContribution<Value>>(body)?;
         commit_version_set(self, Some(ehr_id), uid.as_ref(), versions, &audit, false).await
     }
 
@@ -195,7 +194,7 @@ impl FerroEhrService {
     pub async fn ehr_contribution_commit(
         &self,
         an_ehr_id: EhrId,
-        a_contribution: Value,
+        a_contribution: impl Into<ContributionText>,
         representation: bool,
     ) -> Result<ServiceResponse, ServiceError> {
         if representation {
@@ -210,7 +209,7 @@ impl FerroEhrService {
             // pure waste here (RM common master06 §Committal and Audits — the
             // commit itself yields the new CONTRIBUTION id).
             let committed = self
-                .commit_wire_contribution(an_ehr_id, &a_contribution)
+                .commit_wire_contribution(an_ehr_id, &a_contribution.into())
                 .await
                 .map_err(ServiceError::flattened)?;
             let meta = ResourceMeta::new(an_ehr_id.to_string(), committed.id.to_string())

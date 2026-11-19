@@ -12,6 +12,7 @@
 )]
 
 use bytes::Bytes;
+use ferroehr::versioning::envelope::ContributionText;
 use http::{HeaderMap, header};
 use openehr_its::json::JsonParseError;
 use openehr_its::rest::runtime::ApiError;
@@ -31,6 +32,30 @@ use super::{
 pub(crate) fn json_value(headers: &HeaderMap, body: &Bytes) -> Result<serde_json::Value, ApiError> {
     require_json(headers)?;
     parse_json(body)
+}
+
+/// The text of a CONTRIBUTION commit body, which the service reads once.
+///
+/// The door refuses what [`json_value`] refuses, with its words: text that is
+/// not JSON, and a `_type`-tagged node carrying a key its class does not
+/// declare. A body with neither defect is found so in one pass over its text
+/// that builds no value (#6038); any other takes the value-building path,
+/// which names the defect, and a body that path admits goes on as its
+/// rendering.
+///
+/// # Errors
+/// As [`json_value`].
+pub(crate) fn contribution_text(
+    headers: &HeaderMap,
+    body: &Bytes,
+) -> Result<ContributionText, ApiError> {
+    require_json(headers)?;
+    if let Ok(text) = std::str::from_utf8(body)
+        && matches!(openehr_its::json::holds_undeclared_key(text), Ok(false))
+    {
+        return Ok(text.to_owned().into());
+    }
+    parse_json(body).map(Into::into)
 }
 
 /// Decode a required JSON body into the typed DTO `T`, strictly, with a
@@ -260,6 +285,43 @@ mod tests {
         let h = headers(&[("content-type", "application/json")]);
         let v = json_value(&h, &Bytes::from_static(br#"{"a":1}"#)).expect("json");
         assert_eq!(v, serde_json::json!({"a": 1}));
+    }
+
+    /// The CONTRIBUTION door refuses what the value door refuses, in its
+    /// words, and hands on the text of a body it admits as it arrived.
+    #[test]
+    fn the_contribution_door_is_the_value_door() {
+        let h = headers(&[("content-type", "application/json")]);
+        let refused: [&[u8]; 5] = [
+            br#"{"versions":[{"data":{"_type":"DV_TEXT","value":"x","wrong":1}}]}"#,
+            br#"{"_type":"CONTRIBUTION","wrong":1}"#,
+            br#"{"versions":["#,
+            b"{\"a\":\"\xff\"}",
+            br"{} {}",
+        ];
+        for body in refused {
+            let body = Bytes::from_static(body);
+            let (Err(ApiError::BadRequest(value)), Err(ApiError::BadRequest(text))) =
+                (json_value(&h, &body), contribution_text(&h, &body))
+            else {
+                panic!("both doors refuse {body:?} as a 400");
+            };
+            assert_eq!(text, value);
+        }
+        let admitted = Bytes::from_static(br#"{ "versions" : [ { "data" : { "n" : 1.50 } } ] }"#);
+        let text = contribution_text(&h, &admitted).expect("admitted");
+        assert_eq!(
+            format!("{text:?}"),
+            format!(
+                "{:?}",
+                ContributionText::from(String::from_utf8(admitted.to_vec()).unwrap())
+            )
+        );
+        let xml = headers(&[("content-type", "application/xml")]);
+        assert!(matches!(
+            contribution_text(&xml, &admitted),
+            Err(ApiError::UnsupportedMediaType(_))
+        ));
     }
 
     #[test]

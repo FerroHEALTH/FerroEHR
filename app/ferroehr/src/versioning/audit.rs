@@ -627,31 +627,23 @@ pub(crate) fn check_committer(committer: &PartyProxy) -> Result<PartyProxy, Serv
 /// (`…org.openehr.rm.common.party_related.adoc` §Invariants), and the
 /// structural conformance of the concrete `PARTY_PROXY` subtype.
 ///
-/// The rules are not restated here: the value goes through the unified
-/// dispatcher [`openehr_its::wire_validate::validate_rm_value`], the same one
-/// the whole-instance commit pass runs on every node of a committed RM document,
-/// which runs the generated structural check, the typed invariant cores, the
-/// model-driven mandatory-container bounds and the terminology-backed invariants
-/// (all defined in `openehr_rm::v1_2::validate`).
+/// The rules are not restated here: the typed committer goes through
+/// [`openehr_rm::v1_2::validate::tree::validate_node`], which runs the class
+/// invariants and the terminology-backed invariants the unified dispatcher
+/// [`openehr_its::wire_validate::validate_rm_value`] runs on its canonical
+/// JSON, and renders nothing (#6038). The structural check and the
+/// mandatory-container bounds of that dispatcher are what the reader already
+/// refused when it read the committer.
 ///
 /// It is invoked explicitly because a commit audit is not part of any committed
 /// RM document: the `AUDIT_DETAILS` is written to its own row and never walked
 /// by the content pass, so without this call the committer would be the one
 /// `PARTY_PROXY` reaching storage unvalidated.
 ///
-/// NOTE: the dispatcher is canonical-JSON-valued, so a typed committer is
-/// serialized here to be judged; running only
-/// [`openehr_base::validate::Validate`] on the typed value would drop the
-/// terminology tier that decides `PARTY_RELATED.Relationship_valid`.
-///
 /// # Errors
 /// [`ServiceError::Unprocessable`] carrying the dispatcher's violations.
 pub(crate) fn validate_committer(committer: &PartyProxy) -> Result<(), ServiceError> {
-    let mut violations = Vec::new();
-    openehr_its::wire_validate::validate_rm_value(
-        &openehr_its::json::to_canonical_value(committer),
-        &mut violations,
-    );
+    let violations = openehr_rm::v1_2::validate::tree::validate_node(committer);
     if violations.is_empty() {
         return Ok(());
     }

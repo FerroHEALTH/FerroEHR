@@ -369,6 +369,204 @@ pub fn reject_undeclared_keys(value: &serde_json::Value) -> Result<(), JsonParse
     }
 }
 
+/// Whether canonical-JSON text holds a `_type`-tagged node carrying a wire key
+/// its class does not declare: the verdict of [`reject_undeclared_keys`] read
+/// off the text in one pass that builds no value.
+///
+/// A commit door that hands the text on to the typed reader asks this first,
+/// and takes the value-building path of [`reject_undeclared_keys`] only for a
+/// body this refuses, to name the key. A repeated `_type` is read as its last
+/// occurrence, as a parsed value holds it.
+///
+/// # Errors
+/// The `serde_json` error of text that is not one JSON value.
+pub fn holds_undeclared_key(json: &str) -> Result<bool, serde_json::Error> {
+    let mut deserializer = serde_json::Deserializer::from_str(json);
+    let mut keys = Vec::new();
+    let found = serde::de::DeserializeSeed::deserialize(KeyScan(&mut keys), &mut deserializer)?;
+    deserializer.end()?;
+    Ok(found)
+}
+
+/// The pass of [`holds_undeclared_key`] over one JSON value. The keys of the
+/// objects being read share one buffer, each object owning its tail.
+struct KeyScan<'a, 'de>(&'a mut Vec<std::borrow::Cow<'de, str>>);
+
+impl<'de> serde::de::DeserializeSeed<'de> for KeyScan<'_, 'de> {
+    type Value = bool;
+
+    fn deserialize<D: serde::Deserializer<'de>>(self, deserializer: D) -> Result<bool, D::Error> {
+        deserializer.deserialize_any(self)
+    }
+}
+
+impl<'de> serde::de::Visitor<'de> for KeyScan<'_, 'de> {
+    type Value = bool;
+
+    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("a JSON value")
+    }
+
+    fn visit_bool<E>(self, _: bool) -> Result<bool, E> {
+        Ok(false)
+    }
+
+    fn visit_i64<E>(self, _: i64) -> Result<bool, E> {
+        Ok(false)
+    }
+
+    fn visit_u64<E>(self, _: u64) -> Result<bool, E> {
+        Ok(false)
+    }
+
+    fn visit_f64<E>(self, _: f64) -> Result<bool, E> {
+        Ok(false)
+    }
+
+    fn visit_str<E>(self, _: &str) -> Result<bool, E> {
+        Ok(false)
+    }
+
+    fn visit_unit<E>(self) -> Result<bool, E> {
+        Ok(false)
+    }
+
+    fn visit_seq<A: serde::de::SeqAccess<'de>>(self, mut items: A) -> Result<bool, A::Error> {
+        let mut found = false;
+        while let Some(item) = items.next_element_seed(KeyScan(&mut *self.0))? {
+            found |= item;
+        }
+        Ok(found)
+    }
+
+    fn visit_map<A: serde::de::MapAccess<'de>>(self, mut members: A) -> Result<bool, A::Error> {
+        let keys = self.0;
+        let own = keys.len();
+        let mut class: Option<std::borrow::Cow<'de, str>> = None;
+        let mut found = false;
+        while let Some(key) = members.next_key_seed(KeyText)? {
+            if key == "_type" {
+                match members.next_value_seed(TypeTag(&mut *keys))? {
+                    Tag::Name(name) => class = Some(name),
+                    Tag::Other(inner) => {
+                        class = None;
+                        found |= inner;
+                    }
+                }
+            } else {
+                keys.push(key);
+                found |= members.next_value_seed(KeyScan(&mut *keys))?;
+            }
+        }
+        if let Some(declared) = class
+            .as_deref()
+            .and_then(crate::json_codec::generated::structural::declared_fields)
+        {
+            found |= keys
+                .get(own..)
+                .unwrap_or_default()
+                .iter()
+                .any(|key| declared.binary_search(&key.as_ref()).is_err());
+        }
+        keys.truncate(own);
+        Ok(found)
+    }
+}
+
+/// An object key, borrowed from the text where it holds no escape.
+struct KeyText;
+
+impl<'de> serde::de::DeserializeSeed<'de> for KeyText {
+    type Value = std::borrow::Cow<'de, str>;
+
+    fn deserialize<D: serde::Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error> {
+        deserializer.deserialize_str(self)
+    }
+}
+
+impl<'de> serde::de::Visitor<'de> for KeyText {
+    type Value = std::borrow::Cow<'de, str>;
+
+    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an object key")
+    }
+
+    fn visit_borrowed_str<E>(self, key: &'de str) -> Result<Self::Value, E> {
+        Ok(std::borrow::Cow::Borrowed(key))
+    }
+
+    fn visit_str<E>(self, key: &str) -> Result<Self::Value, E> {
+        Ok(std::borrow::Cow::Owned(key.to_owned()))
+    }
+}
+
+/// What a `_type` member holds: the class name, or any other value scanned.
+enum Tag<'de> {
+    Name(std::borrow::Cow<'de, str>),
+    Other(bool),
+}
+
+/// The value of a `_type` member.
+struct TypeTag<'a, 'de>(&'a mut Vec<std::borrow::Cow<'de, str>>);
+
+impl<'de> serde::de::DeserializeSeed<'de> for TypeTag<'_, 'de> {
+    type Value = Tag<'de>;
+
+    fn deserialize<D: serde::Deserializer<'de>>(
+        self,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error> {
+        deserializer.deserialize_any(self)
+    }
+}
+
+impl<'de> serde::de::Visitor<'de> for TypeTag<'_, 'de> {
+    type Value = Tag<'de>;
+
+    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("a JSON value")
+    }
+
+    fn visit_bool<E>(self, _: bool) -> Result<Self::Value, E> {
+        Ok(Tag::Other(false))
+    }
+
+    fn visit_i64<E>(self, _: i64) -> Result<Self::Value, E> {
+        Ok(Tag::Other(false))
+    }
+
+    fn visit_u64<E>(self, _: u64) -> Result<Self::Value, E> {
+        Ok(Tag::Other(false))
+    }
+
+    fn visit_f64<E>(self, _: f64) -> Result<Self::Value, E> {
+        Ok(Tag::Other(false))
+    }
+
+    fn visit_unit<E>(self) -> Result<Self::Value, E> {
+        Ok(Tag::Other(false))
+    }
+
+    fn visit_borrowed_str<E>(self, name: &'de str) -> Result<Self::Value, E> {
+        Ok(Tag::Name(std::borrow::Cow::Borrowed(name)))
+    }
+
+    fn visit_str<E>(self, name: &str) -> Result<Self::Value, E> {
+        Ok(Tag::Name(std::borrow::Cow::Owned(name.to_owned())))
+    }
+
+    fn visit_seq<A: serde::de::SeqAccess<'de>>(self, items: A) -> Result<Self::Value, A::Error> {
+        KeyScan(self.0).visit_seq(items).map(Tag::Other)
+    }
+
+    fn visit_map<A: serde::de::MapAccess<'de>>(self, members: A) -> Result<Self::Value, A::Error> {
+        KeyScan(self.0).visit_map(members).map(Tag::Other)
+    }
+}
+
 /// The ITS-JSON validator whose root dispatches on the top-level `_type` to
 /// EVERY class definition of [`RM_SCHEMA_JSON`], the published root listing
 /// only some of them.

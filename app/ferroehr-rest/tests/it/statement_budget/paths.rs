@@ -165,6 +165,9 @@ struct Budget {
 /// The commits of a body the data-minimisation pass reads have since lost
 /// their second render and the pass's own allocations (#6038): 18,841
 /// allocations on the JSON commit against 33,307, measured over three runs.
+/// A CONTRIBUTION commit has since read its envelope once from the text and
+/// each member from its own text, and judged its committers as typed RM
+/// (#6038): 6 conversions and 19,010 allocations against 9 and 51,858.
 const BUDGETS: [Budget; 16] = [
     Budget {
         path: Path::CommitJson,
@@ -267,9 +270,9 @@ const BUDGETS: [Budget; 16] = [
     },
     Budget {
         path: Path::CommitContribution,
-        conversions: 9,
-        allocations: 52_896,
-        peak_bytes: 3_678_823,
+        conversions: 6,
+        allocations: 19_396,
+        peak_bytes: 1_649_934,
         round_trips: 18,
         nested: 14,
         wal: 251_382,

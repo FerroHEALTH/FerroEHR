@@ -29,7 +29,7 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
     let h = &parts.headers;
     let base = state.config().api.base_path.clone();
     // A CONTRIBUTION commit is a `NewContribution` wrapper DTO, JSON only.
-    let body = negotiate::decode::json_value(h, &parts.body)?;
+    let body = negotiate::decode::contribution_text(h, &parts.body)?;
     let resp = state
         .backend()
         .demographic_contribution_create(body)
