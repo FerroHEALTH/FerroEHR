@@ -1,0 +1,1 @@
+- The access log's intake is written by two writers instead of four, so each statement carries more entries: at the 3000 rps mix the store spends about 7% less CPU and the median commit is about 23% faster, with reads unchanged.

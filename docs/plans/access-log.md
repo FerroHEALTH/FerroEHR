@@ -646,9 +646,9 @@ NCP. How the log is protected is therefore our own design.
   narrow `audit.access_log_link` row (#5747, #5745, #5968; our own design).
   The write is one statement, `audit.access_log_intake_take()`, which
   stores or finds the entries' search tokens and shared sets and inserts
-  the rows, and it commits on its own; four writers gather the
+  the rows, and it commits on its own; two writers gather the
   entries of the requests waiting into each statement, so one commit and one
-  flush of the write-ahead log serve many requests (#5770). The intake is
+  flush of the write-ahead log serve many requests (#5770, #6058). The intake is
   unchained, so no request waits on the head. It is
   append-only by the database's rules: the runtime role may insert and read
   the entries and the intake rows and nothing else, the tables refuse every
