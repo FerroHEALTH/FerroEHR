@@ -669,6 +669,11 @@ hospital_setup() {
   # (FerroSMART docs/architecture.md §13.21; the CDR grants act_for_persons).
   h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
     || h_fail_call "the hospital's SMART app"
+  # FerroSMART's patient picker looks the EHR up as the signed-in person, with a
+  # token whose client_id is FerroSMART's own issuer (FerroSMART
+  # docs/architecture.md §13.6 item 4), so the CDR grants it sign_in_persons.
+  h_client picker "$HS_ISSUER" "$(hv hospital)" "$(j_capability "$(j_operation sign_in_persons)")" \
+    || h_fail_call "FerroSMART's patient picker"
 
   # The patients: Eva under the care of three teams since ten days ago,
   # Frank her representative, Gina a patient too, and Piet, anybody else.
@@ -1541,6 +1546,11 @@ hospital_pixm() {
   h_party hospital organisation "$(j_named_party ORGANISATION "Sint Example Ziekenhuis")" || h_fail_call "the controller"
   h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
     || h_fail_call "the hospital's SMART app"
+  # FerroSMART's patient picker looks the EHR up as the signed-in person, with a
+  # token whose client_id is FerroSMART's own issuer (FerroSMART
+  # docs/architecture.md §13.6 item 4), so the CDR grants it sign_in_persons.
+  h_client picker "$HS_ISSUER" "$(hv hospital)" "$(j_capability "$(j_operation sign_in_persons)")" \
+    || h_fail_call "FerroSMART's patient picker"
   h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role"
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"
