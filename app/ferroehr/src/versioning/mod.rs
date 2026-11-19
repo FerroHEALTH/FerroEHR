@@ -208,13 +208,6 @@ pub(crate) struct SigningCtx<'a> {
     /// is decomposed and signed.
     #[cfg(feature = "multimedia")]
     pub(crate) multimedia: Option<&'a ferroehr_ext::multimedia::MultimediaEngine>,
-    /// The optional national-identifier protection engine (no openEHR spec
-    /// governs identifier protection — our own extension). When set, the
-    /// demographic commit path seals every configured-scheme identifier out of
-    /// the body before it is decomposed and signed, so the stored, signed and
-    /// served form is the same one — the invariant the multimedia offload
-    /// above already keeps.
-    pub(crate) identifiers: Option<&'a crate::identifier_protection::engine::IdentifierProtection>,
     /// Whether to write the transactional event outbox on this commit. `false`
     /// when no change-feed grant names a reader, so the per-commit `event_outbox`
     /// INSERT + envelope serialization is skipped entirely. No openEHR spec

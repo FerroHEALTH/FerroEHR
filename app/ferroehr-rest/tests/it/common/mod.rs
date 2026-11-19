@@ -1326,46 +1326,6 @@ pub(crate) async fn rendered_audit_event(pool: &PgPool, chain: &str, chain_seq: 
         .expect("the audit record is stored")
 }
 
-/// The columns migration 0017 added of every stored audit record, every
-/// stored access-log entry, then every record's served FHIR document, as text, for the tests that assert a value
-/// never reaches the trail.
-pub(crate) async fn audit_texts(pool: &PgPool) -> Vec<String> {
-    use ferroehr::system_log::store::{AuditSearchFilter, AuditStore};
-    let mut texts: Vec<String> = sqlx::query_scalar(
-        "SELECT concat_ws(' ', issuer, client_id, ehr_id, subject_namespace, \
-         category_content::text) FROM audit.access_trail ORDER BY chain, chain_seq",
-    )
-    .fetch_all(pool)
-    .await
-    .expect("read the stored audit rows");
-    let entries: Vec<String> = sqlx::query_scalar::<_, String>(
-        "SELECT audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
-         r.time_recorded, r.ehr_id, r.request_id, r.resource_id)::text FROM audit.access_log_record r \
-         LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared ORDER BY r.chain_seq",
-    )
-    .fetch_all(pool)
-    .await
-    .expect("read the stored access-log entries")
-    .into_iter()
-    .map(|document| canonical_entry(&document))
-    .collect();
-    texts.extend(entries);
-    let documents = AuditStore::new(pool.clone())
-        .search(&AuditSearchFilter {
-            count: 1000,
-            ..AuditSearchFilter::default()
-        })
-        .await
-        .expect("render the stored audit records")
-        .documents;
-    texts.extend(documents.iter().map(|document| {
-        serde_json::to_value(document)
-            .expect("a served document")
-            .to_string()
-    }));
-    texts
-}
-
 /// The canonical form of the access-log entry `document`, as
 /// `audit.access_log_document` reads it from its row (#5784).
 pub(crate) fn canonical_entry(document: &str) -> String {

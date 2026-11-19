@@ -338,47 +338,6 @@ key is already bound to another party, and **404** for an unknown or
 deleted `PERSON`. The [party mapping](installation/config-auth.md#the-party-mapping)
 says which parties are protected.
 
-## Reading a party's protected identifiers
-
-With [national-identifier protection](installation/config-privacy.md#protecting-national-identifiers-in-the-demographic-domain)
-on, a party's versioned body carries a reference where each protected
-identifier stood, and every ordinary read serves that reference.
-`GET {ext}/admin/party/identifiers` is the one route that puts the values back
-for a reader entitled to see them. No openEHR specification governs it; it is
-our own extension.
-
-```bash
-curl -H "Authorization: Bearer $TOKEN" \
-  "$BASE/admin/party/identifiers?version_uid=8d7c…::ferroehr.local::2"
-```
-
-```json
-{
-  "version_uid": "8d7c…::ferroehr.local::2",
-  "expanded_schemes": ["nl-bsn"],
-  "version": { "_type": "ORIGINAL_VERSION", "data": { "_type": "PERSON", … } }
-}
-```
-
-- **Two gates.** The route is in the admin group, so it needs `api.admin`
-  and the admin role, and it also needs a `read_identifiers` policy grant in
-  the CDR
-  ([Operational policy](operational-policy.md#what-the-grants-decide)).
-  Holding the admin role alone reveals no national identifier (**403**).
-- **Any version.** `version_uid` names one party version; a historical
-  version shows the value it committed.
-- **A view, never a write.** The body is the stored `ORIGINAL_VERSION` with
-  the values put back, so it no longer matches the signed version. Nothing is
-  written back.
-- **Every read is recorded.** Each scheme expanded is one access record in the
-  `demographic` domain, naming the reader, the party and the scheme
-  (`party:<id>#national-identifier:<scheme>`), never the value. A version that
-  holds no protected identifier still leaves one record. A record that
-  cannot be written withholds the values with **503**.
-- **Refusals.** **400** for a missing or malformed `version_uid`, or a
-  deployment that configures no identifier protection; **404** when no party
-  holds that version.
-
 ## Storage integrity
 
 Two routes that check the stored data against itself and repair what they
@@ -670,20 +629,6 @@ already exists is reported the same way, under its own kind (`PERSON`,
 
 Both directions are lossless: a dump and a load reproduce every record,
 whichever format and container you choose.
-
-With [national-identifier protection](installation/config-privacy.md) on, a
-party's demographic record also carries its sealed identifier rows, live and
-retired, as base64 ciphertext, nonce and lookup digest. The archive never holds
-a protected value in plaintext. The rows open again only under the same
-`[privacy.identifier_protection]` root key, so restore a dump into a
-deployment configured with the key it was taken under. A load reports a
-demographic container in the response array and restores none of it when:
-
-- one of its sealed rows holds a value that is already live for another party
-  in this repository, or names a scheme this repository has not registered;
-- with protection on here, one of its versions carries a protected scheme's
-  value in plaintext, or references a sealed row the container does not
-  carry.
 
 ### Refusals
 

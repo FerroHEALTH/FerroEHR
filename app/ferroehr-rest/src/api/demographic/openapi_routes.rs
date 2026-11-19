@@ -415,20 +415,17 @@ macro_rules! party_kind_handlers {
                                                   `Content-Type` declares nothing to refuse.",
                      body = serde_json::Value),
                     (status = 409, description = concat!("OUR OWN EXTENSION — no openEHR spec \
-                                                  governs national-identifier protection. \
-                                                  With `[privacy.identifier_protection]` \
-                                                  on, the submitted ", $upper, " carries a \
-                                                  protected identifier whose value the \
-                                                  latest version of another party already \
-                                                  holds: one value identifies one party. The \
-                                                  status is the released `409 Conflict` \
-                                                  trigger, \"the request could not be \
-                                                  processed because it might generate a \
+                                                  governs these triggers. The submitted ", $upper, " \
+                                                  carries a binding key, a `userName`, an \
+                                                  `externalId`, a group `displayName` or a \
+                                                  client identifier another live party holds, \
+                                                  or a record subject reference another \
+                                                  PERSON declares. The status is the released \
+                                                  `409 Conflict` trigger, \"the request could \
+                                                  not be processed because it might generate a \
                                                   duplicate or a conflict\" \
                                                   (`Requests_and_responses.md` §HTTP status \
-                                                  codes); the released operation does not \
-                                                  enumerate `409`. The body names the scheme, \
-                                                  never the value."),
+                                                  codes)."),
                      body = serde_json::Value),
                     (status = 422, description = concat!("The released trigger, verbatim: `422 \
                                                   Unprocessable Entity` \"is returned when the \
@@ -441,10 +438,7 @@ macro_rules! party_kind_handlers {
                                                   not the type designation), or a body whose \
                                                   `_type` is a different PARTY subtype than \
                                                   the route's — the routed kind's codec is the \
-                                                  one that decodes it. With identifier protection on, also a ", $upper, " \
-                                                  carrying two values in one protected scheme, \
-                                                  or referencing a protected identifier this \
-                                                  party does not hold (our own extension)."),
+                                                  one that decodes it."),
                      body = serde_json::Value)
                 )
             )]
@@ -968,20 +962,17 @@ macro_rules! party_kind_handlers {
                                                   nothing to refuse.",
                      body = serde_json::Value),
                     (status = 409, description = concat!("OUR OWN EXTENSION — no openEHR spec \
-                                                  governs national-identifier protection. \
-                                                  With `[privacy.identifier_protection]` \
-                                                  on, the submitted ", $upper, " carries a \
-                                                  protected identifier whose value the \
-                                                  latest version of another party already \
-                                                  holds: one value identifies one party. The \
-                                                  status is the released `409 Conflict` \
-                                                  trigger, \"the request could not be \
-                                                  processed because it might generate a \
+                                                  governs these triggers. The submitted ", $upper, " \
+                                                  carries a binding key, a `userName`, an \
+                                                  `externalId`, a group `displayName` or a \
+                                                  client identifier another live party holds, \
+                                                  or a record subject reference another \
+                                                  PERSON declares. The status is the released \
+                                                  `409 Conflict` trigger, \"the request could \
+                                                  not be processed because it might generate a \
                                                   duplicate or a conflict\" \
                                                   (`Requests_and_responses.md` §HTTP status \
-                                                  codes); the released operation does not \
-                                                  enumerate `409`. The body names the scheme, \
-                                                  never the value."),
+                                                  codes)."),
                      body = serde_json::Value),
                     (status = 422, description = concat!("The released trigger, verbatim: `422 \
                                                   Unprocessable Entity` \"is returned when the \
@@ -991,10 +982,7 @@ macro_rules! party_kind_handlers {
                                                   `specifications/responses/422.yaml`). Here: \
                                                   an RM invariant violation on the submitted \
                                                   ", $upper, ", or a body typed as a different PARTY \
-                                                  subtype than the route's. With identifier protection on, also a ", $upper, " \
-                                                  carrying two values in one protected scheme, \
-                                                  or referencing a protected identifier this \
-                                                  party does not hold (our own extension)."),
+                                                  subtype than the route's."),
                      body = serde_json::Value)
                 )
             )]

@@ -81,8 +81,8 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 15);
-    assert_eq!(applied("clinical").await, 55);
-    assert_eq!(applied("party").await, 58);
+    assert_eq!(applied("clinical").await, 56);
+    assert_eq!(applied("party").await, 59);
     assert_eq!(applied("audit").await, 50);
 
     let tables = |schema: &'static str| {
@@ -165,9 +165,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "contribution",
             "event_outbox",
             "event_outbox_reader",
-            "identifier_scheme",
             "item_tag",
-            "national_identifier",
             "node",
             "party_relationship_target",
             "pmir_identity",
@@ -298,8 +296,8 @@ async fn only_the_guarded_ehr_columns_name_a_subject_in_the_clinical_domain() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
 
-    // A keyed digest of a subject reference (HMAC-SHA-256, #5699) names no
-    // subject: its key never reaches the database. Such a column is held to
+    // A SHA-256 digest of a subject reference (#5699, #6092) digests the
+    // pseudonym the guarded ehr pair already holds. Such a column is held to
     // the digest's 32 octets by a check, so it cannot carry an identifier.
     let digests: Vec<(String, String)> = sqlx::query_as(
         "SELECT c.table_name, c.column_name FROM information_schema.columns c \
@@ -323,7 +321,7 @@ async fn only_the_guarded_ehr_columns_name_a_subject_in_the_clinical_domain() {
             ("access_care".to_owned(), "subject_digest".to_owned()),
             ("ehr".to_owned(), "subject_digest".to_owned()),
         ],
-        "the care projection's keyed digests, each held to 32 octets"
+        "the care projection's digests, each held to 32 octets"
     );
     let columns: Vec<(String, String)> = sqlx::query_as(
         "SELECT table_name, column_name FROM information_schema.columns \

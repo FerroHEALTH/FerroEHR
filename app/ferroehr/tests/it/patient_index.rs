@@ -35,8 +35,6 @@ use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
 pub(crate) const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
 /// The patient's identifier domain, as a TRC's `system` names it.
 pub(crate) const NATIONAL: &str = "urn:oid:2.999.4.1";
-/// A synthetic identifier of a protected scheme, in no national number's form.
-const SEALED: &str = "SEALED-PATIENT-1";
 
 fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
@@ -360,60 +358,4 @@ async fn an_identifier_two_persons_carry_finds_no_ehr() {
         Vec::new(),
         "an ambiguous identifier fails closed"
     );
-}
-
-#[tokio::test]
-async fn a_protected_identifier_is_found_through_its_lookup_digest() {
-    let pix = MockServer::start().await;
-    let db = testkit::db().await.expect("testkit database");
-    let engine = Arc::new(crate::pseudonymisation_boundary::protection_engine(
-        db.pool(),
-    ));
-    let one = pixm_replica(&db, &pix)
-        .await
-        .with_identifier_protection(Arc::clone(&engine));
-    let two = pixm_replica(&db, &pix)
-        .await
-        .with_identifier_protection(engine);
-    // NOTE: the scheme is the one the protection fixture seals; the issuer is a test domain.
-    let issuer = "urn:oid:2.999.4.2";
-    let pseudonym = Uuid::now_v7().to_string();
-    let (person, _) = create(
-        &one,
-        PartyKind::Person,
-        &patient(
-            "E",
-            &[identifier(issuer, SEALED, "nl-bsn")],
-            &[identifier(CLINICAL, &pseudonym, "PI")],
-        ),
-    )
-    .await
-    .expect("the patient commits");
-    let ehr = create_ehr_subject(&one, &SubjectRef::person(&pseudonym, CLINICAL)).await;
-
-    let stored: Option<String> = sqlx::query_scalar(
-        "SELECT value FROM party.binding_patient_identifier WHERE holder_id = $1",
-    )
-    .bind(person.0)
-    .fetch_optional(&db.pool())
-    .await
-    .expect("the projection reads");
-    assert!(
-        stored.is_some_and(|value| !value.contains(SEALED)),
-        "the projection holds the sealed row's reference, never the value"
-    );
-    assert_eq!(
-        two.patient_ehrs(&SubjectRef::person(SEALED, issuer))
-            .await
-            .expect("the TRC resolves"),
-        vec![ehr]
-    );
-    assert_eq!(
-        two.patient_ehrs(&SubjectRef::person(SEALED, NATIONAL))
-            .await
-            .expect("the TRC resolves"),
-        Vec::new(),
-        "the issuer is compared with the value"
-    );
-    assert_eq!(pix_calls(&pix).await, 0);
 }

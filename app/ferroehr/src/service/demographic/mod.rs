@@ -65,7 +65,6 @@ pub mod adopt;
 pub mod default_definitions;
 pub mod group_provision;
 pub mod group_write;
-pub mod identifier;
 pub mod identity_feed;
 pub mod jit;
 pub mod mapped_write;

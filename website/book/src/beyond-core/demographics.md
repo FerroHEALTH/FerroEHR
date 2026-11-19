@@ -47,13 +47,12 @@ privilege](../operations.md#database-roles-and-least-privilege) for the roles
 and [the pseudonymisation boundary](../security.md#the-pseudonymisation-boundary)
 for what the split is for.
 
-The demographic side is where a person's national identifier legitimately
-lives, and `[privacy.identifier_protection]` decides how it is held there:
-with it on, the value leaves the versioned body for an encrypted column and
-the body keeps a reference, while a keyed digest beside the ciphertext still
-answers "which party holds this identifier". The wire shape of every route
-below is unchanged either way. See
-[Privacy & data minimisation](../installation/config-privacy.md#protecting-national-identifiers-in-the-demographic-domain).
+The demographic side holds no national identifier either. A national
+identifier belongs in the master patient index (FerroPIX, over IHE PIX/PDQ and
+PIXm), and the CDR knows the subject only as a pseudonym. A party is stored,
+signed and served exactly as it was committed, identifiers included, so keep
+national identifiers out of the parties you write. See
+[Privacy & data minimisation](../installation/config-privacy.md#national-identifiers-belong-in-the-master-patient-index).
 
 ## Party endpoints
 

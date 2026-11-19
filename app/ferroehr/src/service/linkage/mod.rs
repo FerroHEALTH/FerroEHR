@@ -40,7 +40,7 @@ impl FerroEhrService {
     /// The record names what was crossed (`party-ehr:query` for a join,
     /// `subject:<namespace>` for a subject resolution), the EHR it resolved to
     /// when it resolved to exactly one, and how many EHRs it resolved — never an identifier value: a trail carrying the identity
-    /// would hold the very data the sealing keeps out of readable storage. The
+    /// would rejoin it to the records the domain split keeps apart. The
     /// actor is the request's authenticated committer and the purpose is the
     /// code the deployment's own vocabulary accepted
     /// ([`crate::system_log::access_context`]); outside a request scope both

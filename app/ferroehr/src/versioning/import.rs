@@ -43,7 +43,7 @@ use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::error::{ServiceError, Violation};
+use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
 use crate::storage::codec::reassembly_order;
 use crate::storage::compact::RootIdentity;
@@ -474,55 +474,6 @@ async fn land_first_receipt(
     Ok(())
 }
 
-/// Refuses a received party version that carries a protected national
-/// identifier this deployment has not sealed.
-///
-/// A copy is stored verbatim (master06 §Copying: "the `ORIGINAL_VERSION`
-/// instance is never modified"), so it cannot be sealed the way a local commit
-/// is; the refusal keeps the value out of the record, as the clinical
-/// data-minimisation scan does for clinical content. No openEHR spec governs
-/// identifier protection — our own design/extension.
-///
-/// A sealed identifier does not travel in an extract (#3777): each deployment
-/// seals under its own root key, and the sealed row is not part of the
-/// `ORIGINAL_VERSION`, so a reference from another instance holds no row here.
-/// The refusal names the remedy: the receiving deployment registers the party
-/// through its own party API, which seals under its own key.
-///
-/// # Errors
-/// The [`ServiceError`] the engine's refusal maps to:
-/// `422` for a plaintext protected value or a reference this party does not
-/// hold.
-async fn refuse_unsealed_identifiers(
-    tx: &mut PgConnection,
-    act: &ImportAct<'_>,
-    cursor: &ContainerCursor<'_>,
-    data: &Value,
-) -> Result<(), ServiceError> {
-    let Some(engine) = act.ctx.identifiers else {
-        return Ok(());
-    };
-    if !cursor.kind.is_demographic() || data.is_null() {
-        return Ok(());
-    }
-    engine
-        .refuse_unsealed(tx, cursor.vo_id.0, data)
-        .await
-        .map_err(|error| {
-            if !error.is_foreign_reference() {
-                return ServiceError::from(error);
-            }
-            ServiceError::content_invalid(Violation::new(
-                "the party references a protected identifier this deployment does not hold for \
-                 it; a sealed identifier from another deployment does not travel in an EHR \
-                 extract, so import the extract without this party and register the person \
-                 through this deployment's party API, which seals the identifier under its own \
-                 key"
-                .to_owned(),
-            ))
-        })
-}
-
 /// Replays one received original as an `IMPORTED_VERSION` row (plus its nodes
 /// and attestations), returning the PHI-free outbox entry announcing it.
 ///
@@ -561,7 +512,6 @@ async fn import_one_version(
     if !cursor.kind.is_demographic() && !version.data.is_null() {
         act.privacy.enforce(cursor.kind.as_str(), &version.data)?;
     }
-    refuse_unsealed_identifiers(tx, act, cursor, &version.data).await?;
     // The content, decomposed once: the node rows to write AND — through
     // `reassemble` — the exact bytes a later read will serve.
     let version_uid = object_version_id(cursor.vo_id, &version.creating_system_id, version.tree);

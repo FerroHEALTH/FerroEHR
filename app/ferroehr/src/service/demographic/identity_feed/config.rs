@@ -70,8 +70,7 @@ pub struct IdentifierDomain {
     /// The domain's `Identifier.system`, the `DV_IDENTIFIER.issuer` its
     /// identifiers are carried under, such as `urn:oid:2.999.1.1`.
     pub system: String,
-    /// The `DV_IDENTIFIER.type` they are written with, such as `MR`; a
-    /// protected scheme's code keeps the identifier sealed.
+    /// The `DV_IDENTIFIER.type` they are written with, such as `MR`.
     pub identifier_type: String,
 }
 

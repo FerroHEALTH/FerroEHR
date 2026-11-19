@@ -252,7 +252,6 @@ licensed copy follows them by control family.
 |---|---|---|
 | NEN 7510-1, the information security management system | \`website/book/src/compliance/shared-responsibility.md\`, \`website/book/src/compliance/index.md\` | The software supplies technical controls an ISMS can point at; running the ISMS, and holding any certificate, is the deployment's |
 | NEN 7510-2, the control set | \`website/book/src/compliance/shared-responsibility.md\`, \`website/book/src/compliance/index.md\` | Access control, audit logging, cryptography in transit and for version signatures, supply-chain verification |
-| NEN 7510-2, cryptographic controls | \`website/book/src/security/dpia.md\` | National identifiers sealed and looked up by keyed digest, resolved under audit |
 
 ## Why the citations still work without the text
 

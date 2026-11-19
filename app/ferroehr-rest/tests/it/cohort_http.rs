@@ -262,7 +262,7 @@ async fn an_unbound_predicate_is_refused() {
         &app,
         common::post_json(
             &format!("{}/query/cohort", common::EXT),
-            &body("national_identifier", "x"),
+            &body("passport_number", "x"),
         ),
     )
     .await;
@@ -273,7 +273,7 @@ async fn an_unbound_predicate_is_refused() {
         "the refusal uses the server's one error shape: {text}"
     );
     assert!(
-        text.contains("national_identifier"),
+        text.contains("passport_number"),
         "the refusal names the predicate: {text}"
     );
     drop(db);

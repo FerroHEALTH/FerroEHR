@@ -59,9 +59,7 @@ impl LiveGrants {
     /// The patient `PERSON`s that carry the identifier `value` under
     /// `issuer` at the patient identifier path while they are `complete` or
     /// `incomplete`, sorted, read on the party pool with one indexed
-    /// statement: by the value as written, or, for an identifier of a
-    /// protected scheme, by one of `protected`, each a scheme with the lookup
-    /// digest of `value` in it. The issuer is the identifier's domain (RM
+    /// statement. The issuer is the identifier's domain (RM
     /// Demographic IM §2.1.3); reading it so is our own design (#5648).
     ///
     /// # Errors
@@ -70,13 +68,12 @@ impl LiveGrants {
         &self,
         issuer: &str,
         value: &str,
-        protected: &[(String, Vec<u8>)],
     ) -> Result<Vec<Uuid>, GrantsUnavailable> {
         let mut conn = acquire(&self.pool).await.map_err(StorageError::from)?;
-        Ok(crate::party_binding::grants::caller::patient::carrying(
-            &mut conn, issuer, value, protected,
+        Ok(
+            crate::party_binding::grants::caller::patient::carrying(&mut conn, issuer, value)
+                .await?,
         )
-        .await?)
     }
 
     /// The care teams and units the subject `subject` is under the care of:

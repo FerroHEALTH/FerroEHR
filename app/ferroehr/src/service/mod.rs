@@ -208,15 +208,6 @@ pub struct FerroEhrService {
     /// construction (an EHR's identity at creation is immutable). No openEHR
     /// spec governs it — our own performance design.
     pub(in crate::service) created_ehr_repr: ehr::created::CreatedEhrs,
-    /// The national-identifier protection engine
-    /// ([`crate::identifier_protection::engine`]), when the
-    /// deployment configured one.
-    ///
-    /// `None` leaves identifiers stored exactly as written, which is the
-    /// default posture; the binary installs the compiled
-    /// `[privacy.identifier_protection]` section.
-    pub(in crate::service) identifiers:
-        Option<Arc<crate::identifier_protection::engine::IdentifierProtection>>,
     /// The `DV_IDENTIFIER.type` of each patient identifier domain
     /// `[[pix.identifier_domain]]` names, by `Identifier.system`, which an
     /// applied PMIR message writes a linked identifier with.
@@ -346,7 +337,6 @@ impl FerroEhrService {
             outbox_gate: crate::extensions::outbox::OutboxGate::Always,
             skip_identical_resend: false,
             created_ehr_repr: ehr::created::created_ehrs(ehr::created::CREATED_EHRS),
-            identifiers: None,
             pmir_domains: Arc::default(),
             care_projected: Arc::default(),
             privacy: Arc::new(crate::privacy::PrivacyPolicy::default()),
@@ -367,42 +357,6 @@ impl FerroEhrService {
     }
 
     // ── Builders (the binary wires each configured subsystem) ────────────────
-
-    /// Install the national-identifier protection engine.
-    ///
-    /// Without it the demographic write path stores identifiers exactly as
-    /// written, which is the default posture; the binary installs the compiled
-    /// `[privacy.identifier_protection]` section when it is enabled.
-    #[must_use]
-    pub fn with_identifier_protection(
-        mut self,
-        engine: Arc<crate::identifier_protection::engine::IdentifierProtection>,
-    ) -> Self {
-        self.identifiers = Some(engine);
-        self
-    }
-
-    /// The national-identifier protection engine, when one is configured.
-    #[must_use]
-    pub fn identifier_protection(
-        &self,
-    ) -> Option<&crate::identifier_protection::engine::IdentifierProtection> {
-        self.identifiers.as_deref()
-    }
-
-    /// Install the protection engine when the deployment built one.
-    ///
-    /// The optional twin of [`Self::with_identifier_protection`], so the
-    /// binary's builder chain stays one expression whether or not the section
-    /// is enabled.
-    #[must_use]
-    pub fn with_identifier_protection_opt(
-        mut self,
-        engine: Option<Arc<crate::identifier_protection::engine::IdentifierProtection>>,
-    ) -> Self {
-        self.identifiers = engine;
-        self
-    }
 
     /// Install the compiled clinical-side data-minimisation policy
     /// ([`crate::privacy::PrivacyPolicy`]).
@@ -662,7 +616,6 @@ impl FerroEhrService {
             spec_profile: self.spec_profile,
             #[cfg(feature = "multimedia")]
             multimedia: self.multimedia.as_deref(),
-            identifiers: self.identifiers.as_deref(),
             outbox_enabled: self.outbox_written(),
             skip_identical_resend: self.skip_identical_resend,
             binding: &self.binding,

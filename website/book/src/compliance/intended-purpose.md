@@ -83,8 +83,9 @@ S3-compatible store ([S3 multimedia](../beyond-core/s3-multimedia.md)), or as
 references to an imaging archive; FerroEHR implements no DICOM image transfer.
 
 **Identities**, in the demographic domain: parties (persons, organisations,
-roles) and their identifiers, with national identifiers optionally sealed
-under AES-256-GCM ([the sealed identifier](../threat-model.md#the-sealed-identifier-and-its-lookup-digest)).
+roles) and their identifiers. National identifiers belong in the master
+patient index and are not held here
+([national identifiers stay in the master patient index](../threat-model.md#national-identifiers-stay-in-the-master-patient-index)).
 
 **The link between the two**: which party an EHR belongs to, as the EHR's own
 `EHR_STATUS.subject` in the clinical domain.

@@ -193,23 +193,24 @@ pub(super) fn version_response(
 
 /// Whether a demographic commit stores a different body than the one submitted.
 ///
-/// Two collaborators rewrite the body before it is decomposed and signed: the
-/// `DV_MULTIMEDIA` offload replaces inline media with a reference, and
-/// national-identifier protection replaces each protected value with a
-/// reference to its sealed row. A write response built from the submitted
-/// body would then serve bytes the store does not hold — for identifier
-/// protection, the very value the store exists to keep out of the record — so
+/// The `DV_MULTIMEDIA` offload rewrites the body before it is decomposed and
+/// signed, replacing inline media with a reference. A write response built
+/// from the submitted body would then serve bytes the store does not hold, so
 /// the write paths re-read the stored form instead. No openEHR spec governs
-/// either rewrite — our own design/extension.
+/// the rewrite — our own design/extension.
+#[cfg(feature = "multimedia")]
 pub(super) fn commit_rewrites_body(service: &FerroEhrService) -> bool {
-    #[cfg(feature = "multimedia")]
-    let offloads = service
+    service
         .multimedia
         .as_ref()
-        .is_some_and(|engine| engine.offload_enabled());
-    #[cfg(not(feature = "multimedia"))]
-    let offloads = false;
-    offloads || service.identifiers.is_some()
+        .is_some_and(|engine| engine.offload_enabled())
+}
+
+/// Whether a demographic commit stores a different body than the one
+/// submitted: never in a build without the `DV_MULTIMEDIA` offload.
+#[cfg(not(feature = "multimedia"))]
+pub(super) fn commit_rewrites_body(_service: &FerroEhrService) -> bool {
+    false
 }
 
 /// The create/update representation built **from the commit result**, never a

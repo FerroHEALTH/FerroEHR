@@ -65,8 +65,8 @@ store, or before it can trust anything:
 Everything else is CDR data: who may do what is party data (below), and the
 policy with no demographic home is an admin register. The privileges beyond
 clinical access have no configuration key: reading one subject's access log,
-acting as an EHDS Art. 10 access service, importing, and reading protected
-national identifiers are each a grant of its own operation
+acting as an EHDS Art. 10 access service, and importing are each a grant of
+its own operation
 ([What the grants decide](#what-the-grants-decide)).
 
 ## The policy parties
@@ -212,7 +212,6 @@ own in it, which the change request does not propose. A `CAPABILITY` grants an o
 | `federated_organisation_access` | Admit a federation partner organisation itself under a data-sharing agreement |
 | `read_subject_audit` | Read the access log of one subject |
 | `access_service` | Act as an EHDS Article 10 access service, held to a subject's opt-out |
-| `read_identifiers` | Read a party's protected national identifiers |
 | `data_origin` | Be an origin of data: the grant's `origin` is the id the party's data carry |
 | `read_change_feed` | Read the commit-event outbox as the reader the grant's `reader` names |
 | `scim_provision` | Provision Users and Groups over SCIM, owning the binding keys of the grant's `binding_issuer` |
@@ -437,10 +436,6 @@ grant whose `subject_namespace` names the EHR's subject namespace;
 under its `commit_composition` grants and exports under its
 `export_ehr_extract` grants
 ([What a system client may do](#what-a-system-client-may-do)).
-
-**Reading protected identifiers.** `GET /admin/party/identifiers` admits an
-administrator who holds a `read_identifiers` grant. The administrator role
-alone reveals no national identifier.
 
 **Reading one subject's access log.** `GET /fhir/r4/AuditEvent` admits a
 caller outside the administrator role that holds a `read_subject_audit`

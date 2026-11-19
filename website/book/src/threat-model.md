@@ -41,7 +41,7 @@ What an attacker wants, in the order the loss hurts:
 | Asset | Where it lives | Why it matters |
 |---|---|---|
 | **Clinical payload:** compositions, EHR status, folders | the `clinical` schema's `node` and `version` tables, archival partitions included | this is PHI; disclosure is the primary harm and it is not undoable |
-| **Demographic parties and their identifiers** | the `party` schema, archival partitions included, with protected national identifiers sealed in `national_identifier` | who the people are, held apart from what is recorded about them |
+| **Demographic parties and their identifiers** | the `party` schema, archival partitions included; a national identifier belongs in the master patient index and is not among them | who the people are, held apart from what is recorded about them |
 | **The EHR id / subject cross-reference** | the EHR's own `EHR_STATUS.subject.external_ref`, promoted to the `clinical.ehr` subject columns | the additional information that re-attributes a pseudonymised record to a person once joined to the party or the identity source |
 | **The audit trail** | the `audit` schema, plus any configured forwarding sink | it is the evidence that everything else happened; an attacker who can edit it can make an access disappear |
 | **Version history and its integrity** | `version`, `vo_head`, `contribution`, attestations | an openEHR record's value is that it is *append-only and attributable*; a silently rewritten prior version is worse than a deleted one |
@@ -291,10 +291,12 @@ contribution and an audit record in the same transaction.
   the single largest residual risk in this system, and it is inherent: FerroEHR
   enforces authorization at the API. Protect the credentials and the network
   path accordingly.
-- **Encryption at rest is the operator's.** FerroEHR does not encrypt clinical
-  payload before it reaches PostgreSQL; the payload is queryable JSONB, which is
-  what makes AQL possible and is incompatible with application-level encryption
-  of the same fields.
+- **Encryption at rest is the operator's, and it is required.** FerroEHR
+  encrypts no field before it reaches PostgreSQL; the payload is queryable
+  JSONB, which is what makes AQL possible and is incompatible with
+  application-level encryption of the same fields. The database volumes and
+  every backup are encrypted at rest under keys held off the database hosts
+  ([go-live checklist](security/go-live-checklist.md#9-the-database-volumes-and-backups-are-encrypted-at-rest)).
 - **A superuser can rewrite history.** The temporal design makes accidental
   overwrite structurally hard; it does not defend against someone with `UPDATE`
   on the tables. The audit chain (B7) is the detection layer.
@@ -379,8 +381,8 @@ of no other, so a privilege cannot arrive through a membership.
 |---|---|---|
 | `ferroehr_clinical` | `clinical`, archival partitions included, with `SELECT`, `INSERT`, `UPDATE` and `DELETE`; `MAINTAIN` on the partitioned `node`, `version` and `vo_attestation` and on `ehr`, to keep their planner statistics; the `ext.posture` stamp, and `SELECT` on `ext.posture` for the subject pseudonym guard; `USAGE` on `ext`; in `audit`, record an event, stamp it forwarded, run the retention reaper and verify the chain | `party`, revoked explicitly and in both directions |
 | `ferroehr_clinical_reader` | `SELECT` on `clinical`; `USAGE` on `ext`; read the `audit` repository and verify the chain | `party` |
-| `ferroehr_party` | `party`, archival partitions included, with `SELECT`, `INSERT`, `UPDATE` and `DELETE`, the sealed `national_identifier` rows included; `MAINTAIN` on the partitioned `node`, `version` and `vo_attestation`, to keep their planner statistics | `clinical`, revoked explicitly and in both directions |
-| `ferroehr_party_reader` | `SELECT` on `party`. On `national_identifier` the table-level grant is revoked and re-granted column by column, so it reads `id`, `party_id`, `scheme`, `created_at` and `retired_at` and never `lookup_digest`, `nonce` or `ciphertext` | `clinical` |
+| `ferroehr_party` | `party`, archival partitions included, with `SELECT`, `INSERT`, `UPDATE` and `DELETE`; `MAINTAIN` on the partitioned `node`, `version` and `vo_attestation`, to keep their planner statistics | `clinical`, revoked explicitly and in both directions |
+| `ferroehr_party_reader` | `SELECT` on `party` | `clinical` |
 | The schema-preparation credential (`[database] migrate_url`, normally a member of `ferroehr_migrator`) | every schema: it issues the DDL of all four migration sets and reads all four `_sqlx_migrations` tables, and it owns the objects it created | nothing. The server opens it for that one boot step and closes it again, so no pool is held on it and no request is served through it |
 
 A schema's `_sqlx_migrations` bookkeeping, the record of which migrations ran
@@ -432,9 +434,9 @@ one.
 **Residual risk.**
 
 - **Each dump is plaintext of its own domain.** The clinical one holds every
-  composition. The demographic one holds every party and the sealed identifier
-  columns with them, which stay sealed only while
-  `[privacy.identifier_protection] key` lives somewhere the dump does not.
+  composition, and the demographic one every party. Encryption of the dump
+  volume or object store at rest, under a key held apart from the dumps, is
+  the control.
 - **Two dumps together are worth more than twice one.** The demographic dump
   beside the clinical one says which person each record belongs to: the
   record is re-identified. Who may read each claim is the control, and it
@@ -472,8 +474,8 @@ writes it.
   a name, a street address or a date of birth written into free text or an
   unconstrained `DV_IDENTIFIER` is stored as written. Keeping such values out
   of clinical content is the controller's design of its templates and
-  feeds; the demographic domain is where an identifier belongs, sealed under
-  `[privacy.identifier_protection]`.
+  feeds. A national identifier belongs in the master patient index, never
+  in either domain of the CDR.
 - **`subject_namespaces` is empty by default**, and with it empty the subject
   rule and the database trigger are both out of force. The
   `open_subject_namespace` gap of `deployment.profile` is what names that.
@@ -521,48 +523,24 @@ identifier. FerroEHR matches, links and merges no patients.
   a record for a person is itself a disclosure, which is why the miss is
   recorded too.
 
-### The sealed identifier and its lookup digest
+### National identifiers stay in the master patient index
 
-**Control.** A protected national identifier leaves the versioned body and
-lives in `party.national_identifier` under AES-256-GCM with a fresh
-96-bit nonce per record, with the scheme code bound in as
-associated data so a ciphertext moved between either fails to open. Beside it
-is an HMAC-SHA-256 digest under a separate subkey, which is what lets equality
-lookup work without the plaintext ever reaching the database. Both subkeys are
-derived per domain from one configured root key. The resolve
-function is `SECURITY DEFINER`, `PUBLIC` is revoked from it, and only
-`ferroehr_party` may execute it. No server path calls it: FerroEHR offers no
-lookup from an identifier to its party. The scheme
-registry is a closed set: an identifier whose scheme nobody registered cannot
-be stored as a protected one at all.
-
-Each party version seals rows of its own. When a later version or the logical
-deletion supersedes a version, its rows get a `retired_at` stamp and stay, so
-an older version still expands to the value it committed. The resolve
-function matches live rows only, and a value is live for at most one party at a
-time.
-
-Three paths that move a party version keep the value sealed:
-
-- **EHR-Extract import:** a received version is stored verbatim, so the server
-  cannot seal it on the way in. It refuses with a `422` a version that carries
-  a protected scheme's value in plaintext, and one that references a sealed
-  row this instance does not hold, such as a reference from another instance.
-- **Admin dump and load:** the archive carries the party's sealed rows, live
-  and retired, as base64 ciphertext, nonce and digest, never the value. They
-  open again only under the same root key.
-- **Physical erasure of a party:** every sealed row of the party, live and
-  retired, is deleted in the same transaction as its versions.
+**Control.** The CDR holds no national identifier. A person is resolved to
+their pseudonym by the master patient index (FerroPIX, over IHE PIX/PDQ and
+PIXm), and the clinical domain holds the pseudonym only, which the subject
+rule enforces. A party is stored, signed and served as committed, so the
+stored version is the signed one on every path that moves it: the commit, the
+EHR-Extract import, the admin dump and load, and the erasure.
 
 **Residual risk.**
 
-- **The root key is the whole control.** Held beside a dump, the ciphertext
-  opens and the digest can be recomputed over a nine-digit space in seconds.
-  It belongs in a secret store, not next to the backup.
-- **Protection is off by default**, and an identifier whose type the
-  deployment did not list is left in the versioned body exactly as written.
-- **Rotating the key is a re-encryption**, not an edit, because every record
-  is sealed under a subkey derived from it.
+- **A client can still write a national identifier into a party.** The server
+  stores a party as committed and ships no registry of national identifier
+  schemes, so keeping identifiers out of the parties it writes is the
+  controller's design of its templates and feeds.
+- **What a party carries is as safe as the volume under it.** Encryption at
+  rest of the database volumes and backups is the control, and it is a
+  deployment requirement.
 
 ### The subject pseudonym
 

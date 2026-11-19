@@ -1579,3 +1579,101 @@ async fn demographic_contribution_member_is_open_but_assigned_members_are_refuse
         );
     }
 }
+
+/// A `PERSON` whose `PARTY_IDENTITY` carries `DV_IDENTIFIER`s is stored as
+/// committed (#6092): the version body, its content digest and its signature
+/// are over the committed form, and every read serves it.
+///
+/// The server substitutes no reference for an identifier (RM demographic
+/// `master02-demographic_package.adoc` §Party Identification records an
+/// identifier as data of the party, and RM common
+/// `master06-change_control_package.adoc` §Digital Signature signs the
+/// version as committed).
+#[tokio::test]
+async fn a_person_with_identifiers_is_stored_and_signed_as_committed() {
+    use ferroehr::versioning::signature::signer::Signer;
+    use ferroehr::versioning::signature::verify::Verdict;
+    use openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json;
+
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    let mut committed = person("Lovelace");
+    let items = committed
+        .pointer_mut("/identities/0/details/items")
+        .and_then(Value::as_array_mut)
+        .expect("the identity items");
+    for (name, id_type, id) in [
+        ("passport", "passport", "XA0042817"),
+        ("registry number", "urn:example:registry", "R-7731-55"),
+    ] {
+        items.push(json!({
+            "_type": "ELEMENT",
+            "archetype_node_id": "at0004",
+            "name": { "_type": "DV_TEXT", "value": name },
+            "value": { "_type": "DV_IDENTIFIER", "type": id_type, "id": id,
+                       "issuer": "Example Registry", "assigner": "Example Registry" }
+        }));
+    }
+
+    let created = svc
+        .party_create(PartyKind::Person, WriteRequest::new(typed(&committed)))
+        .await
+        .expect("commit a person carrying identifiers")
+        .body;
+    assert_eq!(
+        created["identities"], committed["identities"],
+        "the create response carries the identities as committed"
+    );
+    let vo_id = vo_uuid(&created);
+    let read = svc
+        .party_get(PartyKind::Person, crate::fixtures::at(vo_id.clone()), None)
+        .await
+        .expect("read the person back")
+        .into_value_response()
+        .expect("the stored body parses")
+        .body;
+    assert_eq!(read, created, "a read serves the stored, committed form");
+
+    // The stored body is the committed form, and its content digest is over it.
+    let (body, digest): (String, Vec<u8>) = sqlx::query_as(
+        "SELECT body, content_digest FROM party.version WHERE vo_id = $1::uuid AND body IS NOT NULL",
+    )
+    .bind(&vo_id)
+    .fetch_one(&pool)
+    .await
+    .expect("the stored version");
+    let stored: Value = serde_json::from_str(&body).expect("the stored body parses");
+    assert_eq!(stored["identities"], committed["identities"]);
+    for id in ["XA0042817", "R-7731-55"] {
+        assert!(body.contains(id), "the stored body carries {id}");
+    }
+    let rendered = ferroehr::storage::render::index::render(&stored).expect("the body renders");
+    assert_eq!(
+        digest.as_slice(),
+        ferroehr::storage::render::content_digest(&rendered).as_slice(),
+        "the content digest is over the committed form"
+    );
+
+    // The signature recomputes from the served ORIGINAL_VERSION.
+    let version = svc
+        .versioned_party_version_get_by_id(
+            crate::fixtures::object(vo_id),
+            crate::fixtures::tree(ovid(&created)),
+        )
+        .await
+        .expect("the version reads")
+        .body;
+    assert_eq!(
+        version["data"], created,
+        "the version carries the committed body"
+    );
+    let signature = version["signature"].as_str().expect("a signature");
+    let canonical = canonical_form_of_json(&version).expect("canonical form");
+    assert_eq!(
+        Signer::digest_default().verify(&canonical, signature),
+        Verdict::DigestMatch,
+        "the signature is over the committed form"
+    );
+}
