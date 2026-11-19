@@ -55,8 +55,8 @@ pub fn app(app_state: AppState, health: Health, policy: StackPolicy) -> axum::Ro
 pub fn router(app_state: AppState) -> axum::Router {
     let origin = same_origin_check(&app_state);
     let sign_in = app_state.sign_in.clone();
-    let headers =
-        ConsoleHeaders::server_rendered("'self'").with_bundle(ferrohealth_ui::serve::PREFIX);
+    let headers = ConsoleHeaders::server_rendered(form_action(&app_state))
+        .with_bundle(ferrohealth_ui::serve::PREFIX);
     axum::Router::new()
         .nest(
             ferrohealth_ui::serve::PREFIX,
@@ -133,6 +133,16 @@ pub fn router(app_state: AppState) -> axum::Router {
         }))
 }
 
+/// The `form-action` of the pages' policy: `'self'`, and the origin of each
+/// SMART app a launch sends its new window to ([`crate::launch`]).
+fn form_action(state: &AppState) -> String {
+    let mut sources = vec!["'self'".to_owned()];
+    if let Some(launch) = state.launch.as_deref() {
+        sources.extend(launch.form_action_origins());
+    }
+    sources.join(" ")
+}
+
 /// The same-origin check of the viewer's unsafe requests: `Sec-Fetch-Site`
 /// decides, and without it `Origin` or `Referer` must name the public URL
 /// `auth.public_base_url` gives, when one is set.
@@ -206,7 +216,9 @@ async fn page(
     let scope = Arc::new(Scope::new(state, parts, posted));
     let drawn = crate::scope::run(Arc::clone(&scope), async {
         let drawn = crate::routes::draw().await;
-        if scope.answer(|answer| answer.redirect.is_some() || answer.session_over) {
+        if scope.answer(|answer| {
+            answer.redirect.is_some() || answer.away.is_some() || answer.session_over
+        }) {
             return None;
         }
         let body = if drawn.bare {
@@ -232,16 +244,17 @@ fn answered(
     answer: crate::scope::Answer,
     drawn: Option<ferrohealth_ui::html::Html>,
 ) -> axum::response::Response {
-    let mut response = match (answer.redirect, drawn) {
-        (Some(to), _) => found(&to),
-        (None, Some(document)) => {
+    let mut response = match (answer.away, answer.redirect, drawn) {
+        (Some(app), _, _) => see_other(&app),
+        (None, Some(to), _) => found(&to),
+        (None, None, Some(document)) => {
             let mut response = axum::response::Html(String::from(document)).into_response();
             if let Some(status) = answer.status {
                 *response.status_mut() = status;
             }
             response
         }
-        (None, None) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        (None, None, None) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
     for cookie in answer.cookies {
         response
@@ -260,6 +273,25 @@ fn found(to: &str) -> axum::response::Response {
             response
                 .headers_mut()
                 .insert(http::header::LOCATION, location);
+            response
+        }
+        Err(_invalid) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// The `303 See Other` that sends a launch's new window to the app (SMART
+/// App Launch 2.2.0, Launch App: EHR Launch, Request), never cached, since
+/// its `launch` value is single use (RFC 9111 §5.2.2.5).
+fn see_other(app: &url::Url) -> axum::response::Response {
+    let mut response = http::StatusCode::SEE_OTHER.into_response();
+    match http::HeaderValue::from_str(app.as_str()) {
+        Ok(location) => {
+            let headers = response.headers_mut();
+            headers.insert(http::header::LOCATION, location);
+            headers.insert(
+                http::header::CACHE_CONTROL,
+                http::HeaderValue::from_static("no-store"),
+            );
             response
         }
         Err(_invalid) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),

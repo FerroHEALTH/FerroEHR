@@ -23,6 +23,8 @@ pub struct AppState {
     /// The session store, the relying party when `auth.oidc_enabled`, and
     /// the pages the sign-in routes land on.
     pub sign_in: SignIn<ViewerPages>,
+    /// The EHR client at FerroSMART, when `[launch]` names an issuer.
+    pub launch: Option<Arc<crate::launch::Launcher>>,
 }
 
 impl AppState {
@@ -31,7 +33,8 @@ impl AppState {
     ///
     /// # Errors
     /// [`crate::config::ConfigError::Session`], the `ferrohealth-session`
-    /// refusal of `[session]`.
+    /// refusal of `[session]`, and [`crate::config::ConfigError::Launch`],
+    /// the refusal of `[launch]`.
     pub fn new(
         config: crate::config::ViewerConfig,
         cdr: crate::cdr::CdrClient,
@@ -39,6 +42,7 @@ impl AppState {
     ) -> Result<Self, crate::config::ConfigError> {
         let offline_access = config.auth.oidc_enabled && config.oidc.offline_access;
         let settings = config.session.check_with(offline_access)?;
+        let launch = crate::launch::Launcher::from_section(&config.launch)?.map(Arc::new);
         let sessions = Sessions::new(
             settings,
             CookieNames::for_console(crate::session::COOKIE_BASE),
@@ -47,6 +51,7 @@ impl AppState {
             config: Arc::new(config),
             cdr,
             sign_in: SignIn::new(sessions, party, ViewerPages),
+            launch,
         })
     }
 }

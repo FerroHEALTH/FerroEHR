@@ -208,6 +208,15 @@ pub fn redirect(to: &str) {
     crate::scope::with(|scope| scope.answer(|answer| answer.redirect = Some(to)));
 }
 
+/// Sends the browser to `app`, a configured SMART app's launch URL, with
+/// `303 See Other` instead of drawing the page.
+///
+/// Only a launch sets it ([`crate::launch`]); every other page redirects to
+/// the viewer's own pages alone ([`redirect`]).
+pub fn launch_away(app: url::Url) {
+    crate::scope::with(|scope| scope.answer(|answer| answer.away = Some(app)));
+}
+
 /// Appends a `Set-Cookie` to the response of the page being drawn.
 pub fn set_cookie(cookie: &str) {
     if let Ok(value) = http::HeaderValue::from_str(cookie) {

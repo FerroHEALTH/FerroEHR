@@ -31,6 +31,9 @@ pub struct Answer {
     pub status: Option<http::StatusCode>,
     /// Where the page sends the browser instead of drawing itself.
     pub redirect: Option<String>,
+    /// The app a launch sends the browser to, off the viewer
+    /// ([`crate::request::launch_away`]).
+    pub away: Option<url::Url>,
     /// The `Set-Cookie` values the answer carries, in the order set.
     pub cookies: Vec<http::HeaderValue>,
     /// The docked decision bar the page set for the shell to draw.

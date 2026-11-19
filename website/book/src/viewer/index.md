@@ -204,14 +204,21 @@ override, because the viewer's variables share its prefix:
 | `session.absolute_timeout` | `"12h"` | The session's lifetime from sign-in, which no activity extends. Zero, or a value below `session.idle_timeout`, is a startup error. |
 | `session.secure_cookie` | `true` | The cookies carry `Secure` and with it the `__Host-` prefix; set `false` only for plain-HTTP local development. |
 | `session.key` / `session.key_file` | unset | The sealing key of a `sealed` store: base64 of at least 64 bytes (`openssl rand -base64 64`), the same on every replica. A sealed store without one, or a key beside a `memory` store, is a startup error. |
+| `launch.issuer` | empty | FerroSMART's issuer identifier. Set, an EHR's More menu offers a **Launch** item per `[[launch.app]]` ([Launching a SMART app](../smart-app-launch.md#launching-an-app-from-the-viewer)); empty, it offers none. An issuer that is not `https` off loopback is a startup error. |
+| `launch.client_id` / `private_key_file` / `kid` | — / — / empty | The viewer's client at FerroSMART, of kind `confidential_asymmetric` with `system/launch.c` in its scopes, and the PEM private key its client assertion is signed with: RSA (signed RS384) or P-384 (signed ES384), the two algorithms SMART App Launch 2.2.0 has a server support. `kid` is the key id FerroSMART's registered JWK Set names; empty, the key's RFC 7638 thumbprint. Required when `launch.issuer` is set. |
+| `launch.resource` | — | The base an app receives as `iss`: the CDR's public openEHR REST base, one of FerroSMART's `[[ferrosmart.resource]]` tables. Required when `launch.issuer` is set. |
+| `launch.patient_namespaces` | empty | The EHR subject namespaces whose subject id is a FHIR `Patient` id, sent as `patient` beside `ehrId`. |
+| `launch.timeout` / `launch.tls.*` | `"10s"` / unset | How long one request to FerroSMART may take, and the family's outbound TLS table for it. |
+| `launch.app` | empty | The apps, each `{ name, client_id, launch_url }`: the name the menu draws, the app's `client_id` at FerroSMART and its registered launch URL. Two apps with one `client_id` are a startup error. |
 | `ui.locale` | `en` | The language a page renders in when the browser's `Accept-Language` names none the viewer ships. English is the one language that ships today. A language is added as a catalog file under `app/ferroehr-viewer/locales/<tag>/` (the viewer's words) beside FerroUI's (the components' words) with no code change; the catalogs are embedded when the viewer is built, so a new one reaches a deployment in a rebuilt image, never at run time. A value that is no BCP 47 language tag is a startup error. |
 
 ### Commands
 
 `ferroehr-viewer` (or `ferroehr-viewer serve`) serves until `SIGTERM` or
 `SIGINT`. `ferroehr-viewer config check` reads the configuration, checks
-`[oidc]` and `[session]` and builds the CDR client and the session store,
-reading every TLS file, without reaching the CDR or the provider.
+`[oidc]` and `[session]` and builds the CDR client, the session store and,
+with `[launch]` set, the launch client and its key, reading every TLS file,
+without reaching the CDR, the provider or FerroSMART.
 `ferroehr-viewer healthcheck`, the image's `HEALTHCHECK`, asks the viewer
 beside it for `GET /health/readiness` over the loopback (over TLS when
 `server.tls` is set) and exits `0` only on `200`. The viewer serves the
@@ -228,6 +235,9 @@ exits `2`.
 Every response carries a Content-Security-Policy that admits scripts and
 styles from the viewer's own origin alone (`script-src 'self'; style-src
 'self'`), with no nonce and neither `'unsafe-inline'` nor `'unsafe-eval'`,
+and forms that post to the viewer alone (`form-action 'self'`, beside the
+origin of each `[[launch.app]]`, since a launch's answer sends its window
+on to the app),
 beside `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin` and
 `Cross-Origin-Resource-Policy: same-site`; when the viewer serves TLS itself

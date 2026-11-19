@@ -42,7 +42,9 @@ pub struct ViewerConfig {
     /// `[session]`.
     pub session: SessionSection,
     /// The language the viewer renders in.
-    pub ui: UiConfig,
+    pub ui: crate::locale::UiConfig,
+    /// The SMART apps an EHR's page launches through FerroSMART.
+    pub launch: crate::launch::LaunchSection,
     /// The console, the request log and the OpenTelemetry export: the
     /// family's `[telemetry]` section.
     pub telemetry: TelemetrySection,
@@ -78,25 +80,9 @@ impl Default for ViewerConfig {
                 absolute_timeout: ferrohealth_config::units::Duration::from_hours(12),
                 ..SessionSection::default()
             },
-            ui: UiConfig::default(),
+            ui: crate::locale::UiConfig::default(),
+            launch: crate::launch::LaunchSection::default(),
             telemetry: TelemetrySection::default(),
-        }
-    }
-}
-
-/// `[ui]`: the language the viewer renders in.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct UiConfig {
-    /// The BCP 47 tag of the locale a page renders in when the request's
-    /// `Accept-Language` names no language the viewer's catalog holds.
-    pub locale: String,
-}
-
-impl Default for UiConfig {
-    fn default() -> Self {
-        Self {
-            locale: String::from("en"),
         }
     }
 }
@@ -242,6 +228,9 @@ pub enum ConfigError {
     /// `[oidc]` or `[session]` is refused.
     #[error(transparent)]
     Session(Box<ferrohealth_session::config::ConfigError>),
+    /// `[launch]` is refused.
+    #[error(transparent)]
+    Launch(#[from] crate::launch::LaunchConfigError),
 }
 
 impl From<ferrohealth_session::config::ConfigError> for ConfigError {

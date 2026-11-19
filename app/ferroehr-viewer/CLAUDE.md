@@ -68,6 +68,11 @@ crate lacks is a FerroSMART issue, never a local copy.
   `intent` wins (`Posted::intent`). A success redirects with a toast waiting
   in a flash cookie (`crate::flash::redirect_with`); a redirect is never
   overwritten by a later `set_status` (`crate::request::set_status`).
+- **Only a SMART launch leaves the viewer** (`crate::launch`, #5880): the
+  EHR page's `launch` intent posts the context to FerroSMART's EHR launch
+  API with the viewer's `private_key_jwt` key, held server-side, and answers
+  `303` to the app (`crate::request::launch_away`); every other redirect
+  stays on the viewer's own pages. The app origins join `form-action`.
 - **A dead session ends the page:** a refused session or a CDR `401` is
   noted in the scope (`session_client::note_if_over`) and the page answers
   with the sign-in page.

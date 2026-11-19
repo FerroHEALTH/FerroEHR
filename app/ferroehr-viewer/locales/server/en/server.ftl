@@ -41,6 +41,8 @@ ehr-without-own-access-settings-admits = an EHR without its own access settings 
 role-checks-off-so-every-signed = role checks are off, so every signed-in caller may use every enabled surface, the admin and management endpoints included
 not-version-store-stored-query-version = `{ $version }` is not a version to store at: a stored-query version is `major.minor.patch` (for example `1.0.0`). A shorter pattern like `1` or `1.0` selects the latest matching version when READING a query; leave the field empty to let the server assign the version.
 cdr-url-outside-base = the request addresses a CDR path outside the configured CDR base
+launch-app = Launch { $name }
+launch-refused = The app could not be launched
 
 ## Numbers: the marks FerroUI's formatter groups a number with
 
