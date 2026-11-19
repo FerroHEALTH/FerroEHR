@@ -1770,8 +1770,8 @@ system_id = "ferroehr.local"
 # is refused when none signed it. Optional (trust).
 #? trusted_key_files = []
 
-# The data-minimisation policy: the subject namespaces, the identifier scan and
-# protection, the cohort query and the access delay.
+# The data-minimisation policy: the subject namespaces, the identified parties,
+# the identifier protection, the cohort query and the access delay.
 [privacy]
 # The namespaces an `EHR_STATUS.subject.external_ref` may name
 # (`FERROEHR__PRIVACY__SUBJECT_NAMESPACES`, comma-separated in the environment)

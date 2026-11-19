@@ -100,8 +100,8 @@ pub struct FerroEhrConfig {
     /// Repository + the syslog and FHIR-feed forwarding sinks).
     pub audit: crate::system_log::config::AuditConfig,
     /// `[privacy]` — the data-minimisation policy: the subject namespaces,
-    /// the identifier scan and protection, the cohort query and the access
-    /// delay.
+    /// the identified parties, the identifier protection, the cohort query and
+    /// the access delay.
     pub privacy: crate::privacy::config::PrivacyConfig,
     /// `[record]` — the record itself: the subject index, versioning,
     /// signing, the query engine, the change feed and multimedia.
