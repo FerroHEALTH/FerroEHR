@@ -191,7 +191,9 @@ impl Projector {
         sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
             .execute(&mut *snapshot)
             .await?;
-        let (_, revision) = crate::party_binding::grants::store::revisions(&mut snapshot).await?;
+        let revision = crate::party_binding::grants::store::revisions(&mut snapshot)
+            .await?
+            .facts;
         let persons = match held {
             Some(held) if !whole && held >= revision => Vec::new(),
             Some(held) if !whole => caller::store::stamped_since(&mut snapshot, held).await?,

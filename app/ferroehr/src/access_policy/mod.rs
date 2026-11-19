@@ -268,14 +268,36 @@ impl LivePolicy {
     /// [`PolicyError::Store`] when the store does not answer; the policy in
     /// force stays.
     pub async fn refresh(&self) -> Result<(), PolicyError> {
-        if store::head(&self.pool).await? == self.in_force().version {
+        let head = store::head(&self.pool).await?;
+        self.install(head).await
+    }
+
+    /// Bring the policy in force to `head`, the newest stored version as the
+    /// request read it in its one read of the policy heads
+    /// ([`crate::storage::policy_register::policy_heads`]), so what the
+    /// request decides rests on that read and on no notification's delay
+    /// (#6048): nothing is read when this replica holds that version.
+    ///
+    /// # Errors
+    /// As [`Self::refresh`].
+    pub(crate) async fn confirm(&self, head: i32) -> Result<(), PolicyError> {
+        // NOTE: our own design (#6048), the pending notification is taken: `head` is newer.
+        let _notified = self.listened.must_read();
+        self.install(head).await
+    }
+
+    /// Install the newest stored version when `head` is past the one this
+    /// replica holds. The policy's versions only grow, so a `head` read
+    /// before another caller's never puts an older version back in force.
+    async fn install(&self, head: i32) -> Result<(), PolicyError> {
+        if head <= self.in_force().version {
             return Ok(());
         }
         let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
         let Some(row) = store::newest(&self.pool).await? else {
             return Ok(());
         };
-        if row.version == self.in_force().version {
+        if row.version <= self.in_force().version {
             return Ok(());
         }
         let read = match openehr_its::json::from_canonical_json::<AccessPolicy>(&row.data) {

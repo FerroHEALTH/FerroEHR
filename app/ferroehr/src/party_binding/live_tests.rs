@@ -71,10 +71,10 @@ async fn the_lookups_stay_under_the_cap_and_an_evicted_one_reads_the_store() {
         for n in 0..KEYS {
             let read = async {
                 reads.fetch_add(1, Ordering::Relaxed);
-                Ok::<_, Infallible>(found(n))
+                Ok::<_, Infallible>((found(n), 0))
             };
             let lookup = bindings
-                .lookup(key(n), read)
+                .lookup(key(n), 0, read)
                 .await
                 .expect("the read succeeds");
             assert_eq!(lookup, found(n), "round {round}, login {n}");
@@ -87,6 +87,41 @@ async fn the_lookups_stay_under_the_cap_and_an_evicted_one_reads_the_store() {
     assert!(
         reads.load(Ordering::Relaxed) > KEYS,
         "the evicted lookups were read again"
+    );
+}
+
+/// A held lookup is taken at the binding revision it was read at and at none
+/// after it: a request that reads a later revision from the store reads the
+/// lookup again, whatever the notification's delay (#6048).
+#[tokio::test]
+async fn a_lookup_read_before_the_stores_revision_is_read_again() {
+    let bindings = listening().await;
+    let reads = AtomicUsize::new(0);
+    let at = |revision: i64, read_at: i64| {
+        let (bindings, reads) = (&bindings, &reads);
+        async move {
+            let read = async {
+                reads.fetch_add(1, Ordering::Relaxed);
+                Ok::<_, Infallible>((found(1), read_at))
+            };
+            bindings
+                .lookup(key(1), revision, read)
+                .await
+                .expect("the read succeeds")
+        }
+    };
+    at(3, 3).await;
+    at(3, 3).await;
+    assert_eq!(reads.load(Ordering::Relaxed), 1, "held at its revision");
+    at(2, 2).await;
+    assert_eq!(reads.load(Ordering::Relaxed), 1, "held for an older read");
+    at(4, 5).await;
+    assert_eq!(reads.load(Ordering::Relaxed), 2, "read again past it");
+    at(5, 5).await;
+    assert_eq!(
+        reads.load(Ordering::Relaxed),
+        2,
+        "held at the revision read"
     );
 }
 

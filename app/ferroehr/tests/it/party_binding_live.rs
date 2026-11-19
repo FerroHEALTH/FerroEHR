@@ -230,3 +230,97 @@ async fn with_the_listener_down_every_lookup_reads_the_store() {
         "the lookup read the store again"
     );
 }
+
+/// Two replicas over one fresh store, the second listening where no change
+/// of the store is notified, with the database its listener connects to.
+async fn deaf_second() -> (
+    testkit::TestDb,
+    FerroEhrService,
+    FerroEhrService,
+    testkit::TestDb,
+) {
+    let (db, first) = crate::fixtures::service().await;
+    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
+    let first = first.with_binding_mapping(named());
+    let second =
+        FerroEhrService::new(&DomainPools::from_shared(&db.pool())).with_binding_mapping(named());
+    let elsewhere = crate::policy_fixtures::deaf(&[Arc::clone(second.bindings().listened())]).await;
+    (db, first, second, elsewhere)
+}
+
+/// A deprovisioning and a new binding committed on another replica decide
+/// the next lookup of a replica whose notification never arrives: a held
+/// lookup is taken only at the binding revision the request reads from the
+/// store (#6048).
+#[tokio::test]
+async fn a_change_whose_notification_is_withheld_decides_the_next_lookup() {
+    let (_db, first, second, _elsewhere) = deaf_second().await;
+    let value = "4e5f6071-8293-4da4-9ec5-d6e7f8091a2b";
+    let other = "5f607182-93a4-4eb5-8fd6-e7f8091a2b3c";
+    let (vo, uid) = professional(&first, value).await;
+    assert_eq!(parties(&lookup(&second, value).await), [person_ref(vo)]);
+    assert_eq!(parties(&lookup(&second, other).await), []);
+
+    delete(&first, PartyKind::Person, &uid).await;
+    let (bound, _) = professional(&first, other).await;
+    assert_eq!(
+        second.bindings().listened().notifications(),
+        0,
+        "the second replica heard nothing"
+    );
+    assert_eq!(lookup(&second, value).await, Lookup::Deprovisioned);
+    assert_eq!(parties(&lookup(&second, other).await), [person_ref(bound)]);
+}
+
+/// The binding revision moves once in each transaction that changes a key
+/// row, a membership, a representation or a key space's state, and with no
+/// other statement (#6048).
+#[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+async fn every_change_of_the_side_table_moves_the_binding_revision_once() {
+    let (db, _svc) = crate::fixtures::service().await;
+    let pool = db.pool();
+    let revision = || async {
+        sqlx::query_scalar::<_, i64>("SELECT binding_revision FROM party.binding_grant_revision")
+            .fetch_one(&pool)
+            .await
+            .expect("the revision reads")
+    };
+    let changes = [
+        "UPDATE party.binding_identifier SET value = value WHERE false",
+        "UPDATE party.binding_membership SET member_id = member_id WHERE false",
+        "UPDATE party.binding_representation SET subject_id = subject_id WHERE false",
+        "UPDATE party.binding_key_space SET state = state WHERE false",
+    ];
+    for change in changes {
+        let before = revision().await;
+        let mut tx = pool.begin().await.expect("begin");
+        for _ in 0..2 {
+            sqlx::query(change)
+                .execute(&mut *tx)
+                .await
+                .expect("the change applies");
+        }
+        tx.commit().await.expect("commit");
+        assert_eq!(revision().await, before + 1, "{change}");
+    }
+    let before = revision().await;
+    sqlx::query("UPDATE party.binding_key_space SET fill_after = fill_after WHERE false")
+        .execute(&pool)
+        .await
+        .expect("a change of a key space's fill");
+    let mut tx = pool.begin().await.expect("begin");
+    sqlx::query(changes[0])
+        .execute(&mut *tx)
+        .await
+        .expect("the change applies");
+    tx.rollback().await.expect("rollback");
+    assert_eq!(
+        revision().await,
+        before,
+        "a fill and a rolled-back change move nothing"
+    );
+}

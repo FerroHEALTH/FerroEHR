@@ -47,7 +47,7 @@ use tracing_subscriber::layer::{Context, SubscriberExt as _};
 use tracing_subscriber::registry::LookupSpan;
 
 use super::{CHAINER_RELEASE, CHAINER_ROUND, CHAINER_TAKE, SYSTEM_ROUND, calls, counted, drained};
-use crate::access_evaluator_http::{app, credential, ehr_with_composition};
+use crate::access_evaluator_http::{credential, ehr_with_composition};
 use crate::common::{self, BASE, FHIR};
 
 /// The measured requests of each path.
@@ -181,13 +181,22 @@ struct Budget {
 /// commit and 1.08%, inside the 3% that issue allows the index. Their WAL
 /// ceilings rose by that, to the largest of three runs plus 1%: the one rise
 /// of a ceiling, and the trade #6033 states.
+/// The harness has since started the `LISTEN` sessions a server runs with,
+/// and a request confirms the copies its decision rests on with two indexed
+/// reads, one per store (#6048). The round trips are the figures measured
+/// then: a read sends 3 (its own, the party store's revisions, the policy
+/// heads) where the harness without listeners sent 7 and a server before
+/// #6048 sent 1. A party commit moves the binding revision in its
+/// transaction, one nested statement and 88 bytes of WAL, the second rise of
+/// a ceiling and the price #6048 states for a decision that waits on no
+/// notification.
 const BUDGETS: [Budget; 16] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
         allocations: 19_218,
         peak_bytes: 1_530_778,
-        round_trips: 14,
+        round_trips: 9,
         nested: 13,
         wal: 245_216,
     },
@@ -196,7 +205,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 5,
         allocations: 40_647,
         peak_bytes: 1_533_031,
-        round_trips: 14,
+        round_trips: 9,
         nested: 14,
         wal: 245_289,
     },
@@ -205,7 +214,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 5,
         allocations: 33_800,
         peak_bytes: 1_528_525,
-        round_trips: 14,
+        round_trips: 9,
         nested: 13,
         wal: 245_263,
     },
@@ -214,7 +223,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 0,
         allocations: 1376,
         peak_bytes: 617_268,
-        round_trips: 7,
+        round_trips: 3,
         nested: 2,
         wal: 2773,
     },
@@ -223,7 +232,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 2,
         allocations: 10_852,
         peak_bytes: 1_017_140,
-        round_trips: 7,
+        round_trips: 3,
         nested: 2,
         wal: 2773,
     },
@@ -232,7 +241,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 2,
         allocations: 15_577,
         peak_bytes: 1_634_407,
-        round_trips: 7,
+        round_trips: 3,
         nested: 2,
         wal: 2773,
     },
@@ -241,7 +250,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 1,
         allocations: 1162,
         peak_bytes: 100_250,
-        round_trips: 7,
+        round_trips: 3,
         nested: 2,
         wal: 1989,
     },
@@ -250,7 +259,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 2,
         allocations: 2505,
         peak_bytes: 118_273,
-        round_trips: 10,
+        round_trips: 4,
         nested: 2,
         wal: 4439,
     },
@@ -259,7 +268,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 2,
         allocations: 3344,
         peak_bytes: 158_823,
-        round_trips: 8,
+        round_trips: 3,
         nested: 2,
         wal: 11_380,
     },
@@ -268,7 +277,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 0,
         allocations: 9023,
         peak_bytes: 624_026,
-        round_trips: 6,
+        round_trips: 3,
         nested: 2,
         wal: 1852,
     },
@@ -277,7 +286,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 0,
         allocations: 1107,
         peak_bytes: 78_848,
-        round_trips: 11,
+        round_trips: 8,
         nested: 6,
         wal: 2070,
     },
@@ -286,7 +295,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 6,
         allocations: 19_396,
         peak_bytes: 1_649_934,
-        round_trips: 18,
+        round_trips: 13,
         nested: 14,
         wal: 245_784,
     },
@@ -295,7 +304,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 0,
         allocations: 1388,
         peak_bytes: 701_748,
-        round_trips: 7,
+        round_trips: 3,
         nested: 2,
         wal: 2773,
     },
@@ -304,7 +313,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 4,
         allocations: 1809,
         peak_bytes: 144_180,
-        round_trips: 19,
+        round_trips: 15,
         nested: 11,
         wal: 6213,
     },
@@ -313,7 +322,7 @@ const BUDGETS: [Budget; 16] = [
         conversions: 0,
         allocations: 1231,
         peak_bytes: 102_503,
-        round_trips: 7,
+        round_trips: 3,
         nested: 2,
         wal: 2102,
     },
@@ -322,9 +331,9 @@ const BUDGETS: [Budget; 16] = [
         conversions: 8,
         allocations: 2047,
         peak_bytes: 117_146,
-        round_trips: 32,
-        nested: 19,
-        wal: 7864,
+        round_trips: 31,
+        nested: 20,
+        wal: 7953,
     },
 ];
 
@@ -983,7 +992,7 @@ async fn every_hot_path_stays_within_its_budget() {
         tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
     // The budgets count what a release build does, without the debug reference cells.
     ferroehr::aql::sql::without_reference_cells();
-    let (_db, pool, _svc, app) = Box::pin(app()).await;
+    let (_db, pool, _svc, app) = Box::pin(super::served()).await;
     sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
         .execute(&pool)
         .await

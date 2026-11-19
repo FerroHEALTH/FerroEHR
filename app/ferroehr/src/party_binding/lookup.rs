@@ -83,7 +83,10 @@ pub struct KeyRow {
 }
 
 /// The key rows of the identifier `value` of `identifier_type` under
-/// `issuer`, live and tombstoned.
+/// `issuer`, live and tombstoned, with the store's binding revision.
+///
+/// The revision is the one the statement read the rows at, so the rows a
+/// later statement reads are never older than it.
 ///
 /// Each carries the professional state on `today` (`YYYY-MM-DD`); answered
 /// from `ix_binding_identifier_lookup` and the key space's primary key.
@@ -97,7 +100,7 @@ pub async fn key_rows(
     identifier_type: &str,
     value: &str,
     today: &str,
-) -> Result<Vec<KeyRow>, LookupError> {
+) -> Result<(Vec<KeyRow>, i64), LookupError> {
     let rows = sqlx::query(LOOKUP)
         .bind(issuer)
         .bind(identifier_type)
@@ -105,9 +108,14 @@ pub async fn key_rows(
         .bind(today)
         .fetch_all(&mut *conn)
         .await?;
-    let space: Option<String> = match rows.first() {
-        Some(row) => row.try_get("space")?,
-        None => None,
+    let (space, revision): (Option<String>, i64) = match rows.first() {
+        Some(row) => (row.try_get("space")?, row.try_get("revision")?),
+        None => {
+            return Err(StorageError::InvalidRows(
+                "the binding lookup answered no row, where it answers the key space's".to_owned(),
+            )
+            .into());
+        }
     };
     open(issuer, space.as_deref())?;
     let mut out = Vec::with_capacity(rows.len());
@@ -123,17 +131,18 @@ pub async fn key_rows(
             live: row.try_get("live")?,
         });
     }
-    Ok(out)
+    Ok((out, revision))
 }
 
 /// The lookup statement of [`key_rows`], public so a test can `EXPLAIN` it.
 ///
 /// It answers one row with the key space's state, NULL when none records the
 /// issuer, and no key row when no row matches or the key space is not
-/// `active`.
+/// `active`; every row carries the binding revision.
 pub const LOOKUP: &str = "SELECT s.state AS space, b.party_id, b.lifecycle_state, \
             b.professional @> $4::date AS professional, b.representative, \
-            b.retired_at IS NULL AS live \
+            b.retired_at IS NULL AS live, \
+            (SELECT r.binding_revision FROM binding_grant_revision r) AS revision \
      FROM (SELECT $1::text AS issuer) q \
      LEFT JOIN binding_key_space s ON s.issuer = q.issuer \
      LEFT JOIN binding_identifier b ON s.state = 'active' \

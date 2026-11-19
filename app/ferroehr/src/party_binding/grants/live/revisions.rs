@@ -9,14 +9,15 @@
 //! replica committed is never read from an older copy (#5806). No openEHR
 //! spec governs the copy: our own design.
 
-use super::{GrantsUnavailable, LiveGrants, store};
-use crate::db::acquire::acquire;
+use super::{GrantsUnavailable, LiveGrants};
 
-/// The grant revision and the facts revision of the store.
+/// The revisions of the party store: of the grants, of the caller facts and
+/// of the binding side table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Revisions {
-    grants: i64,
-    facts: i64,
+    pub(crate) grants: i64,
+    pub(crate) facts: i64,
+    pub(crate) bindings: i64,
 }
 
 impl LiveGrants {
@@ -33,19 +34,31 @@ impl LiveGrants {
     }
 
     /// The revisions in force in the store when this replica's copy is older
-    /// than them, read in one indexed statement; `None` when the copy holds
-    /// them.
+    /// than them, from the indexed read the request makes
+    /// ([`crate::party_binding::request`]); `None` when the copy
+    /// holds them.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the party store does not answer.
     pub async fn behind(&self) -> Result<Option<Revisions>, GrantsUnavailable> {
-        let read = async {
-            let mut conn = acquire(&self.pool).await?;
-            store::revisions(&mut conn).await
-        };
-        let (grants, facts) = read.await?;
-        let store = Revisions { grants, facts };
+        let store = crate::party_binding::request::revisions(&self.pool).await?;
         Ok((!self.holds(store)).then_some(store))
+    }
+
+    /// Bring the copy to the store's revisions as the request reads them
+    /// ([`crate::party_binding::request`]), so the decision that
+    /// follows rests on an indexed read of the store and on no notification's
+    /// delay (#6048): the rows are read when a notification marked them
+    /// stale, the listener is down, or the store's revisions are past the
+    /// copy's; otherwise the copy stands at the revisions just read.
+    ///
+    /// # Errors
+    /// As [`Self::refresh`].
+    pub async fn confirm(&self) -> Result<(), GrantsUnavailable> {
+        if self.listened.must_read() || self.behind().await?.is_some() {
+            self.refresh().await?;
+        }
+        Ok(())
     }
 
     /// Whether the copy holds at least the revisions `store`.

@@ -230,6 +230,32 @@ pub(crate) async fn as_client<F: Future>(
     with_capabilities(of_client(svc, client_id).await, fut).await
 }
 
+/// Connects the `LISTEN` session of `listened` to a database of its own,
+/// returned to be kept, where no change of the store under test is ever
+/// notified: the longest delay a notification can have. Each copy then reads
+/// as listening and hears nothing, so what a request decides on it rests on
+/// what the request reads (#6048).
+pub(crate) async fn deaf(
+    listened: &[Arc<ferroehr::policy_register::listen::Listened>],
+) -> testkit::TestDb {
+    use std::str::FromStr as _;
+    let elsewhere = testkit::db().await.expect("a second database");
+    ferroehr::policy_register::listen::Listeners::on(
+        sqlx::postgres::PgConnectOptions::from_str(elsewhere.url()).expect("the test DSN parses"),
+        listened,
+    )
+    .spawn();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while !listened.iter().all(|listened| listened.is_listening()) {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the listeners connect"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    elsewhere
+}
+
 /// Starts the `LISTEN` sessions of `listened` on `db`, one per database as
 /// the server does ([`ferroehr::policy_register::listen::Listeners`]).
 pub(crate) fn listen(

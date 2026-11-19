@@ -30,6 +30,7 @@ use std::sync::{Arc, PoisonError, RwLock};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use self::revisions::Revisions;
 use crate::db::acquire::acquire;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
@@ -280,8 +281,8 @@ impl LiveGrants {
     }
 
     /// Read the grant rows when a notification marked them stale or the
-    /// listener is down; otherwise the copy stands, and the request touches
-    /// no database.
+    /// listener is down; otherwise the copy stands, and the caller touches
+    /// no database. A request decides on [`Self::confirm`].
     ///
     /// # Errors
     /// As [`Self::refresh`].
@@ -308,7 +309,11 @@ impl LiveGrants {
         let mut kind = "unchanged";
         let read = async {
             let mut conn = acquire(&self.pool).await?;
-            let (revision, facts_revision) = store::revisions(&mut conn).await?;
+            let Revisions {
+                grants: revision,
+                facts: facts_revision,
+                ..
+            } = store::revisions(&mut conn).await?;
             if Some(revision) != self.revision() {
                 kind = "grants";
                 let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;

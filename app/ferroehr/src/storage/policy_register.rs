@@ -43,6 +43,33 @@ pub async fn heads(pool: &PgPool) -> Result<Vec<(String, i64)>, StorageError> {
         .collect()
 }
 
+/// The newest version of every register that has one and the newest trunk
+/// version of the access policy, `0` when it has none: the one indexed read a
+/// request confirms its policy copies with (#6048).
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn policy_heads(pool: &PgPool) -> Result<(Vec<(String, i64)>, i32), StorageError> {
+    let rows = sqlx::query(
+        "SELECT register, max(version) AS version, NULL::integer AS policy \
+           FROM policy_register GROUP BY register \
+         UNION ALL \
+         SELECT NULL, NULL, max(version) FROM access_policy_version",
+    )
+    .fetch_all(&mut *acquire(pool).await?)
+    .await?;
+    let mut registers = Vec::with_capacity(rows.len());
+    let mut access_policy = 0_i32;
+    for row in &rows {
+        if let Some(register) = row.try_get::<Option<String>, _>("register")? {
+            registers.push((register, row.try_get("version")?));
+        } else {
+            access_policy = row.try_get::<Option<i32>, _>("policy")?.unwrap_or(0);
+        }
+    }
+    Ok((registers, access_policy))
+}
+
 /// The stored version `version` of `register`, or `None` when it has none.
 ///
 /// # Errors

@@ -1047,6 +1047,7 @@ pub(crate) async fn bound_person(pool: &PgPool, issuer: &str, key: &str) -> Opti
     ferroehr::party_binding::lookup::key_rows(&mut conn, issuer, "guid", key, &today)
         .await
         .expect("the binding key reads")
+        .0
         .iter()
         .find(|row| row.live)
         .map(|row| row.party_id)

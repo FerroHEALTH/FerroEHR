@@ -387,7 +387,9 @@ pub(crate) async fn load(
     conn: &mut PgConnection,
     since: Option<i64>,
 ) -> Result<Changed, StorageError> {
-    let (_, revision) = crate::party_binding::grants::store::revisions(conn).await?;
+    let revision = crate::party_binding::grants::store::revisions(conn)
+        .await?
+        .facts;
     let (rows, cared_teams, declared) = match since {
         Some(since) => {
             let declared: Vec<(String, String)> = sqlx::query_as(DECLARED)

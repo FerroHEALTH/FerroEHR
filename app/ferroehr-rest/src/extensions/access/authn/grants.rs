@@ -68,7 +68,7 @@ pub(crate) async fn resolve(
         (_, _, _, Some(party)) => Actor::Party(party),
         _ => return Ok(Arc::default()),
     };
-    if let Err(error) = grants.refresh_if_stale().await {
+    if let Err(error) = grants.confirm().await {
         tracing::warn!(
             error = %ferroehr::error::ErrorChain::new(&error),
             "the policy grants could not be read"

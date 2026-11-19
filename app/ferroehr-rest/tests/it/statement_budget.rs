@@ -14,8 +14,10 @@
 //! container and CI's server do. The chainer runs on the audit runtime beside
 //! the requests and batches what they wrote, so its nested statements are
 //! budgeted per round, and the requests' per request.
-//! The harness runs no LISTEN refresher, so the caller and policy reads a
-//! server serves from its copies are sent on every request and counted here.
+//! The harness starts the `LISTEN` sessions of the copies as the server does
+//! ([`served`]), so a request sends what a request of a running server sends:
+//! its own read, its record, and the two indexed reads that confirm the
+//! copies its decision rests on (#6048).
 //! No openEHR spec governs the statements of a request: our own design.
 
 use std::fmt::Write as _;
@@ -38,6 +40,39 @@ mod entry;
 mod intake;
 mod paths;
 mod wal;
+
+/// The assembled router of [`app`] as a server runs it: with the `LISTEN`
+/// session of every copy this replica holds connected
+/// (`ferroehr-server` `policy::listen`), so a copy is read when its
+/// revision moved and not on every request.
+async fn served() -> (
+    testkit::TestDb,
+    PgPool,
+    Arc<ferroehr::service::FerroEhrService>,
+    Router,
+) {
+    let (db, pool, svc, app) = Box::pin(app()).await;
+    let listened: Vec<_> = svc
+        .policy_listeners()
+        .into_iter()
+        .map(|(_, listened)| listened)
+        .collect();
+    ferroehr::policy_register::listen::Listeners::new(
+        &ferroehr::db::DbConfig::new(db.url()),
+        &listened,
+    )
+    .expect("the test DSN parses")
+    .spawn();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while !listened.iter().all(|listened| listened.is_listening()) {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the listeners connect"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    (db, pool, svc, app)
+}
 
 /// The EHRs the population query serves, each with one composition.
 const EHRS: u64 = 5;
@@ -85,14 +120,14 @@ const BUDGETS: [Budget; 2] = [
         name: "single-EHR AQL",
         body: single,
         served: 1,
-        round_trips: 10,
+        round_trips: 4,
         nested: 4,
     },
     Budget {
         name: "population AQL",
         body: population,
         served: EHRS,
-        round_trips: 8,
+        round_trips: 3,
         nested: 4,
     },
 ];
@@ -248,7 +283,7 @@ async fn an_aql_request_stays_within_its_statement_budget() {
         tracing::subscriber::set_default(tracing_subscriber::registry().with(round_trips.clone()));
     // The budgets count what a release build does, without the debug reference cells.
     ferroehr::aql::sql::without_reference_cells();
-    let (_db, pool, _svc, app) = Box::pin(app()).await;
+    let (_db, pool, _svc, app) = Box::pin(served()).await;
     sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
         .execute(&pool)
         .await

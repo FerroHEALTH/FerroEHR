@@ -403,8 +403,8 @@ where
         return resp;
     }
     // NOTE: no specification governs operational policy: our own design; the request reads
-    // the newest version of every policy register and the access policy first, so a change
-    // decides this request.
+    // the newest version of every policy register and of the access policy first, in one
+    // indexed read, so a change decides this request whatever its notification's delay.
     if let Err(error) = refresh_policy(&state, op).await {
         let mut resp = RestError::from(error).into_response();
         resp.extensions_mut()
@@ -497,13 +497,10 @@ const ADMIN_REGISTER_READERS: [&str; 4] = [
 /// registers ([`reads_registers`]) and, for every operation outside the admin
 /// group, the controller's access policy.
 async fn refresh_policy(state: &AppState, op: &str) -> Result<(), ferroehr::error::ServiceError> {
-    if reads_registers(state, op) {
-        state.backend().refresh_policy_registers().await?;
-    }
-    if !op.starts_with("admin_") {
-        state.backend().refresh_access_policy().await?;
-    }
-    Ok(())
+    state
+        .backend()
+        .confirm_policy(reads_registers(state, op), !op.starts_with("admin_"))
+        .await
 }
 
 /// Whether `op` reads the policy registers before it runs: every operation but

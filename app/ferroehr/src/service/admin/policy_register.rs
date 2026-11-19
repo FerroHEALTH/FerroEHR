@@ -93,6 +93,38 @@ impl FerroEhrService {
         })
     }
 
+    /// Bring the policy a request reads up to date before it decides
+    /// anything, on one indexed read of the newest versions in the store
+    /// (#6048): the registers when `registers` holds, the controller's access
+    /// policy when `access_policy` holds. A copy at the version read stands;
+    /// one behind it is read. No notification's delay decides the request.
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when the store does not answer.
+    pub async fn confirm_policy(
+        &self,
+        registers: bool,
+        access_policy: bool,
+    ) -> Result<(), ServiceError> {
+        if !registers && !access_policy {
+            return Ok(());
+        }
+        let (heads, head) = crate::storage::policy_register::policy_heads(self.registers.pool())
+            .await
+            .map_err(|error| ServiceError::overloaded("the policy could not be read", error))?;
+        if registers {
+            self.registers.confirm(&heads).await.map_err(|error| {
+                ServiceError::overloaded("the policy registers could not be read", error)
+            })?;
+        }
+        if access_policy {
+            self.access_policy.confirm(head).await.map_err(|error| {
+                ServiceError::overloaded("the access policy could not be read", error)
+            })?;
+        }
+        Ok(())
+    }
+
     /// Read the newest version of every register and install each one this
     /// replica does not hold, whatever the listener says.
     ///
