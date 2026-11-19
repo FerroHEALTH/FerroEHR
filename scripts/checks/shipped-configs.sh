@@ -16,7 +16,9 @@
 #     `.env` supplies (deploy/hosted/docker-compose.yml);
 #   * the server configuration and the `ferroehr` environment of every
 #     overlay on docker-compose.yml (docker-compose.<overlay>.yml), resolved
-#     with `docker compose config` over both files. A file the server reads
+#     with `docker compose config` over both files (and over the overlay an
+#     upstream overlay such as docker-compose.ferrosmart-zitadel.yml sits
+#     on, docker-compose.ferrosmart.yml). A file the server reads
 #     from a named volume (the Keycloak overlay's development CA) is staged as
 #     a throwaway CA certificate, since the volume exists only on a running
 #     stack.
@@ -31,6 +33,9 @@
 #   * the viewer environment of every chart render under deploy/helm/golden/
 #     that deploys the viewer.
 #
+# A viewer value under /run/secrets/ reads the compose secret's file, which
+# docker/ferrosmart/secrets.sh makes as a deployment makes it.
+#
 # No specification governs the deployment files: our own design.
 #
 # Usage: scripts/checks/shipped-configs.sh   (no arguments)
@@ -40,7 +45,8 @@
 #                          (a developer machine);
 #   FERROEHR_VIEWER_BIN    a ferroehr-viewer binary built from this tree.
 # At least one is set; each part runs for the program it is given.
-# Needs docker with the compose plugin (or `docker-compose`), jq and yq.
+# Needs docker with the compose plugin (or `docker-compose`), jq, yq, openssl
+# and xxd.
 set -euo pipefail
 
 # shellcheck source=scripts/lib/guard-args.sh
@@ -72,6 +78,29 @@ openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 1 \
 # environment a local binary reads them through instead.
 mounts=()
 
+# stack <overlay>: the compose files the overlay runs over, as -f arguments
+# with the label they read as. An overlay docker-compose.<a>-<b>.yml sits on
+# docker-compose.<a>.yml when that file exists (the upstream providers of
+# docker-compose.ferrosmart.yml), and every overlay on docker-compose.yml.
+stack_files=()
+stack_label=""
+stack() {
+  local overlay="$1" name base
+  name="${overlay#docker-compose.}"
+  name="${name%.yml}"
+  stack_files=(-f docker-compose.yml)
+  stack_label="docker-compose.yml"
+  if [[ "$name" == *-* ]]; then
+    base="docker-compose.${name%%-*}.yml"
+    if [[ -f "$base" ]]; then
+      stack_files+=(-f "$base")
+      stack_label+=" with $base"
+    fi
+  fi
+  stack_files+=(-f "$overlay")
+  stack_label+=" with $overlay"
+}
+
 # check <label> <toml> <env-file>: `config check` over the file, with the
 # environment in the env file and the usage report off.
 check() {
@@ -102,8 +131,9 @@ if [[ -n "${FERROEHR_CONFIG_IMAGE:-}" || -n "${FERROEHR_BIN:-}" ]]; then
 
   # ── Every overlay on the quickstart ──────────────────────────────────────────
   for overlay in docker-compose.*.yml; do
-    "${compose[@]}" -f docker-compose.yml -f "$overlay" config --format json </dev/null >"$work/compose.json" 2>"$work/compose.err" || {
-      echo "::error file=$overlay::docker compose cannot resolve docker-compose.yml with $overlay:" >&2
+    stack "$overlay"
+    "${compose[@]}" "${stack_files[@]}" config --format json </dev/null >"$work/compose.json" 2>"$work/compose.err" || {
+      echo "::error file=$overlay::docker compose cannot resolve $stack_label:" >&2
       cat "$work/compose.err" >&2
       fail=1
       continue
@@ -142,7 +172,7 @@ if [[ -n "${FERROEHR_CONFIG_IMAGE:-}" || -n "${FERROEHR_BIN:-}" ]]; then
         sed -i.bak "s|=${pair%%|*}/|=${pair#*|}/|" "$work/$name.env"
       done
     fi
-    check "docker-compose.yml with $overlay" "$work/$name.toml" "$work/$name.env"
+    check "$stack_label" "$work/$name.toml" "$work/$name.env"
   done
 
 fi
@@ -192,6 +222,27 @@ stage() {
   mv "$envfile.staged" "$envfile"
 }
 
+# secrets <env-file> <compose.json> <service>: each value in the env file
+# under /run/secrets/ names a compose secret the service lists; the value is
+# pointed at the secret's file, as the container sees it at run time.
+secrets() {
+  local envfile="$1" json="$2" service="$3" line key value name file
+  : >"$envfile.secrets"
+  while IFS= read -r line; do
+    key="${line%%=*}"
+    value="${line#*=}"
+    if [[ "$value" == /run/secrets/* ]]; then
+      name="${value#/run/secrets/}"
+      file="$(jq -r --arg s "$service" --arg n "$name" '
+        [.services[$s].secrets[]? | select((.target // .source) == $n) | .source][0] as $src
+        | if $src then .secrets[$src].file // empty else empty end' "$json")"
+      [[ -z "$file" ]] || value="$file"
+    fi
+    printf '%s=%s\n' "$key" "$value" >>"$envfile.secrets"
+  done <"$envfile"
+  mv "$envfile.secrets" "$envfile"
+}
+
 # viewer_compose <label> <compose.json> <dir>: the viewer service of a
 # resolved compose file, its environment and the file it mounts at the path
 # FERROEHR_VIEWER_CONFIG names, a relative bind source read from <dir>.
@@ -230,6 +281,7 @@ viewer_compose() {
   mounts_in=()
   while IFS= read -r mount; do mounts_in+=("$mount"); done < <(jq -r --arg s "$service" '.services[$s].volumes[]? | select(.type == "volume") | .target' "$json")
   stage "$work/viewer.env" ${mounts_in[@]+"${mounts_in[@]}"}
+  secrets "$work/viewer.env" "$json" "$service"
   viewer_check "$label" "$work/viewer.env" "$file"
 }
 
@@ -237,6 +289,10 @@ if [[ -n "${FERROEHR_VIEWER_BIN:-}" ]]; then
   # The viewer sits behind a compose profile; every profile is resolved.
   mounts_in=()
   export COMPOSE_PROFILES="*"
+  # The FerroSMART overlays' secret files, made as a deployment makes them,
+  # so a key the viewer reads from a compose secret is a real one.
+  export FERROSMART_SECRETS="$work/ferrosmart-secrets"
+  bash docker/ferrosmart/secrets.sh "$FERROSMART_SECRETS" >/dev/null
   # ── The hosted sandbox's viewer ────────────────────────────────────────────
   # The box's .env supplies these; a placeholder stands in for each.
   DATABASE_URL="$dsn" FERROPIX_DATABASE_URL="$dsn" FERROPIX_DATA_KEY=placeholder \
@@ -247,8 +303,9 @@ if [[ -n "${FERROEHR_VIEWER_BIN:-}" ]]; then
   "${compose[@]}" -f docker-compose.yml config --format json </dev/null >"$work/quickstart.json"
   viewer_compose docker-compose.yml "$work/quickstart.json" "$PWD"
   for overlay in docker-compose.*.yml; do
-    "${compose[@]}" -f docker-compose.yml -f "$overlay" config --format json </dev/null >"$work/overlay.json" 2>/dev/null || continue
-    viewer_compose "docker-compose.yml with $overlay" "$work/overlay.json" "$PWD"
+    stack "$overlay"
+    "${compose[@]}" "${stack_files[@]}" config --format json </dev/null >"$work/overlay.json" 2>/dev/null || continue
+    viewer_compose "$stack_label" "$work/overlay.json" "$PWD"
   done
 
   # ── Every chart render that deploys the viewer ─────────────────────────────
