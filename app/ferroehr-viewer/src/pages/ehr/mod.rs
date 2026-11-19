@@ -39,6 +39,7 @@ use crate::bff::ehr_detail::status::EhrStatusState;
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
 use crate::locale::records::RecordsMsg;
+use crate::locale::server::ServerMsg;
 use crate::locale::{Msg, current, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::{Refused, is_status, refused, shortened};
@@ -309,6 +310,7 @@ fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
         tr(RecordsMsg::EhrCopyId),
         Act::Copy(ehr_id.to_owned()),
     )));
+    items.extend(launch_items(ehr_id));
     let destructive = if facts.admin {
         vec![Item::new(Action::new(
             Some(Glyph::TRASH),
@@ -319,6 +321,63 @@ fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
         Vec::new()
     };
     Menu::new("ehr-more", tr(RecordsMsg::EhrMore), items).destructive(destructive)
+}
+
+/// A Launch item per configured SMART app, each posting this page's
+/// `launch` intent into a new window (SMART App Launch 2.2.0, Launch App:
+/// EHR Launch, Request: "a new browser instance").
+fn launch_items(ehr_id: &str) -> Vec<Item> {
+    let Some(launch) = crate::request::state().and_then(|state| state.launch) else {
+        return Vec::new();
+    };
+    launch
+        .apps()
+        .map(|app| {
+            Item::new(Action::new(
+                Some(Glyph::PLAY),
+                tr_with(ServerMsg::LaunchApp, &[("name", app.name.clone().into())]),
+                Act::PostToNewWindow {
+                    action: ehr_href(ehr_id),
+                    fields: vec![
+                        ("intent".to_owned(), "launch".to_owned()),
+                        ("app".to_owned(), app.client_id.clone()),
+                    ],
+                },
+            ))
+        })
+        .collect()
+}
+
+/// Launches the app `app_client_id` for the EHR `ehr_id`: the EHR is read
+/// with the person's own session first, so a launch is only ever for an EHR
+/// they may read, and the browser goes on to the app ([`crate::launch`]).
+async fn launch(ehr_id: &str, app_client_id: &str) -> Option<Acted> {
+    let refusal = |error: ViewerError| {
+        Some(Acted::Refused(Refused::new(
+            tr(ServerMsg::LaunchRefused),
+            error,
+        )))
+    };
+    let launcher = crate::request::state().and_then(|state| state.launch)?;
+    let status = match crate::bff::ehr_detail::status::fetch_ehr_status(ehr_id.to_owned()).await {
+        Ok(status) => status,
+        Err(error) => return refusal(error),
+    };
+    let context = crate::launch::Context {
+        ehr_id,
+        subject: &status.subject,
+        subject_namespace: &status.subject_namespace,
+    };
+    match launcher.launch(app_client_id, context).await {
+        Ok(app) => {
+            crate::request::launch_away(app);
+            None
+        }
+        Err(error) => {
+            tracing::warn!(app = %app_client_id, error = %crate::error::error_chain(&error), "a SMART launch was refused");
+            refusal(ViewerError::failed(tr(ServerMsg::LaunchRefused), error))
+        }
+    }
 }
 
 /// Delete EHR's confirmation: what a physical delete removes, and the field
@@ -502,6 +561,7 @@ async fn act(ehr_id: &str) -> Option<Acted> {
                 ))),
             }
         }
+        "launch" => launch(ehr_id, &posted.text("app")).await,
         _ => None,
     }
 }

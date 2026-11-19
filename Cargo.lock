@@ -2385,6 +2385,7 @@ dependencies = [
  "http",
  "indexmap 2.14.2",
  "jiff",
+ "jsonwebtoken",
  "openehr-am",
  "openehr-base",
  "openehr-its",

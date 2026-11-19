@@ -66,7 +66,7 @@ fn manifest() -> Value {
 }
 
 /// One id of the manifest.
-fn id(key: &str) -> String {
+pub(crate) fn id(key: &str) -> String {
     manifest()
         .get(key)
         .and_then(Value::as_str)
@@ -185,6 +185,14 @@ async fn replayed_cdr_with(stubs: Vec<Value>) -> String {
 
 /// The viewer's state, pointed at `cdr`, with a sealed session store.
 fn app_state(cdr: &str) -> ferroehr_viewer::state::AppState {
+    app_state_launching(cdr, ferroehr_viewer::launch::LaunchSection::default())
+}
+
+/// The viewer's state of [`app_state`], launching the apps `launch` names.
+fn app_state_launching(
+    cdr: &str,
+    launch: ferroehr_viewer::launch::LaunchSection,
+) -> ferroehr_viewer::state::AppState {
     let defaults = ferroehr_viewer::config::ViewerConfig::default();
     let config = ferroehr_viewer::config::ViewerConfig {
         cdr: ferroehr_viewer::config::CdrConfig {
@@ -198,6 +206,7 @@ fn app_state(cdr: &str) -> ferroehr_viewer::state::AppState {
             key: Some(ferrohealth_secret::secret::Secret::new(SESSION_KEY)),
             ..defaults.session.clone()
         },
+        launch,
         ..defaults
     };
     let cdr = ferroehr_viewer::cdr::CdrClient::new(&config.cdr)
@@ -222,24 +231,24 @@ fn is_session_cookie(cookie: &str) -> bool {
 }
 
 /// The viewer's service over the replayed CDR.
-struct Viewer {
+pub(crate) struct Viewer {
     /// The router the binary serves.
     service: axum::Router,
 }
 
 /// One answer of the viewer: its status, its headers and its body.
-struct Answer {
+pub(crate) struct Answer {
     /// The status.
-    status: http::StatusCode,
+    pub(crate) status: http::StatusCode,
     /// The headers.
-    headers: http::HeaderMap,
+    pub(crate) headers: http::HeaderMap,
     /// The body, as text.
-    body: String,
+    pub(crate) body: String,
 }
 
 impl Answer {
     /// The `Location` it sends the browser to.
-    fn location(&self) -> &str {
+    pub(crate) fn location(&self) -> &str {
         self.headers
             .get(http::header::LOCATION)
             .and_then(|value| value.to_str().ok())
@@ -257,7 +266,7 @@ impl Answer {
     }
 
     /// The page's main region, the part a screen draws inside the shell.
-    fn main(&self) -> &str {
+    pub(crate) fn main(&self) -> &str {
         let start = self.body.find("<main").unwrap_or(0);
         let end = self.body.find("</main>").unwrap_or(self.body.len());
         self.body.get(start..end).unwrap_or(&self.body)
@@ -278,8 +287,17 @@ impl Viewer {
         }
     }
 
+    /// The viewer over a fresh replayed CDR, launching the apps `launch`
+    /// names.
+    pub(crate) async fn start_launching(launch: ferroehr_viewer::launch::LaunchSection) -> Self {
+        let cdr = replayed_cdr_with(Vec::new()).await;
+        Self {
+            service: ferroehr_viewer::server::router(app_state_launching(&cdr, launch)),
+        }
+    }
+
     /// Sends one request; `cookie` is the session, when there is one.
-    async fn send(
+    pub(crate) async fn send(
         &self,
         method: http::Method,
         path: &str,
@@ -354,7 +372,7 @@ impl Viewer {
     }
 
     /// Signs in through the form and returns the session cookie.
-    async fn sign_in(&self) -> String {
+    pub(crate) async fn sign_in(&self) -> String {
         let answer = self
             .send(
                 http::Method::POST,
@@ -376,7 +394,7 @@ impl Viewer {
     }
 
     /// A page, signed in as `cookie`.
-    async fn page(&self, cookie: &str, path: &str) -> Answer {
+    pub(crate) async fn page(&self, cookie: &str, path: &str) -> Answer {
         self.send(http::Method::GET, path, Some(cookie), None).await
     }
 }

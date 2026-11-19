@@ -222,6 +222,94 @@ A document looks like:
 
 With `enabled = false` the path is not mounted at all (404).
 
+## Launching an app from the viewer
+
+SMART App Launch 2.2.0 has the EHR start an EHR launch by opening the app's
+launch URL "in a new browser instance (or iframe)" with `iss`, the base, and
+`launch`, "an opaque handle to the EHR context" (Launch App: EHR Launch,
+Request). The specification gives the EHR no way to hand the authorization
+server that context, so FerroSMART takes it through its own EHR launch API,
+`POST {issuer}/launch`
+([§13.17, Launching an app from an EHR](https://github.com/FerroHEALTH/FerroSMART/blob/main/docs/architecture.md#1317-launching-an-app-from-an-ehr)).
+The viewer is that EHR: with `[launch]` set, an EHR's **More** menu carries a
+**Launch** item per configured app, and a click does this:
+
+1. The viewer reads the EHR's status with your own session, so you launch
+   only for an EHR you may read.
+2. Its server posts the context to FerroSMART, authenticated by its own
+   `private_key_jwt` client assertion (`aud` FerroSMART's issuer, `typ`
+   `client-authentication+jwt`): the app's `client_id`, `resource` (the
+   openEHR base), `ehrId` of the EHR on screen, `patient` when the EHR's
+   subject namespace is one of `launch.patient_namespaces`, and
+   `need_patient_banner=false`, since the viewer already shows whose record
+   it is. No `encounter` is sent: an openEHR CDR holds none to send, and the
+   context is optional in SMART.
+3. FerroSMART answers `201` with a fresh `launch` value, single use, valid
+   for five minutes, for that app and that base alone. The viewer answers
+   the click's new window with `303 See Other` to
+   `{launch_url}?iss={resource}&launch={value}`, `Cache-Control: no-store`.
+   The app then reads the base's discovery document, which names FerroSMART,
+   and the person logs in and consents there; the token response carries
+   the context the viewer registered.
+
+The key that authenticates the viewer never reaches the browser, and the
+viewer logs no launch value. A launch FerroSMART refuses draws the refusal on
+the EHR's page in that window.
+
+Register the viewer and each app at FerroSMART, and list the apps in the
+viewer:
+
+```toml,ferrosmart
+# FerroSMART: the viewer is the EHR client, its public key by value.
+[[ferrosmart.client]]
+client_id = "ferroehr-viewer"
+name = "FerroEHR viewer"
+kind = "confidential_asymmetric"
+jwks_file = "/run/secrets/ferroehr-viewer.jwks.json"
+scopes = ["system/launch.c"]
+grant_types = ["client_credentials"]
+
+# Each app it launches, a client of the authorization code grant.
+[[ferrosmart.client]]
+client_id = "growth-chart"
+name = "Growth chart"
+kind = "public"
+redirect_uris = ["https://apps.example.org/growth/callback"]
+scopes = ["openid", "fhirUser", "launch", "patient/composition-*.r"]
+grant_types = ["authorization_code"]
+```
+
+```toml
+# ferroehr-viewer.toml
+[launch]
+issuer = "https://smart.example.org"
+client_id = "ferroehr-viewer"
+private_key_file = "/run/secrets/ferroehr-viewer-launch.pem"
+kid = "viewer-1"
+resource = "https://ehr.example.org/ferroehr/rest/openehr/v1"
+
+[[launch.app]]
+name = "Growth chart"
+client_id = "growth-chart"
+launch_url = "https://apps.example.org/growth/launch"
+```
+
+The JWK Set FerroSMART registers holds the key's public half under the same
+`kid`. For an RSA key:
+
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out ferroehr-viewer-launch.pem
+n=$(openssl rsa -in ferroehr-viewer-launch.pem -noout -modulus | cut -d= -f2 | xxd -r -p \
+  | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+jq -n --arg n "$n" '{keys: [{kty: "RSA", kid: "viewer-1", alg: "RS384", n: $n, e: "AQAB"}]}' \
+  > ferroehr-viewer.jwks.json
+```
+
+The viewer's configuration keys are in [the viewer's
+configuration](viewer/index.md#configuration). The launch API, the menu and
+the context the viewer sends are our own design; SMART fixes only the launch
+URL.
+
 ## Configuration keys
 
 The keys live in `[auth]` and `[auth.smart]`; see the

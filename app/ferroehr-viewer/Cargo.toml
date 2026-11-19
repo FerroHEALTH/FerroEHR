@@ -78,6 +78,9 @@ tracing.workspace = true
 ferrohealth-telemetry.workspace = true
 reqwest.workspace = true
 ferrohealth-config.workspace = true
+# The algorithm a launch key signs with (`crate::launch`), which
+# `ferrohealth-smart`'s `AssertionKey` names in `jsonwebtoken`'s type.
+jsonwebtoken.workspace = true
 ferrohealth-secret.workspace = true
 # The family's server plumbing: the stack with the health routes, the bounded
 # drain, `cli::Common` and the healthcheck, the console's browser security

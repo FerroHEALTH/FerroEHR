@@ -80,5 +80,9 @@ crate::locale::messages! {
         NotVersionStoreStoredQueryVersion = "not-version-store-stored-query-version",
         /// `the request addresses a CDR path outside the configured CDR base`
         CdrUrlOutsideBase = "cdr-url-outside-base",
+        /// Launch `$name`
+        LaunchApp = "launch-app",
+        /// `The app could not be launched`
+        LaunchRefused = "launch-refused",
     }
 }
