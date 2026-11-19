@@ -16,15 +16,15 @@ use super::{
 group! {
     /// What an access recorded in the access log did (`ACCESS_LOG_ENTRY.action`).
     Action in AccessAction {
-        /// The access read data: HL7 FHIR `audit-event-action#R`.
+        /// The access read data: HL7 FHIR `HL7_AuditEventAction#R`.
         Read => "R" of TERMINOLOGY_ID_AUDIT_EVENT_ACTION, "read",
         /// The access queried data.
         Query => "query",
-        /// The access created data: HL7 FHIR `audit-event-action#C`.
+        /// The access created data: HL7 FHIR `HL7_AuditEventAction#C`.
         Create => "C" of TERMINOLOGY_ID_AUDIT_EVENT_ACTION, "create",
-        /// The access changed data: HL7 FHIR `audit-event-action#U`.
+        /// The access changed data: HL7 FHIR `HL7_AuditEventAction#U`.
         Update => "U" of TERMINOLOGY_ID_AUDIT_EVENT_ACTION, "update",
-        /// The access deleted data: HL7 FHIR `audit-event-action#D`.
+        /// The access deleted data: HL7 FHIR `HL7_AuditEventAction#D`.
         Delete => "D" of TERMINOLOGY_ID_AUDIT_EVENT_ACTION, "delete",
         /// The access exported data out of the system.
         Export => "export",
@@ -55,7 +55,7 @@ group! {
         Person => "person",
         /// A person acting through a client they delegated to.
         DelegatedPerson => "delegated person",
-        /// The subject of care: HL7 `extra-security-role-type#datasubject`.
+        /// The subject of care: HL7 `HL7_SecurityRoleType#datasubject`.
         SubjectOfCare => "datasubject" of TERMINOLOGY_ID_SECURITY_ROLE_TYPE, "subject of care",
         /// A representative of the subject of care.
         Representative => "representative",

@@ -36,7 +36,7 @@ const REPRESENTATION: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representat
 /// The ADL 2 id of the representation archetype.
 const REPRESENTATION_HRID: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0";
 /// The ADL 2 id of the membership archetype.
-const MEMBERSHIP_HRID: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0";
+const MEMBERSHIP_HRID: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.1";
 
 /// A file of the repository.
 fn repo_file(relative: &str) -> String {

@@ -71,7 +71,7 @@ fn access_record() -> Value {
             "identifiers": [{ "_type": "DV_IDENTIFIER", "id": "900012345", "issuer": "CIBG", "type": "UZI" }]
         },
         "operation": { "_type": "CODE_PHRASE", "terminology_id": { "value": "ferroehr-operations" }, "code_string": "read" },
-        "purpose": { "_type": "CODE_PHRASE", "terminology_id": { "value": "v3-ActReason" }, "code_string": "TREAT" },
+        "purpose": { "_type": "CODE_PHRASE", "terminology_id": { "value": "HL7_ActReason" }, "code_string": "TREAT" },
         "outcome": { "_type": "CODE_PHRASE", "terminology_id": { "value": "ferroehr-outcome" }, "code_string": "permitted" },
         "resources": [
             "openEHR-EHR-COMPOSITION.encounter.v1",

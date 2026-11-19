@@ -174,6 +174,10 @@ enum Defect {
     /// The settings break a BMM invariant of the draft access control.
     #[error("EHR_ACCESS.settings break the invariant {0}")]
     Invariant(openehr_rm::draft::invariants::Violation),
+    /// The settings set an attribute no access decision of this server
+    /// reads yet.
+    #[error("EHR_ACCESS.settings.{0} is not decided by this server, so it is not stored")]
+    Undecided(String),
 }
 
 /// Reads written settings as the scheme, checking every invariant.
@@ -191,6 +195,9 @@ fn read_settings(settings: &Value) -> Result<AccessDirectiveSettings, Defect> {
         return Err(Defect::Invariant(*first));
     }
     check_codes(&read)?;
+    if let Some(path) = crate::access_policy::undecided::in_settings(&read) {
+        return Err(Defect::Undecided(path));
+    }
     Ok(read)
 }
 
@@ -218,7 +225,7 @@ fn check_codes(settings: &AccessDirectiveSettings) -> Result<(), Defect> {
         foreign(
             &format!("labels[{index}].sensitivities"),
             ForeignKind::Sensitivity,
-            &label.sensitivities,
+            label.sensitivities.as_deref().unwrap_or_default(),
         )?;
     }
     Ok(())
@@ -376,7 +383,7 @@ mod tests {
                     "code_string": code } })
     }
 
-    /// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+    /// An `access effect`: a code of HL7 FHIR `HL7_ConsentProvisionType`.
     fn provision(code: &str) -> Value {
         let mut value = term(code);
         value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
@@ -554,7 +561,7 @@ mod tests {
         let foreign = |code: &str| {
             json!({ "_type": "DV_CODED_TEXT", "value": code,
                     "defining_code": { "_type": "CODE_PHRASE",
-                        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "v3-ActReason" },
+                        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_ActReason" },
                         "code_string": code } })
         };
         let restriction = |extra: Value| directive("restriction", "deny", &extra);

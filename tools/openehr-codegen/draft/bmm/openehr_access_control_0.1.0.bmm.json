@@ -5,7 +5,7 @@
   "rm_release": "0.1.0",
   "schema_revision": "0.1.0.1",
   "schema_lifecycle_state": "draft",
-  "schema_description": "openEHR Access Control: a draft change proposal for a concrete ACCESS_CONTROL_SETTINGS scheme of access directives (consent, restriction, opt-out, delegation, sensitivity labels) carried by EHR_ACCESS, and a versioned ACCESS_POLICY of a controller. The classes hold facts; the decision procedure is fixed by the scheme. Not an openEHR release.",
+  "schema_description": "openEHR Access Control: a draft change proposal for two concrete ACCESS_CONTROL_SETTINGS schemes carried by EHR_ACCESS (the controller's confidentiality and exclusions, and the access directives of consent, restriction, opt-out, delegation and labels that inherit them), a versioned ACCESS_POLICY of a controller with its care relationship facts, and versioned party relationships. The classes hold facts; the decision procedure is fixed by the scheme. Not an openEHR release.",
   "schema_author": "FerroEHR (FerroHEALTH/FerroEHR#5487), draft for review",
   "includes": {
     "openehr_rm_1.2.0": {
@@ -16,6 +16,8 @@
     "org.openehr.rm.access_control": {
       "name": "org.openehr.rm.access_control",
       "classes": [
+        "CONFIDENTIALITY_SETTINGS",
+        "CONFIDENTIALITY_MARKING",
         "ACCESS_DIRECTIVE_SETTINGS",
         "ACCESS_DIRECTIVE",
         "ACCESS_ACTOR_SCOPE",
@@ -23,19 +25,120 @@
         "ACCESS_LABEL",
         "ACCESS_POLICY",
         "ACCESS_CLASSIFICATION",
+        "ACCESS_RELATIONSHIP_VALIDITY",
+        "ACCESS_RELATIONSHIP_WRITER",
+        "ACCESS_CONFLICT_RULE",
+        "ACCESS_VALUE_SET",
         "ACCESS_LOG_RESTRICTION",
         "ACCESS_LOG_RETENTION",
         "ACCESS_RETENTION_BOUND",
-        "VERSIONED_ACCESS_POLICY"
+        "VERSIONED_ACCESS_POLICY",
+        "VERSIONED_PARTY_RELATIONSHIP"
       ]
     }
   },
   "class_definitions": {
-    "ACCESS_DIRECTIVE_SETTINGS": {
-      "name": "ACCESS_DIRECTIVE_SETTINGS",
-      "documentation": "The concrete `ACCESS_CONTROL_SETTINGS` of the access directive scheme, carried by `EHR_ACCESS._settings_` and versioned with the EHR. It records the facts an access decision about one EHR rests on: the default disposition, the gate-keepers who may change the settings, the directives the subject or their representative gave (consent, restriction, opt-out, delegation scope), and sensitivity labels on individual versioned objects. It carries no rule language: the decision procedure that reads these facts is fixed by the scheme. `EHR_ACCESS.scheme()` returns `access_directives` for an instance of this class.",
+    "CONFIDENTIALITY_SETTINGS": {
+      "name": "CONFIDENTIALITY_SETTINGS",
+      "documentation": "The concrete `ACCESS_CONTROL_SETTINGS` that holds the controller's facts about one EHR: the confidentiality of the whole record and the named parties excluded from it. The simplest concrete scheme; `ACCESS_DIRECTIVE_SETTINGS` inherits from it, so an EHR holds one settings object (`EHR_ACCESS._settings_` 0..1). `EHR_ACCESS.scheme()` returns `confidentiality` for an instance of this class.",
       "ancestors": [
         "ACCESS_CONTROL_SETTINGS"
+      ],
+      "properties": {
+        "marking": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "marking",
+          "documentation": "The confidentiality of the whole EHR. Void reads as `N`. Set only by the controller; a version committed by anyone else carries it unchanged.",
+          "type": "CONFIDENTIALITY_MARKING"
+        },
+        "exclusions": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "exclusions",
+          "documentation": "Denies the controller sets for this EHR alone, each of kind `exclusion` naming the parties it keeps out. Read and written only by the controller; a version committed by anyone else carries them unchanged.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_DIRECTIVE"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        }
+      },
+      "functions": {
+        "scheme": {
+          "name": "scheme",
+          "documentation": "The name of this scheme, `confidentiality`, which `EHR_ACCESS.scheme()` returns.",
+          "result": {
+            "_type": "P_BMM_SIMPLE_TYPE",
+            "type": "String"
+          }
+        },
+        "is_normal": {
+          "name": "is_normal",
+          "documentation": "True when `_marking_` is Void or its `level()` is 0.",
+          "result": {
+            "_type": "P_BMM_SIMPLE_TYPE",
+            "type": "Boolean"
+          }
+        }
+      },
+      "invariants": {
+        "Exclusions_valid": "exclusions /= Void implies not exclusions.is_empty",
+        "Exclusions_kind": "exclusions /= Void implies exclusions.for_all (e | e.is_exclusion)"
+      }
+    },
+    "CONFIDENTIALITY_MARKING": {
+      "name": "CONFIDENTIALITY_MARKING",
+      "documentation": "The confidentiality of a whole EHR or of one versioned object, with who set it, when and why. The levels are ordered `N` < `R` < `V`: a datum at a level is cleared by a permit that names that level or a higher one.",
+      "properties": {
+        "confidentiality": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "confidentiality",
+          "documentation": "The confidentiality, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted). The codes `U`, `L` and `M` of the same code system read as `N`.",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        },
+        "set_by": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "set_by",
+          "documentation": "The party that set this marking: the controller, or a professional acting for it.",
+          "is_mandatory": true,
+          "type": "PARTY_PROXY"
+        },
+        "set_at": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "set_at",
+          "documentation": "When this marking was set.",
+          "is_mandatory": true,
+          "type": "DV_DATE_TIME"
+        },
+        "reason": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "reason",
+          "documentation": "Why the marking was set, written for the subject to read. Never clinical content, and never read by an access decision.",
+          "type": "DV_TEXT"
+        }
+      },
+      "functions": {
+        "level": {
+          "name": "level",
+          "documentation": "The rank of `_confidentiality_` in the order the package fixes: 0 for `N` (and for `U`, `L` and `M`), 1 for `R`, 2 for `V`.",
+          "result": {
+            "_type": "P_BMM_SIMPLE_TYPE",
+            "type": "Integer"
+          }
+        }
+      },
+      "invariants": {
+        "Confidentiality_valid": "confidentiality.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)"
+      }
+    },
+    "ACCESS_DIRECTIVE_SETTINGS": {
+      "name": "ACCESS_DIRECTIVE_SETTINGS",
+      "documentation": "The access directive scheme, carried by `EHR_ACCESS._settings_` and versioned with the EHR. It inherits the controller's facts of `CONFIDENTIALITY_SETTINGS` and adds the facts the subject's instructions give: the default disposition, the gate-keepers who may change the settings, the directives the subject or their representative gave (consent, restriction, opt-out, delegation scope), and labels on individual versioned objects. It carries no rule language: the decision procedure that reads these facts is fixed by the scheme. `EHR_ACCESS.scheme()` returns `access_directives` for an instance of this class.",
+      "ancestors": [
+        "CONFIDENTIALITY_SETTINGS"
       ],
       "properties": {
         "default_access": {
@@ -74,7 +177,7 @@
         "labels": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "labels",
-          "documentation": "Sensitivity labels on individual versioned objects of the EHR, beside the labels the system's `ACCESS_POLICY` classification gives whole kinds of data.",
+          "documentation": "Labels on individual versioned objects of the EHR, beside the labels the `ACCESS_POLICY` classifications give whole kinds of data and the marking of the whole EHR.",
           "type_def": {
             "container_type": "List",
             "type": "ACCESS_LABEL"
@@ -101,7 +204,7 @@
         "Directives_valid": "directives /= Void implies not directives.is_empty",
         "Labels_valid": "labels /= Void implies not labels.is_empty",
         "Opt_out_unique": "directives /= Void implies directives.filter (d | d.is_opt_out).count <= 1",
-        "Directives_not_controller_rules": "directives /= Void implies directives.for_all (d | not d.is_controller_rule and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule)))"
+        "Directives_not_controller_rules": "directives /= Void implies directives.for_all (d | not d.is_controller_rule and not d.is_exclusion and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule and not e.is_exclusion)))"
       }
     },
     "ACCESS_DIRECTIVE": {
@@ -114,7 +217,7 @@
         "kind": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "kind",
-          "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
+          "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`, `exclusion` for a controller's exclusion of a named party from one EHR (`CONFIDENTIALITY_SETTINGS._exclusions_`). The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
           "is_mandatory": true,
           "type": "DV_CODED_TEXT"
         },
@@ -298,6 +401,14 @@
             "_type": "P_BMM_SIMPLE_TYPE",
             "type": "Boolean"
           }
+        },
+        "is_exclusion": {
+          "name": "is_exclusion",
+          "documentation": "True when `_kind_` is the `exclusion` code of the `access directive kind` group.",
+          "result": {
+            "_type": "P_BMM_SIMPLE_TYPE",
+            "type": "Boolean"
+          }
         }
       },
       "invariants": {
@@ -313,7 +424,8 @@
         "Exceptions_valid": "exceptions /= Void implies not exceptions.is_empty",
         "Legal_grounds_valid": "legal_grounds /= Void implies not legal_grounds.is_empty",
         "Evidence_valid": "evidence /= Void implies not evidence.is_empty",
-        "Identifiers_valid": "identifiers /= Void implies not identifiers.is_empty"
+        "Identifiers_valid": "identifiers /= Void implies not identifiers.is_empty",
+        "Exclusion_denies": "is_exclusion implies (is_deny and exceptions = Void)"
       }
     },
     "ACCESS_ACTOR_SCOPE": {
@@ -335,7 +447,26 @@
         "relationship": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "relationship",
-          "documentation": "A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship), `representative` or `proxy`.",
+          "documentation": "A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship, narrowed by `_care_roles_` and `_care_path_`), `representative` or `proxy`.",
+          "type": "DV_CODED_TEXT"
+        },
+        "care_roles": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "care_roles",
+          "documentation": "The roles in a care relationship the scope names: a caller matches when it holds a live care relationship to the subject whose `care_role` has the terminology and code of one of them. Void means any role. No role implies another.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "care_path": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "care_path",
+          "documentation": "How the care relationship reaches the caller, coded in the `care path` group: `direct`, `team`, `attested` or `self_declared`. Void means `direct` or `team`, and `attested` or `self_declared` only where the policy admits that path.",
           "type": "DV_CODED_TEXT"
         },
         "organisation_type": {
@@ -354,7 +485,9 @@
       "invariants": {
         "Not_empty": "party /= Void or role /= Void or organisation_type /= Void or relationship /= Void or caller_kind /= Void",
         "Relationship_valid": "relationship /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)",
-        "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)"
+        "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)",
+        "Care_roles_valid": "care_roles /= Void implies (not care_roles.is_empty and relationship /= Void and then relationship.defining_code.code_string.is_equal (\"care\"))",
+        "Care_path_valid": "care_path /= Void implies (relationship /= Void and then relationship.defining_code.code_string.is_equal (\"care\") and terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_care_path, care_path.defining_code))"
       }
     },
     "ACCESS_DATA_SCOPE": {
@@ -416,7 +549,20 @@
         "sensitivities": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "sensitivities",
-          "documentation": "Sensitivity codes, matched against the labels the data carry, coded in a terminology the system documents (such as the HL7 v3 confidentiality and sensitivity codes).",
+          "documentation": "Sensitivity codes, matched against the labels the data carry, coded in a terminology the jurisdiction names (such as the `HL7_ActCode` sensitivity policy codes).",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "confidentialities": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "confidentialities",
+          "documentation": "Confidentiality levels, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted): the data whose confidentiality is one of these levels or a lower one.",
           "type_def": {
             "container_type": "List",
             "type": "DV_CODED_TEXT"
@@ -452,18 +598,19 @@
         }
       },
       "invariants": {
-        "Not_empty": "objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or origins /= Void or recorded /= Void",
+        "Not_empty": "objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or confidentialities /= Void or origins /= Void or recorded /= Void",
         "Objects_valid": "objects /= Void implies not objects.is_empty",
         "Templates_valid": "templates /= Void implies not templates.is_empty",
         "Archetypes_valid": "archetypes /= Void implies not archetypes.is_empty",
         "Categories_valid": "categories /= Void implies not categories.is_empty",
         "Sensitivities_valid": "sensitivities /= Void implies not sensitivities.is_empty",
+        "Confidentialities_valid": "confidentialities /= Void implies (not confidentialities.is_empty and confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)))",
         "Origins_valid": "origins /= Void implies not origins.is_empty"
       }
     },
     "ACCESS_LABEL": {
       "name": "ACCESS_LABEL",
-      "documentation": "Sensitivity labels on one versioned object of the EHR. A caller reads labelled data only when a capability clears every label, a permit directive names the label, or an emergency override applies.",
+      "documentation": "Labels on one versioned object of the EHR: sensitivity codes, a confidentiality, or both. A caller reads labelled data only when a permit clears every label, or an emergency override applies.",
       "properties": {
         "target": {
           "_type": "P_BMM_SINGLE_PROPERTY",
@@ -476,15 +623,20 @@
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "sensitivities",
           "documentation": "The sensitivity codes the object carries.",
-          "is_mandatory": true,
           "type_def": {
             "container_type": "List",
             "type": "DV_CODED_TEXT"
           },
           "cardinality": {
-            "lower": 1,
+            "lower": 0,
             "upper_unbounded": true
           }
+        },
+        "confidentiality": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "confidentiality",
+          "documentation": "The confidentiality of the object. The confidentiality of a datum is the highest of this marking, the marking of its EHR and the confidentiality its classifications give it.",
+          "type": "CONFIDENTIALITY_MARKING"
         },
         "reason": {
           "_type": "P_BMM_SINGLE_PROPERTY",
@@ -492,6 +644,10 @@
           "documentation": "Why the object is labelled, never clinical content.",
           "type": "DV_TEXT"
         }
+      },
+      "invariants": {
+        "Not_empty": "sensitivities /= Void or confidentiality /= Void",
+        "Sensitivities_valid": "sensitivities /= Void implies not sensitivities.is_empty"
       }
     },
     "ACCESS_POLICY": {
@@ -531,8 +687,130 @@
         "relationship_grace": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "relationship_grace",
-          "documentation": "How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access).",
+          "documentation": "How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access). Grace never extends a team membership.",
           "type": "DV_DURATION"
+        },
+        "time_zone": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "time_zone",
+          "documentation": "The time zone, as an IANA time zone name, in which the dates of a relationship's `time_validity` are read. Void means UTC.",
+          "type": "String"
+        },
+        "care_purposes": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "care_purposes",
+          "documentation": "The purposes of use for which a care relationship is a ground. Void means the `HL7_ActReason` codes `TREAT`, `ETREAT` and `CAREMGT`. An access that declares another purpose is not admitted by a relationship.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "relationship_validity": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "relationship_validity",
+          "documentation": "The default and maximum periods of care relationships, by role and organisation type. A relationship no entry covers must be written with an end.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_RELATIONSHIP_VALIDITY"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "relationship_writers": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "relationship_writers",
+          "documentation": "The writers that may state a care relationship to a subject whose EHR is marked above `N`. Void means none.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_RELATIONSHIP_WRITER"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "team_targets": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "team_targets",
+          "documentation": "The `ORGANISATION` units a care relationship may name as its target. Void means none: a team target is then a `GROUP`.",
+          "type_def": {
+            "container_type": "List",
+            "type": "PARTY_REF"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "self_declared_care": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "self_declared_care",
+          "documentation": "The longest period of a self-declared care relationship. Void means a self-declared relationship is refused at write.",
+          "type": "DV_DURATION"
+        },
+        "attested_care": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "attested_care",
+          "documentation": "The agreements under which a caller's verified credential may attest a care relationship. Void means no attested relationship is admitted.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_IDENTIFIER"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "caseload": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "caseload",
+          "documentation": "Whether a query may be narrowed to the caller's caseload and the caseload resource answers. Void means true.",
+          "type": "Boolean"
+        },
+        "conflict_rules": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "conflict_rules",
+          "documentation": "The conflicts of interest the controller allows through the professional path. Void allows none: a professional who is the subject, or is related to the subject, is refused.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_CONFLICT_RULE"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "concealed_confidentialities": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "concealed_confidentialities",
+          "documentation": "The confidentiality levels whose refused records are answered as absent. Void answers every refused named record as forbidden.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "value_sets": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "value_sets",
+          "documentation": "The value sets the controller binds the coded attributes of care relationships, representations and rules to, held on a terminology server. A binding left out uses the default value set of the package.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_VALUE_SET"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
         },
         "purpose_required": {
           "_type": "P_BMM_SINGLE_PROPERTY",
@@ -602,7 +880,16 @@
         "Log_restrictions_valid": "log_restrictions /= Void implies not log_restrictions.is_empty",
         "Rules_valid": "rules /= Void implies not rules.is_empty",
         "Rules_kind": "rules /= Void implies rules.for_all (r | r.is_controller_rule and (r.exceptions = Void or r.exceptions.for_all (e | e.is_controller_rule)))",
-        "Catalogue_not_controller_rules": "catalogue /= Void implies catalogue.for_all (d | not d.is_controller_rule and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule)))"
+        "Catalogue_not_controller_rules": "catalogue /= Void implies catalogue.for_all (d | not d.is_controller_rule and not d.is_exclusion and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule and not e.is_exclusion)))",
+        "Care_purposes_valid": "care_purposes /= Void implies not care_purposes.is_empty",
+        "Relationship_validity_valid": "relationship_validity /= Void implies not relationship_validity.is_empty",
+        "Relationship_writers_valid": "relationship_writers /= Void implies not relationship_writers.is_empty",
+        "Team_targets_valid": "team_targets /= Void implies (not team_targets.is_empty and team_targets.for_all (t | t.type.is_equal (\"ORGANISATION\")))",
+        "Self_declared_valid": "self_declared_care /= Void implies self_declared_care.magnitude > 0",
+        "Attested_care_valid": "attested_care /= Void implies not attested_care.is_empty",
+        "Conflict_rules_valid": "conflict_rules /= Void implies not conflict_rules.is_empty",
+        "Concealed_valid": "concealed_confidentialities /= Void implies (not concealed_confidentialities.is_empty and concealed_confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)))",
+        "Value_sets_valid": "value_sets /= Void implies not value_sets.is_empty"
       }
     },
     "ACCESS_CLASSIFICATION": {
@@ -623,6 +910,103 @@
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "sensitivities",
           "documentation": "The sensitivity codes the data carry.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "confidentiality": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "confidentiality",
+          "documentation": "The confidentiality the data carry, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted).",
+          "type": "DV_CODED_TEXT"
+        }
+      },
+      "invariants": {
+        "No_objects": "data.objects = Void",
+        "Not_empty": "sensitivities /= Void or confidentiality /= Void",
+        "Sensitivities_valid": "sensitivities /= Void implies not sensitivities.is_empty",
+        "Confidentiality_valid": "confidentiality /= Void implies confidentiality.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)"
+      }
+    },
+    "ACCESS_RELATIONSHIP_VALIDITY": {
+      "name": "ACCESS_RELATIONSHIP_VALIDITY",
+      "documentation": "The default and maximum period of the care relationships one entry covers. A relationship written without an end takes the default period from its start; one longer than the maximum is refused. An entry with neither period lets the relationships it covers stay open.",
+      "properties": {
+        "roles": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "roles",
+          "documentation": "The `care_role` codes the entry covers. Void means every role.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "organisation_types": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "organisation_types",
+          "documentation": "The types of the relationship's `provider` the entry covers, matched as `ACCESS_ACTOR_SCOPE._organisation_type_` is. Void means every type.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "default_period": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "default_period",
+          "documentation": "The period a relationship written without an end takes.",
+          "type": "DV_DURATION"
+        },
+        "max_period": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "max_period",
+          "documentation": "The longest period a relationship may have.",
+          "type": "DV_DURATION"
+        }
+      },
+      "invariants": {
+        "Roles_valid": "roles /= Void implies not roles.is_empty",
+        "Organisation_types_valid": "organisation_types /= Void implies not organisation_types.is_empty",
+        "Default_valid": "default_period /= Void implies default_period.magnitude > 0",
+        "Max_valid": "max_period /= Void implies max_period.magnitude > 0",
+        "Default_within_max": "(default_period /= Void and max_period /= Void) implies default_period.magnitude <= max_period.magnitude",
+        "Bounded_together": "default_period /= Void implies max_period /= Void"
+      }
+    },
+    "ACCESS_RELATIONSHIP_WRITER": {
+      "name": "ACCESS_RELATIONSHIP_WRITER",
+      "documentation": "The writers that may state a care relationship to a subject whose EHR is marked at one of the levels named, beside the writers the capabilities already admit.",
+      "properties": {
+        "applies_to": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "applies_to",
+          "documentation": "The writers, any one of which is enough.",
+          "is_mandatory": true,
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_ACTOR_SCOPE"
+          },
+          "cardinality": {
+            "lower": 1,
+            "upper_unbounded": true
+          }
+        },
+        "confidentialities": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "confidentialities",
+          "documentation": "The levels, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted), for which these writers may state a relationship.",
           "is_mandatory": true,
           "type_def": {
             "container_type": "List",
@@ -635,7 +1019,74 @@
         }
       },
       "invariants": {
-        "No_objects": "data.objects = Void"
+        "Confidentialities_valid": "confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality))"
+      }
+    },
+    "ACCESS_CONFLICT_RULE": {
+      "name": "ACCESS_CONFLICT_RULE",
+      "documentation": "A conflict of interest the controller allows through the professional path, for the callers named. An access admitted under it is marked in the access log.",
+      "properties": {
+        "conflict": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "conflict",
+          "documentation": "The conflict, coded in the `access conflict` group: `self` (the caller is the subject) or `related` (the caller is related to the subject).",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        },
+        "applies_to": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "applies_to",
+          "documentation": "The callers the allowance covers. Void means every professional.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_ACTOR_SCOPE"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "kinships": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "kinships",
+          "documentation": "For `related`, the kinship codes the allowance covers. Void means every kinship.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        }
+      },
+      "invariants": {
+        "Conflict_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_conflict, conflict.defining_code)",
+        "Applies_to_valid": "applies_to /= Void implies not applies_to.is_empty",
+        "Kinships_valid": "kinships /= Void implies (not kinships.is_empty and conflict.defining_code.code_string.is_equal (\"related\"))"
+      }
+    },
+    "ACCESS_VALUE_SET": {
+      "name": "ACCESS_VALUE_SET",
+      "documentation": "A value set the controller binds a coded attribute of the package to.",
+      "properties": {
+        "binding": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "binding",
+          "documentation": "What the value set codes, in the `access value set binding` group: `care_role`, `representation_basis`, `kinship`, `organisation_type`, `care_purpose` or `emergency_purpose`.",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        },
+        "value_set": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "value_set",
+          "documentation": "The canonical URL of the value set on the terminology server.",
+          "is_mandatory": true,
+          "type": "DV_URI"
+        }
+      },
+      "invariants": {
+        "Binding_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_value_set_binding, binding.defining_code)"
       }
     },
     "ACCESS_LOG_RESTRICTION": {
@@ -777,6 +1228,13 @@
     "VERSIONED_ACCESS_POLICY": {
       "name": "VERSIONED_ACCESS_POLICY",
       "documentation": "Version container for an `ACCESS_POLICY`, committed in contributions with their audit like any other versioned object.",
+      "ancestors": [
+        "VERSIONED_OBJECT"
+      ]
+    },
+    "VERSIONED_PARTY_RELATIONSHIP": {
+      "name": "VERSIONED_PARTY_RELATIONSHIP",
+      "documentation": "Version container for one `PARTY_RELATIONSHIP` stored on its own, such as a care relationship, committed in contributions with their audit like any other versioned object.",
       "ancestors": [
         "VERSIONED_OBJECT"
       ]

@@ -268,7 +268,7 @@ fn ferrohealth_group() -> Schema {
             sub_attributes: None,
             multi_valued: false,
             description: "Whether the Group is a care team: its GROUP carries \
-                          openehr_access::care_team and each membership v3-RoleClass::MBR, \
+                          openehr_access::care_team and each membership HL7_RoleClass::MBR, \
                           written under the client's write_care_relationship grant; set at \
                           creation and never changed."
                 .to_owned(),

@@ -522,7 +522,7 @@ mod tests {
     const TEAM: &str = "0190a1bc-3a1e-72e4-b7c5-f78a24c01308";
 
     /// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
-    const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
+    const MEMBER: (&str, &str) = ("HL7_RoleClass", "MBR");
     /// A patient under the care of a team or unit.
     const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
     /// A representation.
@@ -650,7 +650,7 @@ mod tests {
     fn a_membership_is_read_by_the_hl7_code_alone() {
         let body = json!({"_type": "PERSON", "relationships": [
             relationship((TERMINOLOGY, "member_of"), TEAM),
-            relationship(("v3-RoleCode", "MBR"), TEAM)
+            relationship(("HL7_RoleCode", "MBR"), TEAM)
         ]});
         let facts = GrantFacts::of(Kind::Person, &body);
         assert_eq!(facts.facts, Vec::new());

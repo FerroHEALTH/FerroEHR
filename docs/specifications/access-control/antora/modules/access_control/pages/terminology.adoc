@@ -18,40 +18,74 @@ The identifier is a `TERMINOLOGY_ID` of the form BASE gives (xref:BASE:base_type
 
 == Codes from HL7 Code Systems
 
-Where an HL7 code system publishes a code with the same meaning as a term of a group, the group's term is that code, and a record carries it under the code system's identifier. The draft holds no code of its own for it. Each HL7 code system has one terminology identifier, its code system `id`, since a URI or an OID is no valid `TERMINOLOGY_ID`:
+Where an HL7 code system publishes a code with the same meaning as a term of a group, the group's term is that code, and a record carries it under the code system's terminology identifier. The draft holds no code of its own for it. A URI or an OID is no valid `TERMINOLOGY_ID`, so the identifier of an HL7 code system is `HL7_` followed by the code system's `name`, on the model of openEHR's identifiers for external terminologies, which join the publishing organisation and the name with an underscore (`ISO_639-1`, `IANA_media-types`). This table is the one place a code system's canonical URL appears; an exporter to FHIR maps the identifier to the URL through it and keeps the code. The rule and the identifiers are proposed and not assigned.
 
-[cols="2,4,3", options="header"]
+[cols="3,5,3,2", options="header"]
 |===
-|Terminology identifier |Canonical URI |Codes used
+|Terminology identifier |Canonical URL |OID |Version read
 
-|`consent-provision-type`
-|`http://hl7.org/fhir/consent-provision-type`
-|`permit`, `deny`
-
-|`extra-security-role-type`
-|`http://terminology.hl7.org/CodeSystem/extra-security-role-type`
-|`datasubject`
-
-|`v3-RoleClass`
-|`http://terminology.hl7.org/CodeSystem/v3-RoleClass`
-|`MBR`
-
-|`audit-event-action`
-|`http://hl7.org/fhir/audit-event-action`
-|`C`, `R`, `U`, `D`
-
-|`v3-ActReason`
-|`http://terminology.hl7.org/CodeSystem/v3-ActReason`
-|PurposeOfUse codes, such as `TREAT` and `ETREAT` (see <<Codes from Other Terminologies>>)
-
-|`v3-Confidentiality`
-|`http://terminology.hl7.org/CodeSystem/v3-Confidentiality`
-|`U`, `L`, `M`, `N`, `R`, `V` (see <<Codes from Other Terminologies>>)
-
-|`v3-ActCode`
+|`HL7_ActCode`
 |`http://terminology.hl7.org/CodeSystem/v3-ActCode`
-|`_InformationSensitivityPolicy` codes (see <<Codes from Other Terminologies>>)
+|2.16.840.1.113883.5.4
+|11.0.0
+
+|`HL7_ActReason`
+|`http://terminology.hl7.org/CodeSystem/v3-ActReason`
+|2.16.840.1.113883.5.8
+|4.0.0
+
+|`HL7_AuditEventAction`
+|`http://hl7.org/fhir/audit-event-action`
+|2.16.840.1.113883.4.642.4.453
+|4.0.1
+
+|`HL7_AuditEventOutcome`
+|`http://terminology.hl7.org/CodeSystem/audit-event-outcome`
+|2.16.840.1.113883.4.642.1.0
+|1.0.1
+
+|`HL7_Confidentiality`
+|`http://terminology.hl7.org/CodeSystem/v3-Confidentiality`
+|2.16.840.1.113883.5.25
+|5.0.0
+
+|`HL7_ConsentActionCodes`
+|`http://terminology.hl7.org/CodeSystem/consentaction`
+|2.16.840.1.113883.4.642.1.1227
+|1.0.1
+
+|`HL7_ConsentProvisionType`
+|`http://hl7.org/fhir/consent-provision-type`
+|2.16.840.1.113883.4.642.4.758
+|4.0.1
+
+|`HL7_ParticipationFunction`
+|`http://terminology.hl7.org/CodeSystem/v3-ParticipationFunction`
+|2.16.840.1.113883.5.88
+|5.0.0
+
+|`HL7_ParticipationType`
+|`http://terminology.hl7.org/CodeSystem/v3-ParticipationType`
+|2.16.840.1.113883.5.90
+|7.0.0
+
+|`HL7_RoleClass`
+|`http://terminology.hl7.org/CodeSystem/v3-RoleClass`
+|2.16.840.1.113883.5.110
+|6.0.0
+
+|`HL7_RoleCode`
+|`http://terminology.hl7.org/CodeSystem/v3-RoleCode`
+|2.16.840.1.113883.5.111
+|4.0.0
+
+|`HL7_SecurityRoleType`
+|`http://terminology.hl7.org/CodeSystem/extra-security-role-type`
+|none published
+|1.0.1
 |===
+
+The versions are those of the HL7 Terminology package `hl7.terminology` 7.5.0 and the FHIR R4 core package `hl7.fhir.r4.core` 4.0.1 the codes were read from. A code is compared by terminology identifier and code, never by display.
 
 A group is the set of its terms, whichever terminology each is of, so `has_code_for_group_id` in an invariant holds for each term the group lists below.
 
@@ -68,53 +102,126 @@ The groups of this package follow. The codes in `openehr_access` are proposed; a
 |`ACCESS_DIRECTIVE_SETTINGS._default_access_` (`Group_id_access_default`)
 
 |access directive kind
-|consent, restriction, opt_out, delegation, controller_rule
-|`ACCESS_DIRECTIVE._kind_` (`Group_id_access_directive_kind`); `controller_rule` only in `ACCESS_POLICY._rules_`
+|consent, restriction, opt_out, delegation, controller_rule, exclusion
+|`ACCESS_DIRECTIVE._kind_` (`Group_id_access_directive_kind`); `controller_rule` only in `ACCESS_POLICY._rules_`, `exclusion` only in `CONFIDENTIALITY_SETTINGS._exclusions_`
 
 |access effect
-|`consent-provision-type::permit`, `consent-provision-type::deny`
+|`HL7_ConsentProvisionType::permit`, `HL7_ConsentProvisionType::deny`
 |`ACCESS_DIRECTIVE._effect_` (`Group_id_access_effect`)
 
 |access relationship
 |care, representative, proxy
 |`ACCESS_ACTOR_SCOPE._relationship_` (`Group_id_access_relationship`)
 
+|care path
+|direct, team, attested, self_declared
+|`ACCESS_ACTOR_SCOPE._care_path_` (`Group_id_access_care_path`): how a care relationship reaches the caller (xref:decision_procedure.adoc#_holding_a_care_relationship[Holding a Care Relationship])
+
 |access caller kind
-|professional, access_service, `extra-security-role-type::datasubject` (the subject), representative, system
+|professional, access_service, `HL7_SecurityRoleType::datasubject` (the subject), representative, system
 |`ACCESS_ACTOR_SCOPE._caller_kind_` (`Group_id_access_caller_kind`)
 
 |access operation
 |read, write, export, query
 |`ACCESS_DIRECTIVE._operations_`: the classes of operation a directive applies to
 
+|access conflict
+|self, related
+|`ACCESS_CONFLICT_RULE._conflict_` (`Group_id_access_conflict`)
+
+|access value set binding
+|care_role, representation_basis, kinship, organisation_type, care_purpose, emergency_purpose
+|`ACCESS_VALUE_SET._binding_` (`Group_id_access_value_set_binding`)
+
 |care relationship
-|`v3-RoleClass::MBR` (a member of a care-team `GROUP`), under_care_of
-|The `_name_` or `_details_` of a `PARTY_RELATIONSHIP`: a professional's membership of a care-team `GROUP`, and the subject being under the care of a team or unit
+|`HL7_RoleClass::MBR` (a member of a care-team `GROUP` or of an organisational unit), under_care_of
+|The `_name_` of a `PARTY_RELATIONSHIP`: a membership, and the subject being under the care of a carer (xref:access_control_package.adoc#_care_relationships[Care Relationships])
+
+|care relationship element
+|care_role, provider, covers_for, context, basis
+|The `_name_` of an `ELEMENT` in the `_details_` of an `under_care_of` relationship
+
+|care basis
+|assigned, self_declared
+|The value of the `basis` element of an `under_care_of` relationship
 
 |representation
 |represents
-|The `_name_` or `_details_` of a `PARTY_RELATIONSHIP` whose source represents its target, the subject; the openEHR `subject_relationship` code beside it says how, such as 264 guardian or 254 parent
+|The `_name_` of a `PARTY_RELATIONSHIP` whose source represents its target, the subject
+
+|representation element
+|basis, provider, evidence
+|The `_name_` of an `ELEMENT` in the `_details_` of a `represents` relationship
+
+|kinship
+|related_to
+|The `_name_` of a `PARTY_RELATIONSHIP` that states a kinship between two persons
+
+|kinship element
+|kinship
+|The `_name_` of the `ELEMENT` in the `_details_` of a `related_to` relationship that codes the kinship
 
 |group kind
 |care_team
-|The `_name_` of a `GROUP`: the `GROUP` is a care team, whose members' memberships are named `v3-RoleClass::MBR`
+|The `_name_` of a `GROUP`: the `GROUP` is a care team, whose members' memberships are named `HL7_RoleClass::MBR`
 
 |record subject
 |record_subject
 |The `_name_` of an `ELEMENT` in a `PERSON`'s `PARTY._details_` whose value is a `DV_IDENTIFIER` naming an `EHR_STATUS._subject_` reference the `PERSON` stands for: `_issuer_` is the reference's `_namespace_` and `_id_` its `_id_`, such as a pseudonym an identity source issued. An identifier another organisation issued belongs in `_details_` (Demographic IM §2.1.3), and the cross-reference stays out of the EHR (EHR IM §EHR Status)
 
 |access refusal
-|refused-opt-out, refused-restricted, refused-consent-denied, refused-policy-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing
+|refused-opt-out, refused-restricted, refused-consent-denied, refused-policy-denied, refused-sensitivity, refused-confidentiality, refused-no-care-relationship, refused-purpose-missing, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing, refused-excluded, refused-conflict
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
+
+|caseload
+|direct, team, all, none
+|The `caseload` member of a query request (xref:its_rest.adoc#_queries_and_the_caseload[Queries and the Caseload])
 
 |access log withheld
 |accessor_party, accessor_provider, accessor_roles, accessor_groups
 |`ACCESS_LOG_RESTRICTION._withheld_` (`Group_id_access_log_withheld`): the `_party_`, `_provider_`, `_roles_` and `_groups_` of an `ACCESSOR` the subject view withholds (EHDS Art 9(3))
 |===
 
-The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other five are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a care relationship or a representation by the code in a relationship's `_name_` or `_details_`, a record subject by the code in an element's `_name_`, and a care team by the `group kind` code in a `GROUP`'s `_name_`, never by its archetype or a path. The Demographic IM makes a party's type its name (`PARTY.type()`, invariant `Type_valid: type = name`; `PARTY_RELATIONSHIP.type()` likewise) and names "the specialist care team, e.g. cardiology team" as the typical `GROUP` (`GROUP` class), so a coded name says what kind of group or relationship it is; the codes are this proposal's design. A role is no code of these groups: it is the coded `_name_` of a `ROLE`, in the terminology the jurisdiction names, and a sensitivity a caller may read and a purpose it may declare are rules of the controller's policy. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
+The groups `access default`, `access directive kind`, `access effect`, `access relationship`, `care path`, `access caller kind`, `access conflict`, `access value set binding` and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The others are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a care relationship, a representation or a kinship by the code in a relationship's `_name_`, its content by the code in each element's `_name_`, a record subject by the code in an element's `_name_`, and a care team by the `group kind` code in a `GROUP`'s `_name_`, never by its archetype or a path. The Demographic IM makes a party's type its name (`PARTY.type()`, invariant `Type_valid: type = name`; `PARTY_RELATIONSHIP.type()` likewise) and names "the specialist care team, e.g. cardiology team" as the typical `GROUP` (`GROUP` class), so a coded name says what kind of group or relationship it is; the codes are this proposal's design. A professional role is no code of these groups: it is the coded `_name_` of a `ROLE`, in the terminology the jurisdiction names, and a sensitivity a caller may read and a purpose it may declare are rules of the controller's policy. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
+
+`Terminology_id_confidentiality` in the invariants is `HL7_Confidentiality`.
 
 A system that keeps the access log of the Access Log Information Model records a refusal of this procedure in `ACCESS_OUTCOME._reason_` with its `access refusal` code, which is that model's reason for an opt-out or a restriction. `ACCESS_LOG_RESTRICTION._accessor_kinds_` is coded in that model's `accessor kind` group, so a restriction names exactly the kinds its entries record. The Access Log Information Model lists its own groups on its Terminology page, in the same terminology.
+
+== Value Sets
+
+What a care role, a basis of representation, a kinship, an organisation type or a purpose is called in a jurisdiction is content of that jurisdiction (xref:BASE:architecture_overview:security.adoc[Security Policy], Privacy), and the package ships none of it. The controller binds each coded attribute to a value set in `ACCESS_POLICY._value_sets_`, held on a terminology server, and a system checks a code against the bound value set on that server. Where the policy binds none, the attribute takes any code of the code system below, and the system compares codes by terminology identifier and code:
+
+[cols="2,3,3", options="header"]
+|===
+|Binding |Code system without a binding |Used by
+
+|care_role
+|`HL7_ParticipationType`
+|the `care_role` element of a care relationship; `ACCESS_ACTOR_SCOPE._care_roles_`; `ACCESS_RELATIONSHIP_VALIDITY._roles_`
+
+|representation_basis
+|`HL7_RoleCode`
+|the `basis` element of a representation
+
+|kinship
+|the openEHR Terminology group `subject relationship`
+|the `kinship` element of a `related_to` relationship; `ACCESS_CONFLICT_RULE._kinships_`
+
+|organisation_type
+|none: the controller binds one before a rule names a type
+|`ACCESS_ACTOR_SCOPE._organisation_type_`; `ACCESS_RELATIONSHIP_VALIDITY._organisation_types_`
+
+|care_purpose
+|`HL7_ActReason`
+|`ACCESS_POLICY._care_purposes_`
+
+|emergency_purpose
+|`HL7_ActReason`
+|the purposes the system reads as declaring an emergency
+|===
+
+`HL7_ParticipationType` defines the parts a professional plays in an act: for example `RESP` is "the person or organization that has primary responsibility for the act" and `SPRF` "a person assisting in an act through his substantial presence and involvement". `PART`, "the target of the participation is involved in some manner in the act, but does not qualify how", is the role a writer states when it knows none, so every care relationship has a role. No role implies another: a rule lists every role it means. The examples on these pages use these codes and fictional parties; they are no default list.
 
 == Mappings to Standard Codes
 
@@ -126,62 +233,64 @@ A draft code whose closest standard code is broader or narrower stays in `openeh
 
 |access default
 |consent_required
-|`v3-ActCode::OPTIN`
+|`HL7_ActCode::OPTIN`
 |`>`
 
 |access directive kind
 |consent
-|`v3-ActCode::_ActConsentDirective`
+|`HL7_ActCode::_ActConsentDirective`
 |`>`
 
 |access directive kind
 |opt_out
-|`v3-ActCode::OPTOUT`
+|`HL7_ActCode::OPTOUT`
 |`>`
 
 |access relationship
 |representative
-|`v3-RoleCode::RESPRSN`
+|`HL7_RoleCode::RESPRSN`
 |`>`
 
 |access relationship
 |proxy
-|`v3-RoleCode::DELEGATEE`
+|`HL7_RoleCode::DELEGATEE`
 |`>`
 
 |access caller kind
 |professional
-|`v3-RoleClass::PROV`
+|`HL7_RoleClass::PROV`
 |`<`
 
 |access caller kind
 |representative
-|`v3-RoleCode::RESPRSN`
+|`HL7_RoleCode::RESPRSN`
 |`>`
 
 |access operation
 |export
-|`consentaction::disclose`
+|`HL7_ConsentActionCodes::disclose`
 |`<`
 
 |access operation
 |query
-|`audit-event-action::E`
+|`HL7_AuditEventAction::E`
 |`<`
 
 |care relationship
 |under_care_of
-|`v3-RoleClass::PAT`
+|`HL7_RoleClass::PAT`
 |`<`
 
 |representation
 |represents
-|`v3-RoleCode::RESPRSN`
+|`HL7_RoleCode::RESPRSN`
 |`>`
 |===
 
-`v3-RoleCode` is `http://terminology.hl7.org/CodeSystem/v3-RoleCode` and `consentaction` is `http://terminology.hl7.org/CodeSystem/consentaction`. No code of this page is mapped to SNOMED CT: every concept either has a freely usable HL7 or openEHR code or has no published code, and a SNOMED CT code in a published openEHR artefact would carry the SNOMED CT Affiliate Licence to every implementer.
+No code of this page is mapped to SNOMED CT: every concept either has a freely usable HL7 or openEHR code or has no published code, and a SNOMED CT code in a published openEHR artefact would carry the SNOMED CT Affiliate Licence to every implementer. A jurisdiction may add SNOMED CT codes to its own value sets.
 
 == Codes from Other Terminologies
 
-Role, sensitivity, category and purpose-of-use codes are not part of these groups. They come from the terminology the jurisdiction names, such as the HL7 `v3-Confidentiality` codes and the `v3-ActCode` sensitivity codes, the EHDS categories, and the HL7 `v3-ActReason` PurposeOfUse codes, and a system compares them by terminology identifier and code. This keeps the privacy levels "defined by standards or agreements within jurisdictions of use" (xref:BASE:architecture_overview:security.adoc[Security Policy], Privacy).
+Professional role, sensitivity, category and purpose-of-use codes are not part of these groups. They come from the terminology the jurisdiction names, such as the `HL7_ActCode` sensitivity policy codes, the EHDS categories and the `HL7_ActReason` purpose-of-use codes, and a system compares them by terminology identifier and code. This keeps the privacy levels "defined by standards or agreements within jurisdictions of use" (xref:BASE:architecture_overview:security.adoc[Security Policy], Privacy).
+
+The confidentiality levels are the one exception: the package fixes `HL7_Confidentiality` and its order, `N` < `R` < `V`, in its own text, because the decision compares levels. The code system states the order itself: "Very Restricted (V) is the highest protection level and subsumes all other protection levels", and `N` is "less protective than V and R" (`HL7_Confidentiality` 5.0.0, definitions of `V` and `N`). The codes `U`, `L` and `M` of the same code system read as `N`.

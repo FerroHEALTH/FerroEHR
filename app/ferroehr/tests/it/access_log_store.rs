@@ -224,7 +224,7 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
     );
     assert_eq!(
         row.get::<String, _>("action_terminology"),
-        "audit-event-action"
+        "HL7_AuditEventAction"
     );
     assert_eq!(row.get::<String, _>("action_code"), "R");
     assert_eq!(row.get::<String, _>("result_terminology"), "openehr_access");
@@ -244,23 +244,25 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
 }
 
 /// The links of the same entries are the same bytes whatever form the log
-/// stores them in (#5784): the digests below were written by the log that
-/// kept each entry's index in a second table, and the log that keeps it on
-/// the entry's row writes them again, and reads them back from its rows.
+/// stores them in (#5784): the log that keeps each entry's index on the
+/// entry's row writes the digests below and reads them back from its rows.
+/// They are the links of the example entries with their action coded under
+/// `HL7_AuditEventAction` (#6070); under the former `audit-event-action` the
+/// same entries give the links the log with a second index table wrote.
 #[tokio::test]
 async fn the_links_of_the_same_entries_are_unchanged_by_the_stored_form() {
     const LINKS: [(&str, &str); 3] = [
         (
-            "9b343e891a7013a6bd67fee757f68efb56dea2fb1051f69f1e5da72476c7f111",
-            "cd88160055c4d6ac897274f9dfe41afbe4542124275bdbabbda53fc5cf313c0c",
+            "803a53ebc5048817e288f537c1249449b121d7590673ce95c3e444a435ad4e22",
+            "6852637299d6c5fa1bd4162bf0b157e118da9562e6f92350fcd17b1b96a6faa6",
         ),
         (
-            "9959bcaad431d4851812de2fa9706c3c8ec9bc33a091d186cafaa5b322a472b4",
-            "54259816c69edd83a2461961d177d33bc14a244c9a1f20fd3f7037e7d240daf4",
+            "7afcfd46fe334088b483a8c9306b3021f63c1be3ecedffcb91a178c27068243a",
+            "7c8a3582357fd3f9268526bd2fdf66aac8ebd07e480fae1a7fd8db997815c7bc",
         ),
         (
-            "3b2b1125847ca121a5f2b79ffb3d1700ea213eaf44533ff5a6ecbf25dddea108",
-            "760f494dcf6b375c226d9af65df07c99c71c080a4a071d4383e305d87f92a0b1",
+            "f4db7ed8df765d04c53a4adeb4a44a996c301079e4b29b92951c55f0675b9af5",
+            "f8e96987118be11e1951931e0db48a998bc81e461ab18fa0564ea567a086b61a",
         ),
     ];
     let testdb = testkit::db().await.expect("testkit database");

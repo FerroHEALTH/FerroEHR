@@ -41,7 +41,7 @@ const PERSON_TEMPLATE: &str = "FerroEHR professional";
 /// The ADL 2 id of the care-team `GROUP`, which is its own template.
 const GROUP_ARCHETYPE: &str = "openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0";
 /// The ADL 2 id of the membership `PARTY_RELATIONSHIP`.
-const MEMBERSHIP_ARCHETYPE: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0";
+const MEMBERSHIP_ARCHETYPE: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.1";
 /// The `version_lifecycle_state` codes (RM common master06 §Version Lifecycle).
 const COMPLETE: &str = "532";
 const INCOMPLETE: &str = "553";

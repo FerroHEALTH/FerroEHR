@@ -1096,7 +1096,7 @@ fn exchange_rules() -> Value {
             "deny",
             &json!({
             "applies_to": [access_service()],
-            "purposes": [coded_in("v3-ActReason", "EXAMINATION")],
+            "purposes": [coded_in("HL7_ActReason", "EXAMINATION")],
             "legal_grounds": [coded_in(LAW, "exchange-2")] })
         ),
         exchange_rule(

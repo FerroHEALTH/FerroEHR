@@ -46,7 +46,7 @@ pub struct AccessDirective {
     pub archetype_details: Option<Archetyped>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
     pub feeder_audit: Option<FeederAudit>,
-    /// What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).
+    /// What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`, `exclusion` for a controller's exclusion of a named party from one EHR (`CONFIDENTIALITY_SETTINGS._exclusions_`). The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).
     pub kind: DvCodedText,
     /// Whether the directive permits or denies the access it applies to, coded in the `access effect` group: `permit` or `deny`.
     pub effect: DvCodedText,

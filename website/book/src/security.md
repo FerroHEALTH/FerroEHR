@@ -559,8 +559,8 @@ Data carries a sensitivity from two places: a label on a single object in
 the person's `EHR_ACCESS` settings, and a classification in the access
 policy that gives every object it covers (by template, root archetype,
 category or origin) its sensitivities. Sensitivity codes are those of your
-jurisdiction's terminology, such as HL7 `v3-Confidentiality` and
-`v3-ActCode`. Step 6 refuses data with a sensitivity that no applying permit
+jurisdiction's terminology, such as HL7 `HL7_Confidentiality` and
+`HL7_ActCode`. Step 6 refuses data with a sensitivity that no applying permit
 names, with `403 refused-sensitivity`. Two permits clear a caller: a consent
 permit of the person whose `data` names the sensitivity, and a permit rule
 of the access policy, such as one that clears the psychiatrist role for

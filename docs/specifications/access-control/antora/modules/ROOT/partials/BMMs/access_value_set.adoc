@@ -1,0 +1,26 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_VALUE_SET",
+  "documentation": "A value set the controller binds a coded attribute of the package to.",
+  "properties": {
+    "binding": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "binding",
+      "documentation": "What the value set codes, in the `access value set binding` group: `care_role`, `representation_basis`, `kinship`, `organisation_type`, `care_purpose` or `emergency_purpose`.",
+      "is_mandatory": true,
+      "type": "DV_CODED_TEXT"
+    },
+    "value_set": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "value_set",
+      "documentation": "The canonical URL of the value set on the terminology server.",
+      "is_mandatory": true,
+      "type": "DV_URI"
+    }
+  },
+  "invariants": {
+    "Binding_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_value_set_binding, binding.defining_code)"
+  }
+}
+--------

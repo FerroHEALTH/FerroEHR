@@ -1,0 +1,55 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_RELATIONSHIP_VALIDITY",
+  "documentation": "The default and maximum period of the care relationships one entry covers. A relationship written without an end takes the default period from its start; one longer than the maximum is refused. An entry with neither period lets the relationships it covers stay open.",
+  "properties": {
+    "roles": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "roles",
+      "documentation": "The `care_role` codes the entry covers. Void means every role.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "organisation_types": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "organisation_types",
+      "documentation": "The types of the relationship's `provider` the entry covers, matched as `ACCESS_ACTOR_SCOPE._organisation_type_` is. Void means every type.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "default_period": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "default_period",
+      "documentation": "The period a relationship written without an end takes.",
+      "type": "DV_DURATION"
+    },
+    "max_period": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "max_period",
+      "documentation": "The longest period a relationship may have.",
+      "type": "DV_DURATION"
+    }
+  },
+  "invariants": {
+    "Roles_valid": "roles /= Void implies not roles.is_empty",
+    "Organisation_types_valid": "organisation_types /= Void implies not organisation_types.is_empty",
+    "Default_valid": "default_period /= Void implies default_period.magnitude > 0",
+    "Max_valid": "max_period /= Void implies max_period.magnitude > 0",
+    "Default_within_max": "(default_period /= Void and max_period /= Void) implies default_period.magnitude <= max_period.magnitude",
+    "Bounded_together": "default_period /= Void implies max_period /= Void"
+  }
+}
+--------

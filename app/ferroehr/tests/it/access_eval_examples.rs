@@ -37,7 +37,7 @@ use openehr_rm::draft::access_control::terminology::{
 };
 
 /// The HL7 v3 `ActCode` sensitivity terminology id.
-const ACT_CODE: &str = "v3-ActCode";
+const ACT_CODE: &str = "HL7_ActCode";
 
 fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
@@ -56,7 +56,7 @@ fn party_ref(kind: &str, id: VoId) -> Value {
 }
 
 /// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
-pub(crate) const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
+pub(crate) const MEMBER: (&str, &str) = ("HL7_RoleClass", "MBR");
 /// A patient under the care of a team or unit.
 pub(crate) const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
 

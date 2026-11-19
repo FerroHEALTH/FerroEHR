@@ -66,7 +66,7 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
-/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+/// An `access effect`: a code of HL7 FHIR `HL7_ConsentProvisionType`.
 fn provision(code: &str) -> Value {
     let mut value = term(code);
     value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
@@ -687,7 +687,7 @@ async fn step_6_a_sensitive_object_leaves_the_query() {
     let world = Box::pin(World::new()).await;
     let labelled = world.objects(0)[1].clone();
     let label = json!({ "_type": "ACCESS_LABEL", "target": object_ref(&labelled),
-                        "sensitivities": [coded("v3-ActCode", "HIV")] });
+                        "sensitivities": [coded("HL7_ActCode", "HIV")] });
     world.settings(0, &settings("open", &[], &[label])).await;
     assert_reads(
         &world,
@@ -701,7 +701,7 @@ async fn step_6_a_sensitive_object_leaves_the_query() {
         "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": "HIV specialists" },
         "archetype_node_id": "at0001", "kind": term("controller_rule"), "effect": provision("permit"),
         "applies_to": [{ "role": coded(ROLES, "HIV_SPECIALIST") }],
-        "data": [{ "sensitivities": [coded("v3-ActCode", "HIV")] }],
+        "data": [{ "sensitivities": [coded("HL7_ActCode", "HIV")] }],
         "emergency_override": false }] })));
     assert_reads(
         &world,
@@ -882,7 +882,7 @@ async fn step_4_a_missing_purpose_reads_nothing() {
             "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": "Treatment" },
             "archetype_node_id": "at0002", "kind": term("controller_rule"),
             "effect": provision("permit"),
-            "purposes": [coded("v3-ActReason", "TREAT")],
+            "purposes": [coded("HL7_ActReason", "TREAT")],
             "emergency_override": false }],
         "emergency_override": false }] })));
     assert_reads(&world, &ask, &world.every(), "a permitted purpose").await;
@@ -1103,7 +1103,7 @@ async fn a_shared_class_reads_each_ehrs_labels() {
     let world = Box::pin(World::new()).await;
     let label = |object: &str| {
         json!({ "_type": "ACCESS_LABEL", "target": object_ref(object),
-                "sensitivities": [coded("v3-ActCode", "HIV")] })
+                "sensitivities": [coded("HL7_ActCode", "HIV")] })
     };
     let (first, second) = (world.objects(0)[0].clone(), world.objects(2)[1].clone());
     world

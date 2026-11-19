@@ -37,8 +37,130 @@
     "relationship_grace": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "relationship_grace",
-      "documentation": "How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access).",
+      "documentation": "How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access). Grace never extends a team membership.",
       "type": "DV_DURATION"
+    },
+    "time_zone": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "time_zone",
+      "documentation": "The time zone, as an IANA time zone name, in which the dates of a relationship's `time_validity` are read. Void means UTC.",
+      "type": "String"
+    },
+    "care_purposes": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "care_purposes",
+      "documentation": "The purposes of use for which a care relationship is a ground. Void means the `HL7_ActReason` codes `TREAT`, `ETREAT` and `CAREMGT`. An access that declares another purpose is not admitted by a relationship.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "relationship_validity": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "relationship_validity",
+      "documentation": "The default and maximum periods of care relationships, by role and organisation type. A relationship no entry covers must be written with an end.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_RELATIONSHIP_VALIDITY"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "relationship_writers": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "relationship_writers",
+      "documentation": "The writers that may state a care relationship to a subject whose EHR is marked above `N`. Void means none.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_RELATIONSHIP_WRITER"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "team_targets": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "team_targets",
+      "documentation": "The `ORGANISATION` units a care relationship may name as its target. Void means none: a team target is then a `GROUP`.",
+      "type_def": {
+        "container_type": "List",
+        "type": "PARTY_REF"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "self_declared_care": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "self_declared_care",
+      "documentation": "The longest period of a self-declared care relationship. Void means a self-declared relationship is refused at write.",
+      "type": "DV_DURATION"
+    },
+    "attested_care": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "attested_care",
+      "documentation": "The agreements under which a caller's verified credential may attest a care relationship. Void means no attested relationship is admitted.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_IDENTIFIER"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "caseload": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "caseload",
+      "documentation": "Whether a query may be narrowed to the caller's caseload and the caseload resource answers. Void means true.",
+      "type": "Boolean"
+    },
+    "conflict_rules": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "conflict_rules",
+      "documentation": "The conflicts of interest the controller allows through the professional path. Void allows none: a professional who is the subject, or is related to the subject, is refused.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_CONFLICT_RULE"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "concealed_confidentialities": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "concealed_confidentialities",
+      "documentation": "The confidentiality levels whose refused records are answered as absent. Void answers every refused named record as forbidden.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "value_sets": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "value_sets",
+      "documentation": "The value sets the controller binds the coded attributes of care relationships, representations and rules to, held on a terminology server. A binding left out uses the default value set of the package.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_VALUE_SET"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
     },
     "purpose_required": {
       "_type": "P_BMM_SINGLE_PROPERTY",
@@ -108,7 +230,16 @@
     "Log_restrictions_valid": "log_restrictions /= Void implies not log_restrictions.is_empty",
     "Rules_valid": "rules /= Void implies not rules.is_empty",
     "Rules_kind": "rules /= Void implies rules.for_all (r | r.is_controller_rule and (r.exceptions = Void or r.exceptions.for_all (e | e.is_controller_rule)))",
-    "Catalogue_not_controller_rules": "catalogue /= Void implies catalogue.for_all (d | not d.is_controller_rule and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule)))"
+    "Catalogue_not_controller_rules": "catalogue /= Void implies catalogue.for_all (d | not d.is_controller_rule and not d.is_exclusion and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule and not e.is_exclusion)))",
+    "Care_purposes_valid": "care_purposes /= Void implies not care_purposes.is_empty",
+    "Relationship_validity_valid": "relationship_validity /= Void implies not relationship_validity.is_empty",
+    "Relationship_writers_valid": "relationship_writers /= Void implies not relationship_writers.is_empty",
+    "Team_targets_valid": "team_targets /= Void implies (not team_targets.is_empty and team_targets.for_all (t | t.type.is_equal (\"ORGANISATION\")))",
+    "Self_declared_valid": "self_declared_care /= Void implies self_declared_care.magnitude > 0",
+    "Attested_care_valid": "attested_care /= Void implies not attested_care.is_empty",
+    "Conflict_rules_valid": "conflict_rules /= Void implies not conflict_rules.is_empty",
+    "Concealed_valid": "concealed_confidentialities /= Void implies (not concealed_confidentialities.is_empty and concealed_confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)))",
+    "Value_sets_valid": "value_sets /= Void implies not value_sets.is_empty"
   }
 }
 --------

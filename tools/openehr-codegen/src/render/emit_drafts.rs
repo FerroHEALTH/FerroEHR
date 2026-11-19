@@ -301,13 +301,16 @@ mod tests {
             .find(|d| d.package == "access_control")
             .expect("the access control draft row");
         let c = compose_draft(d).expect("the access control draft composes");
-        assert_eq!(
-            open_ancestor(&c.model, "ACCESS_DIRECTIVE_SETTINGS"),
-            Some((
-                "ACCESS_CONTROL_SETTINGS".to_owned(),
-                "openehr_base::serde_support::OpenSubtype"
-            ))
-        );
+        for settings in ["CONFIDENTIALITY_SETTINGS", "ACCESS_DIRECTIVE_SETTINGS"] {
+            assert_eq!(
+                open_ancestor(&c.model, settings),
+                Some((
+                    "ACCESS_CONTROL_SETTINGS".to_owned(),
+                    "openehr_base::serde_support::OpenSubtype"
+                )),
+                "{settings}"
+            );
+        }
         for closed in [
             "ACCESS_DIRECTIVE",
             "ACCESS_POLICY",
@@ -329,13 +332,17 @@ mod tests {
             "use openehr_base::serde_support::OpenSubtype;",
             "impl TryFrom<&OpenSubtype> for AccessDirectiveSettings",
             "impl TryFrom<&AccessDirectiveSettings> for OpenSubtype",
+            "use crate::draft::access_control::access_control::confidentiality_settings::\
+             ConfidentialitySettings;",
+            "impl TryFrom<&OpenSubtype> for ConfidentialitySettings",
+            "impl TryFrom<&ConfidentialitySettings> for OpenSubtype",
         ] {
             assert!(seam.contains(line), "{line} missing from {seam}");
         }
         assert_eq!(
             seam.matches("impl ").count(),
-            2,
-            "one class, two directions"
+            4,
+            "two settings classes, two directions each"
         );
         assert!(body(&files, &format!("{root}/mod.rs")).contains("mod open_seam;"));
         // The RM types `EHR_ACCESS.settings` with the carrier, so no RM class

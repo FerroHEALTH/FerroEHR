@@ -59,7 +59,20 @@
     "sensitivities": {
       "_type": "P_BMM_CONTAINER_PROPERTY",
       "name": "sensitivities",
-      "documentation": "Sensitivity codes, matched against the labels the data carry, coded in a terminology the system documents (such as the HL7 v3 confidentiality and sensitivity codes).",
+      "documentation": "Sensitivity codes, matched against the labels the data carry, coded in a terminology the jurisdiction names (such as the `HL7_ActCode` sensitivity policy codes).",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "confidentialities": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "confidentialities",
+      "documentation": "Confidentiality levels, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted): the data whose confidentiality is one of these levels or a lower one.",
       "type_def": {
         "container_type": "List",
         "type": "DV_CODED_TEXT"
@@ -95,12 +108,13 @@
     }
   },
   "invariants": {
-    "Not_empty": "objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or origins /= Void or recorded /= Void",
+    "Not_empty": "objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or confidentialities /= Void or origins /= Void or recorded /= Void",
     "Objects_valid": "objects /= Void implies not objects.is_empty",
     "Templates_valid": "templates /= Void implies not templates.is_empty",
     "Archetypes_valid": "archetypes /= Void implies not archetypes.is_empty",
     "Categories_valid": "categories /= Void implies not categories.is_empty",
     "Sensitivities_valid": "sensitivities /= Void implies not sensitivities.is_empty",
+    "Confidentialities_valid": "confidentialities /= Void implies (not confidentialities.is_empty and confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)))",
     "Origins_valid": "origins /= Void implies not origins.is_empty"
   }
 }

@@ -69,7 +69,7 @@ guarded_handler! {
              description = "The last `time_recorded` selected, an ISO 8601 date-time."),
             ("action" = Option<String>, Query,
              description = "A term of the `access action` group by its coded content, the token \
-                            `terminology_id|code`, such as `audit-event-action|R` or \
+                            `terminology_id|code`, such as `HL7_AuditEventAction|R` or \
                             `openehr_access|query`."),
             ("outcome" = Option<String>, Query,
              description = "A term of the `access outcome` group by its coded content, the token \
@@ -77,7 +77,7 @@ guarded_handler! {
             ("accessor_kind" = Option<String>, Query,
              description = "A term of the `accessor kind` group by its coded content, the token \
                             `terminology_id|code`, such as \
-                            `extra-security-role-type|datasubject`."),
+                            `HL7_SecurityRoleType|datasubject`."),
             ("emergency" = Option<bool>, Query,
              description = "Only the entries whose `is_emergency` is this."),
             ("include_self" = Option<bool>, Query,

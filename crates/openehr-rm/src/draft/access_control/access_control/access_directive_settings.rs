@@ -8,21 +8,29 @@
 
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
 use crate::draft::access_control::access_control::access_label::AccessLabel;
+use crate::draft::access_control::access_control::confidentiality_marking::ConfidentialityMarking;
 use crate::v1_2::common::generic::party_proxy::PartyProxy;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
-/// The concrete `ACCESS_CONTROL_SETTINGS` of the access directive scheme, carried by `EHR_ACCESS._settings_` and versioned with the EHR.
+/// The access directive scheme, carried by `EHR_ACCESS._settings_` and versioned with the EHR.
 ///
-/// It records the facts an access decision about one EHR rests on: the default disposition, the gate-keepers who may change the settings, the directives the subject or their representative gave (consent, restriction, opt-out, delegation scope), and sensitivity labels on individual versioned objects. It carries no rule language: the decision procedure that reads these facts is fixed by the scheme. `EHR_ACCESS.scheme()` returns `access_directives` for an instance of this class.
+/// It inherits the controller's facts of `CONFIDENTIALITY_SETTINGS` and adds the facts the subject's instructions give: the default disposition, the gate-keepers who may change the settings, the directives the subject or their representative gave (consent, restriction, opt-out, delegation scope), and labels on individual versioned objects. It carries no rule language: the decision procedure that reads these facts is fixed by the scheme. `EHR_ACCESS.scheme()` returns `access_directives` for an instance of this class.
 #[doc(alias = "ACCESS_DIRECTIVE_SETTINGS")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessDirectiveSettings {
+    // inherited: CONFIDENTIALITY_SETTINGS
+    /// The confidentiality of the whole EHR. Void reads as `N`. Set only by the controller; a version committed by anyone else carries it unchanged.
+    pub marking: Option<ConfidentialityMarking>,
+    /// Denies the controller sets for this EHR alone, each of kind `exclusion` naming the parties it keeps out.
+    ///
+    /// Read and written only by the controller; a version committed by anyone else carries them unchanged.
+    pub exclusions: Option<openehr_base::containers::NonEmptyVec<AccessDirective>>,
     /// What the EHR admits where no directive applies, coded in the `access default` group: `open` (any caller the other layers admit), `restricted` (only callers a permit directive, a gate-keeper or a care relationship names) or `consent_required` (only callers a permit directive names, apart from the subject and an emergency override).
     pub default_access: DvCodedText,
     /// The parties who may commit a new version of the `EHR_ACCESS` that holds these settings: usually `PARTY_SELF` for a competent adult, otherwise a parent, guardian or other responsible party referenced into the demographic service (BASE Architecture Overview, Security, Access Control of access settings). Empty leaves the change to the system's administrators.
     pub gate_keepers: Option<openehr_base::containers::NonEmptyVec<PartyProxy>>,
     /// The directives in force or recorded for this EHR. A directive outside its `_time_validity_` is kept as history and decides nothing.
     pub directives: Option<openehr_base::containers::NonEmptyVec<AccessDirective>>,
-    /// Sensitivity labels on individual versioned objects of the EHR, beside the labels the system's `ACCESS_POLICY` classification gives whole kinds of data.
+    /// Labels on individual versioned objects of the EHR, beside the labels the `ACCESS_POLICY` classifications give whole kinds of data and the marking of the whole EHR.
     pub labels: Option<openehr_base::containers::NonEmptyVec<AccessLabel>>,
 }

@@ -56,18 +56,18 @@ async fn query(fx: &Fixture) {
     .await;
 }
 
-/// `action` selects an HL7 `audit-event-action` code and an `openehr_access`
+/// `action` selects an HL7 `HL7_AuditEventAction` code and an `openehr_access`
 /// code by their coded content, and a code no entry carries selects none.
 #[tokio::test]
 async fn the_action_filter_selects_by_the_coded_term() {
     let fx = fixture().await;
     query(&fx).await;
 
-    let read = page(&fx.app, &fx.ehr, "action=audit-event-action%7CR").await;
+    let read = page(&fx.app, &fx.ehr, "action=HL7_AuditEventAction%7CR").await;
     assert!(!read.is_empty(), "the administrator's read is selected");
     assert!(
         read.iter()
-            .all(|entry| code_at(entry, &["action"]) == ("audit-event-action", "R")),
+            .all(|entry| code_at(entry, &["action"]) == ("HL7_AuditEventAction", "R")),
         "{read:#?}"
     );
 
@@ -80,7 +80,7 @@ async fn the_action_filter_selects_by_the_coded_term() {
         "{queried:#?}"
     );
 
-    let deleted = page(&fx.app, &fx.ehr, "action=audit-event-action%7CD").await;
+    let deleted = page(&fx.app, &fx.ehr, "action=HL7_AuditEventAction%7CD").await;
     assert!(deleted.is_empty(), "no entry deleted: {deleted:#?}");
 }
 
@@ -131,7 +131,7 @@ async fn the_outcome_filter_selects_by_the_coded_term() {
     assert_eq!(failed["entries"], json!([]), "{failed}");
 }
 
-/// `accessor_kind` selects the HL7 `extra-security-role-type` code of the
+/// `accessor_kind` selects the HL7 `HL7_SecurityRoleType` code of the
 /// subject of care, whose own reads of their log `include_self` alone shows,
 /// and an `openehr_access` kind; a kind no entry carries selects none.
 #[tokio::test]
@@ -147,11 +147,11 @@ async fn the_accessor_kind_filter_selects_by_the_coded_term() {
     assert_eq!(status, StatusCode::OK, "{body}");
     stored(&fx.pool, 1, |entry| {
         entry["ehr_id"]["value"] == json!(fx.ehr)
-            && code_at(entry, &["accessor", "kind"]) == ("extra-security-role-type", "datasubject")
+            && code_at(entry, &["accessor", "kind"]) == ("HL7_SecurityRoleType", "datasubject")
     })
     .await;
 
-    let subject = "accessor_kind=extra-security-role-type%7Cdatasubject";
+    let subject = "accessor_kind=HL7_SecurityRoleType%7Cdatasubject";
     let hidden = page(&fx.app, &fx.ehr, subject).await;
     assert!(
         hidden.is_empty(),
@@ -163,7 +163,7 @@ async fn the_accessor_kind_filter_selects_by_the_coded_term() {
         shown
             .iter()
             .all(|entry| code_at(entry, &["accessor", "kind"])
-                == ("extra-security-role-type", "datasubject")),
+                == ("HL7_SecurityRoleType", "datasubject")),
         "{shown:#?}"
     );
 
@@ -195,10 +195,10 @@ async fn a_coded_filter_outside_its_form_or_group_is_refused() {
                 "read",
                 "R",
                 "%7CR",
-                "audit-event-action%7C",
+                "HL7_AuditEventAction%7C",
                 "urn%3Aexample%7CR",
                 "http%3A%2F%2Fhl7.org%2Ffhir%2Faudit-event-action%7CR",
-                "audit-event-action%7CE",
+                "HL7_AuditEventAction%7CE",
                 "openehr_access%7Cread",
                 "openehr_access%7Cgranted",
             ],
@@ -221,14 +221,18 @@ async fn a_coded_filter_outside_its_form_or_group_is_refused() {
                 "subject%20of%20care",
                 "datasubject",
                 "urn%3Aexample%7Cperson",
-                "extra-security-role-type%7Cdatasubjects",
+                "HL7_SecurityRoleType%7Cdatasubjects",
                 "openehr_access%7Cdatasubject",
             ],
         ),
         (
             &review,
             "outcome",
-            &["granted", "openehr_access%7Cread", "audit-event-action%7CR"],
+            &[
+                "granted",
+                "openehr_access%7Cread",
+                "HL7_AuditEventAction%7CR",
+            ],
         ),
     ];
     for (resource, name, values) in cases {
@@ -252,19 +256,19 @@ async fn a_coded_filter_pages() {
     }
     stored(&fx.pool, 4, |entry| {
         entry["ehr_id"]["value"] == json!(fx.ehr)
-            && code_at(entry, &["action"]) == ("audit-event-action", "R")
+            && code_at(entry, &["action"]) == ("HL7_AuditEventAction", "R")
     })
     .await;
     query(&fx).await;
     let until = jiff::Timestamp::now();
-    let bounded = format!("to={until}&action=audit-event-action%7CR");
+    let bounded = format!("to={until}&action=HL7_AuditEventAction%7CR");
 
     let every = page(&fx.app, &fx.ehr, &bounded).await;
     assert!(every.len() >= 4, "{every:#?}");
     assert!(
         every
             .iter()
-            .all(|entry| code_at(entry, &["action"]) == ("audit-event-action", "R")),
+            .all(|entry| code_at(entry, &["action"]) == ("HL7_AuditEventAction", "R")),
         "the query is left out: {every:#?}"
     );
     let first = page(&fx.app, &fx.ehr, &format!("{bounded}&fetch=2")).await;

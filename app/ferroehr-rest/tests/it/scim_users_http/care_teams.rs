@@ -126,7 +126,7 @@ pub(super) async fn write_person(
 fn membership_code() -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": "member of",
         "defining_code": { "_type": "CODE_PHRASE",
-            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "v3-RoleClass" },
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_RoleClass" },
             "code_string": "MBR" } })
 }
 
@@ -192,10 +192,10 @@ pub(super) async fn relationships(app: &Router, id: &str) -> Vec<Value> {
         .unwrap_or_default()
 }
 
-/// Whether `relationship` carries the membership code, `v3-RoleClass::MBR`.
+/// Whether `relationship` carries the membership code, `HL7_RoleClass::MBR`.
 pub(super) fn carries_member_of(relationship: &Value) -> bool {
     let text = relationship.to_string();
-    text.contains("\"code_string\":\"MBR\"") && text.contains("\"value\":\"v3-RoleClass\"")
+    text.contains("\"code_string\":\"MBR\"") && text.contains("\"value\":\"HL7_RoleClass\"")
 }
 
 /// The ADT system rosters a SCIM User on a team: a version of the User's
@@ -285,7 +285,7 @@ async fn a_care_team_group_writes_member_of_under_the_grant() {
             &held[0]["name"]["defining_code"]["terminology_id"]["value"],
             &held[0]["name"]["defining_code"]["code_string"]
         ),
-        (&json!("v3-RoleClass"), &json!("MBR")),
+        (&json!("HL7_RoleClass"), &json!("MBR")),
         "the membership is named by the coded MBR: {held:?}"
     );
     let request = common::req("GET", format!("{BASE}/demographic/group/{team}"))

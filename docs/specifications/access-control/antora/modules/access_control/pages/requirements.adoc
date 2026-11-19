@@ -41,9 +41,27 @@ The openEHR specifications name the slot this package fills and the properties a
 
 |Patient consents are recorded as instances of `ADMIN_ENTRY`.
 |RM EHR IM, Entry Package, Standard Clinical Types of Data
+
+|The professional level of a health care professional is less important than their relationship to the current care process for the patient; which staff are involved in a patient's care is established in the care delivery environment and made known to the EHR system, including temporary replacements due to illness or holiday.
+|xref:BASE:architecture_overview:security.adoc[Security and Confidentiality], The Problem of Roles
+
+|An access list names identified individuals and categories, including particular staff groups.
+|Security Policy, Access Control (Access list)
+
+|Every change to the access settings and to the facts they rest on is audit-trailed with who made it.
+|Security Policy, Access Control (Audit trailing)
+
+|The EHR holds no identity of a professional.
+|Security Policy, Anonymity
+
+|A record of a person at heightened risk, such as a celebrity or a politician, can be protected as a whole.
+|xref:BASE:architecture_overview:security.adoc[Security and Confidentiality], Threats to Security and Privacy
+
+|The mechanism is simple enough to implement and use safely.
+|Security Policy, Access Control (Usability)
 |===
 
-openEHR gives no concrete settings class, no consent model, no home for a policy that holds for every EHR of a controller, and no authorisation meaning for a demographic `CAPABILITY`. This package supplies the first three. The last stays outside the RM: a system documents the codes its capabilities carry.
+openEHR gives no concrete settings class, no consent model, no home for a policy that holds for every EHR of a controller, no code for a care relationship or a professional's part in it, no confidentiality level for a record, and no authorisation meaning for a demographic `CAPABILITY`. This package supplies all but the last. The last stays outside the RM: a system documents the codes its capabilities carry.
 
 == Legal Requirements
 
@@ -54,6 +72,12 @@ Regulation (EU) 2025/327 (EHDS) gives the natural person rights that an access c
 * *Art 10:* where a Member State's law gives it, the right to opt out from access through the electronic health data access services, reversible, with Art 10(2) admitting access for vital interests where that law allows it.
 * *Art 4(2):* authorisation of other natural persons, for a limited or unlimited period and if needed for a specific purpose only, and the acts of legal representatives under national law.
 * *Annex II 3.4:* access rights that take into account the origins and categories of the data.
+* *Art 11(1):* health professionals have access to the data "of natural persons under their treatment". The Regulation defines neither the treatment nor a professional's part in it, so the relationship is a fact a system holds, and the vocabulary for it comes from the jurisdiction.
+* *Art 11(3) and 11(4):* Member States lay down the categories of data accessible by categories of health professionals or for healthcare tasks, and the rules of the Member State of treatment apply. A national rule is a profile of the controller's policy, never a step of the procedure.
+* *Art 11(2) and Art 23:* cross-border access runs through MyHealth@EU, where a foreign professional holds no relationship stored in the system and its credential attests the treatment context.
+* *Annex II 3.2:* the access log records the healthcare provider, so a relationship names the provider in whose care it is.
+
+Regulation (EU) 2016/679 (GDPR) Art 4(15) and Art 9 make data concerning health special categories of data. That a person is under the care of a given professional or service is such data, so reading a relationship, a caseload or a list of who is in whose care is an access to each subject it reveals, and is decided and logged as one.
 
 Regulation (EU) 2016/679 (GDPR) Art 6(1) and 9(2) name the grounds of the processing. Care runs on Art 9(2)(h); explicit consent (Art 9(2)(a)) and vital interests (Art 9(2)(c)) are other grounds a directive or an override can rest on, so the model records the legal ground of each directive.
 

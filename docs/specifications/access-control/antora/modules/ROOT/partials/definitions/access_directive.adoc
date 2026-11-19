@@ -15,7 +15,7 @@ h|*Attributes*
 
 h|*1..1*
 |*kind*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
-a|What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).
+a|What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`, `exclusion` for a controller's exclusion of a named party from one EHR (`CONFIDENTIALITY_SETTINGS._exclusions_`). The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).
 
 h|*1..1*
 |*effect*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
@@ -93,6 +93,10 @@ h|*1..1*
 |*is_controller_rule* (): `xref:{class_boolean}[Boolean]`
 a|True when `_kind_` is the `controller_rule` code of the `access directive kind` group.
 
+h|*1..1*
+|*is_exclusion* (): `xref:{class_boolean}[Boolean]`
+a|True when `_kind_` is the `exclusion` code of the `access directive kind` group.
+
 h|*Invariants*
 2+a|__Kind_valid__: `terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_directive_kind, kind.defining_code)`
 
@@ -131,5 +135,8 @@ h|
 
 h|
 2+a|__Identifiers_valid__: `identifiers /= Void implies not identifiers.is_empty`
+
+h|
+2+a|__Exclusion_denies__: `is_exclusion implies (is_deny and exceptions = Void)`
 
 |===

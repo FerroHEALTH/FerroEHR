@@ -229,6 +229,13 @@ const DRAFT_REF_TARGETS: &[RefTarget] = &[
         citation: "draft openehr_access_control_0.1.0.bmm.json ACCESS_POLICY.controller: \"The \
                    `ORGANISATION` whose policy this is, the controller of the data.\"",
     },
+    RefTarget {
+        class: "ACCESS_POLICY",
+        attr: "team_targets",
+        target: Some("ORGANISATION"),
+        citation: "draft openehr_access_control_0.1.0.bmm.json ACCESS_POLICY.team_targets: \"The \
+                   `ORGANISATION` units a care relationship may name as its target.\"",
+    },
 ];
 
 /// The target of the reference-typed draft attribute `class.attr`, if the

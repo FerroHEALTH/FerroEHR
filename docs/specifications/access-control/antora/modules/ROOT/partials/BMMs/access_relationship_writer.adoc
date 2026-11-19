@@ -1,0 +1,40 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_RELATIONSHIP_WRITER",
+  "documentation": "The writers that may state a care relationship to a subject whose EHR is marked at one of the levels named, beside the writers the capabilities already admit.",
+  "properties": {
+    "applies_to": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "applies_to",
+      "documentation": "The writers, any one of which is enough.",
+      "is_mandatory": true,
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_ACTOR_SCOPE"
+      },
+      "cardinality": {
+        "lower": 1,
+        "upper_unbounded": true
+      }
+    },
+    "confidentialities": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "confidentialities",
+      "documentation": "The levels, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted), for which these writers may state a relationship.",
+      "is_mandatory": true,
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 1,
+        "upper_unbounded": true
+      }
+    }
+  },
+  "invariants": {
+    "Confidentialities_valid": "confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality))"
+  }
+}
+--------

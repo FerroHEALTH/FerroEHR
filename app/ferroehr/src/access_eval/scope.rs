@@ -484,7 +484,7 @@ impl Scopes {
             let Some(vo_id) = crate::service::ehr::access_settings::object_id(&label.target) else {
                 continue;
             };
-            for code in sensitivities(&label.sensitivities) {
+            for code in sensitivities(label.sensitivities.as_deref().unwrap_or_default()) {
                 by_code.entry(code).or_default().push(vo_id);
             }
         }
@@ -530,7 +530,7 @@ impl Scopes {
             .map(|classification| {
                 (
                     scopes.scope(&classification.data, Polarity::Deny, false, None),
-                    sensitivities(&classification.sensitivities),
+                    sensitivities(classification.sensitivities.as_deref().unwrap_or_default()),
                 )
             })
             .collect();

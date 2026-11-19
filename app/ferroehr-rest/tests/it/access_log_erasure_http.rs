@@ -58,7 +58,7 @@ fn entry() -> Value {
         "uid": { "_type": "HIER_OBJECT_ID", "value": UID },
         "system_id": "cdr.example.org",
         "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-07T09:14:03.120Z" },
-        "action": coded("audit-event-action", "R"),
+        "action": coded("HL7_AuditEventAction", "R"),
         "outcome": { "_type": "ACCESS_OUTCOME", "result": coded("openehr_access", "granted"),
             "delivered": 1 },
         "accessor": { "_type": "ACCESSOR", "kind": coded("openehr_access", "person"),

@@ -37,7 +37,7 @@ fn policy(care: bool) -> Value {
             "sensitivities": [{ "_type": "DV_CODED_TEXT", "value": "HIV",
                 "defining_code": { "_type": "CODE_PHRASE",
                     "terminology_id": { "_type": "TERMINOLOGY_ID",
-                        "value": "v3-ActCode" },
+                        "value": "HL7_ActCode" },
                     "code_string": "HIV" } }] }],
         "care_relationship_required": care,
         "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" },

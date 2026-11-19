@@ -1387,10 +1387,10 @@ outcome`, `accessor kind`, `access authorisation`, `access refusal
 reason` and `credential binding` (#5660), which codes `ACCESSOR.binding`
 from the party binding outcome (`BindingCode::term`). Each is a closed set of terms read into a typed term (`Term::read`)
 by terminology id and code. A term whose meaning an HL7 code system
-publishes is that code under the code system's id: `consent-provision-type`
-`permit` and `deny`, `extra-security-role-type` `datasubject` (the subject
-caller kind and the subject-of-care accessor kind), `v3-RoleClass` `MBR` (a
-care-team membership) and `audit-event-action` `C`, `R`, `U`, `D`. A value of
+publishes is that code under the code system's id: `HL7_ConsentProvisionType`
+`permit` and `deny`, `HL7_SecurityRoleType` `datasubject` (the subject
+caller kind and the subject-of-care accessor kind), `HL7_RoleClass` `MBR` (a
+care-team membership) and `HL7_AuditEventAction` `C`, `R`, `U`, `D`. A value of
 a terminology the group holds no term of, or a code outside the group, is
 refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the care relationship codes are qualifiers, never
@@ -1615,7 +1615,7 @@ holder of `write_care_relationship`, and the care check decides it, so the
 ADT system rosters a provisioned professional (#5617). A SCIM Group created
 with `careTeam` in FerroEHR's Group extension is a care team: its `GROUP`
 is named by the coded `openehr_access::care_team` (group `group kind`) and
-each membership by the coded `v3-RoleClass::MBR`, both bound in the default
+each membership by the coded `HL7_RoleClass::MBR`, both bound in the default
 definitions' `term_bindings`, since RM demographic `PARTY.type()` and
 `PARTY_RELATIONSHIP.type()` are the `name` (`Type_valid`); creating
 one needs the client's `write_care_relationship` grant, and its membership

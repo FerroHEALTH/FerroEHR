@@ -97,6 +97,7 @@
   - [Access path metrics and runbooks](operations-access-path.md)
   - [Admin & messaging APIs](operations-admin-apis.md)
   - [Operational policy](operational-policy.md)
+    - [What the CDR leaves to the application](application-boundary.md)
   - [Usage report](usage-report.md)
   - [Returning to the original state](operations-reset.md)
   - [Decommissioning](operations-decommissioning.md)

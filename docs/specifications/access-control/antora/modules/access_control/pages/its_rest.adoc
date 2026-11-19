@@ -14,7 +14,7 @@ NOTE: This page proposes an addition to the xref:ITS-REST::index.adoc[openEHR RE
 |The current `EHR_ACCESS`, to the parties xref:decision_procedure.adoc#_reading_and_writing_the_settings[Reading and Writing the Settings] admits; `404` to everyone else.
 
 |`PUT {baseUrl}/ehr/{ehr_id}/ehr_access`
-|Commits a new version, with `If-Match` naming the current version uid. A body that fails an invariant or a terminology check is refused `400` naming the first defect.
+|Commits a new version, with `If-Match` naming the current version uid. The settings body is a `CONFIDENTIALITY_SETTINGS` or a subtype. A body that fails an invariant or a terminology check is refused `400` naming the first defect; a version that changes the marking or the exclusions without being the controller's is refused `403`.
 
 |`GET {baseUrl}/ehr/{ehr_id}/versioned_ehr_access`, `.../revision_history`, `.../version/{version_uid}`
 |The versioned object, its revision history and one version, to the same parties.
@@ -30,3 +30,57 @@ NOTE: This page proposes an addition to the xref:ITS-REST::index.adoc[openEHR RE
 |===
 
 Each body is the ITS-JSON form of the class, with `_type`. A change to either object is a `CONTRIBUTION` with its `AUDIT_DETAILS`, as for any versioned object.
+
+== Care Relationships
+
+ITS-REST 1.1.0 has no resource for a relationship; its Demographic API (`x-status: DEVELOPMENT`) has party, versioned party and contribution resources only. The resources below hold the relationships of xref:access_control_package.adoc#_care_relationships[Care Relationships] one by one, addressed by the subject reference (`subject_id` and `subject_namespace`, as `GET {baseUrl}/ehr` addresses an EHR) or, in a system with a demographic service, by the subject's party. Each change is a `CONTRIBUTION` with its `AUDIT_DETAILS`; `PUT` and `DELETE` take `If-Match` with the relationship's version uid, and every answer carries its `ETag`.
+
+[cols="2,3", options="header"]
+|===
+|Resource |Behaviour
+
+|`GET {baseUrl}/care_relationship?subject_id=&subject_namespace=`, `GET {baseUrl}/demographic/person/{uid_based_id}/care_relationship`
+|The care relationships of the subject, live ones by default; `at` a day, `all=true` with ended ones.
+
+|`POST` on the same
+|Adds a relationship. `201` with its uid. `422` when `target`, `provider` or `covers_for` names no party of its kind, or the relationship breaks the policy's bounds; `403` when the writer's authority does not cover the provider or the target kind (xref:decision_procedure.adoc#_writing_relationships[Writing Relationships]).
+
+|`GET`, `PUT` and `DELETE {baseUrl}/care_relationship/{relationship_uid}`
+|One relationship. `PUT` changes the role or the period; closing `time_validity` ends it. `DELETE` removes one written in error; its earlier versions keep it.
+
+|`GET {baseUrl}/versioned_care_relationship/{relationship_uid}`, `.../revision_history`, `.../version/{version_uid}`
+|The versioned object, its revision history and one version.
+
+|`GET {baseUrl}/care_relationship?carer={uid}&role={terminology_id\|code}&path={direct,team}&at={day}`
+|The reverse reading: the relationships that reach a carer, paged by `offset` and `fetch`. For the systems that manage relationships.
+|===
+
+The same resources serve memberships, representations and kinships by the code of the relationship's `_name_` (`kind=MBR`, `represents`, `related_to`).
+
+That a person is under the care of a given professional or service is data concerning health (GDPR Art 4(15), Art 9). Every read of these resources is decided per subject it reveals: a relationship of a subject whose record the caller may not read is left out of a list, and its role and context are returned only to a caller that may read the record or to the writer for its own provider. Each read is recorded in the access log once per subject it reveals.
+
+== Queries and the Caseload
+
+AQL is unchanged. A query request MAY carry two members beside `q` (`POST {baseUrl}/query/aql`, and `GET` and `POST {baseUrl}/query/{qualified_query_name}`):
+
+[cols="1,2,3", options="header"]
+|===
+|Member |Values |Meaning
+
+|`caseload`
+|`direct`, `team`, `all`, `none` (default)
+|Narrows the query to the EHRs of subjects the caller holds a live care relationship to by that path; `all` is both.
+
+|`caseload_roles`
+|a list of `care_role` terms, each the token `terminology_id\|code`, such as `HL7_ParticipationType\|RESP`
+|Narrows further to relationships in one of these roles. Absent means any role.
+|===
+
+The caseload only narrows: the procedure applies to every row whatever its value, and it is applied before the result is counted, limited or paged. Liveness is that of the procedure, grace included, so the caseload and the decision agree. An unknown value, `caseload_roles` with `caseload` `none`, a caseload under a purpose outside `_care_purposes_`, and a caseload where `ACCESS_POLICY._caseload_` is false are refused `400`, naming the member. The members are an addition to the REST request, so the AQL text stays portable.
+
+----
+POST {baseUrl}/query/aql
+{ "q": "SELECT e/ehr_id/value FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]",
+  "caseload": "direct",
+  "caseload_roles": ["HL7_ParticipationType|RESP"] }
+----

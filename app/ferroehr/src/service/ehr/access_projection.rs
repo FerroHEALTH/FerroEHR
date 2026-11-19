@@ -301,7 +301,7 @@ mod tests {
                     "code_string": code } })
     }
 
-    /// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+    /// An `access effect`: a code of HL7 FHIR `HL7_ConsentProvisionType`.
     fn provision(code: &str) -> Value {
         let mut value = term(code);
         value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
@@ -386,7 +386,7 @@ mod tests {
         let label = json!({ "_type": "ACCESS_LABEL",
             "target": { "_type": "OBJECT_REF", "namespace": "local", "type": "VERSIONED_COMPOSITION",
                         "id": { "_type": "HIER_OBJECT_ID", "value": party } },
-            "sensitivities": [foreign_term("v3-ActCode", "HIV")] });
+            "sensitivities": [foreign_term("HL7_ActCode", "HIV")] });
         access(settings("restricted", vec![restriction], vec![label]))
     }
 

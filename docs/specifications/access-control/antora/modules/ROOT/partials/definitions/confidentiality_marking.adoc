@@ -1,0 +1,40 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*CONFIDENTIALITY_MARKING*
+
+h|*Description*
+2+a|The confidentiality of a whole EHR or of one versioned object, with who set it, when and why. The levels are ordered `N` < `R` < `V`: a datum at a level is cleared by a permit that names that level or a higher one.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*confidentiality*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|The confidentiality, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted). The codes `U`, `L` and `M` of the same code system read as `N`.
+
+h|*1..1*
+|*set_by*: `xref:common:generic_package.adoc#_party_proxy_class[PARTY_PROXY]`
+a|The party that set this marking: the controller, or a professional acting for it.
+
+h|*1..1*
+|*set_at*: `xref:data_types:date_time_package.adoc#_dv_date_time_class[DV_DATE_TIME]`
+a|When this marking was set.
+
+h|*0..1*
+|*reason*: `xref:data_types:text_package.adoc#_dv_text_class[DV_TEXT]`
+a|Why the marking was set, written for the subject to read. Never clinical content, and never read by an access decision.
+
+h|*Functions*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*level* (): `xref:{class_integer}[Integer]`
+a|The rank of `_confidentiality_` in the order the package fixes: 0 for `N` (and for `U`, `L` and `M`), 1 for `R`, 2 for `V`.
+
+h|*Invariants*
+2+a|__Confidentiality_valid__: `confidentiality.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)`
+
+|===

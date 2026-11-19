@@ -1,0 +1,49 @@
+[source,json]
+--------
+{
+  "name": "CONFIDENTIALITY_MARKING",
+  "documentation": "The confidentiality of a whole EHR or of one versioned object, with who set it, when and why. The levels are ordered `N` < `R` < `V`: a datum at a level is cleared by a permit that names that level or a higher one.",
+  "properties": {
+    "confidentiality": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "confidentiality",
+      "documentation": "The confidentiality, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted). The codes `U`, `L` and `M` of the same code system read as `N`.",
+      "is_mandatory": true,
+      "type": "DV_CODED_TEXT"
+    },
+    "set_by": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "set_by",
+      "documentation": "The party that set this marking: the controller, or a professional acting for it.",
+      "is_mandatory": true,
+      "type": "PARTY_PROXY"
+    },
+    "set_at": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "set_at",
+      "documentation": "When this marking was set.",
+      "is_mandatory": true,
+      "type": "DV_DATE_TIME"
+    },
+    "reason": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "reason",
+      "documentation": "Why the marking was set, written for the subject to read. Never clinical content, and never read by an access decision.",
+      "type": "DV_TEXT"
+    }
+  },
+  "functions": {
+    "level": {
+      "name": "level",
+      "documentation": "The rank of `_confidentiality_` in the order the package fixes: 0 for `N` (and for `U`, `L` and `M`), 1 for `R`, 2 for `V`.",
+      "result": {
+        "_type": "P_BMM_SIMPLE_TYPE",
+        "type": "Integer"
+      }
+    }
+  },
+  "invariants": {
+    "Confidentiality_valid": "confidentiality.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)"
+  }
+}
+--------

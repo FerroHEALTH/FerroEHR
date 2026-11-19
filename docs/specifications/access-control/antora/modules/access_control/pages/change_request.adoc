@@ -29,17 +29,19 @@ Answers:: the problem report above
 Reason:: Fills the slot RM EHR IM §EHR Access and BASE Architecture Overview §Access Control leave open with one concrete scheme, so that the subject's directives and the sensitivity of data are recorded as versioned, exchangeable facts with one decision procedure. Carries the rights of Regulation (EU) 2025/327 Art 8, 10, 11(5) and 4(2), and maps to HL7 FHIR `Consent` (R4, R5), IHE BPPC and IHE APPC (xref:mappings.adoc[Mappings]).
 
 Change description::
-* A new RM package `org.openehr.rm.access_control` (xref:access_control_package.adoc[The access_control Package]) with the classes `ACCESS_DIRECTIVE_SETTINGS` (a subtype of `ACCESS_CONTROL_SETTINGS`, the scheme `access_directives`), `ACCESS_DIRECTIVE`, `ACCESS_ACTOR_SCOPE`, `ACCESS_DATA_SCOPE`, `ACCESS_LABEL`, `ACCESS_POLICY`, `ACCESS_CLASSIFICATION`, `ACCESS_LOG_RESTRICTION`, `ACCESS_LOG_RETENTION`, `ACCESS_RETENTION_BOUND` and `VERSIONED_ACCESS_POLICY`, and its BMM `openehr_access_control_0.1.0.bmm.json`, which includes `openehr_rm_1.2.0`.
+* A new RM package `org.openehr.rm.access_control` (xref:access_control_package.adoc[The access_control Package]) with the classes `CONFIDENTIALITY_SETTINGS` (a subtype of `ACCESS_CONTROL_SETTINGS`, the scheme `confidentiality`), `CONFIDENTIALITY_MARKING`, `ACCESS_DIRECTIVE_SETTINGS` (a subtype of `CONFIDENTIALITY_SETTINGS`, the scheme `access_directives`), `ACCESS_DIRECTIVE`, `ACCESS_ACTOR_SCOPE`, `ACCESS_DATA_SCOPE`, `ACCESS_LABEL`, `ACCESS_POLICY`, `ACCESS_CLASSIFICATION`, `ACCESS_RELATIONSHIP_VALIDITY`, `ACCESS_RELATIONSHIP_WRITER`, `ACCESS_CONFLICT_RULE`, `ACCESS_VALUE_SET`, `ACCESS_LOG_RESTRICTION`, `ACCESS_LOG_RETENTION`, `ACCESS_RETENTION_BOUND`, `VERSIONED_ACCESS_POLICY` and `VERSIONED_PARTY_RELATIONSHIP`, and its BMM `openehr_access_control_0.1.0.bmm.json`, which includes `openehr_rm_1.2.0`.
+* The content of care relationships, memberships, representations and kinships as coded `PARTY_RELATIONSHIP` instances (xref:access_control_package.adoc#_care_relationships[Care Relationships]), each versioned on its own, with the relationship store as the normative unit and two conformance levels.
+* `CARE_RELATIONSHIP`, a subtype of `PARTY_RELATIONSHIP` with the attributes `care_role`, `provider`, `covers_for`, `context` and `basis`, as the class the RM gains if openEHR wants the role typed; each attribute maps one to one to the element of the same name in the coded form, which stays the exchange form until then.
 * The decision procedure of the scheme (xref:decision_procedure.adoc[The Decision Procedure]) as normative text of the package.
 * In the EHR Package, EHR Access: a sentence naming `access_directives` as a published scheme and pointing at the package; the reference to "the Security Information Model" pointed at it.
 * No existing class changes.
 
 Related changes::
-* SPECTERM: the draft terminology `openehr_access` ("openEHR access (draft)", `Terminology_id_access`) and the groups the access control and access log packages code in it (xref:terminology.adoc[Terminology]); a term with the meaning of a published HL7 code is that code, and the other codes carry their `TERM_MAPPING`s. The identifier is proposed and not assigned, and the groups move into the openEHR Terminology with numeric codes if openEHR adopts them.
-* SPECITS: the `EHR_ACCESS` and `ACCESS_POLICY` resources of xref:its_rest.adoc[ITS-REST Resources], and the ITS-JSON schema of the package.
+* SPECTERM: the draft terminology `openehr_access` ("openEHR access (draft)", `Terminology_id_access`) and the groups the access control and access log packages code in it (xref:terminology.adoc[Terminology]); a term with the meaning of a published HL7 code is that code, and the other codes carry their `TERM_MAPPING`s. The identifier is proposed and not assigned, and the groups move into the openEHR Terminology with numeric codes if openEHR adopts them. The terminology identifiers `HL7_<name>` for the HL7 code systems the packages use, which openEHR is asked to assign, and the default value sets for care roles, representation bases and care purposes.
+* SPECITS: the `EHR_ACCESS` and `ACCESS_POLICY` resources, the care relationship resources addressed by subject reference, the caseload resource and the `caseload` and `caseload_roles` members of a query request (xref:its_rest.adoc[ITS-REST Resources]), and the ITS-JSON schema of the package.
 * SPECBASE: in the Architecture Overview, Security and Confidentiality, Access Control, Overview, a paragraph naming the published scheme, and the class name corrected to `ACCESS_CONTROL_SETTINGS`.
 
-Impact:: Additive. A system that does not implement the scheme sees an `EHR_ACCESS` whose `scheme()` it does not know and keeps it as data. A system that implements it decides access to an EHR with these settings by the procedure.
+Impact:: Additive: no existing class, attribute or invariant changes. A system that does not implement the schemes sees an `EHR_ACCESS` whose `scheme()` it does not know. A system that implements them decides access to an EHR with these settings by the procedure. A care relationship in the coded form is a `PARTY_RELATIONSHIP` every RM 1.2.0 system can store; a system that validates against the RM refuses a `_type` it does not know, which is why the coded form, not a subtype, is the exchange form.
 
 == What is Labelled as Own Design
 
@@ -48,7 +50,13 @@ No openEHR or other specification governs the following; each is this proposal's
 * the scheme name `access_directives` and every class of the package;
 * facts with a fixed procedure, deny-overrides, and one level of exceptions;
 * the order of the procedure's steps and its refusals;
-* care relationships through care-team `GROUP` membership and an under-care-of relationship, with a grace period;
+* the scheme `confidentiality`, `CONFIDENTIALITY_SETTINGS` as the parent of `ACCESS_DIRECTIVE_SETTINGS`, the marking of a whole record and of an object, the order `N` < `R` < `V` as a step of the procedure, and the answer to a refused protected record;
+* the controller's exclusion as a directive of kind `exclusion`, its place before step 1, and the conflict rules;
+* care relationships as coded `PARTY_RELATIONSHIP` instances with a role, a provider, cover and a basis; the closed paths `direct`, `team`, `self_declared` and `attested` and the one level of nesting; that no role implies another; liveness with a grace period read in days in the policy's time zone; the relationship store as the normative unit and its two conformance levels;
+* `_care_roles_` and `_care_path_` on `ACCESS_ACTOR_SCOPE`, `_confidentialities_` on `ACCESS_DATA_SCOPE`, and the controller's facts about care relationships and representation on `ACCESS_POLICY`, with their strictest defaults;
+* the representation and the kinship as stored facts the writer decides, with no age, capacity or legal-basis rule in the package;
+* value-set bindings with the code system used when none is bound, the rule `HL7_` plus the code system's name for an HL7 terminology identifier, and a jurisdiction's profile as a template of the policy archetype plus value sets;
+* the caseload request members, the care relationship resources, the reverse reading and the per-subject decision on reading a relationship;
 * `ACCESS_POLICY._rules_`, the `controller_rule` kind, the place of step 4 in the procedure, and where a permit may decide;
 * reading `ACCESS_ACTOR_SCOPE._role_` from the coded `_name_` of a `ROLE` the caller performs;
 * reading `ACCESS_ACTOR_SCOPE._organisation_type_` from the coded `_name_` of the `ORGANISATION` the caller acts for, and both from what an admitted caller's verified credential attests;

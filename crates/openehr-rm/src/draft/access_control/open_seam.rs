@@ -7,6 +7,7 @@
 //! codec.
 
 use crate::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
+use crate::draft::access_control::access_control::confidentiality_settings::ConfidentialitySettings;
 use openehr_base::serde_support::OpenSubtype;
 
 /// Reads the draft class `ACCESS_DIRECTIVE_SETTINGS` out of the `ACCESS_CONTROL_SETTINGS` carrier, refusing a carrier
@@ -25,6 +26,26 @@ impl TryFrom<&AccessDirectiveSettings> for OpenSubtype {
     type Error = serde_json::Error;
 
     fn try_from(value: &AccessDirectiveSettings) -> Result<Self, Self::Error> {
+        serde_json::from_value(serde_json::to_value(value)?)
+    }
+}
+
+/// Reads the draft class `CONFIDENTIALITY_SETTINGS` out of the `ACCESS_CONTROL_SETTINGS` carrier, refusing a carrier
+/// of another scheme or one whose members break the class.
+impl TryFrom<&OpenSubtype> for ConfidentialitySettings {
+    type Error = serde_json::Error;
+
+    fn try_from(carrier: &OpenSubtype) -> Result<Self, Self::Error> {
+        serde_json::from_value(serde_json::to_value(carrier)?)
+    }
+}
+
+/// Writes the draft class `CONFIDENTIALITY_SETTINGS` into the `ACCESS_CONTROL_SETTINGS` carrier, tagged with its
+/// `_type`.
+impl TryFrom<&ConfidentialitySettings> for OpenSubtype {
+    type Error = serde_json::Error;
+
+    fn try_from(value: &ConfidentialitySettings) -> Result<Self, Self::Error> {
         serde_json::from_value(serde_json::to_value(value)?)
     }
 }

@@ -224,7 +224,7 @@ own in it, which the change request does not propose. A `CAPABILITY` grants an o
 | `sign_in_persons` | Be a client the persons of its token issuer sign in through: a person's token through it is the person's own, or their representative's |
 | `act_for_persons` | Act for the persons of its token issuer, as a third-party client or as the RFC 8693 actor a person's token names in `act` |
 | `access_without_scope` | Be admitted, as a system caller whose token carries no resource scope, to every SMART on openEHR requirement |
-| `write_care_relationship` | Write the membership (`MBR` of `v3-RoleClass`) and `under_care_of` care relationships through the Demographic API, as a hospital's ADT system does ([The access control terminology](#the-access-control-terminology)) |
+| `write_care_relationship` | Write the membership (`MBR` of `HL7_RoleClass`) and `under_care_of` care relationships through the Demographic API, as a hospital's ADT system does ([The access control terminology](#the-access-control-terminology)) |
 | `write_access_policy` | Write the controller's `ACCESS_POLICY` |
 
 The same terminology names the elements that qualify a grant, by the code
@@ -316,10 +316,10 @@ caller facts they are read against are coded in the draft `openehr_access`
 terminology, which the access control change request proposes to openEHR
 as "openEHR access (draft)". Where an HL7 code system publishes a code of
 the same meaning, the group's term is that code, under the code system's
-id: `consent-provision-type` (`http://hl7.org/fhir/consent-provision-type`),
-`extra-security-role-type`
+id: `HL7_ConsentProvisionType` (`http://hl7.org/fhir/consent-provision-type`),
+`HL7_SecurityRoleType`
 (`http://terminology.hl7.org/CodeSystem/extra-security-role-type`) and
-`v3-RoleClass` (`http://terminology.hl7.org/CodeSystem/v3-RoleClass`). The
+`HL7_RoleClass` (`http://terminology.hl7.org/CodeSystem/v3-RoleClass`). The
 groups below are the stable contract: the access evaluator and the access
 write checks read these codes and no archetype id, so you model consent,
 restriction and care relationships with your own archetypes and bind their
@@ -334,11 +334,11 @@ design.
 |---|---|---|
 | `access default` | `open`, `restricted`, `consent_required` | `ACCESS_DIRECTIVE_SETTINGS.default_access`: the disposition of an EHR where no directive applies |
 | `access directive kind` | `consent`, `restriction`, `opt_out`, `delegation`, `controller_rule` | `ACCESS_DIRECTIVE.kind`. A `restriction` (EHDS Art. 8) is always a deny; an `opt_out` (EHDS Art. 10) is a deny of the whole record; a `controller_rule` is a rule of the access policy and never a directive of an EHR |
-| `access effect` | `permit`, `deny` of `consent-provision-type` | `ACCESS_DIRECTIVE.effect`; a deny overrides a permit |
+| `access effect` | `permit`, `deny` of `HL7_ConsentProvisionType` | `ACCESS_DIRECTIVE.effect`; a deny overrides a permit |
 | `access relationship` | `care`, `representative`, `proxy` | `ACCESS_ACTOR_SCOPE.relationship`: the caller's relationship to the subject |
-| `access caller kind` | `professional`, `access_service`, `datasubject` of `extra-security-role-type` (the subject), `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
+| `access caller kind` | `professional`, `access_service`, `datasubject` of `HL7_SecurityRoleType` (the subject), `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
 | `access operation` | `read`, `write`, `export`, `query` | `ACCESS_DIRECTIVE.operations`: the operation classes a directive applies to. No capability grants one |
-| `care relationship` | `MBR` of `v3-RoleClass`, `under_care_of` | The `name` or `details` of a `PARTY_RELATIONSHIP`: with `MBR`, the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP`, or the source, a provider `ORGANISATION`, is a member of the target `GROUP`; with `under_care_of`, the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
+| `care relationship` | `MBR` of `HL7_RoleClass`, `under_care_of` | The `name` or `details` of a `PARTY_RELATIONSHIP`: with `MBR`, the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP`, or the source, a provider `ORGANISATION`, is a member of the target `GROUP`; with `under_care_of`, the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
 | `representation` | `represents` | The `name` or `details` of a `PARTY_RELATIONSHIP`: the source represents the target, the subject ([Representatives in the patient portal](#representatives-in-the-patient-portal)) |
 | `group kind` | `care_team` | The `name` of a `GROUP`: the `GROUP` is a care team ([Care teams provisioned over SCIM](#care-teams-provisioned-over-scim)) |
 | `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing` | The access record of a refusal |
@@ -349,8 +349,8 @@ Two grants of the operation table belong to access control:
 
 **Codes FerroEHR does not own.** Role, sensitivity, data category, purpose
 of use and legal ground are coded in the terminology your jurisdiction names, such
-as HL7 `v3-Confidentiality` and `v3-ActCode`, the EHDS categories and the
-HL7 `v3-ActReason` purposes of use. FerroEHR compares them by terminology id and code, and refuses
+as HL7 `HL7_Confidentiality` and `HL7_ActCode`, the EHDS categories and the
+HL7 `HL7_ActReason` purposes of use. FerroEHR compares them by terminology id and code, and refuses
 one coded in `openehr_access`, which holds none.
 
 **Refusals.** `refused-opt-out` and `refused-restricted` answer `404`, as if
@@ -1298,7 +1298,7 @@ accessor, here `person`. Each term is an element whose `name` is its
         {
           "_type": "ELEMENT", "archetype_node_id": "id13",
           "name": { "_type": "DV_CODED_TEXT", "value": "Purpose", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "purpose" } },
-          "value": { "_type": "DV_CODED_TEXT", "value": "treatment", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "v3-ActReason" }, "code_string": "TREAT" } }
+          "value": { "_type": "DV_CODED_TEXT", "value": "treatment", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_ActReason" }, "code_string": "TREAT" } }
         },
         {
           "_type": "CLUSTER", "archetype_node_id": "id14", "name": { "_type": "DV_TEXT", "value": "Legal ground" },
@@ -1588,6 +1588,10 @@ design:
 
 ## Caller facts: roles and care relationships
 
+What FerroEHR stores and decides on, and what it leaves to your applications
+and your deployment, is listed in
+[What the CDR leaves to the application](application-boundary.md).
+
 Beside its grants, a caller carries the facts the access evaluator reads:
 the roles it performs and the care teams it belongs to. A patient carries the
 teams and units it is under the care of. FerroEHR reads them in any
@@ -1625,7 +1629,7 @@ rule](#controller-rules) names them in an `applies_to` entry's
 `organisation_type`, compared by terminology and code.
 
 **Care relationships.** A `PARTY_RELATIONSHIP` in a `PERSON`'s
-`relationships` whose `name` or `details` carry `MBR` of `v3-RoleClass`
+`relationships` whose `name` or `details` carry `MBR` of `HL7_RoleClass`
 makes the professional a member of the care team its `target` names; one carrying
 `under_care_of` puts the patient in the care of the team or unit its
 `target` names, with the admission as its `time_validity`. The discharge is
@@ -1634,12 +1638,12 @@ evaluator can apply a grace period after it. A care relationship of a party
 other than a `PERSON`, one whose target is no party of this store, and a
 `PARTY_RELATIONSHIP` committed on its own carrying either code are refused
 `422`, apart from the group memberships below. The default definitions ship
-`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0` and
+`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.1` and
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0` as examples
 ([Default demographic definitions](installation/default-demographic-definitions.md)).
 
 **Group memberships of a provider.** A `PARTY_RELATIONSHIP` in an
-`ORGANISATION`'s `relationships` carrying `MBR` of `v3-RoleClass` makes that provider a
+`ORGANISATION`'s `relationships` carrying `MBR` of `HL7_RoleClass` makes that provider a
 member of the `GROUP` its `target` names, such as the providers of a
 regional health network, for as long as its `time_validity` holds. A system
 client acting for the `ORGANISATION` then acts for the `GROUP` too, so a
@@ -1666,7 +1670,7 @@ relationship before it changes none.
 The care delivery environment reaches FerroEHR on two channels, and a
 deployment uses either or both:
 
-- **The ADT or rostering system** writes memberships (`MBR` of `v3-RoleClass`) and `under_care_of`
+- **The ADT or rostering system** writes memberships (`MBR` of `HL7_RoleClass`) and `under_care_of`
   through the Demographic API. On the `PERSON` of a SCIM User, which the
   party binding protects, a version whose only change is to its care
   relationships commits under the grant; any other change it makes stays
@@ -1702,7 +1706,7 @@ the typical `GROUP`, so this reading is FerroEHR's own design. The Demographic
 IM makes a party's type its name (`PARTY.type()`, invariant
 `Type_valid: type = name`, and `PARTY_RELATIONSHIP.type()` likewise), so its
 `GROUP` is named by the coded `care_team` and each member's membership by the
-coded `MBR` of `v3-RoleClass`, and the evaluator counts the member in the team's care on
+coded `MBR` of `HL7_RoleClass`, and the evaluator counts the member in the team's care on
 the next request. FerroEHR reads the kind by that code, never by the template
 or a path. `careTeam` is immutable (RFC 7643 §2.2): a
 Group never changes kind with its members in it.
@@ -2051,7 +2055,7 @@ Four rules, as you write them in the policy body (a role code of
   { "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": "Nurses do not record diagnoses" },
     "archetype_node_id": "id15",
     "kind": { "_type": "DV_CODED_TEXT", "value": "controller_rule", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "controller_rule" } },
-    "effect": { "_type": "DV_CODED_TEXT", "value": "deny", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "consent-provision-type" }, "code_string": "deny" } },
+    "effect": { "_type": "DV_CODED_TEXT", "value": "deny", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_ConsentProvisionType" }, "code_string": "deny" } },
     "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "role": { "_type": "DV_CODED_TEXT", "value": "Nurse", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "urn:example:roles" }, "code_string": "NURSE" } } }],
     "operations": [{ "_type": "DV_CODED_TEXT", "value": "write", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "write" } }],
     "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["Diagnosis"] }],

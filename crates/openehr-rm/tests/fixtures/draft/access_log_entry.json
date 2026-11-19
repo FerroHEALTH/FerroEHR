@@ -14,7 +14,7 @@
     "value": "read",
     "defining_code": {
       "terminology_id": {
-        "value": "audit-event-action"
+        "value": "HL7_AuditEventAction"
       },
       "code_string": "R"
     }
@@ -117,7 +117,7 @@
       "value": "treatment",
       "defining_code": {
         "terminology_id": {
-          "value": "v3-ActReason"
+          "value": "HL7_ActReason"
         },
         "code_string": "TREAT"
       }

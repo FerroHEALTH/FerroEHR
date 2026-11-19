@@ -1,0 +1,24 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_VALUE_SET*
+
+h|*Description*
+2+a|A value set the controller binds a coded attribute of the package to.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*binding*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|What the value set codes, in the `access value set binding` group: `care_role`, `representation_basis`, `kinship`, `organisation_type`, `care_purpose` or `emergency_purpose`.
+
+h|*1..1*
+|*value_set*: `xref:data_types:uri_package.adoc#_dv_uri_class[DV_URI]`
+a|The canonical URL of the value set on the terminology server.
+
+h|*Invariants*
+2+a|__Binding_valid__: `terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_value_set_binding, binding.defining_code)`
+
+|===

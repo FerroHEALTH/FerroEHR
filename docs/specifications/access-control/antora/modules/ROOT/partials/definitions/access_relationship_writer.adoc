@@ -1,0 +1,24 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_RELATIONSHIP_WRITER*
+
+h|*Description*
+2+a|The writers that may state a care relationship to a subject whose EHR is marked at one of the levels named, beside the writers the capabilities already admit.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*applies_to*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_actor_scope_class[ACCESS_ACTOR_SCOPE]>`
+a|The writers, any one of which is enough.
+
+h|*1..1*
+|*confidentialities*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The levels, coded in the `HL7_Confidentiality` code system (`N` normal, `R` restricted, `V` very restricted), for which these writers may state a relationship.
+
+h|*Invariants*
+2+a|__Confidentialities_valid__: `confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality))`
+
+|===
