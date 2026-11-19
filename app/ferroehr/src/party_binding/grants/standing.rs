@@ -46,7 +46,7 @@ impl GrantStanding {
     /// `id` of `issuer`, after reading the rows when the copy is stale.
     async fn of(&self, issuer: &str, id: &str) -> Result<Capabilities, StandingError> {
         self.grants
-            .refresh_if_stale()
+            .confirm()
             .await
             .map_err(|error| StandingError::new(error.into_inner()))?;
         Ok(self.grants.capabilities(

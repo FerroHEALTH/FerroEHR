@@ -1186,3 +1186,40 @@ async fn an_export_grant_carries_the_access_directives_through_an_import() {
     assert_eq!(read.directives.as_deref().map(<[_]>::len), Some(1));
     assert_eq!(read.gate_keepers.as_deref().map(<[_]>::len), Some(1));
 }
+
+/// A grant written on another replica decides the next request of a replica
+/// whose notification never arrives: the request reads the store's revisions
+/// before it takes its capabilities from the copy (#6048).
+#[tokio::test]
+async fn a_change_whose_notification_is_withheld_decides_the_next_request() {
+    let db = testkit::db().await.expect("testkit database");
+    let writer = replica(&db.pool(), GrantCeiling::default()).await;
+    let reader = replica(&db.pool(), GrantCeiling::default()).await;
+    let _elsewhere =
+        crate::policy_fixtures::deaf(&[std::sync::Arc::clone(reader.grants().listened())]).await;
+    reader.grants().confirm().await.expect("a read");
+    let lab = Actor::Client {
+        issuer: ISSUER,
+        client_id: "lab",
+    };
+    let granted = reader.grants().capabilities(lab, jiff::Timestamp::now());
+    assert_eq!(written(&granted), Vec::<String>::new());
+    let (agent_id, _) = create(&writer, PartyKind::Agent, &agent("lab"))
+        .await
+        .expect("the AGENT commits");
+    create(
+        &writer,
+        PartyKind::Role,
+        &role(agent_id, None, &[writes("Lab.v1", None)]),
+    )
+    .await
+    .expect("the ROLE commits");
+    assert_eq!(
+        reader.grants().listened().notifications(),
+        0,
+        "the reader heard nothing"
+    );
+    reader.grants().confirm().await.expect("the request's read");
+    let granted = reader.grants().capabilities(lab, jiff::Timestamp::now());
+    assert_eq!(written(&granted), vec!["Lab.v1"]);
+}

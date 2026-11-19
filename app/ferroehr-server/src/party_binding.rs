@@ -544,6 +544,7 @@ async fn basic_user_person(
     .await
     .context("reading the binding key")?;
     let live: Vec<uuid::Uuid> = rows
+        .0
         .iter()
         .filter(|row| row.live)
         .map(|row| row.party_id)

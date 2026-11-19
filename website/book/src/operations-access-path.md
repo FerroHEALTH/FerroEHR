@@ -70,11 +70,14 @@ instance answers every request with a database read. A rise of
 
 The `party_binding` copy holds what resolves a login to its `PERSON`: the
 lookup of each login's key, for at most 65536 logins, and the name of each
-bound `PERSON`, so a request whose caller it holds reads neither. A change of
-the binding side table drops every lookup, and a new version of a `PERSON`
-drops its name, on every instance once the notification arrives; the instance
-whose own commit made the change drops its copy before it answers, so a
-deprovisioned login is refused on its next request. In `access_copy_lookups`,
+bound `PERSON`, so a request whose caller it holds reads neither. A request
+takes a held lookup only when it was read at the binding revision the request
+reads from the party store, so a deprovisioned login is refused on its next
+request on every instance, whatever the delay of the notification
+([several instances](installation/several-instances.md)). A change of the
+binding side table also drops every lookup, and a new version of a `PERSON`
+drops its name, on every instance once the notification arrives, and the
+instance whose own commit made the change drops its copy before it answers. In `access_copy_lookups`,
 `access_copy_refills` and `access_copy_drops` the `copy` label is `binding`
 for the lookups and `party_name` for the names.
 
@@ -101,7 +104,7 @@ answers `503`, so no decision is made without it.
 | `access_copy_size_bytes` | gauge | `copy` | Bytes each copy takes, by the same `copy` labels, as its weights estimate them. `care_teams`, `care_patients` and `care_declared` together are the care censuses that the 64 MiB bound holds, and `object_version` is held against its own 64 MiB. The [memory budget](installation/configuration.md#memory-budget) lists every cap. |
 | `cache_entries` | gauge | `cache` | Entries each cache holds: `created_ehr`, `web_template`, `aql_plan`, `archetype_lineage` and, while auditing is on, `audit_subjects`. |
 | `cache_size_bytes` | gauge | `cache` | Bytes each cache takes, by the same `cache` labels, as its weights estimate them. |
-| `access_copy_lookups_total` | counter | `copy`, `result` | Lookups while the listener is up: `hit` (served from the copy) or `miss` (this request read the database). A request that waited on another request's read counts as a hit. |
+| `access_copy_lookups_total` | counter | `copy`, `result` | Lookups while the listener is up: `hit` (served from the copy), `miss` (this request read the database) or, for the `binding` copy, `behind` (the copy held a lookup read before the store's binding revision, and this request read the database). A request that waited on another request's read counts as a hit. |
 | `access_copy_refills_total` | counter | `copy`, `outcome` | Reads of the settings projection that fill the copy: `ok`, or `failed` (the request answered `503`). |
 | `access_copy_drops_total` | counter | `scope` | Drops: `ehr` (one EHR's settings changed), `classes` (a new class), `every` (a listener connected or was lost, or a refill notification). |
 

@@ -27,6 +27,7 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::derive::{Bound, GrantFacts};
+use crate::party_binding::grants::live::revisions::Revisions;
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
 
@@ -298,16 +299,22 @@ pub(crate) async fn refilled(tx: &mut PgConnection) -> Result<(), StorageError> 
     Ok(())
 }
 
-/// The grant revision and the facts revision, on `conn`, in one read.
+/// The grant revision, the facts revision and the binding revision, on
+/// `conn`, in one read.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
-pub(crate) async fn revisions(conn: &mut PgConnection) -> Result<(i64, i64), StorageError> {
-    Ok(
-        sqlx::query_as("SELECT revision, facts_revision FROM binding_grant_revision")
-            .fetch_one(&mut *conn)
-            .await?,
+pub(crate) async fn revisions(conn: &mut PgConnection) -> Result<Revisions, StorageError> {
+    let (grants, facts, bindings) = sqlx::query_as(
+        "SELECT revision, facts_revision, binding_revision FROM binding_grant_revision",
     )
+    .fetch_one(&mut *conn)
+    .await?;
+    Ok(Revisions {
+        grants,
+        facts,
+        bindings,
+    })
 }
 
 /// The revision, on `tx`; `0` until the first fill or grant change.

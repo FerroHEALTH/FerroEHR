@@ -61,6 +61,27 @@ notification arrives; while an instance's listener is down it reads the
 settings on every request, so it has no window. No request adds a statement or
 a transaction for this.
 
+The other copies are confirmed in the request too, so no decision waits on a
+notification. A request reads two revisions before it decides, each in one
+indexed statement on its own connection:
+
+- in the party store, the revisions of the grants, of the caller facts and of
+  the binding side table (`binding_grant_revision`). The binding revision
+  moves in the transaction of every change of a login's key, a membership, a
+  representation or a key space's state. A held lookup is taken only when it
+  was read at the revision the request read, and the grants and the caller
+  facts are read again when the store's revisions are past the copy's;
+- in the clinical store, the newest version of each policy register and of
+  the access policy. A copy behind one of them is read before the request is
+  judged.
+
+So a deprovisioned login, a removed membership, a revoked grant, an ended care
+relationship and a policy change committed on one instance decide the next
+request on every instance, whatever the delay of the notification. The
+notification still drops the copies early; the two reads are what a decision
+rests on. A read request sends its own read, its access record and these two
+statements.
+
 ## The listeners share one connection per database
 
 Each instance keeps six policy copies fresh, each on a notification channel

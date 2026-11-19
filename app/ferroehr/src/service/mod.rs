@@ -587,7 +587,7 @@ impl FerroEhrService {
         &self,
     ) -> Result<&crate::party_binding::grants::live::LiveGrants, crate::error::ServiceError> {
         self.grants
-            .refresh_if_stale()
+            .confirm()
             .await
             .map_err(|error| crate::error::ServiceError::from(error.into_inner()))?;
         Ok(&self.grants)

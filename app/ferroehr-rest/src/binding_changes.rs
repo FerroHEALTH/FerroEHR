@@ -22,7 +22,10 @@ pub(crate) async fn middleware(
     request: Request,
     next: Next,
 ) -> Response {
-    let (response, changed) = ferroehr::party_binding::live::tracking(next.run(request)).await;
+    let (response, changed) = ferroehr::party_binding::request::scope(
+        ferroehr::party_binding::live::tracking(next.run(request)),
+    )
+    .await;
     if changed {
         service.bindings().forget_all();
     }

@@ -211,6 +211,63 @@ async fn a_scim_deactivation_on_one_replica_refuses_on_the_other() {
     assert_eq!(first.status, StatusCode::FORBIDDEN, "{}", first.body);
 }
 
+/// A second replica none of whose copies hears a notification: every
+/// listener connects to a database of its own, so what its requests decide
+/// rests on what they read (#6048). With its audit drain, and that database.
+async fn deaf(world: &World) -> (Router, AuditHandle, testkit::TestDb) {
+    let (sender, drain) = start(audit(), None, world.pool.clone())
+        .await
+        .expect("the audit sender");
+    let svc = Arc::new(replica(&world.config, &world.pool, Some(sender)).await);
+    let elsewhere = testkit::db().await.expect("a second database");
+    let listened: Vec<_> = svc
+        .policy_listeners()
+        .into_iter()
+        .map(|(_, listened)| listened)
+        .collect();
+    Listeners::on(
+        PgConnectOptions::from_str(elsewhere.url()).expect("the test DSN parses"),
+        &listened,
+    )
+    .spawn();
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    while !listened.iter().all(|listened| listened.is_listening()) {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the listeners connect"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    (router(&world.config, &svc).await, drain, elsewhere)
+}
+
+/// SCIM's deactivation of the nurse through the first replica refuses her
+/// very next request on a replica that hears no notification: the request
+/// reads the party store's revisions before it resolves her login (#6048).
+#[tokio::test]
+async fn a_scim_deactivation_refuses_the_next_request_of_a_replica_that_hears_nothing() {
+    let world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let path = format!(
+        "{}/ehr/{}/composition/{}",
+        crate::common::BASE,
+        world.ehr,
+        world.vitals.vo
+    );
+    let read =
+        || crate::hospital::world::call(&other, "devries", "GET", &path, Some("TREAT"), None);
+    for _ in 0..2 {
+        let answer = read().await;
+        answered(&answer, StatusCode::OK, None);
+    }
+    let user = format!("/Users/{}", world.people["devries"].person);
+    let body = patch_op(json!([{ "op": "replace", "path": "active", "value": false }]));
+    let (status, scimmed) = scim(&world.app, SCIM, "PATCH", &user, Some(&body)).await;
+    assert_eq!(status, StatusCode::OK, "the deactivation: {scimmed}");
+    let answer = read().await;
+    assert_eq!(answer.status, StatusCode::FORBIDDEN, "{}", answer.body);
+}
+
 /// The system log's records of the request `request_id`, as `(operation,
 /// outcome)`, once at least one has been chained, or none after ten seconds.
 async fn audited(world: &World, request_id: &str) -> Vec<(Option<String>, i16)> {

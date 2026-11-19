@@ -16,7 +16,7 @@ use http::StatusCode;
 use sqlx::PgPool;
 
 use super::{BASE, EHRS, drained, entries, population, single};
-use crate::access_evaluator_http::{app, ehr_with_composition, send};
+use crate::access_evaluator_http::{ehr_with_composition, send};
 
 /// The requests of each kind measured.
 const REQUESTS: u64 = 20;
@@ -250,7 +250,7 @@ async fn passes(pool: &PgPool, from: &str, to: &str) -> u64 {
 async fn an_access_log_entry_stays_within_its_wal_ceiling() {
     // The budgets count what a release build does, without the debug reference cells.
     ferroehr::aql::sql::without_reference_cells();
-    let (_db, pool, _svc, app) = Box::pin(app()).await;
+    let (_db, pool, _svc, app) = Box::pin(super::served()).await;
     sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_walinspect")
         .execute(&pool)
         .await
@@ -408,7 +408,7 @@ fn commit_relation(relation: &str) -> bool {
 async fn a_composition_commit_stays_within_its_wal_ceiling() {
     // The budgets count what a release build does, without the debug reference cells.
     ferroehr::aql::sql::without_reference_cells();
-    let (_db, pool, _svc, app) = Box::pin(app()).await;
+    let (_db, pool, _svc, app) = Box::pin(super::served()).await;
     let made = commit_fixture(&app, &pool).await;
     let mut report = String::new();
     let mut over = false;

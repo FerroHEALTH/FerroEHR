@@ -373,3 +373,70 @@ async fn a_replica_without_its_listener_reads_on_every_request() {
     reader.refresh_access_policy().await.expect("a read");
     assert_eq!(reader.access_policy().in_force().version, 1);
 }
+
+/// A policy written on another replica decides the next request of a replica
+/// whose notification never arrives: the request reads the newest version in
+/// the store before it decides (#6048).
+#[tokio::test]
+async fn a_change_whose_notification_is_withheld_decides_the_next_request() {
+    let db = testkit::db().await.expect("testkit database");
+    let writer = replica(&db.pool());
+    let reader = replica(&db.pool());
+    let _elsewhere =
+        crate::policy_fixtures::deaf(&[std::sync::Arc::clone(reader.access_policy().listened())])
+            .await;
+    reader.confirm_policy(false, true).await.expect("a read");
+    assert_eq!(reader.access_policy().in_force().version, 0);
+    create(&writer, &policy(true)).await;
+    assert_eq!(
+        reader.access_policy().listened().notifications(),
+        0,
+        "the reader heard nothing"
+    );
+    reader
+        .confirm_policy(false, true)
+        .await
+        .expect("the request's read");
+    let in_force = reader.access_policy().in_force();
+    assert_eq!(in_force.version, 1);
+    assert!(
+        in_force
+            .policy
+            .as_ref()
+            .is_some_and(|p| p.care_relationship_required)
+    );
+}
+
+/// A register written on another replica decides the next request of a
+/// replica whose notification never arrives (#6048).
+#[tokio::test]
+async fn a_register_whose_notification_is_withheld_decides_the_next_request() {
+    use ferroehr::policy_register::Register;
+    let db = testkit::db().await.expect("testkit database");
+    let writer = replica(&db.pool());
+    let reader = replica(&db.pool());
+    let _elsewhere = crate::policy_fixtures::deaf(&[std::sync::Arc::clone(
+        reader.policy_registers().listened(),
+    )])
+    .await;
+    reader.confirm_policy(true, false).await.expect("a read");
+    assert_eq!(reader.policy_registers().version(Register::AccessDelay), 0);
+    writer
+        .put_policy_register(
+            Register::AccessDelay,
+            0,
+            r#"{"enabled": true, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#,
+        )
+        .await
+        .expect("the register is written");
+    assert_eq!(
+        reader.policy_registers().listened().notifications(),
+        0,
+        "the reader heard nothing"
+    );
+    reader
+        .confirm_policy(true, false)
+        .await
+        .expect("the request's read");
+    assert_eq!(reader.policy_registers().version(Register::AccessDelay), 1);
+}

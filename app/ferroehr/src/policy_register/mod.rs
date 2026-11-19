@@ -241,6 +241,27 @@ impl LiveRegisters {
     /// in force stay.
     pub async fn refresh(&self) -> Result<(), RegisterError> {
         let heads = store::heads(&self.pool).await?;
+        self.install(&heads).await
+    }
+
+    /// Bring the registers in force to `heads`, the newest stored version of
+    /// each register as the request read them in its one read of the policy
+    /// heads ([`store::policy_heads`]), so what the request decides rests on
+    /// that read and on no notification's delay (#6048): nothing is read
+    /// when this replica holds every one of them.
+    ///
+    /// # Errors
+    /// As [`Self::refresh`].
+    pub(crate) async fn confirm(&self, heads: &[(String, i64)]) -> Result<(), RegisterError> {
+        // NOTE: our own design (#6048), the pending notification is taken: `heads` is newer.
+        let _notified = self.listened.must_read();
+        self.install(heads).await
+    }
+
+    /// Install each register whose newest version in `heads` is past the one
+    /// this replica holds. A register's versions only grow, so `heads` read
+    /// before another caller's never puts an older version back in force.
+    async fn install(&self, heads: &[(String, i64)]) -> Result<(), RegisterError> {
         let newest = |register: Register| {
             heads
                 .iter()
@@ -249,14 +270,14 @@ impl LiveRegisters {
         };
         if Register::ALL
             .into_iter()
-            .all(|register| newest(register) == self.version(register))
+            .all(|register| newest(register) <= self.version(register))
         {
             return Ok(());
         }
         let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
         let categories = newest(Register::AuditCategories);
         let held = self.categories();
-        let categories_changed = categories != held.version;
+        let categories_changed = categories > held.version;
         if categories_changed {
             let map = self
                 .load::<CategoryMapConfig>(Register::AuditCategories, categories)
@@ -265,12 +286,14 @@ impl LiveRegisters {
         }
         let delay = newest(Register::AccessDelay);
         let held = self.access_delay();
-        if delay != held.version || categories_changed {
-            let register = if delay == held.version {
-                None
+        if delay > held.version || categories_changed {
+            let (delay, register) = if delay > held.version {
+                let register = self
+                    .load::<AccessDelayRegister>(Register::AccessDelay, delay)
+                    .await?;
+                (delay, register)
             } else {
-                self.load::<AccessDelayRegister>(Register::AccessDelay, delay)
-                    .await?
+                (held.version, None)
             };
             self.install_delay(delay, register.unwrap_or_else(|| held.register.clone()));
         }

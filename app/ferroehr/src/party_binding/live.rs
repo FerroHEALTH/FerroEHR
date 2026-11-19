@@ -146,7 +146,8 @@ fn reference_heap(reference: &PartyRef) -> usize {
 /// [`CHANNEL`].
 #[derive(Debug)]
 struct BindingCopy {
-    lookups: Cache<LookupKey, Lookup>,
+    /// Each lookup with the binding revision of the store it was read at.
+    lookups: Cache<LookupKey, (Lookup, i64)>,
     names: Cache<Uuid, Option<String>>,
     /// Moved by every drop, so a read that started before one keeps nothing.
     drops: AtomicU64,
@@ -252,29 +253,43 @@ impl LiveBindings {
         self.copy.forget_all();
     }
 
-    /// The lookup held for `key`, or `read` it and hold it unless a drop
-    /// overtook the read; with the listener down, `read` it and hold nothing.
+    /// Whether the listener is down, so a lookup reads the store and holds
+    /// nothing; such a read is counted.
+    pub(crate) fn unlistened(&self) -> bool {
+        self.listened.unlistened()
+    }
+
+    /// The lookup held for `key` when it was read at the store's binding
+    /// revision `revision`, which the request read, or at a later one; else
+    /// `read` it with the revision it was read at and hold it unless a drop
+    /// overtook the read. A lookup read before `revision` is older than a
+    /// change of the side table whose notification has not arrived, and is
+    /// read again (#6048).
     ///
     /// # Errors
     /// The error of `read`, which is never held.
     pub(crate) async fn lookup<E>(
         &self,
         key: LookupKey,
-        read: impl Future<Output = Result<Lookup, E>>,
+        revision: i64,
+        read: impl Future<Output = Result<(Lookup, i64), E>>,
     ) -> Result<Lookup, E> {
-        if self.listened.unlistened() {
-            return read.await;
+        match self.copy.lookups.get(&key).await {
+            Some((held, at)) if at >= revision => {
+                looked_up(LOOKUPS, "hit");
+                return Ok(held);
+            }
+            Some(_) => looked_up(LOOKUPS, "behind"),
+            None => looked_up(LOOKUPS, "miss"),
         }
-        if let Some(held) = self.copy.lookups.get(&key).await {
-            looked_up(LOOKUPS, "hit");
-            return Ok(held);
-        }
-        looked_up(LOOKUPS, "miss");
         let seen = self.copy.drops.load(Ordering::Acquire);
         let read = read.await;
         refilled(LOOKUPS, read.is_ok());
-        let lookup = read?;
-        self.copy.lookups.insert(key.clone(), lookup.clone()).await;
+        let (lookup, at) = read?;
+        self.copy
+            .lookups
+            .insert(key.clone(), (lookup.clone(), at))
+            .await;
         if self.copy.drops.load(Ordering::Acquire) != seen {
             self.copy.lookups.invalidate(&key).await;
         }
