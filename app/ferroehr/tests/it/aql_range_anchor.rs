@@ -42,7 +42,7 @@ const EVENT_LEAF: &str = "o/data[at0001]/events[at0002]/time/value";
 const ORIGIN_LEAF: &str = "o/data[at0001]/origin/value";
 
 /// `FROM` an OBSERVATION of [`TIMED`].
-const FROM_OBSERVATION: &str =
+pub(crate) const FROM_OBSERVATION: &str =
     "FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.timed.v1]";
 
 /// The magnitude of the one ELEMENT of an event under the OBSERVATION `o`.
@@ -61,7 +61,7 @@ fn time_anchors(sql: &str) -> usize {
 }
 
 /// The SQL of `aql` over the population, with `params` bound.
-fn lowered(aql: &str, params: &Params) -> String {
+pub(crate) fn lowered(aql: &str, params: &Params) -> String {
     aql_sql_with(aql, params, Vec::new(), None).sql.to_string()
 }
 
@@ -360,7 +360,7 @@ const BOUNDS: [&str; 9] = [
 /// A `DV_DATE_TIME` reading `value`: the plain form the node row stores
 /// compact, or, `wide`, one carrying a `magnitude_status`, which the row
 /// keeps as an object (`ferroehr::storage::compact`).
-fn date_time(value: &str, wide: bool) -> Value {
+pub(crate) fn date_time(value: &str, wide: bool) -> Value {
     if wide {
         json!({ "_type": "DV_DATE_TIME", "value": value, "magnitude_status": "~" })
     } else {
@@ -380,7 +380,7 @@ fn event(time: &str, wide: bool, interval: bool) -> Value {
 }
 
 /// [`event`] whose one ELEMENT holds `value`.
-fn event_holding(time: &str, wide: bool, interval: bool, value: &Value) -> Value {
+pub(crate) fn event_holding(time: &str, wide: bool, interval: bool, value: &Value) -> Value {
     let mut event = json!({
         "_type": "POINT_EVENT",
         "name": { "_type": "DV_TEXT", "value": "Any event" },
@@ -423,7 +423,7 @@ fn event_holding(time: &str, wide: bool, interval: bool, value: &Value) -> Value
 
 /// A COMPOSITION carrying one OBSERVATION of [`TIMED`] whose history starts
 /// at `origin` and holds `events`.
-fn timed_composition(name: &str, origin: &Value, events: &[Value]) -> Value {
+pub(crate) fn timed_composition(name: &str, origin: &Value, events: &[Value]) -> Value {
     let mut body = composition(name);
     let content = json!([{
         "_type": "OBSERVATION",
@@ -560,12 +560,16 @@ async fn store_unreadable_times(pool: &PgPool) -> u64 {
 }
 
 /// The rows `aql` answers over the population, sorted.
-async fn rows(svc: &FerroEhrService, aql: &str, params: BTreeMap<String, Value>) -> Vec<String> {
+pub(crate) async fn rows(
+    svc: &FerroEhrService,
+    aql: &str,
+    params: BTreeMap<String, Value>,
+) -> Vec<String> {
     rows_fetched(svc, aql, params, None).await
 }
 
 /// [`rows`] of an execution that fetches at most `fetch` rows, which streams.
-async fn rows_fetched(
+pub(crate) async fn rows_fetched(
     svc: &FerroEhrService,
     aql: &str,
     params: BTreeMap<String, Value>,

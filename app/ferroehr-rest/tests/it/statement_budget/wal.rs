@@ -112,7 +112,7 @@ impl Kind {
 }
 
 /// The current WAL insert position, as text.
-async fn insert_lsn(pool: &PgPool) -> String {
+pub(super) async fn insert_lsn(pool: &PgPool) -> String {
     sqlx::query_scalar("SELECT /* statement_budget_own */ pg_current_wal_insert_lsn()::text")
         .fetch_one(pool)
         .await
@@ -122,7 +122,7 @@ async fn insert_lsn(pool: &PgPool) -> String {
 /// Waits until the server has flushed its WAL past `to`: `pg_walinspect` reads
 /// only flushed WAL, and the servers commit asynchronously, so their WAL
 /// writer flushes it shortly after.
-async fn flushed(pool: &PgPool, to: &str) {
+pub(super) async fn flushed(pool: &PgPool, to: &str) {
     for _ in 0..400 {
         let past: bool = sqlx::query_scalar(
             "SELECT /* statement_budget_own */ pg_current_wal_flush_lsn() >= $1::pg_lsn",
@@ -147,7 +147,11 @@ async fn flushed(pool: &PgPool, to: &str) {
 /// holds, a table, index or TOAST table of a schema of the server's: the
 /// statistics and catalog rows autovacuum and autoanalyze write when a
 /// parallel run's timing puts them in the window are left out, as are the
-/// records of the shared catalogs and of every other database.
+/// records of the shared catalogs and of every other database. A TOAST
+/// table's index belongs to the schema of the table the TOAST table serves,
+/// so the index of `pg_statistic`'s is a catalog relation too: an autoanalyze
+/// in the window wrote 770 bytes through it, the figure a path's budget was
+/// over by on CI (#6035).
 ///
 /// Only the records a statement writes for each row count: a heap insert,
 /// update, delete or lock, a B-tree leaf insert and a GIN pending-list insert.
@@ -155,7 +159,7 @@ async fn flushed(pool: &PgPool, to: &str) {
 /// a hint-bit image, a sequence's prefetch) falls on whichever row first
 /// crosses a page boundary, which the random ids and the chainer's timing
 /// move between runs, so it is left out.
-async fn by_relation(pool: &PgPool, from: &str, to: &str) -> Vec<(String, u64, u64)> {
+pub(super) async fn by_relation(pool: &PgPool, from: &str, to: &str) -> Vec<(String, u64, u64)> {
     let rows: Vec<(String, i64, i64)> = sqlx::query_as(
         "SELECT /* statement_budget_own */ c.relname, \
                 sum(b.record_length)::bigint, count(*) \
@@ -169,7 +173,8 @@ async fn by_relation(pool: &PgPool, from: &str, to: &str) -> Vec<(String, u64, u
                       OR (resource_manager = 'Btree' AND record_type = 'INSERT_LEAF') \
                       OR (resource_manager = 'Gin' AND record_type = 'UPDATE_META_PAGE'))) b \
            JOIN pg_class c ON pg_relation_filenode(c.oid) = b.relfilenode \
-           LEFT JOIN pg_class owner ON owner.reltoastrelid = c.oid \
+           LEFT JOIN pg_index i ON i.indexrelid = c.oid \
+           LEFT JOIN pg_class owner ON owner.reltoastrelid = coalesce(i.indrelid, c.oid) \
           WHERE coalesce(owner.relnamespace, c.relnamespace) NOT IN \
                 ('pg_catalog'::regnamespace, 'information_schema'::regnamespace) \
           GROUP BY 1 ORDER BY 2 DESC, 1",
@@ -207,7 +212,7 @@ fn entry_relation(relation: &str) -> bool {
 
 /// Whether `relation` is the access log's chain head, which a chainer pass
 /// that links entries updates once whatever their number.
-fn pass_relation(relation: &str) -> bool {
+pub(super) fn pass_relation(relation: &str) -> bool {
     relation == "access_log_chain_state"
 }
 
@@ -383,9 +388,13 @@ fn corpus(file: &str) -> String {
 /// its index and the magnitude index (#6022) brought them to 237,374 and
 /// 10,092: the IPS ceiling holds, and the lab ceiling is that measurement, 2%
 /// above, since two of a lab commit's ten node rows are an event and a
-/// history (the decision of 2026-11-18 on #6022).
+/// history (the decision of 2026-11-18 on #6022). The index on the code of an
+/// ELEMENT value (#6033) adds 36 entries of 72 bytes to an IPS commit, which
+/// measured 239,966: its ceiling is that measurement, 2% above, the rise that
+/// issue's 3% allows and the orchestrator accepted on 2026-11-19. A lab
+/// commit carries no coded ELEMENT value and keeps its ceiling.
 const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
-    [(Fixture::Ips, 237_945, 8), (Fixture::Lab, 10_293, 8)];
+    [(Fixture::Ips, 244_765, 8), (Fixture::Lab, 10_293, 8)];
 
 /// Whether `relation` is written by a commit rather than by the access log or
 /// the audit intake beside it.

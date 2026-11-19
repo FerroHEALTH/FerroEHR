@@ -624,11 +624,14 @@ serialized JSON; AQL 1.1.0 leaves this open, so the reading is our own
 never through `float8` (#5753). The emitter uses no
 jsonpath item methods (their date/time conversions depend on the session
 TimeZone and are not index-legal), no `JSON_TABLE`, and no GIN index (it
-emits no GIN-servable operator; the baseline removed the index). Three
+emits no GIN-servable operator; the baseline removed the index). Four
 value indexes give a filter an entry: `idx_node_hot_value_search` on
 `ext.node_search_text`, the text an equality on a text leaf of an ELEMENT
 value compares against from the typed value columns or the stored fragment
-(#4437); `idx_node_hot_event_time` on `node.event_time`, the
+(#4437); `idx_node_hot_value_code` on `ext.node_code`, the code an equality
+on the `defining_code` of a coded text or of an ordinal's symbol reads from
+`value_code` or the stored fragment (#6033); `idx_node_hot_event_time` on
+`node.event_time`, the
 `ext.openehr_timestamp` of an event row's `time` and of a history row's
 `origin`, which the node insert stores; and `idx_node_hot_value_magnitude`
 on `ext.node_magnitude`, the number an ordering comparison of an ELEMENT
