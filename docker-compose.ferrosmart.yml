@@ -1,0 +1,174 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# FerroEHR behind FerroSMART, the FerroHEALTH family's SMART App Launch 2.x
+# authorization server: an overlay of docker-compose.yml, run from a
+# checkout with ONE upstream overlay beside it, which names the OpenID
+# Connect provider FerroSMART logs people in at:
+#
+#   bash docker/ferrosmart/secrets.sh
+#   docker compose -f docker-compose.yml -f docker-compose.ferrosmart.yml \
+#     -f docker-compose.ferrosmart-keycloak.yml up -d --wait
+#   # or, with ZITADEL upstream:
+#   docker compose -f docker-compose.yml -f docker-compose.ferrosmart.yml \
+#     -f docker-compose.ferrosmart-zitadel.yml up -d --wait
+#
+# FerroSMART issues every token FerroEHR reads under this overlay; the
+# provider serves only the login (FerroSMART docs/architecture.md §13.21, A
+# product behind FerroSMART). FerroEHR trusts it in one `[[auth.issuer]]`
+# table with `kind = "persons"` and the `ferrosmart` profile, the persons it
+# issues tokens for bind to their PERSONs under their FerroSMART subject
+# (the pairwise `sub`, §13.6 item 9), and its patient/ grants count, so a
+# standalone launch with `launch/patient` through FerroSMART's picker reads
+# the EHR it chose.
+#
+# NETWORK. FerroSMART and the provider join the issuer's network namespace,
+# as FerroEHR does, so every party reaches every other on `localhost`,
+# exactly as the browser does through the published ports:
+#   8080  FerroEHR        8280  FerroSMART      8380  Keycloak (upstream)
+#   8480  ZITADEL         3300  ZITADEL's login (upstream)
+# ferrohealth-smart and FerroSMART admit a plain http issuer on a loopback
+# host alone (RFC 8414 §2 as they read it), so this is a local example: a
+# deployment serves FerroSMART and its provider over https on their own names.
+#
+# SECRETS. docker/ferrosmart/secrets.sh makes them under ./secrets/ferrosmart
+# (FERROSMART_SECRETS names another directory): FerroSMART's database
+# password and URL, its token signing key, its assertion key at the
+# provider, and the viewer's launch key with its JWK Set.
+#
+# FerroSMART's configuration is docker/ferrosmart/ferrosmart.toml
+# (FERROSMART_CONFIG_FILE names another). Its own documentation is
+# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md#13-ferrosmart-the-smart-authorization-server
+
+services:
+  identity-issuer:
+    ports:
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROSMART_PORT:-8280}:8280"
+      # The viewer's port (`--profile viewer`), since the viewer joins this
+      # namespace below.
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_VIEWER_PORT:-3000}:3000"
+
+  # FerroSMART's own store: every client, grant, launch and token record.
+  ferrosmart-postgres:
+    image: postgres:18.6@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42
+    environment:
+      POSTGRES_DB: ferrosmart
+      POSTGRES_USER: ferrosmart
+      POSTGRES_PASSWORD_FILE: /run/secrets/ferrosmart_postgres_password
+    secrets:
+      - ferrosmart_postgres_password
+    volumes:
+      - ferrosmart-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "ferrosmart", "-d", "ferrosmart"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    # The entrypoint starts as root to own the data directory, then drops to
+    # the postgres user, so it keeps the capabilities that hand-over needs.
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  ferrosmart:
+    image: ${FERROSMART_IMAGE:-ghcr.io/ferrohealth/ferrosmart:0.1.0@sha256:38b724514e78212c3944e82d8b8f6dc19ed3ac2392489ac3933bae40e256245d}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferrosmart-postgres:
+        condition: service_healthy
+    environment:
+      FERROSMART_CONFIG: /etc/ferrosmart/ferrosmart.toml
+      # The image sets 0.0.0.0:8080, FerroEHR's port in this namespace, in its
+      # environment, which outranks the file.
+      FERROSMART__SERVER__LISTEN: 0.0.0.0:8280
+      FERROSMART__FERROSMART__RESOURCE__0__SUBJECT_NAMESPACE: ${FERROSMART_SUBJECT_NAMESPACE:-urn:oid:2.999.7.1}
+      FERROSMART__TELEMETRY__FORMAT: ${FERROSMART_LOG_FORMAT:-pretty}
+      FERROSMART__TELEMETRY__FILTER: ${FERROSMART_LOG_FILTER:-info}
+    secrets:
+      - ferrosmart_database_url
+      - ferrosmart_signing_key
+      - ferrosmart_viewer_jwks
+    volumes:
+      - type: bind
+        source: ${FERROSMART_CONFIG_FILE:-./docker/ferrosmart/ferrosmart.toml}
+        target: /etc/ferrosmart/ferrosmart.toml
+        read_only: true
+    # Every piece of state lives in PostgreSQL and every secret is read once
+    # at boot.
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    # The image's own check, `ferrosmart healthcheck` (healthy once it serves
+    # and its database answers), asked every 5 seconds instead of 30.
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/ferrosmart", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  ferroehr:
+    depends_on:
+      ferrosmart:
+        condition: service_healthy
+    environment: &ferrosmart-trust
+      # FerroSMART is the third [[auth.issuer]] table (index 2): the first is
+      # the issuer the quickstart's Basic user binds under, the second the
+      # machines issuer of its SCIM provisioning client.
+      FERROEHR__AUTH__ISSUER__2__ISSUER: http://localhost:8280
+      FERROEHR__AUTH__ISSUER__2__KIND: persons
+      FERROEHR__AUTH__ISSUER__2__PROFILE: ferrosmart
+      # FerroSMART names the base the app asked for in `aud` (RFC 8707 §2).
+      FERROEHR__AUTH__ISSUER__2__AUDIENCE: http://localhost:8080/ferroehr/rest/openehr/v1
+      # A person binds to the PERSON whose SCIM loginIdentifier is their
+      # FerroSMART subject.
+      FERROEHR__AUTH__PARTY__1__ISSUER: http://localhost:8280
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:ferroehr:ferrosmart-login
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
+      # A patient/ grant of FerroSMART's tokens counts, with the EHR its
+      # `ehrId` claim names as the launch context (SMART on openEHR, master07
+      # §Context Selection).
+      FERROEHR__AUTH__SMART__PATIENT_ISSUERS: http://localhost:8280
+      # The discovery document describes FerroSMART, so an app that starts at
+      # FerroEHR's base finds it.
+      FERROEHR__AUTH__SMART__DISCOVERY: "true"
+      FERROEHR__SERVER__PUBLIC_BASE_URL: http://localhost:8080
+
+  # The viewer launches SMART apps from an EHR's page through FerroSMART's
+  # EHR launch API (`[launch]`); it joins the namespace to reach
+  # http://localhost:8280 as the issuer names it.
+  ferroehr-viewer:
+    network_mode: service:identity-issuer
+    ports: !reset []
+    environment:
+      FERROEHR_VIEWER__CDR__BASE_URL: http://localhost:8080
+      FERROEHR_VIEWER__SERVER__LISTEN: 0.0.0.0:3000
+      FERROEHR_VIEWER__LAUNCH__ISSUER: http://localhost:8280
+      FERROEHR_VIEWER__LAUNCH__CLIENT_ID: ferroehr-viewer
+      FERROEHR_VIEWER__LAUNCH__PRIVATE_KEY_FILE: /run/secrets/ferrosmart_viewer_launch_key
+      FERROEHR_VIEWER__LAUNCH__KID: ferroehr-viewer
+      FERROEHR_VIEWER__LAUNCH__RESOURCE: http://localhost:8080/ferroehr/rest/openehr/v1
+      FERROEHR_VIEWER__LAUNCH__APP__0__NAME: Example SMART app
+      FERROEHR_VIEWER__LAUNCH__APP__0__CLIENT_ID: example-app
+      FERROEHR_VIEWER__LAUNCH__APP__0__LAUNCH_URL: http://localhost:9000/launch
+    secrets:
+      - ferrosmart_viewer_launch_key
+
+secrets:
+  ferrosmart_postgres_password:
+    file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/postgres_password
+  ferrosmart_database_url:
+    file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/database_url
+  ferrosmart_signing_key:
+    file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/signing_key.pem
+  ferrosmart_viewer_launch_key:
+    file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/viewer_launch_key.pem
+  ferrosmart_viewer_jwks:
+    file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/viewer.jwks.json
+
+volumes:
+  ferrosmart-pgdata:
