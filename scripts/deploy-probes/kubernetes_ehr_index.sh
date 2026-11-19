@@ -214,9 +214,8 @@ k8s_pix_token() { # <client-id> <scope>
     | jq -r '.access_token // empty'
 }
 
-# A fresh synthetic identifier of letters alone. A digit run can pass a
-# national number's checksum (a 9 or 10 digit run passes the NHS number's about
-# one time in eleven), which the identifier scanner refuses with 422 (#5109).
+# A fresh synthetic identifier of letters alone, so no probe value has the
+# shape of a national number (#5109).
 k8s_index_word() { # <prefix>
   printf '%s-%s' "$1" "$(openssl rand -hex 8 | tr 0-9 g-p)"
 }

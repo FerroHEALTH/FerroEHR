@@ -138,7 +138,6 @@ vendor script asserts is present.
 | [Bundesgesetz über das elektronische Patientendossier (EPDG)](ch/epdg/) | SR `816.1`, ELI `cc/2017/203` | 2024-10-01 (German; English exists only at 2020-04-15, not vendored) | [Fedlex](https://www.fedlex.admin.ch/eli/cc/2017/203/20241001/de) | `LicenseRef-URG-Art5-Nicht-Geschuetzte-Werke` | `compliance/index.md`, `compliance/shared-responsibility.md` |
 | [Verordnung über das elektronische Patientendossier (EPDV)](ch/epdv/) | SR `816.11`, ELI `cc/2017/204` | 2024-10-01 (German; English exists only at 2019-04-01, not vendored) | [Fedlex](https://www.fedlex.admin.ch/eli/cc/2017/204/20241001/de) | `LicenseRef-URG-Art5-Nicht-Geschuetzte-Werke` | `compliance/index.md`, `compliance/shared-responsibility.md` |
 | [Verordnung des EDI über das elektronische Patientendossier (EPDV-EDI)](ch/epdv-edi/) | SR `816.111`, ELI `cc/2017/205` | 2026-06-01 (German; no English published) | [Fedlex](https://www.fedlex.admin.ch/eli/cc/2017/205/20260601/de) | `LicenseRef-URG-Art5-Nicht-Geschuetzte-Werke` | `compliance/index.md` |
-| [Verordnung über die Alters- und Hinterlassenenversicherung (AHVV)](ch/ahvv/), Art. 133 | SR `831.101`, ELI `cc/63/1185_1183_1185` | 2026-01-01 (German; no English published) | [Fedlex](https://www.fedlex.admin.ch/eli/cc/63/1185_1183_1185/20260101/de) | `LicenseRef-URG-Art5-Nicht-Geschuetzte-Werke` | `installation/config-privacy.md` (the `ch-ahvn13` identifier rule) |
 
 ## The standards that cannot be vendored
 

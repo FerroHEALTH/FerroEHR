@@ -69,7 +69,7 @@ async fn the_local_posture_creates_and_finds_an_ehr_by_its_subject() {
     ferroehr::db::stamp_subject_posture(&pool, !privacy.subject_namespaces.is_empty())
         .await
         .expect("stamp the subject posture");
-    let policy = ferroehr::privacy::PrivacyPolicy::compile(&privacy).expect("the policy compiles");
+    let policy = ferroehr::privacy::PrivacyPolicy::from(&privacy);
     let ehr_index =
         EhrIndexProvider::from_config(config.record.subject_index, config.pixm.as_ref())
             .expect("the local provider builds");

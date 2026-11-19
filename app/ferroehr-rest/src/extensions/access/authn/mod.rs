@@ -50,6 +50,7 @@ pub(crate) mod record;
 pub(crate) mod refusal;
 mod scope;
 pub(crate) mod trc;
+mod verdicts;
 
 use std::sync::Arc;
 
@@ -375,6 +376,9 @@ pub struct Authenticator {
     enabled: bool,
     /// The credentials admitted, checked by `ferrohealth-smart`.
     gate: Gate,
+    /// The bearer issuers of the gate, whose held token verdicts the
+    /// `cache` gauges report, when `[auth]` trusts any.
+    bearer: Option<verdicts::TokenVerdicts>,
     /// The protection space every challenge names.
     realm: String,
     /// The issuer whose metadata the SMART discovery document is built from,
@@ -402,6 +406,12 @@ impl std::fmt::Debug for Authenticator {
 }
 
 impl Authenticator {
+    /// Returns the token verdicts of the bearer issuers, for the `cache`
+    /// gauges, when `[auth]` trusts any.
+    pub(crate) fn token_verdicts(&self) -> Option<verdicts::TokenVerdicts> {
+        self.bearer.clone()
+    }
+
     pub(crate) fn enabled(&self) -> bool {
         self.enabled
     }

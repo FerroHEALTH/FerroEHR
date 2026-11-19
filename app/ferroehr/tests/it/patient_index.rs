@@ -84,11 +84,10 @@ pub(crate) fn patient(name: &str, identifiers: &[Value], subjects: &[Value]) -> 
 /// declared as the pseudonym namespace.
 pub(crate) async fn replica(db: &testkit::TestDb, provider: EhrIndexProvider) -> FerroEhrService {
     let policy =
-        ferroehr::privacy::PrivacyPolicy::compile(&ferroehr::privacy::config::PrivacyConfig {
+        ferroehr::privacy::PrivacyPolicy::from(&ferroehr::privacy::config::PrivacyConfig {
             subject_namespaces: vec![CLINICAL.to_owned()],
             ..Default::default()
-        })
-        .expect("the deployment policy compiles");
+        });
     granting(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
             .with_privacy(Arc::new(policy))

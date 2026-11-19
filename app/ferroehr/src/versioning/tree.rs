@@ -7,7 +7,7 @@
 //! ([`crate::storage::render::index`]) or the typed RM itself (`Typed`), so
 //! a typed commit is read with no canonical value built (#6003) and, before
 //! it is rendered, with nothing rendered (#6038). The data-minimisation pass, the party
-//! checks, the binding facts and the identifier scan read through it. No
+//! checks and the binding facts read through it. No
 //! openEHR spec governs this: our own design.
 
 #![expect(

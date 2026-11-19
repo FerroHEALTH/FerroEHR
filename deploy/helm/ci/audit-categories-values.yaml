@@ -48,9 +48,6 @@ config:
             key: { path: "/details[id2]/items[id3]", type: uuid }
             user_name: { path: "/details[id2]/items[id3]", type: scim_user_name }
             external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
-  privacy:
-    identifier_scan:
-      rules: [de-kvnr]
   record:
     subject_index: local
 

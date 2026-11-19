@@ -46,7 +46,7 @@ pub mod terminology;
 pub(crate) mod contribution;
 pub(crate) mod datetime;
 pub mod list;
-mod observed;
+pub mod observed;
 pub mod platform_service;
 pub mod response;
 pub mod version_update;
@@ -277,6 +277,10 @@ pub struct FerroEhrService {
     /// [`Self::new`] lets every caller import with no wrapped-committer rule
     /// beyond its own issuer.
     pub(in crate::service) import_policy: Arc<message::import_policy::ImportPolicy>,
+    /// The caches of the authentication layer, which the binary registers
+    /// once it has built them ([`Self::observe_authn`]); empty in
+    /// [`Self::new`].
+    pub(in crate::service) authn_caches: Arc<std::sync::OnceLock<Arc<dyn observed::HeldCaches>>>,
 }
 
 impl FerroEhrService {
@@ -358,6 +362,7 @@ impl FerroEhrService {
             grants,
             bindings: Arc::default(),
             import_policy: Arc::default(),
+            authn_caches: Arc::default(),
         }
     }
 

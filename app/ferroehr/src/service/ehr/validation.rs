@@ -324,8 +324,8 @@ impl FerroEhrService {
     /// Demographic arms go to [`Self::demographic_commit_check`]; a party needs its container.
     ///
     /// The clinical arms additionally run the data-minimisation pass
-    /// ([`crate::privacy`]) — the subject-reference rule, the identified-party
-    /// rule and the identifier scanner — which the demographic arms must not:
+    /// ([`crate::privacy`]) — the subject-reference rule and the
+    /// identified-party rule — which the demographic arms must not:
     /// a party's name is the point of the demographic domain.
     ///
     /// # Errors

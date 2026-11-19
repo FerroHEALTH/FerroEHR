@@ -11,6 +11,8 @@
 
 # Env / secrets
 .env
+# The FerroSMART overlays' secrets (docker/ferrosmart/secrets.sh).
+/secrets/
 .env.*
 !.env.example
 *.pem

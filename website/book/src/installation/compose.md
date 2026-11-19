@@ -323,6 +323,47 @@ The identity services still start, and nothing asks them. Start without the
 variable to return to FerroPIX; the EHRs created on the local index keep their
 subject references, and the database refuses no stored row.
 
+## Behind FerroSMART
+
+Three files run FerroEHR behind FerroSMART, the family's SMART App Launch 2.x
+authorization server, with an OpenID Connect provider upstream for login only
+([Behind FerroSMART](../behind-ferrosmart.md)). They need a checkout, since
+they mount FerroSMART's configuration, the upstream realm or bootstrap script
+from `docker/ferrosmart/`:
+
+```shell
+bash docker/ferrosmart/secrets.sh
+docker compose -f docker-compose.yml -f docker-compose.ferrosmart.yml \
+  -f docker-compose.ferrosmart-keycloak.yml --profile viewer up -d --wait
+```
+
+- `docker-compose.ferrosmart.yml` adds FerroSMART, pinned by digest in
+  `docs/VERSIONS.md`, with its own PostgreSQL, at `http://localhost:8280`.
+  FerroEHR trusts it as the `persons` issuer with the `ferrosmart` profile,
+  binds people by FerroSMART's subject under `urn:ferroehr:ferrosmart-login`,
+  honours its `patient/` grants and describes it in the discovery document.
+  The viewer's [Launch button](../smart-app-launch.md#launching-an-app-from-the-viewer)
+  registers its EHR launches there, for the example app `example-app`.
+  FerroSMART's configuration is `docker/ferrosmart/ferrosmart.toml`
+  (`FERROSMART_CONFIG_FILE` names another), its picker looks EHRs up under
+  `FERROSMART_SUBJECT_NAMESPACE` (the FerroPIX domain `urn:oid:2.999.7.1` by
+  default), and `docker/ferrosmart/secrets.sh` writes its secrets under
+  `./secrets/ferrosmart` (`FERROSMART_SECRETS`).
+- `docker-compose.ferrosmart-keycloak.yml` runs Keycloak upstream at
+  `http://localhost:8380`, with the realm `docker/ferrosmart/keycloak/realm.json`
+  and the demo user `clinician`/`clinician`.
+- `docker-compose.ferrosmart-zitadel.yml`, in its place, runs ZITADEL at
+  `http://localhost:8480` with its login at `http://localhost:3300/ui/v2/login`,
+  bootstrapped by `docker/ferrosmart/zitadel/bootstrap.sh`; its header names
+  the two secrets it adds.
+
+Every party shares the issuer's network namespace and serves plain `http` on
+loopback, which FerroSMART and FerroEHR admit for a loopback issuer only: a
+local example, never a deployment. A deployment serves FerroSMART and its
+provider over https on their own names. The hospital scenario of the
+deployment probe runs on these files once per upstream
+(`deploy-probe-hospital` in CI).
+
 ## The OIDC variant (Keycloak overlay)
 
 A second standalone file adds a ready-made identity provider, so you can

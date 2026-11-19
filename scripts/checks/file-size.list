@@ -11,7 +11,7 @@ app/ferroehr-rest/src/api/ehr/openapi_routes.rs 6490
 app/ferroehr-rest/src/api/query/openapi_routes.rs 1850
 app/ferroehr-rest/src/extensions/access/authn/mod.rs 1731
 app/ferroehr-rest/src/extensions/openapi.rs 1029
-app/ferroehr-server/src/lib.rs 1202
+app/ferroehr-server/src/lib.rs 1134
 app/ferroehr-viewer/src/builder/lift.rs 1270
 app/ferroehr-viewer/src/locale/records.rs 918
 app/ferroehr-viewer/src/management.rs 933
@@ -27,9 +27,8 @@ app/ferroehr-viewer/src/pages/templates.rs 1180
 app/ferroehr-viewer/src/pages/terminology.rs 803
 app/ferroehr/src/aql/sql/from.rs 1231
 app/ferroehr/src/aql/sql/value.rs 988
-app/ferroehr/src/config/mod.rs 1683
+app/ferroehr/src/config/mod.rs 1631
 app/ferroehr/src/db/mod.rs 2033
-app/ferroehr/src/privacy/detect.rs 901
 app/ferroehr/src/service/admin/dump_load.rs 1783
 app/ferroehr/src/service/ehr/validation.rs 1226
 app/ferroehr/src/service/message/export.rs 1028

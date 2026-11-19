@@ -775,8 +775,7 @@ mod tests {
         );
         // The declared namespace stays in force under the local index, so every
         // subject reference is still a pseudonym (no mixed mode, #4379).
-        let policy =
-            crate::privacy::PrivacyPolicy::compile(&config.privacy).expect("the policy compiles");
+        let policy = crate::privacy::PrivacyPolicy::from(&config.privacy);
         assert!(policy.subject_rule_in_force());
         assert!(!policy.admits_subject("benchmark", "1793131381"));
     }

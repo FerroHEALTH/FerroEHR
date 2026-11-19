@@ -106,7 +106,7 @@ on three levels (high, medium, low).
 | C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address and a separate plain-HTTP management listener unless `plaintext_listener` is accepted by name; the syslog audit feed sends over TLS only (`ihe-atna`); a boot warning on a plaintext routable bind | (e) |
 | C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the hash-chained access log | (e), (f) |
 | C5 | An access happens and the log does not show it, or the log is altered | high | low with an off-box sink; a write's record waits on #5762 between its clinical commit and the audit intake | every record written before its response and an access refused when it cannot be; refusals always recorded; `production` refuses audit off unless accepted; the hash chain | (f), (l) |
-| C6 | A national identifier or identifying content leaks into the clinical record, telemetry or a report | high | low | the identifier scanner in `strict` mode; log sanitising; reports with no identifiers | (e), (g) |
+| C6 | A national identifier or identifying content leaks into the clinical record, telemetry or a report | high | low | the data-minimisation pass over the subject reference and identified parties; log sanitising; reports with no identifiers | (e), (g) |
 | C7 | A malformed or hostile payload crashes or corrupts the server | medium | low | memory-safe Rust with `unsafe` forbidden; overflow checks in release; fuzzed parsers; caught panics | (j), (k) |
 | C8 | The service is made unavailable | high (clinical availability) | medium: an authorised caller holding resources is not defended against | admission limit with `503` shedding; rate limits; body, header and statement limits; replicas and a disruption budget | (h) |
 | C9 | A vulnerable component ships in a release | high | medium | `cargo deny` advisories gate; image scan before tagging; daily re-scan; Dependabot; VEX for argued findings | (a) |
@@ -189,7 +189,7 @@ reset the product to its original state"
 - **How:** authentication on, with a boot refusal when no mechanism is
   configured; RBAC on; the admin and management surfaces off; every
   integration off; Swagger UI `private`; the rate limiter on; version signing
-  on; the identifier scanner `strict`. Weak settings are refused at boot: an
+  on. Weak settings are refused at boot: an
   `alg: none` token, a symmetric algorithm, a non-HTTPS issuer, an Argon2id
   hash below the floor. The chart runs non-root with a read-only root filesystem,
   all capabilities dropped, `RuntimeDefault` seccomp and an ingress
@@ -220,8 +220,7 @@ reset the product to its original state"
   shipped and `production` raises nothing about them: authentication on,
   RBAC on, the admin API and every management endpoint off, Swagger UI
   `private`, the rate limiter on, version signing on in `digest` mode with
-  read-time verification `strict`, the identifier scanner `strict` over every
-  shipped rule, and the audit trail on with the local store and
+  read-time verification `strict`, and the audit trail on with the local store and
   no `retention`, which the server refuses at boot where a jurisdiction
   in force sets a ceiling. These must change, and `production` refuses them:
   `authz.rbac.ehr_access_default = "open"`, an
@@ -424,7 +423,7 @@ digital elements (data minimisation)"
 
 - **Applies:** yes, measured against the [intended purpose](intended-purpose.md).
 - **How:** the clinical record carries pseudonymous subject references; the
-  identifier scanner refuses national identifiers in clinical content; the
+  data-minimisation pass refuses a party proxy that is the subject; the
   identity, the link and the access log sit in their own domains; telemetry
   carries no identified data; the access-log category classification never
   reaches spans, logs or metrics; `ferroehr report` identifies no person.

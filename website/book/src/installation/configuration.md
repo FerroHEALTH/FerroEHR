@@ -346,10 +346,12 @@ describes them.
 | AQL plans | `cache="aql_plan"` | `[record.query] plan_cache_capacity`, 256 by default | about 3.4 KB for a one-observation query | 0.9 MiB at 256 |
 | Archetype lineage | `cache="archetype_lineage"` | 1 index, 1 min | grows with the specialised archetypes stored | a few KiB |
 | Audit subjects | `cache="audit_subjects"` | 100 000 EHRs, 1 h each | about 410 B | 39 MiB |
+| Token verdicts | `cache="token_verdicts"` | 10 000 tokens and 16 MiB per `[auth]` issuer, each until the token's `exp` | about 400 B for a token with 400 B of claims | 4 MiB per issuer; 16 MiB at most |
 
-Their sum is about 260 MiB per replica with typical WebTemplates and EHRs
-without settings, and about 305 MiB at the 90th percentile of WebTemplates
-with every held EHR carrying 4 KB of settings.
+Their sum is about 264 MiB per replica with typical WebTemplates and EHRs
+and one issuer's tokens without settings, and about 321 MiB at the 90th
+percentile of WebTemplates with every held EHR carrying 4 KB of settings and
+the token verdicts at their byte bound.
 
 Three holdings have no cap of their own:
 
@@ -383,7 +385,7 @@ Three holdings have no cap of their own:
 | `[record.change_feed]` | The commit-event outbox retention; its readers are grants in the CDR | [Integrations](config-integrations.md#recordchange_feed) |
 | `[terminology]`, `[record.multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |
-| `[privacy]`, `[privacy.identifier_scan]` | What the clinical side refuses to hold: the subject reference, identified parties, the identifier scanner | [Privacy & data minimisation](config-privacy.md) |
+| `[privacy]` | What the clinical side refuses to hold: the subject reference and identified parties | [Privacy & data minimisation](config-privacy.md) |
 | `[privacy.cohort]`, `[privacy.cohort.predicates]` | Cross-domain cohort queries: the demographic predicate allow-list, the small-cell floor, the cohort ceiling | [Privacy & data minimisation](config-privacy.md) |
 | `[privacy.identifier_protection]` | Sealing national identifiers in the demographic domain, and the key that opens them | [Privacy & data minimisation](config-privacy.md) |
 | — | The CLI, the production checklist, file-versus-environment guidance | [CLI & production checklist](config-cli.md) |

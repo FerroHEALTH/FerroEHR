@@ -1,0 +1,174 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# ZITADEL as FerroSMART's upstream OpenID Connect provider, for login only:
+# an overlay of docker-compose.yml and docker-compose.ferrosmart.yml (the
+# latter's header says how to run the three). ZITADEL authenticates the
+# person, FerroSMART issues the SMART tokens FerroEHR reads.
+#
+# SECRETS. Two more files beside docker/ferrosmart/secrets.sh's, in
+# ./secrets/ferrosmart (FERROSMART_SECRETS):
+#
+#   openssl rand -hex 16 | tr -d '\n' > secrets/ferrosmart/zitadel_masterkey
+#   printf 'A1!%s' "$(openssl rand -hex 12)" > secrets/ferrosmart/zitadel_user_password
+#
+# The masterkey encrypts ZITADEL's keys; the user password is the
+# `clinician`'s, which ZITADEL's password policy holds to an upper case
+# letter, a digit and a symbol (`cmd/defaults.yaml`).
+#
+# WHAT RUNS. ZITADEL v4.20.3 (pinned in docs/VERSIONS.md) on its own
+# PostgreSQL, its Login v2 UI, and `zitadel-bootstrap` once:
+# docker/ferrosmart/zitadel/bootstrap.sh makes the project, its roles, the
+# application and the user, and writes FerroSMART's configuration with the
+# client id and key ZITADEL generated into ./secrets/ferrosmart/zitadel
+# (FERROSMART_ZITADEL_DIR), beside the first instance's administrator and
+# login-client tokens. ZITADEL and the bootstrap run as FERROSMART_ZITADEL_UID
+# (root by default, as ZITADEL's own compose example runs it), the owner of
+# what they write there.
+#
+# NETWORK. Every party shares the issuer's network namespace:
+# http://localhost:8480 is ZITADEL and http://localhost:3300/ui/v2/login its
+# login, plain http on loopback: a local example, never a deployment.
+# ZITADEL has no password grant (`apis/openidoauth/grant-types.mdx`); a
+# script logs in through its custom login flow
+# (`guides/integrate/login-ui/oidc-standard.mdx`) with the login client's
+# token.
+
+services:
+  identity-issuer:
+    ports:
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROSMART_ZITADEL_PORT:-8480}:8480"
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROSMART_ZITADEL_LOGIN_PORT:-3300}:3300"
+
+  # ZITADEL's database trusts every connection on the project's network and
+  # publishes no port; it holds ZITADEL's data alone.
+  ferrosmart-zitadel-postgres:
+    image: postgres:18.6@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ferrosmart-zitadel-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  ferrosmart-zitadel:
+    image: ghcr.io/zitadel/zitadel:v4.20.3@sha256:1b30fea7ed88826dc0a98dacee4e2f2c8b05201fd26f5e4cb5386615b29f7638
+    network_mode: service:identity-issuer
+    user: "${FERROSMART_ZITADEL_UID:-0}"
+    command: start-from-init --masterkeyFile /run/secrets/ferrosmart_zitadel_masterkey
+    depends_on:
+      ferrosmart-zitadel-postgres:
+        condition: service_healthy
+    environment:
+      ZITADEL_PORT: "8480"
+      ZITADEL_EXTERNALDOMAIN: localhost
+      ZITADEL_EXTERNALPORT: "8480"
+      ZITADEL_EXTERNALSECURE: "false"
+      ZITADEL_TLS_ENABLED: "false"
+      ZITADEL_DATABASE_POSTGRES_DSN: postgresql://postgres@ferrosmart-zitadel-postgres:5432/postgres?sslmode=disable
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "false"
+      ZITADEL_FIRSTINSTANCE_PATPATH: /zitadel/bootstrap/admin.pat
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME: admin
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: Administrator
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2099-01-01T00:00:00Z"
+      ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH: /zitadel/bootstrap/login-client.pat
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME: login-client
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME: Login
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: "2099-01-01T00:00:00Z"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: "true"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: http://localhost:3300/ui/v2/login/
+      ZITADEL_OIDC_DEFAULTLOGINURLV2: http://localhost:3300/ui/v2/login/login?authRequest=
+      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: http://localhost:3300/ui/v2/login/logout?post_logout_redirect=
+    secrets:
+      - ferrosmart_zitadel_masterkey
+    volumes:
+      - type: bind
+        source: ${FERROSMART_ZITADEL_DIR:-./secrets/ferrosmart/zitadel}
+        target: /zitadel/bootstrap
+        bind:
+          create_host_path: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/app/zitadel", "ready"]
+      interval: 10s
+      timeout: 30s
+      retries: 12
+      start_period: 20s
+
+  ferrosmart-zitadel-login:
+    image: ghcr.io/zitadel/zitadel-login:v4.20.3@sha256:8f730428dfd65cd8979d07ef4e34a59d44978e956692b7dbbc3bba4e4abb4f92
+    network_mode: service:identity-issuer
+    user: "${FERROSMART_ZITADEL_UID:-0}"
+    depends_on:
+      ferrosmart-zitadel:
+        condition: service_healthy
+    environment:
+      PORT: "3300"
+      ZITADEL_API_URL: http://localhost:8480
+      NEXT_PUBLIC_BASE_PATH: /ui/v2/login
+      ZITADEL_SERVICE_USER_TOKEN_FILE: /zitadel/bootstrap/login-client.pat
+      CUSTOM_REQUEST_HEADERS: Host:localhost:8480,X-Forwarded-Proto:http
+    volumes:
+      - type: bind
+        source: ${FERROSMART_ZITADEL_DIR:-./secrets/ferrosmart/zitadel}
+        target: /zitadel/bootstrap
+        read_only: true
+    restart: unless-stopped
+
+  ferrosmart-zitadel-bootstrap:
+    image: curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+    network_mode: service:identity-issuer
+    user: "${FERROSMART_ZITADEL_UID:-0}"
+    depends_on:
+      ferrosmart-zitadel:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/bootstrap.sh"]
+    environment:
+      ZITADEL_API: http://localhost:8480
+      ADMIN_PAT_FILE: /zitadel/bootstrap/admin.pat
+      USER_PASSWORD_FILE: /run/secrets/ferrosmart_zitadel_user_password
+      FERROSMART_ISSUER: http://localhost:8280
+      BASE_CONFIG: /base/ferrosmart.toml
+      OUT: /zitadel/bootstrap/out
+    secrets:
+      - ferrosmart_zitadel_user_password
+    volumes:
+      - type: bind
+        source: ./docker/ferrosmart/zitadel/bootstrap.sh
+        target: /bootstrap.sh
+        read_only: true
+      - type: bind
+        source: ${FERROSMART_CONFIG_FILE:-./docker/ferrosmart/ferrosmart.toml}
+        target: /base/ferrosmart.toml
+        read_only: true
+      - type: bind
+        source: ${FERROSMART_ZITADEL_DIR:-./secrets/ferrosmart/zitadel}
+        target: /zitadel/bootstrap
+    restart: "no"
+
+  ferrosmart:
+    depends_on:
+      ferrosmart-zitadel-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      # The configuration the bootstrap wrote: the base file with ZITADEL's
+      # client id and key appended.
+      FERROSMART_CONFIG: /zitadel/bootstrap/out/ferrosmart.toml
+    volumes:
+      - type: bind
+        source: ${FERROSMART_ZITADEL_DIR:-./secrets/ferrosmart/zitadel}
+        target: /zitadel/bootstrap
+        read_only: true
+
+secrets:
+  ferrosmart_zitadel_masterkey:
+    file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/zitadel_masterkey
+  ferrosmart_zitadel_user_password:
+    file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/zitadel_user_password
+
+volumes:
+  ferrosmart-zitadel-pgdata:
