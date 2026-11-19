@@ -1367,6 +1367,13 @@ hospital_ehr_launch() {
     --data-urlencode intent=launch --data-urlencode "app=$HS_APP" "$viewer/ehrs/$eva")"
   rm -f "$jar"
   assert_eq 303 "${location%% *}" "the Launch post answers See Other: $(head -c 300 "$PROBE_TMP/launch-body")"
+  if [[ "${location%% *}" != 303 ]]; then
+    local service
+    for service in ferroehr-viewer ferrosmart; do
+      echo "      log of $service:"
+      hdc logs --no-color --tail 10 "$service" 2>&1 | sed 's/^/        /'
+    done
+  fi
   location="${location#* }"
   assert_contains "$location" "$HS_LAUNCH_URL?" "the new window goes to the app's launch URL"
   iss="$(hs_param iss "$location")"
