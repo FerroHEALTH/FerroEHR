@@ -230,7 +230,7 @@ launch URL "in a new browser instance (or iframe)" with `iss`, the base, and
 Request). The specification gives the EHR no way to hand the authorization
 server that context, so FerroSMART takes it through its own EHR launch API,
 `POST {issuer}/launch`
-([§13.17, Launching an app from an EHR](https://github.com/FerroHEALTH/FerroSMART/blob/main/docs/architecture.md#1317-launching-an-app-from-an-ehr)).
+(FerroSMART's architecture, [§13.17, Launching an app from an EHR](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md)).
 The viewer is that EHR: with `[launch]` set, an EHR's **More** menu carries a
 **Launch** item per configured app, and a click does this:
 

@@ -76,7 +76,8 @@ tracing.workspace = true
 # The family's `[telemetry]`: the console, the panic line, the request log the
 # stack writes and the OpenTelemetry export, as the CDR's.
 ferrohealth-telemetry.workspace = true
-reqwest.workspace = true
+# `form`: the launch request's form body (`crate::launch`).
+reqwest = { workspace = true, features = ["form"] }
 ferrohealth-config.workspace = true
 # The algorithm a launch key signs with (`crate::launch`), which
 # `ferrohealth-smart`'s `AssertionKey` names in `jsonwebtoken`'s type.
