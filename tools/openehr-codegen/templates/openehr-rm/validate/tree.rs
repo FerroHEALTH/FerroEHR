@@ -156,6 +156,8 @@ pub struct Walker {
     out: Vec<TreeViolation>,
     /// The violations of [`validate_node`], which judges the root alone.
     root: Option<Vec<InvariantViolation>>,
+    /// Whether the next node is the root [`validate_below`] leaves out.
+    skip_root: bool,
 }
 
 impl std::fmt::Debug for Walker {
@@ -194,6 +196,10 @@ impl Walker {
     pub fn node(&mut self, node: &Node<'_>) {
         if let Some(out) = &mut self.root {
             root_node(node, out);
+            return;
+        }
+        if self.skip_root {
+            self.skip_root = false;
             return;
         }
         match self.pass {
@@ -287,10 +293,30 @@ pub fn validate_tree<T: Walk + ?Sized>(root: &T) -> Vec<TreeViolation> {
         path: String::new(),
         out: Vec::new(),
         root: None,
+        skip_root: false,
     };
     root.walk(&mut w);
     w.pass = Pass::Terminology;
     root.walk(&mut w);
+    w.out
+}
+
+/// [`validate_tree`] over everything a typed RM value holds, the value
+/// itself left out: the complement of [`validate_node`], for a caller that
+/// reports the root in that function's form.
+#[must_use]
+pub fn validate_below<T: Walk + ?Sized>(value: &T) -> Vec<TreeViolation> {
+    let mut w = Walker {
+        pass: Pass::Invariants,
+        path: String::new(),
+        out: Vec::new(),
+        root: None,
+        skip_root: true,
+    };
+    value.walk(&mut w);
+    w.pass = Pass::Terminology;
+    w.skip_root = true;
+    value.walk(&mut w);
     w.out
 }
 
@@ -309,6 +335,7 @@ pub fn validate_node<T: Walk + ?Sized>(value: &T) -> Vec<InvariantViolation> {
         path: String::new(),
         out: Vec::new(),
         root: Some(Vec::new()),
+        skip_root: false,
     };
     value.walk(&mut w);
     w.root.unwrap_or_default()

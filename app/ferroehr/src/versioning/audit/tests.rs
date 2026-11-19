@@ -355,6 +355,79 @@ fn the_typed_committer_pass_is_the_dispatchers_verdict() {
     );
 }
 
+/// A committer is judged below its root too: a defect of its `external_ref`,
+/// of an identifier or of a relationship's code is the 422, under the path
+/// from the committer (#6044). A committer sound at every level passes.
+#[test]
+fn commit_audit_refuses_a_defect_below_the_committers_root() {
+    let party_ref = |namespace: &str, ty: &str| {
+        json!({
+            "_type": "PARTY_REF", "namespace": namespace, "type": ty,
+            "id": { "_type": "HIER_OBJECT_ID", "value": "7d44b88c-4199-4bad-97dc-d78268e01398" }
+        })
+    };
+    let relationship = |value: &str, code: &str| {
+        json!({
+            "_type": "DV_CODED_TEXT", "value": value,
+            "defining_code": { "_type": "CODE_PHRASE", "code_string": code,
+                               "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" } }
+        })
+    };
+    let defective = [
+        (
+            json!({ "_type": "PARTY_SELF", "external_ref": party_ref("local", "COMPOSITION") }),
+            "external_ref",
+            "Type_validity",
+        ),
+        (
+            json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jones",
+                "external_ref": party_ref("", "PERSON") }),
+            "external_ref",
+            "Namespace_valid",
+        ),
+        (
+            json!({ "_type": "PARTY_IDENTIFIED", "identifiers": [
+                { "_type": "DV_IDENTIFIER", "id": "42" },
+                { "_type": "DV_IDENTIFIER", "id": "" }
+            ] }),
+            "identifiers[1]",
+            "Id_valid",
+        ),
+        (
+            json!({ "_type": "PARTY_RELATED", "name": "Mum",
+                "relationship": relationship("", "10") }),
+            "relationship",
+            "Valid_value",
+        ),
+        (
+            json!({ "_type": "PARTY_RELATED", "name": "Mum",
+                "relationship": relationship("mother", "") }),
+            "relationship/defining_code",
+            "Code_string_valid",
+        ),
+    ];
+    for (committer, path, invariant) in &defective {
+        let causes = committer_causes(validate_commit_audit(&mut audit_input("sys", committer)));
+        assert!(
+            causes
+                .iter()
+                .any(|cause| cause.path == *path && cause.message.contains(invariant)),
+            "{committer}: {invariant} at {path}, got {causes:?}"
+        );
+    }
+    for sound in [
+        json!({ "_type": "PARTY_SELF", "external_ref": party_ref("local", "PERSON") }),
+        json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jones",
+            "external_ref": party_ref("local", "PERSON"),
+            "identifiers": [{ "_type": "DV_IDENTIFIER", "id": "42" }] }),
+        json!({ "_type": "PARTY_RELATED", "name": "Mum",
+            "relationship": relationship("mother", "at0010") }),
+    ] {
+        validate_commit_audit(&mut audit_input("sys", &sound))
+            .unwrap_or_else(|e| panic!("{sound} is a sound committer: {e:?}"));
+    }
+}
+
 /// A wire `UPDATE_VERSION.commit_audit` with a `251|modification|` code and
 /// the given extra members, read through the generated envelope.
 fn wire_audit(extra: &Value) -> UpdateAudit {
