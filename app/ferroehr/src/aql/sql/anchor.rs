@@ -11,11 +11,12 @@
 //! versions some node row of which, under the leaf step's own predicate,
 //! carries a value the conjunct keeps. Four leaves have one:
 //!
-//! - a text leaf of an `ELEMENT` value under `=`, by its search text
-//!   (`ext.node_search_text`, `idx_node_hot_value_search`);
-//! - the code of an `ELEMENT` value under `=`, the `defining_code` of a coded
-//!   text or of an ordinal's symbol, by `ext.node_code`
-//!   (`idx_node_hot_value_code`);
+//! - a text leaf of an `ELEMENT` value under `=` or `matches` over a list of
+//!   strings, by its search text (`ext.node_search_text`,
+//!   `idx_node_hot_value_search`);
+//! - the code of an `ELEMENT` value under `=` or `matches` over a list of
+//!   strings, the `defining_code` of a coded text or of an ordinal's symbol,
+//!   by `ext.node_code` (`idx_node_hot_value_code`);
 //! - the `time` of an event and the `origin` of a history under `=`, `<`,
 //!   `<=`, `>` or `>=`, by `node.event_time`, which the node insert fills
 //!   with the value the comparison reads (`idx_node_hot_event_time`);
@@ -26,7 +27,11 @@
 //! value the conjunct reads, so an anchor removes work and no row. A conjunct
 //! under `OR` or `NOT` implies nothing on its own and gets none.
 //!
-//! An equality keeps few rows, so its anchor always applies. A range may keep
+//! A `matches` over a value list holds when the leaf equals one of its
+//! members (QUERY master03 §matches), so its anchor is the equality anchor
+//! with the members as a list, and only when every member could anchor an
+//! equality on its own. An equality keeps few rows, so its anchor always
+//! applies. A range may keep
 //! most of the store, and how its anchor enters depends on the statement
 //! ([`RangeEntry`]). The comparisons of one leaf bind one node row, so they
 //! share one anchor: a window `>= $from AND < $to` reads the rows inside it.
@@ -44,7 +49,7 @@ use openehr_query::lexer::CompOp;
 
 use crate::aql::error::AqlError;
 use crate::aql::ir::{
-    self, Coercion, FragmentStep, LeafPath, Operand, ParamValue, PathTarget, TypedLit,
+    self, Bind, Coercion, FragmentStep, LeafPath, Operand, ParamValue, PathTarget, TypedLit,
 };
 use crate::db::iden::{Node, VersionRow};
 
@@ -176,15 +181,33 @@ impl Builder<'_> {
                     else {
                         continue;
                     };
-                    let text = match bound {
-                        Operand::Literal(TypedLit::String(text)) => text.clone(),
-                        Operand::Param(name) => match self.params.get(name) {
-                            Some(ParamValue::Str(text)) => text.clone(),
-                            _ => continue,
-                        },
-                        _ => continue,
+                    let bind = match bound {
+                        Operand::Literal(literal) => Bind::Literal(literal.clone()),
+                        Operand::Param(name) => Bind::Param(name.clone()),
+                        Operand::Path(_) | Operand::Function { .. } => continue,
                     };
-                    anchors.extend(self.value_anchor(leaf, &text)?);
+                    let Some(text) = self.anchor_text(&bind) else {
+                        continue;
+                    };
+                    anchors.extend(self.value_anchor(leaf, &[text])?);
+                }
+                // NOTE: AQL QUERY master03 §matches: a value list holds when the leaf
+                // matches one of its items, so it reads as the equalities above.
+                ir::Expr::Matches {
+                    path: PathTarget::Data(leaf),
+                    values,
+                    coercion: Coercion::Text | Coercion::Raw,
+                } => {
+                    let Some(texts) = values
+                        .iter()
+                        .map(|bind| self.anchor_text(bind))
+                        .collect::<Option<Vec<_>>>()
+                    else {
+                        continue;
+                    };
+                    if !texts.is_empty() {
+                        anchors.extend(self.value_anchor(leaf, &texts)?);
+                    }
                 }
                 // NOTE: AQL QUERY master03 §WHERE (`identifiedExpr`): the grammar puts the
                 // path on the left of a comparison and the terminal on its right.
@@ -228,20 +251,37 @@ impl Builder<'_> {
         Ok(anchors)
     }
 
-    /// The anchor of one equality on `leaf` with `text`, or `None` when the
-    /// leaf is neither a text leaf of an `ELEMENT` value
-    /// ([`search_text_leaf`]) nor its code ([`code_leaf`]).
+    /// The string a bound value compares as, a string literal or a string
+    /// parameter, or `None` for any other value: a `Raw` leaf compares with a
+    /// number by its number (`Builder::value_test`), which no index holds.
+    fn anchor_text(&self, bind: &Bind) -> Option<String> {
+        match bind {
+            Bind::Literal(TypedLit::String(text)) => Some(text.clone()),
+            Bind::Param(name) => match self.params.get(name) {
+                Some(ParamValue::Str(text)) => Some(text.clone()),
+                _ => None,
+            },
+            Bind::Literal(_) => None,
+        }
+    }
+
+    /// The anchor of the equality of `leaf` with one of `texts`, or `None`
+    /// when the leaf is neither a text leaf of an `ELEMENT` value for every
+    /// text ([`search_text_leaf`]) nor its code ([`code_leaf`]).
     ///
     /// # Errors
     /// [`AqlError`] from the leaf step's predicate lowering.
     fn value_anchor(
         &mut self,
         leaf: &LeafPath,
-        text: &str,
+        texts: &[String],
     ) -> Result<Option<ValueAnchor>, AqlError> {
         let (function, column) = if code_leaf(&leaf.fragment) {
             ("node_code", Node::ValueCode)
-        } else if search_text_leaf(&leaf.fragment, text) {
+        } else if texts
+            .iter()
+            .all(|text| search_text_leaf(&leaf.fragment, text))
+        {
             ("node_search_text", Node::ValueText)
         } else {
             return Ok(None);
@@ -253,17 +293,21 @@ impl Builder<'_> {
             return Ok(None);
         }
         self.row_anchor(leaf, predicate, false, |node| {
+            let read = call(
+                function,
+                vec![
+                    col(node, Node::ValueType),
+                    col(node, column),
+                    col(node, Node::Data),
+                ],
+            );
+            let test = match texts {
+                [text] => read.eq(Expr::val(text.as_str())),
+                _ => read.is_in(texts.iter().map(|text| Expr::val(text.as_str()))),
+            };
             (
                 col(node, Node::RmType).eq(Expr::cust(ELEMENT_LITERAL)),
-                call(
-                    function,
-                    vec![
-                        col(node, Node::ValueType),
-                        col(node, column),
-                        col(node, Node::Data),
-                    ],
-                )
-                .eq(Expr::val(text)),
+                test,
             )
         })
     }

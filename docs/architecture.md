@@ -643,7 +643,10 @@ reads the objects the filter keeps instead of every node of the archetype.
 The comparison itself stays in the statement, and each anchor reads the
 value the comparison reads, so an anchor removes work and no row. The
 comparisons of one leaf share one anchor, so a window reads the rows inside
-it. An equality's anchor always applies. A range may keep most of the store,
+it. A `matches` over a list of strings reads as the equalities it lists
+(QUERY master03 §matches), so it takes the equality anchor with the members
+as an `IN` list, when every member could anchor its equality (#6084). An
+equality's anchor always applies. A range may keep most of the store,
 so its anchor depends on the statement (`aql::sql::anchor::RangeEntry`): in
 the flat shape the planner places it; a population statement that streams
 toward its LIMIT is led by the first row of each version the range keeps,
