@@ -9,7 +9,8 @@
 //!
 //! The paths are the commit of a COMPOSITION in canonical JSON, canonical XML
 //! and FLAT, its read in the same three formats, the EHR read, a single-EHR
-//! and a population AQL query, an ITI-81 page and a party read, all over the
+//! and a population AQL query, a population `matches` over a value list
+//! (#6084), an ITI-81 page and a party read, all over the
 //! IPS composition (128 KB, 402 node rows), and the commit of that composition
 //! as a CONTRIBUTION, its read at an instant, the `EHR_STATUS` commit and read,
 //! and the commit of a PERSON.
@@ -85,6 +86,7 @@ enum Path {
     EhrRead,
     AqlSingle,
     AqlPopulation,
+    AqlMatches,
     Iti81,
     PartyRead,
     CommitContribution,
@@ -95,7 +97,7 @@ enum Path {
 }
 
 impl Path {
-    const ALL: [Self; 16] = [
+    const ALL: [Self; 17] = [
         Self::CommitJson,
         Self::CommitXml,
         Self::CommitFlat,
@@ -105,6 +107,7 @@ impl Path {
         Self::EhrRead,
         Self::AqlSingle,
         Self::AqlPopulation,
+        Self::AqlMatches,
         Self::Iti81,
         Self::PartyRead,
         Self::CommitContribution,
@@ -125,6 +128,7 @@ impl Path {
             Self::EhrRead => "EHR read",
             Self::AqlSingle => "single-EHR AQL",
             Self::AqlPopulation => "population AQL",
+            Self::AqlMatches => "population AQL matches",
             Self::Iti81 => "ITI-81 page",
             Self::PartyRead => "party read",
             Self::CommitContribution => "contribution commit",
@@ -194,7 +198,11 @@ struct Budget {
 /// the shape of a national identifier (#6081): 1,069 fewer allocations on
 /// each of the three composition commits and 1,057 on a CONTRIBUTION commit,
 /// measured beside the merge base, and their ceilings fell by as much.
-const BUDGETS: [Budget; 16] = [
+/// The population `matches` over a value list (#6084) is measured last, so
+/// its access records stay off the ITI-81 page; its ceilings are the figures
+/// of three runs (5,637 to 5,639 allocations, a median peak of 174,788
+/// bytes, 13,180 WAL bytes) with the margins above.
+const BUDGETS: [Budget; 17] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
@@ -338,6 +346,15 @@ const BUDGETS: [Budget; 16] = [
         round_trips: 31,
         nested: 20,
         wal: 7953,
+    },
+    Budget {
+        path: Path::AqlMatches,
+        conversions: 2,
+        allocations: 5752,
+        peak_bytes: 192_267,
+        round_trips: 4,
+        nested: 2,
+        wal: 13_312,
     },
 ];
 
@@ -682,6 +699,12 @@ impl World {
             Path::AqlPopulation => {
                 aql(serde_json::json!({ "q": "SELECT e/ehr_id/value FROM EHR e LIMIT 20" }))
             }
+            Path::AqlMatches => aql(serde_json::json!({
+                "q": "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+                      CONTAINS ELEMENT el[at0020] WHERE el/value/value \
+                      matches {'Medication item 83', $item}",
+                "query_parameters": { "item": "Medication item 84" },
+            })),
             Path::Iti81 => get(
                 format!("{FHIR}/AuditEvent?date=ge2026-01-01&_count=20"),
                 "root",

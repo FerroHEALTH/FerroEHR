@@ -67,6 +67,7 @@ mod adl2_write_race;
 mod admin_fixture;
 mod aql_code_anchor;
 mod aql_depth_bound;
+mod aql_matches_anchor;
 mod aql_planner;
 mod aql_range_anchor;
 mod aql_template_like;
