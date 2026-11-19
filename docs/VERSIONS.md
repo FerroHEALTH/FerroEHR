@@ -92,24 +92,31 @@ delta over PG 16 and where each app phase (P09/P12/P16/P11/P20) uses it —
 regression was found post-wrap). Managed providers may lag on `io_uring`; still
 target PG 18 and let the AIO benefit follow.
 
-## Example identity providers
+## FerroSMART and its example upstream providers
 
-The ZITADEL example (`docker-compose.zitadel.yml`, #5830) runs ZITADEL and its
-Login v2 UI from these images, unmodified. They are pinned here by the digest
-of each release's multi-platform index, and the `zitadel` job of
-`.github/workflows/base-image-watcher.yml` reads this table each week against
-the release zitadel/zitadel marks Latest. The documentation and sources the
-example cites are vendored at the same release (`scripts/vendor/zitadel-docs.sh`,
-`docs/specs/zitadel/`). Bumping ZITADEL moves both rows, and the vendor
-script's tag, together.
+FerroEHR runs behind FerroSMART, the family's SMART App Launch 2.x
+authorization server, in the overlays `docker-compose.ferrosmart.yml` and
+`docker-compose.ferrosmart-keycloak.yml` or `docker-compose.ferrosmart-zitadel.yml`
+(#5844, #5832), with Keycloak or ZITADEL upstream for login only. The
+hospital scenario's CI job runs once per upstream (`deploy-probe-hospital`,
+#5833). Every image is pinned by the digest of its release's multi-platform
+index. The `zitadel` job of `.github/workflows/base-image-watcher.yml` reads
+the two ZITADEL rows each week against the release zitadel/zitadel marks
+Latest. The ZITADEL documentation and sources the overlay cites are vendored
+at the same release (`scripts/vendor/zitadel-docs.sh`, `docs/specs/zitadel/`).
+Bumping ZITADEL moves both rows, and the vendor script's tag, together.
 
 | Image | Pin | Licence |
 |---|---|---|
+| `ferrosmart` | `ghcr.io/ferrohealth/ferrosmart:0.1.0@sha256:38b724514e78212c3944e82d8b8f6dc19ed3ac2392489ac3933bae40e256245d` | BUSL-1.1 (FerroHEALTH) |
+| `keycloak` | `quay.io/keycloak/keycloak:26.8.2@sha256:723b1d6e254c0fc96d5cffec860c7e0744d6a3277822b865bb538cf891575e41` | Apache-2.0, the pin of `docker-compose.keycloak.yml` |
 | `zitadel` | `ghcr.io/zitadel/zitadel:v4.20.3@sha256:1b30fea7ed88826dc0a98dacee4e2f2c8b05201fd26f5e4cb5386615b29f7638` | AGPL-3.0-only, run unmodified |
 | `zitadel-login` | `ghcr.io/zitadel/zitadel-login:v4.20.3@sha256:8f730428dfd65cd8979d07ef4e34a59d44978e956692b7dbbc3bba4e4abb4f92` | MIT (`apps/login/`) |
 
-Both digests were resolved from `ghcr.io` on 2026-11-16 and checked against the
-sha256 of the index manifest each one names.
+The ZITADEL digests were resolved from `ghcr.io` on 2026-11-16 and the
+FerroSMART digest on 2026-11-19, each checked against the sha256 of the index
+manifest it names. FerroSMART's and ZITADEL's PostgreSQL is the `postgres:18.6`
+digest the quickstart pins.
 
 ## openEHR specification matrix
 

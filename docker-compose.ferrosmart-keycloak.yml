@@ -1,0 +1,80 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# Keycloak as FerroSMART's upstream OpenID Connect provider, for login only:
+# an overlay of docker-compose.yml and docker-compose.ferrosmart.yml (the
+# latter's header says how to run the three). Keycloak authenticates the
+# person, FerroSMART issues the SMART tokens FerroEHR reads, and FerroEHR
+# never sees a Keycloak token.
+#
+# The realm is docker/ferrosmart/keycloak/realm.json, with fixed ids: the
+# client `ferrosmart`, a confidential client that authenticates with a JWT
+# FerroSMART's assertion key signs, read from FerroSMART's
+# http://localhost:8280/upstream-jwks (OpenID Connect Core 1.0 §9,
+# `private_key_jwt`), with PKCE and one exact redirect URI; the realm roles
+# CLINICIAN and PATIENT, which FerroSMART's [[ferrosmart.role]] tables map to
+# scopes, written into the ID Token's `roles`; and the demo user
+# clinician/clinician. FerroSMART's side is the environment below, the
+# setup FerroSMART documents for Keycloak:
+# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md#1316-upstream-providers-keycloak
+#
+# Keycloak runs in development mode (`start-dev`) with its data in the
+# container, on plain http at http://localhost:8380 in the issuer's network
+# namespace: a local example, never a deployment. The master realm's
+# administrator is admin/admin (KEYCLOAK_ADMIN_USER, KEYCLOAK_ADMIN_PASSWORD).
+
+services:
+  identity-issuer:
+    ports:
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROSMART_KEYCLOAK_PORT:-8380}:8380"
+
+  ferrosmart-keycloak:
+    image: quay.io/keycloak/keycloak:26.8.2@sha256:723b1d6e254c0fc96d5cffec860c7e0744d6a3277822b865bb538cf891575e41
+    network_mode: service:identity-issuer
+    command: ["start-dev", "--import-realm", "--http-port=8380"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # Keycloak's own management interface would take 9000 in the shared
+      # namespace; nothing here reads it.
+      KC_HTTP_MANAGEMENT_PORT: "9380"
+    volumes:
+      - type: bind
+        source: ./docker/ferrosmart/keycloak/realm.json
+        target: /opt/keycloak/data/import/ferroehr-realm.json
+        read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    # The image ships bash and no curl, so the probe asks for the realm's
+    # discovery document over bash's /dev/tcp: healthy once the realm is
+    # imported and the listener answers.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "exec 3<>/dev/tcp/127.0.0.1/8380; printf 'GET /realms/ferroehr/.well-known/openid-configuration HTTP/1.1\\r\\nHost: localhost:8380\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -q '^HTTP/1.1 200' <&3"
+      interval: 10s
+      timeout: 5s
+      # A cold start of Keycloak was measured at over nine minutes on a busy
+      # machine (docker-compose.keycloak.yml).
+      retries: 90
+      start_period: 20s
+
+  ferrosmart:
+    depends_on:
+      ferrosmart-keycloak:
+        condition: service_healthy
+    environment:
+      FERROSMART__FERROSMART__UPSTREAM__ISSUER: http://localhost:8380/realms/ferroehr
+      FERROSMART__FERROSMART__UPSTREAM__CLIENT_ID: ferrosmart
+      FERROSMART__FERROSMART__UPSTREAM__SCOPES__0: openid
+      FERROSMART__FERROSMART__UPSTREAM__ROLE_CLAIMS__0: roles
+      FERROSMART__FERROSMART__UPSTREAM__PRIVATE_KEY_JWT__ALGORITHM: RS256
+      FERROSMART__FERROSMART__UPSTREAM__PRIVATE_KEY_JWT__KEYS__PRIVATE_KEY_FILE: /run/secrets/ferrosmart_upstream_assertion_key
+    secrets:
+      - ferrosmart_upstream_assertion_key
+
+secrets:
+  ferrosmart_upstream_assertion_key:
+    file: ${FERROSMART_SECRETS:-./secrets/ferrosmart}/upstream_assertion_key.pem

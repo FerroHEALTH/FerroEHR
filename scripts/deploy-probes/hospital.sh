@@ -3,29 +3,27 @@
 # SPDX-License-Identifier: BUSL-1.1
 # The hospital scenario family (#5610).
 #
-# One controller runs FerroEHR with Keycloak as its `persons` issuer, the
-# quickstart's `machines` issuer for SCIM and its system clients, and two
-# instances on one PostgreSQL. Everything is set up through public interfaces
+# One controller runs FerroEHR behind FerroSMART (#5832), the family's SMART
+# authorization server, which issues every token the scenario presents, with
+# Keycloak or ZITADEL upstream for login only (PROBE_HOSPITAL_UPSTREAM,
+# hospital_smart.sh), and two instances on one PostgreSQL. Everything is set
+# up through public interfaces
 # alone: SCIM for the people, the demographic API for their roles and care
 # relationships, ITS-REST for the record and its EHR_ACCESS, and the admin API
 # for the ACCESS_POLICY. Every assertion is observed over HTTP, half of them
 # through the second instance, so a change made on one must decide the next
 # request on the other.
 #
-# Sourced by scripts/deploy-probe.sh after oidc.sh, signing_pgp.sh and
-# replicas.sh, whose helpers it reuses; never run directly.
+# Sourced by scripts/deploy-probe.sh after oidc.sh, signing_pgp.sh,
+# replicas.sh and hospital_smart.sh, whose helpers it reuses; never run
+# directly.
 
-# The second instance's port; Keycloak takes the replicas family's 18081.
+# The second instance's port; the replicas family's 18081 stays its own.
 HOSPITAL_REPLICA_PORT="${PROBE_HOSPITAL_REPLICA_PORT:-18082}"
-HOSPITAL_KC_TLS_PORT="${PROBE_KC_TLS_PORT:-18443}"
 H1="$CDR"
 H2="http://localhost:${HOSPITAL_REPLICA_PORT}"
 HB="/ferroehr/rest/openehr/v1"
 HX="/ferroehr/rest/extensions/v1"
-# The issuer the realm signs under, which the instances verify against.
-H_REALM_ISSUER="https://keycloak.localhost:8443/auth/realms/ferroehr"
-H_MACHINES="http://localhost:8180/quickstart"
-H_PATIENTS="http://localhost:8180/patients"
 H_ISSUER_HTTP="http://localhost:${FERROEHR_ISSUER_PORT}"
 H_TERM="openehr_access"
 H_PURPOSE="x-purpose-of-use"
@@ -35,111 +33,120 @@ H_ROLES="urn:example:hospital-roles"
 
 # ── The stack ─────────────────────────────────────────────────────────────────
 
-# The overlay of this family, written to `out`: the realm's issuer, break-glass
-# and the purposes on both instances, the second instance trusting the realm
-# as the first does, the issuer minting system-client tokens for this
-# audience and, with `patients` set, a `patients` issuer for the portal.
+# The overlay of this family, written to `out`: FerroSMART trusted as the
+# `persons` issuer and as an issuer of roles on both instances, break-glass
+# and the purposes, the one-shot that grants the SCIM client, and, with
+# `patients` set, FerroSMART's patient/ grants honoured
+# (`[auth.smart] patient_issuers`).
 hospital_overlay() {
-  local out="$1" patients="${2:-}"
+  local out="$1" patients="${2:-}" honoured=""
+  [[ -n "$patients" ]] && honoured="$HS_ISSUER"
   {
-    cat <<'YAML'
+    cat <<YAML
 x-hospital-env: &hospital-env
   FERROEHR__AUTH__ISSUER__1__AUDIENCE: ferroehr-scim,ferroehr-system
-  FERROEHR__AUTH__ISSUER__2__ISSUER: https://keycloak.localhost:8443/auth/realms/ferroehr
+  FERROEHR__AUTH__ISSUER__2__ISSUER: $HS_ISSUER
   FERROEHR__AUTH__ISSUER__2__KIND: persons
-  FERROEHR__AUTH__ISSUER__2__PROFILE: keycloak
-  FERROEHR__AUTH__ISSUER__2__AUDIENCE: ferroehr
-  FERROEHR__AUTH__ISSUER__2__APP_ONLY__0__CLAIM: client_id
-  FERROEHR__AUTH__ISSUER__2__APP_ONLY__0__VALUE: ferroehr-service
-  FERROEHR__AUTH__ISSUER__2__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
-  FERROEHR__AUTH__PARTY__1__ISSUER: https://keycloak.localhost:8443/auth/realms/ferroehr
-  FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:ferroehr:keycloak-quickstart-login
+  FERROEHR__AUTH__ISSUER__2__PROFILE: ferrosmart
+  FERROEHR__AUTH__ISSUER__2__AUDIENCE: $HS_BASE
+  FERROEHR__AUTH__PARTY__1__ISSUER: $HS_ISSUER
+  FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: $HS_LOGIN_ISSUER
   FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
-  FERROEHR__AUTH__PARTY__1__GROUP_CLAIM: groups
-  FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: urn:ferroehr:keycloak-quickstart-groups
-  FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: https://keycloak.localhost:8443/auth/realms/ferroehr
-  FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
+  FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: $HS_ISSUER
   FERROEHR__AUTHZ__RBAC__ENABLED: "true"
   FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE: EMERGENCY
   FERROEHR__AUDIT__PURPOSE_CODES: TREAT,ETREAT
   FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES: ETREAT
-  FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision,hold_scopes,sign_in_persons,access_service,write_access_policy,write_care_relationship
+  FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision,hold_scopes,sign_in_persons,act_for_persons,access_service,write_access_policy,write_care_relationship
   FERROEHR__AUTH__SMART__DISCOVERY: "true"
+  FERROEHR__SERVER__PUBLIC_BASE_URL: http://localhost:8080
+  FERROEHR__AUTH__SMART__PATIENT_ISSUERS: "$honoured"
   # ferrohealth-smart logs why it refuses a token at debug, and nowhere else;
   # the telemetry key is set because compose sets it, which outranks RUST_LOG.
   FERROEHR__TELEMETRY__FILTER: info,ferrohealth_smart=debug
-YAML
-    if [[ -n "$patients" ]]; then
-      cat <<'YAML'
-  FERROEHR__AUTH__ISSUER__3__ISSUER: http://localhost:8180/patients
-  FERROEHR__AUTH__ISSUER__3__KIND: patients
-  FERROEHR__AUTH__ISSUER__3__AUDIENCE: ferroehr-portal
-  FERROEHR__AUTH__ISSUER__3__TOKEN_TYPES: JWT
-  FERROEHR__AUTH__SMART__PATIENT_ISSUERS: http://localhost:8180/patients
-  FERROEHR__AUTH__DESCRIBED_ISSUER: https://keycloak.localhost:8443/auth/realms/ferroehr
-YAML
-    fi
-    cat <<'YAML'
 services:
-  identity-issuer:
-    environment:
-      JSON_CONFIG: >-
-        {"tokenCallbacks":[{"issuerId":"quickstart",
-        "requestMappings":[{"requestParam":"scope","match":"ferroehr/scim",
-        "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
-        "aud":["ferroehr-scim"],"scope":"$${scope}"}},
-        {"requestParam":"scope","match":"ferroehr/pmir",
-        "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
-        "aud":["ferroehr-system"],"scope":"$${scope}"}},
-        {"requestParam":"audience","match":"ferroehr-system",
-        "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
-        "aud":["ferroehr-system"],"scope":"$${scope}"}},
-        {"requestParam":"grant_type","match":"client_credentials",
-        "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
-        "aud":["http://localhost:8090/fhir"],"scope":"$${scope}"}}]},
-        {"issuerId":"patients",
-        "requestMappings":[{"requestParam":"grant_type","match":"client_credentials",
-        "claims":{"sub":"$${login}","client_id":"$${clientId}",
-        "aud":["ferroehr-portal"],"scope":"$${scope}","ehrId":"$${ehr_id}"}}]}]}
   ferroehr:
     environment: *hospital-env
   ferroehr-2:
     depends_on:
-      keycloak:
+      ferrosmart:
         condition: service_healthy
     environment: *hospital-env
+  ferrosmart:
     volumes:
-      - keycloak-tls:/run/ferroehr-dev-tls:ro
+      - type: bind
+        source: $(hs_dir)/clients
+        target: /etc/ferrosmart/clients
+        read_only: true
+  # The viewer launches the hospital's app from an EHR's page (#5880).
+  ferroehr-viewer:
+    environment:
+      FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL: http://localhost:3000
+      FERROEHR_VIEWER__LAUNCH__APP__0__NAME: Hospital app
+      FERROEHR_VIEWER__LAUNCH__APP__0__CLIENT_ID: $HS_APP
+      FERROEHR_VIEWER__LAUNCH__APP__0__LAUNCH_URL: $HS_LAUNCH_URL
+  # Grants the SCIM client \`hospital-scim\` scim_provision in the CDR for
+  # FerroSMART's binding issuer, on the operator's authority, as the
+  # quickstart's ferroehr-grant does for its own client.
+  ferroehr-grant-ferrosmart:
+    image: \${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferroehr:
+        condition: service_healthy
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      FERROEHR__DATABASE__URL: postgres://\${PG_INIT_USER:-ferroehr}:\${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/\${PG_INIT_DB:-ferroehr}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    configs:
+      - source: ferroehr-config\${FERROEHR_EHR_INDEX:+-\${FERROEHR_EHR_INDEX}}
+        target: /etc/ferroehr/ferroehr.toml
+    command: [party-binding, grant, --issuer, $HS_ISSUER, --client-id, hospital-scim,
+      --operation, scim_provision, --element, binding_issuer=$HS_LOGIN_ISSUER,
+      --element, token_scope=ferroehr/scim]
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
 YAML
   } > "$out"
   printf '%s' "$out"
 }
 
-# The compose files of the stack, with the portal's issuer when `patients` is
-# set; the key overlay is written once per run.
+# The compose files of the stack, FerroSMART's patient/ grants honoured when
+# `patients` is set; the key overlay is written once per run.
 hospital_files() {
   local patients="${1:-}"
-  HOSPITAL_FILES=(-f docker-compose.yml -f docker-compose.keycloak.yml
+  HOSPITAL_FILES=(-f docker-compose.yml -f docker-compose.ferrosmart.yml
+    -f "docker-compose.ferrosmart-$HS_UPSTREAM.yml"
     -f docker-compose.replicas.yml -f "$HOSPITAL_KEY_OVERLAY"
     -f "$(hospital_overlay "$PROBE_TMP/hospital${patients:+-patients}.yml" "$patients")")
 }
 
-hdc() { dc "${HOSPITAL_FILES[@]}" --profile replicas --profile s3 "$@"; }
+hdc() { dc "${HOSPITAL_FILES[@]}" --profile replicas --profile s3 --profile viewer "$@"; }
 
-# Brings the whole stack up on fresh volumes: Keycloak first, since its
-# one-shot writes the CA both instances read at load, then both instances,
-# the bucket and the provisioning of the Basic user and the realm's users.
+# Brings the whole stack up on fresh volumes, its EHR subjects named in
+# `namespace` for FerroSMART's picker: the upstream provider and FerroSMART
+# first, since both instances read FerroSMART's metadata at load, then both
+# instances, the viewer, the bucket, the provisioning of the Basic user and
+# the grant of the SCIM client.
 hospital_up() {
+  local namespace="${1:-demographic}"
   export FERROEHR_REPLICA_PORT="$HOSPITAL_REPLICA_PORT"
-  export KEYCLOAK_TLS_PORT="$HOSPITAL_KC_TLS_PORT"
+  hs_export
   # The overlay changes the identity issuer that both instances share a
   # network namespace with, so the quickstart goes down first, its volumes
   # with it: the hospital starts on a database of its own.
   hdc down -v --remove-orphans >/dev/null 2>&1 || true
-  hdc up -d keycloak >/dev/null 2>&1
-  hdc up -d --wait ferroehr ferroehr-2 keycloak seaweedfs seaweedfs-init \
-    ferroehr-provision ferroehr-provision-keycloak >/dev/null 2>&1
-  wait_http "$KC_REALM/.well-known/openid-configuration" 150 \
+  hs_prepare "$namespace" || return 1
+  # shellcheck disable=SC2046 # one word per service
+  hdc up -d --wait $(hs_upstream_services) ferrosmart >/dev/null 2>&1 || return 1
+  hdc up -d --wait ferroehr ferroehr-2 ferroehr-viewer seaweedfs seaweedfs-init \
+    ferroehr-provision >/dev/null 2>&1
+  hdc up ferroehr-grant-ferrosmart >/dev/null 2>&1
+  wait_http "$HS_ISSUER/.well-known/smart-configuration" 60 \
     && wait_http "$H1/health/readiness" 120 && wait_http "$H2/health/readiness" 120
 }
 
@@ -164,51 +171,22 @@ hospital_down() {
 # The base URL of instance `n` (1 or 2).
 h_base() { if [[ "$1" = 2 ]]; then printf '%s' "$H2"; else printf '%s' "$H1"; fi; }
 
-# A password-grant token of the realm user `user` through the viewer client,
-# the documented recipe of the overlay.
-kc_token() {
-  curl -s -d client_id=ferroehr-viewer -d client_secret=ferroehr-viewer-quickstart-secret \
-    -d username="$1" -d password="$1" -d grant_type=password \
-    "$KC_REALM/protocol/openid-connect/token" | jq -r '.access_token // empty'
-}
-
-# A token of the quickstart issuer for `client`, asked for `audience` with
-# `scope`. The issuer names itself after the Host it is reached at, so the
-# call names the host the instances know it by.
-machine_token() {
-  local client="$1" audience="$2" scope="$3"
-  curl -s -H 'Host: localhost:8180' -d grant_type=client_credentials \
-    -d client_id="$client" -d client_secret=hospital -d audience="$audience" \
-    --data-urlencode scope="$scope" "$H_ISSUER_HTTP/quickstart/token" \
-    | jq -r '.access_token // empty'
-}
-
-# A portal token of the `patients` issuer for the login `login`, its launch
-# context the EHR `ehr`.
-patient_token() {
-  curl -s -H 'Host: localhost:8180' -d grant_type=client_credentials \
-    -d client_id=hospital-portal -d client_secret=hospital -d login="$1" -d ehr_id="$2" \
-    --data-urlencode scope="openid launch/patient patient/composition-*.crs patient/aql-*.rs" \
-    "$H_ISSUER_HTTP/patients/token" | jq -r '.access_token // empty'
-}
-
 # The Authorization header value of the caller `who`: `admin` (the Basic
-# first administrator), `kc:<user>` (a realm user), `sys:<client>` (a system
-# client), `scim` (the realm's provisioning client) or `pt:<login>:<ehr>` (a
-# portal login).
+# first administrator), `p:<user>` (a professional through the hospital's
+# app), `sys:<client>` (a Backend Services client), `scim` (the SCIM client)
+# or `pt:<login>:<ehr>` (a patient's standalone launch for the EHR `ehr`);
+# every token but the Basic credential is FerroSMART's (hospital_smart.sh).
 h_auth() {
-  local who="$1"
+  local who="$1" token=""
   case "$who" in
-    admin) printf 'Basic %s' "$(printf 'ferroehr:ferroehr' | base64)" ;;
-    kc:*) printf 'Bearer %s' "$(kc_token "${who#kc:}")" ;;
-    sys:*) printf 'Bearer %s' "$(machine_token "${who#sys:}" ferroehr-system \
-      'system/composition-*.cruds system/aql-*.cruds system/template-*.r')" ;;
-    scim) printf 'Bearer %s' "$(curl -s -H 'Host: localhost:8180' -d grant_type=client_credentials \
-      -d client_id=quickstart-scim-keycloak -d client_secret=quickstart -d scope=ferroehr/scim \
-      "$H_ISSUER_HTTP/quickstart/token" | jq -r '.access_token // empty')" ;;
-    pt:*) local rest="${who#pt:}"; printf 'Bearer %s' "$(patient_token "${rest%%:*}" "${rest#*:}")" ;;
-    *) printf 'none' ;;
+    admin) printf 'Basic %s' "$(printf 'ferroehr:ferroehr' | base64)"; return 0 ;;
+    p:*) token="$(hs_person_token "${who#p:}")" ;;
+    sys:*) token="$(hs_system_token "${who#sys:}" "$HS_SYSTEM_SCOPE")" ;;
+    scim) token="$(hs_system_token hospital-scim ferroehr/scim)" ;;
+    pt:*) local rest="${who#pt:}"; token="$(hs_patient_token "${rest%%:*}" "${rest#*:}")" ;;
+    *) printf 'none'; return 0 ;;
   esac
+  printf 'Bearer %s' "$token"
 }
 
 # h_call <instance> <who> <method> <path> [body] [purpose] [content-type]
@@ -430,7 +408,7 @@ h_boot_log() {
 # AGENT and the ROLE are the ones the compose one-shot's report names.
 h_scim_client_grants() {
   local report agent role version body
-  report="$(hdc logs --no-color ferroehr-grant-keycloak 2>&1)"
+  report="$(hdc logs --no-color ferroehr-grant-ferrosmart 2>&1)"
   agent="$(grep -oE '"agent": "[0-9a-f-]{36}"' <<<"$report" | sed -n 1p | grep -oE '[0-9a-f-]{36}')"
   role="$(grep -oE '"role": "[0-9a-f-]{36}"' <<<"$report" | sed -n 1p | grep -oE '[0-9a-f-]{36}')"
   if [[ -z "$agent" || -z "$role" ]]; then
@@ -451,44 +429,7 @@ h_scim_client_grants() {
     "$(j_capability "$(j_operation write_care_relationship)")")"
 }
 
-# A realm admin token of the master realm.
-kc_admin() {
-  curl -s -d client_id=admin-cli -d username="${KEYCLOAK_ADMIN_USER:-admin}" \
-    -d password="${KEYCLOAK_ADMIN_PASSWORD:-admin}" -d grant_type=password \
-    "$KC/auth/realms/master/protocol/openid-connect/token" | jq -r '.access_token // empty'
-}
-
-# Creates the realm role `role`.
-kc_role() {
-  curl -s -o /dev/null -X POST -H "Authorization: Bearer $(kc_admin)" \
-    -H 'Content-Type: application/json' -d "{\"name\":\"$1\"}" "$KC/auth/admin/realms/ferroehr/roles"
-}
-
-# Creates the realm user `user` (password = user) named `first last` holding
-# the realm roles given after; records its subject as HV_sub_<user>.
-kc_user() {
-  local user="$1" first="$2" last="$3"
-  shift 3
-  local token id role roles
-  token="$(kc_admin)"
-  curl -s -o /dev/null -X POST -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
-    -d "{\"username\":\"$user\",\"enabled\":true,\"firstName\":\"$first\",\"lastName\":\"$last\",
-      \"email\":\"$user@example.test\",\"emailVerified\":true,
-      \"credentials\":[{\"type\":\"password\",\"value\":\"$user\",\"temporary\":false}]}" \
-    "$KC/auth/admin/realms/ferroehr/users"
-  id="$(curl -s -H "Authorization: Bearer $token" \
-    "$KC/auth/admin/realms/ferroehr/users?username=$user&exact=true" | jq -r '.[0].id // empty')"
-  roles="[]"
-  for role in "$@"; do
-    roles="$(jq -c --argjson r "$(curl -s -H "Authorization: Bearer $token" \
-      "$KC/auth/admin/realms/ferroehr/roles/$role")" '. + [$r]' <<<"$roles")"
-  done
-  curl -s -o /dev/null -X POST -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
-    -d "$roles" "$KC/auth/admin/realms/ferroehr/users/$id/role-mappings/realm"
-  hv_set "sub_$user" "$id"
-}
-
-# A SCIM User for the realm user `user`, through instance `n`, with the
+# A SCIM User for the provider's user `user`, through instance `n`, with the
 # hospital roles that follow; records the PERSON as HV_person_<user>.
 scim_user() {
   local n="$1" user="$2" formatted="$3" roles
@@ -564,12 +505,15 @@ H_T_DIAGNOSIS="IDCR - Problem List.v1"
 # the EHR as HV_ehr_<name>.
 h_ehr() {
   local name="$1" person="$2"
+  hs_subject_pending="$person"
   h_call 1 admin POST /ehr "$(jq -nc --argjson s "$(j_party PERSON "$person")" '{_type:"EHR_STATUS",
     archetype_node_id:"openEHR-EHR-EHR_STATUS.generic.v1",name:{_type:"DV_TEXT",value:"EHR status"},
     archetype_details:{_type:"ARCHETYPED",rm_version:"1.1.0",
       archetype_id:{_type:"ARCHETYPE_ID",value:"openEHR-EHR-EHR_STATUS.generic.v1"}},
     subject:{_type:"PARTY_SELF",external_ref:$s},is_queryable:true,is_modifiable:true}')"
   hv_set "ehr_$name" "$(jq -r '.ehr_id.value // empty' <<<"$H_BODY")"
+  # FerroSMART's picker finds the EHR by its subject's id.
+  [[ -n "$(hv "ehr_$name")" ]] && hs_subject "$(hv "ehr_$name")" "$hs_subject_pending"
   [[ "$H_CODE" = 201 ]]
 }
 
@@ -588,13 +532,14 @@ h_commit() {
   [[ "$H_CODE" = 201 ]]
 }
 
-# A system client AGENT carrying `client` under the machines issuer, acting
+# A client AGENT carrying `client` under FerroSMART's issuer (or the one
+# H_CLIENT_ISSUER names), acting
 # for the ORGANISATION `org`, with a ROLE holding the capabilities given
 # after; records the AGENT as HV_<name>.
 h_client() {
   local name="$1" client="$2" org="$3"
   shift 3
-  h_party "$name" agent "$(j_named_party AGENT "$client" "$(jq -nc --arg c "$client" --arg i "$H_MACHINES" \
+  h_party "$name" agent "$(j_named_party AGENT "$client" "$(jq -nc --arg c "$client" --arg i "${H_CLIENT_ISSUER:-$HS_ISSUER}" \
     '{details:{_type:"ITEM_TREE",archetype_node_id:"at0010",name:{_type:"DV_TEXT",value:"details"},
       items:[{_type:"ELEMENT",archetype_node_id:"at0011",name:{_type:"DV_TEXT",value:"client"},
         value:{_type:"DV_IDENTIFIER",issuer:$i,id:$c,type:"client_id"}}]}}')")" || return 1
@@ -613,21 +558,35 @@ h_facts_role() {
     '{performer:$p,name:$n}')")"
 }
 
+# A PERSON named `name` who signs in as the provider's user `user`, with no
+# SCIM User: Dr. Jansen's PERSON as SCIM made it, its login identifier the
+# user's FerroSMART subject; records it as HV_<key>.
+h_patient_person() {
+  local key="$1" name="$2" user="$3"
+  h_call 1 admin GET "/demographic/person/$(hv person_anna)"
+  h_party "$key" person "$(jq -c --arg i "$HS_LOGIN_ISSUER" --arg s "$(hv "sub_$user")" --arg n "$name" \
+    'del(.uid) | del(.relationships)
+    | .name.value = $n
+    | .details.items = [.details.items[0] | .value = {_type:"DV_IDENTIFIER",issuer:$i,id:$s,type:"login"}]
+    | .identities[0].details.items[0].value.value = $n' <<<"$H_BODY")"
+}
+
 # Creates the people, the parties, the record and the controller's policy;
 # each step that does not hold fails the setup probe with what it answered.
 hospital_setup() {
   local user
-  kc_role CLINICIAN
-  kc_role NURSE
-  kc_role EMERGENCY
-  kc_user anna Anna Jansen CLINICIAN
-  kc_user bram Bram "de Vries" NURSE
-  kc_user carla Carla Smit CLINICIAN
-  kc_user dirk Dirk Bakker CLINICIAN EMERGENCY
-  kc_user gina Gina Mulder NURSE
-  kc_user hans Hans Hoekstra ADMIN
-  for user in anna bram carla dirk gina hans; do
-    [[ -n "$(hv "sub_$user")" ]] || probe_fail "a realm user $user" "no subject"
+  for user in CLINICIAN NURSE EMERGENCY ADMIN PATIENT; do hs_role "$user"; done
+  hs_user anna Anna Jansen CLINICIAN
+  hs_user bram Bram "de Vries" NURSE
+  hs_user carla Carla Smit CLINICIAN
+  hs_user dirk Dirk Bakker CLINICIAN EMERGENCY
+  hs_user gina Gina Mulder NURSE
+  hs_user hans Hans Hoekstra ADMIN
+  hs_user ferroehr Ferro EHR ADMIN
+  hs_user eva Eva Visser PATIENT
+  hs_user frank Frank Visser PATIENT
+  for user in anna bram carla dirk gina hans ferroehr eva frank; do
+    [[ -n "$(hv "sub_$user")" ]] || probe_fail "a user $user at the $HS_UPSTREAM upstream" "no subject"
   done
   h_scim_client_grants || h_fail_call "the SCIM client's role ceiling and care-team grant"
   # SCIM through both instances: the client's view must be one deployment.
@@ -639,6 +598,7 @@ hospital_setup() {
   scim_user 2 dirk "Dr. Dirk Bakker" CLINICIAN || h_fail_call "SCIM creates dirk"
   scim_user 1 gina "Gina Mulder" NURSE || h_fail_call "SCIM creates gina"
   scim_user 2 hans "Hans Hoekstra" || h_fail_call "SCIM creates hans"
+  scim_user 1 ferroehr "Ferro EHR" || h_fail_call "SCIM creates the controller's administrator"
 
   h_party cardiology group "$(j_named_party GROUP Cardiology)" || h_fail_call "the Cardiology team"
   h_party ward3 group "$(j_named_party GROUP "Ward 3")" || h_fail_call "the Ward 3 team"
@@ -664,10 +624,9 @@ hospital_setup() {
   h_facts_role carla PSYCHIATRIST || h_fail_call "Dr. Smit's role"
   h_facts_role dirk EMERGENCY_PHYSICIAN || h_fail_call "Dr. Bakker's role"
   h_facts_role gina NURSE || h_fail_call "Gina's role"
-  # The controller's administrator, the realm's ferroehr user, writes the
+  # The controller's administrator, the provider's ferroehr user, writes the
   # policy; the policy route asks for its own grant.
-  h_call 1 scim GET "/scim/v2/Users?filter=$(jq -rn '"userName eq \"keycloak-ferroehr\""|@uri')"
-  hv_set person_controller "$(jq -r '.Resources[0].id // empty' <<<"$H_BODY")"
+  hv_set person_controller "$(hv person_ferroehr)"
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"
   local since
@@ -707,10 +666,14 @@ hospital_setup() {
   h_client access access-service "$(hv member_org)" \
     "$(j_capability "$query")" "$(j_capability "$(j_operation access_service)")" \
     || h_fail_call "the access service"
+  # The hospital's SMART app, whose tokens act for the person who signed in
+  # (FerroSMART docs/architecture.md §13.21; the CDR grants act_for_persons).
+  h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
+    || h_fail_call "the hospital's SMART app"
 
   # The patients: Eva under the care of three teams since ten days ago,
   # Frank her representative, Gina a patient too, and Piet, anybody else.
-  h_party person_eva person "$(j_named_party PERSON "Eva Visser")" || h_fail_call "Eva's PERSON"
+  h_patient_person person_eva "Eva Visser" eva || h_fail_call "Eva's PERSON"
   h_party person_piet person "$(j_named_party PERSON "Piet Jansen")" || h_fail_call "Piet's PERSON"
   local admitted team
   admitted="$(j_dates "$(h_day -10)")"
@@ -720,14 +683,7 @@ hospital_setup() {
       "$admitted")" '. + [$r]' <<<"$H_EVA_CARE")"
   done
   h_rerelate 2 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva's admission"
-  h_call 1 admin GET "/demographic/person/$(hv person_anna)"
-  local frank
-  frank="$(jq -c --arg i "$H_PATIENTS" --argjson r "$(j_care represents PERSON 00000000-0000-0000-0000-000000000000 \
-    PERSON "$(hv person_eva)" "$(j_dates "$(h_day -365)")")" 'del(.uid) | del(.relationships)
-    | .name.value = "Frank Visser"
-    | .details.items = [.details.items[0] | .value = {_type:"DV_IDENTIFIER",issuer:$i,id:"frank",type:"login"}]
-    | .identities[0].details.items[0].value.value = "Frank Visser"' <<<"$H_BODY")"
-  h_party person_frank person "$frank" || h_fail_call "Frank's PERSON"
+  h_patient_person person_frank "Frank Visser" frank || h_fail_call "Frank's PERSON"
   h_rerelate 1 admin person "$(hv person_frank)" "[$(j_care represents PERSON "$(hv person_frank)" \
     PERSON "$(hv person_eva)" "$(j_dates "$(h_day -365)")")]" || h_fail_call "Frank represents Eva"
 
@@ -751,13 +707,13 @@ hospital_setup() {
   eva="$(hv ehr_eva)"
   gina="$(hv ehr_gina)"
   piet="$(hv ehr_piet)"
-  h_commit c_encounter 1 kc:anna "$eva" "$H_T_ENCOUNTER" || h_fail_call "the cardiology encounter"
-  h_commit c_vitals 2 kc:bram "$eva" "$H_T_VITALS" || h_fail_call "the vital signs"
-  h_commit c_mental 1 kc:carla "$eva" "$H_T_MENTAL" || h_fail_call "the mental-health note"
-  h_commit c_hiv 2 kc:anna "$eva" "$H_T_HIV" || h_fail_call "the HIV result"
-  h_commit c_diagnosis 1 kc:anna "$eva" "$H_T_DIAGNOSIS" || h_fail_call "the diagnosis"
-  h_commit c_gina 2 kc:anna "$gina" "$H_T_VITALS" || h_fail_call "Gina's vital signs"
-  h_commit c_piet 1 kc:anna "$piet" "$H_T_VITALS" || h_fail_call "Piet's vital signs"
+  h_commit c_encounter 1 p:anna "$eva" "$H_T_ENCOUNTER" || h_fail_call "the cardiology encounter"
+  h_commit c_vitals 2 p:bram "$eva" "$H_T_VITALS" || h_fail_call "the vital signs"
+  h_commit c_mental 1 p:carla "$eva" "$H_T_MENTAL" || h_fail_call "the mental-health note"
+  h_commit c_hiv 2 p:anna "$eva" "$H_T_HIV" || h_fail_call "the HIV result"
+  h_commit c_diagnosis 1 p:anna "$eva" "$H_T_DIAGNOSIS" || h_fail_call "the diagnosis"
+  h_commit c_gina 2 p:anna "$gina" "$H_T_VITALS" || h_fail_call "Gina's vital signs"
+  h_commit c_piet 1 p:anna "$piet" "$H_T_VITALS" || h_fail_call "Piet's vital signs"
 }
 
 # ── The controller's policy and Eva's directives ──────────────────────────────
@@ -993,7 +949,7 @@ h_check_log() {
   local row rid result reason emergency what entries
   for row in "${H_EXPECT[@]}"; do
     IFS='|' read -r rid result reason emergency what <<<"$row"
-    h_call 1 kc:hans GET "$HX/admin/access-log?request_id=$rid"
+    h_call 1 p:hans GET "$HX/admin/access-log?request_id=$rid"
     entries="$(jq -c '[.entries[]? | {result: .outcome.result.defining_code.code_string,
       reason: (.outcome.reason.defining_code.code_string // "-"), emergency: (.is_emergency // false)}]' \
       <<<"$H_BODY" 2>/dev/null)"
@@ -1005,7 +961,7 @@ h_check_log() {
 # ── The family ────────────────────────────────────────────────────────────────
 
 probes_hospital() {
-  bold "A hospital scenario on two instances (#5610)"
+  bold "A hospital scenario on two instances behind FerroSMART, $HS_UPSTREAM upstream (#5610, #5832)"
   if ! command -v gpg >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
     uncovered "the hospital scenario (#5610)" "gpg or jq is not available on this host"
     return 0
@@ -1022,9 +978,9 @@ probes_hospital() {
   hospital_files
 
   probe "P-HOSP-BOOT" "$PROBE_WORKING" "deployment" "#5610" \
-    "two instances with Keycloak as the persons issuer and the machines issuer boot"
+    "two instances behind FerroSMART, with $HS_UPSTREAM upstream, boot"
   if ! hospital_up; then
-    probe_fail "two serving instances and a realm" "$(replica_state "${HOSPITAL_FILES[@]}")"
+    probe_fail "two serving instances behind FerroSMART" "$(replica_state "${HOSPITAL_FILES[@]}")"
     h_boot_log
     probe_done
     hospital_down
@@ -1049,6 +1005,7 @@ probes_hospital() {
   hospital_care_and_consent
   hospital_scim_lifecycle
   hospital_portal
+  hospital_ehr_launch
   hospital_log
   hospital_portal_remove
   hospital_pixm
@@ -1058,16 +1015,16 @@ probes_hospital() {
 }
 
 # FerroHEALTH-backlog #34: the discovery document describes the persons
-# issuer, never the machines issuer beside it.
+# issuer, FerroSMART (#5832), never the machines issuer beside it.
 hospital_discovery() {
-  probe "P-HOSP-DISCOVERY" "$PROBE_WORKING" "server" "#5425" \
-    "/.well-known/smart-configuration describes the Keycloak persons issuer, never the machines one"
+  probe "P-HOSP-DISCOVERY" "$PROBE_WORKING" "server" "#5425 #5832" \
+    "/.well-known/smart-configuration describes FerroSMART as the issuer, never the machines one"
   local n doc
   for n in 1 2; do
     doc="$(curl -s "$(h_base "$n")/ferroehr/rest/.well-known/smart-configuration")"
-    assert_eq "$H_REALM_ISSUER" "$(jq -r '.issuer // empty' <<<"$doc")" "instance $n: the issuer"
-    assert_contains "$(jq -r '.token_endpoint // empty' <<<"$doc")" "$H_REALM_ISSUER/" \
-      "instance $n: the token endpoint is the realm's"
+    assert_eq "$HS_ISSUER" "$(jq -r '.issuer // empty' <<<"$doc")" "instance $n: the issuer"
+    assert_contains "$(jq -r '.token_endpoint // empty' <<<"$doc")" "$HS_ISSUER/" \
+      "instance $n: the token endpoint is FerroSMART's"
     assert_not_contains "$doc" "8180" "instance $n: nothing of the machines issuer"
   done
   probe_done
@@ -1080,8 +1037,8 @@ hospital_rbac() {
   # write, and #5624: template limits bind system callers only.
   probe "P-HOSP-RBAC-NURSE" "$PROBE_WORKING" "server" "#5621 #5624" \
     "a nurse reads the vital signs and cannot commit the diagnosis template her role may not write"
-  h_read 2 kc:bram "$eva" c_vitals TREAT 200 "" "Nurse de Vries reads the vital signs"
-  h_call 1 kc:bram POST "/ehr/$eva/composition" "$(h_example "$H_T_DIAGNOSIS")" TREAT
+  h_read 2 p:bram "$eva" c_vitals TREAT 200 "" "Nurse de Vries reads the vital signs"
+  h_call 1 p:bram POST "/ehr/$eva/composition" "$(h_example "$H_T_DIAGNOSIS")" TREAT
   h_assert_code 403 "a NURSE commits the diagnosis template (#5621): ${H_BODY:0:300}"
   # A commit that was stored is named, so the probes after this one judge
   # the record as it stands.
@@ -1094,43 +1051,43 @@ hospital_abac() {
   eva="$(hv ehr_eva)"
   probe "P-HOSP-ABAC-CARE" "$PROBE_WORKING" "server" "#5610 #5737" \
     "Dr. Jansen reads the cardiology data she treats Eva for, with a purpose, on both instances"
-  h_read 1 kc:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen reads the encounter"
-  h_read 2 kc:anna "$eva" c_vitals TREAT 200 "" "Dr. Jansen reads the vital signs"
-  h_read 1 kc:anna "$eva" c_encounter "" 403 refused-purpose-missing "Dr. Jansen without a purpose"
-  h_read 2 kc:anna "$eva" c_encounter ETREAT 403 refused-policy-denied \
+  h_read 1 p:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen reads the encounter"
+  h_read 2 p:anna "$eva" c_vitals TREAT 200 "" "Dr. Jansen reads the vital signs"
+  h_read 1 p:anna "$eva" c_encounter "" 403 refused-purpose-missing "Dr. Jansen without a purpose"
+  h_read 2 p:anna "$eva" c_encounter ETREAT 403 refused-policy-denied \
     "Dr. Jansen with a purpose she may not declare"
   probe_done
 
   probe "P-HOSP-ABAC-CLEARANCE" "$PROBE_WORKING" "server" "#5610" \
     "Nurse de Vries reads the vital signs but not the HIV result she is not cleared for"
-  h_read 1 kc:bram "$eva" c_vitals TREAT 200 "" "Nurse de Vries reads the vital signs"
-  h_read 2 kc:bram "$eva" c_hiv TREAT 403 refused-sensitivity "Nurse de Vries reads the HIV result"
-  h_read 1 kc:anna "$eva" c_hiv TREAT 200 "" "Dr. Jansen, cleared, reads the HIV result"
+  h_read 1 p:bram "$eva" c_vitals TREAT 200 "" "Nurse de Vries reads the vital signs"
+  h_read 2 p:bram "$eva" c_hiv TREAT 403 refused-sensitivity "Nurse de Vries reads the HIV result"
+  h_read 1 p:anna "$eva" c_hiv TREAT 200 "" "Dr. Jansen, cleared, reads the HIV result"
   probe_done
 
   probe "P-HOSP-ABAC-RESTRICTION" "$PROBE_WORKING" "server" "#5633 #5636" \
     "Gina is refused everything of Eva's with a 404 that says nothing of the restriction"
-  h_read 1 kc:gina "$eva" c_vitals TREAT 404 refused-restricted "Gina reads the vital signs"
-  h_read 2 kc:gina "$eva" c_encounter TREAT 404 refused-restricted "Gina reads the encounter"
-  h_call 1 kc:gina GET "/ehr/$eva" "" TREAT
+  h_read 1 p:gina "$eva" c_vitals TREAT 404 refused-restricted "Gina reads the vital signs"
+  h_read 2 p:gina "$eva" c_encounter TREAT 404 refused-restricted "Gina reads the encounter"
+  h_call 1 p:gina GET "/ehr/$eva" "" TREAT
   h_assert_code 404 "Gina reads Eva's EHR"
   h_expect refused refused-restricted false "Gina reads Eva's EHR"
-  h_call 2 kc:gina GET "$HX/ehr/$eva/ehr_access" "" TREAT
+  h_call 2 p:gina GET "$HX/ehr/$eva/ehr_access" "" TREAT
   h_assert_code 404 "Gina reads Eva's EHR_ACCESS"
-  assert_eq "" "$(h_rows 1 kc:gina "$eva" TREAT)" "Gina's query of Eva's EHR returns nothing"
+  assert_eq "" "$(h_rows 1 p:gina "$eva" TREAT)" "Gina's query of Eva's EHR returns nothing"
   probe_done
 
   probe "P-HOSP-ABAC-MENTAL" "$PROBE_WORKING" "server" "#5633 #5636" \
     "the mental-health note is refused to Dr. Jansen and readable by Dr. Smit"
-  h_read 2 kc:anna "$eva" c_mental TREAT 403 refused-consent-denied "Dr. Jansen reads the note"
-  h_read 1 kc:carla "$eva" c_mental TREAT 200 "" "Dr. Smit reads the note"
+  h_read 2 p:anna "$eva" c_mental TREAT 403 refused-consent-denied "Dr. Jansen reads the note"
+  h_read 1 p:carla "$eva" c_mental TREAT 200 "" "Dr. Smit reads the note"
   probe_done
 
   probe "P-HOSP-ABAC-BREAKGLASS" "$PROBE_WORKING" "server" "#5627" \
     "Dr. Bakker reads the restricted HIV result only with the emergency role and purpose, marked emergency"
-  h_read 1 kc:dirk "$eva" c_hiv TREAT 403 refused-sensitivity "Dr. Bakker without an emergency"
-  h_read 2 kc:dirk "$eva" c_hiv ETREAT 200 "" "Dr. Bakker declares an emergency"
-  h_read 1 kc:bram "$eva" c_hiv ETREAT 403 refused-policy-denied \
+  h_read 1 p:dirk "$eva" c_hiv TREAT 403 refused-sensitivity "Dr. Bakker without an emergency"
+  h_read 2 p:dirk "$eva" c_hiv ETREAT 200 "" "Dr. Bakker declares an emergency"
+  h_read 1 p:bram "$eva" c_hiv ETREAT 403 refused-policy-denied \
     "a nurse declaring an emergency without the role"
   probe_done
 }
@@ -1169,19 +1126,19 @@ hospital_queries() {
   [[ -n "$(hv c_lab)" ]] && lab=c_lab
   probe "P-HOSP-AQL" "$PROBE_WORKING" "server" "#5633 #5636 #5735" \
     "AQL rows, COUNT and paging agree with the reads for every caller, on both instances"
-  h_query_agrees 1 kc:anna "$eva" TREAT "c_encounter c_vitals c_hiv c_diagnosis c_nurse_dx $lab" "Dr. Jansen"
-  h_query_agrees 2 kc:bram "$eva" TREAT "c_encounter c_vitals c_diagnosis c_nurse_dx $lab" "Nurse de Vries"
-  h_query_agrees 1 kc:carla "$eva" TREAT "c_encounter c_vitals c_mental c_hiv c_diagnosis c_nurse_dx $lab" "Dr. Smit"
+  h_query_agrees 1 p:anna "$eva" TREAT "c_encounter c_vitals c_hiv c_diagnosis c_nurse_dx $lab" "Dr. Jansen"
+  h_query_agrees 2 p:bram "$eva" TREAT "c_encounter c_vitals c_diagnosis c_nurse_dx $lab" "Nurse de Vries"
+  h_query_agrees 1 p:carla "$eva" TREAT "c_encounter c_vitals c_mental c_hiv c_diagnosis c_nurse_dx $lab" "Dr. Smit"
   # Eva's EHR is restricted to Gina whole, so a query scoped to it answers as
   # an unknown EHR does, as her read of it does (security.md, "What a
   # professional sees").
-  h_rows 2 kc:gina "$eva" TREAT >/dev/null
+  h_rows 2 p:gina "$eva" TREAT >/dev/null
   h_assert_code 404 "Gina's query scoped to Eva's EHR: ${H_BODY:0:200}"
-  h_count 1 kc:gina "$eva" TREAT >/dev/null
+  h_count 1 p:gina "$eva" TREAT >/dev/null
   h_assert_code 404 "Gina's COUNT scoped to Eva's EHR: ${H_BODY:0:200}"
-  h_query_agrees 1 kc:dirk "$eva" ETREAT "c_encounter c_vitals c_mental c_hiv c_diagnosis c_nurse_dx $lab" \
+  h_query_agrees 1 p:dirk "$eva" ETREAT "c_encounter c_vitals c_mental c_hiv c_diagnosis c_nurse_dx $lab" \
     "Dr. Bakker in an emergency"
-  h_query_agrees 2 kc:dirk "$eva" TREAT "" "Dr. Bakker without one"
+  h_query_agrees 2 p:dirk "$eva" TREAT "" "Dr. Bakker without one"
   h_query_agrees 1 sys:hie-member "$eva" TREAT "c_encounter c_vitals c_diagnosis c_nurse_dx $lab" "the member's client"
   h_query_agrees 2 sys:hie-outside "$eva" TREAT "" "the outside client"
   probe_done
@@ -1195,7 +1152,7 @@ hospital_care_and_consent() {
   h_settings 1 "pt:eva:$eva" "$eva" "$(j_eva_settings "$(h_day 0)" "$(h_day 365)" opt-out)" \
     || h_fail_call "Eva records her opt-out"
   h_read 2 sys:access-service "$eva" c_vitals TREAT 404 refused-opt-out "the access service after the opt-out"
-  h_read 2 kc:anna "$eva" c_vitals TREAT 200 "" "Dr. Jansen after the opt-out"
+  h_read 2 p:anna "$eva" c_vitals TREAT 200 "" "Dr. Jansen after the opt-out"
   h_read 1 sys:hie-member "$eva" c_vitals TREAT 200 "" "the HIE client, no access service, after the opt-out"
   h_settings 2 "pt:eva:$eva" "$eva" "$(j_eva_settings "$(h_day 0)" "$(h_day 365)")" \
     || h_fail_call "Eva withdraws her opt-out"
@@ -1218,13 +1175,13 @@ hospital_care_and_consent() {
   rels="$(jq -c --arg c "$(hv cardiology)" --argjson v "$(j_dates "$(h_day -10)" "$(h_day 0)")" \
     'map(if .target.id.value == $c then .time_validity = $v else . end)' <<<"$H_EVA_CARE")"
   h_rerelate 1 admin person "$(hv person_eva)" "$rels" || h_fail_call "Eva's discharge today"
-  h_read 2 kc:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen within the grace"
+  h_read 2 p:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen within the grace"
   rels="$(jq -c --arg c "$(hv cardiology)" --argjson v "$(j_dates "$(h_day -10)" "$(h_day -3)")" \
     'map(if .target.id.value == $c then .time_validity = $v else . end)' <<<"$H_EVA_CARE")"
   h_rerelate 2 admin person "$(hv person_eva)" "$rels" || h_fail_call "Eva's discharge three days ago"
-  h_read 1 kc:anna "$eva" c_encounter TREAT 403 refused-no-care-relationship "Dr. Jansen after the grace"
+  h_read 1 p:anna "$eva" c_encounter TREAT 403 refused-no-care-relationship "Dr. Jansen after the grace"
   h_rerelate 1 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva readmitted"
-  h_read 2 kc:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen after the readmission"
+  h_read 2 p:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen after the readmission"
   probe_done
 
   probe "P-HOSP-ROLE-REMOVED" "$PROBE_WORKING" "server" "#5627" \
@@ -1234,9 +1191,9 @@ hospital_care_and_consent() {
   version="$(jq -r '.uid.value // empty' <<<"$H_BODY")"
   h_call 1 admin DELETE "/demographic/role/$version"
   [[ "$H_CODE" = 204 ]] || h_fail_call "204 for the removal of Dr. Jansen's role"
-  h_read 2 kc:anna "$eva" c_hiv TREAT 403 refused-sensitivity "Dr. Jansen after her role went"
+  h_read 2 p:anna "$eva" c_hiv TREAT 403 refused-sensitivity "Dr. Jansen after her role went"
   h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role again"
-  h_read 1 kc:anna "$eva" c_hiv TREAT 200 "" "Dr. Jansen cleared again"
+  h_read 1 p:anna "$eva" c_hiv TREAT 200 "" "Dr. Jansen cleared again"
   probe_done
 }
 
@@ -1254,19 +1211,19 @@ hospital_scim_lifecycle() {
     "SCIM update, deactivation, reactivation and deletion decide the next request on the other instance"
   scim_patch 1 "$bram" '[{"op":"replace","path":"name.formatted","value":"Bram de Vries RN"}]'
   h_assert_code 200 "SCIM updates Nurse de Vries: ${H_BODY:0:200}"
-  h_read 2 kc:bram "$eva" c_vitals TREAT 200 "" "Nurse de Vries after the update"
+  h_read 2 p:bram "$eva" c_vitals TREAT 200 "" "Nurse de Vries after the update"
   scim_patch 2 "$bram" '[{"op":"replace","path":"active","value":false}]'
   h_assert_code 200 "SCIM deactivates Nurse de Vries"
-  h_call 1 kc:bram GET "/ehr/$eva/composition/$(hv c_vitals)" "" TREAT
+  h_call 1 p:bram GET "/ehr/$eva/composition/$(hv c_vitals)" "" TREAT
   h_assert_code 403 "a deactivated nurse reads the vital signs: ${H_BODY:0:200}"
-  h_call 2 kc:bram GET "/ehr/$(hv ehr_piet)" "" TREAT
+  h_call 2 p:bram GET "/ehr/$(hv ehr_piet)" "" TREAT
   h_assert_code 403 "a deactivated nurse is refused everywhere"
   scim_patch 1 "$bram" '[{"op":"replace","path":"active","value":true}]'
   h_assert_code 200 "SCIM reactivates Nurse de Vries"
-  h_read 2 kc:bram "$eva" c_vitals TREAT 200 "" "Nurse de Vries after the reactivation"
+  h_read 2 p:bram "$eva" c_vitals TREAT 200 "" "Nurse de Vries after the reactivation"
   h_call 1 scim DELETE "/scim/v2/Users/$bram"
   h_assert_code 204 "SCIM deletes Nurse de Vries"
-  h_call 2 kc:bram GET "/ehr/$eva/composition/$(hv c_vitals)" "" TREAT
+  h_call 2 p:bram GET "/ehr/$eva/composition/$(hv c_vitals)" "" TREAT
   h_assert_code 403 "a deleted nurse reads the vital signs: ${H_BODY:0:200}"
   probe_done
 
@@ -1288,7 +1245,7 @@ hospital_scim_lifecycle() {
       "$(j_dates "$(h_day -1)")")" '. + [$r]' <<<"$H_EVA_CARE")"
     h_rerelate 2 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva admitted to the emergency department"
   fi
-  h_read 1 kc:dirk "$eva" c_vitals TREAT 200 "" "Dr. Bakker, a member through SCIM, reads the vital signs"
+  h_read 1 p:dirk "$eva" c_vitals TREAT 200 "" "Dr. Bakker, a member through SCIM, reads the vital signs"
   h_call 2 scim PATCH "/scim/v2/Groups/$group" "$(jq -nc --arg m "$(hv person_dirk)" \
     '{schemas:["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
       Operations:[{op:"remove",path:("members[value eq \"" + $m + "\"]")}]}')" "" application/scim+json
@@ -1296,7 +1253,7 @@ hospital_scim_lifecycle() {
   [[ "$H_CODE" = 204 ]] && H_CODE=200
   h_assert_code 200 "SCIM removes Dr. Bakker from the Group on the other instance: \
 ${H_BODY:0:300}"
-  h_read 1 kc:dirk "$eva" c_vitals TREAT 403 refused-no-care-relationship \
+  h_read 1 p:dirk "$eva" c_vitals TREAT 403 refused-no-care-relationship \
     "Dr. Bakker after SCIM removed him from the team"
   probe_done
 
@@ -1306,24 +1263,26 @@ ${H_BODY:0:300}"
     "a role removed through SCIM stops working on the next request on the other instance"
   scim_patch 1 "$(hv person_anna)" '[{"op":"remove","path":"roles[value eq \"CLINICIAN\"]"}]'
   h_assert_code 200 "SCIM removes Dr. Jansen's clinician role: ${H_BODY:0:300}"
-  h_call 2 kc:anna GET "/ehr/$eva/composition/$(hv c_encounter)" "" TREAT
+  h_call 2 p:anna GET "/ehr/$eva/composition/$(hv c_encounter)" "" TREAT
   h_assert_code 403 "Dr. Jansen reads the encounter after her clinician role went"
   scim_patch 2 "$(hv person_anna)" '[{"op":"add","path":"roles","value":[{"value":"CLINICIAN"}]}]'
   h_assert_code 200 "SCIM gives Dr. Jansen her clinician role again: ${H_BODY:0:300}"
-  h_read 1 kc:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen with her clinician role again"
+  h_read 1 p:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen with her clinician role again"
   probe_done
 }
 
-# Restarts both instances, one after the other, with the patient portal's
-# `patients` issuer beside the realm, so Eva and Frank sign in; the
-# discovery document still names the realm. The issuer is a key space the
-# instances fill themselves once both name it, with no refill (#5688).
+# Restarts both instances, one after the other, with FerroSMART in
+# `[auth.smart] patient_issuers`, so the patient/ grants of Eva's and Frank's
+# standalone launches count; the discovery document still names FerroSMART.
+# The owner approved this re-plan on 2026-11-19 (#5832): behind FerroSMART
+# patients and professionals sign in through one issuer, so the separate
+# `patients` issuer this probe added (#5688) has no counterpart.
 hospital_portal_boot() {
-  probe "P-HOSP-PORTAL-BOOT" "$PROBE_WORKING" "deployment" "#5610 #5688" \
-    "both instances restart one after the other with the patients issuer and fill its key space with no refill"
+  probe "P-HOSP-PORTAL-BOOT" "$PROBE_WORKING" "deployment" "#5610 #5688 #5832" \
+    "both instances restart one after the other honouring FerroSMART's patient/ grants, and a patient's launch reads"
   hospital_files patients
   if ! hospital_restart; then
-    probe_fail "two serving instances with the portal issuer" "$(replica_state "${HOSPITAL_FILES[@]}")"
+    probe_fail "two serving instances honouring FerroSMART's patient/ grants" "$(replica_state "${HOSPITAL_FILES[@]}")"
     h_boot_log
     probe_done
     return 1
@@ -1332,7 +1291,7 @@ hospital_portal_boot() {
   eva="$(hv ehr_eva)"
   for n in 1 2; do
     h_portal_bound "$n" "pt:eva:$eva" "$eva"
-    assert_eq 200 "$H_CODE" "Eva's portal login binds on instance $n once both name the issuer: ${H_BODY:0:300}"
+    assert_eq 200 "$H_CODE" "Eva's launch reads her EHR on instance $n once both honour FerroSMART: ${H_BODY:0:300}"
   done
   probe_done
   hospital_discovery
@@ -1350,35 +1309,81 @@ h_portal_bound() {
   done
 }
 
-# Restarts the first instance without the `patients` issuer: its portal
-# logins stop binding on the second instance at once, with no restart of it,
-# and the realm's logins bind on both (#5688).
+# Restarts the first instance without FerroSMART in `[auth.smart]
+# patient_issuers`: there a patient's launch is refused for its patient/
+# grant (403, `insufficient_scope`, RFC 6750 §3.1), the second instance still
+# honours it, and the professionals read on both. Owner-approved re-plan of
+# #5688's issuer removal, 2026-11-19 (#5832): the setting is each instance's
+# own, so no state crosses to the other.
 hospital_portal_remove() {
-  probe "P-HOSP-PORTAL-REMOVE" "$PROBE_WORKING" "deployment" "#5688 #5731" \
-    "removing the patients issuer from one instance stops its logins binding on the other with no restart"
+  probe "P-HOSP-PORTAL-REMOVE" "$PROBE_WORKING" "deployment" "#5688 #5731 #5832" \
+    "an instance that stops honouring FerroSMART's patient/ grants refuses a patient's launch; the other still reads"
   local eva
   eva="$(hv ehr_eva)"
   hospital_files
   if ! hdc up -d --wait --force-recreate --no-deps ferroehr >/dev/null 2>&1 \
     || ! wait_http "$H1/health/readiness" 120; then
-    probe_fail "the first instance serving without the patients issuer" \
+    probe_fail "the first instance serving without FerroSMART's patient/ grants" \
       "$(replica_state "${HOSPITAL_FILES[@]}")"
     h_boot_log
     probe_done
     return 0
   fi
   h_call 2 "pt:eva:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
-  assert_eq 403 "$H_CODE" "Eva on the instance that still trusts the issuer: ${H_BODY:0:300}"
-  assert_eq refused-unbound "$(h_binding_refusal)" "Eva's refusal on the instance that still trusts the issuer"
+  assert_eq 200 "$H_CODE" "Eva on the instance that still honours FerroSMART: ${H_BODY:0:300}"
   h_call 2 "pt:frank:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
-  assert_eq 403 "$H_CODE" "Frank on the instance that still trusts the issuer: ${H_BODY:0:300}"
-  h_call 1 "pt:eva:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
-  assert_eq 401 "$H_CODE" "Eva on the instance that no longer trusts the issuer: ${H_BODY:0:300}"
+  assert_eq 200 "$H_CODE" "Frank on the instance that still honours FerroSMART: ${H_BODY:0:300}"
+  local who
+  for who in eva frank; do
+    h_call 1 "pt:$who:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
+    assert_eq 403 "$H_CODE" "$who on the instance that no longer honours FerroSMART: ${H_BODY:0:300}"
+    assert_contains "$(grep -i '^www-authenticate:' <<<"$H_HEADERS")" "insufficient_scope" \
+      "$who's refusal names the patient/ grant that no longer counts"
+  done
   local n
   for n in 1 2; do
-    h_call "$n" kc:anna GET "/ehr/$eva/composition/$(hv c_encounter)" "" TREAT
+    h_call "$n" p:anna GET "/ehr/$eva/composition/$(hv c_encounter)" "" TREAT
     assert_eq 200 "$H_CODE" "Dr. Jansen on instance $n after the removal: ${H_BODY:0:300}"
   done
+  probe_done
+}
+
+# The EHR launch through the viewer's Launch button (#5880): the viewer
+# registers Eva's EHR at FerroSMART's launch API and sends its new window to
+# the app with `iss` and `launch` (SMART App Launch 2.2.0, Launch App: EHR
+# Launch); the app then takes Dr. Jansen through FerroSMART, and the token
+# response carries the EHR in context (FerroSMART docs/architecture.md §13.17).
+hospital_ehr_launch() {
+  probe "P-HOSP-EHR-LAUNCH" "$PROBE_WORKING" "server" "#5880 #5832" \
+    "the viewer's Launch button launches the app for Eva's EHR, and its token response carries that EHR"
+  local eva viewer jar answer location launch iss response
+  eva="$(hv ehr_eva)"
+  viewer="http://localhost:${FERROEHR_VIEWER_PORT:-3000}"
+  jar="$(mktemp "$PROBE_TMP/viewer.XXXXXX")"
+  curl -s -o /dev/null -c "$jar" -b "$jar" -H "Origin: $viewer" -H 'Sec-Fetch-Site: same-origin' \
+    --data-urlencode username=ferroehr --data-urlencode password=ferroehr --data-urlencode next=/ \
+    "$viewer/sign-in"
+  location="$(curl -s -o "$PROBE_TMP/launch-body" -w '%{http_code} %{redirect_url}' -c "$jar" -b "$jar" \
+    -H "Origin: $viewer" -H 'Sec-Fetch-Site: same-origin' \
+    --data-urlencode intent=launch --data-urlencode "app=$HS_APP" "$viewer/ehrs/$eva")"
+  rm -f "$jar"
+  assert_eq 303 "${location%% *}" "the Launch post answers See Other: $(head -c 300 "$PROBE_TMP/launch-body")"
+  location="${location#* }"
+  assert_contains "$location" "$HS_LAUNCH_URL?" "the new window goes to the app's launch URL"
+  iss="$(hs_param iss "$location")"
+  launch="$(hs_param launch "$location")"
+  assert_eq "$HS_BASE" "$iss" "the launch names the openEHR base as iss"
+  if [[ -z "$launch" ]]; then
+    probe_fail "a launch value" "none in ${location:0:200}"
+    probe_done
+    return 0
+  fi
+  answer="$(hs_code_flow anna "launch openid patient/composition-*.rs" "$launch")"
+  response="$(jq -c '{ehrId, patient, scope}' <<<"$answer" 2>/dev/null)"
+  assert_eq "$eva" "$(jq -r '.ehrId // empty' <<<"$answer" 2>/dev/null)" \
+    "the app's token response carries Eva's EHR: ${response:-${answer:0:300}}"
+  assert_contains "$(jq -r '.scope // empty' <<<"$answer" 2>/dev/null)" "launch" \
+    "the app keeps the launch scope"
   probe_done
 }
 
@@ -1387,9 +1392,9 @@ hospital_portal_remove() {
 hospital_policy() {
   probe "P-HOSP-POLICY" "$PROBE_WORKING" "server" "#5610 #5731" \
     "the controller's administrator writes the ACCESS_POLICY and the privacy officer reads it"
-  H_IF_NONE_MATCH='*' h_call 2 kc:ferroehr PUT "$HX/admin/access_policy" "$(j_policy "$(hv lab)")"
+  H_IF_NONE_MATCH='*' h_call 2 p:ferroehr PUT "$HX/admin/access_policy" "$(j_policy "$(hv lab)")"
   [[ "$H_CODE" = 201 ]] || h_fail_call "201 for the controller's ACCESS_POLICY"
-  h_call 1 kc:hans GET "$HX/admin/access_policy"
+  h_call 1 p:hans GET "$HX/admin/access_policy"
   h_assert_code 200 "Hans reads the policy on the other instance: ${H_BODY:0:200}"
   assert_eq true "$(jq -r '.care_relationship_required // .document.care_relationship_required // empty' \
     <<<"$H_BODY")" "the policy read back requires a care relationship"
@@ -1457,13 +1462,13 @@ hospital_log() {
     <<<"$mine")" "Eva's view withholds the roles of a person (EHDS Art. 9(3))"
   assert_eq 0 "$(jq '[.entries[]? | select(.link != null or .credential != null)] | length' <<<"$mine")" \
     "Eva's view carries no link and no credential"
-  h_call 1 kc:hans GET "$HX/admin/access-log?ehr_id=$eva&fetch=1000"
+  h_call 1 p:hans GET "$HX/admin/access-log?ehr_id=$eva&fetch=1000"
   h_assert_code 200 "Hans reads the log"
   assert_contains "$(jq -c '[.entries[]? | select(.accessor.kind.value == "person") | .accessor.roles // empty][0]' \
     <<<"$H_BODY")" "CLINICIAN" "Hans's full view carries the roles"
   h_call 2 "pt:eva:$eva" GET "$HX/ehr/$(hv ehr_gina)/access_log"
   h_assert_code 404 "Eva reads Gina's log"
-  h_call 1 kc:anna GET "$HX/admin/access-log?ehr_id=$eva" "" TREAT
+  h_call 1 p:anna GET "$HX/admin/access-log?ehr_id=$eva" "" TREAT
   h_assert_code 403 "Dr. Jansen reads the review"
   probe_done
 
@@ -1471,7 +1476,7 @@ hospital_log() {
     "the access log and the system chain both instances appended to verify"
   local n out
   for n in 1 2; do
-    h_call "$n" kc:hans POST "$HX/admin/access-log/verify"
+    h_call "$n" p:hans POST "$HX/admin/access-log/verify"
     h_assert_code 200 "instance $n verifies the access log: ${H_BODY:0:300}"
   done
   hdc exec -T ferroehr /usr/local/bin/ferroehr audit-chain seal >/dev/null 2>&1
@@ -1500,10 +1505,13 @@ pix_feed() {
 # FerroPIX pseudonym and Eva's PERSON declares it (#5634).
 hospital_pixm() {
   unset FERROEHR_EHR_INDEX
+  # FerroEHR serves TLS in this leg (hospital_pix_up), so the base FerroSMART
+  # names in `aud` and its picker reads is the https one.
+  HS_BASE="https://localhost:8080/ferroehr/rest/openehr/v1"
   hospital_files patients
   probe "P-HOSP-PIXM-BOOT" "$PROBE_WORKING" "deployment" "#5610" \
     "the stack boots again with the default pixm subject index and the portal issuer"
-  if ! hospital_up || ! hospital_pix_up; then
+  if ! hospital_up urn:oid:2.999.7.1 || ! hospital_pix_up; then
     probe_fail "two serving instances on pixm" "$(replica_state "${HOSPITAL_FILES[@]}")"
     h_boot_log
     hospital_pix_down
@@ -1514,28 +1522,30 @@ hospital_pixm() {
 
   probe "P-HOSP-PIXM-SETUP" "$PROBE_WORKING" "server" "#5610 #5731" \
     "Dr. Jansen, Cardiology, Eva under its care, Frank her representative and Eva's EHR through FerroPIX"
-  kc_role CLINICIAN
-  kc_user anna Anna Jansen CLINICIAN
+  local role
+  for role in CLINICIAN ADMIN PATIENT; do hs_role "$role"; done
+  hs_user anna Anna Jansen CLINICIAN
+  hs_user ferroehr Ferro EHR ADMIN
+  hs_user eva Eva Visser PATIENT
+  hs_user frank Frank Visser PATIENT
   h_scim_client_grants || h_fail_call "the SCIM client's role ceiling and care-team grant"
   scim_user 1 anna "Dr. Anna Jansen" CLINICIAN || h_fail_call "SCIM creates anna"
+  scim_user 2 ferroehr "Ferro EHR" || h_fail_call "SCIM creates the controller's administrator"
   h_party cardiology group "$(j_named_party GROUP Cardiology)" || h_fail_call "the Cardiology team"
   h_party hospital organisation "$(j_named_party ORGANISATION "Sint Example Ziekenhuis")" || h_fail_call "the controller"
+  h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
+    || h_fail_call "the hospital's SMART app"
   h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role"
-  h_call 1 scim GET "/scim/v2/Users?filter=$(jq -rn '"userName eq \"keycloak-ferroehr\""|@uri')"
-  hv_set person_controller "$(jq -r '.Resources[0].id // empty' <<<"$H_BODY")"
+  hv_set person_controller "$(hv person_ferroehr)"
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"
   h_relate 2 admin person "$(hv person_anna)" \
     "[$(j_care member PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -30)")")]" \
     || h_fail_call "Dr. Jansen joins Cardiology"
-  h_party person_eva person "$(j_named_party PERSON "Eva Visser")" || h_fail_call "Eva's PERSON"
+  h_patient_person person_eva "Eva Visser" eva || h_fail_call "Eva's PERSON"
   H_EVA_CARE="[$(j_care under_care_of PERSON "$(hv person_eva)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -10)")")]"
   h_rerelate 1 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva's admission"
-  h_call 1 admin GET "/demographic/person/$(hv person_anna)"
-  h_party person_frank person "$(jq -c --arg i "$H_PATIENTS" 'del(.uid) | del(.relationships)
-    | .name.value = "Frank Visser"
-    | .details.items = [.details.items[0] | .value = {_type:"DV_IDENTIFIER",issuer:$i,id:"frank",type:"login"}]
-    | .identities[0].details.items[0].value.value = "Frank Visser"' <<<"$H_BODY")" || h_fail_call "Frank's PERSON"
+  h_patient_person person_frank "Frank Visser" frank || h_fail_call "Frank's PERSON"
   h_rerelate 2 admin person "$(hv person_frank)" "[$(j_care represents PERSON "$(hv person_frank)" \
     PERSON "$(hv person_eva)" "$(j_dates "$(h_day -365)")")]" || h_fail_call "Frank represents Eva"
   local fed
@@ -1565,19 +1575,20 @@ hospital_pixm() {
     is_queryable:true,is_modifiable:true}')"
   hv_set ehr_eva "$(jq -r '.ehr_id.value // empty' <<<"$H_BODY")"
   [[ "$H_CODE" = 201 ]] || h_fail_call "Eva's EHR, its subject resolved through FerroPIX"
+  [[ -n "$(hv ehr_eva)" ]] && hs_subject "$(hv ehr_eva)" "$pseudonym"
   h_call 1 admin POST /definition/template/adl1.4 "@$H_OPTS/Vital Signs Encounter (Composition).opt" "" application/xml
   local eva
   eva="$(hv ehr_eva)"
-  h_commit c_vitals 2 kc:anna "$eva" "$H_T_VITALS" || h_fail_call "the vital signs"
+  h_commit c_vitals 2 p:anna "$eva" "$H_T_VITALS" || h_fail_call "the vital signs"
   hospital_pix_patients
-  H_IF_NONE_MATCH='*' h_call 1 kc:ferroehr PUT "$HX/admin/access_policy" "$(j_policy)"
+  H_IF_NONE_MATCH='*' h_call 1 p:ferroehr PUT "$HX/admin/access_policy" "$(j_policy)"
   [[ "$H_CODE" = 201 ]] || h_fail_call "the controller's ACCESS_POLICY"
   probe_done
 
   probe "P-HOSP-PIXM-CARE" "$PROBE_WORKING" "server" "#5634" \
     "under pixm, Dr. Jansen reads the record of the patient she treats, on both instances"
-  h_read 2 kc:anna "$eva" c_vitals TREAT 200 "" "Dr. Jansen under pixm (#5634)"
-  h_read 1 kc:anna "$eva" c_vitals TREAT 200 "" "Dr. Jansen under pixm on the other instance (#5634)"
+  h_read 2 p:anna "$eva" c_vitals TREAT 200 "" "Dr. Jansen under pixm (#5634)"
+  h_read 1 p:anna "$eva" c_vitals TREAT 200 "" "Dr. Jansen under pixm on the other instance (#5634)"
   probe_done
 
   probe "P-HOSP-PIXM-REPRESENTATIVE" "$PROBE_WORKING" "server" "#5634 #5633" \
