@@ -216,6 +216,11 @@ pub struct Limits {
     pub part_size: usize,
     /// How many parts of one blob move at once.
     pub part_concurrency: usize,
+    /// How old an existing blob may be before a write of the same bytes
+    /// rewrites it instead of skipping, which renews its age. Half the orphan
+    /// sweep's grace period, so a blob a commit is about to reference is never
+    /// old enough for the sweep to take.
+    pub refresh_after: Duration,
 }
 
 impl Default for Limits {
@@ -225,6 +230,7 @@ impl Default for Limits {
             request_timeout: Duration::from_secs(30),
             part_size: 8 * 1024 * 1024,
             part_concurrency: 4,
+            refresh_after: Duration::from_mins(30),
         }
     }
 }
@@ -412,9 +418,14 @@ impl BlobStore {
         answer
     }
 
-    /// Writes the blob `key` names from `chunks` unless it already exists,
-    /// checking while it writes that the bytes are `size` long and hash to
-    /// `key`.
+    /// Writes the blob `key` names from `chunks` unless it already exists
+    /// and is younger than [`Limits::refresh_after`], checking while it writes
+    /// that the bytes are `size` long and hash to `key`.
+    ///
+    /// An existing blob older than that is written again, which renews its
+    /// age, so the orphan sweep never takes a blob a commit is about to
+    /// reference by deduplication. A backend that records no write time keeps
+    /// what it has.
     ///
     /// A blob larger than the part size goes up as a multipart upload with
     /// parts sent concurrently. A length or digest mismatch, or a failing
@@ -435,7 +446,7 @@ impl BlobStore {
     where
         I: IntoIterator<Item = Result<Bytes, MultimediaError>>,
     {
-        if self.exists(key).await? {
+        if self.fresh(key).await? {
             return Ok(());
         }
         let span = self.span(BlobOp::Write, Some(key));
@@ -447,6 +458,30 @@ impl BlobStore {
         span.record("bytes", size);
         span.record("elapsed_ms", elapsed_ms(started));
         written
+    }
+
+    /// Whether a blob exists under `key` and was written within
+    /// [`Limits::refresh_after`] (or its backend records no write time).
+    async fn fresh(&self, key: &BlobKey) -> Result<bool, BlobError> {
+        let span = self.span(BlobOp::Exists, Some(key));
+        let started = Instant::now();
+        let stat = self
+            .op
+            .stat(&key.to_string())
+            .instrument(span.clone())
+            .await;
+        span.record("elapsed_ms", elapsed_ms(started));
+        match stat {
+            Ok(meta) => Ok(meta.last_modified().is_none_or(|written| {
+                !older_than(written.into_inner(), self.limits.refresh_after)
+            })),
+            Err(source) if source.kind() == ErrorKind::NotFound => Ok(false),
+            Err(source) => Err(BlobError {
+                op: BlobOp::Exists,
+                key: Some(*key),
+                source: Box::new(source),
+            }),
+        }
     }
 
     /// The body of [`Self::write_if_absent`], inside its span.
@@ -604,6 +639,18 @@ impl BlobStore {
     /// # Errors
     /// [`BlobError`] when the backend cannot list the bucket.
     pub async fn content_keys(&self) -> Result<Vec<BlobKey>, BlobError> {
+        let listing = self.content_listing().await?;
+        Ok(listing.into_iter().map(|(key, _)| key).collect())
+    }
+
+    /// [`Self::content_keys`] with each blob's last write time, where the
+    /// backend records one.
+    ///
+    /// # Errors
+    /// [`BlobError`] when the backend cannot list the bucket.
+    pub async fn content_listing(
+        &self,
+    ) -> Result<Vec<(BlobKey, Option<jiff::Timestamp>)>, BlobError> {
         let span = self.span(BlobOp::List, None);
         let started = Instant::now();
         let listed = self.op.list("/").instrument(span.clone()).await;
@@ -613,13 +660,22 @@ impl BlobStore {
             key: None,
             source: Box::new(source),
         })?;
-        let mut keys: Vec<BlobKey> = entries
+        let mut keys: Vec<(BlobKey, Option<jiff::Timestamp>)> = entries
             .iter()
             .filter(|entry| entry.metadata().mode().is_file())
             // NOTE: an object whose name is not a digest is someone else's, which is absence from our set.
-            .filter_map(|entry| entry.path().parse().ok())
+            .filter_map(|entry| {
+                let key = entry.path().parse().ok()?;
+                Some((
+                    key,
+                    entry
+                        .metadata()
+                        .last_modified()
+                        .map(opendal::raw::Timestamp::into_inner),
+                ))
+            })
             .collect();
-        keys.sort_unstable();
+        keys.sort_unstable_by_key(|(key, _)| *key);
         Ok(keys)
     }
 
@@ -654,6 +710,14 @@ async fn abort(
             MultimediaError::Store(failed(e))
         }
     }
+}
+
+/// Whether `written` lies more than `age` before now. A write time in the
+/// future (clock skew) is not old.
+#[must_use]
+pub fn older_than(written: jiff::Timestamp, age: Duration) -> bool {
+    let elapsed = jiff::Timestamp::now().duration_since(written);
+    jiff::SignedDuration::try_from(age).is_ok_and(|age| elapsed > age)
 }
 
 /// A byte count as `u64`; saturates on a platform whose `usize` is wider.

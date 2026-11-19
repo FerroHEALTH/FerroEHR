@@ -11,6 +11,8 @@
 //! it onto the extension's runtime parameters.
 
 pub mod config;
+#[cfg(feature = "multimedia")]
+pub mod sweep;
 
 #[cfg(feature = "multimedia")]
 use ferroehr_ext::multimedia::blob::{BackendSettings, BlobStoreParams, Limits, S3Settings};
@@ -40,7 +42,7 @@ use crate::extensions::multimedia::config::MultimediaConfig;
 /// Returns `MultimediaError::Endpoint` when
 /// [`config::S3Config::endpoint_url`] refuses the endpoint, and
 /// `MultimediaError::Config` or `ConfigFailed` when the blob store cannot be
-/// built. A read-back-only store (disabled, but
+/// built, or offload is enabled with a zero `orphan_grace`. A read-back-only store (disabled, but
 /// an endpoint left configured) never fails the boot: turning an integration
 /// off must not be able to stop the server starting, so an unbuildable client
 /// there degrades to `None` — and the read path is loud about it per request.
@@ -68,6 +70,13 @@ pub fn engine_from_config(
             allow_http: cfg.allows_http(),
         }),
     };
+    // NOTE: #5957, our own design: a zero grace lets the sweep take a blob whose commit still runs.
+    if cfg.enabled && cfg.orphan_grace.get().is_zero() {
+        return Err(MultimediaError::Config(String::from(
+            "record.multimedia.orphan_grace = \"0s\" would let the orphan sweep delete a blob a \
+             running commit has just uploaded; set it well above the longest commit",
+        )));
+    }
     let size = |what: &str, value: ByteSize| {
         usize::try_from(value.bytes()).map_err(|error| {
             MultimediaError::Config(format!(
@@ -83,6 +92,7 @@ pub fn engine_from_config(
             request_timeout: cfg.request_timeout.get(),
             part_size: size("part_size", cfg.part_size)?,
             part_concurrency: cfg.part_concurrency,
+            refresh_after: cfg.orphan_grace.get() / 2,
         },
     };
     let threshold = size("threshold", cfg.threshold)?;

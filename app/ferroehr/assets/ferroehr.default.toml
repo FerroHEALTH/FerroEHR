@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 856 keys. A deployment that holds real data sets the 10
+# This file lists 857 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -1938,6 +1938,12 @@ subject_namespaces = []
 # How many parts of one blob move at once. Default `4`. Optional
 # (infrastructure).
 #? part_concurrency = 4
+# How old an unreferenced blob must be before `ferroehr db sweep-blobs` deletes
+# it. A write of bytes already stored rewrites a blob older than half of this,
+# so a blob a commit is about to reference is never that old. Keep it well
+# above the longest commit; zero is refused. Default `"1h"`. Optional
+# (infrastructure).
+#? orphan_grace = "1h"
 
 # The S3 backend's settings (`[record.multimedia.s3]`).
 #? [record.multimedia.s3]

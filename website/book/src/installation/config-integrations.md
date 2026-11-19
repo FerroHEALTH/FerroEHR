@@ -457,6 +457,7 @@ read back from it.
 | `request_timeout` | duration | `"30s"` | How long one request to the blob store, or one chunk of its body, may take. A request that fails with a temporary error is retried twice. |
 | `part_size` | size | `"8MiB"` | A blob larger than this is uploaded as a multipart upload in parts of this size, and read in ranged chunks of it. |
 | `part_concurrency` | integer | `4` | How many parts of one blob move at once. |
+| `orphan_grace` | duration | `"1h"` | How old a blob no version references must be before `ferroehr db sweep-blobs` deletes it. Keep it well above your longest commit. With offload enabled, `"0s"` is refused at start. |
 
 ### `[record.multimedia.s3]`
 

@@ -66,6 +66,12 @@ pub struct MultimediaConfig {
     pub part_size: ByteSize,
     /// How many parts of one blob move at once. Default `4`.
     pub part_concurrency: usize,
+    /// How old an unreferenced blob must be before `ferroehr db sweep-blobs`
+    /// deletes it. A write of bytes already stored rewrites a blob older than
+    /// half of this, so a blob a commit is about to reference is never that
+    /// old. Keep it well above the longest commit; zero is refused. Default
+    /// `"1h"`.
+    pub orphan_grace: Duration,
     /// The S3 backend's settings (`[record.multimedia.s3]`).
     pub s3: S3Config,
 }
@@ -80,6 +86,7 @@ impl Default for MultimediaConfig {
             request_timeout: Duration::from_secs(30),
             part_size: ByteSize::from_mib(8),
             part_concurrency: 4,
+            orphan_grace: Duration::from_hours(1),
             s3: S3Config::default(),
         }
     }
@@ -241,6 +248,41 @@ impl S3Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// #5957: with offload enabled a zero grace would let the sweep take a
+    /// blob a running commit has just uploaded, so the engine refuses it; a
+    /// store that only reads old blobs back has no upload to protect.
+    #[cfg(feature = "multimedia")]
+    #[test]
+    fn a_zero_orphan_grace_is_refused_while_offload_is_enabled() {
+        use ferroehr_ext::multimedia::MultimediaError;
+
+        let with = |enabled: bool, grace: u64| MultimediaConfig {
+            enabled,
+            orphan_grace: Duration::from_secs(grace),
+            s3: S3Config {
+                url: Some(SecretUrl::new("http://127.0.0.1:9")),
+                ..S3Config::default()
+            },
+            ..MultimediaConfig::default()
+        };
+        let build = |cfg: &MultimediaConfig| crate::extensions::multimedia::engine_from_config(cfg);
+        assert!(
+            matches!(
+                build(&with(true, 0)),
+                Err(MultimediaError::Config(message)) if message.contains("orphan_grace")
+            ),
+            "a zero grace with offload enabled is refused by name"
+        );
+        assert!(
+            matches!(build(&with(true, 1)), Ok(Some(_))),
+            "one second builds"
+        );
+        assert!(
+            matches!(build(&with(false, 0)), Ok(Some(_))),
+            "a read-back store never fails the start"
+        );
+    }
 
     /// Every refusal of a malformed endpoint carrying `userinfo` keeps the
     /// password out of its message, and an absent or absolute endpoint passes.

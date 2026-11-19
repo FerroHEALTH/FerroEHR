@@ -18,6 +18,7 @@ multimedia = [
     "dep:opendal-http-transport-reqwest",
     "dep:reqwest",
     "dep:futures",
+    "dep:jiff",
     "dep:tracing",
     "dep:openehr-base",
     "dep:openehr-its",
@@ -40,6 +41,7 @@ openehr-rm = { path = "../../crates/openehr-rm", optional = true }
 base64 = { workspace = true, optional = true }
 bytes = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
+jiff = { workspace = true, optional = true }
 opendal = { workspace = true, optional = true }
 opendal-http-transport-reqwest = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }
