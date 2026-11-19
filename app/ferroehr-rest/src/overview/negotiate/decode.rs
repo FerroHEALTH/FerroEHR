@@ -38,24 +38,57 @@ pub(crate) fn json_value(headers: &HeaderMap, body: &Bytes) -> Result<serde_json
 ///
 /// The door refuses what [`json_value`] refuses, with its words: text that is
 /// not JSON, and a `_type`-tagged node carrying a key its class does not
-/// declare. A body with neither defect is found so in one pass over its text
-/// that builds no value (#6038); any other takes the value-building path,
-/// which names the defect, and a body that path admits goes on as its
-/// rendering.
+/// declare. It also refuses a member name written twice in one object, at any
+/// depth, as the direct commit routes do through the strict reader
+/// ([`refuse_repeated_names`], #6043). A body with no such defect is found so
+/// in one pass over its text that builds no value (#6038) and goes on as its
+/// text.
 ///
 /// # Errors
-/// As [`json_value`].
+/// As [`json_value`], and [`ApiError::BadRequest`] for a repeated member
+/// name.
 pub(crate) fn contribution_text(
     headers: &HeaderMap,
     body: &Bytes,
 ) -> Result<ContributionText, ApiError> {
     require_json(headers)?;
     if let Ok(text) = std::str::from_utf8(body)
-        && matches!(openehr_its::json::holds_undeclared_key(text), Ok(false))
+        && let Ok(found) = openehr_its::json::scan_keys(text)
     {
-        return Ok(text.to_owned().into());
+        refused_repeat(found.repeated)?;
+        if !found.undeclared {
+            return Ok(text.to_owned().into());
+        }
     }
     parse_json(body).map(Into::into)
+}
+
+/// Refuses a JSON body in which an object writes a member name twice, at any
+/// depth.
+///
+/// NOTE: RFC 8259 §4 leaves the behaviour on a repeated name "unpredictable" and RFC 8785 §3.1
+/// (I-JSON, RFC 7493 §2.3) forbids one, so the body "could not be parsed or is invalid" (400).
+///
+/// A body that is not JSON text is left to the reader that follows, which
+/// words that refusal.
+///
+/// # Errors
+/// [`ApiError::BadRequest`] naming the repeated member and the path to its
+/// object.
+pub(crate) fn refuse_repeated_names(body: &Bytes) -> Result<(), ApiError> {
+    match std::str::from_utf8(body).map(openehr_its::json::scan_keys) {
+        Ok(Ok(found)) => refused_repeat(found.repeated),
+        _ => Ok(()),
+    }
+}
+
+/// The 400 of a repeated member name the scan found.
+fn refused_repeat(repeated: Option<JsonParseError>) -> Result<(), ApiError> {
+    repeated.map_or(Ok(()), |repeated| {
+        Err(ApiError::BadRequest(format!(
+            "invalid canonical JSON body: {repeated}"
+        )))
+    })
 }
 
 /// Decode a required JSON body into the typed DTO `T`, strictly, with a
@@ -307,6 +340,34 @@ mod tests {
                 panic!("both doors refuse {body:?} as a 400");
             };
             assert_eq!(text, value);
+        }
+        for (body, path) in [
+            (
+                &br#"{"versions":[],"versions":[]}"#[..],
+                "duplicate field `versions`",
+            ),
+            (
+                &br#"{"versions":[{"data":{"_type":"COMPOSITION","name":1,"name":2}}]}"#[..],
+                "duplicate field `name` (at $.versions[0].data)",
+            ),
+            (
+                &br#"{"audit":{"committer":{"name":"a","name":"b"}}}"#[..],
+                ".audit.committer",
+            ),
+        ] {
+            let body = Bytes::copy_from_slice(body);
+            assert!(
+                json_value(&h, &body).is_ok(),
+                "a parsed value hides the repeat"
+            );
+            match contribution_text(&h, &body) {
+                Err(ApiError::BadRequest(text)) => assert!(text.contains(path), "{text}"),
+                other => panic!("a repeated member name is a 400, got {other:?}"),
+            }
+            assert!(matches!(
+                refuse_repeated_names(&body),
+                Err(ApiError::BadRequest(_))
+            ));
         }
         let admitted = Bytes::from_static(br#"{ "versions" : [ { "data" : { "n" : 1.50 } } ] }"#);
         let text = contribution_text(&h, &admitted).expect("admitted");

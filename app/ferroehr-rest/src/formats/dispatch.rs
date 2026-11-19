@@ -319,6 +319,7 @@ pub(crate) async fn contribution_from_simplified(
     body: &Bytes,
     format: WireFormat,
 ) -> Result<Value, RestError> {
+    negotiate::decode::refuse_repeated_names(body)?;
     let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
     let mut envelope: NewContribution<Value> = serde_json::from_slice(body).map_err(|e| {
         RestError::from(ApiError::BadRequest(format!(

@@ -369,104 +369,201 @@ pub fn reject_undeclared_keys(value: &serde_json::Value) -> Result<(), JsonParse
     }
 }
 
-/// Whether canonical-JSON text holds a `_type`-tagged node carrying a wire key
-/// its class does not declare: the verdict of [`reject_undeclared_keys`] read
-/// off the text in one pass that builds no value.
+/// What one pass over canonical-JSON text finds in its member names, with no
+/// value built ([`scan_keys`]).
+#[derive(Debug)]
+pub struct KeyFindings {
+    /// Whether a `_type`-tagged node carries a wire key its class does not
+    /// declare: the verdict of [`reject_undeclared_keys`] on the parsed text.
+    pub undeclared: bool,
+    /// The first object that writes a member name twice, as the refusal the
+    /// strict reader gives a repeated key, with the path to the object.
+    pub repeated: Option<JsonParseError>,
+}
+
+/// Reads the member names of canonical-JSON text in one pass that builds no
+/// value.
 ///
-/// A commit door that hands the text on to the typed reader asks this first,
-/// and takes the value-building path of [`reject_undeclared_keys`] only for a
-/// body this refuses, to name the key. A repeated `_type` is read as its last
-/// occurrence, as a parsed value holds it.
+/// A commit door that hands the text on to the typed reader asks this first.
+/// It refuses a repeated member name itself: an object that writes a name
+/// twice is ambiguous (RFC 8259 §4: the names "SHOULD be unique", and the
+/// behaviour of software that receives one that is not "is unpredictable"),
+/// the canonical form signatures are computed over has none (RFC 8785 §3.1
+/// builds on I-JSON, RFC 7493 §2.3: "Objects in I-JSON messages MUST NOT have
+/// members with duplicate names"), and a parsed value would hold the last
+/// occurrence and hide the first. For an undeclared key it takes the
+/// value-building path of [`reject_undeclared_keys`], which names the key. A
+/// repeated `_type` is read as its last occurrence for that verdict.
 ///
 /// # Errors
 /// The `serde_json` error of text that is not one JSON value.
-pub fn holds_undeclared_key(json: &str) -> Result<bool, serde_json::Error> {
+pub fn scan_keys(json: &str) -> Result<KeyFindings, serde_json::Error> {
     let mut deserializer = serde_json::Deserializer::from_str(json);
     let mut keys = Vec::new();
     let found = serde::de::DeserializeSeed::deserialize(KeyScan(&mut keys), &mut deserializer)?;
     deserializer.end()?;
-    Ok(found)
+    Ok(KeyFindings {
+        undeclared: found.undeclared,
+        repeated: found.repeated.map(|repeated| {
+            let refusal = JsonParseError::custom(format!("duplicate field `{}`", repeated.name));
+            repeated
+                .path
+                .iter()
+                .fold(refusal, |refusal, step| match step {
+                    Step::Member(name) => refusal.in_field(name),
+                    Step::Item(index) => refusal.in_index(*index),
+                })
+        }),
+    })
 }
 
-/// The pass of [`holds_undeclared_key`] over one JSON value. The keys of the
-/// objects being read share one buffer, each object owning its tail.
+/// One step of the path to a value, from the value outward.
+enum Step {
+    Member(String),
+    Item(usize),
+}
+
+/// The first repeated member name under a value, and the path from the
+/// object that holds it out to that value.
+struct Repeated {
+    name: String,
+    path: Vec<Step>,
+}
+
+/// What [`KeyScan`] found under one value.
+#[derive(Default)]
+struct Found {
+    undeclared: bool,
+    repeated: Option<Repeated>,
+}
+
+impl Found {
+    /// Takes in what a child at `step` found.
+    fn take(&mut self, child: Found, step: impl FnOnce() -> Step) {
+        self.undeclared |= child.undeclared;
+        if self.repeated.is_none()
+            && let Some(mut repeated) = child.repeated
+        {
+            repeated.path.push(step());
+            self.repeated = Some(repeated);
+        }
+    }
+}
+
+/// How many members an object may hold before its names are sorted to find a
+/// repeated one, where fewer are compared pairwise.
+const SORTED_FROM: usize = 24;
+
+/// The first name `names` holds twice.
+fn repeated_name<'a>(names: &'a [std::borrow::Cow<'_, str>]) -> Option<&'a str> {
+    if names.len() < SORTED_FROM {
+        return names.iter().enumerate().find_map(|(at, name)| {
+            names
+                .get(..at)
+                .is_some_and(|before| before.contains(name))
+                .then_some(name.as_ref())
+        });
+    }
+    let mut sorted: Vec<&str> = names.iter().map(AsRef::as_ref).collect();
+    sorted.sort_unstable();
+    sorted
+        .windows(2)
+        .find_map(|pair| (pair.first() == pair.get(1)).then(|| pair.first().copied()))
+        .flatten()
+}
+
+/// The pass of [`scan_keys`] over one JSON value. The names of the objects
+/// being read share one buffer, each object owning its tail.
 struct KeyScan<'a, 'de>(&'a mut Vec<std::borrow::Cow<'de, str>>);
 
 impl<'de> serde::de::DeserializeSeed<'de> for KeyScan<'_, 'de> {
-    type Value = bool;
+    type Value = Found;
 
-    fn deserialize<D: serde::Deserializer<'de>>(self, deserializer: D) -> Result<bool, D::Error> {
+    fn deserialize<D: serde::Deserializer<'de>>(self, deserializer: D) -> Result<Found, D::Error> {
         deserializer.deserialize_any(self)
     }
 }
 
 impl<'de> serde::de::Visitor<'de> for KeyScan<'_, 'de> {
-    type Value = bool;
+    type Value = Found;
 
     fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("a JSON value")
     }
 
-    fn visit_bool<E>(self, _: bool) -> Result<bool, E> {
-        Ok(false)
+    fn visit_bool<E>(self, _: bool) -> Result<Found, E> {
+        Ok(Found::default())
     }
 
-    fn visit_i64<E>(self, _: i64) -> Result<bool, E> {
-        Ok(false)
+    fn visit_i64<E>(self, _: i64) -> Result<Found, E> {
+        Ok(Found::default())
     }
 
-    fn visit_u64<E>(self, _: u64) -> Result<bool, E> {
-        Ok(false)
+    fn visit_u64<E>(self, _: u64) -> Result<Found, E> {
+        Ok(Found::default())
     }
 
-    fn visit_f64<E>(self, _: f64) -> Result<bool, E> {
-        Ok(false)
+    fn visit_f64<E>(self, _: f64) -> Result<Found, E> {
+        Ok(Found::default())
     }
 
-    fn visit_str<E>(self, _: &str) -> Result<bool, E> {
-        Ok(false)
+    fn visit_str<E>(self, _: &str) -> Result<Found, E> {
+        Ok(Found::default())
     }
 
-    fn visit_unit<E>(self) -> Result<bool, E> {
-        Ok(false)
+    fn visit_unit<E>(self) -> Result<Found, E> {
+        Ok(Found::default())
     }
 
-    fn visit_seq<A: serde::de::SeqAccess<'de>>(self, mut items: A) -> Result<bool, A::Error> {
-        let mut found = false;
+    fn visit_seq<A: serde::de::SeqAccess<'de>>(self, mut items: A) -> Result<Found, A::Error> {
+        let mut found = Found::default();
+        let mut index = 0_usize;
         while let Some(item) = items.next_element_seed(KeyScan(&mut *self.0))? {
-            found |= item;
+            found.take(item, || Step::Item(index));
+            index = index.saturating_add(1);
         }
         Ok(found)
     }
 
-    fn visit_map<A: serde::de::MapAccess<'de>>(self, mut members: A) -> Result<bool, A::Error> {
+    fn visit_map<A: serde::de::MapAccess<'de>>(self, mut members: A) -> Result<Found, A::Error> {
         let keys = self.0;
         let own = keys.len();
         let mut class: Option<std::borrow::Cow<'de, str>> = None;
-        let mut found = false;
+        let mut found = Found::default();
         while let Some(key) = members.next_key_seed(KeyText)? {
-            if key == "_type" {
+            let child = if key == "_type" {
                 match members.next_value_seed(TypeTag(&mut *keys))? {
-                    Tag::Name(name) => class = Some(name),
+                    Tag::Name(name) => {
+                        class = Some(name);
+                        Found::default()
+                    }
                     Tag::Other(inner) => {
                         class = None;
-                        found |= inner;
+                        inner
                     }
                 }
             } else {
-                keys.push(key);
-                found |= members.next_value_seed(KeyScan(&mut *keys))?;
-            }
+                members.next_value_seed(KeyScan(&mut *keys))?
+            };
+            found.take(child, || Step::Member(key.as_ref().to_owned()));
+            keys.push(key);
         }
+        let names = keys.get(own..).unwrap_or_default();
         if let Some(declared) = class
             .as_deref()
             .and_then(crate::json_codec::generated::structural::declared_fields)
         {
-            found |= keys
-                .get(own..)
-                .unwrap_or_default()
+            found.undeclared |= names
                 .iter()
-                .any(|key| declared.binary_search(&key.as_ref()).is_err());
+                .any(|key| key != "_type" && declared.binary_search(&key.as_ref()).is_err());
+        }
+        // The object's own repeat comes first: its members were read before
+        // it ended, and a refusal names the outermost defect.
+        if let Some(name) = repeated_name(names) {
+            found.repeated = Some(Repeated {
+                name: name.to_owned(),
+                path: Vec::new(),
+            });
         }
         keys.truncate(own);
         Ok(found)
@@ -506,7 +603,7 @@ impl<'de> serde::de::Visitor<'de> for KeyText {
 /// What a `_type` member holds: the class name, or any other value scanned.
 enum Tag<'de> {
     Name(std::borrow::Cow<'de, str>),
-    Other(bool),
+    Other(Found),
 }
 
 /// The value of a `_type` member.
@@ -531,23 +628,23 @@ impl<'de> serde::de::Visitor<'de> for TypeTag<'_, 'de> {
     }
 
     fn visit_bool<E>(self, _: bool) -> Result<Self::Value, E> {
-        Ok(Tag::Other(false))
+        Ok(Tag::Other(Found::default()))
     }
 
     fn visit_i64<E>(self, _: i64) -> Result<Self::Value, E> {
-        Ok(Tag::Other(false))
+        Ok(Tag::Other(Found::default()))
     }
 
     fn visit_u64<E>(self, _: u64) -> Result<Self::Value, E> {
-        Ok(Tag::Other(false))
+        Ok(Tag::Other(Found::default()))
     }
 
     fn visit_f64<E>(self, _: f64) -> Result<Self::Value, E> {
-        Ok(Tag::Other(false))
+        Ok(Tag::Other(Found::default()))
     }
 
     fn visit_unit<E>(self) -> Result<Self::Value, E> {
-        Ok(Tag::Other(false))
+        Ok(Tag::Other(Found::default()))
     }
 
     fn visit_borrowed_str<E>(self, name: &'de str) -> Result<Self::Value, E> {
