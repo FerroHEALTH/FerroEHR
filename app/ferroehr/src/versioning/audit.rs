@@ -635,6 +635,12 @@ pub(crate) fn check_committer(committer: &PartyProxy) -> Result<PartyProxy, Serv
 /// mandatory-container bounds of that dispatcher are what the reader already
 /// refused when it read the committer.
 ///
+/// What the committer holds, its `external_ref`, its `identifiers` and every
+/// value below them, is judged too, by the passes a committed body gets
+/// ([`openehr_rm::v1_2::validate::tree::validate_below`]), each violation
+/// under its path from the committer (#6044): an audit is an RM instance as
+/// its version's data is (RM common `AUDIT_DETAILS.committer`).
+///
 /// It is invoked explicitly because a commit audit is not part of any committed
 /// RM document: the `AUDIT_DETAILS` is written to its own row and never walked
 /// by the content pass, so without this call the committer would be the one
@@ -643,7 +649,17 @@ pub(crate) fn check_committer(committer: &PartyProxy) -> Result<PartyProxy, Serv
 /// # Errors
 /// [`ServiceError::Unprocessable`] carrying the dispatcher's violations.
 pub(crate) fn validate_committer(committer: &PartyProxy) -> Result<(), ServiceError> {
-    let violations = openehr_rm::v1_2::validate::tree::validate_node(committer);
+    let mut violations = openehr_rm::v1_2::validate::tree::validate_node(committer);
+    violations.extend(
+        openehr_rm::v1_2::validate::tree::validate_below(committer)
+            .into_iter()
+            .map(|below| {
+                openehr_base::validate::InvariantViolation::at(
+                    below.path.trim_start_matches('/'),
+                    below.message,
+                )
+            }),
+    );
     if violations.is_empty() {
         return Ok(());
     }

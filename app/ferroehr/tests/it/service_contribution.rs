@@ -469,6 +469,63 @@ async fn attestation_without_committer_is_refused() {
     );
 }
 
+/// A committer with a defect below its root, here an identifier with an empty
+/// `id`, is the 422 on the CONTRIBUTION audit and on a member `commit_audit`
+/// alike, and nothing is committed (#6044).
+#[tokio::test]
+async fn a_committer_defective_below_its_root_is_refused_with_422() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
+    let unidentified = json!({
+        "_type": "PARTY_IDENTIFIED",
+        "name": "Dr Jones",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "id": "" }]
+    });
+    let body = |audit_committer: Value, member_committer: Value| {
+        json!({
+            "versions": [{
+                "commit_audit": {
+                    "change_type": change_type("249", "creation"),
+                    "committer": member_committer
+                },
+                "lifecycle_state": change_type("532", "complete"),
+                "data": composition("committer below the root")
+            }],
+            "audit": {
+                "change_type": change_type("249", "creation"),
+                "committer": audit_committer
+            }
+        })
+    };
+    for (which, sent) in [
+        (
+            "the CONTRIBUTION audit",
+            body(unidentified.clone(), committer("author")),
+        ),
+        (
+            "a member audit",
+            body(committer("author"), unidentified.clone()),
+        ),
+    ] {
+        let err = svc
+            .create_ehr_contribution(ehr_id, sent)
+            .await
+            .expect_err("a committer defective below its root is refused");
+        let ServiceError::Unprocessable { violation, .. } = &err else {
+            panic!("{which}: got {err:?}");
+        };
+        assert!(
+            violation.causes().iter().any(|cause| {
+                cause.path == "identifiers[0]" && cause.message.contains("Id_valid")
+            }),
+            "{which}: got {err:?}"
+        );
+    }
+    svc.create_ehr_contribution(ehr_id, body(committer("author"), committer("author")))
+        .await
+        .expect("a sound committer commits");
+}
+
 /// A committer that does not decode as a canonical `PARTY_PROXY` (a bare
 /// string, an empty object) does not match the `UPartyProxy` schema
 /// `schemas/common/UpdateAudit.yaml` types it with, so it is the "syntactically
