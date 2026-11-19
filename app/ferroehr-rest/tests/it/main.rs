@@ -93,6 +93,7 @@ mod definition_adl2_delete_http;
 mod definition_adl2_http;
 mod definition_archetype_http;
 mod definition_conversion_http;
+mod demographic_aql_access_http;
 mod demographic_ehr_join_http;
 mod demographic_http;
 mod demographic_refusals_http;
