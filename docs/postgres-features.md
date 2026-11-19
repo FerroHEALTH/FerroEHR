@@ -56,9 +56,9 @@ feature sets below; we run the latest patch (18.6) for the fixes.
 - **AQL engine:** `jsonb_path_query_first`, lateral `jsonb_path_query`,
   `ext.openehr_magnitude`, `ext.openehr_timestamp`, integer nested-set joins,
   promoted btree columns, `= ANY` lists (`.claude/rules/aql-engine.md`), and
-  three partial btree indexes a filter enters through: the search text of an
-  ELEMENT value, the time of an event or the origin of a history, and the
-  magnitude of an ELEMENT value, the first and the last over an `IMMUTABLE`
+  four partial btree indexes a filter enters through: the search text of an
+  ELEMENT value, its code, the time of an event or the origin of a history,
+  and the magnitude of an ELEMENT value, all but the time over an `IMMUTABLE`
   SQL function (`indexes-partial.html`, `indexes-expressional.html`). Each
   helper is in the language and shape that measured fastest over the values it
   sees; five reach every cast through a guard rather than an `EXCEPTION` block,
