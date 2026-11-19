@@ -11,6 +11,8 @@
 //! it onto the extension's runtime parameters.
 
 pub mod config;
+#[cfg(feature = "multimedia")]
+pub mod sweep;
 
 #[cfg(feature = "multimedia")]
 use ferroehr_ext::multimedia::blob::{BackendSettings, BlobStoreParams, Limits, S3Settings};
@@ -83,6 +85,7 @@ pub fn engine_from_config(
             request_timeout: cfg.request_timeout.get(),
             part_size: size("part_size", cfg.part_size)?,
             part_concurrency: cfg.part_concurrency,
+            refresh_after: cfg.orphan_grace.get() / 2,
         },
     };
     let threshold = size("threshold", cfg.threshold)?;

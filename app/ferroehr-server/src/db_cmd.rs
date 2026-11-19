@@ -38,6 +38,18 @@ pub enum DbCmd {
         #[arg(long, value_name = "INSTANCE")]
         confirm: Option<String>,
     },
+    /// Delete every multimedia blob no stored version references and that is
+    /// older than `[record.multimedia] orphan_grace`: the blobs commits that
+    /// failed after their upload left behind.
+    ///
+    /// Without `--apply` it deletes nothing and prints what it would delete.
+    /// It can run while servers serve: a blob younger than the grace period is
+    /// always kept.
+    SweepBlobs {
+        /// Delete the orphans instead of listing them.
+        #[arg(long)]
+        apply: bool,
+    },
 }
 
 /// `ferroehr db migrate` / `verify` / `erase`, the out-of-band schema steps.
@@ -70,6 +82,7 @@ pub async fn run(
             .context("applying migrations"),
         DbCmd::Verify => crate::verify_schema_and_isolation(&config).await,
         DbCmd::Erase { confirm } => erase_instance(&config, confirm.as_deref()).await,
+        DbCmd::SweepBlobs { apply } => sweep_blobs(&config, *apply).await,
     };
     telemetry.shutdown().await;
     outcome
@@ -155,4 +168,66 @@ fn schema_list(schemas: &[&str]) -> String {
     } else {
         schemas.join(", ")
     }
+}
+
+/// `ferroehr db sweep-blobs`: lists, and with `apply` deletes, the blobs no
+/// stored version references.
+///
+/// # Errors
+/// No blob store configured, a database or blob store failure.
+#[cfg(feature = "multimedia")]
+#[expect(
+    clippy::print_stdout,
+    reason = "the db sweep-blobs subcommand's PURPOSE is console output \
+              (.claude/rules/reliability.md §tools)"
+)]
+async fn sweep_blobs(config: &ferroehr::config::FerroEhrConfig, apply: bool) -> anyhow::Result<()> {
+    use ferroehr::extensions::multimedia::sweep::Sweep;
+
+    let engine = ferroehr::extensions::multimedia::engine_from_config(&config.record.multimedia)
+        .context("building the multimedia blob store")?
+        .context("[record.multimedia] names no blob store, so there is nothing to sweep")?;
+    let pools = db::connect_domains(&config.database)
+        .await
+        .context("connecting to PostgreSQL")?;
+    let sweep = Sweep::new(
+        engine.store().clone(),
+        &pools,
+        config.record.multimedia.orphan_grace.get(),
+    );
+    let report = if apply { sweep.run().await } else { sweep.plan().await };
+    pools.close().await;
+    let report = report.context("sweeping the multimedia blob store")?;
+    println!(
+        "{} blob(s) in bucket `{}`: {} referenced, {} younger than the grace period, {} orphaned",
+        report.listed,
+        engine.store().bucket(),
+        report.referenced,
+        report.too_young,
+        report.orphans.len()
+    );
+    if apply {
+        println!("deleted {} orphaned blob(s)", report.deleted);
+    } else {
+        for key in &report.orphans {
+            println!("  {key}");
+        }
+        if !report.orphans.is_empty() {
+            println!("to delete them, run: ferroehr db sweep-blobs --apply");
+        }
+    }
+    Ok(())
+}
+
+/// A build without the `multimedia` feature stores no blob to sweep.
+///
+/// # Errors
+/// Always: the subcommand needs the `multimedia` feature.
+#[cfg(not(feature = "multimedia"))]
+#[expect(
+    clippy::unused_async,
+    reason = "signature parity with the multimedia twin, which awaits"
+)]
+async fn sweep_blobs(_config: &ferroehr::config::FerroEhrConfig, _apply: bool) -> anyhow::Result<()> {
+    anyhow::bail!("this binary was built without the `multimedia` feature, so it stores no blob to sweep")
 }
