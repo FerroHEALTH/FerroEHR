@@ -313,6 +313,7 @@ hs_answered() {
   if [[ -s "$HS_JAR.picker" ]]; then
     echo "        the picker page before it: $(tr -s '\n' ' ' < "$HS_JAR.picker" | sed -E 's/.*<body[^>]*>//; s/<[^>]*>/ /g; s/ +/ /g' | cut -c1-400)" >&2
   fi
+  hdc logs --no-color ferroehr 2>&1 | grep -F 'route="/ferroehr/rest/openehr/v1/ehr"' | tail -n 4 | sed 's/^/        /' >&2
   hdc logs --no-color --tail 15 ferrosmart 2>&1 | sed 's/^/        /' >&2
 }
 
