@@ -234,7 +234,7 @@ secrets() {
     if [[ "$value" == /run/secrets/* ]]; then
       name="${value#/run/secrets/}"
       file="$(jq -r --arg s "$service" --arg n "$name" '
-        [.services[$s].secrets[]? | select((.target // .source) == $n) | .source][0] as $src
+        [.services[$s].secrets[]? | select(((.target // .source) | sub("^/run/secrets/"; "")) == $n) | .source][0] as $src
         | if $src then .secrets[$src].file // empty else empty end' "$json")"
       [[ -z "$file" ]] || value="$file"
     fi
