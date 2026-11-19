@@ -293,6 +293,68 @@ fn commit_audit_accepts_valid_committers() {
         .expect("PARTY_SELF committer");
 }
 
+/// The typed pass over a committer finds what the JSON-valued dispatcher finds
+/// on its canonical rendering, violation for violation and in order, on every
+/// concrete `PARTY_PROXY` and on defects at the root and below it (#6038).
+#[test]
+fn the_typed_committer_pass_is_the_dispatchers_verdict() {
+    let coded = |code: &str| {
+        json!({
+            "_type": "DV_CODED_TEXT", "value": "x",
+            "defining_code": { "_type": "CODE_PHRASE", "code_string": code,
+                               "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" } }
+        })
+    };
+    let party_ref = |ty: &str| {
+        json!({
+            "_type": "PARTY_REF", "namespace": "local", "type": ty,
+            "id": { "_type": "HIER_OBJECT_ID", "value": "7d44b88c-4199-4bad-97dc-d78268e01398" }
+        })
+    };
+    let committers = [
+        json!({ "_type": "PARTY_SELF" }),
+        json!({ "_type": "PARTY_SELF", "external_ref": party_ref("PERSON") }),
+        json!({ "_type": "PARTY_SELF", "external_ref": party_ref("COMPOSITION") }),
+        json!({ "_type": "PARTY_IDENTIFIED" }),
+        json!({ "_type": "PARTY_IDENTIFIED", "name": "" }),
+        json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jones" }),
+        json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jones", "external_ref": party_ref("") }),
+        json!({ "_type": "PARTY_IDENTIFIED", "identifiers": [
+            { "_type": "DV_IDENTIFIER", "id": "42", "issuer": "x", "type": "id" }
+        ] }),
+        json!({ "_type": "PARTY_IDENTIFIED", "identifiers": [
+            { "_type": "DV_IDENTIFIER", "id": "" }
+        ] }),
+        json!({ "_type": "PARTY_RELATED", "name": "Mum", "relationship": coded("10") }),
+        json!({ "_type": "PARTY_RELATED", "name": "Mum", "relationship": coded("99999") }),
+        json!({ "_type": "PARTY_RELATED", "name": "", "relationship": coded("99999") }),
+        json!({ "_type": "PARTY_RELATED", "relationship": coded("10") }),
+        json!({ "_type": "PARTY_RELATED", "name": "Mum", "relationship": {
+            "_type": "DV_CODED_TEXT", "value": "mother",
+            "defining_code": { "_type": "CODE_PHRASE", "code_string": "10",
+                               "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" } }
+        } }),
+    ];
+    let mut refused = 0;
+    for committer in &committers {
+        let Ok(typed) = party_proxy(committer) else {
+            panic!("the fixture {committer} is not a PARTY_PROXY the reader takes");
+        };
+        let mut dispatched = Vec::new();
+        openehr_its::wire_validate::validate_rm_value(
+            &openehr_its::json::to_canonical_value(&typed),
+            &mut dispatched,
+        );
+        let typed_pass = openehr_rm::v1_2::validate::tree::validate_node(&typed);
+        assert_eq!(typed_pass, dispatched, "on {committer}");
+        refused += usize::from(!dispatched.is_empty());
+    }
+    assert!(
+        refused >= 4,
+        "the battery must hold refusals, got {refused}"
+    );
+}
+
 /// A wire `UPDATE_VERSION.commit_audit` with a `251|modification|` code and
 /// the given extra members, read through the generated envelope.
 fn wire_audit(extra: &Value) -> UpdateAudit {

@@ -80,7 +80,7 @@ sea-query-sqlx.workspace = true
 # `EHR_ACCESS` scheme-settings cache (per-ehr, invalidated on EHR_ACCESS commit).
 moka.workspace = true
 serde.workspace = true
-serde_json.workspace = true
+serde_json = { workspace = true, features = ["raw_value"] }
 # OPT 1.4 upload structure validation (`service::template`): a depth-aware scan
 # of the template XML that rejects foreign / duplicated top-level elements the
 # tolerant opt14 codec would otherwise accept (CNF master04 upload_opt-invalid_opt).

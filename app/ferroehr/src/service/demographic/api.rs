@@ -33,6 +33,7 @@ use crate::service::ehr::tags::tag_target_tail;
 use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::versioning::body::Body;
+use crate::versioning::envelope::ContributionText;
 use crate::versioning::object_version_id::{TreeId, UidAddress};
 use openehr_rm::prelude::{Party, PartyRelationship};
 
@@ -285,9 +286,9 @@ impl FerroEhrService {
     ///   read-back.
     pub async fn demographic_contribution_create(
         &self,
-        body: Value,
+        body: impl Into<ContributionText>,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.create_demographic_contribution(body)
+        self.create_demographic_contribution(&body.into())
             .await
             .map_err(ServiceError::flattened)
     }
