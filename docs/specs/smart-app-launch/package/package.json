@@ -1,0 +1,29 @@
+{
+  "name" : "hl7.fhir.uv.smart-app-launch",
+  "version" : "2.2.0",
+  "tools-version" : 3,
+  "type" : "IG",
+  "date" : "20240430191219",
+  "license" : "CC-BY-4.0",
+  "canonical" : "http://hl7.org/fhir/smart-app-launch",
+  "url" : "http://hl7.org/fhir/smart-app-launch/STU2.2",
+  "title" : "SMART App Launch",
+  "fhirVersions" : ["4.0.1"],
+  "dependencies" : {
+    "hl7.fhir.r4.core" : "4.0.1",
+    "hl7.fhir.uv.extensions" : "5.1.0-snapshot1",
+    "hl7.terminology" : "5.5.0"
+  },
+  "author" : "HL7 International / FHIR Infrastructure",
+  "maintainers" : [
+    {
+      "name" : "HL7 International / FHIR Infrastructure",
+      "email" : "fhir@lists.HL7.org",
+      "url" : "http://www.hl7.org/Special/committees/fiwg"
+    }
+  ],
+  "directories" : {
+    "lib" : "package",
+    "example" : "example"
+  }
+}
