@@ -624,7 +624,7 @@ hospital_setup() {
   h_facts_role carla PSYCHIATRIST || h_fail_call "Dr. Smit's role"
   h_facts_role dirk EMERGENCY_PHYSICIAN || h_fail_call "Dr. Bakker's role"
   h_facts_role gina NURSE || h_fail_call "Gina's role"
-  # The controller's administrator, the provider's ferroehr user, writes the
+  # The controller's administrator, the provider's controller user, writes the
   # policy; the policy route asks for its own grant.
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"
