@@ -156,10 +156,6 @@ data:
       base_path = "/management"
       enabled = true
     
-    [privacy]
-      [privacy.identifier_scan]
-        rules = ["de-kvnr"]
-    
     [record]
       subject_index = "local"
     
@@ -239,7 +235,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: f3bf4ae286ced1dc7ff5215ec8819ca03934618741c9ee056123adc7722969e4
+        checksum/config: 67abd7745844e7cf2c64985044b38c124e9b8d28650d8b772a9c8ed2c91313d0
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

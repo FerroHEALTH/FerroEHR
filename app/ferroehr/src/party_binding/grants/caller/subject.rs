@@ -385,11 +385,10 @@ mod tests {
 
     #[test]
     fn the_own_namespace_and_an_id_the_subject_rule_refuses_are_refused() {
-        let privacy = PrivacyPolicy::compile(&crate::privacy::config::PrivacyConfig {
+        let privacy = PrivacyPolicy::from(&crate::privacy::config::PrivacyConfig {
             subject_namespaces: vec!["urn:oid:2.999.7.1".to_owned()],
             ..Default::default()
-        })
-        .expect("a policy");
+        });
         let uuid = "6f1c2b9e-4d3a-4e8f-9b7c-1a2d3e4f5a6b";
         let own = facts_declaring("demographic", uuid);
         assert!(matches!(

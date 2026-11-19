@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The clinical-side data-minimisation policy end to end
-//! (`ferroehr::privacy`): the subject-reference rule, the identified-party rule
-//! and the jurisdiction-keyed identifier scanner, as the write path enforces
-//! them.
+//! (`ferroehr::privacy`): the subject-reference rule and the identified-party
+//! rule, as the write path enforces them, and the clinical values neither
+//! rule reads.
 //!
-//! The write path is the single enforcement point. None of the three rules is a
+//! The write path is the single enforcement point. Neither rule is a
 //! structural invariant of the schema — each varies with configuration — so
 //! none is a database constraint.
 //!
@@ -30,7 +30,7 @@ use sqlx::Row;
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Invalid;
 use ferroehr::privacy::PrivacyPolicy;
-use ferroehr::privacy::config::{IdentifierScanConfig, PrivacyConfig, ScanMode};
+use ferroehr::privacy::config::PrivacyConfig;
 use ferroehr::service::FerroEhrService;
 
 use crate::fixtures::{composition, uv};
@@ -39,15 +39,11 @@ use crate::fixtures::{composition, uv};
 const PSEUDONYM_NS: &str = "urn:ferroehr:pseudonym";
 const OPAQUE_SUBJECT: &str = "018f3c2a-7b41-7c2e-9a55-6d1e4f80b2c3";
 
-/// A value the `nl-bsn` rule claims. Synthetic.
+/// A nine-digit value that passes the eleven-test. Synthetic.
 const SYNTHETIC_BSN: &str = "111222333"; // privacy-allow: a synthetic value, no register issues it
 
-/// A value the `no-fodselsnummer` rule claims — the same scanner, a different
-/// jurisdiction. Synthetic.
-const SYNTHETIC_FODSELSNUMMER: &str = "15038545660";
-
 fn service(db: &testkit::TestDb, config: &PrivacyConfig) -> FerroEhrService {
-    let policy = PrivacyPolicy::compile(config).expect("the test policy compiles");
+    let policy = PrivacyPolicy::from(config);
     FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_privacy(Arc::new(policy))
 }
@@ -106,18 +102,6 @@ fn assert_refused(error: &ServiceError, expected_path: &str) {
         "the refusal names the offending RM path; got: {}",
         error.message()
     );
-}
-
-/// Every finding message the service-layer error carries.
-fn finding_messages(error: &ServiceError) -> String {
-    let ServiceError::ValidationFailed(violations) = error else {
-        panic!("a privacy refusal is ValidationFailed, got {error:?}");
-    };
-    violations
-        .iter()
-        .map(|v| format!("{}: {}", v.path, v.message))
-        .collect::<Vec<_>>()
-        .join("; ")
 }
 
 /// The same assertion over the service-layer error the composition routes
@@ -181,6 +165,27 @@ async fn a_non_uuid_subject_id_is_refused_and_the_value_never_reaches_the_wire()
         "the refusal must name the shape, never the value: {}",
         error.message()
     );
+}
+
+/// The identified-party opt-in leaves the subject rule in force on the
+/// write path.
+#[tokio::test]
+async fn the_identified_party_opt_in_keeps_the_subject_rule() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = service(
+        &db,
+        &PrivacyConfig {
+            allow_identified_parties_in_ehr: true,
+            ..enforcing()
+        },
+    );
+    let error = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed_status(
+        &status_with_subject(PSEUDONYM_NS, SYNTHETIC_BSN),
+    )))))
+    .await
+    .map(|(id, _)| id)
+    .expect_err("the opt-in admits identified parties, never a non-pseudonym subject");
+    assert_refused(&error, "EHR_STATUS/subject/external_ref/id/value");
 }
 
 #[tokio::test]
@@ -308,7 +313,7 @@ async fn composer_identifiers_are_accepted_and_a_self_party_needs_the_opt_in() {
         .expect("the documented opt-in accepts it");
 }
 
-// ── the identifier scanner ────────────────────────────────────────────────────
+// ── clinical digit runs ───────────────────────────────────────────────────────
 
 /// A valid COMPOSITION whose one free-text element carries `text`.
 fn composition_with_text(name: &str, text: &str) -> Value {
@@ -352,109 +357,19 @@ fn composition_with_text(name: &str, text: &str) -> Value {
     composition
 }
 
-#[tokio::test]
-async fn strict_mode_refuses_a_composition_carrying_a_synthetic_bsn() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = crate::fixtures::create_ehr(&svc).await;
-
-    let carrying = composition_with_text(
-        "scanner strict",
-        &format!("referral note for {SYNTHETIC_BSN}"),
-    );
-    let error = svc
-        .create_composition(ehr_id, uv(&carrying, "249", None))
-        .await
-        .expect_err("strict mode refuses an identifier-shaped value");
-    assert_refused_service(&error, "COMPOSITION/content[0]/data/items[0]/value/value");
-    let messages = finding_messages(&error);
-    assert!(
-        !messages.contains(SYNTHETIC_BSN),
-        "the refusal must name the rule, never the value: {messages}"
-    );
-}
-
-#[tokio::test]
-async fn warn_mode_accepts_the_same_composition() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = service(
-        &db,
-        &PrivacyConfig {
-            identifier_scan: IdentifierScanConfig {
-                mode: ScanMode::Warn,
-                ..IdentifierScanConfig::default()
-            },
-            ..PrivacyConfig::default()
-        },
-    );
-    let ehr_id = crate::fixtures::create_ehr(&svc).await;
-    let carrying = composition_with_text(
-        "scanner warn",
-        &format!("referral note for {SYNTHETIC_BSN}"),
-    );
-    svc.create_composition(ehr_id, uv(&carrying, "249", None))
-        .await
-        .expect("warn mode records the finding and lets the write through");
-}
-
-#[tokio::test]
-async fn an_identifier_from_another_jurisdiction_is_refused_by_the_same_default() {
-    // The scanner is not built around one country: the default ruleset covers
-    // every jurisdiction the build ships.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = crate::fixtures::create_ehr(&svc).await;
-
-    let carrying = composition_with_text(
-        "scanner cross-border",
-        &format!("referral from Norway, {SYNTHETIC_FODSELSNUMMER}"),
-    );
-    let error = svc
-        .create_composition(ehr_id, uv(&carrying, "249", None))
-        .await
-        .expect_err("a Norwegian identity number is refused by the same default");
-    assert_refused_service(&error, "COMPOSITION/content[0]/data/items[0]/value/value");
-    let messages = finding_messages(&error);
-    assert!(
-        messages.contains("no-fodselsnummer"),
-        "the refusal names the rule that claimed it: {messages}"
-    );
-}
-
-#[tokio::test]
-async fn a_terminology_code_satisfying_a_checksum_is_not_refused() {
-    // The measured false-positive class: 27 of the 30 nine-digit values in this
-    // repository that satisfy the Dutch elfproef are SNOMED CT concept
-    // identifiers. The scanner skips `code_string`, which is CODE_PHRASE's only
-    // string attribute — a structural carve-out, not a per-country one.
-    let db = testkit::db().await.expect("testkit database");
-    let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = crate::fixtures::create_ehr(&svc).await;
-
-    let mut coded = composition_with_text("coded", "a clinical synopsis");
-    coded["content"][0]["data"]["items"][0]["value"] = json!({
-        "_type": "DV_CODED_TEXT",
-        "value": "Hypertensive disorder",
-        "defining_code": {
-            "_type": "CODE_PHRASE",
-            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "SNOMED-CT" },
-            // privacy-allow: a terminology code from the vendored OPT fixtures
-            "code_string": "288526004"
-        }
-    });
-    svc.create_composition(ehr_id, uv(&coded, "249", None))
-        .await
-        .expect("a SNOMED code is clinical data, not an identifier");
-}
-
-// ── typed identifiers ─────────────────────────────────────────────────────────
-
-/// Two laboratory filler order numbers that pass the NHS Number modulus 11 by
-/// chance, as a Dutch laboratory deployment reported them (#4702).
-const ORDER_NUMBERS: [&str; 2] = ["8412501861", "8372500932"]; // privacy-allow: lab order numbers, not person identifiers
-
-/// A value the `gb-nhs-number` rule claims. Synthetic.
-const SYNTHETIC_NHS_NUMBER: &str = "9434767016"; // privacy-allow: synthetic, from the published algorithm
+/// Digit runs a laboratory carries that pass a national checksum by chance,
+/// starting with the filler order number a partner reported (OBR-3 and ORC-3,
+/// ten digits, a YYMMDD reading and a Luhn pass), with two order numbers
+/// passing the NHS Number modulus 11 and runs passing the eleven-test and the
+/// Norwegian and Swiss checks (#6081).
+const CHECKSUM_VALID_RUNS: [&str; 6] = [
+    "9702311805", // privacy-allow: a laboratory filler order number, not a person identifier
+    "8412501861", // privacy-allow: a laboratory order number, not a person identifier
+    "8372500932", // privacy-allow: a laboratory order number, not a person identifier
+    SYNTHETIC_BSN,
+    "15038545660",   // privacy-allow: synthetic, from the published algorithm
+    "7561234567897", // privacy-allow: synthetic, built to satisfy the GS1 modulo-10 check
+];
 
 /// A lab result carrying `id` typed `kind` in the feeder audit's
 /// originating-system item ids and as the order-id element.
@@ -475,65 +390,9 @@ fn lab_result(id: &str, kind: &str) -> Value {
     composition
 }
 
-#[tokio::test]
-async fn a_lab_result_whose_order_number_passes_the_nhs_check_commits() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = crate::fixtures::create_ehr(&svc).await;
-    for order in ORDER_NUMBERS {
-        svc.create_composition(
-            ehr_id,
-            uv(&lab_result(order, "filler_order_number"), "249", None),
-        )
-        .await
-        .expect("an identifier typed as an order is not a person identifier");
-    }
-}
-
-#[tokio::test]
-async fn an_nhs_number_typed_as_one_is_still_refused_while_the_rule_is_on() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = crate::fixtures::create_ehr(&svc).await;
-    let error = svc
-        .create_composition(
-            ehr_id,
-            uv(&lab_result(SYNTHETIC_NHS_NUMBER, "NHS Number"), "249", None),
-        )
-        .await
-        .expect_err("a subject identifier field carrying an NHS Number is refused");
-    assert_refused_service(&error, "COMPOSITION/content[0]/data/items[0]/value/id");
-    assert_refused_service(
-        &error,
-        "COMPOSITION/feeder_audit/originating_system_item_ids[1]/id",
-    );
-    let messages = finding_messages(&error);
-    assert!(messages.contains("gb-nhs-number"), "{messages}");
-    assert!(!messages.contains(SYNTHETIC_NHS_NUMBER), "{messages}");
-
-    let without_nhs = service(
-        &db,
-        &PrivacyConfig {
-            identifier_scan: IdentifierScanConfig {
-                rules: vec!["nl-bsn".to_owned()],
-                ..IdentifierScanConfig::default()
-            },
-            ..PrivacyConfig::default()
-        },
-    );
-    without_nhs
-        .create_composition(
-            ehr_id,
-            uv(&lab_result(SYNTHETIC_NHS_NUMBER, "NHS Number"), "249", None),
-        )
-        .await
-        .expect("a deployment that leaves gb-nhs-number off never claims an NHS Number");
-}
-
 /// A `laboratory_test_result.v1` observation whose "Receiver order
 /// identifier" element (at0063, under "Test request details", at0094) is
-/// named `element_name` and carries `id` with no `type`, as the reporting
-/// deployment sends it (#5291).
+/// named `element_name` and carries `id` with no `type`.
 fn laboratory_test_result(id: &str, element_name: &str) -> Value {
     let mut composition = composition_with_text("laboratory report", "Full blood count");
     let archetype = "openEHR-EHR-OBSERVATION.laboratory_test_result.v1";
@@ -592,42 +451,50 @@ fn laboratory_test_result(id: &str, element_name: &str) -> Value {
     composition
 }
 
+/// A clinical commit carrying a checksum-valid digit run is stored as written,
+/// wherever the run sits: a typed order identifier with the feeder audit's
+/// item ids, an untyped order identifier element, free text and a coded value.
+/// The policy reads the RM structure and guesses nothing from a value's shape
+/// (#6081).
 #[tokio::test]
-async fn an_untyped_order_number_under_the_receiver_order_identifier_commits() {
+async fn a_laboratory_commit_carrying_checksum_valid_digit_runs_is_stored() {
     let db = testkit::db().await.expect("testkit database");
-    let svc = service(&db, &PrivacyConfig::default());
+    let svc = service(&db, &enforcing());
     let ehr_id = crate::fixtures::create_ehr(&svc).await;
-    svc.create_composition(
-        ehr_id,
-        uv(
-            &laboratory_test_result(ORDER_NUMBERS[0], "Receiver order identifier"),
-            "249",
-            None,
-        ),
-    )
-    .await
-    .expect("the element name declares an order identifier when the type is absent");
-}
-
-#[tokio::test]
-async fn an_untyped_nhs_number_under_an_element_named_for_one_is_refused() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = crate::fixtures::create_ehr(&svc).await;
-    let error = svc
-        .create_composition(
-            ehr_id,
-            uv(
-                &laboratory_test_result(SYNTHETIC_NHS_NUMBER, "NHS number"),
-                "249",
-                None,
-            ),
-        )
-        .await
-        .expect_err("an element named for a person identifier keeps its value scanned");
-    assert_refused_service(
-        &error,
-        "COMPOSITION/content[0]/protocol/items[0]/items[1]/value/id",
-    );
-    assert!(finding_messages(&error).contains("gb-nhs-number"));
+    for run in CHECKSUM_VALID_RUNS {
+        let mut coded = composition_with_text("coded", "a clinical synopsis");
+        coded["content"][0]["data"]["items"][0]["value"] = json!({
+            "_type": "DV_CODED_TEXT",
+            "value": "Laboratory order",
+            "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
+                "code_string": run
+            }
+        });
+        for body in [
+            lab_result(run, "filler_order_number"),
+            laboratory_test_result(run, "Receiver order identifier"),
+            composition_with_text("laboratory note", &format!("filler order {run}")),
+            coded,
+        ] {
+            let committed = svc
+                .create_composition(ehr_id, uv(&body, "249", None))
+                .await
+                .unwrap_or_else(|e| panic!("{run}: a laboratory value is stored: {e:?}"));
+            let stored = svc
+                .read_composition_raw(ehr_id, committed.vo_id, None)
+                .await
+                .expect("the stored COMPOSITION reads")
+                .body
+                .into_value()
+                .expect("the stored COMPOSITION decodes");
+            assert!(
+                serde_json::to_string(&stored)
+                    .expect("the stored COMPOSITION renders")
+                    .contains(run),
+                "{run} is stored as written"
+            );
+        }
+    }
 }

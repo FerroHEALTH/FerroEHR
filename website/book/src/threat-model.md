@@ -453,28 +453,27 @@ this system has.
 
 ### An identifier written into clinical content
 
-**Control.** A data-minimisation pass reads the canonical JSON of every
-clinical commit body before it is stored. `EHR_STATUS.subject.external_ref`
+**Control.** A data-minimisation pass reads the Reference Model structure of
+every clinical commit body before it is stored. `EHR_STATUS.subject.external_ref`
 must name a declared pseudonym namespace and carry a UUID once
-`[privacy] subject_namespaces` is set. A `PARTY_IDENTIFIED` or `PARTY_RELATED`
-carrying `identifiers`, and a `PARTY_RELATED` carrying a `name`, are refused
-unless the deployment opts in. An identifier scanner reads every string leaf
-against the active rules: eight ship, one per issuing register that publishes a
-check digit (`ch-ahvn13`, `ch-epd-pid`, `de-kvnr`, `fi-hetu`, `gb-nhs-number`,
-`nl-bsn`, `no-fodselsnummer`, `se-personnummer`), all active by default in `strict` mode, and a deployment
-adds regular expressions for the kinds no build can ship a rule for. The two
-write paths that replay content verbatim, EHR-Extract import and the admin
-archive load, are scanned too: they store what they receive, so a body
-carrying an identifier can only be refused. The database keeps its own line.
+`[privacy] subject_namespaces` is set. A `PARTY_RELATED` whose relationship is
+`self` carrying a `name` or `identifiers` is refused unless the deployment
+opts in. The two write paths that replay content verbatim, EHR-Extract import
+and the admin archive load, run the same pass: they store what they receive,
+so a body identifying its subject can only be refused. The database keeps its
+own line.
 Once the namespaces are declared the server stamps `ehr.posture`, and a
 trigger on `ehr` refuses a `subject_id` that is not a UUID, whichever session
 writes it.
 
 **Residual risk.**
 
-- **A checksum rule matches a number, not a person.** A name, a street
-  address, a date of birth and a local record number with no check digit pass
-  every shipped rule.
+- **The pass reads structure, never a value's shape.** A national identifier,
+  a name, a street address or a date of birth written into free text or an
+  unconstrained `DV_IDENTIFIER` is stored as written. Keeping such values out
+  of clinical content is the controller's design of its templates and
+  feeds; the demographic domain is where an identifier belongs, sealed under
+  `[privacy.identifier_protection]`.
 - **`subject_namespaces` is empty by default**, and with it empty the subject
   rule and the database trigger are both out of force. The
   `open_subject_namespace` gap of `deployment.profile` is what names that.

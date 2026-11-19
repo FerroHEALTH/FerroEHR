@@ -28,7 +28,7 @@ legal citation the period rests on.
 | `kind` | The content category: `COMPOSITION`, `EHR_STATUS`, `FOLDER`, or `EHR` for the whole record |
 | `category` | Optional: the EHDS category the period is keyed on, named as the [audit category register](../installation/config-audit.md#the-audit-category-register) names it: a priority category by its code (`Patient-Summaries`, `Electronic-Prescriptions`, `Electronic-Dispensations`, `Medical-Imaging`, `Laboratory-Reports`, `Discharge-Reports`) or as `<system>\|<code>`, a declared national category as its `<system>\|<code>`, or `none`; stored as the `<system>\|<code>` token; empty keys the period on every object of the kind |
 | `origin` | Optional: the origin the period is keyed on, the id a [`data_origin` grant](#keying-a-period-on-an-origin) in force names; empty keys the period on every origin |
-| `jurisdiction` | ISO 3166-1 alpha-2, the same key the [identifier scanner](../installation/config-privacy.md) rules use |
+| `jurisdiction` | ISO 3166-1 alpha-2 |
 | `period` | How long content of that category is kept |
 | `anchor` | What the period is measured from: `last_commit`, `death`, or `majority` |
 | `source` | The citation the period comes from, quoted as the act spells it |

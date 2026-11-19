@@ -91,11 +91,10 @@ fn config(base: &str) -> PixmConfig {
 /// A service whose provider is the identity source at `base`, with the
 /// clinical domain declared as the pseudonym namespace.
 pub(crate) fn service(db: &testkit::TestDb, base: &str) -> FerroEhrService {
-    let policy = PrivacyPolicy::compile(&PrivacyConfig {
+    let policy = PrivacyPolicy::from(&PrivacyConfig {
         subject_namespaces: vec![CLINICAL.to_owned()],
         ..PrivacyConfig::default()
-    })
-    .expect("the deployment policy compiles");
+    });
     let source = IheIdentitySource::new(&config(base)).expect("the identity source builds");
     FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_privacy(Arc::new(policy))

@@ -11,8 +11,8 @@ environment-name grammar, and file discovery are on the
 FerroEHR keeps clinical content, demographic parties and the map between them
 in three separate database schemas reached by separate roles. That separation
 is only worth something if the clinical side does not carry the subject's
-identity anyway, in the subject reference, in a party proxy, or in free text.
-This section is the three rules that keep it out.
+identity anyway, in the subject reference or in a party proxy. This section
+is the two rules that keep it out.
 
 No openEHR specification governs any of them. The Reference Model leaves
 `EHR_STATUS.subject.external_ref` open and only advises against identifying
@@ -21,7 +21,12 @@ patient identifying information"). GDPR
 [Art. 4(5) and Art. 25(2)](https://eur-lex.europa.eu/eli/reg/2016/679/oj) are
 what make it a duty; this section is where a deployment states its side of it.
 
-All three rules run on the write path, before anything is stored. A refusal is
+Both rules read the Reference Model structure of a write. Neither guesses from
+a value's shape whether it identifies a person, so a laboratory order number,
+a specimen number or any other clinical digit run is stored as written,
+whatever national checksum it happens to pass.
+
+Both rules run on the write path, before anything is stored. A refusal is
 `422 Unprocessable Entity` with one `errors[]` entry per finding (sent when
 the request carries `Prefer: return=representation`),
 each naming the RM path and the rule that matched. **A refusal never echoes the
@@ -32,11 +37,6 @@ access log and the traces, which is the leak the rule exists to prevent.
 [privacy]
 subject_namespaces = []
 allow_identified_parties_in_ehr = false
-
-[privacy.identifier_scan]
-mode = "strict"
-rules = ["ch-ahvn13", "ch-epd-pid", "de-kvnr", "fi-hetu", "gb-nhs-number", "nl-bsn", "no-fodselsnummer", "se-personnummer"]
-patterns = []
 ```
 
 ## `[privacy]`
@@ -123,12 +123,9 @@ where only identifiers may be known … e.g. name and provider number of an
 institution", so a clinician's registration number on the composer is the
 class's own paradigm case, and the simplified formats build exactly that from
 `ctx/participation_identifiers`. What the separation between the two database
-schemas exists to prevent is the *subject's* national identifier on the
-clinical side, and that is caught in two places: a `self` party's
-`identifiers` slot is refused by this rule, and a national-identifier *value*
-is refused by the identifier scanner below in free text and in every
-`DV_IDENTIFIER.id` the scanner reads by its `type`
-([identifiers that declare their own type](#identifiers-that-declare-their-own-type)).
+schemas exists to prevent is the *subject's* identity on the clinical side,
+and a `self` party's `identifiers` slot is where the Reference Model puts it,
+so that slot is refused by this rule.
 
 `PARTY_RELATED` is the "Proxy type for identifying a party **and its
 relationship to the subject** of the record", and that relationship "is coded
@@ -155,166 +152,6 @@ allow_identified_parties_in_ehr = true
 ```
 
 which is announced at boot with a warning naming what it permits.
-
-## `[privacy.identifier_scan]`
-
-Every string leaf of every clinical write is checked against the active
-identifier rules: the EHR, `EHR_STATUS`, COMPOSITION and directory writes,
-the CONTRIBUTION path, EHR-Extract import and the admin archive load. The two
-replay paths store a record verbatim, so for them a finding refuses the whole
-import or load rather than rewriting the content; demographic parties are the
-domain that holds identity and are not scanned.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `mode` | `strict` or `warn` | `strict` | `strict` refuses the write; `warn` accepts it and records a warning naming the RM path and the rule. |
-| `rules` | list of rule keys | every rule the build ships | The national personal-identifier rules to scan for. An unknown key is a boot error listing the shipped keys. |
-| `patterns` | list of regular expressions | `[]` | Extra patterns for the kinds no build can ship a rule for. |
-
-### The shipped rules
-
-Each rule transcribes the checksum its own issuing register publishes. A kind
-whose current algorithm could not be established from its own register is not
-shipped, because a rule that guesses is worse than an absent one: it tells an
-operator their data was scanned.
-
-| Key | Jurisdiction | Identifier | Published by |
-|---|---|---|---|
-| `ch-ahvn13` | CH | AHV-Nummer (AHVN13) | [AHVV Art. 133](https://www.fedlex.admin.ch/eli/cc/63/1185_1183_1185/de) for the structure; the check digit from the [BSV Wegleitung VA/IK 318.106.02 d, Anhang 7](https://sozialversicherungen.admin.ch/de/d/6938/download); matches the plain run and the `756.3047.5009.62` display form |
-| `ch-epd-pid` | CH | Patientenidentifikationsnummer (EPD-PID) | [EPDV-EDI Anhang 1](https://www.fedlex.admin.ch/eli/cc/2017/205/de), vendored at `docs/law/ch/epdv-edi/`: the fixed prefix `76133761` and a mod-10 check digit |
-| `de-kvnr` | DE | Krankenversichertennummer (the unchangeable part) | [GKV-Spitzenverband, Richtlinie nach § 290 SGB V, 3.4.1, with Anlage 1](https://www.gkv-datenaustausch.de/kvnr/kvnr.jsp); the letter-to-digit convention (A=01 … Z=26) is stated in prose only in the same Richtlinie's Anlage 2 and fixed for A and C by the KVNR's own worked examples |
-| `fi-hetu` | FI | henkilötunnus | [Valtioneuvoston asetus väestötietojärjestelmästä 128/2010, 2 §](https://www.finlex.fi/fi/laki/ajantasa/2010/20100128): the date of birth, the century sign, the individual number and the mod-31 check character |
-| `gb-nhs-number` | GB | NHS Number | [NHS Data Model and Dictionary](https://www.datadictionary.nhs.uk/attributes/nhs_number.html) |
-| `nl-bsn` | NL | burgerservicenummer | [Rijksdienst voor Identiteitsgegevens, Logisch Ontwerp BSN](https://www.rvig.nl/logisch-ontwerp-bsn) |
-| `no-fodselsnummer` | NO | fødselsnummer | [Skatteetaten](https://skatteetaten.github.io/folkeregisteret-api-dokumentasjon/nytt-fodselsnummer-fra-2032/) |
-| `se-personnummer` | SE | personnummer | [Skatteverket](https://www4.skatteverket.se/rattsligvagledning/edition/2020.2/330245.html) |
-
-Two are deliberately absent. The Danish CPR-nummer has been
-[issued without its modulus-11 control since 2007](https://cpr.dk/cpr-systemet/personnumre-uden-kontrolciffer-modulus-11-kontrol),
-and those numbers are fully valid, so a checksum rule would pass most recent
-ones through while reporting Denmark as covered. The Belgian
-rijksregisternummer's modulo-97 check is widely reproduced but no definition
-published by the Rijksregister itself could be retrieved.
-
-### Why every rule is active by default
-
-Clinical data crosses borders: a Dutch hospital receives referrals carrying a
-Norwegian fødselsnummer. An operator who has not configured the scanner is
-exactly the operator who has not yet worked out which identifiers their content
-carries, so the default covers all of them.
-
-The two costs are not symmetric. A false positive is a loud `422` naming the RM
-path and the rule, which an operator answers by narrowing `rules` or moving to
-`warn`. A false negative is a national identifier stored on the clinical side
-indefinitely.
-
-A deployment that knows its jurisdictions narrows the list:
-
-```toml
-[privacy.identifier_scan]
-rules = ["nl-bsn", "no-fodselsnummer"]
-```
-
-```bash
-FERROEHR__PRIVACY__IDENTIFIER_SCAN__RULES=nl-bsn,no-fodselsnummer
-```
-
-A Dutch deployment that receives no British content, for example, has no
-use for `gb-nhs-number`, whose check accepts one ten-digit run in eleven.
-
-The boot log states which rules are active, so a jurisdiction that is not
-covered is visible rather than assumed.
-
-### False positives, and what narrows them
-
-Every checksum accepts some fraction of random digit runs, and clinical content
-is full of numbers. Three things narrow it:
-
-- **A digit run must be delimited** — bounded by something other than a letter,
-  a digit or an underscore. Without that, every hex digest and long numeric
-  identifier produces hits at the checksum's own rate. It also means a UUID can
-  never match any rule: its groups are 8, 4, 4, 4 and 12 characters, so no
-  delimited run of 9, 10 or 11 digits occurs in one, and the opaque subject
-  pseudonym the boundary mandates passes unconditionally.
-- **`CODE_PHRASE.code_string` is skipped.** A terminology code system's
-  identifiers are digit runs by construction, so this one slot is where the
-  collision is systematic rather than incidental. Measured over this
-  repository's vendored corpora: of the 30 distinct nine-digit values that
-  satisfy the Dutch elfproef, 27 are SNOMED CT concept identifiers, all of them
-  in a code slot. The carve-out names an RM slot, not a country.
-- **Each rule narrows itself with whatever structure it has.** Two independent
-  control digits (`no-fodselsnummer`, 1 in 120), an embedded date
-  (`se-personnummer`, 1 in 139 with the Luhn check), a non-numeric token shape
-  (`fi-hetu`, 1 in 31 among tokens of that shape). `nl-bsn` at 1 in 11 is the
-  loosest shipped rule, which is why the code-slot carve-out matters most to
-  it. Every figure here is measured, over 100 000 random tokens of each rule's
-  own shape, by a test that fails if a rule drifts from the rate it publishes.
-
-A deployment measuring its own content runs `warn` first, reads the recorded
-findings, then moves to `strict`.
-
-### Identifiers that declare their own type
-
-A `DV_IDENTIFIER` carries an optional `type`, which the Reference Model
-describes as the "identifier type, such as prescription, or Social Security
-Number", and its examples run from a social security number to an "order id".
-The scanner reads it before it scans the `id`. When the `type` is absent or
-names neither kind, the scanner reads the `name` of the `ELEMENT` that holds
-the identifier instead, by the same words. Every `ELEMENT` is a `LOCATABLE`,
-whose `name` the Reference Model calls "the original label by which this
-entry was known to end users", and an archetyped element carries its node
-name there:
-
-| `DV_IDENTIFIER` | In clinical content | In `FEEDER_AUDIT.originating_system_item_ids` or `feeder_system_item_ids` |
-|---|---|---|
-| `type` names a person identifier | scanned | scanned |
-| `type` names an item (an order, specimen, accession, sample, lot) | not scanned | not scanned |
-| no `type`, or one naming neither, and the element name names a person | scanned | scanned |
-| no `type`, or one naming neither, and the element name names an item | not scanned | not scanned |
-| no `type`, or one naming neither, and no element name naming either | scanned | not scanned |
-
-A `type` that names a kind takes precedence over the element name, so an
-identifier typed `NHS Number` is scanned under any element name.
-
-The type is free text, so it is read by its words, in any case and in
-`snake_case`, `camelCase` or spaced form. Words such as `patient`, `person`,
-`subject`, `national`, `social`, `insurance`, `NHS`, `BSN` and the name of
-every shipped rule name a person; `order`, `placer`, `filler`, `accession`,
-`specimen`, `sample`, `requisition`, `prescription`, `lot`, `batch`, `serial`,
-`barcode` and `container` name an item. A person word wins: `patient order
-number` is scanned. The feeder audit's item-id lists are, in the Reference
-Model's words, "Identifiers used for the item in the originating system, e.g.
-filler and placer ids", so an identifier there is scanned only when its type
-says it identifies a person.
-
-A laboratory filler order number typed `filler_order_number` is therefore
-stored even when its ten digits pass the NHS Number check by chance, which one
-ten-digit run in eleven does. So is an untyped order number in the
-`Requester order identifier` or `Receiver order identifier` element of
-`openEHR-EHR-OBSERVATION.laboratory_test_result.v1`, while an untyped value in
-an element named `NHS number` or `Patient identifier` is scanned. The
-archetype's `Laboratory internal identifier` names neither kind, so a value
-there is scanned unless its `type` names an item. The same number written into free text is still
-claimed by every rule in `rules`; a deployment with no NHS Numbers in its
-content leaves `gb-nhs-number` out of that list.
-
-### Local patterns
-
-Medical-record numbers, payer references and postcode forms have no single
-issuing register to transcribe, so a deployment declares them itself as Rust
-regular expressions:
-
-```toml
-[privacy.identifier_scan]
-patterns = [
-  "\\bMRN-[0-9]{6}\\b",
-  "(^|[^0-9A-Za-z])[1-9][0-9]{3} ?[A-Z]{2}[^0-9A-Za-z]{1,3}[0-9]{1,4}([^0-9A-Za-z]|$)",
-]
-```
-
-The second refuses a Dutch postcode paired with a house number — the pair is
-what identifies a household; a postcode alone does not. A pattern that does not
-compile is a boot error naming it.
 
 ## `[privacy.cohort]`
 
