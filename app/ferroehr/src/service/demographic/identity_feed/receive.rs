@@ -262,7 +262,6 @@ impl FerroEhrService {
         tx: &mut PgConnection,
         events: &[FeedEvent],
     ) -> Result<Vec<Split>, ReceiveError> {
-        let engine = self.identifiers.as_deref();
         let mut splits = Vec::new();
         for event in events {
             let known = plan::identity(tx, &event.id).await?;
@@ -286,15 +285,14 @@ impl FerroEhrService {
             if matches!(event.kind, ChangeKind::Merge) || merged_into.is_some() {
                 continue;
             }
-            let Some(person) = Self::bound(tx, engine, known.as_ref(), &event.identifiers).await?
-            else {
+            let Some(person) = Self::bound(tx, known.as_ref(), &event.identifiers).await? else {
                 continue;
             };
             let announced: &[Identifier] = match event.kind {
                 ChangeKind::Delete => &[],
                 _ => &event.identifiers,
             };
-            for row in plan::unannounced(tx, engine, person, announced).await? {
+            for row in plan::unannounced(tx, person, announced).await? {
                 splits.push(Split {
                     holder: person,
                     kind: "identifier",
@@ -314,11 +312,10 @@ impl FerroEhrService {
     /// applied and resolves nothing more by the split it never had.
     async fn bound(
         tx: &mut PgConnection,
-        engine: Option<&crate::identifier_protection::engine::IdentifierProtection>,
         known: Option<&Identity>,
         identifiers: &[Identifier],
     ) -> Result<Option<Uuid>, ReceiveError> {
-        match plan::resolve(tx, engine, known, identifiers, None).await {
+        match plan::resolve(tx, known, identifiers, None).await {
             Ok(person) => Ok(person),
             Err(plan::Resolved::Storage(error)) => Err(error.into()),
             Err(plan::Resolved::Refused(_)) => Ok(None),

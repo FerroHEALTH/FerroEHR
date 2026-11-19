@@ -649,17 +649,6 @@ fn two_equal_selectors_are_refused() {
 }
 
 #[test]
-fn a_key_of_a_protected_scheme_is_refused() {
-    let toml = format!(
-        "{}\n[privacy.identifier_protection]\nschemes = [\"guid\"]\nkey = \"{}\"\n",
-        mapped("", ""),
-        "00".repeat(32)
-    );
-    let text = refusal(&toml);
-    assert!(text.contains("is protected"), "{text}");
-}
-
-#[test]
 fn a_bsn_identifier_on_a_professional_template_is_refused() {
     refused_with(
         "type = \"scim_external_id\" }\n\n[[authz",

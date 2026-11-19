@@ -51,7 +51,7 @@ The database is PostgreSQL 18, split into four schemas:
 |---|---|
 | `ext` | FerroEHR's own `IMMUTABLE` helper functions (`openehr_magnitude`, `openehr_timestamp`), the runtime roles and the deployment posture |
 | `clinical` | the clinical CDR: versions, heads, nodes, EHRs, contributions, templates, queries, tags |
-| `party` | the demographic pseudonymisation domain: party versions, heads, nodes, contributions, commit audits, and the sealed `national_identifier` values |
+| `party` | the demographic pseudonymisation domain: party versions, heads, nodes, contributions and commit audits |
 | `audit` | the IHE ATNA Audit Record Repository (`audit_event`) |
 
 Each carries its own migration set and its own `_sqlx_migrations` bookkeeping

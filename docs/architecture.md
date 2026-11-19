@@ -255,10 +255,10 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   relations (`app/ferroehr/migrations/templates/*.sql.in`), so the two domains
   cannot drift. A party body decomposes like clinical content: the party root,
   each `PARTY_IDENTITY`, `CONTACT`, `ADDRESS` and `CAPABILITY` nested in it, and
-  the `ITEM_STRUCTURE` under each get their own `node` row. Beside them,
-  `national_identifier` holds identifiers sealed under authenticated encryption
-  against the schemes `identifier_scheme` declares, `party_relationship_target`
-  is the target-side index behind `PARTY.reverse_relationships`, and the domain
+  the `ITEM_STRUCTURE` under each get their own `node` row. A party is stored
+  as committed: a national identifier belongs in the master patient index,
+  and the CDR seals none (#6092; `party/0059` drops the former sealed-value
+  tables). Beside them, `party_relationship_target` is the target-side index behind `PARTY.reverse_relationships`, and the domain
   carries its own `item_tag`, `event_outbox` and `blob_ref` because the commit
   path is one code path over two schemas. Nothing selects a domain but the pool's
   `search_path`, so one set of storage code serves both; a `CHECK` on each side
@@ -991,22 +991,19 @@ which is what makes an optional stage safe to disable:
    (`service::ehr::care_projection`), which reads the party domain on the
    party pool in one repeatable-read snapshot and writes the clinical domain
    on the clinical pool, so no role reaches both. A row holds the `PERSON`
-   and team container UUIDs, the care dates and the keyed digest
-   (HMAC-SHA-256 under the clinical lookup subkey of the
-   `[privacy.identifier_protection]` root key, the scheme the national
-   identifier's lookup digest uses) of each subject reference that names the
-   `PERSON`; the EHR row carries the keyed digest of its own reference,
-   written with it, and both digest columns are held to 32 octets, so the
-   clinical domain holds no identifier the key does not open. The probe binds
+   and team container UUIDs, the care dates and the SHA-256 digest of each
+   subject reference that names the `PERSON`; the EHR row carries the digest
+   of its own reference, written with it, and both digest columns are held to
+   32 octets. A subject reference is a pseudonym, so the digest needs no key
+   (#6092, `clinical/0056`). The probe binds
    the caller's team ids, the day and the grace, one index probe per EHR row.
    A replica reads the projection only while the facts revision it reflects
    is at least the one of the facts the replica holds, so a discharge, a
    removed membership or an erasure is never granted from a stale row: until
    the projector applies it the query binds the census, the subjects of every
    patient under the caller's teams as a `jsonb` object in a `WITH` clause
-   (#5645). Erasing a `PERSON` deletes its rows in the erasing flow. Without
-   identifier protection the projection is not written and every query that
-   names no EHR binds the census. Our own design. A query pinned to one EHR is
+   (#5645). Erasing a `PERSON` deletes its rows in the erasing flow. Our own
+   design. A query pinned to one EHR is
    decided before its statement (`access_eval::condition::pinned`, #5746): the
    evaluator judges that EHR from its copy as a direct read of it is judged,
    and the statement carries only the part of the verdict that reads each
@@ -1454,7 +1451,7 @@ its `credentials` hold, at any depth, an element whose value is a
 (`commit_composition`, `import_ehr`, `import_ehr_extract`,
 `export_ehr_extract`, `federated_person_access`,
 `federated_organisation_access`, `read_subject_audit`, `access_service`,
-`read_identifiers`, `data_origin`, `read_change_feed`, `scim_provision`,
+`data_origin`, `read_change_feed`, `scim_provision`,
 `hold_roles`, `hold_scopes`, `create_at_login`, `query_system_wide`,
 `access_demographic`); elements named by the
 qualifier codes `not_before` and `not_after` bound it finer than a day,
@@ -1691,9 +1688,8 @@ TRC patient resolves in the party domain alone (`patient_ehrs`): migration
 `party/0045` projects the `DV_IDENTIFIER`s at the `[authz.party_binding.patient]
 identifier` path of a `PERSON` of the patient template into
 `binding_patient_identifier` at its commit, and one indexed statement finds
-the `PERSON` that carries the TRC identifier by issuer and value. A
-protected-scheme identifier is held as its stored reference and joined
-through `national_identifier`'s lookup digest. Then the `PERSON`'s references
+the `PERSON` that carries the TRC identifier by issuer and value. Then the
+`PERSON`'s references
 name its EHRs. Under `local` the identifier also names the EHR whose
 `EHR_STATUS` carries it. An identifier no `PERSON`, or more than one,
 carries finds nothing, and the request is refused with `trc-patient-mismatch`.
@@ -1861,8 +1857,7 @@ A token's roles and scopes stay the token's: its issuer is their authority,
 and a SMART scope is what the user consented to (SMART App Launch 2.2.0,
 Scopes and Launch Context). The privileges beyond clinical access are
 grants and nothing else (#5521): `import_ehr` and `import_ehr_extract` admit
-the matching import, `read_identifiers` the protected-identifier read,
-`read_subject_audit` the ITI-81 read of one subject's access log and
+the matching import, `read_subject_audit` the ITI-81 read of one subject's access log and
 `access_service` an EHDS Art. 10 access service, each read from the
 request's `Capabilities` with no transaction added; `[authz.rbac]` names no
 role for any of them, and the four keys that did are unknown keys. The

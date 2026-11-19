@@ -77,7 +77,6 @@ use crate::db::domain::Domain;
 use crate::db::parent_statistics;
 use crate::error::ServiceError;
 use crate::error::refusal::{ArchiveDefect, Clash, Malformed, Refusal};
-use crate::identifier_protection::store::StoreError;
 use crate::ids::{EhrId, VoId};
 use crate::party_binding::store::reindex_loaded;
 use crate::service::FerroEhrService;
@@ -90,7 +89,6 @@ use crate::storage::dump_repo::{
     Scope, VersionRecord,
 };
 use crate::storage::error::StorageError;
-use crate::storage::identifier_repo::{self, IdentifierRepoError, SealedRow};
 use crate::storage::{node_write, version_repo};
 use crate::system_log::event::EventActionCode;
 use crate::versioning::audit::AuditInput;
@@ -179,13 +177,6 @@ struct DemographicRecord {
     item_tags: Vec<ItemTagRow>,
     #[serde(default)]
     archives: Vec<ArchiveRow>,
-    /// The container's sealed national-identifier rows, live and retired, as
-    /// ciphertext: the versions reference them, so a restored version expands
-    /// to the value it committed under the same deployment key, and the archive
-    /// never carries a protected value in plaintext. `#[serde(default)]` so
-    /// archives dumped before this member existed load with none.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    identifiers: Vec<SealedRow>,
 }
 
 /// One EHR's full exported content bundle.
@@ -1311,17 +1302,10 @@ impl FerroEhrService {
                 )),
             }));
         }
-        let (entity_type, entity_id) = (record.kind.clone(), record.vo_id.to_string());
-        Ok(self
-            .load_one_demographic(record)
+        self.load_one_demographic(record)
             .await
-            .map_err(ServiceError::flattened)?
-            .map(|refusal| DumpLoadFailReport {
-                entity_type,
-                entity_id,
-                dump_status: false,
-                error: Some(refusal),
-            }))
+            .map_err(ServiceError::flattened)?;
+        Ok(None)
     }
 
     /// Load the demographic wave's shared rows. Audits and contributions may
@@ -1340,41 +1324,17 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Load one ehr-less demographic container: its per-version audits, its
-    /// sealed national-identifier rows, every version (`version` +
-    /// re-decomposed `node` rows, `ehr_id` NULL), attestations, demographic
-    /// tags and archive rows — one transaction, so a failed container commits
-    /// nothing.
-    ///
-    /// Returns the refusal text when the container cannot be restored under
-    /// this deployment's identifier protection: a sealed row that collides with
-    /// a live value here, or a version carrying a protected value in plaintext
-    /// or a reference this container does not hold. A restored version is
-    /// stored verbatim, so it cannot be sealed on the way in (no openEHR spec
-    /// governs identifier protection — our own design/extension).
+    /// Load one ehr-less demographic container: its per-version audits, every
+    /// version (`version` + re-decomposed `node` rows, `ehr_id` NULL),
+    /// attestations, demographic tags and archive rows — one transaction, so a
+    /// failed container commits nothing.
     ///
     /// # Errors
     /// The storage errors of the load itself.
-    async fn load_one_demographic(
-        &self,
-        record: DemographicRecord,
-    ) -> Result<Option<String>, ServiceError> {
+    async fn load_one_demographic(&self, record: DemographicRecord) -> Result<(), ServiceError> {
         let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         dump_repo::write::insert_audits(&mut tx, &record.audits, StoredAudit::Keep).await?;
-        if let Err(refusal) = identifier_repo::restore_sealed(&mut tx, &record.identifiers).await {
-            return restore_refusal(refusal.into());
-        }
-        if let Some(engine) = self.identifiers.as_deref() {
-            for version in record.versions.iter().filter(|v| !v.body.is_null()) {
-                if let Err(refusal) = engine
-                    .refuse_unsealed(&mut tx, record.vo_id.0, &version.body)
-                    .await
-                {
-                    return restore_refusal(refusal);
-                }
-            }
-        }
         load_versions(&mut tx, &self.privacy, None, record.versions).await?;
         dump_repo::write::insert_attestations(&mut tx, &record.attestations).await?;
         dump_repo::write::insert_item_tags(&mut tx, None, &record.item_tags).await?;
@@ -1382,7 +1342,7 @@ impl FerroEhrService {
         // The archive carries no index row: each is rebuilt from the loaded head.
         reindex_loaded(&mut tx, &self.binding, &record.kind, record.vo_id).await?;
         self.commit_act_recorded(tx, Vec::new()).await?;
-        Ok(None)
+        Ok(())
     }
 
     /// Read every EHR's content into export records (ordered by EHR id for a
@@ -1427,9 +1387,6 @@ impl FerroEhrService {
     ) -> Result<DemographicRecord, ServiceError> {
         let pool = &self.demographic_pool;
         let scope = Scope::Container(vo_id);
-        let identifiers = identifier_repo::sealed_rows(pool, vo_id)
-            .await
-            .map_err(|e| ServiceError::internal("read the sealed national identifiers", e))?;
         Ok(DemographicRecord {
             vo_id,
             kind,
@@ -1438,7 +1395,6 @@ impl FerroEhrService {
             attestations: dump_repo::read::attestations(pool, scope).await?,
             item_tags: dump_repo::read::item_tags(pool, scope).await?,
             archives: dump_repo::read::archives(pool, scope).await?,
-            identifiers,
         })
     }
 
@@ -1562,29 +1518,6 @@ async fn with_bodies(
         }
     }
     Ok(versions)
-}
-
-/// The per-container answer to a protected-identifier refusal during a
-/// demographic restore: a failure report for what the archive itself
-/// carries, an error for a storage fault.
-///
-/// # Errors
-/// [`ServiceError`] for a store fault that says nothing about the archive.
-fn restore_refusal(refusal: StoreError) -> Result<Option<String>, ServiceError> {
-    match refusal {
-        StoreError::Repo(
-            IdentifierRepoError::ValueTaken { .. }
-            | IdentifierRepoError::SchemeRepeated { .. }
-            | IdentifierRepoError::UnknownScheme { .. }
-            | IdentifierRepoError::MalformedRow(_),
-        )
-        | StoreError::ForeignReference
-        | StoreError::Unsealed { .. }
-        | StoreError::Crypto(_) => Ok(Some(refusal.to_string())),
-        other @ (StoreError::Repo(_) | StoreError::Render(_) | StoreError::Substitute(_)) => Err(
-            ServiceError::internal("restore the sealed national identifiers", other),
-        ),
-    }
 }
 
 /// Load a record's version rows and their re-decomposed node rows (through

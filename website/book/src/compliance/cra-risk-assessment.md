@@ -338,21 +338,21 @@ transit by state of the art mechanisms, and by using other technical means"
 - **How:** in transit, rustls with TLS 1.3 by default and mutual TLS, or a
   TLS-terminating ingress; integrations offer TLS (syslog over TLS,
   HTTPS-only S3 by default); a renewed server certificate is served without a
-  restart, on `SIGHUP` and every `[server.tls] reload_interval`. At rest, protected
-  national identifiers sealed under AES-256-GCM with a keyed lookup digest,
-  per party version, inside the party commit; a write response serves the
-  sealed form, an import or admin load carrying a protected value in plaintext
-  is refused, and a dump carries the sealed rows as ciphertext. Other
+  restart, on `SIGHUP` and every `[server.tls] reload_interval`. At rest,
+  encryption of the database volumes and backups, which the deploying
+  organisation provisions and the go-live checklist requires; national
+  identifiers belong in the master patient index, so the CDR holds none. Other
   technical means: three
   pseudonymisation domains on separate credentials, checked by `production`;
   secrets that never render; log sanitising.
 - **Evidence:** `[server.tls]` in `ferroehr.default.toml`;
   [B1](../threat-model.md#b1--network-and-protocol),
   [B6](../threat-model.md#b6--the-database),
-  [the sealed identifier](../threat-model.md#the-sealed-identifier-and-its-lookup-digest),
+  [national identifiers stay in the master patient index](../threat-model.md#national-identifiers-stay-in-the-master-patient-index),
+  [the go-live checklist](../security/go-live-checklist.md#9-the-database-volumes-and-backups-are-encrypted-at-rest),
   [TLS and database security](../operations.md#tls-and-database-security).
 - **Status:** partial. The shipped transport default is plaintext, and
-  identifier sealing is off by default. `production` refuses a plaintext main
+  encryption at rest is the deploying organisation's. `production` refuses a plaintext main
   listener on a routable address unless `plaintext_listener` is accepted by
   name, and a loopback bind is exempt; a deployment behind a TLS-terminating
   ingress accepts the gap by name, because the ingress carries the encryption
@@ -592,11 +592,13 @@ does not encrypt the clinical payload before it reaches PostgreSQL:
   encrypting those fields in the application would make them unqueryable,
   which defeats the intended purpose.
 - Encryption at rest is provided where the data is stored: at the volume or
-  disk layer, which the deploying organisation provisions
-  ([TLS and database security](../operations.md#tls-and-database-security)).
-- The fields whose disclosure re-identifies a person directly, the protected
-  national identifiers, are sealed in the application (AES-256-GCM), because
-  they are looked up by digest and never queried by content.
+  disk layer, for the database volumes and every backup, which the deploying
+  organisation provisions and the
+  [go-live checklist](../security/go-live-checklist.md#9-the-database-volumes-and-backups-are-encrypted-at-rest)
+  requires ([TLS and database security](../operations.md#tls-and-database-security)).
+- The identifiers whose disclosure re-identifies a person directly, the
+  national identifiers, belong in the master patient index, and the CDR holds
+  the subject only as a pseudonym.
 - Confidentiality at rest is further carried by "other technical means": the
   separated domains and credentials, and least-privilege roles.
 

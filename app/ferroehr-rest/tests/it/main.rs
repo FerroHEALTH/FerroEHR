@@ -63,7 +63,6 @@ mod admin_extension_http;
 mod admin_http;
 mod admin_integrity_http;
 mod admin_party_delete_http;
-mod admin_party_identifiers_http;
 mod agreement_parties;
 mod audit_categories;
 mod audit_data_permit;

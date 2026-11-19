@@ -188,8 +188,7 @@ impl FerroEhrService {
     ///
     /// The patient is the `PERSON` that carries `patient` at the
     /// `[authz.party_binding.patient]` identifier path, matched on the issuer
-    /// and the value (a protected scheme's value through its lookup digest),
-    /// and its EHRs are the ones its own reference and its record subjects
+    /// and the value, and its EHRs are the ones its own reference and its record subjects
     /// name ([`Self::ehr_ids_for_person`]). Under
     /// [`EhrIndexProvider::Local`] the identifier also names the EHR whose
     /// `EHR_STATUS` carries it, as a local subject names itself. An
@@ -212,14 +211,9 @@ impl FerroEhrService {
             }
             EhrIndexProvider::Ihe(_) => Vec::new(),
         };
-        let protected = self
-            .identifiers
-            .as_ref()
-            .map(|engine| engine.lookup_digests(&patient.id))
-            .unwrap_or_default();
         let persons = self
             .grants
-            .patients_carrying(&patient.namespace, &patient.id, &protected)
+            .patients_carrying(&patient.namespace, &patient.id)
             .await
             .map_err(crate::error::ServiceError::from)?;
         let [person] = persons.as_slice() else {

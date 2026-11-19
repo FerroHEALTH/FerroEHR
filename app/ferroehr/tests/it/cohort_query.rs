@@ -464,10 +464,10 @@ async fn an_unknown_predicate_and_an_unbound_deployment_are_refused() {
         .with_cohort(cohort_config(0));
     assert!(svc.cohort_enabled());
     match svc
-        .execute_cohort_query(request(&[("national_identifier", "x")]))
+        .execute_cohort_query(request(&[("passport_number", "x")]))
         .await
     {
-        Err(CohortError::UnknownPredicate(name)) => assert_eq!(name, "national_identifier"),
+        Err(CohortError::UnknownPredicate(name)) => assert_eq!(name, "passport_number"),
         other => panic!("an unbound predicate name must be refused, got {other:?}"),
     }
     assert!(

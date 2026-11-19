@@ -5,8 +5,8 @@
 //!
 //! `clinical/0047_access_care.sql` holds the care relationships of the party
 //! domain, one row per subject reference and relationship, each reference
-//! held only as its keyed digest, and the keyed digest of each EHR's own
-//! subject reference beside it.
+//! held as its SHA-256 digest, and the digest of each EHR's own subject
+//! reference beside it.
 //!
 //! The care projector writes the rows; a query's access condition probes
 //! them by the EHR row's digest and the caller's team ids. No openEHR spec
@@ -35,6 +35,25 @@ pub fn subject_key(own: &str, subject: &EhrSubject) -> String {
     }
 }
 
+/// The SHA-256 digest of the subject key `key`, [`subject_key`] or
+/// [`cared_key`], the fixed-width value the projection and the EHR row are
+/// matched by.
+///
+/// The reference is a pseudonym (data-minimisation rule 1), so its digest
+/// needs no key; the clinical `ehr` row holds the reference itself.
+#[must_use]
+pub fn subject_digest(key: &str) -> Vec<u8> {
+    use sha2::Digest as _;
+    sha2::Sha256::digest(key.as_bytes()).to_vec()
+}
+
+/// The check value of the digest form, which tells the projector that the
+/// stored digests were taken in another form and must be taken again.
+#[must_use]
+pub fn digest_check() -> Vec<u8> {
+    subject_digest("ferroehr-care-subject-sha256")
+}
+
 /// The text a subject reference a `PERSON` is named by is digested from.
 ///
 /// It is the reference as the party domain holds it, the namespace and the
@@ -48,7 +67,7 @@ pub fn cared_key(subject: &EhrSubject) -> String {
 /// One projected care relationship of one subject reference.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CareRow {
-    /// The keyed digest of the subject reference.
+    /// The digest of the subject reference.
     pub digest: Vec<u8>,
     /// The `PERSON` under care.
     pub person: Uuid,
@@ -60,8 +79,8 @@ pub struct CareRow {
     pub until: Option<jiff::civil::Date>,
 }
 
-/// The facts revision the projection reflects and the check digest of the
-/// key its digests were taken under, the state row locked until the
+/// The facts revision the projection reflects and the check value of the
+/// digest form its digests were taken in, the state row locked until the
 /// transaction on `tx` ends, so one projector writes at a time.
 ///
 /// # Errors
@@ -77,7 +96,7 @@ pub async fn lock_state(
 }
 
 /// Record that the projection reflects the facts revision `revision`, its
-/// digests taken under the key `key_check` names.
+/// digests taken in the form `key_check` names.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -98,7 +117,7 @@ pub async fn set_state(
 }
 
 /// Empty the projection and every EHR row's digest, before a projection under
-/// another key or from no revision is written whole.
+/// another digest form or from no revision is written whole.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.

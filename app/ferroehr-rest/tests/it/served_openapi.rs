@@ -520,8 +520,8 @@ async fn demographic_operations_are_fully_documented() {
         assert!(
             op["responses"]["409"]["description"]
                 .as_str()
-                .is_some_and(|d| d.contains("national-identifier protection")),
-            "POST {path} 409 must state the protected-identifier conflict"
+                .is_some_and(|d| d.contains("record subject reference")),
+            "POST {path} 409 must state the identifier conflicts"
         );
         let headers = header_names(&op, "201");
         for want in [
@@ -603,8 +603,8 @@ async fn demographic_operations_are_fully_documented() {
         assert!(
             op["responses"]["409"]["description"]
                 .as_str()
-                .is_some_and(|d| d.contains("national-identifier protection")),
-            "PUT {path} 409 must state the protected-identifier conflict"
+                .is_some_and(|d| d.contains("record subject reference")),
+            "PUT {path} 409 must state the identifier conflicts"
         );
         assert!(
             documented_params(&op, "header")
@@ -1451,8 +1451,9 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
             "/ferroehr/rest/extensions/v1/admin/query/",
         ],
         flag: "no its-rest operation governs this",
-        // The sixth is the binding-key re-key of #5013.
-        operations: 6,
+        // The fifth is the binding-key re-key of #5013; the protected-identifier
+        // read went with the protection (#6092).
+        operations: 5,
     },
     NonSpecFamily {
         // The four statistics calls; the released Admin API is the two EHR

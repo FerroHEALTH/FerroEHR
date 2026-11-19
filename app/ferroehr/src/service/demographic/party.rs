@@ -123,9 +123,8 @@ impl FerroEhrService {
     /// the `uid` injected, byte-identical to a fresh [`Self::read_party`] (the
     /// node codec round-trips losslessly; pinned by a test). When the commit
     /// rewrites the body ([`support::commit_rewrites_body`]: the `DV_MULTIMEDIA`
-    /// offload, or national-identifier protection), the in-memory input is not
-    /// the stored form, so the stored version is read back instead and the
-    /// response never carries a protected value the store does not hold.
+    /// offload), the in-memory input is not the stored form, so the stored
+    /// version is read back instead.
     pub(super) async fn commit_new_party(
         &self,
         kind: PartyKind,

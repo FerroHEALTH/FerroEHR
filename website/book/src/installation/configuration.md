@@ -387,5 +387,4 @@ Three holdings have no cap of their own:
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |
 | `[privacy]` | What the clinical side refuses to hold: the subject reference and identified parties | [Privacy & data minimisation](config-privacy.md) |
 | `[privacy.cohort]`, `[privacy.cohort.predicates]` | Cross-domain cohort queries: the demographic predicate allow-list, the small-cell floor, the cohort ceiling | [Privacy & data minimisation](config-privacy.md) |
-| `[privacy.identifier_protection]` | Sealing national identifiers in the demographic domain, and the key that opens them | [Privacy & data minimisation](config-privacy.md) |
 | — | The CLI, the production checklist, file-versus-environment guidance | [CLI & production checklist](config-cli.md) |

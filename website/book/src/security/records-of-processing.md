@@ -90,7 +90,7 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 |---|---|
 | Purpose | Holding who the record subjects are, and resolving a person to their record where a caller is entitled to |
 | Categories of data subject | Patients, and the parties a record refers to |
-| Categories of personal data | Parties in the `party` schema with names, addresses and contacts as the template defines them; protected national identifiers sealed in `national_identifier` |
+| Categories of personal data | Parties in the `party` schema with names, addresses and contacts as the template defines them; national identifiers are held in the master patient index, not here |
 | Recipients | *yours* |
 | Third-country transfers | *yours* |
 | Retention | Parties leave only by an administrator's deletion. The subject reference of an EHR leaves with the EHR that carries it |

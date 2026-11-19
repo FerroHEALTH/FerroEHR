@@ -878,30 +878,6 @@ async fn a_record_subject_is_refused_unless_it_is_a_persons_own_and_its_writer_m
     assert!(matches!(refused, ServiceError::Conflict(_)), "{refused:?}");
 }
 
-/// The synthetic root key the care projection tests digest under.
-const CARE_KEY: &str = "0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a";
-
-/// A replica over `pool` with identifier protection under [`CARE_KEY`], so
-/// it projects care (#5699).
-async fn projecting_replica(pool: &sqlx::PgPool) -> FerroEhrService {
-    use ferroehr::identifier_protection::config::IdentifierProtectionConfig;
-    use ferroehr::identifier_protection::engine::IdentifierProtection;
-    let engine = IdentifierProtection::from_config(
-        Some(&IdentifierProtectionConfig {
-            schemes: vec!["nl-bsn".to_owned()],
-            key: None,
-            key_file: None,
-        }),
-        Some(&ferrohealth_secret::secret::Secret::new(CARE_KEY)),
-        pool.clone(),
-    )
-    .expect("the engine builds")
-    .expect("protection is enabled");
-    replica(pool)
-        .await
-        .with_identifier_protection(std::sync::Arc::new(engine))
-}
-
 /// Whether the projection of `pool` says the subject of `ehr` is under the
 /// care of `team` on `day`, read as a query's probe reads it.
 async fn projected_care(
@@ -933,10 +909,7 @@ async fn projected_care(
 async fn a_discharge_on_one_replica_is_never_read_stale_from_the_projection_on_another() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let (one, two) = (
-        projecting_replica(&pool).await,
-        projecting_replica(&pool).await,
-    );
+    let (one, two) = (replica(&pool).await, replica(&pool).await);
     granted(&one, "adt", &[capability("write_care_relationship", &[])]).await;
     let (ward, _) = create(&one, PartyKind::Group, &team())
         .await

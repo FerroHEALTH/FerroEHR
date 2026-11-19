@@ -253,12 +253,11 @@ state_put() { # <key> <value>
 
 # The configuration every instance runs: the gate's, with each path the
 # topology mounts and the management surface the instruments read.
-instance_config() { # <dir> <jwks> <scim-jwks> <key> <passphrase> <identifier-key>
+instance_config() { # <dir> <jwks> <scim-jwks> <key> <passphrase>
   sed -e "s#/opt/sandbox-posture/basic-users-jwks.json#$2#" \
     -e "s#/etc/ferroehr/scim-jwks.json#$3#" \
     -e "s#/etc/ferroehr/signing.asc#$4#" \
     -e "s#/etc/ferroehr/signing-passphrase#$5#" \
-    -e "s#/etc/ferroehr/identifier-key#$6#" \
     "$CAPACITY_ROOT/perf/ferroehr.toml" >"$1/ferroehr.toml"
   cat >>"$1/ferroehr.toml" <<'EOF'
 
@@ -316,7 +315,7 @@ up_native() { # <instances>
   [[ -f "$PERF_OUT/signing/signing.asc" ]] || signing_key
   instance_config "$CAP_OUT_ABS" "$CAPACITY_ROOT/deploy/hosted/basic-users-jwks.json" \
     "$CAPACITY_ROOT/docs/conformance/party/scim/jwks.json" "$PERF_OUT/signing/signing.asc" \
-    "$PERF_OUT/signing/passphrase" "$PERF_OUT/signing/identifier-key"
+    "$PERF_OUT/signing/passphrase"
   state_put instances "$count"
   servers_start_native
 }
@@ -403,8 +402,7 @@ up_docker() { # <instances>
   # A key an earlier `up` generated is kept, so a restored store verifies.
   [[ -f "$PERF_OUT/signing/signing.asc" ]] || signing_key
   instance_config "$CAP_OUT_ABS" /opt/sandbox-posture/basic-users-jwks.json \
-    /etc/ferroehr/scim-jwks.json /etc/ferroehr/signing.asc /etc/ferroehr/signing-passphrase \
-    /etc/ferroehr/identifier-key
+    /etc/ferroehr/scim-jwks.json /etc/ferroehr/signing.asc /etc/ferroehr/signing-passphrase
   state_put instances "$count"
   state_put image "$image"
   state_put server_cpus "${CAPACITY_SERVER_CPUS:-}"
@@ -440,9 +438,6 @@ servers_start_docker() {
     -v "$CAPACITY_ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
     -v "$PERF_OUT/signing/signing.asc:/etc/ferroehr/signing.asc:ro"
     -v "$PERF_OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro")
-  # A tree whose gate generates an identifier-protection key mounts it too.
-  [[ -f "$PERF_OUT/signing/identifier-key" ]] \
-    && process+=(-v "$PERF_OUT/signing/identifier-key:/etc/ferroehr/identifier-key:ro")
   local targets="" upstreams="" urls=""
   for ((i = 1; i <= count; i++)); do
     docker run -d --name "$CAP_SERVER-$i" -p "127.0.0.1:$((CAP_HTTP_PORT + i)):8080" \

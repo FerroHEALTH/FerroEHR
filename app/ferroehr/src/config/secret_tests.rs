@@ -546,8 +546,8 @@ fn the_removed_import_role_is_refused() {
     removed_rbac_key("import_role", "\"IMPORTER\"");
 }
 
-/// `[authz.rbac] identifier_reader_role` is removed: reading protected
-/// national identifiers is a `read_identifiers` grant in the CDR (#5521).
+/// `[authz.rbac] identifier_reader_role` is removed (#5521), and the
+/// protected-identifier read it gated is gone with the protection (#6092).
 #[test]
 fn the_removed_identifier_reader_role_is_refused() {
     removed_rbac_key("identifier_reader_role", "\"IDENTIFIER_READER\"");

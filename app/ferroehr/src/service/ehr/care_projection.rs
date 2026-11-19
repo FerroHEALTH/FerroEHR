@@ -12,15 +12,14 @@
 //! projection's state row, so one projector of the cluster writes at a time
 //! and no role reaches both domains. Each run applies every `PERSON` stamped
 //! since the revision the projection holds, or every `PERSON` in care when
-//! it holds none or its digests were taken under another key, then digests
+//! it holds none or its digests were taken in another form, then digests
 //! the EHR rows that carry a subject and no digest. Only then does this
 //! replica read the projection, and only while it is at least as recent as
 //! the facts it holds: a removed relationship is never read from a stale row.
 //!
-//! The projection needs the deployment's identifier-protection key, whose
-//! clinical lookup subkey digests every subject reference; without it every
-//! query binds the census. No openEHR spec governs the projection: our own
-//! design.
+//! Every subject reference is held as its SHA-256 digest
+//! ([`access_care::subject_digest`]). No openEHR spec governs the
+//! projection: our own design.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -29,12 +28,11 @@ use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
-use crate::identifier_protection::engine::IdentifierProtection;
 use crate::party_binding::grants::caller;
 use crate::party_binding::grants::care::care_teams;
 use crate::party_binding::grants::live::LiveGrants;
 use crate::service::FerroEhrService;
-use crate::storage::access_care::{self, CareRow, cared_key, subject_key};
+use crate::storage::access_care::{self, CareRow, cared_key, subject_digest, subject_key};
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 
@@ -77,25 +75,25 @@ impl Projected {
 struct Projector {
     clinical: PgPool,
     party: PgPool,
-    engine: Arc<IdentifierProtection>,
     grants: Arc<LiveGrants>,
     projected: Arc<Projected>,
 }
 
 impl FerroEhrService {
-    /// The keyed digest of `subject`, the reference an EHR row is matched to
-    /// the care projection by; `None` without a subject or while identifier
-    /// protection is off.
+    /// The digest of `subject`, the reference an EHR row is matched to the
+    /// care projection by; `None` without a subject.
     pub(crate) fn care_subject_digest(&self, subject: Option<&EhrSubject>) -> Option<Vec<u8>> {
-        let engine = self.identifier_protection()?;
-        Some(engine.care_subject_digest(&subject_key(&self.grants.namespace(), subject?)))
+        Some(subject_digest(&subject_key(
+            &self.grants.namespace(),
+            subject?,
+        )))
     }
 
     /// Whether the clinical care projection reflects at least the facts
     /// this replica holds, so a query may read it.
     #[must_use]
     pub fn care_projection_current(&self) -> bool {
-        self.identifiers.is_some() && self.care_projected.covers(self.grants.facts_revision())
+        self.care_projected.covers(self.grants.facts_revision())
     }
 
     /// Remove the care of each of `persons` from the projection, the erasure
@@ -109,38 +107,32 @@ impl FerroEhrService {
     }
 
     /// Run the care projector once on this replica, as its task runs it, and
-    /// answer the facts revision the projection reached; `None` while
-    /// identifier protection is off.
+    /// answer the facts revision the projection reached.
     ///
     /// # Errors
     /// [`StorageError`] when a domain cannot be read or written.
-    pub async fn project_care(&self) -> Result<Option<i64>, StorageError> {
-        let Some(projector) = self.projector() else {
-            return Ok(None);
-        };
+    pub async fn project_care(&self) -> Result<i64, StorageError> {
+        let projector = self.projector();
         let revision = projector.project().await?;
         projector.projected.reached(revision);
-        Ok(Some(revision))
+        Ok(revision)
     }
 
-    /// The projector of this replica; `None` while identifier protection is
-    /// off.
-    fn projector(&self) -> Option<Projector> {
-        Some(Projector {
+    /// The projector of this replica.
+    fn projector(&self) -> Projector {
+        Projector {
             clinical: self.pool.clone(),
             party: self.demographic_pool.clone(),
-            engine: self.identifiers.clone()?,
             grants: Arc::clone(&self.grants),
             projected: Arc::clone(&self.care_projected),
-        })
+        }
     }
 
     /// Keep the care projection at the facts this replica holds, in a
-    /// detached task; nothing when identifier protection is off.
+    /// detached task.
     pub fn spawn_care_projector(&self) {
-        if let Some(projector) = self.projector() {
-            tokio::spawn(async move { projector.run().await });
-        }
+        let projector = self.projector();
+        tokio::spawn(async move { projector.run().await });
     }
 }
 
@@ -181,7 +173,7 @@ impl Projector {
     /// One run: the projection brought to the party facts revision it reads,
     /// then every undigested EHR row digested; the revision reached.
     async fn project(&self) -> Result<i64, StorageError> {
-        let key_check = self.engine.care_key_check();
+        let key_check = access_care::digest_check();
         let mut clinical = acquire(&self.clinical).await?;
         let mut tx = clinical.begin().await?;
         let (held, check) = access_care::lock_state(&mut tx).await?;
@@ -218,7 +210,7 @@ impl Projector {
 
     /// The projected rows of `persons`: each care relationship of a live head,
     /// once for the `PERSON`'s own reference and once for each record subject
-    /// it declares, each reference as its keyed digest.
+    /// it declares, each reference as its digest.
     async fn rows_of(
         &self,
         snapshot: &mut sqlx::PgConnection,
@@ -241,10 +233,7 @@ impl Projector {
                     .filter(|(holder, _)| holder == person)
                     .map(|(_, subject)| cared_key(subject)),
             );
-            let digests = self
-                .engine
-                .care_subject_digests(keys.iter().map(String::as_str));
-            for digest in digests {
+            for digest in keys.iter().map(|key| subject_digest(key)) {
                 for team in &teams {
                     rows.push(CareRow {
                         digest: digest.clone(),
@@ -260,7 +249,7 @@ impl Projector {
     }
 
     /// Digest every EHR row that carries a subject and no digest: rows
-    /// written before the projection existed or under another key.
+    /// written before the projection existed or in another digest form.
     async fn digest_ehrs(&self, namespace: &str) -> Result<(), StorageError> {
         let mut conn = acquire(&self.clinical).await?;
         loop {
@@ -272,9 +261,7 @@ impl Projector {
                 .iter()
                 .map(|(_, subject)| subject_key(namespace, subject))
                 .collect();
-            let digests = self
-                .engine
-                .care_subject_digests(keys.iter().map(String::as_str));
+            let digests = keys.iter().map(|key| subject_digest(key));
             let rows: Vec<_> = batch
                 .into_iter()
                 .zip(digests)

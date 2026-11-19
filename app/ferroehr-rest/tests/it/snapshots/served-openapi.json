@@ -2798,97 +2798,6 @@
         }
       }
     },
-    "/ferroehr/rest/extensions/v1/admin/party/identifiers": {
-      "get": {
-        "tags": [
-          "admin-identifiers"
-        ],
-        "summary": "Read a party version with its protected identifiers expanded\n(`GET /admin/party/identifiers`).",
-        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
-        "operationId": "admin_party_identifiers",
-        "parameters": [
-          {
-            "name": "version_uid",
-            "in": "query",
-            "description": "The `OBJECT_VERSION_ID` of the party version to read. Any version may be named, so a historical version shows the values it committed.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "`{ \"version_uid\": …, \"expanded_schemes\": [...], \"version\": … }`: the party's `ORIGINAL_VERSION` with each protected identifier put back to its value, and the scheme of each value put back. The body is a view: it no longer matches the stored, signed version. Each scheme expanded is one access record naming the reader, the party and the scheme, never the value.",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "`version_uid` is missing or not an `OBJECT_VERSION_ID`, or the deployment configures no identifier protection.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthenticated.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not in the Admin class, or holding no policy grant of `read_identifiers`.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No party holds that version.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "The admin API is disabled on this server.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "The access record could not be written; the values are withheld.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/ferroehr/rest/extensions/v1/admin/party/{party_id}": {
       "delete": {
         "tags": [
@@ -10779,7 +10688,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted AGENT carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs these triggers. The submitted AGENT carries a binding key, a `userName`, an `externalId`, a group `displayName` or a client identifier another live party holds, or a record subject reference another PERSON declares. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10799,7 +10708,7 @@
             }
           },
           "422": {
-            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted AGENT (empty `identities`, a `name` that is not the type designation), or a body whose `_type` is a different PARTY subtype than the route's — the routed kind's codec is the one that decodes it. With identifier protection on, also a AGENT carrying two values in one protected scheme, or referencing a protected identifier this party does not hold (our own extension).",
+            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted AGENT (empty `identities`, a `name` that is not the type designation), or a body whose `_type` is a different PARTY subtype than the route's — the routed kind's codec is the one that decodes it.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11355,7 +11264,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted AGENT carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs these triggers. The submitted AGENT carries a binding key, a `userName`, an `externalId`, a group `displayName` or a client identifier another live party holds, or a record subject reference another PERSON declares. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11399,7 +11308,7 @@
             }
           },
           "422": {
-            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted AGENT, or a body typed as a different PARTY subtype than the route's. With identifier protection on, also a AGENT carrying two values in one protected scheme, or referencing a protected identifier this party does not hold (our own extension).",
+            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted AGENT, or a body typed as a different PARTY subtype than the route's.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12664,7 +12573,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted GROUP carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs these triggers. The submitted GROUP carries a binding key, a `userName`, an `externalId`, a group `displayName` or a client identifier another live party holds, or a record subject reference another PERSON declares. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12684,7 +12593,7 @@
             }
           },
           "422": {
-            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted GROUP (empty `identities`, a `name` that is not the type designation), or a body whose `_type` is a different PARTY subtype than the route's — the routed kind's codec is the one that decodes it. With identifier protection on, also a GROUP carrying two values in one protected scheme, or referencing a protected identifier this party does not hold (our own extension).",
+            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted GROUP (empty `identities`, a `name` that is not the type designation), or a body whose `_type` is a different PARTY subtype than the route's — the routed kind's codec is the one that decodes it.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -13240,7 +13149,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted GROUP carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs these triggers. The submitted GROUP carries a binding key, a `userName`, an `externalId`, a group `displayName` or a client identifier another live party holds, or a record subject reference another PERSON declares. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -13284,7 +13193,7 @@
             }
           },
           "422": {
-            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted GROUP, or a body typed as a different PARTY subtype than the route's. With identifier protection on, also a GROUP carrying two values in one protected scheme, or referencing a protected identifier this party does not hold (our own extension).",
+            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted GROUP, or a body typed as a different PARTY subtype than the route's.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -14112,7 +14021,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted ORGANISATION carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs these triggers. The submitted ORGANISATION carries a binding key, a `userName`, an `externalId`, a group `displayName` or a client identifier another live party holds, or a record subject reference another PERSON declares. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -14132,7 +14041,7 @@
             }
           },
           "422": {
-            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted ORGANISATION (empty `identities`, a `name` that is not the type designation), or a body whose `_type` is a different PARTY subtype than the route's — the routed kind's codec is the one that decodes it. With identifier protection on, also a ORGANISATION carrying two values in one protected scheme, or referencing a protected identifier this party does not hold (our own extension).",
+            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted ORGANISATION (empty `identities`, a `name` that is not the type designation), or a body whose `_type` is a different PARTY subtype than the route's — the routed kind's codec is the one that decodes it.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -14688,7 +14597,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted ORGANISATION carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs these triggers. The submitted ORGANISATION carries a binding key, a `userName`, an `externalId`, a group `displayName` or a client identifier another live party holds, or a record subject reference another PERSON declares. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -14732,7 +14641,7 @@
             }
           },
           "422": {
-            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted ORGANISATION, or a body typed as a different PARTY subtype than the route's. With identifier protection on, also a ORGANISATION carrying two values in one protected scheme, or referencing a protected identifier this party does not hold (our own extension).",
+            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted ORGANISATION, or a body typed as a different PARTY subtype than the route's.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -15560,7 +15469,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted PERSON carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs these triggers. The submitted PERSON carries a binding key, a `userName`, an `externalId`, a group `displayName` or a client identifier another live party holds, or a record subject reference another PERSON declares. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -15580,7 +15489,7 @@
             }
           },
           "422": {
-            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted PERSON (empty `identities`, a `name` that is not the type designation), or a body whose `_type` is a different PARTY subtype than the route's — the routed kind's codec is the one that decodes it. With identifier protection on, also a PERSON carrying two values in one protected scheme, or referencing a protected identifier this party does not hold (our own extension).",
+            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted PERSON (empty `identities`, a `name` that is not the type designation), or a body whose `_type` is a different PARTY subtype than the route's — the routed kind's codec is the one that decodes it.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -16136,7 +16045,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted PERSON carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs these triggers. The submitted PERSON carries a binding key, a `userName`, an `externalId`, a group `displayName` or a client identifier another live party holds, or a record subject reference another PERSON declares. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -16180,7 +16089,7 @@
             }
           },
           "422": {
-            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted PERSON, or a body typed as a different PARTY subtype than the route's. With identifier protection on, also a PERSON carrying two values in one protected scheme, or referencing a protected identifier this party does not hold (our own extension).",
+            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted PERSON, or a body typed as a different PARTY subtype than the route's.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -17008,7 +16917,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted ROLE carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs these triggers. The submitted ROLE carries a binding key, a `userName`, an `externalId`, a group `displayName` or a client identifier another live party holds, or a record subject reference another PERSON declares. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -17028,7 +16937,7 @@
             }
           },
           "422": {
-            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted ROLE (empty `identities`, a `name` that is not the type designation), or a body whose `_type` is a different PARTY subtype than the route's — the routed kind's codec is the one that decodes it. With identifier protection on, also a ROLE carrying two values in one protected scheme, or referencing a protected identifier this party does not hold (our own extension).",
+            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted ROLE (empty `identities`, a `name` that is not the type designation), or a body whose `_type` is a different PARTY subtype than the route's — the routed kind's codec is the one that decodes it.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -17584,7 +17493,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted ROLE carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs these triggers. The submitted ROLE carries a binding key, a `userName`, an `externalId`, a group `displayName` or a client identifier another live party holds, or a record subject reference another PERSON declares. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -17628,7 +17537,7 @@
             }
           },
           "422": {
-            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted ROLE, or a body typed as a different PARTY subtype than the route's. With identifier protection on, also a ROLE carrying two values in one protected scheme, or referencing a protected identifier this party does not hold (our own extension).",
+            "description": "The released trigger, verbatim: `422 Unprocessable Entity` \"is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors\" (ITS-REST `specifications/responses/422.yaml`). Here: an RM invariant violation on the submitted ROLE, or a body typed as a different PARTY subtype than the route's.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -28051,7 +27960,7 @@
     },
     {
       "name": "admin-identifiers",
-      "description": "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and a `read_identifiers` grant in the CDR, and every read is an access record naming the reader, the party and the scheme, never the value."
+      "description": "The identifiers that bind a party: a PERSON's binding key, and the refused PMIR identity-feed messages with their retry and settle. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."
     },
     {
       "name": "admin-marks",
