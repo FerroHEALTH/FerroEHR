@@ -8,14 +8,18 @@
 //! EHR opens the app's launch URL with `iss` and `launch`, "an opaque handle
 //! to the EHR context" (Launch App: EHR Launch, Request). It defines no way
 //! for the EHR to hand the authorization server that context, so FerroSMART
-//! takes it at `POST {issuer}/launch`, its own API: a form in which the EHR
+//! takes it at its own API, the `launch_registration_endpoint` its discovery
+//! document names (`{issuer}/.well-known/smart-configuration`): a form in which the EHR
 //! authenticates with its `private_key_jwt` client assertion as at the token
 //! endpoint and names the app, the base and the context, answered `201`
 //! with `{"launch", "expires_in"}`. The viewer is that EHR client: it holds
 //! the key server-side, registers each click's context there and sends the
 //! browser to `{launch_url}?iss={resource}&launch={value}`. The launch JWT
 //! FerroSMART also takes is not used, so every value is single use at
-//! FerroSMART's side. No openEHR spec governs this: our own design.
+//! FerroSMART's side. A SMART launch Task read at the FHIR facade
+//! ([`crate::launch_tasks`]) launches the same way, its app named by its
+//! launch URL (`app_launch_uri`) and its base the facade's. No openEHR spec
+//! governs this: our own design.
 
 use std::path::PathBuf;
 
@@ -38,8 +42,9 @@ const ASSERTION_TYP: &str = "client-authentication+jwt";
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct LaunchSection {
-    /// FerroSMART's issuer identifier: the launch API is `{issuer}/launch`
-    /// and the client assertion's sole `aud` is the issuer.
+    /// FerroSMART's issuer identifier: the launch API is the
+    /// `launch_registration_endpoint` of its discovery document, and the
+    /// client assertion's sole `aud` is the issuer.
     pub issuer: String,
     /// The viewer's `client_id` at FerroSMART: a `confidential_asymmetric`
     /// client whose scopes list `system/launch.c`.
@@ -55,6 +60,10 @@ pub struct LaunchSection {
     /// The EHR subject namespaces whose subject id is a FHIR `Patient` id,
     /// sent as `patient` beside `ehrId`.
     pub patient_namespaces: Vec<String>,
+    /// The FHIR R4 base of the facade that serves the SMART launch Tasks,
+    /// one `[[ferrosmart.resource]]` paired with `resource`; empty, the
+    /// viewer lists no Task.
+    pub fhir_base: String,
     /// How long one request to FerroSMART may take.
     pub timeout: Duration,
     /// The trust roots beside the platform's and the client identity the
@@ -73,6 +82,7 @@ impl Default for LaunchSection {
             kid: String::new(),
             resource: String::new(),
             patient_namespaces: Vec::new(),
+            fhir_base: String::new(),
             // NOTE: no specification governs this: our own design; one form post to a server
             // beside the viewer answers in well under ten seconds.
             timeout: Duration::from_secs(10),
@@ -163,6 +173,10 @@ pub enum LaunchError {
     /// FerroSMART answered `201` with a body that is no launch.
     #[error("FerroSMART's answer carries no launch value")]
     Answer(#[source] serde_json::Error),
+    /// FerroSMART's discovery document answered no
+    /// `launch_registration_endpoint` the viewer may post to.
+    #[error("FerroSMART's discovery document names no usable launch_registration_endpoint")]
+    NoEndpoint,
 }
 
 /// The form of `POST {issuer}/launch`, its parameters in this order: the
@@ -194,6 +208,60 @@ impl std::fmt::Debug for LaunchForm<'_> {
             .field("app_client_id", &self.app_client_id)
             .finish_non_exhaustive()
     }
+}
+
+/// The form that registers the launch of a SMART launch Task's app: the
+/// app by its launch URL, the facade's base, and the Task's context
+/// (FerroSMART `docs/architecture.md` §13.6 item 3; SMART App Launch 2.2.0,
+/// Task profile for requesting a SMART launch).
+#[derive(Serialize)]
+struct TaskLaunchForm<'a> {
+    /// The assertion type, RFC 7523 §2.2.
+    client_assertion_type: &'a str,
+    /// The viewer's signed assertion.
+    client_assertion: &'a str,
+    /// The app's configured launch URL, which the Task's URL matched.
+    app_launch_uri: &'a str,
+    /// The facade's base, the app's `iss`.
+    resource: &'a str,
+    /// The Task's `for`, a FHIR `Patient` id.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    patient: Option<&'a str>,
+    /// The Task's `encounter`, a FHIR `Encounter` id.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    encounter: Option<&'a str>,
+    /// The Task's `smartonfhir-appcontext` input, unchanged.
+    #[serde(rename = "appContext", skip_serializing_if = "Option::is_none")]
+    app_context: Option<&'a str>,
+    /// Always `false`: the viewer shows whose record it is.
+    need_patient_banner: bool,
+}
+
+impl std::fmt::Debug for TaskLaunchForm<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TaskLaunchForm")
+            .field("app_launch_uri", &self.app_launch_uri)
+            .finish_non_exhaustive()
+    }
+}
+
+/// The context a SMART launch Task carries into its app's launch.
+#[derive(Debug, Clone, Copy)]
+pub struct TaskContext<'a> {
+    /// The Task's patient, a FHIR `Patient` id.
+    pub patient: Option<&'a str>,
+    /// The Task's encounter, a FHIR `Encounter` id.
+    pub encounter: Option<&'a str>,
+    /// The Task's application context.
+    pub app_context: Option<&'a str>,
+}
+
+/// The member of FerroSMART's discovery document that names its launch
+/// API (FerroSMART `docs/architecture.md` §13.6 item 3).
+#[derive(Deserialize)]
+struct Discovered {
+    /// The endpoint.
+    launch_registration_endpoint: String,
 }
 
 /// The answer of `POST {issuer}/launch`.
@@ -239,8 +307,12 @@ pub struct Launcher {
     key: AssertionKey,
     /// The issuer identifier, the assertion's `aud`.
     issuer: String,
-    /// `{issuer}/launch`.
-    endpoint: url::Url,
+    /// `{issuer}/.well-known/smart-configuration`.
+    discovery: url::Url,
+    /// The `launch_registration_endpoint` it names, read once.
+    endpoint: tokio::sync::OnceCell<url::Url>,
+    /// The facade's FHIR base, when the viewer lists SMART launch Tasks.
+    fhir_base: Option<String>,
     /// The viewer's `client_id`.
     client_id: String,
     /// The base the apps get as `iss`.
@@ -294,9 +366,14 @@ impl Launcher {
         }
         let issuer = ferrohealth_smart::metadata::issuer_url(&section.issuer)
             .map_err(|_insecure| LaunchConfigError::Issuer(section.issuer.clone()))?;
-        let endpoint = web_url(
+        // NOTE: SMART App Launch 2.2.0, Conformance, Metadata: the document lives at
+        // `{issuer}/.well-known/smart-configuration`.
+        let discovery = web_url(
             "issuer",
-            &format!("{}/launch", issuer.as_str().trim_end_matches('/')),
+            &format!(
+                "{}/.well-known/smart-configuration",
+                issuer.as_str().trim_end_matches('/')
+            ),
         )?;
         if section.client_id.is_empty() {
             return Err(LaunchConfigError::Missing("client_id"));
@@ -305,6 +382,9 @@ impl Launcher {
             return Err(LaunchConfigError::Missing("resource"));
         }
         web_url("resource", &section.resource)?;
+        if !section.fhir_base.is_empty() {
+            web_url("fhir_base", &section.fhir_base)?;
+        }
         if section.app.is_empty() {
             return Err(LaunchConfigError::Missing("app"));
         }
@@ -338,7 +418,7 @@ impl Launcher {
             return Err(LaunchConfigError::Algorithm(key.algorithm()));
         }
         let connection = EndpointSection {
-            url: SecretUrl::new(endpoint.as_str()),
+            url: SecretUrl::new(discovery.as_str()),
             timeout: section.timeout,
             tls: section.tls.clone(),
             ..EndpointSection::default()
@@ -351,12 +431,50 @@ impl Launcher {
             http,
             key,
             issuer: section.issuer.clone(),
-            endpoint,
+            discovery,
+            endpoint: tokio::sync::OnceCell::new(),
+            fhir_base: (!section.fhir_base.is_empty()).then(|| section.fhir_base.clone()),
             client_id: section.client_id.clone(),
             resource: section.resource.clone(),
             patient_namespaces: section.patient_namespaces.clone(),
             apps,
         }))
+    }
+
+    /// The facade's FHIR base, when the viewer lists SMART launch Tasks.
+    #[must_use]
+    pub fn fhir_base(&self) -> Option<&str> {
+        self.fhir_base.as_deref()
+    }
+
+    /// Whether an EHR whose subject is in `namespace` names a FHIR
+    /// `Patient` by its subject id.
+    #[must_use]
+    pub fn names_patients(&self, namespace: &str) -> bool {
+        self.patient_namespaces
+            .iter()
+            .any(|configured| configured == namespace)
+    }
+
+    /// The connection to FerroSMART and the facade.
+    #[must_use]
+    pub const fn http(&self) -> &reqwest::Client {
+        &self.http
+    }
+
+    /// The configured app whose launch URL is `launch_url`, compared after
+    /// the RFC 3986 §6.2.2 normalization FerroSMART compares a registered
+    /// launch URL by, or `None` for an app the viewer does not launch.
+    #[must_use]
+    pub fn app_launched_at(&self, launch_url: &str) -> Option<&LaunchApp> {
+        let wanted = ferrohealth_smart::uri::normalized(launch_url)?;
+        self.apps
+            .iter()
+            .find(|(app, _)| {
+                ferrohealth_smart::uri::normalized(&app.launch_url).as_deref()
+                    == Some(wanted.as_str())
+            })
+            .map(|(app, _)| app)
     }
 
     /// The apps an EHR's page offers, in configured order.
@@ -419,8 +537,10 @@ impl Launcher {
     /// [`LaunchError::UnknownApp`] for an app `[launch]` does not list,
     /// [`LaunchError::Assertion`] when the assertion cannot be signed,
     /// [`LaunchError::Unreachable`] when FerroSMART cannot be reached,
-    /// [`LaunchError::Refused`] for any answer but `201`, and
-    /// [`LaunchError::Answer`] for a `201` that carries no launch value.
+    /// [`LaunchError::Refused`] for any answer but `201`,
+    /// [`LaunchError::Answer`] for a `201` that carries no launch value, and
+    /// [`LaunchError::NoEndpoint`] when FerroSMART's discovery document
+    /// names no launch API.
     pub async fn launch(
         &self,
         app_client_id: &str,
@@ -431,16 +551,98 @@ impl Launcher {
             .iter()
             .find(|(app, _)| app.client_id == app_client_id)
             .ok_or_else(|| LaunchError::UnknownApp(app_client_id.to_owned()))?;
-        let assertion = self
-            .key
+        let assertion = self.assertion()?;
+        let launch = self.register(&self.form(app, &assertion, context)).await?;
+        let mut url = launch_url.clone();
+        url.query_pairs_mut()
+            .append_pair("iss", &self.resource)
+            .append_pair("launch", &launch);
+        Ok(url)
+    }
+
+    /// Registers the launch of the configured `app` a SMART launch Task
+    /// named, with the Task's `context`, at the facade's base, and returns
+    /// the app's configured launch URL with `iss` and the fresh `launch`
+    /// value; the URL is never one the Task carries (SMART App Launch
+    /// 2.2.0, Task profile for requesting a SMART launch).
+    ///
+    /// # Errors
+    ///
+    /// As [`Launcher::launch`], and [`LaunchError::NoEndpoint`] when the
+    /// viewer lists no Task.
+    pub async fn launch_task(
+        &self,
+        app: &LaunchApp,
+        context: TaskContext<'_>,
+    ) -> Result<url::Url, LaunchError> {
+        let base = self.fhir_base.as_deref().ok_or(LaunchError::NoEndpoint)?;
+        let launch_url = self
+            .apps
+            .iter()
+            .find(|(configured, _)| configured == app)
+            .map(|(_, url)| url)
+            .ok_or_else(|| LaunchError::UnknownApp(app.client_id.clone()))?;
+        let assertion = self.assertion()?;
+        let form = TaskLaunchForm {
+            client_assertion_type: ASSERTION_TYPE,
+            client_assertion: &assertion,
+            app_launch_uri: &app.launch_url,
+            resource: base,
+            patient: context.patient,
+            encounter: context.encounter,
+            app_context: context.app_context,
+            need_patient_banner: false,
+        };
+        let launch = self.register(&form).await?;
+        let mut url = launch_url.clone();
+        url.query_pairs_mut()
+            .append_pair("iss", base)
+            .append_pair("launch", &launch);
+        Ok(url)
+    }
+
+    /// The viewer's client assertion to FerroSMART.
+    fn assertion(&self) -> Result<String, LaunchError> {
+        self.key
             .assertion(&self.client_id, &self.issuer, ASSERTION_TYP)
-            .map_err(LaunchError::Assertion)?;
-        let body = self.form(app, &assertion, context);
+            .map_err(LaunchError::Assertion)
+    }
+
+    /// The `launch_registration_endpoint` of FerroSMART's discovery
+    /// document, read once and then kept.
+    async fn endpoint(&self) -> Result<&url::Url, LaunchError> {
+        self.endpoint
+            .get_or_try_init(|| async {
+                let response = self
+                    .http
+                    .get(self.discovery.clone())
+                    .header(http::header::ACCEPT, "application/json")
+                    .send()
+                    .await
+                    .map_err(LaunchError::Unreachable)?;
+                if response.status() != http::StatusCode::OK {
+                    return Err(LaunchError::NoEndpoint);
+                }
+                let body = response.bytes().await.map_err(LaunchError::Unreachable)?;
+                let discovered: Discovered =
+                    serde_json::from_slice(&body).map_err(|_unread| LaunchError::NoEndpoint)?;
+                // NOTE: RFC 8414 §2: an endpoint of the issuer is https, or http on a
+                // loopback host, as the issuer itself.
+                ferrohealth_smart::metadata::issuer_url(&discovered.launch_registration_endpoint)
+                    .map_err(|_insecure| LaunchError::NoEndpoint)
+            })
+            .await
+    }
+
+    /// Posts `form` to FerroSMART's launch API and returns the `launch`
+    /// value it answers.
+    async fn register<F: Serialize>(&self, form: &F) -> Result<String, LaunchError> {
+        let endpoint = self.endpoint().await?;
         let response = self
             .http
-            .post(self.endpoint.clone())
+            .post(endpoint.clone())
             .header(http::header::ACCEPT, "application/json")
-            .form(&body)
+            .form(form)
             .send()
             .await
             .map_err(LaunchError::Unreachable)?;
@@ -457,11 +659,7 @@ impl Launcher {
             });
         }
         let registered: Registered = serde_json::from_slice(&body).map_err(LaunchError::Answer)?;
-        let mut url = launch_url.clone();
-        url.query_pairs_mut()
-            .append_pair("iss", &self.resource)
-            .append_pair("launch", &registered.launch);
-        Ok(url)
+        Ok(registered.launch)
     }
 }
 

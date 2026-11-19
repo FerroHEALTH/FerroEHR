@@ -257,7 +257,8 @@ launch URL "in a new browser instance (or iframe)" with `iss`, the base, and
 `launch`, "an opaque handle to the EHR context" (Launch App: EHR Launch,
 Request). The specification gives the EHR no way to hand the authorization
 server that context, so FerroSMART takes it through its own EHR launch API,
-`POST {issuer}/launch`
+the `launch_registration_endpoint` its discovery document
+`{issuer}/.well-known/smart-configuration` names
 (FerroSMART's architecture, [§13.17, Launching an app from an EHR](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md)).
 The viewer is that EHR: with `[launch]` set, an EHR's **More** menu carries a
 **Launch** item per configured app, and a click does this:
@@ -337,6 +338,74 @@ The viewer's configuration keys are in [the viewer's
 configuration](viewer/index.md#configuration). The launch API, the menu and
 the context the viewer sends are our own design; SMART fixes only the launch
 URL.
+
+### Launch Tasks
+
+SMART App Launch 2.2.0 lets a system ask staff to launch an app with a FHIR
+`Task` of the `task-ehr-launch` or `task-standalone-launch` profile (Task
+profile for requesting a SMART launch): the app's URL in the
+`smartonfhir-application` input, an optional `smartonfhir-appcontext`, the
+patient in `for` and an optional `encounter`. With `launch.fhir_base` set to
+the FHIR facade's base, the page of an EHR whose subject namespace is one of
+`launch.patient_namespaces` carries a **Launch tasks** section:
+
+1. The viewer asks FerroSMART for an access token for the facade on your
+   session's grant: a refresh grant naming `resource={fhir_base}` (RFC 8707
+   §2.2), the token kept with the session until it is due.
+2. It searches `Task?patient={subject}&code=` for the two launch codes of
+   the SMART codes system, follows the bundle's `next` links under the base,
+   and checks each Task against its profile. A Task off its profile is
+   logged and not listed.
+3. A Task whose app URL is a configured app's `launch_url` (compared after
+   RFC 3986 §6.2.2 normalization, as FerroSMART compares it) gets a
+   **Launch** button into a new window; any other is listed as **App not
+   configured**.
+4. The button posts only the Task's id. The viewer reads the Task again at
+   the facade, refuses it unless its `for` is the EHR's subject and its URL a
+   configured app's, and then launches. An EHR launch Task registers
+   `app_launch_uri`, `resource={fhir_base}`, `patient`, `encounter` and the
+   Task's `appContext` unchanged at FerroSMART and opens the configured
+   `launch_url` with `iss={fhir_base}` and the fresh `launch`; a standalone
+   launch Task opens the configured `launch_url` as it is. The browser never
+   goes to a URL the Task carries.
+
+Launching a Task changes no Task status. The section needs these, beside the
+EHR launch setup above:
+
+- **An OpenID Connect sign-in at FerroSMART** over a `memory` session store
+  with `oidc.offline_access = true`, so the session holds the refresh token
+  the facade token comes from. A Basic sign-in or a `sealed` store holds
+  none, and the section asks you to sign in with FerroSMART.
+- **The FHIR scopes in the sign-in**: `oidc.scopes` lists the scopes the
+  facade token needs, such as `user/Task.rs`, and the viewer's sign-in client
+  at FerroSMART carries them in its `scopes` ceiling. FerroSMART narrows the
+  facade token to the grant's FHIR scopes.
+- **The pairing at FerroSMART**: the openEHR `[[ferrosmart.resource]]` the
+  viewer signs in for names the facade as its `fhir_base`, so FerroSMART
+  accepts that `resource` on refresh.
+- **Each app's launch URL at FerroSMART**: the app's client registers the
+  URL its Tasks carry as `launch_uri`, the same as the viewer's `launch_url`.
+
+```toml
+# ferroehr-viewer.toml
+[auth]
+oidc_enabled = true
+
+[oidc]
+issuer = "https://smart.example.org"
+client_id = "ferroehr-viewer-sign-in"
+scopes = ["openid", "profile", "user/Task.rs"]
+offline_access = true
+
+[session]
+store = "memory"
+
+[launch]
+patient_namespaces = ["demo.hospital.mrn"]
+fhir_base = "https://ehr.example.org/fhir"
+```
+
+Which Tasks the viewer lists and launches is our own design.
 
 ## Configuration keys
 

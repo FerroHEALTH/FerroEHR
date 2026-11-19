@@ -21,6 +21,7 @@
 pub mod compositions;
 pub mod contribution;
 pub mod directory;
+pub mod launch_tasks;
 pub mod status;
 pub mod tags;
 
@@ -212,6 +213,9 @@ pub struct EhrModel<P> {
     head: Result<EhrHead, ViewerError>,
     /// The tab's own model.
     panel: Option<P>,
+    /// The SMART launch Tasks of the EHR's patient, when the viewer lists
+    /// them.
+    tasks: Option<launch_tasks::Panel>,
 }
 
 /// The subject line of the EHR `ehr_id` whose status is `status`; a
@@ -265,6 +269,7 @@ where
                 acted,
                 head: Err(error),
                 panel: None,
+                tasks: None,
             };
         }
     };
@@ -279,10 +284,15 @@ where
         has_directory: facts.has_directory,
         admin: facts.admin,
     };
+    let tasks = match facts.status.as_ref() {
+        Ok(status) => launch_tasks::read(status).await,
+        Err(_) => None,
+    };
     EhrModel {
         acted,
         head: Ok(head),
         panel: Some(panel(facts).await),
+        tasks,
     }
 }
 
@@ -562,8 +572,27 @@ async fn act(ehr_id: &str) -> Option<Acted> {
             }
         }
         "launch" => launch(ehr_id, &posted.text("app")).await,
+        "launch-task" => launch_task(ehr_id, &posted.text("task")).await,
         _ => None,
     }
+}
+
+/// Launches the app of the SMART launch Task `task_id` for the EHR
+/// `ehr_id`, read with the person's own session first
+/// ([`launch_tasks::launch`]).
+async fn launch_task(ehr_id: &str, task_id: &str) -> Option<Acted> {
+    let status = match crate::bff::ehr_detail::status::fetch_ehr_status(ehr_id.to_owned()).await {
+        Ok(status) => status,
+        Err(error) => {
+            return Some(Acted::Refused(Refused::new(
+                tr(ServerMsg::LaunchRefused),
+                error,
+            )));
+        }
+    };
+    launch_tasks::launch(ehr_id, &status, task_id)
+        .await
+        .map(Acted::Refused)
 }
 
 /// An EHR's page: its header and the tab `tab` over the panel `draw` makes
@@ -572,7 +601,12 @@ pub fn ehr_view<P, F>(ehr_id: &str, tab: EhrTab, model: EhrModel<P>, draw: F) ->
 where
     F: FnOnce(P) -> Html,
 {
-    let EhrModel { acted, head, panel } = model;
+    let EhrModel {
+        acted,
+        head,
+        panel,
+        tasks,
+    } = model;
     let acted = acted.map(|acted| match acted {
         Acted::Refused(refusal) => refusal.view(),
         Acted::Mismatch => crate::pages::common::warn_note(t(tr(RecordsMsg::EhrDeleteMismatch))),
@@ -585,8 +619,9 @@ where
     let tabs = tabs(ehr_id, &head);
     let body = opt(panel.map(draw));
     let binder = binder(&current(), tr(RecordsMsg::EhrViews), tabs, tab.key(), body);
+    let tasks = opt(tasks.map(|tasks| launch_tasks::view(ehr_id, tasks)));
     header.then(h(format!(
-        r#"<div class="fui-stack">{}{binder}</div>"#,
+        r#"<div class="fui-stack">{}{tasks}{binder}</div>"#,
         opt(acted)
     )))
 }
