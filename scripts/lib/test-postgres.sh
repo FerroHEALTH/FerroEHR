@@ -5,7 +5,9 @@
 # (tools/testkit, FERROEHR_TEST_PG_URL), applied to the lane's service
 # container: the non-durable settings the PostgreSQL docs give for throwaway
 # data ("Non-Durable Settings"), and pg_stat_statements loaded with
-# track = all, which the statement budget of an AQL request reads (#5885).
+# track = all, which the statement budget of an AQL request reads (#5885),
+# and 1 GB of past WAL kept, so a checkpoint removes no segment a WAL budget
+# is about to read with pg_walinspect (#6035).
 # The testkit container starts with the same settings.
 #
 # shared_preload_libraries takes effect only at server start (PostgreSQL 18
@@ -27,7 +29,8 @@ psql -h localhost -U openehr -d postgres -v ON_ERROR_STOP=1 \
   -c "ALTER SYSTEM SET full_page_writes = off" \
   -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'" \
   -c "ALTER SYSTEM SET pg_stat_statements.track = 'all'" \
-  -c "ALTER SYSTEM SET pg_stat_statements.max = 100000" >/dev/null
+  -c "ALTER SYSTEM SET pg_stat_statements.max = 100000" \
+  -c "ALTER SYSTEM SET wal_keep_size = '1GB'" >/dev/null
 docker restart "$container" >/dev/null
 for _ in $(seq 1 60); do
   if pg_isready -h localhost -U openehr -q; then
