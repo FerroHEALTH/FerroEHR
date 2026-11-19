@@ -27,6 +27,7 @@
 
 use crate::draft::access_control::access_control::access_actor_scope::AccessActorScope;
 use crate::draft::access_control::access_control::access_classification::AccessClassification;
+use crate::draft::access_control::access_control::access_conflict_rule::AccessConflictRule;
 use crate::draft::access_control::access_control::access_data_scope::AccessDataScope;
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
 use crate::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
@@ -35,7 +36,8 @@ use crate::draft::access_control::access_control::access_log_retention::AccessLo
 use crate::draft::access_control::access_control::access_policy::AccessPolicy;
 use crate::draft::access_control::terminology::log::AccessorKind;
 use crate::draft::access_control::terminology::{
-    AccessDefault, CallerKind, DirectiveKind, Effect, Relationship, Term, Withheld,
+    AccessDefault, CallerKind, Conflict, DirectiveKind, Effect, Relationship,
+    TERMINOLOGY_ID_CONFIDENTIALITY, Term, ValueSetBinding, Withheld,
 };
 use crate::draft::invariants::{Check, Violations};
 use crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
@@ -165,7 +167,60 @@ pub fn check_policy(policy: &AccessPolicy) -> Result<(), Violations> {
     if let Some(retention) = &policy.log_retention {
         log_retention_rules(&mut check, retention);
     }
+    care_rules(&mut check, policy);
     check.finish()
+}
+
+/// The invariants of the attributes that say how care relationships are
+/// read: `Self_declared_valid`, `Concealed_valid`, and those of each
+/// `ACCESS_CONFLICT_RULE` and `ACCESS_VALUE_SET`.
+fn care_rules(check: &mut Check, policy: &AccessPolicy) {
+    if let Some(period) = &policy.self_declared_care {
+        duration(check, period);
+    }
+    check.hold(
+        policy
+            .self_declared_care
+            .as_ref()
+            .is_none_or(|period| period.magnitude().is_some_and(|seconds| seconds > 0.0)),
+        "ACCESS_POLICY",
+        "Self_declared_valid",
+    );
+    check.hold(
+        policy
+            .concealed_confidentialities
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .all(|level| {
+                level.defining_code.terminology_id.value == TERMINOLOGY_ID_CONFIDENTIALITY
+            }),
+        "ACCESS_POLICY",
+        "Concealed_valid",
+    );
+    for rule in policy.conflict_rules.as_deref().unwrap_or_default() {
+        conflict_rule_rules(check, rule);
+    }
+    for value_set in policy.value_sets.as_deref().unwrap_or_default() {
+        check.hold(
+            ValueSetBinding::read_coded(&value_set.binding).is_ok(),
+            "ACCESS_VALUE_SET",
+            "Binding_valid",
+        );
+    }
+}
+
+fn conflict_rule_rules(check: &mut Check, rule: &AccessConflictRule) {
+    let conflict = Conflict::read_coded(&rule.conflict);
+    check.hold(conflict.is_ok(), "ACCESS_CONFLICT_RULE", "Conflict_valid");
+    check.hold(
+        rule.kinships.is_none() || conflict == Ok(Conflict::Related),
+        "ACCESS_CONFLICT_RULE",
+        "Kinships_valid",
+    );
+    for scope in rule.applies_to.as_deref().unwrap_or_default() {
+        actor_scope_rules(check, scope);
+    }
 }
 
 /// The `ACCESS_LOG_RETENTION` invariants, comparing durations by RM

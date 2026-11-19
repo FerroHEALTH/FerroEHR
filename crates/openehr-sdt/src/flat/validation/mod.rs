@@ -469,16 +469,22 @@ struct Validator {
     slot_fills_enumerated: bool,
 }
 
-/// Does the generated RM model declare an attribute named `attr` on ANY class?
+/// Does the generated RM model, or a class of FerroEHR's draft packages that
+/// extend it, declare an attribute named `attr` on ANY class?
 ///
 /// Name-only by design: an OPT constrains attributes at several RM levels and
 /// the walker does not carry the declaring class here, while the defect this
 /// answers — a constraint on an attribute NO RM class declares — is fully
-/// decided by the name.
+/// decided by the name. A template of a draft class, such as an
+/// `ACCESS_POLICY` profile, constrains the draft's attributes, which the RM
+/// adapted by the draft class tables declares (AOM2
+/// `master11-rm_adaptation.adoc`).
 fn rm_declares_attribute(attr: &str) -> bool {
     static DECLARED: std::sync::LazyLock<std::collections::BTreeSet<&str>> =
         std::sync::LazyLock::new(|| {
             openehr_rm::v1_2::model::classes()
+                .chain(openehr_rm::draft::access_control::model::CLASSES)
+                .chain(openehr_rm::draft::access_log::model::CLASSES)
                 .flat_map(|c| c.attributes.iter().map(|a| a.name))
                 .collect()
         });
@@ -1927,6 +1933,27 @@ mod tests {
             msgs.iter()
                 .any(|m| m.kind == ValidationKind::Required && m.path.ends_with("/value")),
             "expected a Required existence violation for the missing value, got {msgs:?}"
+        );
+    }
+
+    #[test]
+    fn existence_of_a_draft_class_attribute_is_enforced() {
+        // An ACCESS_POLICY profile requiring `self_declared_care`, an attribute
+        // only the draft access control class table declares.
+        let mut n = node("ACCESS_POLICY", "");
+        n.existence = vec![WebTemplateExistence {
+            min: 1,
+            max: 1,
+            path: "/self_declared_care".to_owned(),
+        }];
+        let inst = json!({"_type": "ACCESS_POLICY",
+            "name": {"_type": "DV_TEXT", "value": "policy"}});
+        let msgs = walk_only(&inst, &n);
+        assert!(
+            msgs.iter()
+                .any(|m| m.kind == ValidationKind::Required
+                    && m.path.ends_with("/self_declared_care")),
+            "expected a Required existence violation, got {msgs:?}"
         );
     }
 

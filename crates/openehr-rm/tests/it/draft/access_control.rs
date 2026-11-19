@@ -275,6 +275,16 @@ fn policy() -> Value {
             "purpose_required": true,
             "rules": [nurse_rule(), psychiatry_rule()],
             "catalogue": [regional_sharing()],
+            "self_declared_care": { "_type": "DV_DURATION", "value": "P1D" },
+            "attested_care": [{ "_type": "DV_IDENTIFIER", "issuer": "Regional exchange",
+                "id": "urn:example:agreement:attested-care" }],
+            "caseload": true,
+            "conflict_rules": [{ "_type": "ACCESS_CONFLICT_RULE",
+                "conflict": term("related"),
+                "kinships": [coded("openehr", "mother", "10")] }],
+            "concealed_confidentialities": [coded("HL7_Confidentiality", "very restricted", "V")],
+            "value_sets": [{ "_type": "ACCESS_VALUE_SET", "binding": term("kinship"),
+                "value_set": { "_type": "DV_URI", "value": "http://terminology.example/ValueSet/kinship" } }],
             "log_restrictions": [log_restriction()],
             "log_retention": log_retention()
         })
@@ -462,7 +472,23 @@ fn each_settings_invariant_refuses_settings_that_break_it() {
 
 #[test]
 fn each_policy_invariant_refuses_a_policy_that_breaks_it() {
-    let cases: [Breaking; 17] = [
+    let cases: [Breaking; 22] = [
+        ("ACCESS_POLICY.Self_declared_valid", |p| {
+            p["self_declared_care"]["value"] = json!("PT0S");
+        }),
+        ("ACCESS_POLICY.Concealed_valid", |p| {
+            p["concealed_confidentialities"] =
+                json!([coded("HL7_ActCode", "very restricted", "V")]);
+        }),
+        ("ACCESS_CONFLICT_RULE.Conflict_valid", |p| {
+            p["conflict_rules"][0]["conflict"] = term("kinship");
+        }),
+        ("ACCESS_CONFLICT_RULE.Kinships_valid", |p| {
+            p["conflict_rules"][0]["conflict"] = term("self");
+        }),
+        ("ACCESS_VALUE_SET.Binding_valid", |p| {
+            p["value_sets"][0]["binding"] = term("related");
+        }),
         ("ACCESS_POLICY.Rules_kind", |p| {
             p["rules"][0]["kind"] = term("consent");
         }),
@@ -675,14 +701,23 @@ fn each_optional_list_is_absent_or_non_empty() {
         s["directives"][1]["data"][0][list] = json!([]);
         refused.push(serde_json::from_value::<AccessDirectiveSettings>(s).is_err());
     }
-    for list in ["classifications", "rules", "catalogue", "log_restrictions"] {
+    for list in [
+        "classifications",
+        "rules",
+        "catalogue",
+        "log_restrictions",
+        "attested_care",
+        "conflict_rules",
+        "concealed_confidentialities",
+        "value_sets",
+    ] {
         let mut p = policy();
         p[list] = json!([]);
         refused.push(serde_json::from_value::<AccessPolicy>(p).is_err());
     }
     assert_eq!(
         refused,
-        vec![true; 21],
+        vec![true; 25],
         "every empty optional list is refused"
     );
 }

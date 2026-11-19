@@ -13,8 +13,9 @@
 //! §Contributions, §Committal and Audits). A write names the version it
 //! replaces, or creates the first one, so a writer that read an older
 //! version is refused (`412`) rather than overwriting a change it never saw.
-//! A body that does not hold is refused whole (`400`) and never reaches the
-//! request path. A write that changes the restrictions of the access log's
+//! A body that does not hold as a model is refused whole (`400`), and one
+//! that breaks its template or a value set it binds is refused whole (`422`);
+//! neither reaches the request path. A write that changes the restrictions of the access log's
 //! subject view (EHDS Art. 9(3)) changes what the log means, so it writes an
 //! access-log entry naming the write and a record naming the version (the
 //! access log's recording rule 7).
@@ -237,6 +238,9 @@ impl FerroEhrService {
     ///   `ACCESS_POLICY` archetype root, its controller is no `ORGANISATION`
     ///   or another one than the policy's; or `If-Match` is no
     ///   `OBJECT_VERSION_ID`.
+    /// - `validation_failed` (`422`) — the policy breaks the template it
+    ///   names, or names a code outside a value set it binds
+    ///   ([`Self::access_policy_content`]).
     /// - `version_mismatch` (`412`) — `precondition` does not hold.
     /// - `service_overloaded` (`503`) — the policy store does not answer, or
     ///   the write changes the access log's restrictions and its access-log
@@ -253,6 +257,7 @@ impl FerroEhrService {
                 defect,
             )
         })?;
+        self.access_policy_content(body, &policy).await?;
         let mut conn = self.recorded_conn(self.access_policy.pool()).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         let newest = store::lock_newest(&mut tx).await?;

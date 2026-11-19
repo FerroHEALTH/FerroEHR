@@ -9,7 +9,8 @@
 //! ([`check_policy`]), the root rules of a
 //! `LOCATABLE` and of the `controller`, and that each sensitivity and
 //! category a classification names, each role, purpose, sensitivity,
-//! category and legal ground a controller rule names, each legal ground
+//! category and legal ground a controller rule names, each role and
+//! organisation type a conflict rule names, each legal ground
 //! of a restriction of the access log's subject view, and each provision of
 //! the access log retention, comes from the jurisdiction's terminology
 //! ([`ForeignCode`]); and that the access log retention is one the audit
@@ -26,6 +27,7 @@
 
 use serde_json::Value;
 
+use openehr_rm::draft::access_control::access_control::access_actor_scope::AccessActorScope;
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::invariants::check_policy;
@@ -126,6 +128,11 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
             rule_codes(exception)?;
         }
     }
+    for rule in policy.conflict_rules.as_deref().unwrap_or_default() {
+        for scope in rule.applies_to.as_deref().unwrap_or_default() {
+            scope_codes(scope)?;
+        }
+    }
     for restriction in policy.log_restrictions.as_deref().unwrap_or_default() {
         for ground in &restriction.legal_grounds {
             ForeignCode::read(ForeignKind::LegalGround, ground)?;
@@ -159,12 +166,7 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
 /// [`NotForeign`] for the first one coded in the draft access terminology.
 fn rule_codes(rule: &AccessDirective) -> Result<(), NotForeign> {
     for scope in rule.applies_to.as_deref().unwrap_or_default() {
-        if let Some(role) = &scope.role {
-            ForeignCode::read(ForeignKind::Role, role)?;
-        }
-        if let Some(kind) = &scope.organisation_type {
-            ForeignCode::read(ForeignKind::OrganisationType, kind)?;
-        }
+        scope_codes(scope)?;
     }
     for purpose in rule.purposes.as_deref().unwrap_or_default() {
         ForeignCode::read(ForeignKind::Purpose, purpose)?;
@@ -179,6 +181,21 @@ fn rule_codes(rule: &AccessDirective) -> Result<(), NotForeign> {
     }
     for ground in rule.legal_grounds.as_deref().unwrap_or_default() {
         ForeignCode::read(ForeignKind::LegalGround, ground)?;
+    }
+    Ok(())
+}
+
+/// Reads the role and organisation type `scope` names, neither of which the
+/// draft access terminology holds.
+///
+/// # Errors
+/// [`NotForeign`] for the first one coded in the draft access terminology.
+fn scope_codes(scope: &AccessActorScope) -> Result<(), NotForeign> {
+    if let Some(role) = &scope.role {
+        ForeignCode::read(ForeignKind::Role, role)?;
+    }
+    if let Some(kind) = &scope.organisation_type {
+        ForeignCode::read(ForeignKind::OrganisationType, kind)?;
     }
     Ok(())
 }
