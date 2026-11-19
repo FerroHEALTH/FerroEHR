@@ -249,9 +249,10 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # under, 0.29.1 refuses an issuer named in two `[[auth.issuer]]` tables, and
 # 0.29.2 names `token_endpoint_auth_signing_alg_values_supported` in the App
 # Launch discovery document beside `private_key_jwt`; 0.30 builds on
-# ferrohealth-server 0.11, with one server in the lock. Verified on crates.io
-# 2026-11-17.
-ferrohealth-smart = { version = "=0.30.0", default-features = false, features = ["fetch", "idp-entra"] }
+# ferrohealth-server 0.11, with one server in the lock, and 0.30.1 keeps a
+# verified token's verdict until its `exp` and reports the verdicts held
+# (#6049). Verified on crates.io 2026-11-19.
+ferrohealth-smart = { version = "=0.30.1", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over

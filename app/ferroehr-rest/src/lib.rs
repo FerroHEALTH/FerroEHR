@@ -179,7 +179,8 @@ async fn build_authenticator(
 /// Builds the [`Authenticator`] of `config` over `backend`: every caller
 /// looked up in its party source, its accepted `DPoP` proofs recorded in its
 /// store, and the standing of a client, a delegate actor and a scopeless
-/// subject read from its policy grants.
+/// subject read from its policy grants. The token verdicts of its bearer
+/// issuers are reported by `backend`'s `cache` gauges.
 ///
 /// # Errors
 /// As [`build_authenticator`].
@@ -187,13 +188,17 @@ async fn authenticator_over(
     config: &AppConfig,
     backend: &Arc<FerroEhrService>,
 ) -> Result<Arc<Authenticator>, ServeError> {
-    build_authenticator(
+    let authenticator = build_authenticator(
         config,
         Some(party_source(config, backend)),
         Arc::new(PgReplayStore::of(backend)),
         Arc::new(GrantStanding::new(Arc::clone(backend.grants()))),
     )
-    .await
+    .await?;
+    if let Some(verdicts) = authenticator.token_verdicts() {
+        backend.observe_authn(Arc::new(verdicts));
+    }
+    Ok(authenticator)
 }
 
 /// The local party source over `backend`'s party pool, naming each party

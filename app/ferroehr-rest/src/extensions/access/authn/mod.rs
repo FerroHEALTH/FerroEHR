@@ -369,12 +369,33 @@ impl AuthError {
     }
 }
 
+/// The token verdicts `ferrohealth-smart` holds for the issuers of an
+/// [`ferrohealth_smart::resource::IssuerSet`], reported under `cache="token_verdicts"` (#6049).
+#[derive(Debug, Clone)]
+pub(crate) struct TokenVerdicts(Arc<ferrohealth_smart::resource::IssuerSet>);
+
+impl ferroehr::service::observed::HeldCaches for TokenVerdicts {
+    fn held(&self) -> Vec<(&'static str, ferroehr::memory::Held)> {
+        let usage = self.0.verdict_usage();
+        vec![(
+            "token_verdicts",
+            ferroehr::memory::Held {
+                entries: u64::try_from(usage.entries).unwrap_or(u64::MAX),
+                bytes: u64::try_from(usage.bytes).unwrap_or(u64::MAX),
+            },
+        )]
+    }
+}
+
 /// The configured authenticator: the crate's gate and the role sources.
 pub struct Authenticator {
     /// `[auth] enabled`.
     enabled: bool,
     /// The credentials admitted, checked by `ferrohealth-smart`.
     gate: Gate,
+    /// The bearer issuers of the gate, whose held token verdicts the
+    /// `cache` gauges report, when `[auth]` trusts any.
+    bearer: Option<TokenVerdicts>,
     /// The protection space every challenge names.
     realm: String,
     /// The issuer whose metadata the SMART discovery document is built from,
@@ -402,6 +423,12 @@ impl std::fmt::Debug for Authenticator {
 }
 
 impl Authenticator {
+    /// Returns the token verdicts of the bearer issuers, for the `cache`
+    /// gauges, when `[auth]` trusts any.
+    pub(crate) fn token_verdicts(&self) -> Option<TokenVerdicts> {
+        self.bearer.clone()
+    }
+
     pub(crate) fn enabled(&self) -> bool {
         self.enabled
     }

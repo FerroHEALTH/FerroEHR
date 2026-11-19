@@ -19,7 +19,7 @@ use ferrohealth_smart::resource::{Caller, Honoured, IssuerSet, ResourceServer, V
 use ferrohealth_smart::sender::proof::ProofCheck;
 use ferrohealth_smart::sender::replay::ReplayStore;
 
-use super::{Authenticator, issuer, upper_cased};
+use super::{Authenticator, TokenVerdicts, issuer, upper_cased};
 use crate::config::AppConfig;
 use ferrohealth_secret::secret_url::SecretUrl;
 
@@ -146,6 +146,7 @@ impl Authenticator {
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
         let mut gate = Gate::open();
         let mut primary = None;
+        let mut bearer = None;
         if resolved.enabled {
             let mut issuers = IssuerSet::new();
             let mut candidates = Vec::new();
@@ -189,7 +190,9 @@ impl Authenticator {
                 primary = Some((described.into_check(), purpose));
             }
             if !issuers.is_empty() {
-                gate = gate.with_bearer(Arc::new(issuers));
+                let issuers = Arc::new(issuers);
+                bearer = Some(TokenVerdicts(Arc::clone(&issuers)));
+                gate = gate.with_bearer(issuers);
             }
             if let Some(dpop) = resolved.dpop {
                 let root = config.public_root.as_ref().ok_or_else(|| {
@@ -215,6 +218,7 @@ impl Authenticator {
         Ok(Arc::new(Self {
             enabled: config.auth.shared.enabled,
             gate,
+            bearer,
             realm: ferroehr::config::auth::realm(&config.auth.shared).to_owned(),
             primary,
             role_issuers: RoleIssuers::of(config),

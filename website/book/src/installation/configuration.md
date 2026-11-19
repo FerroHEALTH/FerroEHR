@@ -346,10 +346,12 @@ describes them.
 | AQL plans | `cache="aql_plan"` | `[record.query] plan_cache_capacity`, 256 by default | about 3.4 KB for a one-observation query | 0.9 MiB at 256 |
 | Archetype lineage | `cache="archetype_lineage"` | 1 index, 1 min | grows with the specialised archetypes stored | a few KiB |
 | Audit subjects | `cache="audit_subjects"` | 100 000 EHRs, 1 h each | about 410 B | 39 MiB |
+| Token verdicts | `cache="token_verdicts"` | 10 000 tokens and 16 MiB per `[auth]` issuer, each until the token's `exp` | about 400 B for a token with 400 B of claims | 4 MiB per issuer; 16 MiB at most |
 
-Their sum is about 260 MiB per replica with typical WebTemplates and EHRs
-without settings, and about 305 MiB at the 90th percentile of WebTemplates
-with every held EHR carrying 4 KB of settings.
+Their sum is about 264 MiB per replica with typical WebTemplates and EHRs
+and one issuer's tokens without settings, and about 321 MiB at the 90th
+percentile of WebTemplates with every held EHR carrying 4 KB of settings and
+the token verdicts at their byte bound.
 
 Three holdings have no cap of their own:
 
