@@ -1874,6 +1874,12 @@ fn text_observation_composition(name: &str, text: &str) -> Value {
 /// Asserts that the plan of a lookup by an ELEMENT value found its one row
 /// through `idx_node_hot_value_search` and read no scan of the population.
 fn assert_value_lookup(name: &str, plan: &Value, population: u32) {
+    assert_lookup_through(name, plan, population, "idx_node_hot_value_search");
+}
+
+/// Asserts that the plan of a lookup by an ELEMENT value found its one row
+/// through `index` and read no scan of the population.
+pub(crate) fn assert_lookup_through(name: &str, plan: &Value, population: u32, index: &str) {
     let root = plan
         .get(0)
         .expect("EXPLAIN FORMAT JSON returns a one-element array");
@@ -1889,8 +1895,8 @@ fn assert_value_lookup(name: &str, plan: &Value, population: u32) {
     assert!(
         scans
             .iter()
-            .any(|scan| scan.index.as_deref() == Some("idx_node_hot_value_search")),
-        "#4437: {name} enters through the value index:\n{}",
+            .any(|scan| scan.index.as_deref() == Some(index)),
+        "#4437: {name} enters through {index}:\n{}",
         render(&scans)
     );
     let population = f64::from(population);
