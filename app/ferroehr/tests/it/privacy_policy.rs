@@ -167,6 +167,27 @@ async fn a_non_uuid_subject_id_is_refused_and_the_value_never_reaches_the_wire()
     );
 }
 
+/// The identified-party opt-in leaves the subject rule in force on the
+/// write path.
+#[tokio::test]
+async fn the_identified_party_opt_in_keeps_the_subject_rule() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = service(
+        &db,
+        &PrivacyConfig {
+            allow_identified_parties_in_ehr: true,
+            ..enforcing()
+        },
+    );
+    let error = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed_status(
+        &status_with_subject(PSEUDONYM_NS, SYNTHETIC_BSN),
+    )))))
+    .await
+    .map(|(id, _)| id)
+    .expect_err("the opt-in admits identified parties, never a non-pseudonym subject");
+    assert_refused(&error, "EHR_STATUS/subject/external_ref/id/value");
+}
+
 #[tokio::test]
 async fn an_unconfigured_namespace_is_refused() {
     let db = testkit::db().await.expect("testkit database");

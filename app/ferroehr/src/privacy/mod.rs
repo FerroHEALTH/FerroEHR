@@ -114,10 +114,18 @@ impl PrivacyPolicy {
         self.subject_namespaces.iter().any(|n| n == namespace) && is_uuid(id)
     }
 
-    /// Whether the pass reads anything of a body other than an `EHR_STATUS`:
-    /// the identified-party rule is in force.
+    /// Whether the pass has a rule in force for a body of RM type `rm_type`:
+    /// the identified-party rule for every clinical kind, or the subject rule
+    /// for an `EHR_STATUS`. A caller skips the pass, and the reading of the
+    /// body it needs, when neither is.
     #[must_use]
-    pub fn reads_content(&self) -> bool {
+    pub fn applies_to(&self, rm_type: &str) -> bool {
+        self.party_rule_in_force() || (rm_type == "EHR_STATUS" && self.subject_rule_in_force())
+    }
+
+    /// Whether the identified-party rule is in force (the deployment did not
+    /// opt in to identified parties).
+    fn party_rule_in_force(&self) -> bool {
         !self.allow_identified_parties
     }
 
@@ -134,7 +142,7 @@ impl PrivacyPolicy {
         if root == "EHR_STATUS" && self.subject_rule_in_force() {
             self.check_subject(root, body, &mut findings);
         }
-        if self.reads_content() {
+        if self.party_rule_in_force() {
             walk(&mut root.to_owned(), body, &mut findings);
         }
         findings

@@ -66,7 +66,7 @@ fn the_configuration_default_is_the_minimising_posture() {
     assert_eq!(default.subject_namespaces, Vec::<String>::new());
     let compiled = policy(&default);
     assert!(!compiled.subject_rule_in_force());
-    assert!(compiled.reads_content());
+    assert!(compiled.applies_to("COMPOSITION"));
 }
 
 // ── rule 1: the subject reference ─────────────────────────────────────────────
@@ -359,6 +359,32 @@ fn the_opt_in_accepts_every_cell_of_the_matrix() {
     assert!(findings.is_empty(), "{findings:?}");
 }
 
+/// The identified-party opt-in leaves the subject rule in force: an
+/// `EHR_STATUS` still meets the pass, a COMPOSITION has nothing to meet.
+#[test]
+fn the_opt_in_leaves_the_subject_rule_in_force() {
+    let permitted = policy(&PrivacyConfig {
+        subject_namespaces: vec![PSEUDONYM_NS.to_owned()],
+        allow_identified_parties_in_ehr: true,
+        ..PrivacyConfig::default()
+    });
+    assert!(permitted.applies_to("EHR_STATUS"));
+    assert!(!permitted.applies_to("COMPOSITION"));
+    let findings = permitted.findings(
+        "EHR_STATUS",
+        &status_with_subject(PSEUDONYM_NS, "not-a-pseudonym"),
+    );
+    assert_eq!(
+        paths(&findings),
+        ["EHR_STATUS/subject/external_ref/id/value"]
+    );
+    let open = policy(&PrivacyConfig {
+        allow_identified_parties_in_ehr: true,
+        ..PrivacyConfig::default()
+    });
+    assert!(!open.applies_to("EHR_STATUS"));
+}
+
 #[test]
 fn a_party_self_carries_no_name_slot_and_is_untouched() {
     let composition = json!({
@@ -387,7 +413,7 @@ fn the_default_policy_is_the_refusing_posture() {
     });
     let findings = PrivacyPolicy::default().findings("COMPOSITION", &composition);
     assert_eq!(paths(&findings), ["COMPOSITION/composer/name"]);
-    assert!(PrivacyPolicy::default().reads_content());
+    assert!(PrivacyPolicy::default().applies_to("COMPOSITION"));
 }
 
 #[test]
