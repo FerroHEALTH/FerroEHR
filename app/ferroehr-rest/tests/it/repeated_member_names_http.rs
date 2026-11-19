@@ -28,18 +28,18 @@ const AUDIT: &str = r#"{"_type":"UPDATE_AUDIT","change_type":{"value":"creation"
 /// The `lifecycle_state` of a complete version.
 const COMPLETE: &str = r#"{"value":"complete","defining_code":{"terminology_id":{"value":"openehr"},"code_string":"532"}}"#;
 
-/// Sends `body` as `media` and asserts the `400` that names `repeated`.
+/// Sends `body` as `media` to `route` in the EHR `ehr` and asserts the `400`
+/// that names `repeated`. A failure names the route by its template.
 async fn refused(
     app: &Router,
-    method: &str,
-    path: &str,
+    (method, route, ehr): (&str, &str, &str),
     media: &str,
     body: String,
     repeated: &str,
 ) {
     let request = Request::builder()
         .method(method)
-        .uri(full(path))
+        .uri(full(&route.replace("{ehr_id}", ehr)))
         .header(header::CONTENT_TYPE, media)
         .header(
             header::IF_MATCH,
@@ -52,11 +52,11 @@ async fn refused(
     assert_eq!(
         status,
         StatusCode::BAD_REQUEST,
-        "{method} {path} {body}: {text}"
+        "{method} {route} as {media}, repeating {repeated}: {text}"
     );
     assert!(
         text.contains(&format!("duplicate field `{repeated}`")),
-        "{method} {path}: the refusal names the repeated member: {text}"
+        "{method} {route}: the refusal names the repeated member: {text}"
     );
 }
 
@@ -108,14 +108,10 @@ async fn a_contribution_with_a_repeated_member_name_is_refused() {
     let (_db, app) = test_router().await;
     let ehr = create_ehr(&app).await;
     for (body, repeated) in contributions() {
-        for path in [
-            format!("/ehr/{ehr}/contribution"),
-            "/demographic/contribution".to_owned(),
-        ] {
+        for route in ["/ehr/{ehr_id}/contribution", "/demographic/contribution"] {
             refused(
                 &app,
-                "POST",
-                &path,
+                ("POST", route, &ehr),
                 "application/json",
                 body.clone(),
                 repeated,
@@ -126,8 +122,8 @@ async fn a_contribution_with_a_repeated_member_name_is_refused() {
             "application/openehr.wt.flat+json",
             "application/openehr.wt.structured+json",
         ] {
-            let path = format!("/ehr/{ehr}/contribution");
-            refused(&app, "POST", &path, media, body.clone(), repeated).await;
+            let route = "/ehr/{ehr_id}/contribution";
+            refused(&app, ("POST", route, &ehr), media, body.clone(), repeated).await;
         }
     }
 }
@@ -136,13 +132,20 @@ async fn a_contribution_with_a_repeated_member_name_is_refused() {
 async fn a_direct_commit_with_a_repeated_member_name_is_refused() {
     let (_db, app) = test_router().await;
     let ehr = create_ehr(&app).await;
-    for (method, path, class) in [
-        ("POST", format!("/ehr/{ehr}/composition"), "COMPOSITION"),
-        ("PUT", format!("/ehr/{ehr}/ehr_status"), "EHR_STATUS"),
-        ("POST", format!("/ehr/{ehr}/directory"), "FOLDER"),
-        ("POST", "/demographic/person".to_owned(), "PERSON"),
+    for (method, route, class) in [
+        ("POST", "/ehr/{ehr_id}/composition", "COMPOSITION"),
+        ("PUT", "/ehr/{ehr_id}/ehr_status", "EHR_STATUS"),
+        ("POST", "/ehr/{ehr_id}/directory", "FOLDER"),
+        ("POST", "/demographic/person", "PERSON"),
     ] {
         let body = format!(r#"{{"_type":"{class}",{NAME_TWICE}}}"#);
-        refused(&app, method, &path, "application/json", body, "name").await;
+        refused(
+            &app,
+            (method, route, &ehr),
+            "application/json",
+            body,
+            "name",
+        )
+        .await;
     }
 }
