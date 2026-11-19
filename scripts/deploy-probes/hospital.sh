@@ -582,10 +582,10 @@ hospital_setup() {
   hs_user dirk Dirk Bakker CLINICIAN EMERGENCY
   hs_user gina Gina Mulder NURSE
   hs_user hans Hans Hoekstra ADMIN
-  hs_user ferroehr Ferro EHR ADMIN
+  hs_user controller Ferro EHR ADMIN
   hs_user eva Eva Visser PATIENT
   hs_user frank Frank Visser PATIENT
-  for user in anna bram carla dirk gina hans ferroehr eva frank; do
+  for user in anna bram carla dirk gina hans controller eva frank; do
     [[ -n "$(hv "sub_$user")" ]] || probe_fail "a user $user at the $HS_UPSTREAM upstream" "no subject"
   done
   h_scim_client_grants || h_fail_call "the SCIM client's role ceiling and care-team grant"
@@ -598,7 +598,7 @@ hospital_setup() {
   scim_user 2 dirk "Dr. Dirk Bakker" CLINICIAN || h_fail_call "SCIM creates dirk"
   scim_user 1 gina "Gina Mulder" NURSE || h_fail_call "SCIM creates gina"
   scim_user 2 hans "Hans Hoekstra" || h_fail_call "SCIM creates hans"
-  scim_user 1 ferroehr "Ferro EHR" || h_fail_call "SCIM creates the controller's administrator"
+  scim_user 1 controller "Ferro EHR" || h_fail_call "SCIM creates the controller's administrator"
 
   h_party cardiology group "$(j_named_party GROUP Cardiology)" || h_fail_call "the Cardiology team"
   h_party ward3 group "$(j_named_party GROUP "Ward 3")" || h_fail_call "the Ward 3 team"
@@ -626,7 +626,6 @@ hospital_setup() {
   h_facts_role gina NURSE || h_fail_call "Gina's role"
   # The controller's administrator, the provider's ferroehr user, writes the
   # policy; the policy route asks for its own grant.
-  hv_set person_controller "$(hv person_ferroehr)"
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"
   local since
@@ -1392,7 +1391,7 @@ hospital_ehr_launch() {
 hospital_policy() {
   probe "P-HOSP-POLICY" "$PROBE_WORKING" "server" "#5610 #5731" \
     "the controller's administrator writes the ACCESS_POLICY and the privacy officer reads it"
-  H_IF_NONE_MATCH='*' h_call 2 p:ferroehr PUT "$HX/admin/access_policy" "$(j_policy "$(hv lab)")"
+  H_IF_NONE_MATCH='*' h_call 2 p:controller PUT "$HX/admin/access_policy" "$(j_policy "$(hv lab)")"
   [[ "$H_CODE" = 201 ]] || h_fail_call "201 for the controller's ACCESS_POLICY"
   h_call 1 p:hans GET "$HX/admin/access_policy"
   h_assert_code 200 "Hans reads the policy on the other instance: ${H_BODY:0:200}"
@@ -1525,18 +1524,17 @@ hospital_pixm() {
   local role
   for role in CLINICIAN ADMIN PATIENT; do hs_role "$role"; done
   hs_user anna Anna Jansen CLINICIAN
-  hs_user ferroehr Ferro EHR ADMIN
+  hs_user controller Ferro EHR ADMIN
   hs_user eva Eva Visser PATIENT
   hs_user frank Frank Visser PATIENT
   h_scim_client_grants || h_fail_call "the SCIM client's role ceiling and care-team grant"
   scim_user 1 anna "Dr. Anna Jansen" CLINICIAN || h_fail_call "SCIM creates anna"
-  scim_user 2 ferroehr "Ferro EHR" || h_fail_call "SCIM creates the controller's administrator"
+  scim_user 2 controller "Ferro EHR" || h_fail_call "SCIM creates the controller's administrator"
   h_party cardiology group "$(j_named_party GROUP Cardiology)" || h_fail_call "the Cardiology team"
   h_party hospital organisation "$(j_named_party ORGANISATION "Sint Example Ziekenhuis")" || h_fail_call "the controller"
   h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
     || h_fail_call "the hospital's SMART app"
   h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role"
-  hv_set person_controller "$(hv person_ferroehr)"
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"
   h_relate 2 admin person "$(hv person_anna)" \
@@ -1581,7 +1579,7 @@ hospital_pixm() {
   eva="$(hv ehr_eva)"
   h_commit c_vitals 2 p:anna "$eva" "$H_T_VITALS" || h_fail_call "the vital signs"
   hospital_pix_patients
-  H_IF_NONE_MATCH='*' h_call 1 p:ferroehr PUT "$HX/admin/access_policy" "$(j_policy)"
+  H_IF_NONE_MATCH='*' h_call 1 p:controller PUT "$HX/admin/access_policy" "$(j_policy)"
   [[ "$H_CODE" = 201 ]] || h_fail_call "the controller's ACCESS_POLICY"
   probe_done
 
