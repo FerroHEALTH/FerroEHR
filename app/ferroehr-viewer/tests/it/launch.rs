@@ -104,7 +104,7 @@ fn key() -> (tempfile_path::Path, String) {
 }
 
 /// A file under the system's temporary directory, removed when dropped.
-mod tempfile_path {
+pub(crate) mod tempfile_path {
     /// The file.
     pub(crate) struct Path(pub(crate) std::path::PathBuf);
 
