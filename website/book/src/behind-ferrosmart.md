@@ -10,7 +10,7 @@ carry the launch context: `patient`, `encounter`, `fhirUser` and, at an
 openEHR base, `ehrId`. FerroEHR runs behind it as a resource server. The
 person never signs in to FerroEHR, and FerroEHR never sees the provider's
 tokens. FerroSMART's architecture describes the whole deployment in
-[§13.21, A product behind FerroSMART](https://github.com/FerroHEALTH/FerroSMART/blob/main/docs/architecture.md#1321-a-product-behind-ferrosmart).
+§13.21, A product behind FerroSMART, of its [architecture](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md).
 This page is FerroEHR's side of it.
 
 ```text
@@ -82,6 +82,13 @@ describes the issuer `ferrohealth-smart`'s shared rule picks
 FerroEHR's base finds FerroSMART (SMART App Launch 2.2.0, Conformance,
 Metadata). When FerroEHR trusts another issuer that signs user tokens
 beside it, `[auth] described_issuer` names FerroSMART.
+
+## Try it
+
+The quickstart runs FerroEHR behind FerroSMART with Keycloak or ZITADEL
+upstream ([Docker Compose](installation/compose.md#behind-ferrosmart)), and
+[Enterprise identity providers](identity-providers.md#behind-ferrosmart) lists
+every upstream FerroSMART supports with its setup.
 
 No specification governs this deployment shape: our own design, built on
 SMART App Launch 2.2.0 and RFC 9068.
