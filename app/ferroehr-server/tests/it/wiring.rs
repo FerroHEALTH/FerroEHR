@@ -314,7 +314,9 @@ fn db_sweep_blobs_lists_unless_told_to_apply() -> Result<(), clap::Error> {
 }
 
 /// Runs `ferroehr db sweep-blobs` in this process against `toml`, returning
-/// the error chain it fails with.
+/// the error chain it fails with. The unreachable database is a `--set`
+/// override, because `DATABASE_URL` in the environment (CI sets it) wins over
+/// the file.
 #[cfg(feature = "multimedia")]
 async fn sweep_blobs_failure(toml: &str) -> String {
     let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("a temp config path");
@@ -322,7 +324,10 @@ async fn sweep_blobs_failure(toml: &str) -> String {
     let failure = ferroehr_server::db_cmd::run(
         &ferroehr_server::db_cmd::DbCmd::SweepBlobs { apply: false },
         Some(file.path()),
-        &[],
+        &[(
+            String::from("database.url"),
+            String::from("postgres://sweep@127.0.0.1:1/ferroehr"),
+        )],
     )
     .await
     .expect_err("the sweep cannot run against this configuration");
@@ -335,11 +340,7 @@ async fn sweep_blobs_failure(toml: &str) -> String {
 #[cfg(feature = "multimedia")]
 #[tokio::test]
 async fn db_sweep_blobs_refuses_a_configuration_without_a_blob_store() {
-    let failure = sweep_blobs_failure(
-        "[database]\nurl = \"postgres://sweep@127.0.0.1:1/ferroehr\"\n\
-         [record]\nsubject_index = \"local\"\n",
-    )
-    .await;
+    let failure = sweep_blobs_failure("[record]\nsubject_index = \"local\"\n").await;
     assert!(
         failure.contains("[record.multimedia] names no blob store"),
         "{failure}"
@@ -354,8 +355,7 @@ async fn db_sweep_blobs_refuses_a_configuration_without_a_blob_store() {
 #[tokio::test]
 async fn db_sweep_blobs_fails_when_the_database_is_unreachable() {
     let failure = sweep_blobs_failure(
-        "[database]\nurl = \"postgres://sweep@127.0.0.1:1/ferroehr\"\n\
-         acquire_timeout = \"1s\"\n\
+        "[database]\nacquire_timeout = \"1s\"\n\
          [record]\nsubject_index = \"local\"\n\
          [record.multimedia]\nenabled = true\n\
          [record.multimedia.s3]\nurl = \"http://127.0.0.1:1\"\nbucket = \"sweep\"\n\
