@@ -80,6 +80,9 @@ services:
         condition: service_healthy
     environment:
       FERROSMART_CONFIG: /etc/ferrosmart/ferrosmart.toml
+      # The image sets 0.0.0.0:8080, FerroEHR's port in this namespace, in its
+      # environment, which outranks the file.
+      FERROSMART__SERVER__LISTEN: 0.0.0.0:8280
       FERROSMART__FERROSMART__RESOURCE__0__SUBJECT_NAMESPACE: ${FERROSMART_SUBJECT_NAMESPACE:-urn:oid:2.999.7.1}
       FERROSMART__TELEMETRY__FORMAT: ${FERROSMART_LOG_FORMAT:-pretty}
       FERROSMART__TELEMETRY__FILTER: ${FERROSMART_LOG_FILTER:-info}
