@@ -204,9 +204,12 @@ wait_for() { # <what> <seconds> <command...>
 # up <image> <pg-image> [<tree> <suffix> <http-port> <pg-port>]: one arm's
 # PostgreSQL and server, configured, provisioned and seeded from <tree> (this
 # checkout by default), its containers named with <suffix>. Sets SERVER_URL,
-# DATABASE_URL, TARGET and SEED for that arm.
+# DATABASE_URL, TARGET and SEED for that arm, and CODE_TREE, the tree its
+# binary is built from, whose vocabulary the access seed writes.
 up() {
   local image="$1" pg_image="$2" tree="${3:-$ROOT}" suffix="${4:-}"
+  CODE_TREE="$ROOT"
+  [[ "$suffix" == -base ]] && CODE_TREE="$BASE_TREE"
   local http_port="${5:-$HTTP_PORT}" pg_port="${6:-$PG_PORT}"
   local pg="$PG$suffix" server="$SERVER$suffix"
   docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
@@ -293,7 +296,7 @@ seed() {
   local tree="$1" read_ehr write_ehr uid party clinical="$AUTH"
   call POST /definition/template/adl1.4 application/xml "$tree/$TEMPLATE_PATH" 201 >/dev/null
   if access_arm "$tree"; then
-    access_seed
+    access_seed "$CODE_TREE"
     read_ehr=$(access_patient_ehr "$ACCESS_TEAM")
     write_ehr=$(access_patient_ehr "$ACCESS_TEAM")
     clinical="$CLINICIAN_AUTH"

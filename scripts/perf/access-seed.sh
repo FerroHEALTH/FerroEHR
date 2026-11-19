@@ -30,12 +30,14 @@
 readonly EXT=/ferroehr/rest/extensions/v1
 # shellcheck disable=SC2034 # read by gate.sh, which sources this file
 readonly CLINICIAN_AUTH="Basic Y2xpbmljaWFuOmNsaW5pY2lhbg=="
-# The access-control codes and the grant operations (openehr_access), the
-# effect of a directive (HL7 FHIR HL7_ConsentProvisionType) and a membership
-# of a care team (HL7 v3 RoleClass MBR), as openehr-rm's terminology names them.
+# The access-control codes and the grant operations (openehr_access). The
+# terminology identifiers of a directive's effect (HL7 ConsentProvisionType)
+# and of a care-team membership (HL7 RoleClass MBR) are read from the
+# terminology of the tree the seeded server is built from (access_vocabulary),
+# so a base built before a rename is seeded with the identifiers it accepts.
 readonly ACCESS_TERMINOLOGY=openehr_access
-readonly PROVISION_TERMINOLOGY=HL7_ConsentProvisionType
-readonly ROLE_CLASS_TERMINOLOGY=HL7_RoleClass
+PROVISION_TERMINOLOGY=""
+ROLE_CLASS_TERMINOLOGY=""
 readonly ACT_CODE=2.16.840.1.113883.5.25
 readonly ACT_REASON=2.16.840.1.113883.5.8
 # The code system and code of the clinician's functional role.
@@ -279,11 +281,24 @@ access_population() {
     || die "seed: $(wc -l <"$made" | tr -d ' ') of $count access population EHRs were made: $(head -c 400 "$OUT/access-population.log")"
 }
 
-# access_seed: the grants, the policy, the team, the clinician's membership
-# and role, and the parties the directives name, through ACCESS_FERROEHR
-# and ACCESS_IDS.
+# access_vocabulary <tree>: the terminology identifiers of a directive's
+# effect and of a care-team membership, as <tree>'s openehr-rm names them.
+access_vocabulary() {
+  local terms="$1/crates/openehr-rm/src/draft/access_control/terminology.rs"
+  PROVISION_TERMINOLOGY=$(sed -nE 's/^pub const TERMINOLOGY_ID_CONSENT_PROVISION_TYPE: &str = "([^"]+)";$/\1/p' "$terms")
+  ROLE_CLASS_TERMINOLOGY=$(sed -nE 's/^pub const TERMINOLOGY_ID_ROLE_CLASS: &str = "([^"]+)";$/\1/p' "$terms")
+  if [[ -z "$PROVISION_TERMINOLOGY" || -z "$ROLE_CLASS_TERMINOLOGY" ]]; then
+    echo "access seed: $terms names no effect or membership terminology" >&2
+    return 1
+  fi
+}
+
+# access_seed [<tree>]: the grants, the policy, the team, the clinician's
+# membership and role, and the parties the directives name, through
+# ACCESS_FERROEHR and ACCESS_IDS, in the vocabulary of <tree> (default ROOT).
 access_seed() {
   local op clinician version org
+  access_vocabulary "${1:-$ROOT}"
   for op in write_care_relationship write_access_policy; do
     "${ACCESS_FERROEHR[@]}" party-binding grant --basic-user ferroehr --operation "$op" >/dev/null
   done
