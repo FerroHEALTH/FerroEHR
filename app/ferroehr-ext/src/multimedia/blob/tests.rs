@@ -75,6 +75,38 @@ fn foreign_uri_is_not_our_key() {
     assert_eq!(s.key_from_uri(&format!("s3://test-bucketx/{key}")), None);
 }
 
+#[test]
+fn a_write_time_is_old_only_once_more_than_the_age_has_passed() {
+    let now = jiff::Timestamp::now();
+    let hour = Duration::from_hours(1);
+    let ago = |seconds: i64| now - jiff::SignedDuration::from_secs(seconds);
+    assert!(older_than(ago(2 * 3600), hour), "two hours old");
+    assert!(!older_than(ago(60), hour), "a minute old");
+    assert!(
+        older_than(ago(60), Duration::ZERO),
+        "a zero age takes anything written"
+    );
+    // A write time ahead of this clock is never old, whatever the age.
+    assert!(!older_than(ago(-60), Duration::ZERO), "clock skew");
+}
+
+#[tokio::test]
+async fn the_listing_names_every_blob_of_ours_in_key_order() {
+    let s = BlobStore::in_memory("b");
+    let (one, two) = (key_of(b"one"), key_of(b"two"));
+    for (key, bytes) in [(&one, b"one".as_slice()), (&two, b"two".as_slice())] {
+        s.write_if_absent(key, 3, chunks(bytes, 3)).await.unwrap();
+    }
+    let listing = s.content_listing().await.unwrap();
+    let mut keys = vec![one, two];
+    keys.sort_unstable();
+    assert_eq!(
+        keys,
+        listing.iter().map(|(key, _)| *key).collect::<Vec<_>>()
+    );
+    assert_eq!(keys, s.content_keys().await.unwrap());
+}
+
 #[tokio::test]
 async fn write_read_exists_delete_round_trip() {
     let s = BlobStore::in_memory("b");

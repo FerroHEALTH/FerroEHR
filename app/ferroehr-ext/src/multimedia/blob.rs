@@ -465,12 +465,16 @@ impl BlobStore {
     async fn fresh(&self, key: &BlobKey) -> Result<bool, BlobError> {
         let span = self.span(BlobOp::Exists, Some(key));
         let started = Instant::now();
-        let stat = self.op.stat(&key.to_string()).instrument(span.clone()).await;
+        let stat = self
+            .op
+            .stat(&key.to_string())
+            .instrument(span.clone())
+            .await;
         span.record("elapsed_ms", elapsed_ms(started));
         match stat {
-            Ok(meta) => Ok(meta
-                .last_modified()
-                .is_none_or(|written| !older_than(written.into_inner(), self.limits.refresh_after))),
+            Ok(meta) => Ok(meta.last_modified().is_none_or(|written| {
+                !older_than(written.into_inner(), self.limits.refresh_after)
+            })),
             Err(source) if source.kind() == ErrorKind::NotFound => Ok(false),
             Err(source) => Err(BlobError {
                 op: BlobOp::Exists,
@@ -644,7 +648,9 @@ impl BlobStore {
     ///
     /// # Errors
     /// [`BlobError`] when the backend cannot list the bucket.
-    pub async fn content_listing(&self) -> Result<Vec<(BlobKey, Option<jiff::Timestamp>)>, BlobError> {
+    pub async fn content_listing(
+        &self,
+    ) -> Result<Vec<(BlobKey, Option<jiff::Timestamp>)>, BlobError> {
         let span = self.span(BlobOp::List, None);
         let started = Instant::now();
         let listed = self.op.list("/").instrument(span.clone()).await;
@@ -660,7 +666,13 @@ impl BlobStore {
             // NOTE: an object whose name is not a digest is someone else's, which is absence from our set.
             .filter_map(|entry| {
                 let key = entry.path().parse().ok()?;
-                Some((key, entry.metadata().last_modified().map(opendal::raw::Timestamp::into_inner)))
+                Some((
+                    key,
+                    entry
+                        .metadata()
+                        .last_modified()
+                        .map(opendal::raw::Timestamp::into_inner),
+                ))
             })
             .collect();
         keys.sort_unstable_by_key(|(key, _)| *key);

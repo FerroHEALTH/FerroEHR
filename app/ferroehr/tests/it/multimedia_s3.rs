@@ -594,6 +594,129 @@ async fn gc_removes_unreferenced_but_keeps_shared_blobs() {
     );
 }
 
+/// #5957: the sweep deletes a blob no version references once it is older than
+/// the grace period, and keeps every blob `blob_ref` names in either domain and
+/// every blob still inside the grace period, which is what a commit in flight
+/// has uploaded.
+#[tokio::test]
+async fn the_sweep_deletes_an_orphan_past_the_grace_and_nothing_a_version_references() {
+    use ferroehr::extensions::multimedia::sweep::Sweep;
+
+    let db = testkit::db().await.expect("testkit database");
+    let sw = Seaweed::start().await;
+    let pools = ferroehr::db::domain::DomainPools::from_shared(&db.pool());
+    let svc = FerroEhrService::new(&pools).with_multimedia(sw.engine());
+    let store = sw.engine().store().clone();
+
+    // One blob a clinical version references, one a party version references,
+    // and one nothing references: the bytes a commit that failed after its
+    // upload leaves behind.
+    let ehr =
+        Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status_with_media(multimedia(1000))))))
+            .await
+            .map(|(id, _)| id)
+            .expect("an EHR with media");
+    let clinical = blob_key(
+        &svc.ehr_object(ehr, EhrObject::Status, None)
+            .await
+            .map(|r| r.body)
+            .expect("read the status"),
+    );
+    let person = make_person_with_media(&svc, "Swept", &multimedia(1100)).await;
+    let party = party_blob_key(
+        &svc.party_get(PartyKind::Person, crate::fixtures::at(person), None)
+            .await
+            .expect("read the person")
+            .into_value_response()
+            .expect("the stored body parses")
+            .body,
+    );
+    let orphan_bytes = vec![0x17_u8; 2048];
+    let orphan = BlobKey::of(&orphan_bytes);
+    store
+        .write_if_absent(&orphan, 2048, [Ok(Bytes::from(orphan_bytes))])
+        .await
+        .expect("write the orphan");
+
+    // Inside the grace period nothing is an orphan yet, an applied sweep included.
+    let young = Sweep::new(store.clone(), &pools, Duration::from_hours(1))
+        .run()
+        .await
+        .expect("the sweep inside the grace period");
+    assert_eq!(
+        (3, 3, 0, 0),
+        (
+            young.listed,
+            young.too_young,
+            young.orphans.len(),
+            young.deleted
+        ),
+        "{young:?}"
+    );
+    assert!(
+        store.exists(&orphan).await.unwrap(),
+        "an upload in flight is kept"
+    );
+
+    // Past it, the plan names the orphan alone and deletes nothing.
+    tokio::time::sleep(Duration::from_millis(2_500)).await;
+    let sweep = Sweep::new(store.clone(), &pools, Duration::from_secs(1));
+    let plan = sweep.plan().await.expect("the plan");
+    assert_eq!(vec![orphan], plan.orphans, "{plan:?}");
+    assert_eq!(
+        (3, 0, 2, 0),
+        (plan.listed, plan.too_young, plan.referenced, plan.deleted)
+    );
+    assert!(
+        store.exists(&orphan).await.unwrap(),
+        "a plan deletes nothing"
+    );
+
+    // The run deletes it, and both referenced blobs stay readable.
+    let ran = sweep.run().await.expect("the sweep");
+    assert_eq!((vec![orphan], 1), (ran.orphans.clone(), ran.deleted));
+    assert!(!store.exists(&orphan).await.unwrap(), "the orphan is gone");
+    assert_eq!(1000, stored_bytes(&store, &clinical).await.len());
+    assert_eq!(1100, stored_bytes(&store, &party).await.len());
+    let again = sweep.run().await.expect("a second sweep");
+    assert_eq!((2, 2, 0), (again.listed, again.referenced, again.deleted));
+}
+
+/// #5957: a write of bytes the store already holds renews a blob older than
+/// `refresh_after`, half the sweep's grace period, so a commit that
+/// deduplicates onto an old blob never loses it to the sweep; a younger blob is
+/// left as it is.
+#[tokio::test]
+async fn a_write_of_stored_bytes_renews_a_blob_past_the_refresh_age() {
+    let sw = Seaweed::start().await;
+    let store = s3_store(
+        &sw,
+        Limits {
+            refresh_after: Duration::from_secs(1),
+            ..Limits::default()
+        },
+    );
+    let key = BlobKey::of(b"renewed");
+    let write = || store.write_if_absent(&key, 7, [Ok(Bytes::from_static(b"renewed"))]);
+    let written = || async {
+        let listing = store.content_listing().await.expect("the listing");
+        assert_eq!(1, listing.len(), "{listing:?}");
+        listing[0].1.expect("an S3 store records each write")
+    };
+    write().await.expect("the first write");
+    let first = written().await;
+    write().await.expect("a write at once");
+    assert_eq!(first, written().await, "a young blob is left as it is");
+    tokio::time::sleep(Duration::from_millis(2_500)).await;
+    write().await.expect("a write past the refresh age");
+    let renewed = written().await;
+    assert!(
+        renewed > first,
+        "an old blob is written again: {first} then {renewed}"
+    );
+    assert_eq!(stored_bytes(&store, &key).await, b"renewed");
+}
+
 /// #3180: a physically deleted party takes its blobs with it, and leaves a
 /// blob anything else still references alone.
 #[tokio::test]

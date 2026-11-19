@@ -195,7 +195,11 @@ async fn sweep_blobs(config: &ferroehr::config::FerroEhrConfig, apply: bool) -> 
         &pools,
         config.record.multimedia.orphan_grace.get(),
     );
-    let report = if apply { sweep.run().await } else { sweep.plan().await };
+    let report = if apply {
+        sweep.run().await
+    } else {
+        sweep.plan().await
+    };
     pools.close().await;
     let report = report.context("sweeping the multimedia blob store")?;
     println!(
@@ -228,6 +232,11 @@ async fn sweep_blobs(config: &ferroehr::config::FerroEhrConfig, apply: bool) -> 
     clippy::unused_async,
     reason = "signature parity with the multimedia twin, which awaits"
 )]
-async fn sweep_blobs(_config: &ferroehr::config::FerroEhrConfig, _apply: bool) -> anyhow::Result<()> {
-    anyhow::bail!("this binary was built without the `multimedia` feature, so it stores no blob to sweep")
+async fn sweep_blobs(
+    _config: &ferroehr::config::FerroEhrConfig,
+    _apply: bool,
+) -> anyhow::Result<()> {
+    anyhow::bail!(
+        "this binary was built without the `multimedia` feature, so it stores no blob to sweep"
+    )
 }

@@ -65,6 +65,36 @@ is written, and an expanded read of an already-offloaded record is refused `500`
 read **without** `expand_multimedia` still answers `200`; it never touches the
 store.
 
+## Blobs nothing references
+
+A commit uploads its blobs before it writes the version that references
+them. A commit that fails after the upload leaves its blob in the bucket
+with nothing pointing at it. A physical delete collects the blobs of what it
+deletes, but nothing collects these on its own.
+
+`ferroehr db sweep-blobs` finds them. It lists the bucket, sets aside every
+blob younger than `orphan_grace` (default one hour), checks the rest against
+the references of every stored version in the clinical and the party
+database, and names the ones no version references:
+
+```sh
+ferroehr db sweep-blobs            # lists what it would delete
+ferroehr db sweep-blobs --apply    # deletes them
+```
+
+It is safe to run while the servers serve. A blob inside the grace period
+is never deleted, so an upload whose commit is still running is left alone.
+A commit that stores bytes the bucket already holds writes the blob again
+when it is older than half the grace period, which makes it young again, so
+a blob a commit is about to reference is never old enough to be swept. Keep
+`orphan_grace` well above your longest commit.
+
+The sweep stops at the first failure and says which step failed: a listing
+or a reference read that fails deletes nothing, and a failed delete leaves
+the earlier deletes done, so a second run finishes the rest. Run it from a
+scheduled job, for example a Kubernetes `CronJob` with the server's image
+and configuration.
+
 ## Turning it back off
 
 `enabled` governs **new offloads**, not access to old ones. Switching it back to
