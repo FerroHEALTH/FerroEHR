@@ -15,8 +15,11 @@
 //! runs again at once. A round seals its last link in a signed checkpoint
 //! when it is the first after a rest or the last checkpoint is
 //! [`SEAL_EVERY`] old, and a chainer that comes to rest unsealed seals the
-//! head, so a checkpoint covers every entry within [`SEAL_EVERY`] under load
-//! and at once at rest. The bounds are our own design, set from the capacity
+//! head, waiting out another replica's chainer that holds it, so a checkpoint
+//! covers every entry within [`SEAL_EVERY`] under load and at once at rest. A
+//! sealing round that chains nothing seals a head no checkpoint covers, which
+//! is how a chainer's poll and its stop seal what a stopped replica left
+//! (#6050). The bounds are our own design, set from the capacity
 //! runs of #5745 and #5770 and the performance gate; no specification governs
 //! them.
 
@@ -193,7 +196,12 @@ async fn run(
                     sealed_at = tokio::time::Instant::now();
                     unsealed = false;
                 }
-                Ok(false) => {}
+                Ok(false) => {
+                    // NOTE: our own design (#6050), the chainer that holds the head may chain
+                    // nothing and so seal nothing, so this one asks again and rests sealed.
+                    tokio::time::sleep(BUSY).await;
+                    continue;
+                }
                 Err(error) => tracing::error!(
                     error = %crate::error::ErrorChain::new(&error),
                     "the access log's head could not be sealed; the next round seals it"

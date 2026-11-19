@@ -101,12 +101,16 @@ impl AccessLogStore {
             .fetch_all(&mut *tx)
             .await?;
         if rows.is_empty() {
-            if release.is_empty() {
-                tx.rollback().await?;
-            } else {
+            // NOTE: our own design (#6050), a round that seals and chains nothing seals the head a
+            // stopped chainer left to a later checkpoint.
+            let sealed =
+                seal == Seal::Now && self.seal_unsealed(&mut tx, sequence, &previous).await?;
+            if sealed || !release.is_empty() {
                 // NOTE: our own design (#5762), the audit domain's own store, whose held rows this
-                // transaction released.
+                // transaction released and whose head it sealed.
                 tx.commit().await?;
+            } else {
+                tx.rollback().await?;
             }
             return Ok(Round::Chained {
                 entries: 0,
@@ -189,18 +193,37 @@ impl AccessLogStore {
         let Some((sequence, digest)) = head else {
             return Ok(false);
         };
+        self.seal_unsealed(&mut tx, sequence, &digest).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, sealing the head no request
+        // moved.
+        tx.commit().await?;
+        Ok(true)
+    }
+
+    /// Seal the head `digest` at `sequence`, which `tx` holds, unless the log
+    /// is empty or a checkpoint seals it already; whether it wrote one.
+    async fn seal_unsealed(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        sequence: i64,
+        digest: &str,
+    ) -> Result<bool, AccessLogError> {
+        if sequence == 0 {
+            return Ok(false);
+        }
         let sealed: bool = sqlx::query_scalar(
             "SELECT EXISTS (SELECT 1 FROM audit.access_log_checkpoint WHERE sequence = $1)",
         )
         .bind(sequence)
-        .fetch_one(&mut *tx)
+        .fetch_one(&mut **tx)
         .await?;
-        if !sealed && let Some(seal) = self.begin_seal(sequence, &digest)? {
-            seal.write(&mut tx).await?;
+        if sealed {
+            return Ok(false);
         }
-        // NOTE: our own design (#5762), the audit domain's own store, sealing the head no request
-        // moved.
-        tx.commit().await?;
+        let Some(seal) = self.begin_seal(sequence, digest)? else {
+            return Ok(false);
+        };
+        seal.write(tx).await?;
         Ok(true)
     }
 }

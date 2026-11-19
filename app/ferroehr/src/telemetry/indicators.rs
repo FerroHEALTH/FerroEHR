@@ -514,7 +514,7 @@ impl HealthIndicator for InstancesHealth {
 /// `access_log_checkpoints` — reports whether the access log is sealed and
 /// its checkpoints published outside the database.
 ///
-/// Every append seals itself in a checkpoint stored beside the log, so a
+/// The chainer seals what it appends in checkpoints stored beside the log, so a
 /// change to a sealed entry is detected. Removing the newest entries together
 /// with the checkpoints that seal them is detected only against a checkpoint
 /// published outside the database, which is the recommended setup. The

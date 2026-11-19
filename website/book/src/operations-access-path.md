@@ -145,7 +145,7 @@ controller reviews.
 | `audit_reservation_age_seconds` | gauge | none | Age of the oldest such reservation at the reconciler's last look. |
 | `audit_reservations_reconciled_total` | counter | `outcome` | Reservations the reconciler resolved: `released` (the write committed, its records go to the chain), `discarded` (it never did) or `removed` (a spent reservation row). |
 | `access_log_sign_duration_seconds` | histogram | `outcome` | Time from the start of a chainer round's checkpoint signature to its end, measured when the round stores the checkpoint; it runs beside the insert of the records while the head is held. Present only with an OpenPGP key. |
-| `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run of the system chain (`chain` is `system`); `outcome` is `sealed`, `empty` or `failed`. The access log needs no schedule: every append seals itself. |
+| `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run of the system chain (`chain` is `system`); `outcome` is `sealed`, `empty` or `failed`. The access log needs no schedule: its chainer signs a checkpoint at least once a second while it appends, seals the head when it comes to rest, and seals a head another replica left unsealed on its two-second poll. |
 | `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest seal run of the system chain that did not fail. |
 | `access_log_tombstones_total` | counter | `chain` | Entries the retention run replaced by their tombstones, `local` or `imported` from another system. |
 | `access_log_folded_total` | counter | `chain` | Tombstones the retention run folded into gaps of the chain once they were past their own end, `local` or `imported`. |
