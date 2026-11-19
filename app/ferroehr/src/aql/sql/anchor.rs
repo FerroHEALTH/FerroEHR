@@ -9,10 +9,13 @@
 //! the value last (#4437, #6022). An anchor is the condition a top-level
 //! conjunct implies, stated as a FROM item the planner can start from: the
 //! versions some node row of which, under the leaf step's own predicate,
-//! carries a value the conjunct keeps. Three leaves have one:
+//! carries a value the conjunct keeps. Four leaves have one:
 //!
 //! - a text leaf of an `ELEMENT` value under `=`, by its search text
 //!   (`ext.node_search_text`, `idx_node_hot_value_search`);
+//! - the code of an `ELEMENT` value under `=`, the `defining_code` of a coded
+//!   text or of an ordinal's symbol, by `ext.node_code`
+//!   (`idx_node_hot_value_code`);
 //! - the `time` of an event and the `origin` of a history under `=`, `<`,
 //!   `<=`, `>` or `>=`, by `node.event_time`, which the node insert fills
 //!   with the value the comparison reads (`idx_node_hot_event_time`);
@@ -226,7 +229,8 @@ impl Builder<'_> {
     }
 
     /// The anchor of one equality on `leaf` with `text`, or `None` when the
-    /// leaf is no text leaf of an `ELEMENT` value ([`search_text_leaf`]).
+    /// leaf is neither a text leaf of an `ELEMENT` value
+    /// ([`search_text_leaf`]) nor its code ([`code_leaf`]).
     ///
     /// # Errors
     /// [`AqlError`] from the leaf step's predicate lowering.
@@ -235,9 +239,13 @@ impl Builder<'_> {
         leaf: &LeafPath,
         text: &str,
     ) -> Result<Option<ValueAnchor>, AqlError> {
-        if !search_text_leaf(&leaf.fragment, text) {
+        let (function, column) = if code_leaf(&leaf.fragment) {
+            ("node_code", Node::ValueCode)
+        } else if search_text_leaf(&leaf.fragment, text) {
+            ("node_search_text", Node::ValueText)
+        } else {
             return Ok(None);
-        }
+        };
         let Some((types, predicate)) = leaf_step(self.ir, leaf) else {
             return Ok(None);
         };
@@ -248,10 +256,10 @@ impl Builder<'_> {
             (
                 col(node, Node::RmType).eq(Expr::cust(ELEMENT_LITERAL)),
                 call(
-                    "node_search_text",
+                    function,
                     vec![
                         col(node, Node::ValueType),
-                        col(node, Node::ValueText),
+                        col(node, column),
                         col(node, Node::Data),
                     ],
                 )
@@ -426,6 +434,22 @@ impl ValueAnchor {
             .eq(col(&self.version, VersionRow::VoId))
             .and(col(&self.alias, Node::SysVersion).eq(self.key.clone()))
     }
+}
+
+/// Whether an equality of the fragment path `steps` compares the code
+/// `ext.node_code` yields for every `ELEMENT` row that can satisfy it: the
+/// `defining_code` of a coded text, or of the symbol of an ordinal or a
+/// scale.
+fn code_leaf(steps: &[FragmentStep]) -> bool {
+    if steps.iter().any(|step| step.predicate.is_some()) {
+        return false;
+    }
+    let names: Vec<&str> = steps.iter().map(|step| step.name.as_str()).collect();
+    matches!(
+        names.as_slice(),
+        ["value", "defining_code", "code_string"]
+            | ["value", "symbol", "defining_code", "code_string"]
+    )
 }
 
 /// Whether an equality of the fragment path `steps` with `text` compares the

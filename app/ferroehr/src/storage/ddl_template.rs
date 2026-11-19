@@ -114,6 +114,10 @@ pub const NODE_EVENT_TIME: &str = include_str!("../../migrations/templates/node_
 pub const NODE_VALUE_MAGNITUDE: &str =
     include_str!("../../migrations/templates/node_value_magnitude.sql.in");
 
+/// The template that indexes the code of an ELEMENT value, which an AQL
+/// equality enters through (#6033).
+pub const NODE_VALUE_CODE: &str = include_str!("../../migrations/templates/node_value_code.sql.in");
+
 /// The marker opening a block rendered only for a domain that owns an `ehr`
 /// relation.
 const EHR_BEGIN: &str = "--@ehr-begin";
@@ -295,6 +299,16 @@ mod tests {
             "migrations/party/0056_node_value_magnitude.sql",
             PARTY,
             NODE_VALUE_MAGNITUDE,
+        ),
+        (
+            "migrations/clinical/0055_node_value_code.sql",
+            CLINICAL,
+            NODE_VALUE_CODE,
+        ),
+        (
+            "migrations/party/0057_node_value_code.sql",
+            PARTY,
+            NODE_VALUE_CODE,
         ),
     ];
 
