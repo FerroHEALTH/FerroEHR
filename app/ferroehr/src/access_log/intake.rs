@@ -334,7 +334,11 @@ const QUEUE: usize = 4096;
 
 /// How many gathered writes may be in flight at once, each on its own
 /// connection.
-const WRITERS: usize = 4;
+///
+/// Two, so one slow flush of the write-ahead log never holds every request.
+/// More writers send more statements of fewer entries, which costs the store
+/// more for each entry and puts more commits behind each flush (#6058).
+const WRITERS: usize = 2;
 
 /// The gathered intake write (#5770).
 ///
