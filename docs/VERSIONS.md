@@ -112,11 +112,23 @@ Bumping ZITADEL moves both rows, and the vendor script's tag, together.
 | `keycloak` | `quay.io/keycloak/keycloak:26.8.2@sha256:723b1d6e254c0fc96d5cffec860c7e0744d6a3277822b865bb538cf891575e41` | Apache-2.0, the pin of `docker-compose.keycloak.yml` |
 | `zitadel` | `ghcr.io/zitadel/zitadel:v4.20.3@sha256:1b30fea7ed88826dc0a98dacee4e2f2c8b05201fd26f5e4cb5386615b29f7638` | AGPL-3.0-only, run unmodified |
 | `zitadel-login` | `ghcr.io/zitadel/zitadel-login:v4.20.3@sha256:8f730428dfd65cd8979d07ef4e34a59d44978e956692b7dbbc3bba4e4abb4f92` | MIT (`apps/login/`) |
+| `ferrosmart-source` | `2da52849e556b9ecd20779d8cff9309e570c889b` | BUSL-1.1 (FerroHEALTH), a commit of FerroHEALTH/FerroSMART built in CI only |
 
 The ZITADEL digests were resolved from `ghcr.io` on 2026-11-16 and the
 FerroSMART digest on 2026-11-19, each checked against the sha256 of the index
 manifest it names. FerroSMART's and ZITADEL's PostgreSQL is the `postgres:18.6`
 digest the quickstart pins.
+
+The `ferrosmart-source` row is the FerroSMART commit the hospital scenario
+runs against in CI (#6085): the `ferrosmart-image` job of
+`.github/workflows/ci.yml` reads it from this table, checks out that commit,
+builds its static binary and packages it with FerroSMART's own
+`docker/ferrosmart/Dockerfile`. The scenario needs the access token's `roles`
+claim (FerroHEALTH/FerroSMART#649) and a role that grants an extension scope
+(FerroHEALTH/FerroSMART#647), both on FerroSMART `main` and in no release yet.
+The quickstart overlay keeps the released `ferrosmart` image. When FerroSMART
+0.2.0 is published, the overlay's pin moves to its digest, the job and this row
+are removed, and the scenario runs that image.
 
 ## openEHR specification matrix
 

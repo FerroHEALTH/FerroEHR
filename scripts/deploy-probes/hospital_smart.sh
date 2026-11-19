@@ -64,7 +64,7 @@ hs_password() { printf 'A1!%s-hospital' "$1"; }
 # The FerroSMART configuration of the scenario, with the subject namespace
 # `namespace` its picker looks EHRs up under.
 hs_config() {
-  local namespace="$1" client
+  local namespace="$1" client role platform
   {
     cat <<TOML
 # Written by scripts/deploy-probes/hospital_smart.sh for one run.
@@ -87,8 +87,13 @@ kind = "openehr"
 subject_namespace = "$namespace"
 
 TOML
+    # Every role the people hold is named, so FerroSMART carries it in the
+    # token's `roles` (FerroHEALTH/FerroSMART#649); ADMIN alone grants the
+    # product scope of the ADMIN API (FerroHEALTH/FerroSMART#647).
     for role in CLINICIAN NURSE EMERGENCY ADMIN; do
-      printf '[[ferrosmart.role]]\nname = "%s"\nscopes = ["user/composition-*.cruds", "user/aql-*.cruds", "user/template-*.r", "patient/composition-*.rs"]\n\n' "$role"
+      platform=""
+      if [[ "$role" == ADMIN ]]; then platform=', "__ferroehr.platform"'; fi
+      printf '[[ferrosmart.role]]\nname = "%s"\nscopes = ["user/composition-*.cruds", "user/aql-*.cruds", "user/template-*.r", "patient/composition-*.rs"%s]\n\n' "$role" "$platform"
     done
     cat <<TOML
 [[ferrosmart.role]]
