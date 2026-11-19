@@ -19,7 +19,8 @@ use ferrohealth_smart::resource::{Caller, Honoured, IssuerSet, ResourceServer, V
 use ferrohealth_smart::sender::proof::ProofCheck;
 use ferrohealth_smart::sender::replay::ReplayStore;
 
-use super::{Authenticator, TokenVerdicts, issuer, upper_cased};
+use super::verdicts::TokenVerdicts;
+use super::{Authenticator, issuer, upper_cased};
 use crate::config::AppConfig;
 use ferrohealth_secret::secret_url::SecretUrl;
 
