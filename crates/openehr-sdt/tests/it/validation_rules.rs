@@ -1529,6 +1529,30 @@ fn scale_pair_must_match() {
     );
 }
 
+/// A `DV_SCALE` symbol is a code phrase, so a code of another terminology is
+/// no member of a list of `local` codes, whatever its paired value (RM
+/// `data_types` `CODE_PHRASE.terminology_id`; #5914).
+#[test]
+fn a_scale_symbol_of_another_terminology_is_off_the_list() {
+    let n = ordinal_node("DV_SCALE", true);
+    for terminology in ["external", "SNOMED-CT"] {
+        let mut value = ordinal_value("DV_SCALE", &json!(0.0), "at0014");
+        value["symbol"]["defining_code"]["terminology_id"]["value"] = json!(terminology);
+        let found = walk_only(&value, &n);
+        assert_eq!(
+            vec![ValidationKind::CodedValue],
+            kinds(&found),
+            "{terminology}::at0014 is refused: {found:?}"
+        );
+        assert!(
+            found[0]
+                .message
+                .contains(&format!("'{terminology}::at0014'")),
+            "the finding names the terminology: {found:?}"
+        );
+    }
+}
+
 // ── C_STRING fail-closed with fancy-regex fallback ─────────────────
 
 #[test]
