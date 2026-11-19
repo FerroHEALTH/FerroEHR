@@ -24,6 +24,7 @@
 
 use ferrohealth_ui::i18n::{Arg, Locale, Message};
 use fluent_templates::Loader;
+use serde::Deserialize;
 
 pub mod console;
 pub mod definitions;
@@ -32,6 +33,23 @@ pub mod queries;
 pub mod records;
 pub mod server;
 pub mod signin;
+
+/// `[ui]`: the language the viewer renders in.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct UiConfig {
+    /// The BCP 47 tag of the locale a page renders in when the request's
+    /// `Accept-Language` names no language the viewer's catalog holds.
+    pub locale: String,
+}
+
+impl Default for UiConfig {
+    fn default() -> Self {
+        Self {
+            locale: String::from("en"),
+        }
+    }
+}
 
 /// A message of one of the viewer's catalogs.
 pub trait Catalogued: Copy {

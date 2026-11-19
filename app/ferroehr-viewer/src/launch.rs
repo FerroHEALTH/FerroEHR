@@ -27,7 +27,7 @@ use ferrohealth_smart::client::outbound::{OutboundClient, OutboundError};
 use ferrohealth_smart::config::ServerTls;
 use ferrohealth_smart::config::endpoint::EndpointSection;
 use jsonwebtoken::Algorithm;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// The `typ` of the client assertion the viewer sends: RFC 10070 §4's
 /// explicit type, which FerroSMART takes beside SMART's `JWT`.
@@ -102,15 +102,18 @@ pub enum LaunchConfigError {
     /// A key the launch needs is empty.
     #[error("launch.{0} is required when launch.issuer is set")]
     Missing(&'static str),
-    /// A URL of the section does not parse or breaks its rule.
-    #[error("launch.{key} `{value}` is no {rule}")]
+    /// The issuer is no RFC 8414 §2 issuer identifier.
+    #[error(
+        "launch.issuer `{0}` is no issuer identifier (https, or http on a loopback host; RFC 8414 §2)"
+    )]
+    Issuer(String),
+    /// A URL of the section is no absolute `http` or `https` URL.
+    #[error("launch.{key} `{value}` is no absolute http or https URL")]
     Url {
         /// The key.
         key: &'static str,
         /// The value as configured.
         value: String,
-        /// What it must be.
-        rule: &'static str,
     },
     /// Two apps name the same `client_id`.
     #[error("launch.app names the client `{0}` twice")]
@@ -160,6 +163,37 @@ pub enum LaunchError {
     /// FerroSMART answered `201` with a body that is no launch.
     #[error("FerroSMART's answer carries no launch value")]
     Answer(#[source] serde_json::Error),
+}
+
+/// The form of `POST {issuer}/launch`, its parameters in this order: the
+/// client assertion as at the token endpoint, the app, the base and the
+/// context (FerroSMART `docs/architecture.md` §13.6 item 3).
+#[derive(Serialize)]
+struct LaunchForm<'a> {
+    /// The assertion type, RFC 7523 §2.2.
+    client_assertion_type: &'a str,
+    /// The viewer's signed assertion.
+    client_assertion: &'a str,
+    /// The app launched.
+    app_client_id: &'a str,
+    /// The base the app gets as `iss`.
+    resource: &'a str,
+    /// The EHR on screen.
+    #[serde(rename = "ehrId")]
+    ehr_id: &'a str,
+    /// The FHIR `Patient` id of its subject, for a configured namespace.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    patient: Option<&'a str>,
+    /// Always `false`: the viewer shows whose record it is.
+    need_patient_banner: bool,
+}
+
+impl std::fmt::Debug for LaunchForm<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LaunchForm")
+            .field("app_client_id", &self.app_client_id)
+            .finish_non_exhaustive()
+    }
 }
 
 /// The answer of `POST {issuer}/launch`.
@@ -234,7 +268,6 @@ fn web_url(key: &'static str, value: &str) -> Result<url::Url, LaunchConfigError
     let refused = || LaunchConfigError::Url {
         key,
         value: value.to_owned(),
-        rule: "absolute http or https URL",
     };
     let url = url::Url::parse(value).map_err(|_unparsed| refused())?;
     if matches!(url.scheme(), "http" | "https") && url.has_host() {
@@ -259,14 +292,8 @@ impl Launcher {
         if section.issuer.is_empty() {
             return Ok(None);
         }
-        let issuer =
-            ferrohealth_smart::metadata::issuer_url(&section.issuer).map_err(|_insecure| {
-                LaunchConfigError::Url {
-                    key: "issuer",
-                    value: section.issuer.clone(),
-                    rule: "issuer identifier (https, or http on a loopback host; RFC 8414 §2)",
-                }
-            })?;
+        let issuer = ferrohealth_smart::metadata::issuer_url(&section.issuer)
+            .map_err(|_insecure| LaunchConfigError::Issuer(section.issuer.clone()))?;
         let endpoint = web_url(
             "issuer",
             &format!("{}/launch", issuer.as_str().trim_end_matches('/')),
@@ -353,25 +380,28 @@ impl Launcher {
         origins
     }
 
-    /// The form body of one launch request, built whole before the request
-    /// is sent, since the serializer is not `Send`.
-    fn form(&self, app: &LaunchApp, assertion: &str, context: Context<'_>) -> String {
-        let mut form = url::form_urlencoded::Serializer::new(String::new());
-        form.append_pair("client_assertion_type", ASSERTION_TYPE)
-            .append_pair("client_assertion", assertion)
-            .append_pair("app_client_id", &app.client_id)
-            .append_pair("resource", &self.resource)
-            .append_pair("ehrId", context.ehr_id);
-        if !context.subject.is_empty()
+    /// The form of one launch request.
+    fn form<'a>(
+        &'a self,
+        app: &'a LaunchApp,
+        assertion: &'a str,
+        context: Context<'a>,
+    ) -> LaunchForm<'a> {
+        let patient = (!context.subject.is_empty()
             && self
                 .patient_namespaces
                 .iter()
-                .any(|namespace| namespace == context.subject_namespace)
-        {
-            form.append_pair("patient", context.subject);
+                .any(|namespace| namespace == context.subject_namespace))
+        .then_some(context.subject);
+        LaunchForm {
+            client_assertion_type: ASSERTION_TYPE,
+            client_assertion: assertion,
+            app_client_id: &app.client_id,
+            resource: &self.resource,
+            ehr_id: context.ehr_id,
+            patient,
+            need_patient_banner: false,
         }
-        form.append_pair("need_patient_banner", "false");
-        form.finish()
     }
 
     /// Registers the context of `context` at FerroSMART for the app
@@ -409,12 +439,8 @@ impl Launcher {
         let response = self
             .http
             .post(self.endpoint.clone())
-            .header(
-                http::header::CONTENT_TYPE,
-                "application/x-www-form-urlencoded",
-            )
             .header(http::header::ACCEPT, "application/json")
-            .body(body)
+            .form(&body)
             .send()
             .await
             .map_err(LaunchError::Unreachable)?;
@@ -468,10 +494,7 @@ mod tests {
     #[test]
     fn an_issuer_needs_its_client_its_key_its_resource_and_an_app() {
         let insecure = Launcher::from_section(&section("http://smart.example.org"));
-        assert!(matches!(
-            insecure,
-            Err(LaunchConfigError::Url { key: "issuer", .. })
-        ));
+        assert!(matches!(insecure, Err(LaunchConfigError::Issuer(_))));
         let no_key = Launcher::from_section(&section("https://smart.example.org"));
         assert!(matches!(
             no_key,
