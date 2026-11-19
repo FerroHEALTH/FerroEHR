@@ -55,10 +55,11 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
     // canonical RM value with a defined canonical-XML shape — so it is
     // accepted as JSON only.
     let body = match negotiate::content_type_format(h) {
-        Some(WireFormat::CanonicalJson) => negotiate::decode::json_value(h, &parts.body)?,
+        Some(WireFormat::CanonicalJson) => negotiate::decode::contribution_text(h, &parts.body)?,
         Some(fmt @ (WireFormat::Flat | WireFormat::Structured)) => {
             crate::formats::dispatch::contribution_from_simplified(&state, h, &parts.body, fmt)
                 .await?
+                .into()
         }
         _ => {
             return Err(RestError::from(ApiError::UnsupportedMediaType(

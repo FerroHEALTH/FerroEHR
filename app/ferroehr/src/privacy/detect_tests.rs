@@ -152,14 +152,15 @@ fn no_rule_matches_a_uuid() {
     // A UUID's hyphen groups are 8, 4, 4, 4 and 12 characters, so it
     // carries no delimited run of 9, 10 or 11 digits — which is what lets
     // the opaque subject pseudonym the boundary mandates pass every rule.
-    for uuid in [
+    let uuids = [
         "018f3c2a-7b41-7c2e-9a55-6d1e4f80b2c3",
         "00000000-0000-0000-0000-000000000000",
         "11122233-3111-2223-3311-122233311122",
         "15038545-6601-5038-5456-601503854566",
-    ] {
+    ];
+    for (nth, uuid) in uuids.into_iter().enumerate() {
         for rule in built_in_rules() {
-            assert!(!rule.matches(uuid), "{} matched {uuid}", rule.key);
+            assert!(!rule.matches(uuid), "{} matched UUID {nth}", rule.key);
         }
     }
 }

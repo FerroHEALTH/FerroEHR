@@ -32,13 +32,14 @@ use crate::system_log::recorder::WriteFacts;
 use crate::versioning::Kind;
 use crate::versioning::attestation::PendingAttest;
 use crate::versioning::audit::{AuditInput, validate_commit_audit};
-use crate::versioning::body::{Body, decode_member};
+use crate::versioning::body::{Body, decode_member, decode_member_text};
 use crate::versioning::change::{self, Change, CommittedContribution};
 use crate::versioning::contribution::{
     Action, PlannedVersion, body_target_not_found_is_bad_request, check_kind_scope, data_kind,
     delete_change, needs_content_write_permission, parse_contribution_audit, parse_supplied_uid,
     plan_attestation, plan_version, plan_writes_content_without_reactivating, require_kind,
 };
+use crate::versioning::envelope::MemberData;
 
 /// The pool the pseudonymisation domain this CONTRIBUTION belongs to is served
 /// by: the demographic one for a party-only set, the clinical one otherwise.
@@ -83,7 +84,7 @@ pub(crate) async fn commit_version_set(
     cx: &FerroEhrService,
     ehr_id: Option<EhrId>,
     uid: Option<&HierObjectId>,
-    versions: Vec<UpdateVersion<Value>>,
+    versions: Vec<UpdateVersion<MemberData>>,
     audit: &UpdateAudit,
     party_only: bool,
 ) -> Result<CommittedContribution, ServiceError> {
@@ -403,35 +404,66 @@ async fn build_change(
 async fn accept_content(
     cx: &FerroEhrService,
     (kind, container): (Kind, Option<Container>),
-    data: Value,
+    data: MemberData,
     (incomplete, signed): (bool, bool),
     index: usize,
     party_only: bool,
 ) -> Result<(Body, Option<String>), ServiceError> {
     check_kind_scope(kind, party_only).map_err(|e| e.for_version_member(index))?;
-    let typed = decode_member(kind, &data, incomplete).map_err(|e| e.for_version_member(index))?;
-    let checked = match (container, &typed) {
-        (container, Some(typed)) if kind.is_demographic() => {
-            cx.demographic_typed_check(kind, typed, container).await
-        }
-        (Some(container), None) if kind.is_party() => {
-            cx.demographic_commit_check(kind, &data, incomplete, Some(container))
-                .await
-        }
-        (_, Some(typed)) => cx.validate_body(kind, typed, false).await,
-        (_, None) => cx.validate_for_commit(kind, &data, incomplete).await,
+    // A complete, unsigned member is read from its text. Any other, and one
+    // the text reader refuses, is read from its JSON value, which words the
+    // refusal and is what a signed or incomplete member is stored from.
+    let read = match data.text() {
+        Some(text) if !incomplete && !signed => decode_member_text(kind, text),
+        _ => None,
     };
-    checked.map_err(|e| e.for_version_member(index))?;
-    // NOTE: a member is stored as its typed canonical rendering, as every route
-    // stores; one its client signed keeps the bytes that signature covers (#6003).
-    let body = match typed {
-        Some(typed) if !signed => typed,
-        _ => Body::Canonical(data),
+    let body = if let Some(typed) = read {
+        check_typed(cx, kind, container, &typed)
+            .await
+            .map_err(|e| e.for_version_member(index))?;
+        typed
+    } else {
+        let data = data.into_value().map_err(|e| e.for_version_member(index))?;
+        let typed =
+            decode_member(kind, &data, incomplete).map_err(|e| e.for_version_member(index))?;
+        let checked = match (container, &typed) {
+            (container, Some(typed)) => check_typed(cx, kind, container, typed).await,
+            (Some(container), None) if kind.is_party() => {
+                cx.demographic_commit_check(kind, &data, incomplete, Some(container))
+                    .await
+            }
+            (_, None) => cx.validate_for_commit(kind, &data, incomplete).await,
+        };
+        checked.map_err(|e| e.for_version_member(index))?;
+        // NOTE: a member is stored as its typed canonical rendering, as every route
+        // stores; one its client signed keeps the bytes that signature covers (#6003).
+        match typed {
+            Some(typed) if !signed => typed,
+            _ => Body::Canonical(data),
+        }
     };
     let template_id = (kind == Kind::Composition)
         .then(|| body.template_id().map(str::to_owned))
         .flatten();
     Ok((body, template_id))
+}
+
+/// The commit validation of a member read as typed RM: a demographic kind
+/// as part of its `container`, every other kind by itself.
+///
+/// # Errors
+/// The refusals of the two validations.
+async fn check_typed(
+    cx: &FerroEhrService,
+    kind: Kind,
+    container: Option<Container>,
+    typed: &Body,
+) -> Result<(), ServiceError> {
+    if kind.is_demographic() {
+        cx.demographic_typed_check(kind, typed, container).await
+    } else {
+        cx.validate_body(kind, typed, false).await
+    }
 }
 
 /// Resolves a creation member. Its kind comes from the payload `_type`.
@@ -454,7 +486,7 @@ async fn create_change(
         )
         .for_version_member(v.index));
     };
-    let kind = data_kind(&data).map_err(|e| e.for_version_member(v.index))?;
+    let kind = data_kind(&data.rm_type).map_err(|e| e.for_version_member(v.index))?;
     // A party's id is allocated before the checks, so it is judged against the
     // container the commit gives it.
     let allocated = kind.is_party().then(|| cx.allocate_party_id());
@@ -462,7 +494,7 @@ async fn create_change(
     let (body, template_id) = accept_content(
         cx,
         (kind, container),
-        data,
+        data.data,
         (v.incomplete, v.signature.is_some()),
         v.index,
         party_only,
@@ -509,7 +541,7 @@ async fn modify_change(
     let (body, template_id) = accept_content(
         cx,
         (kind, Some(Container::Existing(vo_id))),
-        data,
+        data.data,
         (v.incomplete, v.signature.is_some()),
         v.index,
         party_only,

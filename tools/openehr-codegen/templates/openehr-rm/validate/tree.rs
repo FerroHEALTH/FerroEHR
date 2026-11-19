@@ -154,6 +154,8 @@ pub struct Walker {
     pass: Pass,
     path: String,
     out: Vec<TreeViolation>,
+    /// The violations of [`validate_node`], which judges the root alone.
+    root: Option<Vec<InvariantViolation>>,
 }
 
 impl std::fmt::Debug for Walker {
@@ -167,6 +169,9 @@ impl std::fmt::Debug for Walker {
 impl Walker {
     /// Visit a single-valued attribute.
     pub fn attr<T: Walk + ?Sized>(&mut self, key: &str, value: &T) {
+        if self.root.is_some() {
+            return;
+        }
         let base = self.path.len();
         self.path.push('/');
         self.path.push_str(key);
@@ -176,6 +181,9 @@ impl Walker {
 
     /// Visit member `index` of a container attribute.
     pub fn member<T: Walk + ?Sized>(&mut self, key: &str, index: usize, value: &T) {
+        if self.root.is_some() {
+            return;
+        }
         let base = self.path.len();
         let _ = write!(self.path, "/{key}[{index}]");
         value.walk(self);
@@ -184,6 +192,10 @@ impl Walker {
 
     /// Run this pass's checks on one node.
     pub fn node(&mut self, node: &Node<'_>) {
+        if let Some(out) = &mut self.root {
+            root_node(node, out);
+            return;
+        }
         match self.pass {
             Pass::Invariants => self.invariants(node),
             Pass::Terminology => self.terminology(node),
@@ -274,11 +286,65 @@ pub fn validate_tree<T: Walk + ?Sized>(root: &T) -> Vec<TreeViolation> {
         pass: Pass::Invariants,
         path: String::new(),
         out: Vec::new(),
+        root: None,
     };
     root.walk(&mut w);
     w.pass = Pass::Terminology;
     root.walk(&mut w);
     w.out
+}
+
+/// Judge one typed RM value by itself, leaving what it holds unvisited: its
+/// class invariants, then its terminology bindings.
+///
+/// The violations are the ones `openehr_its::wire_validate::validate_rm_value`
+/// reports for the value's canonical JSON, in its form (the path relative to
+/// the value, `Invariant <Name> failed on type <RM_TYPE>`), with no rendering.
+/// It is the pass for a value no committed document holds, such as the
+/// committer of an audit.
+#[must_use]
+pub fn validate_node<T: Walk + ?Sized>(value: &T) -> Vec<InvariantViolation> {
+    let mut w = Walker {
+        pass: Pass::Invariants,
+        path: String::new(),
+        out: Vec::new(),
+        root: Some(Vec::new()),
+    };
+    value.walk(&mut w);
+    w.root.unwrap_or_default()
+}
+
+/// The checks of [`validate_node`] on its one node.
+fn root_node(node: &Node<'_>, out: &mut Vec<InvariantViolation>) {
+    let ty = node.rm_type;
+    let before = out.len();
+    class_invariants(ty, node.value, out);
+    if node.node_id == Some("") && crate::v1_2::model::descendants("LOCATABLE").contains(&ty) {
+        let mut closeout = Vec::with_capacity(1);
+        super::generated::archetype_node_id_core(ty, "", &mut closeout);
+        for v in closeout {
+            if !out.get(before..).is_some_and(|own| own.contains(&v)) {
+                out.push(v);
+            }
+        }
+    }
+    for slot in slots_for(ty) {
+        let Some((code, terminology)) = (node.coded)(slot.field) else {
+            continue;
+        };
+        let violated = match slot.binding {
+            Binding::Group(group) => {
+                terminology == "openehr" && !group.is_valid(openehr_term::bundle::openehr(), code)
+            }
+            Binding::CodeSet(set) => !set.is_valid(openehr_term::bundle::openehr(), code),
+        };
+        if violated {
+            out.push(InvariantViolation::at(
+                slot.field,
+                format!("Invariant {} failed on type {ty}", slot.invariant),
+            ));
+        }
+    }
 }
 
 /// The HISTORY generic-parameter duty of

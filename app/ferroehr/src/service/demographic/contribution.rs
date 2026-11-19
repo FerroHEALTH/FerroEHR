@@ -26,6 +26,7 @@
 
 use openehr_base::prelude::{HierObjectId, ObjectId, ObjectRef, ObjectRefData};
 use openehr_its::rest::generated::demographic::NewContribution;
+use serde_json::value::RawValue;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
@@ -36,7 +37,7 @@ use crate::service::contribution::commit_version_set;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::storage::version_repo;
 use crate::versioning::audit::AuditInput;
-use crate::versioning::contribution::decode_new_contribution;
+use crate::versioning::envelope::{self, ContributionText, Parts};
 use crate::versioning::object_version_id::{TreeId, version_id};
 
 impl FerroEhrService {
@@ -46,16 +47,13 @@ impl FerroEhrService {
     /// `ETag`/`Location` (the contribution uid).
     pub(super) async fn create_demographic_contribution(
         &self,
-        body: Value,
+        body: &ContributionText,
     ) -> Result<ServiceResponse, ServiceError> {
-        // NOTE: ITS-REST `schemas/demographic/NewContribution.yaml` leaves `additionalProperties` open
-        // (`ItemTag.yaml` closes its object with `false`), so an undeclared member is ignored.
-        let NewContribution {
+        let Parts {
             uid,
             versions,
             audit,
-            additional_properties: _,
-        } = decode_new_contribution::<NewContribution<Value>>(&body)?;
+        } = envelope::read::<NewContribution<Box<RawValue>>, NewContribution<Value>>(body)?;
         let committed =
             commit_version_set(self, None, uid.as_ref(), versions, &audit, true).await?;
         let body = self.demographic_contribution(committed.id).await?;

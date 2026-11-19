@@ -52,6 +52,7 @@ mod rest_routes;
 mod rest_server;
 mod rm_access;
 mod rm_validation;
+mod undeclared_key_scan;
 mod xml_abstract_root;
 mod xml_c14n;
 mod xml_closed_content;

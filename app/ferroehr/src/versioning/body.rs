@@ -17,6 +17,7 @@
 )]
 
 use openehr_base::prelude::{ObjectVersionId, UidBasedId};
+use openehr_its::json::JsonParseError;
 use openehr_rm::prelude::{
     Agent, Composition, EhrAccess, EhrStatus, Folder, Group, Organisation, Person, Role,
 };
@@ -289,31 +290,62 @@ pub(crate) fn decode_member(
     data: &Value,
     incomplete: bool,
 ) -> Result<Option<Body>, ServiceError> {
-    fn typed<T>(data: &Value) -> Result<Option<Body>, ServiceError>
-    where
-        T: serde::de::DeserializeOwned,
-        Body: From<T>,
-    {
-        openehr_its::json::from_canonical_value::<T>(data)
-            .map(|rm| Some(Body::from(rm)))
-            .map_err(|e| ServiceError::canonical_decode(data, e))
-    }
     if incomplete {
         return Ok(None);
+    }
+    read_member(kind, data)
+        .map(Some)
+        .map_err(|e| ServiceError::canonical_decode(data, e))
+}
+
+/// [`decode_member`] over a member's canonical-JSON text, with no JSON value
+/// between: its typed RM, or `None` for a text the strict reader refuses,
+/// which its caller then reads through [`decode_member`] for the refusal.
+pub(crate) fn decode_member_text(kind: Kind, text: &str) -> Option<Body> {
+    read_member(kind, text).ok()
+}
+
+/// A canonical-JSON document the strict reader takes: its text or its value.
+trait Canonical {
+    /// The document read as `T`.
+    fn read<T: serde::de::DeserializeOwned>(&self) -> Result<T, JsonParseError>;
+}
+
+impl Canonical for Value {
+    fn read<T: serde::de::DeserializeOwned>(&self) -> Result<T, JsonParseError> {
+        openehr_its::json::from_canonical_value(self)
+    }
+}
+
+impl Canonical for str {
+    fn read<T: serde::de::DeserializeOwned>(&self) -> Result<T, JsonParseError> {
+        openehr_its::json::from_canonical_json(self)
+    }
+}
+
+/// `data` read strictly as the RM class of `kind`.
+fn read_member<S: Canonical + ?Sized>(kind: Kind, data: &S) -> Result<Body, JsonParseError> {
+    fn party<T, S>(data: &S) -> Result<Body, JsonParseError>
+    where
+        T: serde::de::DeserializeOwned,
+        Party: From<T>,
+        S: Canonical + ?Sized,
+    {
+        data.read::<T>().map(|rm| Body::from(Party::from(rm)))
     }
     // NOTE: a party is read as the concrete class its container holds, so a body
     // of another class is refused at this door as it is on the direct routes.
     match kind {
-        Kind::Composition => typed::<Composition>(data),
-        Kind::EhrStatus => typed::<EhrStatus>(data),
-        Kind::EhrAccess => typed::<EhrAccess>(data),
-        Kind::Folder => typed::<Folder>(data),
-        Kind::PartyRelationship => typed::<PartyRelationship>(data),
-        Kind::Agent => party::<Agent>(data),
-        Kind::Group => party::<Group>(data),
-        Kind::Organisation => party::<Organisation>(data),
-        Kind::Person => party::<Person>(data),
-        Kind::Role => party::<Role>(data),
+        Kind::Composition => data.read::<Composition>().map(Body::from),
+        Kind::EhrStatus => data.read::<EhrStatus>().map(Body::from),
+        Kind::EhrAccess => data.read::<EhrAccess>().map(Body::from),
+        Kind::Folder => data.read::<Folder>().map(Body::from),
+        Kind::PartyRelationship => data.read::<PartyRelationship>().map(Body::from),
+        Kind::Agent => party::<Agent, S>(data),
+        Kind::Group => party::<Group, S>(data),
+        Kind::Organisation => party::<Organisation, S>(data),
+        Kind::Person => party::<Person, S>(data),
+        Kind::Role => party::<Role, S>(data),
     }
 }
 
@@ -325,20 +357,6 @@ pub(crate) fn decode_member(
 /// [`ServiceError::BadRequest`] when the strict reader refuses `data`.
 pub(crate) fn decoded(kind: Kind, data: Value, incomplete: bool) -> Result<Body, ServiceError> {
     Ok(decode_member(kind, &data, incomplete)?.unwrap_or(Body::Canonical(data)))
-}
-
-/// The PARTY `data` holds, read strictly as its concrete class `T`.
-///
-/// # Errors
-/// [`ServiceError::BadRequest`] when the strict reader refuses `data` as a `T`.
-fn party<T>(data: &Value) -> Result<Option<Body>, ServiceError>
-where
-    T: serde::de::DeserializeOwned,
-    Party: From<T>,
-{
-    openehr_its::json::from_canonical_value::<T>(data)
-        .map(|rm| Some(Body::from(Party::from(rm))))
-        .map_err(|e| ServiceError::canonical_decode(data, e))
 }
 
 #[cfg(test)]
