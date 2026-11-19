@@ -69,14 +69,12 @@ impl FerroEhrService {
     /// # Errors
     /// As [`Self::validate_for_commit`].
     async fn validate_typed_for_commit(&self, kind: Kind, body: &Body) -> Result<(), ServiceError> {
-        if !kind.is_demographic() && self.privacy.reads_content() {
-            crate::telemetry::conversion::record("rm_to_index");
-            let rendered = crate::storage::render::index::render(body)
-                .map_err(|e| ServiceError::internal("serialize the commit body", e))?;
-            self.privacy.enforce(
-                kind.as_str(),
-                crate::versioning::tree::Indexed::root(&rendered),
-            )?;
+        if !kind.is_demographic()
+            && self.privacy.reads_content()
+            && let Some(rm) = body.as_rm()
+        {
+            self.privacy
+                .enforce(kind.as_str(), crate::versioning::tree::Typed::Object(rm))?;
         }
         match body {
             Body::Composition(rm) => {

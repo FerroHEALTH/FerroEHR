@@ -6,11 +6,14 @@ use serde_json::{Value, json};
 
 use super::{Body, decode_member};
 use crate::ids::VoId;
+use crate::privacy::PrivacyPolicy;
+use crate::privacy::config::PrivacyConfig;
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::change::stamp_uid_value;
 use crate::versioning::integrity::{Signed, signed_form};
 use crate::versioning::object_version_id::TreeId;
+use crate::versioning::tree::{Indexed, Tree as _, Typed};
 use crate::versioning::wire::{OriginalVersionParts, build_original_version, contribution_ref};
 
 /// Every document in the repository's corpora whose root is a versioned
@@ -192,4 +195,64 @@ fn the_typed_commit_writes_and_signs_the_bytes_the_canonical_one_did() {
     for kind in ["EHR_STATUS", "FOLDER", "PERSON"] {
         assert!(counts.contains_key(kind), "no {kind} in {counts:?}");
     }
+}
+
+/// A nine-digit value that passes the BSN eleven-test and names no person.
+const SYNTHETIC_BSN: &str = "123456782"; // privacy-allow: synthetic, built to satisfy the published arithmetic
+
+/// `composition` with the record's subject as its composer, by name and by a
+/// formal identifier, and an identifier-shaped name: what the
+/// data-minimisation pass refuses.
+fn identifying(composition: &Value) -> Value {
+    let mut planted = composition.clone();
+    planted["composer"] = json!({
+        "_type": "PARTY_RELATED",
+        "name": "A. Subject",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "id": SYNTHETIC_BSN }],
+        "relationship": {
+            "_type": "DV_CODED_TEXT",
+            "value": "self",
+            "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": "0"
+            }
+        }
+    });
+    planted["name"]["value"] = json!(SYNTHETIC_BSN);
+    planted
+}
+
+/// The typed reading of a body is its canonical JSON, value for value and in
+/// order, and the data-minimisation pass finds the same on it as on the
+/// rendering, on every document of every versioned kind in the corpora and on
+/// every COMPOSITION of them made to identify its subject (#6038).
+#[test]
+fn the_typed_reading_of_a_body_is_its_canonical_json() {
+    let policy = PrivacyPolicy::compile(&PrivacyConfig::default()).expect("compiles");
+    let mut found = 0;
+    let mut read = 0;
+    for (path, kind, body, value) in corpus() {
+        let planted = (kind == Kind::Composition)
+            .then(|| typed(kind, &identifying(&value)))
+            .flatten();
+        for body in std::iter::once(body).chain(planted) {
+            let rm = body.as_rm().expect("a typed body");
+            let typed = Typed::Object(rm);
+            assert_eq!(
+                typed.to_value(),
+                openehr_its::json::to_canonical_value(&body),
+                "{path}"
+            );
+            let rendered = body.render().unwrap();
+            let want = policy.findings(kind.as_str(), Indexed::root(&rendered));
+            assert_eq!(policy.findings(kind.as_str(), typed), want, "{path}");
+            found += want.len();
+            read += 1;
+        }
+    }
+    assert!(
+        read >= 360 && found >= 180,
+        "{read} bodies, {found} findings"
+    );
 }

@@ -162,11 +162,14 @@ struct Budget {
 /// the figures measured over four runs once a read left the stored audit
 /// undecoded and a commit signed its version from typed members (#6037), with
 /// the same margins.
+/// The commits of a body the data-minimisation pass reads have since lost
+/// their second render and the pass's own allocations (#6038): 18,841
+/// allocations on the JSON commit against 33,307, measured over three runs.
 const BUDGETS: [Budget; 16] = [
     Budget {
         path: Path::CommitJson,
-        conversions: 6,
-        allocations: 33_974,
+        conversions: 5,
+        allocations: 19_218,
         peak_bytes: 1_530_778,
         round_trips: 14,
         nested: 13,
@@ -174,8 +177,8 @@ const BUDGETS: [Budget; 16] = [
     },
     Budget {
         path: Path::CommitXml,
-        conversions: 6,
-        allocations: 55_403,
+        conversions: 5,
+        allocations: 40_647,
         peak_bytes: 1_533_031,
         round_trips: 14,
         nested: 14,
@@ -183,8 +186,8 @@ const BUDGETS: [Budget; 16] = [
     },
     Budget {
         path: Path::CommitFlat,
-        conversions: 6,
-        allocations: 48_556,
+        conversions: 5,
+        allocations: 33_800,
         peak_bytes: 1_528_525,
         round_trips: 14,
         nested: 13,
@@ -264,8 +267,8 @@ const BUDGETS: [Budget; 16] = [
     },
     Budget {
         path: Path::CommitContribution,
-        conversions: 10,
-        allocations: 67_651,
+        conversions: 9,
+        allocations: 52_896,
         peak_bytes: 3_678_823,
         round_trips: 18,
         nested: 14,
@@ -282,8 +285,8 @@ const BUDGETS: [Budget; 16] = [
     },
     Budget {
         path: Path::CommitStatus,
-        conversions: 5,
-        allocations: 1864,
+        conversions: 4,
+        allocations: 1809,
         peak_bytes: 144_180,
         round_trips: 19,
         nested: 11,

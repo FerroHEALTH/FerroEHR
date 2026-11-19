@@ -231,7 +231,6 @@ impl Body {
 
     /// The typed RM view of the body, for the passes that walk any RM value;
     /// `None` for a canonical body.
-    #[cfg(feature = "multimedia")]
     pub(crate) fn as_rm(&self) -> Option<&dyn openehr_rm::v1_2::access::RmObject> {
         use openehr_rm::v1_2::access::AsRm as _;
         each_typed!(self, rm => Some(rm.as_rm()), _view => None)

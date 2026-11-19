@@ -342,13 +342,10 @@ fn emit_struct(
             format!("self.{}", f.ident)
         }
     };
+    let names: Vec<String> = fields.iter().map(|f| format!("{:?}", f.wire)).collect();
+    let names = names.join(", ");
     if !class.is_abstract && !validated {
-        let names: Vec<String> = fields.iter().map(|f| format!("{:?}", f.wire)).collect();
-        let _ = writeln!(
-            table,
-            "{spec:?} => Some(({spec:?}, &[{}])),",
-            names.join(", ")
-        );
+        let _ = writeln!(table, "{spec:?} => Some(({spec:?}, &[{names}])),");
     }
 
     let mut is_set = String::new();
@@ -602,6 +599,7 @@ fn emit_struct(
         b,
         "impl{hdr} RmObject for {path}::{rust}{args} {{\n\
          fn rm_type(&self) -> &'static str {{ {spec:?} }}\n\
+         fn attributes(&self) -> &'static [&'static str] {{ &[{names}] }}\n\
          fn clone_box(&self) -> Box<dyn RmObject> {{ Box::new(self.clone()) }}\n\
          fn as_any(&self) -> &dyn Any {{ self }}\n\
          fn as_any_mut(&mut self) -> &mut dyn Any {{ self }}\n\

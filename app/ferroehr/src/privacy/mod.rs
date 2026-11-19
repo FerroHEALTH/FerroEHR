@@ -419,9 +419,9 @@ impl PrivacyPolicy {
                 }
                 let unscanned_id = names_no_person(map, position);
                 let element_name = element_name_kind(map);
-                for (key, child) in map.members() {
+                map.each_member(&mut |key, child| {
                     if key == TERMINOLOGY_CODE_KEY || (unscanned_id && key == "id") {
-                        continue;
+                        return;
                     }
                     let slot = if ITEM_ID_KEYS.contains(&key) {
                         Slot::ItemIds
@@ -438,15 +438,17 @@ impl PrivacyPolicy {
                     at.push_str(key);
                     self.walk(at, child, child_position, findings);
                     at.truncate(len);
-                }
+                });
             }
             Shape::Array => {
-                for (index, child) in node.items().enumerate() {
+                let mut index = 0_usize;
+                node.each_item(&mut |child| {
                     let len = at.len();
                     let _ = write!(at, "[{index}]");
                     self.walk(at, child, position, findings);
                     at.truncate(len);
-                }
+                    index = index.saturating_add(1);
+                });
             }
             Shape::String => {
                 if let Some(text) = node.text() {
