@@ -1,13 +1,41 @@
 # SMART App Launch
 
 FerroEHR is the **resource server** of a SMART on openEHR platform: a clinical
-app is launched with an OAuth 2.0 access token from your authorization server
-(Keycloak or any standards-compliant identity provider), and the CDR checks
-the token, enforces the SMART on openEHR scopes it carries, and holds a
-`patient/` grant to the EHR of the launch context. FerroEHR never issues
-tokens, registers clients, or serves the OAuth 2.0 endpoints itself; those
-remain your authorization server's job. Token checking and scope enforcement
-run on `ferrohealth-smart`, the crate every FerroHEALTH product shares.
+app is launched with an OAuth 2.0 access token from an authorization server,
+and the CDR checks the token, enforces the SMART on openEHR scopes it carries,
+and holds a `patient/` grant to the EHR of the launch context. FerroEHR never
+issues tokens, registers clients, or serves the OAuth 2.0 endpoints itself.
+Token checking and scope enforcement run on `ferrohealth-smart`, the crate
+every FerroHEALTH product shares.
+
+The authorization server is **FerroSMART**, the FerroHEALTH family's SMART App
+Launch 2.x authorization server ([Behind FerroSMART](behind-ferrosmart.md)).
+It narrows each request to the client's ceiling and the person's roles, asks
+the person's consent, and puts the launch context in the token response and
+the access token. An OpenID Connect provider, such as Keycloak or ZITADEL,
+signs the person in upstream of it and issues no token FerroEHR reads
+([Enterprise identity providers](identity-providers.md#behind-ferrosmart)).
+The three ways an app starts:
+
+- **EHR launch:** the viewer's Launch button registers the EHR on screen at
+  FerroSMART and opens the app with `iss` and `launch`
+  ([Launching an app from the viewer](#launching-an-app-from-the-viewer);
+  SMART App Launch 2.2.0, Launch App: EHR Launch).
+- **Standalone launch:** an app that asks for `launch/patient` gets
+  FerroSMART's patient picker, which looks the EHR up at the openEHR base
+  under its `subject_namespace` as the signed-in person
+  (`GET /ehr?subject_id=…&subject_namespace=…`) and puts its `ehrId` in
+  context (SMART on openEHR, Context Selection; SMART App Launch 2.2.0,
+  Launch App: Standalone Launch).
+- **Backend Services:** a system client takes the client credentials grant
+  with a `private_key_jwt` assertion; FerroEHR reads its token as the system,
+  since its `sub` is its `client_id` (SMART App Launch 2.2.0, Backend
+  Services; RFC 9068 §2.2).
+
+`docker-compose.ferrosmart.yml` runs the whole platform from the quickstart
+([Docker Compose](installation/compose.md#behind-ferrosmart)). FerroSMART's
+own setup is its [architecture](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md), sections 13.17
+(launching an app from an EHR) and 13.21 (a product behind FerroSMART).
 
 <!-- toc -->
 

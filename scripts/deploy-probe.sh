@@ -61,6 +61,8 @@ PROBE_OUT="${PROBE_OUT:-docs/conformance/deployment/compose.json}"
 . scripts/deploy-probes/signing_pgp.sh
 # shellcheck source=scripts/deploy-probes/replicas.sh
 . scripts/deploy-probes/replicas.sh
+# shellcheck source=scripts/deploy-probes/hospital_smart.sh
+. scripts/deploy-probes/hospital_smart.sh
 # shellcheck source=scripts/deploy-probes/hospital.sh
 . scripts/deploy-probes/hospital.sh
 # shellcheck source=scripts/deploy-probes/hospital_pix.sh
@@ -167,7 +169,10 @@ run_family observability && probes_observability
 run_family terminology_ferroterm && probes_terminology_ferroterm
 run_family terminology && probes_terminology
 run_family replicas && probes_replicas
-run_family hospital && probes_hospital
+# The hospital scenario runs behind FerroSMART with an upstream provider, its
+# own CI job per provider (deploy-probe-hospital), so only PROBE_ONLY=hospital
+# runs it.
+[[ "${PROBE_ONLY:-}" = hospital ]] && probes_hospital
 # Last: it deletes the stack's volumes, which is the procedure under test.
 run_family original_state && probes_original_state
 run_family decommission && probes_decommission

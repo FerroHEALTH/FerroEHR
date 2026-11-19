@@ -2142,9 +2142,10 @@ jobs:
   # Families needing a dependency the harness composes itself (Keycloak, the
   # broker, the collector) run here; terminology does NOT — it needs a licensed
   # SNOMED release that may not be fetched onto a shared runner, and its own
-  # opt-in local lane covers it. The hospital scenario runs here since its
-  # findings landed (#5642), and deploy-probe-scheduled.yml runs the same
-  # default run daily and against each published image.
+  # opt-in local lane covers it. The hospital scenario runs behind FerroSMART
+  # in its own job, deploy-probe-hospital, once per upstream provider (#5833),
+  # and deploy-probe-scheduled.yml runs the same default run daily and against
+  # each published image.
   #
   # The timeout, measured on 2026-11-16: the job took 10 to 10.5 minutes
   # before the hospital family joined it, and the family's probe step took
@@ -2200,6 +2201,83 @@ jobs:
         with:
           name: deploy-probe-record
           path: docs/conformance/deployment/compose.json
+          if-no-files-found: warn
+
+  # ── The hospital scenario behind FerroSMART (#5832, #5833) ───────────────────
+  # The hospital family of the deployment harness, once per upstream identity
+  # provider of FerroSMART, the SMART authorization server that issues every
+  # token the scenario presents: Keycloak and ZITADEL, each pinned by digest in
+  # the overlays docs/VERSIONS.md names. It packages the server binary the
+  # ui-e2e lane builds and the viewer binary of ui-e2e-viewer, whose Launch
+  # button starts the scenario's EHR launch. The merge queue skips it: the pull
+  # request's run of the same tree proved it.
+  deploy-probe-hospital:
+    name: deploy-probe hospital (${{ matrix.upstream }})
+    needs: [changes, ui-e2e-binary, ui-e2e-viewer]
+    if: >-
+      github.event_name != 'merge_group' &&
+      (needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') &&
+      needs.changes.outputs.queue_verified != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        upstream: [keycloak, zitadel]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ui-e2e-server-binary
+          path: bin/amd64
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ui-e2e-console
+          path: ui-e2e-console-stage
+      - name: Place the prebuilt viewer in the image context
+        run: install -m0755 ui-e2e-console-stage/ferroehr-viewer bin/amd64/ferroehr-viewer
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Package the app image (COPY-only, seconds)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: runtime-prebuilt
+          load: true
+          tags: ferroehr:deploy-probe
+      - name: Package the viewer image (COPY-only, seconds)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/viewer/Dockerfile
+          target: runtime-prebuilt
+          load: true
+          tags: ferroehr-viewer:deploy-probe
+      - name: Package the postgres image (base + security updates)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: docker/postgres
+          file: docker/postgres/Dockerfile
+          load: true
+          tags: ferroehr-postgres:deploy-probe
+      - name: Probe the hospital scenario
+        env:
+          FERROEHR_IMAGE: ferroehr:deploy-probe
+          FERROEHR_VIEWER_IMAGE: ferroehr-viewer:deploy-probe
+          FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:deploy-probe
+          PROBE_ONLY: hospital
+          PROBE_HOSPITAL_UPSTREAM: ${{ matrix.upstream }}
+          PROBE_OUT: docs/conformance/deployment/hospital-${{ matrix.upstream }}.json
+        run: bash scripts/deploy-probe.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: deploy-probe-hospital-${{ matrix.upstream }}
+          path: docs/conformance/deployment/hospital-${{ matrix.upstream }}.json
           if-no-files-found: warn
 
   # ── Unused dependencies ──────────────────────────────────────────────────────
@@ -2379,7 +2457,11 @@ jobs:
   ui-e2e-viewer:
     name: ui-e2e viewer + test binaries
     needs: changes
-    if: needs.changes.outputs.viewer == 'true' && github.event_name != 'merge_group'
+    # The hospital scenario launches an app through the viewer (#5880), so the
+    # deploy-probe-hospital job packages this binary too.
+    if: >-
+      github.event_name != 'merge_group' && (needs.changes.outputs.viewer == 'true' ||
+      ((needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -3330,6 +3412,7 @@ jobs:
       - ui-docs-shots
       - viewer-login-smoke
       - deploy-probe
+      - deploy-probe-hospital
       - perf
       - perf-verdict
       - server-image-from-source

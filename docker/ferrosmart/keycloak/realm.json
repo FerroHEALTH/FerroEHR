@@ -1,0 +1,66 @@
+{
+  "id": "ferroehr",
+  "realm": "ferroehr",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": false,
+  "roles": {
+    "realm": [
+      { "id": "6b1f0d8e-2c4a-4e5b-9a7c-0d1e2f3a4b01", "name": "CLINICIAN", "description": "A clinician, whom FerroSMART's [[ferrosmart.role]] CLINICIAN grants user/ scopes" },
+      { "id": "6b1f0d8e-2c4a-4e5b-9a7c-0d1e2f3a4b02", "name": "PATIENT", "description": "A patient, whom FerroSMART's [[ferrosmart.role]] PATIENT grants patient/ scopes" }
+    ]
+  },
+  "users": [
+    {
+      "id": "6b1f0d8e-2c4a-4e5b-9a7c-0d1e2f3a4b10",
+      "username": "clinician",
+      "enabled": true,
+      "email": "clinician@example.org",
+      "emailVerified": true,
+      "firstName": "Clara",
+      "lastName": "Clinician",
+      "credentials": [{ "type": "password", "value": "clinician", "temporary": false }],
+      "realmRoles": ["CLINICIAN"]
+    }
+  ],
+  "clients": [
+    {
+      "id": "6b1f0d8e-2c4a-4e5b-9a7c-0d1e2f3a4b20",
+      "clientId": "ferrosmart",
+      "name": "FerroSMART",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-jwt",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:8280/callback"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "use.jwks.url": "true",
+        "jwks.url": "http://localhost:8280/upstream-jwks",
+        "token.endpoint.auth.signing.alg": "RS256"
+      },
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "id": "6b1f0d8e-2c4a-4e5b-9a7c-0d1e2f3a4b31",
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "multivalued": "true",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -82,6 +82,13 @@ services:
     image: $HP_FERROPIX_IMAGE
     volumes:
       - $dir:/run/pmir-tls:ro
+  # FerroSMART's patient picker reads the EHR over the TLS the test CA
+  # anchors; its client reads the platform's trust store.
+  ferrosmart:
+    environment:
+      SSL_CERT_FILE: /run/pmir-tls/ca.crt
+    volumes:
+      - $dir:/run/pmir-tls:ro
 configs:
   ferropix-config:
     content: |
@@ -156,6 +163,7 @@ hospital_pix_up() {
     hdc logs --no-color --tail 40 ferropix 2>&1 | sed 's/^/        /'
     return 1
   fi
+  hdc up -d --wait --force-recreate --no-deps ferrosmart >/dev/null 2>&1 || return 1
   hospital_restart
 }
 
@@ -163,6 +171,7 @@ hospital_pix_up() {
 # shellcheck disable=SC2034 # H1 and H2 are read by h_base in hospital.sh
 hospital_pix_down() {
   unset CURL_CA_BUNDLE
+  HS_BASE="http://localhost:8080/ferroehr/rest/openehr/v1"
   H1="$CDR"
   H2="http://localhost:${HOSPITAL_REPLICA_PORT}"
 }
@@ -312,7 +321,7 @@ hospital_pix_patients() {
   h_party person_lisa_dup person "$(j_patient "L. Bos" lisa-0002 "$pseudonym")" \
     || h_fail_call "the duplicate record's patient PERSON"
   hp_ehr lisa_dup "$pseudonym" || h_fail_call "the duplicate record's EHR"
-  h_commit c_lisa_dup 2 kc:anna "$(hv ehr_lisa_dup)" "$H_T_VITALS" \
+  h_commit c_lisa_dup 2 p:anna "$(hv ehr_lisa_dup)" "$H_T_VITALS" \
     || h_fail_call "vital signs in the duplicate record"
 }
 
@@ -327,12 +336,12 @@ hospital_pix_merge() {
     fed="$(hp_feed "$mrn" Bos Lisa)"
     [[ "$fed" = 200 || "$fed" = 201 ]] || probe_fail "200 or 201 for the corrected feed of $mrn" "$fed"
   done
-  h_client pix ferropix "$(hv hospital)" "$(j_capability "$(j_operation write_care_relationship)")" \
+  H_CLIENT_ISSUER=http://localhost:8180/quickstart h_client pix ferropix "$(hv hospital)" "$(j_capability "$(j_operation write_care_relationship)")" \
     || h_fail_call "FerroPIX's feed client, which writes record subjects"
   hv_set pix_lisa "$(hp_person lisa-0001)"
   hv_set pix_lisa_dup "$(hp_person lisa-0002)"
   [[ -n "$(hv pix_lisa)" && -n "$(hv pix_lisa_dup)" ]] || probe_fail "both FerroPIX persons" "missing"
-  hp_read_until 1 kc:anna "$(hv ehr_lisa_dup)" c_lisa_dup 403 \
+  hp_read_until 1 p:anna "$(hv ehr_lisa_dup)" c_lisa_dup 403 \
     "Dr. Jansen has no care relationship to the duplicate record's patient yet"
   probe_done
 
@@ -345,9 +354,9 @@ hospital_pix_merge() {
       merged_version:.merged.version,reason:$r}' <<<"$PIX_BODY")"
   [[ "$PIX_CODE" = 200 || "$PIX_CODE" = 201 ]] || probe_fail "the steward's merge" "$PIX_CODE ${PIX_BODY:0:300}"
   hv_set pix_merge "$(jq -r '.merge // empty' <<<"$PIX_BODY")"
-  hp_read_until 2 kc:anna "$(hv ehr_lisa_dup)" c_lisa_dup 200 \
+  hp_read_until 2 p:anna "$(hv ehr_lisa_dup)" c_lisa_dup 200 \
     "after the merge Dr. Jansen reads the duplicate record under Lisa's care relationship"
-  hp_read_until 1 kc:anna "$(hv ehr_lisa_dup)" c_lisa_dup 200 \
+  hp_read_until 1 p:anna "$(hv ehr_lisa_dup)" c_lisa_dup 200 \
     "the merge holds on the other instance"
   [[ "$H_CODE" = 200 ]] || hp_feed_log
   probe_done
@@ -359,9 +368,9 @@ hospital_pix_merge() {
   hp_steward POST "/operator/merges/$(hv pix_merge)/revert" "$(jq -c --arg r "two patients" \
     '{survivor_version:.survivor.version,reason:$r}' <<<"$PIX_BODY")"
   [[ "$PIX_CODE" = 200 || "$PIX_CODE" = 201 ]] || probe_fail "the steward's revert" "$PIX_CODE ${PIX_BODY:0:300}"
-  hp_read_until 1 kc:anna "$(hv ehr_lisa_dup)" c_lisa_dup 403 \
+  hp_read_until 1 p:anna "$(hv ehr_lisa_dup)" c_lisa_dup 403 \
     "after the revert Dr. Jansen is refused the duplicate record again"
-  hp_read_until 2 kc:anna "$(hv ehr_lisa_dup)" c_lisa_dup 403 \
+  hp_read_until 2 p:anna "$(hv ehr_lisa_dup)" c_lisa_dup 403 \
     "the revert holds on the other instance"
   probe_done
 }

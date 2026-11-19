@@ -4,7 +4,8 @@ FerroEHR does not manage users. There is no user table, no user API, and no
 plan to add one: **identity administration is delegated to your identity
 provider (IdP)**, and the CDR consumes standard OAuth 2.0 bearer tokens. This page
 records that posture and walks through connecting an identity provider:
-[the generic standards path](#the-generic-standards-path) first, then
+[behind FerroSMART](#behind-ferrosmart), the setup for SMART apps, first,
+then [the generic standards path](#the-generic-standards-path), then
 **Microsoft Entra ID** (Azure AD), **AD FS**, **Okta**, **Keycloak**, a SAML
 identity provider behind one of them, and the answer for plain-LDAP
 directories.
@@ -59,12 +60,90 @@ Three things do all the work:
    array.
 3. **SMART on openEHR scopes**: every route requires a scope from the
    token's `scope` claim (`user/composition-*.cruds`, `user/aql-*.s` and so
-   on; see [SMART App Launch](smart-app-launch.md)). Your IdP has to mint
-   them, for example as Keycloak client scopes assigned to the client. A token
-   with roles and no SMART on openEHR scope authenticates and is then refused
-   with `403` on every route.
+   on; see [SMART App Launch](smart-app-launch.md)). Behind FerroSMART,
+   FerroSMART grants them per request ([Behind FerroSMART](#behind-ferrosmart));
+   a provider FerroEHR trusts directly has to mint them itself. A token with
+   roles and no SMART on openEHR scope authenticates and is then refused with
+   `403` on every route.
 
 Everything below is those three pointed at a different issuer.
+
+## Behind FerroSMART
+
+For SMART apps, FerroEHR trusts one issuer, **FerroSMART**, the FerroHEALTH
+family's SMART App Launch 2.x authorization server, and your identity provider
+runs upstream of FerroSMART for login only
+([Behind FerroSMART](behind-ferrosmart.md)). FerroEHR never sees the provider's
+tokens: FerroSMART logs the person in at the provider, applies its own policy
+and consent, and issues the RFC 9068 access tokens FerroEHR reads under the
+`ferrosmart` issuer preset (`profile = "ferrosmart"`: `typ` `at+jwt` alone,
+`scope` required).
+
+FerroSMART supports these upstream providers, each with its setup in
+FerroSMART's repository:
+
+| Provider | FerroSMART's setup |
+|---|---|
+| Keycloak | the realm and configuration of [`examples/keycloak/`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/app/ferrosmart/examples/keycloak/), run by [`compose.keycloak.yaml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/compose.keycloak.yaml) (architecture §13.16) |
+| ZITADEL | the bootstrap of [`examples/zitadel/`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/app/ferrosmart/examples/zitadel/), run by [`compose.zitadel.yaml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/compose.zitadel.yaml) (§13.20) |
+| Microsoft Entra ID | [`examples/entra/ferrosmart.toml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/app/ferrosmart/examples/entra/ferrosmart.toml) (§13.18) |
+| Okta | [`examples/okta/ferrosmart.toml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/app/ferrosmart/examples/okta/ferrosmart.toml) (§13.19) |
+
+FerroEHR's quickstart runs the first two upstream of FerroSMART
+([Docker Compose](installation/compose.md#behind-ferrosmart)).
+
+What changes against a provider FerroEHR trusts directly, such as the
+[Keycloak](#keycloak) issuer below:
+
+- **Scopes per request, with consent.** FerroSMART grants the intersection of
+  what the app asks, the client's ceiling and the scopes the person's roles map
+  to (`[[ferrosmart.role]]`), and the person approves or narrows them on its
+  consent page. A directly trusted provider puts a fixed set in every token.
+- **Launch context.** FerroSMART puts `ehrId` (at an openEHR base), `patient`
+  and `fhirUser` in the token response and the access token, from the
+  viewer's EHR launch or its own patient picker
+  ([SMART App Launch](smart-app-launch.md)). Name FerroSMART in
+  `[auth.smart] patient_issuers` so its `patient/` grants count.
+- **One issuer for professionals and patients.** A provider issuer has one
+  `kind`, so a direct setup takes a second realm or issuer for patients.
+  FerroSMART is one `persons` issuer for both: a patient signs in, picks their
+  EHR and gets a `patient/` grant to it.
+- **The person's key is FerroSMART's subject.** FerroSMART's `sub` is
+  pairwise per provider: base64url of the SHA-256 of the provider's issuer,
+  a zero octet and the provider's `sub`. A PERSON's SCIM `loginIdentifier` is
+  that value, under the `[[auth.party]]` identifier issuer of FerroSMART's
+  table. Moving people to another provider changes every key, and a
+  deployment re-provisions their logins.
+- **Roles.** FerroSMART writes the person's roles, as it mapped them from the
+  provider, into the access token's `roles` claim (RFC 9068 §2.2.3.1) from
+  FerroSMART 0.2.0 (FerroHEALTH/FerroSMART#649). List FerroSMART in
+  `[authz.rbac] role_issuers` for them to grant `admin_role` or the emergency
+  role. FerroSMART 0.1.0, the release the quickstart pins, writes none.
+- **The product scope.** A person reaches the ADMIN API only with the
+  product scope, which FerroSMART grants through a role that maps to it from
+  FerroSMART 0.2.0 (FerroHEALTH/FerroSMART#647).
+- **System clients** register at FerroSMART for Backend Services, with a JWK
+  Set, and FerroEHR grants each its operations in the CDR as for any system
+  caller.
+
+```toml
+[[auth.issuer]]
+issuer = "https://smart.example.org"
+kind = "persons"
+profile = "ferrosmart"
+audience = ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
+
+[[auth.party]]
+issuer = "https://smart.example.org"
+identifier_issuer = "urn:example:ferrosmart-login"
+identifier_type = "login"
+
+[auth.smart]
+patient_issuers = ["https://smart.example.org"]
+
+[authz.rbac]
+role_issuers = ["https://smart.example.org"]
+```
 
 ## Who the caller is
 
@@ -640,6 +719,11 @@ each identity provider must do for it:
   professional who could edit their own name could change what their first
   login writes.
 
+- **FerroSMART:** its access token carries the launch context, `fhirUser`
+  and the person's roles and no name claims, so just-in-time creation does not
+  apply behind it: provision the people through SCIM, their `loginIdentifier`
+  FerroSMART's subject ([Behind FerroSMART](#behind-ferrosmart)).
+
 The `userName` comes from `user_name_claim`, or the key when it is unset, and
 never from a claim the user can change. SCIM completes a provisional `PERSON`
 later: a client whose `binding_issuer` is the issuer's `identifier_issuer`
@@ -648,8 +732,8 @@ finds it by `userName`, sets the `externalId`, and a complete `PUT` makes it
 
 ## Serving SMART apps
 
-If your IdP is also the authorization server for SMART App Launch apps, the same
-`[auth]` issuer does double duty: the CDR validates the tokens those apps come
-back with, and the discovery document it serves is built from that issuer's
-metadata, so the server it *advertises* to apps is the one it *accepts* tokens
-from. See [SMART App Launch](smart-app-launch.md).
+SMART apps take their tokens from FerroSMART, with your identity provider
+upstream of it ([Behind FerroSMART](#behind-ferrosmart)). FerroEHR's discovery
+document then describes FerroSMART, so an app that starts at FerroEHR's base
+finds it, and the server it *advertises* to apps is the one it *accepts*
+tokens from ([SMART App Launch](smart-app-launch.md#the-discovery-document)).
