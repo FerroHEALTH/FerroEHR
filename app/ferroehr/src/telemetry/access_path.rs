@@ -484,7 +484,7 @@ pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
         .u64_observable_gauge(CACHE_ENTRIES)
         .with_description(
             "Entries the caches hold (cache = created_ehr | web_template | aql_plan \
-             | archetype_lineage | audit_subjects)",
+             | archetype_lineage | audit_subjects | token_verdicts)",
         )
         .with_callback(move |observer| {
             for (cache, held) in cached.caches_held() {
