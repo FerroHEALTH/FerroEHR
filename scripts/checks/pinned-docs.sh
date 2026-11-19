@@ -44,6 +44,7 @@ readonly TREES=(
   docs/specs/ihe-balp
   docs/specs/fhir-auditevent
   docs/specs/fhir-consent
+  docs/specs/smart-app-launch
   docs/specs/ihe-consents
   docs/specs/xacml
   docs/specs/dicom-ps3-15

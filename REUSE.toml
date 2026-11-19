@@ -651,6 +651,14 @@ precedence = "override"
 SPDX-FileCopyrightText = "HL7 International"
 SPDX-License-Identifier = "CC0-1.0"
 
+# SMART App Launch 2.2.0, the Task launch profiles: CC-BY-4.0, the licence its
+# package declares.
+[[annotations]]
+path = "docs/specs/smart-app-launch/**"
+precedence = "override"
+SPDX-FileCopyrightText = "HL7 International / FHIR Infrastructure"
+SPDX-License-Identifier = "CC-BY-4.0"
+
 # IHE BPPC and APPC: the copyright licence of the IHE General Introduction,
 # chapter 9, vendored beside them; the LicenseRef text quotes the grant.
 [[annotations]]
@@ -696,6 +704,7 @@ path = [
   "docs/specs/ihe-balp/PROVENANCE.md",
   "docs/specs/fhir-auditevent/PROVENANCE.md",
   "docs/specs/fhir-consent/PROVENANCE.md",
+  "docs/specs/smart-app-launch/PROVENANCE.md",
   "docs/specs/ihe-consents/PROVENANCE.md",
   "docs/specs/xacml/PROVENANCE.md",
   "docs/specs/dicom-ps3-15/PROVENANCE.md",

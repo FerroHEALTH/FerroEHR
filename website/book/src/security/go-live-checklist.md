@@ -111,34 +111,7 @@ rather than hidden.
 - [ ] `GET /management/status` shows the profile and an accepted-gap list you
       recognise.
 
-## 3. Identifier scanning is on and strict
-
-```toml
-[privacy.identifier_scan]
-mode  = "strict"
-rules = ["ch-ahvn13", "ch-epd-pid", "de-kvnr", "fi-hetu", "gb-nhs-number", "nl-bsn", "no-fodselsnummer", "se-personnummer"]
-```
-
-Both are the defaults, so the check is that nothing turned them off. `strict`
-refuses a clinical write carrying a value one of the active rules claims, and
-names the RM path and the rule without echoing the value. Every rule the build
-ships is active unless you narrow the list.
-
-Add `patterns` for the identifier kinds no build can ship a rule for: local
-medical-record numbers, payer references, a postcode paired with a house
-number. Each is a Rust regular expression compiled at boot, and one that does
-not compile is a boot error naming it.
-
-If you are migrating existing content, run `mode = "warn"` first, read what it
-reports, then switch to `strict`. Going live in `warn` means the scanner
-observes and nothing acts.
-
-- [ ] `mode = "strict"`.
-- [ ] The `rules` list covers every jurisdiction whose identifiers your content
-      can carry.
-- [ ] Local identifier kinds have a `patterns` entry.
-
-## 4. The pseudonym namespaces are declared
+## 3. The pseudonym namespaces are declared
 
 ```toml
 [privacy]
@@ -160,7 +133,7 @@ authority, `pixm.assigning_authority`.
 - [ ] The `open_subject_namespace` gap no longer appears on
       `GET /management/status`.
 
-## 5. Backups, one per domain
+## 4. Backups, one per domain
 
 Backups leave the database with none of the grants attached, so one dump per
 cluster undoes the split. Configure one per domain, each with its own
@@ -192,7 +165,7 @@ dumps, and no network policy of ours selects the dump pods.
 - [ ] A restore has been rehearsed, and the rehearsal is recorded.
 - [ ] Retention and pruning of the dumps is somebody's job, and they know it.
 
-## 6. The audit trail is on, durable, and kept long enough
+## 5. The audit trail is on, durable, and kept long enough
 
 ```toml
 [audit]
@@ -245,7 +218,7 @@ SELECT * FROM audit.verify_access_log_chain();
 - [ ] `audit.verify_audit_chain()` and `audit.verify_access_log_chain()`
       return no rows on a healthy trail.
 
-## 7. Schema preparation runs on its own credential
+## 6. Schema preparation runs on its own credential
 
 Preparing the schema spans every schema at once: the DDL of all four migration
 sets under `migrations = "apply"`, all four `_sqlx_migrations` bookkeeping tables
@@ -257,7 +230,7 @@ back to `[database] url`, which is the single-credential posture.
 - [ ] `migrations = "verify"` if the schema is applied out of band, with
       `ferroehr db migrate` run under the migrator DSN first.
 
-## 8. Callers are bound and rate-limited
+## 7. Callers are bound and rate-limited
 
 Every person is bound to a demographic `PERSON` before their issuer is
 trusted ([Who is the committer](committer.md)), and each caller is held to a
@@ -273,7 +246,7 @@ rate.
       `burst`; its commit is refused without them
       ([federation agreements](../operational-policy.md#federation-agreements)).
 
-## 9. The paperwork exists
+## 8. The paperwork exists
 
 - [ ] A data protection impact assessment has been carried out and signed off.
       The technical half is [the DPIA page](dpia.md); the purposes, the lawful

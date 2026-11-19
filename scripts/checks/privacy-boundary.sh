@@ -68,7 +68,6 @@ readonly BOUNDARY_PATTERNS=(
   '^app/ferroehr/migrations/party/'
   '^app/ferroehr/src/service/demographic/'
   '^app/ferroehr/src/service/linkage/'
-  '^app/ferroehr[^/]*/src/.*identifier_scan'
   '^app/ferroehr[^/]*/src/.*outbox'
 )
 
@@ -234,7 +233,6 @@ self_test() {
   expect_path miss 'app/ferroehr-ext/migrations/party/0001_baseline.sql'
   expect_path hit 'app/ferroehr/src/service/linkage/mod.rs'
   expect_path hit 'app/ferroehr/src/service/demographic/party.rs'
-  expect_path hit 'app/ferroehr/src/scan/identifier_scanner.rs'
   expect_path hit 'app/ferroehr-ext/src/events/outbox_payload.rs'
   expect_path miss 'app/ferroehr/src/service/ehr/composition.rs'
   expect_path miss 'app/ferroehr/migrations/ehr/0002_event_outbox.sql'

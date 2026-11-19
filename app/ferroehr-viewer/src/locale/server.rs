@@ -84,5 +84,15 @@ crate::locale::messages! {
         LaunchApp = "launch-app",
         /// `The app could not be launched`
         LaunchRefused = "launch-refused",
+        /// `Launch tasks`
+        LaunchTasks = "launch-tasks",
+        /// `No task asks to launch an app for this patient.`
+        LaunchTasksNone = "launch-tasks-none",
+        /// `Sign in with FerroSMART to see the launch tasks.`
+        LaunchTasksNoToken = "launch-tasks-no-token",
+        /// `The launch tasks could not be read: $why`
+        LaunchTasksFailed = "launch-tasks-failed",
+        /// `App not configured`
+        LaunchTaskUnconfigured = "launch-task-unconfigured",
     }
 }

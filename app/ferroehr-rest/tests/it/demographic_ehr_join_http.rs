@@ -32,10 +32,9 @@ async fn local_app() -> (testkit::TestDb, Router) {
     ferroehr::db::stamp_subject_posture(&pool, false)
         .await
         .expect("stamp the subject posture");
-    let policy = ferroehr::privacy::PrivacyPolicy::compile(
+    let policy = ferroehr::privacy::PrivacyPolicy::from(
         &ferroehr::privacy::config::PrivacyConfig::default(),
-    )
-    .expect("the policy compiles");
+    );
     let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
         .with_privacy(Arc::new(policy))
         .with_ehr_index(EhrIndexProvider::Local);

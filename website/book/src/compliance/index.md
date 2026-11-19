@@ -132,8 +132,8 @@ AQL demographic join cross the boundary in the application over two pools, and
 each crossing writes an access record. On the
 clinical side the subject reference is an opaque pseudonym once
 `[privacy] subject_namespaces` is declared, enforced by the write path and by a
-database trigger, and the identifier scanner refuses a national identifier
-anywhere in a clinical body.
+database trigger, and a party proxy that is the subject by name or identifier
+is refused in a clinical body.
 
 ```mermaid
 flowchart LR
@@ -244,26 +244,17 @@ section plus the EU layer.
 
 Three jurisdictions are filled in today: the Netherlands, Germany and
 Switzerland, each vendored under `docs/law/` and read against the text. The
-product side of the split is plural too: the write-path
-[identifier scanner](../installation/config-privacy.md) ships a named rule per
-national identifier — Finland, the United Kingdom, the Netherlands, Norway and
-Sweden — each transcribing the checksum its own issuing register publishes,
-and a deployment selects the ones its content can carry. Denmark and Belgium
-are named there too, with the reason each is deliberately absent.
+product ships no country content: its mechanisms are the same in every
+jurisdiction.
 
-**Adding a jurisdiction** takes three things, and none of them is a change to
-how the scanner works: the national acts that sit on top of the GDPR, as a
-section in the shape of the Dutch one below (provision, what the product
-ships, tracker status, what the organisation must do); the national security
-and logging standards, in the shape of the NEN section; and, where the country
-issues a personal identifier with a published algorithm, a rule in
-`app/ferroehr/src/privacy/detect.rs` citing the register that defines it. Open
+**Adding a jurisdiction** takes two things: the national acts that sit on top
+of the GDPR, as a section in the shape of the Dutch one below (provision, what
+the product ships, tracker status, what the organisation must do), and the
+national security and logging standards, in the shape of the NEN section. Open
 a [regulation request](https://github.com/FerroHEALTH/FerroEHR/issues/new?template=04-regulation.yml)
 with the official source and the provisions that reach a repository, and the
 project vendors the text and records a status per provision, the way the acts
-below are handled. A checksum transcribed from a secondary source is refused,
-because a rule that guesses tells an operator their data was scanned when it
-was not.
+below are handled.
 
 ### The Netherlands: UAVG and Wabvpz
 
@@ -326,7 +317,7 @@ health insurer or gematik, the row says so.
 | **SGB V § 355**, interoperability of ePA content: international standards, the BfArM terminologies, a versioned terminology server | openEHR archetypes and templates as the content model, terminology bindings resolved at commit time against any FHIR R4B terminology server through [`[terminology]`](../installation/config-integrations.md), which is the interface gematik's terminology server exposes | shipped | Point `[terminology] url` at the server gematik runs and adopt the information objects the KBV publishes; the text names no serialization, and neither does this page |
 | **SGB V § 360 Abs. 16**, electronic prescription transport outside the telematics infrastructure is prohibited | Nothing, and nothing planned: the CDR carries no prescription transport | not planned | Run prescriptions through the TI |
 | **GDNG § 6**, a provider's own patient data reprocessed for quality assurance, research and statistics: pseudonymised, anonymised as soon as possible, under a rights-and-roles concept with logging, deleted after thirty years at the latest, and disclosable to the subject by kind, scope and concrete purpose | Per-domain roles that keep a research credential off the identifying data, [cohort queries](../querying-aql.md#cohort-queries-across-the-pseudonymisation-boundary) named by a digest of their predicates and withheld under a small-cell threshold, an access record per query carrying the deployment's declared `purpose` and `legal_basis`, and the [retention register](retention.md#the-retention-register) as where the thirty-year limit for the repository's own copies is written down and read back | shipped, [#3159](https://github.com/FerroHEALTH/FerroEHR/issues/3159), [#3346](https://github.com/FerroHEALTH/FerroEHR/issues/3346); research pseudonyms are made in FerroBRIDGE, which loads the research database ([Secondary use](secondary-use.md)) | Write the rights-and-roles concept, publish the purposes, run the thirty-year clock against the register, and answer subjects' requests from the trail |
-| **SGB V § 290**, the Krankenversichertennummer every insured person's record carries | The [identifier scanner](../installation/config-privacy.md)'s `de-kvnr` rule refuses the number's unchangeable part in clinical content, transcribed from the GKV-Spitzenverband's Richtlinie; FerroEHR registers no access-log bound for any country, and a German controller bound by SGB V § 309 declares its ceiling in the access policy | shipped, [#3318](https://github.com/FerroHEALTH/FerroEHR/issues/3318) | Keep the number out of the clinical record as the scanner asks, and hold it sealed in the demographic domain |
+| **SGB V § 290**, the Krankenversichertennummer every insured person's record carries | Nothing specific to the number: the clinical side reads no value's shape, so nothing detects it in clinical content ([#6081](https://github.com/FerroHEALTH/FerroEHR/issues/6081)); FerroEHR registers no access-log bound for any country, and a German controller bound by SGB V § 309 declares its ceiling in the access policy | shipped, [#3318](https://github.com/FerroHEALTH/FerroEHR/issues/3318) | Keep the number out of the clinical record in your templates and feeds |
 | **§ 203 StGB Abs. 3 and 4**, disclosure to persons who keep the systems running is lawful only as far as their work requires it, and the professional is liable for not binding them to secrecy | Operations reach the CDR through separate [surfaces](../security.md#operational-surfaces-what-is-reachable-and-by-whom) (management, admin, clinical), every admin read of clinical content is an access record naming the caller, the database roles hold one domain each, and secrets are mounted rather than baked | shipped | Bind every operator and subcontractor to secrecy in writing, and give support a route that needs no standing read of clinical content |
 
 ### Switzerland: DSG, DSV, EPDG and its ordinances
@@ -359,7 +350,7 @@ binds a community or the identity issuers, the row says so.
 | **DSG Art. 28 and DSV Art. 21**, data portability in a common electronic format that another controller can reuse | Canonical openEHR JSON and XML, the simplified FLAT and STRUCTURED formats, and the EHR Extract, all published open formats | shipped | Decide which data are subject-provided or observed and which are derived (DSV Art. 20 Abs. 2), and export accordingly |
 | **DSG Art. 6 Abs. 4 and Art. 31 Abs. 2 lit. e**, destruction or anonymisation once the purpose lapses, and research on the condition that data are anonymised as soon as the purpose allows, with measures against identifiability meanwhile | Clinical and demographic data in separate schemas under separate roles, [cohort queries](../querying-aql.md#cohort-queries-across-the-pseudonymisation-boundary) with small-cell suppression, admin deletion and archival of a record, and the [retention register](retention.md#the-retention-register) that says when a purpose has lapsed and lists what is due | shipped, [#3158](https://github.com/FerroHEALTH/FerroEHR/issues/3158), [#3159](https://github.com/FerroHEALTH/FerroEHR/issues/3159), [#3346](https://github.com/FerroHEALTH/FerroEHR/issues/3346); research pseudonyms are made in FerroBRIDGE, which loads the research database ([Secondary use](secondary-use.md)) | Set the retention the cantonal health law requires, decide when anonymisation is possible, and hold the research ground |
 | **EPDG Art. 9 and 10, EPDV Art. 1 to 4, 10 and 12, EPDV-EDI Anhang 5**, the EPD: three confidentiality levels and grantable access rights, emergency access with notification of the patient, every processing logged and the logs kept ten years, EPD data stored separately and encrypted, data stores in Switzerland, and the IHE profiles a community speaks (ATNA with Record Audit Event ITI-20 and Authenticate Node ITI-19, CH:ATC with Retrieve ATNA Audit Event ITI-81, IUA, XUA, XDS, MHD) | What a community integration consumes: [IHE ATNA](../audit.md) audit events over ITI-20 with [ITI-19 mutual TLS](../audit.md#node-authentication-iti-19-mutual-tls) and ITI-81 retrieval, the record in published formats, a self-hosted deployment with no dependency outside the operator's control, and the [retention register](retention.md) for Art. 10's twenty-year destruction, with the per-object hold Abs. 2 lit. b asks for | shipped, [#3346](https://github.com/FerroHEALTH/FerroEHR/issues/3346); an access declared with an emergency purpose is [marked in the access log](../audit.md#emergency-access-ehds-art-115), but FerroEHR lifts no restriction for it and notifies no one; it encrypts national identifiers only, so encryption at rest is the database's and the disk's | These provisions bind the certified community, which the CDR is not. Feed the EPD through a community's access point, place the data stores in Switzerland, and carry the confidentiality level on each document you contribute |
-| **EPDV Art. 5 and 7, EPDV-EDI Anhang 1, AHVV Art. 133**, the patient identification number (eighteen digits with a published check digit, entered manually only under a check-digit control, never a source of inference about the patient) and the AHV number it is issued from | The [identifier scanner](../installation/config-privacy.md)'s `ch-epd-pid` and `ch-ahvn13` rules refuse either number in clinical content, transcribed from the ordinance's annex and the BSV's Wegleitung; the one-year access-log floor of DSV Art. 4 Abs. 5 is enforced once the controller declares it in the access policy | shipped, [#3319](https://github.com/FerroHEALTH/FerroEHR/issues/3319) | Treat the number as opaque, and keep the AHV number out of clinical content |
+| **EPDV Art. 5 and 7, EPDV-EDI Anhang 1**, the patient identification number (eighteen digits with a published check digit, entered manually only under a check-digit control, never a source of inference about the patient) | FerroEHR holds the number as an opaque value and reads no value's shape, so it neither checks nor detects it in clinical content ([#6081](https://github.com/FerroHEALTH/FerroEHR/issues/6081)); the one-year access-log floor of DSV Art. 4 Abs. 5 is enforced once the controller declares it in the access policy | shipped, [#3319](https://github.com/FerroHEALTH/FerroEHR/issues/3319) | Treat the number as opaque, and keep it out of clinical content in your templates and feeds |
 
 ## Where to go next
 

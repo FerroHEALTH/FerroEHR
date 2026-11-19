@@ -641,7 +641,7 @@ that addressee.
 |---|---|---|
 | Besluit vaststelling bewaartermijn logging | logging kept "ten minste 5 jaar vanaf het moment dat de logregel wordt geschreven" | `retention_floor_days("NL") = 1830` stays; the audit domain's reaper refuses a shorter setting at boot (unchanged) |
 | Wabvpz Art. 15e | the patient may learn who made data available and who consulted it, with dates | the audit domain's per-EHR access events are the source of that answer (unchanged); the ITI-81 read side serves it |
-| UAVG Art. 46 | a legally prescribed number used only for that law's purposes | the BSN never enters the clinical domain (scanner rule `nl-bsn`, the pseudonym guard); sealed in `demographic.national_identifier` |
+| UAVG Art. 46 | a legally prescribed number used only for that law's purposes | the BSN never enters the clinical domain (the pseudonym guard); sealed in `demographic.national_identifier` |
 
 ### Germany (`docs/law/de/`)
 

@@ -3,8 +3,8 @@
 
 //! The SMART EHR launch from an EHR's page (#5880), through the viewer's
 //! real service over the replayed CDR, against a stub of FerroSMART's EHR
-//! launch API that answers as its documentation has it: `POST
-//! {issuer}/launch`, a form carrying the EHR client's `private_key_jwt`
+//! launch API that answers as its documentation has it: the
+//! `launch_registration_endpoint` its discovery document names, a form carrying the EHR client's `private_key_jwt`
 //! assertion, answered `201` with `{"launch", "expires_in": 300}` or an RFC
 //! 6749 §5.2 refusal (FerroSMART `docs/architecture.md` §13.6 item 3).
 
@@ -45,28 +45,46 @@ struct Stub {
     received: Forms,
 }
 
-/// Starts a FerroSMART stub whose `/launch` answers `status` with `body`.
+/// Starts a FerroSMART stub whose discovery document names its `/launch`
+/// as `launch_registration_endpoint`, and whose `/launch` answers `status`
+/// with `body`.
 async fn ferrosmart(status: http::StatusCode, body: &'static str) -> Stub {
     let received: Forms = Arc::default();
     let seen = Arc::clone(&received);
-    let app = axum::Router::new().route(
-        "/launch",
-        axum::routing::post(move |form: axum::extract::Form<Vec<(String, String)>>| {
-            let seen = Arc::clone(&seen);
-            async move {
-                seen.lock().expect("the stub's record").push(form.0);
-                (
-                    status,
-                    [(http::header::CONTENT_TYPE, "application/json")],
-                    body,
-                )
-            }
-        }),
-    );
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind a loopback port");
     let addr = listener.local_addr().expect("the bound address");
+    let discovery = format!(
+        r#"{{"issuer":"http://{addr}","launch_registration_endpoint":"http://{addr}/launch"}}"#
+    );
+    let app = axum::Router::new()
+        .route(
+            "/.well-known/smart-configuration",
+            axum::routing::get(move || {
+                let discovery = discovery.clone();
+                async move {
+                    (
+                        [(http::header::CONTENT_TYPE, "application/json")],
+                        discovery,
+                    )
+                }
+            }),
+        )
+        .route(
+            "/launch",
+            axum::routing::post(move |form: axum::extract::Form<Vec<(String, String)>>| {
+                let seen = Arc::clone(&seen);
+                async move {
+                    seen.lock().expect("the stub's record").push(form.0);
+                    (
+                        status,
+                        [(http::header::CONTENT_TYPE, "application/json")],
+                        body,
+                    )
+                }
+            }),
+        );
     tokio::spawn(async move {
         axum::serve(listener, app)
             .await
@@ -86,7 +104,7 @@ fn key() -> (tempfile_path::Path, String) {
 }
 
 /// A file under the system's temporary directory, removed when dropped.
-mod tempfile_path {
+pub(crate) mod tempfile_path {
     /// The file.
     pub(crate) struct Path(pub(crate) std::path::PathBuf);
 

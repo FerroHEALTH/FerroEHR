@@ -385,7 +385,7 @@ Three holdings have no cap of their own:
 | `[record.change_feed]` | The commit-event outbox retention; its readers are grants in the CDR | [Integrations](config-integrations.md#recordchange_feed) |
 | `[terminology]`, `[record.multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |
-| `[privacy]`, `[privacy.identifier_scan]` | What the clinical side refuses to hold: the subject reference, identified parties, the identifier scanner | [Privacy & data minimisation](config-privacy.md) |
+| `[privacy]` | What the clinical side refuses to hold: the subject reference and identified parties | [Privacy & data minimisation](config-privacy.md) |
 | `[privacy.cohort]`, `[privacy.cohort.predicates]` | Cross-domain cohort queries: the demographic predicate allow-list, the small-cell floor, the cohort ceiling | [Privacy & data minimisation](config-privacy.md) |
 | `[privacy.identifier_protection]` | Sealing national identifiers in the demographic domain, and the key that opens them | [Privacy & data minimisation](config-privacy.md) |
 | — | The CLI, the production checklist, file-versus-environment guidance | [CLI & production checklist](config-cli.md) |

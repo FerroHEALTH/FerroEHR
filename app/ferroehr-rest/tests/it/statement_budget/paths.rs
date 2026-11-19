@@ -194,6 +194,10 @@ struct Budget {
 /// transaction, one nested statement and 88 bytes of WAL, the second rise of
 /// a ceiling and the price #6048 states for a decision that waits on no
 /// notification.
+/// The data-minimisation pass has since stopped reading string leaves for
+/// the shape of a national identifier (#6081): 1,069 fewer allocations on
+/// each of the three composition commits and 1,057 on a CONTRIBUTION commit,
+/// measured beside the merge base, and their ceilings fell by as much.
 /// The population `matches` over a value list (#6084) is measured last, so
 /// its access records stay off the ITI-81 page; its ceilings are the figures
 /// of three runs (5,637 to 5,639 allocations, a median peak of 174,788
@@ -202,7 +206,7 @@ const BUDGETS: [Budget; 17] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
-        allocations: 19_218,
+        allocations: 18_149,
         peak_bytes: 1_530_778,
         round_trips: 9,
         nested: 13,
@@ -211,7 +215,7 @@ const BUDGETS: [Budget; 17] = [
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        allocations: 40_647,
+        allocations: 39_578,
         peak_bytes: 1_533_031,
         round_trips: 9,
         nested: 14,
@@ -220,7 +224,7 @@ const BUDGETS: [Budget; 17] = [
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        allocations: 33_800,
+        allocations: 32_731,
         peak_bytes: 1_528_525,
         round_trips: 9,
         nested: 13,
@@ -301,7 +305,7 @@ const BUDGETS: [Budget; 17] = [
     Budget {
         path: Path::CommitContribution,
         conversions: 6,
-        allocations: 19_396,
+        allocations: 18_339,
         peak_bytes: 1_649_934,
         round_trips: 13,
         nested: 14,

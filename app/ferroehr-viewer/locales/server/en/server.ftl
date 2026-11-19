@@ -43,6 +43,11 @@ not-version-store-stored-query-version = `{ $version }` is not a version to stor
 cdr-url-outside-base = the request addresses a CDR path outside the configured CDR base
 launch-app = Launch { $name }
 launch-refused = The app could not be launched
+launch-tasks = Launch tasks
+launch-tasks-none = No task asks to launch an app for this patient.
+launch-tasks-no-token = Sign in with FerroSMART to see the launch tasks.
+launch-tasks-failed = The launch tasks could not be read: { $why }
+launch-task-unconfigured = App not configured
 
 ## Numbers: the marks FerroUI's formatter groups a number with
 
