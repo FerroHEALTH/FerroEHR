@@ -388,9 +388,13 @@ fn corpus(file: &str) -> String {
 /// its index and the magnitude index (#6022) brought them to 237,374 and
 /// 10,092: the IPS ceiling holds, and the lab ceiling is that measurement, 2%
 /// above, since two of a lab commit's ten node rows are an event and a
-/// history (the decision of 2026-11-18 on #6022).
+/// history (the decision of 2026-11-18 on #6022). The index on the code of an
+/// ELEMENT value (#6033) adds 36 entries of 72 bytes to an IPS commit, which
+/// measured 239,966: its ceiling is that measurement, 2% above, the rise that
+/// issue's 3% allows and the orchestrator accepted on 2026-11-19. A lab
+/// commit carries no coded ELEMENT value and keeps its ceiling.
 const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
-    [(Fixture::Ips, 237_945, 8), (Fixture::Lab, 10_293, 8)];
+    [(Fixture::Ips, 244_765, 8), (Fixture::Lab, 10_293, 8)];
 
 /// Whether `relation` is written by a commit rather than by the access log or
 /// the audit intake beside it.

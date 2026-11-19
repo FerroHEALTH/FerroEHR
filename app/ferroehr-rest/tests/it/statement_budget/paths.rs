@@ -176,6 +176,11 @@ struct Budget {
 /// the sixteen paths now measure the same figure in every one of seven runs,
 /// one of them beside 175 other tests, and the other four within 64 bytes,
 /// so the ceilings are the largest of the seven plus 1%.
+/// The four commits of the IPS composition have since taken the index on the
+/// code of an ELEMENT value (#6033): 36 entries of 72 bytes, 2,592 bytes a
+/// commit and 1.08%, inside the 3% that issue allows the index. Their WAL
+/// ceilings rose by that, to the largest of three runs plus 1%: the one rise
+/// of a ceiling, and the trade #6033 states.
 const BUDGETS: [Budget; 16] = [
     Budget {
         path: Path::CommitJson,
@@ -184,7 +189,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 1_530_778,
         round_trips: 14,
         nested: 13,
-        wal: 242_593,
+        wal: 245_216,
     },
     Budget {
         path: Path::CommitXml,
@@ -193,7 +198,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 1_533_031,
         round_trips: 14,
         nested: 14,
-        wal: 242_671,
+        wal: 245_289,
     },
     Budget {
         path: Path::CommitFlat,
@@ -202,7 +207,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 1_528_525,
         round_trips: 14,
         nested: 13,
-        wal: 242_645,
+        wal: 245_263,
     },
     Budget {
         path: Path::ReadJson,
@@ -283,7 +288,7 @@ const BUDGETS: [Budget; 16] = [
         peak_bytes: 1_649_934,
         round_trips: 18,
         nested: 14,
-        wal: 243_169,
+        wal: 245_784,
     },
     Budget {
         path: Path::ReadAtTime,
