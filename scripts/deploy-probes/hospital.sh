@@ -1374,6 +1374,8 @@ hospital_ehr_launch() {
   assert_eq 303 "${location%% *}" "the Launch post answers See Other: $(head -c 300 "$PROBE_TMP/launch-body")"
   if [[ "${location%% *}" != 303 ]]; then
     local service
+    echo "      the viewer's page says: $(tr -s '\n' ' ' < "$PROBE_TMP/launch-body" \
+      | sed -E 's/.*<main[^>]*>//; s/<[^>]*>/ /g; s/ +/ /g' | cut -c1-600)"
     for service in ferroehr-viewer ferrosmart; do
       echo "      log of $service:"
       hdc logs --no-color --tail 10 "$service" 2>&1 | sed 's/^/        /'
