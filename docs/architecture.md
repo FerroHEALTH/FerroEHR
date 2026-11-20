@@ -645,7 +645,13 @@ value the comparison reads, so an anchor removes work and no row. The
 comparisons of one leaf share one anchor, so a window reads the rows inside
 it. A `matches` over a list of strings reads as the equalities it lists
 (QUERY master03 §matches), so it takes the equality anchor with the members
-as an `IN` list, when every member could anchor its equality (#6084). An
+as an `IN` list, when every member could anchor its equality (#6084). In a
+demographic query that reads the trunk head, an equality of a party's
+`relationships/target/id/value` with a text that names a party enters
+through the open rows of `party_relationship_target`, which hold the party
+each trunk head's relationships name, as the commit derives it (root before
+`::`, case-folded, a hyphenated UUID); the comparison keeps its exact text,
+and under `ALL_VERSIONS` or a version predicate it has no entry (#6090). An
 equality's anchor always applies. A range may keep most of the store,
 so its anchor depends on the statement (`aql::sql::anchor::RangeEntry`): in
 the flat shape the planner places it; a population statement that streams
