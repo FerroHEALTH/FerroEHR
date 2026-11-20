@@ -30,10 +30,9 @@ use openehr_its::rest::runtime::ApiError;
 use crate::api::RequestParts;
 use crate::negotiate;
 use crate::overview::error::RestError;
-use ferroehr::access_eval::condition::AccessCondition;
 use ferroehr::access_log::view::LogStanding;
 use ferroehr::ids::EhrId;
-use ferroehr::service::query::request::AqlQueryRequest;
+use ferroehr::service::query::request::{AqlQueryRequest, QueryAccess};
 use ferroehr::service::query::result_set::ResultSetDoc;
 
 /// The access pre-filter derived from the request: the caller's per-EHR
@@ -43,17 +42,17 @@ use ferroehr::service::query::result_set::ResultSetDoc;
 /// before execution. No openEHR spec governs how they reach a query — our own
 /// access-control extension.
 pub(super) struct QueryScope {
-    /// The rows the access evaluator lets the query read.
-    pub(super) ehr_access: AccessCondition,
     /// What the caller may read of the access log (#5131).
     pub(super) log_standing: LogStanding,
 }
 
 impl QueryScope {
-    /// Stamps the per-EHR access decision and the access-log standing onto a
-    /// normalized request.
+    /// Stamps the access-log standing onto a normalized request, and the
+    /// running request's `EHR_ACCESS` condition (RM ehr `ehr_access.adoc`
+    /// §`EHR_ACCESS` Class), which only a statement that reads EHR data
+    /// judges, so a demographic query reads no settings (#6110).
     pub(super) fn apply(&self, mut request: AqlQueryRequest) -> AqlQueryRequest {
-        request.ehr_access.clone_from(&self.ehr_access);
+        request.ehr_access = QueryAccess::OfRequest;
         request.log_standing = self.log_standing.clone();
         request
     }
@@ -380,8 +379,6 @@ pub(super) fn merge_body_and_url_parameters(
 mod tests {
     use super::*;
     use bytes::Bytes;
-    use ferroehr::access_eval::condition::{CallerKeys, ConditionGroups, VerdictPair};
-    use ferroehr::access_eval::procedure::Verdict;
 
     fn headers(pairs: &[(&str, &str)]) -> HeaderMap {
         let mut h = HeaderMap::new();
@@ -547,29 +544,11 @@ mod tests {
 
     #[test]
     fn query_scope_apply_stamps_ehr_access_and_log_standing() {
-        let pair = std::sync::Arc::new(VerdictPair {
-            cared: Verdict::admit(),
-            uncared: Verdict::admit(),
-        });
         let scope = QueryScope {
-            ehr_access: AccessCondition::from(ConditionGroups {
-                groups: vec![(vec![1], std::sync::Arc::clone(&pair))],
-                closed: pair,
-                default: None,
-                cared: ferroehr::access_eval::condition::care::Care::Census(Vec::new().into()),
-                subject_namespace: "demographic".into(),
-                facts: CallerKeys {
-                    now: jiff::Timestamp::UNIX_EPOCH,
-                    parties: Vec::new().into(),
-                    keeper: None,
-                },
-                confined: None,
-                conflicts: std::sync::Arc::from([]),
-            }),
             log_standing: LogStanding::Reviewer,
         };
         let req = scope.apply(AqlQueryRequest::default());
-        assert_eq!(scope.ehr_access, req.ehr_access);
+        assert_eq!(req.ehr_access, QueryAccess::OfRequest);
         assert_eq!(req.log_standing, LogStanding::Reviewer);
     }
 }

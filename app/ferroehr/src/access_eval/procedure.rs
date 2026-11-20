@@ -208,10 +208,6 @@ pub struct Policy<'a> {
     pub care_purposes: Option<&'a [DvCodedText]>,
 }
 
-/// The purposes `care_purposes` reads as when void.
-// NOTE: draft BMM ACCESS_POLICY.care_purposes, void means TREAT, ETREAT and CAREMGT.
-const DEFAULT_CARE_PURPOSES: [&str; 3] = ["TREAT", "ETREAT", "CAREMGT"];
-
 impl<'a> Policy<'a> {
     /// The requirements of `policy`; none when no version is committed.
     #[must_use]
@@ -244,7 +240,8 @@ impl<'a> Policy<'a> {
             Some(codes) => codes
                 .iter()
                 .any(|coded| coded.defining_code.code_string == purpose),
-            None => DEFAULT_CARE_PURPOSES.contains(&purpose),
+            // NOTE: draft BMM ACCESS_POLICY.care_purposes, void means TREAT, ETREAT and CAREMGT.
+            None => ["TREAT", "ETREAT", "CAREMGT"].contains(&purpose),
         })
     }
 }
