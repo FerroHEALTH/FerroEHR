@@ -178,14 +178,23 @@ impl DbConfig {
     }
 }
 
+/// How long a connection sits idle before the pool pings it on its next
+/// checkout (#5109).
+///
+/// A busy pool hands its connections out again well within
+/// it, so a loaded server sends no ping; a quiet one pays one round trip per
+/// checkout of a connection idle that long. No openEHR spec governs
+/// connection handling: our own design.
+pub const IDLE_PROBE: std::time::Duration = std::time::Duration::from_secs(1);
+
 /// The span a new connection's session setup runs in, so its statements read
 /// as the pool's and not as the statements of the request that happened to
 /// open the connection (#5899).
 pub const SESSION_SETUP_SPAN: &str = "db_session_setup";
 
 /// The pool options for one domain: sizing + acquire timeout from settings,
-/// the domain's session setup on every physical connection, and no per-checkout
-/// liveness ping. Connection retirement stays on the `sqlx` defaults (an idle
+/// the domain's session setup on every physical connection, and a liveness
+/// ping only for a connection idle for [`IDLE_PROBE`]. Connection retirement stays on the `sqlx` defaults (an idle
 /// reap plus a bounded lifetime — infinite-lived connections are discouraged by
 /// the driver, so we do not disable them).
 pub(crate) fn options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
@@ -206,10 +215,20 @@ pub(crate) fn options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
         // No liveness ping per checkout: `test_before_acquire` (default true)
         // pings each connection before handing it out, one round trip per
         // acquisition (https://docs.rs/sqlx/0.9.0/sqlx/pool/struct.PoolOptions.html#method.test_before_acquire).
-        // A connection that broke while idle therefore fails its first real
-        // statement, and that statement's error reaches the caller: sqlx does
-        // not retry it.
+        // Only a connection that sat idle for `IDLE_PROBE` is pinged, so a
+        // session the database cut while nobody used it (a restart, a
+        // failover, a terminated backend) is replaced before a request gets it.
         .test_before_acquire(false)
+        .before_acquire(|conn, meta| {
+            Box::pin(async move {
+                if meta.idle_for < IDLE_PROBE {
+                    return Ok(true);
+                }
+                // NOTE: sqlx 0.9 `PoolOptions::before_acquire`, a failed ping is the answer:
+                // `false` closes the connection and the pool opens another in its place.
+                Ok(sqlx::Connection::ping(conn).await.is_ok())
+            })
+        })
         .after_connect(move |conn, _meta| {
             // Cloned per call: `after_connect` takes an `Fn`, so the captured
             // value cannot be moved out of it.
