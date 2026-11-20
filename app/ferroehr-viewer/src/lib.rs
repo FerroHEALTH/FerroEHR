@@ -62,6 +62,7 @@ pub mod pages;
 pub mod paging;
 pub mod posted;
 pub mod prefs;
+pub mod purpose;
 pub mod request;
 pub mod routes;
 pub mod scope;

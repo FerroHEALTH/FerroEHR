@@ -1564,3 +1564,25 @@ async fn compare_names_the_paths_one_release_adds_to_another() {
         same.main()
     );
 }
+
+/// The Reading tab offers the purposes of use the CDR lists, each by its
+/// display text beside its code, after the configured default (#6105).
+#[tokio::test]
+async fn the_reading_tab_offers_the_purposes_the_cdr_lists() {
+    let listed = r#"{"header":"x-purpose-of-use","system":"http://terminology.hl7.org/CodeSystem/v3-ActReason","codes":[{"code":"TREAT","display":"treatment"},{"code":"ETREAT"}]}"#;
+    let viewer = Viewer::start_with(vec![stub(
+        "/ferroehr/rest/extensions/v1/access/purposes",
+        "application/json",
+        listed,
+    )])
+    .await;
+    let cookie = viewer.sign_in().await;
+    let page = viewer.page(&cookie, "/preferences/reading").await;
+    assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
+    let main = page.main();
+    assert!(main.contains("Purpose of use"), "{main}");
+    assert!(main.contains("action=\"/purpose\""), "{main}");
+    assert!(main.contains("<option value=\"TREAT\""), "{main}");
+    assert!(main.contains("treatment (TREAT)"), "{main}");
+    assert!(main.contains("<option value=\"ETREAT\""), "{main}");
+}

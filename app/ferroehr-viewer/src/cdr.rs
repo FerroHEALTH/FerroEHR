@@ -178,6 +178,8 @@ pub struct CdrClient {
     /// What a request may address: the product root, the management base
     /// and the origin's health family.
     roots: Roots,
+    /// The purposes of use the CDR accepts and the one the viewer declares.
+    purposes: crate::purpose::Purposes,
 }
 
 impl CdrClient {
@@ -209,6 +211,11 @@ impl CdrClient {
             ("cdr.management_base_url", management_base.clone()),
             ("cdr.base_url", format!("{origin}/{HEALTH_FAMILY}")),
         ])?;
+        let purposes = crate::purpose::Purposes::new(
+            http.clone(),
+            format!("{origin}{rest_root}/extensions/v1/access/purposes"),
+            cfg.purpose_of_use.clone(),
+        );
         Ok(Self {
             http,
             origin,
@@ -216,6 +223,7 @@ impl CdrClient {
             rest_root,
             management_base,
             roots,
+            purposes,
         })
     }
 
@@ -240,6 +248,12 @@ impl CdrClient {
     #[must_use]
     pub fn rest_v1_root(&self) -> String {
         format!("{}{}", self.origin, self.base_path)
+    }
+
+    /// The purposes of use the CDR accepts and the one the viewer declares.
+    #[must_use]
+    pub fn purposes(&self) -> &crate::purpose::Purposes {
+        &self.purposes
     }
 
     /// A URL under the CDR's extensions root (`{rest_root}/extensions/v1`),
@@ -297,12 +311,14 @@ impl CdrClient {
     /// A `url` outside the configured roots is refused when the call is sent,
     /// before any request leaves.
     pub fn call(&self, method: http::Method, url: &str, credential: &Credential) -> CdrCall {
-        CdrCall::new(
+        let mut call = CdrCall::new(
             self.http.clone(),
             method,
             self.roots.admit(url),
             Some(credential.clone()),
-        )
+        );
+        call.purposes = Some(self.purposes.clone());
+        call
     }
 
     /// One request to `url` with no credential, for the surfaces the CDR
@@ -345,6 +361,20 @@ impl CdrClient {
     }
 }
 
+/// `request` carrying `credential`, as Basic or as a bearer token.
+pub(crate) fn authorize(
+    request: reqwest::RequestBuilder,
+    credential: Option<&Credential>,
+) -> reqwest::RequestBuilder {
+    match credential {
+        Some(Credential::Basic { username, password }) => {
+            request.basic_auth(username, Some(password.expose()))
+        }
+        Some(Credential::Bearer(access_token)) => request.bearer_auth(access_token.expose()),
+        None => request,
+    }
+}
+
 /// One request to the CDR, built up and sent once.
 ///
 /// Every request asks for `application/json` unless [`Self::accept`] names
@@ -360,6 +390,8 @@ pub struct CdrCall {
     accept: String,
     headers: Vec<(String, String)>,
     body: Option<(String, String)>,
+    /// The purposes of use a credentialed call declares one of.
+    purposes: Option<crate::purpose::Purposes>,
 }
 
 impl CdrCall {
@@ -377,6 +409,7 @@ impl CdrCall {
             accept: "application/json".to_owned(),
             headers: Vec::new(),
             body: None,
+            purposes: None,
         }
     }
 
@@ -406,7 +439,8 @@ impl CdrCall {
     /// Sends the request and returns the CDR's answer, whatever its status.
     ///
     /// # Errors
-    /// [`ViewerError::Invalid`] when the URL leaves the configured roots, and
+    /// [`ViewerError::Invalid`] when the URL leaves the configured roots or
+    /// the configured purpose of use is one the CDR does not accept, and
     /// [`ViewerError::CdrUnreachable`] when the CDR does not answer or its
     /// body does not read.
     pub async fn send(self) -> Result<CdrResponse, ViewerError> {
@@ -417,19 +451,20 @@ impl CdrCall {
         for (name, value) in &self.headers {
             request = request.header(name, value);
         }
+        if let (Some(purposes), Some(credential)) = (&self.purposes, &self.credential)
+            && let Some((header, code)) = purposes.declared(credential).await?
+        {
+            request = request.header(header, code);
+        }
         if let Some((content_type, body)) = self.body {
             request = request
                 .header(http::header::CONTENT_TYPE, content_type)
                 .body(body);
         }
-        request = match &self.credential {
-            Some(Credential::Basic { username, password }) => {
-                request.basic_auth(username, Some(password.expose()))
-            }
-            Some(Credential::Bearer(access_token)) => request.bearer_auth(access_token.expose()),
-            None => request,
-        };
-        let response = request.send().await.map_err(ViewerError::unreachable)?;
+        let response = authorize(request, self.credential.as_ref())
+            .send()
+            .await
+            .map_err(ViewerError::unreachable)?;
         let status = response.status();
         let headers = response.headers().clone();
         let body = response.text().await.map_err(ViewerError::unreachable)?;

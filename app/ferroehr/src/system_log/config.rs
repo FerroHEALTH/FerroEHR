@@ -289,6 +289,17 @@ pub struct AuditConfig {
     /// free text that means nothing at review time.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub purpose_codes: Vec<String>,
+    /// The code system `purpose_codes` and `emergency_purpose_codes` belong
+    /// to (`FERROEHR__AUDIT__PURPOSE_SYSTEM`), the canonical URL of a FHIR
+    /// `CodeSystem`.
+    ///
+    /// The default is HL7's `ActReason` code system, which holds the
+    /// `PurposeOfUse` codes and which a token's purposes are recorded under.
+    /// The terminology server's `CodeSystem/$lookup` on this system gives each
+    /// code the display text a client shows; no specification names the
+    /// system of a purpose header, so the key is our own design.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
+    pub purpose_system: String,
     /// The declared purpose codes that mark an access as an emergency access
     /// (`FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES`). Empty (the default) marks
     /// nothing.
@@ -337,6 +348,7 @@ impl Default for AuditConfig {
             purpose_header: "x-purpose-of-use".to_owned(),
             permit_header: "x-data-permit".to_owned(),
             purpose_codes: Vec::new(),
+            purpose_system: "http://terminology.hl7.org/CodeSystem/v3-ActReason".to_owned(),
             emergency_purpose_codes: Vec::new(),
             legal_basis: None,
             store: StoreConfig::default(),

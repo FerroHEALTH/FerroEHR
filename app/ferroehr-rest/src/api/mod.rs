@@ -57,6 +57,7 @@
 //! exposes only the standardised ITS-REST surface.
 
 pub(crate) mod access_log_query;
+pub(crate) mod access_purposes;
 pub mod admin;
 pub mod definition;
 pub mod demographic;
@@ -307,6 +308,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(ehr::openapi_routes::extension_routes())
         .merge(ehr::ehr_access::routes())
         .merge(ehr::access_delay::routes())
+        .merge(access_purposes::routes())
         .merge(ehr::access_log::routes())
         .merge(demographic::relationship::relationship_routes())
         .merge(demographic::reverse::reverse_relationship_routes())
