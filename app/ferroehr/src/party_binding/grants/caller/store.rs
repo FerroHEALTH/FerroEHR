@@ -333,6 +333,27 @@ fn care_of(fact: &CallerFact) -> Option<&CareFact> {
     }
 }
 
+/// The issuer, the id and the kind of the `covers_for` each of `facts`
+/// names, each `None` for a fact that names none.
+type CoversColumns<'a> = (
+    Vec<Option<&'a str>>,
+    Vec<Option<&'a str>>,
+    Vec<Option<&'static str>>,
+);
+
+/// The [`CoversColumns`] of `facts`.
+fn covers_of(facts: &[CallerFact]) -> CoversColumns<'_> {
+    let covers: Vec<Option<&Cover>> = facts
+        .iter()
+        .map(|f| care_of(f).and_then(|care| care.covers_for.as_ref()))
+        .collect();
+    (
+        covers.iter().map(|c| c.map(|c| &*c.key.issuer)).collect(),
+        covers.iter().map(|c| c.map(|c| &*c.key.id)).collect(),
+        covers.iter().map(|c| c.map(|c| c.kind.rm_type())).collect(),
+    )
+}
+
 /// Inserts `facts` of `head` about `party`; the inserted rows as their party
 /// and text.
 async fn insert(
@@ -380,13 +401,7 @@ async fn insert(
         .iter()
         .map(|f| care_of(f).is_some_and(|care| care.self_declared))
         .collect();
-    let covers: Vec<Option<&Cover>> = facts
-        .iter()
-        .map(|f| care_of(f).and_then(|care| care.covers_for.as_ref()))
-        .collect();
-    let covers_issuer: Vec<_> = covers.iter().map(|c| c.map(|c| &*c.key.issuer)).collect();
-    let covers_id: Vec<_> = covers.iter().map(|c| c.map(|c| &*c.key.id)).collect();
-    let covers_kind: Vec<_> = covers.iter().map(|c| c.map(|c| c.kind.rm_type())).collect();
+    let (covers_issuer, covers_id, covers_kind) = covers_of(facts);
     let validity: Vec<Option<&Value>> = facts.iter().map(|f| f.validity.as_ref()).collect();
     let unreadable: Vec<bool> = facts
         .iter()
