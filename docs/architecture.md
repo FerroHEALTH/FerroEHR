@@ -887,7 +887,9 @@ which is what makes an optional stage safe to disable:
    role passes the role gate and is confined to those records: it is the
    subject kind, and every other EHR refuses it `refused-not-subject`. A
    `persons` login whose one `PERSON` carries neither the professional nor
-   the representative marker is that patient: the shared binding answers it
+   the representative marker is that patient, through a first-party client or
+   a SMART app the CDR grants `act_for_persons` (an openEHR launch, #6146):
+   the shared binding answers it
    `wrong_marker`, and FerroEHR admits it as the person themself, with no
    role, `PARTY_SELF` as its committer and the binding `self` on its access
    record, confined in the same way. An
