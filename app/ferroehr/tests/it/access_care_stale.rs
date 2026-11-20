@@ -264,7 +264,9 @@ fn pinned_to(ehr_id: EhrId) -> String {
 /// The rows `aql` answers the running request, or its refusal.
 async fn query(svc: &FerroEhrService, aql: &str) -> Result<usize, ServiceError> {
     let request = AqlQueryRequest {
-        ehr_access: svc.request_access_condition().await?,
+        ehr_access: ferroehr::service::query::request::QueryAccess::Given(
+            svc.request_access_condition().await?,
+        ),
         ..AqlQueryRequest::default()
     };
     let outcome = Box::pin(svc.execute_aql(aql, None, &request)).await?;

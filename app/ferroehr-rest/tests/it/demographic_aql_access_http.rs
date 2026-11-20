@@ -164,3 +164,45 @@ async fn a_person_query_answers_what_the_demographic_api_serves() {
         );
     }
 }
+
+/// With the access settings store unavailable, a demographic query still
+/// answers from the party domain, which no `EHR_ACCESS` condition governs,
+/// and a clinical query, whose condition cannot be judged, answers `503`
+/// (#6110).
+#[tokio::test]
+async fn a_person_query_answers_while_the_settings_store_is_down() {
+    let mapping = crate::party_binding_http::mapping()
+        .with_policy()
+        .with_admin_role("ADMIN");
+    let (_db, pool, _svc, app) = Box::pin(app_with(mapping)).await;
+    let created = person(&app, &person_body()).await;
+    sqlx::query("ALTER TABLE clinical.access_class RENAME TO access_class_away")
+        .execute(&pool)
+        .await
+        .expect("the settings store goes away");
+
+    let nurse = parties(
+        &app,
+        "nurse",
+        "SELECT p/uid/value FROM PERSON p",
+        &json!({}),
+    )
+    .await;
+    assert!(nurse.contains(&created), "the PERSON is served: {nurse:?}");
+
+    let body = json!({ "q": "SELECT e/ehr_id/value FROM EHR e LIMIT 20" }).to_string();
+    let (status, answer) = send(
+        &app,
+        "POST",
+        &format!("{BASE}/query/aql"),
+        "nurse",
+        None,
+        Some(("application/json", body)),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::SERVICE_UNAVAILABLE,
+        "a clinical query is judged by the settings: {answer}"
+    );
+}
