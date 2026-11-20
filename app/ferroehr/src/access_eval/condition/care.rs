@@ -266,28 +266,6 @@ impl RequestAccess {
         };
         Ok(self.cared(&under_care_of))
     }
-
-    /// Whether the subject reference `entry` names is the `PERSON` the
-    /// caller is bound to ([`Caller::party`](crate::access_eval::procedure::Caller::party)).
-    pub(super) async fn names_the_caller(
-        &self,
-        entry: &EhrEntry,
-    ) -> Result<bool, GrantsUnavailable> {
-        let (Some(grants), Some(subject)) = (&self.grants, &entry.subject) else {
-            return Ok(false);
-        };
-        // NOTE: the local source names each party by its container's UUID, so a bound
-        // party id that is no UUID names no PERSON of this store and no record.
-        let Some(party) = self
-            .caller()
-            .party
-            .as_deref()
-            .and_then(|p| p.parse::<Uuid>().ok())
-        else {
-            return Ok(false);
-        };
-        Ok(grants.person_of(subject).await? == Some(party))
-    }
 }
 
 /// How a condition reads the caller's care for the subject of an EHR.
