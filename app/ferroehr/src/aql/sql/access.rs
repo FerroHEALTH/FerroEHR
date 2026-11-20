@@ -195,7 +195,7 @@ fn known_classes(condition: &ConditionGroups) -> Vec<i64> {
 
 /// The settings row is held closed or of a class `condition` holds; any
 /// other row fails the statement through `access_class_unknown` (SQLSTATE
-/// `ZA002`, `clinical/0049_access_stale_copy.sql`), so a class this
+/// `ZA002`, `clinical/0009_baseline_access.sql`), so a class this
 /// replica's copy has not yet heard of is waited for or refused, and never
 /// answered as an EHR with nothing to read. The function takes the row's
 /// EHR id, so the planner cannot fold it as a constant. No openEHR spec

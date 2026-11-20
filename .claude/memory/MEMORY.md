@@ -34,7 +34,7 @@
 - [K8s testing uses a compose postgres](k8s-testing-uses-compose-postgres.md) — never deploy postgres into the test cluster
 - [This is a rewrite, not inherited code](rewrite-not-inherited-code.md) — existing code never assumed correct; breaking changes over bad code
 - [One Closes keyword per issue; current milestone always](pr-closes-one-keyword-per-issue.md) — "Closes #1, #2" closes only #1
-- [Migrations are append-only](migrations-are-append-only.md) — never edit a migration present at the latest release tag
+- [Migrations are append-only](migrations-are-append-only.md) — v6.0.0 restarts from one baseline per set (2026-11-20); never edit a migration present at the latest release tag
 - [Rewrite fn docs on update](rewrite-fn-docs-on-update.md) — fully rewrite a touched fn's doc comment; include `///` in old_string
 - [UNLOGGED node rejected](unlogged-node-rejected.md) — never re-propose reduced-durability storage tiers
 - [Public comments: one and short](public-comments-one-and-short.md) — one short comment on external threads; edit, don't add

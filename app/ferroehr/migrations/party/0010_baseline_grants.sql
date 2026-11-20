@@ -1,0 +1,134 @@
+-- SPDX-FileCopyrightText: Cadasto B.V.
+-- SPDX-License-Identifier: BUSL-1.1
+
+-- party: the grants.
+--
+-- The writer role (ferroehr_party) reads and writes every relation, the
+-- reader role (ferroehr_party_reader) reads them; the migration bookkeeping
+-- is read-only to both. The default privileges extend the same grants to
+-- every table a later file creates here. The clinical roles are granted
+-- nothing in this schema.
+--
+-- The role grants run only when the runtime roles exist (see the role block
+-- of ext); without them the block is skipped with a NOTICE.
+--
+-- No openEHR spec governs database roles: our own design/extension.
+
+REVOKE ALL ON FUNCTION
+    binding_date(p_value text, p_upper boolean),
+    binding_validity(p_interval jsonb),
+    binding_fold(p_value text),
+    binding_changed(),
+    person_version_changed()
+    FROM PUBLIC;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_party') THEN
+        GRANT USAGE ON SCHEMA party TO ferroehr_party;
+        GRANT USAGE ON SCHEMA party TO ferroehr_party_reader;
+        GRANT SELECT ON TABLE _sqlx_migrations TO ferroehr_party;
+        GRANT SELECT ON TABLE
+            _sqlx_migrations,
+            commit_audit,
+            contribution,
+            version,
+            version_hot,
+            version_cold,
+            vo_head,
+            vo_attestation,
+            vo_attestation_hot,
+            vo_attestation_cold,
+            node,
+            node_hot,
+            node_cold,
+            item_tag,
+            party_relationship_target,
+            event_outbox,
+            event_outbox_reader,
+            blob_ref,
+            audit_reservation,
+            binding_identifier,
+            binding_membership,
+            binding_representation,
+            binding_lease,
+            binding_state,
+            binding_group_revision,
+            binding_capability,
+            binding_provider,
+            binding_client,
+            binding_grant_revision,
+            binding_caller_fact,
+            binding_caller_fact_party,
+            binding_record_subject,
+            binding_patient_identifier,
+            binding_key_space,
+            binding_care_validity,
+            scim_deactivation,
+            scim_contact_erasure,
+            scim_group,
+            pmir_subscription,
+            pmir_message,
+            pmir_identity,
+            pmir_merge,
+            pmir_suppression,
+            access_revision_of
+            TO ferroehr_party_reader;
+        GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE
+            commit_audit,
+            contribution,
+            version_hot,
+            version_cold,
+            vo_head,
+            vo_attestation_hot,
+            vo_attestation_cold,
+            node_hot,
+            node_cold,
+            item_tag,
+            party_relationship_target,
+            event_outbox,
+            event_outbox_reader,
+            blob_ref,
+            audit_reservation,
+            binding_identifier,
+            binding_membership,
+            binding_representation,
+            binding_lease,
+            binding_state,
+            binding_group_revision,
+            binding_capability,
+            binding_provider,
+            binding_client,
+            binding_grant_revision,
+            binding_caller_fact,
+            binding_caller_fact_party,
+            binding_record_subject,
+            binding_patient_identifier,
+            binding_key_space,
+            binding_care_validity,
+            scim_deactivation,
+            scim_contact_erasure,
+            scim_group,
+            pmir_subscription,
+            pmir_message,
+            pmir_identity,
+            pmir_merge,
+            pmir_suppression,
+            access_revision_of
+            TO ferroehr_party;
+        GRANT SELECT, INSERT, DELETE, MAINTAIN, UPDATE ON TABLE
+            version,
+            vo_attestation,
+            node
+            TO ferroehr_party;
+        GRANT EXECUTE ON FUNCTION
+            binding_date(p_value text, p_upper boolean),
+            binding_validity(p_interval jsonb),
+            binding_fold(p_value text)
+            TO ferroehr_party;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA party GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO ferroehr_party;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA party GRANT SELECT ON TABLES TO ferroehr_party_reader;
+    ELSE
+        RAISE NOTICE 'skipping the party grants (roles absent: see the role block NOTICE of ext)';
+    END IF;
+END $$;

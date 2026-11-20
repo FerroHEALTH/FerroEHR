@@ -392,14 +392,14 @@ corruptions"
   Configuration: unknown keys and unknown `FERROEHR__` variables are refused
   at boot.
 - **Evidence:** `app/ferroehr/src/versioning/integrity.rs`;
-  `app/ferroehr/migrations/audit/0003_tamper_chain.sql`;
-  `app/ferroehr/migrations/audit/0011_chain_digest_v2.sql`;
+  `app/ferroehr/migrations/audit/0001_baseline_audit_event.sql`;
+  `app/ferroehr/migrations/audit/0002_baseline_audit_chain.sql`;
   `app/ferroehr/src/system_log/chain_check.rs`;
   `app/ferroehr/tests/it/audit_chain.rs`
   (`the_chain_check_reports_a_tampered_record_on_the_health_surface`,
   `the_current_digest_covers_every_column`,
   `every_hashed_column_is_tamper_evident`);
-  `app/ferroehr/migrations/clinical/0014_bookkeeping_read_only.sql` and its
+  `app/ferroehr/migrations/clinical/0010_baseline_grants.sql` and its
   party twin;
   `app/ferroehr/src/config/strict.rs`;
   [tamper evidence](../audit.md#tamper-evidence);

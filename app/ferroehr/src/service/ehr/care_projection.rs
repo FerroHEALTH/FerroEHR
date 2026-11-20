@@ -3,7 +3,7 @@
 
 //! The care projector (#5699).
 //!
-//! It keeps the clinical care projection (`clinical/0047_access_care.sql`) at
+//! It keeps the clinical care projection (`clinical/0009_baseline_access.sql`) at
 //! the party facts revision this replica holds, so a query's access
 //! condition binds only the caller's team ids.
 //!

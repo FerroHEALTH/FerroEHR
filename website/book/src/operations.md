@@ -181,13 +181,9 @@ CREATE ROLE ferroehr_clinical NOLOGIN NOINHERIT;
 CREATE ROLE ferroehr_party NOLOGIN NOINHERIT;
 CREATE ROLE ferroehr_clinical_reader NOLOGIN NOINHERIT;
 CREATE ROLE ferroehr_party_reader NOLOGIN NOINHERIT;
--- The released grant files still name this role, so a first install needs it
--- while they apply. The last migration drops it again where it may; a migrator
--- without CREATEROLE may not, so drop it yourself after the first boot.
-CREATE ROLE ferroehr_linkage NOLOGIN NOINHERIT;
 ```
 
-then give each login role membership of exactly one of the first four.
+then give each login role membership of exactly one of them.
 `ferroehr db verify` tells you whether the boundary holds afterwards.
 
 The local Audit Record Repository is written on its own pool
@@ -198,8 +194,7 @@ clinical login role that is a member of `ferroehr_clinical` alone writes its own
 access log; no extra membership is needed. The audit trail is not a
 pseudonymisation domain, so this grant adds no reach into `party`.
 
-The compose stacks create the four domain roles, and `ferroehr_linkage` for the
-released grant files, and grant the clinical and party domains to
+The compose stacks create the four domain roles and grant the clinical and party domains to
 the single dev login role, which owns the database. That
 demonstrates the schema separation and exercises the boot self-check; it is
 deliberately **not** the credential separation, because one container with one
@@ -267,13 +262,14 @@ of `ferroehr_migrator`, `ferroehr_clinical` and `ferroehr_party`.
   schema](#which-credential-prepares-the-schema), and set that key whenever
   `database.url` is a role that holds one domain.
 
-Migrations are **append-only**, so upgrading an existing database in place is
-the supported path and always has been the one your data takes. A released
-migration is never edited: sqlx records a checksum of each applied file and
-refuses a database whose recorded checksum no longer matches, so a corrected
-schema arrives as a new migration rather than as a change to an old one. A CI
-guard fails any pull request that modifies, renames or deletes a migration the
-base branch already carries.
+Migrations are **append-only** within a major release line: a released
+migration is never edited, because sqlx records a checksum of each applied file
+and refuses a database whose recorded checksum no longer matches, so a
+corrected schema arrives as a new migration rather than as a change to an old
+one. A CI guard fails any pull request that modifies, renames or deletes a
+migration a release carries. v6.0.0 starts the line again from one baseline per
+schema, so a v5 database is not upgraded in place; see
+[Upgrading from v5 to v6](#upgrading-from-v5-to-v6).
 
 With `verify`, something else has to run the migrations first. Use the binary's
 own subcommand under the migrator DSN: a CI/CD stage, a one-shot job, or the
@@ -387,56 +383,6 @@ start the server against it.
 > only wipe with no partial-state failure mode. `ferroehr db erase` drops all
 > four schemas of a database in one transaction, for taking an instance out of
 > service ([Decommissioning](operations-decommissioning.md)).
-
-### Upgrading past the linkage domain
-
-Releases before 5.6.0 ran a third storage domain, `linkage`, with its own
-schema, role (`ferroehr_linkage`), `[storage.linkage]` and
-`[storage.migrate.linkage]` configuration, pool and backup job. It held no
-relation once which EHR belongs to which subject became the EHR's own
-`EHR_STATUS.subject`, and this release removes it.
-
-Before you upgrade, delete `[storage.linkage]` and `[storage.migrate.linkage]`
-from the configuration, and the `linkage` blocks under `database` and `backup`
-from the chart values: the server now refuses both tables as unknown keys, and
-the chart schema refuses both blocks.
-
-On a co-located database (no `[database.<domain>]` naming another database) the
-first boot does the rest. Migration `audit/0021_drop_linkage_domain.sql` drops
-the `linkage` schema, revokes what the role held on `ext`, drops the role when
-nothing else in the cluster names it, and drops the `btree_gist` extension.
-When it cannot drop the role or the extension, it says so in a `NOTICE` and the
-boot carries on.
-
-The migration runs in the database that holds the audit domain, so it does not
-reach every layout. Run the following by hand, as a superuser or a member of
-`ferroehr_linkage`, when either applies:
-
-- the linkage domain lived in a database of its own, or `[database.audit]` names
-  a database other than the one that held `linkage`;
-- the cluster holds more than one FerroEHR database, which keeps the role named
-  in the others.
-
-In every such database:
-
-```sql
-DROP SCHEMA IF EXISTS linkage CASCADE;
-REVOKE ALL ON SCHEMA ext FROM ferroehr_linkage;
-REVOKE ALL ON ALL FUNCTIONS IN SCHEMA ext FROM ferroehr_linkage;
-ALTER DEFAULT PRIVILEGES IN SCHEMA ext REVOKE EXECUTE ON FUNCTIONS FROM ferroehr_linkage;
-DROP OWNED BY ferroehr_linkage;
-DROP EXTENSION IF EXISTS btree_gist;
-```
-
-Then, once per cluster:
-
-```sql
-DROP ROLE ferroehr_linkage;
-```
-
-A database that held only the linkage domain holds nothing the server reads
-any more; drop it with `DROP DATABASE` once you no longer need it. Drop the
-login roles that were members of `ferroehr_linkage` as well.
 
 ## TLS and database security
 
@@ -873,9 +819,10 @@ why they are written as your checklist rather than as our claim.
 
 ## Upgrades
 
-- **Upgrade in place; the migrations are append-only.** A released migration
-  is never edited again, so a database created by an earlier release takes the
-  new release's migrations on top of the ones it already carries. The server
+- **Upgrade in place within v6; the migrations are append-only.** A released
+  migration is never edited again, so a database created by an earlier v6
+  release takes the new release's migrations on top of the ones it already
+  carries. The server
   records the checksum of every applied migration and refuses to start against
   a database whose recorded checksums differ from the files it carries
   (`migration 1 was previously applied but has been modified`), which is why
@@ -888,7 +835,8 @@ why they are written as your checklist rather than as our claim.
 
   Releases up to and including 4.0.18 predate this policy and did edit
   migration files in place. A database created by one of those and never
-  upgraded since is recreated rather than migrated.
+  upgraded since is recreated rather than migrated. A v5 database is not
+  upgraded in place either: see [Upgrading from v5 to v6](#upgrading-from-v5-to-v6).
 - **Sweep for stale decomposition after a release that changes how content is
   decomposed.** The version body is unaffected and every read serves it
   correctly; what is stale is the decomposed index over it, which a
@@ -905,17 +853,6 @@ why they are written as your checklist rather than as our claim.
   default `none` and asked for no certificate, and from 5.6.0 such a table is
   refused at load (GHSA-52mf-qg39-4q4j). See
   [`[server.tls]`](installation/config-server.md#servertls-native-tls-and-mutual-tls-client-authentication).
-- **Upgrading to 5.7.2 starts on an empty audit store.** Audit migration
-  0040 refuses a store that holds a render policy written before it, naming
-  each by its digest: those policies state the `[audit.store] retention`
-  horizon this release removes, and a stored record is never rewritten.
-  Export what you need over ITI-81 with the earlier release, drop the `audit`
-  schema, and start again. Then write the access log retention into the
-  controller's access policy (`ACCESS_POLICY.log_retention`,
-  [Audit trail](audit.md#retention-and-who-chooses-it)), and remove
-  `retention` and `sgb_v_309_controller` from `[audit.store]`, which are now
-  refused as unknown keys. Nothing is in production; a 5.7.1-rc1 store holds
-  test data.
 - **Bound the DDL yourself.** Every pooled connection carries the
   `[database] statement_timeout` value (60 seconds by default), and the migration
   step runs on that pool, so a runaway statement is cut off, but there is **no
@@ -932,6 +869,41 @@ why they are written as your checklist rather than as our claim.
   API. The default 30-second termination grace period covers the server's
   shutdown; the audit records are stored before each response, so a
   replica that stops leaves nothing in memory.
+
+### Upgrading from v5 to v6
+
+**v6 needs a new, empty database.** v6.0.0 replaces the whole migration
+history of every schema (`ext`, `clinical`, `party`, `audit`) with one
+baseline that creates each object once, in its final shape. A database
+prepared by v5 carries the v5 migration bookkeeping, and a v6 server refuses
+to start against it, naming the schema it found and this way forward, rather
+than apply its baseline over the old schema. Nothing is upgraded in place, and
+no compatibility layer reads a v5 database.
+
+Move the records instead:
+
+1. With the v5 server still running, dump the repository with
+   [`POST {ext}/admin/dump`](operations-admin-apis.md) to a location both
+   servers can reach.
+2. Create a new, empty PostgreSQL 18 database (or one per relocated domain,
+   as the v5 deployment had), and start the v6 server against it. With
+   `[database] migrations = "apply"` it applies the baseline at its first
+   boot; with `"verify"`, run `ferroehr db migrate` under the migrator
+   credential first.
+3. Load the archive into the v6 server with
+   [`POST {ext}/admin/load`](operations-admin-apis.md).
+4. Put the controller's access policy in place before you load an archive
+   that holds open care relationships
+   ([operational policy](operational-policy.md)), and check the configuration
+   with `ferroehr config check`, since v6 refuses the keys v5 removed.
+
+The audit trail is not part of the archive. Export what you need of the v5
+audit trail over ITI-81 before you retire the v5 database.
+
+The v6 baseline creates no `linkage` schema and no `ferroehr_linkage` role: a
+cluster that held v5 databases may still carry that role, which v6 never names,
+and you drop it with `DROP ROLE ferroehr_linkage` once no v5 database in the
+cluster grants it anything.
 
 ### How long the version you pinned is supported
 

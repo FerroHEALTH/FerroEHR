@@ -40,10 +40,6 @@ Run once, on an empty data directory, as the bootstrap superuser
   deployment. It is one credential playing every part: this stack shows the
   schema separation, not the credential separation, which a deployment reaches
   by giving each domain its own DSN;
-- **`ferroehr_linkage`**, which the released grant files still name, so a fresh
-  database needs it while they apply. The app role holds no `CREATEROLE`, so
-  the migration that retires the linkage domain cannot drop it here; it stays,
-  granted nothing;
 - schemas **`clinical`**, **`ext`** and **`audit`** (the local IHE ATNA Audit
   Record Repository), owned by the app role. The fourth storage schema,
   **`party`**, is left to the server: `ferroehr::db::prepare` creates all four
