@@ -9,7 +9,7 @@
 //! An entry is read on a miss and kept until a notification on [`CHANNEL`]
 //! drops it: a change of the side table drops every lookup, and a write of a
 //! `PERSON`'s version drops its name
-//! (`migrations/party/0051_binding_notify.sql`). A listener that connects or
+//! (`migrations/party/0006_baseline_binding.sql`). A listener that connects or
 //! loses its connection drops everything, and while it is down every request
 //! reads the store. A request whose own commit changed the side table drops
 //! every lookup and name before it answers ([`tracking`]), so the change holds

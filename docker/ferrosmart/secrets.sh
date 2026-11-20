@@ -38,5 +38,6 @@ if ! keep viewer.jwks.json; then
   jq -n --arg n "$modulus" '{keys: [{kty: "RSA", kid: "ferroehr-viewer", alg: "RS384", use: "sig", n: $n, e: "AQAB"}]}' \
     > "$dir/viewer.jwks.json"
 fi
-chmod 0644 "$dir"/*
+# Only the files: a directory a caller keeps beside them must stay traversable.
+find "$dir" -maxdepth 1 -type f -exec chmod 0644 {} +
 echo "the FerroSMART secrets are in $dir"

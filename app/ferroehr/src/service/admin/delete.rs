@@ -43,7 +43,7 @@ impl FerroEhrService {
     /// # Errors
     /// - `versioned_object_does_not_exist` (`404`) — no template with that id.
     /// - `409` (`ServiceError::Conflict`) — the party mapping names the
-    ///   template, or a `version` row still references the template (`version.template_id` FK, `clinical/0006_definitions.sql`);
+    ///   template, or a `version` row still references the template (`version.template_id` FK, `clinical/0002_baseline_definitions.sql`);
     ///   a physical delete must never orphan the compositions built on it.
     /// - `exception` — a database fault.
     pub async fn admin_template_delete(&self, template_id: &str) -> Result<(), ServiceError> {

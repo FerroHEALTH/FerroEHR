@@ -78,12 +78,12 @@ async fn migrations_apply_cleanly_and_idempotently() {
             .unwrap_or_else(|e| panic!("{schema} bookkeeping: {e}"))
         }
     };
-    // One file per concern, numbered per domain with no gaps, so
-    // `_sqlx_migrations` reads as the set's table of contents.
-    assert_eq!(applied("ext").await, 16);
-    assert_eq!(applied("clinical").await, 60);
-    assert_eq!(applied("party").await, 63);
-    assert_eq!(applied("audit").await, 50);
+    // The v6.0.0 baseline: one file per subject, numbered per domain with no
+    // gaps, so `_sqlx_migrations` reads as the set's table of contents.
+    assert_eq!(applied("ext").await, 5);
+    assert_eq!(applied("clinical").await, 10);
+    assert_eq!(applied("party").await, 10);
+    assert_eq!(applied("audit").await, 8);
 
     let tables = |schema: &'static str| {
         let pool = pool.clone();
@@ -364,33 +364,22 @@ async fn only_the_guarded_ehr_columns_name_a_subject_in_the_clinical_domain() {
     );
 }
 
-/// The linkage domain is gone: `audit/0021_drop_linkage_domain.sql` drops its
-/// schema and, once nothing in the database names it, its role.
+/// The linkage domain is gone: the baseline creates no `linkage` schema, never
+/// names the `ferroehr_linkage` role, and needs no `btree_gist`.
 ///
-/// The file runs once more here, as a second database of the cluster would run
-/// it, so it is idempotent. Roles are per cluster and other tests prepare
-/// databases beside this one, where `ext/0001_schema_and_roles.sql` creates the
-/// role again; so the role is either gone or still named by a grant in another
-/// database, and never by anything in this one.
+/// Roles are per cluster, so the role may still exist where another database
+/// of the cluster grants it something; nothing in this one names it.
 #[tokio::test]
-async fn the_linkage_domain_is_dropped() {
+async fn the_linkage_domain_does_not_exist() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let roles = testkit::roles::lock().await.expect("the roles lock");
-    sqlx::raw_sql(include_str!(
-        "../../migrations/audit/0021_drop_linkage_domain.sql"
-    ))
-    .execute(&pool)
-    .await
-    .expect("the drop runs again without error");
-    roles.release().await;
 
     let schema: bool =
         sqlx::query_scalar("SELECT EXISTS (SELECT FROM pg_namespace WHERE nspname = 'linkage')")
             .fetch_one(&pool)
             .await
             .expect("probe the schema");
-    assert!(!schema, "no linkage schema remains");
+    assert!(!schema, "no linkage schema exists");
 
     let (here, elsewhere): (i64, i64) = sqlx::query_as(
         "SELECT count(*) FILTER (WHERE d.dbid = db.oid), \
@@ -402,7 +391,7 @@ async fn the_linkage_domain_is_dropped() {
     )
     .fetch_one(&pool)
     .await
-    .expect("read what still names the role");
+    .expect("read what names the role");
     assert_eq!(here, 0, "nothing in this database names ferroehr_linkage");
     let role: bool = sqlx::query_scalar(
         "SELECT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_linkage')",
@@ -412,7 +401,7 @@ async fn the_linkage_domain_is_dropped() {
     .expect("probe the role");
     assert!(
         !role || elsewhere > 0,
-        "ferroehr_linkage is dropped unless another database still grants it something"
+        "the baseline never creates ferroehr_linkage"
     );
 
     let extension: bool =
@@ -422,7 +411,7 @@ async fn the_linkage_domain_is_dropped() {
             .expect("probe the extension");
     assert!(
         !extension,
-        "btree_gist, which only the linkage table needed, is gone"
+        "btree_gist, which only the linkage table needed, is absent"
     );
 }
 
@@ -480,21 +469,21 @@ async fn a_database_from_before_the_storage_rewrite_is_refused_with_the_remedy()
 /// A first-generation `ext`, `linkage` or `audit` set is refused by the SAME
 /// typed error, on the description of its version 1.
 ///
-/// Those three schema NAMES survive the rewrite, so their bookkeeping exists in
-/// more than one generation and its mere presence proves nothing; which
-/// migration ran first does. The `linkage` bookkeeping is seeded, because this
-/// build drops the schema. Without this the old set would reach its own migrator and fail
-/// on a checksum mismatch — an error about a hash where the operator needs the
+/// Those schema NAMES survive, so their bookkeeping exists in more than one
+/// generation and its mere presence proves nothing; which migration ran first
+/// does. The `linkage` bookkeeping is seeded, because this build creates no
+/// such schema. Without this the old set would reach its own migrator and fail
+/// on a checksum mismatch, an error about a hash where the operator needs the
 /// remedy.
 #[tokio::test]
 async fn a_first_generation_set_in_a_surviving_schema_is_refused_by_its_first_migration() {
-    // (schema, the first generation's version-1 description, this build's).
-    const SIGNATURES: [(&str, &str, &str); 3] = [
-        ("ext", "openehr functions", "schema and roles"),
-        ("linkage", "baseline", "schema and role"),
-        ("audit", "baseline", "schema and roles"),
+    // (schema, the first generation's version-1 description).
+    const SIGNATURES: [(&str, &str); 3] = [
+        ("ext", "openehr functions"),
+        ("linkage", "baseline"),
+        ("audit", "baseline"),
     ];
-    for (schema, first_generation, second_generation) in SIGNATURES {
+    for (schema, first_generation) in SIGNATURES {
         let db = testkit::db().await.expect("testkit database");
         let pool = db.pool();
         seed_linkage_bookkeeping(&pool, schema).await;
@@ -510,17 +499,65 @@ async fn a_first_generation_set_in_a_surviving_schema_is_refused_by_its_first_mi
             error.to_string().contains("recreate the database"),
             "{schema}: the refusal must name the remedy: {error}"
         );
+    }
+}
 
-        // The discrimination is real: the same bookkeeping carrying THIS
-        // build's version-1 description is a generation-2 set, and migrating it
-        // again is the no-op it should be.
+/// A database prepared by v5 is refused at boot with the typed error that
+/// names its schema and the way forward (#6139): v6.0.0 replaced the v5
+/// migration history with one baseline per schema, and upgrades nothing in
+/// place.
+///
+/// sqlx recorded v5's version 1 as `schema and roles` in `ext` and `audit`
+/// and as `schema and grants baseline` in `clinical` and `party`; any
+/// bookkeeping in `linkage` is v5's too, since v6 creates no such schema. The
+/// same bookkeeping carrying this build's own version-1 description passes,
+/// which proves the discrimination is real.
+#[tokio::test]
+async fn a_v5_database_is_refused_with_the_way_forward() {
+    // (schema, v5's version-1 description, this build's).
+    const SIGNATURES: [(&str, &str, Option<&str>); 5] = [
+        ("ext", "schema and roles", Some("baseline roles")),
+        (
+            "clinical",
+            "schema and grants baseline",
+            Some("baseline ehr"),
+        ),
+        (
+            "party",
+            "schema and grants baseline",
+            Some("baseline schema"),
+        ),
+        ("audit", "schema and roles", Some("baseline audit event")),
+        ("linkage", "schema and role", None),
+    ];
+    for (schema, v5, v6) in SIGNATURES {
         let db = testkit::db().await.expect("testkit database");
         let pool = db.pool();
         seed_linkage_bookkeeping(&pool, schema).await;
-        set_first_description(&pool, schema, second_generation).await;
+        set_first_description(&pool, schema, v5).await;
+        let error = db::run_migrations(&pool)
+            .await
+            .expect_err("a v5 set must be refused");
+        assert!(
+            matches!(&error, db::DbError::V5Database { schema: s } if *s == schema),
+            "{schema}: the refusal must be the typed one, not a checksum error: {error}"
+        );
+        let message = error.to_string();
+        assert!(
+            message.contains(&format!("schema `{schema}`"))
+                && message.contains("new, empty database")
+                && message.contains("admin/dump")
+                && message.contains("admin/load"),
+            "{schema}: the refusal must name the schema and the way forward: {message}"
+        );
+
+        let Some(v6) = v6 else { continue };
+        let db = testkit::db().await.expect("testkit database");
+        let pool = db.pool();
+        set_first_description(&pool, schema, v6).await;
         db::run_migrations(&pool)
             .await
-            .unwrap_or_else(|e| panic!("{schema}: a generation-2 set must pass the guard: {e}"));
+            .unwrap_or_else(|e| panic!("{schema}: this build's set must pass the guard: {e}"));
     }
 }
 

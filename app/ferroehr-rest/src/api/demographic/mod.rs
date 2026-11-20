@@ -43,6 +43,9 @@ use ferroehr::service::demographic::precondition::Precondition;
 use ferroehr::service::response::{ResourceMeta, ServiceResponse};
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
+mod care_query;
+pub(crate) mod care_relationship;
+pub(crate) mod care_relationship_versioned;
 mod contribution;
 pub(crate) mod openapi_routes;
 mod party;

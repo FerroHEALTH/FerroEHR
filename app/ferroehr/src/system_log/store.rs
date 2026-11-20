@@ -10,7 +10,7 @@
 //! in the EHR system … currently openEHR does not support \[logs as part of
 //! the EHR proper\]" — BASE `architecture_overview/master07-security.adoc`
 //! §Access logging), so the store lives in its own `audit` schema, strictly
-//! outside the EHR data (`migrations/audit/0001_schema_and_roles.sql`).
+//! outside the EHR data (`migrations/audit/0001_baseline_audit_event.sql`).
 //!
 //! A record keeps its facts in columns and names the render policy it was
 //! written under ([`crate::system_log::render`]). The FHIR R4 `AuditEvent`

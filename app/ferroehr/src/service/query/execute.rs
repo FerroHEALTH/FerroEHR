@@ -576,7 +576,7 @@ fn map_exec_error(e: AqlError) -> ServiceError {
         {
             ServiceError::bad_request(CAST_REFUSAL, db)
         }
-        // SQLSTATE `ZA003` (`ext/0013_aql_not_an_amount.sql`): SUM or AVG met
+        // SQLSTATE `ZA003` (`ext/0002_baseline_value_functions.sql`): SUM or AVG met
         // a whole data value that is no amount, which the query asked for.
         AqlError::Exec(ExecError::Database(db))
             if db

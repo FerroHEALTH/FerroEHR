@@ -286,6 +286,48 @@ fn the_demographic_api_needs_a_granted_client_or_the_product_scope() {
     }
 }
 
+/// The care relationship resources carry the DEMOGRAPHIC API's need on
+/// every method, the patient's own credential included (#6076).
+#[test]
+fn the_care_relationship_resources_need_what_the_demographic_api_needs() {
+    let table = routes();
+    let ext = "/ferroehr/rest/extensions/v1";
+    for (method, template) in [
+        (Method::GET, format!("{ext}/care_relationship")),
+        (Method::POST, format!("{ext}/care_relationship")),
+        (
+            Method::GET,
+            format!("{ext}/care_relationship/{{relationship_uid}}"),
+        ),
+        (
+            Method::PUT,
+            format!("{ext}/care_relationship/{{relationship_uid}}"),
+        ),
+        (
+            Method::DELETE,
+            format!("{ext}/care_relationship/{{relationship_uid}}"),
+        ),
+        (
+            Method::GET,
+            format!("{ext}/demographic/person/{{uid_based_id}}/care_relationship"),
+        ),
+        (
+            Method::POST,
+            format!("{ext}/demographic/person/{{uid_based_id}}/care_relationship"),
+        ),
+        (
+            Method::GET,
+            format!("{ext}/versioned_care_relationship/{{relationship_uid}}/revision_history"),
+        ),
+    ] {
+        assert_eq!(
+            table.need(&method, Some(&template), &template),
+            Need::Demographic(table.product()),
+            "{method} {template}"
+        );
+    }
+}
+
 /// The patient writes a standalone relationship; reading one is the DEMOGRAPHIC API's.
 #[test]
 fn a_patient_writes_a_standalone_relationship_and_reads_none() {

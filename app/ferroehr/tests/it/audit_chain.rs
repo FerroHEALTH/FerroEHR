@@ -665,7 +665,8 @@ fn changed_value(column: &str, data_type: &str) -> Option<String> {
     Some(value)
 }
 
-/// The columns version 2 adds to the 0017 list (`0023_binding_outcome.sql`).
+/// The columns version 2 adds to version 1's list (the v5 binding-outcome
+/// change).
 const VERSION_2_COLUMNS: [&str; 13] = [
     "binding",
     "party",
@@ -682,11 +683,12 @@ const VERSION_2_COLUMNS: [&str; 13] = [
     "digest_version",
 ];
 
-/// The column version 3 adds to version 2's list (`0026_token_attributes.sql`).
+/// The column version 3 adds to version 2's list (the v5 token-attributes
+/// change).
 const VERSION_3_COLUMNS: [&str; 1] = ["token_attributes"];
 
-/// The column version 4 drops from version 3's list
-/// (`0032_drop_access_organisation.sql`).
+/// The column version 4 drops from version 3's list (the v5 change that
+/// dropped the access organisation).
 const VERSION_4_DROPPED: [&str; 1] = ["organisation"];
 
 /// The digest of version 4 lists every column of the record but the unhashed

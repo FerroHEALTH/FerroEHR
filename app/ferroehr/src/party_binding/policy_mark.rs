@@ -57,8 +57,8 @@ pub const CLIENT_ID: &str = "client_id";
 
 /// The SQL/JSON path that holds exactly when `policy_content` finds content.
 ///
-/// The party migration `0044_access_terminology.sql` and `mark_stored` test
-/// each version's body with it, and a test runs both over one set of bodies.
+/// `mark_stored` tests each version's body with it, and a test runs it and
+/// the content test over one set of bodies.
 pub const POLICY_PATH: &str = "$ ? (\
 exists($.**?(@._type == \"CAPABILITY\").credentials.**?(@._type == \"DV_CODED_TEXT\" \
 && @.defining_code.terminology_id.value == \"openehr_access\")) \
@@ -444,22 +444,5 @@ mod tests {
                     .expect("the path runs");
             assert_eq!(held, expected.is_some(), "{body}");
         }
-    }
-
-    /// The party migration that adds the mark tests the stored bodies with
-    /// [`POLICY_PATH`] as [`mark_stored`] does.
-    #[test]
-    fn the_migration_marks_by_the_same_path() {
-        let migration = include_str!("../../migrations/party/0044_access_terminology.sql");
-        assert!(
-            migration.contains(&format!(
-                "jsonb_path_exists(v.body::jsonb, '{POLICY_PATH}')"
-            )),
-            "the migration's path:\n'{POLICY_PATH}'"
-        );
-        assert!(
-            migration.contains("WHERE v.vo_id = h.vo_id AND v.body IS NOT NULL"),
-            "the migration's join"
-        );
     }
 }

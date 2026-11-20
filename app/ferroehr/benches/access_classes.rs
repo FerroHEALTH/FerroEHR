@@ -165,7 +165,12 @@ fn main() {
         let mut admitted = 0usize;
         for read in &sample {
             for cared in [true, false] {
-                admitted += usize::from(access.judge(None, Some(read), cared).admits_any());
+                let care = if cared {
+                    ferroehr::access_eval::care_tie::Cared::Left
+                } else {
+                    ferroehr::access_eval::care_tie::Cared::No
+                };
+                admitted += usize::from(access.judge(None, Some(read), &care).admits_any());
             }
         }
         let decision_ns = started

@@ -24,7 +24,7 @@ pub(super) fn simplified(pred: &Pred) -> Pred {
         Pred::All(preds) => folded(Pred::all(preds.iter().map(simplified).collect()), true),
         Pred::Any(preds) => folded(Pred::any(preds.iter().map(simplified).collect()), false),
         Pred::Data(data, _) if covers_nothing(data) => Pred::False,
-        Pred::True | Pred::False | Pred::Data(..) | Pred::Ehr(_) => pred.clone(),
+        Pred::True | Pred::False | Pred::Data(..) | Pred::Ehr(_) | Pred::Care(_) => pred.clone(),
     }
 }
 
@@ -54,12 +54,12 @@ fn folded(pred: Pred, all: bool) -> Pred {
     }
 }
 
-/// Whether the SQL of `pred` is never unknown: every data atom is null-safe,
-/// and a fact of the EHR is read from its settings row, where it may be
-/// absent.
+/// Whether the SQL of `pred` is never unknown: every data atom and care probe
+/// is null-safe, and a fact of the EHR is read from its settings row, where
+/// it may be absent.
 fn two_valued(pred: &Pred) -> bool {
     match pred {
-        Pred::True | Pred::False | Pred::Data(..) => true,
+        Pred::True | Pred::False | Pred::Data(..) | Pred::Care(_) => true,
         Pred::Ehr(_) => false,
         Pred::Not(inner) => two_valued(inner),
         Pred::All(preds) | Pred::Any(preds) => preds.iter().all(two_valued),
