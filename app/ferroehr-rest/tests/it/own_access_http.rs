@@ -225,5 +225,8 @@ async fn a_token_whose_patient_claim_differs_from_its_fhir_user_is_not_the_perso
     let credential = patient_token("p-1", "p-2", PATIENT_SCOPES, Some(&launch));
 
     let (code, body) = get(&app, &format!("/ehr/{launch}"), &credential).await;
-    assert!(!refused_with(&body, "refused-wrong-marker"), "{code}: {body}");
+    assert!(
+        !refused_with(&body, "refused-wrong-marker"),
+        "{code}: {body}"
+    );
 }

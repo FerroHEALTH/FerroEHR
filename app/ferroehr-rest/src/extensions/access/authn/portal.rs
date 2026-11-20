@@ -194,7 +194,9 @@ async fn own_context(
         Ok(ehr) => service
             .ehr_subject_person(ferroehr::ids::EhrId(ehr))
             .await
-            .map_err(unavailable("the subject of the launch EHR could not be read"))?,
+            .map_err(unavailable(
+                "the subject of the launch EHR could not be read",
+            ))?,
         Err(_not_an_ehr_id) => None,
     };
     if subject.is_some_and(|subject| subject.to_string().eq_ignore_ascii_case(own.id())) {
