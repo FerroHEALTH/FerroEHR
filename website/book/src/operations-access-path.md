@@ -81,6 +81,21 @@ instance whose own commit made the change drops its copy before it answers. In `
 `access_copy_refills` and `access_copy_drops` the `copy` label is `binding`
 for the lookups and `party_name` for the names.
 
+## The definition copies
+
+Each instance keeps the Web Template it built from each stored template and
+the archetype specialisation lineage AQL widens an archetype predicate with
+(the `web_template` and `archetype_lineage` caches below). Every template or
+ADL2 artefact upload and delete moves a definition revision in its own
+transaction, and a request reads that revision in the same indexed read as the
+policy heads. When the revision moved, the instance drops both caches before
+the request answers, so after a template delete or replacement, or an ADL2
+artefact write, on any instance, the next FLAT or STRUCTURED commit, `wt+json`
+read and AQL query on every instance uses what the store holds. No
+notification and no time-to-live decides it. A lineage that cannot be read
+refuses the query with `503`, so a query never matches fewer rows than the
+store holds.
+
 ## The per-EHR access copy and the class copy
 
 The `ehr_access` copy holds at most 4096 EHRs' settings, and beside them the
