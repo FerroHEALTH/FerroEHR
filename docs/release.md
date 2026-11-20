@@ -216,8 +216,23 @@ full report in the `perf-verdict` job's summary and log. A run that could not
 be judged is never accepted. `pr-guards.yml` re-runs `perf-verdict` alone
 when the label or the description changes, so the measurement is not
 repeated. On a push to `main` the verdict reads the pull request that merged
-the commit. The release's `performance` job reads no acceptance. No openEHR
-spec governs this: our own design.
+the commit. No openEHR spec governs this: our own design.
+
+The release's `performance` job runs the same gate against the previous
+published release and honours the same acceptances
+(`scripts/perf/accepted.sh release`, #5927). A breach passes there only when
+a pull request merged into the milestone titled as the tag carries the
+`perf-accepted` label and a `Perf-accepted:` line naming that metric, and the
+named issue carries the "accepted" comment of the code owner of the default
+branch. The job verifies each acceptance again when it runs, with the same
+check `perf-verdict` uses, so a label removed, a description edited, or a
+comment written by anyone else no longer counts. A closed, unmerged pull
+request claims nothing. Each honoured acceptance is listed with its pull
+request, its issue and the comment's link in an "Accepted breaches" table
+after the gate's report, in the job summary and the `perf-guard` artifact,
+with a warning per metric. A breach no acceptance covers, or a run that
+could not be judged, still refuses the release. The job accepts nothing on
+its own and widens no tolerance.
 
 ### Reading the report
 
