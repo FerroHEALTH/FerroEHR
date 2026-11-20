@@ -829,7 +829,7 @@ mod tests {
             &env(&[
                 (
                     "FERROEHR__PRIVACY__SUBJECT_NAMESPACES",
-                    "urn:ferroehr:pseudonym,mpi.example",
+                    "urn:example:pseudonym,mpi.example",
                 ),
                 ("FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR", "true"),
                 // The explicit standalone opt-in, without which the default
@@ -841,7 +841,7 @@ mod tests {
         assert_eq!(
             c.privacy.subject_namespaces,
             vec![
-                "urn:ferroehr:pseudonym".to_owned(),
+                "urn:example:pseudonym".to_owned(),
                 "mpi.example".to_owned()
             ]
         );

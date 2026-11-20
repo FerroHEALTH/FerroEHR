@@ -236,6 +236,7 @@ data:
     [api]
       base_path = "/ferroehr/rest/openehr/v1"
       body_limit = "16MiB"
+      system_id = "cdr.example.com"
     
     [audit]
       enabled = true
@@ -528,7 +529,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 5e99b0023891c621194aff39e369691c089e5ac45c2b4836abea416bac10fbf6
+        checksum/config: c0aa8a37d42369978105a6c0359e7ca32737fc1a974aa764e7e4d311aaeaa5b1
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

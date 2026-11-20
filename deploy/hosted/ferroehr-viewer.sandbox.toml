@@ -15,6 +15,9 @@
 # The public REST base — the viewer's BFF calls the same origin a visitor's
 # own tooling calls, never a private channel.
 base_url = "https://sandbox.ferroehr.eu"
+# The CDR's [api] basic_issuer: its system id, the host of its public base
+# URL, under which it issues the Basic login a commit's placeholder names.
+basic_issuer = "sandbox.ferroehr.eu"
 
 [session]
 # The sessions live in one sealed cookie, so a viewer restart keeps them; a

@@ -48,7 +48,7 @@ CARE_WRITER_SCOPED=""
 readonly ACT_CODE=2.16.840.1.113883.5.25
 readonly ACT_REASON=2.16.840.1.113883.5.8
 # The code system and code of the clinician's functional role.
-readonly ROLE_SYSTEM=urn:ferroehr:perf:roles
+readonly ROLE_SYSTEM=urn:example:perf:roles
 readonly ROLE_CODE=INFECTIOUS_DISEASE
 # What access_seed creates: the care team, the professional the mental-health
 # restriction excepts and the subjects' representative (parties the

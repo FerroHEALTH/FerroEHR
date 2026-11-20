@@ -593,7 +593,7 @@ services:
       - --operation
       - scim_provision
       - --element
-      - binding_issuer=urn:ferroehr:basic-user
+      - binding_issuer=urn:example:basic-user
       - --element
       - token_scope=ferroehr/scim
     tmpfs:
@@ -908,10 +908,10 @@ configs:
 
       [[auth.party]]
       issuer = "https://basic-users.ferroehr.invalid"
-      identifier_issuer = "urn:ferroehr:basic-user"
+      identifier_issuer = "urn:example:basic-user"
       identifier_type = "login"
       group_claim = "groups"
-      group_identifier_issuer = "urn:ferroehr:groups"
+      group_identifier_issuer = "urn:example:groups"
 
       # The quickstart user: ferroehr / ferroehr (the hash is Argon2id of
       # "ferroehr"). Replace with your own users — or an [auth] issuer — before
@@ -933,7 +933,7 @@ configs:
 
       [[authz.party_binding.basic_user]]
       user = "ferroehr"
-      key_issuer = "urn:ferroehr:basic-user"
+      key_issuer = "urn:example:basic-user"
       key = "ferroehr"
 
       # The SCIM endpoint the ferroehr-provision one-shot provisions the quickstart
@@ -1047,10 +1047,10 @@ configs:
 
       [[auth.party]]
       issuer = "https://basic-users.ferroehr.invalid"
-      identifier_issuer = "urn:ferroehr:basic-user"
+      identifier_issuer = "urn:example:basic-user"
       identifier_type = "login"
       group_claim = "groups"
-      group_identifier_issuer = "urn:ferroehr:groups"
+      group_identifier_issuer = "urn:example:groups"
 
       # The quickstart user: ferroehr / ferroehr (the hash is Argon2id of
       # "ferroehr"). Replace with your own users — or an [auth] issuer — before
@@ -1072,7 +1072,7 @@ configs:
 
       [[authz.party_binding.basic_user]]
       user = "ferroehr"
-      key_issuer = "urn:ferroehr:basic-user"
+      key_issuer = "urn:example:basic-user"
       key = "ferroehr"
 
       # The SCIM endpoint the ferroehr-provision one-shot provisions the quickstart

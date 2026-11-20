@@ -98,6 +98,12 @@ config:
     # The one gap this overlay accepts, and why: see plaintext_listener above.
     accepts: [plaintext_listener]
 
+  # The system that authors this deployment's data, stamped into every
+  # EHR, AUDIT_DETAILS and version id: a production deployment names it, by
+  # this key or by server.public_base_url, and refuses to start without one.
+  api:
+    system_id: cdr.example.com
+
 
   auth:
     # Your identity provider. The server reads its metadata and signing keys
