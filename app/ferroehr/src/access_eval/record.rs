@@ -694,7 +694,7 @@ mod tests {
                 "refused-consent-denied" => 3,
                 "refused-purpose-missing" => 4,
                 "refused-policy-denied" => 5,
-                "refused-sensitivity" => 6,
+                "refused-sensitivity" | "refused-confidentiality" => 6,
                 "refused-no-care-relationship" => 7,
                 "refused-consent-required" => 8,
                 "refused-not-subject"
