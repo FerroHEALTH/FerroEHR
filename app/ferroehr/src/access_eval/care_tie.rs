@@ -35,7 +35,7 @@ use openehr_rm::draft::access_control::terminology::{
 };
 use uuid::Uuid;
 
-use crate::party_binding::grants::caller::care_of::{CareOf, CarerKind, ProviderKey};
+use crate::party_binding::grants::caller::care_of::{CareOf, CarerKind, Cover, ProviderKey};
 use crate::party_binding::grants::caller::facts::CallerFacts;
 
 /// One live care relationship by which the caller holds the subject.
@@ -65,8 +65,8 @@ pub struct Grant {
     pub provider: ProviderKey,
     /// Whether it had ended and the grace after its end admitted the access.
     pub in_grace: bool,
-    /// The carer it covers for.
-    pub covers_for: Option<ProviderKey>,
+    /// The carer it covers for, with its kind.
+    pub covers_for: Option<Cover>,
 }
 
 impl Tie {

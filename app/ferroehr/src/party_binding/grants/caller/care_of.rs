@@ -112,10 +112,10 @@ pub(crate) struct CareFact {
     /// Whether its `basis` is `self_declared`: written by the professional
     /// it names.
     pub(crate) self_declared: bool,
-    /// The carer it covers for, by the `issuer` and `id` of its `covers_for`
-    /// `DV_IDENTIFIER`, written in the provider's form; `None` when it names
-    /// none.
-    pub(crate) covers_for: Option<ProviderKey>,
+    /// The carer it covers for, by the `issuer`, `id` and `type` of its
+    /// `covers_for` `DV_IDENTIFIER`, written in the provider's form; `None`
+    /// when it names none.
+    pub(crate) covers_for: Option<Cover>,
 }
 
 /// Pushes onto `facts` the care relationship `body`, a `PARTY_RELATIONSHIP`
@@ -152,7 +152,7 @@ pub(crate) fn read<'a, T: Tree<'a>>(body: T, facts: &mut GrantFacts) {
             Some(cover) if carer == Some(cover.carer) => {
                 Err("its covers_for names its target, which never covers for itself".to_owned())
             }
-            cover => Ok(cover.map(|cover| cover.key)),
+            cover => Ok(cover.map(|cover| cover.cover)),
         })
         .map_err(|why| wrong.push(why))
         .ok();
@@ -271,15 +271,32 @@ pub(crate) fn organisation<'a, T: Tree<'a>>(value: T) -> Result<ProviderKey, Str
     }
 }
 
+/// The carer a care relationship covers for, as the caller fact keeps it:
+/// the `issuer` and `id` of its `covers_for` `DV_IDENTIFIER` and the kind its
+/// `type` names.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Cover {
+    /// The identifier's `issuer` and `id`.
+    pub key: ProviderKey,
+    /// What the carer is, as the identifier's `type` names it.
+    pub kind: CarerKind,
+}
+
+impl Cover {
+    /// The carer `key` names, of `kind`.
+    #[must_use]
+    pub fn new(key: ProviderKey, kind: CarerKind) -> Self {
+        Self { key, kind }
+    }
+}
+
 /// The carer a care relationship covers for, as its `covers_for` names it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CoversFor {
-    /// The identifier's `issuer` and `id`, as the caller fact stores them.
-    pub(crate) key: ProviderKey,
+    /// The identifier, as the caller fact stores it.
+    pub(crate) cover: Cover,
     /// The container its `id` names.
     pub(crate) carer: Uuid,
-    /// The kind its `type` names.
-    pub(crate) kind: CarerKind,
 }
 
 /// The carer the care relationship `body` covers for: its `covers_for`
@@ -302,9 +319,8 @@ pub(crate) fn covers_for<'a, T: Tree<'a>>(body: T) -> Result<Option<CoversFor>, 
     let kind = identifier.r#type.as_deref().and_then(CarerKind::of);
     match (issuer, container(&identifier.id), kind) {
         (Some(issuer), Some(carer), Some(kind)) => Ok(Some(CoversFor {
-            key: ProviderKey::new(issuer, identifier.id),
+            cover: Cover::new(ProviderKey::new(issuer, identifier.id), kind),
             carer,
-            kind,
         })),
         _ => Err(
             "its covers_for names the carer it replaces by the namespace of its reference as \
@@ -347,7 +363,7 @@ pub struct CareOf {
     writer: Option<Uuid>,
     self_declared: bool,
     held: Option<Held>,
-    covers_for: Option<ProviderKey>,
+    covers_for: Option<Cover>,
 }
 
 /// Where a care relationship is stored: its own `PARTY_RELATIONSHIP`
@@ -383,7 +399,7 @@ impl CareOf {
         mut self,
         (relationship, version): (Uuid, Option<String>),
         carer_kind: CarerKind,
-        covers_for: Option<ProviderKey>,
+        covers_for: Option<Cover>,
     ) -> Self {
         self.held = Some(Held {
             relationship,
@@ -416,7 +432,7 @@ impl CareOf {
 
     /// The carer it covers for; `None` when it names none.
     #[must_use]
-    pub fn covers_for(&self) -> Option<&ProviderKey> {
+    pub fn covers_for(&self) -> Option<&Cover> {
         self.covers_for.as_ref()
     }
 
@@ -546,9 +562,10 @@ impl crate::memory::Weigh for CareOf {
                 .map_or(0, String::capacity),
             self.covers_for.as_ref().map_or(0, |covers| {
                 covers
+                    .key
                     .issuer
                     .capacity()
-                    .saturating_add(covers.id.capacity())
+                    .saturating_add(covers.key.id.capacity())
             }),
         ]
         .into_iter()
@@ -693,7 +710,10 @@ mod tests {
             read.facts.as_slice(),
             [CallerFact {
                 value: FactValue::Care(CareFact {
-                    covers_for: Some(ProviderKey { issuer, id }),
+                    covers_for: Some(Cover {
+                        key: ProviderKey { issuer, id },
+                        kind: CarerKind::Person,
+                    }),
                     ..
                 }),
                 ..

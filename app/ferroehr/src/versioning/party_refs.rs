@@ -241,7 +241,7 @@ pub(crate) fn of_body<'a, T: Tree<'a>>(kind: Kind, body: T) -> Vec<Reference> {
             {
                 out.push(Reference {
                     container: Some(cover.carer),
-                    referent: Referent::Carer(cover.kind),
+                    referent: Referent::Carer(cover.cover.kind),
                     path: "PARTY_RELATIONSHIP.details.covers_for".to_owned(),
                 });
             }

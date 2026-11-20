@@ -24,7 +24,7 @@ use serde_json::Value;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
-use super::care_of::{CareFact, CarerKind, ProviderKey};
+use super::care_of::{CareFact, CarerKind, Cover, ProviderKey};
 use super::{CallerFact, FactKind, FactValue};
 use crate::party_binding::grants::derive::Bound;
 use crate::party_binding::grants::store::{CHANNEL, GrantHead, Term};
@@ -37,7 +37,7 @@ macro_rules! fact_columns {
     () => {
         "f.holder_id, f.kind, f.terminology_id, f.code_string, f.target_id, f.target_kind, \
          f.provider_issuer, f.provider_id, f.self_declared, f.writer_id, f.lifecycle_state, \
-         f.holder_version, f.covers_issuer, f.covers_id, \
+         f.holder_version, f.covers_issuer, f.covers_id, f.covers_kind, \
          isempty(f.role_validity) AS role_empty, \
          lower(f.role_validity) AS role_lower, upper(f.role_validity) AS role_upper, \
          isempty(f.validity) AS empty, lower(f.validity) AS lower, upper(f.validity) AS upper, \
@@ -133,7 +133,7 @@ const DECLARED: &str = "SELECT r.namespace, r.subject_id FROM binding_caller_fac
 const FACT_TEXT: &str = "ROW(kind, ordinal, party_id, terminology_id, code_string, target_id, \
      target_kind, provider_issuer, provider_id, self_declared, writer_id, lifecycle_state, \
      role_validity, validity, not_before, not_after, holder_version, covers_issuer, \
-     covers_id)::text";
+     covers_id, covers_kind)::text";
 
 /// The party that wrote the trunk head of the holder `$1`: the container its
 /// commit audit's committer names in `external_ref`, the bound `PERSON` of a
@@ -193,9 +193,10 @@ impl crate::memory::Weigh for FactRow {
                 .saturating_add(care.provider.id.capacity())
                 .saturating_add(care.covers_for.as_ref().map_or(0, |covers| {
                     covers
+                        .key
                         .issuer
                         .capacity()
-                        .saturating_add(covers.id.capacity())
+                        .saturating_add(covers.key.id.capacity())
                 })),
         };
         value
@@ -332,21 +333,6 @@ fn care_of(fact: &CallerFact) -> Option<&CareFact> {
     }
 }
 
-/// The issuer and the id of the `covers_for` each of `facts` names, `None`
-/// for a fact that names none.
-fn covers_of(facts: &[CallerFact]) -> (Vec<Option<&str>>, Vec<Option<&str>>) {
-    facts
-        .iter()
-        .map(|f| {
-            let covers = care_of(f).and_then(|care| care.covers_for.as_ref());
-            (
-                covers.map(|covers| covers.issuer.as_str()),
-                covers.map(|covers| covers.id.as_str()),
-            )
-        })
-        .unzip()
-}
-
 /// Inserts `facts` of `head` about `party`; the inserted rows as their party
 /// and text.
 async fn insert(
@@ -394,7 +380,13 @@ async fn insert(
         .iter()
         .map(|f| care_of(f).is_some_and(|care| care.self_declared))
         .collect();
-    let (covers_issuer, covers_id) = covers_of(facts);
+    let covers: Vec<Option<&Cover>> = facts
+        .iter()
+        .map(|f| care_of(f).and_then(|care| care.covers_for.as_ref()))
+        .collect();
+    let covers_issuer: Vec<_> = covers.iter().map(|c| c.map(|c| &*c.key.issuer)).collect();
+    let covers_id: Vec<_> = covers.iter().map(|c| c.map(|c| &*c.key.id)).collect();
+    let covers_kind: Vec<_> = covers.iter().map(|c| c.map(|c| c.kind.rm_type())).collect();
     let validity: Vec<Option<&Value>> = facts.iter().map(|f| f.validity.as_ref()).collect();
     let unreadable: Vec<bool> = facts
         .iter()
@@ -407,7 +399,7 @@ async fn insert(
              (holder_id, ordinal, kind, party_id, terminology_id, code_string, target_id, \
               target_kind, provider_issuer, provider_id, self_declared, writer_id, \
               lifecycle_state, role_validity, validity, not_before, not_after, \
-              holder_version, covers_issuer, covers_id) \
+              holder_version, covers_issuer, covers_id, covers_kind) \
          SELECT $1, t.ordinal, t.kind, $2, t.terminology_id, t.code_string, t.target_id, \
                 t.target_kind, t.provider_issuer, t.provider_id, t.self_declared, writer.id, $3, \
                 party.binding_validity($4::jsonb), \
@@ -416,14 +408,15 @@ async fn insert(
                           AND NOT isempty(party.binding_validity(t.validity)) \
                      THEN daterange(lower(party.binding_validity(t.validity)), c.effective_until) \
                      ELSE party.binding_validity(t.validity) END, \
-                t.not_before, t.not_after, holder.version, t.covers_issuer, t.covers_id \
+                t.not_before, t.not_after, holder.version, t.covers_issuer, t.covers_id, \
+                t.covers_kind \
          FROM unnest($5::integer[], $6::text[], $7::text[], $8::text[], $9::uuid[], \
                      $10::text[], $11::text[], $12::text[], \
                      $13::jsonb[], $14::boolean[], $15::timestamptz[], $16::timestamptz[], \
-                     $17::boolean[], $18::text[], $19::text[]) \
+                     $17::boolean[], $18::text[], $19::text[], $20::text[]) \
               AS t(ordinal, kind, terminology_id, code_string, target_id, target_kind, \
                    provider_issuer, provider_id, validity, unreadable, not_before, not_after, \
-                   self_declared, covers_issuer, covers_id) \
+                   self_declared, covers_issuer, covers_id, covers_kind) \
          CROSS JOIN (SELECT {WRITER} AS id) writer \
          CROSS JOIN (SELECT {HOLDER_VERSION} AS version) holder \
          LEFT JOIN binding_care_validity c ON c.vo_id = $1 \
@@ -450,6 +443,7 @@ async fn insert(
         .bind(&self_declared)
         .bind(&covers_issuer)
         .bind(&covers_id)
+        .bind(&covers_kind)
         .fetch_all(&mut *tx)
         .await?)
 }
@@ -705,12 +699,22 @@ fn fact_row(holder: Uuid, row: &sqlx::postgres::PgRow) -> Result<FactRow, Storag
     let provider_issuer: Option<String> = row.try_get("provider_issuer")?;
     let provider_id: Option<String> = row.try_get("provider_id")?;
     let self_declared: bool = row.try_get("self_declared")?;
+    let covers_kind: Option<String> = row.try_get("covers_kind")?;
     let covers_for = match (
         row.try_get::<Option<String>, _>("covers_issuer")?,
         row.try_get::<Option<String>, _>("covers_id")?,
+        covers_kind.as_deref().map(CarerKind::of),
     ) {
-        (Some(issuer), Some(id)) => Some(ProviderKey::new(issuer, id)),
-        _ => None,
+        (None, None, None) => None,
+        (Some(issuer), Some(id), Some(Some(kind))) => {
+            Some(Cover::new(ProviderKey::new(issuer, id), kind))
+        }
+        _ => {
+            return Err(StorageError::InvalidRows(
+                "binding_caller_fact holds a covers_for ck_binding_caller_fact_covers refuses"
+                    .to_owned(),
+            ));
+        }
     };
     let care = (
         target_kind.as_deref().and_then(CarerKind::of),
