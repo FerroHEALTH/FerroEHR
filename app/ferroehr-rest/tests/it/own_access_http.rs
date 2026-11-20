@@ -27,7 +27,7 @@ use ferroehr_rest::state::AppState;
 use ferrohealth_smart::party::source::{Lookup, PartyRecord, PartySource, Query, SourceError};
 use ferrohealth_smart::party::{Markers, PartyRef, PartyState};
 use http::StatusCode;
-use serde_json::{Value, json};
+use serde_json::json;
 
 use crate::common::{self, BASE};
 use crate::party_binding_http::{service, token};
@@ -52,7 +52,6 @@ impl PartySource for Source {
     ) -> std::pin::Pin<Box<dyn Future<Output = Result<Lookup, SourceError>> + Send + 'a>> {
         let parties = self
             .0
-            .clone()
             .map(|markers| {
                 PartyRecord::new(
                     PartyRef::new("demographic", "PERSON", PERSON),
@@ -123,9 +122,7 @@ async fn get(app: &Router, path: &str, credential: &str) -> (StatusCode, String)
 
 /// The body of a refusal names the binding code it was refused with.
 fn refused_with(body: &str, code: &str) -> bool {
-    serde_json::from_str::<Value>(body)
-        .map(|value| value.to_string().contains(code))
-        .unwrap_or_else(|_| body.contains(code))
+    body.contains(code)
 }
 
 #[tokio::test]
