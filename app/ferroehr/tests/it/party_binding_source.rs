@@ -9,9 +9,11 @@
 //! professional is a `PERSON` of a mapped template whose `roles` list a `ROLE`
 //! of the mapped role template that names it as `performer` (RM demographic
 //! `org.openehr.rm.demographic.actor.adoc`, `org.openehr.rm.demographic.role.adoc`);
-//! a membership and a representation are inline `PARTY_RELATIONSHIP`s of
-//! their source (`master02-demographic_package.adoc` §Party Relationships),
-//! a representation recognised by its code in any archetype.
+//! a membership is an inline `PARTY_RELATIONSHIP` of its source
+//! (`master02-demographic_package.adoc` §Party Relationships), and a
+//! representation a `PARTY_RELATIONSHIP` of its own named `represents`, with
+//! its basis and provider, in any archetype (draft access control package,
+//! The Relationship Store).
 //! The states are the `version_lifecycle_state` codes of RM common
 //! `master06-change_control_package.adoc` §Version Lifecycle. Resolving a
 //! login to a party is governed by no openEHR spec: our own design.
@@ -30,12 +32,15 @@ use sqlx::Row;
 
 use crate::fixtures::{delete_precondition, if_match, object, written_vo};
 use ferroehr::ids::VoId;
+use ferroehr::party_binding::grants::caller::care_of::ProviderKey;
 use ferroehr::party_binding::source::LocalPartySource;
 use ferroehr::party_binding::{BindingMapping, IdentifierSelector};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::party_set::NewParty;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
+use ferroehr::versioning::committer::bound::{BoundDetails, PortalParty};
+use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 
 /// The template of a professional's `PERSON`.
 pub(crate) const PERSON_TEMPLATE: &str = "FerroEHR professional";
@@ -184,27 +189,59 @@ pub(crate) fn role(template: &str, performer: VoId, validity: Option<Value>) -> 
     body
 }
 
-/// A representation `PARTY_RELATIONSHIP` of `archetype` from `source` to
-/// `target`: its name the openEHR `subject_relationship` code `code`, and its
-/// details the representation code of the draft access terminology.
-fn representation(
+/// The provider every representation below is recorded for.
+pub(crate) const PROVIDER: (&str, &str) = ("urn:example:providers", "hospital");
+
+/// A representation of its own from the `PERSON` `source` to the `PERSON`
+/// `target`, of `archetype`: named `represents`, its `basis` the HL7
+/// `RoleCode` `basis`, its `provider` [`PROVIDER`], and the openEHR
+/// `subject_relationship` code `264|guardian|` in its details.
+pub(crate) fn representation(
     archetype: &str,
-    source: (&str, VoId),
-    target: (&str, VoId),
-    code: &str,
+    (source, target): (VoId, VoId),
+    basis: &str,
     validity: Option<Value>,
 ) -> Value {
-    let mut body = relationship(archetype, source, target, code, validity);
-    body["name"]["defining_code"]["terminology_id"]["value"] = json!("openehr");
+    let coded = |terminology: &str, code: &str| {
+        json!({ "_type": "DV_CODED_TEXT", "value": code,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+                "code_string": code } })
+    };
+    let access = ferroehr::party_binding::policy_mark::TERMINOLOGY;
+    let mut body = relationship(
+        archetype,
+        ("PERSON", source),
+        ("PERSON", target),
+        "x",
+        validity,
+    );
+    body["name"] = coded(access, "represents");
     body["details"] = json!({ "_type": "ITEM_TREE", "archetype_node_id": "at0002",
         "name": text("details"),
-        "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003",
-            "name": text("Representation code"),
-            "value": { "_type": "DV_CODED_TEXT", "value": "represents",
-                "defining_code": { "_type": "CODE_PHRASE",
-                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
-                    "code_string": "represents" } } }] });
+        "items": [
+            { "_type": "ELEMENT", "archetype_node_id": "at0003",
+              "name": coded(access, "basis"), "value": coded("HL7_RoleCode", basis) },
+            { "_type": "ELEMENT", "archetype_node_id": "at0004",
+              "name": coded(access, "provider"),
+              "value": { "_type": "DV_IDENTIFIER", "issuer": PROVIDER.0, "id": PROVIDER.1,
+                         "type": "ORGANISATION" } },
+            { "_type": "ELEMENT", "archetype_node_id": "at0005",
+              "name": text("relationship"), "value": coded("openehr", "264") }] });
+    body["archetype_details"] = json!({ "_type": "ARCHETYPED", "rm_version": "1.1.0",
+        "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype } });
     body
+}
+
+/// Commits `body`, a `PARTY_RELATIONSHIP` of its own, returning its
+/// container.
+async fn commit_relationship(svc: &FerroEhrService, body: &Value) -> VoId {
+    Box::pin(crate::fixtures::create_relationship(
+        svc,
+        version(body, "532", None),
+    ))
+    .await
+    .expect("the relationship commits")
 }
 
 /// A `PARTY_RELATIONSHIP` of `archetype` from `source` to `target`, of the
@@ -1052,31 +1089,43 @@ async fn a_representative_reports_only_its_live_subjects() {
     let value = "5e6f7a8b-9c0d-4e1f-8a2b-4c5d6e7f8a9b";
     let body = person(PERSON_TEMPLATE, &[key(value)]);
     let (vo, uid) = create(&svc, PartyKind::Person, &body).await;
-    let mut representing = body;
-    representing["relationships"] = json!([
-        representation(
-            REPRESENTATION,
-            ("PERSON", vo),
-            ("PERSON", subject),
-            "264",
-            None
-        ),
-        representation(
-            REPRESENTATION,
-            ("PERSON", vo),
-            ("PERSON", former),
-            "264",
-            Some(interval(Some("2020-01-01"), Some("2025-12-31"))),
-        ),
-        relationship(
-            REPRESENTATION,
-            ("PERSON", vo),
-            ("PERSON", former),
-            "at0010",
-            None
-        ),
-    ]);
-    update(&svc, PartyKind::Person, vo, &uid, &representing, "532").await;
+    commit_relationship(
+        &svc,
+        &representation(REPRESENTATION, (vo, subject), "GUARD", None),
+    )
+    .await;
+    let ended = Some(interval(Some("2020-01-01"), Some("2025-12-31")));
+    commit_relationship(
+        &svc,
+        &representation(REPRESENTATION, (vo, former), "GUARD", ended),
+    )
+    .await;
+    let mut plain = relationship(
+        REPRESENTATION,
+        ("PERSON", vo),
+        ("PERSON", former),
+        "at0010",
+        None,
+    );
+    plain["archetype_details"] =
+        representation(REPRESENTATION, (vo, former), "GUARD", None)["archetype_details"].clone();
+    commit_relationship(&svc, &plain).await;
+    // NOTE: draft access control package, The Relationship Store: a representation held in
+    // its source's relationships is refused, naming the resource that holds it.
+    let mut inline = body.clone();
+    inline["relationships"] = json!([representation(REPRESENTATION, (vo, subject), "GUARD", None)]);
+    let refused = Box::pin(svc.party_update(
+        PartyKind::Person,
+        object(vo.to_string()),
+        if_match(&uid),
+        version(&inline, "532", Some(&uid)),
+    ))
+    .await
+    .expect_err("an inline representation is refused");
+    assert!(
+        format!("{refused:?}").contains("/demographic/party_relationship"),
+        "{refused:?}"
+    );
 
     let found = lookup(&svc, value).await;
     let Lookup::Parties(records) = &found else {
@@ -1324,14 +1373,10 @@ async fn a_rebuild_from_the_versions_writes_the_intervals_the_commits_wrote() {
     assert_eq!(intervals(&pool, vo).await, committed);
 }
 
-/// A standalone `PARTY_RELATIONSHIP` carrying the representation code makes
-/// its source a representative with a row of its own, its deletion retires
-/// both, and a refill rebuilds the rows the commits wrote.
+/// A representation of its own makes its source a representative with a
+/// row of its own, admitted only for the provider it names, its deletion
+/// retires both, and a refill rebuilds the rows the commits wrote.
 #[tokio::test]
-#[expect(
-    clippy::disallowed_methods,
-    reason = "a test reads the database on a raw pool connection, outside any request"
-)]
 async fn a_standalone_representation_holds_a_row_of_its_own() {
     let (db, svc) = service().await;
     let pool = db.pool();
@@ -1351,21 +1396,8 @@ async fn a_standalone_representation_holds_a_row_of_its_own() {
     };
     assert_eq!(records.len(), 1, "{found:?}");
     assert_eq!(records[0].markers(), Markers::default(), "{found:?}");
-    let mut body = representation(
-        REPRESENTATION,
-        ("PERSON", proxy),
-        ("PERSON", subject),
-        "253",
-        None,
-    );
-    body["archetype_details"] = json!({ "_type": "ARCHETYPED", "rm_version": "1.1.0",
-        "archetype_id": { "_type": "ARCHETYPE_ID", "value": REPRESENTATION } });
-    let container = Box::pin(crate::fixtures::create_relationship(
-        &svc,
-        version(&body, "532", None),
-    ))
-    .await
-    .expect("the representation commits");
+    let body = representation(REPRESENTATION, (proxy, subject), "DELEGATEE", None);
+    let container = commit_relationship(&svc, &body).await;
 
     let found = lookup(&svc, value).await;
     let Lookup::Parties(records) = &found else {
@@ -1378,7 +1410,22 @@ async fn a_standalone_representation_holds_a_row_of_its_own() {
         .iter()
         .map(|r| (r.subject().clone(), r.relationship().map(str::to_owned)))
         .collect();
-    assert_eq!(subjects, [(person_ref(subject), Some("253".to_owned()))]);
+    assert_eq!(subjects, [(person_ref(subject), Some("264".to_owned()))]);
+    let hospital = [ProviderKey::new(PROVIDER.0, PROVIDER.1)];
+    let other = [ProviderKey::new(PROVIDER.0, "clinic")];
+    assert_eq!(
+        represented(&pool, (proxy, subject), &hospital).await,
+        Some(Some(ferroehr::party_binding::lookup::LiveRepresentation {
+            container: container.0,
+            relationship: Some("264".to_owned()),
+        })),
+        "a live representation for the provider the caller acts for admits it"
+    );
+    assert_eq!(
+        represented(&pool, (proxy, subject), &other).await,
+        Some(None),
+        "a representation for another provider admits nothing"
+    );
 
     let (rows, keys) = (representation_rows(&pool).await, key_rows(&pool).await);
     svc.refill_binding_table().await.expect("the refill runs");
@@ -1412,39 +1459,120 @@ async fn a_standalone_representation_holds_a_row_of_its_own() {
         former(lookup(&svc, value).await),
         [(Markers::REPRESENTATIVE, 0)]
     );
-    let today = jiff::Timestamp::now()
-        .to_zoned(jiff::tz::TimeZone::UTC)
-        .date()
-        .to_string();
-    let representing = || async {
-        let mut conn = pool.acquire().await.expect("a connection");
-        sqlx::query("SET search_path = party, ext, public")
-            .execute(&mut *conn)
-            .await
-            .expect("the party schema");
-        ferroehr::party_binding::lookup::representation_of(&mut conn, proxy.0, subject.0, &today)
-            .await
-            .expect("reads")
-    };
-    assert_eq!(representing().await, Some((false, Some("253".to_owned()))));
+    assert_eq!(
+        represented(&pool, (proxy, subject), &hospital).await,
+        Some(None)
+    );
     svc.refill_binding_table().await.expect("the refill runs");
     assert_eq!(
         former(lookup(&svc, value).await),
         [(Markers::REPRESENTATIVE, 0)]
     );
     assert_eq!(
-        representing().await,
-        Some((false, Some("253".to_owned()))),
+        represented(&pool, (proxy, subject), &hospital).await,
+        Some(None),
         "the refill keeps who once represented whom"
     );
 }
 
-/// The live representation rows, as `(representative, subject, relationship,
-/// container)` text, in a stable order.
+/// A representation written by its own representative admits nothing: the
+/// draft access control decision procedure, Writing Relationships, "a caller
+/// MUST NOT be admitted on a relationship it wrote naming itself". The
+/// writer is the `PERSON` the committer names in `external_ref`.
+#[tokio::test]
+async fn a_representation_its_representative_wrote_admits_nothing() {
+    let (db, svc) = crate::fixtures::service().await;
+    let svc = svc.with_binding_mapping(mapping().with_admin_role("ADMIN"));
+    let pool = db.pool();
+    let (subject, _) = create(&svc, PartyKind::Person, &person(OTHER_TEMPLATE, &[])).await;
+    let (proxy, _) = create(&svc, PartyKind::Person, &person(OTHER_TEMPLATE, &[])).await;
+    let (other, _) = create(&svc, PartyKind::Person, &person(OTHER_TEMPLATE, &[])).await;
+    let identity = CommitterIdentity {
+        subject: "proxy".to_owned(),
+        id_type: "oauth2",
+        issuer: Some(LOGIN.to_owned()),
+        client: None,
+        person: false,
+        party: None,
+        representative: false,
+        bound: Some(BoundDetails {
+            namespace: "demographic".to_owned(),
+            portal: Some(PortalParty {
+                person: proxy.0,
+                relationship: None,
+                login_issuer: LOGIN.to_owned(),
+                login: "proxy".to_owned(),
+            }),
+            ..BoundDetails::default()
+        }),
+        system: false,
+        agent: None,
+        external: None,
+    };
+    let own = representation(REPRESENTATION, (proxy, subject), "GUARD", None);
+    ferroehr::system_log::access_context::with_roles(
+        vec!["ADMIN".to_owned()],
+        with_committer(Some(identity), commit_relationship(&svc, &own)),
+    )
+    .await;
+    let hospital = [ProviderKey::new(PROVIDER.0, PROVIDER.1)];
+    assert_eq!(
+        represented(&pool, (proxy, subject), &hospital).await,
+        Some(None),
+        "a representation written by its representative admits nothing"
+    );
+    commit_relationship(
+        &svc,
+        &representation(REPRESENTATION, (other, subject), "GUARD", None),
+    )
+    .await;
+    assert!(
+        matches!(
+            represented(&pool, (other, subject), &hospital).await,
+            Some(Some(_))
+        ),
+        "one another party wrote admits its representative"
+    );
+}
+
+/// What [`ferroehr::party_binding::lookup::representation_of`] answers for
+/// `representative` and `subject` today, for a caller acting for `providers`.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+async fn represented(
+    pool: &sqlx::PgPool,
+    (representative, subject): (VoId, VoId),
+    providers: &[ProviderKey],
+) -> Option<Option<ferroehr::party_binding::lookup::LiveRepresentation>> {
+    let today = jiff::Timestamp::now()
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .date()
+        .to_string();
+    let mut conn = pool.acquire().await.expect("a connection");
+    sqlx::query("SET search_path = party, ext, public")
+        .execute(&mut *conn)
+        .await
+        .expect("the party schema");
+    ferroehr::party_binding::lookup::representation_of(
+        &mut conn,
+        (representative.0, subject.0),
+        &today,
+        providers,
+    )
+    .await
+    .expect("reads")
+}
+
+/// The live representation rows, as `(representative, subject, basis,
+/// provider, container)` text, in a stable order.
 async fn representation_rows(pool: &sqlx::PgPool) -> Vec<String> {
     sqlx::query_scalar(
         "SELECT representative_id::text || '|' || subject_id::text || '|' \
-                || coalesce(relationship, '') || '|' || coalesce(relationship_id::text, '') \
+                || basis_terminology || '::' || basis_code || '|' \
+                || provider_issuer || '::' || provider_id || '|' \
+                || coalesce(relationship, '') || '|' || relationship_id::text \
          FROM party.binding_representation WHERE retired_at IS NULL ORDER BY 1",
     )
     .fetch_all(pool)

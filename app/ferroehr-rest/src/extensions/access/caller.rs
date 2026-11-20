@@ -43,6 +43,7 @@ use openehr_rm::draft::access_control::terminology::{
 };
 use uuid::Uuid;
 
+use super::authn::attested::Attested;
 use super::authn::trc::TrcPatientEhr;
 use super::authn::{Principal, current_principal};
 use super::authz::AuthzHandle;
@@ -161,7 +162,11 @@ fn caller_of(
             || capabilities.facts().clone(),
             |principal| {
                 let (roles, types) = attested(principal);
-                capabilities.facts().clone().with_attested(roles, types)
+                let facts = capabilities.facts().clone().with_attested(roles, types);
+                match principal.access.extension::<Attested>() {
+                    Some(Attested(attestation)) => facts.with_attestation(Arc::clone(attestation)),
+                    None => facts,
+                }
             },
         ),
         settings,

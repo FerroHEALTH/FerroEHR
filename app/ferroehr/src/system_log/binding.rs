@@ -220,6 +220,9 @@ pub struct Representation {
     pub ground: Option<String>,
     /// The `subject_relationship` code the representative's committer carries.
     pub relationship: Option<String>,
+    /// The `PARTY_RELATIONSHIP` container of the stored representation the
+    /// access rested on; `None` for a refusal, which rests on none.
+    pub relationship_id: Option<String>,
 }
 
 /// The federation agreement an external accessor was admitted under.

@@ -11,7 +11,9 @@
 //! openEHR Terminology group `subject relationship`, an unbound organisation
 //! type is refused since it has no default code system, and a concealed level
 //! is a level of `HL7_Confidentiality` (draft access control Terminology,
-//! Value Sets). A policy that breaks either is refused `422` naming the
+//! Value Sets). An agreement of `attested_care` that sets an `issuer` names
+//! the container of an agreement `ROLE` whose partner holds its client
+//! identifiers under that issuer (owner decision on #6078). A policy that breaks either is refused `422` naming the
 //! attribute, as content that "was well-formed but was unable to be
 //! followed due to semantic errors" (ITS-REST overview
 //! `Requests_and_responses.md` §HTTP status codes). Which failure is `400`
@@ -138,6 +140,7 @@ impl FerroEhrService {
         }
         wrong.extend(self.relationship_codes(facts, policy).await);
         wrong.extend(self.care_purposes(facts, policy).await);
+        wrong.extend(self.attested_issuers(facts).await?);
         if wrong.is_empty() {
             Ok(())
         } else {
@@ -196,6 +199,41 @@ impl FerroEhrService {
             );
         }
         wrong
+    }
+
+    /// The refusals of the agreements `attested_care` names with an
+    /// `issuer` that is not the federation issuer of the partner whose
+    /// agreement `ROLE` the `id` names; an `id` with no issuer is not read
+    /// here, and names no agreement when it names no `ROLE`.
+    async fn attested_issuers(
+        &self,
+        facts: CareFacts<'_>,
+    ) -> Result<Vec<InvariantViolation>, ServiceError> {
+        let mut wrong = Vec::new();
+        for (index, named) in facts.attested_agreements().iter().enumerate() {
+            let Some(issuer) = named.issuer.as_deref() else {
+                continue;
+            };
+            let issuers = match uuid::Uuid::parse_str(named.id.trim()) {
+                Ok(role) => {
+                    crate::party_binding::grants::store::agreement_issuers(
+                        &self.demographic_pool,
+                        role,
+                    )
+                    .await?
+                }
+                Err(_) => Vec::new(),
+            };
+            if !issuers.iter().any(|held| held == issuer) {
+                wrong.push(InvariantViolation::at(
+                    format!("/attested_care/{index}/issuer"),
+                    "the issuer is not the federation issuer of the partner whose agreement ROLE \
+                     the id names"
+                        .to_owned(),
+                ));
+            }
+        }
+        Ok(wrong)
     }
 
     /// The refusal of the kinship at `path`: outside the bound value set,

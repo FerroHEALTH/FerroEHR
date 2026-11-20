@@ -91,12 +91,10 @@ pub(super) fn of_request(
     granted: &Capabilities,
     auth: Option<&super::Authenticator>,
 ) -> Option<BindingRecord> {
-    if let Some(portal) = principal
-        .represented
-        .as_ref()
-        .and_then(|represented| represented.portal.as_ref())
+    if let Some(represented) = &principal.represented
+        && let Some(portal) = &represented.portal
     {
-        return Some(portal_record(portal));
+        return Some(portal_record(portal, represented.representation));
     }
     // NOTE: EHDS Annex II 3.2(a), the record's person is recorded as the subject of care,
     // naming the `PERSON` the party binding bound them to, whatever their issuer (#6080).
@@ -108,9 +106,8 @@ pub(super) fn of_request(
     }
     let client = granted.client().filter(|_| committer.system);
     let deployment = auth
-        .and_then(|auth| auth.party.as_deref())
         .zip(principal.access.caller())
-        .and_then(|(binding, caller)| binding.provider_of(caller));
+        .and_then(|(auth, caller)| auth.deployment.provider_of(caller));
     let provider = client
         .and_then(|client| client.provider.as_ref())
         .and_then(|provider| provider.identifier.clone())
@@ -127,6 +124,11 @@ pub(super) fn of_request(
             )
         }),
     )?;
+    if let (Some(representation), Some(represented)) =
+        (&mut record.representation, &principal.represented)
+    {
+        representation.relationship_id = Some(represented.representation.to_string());
+    }
     if let Some(client) = client {
         // NOTE: BASE base_types PARTY_REF Type_validity admits "ACTOR", and a client is
         // an ACTOR of any concrete kind.
@@ -200,6 +202,7 @@ fn of(
                             .iter()
                             .find_map(ferrohealth_smart::party::Represented::relationship)
                             .map(str::to_owned),
+                        relationship_id: None,
                     });
                 }
                 CallerKind::Delegated { .. } => record.actor_chain = actor_chain(caller),
@@ -221,7 +224,10 @@ fn of(
 
 /// The record of the patient-portal representative `portal`: bound to their
 /// `PERSON`, representing the subject's `PERSON` (EHDS Annex II 3.2(a)).
-fn portal_record(portal: &super::portal::PortalRepresentative) -> BindingRecord {
+fn portal_record(
+    portal: &super::portal::PortalRepresentative,
+    representation: uuid::Uuid,
+) -> BindingRecord {
     let mut record = BindingRecord::bound(
         PartyTriple {
             namespace: portal.namespace.clone(),
@@ -237,6 +243,7 @@ fn portal_record(portal: &super::portal::PortalRepresentative) -> BindingRecord 
         represented: portal.subject.to_string(),
         ground: None,
         relationship: portal.relationship.clone(),
+        relationship_id: Some(representation.to_string()),
     });
     record
 }
