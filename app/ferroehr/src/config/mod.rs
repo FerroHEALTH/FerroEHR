@@ -840,10 +840,7 @@ mod tests {
         );
         assert_eq!(
             c.privacy.subject_namespaces,
-            vec![
-                "urn:example:pseudonym".to_owned(),
-                "mpi.example".to_owned()
-            ]
+            vec!["urn:example:pseudonym".to_owned(), "mpi.example".to_owned()]
         );
         assert!(c.privacy.allow_identified_parties_in_ehr);
         c.validate()

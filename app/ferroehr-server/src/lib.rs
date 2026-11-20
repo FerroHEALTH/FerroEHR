@@ -882,9 +882,8 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         );
     }
 
-    // `[server] system_id` is stamped into `EHR.system_id`,
-    // `AUDIT_DETAILS.system_id` and `OBJECT_VERSION_ID.creating_system_id`;
-    // logged so an operator can see the key took.
+    // `[api] system_id`, stamped into every EHR, audit and version id, is
+    // logged so an operator sees which identifier took.
     tracing::info!(system_id = %config.api.system_id(), "openEHR system identifier");
 
     // An IHE patient identity source answers its capabilities read here, so an

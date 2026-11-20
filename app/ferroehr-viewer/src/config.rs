@@ -124,12 +124,7 @@ pub struct CdrConfig {
     /// error naming it and is never sent. No openEHR spec governs the purpose
     /// of use: our own design (#6105).
     pub purpose_of_use: Option<String>,
-    /// The issuer the CDR names a Basic user's login by, its own
-    /// `[api] basic_issuer` (`FERROEHR_VIEWER__CDR__BASIC_ISSUER`): the
-    /// placeholder committer of a Basic session names the user under it.
-    /// The default is the CDR's own default in a sandbox without
-    /// `[api] system_id` or `[server] public_base_url`. No openEHR spec
-    /// governs the issuer of a local login: our own design (#6143).
+    /// The CDR's `[api] basic_issuer`, which a Basic session's committer names.
     pub basic_issuer: String,
     /// The trust roots beside the platform's and the client identity the CDR
     /// client presents (`[cdr.tls]`).
