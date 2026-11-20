@@ -20,6 +20,7 @@ use axum::response::{IntoResponse, Response};
 use ferroehr::system_log::access_context::AccessDelay;
 use ferrohealth_smart::kind::CallerKind;
 
+use super::authn::party::own::own_person;
 use super::authn::{Principal, current_principal};
 use crate::api::RequestParts;
 use crate::overview::error::RestError;
@@ -62,7 +63,8 @@ pub(crate) fn of(state: &AppState, op: &str) -> AccessDelay {
 }
 
 /// Whether `principal` may be the person's own access: a caller
-/// `ferrohealth-smart` classifies as the patient, or one representing the
+/// `ferrohealth-smart` classifies as the patient, a `persons` login the party
+/// binding binds to the person themself (#6106), or one representing the
 /// person, through a `persons` or a `patients` issuer.
 pub(crate) fn acts_for_the_person(principal: &Principal) -> bool {
     // NOTE: EHDS Art. 3(3), the owner's ruling of 2026-10-31: a mixed token is withheld
@@ -73,7 +75,9 @@ pub(crate) fn acts_for_the_person(principal: &Principal) -> bool {
         .is_some_and(|represented| represented.portal.is_some());
     portal
         || principal.access.caller().is_some_and(|caller| {
-            caller.is_the_person() || matches!(caller.kind(), CallerKind::Representative { .. })
+            caller.is_the_person()
+                || own_person(caller).is_some()
+                || matches!(caller.kind(), CallerKind::Representative { .. })
         })
 }
 

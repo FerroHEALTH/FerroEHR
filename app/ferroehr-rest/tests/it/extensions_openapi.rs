@@ -551,6 +551,7 @@ fn app_config() -> AppConfig {
             spec_profile: ferroehr::config::profile::SpecProfile::default(),
             party_binding: ferroehr::config::binding::PartyBindingConfig::default(),
             pix: None,
+            rate_clock: ferroehr_rest::config::RateClock::default(),
         };
         c.api.admin = true;
         c.auth.smart = SmartConfig {

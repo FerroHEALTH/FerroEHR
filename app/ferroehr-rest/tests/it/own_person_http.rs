@@ -12,9 +12,14 @@
 use std::sync::Arc;
 
 use axum::Router;
+use ferroehr::config::authz::AuthzConfig;
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
+use ferroehr_rest::extensions::access::authn::Authenticator;
+use ferroehr_rest::extensions::access::authz::AuthzHandle;
+use ferroehr_rest::extensions::management::Observability;
+use ferroehr_rest::state::AppState;
 use ferrohealth_smart::party::source::{Lookup, PartyRecord, PartySource, Query, SourceError};
 use ferrohealth_smart::party::{Markers, PartyRef, PartyState};
 use http::StatusCode;
@@ -22,7 +27,7 @@ use serde_json::{Value, json};
 
 use crate::common::{self, BASE};
 use crate::party_binding_http::{LOGIN, person, service, token, uid, vo, write};
-use crate::representation_http::{STRANGER, ehr, router};
+use crate::representation_http::{STRANGER, config, ehr, router};
 
 /// The `PERSON` every login of [`Patient`] binds.
 const PERSON: &str = "4d5e6f7a-8b9c-4d0e-9f1a-2b3c4d5e6f7a";
@@ -161,4 +166,53 @@ async fn a_person_of_no_ehr_reads_no_ehr() {
     assert!(body.contains("refused-not-subject"), "{body}");
     let (code, body) = send(&app, ("GET", &lookup(STRANGER)), &credential, None).await;
     assert_eq!(code, StatusCode::NOT_FOUND, "{body}");
+}
+
+/// The router of [`router`] with the RBAC gate on, as every deployment that
+/// grants by role runs it.
+async fn rbac_router(svc: Arc<FerroEhrService>, source: Arc<dyn BindingSource>) -> Router {
+    let config = config();
+    common::first_party(&svc, &config).await;
+    let authenticator = Authenticator::new(
+        &config,
+        Some(source),
+        Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
+    )
+    .await
+    .expect("the binding builds");
+    let observability = Observability::default();
+    observability.lifecycle.booted();
+    let mut authz = AuthzConfig::default();
+    authz.rbac.enabled = true;
+    let authz = AuthzHandle::build(&authz, &config.api.base_path).map(Arc::new);
+    let state = AppState::with_parts(config, svc, authz, observability);
+    ferroehr_rest::router::router(state, authenticator)
+}
+
+/// Under the RBAC gate the person themself, who holds no role, still finds
+/// and reads their own EHR: their right is who they are (EHDS Art. 3), and
+/// the gate admits them as it admits the patient's token; another EHR stays
+/// refused.
+#[tokio::test]
+async fn the_rbac_gate_admits_the_person_themself_to_their_own_ehr() {
+    let (_db, svc) = service().await;
+    let own = ehr(&svc, Some(PERSON)).await;
+    let stranger = ehr(&svc, Some(STRANGER)).await;
+    let app = rbac_router(Arc::clone(&svc), Arc::new(Patient)).await;
+    let credential = token("eva-login", &json!({}));
+
+    let (code, body) = send(&app, ("GET", &lookup(PERSON)), &credential, None).await;
+    assert_eq!(code, StatusCode::OK, "the lookup of her own EHR: {body}");
+    let (code, body) = send(&app, ("GET", &format!("/ehr/{own}")), &credential, None).await;
+    assert_eq!(code, StatusCode::OK, "her own EHR: {body}");
+    let (code, body) = send(
+        &app,
+        ("GET", &format!("/ehr/{stranger}")),
+        &credential,
+        None,
+    )
+    .await;
+    assert_eq!(code, StatusCode::FORBIDDEN, "another EHR: {body}");
+    assert!(body.contains("refused-not-subject"), "{body}");
 }

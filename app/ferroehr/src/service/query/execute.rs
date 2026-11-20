@@ -25,7 +25,7 @@ use serde_json::Value;
 
 use openehr_query::parser::parse_str;
 
-use crate::access_eval::condition::current;
+use crate::access_eval::condition::{AccessCondition, current};
 use crate::aql;
 use crate::aql::error::{AqlError, ExecError};
 use crate::aql::ir::{Params, QueryDomain, QueryIr};
@@ -170,10 +170,9 @@ impl FerroEhrService {
         // `ehr_id_does_not_exist`.
         self.check_ehr_ids(&request.ehr_ids).await?;
         let pinned = pinned_ehrs(ir, params, request);
-        let mut ehr_access =
-            Box::pin(self.query_access_condition(&request.ehr_access, pinned.as_deref()))
-                .await
-                .map_err(Failure::analysis)?;
+        let mut ehr_access = Box::pin(self.domain_condition(ir.domain, request, pinned.as_deref()))
+            .await
+            .map_err(Failure::analysis)?;
         // The stored specialisation graph an archetype predicate widens a
         // parent query through (BASE Artefact Identification
         // §Supporting Archetype-based Querying): resolved here, once per execution,
@@ -185,7 +184,7 @@ impl FerroEhrService {
         let exec_start = Instant::now();
         let mut stale_since = None;
         let result = loop {
-            let access_settings = Box::pin(self.query_access_readers(&ehr_access))
+            let access_settings = Box::pin(self.domain_readers(ir.domain, &ehr_access))
                 .await
                 .map_err(Failure::analysis)?;
             let ctx = SqlCtx {
@@ -361,10 +360,7 @@ impl FerroEhrService {
 /// served rows of it: the statement checked that revision against the
 /// store's ([`crate::aql::sql`], #5589), so its access record names the
 /// subject that revision names.
-fn read_pinned(
-    condition: &crate::access_eval::condition::AccessCondition,
-    result: &aql::exec::QueryResult,
-) {
+fn read_pinned(condition: &AccessCondition, result: &aql::exec::QueryResult) {
     if let (Some(access), Some(pinned)) = (current(), condition.pinned())
         && result.served_ehrs.iter().any(|(ehr, _)| *ehr == pinned.ehr)
     {
