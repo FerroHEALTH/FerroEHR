@@ -391,13 +391,14 @@ pub struct Authenticator {
     primary: Option<(Primary, Purpose)>,
     /// The issuers whose tokens may grant a privileged role.
     role_issuers: build::RoleIssuers,
-    /// The party binding every admitted caller is looked up in, when an
-    /// `[[auth.party]]` table binds an issuer.
+    /// The binding every caller is looked up in, when `[[auth.party]]` binds an issuer.
     party: Option<Arc<party::Binding>>,
     /// The federation agreements' caller limits.
     declared: declared::Declared,
     /// `[authz.party_binding] namespace`, naming a portal representative's `PERSON`.
     namespace: String,
+    /// `[api] basic_issuer`, the issuer of a login this deployment holds.
+    local_issuer: Arc<str>,
     /// The provider the deployment acts for.
     deployment: party::Deployment,
 }

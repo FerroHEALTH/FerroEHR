@@ -71,10 +71,13 @@ use crate::versioning::signature::signer::Signer;
 /// `AUDIT_DETAILS.system_id`, and every `OBJECT_VERSION_ID.creating_system_id`.
 ///
 /// This is the fallback only: a deployment sets its own identifier with the
-/// `[server] system_id` config key (`FERROEHR__SERVER__SYSTEM_ID`), which the
-/// binary wires in via [`FerroEhrService::with_system_id`]. An unset key leaves
-/// this value in force.
-pub const DEFAULT_SYSTEM_ID: &str = "ferroehr.local";
+/// `[api] system_id` config key (`FERROEHR__API__SYSTEM_ID`) or derives it
+/// from `[server] public_base_url`, which the binary wires in via
+/// [`FerroEhrService::with_system_id`]; a `production` deployment with
+/// neither refuses to start, so this value stands only in a `sandbox` and in
+/// a service built without configuration. It names the local host, never a
+/// product (#6143).
+pub const DEFAULT_SYSTEM_ID: &str = "localhost";
 
 /// The DB-backed application service — the concrete platform behind the
 /// chapter methods.
@@ -93,6 +96,9 @@ pub struct FerroEhrService {
     /// design/extension.
     pub(crate) demographic_pool: PgPool,
     system_id: String,
+    /// `[api] basic_issuer`, the issuer of a Basic user's login; `None`
+    /// names it by [`Self::system_id`].
+    basic_issuer: Option<String>,
     /// The ACTIVE openEHR specification generation set (`spec_profile`).
     /// Boot-fixed; the AQL planner's profile gate and the ingress acceptance
     /// boundary read it.
@@ -295,6 +301,7 @@ impl FerroEhrService {
             demographic_pool: pools.party.clone(),
             pool: pools.clinical.clone(),
             system_id: DEFAULT_SYSTEM_ID.to_owned(),
+            basic_issuer: None,
             spec_profile: crate::config::profile::SpecProfile::default(),
             definitions: Arc::default(),
             registered_templates: Arc::new(definition::registered::RegisteredTemplates::new(
@@ -403,11 +410,26 @@ impl FerroEhrService {
 
     /// Set the openEHR system id (identifies this CDR in `EHR.system_id`,
     /// audit rows, and every minted `OBJECT_VERSION_ID`). The binary wires
-    /// `[server] system_id`; without a call, [`DEFAULT_SYSTEM_ID`] stands.
+    /// `[api] system_id`; without a call, [`DEFAULT_SYSTEM_ID`] stands.
     #[must_use]
     pub fn with_system_id(mut self, system_id: impl Into<String>) -> Self {
         self.system_id = system_id.into();
         self
+    }
+
+    /// Set the issuer of a Basic user's login (`[api] basic_issuer`); without
+    /// a call it is the system id.
+    #[must_use]
+    pub fn with_basic_issuer(mut self, issuer: impl Into<String>) -> Self {
+        self.basic_issuer = Some(issuer.into());
+        self
+    }
+
+    /// The issuer of a Basic user's login, this deployment's own: `[api]
+    /// basic_issuer`, or the system id.
+    #[must_use]
+    pub fn basic_issuer(&self) -> &str {
+        self.basic_issuer.as_deref().unwrap_or(&self.system_id)
     }
 
     /// Install the boot outcome of the `[deployment] licence_file` section. The stamp key
@@ -591,6 +613,13 @@ impl FerroEhrService {
     /// committed -- and possibly signed -- content".
     pub(crate) fn effective_system_id(&self) -> String {
         self.system_id.clone()
+    }
+
+    /// The openEHR `system_id` of this instance (`[api] system_id`), which
+    /// also names the committer of a commit no caller made.
+    #[must_use]
+    pub fn system_id(&self) -> &str {
+        &self.system_id
     }
 
     /// The configured version [`Signer`] (used for read-time verification).

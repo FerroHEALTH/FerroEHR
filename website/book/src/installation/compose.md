@@ -340,7 +340,7 @@ docker compose -f docker-compose.yml -f docker-compose.ferrosmart.yml \
 - `docker-compose.ferrosmart.yml` adds FerroSMART, pinned by digest in
   `docs/VERSIONS.md`, with its own PostgreSQL, at `http://localhost:8280`.
   FerroEHR trusts it as the `persons` issuer with the `ferrosmart` profile,
-  binds people by FerroSMART's subject under `urn:ferroehr:ferrosmart-login`,
+  binds people by FerroSMART's subject under `urn:example:ferrosmart-login`,
   honours its `patient/` grants and describes it in the discovery document.
   The viewer's [Launch button](../smart-app-launch.md#launching-an-app-from-the-viewer)
   registers its EHR launches there, for the example app `example-app`.
@@ -445,7 +445,7 @@ every user a fixed `id`, which Keycloak puts in `sub`, and the one-shot
 `ferroehr-provision-keycloak` creates a SCIM User for each with that id as its
 login key, as a second client of the development issuer, which the one-shot
 `ferroehr-grant-keycloak` first grants `scim_provision` in the CDR with the
-realm's identifier issuer, `urn:ferroehr:keycloak-quickstart-login`, as its
+realm's identifier issuer, `urn:example:keycloak-quickstart-login`, as its
 `binding_issuer`. The service
 account acts for nobody, so it binds to no party.
 

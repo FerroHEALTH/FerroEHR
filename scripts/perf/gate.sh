@@ -252,7 +252,7 @@ up() {
   # the server first; an older tree declares it in its configuration.
   if grep -q 'binding-issuer' "$tree/scripts/scim-provision.sh"; then
     SCIM_GRANT="docker exec $server /usr/local/bin/ferroehr" \
-      bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users urn:ferroehr:basic-user \
+      bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users urn:example:basic-user \
       ferroehr >/dev/null
   else
     bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null
@@ -261,7 +261,7 @@ up() {
     ACCESS_IDS="$OUT/scim-ids$suffix"
     : >"$ACCESS_IDS"
     SCIM_IDS="$ACCESS_IDS" SCIM_GRANT="docker exec $server /usr/local/bin/ferroehr" \
-      bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users urn:ferroehr:basic-user \
+      bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users urn:example:basic-user \
       --roles USER clinician >/dev/null
     ACCESS_FERROEHR=(docker exec "$server" /usr/local/bin/ferroehr)
   fi
@@ -668,7 +668,7 @@ prepare() { # <image> <pg-image>
       ACCESS_IDS="$OUT/scim-ids"
       : >"$ACCESS_IDS"
       SCIM_IDS="$ACCESS_IDS" SCIM_GRANT="$PERF_FERROEHR" bash "$ROOT/scripts/scim-provision.sh" \
-        "$SERVER_URL" basic-users urn:ferroehr:basic-user --roles USER clinician >/dev/null
+        "$SERVER_URL" basic-users urn:example:basic-user --roles USER clinician >/dev/null
     fi
     seed "$ROOT"
   else

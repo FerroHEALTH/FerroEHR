@@ -641,7 +641,7 @@ pub async fn start(
         let forwarder = crate::system_log::syslog::forwarder(
             syslog,
             config.server_host.as_deref().unwrap_or_default(),
-            &config.source_id,
+            config.source_id(),
             behind.clone(),
             Arc::clone(&notify),
         )

@@ -62,11 +62,22 @@ pub struct ApiConfig {
     /// display identity of the `OPTIONS` System-Options manifest; `system_id`
     /// names which system authored the data.
     ///
-    /// Defaults to [`crate::service::DEFAULT_SYSTEM_ID`]. No openEHR spec
-    /// governs the configuration mechanism — our own design; the specs govern
-    /// only that a system has such an identifier.
+    /// Unset, it is the host of `[server] public_base_url`; with neither, a
+    /// `production` deployment refuses to start and a `sandbox` one stamps
+    /// [`crate::service::DEFAULT_SYSTEM_ID`] ([`Self::system_id`]). No
+    /// openEHR spec governs the configuration mechanism: our own design; the
+    /// specs govern only that a system has such an identifier.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = true)))]
-    pub system_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_id: Option<String>,
+    /// The `DV_IDENTIFIER.issuer` of a Basic user's login
+    /// (`FERROEHR__API__BASIC_ISSUER`): the authority a committer names a
+    /// login this deployment holds itself by, and a placeholder committer
+    /// names the Basic caller by. Unset, it is the system identifier
+    /// ([`Self::basic_issuer`]). No openEHR spec governs which string names
+    /// the issuing authority: our own design.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub basic_issuer: Option<String>,
     /// The `OPTIONS /` System-Options manifest identity (`[api.options]`).
     /// Sourced from config so the public identity is not a string literal in
     /// the handler; the live endpoint list is supplied separately by
@@ -108,14 +119,35 @@ impl Default for ApiConfig {
             base_path: "/ferroehr/rest/openehr/v1".to_owned(),
             openapi_ui: AccessLevel::Private,
             cors: None,
-            // The service layer's own default, so an unset `[api] system_id`
-            // boots exactly as the service does.
-            system_id: crate::service::DEFAULT_SYSTEM_ID.to_owned(),
+            system_id: None,
+            basic_issuer: None,
             options: SystemOptionsConfig::default(),
             body_limit: None,
             admin: false,
             terminology: false,
         }
+    }
+}
+
+impl ApiConfig {
+    /// The system identifier this deployment stamps: `[api] system_id`, or
+    /// [`crate::service::DEFAULT_SYSTEM_ID`] while it is unset, as in a
+    /// `sandbox` with no `[server] public_base_url` (the assembled
+    /// configuration fills it from that URL).
+    #[must_use]
+    pub fn system_id(&self) -> &str {
+        self.system_id
+            .as_deref()
+            .unwrap_or(crate::service::DEFAULT_SYSTEM_ID)
+    }
+
+    /// The issuer of a Basic user's login: `[api] basic_issuer`, or the
+    /// system identifier ([`Self::system_id`]).
+    #[must_use]
+    pub fn basic_issuer(&self) -> &str {
+        self.basic_issuer
+            .as_deref()
+            .unwrap_or_else(|| self.system_id())
     }
 }
 

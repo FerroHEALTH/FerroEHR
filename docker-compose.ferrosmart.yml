@@ -127,7 +127,7 @@ services:
       # A person binds to the PERSON whose SCIM loginIdentifier is their
       # FerroSMART subject.
       FERROEHR__AUTH__PARTY__1__ISSUER: http://localhost:8280
-      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:ferroehr:ferrosmart-login
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:example:ferrosmart-login
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
       # A patient/ grant of FerroSMART's tokens counts, with the EHR its
       # `ehrId` claim names as the launch context (SMART on openEHR, master07

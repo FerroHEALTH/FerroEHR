@@ -5,8 +5,9 @@
 --
 -- Runs with search_path = audit, ext, public.
 
--- The value of the detail at-code p_code of an entry's FerroEHR access
--- details, its first element when it holds several.
+-- The value of the detail id-code p_code of an entry's access log details
+-- (openEHR-EHR-ITEM_TREE.access_log_details.v1), its first element when it
+-- holds several.
 CREATE FUNCTION audit.access_detail(p_doc jsonb, p_code text) RETURNS jsonb
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
     SET search_path = pg_catalog
@@ -16,7 +17,7 @@ CREATE FUNCTION audit.access_detail(p_doc jsonb, p_code text) RETURNS jsonb
         jsonb_build_object('code', p_code))
 $$;
 COMMENT ON FUNCTION access_detail(jsonb, text) IS
-    'The value of one of FerroEHR''s access details (an ELEMENT of the entry''s other_details, named by its at-code); NULL when the entry holds none.';
+    'The value of one of the access log details (an ELEMENT of the entry''s other_details, named by its id-code); NULL when the entry holds none.';
 
 -- The texts of every element of the detail p_code, as a JSON array; NULL
 -- when the entry holds none.
@@ -29,7 +30,7 @@ CREATE FUNCTION audit.access_details(p_doc jsonb, p_code text) RETURNS jsonb
         jsonb_build_object('code', p_code)), '[]'::jsonb)
 $$;
 COMMENT ON FUNCTION access_details(jsonb, text) IS
-    'The texts of every element of one of FerroEHR''s access details, as a JSON array; NULL when the entry holds none.';
+    'The texts of every element of one of the access log details, as a JSON array; NULL when the entry holds none.';
 
 -- The DICOM EventID (PS3.15 A.5.1) of a resource class and action, as the
 -- audit_event records state it.
@@ -117,17 +118,17 @@ CREATE VIEW access_trail AS
     UNION ALL
     SELECT t.chain_seq, NULL::uuid, t.time_recorded, t.stored_at,
            t.event_action,
-           coalesce((audit.access_detail(t.doc, 'at0003') ->> 'magnitude')::smallint,
+           coalesce((audit.access_detail(t.doc, 'id13') ->> 'magnitude')::smallint,
                     CASE WHEN t.doc #>> '{outcome,result,defining_code,code_string}' = 'granted'
                          THEN 0::smallint END),
-           audit.access_event_code(audit.access_detail(t.doc, 'at0002') ->> 'value',
+           audit.access_event_code(audit.access_detail(t.doc, 'id12') ->> 'value',
                                    t.event_action),
-           coalesce(audit.access_detail(t.doc, 'at0029') ->> 'value',
+           coalesce(audit.access_detail(t.doc, 'id39') ->> 'value',
                     t.doc #>> '{operation,defining_code,code_string}'),
            t.principal,
-           audit.access_detail(t.doc, 'at0012') ->> 'id',
-           audit.access_detail(t.doc, 'at0002') ->> 'value',
-           coalesce(audit.access_detail(t.doc, 'at0014') ->> 'value',
+           audit.access_detail(t.doc, 'id22') ->> 'id',
+           audit.access_detail(t.doc, 'id12') ->> 'value',
+           coalesce(audit.access_detail(t.doc, 'id24') ->> 'value',
                     CASE WHEN t.doc #>> '{items,0,rm_type}' IS DISTINCT FROM 'ACCESS_LOG_RECORD'
                          THEN coalesce(t.doc #>> '{items,0,version_id,value}',
                                        CASE WHEN t.doc #>> '{items,0,object,type}'
@@ -135,40 +136,40 @@ CREATE VIEW access_trail AS
                                             THEN t.doc #>> '{items,0,object,id,value}' END)
                     END),
            t.doc #>> '{channel,client_address}',
-           coalesce(audit.access_detail(t.doc, 'at0007') ->> 'value',
+           coalesce(audit.access_detail(t.doc, 'id17') ->> 'value',
                     t.doc #>> '{accessor,credential,token_id}'),
-           coalesce(audit.access_detail(t.doc, 'at0010') ->> 'value', 'clinical'),
-           coalesce(audit.access_detail(t.doc, 'at0015') ->> 'value',
+           coalesce(audit.access_detail(t.doc, 'id20') ->> 'value', 'clinical'),
+           coalesce(audit.access_detail(t.doc, 'id25') ->> 'value',
                     t.doc -> 'purposes' -> jsonb_array_length(coalesce(t.token -> 'purposes', '[]'::jsonb))
                         #>> '{defining_code,code_string}'),
-           audit.access_detail(t.doc, 'at0016') ->> 'value',
-           coalesce((audit.access_detail(t.doc, 'at0017') ->> 'magnitude')::bigint,
+           audit.access_detail(t.doc, 'id26') ->> 'value',
+           coalesce((audit.access_detail(t.doc, 'id27') ->> 'magnitude')::bigint,
                     (t.doc #>> '{outcome,delivered}')::bigint,
                     (t.doc #>> '{query,rows}')::bigint),
            t.doc #>> '{channel,request_id}',
            CASE WHEN t.principal IS NULL AND t.roles = '[]'::jsonb THEN NULL ELSE t.roles END,
-           audit.access_details(t.doc, 'at0018'),
-           (audit.access_detail(t.doc, 'at0019') ->> 'magnitude')::bigint,
+           audit.access_details(t.doc, 'id28'),
+           (audit.access_detail(t.doc, 'id29') ->> 'magnitude')::bigint,
            NULL::jsonb, NULL::text, NULL::jsonb,
-           audit.access_detail(t.doc, 'at0020') ->> 'value',
-           audit.access_detail(t.doc, 'at0022') ->> 'value',
-           coalesce(audit.access_detail(t.doc, 'at0023') ->> 'value',
+           audit.access_detail(t.doc, 'id30') ->> 'value',
+           audit.access_detail(t.doc, 'id32') ->> 'value',
+           coalesce(audit.access_detail(t.doc, 'id33') ->> 'value',
                     t.doc #>> '{accessor,credential,assurance,defining_code,code_string}'),
-           audit.access_detail(t.doc, 'at0024') ->> 'value',
-           audit.access_detail(t.doc, 'at0025') ->> 'value',
+           audit.access_detail(t.doc, 'id34') ->> 'value',
+           audit.access_detail(t.doc, 'id35') ->> 'value',
            coalesce((t.doc ->> 'is_emergency')::boolean, false),
            (SELECT a #>> '{reference,id}'
               FROM jsonb_array_elements(coalesce(t.doc -> 'authorisations', '[]'::jsonb)) a
              WHERE a #>> '{kind,defining_code,code_string}' = 'permit' LIMIT 1),
-           coalesce(audit.access_detail(t.doc, 'at0005') ->> 'value',
+           coalesce(audit.access_detail(t.doc, 'id15') ->> 'value',
                     t.doc #>> '{accessor,credential,issuer}'),
-           coalesce(audit.access_detail(t.doc, 'at0006') ->> 'value',
+           coalesce(audit.access_detail(t.doc, 'id16') ->> 'value',
                     t.doc #>> '{accessor,credential,client_id}'),
-           coalesce(audit.access_detail(t.doc, 'at0011') ->> 'value',
+           coalesce(audit.access_detail(t.doc, 'id21') ->> 'value',
                     t.doc #>> '{ehr_id,value}'),
-           audit.access_detail(t.doc, 'at0012') ->> 'issuer',
-           coalesce((audit.access_detail(t.doc, 'at0013') ->> 'value')::boolean, false),
-           (audit.access_detail(t.doc, 'at0021') ->> 'value')::jsonb,
+           audit.access_detail(t.doc, 'id22') ->> 'issuer',
+           coalesce((audit.access_detail(t.doc, 'id23') ->> 'value')::boolean, false),
+           (audit.access_detail(t.doc, 'id31') ->> 'value')::jsonb,
            t.binding ->> 'code',
            coalesce((t.binding ->> 'guest')::boolean, false),
            nullif(t.binding -> 'party', 'null'::jsonb),
@@ -180,23 +181,23 @@ CREATE VIEW access_trail AS
            nullif(t.binding -> 'actor_chain', '[]'::jsonb),
            nullif(t.binding -> 'facilities', '[]'::jsonb),
            nullif(t.binding -> 'detail', '{}'::jsonb),
-           (audit.access_detail(t.doc, 'at0028') ->> 'value')::jsonb,
+           (audit.access_detail(t.doc, 'id38') ->> 'value')::jsonb,
            t.token,
            t.uid::text, 'access_log'::text
       FROM (SELECT d.*,
-                   coalesce(audit.access_detail(d.doc, 'at0001') ->> 'value',
+                   coalesce(audit.access_detail(d.doc, 'id11') ->> 'value',
                             CASE d.doc #>> '{action,defining_code,code_string}'
                                  WHEN 'C' THEN 'C' WHEN 'import' THEN 'C'
                                  WHEN 'U' THEN 'U' WHEN 'D' THEN 'D'
                                  WHEN 'R' THEN 'R' WHEN 'query' THEN 'R' WHEN 'export' THEN 'R'
                             END) AS event_action,
-                   coalesce(audit.access_detail(d.doc, 'at0004') ->> 'value',
+                   coalesce(audit.access_detail(d.doc, 'id14') ->> 'value',
                             d.doc #>> '{accessor,credential,subject}',
                             (SELECT nullif(i ->> 'id', 'UNKNOWN')
                                FROM jsonb_array_elements(
                                         coalesce(d.doc #> '{accessor,party,identifiers}', '[]'::jsonb)) i
                               WHERE i ->> 'type' = 'login' LIMIT 1)) AS principal,
-                   coalesce(audit.access_details(d.doc, 'at0009'),
+                   coalesce(audit.access_details(d.doc, 'id19'),
                             (SELECT coalesce(jsonb_agg(role #> '{defining_code,code_string}'
                                                        ORDER BY n), '[]'::jsonb)
                                FROM jsonb_array_elements(
@@ -206,8 +207,8 @@ CREATE VIEW access_trail AS
                                          - jsonb_array_length(coalesce(d.token -> 'roles', '[]'::jsonb))))
                        AS roles
               FROM (SELECT r.chain_seq, r.uid, r.time_recorded, r.stored_at, x.doc,
-                           (audit.access_detail(x.doc, 'at0027') ->> 'value')::jsonb AS binding,
-                           (audit.access_detail(x.doc, 'at0026') ->> 'value')::jsonb AS token
+                           (audit.access_detail(x.doc, 'id37') ->> 'value')::jsonb AS binding,
+                           (audit.access_detail(x.doc, 'id36') ->> 'value')::jsonb AS token
                       FROM access_log_record r
                       LEFT JOIN access_log_shared sh ON sh.digest = r.shared
                      CROSS JOIN LATERAL

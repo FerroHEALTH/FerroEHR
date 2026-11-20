@@ -121,7 +121,8 @@ pub(crate) fn start(
 pub async fn run(cmd: &PmirCmd, config: &ferroehr::config::FerroEhrConfig) -> anyhow::Result<()> {
     config.validate()?;
     let pools = crate::pools::connect(config, crate::pools::Opening::OneShot).await?;
-    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await?;
+    let (sender, handle) =
+        crate::start_audit(&config.audit_section(), &pools.clinical, &pools.audit).await?;
     let mut service = FerroEhrService::new(&pools);
     if let Some(sender) = sender {
         service = service.with_audit(sender);
@@ -145,33 +146,36 @@ pub async fn act(service: &FerroEhrService, cmd: &PmirCmd) -> anyhow::Result<Str
     | PmirCmd::Settle { operator, .. }) = cmd;
     anyhow::ensure!(!operator.trim().is_empty(), "--operator names the operator");
     let account = os_account()?;
-    with_committer(Some(committer(operator, &account)), async {
-        match cmd {
-            PmirCmd::List { .. } => {
-                let listed = service.pmir_refused().await.context("listing")?;
-                Ok::<_, anyhow::Error>(serde_json::to_string_pretty(&listed)?)
+    with_committer(
+        Some(committer(operator, &account, service.basic_issuer())),
+        async {
+            match cmd {
+                PmirCmd::List { .. } => {
+                    let listed = service.pmir_refused().await.context("listing")?;
+                    Ok::<_, anyhow::Error>(serde_json::to_string_pretty(&listed)?)
+                }
+                PmirCmd::Retry { message_id, .. } => {
+                    let retried = service.pmir_retry(message_id).await.context("retrying")?;
+                    Ok(serde_json::to_string_pretty(&retried)?)
+                }
+                PmirCmd::Settle {
+                    message_id,
+                    decision,
+                    reason,
+                    ..
+                } => {
+                    let decision = Decision::of(decision).with_context(|| {
+                        format!("--decision {decision:?} is neither discard nor lift-splits")
+                    })?;
+                    let settled = service
+                        .pmir_settle(message_id, decision, reason)
+                        .await
+                        .context("settling")?;
+                    Ok(serde_json::to_string_pretty(&settled)?)
+                }
             }
-            PmirCmd::Retry { message_id, .. } => {
-                let retried = service.pmir_retry(message_id).await.context("retrying")?;
-                Ok(serde_json::to_string_pretty(&retried)?)
-            }
-            PmirCmd::Settle {
-                message_id,
-                decision,
-                reason,
-                ..
-            } => {
-                let decision = Decision::of(decision).with_context(|| {
-                    format!("--decision {decision:?} is neither discard nor lift-splits")
-                })?;
-                let settled = service
-                    .pmir_settle(message_id, decision, reason)
-                    .await
-                    .context("settling")?;
-                Ok(serde_json::to_string_pretty(&settled)?)
-            }
-        }
-    })
+        },
+    )
     .await
 }
 
@@ -180,13 +184,15 @@ pub async fn act(service: &FerroEhrService, cmd: &PmirCmd) -> anyhow::Result<Str
 /// Its subject is the operator's name from the command line of a process that
 /// holds the database credentials; its client is the operating-system
 /// `account` that ran it, which every access record of the act names beside
-/// the operator.
+/// the operator; this deployment's own issuer, `local_issuer`, names the
+/// operator's login.
 #[must_use]
-pub fn committer(operator: &str, account: &str) -> CommitterIdentity {
+pub fn committer(operator: &str, account: &str, local_issuer: &str) -> CommitterIdentity {
     CommitterIdentity {
         subject: operator.trim().to_owned(),
         id_type: "operator",
         issuer: None,
+        local_issuer: local_issuer.into(),
         client: Some(account.to_owned()),
         person: false,
         party: None,

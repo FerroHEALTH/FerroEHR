@@ -9,7 +9,7 @@
       }
     }
   },
-  "system_id": "ferroehr.local",
+  "system_id": "localhost",
   "environment": {
     "exclusive_server": true,
     "hardware_class": "consumer-laptop",

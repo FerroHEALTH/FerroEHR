@@ -156,6 +156,20 @@ impl Default for FerroEhrConfig {
 pub const DEFAULT_TEMPLATE: &str = include_str!("../../assets/ferroehr.default.toml");
 
 impl FerroEhrConfig {
+    /// The `[audit]` section the audit trail runs with: `source_id` and
+    /// `role_code_system`, where unset, name this system by `[api]
+    /// system_id`, never the product (#6143).
+    #[must_use]
+    pub fn audit_section(&self) -> crate::system_log::config::AuditConfig {
+        let mut audit = self.audit.clone();
+        let system_id = self.api.system_id();
+        audit.source_id.get_or_insert_with(|| system_id.to_owned());
+        audit
+            .role_code_system
+            .get_or_insert_with(|| system_id.to_owned());
+        audit
+    }
+
     /// Returns the redacted configuration as a TOML table, the tree
     /// `ferroehr report` records.
     ///
@@ -263,6 +277,8 @@ pub fn load_with_provenance(
 mod abac_tests;
 #[cfg(test)]
 mod audit_tests;
+#[cfg(test)]
+mod identity_tests;
 #[cfg(test)]
 mod secret_tests;
 #[cfg(test)]
@@ -657,32 +673,6 @@ mod tests {
         assert_eq!(entry.profile, ferrohealth_smart::profile::Preset::Rfc9068);
     }
 
-    /// `[api] system_id` — the CDR's own openEHR system identifier (stamped
-    /// into `EHR.system_id`, the `AUDIT_DETAILS.system_id` server default, and
-    /// every `OBJECT_VERSION_ID.creating_system_id`). Pins all three layers:
-    /// the compatibility default, the file value, and the `FERROEHR__` env form.
-    #[test]
-    fn rest_system_id_default_file_and_env() {
-        // Unset, the default is the service-layer constant.
-        let c = assemble_ok(None, &env(&[]), &[]);
-        assert_eq!(c.api.system_id, crate::service::DEFAULT_SYSTEM_ID);
-
-        let file = toml_file("[api]\nsystem_id = \"cdr.hospital.example\"\n");
-        let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        assert_eq!(c.api.system_id, "cdr.hospital.example");
-
-        let c = assemble_ok(
-            Some(file.path()),
-            &env(&[("FERROEHR__API__SYSTEM_ID", "cdr.env.example")]),
-            &[],
-        );
-        assert_eq!(c.api.system_id, "cdr.env.example");
-
-        // `system_id` and the `[api.options]` display identity are
-        // independent knobs — setting one must not disturb the other.
-        assert_eq!(c.api.options.solution, "FerroEHR");
-    }
-
     // ── 3. Strictness ─────────────────────────────────────────────────────────
 
     #[test]
@@ -839,7 +829,7 @@ mod tests {
             &env(&[
                 (
                     "FERROEHR__PRIVACY__SUBJECT_NAMESPACES",
-                    "urn:ferroehr:pseudonym,mpi.example",
+                    "urn:example:pseudonym,mpi.example",
                 ),
                 ("FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR", "true"),
                 // The explicit standalone opt-in, without which the default
@@ -850,10 +840,7 @@ mod tests {
         );
         assert_eq!(
             c.privacy.subject_namespaces,
-            vec![
-                "urn:ferroehr:pseudonym".to_owned(),
-                "mpi.example".to_owned()
-            ]
+            vec!["urn:example:pseudonym".to_owned(), "mpi.example".to_owned()]
         );
         assert!(c.privacy.allow_identified_parties_in_ehr);
         c.validate()
@@ -1379,52 +1366,6 @@ mod tests {
             "must not contain an empty path segment",
         ] {
             assert!(err.contains(expected), "{expected} missing from: {err}");
-        }
-    }
-
-    /// `api.system_id` is judged by the openEHR `uid` grammar itself.
-    ///
-    /// It occupies the `creating_system_id` position of every
-    /// `OBJECT_VERSION_ID` this CDR mints — "`creating_system_id` = `uid`" with
-    /// "`uid` = `iso_oid` | `uuid` | `internet_id`" (BASE
-    /// `base_types/master05-identification_package.adoc` §Syntaxes) — and is
-    /// stamped into `AUDIT_DETAILS.system_id`, whose RM invariant
-    /// `System_id_valid` forbids an empty value. Both the accepted and the
-    /// refused shapes are pinned, including the ones a non-empty/no-`::` check
-    /// would have let through into unmintable version ids.
-    #[test]
-    fn validate_system_id_is_a_legal_uid() {
-        let mut c = standalone();
-        assert!(c.validate().is_ok());
-
-        for refused in [
-            "",                 // AUDIT_DETAILS.System_id_valid
-            "   ",              // blank
-            "cdr::hospital",    // the OBJECT_VERSION_ID field separator
-            "cdr hospital",     // a space is in no `uid` production
-            "cdr/hospital",     // nor is a path separator
-            "-leading-hyphen",  // an internet_id label starts with a letter
-            "trailing-hyphen-", // and ends with a letter or digit
-            "1.2.840.",         // an iso_oid group may not be empty
-        ] {
-            c.api.system_id = refused.to_owned();
-            assert!(
-                c.validate().is_err(),
-                "system_id {refused:?} is not a legal openEHR uid and must be refused at boot"
-            );
-        }
-
-        for accepted in [
-            "cdr.hospital.example",                 // internet_id
-            "ferroehr.local",                       // internet_id (the default)
-            "1.2.840.113554",                       // iso_oid
-            "8849182c-82ad-4088-a07f-48ead4180515", // uuid
-        ] {
-            c.api.system_id = accepted.to_owned();
-            assert!(
-                c.validate().is_ok(),
-                "system_id {accepted:?} is a legal openEHR uid and must boot"
-            );
         }
     }
 
