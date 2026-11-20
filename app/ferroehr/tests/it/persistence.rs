@@ -148,6 +148,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "binding_caller_fact",
             "binding_caller_fact_party",
             "binding_capability",
+            "binding_care_validity",
             "binding_client",
             "binding_grant_revision",
             "binding_group_revision",
