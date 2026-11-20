@@ -32,6 +32,7 @@ use crate::service::demographic::types::PartyKind;
 use crate::service::ehr::tags::tag_target_tail;
 use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
+use crate::versioning::Kind;
 use crate::versioning::body::Body;
 use crate::versioning::envelope::ContributionText;
 use crate::versioning::object_version_id::{TreeId, UidAddress};
@@ -420,7 +421,8 @@ impl FerroEhrService {
         version_at_time: Option<String>,
     ) -> Result<RawServiceResponse, ServiceError> {
         let (vo_id, version, at) = self.gated_address(address, version_at_time).await?;
-        self.read_relationship_raw(vo_id, version, at).await
+        self.demographic_read_raw(Kind::PartyRelationship, vo_id, version, at)
+            .await
     }
 
     /// Update a relationship under a mandatory `If-Match` precondition
