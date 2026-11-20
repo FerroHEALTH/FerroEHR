@@ -23,7 +23,7 @@
 //! is read at the request. A membership is an inline `PARTY_RELATIONSHIP`
 //! of the source party (`master02-demographic_package.adoc` §Party
 //! Relationships), and a representation a `PARTY_RELATIONSHIP` of its own
-//! ([`standalone`]). No openEHR spec governs the side table or its SQL: our
+//! (`standalone`). No openEHR spec governs the side table or its SQL: our
 //! own design.
 
 #![expect(
