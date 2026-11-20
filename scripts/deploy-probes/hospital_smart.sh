@@ -339,7 +339,7 @@ hs_lookup_records() {
     second="$(grep -F "$rid" <<<"$logs" | sed -nE 's/.*([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8})\..*/\1/p' | sed -n 1p)"
     if [[ -n "$second" ]]; then
       grep -F "$second" <<<"$logs" \
-        | grep -E 'subject this request|bound to no PERSON|against the caller|hides the EHR|as absent' \
+        | grep -E 'subject this request|bound to no PERSON|against the caller|hides the EHR|as absent|subject columns' \
         | sed -E 's/request\{[^}]*\}: //' | cut -c1-300 | sed 's/^/        /' >&2
     fi
     h_call 1 p:hans GET "$HX/admin/access-log?request_id=$rid"

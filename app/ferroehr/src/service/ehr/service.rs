@@ -253,6 +253,12 @@ impl FerroEhrService {
         .await?;
         // NOTE: EHDS Art. 8 and Art. 10 (`docs/law/eu/ehds/text.html`), an EHR the request
         // reads as absent under a restriction or an opt-out is not found by its subject.
+        tracing::debug!(
+            namespace,
+            found = found.is_some(),
+            id_length = subject_id.len(),
+            "a lookup by subject read the subject columns"
+        );
         let found = match found {
             Some(id) if self.ehr_hidden_from_lookup(id).await? => None,
             other => other,
