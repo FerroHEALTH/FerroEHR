@@ -82,6 +82,27 @@ no role and no purpose of use. The access log records each access as their own.
 The binding is the source because an openEHR launch token names its record
 by `ehrId` and carries no `fhirUser` and no `patient` claim.
 
+A FHIR-paired launch token can carry both. Since `ferrohealth-smart` 0.31 the
+`ferrosmart` preset reads a token as the patient's own when its `fhirUser` is
+`Patient/<x>`, its `patient` claim is `x` and its scopes are `patient/`
+alone. FerroEHR uses that reading only as a check, never as a grant:
+
+- FerroEHR looks the token's login up in FerroSMART's `[[auth.party]]` table,
+  as it does for any person. The login has to bind a `PERSON` with no
+  professional `ROLE` and no representation. That `PERSON` decides what the
+  caller reaches, exactly as for an openEHR launch.
+- A login that binds no `PERSON` is refused `403` with `refused-unbound`, or
+  `refused-key-claim-missing` when the token lacks the key claim.
+- A login bound to a professional's or a representative's `PERSON` is
+  refused `403` with `refused-wrong-marker`.
+- A token whose `ehrId` names an EHR whose `EHR_STATUS.subject` is not the
+  bound `PERSON` is refused `403` with `refused-representation-unrecorded`.
+  The same check holds for every caller bound as the person themself.
+
+FerroEHR does not compare the `patient` claim with the `PERSON`, because it
+cannot map a FHIR `Patient` id to a `PERSON` without the FHIR pairing. Each
+refusal is recorded under its binding code on the access record.
+
 FerroSMART's patient picker looks the EHR up with a token that carries no
 role:
 

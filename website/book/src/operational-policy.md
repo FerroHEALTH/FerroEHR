@@ -1838,16 +1838,19 @@ subject, and refused otherwise. A representative with no representation yet,
 one whose representation ended or was deleted, and one who represents
 someone else are all refused, so a former representative never becomes the
 patient. When FerroEHR knows who signs in, its own records decide, not the
-issuer's claim of which EHR the login names. A login no `PERSON` carries is
-the patient themself on the second path; on the first path such an actor is
-refused. These outcomes are decided at binding, when FerroEHR resolves who
+issuer's claim of which EHR the login names. A login no `PERSON` carries
+binds no one: on the first path such an actor is refused, and on the second
+path the token is refused `403` with `refused-unbound`, as is a token that
+names no `ehrId`. These outcomes are decided at binding, when FerroEHR resolves who
 the login is, before the access evaluator decides what that caller may
 reach, and each is recorded as a binding outcome: a missing representation
 with `403` (`refused-representation-unrecorded`), a representative's
 `PERSON` that is `inactive` or `abandoned` with `refused-inactive`, and a
-login two `PERSON`s carry with `refused-ambiguous`. FerroEHR trusts a
-`patients` issuer for the patient its token names only when it knows no
-`PERSON` for the login. This is FerroEHR's own design.
+login two `PERSON`s carry with `refused-ambiguous`. The patient themself is
+the one whose login is a binding key of the `PERSON` the EHR's subject
+names: the party binding is the one source of own access, for a `patients`
+issuer as for a `persons` one, and the token's claims are never trusted on
+their own. This is FerroEHR's own design.
 
 Each access is recorded bound to the representative's `PERSON`, naming the
 subject they represent and the relationship (EHDS Annex II 3.2), and a commit

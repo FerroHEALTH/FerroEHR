@@ -867,11 +867,12 @@ and nothing else, so a user with none is refused every Clinical operation;
 bearer token whose SMART on openEHR resource scopes are all `system/` scopes,
 such as `system/template-*.r`, is a backend client and needs no role for a
 Clinical operation: its scopes decide what it reaches. The record's person and
-their representative need no role either: a patient's portal token (a
-`patients` issuer, `patient/` grants alone) and a caller acting for the
-person, through a `patients` or a `persons` issuer, pass the Clinical class,
-and the access evaluator decides from who they are (EHDS Art. 3 and 4(2)),
-confining them to the one EHR. The read-only role still refuses their writes.
+their representative need no role either: a caller the party binding binds
+to the `PERSON` they are, through a `patients` or a `persons` issuer, and a
+caller acting for the person pass the Clinical class, and the access
+evaluator decides from who they are (EHDS Art. 3 and 4(2)), confining them
+to their own records. A token's own reading of the patient never counts
+without that binding. The read-only role still refuses their writes.
 Any other `user/` or `patient/` token belongs to a professional and still needs
 a role. The former `user_role` key is refused at boot.
 Disabling RBAC restores authentication-only behaviour.

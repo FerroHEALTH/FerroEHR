@@ -74,8 +74,9 @@ impl Shape {
 /// Holds the caller of `principal` to its agreement's `caller_rate`, then to
 /// the patient it may reach on `req`: a contact point's caller to the EHR of
 /// its TRC patient ([`confine`]), then a bound representative, of a `persons`
-/// or a `patients` issuer, to the EHR of its subject; the refusal of any,
-/// before any patient lookup of the request itself.
+/// or a `patients` issuer, to the EHR of its subject, and the person
+/// themself to their own `PERSON` ([`super::portal::bound`]); the refusal of
+/// any, before any patient lookup of the request itself.
 ///
 /// What it reads of `req` is read before it awaits anything, so the future
 /// holds no borrow of the request.
@@ -94,9 +95,12 @@ pub(super) fn patient_context<'a>(
             return Some(refusal);
         }
         let namespace = &layer.authenticator.namespace;
-        match super::portal::represented_ehr(&layer.service, namespace, &principal.access).await {
-            Ok(represented) => {
-                principal.represented = represented;
+        match super::portal::bound(&layer.service, namespace, principal).await {
+            Ok(bound) => {
+                principal.represented = bound.represented;
+                if bound.own.is_some() {
+                    principal.own = bound.own;
+                }
                 None
             }
             Err(e) => Some(super::refusal::refused(

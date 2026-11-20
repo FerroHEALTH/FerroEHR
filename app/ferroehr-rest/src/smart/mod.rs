@@ -41,21 +41,16 @@ pub(crate) fn holds_only_system_scopes(scopes: &[SmartScope]) -> bool {
         && resources.all(|compartment| compartment == Compartment::System)
 }
 
-/// Whether `principal` is the record's person, or their representative, acting
-/// through a patient-context credential: a bearer token with a `patient/`
-/// scope and no `user/` or `system/` one (`Caller::is_the_person` of
-/// `ferrohealth-smart`).
+/// Whether `principal` is the record's person: a caller the party binding
+/// binds to the `PERSON` they are ([`Principal::own`](crate::extensions::access::authn::Principal::own)).
 ///
-/// A `patient/` scope is "for applications acting in the context of a specific
-/// patient/EHR", a `user/` one for those "acting on behalf of a logged-in user
-/// (e.g., a practitioner)" (ITS-REST `docs/smart_app_launch/master08-scopes.adoc`
-/// §Resource Scopes). The patient claim alone does not count, as a
-/// professional's token in a patient's context carries it too.
-// NOTE: EHDS Art. 5, the owner's ruling of 2026-10-31: authorship errs toward the
-// professional, the strict answer of the family crate.
+/// The binding is the one source of who that is. A token `ferrohealth-smart`
+/// reads as the patient's own (`Caller::is_the_person`) is only checked
+/// against it, and a `patient/` scope names a launch context, which a
+/// professional's token carries too (ITS-REST
+/// `docs/smart_app_launch/master08-scopes.adoc` §Resource Scopes).
+// NOTE: EHDS Art. 3 and 5, the orchestrator's ruling on #6080: own access has one source,
+// the party binding, so authorship never rests on a token's claims alone.
 pub(crate) fn acts_as_person(principal: &crate::extensions::access::authn::Principal) -> bool {
-    principal
-        .access
-        .caller()
-        .is_some_and(ferrohealth_smart::resource::Caller::is_the_person)
+    principal.own.is_some()
 }

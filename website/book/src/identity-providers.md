@@ -103,7 +103,10 @@ What changes against a provider FerroEHR trusts directly, such as the
   and `fhirUser` in the token response and the access token, from the
   viewer's EHR launch or its own patient picker
   ([SMART App Launch](smart-app-launch.md)). Name FerroSMART in
-  `[auth.smart] patient_issuers` so its `patient/` grants count.
+  `[auth.smart] patient_issuers` so its `patient/` grants count. That list is
+  trust in the grants and nothing more: whether a caller is the record's
+  person comes from the party binding alone
+  ([A person's own record](behind-ferrosmart.md#a-persons-own-record)).
 - **One issuer for professionals and patients.** A provider issuer has one
   `kind`, so a direct setup takes a second realm or issuer for patients.
   FerroSMART is one `persons` issuer for both: a patient signs in, picks their
@@ -603,6 +606,12 @@ binding as follows.
 
 1. **Two realms.** An issuer has one `kind`, so professionals sign in at one
    realm (`kind = "persons"`) and patients at another (`kind = "patients"`).
+   A patient's own access comes from the party binding alone: their login
+   under the patients realm has to be a binding key of the `PERSON` that
+   their EHR's `EHR_STATUS.subject` names. A patient token whose login no
+   `PERSON` carries, or that names no `ehrId`, is refused `403` with
+   `refused-unbound`
+   ([Representatives in the patient portal](operational-policy.md#representatives-in-the-patient-portal)).
 2. **The binding on `sub`.** Keycloak's `sub` is the user id, which no user
    can change. A user-profile attribute can be the key instead only when its
    *Who can edit* permission is *Admin* (`"permissions": { "edit": ["admin"] }`,

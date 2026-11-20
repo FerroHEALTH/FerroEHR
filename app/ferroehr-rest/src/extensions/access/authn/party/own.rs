@@ -9,21 +9,26 @@
 //! patient's `PERSON` is that patient (EHDS Art. 3), so FerroEHR admits it
 //! as the person themself: it holds no role, and the access evaluator
 //! confines it to the EHRs whose `EHR_STATUS.subject` names that `PERSON`.
+//! A token `ferrohealth-smart` reads as the patient's own (`CallerKind::Patient`)
+//! is never looked up by the shared binding, so FerroEHR looks its login up
+//! as a person's ([`as_person`]): the binding stays the one source of own
+//! access, and the token's reading is only checked against it.
 //! No openEHR spec governs resolving a login to a party: our own design
-//! (#6106).
+//! (#6106, #6080).
 
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::{Marker, Outcome, PartyRef};
 use ferrohealth_smart::resource::Caller;
 
 /// Whether `outcome`, the binding of a caller of `kind`, binds the person
-/// themself: a plain `persons` login, neither a guest nor a delegate, whose
-/// one live `PERSON` carries neither marker.
+/// themself: a plain `persons` login, neither a guest nor a delegate, or a
+/// token read as the patient's own, whose one live `PERSON` carries neither
+/// marker.
 pub(in crate::extensions::access::authn) fn binds_the_person(
     kind: &CallerKind,
     outcome: &Outcome,
 ) -> bool {
-    matches!(kind, CallerKind::Person)
+    matches!(kind, CallerKind::Person | CallerKind::Patient)
         && matches!(
             outcome,
             Outcome::WrongMarker {
@@ -42,6 +47,29 @@ pub(crate) fn own_person(caller: &Caller) -> Option<&PartyRef> {
         outcome.party()
     } else {
         None
+    }
+}
+
+/// The caller of the login of `caller`, a token read as the patient's own,
+/// as a `persons` login of the same issuer, client, scopes and claims, which
+/// the shared binding looks up under the issuer's `[[auth.party]]` table.
+pub(in crate::extensions::access::authn) fn as_person(caller: &Caller) -> Caller {
+    let probe = Caller::new(
+        caller.subject().to_owned(),
+        caller.client_id().map(str::to_owned),
+        &caller.scope().join(" "),
+        caller.patient().map(str::to_owned),
+        false,
+        CallerKind::Person,
+    )
+    .with_person_key(
+        caller.person_key().map(str::to_owned),
+        caller.tenant().map(str::to_owned),
+    )
+    .with_claims(caller.claims().clone());
+    match caller.issuer() {
+        Some(issuer) => probe.with_issuer(issuer.to_owned()),
+        None => probe,
     }
 }
 
@@ -99,5 +127,41 @@ mod tests {
         assert!(!binds_the_person(&CallerKind::Person, &agent));
         let needs_rep = wrong("PERSON", Markers::default(), Marker::Representative);
         assert!(!binds_the_person(&CallerKind::Person, &needs_rep));
+    }
+
+    #[test]
+    fn a_patient_token_on_a_plain_person_binds_the_person() {
+        let outcome = wrong("PERSON", Markers::default(), Marker::Professional);
+        assert!(binds_the_person(&CallerKind::Patient, &outcome));
+        let professional = wrong(
+            "PERSON",
+            Markers {
+                professional: true,
+                representative: false,
+            },
+            Marker::Professional,
+        );
+        assert!(!binds_the_person(&CallerKind::Patient, &professional));
+    }
+
+    #[test]
+    fn the_person_probe_keeps_the_login_and_drops_the_patient_reading() {
+        let caller = Caller::new(
+            "eva-login".to_owned(),
+            Some("app".to_owned()),
+            "patient/composition-*.r",
+            Some("p-1".to_owned()),
+            false,
+            CallerKind::Patient,
+        )
+        .with_issuer("https://smart.example".to_owned())
+        .with_person_key(Some("eva-key".to_owned()), None);
+        let probe = as_person(&caller);
+        assert_eq!(probe.kind(), &CallerKind::Person);
+        assert!(!probe.is_the_person());
+        assert_eq!(probe.issuer(), Some("https://smart.example"));
+        assert_eq!(probe.person_key(), Some("eva-key"));
+        assert_eq!(probe.subject(), "eva-login");
+        assert_eq!(probe.client_id(), Some("app"));
     }
 }

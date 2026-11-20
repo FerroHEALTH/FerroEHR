@@ -893,7 +893,24 @@ which is what makes an optional stage safe to disable:
    record, confined in the same way. An
    openEHR launch token carries no `fhirUser` and no `patient` claim (SMART
    on openEHR `master07` §Context Selection names the `ehrId`), so no
-   reading of the token alone can name the person. A confined caller is refused `403`
+   reading of the token alone can name the person. A token
+   `ferrohealth-smart` 0.31 reads as the patient's own (`Caller::is_the_person`:
+   a `patients` issuer's patient-context token, or, under the `ferrosmart`
+   preset's `fhir_user_patient`, a `persons` token whose `fhirUser` is the
+   `Patient` its `patient` claim names, with `patient/` scopes alone) is a
+   check against the binding and never a grant (#6080). On a `persons` issuer
+   its login is looked up as a person's through the `[[auth.party]]` table,
+   which the shared binding never does for a `Patient` caller, and has to bind
+   a `PERSON` with neither marker, else `refused-unbound`,
+   `refused-key-claim-missing` or `refused-wrong-marker`. On a `patients`
+   issuer, which may carry no table, the patient-portal binding reads the
+   login as a key of the `PERSON` the launch EHR's subject names, else
+   `refused-unbound`. A caller bound as the person themself whose token names
+   an `ehrId` whose subject is another `PERSON` is refused
+   `refused-representation-unrecorded`, as a portal login is. The refusals
+   reuse the binding codes the access record carries. FerroEHR cannot map a
+   FHIR `Patient` id to a `PERSON` without the FHIR pairing, so the `patient`
+   claim is not compared. A confined caller is refused `403`
    `refused-not-subject` on every other EHR, before step 1 (#5605): the
    `subject` kind, through a SMART App Launch patient-context credential, and
    any caller whose grants on the EHR's data are `patient/` grants alone. Its
@@ -1810,7 +1827,8 @@ a client, the app-only token of a `machines` issuer; a person signed in
 through that client holds the person's grants. `[auth.smart]
 patient_issuers` stays in the file: it is trust, the issuers whose `ehrId`
 claim names an EHR of this platform (master07 §Context Selection), which the
-server needs before it believes a `patient/` token. The person-token client
+server needs before it believes a `patient/` token. It never makes a caller
+the record's person, which the party binding alone decides (#6080). The person-token client
 lists are answered the same way inside `ferrohealth-smart`'s token
 classification, through the crate's `kind::standing::Standing` seam:
 `party_binding::grants::standing::GrantStanding` reads the grants of the

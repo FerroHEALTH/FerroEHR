@@ -98,6 +98,14 @@ pub(super) fn of_request(
     {
         return Some(portal_record(portal));
     }
+    // NOTE: EHDS Annex II 3.2(a), the record's person is recorded as the subject of care,
+    // naming the `PERSON` the party binding bound them to, whatever their issuer (#6080).
+    if let Some(own) = &principal.own {
+        return Some(BindingRecord {
+            party: Some(triple(own)),
+            ..BindingRecord::of(ferroehr::system_log::binding::BindingCode::SelfPatient)
+        });
+    }
     let client = granted.client().filter(|_| committer.system);
     let deployment = auth
         .and_then(|auth| auth.party.as_deref())
