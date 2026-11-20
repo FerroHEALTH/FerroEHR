@@ -395,6 +395,9 @@ hs_authorize() {
     echo "        its row: $(hdc exec -T ferroehr-postgres psql -qtAX -U "${PG_INIT_USER:-ferroehr}" \
       -d "${PG_INIT_DB:-ferroehr}" -c "SELECT subject_id, subject_namespace FROM clinical.ehr \
       WHERE id = '$ehr'" 2>&1 | sed -n 1,3p)" >&2
+    h_call 1 admin GET "/ehr?subject_id=$subject&subject_namespace=demographic"
+    echo "        the same lookup as the administrator: $H_CODE ${H_BODY:0:160}" >&2
+    echo "        FerroSMART's resource table: $(grep -E '^(base|kind|subject_namespace)' "$(hs_dir)/ferrosmart.toml" | tr '\n' ' ')" >&2
     hs_answered; return 1 ;; esac
   page="$(curl -sS -c "$HS_JAR" -b "$HS_JAR" "$location")"
   form_token="$(hs_attribute "$page" '<input[^>]*name="form_token"[^>]*>' value)"
