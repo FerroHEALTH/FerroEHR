@@ -241,6 +241,34 @@ pub async fn committer_of(
     .await?)
 }
 
+/// The `composer` of the COMPOSITION version `(t, b, v)` of `vo_id`, as the
+/// canonical JSON text of its stored body, or `None` when no such version
+/// holds one.
+///
+/// No openEHR spec governs the SQL: our own design; the composer is
+/// `COMPOSITION.composer` (RM `org.openehr.rm.composition.composition.adoc`).
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn composer_of(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+    (t, b, v): (i32, i32, i32),
+) -> Result<Option<String>, StorageError> {
+    let composer: Option<Option<String>> = sqlx::query_scalar(
+        "SELECT (body::jsonb -> 'composer')::text FROM version \
+         WHERE vo_id = $1 AND trunk_version = $2 AND branch_number = $3 \
+           AND branch_version = $4",
+    )
+    .bind(vo_id)
+    .bind(t)
+    .bind(b)
+    .bind(v)
+    .fetch_optional(&mut *tx)
+    .await?;
+    Ok(composer.flatten())
+}
+
 /// The template id the head of `vo_id` names, or `None` for an unknown
 /// object, a deleted head or an undeclared template.
 ///

@@ -603,6 +603,105 @@ async fn a_system_callers_records_carry_its_client_and_provider() {
     }
 }
 
+/// A client-credentials client's write and its read are recorded under one
+/// client identity: every access record of the two carries the same binding,
+/// acting mode, client, provider and `AGENT`, and the access-log entries of
+/// the write and the read name the same accessor (EHDS Annex II 3.2; #6130).
+#[tokio::test]
+async fn a_system_clients_write_and_read_are_recorded_under_one_client_identity() {
+    type Trail = (
+        String,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<Value>,
+    );
+    let (db, _audit, svc) = audited_service().await;
+    let agent = grant_lab(&svc).await;
+    let app = router(svc, config(false)).await;
+    let [(_, credential), ..] = app_only(SYSTEM_SCOPES);
+    let (status, body) = create_ehr(&app, &credential).await;
+    assert_eq!(status, StatusCode::CREATED, "the write: {body}");
+    let created: Value = serde_json::from_str(&body).expect("the EHR");
+    let ehr = created["ehr_id"]["value"].as_str().expect("an EHR id");
+    let (status, body) = common::send_body(
+        &app,
+        common::req("GET", format!("{BASE}/ehr/{ehr}"))
+            .auth(&credential)
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "the read: {body}");
+    let mut rows: Vec<Trail> = Vec::new();
+    for _ in 0..50 {
+        rows = sqlx::query_as(
+            "SELECT operation, binding, acting_mode, client_id, provider ->> 'id', party \
+             FROM audit.access_trail WHERE principal = 'lab' ORDER BY recorded_at",
+        )
+        .fetch_all(&db.pool())
+        .await
+        .expect("the access trail");
+        if rows.len() >= 2 {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    assert!(
+        rows.len() >= 2,
+        "the write and the read are recorded: {rows:?}"
+    );
+    let identity = |row: &Trail| {
+        (
+            row.1.clone(),
+            row.2.clone(),
+            row.3.clone(),
+            row.4.clone(),
+            row.5.clone(),
+        )
+    };
+    let party = json!({ "namespace": "demographic", "type": "ACTOR", "id": agent.to_string() });
+    for row in &rows {
+        assert_eq!(
+            identity(row),
+            (
+                Some("system".to_owned()),
+                Some("system".to_owned()),
+                Some("lab".to_owned()),
+                Some("90000001".to_owned()),
+                Some(party.clone())
+            ),
+            "{row:?}"
+        );
+    }
+    let operations: std::collections::BTreeSet<&str> =
+        rows.iter().map(|row| row.0.as_str()).collect();
+    assert!(operations.len() >= 2, "a write and a read: {operations:?}");
+    let entries = crate::access_log_http::entries(&db.pool(), 2, |stored| {
+        stored.ehr_id.as_deref() == Some(ehr) && matches!(stored.action.as_deref(), Some("C" | "R"))
+    })
+    .await;
+    let accessors: Vec<Value> = entries
+        .iter()
+        .map(|stored| {
+            serde_json::from_str::<Value>(&stored.content).expect("an entry")["accessor"].clone()
+        })
+        .collect();
+    let actions: std::collections::BTreeSet<Option<&str>> = entries
+        .iter()
+        .map(|stored| stored.action.as_deref())
+        .collect();
+    assert_eq!(
+        actions.len(),
+        2,
+        "a write entry and a read entry: {accessors:?}"
+    );
+    assert!(
+        accessors.windows(2).all(|pair| pair[0] == pair[1]),
+        "one accessor: {accessors:#?}"
+    );
+}
+
 /// An RFC 7523 JWT-bearer onward token names the person in `sub` and the
 /// middle-tier client in its client claim, with no `act`: the client the
 /// CDR grants `act_for_persons` acts for the person, who is bound and commits
