@@ -1177,7 +1177,11 @@ Unavailable` with `Retry-After`: those that cannot get a connection, and those
 whose open connection the restart or the network cut (SQLSTATE class `08`,
 `57P01` admin shutdown, `57P02` crash shutdown, `57P03` cannot connect now,
 or a reset socket). A transaction the cut interrupted is rolled back by
-PostgreSQL. A request that waits more than a second for a connection makes
+PostgreSQL. Once the database answers again, no request is handed a
+connection the outage closed while it sat idle: the pools test a connection
+that has been idle for a second or longer before they hand it out, and
+replace it when the database no longer answers on it, so the first request
+after a restart is served. A request that waits more than a second for a connection makes
 the server try a connection of its own: when that cannot reach the database,
 the request answers `503` at once, and so does every request after it, until
 a fresh attempt (at most every half second) connects again. A pool that is
