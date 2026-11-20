@@ -364,6 +364,8 @@ async fn project(
             until: *until,
             writer: None,
             self_declared: false,
+            role_terminology: "HL7_ParticipationType".to_owned(),
+            role_code: "PART".to_owned(),
         })
         .collect();
     access_care::clear(&mut tx)

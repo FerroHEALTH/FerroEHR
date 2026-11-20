@@ -345,9 +345,9 @@ async fn a_demographic_query_leaves_the_policy_parties_out_for_a_non_administrat
             !ordinary.is_empty(),
             "the fixture holds an ordinary {class}"
         );
-        let seen = as_clinician(every_reading(&svc, class)).await;
+        let seen = Box::pin(as_clinician(every_reading(&svc, class))).await;
         assert_eq!(seen, ordinary, "a clinician's {class} query");
-        let seen = as_admin(every_reading(&svc, class)).await;
+        let seen = Box::pin(as_admin(every_reading(&svc, class))).await;
         let both: BTreeSet<String> = ordinary.union(&policy).cloned().collect();
         assert_eq!(seen, both, "an administrator's {class} query");
     }
@@ -495,6 +495,7 @@ async fn plan_of(
         policy_parties,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
         own_records: None,
+        caseload: None,
     };
     let prepared = ferroehr::aql::sql::build(&ir, &params, &ctx).expect("the AQL lowers");
     let party = ferroehr::db::domain_pool_from(&db.pool(), ferroehr::db::domain::Domain::Party);
@@ -621,7 +622,7 @@ async fn a_former_policy_party_stays_hidden_on_both_read_paths() {
     for class in ROOTS {
         let ordinary = &Fixture::under(&fixture.ordinary, class);
         let policy = Fixture::under(&fixture.policy, class);
-        let seen = as_clinician(every_reading(&svc, class)).await;
+        let seen = Box::pin(as_clinician(every_reading(&svc, class))).await;
         assert_eq!(&seen, ordinary, "a clinician's {class} query");
         let versions =
             format!("SELECT x/uid/value FROM VERSION v[ALL_VERSIONS] CONTAINS {class} x");
@@ -632,7 +633,7 @@ async fn a_former_policy_party_stays_hidden_on_both_read_paths() {
         assert_eq!(&seen, ordinary, "a clinician's {class} versions");
 
         let containers: BTreeSet<VoId> = policy.iter().map(|uid| vo_of(uid)).collect();
-        let seen = as_admin(every_reading(&svc, class)).await;
+        let seen = Box::pin(as_admin(every_reading(&svc, class))).await;
         let admin_containers: BTreeSet<VoId> = seen.iter().map(|uid| vo_of(uid)).collect();
         assert!(
             containers.is_subset(&admin_containers),

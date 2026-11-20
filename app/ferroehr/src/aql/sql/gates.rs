@@ -41,6 +41,7 @@ use sea_query::{Expr, ExprTrait as _};
 use super::expr::col;
 use super::own_records::OwnRecords;
 use super::{EhrAccessReaders, PolicyParties};
+use crate::access_eval::caseload::Caseload;
 use crate::access_eval::condition::AccessCondition;
 use crate::aql::ir::QueryDomain;
 use crate::db::iden::{Ehr, VoHead};
@@ -64,6 +65,9 @@ pub(super) struct Gates<'a> {
     /// The caller's own records by the party binding: an object of one of
     /// them withheld from the person contributes no row (#6108).
     own_records: Option<&'a OwnRecords>,
+    /// The caseload the request narrows the query to: a row of an EHR
+    /// outside it contributes nothing.
+    caseload: Option<&'a Caseload>,
 }
 
 impl<'a> Gates<'a> {
@@ -77,6 +81,7 @@ impl<'a> Gates<'a> {
         access_settings: &'a EhrAccessReaders,
         access: &'a AccessCondition,
         own_records: Option<&'a OwnRecords>,
+        caseload: Option<&'a Caseload>,
     ) -> Self {
         use crate::system_log::access_context::access_delay_enforced;
         let clinical = domain == QueryDomain::Clinical;
@@ -91,6 +96,7 @@ impl<'a> Gates<'a> {
                 policy_parties
             },
             access_settings: clinical.then_some(access_settings),
+            caseload: caseload.filter(|_| clinical),
         }
     }
 
@@ -122,6 +128,14 @@ impl<'a> Gates<'a> {
                     .or(Expr::exists(own_record(own, h)).not()),
             );
         }
+        // NOTE: draft access control, Queries and the Caseload, a row of an EHR outside the
+        // request's caseload contributes none, inside the one statement (#6056).
+        if let Some(caseload) = self.caseload {
+            predicates.push(super::caseload::in_caseload(
+                caseload,
+                col(h, VoHead::EhrId),
+            ));
+        }
         // NOTE: EHDS Art. 8, an EHR_ACCESS whose settings the caller may not read
         // contributes no row, so a restriction stays invisible (our own design).
         if let Some(EhrAccessReaders::Only(keepers)) = self.access_settings {
@@ -139,8 +153,16 @@ impl<'a> Gates<'a> {
     /// versioned-object root or an EHR source: an EHR none of whose data the
     /// caller may read contributes no row.
     pub(super) fn on_ehr_id(self, target: &Expr) -> Option<Expr> {
-        self.access
-            .and_then(|access| super::access::on_ehr_id(access, target))
+        let access = self
+            .access
+            .and_then(|access| super::access::on_ehr_id(access, target));
+        let caseload = self
+            .caseload
+            .map(|caseload| super::caseload::in_caseload(caseload, target.clone()));
+        match (access, caseload) {
+            (Some(access), Some(caseload)) => Some(access.and(caseload)),
+            (access, caseload) => access.or(caseload),
+        }
     }
 }
 

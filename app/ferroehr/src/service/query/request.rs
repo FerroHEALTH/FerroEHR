@@ -52,6 +52,9 @@ pub struct AqlQueryRequest {
     /// how a query over `ACCESS_LOG_ENTRY` runs; the default refuses it. No
     /// openEHR spec governs AQL over the access log: our own design (#5131).
     pub log_standing: crate::access_log::view::LogStanding,
+    /// The caseload the request narrows the query to (the `caseload` and
+    /// `caseload_roles` members); `None` for no narrowing.
+    pub caseload: Option<crate::access_eval::caseload::Ask>,
 }
 
 impl AqlQueryRequest {

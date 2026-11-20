@@ -83,6 +83,10 @@ pub struct CareRow {
     pub writer: Option<Uuid>,
     /// Whether its basis is `self_declared`.
     pub self_declared: bool,
+    /// The terminology id of its `care_role`.
+    pub role_terminology: String,
+    /// The code of its `care_role`.
+    pub role_code: String,
 }
 
 /// The facts revision the projection reflects and the check value of the
@@ -171,11 +175,17 @@ pub async fn replace(
         .collect();
     let writers: Vec<Option<Uuid>> = rows.iter().map(|row| row.writer).collect();
     let declared: Vec<bool> = rows.iter().map(|row| row.self_declared).collect();
+    let terminologies: Vec<&str> = rows
+        .iter()
+        .map(|row| row.role_terminology.as_str())
+        .collect();
+    let codes: Vec<&str> = rows.iter().map(|row| row.role_code.as_str()).collect();
     sqlx::query(
         "INSERT INTO access_care (subject_digest, person_id, carer_id, provider_issuer, \
-             provider_id, care_from, care_until, writer_id, self_declared) \
+             provider_id, care_from, care_until, writer_id, self_declared, role_terminology, \
+             role_code) \
          SELECT * FROM unnest($1::bytea[], $2::uuid[], $3::uuid[], $4::text[], $5::text[], \
-             $6::date[], $7::date[], $8::uuid[], $9::boolean[])",
+             $6::date[], $7::date[], $8::uuid[], $9::boolean[], $10::text[], $11::text[])",
     )
     .bind(&digests)
     .bind(&people)
@@ -186,6 +196,8 @@ pub async fn replace(
     .bind(&untils)
     .bind(&writers)
     .bind(&declared)
+    .bind(&terminologies)
+    .bind(&codes)
     .execute(&mut *tx)
     .await?;
     Ok(())

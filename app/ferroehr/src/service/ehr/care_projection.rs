@@ -245,6 +245,8 @@ impl Projector {
                         until: care.until(),
                         writer: care.writer(),
                         self_declared: care.self_declared(),
+                        role_terminology: care.role().terminology.clone(),
+                        role_code: care.role().code.clone(),
                     });
                 }
             }

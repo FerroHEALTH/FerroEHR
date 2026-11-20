@@ -30,6 +30,7 @@
 //! (`docs/specs/fhir-consent/` §6.2.3).
 
 pub mod alongside;
+pub mod caseload;
 pub mod class;
 pub mod condition;
 mod directive;

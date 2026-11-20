@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use openehr_rm::draft::access_control::terminology::AccessDefault;
 
+use crate::access_eval::caseload::{Ask, Caseload};
 use crate::access_eval::condition::care::{Care, CareUnsettled};
 use crate::access_eval::condition::{AccessCondition, InForce, RequestAccess, current};
 use crate::access_eval::procedure::{Lifted, Outcome, Verdict};
@@ -286,6 +287,67 @@ impl FerroEhrService {
             care = self.care_of(&access, pinned).await?;
         }
         Ok(condition.with_care(care))
+    }
+
+    /// The caseload `ask` of the running request a query of `domain` is
+    /// narrowed to ([`crate::access_eval::caseload`]): the clinical care
+    /// projection probed with the path's principals and the roles while it
+    /// holds the store's revision, the caller's caseload read from the care
+    /// copy otherwise, once the copy is found to hold the store's revisions.
+    /// Outside a request no caller holds a caseload, so it is empty.
+    ///
+    /// # Errors
+    /// `bad_request` (`400`) naming `caseload` for a demographic query, a
+    /// policy that turns the caseload off and a purpose outside the policy's
+    /// care purposes; `service_overloaded` (`503`) when the care copy cannot
+    /// be read, and `access-refreshing` (`503`) when it stays older than the
+    /// store.
+    pub(crate) async fn query_caseload(
+        &self,
+        domain: crate::aql::ir::QueryDomain,
+        ask: Option<&Ask>,
+    ) -> Result<Option<Caseload>, ServiceError> {
+        let Some(ask) = ask else {
+            return Ok(None);
+        };
+        if domain != crate::aql::ir::QueryDomain::Clinical {
+            let refused = crate::access_eval::caseload::Refused::Demographic;
+            return Err(ServiceError::bad_request(refused.to_string(), refused));
+        }
+        let Some(access) = current() else {
+            return Ok(Some(Caseload::Census {
+                namespace: Arc::from(""),
+                subjects: Vec::new().into(),
+            }));
+        };
+        access
+            .caseload_allowed()
+            .map_err(|refused| ServiceError::bad_request(refused.to_string(), refused))?;
+        // NOTE: our own design (#5806, #5891), the caseload rests on the copy found to hold the
+        // store's revisions, so a discharge another replica committed narrows it at once.
+        access.care_in_force(std::future::ready(())).await?;
+        if let Some(care) = projected_care(&access).filter(|_| self.care_projection_current()) {
+            let principals = ask.principals(&access.caller().facts);
+            let held = access.principals_held();
+            let care = crate::access_eval::condition::care::ProjectedCare {
+                principals: principals
+                    .into_iter()
+                    .filter(|principal| held.binary_search(principal).is_ok())
+                    .collect::<Vec<_>>()
+                    .into(),
+                ..care
+            };
+            return Ok(Some(Caseload::Projected {
+                care,
+                roles: ask.roles.clone(),
+                principals: held.into(),
+            }));
+        }
+        let (namespace, subjects) = access.caseload_subjects(ask).await?;
+        Ok(Some(Caseload::Census {
+            namespace,
+            subjects: subjects.into(),
+        }))
     }
 
     /// The care of the caller of `access` a query reads, for its EHRs

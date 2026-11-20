@@ -53,6 +53,7 @@ mod access;
 mod anchor;
 mod archetype;
 mod attestation;
+mod caseload;
 mod coerce;
 mod compact;
 mod condition;
@@ -131,6 +132,9 @@ pub struct SqlCtx {
     /// Art. 3(3) delay withholds held data from the query (#6108); `None`
     /// where the delay holds on no record or on every one.
     pub own_records: Option<own_records::OwnRecords>,
+    /// The caseload the request narrows the query to
+    /// ([`crate::access_eval::caseload`]); `None` for no narrowing.
+    pub caseload: Option<crate::access_eval::caseload::Caseload>,
 }
 
 /// The EHRs whose `EHR_ACCESS` settings a query may read rows of.
@@ -531,6 +535,7 @@ impl<'a> Builder<'a> {
                 &ctx.access_settings,
                 &ctx.ehr_access,
                 ctx.own_records.as_ref(),
+                ctx.caseload.as_ref(),
             ),
             step_bindings: Vec::new(),
             node_groups: Vec::new(),

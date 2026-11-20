@@ -312,6 +312,16 @@ impl RequestAccess {
         Policy::of(self.policy.as_deref())
     }
 
+    /// Refuses a caseload for this request where the policy turns it off or
+    /// the declared purpose is no care purpose
+    /// ([`crate::access_eval::caseload::allowed`]).
+    ///
+    /// # Errors
+    /// [`crate::access_eval::caseload::Refused`].
+    pub fn caseload_allowed(&self) -> Result<(), crate::access_eval::caseload::Refused> {
+        crate::access_eval::caseload::allowed(self.policy.as_deref(), self.purpose.as_deref())
+    }
+
     /// The moment the request began.
     #[must_use]
     pub fn now(&self) -> jiff::Timestamp {

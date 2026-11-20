@@ -107,14 +107,34 @@ impl LiveGrants {
         day: jiff::civil::Date,
         policy: &crate::access_eval::procedure::Policy,
     ) -> Result<Vec<EhrSubject>, GrantsUnavailable> {
+        self.cared_where(principals, principals, providers, (day, policy), |_| true)
+            .await
+    }
+
+    /// [`Self::cared_for_by`] through `reaching`, the principals of one path
+    /// of a caller whose principals are `principals`, on the relationships
+    /// `keep` selects: the subjects of a caseload
+    /// ([`crate::access_eval::caseload`]).
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when a miss cannot be read.
+    pub async fn cared_where(
+        &self,
+        reaching: &[Uuid],
+        principals: &[Uuid],
+        providers: &[ProviderKey],
+        (day, policy): (jiff::civil::Date, &crate::access_eval::procedure::Policy),
+        keep: impl Fn(&CareOf) -> bool,
+    ) -> Result<Vec<EhrSubject>, GrantsUnavailable> {
         let namespace = self.namespace();
         let mut subjects = Vec::new();
-        for principal in principals {
+        for principal in reaching {
             let census = self.care.of_team(&self.pool, *principal).await?;
             for (person, _) in census.cared.iter().filter(|(_, care)| {
                 care.live_on(day, policy.grace)
                     && care.admits_writer(principals, policy.self_declared)
                     && providers.binary_search(care.provider()).is_ok()
+                    && keep(care)
             }) {
                 subjects.push(EhrSubject::new(&*namespace, person.to_string()));
                 subjects.extend(census.declared.get(person).into_iter().flatten().cloned());

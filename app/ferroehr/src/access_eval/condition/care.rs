@@ -113,6 +113,39 @@ impl RequestAccess {
             .await
     }
 
+    /// The subject references of the caller's caseload `ask`: the patients
+    /// it holds a live care relationship to by the path `ask` names, in one
+    /// of its roles, never on a self-declared one, read as
+    /// [`Self::cared_subjects`] reads the census, beside the namespace this
+    /// CDR names its own parties under.
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when the care copy misses and cannot read.
+    pub async fn caseload_subjects(
+        &self,
+        ask: &crate::access_eval::caseload::Ask,
+    ) -> Result<(Arc<str>, Vec<EhrSubject>), GrantsUnavailable> {
+        let principals = self.principals_held();
+        let reaching: Vec<Uuid> = ask
+            .principals(&self.caller.facts)
+            .into_iter()
+            .filter(|principal| principals.binary_search(principal).is_ok())
+            .collect();
+        let Some(grants) = self.grants.as_ref().filter(|_| self.may_hold_care()) else {
+            return Ok((Arc::from(""), Vec::new()));
+        };
+        let subjects = grants
+            .cared_where(
+                &reaching,
+                &principals,
+                self.caller.facts.providers(),
+                (self.today(), &self.policy()),
+                |care| !care.self_declared() && ask.admits_role(care),
+            )
+            .await?;
+        Ok((grants.namespace(), subjects))
+    }
+
     /// Whether one of a subject's care `relations` is live, targets a
     /// principal of the caller acting for its provider, and was not written
     /// by the caller naming itself ([`CareOf::admits_writer`]) (draft

@@ -434,29 +434,42 @@ fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
 /// does. No openEHR spec governs this: our own design (#5699, #6055, #6073).
 fn projected(care: &ProjectedCare, target: Expr) -> Expr {
     Expr::cust_with_exprs(
-        "EXISTS (SELECT 1 FROM ehr access_care_ehr \
-         JOIN access_care access_care_row \
-           ON access_care_row.subject_digest = access_care_ehr.subject_digest \
-         WHERE access_care_ehr.id = $1 AND access_care_row.carer_id = ANY($2) \
-         AND (access_care_row.provider_issuer, access_care_row.provider_id) IN \
-             (SELECT * FROM unnest(CAST($5 AS text[]), CAST($6 AS text[]))) \
-         AND (access_care_row.care_from IS NULL OR access_care_row.care_from <= CAST($3 AS date)) \
-         AND (access_care_row.care_until IS NULL \
-              OR CAST($3 AS date) < access_care_row.care_until \
-              OR CAST($3 AS date) < access_care_row.care_until + CAST($4 AS interval)) \
-         AND CASE WHEN access_care_row.self_declared THEN CAST($7 AS boolean) \
-                  ELSE access_care_row.writer_id IS NULL \
-                       OR access_care_row.writer_id <> ALL($2) END)",
-        [
-            target,
-            Expr::val(care.principals.to_vec()),
-            Expr::val(care.day.to_string()),
-            Expr::val(care.grace.clone()),
-            Expr::val(care.provider_issuers.to_vec()),
-            Expr::val(care.provider_ids.to_vec()),
-            Expr::val(care.self_declared),
-        ],
+        format!(
+            "EXISTS ({CARE_PROBE} \
+             AND CASE WHEN access_care_row.self_declared THEN CAST($7 AS boolean) \
+                      ELSE access_care_row.writer_id IS NULL \
+                           OR access_care_row.writer_id <> ALL($2) END)"
+        ),
+        probe_values(care, target, Expr::val(care.self_declared)),
     )
+}
+
+/// The probe of one EHR's rows of the clinical care projection: its subject
+/// digest, a carer among `$2`, a provider among `$5` and `$6`, live on the
+/// day `$3` with the grace `$4`.
+pub(super) const CARE_PROBE: &str = "SELECT 1 FROM ehr access_care_ehr \
+     JOIN access_care access_care_row \
+       ON access_care_row.subject_digest = access_care_ehr.subject_digest \
+     WHERE access_care_ehr.id = $1 AND access_care_row.carer_id = ANY($2) \
+     AND (access_care_row.provider_issuer, access_care_row.provider_id) IN \
+         (SELECT * FROM unnest(CAST($5 AS text[]), CAST($6 AS text[]))) \
+     AND (access_care_row.care_from IS NULL OR access_care_row.care_from <= CAST($3 AS date)) \
+     AND (access_care_row.care_until IS NULL \
+          OR CAST($3 AS date) < access_care_row.care_until \
+          OR CAST($3 AS date) < access_care_row.care_until + CAST($4 AS interval))";
+
+/// The values of [`CARE_PROBE`] for `care` and the EHR `target`, then
+/// `seventh`.
+pub(super) fn probe_values(care: &ProjectedCare, target: Expr, seventh: Expr) -> [Expr; 7] {
+    [
+        target,
+        Expr::val(care.principals.to_vec()),
+        Expr::val(care.day.to_string()),
+        Expr::val(care.grace.clone()),
+        Expr::val(care.provider_issuers.to_vec()),
+        Expr::val(care.provider_ids.to_vec()),
+        seventh,
+    ]
 }
 
 /// `pred` on the head row `h`, its facts read with `facts`.
