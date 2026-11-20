@@ -1722,12 +1722,14 @@ named by codes of `openehr_access`:
 | `care_role` | 1..1 | A `DV_CODED_TEXT`: the part the carer plays in the patient's care, of the value set the access policy binds for `care_role`, or of `HL7_ParticipationType` when it binds none, such as `RESP`, `ATND` or `PART` when the role is not stated |
 | `provider` | 1..1 | A `DV_IDENTIFIER` of type `ORGANISATION`: the healthcare provider in whose care the relationship is, by the namespace of its reference and its id, or by the issuer and id of its identifier |
 | `covers_for`, `context` | 0..1 | A `DV_IDENTIFIER`: the carer the target replaces, and the episode, referral or case the relationship belongs to |
-| `basis` | 0..1 | `assigned` (the default); `self_declared` is refused until the access decision reads it |
+| `basis` | 0..1 | `assigned` (the default); `self_declared` where the policy sets `self_declared_care` ([Writing a care relationship](#writing-a-care-relationship)) |
 
 A caller holds a live care relationship when the relationship's `target`
-names its `PERSON` or a `ROLE` it performs (the direct path), or a care team
-or unit it is a member of (the team path), and it acts for the relationship's
-`provider`: a bound professional acts for the provider the party binding
+names its `PERSON` or a `ROLE` it performs (the `direct` path), or a care
+team or unit it is a member of (the `team` path), or, for a `self_declared`
+relationship, its own `PERSON` (the `self_declared` path), the access
+declares no purpose or one of the policy's `care_purposes`, and it acts for
+the relationship's `provider`: a bound professional acts for the provider the party binding
 names (`[authz.party_binding.provider]`, or the table of its tenant when the
 binding names one per tenant), and a system client for the `ORGANISATION`
 its `AGENT` acts for, matched by that organisation's own reference (its
@@ -2235,8 +2237,12 @@ fixes some of these attributes for many controllers is a profile: write the
 policy with its `template_id`, and FerroEHR validates it against the
 template.
 
-The time zone and the care purposes are refused until the access decision
-reads them.
+Two more attributes say when a relationship is a ground at all:
+
+| Attribute | What it says | Left out |
+| --- | --- | --- |
+| `care_purposes` | The purposes of use for which a care relationship is a ground: an access declaring another purpose, such as research, rests on no relationship and matches no rule scope naming `care` | `TREAT`, `ETREAT` and `CAREMGT` of `HL7_ActReason` |
+| `time_zone` | The IANA time zone in which the dates of a relationship's `time_validity` are read, such as `Europe/Amsterdam`; a name the zone database does not hold is refused `400` | UTC |
 
 #### Writing a care relationship
 
@@ -2309,6 +2315,14 @@ the role may do.
   hold.
 - **A deny rule with a permit exception says "only"**: the exception carves
   what it covers out of the deny.
+- **A scope naming `care` can name care roles and a path.** With
+  `relationship` `care`, an actor scope's `care_roles` lists the roles a
+  caller's live care relationship must have, compared by terminology and
+  code, and `care_path` says how it must reach the caller: `direct`, `team`
+  or `self_declared` (`attested` matches no caller until it is built). Left
+  out, any role and the paths the policy turns on. No role implies another:
+  `RESP` does not cover `ATND`. The same scope decides a read and narrows a
+  query inside its one statement, so a `COUNT` agrees with the reads.
 - **For a write**, the data are the version being committed: its template,
   root archetype, origins and the sensitivities your classifications give it.
 
@@ -2341,6 +2355,14 @@ Four rules, as you write them in the policy body (a role code of
   declaring none is refused `refused-purpose-missing` where the policy sets
   `purpose_required`, and otherwise `refused-policy-denied`, since the
   exception names no request without a purpose.
+- **Only the responsible practitioner, directly, signs the discharge
+  summary:** a `deny` rule on `write` whose `data` names the discharge
+  summary template, with one `permit` exception whose `applies_to` is
+  `relationship` `care`, `care_roles` `[RESP]` and `care_path` `direct`. A
+  second in chain (`SPRF`), a consultant (`CON`) and a team member are
+  refused `refused-policy-denied`; a professional covering for the
+  responsible one holds a `RESP` relationship of their own for the period
+  and is admitted.
 - **A system client writes only its laboratory templates:** a `deny` rule on
   `write` whose `applies_to` names the client's `AGENT` by `party`, with one
   `permit` exception whose `data` lists the templates.

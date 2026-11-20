@@ -13,6 +13,11 @@ use openehr_rm::draft::access_control::terminology::{
     CallerKind, DirectiveKind, Effect, ForeignCode, ForeignKind, OperationClass, Relationship, Term,
 };
 
+use std::sync::Arc;
+
+use openehr_rm::draft::access_control::access_control::access_actor_scope::AccessActorScope;
+
+use crate::access_eval::care_tie::{CareNeed, Cared};
 use crate::access_eval::class::{DirectiveLayout, keeper};
 use crate::access_eval::procedure::Judged;
 use crate::access_eval::scope::{EhrFact, Polarity, Pred, within};
@@ -165,54 +170,79 @@ impl Reader<'_, '_> {
     ) -> Pred {
         let caller = self.judged.caller;
         let class = self.judged.scopes.layout().is_some();
-        let scopes =
-            directive
-                .applies_to
-                .as_deref()
-                .unwrap_or_default()
-                .iter()
-                .enumerate()
-                .map(|(at, scope)| {
-                    let party = match scope.party.as_ref() {
-                        None => Pred::True,
-                        Some(party) => {
-                            match placed.and_then(|p| p.parties.get(at).copied().flatten()) {
-                                Some(fact) if class => Pred::Ehr(EhrFact::Party(fact)),
-                                _ => Pred::of(party_key(party).is_some_and(|key| {
-                                    caller.party.as_ref() == Some(&key)
-                                        || caller.acts_for.contains(&key)
-                                })),
-                            }
+        let scopes = directive
+            .applies_to
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+            .map(|(at, scope)| {
+                let party = match scope.party.as_ref() {
+                    None => Pred::True,
+                    Some(party) => {
+                        match placed.and_then(|p| p.parties.get(at).copied().flatten()) {
+                            Some(fact) if class => Pred::Ehr(EhrFact::Party(fact)),
+                            _ => Pred::of(party_key(party).is_some_and(|key| {
+                                caller.party.as_ref() == Some(&key)
+                                    || caller.acts_for.contains(&key)
+                            })),
                         }
-                    };
-                    let role = scope
-                        .role
-                        .as_ref()
-                        .is_none_or(|role| caller.facts.performs(role));
-                    let organisation = scope
-                        .organisation_type
-                        .as_ref()
-                        .is_none_or(|kind| caller.facts.acts_for_type(kind));
-                    let relationship = scope.relationship.as_ref().is_none_or(|coded| {
-                        match Relationship::read_coded(coded) {
-                            Ok(Relationship::Care) => self.judged.ehr.cared,
-                            Ok(Relationship::Representative | Relationship::Proxy) => {
-                                caller.kind == CallerKind::Representative
-                            }
-                            Err(_) => false,
+                    }
+                };
+                let role = scope
+                    .role
+                    .as_ref()
+                    .is_none_or(|role| caller.facts.performs(role));
+                let organisation = scope
+                    .organisation_type
+                    .as_ref()
+                    .is_none_or(|kind| caller.facts.acts_for_type(kind));
+                let relationship = match scope.relationship.as_ref() {
+                    None => Pred::True,
+                    Some(coded) => match Relationship::read_coded(coded) {
+                        Ok(Relationship::Care) => self.care(scope),
+                        Ok(Relationship::Representative | Relationship::Proxy) => {
+                            Pred::of(caller.kind == CallerKind::Representative)
                         }
-                    });
-                    let kind = scope
-                        .caller_kind
-                        .as_ref()
-                        .is_none_or(|coded| CallerKind::read_coded(coded) == Ok(caller.kind));
-                    Pred::all(vec![
-                        party,
-                        Pred::of(role && organisation && relationship && kind),
-                    ])
-                })
-                .collect();
+                        Err(_) => Pred::False,
+                    },
+                };
+                let kind = scope
+                    .caller_kind
+                    .as_ref()
+                    .is_none_or(|coded| CallerKind::read_coded(coded) == Ok(caller.kind));
+                Pred::all(vec![
+                    party,
+                    relationship,
+                    Pred::of(role && organisation && kind),
+                ])
+            })
+            .collect();
         Pred::any(scopes)
+    }
+
+    /// Whether the caller holds a live care relationship that is a ground for
+    /// the access: one is held, and the access declares no purpose or one of
+    /// the policy's `care_purposes` (draft decision procedure, Terms).
+    pub(super) fn cared(&self) -> bool {
+        let judged = self.judged;
+        judged.ehr.care.live() && judged.policy.admits_care(judged.asked.purpose)
+    }
+
+    /// Whether the care relationships the caller holds meet the care roles
+    /// and path of `scope`, an actor scope naming `care`: a constant when
+    /// they are known or no relationship is held, and otherwise the fact a
+    /// query's statement reads.
+    fn care(&self, scope: &AccessActorScope) -> Pred {
+        if !self.cared() {
+            return Pred::False;
+        }
+        match (CareNeed::of(scope), self.judged.ehr.care) {
+            (None, _) => Pred::True,
+            (Some(need), Cared::Ties(ties)) => Pred::of(ties.iter().any(|tie| need.met_by(tie))),
+            (Some(need), Cared::Left) => Pred::Care(Arc::new(need)),
+            (Some(_), Cared::No) => Pred::False,
+        }
     }
 
     /// The items `directive`, of `effect`, covers: its data less what its

@@ -451,7 +451,12 @@ impl AuditEvent {
     }
 
     /// The roles the record renders: the roles the caller held, then the
-    /// professional roles the access token states.
+    /// professional roles the access token states, then the role of the care
+    /// relationship the access rested on, its HL7 terminology identifier
+    /// mapped to the code system's canonical URL (FHIR R4
+    /// `AuditEvent.agent.role`, "the security role that the user was acting
+    /// under"; draft access control Terminology, Codes from HL7 Code
+    /// Systems).
     #[must_use]
     pub fn role_codings(&self) -> Vec<Coding> {
         let held = self.roles.iter().map(|role| Coding {
@@ -462,7 +467,26 @@ impl AuditEvent {
             .token
             .iter()
             .flat_map(|token| token.roles.iter().cloned());
-        held.chain(stated).collect()
+        let cared = self
+            .decided
+            .iter()
+            .flat_map(|decided| &decided.grounds)
+            .filter_map(|ground| ground.care.as_ref())
+            .map(|care| {
+                let phrase = &care.role.defining_code;
+                let terminology = phrase.terminology_id.value.as_str();
+                Coding {
+                    system: Some(
+                        openehr_rm::draft::access_control::terminology::hl7::canonical_url(
+                            terminology,
+                        )
+                        .unwrap_or(terminology)
+                        .to_owned(),
+                    ),
+                    code: phrase.code_string.clone(),
+                }
+            });
+        held.chain(stated).chain(cared).collect()
     }
 
     /// Whether the audited data moves from this server to the client, which

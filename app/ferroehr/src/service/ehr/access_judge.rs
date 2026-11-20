@@ -517,11 +517,22 @@ fn projected_care(
         .iter()
         .map(|provider| (provider.issuer.clone(), provider.id.clone()))
         .unzip();
+    let day = access.today()?;
+    let principals = access.principals_held();
+    let facts = &access.caller().facts;
+    let direct: Vec<uuid::Uuid> = principals
+        .iter()
+        .copied()
+        .filter(|principal| {
+            facts.party() == Some(*principal) || facts.performed().binary_search(principal).is_ok()
+        })
+        .collect();
     calendar.then(|| crate::access_eval::condition::care::ProjectedCare {
-        principals: access.principals_held().into(),
+        principals: principals.into(),
+        direct: direct.into(),
         provider_issuers: provider_issuers.into(),
         provider_ids: provider_ids.into(),
-        day: access.today(),
+        day,
         grace: grace.to_string(),
         self_declared: access.policy().self_declared,
     })

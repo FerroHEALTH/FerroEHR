@@ -12,6 +12,7 @@
 //! them by the EHR row's digest, the caller's principals and the providers
 //! it acts for. No openEHR spec governs the projection: our own design.
 
+use openehr_rm::draft::access_control::terminology::ForeignCode;
 use sqlx::{PgConnection, PgPool, Row};
 use uuid::Uuid;
 
@@ -83,6 +84,8 @@ pub struct CareRow {
     pub writer: Option<Uuid>,
     /// Whether its basis is `self_declared`.
     pub self_declared: bool,
+    /// Its `care_role`.
+    pub role: ForeignCode,
 }
 
 /// The facts revision the projection reflects and the check value of the
@@ -171,11 +174,17 @@ pub async fn replace(
         .collect();
     let writers: Vec<Option<Uuid>> = rows.iter().map(|row| row.writer).collect();
     let declared: Vec<bool> = rows.iter().map(|row| row.self_declared).collect();
+    let role_terminologies: Vec<&str> = rows
+        .iter()
+        .map(|row| row.role.terminology.as_str())
+        .collect();
+    let role_codes: Vec<&str> = rows.iter().map(|row| row.role.code.as_str()).collect();
     sqlx::query(
         "INSERT INTO access_care (subject_digest, person_id, carer_id, provider_issuer, \
-             provider_id, care_from, care_until, writer_id, self_declared) \
+             provider_id, care_from, care_until, writer_id, self_declared, role_terminology, \
+             role_code) \
          SELECT * FROM unnest($1::bytea[], $2::uuid[], $3::uuid[], $4::text[], $5::text[], \
-             $6::date[], $7::date[], $8::uuid[], $9::boolean[])",
+             $6::date[], $7::date[], $8::uuid[], $9::boolean[], $10::text[], $11::text[])",
     )
     .bind(&digests)
     .bind(&people)
@@ -186,6 +195,8 @@ pub async fn replace(
     .bind(&untils)
     .bind(&writers)
     .bind(&declared)
+    .bind(&role_terminologies)
+    .bind(&role_codes)
     .execute(&mut *tx)
     .await?;
     Ok(())
