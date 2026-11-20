@@ -2277,6 +2277,52 @@ Two more attributes say when a relationship is a ground at all:
 | `care_purposes` | The purposes of use for which a care relationship is a ground: an access declaring another purpose, such as research, rests on no relationship and matches no rule scope naming `care` | `TREAT`, `ETREAT` and `CAREMGT` of `HL7_ActReason` |
 | `time_zone` | The IANA time zone in which the dates of a relationship's `time_validity` are read, such as `Europe/Amsterdam`; a name the zone database does not hold is refused `400` | UTC |
 
+#### The attested care path
+
+A caller from another organisation, admitted under a
+[federation agreement](#federation-agreements), can hold a care
+relationship that is never stored: its verified credential attests a
+treatment context for the patient. This is how a national contact point or a
+national infrastructure reaches the record for cross-border care. The path is
+off until `attested_care` names the agreement:
+
+```json
+"attested_care": [
+  { "_type": "DV_IDENTIFIER",
+    "issuer": "https://federation.example",
+    "id": "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f99" }
+]
+```
+
+- `id` is the container uid of the agreement `ROLE` (the part of its
+  version uid before `::`), so a new version of the agreement keeps the
+  reference.
+- `issuer`, when you set it, must be the federation issuer the partner's
+  client identifiers are held under. A policy that names another issuer, or
+  names under an issuer an id that is no agreement `ROLE`, is refused `422`,
+  naming `/attested_care/<n>/issuer`.
+
+Which claims carry the treatment context is your data, in the issuer's
+`[[auth.federation]]` table. FerroEHR reads these fields:
+
+| Field | What it carries |
+| --- | --- |
+| `patient.id` | The patient, as `system\|value`: the identifier an EHR's subject names |
+| `trc.id` | The id of the assertion that attests the treatment context |
+| `trc.not_on_or_after` | The end of its window, in seconds since the epoch |
+| `trc.not_before` | The start of its window, when the credential states one |
+| `assertion.issuer` | The issuer of the assertion, when the credential states one |
+
+A credential that lacks `patient.id`, `trc.id` or `trc.not_on_or_after`
+attests nothing. On every access FerroEHR checks that the policy names the
+agreement, that the window holds the moment of the access, and that the
+record's subject is the attested patient. The caller then holds a live care
+relationship for the care step, the default disposition and any rule whose
+actor scope names `relationship: care`. The relationship is never stored and
+never in a caseload. The access log names it as a `treatment relationship`
+ground whose `reference` is the assertion (`id` and `issuer`) and whose
+`name` and `version` are the agreement's.
+
 #### Writing a care relationship
 
 FerroEHR checks each care relationship against the policy when it is
