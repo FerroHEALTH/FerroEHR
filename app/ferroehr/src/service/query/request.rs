@@ -47,11 +47,32 @@ pub struct AqlQueryRequest {
     /// The access evaluator's condition for the caller (`EHR_ACCESS`): the
     /// rows the query may read, applied to every EHR-anchored source whatever
     /// the query scopes or projects.
-    pub ehr_access: crate::access_eval::condition::AccessCondition,
+    pub ehr_access: QueryAccess,
     /// What the caller may read of the access log, which decides whether and
     /// how a query over `ACCESS_LOG_ENTRY` runs; the default refuses it. No
     /// openEHR spec governs AQL over the access log: our own design (#5131).
     pub log_standing: crate::access_log::view::LogStanding,
+}
+
+/// The access evaluator's condition an [`AqlQueryRequest`] applies
+/// (`EHR_ACCESS`).
+///
+/// The running request's condition is judged only by a statement that reads
+/// EHR data, so a query of the party domain depends on no read of the
+/// settings store (#6110). No openEHR spec governs this: our own design.
+#[derive(Debug, Clone, PartialEq)]
+pub enum QueryAccess {
+    /// The condition of the running request, judged when a clinical
+    /// statement asks for it; unrestricted outside a request.
+    OfRequest,
+    /// This condition.
+    Given(crate::access_eval::condition::AccessCondition),
+}
+
+impl Default for QueryAccess {
+    fn default() -> Self {
+        Self::Given(crate::access_eval::condition::AccessCondition::default())
+    }
 }
 
 impl AqlQueryRequest {
