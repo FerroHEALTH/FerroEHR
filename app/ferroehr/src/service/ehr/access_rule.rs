@@ -67,6 +67,16 @@ impl SettingsCaller {
         }
     }
 
+    /// This caller as the record's person, on an EHR whose subject is the
+    /// `PERSON` the party binding names it (#6106).
+    #[must_use]
+    pub fn into_subject(self) -> Self {
+        Self {
+            subject: true,
+            ..self
+        }
+    }
+
     /// Whether the caller writes and reads every EHR's settings.
     #[must_use]
     pub fn administrator(&self) -> bool {

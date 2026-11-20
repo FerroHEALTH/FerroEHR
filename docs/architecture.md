@@ -863,7 +863,20 @@ which is what makes an optional stage safe to disable:
    one, `403` `refused-no-care-relationship` (BASE Architecture Overview
    §Security Policy, "Time-limitation of access"); (8) the default disposition, `403` `refused-consent-required`, an EHR with no
    settings taking `[authz.rbac] ehr_access_default`. The subject skips every
-   step on their own EHR (Art. 3). A confined caller is refused `403`
+   step on their own EHR (Art. 3). Who the subject is has one source, the
+   party binding (#6106): a caller is the subject of an EHR whose
+   `EHR_STATUS.subject` names the `PERSON` its authenticated identity is
+   bound to, whatever roles it holds and with no purpose declared. The
+   evaluator reads that subject reference from its per-EHR copy, whose
+   revision every read checks against the store, and resolves its `PERSON`
+   as the care step does, so the decision adds no statement; it then
+   records the access as the subject's own and reads the caller as the
+   subject for that EHR's `EHR_ACCESS` settings. A bound person holding no
+   role passes the role gate and is confined to those records: it is the
+   subject kind, and every other EHR refuses it `refused-not-subject`. An
+   openEHR launch token carries no `fhirUser` and no `patient` claim (SMART
+   on openEHR `master07` §Context Selection names the `ehrId`), so no
+   reading of the token alone can name the person. A confined caller is refused `403`
    `refused-not-subject` on every other EHR, before step 1 (#5605): the
    `subject` kind, through a SMART App Launch patient-context credential, and
    any caller whose grants on the EHR's data are `patient/` grants alone. Its
@@ -873,8 +886,9 @@ which is what makes an optional stage safe to disable:
    evaluator alone confines it, on every route that names an EHR in its path,
    its single-EHR query or import scope, its manifest or its result, and on
    every row, count and page of a query; an operation on EHR data that names
-   no EHR (an EHR create, a lookup by subject, an unscoped query or import)
-   is refused at step 0. The SMART layer checks only a grant's family and
+   no EHR (an EHR create, an unscoped query or import) is refused at step 0.
+   A lookup by subject judges the EHR it finds, and a confined caller finds
+   only its own: any other answers `404` as a subject no EHR names does. The SMART layer checks only a grant's family and
    permission (#5586, #5606, our own design: SMART App Launch requires the
    patient context held and names no layer). On its own EHR a confined
    professional takes every step. A representative is confined the same way
