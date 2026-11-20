@@ -35,7 +35,7 @@
 #     files may appear in the same directory: a schema NAME can outlive the set
 #     that used it, and re-authoring `ext`, `linkage` or `audit` is exactly that.
 #     What may not survive is any file of the old set, edited or untouched.
-#   * `<schema>` is named in `FIRST_GENERATION_SETS` in
+#   * `<schema>` is named in `RETIRED_SETS` in
 #     `app/ferroehr/src/db/mod.rs` at head, which is the table the server's boot
 #     refusal reads: a database carrying that set's bookkeeping is refused by
 #     name, with the remedy, instead of failing on a checksum.
@@ -57,19 +57,19 @@ cd "$(dirname "$0")/../.." || exit 1
 
 readonly MIGRATIONS='app/ferroehr/migrations/'
 readonly RULE='.claude/rules/sqlx-conventions.md §Migrations'
-# The file whose `FIRST_GENERATION_SETS` table the boot refusal reads.
+# The file whose `RETIRED_SETS` table the boot refusal reads.
 readonly REFUSAL_FILE='app/ferroehr/src/db/mod.rs'
 
 # The schemas the boot refusal names at `$1`, one per line.
 #
-# The table is a list of `FirstGenerationSet { schema: "…", … }` records, so the
+# The table is a list of `RetiredSet { schema: "…", … }` records, so the
 # schema names are read out of it rather than restated here: a schema the guard
 # accepted a retirement for is by construction one the server refuses a database
 # for.
 refused_schemas_at() {
   local rev="$1"
   git show "$rev:$REFUSAL_FILE" 2>/dev/null \
-    | sed -n '/^const FIRST_GENERATION_SETS/,/^];$/p' \
+    | sed -n '/^const RETIRED_SETS/,/^];$/p' \
     | grep -o 'schema: "[A-Za-z0-9_]*"' \
     | sed 's/schema: "\(.*\)"/\1/'
 }
@@ -177,6 +177,9 @@ refused_changes() {
   [[ -n "$shipped" ]] || shipped="$fork"
   while IFS=$'\t' read -r status path _; do
     [[ -n "${status:-}" ]] || continue
+    # The templates render into the set files and are no migration: sqlx
+    # checksums the rendered files, which this guard judges.
+    [[ "$path" != "${MIGRATIONS}templates/"* ]] || continue
     # A file no release carries has been applied by no installation.
     shipped_at "$shipped" "$path" || continue
     case $status in
@@ -214,7 +217,7 @@ report() {
   echo "A whole SET is retired rather than edited, and only together with the" >&2
   echo "boot refusal that names its schema: every shipped file under" >&2
   echo "${MIGRATIONS}<schema>/ must be gone (a new set may take its place), and" >&2
-  echo "<schema> must be named in FIRST_GENERATION_SETS in ${REFUSAL_FILE}, so an" >&2
+  echo "<schema> must be named in RETIRED_SETS in ${REFUSAL_FILE}, so an" >&2
   echo "existing database is told what happened instead of being locked out by a" >&2
   echo "checksum." >&2
   echo >&2
@@ -247,7 +250,7 @@ self_test() {
     printf 'SELECT 5;\n' > "$MIGRATIONS/audit/0002_chain.sql"
     printf 'SELECT 6;\n' > "$MIGRATIONS/keep/0001_baseline.sql"
     printf 'SELECT 7;\n' > "$MIGRATIONS/keep/0002_second.sql"
-    printf 'const FIRST_GENERATION_SETS: &[FirstGenerationSet] = &[\n];\n' > "$REFUSAL_FILE"
+    printf 'const RETIRED_SETS: &[RetiredSet] = &[\n];\n' > "$REFUSAL_FILE"
     git add -A && git commit -qm base
     # Everything above is SHIPPED: the release tag sits on it.
     git -c tag.gpgSign=false tag v0.1.0
@@ -302,7 +305,7 @@ self_test() {
     printf 'SELECT 15; -- edited, but v0.2.0 ships it\n' > "$MIGRATIONS/keep/0006_released_off_lineage.sql"
     printf 'SELECT 16; -- edited, but v0.3.0-rc1 ships it\n' > "$MIGRATIONS/keep/0007_released_as_rc.sql"
     printf 'SELECT 6;\n' > "$MIGRATIONS/keep/0001_baseline.sql"
-    printf 'const FIRST_GENERATION_SETS: &[FirstGenerationSet] = &[\n    FirstGenerationSet { schema: "ext", first_description: Some("openehr functions") },\n    FirstGenerationSet { schema: "demographic", first_description: None },\n];\n' > "$REFUSAL_FILE"
+    printf 'const RETIRED_SETS: &[RetiredSet] = &[\n    RetiredSet { schema: "ext", first_description: Some("openehr functions") },\n    RetiredSet { schema: "demographic", first_description: None },\n];\n' > "$REFUSAL_FILE"
     git add -A && git commit -qm work
 
     # Meanwhile the base branch gained a migration the work branch never saw:
