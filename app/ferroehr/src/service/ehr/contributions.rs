@@ -20,7 +20,8 @@
 )]
 
 use crate::ids::EhrId;
-use crate::service::response::{ResourceMeta, ServiceResponse};
+use crate::service::ehr::access_view;
+use crate::service::response::{ContributionRead, ResourceMeta, ServiceResponse};
 use openehr_its::rest::generated::ehr::NewContribution;
 use serde_json::value::RawValue;
 use serde_json::{Value, json};
@@ -57,7 +58,10 @@ impl FerroEhrService {
             .commit_wire_contribution(ehr_id, &body.into())
             .await
             .map_err(ServiceError::flattened)?;
-        let body = self.ehr_contribution(ehr_id, committed.id, false).await?;
+        let body = self
+            .ehr_contribution(ehr_id, committed.id, false)
+            .await?
+            .body;
         let meta = ResourceMeta::new(ehr_id.to_string(), committed.id.to_string())
             .with_last_modified(committed.time_committed)
             .with_content(self.written_content(None, &committed.versions).await);
@@ -91,8 +95,10 @@ impl FerroEhrService {
     ///
     /// A CONTRIBUTION that commits an `EHR_ACCESS` version is answered as an
     /// unknown one to a caller who may not read the EHR's settings
-    /// ([`Self::may_read_ehr_access`]), since a restriction must not be
-    /// visible to a provider (EHDS Art. 8); our own design.
+    /// ([`Self::ehr_access_view`]), since a restriction must not be visible
+    /// to a provider (EHDS Art. 8); our own design. To a gate-keeper who is
+    /// not the subject, a resolved `EHR_ACCESS` version is served without
+    /// its marking and its signature (#6165).
     ///
     /// # Errors
     /// [`ServiceError`] when the CONTRIBUTION does not exist in this EHR
@@ -102,8 +108,8 @@ impl FerroEhrService {
         ehr_id: EhrId,
         contribution_id: Uuid,
         resolve_refs: bool,
-    ) -> Result<Value, ServiceError> {
-        let contribution = get_contribution(
+    ) -> Result<ContributionRead, ServiceError> {
+        let mut contribution = get_contribution(
             &self.pool,
             self.signer(),
             self.spec_profile,
@@ -112,13 +118,24 @@ impl FerroEhrService {
             resolve_refs,
         )
         .await?;
-        if commits_ehr_access(&contribution) && !Box::pin(self.may_read_ehr_access(ehr_id)).await? {
+        if !commits_ehr_access(&contribution) {
+            return Ok(ContributionRead {
+                body: contribution,
+                redacted: false,
+            });
+        }
+        let view = Box::pin(self.ehr_access_view(ehr_id)).await?;
+        if !view.reads() {
             return Err(ServiceError::not_found(
                 Missing::Contribution,
                 format!("CONTRIBUTION {contribution_id}"),
             ));
         }
-        Ok(contribution)
+        let redacted = view.redacts() && redact_access_versions(&mut contribution);
+        Ok(ContributionRead {
+            body: contribution,
+            redacted,
+        })
     }
 }
 
@@ -276,4 +293,21 @@ fn commits_ehr_access(contribution: &Value) -> bool {
                     || version.pointer("/data/_type").and_then(Value::as_str) == Some("EHR_ACCESS")
             })
         })
+}
+
+/// Redacts every resolved `EHR_ACCESS` version of `contribution`
+/// ([`access_view::redact_version`]); whether it redacted one.
+fn redact_access_versions(contribution: &mut Value) -> bool {
+    let mut redacted = false;
+    let versions = contribution
+        .get_mut("versions")
+        .and_then(Value::as_array_mut)
+        .map_or(&mut [][..], Vec::as_mut_slice);
+    for version in versions {
+        if version.pointer("/data/_type").and_then(Value::as_str) == Some("EHR_ACCESS") {
+            access_view::redact_version(version);
+            redacted = true;
+        }
+    }
+    redacted
 }
