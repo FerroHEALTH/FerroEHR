@@ -75,14 +75,14 @@ MIGRATIONS=app/ferroehr/migrations
 
 # Files whose historical citations are deliberate, each with its reason.
 #
-# `db/mod.rs` IS the boot refusal for a first-generation database: it names that
-# generation's opening files because sqlx records the file name as the recorded
-# description, so the names are the signature it matches on.
+# `db/retired.rs` IS the boot refusal for a retired set's database: it names
+# the opening files of the first generation and of v5, because sqlx records the
+# file name as the description, so the names are the signature it matches on.
 #
 # `ext_functions.rs` cites the first generation's helper file at the `v4.3.0`
 # tag, where it still exists; the same test asserts its embedded copy equals
 # `git show v4.3.0:…` byte for byte, so the citation is machine-checked.
-EXEMPT='app/ferroehr/src/db/mod.rs
+EXEMPT='app/ferroehr/src/db/retired.rs
 app/ferroehr/tests/it/ext_functions.rs'
 
 exempted() {
