@@ -38,6 +38,7 @@
 )]
 
 pub(crate) mod assurance;
+pub(crate) mod attested;
 mod build;
 pub(crate) mod declared;
 mod gates;

@@ -219,7 +219,8 @@ pub struct Ehr<'a> {
     pub settings: Option<&'a EhrAccessSettings>,
     /// The server-wide default of an EHR with no settings.
     pub server_default: AccessDefault,
-    /// Whether the caller has a live care relationship to its subject.
+    /// Whether the caller has a live care relationship to its subject,
+    /// stored or attested by its credential.
     pub cared: bool,
     /// Whether the EHR is one of the [`Caller::own_ehrs`] of a confined caller.
     pub own: bool,

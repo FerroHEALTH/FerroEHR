@@ -19,8 +19,10 @@ use uuid::Uuid;
 use super::{EhrEntry, RequestAccess};
 use crate::access_eval::procedure::Verdict;
 use crate::access_eval::stale::{STALE_POLL, STALE_WAIT};
+use crate::access_policy::care::CareFacts;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
+use crate::party_binding::grants::caller::attestation::Attestation;
 use crate::party_binding::grants::caller::care_of::CareOf;
 use crate::party_binding::grants::live::GrantsUnavailable;
 use crate::party_binding::grants::live::revisions::Revisions;
@@ -127,6 +129,50 @@ impl RequestAccess {
                 && care.admits_writer(&principals, policy.self_declared)
                 && self.caller.facts.acts_for_provider(care.provider())
         })
+    }
+
+    /// The treatment context the caller's verified credential attests for
+    /// the subject of `ehr_id`, when the policy in force names its agreement
+    /// in `attested_care` and the assertion is current: the `attested` path
+    /// (draft decision procedure, Holding a Care Relationship), off while
+    /// `attested_care` is void.
+    #[must_use]
+    pub fn attested_on(&self, ehr_id: EhrId) -> Option<&Attestation> {
+        let attestation = self.caller.facts.attestation()?;
+        let agreements = CareFacts::of(self.policy.as_deref()).attested_agreements();
+        attestation
+            .holds(agreements, ehr_id, self.now)
+            .then_some(attestation)
+    }
+
+    /// The EHRs the caller holds an attested care relationship to
+    /// ([`Self::attested_on`]).
+    fn attested_ehrs(&self) -> Vec<Uuid> {
+        self.caller
+            .facts
+            .attestation()
+            .map_or_else(Vec::new, |attestation| {
+                attestation
+                    .ehrs
+                    .iter()
+                    .filter(|ehr| self.attested_on(**ehr).is_some())
+                    .map(|ehr| ehr.0)
+                    .collect()
+            })
+    }
+
+    /// The care a query that names no EHR reads for a caller that holds no
+    /// stored relationship and attests a treatment context: the EHRs of the
+    /// attested subject. `None` for every other caller.
+    #[must_use]
+    pub fn attested_care(&self) -> Option<Care> {
+        // NOTE: our own design (#6078), an attested caller is admitted under an agreement and
+        // holds no principal here, so the attested EHRs are all the care it holds.
+        if self.may_hold_care() {
+            return None;
+        }
+        let ehrs = self.attested_ehrs();
+        (!ehrs.is_empty()).then(|| Care::Ehrs(ehrs.into()))
     }
 
     /// Whether the caller can hold a care relationship at all: it has a
@@ -256,7 +302,8 @@ impl RequestAccess {
     }
 
     /// Of the EHRs `entries` name, those whose subject the caller has a live
-    /// care relationship to, judged as the care step judges one EHR.
+    /// care relationship to, stored or attested, judged as the care step
+    /// judges one EHR.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the care copy misses and cannot read.
@@ -266,7 +313,7 @@ impl RequestAccess {
     ) -> Result<Vec<Uuid>, GrantsUnavailable> {
         let mut cared = Vec::new();
         for (ehr_id, entry) in entries {
-            if self.cares_for(entry).await? {
+            if self.attested_on(*ehr_id).is_some() || self.cares_for(entry).await? {
                 cared.push(ehr_id.0);
             }
         }

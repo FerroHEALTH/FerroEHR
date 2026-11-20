@@ -300,9 +300,10 @@ impl FerroEhrService {
                 let entries = self.ehr_access_entries(ehrs).await?;
                 Care::Ehrs(access.cared_ehrs(&entries).await?.into())
             }
-            None => match projected_care(access) {
-                Some(care) if self.care_projection_current() => Care::Projected(care),
-                _ => Care::Census(access.cared_subjects().await?.into()),
+            None => match (access.attested_care(), projected_care(access)) {
+                (Some(attested), _) => attested,
+                (None, Some(care)) if self.care_projection_current() => Care::Projected(care),
+                (None, _) => Care::Census(access.cared_subjects().await?.into()),
             },
         })
     }

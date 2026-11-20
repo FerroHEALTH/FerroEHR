@@ -319,7 +319,7 @@ impl RequestAccess {
                 });
             }
             if found.cared {
-                grounds.push(self.policy_ground(Authorisation::TreatmentRelationship));
+                grounds.push(self.care_ground(judged));
             }
         }
         grounds.extend(
@@ -340,6 +340,27 @@ impl RequestAccess {
         );
         if verdict.lifted.contains(&Lifted::Policy) {
             grounds.push(self.policy_ground(Authorisation::Emergency));
+        }
+    }
+
+    /// The treatment relationship `judged` rests on: the assertion and the
+    /// agreement of an attested one (draft decision procedure, Refusals:
+    /// "the assertion and agreement for `attested`"), otherwise a ground of
+    /// the access policy in force.
+    fn care_ground(&self, judged: &Judgement) -> AccessAuthorisation {
+        match self
+            .caller()
+            .facts
+            .attestation()
+            .filter(|_| judged.attested)
+        {
+            Some(attestation) => AccessAuthorisation {
+                name: Some(attestation.agreement.name.clone()),
+                version: Some(attestation.agreement.version.clone()),
+                reference: Some(attestation.assertion_ref()),
+                ..authorisation(Authorisation::TreatmentRelationship)
+            },
+            None => self.policy_ground(Authorisation::TreatmentRelationship),
         }
     }
 

@@ -105,6 +105,10 @@ pub struct Judgement {
     pub version: Option<String>,
     /// The revision of the settings row they were read from.
     pub revision: Revision,
+    /// Whether the caller's care for the subject rests on the treatment
+    /// context its credential attests alone, no stored relationship
+    /// admitting it ([`RequestAccess::attested_on`]).
+    pub attested: bool,
 }
 
 /// What the access record of a request names beside the verdicts: the
@@ -428,7 +432,8 @@ impl RequestAccess {
                 cared = self.cares_for(entry).await?;
             }
         }
-        let judged = self.judgement_of(ehr_id, entry, cared);
+        let attested = !cared && self.attested_on(ehr_id).is_some();
+        let judged = self.judgement_of(ehr_id, entry, cared, attested);
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
             .lock()
@@ -438,13 +443,25 @@ impl RequestAccess {
     }
 
     /// The judgement of the EHR `ehr_id` as `entry` reads it, the caller
-    /// `cared` for its subject or not.
-    fn judgement_of(&self, ehr_id: EhrId, entry: &EhrEntry, cared: bool) -> Judgement {
+    /// `cared` for its subject by a stored relationship or not, and
+    /// `attested` to it by its credential alone or not.
+    fn judgement_of(
+        &self,
+        ehr_id: EhrId,
+        entry: &EhrEntry,
+        cared: bool,
+        attested: bool,
+    ) -> Judgement {
         Judgement {
-            verdict: Arc::new(self.judge(Some(ehr_id), (*entry.settings).as_ref(), cared)),
+            verdict: Arc::new(self.judge(
+                Some(ehr_id),
+                (*entry.settings).as_ref(),
+                cared || attested,
+            )),
             settings: Arc::clone(&entry.settings),
             version: entry.version.clone(),
             revision: entry.revision.clone(),
+            attested,
         }
     }
 
@@ -466,7 +483,8 @@ impl RequestAccess {
         let at = Some(ehr_id);
         let cared =
             self.judge(at, None, true).admits_any() && !self.judge(at, None, false).admits_any();
-        let judged = self.judgement_of(ehr_id, &entry, cared);
+        let attested = cared && self.attested_on(ehr_id).is_some();
+        let judged = self.judgement_of(ehr_id, &entry, cared && !attested, attested);
         self.verdicts
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
