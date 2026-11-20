@@ -78,7 +78,7 @@ pub(in crate::extensions::access::authn) fn as_person(caller: &Caller) -> Caller
 /// The caller `caller`, a token `ferrohealth-smart` reads as the patient's
 /// own, carrying the binding of its login when its issuer is a `persons`
 /// issuer with an `[[auth.party]]` table; `None` for a `patients` issuer's
-/// token, whose login the patient-portal binding reads ([`super::portal`]).
+/// token, whose login the patient-portal binding reads ([`super::super::portal`]).
 ///
 /// The token's reading never grants: its login has to bind the person
 /// themself ([`binds_the_person`]), looked up as a person's
