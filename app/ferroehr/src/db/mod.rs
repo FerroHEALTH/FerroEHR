@@ -330,6 +330,22 @@ pub enum DbError {
         schema: &'static str,
     },
 
+    /// The database was prepared by a FerroEHR v5 release, whose migration
+    /// history v6.0.0 replaced with a new baseline.
+    #[error(
+        "this database was prepared by FerroEHR v5: schema `{schema}` carries the v5 migration \
+         bookkeeping. FerroEHR v6 replaces the whole migration history with one baseline per \
+         schema, so there is nothing to upgrade in place, and this server will not apply its \
+         baseline over the v5 schema. Prepare a new, empty database for v6 and start this server \
+         against it, then move the records: dump them with the v5 server's archive export \
+         (`POST /ferroehr/rest/extensions/v1/admin/dump`) and load the archive into \
+         this server (`POST /ferroehr/rest/extensions/v1/admin/load`)"
+    )]
+    V5Database {
+        /// The v5 schema whose migration bookkeeping was found.
+        schema: &'static str,
+    },
+
     /// A runtime role can read a relation belonging to a pseudonymisation
     /// domain it does not own.
     #[error(
@@ -584,15 +600,26 @@ const fn domain_migrator(domain: Domain) -> (&'static str, &'static Migrator) {
     }
 }
 
-/// One schema of the first storage generation, and how to recognise its
+/// The release line a retired migration set belongs to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RetiredRelease {
+    /// The first storage generation, which the storage rewrite replaced.
+    FirstGeneration,
+    /// The v5 sets, which the v6.0.0 baseline replaced.
+    V5,
+}
+
+/// One retired migration set: the schema it ran in, and how to recognise its
 /// bookkeeping.
 #[derive(Debug, Clone, Copy)]
-struct FirstGenerationSet {
-    /// The schema the first generation's migration set ran in.
+struct RetiredSet {
+    /// The schema the retired set ran in.
     schema: &'static str,
+    /// The release line the set belongs to, which picks the refusal.
+    release: RetiredRelease,
     /// The description sqlx recorded for that set's version 1, when a later
-    /// generation reused the schema name; `None` when the schema itself is
-    /// first-generation and any bookkeeping in it is the signature.
+    /// set reused the schema name; `None` when this build owns no set of that
+    /// name and any bookkeeping in it is the signature.
     ///
     /// sqlx derives the description from the file name after the version
     /// number, with underscores replaced by spaces, so `0001_baseline.sql`
@@ -600,51 +627,81 @@ struct FirstGenerationSet {
     first_description: Option<&'static str>,
 }
 
-/// The first storage generation's migration sets, which this build does not
-/// migrate and cannot read.
+/// The retired migration sets, which this build does not migrate and cannot
+/// read: a database that carries one is refused at boot with the way forward
+/// rather than half-adopted.
 ///
-/// The rewrite is greenfield: the new sets replace the old ones outright,
-/// nothing is upgraded in place, and a database created by an earlier release
-/// is refused at boot rather than half-adopted.
+/// Neither retirement is upgraded in place. The storage rewrite replaced the
+/// first generation outright, and v6.0.0 replaced the v5 history with one
+/// baseline per schema (owner decision 2026-11-20, #6139).
 ///
-/// Three of the five schema NAMES survive the rewrite (`ext`, `linkage`,
-/// `audit`), so for those the signature cannot be the bookkeeping's existence —
-/// it is which migration ran FIRST. Version 1 is the one row a set can never
-/// lack, and its description names the file: the first generation opened `ext`
-/// with `0001_openehr_functions.sql` where this one opens it with
-/// `0001_schema_and_roles.sql`, and opened `linkage`/`audit` with
-/// `0001_baseline.sql` where the second opened them with `0001_schema_and_role`
-/// and `0001_schema_and_roles`. A second-generation `linkage` schema is not
-/// refused: `audit/0021_drop_linkage_domain.sql` drops it. For `ehr` and
-/// `demographic`, which this build
-/// owns no set for, any bookkeeping at all is the signature — a bare schema of
-/// the same name is not, because `CREATE SCHEMA` is cheap and someone may have
-/// made one, while the bookkeeping table is written only by a migrator that ran
-/// there.
+/// Where a schema NAME survives (`ext`, `audit`, `clinical`, `party`), the
+/// signature cannot be the bookkeeping's existence; it is which migration ran
+/// FIRST. Version 1 is the one row a set can never lack, and its description
+/// names the file. The first generation opened `ext` with
+/// `0001_openehr_functions.sql` and `audit` with `0001_baseline.sql`; v5 opened
+/// `ext` and `audit` with `0001_schema_and_roles.sql` and `clinical` and `party`
+/// with `0001_schema_and_grants_baseline.sql`; the v6 baseline opens them with
+/// files of other names. For `ehr`, `demographic` and `linkage`, which this
+/// build owns no set for, any bookkeeping at all is the signature: a bare
+/// schema of the same name is not, because `CREATE SCHEMA` is cheap and someone
+/// may have made one, while the bookkeeping table is written only by a migrator
+/// that ran there. The first generation's `linkage` is listed first, so its
+/// signature picks its own refusal.
 ///
-/// Without this, a first-generation `ext`, `linkage` or `audit` set would reach
-/// its own migrator and fail on a checksum mismatch — an error about a hash
-/// where the operator needs the remedy.
-const FIRST_GENERATION_SETS: &[FirstGenerationSet] = &[
-    FirstGenerationSet {
+/// Without this, a retired set in a surviving schema would reach this build's
+/// migrator and fail on a checksum mismatch: an error about a hash where the
+/// operator needs the remedy.
+const RETIRED_SETS: &[RetiredSet] = &[
+    RetiredSet {
         schema: "ehr",
+        release: RetiredRelease::FirstGeneration,
         first_description: None,
     },
-    FirstGenerationSet {
+    RetiredSet {
         schema: "demographic",
+        release: RetiredRelease::FirstGeneration,
         first_description: None,
     },
-    FirstGenerationSet {
+    RetiredSet {
         schema: "ext",
+        release: RetiredRelease::FirstGeneration,
         first_description: Some("openehr functions"),
     },
-    FirstGenerationSet {
+    RetiredSet {
         schema: "linkage",
+        release: RetiredRelease::FirstGeneration,
         first_description: Some("baseline"),
     },
-    FirstGenerationSet {
+    RetiredSet {
         schema: "audit",
+        release: RetiredRelease::FirstGeneration,
         first_description: Some("baseline"),
+    },
+    RetiredSet {
+        schema: "ext",
+        release: RetiredRelease::V5,
+        first_description: Some("schema and roles"),
+    },
+    RetiredSet {
+        schema: "clinical",
+        release: RetiredRelease::V5,
+        first_description: Some("schema and grants baseline"),
+    },
+    RetiredSet {
+        schema: "party",
+        release: RetiredRelease::V5,
+        first_description: Some("schema and grants baseline"),
+    },
+    RetiredSet {
+        schema: "audit",
+        release: RetiredRelease::V5,
+        first_description: Some("schema and roles"),
+    },
+    RetiredSet {
+        schema: "linkage",
+        release: RetiredRelease::V5,
+        first_description: None,
     },
 ];
 
@@ -1559,7 +1616,7 @@ async fn verify_set(
 /// `RESTRICT` (<https://www.postgresql.org/docs/18/sql-dropschema.html>): a
 /// schema that came to hold anything stays, and the failure is reported.
 async fn apply_migrations(conn: &mut PgConnection, domains: &[Domain]) -> Result<(), DbError> {
-    guard_first_generation_database(&mut *conn).await?;
+    guard_retired_database(&mut *conn).await?;
     let named_only: Vec<&'static str> = bootstrap_schemas(domains)
         .into_iter()
         .filter(|domain| !domains.contains(domain))
@@ -1609,24 +1666,25 @@ async fn apply_migrations(conn: &mut PgConnection, domains: &[Domain]) -> Result
     Ok(())
 }
 
-/// Refuse a database created by a release older than the storage rewrite.
+/// Refuse a database that carries a retired migration set.
 ///
-/// The rewrite is greenfield: the migration sets replace the first
-/// generation's outright, so there is nothing to upgrade and nothing to adopt.
-/// Left to itself the sequence would create `clinical` and `party` beside the
-/// old `ehr` and `demographic` schemas and serve an empty repository, with the
-/// operator's data sitting untouched and unreachable in the same database.
-/// That is the one outcome worse than refusing.
+/// Neither retirement upgrades anything in place: the storage rewrite replaced
+/// the first generation's sets outright, and v6.0.0 replaced the v5 history
+/// with one baseline per schema. Left to itself the sequence would create
+/// this build's schemas beside the old ones, or apply its baseline over a v5
+/// schema, and serve an empty or broken repository with the operator's data
+/// sitting unreachable in the same database. That is the one outcome worse
+/// than refusing.
 ///
-/// The signature is [`FIRST_GENERATION_SETS`]: bookkeeping in a schema this
-/// build owns no set for, or bookkeeping whose version 1 names the file the
-/// first generation opened that schema with.
+/// The signature is [`RETIRED_SETS`]: bookkeeping in a schema this build owns
+/// no set for, or bookkeeping whose version 1 names the file a retired set
+/// opened that schema with.
 ///
 /// `to_regclass` answers `NULL` for a missing relation instead of failing
 /// (<https://www.postgresql.org/docs/18/functions-info.html>), so the presence
 /// probe is one statement over a fresh database and an old one alike.
-async fn guard_first_generation_database(conn: &mut PgConnection) -> Result<(), DbError> {
-    for set in FIRST_GENERATION_SETS {
+async fn guard_retired_database(conn: &mut PgConnection) -> Result<(), DbError> {
+    for set in RETIRED_SETS {
         let present: bool =
             sqlx::query_scalar("SELECT to_regclass($1 || '._sqlx_migrations') IS NOT NULL")
                 .bind(set.schema)
@@ -1635,23 +1693,31 @@ async fn guard_first_generation_database(conn: &mut PgConnection) -> Result<(), 
         if !present {
             continue;
         }
-        let Some(signature) = set.first_description else {
+        let retired = match set.first_description {
             // This build owns no set of that name, so the bookkeeping can only
-            // be the first generation's.
-            return Err(DbError::FirstGenerationDatabase { schema: set.schema });
+            // be a retired set's.
+            None => true,
+            Some(signature) => {
+                // The schema name survives, so which migration ran FIRST is
+                // what separates the sets. `set.schema` is one of the literals
+                // in `RETIRED_SETS` above, never input.
+                let sql = format!(
+                    "SELECT description FROM {}._sqlx_migrations WHERE version = 1",
+                    set.schema
+                );
+                let first: Option<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
+                    .fetch_optional(&mut *conn)
+                    .await?;
+                first.as_deref() == Some(signature)
+            }
         };
-        // The schema name survives the rewrite, so which migration ran FIRST is
-        // what separates the generations. `set.schema` is one of the literals
-        // in `FIRST_GENERATION_SETS` above, never input.
-        let sql = format!(
-            "SELECT description FROM {}._sqlx_migrations WHERE version = 1",
-            set.schema
-        );
-        let first: Option<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
-            .fetch_optional(&mut *conn)
-            .await?;
-        if first.as_deref() == Some(signature) {
-            return Err(DbError::FirstGenerationDatabase { schema: set.schema });
+        if retired {
+            return Err(match set.release {
+                RetiredRelease::FirstGeneration => {
+                    DbError::FirstGenerationDatabase { schema: set.schema }
+                }
+                RetiredRelease::V5 => DbError::V5Database { schema: set.schema },
+            });
         }
     }
     Ok(())

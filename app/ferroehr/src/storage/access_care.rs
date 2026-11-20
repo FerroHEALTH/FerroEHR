@@ -3,7 +3,7 @@
 
 //! The care projection of the clinical domain (#5699).
 //!
-//! `clinical/0047_access_care.sql` holds the care relationships of the party
+//! `clinical/0009_baseline_access.sql` holds the care relationships of the party
 //! domain, one row per subject reference and relationship, each reference
 //! held as its SHA-256 digest, and the digest of each EHR's own subject
 //! reference beside it.

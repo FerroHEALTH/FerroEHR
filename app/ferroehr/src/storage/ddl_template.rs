@@ -18,23 +18,22 @@
 /// One domain's substitutions into the shared DDL templates.
 #[derive(Debug, Clone, Copy)]
 pub struct Domain {
+    /// The domain's name, which marks the blocks rendered into it alone.
+    pub name: &'static str,
     /// The versioned-object RM types this domain admits; every other kind is
     /// refused by the rendered `CHECK`.
     pub kinds: &'static [&'static str],
-    /// Whether the domain owns an `ehr` relation the change-control rows may
-    /// reference. The party domain has none, so those foreign keys are not
-    /// rendered into its files.
-    pub references_ehr: bool,
 }
 
 /// The clinical domain: the EHR-owned versioned objects.
 pub const CLINICAL: Domain = Domain {
+    name: "clinical",
     kinds: &["COMPOSITION", "EHR_STATUS", "EHR_ACCESS", "FOLDER"],
-    references_ehr: true,
 };
 
 /// The party domain: the demographic versioned objects.
 pub const PARTY: Domain = Domain {
+    name: "party",
     kinds: &[
         "AGENT",
         "GROUP",
@@ -43,93 +42,22 @@ pub const PARTY: Domain = Domain {
         "ROLE",
         "PARTY_RELATIONSHIP",
     ],
-    references_ehr: false,
 };
+
+/// The domains the templates render into.
+pub const DOMAINS: [Domain; 2] = [CLINICAL, PARTY];
 
 /// The change-control template: commit audit, contribution, version, head and
 /// attestations.
 pub const CHANGE_CONTROL: &str = include_str!("../../migrations/templates/change_control.sql.in");
 
-/// The node template: the decomposed content of every version.
+/// The node template: the decomposed content of every version, with its
+/// indexes and extended statistics.
 pub const NODE: &str = include_str!("../../migrations/templates/node.sql.in");
 
-/// The node values template: the typed value columns and the nullable,
-/// slimmed fragment (#4306).
-pub const NODE_VALUES: &str = include_str!("../../migrations/templates/node_values.sql.in");
-
-/// The node header template: the `rm_version`, `language` and `encoding`
-/// columns a row below the root keeps its archetype header, language and
-/// encoding in (#4525).
-pub const NODE_HEADER: &str = include_str!("../../migrations/templates/node_header.sql.in");
-
-/// The node compact template: the four marker columns a row announces the
-/// keys it leaves out of its fragment with (#4904).
-pub const NODE_COMPACT: &str = include_str!("../../migrations/templates/node_compact.sql.in");
-
-/// The version content template: the digest and the content version a
-/// version whose content equals its predecessor's reads its rows through
-/// (#4415).
-pub const VERSION_CONTENT: &str = include_str!("../../migrations/templates/version_content.sql.in");
-
-/// The head content key template: the trunk head's content key a
-/// `LATEST_VERSION` read joins the node rows on (#4944).
-pub const HEAD_CONTENT_KEY: &str =
-    include_str!("../../migrations/templates/head_content_key.sql.in");
-
-/// The head root archetype template: the trunk head's root archetype a
-/// query's access condition compares (#5782).
-pub const HEAD_ROOT_ARCHETYPE: &str =
-    include_str!("../../migrations/templates/head_root_archetype.sql.in");
-
-/// The version-tree key template: `uq_version_tree` keyed with the object
-/// last, so the foreign-key lookup of a node row reads one version (#4340).
-pub const VERSION_TREE_KEY: &str =
-    include_str!("../../migrations/templates/version_tree_key.sql.in");
-
-/// The version-tree read template: an index on the object and its three
-/// tree columns, so a read by version tree id probes one version (#4420).
-pub const VERSION_TREE_READ: &str =
-    include_str!("../../migrations/templates/version_tree_read.sql.in");
-
-/// The version-uid order template: an index on the uid the AQL engine
-/// synthesizes, so a page ordered by it reads the index (#4429).
-pub const VERSION_UID_ORDER: &str =
-    include_str!("../../migrations/templates/version_uid_order.sql.in");
-
-/// The value search template: the expression index and statistics an AQL
-/// lookup by an ELEMENT value enters through (#4437).
-pub const VALUE_SEARCH: &str = include_str!("../../migrations/templates/value_search.sql.in");
-
-/// The template that drops the node rows' foreign key into `version` and
-/// narrows the per-EHR class and subsumption indexes to the rows their
-/// readers reach (#5969).
-pub const NODE_LEAN: &str = include_str!("../../migrations/templates/node_lean.sql.in");
-
-/// The template that adds the time of an event row and the origin of a
-/// history row as an indexed column an AQL filter enters through (#6022).
-pub const NODE_EVENT_TIME: &str = include_str!("../../migrations/templates/node_event_time.sql.in");
-
-/// The template that indexes the magnitude of an ELEMENT value, which an AQL
-/// range filter enters through (#6022).
-pub const NODE_VALUE_MAGNITUDE: &str =
-    include_str!("../../migrations/templates/node_value_magnitude.sql.in");
-
-/// The template that indexes the code of an ELEMENT value, which an AQL
-/// equality enters through (#6033).
-pub const NODE_VALUE_CODE: &str = include_str!("../../migrations/templates/node_value_code.sql.in");
-
-/// The template that indexes the number of an ELEMENT value's `value`
-/// member, which an AQL equality with a number-shaped text enters through
-/// (#6090).
-pub const NODE_VALUE_NUMBER: &str =
-    include_str!("../../migrations/templates/node_value_number.sql.in");
-
-/// The marker opening a block rendered only for a domain that owns an `ehr`
-/// relation.
-const EHR_BEGIN: &str = "--@ehr-begin";
-
-/// The marker closing such a block.
-const EHR_END: &str = "--@ehr-end";
+/// The prefix of a marker line; `--@<domain>-begin` opens a block rendered
+/// into that domain alone and `--@<domain>-end` closes it.
+const MARKER: &str = "--@";
 
 /// The placeholder the domain's admitted kinds are rendered into.
 const KINDS: &str = "{{kinds}}";
@@ -138,9 +66,8 @@ const KINDS: &str = "{{kinds}}";
 ///
 /// The rendering is a pure function of the template text and the [`Domain`]:
 /// the `{{kinds}}` placeholder becomes the domain's quoted kind list, and a
-/// block between the `--@ehr-begin` and `--@ehr-end` markers is kept only when
-/// the domain owns an `ehr` relation. The markers themselves never reach the
-/// output.
+/// block between `--@<name>-begin` and `--@<name>-end` is kept only for the
+/// domain of that name. The markers themselves never reach the output.
 #[must_use]
 pub fn render(template: &str, domain: &Domain) -> String {
     let kinds = domain
@@ -150,18 +77,19 @@ pub fn render(template: &str, domain: &Domain) -> String {
         .collect::<Vec<_>>()
         .join(", ");
     let mut out = String::with_capacity(template.len());
-    let mut inside_ehr_block = false;
+    let mut block: Option<&str> = None;
     for line in template.lines() {
-        let trimmed = line.trim();
-        if trimmed == EHR_BEGIN {
-            inside_ehr_block = true;
-            continue;
+        if let Some(marker) = line.trim().strip_prefix(MARKER) {
+            if let Some(name) = marker.strip_suffix("-begin") {
+                block = Some(name);
+                continue;
+            }
+            if marker.strip_suffix("-end").is_some() {
+                block = None;
+                continue;
+            }
         }
-        if trimmed == EHR_END {
-            inside_ehr_block = false;
-            continue;
-        }
-        if inside_ehr_block && !domain.references_ehr {
+        if block.is_some_and(|name| name != domain.name) {
             continue;
         }
         out.push_str(&line.replace(KINDS, &kinds));
@@ -177,155 +105,17 @@ mod tests {
     /// The rendered file that each template + domain pair is committed as.
     const RENDERED: &[(&str, Domain, &str)] = &[
         (
-            "migrations/clinical/0003_change_control.sql",
+            "migrations/clinical/0003_baseline_change_control.sql",
             CLINICAL,
             CHANGE_CONTROL,
         ),
         (
-            "migrations/party/0002_change_control.sql",
+            "migrations/party/0002_baseline_change_control.sql",
             PARTY,
             CHANGE_CONTROL,
         ),
-        ("migrations/clinical/0004_node.sql", CLINICAL, NODE),
-        ("migrations/party/0003_node.sql", PARTY, NODE),
-        (
-            "migrations/clinical/0019_node_values.sql",
-            CLINICAL,
-            NODE_VALUES,
-        ),
-        ("migrations/party/0012_node_values.sql", PARTY, NODE_VALUES),
-        (
-            "migrations/clinical/0022_version_tree_key.sql",
-            CLINICAL,
-            VERSION_TREE_KEY,
-        ),
-        (
-            "migrations/party/0013_version_tree_key.sql",
-            PARTY,
-            VERSION_TREE_KEY,
-        ),
-        (
-            "migrations/clinical/0023_version_tree_read.sql",
-            CLINICAL,
-            VERSION_TREE_READ,
-        ),
-        (
-            "migrations/party/0014_version_tree_read.sql",
-            PARTY,
-            VERSION_TREE_READ,
-        ),
-        (
-            "migrations/clinical/0024_version_uid_order.sql",
-            CLINICAL,
-            VERSION_UID_ORDER,
-        ),
-        (
-            "migrations/party/0015_version_uid_order.sql",
-            PARTY,
-            VERSION_UID_ORDER,
-        ),
-        (
-            "migrations/clinical/0025_value_search.sql",
-            CLINICAL,
-            VALUE_SEARCH,
-        ),
-        (
-            "migrations/party/0016_value_search.sql",
-            PARTY,
-            VALUE_SEARCH,
-        ),
-        (
-            "migrations/clinical/0028_node_header.sql",
-            CLINICAL,
-            NODE_HEADER,
-        ),
-        ("migrations/party/0020_node_header.sql", PARTY, NODE_HEADER),
-        (
-            "migrations/clinical/0031_node_compact.sql",
-            CLINICAL,
-            NODE_COMPACT,
-        ),
-        (
-            "migrations/party/0024_node_compact.sql",
-            PARTY,
-            NODE_COMPACT,
-        ),
-        (
-            "migrations/clinical/0032_version_content.sql",
-            CLINICAL,
-            VERSION_CONTENT,
-        ),
-        (
-            "migrations/party/0025_version_content.sql",
-            PARTY,
-            VERSION_CONTENT,
-        ),
-        (
-            "migrations/clinical/0034_head_content_key.sql",
-            CLINICAL,
-            HEAD_CONTENT_KEY,
-        ),
-        (
-            "migrations/party/0026_head_content_key.sql",
-            PARTY,
-            HEAD_CONTENT_KEY,
-        ),
-        (
-            "migrations/clinical/0048_head_root_archetype.sql",
-            CLINICAL,
-            HEAD_ROOT_ARCHETYPE,
-        ),
-        (
-            "migrations/party/0050_head_root_archetype.sql",
-            PARTY,
-            HEAD_ROOT_ARCHETYPE,
-        ),
-        (
-            "migrations/clinical/0052_node_lean.sql",
-            CLINICAL,
-            NODE_LEAN,
-        ),
-        ("migrations/party/0054_node_lean.sql", PARTY, NODE_LEAN),
-        (
-            "migrations/clinical/0053_node_event_time.sql",
-            CLINICAL,
-            NODE_EVENT_TIME,
-        ),
-        (
-            "migrations/party/0055_node_event_time.sql",
-            PARTY,
-            NODE_EVENT_TIME,
-        ),
-        (
-            "migrations/clinical/0054_node_value_magnitude.sql",
-            CLINICAL,
-            NODE_VALUE_MAGNITUDE,
-        ),
-        (
-            "migrations/party/0056_node_value_magnitude.sql",
-            PARTY,
-            NODE_VALUE_MAGNITUDE,
-        ),
-        (
-            "migrations/clinical/0055_node_value_code.sql",
-            CLINICAL,
-            NODE_VALUE_CODE,
-        ),
-        (
-            "migrations/party/0057_node_value_code.sql",
-            PARTY,
-            NODE_VALUE_CODE,
-        ),
-        (
-            "migrations/clinical/0057_node_value_number.sql",
-            CLINICAL,
-            NODE_VALUE_NUMBER,
-        ),
-        (
-            "migrations/party/0060_node_value_number.sql",
-            PARTY,
-            NODE_VALUE_NUMBER,
-        ),
+        ("migrations/clinical/0004_baseline_node.sql", CLINICAL, NODE),
+        ("migrations/party/0003_baseline_node.sql", PARTY, NODE),
     ];
 
     /// Set to `1` to rewrite the committed files from the templates instead of
@@ -357,56 +147,66 @@ mod tests {
         }
     }
 
+    /// A template renders the same text into both domains but for the kind
+    /// list and the lines of the blocks marked for one domain.
     #[test]
-    fn the_two_domains_differ_only_in_kinds_and_the_clinical_references() {
-        for template in [
-            CHANGE_CONTROL,
-            NODE,
-            NODE_VALUES,
-            VERSION_TREE_KEY,
-            VERSION_TREE_READ,
-        ] {
-            let clinical = render(template, &CLINICAL);
-            let party = render(template, &PARTY);
-            let differences: Vec<(&str, &str)> = diff_lines(&clinical, &party);
-            for (left, right) in differences {
-                let is_kind_check = left.contains("'COMPOSITION'") && right.contains("'PERSON'");
-                let is_clinical_reference =
-                    right.is_empty() && (left.contains("REFERENCES ehr (id)"));
-                assert!(
-                    is_kind_check || is_clinical_reference,
-                    "unexpected difference between the domains:\n  clinical: {left}\n  party:    {right}"
-                );
+    fn the_two_domains_differ_only_in_kinds_and_their_own_blocks() {
+        for template in [CHANGE_CONTROL, NODE] {
+            // The template with every marked block taken out, rendered for one
+            // domain: what is left differs between the domains only in kinds.
+            let mut unmarked = String::new();
+            let mut inside = false;
+            for line in template.lines() {
+                if let Some(marker) = line.trim().strip_prefix(MARKER) {
+                    inside = marker.ends_with("-begin");
+                    continue;
+                }
+                if !inside {
+                    unmarked.push_str(line);
+                    unmarked.push('\n');
+                }
+            }
+            let shared = |domain: &Domain| render(&unmarked, domain);
+            let clinical = shared(&CLINICAL);
+            let party = shared(&PARTY);
+            assert_eq!(clinical.lines().count(), party.lines().count());
+            for (left, right) in clinical.lines().zip(party.lines()) {
+                if left != right {
+                    assert!(
+                        left.contains("'COMPOSITION'") && right.contains("'PERSON'"),
+                        "unexpected difference between the domains:\n  clinical: {left}\n  party:    {right}"
+                    );
+                }
             }
         }
     }
 
-    /// The lines of `left` that `right` does not carry in the same position,
-    /// paired with what `right` carries there (the empty string once `right`
-    /// has run out).
-    fn diff_lines<'a>(left: &'a str, right: &'a str) -> Vec<(&'a str, &'a str)> {
-        let mut right_lines = right.lines().peekable();
-        let mut differences = Vec::new();
-        for line in left.lines() {
-            match right_lines.peek() {
-                Some(other) if *other == line => {
-                    right_lines.next();
+    /// Every block marker names a domain the templates render into, and every
+    /// block that opens closes.
+    #[test]
+    fn every_marker_names_a_domain_and_every_block_closes() {
+        for template in [CHANGE_CONTROL, NODE] {
+            let mut open: Option<&str> = None;
+            for line in template.lines() {
+                let Some(marker) = line.trim().strip_prefix(MARKER) else {
+                    continue;
+                };
+                if let Some(name) = marker.strip_suffix("-begin") {
+                    assert!(open.is_none(), "a block opens inside another: {line}");
+                    assert!(
+                        DOMAINS.iter().any(|d| d.name == name),
+                        "a block names no domain: {line}"
+                    );
+                    open = Some(name);
+                } else if let Some(name) = marker.strip_suffix("-end") {
+                    assert_eq!(open, Some(name), "a block closes another: {line}");
+                    open = None;
+                } else {
+                    panic!("a marker that neither opens nor closes a block: {line}");
                 }
-                Some(other) => {
-                    // A line the clinical rendering has and the party one does
-                    // not: report it against the empty string, and do not
-                    // consume the party line, so the two realign afterwards.
-                    if line.contains("REFERENCES ehr (id)") {
-                        differences.push((line, ""));
-                    } else {
-                        differences.push((line, *other));
-                        right_lines.next();
-                    }
-                }
-                None => differences.push((line, "")),
             }
+            assert!(open.is_none(), "a block never closes");
         }
-        differences
     }
 
     #[test]

@@ -712,19 +712,17 @@ async fn one_indexed_read_returns_the_facts_of_the_parties_that_changed() {
     assert_eq!(read.len(), 10, "only the parties stamped since are read");
 }
 
-/// Party migration 0042 (#5621) made a `ROLE`'s coded name a caller fact. A
-/// store migrated from 0041 holds its `ROLE`s and no role rows, and the next
-/// boot refills them before it serves, with no command run (#5675). The
-/// store is built at head and its role rows deleted, then 0042 runs again:
-/// a real 0041 store cannot be built, because its check constraint refuses
-/// the `role` facts the current code writes at each `ROLE` commit.
+/// A store that holds its `ROLE`s and no role rows, with the grant revision
+/// reset, is refilled by the next boot before it serves, with no command run
+/// (#5675). The v5 party migration that made a `ROLE`'s coded name a caller
+/// fact (#5621) left a store in that state; the store is built here and its
+/// role rows deleted, then the revision is reset as that migration reset it.
 #[tokio::test]
 #[expect(
     clippy::disallowed_methods,
     reason = "a test reads the database on a raw pool connection, outside any request"
 )]
-async fn the_boot_after_migration_0042_reads_the_roles_already_stored() {
-    const MIGRATION: &str = include_str!("../../migrations/party/0042_role_facts.sql");
+async fn the_boot_after_a_revision_reset_reads_the_roles_already_stored() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = replica(&pool).await;
@@ -744,19 +742,11 @@ async fn the_boot_after_migration_0042_reads_the_roles_already_stored() {
     sqlx::query("DELETE FROM party.binding_caller_fact WHERE kind = 'role'")
         .execute(&pool)
         .await
-        .expect("the store as migration 0041 left it");
-    let mut conn = pool.acquire().await.expect("a connection").detach();
-    sqlx::raw_sql("SET search_path = party, ext, public")
-        .execute(&mut conn)
+        .expect("the store with no role rows");
+    sqlx::query("UPDATE party.binding_grant_revision SET revision = 0, revised_at = now()")
+        .execute(&pool)
         .await
-        .expect("the party search path");
-    sqlx::raw_sql(MIGRATION)
-        .execute(&mut conn)
-        .await
-        .expect("migration 0042 runs");
-    sqlx::Connection::close(conn)
-        .await
-        .expect("the connection closes");
+        .expect("the grant revision reset");
 
     let upgraded = replica(&pool).await;
     assert!(

@@ -11,7 +11,7 @@
 //! form, the content digest over the whole form, the columns the log derives
 //! from the content and, when the entry is indexed, its ITI-81 index row, so
 //! the chainer only computes the links
-//! (`migrations/audit/0048_access_log_entry_written_once.sql`). The forms are written
+//! (`migrations/audit/0006_baseline_intake.sql`). The forms are written
 //! straight from the entry, with no JSON value of it built (#5849). Each
 //! derived column is read from the entry's ITS-JSON form at the path the
 //! database's own derive reads (`audit.access_log_entry_derive`), and the

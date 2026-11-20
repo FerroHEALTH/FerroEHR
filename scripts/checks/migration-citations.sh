@@ -41,8 +41,8 @@ if [[ "${1:-}" == "--self-test" ]]; then
   # <label>|<cited file>|<expected exit: 0 accept, 1 reject>
   self_cases=(
     "a deleted migration|0001_baseline.sql|1"
-    "a misspelled schema directory|clinical/0006_defintions.sql|1"
-    "a migration that exists|clinical/0006_definitions.sql|0"
+    "a misspelled schema directory|clinical/0002_baseline_defintions.sql|1"
+    "a migration that exists|clinical/0002_baseline_definitions.sql|0"
   )
   for self_case in "${self_cases[@]}"; do
     label="${self_case%%|*}"
