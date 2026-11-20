@@ -63,7 +63,7 @@ x-hospital-env: &hospital-env
   FERROEHR__AUTH__SMART__PATIENT_ISSUERS: "$honoured"
   # ferrohealth-smart logs why it refuses a token at debug, and nowhere else;
   # the telemetry key is set because compose sets it, which outranks RUST_LOG.
-  FERROEHR__TELEMETRY__FILTER: info,ferrohealth_smart=debug,ferroehr::access_eval=debug,ferroehr::service::ehr=debug
+  FERROEHR__TELEMETRY__FILTER: info,ferrohealth_smart=debug
 services:
   # The quickstart issuer signs FerroPIX's PMIR feed token for FerroEHR's
   # \`ferroehr-system\` audience, which issuer 1 accepts above; any other
@@ -153,7 +153,7 @@ hdc() { dc "${HOSPITAL_FILES[@]}" --profile replicas --profile s3 --profile view
 hospital_up() {
   local namespace="${1:-demographic}"
   export FERROEHR_REPLICA_PORT="$HOSPITAL_REPLICA_PORT"
-  hs_export
+  hs_export "$namespace"
   # The overlay changes the identity issuer that both instances share a
   # network namespace with, so the quickstart goes down first, its volumes
   # with it: the hospital starts on a database of its own.

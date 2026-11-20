@@ -162,7 +162,11 @@ hs_upstream_services() {
 
 # Exports what the FerroSMART overlays read for this run.
 hs_export() {
+  local namespace="${1:-demographic}"
   export FERROSMART_SECRETS FERROSMART_CONFIG_FILE FERROSMART_ZITADEL_DIR FERROSMART_ZITADEL_UID
+  # docker-compose.ferrosmart.yml sets the picker's namespace in FerroSMART's
+  # environment, which outranks the file, so the scenario's goes there too.
+  export FERROSMART_SUBJECT_NAMESPACE="$namespace"
   FERROSMART_SECRETS="$(hs_dir)"
   FERROSMART_CONFIG_FILE="$(hs_dir)/ferrosmart.toml"
   FERROSMART_ZITADEL_DIR="$(hs_dir)/zitadel"
@@ -332,16 +336,6 @@ hs_lookup_records() {
     | sed -E $'s/\x1b\\[[0-9;]*m//g' \
     | grep -E 'route="/ferroehr/rest/openehr/v1/ehr" status=4' \
     | sed -nE 's/.*request_id="([^"]+)".*/\1/p' | tail -n 2); do
-    # The judgement's traces carry no request id when they run outside its
-    # span, so the ones of the lookup's second are printed.
-    local logs second
-    logs="$(hdc logs --no-color --since 3m ferroehr ferroehr-2 2>&1 | sed -E $'s/\x1b\\[[0-9;]*m//g')"
-    second="$(grep -F "$rid" <<<"$logs" | sed -nE 's/.*([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8})\..*/\1/p' | sed -n 1p)"
-    if [[ -n "$second" ]]; then
-      grep -F "$second" <<<"$logs" \
-        | grep -E 'subject this request|bound to no PERSON|against the caller|hides the EHR|as absent|subject columns' \
-        | sed -E 's/request\{[^}]*\}: //' | cut -c1-300 | sed 's/^/        /' >&2
-    fi
     h_call 1 p:hans GET "$HX/admin/access-log?request_id=$rid"
     echo "        the access record of lookup $rid ($H_CODE): $(jq -c '[.entries[]? | del(.uid, .link,
       .system_id, .time_recorded, .action, .operation, .accessor, .retention, .channel)]' <<<"$H_BODY" 2>/dev/null | cut -c1-3000)" >&2
@@ -390,14 +384,6 @@ hs_authorize() {
   fi
   case "$location" in "$HS_ISSUER"/consent*) ;; *)
     echo "      FerroSMART did not ask $user for consent (picker subject '$subject', EHR '$ehr'): ${location:0:200}" >&2
-    h_call 1 admin GET "/ehr/$ehr/ehr_status"
-    echo "        the stored subject of EHR $ehr ($H_CODE): $(jq -c '.subject' <<<"$H_BODY" 2>/dev/null)" >&2
-    echo "        its row: $(hdc exec -T ferroehr-postgres psql -qtAX -U "${PG_INIT_USER:-ferroehr}" \
-      -d "${PG_INIT_DB:-ferroehr}" -c "SELECT subject_id, subject_namespace FROM clinical.ehr \
-      WHERE id = '$ehr'" 2>&1 | sed -n 1,3p)" >&2
-    h_call 1 admin GET "/ehr?subject_id=$subject&subject_namespace=demographic"
-    echo "        the same lookup as the administrator: $H_CODE ${H_BODY:0:160}" >&2
-    echo "        FerroSMART's resource table: $(grep -E '^(base|kind|subject_namespace)' "$(hs_dir)/ferrosmart.toml" | tr '\n' ' ')" >&2
     hs_answered; return 1 ;; esac
   page="$(curl -sS -c "$HS_JAR" -b "$HS_JAR" "$location")"
   form_token="$(hs_attribute "$page" '<input[^>]*name="form_token"[^>]*>' value)"

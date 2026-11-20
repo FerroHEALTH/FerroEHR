@@ -1,1 +1,0 @@
-- The access evaluator traces at `debug`, with no identifier, why a lookup by subject hides the EHR it found from the record's person: whether the request could bind the EHR's subject, and whether the subject's `PERSON` resolved and is the caller's (#6138).
