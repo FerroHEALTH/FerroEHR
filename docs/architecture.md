@@ -1231,7 +1231,11 @@ of exceptions are our own design.
   is the categories and origins a data scope names; Art. 9 and Annex II 3.2
   are the access record with its grounds. Art. 3(3), the delay of the
   person's own access, stays the access-delay register: a controller rule on
-  categories, not a patient's choice. Art. 3 is why the subject skips every
+  categories, not a patient's choice. It holds wherever the caller is the
+  record's person: on every EHR for a request that acts for the person, and
+  on each EHR whose subject the caller's bound `PERSON` is, which a query
+  across the population checks per row against that `PERSON`'s subject
+  references (#6108). Art. 3 is why the subject skips every
   step on their own EHR.
 - **GDPR** (`docs/law/eu/gdpr/text.html`): care runs on Art. 9(2)(h) with
   Art. 6(1)(c) or (e), so a directive in care is often a choice under

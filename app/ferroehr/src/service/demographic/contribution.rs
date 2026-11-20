@@ -89,6 +89,7 @@ impl FerroEhrService {
         let version_refs = version_repo::contribution::contribution_version_refs(
             &self.demographic_pool,
             contribution_id,
+            crate::system_log::access_context::access_delay_enforced(),
         )
         .await?;
         let mut versions: Vec<Value> = Vec::with_capacity(version_refs.len());

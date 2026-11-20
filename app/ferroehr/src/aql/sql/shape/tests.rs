@@ -45,6 +45,7 @@ fn ctx(ehr_access: AccessCondition, lineage: &Arc<ArchetypeLineage>) -> SqlCtx {
         archetype_lineage: Arc::clone(lineage),
         policy_parties: PolicyParties::Served,
         access_settings: EhrAccessReaders::Every,
+        own_records: None,
     }
 }
 

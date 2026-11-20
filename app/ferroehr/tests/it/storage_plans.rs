@@ -900,6 +900,18 @@ fn aql_sql_for(
     (ehr_ids, limit): (Vec<EhrId>, Option<i64>),
     policy_parties: ferroehr::aql::sql::PolicyParties,
 ) -> ferroehr::aql::sql::PreparedQuery {
+    aql_sql_owning(aql, params, (ehr_ids, limit), policy_parties, None)
+}
+
+/// [`aql_sql_for`] for a caller whose own records by the party binding are
+/// `own_records`.
+fn aql_sql_owning(
+    aql: &str,
+    params: &Params,
+    (ehr_ids, limit): (Vec<EhrId>, Option<i64>),
+    policy_parties: ferroehr::aql::sql::PolicyParties,
+    own_records: Option<ferroehr::aql::sql::own_records::OwnRecords>,
+) -> ferroehr::aql::sql::PreparedQuery {
     let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
     let ir = ferroehr::aql::plan(&ast, params, SpecProfile::default()).expect("the AQL plans");
     let ctx = SqlCtx {
@@ -912,6 +924,7 @@ fn aql_sql_for(
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
         policy_parties,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        own_records,
     };
     ferroehr::aql::sql::build(&ir, params, &ctx).expect("the AQL lowers to SQL")
 }
@@ -1018,6 +1031,60 @@ async fn aql_over_the_population_reads_the_hot_partition_only() {
     assert_version_probed_per_object(&scans);
     // H9: nothing attaches a row-security qual to the population scan.
     assert_no_policy_qual(&plan, &scans);
+}
+
+/// A population query of a caller whose own records the EHDS Art. 3(3) delay
+/// holds (#6108) reads the same partitions with the same joins as one with
+/// no delay: the own-record check reads the `ehr` row of a held object by
+/// its key and nothing else.
+#[tokio::test]
+async fn aql_over_the_population_holds_the_delay_on_own_records_by_key() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    seed_with_history(&svc, &pool, LONG_HISTORY).await;
+    sqlx::query(
+        "UPDATE clinical.vo_head SET person_withheld_until = now() + interval '1 day' \
+         WHERE vo_id IN (SELECT vo_id FROM clinical.vo_head ORDER BY vo_id LIMIT 3)",
+    )
+    .execute(&pool)
+    .await
+    .expect("hold three objects from the person");
+    let person = uuid::Uuid::now_v7().to_string();
+    let own = ferroehr::aql::sql::own_records::OwnRecords {
+        subjects: Arc::from(vec![(person, "demographic".to_owned())]),
+    };
+    let prepared = aql_sql_owning(
+        CONTAINS_AQL,
+        &Params::default(),
+        (Vec::new(), None),
+        ferroehr::aql::sql::PolicyParties::Served,
+        Some(own),
+    );
+    let plan = explain_aql(&pool, prepared).await;
+    let scans = scans(&plan);
+    assert_eq!(
+        partitions(&scans, "node"),
+        vec!["node_hot"],
+        "{}",
+        render(&scans)
+    );
+    assert_eq!(
+        partitions(&scans, "version"),
+        vec!["version_hot"],
+        "{}",
+        render(&scans)
+    );
+    assert_head_join_by_key(&scans);
+    assert_version_probed_per_object(&scans);
+    let probes: Vec<&Scan> = scans.iter().filter(|scan| scan.relation == "ehr").collect();
+    assert!(
+        probes
+            .iter()
+            .all(|scan| scan.index.is_some() && scan.node_type != "Seq Scan"),
+        "the own-record check reads the ehr row by its key:\n{}",
+        render(&scans)
+    );
 }
 
 /// The archetype columns carry one statistics object in each store, so the
