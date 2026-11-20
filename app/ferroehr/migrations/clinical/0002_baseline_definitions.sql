@@ -97,6 +97,48 @@ CREATE TABLE adl2_artefact (
 );
 COMMENT ON TABLE adl2_artefact IS 'SM-2 ADL2 artefacts (I_DEFINITION_ADL2), keyed by ARCHETYPE_HRID; kind ∈ archetype/template/operational_template; verbatim ADL2 text.';
 
+-- ── definition_revision ──────────────────────────────────────────────────────
+-- The revision of template_store and adl2_artefact (#5948). A replica keeps
+-- what it builds from them in memory (the Web Template of each template and
+-- the archetype lineage AQL widens a predicate with); a request reads this
+-- revision in the one read of the policy heads it already makes and drops the
+-- copies built before it, so no answer rests on a notification or a
+-- time-to-live. The statement trigger moves it once per transaction: the
+-- first statement takes the row's lock for the rest of the transaction and
+-- sets the transaction-local marker the later statements find. No openEHR
+-- spec governs the caches: our own design.
+CREATE TABLE definition_revision (
+    singleton  boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+    revision   bigint NOT NULL,
+    revised_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO definition_revision (singleton, revision) VALUES (true, 0);
+COMMENT ON TABLE definition_revision IS 'The revision of template_store and adl2_artefact, which moves once in each transaction that changes either. A request reads it to confirm the definition copies a replica holds. Our own design.';
+
+CREATE FUNCTION definition_changed() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path = clinical, pg_catalog
+    AS $$
+BEGIN
+    IF current_setting('ferroehr.definition_revised', true) IS DISTINCT FROM pg_current_xact_id()::text THEN
+        UPDATE definition_revision
+           SET revision = revision + 1, revised_at = now()
+         WHERE singleton;
+        PERFORM set_config('ferroehr.definition_revised', pg_current_xact_id()::text, true);
+    END IF;
+    RETURN NULL;
+END;
+$$;
+COMMENT ON FUNCTION definition_changed() IS
+    'Moves definition_revision.revision once in the transaction, so every replica drops the definition copies it built before the change at its next request.';
+
+CREATE TRIGGER template_store_definition_changed
+    AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON template_store
+    FOR EACH STATEMENT EXECUTE FUNCTION definition_changed();
+CREATE TRIGGER adl2_artefact_definition_changed
+    AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON adl2_artefact
+    FOR EACH STATEMENT EXECUTE FUNCTION definition_changed();
+
 -- ── stored_query ─────────────────────────────────────────────────────────────
 -- Stored AQL queries, addressed by qualified name + SEMVER version (ITS-REST
 -- specifications/docs/query/Qualified_query_name.md: "Stored queries are

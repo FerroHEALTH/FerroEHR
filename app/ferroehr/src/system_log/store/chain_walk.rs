@@ -37,23 +37,39 @@ pub const STEP_FLOOR: i32 = 500;
 /// The most records a step verifies, however fast the last one was.
 pub const STEP_CEILING: i32 = 100_000;
 
+/// The longest pause after a step, as a multiple of the step's duration, so
+/// a walk under the heaviest load still verifies a sixteenth of the time.
+pub const PAUSE_CEILING: u32 = 16;
+
 /// The records the first step of a walk verifies.
 const STEP_FIRST: i32 = 5_000;
 
-/// The size of a walk's next step, adapted to how long its last one took.
+/// The size of a walk's next step, adapted to how long its last one took,
+/// and the pause owed before it, adapted to how loaded the database was.
 ///
 /// A step's cost per record grows with the load on the database, so a fixed
-/// count can near the statement timeout (#5804). No openEHR spec governs the
-/// verification schedule: our own design.
+/// count can near the statement timeout (#5804). The same cost, against the
+/// lowest this pace has measured, reads the load: a step that cost `k` times
+/// the quiet cost per record is followed by a pause `k²` times its duration,
+/// within [`PAUSE_CEILING`], so a walk leaves a loaded database to the
+/// requests and takes about half a core of a quiet one. No openEHR spec
+/// governs the verification schedule: our own design.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StepPace {
     records: i32,
+    /// The duration of the last step measured, and its cost per record in
+    /// nanoseconds; `None` before the first.
+    last: Option<(Duration, u128)>,
+    /// The lowest cost per record measured, in nanoseconds.
+    quiet: Option<u128>,
 }
 
 impl Default for StepPace {
     fn default() -> Self {
         Self {
             records: STEP_FIRST,
+            last: None,
+            quiet: None,
         }
     }
 }
@@ -65,6 +81,7 @@ impl StepPace {
     pub fn starting_at(records: i32) -> Self {
         Self {
             records: records.max(1),
+            ..Self::default()
         }
     }
 
@@ -76,11 +93,18 @@ impl StepPace {
 
     /// Adapt to a step of [`Self::records`] that took `took`: toward
     /// [`STEP_BUDGET`], at most doubling, within [`STEP_FLOOR`] and
-    /// [`STEP_CEILING`].
+    /// [`STEP_CEILING`]; and record its cost per record for [`Self::pause`].
     pub fn took(&mut self, took: Duration) {
+        let records = i128::from(self.records);
+        let cost = took
+            .as_nanos()
+            .checked_div(u128::from(self.records.unsigned_abs()))
+            .unwrap_or(u128::MAX)
+            .max(1);
+        self.last = Some((took, cost));
+        self.quiet = Some(self.quiet.map_or(cost, |quiet| quiet.min(cost)));
         let took = i128::try_from(took.as_micros()).unwrap_or(i128::MAX).max(1);
         let budget = i128::try_from(STEP_BUDGET.as_micros()).unwrap_or(i128::MAX);
-        let records = i128::from(self.records);
         let next = records
             .saturating_mul(budget)
             .checked_div(took)
@@ -89,6 +113,29 @@ impl StepPace {
             .clamp(i128::from(STEP_FLOOR), i128::from(STEP_CEILING));
         // NOTE: our own design; the clamp above keeps it inside the i32 floor and ceiling.
         self.records = i32::try_from(next).unwrap_or(STEP_CEILING);
+    }
+
+    /// The pause owed after the last step measured: its duration times the
+    /// square of its cost per record over the quiet cost, at least the
+    /// step's duration and at most [`PAUSE_CEILING`] times it; none before
+    /// the first step.
+    #[must_use]
+    pub fn pause(self) -> Duration {
+        let Some((took, cost)) = self.last else {
+            return Duration::ZERO;
+        };
+        let quiet = self.quiet.unwrap_or(cost).max(1);
+        let ceiling = took.saturating_mul(PAUSE_CEILING);
+        let nanos = took
+            .as_nanos()
+            .saturating_mul(cost)
+            .checked_div(quiet)
+            .unwrap_or(u128::MAX)
+            .saturating_mul(cost)
+            .checked_div(quiet)
+            .unwrap_or(u128::MAX);
+        let pause = u64::try_from(nanos).map_or(ceiling, Duration::from_nanos);
+        pause.clamp(took, ceiling)
     }
 }
 
@@ -240,7 +287,10 @@ impl AuditStore {
     }
 
     /// [`Self::chain_step`] sized by `pace`, which then adapts to how long
-    /// the step took; returns the step's findings and its duration.
+    /// the step took; returns the step's findings and the pause the walk
+    /// owes before its next step ([`StepPace::pause`]), none once it is
+    /// done. The last step, which may verify fewer records, leaves `pace`
+    /// as it was.
     ///
     /// # Errors
     /// As [`Self::chain_step`].
@@ -251,9 +301,11 @@ impl AuditStore {
     ) -> Result<(Vec<AuditChainFinding>, Duration), AuditError> {
         let started = Instant::now();
         let findings = self.chain_step(walk, pace.records()).await?;
-        let took = started.elapsed();
-        pace.took(took);
-        Ok((findings, took))
+        if walk.done {
+            return Ok((findings, Duration::ZERO));
+        }
+        pace.took(started.elapsed());
+        Ok((findings, pace.pause()))
     }
 
     /// How far `chain`'s verification cursor is behind its head.
@@ -510,5 +562,29 @@ mod tests {
             pace.took(Duration::ZERO);
         }
         assert_eq!(pace.records(), STEP_CEILING);
+    }
+
+    /// A step at the quiet cost per record pauses as long as it took, one
+    /// that cost twice as much per record pauses four times as long, no
+    /// pause passes the ceiling, and the pause falls back once the load has
+    /// passed (#5804).
+    #[test]
+    fn the_pause_grows_with_the_cost_per_record_over_the_quiet_cost() {
+        let mut pace = StepPace::starting_at(5_000);
+        assert_eq!(pace.pause(), Duration::ZERO, "no pause before a step");
+        pace.took(STEP_BUDGET);
+        assert_eq!(pace.pause(), STEP_BUDGET, "a quiet step pauses as long");
+        pace.took(STEP_BUDGET * 2);
+        assert_eq!(
+            pace.pause(),
+            STEP_BUDGET * 8,
+            "twice the cost per record pauses four times the step's duration"
+        );
+        assert_eq!(pace.records(), 2_500, "and halves the next step");
+        pace.took(STEP_BUDGET * 10);
+        assert_eq!(pace.pause(), STEP_BUDGET * 10 * PAUSE_CEILING);
+        assert_eq!(pace.records(), STEP_FLOOR);
+        pace.took(STEP_BUDGET / 10);
+        assert_eq!(pace.pause(), STEP_BUDGET / 10, "the load has passed");
     }
 }

@@ -42,6 +42,7 @@ mod cold_start_burst;
 mod cold_start_pools;
 mod common;
 
+mod access_confidentiality_http;
 mod access_delay_http;
 mod access_delay_trail;
 mod access_evaluator_http;

@@ -95,10 +95,6 @@ pub enum PolicyDefect {
     /// `time_zone` names no zone of the IANA time zone database.
     #[error("time_zone {0:?} names no zone of the IANA time zone database")]
     TimeZone(String),
-    /// The policy sets an attribute no access decision of this server reads
-    /// yet.
-    #[error("ACCESS_POLICY.{0} is not decided by this server, so it is not stored")]
-    Undecided(String),
 }
 
 /// `body` read and checked as an access policy.
@@ -175,9 +171,6 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
         .policy()?;
     if policy.controller.r#type != CONTROLLER_TYPE {
         return Err(PolicyDefect::Controller(policy.controller.r#type.clone()));
-    }
-    if let Some(path) = crate::access_policy::undecided::in_policy(&policy) {
-        return Err(PolicyDefect::Undecided(path));
     }
     Ok(policy)
 }

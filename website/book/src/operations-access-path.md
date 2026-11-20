@@ -81,6 +81,21 @@ instance whose own commit made the change drops its copy before it answers. In `
 `access_copy_refills` and `access_copy_drops` the `copy` label is `binding`
 for the lookups and `party_name` for the names.
 
+## The definition copies
+
+Each instance keeps the Web Template it built from each stored template and
+the archetype specialisation lineage AQL widens an archetype predicate with
+(the `web_template` and `archetype_lineage` caches below). Every template or
+ADL2 artefact upload and delete moves a definition revision in its own
+transaction, and a request reads that revision in the same indexed read as the
+policy heads. When the revision moved, the instance drops both caches before
+the request answers, so after a template delete or replacement, or an ADL2
+artefact write, on any instance, the next FLAT or STRUCTURED commit, `wt+json`
+read and AQL query on every instance uses what the store holds. No
+notification and no time-to-live decides it. A lineage that cannot be read
+refuses the query with `503`, so a query never matches fewer rows than the
+store holds.
+
 ## The per-EHR access copy and the class copy
 
 The `ehr_access` copy holds at most 4096 EHRs' settings, and beside them the
@@ -177,10 +192,15 @@ verify_interval`, and on `audit_chain_unverified_age_seconds` above
 
 A run walks each chain in steps, one statement each, and every intact step
 moves the cursor. Each step is sized to take about half a second, adapting to
-how long the step before it took, and the run waits as long as a step took
-before the next, so a catch-up takes at most about half a core of the
-database. A long backlog therefore shows as a lag that falls during the run,
-never as `unverifiable`.
+how long the step before it took, so a long backlog shows as a lag, never as
+`unverifiable`. Between two steps the run waits at least as long as the step
+took, and longer under load: the wait grows with the square of the step's
+cost per record over the lowest cost the server has measured for the chain,
+up to 16 times the step. A catch-up takes about half a core of a quiet
+database and much less of a loaded one, so under a sustained peak the lag
+can grow while the requests keep the database, and falls once the load
+does. Alert on `audit_chain_unverified_age_seconds` above
+`[audit.store] max_verify_lag` to see a walk that cannot catch up.
 
 ## The instances of a deployment
 

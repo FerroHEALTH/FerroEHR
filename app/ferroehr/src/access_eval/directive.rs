@@ -10,7 +10,8 @@
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::terminology::{
-    CallerKind, DirectiveKind, Effect, ForeignCode, ForeignKind, OperationClass, Relationship, Term,
+    CallerKind, Confidentiality, DirectiveKind, Effect, ForeignCode, ForeignKind, OperationClass,
+    Relationship, Term,
 };
 
 use std::sync::Arc;
@@ -43,6 +44,18 @@ pub(super) fn names_sensitivity(directive: &AccessDirective, code: &ForeignCode)
         .iter()
         .flat_map(|scope| scope.sensitivities.as_deref().unwrap_or_default())
         .any(|coded| ForeignCode::read(ForeignKind::Sensitivity, coded).as_ref() == Ok(code))
+}
+
+/// Whether a data scope of `directive` names, in `confidentialities`,
+/// `level` or a higher one, which clears data at `level`.
+pub(super) fn clears_confidentiality(directive: &AccessDirective, level: Confidentiality) -> bool {
+    directive
+        .data
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .flat_map(|scope| scope.confidentialities.as_deref().unwrap_or_default())
+        .any(|coded| Confidentiality::read(coded).is_ok_and(|named| named >= level))
 }
 
 /// The kind and effect of `directive`; settings that hold a code outside its
