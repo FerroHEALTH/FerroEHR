@@ -17,7 +17,8 @@ use ferroehr::system_log::config::{AuditConfig, FhirFeedConfig, StoreConfig};
 use ferroehr::system_log::event::{
     AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
-use ferroehr::system_log::sender;
+use ferroehr::system_log::sender::{self, AuditHandle, AuditSender};
+use ferroehr::system_log::store::intake::Chains;
 
 fn config(arr_url: &str) -> AuditConfig {
     AuditConfig {
@@ -343,6 +344,23 @@ async fn count(pool: &sqlx::PgPool, sql: &'static str) -> i64 {
         .expect("count")
 }
 
+/// Chains every record the intake holds, then stops the sender, so a count
+/// read afterwards never depends on the shutdown's bounded drain (#6128).
+#[expect(
+    clippy::expect_used,
+    reason = "clippy.toml `allow-expect-in-tests` reaches only `#[test]` functions, not this \
+              helper; a failed settle fails the test that asked for it"
+)]
+async fn settle_and_stop(sender: AuditSender, handle: AuditHandle) {
+    sender
+        .store()
+        .settle(Chains::BOTH)
+        .await
+        .expect("the intake is chained");
+    drop(sender);
+    handle.shutdown(Duration::from_secs(2)).await;
+}
+
 /// With no feed configured no sink is owed a record, so the outbox stays
 /// empty however many records the store holds, and no index covers the
 /// records by an unset delivery stamp.
@@ -359,8 +377,7 @@ async fn with_no_feed_configured_no_record_is_owed() {
             .await
             .expect("the record is written");
     }
-    drop(sender);
-    handle.shutdown(Duration::from_secs(2)).await;
+    settle_and_stop(sender, handle).await;
 
     assert_eq!(
         count(&pool, "SELECT count(*) FROM audit.audit_event").await,
@@ -398,8 +415,7 @@ async fn records_stored_before_the_outbox_are_fed_once_a_feed_runs() {
             .await
             .expect("the record is written");
     }
-    drop(sender);
-    handle.shutdown(Duration::from_secs(2)).await;
+    settle_and_stop(sender, handle).await;
     // The migration records the newest position written before it.
     sqlx::query("UPDATE audit.fhir_feed_backlog SET through_seq = 2")
         .execute(&pool)
