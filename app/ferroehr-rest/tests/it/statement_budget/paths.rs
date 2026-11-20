@@ -218,6 +218,8 @@ struct Budget {
 /// the 10,489 bytes it wrote in each of three runs. Its ceilings are the
 /// figures of those runs (2,486 allocations, a median peak of at most 120,133
 /// bytes, 20 nested statements) with the margins above; no other path moved.
+/// It is measured last, so the PERSONs it commits stay out of the population
+/// the demographic query reads, which they grew by some 100 allocations.
 const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::CommitJson,
@@ -364,15 +366,6 @@ const BUDGETS: [Budget; 19] = [
         wal: 7953,
     },
     Budget {
-        path: Path::CommitPartyScored,
-        conversions: 8,
-        allocations: 2536,
-        peak_bytes: 132_147,
-        round_trips: 31,
-        nested: 21,
-        wal: 10_594,
-    },
-    Budget {
         path: Path::AqlMatches,
         conversions: 2,
         allocations: 5752,
@@ -389,6 +382,15 @@ const BUDGETS: [Budget; 19] = [
         round_trips: 8,
         nested: 6,
         wal: 2083,
+    },
+    Budget {
+        path: Path::CommitPartyScored,
+        conversions: 8,
+        allocations: 2536,
+        peak_bytes: 132_147,
+        round_trips: 31,
+        nested: 21,
+        wal: 10_594,
     },
 ];
 
@@ -770,21 +772,20 @@ impl World {
             ),
             Path::CommitStatus => self.status_commit(ehr, n),
             Path::ReadStatus => get(format!("{BASE}/ehr/{ehr}/ehr_status"), "nurse", JSON),
-            Path::CommitParty | Path::CommitPartyScored => Call {
-                method: "POST",
-                uri: format!("{BASE}/demographic/person"),
-                user: "root",
-                accept: JSON,
-                headers: minimal.clone(),
-                body: Some((
-                    JSON,
-                    if path == Path::CommitParty {
-                        self.person.clone()
-                    } else {
-                        self.scored.clone()
-                    },
-                )),
-            },
+            Path::CommitParty => Self::party_commit(self.person.clone()),
+            Path::CommitPartyScored => Self::party_commit(self.scored.clone()),
+        }
+    }
+
+    /// A commit of the `PERSON` `body`.
+    fn party_commit(body: String) -> Call {
+        Call {
+            method: "POST",
+            uri: format!("{BASE}/demographic/person"),
+            user: "root",
+            accept: JSON,
+            headers: vec![("Prefer", "return=minimal".to_owned())],
+            body: Some((JSON, body)),
         }
     }
 }
