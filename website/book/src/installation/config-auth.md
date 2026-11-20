@@ -654,7 +654,7 @@ still holds it is refused at boot as an unknown key.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `allowed` | list of operation codes | `["commit_composition"]` | The operations of the `openehr_access` terminology the policy grants may grant. A `ROLE` committed with a capability that codes an operation this list does not name is refused with `403`, and one already stored is never honoured, so a compromised administrator account grants no more than you allow. An empty list lets the party store grant nothing; an unknown code refuses the start. Environment: `FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated. The codes and how a request reads its grants are on [Operational policy](../operational-policy.md#how-a-request-reads-its-grants). |
+| `allowed` | list of operation codes | `["commit_composition"]` | The operations of the `openehr_access` terminology the policy grants may grant. A `ROLE` committed with a capability that codes an operation this list does not name is refused with `403`, and one already stored is never honoured, so a compromised administrator account grants no more than you allow. Allow `compose_for` to let a professional name another `PERSON` of the same provider as the composer of what they commit ([Who is the committer](../security/committer.md#the-composer-of-a-professionals-composition)). An empty list lets the party store grant nothing; an unknown code refuses the start. Environment: `FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated. The codes and how a request reads its grants are on [Operational policy](../operational-policy.md#how-a-request-reads-its-grants). |
 
 ### `[authz.rbac]`
 

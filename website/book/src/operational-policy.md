@@ -209,6 +209,7 @@ own in it, which the change request does not propose. A `CAPABILITY` grants an o
 | Code | Operation |
 |---|---|
 | `commit_composition` | Commit a `COMPOSITION` on the caller's own account, within the templates and facilities the grant names |
+| `compose_for` | Name, as a bound professional, another `PERSON` of the provider the caller acts for as the composer of a `COMPOSITION` the caller commits; the committer stays the caller ([Who is the committer](security/committer.md#the-composer-of-a-professionals-composition)) |
 | `import_ehr` | Import an EHR |
 | `import_ehr_extract` | Import an EHR extract |
 | `export_ehr_extract` | Export an EHR extract |
@@ -439,6 +440,16 @@ token with `503`.
 grant whose `subject_namespace` names the EHR's subject namespace;
 `message_import_ehr_extract` the same with an `import_ehr_extract` grant
 ([What a system client may do](#what-a-system-client-may-do)).
+
+**Composing for another professional.** A professional's `COMPOSITION`
+names the professional as its composer. Under a `compose_for` grant in force
+on a `ROLE` the professional's `PERSON` performs, its composer may name
+another `PERSON` of the same provider by its `external_ref`, as a scribe or
+a resident records for a physician; a correction that keeps the composer
+of the version it replaces needs no grant. The committer is still the
+professional who committed
+([Who is the committer](security/committer.md#the-composer-of-a-professionals-composition)).
+The grant names no further element.
 
 **Committing and exporting as a system client.** A system client commits
 under its `commit_composition` grants and exports under its
@@ -781,6 +792,8 @@ names them.
 
 **Default definitions.** The binary carries a default template of each,
 version `1.0.0` (for example `openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0`).
+The privileged `ROLE` also ships as `1.0.1`, which adds the kind `Compose for`
+(`at14`) for a `compose_for` grant; `1.0.0` stays as published.
 At boot FerroEHR stores each one through the normal definition path only
 when no definition of its id is stored. It never overwrites a stored
 definition, never refuses one you changed, and never seeds over your change.
@@ -1420,6 +1433,62 @@ configuration grant those.
   }]
 }
 ```
+
+#### A scribe composing for physicians
+
+A scribe records the notes the physicians of the same provider dictate. The
+grant is a `ROLE` of the privileged template, version `1.0.1`, whose kind
+`at14` is `Compose for`, performed by the scribe's `PERSON`
+`3e7a1d5c-9b2f-4c8e-a6d0-1f4b8e2c7a95`. Each `COMPOSITION` the scribe
+commits names the physician as its composer, and the committer is the scribe.
+
+<!-- policy-example: compose-for-role -->
+```json
+{
+  "_type": "ROLE",
+  "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.privileged.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.privileged.v1" },
+    "template_id": { "_type": "TEMPLATE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.1" },
+    "rm_version": "1.1.0"
+  },
+  "name": { "_type": "DV_TEXT", "value": "Privileged role" },
+  "identities": [{
+    "_type": "PARTY_IDENTITY", "archetype_node_id": "id2", "name": { "_type": "DV_TEXT", "value": "Role name" },
+    "details": {
+      "_type": "ITEM_TREE", "archetype_node_id": "id3", "name": { "_type": "DV_TEXT", "value": "Name" },
+      "items": [{
+        "_type": "ELEMENT", "archetype_node_id": "id4", "name": { "_type": "DV_TEXT", "value": "Full name" },
+        "value": { "_type": "DV_TEXT", "value": "Medical scribe" }
+      }]
+    }
+  }],
+  "performer": {
+    "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+    "id": { "_type": "HIER_OBJECT_ID", "value": "3e7a1d5c-9b2f-4c8e-a6d0-1f4b8e2c7a95" }
+  },
+  "capabilities": [{
+    "_type": "CAPABILITY", "archetype_node_id": "id6",
+    "name": {
+      "_type": "DV_CODED_TEXT", "value": "Compose for",
+      "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at14" }
+    },
+    "credentials": {
+      "_type": "ITEM_TREE", "archetype_node_id": "id8", "name": { "_type": "DV_TEXT", "value": "Grant" },
+      "items": [{
+        "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
+        "value": {
+          "_type": "DV_CODED_TEXT", "value": "Compose for",
+          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "compose_for" }
+        }
+      }]
+    }
+  }]
+}
+```
+
+Allow the operation by name: `[authz.grants] allowed = ["commit_composition", "compose_for"]`.
 
 #### Just-in-time admission
 

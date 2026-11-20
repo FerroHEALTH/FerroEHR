@@ -16,10 +16,12 @@
               is not typed yet, and the view the JSON-reading passes take (#6003)"
 )]
 
+use std::borrow::Cow;
+
 use openehr_base::prelude::{ObjectVersionId, UidBasedId};
 use openehr_its::json::JsonParseError;
 use openehr_rm::prelude::{
-    Agent, Composition, EhrAccess, EhrStatus, Folder, Group, Organisation, Person, Role,
+    Agent, Composition, EhrAccess, EhrStatus, Folder, Group, Organisation, PartyProxy, Person, Role,
 };
 use openehr_rm::v1_2::common::archetyped::archetyped::Archetyped;
 use openehr_rm::v1_2::demographic::party::Party;
@@ -143,6 +145,36 @@ impl Body {
         match self {
             Body::Canonical(view) => Some(view),
             _ => None,
+        }
+    }
+
+    /// The composer a COMPOSITION body states: the typed one, or a canonical
+    /// one read strictly; `None` for a body of another kind, or a canonical
+    /// one stating no composer.
+    pub(crate) fn composer(&self) -> Option<Result<Cow<'_, PartyProxy>, JsonParseError>> {
+        match self {
+            Body::Composition(rm) => Some(Ok(Cow::Borrowed(&rm.composer))),
+            Body::Canonical(view) => view
+                .get("composer")
+                .map(|composer| openehr_its::json::from_canonical_value(composer).map(Cow::Owned)),
+            _ => None,
+        }
+    }
+
+    /// Puts `composer` in the place of a COMPOSITION body's composer; a body
+    /// of another kind is left as it is.
+    pub(crate) fn set_composer(&mut self, composer: PartyProxy) {
+        match self {
+            Body::Composition(rm) => *rm.composer = composer,
+            Body::Canonical(view) => {
+                if let Some(map) = view.as_object_mut() {
+                    map.insert(
+                        "composer".to_owned(),
+                        openehr_its::json::to_canonical_value(&composer),
+                    );
+                }
+            }
+            _ => {}
         }
     }
 

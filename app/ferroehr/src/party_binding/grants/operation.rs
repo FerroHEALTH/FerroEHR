@@ -199,6 +199,10 @@ pub enum Operation {
     /// Commit a `COMPOSITION` on the caller's own account, within the
     /// templates and facilities the grant names.
     CommitComposition,
+    /// Name, as a bound professional, another `PERSON` of the provider the
+    /// caller acts for as the composer of a `COMPOSITION` the caller
+    /// commits; the committer stays the caller.
+    ComposeFor,
     /// Import an EHR (`message_import_ehr`).
     ImportEhr,
     /// Import an EHR extract (`message_import_ehr_extract`).
@@ -273,6 +277,7 @@ impl Operation {
     /// Every operation, in contract order.
     pub const ALL: [Self; 22] = [
         Self::CommitComposition,
+        Self::ComposeFor,
         Self::ImportEhr,
         Self::ImportEhrExtract,
         Self::ExportEhrExtract,
@@ -301,6 +306,7 @@ impl Operation {
     pub const fn code(self) -> &'static str {
         match self {
             Self::CommitComposition => "commit_composition",
+            Self::ComposeFor => "compose_for",
             Self::ImportEhr => "import_ehr",
             Self::ImportEhrExtract => "import_ehr_extract",
             Self::ExportEhrExtract => "export_ehr_extract",
