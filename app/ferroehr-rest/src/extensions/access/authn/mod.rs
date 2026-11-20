@@ -382,8 +382,7 @@ pub struct Authenticator {
     enabled: bool,
     /// The credentials admitted, checked by `ferrohealth-smart`.
     gate: Gate,
-    /// The bearer issuers of the gate, whose held token verdicts the
-    /// `cache` gauges report, when `[auth]` trusts any.
+    /// The gate's bearer issuers, whose token verdicts the `cache` gauges report.
     bearer: Option<verdicts::TokenVerdicts>,
     /// The protection space every challenge names.
     realm: String,
@@ -397,9 +396,10 @@ pub struct Authenticator {
     party: Option<Arc<party::Binding>>,
     /// The federation agreements' caller limits.
     declared: declared::Declared,
-    /// `[authz.party_binding] namespace`, under which a patient-portal
-    /// representative's `PERSON` is named.
+    /// `[authz.party_binding] namespace`, naming a portal representative's `PERSON`.
     namespace: String,
+    /// The provider the deployment acts for.
+    deployment: party::Deployment,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -584,7 +584,7 @@ pub(crate) async fn middleware(
     let mut req = Request::from_parts(parts, body);
     match outcome {
         Ok(Authenticated { principal, fresh }) => {
-            let granted = match grants::resolve(live, &principal, auth.party.as_deref()).await {
+            let granted = match grants::resolve(live, &principal, Some(&auth.deployment)).await {
                 Ok(granted) => granted,
                 Err(e) => return refusal::response(auth, req.headers(), &e),
             };

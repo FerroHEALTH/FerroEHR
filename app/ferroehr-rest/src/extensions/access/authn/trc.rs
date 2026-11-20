@@ -25,6 +25,7 @@ use std::sync::Arc;
 
 use axum::extract::Request;
 use axum::response::{IntoResponse as _, Response};
+use ferroehr::party_binding::grants::caller::care_of::ProviderKey;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferrohealth_smart::federation::contact::{EhdsiCode, TrcPatientId};
 use ferrohealth_smart::guard::Requirement;
@@ -99,7 +100,16 @@ pub(super) fn patient_context<'a>(
             return Some(refusal);
         }
         let namespace = &layer.authenticator.namespace;
-        match super::portal::bound(&layer.service, namespace, principal).await {
+        // NOTE: draft access control decision procedure step 0 Representation, a
+        // representative acts for the provider the party binding names for its issuer.
+        let providers: Vec<ProviderKey> = principal
+            .access
+            .caller()
+            .and_then(|caller| layer.authenticator.deployment.provider_of(caller))
+            .map(|(issuer, id)| ProviderKey::new(issuer, id))
+            .into_iter()
+            .collect();
+        match super::portal::bound(&layer.service, (namespace, &providers), principal).await {
             Ok(bound) => {
                 principal.represented = bound.represented;
                 if bound.own.is_some() {

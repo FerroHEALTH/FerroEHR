@@ -1,27 +1,31 @@
 # Representation definition: provenance
 
-One ADL 2 archetype of FerroEHR's default demographic definitions, which the
-binary carries and stores at boot when absent, as an example of a
+Two ADL 2 archetypes of FerroEHR's default demographic definitions, which
+the binary carries and stores at boot when absent, as examples of a
 representation:
 
+- `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2.0.0.adls`: a
+  representation of its own, written at `/demographic/party_relationship`,
+  from the representative's `PERSON` to the subject's, in its interface form
+  `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2`. Its name is
+  `represents` of the draft openEHR access terminology `openehr_access`, and
+  its details hold the elements of the `representation element` group:
+  `basis` (`id3`, 1..1), `provider` (`id5`, 1..1) and `evidence` (`id7`,
+  0..1), with an optional code of the openEHR `subject_relationship` group
+  (`id9`), such as `254|parent|`, which the committer and the access log
+  name (#6079).
 - `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls`: the
-  relationship a representative acts through, from the representative's
-  `PERSON` to the subject's, in its interface form
-  `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1`.
+  former example, held in a `PERSON`'s relationships or of its own, whose
+  name is its type from the value set `ac1` and whose details carry the
+  representation code (`id4`) and a `subject_relationship` code (`id6`).
+  FerroEHR refuses that form, which has no `basis` and no `provider`; the
+  file stays published under its id.
 
-FerroEHR recognises a representation by the code its `name` or `details`
-carry, `represents` of the draft openEHR access terminology `openehr_access`,
-in any archetype, never by this archetype's id. Its name is its type (RM
-demographic `PARTY_RELATIONSHIP` `Type_validity`), coded from the value set
-`ac1`: `at10` (parent), `at11` (guardian) and `at12` (authorised proxy). Its
-details hold the representation code (`id4`) and the code of the openEHR
-`subject_relationship` group the relationship is (`id6`), such as
-`254|parent|` or `264|guardian|`, which the committer and the access log
-name.
-
-The book's "Default demographic definitions" page lists the whole set. It is
-an example: a deployment may model a representation in an archetype of its
-own, with its own types, and FerroEHR honours it by the code.
+FerroEHR recognises a representation by the codes its `name` and its
+elements' names carry, in any archetype, never by these archetypes' ids.
+The book's "Default demographic definitions" page lists the whole set. Each
+is an example: a deployment may model a representation in an archetype of
+its own, and FerroEHR honours it by the codes.
 
 ## Source
 
