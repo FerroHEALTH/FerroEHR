@@ -142,25 +142,6 @@ impl FerroEhrService {
             .map_err(|failure| *failure.error)
     }
 
-    /// The caller's own records the Art. 3(3) delay reads
-    /// ([`Self::delayed_own_records`]) and the caseload the request narrows a
-    /// query of `domain` to ([`Self::query_caseload`]).
-    async fn own_and_caseload(
-        &self,
-        domain: QueryDomain,
-        request: &AqlQueryRequest,
-    ) -> Result<
-        (
-            Option<aql::sql::own_records::OwnRecords>,
-            Option<crate::access_eval::caseload::Caseload>,
-        ),
-        ServiceError,
-    > {
-        let own_records = Box::pin(self.delayed_own_records()).await?;
-        let caseload = Box::pin(self.query_caseload(domain, request.caseload.as_ref())).await?;
-        Ok((own_records, caseload))
-    }
-
     /// Execute a planned single-domain query and assemble its `RESULT_SET`,
     /// every failure carrying its `aql_queries_total{outcome}` label.
     async fn execute_single(
@@ -596,7 +577,7 @@ fn map_exec_error(e: AqlError) -> ServiceError {
         {
             ServiceError::bad_request(CAST_REFUSAL, db)
         }
-        // SQLSTATE `ZA003` (`ext/0013_aql_not_an_amount.sql`): SUM or AVG met
+        // SQLSTATE `ZA003` (`ext/0002_baseline_value_functions.sql`): SUM or AVG met
         // a whole data value that is no amount, which the query asked for.
         AqlError::Exec(ExecError::Database(db))
             if db

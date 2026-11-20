@@ -20,6 +20,7 @@ use uuid::Uuid;
 
 use super::care::Care;
 use super::{AccessCondition, EhrEntry, RequestAccess};
+use crate::access_eval::care_tie::Cared;
 use crate::access_eval::scope::Pred;
 use crate::ids::EhrId;
 use crate::storage::access_projection::Revision;
@@ -80,12 +81,15 @@ impl RequestAccess {
         {
             return condition.clone();
         }
-        let cared = match &groups.cared {
-            Care::Ehrs(ehrs) => ehrs.contains(&ehr_id.0),
-            _ if !condition.reads_care() => false,
+        let care = match &groups.cared {
+            Care::Ehrs(ehrs) => ehrs
+                .iter()
+                .find(|cared| cared.ehr == ehr_id.0)
+                .map_or(Cared::No, |cared| Cared::Ties(Arc::clone(&cared.ties))),
+            _ if !condition.reads_care() => Cared::No,
             _ => return condition.clone(),
         };
-        let verdict = self.judge(Some(ehr_id), (*entry.settings).as_ref(), cared);
+        let verdict = self.judge(Some(ehr_id), (*entry.settings).as_ref(), &care);
         let admitted = if verdict.admits_any() {
             verdict.admitted()
         } else {
@@ -119,7 +123,7 @@ impl AccessCondition {
 /// leaves to the statement.
 fn reads_ehr_facts(pred: &Pred) -> bool {
     match pred {
-        Pred::Ehr(_) => true,
+        Pred::Ehr(_) | Pred::Care(_) => true,
         Pred::True | Pred::False | Pred::Data(..) => false,
         Pred::Not(inner) => reads_ehr_facts(inner),
         Pred::All(preds) | Pred::Any(preds) => preds.iter().any(reads_ehr_facts),

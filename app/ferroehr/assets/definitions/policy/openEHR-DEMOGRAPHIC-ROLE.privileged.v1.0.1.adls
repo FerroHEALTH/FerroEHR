@@ -13,7 +13,7 @@ description
     details = <
         ["en"] = <
             language = <[ISO_639-1::en]>
-            purpose = <"The ROLE a professional's PERSON performs to hold a privilege beyond clinical access: reading the access log of a subject, acting as an EHDS access service, reading protected national identifiers, importing EHRs, or naming another professional of the same provider as the composer of what the person commits.">
+            purpose = <"The ROLE a professional's PERSON performs to hold a privilege beyond clinical access: reading the access log of a subject, acting as an EHDS access service, importing EHRs, or naming another professional of the same provider as the composer of what the person commits.">
             use = <"One CAPABILITY per privilege, named by its kind; time_validity bounds it by day, for example the cover of an absent colleague. The administrator privilege and emergency access are never granted here: the identity provider and the configuration grant those. The ROLE is adapted from the openEHR CKM archetype the derived_from entry names. Its CAPABILITY, whose credentials hold an authorization grant, is FerroEHR's own design: the openEHR RM and CKM use CAPABILITY for the professional qualifications of a performer, and no openEHR specification gives it an authorization meaning.">
             copyright = <"© openEHR Foundation">
         >
@@ -84,7 +84,6 @@ terminology
             ["ac1"] = <text = <"Privileges"> description = <"The privileges a person may hold through this role.">>
             ["at10"] = <text = <"Subject audit"> description = <"Read the access log of one subject, by the subject's pseudonym.">>
             ["at11"] = <text = <"Access service"> description = <"Act as an EHDS Article 10 access service, held to a subject's opt-out.">>
-            ["at12"] = <text = <"Identifier reader"> description = <"Read a party's protected national identifiers.">>
             ["at13"] = <text = <"Import"> description = <"Import an EHR or an EHR extract.">>
             ["at14"] = <text = <"Compose for"> description = <"Name another professional PERSON of the provider the person acts for as the composer of a COMPOSITION the person commits; the committer stays the person.">>
         >
@@ -92,6 +91,6 @@ terminology
     value_sets = <
         ["ac1"] = <
             id = <"ac1">
-            members = <"at10", "at11", "at12", "at13", "at14">
+            members = <"at10", "at11", "at13", "at14">
         >
     >

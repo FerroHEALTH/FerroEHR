@@ -132,6 +132,10 @@ hs_prepare() {
   bash docker/ferrosmart/secrets.sh "$dir" >/dev/null || return 1
   [[ -s "$dir/zitadel_masterkey" ]] || openssl rand -hex 16 | tr -d '\n' > "$dir/zitadel_masterkey"
   [[ -s "$dir/zitadel_user_password" ]] || hs_password clinician > "$dir/zitadel_user_password"
+  # A fresh stack starts ZITADEL on an empty volume, whose bootstrap must run
+  # again: it keeps an out/ferrosmart.toml it finds, which would carry the last
+  # stack's ZITADEL client and the last run's resource base.
+  [[ -d "$dir/zitadel" ]] && find "$dir/zitadel" -mindepth 1 -delete
   mkdir -p "$dir/clients" "$dir/zitadel" "$dir/tokens"
   for client in $HS_SYSTEMS; do
     [[ -s "$dir/clients/$client.pem" ]] && continue
@@ -256,7 +260,16 @@ hs_cached() {
 hs_keep() {
   local key="$1" answer="$2" token expires
   token="$(jq -r '.access_token // empty' <<<"$answer" 2>/dev/null)"
-  [[ -n "$token" ]] || { echo "      FerroSMART answered no token for $key: ${answer:0:300}" >&2; return 1; }
+  if [[ -z "$token" ]]; then
+    echo "      FerroSMART answered no token for $key: ${answer:0:300}" >&2
+    if [[ "$answer" == *invalid_target* ]]; then
+      echo "        the resource asked for: $HS_BASE; the one its configuration serves:" \
+        "$(grep -E '^base' "$(hs_dir)/ferrosmart.toml" 2>/dev/null)" >&2
+      echo "        FerroSMART's container: $(hdc ps --format '{{.Name}} {{.CreatedAt}} {{.Status}}' ferrosmart 2>&1)" >&2
+      hdc logs --no-color --tail 15 ferrosmart 2>&1 | sed 's/^/        /' >&2
+    fi
+    return 1
+  fi
   expires="$(jq -r '.expires_in // 60' <<<"$answer")"
   printf '%s\n%s\n' "$(( $(date +%s) + expires ))" "$token" > "$(hs_dir)/tokens/$key"
   printf '%s' "$answer" > "$(hs_dir)/tokens/$key.response"

@@ -19,13 +19,14 @@
 use std::sync::Arc;
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
-use openehr_rm::draft::access_control::terminology::ForeignCode;
-use uuid::Uuid;
+use openehr_rm::draft::access_control::terminology::care::CarePath;
+use openehr_rm::draft::access_control::terminology::{
+    ForeignCode, TERMINOLOGY_ID_PARTICIPATION_TYPE,
+};
 
+use crate::access_eval::care_tie::{CareNeed, Tie};
 use crate::access_eval::condition::care::ProjectedCare;
-use crate::party_binding::grants::caller::CareTeam;
-use crate::party_binding::grants::caller::care_of::CareOf;
-use crate::party_binding::grants::caller::facts::CallerFacts;
+use crate::access_eval::procedure::Policy;
 use crate::storage::access_projection::EhrSubject;
 
 /// The request member that names the path.
@@ -46,62 +47,39 @@ pub enum Path {
     All,
 }
 
-/// One role a request names: a code of any terminology, or one of the
-/// terminology it names as `terminology::code`.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RoleAsk {
-    /// The terminology, when the request names one.
-    pub terminology: Option<String>,
-    /// The code.
-    pub code: String,
-}
-
-impl RoleAsk {
-    /// Whether the role `role` of a relationship is this one.
-    #[must_use]
-    pub fn matches(&self, role: &ForeignCode) -> bool {
-        role.code == self.code
-            && self
-                .terminology
-                .as_ref()
-                .is_none_or(|terminology| *terminology == role.terminology)
-    }
-}
-
 /// The caseload a request asks for.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Ask {
     /// The path.
     pub path: Path,
     /// The roles; empty means any role.
-    pub roles: Vec<RoleAsk>,
+    pub roles: Vec<ForeignCode>,
 }
 
 impl Ask {
-    /// Whether the relationship `care` counts for this caseload by its role.
+    /// What a relationship must meet to count: one need per path the
+    /// caseload names, in one of its roles. A self-declared relationship
+    /// meets none, as no path implies another.
     #[must_use]
-    pub fn admits_role(&self, care: &CareOf) -> bool {
-        self.roles.is_empty() || self.roles.iter().any(|role| role.matches(care.role()))
+    pub fn needs(&self) -> Vec<CareNeed> {
+        let roles = (!self.roles.is_empty()).then(|| self.roles.clone());
+        let paths: &[CarePath] = match self.path {
+            Path::Direct => &[CarePath::Direct],
+            Path::Team => &[CarePath::Team],
+            Path::All => &[CarePath::Direct, CarePath::Team],
+        };
+        paths
+            .iter()
+            .map(|path| CareNeed::new(roles.clone(), Some(*path)))
+            .collect()
     }
 
-    /// The caller's principals the path reaches, sorted: its `PERSON` and
-    /// the `ROLE`s it performs for `direct`, its care teams and units for
-    /// `team`.
+    /// Whether a subject the caller holds by `ties` is in the caseload.
     #[must_use]
-    pub fn principals(&self, facts: &CallerFacts) -> Vec<Uuid> {
-        let direct = facts
-            .party()
-            .into_iter()
-            .chain(facts.performed().iter().copied());
-        let team = facts.care_teams().iter().map(CareTeam::team);
-        let mut principals: Vec<Uuid> = match self.path {
-            Path::Direct => direct.collect(),
-            Path::Team => team.collect(),
-            Path::All => direct.chain(team).collect(),
-        };
-        principals.sort_unstable();
-        principals.dedup();
-        principals
+    pub fn holds(&self, ties: &[Tie]) -> bool {
+        let needs = self.needs();
+        ties.iter()
+            .any(|tie| needs.iter().any(|need| need.met_by(tie)))
     }
 }
 
@@ -132,6 +110,10 @@ pub enum Refused {
 /// The caseload the members `caseload` and `caseload_roles` ask for, as the
 /// texts the request carries; `None` for `none` or neither.
 ///
+/// A role is `terminology::code`, or a code alone of `HL7_ParticipationType`,
+/// the default code system of `care_role` (draft access control,
+/// Terminology).
+///
 /// # Errors
 /// [`Refused`] for an unknown value, roles that are no non-empty list of
 /// codes, and roles with no caseload.
@@ -158,17 +140,18 @@ pub fn read(caseload: Option<&str>, roles: Option<&[String]>) -> Result<Option<A
     }
 }
 
-/// The role `text` names: `terminology::code`, or a code alone.
-fn role(text: &str) -> RoleAsk {
-    match text.split_once("::") {
-        Some((terminology, code)) if !terminology.is_empty() && !code.is_empty() => RoleAsk {
-            terminology: Some(terminology.to_owned()),
-            code: code.to_owned(),
-        },
-        _ => RoleAsk {
-            terminology: None,
-            code: text.to_owned(),
-        },
+/// The role `text` names: `terminology::code`, or a code of
+/// `HL7_ParticipationType`.
+fn role(text: &str) -> ForeignCode {
+    let (terminology, code) = match text.split_once("::") {
+        Some((terminology, code)) if !terminology.is_empty() && !code.is_empty() => {
+            (terminology, code)
+        }
+        _ => (TERMINOLOGY_ID_PARTICIPATION_TYPE, text),
+    };
+    ForeignCode {
+        terminology: terminology.to_owned(),
+        code: code.to_owned(),
     }
 }
 
@@ -176,7 +159,7 @@ fn role(text: &str) -> RoleAsk {
 /// is outside the policy's `care_purposes`.
 ///
 /// A care relationship is a ground for primary use only (The Decision
-/// Procedure, Procedure).
+/// Procedure, Procedure), so a caseload under another purpose holds nobody.
 ///
 /// # Errors
 /// [`Refused::Off`] and [`Refused::Purpose`].
@@ -184,20 +167,10 @@ pub fn allowed(policy: Option<&AccessPolicy>, purpose: Option<&str>) -> Result<(
     if !crate::access_policy::care::CareFacts::of(policy).caseload() {
         return Err(Refused::Off);
     }
-    let purposes = policy
-        .and_then(|policy| policy.care_purposes.as_deref())
-        .unwrap_or_default();
-    match purpose {
-        Some(code)
-            if !purposes.is_empty()
-                && !purposes
-                    .iter()
-                    .any(|care| care.defining_code.code_string == code) =>
-        {
-            Err(Refused::Purpose)
-        }
-        _ => Ok(()),
+    if !Policy::of(policy).admits_care(purpose) {
+        return Err(Refused::Purpose);
     }
+    Ok(())
 }
 
 /// The caseload a query's statement applies.
@@ -213,15 +186,12 @@ pub enum Caseload {
         subjects: Arc<[EhrSubject]>,
     },
     /// The clinical care projection, probed by the EHR row's subject digest
-    /// with the path's principals and the roles.
+    /// for a relationship that meets one of the needs.
     Projected {
-        /// The probe of the care condition, its principals the path's.
+        /// The probe of the care condition.
         care: ProjectedCare,
-        /// The roles; empty means any role.
-        roles: Vec<RoleAsk>,
-        /// Every principal the caller holds, none of which may have written
-        /// a relationship that counts.
-        principals: Arc<[Uuid]>,
+        /// What a relationship must meet ([`Ask::needs`]).
+        needs: Vec<CareNeed>,
     },
 }
 
@@ -258,9 +228,18 @@ mod tests {
             terminology: terminology.to_owned(),
             code: code.to_owned(),
         };
-        assert!(ask.roles[0].matches(&code("HL7_ParticipationType", "RESP")));
-        assert!(ask.roles[1].matches(&code("HL7_ParticipationType", "ATND")));
-        assert!(!ask.roles[1].matches(&code("local", "ATND")));
+        assert_eq!(
+            ask.roles,
+            vec![
+                code("HL7_ParticipationType", "RESP"),
+                code("HL7_ParticipationType", "ATND")
+            ]
+        );
+        let local = read(Some("all"), Some(&texts(&["local::lead"])))
+            .expect("the role reads")
+            .expect("a caseload");
+        assert_eq!(local.roles, vec![code("local", "lead")]);
+        assert_eq!(local.needs().len(), 2, "all is direct and team");
     }
 
     #[test]
@@ -326,7 +305,8 @@ mod tests {
         assert_eq!(allowed(Some(&cared), Some("TREAT")), Ok(()));
         assert_eq!(allowed(Some(&cared), None), Ok(()));
         assert_eq!(allowed(Some(&cared), Some("HRESCH")), Err(Refused::Purpose));
-        assert_eq!(allowed(None, Some("HRESCH")), Ok(()));
+        assert_eq!(allowed(None, Some("HRESCH")), Err(Refused::Purpose));
+        assert_eq!(allowed(None, Some("ETREAT")), Ok(()));
         let off = policy(&json!({ "caseload": false }));
         assert_eq!(allowed(Some(&off), None), Err(Refused::Off));
     }

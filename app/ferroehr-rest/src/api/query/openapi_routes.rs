@@ -486,7 +486,7 @@ guarded_handler! {
                            parameter or the `openehr-ehr-id` header. FerroEHR extension, no \
                            ITS-REST member: `caseload` (`direct`, `team`, `all` or \
                            `none`) and `caseload_roles` (role codes, \
-                           `terminology::code` or a bare code) narrow the query to \
+                           `terminology::code` or a bare `HL7_ParticipationType` code) narrow the query to \
                            the EHRs whose subjects the caller holds a live care \
                            relationship to, inside its one statement; an unknown \
                            value, roles without a caseload, a policy that turns the \
@@ -997,7 +997,7 @@ guarded_handler! {
                            `openehr-ehr-id` header. FerroEHR extension, no \
                            ITS-REST member: `caseload` (`direct`, `team`, `all` or \
                            `none`) and `caseload_roles` (role codes, \
-                           `terminology::code` or a bare code) narrow the query to \
+                           `terminology::code` or a bare `HL7_ParticipationType` code) narrow the query to \
                            the EHRs whose subjects the caller holds a live care \
                            relationship to, inside its one statement; an unknown \
                            value, roles without a caseload, a policy that turns the \
@@ -1529,7 +1529,7 @@ guarded_handler! {
                            parameter or the `openehr-ehr-id` header. FerroEHR extension, no \
                            ITS-REST member: `caseload` (`direct`, `team`, `all` or \
                            `none`) and `caseload_roles` (role codes, \
-                           `terminology::code` or a bare code) narrow the query to \
+                           `terminology::code` or a bare `HL7_ParticipationType` code) narrow the query to \
                            the EHRs whose subjects the caller holds a live care \
                            relationship to, inside its one statement; an unknown \
                            value, roles without a caseload, a policy that turns the \

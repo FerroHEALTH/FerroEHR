@@ -6,7 +6,7 @@
 //! The access condition of a query is judged from this replica's copies of
 //! the settings classes and, for a query pinned to one EHR, of that EHR's
 //! settings and subject. The statement fails when a copy is older than the
-//! store (`clinical/0049_access_stale_copy.sql`), so a stale verdict never
+//! store (`clinical/0009_baseline_access.sql`), so a stale verdict never
 //! answers rows, a count or a page, and never an empty result that reads as
 //! "nothing recorded". The service then drops the stale copy, judges the
 //! query again from a fresh read, as a direct read judged on an older
@@ -17,6 +17,7 @@
 //! `aql_stale_access_total{copy, outcome}`. No openEHR spec governs the
 //! copies or the refusal: our own design (#5794).
 
+use std::borrow::Cow;
 use std::time::Instant;
 
 use crate::access_eval::condition::{AccessCondition, current};
@@ -25,11 +26,12 @@ use crate::aql::error::StaleCopy;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
+use crate::service::query::request::QueryAccess;
 
 impl FerroEhrService {
     /// The condition of a query whose statement found `copy` stale, judged
-    /// again from a fresh read: `base` (the request's unresolved condition
-    /// outside a request) with its care resolved and its EHR decided for
+    /// again from a fresh read: the running request's condition, or the one
+    /// `base` gives outside a request, with its care resolved and its EHR decided for
     /// `pinned`, as [`Self::query_access_condition`] does.
     ///
     /// A judgement equal to `stale` reads the copy again after a pause; once
@@ -42,7 +44,7 @@ impl FerroEhrService {
     pub(super) async fn judged_again(
         &self,
         copy: StaleCopy,
-        base: &AccessCondition,
+        base: &QueryAccess,
         pinned: Option<&[EhrId]>,
         stale: &AccessCondition,
         since: Instant,
@@ -60,10 +62,9 @@ impl FerroEhrService {
                 }
                 StaleCopy::Classes => self.ehr_access.forget_classes(),
             }
-            let unresolved = if current().is_some() {
-                self.request_access_condition().await?
-            } else {
-                base.clone()
+            let unresolved = match base {
+                QueryAccess::Given(given) if current().is_none() => Cow::Borrowed(given),
+                _ => Cow::Owned(Box::pin(self.request_access_condition()).await?),
             };
             let fresh = Box::pin(self.query_access_condition(&unresolved, pinned)).await?;
             if fresh != *stale {

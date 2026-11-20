@@ -24,7 +24,7 @@ use crate::access_eval::scope::{CategoryIndex, Item};
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::storage::access_projection::Revision;
+use crate::storage::access_projection::{EhrSubject, Revision};
 
 impl FerroEhrService {
     /// The facts a request that begins now is judged under, an EHR with no
@@ -327,27 +327,41 @@ impl FerroEhrService {
         // store's revisions, so a discharge another replica committed narrows it at once.
         access.care_in_force(std::future::ready(())).await?;
         if let Some(care) = projected_care(&access).filter(|_| self.care_projection_current()) {
-            let principals = ask.principals(&access.caller().facts);
-            let held = access.principals_held();
-            let care = crate::access_eval::condition::care::ProjectedCare {
-                principals: principals
-                    .into_iter()
-                    .filter(|principal| held.binary_search(principal).is_ok())
-                    .collect::<Vec<_>>()
-                    .into(),
-                ..care
-            };
             return Ok(Some(Caseload::Projected {
                 care,
-                roles: ask.roles.clone(),
-                principals: held.into(),
+                needs: ask.needs(),
             }));
         }
-        let (namespace, subjects) = access.caseload_subjects(ask).await?;
+        let subjects: Vec<EhrSubject> = access
+            .cared_subjects()
+            .await?
+            .into_iter()
+            .filter(|cared| ask.holds(&cared.ties))
+            .map(|cared| cared.subject)
+            .collect();
         Ok(Some(Caseload::Census {
-            namespace,
+            namespace: access.party_namespace(),
             subjects: subjects.into(),
         }))
+    }
+
+    /// The caller's own records the Art. 3(3) delay reads
+    /// ([`Self::delayed_own_records`]) and the caseload the request narrows a
+    /// query of `domain` to ([`Self::query_caseload`]).
+    pub(crate) async fn own_and_caseload(
+        &self,
+        domain: crate::aql::ir::QueryDomain,
+        request: &crate::service::query::request::AqlQueryRequest,
+    ) -> Result<
+        (
+            Option<crate::aql::sql::own_records::OwnRecords>,
+            Option<Caseload>,
+        ),
+        ServiceError,
+    > {
+        let own_records = Box::pin(self.delayed_own_records()).await?;
+        let caseload = Box::pin(self.query_caseload(domain, request.caseload.as_ref())).await?;
+        Ok((own_records, caseload))
     }
 
     /// The care of the caller of `access` a query reads, for its EHRs
@@ -579,11 +593,22 @@ fn projected_care(
         .iter()
         .map(|provider| (provider.issuer.clone(), provider.id.clone()))
         .unzip();
+    let day = access.today()?;
+    let principals = access.principals_held();
+    let facts = &access.caller().facts;
+    let direct: Vec<uuid::Uuid> = principals
+        .iter()
+        .copied()
+        .filter(|principal| {
+            facts.party() == Some(*principal) || facts.performed().binary_search(principal).is_ok()
+        })
+        .collect();
     calendar.then(|| crate::access_eval::condition::care::ProjectedCare {
-        principals: access.principals_held().into(),
+        principals: principals.into(),
+        direct: direct.into(),
         provider_issuers: provider_issuers.into(),
         provider_ids: provider_ids.into(),
-        day: access.today(),
+        day,
         grace: grace.to_string(),
         self_declared: access.policy().self_declared,
     })

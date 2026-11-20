@@ -3,7 +3,7 @@
 
 //! The care projection of the clinical domain (#5699).
 //!
-//! `clinical/0047_access_care.sql` holds the care relationships of the party
+//! `clinical/0009_baseline_access.sql` holds the care relationships of the party
 //! domain, one row per subject reference and relationship, each reference
 //! held as its SHA-256 digest, and the digest of each EHR's own subject
 //! reference beside it.
@@ -12,6 +12,7 @@
 //! them by the EHR row's digest, the caller's principals and the providers
 //! it acts for. No openEHR spec governs the projection: our own design.
 
+use openehr_rm::draft::access_control::terminology::ForeignCode;
 use sqlx::{PgConnection, PgPool, Row};
 use uuid::Uuid;
 
@@ -83,10 +84,8 @@ pub struct CareRow {
     pub writer: Option<Uuid>,
     /// Whether its basis is `self_declared`.
     pub self_declared: bool,
-    /// The terminology id of its `care_role`.
-    pub role_terminology: String,
-    /// The code of its `care_role`.
-    pub role_code: String,
+    /// Its `care_role`.
+    pub role: ForeignCode,
 }
 
 /// The facts revision the projection reflects and the check value of the
@@ -175,11 +174,11 @@ pub async fn replace(
         .collect();
     let writers: Vec<Option<Uuid>> = rows.iter().map(|row| row.writer).collect();
     let declared: Vec<bool> = rows.iter().map(|row| row.self_declared).collect();
-    let terminologies: Vec<&str> = rows
+    let role_terminologies: Vec<&str> = rows
         .iter()
-        .map(|row| row.role_terminology.as_str())
+        .map(|row| row.role.terminology.as_str())
         .collect();
-    let codes: Vec<&str> = rows.iter().map(|row| row.role_code.as_str()).collect();
+    let role_codes: Vec<&str> = rows.iter().map(|row| row.role.code.as_str()).collect();
     sqlx::query(
         "INSERT INTO access_care (subject_digest, person_id, carer_id, provider_issuer, \
              provider_id, care_from, care_until, writer_id, self_declared, role_terminology, \
@@ -196,8 +195,8 @@ pub async fn replace(
     .bind(&untils)
     .bind(&writers)
     .bind(&declared)
-    .bind(&terminologies)
-    .bind(&codes)
+    .bind(&role_terminologies)
+    .bind(&role_codes)
     .execute(&mut *tx)
     .await?;
     Ok(())

@@ -315,7 +315,7 @@ portable.
 | Member | Values | Meaning |
 |---|---|---|
 | `caseload` | `direct`, `team`, `all`, `none` (default) | `direct`: relationships that name you or a `ROLE` you perform; `team`: relationships that name a care team or unit you are a member of; `all`: either. |
-| `caseload_roles` | a list of role codes | Narrows further to relationships in one of these roles, each `terminology::code` (such as `HL7_ParticipationType::RESP`) or a bare code matched in any terminology. Absent means any role. |
+| `caseload_roles` | a list of role codes | Narrows further to relationships in one of these roles, each `terminology::code` (such as `local::lead`) or a bare code of `HL7_ParticipationType` (such as `RESP`). Absent means any role. |
 
 ```json
 POST /ferroehr/rest/openehr/v1/query/aql

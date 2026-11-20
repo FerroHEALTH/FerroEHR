@@ -1,0 +1,44 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_CARE_GROUND*
+
+h|*Description*
+2+a|The care relationship an access rested on, as the draft access control decision procedure records it: its role, its path, the version that holds it, whether the grace after its end admitted the access, the carer it covers for and the provider in whose care it is.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*role*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|The relationship's `care_role`.
+
+h|*1..1*
+|*path*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|How the relationship reached the accessor, coded in the draft `openehr_access` terminology's `care path` group: `direct`, `team`, `self_declared` or `attested`.
+
+h|*1..1*
+|*carer*: `xref:{class_party_ref}[PARTY_REF]`
+a|The relationship's target: the accessor's `PERSON` or a `ROLE` it performs for `direct` and `self_declared`, the care team `GROUP` or the `ORGANISATION` unit for `team`.
+
+h|*0..1*
+|*relationship*: `xref:{class_object_version_id}[OBJECT_VERSION_ID]`
+a|The version of the relationship the decision read: its `object_id` is the relationship's uid.
+
+h|*1..1*
+|*in_grace*: `xref:{class_boolean}[Boolean]`
+a|True when the relationship had ended and the policy's `relationship_grace` admitted the access.
+
+h|*0..1*
+|*covers_for*: `xref:data_types:basic_package.adoc#_dv_identifier_class[DV_IDENTIFIER]`
+a|The carer the relationship's target replaces, as its `covers_for` element names it.
+
+h|*1..1*
+|*provider*: `xref:data_types:basic_package.adoc#_dv_identifier_class[DV_IDENTIFIER]`
+a|The healthcare provider in whose care the relationship is, as its `provider` element names it.
+
+h|*Invariants*
+2+a|__Path_valid__: `terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_care_path, path.defining_code)`
+
+|===

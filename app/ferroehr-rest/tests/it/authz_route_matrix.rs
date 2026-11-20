@@ -249,6 +249,23 @@ const CLINICAL_READ: &[(&str, &str)] = &[
     ("GET", "/demographic/role/{uid_based_id}"),
     ("GET", "/demographic/role/{uid_based_id}/tags"),
     ("GET", "/demographic/party_relationship/{uid_based_id}"),
+    // The care relationship resources (#6076), spelled at their full paths
+    // where a relative one would read as the released Demographic API's.
+    ("GET", "/care_relationship"),
+    ("GET", "/care_relationship/{relationship_uid}"),
+    (
+        "GET",
+        "/ferroehr/rest/extensions/v1/demographic/person/{uid_based_id}/care_relationship",
+    ),
+    ("GET", "/versioned_care_relationship/{relationship_uid}"),
+    (
+        "GET",
+        "/versioned_care_relationship/{relationship_uid}/revision_history",
+    ),
+    (
+        "GET",
+        "/versioned_care_relationship/{relationship_uid}/version/{version_uid}",
+    ),
     (
         "GET",
         "/demographic/party/{uid_based_id}/reverse_relationships",
@@ -404,6 +421,13 @@ const CLINICAL_WRITE: &[(&str, &str)] = &[
     ("POST", "/demographic/party_relationship"),
     ("PUT", "/demographic/party_relationship/{uid_based_id}"),
     ("DELETE", "/demographic/party_relationship/{uid_based_id}"),
+    ("POST", "/care_relationship"),
+    ("PUT", "/care_relationship/{relationship_uid}"),
+    ("DELETE", "/care_relationship/{relationship_uid}"),
+    (
+        "POST",
+        "/ferroehr/rest/extensions/v1/demographic/person/{uid_based_id}/care_relationship",
+    ),
     ("POST", "/message/import"),
     ("POST", "/message/import/{ehr_id}"),
 ];

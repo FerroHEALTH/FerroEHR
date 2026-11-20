@@ -155,14 +155,11 @@ Repeat it for every database `[database.party]` or `[database.audit]` names.
 The roles are cluster-wide, so neither command removes them: the migrations
 create `ferroehr_migrator`, `ferroehr_clinical`, `ferroehr_clinical_reader`,
 `ferroehr_party` and `ferroehr_party_reader`, and you created the login roles
-your DSNs use. `ferroehr_linkage` is there too when a migrator without
-`CREATEROLE` could not drop it. Drop them when no other database on the cluster
-uses them:
+your DSNs use. Drop them when no other database on the cluster uses them:
 
 ```sql
 DROP ROLE ferroehr_clinical, ferroehr_clinical_reader, ferroehr_party,
           ferroehr_party_reader, ferroehr_migrator;
-DROP ROLE IF EXISTS ferroehr_linkage;
 ```
 
 [DROP ROLE](https://www.postgresql.org/docs/18/sql-droprole.html) refuses a

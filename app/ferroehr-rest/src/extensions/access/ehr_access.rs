@@ -20,13 +20,14 @@
 //! answers `404`, as an unknown target does, with nothing in the body that
 //! names it (EHDS Art. 8, third paragraph); every other refusal answers `403`
 //! with its `refused-*` code. A query carries the same verdicts as a
-//! condition of its one SQL statement (`query_condition`). The procedure and
+//! condition of its one SQL statement, judged by the service only for a
+//! statement that reads EHR data (#6110). The procedure and
 //! its codes are our own design (#5487, #5513).
 
 use std::sync::Arc;
 
 use axum::response::{IntoResponse, Response};
-use ferroehr::access_eval::condition::{AccessCondition, RequestAccess, current};
+use ferroehr::access_eval::condition::{RequestAccess, current};
 use ferroehr::access_eval::procedure::{Outcome, Verdict};
 use ferroehr::access_eval::scope::Item;
 use ferroehr::error::ServiceError;
@@ -433,17 +434,6 @@ async fn record_overrides(state: &AppState, ehr_ids: &[EhrId]) -> Result<(), Box
         .record_access_opt_out_overrides(ehr_ids)
         .await
         .map_err(|error| Box::new(RestError::from(error).into_response()))
-}
-
-/// The condition of a query of the running request: the evaluator's verdict
-/// on every EHR, as the SQL generator applies it. `Err(response)` is the
-/// `503` of a settings store that cannot answer.
-pub(crate) async fn query_condition(state: &AppState) -> Result<AccessCondition, Box<Response>> {
-    state
-        .backend()
-        .request_access_condition()
-        .await
-        .map_err(|e| Box::new(unavailable(current_principal().as_ref(), e)))
 }
 
 /// The versioned objects the request path names, each with the raw parameter

@@ -26,7 +26,7 @@ use ferroehr::system_log::event::ActorAuthentication;
 
 use super::assurance::{PatientDataGate, PatientDataRefusal};
 use super::refusal::count_auth_failure;
-use super::{AuthError, AuthLayer, AuthMethod, Principal};
+use super::{AuthError, AuthLayer, AuthMethod, Authenticator, FreshAuthentication, Principal};
 
 /// Runs the RBAC gate over an authenticated caller: the matched operation's
 /// class against the caller's roles, then the read-only restriction.
@@ -243,5 +243,29 @@ fn mechanism_label(method: AuthMethod) -> &'static str {
     match method {
         AuthMethod::Basic => "basic",
         AuthMethod::Bearer => "bearer",
+    }
+}
+
+/// Response-extension marker of a `403` the SMART on openEHR requirement of a
+/// COMPOSITION operation refused once its template was known
+/// (`crate::extensions::access::pep`).
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ScopeRefused;
+
+/// Finishes the response of an admitted request: the login marker of a
+/// `fresh` authentication, and the `insufficient_scope` challenge
+/// (RFC 6750 §3.1) on a [`ScopeRefused`] response, as [`smart_refusal`] gives
+/// a route's refusal.
+pub(super) fn finish(auth: &Authenticator, resp: &mut Response, fresh: bool) {
+    if fresh {
+        resp.extensions_mut().insert(FreshAuthentication);
+    }
+    if resp.extensions().get::<ScopeRefused>().is_some()
+        && !resp.headers().contains_key(header::WWW_AUTHENTICATE)
+    {
+        resp.headers_mut().insert(
+            header::WWW_AUTHENTICATE,
+            auth.challenge(Some(&AuthError::Forbidden(String::new()))),
+        );
     }
 }

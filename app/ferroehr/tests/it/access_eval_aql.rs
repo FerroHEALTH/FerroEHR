@@ -12,7 +12,8 @@
 
 use std::sync::Arc;
 
-use ferroehr::access_eval::condition::care::Care;
+use ferroehr::access_eval::care_tie::Tie;
+use ferroehr::access_eval::condition::care::{Care, CaredEhr, CaredSubject};
 use ferroehr::access_eval::condition::{
     AccessCondition, Asking, InForce, RequestAccess, with_request_access,
 };
@@ -28,6 +29,7 @@ use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr::storage::access_projection::EhrSubject;
 use ferroehr::versioning::committer::CommitterIdentity;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
+use openehr_rm::draft::access_control::terminology::care::CarePath;
 use openehr_rm::draft::access_control::terminology::{
     AccessDefault, CallerKind, ForeignCode, OperationClass, Refusal,
 };
@@ -364,8 +366,10 @@ async fn project(
             until: *until,
             writer: None,
             self_declared: false,
-            role_terminology: "HL7_ParticipationType".to_owned(),
-            role_code: "PART".to_owned(),
+            role: ForeignCode {
+                terminology: "HL7_ParticipationType".to_owned(),
+                code: "PART".to_owned(),
+            },
         })
         .collect();
     access_care::clear(&mut tx)
@@ -394,6 +398,7 @@ async fn project(
 fn projected(day: jiff::civil::Date, grace: &str) -> Care {
     Care::Projected(ferroehr::access_eval::condition::care::ProjectedCare {
         principals: vec![TEAM].into(),
+        direct: Vec::new().into(),
         provider_issuers: vec![PROVIDER.0.to_owned()].into(),
         provider_ids: vec![PROVIDER.1.to_owned()].into(),
         day,
@@ -402,20 +407,43 @@ fn projected(day: jiff::civil::Date, grace: &str) -> Care {
     })
 }
 
+/// The tie by which a caller of [`TEAM`] holds a subject the projection
+/// writes under it: the team path, the role `PART`.
+fn team_tie() -> Tie {
+    Tie {
+        path: CarePath::Team,
+        role: ForeignCode {
+            terminology: "HL7_ParticipationType".to_owned(),
+            code: "PART".to_owned(),
+        },
+        grant: None,
+    }
+}
+
 /// The care `ask` holds, in `form`.
 fn care_of(world: &World, ask: &Ask, form: CareForm) -> Care {
     match form {
         CareForm::Projected => projected(jiff::Zoned::now().date(), "P0D"),
-        CareForm::Census => Care::Census(ask.cared.clone().into()),
+        CareForm::Census => Care::Census(
+            ask.cared
+                .iter()
+                .map(|subject| CaredSubject {
+                    subject: subject.clone(),
+                    ties: vec![team_tie()].into(),
+                })
+                .collect(),
+        ),
         CareForm::Ehrs => Care::Ehrs(
             world
                 .ehrs
                 .iter()
                 .enumerate()
                 .filter(|(index, _)| ask.cared.contains(&world.subject(*index)))
-                .map(|(_, (ehr_id, _, _))| ehr_id.0)
-                .collect::<Vec<_>>()
-                .into(),
+                .map(|(_, (ehr_id, _, _))| CaredEhr {
+                    ehr: ehr_id.0,
+                    ties: vec![team_tie()].into(),
+                })
+                .collect(),
         ),
     }
 }
@@ -445,7 +473,9 @@ async fn run_query_as(
     let run = async {
         let classes = svc.ehr_access_classes().await.expect("the classes read");
         let request = AqlQueryRequest {
-            ehr_access: access.condition(&classes, care_of(world, ask, form)),
+            ehr_access: ferroehr::service::query::request::QueryAccess::Given(
+                access.condition(&classes, care_of(world, ask, form)),
+            ),
             offset: page.map(|(offset, _)| offset),
             fetch: page.map(|(_, fetch)| fetch),
             ..AqlQueryRequest::default()
@@ -769,7 +799,7 @@ async fn the_projection_reads_the_dates_of_care_as_the_evaluator() {
     let mut ask = Ask::professional(&world);
     ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
     let access = request_of(&ask);
-    let today = access.today();
+    let today = access.today().expect("the day in UTC");
     let day = |days: i64| {
         today
             .checked_add(jiff::Span::new().days(days))
@@ -800,7 +830,9 @@ async fn the_projection_reads_the_dates_of_care_as_the_evaluator() {
                 .await
                 .expect("the classes read");
             let request = AqlQueryRequest {
-                ehr_access: access.condition(&classes, projected(today, grace)),
+                ehr_access: ferroehr::service::query::request::QueryAccess::Given(
+                    access.condition(&classes, projected(today, grace)),
+                ),
                 ..AqlQueryRequest::default()
             };
             Box::pin(world.svc.execute_aql(COMPOSITIONS, None, &request))
@@ -1142,7 +1174,7 @@ async fn an_ehr_of_a_class_the_condition_does_not_hold_is_judged_again() {
     .await;
     world.settings(1, &settings("open", &[], &[])).await;
     let request = AqlQueryRequest {
-        ehr_access: stale,
+        ehr_access: ferroehr::service::query::request::QueryAccess::Given(stale),
         ..AqlQueryRequest::default()
     };
     let outcome = Box::pin(with_request_access(
@@ -1377,7 +1409,7 @@ async fn a_query_pinned_to_one_ehr_is_decided_before_the_statement() {
         "a query over two EHRs is not pinned"
     );
     let request = AqlQueryRequest {
-        ehr_access: pinned,
+        ehr_access: ferroehr::service::query::request::QueryAccess::Given(pinned),
         ..AqlQueryRequest::default()
     };
     let outcome = Box::pin(with_request_access(
@@ -1430,10 +1462,16 @@ async fn a_pinned_verdict_judged_on_an_older_copy_is_judged_again_or_refused() {
                     entry.revision.settings = entry.revision.settings.map(|ordinal| ordinal - 1);
                 }
                 let request = AqlQueryRequest {
-                    ehr_access: access.pin(&condition, ehr_id, &entry),
+                    ehr_access: ferroehr::service::query::request::QueryAccess::Given(access.pin(&condition, ehr_id, &entry)),
                     ..AqlQueryRequest::default()
                 };
-                assert!(request.ehr_access.pinned().is_some(), "the EHR is decided");
+                assert!(
+                    matches!(
+                        &request.ehr_access,
+                        ferroehr::service::query::request::QueryAccess::Given(c) if c.pinned().is_some()
+                    ),
+                    "the EHR is decided"
+                );
                 Box::pin(svc.execute_aql(&aql, None, &request)).await
             }))
             .await
@@ -1543,7 +1581,7 @@ async fn served_under(
     aql: &str,
 ) -> Vec<String> {
     let request = AqlQueryRequest {
-        ehr_access: condition,
+        ehr_access: ferroehr::service::query::request::QueryAccess::Given(condition),
         ..AqlQueryRequest::default()
     };
     let outcome = Box::pin(with_request_access(

@@ -142,7 +142,7 @@ async fn column(
     let svc = &ward.svc;
     let run = async {
         let request = AqlQueryRequest {
-            ehr_access: svc.request_access_condition().await?,
+            ehr_access: ferroehr::service::query::request::QueryAccess::OfRequest,
             offset: page.map(|(offset, _)| offset),
             fetch: page.map(|(_, fetch)| fetch),
             caseload,
@@ -323,17 +323,18 @@ async fn a_policy_without_the_caseload_refuses_it() {
 async fn the_projected_caseload_probe_uses_the_subject_index() {
     let ward = Ward::new().await;
     ward.svc.project_care().await.expect("the projector runs");
+    let ask = ask(Path::All, &[]).expect("a caseload");
     let caseload = ferroehr::access_eval::caseload::Caseload::Projected {
         care: ferroehr::access_eval::condition::care::ProjectedCare {
             principals: vec![ward.doctor.0].into(),
+            direct: vec![ward.doctor.0].into(),
             provider_issuers: vec![CARE_PROVIDER.0.to_owned()].into(),
             provider_ids: vec![CARE_PROVIDER.1.to_owned()].into(),
             day: jiff::civil::date(2026, 11, 20),
             grace: "P0D".to_owned(),
             self_declared: false,
         },
-        roles: Vec::new(),
-        principals: vec![ward.doctor.0].into(),
+        needs: ask.needs(),
     };
     let params = ferroehr::aql::ir::Params::default();
     let ast = openehr_query::parser::parse_str(COUNT).expect("the query parses");

@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::config::authz::AuthzConfig;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
@@ -26,7 +27,7 @@ use http::StatusCode;
 use serde_json::{Value, json};
 
 use crate::common::{self, BASE};
-use crate::party_binding_http::{LOGIN, person, service, token, uid, vo, write};
+use crate::party_binding_http::{ISSUER, LOGIN, person, service, token, uid, vo, write};
 use crate::representation_http::{STRANGER, config, ehr, router};
 
 /// The `PERSON` every login of [`Patient`] binds.
@@ -206,6 +207,38 @@ async fn the_rbac_gate_admits_the_person_themself_to_their_own_ehr() {
     assert_eq!(code, StatusCode::OK, "the lookup of her own EHR: {body}");
     let (code, body) = send(&app, ("GET", &format!("/ehr/{own}")), &credential, None).await;
     assert_eq!(code, StatusCode::OK, "her own EHR: {body}");
+    let (code, body) = send(
+        &app,
+        ("GET", &format!("/ehr/{stranger}")),
+        &credential,
+        None,
+    )
+    .await;
+    assert_eq!(code, StatusCode::FORBIDDEN, "another EHR: {body}");
+    assert!(body.contains("refused-not-subject"), "{body}");
+}
+
+/// The SMART app an openEHR launch reaches the CDR through, granted
+/// `act_for_persons`.
+const APP: &str = "hospital-app";
+
+/// A patient's login through a SMART app the CDR grants `act_for_persons`
+/// is the person themself, as a first-party login is: an openEHR launch
+/// reaches the CDR through such an app (#6080). They read their own EHR and
+/// write its settings, and any other EHR stays refused.
+#[tokio::test]
+async fn a_patients_login_through_a_delegated_app_reads_their_own_ehr() {
+    let (_db, svc) = service().await;
+    let own = ehr(&svc, Some(PERSON)).await;
+    let stranger = ehr(&svc, Some(STRANGER)).await;
+    common::grant_standing(&svc, ISSUER, APP, Operation::ActForPersons).await;
+    let app = router(Arc::clone(&svc), Arc::new(Patient)).await;
+    let credential = token("eva-login", &json!({ "client_id": APP }));
+
+    let (code, body) = send(&app, ("GET", &format!("/ehr/{own}")), &credential, None).await;
+    assert_eq!(code, StatusCode::OK, "her own EHR through the app: {body}");
+    let (code, body) = send(&app, ("GET", &lookup(PERSON)), &credential, None).await;
+    assert_eq!(code, StatusCode::OK, "the lookup of her own EHR: {body}");
     let (code, body) = send(
         &app,
         ("GET", &format!("/ehr/{stranger}")),
