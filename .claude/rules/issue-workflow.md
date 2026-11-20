@@ -85,8 +85,9 @@ six retired ones (`bug`, `enhancement`, `P0`–`P3`) wherever they reappear.
   `no-chart-bump`, `no-ui-visual-change`, and `perf-accepted`, which
   `perf-verdict` honours only with a `Perf-accepted: #<issue> <metric>` line
   per breached metric and the owner's acceptance on that issue, and which
-  reports the breach as accepted beside the full report (`docs/release.md`
-  §The performance gate).
+  reports the breach as accepted beside the full report; the release's
+  `performance` job honours the same acceptances of the milestone's merged
+  pull requests, verified again (`docs/release.md` §The performance gate).
 
 A new label goes into `labels.sh` in the same change that first uses it.
 
