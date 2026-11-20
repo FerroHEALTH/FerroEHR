@@ -557,6 +557,7 @@ pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
 pub(super) fn committer_identity(
     principal: &super::Principal,
     granted: &Capabilities,
+    local_issuer: &str,
 ) -> ferroehr::versioning::committer::CommitterIdentity {
     let caller = principal.access.caller();
     let system = caller.is_some_and(|caller| matches!(caller.kind(), CallerKind::System));
@@ -579,6 +580,7 @@ pub(super) fn committer_identity(
                 .and_then(Caller::issuer)
                 .map(str::to_owned),
         },
+        local_issuer: local_issuer.to_owned(),
         client,
         person: crate::smart::acts_as_person(principal) || portal.is_some(),
         party: principal

@@ -23,7 +23,7 @@ use openehr_rm::prelude::{
     DvIdentifier, PartyIdentified, PartyIdentifiedData, PartyProxy, PartyRelated, PartySelf,
 };
 
-use super::{CommitterIdentity, LOCAL_ISSUER};
+use super::CommitterIdentity;
 use crate::error::ServiceError;
 
 /// The `DV_IDENTIFIER.type` of the provider identifier a professional's
@@ -108,7 +108,7 @@ pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
                         identity
                             .issuer
                             .clone()
-                            .unwrap_or_else(|| LOCAL_ISSUER.to_owned()),
+                            .unwrap_or_else(|| identity.local_issuer.clone()),
                     ),
                     assigner: None,
                     id: client,
@@ -240,7 +240,8 @@ pub fn professional(
 }
 
 /// The login identifier of `identity`: the issuer profile's `person_key`
-/// value under the token issuer, or the Basic user under `ferroehr`.
+/// value under the token issuer, or the Basic user under this deployment's
+/// own issuer ([`CommitterIdentity::local_issuer`]).
 fn login(identity: &CommitterIdentity) -> DvIdentifier {
     let id = match (&identity.party, identity.id_type) {
         (Some(bound), "oauth2") => bound.identifier.value().to_owned(),
@@ -251,7 +252,7 @@ fn login(identity: &CommitterIdentity) -> DvIdentifier {
             identity
                 .issuer
                 .clone()
-                .unwrap_or_else(|| LOCAL_ISSUER.to_owned()),
+                .unwrap_or_else(|| identity.local_issuer.clone()),
         ),
         assigner: None,
         id,
@@ -264,7 +265,7 @@ fn login(identity: &CommitterIdentity) -> DvIdentifier {
 ///
 /// The placeholder, one `DV_IDENTIFIER{issuer, id}` with no `type`, no name and
 /// no `external_ref`, is accepted when it names the caller (the token's `iss`
-/// and `sub`, or `ferroehr` and the Basic user). Any other stated committer
+/// and `sub`, or this deployment's own issuer and the Basic user). Any other stated committer
 /// is accepted when it states nothing `server` does not: a name equal to its
 /// name, no identifier other than its own (the caller's login and, for a
 /// professional, the provider identifier), no `external_ref` other than the
@@ -319,7 +320,7 @@ pub(super) fn placeholder(party: &PartyIdentifiedData) -> bool {
 
 /// Whether the placeholder `party` names the authenticated caller.
 pub(super) fn names_caller(party: &PartyIdentifiedData, identity: &CommitterIdentity) -> bool {
-    let issuer = identity.issuer.as_deref().unwrap_or(LOCAL_ISSUER);
+    let issuer = identity.issuer.as_deref().unwrap_or(&identity.local_issuer);
     party.identifiers.as_ref().is_some_and(|ids| {
         ids.iter()
             .all(|id| id.issuer.as_deref() == Some(issuer) && id.id == identity.subject)

@@ -420,7 +420,8 @@ fn assemble_service(
 
     let mut service = FerroEhrService::new(pools)
         .with_spec_profile(config.deployment.spec_profile)
-        .with_system_id(config.api.system_id.clone())
+        .with_system_id(config.api.system_id())
+        .with_basic_issuer(config.api.basic_issuer())
         .with_signer(signer)
         .with_licence(licence)
         .with_deployment(deployment)
@@ -813,7 +814,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // `AuditEvent` the store and the ATX:FHIR Feed carry.
     #[cfg(not(feature = "fhir"))]
     ferroehr::system_log::require_fhir_disabled(&config.audit).map_err(|e| anyhow::anyhow!(e))?;
-    let audit_config: AuditConfig = config.audit.clone();
+    let audit_config: AuditConfig = config.audit_section();
     let (audit_sender, mut audit_handle) = start_audit(&audit_config, &pool, &pools.audit).await?;
     // NOTE: our own design (#5762), any replica resolves the reservations a stopped one left.
     if let Some(handle) = audit_handle.as_mut() {
@@ -884,7 +885,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // `[server] system_id` is stamped into `EHR.system_id`,
     // `AUDIT_DETAILS.system_id` and `OBJECT_VERSION_ID.creating_system_id`;
     // logged so an operator can see the key took.
-    tracing::info!(system_id = %config.api.system_id, "openEHR system identifier");
+    tracing::info!(system_id = %config.api.system_id(), "openEHR system identifier");
 
     // An IHE patient identity source answers its capabilities read here, so an
     // unreachable one refuses boot rather than the first request (#3380).

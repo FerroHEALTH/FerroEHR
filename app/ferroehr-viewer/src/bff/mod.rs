@@ -54,7 +54,11 @@ pub fn cdr() -> Result<Cdr, ViewerError> {
     let session = crate::session::require_session()?;
     let state = crate::scope::state()?;
     Ok(Cdr {
-        login: login::Login::of(&session, state.config.oidc.issuer.expose()),
+        login: login::Login::of(
+            &session,
+            state.config.oidc.issuer.expose(),
+            &state.config.cdr.basic_issuer,
+        ),
         client: state.cdr,
         credential: session.credential().clone(),
     })

@@ -384,6 +384,7 @@ async fn a_basic_or_unbound_caller_keeps_its_composer() {
         subject: "sub-u".to_owned(),
         id_type: "oauth2",
         issuer: Some(ISSUER.to_owned()),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
         client: Some("app".to_owned()),
         person: false,
         party: None,

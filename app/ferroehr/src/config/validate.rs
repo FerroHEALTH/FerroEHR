@@ -295,9 +295,25 @@ impl FerroEhrConfig {
     /// and occupies the `creating_system_id` position of every
     /// `OBJECT_VERSION_ID` this CDR mints (BASE
     /// `base_types/master05-identification_package.adoc` §Syntaxes).
+    ///
+    /// A `production` deployment names it, by `[api] system_id` or by
+    /// `[server] public_base_url`, whose host the assembled configuration
+    /// takes: the sandbox fallback is no identity a production record may
+    /// carry (#6143).
     fn validate_system_id(&self, errors: &mut Vec<ConfigError>) {
+        if self.api.system_id.is_none()
+            && self.deployment.profile == deployment::DeploymentProfile::Production
+        {
+            errors.push(ConfigError::semantic(
+                "api.system_id is unset and server.public_base_url names no host: a production \
+                 deployment names the system that authors its data, so set api.system_id or \
+                 server.public_base_url"
+                    .to_owned(),
+            ));
+            return;
+        }
         if let Err(source) =
-            openehr_base::v1_3::base_types::identification::uid::Uid::new(&self.api.system_id)
+            openehr_base::v1_3::base_types::identification::uid::Uid::new(self.api.system_id())
         {
             errors.push(ConfigError::semantic(format!(
                 "api.system_id {:?} is not a legal openEHR `uid` \
@@ -305,7 +321,7 @@ impl FerroEhrConfig {
                  {source}. It is stamped into EHR.system_id, \
                  AUDIT_DETAILS.system_id, and the creating_system_id of every \
                  OBJECT_VERSION_ID",
-                self.api.system_id
+                self.api.system_id()
             )));
         }
     }

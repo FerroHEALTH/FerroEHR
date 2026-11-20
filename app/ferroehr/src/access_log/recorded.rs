@@ -65,7 +65,7 @@ pub enum RecordedError {
     Time,
     /// The entry holds no details: it was not written by this build's
     /// recording path, such as an entry imported from another system.
-    #[error("the entry holds no FerroEHR access details")]
+    #[error("the entry holds no access log details")]
     NoDetails,
 }
 
@@ -219,7 +219,7 @@ const fn outcome_indicator(outcome: EventOutcome) -> u64 {
 /// position `chain_seq`.
 ///
 /// # Errors
-/// [`RecordedError::NoDetails`] for an entry without FerroEHR's access
+/// [`RecordedError::NoDetails`] for an entry without access log
 /// details, [`RecordedError::Details`] when they do not read, and
 /// [`RecordedError::Value`] for a value this build does not write.
 pub(crate) fn stored(

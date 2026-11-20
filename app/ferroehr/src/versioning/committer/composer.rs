@@ -240,6 +240,7 @@ mod tests {
             subject: "sub-a".to_owned(),
             id_type: "oauth2",
             issuer: Some(ISSUER.to_owned()),
+            local_issuer: crate::service::DEFAULT_SYSTEM_ID.to_owned(),
             client: Some("app".to_owned()),
             person: false,
             party: None,

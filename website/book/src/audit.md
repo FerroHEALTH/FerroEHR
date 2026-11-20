@@ -183,49 +183,60 @@ The entry is written with every other record of its request in one database
 transaction before the response leaves, and an access whose entry cannot be
 written is refused with `503` ([how a record is written](#how-a-record-is-written)).
 
-### FerroEHR's access details
+### The access log details
 
 The draft's core attributes are openEHR's: the action, the outcome, the
 accessor, the items, the query, the authorisations, the channel. The facts
 the BALP `AuditEvent`, the DICOM message and the EHDS access record carry
 that the core holds no attribute for are kept in the entry's
 `other_details`, which the draft gives to the fields a jurisdiction adds: one
-`ITEM_TREE` under the archetype id
-`openEHR-EHR-ITEM_TREE.ferroehr_access_details.v0`, one `ELEMENT` per fact,
-named by its at-code. They are part of the entry, so the hash chain covers
-them, and a tombstone removes them with the rest of its content. No openEHR
-specification governs them: they are FerroEHR's own.
+`ITEM_TREE` under the archetype `openEHR-EHR-ITEM_TREE.access_log_details.v1`,
+one `ELEMENT` per fact, named by its node id. A fact the core states as the
+access holds it, such as the principal the credential names or the count the
+outcome delivered, is not repeated there: read the core first and the
+details beside it. They are part of the entry, so the hash chain covers
+them, and a tombstone removes them with the rest of its content.
 
-| at-code | Name | Value | Holds |
+The archetype is published, so another system reads the details of an
+exported log by it. FerroEHR ships it among its default definitions
+(`openEHR-EHR-ITEM_TREE.access_log_details.v1.0.0.adls`, stored at the
+first boot like the [operational policy](operational-policy.md)
+definitions, with its digest in `deploy/definitions/published.sha256`), and
+you read it with `GET /definition/template/adl2/openEHR-EHR-ITEM_TREE.access_log_details.v1.0.0`.
+The node ids are two-digit id-codes, so their byte order is their numeric
+order, which is the order the elements of a tree are kept in. No openEHR
+specification governs the details: they are FerroEHR's own.
+
+| Node id | Name | Value | Holds |
 |---|---|---|---|
-| `at0001` | event action | `DV_TEXT` | the DICOM `EventActionCode`: `C`, `R`, `U`, `D` or `E` |
-| `at0002` | resource class | `DV_TEXT` | the class of resource the access addressed |
-| `at0003` | outcome indicator | `DV_COUNT` | the DICOM `EventOutcomeIndicator`: `0`, `4` or `8` |
-| `at0004` | principal | `DV_TEXT` | the login the access was made under |
-| `at0005` | issuer | `DV_TEXT` | the issuer of the caller's token |
-| `at0006` | client id | `DV_TEXT` | the client the token was issued to |
-| `at0007` | token id | `DV_TEXT` | the token's `jti` |
-| `at0009` | role | `DV_TEXT` | a role the caller held, one element each |
-| `at0010` | domain | `DV_TEXT` | the pseudonymisation domain, when it is not the resource class's own |
-| `at0011` | ehr id | `DV_TEXT` | the EHR the request named |
-| `at0012` | subject | `DV_IDENTIFIER` | the subject of care of the EHR, as `EHR_STATUS.subject` names it, with its namespace as the issuer |
-| `at0013` | subject lookup failed | `DV_BOOLEAN` | set when the subject could not be looked up |
-| `at0014` | object id | `DV_TEXT` | the object the request named; none for a read of the log, whose search the entry names by digest |
-| `at0015` | purpose | `DV_TEXT` | the purpose of use the caller declared |
-| `at0016` | legal basis | `DV_TEXT` | the legal basis the deployment attributes |
-| `at0017` | result count | `DV_COUNT` | how many records the access served |
-| `at0018` | origin | `DV_TEXT` | an origin of the data, one element each |
-| `at0019` | origin count | `DV_COUNT` | how many distinct origins the data had |
-| `at0020` | category map digest | `DV_TEXT` | the category map the access was classified through |
-| `at0021` | category content | `DV_PARSABLE` (`application/json`) | what the classification read |
-| `at0022` | acting mode | `DV_TEXT` | how the credential acted |
-| `at0023` | assurance level | `DV_TEXT` | the assurance level of the authentication |
-| `at0024` | assurance value | `DV_TEXT` | the claim value the level was read from |
-| `at0025` | professional id | `DV_TEXT` | the identifier of the natural person who accessed |
-| `at0026` | token attributes | `DV_PARSABLE` (`application/json`) | the purposes and roles the token stated |
-| `at0027` | binding | `DV_PARSABLE` (`application/json`) | the party binding with every field |
-| `at0028` | summary | `DV_PARSABLE` (`application/json`) | the count and EHRs of a summary of refusals |
-| `at0029` | event type | `DV_TEXT` | the DICOM `EventTypeCode` of an authentication record: `110122` Login, `110123` Logout |
+| `id11` | event action | `DV_TEXT` | the DICOM `EventActionCode`: `C`, `R`, `U`, `D` or `E` |
+| `id12` | resource class | `DV_TEXT` | the class of resource the access addressed |
+| `id13` | outcome indicator | `DV_COUNT` | the DICOM `EventOutcomeIndicator`: `0`, `4` or `8` |
+| `id14` | principal | `DV_TEXT` | the login the access was made under |
+| `id15` | issuer | `DV_TEXT` | the issuer of the caller's token |
+| `id16` | client id | `DV_TEXT` | the client the token was issued to |
+| `id17` | token id | `DV_TEXT` | the token's `jti` |
+| `id19` | role | `DV_TEXT` | a role the caller held, one element each |
+| `id20` | domain | `DV_TEXT` | the pseudonymisation domain, when it is not the resource class's own |
+| `id21` | ehr id | `DV_TEXT` | the EHR the request named |
+| `id22` | subject | `DV_IDENTIFIER` | the subject of care of the EHR, as `EHR_STATUS.subject` names it, with its namespace as the issuer |
+| `id23` | subject lookup failed | `DV_BOOLEAN` | set when the subject could not be looked up |
+| `id24` | object id | `DV_TEXT` | the object the request named; none for a read of the log, whose search the entry names by digest |
+| `id25` | purpose | `DV_TEXT` | the purpose of use the caller declared |
+| `id26` | legal basis | `DV_TEXT` | the legal basis the deployment attributes |
+| `id27` | result count | `DV_COUNT` | how many records the access served |
+| `id28` | origin | `DV_TEXT` | an origin of the data, one element each |
+| `id29` | origin count | `DV_COUNT` | how many distinct origins the data had |
+| `id30` | category map digest | `DV_TEXT` | the category map the access was classified through |
+| `id31` | category content | `DV_PARSABLE` (`application/json`) | what the classification read |
+| `id32` | acting mode | `DV_TEXT` | how the credential acted |
+| `id33` | assurance level | `DV_TEXT` | the assurance level of the authentication |
+| `id34` | assurance value | `DV_TEXT` | the claim value the level was read from |
+| `id35` | professional id | `DV_TEXT` | the identifier of the natural person who accessed |
+| `id36` | token attributes | `DV_PARSABLE` (`application/json`) | the purposes and roles the token stated |
+| `id37` | binding | `DV_PARSABLE` (`application/json`) | the party binding with every field |
+| `id38` | summary | `DV_PARSABLE` (`application/json`) | the count and EHRs of a summary of refusals |
+| `id39` | event type | `DV_TEXT` | the DICOM `EventTypeCode` of an authentication record: `110122` Login, `110123` Logout |
 
 The subject of care is kept so the BALP `entity:patient` and the
 `patient` search parameter name the patient as they did when the access
@@ -236,7 +247,7 @@ keeps that system's details, and FerroEHR projects none of it.
 To read the trail with SQL, `audit.access_trail` holds every record of
 either form with the facts it states, in the audit vocabulary
 (`operation`, `principal`, `binding`, `party` and the rest), an entry's read
-from its content. `audit.access_detail(content::jsonb, 'at0022')` reads one
+from its content. `audit.access_detail(content::jsonb, 'id32')` reads one
 access detail of an entry. The categories a classification computes are no
 column there: the projection writes them.
 
@@ -285,7 +296,7 @@ not classify is a BALP exchange without the EHDS entities. Each row is a test
 | `time_recorded` | `EventDateTime` | `occurred` |
 | `outcome` | `EventOutcomeIndicator`, `EventOutcomeDescription` | the reason's code |
 | `accessor.credential` | the requestor's `UserID` (the subject, or the professional a client acts for) | the issuer, the token id, the assurance |
-| `accessor.roles` | `RoleIDCode` in `urn:ferroehr:role` | none |
+| `accessor.roles` | `RoleIDCode` in the `codeSystemName` of `[audit] role_code_system`, by default the deployment's `[api] system_id` | none |
 | `accessor.party`, `binding`, `groups`, `delegation` | details of the `ehds-accessor` participant object | no element; details |
 | `accessor.provider` | nothing | lost |
 | `system_id` | `AuditSourceID`, with `AuditEnterpriseSiteID` from the deployment | none |

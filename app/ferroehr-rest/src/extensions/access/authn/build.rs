@@ -226,6 +226,7 @@ impl Authenticator {
             party,
             declared: super::declared::Declared::new(config.rate_clock.clone()),
             namespace: config.party_binding.namespace.clone(),
+            local_issuer: config.api.basic_issuer().to_owned(),
         }))
     }
 }

@@ -40,10 +40,10 @@ jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 
 [[auth.party]]
 issuer = "https://basic-users.ferroehr.invalid"
-identifier_issuer = "urn:ferroehr:basic-user"
+identifier_issuer = "urn:example:basic-user"
 identifier_type = "login"
 group_claim = "groups"
-group_identifier_issuer = "urn:ferroehr:groups"
+group_identifier_issuer = "urn:example:groups"
 
 # The whole admin group behind the demo credential — no partial enablement,
 # no separate admin user (owner ruling, #2965).
@@ -66,7 +66,7 @@ provider = { issuer = "urn:oid:2.999.7.9", id = "sandbox" }
 
 [[authz.party_binding.basic_user]]
 user = "ferroehr"
-key_issuer = "urn:ferroehr:basic-user"
+key_issuer = "urn:example:basic-user"
 key = "ferroehr"
 
 # The SCIM endpoint the demo PERSON is provisioned through (RFC 7644 §3.3), as

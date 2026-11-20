@@ -238,7 +238,7 @@ data:
         kind = "persons"
     
       [[auth.party]]
-        identifier_issuer = "urn:ferroehr:basic-user"
+        identifier_issuer = "urn:example:basic-user"
         identifier_type = "login"
         issuer = "https://basic-users.ferroehr.invalid"
     
@@ -247,7 +247,7 @@ data:
     
         [[authz.party_binding.basic_user]]
           key = "clinician"
-          key_issuer = "urn:ferroehr:basic-user"
+          key_issuer = "urn:example:basic-user"
           user = "clinician"
         [authz.party_binding.provider]
           id = "terminology"
@@ -516,7 +516,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: dba44d3c3b283ad7add8f110d101a637317bd1ba6ba22820b4332414b5ab90fe
+        checksum/config: 7dc3648374a64dc7893a3fedd403d2db27ffea876a506adeab9b77f0eeaa22b0
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

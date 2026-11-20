@@ -215,6 +215,7 @@ pub(crate) async fn system(svc: &FerroEhrService, client_id: &str) -> System {
         subject: client_id.to_owned(),
         id_type: "oauth2",
         issuer: Some(MACHINES.to_owned()),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
         client: Some(client_id.to_owned()),
         person: false,
         party: None,

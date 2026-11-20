@@ -88,7 +88,9 @@ pub(super) fn patient_context<'a>(
     let shape = Shape::of(layer, req);
     let headers = req.headers().clone();
     async move {
-        if let Some(refusal) = super::declared::over_rate(principal) {
+        if let Some(refusal) =
+            super::declared::over_rate(principal, &layer.authenticator.local_issuer)
+        {
             return Some(refusal);
         }
         if let Some(refusal) = confine(layer, principal, shape, &headers).await {

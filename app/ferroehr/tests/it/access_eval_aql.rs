@@ -111,6 +111,7 @@ fn administrator() -> CommitterIdentity {
         subject: "root".to_owned(),
         id_type: "basic",
         issuer: None,
+        local_issuer: DEFAULT_SYSTEM_ID.to_owned(),
         client: None,
         person: false,
         party: None,

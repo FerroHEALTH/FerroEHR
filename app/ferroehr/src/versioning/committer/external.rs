@@ -286,6 +286,7 @@ mod tests {
             subject: "hp-remote-1".to_owned(),
             id_type: "oauth2",
             issuer: Some("https://federation.example".to_owned()),
+            local_issuer: crate::service::DEFAULT_SYSTEM_ID.to_owned(),
             client: None,
             person: false,
             party: None,

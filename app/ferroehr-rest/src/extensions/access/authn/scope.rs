@@ -23,7 +23,7 @@ impl Authenticator {
         F: Future<Output = Response>,
     {
         let granted = Capabilities::default();
-        let committer = party::committer_identity(&principal, &granted);
+        let committer = party::committer_identity(&principal, &granted, &self.local_issuer);
         let binding = record::of_request(&principal, &committer, &granted, Some(self));
         let scoped = ferroehr::system_log::access_context::with_roles(
             principal.roles.clone(),

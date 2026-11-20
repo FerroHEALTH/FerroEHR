@@ -399,6 +399,9 @@ pub struct Authenticator {
     /// `[authz.party_binding] namespace`, under which a patient-portal
     /// representative's `PERSON` is named.
     namespace: String,
+    /// `[api] basic_issuer`, the issuer this deployment names a login it
+    /// holds itself by ([`ferroehr::versioning::committer::CommitterIdentity::local_issuer`]).
+    local_issuer: String,
 }
 
 impl std::fmt::Debug for Authenticator {

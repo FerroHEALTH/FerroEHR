@@ -300,6 +300,7 @@ fn caller(subject: &str) -> ferroehr::versioning::committer::CommitterIdentity {
         subject: subject.to_owned(),
         id_type: "oauth2",
         issuer: Some(crate::policy_fixtures::ISSUER.to_owned()),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
         client: Some(subject.to_owned()),
         person: false,
         party: None,

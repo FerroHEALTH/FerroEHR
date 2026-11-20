@@ -10,7 +10,8 @@
 //! deployment arrive through a provisioning client that itself needs a grant
 //! (`scim_provision`). This step breaks that circle on the operator's
 //! authority, offline, through the same commit path a Demographic API write
-//! takes: an `AGENT` carrying the client identifier and a `ROLE` it performs
+//! takes: an `AGENT` of the shipped system definition carrying the client
+//! identifier and a `ROLE` of the shipped grant definition it performs,
 //! whose capability grants the operation with the scope elements given, each
 //! validated, checked against `[authz.grants] allowed` and recorded with the
 //! server's own committer. A client an `ACTOR` names already gets the `ROLE`
@@ -20,10 +21,12 @@
 //! No openEHR spec governs who grants a capability: our own design.
 
 use openehr_base::containers::NonEmptyVec;
-use openehr_base::prelude::{HierObjectId, ObjectId, PartyRef, TerminologyId};
+use openehr_base::prelude::{
+    ArchetypeId, HierObjectId, ObjectId, PartyRef, TemplateId, TerminologyId,
+};
 use openehr_rm::prelude::{
-    Agent, Capability, CodePhrase, DataValue, DvCodedText, DvIdentifier, DvText, Element, Item,
-    ItemStructure, ItemTree, Party, PartyIdentity, Role,
+    Agent, Archetyped, Capability, CodePhrase, DataValue, DvCodedText, DvIdentifier, DvText,
+    Element, Item, ItemStructure, ItemTree, Party, PartyIdentity, Role,
 };
 use serde::Serialize;
 use uuid::Uuid;
@@ -33,19 +36,19 @@ use crate::error::refusal::Refusal;
 use crate::ids::VoId;
 use crate::party_binding::grants::capabilities::Actor;
 use crate::party_binding::grants::operation::Operation;
+use crate::party_binding::policy::{AGENT_ARCHETYPE, PolicyRole};
 use crate::party_binding::policy_mark::{CLIENT_ID, TERMINOLOGY};
 use crate::service::FerroEhrService;
 use crate::service::demographic::types::PartyKind;
-use crate::service::ehr::service::archetyped;
 use crate::service::version_update::{WriteRequest, plain_text};
 
-/// The archetype of the `AGENT` a grant creates: FerroEHR's own, with no
-/// template.
-const AGENT_ARCHETYPE: &str = "openEHR-DEMOGRAPHIC-AGENT.ferroehr_client.v1";
+/// The template of the `AGENT` a grant creates: the shipped system `AGENT`
+/// ([`crate::party_binding::policy::AGENT_ARCHETYPE`]).
+const AGENT_TEMPLATE: &str = "openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0";
 
-/// The archetype of the `ROLE` a grant creates: FerroEHR's own, with no
-/// template.
-const ROLE_ARCHETYPE: &str = "openEHR-DEMOGRAPHIC-ROLE.ferroehr_grant.v1";
+/// The template of the `ROLE` a grant creates: the shipped grant `ROLE`
+/// ([`PolicyRole::Grant`]).
+const ROLE_TEMPLATE: &str = "openEHR-DEMOGRAPHIC-ROLE.grant.v1.0.0";
 
 /// The grant of one operation to one client.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -124,11 +127,17 @@ impl FerroEhrService {
     /// Grants `grant`'s operation to its client, creating the client's
     /// `AGENT` when no `ACTOR` names it, on the operator's authority.
     ///
+    /// The `AGENT` and the `ROLE` are written under the shipped definitions,
+    /// which the grant stores first when no definition of their ids is
+    /// stored, as a boot does.
+    ///
     /// # Errors
-    /// The refusals of the commit: an operation `[authz.grants] allowed` does
+    /// A shipped definition the definition store refuses, and the refusals
+    /// of the commit: an operation `[authz.grants] allowed` does
     /// not admit (`403`), a scope element the operation is read by named
     /// other than once (`400`), a storage failure.
     pub async fn grant_client(&self, grant: &ClientGrant) -> Result<Granted, ServiceError> {
+        self.seed_default_definitions().await?;
         let grants = self.fresh_grants().await?;
         let held = grants.capabilities(
             Actor::Client {
@@ -182,6 +191,7 @@ impl FerroEhrService {
     /// The refusals of the commit, as [`Self::grant_client`]'s, and the
     /// refusal of a `ROLE` whose performer is no `PERSON` of this store.
     pub async fn grant_person(&self, grant: &PersonGrant) -> Result<Granted, ServiceError> {
+        self.seed_default_definitions().await?;
         let grants = self.fresh_grants().await?;
         let held = grants.capabilities(Actor::Party(grant.person), jiff::Timestamp::now());
         if held.holds(grant.operation) {
@@ -269,20 +279,36 @@ fn tree(node: &str, name: &str, items: Vec<Item>) -> ItemStructure {
     }))
 }
 
-/// The one name identity of a party named `name`.
-fn identities(name: &str) -> NonEmptyVec<PartyIdentity> {
+/// The archetype details of a party of the archetype `archetype_id` written
+/// under the template `template_id`.
+fn archetyped(archetype_id: &str, template_id: &str) -> Archetyped {
+    Archetyped {
+        archetype_id: ArchetypeId {
+            value: archetype_id.to_owned(),
+        },
+        template_id: Some(TemplateId {
+            value: template_id.to_owned(),
+        }),
+        rm_version: openehr_rm::Generation::default().spec_version().to_owned(),
+    }
+}
+
+/// The one name identity of a party named `name`, at the node ids `nodes`
+/// of the identity, its tree and its element.
+fn identities(name: &str, nodes: [&str; 3]) -> NonEmptyVec<PartyIdentity> {
+    let [identity, details, element_node] = nodes;
     NonEmptyVec::of(PartyIdentity {
         name: plain_text("name"),
-        archetype_node_id: "at0001".to_owned(),
+        archetype_node_id: identity.to_owned(),
         uid: None,
         links: None,
         archetype_details: None,
         feeder_audit: None,
         details: tree(
-            "at0002",
+            details,
             "details",
             vec![element(
-                "at0003",
+                element_node,
                 plain_text("name"),
                 DataValue::DvText(plain_text(name)),
             )],
@@ -303,15 +329,15 @@ fn agent(grant: &ClientGrant) -> Party {
         archetype_node_id: AGENT_ARCHETYPE.to_owned(),
         uid: None,
         links: None,
-        archetype_details: Some(Box::new(archetyped(AGENT_ARCHETYPE))),
+        archetype_details: Some(Box::new(archetyped(AGENT_ARCHETYPE, AGENT_TEMPLATE))),
         feeder_audit: None,
-        identities: identities(&grant.client_id),
+        identities: identities(&grant.client_id, ["id4", "id5", "id6"]),
         contacts: None,
         details: Some(tree(
-            "at0010",
+            "id2",
             "details",
             vec![element(
-                "at0011",
+                "id3",
                 plain_text("client"),
                 DataValue::DvIdentifier(client),
             )],
@@ -327,18 +353,18 @@ fn agent(grant: &ClientGrant) -> Party {
 fn role(performer: (&str, VoId), operation: Operation, elements: &[GrantElement]) -> Party {
     let code = operation.code();
     let mut items = vec![element(
-        "at0021",
+        "id90",
         plain_text("operation"),
         DataValue::DvText(DvText::DvCodedText(coded(code))),
     )];
     items.extend(elements.iter().map(|named| match named {
         GrantElement::Text { code, text } => element(
-            "at0022",
+            "id9",
             DvText::DvCodedText(coded(code)),
             DataValue::DvText(plain_text(text)),
         ),
         GrantElement::Identifier { code, issuer, id } => element(
-            "at0022",
+            "id10",
             DvText::DvCodedText(coded(code)),
             DataValue::DvIdentifier(DvIdentifier {
                 issuer: Some(issuer.clone()),
@@ -348,14 +374,15 @@ fn role(performer: (&str, VoId), operation: Operation, elements: &[GrantElement]
             }),
         ),
     }));
+    let archetype = PolicyRole::Grant.archetype_id();
     Party::Role(Box::new(Role {
         name: plain_text(code),
-        archetype_node_id: ROLE_ARCHETYPE.to_owned(),
+        archetype_node_id: archetype.to_owned(),
         uid: None,
         links: None,
-        archetype_details: Some(Box::new(archetyped(ROLE_ARCHETYPE))),
+        archetype_details: Some(Box::new(archetyped(archetype, ROLE_TEMPLATE))),
         feeder_audit: None,
-        identities: identities(code),
+        identities: identities(code, ["id2", "id3", "id4"]),
         contacts: None,
         details: None,
         relationships: None,
@@ -367,12 +394,12 @@ fn role(performer: (&str, VoId), operation: Operation, elements: &[GrantElement]
         },
         capabilities: Some(NonEmptyVec::of(Capability {
             name: plain_text("grant"),
-            archetype_node_id: "at0020".to_owned(),
+            archetype_node_id: "id6".to_owned(),
             uid: None,
             links: None,
             archetype_details: None,
             feeder_audit: None,
-            credentials: tree("at0023", "terms", items),
+            credentials: tree("id8", "terms", items),
             time_validity: None,
         })),
     }))
@@ -430,6 +457,56 @@ mod tests {
             openehr_its::json::to_canonical_value(&agent(&grant))
                 .pointer("/details/items/0/value/type"),
             Some(&serde_json::json!(CLIENT_ID))
+        );
+    }
+
+    /// The `AGENT` and the `ROLE` are written under the shipped, neutral
+    /// definitions, each a policy kind validated against its own template.
+    #[test]
+    fn a_grant_writes_under_the_shipped_definitions() {
+        use crate::party_binding::policy::PolicyKind;
+        let grant = ClientGrant {
+            issuer: "https://as.example".to_owned(),
+            client_id: "provisioning".to_owned(),
+            operation: Operation::ScimProvision,
+            elements: Vec::new(),
+        };
+        let agent = openehr_its::json::to_canonical_value(&agent(&grant));
+        let role = openehr_its::json::to_canonical_value(&role(
+            ("AGENT", VoId(Uuid::nil())),
+            grant.operation,
+            &grant.elements,
+        ));
+        for (party, archetype, template, kind) in [
+            (&agent, AGENT_ARCHETYPE, AGENT_TEMPLATE, PolicyKind::Agent),
+            (
+                &role,
+                PolicyRole::Grant.archetype_id(),
+                ROLE_TEMPLATE,
+                PolicyKind::Role(PolicyRole::Grant),
+            ),
+        ] {
+            assert_eq!(party["archetype_node_id"], archetype);
+            assert_eq!(
+                party["archetype_details"]["archetype_id"]["value"],
+                archetype
+            );
+            assert_eq!(party["archetype_details"]["template_id"]["value"], template);
+            assert_eq!(PolicyKind::of(archetype), Some(kind));
+            assert!(
+                crate::party_binding::policy::DEFINITIONS
+                    .iter()
+                    .any(|(file, _)| file.strip_suffix(".adls") == Some(template)),
+                "{template} is shipped"
+            );
+        }
+        assert_eq!(
+            agent.pointer("/details/archetype_node_id"),
+            Some(&serde_json::json!("id2"))
+        );
+        assert_eq!(
+            role.pointer("/capabilities/0/credentials/items/0/archetype_node_id"),
+            Some(&serde_json::json!("id90"))
         );
     }
 }

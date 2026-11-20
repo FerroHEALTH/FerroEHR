@@ -344,7 +344,7 @@ data:
         kind = "machines"
     
       [[auth.party]]
-        identifier_issuer = "urn:ferroehr:basic-user"
+        identifier_issuer = "urn:example:basic-user"
         identifier_type = "login"
         issuer = "https://basic-users.ferroehr.invalid"
     
@@ -353,7 +353,7 @@ data:
     
         [[authz.party_binding.basic_user]]
           key = "clinician"
-          key_issuer = "urn:ferroehr:basic-user"
+          key_issuer = "urn:example:basic-user"
           user = "clinician"
         [authz.party_binding.provider]
           id = "server-tls"
@@ -642,7 +642,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: ac20e302d21f94bd5d235d8dddf808cf286904372b4383fe13d43839c5a758c8
+        checksum/config: b8421278c5b842d17beb29157ecce313619798be51434097b6349b7a5d47814b
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/management/prometheus"

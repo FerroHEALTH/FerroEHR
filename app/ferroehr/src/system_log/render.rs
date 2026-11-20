@@ -39,8 +39,11 @@ use crate::system_log::retention::LogRetention;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RenderPolicy {
-    /// `[audit] source_id`: the audit source and FerroEHR's own agent.
+    /// `[audit] source_id`: the audit source and this system's own agent.
     pub source_id: String,
+    /// `[audit] role_code_system`: the code system a caller's roles are
+    /// named in on a DICOM `RoleIDCode`.
+    pub role_code_system: String,
     /// `[audit] enterprise_site_id`, empty when unset.
     pub enterprise_site_id: String,
     /// `[audit] server_host`, empty when unset.
@@ -63,7 +66,8 @@ impl RenderPolicy {
     #[must_use]
     pub fn of(config: &AuditConfig, categories: &CategoryMapConfig) -> Self {
         Self {
-            source_id: config.source_id.clone(),
+            source_id: config.source_id().to_owned(),
+            role_code_system: config.role_code_system().to_owned(),
             enterprise_site_id: config.enterprise_site_id.clone().unwrap_or_default(),
             server_host: config.server_host.clone().unwrap_or_default(),
             value_if_missing: config.value_if_missing.clone(),
@@ -86,6 +90,7 @@ impl RenderPolicy {
         let emergency = emergency_purposes(&self.emergency_purpose_codes)?;
         let context = AuditContext {
             source_id: self.source_id.clone(),
+            role_code_system: self.role_code_system.clone(),
             enterprise_site_id: self.enterprise_site_id.clone(),
             server_ip: self.server_host.clone(),
             value_if_missing: self.value_if_missing.clone(),
