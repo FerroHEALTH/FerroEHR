@@ -910,6 +910,7 @@ async fn explain_population(pool: &PgPool, corpus: &Corpus) -> Value {
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
         policy_parties: ferroehr::aql::sql::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        own_records: None,
     };
     let prepared =
         ferroehr::aql::sql::build(&ir, &params, &ctx).expect("the population AQL lowers to SQL");
@@ -1287,6 +1288,7 @@ fn from_shape(aql: &str) -> &'static str {
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
         policy_parties: ferroehr::aql::sql::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        own_records: None,
     };
     let sql = ferroehr::aql::sql::build(&ir, &params, &ctx)
         .expect("the path AQL lowers to SQL")

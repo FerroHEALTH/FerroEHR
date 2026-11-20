@@ -201,34 +201,36 @@ pub fn permit_identifier(declared: &str) -> Option<String> {
         .then(|| value.to_owned())
 }
 
-/// Whether the EHDS Art. 3(3) delay of the person's own access holds for the
-/// current request: data a professional has not yet released then reads as
-/// absent.
+/// Whether the EHDS Art. 3(3) delay of the person's own access holds on
+/// every EHR the current request reads: data a professional has not yet
+/// released then reads as absent.
 ///
-/// The protocol adapter publishes `true` for a patient-context request (a
-/// SMART `patient/` grant or the configured patient claim) on a deployment
-/// that enables `[privacy.access_delay]`, and `false` for every other caller, so a
-/// professional reads the record as before. Outside a request scope it is
-/// `false` (`docs/law/eu/ehds/text.html` Art. 3(3)). No openEHR spec governs a
+/// It holds for a request that acts for the person (a SMART `patient/` grant,
+/// the configured patient claim, a representative) on a deployment that
+/// enables the delay, and for a caller bound to a `PERSON` whom the evaluator
+/// confines to that person's own records. Outside a request scope it does not
+/// hold (`docs/law/eu/ehds/text.html` Art. 3(3)). No openEHR spec governs a
 /// delay of the person's access: our own design/extension.
 #[must_use]
 pub fn access_delay_enforced() -> bool {
-    access_delay() == AccessDelay::Person
-}
-
-/// Whether the EHDS Art. 3(3) delay holds for the current request on `ehr_id`.
-///
-/// It holds on every EHR for a request that acts for the person, and on the
-/// EHRs the request found to be the caller's own records by the party binding
-/// (#6108).
-#[must_use]
-pub fn access_delay_enforced_on(ehr_id: crate::ids::EhrId) -> bool {
     match access_delay() {
         AccessDelay::Off => false,
         AccessDelay::Person => true,
         AccessDelay::Records => crate::access_eval::condition::current()
-            .is_some_and(|access| access.is_record(Some(ehr_id))),
+            .is_some_and(|access| access.caller().confined()),
     }
+}
+
+/// Whether the EHDS Art. 3(3) delay holds for the current request on `ehr_id`.
+///
+/// It holds wherever [`access_delay_enforced`] does, and on each EHR the
+/// request found to be the caller's own record by the party binding (#6108).
+#[must_use]
+pub fn access_delay_enforced_on(ehr_id: crate::ids::EhrId) -> bool {
+    access_delay_enforced()
+        || (access_delay() == AccessDelay::Records
+            && crate::access_eval::condition::current()
+                .is_some_and(|access| access.is_record(Some(ehr_id))))
 }
 
 /// The EHDS Art. 3(3) delay the current request runs under; [`AccessDelay::Off`]

@@ -126,6 +126,21 @@ pub struct SqlCtx {
     pub policy_parties: PolicyParties,
     /// The EHRs whose `EHR_ACCESS` objects the query reads rows of.
     pub access_settings: EhrAccessReaders,
+    /// The caller's own records by the party binding, on which the EHDS
+    /// Art. 3(3) delay withholds held data from the query (#6108); `None`
+    /// where the delay holds on no record or on every one.
+    pub own_records: Option<OwnRecords>,
+}
+
+/// The subject references of the caller's own records by the party binding.
+///
+/// A query compares each row's EHR subject with them. No openEHR spec
+/// governs this: our own design under EHDS Art. 3(3).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OwnRecords {
+    /// Each reference as its `(id, namespace)`, as the `ehr` row stores the
+    /// subject, read through the subject's unique index.
+    pub subjects: Arc<[(String, String)]>,
 }
 
 /// The EHRs whose `EHR_ACCESS` settings a query may read rows of.
@@ -525,6 +540,7 @@ impl<'a> Builder<'a> {
                 ctx.policy_parties,
                 &ctx.access_settings,
                 &ctx.ehr_access,
+                ctx.own_records.as_ref(),
             ),
             step_bindings: Vec::new(),
             node_groups: Vec::new(),

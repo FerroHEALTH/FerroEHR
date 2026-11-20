@@ -31,10 +31,10 @@
 use sea_query::{Expr, ExprTrait as _};
 
 use super::expr::col;
-use super::{EhrAccessReaders, PolicyParties};
+use super::{EhrAccessReaders, OwnRecords, PolicyParties};
 use crate::access_eval::condition::AccessCondition;
 use crate::aql::ir::QueryDomain;
-use crate::db::iden::VoHead;
+use crate::db::iden::{Ehr, VoHead};
 
 /// Which access gates hold for the query being built.
 #[derive(Debug, Clone, Copy)]
@@ -51,17 +51,9 @@ pub(super) struct Gates<'a> {
     policy_parties: PolicyParties,
     /// The EHRs whose `EHR_ACCESS` objects contribute rows.
     access_settings: &'a EhrAccessReaders,
-}
-
-/// Whether the EHDS Art. 3(3) delay withholds held data from a query under
-/// `access`: for a request that acts for the person, and for a query pinned
-/// to an EHR the request found to be the caller's own record (#6108).
-pub(super) fn person_withheld(access: &AccessCondition) -> bool {
-    use crate::system_log::access_context::{access_delay_enforced, access_delay_enforced_on};
-    access_delay_enforced()
-        || access
-            .pinned()
-            .is_some_and(|pinned| access_delay_enforced_on(crate::ids::EhrId(pinned.ehr)))
+    /// The caller's own records by the party binding: an object of one of
+    /// them withheld from the person contributes no row (#6108).
+    own_records: Option<&'a OwnRecords>,
 }
 
 impl<'a> Gates<'a> {
@@ -74,10 +66,13 @@ impl<'a> Gates<'a> {
         policy_parties: PolicyParties,
         access_settings: &'a EhrAccessReaders,
         access: &'a AccessCondition,
+        own_records: Option<&'a OwnRecords>,
     ) -> Self {
+        let person_withheld = crate::system_log::access_context::access_delay_enforced();
         Self {
             access,
-            person_withheld: person_withheld(access),
+            person_withheld,
+            own_records: own_records.filter(|_| !person_withheld),
             policy_parties: if domain == QueryDomain::Demographic {
                 policy_parties
             } else {
@@ -100,6 +95,17 @@ impl<'a> Gates<'a> {
         if self.person_withheld {
             let until = col(h, VoHead::PersonWithheldUntil);
             predicates.push(until.clone().is_null().or(until.lte(Expr::cust("now()"))));
+        } else if let Some(own) = self.own_records {
+            // NOTE: EHDS Art. 3(3), on the caller's own record by the party binding an object
+            // withheld from the person contributes no row; elsewhere it reads as before (#6108).
+            let until = col(h, VoHead::PersonWithheldUntil);
+            predicates.push(
+                until
+                    .clone()
+                    .is_null()
+                    .or(until.lte(Expr::cust("now()")))
+                    .or(Expr::exists(own_record(own, h)).not()),
+            );
         }
         // NOTE: EHDS Art. 8, an EHR_ACCESS whose settings the caller may not read
         // contributes no row, so a restriction stays invisible (our own design).
@@ -120,4 +126,25 @@ impl<'a> Gates<'a> {
     pub(super) fn on_ehr_id(self, target: &Expr) -> Option<Expr> {
         super::access::on_ehr_id(self.access, target)
     }
+}
+
+/// The alias of the `ehr` row an own-record probe reads.
+const OWN: &str = "own_record_ehr";
+
+/// The probe that finds the EHR of the head row `h` among the caller's own
+/// records `own`, by its `EHR_STATUS` subject reference.
+fn own_record(own: &OwnRecords, h: &str) -> sea_query::SelectStatement {
+    let mut probe = sea_query::Query::select();
+    probe
+        .expr(Expr::val(1))
+        .from_as(Ehr::Table, sea_query::Alias::new(OWN))
+        .and_where(col(OWN, Ehr::Id).eq(col(h, VoHead::EhrId)))
+        .and_where(
+            Expr::tuple([col(OWN, Ehr::SubjectId), col(OWN, Ehr::SubjectNamespace)]).in_tuples(
+                own.subjects.iter().map(|(id, namespace)| {
+                    sea_query::ValueTuple::Two(id.clone().into(), namespace.clone().into())
+                }),
+            ),
+        );
+    probe
 }

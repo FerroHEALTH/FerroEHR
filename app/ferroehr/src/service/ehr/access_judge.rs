@@ -307,6 +307,52 @@ impl FerroEhrService {
         })
     }
 
+    /// The caller's own records by the party binding, on which the EHDS
+    /// Art. 3(3) delay withholds held data from a query (#6108): the subject
+    /// references of the `PERSON` a caller whose delay holds per record is
+    /// bound to, read on the party pool. `None` when the delay holds on
+    /// every record the query reads or on none. No openEHR spec governs this:
+    /// our own design.
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the `PERSON`'s references cannot be read.
+    pub(crate) async fn delayed_own_records(
+        &self,
+    ) -> Result<Option<crate::aql::sql::OwnRecords>, ServiceError> {
+        use crate::system_log::access_context::{AccessDelay, access_delay, access_delay_enforced};
+        if access_delay() != AccessDelay::Records || access_delay_enforced() {
+            return Ok(None);
+        }
+        let Some(access) = current() else {
+            return Ok(None);
+        };
+        // NOTE: the local source names each party by its container's UUID, so a bound party
+        // id that is no UUID names no PERSON of this store and no record.
+        let Some(person) = access
+            .caller()
+            .party
+            .as_deref()
+            .and_then(|party| party.parse::<uuid::Uuid>().ok())
+        else {
+            return Ok(None);
+        };
+        let namespace = self.grants.namespace();
+        let mut subjects = Vec::new();
+        for subject in self.grants.subjects_of(person).await? {
+            // NOTE: our own design (#6108), this CDR's own references name a PERSON by its
+            // UUID, read in either case, as the evaluator reads it (`LiveGrants::person_of`).
+            if *subject.namespace == *namespace {
+                subjects.push((subject.id.to_uppercase(), subject.namespace.clone()));
+                subjects.push((subject.id.to_lowercase(), subject.namespace));
+            } else {
+                subjects.push((subject.id, subject.namespace));
+            }
+        }
+        Ok(Some(crate::aql::sql::OwnRecords {
+            subjects: subjects.into(),
+        }))
+    }
+
     /// The condition of a query whose rows all belong to `pinned` when it
     /// names them: its care read as [`Self::resolve_care`] reads it, and the
     /// one EHR of a query pinned to one decided before the statement, from

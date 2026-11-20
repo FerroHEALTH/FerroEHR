@@ -119,10 +119,8 @@ fn professional() -> String {
 
 /// A token of the professionals' issuer for `sub`, holding `roles`.
 fn staff(sub: &str, roles: &[&str]) -> String {
-    common::bearer(
-        &json!({ "sub": sub, "iss": ISSUER, "aud": AUDIENCE,
-        "exp": jiff::Timestamp::now().as_second() + 3600, "roles": roles }),
-    )
+    common::bearer(&json!({ "sub": sub, "iss": ISSUER, "aud": AUDIENCE,
+        "exp": jiff::Timestamp::now().as_second() + 3600, "roles": roles }))
 }
 
 /// The person's token: `patient/` read and query grants in the launch context
@@ -188,6 +186,8 @@ async fn own_ehr(app: &Router, pool: &PgPool, sub: &str, credential: &str) -> St
     let status = json!({
         "_type": "EHR_STATUS",
         "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.1.0",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-EHR_STATUS.generic.v1" } },
         "name": { "_type": "DV_TEXT", "value": "EHR Status" },
         "subject": { "_type": "PARTY_SELF", "external_ref": {
             "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
@@ -244,11 +244,23 @@ async fn read(app: &Router, ehr: &str, vo: &str, credential: &str) -> StatusCode
 
 /// The composition uids a query scoped to `ehr` returns to `credential`.
 async fn composition_uids(app: &Router, ehr: &str, credential: &str) -> Vec<String> {
+    uids_of(app, &format!("&ehr_id={ehr}"), credential).await
+}
+
+/// The composition uids a query across the population returns to
+/// `credential`.
+async fn population_uids(app: &Router, credential: &str) -> Vec<String> {
+    uids_of(app, "", credential).await
+}
+
+/// The composition uids the query with the parameters `scope` returns to
+/// `credential`.
+async fn uids_of(app: &Router, scope: &str, credential: &str) -> Vec<String> {
     let q = urlencoding::encode("SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
     let (status, body) = send(
         app,
         "GET",
-        &format!("{BASE}/query/aql?q={q}&ehr_id={ehr}"),
+        &format!("{BASE}/query/aql?q={q}{scope}"),
         credential,
         None,
     )
@@ -508,6 +520,9 @@ async fn the_delay_holds_on_the_callers_own_record_by_the_party_binding() {
         let uids = composition_uids(&app, &own, caller).await;
         assert!(!uids.iter().any(|uid| uid.starts_with(&held)), "{uids:?}");
     }
+    let uids = population_uids(&app, &gina).await;
+    assert!(!uids.iter().any(|uid| uid.starts_with(&held)), "{uids:?}");
+    assert!(uids.iter().any(|uid| uid.starts_with(&theirs)), "{uids:?}");
     assert_eq!(read(&app, &own, &held, &jansen).await, StatusCode::OK);
     assert_eq!(
         read(&app, &other, &theirs, &gina).await,
@@ -519,9 +534,15 @@ async fn the_delay_holds_on_the_callers_own_record_by_the_party_binding() {
 
     let release = format!("{EXT}/ehr/{own}/versioned_composition/{held}/access-delay/release");
     let (status, body) = send(&app, "POST", &release, &gina, None).await;
-    assert_eq!(status, StatusCode::NOT_FOUND, "held reads as absent: {body}");
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "held reads as absent: {body}"
+    );
     let (status, body) = send(&app, "POST", &release, &jansen, None).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "release: {body}");
+    let uids = population_uids(&app, &gina).await;
+    assert!(uids.iter().any(|uid| uid.starts_with(&held)), "{uids:?}");
     for caller in [&gina, &gina_alone] {
         assert_eq!(read(&app, &own, &held, caller).await, StatusCode::OK);
         let uids = composition_uids(&app, &own, caller).await;

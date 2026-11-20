@@ -477,11 +477,16 @@ async fn admit(
     let withheld = match delay {
         AccessDelay::Off => false,
         AccessDelay::Person => true,
-        AccessDelay::Records => parts
-            .path
-            .get("ehr_id")
-            .and_then(|raw| uuid::Uuid::parse_str(raw).ok())
-            .is_some_and(|ehr| access_context::access_delay_enforced_on(ferroehr::ids::EhrId(ehr))),
+        AccessDelay::Records => {
+            access_context::access_delay_enforced()
+                || parts
+                    .path
+                    .get("ehr_id")
+                    .and_then(|raw| uuid::Uuid::parse_str(raw).ok())
+                    .is_some_and(|ehr| {
+                        access_context::access_delay_enforced_on(ferroehr::ids::EhrId(ehr))
+                    })
+        }
     };
     if withheld {
         match delay::refuse_withheld(state, op, parts).await {

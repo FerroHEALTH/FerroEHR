@@ -7,7 +7,7 @@
 use std::sync::Arc;
 use uuid::Uuid;
 
-use super::super::{EhrAccessReaders, EhrScopeKind, PolicyParties, SqlCtx};
+use super::super::{EhrAccessReaders, EhrScopeKind, OwnRecords, PolicyParties, SqlCtx};
 use crate::access_eval::condition::care::Care;
 use crate::access_eval::condition::{AccessCondition, ConditionGroups};
 use crate::aql::ir::{ParamValue, Params, QueryIr};
@@ -31,6 +31,7 @@ pub(super) struct Key {
     access_settings: EhrAccessReaders,
     condition: AccessCondition,
     person_withheld: bool,
+    own_records: Option<OwnRecords>,
 }
 
 /// One parameter of the plan, in [`QueryIr::params`] order.
@@ -66,6 +67,7 @@ impl Key {
             access_settings: ctx.access_settings.clone(),
             condition: ctx.ehr_access.clone(),
             person_withheld,
+            own_records: ctx.own_records.clone(),
         }
     }
 
@@ -94,6 +96,7 @@ impl Key {
                 .all(|(held, name)| held.admits(live_params, name, params))
             && self.access_settings == ctx.access_settings
             && same_condition(&self.condition, &ctx.ehr_access)
+            && self.own_records == ctx.own_records
     }
 }
 
@@ -109,6 +112,7 @@ impl PartialEq for Key {
             && self.params == other.params
             && self.access_settings == other.access_settings
             && same_condition(&self.condition, &other.condition)
+            && self.own_records == other.own_records
     }
 }
 
