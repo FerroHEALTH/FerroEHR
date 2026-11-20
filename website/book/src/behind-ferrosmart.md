@@ -78,6 +78,27 @@ audience = ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
 
 The scopes a token grants still meet FerroEHR's own access decisions on top.
 
+## A person's own record
+
+FerroEHR reads who a record belongs to from the party binding and never from
+the token alone. A person whose login binds to the `PERSON` that an EHR's
+`EHR_STATUS.subject` names is that EHR's subject. On that EHR they read their
+record and write its `EHR_ACCESS` settings as its subject (EHDS Art. 3), with
+no role and no purpose of use. The access log records each access as their own.
+
+The binding is the source because an openEHR launch token names its record
+by `ehrId` and carries no `fhirUser` and no `patient` claim.
+
+FerroSMART's patient picker looks the EHR up with a token that carries no
+role:
+
+- A person holding no role reaches only the EHRs whose subject is their
+  `PERSON`.
+- Their lookup of their own subject finds their EHR. A lookup of anyone
+  else's subject answers `404`, as a subject no EHR names does.
+- A professional's lookup through the picker needs their roles on the
+  picker's token (FerroHEALTH/FerroSMART#716).
+
 ## The discovery document describes FerroSMART
 
 With `[auth.smart] discovery = true`,

@@ -36,7 +36,9 @@ use super::{AuthError, AuthLayer, AuthMethod, Principal};
 /// in [`smart_refusal`]. So does the record's person and whoever represents
 /// them: their right comes from who they are (EHDS Art. 3 and 4(2)), SMART App
 /// Launch defines no role claim for a patient's token, and the access
-/// evaluator confines them to the one EHR ([`crate::extensions::access::delay::acts_for_the_person`]).
+/// evaluator confines them to the one EHR ([`crate::extensions::access::delay::acts_for_the_person`]),
+/// as it confines a bound person holding no role to the records whose subject
+/// is their `PERSON` ([`crate::extensions::access::caller::bound_person_alone`]).
 /// Any other `user/` or `patient/` token keeps the role gate, as does a Basic
 /// user.
 ///
@@ -60,7 +62,8 @@ pub(super) fn rbac_refusal(
             .access
             .caller()
             .is_some_and(|caller| crate::smart::holds_only_system_scopes(&caller.openehr_scopes()));
-    let person = crate::extensions::access::delay::acts_for_the_person(principal);
+    let person = crate::extensions::access::delay::acts_for_the_person(principal)
+        || crate::extensions::access::caller::bound_person_alone(principal);
     let gated = if (backend || person) && class == OperationClass::Clinical {
         RbacDecision::Allow
     } else {

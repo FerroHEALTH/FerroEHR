@@ -36,7 +36,7 @@ use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
 use crate::access_eval::stale::StaleCopies;
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CareTeam;
-use crate::party_binding::grants::live::LiveGrants;
+use crate::party_binding::grants::live::{GrantsUnavailable, LiveGrants};
 use crate::service::ehr::access_settings::EhrAccessSettings;
 use crate::storage::access_projection::{EhrSubject, Revision};
 
@@ -69,6 +69,18 @@ pub struct RequestAccess {
     stale: Option<Arc<StaleCopies>>,
     pub(super) written: Mutex<BTreeSet<Uuid>>,
     care: care::CareInForce,
+    /// The EHRs whose subject a read of this request found to be the
+    /// `PERSON` the caller is bound to ([`Self::bind_subject`]).
+    records: Mutex<BTreeSet<EhrId>>,
+}
+
+/// How the caller holds one EHR.
+#[derive(Debug, Clone, Copy, Default)]
+struct Held {
+    /// The EHR is one a confined caller reaches.
+    own: bool,
+    /// The EHR's subject is the `PERSON` the caller is bound to.
+    subject: bool,
 }
 
 /// One EHR as the access evaluator reads it from this replica's copy: its
@@ -182,6 +194,7 @@ impl RequestAccess {
             stale: None,
             written: Mutex::new(BTreeSet::new()),
             care: care::CareInForce::default(),
+            records: Mutex::new(BTreeSet::new()),
         }
     }
 
@@ -253,7 +266,7 @@ impl RequestAccess {
         if !self.confined() {
             return Outcome::Admit;
         }
-        let verdict = self.judge_as(false, None, false);
+        let verdict = self.judge_as(Held::default(), None, false);
         self.note_under(None, &verdict, &Item::Ehr)
     }
 
@@ -341,11 +354,53 @@ impl RequestAccess {
         settings: Option<&EhrAccessSettings>,
         cared: bool,
     ) -> Verdict {
-        self.judge_as(self.owns(ehr_id), settings, cared)
+        let subject = self.is_record(ehr_id);
+        // NOTE: our own design (#6106), a confined caller with no launch context reaches the
+        // records the party binding names as its own, and one with a context only that EHR.
+        let own = self.owns(ehr_id) || (subject && self.caller.own_ehrs.is_empty());
+        self.judge_as(Held { own, subject }, settings, cared)
     }
 
-    /// The verdict for an EHR with `settings`, the caller's own when `own`.
-    fn judge_as(&self, own: bool, settings: Option<&EhrAccessSettings>, cared: bool) -> Verdict {
+    /// Whether a read of this request found `ehr_id`'s subject to be the
+    /// `PERSON` the caller is bound to.
+    #[must_use]
+    pub fn is_record(&self, ehr_id: Option<EhrId>) -> bool {
+        ehr_id.is_some_and(|ehr_id| {
+            self.records
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .contains(&ehr_id)
+        })
+    }
+
+    /// Finds whether the subject `entry`, the copy of `ehr_id`, names is the
+    /// `PERSON` the caller's authenticated identity is bound to, and keeps
+    /// the answer for every later judgement of `ehr_id` in this request.
+    ///
+    /// The subject reference is the one the copy holds, whose revision every
+    /// read of the EHR checks against the store, and the `PERSON` the binding
+    /// of this request named. No openEHR spec governs this: our own design
+    /// under EHDS Art. 3 (#6106).
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when the subject's `PERSON` cannot be read.
+    pub async fn bind_subject(
+        &self,
+        ehr_id: EhrId,
+        entry: &EhrEntry,
+    ) -> Result<bool, GrantsUnavailable> {
+        let named = self.names_the_caller(entry).await?;
+        let mut records = self.records.lock().unwrap_or_else(PoisonError::into_inner);
+        if named {
+            records.insert(ehr_id);
+        } else {
+            records.remove(&ehr_id);
+        }
+        Ok(named)
+    }
+
+    /// The verdict for an EHR with `settings`, held by the caller as `held`.
+    fn judge_as(&self, held: Held, settings: Option<&EhrAccessSettings>, cared: bool) -> Verdict {
         let labels = match settings {
             Some(EhrAccessSettings::Directives(settings)) => {
                 settings.labels.as_deref().unwrap_or_default()
@@ -353,7 +408,7 @@ impl RequestAccess {
             _ => &[],
         };
         let scopes = Scopes::new(self.categories.clone(), labels, self.classifications());
-        self.decide(settings, cared, own, &scopes)
+        self.decide(settings, cared, held, &scopes)
     }
 
     /// Whether `ehr_id` is one of the confined caller's own EHRs.
@@ -377,7 +432,11 @@ impl RequestAccess {
             Arc::clone(&class.layout),
             self.classifications(),
         );
-        self.decide((*class.settings).as_ref(), cared, self.confined(), &scopes)
+        let held = Held {
+            own: self.confined(),
+            subject: false,
+        };
+        self.decide((*class.settings).as_ref(), cared, held, &scopes)
     }
 
     /// The controller's classifications.
@@ -393,7 +452,7 @@ impl RequestAccess {
         &self,
         settings: Option<&EhrAccessSettings>,
         cared: bool,
-        own: bool,
+        held: Held,
         scopes: &Scopes,
     ) -> Verdict {
         decide(&Judged {
@@ -409,7 +468,8 @@ impl RequestAccess {
                 settings,
                 server_default: self.server_default,
                 cared,
-                own,
+                own: held.own,
+                subject: held.subject,
             },
             scopes,
             now: self.now,
@@ -430,6 +490,7 @@ impl RequestAccess {
         ehr_id: EhrId,
         entry: &EhrEntry,
     ) -> Result<Arc<Verdict>, CareUnsettled> {
+        self.bind_subject(ehr_id, entry).await?;
         let mut cared = self.cares_for(entry).await?;
         if cared && let Some(with_care) = self.care_decided(ehr_id, entry) {
             // NOTE: our own design (#5959), a read the request handed over runs during the care
@@ -555,10 +616,13 @@ impl RequestAccess {
     /// this replica does not hold is withheld.
     #[must_use]
     pub fn condition(&self, classes: &Classes, care: Care) -> AccessCondition {
-        let confined = self.confined();
+        let held = Held {
+            own: self.confined(),
+            subject: false,
+        };
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
-            cared: self.judge_as(confined, settings, true).bare(),
-            uncared: self.judge_as(confined, settings, false).bare(),
+            cared: self.judge_as(held, settings, true).bare(),
+            uncared: self.judge_as(held, settings, false).bare(),
         };
         let mut groups: BTreeMap<VerdictPair, Vec<i64>> = BTreeMap::new();
         for (id, class) in &classes.classes {
@@ -588,7 +652,8 @@ impl RequestAccess {
             facts,
             // NOTE: our own design (#5586), a confined caller reads only the EHR its patient
             // context names, so a query of it reaches no other EHR whatever its class.
-            confined.then(|| self.caller.own_ehrs.iter().map(|own| own.0).collect()),
+            held.own
+                .then(|| self.caller.own_ehrs.iter().map(|own| own.0).collect()),
         )
     }
 }
