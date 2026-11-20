@@ -4,9 +4,9 @@
 
 //! The macro that defines one group of the access terminology.
 
-/// Defines one group's term type, its [`Term`] impl and its `Display`.
+/// Defines one group's term type, its [`Term`](super::Term) impl and its `Display`.
 ///
-/// A term is `Name => "code"`, a code of [`TERMINOLOGY_ID_ACCESS`] that is
+/// A term is `Name => "code"`, a code of [`TERMINOLOGY_ID_ACCESS`](super::TERMINOLOGY_ID_ACCESS) that is
 /// its own rubric, or `Name => "code" of TERMINOLOGY, "rubric"`, the code of
 /// another terminology.
 macro_rules! group {
