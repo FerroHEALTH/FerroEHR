@@ -873,7 +873,12 @@ which is what makes an optional stage safe to disable:
    records the access as the subject's own and reads the caller as the
    subject for that EHR's `EHR_ACCESS` settings. A bound person holding no
    role passes the role gate and is confined to those records: it is the
-   subject kind, and every other EHR refuses it `refused-not-subject`. An
+   subject kind, and every other EHR refuses it `refused-not-subject`. A
+   `persons` login whose one `PERSON` carries neither the professional nor
+   the representative marker is that patient: the shared binding answers it
+   `wrong_marker`, and FerroEHR admits it as the person themself, with no
+   role, `PARTY_SELF` as its committer and the binding `self` on its access
+   record, confined in the same way. An
    openEHR launch token carries no `fhirUser` and no `patient` claim (SMART
    on openEHR `master07` §Context Selection names the `ehrId`), so no
    reading of the token alone can name the person. A confined caller is refused `403`
