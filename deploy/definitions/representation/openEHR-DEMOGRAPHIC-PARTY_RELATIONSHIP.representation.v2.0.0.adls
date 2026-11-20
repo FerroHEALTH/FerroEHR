@@ -1,0 +1,58 @@
+archetype (adl_version=2.0.6; rm_release=1.1.0)
+    openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"FerroEHR">
+        ["organisation"] = <"Cadasto B.V.">
+    >
+    lifecycle_state = <"unmanaged">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A representation: a PARTY_RELATIONSHIP of its own from the representative's PERSON, its source, to the PERSON of the subject they act for, its target, with the period of the representation as its time_validity.">
+            use = <"Written at /demographic/party_relationship by an administrator or under a write_representation grant for its provider, or by the subject on the basis DELEGATEE of HL7_RoleCode when they authorise a proxy, each representation versioned on its own. Its name is represents of the draft openEHR access terminology openehr_access, and its details hold the elements the representation element group of that terminology names: basis (1..1), why the representative may act for the subject, provider (1..1), the ORGANISATION for which it is recorded, and evidence (0..1), the court order, register entry or written authorisation; a code of the openEHR subject_relationship group may say how the two are related. The writer decides who represents whom under the law that applies to it. Adapted from the person-to-person PARTY_RELATIONSHIP the openEHR CKM archetypes the derived_from entry names constrain inline.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+    other_details = <
+        ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person.v0 (openEHR CKM 1013.1.479, modified 2022-01-20), openEHR-DEMOGRAPHIC-PERSON.person-patient.v0 (openEHR CKM 1013.1.821, modified 2019-08-09)">
+    >
+
+definition
+    PARTY_RELATIONSHIP[id1] matches {
+        details matches {
+            ITEM_TREE[id2] matches {
+                items matches {
+                    ELEMENT[id3] occurrences matches {1} matches {
+                        value matches { DV_CODED_TEXT[id4] }
+                    }
+                    ELEMENT[id5] occurrences matches {1} matches {
+                        value matches { DV_IDENTIFIER[id6] }
+                    }
+                    ELEMENT[id7] occurrences matches {0..1} matches {
+                        value matches { DV_IDENTIFIER[id8] }
+                    }
+                    ELEMENT[id9] occurrences matches {0..1} matches {
+                        value matches { DV_CODED_TEXT[id10] }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"Representation"> description = <"The relationship of a representative to the subject they act for.">>
+            ["id2"] = <text = <"Details"> description = <"The details of the representation.">>
+            ["id3"] = <text = <"Basis"> description = <"Why the representative may act for the subject, named basis of openehr_access: a code of the value set the access policy binds for representation_basis, or of HL7_RoleCode when it binds none.">>
+            ["id5"] = <text = <"Provider"> description = <"The healthcare provider for which the representation is recorded, named provider of openehr_access: an ORGANISATION by issuer and id, with the type ORGANISATION.">>
+            ["id7"] = <text = <"Evidence"> description = <"The court order, register entry or written authorisation the representation rests on, named evidence of openehr_access.">>
+            ["id9"] = <text = <"Relationship"> description = <"How the representative is related to the subject, a code of the openEHR subject_relationship group.">>
+        >
+    >

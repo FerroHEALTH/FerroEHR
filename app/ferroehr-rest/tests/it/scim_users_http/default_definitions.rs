@@ -17,7 +17,6 @@
 use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::demographic::precondition::Precondition;
 use ferroehr::service::demographic::template::TemplateFit;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
@@ -32,9 +31,9 @@ use crate::common;
 
 /// The interface form of the representation archetype's id, which each
 /// representation's `archetype_node_id` carries.
-const REPRESENTATION: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1";
+const REPRESENTATION: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2";
 /// The ADL 2 id of the representation archetype.
-const REPRESENTATION_HRID: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0";
+const REPRESENTATION_HRID: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2.0.0";
 /// The ADL 2 id of the membership archetype.
 const MEMBERSHIP_HRID: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.1";
 
@@ -174,29 +173,30 @@ fn person_ref(id: &str) -> Value {
             "id": { "_type": "HIER_OBJECT_ID", "value": id } })
 }
 
-/// A representation of the type `code` (`at10` parent, `at11` guardian) from
-/// `representative` to `subject`, as the default representation archetype
-/// describes it: its name is its type (RM `PARTY_RELATIONSHIP`
-/// `Type_validity`), and its details carry the representation code and the
-/// openEHR `subject_relationship` code `254|parent|`.
-fn representation(code: &str, label: &str, representative: &str, subject: &str) -> Value {
+/// A representation of its own from `representative` to `subject`, as the
+/// default representation archetype describes it: named `represents`, on
+/// the basis `HL7_RoleCode::GUARD` for one provider, with the openEHR
+/// `subject_relationship` code `254|parent|`.
+fn representation(representative: &str, subject: &str) -> Value {
+    let access = ferroehr::party_binding::policy_mark::TERMINOLOGY;
     json!({
         "_type": "PARTY_RELATIONSHIP",
         "archetype_node_id": REPRESENTATION,
         "archetype_details": { "_type": "ARCHETYPED",
             "archetype_id": { "_type": "ARCHETYPE_ID", "value": REPRESENTATION },
             "rm_version": "1.1.0" },
-        "name": { "_type": "DV_CODED_TEXT", "value": label,
-            "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
-                "code_string": code } },
-        "details": { "_type": "ITEM_TREE", "archetype_node_id": "id3",
+        "name": coded(access, "represents", "represents"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "id2",
             "name": { "_type": "DV_TEXT", "value": "Details" },
             "items": [
-                { "_type": "ELEMENT", "archetype_node_id": "id4",
-                    "name": { "_type": "DV_TEXT", "value": "Representation code" },
-                    "value": coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "represents", "represents") },
-                { "_type": "ELEMENT", "archetype_node_id": "id6",
+                { "_type": "ELEMENT", "archetype_node_id": "id3",
+                    "name": coded(access, "basis", "basis"),
+                    "value": coded("HL7_RoleCode", "GUARD", "guardian") },
+                { "_type": "ELEMENT", "archetype_node_id": "id5",
+                    "name": coded(access, "provider", "provider"),
+                    "value": { "_type": "DV_IDENTIFIER", "issuer": "urn:example:providers",
+                               "id": "hospital", "type": "ORGANISATION" } },
+                { "_type": "ELEMENT", "archetype_node_id": "id9",
                     "name": { "_type": "DV_TEXT", "value": "Relationship" },
                     "value": coded("openehr", "254", "parent") }
             ] },
@@ -243,11 +243,11 @@ async fn provision_group(app: &axum::Router, user: &str) -> String {
     id
 }
 
-/// Commits a subject `PERSON` and adds to `user`'s `PERSON` a representation
-/// of it as its parent, after checking the membership `user` holds and the
-/// representation each fit their default archetype; the subject's id.
+/// Commits a subject `PERSON` and a representation of it by `user`'s
+/// `PERSON` as its parent, after checking the membership `user` holds and
+/// the representation each fit their default archetype; the subject's id.
 async fn represent(service: &FerroEhrService, user: &str) -> String {
-    let (uid, body) = head(service, user).await;
+    let (_, body) = head(service, user).await;
     let memberships = body["relationships"]
         .as_array()
         .expect("the PERSON holds its membership");
@@ -281,25 +281,15 @@ async fn represent(service: &FerroEhrService, user: &str) -> String {
         .next()
         .expect("a container id")
         .to_owned();
-    let parent = representation("at10", "Parent", user, &subject_id);
+    let parent = representation(user, &subject_id);
     let fit = service
         .party_template_fit(&parent, REPRESENTATION_HRID)
         .await
         .expect("the representation is of the representation archetype");
     assert!(matches!(fit, TemplateFit::Complete), "{fit:?}");
-    let mut representing = body;
-    representing["relationships"]
-        .as_array_mut()
-        .expect("the relationships")
-        .push(parent);
-    Box::pin(service.party_update(
-        PartyKind::Person,
-        ferroehr::ids::VoId(user.parse().expect("a container id")),
-        Precondition::parse(Some(&uid), None).expect("an If-Match"),
-        next(&representing, Some(&uid)),
-    ))
-    .await
-    .expect("the representation commits");
+    Box::pin(service.party_relationship_create(next(&parent, None)))
+        .await
+        .expect("the representation commits");
     subject_id
 }
 
@@ -366,7 +356,7 @@ async fn the_documented_mapping_boots_on_the_default_definitions_and_serves_user
             &PartyRef::new("demographic", "PERSON", subject.as_str()),
             Some("254")
         )],
-        "at10 maps to 254|parent| of the openEHR subject_relationship group"
+        "the representation names 254|parent| of the openEHR subject_relationship group"
     );
 }
 

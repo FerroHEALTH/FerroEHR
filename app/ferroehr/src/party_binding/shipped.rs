@@ -34,8 +34,10 @@ pub const MEMBER_OF: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1
 /// relationship code, its `care_role` and its `provider`.
 pub const UNDER_CARE_OF: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2";
 
-/// The representation `PARTY_RELATIONSHIP` archetype, in its interface form.
-pub const REPRESENTATION: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1";
+/// The representation `PARTY_RELATIONSHIP` archetype, in its interface
+/// form: a relationship of its own named `represents`, with its `basis` and
+/// its `provider`.
+pub const REPRESENTATION: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2";
 
 /// The patient's `PERSON` template.
 pub const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0";
@@ -43,7 +45,7 @@ pub const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0";
 /// The default demographic definitions, each its file name and its ADL 2
 /// text, in the order the book's "Default demographic definitions" page
 /// lists them.
-pub const DEFINITIONS: [(&str, &str); 13] = [
+pub const DEFINITIONS: [(&str, &str); 14] = [
     (
         "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
         include_str!(
@@ -102,6 +104,12 @@ pub const DEFINITIONS: [(&str, &str); 13] = [
         "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls",
         include_str!(
             "../../../../deploy/definitions/representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls"
+        ),
+    ),
+    (
+        "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2.0.0.adls",
+        include_str!(
+            "../../../../deploy/definitions/representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2.0.0.adls"
         ),
     ),
     (
