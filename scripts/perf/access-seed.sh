@@ -38,6 +38,12 @@ readonly CLINICIAN_AUTH="Basic Y2xpbmljaWFuOmNsaW5pY2lhbg=="
 readonly ACCESS_TERMINOLOGY=openehr_access
 PROVISION_TERMINOLOGY=""
 ROLE_CLASS_TERMINOLOGY=""
+# Set by access_vocabulary when the tree writes a care relationship as a
+# PARTY_RELATIONSHIP of its own (#6055): the care_role terminology and the
+# provider the clinician acts for, as "<issuer> <id>". Empty for a tree that
+# holds it in the patient's relationships.
+PARTICIPATION_TERMINOLOGY=""
+CARE_PROVIDER=""
 readonly ACT_CODE=2.16.840.1.113883.5.25
 readonly ACT_REASON=2.16.840.1.113883.5.8
 # The code system and code of the clinician's functional role.
@@ -104,6 +110,36 @@ care_json() {
        items: [{_type: "ELEMENT", archetype_node_id: "at0003", name: text("kind"),
          value: {_type: "DV_CODED_TEXT", value: $code, defining_code: {_type: "CODE_PHRASE",
            terminology_id: {_type: "TERMINOLOGY_ID", value: $t}, code_string: $coded}}}]},
+     time_validity: {_type: "DV_INTERVAL", lower: {_type: "DV_DATE", value: $from},
+       lower_unbounded: false, upper_unbounded: true, lower_included: true,
+       upper_included: false},
+     source: ref("PERSON"; $source), target: ref("GROUP"; $team)}'
+}
+
+# care_of_json <patient> <team>: a care relationship of its own from the
+# first of January this year, unbounded, from the patient's PERSON to the
+# team's GROUP, in the role RESP under CARE_PROVIDER (draft access control
+# package, Care Relationships).
+care_of_json() {
+  local from issuer id
+  from="$(date -u +%Y)-01-01"
+  read -r issuer id <<<"$CARE_PROVIDER"
+  jq -cn --arg source "$1" --arg team "$2" --arg from "$from" --arg t "$ACCESS_TERMINOLOGY" \
+    --arg roles "$PARTICIPATION_TERMINOLOGY" --arg issuer "$issuer" --arg id "$id" '
+    def text($v): {_type: "DV_TEXT", value: $v};
+    def code($term; $c): {_type: "DV_CODED_TEXT", value: $c, defining_code: {_type: "CODE_PHRASE",
+      terminology_id: {_type: "TERMINOLOGY_ID", value: $term}, code_string: $c}};
+    def ref($type; $id): {_type: "PARTY_REF", namespace: "demographic", type: $type,
+      id: {_type: "HIER_OBJECT_ID", value: $id}};
+    {_type: "PARTY_RELATIONSHIP",
+     archetype_node_id: "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2",
+     name: code($t; "under_care_of"),
+     details: {_type: "ITEM_TREE", archetype_node_id: "at0001", name: text("details"),
+       items: [
+         {_type: "ELEMENT", archetype_node_id: "at0002", name: code($t; "care_role"),
+          value: code($roles; "RESP")},
+         {_type: "ELEMENT", archetype_node_id: "at0003", name: code($t; "provider"),
+          value: {_type: "DV_IDENTIFIER", issuer: $issuer, id: $id, type: "ORGANISATION"}}]},
      time_validity: {_type: "DV_INTERVAL", lower: {_type: "DV_DATE", value: $from},
        lower_unbounded: false, upper_unbounded: true, lower_included: true,
        upper_included: false},
@@ -250,7 +286,14 @@ related() {
 # EHR with the directives; the EHR id on stdout.
 access_patient_ehr() {
   local patient ehr
-  patient=$(related person openEHR-DEMOGRAPHIC-PERSON.person.v1 Patient under_care_of "$1")
+  if [[ -n "$CARE_PROVIDER" ]]; then
+    patient=$(post_json /demographic/person \
+      "$(party_json PERSON openEHR-DEMOGRAPHIC-PERSON.person.v1 Patient)" \
+      | jq -er '.uid.value | split("::")[0]')
+    post_json "$EXT/demographic/party_relationship" "$(care_of_json "$patient" "$1")" >/dev/null
+  else
+    patient=$(related person openEHR-DEMOGRAPHIC-PERSON.person.v1 Patient under_care_of "$1")
+  fi
   ehr=$(post_json /ehr "$(subject_status_json "$patient")" | jq -er '.ehr_id.value')
   access_directives "$ehr"
   echo "$ehr"
@@ -290,6 +333,16 @@ access_vocabulary() {
   if [[ -z "$PROVISION_TERMINOLOGY" || -z "$ROLE_CLASS_TERMINOLOGY" ]]; then
     echo "access seed: $terms names no effect or membership terminology" >&2
     return 1
+  fi
+  PARTICIPATION_TERMINOLOGY=""
+  CARE_PROVIDER=""
+  if [[ -f "$1/app/ferroehr/src/party_binding/grants/caller/care_of.rs" ]]; then
+    PARTICIPATION_TERMINOLOGY=$(sed -nE 's/^pub const TERMINOLOGY_ID_PARTICIPATION_TYPE: &str = "([^"]+)";$/\1/p' "$terms")
+    CARE_PROVIDER=$(sed -nE 's/^provider = \{ issuer = "([^"]+)", id = "([^"]+)" \}$/\1 \2/p' "$1/perf/ferroehr.toml")
+    if [[ -z "$PARTICIPATION_TERMINOLOGY" || -z "$CARE_PROVIDER" ]]; then
+      echo "access seed: $1 names no care_role terminology or no provider in perf/ferroehr.toml" >&2
+      return 1
+    fi
   fi
 }
 
