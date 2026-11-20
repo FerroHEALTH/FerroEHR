@@ -16,9 +16,9 @@
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Invalid;
 use ferroehr::ids::EhrId;
-use ferroehr::service::FerroEhrService;
 use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;
+use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 use openehr_its::rest::generated::common::UpdateAudit;
 use serde_json::{Value, json};
@@ -39,7 +39,7 @@ fn professional() -> CommitterIdentity {
         subject: LOGIN.to_owned(),
         id_type: "oauth2",
         issuer: Some(ISSUER.to_owned()),
-        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        local_issuer: DEFAULT_SYSTEM_ID.to_owned(),
         client: None,
         person: false,
         party: None,
@@ -191,7 +191,7 @@ async fn composition_create_checks_the_committer() {
             &svc,
             ehr,
             Some(professional()),
-            &identified("dr.bakker", "ferroehr")
+            &identified("dr.bakker", DEFAULT_SYSTEM_ID)
         )
         .await,
         Some(Refused::Forbidden),
@@ -222,7 +222,7 @@ async fn a_basic_login_is_checked_against_this_server() {
         subject: "alice".to_owned(),
         id_type: "basic",
         issuer: None,
-        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        local_issuer: DEFAULT_SYSTEM_ID.to_owned(),
         client: Some("alice".to_owned()),
         person: false,
         party: None,
@@ -237,13 +237,19 @@ async fn a_basic_login_is_checked_against_this_server() {
             &svc,
             ehr,
             Some(basic.clone()),
-            &identified("alice", "ferroehr")
+            &identified("alice", DEFAULT_SYSTEM_ID)
         )
         .await,
         None
     );
     assert_eq!(
-        composition_create(&svc, ehr, Some(basic), &identified("bob", "ferroehr")).await,
+        composition_create(
+            &svc,
+            ehr,
+            Some(basic),
+            &identified("bob", DEFAULT_SYSTEM_ID)
+        )
+        .await,
         Some(Refused::Forbidden)
     );
 }
