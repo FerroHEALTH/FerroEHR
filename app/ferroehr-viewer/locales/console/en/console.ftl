@@ -74,6 +74,8 @@ about-manifest-refused = The conformance manifest could not be read.
 about-no-state = The viewer's state is not in reach.
 
 purpose-label = Purpose of use
+purpose-list-refused = The CDR refused its list of purposes of use.
+purpose-unlisted = The configured purpose of use { $code } (cdr.purpose_of_use) is not one the CDR accepts under { $system }.
 purpose-description = Why you read records in this session, declared on every request; the CDR's access policy may require one.
 purpose-default = The configured default
 reveal-label = Show a revealed identifier for

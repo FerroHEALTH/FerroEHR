@@ -22,6 +22,7 @@ use http::header::SET_COOKIE;
 use serde::Deserialize;
 
 use crate::error::ViewerError;
+use crate::locale::console::ConsoleMsg;
 
 /// The cookie the reader's chosen purpose of use is kept in.
 pub const COOKIE: &str = "ferroehr-viewer-purpose";
@@ -130,7 +131,7 @@ impl Purposes {
         } else {
             return Err(ViewerError::Cdr {
                 status: status.as_u16(),
-                message: "the CDR refused its list of purposes of use".to_owned(),
+                message: crate::locale::tr(ConsoleMsg::PurposeListRefused),
             });
         };
         if let Ok(mut held) = self.inner.held.lock() {
@@ -173,10 +174,12 @@ impl Purposes {
         }
         match &self.inner.default {
             Some(code) if offered.accepts(code) => Ok(Some((offered.header, code.clone()))),
-            Some(code) => Err(ViewerError::Invalid(format!(
-                "the configured purpose of use `{code}` ([cdr] purpose_of_use) is not one the \
-                 CDR accepts under {}",
-                offered.system
+            Some(code) => Err(ViewerError::Invalid(crate::locale::tr_with(
+                ConsoleMsg::PurposeUnlisted,
+                &[
+                    ("code", code.clone().into()),
+                    ("system", offered.system.into()),
+                ],
             ))),
             None => Ok(None),
         }
@@ -215,16 +218,11 @@ pub async fn choose(
     let valid = code
         .bytes()
         .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'));
-    let attributes = if secure {
-        "Path=/; HttpOnly; SameSite=Strict; Secure"
-    } else {
-        "Path=/; HttpOnly; SameSite=Strict"
-    };
-    let cookie = if code.is_empty() || !valid {
-        format!("{COOKIE}=; Max-Age=0; {attributes}")
-    } else {
-        format!("{COOKIE}={code}; {attributes}")
-    };
+    let keep = !code.is_empty() && valid;
+    let value = if keep { code } else { "" };
+    let expiry = if keep { "" } else { "; Max-Age=0" };
+    let secure = if secure { "; Secure" } else { "" };
+    let cookie = format!("{COOKIE}={value}; Path=/; SameSite=Strict; HttpOnly{expiry}{secure}");
     let back = crate::prefs::preference_return(chosen.back.as_deref().unwrap_or("/"), "purpose");
     ([(SET_COOKIE, cookie)], Redirect::to(&back)).into_response()
 }

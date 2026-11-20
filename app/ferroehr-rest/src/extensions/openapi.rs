@@ -644,8 +644,7 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         "FerroEHR: Audit",
         "audit",
         // The ITI-81 AuditEvent retrieval under the FHIR root `/fhir/r4`, gated
-        // by the local audit repository, and the purposes of use an access
-        // record carries (`/access/purposes`, #6105).
+        // by the local audit repository, and `/access/purposes` (#6105).
         Members::Tags(&["audit"]),
     ),
     (
