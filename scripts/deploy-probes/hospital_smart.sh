@@ -380,6 +380,8 @@ hs_authorize() {
   fi
   case "$location" in "$HS_ISSUER"/consent*) ;; *)
     echo "      FerroSMART did not ask $user for consent (picker subject '$subject', EHR '$ehr'): ${location:0:200}" >&2
+    h_call 1 admin GET "/ehr/$ehr/ehr_status"
+    echo "        the stored subject of EHR $ehr ($H_CODE): $(jq -c '.subject' <<<"$H_BODY" 2>/dev/null)" >&2
     hs_answered; return 1 ;; esac
   page="$(curl -sS -c "$HS_JAR" -b "$HS_JAR" "$location")"
   form_token="$(hs_attribute "$page" '<input[^>]*name="form_token"[^>]*>' value)"
