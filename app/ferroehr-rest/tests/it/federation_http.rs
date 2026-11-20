@@ -19,6 +19,8 @@ use std::sync::Arc;
 use axum::Router;
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::terminology::config::{OnError, TerminologyServerConfig};
+use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::config::Retention;
@@ -33,6 +35,8 @@ use ferrohealth_smart::sender::proof::DpopSection;
 use ferrohealth_smart::sender::{ClientCertificate, SenderConstraint};
 use http::StatusCode;
 use serde_json::{Value, json};
+use wiremock::matchers::{body_string_contains, method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use crate::agreement_parties::{Accessor, Terms};
 use crate::common::{self, BASE};
@@ -221,6 +225,9 @@ async fn serve_observed(
         ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
             .expect("a public root"),
     );
+    // NOTE: our own design (#6117), a caller rate is judged on a clock held still, so no
+    // admitted request's duration refills the allowance the next one is judged against.
+    config.rate_clock = ferroehr_rest::config::RateClock::still();
     let app = common::build_full(config, Arc::clone(&svc), None, observability).await;
     (db, svc, app)
 }
@@ -1031,8 +1038,37 @@ fn coded_in(terminology: &str, code: &str) -> Value {
                 "code_string": code } })
 }
 
-/// Commits the controller's `ACCESS_POLICY` with `rules`.
-async fn commit_rules(svc: &FerroEhrService, rules: &Value) {
+/// The value set the exchange policy binds its organisation types to.
+const TYPE_VALUE_SET: &str = "http://terminology.example/ValueSet/organisation-types";
+
+/// A terminology server whose [`TYPE_VALUE_SET`] holds the codes of
+/// [`TYPE_SYSTEM`] a rule below names.
+async fn organisation_types() -> MockServer {
+    let server = MockServer::start().await;
+    for code in ["HOSPITAL", "GP"] {
+        Mock::given(method("POST"))
+            .and(path("/ValueSet/$validate-code"))
+            .and(body_string_contains(format!(
+                r#""name":"url","valueUri":"{TYPE_VALUE_SET}""#
+            )))
+            .and(body_string_contains(format!(
+                r#""name":"code","valueCode":"{code}""#
+            )))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "resourceType": "Parameters",
+                "parameter": [{ "name": "result", "valueBoolean": true }]
+            })))
+            .mount(&server)
+            .await;
+    }
+    server
+}
+
+/// Commits the controller's `ACCESS_POLICY` with `rules`, binding its
+/// organisation types to [`TYPE_VALUE_SET`], through a replica over `db` that
+/// checks them on a terminology server, then reads it on `svc`.
+async fn commit_rules(db: &testkit::TestDb, svc: &FerroEhrService, rules: &Value) {
+    use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
     let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
     let policy = json!({
         "_type": "ACCESS_POLICY",
@@ -1045,14 +1081,30 @@ async fn commit_rules(svc: &FerroEhrService, rules: &Value) {
             "id": { "_type": "HIER_OBJECT_ID", "value": "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7" } },
         "care_relationship_required": false,
         "purpose_required": false,
-        "rules": rules
+        "rules": rules,
+        "value_sets": [{ "_type": "ACCESS_VALUE_SET",
+            "binding": coded_in(TERMINOLOGY_ID_ACCESS, "organisation_type"),
+            "value_set": { "_type": "DV_URI", "value": TYPE_VALUE_SET } }]
     });
-    svc.put_access_policy(
-        &ferroehr::service::admin::access_policy::PolicyPrecondition::Create,
-        &policy,
-    )
-    .await
-    .expect("the policy commits");
+    let server = organisation_types().await;
+    let cfg = TerminologyServerConfig {
+        endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+            url: ferrohealth_secret::secret_url::SecretUrl::new(server.uri()),
+            timeout: ferrohealth_config::units::Duration::from_millis(800),
+            ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+        },
+        on_error: OnError::Refuse,
+    };
+    let terminology = FhirTerminologyProvider::new(&cfg).expect("the terminology client builds");
+    let writer = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
+        .with_terminology_server(Arc::new(terminology));
+    writer
+        .put_access_policy(
+            &ferroehr::service::admin::access_policy::PolicyPrecondition::Create,
+            &policy,
+        )
+        .await
+        .expect("the policy commits");
     svc.read_access_policy().await.expect("the policy reads");
 }
 
@@ -1158,7 +1210,7 @@ async fn refused_body(app: &Router, ehr: &str, credential: &str, purpose: Option
 /// rule of one country is compiled in (#5691).
 #[tokio::test]
 async fn an_exchange_of_care_providers_only_is_stated_as_controller_rules() {
-    let (_db, svc, app) = serve(vec![agreement(Accessor::Person)]).await;
+    let (db, svc, app) = serve(vec![agreement(Accessor::Person)]).await;
     let target = ehr(&svc).await.to_string();
     let refused = [
         (
@@ -1192,7 +1244,7 @@ async fn an_exchange_of_care_providers_only_is_stated_as_controller_rules() {
             StatusCode::OK
         );
     }
-    commit_rules(&svc, &exchange_rules()).await;
+    commit_rules(&db, &svc, &exchange_rules()).await;
     for (name, credential, purpose, ground) in &refused {
         let body = refused_body(&app, &target, credential, *purpose).await;
         assert_eq!(body["refusal"], "refused-policy-denied", "{name}: {body}");

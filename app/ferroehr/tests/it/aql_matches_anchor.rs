@@ -33,7 +33,7 @@ use crate::aql_range_anchor::{
     FROM_OBSERVATION, date_time, event_holding, lowered, rows, rows_fetched, timed_composition,
 };
 use crate::fixtures::{create_ehr, uv};
-use crate::storage_plans::{aql_sql_with, assert_lookup_through, explain_aql};
+use crate::storage_plans::{aql_sql_with, assert_lookup_through, explain_aql, render, scans};
 use crate::typed_body::typed;
 
 /// The path from the OBSERVATION `o` to the one ELEMENT of an event.
@@ -90,14 +90,46 @@ fn a_value_list_of_strings_is_anchored() {
     }
 }
 
+/// On the `value` member a text in plain decimal form also reads the number
+/// of an ordinal or a scale (`ext.node_number`), since that value's search
+/// text is its symbol; a text in any other form equals no number and reads
+/// the search text alone (#6090).
+#[test]
+fn a_number_shaped_member_also_reads_the_number_of_an_ordinal_or_a_scale() {
+    let value = format!("{ELEMENT}/value/value");
+    for (filter, numbers) in [
+        (format!("{value} matches {{'1950-01-01', '19500101'}}"), 1),
+        (format!("{value} = '19500101'"), 1),
+        (format!("{value} matches {{'3.5', '-2', 'alpha'}}"), 1),
+        (
+            format!("{value} matches {{'1950-01-01', '1e5', '+3', '.5'}}"),
+            0,
+        ),
+        (
+            format!("{ELEMENT}/value/id matches {{'alpha', '19500101'}}"),
+            0,
+        ),
+        (format!("{ELEMENT}/value/symbol/value = '3'"), 0),
+    ] {
+        let sql = lowered(
+            &format!("SELECT c/uid/value {FROM_OBSERVATION} WHERE {filter}"),
+            &params(),
+        );
+        assert_eq!(anchors(&sql), 1, "{filter}: one anchor\n{sql}");
+        assert_eq!(
+            sql.matches("node_number(").count(),
+            numbers,
+            "{filter}: the anchor reads the number only for a plain decimal member\n{sql}"
+        );
+    }
+}
+
 /// A list with a member no index holds, a conjunct under `OR` or `NOT`, and a
 /// leaf no index reads imply no anchor.
 #[test]
 fn only_a_list_every_member_of_which_anchors_is_anchored() {
     let value = format!("{ELEMENT}/value/value");
     for filter in [
-        // An ordinal's or a scale's value is a number its text compares with.
-        format!("{value} matches {{'1950-01-01', '19500101'}}"),
         format!("{value} matches {{'alpha', 3}}"),
         format!("{value} matches {{'alpha', $n}}"),
         format!("{value} matches {{'alpha'}} OR {value} matches {{'beta'}}"),
@@ -189,6 +221,9 @@ async fn an_anchored_value_list_answers_the_rows_the_unanchored_one_does() {
                 "{'alpha', 'Alpha', 'absent'}",
                 "{'true', 'beta'}",
                 "{'3', 'alpha'}",
+                "{'3.5', 'absent'}",
+                "{'3.50', '03', '-0', '19500101.0'}",
+                "{'1e5', '19500101'}",
             ],
         ),
         ("value/id", vec!["{'alpha', '19500101'}", "{$a, 'alpha '}"]),
@@ -263,6 +298,7 @@ fn population_sql(ast: &openehr_query::ast::SelectQuery) -> String {
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
         policy_parties: ferroehr::aql::sql::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        own_records: None,
     };
     ferroehr::aql::sql::build(&ir, &params, &ctx)
         .expect("the AQL lowers to SQL")
@@ -328,7 +364,7 @@ fn an_interval_or_a_regex_operand_is_refused() {
 }
 
 /// A PERSON whose details hold a date of birth, the PERSON of #6084.
-fn person_born(name: &str, birth: &str) -> Value {
+pub(crate) fn person_born(name: &str, birth: &str) -> Value {
     json!({
         "_type": "PERSON",
         "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
@@ -421,4 +457,68 @@ async fn a_lookup_by_a_list_of_dates_of_birth_reads_the_one_person() {
         buffers > f64::from(PERSONS),
         "the same lookup without its anchor reads the store: {buffers} buffers"
     );
+}
+
+/// The lookup of Cadasto/FerroHEALTH-backlog#51 by its exact list,
+/// `{'19500101', '1950-01-01'}`, reads the one person whose date of birth is
+/// an ordinal of that number through `idx_node_hot_value_number` and the text
+/// members through `idx_node_hot_value_search`, and answers the rows the
+/// same lookup answers without its anchor (#6090).
+#[tokio::test]
+async fn the_reported_list_reads_an_ordinal_through_the_number_index() {
+    const PERSONS: u32 = 100;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let pools = ferroehr::db::domain::DomainPools::from_shared(&pool);
+    let svc = FerroEhrService::new(&pools);
+    for index in 0..PERSONS {
+        let body = person_born(
+            &format!("person {index}"),
+            &format!("{}-01-01", 1800 + index),
+        );
+        svc.party_create(PartyKind::Person, WriteRequest::new(typed(&body)))
+            .await
+            .expect("create a person");
+    }
+    let mut ordinal = person_born("ordinal", "1800-01-01");
+    ordinal["details"]["items"][0]["items"][0]["value"] = json!({
+        "_type": "DV_ORDINAL", "value": 19_500_101, "symbol": coded_text("born", "at0011")
+    });
+    svc.party_create(PartyKind::Person, WriteRequest::new(typed(&ordinal)))
+        .await
+        .expect("create the person with an ordinal date of birth");
+    pools
+        .party
+        .execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded parties");
+
+    let birth = "p/details/items[at0001]/items[at0010]/value/value";
+    let list = format!("{birth} matches {{'19500101', '1950-01-01'}}");
+    let lookup = |test: &str| format!("SELECT p/name/value FROM PERSON p WHERE {test}");
+    let params = Params::default();
+    let plan = explain_aql(
+        &pools.party,
+        aql_sql_with(&lookup(&list), &params, Vec::new(), None),
+    )
+    .await;
+    assert_lookup_through(
+        "the reported lookup",
+        &plan,
+        PERSONS,
+        "idx_node_hot_value_search",
+    );
+    // The two indexes meet under one BitmapOr, whose second scan
+    // `scans` reports under no heap node of its own.
+    let indexes = plan.to_string();
+    assert!(
+        indexes.contains(r#""Index Name":"idx_node_hot_value_number""#),
+        "the number-shaped member enters through the number index:\n{}",
+        render(&scans(&plan))
+    );
+    let anchored = rows(&svc, &lookup(&list), BTreeMap::new()).await;
+    let unanchored = rows(&svc, &lookup(&format!("{list} OR {list}")), BTreeMap::new()).await;
+    assert_eq!(anchored.len(), 1, "one person: {anchored:?}");
+    assert!(anchored[0].contains("ordinal"), "{anchored:?}");
+    assert_eq!(anchored, unanchored, "the anchor changes no row");
 }

@@ -21,10 +21,12 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
+use ferroehr::config::authz::AuthzConfig;
 use ferroehr::policy_register::Register;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
+use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
 use http::{Request, StatusCode, header};
 use serde_json::{Value, json};
@@ -44,6 +46,16 @@ const PROFESSIONAL: &str = "dr-jansen";
 /// `delayed`, the professional's and the patient's issuer bound, auditing to
 /// the local store, and the IPS template uploaded.
 async fn app(delayed: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, Router) {
+    app_with(delayed, &[]).await
+}
+
+/// [`app`], with the logins `bound` of the professionals' issuer each bound
+/// to a `PERSON` and RBAC on, the roles of that issuer's tokens trusted, when
+/// any is named.
+async fn app_with(
+    delayed: bool,
+    bound: &[&str],
+) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = common::local_audit();
     let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
@@ -72,12 +84,24 @@ async fn app(delayed: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, R
         ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
         ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS),
     ];
-    let app = common::build_full(config, Arc::clone(&svc), None, Observability::default()).await;
+    let mut authz = None;
+    let mut uploader = professional();
+    if !bound.is_empty() {
+        common::bind_issuer(&mut config, ISSUER);
+        config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(ISSUER)];
+        let logins: Vec<_> = bound.iter().map(|sub| (ISSUER, *sub)).collect();
+        common::bind_subjects(&pool, &logins).await;
+        let mut rbac = AuthzConfig::default();
+        rbac.rbac.enabled = true;
+        authz = AuthzHandle::build(&rbac, &config.api.base_path).map(Arc::new);
+        uploader = staff(PROFESSIONAL, &["ADMIN", "USER"]);
+    }
+    let app = common::build_full(config, Arc::clone(&svc), authz, Observability::default()).await;
     let (status, body) = send(
         &app,
         "POST",
         &format!("{BASE}/definition/template/adl1.4"),
-        &professional(),
+        &uploader,
         Some(("application/xml", common::ips_opt_xml())),
     )
     .await;
@@ -91,6 +115,12 @@ fn professional() -> String {
         &json!({ "sub": PROFESSIONAL, "iss": ISSUER, "aud": AUDIENCE,
         "exp": jiff::Timestamp::now().as_second() + 3600 }),
     )
+}
+
+/// A token of the professionals' issuer for `sub`, holding `roles`.
+fn staff(sub: &str, roles: &[&str]) -> String {
+    common::bearer(&json!({ "sub": sub, "iss": ISSUER, "aud": AUDIENCE,
+        "exp": jiff::Timestamp::now().as_second() + 3600, "roles": roles }))
 }
 
 /// The person's token: `patient/` read and query grants in the launch context
@@ -130,23 +160,57 @@ async fn send(
 /// Creates an EHR and commits the IPS composition into it as the
 /// professional; returns the EHR id and the composition's object id.
 async fn record(app: &Router) -> (String, String) {
-    let (status, body) = send(app, "POST", &format!("{BASE}/ehr"), &professional(), None).await;
-    assert_eq!(status, StatusCode::CREATED, "EHR create: {body}");
-    let ehr = serde_json::from_str::<Value>(&body).expect("EHR json")["ehr_id"]["value"]
-        .as_str()
-        .expect("ehr_id")
-        .to_owned();
+    let ehr = ehr_as(app, &professional(), None).await;
     let vo = commit(app, &ehr).await;
     (ehr, vo)
+}
+
+/// Creates an EHR as `credential`, with the `EHR_STATUS` `status` when one is
+/// given; returns its id.
+async fn ehr_as(app: &Router, credential: &str, status: Option<&Value>) -> String {
+    let body = status.map(|status| ("application/json", status.to_string()));
+    let (code, body) = send(app, "POST", &format!("{BASE}/ehr"), credential, body).await;
+    assert_eq!(code, StatusCode::CREATED, "EHR create: {body}");
+    serde_json::from_str::<Value>(&body).expect("EHR json")["ehr_id"]["value"]
+        .as_str()
+        .expect("ehr_id")
+        .to_owned()
+}
+
+/// Creates, as `credential`, the EHR whose subject is the `PERSON` the login
+/// `sub` of the professionals' issuer is bound to; returns its id.
+async fn own_ehr(app: &Router, pool: &PgPool, sub: &str, credential: &str) -> String {
+    let person = common::bound_person(pool, &common::logins_of(ISSUER), sub)
+        .await
+        .expect("the login's PERSON is committed");
+    let status = json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.1.0",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-EHR_STATUS.generic.v1" } },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": { "_type": "PARTY_SELF", "external_ref": {
+            "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": person.to_string() } } },
+        "is_queryable": true,
+        "is_modifiable": true
+    });
+    ehr_as(app, credential, Some(&status)).await
 }
 
 /// Commits the IPS composition into `ehr` as the professional; returns its
 /// object id.
 async fn commit(app: &Router, ehr: &str) -> String {
+    commit_as(app, ehr, &professional()).await
+}
+
+/// Commits the IPS composition into `ehr` as `credential`; returns its object
+/// id.
+async fn commit_as(app: &Router, ehr: &str, credential: &str) -> String {
     let (status, headers, body) = common::send(
         app,
         Request::post(format!("{BASE}/ehr/{ehr}/composition"))
-            .header(header::AUTHORIZATION, professional())
+            .header(header::AUTHORIZATION, credential)
             .header(header::CONTENT_TYPE, "application/json")
             .body(Body::from(common::ips_canonical_composition().to_string()))
             .unwrap(),
@@ -180,11 +244,23 @@ async fn read(app: &Router, ehr: &str, vo: &str, credential: &str) -> StatusCode
 
 /// The composition uids a query scoped to `ehr` returns to `credential`.
 async fn composition_uids(app: &Router, ehr: &str, credential: &str) -> Vec<String> {
+    uids_of(app, &format!("&ehr_id={ehr}"), credential).await
+}
+
+/// The composition uids a query across the population returns to
+/// `credential`.
+async fn population_uids(app: &Router, credential: &str) -> Vec<String> {
+    uids_of(app, "", credential).await
+}
+
+/// The composition uids the query with the parameters `scope` returns to
+/// `credential`.
+async fn uids_of(app: &Router, scope: &str, credential: &str) -> Vec<String> {
     let q = urlencoding::encode("SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
     let (status, body) = send(
         app,
         "GET",
-        &format!("{BASE}/query/aql?q={q}&ehr_id={ehr}"),
+        &format!("{BASE}/query/aql?q={q}{scope}"),
         credential,
         None,
     )
@@ -422,6 +498,72 @@ async fn the_treating_professional_releases_from_a_clinical_route() {
         StatusCode::UNAUTHORIZED,
         "nor does a mixed token: {body}"
     );
+}
+
+/// The delay follows the party binding (#6108). On an EHR whose subject is the
+/// `PERSON` the caller is bound to, a held composition reads as absent to the
+/// caller, whether it holds a role or none, by id and in a query, until a
+/// professional releases it. On anyone else's EHR the caller reads as before.
+#[tokio::test]
+async fn the_delay_holds_on_the_callers_own_record_by_the_party_binding() {
+    let (_db, pool, _svc, app) = app_with(true, &[PROFESSIONAL, "gina"]).await;
+    let jansen = staff(PROFESSIONAL, &["USER"]);
+    let gina = staff("gina", &["USER"]);
+    let gina_alone = staff("gina", &[]);
+    let own = own_ehr(&app, &pool, "gina", &jansen).await;
+    let held = commit_as(&app, &own, &jansen).await;
+    let other = ehr_as(&app, &jansen, None).await;
+    let theirs = commit_as(&app, &other, &jansen).await;
+
+    for caller in [&gina, &gina_alone] {
+        assert_eq!(read(&app, &own, &held, caller).await, StatusCode::NOT_FOUND);
+        let uids = composition_uids(&app, &own, caller).await;
+        assert!(!uids.iter().any(|uid| uid.starts_with(&held)), "{uids:?}");
+    }
+    let uids = population_uids(&app, &gina).await;
+    assert!(!uids.iter().any(|uid| uid.starts_with(&held)), "{uids:?}");
+    assert!(uids.iter().any(|uid| uid.starts_with(&theirs)), "{uids:?}");
+    assert_eq!(read(&app, &own, &held, &jansen).await, StatusCode::OK);
+    assert_eq!(
+        read(&app, &other, &theirs, &gina).await,
+        StatusCode::OK,
+        "a held composition of another person's EHR reads as before"
+    );
+    let uids = composition_uids(&app, &other, &gina).await;
+    assert!(uids.iter().any(|uid| uid.starts_with(&theirs)), "{uids:?}");
+
+    let release = format!("{EXT}/ehr/{own}/versioned_composition/{held}/access-delay/release");
+    let (status, body) = send(&app, "POST", &release, &gina, None).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "held reads as absent: {body}"
+    );
+    let (status, body) = send(&app, "POST", &release, &jansen, None).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "release: {body}");
+    let uids = population_uids(&app, &gina).await;
+    assert!(uids.iter().any(|uid| uid.starts_with(&held)), "{uids:?}");
+    assert_eq!(
+        recorded(&pool, "subject-namespace:demographic")
+            .await
+            .as_deref(),
+        Some("gina"),
+        "the read of Gina's own subject references is an access record"
+    );
+    let (request,): (Option<String>,) = sqlx::query_as(
+        "SELECT request_id FROM audit.access_trail WHERE resource_id = $1 \
+         ORDER BY chain_seq DESC LIMIT 1",
+    )
+    .bind("subject-namespace:demographic")
+    .fetch_one(&pool)
+    .await
+    .expect("read the record");
+    assert!(request.is_some(), "the record names its request");
+    for caller in [&gina, &gina_alone] {
+        assert_eq!(read(&app, &own, &held, caller).await, StatusCode::OK);
+        let uids = composition_uids(&app, &own, caller).await;
+        assert!(uids.iter().any(|uid| uid.starts_with(&held)), "{uids:?}");
+    }
 }
 
 /// With the access-delay register off the person reads new data immediately (Art. 3(1))

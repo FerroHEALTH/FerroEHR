@@ -187,21 +187,16 @@ async fn an_ehr_named_outside_the_path_refuses_and_records_alike() {
 }
 
 /// An operation that reaches EHR data and names no EHR names none the
-/// representative represents: an EHR create, a lookup by subject, a query
-/// with no single-EHR scope and an import that names no EHR.
+/// representative represents: an EHR create, a query with no single-EHR
+/// scope and an import that names no EHR.
 #[tokio::test]
 async fn an_operation_naming_no_ehr_refuses_and_records_alike() {
     let walk = walk().await;
     let aql = json!({ "q": "SELECT e/ehr_id/value FROM EHR e" }).to_string();
-    let lookup = format!("/ehr?subject_id={CHILD}&subject_namespace=demographic");
     let unnamed = [
         (
             "an EHR create",
             as_representative("POST", "/ehr").body(Body::from("{}")),
-        ),
-        (
-            "a lookup by subject",
-            as_representative("GET", &lookup).body(Body::empty()),
         ),
         (
             "a query with no single-EHR scope",
@@ -215,6 +210,28 @@ async fn an_operation_naming_no_ehr_refuses_and_records_alike() {
     for (n, (label, req)) in unnamed.into_iter().enumerate() {
         assert_refused(&walk, req.expect("request"), n + 1, label).await;
     }
+}
+
+/// A representative's lookup by subject finds the represented subject's EHR,
+/// and a stranger's subject answers as one no EHR names (#6106).
+#[tokio::test]
+async fn a_lookup_by_subject_finds_only_the_represented_ehr() {
+    let walk = walk().await;
+    let lookup = |subject: &str| {
+        as_representative(
+            "GET",
+            &format!("/ehr?subject_id={subject}&subject_namespace=demographic"),
+        )
+        .header("accept", "application/json")
+        .body(Body::empty())
+        .expect("request")
+    };
+    let (found, _, body) = common::send(&walk.app, lookup(CHILD)).await;
+    assert_eq!(found, StatusCode::OK, "{body}");
+    let ehr: Value = serde_json::from_str(&body).expect("an EHR");
+    assert_eq!(ehr["ehr_id"]["value"], json!(walk.child));
+    let (stranger, _, body) = common::send(&walk.app, lookup(STRANGER)).await;
+    assert_eq!(stranger, StatusCode::NOT_FOUND, "{body}");
 }
 
 /// A `POST /message/export` manifest naming `ehr_ids`.

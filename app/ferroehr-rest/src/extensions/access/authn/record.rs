@@ -150,6 +150,12 @@ fn of(
         CallerKind::ExternalOrganisation(external) => {
             Some(external_record(true, external, agreement?))
         }
+        // NOTE: EHDS Annex II 3.2(a), the record's person bound by the party binding is
+        // recorded as the subject of care, naming their `PERSON` (#6106).
+        _ if let Some(party) = super::party::own::own_person(caller) => Some(BindingRecord {
+            party: Some(triple(party)),
+            ..BindingRecord::of(ferroehr::system_log::binding::BindingCode::SelfPatient)
+        }),
         kind => {
             let bound = caller.party().and_then(Outcome::bound)?;
             let mut record = BindingRecord::bound(
