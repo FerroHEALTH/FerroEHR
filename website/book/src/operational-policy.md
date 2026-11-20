@@ -179,6 +179,10 @@ those parties were not stored, and it is not refused:
   adds no statement and no transaction. The Demographic API read checks the
   same mark.
 - An administrator's query returns the policy parties.
+- A party belongs to no EHR, so the EHR access settings and the rest of the
+  access decision a clinical query applies to each row do not apply to a
+  party. The mark decides which parties a caller reads, for AQL as for the
+  Demographic API.
 
 So `FROM AGENT` and `FROM PARTY` never return a system's `AGENT` to such a
 caller, and `FROM PARTY_RELATIONSHIP` never returns an acts-for relationship
@@ -2002,7 +2006,10 @@ one, nothing is tightened.
   or breaks an invariant of the draft model is refused whole with `400`, as
   is a rule of another kind than `controller_rule`, a catalogue entry of that
   kind, and a rule naming a role, purpose, sensitivity, category or legal
-  ground in `openehr_access`.
+  ground in `openehr_access`. A policy that holds as a model but breaks the
+  template its `archetype_details.template_id` names, or names a code
+  outside a value set it binds, is refused whole with `422`, naming the
+  attribute.
 - **Effective without a restart**, as the registers above.
 - **Read by the access evaluator** on every request: `purpose_required` is
   step 4, checked before any rule, the rules are step 5, a classification
@@ -2015,6 +2022,38 @@ one, nothing is tightened.
 The routes are on
 [Admin & messaging APIs](operations-admin-apis.md#the-access-policy). A write
 needs `admin_role` and a policy grant of `write_access_policy`.
+
+### Care relationship facts
+
+The policy also states how care relationships are read. Each attribute you
+leave out reads as its strictest default, so a policy that sets none admits
+least.
+
+| Attribute | What it says | Left out |
+| --- | --- | --- |
+| `self_declared_care` | The longest period of a care relationship a professional states for themself | no self-declared relationship |
+| `attested_care` | The agreements under which a caller's verified credential may attest a care relationship | no attested relationship |
+| `caseload` | Whether a query may be narrowed to the caller's caseload | `true` |
+| `conflict_rules` | The conflicts of interest (`self`, `related`, with the kinships) allowed through the professional path, and for whom | none: a professional who is the patient, or is related to them, is refused |
+| `concealed_confidentialities` | The `HL7_Confidentiality` levels whose refused records answer as absent | every refused record answers as forbidden |
+| `value_sets` | The value set on your terminology server that each coded attribute (`care_role`, `representation_basis`, `kinship`, `organisation_type`, `care_purpose`, `emergency_purpose`) is bound to | the package's default code system |
+
+FerroEHR ships no value set and no country content. A code of a bound
+attribute is checked against its value set on the
+[terminology server](templates-validation.md) when you write the policy;
+with no terminology server configured, a policy that binds a value set the
+check needs is refused. An unbound kinship is a code of the openEHR
+`subject relationship` group. An organisation type has no default code
+system, so a rule, an exception or a conflict rule that names an
+`organisation_type` is refused `422`, naming it, until the policy binds an
+`organisation_type` value set. A template of the default archetype that
+fixes some of these attributes for many controllers is a profile: write the
+policy with its `template_id`, and FerroEHR validates it against the
+template.
+
+The time zone, the care purposes, the validity periods and the writers of
+care relationships, and the team targets, are refused until the access
+decision reads them.
 
 ### Controller rules
 

@@ -232,9 +232,21 @@ async fn clinical_op_allowed_for_user_role() {
     assert_ne!(s, StatusCode::FORBIDDEN, "USER may reach a clinical op");
 }
 
+/// A principal with no role reaches no one else's record when RBAC is
+/// enabled. Its bound `PERSON` makes it the subject of its own EHR alone
+/// (#6106), so an EHR whose subject is another person refuses it.
 #[tokio::test]
 async fn zero_role_principal_denied_clinical() {
     let (_pg, app) = app(true, None).await;
+    let create = common::req("PUT", common::full(&format!("/ehr/{EHR_ID}")))
+        .auth(basic("user"))
+        .build();
+    let created = status(&app, create).await;
+    assert_eq!(
+        created,
+        StatusCode::CREATED,
+        "the clinician creates the EHR"
+    );
     let s = status(
         &app,
         req("GET", &format!("/ehr/{EHR_ID}"), &basic("noroles")),
@@ -243,7 +255,7 @@ async fn zero_role_principal_denied_clinical() {
     assert_eq!(
         s,
         StatusCode::FORBIDDEN,
-        "a roleless principal is denied when RBAC is enabled"
+        "a roleless principal is denied another person's EHR when RBAC is enabled"
     );
 }
 

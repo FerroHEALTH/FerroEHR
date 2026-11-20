@@ -20,6 +20,7 @@
 //! ITS-REST defines no resource for it, so the store, the copy and its
 //! invalidation are our own design/extension.
 
+pub mod care;
 pub mod check;
 pub mod retention;
 pub mod undecided;
@@ -65,6 +66,15 @@ pub struct PolicyInForce {
     /// The policy; `None` when no version is committed, which tightens
     /// nothing.
     pub policy: Option<Arc<AccessPolicy>>,
+}
+
+impl PolicyInForce {
+    /// The policy's facts about care relationships, each void one at its
+    /// strictest default.
+    #[must_use]
+    pub fn care(&self) -> care::CareFacts<'_> {
+        care::CareFacts::of(self.policy.as_deref())
+    }
 }
 
 /// Why the policy could not be read.

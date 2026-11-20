@@ -115,3 +115,31 @@ fn a_foreign_code_is_of_another_terminology() {
     )));
     assert!(!Effect::Deny.is(&coded_text("local", "deny", "deny")));
 }
+
+#[test]
+fn a_confidentiality_reads_as_its_level_in_the_package_order() {
+    let level =
+        |code| Confidentiality::read(&coded_text(TERMINOLOGY_ID_CONFIDENTIALITY, code, code));
+    for code in ["U", "L", "M", "N"] {
+        assert_eq!(level(code), Ok(Confidentiality::Normal), "{code}");
+    }
+    assert_eq!(level("R"), Ok(Confidentiality::Restricted));
+    assert_eq!(level("V"), Ok(Confidentiality::VeryRestricted));
+    assert!(Confidentiality::Normal < Confidentiality::Restricted);
+    assert!(Confidentiality::Restricted < Confidentiality::VeryRestricted);
+    assert!(level("X").is_err());
+    assert!(Confidentiality::read(&coded_text("HL7_ActCode", "R", "R")).is_err());
+}
+
+#[test]
+fn the_conflict_and_binding_groups_read_their_codes() {
+    assert_eq!(
+        Conflict::read(TERMINOLOGY_ID_ACCESS, "related"),
+        Ok(Conflict::Related)
+    );
+    assert_eq!(
+        ValueSetBinding::read(TERMINOLOGY_ID_ACCESS, "kinship"),
+        Ok(ValueSetBinding::Kinship)
+    );
+    assert!(Conflict::read(TERMINOLOGY_ID_ACCESS, "kinship").is_err());
+}

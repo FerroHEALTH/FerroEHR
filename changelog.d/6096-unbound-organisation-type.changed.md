@@ -1,0 +1,1 @@
+- An access policy whose rule, exception or conflict rule names an `organisation_type` while the policy binds no `organisation_type` value set is refused `422`, naming the attribute: the draft access control package gives organisation types no default code system (#6096).

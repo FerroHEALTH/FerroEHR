@@ -254,7 +254,7 @@ impl FerroEhrService {
         // NOTE: EHDS Art. 8 and Art. 10 (`docs/law/eu/ehds/text.html`), an EHR the request
         // reads as absent under a restriction or an opt-out is not found by its subject.
         let found = match found {
-            Some(id) if self.ehr_hidden_from_request(id).await? => None,
+            Some(id) if self.ehr_hidden_from_lookup(id).await? => None,
             other => other,
         };
         self.emit_subject_resolution(namespace, found).await?;
@@ -274,6 +274,22 @@ impl FerroEhrService {
         namespace: &str,
         resolved: Option<EhrId>,
     ) -> Result<(), ServiceError> {
+        self.emit_resolution(namespace, resolved, u64::from(resolved.is_some()))
+            .await
+    }
+
+    /// Record one resolution of subject references under `namespace` on the
+    /// access log, as [`Self::emit_subject_resolution`] does: the EHR it found
+    /// when it found one, and `count`, how many it served.
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the access record cannot be written.
+    pub(in crate::service) async fn emit_resolution(
+        &self,
+        namespace: &str,
+        resolved: Option<EhrId>,
+        count: u64,
+    ) -> Result<(), ServiceError> {
         if !self.audit_enabled() {
             return Ok(());
         }
@@ -285,7 +301,8 @@ impl FerroEhrService {
         event.domain = AccessDomain::Linkage;
         event.object_id = Some(format!("subject-namespace:{namespace}"));
         event.ehr_id = resolved.map(|id| id.to_string());
-        event.result_count = Some(u64::from(resolved.is_some()));
+        event.result_count = Some(count);
+        event.request_id = crate::system_log::access_context::current_origin().request_id;
         self.record_committer_access(event).await
     }
 

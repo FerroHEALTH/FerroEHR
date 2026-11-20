@@ -877,9 +877,11 @@ pub(crate) async fn get_contribution(
     // §Contributions); a 666 attestation commits no new version but still
     // affects an existing one, so the storage query unions the versions
     // referenced by this contribution's `vo_attestation` rows (dedup).
+    let withheld = crate::system_log::access_context::access_delay_enforced_on(ehr_id);
     let referenced = crate::storage::version_repo::contribution::contribution_version_refs(
         pool,
         contribution_id,
+        withheld,
     )
     .await?;
 
