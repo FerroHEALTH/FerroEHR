@@ -62,13 +62,6 @@ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_party_reader') THEN
     CREATE ROLE ferroehr_party_reader NOLOGIN NOINHERIT;
   END IF;
-  -- The released ext, clinical and party grant files still name
-  -- ferroehr_linkage, so a fresh database needs it while they apply.
-  -- audit/0021_drop_linkage_domain.sql drops it again where the migrator may;
-  -- this app role holds no CREATEROLE, so here it stays, granted nothing.
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_linkage') THEN
-    CREATE ROLE ferroehr_linkage NOLOGIN NOINHERIT;
-  END IF;
   -- In dev the single app user plays both migrator and writer.
   GRANT ferroehr_migrator TO "${APP_USER}";
   -- ONE login credential, deliberately. This stack demonstrates the SCHEMA

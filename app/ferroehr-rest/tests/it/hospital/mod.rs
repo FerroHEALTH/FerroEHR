@@ -17,6 +17,7 @@
 pub(crate) mod abac;
 mod access_log;
 pub(crate) mod build;
+mod care_relationship;
 mod discovery;
 pub(crate) mod ledger;
 mod lifecycle;

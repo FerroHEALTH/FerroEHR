@@ -7,7 +7,7 @@
 use sea_query::Value;
 use uuid::Uuid;
 
-use super::super::{SqlCtx, access};
+use super::super::{SqlCtx, care};
 use crate::access_eval::condition::care::Care;
 use crate::aql::ir::{ParamValue, Params};
 
@@ -29,8 +29,12 @@ pub(super) enum Live {
     Census,
     /// The EHRs of a pinned query whose subject the caller cares for.
     CareEhrs,
+    /// The ties by which the caller holds each of them, as `jsonb` text.
+    CareTies,
     /// The caller's principals.
     CarePrincipals,
+    /// Those of the caller's principals a relationship reaches directly.
+    CareDirect,
     /// The issuers of the providers the caller acts for.
     CareIssuers,
     /// The ids of the providers the caller acts for.
@@ -61,7 +65,9 @@ impl Live {
             Self::Parties,
             Self::Census,
             Self::CareEhrs,
+            Self::CareTies,
             Self::CarePrincipals,
+            Self::CareDirect,
             Self::CareIssuers,
             Self::CareProviders,
             Self::CareDay,
@@ -97,15 +103,25 @@ impl Live {
             Self::Now => groups.map(|groups| Value::from(groups.facts.now.to_string())),
             Self::Parties => groups.map(|groups| Value::from(groups.facts.parties.to_vec())),
             Self::Census => match groups.map(|groups| &groups.cared) {
-                Some(Care::Census(cared)) => Some(Value::from(access::census_text(cared))),
+                Some(Care::Census(cared)) => Some(Value::from(care::census_text(cared))),
                 _ => None,
             },
             Self::CareEhrs => match groups.map(|groups| &groups.cared) {
-                Some(Care::Ehrs(ehrs)) => Some(Value::from(ehrs.to_vec())),
+                Some(Care::Ehrs(ehrs)) => Some(Value::from(
+                    ehrs.iter().map(|cared| cared.ehr).collect::<Vec<Uuid>>(),
+                )),
+                _ => None,
+            },
+            Self::CareTies => match groups.map(|groups| &groups.cared) {
+                Some(Care::Ehrs(ehrs)) => Some(Value::from(care::ehr_ties_text(ehrs))),
                 _ => None,
             },
             Self::CarePrincipals => match groups.map(|groups| &groups.cared) {
                 Some(Care::Projected(care)) => Some(Value::from(care.principals.to_vec())),
+                _ => None,
+            },
+            Self::CareDirect => match groups.map(|groups| &groups.cared) {
+                Some(Care::Projected(care)) => Some(Value::from(care.direct.to_vec())),
                 _ => None,
             },
             Self::CareIssuers => match groups.map(|groups| &groups.cared) {

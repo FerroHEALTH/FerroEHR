@@ -17,6 +17,7 @@ use std::time::Instant;
 use uuid::Uuid;
 
 use super::{EhrEntry, RequestAccess};
+use crate::access_eval::care_tie::{Cared, Tie};
 use crate::access_eval::procedure::Verdict;
 use crate::access_eval::stale::{STALE_POLL, STALE_WAIT};
 use crate::access_policy::care::CareFacts;
@@ -94,41 +95,72 @@ impl CareInForce {
 
 impl RequestAccess {
     /// The subject references of the `PERSON`s the caller has a live care
-    /// relationship to
+    /// relationship to, each with the ties by which it holds them
     /// ([`crate::party_binding::grants::live::LiveGrants::cared_for_by`]); a
-    /// caller with no principal or no provider reads nothing.
+    /// caller with no principal or no provider reads nothing, and an access
+    /// whose purpose a care relationship is no ground for reads nothing.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the care copy misses and cannot read.
-    pub async fn cared_subjects(&self) -> Result<Vec<EhrSubject>, GrantsUnavailable> {
+    pub async fn cared_subjects(&self) -> Result<Vec<CaredSubject>, GrantsUnavailable> {
         let principals = self.principals_held();
         let Some(grants) = self.grants.as_ref().filter(|_| self.may_hold_care()) else {
             return Ok(Vec::new());
         };
+        let Some(day) = self.today() else {
+            return Ok(Vec::new());
+        };
         grants
-            .cared_for_by(
-                &principals,
-                self.caller.facts.providers(),
-                self.today(),
-                &self.policy(),
-            )
+            .cared_for_by(&self.caller.facts, &principals, day, &self.policy())
             .await
     }
 
-    /// Whether one of a subject's care `relations` is live, targets a
-    /// principal of the caller acting for its provider, and was not written
-    /// by the caller naming itself ([`CareOf::admits_writer`]) (draft
-    /// decision procedure).
+    /// The ties by which the caller holds a subject whose care relationships
+    /// are `relations`: each one live, targeting a principal of the caller by
+    /// a path while it acts for its provider, not written by the caller
+    /// naming itself ([`CareOf::admits_writer`]), sorted; none when the
+    /// access declares a purpose outside the policy's `care_purposes` (draft
+    /// decision procedure, Terms and Holding a Care Relationship).
     #[must_use]
-    pub fn cared(&self, relations: &[CareOf]) -> bool {
+    pub fn ties(&self, relations: &[CareOf]) -> Vec<Tie> {
         let policy = self.policy();
+        let Some(day) = self
+            .today()
+            .filter(|_| policy.admits_care(self.purpose.as_deref()))
+        else {
+            return Vec::new();
+        };
         let principals = self.principals_held();
-        relations.iter().any(|care| {
-            care.live_on(self.today(), policy.grace)
-                && principals.binary_search(&care.carer()).is_ok()
-                && care.admits_writer(&principals, policy.self_declared)
-                && self.caller.facts.acts_for_provider(care.provider())
-        })
+        let mut ties: Vec<Tie> = relations
+            .iter()
+            .filter(|care| {
+                care.live_on(day, policy.grace)
+                    && care.admits_writer(&principals, policy.self_declared)
+                    && self.caller.facts.acts_for_provider(care.provider())
+            })
+            .filter_map(|care| Tie::of(care, &self.caller.facts, &principals, day))
+            .collect();
+        ties.sort();
+        ties
+    }
+
+    /// The caller's care for a subject whose care relationships are
+    /// `relations` ([`Self::ties`]).
+    #[must_use]
+    pub fn cared(&self, relations: &[CareOf]) -> Cared {
+        Cared::of(self.ties(relations))
+    }
+
+    /// The caller's care as a query of every EHR reads it: [`Cared::Left`]
+    /// when the access may rest on a care relationship, [`Cared::No`] when
+    /// it declares a purpose outside the policy's `care_purposes`.
+    #[must_use]
+    pub fn care_left(&self) -> Cared {
+        if self.policy().admits_care(self.purpose.as_deref()) {
+            Cared::Left
+        } else {
+            Cared::No
+        }
     }
 
     /// The treatment context the caller's verified credential attests for
@@ -145,25 +177,45 @@ impl RequestAccess {
             .then_some(attestation)
     }
 
-    /// The EHRs the caller holds an attested care relationship to
-    /// ([`Self::attested_on`]).
-    fn attested_ehrs(&self) -> Vec<Uuid> {
-        self.caller
-            .facts
-            .attestation()
-            .map_or_else(Vec::new, |attestation| {
-                attestation
-                    .ehrs
-                    .iter()
-                    .filter(|ehr| self.attested_on(**ehr).is_some())
-                    .map(|ehr| ehr.0)
-                    .collect()
-            })
+    /// The tie by which the caller holds the subject of `ehr_id` on the
+    /// `attested` path ([`Self::attested_on`]), in the role `PART`, which the
+    /// credential states no other of; none when the access declares a
+    /// purpose outside the policy's `care_purposes`.
+    pub(super) fn attested_tie(&self, ehr_id: EhrId) -> Option<Tie> {
+        use openehr_rm::draft::access_control::terminology::care::CarePath;
+        use openehr_rm::draft::access_control::terminology::{
+            ForeignCode, TERMINOLOGY_ID_PARTICIPATION_TYPE,
+        };
+        if !self.policy().admits_care(self.purpose.as_deref()) {
+            return None;
+        }
+        self.attested_on(ehr_id)?;
+        Some(Tie {
+            path: CarePath::Attested,
+            role: ForeignCode {
+                terminology: TERMINOLOGY_ID_PARTICIPATION_TYPE.to_owned(),
+                code: "PART".to_owned(),
+            },
+            grant: None,
+        })
+    }
+
+    /// `care` with the tie the caller's credential attests for the subject
+    /// of `ehr_id` beside the stored ones.
+    pub(super) fn with_attested(&self, ehr_id: EhrId, care: Cared) -> Cared {
+        let Some(tie) = self.attested_tie(ehr_id) else {
+            return care;
+        };
+        let mut ties = care.ties().to_vec();
+        ties.push(tie);
+        ties.sort();
+        Cared::of(ties)
     }
 
     /// The care a query that names no EHR reads for a caller that holds no
     /// stored relationship and attests a treatment context: the EHRs of the
-    /// attested subject. `None` for every other caller.
+    /// attested subject, each with its attested tie. `None` for every other
+    /// caller.
     #[must_use]
     pub fn attested_care(&self) -> Option<Care> {
         // NOTE: our own design (#6078), an attested caller is admitted under an agreement and
@@ -171,14 +223,24 @@ impl RequestAccess {
         if self.may_hold_care() {
             return None;
         }
-        let ehrs = self.attested_ehrs();
+        let attestation = self.caller.facts.attestation()?;
+        let ehrs: Vec<CaredEhr> = attestation
+            .ehrs
+            .iter()
+            .filter_map(|ehr| {
+                self.attested_tie(*ehr).map(|tie| CaredEhr {
+                    ehr: ehr.0,
+                    ties: vec![tie].into(),
+                })
+            })
+            .collect();
         (!ehrs.is_empty()).then(|| Care::Ehrs(ehrs.into()))
     }
 
     /// Whether the caller can hold a care relationship at all: it has a
     /// principal and acts for a provider, so a caller with neither reads no
     /// subject's relationships.
-    fn may_hold_care(&self) -> bool {
+    pub(super) fn may_hold_care(&self) -> bool {
         !self.caller.facts.providers().is_empty() && !self.principals_held().is_empty()
     }
 
@@ -265,8 +327,8 @@ impl RequestAccess {
         // NOTE: our own design (#5891), a care read that fails here reads ahead nothing, and the
         // judgement reads it again and answers that read's error.
         if matches!(self.care.get(), Checked::Unchecked)
-            && self.care_decided(ehr_id, entry).is_some()
-            && matches!(self.cares_for(entry).await, Ok(true))
+            && self.care_decided(ehr_id, entry, &Cared::Left).is_some()
+            && matches!(self.care_for(entry).await, Ok(care) if care.live())
         {
             self.care_read_ahead().await;
         }
@@ -289,12 +351,18 @@ impl RequestAccess {
     }
 
     /// The verdict of `ehr_id` as `entry` reads it with the caller's care
-    /// for its subject, when it differs from the verdict without that care.
-    pub(super) fn care_decided(&self, ehr_id: EhrId, entry: &EhrEntry) -> Option<Verdict> {
+    /// `care` for its subject, when it differs from the verdict without that
+    /// care.
+    pub(super) fn care_decided(
+        &self,
+        ehr_id: EhrId,
+        entry: &EhrEntry,
+        care: &Cared,
+    ) -> Option<Verdict> {
         let settings = (*entry.settings).as_ref();
         let (with, without) = (
-            self.judge(Some(ehr_id), settings, true),
-            self.judge(Some(ehr_id), settings, false),
+            self.judge(Some(ehr_id), settings, care),
+            self.judge(Some(ehr_id), settings, &Cared::No),
         );
         let decides = (&with.rules, with.otherwise, &with.lifted)
             != (&without.rules, without.otherwise, &without.lifted);
@@ -302,28 +370,31 @@ impl RequestAccess {
     }
 
     /// Of the EHRs `entries` name, those whose subject the caller has a live
-    /// care relationship to, stored or attested, judged as the care step
-    /// judges one EHR.
+    /// care relationship to, stored or attested, each with the ties by which
+    /// it holds it, judged as the care step judges one EHR.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the care copy misses and cannot read.
     pub async fn cared_ehrs(
         &self,
         entries: &[(EhrId, EhrEntry)],
-    ) -> Result<Vec<Uuid>, GrantsUnavailable> {
+    ) -> Result<Vec<CaredEhr>, GrantsUnavailable> {
         let mut cared = Vec::new();
         for (ehr_id, entry) in entries {
-            if self.attested_on(*ehr_id).is_some() || self.cares_for(entry).await? {
-                cared.push(ehr_id.0);
+            let care = self.care_for(entry).await?;
+            if let Cared::Ties(ties) = self.with_attested(*ehr_id, care) {
+                cared.push(CaredEhr {
+                    ehr: ehr_id.0,
+                    ties,
+                });
             }
         }
         Ok(cared)
     }
 
-    /// Whether the caller has a live care relationship to the `PERSON` the
-    /// subject reference of `entry` names; a caller with no principal has
-    /// none, and reads nothing for it.
-    pub(super) async fn cares_for(&self, entry: &EhrEntry) -> Result<bool, GrantsUnavailable> {
+    /// The caller's care for the `PERSON` the subject reference of `entry`
+    /// names; a caller with no principal has none, and reads nothing for it.
+    pub(super) async fn care_for(&self, entry: &EhrEntry) -> Result<Cared, GrantsUnavailable> {
         let under_care_of = match (&self.grants, &entry.subject) {
             (Some(grants), Some(subject)) if self.may_hold_care() => {
                 match grants.person_of(subject).await? {
@@ -335,6 +406,26 @@ impl RequestAccess {
         };
         Ok(self.cared(&under_care_of))
     }
+}
+
+/// A subject reference the caller has a live care relationship to, with the
+/// ties by which it holds it.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CaredSubject {
+    /// The subject reference.
+    pub subject: EhrSubject,
+    /// The ties, each without the relationship it rests on.
+    pub ties: Arc<[Tie]>,
+}
+
+/// An EHR whose subject the caller has a live care relationship to, with the
+/// ties by which it holds it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CaredEhr {
+    /// The EHR.
+    pub ehr: Uuid,
+    /// The ties; never empty.
+    pub ties: Arc<[Tie]>,
 }
 
 /// How a condition reads the caller's care for the subject of an EHR.
@@ -350,11 +441,12 @@ pub enum Care {
     /// Not read yet: the service reads it once it knows the query's EHRs.
     Unresolved,
     /// The subject references of every `PERSON` the caller has a live care
-    /// relationship to.
-    Census(Arc<[EhrSubject]>),
+    /// relationship to, each with its ties.
+    Census(Arc<[CaredSubject]>),
     /// Of the EHRs the query is pinned to, those whose subject the caller has
-    /// a live care relationship to; every other EHR is uncared.
-    Ehrs(Arc<[Uuid]>),
+    /// a live care relationship to, each with its ties; every other EHR is
+    /// uncared.
+    Ehrs(Arc<[CaredEhr]>),
     /// The clinical care projection, read by the EHR row's subject digest:
     /// the caller's principals and providers and the day and grace a
     /// relationship is live on, as
@@ -369,6 +461,10 @@ pub struct ProjectedCare {
     /// The caller's principals: its `PERSON`, the `ROLE`s it performs and
     /// the care teams and units it is a member of.
     pub principals: Arc<[Uuid]>,
+    /// Of [`Self::principals`], those a relationship reaches by the `direct`
+    /// path: its `PERSON` and the `ROLE`s it performs; the rest reach by the
+    /// `team` path.
+    pub direct: Arc<[Uuid]>,
     /// The issuers of the providers the caller acts for, each beside its id
     /// in [`Self::provider_ids`].
     pub provider_issuers: Arc<[String]>,

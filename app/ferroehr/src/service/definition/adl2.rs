@@ -207,7 +207,7 @@ impl FerroEhrService {
         }
         // Maintain the `template_ref` registry (the version.template_id FK
         // target) in the same transaction: a template-kind HRID is a commit
-        // addressable wire identity (`clinical/0006_definitions.sql`
+        // addressable wire identity (`clinical/0002_baseline_definitions.sql`
         // §template_ref).
         if is_template_kind(kind) {
             template_repo::register_template_ref(tx, &summary.archetype_id).await?;

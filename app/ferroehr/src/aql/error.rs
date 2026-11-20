@@ -487,7 +487,7 @@ impl StaleCopy {
 
 impl AqlError {
     /// The access copy the statement found older than the store, when that
-    /// is why it failed (`clinical/0049_access_stale_copy.sql`).
+    /// is why it failed (`clinical/0009_baseline_access.sql`).
     #[must_use]
     pub fn stale_copy(&self) -> Option<StaleCopy> {
         let Self::Exec(ExecError::Database(db)) = self else {

@@ -1,0 +1,1 @@
+- A COMPOSITION request refused `403` because the caller's SMART on openEHR grants do not cover its template now carries the RFC 6750 §3.1 `WWW-Authenticate` challenge with `error="insufficient_scope"`, as a route's scope refusal does. It carried no challenge.

@@ -230,15 +230,23 @@ fn rule(effect: &str, extra: &Value) -> Value {
 /// relationship (a deny with a permit exception naming `care`), with
 /// `attested_care` holding `attested` when given.
 fn policy(attested: Option<Value>) -> Value {
+    policy_in(attested, &json!({}))
+}
+
+/// [`policy`], its care scope also holding `care` (such as `care_path`).
+fn policy_in(attested: Option<Value>, care: &Value) -> Value {
     let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
+    let mut scope = json!({ "_type": "ACCESS_ACTOR_SCOPE",
+        "relationship": coded(TERMINOLOGY_ID_ACCESS, "care") });
+    if let (Some(scope), Some(care)) = (scope.as_object_mut(), care.as_object()) {
+        scope.extend(care.clone());
+    }
     let care_rule = rule(
         "deny",
         &json!({
             "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
                 "caller_kind": coded(TERMINOLOGY_ID_ACCESS, "access_service") }],
-            "exceptions": [rule("permit", &json!({ "applies_to": [
-                { "_type": "ACCESS_ACTOR_SCOPE",
-                  "relationship": coded(TERMINOLOGY_ID_ACCESS, "care") }] }))] }),
+            "exceptions": [rule("permit", &json!({ "applies_to": [scope] }))] }),
     );
     let mut body = json!({
         "_type": "ACCESS_POLICY",
@@ -440,4 +448,42 @@ async fn an_attested_agreement_under_another_issuer_is_refused_naming_the_elemen
         );
     }
     commit(&svc, &policy(Some(naming(&role, Some(FEDERATION))))).await;
+}
+
+/// A rule's `care_path` and `care_roles` read the attested relationship: one
+/// naming `attested`, or the role `PART` the credential holds it in, admits
+/// the attested caller, and one naming `direct` or another role does not,
+/// since no path implies another and no role another (draft decision
+/// procedure, Holding a Care Relationship).
+#[tokio::test]
+async fn a_rule_names_the_attested_path_and_its_role() {
+    let participation = "HL7_ParticipationType";
+    for (care, expected) in [
+        (
+            json!({ "care_path": coded(TERMINOLOGY_ID_ACCESS, "attested") }),
+            StatusCode::OK,
+        ),
+        (
+            json!({ "care_roles": [coded(participation, "PART")] }),
+            StatusCode::OK,
+        ),
+        (
+            json!({ "care_path": coded(TERMINOLOGY_ID_ACCESS, "direct") }),
+            StatusCode::FORBIDDEN,
+        ),
+        (
+            json!({ "care_roles": [coded(participation, "RESP")] }),
+            StatusCode::FORBIDDEN,
+        ),
+    ] {
+        let (_db, pool, svc, app) = Box::pin(serve(false)).await;
+        let target = patient_ehr(&svc, PATIENT).await;
+        let role = agreement_role(&pool).await;
+        commit(&svc, &policy_in(Some(naming(&role, None)), &care)).await;
+        assert_eq!(
+            read(&app, &target, &token(&target, Some(PATIENT), 600)).await,
+            expected,
+            "{care}"
+        );
+    }
 }

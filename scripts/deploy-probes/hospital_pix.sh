@@ -300,8 +300,9 @@ hospital_pix_patients() {
   h_party person_lisa person "$(j_patient "Lisa Bos" lisa-0001 "$pseudonym")" \
     || h_fail_call "Lisa's patient PERSON"
   hp_ehr lisa "$pseudonym" || h_fail_call "Lisa's EHR"
+  # With its end, as j_care_of requires of a relationship no relationship_validity entry covers (#6073).
   h_care care_lisa_cardiology 1 admin "$(j_care_of "$(hv person_lisa)" GROUP "$(hv cardiology)" \
-    "$(j_dates "$(h_day -5)")")" || h_fail_call "Lisa's admission to Cardiology"
+    "$(j_dates "$(h_day -5)" "$(h_day 30)")")" || h_fail_call "Lisa's admission to Cardiology"
   pseudonym="$(hp_pseudonym lisa-0002)"
   h_party person_lisa_dup person "$(j_patient "L. Bos" lisa-0002 "$pseudonym")" \
     || h_fail_call "the duplicate record's patient PERSON"

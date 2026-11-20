@@ -28,8 +28,8 @@
 //!   plus `storage::promoted::PROMOTED_LEAVES[..].column`, whose fields are
 //!   `&'static str`. `IDENTIFIERS` below pins the whole vocabulary against the
 //!   clinical migrations that define those relations
-//!   (`migrations/clinical/0002_ehr.sql` through `0006_definitions.sql`, and
-//!   the node compact markers of `0031_node_compact.sql`).
+//!   (`migrations/clinical/0001_baseline_ehr.sql` through `0004_baseline_node.sql`, and
+//!   the node compact markers of `0004_baseline_node.sql`).
 //! * **Table aliases** — `format!` over an integer source id or the builder's
 //!   own counter, never over query text: `n{sid}`, `v{sid}`, `e{sid}`,
 //!   `x{ctr}`, `xv{ctr}`, `s{ctr}`, `w{ctr}`, `b{ctr}`, `p{ctr}`, `qg{ctr}`,
@@ -552,7 +552,7 @@ const CORPUS: &[&str] = &[
 /// format fragment that renders inside double quotes.
 ///
 /// The column names are the vocabulary the clinical migrations define
-/// (`migrations/clinical/0002_ehr.sql` through `0006_definitions.sql`).
+/// (`migrations/clinical/0001_baseline_ehr.sql` through `0004_baseline_node.sql`).
 const IDENTIFIERS: &[&str] = &[
     // relations
     "node",
@@ -589,7 +589,7 @@ const IDENTIFIERS: &[&str] = &[
     "path",
     "data",
     "context_start",
-    // the compact markers (`migrations/clinical/0031_node_compact.sql`)
+    // the compact markers (`migrations/clinical/0004_baseline_node.sql`)
     "origin_compact",
     "time_compact",
     "party_self",
@@ -626,7 +626,7 @@ const IDENTIFIERS: &[&str] = &[
     "description",
     "committer",
     "attestation",
-    // vo_attestation (`migrations/clinical/0003_change_control.sql`)
+    // vo_attestation (`migrations/clinical/0003_baseline_change_control.sql`)
     "vo_attestation",
     "at_committal",
     // NOTE: `T` is the literal date/time separator inside the `to_char` format
