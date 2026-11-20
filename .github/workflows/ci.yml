@@ -3460,7 +3460,4 @@ jobs:
           # shows it beside its result.
           echo "$NEEDS" | jq -r \
             'to_entries[] | "\(.key): \(.value.result)\(if (.value.outputs.verdict // "") != "" then " (verdict: \(.value.outputs.verdict))" else "" end)"'
-          # TODO(#6099): the hospital scenario is advisory until it passes on
-          # main: it runs and shows above, but its result is left out of the
-          # verdict (owner decision 2026-11-20).
-          echo "$NEEDS" | jq -e 'del(.["deploy-probe-hospital"]) | all(.[] | .result; . == "success" or . == "skipped")' >/dev/null
+          echo "$NEEDS" | jq -e 'all(.[] | .result; . == "success" or . == "skipped")' >/dev/null

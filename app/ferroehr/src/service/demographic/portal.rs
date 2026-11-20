@@ -174,6 +174,17 @@ impl FerroEhrService {
         }
     }
 
+    /// Returns the `PERSON` the subject reference `subject` names, as an
+    /// `EHR_STATUS` subject reference resolves
+    /// ([`crate::party_binding::grants::live::LiveGrants::person_of`]),
+    /// `None` when it names none of this store.
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the party store cannot answer.
+    pub async fn subject_person(&self, subject: &EhrSubject) -> Result<Option<Uuid>, ServiceError> {
+        Ok(self.grants.person_of(subject).await?)
+    }
+
     /// Returns the EHRs whose `EHR_STATUS` subject reference names the
     /// `PERSON` the reference `(subject_id, namespace)` names: the EHR of that
     /// reference, and the EHR of each record subject the `PERSON` declares,
