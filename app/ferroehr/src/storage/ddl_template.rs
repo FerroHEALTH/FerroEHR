@@ -154,7 +154,7 @@ mod tests {
         for template in [CHANGE_CONTROL, NODE] {
             // The template with every marked block taken out, rendered for one
             // domain: what is left differs between the domains only in kinds.
-            let mut unmarked = String::new();
+            let mut kept: Vec<&str> = Vec::new();
             let mut inside = false;
             for line in template.lines() {
                 if let Some(marker) = line.trim().strip_prefix(MARKER) {
@@ -162,10 +162,10 @@ mod tests {
                     continue;
                 }
                 if !inside {
-                    unmarked.push_str(line);
-                    unmarked.push('\n');
+                    kept.push(line);
                 }
             }
+            let unmarked = kept.join("\n");
             let shared = |domain: &Domain| render(&unmarked, domain);
             let clinical = shared(&CLINICAL);
             let party = shared(&PARTY);

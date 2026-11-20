@@ -718,10 +718,6 @@ async fn one_indexed_read_returns_the_facts_of_the_parties_that_changed() {
 /// fact (#5621) left a store in that state; the store is built here and its
 /// role rows deleted, then the revision is reset as that migration reset it.
 #[tokio::test]
-#[expect(
-    clippy::disallowed_methods,
-    reason = "a test reads the database on a raw pool connection, outside any request"
-)]
 async fn the_boot_after_a_revision_reset_reads_the_roles_already_stored() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();

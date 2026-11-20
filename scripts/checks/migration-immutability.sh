@@ -36,7 +36,7 @@
 #     that used it, and re-authoring `ext`, `linkage` or `audit` is exactly that.
 #     What may not survive is any file of the old set, edited or untouched.
 #   * `<schema>` is named in `RETIRED_SETS` in
-#     `app/ferroehr/src/db/mod.rs` at head, which is the table the server's boot
+#     `app/ferroehr/src/db/retired.rs` at head, which is the table the server's boot
 #     refusal reads: a database carrying that set's bookkeeping is refused by
 #     name, with the remedy, instead of failing on a checksum.
 #
@@ -58,7 +58,7 @@ cd "$(dirname "$0")/../.." || exit 1
 readonly MIGRATIONS='app/ferroehr/migrations/'
 readonly RULE='.claude/rules/sqlx-conventions.md §Migrations'
 # The file whose `RETIRED_SETS` table the boot refusal reads.
-readonly REFUSAL_FILE='app/ferroehr/src/db/mod.rs'
+readonly REFUSAL_FILE='app/ferroehr/src/db/retired.rs'
 
 # The schemas the boot refusal names at `$1`, one per line.
 #

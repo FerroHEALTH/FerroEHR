@@ -46,7 +46,7 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
   `app/ferroehr/migrations/<schema>/` goes, so no half-set survives for a database to apply against — a NEW set may
   take its place in the same directory, because a schema name can outlive the
   set that used it — and `<schema>` is named in `RETIRED_SETS`
-  (`app/ferroehr/src/db/mod.rs`) in the same change, so a database carrying that
+  (`app/ferroehr/src/db/retired.rs`) in the same change, so a database carrying that
   set's bookkeeping is refused at boot by name, with the remedy. An installation
   is then TOLD what happened instead of being locked out by a checksum it cannot
   interpret. A single-file edit, a partial turnover, and a turnover the boot
