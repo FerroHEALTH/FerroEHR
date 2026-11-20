@@ -12,6 +12,8 @@
               by specification), and its class is the same open object"
 )]
 
+use openehr_its::json::to_canonical_value;
+use openehr_rm::prelude::{DvDateTime, PartyProxy, PartySelf};
 use serde_json::Value;
 
 use super::{INSTANT, retain, set};
@@ -40,14 +42,17 @@ pub(super) fn normalize_marking(marking: &mut Value) {
     retain(marking, &["_type"]);
     if let (Some(object), Some(level)) = (marking.as_object_mut(), level) {
         object.insert("confidentiality".to_owned(), level);
-        object.insert(
-            "set_by".to_owned(),
-            serde_json::json!({ "_type": "PARTY_SELF" }),
-        );
-        object.insert(
-            "set_at".to_owned(),
-            serde_json::json!({ "_type": "DV_DATE_TIME", "value": INSTANT }),
-        );
+        let set_by = PartyProxy::PartySelf(PartySelf { external_ref: None });
+        let set_at = DvDateTime {
+            normal_status: None,
+            normal_range: None,
+            other_reference_ranges: None,
+            magnitude_status: None,
+            accuracy: None,
+            value: INSTANT.to_owned(),
+        };
+        object.insert("set_by".to_owned(), to_canonical_value(&set_by));
+        object.insert("set_at".to_owned(), to_canonical_value(&set_at));
     }
 }
 
