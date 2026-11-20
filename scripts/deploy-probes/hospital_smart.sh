@@ -319,7 +319,23 @@ hs_answered() {
     | sed -E $'s/\x1b\\[[0-9;]*m//g' \
     | grep -E 'status=4[0-9][0-9]|refused|denied' | sed -E 's/request\{[^}]*\}: //' \
     | tail -n 12 | cut -c1-400 | sed 's/^/        /' >&2
+  hs_lookup_records
   hdc logs --no-color --tail 15 ferrosmart 2>&1 | sed 's/^/        /' >&2
+}
+
+# Prints the access record of each EHR lookup by subject either instance
+# refused in the last two minutes: it names the caller's standing and the
+# ground of a refusal the answer itself withholds.
+hs_lookup_records() {
+  local rid
+  for rid in $(hdc logs --no-color --since 2m ferroehr ferroehr-2 2>&1 \
+    | sed -E $'s/\x1b\\[[0-9;]*m//g' \
+    | grep -E 'route="/ferroehr/rest/openehr/v1/ehr" status=4' \
+    | sed -nE 's/.*request_id="([^"]+)".*/\1/p' | tail -n 2); do
+    h_call 1 p:hans GET "$HX/admin/access-log?request_id=$rid"
+    echo "        the access record of lookup $rid ($H_CODE): $(jq -c '.entries' <<<"$H_BODY" 2>/dev/null \
+      | cut -c1-1500)" >&2
+  done
 }
 
 # Takes the person `user` through FerroSMART's authorization request `url`:
