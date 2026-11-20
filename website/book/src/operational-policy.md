@@ -182,7 +182,9 @@ those parties were not stored, and it is not refused:
 - A party belongs to no EHR, so the EHR access settings and the rest of the
   access decision a clinical query applies to each row do not apply to a
   party. The mark decides which parties a caller reads, for AQL as for the
-  Demographic API.
+  Demographic API. A demographic query never reads the EHR access settings,
+  so it answers while the settings store is unavailable, when a clinical
+  query answers `503`.
 
 So `FROM AGENT` and `FROM PARTY` never return a system's `AGENT` to such a
 caller, and `FROM PARTY_RELATIONSHIP` never returns an acts-for relationship
