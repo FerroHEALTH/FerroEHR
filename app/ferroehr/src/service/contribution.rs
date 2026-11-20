@@ -266,7 +266,7 @@ async fn write_contribution(
             .changes
             .iter()
             .filter(|(_, c)| c.kind() == Kind::EhrAccess)
-            .map(|(_, c)| c.written_marking())
+            .map(|(_, c)| crate::service::ehr::access::written_marking(c))
             .collect();
         cx.check_ehr_access_writer(&mut tx, ehr_id, &markings)
             .await?;

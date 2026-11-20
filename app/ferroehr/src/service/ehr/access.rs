@@ -46,6 +46,7 @@ use crate::service::FerroEhrService;
 use crate::storage::access_projection::{Revision, Stored, StoredSettings};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::Body;
 use crate::versioning::change::{Change, commit_contribution};
 
 impl FerroEhrService {
@@ -578,5 +579,23 @@ fn same_marking(written: Option<&Value>, stored: Option<&Value>) -> bool {
             _ => written == stored,
         },
         _ => false,
+    }
+}
+
+/// The `settings.marking` an `EHR_ACCESS` change writes: `None` for a
+/// deletion, or a version that carries no marking.
+pub(in crate::service) fn written_marking(change: &Change) -> Option<&Value> {
+    match change {
+        Change::Create { body, .. } | Change::Modify { body, .. } => match body {
+            Body::EhrAccess(rm) => rm
+                .settings
+                .as_ref()
+                .and_then(|settings| settings.members().get("marking")),
+            _ => body
+                .canonical()
+                .and_then(|view| view.get("settings"))
+                .and_then(|settings| settings.get("marking")),
+        },
+        Change::Delete { .. } => None,
     }
 }

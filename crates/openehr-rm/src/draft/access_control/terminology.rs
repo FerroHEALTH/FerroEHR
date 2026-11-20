@@ -32,6 +32,9 @@ use openehr_base::prelude::TerminologyId;
 
 use log::{AccessorKind, Action, Authorisation, CredentialBinding, Outcome, RefusalReason};
 
+#[macro_use]
+mod group_macro;
+
 /// The BMMs' `Terminology_id_access`: the draft `openehr_access` terminology,
 /// which holds the access groups' own codes until openEHR adopts them.
 pub const TERMINOLOGY_ID_ACCESS: &str = "openehr_access";
@@ -343,59 +346,6 @@ pub trait Term: Copy + PartialEq + Sized + 'static {
     fn is(self, coded: &DvCodedText) -> bool {
         Self::read_coded(coded).is_ok_and(|term| term == self)
     }
-}
-
-/// Defines one group's term type, its [`Term`] impl and its `Display`.
-///
-/// A term is `Name => "code"`, a code of [`TERMINOLOGY_ID_ACCESS`] that is
-/// its own rubric, or `Name => "code" of TERMINOLOGY, "rubric"`, the code of
-/// another terminology.
-macro_rules! group {
-    (@terminology) => { TERMINOLOGY_ID_ACCESS };
-    (@terminology $terminology:ident) => { $terminology };
-    (@rubric $code:literal) => { $code };
-    (@rubric $code:literal $rubric:literal) => { $rubric };
-    (
-        $(#[$doc:meta])*
-        $name:ident in $group:ident {
-            $( $(#[$term_doc:meta])* $term:ident => $code:literal $(of $terminology:ident, $rubric:literal)?, )+
-        }
-    ) => {
-        $(#[$doc])*
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        pub enum $name {
-            $( $(#[$term_doc])* $term, )+
-        }
-
-        impl Term for $name {
-            const GROUP: Group = Group::$group;
-            const ALL: &'static [Self] = &[$(Self::$term),+];
-
-            fn terminology(self) -> &'static str {
-                match self {
-                    $(Self::$term => group!(@terminology $($terminology)?),)+
-                }
-            }
-
-            fn code(self) -> &'static str {
-                match self {
-                    $(Self::$term => $code,)+
-                }
-            }
-
-            fn rubric(self) -> &'static str {
-                match self {
-                    $(Self::$term => group!(@rubric $code $($rubric)?),)+
-                }
-            }
-        }
-
-        impl fmt::Display for $name {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str(self.code())
-            }
-        }
-    };
 }
 
 pub mod log;
