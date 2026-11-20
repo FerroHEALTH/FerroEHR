@@ -132,6 +132,10 @@ hs_prepare() {
   bash docker/ferrosmart/secrets.sh "$dir" >/dev/null || return 1
   [[ -s "$dir/zitadel_masterkey" ]] || openssl rand -hex 16 | tr -d '\n' > "$dir/zitadel_masterkey"
   [[ -s "$dir/zitadel_user_password" ]] || hs_password clinician > "$dir/zitadel_user_password"
+  # A fresh stack starts ZITADEL on an empty volume, whose bootstrap must run
+  # again: it keeps an out/ferrosmart.toml it finds, which would carry the last
+  # stack's ZITADEL client and the last run's resource base.
+  [[ -d "$dir/zitadel" ]] && find "$dir/zitadel" -mindepth 1 -delete
   mkdir -p "$dir/clients" "$dir/zitadel" "$dir/tokens"
   for client in $HS_SYSTEMS; do
     [[ -s "$dir/clients/$client.pem" ]] && continue
