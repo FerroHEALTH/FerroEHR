@@ -22,8 +22,8 @@ use uuid::Uuid;
 
 use crate::access_policy::relationship::{self, WriterVerdict};
 use crate::error::ServiceError;
-use crate::party_binding::grants::capabilities::Capabilities;
 use crate::party_binding::grants::caller::facts::CallerFacts;
+use crate::party_binding::grants::capabilities::Capabilities;
 use crate::service::FerroEhrService;
 use crate::service::ehr::access_rule::party_key;
 use crate::storage::access_projection::EhrSubject;
@@ -116,15 +116,12 @@ impl<'f> Writer<'f> {
     fn current(facts: &'f CallerFacts) -> Self {
         let identity = crate::versioning::committer::current_committer();
         let system = identity.as_ref().is_some_and(|identity| identity.system);
-        let party = facts
-            .party()
-            .map(|party| party.to_string())
-            .or_else(|| {
-                identity
-                    .as_ref()
-                    .and_then(|identity| identity.party.as_ref())
-                    .map(|party| party.party.id().to_owned())
-            });
+        let party = facts.party().map(|party| party.to_string()).or_else(|| {
+            identity
+                .as_ref()
+                .and_then(|identity| identity.party.as_ref())
+                .map(|party| party.party.id().to_owned())
+        });
         Self {
             party,
             facts,
@@ -139,10 +136,9 @@ impl<'f> Writer<'f> {
     /// Whether `scope` names the writer: every attribute it sets matches,
     /// and a scope naming a relationship to the subject names no writer.
     fn named_by(&self, scope: &AccessActorScope) -> bool {
-        let party = scope
-            .party
-            .as_ref()
-            .is_none_or(|party| party_key(party).is_some_and(|key| self.party.as_ref() == Some(&key)));
+        let party = scope.party.as_ref().is_none_or(|party| {
+            party_key(party).is_some_and(|key| self.party.as_ref() == Some(&key))
+        });
         let role = scope
             .role
             .as_ref()

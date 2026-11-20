@@ -127,7 +127,10 @@ pub(crate) fn party(rm_type: &str, name: &str) -> Value {
 
 /// Commits the care relationship `body` as an administrator; its container
 /// and version uid.
-pub(crate) async fn relate(svc: &FerroEhrService, body: &Value) -> Result<(VoId, String), ServiceError> {
+pub(crate) async fn relate(
+    svc: &FerroEhrService,
+    body: &Value,
+) -> Result<(VoId, String), ServiceError> {
     let mut write = WriteRequest::new(crate::typed_body::typed(body));
     write.lifecycle_state = Some("532".to_owned());
     let created = as_admin(async { Box::pin(svc.party_relationship_create(write)).await }).await?;

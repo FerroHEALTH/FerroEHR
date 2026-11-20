@@ -49,10 +49,12 @@ pub async fn ehrs_of_subjects(
         .collect())
 }
 
-/// The `marking` of the `EHR_ACCESS` settings of every EHR whose subject is
-/// one of `subjects`, as stored JSON text, read in one statement on
-/// `uq_ehr_subject` and the settings' primary key; an EHR whose settings
-/// carry no marking yields none, and an empty `subjects` makes no round trip.
+/// The `marking` of the settings of every EHR whose subject is one of
+/// `subjects`, as stored JSON text.
+///
+/// One statement reads them on `uq_ehr_subject` and the settings' primary
+/// key; an EHR whose settings carry no marking yields none, and an empty
+/// `subjects` makes no round trip.
 ///
 /// # Errors
 /// [`StorageError`] when no connection is free or the read fails.
