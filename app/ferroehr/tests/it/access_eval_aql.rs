@@ -12,7 +12,8 @@
 
 use std::sync::Arc;
 
-use ferroehr::access_eval::condition::care::Care;
+use ferroehr::access_eval::care_tie::Tie;
+use ferroehr::access_eval::condition::care::{Care, CaredEhr, CaredSubject};
 use ferroehr::access_eval::condition::{
     AccessCondition, Asking, InForce, RequestAccess, with_request_access,
 };
@@ -28,6 +29,7 @@ use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr::storage::access_projection::EhrSubject;
 use ferroehr::versioning::committer::CommitterIdentity;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
+use openehr_rm::draft::access_control::terminology::care::CarePath;
 use openehr_rm::draft::access_control::terminology::{
     AccessDefault, CallerKind, ForeignCode, OperationClass, Refusal,
 };
@@ -364,6 +366,10 @@ async fn project(
             until: *until,
             writer: None,
             self_declared: false,
+            role: ForeignCode {
+                terminology: "HL7_ParticipationType".to_owned(),
+                code: "PART".to_owned(),
+            },
         })
         .collect();
     access_care::clear(&mut tx)
@@ -392,6 +398,7 @@ async fn project(
 fn projected(day: jiff::civil::Date, grace: &str) -> Care {
     Care::Projected(ferroehr::access_eval::condition::care::ProjectedCare {
         principals: vec![TEAM].into(),
+        direct: Vec::new().into(),
         provider_issuers: vec![PROVIDER.0.to_owned()].into(),
         provider_ids: vec![PROVIDER.1.to_owned()].into(),
         day,
@@ -400,20 +407,43 @@ fn projected(day: jiff::civil::Date, grace: &str) -> Care {
     })
 }
 
+/// The tie by which a caller of [`TEAM`] holds a subject the projection
+/// writes under it: the team path, the role `PART`.
+fn team_tie() -> Tie {
+    Tie {
+        path: CarePath::Team,
+        role: ForeignCode {
+            terminology: "HL7_ParticipationType".to_owned(),
+            code: "PART".to_owned(),
+        },
+        grant: None,
+    }
+}
+
 /// The care `ask` holds, in `form`.
 fn care_of(world: &World, ask: &Ask, form: CareForm) -> Care {
     match form {
         CareForm::Projected => projected(jiff::Zoned::now().date(), "P0D"),
-        CareForm::Census => Care::Census(ask.cared.clone().into()),
+        CareForm::Census => Care::Census(
+            ask.cared
+                .iter()
+                .map(|subject| CaredSubject {
+                    subject: subject.clone(),
+                    ties: vec![team_tie()].into(),
+                })
+                .collect(),
+        ),
         CareForm::Ehrs => Care::Ehrs(
             world
                 .ehrs
                 .iter()
                 .enumerate()
                 .filter(|(index, _)| ask.cared.contains(&world.subject(*index)))
-                .map(|(_, (ehr_id, _, _))| ehr_id.0)
-                .collect::<Vec<_>>()
-                .into(),
+                .map(|(_, (ehr_id, _, _))| CaredEhr {
+                    ehr: ehr_id.0,
+                    ties: vec![team_tie()].into(),
+                })
+                .collect(),
         ),
     }
 }
@@ -767,7 +797,7 @@ async fn the_projection_reads_the_dates_of_care_as_the_evaluator() {
     let mut ask = Ask::professional(&world);
     ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
     let access = request_of(&ask);
-    let today = access.today();
+    let today = access.today().expect("the day in UTC");
     let day = |days: i64| {
         today
             .checked_add(jiff::Span::new().days(days))

@@ -294,7 +294,7 @@ pub(crate) fn its_openapi_router() -> OpenApiRouter<AppState> {
 /// or IHE interface, as one native `utoipa-axum` router (paths relative to the
 /// extensions root): the ADMIN extensions, the `EHR_ACCESS` reads, the archetype
 /// and artefact library with its ADL 1.4 to ADL 2 conversion,
-/// `PARTY_RELATIONSHIP`, the EHR Extract messages, the cohort query,
+/// `PARTY_RELATIONSHIP` and the care relationship resources, the EHR Extract messages, the cohort query,
 /// terminology and the outbox feed. They are mounted under
 /// `{rest_root}/extensions/v1`, beside the openEHR base path, on their own
 /// version line.
@@ -313,6 +313,8 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(demographic::relationship::relationship_routes())
         .merge(demographic::reverse::reverse_relationship_routes())
         .merge(demographic::versioned_relationship::versioned_relationship_routes())
+        .merge(demographic::care_relationship::care_relationship_routes())
+        .merge(demographic::care_relationship_versioned::versioned_care_relationship_routes())
         .merge(definition::archetype::archetype_routes())
         .merge(definition::conversion::conversion_routes())
         .merge(query::openapi_routes::cohort_routes())

@@ -1201,7 +1201,8 @@ fn single_field_type(
     }
     let inner = crate::plan::ordered_hashes::retype(model, class, &p.name, inner);
     if overridden.is_none()
-        && crate::plan::layout::boxes_field(model, class, p.is_mandatory, &inner, generics)
+        && (crate::plan::layout::boxes_field(model, class, p.is_mandatory, &inner, generics)
+            || crate::plan::drafts::boxes_draft_field(&class.name, &p.name))
     {
         format!("Box<{inner}>")
     } else {

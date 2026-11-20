@@ -297,8 +297,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   promoted from `EHR_STATUS.subject.external_ref` on every EHR create and
   `EHR_STATUS` update. A cohort, the AQL demographic join and the EHR index
   resolve a party or a subject through them; `service::linkage` holds those
-  crossings and the access record each one owes. The linkage schema that held a
-  cross-reference before is gone (`audit/0021_drop_linkage_domain.sql`).
+  crossings and the access record each one owes. The v6.0.0 baseline creates no
+  linkage schema and no `ferroehr_linkage` role.
 - **The access log** is the `audit` schema. An access to EHR data is stored
   as its `ACCESS_LOG_ENTRY` alone; `audit_event` keeps the records of
   accesses outside the access log (an authentication, a template or party
@@ -323,7 +323,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   most `VERIFY_STEP_RECORDS` records, one statement each, and every intact
   window moves the cursor, so no statement grows with the backlog and a
   backlog reads as a lag, never as unverifiable (#5779, our own design,
-  `audit/0041_chain_verification_steps.sql`). An access detail the core states as the record holds it
+  `audit/0004_baseline_access_log.sql`). An access detail the core states as the record holds it
   (the principal and issuer the credential names, the count the outcome
   delivered, the action and outcome the core codes) is not written
   (`access_log::recorded::Core`). A tombstone keeps no shared part, and a
@@ -335,15 +335,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   the system chain, keeps its head (`audit_chain_state`), its retention gaps
   and `audit.verify_audit_chain()`. Writers of a chain serialise on its head
   row, which holds across replicas, and the scheduled chain check verifies
-  both. The split ran once in `audit/0031_access_log_own_chain.sql`: the
-  positions the access log held in the shared chain became recorded gaps of
-  the system chain, and the access log was renumbered and linked again from
-  its own genesis, its link signatures and checkpoints of the shared chain
-  removed. A record of the ITI-81 search, the person's trail and the FHIR
+  both. Each chain links from its own genesis
+  (`audit/0002_baseline_audit_chain.sql`, `audit/0004_baseline_access_log.sql`). A record of the ITI-81 search, the person's trail and the FHIR
   Feed's outbox is named by its chain and position (`audit_record.chain`,
   `fhir_feed_outbox`). An entry changes only by its replacement with
   its own tombstone, which keeps its uid, time and link, so the chain verifies
-  after its content is gone (`audit/0027_access_log_record.sql`,
+  after its content is gone (`audit/0004_baseline_access_log.sql`,
   `access_log::store`). Each entry states its retention when it is written
   (`access_log::retention`: `retain_until` from the period of the access
   policy's `log_retention`, the grounds it declares beside EHDS Art. 9(2)
@@ -354,7 +351,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   was kept. After that the same worker folds each run of consecutive
   tombstones past their end into one `access_log_chain_gap` row through
   `audit.fold_access_log_tombstones()`, the one path a record leaves the log
-  by (`audit/0033_access_log_chain_gap.sql`, `access_log::gap`): the
+  by (`audit/0004_baseline_access_log.sql`, `access_log::gap`): the
   positions the run held, the link of its last record and the grounds of its
   tombstones. The gap row is the record of the fold and
   is append-only; replicas serialise the fold on a transaction-scoped
@@ -398,7 +395,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   links, so the signature runs beside the insert of the records, and the
   head is held for one signature at most. No link carries a signature; a checkpoint
   insert must name the link the log holds at its position
-  (`audit/0037_access_log_batch_checkpoint.sql`, our own design, #5704).
+  (`audit/0004_baseline_access_log.sql`, our own design, #5704).
   Without a key nothing is sealed, and no key of `[audit.access_log]`
   switches it (#5562). `access_log::publish` writes the newest checkpoint
   every 30 seconds as its own write-once file under `[audit.access_log]
@@ -413,14 +410,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (an export), and `access_log::transfer` exports one EHR's records with the
   span and checkpoint and imports another system's into
   `access_log_imported_*`, outside this system's chain
-  (`audit/0028_access_log_checkpoint.sql`). An imported entry ends at the
+  (`audit/0005_baseline_access_log_imported.sql`). An imported entry ends at the
   `retain_until` it states and its tombstone is kept as long again; the
   hourly run then folds, per exporting system and within each span between
   two imported checkpoints, only the positions before the first imported
   record still kept (tombstones past their end and the other EHRs' links)
   into `access_log_imported_gap` through `audit.fold_access_log_imported()`,
   so every kept imported record stays hash-chained to its checkpoint with or
-  without link signatures (`audit/0034_access_log_imported_retention.sql`,
+  without link signatures (`audit/0005_baseline_access_log_imported.sql`,
   `access_log::imported`, our own design, #5664). `Checkpoints::verify`
   verifies each imported checkpoint's stored span through `chain::verify`.
   Every access to EHR data writes one entry per EHR it
@@ -433,13 +430,13 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   intake in one short transaction of the audit pool: each entry is written
   once, into `access_log_entry`, with one `access_log_intake` row naming the
   entries of the statement until the chainer links them, and the other
-  records into `audit_event_intake` (`audit/0042_audit_intake.sql`,
-  `audit/0048_access_log_entry_written_once.sql`, #5968). The intake statement finds each entry's
+  records into `audit_event_intake` (`audit/0006_baseline_intake.sql`,
+  `audit/0004_baseline_access_log.sql`, #5968). The intake statement finds each entry's
   search tokens by the digests the server computes
   (`system_log::token_digest`, the bytes of `audit.search_token_digest`)
   and groups them by entry in one pass, so its cost grows with the batch's
   tokens and not with its entries times its tokens
-  (`audit/0044_intake_grouped_tokens.sql`, #5889). A write that fails refuses the request
+  (`audit/0006_baseline_intake.sql`, #5889). A write that fails refuses the request
   with `503`, so back-pressure replaces loss; there is no queue in memory and
   no fail mode. The intake is append-only: the runtime role may insert and
   read, the tables refuse every update, delete and truncate, and only the
@@ -464,12 +461,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   rows carry no foreign keys, since the chain move is their one writer and the
   verifier derives each record from its shared part again, and the link check
   moves the head cursor by an assignment
-  (`audit/0043_access_log_nested_statements.sql`). The intake rows carry no
+  (`audit/0006_baseline_intake.sql`). The intake rows carry no
   foreign keys either (#5887): the intake statement refuses a render policy or
   shared part the store does not hold in the statement that writes the rows,
   and locks each distinct stored part its batch names once, so the
   retention sweep's collection of shared parts skips a part a write in
-  flight names (`audit/0045_intake_without_foreign_keys.sql`). A shared part
+  flight names (`audit/0006_baseline_intake.sql`). A shared part
   keeps the latest `retain_until` of its entries, never earlier than the day
   the intake last named it, and the sweep removes the parts past it that no
   entry names, in batches read through the entries' `retain_until` index
@@ -887,7 +884,9 @@ which is what makes an optional stage safe to disable:
    role passes the role gate and is confined to those records: it is the
    subject kind, and every other EHR refuses it `refused-not-subject`. A
    `persons` login whose one `PERSON` carries neither the professional nor
-   the representative marker is that patient: the shared binding answers it
+   the representative marker is that patient, through a first-party client or
+   a SMART app the CDR grants `act_for_persons` (an openEHR launch, #6146):
+   the shared binding answers it
    `wrong_marker`, and FerroEHR admits it as the person themself, with no
    role, `PARTY_SELF` as its committer and the binding `self` on its access
    record, confined in the same way. An
@@ -1033,7 +1032,7 @@ which is what makes an optional stage safe to disable:
    EHRs it names (an `ehr_id` scope, or `ehr_id/value` held equal in the
    `EHR` source's predicate or the `WHERE` clause) has each EHR's care
    decided from the evaluator's copies and binds only the cared EHR ids. Any
-   other query reads the clinical care projection (`clinical/0047_access_care.sql`):
+   other query reads the clinical care projection (`clinical/0009_baseline_access.sql`):
    the care relationships of the party domain, one row per subject reference
    and relationship, written by each replica's care projector
    (`service::ehr::care_projection`), which reads the party domain on the
@@ -1059,7 +1058,7 @@ which is what makes an optional stage safe to disable:
    which PostgreSQL runs once, that the revision of the EHR's settings row
    and subject in force is the one the verdict was judged on, so a copy older
    than the store answers no row: the check fails the statement (SQLSTATE
-   `ZA001`, `clinical/0049_access_stale_copy.sql`), and so does a row of an
+   `ZA001`, `clinical/0009_baseline_access.sql`), and so does a row of an
    EHR whose settings class the condition does not hold (`ZA002`). The
    service then drops the stale copy, judges the query again from a fresh
    read and runs it once more; when the copy has not caught up within 100 ms
@@ -1073,7 +1072,7 @@ which is what makes an optional stage safe to disable:
    admitted object is one its EHR reaches, the head condition of the linked
    root decides the source's EHR too, so neither repeats the probe. The head
    row carries the root archetype of the trunk head (`vo_head.root_archetype`,
-   written by every commit and import, `clinical/0048_head_root_archetype.sql`),
+   written by every commit and import, `clinical/0003_baseline_change_control.sql`),
    which an archetype or category scope compares instead of probing the root
    node row. A condition whose every known class, closed verdict and default
    admit every item, an administrator's, reduces exactly to "the EHR carries
@@ -1318,7 +1317,7 @@ own directives or per-object sensitivity; the model has them. What stays in
   to one EHR checks the revision once in its statement, `access_in_force`
   raising SQLSTATE `ZA001`, and a query reaching an EHR of a settings class
   its condition does not hold fails through `access_class_unknown`, `ZA002`
-  (`clinical/0049_access_stale_copy.sql`). The service then judges again
+  (`clinical/0009_baseline_access.sql`). The service then judges again
   from a fresh read, and answers `503` `access-refreshing` when the copy has
   not caught up within 100 ms (#5794). The care projection a population
   query reads is used only while the party facts revision it reflects
@@ -1479,7 +1478,7 @@ or turned into an ordinary one by anyone else. Reads are an administrator's too:
 party or relationship any of whose versions is a policy party are `403` to
 any other caller, and demographic AQL by such a caller leaves out every
 version of it (#5450, #5485). Both read one mark: `vo_head.policy_party_at`
-(party migration `0034_policy_party_mark.sql`), which the commit of a policy
+(`party/0002_baseline_change_control.sql`), which the commit of a policy
 version sets in its own transaction (`protect::check`, from the body the
 commit holds), which nothing clears, and which an import, an archive load
 and `party-binding refill` set from the stored bodies

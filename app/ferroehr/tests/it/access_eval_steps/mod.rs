@@ -10,6 +10,7 @@
               (.claude/rules/testing.md §Test-fixture construction)"
 )]
 
+mod care_roles;
 mod examples;
 mod grounds;
 mod steps;
@@ -20,12 +21,14 @@ mod steps_rules;
 use std::sync::Arc;
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
+use openehr_rm::draft::access_control::terminology::care::CarePath;
 use openehr_rm::draft::access_control::terminology::{
     AccessDefault, CallerKind, ForeignCode, OperationClass, Refusal,
 };
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+use ferroehr::access_eval::care_tie::{Cared, Tie};
 use ferroehr::access_eval::class::{Class, classify, resolve_verdict};
 use ferroehr::access_eval::condition::CallerKeys;
 use ferroehr::access_eval::procedure::{
@@ -333,6 +336,9 @@ pub(super) struct Case {
     pub(super) server_default: Option<AccessDefault>,
     pub(super) policy: Option<AccessPolicy>,
     pub(super) cared: bool,
+    /// The ties by which the caller holds the subject, in place of
+    /// [`Self::cared`]'s one team tie.
+    pub(super) ties: Option<Vec<Tie>>,
     pub(super) now: Option<jiff::Timestamp>,
     /// The EHR is not the subject caller's own.
     pub(super) foreign: bool,
@@ -344,6 +350,20 @@ impl Case {
         Self {
             settings: Some(settings),
             ..Self::default()
+        }
+    }
+
+    /// The caller's care for the subject: [`Self::ties`], or for
+    /// [`Self::cared`] one team tie in the role `PART`.
+    fn care(&self) -> Cared {
+        match &self.ties {
+            Some(ties) => Cared::of(ties.clone()),
+            None if self.cared => Cared::of(vec![Tie {
+                path: CarePath::Team,
+                role: code("HL7_ParticipationType", "PART"),
+                grant: None,
+            }]),
+            None => Cared::No,
         }
     }
 
@@ -361,6 +381,7 @@ impl Case {
                 .and_then(|p| p.classifications.as_deref())
                 .unwrap_or_default();
             let scopes = Scopes::of_class(categories(), Arc::clone(&class.layout), classifications);
+            let care = self.care();
             let symbolic = decide(&Judged {
                 caller,
                 asked,
@@ -369,7 +390,7 @@ impl Case {
                 ehr: Ehr {
                     settings: (*class.settings).as_ref(),
                     server_default: self.server_default.unwrap_or(AccessDefault::Open),
-                    cared: self.cared,
+                    care: &care,
                     own: !self.foreign,
                     subject: false,
                 },
@@ -423,6 +444,7 @@ impl Case {
             .and_then(|p| p.classifications.as_deref())
             .unwrap_or_default();
         let scopes = Scopes::new(categories(), labels, classifications);
+        let care = self.care();
         decide(&Judged {
             caller,
             asked,
@@ -431,7 +453,7 @@ impl Case {
             ehr: Ehr {
                 settings: self.settings.as_ref(),
                 server_default: self.server_default.unwrap_or(AccessDefault::Open),
-                cared: self.cared,
+                care: &care,
                 own: !self.foreign,
                 subject: false,
             },

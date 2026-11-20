@@ -602,7 +602,7 @@ async fn element_without_value_or_null_flavour_is_rejected_at_commit() {
 /// direct-route commit against an **ADL2-registered** operational template is
 /// accepted and stamps `version.template_id` — the FK target is the
 /// `template_ref` registry (the union of BOTH template dialects' wire
-/// addresses, `clinical/0006_definitions.sql`), so the stamp is not refused as
+/// addresses, `clinical/0002_baseline_definitions.sql`), so the stamp is not refused as
 /// a foreign
 /// key violation the way a `template_store`-only FK would (the CNF
 /// `SF-FLAT-adl2_commit` regression). The in-use delete guard then refuses the

@@ -5,7 +5,7 @@
 //! carries no professional and no representative marker.
 //!
 //! The shared binding answers such a login `wrong_marker`, since a `Person`
-//! caller needs a professional party there. An identity bound to a
+//! or a `Delegated` caller needs a professional party there. An identity bound to a
 //! patient's `PERSON` is that patient (EHDS Art. 3), so FerroEHR admits it
 //! as the person themself: it holds no role, and the access evaluator
 //! confines it to the EHRs whose `EHR_STATUS.subject` names that `PERSON`.
@@ -14,7 +14,7 @@
 //! as a person's ([`as_person`]): the binding stays the one source of own
 //! access, and the token's reading is only checked against it.
 //! No openEHR spec governs resolving a login to a party: our own design
-//! (#6106, #6080).
+//! (#6106, #6080, #6146).
 
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::{Marker, Outcome, PartyRef};
@@ -23,22 +23,27 @@ use ferrohealth_smart::resource::Caller;
 use super::super::AuthError;
 
 /// Whether `outcome`, the binding of a caller of `kind`, binds the person
-/// themself: a plain `persons` login, neither a guest nor a delegate, or a
-/// token read as the patient's own, whose one live `PERSON` carries neither
-/// marker.
+/// themself: a plain `persons` login, through a first-party client or a
+/// SMART app the CDR grants `act_for_persons`, never a guest nor an RFC 8693
+/// actor's, or a token read as the patient's own, whose one live `PERSON`
+/// carries neither marker.
 pub(in crate::extensions::access::authn) fn binds_the_person(
     kind: &CallerKind,
     outcome: &Outcome,
 ) -> bool {
-    matches!(kind, CallerKind::Person | CallerKind::Patient)
-        && matches!(
-            outcome,
-            Outcome::WrongMarker {
-                party,
-                markers,
-                needed: Marker::Professional,
-            } if party.type_name() == "PERSON" && !markers.professional && !markers.representative
-        )
+    // NOTE: our own design (#6146), an openEHR launch reaches the CDR through a delegated
+    // SMART app, and its login is the person's as a first-party login is (EHDS Art. 3).
+    matches!(
+        kind,
+        CallerKind::Person | CallerKind::Patient | CallerKind::Delegated { actor: None }
+    ) && matches!(
+        outcome,
+        Outcome::WrongMarker {
+            party,
+            markers,
+            needed: Marker::Professional,
+        } if party.type_name() == "PERSON" && !markers.professional && !markers.representative
+    )
 }
 
 /// The `PERSON` the login binding bound `caller` to as the person themself
@@ -188,6 +193,27 @@ mod tests {
         assert!(!binds_the_person(&CallerKind::Person, &agent));
         let needs_rep = wrong("PERSON", Markers::default(), Marker::Representative);
         assert!(!binds_the_person(&CallerKind::Person, &needs_rep));
+    }
+
+    #[test]
+    fn a_login_through_a_delegated_app_binds_the_person_and_an_actor_does_not() {
+        let plain = wrong("PERSON", Markers::default(), Marker::Professional);
+        assert!(binds_the_person(
+            &CallerKind::Delegated { actor: None },
+            &plain
+        ));
+        let professional = wrong(
+            "PERSON",
+            Markers {
+                professional: true,
+                representative: false,
+            },
+            Marker::Professional,
+        );
+        assert!(!binds_the_person(
+            &CallerKind::Delegated { actor: None },
+            &professional
+        ));
     }
 
     #[test]

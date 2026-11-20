@@ -99,7 +99,7 @@ impl Domain {
     ///
     /// The audit trail has none of its own: it is not a pseudonymisation
     /// domain, the clinical runtime role writes it, and the grants say so
-    /// (`migrations/audit/0006_grants.sql`).
+    /// (`migrations/audit/0008_baseline_grants.sql`).
     #[must_use]
     pub const fn roles(self) -> &'static [&'static str] {
         match self {
@@ -137,7 +137,7 @@ impl Domain {
     /// names, so that schema must exist while the set applies.
     ///
     /// The shipped grant files revoke the runtime roles from the other
-    /// domains' schemas by name (`migrations/party/0008_grants.sql` from
+    /// domains' schemas by name (`migrations/party/0010_baseline_grants.sql` from
     /// `clinical`), and a `REVOKE` on a schema that does not exist fails. A
     /// database that does not hold such a domain gets its schema only for the
     /// duration of the run, empty, and loses it again afterwards.

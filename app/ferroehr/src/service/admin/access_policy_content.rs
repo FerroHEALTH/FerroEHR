@@ -45,6 +45,10 @@ const OPENEHR: &str = "openehr";
 /// The `subject relationship` group of the openEHR terminology.
 const SUBJECT_RELATIONSHIP: &str = "subject_relationship";
 
+/// HL7 `v3-ActReason` by `HL7_` and its code system name: the code system
+/// of an unbound care purpose (draft access control Terminology, Value Sets).
+const ACT_REASON: &str = "HL7_ActReason";
+
 impl FerroEhrService {
     /// Refuse `policy`, read from `body`, when it breaks its template or
     /// names a code outside a value set it binds.
@@ -116,10 +120,9 @@ impl FerroEhrService {
             .enumerate()
         {
             let scopes = rule.applies_to.as_deref().unwrap_or_default();
-            wrong.extend(
-                self.organisation_types(facts, &format!("/rules/{at}/applies_to"), scopes)
-                    .await,
-            );
+            let path = format!("/rules/{at}/applies_to");
+            wrong.extend(self.organisation_types(facts, &path, scopes).await);
+            wrong.extend(self.care_roles(facts, &path, scopes).await);
             for (index, exception) in rule
                 .exceptions
                 .as_deref()
@@ -130,9 +133,11 @@ impl FerroEhrService {
                 let path = format!("/rules/{at}/exceptions/{index}/applies_to");
                 let scopes = exception.applies_to.as_deref().unwrap_or_default();
                 wrong.extend(self.organisation_types(facts, &path, scopes).await);
+                wrong.extend(self.care_roles(facts, &path, scopes).await);
             }
         }
         wrong.extend(self.relationship_codes(facts, policy).await);
+        wrong.extend(self.care_purposes(facts, policy).await);
         if wrong.is_empty() {
             Ok(())
         } else {
@@ -219,6 +224,56 @@ impl FerroEhrService {
                 ),
             )
         }))
+    }
+
+    /// The refusals of the care roles `scopes` name, at `path`: each outside
+    /// the value set the policy binds for `care_role`, or, unbound, of a
+    /// terminology other than `HL7_ParticipationType` (draft access control
+    /// Terminology, Value Sets; #6075).
+    async fn care_roles(
+        &self,
+        facts: CareFacts<'_>,
+        path: &str,
+        scopes: &[AccessActorScope],
+    ) -> Vec<InvariantViolation> {
+        let mut wrong = Vec::new();
+        for (index, scope) in scopes.iter().enumerate() {
+            for (at, role) in scope.care_roles.iter().flatten().enumerate() {
+                let path = format!("{path}/{index}/care_roles/{at}");
+                wrong.extend(self.care_role(facts, &path, role).await);
+            }
+        }
+        wrong
+    }
+
+    /// The refusals of `care_purposes`: each outside the value set the policy
+    /// binds for `care_purpose`, or, unbound, of a terminology other than
+    /// `HL7_ActReason` (draft access control Terminology, Value Sets).
+    async fn care_purposes(
+        &self,
+        facts: CareFacts<'_>,
+        policy: &AccessPolicy,
+    ) -> Vec<InvariantViolation> {
+        let mut wrong = Vec::new();
+        for (index, purpose) in policy.care_purposes.iter().flatten().enumerate() {
+            let path = format!("/care_purposes/{index}");
+            if let Some(url) = facts.value_set(ValueSetBinding::CarePurpose) {
+                wrong.extend(self.in_value_set(&path, url, purpose).await);
+                continue;
+            }
+            let phrase = &purpose.defining_code;
+            if phrase.terminology_id.value != ACT_REASON {
+                wrong.push(InvariantViolation::at(
+                    path,
+                    format!(
+                        "{}::{} is no code of {ACT_REASON}, which codes a care purpose the policy \
+                         binds no value set for",
+                        phrase.terminology_id.value, phrase.code_string
+                    ),
+                ));
+            }
+        }
+        wrong
     }
 
     /// The refusals of the organisation types `scopes` name, at `path`.

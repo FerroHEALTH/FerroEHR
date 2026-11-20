@@ -715,7 +715,7 @@ pub struct PromotedColumns<'a> {
     /// `EHR_STATUS.is_modifiable`.
     pub is_modifiable: bool,
     /// The SHA-256 digest of the subject reference the care projection is
-    /// matched by (`clinical/0047_access_care.sql`); `None` without a subject.
+    /// matched by (`clinical/0009_baseline_access.sql`); `None` without a subject.
     pub subject_digest: Option<&'a [u8]>,
 }
 

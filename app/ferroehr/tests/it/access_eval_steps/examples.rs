@@ -106,7 +106,7 @@ fn the_ward_with_its_grace_period() {
                 grants: None,
             },
         );
-        access.judge(None, None, access.cared(&mr_e))
+        access.judge(None, None, &access.cared(&mr_e))
     };
     let dr_d = || with_facts(professional(NURSE), &[], &[CARDIOLOGY]);
     let dr_f = with_facts(professional(DR_B), &[], &[NEPHROLOGY]);
@@ -157,7 +157,7 @@ fn a_care_relationship_admits_its_carer_only_under_its_provider() {
             },
         );
         let relations = [care_of(carer, "2026-11-03", None)];
-        access.judge(None, None, access.cared(&relations))
+        access.judge(None, None, &access.cared(&relations))
     };
     let mut direct = professional(NURSE);
     direct.facts = CallerFacts::default()

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
+use super::hl7::canonical_url;
 use super::*;
 
 #[test]
@@ -155,4 +156,22 @@ fn the_care_element_and_basis_groups_read_their_codes() {
         Ok(CareBasis::SelfDeclared)
     );
     assert!(CareBasis::read(TERMINOLOGY_ID_ACCESS, "care_role").is_err());
+}
+
+#[test]
+fn an_hl7_terminology_identifier_maps_to_its_canonical_url_and_no_other_does() {
+    assert_eq!(
+        canonical_url(TERMINOLOGY_ID_PARTICIPATION_TYPE),
+        Some("http://terminology.hl7.org/CodeSystem/v3-ParticipationType")
+    );
+    assert_eq!(
+        canonical_url(TERMINOLOGY_ID_CONSENT_PROVISION_TYPE),
+        Some("http://hl7.org/fhir/consent-provision-type")
+    );
+    assert_eq!(canonical_url(TERMINOLOGY_ID_ACCESS), None);
+    assert_eq!(canonical_url("urn:example:roles"), None);
+    assert_eq!(
+        CarePath::read(TERMINOLOGY_ID_ACCESS, "self_declared"),
+        Ok(CarePath::SelfDeclared)
+    );
 }

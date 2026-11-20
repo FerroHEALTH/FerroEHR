@@ -37,6 +37,7 @@ macro_rules! fact_columns {
     () => {
         "f.holder_id, f.kind, f.terminology_id, f.code_string, f.target_id, f.target_kind, \
          f.provider_issuer, f.provider_id, f.self_declared, f.writer_id, f.lifecycle_state, \
+         f.holder_version, f.covers_issuer, f.covers_id, \
          isempty(f.role_validity) AS role_empty, \
          lower(f.role_validity) AS role_lower, upper(f.role_validity) AS role_upper, \
          isempty(f.validity) AS empty, lower(f.validity) AS lower, upper(f.validity) AS upper, \
@@ -102,6 +103,23 @@ pub const CARE_OF_TEAM: &str = concat!(
      ORDER BY f.party_id, f.holder_id, f.ordinal"
 );
 
+/// The care relationships whose target is one of `$1`, by subject. Answered
+/// from `ix_binding_caller_fact_care_team`.
+const CARE_OF_CARERS: &str = concat!(
+    "SELECT f.party_id AS stamped, ",
+    fact_columns!(),
+    " FROM binding_caller_fact f WHERE f.target_id = ANY($1) AND f.kind = 'under_care_of' \
+     ORDER BY f.party_id, f.holder_id, f.ordinal"
+);
+
+/// The care relationship the `PARTY_RELATIONSHIP` head `$1` holds. Answered
+/// from `uq_binding_caller_fact`.
+const CARE_OF_HOLDER: &str = concat!(
+    "SELECT f.party_id AS stamped, ",
+    fact_columns!(),
+    " FROM binding_caller_fact f WHERE f.holder_id = $1 AND f.kind = 'under_care_of'"
+);
+
 /// The record subjects the parties stamped after the facts revision `$1`
 /// declare now, whose cached resolution a replica drops; answered from
 /// `ix_binding_caller_fact_party_revision` and the primary key of
@@ -114,7 +132,8 @@ const DECLARED: &str = "SELECT r.namespace, r.subject_id FROM binding_caller_fac
 /// before and after.
 const FACT_TEXT: &str = "ROW(kind, ordinal, party_id, terminology_id, code_string, target_id, \
      target_kind, provider_issuer, provider_id, self_declared, writer_id, lifecycle_state, \
-     role_validity, validity, not_before, not_after)::text";
+     role_validity, validity, not_before, not_after, holder_version, covers_issuer, \
+     covers_id)::text";
 
 /// The party that wrote the trunk head of the holder `$1`: the container its
 /// commit audit's committer names in `external_ref`, the bound `PERSON` of a
@@ -130,6 +149,14 @@ pub(crate) const WRITER: &str = "(SELECT CASE WHEN w.ref ~ \
                 AND v.sys_version = h.trunk_head_sys_version \
            JOIN commit_audit a ON a.id = v.commit_audit_id WHERE h.vo_id = $1) w)";
 
+/// The `OBJECT_VERSION_ID` of the trunk head of the holder `$1`, the version
+/// its facts are derived from, which the access log names for a care
+/// relationship (draft access control decision procedure, Refusals).
+const HOLDER_VERSION: &str = "(SELECT ext.version_uid(v.vo_id, v.creating_system_id, \
+     v.trunk_version, v.branch_number, v.branch_version) \
+     FROM vo_head h JOIN version v ON v.tier = h.tier AND v.vo_id = h.vo_id \
+          AND v.sys_version = h.trunk_head_sys_version WHERE h.vo_id = $1)";
+
 /// One stored fact about a party.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct FactRow {
@@ -144,6 +171,9 @@ pub(crate) struct FactRow {
     /// The party that wrote the holder's head ([`WRITER`]); `None` when its
     /// committer names none.
     pub(crate) writer: Option<Uuid>,
+    /// The `OBJECT_VERSION_ID` of the holder's head the fact was derived
+    /// from ([`HOLDER_VERSION`]).
+    pub(crate) version: Option<String>,
 }
 
 impl crate::memory::Weigh for FactRow {
@@ -160,9 +190,17 @@ impl crate::memory::Weigh for FactRow {
                 .capacity()
                 .saturating_add(care.role.code.capacity())
                 .saturating_add(care.provider.issuer.capacity())
-                .saturating_add(care.provider.id.capacity()),
+                .saturating_add(care.provider.id.capacity())
+                .saturating_add(care.covers_for.as_ref().map_or(0, |covers| {
+                    covers
+                        .issuer
+                        .capacity()
+                        .saturating_add(covers.id.capacity())
+                })),
         };
-        value.saturating_add(self.term.lifecycle_state.capacity())
+        value
+            .saturating_add(self.term.lifecycle_state.capacity())
+            .saturating_add(self.version.as_ref().map_or(0, String::capacity))
     }
 }
 
@@ -294,6 +332,21 @@ fn care_of(fact: &CallerFact) -> Option<&CareFact> {
     }
 }
 
+/// The issuer and the id of the `covers_for` each of `facts` names, `None`
+/// for a fact that names none.
+fn covers_of(facts: &[CallerFact]) -> (Vec<Option<&str>>, Vec<Option<&str>>) {
+    facts
+        .iter()
+        .map(|f| {
+            let covers = care_of(f).and_then(|care| care.covers_for.as_ref());
+            (
+                covers.map(|covers| covers.issuer.as_str()),
+                covers.map(|covers| covers.id.as_str()),
+            )
+        })
+        .unzip()
+}
+
 /// Inserts `facts` of `head` about `party`; the inserted rows as their party
 /// and text.
 async fn insert(
@@ -341,6 +394,7 @@ async fn insert(
         .iter()
         .map(|f| care_of(f).is_some_and(|care| care.self_declared))
         .collect();
+    let (covers_issuer, covers_id) = covers_of(facts);
     let validity: Vec<Option<&Value>> = facts.iter().map(|f| f.validity.as_ref()).collect();
     let unreadable: Vec<bool> = facts
         .iter()
@@ -352,7 +406,8 @@ async fn insert(
         "INSERT INTO binding_caller_fact \
              (holder_id, ordinal, kind, party_id, terminology_id, code_string, target_id, \
               target_kind, provider_issuer, provider_id, self_declared, writer_id, \
-              lifecycle_state, role_validity, validity, not_before, not_after) \
+              lifecycle_state, role_validity, validity, not_before, not_after, \
+              holder_version, covers_issuer, covers_id) \
          SELECT $1, t.ordinal, t.kind, $2, t.terminology_id, t.code_string, t.target_id, \
                 t.target_kind, t.provider_issuer, t.provider_id, t.self_declared, writer.id, $3, \
                 party.binding_validity($4::jsonb), \
@@ -361,15 +416,16 @@ async fn insert(
                           AND NOT isempty(party.binding_validity(t.validity)) \
                      THEN daterange(lower(party.binding_validity(t.validity)), c.effective_until) \
                      ELSE party.binding_validity(t.validity) END, \
-                t.not_before, t.not_after \
+                t.not_before, t.not_after, holder.version, t.covers_issuer, t.covers_id \
          FROM unnest($5::integer[], $6::text[], $7::text[], $8::text[], $9::uuid[], \
                      $10::text[], $11::text[], $12::text[], \
                      $13::jsonb[], $14::boolean[], $15::timestamptz[], $16::timestamptz[], \
-                     $17::boolean[]) \
+                     $17::boolean[], $18::text[], $19::text[]) \
               AS t(ordinal, kind, terminology_id, code_string, target_id, target_kind, \
                    provider_issuer, provider_id, validity, unreadable, not_before, not_after, \
-                   self_declared) \
+                   self_declared, covers_issuer, covers_id) \
          CROSS JOIN (SELECT {WRITER} AS id) writer \
+         CROSS JOIN (SELECT {HOLDER_VERSION} AS version) holder \
          LEFT JOIN binding_care_validity c ON c.vo_id = $1 \
          ON CONFLICT DO NOTHING \
          RETURNING party_id, {FACT_TEXT} AS fact"
@@ -392,6 +448,8 @@ async fn insert(
         .bind(&not_before)
         .bind(&not_after)
         .bind(&self_declared)
+        .bind(&covers_issuer)
+        .bind(&covers_id)
         .fetch_all(&mut *tx)
         .await?)
 }
@@ -577,6 +635,41 @@ pub(crate) async fn care_of_team(
     by_party(rows)
 }
 
+/// The care relationships whose target is one of `carers`, by subject, read
+/// on `conn`: the reverse reading of the relationship resources.
+///
+/// # Errors
+/// As [`load`].
+pub(crate) async fn care_of_carers(
+    conn: &mut PgConnection,
+    carers: &[Uuid],
+) -> Result<Vec<(Uuid, Vec<FactRow>)>, StorageError> {
+    let rows = sqlx::query(CARE_OF_CARERS)
+        .bind(carers)
+        .fetch_all(&mut *conn)
+        .await?;
+    by_party(rows)
+}
+
+/// The care relationship the head of the `PARTY_RELATIONSHIP` `holder`
+/// holds, with its subject, read on `conn`; `None` when its head holds none:
+/// it is deleted, or no care relationship.
+///
+/// # Errors
+/// As [`load`].
+pub(crate) async fn care_of_holder(
+    conn: &mut PgConnection,
+    holder: Uuid,
+) -> Result<Option<(Uuid, FactRow)>, StorageError> {
+    let rows = sqlx::query(CARE_OF_HOLDER)
+        .bind(holder)
+        .fetch_all(&mut *conn)
+        .await?;
+    Ok(by_party(rows)?
+        .into_iter()
+        .find_map(|(subject, facts)| facts.into_iter().next().map(|fact| (subject, fact))))
+}
+
 /// `rows`, ordered by their `stamped` party, grouped by it; a party whose
 /// row carries no fact holds none.
 fn by_party(rows: Vec<sqlx::postgres::PgRow>) -> Result<Vec<(Uuid, Vec<FactRow>)>, StorageError> {
@@ -612,6 +705,13 @@ fn fact_row(holder: Uuid, row: &sqlx::postgres::PgRow) -> Result<FactRow, Storag
     let provider_issuer: Option<String> = row.try_get("provider_issuer")?;
     let provider_id: Option<String> = row.try_get("provider_id")?;
     let self_declared: bool = row.try_get("self_declared")?;
+    let covers_for = match (
+        row.try_get::<Option<String>, _>("covers_issuer")?,
+        row.try_get::<Option<String>, _>("covers_id")?,
+    ) {
+        (Some(issuer), Some(id)) => Some(ProviderKey::new(issuer, id)),
+        _ => None,
+    };
     let care = (
         target_kind.as_deref().and_then(CarerKind::of),
         provider_issuer,
@@ -631,6 +731,7 @@ fn fact_row(holder: Uuid, row: &sqlx::postgres::PgRow) -> Result<FactRow, Storag
             role: ForeignCode { terminology, code },
             provider: ProviderKey::new(issuer, id),
             self_declared,
+            covers_for,
         }),
         (
             FactKind::Role | FactKind::OrganisationType,
@@ -651,6 +752,7 @@ fn fact_row(holder: Uuid, row: &sqlx::postgres::PgRow) -> Result<FactRow, Storag
         value,
         term: Term::of(row)?,
         writer: row.try_get("writer_id")?,
+        version: row.try_get("holder_version")?,
     })
 }
 
