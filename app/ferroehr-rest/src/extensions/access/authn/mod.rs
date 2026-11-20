@@ -399,6 +399,8 @@ pub struct Authenticator {
     /// `[authz.party_binding] namespace`, under which a patient-portal
     /// representative's `PERSON` is named.
     namespace: String,
+    /// The provider the deployment acts for, which a bound caller acts for.
+    deployment: party::Deployment,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -583,7 +585,7 @@ pub(crate) async fn middleware(
     let mut req = Request::from_parts(parts, body);
     match outcome {
         Ok(Authenticated { principal, fresh }) => {
-            let granted = match grants::resolve(live, &principal, auth.party.as_deref()).await {
+            let granted = match grants::resolve(live, &principal, Some(&auth.deployment)).await {
                 Ok(granted) => granted,
                 Err(e) => return refusal::response(auth, req.headers(), &e),
             };

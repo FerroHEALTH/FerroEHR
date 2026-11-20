@@ -358,7 +358,7 @@ membership archetype is named in the interface form each membership's
 `archetype_node_id` carries. The patient template is a person template too,
 never the default: a patient portal's SCIM client provisions its
 representatives in it ([Users](#users)). A representation needs no section: FerroEHR
-recognises it by the code it carries, in any archetype (see
+recognises it by its coded name, in any archetype (see
 [Representatives in the patient portal](../operational-policy.md#representatives-in-the-patient-portal)). The default
 key is of the type `login`, so an `[[auth.party]]` table whose
 `identifier_type` is `login` needs no mapping key.
@@ -405,11 +405,13 @@ the mapping names is refused with `409`.
 
 The parties the binding relies on are protected: a `PERSON` of a mapped
 template carrying a selector identifier, its professional `ROLE`, a
-representation relationship (one carrying `openehr_access::represents`),
-and a `GROUP` of the group template. Only an
+representation (a `PARTY_RELATIONSHIP` of its own named
+`openehr_access::represents`), and a `GROUP` of the group template. Only an
 administrator (`authz.rbac.admin_role`) writes one through the demographic
 API, including the creation of a party that carries a selector identifier;
-the patient a representation of its own targets writes that one too.
+a `write_representation` holder writes a representation for the providers
+its grant names, and the patient a representation targets writes one on the
+basis `HL7_RoleCode::DELEGATEE`.
 The policy parties (a party holding a capability coded in
 `openehr_access`, an acts-for relationship or a `client_id` identifier)
 are recognised by what they hold and take no key of this mapping; they are an administrator's to write and to read,
@@ -475,7 +477,7 @@ the binding key of each `PERSON` of a mapped template that performs a
 professional `ROLE` (a `ROLE` of the mapped role template that its `roles`
 list, that names it as `performer`, whose state is `complete` or
 `incomplete` and whose `time_validity` holds today's date in UTC) or that
-is the source of a representation relationship, inline or of its own. A key of type `guid` or
+is the source of a representation. A key of type `guid` or
 `uuid` is compared in lower case. The table is written in each party
 commit's transaction and can be rebuilt from the party versions alone.
 
@@ -488,7 +490,9 @@ marker the caller's kind needs (`refused-wrong-marker`), when the groups a
 token asserts cannot be read (`refused-groups-unavailable`), when a guest
 comes from an issuer whose table does not set `guests` (`refused-guest`), and
 when a representative's token names a subject its party has no live
-representation relationship to (`refused-representation-unrecorded`). A party
+representation of, stored in the CDR for the provider the deployment acts
+for and not written by the representative itself
+(`refused-representation-unrecorded`). A party
 store or an identity provider that cannot answer is answered `503`, with
 `Retry-After` when the identity provider gave one.
 
@@ -508,8 +512,11 @@ claim value, and counts into the `binding_refusals` metric by `issuer` and
 A representative reaches only the EHR whose `EHR_STATUS.subject.external_ref`
 names the subject it represents: the issuer's `representation` claim carries
 the subject's party id, matched without regard to case, and the subject must
-be the target of one of the representative's live relationships, so a
-representative of an issuer no `[[auth.party]]` table binds is refused. The
+be the target of one of the representative's live representations, stored
+in the CDR for the provider `[authz.party_binding.provider]` names, so a
+representative of an issuer no `[[auth.party]]` table binds is refused, and
+so is one whose party source reports a representation the CDR does not
+store. The
 access evaluator holds every request that names an EHR to that EHR, whatever
 the token's scopes cover, and refuses any other with `403`
 `refused-not-represented`; a query must name it with `ehr_id`, and an
@@ -774,9 +781,10 @@ User is a `PERSON` of the `[authz.party_binding.patient]` template, which a
 `[[authz.party_binding.person.template]]` must name too, with no `ROLE`,
 and its binding key is the representative's portal login. SCIM provisions
 the identity only. The representation that lets the person act for a
-patient is written by the patient or an administrator (Regulation (EU)
-2025/327 Art. 4(2)), and a version from the client that adds, changes or
-drops one is refused `403`. Until a live representation exists, the login
+patient is a `PARTY_RELATIONSHIP` of its own, written by the patient, an
+administrator or a `write_representation` holder (Regulation (EU) 2025/327
+Art. 4(2)), and a User version that holds one in its relationships is
+refused `422`. Until a live representation exists, the login
 reaches nothing ([Representatives in the patient portal](../operational-policy.md#representatives-in-the-patient-portal)).
 This is FerroEHR's own design. The client serves these operations (RFC 7644 §3):
 

@@ -504,37 +504,36 @@ async fn content(world: &mut World) {
     );
 }
 
-/// `root` records Frank's representation of Eva on his `PERSON`.
+/// `root` records Frank's representation of Eva: a `PARTY_RELATIONSHIP` of
+/// its own of the default representation archetype, on the basis
+/// `HL7_RoleCode::RESPRSN` for the hospital (draft access control package,
+/// "A representation is").
 async fn represent(world: &World) {
     let frank = &world.people["frank"].person;
-    let (version, mut body) = read_party(&world.app, "person", frank).await;
+    let archetype = ferroehr::party_binding::shipped::REPRESENTATION;
+    let named = |code: &str| coded_in(ferroehr::party_binding::policy_mark::TERMINOLOGY, code);
     let representation = json!({
         "_type": "PARTY_RELATIONSHIP",
-        "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1",
+        "archetype_node_id": archetype,
         "archetype_details": { "_type": "ARCHETYPED",
-            "archetype_id": { "_type": "ARCHETYPE_ID",
-                "value": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1" },
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
             "rm_version": "1.1.0" },
-        "name": { "_type": "DV_CODED_TEXT", "value": "Partner",
-            "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
-                "code_string": "at12" } },
-        "details": { "_type": "ITEM_TREE", "archetype_node_id": "id3", "name": text("Details"),
-            "items": [{ "_type": "ELEMENT", "archetype_node_id": "id4",
-                "name": text("Representation code"), "value": term("represents") }] },
+        "name": named("represents"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "id2", "name": text("Details"),
+            "items": [
+                { "_type": "ELEMENT", "archetype_node_id": "id3", "name": named("basis"),
+                  "value": coded_in("HL7_RoleCode", "RESPRSN") },
+                { "_type": "ELEMENT", "archetype_node_id": "id5", "name": named("provider"),
+                  "value": { "_type": "DV_IDENTIFIER", "issuer": PROVIDERS,
+                             "id": "sint-example", "type": "ORGANISATION" } }] },
         "source": party_ref("PERSON", frank),
         "target": party_ref("PERSON", &world.eva)
     });
-    let mut relationships = body["relationships"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
-    relationships.push(representation);
-    body["relationships"] = Value::Array(relationships);
-    let answer = update_party(&world.app, ROOT, ("person", frank, &version), &body).await;
+    let uri = format!("{EXT}/demographic/party_relationship");
+    let answer = call(&world.app, ROOT, "POST", &uri, None, Some(&representation)).await;
     assert_eq!(
         answer.status,
-        StatusCode::OK,
+        StatusCode::CREATED,
         "representation: {}",
         answer.body
     );

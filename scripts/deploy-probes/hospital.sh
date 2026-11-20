@@ -357,6 +357,25 @@ j_care_of() {
     time_validity:$v,source:$s,target:$t}'
 }
 
+# A representation of its own (#6079): the PERSON `source` represents the
+# PERSON `target` over `validity`, on the basis RESPRSN of HL7_RoleCode, for
+# the stack's provider (draft access control package, "A representation is").
+j_represents() {
+  local source="$1" target="$2" validity="$3"
+  jq -nc --argjson k "$(j_term represents)" --argjson b "$(j_term basis)" \
+    --argjson p "$(j_term provider)" --argjson basis "$(j_coded HL7_RoleCode RESPRSN)" \
+    --arg pi "$H_CARE_PROVIDER_ISSUER" --arg pid "$H_CARE_PROVIDER_ID" \
+    --argjson s "$(j_party PERSON "$source")" --argjson t "$(j_party PERSON "$target")" \
+    --argjson v "$validity" '{_type:"PARTY_RELATIONSHIP",
+    archetype_node_id:"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.hospital_representation.v1",
+    name:$k,
+    details:{_type:"ITEM_TREE",archetype_node_id:"at0002",name:{_type:"DV_TEXT",value:"details"},
+      items:[{_type:"ELEMENT",archetype_node_id:"at0003",name:$b,value:$basis},
+        {_type:"ELEMENT",archetype_node_id:"at0004",name:$p,
+          value:{_type:"DV_IDENTIFIER",issuer:$pi,id:$pid,type:"ORGANISATION"}}]},
+    time_validity:$v,source:$s,target:$t}'
+}
+
 # A credentials element named by the code `name` holding `value`.
 j_qualifier() {
   jq -nc --argjson n "$(j_term "$1")" --argjson v "$2" \
@@ -523,17 +542,6 @@ h_relate() {
   h_call "$n" admin GET "/demographic/$kind/$id"
   version="$(jq -r '.uid.value' <<<"$H_BODY")"
   body="$(jq -c --argjson r "$rels" 'del(.uid) | .relationships = ((.relationships // []) + $r)' <<<"$H_BODY")"
-  H_IF_MATCH="\"$version\"" h_call "$n" "$who" PUT "/demographic/$kind/$version" "$body"
-  [[ "$H_CODE" = 200 || "$H_CODE" = 204 ]]
-}
-
-# Replaces the relationships of the party `id` of `kind` by `rels` (a JSON
-# array), through instance `n` as `who`.
-h_rerelate() {
-  local n="$1" who="$2" kind="$3" id="$4" rels="$5" body version
-  h_call "$n" admin GET "/demographic/$kind/$id"
-  version="$(jq -r '.uid.value' <<<"$H_BODY")"
-  body="$(jq -c --argjson r "$rels" 'del(.uid) | .relationships = $r' <<<"$H_BODY")"
   H_IF_MATCH="\"$version\"" h_call "$n" "$who" PUT "/demographic/$kind/$version" "$body"
   [[ "$H_CODE" = 200 || "$H_CODE" = 204 ]]
 }
@@ -770,8 +778,8 @@ hospital_setup() {
       "$admitted")" || h_fail_call "Eva's admission to $team"
   done
   h_patient_person person_frank "Frank Visser" frank || h_fail_call "Frank's PERSON"
-  h_rerelate 1 admin person "$(hv person_frank)" "[$(j_care represents PERSON "$(hv person_frank)" \
-    PERSON "$(hv person_eva)" "$(j_dates "$(h_day -365)")")]" || h_fail_call "Frank represents Eva"
+  h_care representation_frank 1 admin "$(j_represents "$(hv person_frank)" "$(hv person_eva)" \
+    "$(j_dates "$(h_day -365)")")" || h_fail_call "Frank represents Eva"
 
   h_ehr eva "$(hv person_eva)" || h_fail_call "Eva's EHR"
   h_ehr gina "$(hv person_gina)" || h_fail_call "Gina's EHR"
@@ -1642,8 +1650,8 @@ hospital_pixm() {
   h_care care_eva_cardiology 1 admin "$(j_care_of "$(hv person_eva)" GROUP "$(hv cardiology)" \
     "$(j_dates "$(h_day -10)" "$(h_day 30)")")" || h_fail_call "Eva's admission"
   h_patient_person person_frank "Frank Visser" frank || h_fail_call "Frank's PERSON"
-  h_rerelate 2 admin person "$(hv person_frank)" "[$(j_care represents PERSON "$(hv person_frank)" \
-    PERSON "$(hv person_eva)" "$(j_dates "$(h_day -365)")")]" || h_fail_call "Frank represents Eva"
+  h_care representation_frank 2 admin "$(j_represents "$(hv person_frank)" "$(hv person_eva)" \
+    "$(j_dates "$(h_day -365)")")" || h_fail_call "Frank represents Eva"
   local fed
   fed="$(pix_feed eva-0001)"
   [[ "$fed" = 200 || "$fed" = 201 ]] || probe_fail "200 or 201 for the ITI-104 feed of Eva" "$fed"

@@ -20,10 +20,11 @@
 //! `performer` names the `PERSON`'s container
 //! (`org.openehr.rm.demographic.role.adoc`) and whose head is `complete` or
 //! `incomplete`; its `time_validity` is kept as dates, so whether it is live
-//! is read at the request. A membership and a representation are inline
-//! `PARTY_RELATIONSHIP`s of the source party (`master02-demographic_package.adoc`
-//! §Party Relationships); standalone relationship containers never count. No
-//! openEHR spec governs the side table or its SQL: our own design.
+//! is read at the request. A membership is an inline `PARTY_RELATIONSHIP`
+//! of the source party (`master02-demographic_package.adoc` §Party
+//! Relationships), and a representation a `PARTY_RELATIONSHIP` of its own
+//! ([`standalone`]). No openEHR spec governs the side table or its SQL: our
+//! own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -44,9 +45,7 @@ use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants;
 use crate::party_binding::key_space;
-use crate::party_binding::rows::{
-    self, IdentifierRow, Professional, RepresentationRow, write_identifiers,
-};
+use crate::party_binding::rows::{self, IdentifierRow, Professional, write_identifiers};
 use crate::storage::error::StorageError;
 use crate::storage::party_reverse;
 use crate::versioning::change::Committed;
@@ -394,7 +393,7 @@ impl Scope<'_> {
 /// dates of the professional `ROLE`s it performs (RM demographic
 /// `role.adoc`: a `ROLE` listed in `roles`, whose `performer` names the
 /// `PERSON` and whose head is `complete` or `incomplete`) and whether it is
-/// the source of a representation relationship, inline or of its own.
+/// the source of a representation.
 async fn write_persons(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
@@ -403,7 +402,6 @@ async fn write_persons(
 ) -> Result<(), StorageError> {
     let parties: Vec<Uuid> = heads.iter().map(|h| h.vo_id).collect();
     let mut identifiers = Vec::new();
-    let mut representations = Vec::new();
     let mut memberships = Vec::new();
     let mut listed = Vec::new();
     let standalone = rows::representatives(tx, &parties).await?;
@@ -421,12 +419,6 @@ async fn write_persons(
         else {
             continue;
         };
-        representations.extend(facts.representations.iter().map(|r| RepresentationRow {
-            representative: head.vo_id,
-            subject: r.subject,
-            code: r.code.clone(),
-            validity: r.validity.clone(),
-        }));
         for (selector, identifier) in &facts.identifiers {
             if !scope.holds(selector, &identifier.issuer) {
                 continue;
@@ -442,8 +434,7 @@ async fn write_persons(
                     identifier.id.clone()
                 },
                 lifecycle_state: head.lifecycle_state.clone(),
-                representative: !facts.representations.is_empty()
-                    || standalone.contains(&head.vo_id),
+                representative: standalone.contains(&head.vo_id),
             });
         }
         listed.extend(facts.roles.iter().map(|role| (*role, head.vo_id)));
@@ -453,9 +444,6 @@ async fn write_persons(
         Scope::Heads { tombstones } => (&["key", "user_name", "external_id"], None, tombstones),
         Scope::KeySpace(issuer) => (&["key"], Some(issuer), true),
     };
-    if issuer.is_none() {
-        rows::write_representations(tx, &parties, &representations).await?;
-    }
     write_identifiers(
         tx,
         &parties,
