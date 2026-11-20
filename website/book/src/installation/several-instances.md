@@ -72,14 +72,18 @@ indexed statement on its own connection:
   was read at the revision the request read, and the grants and the caller
   facts are read again when the store's revisions are past the copy's;
 - in the clinical store, the newest version of each policy register and of
-  the access policy. A copy behind one of them is read before the request is
-  judged.
+  the access policy, and the definition revision (`definition_revision`). A
+  copy behind one of the policy versions is read before the request is
+  judged. The definition revision moves in the transaction of every template
+  or ADL2 artefact upload and delete, and an instance whose Web Templates and
+  archetype lineage were built before it drops them before the request
+  answers.
 
 So a deprovisioned login, a removed membership, a revoked grant, an ended care
-relationship and a policy change committed on one instance decide the next
-request on every instance, whatever the delay of the notification. The
-notification still drops the copies early; the two reads are what a decision
-rests on. A read request sends its own read, its access record and these two
+relationship, a policy change and a template or artefact change committed on
+one instance decide the next request on every instance, whatever the delay of
+the notification. The notification still drops the copies early; the two
+reads are what a decision rests on. A read request sends its own read, its access record and these two
 statements.
 
 ## The listeners share one connection per database

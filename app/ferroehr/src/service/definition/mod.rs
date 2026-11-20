@@ -17,6 +17,8 @@
 //!   (keyed by `ARCHETYPE_HRID`).
 //! - `lineage` — the archetype specialisation graph over those artefacts (their
 //!   `specialize` edges), memoised for the AQL archetype predicate.
+//! - `copies` — the Web Templates and the lineage index a replica keeps, held
+//!   at the definition revision a request confirms.
 //! - `query` — query registration: the stored-query CRUD. DEFINITION *owns*
 //!   query registration (`master04` §Registered Queries); the Query service
 //!   only resolves + executes it, so the stored-query store folds in here.
@@ -50,6 +52,7 @@ mod adl2_engine;
 mod adl2_resolution;
 mod adl2_terminology;
 mod binding_uri;
+pub(crate) mod copies;
 pub(super) mod lineage;
 pub mod load;
 mod opt14;

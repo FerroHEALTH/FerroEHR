@@ -166,8 +166,9 @@ impl FerroEhrService {
         }
         let summary = summarize(&archetype);
         Self::adl2_persist(&mut tx, &summary, source).await?;
+        let revision = template_repo::definition_revision(&mut tx).await?;
         self.commit_definition(tx).await?;
-        self.invalidate_archetype_lineage().await;
+        self.definitions.confirm(revision);
         Ok(summary.archetype_id)
     }
 
@@ -381,7 +382,8 @@ impl FerroEhrService {
             "{ADL2_CACHE_NS}{}",
             crate::templates::identity::canonical_key(template_id)
         );
-        if let Some(wt) = self.web_templates.get(&key).await {
+        let generation = self.definitions.current();
+        if let Some(wt) = generation.web_templates.get(&key).await {
             return Ok(wt);
         }
         // Compile the stored ADL2 source to its OPT2 (async) before the sync WT
@@ -396,7 +398,8 @@ impl FerroEhrService {
             }
             Err(e) => return Err(e),
         };
-        self.web_templates
+        generation
+            .web_templates
             .get_or_build(&key, || {
                 build_web_template_v2_4(&opt.template, &opt.prohibited_attributes)
             })
@@ -556,20 +559,15 @@ impl FerroEhrService {
             // it (`template_ref` is the union of both dialects' addresses).
             template_repo::release_template_ref(&mut tx, &hrid).await?;
         }
+        let revision = template_repo::definition_revision(&mut tx).await?;
         self.commit_definition(tx).await?;
         if is_template {
             self.registered_templates.changed();
-            // Evict the built `WebTemplate` so a re-uploaded template is never
-            // served from the deleted artefact's compiled form (the OPT 1.4
-            // delete paths do the same; no openEHR spec governs the cache).
-            self.web_templates
-                .invalidate(&format!(
-                    "{ADL2_CACHE_NS}{}",
-                    crate::templates::identity::canonical_key(&hrid)
-                ))
-                .await;
         }
-        self.invalidate_archetype_lineage().await;
+        // The delete moved the definition revision: the Web Templates compiled
+        // from the artefact and the lineage index are dropped here, and on
+        // every other replica at its next request (#5948).
+        self.definitions.confirm(revision);
         Ok(())
     }
 
