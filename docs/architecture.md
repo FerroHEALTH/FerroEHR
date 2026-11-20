@@ -889,7 +889,13 @@ which is what makes an optional stage safe to disable:
    the shared binding answers it
    `wrong_marker`, and FerroEHR admits it as the person themself, with no
    role, `PARTY_SELF` as its committer and the binding `self` on its access
-   record, confined in the same way. An
+   record, confined in the same way. A `persons` login of the same two kinds
+   whose one `PERSON` carries the representative marker alone is admitted as
+   a representative read from the CDR's own facts (#6147): it holds no role,
+   and reaches the subject of the EHR its launch context names, else of the
+   EHR the request names, else the `PERSON` an EHR lookup by subject names,
+   only on a live stored representation of that subject (#6079), else
+   `refused-representation-unrecorded`. An
    openEHR launch token carries no `fhirUser` and no `patient` claim (SMART
    on openEHR `master07` §Context Selection names the `ehrId`), so no
    reading of the token alone can name the person. A token
