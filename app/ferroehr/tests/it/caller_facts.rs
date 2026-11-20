@@ -16,12 +16,16 @@
 //! (#5575), held and guarded the same way. No openEHR spec gives a
 //! capability or a relationship an access meaning: our own design.
 
+use ferroehr::access_eval::procedure::Policy;
 use std::future::Future;
 
 use serde_json::{Value, json};
 
 use crate::fixtures::{if_match, object};
-use crate::policy_fixtures::{capability, create, granted, granting, of_client};
+use crate::policy_fixtures::{
+    CARE_PROVIDER, capability, care_provider, care_writer, create, granted, granting, of_client,
+    provider_team,
+};
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::grants::caller::care_of::ProviderKey;
@@ -368,10 +372,9 @@ async fn a_clearance_or_purpose_element_is_no_qualifier_any_more() {
 async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica() {
     let db = testkit::db().await.expect("testkit database");
     let (one, two) = (replica(&db.pool()).await, replica(&db.pool()).await);
-    granted(&one, "adt", &[capability("write_care_relationship", &[])]).await;
-    let (ward, _) = create(&one, PartyKind::Group, &team())
-        .await
-        .expect("the GROUP commits");
+    granted(&one, "adt", &[care_writer()]).await;
+    let hospital = care_provider(&one, CARE_PROVIDER).await;
+    let (ward, _) = provider_team(&one, hospital, &team()).await;
     let (doctor, doctor_uid) = create(&one, PartyKind::Person, &person("Dr D", &[]))
         .await
         .expect("the professional commits");
@@ -432,7 +435,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
     assert!(cared[0].live_on(today, jiff::Span::new()));
     assert_eq!(
         two.grants()
-            .cared_for_by(&[ward.0], &[provider()], today, jiff::Span::new())
+            .cared_for_by(&[ward.0], &[provider()], today, &Policy::default())
             .await
             .expect("the ward's patients read"),
         vec![ferroehr::storage::access_projection::EhrSubject::new(
@@ -447,7 +450,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
                 &[ward.0],
                 &[ProviderKey::new(PROVIDERS, "clinic")],
                 today,
-                jiff::Span::new()
+                &Policy::default()
             )
             .await
             .expect("the ward's patients read"),
@@ -487,7 +490,7 @@ async fn only_a_write_care_relationship_grant_changes_a_care_relationship() {
     let db = testkit::db().await.expect("testkit database");
     let svc = replica(&db.pool()).await;
     granted(&svc, "registry", &[capability("access_demographic", &[])]).await;
-    granted(&svc, "adt", &[capability("write_care_relationship", &[])]).await;
+    granted(&svc, "adt", &[care_writer()]).await;
     let (ward, _) = create(&svc, PartyKind::Group, &team())
         .await
         .expect("the GROUP commits");
@@ -517,10 +520,9 @@ async fn a_providers_group_membership_is_guarded_and_held_on_another_replica() {
     let db = testkit::db().await.expect("testkit database");
     let (one, two) = (replica(&db.pool()).await, replica(&db.pool()).await);
     granted(&one, "registry", &[capability("access_demographic", &[])]).await;
-    granted(&one, "adt", &[capability("write_care_relationship", &[])]).await;
-    let (region, _) = create(&one, PartyKind::Group, &team())
-        .await
-        .expect("the GROUP commits");
+    granted(&one, "adt", &[care_writer()]).await;
+    let owner = care_provider(&one, CARE_PROVIDER).await;
+    let (region, _) = provider_team(&one, owner, &team()).await;
     let (hospital, uid) = create(&one, PartyKind::Organisation, &organisation(&[]))
         .await
         .expect("the ORGANISATION commits");
@@ -594,7 +596,7 @@ async fn a_providers_group_membership_is_guarded_and_held_on_another_replica() {
 async fn a_care_relationship_is_its_own_with_a_role_and_a_provider() {
     let db = testkit::db().await.expect("testkit database");
     let svc = replica(&db.pool()).await;
-    granted(&svc, "adt", &[capability("write_care_relationship", &[])]).await;
+    granted(&svc, "adt", &[care_writer()]).await;
     let (ward, _) = create(&svc, PartyKind::Group, &team())
         .await
         .expect("the GROUP commits");
@@ -807,7 +809,7 @@ fn pixm_ref(id: &str) -> ferroehr::storage::access_projection::EhrSubject {
 async fn a_record_subject_decides_the_next_request_on_another_replica() {
     let db = testkit::db().await.expect("testkit database");
     let (one, two) = (replica(&db.pool()).await, replica(&db.pool()).await);
-    granted(&one, "adt", &[capability("write_care_relationship", &[])]).await;
+    granted(&one, "adt", &[care_writer()]).await;
     let (patient, uid) = create(&one, PartyKind::Person, &person("Mr E", &[]))
         .await
         .expect("the patient commits");
@@ -905,7 +907,7 @@ async fn a_record_subject_is_refused_unless_it_is_a_persons_own_and_its_writer_m
         .await
         .with_privacy(std::sync::Arc::new(policy));
     granted(&svc, "registry", &[capability("access_demographic", &[])]).await;
-    granted(&svc, "adt", &[capability("write_care_relationship", &[])]).await;
+    granted(&svc, "adt", &[care_writer()]).await;
     let (patient, uid) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
         .await
         .expect("the patient commits");
@@ -1013,7 +1015,7 @@ async fn a_discharge_on_one_replica_is_never_read_stale_from_the_projection_on_a
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let (one, two) = (replica(&pool).await, replica(&pool).await);
-    granted(&one, "adt", &[capability("write_care_relationship", &[])]).await;
+    granted(&one, "adt", &[care_writer()]).await;
     let (ward, _) = create(&one, PartyKind::Group, &team())
         .await
         .expect("the GROUP commits");

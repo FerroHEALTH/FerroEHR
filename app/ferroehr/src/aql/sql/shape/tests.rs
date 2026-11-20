@@ -143,6 +143,7 @@ fn projected(teams: Vec<Uuid>, day: jiff::civil::Date) -> Care {
         provider_ids: vec!["hospital".to_owned()].into(),
         day,
         grace: "P14D".to_owned(),
+        self_declared: false,
     })
 }
 

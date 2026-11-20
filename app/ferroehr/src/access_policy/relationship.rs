@@ -120,6 +120,71 @@ pub fn effective_end(
     }
 }
 
+/// Why a self-declared care relationship is refused at write.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum SelfDeclaredRefusal {
+    /// The policy sets no `self_declared_care`.
+    #[error(
+        "a self_declared care relationship is refused: the access policy sets no \
+         self_declared_care"
+    )]
+    Off,
+    /// Its target is not the writer's own `PERSON`.
+    #[error(
+        "a self_declared care relationship is written by the professional it names: its target \
+         is the writer's own PERSON"
+    )]
+    NotTheWriter,
+    /// It ends after the period `self_declared_care` allows from its start,
+    /// or has no end.
+    #[error(
+        "a self_declared care relationship ends within {max} of its start, by {until} at the \
+         latest"
+    )]
+    TooLong {
+        /// The policy's `self_declared_care`.
+        max: String,
+        /// The first date past that period.
+        until: jiff::civil::Date,
+    },
+    /// The period does not add to a date.
+    #[error(transparent)]
+    Period(#[from] ValidityRefusal),
+}
+
+/// Judges a self-declared care relationship `written` against `policy`.
+///
+/// `end` is the end it holds from then on, `(kind, carer)` its target and
+/// `writer` the party that wrote it: the policy sets `self_declared_care`,
+/// the target is the writer's own `PERSON`, and it ends within that period
+/// of its start (draft access control decision procedure, Writing
+/// Relationships).
+///
+/// # Errors
+/// [`SelfDeclaredRefusal`] naming the condition it fails.
+pub fn self_declared(
+    policy: Option<&AccessPolicy>,
+    written: &Written<'_>,
+    end: Option<jiff::civil::Date>,
+    (kind, carer): (CarerKind, Uuid),
+    writer: Option<Uuid>,
+) -> Result<(), SelfDeclaredRefusal> {
+    let max = policy
+        .and_then(|policy| policy.self_declared_care.as_ref())
+        .ok_or(SelfDeclaredRefusal::Off)?;
+    if kind != CarerKind::Person || writer != Some(carer) {
+        return Err(SelfDeclaredRefusal::NotTheWriter);
+    }
+    let until = add(written.start(), max)?;
+    match end {
+        Some(end) if end <= until => Ok(()),
+        _ => Err(SelfDeclaredRefusal::TooLong {
+            max: max.value.clone(),
+            until,
+        }),
+    }
+}
+
 /// The first entry of `policy` that covers the role and a provider type of
 /// `written`.
 fn covering<'a>(
@@ -490,5 +555,55 @@ mod tests {
             WriterVerdict::Refused,
             "void relationship_writers names none"
         );
+    }
+
+    #[test]
+    fn a_self_declared_relationship_needs_the_switch_its_writer_and_a_short_end() {
+        let role = code("HL7_ParticipationType", "PART");
+        let switched = policy(&format!(r#", "self_declared_care": {}"#, duration("P2D")));
+        let writer = Uuid::parse_str(WARD).expect("a uuid");
+        let target = (CarerKind::Person, writer);
+        let short = written(&role, &[], Some("2026-11-03"));
+        let end = Some(date("2026-11-03"));
+        assert_eq!(
+            self_declared(None, &short, end, target, Some(writer)),
+            Err(SelfDeclaredRefusal::Off)
+        );
+        assert_eq!(
+            self_declared(Some(&switched), &short, end, target, Some(writer)),
+            Ok(())
+        );
+        assert_eq!(
+            self_declared(Some(&switched), &short, end, target, None),
+            Err(SelfDeclaredRefusal::NotTheWriter),
+            "a writer that names no party"
+        );
+        assert_eq!(
+            self_declared(
+                Some(&switched),
+                &short,
+                end,
+                (CarerKind::Group, writer),
+                Some(writer)
+            ),
+            Err(SelfDeclaredRefusal::NotTheWriter),
+            "a team is never self-declared"
+        );
+        let long = written(&role, &[], Some("2026-11-04"));
+        assert!(matches!(
+            self_declared(
+                Some(&switched),
+                &long,
+                Some(date("2026-11-04")),
+                target,
+                Some(writer)
+            ),
+            Err(SelfDeclaredRefusal::TooLong { .. })
+        ));
+        let open = written(&role, &[], None);
+        assert!(matches!(
+            self_declared(Some(&switched), &open, None, target, Some(writer)),
+            Err(SelfDeclaredRefusal::TooLong { .. })
+        ));
     }
 }

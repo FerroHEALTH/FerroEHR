@@ -71,7 +71,8 @@ impl GrantHead<'_> {
 /// Replaces the grant rows and the caller facts of `head`, a party of `kind`,
 /// on its commit transaction `tx`; moves the revision and notifies when they
 /// changed. An `ACTOR` holds client rows, an `ORGANISATION` its provider row
-/// and its `GROUP` memberships too, a `PERSON` its memberships, a `ROLE`
+/// and its `GROUP` memberships too, a `PERSON` its memberships, a `GROUP`
+/// its membership of the `ORGANISATION` it belongs to, a `ROLE`
 /// capability rows and its clearances and purposes, and a care relationship
 /// of its own the fact about its source; every other kind holds none.
 ///
@@ -92,7 +93,11 @@ pub(crate) async fn write(
             super::caller::store::write_person(tx, head).await?;
             write_clients(tx, head).await?
         }
-        Kind::Agent | Kind::Group => write_clients(tx, head).await?,
+        Kind::Group => {
+            super::caller::store::write(tx, head, Some(head.vo_id), None).await?;
+            write_clients(tx, head).await?
+        }
+        Kind::Agent => write_clients(tx, head).await?,
         Kind::PartyRelationship => {
             let source = head.live().and_then(|facts| facts.grants.care_source);
             super::caller::store::write(tx, head, source, None).await?;

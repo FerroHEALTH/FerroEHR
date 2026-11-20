@@ -17,7 +17,7 @@ use crate::ehr_index_ihe::CLINICAL;
 use crate::fixtures::create_ehr_subject;
 use crate::patient_index::{NATIONAL, identifier, patient, replica, sorted};
 use crate::pmir_consumer::MasterIdentifier;
-use crate::policy_fixtures::{ISSUER, capability, create, granted};
+use crate::policy_fixtures::{ISSUER, care_writer, create, granted};
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::identity_feed::apply::Applied;
@@ -148,7 +148,7 @@ pub(crate) async fn trc(svc: &FerroEhrService, system: &str, id: &str) -> Vec<Eh
 pub(crate) async fn consumer(db: &testkit::TestDb, grant: bool) -> FerroEhrService {
     let svc = replica(db, EhrIndexProvider::Local).await;
     if grant {
-        granted(&svc, CLIENT, &[capability("write_care_relationship", &[])]).await;
+        granted(&svc, CLIENT, &[care_writer()]).await;
     }
     svc
 }

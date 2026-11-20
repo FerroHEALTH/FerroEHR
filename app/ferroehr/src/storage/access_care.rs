@@ -81,6 +81,10 @@ pub struct CareRow {
     pub from: Option<jiff::civil::Date>,
     /// The first date it no longer holds; `None` when unbounded.
     pub until: Option<jiff::civil::Date>,
+    /// The party that wrote it; `None` when its committer names none.
+    pub writer: Option<Uuid>,
+    /// Whether its basis is `self_declared`.
+    pub self_declared: bool,
 }
 
 /// The facts revision the projection reflects and the check value of the
@@ -167,11 +171,13 @@ pub async fn replace(
         .iter()
         .map(|row| row.until.map(jiff_sqlx::Date::from))
         .collect();
+    let writers: Vec<Option<Uuid>> = rows.iter().map(|row| row.writer).collect();
+    let declared: Vec<bool> = rows.iter().map(|row| row.self_declared).collect();
     sqlx::query(
         "INSERT INTO access_care (subject_digest, person_id, carer_id, provider_issuer, \
-             provider_id, care_from, care_until) \
+             provider_id, care_from, care_until, writer_id, self_declared) \
          SELECT * FROM unnest($1::bytea[], $2::uuid[], $3::uuid[], $4::text[], $5::text[], \
-             $6::date[], $7::date[])",
+             $6::date[], $7::date[], $8::uuid[], $9::boolean[])",
     )
     .bind(&digests)
     .bind(&people)
@@ -180,6 +186,8 @@ pub async fn replace(
     .bind(&ids)
     .bind(&froms)
     .bind(&untils)
+    .bind(&writers)
+    .bind(&declared)
     .execute(&mut *tx)
     .await?;
     Ok(())

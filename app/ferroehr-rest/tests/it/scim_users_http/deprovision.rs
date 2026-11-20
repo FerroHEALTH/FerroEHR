@@ -26,7 +26,7 @@ use http::StatusCode;
 use serde_json::{Value, json};
 
 use super::care_teams::{
-    ADT, carries_member_of, group, id_of, member_of, read_person, relationships, write_person,
+    ADT, PROVIDER, carries_member_of, group, member_of, read_person, relationships, write_person,
 };
 use super::default_definitions::{seeded, zero_config};
 use super::{
@@ -34,7 +34,8 @@ use super::{
     ROLES, SCOPE, call, create_body, patch_op,
 };
 use crate::common;
-use crate::policy_fixture::{capability, grant, scope};
+use crate::policy_fixture::{capability, care_writer, grant, scope};
+use crate::system_grants::{acting_client, provider_group, provider_organisation};
 
 /// The router over a fresh database holding the default definitions, where
 /// [`CLIENT`] provisions under [`LOGIN`] and holds `write_care_relationship`,
@@ -54,11 +55,12 @@ async fn hospital() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
         items.extend(ROLE_CODES.iter().map(|role| scope("role", role)));
         capability("scim_provision", &items)
     };
-    let care = capability("write_care_relationship", &[]);
-    grant(
+    let hospital = provider_organisation(&service, PROVIDER, &[]).await;
+    let care = care_writer(PROVIDER);
+    acting_client(
         &service,
-        MACHINES,
-        CLIENT,
+        &[(MACHINES, CLIENT)],
+        Some(hospital),
         &[provisioning(LOGIN), care.clone()],
     )
     .await;
@@ -152,8 +154,8 @@ async fn deprovisioning_a_rostered_professional_needs_no_grant_and_reaches_every
     let other = replica(&db).await;
     let key = (OTHER, "bram-login");
     let user = nurse(&app, OTHER, "bram", key.1).await;
-    let (_, ward) = group(&app, OTHER, "Ward 3", &[], false).await;
-    roster(&app, &user, &id_of(&ward)).await;
+    let ward = provider_group(&service, "Ward 3", PROVIDER).await;
+    roster(&app, &user, &ward.to_string()).await;
     let rostered = relationships(&app, &user).await;
     assert_eq!(rostered.iter().filter(|r| carries_member_of(r)).count(), 1);
     admitted(&other, key, None).await;
@@ -225,16 +227,18 @@ async fn a_deactivation_keeps_a_care_team_membership_and_drops_a_plain_one() {
 /// User stays inactive and the login stays refused.
 #[tokio::test]
 async fn the_adt_system_does_not_reactivate_a_deactivated_professional() {
-    let (_db, _service, app) = hospital().await;
+    let (_db, service, app) = hospital().await;
     let key = (OTHER, "dirk-login");
     let user = nurse(&app, OTHER, "dirk", key.1).await;
-    let (_, ward) = group(&app, OTHER, "Ward 4", &[], false).await;
+    let ward = provider_group(&service, "Ward 4", PROVIDER)
+        .await
+        .to_string();
     let (status, body) = set_active(&app, OTHER, &user, false).await;
     assert_eq!(status, StatusCode::OK, "{body}");
 
     let (status, version, mut person) = read_person(&app, ADT, &user).await;
     assert_eq!(status, StatusCode::OK, "the ADT system reads the PERSON");
-    person["relationships"] = json!([member_of(&user, &id_of(&ward))]);
+    person["relationships"] = json!([member_of(&user, &ward)]);
     let (status, refused) = write_person(&app, ADT, (&user, &version), &person).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
     assert_eq!(relationships(&app, &user).await, Vec::<Value>::new());

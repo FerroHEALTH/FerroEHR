@@ -18,7 +18,7 @@
 //! `time_validity`): the professional is a member (HL7 v3 `RoleClass#MBR`) of a care team, and the
 //! patient is `under_care_of` a team or a unit, with the admission as its
 //! `time_validity`. The care delivery environment, such as a hospital's ADT
-//! system, writes them under a [`Operation::WriteCareRelationship`] grant
+//! system, writes them under a `write_care_relationship` grant
 //! (BASE Architecture Overview, `master07-security.adoc` §The Problem of
 //! Roles: the evaluation of "care deliverer" into identities "must be done in
 //! each care delivery environment, not in the EHR").
@@ -49,6 +49,7 @@ pub mod facts;
 pub mod patient;
 pub mod store;
 pub mod subject;
+pub(crate) mod writer;
 
 use serde_json::Value;
 
@@ -56,13 +57,10 @@ use crate::versioning::tree::Tree;
 use uuid::Uuid;
 
 use crate::error::{ServiceError, Violation};
-use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::{Facts, container};
-use crate::party_binding::grants::capabilities::Capabilities;
 use crate::party_binding::grants::derive::{Bound, GrantFacts};
-use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::grants::store::Dates;
-use crate::party_binding::policy_mark::{TERMINOLOGY, carries};
+use crate::party_binding::policy_mark::carries;
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
 use openehr_rm::draft::access_control::terminology::{
@@ -207,7 +205,8 @@ pub(crate) fn coded_name<'a, T: Tree<'a>>(body: T, kind: FactKind, facts: &mut G
 /// `PARTY_RELATIONSHIP` of its own ([`care_of`]), a membership (`MBR`) is
 /// held in the relationships of its member, a `PERSON` or an
 /// `ORGANISATION`, such as a provider's membership of the providers of a
-/// region.
+/// region, or a `GROUP`, whose membership names the `ORGANISATION` it
+/// belongs to and so the provider that writes its memberships.
 pub(crate) fn relationships<'a, T: Tree<'a>>(kind: Kind, body: T, facts: &mut GrantFacts) {
     if kind == Kind::PartyRelationship {
         match care_kind(body) {
@@ -234,8 +233,14 @@ pub(crate) fn relationships<'a, T: Tree<'a>>(kind: Kind, body: T, facts: &mut Gr
         let target = relationship
             .pointer_text("/target/id/value")
             .and_then(|id| container(&id));
+        let organisation = relationship.pointer_text("/target/type").as_deref()
+            == Some(care_of::CarerKind::Organisation.rm_type());
         let refusal = match (kind, target) {
-            (Kind::Person | Kind::Organisation, Some(team)) => {
+            (Kind::Group, Some(_)) if !organisation => {
+                "of a GROUP targets the ORGANISATION the GROUP belongs to, by a PARTY_REF of \
+                 type ORGANISATION"
+            }
+            (Kind::Person | Kind::Organisation | Kind::Group, Some(team)) => {
                 facts.facts.push(CallerFact {
                     ordinal: i32::try_from(ordinal).unwrap_or(i32::MAX),
                     kind: FactKind::MemberOf,
@@ -246,10 +251,10 @@ pub(crate) fn relationships<'a, T: Tree<'a>>(kind: Kind, body: T, facts: &mut Gr
                 });
                 continue;
             }
-            (Kind::Person | Kind::Organisation, None) => {
+            (Kind::Person | Kind::Organisation | Kind::Group, None) => {
                 "targets no party of this store by its container"
             }
-            _ => "is a membership of a PERSON or an ORGANISATION, its source",
+            _ => "is a membership of a PERSON, an ORGANISATION or a GROUP, its source",
         };
         facts.unread.push(format!(
             "relationships[{ordinal}]: a {}::{} relationship {refusal}",
@@ -273,8 +278,8 @@ fn care_kind<'a, T: Tree<'a>>(relationship: T) -> Option<CareRelationship> {
 /// and every relationship carrying a [`CareRelationship`] code taken out is
 /// the same tree.
 ///
-/// The party protection leaves such a version to [`check_care_writer`], so a
-/// caller holding [`Operation::WriteCareRelationship`] rosters a provisioned
+/// The party protection leaves such a version to [`writer::check_care`], so a
+/// caller holding a `write_care_relationship` grant rosters a provisioned
 /// professional and changes nothing else (#5617). Our own design.
 ///
 /// # Errors
@@ -312,123 +317,10 @@ pub(crate) fn check_content(facts: Option<&Facts>) -> Result<(), ServiceError> {
     }
 }
 
-/// Refuses the commit `committed` of a `PERSON`, an `ORGANISATION` or a
-/// `PARTY_RELATIONSHIP` when its version changes what the memberships or the
-/// care relationship say, or the record subjects it declares, and its caller
-/// may not ([`check_care_writer`]).
-///
-/// The memberships, care relationships and record subjects of `facts`, what
-/// the committed body holds, are compared with those of the last earlier
-/// version that holds a body: a relationship by kind, what it states and
-/// `time_validity`, a subject by namespace and id, never by position
-/// (#5640). A logical deletion of a party holds no body and changes none:
-/// its earlier versions keep them (RM common
-/// `master06-change_control_package.adoc` §Logical Deletion). A logical
-/// deletion of a care relationship removes it from the current set, so it
-/// needs the grant its writing does. A lifecycle state is no relationship
-/// content, so a deactivation that keeps them needs no grant (#5628). Our own
-/// design.
-///
-/// Whether the commit changed them.
-///
-/// # Errors
-/// The `403` of [`check_care_writer`], and a storage failure.
-pub(crate) async fn check_care(
-    tx: &mut sqlx::PgConnection,
-    mapping: &BindingMapping,
-    committed: &crate::versioning::change::Committed,
-    facts: Option<&Facts>,
-) -> Result<bool, ServiceError> {
-    let standalone = committed.kind == Kind::PartyRelationship;
-    if !standalone && !matches!(committed.kind, Kind::Person | Kind::Organisation) {
-        return Ok(false);
-    }
-    let after = match facts {
-        Some(facts) => &facts.grants,
-        None if standalone => &GrantFacts::default(),
-        None => return Ok(false),
-    };
-    let before: Option<String> = sqlx::query_scalar(
-        "SELECT v.body FROM version v WHERE v.vo_id = $1 AND v.sys_version < $2 \
-         AND v.body IS NOT NULL ORDER BY v.sys_version DESC LIMIT 1",
-    )
-    .bind(committed.vo_id)
-    .bind(committed.sys_version)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(StorageError::from)?;
-    let before = match before {
-        Some(body) => {
-            let body: Value = serde_json::from_str(&body).map_err(StorageError::BodyDecode)?;
-            GrantFacts::of(committed.kind, &body)
-        }
-        None => GrantFacts::default(),
-    };
-    if same_care(&before.facts, &after.facts) && same_subjects(&before.subjects, &after.subjects) {
-        return Ok(false);
-    }
-    check_care_writer(mapping, committed.vo_id.0).map(|()| true)
-}
-
-/// Whether the care relationships among `before` and `after` say the same:
-/// each of one matches one of the other by kind, target and
-/// `time_validity`, whatever their order.
-fn same_care(before: &[CallerFact], after: &[CallerFact]) -> bool {
-    let care = |fact: &&CallerFact| matches!(fact.value, FactValue::Team(_) | FactValue::Care(_));
-    let mut unmatched: Vec<&CallerFact> = after.iter().filter(care).collect();
-    before.iter().filter(care).all(|fact| {
-        let found = unmatched.iter().position(|other| {
-            other.kind == fact.kind && other.value == fact.value && other.validity == fact.validity
-        });
-        found.map(|at| unmatched.swap_remove(at)).is_some()
-    }) && unmatched.is_empty()
-}
-
-/// Whether `before` and `after` declare the same record subjects, by
-/// namespace and id, whatever their order.
-fn same_subjects(before: &[subject::DeclaredSubject], after: &[subject::DeclaredSubject]) -> bool {
-    let sorted = |held: &[subject::DeclaredSubject]| {
-        let mut subjects: Vec<_> = held
-            .iter()
-            .map(|declared| declared.subject.clone())
-            .collect();
-        subjects.sort();
-        subjects
-    };
-    sorted(before) == sorted(after)
-}
-
 /// Whether `relationship` carries a code of [`CareRelationship`] in its
 /// `name` or its `details`: a care relationship, which SCIM never changes.
 pub(crate) fn is_care<'a, T: Tree<'a>>(relationship: T) -> bool {
     care_kind(relationship).is_some()
-}
-
-/// Refuses a commit that changed the care relationships, memberships or
-/// record subjects of the party `party` when its caller holds no
-/// [`Operation::WriteCareRelationship`] grant and is no administrator of
-/// `mapping`.
-///
-/// # Errors
-/// [`ServiceError::Forbidden`] (`403`) naming the grant.
-fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), ServiceError> {
-    if Capabilities::current().holds(Operation::WriteCareRelationship)
-        || crate::party_binding::protect::administrator(mapping)
-    {
-        return Ok(());
-    }
-    Err(ServiceError::not_permitted(format!(
-        "this version changes the care relationships of party {party} ({}::{} or {}::{}) or \
-         the record subjects it declares ({TERMINOLOGY}::{}): only a caller holding the {} \
-         grant, such as the care delivery environment's ADT system, or an administrator \
-         writes them",
-        CareRelationship::MemberOf.terminology(),
-        CareRelationship::MemberOf.code(),
-        CareRelationship::UnderCareOf.terminology(),
-        CareRelationship::UnderCareOf.code(),
-        openehr_rm::draft::access_control::terminology::RecordSubject::RecordSubject.code(),
-        Operation::WriteCareRelationship
-    )))
 }
 
 /// One membership of a care team or unit: the team or unit it targets and
@@ -494,7 +386,9 @@ impl CareTeam {
 mod tests {
     use serde_json::json;
 
+    use super::writer::{care_changes, same_subjects};
     use super::*;
+    use crate::party_binding::policy_mark::TERMINOLOGY;
 
     fn coded(terminology: &str, code: &str) -> Value {
         json!({"_type": "DV_CODED_TEXT", "value": code,
@@ -680,16 +574,31 @@ mod tests {
             relationship(MEMBER, other),
             relationship(MEMBER, TEAM),
         ]);
-        assert!(same_care(&both, &swapped), "order and other relationships");
-        assert!(!same_care(&both, &both[..1]), "a relationship removed");
-        assert!(!same_care(&both[..1], &both), "a relationship added");
+        assert!(
+            care_changes(&both, &swapped).is_empty(),
+            "order and other relationships"
+        );
+        assert!(
+            !care_changes(&both, &both[..1]).is_empty(),
+            "a relationship removed"
+        );
+        assert!(
+            !care_changes(&both[..1], &both).is_empty(),
+            "a relationship added"
+        );
         let mut ended = relationship(MEMBER, TEAM);
         ended["time_validity"]["upper"] = json!({"_type": "DV_DATE", "value": "2026-11-14"});
         ended["time_validity"]["upper_unbounded"] = json!(false);
         let ended = facts(vec![ended, relationship(MEMBER, other)]);
-        assert!(!same_care(&both, &ended), "a relationship ended");
+        assert!(
+            !care_changes(&both, &ended).is_empty(),
+            "a relationship ended"
+        );
         let twice = facts(vec![relationship(MEMBER, TEAM), relationship(MEMBER, TEAM)]);
-        assert!(!same_care(&twice, &both[..1]), "a repeat removed");
+        assert!(
+            !care_changes(&twice, &both[..1]).is_empty(),
+            "a repeat removed"
+        );
     }
 
     #[test]
@@ -730,5 +639,31 @@ mod tests {
         assert!(!team.holds_on(day("2026-11-11")) && !team.holds_on(day("2026-11-02")));
         assert_eq!(team.until(), Some(day("2026-11-11")));
         assert_eq!(team.from(), Some(day("2026-11-03")));
+    }
+
+    #[test]
+    fn a_groups_membership_names_the_organisation_it_belongs_to() {
+        let mut of_organisation = relationship(MEMBER, TEAM);
+        of_organisation["target"]["type"] = json!("ORGANISATION");
+        let mut of_group = relationship(MEMBER, TEAM);
+        of_group["target"]["type"] = json!("GROUP");
+        let body = json!({"_type": "GROUP", "relationships": [of_organisation, of_group]});
+        let facts = GrantFacts::of(Kind::Group, &body);
+        let organisation = Uuid::parse_str(TEAM).expect("a uuid");
+        let read: Vec<(FactKind, FactValue)> = facts
+            .facts
+            .iter()
+            .map(|fact| (fact.kind, fact.value.clone()))
+            .collect();
+        assert_eq!(
+            read,
+            vec![(FactKind::MemberOf, FactValue::Team(organisation))]
+        );
+        assert_eq!(facts.unread.len(), 1, "{:?}", facts.unread);
+        assert!(
+            facts.unread[0].contains("ORGANISATION the GROUP belongs to"),
+            "{:?}",
+            facts.unread
+        );
     }
 }

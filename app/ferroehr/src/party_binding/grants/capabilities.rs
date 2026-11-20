@@ -238,6 +238,27 @@ impl<'a> Credentials<'a> {
             .collect()
     }
 
+    /// The issuer and id of each `DV_IDENTIFIER` element `code` names that
+    /// carries both, trimmed, such as the providers of a
+    /// [`Operation::WriteCareRelationship`] grant; an identifier without an
+    /// issuer names none.
+    #[must_use]
+    pub fn identifiers(self, code: &str) -> Vec<ProviderKey> {
+        self.values(code)
+            .filter(|value| value.get("_type").and_then(Value::as_str) == Some("DV_IDENTIFIER"))
+            .filter_map(|value| {
+                let text = |key: &str| {
+                    value
+                        .get(key)
+                        .and_then(Value::as_str)
+                        .map(str::trim)
+                        .filter(|text| !text.is_empty())
+                };
+                Some(ProviderKey::new(text("issuer")?, text("id")?))
+            })
+            .collect()
+    }
+
     /// The code of each `DV_CODED_TEXT` element `code` names.
     #[must_use]
     pub fn codes(self, code: &str) -> Vec<&'a str> {
