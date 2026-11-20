@@ -405,6 +405,73 @@ async fn each_worked_example_fits_its_definition() {
     );
 }
 
+/// The privileged `ROLE` v1.0.1 offers no Identifier reader kind (`at12`),
+/// which grants nothing since its read is gone (#6097); v1.0.0 keeps it as
+/// published, and a `ROLE` that carries it still fits v1.0.0.
+#[tokio::test]
+async fn the_identifier_reader_kind_is_offered_only_by_the_first_privileged_version() {
+    let kinds = |file: &str| {
+        let (_, text) = ferroehr::party_binding::policy::DEFINITIONS
+            .iter()
+            .find(|(name, _)| *name == file)
+            .unwrap_or_else(|| panic!("{file} is carried"));
+        let archetype =
+            openehr_adl::assemble::parse_artefact(text, openehr_adl::parse::Dialect::Adl2)
+                .unwrap_or_else(|e| panic!("{file} parses: {e:?}"));
+        let terminology = archetype.terminology();
+        let members: Vec<String> = terminology
+            .value_sets
+            .as_ref()
+            .and_then(|sets| sets.get("ac1"))
+            .map(|set| set.members.to_vec())
+            .expect("the privileges value set");
+        let defined = terminology.term_definitions["en"].contains_key("at12");
+        (members, defined)
+    };
+    assert_eq!(
+        kinds("openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls"),
+        (
+            vec![
+                "at10".to_owned(),
+                "at11".to_owned(),
+                "at12".to_owned(),
+                "at13".to_owned()
+            ],
+            true
+        )
+    );
+    assert_eq!(
+        kinds("openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.1.adls"),
+        (
+            vec![
+                "at10".to_owned(),
+                "at11".to_owned(),
+                "at13".to_owned(),
+                "at14".to_owned()
+            ],
+            false
+        )
+    );
+
+    let (_db, svc) = loaded().await;
+    let any = VoId::from_uid_head(AGENT).expect("a uuid");
+    let mut role = body("privileged-role", &[(PERSON, any)]);
+    role["capabilities"][0]["name"] = json!({
+        "_type": "DV_CODED_TEXT", "value": "Identifier reader",
+        "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
+            "code_string": "at12" }
+    });
+    let fit = svc
+        .party_template_fit(&role, "openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0")
+        .await
+        .expect("a ROLE with the Identifier reader kind fits v1.0.0");
+    assert_eq!(
+        fit,
+        ferroehr::service::demographic::template::TemplateFit::Complete
+    );
+}
+
 #[tokio::test]
 async fn only_an_administrator_writes_a_system_client() {
     let (_db, svc) = mapped().await;
