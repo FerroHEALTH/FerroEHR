@@ -9,7 +9,9 @@
 //! (`refused-representation-unrecorded`) when the party source records no live
 //! representation of the subject its token asserts, or the CDR stores none
 //! for the provider the deployment acts for (draft access control decision
-//! procedure, step 0 Representation). A `persons` token whose
+//! procedure, step 0 Representation). A login whose `PERSON` carries the
+//! representative marker alone, asserting no subject, reaches the subject a
+//! stored representation names it for (#6147). A `persons` token whose
 //! only clinical grants are `patient/` is a professional confined to its
 //! launch EHR, and its commit never records `PARTY_SELF`. No openEHR spec
 //! governs resolving a login to a party: our own design.
@@ -324,21 +326,73 @@ async fn a_representation_the_cdr_does_not_store_for_the_provider_is_refused() {
     assert_eq!(code, StatusCode::OK, "stored for the provider: {body}");
 }
 
-/// #5011: a person login, one asserting no represented subject, on a row
-/// that carries only the representative marker is refused with `403`
-/// (`refused-wrong-marker`): a representative's `PERSON` never binds a
-/// professional.
+/// #5011, #6147: a person login, one asserting no represented subject, on a
+/// row that carries only the representative marker never binds a
+/// professional. FerroEHR admits it as a representative for a subject a live
+/// representation it stores names it for: the subject of the EHR its launch
+/// context or the request names, or the one an EHR lookup by subject names.
+/// Any other request is refused with `403`
+/// (`refused-representation-unrecorded`). Our own design.
 #[tokio::test]
-async fn a_person_login_on_a_representative_row_is_refused_as_the_wrong_marker() {
+async fn a_person_login_on_a_representative_row_reaches_only_a_stored_representation() {
     let (_db, svc) = service().await;
     let family = family(&svc).await;
+    let child = family.ehr.clone();
+    let stranger = ehr(&svc, Some(STRANGER)).await;
     let app = router(Arc::clone(&svc), Arc::new(Recorded::of(&family))).await;
-    refused(
-        &app,
-        &token("rep-login", &json!({})),
-        "refused-wrong-marker",
-    )
-    .await;
+    let credential = token("rep-login", &json!({}));
+    let unrecorded = |what: &str, (code, body): (StatusCode, String)| {
+        assert_eq!(code, StatusCode::FORBIDDEN, "{what}: {body}");
+        assert!(
+            body.contains("refused-representation-unrecorded"),
+            "{what}: {body}"
+        );
+    };
+    let lookup = |subject: &str| format!("/ehr?subject_id={subject}&subject_namespace={NAMESPACE}");
+
+    unrecorded(
+        "the child's EHR before any representation is stored",
+        status(&app, "GET", &format!("/ehr/{child}"), &credential).await,
+    );
+    stored(&svc, &family).await;
+    let (code, body) = status(&app, "GET", &format!("/ehr/{child}"), &credential).await;
+    assert_eq!(code, StatusCode::OK, "the represented child's EHR: {body}");
+    let (code, body) = status(&app, "GET", &lookup(&family.child), &credential).await;
+    assert_eq!(code, StatusCode::OK, "the lookup of the child: {body}");
+    assert!(body.contains(&child), "the child's EHR is found: {body}");
+    unrecorded(
+        "another subject's EHR",
+        status(&app, "GET", &format!("/ehr/{stranger}"), &credential).await,
+    );
+    unrecorded(
+        "the lookup of another subject",
+        status(&app, "GET", &lookup(STRANGER), &credential).await,
+    );
+    unrecorded(
+        "a request that names no subject",
+        status(&app, "GET", "/definition/template/adl1.4", &credential).await,
+    );
+
+    let launched = token(
+        "rep-login",
+        &json!({ "scope": "patient/composition-*.r", "ehrId": child }),
+    );
+    let (code, body) = status(&app, "GET", &format!("/ehr/{child}"), &launched).await;
+    assert_eq!(code, StatusCode::OK, "the launch EHR: {body}");
+    let (code, body) = status(&app, "GET", &format!("/ehr/{stranger}"), &launched).await;
+    assert_eq!(
+        code,
+        StatusCode::FORBIDDEN,
+        "another EHR than the launch EHR: {body}"
+    );
+    let elsewhere = token(
+        "rep-login",
+        &json!({ "scope": "patient/composition-*.r", "ehrId": stranger }),
+    );
+    unrecorded(
+        "a launch EHR of a subject no representation names",
+        status(&app, "GET", &format!("/ehr/{stranger}"), &elsewhere).await,
+    );
 }
 
 #[tokio::test]

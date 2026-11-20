@@ -11,11 +11,15 @@
 //! `PERSON` whose binding key is that login under the token's issuer, and
 //! admitted while it holds a live representation of the EHR's subject. The
 //! patient's own write of the representation that authorises a proxy is
-//! committed naming their `PERSON`. No openEHR spec governs resolving a login
-//! to a party: our own design.
+//! committed naming their `PERSON`. A `persons` login whose one `PERSON` is a
+//! representative's alone carries no representation in its token, so it is
+//! admitted here for the subject a live stored representation names it for
+//! (#6147). No openEHR spec governs resolving a login to a party: our own
+//! design.
 
 use ferroehr::party_binding::grants::caller::care_of::ProviderKey;
 use ferroehr::service::demographic::portal::PortalLogin;
+use ferroehr::storage::access_projection::EhrSubject;
 use ferroehr::versioning::committer::bound::BoundDetails;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::{Outcome, PartyRef};
@@ -39,17 +43,20 @@ pub struct RepresentedEhr {
     /// The `PARTY_RELATIONSHIP` container of the representation the
     /// representative is admitted on, which the access log names.
     pub representation: uuid::Uuid,
-    /// The representative of a `patients` issuer's token, whom FerroEHR binds
-    /// itself; `None` for a representative of a `persons` issuer, whom the
-    /// login binding bound.
+    /// The representative FerroEHR binds itself: of a `patients` issuer's
+    /// token, or a `persons` login whose `PERSON` is a representative's
+    /// alone; `None` for a representative whose token asserts the subject it
+    /// represents, whom the login binding bound.
     pub portal: Option<PortalRepresentative>,
 }
 
-/// Someone a `patients` issuer's token admits for the patient it names.
+/// Someone FerroEHR admits for a subject on a representation it stores,
+/// with no representation in the token.
 ///
-/// That is the actor of its RFC 8693 §4.1 `act` claim, or the person signing
-/// in under their own login, bound to their `PERSON` by that login and
-/// admitted while it holds a live representation of the EHR's subject.
+/// That is the actor of a `patients` issuer's RFC 8693 §4.1 `act` claim, or
+/// the person signing in under their own login, bound to their `PERSON` by
+/// that login, of a `patients` or a `persons` issuer, and admitted while it
+/// holds a live representation of the EHR's subject.
 ///
 /// No openEHR spec governs resolving a login to a party: our own design.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,6 +73,18 @@ pub struct PortalRepresentative {
     pub login: String,
     /// The `PARTY_REF.namespace` the `PERSON`s are named under.
     pub namespace: String,
+}
+
+/// What a request names of the record it reaches, read before the
+/// middleware awaits anything: the EHR of its path or of its query's scope,
+/// and the subject reference an EHR lookup by subject names, as
+/// `(subject_id, subject_namespace)` (ITS-REST EHR API `GET /ehr`).
+#[derive(Debug, Clone, Default)]
+pub(super) struct Reached {
+    /// The EHR id the request names.
+    pub(super) ehr: Option<String>,
+    /// The subject reference an EHR lookup by subject names.
+    pub(super) subject: Option<(String, String)>,
 }
 
 /// What the patient context of a request binds: the EHRs a representative
@@ -92,7 +111,9 @@ pub(super) struct Bound {
 /// the person themself only when their login is a key of the `PERSON` the
 /// launch EHR's subject names. A caller the login binding bound as the
 /// person themself and whose token names a launch EHR is held to that EHR's
-/// subject being their `PERSON` ([`own_context`]).
+/// subject being their `PERSON` ([`own_context`]). A caller the login
+/// binding bound as a representative is admitted for the subject the request
+/// `reached` names ([`represented_by_store`]).
 ///
 /// # Errors
 /// [`AuthError::PartyRefused`] when the bound party represents no such
@@ -103,6 +124,7 @@ pub(super) async fn bound(
     service: &ferroehr::service::FerroEhrService,
     (namespace, providers): (&str, &[ProviderKey]),
     principal: &Principal,
+    reached: &Reached,
 ) -> Result<Bound, AuthError> {
     let access = &principal.access;
     let Some(caller) = access.caller() else {
@@ -111,6 +133,14 @@ pub(super) async fn bound(
     if let Some(own) = &principal.own {
         own_context(service, caller, own).await?;
         return Ok(Bound::default());
+    }
+    if let Some(person) = super::party::own::representative_person(caller) {
+        return represented_by_store(service, (namespace, providers), caller, person, reached)
+            .await
+            .map(|represented| Bound {
+                represented: Some(represented),
+                own: None,
+            });
     }
     let represented = match caller.kind() {
         CallerKind::Representative { represented, .. } => represented,
@@ -190,6 +220,110 @@ pub(super) async fn bound(
             portal: None,
         }),
         own: None,
+    })
+}
+
+/// The EHRs `caller`, bound by the login binding to the representative's
+/// `PERSON` `person`, reaches on a request that `reached` names, with the
+/// representation it is admitted on.
+///
+/// The subject is that of the EHR the token's launch context names (`ehrId`,
+/// master07 §Context Selection), which then holds the caller to that EHR,
+/// else that of the EHR the request names, else the `PERSON` an EHR lookup by
+/// subject names. The caller is admitted only on a live representation of
+/// that subject for a provider it acts for, not written by itself, read in
+/// one exact indexed read (draft access control decision procedure, step 0
+/// Representation). No openEHR spec governs resolving a login to a party: our
+/// own design (#6147).
+///
+/// # Errors
+/// [`AuthError::PartyRefused`] (`refused-representation-unrecorded`) when
+/// the request names no subject of this store or no such representation
+/// names the caller for it, and [`AuthError::PartyUnavailable`] when a store
+/// cannot answer.
+async fn represented_by_store(
+    service: &ferroehr::service::FerroEhrService,
+    (namespace, providers): (&str, &[ProviderKey]),
+    caller: &Caller,
+    person: &PartyRef,
+    reached: &Reached,
+) -> Result<RepresentedEhr, AuthError> {
+    let unrecorded = |why: &'static str| {
+        tracing::warn!(
+            issuer = caller.issuer().unwrap_or("-"),
+            outcome = "refused-representation-unrecorded",
+            "{why}"
+        );
+        super::party::unrecorded()
+    };
+    // NOTE: the local party source names each party by its container's UUID, so a party
+    // another source names is no PERSON of this store and holds no stored representation.
+    let Ok(representative) = person.id().parse::<uuid::Uuid>() else {
+        return Err(unrecorded(
+            "the representative's PERSON is no party of this store",
+        ));
+    };
+    // NOTE: our own design (#6147), a launch context that names no EHR id names no subject,
+    // so the representative reaches none.
+    let launch = caller
+        .ehr_id()
+        .map(|ehr| ehr.parse::<uuid::Uuid>().ok().map(ferroehr::ids::EhrId));
+    let subject = match (launch, reached) {
+        (Some(Some(ehr)), _) => service.ehr_subject_person(ehr).await,
+        (None, Reached { ehr: Some(ehr), .. }) => match ehr.parse::<uuid::Uuid>() {
+            Ok(ehr) => service.ehr_subject_person(ferroehr::ids::EhrId(ehr)).await,
+            Err(_not_an_ehr_id) => Ok(None),
+        },
+        (
+            None,
+            Reached {
+                subject: Some((id, subject_namespace)),
+                ..
+            },
+        ) => {
+            service
+                .subject_person(&EhrSubject::new(subject_namespace.as_str(), id.as_str()))
+                .await
+        }
+        (Some(None) | None, Reached { .. }) => Ok(None),
+    }
+    .map_err(unavailable(
+        "the subject the representative reaches could not be read",
+    ))?;
+    let Some(subject) = subject else {
+        return Err(unrecorded(
+            "the request of a representative names no subject of this store",
+        ));
+    };
+    let Some(representation) = service
+        .live_representation((representative, subject), providers)
+        .await
+        .map_err(unavailable("the representation could not be read"))?
+    else {
+        return Err(unrecorded(
+            "no stored representation admits the representative for the subject it reaches",
+        ));
+    };
+    let ehr_ids = match launch {
+        Some(Some(ehr)) => vec![ehr],
+        _ => service
+            .ehr_ids_for_person(&subject.to_string(), namespace)
+            .await
+            .map_err(unavailable(
+                "the EHRs of the represented subject could not be read",
+            ))?,
+    };
+    Ok(RepresentedEhr {
+        ehr_ids,
+        representation: representation.container,
+        portal: Some(PortalRepresentative {
+            person: representative,
+            subject,
+            relationship: representation.relationship,
+            login_issuer: caller.issuer().unwrap_or_default().to_owned(),
+            login: caller.subject().to_owned(),
+            namespace: namespace.to_owned(),
+        }),
     })
 }
 

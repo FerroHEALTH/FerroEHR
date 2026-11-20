@@ -31,6 +31,7 @@ use ferrohealth_smart::federation::contact::{EhdsiCode, TrcPatientId};
 use ferrohealth_smart::guard::Requirement;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::resource::{Access, Caller};
+use openehr_its::rest::decode::query_component_octets;
 use openehr_its::rest::runtime::ApiError;
 
 use super::{AuthError, AuthLayer, Principal};
@@ -44,12 +45,12 @@ use crate::smart::routes::{Need, target_ehr};
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct TrcPatientEhr(pub(crate) ferroehr::ids::EhrId);
 
-/// What the TRC confinement reads of a request: whether its route serves
-/// patient data, and the EHR it addresses.
+/// What the patient context reads of a request: whether its route serves
+/// patient data, and the record it reaches.
 #[derive(Debug, Clone)]
 pub(super) struct Shape {
     patient_data: bool,
-    target: Option<String>,
+    reached: super::portal::Reached,
 }
 
 impl Shape {
@@ -67,7 +68,14 @@ impl Shape {
                 .patient_data
                 .as_deref()
                 .is_none_or(|gate| gate.serves_patient_data(matched)),
-            target: target_ehr(&requirement, matched, uri, req.headers()),
+            reached: super::portal::Reached {
+                ehr: target_ehr(&requirement, matched, uri, req.headers()),
+                subject: layer
+                    .smart
+                    .looks_up_by_subject(req.method(), matched)
+                    .then(|| subject_query(uri))
+                    .flatten(),
+            },
         }
     }
 }
@@ -87,6 +95,7 @@ pub(super) fn patient_context<'a>(
     req: &Request,
 ) -> impl Future<Output = Option<Response>> + Send + 'a {
     let shape = Shape::of(layer, req);
+    let reached = shape.reached.clone();
     let headers = req.headers().clone();
     async move {
         if let Some(refusal) = super::declared::over_rate(principal) {
@@ -105,7 +114,9 @@ pub(super) fn patient_context<'a>(
             .map(|(issuer, id)| ProviderKey::new(issuer, id))
             .into_iter()
             .collect();
-        match super::portal::bound(&layer.service, (namespace, &providers), principal).await {
+        match super::portal::bound(&layer.service, (namespace, &providers), principal, &reached)
+            .await
+        {
             Ok(bound) => {
                 principal.represented = bound.represented;
                 if bound.own.is_some() {
@@ -183,7 +194,7 @@ async fn confine(
             ));
         }
     };
-    let held = shape.target.as_deref().and_then(|target| {
+    let held = shape.reached.ehr.as_deref().and_then(|target| {
         resolved
             .into_iter()
             .find(|ehr| target.eq_ignore_ascii_case(&ehr.to_string()))
@@ -195,6 +206,30 @@ async fn confine(
         Caller::clone(caller).with_extension(TrcPatientEhr(ehr)),
     ));
     None
+}
+
+/// The `subject_id` and `subject_namespace` query parameters of `uri`, an EHR
+/// lookup by subject (ITS-REST EHR API `GET /ehr`), each read once; `None`
+/// unless both are.
+fn subject_query(uri: &http::Uri) -> Option<(String, String)> {
+    let mut id = None;
+    let mut namespace = None;
+    for pair in uri.query()?.split('&') {
+        let Some((key, value)) = pair.split_once('=') else {
+            continue;
+        };
+        let slot = match key {
+            "subject_id" => &mut id,
+            "subject_namespace" => &mut namespace,
+            _ => continue,
+        };
+        // NOTE: a parameter given twice names no one subject, so the lookup reaches none.
+        if slot.is_some() {
+            return None;
+        }
+        *slot = Some(String::from_utf8(query_component_octets(value)).ok()?);
+    }
+    id.zip(namespace)
 }
 
 /// The identifier of the TRC patient `patient`, a `PERSON` whose identifier
@@ -236,6 +271,20 @@ fn mismatch(principal: &Principal, not_found: &'static str) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_ehr_lookup_names_its_subject_once() {
+        let query = |q: &str| subject_query(&format!("/ehr?{q}").parse().expect("a URI"));
+        assert_eq!(
+            query("subject_id=p%201&subject_namespace=demographic"),
+            Some(("p 1".to_owned(), "demographic".to_owned()))
+        );
+        assert_eq!(query("subject_id=p1"), None);
+        assert_eq!(
+            query("subject_id=p1&subject_id=p2&subject_namespace=demographic"),
+            None
+        );
+    }
 
     #[test]
     fn the_binding_is_the_system_and_the_value() {
