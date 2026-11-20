@@ -1628,9 +1628,9 @@ hospital_log() {
   h_assert_code 200 "Hans reads the log"
   # Dr. Jansen's reads in P-HOSP-ABAC-CARE, selected by the PERSON the login
   # binding bound her to, so the entry read does not depend on who read Eva's
-  # record last.
-  assert_contains "$(jq -c --arg p "$(hv person_anna)" '[.entries[]? | select(.accessor.kind.value == "person"
-    and ((.accessor.party.external_ref.id.value // "") | ascii_downcase) == ($p | ascii_downcase))
+  # record last. She reads through the app, so her kind is the delegated one.
+  assert_contains "$(jq -c --arg p "$(hv person_anna)" '[.entries[]?
+    | select(((.accessor.party.external_ref.id.value // "") | ascii_downcase) == ($p | ascii_downcase))
     | .accessor.roles // empty][0]' <<<"$H_BODY")" "CLINICIAN" "Hans's full view carries the roles"
   h_call 2 "pt:eva:$eva" GET "$HX/ehr/$(hv ehr_gina)/access_log"
   h_assert_code 404 "Eva reads Gina's log"
