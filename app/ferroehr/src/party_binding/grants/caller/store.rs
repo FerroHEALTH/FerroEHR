@@ -102,6 +102,23 @@ pub const CARE_OF_TEAM: &str = concat!(
      ORDER BY f.party_id, f.holder_id, f.ordinal"
 );
 
+/// The care relationships whose target is one of `$1`, by subject. Answered
+/// from `ix_binding_caller_fact_care_team`.
+const CARE_OF_CARERS: &str = concat!(
+    "SELECT f.party_id AS stamped, ",
+    fact_columns!(),
+    " FROM binding_caller_fact f WHERE f.target_id = ANY($1) AND f.kind = 'under_care_of' \
+     ORDER BY f.party_id, f.holder_id, f.ordinal"
+);
+
+/// The care relationship the `PARTY_RELATIONSHIP` head `$1` holds. Answered
+/// from `uq_binding_caller_fact`.
+const CARE_OF_HOLDER: &str = concat!(
+    "SELECT f.party_id AS stamped, ",
+    fact_columns!(),
+    " FROM binding_caller_fact f WHERE f.holder_id = $1 AND f.kind = 'under_care_of'"
+);
+
 /// The record subjects the parties stamped after the facts revision `$1`
 /// declare now, whose cached resolution a replica drops; answered from
 /// `ix_binding_caller_fact_party_revision` and the primary key of
@@ -575,6 +592,41 @@ pub(crate) async fn care_of_team(
         .fetch_all(&mut *conn)
         .await?;
     by_party(rows)
+}
+
+/// The care relationships whose target is one of `carers`, by subject, read
+/// on `conn`: the reverse reading of the relationship resources.
+///
+/// # Errors
+/// As [`load`].
+pub(crate) async fn care_of_carers(
+    conn: &mut PgConnection,
+    carers: &[Uuid],
+) -> Result<Vec<(Uuid, Vec<FactRow>)>, StorageError> {
+    let rows = sqlx::query(CARE_OF_CARERS)
+        .bind(carers)
+        .fetch_all(&mut *conn)
+        .await?;
+    by_party(rows)
+}
+
+/// The care relationship the head of the `PARTY_RELATIONSHIP` `holder`
+/// holds, with its subject, read on `conn`; `None` when its head holds none:
+/// it is deleted, or no care relationship.
+///
+/// # Errors
+/// As [`load`].
+pub(crate) async fn care_of_holder(
+    conn: &mut PgConnection,
+    holder: Uuid,
+) -> Result<Option<(Uuid, FactRow)>, StorageError> {
+    let rows = sqlx::query(CARE_OF_HOLDER)
+        .bind(holder)
+        .fetch_all(&mut *conn)
+        .await?;
+    Ok(by_party(rows)?
+        .into_iter()
+        .find_map(|(subject, facts)| facts.into_iter().next().map(|fact| (subject, fact))))
 }
 
 /// `rows`, ordered by their `stamped` party, grouped by it; a party whose

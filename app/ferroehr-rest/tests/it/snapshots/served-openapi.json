@@ -4717,6 +4717,535 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/care_relationship": {
+      "get": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "List care relationships (`GET /care_relationship`).",
+        "description": "**An extension of ITS-REST: no ITS-REST operation governs this.** With\n`subject_id` and `subject_namespace`, the care relationships of that\nsubject, live ones by default; with `carer`, the reverse reading, the\nrelationships that reach that carer, one page. A relationship of a\nsubject whose record the caller may not read is left out, unless the\ncaller writes care relationships for its provider; each subject a list\nreveals writes one access-log entry.",
+        "operationId": "care_relationship_list",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "description": "The subject's id, with subject_namespace.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_namespace",
+            "in": "query",
+            "description": "The namespace of subject_id.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "at",
+            "in": "query",
+            "description": "The day `YYYY-MM-DD` the relationships are live on, with the policy's grace; today when absent.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "all",
+            "in": "query",
+            "description": "With the subject: `true` lists ended relationships too.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "carer",
+            "in": "query",
+            "description": "The reverse reading: the carer's party container id.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "description": "With carer: the care_role as the token `terminology_id|code`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "description": "With carer: `direct` or `team`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "With carer: the first relationship of the page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "fetch",
+            "in": "query",
+            "description": "With carer: the largest page, 1 to 1000, 100 when absent.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A JSON array of PARTY_RELATIONSHIPs, each with its uid.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A parameter outside its form, or both forms.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The Accept header admits no JSON.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "Create a care relationship of a subject by its reference\n(`POST /care_relationship?subject_id=&subject_namespace=`).",
+        "description": "**An extension of ITS-REST: no ITS-REST operation governs this.** The\nbody is an `under_care_of` `PARTY_RELATIONSHIP` whose source is the\n`PERSON` the subject reference names; the commit is that of\n`/demographic/party_relationship`.",
+        "operationId": "care_relationship_create",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "description": "The subject's id.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_namespace",
+            "in": "query",
+            "description": "The namespace of subject_id.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Prefer",
+            "in": "header",
+            "description": "`return=representation`, `return=identifier` or `return=minimal` (the default).",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "openehr-audit-details",
+            "in": "header",
+            "description": "Committal AUDIT_DETAILS of the CONTRIBUTION.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "openehr-version",
+            "in": "header",
+            "description": "Committal metadata of the VERSION.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "An under_care_of PARTY_RELATIONSHIP as canonical JSON or XML.",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created; ETag and Location name the new version.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A malformed body or query.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The writer's authority does not cover the provider or the target kind.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No care relationship of this subject, or a target, provider or bound it breaks.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/care_relationship/{relationship_uid}": {
+      "get": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "Retrieve one care relationship (`GET /care_relationship/{relationship_uid}`).",
+        "description": "**An extension of ITS-REST: no ITS-REST operation governs this.** A\nrelationship the caller may not read answers `404`, as one that does\nnot exist; a read writes one access-log entry for its subject.",
+        "operationId": "care_relationship_get",
+        "parameters": [
+          {
+            "name": "relationship_uid",
+            "in": "path",
+            "description": "The relationship's container id for its current version, or one version's uid.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The PARTY_RELATIONSHIP, with its ETag.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "204": {
+            "description": "The version read is a deletion marker."
+          },
+          "400": {
+            "description": "A malformed uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No care relationship the caller may read has this uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "Change a care relationship (`PUT /care_relationship/{relationship_uid}`).",
+        "description": "**An extension of ITS-REST: no ITS-REST operation governs this.** It\nchanges the role or the period; closing `time_validity` ends it. The\nsource stays the same subject.",
+        "operationId": "care_relationship_update",
+        "parameters": [
+          {
+            "name": "relationship_uid",
+            "in": "path",
+            "description": "The relationship's container id.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "REQUIRED: the current version uid.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Prefer",
+            "in": "header",
+            "description": "`return=representation`, `return=identifier` or `return=minimal` (the default).",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The new version, an under_care_of PARTY_RELATIONSHIP of the same subject.",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated, with the representation or identifier asked for.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "204": {
+            "description": "Updated."
+          },
+          "400": {
+            "description": "A malformed body or uid, or no If-Match.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The writer's authority does not cover the change.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No care relationship has this uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match names no current version; ETag names the current one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No care relationship of the same subject, or a bound it breaks.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "Remove a care relationship written in error\n(`DELETE /care_relationship/{relationship_uid}`).",
+        "description": "**An extension of ITS-REST: no ITS-REST operation governs this.** Its\nearlier versions keep it.",
+        "operationId": "care_relationship_delete",
+        "parameters": [
+          {
+            "name": "relationship_uid",
+            "in": "path",
+            "description": "The relationship's container id.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "REQUIRED: the current version uid.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted; ETag names the deletion's version."
+          },
+          "400": {
+            "description": "A malformed uid, no If-Match, or an already deleted relationship.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The writer's authority does not cover it.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No care relationship has this uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match names no current version; ETag names the current one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/definition/archetype/adl1.4": {
       "get": {
         "tags": [
@@ -6416,6 +6945,185 @@
           },
           "415": {
             "description": "The request DECLARES a Simplified `Content-Type`. A `DELETE` sends no payload, but the declaration is refused before the write because an untemplated resource has no template to expand one against (`Resources.md` §\"Simplified Formats\"). An absent `Content-Type` declares nothing to refuse.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/demographic/person/{uid_based_id}/care_relationship": {
+      "get": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "List the care relationships of a `PERSON`\n(`GET /demographic/person/{uid_based_id}/care_relationship`).",
+        "description": "**An extension of ITS-REST: no ITS-REST operation governs this.** As\nthe list by subject reference, for the subject this `PERSON` is.",
+        "operationId": "person_care_relationship_list",
+        "parameters": [
+          {
+            "name": "uid_based_id",
+            "in": "path",
+            "description": "The subject's PERSON, by its container id or a version uid.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "at",
+            "in": "query",
+            "description": "The day `YYYY-MM-DD` the relationships are live on; today when absent.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "all",
+            "in": "query",
+            "description": "`true` lists ended relationships too.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A JSON array of PARTY_RELATIONSHIPs, each with its uid.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A malformed uid or parameter.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No PERSON has this id.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "Create a care relationship of a `PERSON`\n(`POST /demographic/person/{uid_based_id}/care_relationship`).",
+        "description": "**An extension of ITS-REST: no ITS-REST operation governs this.** As\nthe create by subject reference, for the subject this `PERSON` is.",
+        "operationId": "person_care_relationship_create",
+        "parameters": [
+          {
+            "name": "uid_based_id",
+            "in": "path",
+            "description": "The subject's PERSON, by its container id.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Prefer",
+            "in": "header",
+            "description": "`return=representation`, `return=identifier` or `return=minimal` (the default).",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "An under_care_of PARTY_RELATIONSHIP whose source is this PERSON.",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created; ETag and Location name the new version.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A malformed body or uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The writer's authority does not cover the provider or the target kind.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No PERSON has this id.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No care relationship of this PERSON, or a target, provider or bound it breaks.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -8692,6 +9400,198 @@
           },
           "404": {
             "description": "The terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/versioned_care_relationship/{relationship_uid}": {
+      "get": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "Retrieve the versioned object of a care relationship\n(`GET /versioned_care_relationship/{relationship_uid}`).",
+        "description": "**An extension of ITS-REST: no ITS-REST operation governs this.**",
+        "operationId": "versioned_care_relationship_get",
+        "parameters": [
+          {
+            "name": "relationship_uid",
+            "in": "path",
+            "description": "The relationship's container id.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The VERSIONED_OBJECT, with its ETag.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A malformed uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No care relationship the caller may read has this uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/versioned_care_relationship/{relationship_uid}/revision_history": {
+      "get": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "Retrieve the revision history of a care relationship\n(`GET /versioned_care_relationship/{relationship_uid}/revision_history`).",
+        "description": "**An extension of ITS-REST: no ITS-REST operation governs this.** One\nitem per version, with the `AUDIT_DETAILS` of its commit.",
+        "operationId": "care_relationship_revision_history",
+        "parameters": [
+          {
+            "name": "relationship_uid",
+            "in": "path",
+            "description": "The relationship's container id.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The REVISION_HISTORY.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A malformed uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No care relationship the caller may read has this uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/versioned_care_relationship/{relationship_uid}/version/{version_uid}": {
+      "get": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "Retrieve one version of a care relationship\n(`GET /versioned_care_relationship/{relationship_uid}/version/{version_uid}`).",
+        "description": "**An extension of ITS-REST: no ITS-REST operation governs this.**",
+        "operationId": "care_relationship_version_get_by_id",
+        "parameters": [
+          {
+            "name": "relationship_uid",
+            "in": "path",
+            "description": "The relationship's container id.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version_uid",
+            "in": "path",
+            "description": "The version's uid.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The ORIGINAL_VERSION, with its ETag.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A malformed uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such version of a care relationship the caller may read.",
             "content": {
               "application/problem+json": {
                 "schema": {
