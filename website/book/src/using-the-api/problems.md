@@ -93,6 +93,7 @@ access, assurance level) refuses the operation. `detail` names the missing
 grant. When the EHR's access directives or the access policy refuse, `detail`
 starts with the refusal code (`refused-consent-denied`,
 `refused-policy-denied`, `refused-consent-required`, `refused-sensitivity`,
+`refused-confidentiality`,
 `refused-no-care-relationship`, `refused-purpose-missing`,
 `refused-not-subject`, `refused-not-represented`,
 `refused-consent-reference-missing`; see

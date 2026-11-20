@@ -45,6 +45,7 @@ use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, Committed, Write, WriteEnvelope};
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::read::VersionRead;
+use openehr_rm::draft::access_control::terminology::Confidentiality;
 
 /// The name the access record gives the act.
 const ACT: &str = "ehr-access-repair";
@@ -137,6 +138,8 @@ impl FerroEhrService {
                  {preceding_version_uid}"
             )));
         }
+        let level = marked_level(&settings)
+            .or_else(|| current.canonical.get("settings").and_then(marked_level));
         let committed = self
             .replace_ehr_access_settings(
                 ehr_id,
@@ -145,8 +148,18 @@ impl FerroEhrService {
                 "EHR_ACCESS settings committed on the person's instruction",
             )
             .await?;
-        self.emit_mark_access(EventActionCode::Update, ehr_id, None, SETTINGS)
-            .await?;
+        if self.audit_enabled() {
+            let mut record = self.mark_record(EventActionCode::Update, ehr_id, None, SETTINGS);
+            // NOTE: draft access control, Refusals: setting or clearing a marking is an entry
+            // naming the level, the one set or, for a clearing, the one cleared (#6057).
+            record.decided = level.map(|level| {
+                Box::new(crate::access_eval::record::Decision {
+                    confidentiality: Some(level),
+                    ..crate::access_eval::record::Decision::default()
+                })
+            });
+            self.record_access(record).await?;
+        }
         Ok(self.version_meta(
             ehr_id,
             committed.vo_id,
@@ -268,4 +281,15 @@ impl FerroEhrService {
         self.invalidate_ehr_access(ehr_id).await;
         Ok(committed)
     }
+}
+
+/// The level of the marking `settings` carry, when it is above `N`.
+fn marked_level(settings: &Value) -> Option<Confidentiality> {
+    let level = settings.get("marking")?.get("confidentiality")?;
+    // NOTE: our own design, a level that does not decode is refused by the settings check
+    // the commit runs, so it never names an entry's label.
+    let level = openehr_its::json::from_canonical_value(level).ok()?;
+    Confidentiality::read(&level)
+        .ok()
+        .filter(|level| *level > Confidentiality::Normal)
 }
