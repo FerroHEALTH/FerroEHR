@@ -179,6 +179,10 @@ those parties were not stored, and it is not refused:
   adds no statement and no transaction. The Demographic API read checks the
   same mark.
 - An administrator's query returns the policy parties.
+- A party belongs to no EHR, so the EHR access settings and the rest of the
+  access decision a clinical query applies to each row do not apply to a
+  party. The mark decides which parties a caller reads, for AQL as for the
+  Demographic API.
 
 So `FROM AGENT` and `FROM PARTY` never return a system's `AGENT` to such a
 caller, and `FROM PARTY_RELATIONSHIP` never returns an acts-for relationship

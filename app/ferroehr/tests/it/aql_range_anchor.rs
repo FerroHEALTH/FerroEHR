@@ -528,9 +528,9 @@ fn migration_fill() -> Vec<String> {
 }
 
 /// Rewrites the time of every fifth event and the origin of every fifth
-/// history to a text no ISO 8601 reading has, which the commit path refuses
-/// and only a row stored by an earlier release can hold, and fills the
-/// column as the migration does.
+/// history, counted in the stored order, to a text no ISO 8601 reading has,
+/// which the commit path refuses and only a row stored by an earlier release
+/// can hold, and fills the column as the migration does.
 async fn store_unreadable_times(pool: &PgPool) -> u64 {
     let mut rewritten = 0;
     for (types, key) in [
@@ -538,10 +538,16 @@ async fn store_unreadable_times(pool: &PgPool) -> u64 {
         ("'HISTORY'", "origin"),
     ] {
         rewritten += sqlx::query(sqlx::AssertSqlSafe(format!(
-            "UPDATE clinical.node SET data = jsonb_set(data, '{{{key}}}', \
+            "WITH picked AS ( \
+                 SELECT tier, vo_id, sys_version, num, \
+                        row_number() OVER (ORDER BY vo_id, sys_version, num) AS n \
+                 FROM clinical.node WHERE rm_type IN ({types})) \
+             UPDATE clinical.node AS node SET data = jsonb_set(data, '{{{key}}}', \
                  CASE WHEN jsonb_typeof(data -> '{key}') = 'string' THEN '\"99 o''clock\"'::jsonb \
                  ELSE jsonb_set(data -> '{key}', '{{value}}', '\"99 o''clock\"') END) \
-             WHERE rm_type IN ({types}) AND hashtext(vo_id::text || num::text) % 5 = 0"
+             FROM picked p \
+             WHERE (node.tier, node.vo_id, node.sys_version, node.num) \
+                   = (p.tier, p.vo_id, p.sys_version, p.num) AND p.n % 5 = 0"
         )))
         .execute(pool)
         .await

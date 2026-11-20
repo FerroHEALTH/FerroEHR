@@ -9,7 +9,7 @@
 //! the value last (#4437, #6022). An anchor is the condition a top-level
 //! conjunct implies, stated as a FROM item the planner can start from: the
 //! versions some node row of which, under the leaf step's own predicate,
-//! carries a value the conjunct keeps. Four leaves have one:
+//! carries a value the conjunct keeps. Five leaves have one:
 //!
 //! - a text leaf of an `ELEMENT` value under `=` or `matches` over a list of
 //!   strings, by its search text (`ext.node_search_text`,
@@ -21,7 +21,12 @@
 //!   `<=`, `>` or `>=`, by `node.event_time`, which the node insert fills
 //!   with the value the comparison reads (`idx_node_hot_event_time`);
 //! - the `magnitude` of an `ELEMENT` value under `<`, `<=`, `>` or `>=`, by
-//!   `ext.node_magnitude` (`idx_node_hot_value_magnitude`).
+//!   `ext.node_magnitude` (`idx_node_hot_value_magnitude`);
+//! - the `relationships/target/id/value` of a party root under `=` or
+//!   `matches` over a list of strings, in a demographic query that reads the
+//!   trunk head, by the open rows of `party_relationship_target`
+//!   (`uq_party_relationship_target_open`), which hold the party each trunk
+//!   head's relationships name (#6090).
 //!
 //! The conjunct itself stays in the statement and each anchor reads the
 //! value the conjunct reads, so an anchor removes work and no row. A conjunct
@@ -49,9 +54,10 @@ use openehr_query::lexer::CompOp;
 
 use crate::aql::error::AqlError;
 use crate::aql::ir::{
-    self, Bind, Coercion, FragmentStep, LeafPath, Operand, ParamValue, PathTarget, TypedLit,
+    self, Bind, Coercion, FragmentStep, LeafPath, Operand, ParamValue, PathTarget, QueryDomain,
+    TypedLit,
 };
-use crate::db::iden::{Node, VersionRow};
+use crate::db::iden::{Node, RelationshipTarget, VersionRow, VoHead};
 
 use super::Builder;
 use super::expr::{binoper, call, col, hot};
@@ -189,7 +195,7 @@ impl Builder<'_> {
                     let Some(text) = self.anchor_text(&bind) else {
                         continue;
                     };
-                    anchors.extend(self.value_anchor(leaf, &[text])?);
+                    anchors.extend(self.equality_anchor(leaf, &[text])?);
                 }
                 // NOTE: AQL QUERY master03 §matches: a value list holds when the leaf
                 // matches one of its items, so it reads as the equalities above.
@@ -206,7 +212,7 @@ impl Builder<'_> {
                         continue;
                     };
                     if !texts.is_empty() {
-                        anchors.extend(self.value_anchor(leaf, &texts)?);
+                        anchors.extend(self.equality_anchor(leaf, &texts)?);
                     }
                 }
                 // NOTE: AQL QUERY master03 §WHERE (`identifiedExpr`): the grammar puts the
@@ -263,6 +269,88 @@ impl Builder<'_> {
             },
             Bind::Literal(_) => None,
         }
+    }
+
+    /// The anchor of the equality of `leaf` with one of `texts`: the
+    /// relationship target's ([`Self::target_anchor`]), or the value's.
+    ///
+    /// # Errors
+    /// [`AqlError`] from the leaf step's predicate lowering.
+    fn equality_anchor(
+        &mut self,
+        leaf: &LeafPath,
+        texts: &[String],
+    ) -> Result<Option<ValueAnchor>, AqlError> {
+        match self.target_anchor(leaf, texts) {
+            Some(anchor) => Ok(Some(anchor)),
+            None => self.value_anchor(leaf, texts),
+        }
+    }
+
+    /// The anchor of the equality of the relationship target
+    /// `relationships/target/id/value` of a party root with one of `texts`:
+    /// the parties whose trunk head names, among its relationships, one of
+    /// the parties the texts name, read from the open rows of
+    /// `party_relationship_target`; `None` for any other leaf, a text that
+    /// names no party, or a scope other than `LATEST_VERSION`.
+    ///
+    /// The table holds the target a reference names as
+    /// [`crate::party_binding::derive::container`] reads it (its root before
+    /// any `::`, case-folded, a hyphenated UUID), so a text the comparison
+    /// keeps names the same party and the parties it yields hold every party
+    /// the comparison keeps, and more. Its open rows name what each trunk head
+    /// names, so the anchor holds only for a query that reads the trunk head;
+    /// under `ALL_VERSIONS` or a version predicate a party's older versions
+    /// would be lost, and the comparison has no entry.
+    fn target_anchor(&mut self, leaf: &LeafPath, texts: &[String]) -> Option<ValueAnchor> {
+        if self.ir.domain != QueryDomain::Demographic || !leaf.anchor.is_empty() {
+            return None;
+        }
+        let names: Vec<&str> = leaf.fragment.iter().map(|s| s.name.as_str()).collect();
+        if names != ["relationships", "target", "id", "value"] {
+            return None;
+        }
+        let mut targets: Vec<uuid::Uuid> = texts
+            .iter()
+            .map(|text| crate::party_binding::derive::container(text))
+            .collect::<Option<_>>()?;
+        targets.sort_unstable();
+        targets.dedup();
+        let version = self.version_alias_of(leaf.source.0)?;
+        if !self.reads_trunk_head(&version) {
+            return None;
+        }
+        let key = self.node_key_of(&version);
+        let alias = format!("ra{}", self.next_ctr());
+        let (rows, head) = (format!("{alias}_t"), format!("{alias}_h"));
+        // The head is read per row by its key, so the entry probes one head a party
+        // and never scans the heads (PostgreSQL 18, "Scalar Subqueries").
+        let mut content_key = Query::select();
+        content_key
+            .column((Alias::new(head.as_str()), VoHead::TrunkHeadContentKey))
+            .from_as(VoHead::Table, Alias::new(head.as_str()))
+            .and_where(col(&head, VoHead::VoId).eq(col(&rows, RelationshipTarget::SourceVoId)));
+        let mut select = Query::select();
+        select
+            .distinct()
+            .expr_as(col(&rows, RelationshipTarget::SourceVoId), Node::VoId)
+            .expr_as(
+                Expr::SubQuery(None, Box::new(content_key.into())),
+                Node::SysVersion,
+            )
+            .from_as(RelationshipTarget::Table, Alias::new(rows.as_str()))
+            .and_where(match targets.as_slice() {
+                [one] => col(&rows, RelationshipTarget::TargetPartyId).eq(Expr::val(*one)),
+                _ => col(&rows, RelationshipTarget::TargetPartyId)
+                    .is_in(targets.iter().map(|target| Expr::val(*target))),
+            })
+            .and_where(col(&rows, RelationshipTarget::ValidTo).is_null());
+        Some(ValueAnchor {
+            alias,
+            version,
+            key,
+            select,
+        })
     }
 
     /// The anchor of the equality of `leaf` with one of `texts`, or `None`

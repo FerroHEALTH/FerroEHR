@@ -136,18 +136,29 @@ impl Builder<'_> {
     /// [`node_key`] of the version row `voa` under the scope of the source
     /// that opened it.
     pub(super) fn node_key_of(&self, voa: &str) -> Expr {
-        let scope = self.vo_alias.iter().find_map(|(sid, alias)| {
-            match (alias == voa, self.ir.sources.get(*sid)) {
-                (true, Some(Source::Rm(r))) => Some(&r.scope),
-                _ => None,
-            }
-        });
+        let scope = self.scope_of(voa);
         // NOTE: every version alias is opened by an RM source (`vo_alias`); the content-key
         // join is the right answer under every scope, so an alias without one keeps it.
         scope.map_or_else(
             || col(voa, VersionRow::ContentKey),
             |scope| node_key(voa, scope),
         )
+    }
+
+    /// Whether the version row `voa` is the trunk head of its object: the
+    /// source that opened it reads `LATEST_VERSION`.
+    pub(super) fn reads_trunk_head(&self, voa: &str) -> bool {
+        matches!(self.scope_of(voa), Some(VersionScope::Latest))
+    }
+
+    /// The scope of the source that opened the version row `voa`.
+    fn scope_of(&self, voa: &str) -> Option<&VersionScope> {
+        self.vo_alias.iter().find_map(|(sid, alias)| {
+            match (alias == voa, self.ir.sources.get(*sid)) {
+                (true, Some(Source::Rm(r))) => Some(&r.scope),
+                _ => None,
+            }
+        })
     }
 
     /// Binds the head row of the version row `voa` and the predicates its
