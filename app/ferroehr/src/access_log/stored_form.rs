@@ -48,32 +48,32 @@ pub(crate) const SHARED: [&str; 8] = [
     "security_labels",
 ];
 
-/// The at-codes of the access details the shared part holds
+/// The id-codes of the access details the shared part holds
 /// (`crate::access_log::details`): the caller, the credential, the
 /// classification map and the kind of access, the same for every EHR a
 /// request reached, and what the classification read, which repeats for
 /// every access of a caller to data of one template or by one query shape
 /// (#6005).
 const SHARED_DETAILS: [&str; 19] = [
-    "at0001", // event action
-    "at0002", // resource class
-    "at0004", // principal
-    "at0005", // issuer
-    "at0006", // client id
-    "at0007", // token id
-    "at0009", // role
-    "at0010", // domain
-    "at0015", // purpose
-    "at0016", // legal basis
-    "at0020", // category map digest
-    "at0021", // category content
-    "at0022", // acting mode
-    "at0023", // assurance level
-    "at0024", // assurance value
-    "at0025", // professional id
-    "at0026", // token attributes
-    "at0027", // binding
-    "at0029", // event type
+    "id11", // event action
+    "id12", // resource class
+    "id14", // principal
+    "id15", // issuer
+    "id16", // client id
+    "id17", // token id
+    "id19", // role
+    "id20", // domain
+    "id25", // purpose
+    "id26", // legal basis
+    "id30", // category map digest
+    "id31", // category content
+    "id32", // acting mode
+    "id33", // assurance level
+    "id34", // assurance value
+    "id35", // professional id
+    "id36", // token attributes
+    "id37", // binding
+    "id39", // event type
 ];
 
 /// The members split below their top level (#5714): the shared part keeps
@@ -266,7 +266,7 @@ pub fn join(row: Value, shared: Option<Value>) -> Value {
     Value::Object(members)
 }
 
-/// The at-code an element of the details tree names.
+/// The id-code an element of the details tree names.
 #[cfg(test)]
 fn code(item: &Value) -> Option<&str> {
     item.get(NODE).and_then(Value::as_str)
@@ -329,14 +329,14 @@ mod tests {
                 "_type": "ITEM_TREE",
                 "archetype_node_id": "x",
                 "items": [
-                    { "archetype_node_id": "at0002", "v": 1 },
-                    { "archetype_node_id": "at0004", "v": 2 },
-                    { "archetype_node_id": "at0009", "v": 3 },
-                    { "archetype_node_id": "at0009", "v": 4 },
-                    { "archetype_node_id": "at0012", "v": 5 },
-                    { "archetype_node_id": "at0018", "v": 6 },
-                    { "archetype_node_id": "at0018", "v": 7 },
-                    { "archetype_node_id": "at0027", "v": 8 }
+                    { "archetype_node_id": "id12", "v": 1 },
+                    { "archetype_node_id": "id14", "v": 2 },
+                    { "archetype_node_id": "id19", "v": 3 },
+                    { "archetype_node_id": "id19", "v": 4 },
+                    { "archetype_node_id": "id22", "v": 5 },
+                    { "archetype_node_id": "id28", "v": 6 },
+                    { "archetype_node_id": "id28", "v": 7 },
+                    { "archetype_node_id": "id37", "v": 8 }
                 ]
             }
         });
@@ -353,15 +353,15 @@ mod tests {
         assert_eq!(
             stored.row["other_details"],
             json!({ "items": [
-                { "archetype_node_id": "at0012", "v": 5 },
-                { "archetype_node_id": "at0018", "v": 6 },
-                { "archetype_node_id": "at0018", "v": 7 }
+                { "archetype_node_id": "id22", "v": 5 },
+                { "archetype_node_id": "id28", "v": 6 },
+                { "archetype_node_id": "id28", "v": 7 }
             ] })
         );
         assert_eq!(join(stored.row, stored.shared), entry);
     }
 
-    /// The shared at-codes are the codes of the caller's details and of what
+    /// The shared id-codes are the codes of the caller's details and of what
     /// the classification read.
     #[cfg(feature = "fhir")]
     #[test]

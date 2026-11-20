@@ -982,6 +982,12 @@ jobs:
       - name: spec-citations / The access decision holds no rule of one country
         if: ${{ !cancelled() }}
         run: bash scripts/checks/access-decides-no-country.sh
+      - name: spec-citations / The neutral-identifier detector catches what it claims to
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/neutral-identifiers.sh --self-test
+      - name: spec-citations / Nothing FerroEHR writes or sends is named after the product
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/neutral-identifiers.sh
 
       # ---- no-python ---------------------------------------------------
       # No Python anywhere (.claude/rules/rust-style.md §No Python): the tooling

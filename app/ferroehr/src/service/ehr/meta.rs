@@ -323,7 +323,7 @@ impl FerroEhrService {
             system_id: self.effective_system_id(),
             change_type: change_type.to_owned(),
             description: Some(crate::versioning::audit::dv_text(description)),
-            committer: crate::versioning::committer::request_committer(),
+            committer: crate::versioning::committer::request_committer(&self.system_id),
             attestation: None,
         }
     }

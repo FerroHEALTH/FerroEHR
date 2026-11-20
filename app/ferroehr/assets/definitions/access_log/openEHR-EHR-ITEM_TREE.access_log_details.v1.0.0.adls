@@ -1,0 +1,144 @@
+archetype (adl_version=2.0.6; rm_release=1.1.0)
+    openEHR-EHR-ITEM_TREE.access_log_details.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["organisation"] = <"Cadasto B.V.">
+    >
+    lifecycle_state = <"unmanaged">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The details of one access in ACCESS_LOG_ENTRY.other_details of the draft openEHR access log: the facts of an access the entry's core attributes do not hold, which the IHE BALP AuditEvent, the DICOM audit message and the EHDS access record carry beside the core.">
+            use = <"One ITEM_TREE of ELEMENTs, each named by its node id. An element is written only where the entry's core does not state the fact as the access holds it: the core is read first, and a detail beside it. A reader of another system reads the tree by these node ids. The access log model is a draft of FerroEHR, which is no openEHR release.">
+            copyright = <"© Cadasto B.V.">
+        >
+    >
+
+definition
+    ITEM_TREE[id1] matches {
+        items matches {
+                ELEMENT[id11] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id51] }
+                }
+                ELEMENT[id12] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id52] }
+                }
+                ELEMENT[id13] occurrences matches {0..1} matches {
+                    value matches { DV_COUNT[id53] }
+                }
+                ELEMENT[id14] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id54] }
+                }
+                ELEMENT[id15] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id55] }
+                }
+                ELEMENT[id16] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id56] }
+                }
+                ELEMENT[id17] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id57] }
+                }
+                ELEMENT[id19] occurrences matches {0..*} matches {
+                    value matches { DV_TEXT[id59] }
+                }
+                ELEMENT[id20] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id60] }
+                }
+                ELEMENT[id21] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id61] }
+                }
+                ELEMENT[id22] occurrences matches {0..1} matches {
+                    value matches { DV_IDENTIFIER[id62] }
+                }
+                ELEMENT[id23] occurrences matches {0..1} matches {
+                    value matches { DV_BOOLEAN[id63] }
+                }
+                ELEMENT[id24] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id64] }
+                }
+                ELEMENT[id25] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id65] }
+                }
+                ELEMENT[id26] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id66] }
+                }
+                ELEMENT[id27] occurrences matches {0..1} matches {
+                    value matches { DV_COUNT[id67] }
+                }
+                ELEMENT[id28] occurrences matches {0..*} matches {
+                    value matches { DV_TEXT[id68] }
+                }
+                ELEMENT[id29] occurrences matches {0..1} matches {
+                    value matches { DV_COUNT[id69] }
+                }
+                ELEMENT[id30] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id70] }
+                }
+                ELEMENT[id31] occurrences matches {0..1} matches {
+                    value matches { DV_PARSABLE[id71] }
+                }
+                ELEMENT[id32] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id72] }
+                }
+                ELEMENT[id33] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id73] }
+                }
+                ELEMENT[id34] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id74] }
+                }
+                ELEMENT[id35] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id75] }
+                }
+                ELEMENT[id36] occurrences matches {0..1} matches {
+                    value matches { DV_PARSABLE[id76] }
+                }
+                ELEMENT[id37] occurrences matches {0..1} matches {
+                    value matches { DV_PARSABLE[id77] }
+                }
+                ELEMENT[id38] occurrences matches {0..1} matches {
+                    value matches { DV_PARSABLE[id78] }
+                }
+                ELEMENT[id39] occurrences matches {0..1} matches {
+                    value matches { DV_TEXT[id79] }
+                }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"Access log details"> description = <"The details of one access beside the core of its access log entry.">>
+            ["id11"] = <text = <"Event action"> description = <"The DICOM EventActionCode of the access (PS3.15 A.5.1): C, R, U, D or E, where the entry's action does not state it.">>
+            ["id12"] = <text = <"Resource class"> description = <"The class of resource the access addressed, as the audit trail names it.">>
+            ["id13"] = <text = <"Outcome indicator"> description = <"The DICOM EventOutcomeIndicator (PS3.15 A.5.1): 0, 4 or 8, where the entry's outcome does not state it.">>
+            ["id14"] = <text = <"Principal"> description = <"The login the access was made under, where the accessor does not name it.">>
+            ["id15"] = <text = <"Issuer"> description = <"The issuer of the caller's token, where the accessor's credential does not name it.">>
+            ["id16"] = <text = <"Client id"> description = <"The client the caller's token was issued to, where the accessor's credential does not name it.">>
+            ["id17"] = <text = <"Token id"> description = <"The identifier (JWT jti) of the caller's token, where the accessor's credential does not name it.">>
+            ["id19"] = <text = <"Role"> description = <"A role the caller held, one element each, where the accessor's roles do not state them.">>
+            ["id20"] = <text = <"Domain"> description = <"The pseudonymisation domain, where it is not the resource class's own.">>
+            ["id21"] = <text = <"EHR id"> description = <"The EHR the request named, where the entry's ehr_id does not hold it.">>
+            ["id22"] = <text = <"Subject"> description = <"The subject of care of the EHR, as EHR_STATUS.subject names it: the namespace as issuer, the identifier as id.">>
+            ["id23"] = <text = <"Subject lookup failed"> description = <"Set when the subject of care could not be looked up.">>
+            ["id24"] = <text = <"Object id"> description = <"The object the request named, where no accessed item holds it.">>
+            ["id25"] = <text = <"Purpose"> description = <"The purpose of use the caller declared, where the entry's purposes do not state it.">>
+            ["id26"] = <text = <"Legal basis"> description = <"The legal basis the deployment attributes to the access.">>
+            ["id27"] = <text = <"Result count"> description = <"How many records the access served, where the entry's outcome does not count them.">>
+            ["id28"] = <text = <"Origin"> description = <"An origin of the data, one element each, where no accessed item holds them.">>
+            ["id29"] = <text = <"Origin count"> description = <"How many distinct origins the data had.">>
+            ["id30"] = <text = <"Category map digest"> description = <"The digest of the category map the access was classified through.">>
+            ["id31"] = <text = <"Category content"> description = <"What the classification read, as application/json.">>
+            ["id32"] = <text = <"Acting mode"> description = <"How the credential acted.">>
+            ["id33"] = <text = <"Assurance level"> description = <"The assurance level of the authentication, where the accessor's credential does not state it.">>
+            ["id34"] = <text = <"Assurance value"> description = <"The claim value the assurance level was read from.">>
+            ["id35"] = <text = <"Professional id"> description = <"The identifier of the natural person who accessed.">>
+            ["id36"] = <text = <"Token attributes"> description = <"The purposes and roles the access token stated, as application/json.">>
+            ["id37"] = <text = <"Binding"> description = <"The binding of the caller's credential to a party, with every field, as application/json.">>
+            ["id38"] = <text = <"Summary"> description = <"The count and the EHRs of a summary of refusals, as application/json.">>
+            ["id39"] = <text = <"Event type"> description = <"The DICOM EventTypeCode of an authentication record: 110122 Login or 110123 Logout.">>
+        >
+    >

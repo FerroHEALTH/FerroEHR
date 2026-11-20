@@ -127,7 +127,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
     let body = negotiate::decode::rm_value::<EhrStatus>(h, &parts.body)?;
     let uv = crate::overview::committal::write_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         body,
         Some(require_if_match(&p.if_match)?),
     )?;

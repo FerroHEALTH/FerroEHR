@@ -52,7 +52,8 @@ pub struct ImportPolicy {
     /// import.
     enforced: bool,
     /// The issuers whose logins a wrapped committer may not carry: every
-    /// trusted issuer, its `identifier_issuer`, and `ferroehr`.
+    /// trusted issuer and its `identifier_issuer`, beside the service's own
+    /// Basic issuer (`[api] basic_issuer`).
     issuers: BTreeSet<String>,
 }
 
@@ -60,8 +61,7 @@ impl ImportPolicy {
     /// Returns the policy with `issuers` the deployment's own login issuers.
     #[must_use]
     pub fn new(issuers: impl IntoIterator<Item = String>) -> Self {
-        let mut issuers: BTreeSet<String> = issuers.into_iter().collect();
-        issuers.insert("ferroehr".to_owned());
+        let issuers: BTreeSet<String> = issuers.into_iter().collect();
         Self {
             enforced: true,
             issuers,
@@ -283,7 +283,10 @@ impl FerroEhrService {
                 ids.iter().any(|id| {
                     id.get("issuer")
                         .and_then(Value::as_str)
-                        .is_some_and(|issuer| self.import_policy.issuers.contains(issuer))
+                        .is_some_and(|issuer| {
+                            issuer == self.basic_issuer()
+                                || self.import_policy.issuers.contains(issuer)
+                        })
                 })
             });
         // NOTE: a reference whose root is no UUID names no container of this store.

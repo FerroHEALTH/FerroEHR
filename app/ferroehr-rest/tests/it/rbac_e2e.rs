@@ -440,7 +440,12 @@ async fn exchange(
 async fn default_committer_names_the_callers_issuer_on_both_paths() {
     let (_pg, app) = app(true, None).await;
     let callers = [
-        (basic("user"), "user", "basic", "ferroehr"),
+        (
+            basic("user"),
+            "user",
+            "basic",
+            ferroehr::service::DEFAULT_SYSTEM_ID,
+        ),
         (bearer_with_roles(&["USER"]), "svc", "oauth2", ISSUER),
     ];
     for (authorization, subject, id_type, issuer) in callers {
