@@ -13,13 +13,15 @@ use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::party_binding::source::BindingSource;
+use ferroehr::service::FerroEhrService;
+use ferroehr::service::demographic::types::PartyKind;
 use ferrohealth_smart::party::source::{Lookup, PartyRecord, PartySource, Query, SourceError};
 use ferrohealth_smart::party::{Markers, PartyRef, PartyState};
 use http::StatusCode;
 use serde_json::{Value, json};
 
 use crate::common::{self, BASE};
-use crate::party_binding_http::{service, token};
+use crate::party_binding_http::{LOGIN, person, service, token, uid, vo, write};
 use crate::representation_http::{STRANGER, ehr, router};
 
 /// The `PERSON` every login of [`Patient`] binds.
@@ -110,4 +112,53 @@ async fn a_patients_own_login_holds_no_professional_right() {
             "{method} {path}: {answer}"
         );
     }
+}
+
+/// Commits a `PERSON` carrying the login `key` and no professional `ROLE`
+/// through the service; its id.
+async fn plain_person(svc: &FerroEhrService, key: &str) -> String {
+    let created =
+        Box::pin(svc.party_create(PartyKind::Person, write(&person(LOGIN, key), "532", None)))
+            .await
+            .expect("the PERSON commits");
+    vo(&uid(&created)).to_string()
+}
+
+/// A `PERSON` with no professional `ROLE` binds through the local party
+/// source, which holds its key, and reads its own EHR as its subject.
+#[tokio::test]
+async fn a_person_with_no_role_binds_through_the_local_source_to_their_own_ehr() {
+    let (_db, svc) = service().await;
+    let key = "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b";
+    let person = plain_person(&svc, key).await;
+    let own = ehr(&svc, Some(&person)).await;
+    let app = router(Arc::clone(&svc), Arc::new(svc.party_source("demographic"))).await;
+    let credential = token(key, &json!({}));
+    let (code, body) = send(&app, ("GET", &lookup(&person)), &credential, None).await;
+    assert_eq!(code, StatusCode::OK, "the lookup of their own EHR: {body}");
+    let (code, body) = send(&app, ("GET", &format!("/ehr/{own}")), &credential, None).await;
+    assert_eq!(code, StatusCode::OK, "their own EHR: {body}");
+}
+
+/// A `PERSON` with no professional `ROLE` and no EHR reaches nothing: every
+/// request is still decided, and refused.
+#[tokio::test]
+async fn a_person_of_no_ehr_reads_no_ehr() {
+    let (_db, svc) = service().await;
+    let key = "6f7a8b9c-0d1e-4f2a-9b3c-4d5e6f7a8b9c";
+    plain_person(&svc, key).await;
+    let stranger = ehr(&svc, Some(STRANGER)).await;
+    let app = router(Arc::clone(&svc), Arc::new(svc.party_source("demographic"))).await;
+    let credential = token(key, &json!({}));
+    let (code, body) = send(
+        &app,
+        ("GET", &format!("/ehr/{stranger}")),
+        &credential,
+        None,
+    )
+    .await;
+    assert_eq!(code, StatusCode::FORBIDDEN, "{body}");
+    assert!(body.contains("refused-not-subject"), "{body}");
+    let (code, body) = send(&app, ("GET", &lookup(STRANGER)), &credential, None).await;
+    assert_eq!(code, StatusCode::NOT_FOUND, "{body}");
 }
