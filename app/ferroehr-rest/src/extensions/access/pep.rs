@@ -37,6 +37,7 @@ use crate::api::RequestParts;
 use crate::extensions::access::authn::{Principal, current_principal};
 use crate::overview::error::RestError;
 
+use crate::extensions::access::authn::gates::ScopeRefused;
 use crate::negotiate;
 use crate::smart::routes;
 use crate::state::AppState;
@@ -197,7 +198,9 @@ fn smart_composition(
     };
     routes::check(&requirement, principal).map_err(|reason| {
         tracing::debug!(reason, "a SMART on openEHR requirement was not met");
-        forbidden(principal, "the credential does not permit this request")
+        let mut resp = forbidden(principal, "the credential does not permit this request");
+        resp.extensions_mut().insert(ScopeRefused);
+        resp
     })
 }
 
