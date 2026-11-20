@@ -18,9 +18,8 @@
 
 use std::fmt;
 
-use openehr_rm::draft::access_control::terminology::{
-    CareBasis, CareElement, ForeignCode, ForeignKind, Term,
-};
+use openehr_rm::draft::access_control::terminology::care::{CareBasis, CareElement};
+use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind, Term};
 use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
@@ -113,6 +112,10 @@ pub(crate) struct CareFact {
     /// Whether its `basis` is `self_declared`: written by the professional
     /// it names.
     pub(crate) self_declared: bool,
+    /// The carer it covers for, by the `issuer` and `id` of its `covers_for`
+    /// `DV_IDENTIFIER`, written in the provider's form; `None` when it names
+    /// none.
+    pub(crate) covers_for: Option<ProviderKey>,
 }
 
 /// Pushes onto `facts` the care relationship `body`, a `PARTY_RELATIONSHIP`
@@ -144,9 +147,24 @@ pub(crate) fn read<'a, T: Tree<'a>>(body: T, facts: &mut GrantFacts) {
     let role = care_role(body).map_err(|why| wrong.push(why)).ok();
     let provider = provider(body).map_err(|why| wrong.push(why)).ok();
     let self_declared = basis(body).map_err(|why| wrong.push(why)).ok();
-    if let (true, Some(carer), Some(kind), Some(role), Some(provider), Some(self_declared)) =
-        (wrong.is_empty(), carer, kind, role, provider, self_declared)
-    {
+    let covers_for = covers_for(body).map_err(|why| wrong.push(why)).ok();
+    if let (
+        true,
+        Some(carer),
+        Some(kind),
+        Some(role),
+        Some(provider),
+        Some(self_declared),
+        Some(covers_for),
+    ) = (
+        wrong.is_empty(),
+        carer,
+        kind,
+        role,
+        provider,
+        self_declared,
+        covers_for,
+    ) {
         facts.care_source = source;
         facts.facts.push(CallerFact {
             ordinal: 0,
@@ -157,6 +175,7 @@ pub(crate) fn read<'a, T: Tree<'a>>(body: T, facts: &mut GrantFacts) {
                 role,
                 provider,
                 self_declared,
+                covers_for,
             }),
             validity: body.get("time_validity").map(Tree::to_value),
             not_before: Bound::Open,
@@ -235,6 +254,27 @@ fn provider<'a, T: Tree<'a>>(body: T) -> Result<ProviderKey, String> {
     }
 }
 
+/// The carer the care relationship `body` covers for: its `covers_for`
+/// `DV_IDENTIFIER`, by its issuer and id; `None` when it names none (draft
+/// access control package, Care Relationships).
+///
+/// # Errors
+/// Why it cannot be read: a `covers_for` that is no `DV_IDENTIFIER` with an
+/// issuer and an id.
+fn covers_for<'a, T: Tree<'a>>(body: T) -> Result<Option<ProviderKey>, String> {
+    let Some(value) = element(body, CareElement::CoversFor) else {
+        return Ok(None);
+    };
+    let identifier: DvIdentifier = openehr_its::json::from_canonical_value(&value.to_value())
+        .map_err(|error| format!("its covers_for is no DV_IDENTIFIER: {error}"))?;
+    match identifier.issuer.filter(|issuer| !issuer.trim().is_empty()) {
+        Some(issuer) if !identifier.id.trim().is_empty() => {
+            Ok(Some(ProviderKey::new(issuer, identifier.id)))
+        }
+        _ => Err("its covers_for names the carer by an issuer and an id".to_owned()),
+    }
+}
+
 /// Whether the `basis` of `body` is `self_declared`; `assigned`, the
 /// default when absent, is not (draft access control package, Care
 /// Relationships). The access policy judges a self-declared one at its
@@ -266,6 +306,17 @@ pub struct CareOf {
     provider: ProviderKey,
     writer: Option<Uuid>,
     self_declared: bool,
+    held: Option<Held>,
+    covers_for: Option<ProviderKey>,
+}
+
+/// Where a care relationship is stored: its own `PARTY_RELATIONSHIP`
+/// container and the version its fact was read from.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct Held {
+    relationship: Uuid,
+    version: Option<String>,
+    carer_kind: CarerKind,
 }
 
 impl CareOf {
@@ -279,7 +330,61 @@ impl CareOf {
             provider,
             writer: None,
             self_declared: false,
+            held: None,
+            covers_for: None,
         }
+    }
+
+    /// This relationship as stored in the `PARTY_RELATIONSHIP` container
+    /// `relationship`, read from its version `version`, its target of
+    /// `carer_kind`, covering for `covers_for`.
+    #[must_use]
+    pub fn stored_as(
+        mut self,
+        (relationship, version): (Uuid, Option<String>),
+        carer_kind: CarerKind,
+        covers_for: Option<ProviderKey>,
+    ) -> Self {
+        self.held = Some(Held {
+            relationship,
+            version,
+            carer_kind,
+        });
+        self.covers_for = covers_for;
+        self
+    }
+
+    /// The `PARTY_RELATIONSHIP` container that holds it; `None` for one no
+    /// store named.
+    #[must_use]
+    pub fn relationship(&self) -> Option<Uuid> {
+        self.held.as_ref().map(|held| held.relationship)
+    }
+
+    /// The `OBJECT_VERSION_ID` of the version it was read from; `None` when
+    /// no store named one.
+    #[must_use]
+    pub fn version(&self) -> Option<&str> {
+        self.held.as_ref().and_then(|held| held.version.as_deref())
+    }
+
+    /// What its target is; `None` for one no store named.
+    #[must_use]
+    pub fn carer_kind(&self) -> Option<CarerKind> {
+        self.held.as_ref().map(|held| held.carer_kind)
+    }
+
+    /// The carer it covers for; `None` when it names none.
+    #[must_use]
+    pub fn covers_for(&self) -> Option<&ProviderKey> {
+        self.covers_for.as_ref()
+    }
+
+    /// Whether it admits access on `day` only through the grace after its
+    /// end: it ended on or before `day`.
+    #[must_use]
+    pub fn in_grace_on(&self, day: jiff::civil::Date) -> bool {
+        self.dates.upper.is_some_and(|upper| upper <= day)
     }
 
     /// This relationship as written by the party `writer`, the committer's
@@ -395,6 +500,16 @@ impl crate::memory::Weigh for CareOf {
             self.role.code.capacity(),
             self.provider.issuer.capacity(),
             self.provider.id.capacity(),
+            self.held
+                .as_ref()
+                .and_then(|held| held.version.as_ref())
+                .map_or(0, String::capacity),
+            self.covers_for.as_ref().map_or(0, |covers| {
+                covers
+                    .issuer
+                    .capacity()
+                    .saturating_add(covers.id.capacity())
+            }),
         ]
         .into_iter()
         .fold(0, usize::saturating_add)
@@ -518,6 +633,34 @@ mod tests {
         let declared = assigned(Some(writer)).written_by(Some(writer), true);
         assert!(declared.admits_writer(&[writer], true));
         assert!(!declared.admits_writer(&[writer], false), "the path is off");
+    }
+
+    #[test]
+    fn a_covers_for_reads_and_one_without_an_issuer_is_refused() {
+        let with_cover = |cover: Value| {
+            let mut body = care_of();
+            body["details"]["items"]
+                .as_array_mut()
+                .expect("items")
+                .push(element(&coded(TERMINOLOGY, "covers_for"), &cover));
+            GrantFacts::of(Kind::PartyRelationship, &body)
+        };
+        let read = with_cover(json!({"_type": "DV_IDENTIFIER",
+                                     "issuer": "urn:example:staff", "id": "jansen"}));
+        assert_eq!(read.unread, Vec::<String>::new());
+        assert!(matches!(
+            read.facts.as_slice(),
+            [CallerFact {
+                value: FactValue::Care(CareFact {
+                    covers_for: Some(ProviderKey { issuer, id }),
+                    ..
+                }),
+                ..
+            }] if issuer == "urn:example:staff" && id == "jansen"
+        ));
+        let bare = with_cover(json!({"_type": "DV_IDENTIFIER", "id": "jansen"}));
+        assert_eq!(bare.facts, Vec::new());
+        assert_eq!(bare.unread.len(), 1, "{:?}", bare.unread);
     }
 
     #[test]

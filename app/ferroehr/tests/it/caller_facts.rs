@@ -433,11 +433,28 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
     assert_eq!(cared[0].provider(), &provider());
     assert_eq!(cared[0].role(), &foreign("HL7_ParticipationType", "PART"));
     assert!(cared[0].live_on(today, jiff::Span::new()));
+    let member = |provider: ProviderKey| {
+        ferroehr::party_binding::grants::caller::facts::CallerFacts::new(
+            Vec::new(),
+            vec![ferroehr::party_binding::grants::caller::CareTeam::spanning(
+                ward.0, None, None,
+            )],
+        )
+        .with_providers([provider])
+    };
+    let subjects = |cared: Vec<ferroehr::access_eval::condition::care::CaredSubject>| {
+        cared
+            .into_iter()
+            .map(|cared| cared.subject)
+            .collect::<Vec<_>>()
+    };
     assert_eq!(
-        two.grants()
-            .cared_for_by(&[ward.0], &[provider()], today, &Policy::default())
-            .await
-            .expect("the ward's patients read"),
+        subjects(
+            two.grants()
+                .cared_for_by(&member(provider()), &[ward.0], today, &Policy::default())
+                .await
+                .expect("the ward's patients read")
+        ),
         vec![ferroehr::storage::access_projection::EhrSubject::new(
             "demographic",
             patient.to_string()
@@ -445,15 +462,17 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
         "the ward's patients are read by the ward, by their subject references"
     );
     assert_eq!(
-        two.grants()
-            .cared_for_by(
-                &[ward.0],
-                &[ProviderKey::new(PROVIDERS, "clinic")],
-                today,
-                &Policy::default()
-            )
-            .await
-            .expect("the ward's patients read"),
+        subjects(
+            two.grants()
+                .cared_for_by(
+                    &member(ProviderKey::new(PROVIDERS, "clinic")),
+                    &[ward.0],
+                    today,
+                    &Policy::default()
+                )
+                .await
+                .expect("the ward's patients read")
+        ),
         Vec::new(),
         "a caller acting for another provider holds none of them"
     );

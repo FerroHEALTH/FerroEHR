@@ -10,14 +10,15 @@
 //! draft is FerroEHR's change proposal and no openEHR release, so these checks
 //! are our own design over our own model (#5124).
 //!
-//! The five terminology invariants (`Action_valid`, `Kind_valid` of `ACCESSOR`
-//! and of `ACCESS_AUTHORISATION`, `Binding_valid`, `Result_valid`) ask for a
-//! term of a group of
+//! The six terminology invariants (`Action_valid`, `Kind_valid` of `ACCESSOR`
+//! and of `ACCESS_AUTHORISATION`, `Binding_valid`, `Result_valid`, and
+//! `Path_valid` of `ACCESS_CARE_GROUND`) ask for a term of a group of
 //! the draft `openehr_access` terminology (`Terminology_id_access`): a coded
 //! value holds when [`crate::draft::access_control::terminology`] reads its
 //! `defining_code` as a term of the invariant's group.
 
 use crate::draft::access_control::terminology::Term;
+use crate::draft::access_control::terminology::care::CarePath;
 use crate::draft::access_control::terminology::log::{
     AccessorKind, Action, Authorisation, CredentialBinding, Outcome,
 };
@@ -223,9 +224,18 @@ fn query_rules(check: &mut Check, query: &AccessQuery) {
 }
 
 fn authorisation_rules(check: &mut Check, authorisation: &AccessAuthorisation) {
-    check.hold(
-        Authorisation::read_coded(&authorisation.kind).is_ok(),
-        "ACCESS_AUTHORISATION",
-        "Kind_valid",
-    );
+    let kind = Authorisation::read_coded(&authorisation.kind);
+    check.hold(kind.is_ok(), "ACCESS_AUTHORISATION", "Kind_valid");
+    if let Some(care) = &authorisation.care {
+        check.hold(
+            kind == Ok(Authorisation::TreatmentRelationship),
+            "ACCESS_AUTHORISATION",
+            "Care_valid",
+        );
+        check.hold(
+            CarePath::read_coded(&care.path).is_ok(),
+            "ACCESS_CARE_GROUND",
+            "Path_valid",
+        );
+    }
 }

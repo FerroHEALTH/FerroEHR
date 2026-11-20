@@ -6,6 +6,7 @@
 //! The openEHR `ACCESS_AUTHORISATION` spec class, generated from the vendored BMM
 //! meta-model.
 
+use crate::draft::access_log::access_log::access_care_ground::AccessCareGround;
 use crate::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use crate::v1_2::data_types::uri::dv_uri::DvUri;
@@ -26,4 +27,6 @@ pub struct AccessAuthorisation {
     pub reference: Option<DvIdentifier>,
     /// The legal provisions the ground rests on.
     pub legal_grounds: Option<Vec<DvCodedText>>,
+    /// For a treatment relationship, the care relationship the access rested on: where several admitted it, the one the decision procedure chooses (`direct` before `team` before `self_declared` before `attested`, then by the order of the roles in the scope that matched).
+    pub care: Option<AccessCareGround>,
 }

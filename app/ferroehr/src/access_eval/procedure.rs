@@ -72,6 +72,7 @@ use openehr_rm::draft::access_control::terminology::{
     AccessDefault, CallerKind, DirectiveKind, Effect, OperationClass, Refusal,
 };
 
+use crate::access_eval::care_tie::{Cared, Tie, care_needs, granting};
 use crate::access_eval::directive::{Permit, Reader, kind_and_effect, names_sensitivity};
 use crate::access_eval::scope::{Item, Polarity, Pred, Scopes};
 use crate::ids::EhrId;
@@ -167,7 +168,7 @@ impl Emergency {
 }
 
 /// What the controller's `ACCESS_POLICY` requires of clinical access.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone)]
 pub struct Policy {
     /// `care_relationship_required`.
     pub care_required: bool,
@@ -178,6 +179,24 @@ pub struct Policy {
     /// Whether `self_declared_care` is set, which turns the `self_declared`
     /// path on (draft decision procedure, Holding a Care Relationship).
     pub self_declared: bool,
+    /// The codes of `care_purposes`: the purposes of use for which a care
+    /// relationship is a ground.
+    pub care_purposes: Vec<String>,
+}
+
+impl Default for Policy {
+    /// The requirements of no policy: every attribute void, so
+    /// `care_purposes` holds its default codes.
+    fn default() -> Self {
+        Self {
+            care_required: false,
+            grace: jiff::Span::new(),
+            purpose_required: false,
+            self_declared: false,
+            // NOTE: draft BMM ACCESS_POLICY.care_purposes, void means TREAT, ETREAT and CAREMGT.
+            care_purposes: ["TREAT", "ETREAT", "CAREMGT"].map(str::to_owned).to_vec(),
+        }
+    }
 }
 
 impl Policy {
@@ -194,12 +213,30 @@ impl Policy {
             .as_ref()
             .and_then(|grace| grace.value.parse::<jiff::Span>().ok())
             .unwrap_or_default();
+        let defaults = Self::default();
         Self {
             care_required: policy.care_relationship_required,
             grace,
             purpose_required: policy.purpose_required,
             self_declared: policy.self_declared_care.is_some(),
+            care_purposes: policy
+                .care_purposes
+                .as_ref()
+                .map_or(defaults.care_purposes, |codes| {
+                    codes
+                        .iter()
+                        .map(|coded| coded.defining_code.code_string.clone())
+                        .collect()
+                }),
         }
+    }
+
+    /// Whether a care relationship is a ground for an access that declares
+    /// `purpose`: one that declares none, or one of `care_purposes` (draft
+    /// decision procedure, Terms: a live care relationship).
+    #[must_use]
+    pub fn admits_care(&self, purpose: Option<&str>) -> bool {
+        purpose.is_none_or(|purpose| self.care_purposes.iter().any(|code| code == purpose))
     }
 }
 
@@ -219,8 +256,8 @@ pub struct Ehr<'a> {
     pub settings: Option<&'a EhrAccessSettings>,
     /// The server-wide default of an EHR with no settings.
     pub server_default: AccessDefault,
-    /// Whether the caller has a live care relationship to its subject.
-    pub cared: bool,
+    /// The caller's live care relationships to its subject.
+    pub care: &'a Cared,
     /// Whether the EHR is one of the [`Caller::own_ehrs`] of a confined caller.
     pub own: bool,
     /// Whether the EHR's `EHR_STATUS.subject` names the `PERSON` the
@@ -272,6 +309,9 @@ pub struct Grounds {
     pub lifted_rules: Vec<(usize, Pred)>,
     /// The verdict reads a live care relationship to the subject.
     pub cared: bool,
+    /// The relationship the access log names, where the verdict reads one
+    /// and its ties are known.
+    pub granting: Option<Tie>,
     /// The verdict reads the caller as a gate-keeper or the controller.
     pub keeper: bool,
 }
@@ -393,7 +433,7 @@ impl Verdict {
 }
 
 /// The inputs of one decision.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Judged<'a> {
     /// Who asks.
     pub caller: &'a Caller,
@@ -478,7 +518,8 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     let naming: Vec<&Permit<'_>> = permits.iter().chain(&rule_permits).collect();
     sensitivity(&read, &naming, &mut verdict);
     let keeper = Pred::any(vec![Pred::of(caller.administrator), read.keeper()]);
-    let live = judged.ehr.cared && !held_closed;
+    let cared = read.cared();
+    let live = cared && !held_closed;
     let default = judged
         .ehr
         .settings
@@ -487,6 +528,13 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     if care_read || default != AccessDefault::Open {
         verdict.grounds.cared = live;
         verdict.grounds.keeper = keeper == Pred::True;
+    }
+    let needs = care_needs(judged.rules, directives);
+    if cared && needs.named {
+        verdict.grounds.cared = true;
+    }
+    if verdict.grounds.cared {
+        verdict.grounds.granting = granting(judged.ehr.care.ties(), &needs.needs).cloned();
     }
     // Step 7: a care relationship.
     let uncared = Pred::negate(Pred::any(vec![Pred::of(live), keeper.clone()]));

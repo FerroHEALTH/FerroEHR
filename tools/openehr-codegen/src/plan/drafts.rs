@@ -191,6 +191,15 @@ const DRAFT_REF_TARGETS: &[RefTarget] = &[
                    `GROUP` parties, such as care teams, whose membership the access relied on.\"",
     },
     RefTarget {
+        class: "ACCESS_CARE_GROUND",
+        attr: "carer",
+        target: None,
+        citation: "draft openehr_access_log_0.1.0.bmm.json ACCESS_CARE_GROUND.carer: \"The \
+                   relationship's target: the accessor's `PERSON` or a `ROLE` it performs for \
+                   `direct` and `self_declared`, the care team `GROUP` or the `ORGANISATION` unit \
+                   for `team`.\" (several classes)",
+    },
+    RefTarget {
         class: "ACCESSED_ITEM",
         attr: "object",
         target: None,

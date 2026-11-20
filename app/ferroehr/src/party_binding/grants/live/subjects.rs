@@ -8,11 +8,16 @@
 //! `PERSON`, and the care relationships that hang off it. No openEHR spec
 //! governs where the subject's party is found: our own design (#5634).
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use uuid::Uuid;
 
 use super::{GrantsUnavailable, LiveGrants};
+use crate::access_eval::care_tie::Tie;
+use crate::access_eval::condition::care::CaredSubject;
 use crate::db::acquire::acquire;
-use crate::party_binding::grants::caller::care_of::{CareOf, ProviderKey};
+use crate::party_binding::grants::caller::care_of::CareOf;
+use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 
@@ -89,39 +94,51 @@ impl LiveGrants {
     }
 
     /// The subject references of the `PERSON`s under the care of any of
-    /// `principals` on `day` in the care of one of `providers` (sorted), with
-    /// the `policy`'s grace after each relationship ends, on a relationship
-    /// that admits its writer under the `policy`
-    /// ([`CareOf::admits_writer`]): the patients a caller whose
-    /// principals and acting providers these are has a live care relationship
-    /// to ([`CareOf::live_on`]), each by its own reference in this CDR's
-    /// namespace and by every record subject it declares, sorted and
-    /// distinct; from the care copy, or read on a miss.
+    /// `principals` on `day` while the caller with `facts` acts for the
+    /// relationship's provider, with the `policy`'s grace after each
+    /// relationship ends, on a relationship that admits its writer under the
+    /// `policy` ([`CareOf::admits_writer`]): the patients that caller has a
+    /// live care relationship to ([`CareOf::live_on`]), each by its own
+    /// reference in this CDR's namespace and by every record subject it
+    /// declares, sorted and distinct, each with the ties by which the caller
+    /// holds it ([`Tie::of`]), without the relationships they rest on; from
+    /// the care copy, or read on a miss.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when a miss cannot be read.
     pub async fn cared_for_by(
         &self,
+        facts: &CallerFacts,
         principals: &[Uuid],
-        providers: &[ProviderKey],
         day: jiff::civil::Date,
         policy: &crate::access_eval::procedure::Policy,
-    ) -> Result<Vec<EhrSubject>, GrantsUnavailable> {
+    ) -> Result<Vec<CaredSubject>, GrantsUnavailable> {
         let namespace = self.namespace();
-        let mut subjects = Vec::new();
+        let mut subjects: BTreeMap<EhrSubject, BTreeSet<Tie>> = BTreeMap::new();
         for principal in principals {
             let census = self.care.of_team(&self.pool, *principal).await?;
-            for (person, _) in census.cared.iter().filter(|(_, care)| {
+            for (person, care) in census.cared.iter().filter(|(_, care)| {
                 care.live_on(day, policy.grace)
                     && care.admits_writer(principals, policy.self_declared)
-                    && providers.binary_search(care.provider()).is_ok()
+                    && facts.acts_for_provider(care.provider())
             }) {
-                subjects.push(EhrSubject::new(&*namespace, person.to_string()));
-                subjects.extend(census.declared.get(person).into_iter().flatten().cloned());
+                let Some(tie) = Tie::of(care, facts, principals, day) else {
+                    continue;
+                };
+                let tie = Tie { grant: None, ..tie };
+                let own = EhrSubject::new(&*namespace, person.to_string());
+                let declared = census.declared.get(person).into_iter().flatten().cloned();
+                for subject in std::iter::once(own).chain(declared) {
+                    subjects.entry(subject).or_default().insert(tie.clone());
+                }
             }
         }
-        subjects.sort_unstable();
-        subjects.dedup();
-        Ok(subjects)
+        Ok(subjects
+            .into_iter()
+            .map(|(subject, ties)| CaredSubject {
+                subject,
+                ties: ties.into_iter().collect(),
+            })
+            .collect())
     }
 }

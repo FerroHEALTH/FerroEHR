@@ -14,9 +14,11 @@
 //! of a restriction of the access log's subject view, each provision of
 //! the access log retention, and each care role, organisation type and actor
 //! scope of the bounds on care relationships, comes from the jurisdiction's
-//! terminology ([`ForeignCode`]); that each period of `relationship_validity`
-//! adds to a date and `team_targets` does not name the controller; and that
-//! the access log retention is one the audit trail keeps records under
+//! terminology ([`ForeignCode`]), as do each care role an actor scope names
+//! and each of `care_purposes`; that `time_zone` names a zone of the IANA
+//! time zone database; that each period of `relationship_validity` adds to a
+//! date and `team_targets` does not name the controller; and that the access
+//! log retention is one the audit trail keeps records under
 //! ([`crate::access_policy::retention`]).
 //!
 //! The draft package is FerroEHR's change proposal and no openEHR release:
@@ -90,6 +92,9 @@ pub enum PolicyDefect {
     /// `team_targets` names the controller, which is never a target.
     #[error("team_targets names the controller, which is never the target of a care relationship")]
     TeamTargetController,
+    /// `time_zone` names no zone of the IANA time zone database.
+    #[error("time_zone {0:?} names no zone of the IANA time zone database")]
+    TimeZone(String),
     /// The policy sets an attribute no access decision of this server reads
     /// yet.
     #[error("ACCESS_POLICY.{0} is not decided by this server, so it is not stored")]
@@ -143,6 +148,14 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
         }
     }
     relationship_codes(&policy)?;
+    for purpose in policy.care_purposes.iter().flatten() {
+        ForeignCode::read(ForeignKind::Purpose, purpose)?;
+    }
+    if let Some(zone) = &policy.time_zone
+        && jiff::tz::TimeZone::get(zone).is_err()
+    {
+        return Err(PolicyDefect::TimeZone(zone.clone()));
+    }
     for restriction in policy.log_restrictions.as_deref().unwrap_or_default() {
         for ground in &restriction.legal_grounds {
             ForeignCode::read(ForeignKind::LegalGround, ground)?;
@@ -239,8 +252,8 @@ fn rule_codes(rule: &AccessDirective) -> Result<(), NotForeign> {
     Ok(())
 }
 
-/// Reads the role and organisation type `scope` names, neither of which the
-/// draft access terminology holds.
+/// Reads the role, the organisation type and the care roles `scope` names,
+/// none of which the draft access terminology holds.
 ///
 /// # Errors
 /// [`NotForeign`] for the first one coded in the draft access terminology.
@@ -248,8 +261,87 @@ fn scope_codes(scope: &AccessActorScope) -> Result<(), NotForeign> {
     if let Some(role) = &scope.role {
         ForeignCode::read(ForeignKind::Role, role)?;
     }
+    for role in scope.care_roles.iter().flatten() {
+        ForeignCode::read(ForeignKind::CareRole, role)?;
+    }
     if let Some(kind) = &scope.organisation_type {
         ForeignCode::read(ForeignKind::OrganisationType, kind)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    /// A coded value of `terminology`.
+    fn coded(terminology: &str, code: &str) -> Value {
+        json!({ "_type": "DV_CODED_TEXT", "value": code,
+                "defining_code": { "terminology_id": { "value": terminology },
+                    "code_string": code } })
+    }
+
+    /// A policy over the default archetype with `extra` members.
+    fn policy(extra: &Value) -> Value {
+        let mut body = json!({ "_type": "ACCESS_POLICY",
+            "name": { "_type": "DV_TEXT", "value": "policy" },
+            "archetype_node_id": "openEHR-EHR-ACCESS_POLICY.controller.v1",
+            "controller": { "_type": "PARTY_REF", "namespace": "demographic",
+                "type": "ORGANISATION",
+                "id": { "_type": "HIER_OBJECT_ID", "value": "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7" } },
+            "care_relationship_required": true,
+            "purpose_required": false });
+        if let (Some(body), Some(extra)) = (body.as_object_mut(), extra.as_object()) {
+            body.extend(extra.clone());
+        }
+        body
+    }
+
+    /// A rule permitting a caller in care in `care_roles` by `care_path`.
+    fn care_rule(role: &Value, path: &str) -> Value {
+        json!({ "_type": "ACCESS_DIRECTIVE", "archetype_node_id": "id1",
+            "name": { "_type": "DV_TEXT", "value": "rule" },
+            "kind": coded("openehr_access", "controller_rule"),
+            "effect": coded("HL7_ConsentProvisionType", "permit"),
+            "emergency_override": false,
+            "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
+                "relationship": coded("openehr_access", "care"),
+                "care_roles": [role],
+                "care_path": coded("openehr_access", path) }] })
+    }
+
+    /// Care roles, a care path, care purposes and a time zone are decided,
+    /// so a policy setting them is stored (#6075).
+    #[test]
+    fn care_roles_a_path_care_purposes_and_a_time_zone_are_stored() {
+        let body = policy(&json!({
+            "rules": [care_rule(&coded("HL7_ParticipationType", "RESP"), "direct")],
+            "care_purposes": [coded("HL7_ActReason", "TREAT")],
+            "time_zone": "Europe/Amsterdam" }));
+        let stored = checked(&body).expect("the policy is stored");
+        assert_eq!(stored.time_zone.as_deref(), Some("Europe/Amsterdam"));
+    }
+
+    #[test]
+    fn a_time_zone_the_database_does_not_hold_is_refused() {
+        let body = policy(&json!({ "time_zone": "Europe/Atlantis" }));
+        assert!(
+            matches!(checked(&body), Err(PolicyDefect::TimeZone(zone)) if zone == "Europe/Atlantis")
+        );
+    }
+
+    #[test]
+    fn a_care_role_or_care_purpose_of_the_access_terminology_is_refused() {
+        for body in [
+            policy(&json!({ "rules": [care_rule(&coded("openehr_access", "care"), "team")] })),
+            policy(&json!({ "care_purposes": [coded("openehr_access", "care")] })),
+        ] {
+            assert!(
+                matches!(checked(&body), Err(PolicyDefect::NotForeign(_))),
+                "{body}"
+            );
+        }
+    }
 }
