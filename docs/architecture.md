@@ -1730,7 +1730,7 @@ check, its place before the decision, and the wait.
 **The definition copies on a replica that did not make the change** (#5948).
 A replica keeps the Web Template of each stored template and the archetype
 lineage index in one generation, tagged with the `definition_revision`
-(`clinical/0060`) a request read. A statement trigger on `template_store` and
+(`clinical/0002`) a request read. A statement trigger on `template_store` and
 `adl2_artefact` moves the revision once per transaction, and the request reads
 it in its read of the policy heads, so a generation older than the revision is
 replaced by an empty one before the request answers, with no added statement.
