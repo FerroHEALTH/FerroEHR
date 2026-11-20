@@ -330,7 +330,7 @@ k8s_pf_start() {
 # forward of a reinstall runs it again.
 k8s_provision() {
   SCIM_GRANT="kubectl -n $K8S_NS exec deploy/$K8S_RELEASE -c ferroehr -- /usr/local/bin/ferroehr" \
-    bash scripts/scim-provision.sh "$K8S_CDR" basic-users urn:ferroehr:basic-user \
+    bash scripts/scim-provision.sh "$K8S_CDR" basic-users urn:example:basic-user \
     clinician >/dev/null
 }
 

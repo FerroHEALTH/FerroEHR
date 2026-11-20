@@ -79,11 +79,11 @@ reload_up() {
   SERVER_URL="http://127.0.0.1:$((RELOAD_HTTP_PORT + 1))"
   local -a grant=(docker exec "$RELOAD_SERVER-1" /usr/local/bin/ferroehr)
   SCIM_GRANT="${grant[*]}" bash "$ROOT/scripts/scim-provision.sh" "$SERVER_URL" basic-users \
-    urn:ferroehr:basic-user ferroehr >/dev/null
+    urn:example:basic-user ferroehr >/dev/null
   ACCESS_IDS="$OUT/scim-ids-reload"
   : >"$ACCESS_IDS"
   SCIM_IDS="$ACCESS_IDS" SCIM_GRANT="${grant[*]}" bash "$ROOT/scripts/scim-provision.sh" \
-    "$SERVER_URL" basic-users urn:ferroehr:basic-user --roles USER clinician >/dev/null
+    "$SERVER_URL" basic-users urn:example:basic-user --roles USER clinician >/dev/null
   ACCESS_FERROEHR=("${grant[@]}")
   call POST /definition/template/adl1.4 application/xml "$TEMPLATE" 201 >/dev/null
   access_seed

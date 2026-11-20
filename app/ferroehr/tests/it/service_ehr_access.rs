@@ -43,6 +43,7 @@ fn identity(login: &str) -> CommitterIdentity {
         subject: login.to_owned(),
         id_type: "basic",
         issuer: None,
+        local_issuer: DEFAULT_SYSTEM_ID.into(),
         client: None,
         person: false,
         party: None,
@@ -91,7 +92,7 @@ fn representative(person: uuid::Uuid) -> Caller {
                 portal: Some(PortalParty {
                     person,
                     relationship: Some("10".to_owned()),
-                    login_issuer: "ferroehr".to_owned(),
+                    login_issuer: DEFAULT_SYSTEM_ID.to_owned(),
                     login: login.clone(),
                 }),
                 ..BoundDetails::default()
@@ -188,7 +189,7 @@ fn placeholder(caller: &Caller) -> Value {
         .as_ref()
         .map_or("system", |identity| identity.subject.as_str());
     json!({ "_type": "PARTY_IDENTIFIED",
-            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": login }] })
+            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": DEFAULT_SYSTEM_ID, "id": login }] })
 }
 
 /// Commits, as `caller`, an `EHR_ACCESS` version carrying `settings` over the

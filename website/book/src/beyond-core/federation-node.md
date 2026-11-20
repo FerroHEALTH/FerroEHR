@@ -60,9 +60,10 @@ and compares every version uid.
 A federation admits a node on four identifier conditions. For three of them,
 the operator configures a FerroEHR node as follows:
 
-- **A federation-wide unique `system_id`.** The default, `ferroehr.local`, is
-  the same on every node that leaves it unset. Set `[server] system_id` to a
-  name no other member uses before the node commits its first version: the
+- **A federation-wide unique `system_id`.** Unset, it is the host of
+  `[server] public_base_url`, and a production node refuses to start without
+  either. Set `[api] system_id` to a name no other member uses before the
+  node commits its first version: the
   `system_id` is stamped into every version uid and never changes
   ([Server settings](../installation/config-server.md#system_id-the-data-authoring-identity)).
 - **No adoption of a foreign `ehr_id` on import.** `POST /message/import`

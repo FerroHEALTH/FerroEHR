@@ -38,6 +38,7 @@ pub(super) fn policy() -> CompiledPolicy {
     let config: AuditConfig = toml::from_str(
         r#"
         source_id = "cdr.example.org"
+        role_code_system = "cdr.example.org"
         enterprise_site_id = "site-1"
         server_host = "10.42.23.77"
         emergency_purpose_codes = ["ETREAT"]

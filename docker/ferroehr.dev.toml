@@ -44,10 +44,10 @@ jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 
 [[auth.party]]
 issuer = "https://basic-users.ferroehr.invalid"
-identifier_issuer = "urn:ferroehr:basic-user"
+identifier_issuer = "urn:example:basic-user"
 identifier_type = "login"
 group_claim = "groups"
-group_identifier_issuer = "urn:ferroehr:groups"
+group_identifier_issuer = "urn:example:groups"
 
 # The issuer of the dev lanes' SCIM provisioning clients: a machines issuer
 # over the COMMITTED TEST key set of docs/conformance/party/scim/ (never
@@ -156,17 +156,17 @@ provider = { issuer = "urn:oid:2.999.7.9", id = "dev" }
 
 [[authz.party_binding.basic_user]]
 user = "ferroehr"
-key_issuer = "urn:ferroehr:basic-user"
+key_issuer = "urn:example:basic-user"
 key = "ferroehr"
 
 [[authz.party_binding.basic_user]]
 user = "ferroehr-admin"
-key_issuer = "urn:ferroehr:basic-user"
+key_issuer = "urn:example:basic-user"
 key = "ferroehr-admin"
 
 [[authz.party_binding.basic_user]]
 user = "ferroehr-readonly"
-key_issuer = "urn:ferroehr:basic-user"
+key_issuer = "urn:example:basic-user"
 key = "ferroehr-readonly"
 
 # The URL clients reach the server at, which every SCIM location names.

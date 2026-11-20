@@ -78,7 +78,7 @@ pub fn build(
         .context("reading [audit.access_log] trusted_key_files")?;
     Ok(Checkpoints::new(
         pool,
-        config.api.system_id.clone(),
+        config.api.system_id().to_owned(),
         signer,
         Arc::new(trusted),
     ))

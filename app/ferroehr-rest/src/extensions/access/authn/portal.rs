@@ -373,7 +373,7 @@ pub(super) async fn committer(
     ),
     AuthError,
 > {
-    let mut committer = super::party::committer_identity(principal, granted);
+    let mut committer = super::party::committer_identity(principal, granted, &auth.local_issuer);
     let patient = patient?;
     if let Some(person) = patient {
         committer.bound = Some(patient_details(principal, person, &auth.namespace));

@@ -401,12 +401,12 @@ mod tests {
     /// The placeholder of the Basic login `ferroehr`.
     fn committer() -> Value {
         serde_json::json!({ "_type": "PARTY_IDENTIFIED",
-                "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "ferroehr" }] })
+                "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "cdr.example", "id": "ferroehr" }] })
     }
 
     /// The Basic login `ferroehr`.
     fn login() -> Login {
-        Login::basic("ferroehr")
+        Login::basic("ferroehr", "cdr.example")
     }
 
     fn create() -> StagedChange {

@@ -248,14 +248,14 @@ pub(super) fn contact_point(access: &Access) -> Option<&Arc<Agreement>> {
 /// from the family's caller limit, carrying the caller and its binding record
 /// for the access log, which counts it into the caller's summary record.
 /// `None` within the rate or for any other caller.
-pub(super) fn over_rate(principal: &super::Principal) -> Option<Response> {
+pub(super) fn over_rate(principal: &super::Principal, local_issuer: &Arc<str>) -> Option<Response> {
     let held = held(&principal.access)?;
     let limit = held.limit.as_ref()?;
     let caller = CallerKey(Arc::from(principal.subject.as_str()));
     let wait = limit.take(&caller, held.clock.now()).err()?;
     let mut refusal = caller_rate::refusal(wait);
     let granted = Capabilities::default();
-    let committer = super::party::committer_identity(principal, &granted);
+    let committer = super::party::committer_identity(principal, &granted, local_issuer);
     if let Some(mut binding) = super::record::of_request(principal, &committer, &granted, None) {
         binding
             .detail

@@ -44,9 +44,9 @@ use ferroehr::service::demographic::provision::NewUser;
 use sqlx::PgPool;
 
 /// The identifier issuer of the provisioned Users' binding keys.
-const KEY_ISSUER: &str = "urn:ferroehr:scaleseed:scim-login";
+const KEY_ISSUER: &str = "urn:example:scaleseed:scim-login";
 /// The issuer of the Group's `externalId`.
-const GROUP_ISSUER: &str = "urn:ferroehr:scaleseed:scim-groups";
+const GROUP_ISSUER: &str = "urn:example:scaleseed:scim-groups";
 /// The `PARTY_REF.namespace`.
 const NAMESPACE: &str = "scaleseed";
 /// The synthetic definitions: the professional `PERSON`, its `ROLE`, the

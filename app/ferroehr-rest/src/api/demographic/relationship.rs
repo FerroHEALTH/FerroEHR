@@ -688,7 +688,7 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
         .backend()
         .party_relationship_create(crate::overview::committal::write_request(
             h,
-            ferroehr::versioning::committer::request_committer(),
+            ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
             body,
             None,
         )?)
@@ -739,7 +739,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
     let body = negotiate::decode::rm_value::<PartyRelationship>(h, &parts.body)?;
     let request = crate::overview::committal::write_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         body,
         None,
     )?;
@@ -787,7 +787,7 @@ pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Respo
     let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
     let request = crate::overview::committal::delete_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         None,
     )?;
     // NOTE: no openEHR spec defines this route (our own extension); it takes the

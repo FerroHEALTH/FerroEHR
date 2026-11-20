@@ -38,6 +38,9 @@ use crate::system_log::event::{ActingMode, AuditEvent, EventType};
 pub struct AuditContext {
     /// `AuditSourceID` and the destination `ActiveParticipant.UserID`.
     pub source_id: String,
+    /// The `codeSystemName` of the deployment's role vocabulary on a
+    /// `RoleIDCode` (`[audit] role_code_system`).
+    pub role_code_system: String,
     /// `AuditEnterpriseSiteID`.
     pub enterprise_site_id: String,
     /// This node's `NetworkAccessPointID` (destination participant).
@@ -48,11 +51,6 @@ pub struct AuditContext {
     #[cfg(feature = "fhir")]
     pub recording: crate::system_log::fhir::Recording,
 }
-
-/// The `codeSystemName` of the deployment's own role vocabulary on a
-/// `RoleIDCode`: the RBAC roles a caller held, which no published code system
-/// names.
-const ROLE_VOCABULARY: &str = "urn:ferroehr:role";
 
 /// Builds the DICOM audit message of a resolved [`AuditEvent`], with the server
 /// [`AuditContext`] and the optionally-resolved patient subject id (`None` →
@@ -78,7 +76,13 @@ pub fn build(
     } else {
         (codes::ROLE_SOURCE, codes::ROLE_DESTINATION)
     };
-    let mut participants = requesting_participants(event, user_id, client_ip, client_role);
+    let mut participants = requesting_participants(
+        event,
+        user_id,
+        client_ip,
+        client_role,
+        &ctx.role_code_system,
+    );
     participants.push(ActiveParticipant {
         user_id: nonempty(&ctx.source_id, missing),
         alternative_user_id: None,
@@ -184,11 +188,12 @@ fn requesting_participants(
     user_id: String,
     client_ip: String,
     client_role: Code,
+    role_code_system: &str,
 ) -> Vec<ActiveParticipant> {
     let roles: Vec<CodedValue> = event
         .roles
         .iter()
-        .map(|role| CodedValue::new(role, ROLE_VOCABULARY, role))
+        .map(|role| CodedValue::new(role, role_code_system, role))
         .collect();
     let professional = event
         .actor
