@@ -2330,6 +2330,24 @@ terminology server could check, counts as no role, and the relationship
 keeps `PART`. No `[[auth.federation]]` field carries an attested role yet,
 so `PART` is the role every attested relationship holds today.
 
+A rule limits attested callers like any other: give its actor scope
+`relationship: care` with `care_path: attested`. A deny rule's `data` keeps
+attested callers from the templates or categories it names, and on a record
+the controller marks `R` or `V` an attested caller is refused
+`refused-confidentiality` until a permit rule for that path names the level
+in its `data` `confidentialities`:
+
+```json
+{ "_type": "ACCESS_DIRECTIVE", "kind": "controller_rule", "effect": "permit",
+  "applies_to": [ { "_type": "ACCESS_ACTOR_SCOPE",
+    "relationship": "care", "care_path": "attested" } ],
+  "data": [ { "_type": "ACCESS_DATA_SCOPE", "confidentialities": [ "R" ] } ] }
+```
+
+The codes are shown short here; write each as a `DV_CODED_TEXT`. A permit
+that names `R` clears `R` and nothing above it, and one written for the
+`direct` path clears no attested caller.
+
 #### Writing a care relationship
 
 FerroEHR checks each care relationship against the policy when it is

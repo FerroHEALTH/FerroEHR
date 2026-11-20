@@ -25,10 +25,10 @@ use std::sync::Arc;
 use axum::response::Response;
 use ferroehr::party_binding::grants::caller::attestation::Attestation;
 use ferroehr::service::ehr_index::types::SubjectRef;
-use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use ferrohealth_smart::federation::{Attribute, External, Field};
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::resource::{Access, Caller};
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 use super::{AuthError, AuthLayer, Principal};
 
