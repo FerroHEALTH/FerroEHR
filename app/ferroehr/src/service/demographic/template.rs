@@ -314,13 +314,16 @@ impl FerroEhrService {
         }
     }
 
-    /// The template gate of a demographic commit of `rm_type`: a mapped node is
-    /// refused unless it fits its template under the commit's lifecycle state,
-    /// and every other node passes untouched.
+    /// The template gate of a demographic commit of `rm_type`: a care
+    /// relationship's role is checked against its value set
+    /// ([`Self::care_role_check`]), a mapped node is refused unless it fits
+    /// its template under the commit's lifecycle state, and every other node
+    /// passes untouched.
     ///
     /// # Errors
-    /// [`ServiceError::ValidationFailed`] (`422`) when a mapped node is wrong,
-    /// or is missing data under a `complete` commit; the
+    /// [`ServiceError::ValidationFailed`] (`422`) when a care relationship's
+    /// role is outside its value set, or a mapped node is wrong, or is
+    /// missing data under a `complete` commit; the
     /// [`Self::web_template`] refusals when its definition does not resolve.
     pub(crate) async fn mapped_template_gate<'a, T: Tree<'a>>(
         &self,
@@ -328,6 +331,9 @@ impl FerroEhrService {
         body: T,
         incomplete: bool,
     ) -> Result<(), ServiceError> {
+        if rm_type == "PARTY_RELATIONSHIP" {
+            self.care_role_check(body).await?;
+        }
         let Some(wt) = self.mapped_definition(rm_type, body).await? else {
             return Ok(());
         };

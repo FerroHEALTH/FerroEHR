@@ -33,6 +33,7 @@ use ferroehr::access_eval::procedure::{
 };
 use ferroehr::access_eval::scope::{CategoryIndex, Item, Object, Scopes};
 use ferroehr::party_binding::grants::caller::CareTeam;
+use ferroehr::party_binding::grants::caller::care_of::{CareOf, ProviderKey};
 use ferroehr::party_binding::grants::caller::facts::CallerFacts;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::policy_register::CategoriesInForce;
@@ -253,13 +254,13 @@ pub(super) fn caller(kind: CallerKind, party: &str) -> Caller {
 }
 
 /// `caller` performing `ROLE`s named `roles` and member of `teams`, each
-/// relationship from 1 November 2026 with no end.
+/// relationship from 1 November 2026 with no end, acting for [`provider`].
 pub(super) fn with_facts(mut caller: Caller, roles: &[ForeignCode], teams: &[&str]) -> Caller {
     let teams = teams
         .iter()
         .map(|team| care_team(team, "2026-11-01", None))
         .collect();
-    caller.facts = CallerFacts::new(roles.to_vec(), teams);
+    caller.facts = CallerFacts::new(roles.to_vec(), teams).with_providers([provider()]);
     caller.acts_for = caller
         .facts
         .care_teams()
@@ -275,6 +276,29 @@ pub(super) fn care_team(team: &str, lower: &str, upper: Option<&str>) -> CareTea
         uuid(team),
         Some(lower.parse().expect("a date")),
         upper.map(|upper| upper.parse().expect("a date")),
+    )
+}
+
+/// The provider the tests' care relationships are in the care of.
+pub(super) fn provider() -> ProviderKey {
+    ProviderKey::new("urn:example:providers", "hospital")
+}
+
+/// A care relationship to `carer` in the role `PART`, in the care of
+/// [`provider`], over the dates `[lower, upper)`.
+pub(super) fn care_of(carer: &str, lower: &str, upper: Option<&str>) -> CareOf {
+    let role = ForeignCode {
+        terminology: "HL7_ParticipationType".to_owned(),
+        code: "PART".to_owned(),
+    };
+    CareOf::spanning(
+        uuid(carer),
+        (
+            Some(lower.parse().expect("a date")),
+            upper.map(|upper| upper.parse().expect("a date")),
+        ),
+        role,
+        provider(),
     )
 }
 

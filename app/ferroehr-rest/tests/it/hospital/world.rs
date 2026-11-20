@@ -29,7 +29,7 @@ use http::{HeaderMap, StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 
-use crate::common::{self, BASE};
+use crate::common::{self, BASE, EXT};
 
 /// The hospital's Keycloak realm, the `persons` issuer of its staff.
 pub(crate) const PERSONS: &str = "https://keycloak.sint-example.example/realms/hospital";
@@ -189,10 +189,12 @@ pub(crate) struct World {
     pub(crate) teams: BTreeMap<&'static str, String>,
     /// The regional `GROUP` the member provider belongs to.
     pub(crate) region: String,
-    /// The patient's `PERSON`, its current version and her EHR.
+    /// The patient's `PERSON` and her EHR.
     pub(crate) eva: String,
-    pub(crate) eva_version: String,
     pub(crate) ehr: String,
+    /// Each of her care relationships, by team: its container and current
+    /// version.
+    pub(crate) stays: BTreeMap<&'static str, (String, String)>,
     /// Gina's own record, another patient's EHR.
     pub(crate) other_ehr: String,
     /// The compositions of the patient's record.
@@ -758,15 +760,25 @@ pub(crate) async fn provider(app: &Router, id: &str, groups: &[&str]) -> String 
     organisation_id
 }
 
-/// A care relationship coded `code` from the `PERSON` `source` to the
-/// `GROUP` `team`, from `from` to `until` (dates, each included; `None`
+/// A membership (`MBR`) of the `PERSON` `source` in the `GROUP` `team`,
+/// from `from` to `until` (dates, each included; `None` unbounded).
+pub(crate) fn membership(source: &str, team: &str, span: (&str, Option<&str>)) -> Value {
+    json!({
+        "_type": "PARTY_RELATIONSHIP",
+        "archetype_node_id": "org.sint-example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.rostering.v1",
+        "name": text("Rostering"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("kind"),
+                        "value": term("MBR") }] },
+        "time_validity": validity(span),
+        "source": party_ref("PERSON", source),
+        "target": party_ref("GROUP", team)
+    })
+}
+
+/// The `DV_INTERVAL<DV_DATE>` from `from` to `until` (each included; `None`
 /// unbounded).
-pub(crate) fn care(
-    code: &str,
-    source: &str,
-    team: &str,
-    (from, until): (&str, Option<&str>),
-) -> Value {
+fn validity((from, until): (&str, Option<&str>)) -> Value {
     let mut validity = json!({ "_type": "DV_INTERVAL",
         "lower": { "_type": "DV_DATE", "value": from },
         "lower_unbounded": false, "upper_unbounded": until.is_none(),
@@ -774,14 +786,37 @@ pub(crate) fn care(
     if let Some(until) = until {
         validity["upper"] = json!({ "_type": "DV_DATE", "value": until });
     }
+    validity
+}
+
+/// A care relationship of its own: the `PERSON` `source` under the care of
+/// the `GROUP` `team` in the `care_role` `role` of `HL7_ParticipationType`,
+/// in the care of the hospital, from `from` to `until` (dates, each
+/// included; `None` unbounded); draft access control package, Care
+/// Relationships.
+pub(crate) fn care(role: &str, source: &str, team: &str, span: (&str, Option<&str>)) -> Value {
+    let named = |code: &str| {
+        json!({ "_type": "DV_CODED_TEXT", "value": code,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
+                "code_string": code } })
+    };
     json!({
         "_type": "PARTY_RELATIONSHIP",
         "archetype_node_id": "org.sint-example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.ward_stay.v1",
-        "name": text("Ward stay"),
+        "name": named("under_care_of"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
-            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("kind"),
-                        "value": term(code) }] },
-        "time_validity": validity,
+            "items": [
+                { "_type": "ELEMENT", "archetype_node_id": "at0003", "name": named("care_role"),
+                  "value": { "_type": "DV_CODED_TEXT", "value": role,
+                    "defining_code": { "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID",
+                            "value": "HL7_ParticipationType" },
+                        "code_string": role } } },
+                { "_type": "ELEMENT", "archetype_node_id": "at0004", "name": named("provider"),
+                  "value": { "_type": "DV_IDENTIFIER", "issuer": PROVIDERS, "id": "sint-example",
+                             "type": "ORGANISATION" } }] },
+        "time_validity": validity(span),
         "source": party_ref("PERSON", source),
         "target": party_ref("GROUP", team)
     })
@@ -813,33 +848,34 @@ pub(crate) fn day(days: i64) -> String {
 }
 
 /// The ADT system writes the patient's stays, each a team she is under the
-/// care of from a date to a date (`None` open), over her `version`; her new
-/// version.
-pub(crate) async fn admit(
-    world: &World,
-    version: &str,
-    stays: &[(&str, &str, Option<&str>)],
-) -> String {
-    let relationships: Vec<Value> = stays
-        .iter()
-        .map(|(team, from, until)| {
-            care(
-                "under_care_of",
-                &world.eva,
-                &world.teams[team],
-                (from, *until),
-            )
-        })
-        .collect();
-    let answer = update_party(
-        &world.app,
-        "client:adt",
-        ("person", &world.eva, version),
-        &patient_body(&relationships),
-    )
-    .await;
-    assert_eq!(answer.status, StatusCode::OK, "admission: {}", answer.body);
-    answer.etag()
+/// care of from a date to a date (`None` open): a care relationship of its
+/// own per team, created at `/demographic/party_relationship` the first time
+/// and changed over its version after.
+pub(crate) async fn admit(world: &mut World, stays: &[(&'static str, &str, Option<&str>)]) {
+    for (team, from, until) in stays {
+        let body = care("PART", &world.eva, &world.teams[team], (from, *until));
+        let uri = format!("{EXT}/demographic/party_relationship");
+        let answer = match world.stays.get(team) {
+            Some((id, version)) => {
+                call_matching(
+                    &world.app,
+                    "client:adt",
+                    ("PUT", &format!("{uri}/{id}")),
+                    version,
+                    &body,
+                )
+                .await
+            }
+            None => call(&world.app, "client:adt", "POST", &uri, None, Some(&body)).await,
+        };
+        assert!(
+            matches!(answer.status, StatusCode::OK | StatusCode::CREATED),
+            "admission to {team}: {}",
+            answer.body
+        );
+        let version = answer.etag();
+        world.stays.insert(team, (vo_of(&version), version));
+    }
 }
 
 /// `writer` writes the rostering of `name` on `teams` from `from` to
@@ -864,7 +900,7 @@ pub(crate) async fn roster(
     relationships.extend(
         teams
             .iter()
-            .map(|team| care("MBR", person, &world.teams[team], span)),
+            .map(|team| membership(person, &world.teams[team], span)),
     );
     body["relationships"] = Value::Array(relationships);
     update_party(&world.app, writer, ("person", person, &version), &body).await

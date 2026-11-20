@@ -321,6 +321,9 @@ const CARE_FORMS: [CareForm; 3] = [CareForm::Census, CareForm::Ehrs, CareForm::P
 /// The care team the projected care is written under.
 const TEAM: uuid::Uuid = uuid::Uuid::from_u128(0x0199_0000_0000_7000_8000_0000_0000_0001);
 
+/// The provider the projected care relationships are in the care of.
+const PROVIDER: (&str, &str) = ("urn:example:providers", "hospital");
+
 /// The namespace this CDR names its parties under, which the EHR rows'
 /// subjects are digested in.
 fn own() -> String {
@@ -354,7 +357,9 @@ async fn project(
         .map(|(subject, from, until)| CareRow {
             digest: subject_digest(&cared_key(subject)),
             person: subject.id.parse().unwrap_or(uuid::Uuid::nil()),
-            team: TEAM,
+            carer: TEAM,
+            provider_issuer: PROVIDER.0.to_owned(),
+            provider_id: PROVIDER.1.to_owned(),
             from: *from,
             until: *until,
         })
@@ -384,7 +389,9 @@ async fn project(
 /// The projected care probe of the caller on `day` with `grace`.
 fn projected(day: jiff::civil::Date, grace: &str) -> Care {
     Care::Projected(ferroehr::access_eval::condition::care::ProjectedCare {
-        teams: vec![TEAM].into(),
+        principals: vec![TEAM].into(),
+        provider_issuers: vec![PROVIDER.0.to_owned()].into(),
+        provider_ids: vec![PROVIDER.1.to_owned()].into(),
         day,
         grace: grace.to_owned(),
     })
@@ -746,11 +753,12 @@ async fn step_7_only_the_ehrs_in_care_are_queried() {
 }
 
 /// The care projection reads a relationship's dates as the evaluator reads
-/// them (`CareTeam::live_on`): begun, and open or ended less than the grace
+/// them (`CareOf::live_on`): begun, and open or ended less than the grace
 /// before the day of the request (#5699).
 #[tokio::test]
 async fn the_projection_reads_the_dates_of_care_as_the_evaluator() {
-    use ferroehr::party_binding::grants::caller::CareTeam;
+    use ferroehr::party_binding::grants::caller::care_of::{CareOf, ProviderKey};
+    use openehr_rm::draft::access_control::terminology::ForeignCode;
     let world = Box::pin(World::new()).await;
     world.settings(1, &settings("open", &[], &[])).await;
     let mut ask = Ask::professional(&world);
@@ -773,7 +781,12 @@ async fn the_projection_reads_the_dates_of_care_as_the_evaluator() {
     ];
     for (from, until, grace) in cases {
         let span: jiff::Span = grace.parse().expect("a grace");
-        let live = CareTeam::spanning(TEAM, from, until).live_on(today, span);
+        let role = ForeignCode {
+            terminology: "HL7_ParticipationType".to_owned(),
+            code: "PART".to_owned(),
+        };
+        let provider = ProviderKey::new(PROVIDER.0, PROVIDER.1);
+        let live = CareOf::spanning(TEAM, (from, until), role, provider).live_on(today, span);
         project(&world, &[(world.subject(0), from, until)]).await;
         let run = async {
             let classes = world

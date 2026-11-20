@@ -89,7 +89,7 @@ fn mental_health_except_the_psychiatrist() {
 fn the_ward_with_its_grace_period() {
     let ward = policy(&json!({ "care_relationship_required": true,
         "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" } }));
-    let mr_e = [care_team(CARDIOLOGY, "2026-11-03", Some("2026-11-11"))];
+    let mr_e = [care_of(CARDIOLOGY, "2026-11-03", Some("2026-11-11"))];
     let judge = |caller: Caller, day: &str| {
         let access = RequestAccess::new(
             caller,
@@ -127,6 +127,84 @@ fn the_ward_with_its_grace_period() {
     ] {
         assert_outcome(&verdict, &Item::Ehr, expected, name);
     }
+}
+
+/// A care relationship reaches a caller directly, by its `PERSON` or a
+/// `ROLE` it performs, or through a team or unit it is a member of, and only
+/// while the caller acts for the relationship's provider (draft access
+/// control decision procedure, Terms and Holding a Care Relationship;
+/// #6055).
+#[test]
+fn a_care_relationship_admits_its_carer_only_under_its_provider() {
+    const PERSON: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f92";
+    const ROLE: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f93";
+    const UNIT: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f94";
+    let ward = policy(&json!({ "care_relationship_required": true }));
+    let judge = |caller: &Caller, carer: &str| {
+        let access = RequestAccess::new(
+            caller.clone(),
+            Asking {
+                operation: OperationClass::Read,
+                purpose: Some("TREAT".to_owned()),
+                emergency: Emergency::default(),
+            },
+            InForce {
+                policy: Some(Arc::new(ward.clone())),
+                categories: categories(),
+                server_default: AccessDefault::Open,
+                now: "2026-11-05T12:00:00Z".parse().expect("an instant"),
+                grants: None,
+            },
+        );
+        let relations = [care_of(carer, "2026-11-03", None)];
+        access.judge(None, None, access.cared(&relations))
+    };
+    let mut direct = professional(NURSE);
+    direct.facts = CallerFacts::default()
+        .with_party(uuid(PERSON))
+        .with_providers([provider()]);
+    let mut performing = professional(NURSE);
+    performing.facts = CallerFacts::default()
+        .with_performed(vec![uuid(ROLE)])
+        .with_providers([provider()]);
+    let team = with_facts(professional(NURSE), &[], &[CARDIOLOGY]);
+    let unit = with_facts(professional(NURSE), &[], &[UNIT]);
+    let refused = Outcome::Refused(Refusal::NoCareRelationship);
+    for (name, caller, carer) in [
+        ("the PERSON", &direct, PERSON),
+        ("a performed ROLE", &performing, ROLE),
+        ("a team", &team, CARDIOLOGY),
+        ("a unit", &unit, UNIT),
+    ] {
+        assert_outcome(&judge(caller, carer), &Item::Ehr, Outcome::Admit, name);
+        let mut alone = caller.clone();
+        alone.facts = CallerFacts::new(
+            caller.facts.roles().to_vec(),
+            caller.facts.care_teams().to_vec(),
+        )
+        .with_performed(caller.facts.performed().to_vec());
+        if let Some(party) = caller.facts.party() {
+            alone.facts = alone.facts.with_party(party);
+        }
+        let mut elsewhere = alone.clone();
+        elsewhere.facts = elsewhere
+            .facts
+            .with_providers([ProviderKey::new("urn:example:providers", "clinic")]);
+        for (acting, caller) in [("no provider", &alone), ("another provider", &elsewhere)] {
+            assert_outcome(
+                &judge(caller, carer),
+                &Item::Ehr,
+                refused,
+                &format!("{name}, acting for {acting}"),
+            );
+        }
+    }
+    assert_outcome(
+        &judge(&team, NEPHROLOGY),
+        &Item::Ehr,
+        refused,
+        "a team the caller is no member of",
+    );
 }
 
 /// HIV results: the policy classifies the HIV laboratory template and clears

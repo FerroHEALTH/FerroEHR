@@ -260,7 +260,7 @@ in the element's `name`:
 | `admit_role` | A text: a role an admitted login holds |
 | `admit_assurance` | A text, `low`, `substantial` or `high`: the lowest assurance level an admitted login carries |
 | `admit_guests` | A `DV_BOOLEAN`: whether a guest is admitted too |
-| `under_care_of` | On a `PARTY_RELATIONSHIP`: the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
+| `under_care_of` | On a `PARTY_RELATIONSHIP` of its own: the source, a patient's `PERSON`, is under the care of the target, a professional's `PERSON`, a `ROLE`, a team `GROUP` or an organisational unit, with its `care_role` and `provider` |
 
 The terms of a federation agreement are named by codes of the same
 terminology ([Federation agreements](#federation-agreements)), and the value of
@@ -1588,11 +1588,12 @@ and your deployment, is listed in
 [What the CDR leaves to the application](application-boundary.md).
 
 Beside its grants, a caller carries the facts the access evaluator reads:
-the roles it performs and the care teams it belongs to. A patient carries the
-teams and units it is under the care of. FerroEHR reads them in any
-archetype (a membership by HL7 v3 `RoleClass` `MBR`, care by
-`openehr_access` `under_care_of`), never by an archetype id, and holds them on every replica beside
-the grants, so a request reads them with no transaction of its own.
+the roles it performs, the care teams it belongs to and the providers it
+acts for. A patient carries its care relationships. FerroEHR reads them in
+any archetype (a membership by HL7 v3 `RoleClass` `MBR`, care by
+`openehr_access` `under_care_of`), never by an archetype id, and holds them
+on every replica beside the grants, so a request reads them with no
+transaction of its own.
 
 **Roles.** A `ROLE` whose `name` is a `DV_CODED_TEXT` of the terminology
 your jurisdiction names, such as a national professional role code, is a
@@ -1623,18 +1624,43 @@ token attests in `provider.facility_type`. A [controller
 rule](#controller-rules) names them in an `applies_to` entry's
 `organisation_type`, compared by terminology and code.
 
-**Care relationships.** A `PARTY_RELATIONSHIP` in a `PERSON`'s
-`relationships` whose `name` or `details` carry `MBR` of `HL7_RoleClass`
-makes the professional a member of the care team its `target` names; one carrying
-`under_care_of` puts the patient in the care of the team or unit its
-`target` names, with the admission as its `time_validity`. The discharge is
-the upper bound of `time_validity`, and the relationship stays, so the
-evaluator can apply a grace period after it. A care relationship of a party
-other than a `PERSON`, one whose target is no party of this store, and a
-`PARTY_RELATIONSHIP` committed on its own carrying either code are refused
-`422`, apart from the group memberships below. The default definitions ship
+**Memberships.** A `PARTY_RELATIONSHIP` in a `PERSON`'s `relationships`
+whose `name` or `details` carry `MBR` of `HL7_RoleClass` makes the
+professional a member of the care team or unit its `target` names, for as
+long as its `time_validity` holds. A membership of a party other than a
+`PERSON` or an `ORGANISATION`, and one whose target is no party of this
+store, is refused `422`.
+
+**Care relationships.** A care relationship is a `PARTY_RELATIONSHIP` of
+its own, written at `/demographic/party_relationship`, each versioned with
+its own audit details (draft access control package, Care Relationships and
+The Relationship Store). Its `name` is the code `under_care_of` of
+`openehr_access`, its `source` is the patient's `PERSON`, and its `target`
+is the carer: a professional's `PERSON`, a `ROLE` a professional performs, a
+care team's `GROUP` or an `ORGANISATION` unit. Its `details` hold elements
+named by codes of `openehr_access`:
+
+| Element | Occurrences | Value |
+| --- | --- | --- |
+| `care_role` | 1..1 | A `DV_CODED_TEXT`: the part the carer plays in the patient's care, of the value set the access policy binds for `care_role`, or of `HL7_ParticipationType` when it binds none, such as `RESP`, `ATND` or `PART` when the role is not stated |
+| `provider` | 1..1 | A `DV_IDENTIFIER` of type `ORGANISATION`: the healthcare provider in whose care the relationship is, by the namespace of its reference and its id, or by the issuer and id of its identifier |
+| `covers_for`, `context` | 0..1 | A `DV_IDENTIFIER`: the carer the target replaces, and the episode, referral or case the relationship belongs to |
+| `basis` | 0..1 | `assigned` (the default); `self_declared` is refused until the access decision reads it |
+
+A caller holds a live care relationship when the relationship's `target`
+names its `PERSON` or a `ROLE` it performs (the direct path), or a care team
+or unit it is a member of (the team path), and it acts for the relationship's
+`provider`: a bound professional acts for the provider the party binding
+names (`[authz.party_binding.provider]`), and a system client for the
+`ORGANISATION` its `AGENT` acts for and the `GROUP`s that provider is a
+member of. Its `time_validity` is the period of the care: the end is the
+upper bound, and the relationship stays, so the evaluator can apply a grace
+period after it. A relationship without a `care_role` or a `provider`, with a
+role outside its value set, or with a target of another kind is refused
+`422`. A care relationship held in a `PERSON`'s `relationships` is refused
+`422`, naming `/demographic/party_relationship`. The default definitions ship
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.1` and
-`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0` as examples
+`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2.0.0` as examples
 ([Default demographic definitions](installation/default-demographic-definitions.md)).
 
 **Group memberships of a provider.** A `PARTY_RELATIONSHIP` in an
@@ -1653,14 +1679,14 @@ memberships.
 security overview asks: "the evaluation of a role category such as 'care
 deliverer' into particular identities ... must be done in each care
 delivery environment, not in the EHR" (BASE Architecture Overview, §The
-Problem of Roles). A version of a `PERSON` that adds, changes or removes a
-care relationship commits only for a caller holding the
-`write_care_relationship` grant, such as your hospital's ADT system, or for
-an administrator; anyone else is refused `403`. A version that leaves the
-care relationships as they were needs no grant. FerroEHR compares what each
-care relationship says (its code, target, validity and the lifecycle state
-of its holder), never its position in `relationships`, so removing another
-relationship before it changes none.
+Problem of Roles). A care relationship, its change or its deletion, and a
+version of a `PERSON` that adds, changes or removes a membership, commits
+only for a caller holding the `write_care_relationship` grant, such as your
+hospital's ADT system, or for an administrator; anyone else is refused
+`403`. A version that leaves the memberships as they were needs no grant.
+FerroEHR compares what each relationship says (its code, target, role,
+provider and validity), never its position in `relationships`, so removing
+another relationship before it changes none.
 
 The care delivery environment reaches FerroEHR on two channels, and a
 deployment uses either or both:

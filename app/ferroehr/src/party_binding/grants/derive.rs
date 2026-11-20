@@ -77,6 +77,9 @@ pub(crate) struct GrantFacts {
     /// a `PERSON` and the memberships of an `ORGANISATION`, in document
     /// order.
     pub(crate) facts: Vec<CallerFact>,
+    /// The container of the source of a care relationship of its own, the
+    /// subject's `PERSON` its fact is about.
+    pub(crate) care_source: Option<uuid::Uuid>,
     /// The EHR subject references a `PERSON` declares in its `details`,
     /// distinct, in document order.
     pub(crate) subjects: Vec<caller::subject::DeclaredSubject>,

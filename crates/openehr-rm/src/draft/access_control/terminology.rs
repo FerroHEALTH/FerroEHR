@@ -61,6 +61,10 @@ pub const TERMINOLOGY_ID_AUDIT_EVENT_ACTION: &str = "HL7_AuditEventAction";
 /// of data carries.
 pub const TERMINOLOGY_ID_CONFIDENTIALITY: &str = "HL7_Confidentiality";
 
+/// HL7 Terminology `v3-ParticipationType` by `HL7_` and its code system
+/// name: the code system of an unbound `care_role`.
+pub const TERMINOLOGY_ID_PARTICIPATION_TYPE: &str = "HL7_ParticipationType";
+
 /// A `DV_CODED_TEXT` of `code` in `terminology`, displayed as `rubric`.
 #[must_use]
 pub fn coded_text(terminology: &str, code: &str, rubric: &str) -> DvCodedText {
@@ -729,6 +733,9 @@ pub enum ForeignKind {
     /// A type an `ORGANISATION` is named by, such as a healthcare facility
     /// type code (RM Demographic IM, `PARTY.type()`).
     OrganisationType,
+    /// The part a carer plays in a care relationship, its `care_role`, such
+    /// as an HL7 `ParticipationType` code.
+    CareRole,
 }
 
 impl fmt::Display for ForeignKind {
@@ -740,6 +747,7 @@ impl fmt::Display for ForeignKind {
             Self::LegalGround => "legal ground",
             Self::Role => "role",
             Self::OrganisationType => "organisation type",
+            Self::CareRole => "care role",
         })
     }
 }

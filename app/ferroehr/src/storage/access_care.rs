@@ -9,8 +9,8 @@
 //! reference beside it.
 //!
 //! The care projector writes the rows; a query's access condition probes
-//! them by the EHR row's digest and the caller's team ids. No openEHR spec
-//! governs the projection: our own design.
+//! them by the EHR row's digest, the caller's principals and the providers
+//! it acts for. No openEHR spec governs the projection: our own design.
 
 use sqlx::{PgConnection, PgPool, Row};
 use uuid::Uuid;
@@ -71,8 +71,12 @@ pub struct CareRow {
     pub digest: Vec<u8>,
     /// The `PERSON` under care.
     pub person: Uuid,
-    /// The care team or unit.
-    pub team: Uuid,
+    /// The carer: a `PERSON`, a `ROLE`, a `GROUP` or an `ORGANISATION`.
+    pub carer: Uuid,
+    /// The issuer of the provider in whose care it is.
+    pub provider_issuer: String,
+    /// The id of that provider.
+    pub provider_id: String,
     /// The first date it holds; `None` when unbounded.
     pub from: Option<jiff::civil::Date>,
     /// The first date it no longer holds; `None` when unbounded.
@@ -149,7 +153,12 @@ pub async fn replace(
     }
     let digests: Vec<&[u8]> = rows.iter().map(|row| row.digest.as_slice()).collect();
     let people: Vec<Uuid> = rows.iter().map(|row| row.person).collect();
-    let teams: Vec<Uuid> = rows.iter().map(|row| row.team).collect();
+    let carers: Vec<Uuid> = rows.iter().map(|row| row.carer).collect();
+    let issuers: Vec<&str> = rows
+        .iter()
+        .map(|row| row.provider_issuer.as_str())
+        .collect();
+    let ids: Vec<&str> = rows.iter().map(|row| row.provider_id.as_str()).collect();
     let froms: Vec<Option<jiff_sqlx::Date>> = rows
         .iter()
         .map(|row| row.from.map(jiff_sqlx::Date::from))
@@ -159,12 +168,16 @@ pub async fn replace(
         .map(|row| row.until.map(jiff_sqlx::Date::from))
         .collect();
     sqlx::query(
-        "INSERT INTO access_care (subject_digest, person_id, team_id, care_from, care_until) \
-         SELECT * FROM unnest($1::bytea[], $2::uuid[], $3::uuid[], $4::date[], $5::date[])",
+        "INSERT INTO access_care (subject_digest, person_id, carer_id, provider_issuer, \
+             provider_id, care_from, care_until) \
+         SELECT * FROM unnest($1::bytea[], $2::uuid[], $3::uuid[], $4::text[], $5::text[], \
+             $6::date[], $7::date[])",
     )
     .bind(&digests)
     .bind(&people)
-    .bind(&teams)
+    .bind(&carers)
+    .bind(&issuers)
+    .bind(&ids)
     .bind(&froms)
     .bind(&untils)
     .execute(&mut *tx)

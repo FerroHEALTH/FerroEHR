@@ -137,7 +137,10 @@ pub(crate) fn coded_term<T: Term>(term: T, rubric: &str) -> Value {
 
 /// The first value of the tree `value`, itself included, depth first, for
 /// which `found` answers.
-fn first<'a, T: Tree<'a>, R>(value: T, found: &mut impl FnMut(T) -> Option<R>) -> Option<R> {
+pub(crate) fn first<'a, T: Tree<'a>, R>(
+    value: T,
+    found: &mut impl FnMut(T) -> Option<R>,
+) -> Option<R> {
     if let Some(hit) = found(value) {
         return Some(hit);
     }

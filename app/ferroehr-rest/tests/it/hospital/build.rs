@@ -92,7 +92,7 @@ pub(crate) async fn world() -> World {
     let outside = provider(&app, "outside-clinic", &[]).await;
     let lab = provider(&app, "lab", &[]).await;
     agents.extend(system_clients(&app, (&member, &outside, &lab)).await);
-    let (eva, eva_version) = create_party(&app, ROOT, "person", &patient_body(&[])).await;
+    let (eva, _) = create_party(&app, ROOT, "person", &patient_body(&[])).await;
     let ehr = ehr_of(&app, &eva).await;
     let other_ehr = ehr_of(&app, &people["gina"].person).await;
     let mut world = World {
@@ -106,8 +106,8 @@ pub(crate) async fn world() -> World {
         teams,
         region,
         eva,
-        eva_version,
         ehr,
+        stays: BTreeMap::new(),
         other_ehr,
         encounter: Doc::default(),
         vitals: Doc::default(),
@@ -120,11 +120,11 @@ pub(crate) async fn world() -> World {
     content(&mut world).await;
     represent(&world).await;
     let admitted = day(-2);
-    let stays: Vec<(&str, &str, Option<&str>)> = TEAMS
+    let stays: Vec<(&'static str, &str, Option<&str>)> = TEAMS
         .iter()
         .map(|team| (*team, admitted.as_str(), None))
         .collect();
-    world.eva_version = admit(&world, &world.eva_version, &stays).await;
+    admit(&mut world, &stays).await;
     world.policy = policy(&world, &hospital, None).await;
     directives(&mut world, None).await;
     world

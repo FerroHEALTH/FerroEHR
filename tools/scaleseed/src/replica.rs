@@ -3,12 +3,12 @@
 
 //! What one replica holds of the caller facts at scale (#5590): patients under
 //! the care of their teams, and the professionals of those teams with their
-//! clearances, seeded into the facts side table, then read into a replica's
+//! roles, seeded into the facts side table, then read into a replica's
 //! copy as a request reads it.
 //!
 //! The seed writes the rows the commit path derives from a patient's
-//! `under_care_of` relationship and a professional's `member_of` relationship
-//! and clearance straight into `party.binding_caller_fact`, as the caller
+//! `under_care_of` relationship, a professional's membership (`MBR`) and the
+//! role its `ROLE` names straight into `party.binding_caller_fact`, as the caller
 //! facts' integration test does, stamps each party with the facts revision and
 //! moves both revisions, so the copy reads every row. The measurement starts
 //! a [`LiveGrants`] over the party pool and reads it, then reads the care
@@ -66,42 +66,53 @@ pub(crate) async fn seed(pool: &PgPool, target: Target) -> anyhow::Result<()> {
         );
     }
     let mut tx = pool.begin().await.context("begin the seed")?;
-    // One care relationship to a team for each patient, and for each
-    // professional; the label and the kind are literals of this function.
-    for (label, kind, count) in [
-        ("patient", "under_care_of", target.patients),
-        ("staff", "member_of", target.staff),
-    ] {
-        sqlx::query(
-            "INSERT INTO party.binding_caller_fact \
-                 (holder_id, ordinal, kind, party_id, target_id, lifecycle_state, role_validity, \
-                  validity) \
-             SELECT md5($3::text || '-' || n)::uuid, 0, $4, md5($3::text || '-' || n)::uuid, \
-                    md5('team-' || (n % $2))::uuid, '532', daterange(NULL, NULL), \
-                    daterange(date '2026-01-01', NULL) \
-             FROM generate_series(1, $1::bigint) AS n",
-        )
-        .bind(count)
-        .bind(target.teams)
-        .bind(label)
-        .bind(kind)
-        .execute(&mut *tx)
-        .await
-        .with_context(|| format!("seed the {kind} relationships"))?;
-    }
+    // One care relationship to a team for each patient, in the role `PART`
+    // and the care of one provider, held by its own container (#6055).
+    sqlx::query(
+        "INSERT INTO party.binding_caller_fact \
+             (holder_id, ordinal, kind, party_id, terminology_id, code_string, target_id, \
+              target_kind, provider_issuer, provider_id, lifecycle_state, role_validity, \
+              validity) \
+         SELECT md5('care-' || n)::uuid, 0, 'under_care_of', md5('patient-' || n)::uuid, \
+                'HL7_ParticipationType', 'PART', md5('team-' || (n % $2))::uuid, 'GROUP', \
+                'urn:example:providers', 'hospital', '532', daterange(NULL, NULL), \
+                daterange(date '2026-01-01', NULL) \
+         FROM generate_series(1, $1::bigint) AS n",
+    )
+    .bind(target.patients)
+    .bind(target.teams)
+    .execute(&mut *tx)
+    .await
+    .context("seed the care relationships")?;
+    // One membership (`MBR`) of a team for each professional, and the role
+    // its `ROLE` names.
+    sqlx::query(
+        "INSERT INTO party.binding_caller_fact \
+             (holder_id, ordinal, kind, party_id, target_id, lifecycle_state, role_validity, \
+              validity) \
+         SELECT md5('staff-' || n)::uuid, 0, 'MBR', md5('staff-' || n)::uuid, \
+                md5('team-' || (n % $2))::uuid, '532', daterange(NULL, NULL), \
+                daterange(date '2026-01-01', NULL) \
+         FROM generate_series(1, $1::bigint) AS n",
+    )
+    .bind(target.staff)
+    .bind(target.teams)
+    .execute(&mut *tx)
+    .await
+    .context("seed the memberships")?;
     sqlx::query(
         "INSERT INTO party.binding_caller_fact \
              (holder_id, ordinal, kind, party_id, terminology_id, code_string, \
               lifecycle_state, role_validity, validity) \
-         SELECT md5('role-' || n)::uuid, 0, 'sensitivity_clearance', md5('staff-' || n)::uuid, \
-                '2.16.840.1.113883.5.25', 'HIV', '532', daterange(NULL, NULL), \
+         SELECT md5('role-' || n)::uuid, 0, 'role', md5('staff-' || n)::uuid, \
+                'urn:example:roles', 'NURSE', '532', daterange(NULL, NULL), \
                 daterange(NULL, NULL) \
          FROM generate_series(1, $1::bigint) AS n",
     )
     .bind(target.staff)
     .execute(&mut *tx)
     .await
-    .context("seed the clearances")?;
+    .context("seed the roles")?;
     sqlx::query(
         "INSERT INTO party.binding_caller_fact_party (party_id, revision) \
          SELECT DISTINCT party_id, 1 FROM party.binding_caller_fact",
@@ -201,6 +212,12 @@ pub(crate) async fn measure(party: PgPool, target: Target) -> anyhow::Result<()>
     .await
     .context("name the teams")?;
     let today = jiff::Zoned::now().date();
+    let providers = [
+        ferroehr::party_binding::grants::caller::care_of::ProviderKey::new(
+            "urn:example:providers",
+            "hospital",
+        ),
+    ];
     let before = resident_bytes()?;
     let grants = LiveGrants::new(party);
     let started = Instant::now();
@@ -218,10 +235,10 @@ pub(crate) async fn measure(party: PgPool, target: Target) -> anyhow::Result<()>
         }
     };
     let census = |team: &Uuid| {
-        let (grants, team) = (&grants, *team);
+        let (grants, team, providers) = (&grants, *team, &providers);
         async move {
             grants
-                .cared_for_by(&[team], today, jiff::Span::new())
+                .cared_for_by(&[team], providers, today, jiff::Span::new())
                 .await
                 .context("read a team's patients")?;
             Ok(())
@@ -235,6 +252,7 @@ pub(crate) async fn measure(party: PgPool, target: Target) -> anyhow::Result<()>
     let cared = grants
         .cared_for_by(
             teams.first().map_or(&[][..], std::slice::from_ref),
+            &providers,
             today,
             jiff::Span::new(),
         )

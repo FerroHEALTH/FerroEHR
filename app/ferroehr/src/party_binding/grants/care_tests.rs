@@ -13,19 +13,35 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use uuid::Uuid;
 
 use super::{CENSUS_BYTES, CareCopy, Census, SUBJECTS};
-use crate::party_binding::grants::caller::CareTeam;
+use crate::party_binding::grants::caller::care_of::{CareOf, ProviderKey};
 use crate::party_binding::grants::store::Dates;
+use openehr_rm::draft::access_control::terminology::ForeignCode;
+
+/// An open care relationship to `carer` in the role `PART`, in the care of
+/// one provider.
+fn care(carer: Uuid) -> CareOf {
+    let dates = Dates {
+        lower: None,
+        upper: None,
+    };
+    let role = ForeignCode {
+        terminology: "HL7_ParticipationType".to_owned(),
+        code: "PART".to_owned(),
+    };
+    CareOf::new(
+        carer,
+        dates,
+        role,
+        ProviderKey::new("urn:example:providers", "hospital"),
+    )
+}
 use crate::storage::access_projection::EhrSubject;
 
 /// A census of `patients` under `team`, each declaring `each` record
 /// subjects of an identity source's namespace.
 fn census(team: Uuid, patients: usize, each: usize) -> Census {
-    let dates = Dates {
-        lower: None,
-        upper: None,
-    };
     let cared: Vec<_> = (0..patients)
-        .map(|_| (Uuid::now_v7(), CareTeam::new(team, dates)))
+        .map(|_| (Uuid::now_v7(), care(team)))
         .collect();
     let declared: BTreeMap<Uuid, Vec<EhrSubject>> = cared
         .iter()
@@ -96,12 +112,8 @@ const CAP: u64 = 8;
 const KEYS: u64 = 64;
 
 /// The care relationships the store holds for `subject` in these tests.
-fn relationships(subject: Uuid) -> Arc<[CareTeam]> {
-    let dates = Dates {
-        lower: None,
-        upper: None,
-    };
-    vec![CareTeam::new(subject, dates)].into()
+fn relationships(subject: Uuid) -> Arc<[CareOf]> {
+    vec![care(subject)].into()
 }
 
 #[tokio::test]

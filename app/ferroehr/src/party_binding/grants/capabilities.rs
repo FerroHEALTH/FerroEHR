@@ -24,6 +24,7 @@ use std::sync::Arc;
 use serde_json::Value;
 use uuid::Uuid;
 
+use crate::party_binding::grants::caller::care_of::ProviderKey;
 use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::party_binding::grants::derive::walk;
 use crate::party_binding::grants::operation::{NO_SUBJECT_NAMESPACE, Operation, SCOPES};
@@ -116,6 +117,16 @@ pub struct Provider {
     /// The identifier the target `ORGANISATION` carries, `(issuer, id)`, by
     /// which an access record names it; `None` when it carries none.
     pub identifier: Option<(String, String)>,
+}
+
+impl Provider {
+    /// Its identifier as a care relationship's `provider` names it, by
+    /// issuer and id; `None` when it carries none.
+    #[must_use]
+    pub fn key(&self) -> Option<ProviderKey> {
+        let (issuer, id) = self.identifier.clone()?;
+        Some(ProviderKey::new(issuer, id))
+    }
 }
 
 /// One grant in force: an operation a `CAPABILITY` of a `ROLE` grants.
@@ -300,6 +311,16 @@ impl Capabilities {
     #[must_use]
     pub(crate) fn with_facts(mut self, facts: CallerFacts) -> Self {
         self.facts = facts;
+        self
+    }
+
+    /// These capabilities of a caller that also acts for `provider`, the
+    /// deployment's provider a bound person acts for, which a care
+    /// relationship's `provider` names (draft access control decision
+    /// procedure, Terms).
+    #[must_use]
+    pub fn acting_for(mut self, provider: Option<ProviderKey>) -> Self {
+        self.facts = self.facts.with_providers(provider);
         self
     }
 

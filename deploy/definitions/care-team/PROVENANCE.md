@@ -1,6 +1,6 @@
 # Care-team GROUP, membership and care relationship definitions: provenance
 
-Four ADL 2 archetypes of FerroEHR's default demographic definitions, which
+Five ADL 2 archetypes of FerroEHR's default demographic definitions, which
 the binary carries and stores at boot when absent, so that the party mapping
 of groups (`[authz.party_binding.group]` and
 `[authz.party_binding.membership]`, whose defaults name them) finds them and
@@ -28,8 +28,18 @@ SCIM can provision Groups:
    carry `under_care_of` of the draft openEHR access terminology
    `openehr_access`.
 
+5. `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2.0.0.adls`: an
+   example care relationship of its own (#6055), the stored unit of the draft
+   access control package (The Relationship Store), from a patient's `PERSON`
+   to the carer (a professional's `PERSON`, a `ROLE`, a team's `GROUP` or a
+   unit), whose details carry `care_role` and `provider` (1..1) and
+   `covers_for`, `context` and `basis` (0..1), each named by a code of the
+   `care relationship element` group of `openehr_access`. The fourth file's
+   form, held in the patient's `relationships`, is refused at commit; it
+   stays published under its id.
+
 FerroEHR reads a care relationship by its code in any archetype, never by
-the id of the third or fourth file; a deployment may model one in an
+the id of the third, fourth or fifth file; a deployment may model one in an
 archetype of its own. The care delivery environment writes them under the
 `write_care_relationship` grant.
 

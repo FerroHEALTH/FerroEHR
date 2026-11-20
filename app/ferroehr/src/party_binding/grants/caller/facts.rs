@@ -3,15 +3,17 @@
 
 //! What the access evaluator reads about one caller beside its grants.
 //!
-//! They are the roles it performs, its care teams, its provider's `GROUP`s
-//! and the types of the `ORGANISATION` it acts for. No openEHR spec gives
-//! these an access meaning: our own design (#5621, #5691).
+//! They are the roles it performs and the `ROLE`s they are, its care teams,
+//! its provider's `GROUP`s, the types of the `ORGANISATION` it acts for and
+//! the providers it acts for. No openEHR spec gives these an access meaning:
+//! our own design (#5621, #5691, #6055).
 
 use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind};
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
 use crate::party_binding::grants::caller::CareTeam;
+use crate::party_binding::grants::caller::care_of::ProviderKey;
 
 /// What the access evaluator reads about one caller beside its grants.
 ///
@@ -20,13 +22,17 @@ use crate::party_binding::grants::caller::CareTeam;
 /// a client acts for is a member of on that date, and the types of the
 /// `ORGANISATION` it acts for. A caller admitted under an agreement adds the
 /// roles and organisation types its verified credential attests
-/// ([`Self::with_attested`]).
+/// ([`Self::with_attested`]). A care relationship reaches it through its
+/// principals ([`Self::principals`]) while it acts for the relationship's
+/// provider ([`Self::acts_for_provider`]).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CallerFacts {
     roles: Vec<ForeignCode>,
+    performed: Vec<Uuid>,
     care_teams: Vec<CareTeam>,
     provider_groups: Vec<Uuid>,
     organisation_types: Vec<ForeignCode>,
+    providers: Vec<ProviderKey>,
     party: Option<Uuid>,
 }
 
@@ -40,11 +46,34 @@ impl CallerFacts {
         care_teams.dedup();
         Self {
             roles,
+            performed: Vec::new(),
             care_teams,
             provider_groups: Vec::new(),
             organisation_types: Vec::new(),
+            providers: Vec::new(),
             party: None,
         }
+    }
+
+    /// These facts with `roles`, the containers of the `ROLE`s in force the
+    /// caller performs, sorted and distinct.
+    #[must_use]
+    pub fn with_performed(mut self, mut roles: Vec<Uuid>) -> Self {
+        roles.sort_unstable();
+        roles.dedup();
+        self.performed = roles;
+        self
+    }
+
+    /// These facts with `providers`, the providers the caller acts for, by
+    /// the `issuer` and `id` a care relationship's `provider` names them by,
+    /// beside those it holds, sorted and distinct.
+    #[must_use]
+    pub fn with_providers(mut self, providers: impl IntoIterator<Item = ProviderKey>) -> Self {
+        self.providers.extend(providers);
+        self.providers.sort();
+        self.providers.dedup();
+        self
     }
 
     /// These facts as the facts of the party `party`, which a request whose
@@ -130,6 +159,43 @@ impl CallerFacts {
     #[must_use]
     pub fn care_teams(&self) -> &[CareTeam] {
         &self.care_teams
+    }
+
+    /// The containers of the `ROLE`s in force the caller performs.
+    #[must_use]
+    pub fn performed(&self) -> &[Uuid] {
+        &self.performed
+    }
+
+    /// What a care relationship's target names to reach the caller, sorted
+    /// and distinct: its `PERSON` and the `ROLE`s it performs (the `direct`
+    /// path) and the care teams and units it is a member of (the `team`
+    /// path; draft access control decision procedure, Holding a Care
+    /// Relationship).
+    #[must_use]
+    pub fn principals(&self) -> Vec<Uuid> {
+        let mut principals: Vec<Uuid> = self
+            .party
+            .into_iter()
+            .chain(self.performed.iter().copied())
+            .chain(self.care_teams.iter().map(CareTeam::team))
+            .collect();
+        principals.sort_unstable();
+        principals.dedup();
+        principals
+    }
+
+    /// The providers the caller acts for, sorted and distinct.
+    #[must_use]
+    pub fn providers(&self) -> &[ProviderKey] {
+        &self.providers
+    }
+
+    /// Whether the caller acts for `provider`, a care relationship's
+    /// `provider` compared by issuer and id.
+    #[must_use]
+    pub fn acts_for_provider(&self, provider: &ProviderKey) -> bool {
+        self.providers.binary_search(provider).is_ok()
     }
 
     /// The containers of the `GROUP`s the provider a client acts for is a

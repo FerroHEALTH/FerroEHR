@@ -192,6 +192,7 @@ pub(crate) async fn reindex_stored(
         return Ok(());
     };
     if kind == Kind::PartyRelationship {
+        grants::store::write(tx, kind, head.grant_head()).await?;
         let facts = head.facts.filter(|_| head.lifecycle_state != DELETED);
         return standalone::reindex(tx, mapping, vo_id.0, facts.as_ref()).await;
     }

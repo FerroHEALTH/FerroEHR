@@ -35,7 +35,7 @@ use crate::access_eval::record::LiftedCovers;
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
 use crate::access_eval::stale::StaleCopies;
 use crate::ids::EhrId;
-use crate::party_binding::grants::caller::CareTeam;
+use crate::party_binding::grants::caller::care_of::CareOf;
 use crate::party_binding::grants::live::LiveGrants;
 use crate::service::ehr::access_settings::EhrAccessSettings;
 use crate::storage::access_projection::{EhrSubject, Revision};
@@ -320,14 +320,16 @@ impl RequestAccess {
         self.now.to_zoned(jiff::tz::TimeZone::UTC).date()
     }
 
-    /// Whether the caller has a live care relationship to a subject under
-    /// the care of `teams`.
+    /// Whether one of a subject's care `relations` is live and targets a
+    /// principal of the caller acting for its provider (draft decision procedure).
     #[must_use]
-    pub fn cared(&self, teams: &[CareTeam]) -> bool {
+    pub fn cared(&self, relations: &[CareOf]) -> bool {
         let (today, grace) = (self.today(), self.policy().grace);
-        let own = self.care_teams_held();
-        teams.iter().any(|team| {
-            team.live_on(today, grace) && own.iter().any(|own| own.team() == team.team())
+        let principals = self.principals_held();
+        relations.iter().any(|care| {
+            care.live_on(today, grace)
+                && principals.binary_search(&care.carer()).is_ok()
+                && self.caller.facts.acts_for_provider(care.provider())
         })
     }
 
