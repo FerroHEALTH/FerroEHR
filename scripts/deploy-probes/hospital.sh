@@ -65,6 +65,22 @@ x-hospital-env: &hospital-env
   # the telemetry key is set because compose sets it, which outranks RUST_LOG.
   FERROEHR__TELEMETRY__FILTER: info,ferrohealth_smart=debug
 services:
+  # The quickstart issuer signs FerroPIX's PMIR feed token for FerroEHR's
+  # \`ferroehr-system\` audience, which issuer 1 accepts above; any other
+  # client credentials request keeps the quickstart's FerroPIX audience.
+  identity-issuer:
+    environment:
+      JSON_CONFIG: >-
+        {"tokenCallbacks":[{"issuerId":"quickstart",
+        "requestMappings":[{"requestParam":"scope","match":"ferroehr/scim",
+        "claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
+        "aud":["ferroehr-scim"],"scope":"\$\${scope}"}},
+        {"requestParam":"scope","match":"ferroehr/pmir",
+        "claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
+        "aud":["ferroehr-system"],"scope":"\$\${scope}"}},
+        {"requestParam":"grant_type","match":"client_credentials",
+        "claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
+        "aud":["http://localhost:8090/fhir"],"scope":"\$\${scope}"}}]}]}
   ferroehr:
     environment: *hospital-env
   ferroehr-2:
