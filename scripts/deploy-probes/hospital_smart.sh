@@ -313,7 +313,10 @@ hs_answered() {
   if [[ -s "$HS_JAR.picker" ]]; then
     echo "        the picker page before it: $(tr -s '\n' ' ' < "$HS_JAR.picker" | sed -E 's/.*<body[^>]*>//; s/<[^>]*>/ /g; s/ +/ /g' | cut -c1-400)" >&2
   fi
-  hdc logs --no-color ferroehr 2>&1 | grep -F 'route="/ferroehr/rest/openehr/v1/ehr"' | tail -n 4 | sed 's/^/        /' >&2
+  # Every refusal both instances logged in the last two minutes, whatever its
+  # route: the picker's lookup reaches whichever layer answers it.
+  hdc logs --no-color --since 2m ferroehr ferroehr-2 2>&1 \
+    | grep -E 'status=4[0-9][0-9]|refused|denied' | tail -n 12 | cut -c1-400 | sed 's/^/        /' >&2
   hdc logs --no-color --tail 15 ferrosmart 2>&1 | sed 's/^/        /' >&2
 }
 
