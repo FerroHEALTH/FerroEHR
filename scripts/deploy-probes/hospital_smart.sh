@@ -316,6 +316,7 @@ hs_answered() {
   # Every refusal both instances logged in the last two minutes, whatever its
   # route: the picker's lookup reaches whichever layer answers it.
   hdc logs --no-color --since 2m ferroehr ferroehr-2 2>&1 \
+    | sed -E $'s/\x1b\\[[0-9;]*m//g' \
     | grep -E 'status=4[0-9][0-9]|refused|denied' | sed -E 's/request\{[^}]*\}: //' \
     | tail -n 12 | cut -c1-400 | sed 's/^/        /' >&2
   hdc logs --no-color --tail 15 ferrosmart 2>&1 | sed 's/^/        /' >&2
