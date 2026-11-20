@@ -333,8 +333,8 @@ hs_lookup_records() {
     | grep -E 'route="/ferroehr/rest/openehr/v1/ehr" status=4' \
     | sed -nE 's/.*request_id="([^"]+)".*/\1/p' | tail -n 2); do
     h_call 1 p:hans GET "$HX/admin/access-log?request_id=$rid"
-    echo "        the access record of lookup $rid ($H_CODE): $(jq -c '.entries' <<<"$H_BODY" 2>/dev/null \
-      | cut -c1-1500)" >&2
+    echo "        the access record of lookup $rid ($H_CODE): $(jq -c '[.entries[]? | del(.uid, .link,
+      .system_id, .time_recorded, .action, .operation)]' <<<"$H_BODY" 2>/dev/null | cut -c1-3000)" >&2
   done
 }
 
@@ -379,7 +379,8 @@ hs_authorize() {
       --data-urlencode "ehr_id=$ehr" "$HS_ISSUER/picker")"
   fi
   case "$location" in "$HS_ISSUER"/consent*) ;; *)
-    echo "      FerroSMART did not ask $user for consent: ${location:0:200}" >&2; hs_answered; return 1 ;; esac
+    echo "      FerroSMART did not ask $user for consent (picker subject '$subject', EHR '$ehr'): ${location:0:200}" >&2
+    hs_answered; return 1 ;; esac
   page="$(curl -sS -c "$HS_JAR" -b "$HS_JAR" "$location")"
   form_token="$(hs_attribute "$page" '<input[^>]*name="form_token"[^>]*>' value)"
   local -a approve=(--data-urlencode "form_token=$form_token" --data-urlencode "decision=approve")
