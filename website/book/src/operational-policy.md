@@ -2323,6 +2323,13 @@ never in a caseload. The access log names it as a `treatment relationship`
 ground whose `reference` is the assertion (`id` and `issuer`) and whose
 `name` and `version` are the agreement's.
 
+The attested relationship holds the role `PART` unless the credential
+attests a role of the `care_role` value set the policy binds (unbound, a
+code of `HL7_ParticipationType`). A role outside that value set, or one no
+terminology server could check, counts as no role, and the relationship
+keeps `PART`. No `[[auth.federation]]` field carries an attested role yet,
+so `PART` is the role every attested relationship holds today.
+
 #### Writing a care relationship
 
 FerroEHR checks each care relationship against the policy when it is
@@ -2397,9 +2404,9 @@ the role may do.
 - **A scope naming `care` can name care roles and a path.** With
   `relationship` `care`, an actor scope's `care_roles` lists the roles a
   caller's live care relationship must have, compared by terminology and
-  code, and `care_path` says how it must reach the caller: `direct`, `team`
-  or `self_declared` (`attested` matches no caller until it is built). Left
-  out, any role and the paths the policy turns on. No role implies another:
+  code, and `care_path` says how it must reach the caller: `direct`, `team`,
+  `self_declared` or `attested`. Left out, any role and the paths the policy
+  turns on. No role implies another:
   `RESP` does not cover `ATND`. The same scope decides a read and narrows a
   query inside its one statement, so a `COUNT` agrees with the reads.
 - **For a write**, the data are the version being committed: its template,

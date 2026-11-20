@@ -25,6 +25,7 @@ use std::sync::Arc;
 use axum::response::Response;
 use ferroehr::party_binding::grants::caller::attestation::Attestation;
 use ferroehr::service::ehr_index::types::SubjectRef;
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use ferrohealth_smart::federation::{Attribute, External, Field};
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::resource::{Access, Caller};
@@ -85,6 +86,10 @@ pub(super) async fn attest(
         assertion_issuer: context.assertion_issuer,
         not_before: context.not_before,
         not_on_or_after: context.not_on_or_after,
+        role: layer
+            .service
+            .attested_care_role(context.care_role.as_ref())
+            .await,
         ehrs,
     };
     principal.access = Access::Caller(Arc::new(
@@ -100,6 +105,7 @@ struct Context {
     assertion_issuer: Option<String>,
     not_before: Option<jiff::Timestamp>,
     not_on_or_after: jiff::Timestamp,
+    care_role: Option<DvCodedText>,
 }
 
 impl Context {
@@ -128,6 +134,8 @@ impl Context {
             assertion_issuer: text(Field::AssertionIssuer).map(str::to_owned),
             not_before,
             not_on_or_after: instant(Field::TrcNotOnOrAfter)??,
+            // TODO(#6140): read the attested care role from `trc.care_role` once mapped.
+            care_role: None,
         })
     }
 }
