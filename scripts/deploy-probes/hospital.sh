@@ -153,7 +153,7 @@ hdc() { dc "${HOSPITAL_FILES[@]}" --profile replicas --profile s3 --profile view
 hospital_up() {
   local namespace="${1:-demographic}"
   export FERROEHR_REPLICA_PORT="$HOSPITAL_REPLICA_PORT"
-  hs_export
+  hs_export "$namespace"
   # The overlay changes the identity issuer that both instances share a
   # network namespace with, so the quickstart goes down first, its volumes
   # with it: the hospital starts on a database of its own.
