@@ -392,6 +392,37 @@ async fn a_user_grant_reaches_the_contribution_list() {
     assert_ne!(status, StatusCode::UNAUTHORIZED, "{body}");
 }
 
+/// A COMPOSITION whose template the caller's grant does not cover is
+/// refused once its template is known, with the RFC 6750 §3.1
+/// `insufficient_scope` challenge a route's refusal carries (#6146).
+#[tokio::test]
+async fn a_composition_its_grant_does_not_cover_carries_the_insufficient_scope_challenge() {
+    let issuer = issuer().await;
+    let uri = issuer.uri();
+    let (pg, app) = common::app(config(&uri, false, false)).await;
+    let ehr = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+    seed_ehr(&pg, ehr).await;
+    let credential = token(&uri, "user/composition-another.template.v1.c", &json!({}));
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr/{ehr}/composition"))
+        .header(header::ACCEPT, "application/json")
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::AUTHORIZATION, &credential)
+        .body(Body::from(common::ips_canonical_composition().to_string()))
+        .unwrap();
+    let (status, headers, body) = common::send(&app, req).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    let challenge = headers
+        .get(header::WWW_AUTHENTICATE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default();
+    assert!(
+        challenge.contains(r#"error="insufficient_scope""#),
+        "{challenge}"
+    );
+}
+
 /// With authentication off there is no credential, so there is no scope to
 /// check: the operator's explicit choice, which a gate that refused every
 /// request would make unusable.

@@ -563,15 +563,15 @@ h_care_validity() {
 # Declares the EHR subject reference `id` under `namespace` on the PERSON
 # `person` through instance `n` as `who`: a record_subject element of its
 # details, coded in the probe's terminology ($H_TERM), as the registering system writes it (#5634).
-# The element takes the node its template gives record_subject: `id36` in the
-# details tree `id2` of openEHR-DEMOGRAPHIC-PERSON.patient.v2, which SCIM
-# writes a PERSON under, `at0010` in an ADL 1.4 tree.
+# The element takes the node its template gives record_subject: `id36` in
+# openEHR-DEMOGRAPHIC-PERSON.patient.v2, `at0010` in an ADL 1.4 tree.
 h_declare_subject() {
   local n="$1" who="$2" person="$3" namespace="$4" id="$5" body version element node
   h_call "$n" admin GET "/demographic/person/$person"
   version="$(jq -r '.uid.value' <<<"$H_BODY")"
   node="at0010"
-  [[ "$(jq -r '.details.archetype_node_id // empty' <<<"$H_BODY")" == id2 ]] && node="id36"
+  [[ "$(jq -r '.archetype_details.template_id.value // empty' <<<"$H_BODY")" == openEHR-DEMOGRAPHIC-PERSON.patient.v2* ]] \
+    && node="id36"
   element="$(jq -nc --argjson k "$(j_term record_subject)" --arg ns "$namespace" --arg id "$id" --arg node "$node" \
     '{_type:"ELEMENT",archetype_node_id:$node,name:$k,
       value:{_type:"DV_IDENTIFIER",issuer:$ns,id:$id,type:"PI"}}')"
@@ -680,6 +680,26 @@ h_patient_person() {
     | .name.value = $n
     | .details.items = [.details.items[0] | .value = {_type:"DV_IDENTIFIER",issuer:$i,id:$s,type:"login"}]
     | .identities[0].details.items[0].value.value = $n' <<<"$H_BODY")"
+}
+
+# A patient's PERSON named `name` in the patient template, its login
+# identifier the provider's user `user`'s FerroSMART subject, so the binding
+# keys it and its details can declare a record_subject (#5634); records it
+# as HV_<key>.
+h_patient_template_person() {
+  local key="$1" name="$2" user="$3" archetype="openEHR-DEMOGRAPHIC-PERSON.patient.v2"
+  h_party "$key" person "$(jq -nc --arg a "$archetype" --arg n "$name" --arg i "$HS_LOGIN_ISSUER" \
+    --arg s "$(hv "sub_$user")" 'def text(v): {_type:"DV_TEXT",value:v};
+    {_type:"PERSON",archetype_node_id:$a,
+     archetype_details:{_type:"ARCHETYPED",rm_version:"1.1.0",archetype_id:{_type:"ARCHETYPE_ID",value:$a},
+       template_id:{_type:"TEMPLATE_ID",value:"openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0"}},
+     name:text($n),
+     details:{_type:"ITEM_TREE",archetype_node_id:"id2",name:text("Details"),items:[
+       {_type:"ELEMENT",archetype_node_id:"id3",name:text("Patient identifier"),
+        value:{_type:"DV_IDENTIFIER",issuer:$i,id:$s,type:"login"}}]},
+     identities:[{_type:"PARTY_IDENTITY",archetype_node_id:"id6",name:text("Legal name"),
+       details:{_type:"ITEM_TREE",archetype_node_id:"id7",name:text("Name structure"),
+         items:[{_type:"ELEMENT",archetype_node_id:"id8",name:text("Full name"),value:text($n)}]}}]}')"
 }
 
 # Creates the people, the parties, the record and the controller's policy;
@@ -1117,11 +1137,8 @@ probes_hospital() {
   hospital_care_and_consent
   hospital_scim_lifecycle
   hospital_portal
-  # The launch runs after the log probes: the viewer's user reads Eva's EHR
-  # as the Basic administrator, whose entry would otherwise be the newest of
-  # a person that Hans's full view is read on.
-  hospital_log
   hospital_ehr_launch
+  hospital_log
   hospital_portal_remove
   hospital_pixm
 
@@ -1691,7 +1708,9 @@ hospital_pixm() {
   h_relate 2 admin person "$(hv person_anna)" \
     "[$(j_care member PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -30)")")]" \
     || h_fail_call "Dr. Jansen joins Cardiology"
-  h_patient_person person_eva "Eva Visser" eva || h_fail_call "Eva's PERSON"
+  # In the patient template, whose details carry the record_subject she
+  # declares below (#5634).
+  h_patient_template_person person_eva "Eva Visser" eva || h_fail_call "Eva's PERSON"
   h_care care_eva_cardiology 1 admin "$(j_care_of "$(hv person_eva)" GROUP "$(hv cardiology)" \
     "$(j_dates "$(h_day -10)" "$(h_day 30)")")" || h_fail_call "Eva's admission"
   h_patient_person person_frank "Frank Visser" frank || h_fail_call "Frank's PERSON"
