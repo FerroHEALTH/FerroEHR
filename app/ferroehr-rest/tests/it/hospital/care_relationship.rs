@@ -128,22 +128,32 @@ async fn a_care_relationship_is_written_read_and_versioned_by_party_and_by_subje
     assert_eq!(got.etag(), first);
     assert_eq!(role_of(&got.json()), json!("ATND"));
 
-    let mut changed = direct(&world, "RESP");
+    let second = updates(&world, &one, &first).await;
+    refuses(&world, (&by_party, &one), &second).await;
+    lists(&world, &by_party, &id).await;
+    versions(&world, &id, &first).await;
+    deletes(&world, (&by_party, &one), (&id, &second)).await;
+}
+
+/// Changes the relationship `one` over `first` with `If-Match` alone, and
+/// refuses a stale one; the second version.
+async fn updates(world: &World, one: &str, first: &str) -> String {
+    let mut changed = direct(world, "RESP");
     changed["time_validity"]["upper"] = json!({ "_type": "DV_DATE", "value": day(10) });
     changed["time_validity"]["upper_unbounded"] = json!(false);
-    let unconditional = call(&world.app, "client:adt", "PUT", &one, None, Some(&changed)).await;
+    let unconditional = call(&world.app, "client:adt", "PUT", one, None, Some(&changed)).await;
     assert_eq!(
         unconditional.status,
         StatusCode::BAD_REQUEST,
         "If-Match is required: {}",
         unconditional.body
     );
-    let updated = call_matching(&world.app, "client:adt", ("PUT", &one), &first, &changed).await;
+    let updated = call_matching(&world.app, "client:adt", ("PUT", one), first, &changed).await;
     assert_eq!(updated.status, StatusCode::OK, "{}", updated.body);
     let second = updated.etag();
     assert!(second.ends_with("::2"), "{second}");
     assert_eq!(role_of(&updated.json()), json!("RESP"));
-    let stale = call_matching(&world.app, "client:adt", ("PUT", &one), &first, &changed).await;
+    let stale = call_matching(&world.app, "client:adt", ("PUT", one), first, &changed).await;
     assert_eq!(
         stale.status,
         StatusCode::PRECONDITION_FAILED,
@@ -156,9 +166,16 @@ async fn a_care_relationship_is_written_read_and_versioned_by_party_and_by_subje
         "the refusal names the current version"
     );
 
+    second
+}
+
+/// The relationship over `second` moved to another subject, and a body that
+/// is no care relationship, are refused `422`.
+async fn refuses(world: &World, (by_party, one): (&str, &str), second: &str) {
+    let changed = direct(world, "RESP");
     let mut elsewhere = changed.clone();
     elsewhere["source"] = party_ref("PERSON", &world.people["frank"].person);
-    let moved = call_matching(&world.app, "client:adt", ("PUT", &one), &second, &elsewhere).await;
+    let moved = call_matching(&world.app, "client:adt", ("PUT", one), second, &elsewhere).await;
     assert_eq!(
         moved.status,
         StatusCode::UNPROCESSABLE_ENTITY,
@@ -171,7 +188,7 @@ async fn a_care_relationship_is_written_read_and_versioned_by_party_and_by_subje
         &world.app,
         "client:adt",
         "POST",
-        &by_party,
+        by_party,
         None,
         Some(&not_care),
     )
@@ -182,11 +199,14 @@ async fn a_care_relationship_is_written_read_and_versioned_by_party_and_by_subje
         "{}",
         wrong.body
     );
+}
 
-    let mut expected = stays(&world);
-    expected.push(id.clone());
+/// The list by party and by subject reference holds `id` beside the stays.
+async fn lists(world: &World, by_party: &str, id: &str) {
+    let mut expected = stays(world);
+    expected.push(id.to_owned());
     expected.sort();
-    let listed = read(&world, "client:adt", &by_party).await;
+    let listed = read(world, "client:adt", by_party).await;
     assert_eq!(listed.status, StatusCode::OK, "{}", listed.body);
     assert_eq!(containers(&listed), expected);
     let by_subject = format!(
@@ -194,15 +214,19 @@ async fn a_care_relationship_is_written_read_and_versioned_by_party_and_by_subje
         world.eva
     );
     assert_eq!(
-        containers(&read(&world, "client:adt", &by_subject).await),
+        containers(&read(world, "client:adt", &by_subject).await),
         expected
     );
+}
 
+/// The versioned object, its history with an `AUDIT_DETAILS` per version,
+/// and the first version of `id`.
+async fn versions(world: &World, id: &str, first: &str) {
     let versioned = format!("{EXT}/versioned_care_relationship/{id}");
-    let container = read(&world, "client:adt", &versioned).await;
+    let container = read(world, "client:adt", &versioned).await;
     assert_eq!(container.status, StatusCode::OK, "{}", container.body);
     let history = read(
-        &world,
+        world,
         "client:adt",
         &format!("{versioned}/revision_history"),
     )
@@ -220,16 +244,16 @@ async fn a_care_relationship_is_written_read_and_versioned_by_party_and_by_subje
         "each version carries its AUDIT_DETAILS: {}",
         history.body
     );
-    let version = read(
-        &world,
-        "client:adt",
-        &format!("{versioned}/version/{first}"),
-    )
-    .await;
+    let version = read(world, "client:adt", &format!("{versioned}/version/{first}")).await;
     assert_eq!(version.status, StatusCode::OK, "{}", version.body);
     assert_eq!(role_of(&version.json()["data"]), json!("ATND"));
+}
 
-    let unconditional = call(&world.app, "client:adt", "DELETE", &one, None, None).await;
+/// The deletion of `id` over `second` needs `If-Match`, leaves the list and
+/// keeps its earlier versions.
+async fn deletes(world: &World, (by_party, one): (&str, &str), (id, second): (&str, &str)) {
+    let versioned = format!("{EXT}/versioned_care_relationship/{id}");
+    let unconditional = call(&world.app, "client:adt", "DELETE", one, None, None).await;
     assert_eq!(
         unconditional.status,
         StatusCode::BAD_REQUEST,
@@ -238,7 +262,7 @@ async fn a_care_relationship_is_written_read_and_versioned_by_party_and_by_subje
     );
     let deleted = crate::hospital::world::served(
         &world.app,
-        crate::common::req("DELETE", &one)
+        crate::common::req("DELETE", one)
             .auth(crate::hospital::world::credential("client:adt"))
             .if_match(format!("\"{second}\""))
             .build(),
@@ -246,13 +270,13 @@ async fn a_care_relationship_is_written_read_and_versioned_by_party_and_by_subje
     .await;
     assert_eq!(deleted.0, StatusCode::NO_CONTENT, "{}", deleted.2);
     assert_eq!(
-        containers(&read(&world, "client:adt", &by_party).await),
-        stays(&world)
+        containers(&read(world, "client:adt", by_party).await),
+        stays(world)
     );
-    let gone = read(&world, "client:adt", &one).await;
+    let gone = read(world, "client:adt", one).await;
     assert_eq!(gone.status, StatusCode::NO_CONTENT, "{}", gone.body);
     let kept = read(
-        &world,
+        world,
         "client:adt",
         &format!("{versioned}/version/{second}"),
     )

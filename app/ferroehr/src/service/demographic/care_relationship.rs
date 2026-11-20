@@ -12,7 +12,7 @@
 //! (#6055), so every write here is the commit of
 //! `/demographic/party_relationship` in a narrower form, versioned with its
 //! `AUDIT_DETAILS` in a `CONTRIBUTION`. Every read is decided per subject it
-//! reveals ([`super::care_visible`]): that a person is under a carer is data
+//! reveals (`care_visible`): that a person is under a carer is data
 //! concerning health (GDPR Art 4(15), Art 9). No openEHR spec defines these
 //! resources: our own design over the draft package.
 

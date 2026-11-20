@@ -21,8 +21,6 @@ use ferroehr::storage::access_projection::EhrSubject;
 use crate::overview::error::RestError;
 use crate::overview::params::query_pairs;
 
-/// The page served when `fetch` is absent: our own design.
-const DEFAULT_FETCH: usize = 100;
 /// The largest page served: our own design, as the access log's.
 const MAX_FETCH: usize = 1000;
 
@@ -145,7 +143,8 @@ fn carer_of(pairs: &[(String, String)]) -> Result<CarerQuery, RestError> {
         fetch: value(pairs, "fetch")
             .map(|fetch| count("fetch", fetch, 1, MAX_FETCH))
             .transpose()?
-            .unwrap_or(DEFAULT_FETCH),
+            // NOTE: our own design (#6076), a page of 100 when `fetch` is absent.
+            .unwrap_or(100),
     })
 }
 
