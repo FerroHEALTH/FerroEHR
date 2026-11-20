@@ -20,8 +20,8 @@
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
 use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
 use openehr_base::v1_3::base_types::identification::object_ref::ObjectRef;
-use openehr_rm::draft::access_control::terminology::Term as _;
 use openehr_rm::draft::access_control::terminology::log::{Action, Outcome};
+use openehr_rm::draft::access_control::terminology::{Confidentiality, Term as _};
 use openehr_rm::draft::access_log::access_log::access_credential::AccessCredential;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::v1_2::common::generic::party_identified::PartyIdentified;
@@ -299,6 +299,7 @@ pub(crate) fn stored(
     event.decided = crate::access_eval::record::Decision::of_recorded(
         entry.authorisations.as_deref().unwrap_or_default(),
     );
+    labelled(&mut event, entry);
     event.query = entry.query.as_ref().and_then(|query| {
         Some(QueryNaming {
             language: query_language(query.language.as_deref()?),
@@ -547,5 +548,23 @@ impl<'a> Core<'a> {
             .delivered
             .or_else(|| self.0.query.as_ref().and_then(|query| query.rows))
             .and_then(|count| u64::try_from(count).ok())
+    }
+}
+
+/// Stamps `event` with the confidentiality the security label of `entry`
+/// names: the one label an entry carries is the level of the record it
+/// reached (#6057).
+fn labelled(event: &mut AuditEvent, entry: &AccessLogEntry) {
+    // NOTE: our own design, a label of another code system names no level of the record.
+    let confidentiality = entry
+        .security_labels
+        .iter()
+        .flatten()
+        .find_map(|label| Confidentiality::read(label).ok());
+    if confidentiality.is_some() {
+        event
+            .decided
+            .get_or_insert_with(Box::default)
+            .confidentiality = confidentiality;
     }
 }

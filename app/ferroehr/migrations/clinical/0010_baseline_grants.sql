@@ -20,7 +20,8 @@ REVOKE ALL ON FUNCTION
     access_class_notify(),
     access_settings_notify(),
     access_class_unknown(ehr uuid),
-    access_stale_copy()
+    access_stale_copy(),
+    definition_changed()
     FROM PUBLIC;
 
 DO $$
@@ -36,6 +37,7 @@ BEGIN
             template_ref,
             archetype_store,
             adl2_artefact,
+            definition_revision,
             stored_query,
             commit_audit,
             contribution,
@@ -91,6 +93,7 @@ BEGIN
             template_ref,
             archetype_store,
             adl2_artefact,
+            definition_revision,
             stored_query,
             commit_audit,
             contribution,

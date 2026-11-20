@@ -119,6 +119,7 @@ impl FerroEhrService {
         page: (Option<i64>, Option<i64>),
     ) -> Result<QueryOutcome, Failure> {
         let ceiling = self.query_result_ceiling;
+        let archetype_lineage = self.archetype_lineage().await.map_err(Failure::analysis)?;
         let party_ctx = SqlCtx {
             system_id: self.effective_system_id(),
             ehr_ids: Vec::new(),
@@ -126,7 +127,7 @@ impl FerroEhrService {
             ehr_access: crate::access_eval::condition::AccessCondition::default(),
             limit: ceiling.map(|c| c.saturating_add(1)),
             offset: None,
-            archetype_lineage: self.archetype_lineage().await,
+            archetype_lineage,
             policy_parties: PolicyParties::of_request(&self.binding),
             access_settings: EhrAccessReaders::Every,
             own_records: None,

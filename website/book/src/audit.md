@@ -1185,10 +1185,15 @@ Four controls sit on top of it, and they are separate on purpose:
   chain from its own cursor to the head it started with, one statement per
   step (`audit.verify_audit_chain_step()` and
   `audit.verify_access_log_chain_step()`), each sized to take about half a
-  second and followed by a pause as long, and each intact step moves the
-  cursor, so a backlog of any size is verified in one run, no statement nears
-  the `[database] statement_timeout`, and a catch-up leaves the database to
-  the requests. How far a cursor is behind is
+  second, and each intact step moves the cursor, so a backlog of any size is
+  verified in one run and no statement nears the
+  `[database] statement_timeout`. After each step the run pauses at least as
+  long as the step took, and longer the more the step's cost per record rose
+  above the lowest the server has measured for that chain: a step that cost
+  twice as much pauses four times as long, up to 16 times. A catch-up
+  therefore takes about half a core of a quiet database and yields to the
+  requests under load, where the lag can grow until the load falls. How far
+  a cursor is behind is
   the `audit_chain_verification_lag` and `audit_chain_unverified_age_seconds`
   metrics; once the oldest unverified record has waited longer than
   `[audit.store] max_verify_lag` (default four hours), the `audit_chain`

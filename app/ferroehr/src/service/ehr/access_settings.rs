@@ -35,7 +35,7 @@ use crate::ids::VoId;
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
 use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, ForeignCode, ForeignKind, OperationClass, Term,
+    AccessDefault, Confidentiality, ForeignCode, ForeignKind, OperationClass, Term,
 };
 
 /// The `_type` of the settings on the wire (canonical JSON).
@@ -131,6 +131,28 @@ impl EhrAccessSettings {
             Self::Directives(settings) => AccessDefault::read_coded(&settings.default_access)
                 .unwrap_or(AccessDefault::Restricted),
             Self::HeldClosed => AccessDefault::Restricted,
+        }
+    }
+
+    /// The confidentiality of the whole EHR, its marking's level: `N` with
+    /// no marking, and for an EHR held closed, which its closed disposition
+    /// already confines to a gate-keeper, the controller or a live care
+    /// relationship, so the controller can still repair it.
+    #[must_use]
+    pub fn marking(&self) -> Confidentiality {
+        match self {
+            // NOTE: our own design, the write check holds the level to its code system, so a
+            // stored level that does not read is read as the highest, never as normal.
+            Self::Directives(settings) => {
+                settings
+                    .marking
+                    .as_ref()
+                    .map_or(Confidentiality::Normal, |marking| {
+                        Confidentiality::read(&marking.confidentiality)
+                            .unwrap_or(Confidentiality::VeryRestricted)
+                    })
+            }
+            Self::HeldClosed => Confidentiality::Normal,
         }
     }
 

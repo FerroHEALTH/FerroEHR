@@ -45,6 +45,7 @@ use serde_json::{Value, json};
 use crate::error::refusal::{Invalid, Missing};
 use crate::error::{ErrorChain, ServiceError, Violation};
 use crate::service::FerroEhrService;
+use crate::service::definition::copies::Generation;
 use crate::storage::template_repo::{self, NewTemplate, TemplateRow};
 use crate::templates::identity;
 
@@ -147,19 +148,19 @@ impl FerroEhrService {
                 "an operational template with template_id '{template_id}' already exists"
             ))
         })?;
+        let revision = template_repo::definition_revision(&mut tx).await?;
         self.commit_definition(tx).await?;
+        self.definitions.confirm(revision);
 
-        // The create path needs no `WebTemplate`-cache invalidation: the insert
-        // never overwrites and `web_template` caches only successful builds,
-        // so a freshly stored template_id can have no pre-existing entry. The
-        // cache is invalidated where a template's lifetime ends, in the delete.
-        // The Web Template built above is cached, so the upload's representation
-        // reads no row back.
+        // The Web Template built above is cached in the generation of the
+        // revision this upload moved to, so the first commit against it builds
+        // nothing; a later change read in between leaves it uncached.
         let key = identity::canonical_key(&template_id);
-        if let Err(error) = self
-            .web_templates
-            .get_or_build(&key, || Ok(web_template))
-            .await
+        if let Some(generation) = self.definitions.at(revision)
+            && let Err(error) = generation
+                .web_templates
+                .get_or_build(&key, || Ok(web_template))
+                .await
         {
             tracing::warn!(template_id, %error, "the uploaded Web Template was not cached");
         }
@@ -206,9 +207,11 @@ impl FerroEhrService {
 
         // A resident WebTemplate is served without touching `template_store`:
         // composition validation calls this once per commit, so a warm template
-        // makes every later commit a pure in-memory hit (no openEHR spec governs
-        // the cache — our own design).
-        if let Some(wt) = self.web_templates.get(&key).await {
+        // makes every later commit a pure in-memory hit. The generation is the
+        // one the request's definition revision confirmed (no openEHR spec
+        // governs the cache — our own design, #5948).
+        let generation = self.definitions.current();
+        if let Some(wt) = generation.web_templates.get(&key).await {
             note_cache_event("hit");
             return Ok(wt);
         }
@@ -221,8 +224,7 @@ impl FerroEhrService {
         let Some(xml) = template_repo::template_xml(&self.pool, template_id).await? else {
             return self.web_template_adl2_cached(template_id).await;
         };
-        self.build_cached_web_template(&key, template_id, &xml)
-            .await
+        build_cached_web_template(&generation, &key, template_id, &xml).await
     }
 
     /// The [`WebTemplate`] a composition commit naming `template_id` is
@@ -293,7 +295,8 @@ impl FerroEhrService {
             return Err(unknown());
         }
         let key = identity::canonical_key(template_id);
-        let wt = if let Some(wt) = self.web_templates.get(&key).await {
+        let generation = self.definitions.current();
+        let wt = if let Some(wt) = generation.web_templates.get(&key).await {
             note_cache_event("hit");
             wt
         } else {
@@ -301,8 +304,7 @@ impl FerroEhrService {
             let xml = template_repo::template_xml(&self.pool, template_id)
                 .await?
                 .ok_or_else(unknown)?;
-            self.build_cached_web_template(&key, template_id, &xml)
-                .await?
+            build_cached_web_template(&generation, &key, template_id, &xml).await?
         };
         let mut composition = example_or_refusal(&wt, level)?;
         if kind == ExampleType::Output {
@@ -310,39 +312,41 @@ impl FerroEhrService {
         }
         Ok(composition)
     }
+}
 
-    /// Build the [`WebTemplate`] for `xml` and cache it under `key` (the
-    /// §Composite Identifiers and Case canonical form of `template_id`).
-    ///
-    /// The expensive build is single-flighted by the cache's `get_or_build`
-    /// (one build per key under contention); only a *successful* build is
-    /// cached, so no negative entry can shadow a later upload.
-    ///
-    /// # Errors
-    ///
-    /// [`ServiceError::Unprocessable`] (→ `422`) — the stored XML does not
-    /// re-parse as an OPT or the OPT does not build into a [`WebTemplate`]
-    /// (a stored-but-unbuildable template).
-    async fn build_cached_web_template(
-        &self,
-        key: &str,
-        template_id: &str,
-        xml: &str,
-    ) -> Result<Arc<WebTemplate>, ServiceError> {
-        self.web_templates
-            .get_or_build(key, || {
-                let opt = openehr_its::opt14::from_xml(xml)
-                    .map_err(openehr_sdt::flat::error::FlatError::OptParse)?;
-                openehr_sdt::flat::webtemplate::builder::build_web_template(&opt)
-            })
-            .await
-            .map_err(|e| {
-                ServiceError::content_invalid(Violation::new(format!(
-                    "operational template {template_id} could not be built into a WebTemplate: {}",
-                    ErrorChain::new(&*e)
-                )))
-            })
-    }
+/// Build the [`WebTemplate`] for `xml` and cache it under `key` (the
+/// §Composite Identifiers and Case canonical form of `template_id`) in
+/// `generation`, the one the caller looked it up in.
+///
+/// The expensive build is single-flighted by the cache's `get_or_build`
+/// (one build per key under contention); only a *successful* build is
+/// cached, so no negative entry can shadow a later upload.
+///
+/// # Errors
+///
+/// [`ServiceError::Unprocessable`] (→ `422`) — the stored XML does not
+/// re-parse as an OPT or the OPT does not build into a [`WebTemplate`]
+/// (a stored-but-unbuildable template).
+async fn build_cached_web_template(
+    generation: &Generation,
+    key: &str,
+    template_id: &str,
+    xml: &str,
+) -> Result<Arc<WebTemplate>, ServiceError> {
+    generation
+        .web_templates
+        .get_or_build(key, || {
+            let opt = openehr_its::opt14::from_xml(xml)
+                .map_err(openehr_sdt::flat::error::FlatError::OptParse)?;
+            openehr_sdt::flat::webtemplate::builder::build_web_template(&opt)
+        })
+        .await
+        .map_err(|e| {
+            ServiceError::content_invalid(Violation::new(format!(
+                "operational template {template_id} could not be built into a WebTemplate: {}",
+                ErrorChain::new(&*e)
+            )))
+        })
 }
 
 /// The openEHR template descriptor of one stored template (the ITS-REST

@@ -8,11 +8,9 @@
 //! The worked example is the draft package's Who Sees What table (draft
 //! access control package, Appendix, Who Sees What; #6060 B.4.3): one patient
 //! under the care of the hospital H, a policy with a 30-day grace and four
-//! rules, each caller acting for H. Until the record's confidentiality is
-//! decided (#6057) the levels `R` and `V` stand as two sensitivities the
-//! policy classifies by template, so a datum of a level no applying permit
-//! names is refused at step 6 as `refused-sensitivity`, the refusal
-//! `refused-confidentiality` takes there.
+//! rules, each caller acting for H. The policy classifies one template at
+//! the confidentiality `R` and one at `V`, so a datum of a level no applying
+//! permit clears is refused at step 6 as `refused-confidentiality` (#6057).
 
 use std::sync::Arc;
 
@@ -38,8 +36,8 @@ const MEIJER: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7fa5";
 /// Dr. Smit, with no relationship.
 const SMIT: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7fa6";
 
-/// The code system the stand-in levels are coded in.
-const LEVELS: &str = "urn:example:levels";
+/// The code system the confidentiality levels are coded in.
+const LEVELS: &str = "HL7_Confidentiality";
 /// The template whose data stand at the level `R`.
 const AT_R: &str = "restricted_note.v1";
 /// The template whose data stand at the level `V`.
@@ -61,14 +59,14 @@ fn in_care(extra: &Value) -> Value {
     scope
 }
 
-/// The four rules of the worked example, with a 30-day grace, the stand-in
-/// levels classified by template, and `members` beside them.
+/// The four rules of the worked example, with a 30-day grace, the levels
+/// classified by template, and `members` beside them.
 fn hospital(members: &Value) -> AccessPolicy {
     let level = |template: &str, code: &str| {
         json!({ "_type": "ACCESS_CLASSIFICATION",
             "name": { "_type": "DV_TEXT", "value": code }, "archetype_node_id": "at0002",
             "data": { "_type": "ACCESS_DATA_SCOPE", "templates": [template] },
-            "sensitivities": [coded(LEVELS, code)] })
+            "confidentiality": coded(LEVELS, code) })
     };
     let responsible = in_care(
         &json!({ "care_roles": [care_role("RESP"), care_role("ATND")],
@@ -80,10 +78,10 @@ fn hospital(members: &Value) -> AccessPolicy {
         "classifications": [level(AT_R, "R"), level(AT_V, "V")],
         "rules": [
             rule("permit", &json!({ "applies_to": [in_care(&json!({}))],
-                "data": [{ "sensitivities": [coded(LEVELS, "R")] }],
+                "data": [{ "confidentialities": [coded(LEVELS, "R")] }],
                 "purposes": [coded(PURPOSE, "TREAT")] })),
             rule("permit", &json!({ "applies_to": [responsible],
-                "data": [{ "sensitivities": [coded(LEVELS, "V")] }],
+                "data": [{ "confidentialities": [coded(LEVELS, "V")] }],
                 "purposes": [coded(PURPOSE, "TREAT")], "emergency_override": true })),
             rule("deny", &json!({ "operations": [term("write")],
                 "data": [{ "templates": [DISCHARGE] }],
@@ -187,7 +185,7 @@ fn datum(template: &str) -> Item<'_> {
 
 const ADMIT: Outcome = Outcome::Admit;
 const NO_CARE: Outcome = Outcome::Refused(Refusal::NoCareRelationship);
-const LEVEL: Outcome = Outcome::Refused(Refusal::Sensitivity);
+const LEVEL: Outcome = Outcome::Refused(Refusal::Confidentiality);
 
 /// The Who Sees What table of the draft, with the provider: each caller's
 /// answer at `N`, `R` and `V` on a day every relationship holds.
@@ -475,7 +473,7 @@ fn the_record_names_the_relationship_the_procedure_chooses() {
         }
         policy(&json!({ "care_relationship_required": true,
             "rules": [rule("permit", &json!({ "applies_to": [in_care(&scope)],
-                "data": [{ "sensitivities": [coded(LEVELS, "V")] }] }))] }))
+                "data": [{ "confidentialities": [coded(LEVELS, "V")] }] }))] }))
     };
     assert_eq!(
         named(&ordered(&["ATND", "RESP"], None)),

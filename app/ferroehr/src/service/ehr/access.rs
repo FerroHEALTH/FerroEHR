@@ -46,6 +46,7 @@ use crate::service::FerroEhrService;
 use crate::storage::access_projection::{Revision, Stored, StoredSettings};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::Body;
 use crate::versioning::change::{Change, commit_contribution};
 
 impl FerroEhrService {
@@ -320,16 +321,21 @@ impl FerroEhrService {
 
     /// Refuses a caller who may not commit the next `EHR_ACCESS` version of
     /// `ehr_id`, judged against the current settings read on the commit's
-    /// own transaction ([`SettingsCaller::may_write`]).
+    /// own transaction ([`SettingsCaller::may_write`]), or whose versions
+    /// write a `marking` other than the current one: the marking is the
+    /// controller's alone, and a version committed by anyone else carries it
+    /// unchanged (draft access control, The Decision Procedure, Reading and
+    /// Writing the Settings).
     ///
     /// # Errors
     /// [`ServiceError::Forbidden`] (`403`) for a caller who is neither an
-    /// administrator nor a gate-keeper of the current settings, and the
-    /// storage error of the read.
+    /// administrator nor a gate-keeper of the current settings, or who
+    /// changes the marking, and the storage error of the read.
     pub(in crate::service) async fn check_ehr_access_writer(
         &self,
         tx: &mut PgConnection,
         ehr_id: EhrId,
+        markings: &[Option<&Value>],
     ) -> Result<(), ServiceError> {
         let caller = self.settings_caller_on(ehr_id);
         if caller.administrator() {
@@ -337,15 +343,26 @@ impl FerroEhrService {
         }
         let body =
             crate::storage::version_repo::ehr_access::current_ehr_access_body(tx, ehr_id).await?;
-        let current = match body {
-            Some(body) => {
-                let value: Value = serde_json::from_str(&body)
-                    .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
-                EhrAccessSettings::held_or_read(&value)
-            }
-            None => None,
-        };
-        caller.may_write(current.as_ref())
+        let stored: Option<Value> = body
+            .map(|body| serde_json::from_str(&body))
+            .transpose()
+            .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
+        let current = stored.as_ref().and_then(EhrAccessSettings::held_or_read);
+        caller.may_write(current.as_ref())?;
+        let marking = stored
+            .as_ref()
+            .and_then(|value| value.get("settings"))
+            .and_then(|settings| settings.get("marking"));
+        if markings
+            .iter()
+            .any(|written| !same_marking(*written, marking))
+        {
+            return Err(ServiceError::not_permitted(
+                "only the controller sets, changes or clears the EHR_ACCESS marking; a version \
+                 committed by anyone else carries it unchanged",
+            ));
+        }
+        Ok(())
     }
 
     /// Who the running request's caller is to the `EHR_ACCESS` settings.
@@ -541,5 +558,44 @@ pub(in crate::service) fn initial_ehr_access() -> EhrAccess {
         // `EHR_ACCESS.settings` (0..1) — see the doc comment above: with no
         // access-control scheme in force the default carries none.
         settings: None,
+    }
+}
+
+/// Whether two `settings.marking` values are the same marking: read as the
+/// class, so a version that spells the stored marking with or without its
+/// optional `_type` members carries it unchanged; a value that does not read
+/// is compared as it is written.
+fn same_marking(written: Option<&Value>, stored: Option<&Value>) -> bool {
+    use openehr_rm::draft::access_control::access_control::confidentiality_marking::ConfidentialityMarking;
+    // NOTE: our own design, a marking that does not read is no class to compare, so it is
+    // compared as written, which refuses any change to it.
+    let read = |value: &Value| {
+        openehr_its::json::from_canonical_value::<ConfidentialityMarking>(value).ok()
+    };
+    match (written, stored) {
+        (None, None) => true,
+        (Some(written), Some(stored)) => match (read(written), read(stored)) {
+            (Some(written), Some(stored)) => written == stored,
+            _ => written == stored,
+        },
+        _ => false,
+    }
+}
+
+/// The `settings.marking` an `EHR_ACCESS` change writes: `None` for a
+/// deletion, or a version that carries no marking.
+pub(in crate::service) fn written_marking(change: &Change) -> Option<&Value> {
+    match change {
+        Change::Create { body, .. } | Change::Modify { body, .. } => match body {
+            Body::EhrAccess(rm) => rm
+                .settings
+                .as_ref()
+                .and_then(|settings| settings.members().get("marking")),
+            _ => body
+                .canonical()
+                .and_then(|view| view.get("settings"))
+                .and_then(|settings| settings.get("marking")),
+        },
+        Change::Delete { .. } => None,
     }
 }
