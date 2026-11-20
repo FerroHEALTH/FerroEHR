@@ -13,8 +13,8 @@
 //! `_team_targets_` names it, and never the controller; a relationship to a
 //! record marked above `N` is written only by a writer
 //! `_relationship_writers_` names for that level. The checks here are pure:
-//! the commit reads the facts they take inside its transaction
-//! ([`crate::party_binding::grants::caller::bounds`]). Our own design over our
+//! the commit reads the facts they take inside its transaction, in the
+//! crate's `party_binding::grants::caller::bounds`. Our own design over our
 //! own model.
 
 use openehr_rm::draft::access_control::access_control::access_actor_scope::AccessActorScope;
