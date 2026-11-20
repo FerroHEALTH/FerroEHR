@@ -23,6 +23,7 @@ use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 use sqlx::Executor as _;
 
+use crate::aql_matches_anchor::person_born;
 use crate::aql_range_anchor::rows;
 use crate::fixtures::{if_match, object};
 use crate::storage_plans::{aql_sql_with, explain_aql, render, scans};
@@ -40,47 +41,7 @@ const BIRTH: &str = "p/details/items[at0001]/items[at0010]/value/value";
 /// A PERSON named `name` born on `birth`, holding one relationship to each
 /// reference of `targets` with `source` as its source.
 fn person(name: &str, birth: &str, source: Option<&str>, targets: &[&str]) -> Value {
-    let mut body = json!({
-        "_type": "PERSON",
-        "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
-        "archetype_details": { "_type": "ARCHETYPED",
-            "archetype_id": { "_type": "ARCHETYPE_ID",
-                              "value": "openEHR-DEMOGRAPHIC-PERSON.person.v1" },
-            "rm_version": "1.1.0" },
-        "name": { "_type": "DV_TEXT", "value": name },
-        "identities": [{
-            "_type": "PARTY_IDENTITY",
-            "archetype_node_id": "at0002",
-            "name": { "_type": "DV_TEXT", "value": "legal name" },
-            "details": {
-                "_type": "ITEM_TREE",
-                "archetype_node_id": "at0003",
-                "name": { "_type": "DV_TEXT", "value": "structure" },
-                "items": [{
-                    "_type": "ELEMENT",
-                    "archetype_node_id": "at0004",
-                    "name": { "_type": "DV_TEXT", "value": "family" },
-                    "value": { "_type": "DV_TEXT", "value": name }
-                }]
-            }
-        }],
-        "details": {
-            "_type": "ITEM_TREE",
-            "archetype_node_id": "at0000",
-            "name": { "_type": "DV_TEXT", "value": "details" },
-            "items": [{
-                "_type": "CLUSTER",
-                "archetype_node_id": "at0001",
-                "name": { "_type": "DV_TEXT", "value": "birth" },
-                "items": [{
-                    "_type": "ELEMENT",
-                    "archetype_node_id": "at0010",
-                    "name": { "_type": "DV_TEXT", "value": "date of birth" },
-                    "value": { "_type": "DV_DATE", "value": birth }
-                }]
-            }]
-        }
-    });
+    let mut body = person_born(name, birth);
     if let Some(source) = source {
         let relationships: Vec<Value> = targets
             .iter()
