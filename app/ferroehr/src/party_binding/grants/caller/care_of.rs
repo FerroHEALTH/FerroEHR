@@ -217,7 +217,7 @@ pub(crate) fn role_text<'a, T: Tree<'a>>(body: T) -> Result<DvCodedText, String>
 
 /// The `provider` of the care relationship `body`: a `DV_IDENTIFIER` of
 /// type `ORGANISATION` with an issuer and an id.
-fn provider<'a, T: Tree<'a>>(body: T) -> Result<ProviderKey, String> {
+pub(crate) fn provider<'a, T: Tree<'a>>(body: T) -> Result<ProviderKey, String> {
     let value = element(body, CareElement::Provider)
         .ok_or_else(|| "it carries no provider element, which is 1..1".to_owned())?;
     let identifier: DvIdentifier = openehr_its::json::from_canonical_value(&value.to_value())

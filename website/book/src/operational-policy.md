@@ -1753,6 +1753,50 @@ relationships as care relationships and group memberships, the
 `write_care_relationship` rule, and holding them in memory are FerroEHR's
 own design.
 
+### The care relationship resources
+
+These resources are an extension of the openEHR REST API: ITS-REST 1.1.0
+has no resource for a relationship, so FerroEHR serves them under the
+extensions root (`/ferroehr/rest/extensions/v1`), after the draft access
+control package (ITS-REST Resources, Care Relationships). Each is the
+`under_care_of` `PARTY_RELATIONSHIP` above in a narrower form, so a write
+needs the same `write_care_relationship` grant and commits a version with its
+audit details in a contribution.
+
+| Resource | What it does |
+| --- | --- |
+| `GET /care_relationship?subject_id=&subject_namespace=` | The care relationships of the subject that reference names, live ones by default; `at=YYYY-MM-DD` the day they are live on, `all=true` ended ones too |
+| `GET /demographic/person/{uid_based_id}/care_relationship` | The same, for the subject this `PERSON` is |
+| `POST` on either | Adds a relationship whose `source` is that subject's `PERSON`: `201` with `ETag` and `Location`; `422` for a body that is no care relationship of that subject |
+| `GET /care_relationship/{relationship_uid}` | One relationship, its current version or the version the uid names; `204` once it is deleted |
+| `PUT /care_relationship/{relationship_uid}` | Changes the role or the period, with `If-Match` naming the current version (`400` without it, `412` with `ETag` naming the current one when it is stale); closing `time_validity` ends it |
+| `DELETE /care_relationship/{relationship_uid}` | Removes one written in error, with `If-Match`; its earlier versions keep it |
+| `GET /versioned_care_relationship/{relationship_uid}`, `.../revision_history`, `.../version/{version_uid}` | The versioned object, its revision history with the audit details of each version, and one version |
+| `GET /care_relationship?carer={uid}` | The relationships that reach a carer's party, `role=terminology_id\|code` and `path=direct` or `team` to narrow them, `at` as above, paged by `offset` and `fetch` (100 by default, at most 1000) |
+
+That a person is under the care of a given professional or service is data
+concerning health (GDPR Art 4(15), Art 9), so every read is decided per
+subject it reveals. A relationship is served only to a caller who may read
+the subject's record, judged as a read of each of the subject's EHRs, or to a
+caller who writes care relationships for the relationship's provider (an
+administrator, or a `write_care_relationship` grant naming that provider). A
+list leaves every other relationship out, and a read of one answers `404`, so
+its role and context never reach that caller. A subject with no EHR has no
+record to read, so only a writer for the provider sees its relationships.
+Each read writes one access record per subject it reveals: an access-log
+entry on the subject's EHR, or, for a subject with no EHR, an access record
+naming its `PERSON`. The resources carry the Demographic API's SMART
+requirement: a client granted `access_demographic`, or the product scope.
+
+```sh
+curl "$BASE/ferroehr/rest/extensions/v1/demographic/person/$PATIENT/care_relationship" \
+  -H "Authorization: Bearer $ADT_TOKEN"
+```
+
+The resources, the per-subject decision and the writer's exception are
+FerroEHR's own design over its draft access control package; no openEHR
+specification defines them.
+
 ### Care teams provisioned over SCIM
 
 A SCIM Group is a care team when its client creates it with

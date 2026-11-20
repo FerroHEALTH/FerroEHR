@@ -68,6 +68,7 @@ const EXTENSION_ROOTS: &[&str] = &[
     "/admin/restriction",
     "/admin/retention",
     "/admin/template",
+    "/care_relationship",
     "/definition/archetype",
     "/definition/artefact",
     "/demographic/party",
@@ -76,6 +77,7 @@ const EXTENSION_ROOTS: &[&str] = &[
     "/message",
     "/query/cohort",
     "/terminology",
+    "/versioned_care_relationship",
 ];
 
 /// The full server path of a route a test names relative to its namespace:
