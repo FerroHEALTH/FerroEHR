@@ -79,7 +79,9 @@ The client's grant is policy data in the CDR, and the committer carries an
 ## What a client may still send
 
 A client keeps `change_type`, `description` and `lifecycle_state`, and its
-COMPOSITION content, the `composer` included. Where ITS-REST requires a
+COMPOSITION content; a professional's `composer` is held as
+[the next section](#the-composer-of-a-professionals-composition) describes.
+Where ITS-REST requires a
 committer (a CONTRIBUTION's `audit`, each member's `commit_audit`, an
 embedded attestation), send the placeholder, which names the authenticated
 caller and nothing else:
@@ -94,15 +96,51 @@ caller and nothing else:
 ```
 
 The server replaces it with the committer above. A committer that states
-nothing the server's does not (the same name, the caller's own login
-identifier, the bound `PERSON` as `external_ref`) is accepted too. On the
-header path, send no `openEHR-AUDIT_DETAILS` committer at all.
+nothing the server's does not (the same name, the caller's own login or
+provider identifier, the bound `PERSON` as `external_ref`) is accepted too. On
+the header path, send no `openEHR-AUDIT_DETAILS` committer at all.
+
+## The composer of a professional's COMPOSITION
+
+`COMPOSITION.composer` is "the person primarily responsible for the content
+of the Composition" (RM EHR, `COMPOSITION`), and the committer is the "user
+who committed the item" (RM common, `AUDIT_DETAILS`). The two are kept apart
+so that a scribe or a resident can record for a physician. A professional
+bound to a `PERSON` through a token commits a `COMPOSITION` whose composer is
+one of these:
+
+- **The placeholder** naming the caller, the same one the committer takes.
+  The server writes in its place the professional's `PARTY_IDENTIFIED`, the
+  value the committer gets: the `PERSON` in `external_ref`, the name, the
+  login identifier and the provider identifier. It does so before the
+  version is stored and signed, so the stored body names the professional.
+- **A composer that states nothing the server does not**: the bound
+  `PERSON` as `external_ref`, the bound name, the login and the provider
+  identifier, each optional. It is stored as sent.
+- **Another `PERSON` of the same provider**, under a `compose_for` grant on a
+  `ROLE` the professional's `PERSON` performs
+  ([Operational policy](../operational-policy.md#what-the-grants-decide)):
+  a `PARTY_IDENTIFIED` whose `external_ref` names that `PERSON` under the
+  namespace the professional's own `PERSON` is referenced by, carrying the provider identifier of the provider
+  the deployment acts for (`[authz.party_binding] provider`), and none when
+  it acts for none. It is stored as sent, and the committer still names the
+  professional who committed.
+
+Any other composer, on a create or a modify, is refused with `403` naming
+`COMPOSITION.composer`; the server never rewrites a composer it was sent. A
+patient and a representative keep their own rule (`PARTY_SELF` or
+`PARTY_RELATED`, EHDS Art. 5), a system client keeps the `device` and
+`relay` rules above, and a Basic user and an unbound caller keep the
+composer they send. Holding the composer to the professional, and the
+`compose_for` grant, are FerroEHR's own design: no openEHR specification
+governs who may name whom as composer.
 
 ## The refusals
 
 | Request | Answer |
 |---|---|
 | A stated committer with another name, another identifier or another `external_ref` | `403` naming `AUDIT_DETAILS.committer` |
+| A professional's `COMPOSITION` whose composer names another `PERSON` without a `compose_for` grant, a `PERSON` of another provider, or a name or identifier the server does not hold | `403` naming `COMPOSITION.composer` |
 | A placeholder naming anyone other than the caller | `403` |
 | A stated `PARTY_RELATED`, or a `PARTY_SELF` from anyone but the record's person | `403` |
 | A person's committer stated by a system caller | `403` |

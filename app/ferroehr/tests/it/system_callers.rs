@@ -257,15 +257,16 @@ fn attestation(committer: &Value) -> openehr_its::rest::generated::common::Updat
 }
 
 /// Commits a COMPOSITION carrying one attestation by `committer`, as
-/// `identity`.
+/// `identity`, composed by the placeholder naming `identity` (#6130).
 async fn attest(
     svc: &FerroEhrService,
     ehr: EhrId,
     identity: CommitterIdentity,
     committer: &Value,
 ) -> Result<Committed, ServiceError> {
-    let mut request =
-        WriteRequest::new(crate::typed_body::typed(&crate::fixtures::composition("c")));
+    let mut body = crate::fixtures::composition("c");
+    body["composer"] = placeholder(ISSUER, &identity.subject);
+    let mut request = WriteRequest::new(crate::typed_body::typed(&body));
     request.attestations = vec![attestation(committer)];
     with_committer(
         Some(identity),

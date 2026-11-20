@@ -23,7 +23,7 @@ use crate::storage::render::index::Rendered;
 use crate::versioning::body::Body;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::{
-    Kind, SigningCtx, attestation, external, lifecycle, person, profile, system,
+    Kind, SigningCtx, attestation, committer, external, lifecycle, person, profile, system,
 };
 
 /// A logically deleted version of `vo_id` after the open tip `expected` names.
@@ -290,6 +290,7 @@ pub(super) async fn resolve_create(
     // a first version can only be `complete`/`incomplete`.
     validate_transition(None, &lifecycle)?;
     person::refuse_composing_for_others(content.kind, &content.body)?;
+    committer::composer::settle(content.kind, &mut content.body)?;
     system::admit_content(content.kind, &content.body)?;
     external::admit_content(content.kind, &content.body, content.template_id.as_deref())?;
     let vo_id = content
@@ -345,6 +346,7 @@ pub(super) async fn resolve_modify(
     )
     .await?;
     person::refuse_composing_for_others(kind, &content.body)?;
+    committer::composer::settle(kind, &mut content.body)?;
     system::admit_content(kind, &content.body)?;
     external::admit_content(kind, &content.body, content.template_id.as_deref())?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;

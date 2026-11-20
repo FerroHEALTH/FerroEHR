@@ -92,6 +92,7 @@ mod cohort_subjects;
 mod commit_lock_order;
 mod committer_binding;
 mod committer_check;
+mod composer_binding;
 mod composition_passthrough;
 mod composition_version_copy;
 mod console_request_lines;

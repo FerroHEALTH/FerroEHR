@@ -376,6 +376,10 @@ async fn each_worked_example_fits_its_definition() {
             "privileged-role",
             "openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0",
         ),
+        (
+            "compose-for-role",
+            "openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.1",
+        ),
     ] {
         let fit = svc
             .party_template_fit(&body(name, &ids), template)

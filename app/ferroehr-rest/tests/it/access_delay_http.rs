@@ -204,15 +204,19 @@ async fn commit(app: &Router, ehr: &str) -> String {
     commit_as(app, ehr, &professional()).await
 }
 
-/// Commits the IPS composition into `ehr` as `credential`; returns its object
-/// id.
+/// Commits the IPS composition into `ehr` as `credential`, a token of
+/// [`PROFESSIONAL`], composed by the placeholder naming them (#6130); returns
+/// its object id.
 async fn commit_as(app: &Router, ehr: &str, credential: &str) -> String {
+    let mut composition = common::ips_canonical_composition();
+    composition["composer"] = json!({ "_type": "PARTY_IDENTIFIED",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": ISSUER, "id": PROFESSIONAL }] });
     let (status, headers, body) = common::send(
         app,
         Request::post(format!("{BASE}/ehr/{ehr}/composition"))
             .header(header::AUTHORIZATION, credential)
             .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(common::ips_canonical_composition().to_string()))
+            .body(Body::from(composition.to_string()))
             .unwrap(),
     )
     .await;

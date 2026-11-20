@@ -37,7 +37,7 @@ pub const ACTS_FOR_ARCHETYPE: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.act
 
 /// The default policy definitions, each its file name and its ADL 2 text,
 /// the `AGENT` and the acts-for relationship before the `ROLE`s.
-pub const DEFINITIONS: [(&str, &str); 5] = [
+pub const DEFINITIONS: [(&str, &str); 6] = [
     (
         "openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls",
         include_str!(
@@ -66,6 +66,12 @@ pub const DEFINITIONS: [(&str, &str); 5] = [
         "openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls",
         include_str!(
             "../../assets/definitions/policy/openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls"
+        ),
+    ),
+    (
+        "openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.1.adls",
+        include_str!(
+            "../../assets/definitions/policy/openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.1.adls"
         ),
     ),
 ];
