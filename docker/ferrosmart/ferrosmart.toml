@@ -7,7 +7,7 @@
 # provider for login only. The upstream overlay beside it names the provider
 # (docker-compose.ferrosmart-keycloak.yml, docker-compose.ferrosmart-zitadel.yml).
 # FerroSMART's own documentation is the reference for every key:
-# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md#1310-the-configuration
+# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md#1310-the-configuration
 
 [server]
 # FerroSMART shares the issuer's network namespace with FerroEHR, which holds

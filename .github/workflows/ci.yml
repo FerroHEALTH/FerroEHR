@@ -2203,76 +2203,6 @@ jobs:
           path: docs/conformance/deployment/compose.json
           if-no-files-found: warn
 
-  # ── FerroSMART from its pinned commit (#6085) ────────────────────────────────
-  # The hospital scenario needs FerroSMART's `roles` claim and a role that
-  # grants an extension scope (FerroHEALTH/FerroSMART#649, #647), which are on
-  # FerroSMART main and in no release yet. This job checks out the commit
-  # docs/VERSIONS.md pins as `ferrosmart-source`, builds the static binary as
-  # FerroSMART's release lane does, packages it with FerroSMART's own
-  # docker/ferrosmart/Dockerfile and hands the image to both legs below. It
-  # needs no build of this repository, so it runs beside ui-e2e-binary. It
-  # goes when FerroSMART 0.2.0 is published and the overlay pins its digest.
-  ferrosmart-image:
-    name: ferrosmart image (pinned commit)
-    needs: changes
-    if: >-
-      github.event_name != 'merge_group' &&
-      (needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') &&
-      needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Read the FerroSMART commit docs/VERSIONS.md pins
-        id: pin
-        run: |
-          set -euo pipefail
-          commit=$(awk -F'|' -v k='`ferrosmart-source`' '{ c = $2; gsub(/ /, "", c) } c == k { v = $3; gsub(/[` ]/, "", v); print v; exit }' docs/VERSIONS.md)
-          if ! [[ "$commit" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "::error::docs/VERSIONS.md pins '${commit}' as ferrosmart-source; the form is a full 40-hex commit of FerroHEALTH/FerroSMART"
-            exit 1
-          fi
-          echo "commit=$commit" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: FerroHEALTH/FerroSMART
-          ref: ${{ steps.pin.outputs.commit }}
-          path: ferrosmart-src
-          persist-credentials: false
-      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
-        with:
-          rust-src-dir: ferrosmart-src
-          target: x86_64-unknown-linux-musl
-          cache: false
-          rustflags: ""
-      - name: Install the musl toolchain
-        run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends musl-tools
-      - name: Build the FerroSMART binary and stage it for its Dockerfile
-        working-directory: ferrosmart-src
-        run: |
-          set -euo pipefail
-          cargo build --release --locked -p ferrosmart --target x86_64-unknown-linux-musl
-          install -D -m0755 target/x86_64-unknown-linux-musl/release/ferrosmart dist/linux_amd64/ferrosmart
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - name: Package the FerroSMART image with its own Dockerfile
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: ferrosmart-src
-          file: ferrosmart-src/docker/ferrosmart/Dockerfile
-          platforms: linux/amd64
-          tags: ferrosmart:deploy-probe
-          outputs: type=docker,dest=${{ runner.temp }}/ferrosmart-image.tar
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ferrosmart-image
-          path: ${{ runner.temp }}/ferrosmart-image.tar
-          if-no-files-found: error
-          retention-days: 1
-
   # ── The hospital scenario behind FerroSMART (#5832, #5833) ───────────────────
   # The hospital family of the deployment harness, once per upstream identity
   # provider of FerroSMART, the SMART authorization server that issues every
@@ -2283,7 +2213,7 @@ jobs:
   # request's run of the same tree proved it.
   deploy-probe-hospital:
     name: deploy-probe hospital (${{ matrix.upstream }})
-    needs: [changes, ui-e2e-binary, ui-e2e-viewer, ferrosmart-image]
+    needs: [changes, ui-e2e-binary, ui-e2e-viewer]
     if: >-
       github.event_name != 'merge_group' &&
       (needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') &&
@@ -2334,17 +2264,8 @@ jobs:
           file: docker/postgres/Dockerfile
           load: true
           tags: ferroehr-postgres:deploy-probe
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: ferrosmart-image
-          path: ${{ runner.temp }}/ferrosmart-image
-      - name: Load the FerroSMART image of the pinned commit
-        env:
-          IMAGE_DIR: ${{ runner.temp }}/ferrosmart-image
-        run: docker load --input "$IMAGE_DIR/ferrosmart-image.tar"
       - name: Probe the hospital scenario
         env:
-          FERROSMART_IMAGE: ferrosmart:deploy-probe
           FERROEHR_IMAGE: ferroehr:deploy-probe
           FERROEHR_VIEWER_IMAGE: ferroehr-viewer:deploy-probe
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:deploy-probe
@@ -3491,7 +3412,6 @@ jobs:
       - ui-docs-shots
       - viewer-login-smoke
       - deploy-probe
-      - ferrosmart-image
       - deploy-probe-hospital
       - perf
       - perf-verdict

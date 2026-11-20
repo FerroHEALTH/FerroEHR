@@ -10,7 +10,7 @@ carry the launch context: `patient`, `encounter`, `fhirUser` and, at an
 openEHR base, `ehrId`. FerroEHR runs behind it as a resource server. The
 person never signs in to FerroEHR, and FerroEHR never sees the provider's
 tokens. FerroSMART's architecture describes the whole deployment in
-§13.21, A product behind FerroSMART, of its [architecture](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md).
+§13.21, A product behind FerroSMART, of its [architecture](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md).
 This page is FerroEHR's side of it.
 
 ```text
