@@ -14,18 +14,21 @@
 //! committed naming their `PERSON`. No openEHR spec governs resolving a login
 //! to a party: our own design.
 
+use ferroehr::party_binding::grants::caller::care_of::ProviderKey;
 use ferroehr::service::demographic::portal::PortalLogin;
 use ferroehr::versioning::committer::bound::BoundDetails;
 use ferrohealth_smart::kind::CallerKind;
-use ferrohealth_smart::party::PartyRef;
+use ferrohealth_smart::party::{Outcome, PartyRef};
 use ferrohealth_smart::resource::Caller;
 
 use super::{AuthError, Principal};
 
 /// The EHRs a bound representative is confined to: each one whose
 /// `EHR_STATUS.subject.external_ref` names the `PERSON` the token asserts
-/// and the party source records a live representation of, directly or
-/// through a record subject that `PERSON` declares.
+/// and the party store holds a live representation of, recorded for the
+/// provider the caller acts for and not written by the representative
+/// itself, directly or through a record subject that `PERSON` declares
+/// (draft access control decision procedure, step 0 Representation).
 ///
 /// No openEHR spec governs resolving a login to a party: our own design.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -33,6 +36,9 @@ pub struct RepresentedEhr {
     /// Those EHRs, which after an identity merge can be more than one; empty
     /// when no EHR names the subject, so the representative reaches none.
     pub ehr_ids: Vec<ferroehr::ids::EhrId>,
+    /// The `PARTY_RELATIONSHIP` container of the representation the
+    /// representative is admitted on, which the access log names.
+    pub representation: uuid::Uuid,
     /// The representative of a `patients` issuer's token, whom FerroEHR binds
     /// itself; `None` for a representative of a `persons` issuer, whom the
     /// login binding bound.
@@ -95,7 +101,7 @@ pub(super) struct Bound {
 /// cannot answer.
 pub(super) async fn bound(
     service: &ferroehr::service::FerroEhrService,
-    namespace: &str,
+    (namespace, providers): (&str, &[ProviderKey]),
     principal: &Principal,
 ) -> Result<Bound, AuthError> {
     let access = &principal.access;
@@ -110,7 +116,7 @@ pub(super) async fn bound(
         CallerKind::Representative { represented, .. } => represented,
         CallerKind::PatientRepresentative { actor } => {
             let login = (actor.issuer.as_str(), actor.sub.as_str());
-            return match portal(service, namespace, caller, login).await? {
+            return match portal(service, (namespace, providers), caller, login).await? {
                 Portal::Represents(represented) => Ok(Bound {
                     represented: Some(represented),
                     own: None,
@@ -120,7 +126,7 @@ pub(super) async fn bound(
         }
         CallerKind::Patient => {
             let login = (caller.issuer().unwrap_or_default(), caller.subject());
-            return match portal(service, namespace, caller, login).await? {
+            return match portal(service, (namespace, providers), caller, login).await? {
                 Portal::Represents(represented) => Ok(Bound {
                     represented: Some(represented),
                     own: None,
@@ -148,10 +154,29 @@ pub(super) async fn bound(
         }
         _ => return Ok(Bound::default()),
     };
-    let subject = caller
-        .party()
+    let outcome = caller.party();
+    let subject = outcome
         .and_then(|outcome| super::party::represented_subject(outcome, represented))
         .ok_or_else(super::party::unrecorded)?;
+    // NOTE: the local party source names each party by its container's UUID, so a party
+    // another source names is no PERSON of this store and holds no stored representation.
+    let pair = outcome
+        .and_then(Outcome::bound)
+        .and_then(|bound| bound.party.id().parse::<uuid::Uuid>().ok())
+        .zip(subject.id().parse::<uuid::Uuid>().ok())
+        .ok_or_else(super::party::unrecorded)?;
+    let representation = service
+        .live_representation(pair, providers)
+        .await
+        .map_err(unavailable("the representation could not be read"))?
+        .ok_or_else(|| {
+            tracing::warn!(
+                issuer = caller.issuer().unwrap_or("-"),
+                outcome = "refused-representation-unrecorded",
+                "no stored representation admits the representative for the provider it acts for"
+            );
+            super::party::unrecorded()
+        })?;
     let ehr_ids = service
         .ehr_ids_for_person(subject.id(), subject.namespace())
         .await
@@ -161,6 +186,7 @@ pub(super) async fn bound(
     Ok(Bound {
         represented: Some(RepresentedEhr {
             ehr_ids,
+            representation: representation.container,
             portal: None,
         }),
         own: None,
@@ -230,7 +256,7 @@ enum Portal {
 /// when the store cannot answer.
 async fn portal(
     service: &ferroehr::service::FerroEhrService,
-    namespace: &str,
+    (namespace, providers): (&str, &[ProviderKey]),
     caller: &Caller,
     (issuer, value): (&str, &str),
 ) -> Result<Portal, AuthError> {
@@ -241,7 +267,7 @@ async fn portal(
         return Ok(Portal::Unbound);
     };
     let found = service
-        .portal_login(issuer, value, ferroehr::ids::EhrId(ehr))
+        .portal_login((issuer, value), ferroehr::ids::EhrId(ehr), providers)
         .await
         .map_err(unavailable(
             "the party store could not bind the portal login",
@@ -252,14 +278,15 @@ async fn portal(
         PortalLogin::Represents {
             person,
             subject,
-            relationship,
+            representation,
         } => {
             return Ok(Portal::Represents(RepresentedEhr {
                 ehr_ids: vec![ferroehr::ids::EhrId(ehr)],
+                representation: representation.container,
                 portal: Some(PortalRepresentative {
                     person,
                     subject,
-                    relationship,
+                    relationship: representation.relationship,
                     login_issuer: issuer.to_owned(),
                     login: value.to_owned(),
                     namespace: namespace.to_owned(),

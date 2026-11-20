@@ -32,6 +32,7 @@ use openehr_base::prelude::TerminologyId;
 
 use care::{CareBasis, CareElement, CarePath};
 use log::{AccessorKind, Action, Authorisation, CredentialBinding, Outcome, RefusalReason};
+use representation::{Representation, RepresentationElement};
 
 /// The BMMs' `Terminology_id_access`: the draft `openehr_access` terminology,
 /// which holds the access groups' own codes until openEHR adopts them.
@@ -124,6 +125,9 @@ pub enum Group {
     /// `representation`: the demographic relationship that makes its source
     /// a representative of its target.
     Representation,
+    /// `representation element`: the elements in the `details` of a
+    /// `represents` relationship.
+    RepresentationElement,
     /// `access refusal`: the code an access refusal is recorded under.
     AccessRefusal,
     /// `access log withheld`: the attributes of an access-log accessor the
@@ -147,7 +151,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 23] = [
+    pub const ALL: [Self; 24] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -163,6 +167,7 @@ impl Group {
         Self::GroupKind,
         Self::RecordSubject,
         Self::Representation,
+        Self::RepresentationElement,
         Self::AccessRefusal,
         Self::AccessLogWithheld,
         Self::AccessAction,
@@ -192,6 +197,7 @@ impl Group {
             Self::GroupKind => "group kind",
             Self::RecordSubject => "record subject",
             Self::Representation => "representation",
+            Self::RepresentationElement => "representation element",
             Self::AccessRefusal => "access refusal",
             Self::AccessLogWithheld => "access log withheld",
             Self::AccessAction => "access action",
@@ -223,6 +229,7 @@ impl Group {
             Self::GroupKind => phrases::<GroupKind>(),
             Self::RecordSubject => phrases::<RecordSubject>(),
             Self::Representation => phrases::<Representation>(),
+            Self::RepresentationElement => phrases::<RepresentationElement>(),
             Self::AccessRefusal => phrases::<Refusal>(),
             Self::AccessLogWithheld => phrases::<Withheld>(),
             Self::AccessAction => phrases::<Action>(),
@@ -407,6 +414,7 @@ macro_rules! group {
 pub mod care;
 pub mod hl7;
 pub mod log;
+pub mod representation;
 
 group! {
     /// The disposition of an EHR where no directive applies
@@ -564,17 +572,6 @@ group! {
 }
 
 group! {
-    /// The demographic relationship of representation, coded in the `name`
-    /// or `details` of a `PARTY_RELATIONSHIP`.
-    Representation in Representation {
-        /// The relationship's source represents its target, the subject, on
-        /// the subject's own record; the openEHR `subject_relationship` code
-        /// beside it says how.
-        Represents => "represents",
-    }
-}
-
-group! {
     /// The code an access refusal is recorded under, one per step of the
     /// decision procedure that can refuse.
     Refusal in AccessRefusal {
@@ -716,6 +713,8 @@ pub enum ForeignKind {
     /// The part a carer plays in a care relationship, its `care_role`, such
     /// as an HL7 `ParticipationType` code.
     CareRole,
+    /// The `basis` of a representation, such as an HL7 `RoleCode` code.
+    RepresentationBasis,
 }
 
 impl fmt::Display for ForeignKind {
@@ -728,6 +727,7 @@ impl fmt::Display for ForeignKind {
             Self::Role => "role",
             Self::OrganisationType => "organisation type",
             Self::CareRole => "care role",
+            Self::RepresentationBasis => "representation basis",
         })
     }
 }

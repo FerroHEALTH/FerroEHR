@@ -589,7 +589,7 @@ async fn only_an_administrator_writes_a_protected_party() {
     .expect_err("a key-bearing PERSON is protected");
     assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
     // A PERSON carrying no selector is anyone's to write.
-    let (plain, plain_uid) = as_caller(
+    let (plain, _) = as_caller(
         clinician(),
         &["CLINICIAN"],
         create(&svc, PartyKind::Person, &person(&[])),
@@ -616,34 +616,25 @@ async fn only_an_administrator_writes_a_protected_party() {
     .expect_err("a provisioned GROUP is protected");
     assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
 
-    // Nor adds a representation relationship, which its code makes one.
-    let mut represents = person(&[]);
-    represents["relationships"] = json!([{
-        "_type": "PARTY_RELATIONSHIP", "archetype_node_id": REPRESENTATION,
-        "name": { "_type": "DV_CODED_TEXT", "value": "parent",
-            "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
-                "code_string": "254" } },
-        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002",
-            "name": { "_type": "DV_TEXT", "value": "details" },
-            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003",
-                "name": { "_type": "DV_TEXT", "value": "Representation code" },
-                "value": { "_type": "DV_CODED_TEXT", "value": "represents",
-                    "defining_code": { "_type": "CODE_PHRASE",
-                        "terminology_id": { "_type": "TERMINOLOGY_ID",
-                            "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
-                        "code_string": "represents" } } }] },
-        "source": party_ref("PERSON", plain),
-        "target": party_ref("PERSON", plain)
-    }]);
+    // Nor writes a representation, which only an administrator or a holder of
+    // the write_representation grant for its provider writes.
+    let represents =
+        crate::party_binding_source::representation(REPRESENTATION, (plain, plain), "GUARD", None);
     let refused = as_caller(
         clinician(),
         &["CLINICIAN"],
-        try_update(&svc, PartyKind::Person, plain, &plain_uid, &represents),
+        Box::pin(crate::fixtures::create_relationship(
+            &svc,
+            version(&represents, None),
+        )),
     )
     .await
-    .expect_err("a representation relationship is protected");
+    .expect_err("a representation is protected");
     assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
+    assert!(
+        refused.to_string().contains("write_representation"),
+        "{refused}"
+    );
 
     // An administrator creates the professional and grants the ROLE.
     let (vo, uid, role_vo, role_uid) = as_caller(

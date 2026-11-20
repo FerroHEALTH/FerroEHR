@@ -453,6 +453,7 @@ impl RequestAccess {
                 care = self.care_for(entry).await?;
             }
         }
+        let care = self.with_attested(ehr_id, care);
         let judged = self.judgement_of(ehr_id, entry, &care);
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
@@ -493,7 +494,11 @@ impl RequestAccess {
         let left = self.care_left();
         let cared = self.judge(at, None, &left).admits_any()
             && !self.judge(at, None, &Cared::No).admits_any();
-        let care = if cared { left } else { Cared::No };
+        let care = match (cared, self.attested_tie(ehr_id)) {
+            (false, _) => Cared::No,
+            (true, Some(tie)) if !self.may_hold_care() => Cared::of(vec![tie]),
+            (true, _) => left,
+        };
         let judged = self.judgement_of(ehr_id, &entry, &care);
         self.verdicts
             .lock()

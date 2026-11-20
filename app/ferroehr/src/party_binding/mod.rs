@@ -29,6 +29,7 @@ pub mod policy;
 pub mod policy_mark;
 pub mod protect;
 pub mod provisioned;
+pub(crate) mod representation;
 pub mod request;
 mod rows;
 pub mod shipped;

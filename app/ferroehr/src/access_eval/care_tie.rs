@@ -13,9 +13,11 @@
 //! procedure, Holding a Care Relationship). An actor scope with
 //! `relationship` `care` applies to a caller holding a live relationship whose
 //! role is one of its `care_roles` by the path its `care_path` names; void
-//! means any role and the paths the policy turns on. The `attested` path is
-//! not built (#6078), so a scope naming it matches no caller (draft package,
-//! Conformance, AC-11). No role implies another and no path another.
+//! means any role and the paths the policy turns on. A caller holds a tie by
+//! the `attested` path when its verified credential attests a treatment
+//! context under an agreement the policy names, in the role `PART`, and no
+//! stored relationship backs it (#6078). No role implies another and no path
+//! another.
 //!
 //! Where several relationships admit an access the access log names one:
 //! `direct` before `team` before `self_declared` before `attested`, then by
@@ -162,7 +164,13 @@ impl CareNeed {
         let path = match scope.care_path.as_ref().map(CarePath::read_coded) {
             None => None,
             Some(Ok(path)) => Some(path),
-            Some(Err(_)) => Some(CarePath::Attested),
+            // NOTE: our own design (#6078), a path that does not read names no role it meets.
+            Some(Err(_)) => {
+                return Some(Self {
+                    roles: Some(Vec::new()),
+                    path: None,
+                });
+            }
         };
         Some(Self { roles, path })
     }
@@ -206,9 +214,13 @@ impl CareNeed {
     #[must_use]
     pub fn tokens(&self) -> Vec<String> {
         let paths: Vec<CarePath> = match self.path {
-            Some(CarePath::Attested) => Vec::new(),
             Some(path) => vec![path],
-            None => vec![CarePath::Direct, CarePath::Team, CarePath::SelfDeclared],
+            None => vec![
+                CarePath::Direct,
+                CarePath::Team,
+                CarePath::SelfDeclared,
+                CarePath::Attested,
+            ],
         };
         match &self.roles {
             None => paths.iter().map(|path| path.code().to_owned()).collect(),
@@ -355,7 +367,13 @@ mod tests {
         assert!(any_path.met_by(&tie(CarePath::Team, "ATND")));
         assert!(any_path.met_by(&tie(CarePath::SelfDeclared, "ATND")));
         let attested = CareNeed::new(None, Some(CarePath::Attested));
-        assert_eq!(attested.tokens(), Vec::<String>::new());
+        assert!(attested.met_by(&tie(CarePath::Attested, "PART")));
+        assert!(!attested.met_by(&tie(CarePath::Direct, "PART")));
+        assert!(!resp_direct.met_by(&tie(CarePath::Attested, "RESP")));
+        assert_eq!(attested.tokens(), vec!["attested".to_owned()]);
+        let unread = CareNeed::new(Some(Vec::new()), None);
+        assert!(!unread.met_by(&tie(CarePath::Attested, "PART")));
+        assert_eq!(unread.tokens(), Vec::<String>::new());
     }
 
     #[test]
@@ -367,12 +385,15 @@ mod tests {
             ),
             CareNeed::new(None, Some(CarePath::Team)),
             CareNeed::new(Some(vec![code("CON")]), None),
+            CareNeed::new(None, Some(CarePath::Attested)),
+            CareNeed::new(Some(vec![code("PART")]), None),
         ];
         let ties = [
             tie(CarePath::Direct, "RESP"),
             tie(CarePath::Direct, "CON"),
             tie(CarePath::Team, "PART"),
             tie(CarePath::SelfDeclared, "ATND"),
+            tie(CarePath::Attested, "PART"),
         ];
         for need in &needs {
             for tie in &ties {

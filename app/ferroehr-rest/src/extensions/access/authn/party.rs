@@ -47,12 +47,10 @@ pub(crate) struct Binding {
     shared: PartyBinding,
     /// The source logins are looked up in, which also names a `PERSON`.
     source: Arc<dyn BindingSource>,
-    /// `[authz.party_binding] provider`.
-    provider: Option<Providers>,
+    /// The provider the deployment acts for.
+    deployment: Deployment,
     /// `[authz.party_binding] namespace`.
     namespace: String,
-    /// Each issuer's `tenant_claim`, which picks a per-tenant provider.
-    tenant_claims: BTreeMap<String, String>,
     /// Each issuer's `person_key`, the claim a `refused-key-claim-missing`
     /// record names.
     key_claims: BTreeMap<String, String>,
@@ -131,14 +129,6 @@ pub(super) fn binding(
         Arc::<dyn BindingSource>::clone(&source);
     let binding = ferroehr::config::binding::party_binding(&config.party_binding, resolved, lookup)
         .map_err(BindingRefused::Shared)?;
-    let tenant_claims = resolved
-        .issuers
-        .iter()
-        .filter_map(|settings| {
-            let claim = settings.profile.tenant_claim.clone()?;
-            Some((settings.issuer.clone(), claim))
-        })
-        .collect();
     let key_claims = resolved
         .issuers
         .iter()
@@ -154,14 +144,65 @@ pub(super) fn binding(
     Ok(Some(Arc::new(Binding {
         shared: binding,
         source,
-        provider: config.party_binding.provider.clone(),
+        deployment: Deployment::of(config, resolved),
         namespace: config.party_binding.namespace.clone(),
-        tenant_claims,
         key_claims,
         identifier_issuers,
         jit: jit::tables(&config.party_binding, resolved),
         assurance: config.assurance.clone(),
     })))
+}
+
+/// The healthcare provider the deployment acts for:
+/// `[authz.party_binding] provider`, one provider or a table per tenant,
+/// with each issuer's `tenant_claim`, whatever issuer binds a caller.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Deployment {
+    /// `[authz.party_binding] provider`.
+    provider: Option<Providers>,
+    /// Each issuer's `tenant_claim`, which picks a per-tenant provider.
+    tenant_claims: BTreeMap<String, String>,
+}
+
+impl Deployment {
+    /// The provider of `config`, its tenants picked by the claims of
+    /// `resolved`'s issuers.
+    pub(super) fn of(
+        config: &crate::config::AppConfig,
+        resolved: &ferrohealth_smart::config::Resolved,
+    ) -> Self {
+        let tenant_claims = resolved
+            .issuers
+            .iter()
+            .filter_map(|settings| {
+                let claim = settings.profile.tenant_claim.clone()?;
+                Some((settings.issuer.clone(), claim))
+            })
+            .collect();
+        Self {
+            provider: config.party_binding.provider.clone(),
+            tenant_claims,
+        }
+    }
+
+    /// The healthcare provider `caller` acts for, as `(issuer, id)`: the one
+    /// provider, or the table of the tenant its token names.
+    pub(super) fn provider_of(&self, caller: &Caller) -> Option<(String, String)> {
+        match self.provider.as_ref()? {
+            Providers::One(one) => Some((one.issuer.clone(), one.id.clone())),
+            Providers::ByTenant(tables) => {
+                let tenant = caller
+                    .issuer()
+                    .and_then(|issuer| self.tenant_claims.get(issuer))
+                    .and_then(|claim| caller.claim(claim))
+                    .and_then(serde_json::Value::as_str);
+                tables
+                    .iter()
+                    .find(|table| Some(table.tenant.as_str()) == tenant)
+                    .map(|table| (table.issuer.clone(), table.id.clone()))
+            }
+        }
+    }
 }
 
 impl Binding {
@@ -194,29 +235,10 @@ impl Binding {
             })?;
         Ok(Some(BoundDetails {
             name,
-            provider: self.provider_of(caller),
+            provider: self.deployment.provider_of(caller),
             namespace: self.namespace.clone(),
             portal: None,
         }))
-    }
-
-    /// The healthcare provider `caller` acts for, as `(issuer, id)`: the one
-    /// provider, or the table of the tenant its token names.
-    pub(super) fn provider_of(&self, caller: &Caller) -> Option<(String, String)> {
-        match self.provider.as_ref()? {
-            Providers::One(one) => Some((one.issuer.clone(), one.id.clone())),
-            Providers::ByTenant(tables) => {
-                let tenant = caller
-                    .issuer()
-                    .and_then(|issuer| self.tenant_claims.get(issuer))
-                    .and_then(|claim| caller.claim(claim))
-                    .and_then(serde_json::Value::as_str);
-                tables
-                    .iter()
-                    .find(|table| Some(table.tenant.as_str()) == tenant)
-                    .map(|table| (table.issuer.clone(), table.id.clone()))
-            }
-        }
     }
 
     /// The outcome of the unbound `caller`, holding `roles`, after
@@ -269,7 +291,7 @@ impl Binding {
             caller,
             &admissions,
             (roles, &self.assurance),
-            (&self.namespace, self.provider_of(caller)),
+            (&self.namespace, self.deployment.provider_of(caller)),
         ) {
             Ok(person) => person,
             Err(reason) => {

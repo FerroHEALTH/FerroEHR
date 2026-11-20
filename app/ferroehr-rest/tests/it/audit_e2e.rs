@@ -232,9 +232,11 @@ const SENTINEL: Expected = Expected {
 /// asserts an absence can wait for this request's record instead of a silence.
 ///
 /// The sentinel's record is a record of the system chain, which the chainer
-/// moves after the access log in each round and in intake order, and the
-/// syslog route ships its outbox in order over one connection, so every
-/// record the earlier request wrote arrives before [`SENTINEL`].
+/// moves in intake order, and the syslog route ships its outbox in order over
+/// one connection, so every system-chain record the earlier request wrote
+/// arrives before [`SENTINEL`]. A record of the access log leaves in its own
+/// step of a round, read at another moment, and can arrive after it (#5932):
+/// a test that waits for those sends [`send_access_sentinel`] too.
 async fn send_sentinel(app: &Router) {
     let _response = app
         .clone()
@@ -245,6 +247,25 @@ async fn send_sentinel(app: &Router) {
         ))
         .await
         .expect("sentinel response");
+}
+
+/// The record of the [`send_access_sentinel`] request.
+const ACCESS_SENTINEL: Expected = Expected {
+    name: "access-log sentinel EHR read",
+    matches: |xml| xml.contains(r#"originalText="ehr_get_by_id""#),
+};
+
+/// Sends a read of the seeded [`EHR`] after the request under test. Its record
+/// is an entry of the access log, which the chainer moves in intake order, so
+/// every access-log record the earlier request wrote arrives before
+/// [`ACCESS_SENTINEL`].
+async fn send_access_sentinel(app: &Router) {
+    let response = app
+        .clone()
+        .oneshot(req("GET", &format!("/ehr/{EHR}"), true))
+        .await
+        .expect("access sentinel response");
+    assert_eq!(response.status(), StatusCode::OK, "the EHR read is served");
 }
 
 /// The template list's operation record.
@@ -764,10 +785,12 @@ async fn aql_execute_emits_one_access_record_per_served_ehr() {
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::OK);
 
-    // Every access record the query emits lands before the sentinel's, so the
-    // count below sees them all.
+    // Each chain delivers in intake order, so once both sentinels' records
+    // land, every record the query wrote, on either chain, has landed before
+    // them and the count below sees them all.
+    send_access_sentinel(&app).await;
     send_sentinel(&app).await;
-    let records = collect_until(&mut socket, &[SENTINEL]).await;
+    let records = collect_until(&mut socket, &[ACCESS_SENTINEL, SENTINEL]).await;
     assert!(
         records
             .iter()

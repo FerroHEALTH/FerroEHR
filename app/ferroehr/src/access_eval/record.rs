@@ -38,6 +38,7 @@ use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId
 use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
+use openehr_rm::draft::access_control::terminology::care::CarePath;
 use openehr_rm::draft::access_control::terminology::coded_text;
 use openehr_rm::draft::access_log::access_log::access_care_ground::AccessCareGround;
 
@@ -328,14 +329,7 @@ impl RequestAccess {
                 });
             }
             if found.cared {
-                grounds.push(AccessAuthorisation {
-                    care: found
-                        .granting
-                        .as_ref()
-                        .and_then(|tie| care_ground(tie, &self.party_namespace()))
-                        .map(Box::new),
-                    ..self.policy_ground(Authorisation::TreatmentRelationship)
-                });
+                grounds.push(self.care_authorisation(found.granting.as_deref()));
             }
         }
         grounds.extend(
@@ -356,6 +350,33 @@ impl RequestAccess {
         );
         if verdict.lifted.contains(&Lifted::Policy) {
             grounds.push(self.policy_ground(Authorisation::Emergency));
+        }
+    }
+
+    /// The treatment relationship ground of a tie `granting` names: for the
+    /// `attested` path, the assertion it rests on and the agreement it was
+    /// attested under (draft decision procedure, Refusals: "the assertion
+    /// and agreement for `attested`"); otherwise the relationship, as a
+    /// ground of the access policy in force.
+    fn care_authorisation(&self, granting: Option<&Tie>) -> AccessAuthorisation {
+        let attested = granting
+            .filter(|tie| tie.path == CarePath::Attested)
+            .and_then(|_| self.caller().facts.attestation());
+        match attested {
+            // NOTE: draft access log ACCESS_CARE_GROUND, its carer and provider are 1..1 and an
+            // attested relationship names neither here, so the ground carries no care element.
+            Some(attestation) => AccessAuthorisation {
+                name: Some(attestation.agreement.name.clone()),
+                version: Some(attestation.agreement.version.clone()),
+                reference: Some(attestation.assertion_ref()),
+                ..authorisation(Authorisation::TreatmentRelationship)
+            },
+            None => AccessAuthorisation {
+                care: granting
+                    .and_then(|tie| care_ground(tie, &self.party_namespace()))
+                    .map(Box::new),
+                ..self.policy_ground(Authorisation::TreatmentRelationship)
+            },
         }
     }
 

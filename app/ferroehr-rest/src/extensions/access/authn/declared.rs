@@ -20,6 +20,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use axum::response::Response;
 use ferroehr::party_binding::grants::agreement::{AccessClass, Accessor, Agreement};
+use ferroehr::party_binding::grants::caller::attestation::AttestingAgreement;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::grants::trust::FederationTrust;
 use ferroehr::versioning::committer::ExternalCaller;
@@ -45,6 +46,8 @@ pub(crate) struct Admitted(Arc<Held>);
 #[derive(Debug)]
 struct Held {
     agreement: Arc<Agreement>,
+    role: Uuid,
+    issuer: String,
     correlation_source: Option<String>,
     limit: Option<CallerLimit>,
     clock: RateClock,
@@ -186,6 +189,8 @@ impl Declared {
             .map(|rate| self.limit(grant.role(), accessor, rate));
         let held = Held {
             agreement: Arc::new(agreement),
+            role: grant.role(),
+            issuer: issuer.to_owned(),
             correlation_source: partner.correlation_source,
             limit,
             clock: self.clock.clone(),
@@ -201,6 +206,18 @@ impl Declared {
 /// external caller.
 pub(crate) fn admitted(access: &Access) -> Option<&Arc<Agreement>> {
     held(access).map(|held| &held.agreement)
+}
+
+/// The agreement the caller of `access` was admitted under, as an
+/// attestation names it: the container of its `ROLE` and the partner's
+/// federation issuer beside its name and version.
+pub(super) fn attesting(access: &Access) -> Option<AttestingAgreement> {
+    held(access).map(|held| AttestingAgreement {
+        role: held.role,
+        issuer: held.issuer.clone(),
+        name: held.agreement.name.clone(),
+        version: held.agreement.version.clone(),
+    })
 }
 
 /// What this node holds of the agreement the caller of `access` was admitted
