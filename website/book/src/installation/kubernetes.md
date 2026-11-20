@@ -1368,6 +1368,11 @@ PodDisruptionBudget so upgrades and node drains never fully interrupt the API;
 the default `terminationGracePeriodSeconds` covers the binary's shutdown drain.
 Roll back by re-pinning the prior image tag or digest.
 
+The step from v5 to v6 is the exception: v6 starts from a new migration
+baseline and needs a new, empty database, so it is a new installation with the
+records moved by archive dump and load
+([Operations → Upgrading from v5 to v6](../operations.md#upgrading-from-v5-to-v6)).
+
 A change anywhere under `config`, `config.files` or `secrets` changes the
 `checksum/config` pod annotation, so `helm upgrade` rolls the pods for a
 configuration-only change too, including a rotated secret or an edited
