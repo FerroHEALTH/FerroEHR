@@ -572,13 +572,13 @@ h_care_validity() {
 # `person` through instance `n` as `who`: a record_subject element of its
 # details, coded in the probe's terminology ($H_TERM), as the registering system writes it (#5634).
 # The element takes the node its template gives record_subject: `id36` in
-# openEHR-DEMOGRAPHIC-PERSON.patient.v2, `at0010` in an ADL 1.4 tree.
+# openEHR-DEMOGRAPHIC-PERSON.patient.v2 and v3, `at0010` in an ADL 1.4 tree.
 h_declare_subject() {
   local n="$1" who="$2" person="$3" namespace="$4" id="$5" body version element node
   h_call "$n" admin GET "/demographic/person/$person"
   version="$(jq -r '.uid.value' <<<"$H_BODY")"
   node="at0010"
-  [[ "$(jq -r '.archetype_details.template_id.value // empty' <<<"$H_BODY")" == openEHR-DEMOGRAPHIC-PERSON.patient.v2* ]] \
+  [[ "$(jq -r '.archetype_details.template_id.value // empty' <<<"$H_BODY")" == openEHR-DEMOGRAPHIC-PERSON.patient.v[23]* ]] \
     && node="id36"
   element="$(jq -nc --argjson k "$(j_term record_subject)" --arg ns "$namespace" --arg id "$id" --arg node "$node" \
     '{_type:"ELEMENT",archetype_node_id:$node,name:$k,
@@ -695,12 +695,12 @@ h_patient_person() {
 # keys it and its details can declare a record_subject (#5634); records it
 # as HV_<key>.
 h_patient_template_person() {
-  local key="$1" name="$2" user="$3" archetype="openEHR-DEMOGRAPHIC-PERSON.patient.v2"
+  local key="$1" name="$2" user="$3" archetype="openEHR-DEMOGRAPHIC-PERSON.patient.v3"
   h_party "$key" person "$(jq -nc --arg a "$archetype" --arg n "$name" --arg i "$HS_LOGIN_ISSUER" \
     --arg s "$(hv "sub_$user")" 'def text(v): {_type:"DV_TEXT",value:v};
     {_type:"PERSON",archetype_node_id:$a,
      archetype_details:{_type:"ARCHETYPED",rm_version:"1.1.0",archetype_id:{_type:"ARCHETYPE_ID",value:$a},
-       template_id:{_type:"TEMPLATE_ID",value:"openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0"}},
+       template_id:{_type:"TEMPLATE_ID",value:"openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0"}},
      name:text($n),
      details:{_type:"ITEM_TREE",archetype_node_id:"id2",name:text("Details"),items:[
        {_type:"ELEMENT",archetype_node_id:"id3",name:text("Patient identifier"),
