@@ -197,7 +197,8 @@ impl FerroEhrService {
 
     /// The body a read serves of `read`, the version of `vo_id`: `raw_json`,
     /// its stored text, verbatim where it carries the version's own `uid`,
-    /// else the canonical value with the `uid` injected.
+    /// else the canonical value with the `uid` injected; an `EHR_ACCESS`
+    /// read by anyone but the controller carries no exclusions.
     ///
     /// # Errors
     /// The identifier fault of the stored version, and a stored body that is
@@ -208,14 +209,24 @@ impl FerroEhrService {
         read: VersionRead,
         raw_json: Option<String>,
     ) -> Result<ReadBody, ServiceError> {
-        let Some(text) = raw_json else {
+        // NOTE: draft access control decision procedure, Reading and Writing the Settings, only
+        // the controller reads the exclusions of an EHR_ACCESS (#6077).
+        let withhold = read.kind == Kind::EhrAccess && !self.settings_caller().administrator();
+        let Some(mut text) = raw_json else {
+            let mut canonical = read.canonical;
+            if withhold {
+                super::access_exclusions::withhold(&mut canonical);
+            }
             return Ok(ReadBody::Value(self.with_uid(
-                read.canonical,
+                canonical,
                 vo_id,
                 &read.creating_system_id,
                 read.tree,
             )?));
         };
+        if withhold && let Some(withheld) = super::access_exclusions::withheld(&text)? {
+            text = withheld;
+        }
         let uid = object_version_id(vo_id, &read.creating_system_id, read.tree);
         if carries_version_uid(&text, &uid) {
             return Ok(ReadBody::RawJson(text));
@@ -241,12 +252,25 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// The [`version_envelope`] refusals: a failed read-time signature check or
-    /// an uninterpretable stored commit audit.
+    /// an uninterpretable stored commit audit; [`ServiceError::NotFound`] for
+    /// an `EHR_ACCESS` version carrying exclusions read by anyone but the
+    /// controller.
     pub(in crate::service) fn envelope_response(
         &self,
         ehr_id: EhrId,
         read: &VersionRead,
     ) -> Result<ServiceResponse, ServiceError> {
+        // NOTE: draft access control decision procedure, Reading and Writing the Settings, a
+        // signed envelope is never served altered, so one carrying exclusions reads as absent.
+        if read.kind == Kind::EhrAccess
+            && !self.settings_caller().administrator()
+            && super::access_exclusions::held(&read.canonical).is_some()
+        {
+            return Err(ServiceError::not_found(
+                crate::error::refusal::Missing::ObjectVersion,
+                format!("EHR_ACCESS version for EHR {ehr_id}"),
+            ));
+        }
         let meta = self
             .version_meta(
                 ehr_id,

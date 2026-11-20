@@ -215,6 +215,15 @@ fn check_codes(settings: &AccessDirectiveSettings) -> Result<(), Defect> {
     {
         check_directive(&format!("directives[{index}]"), directive)?;
     }
+    for (index, exclusion) in settings
+        .exclusions
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+    {
+        check_directive(&format!("exclusions[{index}]"), exclusion)?;
+    }
     for (index, label) in settings
         .labels
         .as_deref()

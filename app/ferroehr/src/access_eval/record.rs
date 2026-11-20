@@ -20,8 +20,11 @@
 //! care`); and each directive or step an emergency lifted (`emergency`). A
 //! refusal names its `refused-*` code, the step that decided it and the
 //! directive or policy of that step, the absent answers of steps 1 and 2
-//! included, whose response says nothing (EHDS Art. 8). Which grounds are
-//! named, and how a directive is identified, is our own design (#5514).
+//! included, whose response says nothing (EHDS Art. 8), and the exclusion of
+//! a `refused-excluded`, which its response never names. An access a
+//! conflict rule allowed names it (`conflict allowance`). Which grounds are
+//! named, and how a directive is identified, is our own design (#5514,
+//! #6077).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Mutex, PoisonError};
@@ -60,6 +63,9 @@ pub enum Step {
     /// 0, a read by a caller whose agreement conditions it on a consent
     /// decision it names no reference to, before the numbered steps.
     ConsentReference,
+    /// 0, an exclusion of the controller that names the caller, before the
+    /// numbered steps.
+    Exclusion,
     /// 1, an opt-out (EHDS Art. 10).
     OptOut,
     /// 2, a restriction (EHDS Art. 8).
@@ -68,6 +74,8 @@ pub enum Step {
     ConsentDeny,
     /// 4, a purpose the policy requires.
     Purpose,
+    /// 5, a conflict of interest no conflict rule of the policy allows.
+    Conflict,
     /// 5, a deny rule of the controller's policy.
     ControllerRule,
     /// 6, a sensitivity no applying permit names.
@@ -94,6 +102,8 @@ impl Step {
             Refusal::NotSubject => Self::Subject,
             Refusal::NotRepresented => Self::Representation,
             Refusal::ConsentReferenceMissing => Self::ConsentReference,
+            Refusal::Excluded => Self::Exclusion,
+            Refusal::Conflict => Self::Conflict,
         }
     }
 
@@ -101,12 +111,12 @@ impl Step {
     #[must_use]
     pub const fn number(self) -> u8 {
         match self {
-            Self::Subject | Self::Representation | Self::ConsentReference => 0,
+            Self::Subject | Self::Representation | Self::ConsentReference | Self::Exclusion => 0,
             Self::OptOut => 1,
             Self::Restriction => 2,
             Self::ConsentDeny => 3,
             Self::Purpose => 4,
-            Self::ControllerRule => 5,
+            Self::Conflict | Self::ControllerRule => 5,
             Self::Sensitivity => 6,
             Self::CareRelationship => 7,
             Self::DefaultDisposition => 8,
@@ -120,10 +130,12 @@ impl Step {
             Self::Subject => "subject",
             Self::Representation => "representation",
             Self::ConsentReference => "consent reference",
+            Self::Exclusion => "exclusion",
             Self::OptOut => "opt-out",
             Self::Restriction => "restriction",
             Self::ConsentDeny => "consent deny",
             Self::Purpose => "purpose",
+            Self::Conflict => "conflict",
             Self::ControllerRule => "controller rule",
             Self::Sensitivity => "sensitivity",
             Self::CareRelationship => "care relationship",
@@ -321,7 +333,23 @@ impl RequestAccess {
             if found.cared {
                 grounds.push(self.policy_ground(Authorisation::TreatmentRelationship));
             }
+            // NOTE: draft decision procedure step 5, an access a conflict rule allowed is marked.
+            grounds.extend(found.conflicts.iter().map(|conflict| AccessAuthorisation {
+                reference: Some(DvIdentifier {
+                    issuer: None,
+                    assigner: None,
+                    id: conflict.code().to_owned(),
+                    r#type: Some("conflict".to_owned()),
+                }),
+                ..self.policy_ground(Authorisation::ConflictAllowance)
+            }));
         }
+        let exclusions = exclusions_of((*judged.settings).as_ref());
+        grounds.extend(found.lifted_exclusions.iter().filter_map(|(at, _)| {
+            exclusions
+                .get(*at)
+                .map(|e| directive_ground(e, *at, version, Some(Authorisation::Emergency)))
+        }));
         grounds.extend(
             found
                 .lifted
@@ -387,7 +415,20 @@ impl RequestAccess {
                 |version| format!("{ACCESS_POLICY} {version}"),
             )
         };
-        let by = if step == Step::ControllerRule {
+        let by = if step == Step::Exclusion {
+            let exclusions = exclusions_of(settings_of(judged));
+            let named: Vec<String> = noted
+                .by
+                .iter()
+                .map(|at| {
+                    exclusions
+                        .get(*at)
+                        .map_or_else(|| position(*at), |e| identify(e, *at))
+                        .id
+                })
+                .collect();
+            format!("exclusion {} of {}", named.join(", "), carrier())
+        } else if step == Step::ControllerRule {
             let named: Vec<String> = noted
                 .by
                 .iter()
@@ -403,6 +444,7 @@ impl RequestAccess {
             match step {
                 Step::Sensitivity => format!("{} and the labels of {}", policy(), carrier()),
                 Step::CareRelationship | Step::Purpose => policy(),
+                Step::Conflict => format!("the conflict rules of {}", policy()),
                 Step::Subject => "the EHR of the caller's patient context".to_owned(),
                 Step::Representation => "the EHR of the subject the caller represents".to_owned(),
                 Step::ConsentReference => {
@@ -533,6 +575,17 @@ fn directives_of(settings: Option<&EhrAccessSettings>) -> &[AccessDirective] {
     match settings {
         Some(EhrAccessSettings::Directives(settings)) => {
             settings.directives.as_deref().unwrap_or_default()
+        }
+        Some(EhrAccessSettings::HeldClosed) | None => &[],
+    }
+}
+
+/// The controller's exclusions in `settings`; none for an EHR with no
+/// settings or held closed.
+fn exclusions_of(settings: Option<&EhrAccessSettings>) -> &[AccessDirective] {
+    match settings {
+        Some(EhrAccessSettings::Directives(settings)) => {
+            settings.exclusions.as_deref().unwrap_or_default()
         }
         Some(EhrAccessSettings::HeldClosed) | None => &[],
     }
@@ -669,13 +722,14 @@ mod tests {
                 "refused-restricted" => 2,
                 "refused-consent-denied" => 3,
                 "refused-purpose-missing" => 4,
-                "refused-policy-denied" => 5,
+                "refused-policy-denied" | "refused-conflict" => 5,
                 "refused-sensitivity" => 6,
                 "refused-no-care-relationship" => 7,
                 "refused-consent-required" => 8,
                 "refused-not-subject"
                 | "refused-not-represented"
-                | "refused-consent-reference-missing" => 0,
+                | "refused-consent-reference-missing"
+                | "refused-excluded" => 0,
                 other => panic!("an unknown refusal code {other}"),
             };
             assert_eq!(number, expected, "{code}");

@@ -26,6 +26,7 @@ use ferroehr::access_eval::record::{Decision, Step};
 use ferroehr::access_log::entry::entry_of;
 use ferroehr::access_log::retention::stated;
 use ferroehr::ids::EhrId;
+use ferroehr::storage::access_projection::EhrSubject;
 use ferroehr::system_log::event::{
     AccessDecision, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -66,6 +67,44 @@ fn request(caller: Caller, asked: Asked<'_>, policy: Option<AccessPolicy>) -> Re
         policy_version: Some(POLICY_VERSION.to_owned()),
         capabilities: vec![("access_service", uuid(ROLE))],
     })
+}
+
+/// The evaluator of a request by `caller`, as [`request`], with grants that
+/// resolve a subject in this CDR's own namespace, and the subject reference
+/// of the `PERSON` the caller is bound to.
+fn bound(
+    caller: Caller,
+    asked: Asked<'_>,
+    policy: Option<AccessPolicy>,
+) -> (RequestAccess, Option<EhrSubject>) {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://nobody:nothing@127.0.0.1:9/nowhere")
+        .expect("a lazy pool builds without connecting");
+    let grants = Arc::new(ferroehr::party_binding::grants::live::LiveGrants::new(pool));
+    let subject = caller
+        .party
+        .clone()
+        .map(|party| EhrSubject::new(&*grants.namespace(), party));
+    let access = RequestAccess::new(
+        caller,
+        Asking {
+            operation: asked.operation,
+            purpose: asked.purpose.map(str::to_owned),
+            emergency: asked.emergency,
+        },
+        InForce {
+            policy: policy.map(Arc::new),
+            categories: categories(),
+            server_default: AccessDefault::Open,
+            now: now(),
+            grants: Some(grants),
+        },
+    )
+    .with_record_facts(RecordFacts {
+        policy_version: Some(POLICY_VERSION.to_owned()),
+        capabilities: vec![("access_service", uuid(ROLE))],
+    });
+    (access, subject)
 }
 
 /// The subject of [`EHR`], through its patient context.
@@ -109,11 +148,21 @@ fn decide_on(
     settings: Option<EhrAccessSettings>,
     item: &Item<'_>,
 ) -> (Outcome, Decision) {
+    decide_on_subject(access, settings, item, None)
+}
+
+/// [`decide_on`] for an EHR whose `EHR_STATUS` names `subject`.
+fn decide_on_subject(
+    access: &RequestAccess,
+    settings: Option<EhrAccessSettings>,
+    item: &Item<'_>,
+    subject: Option<EhrSubject>,
+) -> (Outcome, Decision) {
     let ehr_id = EhrId(uuid(EHR));
     let version = settings.as_ref().map(|_| EHR_ACCESS_VERSION.to_owned());
     let entry = EhrEntry {
         settings: Arc::new(settings),
-        subject: None,
+        subject,
         version,
         revision: ferroehr::storage::access_projection::Revision::default(),
     };
@@ -547,12 +596,51 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             Item::Ehr,
             "the consent condition of the caller's agreement",
         ),
+        (
+            Refusal::Excluded,
+            professional(DR_B),
+            None,
+            None,
+            excluding(
+                &[exclusion(
+                    &json!({ "party": party("PERSON", DR_B) }),
+                    &json!({}),
+                )],
+                &[],
+                &[],
+            ),
+            Item::Ehr,
+            "exclusion 1 of EHR_ACCESS",
+        ),
+        (
+            Refusal::Conflict,
+            Caller {
+                facts: CallerFacts::new(vec![code(ROLES, "NURSE")], Vec::new()),
+                ..professional(DR_B)
+            },
+            None,
+            None,
+            settings("open", &[], &[], &[]),
+            Item::Ehr,
+            "the conflict rules of ACCESS_POLICY",
+        ),
     ];
+    // NOTE: the conflict row's subject is Dr B's own PERSON, which grants resolve in this
+    // CDR's namespace with no read, so its lazy pool never connects.
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("a runtime");
+    let _context = runtime.enter();
     assert_eq!(rows.len(), Refusal::ALL.len(), "a row per refusal code");
     for (refusal, who, declared, policy, settings, item, by) in rows {
         let code = refusal.code();
-        let access = request(who, read(declared), policy);
-        let (outcome, decision) = decide_on(&access, Some(settings), &item);
+        let (access, subject) = if refusal == Refusal::Conflict {
+            bound(who, read(declared), policy)
+        } else {
+            (request(who, read(declared), policy), None)
+        };
+        let (outcome, decision) = decide_on_subject(&access, Some(settings), &item, subject);
         let expected = if refusal.is_invisible() {
             Outcome::Absent(refusal)
         } else {

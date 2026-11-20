@@ -107,6 +107,16 @@ impl Sentinels {
                     keeper: groups.facts.keeper.clone(),
                 },
                 confined: groups.confined.as_ref().map(|_| self.ids().into()),
+                conflicts: groups
+                    .conflicts
+                    .iter()
+                    .map(|_| {
+                        (
+                            Uuid::from_u128(rand::random()).to_string(),
+                            Uuid::from_u128(rand::random()).to_string(),
+                        )
+                    })
+                    .collect(),
                 ..groups.clone()
             })
         });

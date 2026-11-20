@@ -133,6 +133,7 @@ fn classes(
             keeper: None,
         },
         confined: confined.map(Into::into),
+        conflicts: Arc::from([]),
     })
 }
 

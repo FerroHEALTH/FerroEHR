@@ -37,6 +37,8 @@ use crate::storage::access_projection::EhrSubject;
 
 /// The alias of the trunk head version an origin probe reads.
 const TRUNK: &str = "access_trunk";
+/// The alias of the `ehr` row a conflict probe reads.
+const CONFLICT: &str = "access_conflict_ehr";
 /// The alias of the `ehr` row a care probe reads.
 const CARE: &str = "access_ehr";
 /// The alias of the projected settings row of the EHR.
@@ -213,16 +215,35 @@ fn unknown_class(condition: &ConditionGroups, with: Expr) -> Expr {
     )
 }
 
-/// `held` on the EHR `target`, and for a subject caller only in the EHRs the
-/// condition confines it to (#5586).
+/// `held` on the EHR `target`, for a subject caller only in the EHRs the
+/// condition confines it to (#5586), and never in an EHR whose subject a
+/// professional is in conflict with (#6077).
 fn confine(condition: &ConditionGroups, target: &Expr, held: Expr) -> Expr {
-    match &condition.confined {
+    let held = match &condition.confined {
         Some(ehrs) => target
             .clone()
             .eq(Expr::from(PgFunc::any(Expr::val(ehrs.to_vec()))))
             .and(held),
         None => held,
+    };
+    if condition.conflicts.is_empty() {
+        return held;
     }
+    let mut probe = Query::select();
+    probe
+        .expr(Expr::val(1))
+        .from_as(Ehr::Table, Alias::new(CONFLICT))
+        .and_where(col(CONFLICT, Ehr::Id).eq(target.clone()))
+        .and_where(
+            Expr::tuple([
+                col(CONFLICT, Ehr::SubjectId),
+                col(CONFLICT, Ehr::SubjectNamespace),
+            ])
+            .in_tuples(condition.conflicts.iter().map(|(id, namespace)| {
+                sea_query::ValueTuple::Two(id.clone().into(), namespace.clone().into())
+            })),
+        );
+    held.and(Expr::exists(probe).not())
 }
 
 /// The predicate on the head row `h` that only a gate-keeper `keepers` names
@@ -244,6 +265,19 @@ pub(super) fn keeper_reads(keepers: &Keepers, h: &str) -> Expr {
     let mut probe = settings_row(col(h, VoHead::EhrId));
     probe.and_where(or_all(branches));
     Expr::exists(probe)
+}
+
+/// Whether the `EHR_ACCESS` settings of the head row `h`'s EHR hold no
+/// exclusions of the controller, which only the controller reads (draft
+/// access control decision procedure, Reading and Writing the Settings;
+/// #6077): one probe of the settings row by its key.
+pub(super) fn unexcluded(h: &str) -> Expr {
+    let mut probe = settings_row(col(h, VoHead::EhrId));
+    probe.and_where(Expr::cust_with_exprs(
+        "($1 -> 'exclusions') IS NOT NULL",
+        [col(SETTINGS, AccessSettings::Settings)],
+    ));
+    Expr::exists(probe).not()
 }
 
 /// Whether the EHR `target` carries `EHR_ACCESS` settings: one probe of the

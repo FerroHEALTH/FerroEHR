@@ -5,7 +5,7 @@
 //! decision of this server reads yet, refused at write.
 //!
 //! The draft package states each attribute's meaning (care relationships,
-//! confidentiality, exclusions). A server that stored
+//! confidentiality). A server that stored
 //! one and decided without it would admit what the attribute narrows, so a
 //! settings or policy version that sets one is refused whole, naming the
 //! attribute, until the decision reads it. An attribute whose unread value
@@ -24,10 +24,6 @@ pub fn in_settings(settings: &AccessDirectiveSettings) -> Option<String> {
     // TODO(#6057): decide on the record's confidentiality marking.
     if settings.marking.is_some() {
         return Some("marking".to_owned());
-    }
-    // TODO(#6077): decide on the controller's exclusions.
-    if settings.exclusions.is_some() {
-        return Some("exclusions".to_owned());
     }
     for (index, label) in settings
         .labels

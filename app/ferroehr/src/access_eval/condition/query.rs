@@ -24,8 +24,8 @@ impl RequestAccess {
     pub fn condition(&self, classes: &Classes, care: Care) -> AccessCondition {
         let held = Held::of_class(self.confined());
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
-            cared: self.judge_as(held, settings, true).bare(),
-            uncared: self.judge_as(held, settings, false).bare(),
+            cared: self.judge_as(&held, settings, true).bare(),
+            uncared: self.judge_as(&held, settings, false).bare(),
         };
         let mut groups: BTreeMap<VerdictPair, Vec<i64>> = BTreeMap::new();
         for (id, class) in &classes.classes {
@@ -105,8 +105,24 @@ impl AccessCondition {
             subject_namespace,
             facts,
             confined,
+            conflicts: Arc::from([]),
         }
         .into()
+    }
+
+    /// The condition with `conflicts`, the subject references of the persons
+    /// the caller is in conflict with, read as no row of theirs admitted.
+    #[must_use]
+    pub fn with_conflicts(&self, conflicts: Arc<[(String, String)]>) -> Self {
+        Self {
+            groups: self.groups.as_deref().map(|condition| {
+                Arc::new(ConditionGroups {
+                    conflicts,
+                    ..condition.clone()
+                })
+            }),
+            pinned: self.pinned.clone(),
+        }
     }
 
     /// Whether a verdict of the condition reads care, so the statement needs

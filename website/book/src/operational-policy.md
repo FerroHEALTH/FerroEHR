@@ -339,15 +339,16 @@ design.
 | Group | Codes | Read from |
 |---|---|---|
 | `access default` | `open`, `restricted`, `consent_required` | `ACCESS_DIRECTIVE_SETTINGS.default_access`: the disposition of an EHR where no directive applies |
-| `access directive kind` | `consent`, `restriction`, `opt_out`, `delegation`, `controller_rule` | `ACCESS_DIRECTIVE.kind`. A `restriction` (EHDS Art. 8) is always a deny; an `opt_out` (EHDS Art. 10) is a deny of the whole record; a `controller_rule` is a rule of the access policy and never a directive of an EHR |
+| `access directive kind` | `consent`, `restriction`, `opt_out`, `delegation`, `controller_rule`, `exclusion` | `ACCESS_DIRECTIVE.kind`. A `restriction` (EHDS Art. 8) is always a deny; an `opt_out` (EHDS Art. 10) is a deny of the whole record; a `controller_rule` is a rule of the access policy and never a directive of an EHR; an `exclusion` is the controller's deny of a named party in the settings' `exclusions` alone, with no exception |
 | `access effect` | `permit`, `deny` of `HL7_ConsentProvisionType` | `ACCESS_DIRECTIVE.effect`; a deny overrides a permit |
 | `access relationship` | `care`, `representative`, `proxy` | `ACCESS_ACTOR_SCOPE.relationship`: the caller's relationship to the subject |
 | `access caller kind` | `professional`, `access_service`, `datasubject` of `HL7_SecurityRoleType` (the subject), `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
 | `access operation` | `read`, `write`, `export`, `query` | `ACCESS_DIRECTIVE.operations`: the operation classes a directive applies to. No capability grants one |
 | `care relationship` | `MBR` of `HL7_RoleClass`, `under_care_of` | The `name` or `details` of a `PARTY_RELATIONSHIP`: with `MBR`, the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP`, or the source, a provider `ORGANISATION`, is a member of the target `GROUP`; with `under_care_of`, the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
 | `representation` | `represents` | The `name` or `details` of a `PARTY_RELATIONSHIP`: the source represents the target, the subject ([Representatives in the patient portal](#representatives-in-the-patient-portal)) |
+| `kinship`, `kinship element` | `related_to`; `kinship` | The `name` or `details` of a `PARTY_RELATIONSHIP` of its own: its source and target, two `PERSON`s, are kin, and its `kinship` element codes how ([Exclusions and conflicts of interest](#exclusions-and-conflicts-of-interest)) |
 | `group kind` | `care_team` | The `name` of a `GROUP`: the `GROUP` is a care team ([Care teams provisioned over SCIM](#care-teams-provisioned-over-scim)) |
-| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing` | The access record of a refusal |
+| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing`, `refused-excluded`, `refused-conflict` | The access record of a refusal |
 | `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
 
 Two grants of the operation table belong to access control:
@@ -2239,6 +2240,57 @@ committed. A relationship the policy refuses is reported in the load's
 failure report and is not loaded; the rest of the archive loads. Put the
 access policy in place before you load an archive that holds open care
 relationships.
+
+### Exclusions and conflicts of interest
+
+**An exclusion keeps a named person out of one record.** It is a deny of
+kind `exclusion` in the `exclusions` of the EHR's `EHR_ACCESS` settings,
+naming the parties it keeps out by `applies_to` (a party, or the
+`representative` relationship), with an optional data scope, validity and
+legal grounds. It is decided before step 1: it binds a professional, a
+representative and a gate-keeper, never the person, and no permit of the
+person or a representative lifts it. A declared emergency lifts it only
+where its `emergency_override` holds and the caller is no representative.
+The caller is answered `403 refused-excluded`, and the answer names neither
+the exclusion nor its reason; the access log names the exclusion and the
+`EHR_ACCESS` version. A law that lets a provider decline to treat a person
+as a representative, for example in a case of abuse, is carried by one.
+
+Only the controller (a caller holding `admin_role`) reads and writes the
+exclusions. Every read of an `EHR_ACCESS` by anyone else, the person and a
+gate-keeper included, leaves them out; a version envelope, a contribution
+or an AQL row that would carry them reads as absent to such a caller, and
+an EHR Extract for the person carries no `EHR_ACCESS` that ever held one. A
+version a gate-keeper or the person commits carries the current exclusions
+forward unchanged, and one that names other exclusions is refused `403`.
+
+**A restriction binds a representative it names.** A `restriction` the
+person gives binds a representative whose `applies_to` names it by party or
+by the `representative` relationship, answered as absent, as it is for a
+professional. A controller rule over a label that names representatives
+refuses them at step 5.
+
+**A conflict of interest refuses the professional path.** A professional is
+in conflict with the person when it performs a professional `ROLE` and is
+bound to the person's `PERSON` (a staff member on their own record), or
+when a `related_to` relationship in force joins its `PERSON` to the
+person's. It is refused `403 refused-conflict` at step 5, in a read and in a
+query, unless an entry of the policy's `conflict_rules` for that conflict
+names it (and, for `related`, the kinship); an access such an entry admits
+is marked in the access log with a `conflict allowance` ground. A staff
+member reads their own record through the patient portal. Kinship refuses
+and never grants: a relative passes the other steps as anyone else.
+
+A kinship is a `PARTY_RELATIONSHIP` of its own named `related_to`, written at
+`/demographic/party_relationship` under the `write_care_relationship` grant
+or by an administrator, whose source and target are two `PERSON`s and whose
+`kinship` element is a code of the value set bound for `kinship` (by default
+the openEHR `subject relationship` group). Your demographic service or
+master patient index decides who is kin; FerroEHR stores the fact and
+decides on it. A query leaves out the EHRs of every person the caller is in
+conflict with; a conflict rule that names the `care` relationship admits a
+conflict in a direct read of a record the caller cares for, and in a query
+reads as not admitting it.
 
 ### Controller rules
 

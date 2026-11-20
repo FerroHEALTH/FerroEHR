@@ -320,16 +320,20 @@ impl FerroEhrService {
 
     /// Refuses a caller who may not commit the next `EHR_ACCESS` version of
     /// `ehr_id`, judged against the current settings read on the commit's
-    /// own transaction ([`SettingsCaller::may_write`]).
+    /// own transaction ([`SettingsCaller::may_write`]), and carries the
+    /// controller's current exclusions into each `EHR_ACCESS` version of
+    /// `changes` such a caller commits
+    /// ([`crate::service::ehr::access_exclusions::carry`]).
     ///
     /// # Errors
     /// [`ServiceError::Forbidden`] (`403`) for a caller who is neither an
-    /// administrator nor a gate-keeper of the current settings, and the
-    /// storage error of the read.
+    /// administrator nor a gate-keeper of the current settings, or who
+    /// changes the exclusions, and the storage error of the read.
     pub(in crate::service) async fn check_ehr_access_writer(
         &self,
         tx: &mut PgConnection,
         ehr_id: EhrId,
+        changes: &mut [(crate::versioning::audit::AuditInput, Change)],
     ) -> Result<(), ServiceError> {
         let caller = self.settings_caller_on(ehr_id);
         if caller.administrator() {
@@ -337,15 +341,16 @@ impl FerroEhrService {
         }
         let body =
             crate::storage::version_repo::ehr_access::current_ehr_access_body(tx, ehr_id).await?;
-        let current = match body {
-            Some(body) => {
-                let value: Value = serde_json::from_str(&body)
-                    .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
-                EhrAccessSettings::held_or_read(&value)
-            }
-            None => None,
-        };
-        caller.may_write(current.as_ref())
+        let value: Option<Value> = body
+            .map(|body| serde_json::from_str(&body))
+            .transpose()
+            .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
+        let current = value.as_ref().and_then(EhrAccessSettings::held_or_read);
+        caller.may_write(current.as_ref())?;
+        let held = value
+            .as_ref()
+            .and_then(crate::service::ehr::access_exclusions::held);
+        crate::service::ehr::access_exclusions::carry(held, changes)
     }
 
     /// Who the running request's caller is to the `EHR_ACCESS` settings.
@@ -384,15 +389,19 @@ impl FerroEhrService {
     }
 
     /// The EHRs whose `EHR_ACCESS` objects the running request's query reads:
-    /// every EHR's for a caller who reads them all, otherwise the EHRs whose
-    /// settings name the caller a gate-keeper, judged per class.
+    /// every EHR's for the controller, every EHR's whose settings hold no
+    /// exclusions for the subject, otherwise the EHRs whose settings name the
+    /// caller a gate-keeper and hold no exclusions, judged per class.
     ///
     /// # Errors
     /// [`ServiceError`] when the classes cannot be read.
     pub async fn ehr_access_readers(&self) -> Result<EhrAccessReaders, ServiceError> {
         let caller = self.settings_caller();
-        if caller.reads_every() {
+        if caller.administrator() {
             return Ok(EhrAccessReaders::Every);
+        }
+        if caller.reads_every() {
+            return Ok(EhrAccessReaders::Unexcluded);
         }
         let classes = self.ehr_access_classes().await?;
         Ok(EhrAccessReaders::Only(Arc::new(Keepers::of(
@@ -419,7 +428,11 @@ impl FerroEhrService {
             return self.ehr_access_readers().await;
         };
         if self.may_read_ehr_access(EhrId(pinned.ehr)).await? {
-            return Ok(EhrAccessReaders::Every);
+            return Ok(if self.settings_caller().administrator() {
+                EhrAccessReaders::Every
+            } else {
+                EhrAccessReaders::Unexcluded
+            });
         }
         Ok(EhrAccessReaders::Only(Arc::new(Keepers {
             groups: Vec::new(),

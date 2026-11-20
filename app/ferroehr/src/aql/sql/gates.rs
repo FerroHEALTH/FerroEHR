@@ -124,13 +124,23 @@ impl<'a> Gates<'a> {
         }
         // NOTE: EHDS Art. 8, an EHR_ACCESS whose settings the caller may not read
         // contributes no row, so a restriction stays invisible (our own design).
-        if let Some(EhrAccessReaders::Only(keepers)) = self.access_settings {
-            let other_kind = col(h, VoHead::Kind).ne(Expr::val("EHR_ACCESS"));
-            predicates.push(if keepers.groups.is_empty() {
-                other_kind
-            } else {
-                other_kind.or(super::access::keeper_reads(keepers, h))
-            });
+        let other_kind = || col(h, VoHead::Kind).ne(Expr::val("EHR_ACCESS"));
+        match self.access_settings {
+            Some(EhrAccessReaders::Only(keepers)) => {
+                predicates.push(if keepers.groups.is_empty() {
+                    other_kind()
+                } else {
+                    other_kind()
+                        .or(super::access::keeper_reads(keepers, h)
+                            .and(super::access::unexcluded(h)))
+                });
+            }
+            // NOTE: draft access control decision procedure, Reading and Writing the Settings,
+            // only the controller reads an EHR_ACCESS whose settings hold exclusions (#6077).
+            Some(EhrAccessReaders::Unexcluded) => {
+                predicates.push(other_kind().or(super::access::unexcluded(h)));
+            }
+            Some(EhrAccessReaders::Every) | None => {}
         }
         predicates
     }

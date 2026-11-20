@@ -112,7 +112,15 @@ impl FerroEhrService {
             resolve_refs,
         )
         .await?;
-        if commits_ehr_access(&contribution) && !Box::pin(self.may_read_ehr_access(ehr_id)).await? {
+        // NOTE: draft access control decision procedure, Reading and Writing the Settings, the
+        // signed versions of a CONTRIBUTION are never served altered, so exclusions hide it.
+        let excluded = resolve_refs
+            && !self.settings_caller().administrator()
+            && carries_exclusions(&contribution);
+        if excluded
+            || (commits_ehr_access(&contribution)
+                && !Box::pin(self.may_read_ehr_access(ehr_id)).await?)
+        {
             return Err(ServiceError::not_found(
                 Missing::Contribution,
                 format!("CONTRIBUTION {contribution_id}"),
@@ -274,6 +282,22 @@ fn commits_ehr_access(contribution: &Value) -> bool {
             versions.iter().any(|version| {
                 version.get("type").and_then(Value::as_str) == Some("EHR_ACCESS")
                     || version.pointer("/data/_type").and_then(Value::as_str) == Some("EHR_ACCESS")
+            })
+        })
+}
+
+/// Whether a resolved version of the CONTRIBUTION `contribution` is an
+/// `EHR_ACCESS` whose settings carry the controller's exclusions.
+fn carries_exclusions(contribution: &Value) -> bool {
+    contribution
+        .get("versions")
+        .and_then(Value::as_array)
+        .is_some_and(|versions| {
+            versions.iter().any(|version| {
+                version
+                    .get("data")
+                    .and_then(super::access_exclusions::held)
+                    .is_some()
             })
         })
 }

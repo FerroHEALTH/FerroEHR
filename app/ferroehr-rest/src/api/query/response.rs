@@ -564,6 +564,7 @@ mod tests {
                     keeper: None,
                 },
                 confined: None,
+                conflicts: std::sync::Arc::from([]),
             }),
             log_standing: LogStanding::Reviewer,
         };

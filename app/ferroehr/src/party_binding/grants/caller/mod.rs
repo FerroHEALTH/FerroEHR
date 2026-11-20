@@ -46,6 +46,7 @@
 pub(crate) mod bounds;
 pub mod care_of;
 pub mod facts;
+pub(crate) mod kin;
 pub mod patient;
 pub mod store;
 pub mod subject;
@@ -64,7 +65,7 @@ use crate::party_binding::policy_mark::carries;
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
 use openehr_rm::draft::access_control::terminology::{
-    CareRelationship, ForeignCode, ForeignKind, Term,
+    CareRelationship, ForeignCode, ForeignKind, Kinship, Term,
 };
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
@@ -79,15 +80,18 @@ pub(crate) enum FactKind {
     MemberOf,
     /// The patient is in the care of the team or unit.
     UnderCareOf,
+    /// The person is kin to another person.
+    RelatedTo,
 }
 
 impl FactKind {
     /// Every kind, in contract order.
-    const ALL: [Self; 4] = [
+    const ALL: [Self; 5] = [
         Self::Role,
         Self::OrganisationType,
         Self::MemberOf,
         Self::UnderCareOf,
+        Self::RelatedTo,
     ];
 
     /// The care relationship term the kind is read by; `None` for a role or
@@ -95,7 +99,7 @@ impl FactKind {
     /// jurisdiction's terminology.
     pub(crate) fn care(self) -> Option<CareRelationship> {
         match self {
-            Self::Role | Self::OrganisationType => None,
+            Self::Role | Self::OrganisationType | Self::RelatedTo => None,
             Self::MemberOf => Some(CareRelationship::MemberOf),
             Self::UnderCareOf => Some(CareRelationship::UnderCareOf),
         }
@@ -109,6 +113,7 @@ impl FactKind {
             Self::Role => "role",
             Self::OrganisationType => "organisation_type",
             Self::MemberOf | Self::UnderCareOf => self.care().map_or("", |care| care.code()),
+            Self::RelatedTo => Kinship::RelatedTo.code(),
         }
     }
 
@@ -137,6 +142,8 @@ pub(crate) enum FactValue {
     Team(Uuid),
     /// The carer, its role and the provider of a care relationship.
     Care(care_of::CareFact),
+    /// The other person and the kinship of a `related_to` relationship.
+    Kin(kin::KinFact),
 }
 
 /// One caller fact a body holds.
@@ -155,6 +162,9 @@ pub(crate) struct CallerFact {
     pub(crate) not_before: Bound,
     /// Always [`Bound::Open`].
     pub(crate) not_after: Bound,
+    /// The party the fact is about when it is not the party its head names:
+    /// each end of a `related_to` relationship; `None` for every other fact.
+    pub(crate) about: Option<Uuid>,
 }
 
 /// Pushes onto `facts` the fact of `kind` the coded `name` of `body` names.
@@ -169,7 +179,7 @@ pub(crate) fn coded_name<'a, T: Tree<'a>>(body: T, kind: FactKind, facts: &mut G
     let (class, foreign) = match kind {
         FactKind::Role => ("ROLE", ForeignKind::Role),
         FactKind::OrganisationType => ("ORGANISATION", ForeignKind::OrganisationType),
-        FactKind::MemberOf | FactKind::UnderCareOf => return,
+        FactKind::MemberOf | FactKind::UnderCareOf | FactKind::RelatedTo => return,
     };
     let Some(name) = body
         .get("name")
@@ -196,6 +206,7 @@ pub(crate) fn coded_name<'a, T: Tree<'a>>(body: T, kind: FactKind, facts: &mut G
             validity: None,
             not_before: Bound::Open,
             not_after: Bound::Open,
+            about: None,
         });
     }
 }
@@ -209,6 +220,10 @@ pub(crate) fn coded_name<'a, T: Tree<'a>>(body: T, kind: FactKind, facts: &mut G
 /// belongs to and so the provider that writes its memberships.
 pub(crate) fn relationships<'a, T: Tree<'a>>(kind: Kind, body: T, facts: &mut GrantFacts) {
     if kind == Kind::PartyRelationship {
+        if kin::is_kinship(body) {
+            kin::read(body, facts);
+            return;
+        }
         match care_kind(body) {
             Some(CareRelationship::UnderCareOf) => care_of::read(body, facts),
             Some(term) => facts.unread.push(format!(
@@ -223,6 +238,10 @@ pub(crate) fn relationships<'a, T: Tree<'a>>(kind: Kind, body: T, facts: &mut Gr
     }
     let held = body.get("relationships");
     for (ordinal, relationship) in held.into_iter().flat_map(Tree::items).enumerate() {
+        if kin::is_kinship(relationship) {
+            facts.unread.push(kin::held_inline(ordinal));
+            continue;
+        }
         let Some(code) = care_kind(relationship) else {
             continue;
         };
@@ -248,6 +267,7 @@ pub(crate) fn relationships<'a, T: Tree<'a>>(kind: Kind, body: T, facts: &mut Gr
                     validity: relationship.get("time_validity").map(Tree::to_value),
                     not_before: Bound::Open,
                     not_after: Bound::Open,
+                    about: None,
                 });
                 continue;
             }

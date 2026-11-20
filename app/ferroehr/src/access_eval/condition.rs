@@ -34,6 +34,7 @@ use crate::access_eval::procedure::{
 use crate::access_eval::record::LiftedCovers;
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
 use crate::access_eval::stale::StaleCopies;
+use crate::access_policy::care::CareFacts;
 use crate::ids::EhrId;
 use crate::party_binding::grants::live::LiveGrants;
 use crate::service::ehr::access_settings::EhrAccessSettings;
@@ -73,6 +74,10 @@ pub struct RequestAccess {
     /// The EHRs whose subject a read of this request found to be the
     /// `PERSON` the caller is bound to ([`Self::bind_subject`]).
     records: Mutex<BTreeSet<EhrId>>,
+    /// The kinships a read of this request found to join the caller to each
+    /// EHR's subject ([`Self::bind_subject`]).
+    kinships:
+        Mutex<BTreeMap<EhrId, Vec<openehr_rm::draft::access_control::terminology::ForeignCode>>>,
 }
 
 /// One EHR as the access evaluator reads it from this replica's copy: its
@@ -187,6 +192,7 @@ impl RequestAccess {
             written: Mutex::new(BTreeSet::new()),
             care: care::CareInForce::default(),
             records: Mutex::new(BTreeSet::new()),
+            kinships: Mutex::new(BTreeMap::new()),
         }
     }
 
@@ -258,7 +264,7 @@ impl RequestAccess {
         if !self.confined() {
             return Outcome::Admit;
         }
-        let verdict = self.judge_as(records::Held::default(), None, false);
+        let verdict = self.judge_as(&records::Held::default(), None, false);
         self.note_under(None, &verdict, &Item::Ehr)
     }
 
@@ -328,7 +334,7 @@ impl RequestAccess {
     /// The verdict for an EHR with `settings`, held by the caller as `held`.
     fn judge_as(
         &self,
-        held: records::Held,
+        held: &records::Held,
         settings: Option<&EhrAccessSettings>,
         cared: bool,
     ) -> Verdict {
@@ -364,7 +370,7 @@ impl RequestAccess {
             self.classifications(),
         );
         let held = records::Held::of_class(self.confined());
-        self.decide((*class.settings).as_ref(), cared, held, &scopes)
+        self.decide((*class.settings).as_ref(), cared, &held, &scopes)
     }
 
     /// The controller's classifications.
@@ -380,7 +386,7 @@ impl RequestAccess {
         &self,
         settings: Option<&EhrAccessSettings>,
         cared: bool,
-        held: records::Held,
+        held: &records::Held,
         scopes: &Scopes,
     ) -> Verdict {
         decide(&Judged {
@@ -392,12 +398,14 @@ impl RequestAccess {
             },
             policy: self.policy(),
             rules: rules_of(self.policy.as_deref()),
+            conflict_rules: CareFacts::of(self.policy.as_deref()).conflict_allowances(),
             ehr: Ehr {
                 settings,
                 server_default: self.server_default,
                 cared,
                 own: held.own,
                 subject: held.subject,
+                kinships: &held.kinships,
             },
             scopes,
             now: self.now,
@@ -590,6 +598,10 @@ pub struct ConditionGroups {
     /// For a subject caller, the EHRs it reaches: its own, or none; `None`
     /// for every other caller.
     pub confined: Option<Arc<[Uuid]>>,
+    /// The subject references, each as `(id, namespace)`, of the persons a
+    /// professional is in conflict with and no conflict rule lets it read,
+    /// whose EHRs the query reads no row of (#6077).
+    pub conflicts: Arc<[(String, String)]>,
 }
 
 /// What the facts of a class are read against: the moment of the request,

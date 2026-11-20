@@ -142,11 +142,14 @@ pub struct SqlCtx {
 /// the settings: our own design.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum EhrAccessReaders {
-    /// Every EHR's: an administrator, or the subject in their own EHR.
+    /// Every EHR's: the controller, an administrator.
     #[default]
     Every,
+    /// Every EHR's whose settings hold no exclusions of the controller: the
+    /// subject in their own EHR.
+    Unexcluded,
     /// Only the EHRs whose settings name the caller a gate-keeper, judged
-    /// per settings class.
+    /// per settings class, and hold no exclusions of the controller.
     Only(Arc<crate::access_eval::class::Keepers>),
 }
 

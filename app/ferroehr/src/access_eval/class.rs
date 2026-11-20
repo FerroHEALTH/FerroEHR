@@ -10,8 +10,9 @@
 //! ([`crate::storage::access_projection`]). The class is the settings with
 //! every value the decision reads that is particular to the EHR replaced by a
 //! fixed value: the instants of a validity or a `recorded` interval, the
-//! party of an actor scope or a gate-keeper, the objects of a data scope, its
-//! origins and the objects each sensitivity labels. What the decision does
+//! party of an actor scope, an exclusion's included, or a gate-keeper, the
+//! objects of a data scope, its origins and the objects each sensitivity
+//! labels. What the decision does
 //! not read, such as a directive's name or its evidence, is left out, and
 //! every coded value keeps only its code phrase. The facts are the values
 //! set aside, in the order of a depth-first walk ([`Layout`]).
@@ -32,6 +33,8 @@
               open slot (RM ehr access_control_settings.adoc — abstract, implementation-dependent \
               by specification), and its class is the same open object"
 )]
+
+mod normal;
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -65,6 +68,8 @@ pub struct Layout {
     pub keepers: Vec<KeeperLayout>,
     /// The objects labelled with each sensitivity.
     pub labels: Vec<(ForeignCode, usize)>,
+    /// Each exclusion of the controller, in the order of the settings.
+    pub exclusions: Vec<DirectiveLayout>,
     /// How many facts the class's EHRs hold.
     pub facts: usize,
 }
@@ -318,7 +323,7 @@ pub fn resolve(pred: &Pred, facts: &[Value], keys: &CallerKeys) -> Pred {
 pub fn classify(settings: &AccessDirectiveSettings) -> Result<Classified, serde_json::Error> {
     let walked = Walk::default().settings(settings);
     let mut class = serde_json::to_value(settings)?;
-    normalize_settings(&mut class);
+    normal::normalize_settings(&mut class);
     for edit in &walked.edits {
         edit.apply(&mut class);
     }
@@ -486,6 +491,16 @@ impl Walk {
             let at = self.fact(Value::from(objects));
             self.out.layout.labels.push((code, at));
             self.out.labels.push(first);
+        }
+        for (at, exclusion) in settings
+            .exclusions
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
+            let placed = self.directive(exclusion, &format!("/exclusions/{at}"));
+            self.out.layout.exclusions.push(placed);
         }
         self.out.layout.facts = self.out.facts.len();
         self.out
@@ -656,125 +671,6 @@ fn set_or_remove(object: &mut Value, key: &str, members: Vec<Value>) {
             object.insert(key.to_owned(), Value::Array(members));
         }
     }
-}
-
-/// Keeps of the settings `value` only what the decision reads.
-fn normalize_settings(value: &mut Value) {
-    let Some(object) = value.as_object_mut() else {
-        return;
-    };
-    if let Some(default) = object.get_mut("default_access") {
-        *default = normal_coded(default);
-    }
-    if let Some(Value::Array(directives)) = object.get_mut("directives") {
-        directives.iter_mut().for_each(normalize_directive);
-    }
-}
-
-/// The members of a directive the decision reads.
-const DIRECTIVE: [&str; 10] = [
-    "_type",
-    "kind",
-    "effect",
-    "applies_to",
-    "operations",
-    "purposes",
-    "data",
-    "time_validity",
-    "emergency_override",
-    "exceptions",
-];
-
-/// Keeps of the directive `value` only what the decision reads.
-fn normalize_directive(value: &mut Value) {
-    let Some(object) = value.as_object_mut() else {
-        return;
-    };
-    object.retain(|key, _| DIRECTIVE.contains(&key.as_str()) || key == "name");
-    if let Some(name) = object.get_mut("name") {
-        retain(name, &["_type", "value"]);
-        set(name, "_type", "DV_TEXT");
-        set(name, "value", "directive");
-    }
-    object.insert(
-        "archetype_node_id".to_owned(),
-        Value::String("at0000".to_owned()),
-    );
-    for key in ["kind", "effect"] {
-        if let Some(coded) = object.get_mut(key) {
-            *coded = normal_coded(coded);
-        }
-    }
-    for key in ["operations", "purposes"] {
-        if let Some(Value::Array(codes)) = object.get_mut(key) {
-            for c in codes.iter_mut() {
-                *c = normal_coded(c);
-            }
-        }
-    }
-    if let Some(validity) = object.get_mut("time_validity") {
-        normalize_interval(validity);
-    }
-    if let Some(Value::Array(scopes)) = object.get_mut("applies_to") {
-        for scope in scopes.iter_mut().filter_map(Value::as_object_mut) {
-            for key in ["role", "relationship", "caller_kind"] {
-                if let Some(coded) = scope.get_mut(key) {
-                    *coded = normal_coded(coded);
-                }
-            }
-        }
-    }
-    if let Some(Value::Array(scopes)) = object.get_mut("data") {
-        for scope in scopes.iter_mut().filter_map(Value::as_object_mut) {
-            for key in ["categories", "sensitivities"] {
-                if let Some(Value::Array(codes)) = scope.get_mut(key) {
-                    for c in codes.iter_mut() {
-                        *c = normal_coded(c);
-                    }
-                }
-            }
-            if let Some(recorded) = scope.get_mut("recorded") {
-                normalize_interval(recorded);
-            }
-        }
-    }
-    if let Some(Value::Array(exceptions)) = object.get_mut("exceptions") {
-        exceptions.iter_mut().for_each(normalize_directive);
-    }
-}
-
-/// Keeps of a readable `DV_INTERVAL<DV_DATE_TIME>` only its bounds and their
-/// flags, dropping a bound the interval marks unbounded; an unreadable one
-/// stays as it is, so the class holds what the decision makes of it.
-fn normalize_interval(value: &mut Value) {
-    let readable = serde_json::from_value(value.clone())
-        .is_ok_and(|interval| matches!(validity(&interval), Validity::Within { .. }));
-    let Some(object) = value.as_object_mut().filter(|_| readable) else {
-        return;
-    };
-    for (bound, unbounded) in [("lower", "lower_unbounded"), ("upper", "upper_unbounded")] {
-        let open = object
-            .get(unbounded)
-            .and_then(Value::as_bool)
-            .unwrap_or(false);
-        if open {
-            object.remove(bound);
-        } else if let Some(at) = object.get_mut(bound) {
-            retain(at, &["_type", "value"]);
-        }
-    }
-    object.retain(|key, _| {
-        [
-            "_type",
-            "lower",
-            "upper",
-            "lower_unbounded",
-            "upper_unbounded",
-            "lower_included",
-            "upper_included",
-        ]
-        .contains(&key.as_str())
-    });
 }
 
 /// A `DV_CODED_TEXT` by its code phrase alone, its value the code.

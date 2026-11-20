@@ -48,10 +48,19 @@ impl FerroEhrService {
     /// ([`FerroEhrService::may_read_ehr_access`]), and for the holder of an
     /// `export_ehr_extract` grant covering the EHR, whose extract transfers
     /// the whole EHR (RM EHR Extract IM, `X_VERSIONED_EHR_ACCESS`); our own
-    /// design (#5559).
+    /// design (#5559). A reader of the settings who is no controller carries
+    /// no `EHR_ACCESS` a version of which holds the controller's exclusions,
+    /// which only the controller reads (draft access control decision
+    /// procedure, Reading and Writing the Settings; #6077).
     async fn carries_ehr_access(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
+        if !Box::pin(self.may_read_ehr_access(ehr_id)).await? {
+            return self.export_granted(ehr_id).await;
+        }
+        if self.settings_caller().administrator() {
+            return Ok(true);
+        }
         Ok(
-            Box::pin(self.may_read_ehr_access(ehr_id)).await?
+            !extract_repo::ehr_access_excluded(&self.pool, ehr_id).await?
                 || self.export_granted(ehr_id).await?,
         )
     }

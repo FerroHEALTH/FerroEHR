@@ -25,6 +25,7 @@ use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
 use super::care_of::{CareFact, CarerKind, ProviderKey};
+use super::kin::KinFact;
 use super::{CallerFact, FactKind, FactValue};
 use crate::party_binding::grants::derive::Bound;
 use crate::party_binding::grants::store::{CHANNEL, GrantHead, Term};
@@ -154,6 +155,11 @@ impl crate::memory::Weigh for FactRow {
                 .capacity()
                 .saturating_add(code.code.capacity()),
             FactValue::Team(_) => 0,
+            FactValue::Kin(kin) => kin
+                .kinship
+                .terminology
+                .capacity()
+                .saturating_add(kin.kinship.code.capacity()),
             FactValue::Care(care) => care
                 .role
                 .terminology
@@ -259,9 +265,16 @@ async fn replace(
     let facts = head
         .live()
         .map_or(&[][..], |facts| facts.grants.facts.as_slice());
-    let came = match party {
-        Some(party) if !facts.is_empty() => insert(tx, head, party, role_validity, facts).await?,
-        _ => Vec::new(),
+    // NOTE: our own design (#6077), a fact names the party it is about, else the head's party,
+    // and a fact about no party is not stored.
+    let (facts, about): (Vec<&CallerFact>, Vec<Uuid>) = facts
+        .iter()
+        .filter_map(|fact| fact.about.or(party).map(|about| (fact, about)))
+        .unzip();
+    let came = if facts.is_empty() {
+        Vec::new()
+    } else {
+        insert(tx, head, &about, role_validity, &facts).await?
     };
     if sorted(&gone) == sorted(&came) {
         return Ok(Vec::new());
@@ -276,12 +289,13 @@ fn sorted(rows: &[(Uuid, String)]) -> Vec<&str> {
     texts
 }
 
-/// The code a fact names: a role's, an organisation type's, or a care
-/// relationship's `care_role`; `None` for a membership.
+/// The code a fact names: a role's, an organisation type's, a care
+/// relationship's `care_role` or a kinship's; `None` for a membership.
 fn code_of(fact: &CallerFact) -> Option<&ForeignCode> {
     match &fact.value {
         FactValue::Code(code) => Some(code),
         FactValue::Care(care) => Some(&care.role),
+        FactValue::Kin(kin) => Some(&kin.kinship),
         FactValue::Team(_) => None,
     }
 }
@@ -290,18 +304,18 @@ fn code_of(fact: &CallerFact) -> Option<&ForeignCode> {
 fn care_of(fact: &CallerFact) -> Option<&CareFact> {
     match &fact.value {
         FactValue::Care(care) => Some(care),
-        FactValue::Code(_) | FactValue::Team(_) => None,
+        FactValue::Code(_) | FactValue::Team(_) | FactValue::Kin(_) => None,
     }
 }
 
-/// Inserts `facts` of `head` about `party`; the inserted rows as their party
-/// and text.
+/// Inserts `facts` of `head`, each about the party at its position in
+/// `about`; the inserted rows as their party and text.
 async fn insert(
     tx: &mut PgConnection,
     head: GrantHead<'_>,
-    party: Uuid,
+    about: &[Uuid],
     role_validity: Option<&Value>,
-    facts: &[CallerFact],
+    facts: &[&CallerFact],
 ) -> Result<Vec<(Uuid, String)>, StorageError> {
     let instant = |bound: Bound| match bound {
         Bound::At(at) => Some(jiff_sqlx::Timestamp::from(at)),
@@ -322,6 +336,7 @@ async fn insert(
         .map(|f| match &f.value {
             FactValue::Team(team) => Some(*team),
             FactValue::Care(care) => Some(care.carer),
+            FactValue::Kin(kin) => Some(kin.person),
             FactValue::Code(_) => None,
         })
         .collect();
@@ -353,7 +368,7 @@ async fn insert(
              (holder_id, ordinal, kind, party_id, terminology_id, code_string, target_id, \
               target_kind, provider_issuer, provider_id, self_declared, writer_id, \
               lifecycle_state, role_validity, validity, not_before, not_after) \
-         SELECT $1, t.ordinal, t.kind, $2, t.terminology_id, t.code_string, t.target_id, \
+         SELECT $1, t.ordinal, t.kind, t.party_id, t.terminology_id, t.code_string, t.target_id, \
                 t.target_kind, t.provider_issuer, t.provider_id, t.self_declared, writer.id, $3, \
                 party.binding_validity($4::jsonb), \
                 CASE WHEN t.unreadable THEN 'empty'::daterange \
@@ -365,10 +380,10 @@ async fn insert(
          FROM unnest($5::integer[], $6::text[], $7::text[], $8::text[], $9::uuid[], \
                      $10::text[], $11::text[], $12::text[], \
                      $13::jsonb[], $14::boolean[], $15::timestamptz[], $16::timestamptz[], \
-                     $17::boolean[]) \
+                     $17::boolean[], $2::uuid[]) \
               AS t(ordinal, kind, terminology_id, code_string, target_id, target_kind, \
                    provider_issuer, provider_id, validity, unreadable, not_before, not_after, \
-                   self_declared) \
+                   self_declared, party_id) \
          CROSS JOIN (SELECT {WRITER} AS id) writer \
          LEFT JOIN binding_care_validity c ON c.vo_id = $1 \
          ON CONFLICT DO NOTHING \
@@ -376,7 +391,7 @@ async fn insert(
     );
     Ok(sqlx::query_as(sqlx::AssertSqlSafe(statement))
         .bind(head.vo_id)
-        .bind(party)
+        .bind(about)
         .bind(head.lifecycle_state)
         .bind(role_validity)
         .bind(&ordinal)
@@ -639,6 +654,12 @@ fn fact_row(holder: Uuid, row: &sqlx::postgres::PgRow) -> Result<FactRow, Storag
             Some(code),
             (None, None, None),
         ) => FactValue::Code(ForeignCode { terminology, code }),
+        (FactKind::RelatedTo, Some(person), Some(terminology), Some(code), (None, None, None)) => {
+            FactValue::Kin(KinFact {
+                person,
+                kinship: ForeignCode { terminology, code },
+            })
+        }
         _ => {
             return Err(StorageError::InvalidRows(
                 "binding_caller_fact holds a row ck_binding_caller_fact_value refuses".to_owned(),

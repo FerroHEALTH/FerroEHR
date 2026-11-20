@@ -121,6 +121,12 @@ pub enum Group {
     /// `representation`: the demographic relationship that makes its source
     /// a representative of its target.
     Representation,
+    /// `kinship`: the demographic relationship that states a kinship between
+    /// two persons.
+    Kinship,
+    /// `kinship element`: the element in the `details` of a `related_to`
+    /// relationship that codes the kinship.
+    KinshipElement,
     /// `access refusal`: the code an access refusal is recorded under.
     AccessRefusal,
     /// `access log withheld`: the attributes of an access-log accessor the
@@ -144,7 +150,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 22] = [
+    pub const ALL: [Self; 24] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -159,6 +165,8 @@ impl Group {
         Self::GroupKind,
         Self::RecordSubject,
         Self::Representation,
+        Self::Kinship,
+        Self::KinshipElement,
         Self::AccessRefusal,
         Self::AccessLogWithheld,
         Self::AccessAction,
@@ -187,6 +195,8 @@ impl Group {
             Self::GroupKind => "group kind",
             Self::RecordSubject => "record subject",
             Self::Representation => "representation",
+            Self::Kinship => "kinship",
+            Self::KinshipElement => "kinship element",
             Self::AccessRefusal => "access refusal",
             Self::AccessLogWithheld => "access log withheld",
             Self::AccessAction => "access action",
@@ -217,6 +227,8 @@ impl Group {
             Self::GroupKind => phrases::<GroupKind>(),
             Self::RecordSubject => phrases::<RecordSubject>(),
             Self::Representation => phrases::<Representation>(),
+            Self::Kinship => phrases::<Kinship>(),
+            Self::KinshipElement => phrases::<KinshipElement>(),
             Self::AccessRefusal => phrases::<Refusal>(),
             Self::AccessLogWithheld => phrases::<Withheld>(),
             Self::AccessAction => phrases::<Action>(),
@@ -345,58 +357,8 @@ pub trait Term: Copy + PartialEq + Sized + 'static {
     }
 }
 
-/// Defines one group's term type, its [`Term`] impl and its `Display`.
-///
-/// A term is `Name => "code"`, a code of [`TERMINOLOGY_ID_ACCESS`] that is
-/// its own rubric, or `Name => "code" of TERMINOLOGY, "rubric"`, the code of
-/// another terminology.
-macro_rules! group {
-    (@terminology) => { TERMINOLOGY_ID_ACCESS };
-    (@terminology $terminology:ident) => { $terminology };
-    (@rubric $code:literal) => { $code };
-    (@rubric $code:literal $rubric:literal) => { $rubric };
-    (
-        $(#[$doc:meta])*
-        $name:ident in $group:ident {
-            $( $(#[$term_doc:meta])* $term:ident => $code:literal $(of $terminology:ident, $rubric:literal)?, )+
-        }
-    ) => {
-        $(#[$doc])*
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        pub enum $name {
-            $( $(#[$term_doc])* $term, )+
-        }
-
-        impl Term for $name {
-            const GROUP: Group = Group::$group;
-            const ALL: &'static [Self] = &[$(Self::$term),+];
-
-            fn terminology(self) -> &'static str {
-                match self {
-                    $(Self::$term => group!(@terminology $($terminology)?),)+
-                }
-            }
-
-            fn code(self) -> &'static str {
-                match self {
-                    $(Self::$term => $code,)+
-                }
-            }
-
-            fn rubric(self) -> &'static str {
-                match self {
-                    $(Self::$term => group!(@rubric $code $($rubric)?),)+
-                }
-            }
-        }
-
-        impl fmt::Display for $name {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str(self.code())
-            }
-        }
-    };
-}
+#[macro_use]
+mod group;
 
 pub mod log;
 
@@ -429,6 +391,9 @@ group! {
         /// A rule of the controller's `ACCESS_POLICY` for every EHR it keeps,
         /// never a directive of an EHR (EHDS Art. 11(3)).
         ControllerRule => "controller_rule",
+        /// The controller's exclusion of a named party from one EHR, held in
+        /// `CONFIDENTIALITY_SETTINGS.exclusions` alone; always a deny.
+        Exclusion => "exclusion",
     }
 }
 
@@ -595,6 +560,26 @@ group! {
 }
 
 group! {
+    /// The demographic relationship of kinship, coded in the `name` or
+    /// `details` of a `PARTY_RELATIONSHIP`.
+    Kinship in Kinship {
+        /// The relationship's source and target, two persons, are kin; the
+        /// `kinship` element in its `details` says how. Kinship never
+        /// grants access: it can refuse it as a conflict of interest.
+        RelatedTo => "related_to",
+    }
+}
+
+group! {
+    /// The element in the `details` of a `related_to` relationship, coded in
+    /// the `ELEMENT`'s `name`.
+    KinshipElement in KinshipElement {
+        /// The kinship, of the value set bound for `kinship`.
+        Kinship => "kinship",
+    }
+}
+
+group! {
     /// The code an access refusal is recorded under, one per step of the
     /// decision procedure that can refuse.
     Refusal in AccessRefusal {
@@ -625,6 +610,12 @@ group! {
         /// A caller admitted under an agreement that conditions its reads on
         /// a consent decision asks to read with no reference to one.
         ConsentReferenceMissing => "refused-consent-reference-missing",
+        /// An exclusion of the controller names the caller: its exclusion and
+        /// its reason are never shown.
+        Excluded => "refused-excluded",
+        /// A professional caller is the subject, or is related to the
+        /// subject, and no conflict rule of the policy allows it.
+        Conflict => "refused-conflict",
     }
 }
 
@@ -736,6 +727,9 @@ pub enum ForeignKind {
     /// The part a carer plays in a care relationship, its `care_role`, such
     /// as an HL7 `ParticipationType` code.
     CareRole,
+    /// The kinship a `related_to` relationship codes, such as a code of the
+    /// openEHR Terminology group `subject relationship`.
+    Kinship,
 }
 
 impl fmt::Display for ForeignKind {
@@ -748,6 +742,7 @@ impl fmt::Display for ForeignKind {
             Self::Role => "role",
             Self::OrganisationType => "organisation type",
             Self::CareRole => "care role",
+            Self::Kinship => "kinship",
         })
     }
 }

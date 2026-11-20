@@ -262,7 +262,8 @@ async fn write_contribution(
             .iter()
             .any(|(_, c)| c.kind() == Kind::EhrAccess)
     {
-        cx.check_ehr_access_writer(&mut tx, ehr_id).await?;
+        cx.check_ehr_access_writer(&mut tx, ehr_id, &mut write.changes)
+            .await?;
     }
     for (_, change) in &write.changes {
         if let Change::Modify {

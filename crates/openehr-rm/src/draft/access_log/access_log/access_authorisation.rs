@@ -14,7 +14,7 @@ use crate::v1_2::data_types::uri::dv_uri::DvUri;
 #[doc(alias = "ACCESS_AUTHORISATION")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessAuthorisation {
-    /// The kind of ground, coded in the draft `openehr_access` terminology's `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, or a legal obligation.
+    /// The kind of ground, coded in the draft `openehr_access` terminology's `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, a legal obligation, or a conflict allowance.
     pub kind: DvCodedText,
     /// The policy or agreement the ground is defined in.
     pub policy: Option<DvUri>,

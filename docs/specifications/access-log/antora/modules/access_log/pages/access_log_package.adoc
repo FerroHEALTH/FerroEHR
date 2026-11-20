@@ -18,7 +18,7 @@ An `ACCESS_LOG_ENTRY` records one access event to the data of at most one EHR. A
 
 === Why and Under Which Authorisation
 
-`_purposes_` holds the purposes of use. `_authorisations_` holds each ground of the access decision: a role, a treatment relationship, an agreement with its version and legal grounds, a consent decision with its reference, a permit, an emergency override, the subject's own access, a representation, or a legal obligation. `_is_emergency_` marks an access under an emergency override.
+`_purposes_` holds the purposes of use. `_authorisations_` holds each ground of the access decision: a role, a treatment relationship, an agreement with its version and legal grounds, a consent decision with its reference, a permit, an emergency override, the subject's own access, a representation, a legal obligation, or a conflict allowance (a conflict rule of the controller that admitted a professional in conflict with the subject). `_is_emergency_` marks an access under an emergency override.
 
 === Outcome, System and Transport
 

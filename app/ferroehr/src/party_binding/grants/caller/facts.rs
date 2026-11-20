@@ -4,9 +4,9 @@
 //! What the access evaluator reads about one caller beside its grants.
 //!
 //! They are the roles it performs and the `ROLE`s they are, its care teams,
-//! its provider's `GROUP`s, the types of the `ORGANISATION` it acts for and
-//! the providers it acts for. No openEHR spec gives these an access meaning:
-//! our own design (#5621, #5691, #6055).
+//! its provider's `GROUP`s, the types of the `ORGANISATION` it acts for, the
+//! providers it acts for and the persons it is kin to. No openEHR spec gives
+//! these an access meaning: our own design (#5621, #5691, #6055, #6077).
 
 use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind};
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
@@ -33,7 +33,18 @@ pub struct CallerFacts {
     provider_groups: Vec<Uuid>,
     organisation_types: Vec<ForeignCode>,
     providers: Vec<ProviderKey>,
+    kin: Vec<Kin>,
     party: Option<Uuid>,
+}
+
+/// A person the caller is kin to on the request's date, by a `related_to`
+/// relationship in force in either direction, with the kinship it codes.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Kin {
+    /// The other person's `PERSON` container.
+    pub person: Uuid,
+    /// The kinship the relationship codes.
+    pub kinship: ForeignCode,
 }
 
 impl CallerFacts {
@@ -51,8 +62,43 @@ impl CallerFacts {
             provider_groups: Vec::new(),
             organisation_types: Vec::new(),
             providers: Vec::new(),
+            kin: Vec::new(),
             party: None,
         }
+    }
+
+    /// These facts with `kin`, the persons the caller is kin to, sorted and
+    /// distinct.
+    #[must_use]
+    pub fn with_kin(mut self, mut kin: Vec<Kin>) -> Self {
+        kin.sort();
+        kin.dedup();
+        self.kin = kin;
+        self
+    }
+
+    /// The kinships that join the caller to the `PERSON` `person`, sorted;
+    /// empty when none does.
+    #[must_use]
+    pub fn kinships_with(&self, person: Uuid) -> Vec<ForeignCode> {
+        self.kin
+            .iter()
+            .filter(|kin| kin.person == person)
+            .map(|kin| kin.kinship.clone())
+            .collect()
+    }
+
+    /// The persons the caller is kin to, each with its kinship.
+    #[must_use]
+    pub fn kin(&self) -> &[Kin] {
+        &self.kin
+    }
+
+    /// Whether the caller performs a `ROLE` in force, or its credential
+    /// attests a professional role: it reaches a record as a professional.
+    #[must_use]
+    pub fn performs_a_role(&self) -> bool {
+        !self.performed.is_empty() || !self.roles.is_empty()
     }
 
     /// These facts with `roles`, the containers of the `ROLE`s in force the
@@ -225,6 +271,29 @@ mod tests {
                               "terminology_id": {"_type": "TERMINOLOGY_ID", "value": terminology},
                               "code_string": value}}))
         .expect("a code")
+    }
+
+    #[test]
+    fn kinships_are_read_per_person() {
+        let (mother, brother) = (Uuid::from_u128(1), Uuid::from_u128(2));
+        let kin = |person, code: &str| Kin {
+            person,
+            kinship: self::code("openehr", code),
+        };
+        let facts = CallerFacts::default().with_kin(vec![
+            kin(mother, "254"),
+            kin(brother, "26"),
+            kin(mother, "254"),
+        ]);
+        assert_eq!(facts.kin().len(), 2);
+        assert_eq!(facts.kinships_with(mother), vec![code("openehr", "254")]);
+        assert_eq!(facts.kinships_with(Uuid::from_u128(3)), Vec::new());
+        assert!(!facts.performs_a_role());
+        assert!(
+            CallerFacts::default()
+                .with_performed(vec![mother])
+                .performs_a_role()
+        );
     }
 
     #[test]

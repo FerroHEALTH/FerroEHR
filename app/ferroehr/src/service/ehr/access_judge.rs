@@ -236,7 +236,39 @@ impl FerroEhrService {
             return Ok(AccessCondition::default());
         };
         let classes = self.ehr_access_classes().await?;
-        Ok(access.condition(&classes, Care::Unresolved))
+        let condition = access.condition(&classes, Care::Unresolved);
+        let conflicts = Box::pin(self.conflicted_subjects(&access)).await?;
+        Ok(if conflicts.is_empty() {
+            condition
+        } else {
+            condition.with_conflicts(conflicts.into())
+        })
+    }
+
+    /// The subject references of the persons the caller of `access` is in
+    /// conflict with ([`RequestAccess::conflicted_persons`]), each as the
+    /// `ehr` row stores it, this CDR's own read in either case: a query reads
+    /// no row of their EHRs. Each read of a person's references is recorded,
+    /// as every subject-reference read is. No openEHR spec governs this: our
+    /// own design (#6077).
+    ///
+    /// # Errors
+    /// [`ServiceError`] when a `PERSON`'s references cannot be read.
+    async fn conflicted_subjects(
+        &self,
+        access: &RequestAccess,
+    ) -> Result<Vec<(String, String)>, ServiceError> {
+        let mut subjects = Vec::new();
+        let namespace = self.grants.namespace();
+        for person in access.conflicted_persons() {
+            let references = self.grants.subjects_of(person).await?;
+            let count = u64::try_from(references.len()).unwrap_or(u64::MAX);
+            stored_subjects(references, &namespace, &mut subjects);
+            self.emit_resolution(&namespace, None, count).await?;
+        }
+        subjects.sort_unstable();
+        subjects.dedup();
+        Ok(subjects)
     }
 
     /// `condition` with the caller's care read for a query whose rows all
@@ -340,16 +372,7 @@ impl FerroEhrService {
         let references = self.grants.subjects_of(person).await?;
         let count = u64::try_from(references.len()).unwrap_or(u64::MAX);
         let mut subjects = Vec::new();
-        for subject in references {
-            // NOTE: our own design (#6108), this CDR's own references name a PERSON by its
-            // UUID, read in either case, as the evaluator reads it (`LiveGrants::person_of`).
-            if *subject.namespace == *namespace {
-                subjects.push((subject.id.to_uppercase(), subject.namespace.clone()));
-                subjects.push((subject.id.to_lowercase(), subject.namespace));
-            } else {
-                subjects.push((subject.id, subject.namespace));
-            }
-        }
+        stored_subjects(references, &namespace, &mut subjects);
         // NOTE: our own design (#6108), the read of the caller's own subject references is
         // recorded as every subject-reference read is, by its namespace and never its ids.
         self.emit_resolution(&namespace, None, count).await?;
@@ -535,5 +558,24 @@ fn binds_any(care: &Care) -> bool {
         Care::Census(subjects) => !subjects.is_empty(),
         Care::Ehrs(ehrs) => !ehrs.is_empty(),
         Care::Projected(care) => !care.principals.is_empty() && !care.provider_ids.is_empty(),
+    }
+}
+
+/// Pushes onto `into` each of `references` as the `ehr` row stores a subject,
+/// `(id, namespace)`.
+fn stored_subjects(
+    references: Vec<crate::storage::access_projection::EhrSubject>,
+    namespace: &str,
+    into: &mut Vec<(String, String)>,
+) {
+    for subject in references {
+        // NOTE: our own design (#6108), this CDR's own references name a PERSON by its
+        // UUID, read in either case, as the evaluator reads it (`LiveGrants::person_of`).
+        if *subject.namespace == *namespace {
+            into.push((subject.id.to_uppercase(), subject.namespace.clone()));
+            into.push((subject.id.to_lowercase(), subject.namespace));
+        } else {
+            into.push((subject.id, subject.namespace));
+        }
     }
 }

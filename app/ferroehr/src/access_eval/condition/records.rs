@@ -3,11 +3,14 @@
 
 //! The caller's own records: the EHRs whose `EHR_STATUS.subject` names the
 //! `PERSON` the caller's authenticated identity is bound to, of which the
-//! caller is the subject (EHDS Art. 3). The party binding is the one source
-//! of who that is. No openEHR spec governs this: our own design (#6106).
+//! caller is the subject (EHDS Art. 3), and the records of the persons the
+//! caller is kin to, with which a professional is in conflict (#6077). The
+//! party binding is the one source of who the caller is. No openEHR spec
+//! governs this: our own design (#6106).
 
 use std::sync::PoisonError;
 
+use openehr_rm::draft::access_control::terminology::ForeignCode;
 use uuid::Uuid;
 
 use super::{EhrEntry, RequestAccess};
@@ -17,12 +20,14 @@ use crate::party_binding::grants::live::GrantsUnavailable;
 use crate::service::ehr::access_settings::EhrAccessSettings;
 
 /// How the caller holds one EHR.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub(super) struct Held {
     /// The EHR is one a confined caller reaches.
     pub(super) own: bool,
     /// The EHR's subject is the `PERSON` the caller is bound to.
     pub(super) subject: bool,
+    /// The kinships that join the caller to the EHR's subject.
+    pub(super) kinships: Vec<ForeignCode>,
 }
 
 impl Held {
@@ -32,6 +37,7 @@ impl Held {
         Self {
             own: confined,
             subject: false,
+            kinships: Vec::new(),
         }
     }
 }
@@ -51,7 +57,24 @@ impl RequestAccess {
         // NOTE: our own design (#6106), a confined caller with no launch context reaches the
         // records the party binding names as its own, and one with a context only that EHR.
         let own = self.owns(ehr_id) || (subject && self.caller.own_ehrs.is_empty());
-        self.judge_as(Held { own, subject }, settings, cared)
+        let kinships = ehr_id
+            .and_then(|ehr_id| {
+                self.kinships
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .get(&ehr_id)
+                    .cloned()
+            })
+            .unwrap_or_default();
+        self.judge_as(
+            &Held {
+                own,
+                subject,
+                kinships,
+            },
+            settings,
+            cared,
+        )
     }
 
     /// Whether a read of this request found `ehr_id`'s subject to be the
@@ -82,7 +105,18 @@ impl RequestAccess {
         ehr_id: EhrId,
         entry: &EhrEntry,
     ) -> Result<bool, GrantsUnavailable> {
-        let named = self.names_the_caller(entry).await?;
+        let person = self.person_of(entry).await?;
+        let named = person.is_some() && person == self.bound_person();
+        let kinships =
+            person.map_or_else(Vec::new, |person| self.caller().facts.kinships_with(person));
+        {
+            let mut held = self.kinships.lock().unwrap_or_else(PoisonError::into_inner);
+            if kinships.is_empty() {
+                held.remove(&ehr_id);
+            } else {
+                held.insert(ehr_id, kinships);
+            }
+        }
         let mut records = self.records.lock().unwrap_or_else(PoisonError::into_inner);
         if named {
             records.insert(ehr_id);
@@ -92,22 +126,59 @@ impl RequestAccess {
         Ok(named)
     }
 
-    /// Whether the subject reference `entry` names is the `PERSON` the
-    /// caller is bound to ([`Caller::party`](crate::access_eval::procedure::Caller::party)).
-    async fn names_the_caller(&self, entry: &EhrEntry) -> Result<bool, GrantsUnavailable> {
-        let (Some(grants), Some(subject)) = (&self.grants, &entry.subject) else {
-            return Ok(false);
-        };
+    /// The persons a professional is in conflict with and no conflict rule
+    /// lets it read on an EHR whose settings admit it, each `PERSON` once:
+    /// the one it is bound to on the professional path, and the persons it is
+    /// kin to. A rule that allows a conflict only to a caller in care is read
+    /// as not allowing it, since a query binds no subject's care for this
+    /// (draft decision procedure step 5; our own design, #6077).
+    #[must_use]
+    pub fn conflicted_persons(&self) -> Vec<Uuid> {
+        let caller = self.caller();
+        if caller.kind != openehr_rm::draft::access_control::terminology::CallerKind::Professional {
+            return Vec::new();
+        }
+        let mut persons: Vec<Uuid> = caller.facts.kin().iter().map(|kin| kin.person).collect();
+        persons.extend(self.bound_person());
+        persons.sort_unstable();
+        persons.dedup();
+        persons.retain(|person| {
+            let held = Held {
+                own: false,
+                subject: Some(*person) == self.bound_person(),
+                kinships: caller.facts.kinships_with(*person),
+            };
+            self.judge_as(&held, None, false).rules.iter().any(|rule| {
+                rule.then
+                    == crate::access_eval::procedure::Outcome::Refused(
+                        openehr_rm::draft::access_control::terminology::Refusal::Conflict,
+                    )
+            })
+        });
+        persons
+    }
+
+    /// The `PERSON` the caller is bound to
+    /// ([`Caller::party`](crate::access_eval::procedure::Caller::party)).
+    fn bound_person(&self) -> Option<Uuid> {
         // NOTE: the local source names each party by its container's UUID, so a bound
         // party id that is no UUID names no PERSON of this store and no record.
-        let Some(party) = self
-            .caller()
+        self.caller()
             .party
             .as_deref()
             .and_then(|p| p.parse::<Uuid>().ok())
-        else {
-            return Ok(false);
+    }
+
+    /// The `PERSON` the subject reference `entry` names; `None` when it names
+    /// none, or when the caller is bound to no `PERSON` and is kin to none,
+    /// so nothing of the subject's `PERSON` is read.
+    async fn person_of(&self, entry: &EhrEntry) -> Result<Option<Uuid>, GrantsUnavailable> {
+        let (Some(grants), Some(subject)) = (&self.grants, &entry.subject) else {
+            return Ok(None);
         };
-        Ok(grants.person_of(subject).await? == Some(party))
+        if self.bound_person().is_none() && self.caller().facts.kin().is_empty() {
+            return Ok(None);
+        }
+        grants.person_of(subject).await
     }
 }

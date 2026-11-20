@@ -33,6 +33,7 @@ pub mod alongside;
 pub mod class;
 pub mod condition;
 mod directive;
+mod exclusion;
 pub mod procedure;
 pub mod record;
 pub mod scope;
