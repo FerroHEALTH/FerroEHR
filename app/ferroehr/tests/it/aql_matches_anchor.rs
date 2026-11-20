@@ -328,7 +328,7 @@ fn an_interval_or_a_regex_operand_is_refused() {
 }
 
 /// A PERSON whose details hold a date of birth, the PERSON of #6084.
-fn person_born(name: &str, birth: &str) -> Value {
+pub(crate) fn person_born(name: &str, birth: &str) -> Value {
     json!({
         "_type": "PERSON",
         "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
