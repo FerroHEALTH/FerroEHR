@@ -2065,7 +2065,10 @@ attribute is checked against its value set on the
 [terminology server](templates-validation.md) when you write the policy;
 with no terminology server configured, a policy that binds a value set the
 check needs is refused. An unbound kinship is a code of the openEHR
-`subject relationship` group. A template of the default archetype that
+`subject relationship` group. An organisation type has no default code
+system, so a rule, an exception or a conflict rule that names an
+`organisation_type` is refused `422`, naming it, until the policy binds an
+`organisation_type` value set. A template of the default archetype that
 fixes some of these attributes for many controllers is a profile: write the
 policy with its `template_id`, and FerroEHR validates it against the
 template.

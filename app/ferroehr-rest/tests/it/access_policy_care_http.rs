@@ -30,6 +30,8 @@ use crate::common::{BASE, EXT};
 
 /// The value set the tests bind kinship to.
 const KINSHIP_VS: &str = "http://terminology.example/ValueSet/kinship";
+/// The value set the tests bind organisation types to.
+const ORGANISATION_TYPE_VS: &str = "http://terminology.example/ValueSet/organisation-types";
 
 /// A coded term of `terminology`.
 fn coded(terminology: &str, code: &str) -> Value {
@@ -69,23 +71,25 @@ fn binding(mut body: Value, binding: &str, url: &str) -> Value {
     body
 }
 
-/// A terminology server whose [`KINSHIP_VS`] holds `member` alone.
-async fn terminology(member: &str) -> MockServer {
+/// A terminology server whose `value_set` holds `members` alone.
+async fn terminology(value_set: &str, members: &[&str]) -> MockServer {
     let server = MockServer::start().await;
-    Mock::given(method("POST"))
-        .and(path("/ValueSet/$validate-code"))
-        .and(body_string_contains(format!(
-            r#""name":"url","valueUri":"{KINSHIP_VS}""#
-        )))
-        .and(body_string_contains(format!(
-            r#""name":"code","valueCode":"{member}""#
-        )))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-            "resourceType": "Parameters",
-            "parameter": [{ "name": "result", "valueBoolean": true }]
-        })))
-        .mount(&server)
-        .await;
+    for member in members {
+        Mock::given(method("POST"))
+            .and(path("/ValueSet/$validate-code"))
+            .and(body_string_contains(format!(
+                r#""name":"url","valueUri":"{value_set}""#
+            )))
+            .and(body_string_contains(format!(
+                r#""name":"code","valueCode":"{member}""#
+            )))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "resourceType": "Parameters",
+                "parameter": [{ "name": "result", "valueBoolean": true }]
+            })))
+            .mount(&server)
+            .await;
+    }
     Mock::given(method("POST"))
         .and(path("/ValueSet/$validate-code"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
@@ -173,7 +177,7 @@ async fn every_care_fact_round_trips_through_put_and_get() {
 #[tokio::test]
 async fn a_code_outside_its_value_set_is_refused_naming_the_attribute() {
     let (_db, pool) = common::migrated_pool().await;
-    let server = terminology("BRO").await;
+    let server = terminology(KINSHIP_VS, &["BRO"]).await;
     let (_svc, app) = replica(&pool, Some(&server.uri())).await;
     let first = create(&app, &policy(false)).await;
 
@@ -386,4 +390,69 @@ async fn a_care_role_outside_the_bound_value_set_is_refused() {
     Box::pin(svc.party_relationship_create(write))
         .await
         .expect("a role inside the bound value set commits");
+}
+
+/// [`policy`] naming the organisation type `GP` of a synthetic code system
+/// in a rule, its exception and a conflict rule.
+fn with_organisation_types() -> Value {
+    let gp = || {
+        json!([{ "_type": "ACCESS_ACTOR_SCOPE",
+        "organisation_type": coded("urn:example:organisation-types", "GP") }])
+    };
+    let rule = |effect: &str, extra: Value| {
+        let mut rule = json!({ "_type": "ACCESS_DIRECTIVE",
+            "name": { "_type": "DV_TEXT", "value": "Exchange rule" },
+            "archetype_node_id": "id15",
+            "kind": access("controller_rule"),
+            "effect": coded("HL7_ConsentProvisionType", effect),
+            "applies_to": gp(),
+            "emergency_override": false });
+        if let (Some(rule), Some(extra)) = (rule.as_object_mut(), extra.as_object()) {
+            rule.extend(extra.clone());
+        }
+        rule
+    };
+    let mut body = policy(false);
+    body["rules"] = json!([rule(
+        "deny",
+        json!({ "exceptions": [rule("permit", json!({}))] })
+    )]);
+    body["conflict_rules"] = json!([{ "_type": "ACCESS_CONFLICT_RULE",
+        "conflict": access("self"), "applies_to": gp() }]);
+    body
+}
+
+/// The draft binds `organisation_type` to no code system ("none: the
+/// controller binds one before a rule names a type", draft access control
+/// Terminology, Value Sets), so a policy naming a type it binds no value set
+/// for is refused `422` naming every place it names one; bound to a value
+/// set holding the type, the same policy commits (#6096).
+#[tokio::test]
+async fn an_organisation_type_the_policy_binds_no_value_set_for_is_refused() {
+    let (_db, pool) = common::migrated_pool().await;
+    let server = terminology(ORGANISATION_TYPE_VS, &["GP"]).await;
+    let (_svc, app) = replica(&pool, Some(&server.uri())).await;
+    let (status, answer) = put(
+        &app,
+        (header::IF_NONE_MATCH, "*"),
+        &with_organisation_types(),
+    )
+    .await;
+    for attribute in [
+        "/rules/0/applies_to/0/organisation_type",
+        "/rules/0/exceptions/0/applies_to/0/organisation_type",
+        "/conflict_rules/0/applies_to/0/organisation_type",
+    ] {
+        names(status, &answer, attribute);
+    }
+    let (status, _, _) = call(&app, "GET", "root", "", None, None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "the refused write left none");
+
+    let bound = binding(
+        with_organisation_types(),
+        "organisation_type",
+        ORGANISATION_TYPE_VS,
+    );
+    let (status, answer) = put(&app, (header::IF_NONE_MATCH, "*"), &bound).await;
+    assert_eq!(status, StatusCode::CREATED, "{answer}");
 }

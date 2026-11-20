@@ -240,6 +240,22 @@ fn care_providers_only() -> Value {
     )
 }
 
+/// The value set a policy binds [`ORGANISATION_TYPES`] codes to.
+const ORGANISATION_TYPE_VS: &str = "http://terminology.example/ValueSet/organisation-types";
+
+/// [`care_providers_only`] in a policy that binds its organisation types to
+/// [`ORGANISATION_TYPE_VS`], as the policy write requires (#6096).
+fn care_providers_case() -> Case {
+    Case {
+        policy: Some(policy(&json!({
+            "rules": [care_providers_only()],
+            "value_sets": [{ "_type": "ACCESS_VALUE_SET",
+                "binding": term("organisation_type"),
+                "value_set": { "_type": "DV_URI", "value": ORGANISATION_TYPE_VS } }] }))),
+        ..Case::default()
+    }
+}
+
 /// An access service of an organisation of `types`, performing `roles`.
 fn exchange(roles: &[ForeignCode], types: &[ForeignCode]) -> Caller {
     let mut who = caller(CallerKind::AccessService, DR_B);
@@ -252,7 +268,7 @@ fn exchange(roles: &[ForeignCode], types: &[ForeignCode]) -> Caller {
 /// another terminology is no admitted type.
 #[test]
 fn step_5_a_rule_names_callers_by_the_type_of_their_organisation() {
-    let case = ruled(&[care_providers_only()], None);
+    let case = care_providers_case();
     for (name, types, expected) in [
         (
             "a hospital",
@@ -305,7 +321,7 @@ fn step_5_a_rule_names_callers_by_the_type_of_their_organisation() {
 /// acts for, read as an attested one is.
 #[test]
 fn step_5_an_organisation_type_of_the_cdr_is_read_as_an_attested_one() {
-    let case = ruled(&[care_providers_only()], None);
+    let case = care_providers_case();
     let mut local = caller(CallerKind::AccessService, DR_B);
     local.facts =
         CallerFacts::default().with_organisation_types(vec![code(ORGANISATION_TYPES, "GP")]);

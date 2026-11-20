@@ -8,7 +8,8 @@
 //! validated against it as any archetyped data is (draft access control
 //! package, Profiles). A code of a bound attribute is checked against the
 //! bound value set on the terminology server; an unbound kinship takes the
-//! openEHR Terminology group `subject relationship`, and a concealed level
+//! openEHR Terminology group `subject relationship`, an unbound organisation
+//! type is refused since it has no default code system, and a concealed level
 //! is a level of `HL7_Confidentiality` (draft access control Terminology,
 //! Value Sets). A policy that breaks either is refused `422` naming the
 //! attribute, as content that "was well-formed but was unable to be
@@ -166,26 +167,46 @@ impl FerroEhrService {
         }))
     }
 
-    /// The refusals of the organisation types `scopes` name, at `path`,
-    /// outside the value set the policy binds them to.
+    /// The refusals of the organisation types `scopes` name, at `path`.
     async fn organisation_types(
         &self,
         facts: CareFacts<'_>,
         path: &str,
         scopes: &[AccessActorScope],
     ) -> Vec<InvariantViolation> {
-        let Some(url) = facts.value_set(ValueSetBinding::OrganisationType) else {
-            // TODO(#6096): refuse an organisation type the policy binds no value set for.
-            return Vec::new();
-        };
         let mut wrong = Vec::new();
         for (index, scope) in scopes.iter().enumerate() {
             if let Some(kind) = &scope.organisation_type {
                 let at = format!("{path}/{index}/organisation_type");
-                wrong.extend(self.in_value_set(&at, url, kind).await);
+                wrong.extend(self.organisation_type(facts, &at, kind).await);
             }
         }
         wrong
+    }
+
+    /// The refusal of the organisation type `kind` at `path`: outside the
+    /// value set the policy binds, or, unbound, any type at all, since the
+    /// attribute has no default code system: "none: the controller binds one
+    /// before a rule names a type" (draft access control Terminology, Value
+    /// Sets).
+    async fn organisation_type(
+        &self,
+        facts: CareFacts<'_>,
+        path: &str,
+        kind: &DvCodedText,
+    ) -> Option<InvariantViolation> {
+        if let Some(url) = facts.value_set(ValueSetBinding::OrganisationType) {
+            return self.in_value_set(path, url, kind).await;
+        }
+        let phrase = &kind.defining_code;
+        Some(InvariantViolation::at(
+            path,
+            format!(
+                "{}::{} names an organisation type, and the policy binds no organisation_type \
+                 value set to check it against",
+                phrase.terminology_id.value, phrase.code_string
+            ),
+        ))
     }
 
     /// The refusal of `coded` at `path` when the value set at `url` does not
