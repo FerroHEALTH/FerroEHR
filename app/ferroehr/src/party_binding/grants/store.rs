@@ -34,13 +34,15 @@ use crate::versioning::Kind;
 /// The channel a grant change notifies and every replica listens on.
 pub const CHANNEL: &str = "ferroehr_policy_grants";
 
-/// The kinds whose heads hold grant rows: every `ACTOR` and the `ROLE`.
-pub(crate) const HOLDERS: [Kind; 5] = [
+/// The kinds whose heads hold grant rows or caller facts: every `ACTOR`, the
+/// `ROLE` and the `PARTY_RELATIONSHIP` of its own a care relationship is.
+pub(crate) const HOLDERS: [Kind; 6] = [
     Kind::Agent,
     Kind::Person,
     Kind::Organisation,
     Kind::Group,
     Kind::Role,
+    Kind::PartyRelationship,
 ];
 
 /// The `version_lifecycle_state` code of a logically deleted head.
@@ -69,9 +71,9 @@ impl GrantHead<'_> {
 /// Replaces the grant rows and the caller facts of `head`, a party of `kind`,
 /// on its commit transaction `tx`; moves the revision and notifies when they
 /// changed. An `ACTOR` holds client rows, an `ORGANISATION` its provider row
-/// and its `GROUP` memberships too, a `PERSON` its care relationships, and a
-/// `ROLE` capability rows and its clearances and purposes; every other kind
-/// holds none.
+/// and its `GROUP` memberships too, a `PERSON` its memberships, a `ROLE`
+/// capability rows and its clearances and purposes, and a care relationship
+/// of its own the fact about its source; every other kind holds none.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, the unique violation of
@@ -91,6 +93,11 @@ pub(crate) async fn write(
             write_clients(tx, head).await?
         }
         Kind::Agent | Kind::Group => write_clients(tx, head).await?,
+        Kind::PartyRelationship => {
+            let source = head.live().and_then(|facts| facts.grants.care_source);
+            super::caller::store::write(tx, head, source, None).await?;
+            false
+        }
         Kind::Role => {
             let performer = head
                 .live()

@@ -424,26 +424,31 @@ fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
 }
 
 /// Whether the subject of the EHR `target` is under the care of one of the
-/// caller's teams, read from the clinical care projection by the EHR row's
-/// subject digest: one index probe, binding the team ids, the day and the
-/// grace, with the dates read as
-/// [`crate::party_binding::grants::caller::CareTeam::live_on`] reads them.
-/// No openEHR spec governs this: our own design (#5699).
+/// caller's principals, in the care of a provider it acts for, read from the
+/// clinical care projection by the EHR row's subject digest: one index
+/// probe, binding the principals, the providers, the day and the grace, with
+/// the dates read as
+/// [`crate::party_binding::grants::caller::care_of::CareOf::live_on`] reads
+/// them. No openEHR spec governs this: our own design (#5699, #6055).
 fn projected(care: &ProjectedCare, target: Expr) -> Expr {
     Expr::cust_with_exprs(
         "EXISTS (SELECT 1 FROM ehr access_care_ehr \
          JOIN access_care access_care_row \
            ON access_care_row.subject_digest = access_care_ehr.subject_digest \
-         WHERE access_care_ehr.id = $1 AND access_care_row.team_id = ANY($2) \
+         WHERE access_care_ehr.id = $1 AND access_care_row.carer_id = ANY($2) \
+         AND (access_care_row.provider_issuer, access_care_row.provider_id) IN \
+             (SELECT * FROM unnest(CAST($5 AS text[]), CAST($6 AS text[]))) \
          AND (access_care_row.care_from IS NULL OR access_care_row.care_from <= CAST($3 AS date)) \
          AND (access_care_row.care_until IS NULL \
               OR CAST($3 AS date) < access_care_row.care_until \
               OR CAST($3 AS date) < access_care_row.care_until + CAST($4 AS interval)))",
         [
             target,
-            Expr::val(care.teams.to_vec()),
+            Expr::val(care.principals.to_vec()),
             Expr::val(care.day.to_string()),
             Expr::val(care.grace.clone()),
+            Expr::val(care.provider_issuers.to_vec()),
+            Expr::val(care.provider_ids.to_vec()),
         ],
     )
 }

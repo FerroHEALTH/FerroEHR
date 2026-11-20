@@ -29,8 +29,12 @@ pub(super) enum Live {
     Census,
     /// The EHRs of a pinned query whose subject the caller cares for.
     CareEhrs,
-    /// The caller's care teams.
-    CareTeams,
+    /// The caller's principals.
+    CarePrincipals,
+    /// The issuers of the providers the caller acts for.
+    CareIssuers,
+    /// The ids of the providers the caller acts for.
+    CareProviders,
     /// The day care relationships are judged on.
     CareDay,
     /// The EHRs a subject caller is confined to.
@@ -57,7 +61,9 @@ impl Live {
             Self::Parties,
             Self::Census,
             Self::CareEhrs,
-            Self::CareTeams,
+            Self::CarePrincipals,
+            Self::CareIssuers,
+            Self::CareProviders,
             Self::CareDay,
             Self::Confined,
             Self::PinnedEhr,
@@ -98,8 +104,16 @@ impl Live {
                 Some(Care::Ehrs(ehrs)) => Some(Value::from(ehrs.to_vec())),
                 _ => None,
             },
-            Self::CareTeams => match groups.map(|groups| &groups.cared) {
-                Some(Care::Projected(care)) => Some(Value::from(care.teams.to_vec())),
+            Self::CarePrincipals => match groups.map(|groups| &groups.cared) {
+                Some(Care::Projected(care)) => Some(Value::from(care.principals.to_vec())),
+                _ => None,
+            },
+            Self::CareIssuers => match groups.map(|groups| &groups.cared) {
+                Some(Care::Projected(care)) => Some(Value::from(care.provider_issuers.to_vec())),
+                _ => None,
+            },
+            Self::CareProviders => match groups.map(|groups| &groups.cared) {
+                Some(Care::Projected(care)) => Some(Value::from(care.provider_ids.to_vec())),
                 _ => None,
             },
             Self::CareDay => match groups.map(|groups| &groups.cared) {

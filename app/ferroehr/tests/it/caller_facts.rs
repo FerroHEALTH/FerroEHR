@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The caller facts (#5511, #5621): the roles a caller performs, read from
-//! the coded `name` of each `ROLE` in force it performs, and care
-//! relationships read from a `PERSON`'s relationships by their code (HL7 v3
-//! `RoleClass#MBR` for a membership, `openehr_access::under_care_of` for
-//! care), in an archetype of the deployment's own, held on
-//! every replica beside the grants. An admission and a discharge decide the next request on another
+//! The caller facts (#5511, #5621, #6055): the roles a caller performs, read
+//! from the coded `name` of each `ROLE` in force it performs, memberships
+//! read from a `PERSON`'s relationships by their code (HL7 v3
+//! `RoleClass#MBR`), and care relationships, each a `PARTY_RELATIONSHIP` of
+//! its own named `openehr_access::under_care_of` with its `care_role` and
+//! `provider` (draft access control package, Care Relationships), in an
+//! archetype of the deployment's own, held on every replica beside the
+//! grants. An admission and a discharge decide the next request on another
 //! replica, a replica reads only the facts of the parties that changed, with
 //! one indexed read, and only a caller holding `write_care_relationship` (or
 //! an administrator) changes a care relationship. A provider
@@ -22,6 +24,7 @@ use crate::fixtures::{if_match, object};
 use crate::policy_fixtures::{capability, create, granted, granting, of_client};
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
+use ferroehr::party_binding::grants::caller::care_of::ProviderKey;
 use ferroehr::party_binding::grants::capabilities::with_capabilities;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::FerroEhrService;
@@ -79,11 +82,12 @@ fn party_ref(kind: &str, id: VoId) -> Value {
 
 /// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
 const MEMBER: (&str, &str) = ("HL7_RoleClass", "MBR");
-/// A patient under the care of a team or unit.
-const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
 
-/// A care relationship to `team` carrying `code` in its details, in an
-/// archetype of the deployment's own, over `validity`.
+/// The issuer of the provider the care relationships name.
+const PROVIDERS: &str = "urn:example:providers";
+
+/// A relationship to `team` carrying `code` in its details, in an archetype
+/// of the deployment's own, over `validity`.
 fn care((terminology, code): (&str, &str), source: VoId, team: VoId, validity: &Value) -> Value {
     json!({
         "_type": "PARTY_RELATIONSHIP",
@@ -96,6 +100,69 @@ fn care((terminology, code): (&str, &str), source: VoId, team: VoId, validity: &
         "source": party_ref("PERSON", source),
         "target": party_ref("GROUP", team)
     })
+}
+
+/// The provider the care relationships of these tests are in the care of.
+fn provider() -> ProviderKey {
+    ProviderKey::new(PROVIDERS, "hospital")
+}
+
+/// A care relationship of its own: `source` under the care of the `GROUP`
+/// `team` in the role `PART` of `HL7_ParticipationType`, in the care of
+/// [`provider`], over `validity`.
+fn care_of(source: VoId, team: VoId, validity: &Value) -> Value {
+    json!({
+        "_type": "PARTY_RELATIONSHIP",
+        "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.ward_stay.v3",
+        "name": coded(TERMINOLOGY, "under_care_of"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
+            "items": [
+                { "_type": "ELEMENT", "archetype_node_id": "at0003",
+                  "name": coded(TERMINOLOGY, "care_role"),
+                  "value": coded("HL7_ParticipationType", "PART") },
+                { "_type": "ELEMENT", "archetype_node_id": "at0004",
+                  "name": coded(TERMINOLOGY, "provider"),
+                  "value": { "_type": "DV_IDENTIFIER", "issuer": PROVIDERS, "id": "hospital",
+                             "type": "ORGANISATION" } }] },
+        "time_validity": validity,
+        "source": party_ref("PERSON", source),
+        "target": party_ref("GROUP", team)
+    })
+}
+
+/// Creates the care relationship `body` as the client `client_id`; its
+/// container and version uid.
+async fn relate_as(
+    svc: &FerroEhrService,
+    client_id: &str,
+    body: &Value,
+) -> Result<(VoId, String), ServiceError> {
+    let mut write = WriteRequest::new(crate::typed_body::typed(body));
+    write.lifecycle_state = Some("532".to_owned());
+    let created = as_client(svc, client_id, async {
+        Box::pin(svc.party_relationship_create(write)).await
+    })
+    .await?;
+    let uid = created.meta.as_ref().expect("a version").uid.clone();
+    Ok((crate::fixtures::written_vo(&created), uid))
+}
+
+/// Commits `body` as the next version of the relationship `vo` after `uid`
+/// as the client `client_id`; the new version's uid.
+async fn rerelate_as(
+    svc: &FerroEhrService,
+    client_id: &str,
+    (vo, uid): (VoId, &str),
+    body: &Value,
+) -> Result<String, ServiceError> {
+    let mut write = WriteRequest::new(crate::typed_body::typed(body));
+    write.lifecycle_state = Some("532".to_owned());
+    write.preceding = Some(uid.parse().expect("an OBJECT_VERSION_ID"));
+    let updated = as_client(svc, client_id, async {
+        Box::pin(svc.party_relationship_update(vo, if_match(uid), write)).await
+    })
+    .await?;
+    Ok(updated.meta.expect("a version").uid)
 }
 
 /// A plain `PERSON` named `name` holding `relationships`.
@@ -308,7 +375,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
     let (doctor, doctor_uid) = create(&one, PartyKind::Person, &person("Dr D", &[]))
         .await
         .expect("the professional commits");
-    let (patient, uid) = create(&one, PartyKind::Person, &person("Mr E", &[]))
+    let (patient, _) = create(&one, PartyKind::Person, &person("Mr E", &[]))
         .await
         .expect("the patient commits");
     let roster = person(
@@ -336,14 +403,10 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
     );
     let parties = two.grants().facts_held().entries;
 
-    let admitted = update_as(
+    let (stay, admitted) = relate_as(
         &one,
         "adt",
-        (PartyKind::Person, patient, &uid),
-        &person(
-            "Mr E",
-            &[care(UNDER_CARE, patient, ward, &interval(&day(0), None))],
-        ),
+        &care_of(patient, ward, &interval(&day(0), None)),
     )
     .await
     .expect("the ADT system admits the patient");
@@ -363,11 +426,13 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
         .await
         .expect("the care relationships read");
     assert_eq!(cared.len(), 1, "the admission decides the next request");
-    assert_eq!(cared[0].team(), ward.0);
-    assert!(cared[0].holds_on(today));
+    assert_eq!(cared[0].carer(), ward.0);
+    assert_eq!(cared[0].provider(), &provider());
+    assert_eq!(cared[0].role(), &foreign("HL7_ParticipationType", "PART"));
+    assert!(cared[0].live_on(today, jiff::Span::new()));
     assert_eq!(
         two.grants()
-            .cared_for_by(&[ward.0], today, jiff::Span::new())
+            .cared_for_by(&[ward.0], &[provider()], today, jiff::Span::new())
             .await
             .expect("the ward's patients read"),
         vec![ferroehr::storage::access_projection::EhrSubject::new(
@@ -376,22 +441,27 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
         )],
         "the ward's patients are read by the ward, by their subject references"
     );
+    assert_eq!(
+        two.grants()
+            .cared_for_by(
+                &[ward.0],
+                &[ProviderKey::new(PROVIDERS, "clinic")],
+                today,
+                jiff::Span::new()
+            )
+            .await
+            .expect("the ward's patients read"),
+        Vec::new(),
+        "a caller acting for another provider holds none of them"
+    );
     // NOTE: #5615, a patient in care is no caller fact, so the replica's copy does not grow with it.
     assert_eq!(two.grants().facts_held().entries, parties);
 
-    update_as(
+    rerelate_as(
         &one,
         "adt",
-        (PartyKind::Person, patient, &admitted),
-        &person(
-            "Mr E",
-            &[care(
-                UNDER_CARE,
-                patient,
-                ward,
-                &interval(&day(-3), Some(&day(-1))),
-            )],
-        ),
+        (stay, &admitted),
+        &care_of(patient, ward, &interval(&day(-3), Some(&day(-1)))),
     )
     .await
     .expect("the ADT system discharges the patient");
@@ -406,7 +476,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
         .expect("the care relationships read");
     assert_eq!(cared.len(), 1, "a discharge keeps the relationship it ends");
     assert!(
-        !cared[0].holds_on(today),
+        !cared[0].live_on(today, jiff::Span::new()),
         "the discharge decides the next request"
     );
     assert_eq!(cared[0].until(), Some(today));
@@ -421,38 +491,25 @@ async fn only_a_write_care_relationship_grant_changes_a_care_relationship() {
     let (ward, _) = create(&svc, PartyKind::Group, &team())
         .await
         .expect("the GROUP commits");
-    let (patient, uid) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
+    let (patient, _) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
         .await
         .expect("the patient commits");
-    let admitted = person(
-        "Mr E",
-        &[care(UNDER_CARE, patient, ward, &interval(&day(0), None))],
-    );
-    let refused = update_as(
-        &svc,
-        "registry",
-        (PartyKind::Person, patient, &uid),
-        &admitted,
-    )
-    .await
-    .expect_err("a client without the grant is refused");
+    let admitted = care_of(patient, ward, &interval(&day(0), None));
+    let refused = relate_as(&svc, "registry", &admitted)
+        .await
+        .expect_err("a client without the grant is refused");
     assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
-    let renamed = update_as(
-        &svc,
-        "registry",
-        (PartyKind::Person, patient, &uid),
-        &person("Mr E.", &[]),
-    )
-    .await
-    .expect("a version that leaves the care relationships alone commits");
-    update_as(
-        &svc,
-        "adt",
-        (PartyKind::Person, patient, &renamed),
-        &admitted,
-    )
-    .await
-    .expect("the ADT system writes the care relationship");
+    let (stay, uid) = relate_as(&svc, "adt", &admitted)
+        .await
+        .expect("the ADT system writes the care relationship");
+    let discharged = care_of(patient, ward, &interval(&day(-3), Some(&day(-1))));
+    let refused = rerelate_as(&svc, "registry", (stay, &uid), &discharged)
+        .await
+        .expect_err("a client without the grant changes none");
+    assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
+    rerelate_as(&svc, "adt", (stay, &uid), &discharged)
+        .await
+        .expect("the ADT system ends the care relationship");
 }
 
 #[tokio::test]
@@ -527,32 +584,71 @@ async fn a_providers_group_membership_is_guarded_and_held_on_another_replica() {
     );
 }
 
+/// The single relationship is the stored unit (draft access control
+/// package, The Relationship Store): a care relationship held in a
+/// `PERSON`'s relationships is refused `422`, naming the resource that holds
+/// it, and one of its own without a role or a provider, with a role of
+/// another code system than `HL7_ParticipationType` while the policy binds
+/// none, or with a target of no carer kind is refused `422` (#6055).
 #[tokio::test]
-async fn a_care_relationship_of_its_own_is_refused() {
+async fn a_care_relationship_is_its_own_with_a_role_and_a_provider() {
     let db = testkit::db().await.expect("testkit database");
     let svc = replica(&db.pool()).await;
+    granted(&svc, "adt", &[capability("write_care_relationship", &[])]).await;
     let (ward, _) = create(&svc, PartyKind::Group, &team())
         .await
         .expect("the GROUP commits");
-    let (patient, _) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
+    let (patient, uid) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
         .await
         .expect("the patient commits");
-    let mut write = WriteRequest::new(crate::typed_body::typed(&care(
-        UNDER_CARE,
-        patient,
-        ward,
-        &interval(&day(0), None),
-    )));
-    write.lifecycle_state = Some("532".to_owned());
-    let refused = crate::policy_fixtures::as_admin(async {
-        Box::pin(svc.party_relationship_create(write)).await
-    })
+    let inline = update_as(
+        &svc,
+        "adt",
+        (PartyKind::Person, patient, &uid),
+        &person("Mr E", &[care_of(patient, ward, &interval(&day(0), None))]),
+    )
     .await
-    .expect_err("a standalone care relationship is refused");
+    .expect_err("a care relationship in a PERSON's relationships is refused");
     assert!(
-        matches!(refused, ServiceError::Unprocessable { .. }),
-        "{refused:?}"
+        matches!(inline, ServiceError::Unprocessable { .. })
+            && format!("{inline:?}").contains("/demographic/party_relationship"),
+        "{inline:?}"
     );
+    let valid = care_of(patient, ward, &interval(&day(0), None));
+    let mut no_role = valid.clone();
+    no_role["details"]["items"]
+        .as_array_mut()
+        .expect("items")
+        .remove(0);
+    let mut no_provider = valid.clone();
+    no_provider["details"]["items"]
+        .as_array_mut()
+        .expect("items")
+        .remove(1);
+    let mut local_role = valid.clone();
+    local_role["details"]["items"][0]["value"] = coded("local", "lead");
+    let mut no_carer = valid.clone();
+    no_carer["target"]["type"] = json!("AGENT");
+    for (name, body) in [
+        ("no care_role", no_role),
+        ("no provider", no_provider),
+        ("a role of another code system", local_role),
+        ("a target of no carer kind", no_carer),
+    ] {
+        let refused = relate_as(&svc, "adt", &body)
+            .await
+            .expect_err("the relationship is refused");
+        assert!(
+            matches!(
+                refused,
+                ServiceError::Unprocessable { .. } | ServiceError::ValidationFailed(_)
+            ),
+            "{name}: {refused:?}"
+        );
+    }
+    relate_as(&svc, "adt", &valid)
+        .await
+        .expect("a care relationship with its role and provider commits");
 }
 
 #[tokio::test]
@@ -879,7 +975,8 @@ async fn a_record_subject_is_refused_unless_it_is_a_persons_own_and_its_writer_m
 }
 
 /// Whether the projection of `pool` says the subject of `ehr` is under the
-/// care of `team` on `day`, read as a query's probe reads it.
+/// care of `team` in the care of [`provider`] on `day`, read as a query's
+/// probe reads it.
 async fn projected_care(
     pool: &sqlx::PgPool,
     ehr: ferroehr::ids::EhrId,
@@ -888,13 +985,16 @@ async fn projected_care(
 ) -> bool {
     sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM ehr e JOIN access_care c \
-         ON c.subject_digest = e.subject_digest WHERE e.id = $1 AND c.team_id = $2 \
+         ON c.subject_digest = e.subject_digest WHERE e.id = $1 AND c.carer_id = $2 \
+         AND c.provider_issuer = $4 AND c.provider_id = $5 \
          AND (c.care_from IS NULL OR c.care_from <= $3::date) \
          AND (c.care_until IS NULL OR $3::date < c.care_until))",
     )
     .bind(ehr.0)
     .bind(team.0)
     .bind(day)
+    .bind(PROVIDERS)
+    .bind("hospital")
     .fetch_one(pool)
     .await
     .expect("the projection reads")
@@ -914,18 +1014,14 @@ async fn a_discharge_on_one_replica_is_never_read_stale_from_the_projection_on_a
     let (ward, _) = create(&one, PartyKind::Group, &team())
         .await
         .expect("the GROUP commits");
-    let (patient, uid) = create(&one, PartyKind::Person, &person("Mr E", &[]))
+    let (patient, _) = create(&one, PartyKind::Person, &person("Mr E", &[]))
         .await
         .expect("the patient commits");
     let ehr = crate::fixtures::create_ehr_for_party(&one, patient).await;
-    let admitted = update_as(
+    let (stay, admitted) = relate_as(
         &one,
         "adt",
-        (PartyKind::Person, patient, &uid),
-        &person(
-            "Mr E",
-            &[care(UNDER_CARE, patient, ward, &interval(&day(-3), None))],
-        ),
+        &care_of(patient, ward, &interval(&day(-3), None)),
     )
     .await
     .expect("the ADT system admits the patient");
@@ -940,19 +1036,11 @@ async fn a_discharge_on_one_replica_is_never_read_stale_from_the_projection_on_a
         "the admitted patient is in the ward's care"
     );
 
-    update_as(
+    rerelate_as(
         &one,
         "adt",
-        (PartyKind::Person, patient, &admitted),
-        &person(
-            "Mr E",
-            &[care(
-                UNDER_CARE,
-                patient,
-                ward,
-                &interval(&day(-3), Some(&day(-1))),
-            )],
-        ),
+        (stay, &admitted),
+        &care_of(patient, ward, &interval(&day(-3), Some(&day(-1)))),
     )
     .await
     .expect("the ADT system discharges the patient");

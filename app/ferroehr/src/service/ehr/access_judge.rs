@@ -497,7 +497,7 @@ impl FerroEhrService {
 
 /// The probe of the clinical care projection for the caller of `access`, or
 /// `None` when the policy's grace has a unit of time below a day, which a
-/// date cannot carry as [`crate::party_binding::grants::caller::CareTeam::live_on`]
+/// date cannot carry as [`crate::party_binding::grants::caller::care_of::CareOf::live_on`]
 /// judges it; that query binds the census.
 fn projected_care(
     access: &RequestAccess,
@@ -510,8 +510,17 @@ fn projected_care(
         && grace.get_microseconds() == 0
         && grace.get_nanoseconds() == 0
         && !grace.is_negative();
+    let (provider_issuers, provider_ids): (Vec<String>, Vec<String>) = access
+        .caller()
+        .facts
+        .providers()
+        .iter()
+        .map(|provider| (provider.issuer.clone(), provider.id.clone()))
+        .unzip();
     calendar.then(|| crate::access_eval::condition::care::ProjectedCare {
-        teams: access.care_team_ids().into(),
+        principals: access.principals_held().into(),
+        provider_issuers: provider_issuers.into(),
+        provider_ids: provider_ids.into(),
         day: access.today(),
         grace: grace.to_string(),
     })
@@ -524,6 +533,6 @@ fn binds_any(care: &Care) -> bool {
         Care::Unresolved => false,
         Care::Census(subjects) => !subjects.is_empty(),
         Care::Ehrs(ehrs) => !ehrs.is_empty(),
-        Care::Projected(care) => !care.teams.is_empty(),
+        Care::Projected(care) => !care.principals.is_empty() && !care.provider_ids.is_empty(),
     }
 }

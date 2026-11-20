@@ -21,7 +21,6 @@ use crate::access_eval::procedure::Verdict;
 use crate::access_eval::stale::{STALE_POLL, STALE_WAIT};
 use crate::error::ServiceError;
 use crate::ids::EhrId;
-use crate::party_binding::grants::caller::CareTeam;
 use crate::party_binding::grants::live::GrantsUnavailable;
 use crate::party_binding::grants::live::revisions::Revisions;
 use crate::storage::access_projection::EhrSubject;
@@ -48,8 +47,8 @@ impl From<CareUnsettled> for ServiceError {
     }
 }
 
-/// Whether a request found the caller facts copy in force, and the care
-/// teams the caller still holds once the copy was read again.
+/// Whether a request found the caller facts copy in force, and the
+/// principals the caller still holds once the copy was read again.
 #[derive(Debug, Default)]
 pub(super) struct CareInForce(Mutex<Checked>);
 
@@ -64,8 +63,8 @@ enum Checked {
     Read(Option<Revisions>),
     /// The copy held the store's revisions.
     Held,
-    /// The copy was older and was read again: the care teams the caller is
-    /// a member of in the copy read, by container.
+    /// The copy was older and was read again: the caller's principals in the
+    /// copy read, sorted.
     ReadAgain(Vec<Uuid>),
 }
 
@@ -94,33 +93,45 @@ impl RequestAccess {
     /// The subject references of the `PERSON`s the caller has a live care
     /// relationship to
     /// ([`crate::party_binding::grants::live::LiveGrants::cared_for_by`]); a
-    /// caller of no care team reads nothing.
+    /// caller with no principal or no provider reads nothing.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the care copy misses and cannot read.
     pub async fn cared_subjects(&self) -> Result<Vec<EhrSubject>, GrantsUnavailable> {
-        let teams = self.care_team_ids();
-        let Some(grants) = self.grants.as_ref() else {
+        let principals = self.principals_held();
+        let Some(grants) = self.grants.as_ref().filter(|_| self.may_hold_care()) else {
             return Ok(Vec::new());
         };
         grants
-            .cared_for_by(&teams, self.today(), self.policy().grace)
+            .cared_for_by(
+                &principals,
+                self.caller.facts.providers(),
+                self.today(),
+                self.policy().grace,
+            )
             .await
     }
 
-    /// The care teams the caller is a member of, by container.
-    #[must_use]
-    pub fn care_team_ids(&self) -> Vec<Uuid> {
-        self.care_teams_held().iter().map(CareTeam::team).collect()
+    /// Whether the caller can hold a care relationship at all: it has a
+    /// principal and acts for a provider, so a caller with neither reads no
+    /// subject's relationships.
+    fn may_hold_care(&self) -> bool {
+        !self.caller.facts.providers().is_empty() && !self.principals_held().is_empty()
     }
 
-    /// The care teams of the caller's facts, less any the caller was found
-    /// to have left when the copy was read again ([`Self::care_in_force`]).
-    pub(super) fn care_teams_held(&self) -> Vec<CareTeam> {
-        let teams = self.caller.facts.care_teams().iter().copied();
+    /// What a care relationship's target names to reach the caller, sorted
+    /// ([`crate::party_binding::grants::caller::facts::CallerFacts::principals`]),
+    /// less any the caller was found to have lost when the copy was read
+    /// again ([`Self::care_in_force`]).
+    #[must_use]
+    pub fn principals_held(&self) -> Vec<Uuid> {
+        let principals = self.caller.facts.principals();
         match self.care.get() {
-            Checked::ReadAgain(held) => teams.filter(|team| held.contains(&team.team())).collect(),
-            Checked::Unchecked | Checked::Read(_) | Checked::Held => teams.collect(),
+            Checked::ReadAgain(held) => principals
+                .into_iter()
+                .filter(|principal| held.binary_search(principal).is_ok())
+                .collect(),
+            Checked::Unchecked | Checked::Read(_) | Checked::Held => principals,
         }
     }
 
@@ -132,9 +143,9 @@ impl RequestAccess {
     /// `beside` runs during that indexed read, and is dropped unrun when the
     /// check needs no read.
     ///
-    /// The care teams the caller is a member of in the copy read are those
-    /// it keeps; one it joined since the request began waits for the next
-    /// request, which fails closed. A copy that stays older for
+    /// The principals the caller holds in the copy read are those it keeps;
+    /// one it gained since the request began waits for the next request,
+    /// which fails closed. A copy that stays older for
     /// [`STALE_WAIT`] refuses the request. No openEHR spec governs the
     /// copy: our own design (#5806).
     ///
@@ -175,12 +186,7 @@ impl RequestAccess {
             tokio::time::sleep(STALE_POLL).await;
         }
         let held = self.caller.facts.party().map_or_else(Vec::new, |party| {
-            grants
-                .facts_of(party, self.now)
-                .care_teams()
-                .iter()
-                .map(CareTeam::team)
-                .collect()
+            grants.facts_of(party, self.now).principals()
         });
         self.care.set(Checked::ReadAgain(held));
         count("judged_again");
@@ -204,13 +210,12 @@ impl RequestAccess {
     }
 
     /// Reads the store's revisions ahead for [`Self::care_in_force`] when the
-    /// caller is a member of a care team, for a query whose condition reads
-    /// care. No openEHR spec governs this: our own design (#5891).
+    /// caller has a principal, for a query whose condition reads care. No openEHR spec governs this: our own design (#5891).
     pub async fn care_read_ahead(&self) {
         let Some(grants) = self.grants.as_ref() else {
             return;
         };
-        if self.care_teams_held().is_empty() || !matches!(self.care.get(), Checked::Unchecked) {
+        if !self.may_hold_care() || !matches!(self.care.get(), Checked::Unchecked) {
             return;
         }
         // NOTE: our own design (#5891), a read ahead that fails leaves the check unchecked, and
@@ -252,11 +257,11 @@ impl RequestAccess {
     }
 
     /// Whether the caller has a live care relationship to the `PERSON` the
-    /// subject reference of `entry` names; a caller of no care team has none,
-    /// and reads nothing for it.
+    /// subject reference of `entry` names; a caller with no principal has
+    /// none, and reads nothing for it.
     pub(super) async fn cares_for(&self, entry: &EhrEntry) -> Result<bool, GrantsUnavailable> {
         let under_care_of = match (&self.grants, &entry.subject) {
-            (Some(grants), Some(subject)) if !self.care_teams_held().is_empty() => {
+            (Some(grants), Some(subject)) if self.may_hold_care() => {
                 match grants.person_of(subject).await? {
                     Some(person) => grants.under_care_of(person).await?,
                     None => Vec::new(),
@@ -287,16 +292,24 @@ pub enum Care {
     /// a live care relationship to; every other EHR is uncared.
     Ehrs(Arc<[Uuid]>),
     /// The clinical care projection, read by the EHR row's subject digest:
-    /// the caller's care teams and the day and grace a relationship is live
-    /// on, as [`CareTeam::live_on`] judges it.
+    /// the caller's principals and providers and the day and grace a
+    /// relationship is live on, as
+    /// [`crate::party_binding::grants::caller::care_of::CareOf::live_on`]
+    /// judges it.
     Projected(ProjectedCare),
 }
 
 /// What a probe of the clinical care projection binds.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProjectedCare {
-    /// The care teams the caller is a member of.
-    pub teams: Arc<[Uuid]>,
+    /// The caller's principals: its `PERSON`, the `ROLE`s it performs and
+    /// the care teams and units it is a member of.
+    pub principals: Arc<[Uuid]>,
+    /// The issuers of the providers the caller acts for, each beside its id
+    /// in [`Self::provider_ids`].
+    pub provider_issuers: Arc<[String]>,
+    /// The ids of the providers the caller acts for.
+    pub provider_ids: Arc<[String]>,
     /// The day of the request.
     pub day: jiff::civil::Date,
     /// The grace after a relationship ends, as a PostgreSQL interval of

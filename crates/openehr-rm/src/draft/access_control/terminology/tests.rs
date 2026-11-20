@@ -143,3 +143,16 @@ fn the_conflict_and_binding_groups_read_their_codes() {
     );
     assert!(Conflict::read(TERMINOLOGY_ID_ACCESS, "kinship").is_err());
 }
+
+#[test]
+fn the_care_element_and_basis_groups_read_their_codes() {
+    assert_eq!(
+        CareElement::read(TERMINOLOGY_ID_ACCESS, "provider"),
+        Ok(CareElement::Provider)
+    );
+    assert_eq!(
+        CareBasis::read(TERMINOLOGY_ID_ACCESS, "self_declared"),
+        Ok(CareBasis::SelfDeclared)
+    );
+    assert!(CareBasis::read(TERMINOLOGY_ID_ACCESS, "care_role").is_err());
+}

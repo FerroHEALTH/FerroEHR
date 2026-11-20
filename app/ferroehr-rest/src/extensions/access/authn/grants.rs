@@ -27,6 +27,7 @@ use std::future::Future;
 use std::sync::Arc;
 
 use axum::response::Response;
+use ferroehr::party_binding::grants::caller::care_of::ProviderKey;
 use ferroehr::party_binding::grants::capabilities::{Actor, Capabilities, with_capabilities};
 use ferroehr::party_binding::grants::live::{LiveGrants, tracking};
 use ferroehr::party_binding::grants::operation::{Operation, ROLE, SCOPE};
@@ -38,7 +39,8 @@ use super::build::RoleIssuers;
 use super::{AuthError, AuthLayer, Principal, upper_cased};
 
 /// The capabilities of the caller of `principal` under `grants`, after
-/// reading the grant rows when this replica's copy is stale.
+/// reading the grant rows when this replica's copy is stale; a caller bound
+/// to its `PERSON` acts for the provider the party `binding` names for it.
 ///
 /// # Errors
 /// [`AuthError::PartyUnavailable`] when the copy is stale and the party store
@@ -46,6 +48,7 @@ use super::{AuthError, AuthLayer, Principal, upper_cased};
 pub(crate) async fn resolve(
     grants: &LiveGrants,
     principal: &Principal,
+    binding: Option<&super::party::Binding>,
 ) -> Result<Arc<Capabilities>, AuthError> {
     let Some(caller) = principal.access.caller() else {
         return Ok(Arc::default());
@@ -75,7 +78,14 @@ pub(crate) async fn resolve(
         );
         return Err(AuthError::PartyUnavailable { retry_after: None });
     }
-    Ok(Arc::new(grants.capabilities(actor, jiff::Timestamp::now())))
+    let capabilities = grants.capabilities(actor, jiff::Timestamp::now());
+    Ok(Arc::new(match actor {
+        Actor::Party(_) => {
+            let deployment = binding.and_then(|binding| binding.provider_of(caller));
+            capabilities.acting_for(deployment.map(|(issuer, id)| ProviderKey::new(issuer, id)))
+        }
+        Actor::Client { .. } => capabilities,
+    }))
 }
 
 /// The principal of `principal` under its capabilities `granted`: a Basic

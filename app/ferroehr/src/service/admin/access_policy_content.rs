@@ -211,7 +211,7 @@ impl FerroEhrService {
 
     /// The refusal of `coded` at `path` when the value set at `url` does not
     /// hold it, or no terminology server can say so.
-    async fn in_value_set(
+    pub(crate) async fn in_value_set(
         &self,
         path: &str,
         url: &str,

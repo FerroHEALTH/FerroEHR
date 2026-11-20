@@ -553,12 +553,12 @@ async fn a_contact_points_access_record_carries_its_assertion_ids_and_never_the_
 }
 
 /// The shipped patient template, which the default mapping names.
-const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
+const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0";
 
 /// A patient `PERSON` of [`PATIENT`] carrying `id` under [`NAMESPACE`] at
 /// the patient identifier path.
 fn patient_person(id: &str) -> Value {
-    let archetype = "openEHR-DEMOGRAPHIC-PERSON.patient.v1";
+    let archetype = "openEHR-DEMOGRAPHIC-PERSON.patient.v2";
     let named = |value: &str| json!({ "_type": "DV_TEXT", "value": value });
     json!({
         "_type": "PERSON", "archetype_node_id": archetype, "name": named("Patient"),

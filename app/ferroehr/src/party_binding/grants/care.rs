@@ -31,8 +31,9 @@ use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::memory::{self, CACHE_ENTRY, Held, MAP_ENTRY, Weigh};
+use crate::party_binding::grants::caller::care_of::CareOf;
 use crate::party_binding::grants::caller::store::{self, FactRow};
-use crate::party_binding::grants::caller::{CareTeam, FactKind, FactValue};
+use crate::party_binding::grants::caller::{FactKind, FactValue};
 use crate::policy_register::listen::{Dropping, Subscriber};
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
@@ -46,10 +47,10 @@ pub const SUBJECTS: u64 = 4096;
 /// subject (#5760).
 pub const CENSUS_BYTES: u64 = 64 * 1024 * 1024;
 
-/// One patient under a team's care, with the relationship's dates.
-pub type Cared = (Uuid, CareTeam);
+/// One patient under a carer's care, with the relationship.
+pub type Cared = (Uuid, CareOf);
 
-/// The patients under one team's care, sorted by subject, and the record
+/// The patients under one carer's care, sorted by subject, and the record
 /// subjects each declares.
 #[derive(Debug, Default)]
 pub(crate) struct Census {
@@ -75,7 +76,10 @@ impl Census {
 
     /// The census's bytes by part.
     fn parts(&self) -> Parts {
-        let cared = self.cared.capacity().saturating_mul(size_of::<Cared>());
+        let cared = self.cared.iter().map(|(_, care)| care.heap()).fold(
+            self.cared.capacity().saturating_mul(size_of::<Cared>()),
+            usize::saturating_add,
+        );
         let declared = self
             .declared
             .iter()
@@ -107,12 +111,6 @@ struct Parts {
     declared: usize,
 }
 
-impl Weigh for CareTeam {
-    fn heap(&self) -> usize {
-        0
-    }
-}
-
 /// What the care copy holds, for the copies' gauges (#5760, #5926).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CareHeld {
@@ -136,7 +134,7 @@ pub struct CareHeld {
 /// The care relationships one replica holds.
 #[derive(Debug)]
 pub(crate) struct CareCopy {
-    subjects: Cache<Uuid, Arc<[CareTeam]>>,
+    subjects: Cache<Uuid, Arc<[CareOf]>>,
     teams: Cache<Uuid, Arc<Census>>,
     /// The `PERSON` each record subject names; `None` for one no `PERSON`
     /// declares.
@@ -247,11 +245,11 @@ impl CareCopy {
         &self,
         pool: &PgPool,
         subject: Uuid,
-    ) -> Result<Arc<[CareTeam]>, StorageError> {
+    ) -> Result<Arc<[CareOf]>, StorageError> {
         let read = async {
             let mut conn = acquire(pool).await?;
             let rows = store::care_of_subject(&mut conn, subject).await?;
-            Ok(care_teams(&rows).into())
+            Ok(care_of(&rows).into())
         };
         self.hold(&self.subjects, subject, read, |_| true).await
     }
@@ -365,9 +363,9 @@ async fn read_census(pool: &PgPool, team: Uuid) -> Result<Arc<Census>, StorageEr
         .await?
         .into_iter()
         .flat_map(|(subject, rows)| {
-            care_teams(&rows)
+            care_of(&rows)
                 .into_iter()
-                .filter(|care| care.team() == team)
+                .filter(|care| care.carer() == team)
                 .map(move |care| (subject, care))
         })
         .collect();
@@ -386,13 +384,18 @@ async fn read_census(pool: &PgPool, team: Uuid) -> Result<Arc<Census>, StorageEr
 /// The care relationships `rows` hold: each `under_care_of` relationship of a
 /// live head with the dates it holds, whether or not it holds today, so the
 /// evaluator judges a discharge and the grace after it; sorted and distinct.
-pub(crate) fn care_teams(rows: &[FactRow]) -> Vec<CareTeam> {
-    let mut out: Vec<CareTeam> = rows
+pub(crate) fn care_of(rows: &[FactRow]) -> Vec<CareOf> {
+    let mut out: Vec<CareOf> = rows
         .iter()
         .filter(|row| row.kind == FactKind::UnderCareOf)
         .filter(|row| matches!(row.term.lifecycle_state.as_str(), "532" | "553"))
         .filter_map(|row| match (&row.value, row.term.dates) {
-            (FactValue::Team(team), Some(dates)) => Some(CareTeam::new(*team, dates)),
+            (FactValue::Care(care), Some(dates)) => Some(CareOf::new(
+                care.carer,
+                dates,
+                care.role.clone(),
+                care.provider.clone(),
+            )),
             _ => None,
         })
         .collect();

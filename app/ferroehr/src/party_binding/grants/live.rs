@@ -34,6 +34,7 @@ use self::revisions::Revisions;
 use crate::db::acquire::acquire;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
+use crate::party_binding::grants::caller::care_of::ProviderKey;
 use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::party_binding::grants::caller::store::{Changed, FactRow};
 use crate::party_binding::grants::caller::{self, CareTeam, FactKind, FactValue};
@@ -442,16 +443,21 @@ impl LiveGrants {
                 Some(Grant::new(operation, row.role_id, row.credentials.clone()))
             })
             .collect();
-        let provider = client
-            .as_ref()
-            .and_then(|client| client.provider.as_ref())
-            .map(|provider| provider.party);
-        let groups = provider.map_or_else(Vec::new, |party| self.memberships(party, now));
-        let types = provider.map_or_else(Vec::new, |party| self.organisation_types(party));
+        let provider = client.as_ref().and_then(|client| client.provider.as_ref());
+        let party = provider.map(|provider| provider.party);
+        let groups = party.map_or_else(Vec::new, |party| self.memberships(party, now));
+        let types = party.map_or_else(Vec::new, |party| self.organisation_types(party));
+        let (namespace, identifier) = (self.namespace(), provider.and_then(Provider::key));
+        let units = party.iter().chain(&groups);
+        let providers: Vec<ProviderKey> = units
+            .map(|unit| ProviderKey::new(&*namespace, unit.to_string()))
+            .chain(identifier)
+            .collect();
         let facts = self
             .facts_of(performer, now)
             .with_provider_groups(groups)
-            .with_organisation_types(types);
+            .with_organisation_types(types)
+            .with_providers(providers);
         Capabilities::new(client, grants).with_facts(facts)
     }
 
@@ -469,7 +475,7 @@ impl LiveGrants {
             .filter(|row| row.kind == FactKind::MemberOf && row.term.holds(today, now))
             .filter_map(|row| match row.value {
                 FactValue::Team(group) => Some(group),
-                FactValue::Code(_) => None,
+                FactValue::Code(_) | FactValue::Care(_) => None,
             })
             .collect()
     }
@@ -486,19 +492,19 @@ impl LiveGrants {
             .filter(|row| row.kind == FactKind::OrganisationType)
             .filter_map(|row| match &row.value {
                 FactValue::Code(code) => Some(code.clone()),
-                FactValue::Team(_) => None,
+                FactValue::Team(_) | FactValue::Care(_) => None,
             })
             .collect()
     }
 
     /// The caller facts of the party `party` at `now`, from the copy held:
-    /// the roles of the `ROLE`s it performs that hold on the date of `now` in
-    /// UTC, and the care teams it is a member of on that date.
+    /// the `ROLE`s it performs that hold on the date of `now` in UTC with
+    /// their roles, and the care teams it is a member of on that date.
     #[must_use]
     pub fn facts_of(&self, party: Uuid, now: jiff::Timestamp) -> CallerFacts {
         let held = self.held_facts();
         let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
-        let (mut roles, mut care_teams) = (Vec::new(), Vec::new());
+        let (mut roles, mut performed, mut care_teams) = (Vec::new(), Vec::new(), Vec::new());
         for row in held
             .by_party
             .get(&party)
@@ -509,14 +515,19 @@ impl LiveGrants {
                 continue;
             }
             match (row.kind, &row.value) {
-                (FactKind::Role, FactValue::Code(code)) => roles.push(code.clone()),
+                (FactKind::Role, FactValue::Code(code)) => {
+                    roles.push(code.clone());
+                    performed.push(row.holder);
+                }
                 (FactKind::MemberOf, FactValue::Team(team)) => {
                     care_teams.extend(row.term.dates.map(|dates| CareTeam::new(*team, dates)));
                 }
                 _ => {}
             }
         }
-        CallerFacts::new(roles, care_teams).with_party(party)
+        CallerFacts::new(roles, care_teams)
+            .with_performed(performed)
+            .with_party(party)
     }
 
     /// Every federation agreement in force at `now`, once per client

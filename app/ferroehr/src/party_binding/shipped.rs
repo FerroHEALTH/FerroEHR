@@ -30,19 +30,20 @@ pub const MEMBERSHIP: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.
 pub const MEMBER_OF: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1";
 
 /// The care `PARTY_RELATIONSHIP` archetype of a patient, in its interface
-/// form: carries the `under_care_of` care relationship code.
-pub const UNDER_CARE_OF: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1";
+/// form: a relationship of its own carrying the `under_care_of` care
+/// relationship code, its `care_role` and its `provider`.
+pub const UNDER_CARE_OF: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2";
 
 /// The representation `PARTY_RELATIONSHIP` archetype, in its interface form.
 pub const REPRESENTATION: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1";
 
 /// The patient's `PERSON` template.
-pub const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
+pub const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0";
 
 /// The default demographic definitions, each its file name and its ADL 2
 /// text, in the order the book's "Default demographic definitions" page
 /// lists them.
-pub const DEFINITIONS: [(&str, &str); 11] = [
+pub const DEFINITIONS: [(&str, &str); 13] = [
     (
         "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
         include_str!(
@@ -92,6 +93,12 @@ pub const DEFINITIONS: [(&str, &str); 11] = [
         ),
     ),
     (
+        "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2.0.0.adls",
+        include_str!(
+            "../../../../deploy/definitions/care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2.0.0.adls"
+        ),
+    ),
+    (
         "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls",
         include_str!(
             "../../../../deploy/definitions/representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls"
@@ -101,6 +108,12 @@ pub const DEFINITIONS: [(&str, &str); 11] = [
         "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls",
         include_str!(
             "../../../../deploy/definitions/patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls"
+        ),
+    ),
+    (
+        "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls",
+        include_str!(
+            "../../../../deploy/definitions/patient/openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls"
         ),
     ),
     (

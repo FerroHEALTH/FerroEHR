@@ -82,6 +82,7 @@ pub mod user_roles;
 pub mod user_write;
 
 mod api;
+mod care_role;
 mod contact_erasure;
 mod contribution;
 mod party;
