@@ -439,6 +439,10 @@ impl Expansion {
 
 /// The operations on the server, each answering a value, a classified
 /// [`Absence`], or a [`ServiceError`] for a fault.
+///
+/// Each call waits through [`crate::db::acquire::handoff`]: a request gives
+/// back the connections it keeps while it waits on the terminology server
+/// (#5774).
 #[cfg(feature = "fhir")]
 mod wire {
     use ferrobridge_term::client::Client;
@@ -455,6 +459,7 @@ mod wire {
         Absence, CHILD_RELATION, ENDPOINT_REFUSED, Expansion, FhirTerminologyProvider,
         TerminologyServerConfig,
     };
+    use crate::db::acquire::handoff;
     use crate::error::{ErrorChain, INTERNAL_MESSAGE, ServiceError};
     use crate::service::terminology::types::{DefinedTerm, TermCode, TermEntry, TermRelationship};
 
@@ -540,10 +545,13 @@ mod wire {
             code: &str,
             at_date: Option<&str>,
         ) -> Result<Result<String, Absence>, ServiceError> {
-            let answer = match at_date {
-                Some(date) => self.wire.lookup_at(system, code, None, date).await,
-                None => self.wire.lookup(system, code, None).await,
-            };
+            let answer = handoff(async {
+                match at_date {
+                    Some(date) => self.wire.lookup_at(system, code, None, date).await,
+                    None => self.wire.lookup(system, code, None).await,
+                }
+            })
+            .await;
             match answer {
                 Ok(LookupOutcome::Found { display, .. }) => Ok(Ok(display)),
                 Ok(LookupOutcome::NotFound { outcome }) => {
@@ -576,7 +584,7 @@ mod wire {
                 },
             );
             validation.date = at_date;
-            match self.wire.validate(&validation).await {
+            match handoff(self.wire.validate(&validation)).await {
                 Ok(ValidateOutcome::Valid { .. }) => Ok(Ok(true)),
                 Ok(ValidateOutcome::Invalid { .. }) => Ok(Ok(false)),
                 Ok(_) => Err(self.provider_fault(
@@ -597,10 +605,11 @@ mod wire {
             code_a: &str,
             code_b: &str,
         ) -> Result<Result<bool, Absence>, ServiceError> {
-            match self
-                .wire
-                .subsumes(&Subsumption::new(system, code_a, code_b))
-                .await
+            match handoff(
+                self.wire
+                    .subsumes(&Subsumption::new(system, code_a, code_b)),
+            )
+            .await
             {
                 Ok(outcome) => Ok(Ok(outcome == SubsumesOutcome::Subsumes)),
                 Err(e) => self
@@ -614,10 +623,11 @@ mod wire {
             &self,
             value_set_url: &str,
         ) -> Result<Result<Expansion, Absence>, ServiceError> {
-            match self
-                .wire
-                .expand(&ferrobridge_term::request::Expansion::new(value_set_url))
-                .await
+            match handoff(
+                self.wire
+                    .expand(&ferrobridge_term::request::Expansion::new(value_set_url)),
+            )
+            .await
             {
                 Ok(ExpandOutcome::Expanded(expanded)) => {
                     let mut expansion = Expansion::default();
@@ -640,9 +650,11 @@ mod wire {
         /// `CodeSystem?url=<system>&_summary=count`: how many code systems the
         /// server holds under `system`.
         pub(super) async fn code_system_count(&self, system: &str) -> Result<u32, ServiceError> {
-            self.wire.code_system_count(system).await.map_err(|e| {
-                self.provider_fault(ferrobridge_term::CODE_SYSTEM_SEARCH, &ErrorChain::new(&e))
-            })
+            handoff(self.wire.code_system_count(system))
+                .await
+                .map_err(|e| {
+                    self.provider_fault(ferrobridge_term::CODE_SYSTEM_SEARCH, &ErrorChain::new(&e))
+                })
         }
     }
 

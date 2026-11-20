@@ -257,10 +257,9 @@ pub fn release_held() {
 /// connection one of them gives back while the other waits here is not kept
 /// either ([`Checkout`]): kept, it would be held across the rest of this
 /// wait, and requests each keeping one pool's connection so while they wait
-/// for another's stall as above (#6027). A stretch of a request that may
-/// wait on another server, such as a commit body's validation against the
-/// terminology servers, goes through here too (#5774). No specification
-/// governs this: our own design.
+/// for another's stall as above (#6027). A request's wait on another
+/// server, the terminology server or the blob store, goes through here too
+/// (#5774). No specification governs this: our own design.
 pub async fn handoff<F: Future>(wait: F) -> F::Output {
     let _waiting = Waiting::begin();
     release_held();

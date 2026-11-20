@@ -21,8 +21,7 @@ use crate::versioning::body::Body;
 
 impl FerroEhrService {
     /// Validates a commit body and, when it is valid, externalizes its large
-    /// media, before any connection is held: the connections the request
-    /// keeps go back first, and a statement of the validation keeps none.
+    /// media, before any connection is held.
     ///
     /// The outer error is the offload's, which refuses the write at once; the
     /// inner result is the validation's, which the caller surfaces after its
@@ -36,16 +35,11 @@ impl FerroEhrService {
         body: &mut Body,
         incomplete: bool,
     ) -> Result<Result<(), ServiceError>, ServiceError> {
-        // NOTE: our own design (#5774), the connection the access decision left kept goes back
-        // before validation and the offload, which may wait on the terminology and blob servers.
-        crate::db::acquire::handoff(async {
-            let validated = self.validate_body(kind, body, incomplete).await;
-            if validated.is_ok() {
-                self.externalize_body(body).await?;
-            }
-            Ok(validated)
-        })
-        .await
+        let validated = self.validate_body(kind, body, incomplete).await;
+        if validated.is_ok() {
+            self.externalize_body(body).await?;
+        }
+        Ok(validated)
     }
 
     /// The validation half of [`Self::accept_body`].
@@ -174,68 +168,4 @@ fn root_locatable(details: Option<&Archetyped>, kind: &str) -> Result<(), Servic
         details.is_some(),
         details.is_some_and(|details| !details.archetype_id.value.is_empty()),
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::db::DbConfig;
-    use crate::db::acquire::{acquire, request_scope};
-    use crate::db::domain::Domain;
-    use crate::service::FerroEhrService;
-    use crate::versioning::Kind;
-    use crate::versioning::body::Body;
-
-    /// Connections checked out of `pool`, once a connection given back has
-    /// reached it (the pool takes one back on a task of its own).
-    async fn settled_in_use(pool: &sqlx::PgPool, expected: u32) -> u32 {
-        let in_use = || {
-            pool.size()
-                .saturating_sub(u32::try_from(pool.num_idle()).expect("an idle count fits u32"))
-        };
-        for _ in 0..100 {
-            if in_use() == expected {
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-        }
-        in_use()
-    }
-
-    /// A commit body is accepted with no connection kept: the clinical
-    /// connection the request's access decision left kept goes back to the
-    /// pool before validation, and validation keeps none (#5774).
-    #[tokio::test]
-    async fn a_commit_body_is_accepted_with_no_connection_kept() {
-        let db = testkit::db().await.expect("testkit database");
-        let mut settings = DbConfig::new(db.url());
-        settings.max_connections = Some(1);
-        settings.min_connections = Some(0);
-        settings.connection_budget = 8;
-        let pools = crate::db::connect_domains(&settings)
-            .await
-            .expect("the pools connect");
-        let svc = FerroEhrService::new(&pools);
-        let clinical = pools.get(Domain::Clinical);
-
-        request_scope(Box::pin(async {
-            sqlx::query("SELECT 1")
-                .execute(&mut *acquire(clinical).await.expect("a connection"))
-                .await
-                .expect("the access decision's statement");
-            assert_eq!(settled_in_use(clinical, 1).await, 1, "the scope keeps it");
-
-            let mut body = Body::from(crate::service::ehr::service::initial_ehr_status());
-            svc.accept_body(Kind::EhrStatus, &mut body, false)
-                .await
-                .expect("no offload failure")
-                .expect("a valid EHR_STATUS");
-            assert_eq!(
-                settled_in_use(clinical, 0).await,
-                0,
-                "the accepted body leaves no connection kept"
-            );
-        }))
-        .await;
-        pools.close().await;
-    }
 }

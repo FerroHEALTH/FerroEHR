@@ -7,7 +7,7 @@
 //!
 //! A request holds a connection of a pool from its first statement until its
 //! handler has answered ([`crate::db::acquire::release_held`]), or until it
-//! turns to the other storage domain's pool or validates a commit body; the
+//! turns to the other storage domain's pool or waits on another server; the
 //! pool needs about the arrival rate times that hold, and room for a burst.
 //! No openEHR spec governs connection handling: our own design.
 

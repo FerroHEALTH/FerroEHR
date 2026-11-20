@@ -39,8 +39,9 @@ impl FerroEhrService {
         let Some(engine) = &self.multimedia else {
             return Ok(());
         };
-        engine
-            .offload(body)
+        // NOTE: our own design (#5774), an upload waits on the blob store, so the request gives
+        // back the connections it keeps unless the offload is done at once (no value to upload).
+        crate::db::acquire::awaiting(engine.offload(body))
             .await
             .map_err(|e| ServiceError::internal("externalize multimedia", e))
     }
@@ -103,8 +104,8 @@ impl FerroEhrService {
         let Some(engine) = &self.multimedia else {
             return Ok(());
         };
-        engine
-            .offload_typed(rm)
+        // NOTE: our own design (#5774), as `externalize`: an upload keeps no connection.
+        crate::db::acquire::awaiting(engine.offload_typed(rm))
             .await
             .map_err(|e| ServiceError::internal("externalize multimedia", e))
     }
