@@ -218,7 +218,9 @@ impl Ward {
             }
             let query = |aql: &'static str| async move {
                 let request = AqlQueryRequest {
-                    ehr_access: svc.request_access_condition().await.expect("the condition"),
+                    ehr_access: ferroehr::service::query::request::QueryAccess::Given(
+                        svc.request_access_condition().await.expect("the condition"),
+                    ),
                     ..AqlQueryRequest::default()
                 };
                 Box::pin(svc.execute_aql(aql, None, &request))
