@@ -91,6 +91,50 @@ fn reveal_row(back: &str, saved: bool) -> Html {
     )
 }
 
+/// The purpose of use row of Reading (#6105): the codes the CDR accepts, as
+/// it last listed them, and the configured default; drawn only when the CDR
+/// lists codes.
+fn purpose_row(back: &str, saved: bool) -> Option<Html> {
+    let state = crate::scope::state().ok()?;
+    let offered = state.cdr.purposes().last_offered()?;
+    if offered.codes.is_empty() {
+        return None;
+    }
+    let mut choices = vec![(String::new(), tr(ConsoleMsg::PurposeDefault).into())];
+    choices.extend(offered.codes.iter().map(|code| {
+        let words = code.display.as_ref().map_or_else(
+            || code.code.clone(),
+            |display| format!("{display} ({})", code.code),
+        );
+        (code.code.clone(), words.into())
+    }));
+    let current = crate::purpose::chosen()
+        .filter(|code| offered.accepts(code))
+        .unwrap_or_default();
+    Some(preference_row(
+        &crate::locale::current(),
+        PreferenceRow {
+            label: tr(ConsoleMsg::PurposeLabel).into(),
+            description: tr(ConsoleMsg::PurposeDescription).into(),
+            control_id: Some("code".to_owned()),
+            control: select_preference(
+                &crate::locale::current(),
+                SelectPreference {
+                    name: "code".to_owned(),
+                    choices,
+                    current,
+                    post: Post {
+                        action: crate::purpose::ROUTE.to_owned(),
+                        back: back.to_owned(),
+                    },
+                    saved,
+                },
+            ),
+            saved,
+        },
+    ))
+}
+
 /// What the page reads: the request's `Accept-Language`.
 fn read_page() -> String {
     crate::scope::with(|scope| {
@@ -115,7 +159,10 @@ pub fn page() -> Drawn {
         let saved = crate::request::query("saved");
         let own = if section == Section::Language {
             let saved_reveal = saved.as_deref() == Some(crate::prefs::REVEAL);
-            vec![reveal_row(routes.of(section), saved_reveal)]
+            let saved_purpose = saved.as_deref() == Some("purpose");
+            let mut own = vec![reveal_row(routes.of(section), saved_reveal)];
+            own.extend(purpose_row(routes.of(section), saved_purpose));
+            own
         } else {
             Vec::new()
         };

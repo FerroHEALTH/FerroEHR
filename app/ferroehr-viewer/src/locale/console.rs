@@ -162,6 +162,16 @@ crate::locale::messages! {
         AccessWho = "access-who",
         /// `Teal`
         BrandAccent = "brand-accent",
+        /// `The configured default`
+        PurposeDefault = "purpose-default",
+        /// `Why you read records in this session, declared on every request; the CDR's access policy may require one.`
+        PurposeDescription = "purpose-description",
+        /// `Purpose of use`
+        PurposeLabel = "purpose-label",
+        /// `The CDR refused its list of purposes of use.`
+        PurposeListRefused = "purpose-list-refused",
+        /// `The configured purpose of use { $code } (cdr.purpose_of_use) is not one the CDR accepts under { $system }.`
+        PurposeUnlisted = "purpose-unlisted",
         /// `How long a subject id stays shown after you reveal it; the viewer caps it at 2 minutes.`
         RevealDescription = "reveal-description",
         /// `Show a revealed identifier for`

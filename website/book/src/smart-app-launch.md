@@ -34,7 +34,7 @@ The three ways an app starts:
 
 `docker-compose.ferrosmart.yml` runs the whole platform from the quickstart
 ([Docker Compose](installation/compose.md#behind-ferrosmart)). FerroSMART's
-own setup is its [architecture](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md), sections 13.17
+own setup is its [architecture](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md), sections 13.17
 (launching an app from an EHR) and 13.21 (a product behind FerroSMART).
 
 <!-- toc -->
@@ -259,7 +259,7 @@ Request). The specification gives the EHR no way to hand the authorization
 server that context, so FerroSMART takes it through its own EHR launch API,
 the `launch_registration_endpoint` its discovery document
 `{issuer}/.well-known/smart-configuration` names
-(FerroSMART's architecture, [§13.17, Launching an app from an EHR](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md)).
+(FerroSMART's architecture, [§13.17, Launching an app from an EHR](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md)).
 The viewer is that EHR: with `[launch]` set, an EHR's **More** menu carries a
 **Launch** item per configured app, and a click does this:
 

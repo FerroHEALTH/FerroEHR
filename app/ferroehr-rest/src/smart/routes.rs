@@ -243,6 +243,11 @@ impl SmartRoutes {
         if under("/terminology") || under("/fhir") {
             return Requirement::Caller;
         }
+        if under("/access/purposes") {
+            // NOTE: our own design (#6105), the accepted purposes of use name no personal
+            // data, so any authenticated caller reads them with no grant.
+            return Requirement::Caller;
+        }
         if under("/ehr") && relative.split('/').any(|segment| segment == "access_log") {
             // NOTE: our own design (#5130), the access log has its own access control apart
             // from any clinical grant (the draft's recording rule 8), which its handler applies.

@@ -5,7 +5,7 @@
 # docker-compose.ferrosmart-zitadel.yml, through ZITADEL's v2 APIs with the
 # IAM_OWNER token its first instance wrote (`cmd/setup/steps.yaml`,
 # FirstInstance), as FerroSMART documents the setup:
-# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md#1320-upstream-providers-zitadel
+# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md#1320-upstream-providers-zitadel
 #
 #   project      ferrosmart, role assertion on, the roles CLINICIAN and
 #                PATIENT (project/v2 CreateProject, AddProjectRole)
@@ -18,7 +18,7 @@
 #
 # ZITADEL generates the OIDC client id and the application's key with its key
 # id, so the script writes OUT/upstream-assertion.pem and OUT/ferrosmart.toml:
-# FerroSMART's configuration BASE_CONFIG with the [ferrosmart.upstream]
+# FerroSMART's configuration BASE_CONFIG with the [[ferrosmart.upstream]]
 # tables that name them appended. FerroEHR binds a person by FerroSMART's
 # pairwise `sub`, so no `fhirUser` claim and no Actions target are set up. A
 # second run finds OUT/ferrosmart.toml and does nothing. It needs sh, curl,
@@ -119,7 +119,11 @@ printf '%s' "$org" > "$OUT/organization"
 
 # Written by docker/ferrosmart/zitadel/bootstrap.sh: ZITADEL as the upstream
 # login (FerroSMART docs/architecture.md §13.20).
-[ferrosmart.upstream]
+[[ferrosmart.upstream]]
+name = "zitadel"
+protocol = "oidc"
+
+[ferrosmart.upstream.oidc]
 issuer = "$ZITADEL_API"
 client_id = "$client_id"
 scopes = ["openid"]
@@ -127,10 +131,10 @@ role_claims = ["urn:zitadel:iam:org:project:ferrosmart:roles"]
 # ZITADEL names the project beside the client in every ID Token's aud.
 trusted_audiences = ["ferrosmart"]
 
-[ferrosmart.upstream.private_key_jwt]
+[ferrosmart.upstream.oidc.private_key_jwt]
 algorithm = "RS256"
 
-[ferrosmart.upstream.private_key_jwt.keys]
+[ferrosmart.upstream.oidc.private_key_jwt.keys]
 private_key_file = "$OUT/upstream-assertion.pem"
 kid = "$key_id"
 TOML

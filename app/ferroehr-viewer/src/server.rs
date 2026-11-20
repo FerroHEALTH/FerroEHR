@@ -73,6 +73,10 @@ pub fn router(app_state: AppState) -> axum::Router {
             axum::routing::post(crate::prefs::choose_preference),
         )
         .route(
+            crate::purpose::ROUTE,
+            axum::routing::post(crate::purpose::choose),
+        )
+        .route(
             crate::prefs::RESET_ROUTE,
             axum::routing::post(crate::prefs::reset_preferences),
         )

@@ -65,6 +65,22 @@ x-hospital-env: &hospital-env
   # the telemetry key is set because compose sets it, which outranks RUST_LOG.
   FERROEHR__TELEMETRY__FILTER: info,ferrohealth_smart=debug
 services:
+  # The quickstart issuer signs FerroPIX's PMIR feed token for FerroEHR's
+  # \`ferroehr-system\` audience, which issuer 1 accepts above; any other
+  # client credentials request keeps the quickstart's FerroPIX audience.
+  identity-issuer:
+    environment:
+      JSON_CONFIG: >-
+        {"tokenCallbacks":[{"issuerId":"quickstart",
+        "requestMappings":[{"requestParam":"scope","match":"ferroehr/scim",
+        "claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
+        "aud":["ferroehr-scim"],"scope":"\$\${scope}"}},
+        {"requestParam":"scope","match":"ferroehr/pmir",
+        "claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
+        "aud":["ferroehr-system"],"scope":"\$\${scope}"}},
+        {"requestParam":"grant_type","match":"client_credentials",
+        "claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
+        "aud":["http://localhost:8090/fhir"],"scope":"\$\${scope}"}}]}]}
   ferroehr:
     environment: *hospital-env
   ferroehr-2:
@@ -78,10 +94,12 @@ services:
         source: $(hs_dir)/clients
         target: /etc/ferrosmart/clients
         read_only: true
-  # The viewer launches the hospital's app from an EHR's page (#5880).
+  # The viewer launches the hospital's app from an EHR's page (#5880), and
+  # declares treatment as its purpose of use until its reader chooses (#6105).
   ferroehr-viewer:
     environment:
       FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL: http://localhost:3000
+      FERROEHR_VIEWER__CDR__PURPOSE_OF_USE: TREAT
       FERROEHR_VIEWER__LAUNCH__APP__0__NAME: Hospital app
       FERROEHR_VIEWER__LAUNCH__APP__0__CLIENT_ID: $HS_APP
       FERROEHR_VIEWER__LAUNCH__APP__0__LAUNCH_URL: $HS_LAUNCH_URL
@@ -735,6 +753,11 @@ hospital_setup() {
   # (FerroSMART docs/architecture.md §13.21; the CDR grants act_for_persons).
   h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
     || h_fail_call "the hospital's SMART app"
+  # FerroSMART's patient picker looks the EHR up as the signed-in person, with a
+  # token whose client_id is FerroSMART's own issuer (FerroSMART
+  # docs/architecture.md §13.6 item 4), so the CDR grants it sign_in_persons.
+  h_client picker "$HS_ISSUER" "$(hv hospital)" "$(j_capability "$(j_operation sign_in_persons)")" \
+    || h_fail_call "FerroSMART's patient picker"
 
   # The patients: Eva under the care of three teams since ten days ago,
   # Frank her representative, Gina a patient too, and Piet, anybody else.
@@ -1428,6 +1451,15 @@ hospital_ehr_launch() {
     --data-urlencode intent=launch --data-urlencode "app=$HS_APP" "$viewer/ehrs/$eva")"
   rm -f "$jar"
   assert_eq 303 "${location%% *}" "the Launch post answers See Other: $(head -c 300 "$PROBE_TMP/launch-body")"
+  if [[ "${location%% *}" != 303 ]]; then
+    local service
+    echo "      the viewer's page says: $(tr -s '\n' ' ' < "$PROBE_TMP/launch-body" \
+      | sed -E 's/.*<main[^>]*>//; s/<[^>]*>/ /g; s/ +/ /g' | cut -c1-600)"
+    for service in ferroehr-viewer ferrosmart; do
+      echo "      log of $service:"
+      hdc logs --no-color --tail 10 "$service" 2>&1 | sed 's/^/        /'
+    done
+  fi
   location="${location#* }"
   assert_contains "$location" "$HS_LAUNCH_URL?" "the new window goes to the app's launch URL"
   iss="$(hs_param iss "$location")"
@@ -1595,6 +1627,11 @@ hospital_pixm() {
   h_hospital || h_fail_call "the controller, which the SCIM client acts for"
   h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
     || h_fail_call "the hospital's SMART app"
+  # FerroSMART's patient picker looks the EHR up as the signed-in person, with a
+  # token whose client_id is FerroSMART's own issuer (FerroSMART
+  # docs/architecture.md §13.6 item 4), so the CDR grants it sign_in_persons.
+  h_client picker "$HS_ISSUER" "$(hv hospital)" "$(j_capability "$(j_operation sign_in_persons)")" \
+    || h_fail_call "FerroSMART's patient picker"
   h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role"
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"

@@ -110,6 +110,8 @@ struct SenderInner {
     /// The header a caller declares the data permit it acts under in.
     permit_header: String,
     purpose_codes: Vec<String>,
+    /// The code system the purpose codes belong to.
+    purpose_system: String,
     /// The purposes of use that mark an access as an emergency access, held
     /// by `ehds-logging`.
     emergency: ehds_logging::emergency::EmergencyPurposes,
@@ -167,6 +169,19 @@ impl AuditSender {
     #[must_use]
     pub fn permit_header(&self) -> &str {
         &self.inner.permit_header
+    }
+
+    /// The purpose codes this deployment accepts, in configured order; empty
+    /// when it accepts any.
+    #[must_use]
+    pub fn purpose_codes(&self) -> &[String] {
+        &self.inner.purpose_codes
+    }
+
+    /// The canonical URL of the code system the purpose codes belong to.
+    #[must_use]
+    pub fn purpose_system(&self) -> &str {
+        &self.inner.purpose_system
     }
 
     /// Whether `code` is one this deployment records.
@@ -668,6 +683,7 @@ pub async fn start(
             purpose_header: config.purpose_header.to_ascii_lowercase(),
             permit_header: config.permit_header.to_ascii_lowercase(),
             purpose_codes: config.purpose_codes.clone(),
+            purpose_system: config.purpose_system.clone(),
             emergency,
             legal_basis: config.legal_basis.clone(),
             categories: Arc::new(Classifiers::new(categories)),

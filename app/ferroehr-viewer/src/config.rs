@@ -116,6 +116,14 @@ pub struct CdrConfig {
     pub management_base_url: String,
     /// How long one request to the CDR may take.
     pub timeout: ferrohealth_config::units::Duration,
+    /// The purpose of use the viewer declares when the reader chose none
+    /// (`FERROEHR_VIEWER__CDR__PURPOSE_OF_USE`); unset declares none.
+    ///
+    /// It must be a code the CDR's `GET {extensions}/access/purposes` lists:
+    /// a code it does not list stops the first request after sign-in with an
+    /// error naming it and is never sent. No openEHR spec governs the purpose
+    /// of use: our own design (#6105).
+    pub purpose_of_use: Option<String>,
     /// The trust roots beside the platform's and the client identity the CDR
     /// client presents (`[cdr.tls]`).
     pub tls: TlsClientSection,
@@ -128,6 +136,7 @@ impl Default for CdrConfig {
             base_path: "/ferroehr/rest/openehr/v1".to_owned(),
             management_base_url: String::new(),
             timeout: ferrohealth_config::units::Duration::from_secs(30),
+            purpose_of_use: None,
             tls: TlsClientSection::default(),
         }
     }

@@ -65,6 +65,9 @@ enum Class {
     Clinical,
     /// Requires the configured admin role (`rbac.admin_role`).
     Admin,
+    /// Any authenticated principal, with or without a role: a read that
+    /// discloses no personal data (#6105).
+    Authenticated,
     /// Coarse class `Clinical`, admin enforced inside the handler: the class
     /// gate refuses a roleless caller first, the handler refuses a non-admin.
     HandlerAdmin,
@@ -525,6 +528,12 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
 /// this FHIR-rooted path `Clinical` (`extensions::fhir::audit_search`).
 const HANDLER_ADMIN_READ: &[(&str, &str)] = &[("GET", "/fhir/r4/AuditEvent")];
 
+/// The reads any authenticated caller makes, a roleless one included: the
+/// accepted purposes of use, which name no personal data (#6105). Our own
+/// design, spelled at the full extension path.
+const AUTHENTICATED_READ: &[(&str, &str)] =
+    &[("GET", "/ferroehr/rest/extensions/v1/access/purposes")];
+
 /// The declared classification of every mounted route, keyed by
 /// `(method, absolute path)`.
 fn declared() -> BTreeMap<(String, String), (Class, Effect)> {
@@ -550,6 +559,12 @@ fn declared() -> BTreeMap<(String, String), (Class, Effect)> {
     rows(ADMIN_READ, true, Class::Admin, Effect::Read);
     rows(ADMIN_WRITE, true, Class::Admin, Effect::Write);
     rows(HANDLER_ADMIN_READ, true, Class::HandlerAdmin, Effect::Read);
+    rows(
+        AUTHENTICATED_READ,
+        false,
+        Class::Authenticated,
+        Effect::Read,
+    );
     out
 }
 
@@ -843,6 +858,7 @@ async fn the_role_matrix_holds_for_every_gated_route() {
                 None,
                 Some(Refusal::ReadOnly),
             ],
+            (Class::Authenticated, _) => [None, None, None, None],
             (Class::HandlerAdmin, _) => [
                 Some(Refusal::NeedsRole),
                 Some(Refusal::NeedsAdmin),
@@ -941,7 +957,7 @@ async fn every_route_outside_the_public_inventory_needs_a_credential() {
             Class::Management => {
                 status == StatusCode::UNAUTHORIZED || status == StatusCode::NOT_FOUND
             }
-            Class::Clinical | Class::Admin | Class::HandlerAdmin => {
+            Class::Clinical | Class::Admin | Class::HandlerAdmin | Class::Authenticated => {
                 status == StatusCode::UNAUTHORIZED
             }
         };
