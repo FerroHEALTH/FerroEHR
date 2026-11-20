@@ -609,6 +609,9 @@ group! {
         PolicyDenied => "refused-policy-denied",
         /// The data carry a sensitivity the caller is not cleared for.
         Sensitivity => "refused-sensitivity",
+        /// The data's confidentiality is above `N` and no applying permit
+        /// clears its level; answered without the level or the reason.
+        Confidentiality => "refused-confidentiality",
         /// The policy needs a care relationship and the caller has none.
         NoCareRelationship => "refused-no-care-relationship",
         /// The policy needs a declared purpose and the request has none.
@@ -693,6 +696,35 @@ pub struct NotConfidentiality {
 }
 
 impl Confidentiality {
+    /// Every level, in the package's order.
+    pub const ALL: [Self; 3] = [Self::Normal, Self::Restricted, Self::VeryRestricted];
+
+    /// The level's code in [`TERMINOLOGY_ID_CONFIDENTIALITY`].
+    #[must_use]
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Normal => "N",
+            Self::Restricted => "R",
+            Self::VeryRestricted => "V",
+        }
+    }
+
+    /// The level's display name in the code system.
+    #[must_use]
+    pub const fn rubric(self) -> &'static str {
+        match self {
+            Self::Normal => "normal",
+            Self::Restricted => "restricted",
+            Self::VeryRestricted => "very restricted",
+        }
+    }
+
+    /// The level as a `DV_CODED_TEXT` of [`TERMINOLOGY_ID_CONFIDENTIALITY`].
+    #[must_use]
+    pub fn coded(self) -> DvCodedText {
+        coded_text(TERMINOLOGY_ID_CONFIDENTIALITY, self.code(), self.rubric())
+    }
+
     /// Reads the level `coded` names.
     ///
     /// # Errors

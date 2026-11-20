@@ -32,7 +32,7 @@ use ihe_atna::balp::{
     APPLICATION, CREATE, CUSTODIAN, Coded, DELETE, DESTINATION_ROLE, DOMAIN_RESOURCE, Described,
     Direction, EXPORT, Entity, EventKind, Exchange, IMPORT, LOGIN, LOGOUT, NetworkAddress,
     OPERATION, Observer, Peer, READ, REST, SEARCH, SOURCE_APPLICATION_SERVER, SOURCE_ROLE,
-    SYSTEM_OBJECT, UPDATE, USER_AUTHENTICATION, What,
+    SYSTEM_OBJECT, SecurityLabel, UPDATE, USER_AUTHENTICATION, What,
 };
 use ihe_atna::user::{Code, OnBehalfOf, PurposeOfUse, User};
 use secrecy::SecretString;
@@ -542,11 +542,31 @@ fn entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> Vec<Ent
             name: Some(operation(event)),
             description: None,
             details: Vec::new(),
-            security_labels: Vec::new(),
+            security_labels: security_labels(event),
         }));
     }
     entities
 }
+
+/// The confidentiality of the record the access reached, as the BALP
+/// `entity.securityLabel` of the object it names (HL7 `v3-Confidentiality`).
+fn security_labels(event: &AuditEvent) -> Vec<SecurityLabel> {
+    event
+        .decided
+        .as_ref()
+        .and_then(|decided| decided.confidentiality)
+        .map(|level| SecurityLabel {
+            system: CONFIDENTIALITY_SYSTEM.to_owned(),
+            version: None,
+            code: level.code().to_owned(),
+        })
+        .into_iter()
+        .collect()
+}
+
+/// The canonical URL of the HL7 code system the record's confidentiality is
+/// coded in (draft access control, Terminology).
+const CONFIDENTIALITY_SYSTEM: &str = "http://terminology.hl7.org/CodeSystem/v3-Confidentiality";
 
 /// The operation a record names: the ITS-REST operation id, else the DICOM
 /// event the resource class audits as.

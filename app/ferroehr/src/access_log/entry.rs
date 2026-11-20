@@ -143,7 +143,11 @@ pub fn entry_of(
         authorisations: nonempty(authorisations(event)),
         is_emergency: event.emergency_access,
         channel: channel(event),
-        security_labels: None,
+        security_labels: event
+            .decided
+            .as_ref()
+            .and_then(|decided| decided.confidentiality)
+            .map(|level| vec![level.coded()]),
         retention,
         other_details: None,
     };

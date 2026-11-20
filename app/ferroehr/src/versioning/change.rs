@@ -245,6 +245,24 @@ impl Change {
     }
 
     /// The versioned-object [`Kind`] this change writes.
+    /// The `settings.marking` an `EHR_ACCESS` change writes: `None` for a
+    /// deletion, or a version that carries no marking.
+    pub(crate) fn written_marking(&self) -> Option<&Value> {
+        match self {
+            Change::Create { body, .. } | Change::Modify { body, .. } => match body {
+                Body::EhrAccess(rm) => rm
+                    .settings
+                    .as_ref()
+                    .and_then(|settings| settings.members().get("marking")),
+                _ => body
+                    .canonical()
+                    .and_then(|view| view.get("settings"))
+                    .and_then(|settings| settings.get("marking")),
+            },
+            Change::Delete { .. } => None,
+        }
+    }
+
     pub(crate) fn kind(&self) -> Kind {
         match *self {
             Change::Create { kind, .. }

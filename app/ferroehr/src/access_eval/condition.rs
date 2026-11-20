@@ -22,7 +22,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
-use openehr_rm::draft::access_control::terminology::{AccessDefault, OperationClass, Refusal};
+use openehr_rm::draft::access_control::terminology::{
+    AccessDefault, Confidentiality, OperationClass, Refusal,
+};
 use tokio::task_local;
 use uuid::Uuid;
 
@@ -338,7 +340,8 @@ impl RequestAccess {
             }
             _ => &[],
         };
-        let scopes = Scopes::new(self.categories.clone(), labels, self.classifications());
+        let scopes = Scopes::new(self.categories.clone(), labels, self.classifications())
+            .marked(settings.map_or(Confidentiality::Normal, EhrAccessSettings::marking));
         self.decide(settings, cared, held, &scopes)
     }
 
@@ -362,6 +365,11 @@ impl RequestAccess {
             self.categories.clone(),
             Arc::clone(&class.layout),
             self.classifications(),
+        )
+        .marked(
+            (*class.settings)
+                .as_ref()
+                .map_or(Confidentiality::Normal, EhrAccessSettings::marking),
         );
         let held = records::Held::of_class(self.confined());
         self.decide((*class.settings).as_ref(), cared, held, &scopes)

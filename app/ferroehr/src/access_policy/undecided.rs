@@ -5,7 +5,7 @@
 //! decision of this server reads yet, refused at write.
 //!
 //! The draft package states each attribute's meaning (care relationships,
-//! confidentiality, exclusions). A server that stored
+//! exclusions). A server that stored
 //! one and decided without it would admit what the attribute narrows, so a
 //! settings or policy version that sets one is refused whole, naming the
 //! attribute, until the decision reads it. An attribute whose unread value
@@ -21,25 +21,9 @@ use openehr_rm::draft::access_control::access_control::access_policy::AccessPoli
 /// The path of the first attribute of `settings` no decision reads yet.
 #[must_use]
 pub fn in_settings(settings: &AccessDirectiveSettings) -> Option<String> {
-    // TODO(#6057): decide on the record's confidentiality marking.
-    if settings.marking.is_some() {
-        return Some("marking".to_owned());
-    }
     // TODO(#6077): decide on the controller's exclusions.
     if settings.exclusions.is_some() {
         return Some("exclusions".to_owned());
-    }
-    for (index, label) in settings
-        .labels
-        .as_deref()
-        .unwrap_or_default()
-        .iter()
-        .enumerate()
-    {
-        // TODO(#6057): decide on an object's confidentiality.
-        if label.confidentiality.is_some() {
-            return Some(format!("labels[{index}].confidentiality"));
-        }
     }
     directives(
         "directives",
@@ -57,21 +41,6 @@ pub fn in_policy(policy: &AccessPolicy) -> Option<String> {
     ];
     if let Some((name, _)) = set.iter().find(|(_, is_set)| *is_set) {
         return Some((*name).to_owned());
-    }
-    for (index, classification) in policy
-        .classifications
-        .as_deref()
-        .unwrap_or_default()
-        .iter()
-        .enumerate()
-    {
-        // TODO(#6057): decide on a classification's confidentiality.
-        if classification.confidentiality.is_some() {
-            return Some(format!("classifications[{index}].confidentiality"));
-        }
-        if classification.data.confidentialities.is_some() {
-            return Some(format!("classifications[{index}].data.confidentialities"));
-        }
     }
     directives("rules", policy.rules.as_deref().unwrap_or_default())
         .or_else(|| directives("catalogue", policy.catalogue.as_deref().unwrap_or_default()))
@@ -105,30 +74,22 @@ fn directives_of(path: &str, exceptions: &[AccessDirective]) -> Option<String> {
 
 /// The path of the first undecided attribute of one directive at `path`.
 fn directive_attribute(path: &str, directive: &AccessDirective) -> Option<String> {
-    for (index, scope) in directive
+    directive
         .applies_to
         .as_deref()
         .unwrap_or_default()
         .iter()
         .enumerate()
-    {
-        // TODO(#6075): match a rule's care roles and care path.
-        if scope.care_roles.is_some() {
-            return Some(format!("{path}.applies_to[{index}].care_roles"));
-        }
-        if scope.care_path.is_some() {
-            return Some(format!("{path}.applies_to[{index}].care_path"));
-        }
-    }
-    directive
-        .data
-        .as_deref()
-        .unwrap_or_default()
-        .iter()
-        .enumerate()
-        // TODO(#6057): match the confidentiality levels a data scope names.
-        .find(|(_, scope)| scope.confidentialities.is_some())
-        .map(|(index, _)| format!("{path}.data[{index}].confidentialities"))
+        .find_map(|(index, scope)| {
+            // TODO(#6075): match a rule's care roles and care path.
+            if scope.care_roles.is_some() {
+                Some(format!("{path}.applies_to[{index}].care_roles"))
+            } else if scope.care_path.is_some() {
+                Some(format!("{path}.applies_to[{index}].care_path"))
+            } else {
+                None
+            }
+        })
 }
 
 #[cfg(test)]
@@ -162,7 +123,7 @@ mod tests {
     }
 
     #[test]
-    fn a_record_marking_is_refused_until_the_decision_reads_it() {
+    fn a_record_marking_is_decided() {
         let marked = settings(&format!(
             r#", "marking": {{ "_type": "CONFIDENTIALITY_MARKING",
                 "confidentiality": {},
@@ -170,7 +131,7 @@ mod tests {
                 "set_at": {{ "_type": "DV_DATE_TIME", "value": "2026-11-19T10:00:00Z" }} }}"#,
             term("HL7_Confidentiality", "R")
         ));
-        assert_eq!(in_settings(&marked).as_deref(), Some("marking"));
+        assert_eq!(in_settings(&marked), None);
     }
 
     #[test]

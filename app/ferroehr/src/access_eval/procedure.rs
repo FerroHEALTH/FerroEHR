@@ -29,7 +29,11 @@
 //!    request that declares one of them.
 //! 6. **Sensitivity**: data carrying a sensitivity, from an `ACCESS_LABEL` or
 //!    the controller's classifications, that no applying permit directive or
-//!    permit rule names (`refused-sensitivity`).
+//!    permit rule names (`refused-sensitivity`). **Confidentiality**: data
+//!    whose level, the highest of the EHR's marking, a label's and a
+//!    classification's, is above `N` and that no applying permit clears by
+//!    naming that level or a higher one (`refused-confidentiality`, answered
+//!    as absent at a level the policy conceals).
 //! 7. **Care relationship**: where the policy requires one, a professional
 //!    needs a live care relationship to the subject, a permit naming them, or
 //!    a gate-keeper entry (`refused-no-care-relationship`; BASE Architecture
@@ -69,10 +73,12 @@
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, CallerKind, DirectiveKind, Effect, OperationClass, Refusal,
+    AccessDefault, CallerKind, Confidentiality, DirectiveKind, Effect, OperationClass, Refusal,
 };
 
-use crate::access_eval::directive::{Permit, Reader, kind_and_effect, names_sensitivity};
+use crate::access_eval::directive::{
+    Permit, Reader, clears_confidentiality, kind_and_effect, names_sensitivity,
+};
 use crate::access_eval::scope::{Item, Polarity, Pred, Scopes};
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::facts::CallerFacts;
@@ -178,6 +184,21 @@ pub struct Policy {
     /// Whether `self_declared_care` is set, which turns the `self_declared`
     /// path on (draft decision procedure, Holding a Care Relationship).
     pub self_declared: bool,
+    /// The levels of `concealed_confidentialities`, whose refused records
+    /// answer as absent: `R`, then `V`.
+    pub concealed: [bool; 2],
+}
+
+impl Policy {
+    /// Whether a record refused at `level` answers as absent.
+    #[must_use]
+    pub const fn conceals(self, level: Confidentiality) -> bool {
+        match level {
+            Confidentiality::Normal => false,
+            Confidentiality::Restricted => self.concealed[0],
+            Confidentiality::VeryRestricted => self.concealed[1],
+        }
+    }
 }
 
 impl Policy {
@@ -194,11 +215,16 @@ impl Policy {
             .as_ref()
             .and_then(|grace| grace.value.parse::<jiff::Span>().ok())
             .unwrap_or_default();
+        let concealed = crate::access_policy::care::CareFacts::of(Some(policy)).concealed();
         Self {
             care_required: policy.care_relationship_required,
             grace,
             purpose_required: policy.purpose_required,
             self_declared: policy.self_declared_care.is_some(),
+            concealed: [
+                concealed.contains(&Confidentiality::Restricted),
+                concealed.contains(&Confidentiality::VeryRestricted),
+            ],
         }
     }
 }
@@ -477,6 +503,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     let rule_permits = rule_permits(&read);
     let naming: Vec<&Permit<'_>> = permits.iter().chain(&rule_permits).collect();
     sensitivity(&read, &naming, &mut verdict);
+    confidentiality(&read, &naming, &mut verdict);
     let keeper = Pred::any(vec![Pred::of(caller.administrator), read.keeper()]);
     let live = judged.ehr.cared && !held_closed;
     let default = judged
@@ -720,6 +747,33 @@ fn sensitivity(read: &Reader<'_, '_>, permits: &[&Permit<'_>], verdict: &mut Ver
                 Pred::negate(Pred::any(named)),
             ]),
             then: Outcome::Refused(Refusal::Sensitivity),
+            by: Vec::new(),
+        });
+    }
+}
+
+/// Step 6: data whose confidentiality is above `N` that no applying permit,
+/// a directive of the EHR or a rule of the policy, clears; the highest level
+/// is judged first, so a datum is refused under its own level.
+fn confidentiality(read: &Reader<'_, '_>, permits: &[&Permit<'_>], verdict: &mut Verdict) {
+    let scopes = read.judged.scopes;
+    for level in scopes.levels().into_iter().rev() {
+        let clearing = permits
+            .iter()
+            .filter(|permit| clears_confidentiality(permit.directive, level))
+            .map(|permit| permit.cover.clone())
+            .collect();
+        let refusal = Refusal::Confidentiality;
+        verdict.rules.push(Rule {
+            when: Pred::all(vec![
+                scopes.at_least(level, Polarity::Deny),
+                Pred::negate(Pred::any(clearing)),
+            ]),
+            then: if read.judged.policy.conceals(level) {
+                Outcome::Absent(refusal)
+            } else {
+                Outcome::Refused(refusal)
+            },
             by: Vec::new(),
         });
     }

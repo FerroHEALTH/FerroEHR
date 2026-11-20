@@ -33,13 +33,16 @@ use std::sync::Arc;
 use openehr_rm::draft::access_control::access_control::access_classification::AccessClassification;
 use openehr_rm::draft::access_control::access_control::access_data_scope::AccessDataScope;
 use openehr_rm::draft::access_control::access_control::access_label::AccessLabel;
-use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind};
+use openehr_rm::draft::access_control::terminology::{Confidentiality, ForeignCode, ForeignKind};
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
 use crate::access_eval::class::{DataLayout, Layout};
+use crate::access_eval::scope::confidential::{Labelled, label_level, level_of};
 use crate::policy_register::CategoriesInForce;
 use crate::service::ehr::access_projection::{Bound, Validity, validity};
+
+pub mod confidential;
 
 /// How a fact that cannot be read is read: as covering for a deny, as not
 /// covering for a permit.
@@ -56,6 +59,15 @@ impl Polarity {
     #[must_use]
     pub const fn unreadable(self) -> bool {
         matches!(self, Self::Deny)
+    }
+
+    /// The other polarity, for a fact whose negation narrows.
+    #[must_use]
+    pub const fn flipped(self) -> Self {
+        match self {
+            Self::Deny => Self::Permit,
+            Self::Permit => Self::Deny,
+        }
     }
 }
 
@@ -455,15 +467,23 @@ impl CategoryIndex {
 }
 
 /// The data facts one EHR's directives are read against: the category map,
-/// the EHR's labels and the controller's classifications, and, for a
-/// settings class, where each fact of its EHRs sits.
-#[derive(Debug, Clone, Default)]
+/// the EHR's labels, its marking and the controller's classifications, and,
+/// for a settings class, where each fact of its EHRs sits.
+#[derive(Debug, Clone)]
 pub struct Scopes {
     categories: CategoryIndex,
     /// The objects labelled with each sensitivity.
     labels: BTreeMap<ForeignCode, Held<Vec<Uuid>>>,
-    /// Each classification's data and the sensitivities it gives them.
-    classifications: Vec<(Pred, Vec<ForeignCode>)>,
+    /// The objects labelled with each confidentiality above `N`.
+    confidential: BTreeMap<Confidentiality, Held<Vec<Uuid>>>,
+    /// The confidentiality of the whole EHR, its marking's level.
+    marking: Confidentiality,
+    /// Each classification's data, the sensitivities it gives them and the
+    /// confidentiality it gives them.
+    classifications: Vec<(Pred, Vec<ForeignCode>, Confidentiality)>,
+    /// The classifications as the policy states them, read again once the
+    /// marking is known.
+    sources: Vec<AccessClassification>,
     /// The facts of a settings class; `None` for one EHR's own settings.
     layout: Option<Arc<Layout>>,
 }
@@ -478,6 +498,7 @@ impl Scopes {
         classifications: &[AccessClassification],
     ) -> Self {
         let mut by_code: BTreeMap<ForeignCode, Vec<Uuid>> = BTreeMap::new();
+        let mut by_level: BTreeMap<Confidentiality, Vec<Uuid>> = BTreeMap::new();
         for label in labels {
             // NOTE: our own design, a label on a reference that names no versioned object
             // labels nothing, since nothing it names can be read.
@@ -487,12 +508,20 @@ impl Scopes {
             for code in sensitivities(label.sensitivities.as_deref().unwrap_or_default()) {
                 by_code.entry(code).or_default().push(vo_id);
             }
+            let level = label_level(label);
+            if level > Confidentiality::Normal {
+                by_level.entry(level).or_default().push(vo_id);
+            }
         }
         let labels = by_code
             .into_iter()
             .map(|(code, objects)| (code, Held::Known(objects)))
             .collect();
-        Self::with(categories, labels, classifications, None)
+        let confidential = by_level
+            .into_iter()
+            .map(|(level, objects)| (level, Held::Known(objects)))
+            .collect();
+        Self::with(categories, (labels, confidential), classifications, None)
     }
 
     /// The scopes of every EHR of a settings class laid out as `layout`,
@@ -509,32 +538,70 @@ impl Scopes {
             .iter()
             .map(|(code, fact)| (code.clone(), Held::Fact(*fact)))
             .collect();
-        Self::with(categories, labels, classifications, Some(layout))
+        let confidential = layout
+            .confidential
+            .iter()
+            .map(|(level, fact)| (*level, Held::Fact(*fact)))
+            .collect();
+        Self::with(
+            categories,
+            (labels, confidential),
+            classifications,
+            Some(layout),
+        )
     }
 
-    /// The scopes of `labels` under `classifications`, laid out as `layout`.
+    /// These scopes, of an EHR whose marking is `level`.
+    #[must_use]
+    pub fn marked(self, level: Confidentiality) -> Self {
+        let mut scopes = Self {
+            marking: level,
+            ..self
+        };
+        scopes.classifications = scopes.classified(&scopes.sources);
+        scopes
+    }
+
+    /// The scopes of the labels `labelled` under `classifications`, laid out
+    /// as `layout`.
     fn with(
         categories: CategoryIndex,
-        labels: BTreeMap<ForeignCode, Held<Vec<Uuid>>>,
+        labelled: Labelled,
         classifications: &[AccessClassification],
         layout: Option<Arc<Layout>>,
     ) -> Self {
+        let (labels, confidential) = labelled;
         let mut scopes = Self {
             categories,
             labels,
+            confidential,
+            marking: Confidentiality::Normal,
             classifications: Vec::new(),
+            sources: classifications.to_vec(),
             layout,
         };
-        scopes.classifications = classifications
+        scopes.classifications = scopes.classified(&scopes.sources);
+        scopes
+    }
+
+    /// Each of `classifications` as these scopes read it.
+    fn classified(
+        &self,
+        classifications: &[AccessClassification],
+    ) -> Vec<(Pred, Vec<ForeignCode>, Confidentiality)> {
+        classifications
             .iter()
             .map(|classification| {
                 (
-                    scopes.scope(&classification.data, Polarity::Deny, false, None),
+                    self.scope(&classification.data, Polarity::Deny, false, None),
                     sensitivities(classification.sensitivities.as_deref().unwrap_or_default()),
+                    classification
+                        .confidentiality
+                        .as_ref()
+                        .map_or(Confidentiality::Normal, level_of),
                 )
             })
-            .collect();
-        scopes
+            .collect()
     }
 
     /// Every sensitivity a label or a classification gives.
@@ -546,7 +613,7 @@ impl Scopes {
             .chain(
                 self.classifications
                     .iter()
-                    .flat_map(|(_, codes)| codes.iter().cloned()),
+                    .flat_map(|(_, codes, _)| codes.iter().cloned()),
             )
             .collect()
     }
@@ -559,7 +626,7 @@ impl Scopes {
         if let Some(objects) = self.labels.get(code) {
             preds.push(labelled(objects, Polarity::Deny));
         }
-        for (pred, codes) in &self.classifications {
+        for (pred, codes, _) in &self.classifications {
             if codes.contains(code) {
                 preds.push(pred.clone());
             }
@@ -669,6 +736,12 @@ impl Scopes {
                 .map(|origins| held(origins.to_vec(), placed.and_then(|p| p.origins))),
             recorded,
         };
+        let confidentiality = scope
+            .confidentialities
+            .as_deref()
+            .map_or(Pred::True, |levels| {
+                self.at_most(levels, polarity, with_sensitivity)
+            });
         let sensitivity = match scope.sensitivities.as_deref() {
             Some(codes) if with_sensitivity => Pred::any(
                 sensitivities(codes)
@@ -690,7 +763,7 @@ impl Scopes {
         } else {
             Pred::Data(Arc::new(data), polarity)
         };
-        Pred::all(vec![rows, sensitivity])
+        Pred::all(vec![rows, sensitivity, confidentiality])
     }
 }
 
