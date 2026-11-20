@@ -382,6 +382,9 @@ hs_authorize() {
     echo "      FerroSMART did not ask $user for consent (picker subject '$subject', EHR '$ehr'): ${location:0:200}" >&2
     h_call 1 admin GET "/ehr/$ehr/ehr_status"
     echo "        the stored subject of EHR $ehr ($H_CODE): $(jq -c '.subject' <<<"$H_BODY" 2>/dev/null)" >&2
+    echo "        its row: $(hdc exec -T ferroehr-postgres psql -qtAX -U "${PG_INIT_USER:-ferroehr}" \
+      -d "${PG_INIT_DB:-ferroehr}" -c "SELECT subject_id, subject_namespace FROM clinical.ehr \
+      WHERE id = '$ehr'" 2>&1 | head -3)" >&2
     hs_answered; return 1 ;; esac
   page="$(curl -sS -c "$HS_JAR" -b "$HS_JAR" "$location")"
   form_token="$(hs_attribute "$page" '<input[^>]*name="form_token"[^>]*>' value)"
