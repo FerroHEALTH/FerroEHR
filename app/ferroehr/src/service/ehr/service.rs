@@ -302,6 +302,7 @@ impl FerroEhrService {
         event.object_id = Some(format!("subject-namespace:{namespace}"));
         event.ehr_id = resolved.map(|id| id.to_string());
         event.result_count = Some(count);
+        event.request_id = crate::system_log::access_context::current_origin().request_id;
         self.record_committer_access(event).await
     }
 

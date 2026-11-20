@@ -550,6 +550,15 @@ async fn the_delay_holds_on_the_callers_own_record_by_the_party_binding() {
         Some("gina"),
         "the read of Gina's own subject references is an access record"
     );
+    let (request,): (Option<String>,) = sqlx::query_as(
+        "SELECT request_id FROM audit.access_trail WHERE resource_id = $1 \
+         ORDER BY chain_seq DESC LIMIT 1",
+    )
+    .bind("subject-namespace:demographic")
+    .fetch_one(&pool)
+    .await
+    .expect("read the record");
+    assert!(request.is_some(), "the record names its request");
     for caller in [&gina, &gina_alone] {
         assert_eq!(read(&app, &own, &held, caller).await, StatusCode::OK);
         let uids = composition_uids(&app, &own, caller).await;
