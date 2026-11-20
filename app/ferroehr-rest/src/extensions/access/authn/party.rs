@@ -37,6 +37,7 @@ use super::AuthError;
 
 pub(super) mod closed;
 mod jit;
+pub(crate) mod own;
 
 /// The party binding of the deployment, with what the committer of a bound
 /// caller carries beside it: the provider, the namespace and the source of
@@ -357,7 +358,9 @@ pub(super) async fn bind(
             .unwrap_or(Outcome::Unbound),
         outcome => outcome,
     };
-    if let Some(mut refusal) = refusal(&outcome) {
+    if let Some(mut refusal) =
+        refusal(&outcome).filter(|_| !own::binds_the_person(caller.kind(), &outcome))
+    {
         let issuer = caller.issuer().unwrap_or("-");
         // NOTE: GDPR Art. 5(1)(c), the line names the issuer and the outcome, never the claim
         // value, which the access record of the request carries under its retention.
@@ -569,7 +572,9 @@ pub(super) fn committer_identity(
                 .map(str::to_owned),
         },
         client,
-        person: crate::smart::acts_as_person(principal) || portal.is_some(),
+        person: crate::smart::acts_as_person(principal)
+            || portal.is_some()
+            || caller.is_some_and(|caller| own::own_person(caller).is_some()),
         party: principal
             .access
             .caller()

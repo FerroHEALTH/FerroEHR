@@ -11,8 +11,9 @@
 //! lookup reads them.
 //!
 //! A `PERSON` of a mapped template has a key row for each identifier at its
-//! key selector when it performs a professional `ROLE` or is the source of a
-//! representation relationship, and none otherwise. A professional `ROLE` is
+//! key selector, whose professional dates and representative flag say what
+//! the `PERSON` is bound for; a `PERSON` that is neither binds as the person
+//! themself (#6106). A professional `ROLE` is
 //! a `ROLE` of the mapped role template listed in the `PERSON`'s `roles`
 //! (RM demographic `org.openehr.rm.demographic.actor.adoc`, "Identifiers of
 //! the Version container for each Role played by this Party"), whose
@@ -376,11 +377,11 @@ impl Scope<'_> {
 /// rows of the `PERSON` heads `heads` that `scope` holds, with the tombstones
 /// it asks for.
 ///
-/// A key row is written for a `PERSON` that performs a professional `ROLE`
-/// (RM demographic `role.adoc`: a `ROLE` listed in `roles`, whose
-/// `performer` names the `PERSON` and whose head is `complete` or
-/// `incomplete`) or is the source of a representation relationship, inline
-/// or of its own.
+/// A key row is written for every `PERSON` of a mapped template, with the
+/// dates of the professional `ROLE`s it performs (RM demographic
+/// `role.adoc`: a `ROLE` listed in `roles`, whose `performer` names the
+/// `PERSON` and whose head is `complete` or `incomplete`) and whether it is
+/// the source of a representation relationship, inline or of its own.
 async fn write_persons(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
@@ -430,7 +431,6 @@ async fn write_persons(
                 lifecycle_state: head.lifecycle_state.clone(),
                 representative: !facts.representations.is_empty()
                     || standalone.contains(&head.vo_id),
-                portal: *selector == "key" && mapping.is_portal_issuer(&identifier.issuer),
             });
         }
         listed.extend(facts.roles.iter().map(|role| (*role, head.vo_id)));
@@ -512,7 +512,6 @@ fn tombstones_of(mapping: &BindingMapping, heads: &[Head]) -> Vec<IdentifierRow>
                 value: identifier.canonical(),
                 lifecycle_state: lifecycle_state.clone(),
                 representative: false,
-                portal: false,
             });
         }
     }
@@ -581,7 +580,6 @@ async fn write_groups(
             value: value.to_owned(),
             lifecycle_state: head.lifecycle_state.clone(),
             representative: false,
-            portal: false,
         };
         for id in &facts.group_external_ids {
             identifiers.push(row("group_external_id", &id.issuer, &id.id_type, &id.id));

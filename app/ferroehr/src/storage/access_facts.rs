@@ -108,8 +108,9 @@ pub fn admits_stored(stored: &crate::storage::version_repo::read::StoredVersion)
 /// design/extension.
 #[must_use]
 pub fn visible(stored: &crate::storage::version_repo::read::StoredVersion) -> bool {
-    use crate::system_log::access_context::access_delay_enforced;
-    admits_stored(stored) && (!stored.person_withheld || !access_delay_enforced())
+    use crate::system_log::access_context::{access_delay_enforced, access_delay_enforced_on};
+    let delayed = access_delay_enforced() || stored.ehr_id.is_some_and(access_delay_enforced_on);
+    admits_stored(stored) && (!stored.person_withheld || !delayed)
 }
 
 /// The system ids a `version.origins` stamp names.

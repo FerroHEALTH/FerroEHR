@@ -374,9 +374,19 @@ async fn the_check_reports_every_category_and_writes_nothing() {
 
 #[tokio::test]
 async fn a_key_two_persons_carry_is_a_duplicate_and_fails() {
-    let (db, svc) = service().await;
-    let first = person_with(&svc, PLANTED_KEY, &scim(), false, "532").await;
-    let second = person_with(&svc, &PLANTED_KEY.to_uppercase(), &scim(), false, "532").await;
+    // The store refuses a second PERSON carrying a held key at its commit
+    // (#6106), so the two are committed before the binding is mapped.
+    let (db, unmapped) = crate::fixtures::service().await;
+    let first = person_with(&unmapped, PLANTED_KEY, &scim(), false, "532").await;
+    let second = person_with(
+        &unmapped,
+        &PLANTED_KEY.to_uppercase(),
+        &scim(),
+        false,
+        "532",
+    )
+    .await;
+    let svc = unmapped.with_binding_mapping(mapping());
     let before = snapshot(&db.pool()).await;
 
     let report = svc.check_binding(&input()).await.expect("the check runs");

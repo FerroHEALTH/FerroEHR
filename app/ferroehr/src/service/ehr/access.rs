@@ -331,7 +331,7 @@ impl FerroEhrService {
         tx: &mut PgConnection,
         ehr_id: EhrId,
     ) -> Result<(), ServiceError> {
-        let caller = self.settings_caller();
+        let caller = self.settings_caller_on(ehr_id);
         if caller.administrator() {
             return Ok(());
         }
@@ -354,13 +354,28 @@ impl FerroEhrService {
         SettingsCaller::current(&self.binding)
     }
 
+    /// Who the running request's caller is to the `EHR_ACCESS` settings of
+    /// `ehr_id`: [`Self::settings_caller`], and the record's person as well
+    /// when the request found that EHR's subject to be the `PERSON` the party
+    /// binding names the caller (EHDS Art. 3; our own design, #6106).
+    #[must_use]
+    pub fn settings_caller_on(&self, ehr_id: EhrId) -> SettingsCaller {
+        let caller = self.settings_caller();
+        if crate::access_eval::condition::current()
+            .is_some_and(|access| access.is_record(Some(ehr_id)))
+        {
+            return caller.into_subject();
+        }
+        caller
+    }
+
     /// Whether the running request's caller may read the `EHR_ACCESS`
     /// settings of `ehr_id` ([`SettingsCaller::may_read`]).
     ///
     /// # Errors
     /// [`ServiceError`] when the settings cannot be read.
     pub async fn may_read_ehr_access(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        let caller = self.settings_caller();
+        let caller = self.settings_caller_on(ehr_id);
         if caller.reads_every() {
             return Ok(true);
         }

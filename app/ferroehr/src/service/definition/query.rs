@@ -249,6 +249,7 @@ impl FerroEhrService {
                 archetype_lineage: Arc::new(ArchetypeLineage::default()),
                 policy_parties: PolicyParties::Hidden,
                 access_settings: crate::aql::sql::EhrAccessReaders::Every,
+                own_records: None,
             };
             crate::aql::sql::build(&ir, &params, &ctx).map_err(refused)?;
         }

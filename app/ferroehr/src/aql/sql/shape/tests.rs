@@ -10,6 +10,7 @@ use openehr_rm::draft::access_control::terminology::Refusal;
 use uuid::Uuid;
 
 use super::Shapes;
+use crate::access_eval::class::Keepers;
 use crate::access_eval::condition::care::{Care, ProjectedCare};
 use crate::access_eval::condition::pinned::PinnedEhr;
 use crate::access_eval::condition::{AccessCondition, CallerKeys, ConditionGroups, VerdictPair};
@@ -44,6 +45,7 @@ fn ctx(ehr_access: AccessCondition, lineage: &Arc<ArchetypeLineage>) -> SqlCtx {
         archetype_lineage: Arc::clone(lineage),
         policy_parties: PolicyParties::Served,
         access_settings: EhrAccessReaders::Every,
+        own_records: None,
     }
 }
 
@@ -379,5 +381,59 @@ fn keys_seen_once_leave_the_shapes_in_use() {
         shapes.bound(),
         2,
         "the shape in use outlives the keys seen once"
+    );
+}
+
+/// Under the same restrictive condition and settings readers, a clinical
+/// statement carries the per-EHR gates and a demographic one carries only
+/// the policy-party mark, since a party belongs to no EHR (#6087).
+#[test]
+fn a_demographic_statement_carries_no_per_ehr_gate() {
+    let lineage = Arc::new(ArchetypeLineage::default());
+    let condition = classes(
+        jiff::Timestamp::now(),
+        &["party"],
+        Care::Ehrs(vec![Uuid::now_v7()].into()),
+        None,
+    );
+    let mut ctx = ctx(condition, &lineage);
+    ctx.policy_parties = PolicyParties::Hidden;
+    ctx.access_settings = EhrAccessReaders::Only(Arc::new(Keepers {
+        groups: Vec::new(),
+        party: None,
+    }));
+    let built = |aql: &str| {
+        crate::aql::sql::build_executed(&plan(aql), &Params::default(), &ctx)
+            .expect("the request builds")
+    };
+    let clinical = built(POPULATION);
+    assert!(
+        clinical.sql.contains("\"access_settings\""),
+        "a clinical statement reads the settings row: {}",
+        clinical.sql
+    );
+    assert!(
+        format!("{:?}", clinical.values.0.0).contains("EHR_ACCESS"),
+        "a clinical statement gates the EHR_ACCESS objects"
+    );
+    assert!(
+        !clinical.sql.contains("policy_party_at"),
+        "{}",
+        clinical.sql
+    );
+    let demographic = built("SELECT p/uid/value FROM PERSON p");
+    assert!(
+        !demographic.sql.contains("access_settings"),
+        "a demographic statement reads no settings row: {}",
+        demographic.sql
+    );
+    assert!(
+        !format!("{:?}", demographic.values.0.0).contains("EHR_ACCESS"),
+        "a demographic statement gates no EHR_ACCESS object"
+    );
+    assert!(
+        demographic.sql.contains("\"policy_party_at\" IS NULL"),
+        "a demographic statement leaves the policy parties out: {}",
+        demographic.sql
     );
 }

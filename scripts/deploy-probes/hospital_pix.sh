@@ -226,14 +226,14 @@ hp_steward() {
 # record `mrn` at the patient identifier path and declaring the clinical
 # pseudonym `pseudonym` (#5648, #5634).
 j_patient() {
-  local name="$1" mrn="$2" pseudonym="$3" archetype="openEHR-DEMOGRAPHIC-PERSON.patient.v1"
+  local name="$1" mrn="$2" pseudonym="$3" archetype="openEHR-DEMOGRAPHIC-PERSON.patient.v2"
   jq -nc --arg a "$archetype" --arg n "$name" --arg s "$HP_SOURCE" --arg m "$mrn" \
     --arg c "$HP_CLINICAL" --arg p "$pseudonym" --argjson k "$(j_term record_subject)" '
     def text(v): {_type:"DV_TEXT",value:v};
     {_type:"PERSON",archetype_node_id:$a,
      archetype_details:{_type:"ARCHETYPED",rm_version:"1.1.0",
        archetype_id:{_type:"ARCHETYPE_ID",value:$a},
-       template_id:{_type:"TEMPLATE_ID",value:"openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"}},
+       template_id:{_type:"TEMPLATE_ID",value:"openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0"}},
      name:text($n),
      details:{_type:"ITEM_TREE",archetype_node_id:"id2",name:text("Details"),items:[
        {_type:"ELEMENT",archetype_node_id:"id3",name:text("Patient identifier"),
@@ -243,20 +243,6 @@ j_patient() {
      identities:[{_type:"PARTY_IDENTITY",archetype_node_id:"id6",name:text("Legal name"),
        details:{_type:"ITEM_TREE",archetype_node_id:"id7",name:text("Name structure"),
          items:[{_type:"ELEMENT",archetype_node_id:"id8",name:text("Full name"),value:text($n)}]}}]}'
-}
-
-# A care relationship of the patient template (its node id32): the patient
-# PERSON `source` under the care of the GROUP `team` over `validity`, coded
-# under_care_of of the access terminology.
-j_patient_care() {
-  local source="$1" team="$2" validity="$3"
-  jq -nc --argjson k "$(j_term under_care_of)" --argjson s "$(j_party PERSON "$source")" \
-    --argjson t "$(j_party GROUP "$team")" --argjson v "$validity" '{_type:"PARTY_RELATIONSHIP",
-    archetype_node_id:"id32",name:{_type:"DV_TEXT",value:"Care relationship"},
-    details:{_type:"ITEM_TREE",archetype_node_id:"id33",name:{_type:"DV_TEXT",value:"Care details"},
-      items:[{_type:"ELEMENT",archetype_node_id:"id34",
-        name:{_type:"DV_TEXT",value:"Care relationship code"},value:$k}]},
-    time_validity:$v,source:$s,target:$t}'
 }
 
 # An EHR on the clinical pseudonym `pseudonym`; its id in `hv ehr_<name>`.
@@ -314,9 +300,8 @@ hospital_pix_patients() {
   h_party person_lisa person "$(j_patient "Lisa Bos" lisa-0001 "$pseudonym")" \
     || h_fail_call "Lisa's patient PERSON"
   hp_ehr lisa "$pseudonym" || h_fail_call "Lisa's EHR"
-  h_rerelate 1 admin person "$(hv person_lisa)" \
-    "[$(j_patient_care "$(hv person_lisa)" "$(hv cardiology)" "$(j_dates "$(h_day -5)")")]" \
-    || h_fail_call "Lisa's admission to Cardiology"
+  h_care care_lisa_cardiology 1 admin "$(j_care_of "$(hv person_lisa)" GROUP "$(hv cardiology)" \
+    "$(j_dates "$(h_day -5)")")" || h_fail_call "Lisa's admission to Cardiology"
   pseudonym="$(hp_pseudonym lisa-0002)"
   h_party person_lisa_dup person "$(j_patient "L. Bos" lisa-0002 "$pseudonym")" \
     || h_fail_call "the duplicate record's patient PERSON"

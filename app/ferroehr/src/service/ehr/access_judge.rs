@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use openehr_rm::draft::access_control::terminology::AccessDefault;
 
-use crate::access_eval::condition::care::Care;
+use crate::access_eval::condition::care::{Care, CareUnsettled};
 use crate::access_eval::condition::{AccessCondition, InForce, RequestAccess, current};
 use crate::access_eval::procedure::{Lifted, Outcome, Verdict};
 use crate::access_eval::scope::{CategoryIndex, Item};
@@ -169,6 +169,32 @@ impl FerroEhrService {
         Ok(hidden)
     }
 
+    /// Whether the EHR `ehr_id`, found by its subject, reads as absent to the
+    /// running request's lookup: as [`Self::ehr_hidden_from_request`], and
+    /// for a confined caller every EHR but its own, so a lookup of someone
+    /// else's subject answers as one no EHR names and tells nothing of it.
+    ///
+    /// No openEHR spec governs this: our own design (#6106).
+    ///
+    /// # Errors
+    /// As [`Self::ehr_verdict`].
+    pub(crate) async fn ehr_hidden_from_lookup(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
+        let Some(access) = current() else {
+            return Ok(false);
+        };
+        let verdict = self.ehr_verdict(&access, ehr_id).await?;
+        let caller = access.caller();
+        let hidden = match verdict.outcome(&Item::Ehr) {
+            Outcome::Absent(_) => true,
+            Outcome::Refused(refusal) => caller.confined() && refusal == caller.not_own(),
+            Outcome::Admit => false,
+        };
+        if hidden {
+            access.note(ehr_id, &verdict, &Item::Ehr);
+        }
+        Ok(hidden)
+    }
+
     /// The ids of `ids` that name an EHR of this store the running request
     /// may see: an EHR the evaluator answers as absent (EHDS Art. 8 and 10)
     /// is named by no query.
@@ -281,6 +307,57 @@ impl FerroEhrService {
         })
     }
 
+    /// The caller's own records by the party binding, on which the EHDS
+    /// Art. 3(3) delay withholds held data from a query (#6108): the subject
+    /// references of the `PERSON` a caller whose delay holds per record is
+    /// bound to, read on the party pool. `None` when the delay holds on
+    /// every record the query reads or on none. No openEHR spec governs this:
+    /// our own design.
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the `PERSON`'s references cannot be read.
+    pub(crate) async fn delayed_own_records(
+        &self,
+    ) -> Result<Option<crate::aql::sql::own_records::OwnRecords>, ServiceError> {
+        use crate::system_log::access_context::{AccessDelay, access_delay, access_delay_enforced};
+        if access_delay() != AccessDelay::Records || access_delay_enforced() {
+            return Ok(None);
+        }
+        let Some(access) = current() else {
+            return Ok(None);
+        };
+        // NOTE: the local source names each party by its container's UUID, so a bound party
+        // id that is no UUID names no PERSON of this store and no record.
+        let Some(person) = access
+            .caller()
+            .party
+            .as_deref()
+            .and_then(|party| party.parse::<uuid::Uuid>().ok())
+        else {
+            return Ok(None);
+        };
+        let namespace = self.grants.namespace();
+        let references = self.grants.subjects_of(person).await?;
+        let count = u64::try_from(references.len()).unwrap_or(u64::MAX);
+        let mut subjects = Vec::new();
+        for subject in references {
+            // NOTE: our own design (#6108), this CDR's own references name a PERSON by its
+            // UUID, read in either case, as the evaluator reads it (`LiveGrants::person_of`).
+            if *subject.namespace == *namespace {
+                subjects.push((subject.id.to_uppercase(), subject.namespace.clone()));
+                subjects.push((subject.id.to_lowercase(), subject.namespace));
+            } else {
+                subjects.push((subject.id, subject.namespace));
+            }
+        }
+        // NOTE: our own design (#6108), the read of the caller's own subject references is
+        // recorded as every subject-reference read is, by its namespace and never its ids.
+        self.emit_resolution(&namespace, None, count).await?;
+        Ok(Some(crate::aql::sql::own_records::OwnRecords {
+            subjects: subjects.into(),
+        }))
+    }
+
     /// The condition of a query whose rows all belong to `pinned` when it
     /// names them: its care read as [`Self::resolve_care`] reads it, and the
     /// one EHR of a query pinned to one decided before the statement, from
@@ -303,6 +380,10 @@ impl FerroEhrService {
             return Ok(resolved);
         }
         let entry = Box::pin(self.ehr_access_entry(*ehr_id)).await?;
+        access
+            .bind_subject(*ehr_id, &entry)
+            .await
+            .map_err(CareUnsettled::from)?;
         Ok(access.pin(&resolved, *ehr_id, &entry))
     }
 

@@ -224,7 +224,7 @@ impl Authenticator {
             primary,
             role_issuers: RoleIssuers::of(config),
             party,
-            declared: super::declared::Declared::default(),
+            declared: super::declared::Declared::new(config.rate_clock.clone()),
             namespace: config.party_binding.namespace.clone(),
         }))
     }

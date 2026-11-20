@@ -579,6 +579,34 @@ async fn query_is_filtered_to_the_callers_patient() {
     assert_eq!(count, vec![json!(1)], "one EHR is in the caller's scope");
 }
 
+/// A patient's lookup by subject finds their own EHR and no other: another
+/// patient's subject answers as one no EHR names (#6106).
+#[tokio::test]
+async fn a_patients_lookup_by_subject_finds_only_their_own_ehr() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr_in(&seed, EHR_OWN, "test.patients", "PATIENT-1").await;
+    seed_ehr_in(&seed, EHR_OTHER, "test.patients", "PATIENT-2").await;
+    let app = gated_app(svc).await;
+    let lookup = |subject: &str| {
+        Request::builder()
+            .uri(format!(
+                "{BASE}/ehr?subject_id={subject}&subject_namespace=test.patients"
+            ))
+            .header("authorization", patient(Some(EHR_OWN)))
+            .header("accept", "application/json")
+            .body(Body::empty())
+            .expect("request")
+    };
+    let (own, _, body) = common::send(&app, lookup("PATIENT-1")).await;
+    assert_eq!(own, StatusCode::OK, "{body}");
+    let found: Value = serde_json::from_str(&body).expect("an EHR");
+    assert_eq!(found["ehr_id"]["value"], json!(EHR_OWN));
+    let (other, _, other_body) = common::send(&app, lookup("PATIENT-2")).await;
+    let (none, _, none_body) = common::send(&app, lookup("PATIENT-9")).await;
+    assert_eq!(other, StatusCode::NOT_FOUND, "{other_body}");
+    assert_eq!(none, StatusCode::NOT_FOUND, "{none_body}");
+}
+
 const EHR_SHARED_A: &str = "aaaaaaaa-0000-4000-8000-000000000001";
 const EHR_SHARED_B: &str = "aaaaaaaa-0000-4000-8000-000000000002";
 const EHR_ANONYMOUS: &str = "aaaaaaaa-0000-4000-8000-000000000003";
