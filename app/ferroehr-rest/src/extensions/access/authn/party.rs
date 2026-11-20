@@ -388,9 +388,10 @@ pub(super) async fn bind(
             .unwrap_or(Outcome::Unbound),
         outcome => outcome,
     };
-    if let Some(mut refusal) =
-        refusal(&outcome).filter(|_| !own::binds_the_person(caller.kind(), &outcome))
-    {
+    if let Some(mut refusal) = refusal(&outcome).filter(|_| {
+        !own::binds_the_person(caller.kind(), &outcome)
+            && !own::binds_a_representative(caller.kind(), &outcome)
+    }) {
         let issuer = caller.issuer().unwrap_or("-");
         // NOTE: GDPR Art. 5(1)(c), the line names the issuer and the outcome, never the claim
         // value, which the access record of the request carries under its retention.
