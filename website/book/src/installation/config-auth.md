@@ -768,9 +768,26 @@ reduced to `userName`, `active` and the SCIM attributes
 lists the `User` type at `/Users`, and the `Group` type at `/Groups` with
 FerroEHR's Group extension
 `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group` and its
-immutable boolean `careTeam` when Groups are served. Both extension URNs take
-the form Microsoft Entra ID requires of a custom attribute, in the
-`urn:ietf:params:scim` namespace without a registration (RFC 7643 §10.2.1).
+immutable boolean `careTeam` when Groups are served.
+
+The two extension URNs are a deliberate deviation from RFC 7643. They sit
+under `urn:ietf:params:scim:schemas:extension:`, the sub-namespace RFC 7643
+§10.2 and RFC 3553 reserve for names IANA assigns, and neither name is in the
+IANA "SCIM Schema URIs" registry (RFC 7643 §10.3). The reason is Microsoft
+Entra ID: its provisioning client sends a custom attribute only under a name
+of the form
+`urn:ietf:params:scim:schemas:extension:CustomExtensionName:2.0:User:CustomAttribute`
+("For SCIM applications, the attribute name must follow the pattern shown in
+the example", *Customize Microsoft Entra attribute mappings*, vendored at
+`docs/specs/microsoft-entra/docs/identity/app-provisioning/customize-application-attributes.md`
+line 148). A schema id outside that namespace, which RFC 7643 §3 would allow,
+leaves an Entra non-gallery application unable to send `loginIdentifier`, so
+it could not provision anyone. The binding key fits no registered attribute:
+`userName` is mutable, `externalId` is the client's own identifier for the
+resource (RFC 7643 §3.1), and the Enterprise User extension (§4.3) carries no
+login subject. The two URNs are the provisioning contract of the FerroHEALTH
+products, fixed in the same way as the `/scim/v2` base path, and a client
+writes them exactly as `/Schemas` lists them.
 
 ### Users
 
