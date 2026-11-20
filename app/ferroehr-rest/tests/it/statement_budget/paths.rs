@@ -13,7 +13,7 @@
 //! (#6084), an ITI-81 page and a party read, all over the
 //! IPS composition (128 KB, 402 node rows), and the commit of that composition
 //! as a CONTRIBUTION, its read at an instant, the `EHR_STATUS` commit and read,
-//! and the commit of a PERSON.
+//! and the commit of a PERSON, plain and with ordinal and scale values.
 //!
 //! The conversions are the `trace` events under
 //! [`openehr_its::conversion::TARGET`]: the codec entry points record each
@@ -94,10 +94,11 @@ enum Path {
     CommitStatus,
     ReadStatus,
     CommitParty,
+    CommitPartyScored,
 }
 
 impl Path {
-    const ALL: [Self; 17] = [
+    const ALL: [Self; 18] = [
         Self::CommitJson,
         Self::CommitXml,
         Self::CommitFlat,
@@ -115,6 +116,7 @@ impl Path {
         Self::CommitStatus,
         Self::ReadStatus,
         Self::CommitParty,
+        Self::CommitPartyScored,
     ];
 
     fn name(self) -> &'static str {
@@ -136,6 +138,7 @@ impl Path {
             Self::CommitStatus => "EHR_STATUS commit",
             Self::ReadStatus => "EHR_STATUS read",
             Self::CommitParty => "party commit",
+            Self::CommitPartyScored => "party commit with scores",
         }
     }
 }
@@ -202,7 +205,12 @@ struct Budget {
 /// its access records stay off the ITI-81 page; its ceilings are the figures
 /// of three runs (5,637 to 5,639 allocations, a median peak of 174,788
 /// bytes, 13,180 WAL bytes) with the margins above.
-const BUDGETS: [Budget; 17] = [
+/// The commit of a PERSON holding two ordinals and two scales holds the WAL
+/// the index on their numbers costs (#6090): 4 entries of 72 bytes, 288 of
+/// the 10,489 bytes it wrote in each of three runs. Its ceilings are the
+/// figures of those runs (2,486 allocations, a median peak of at most 120,133
+/// bytes, 20 nested statements) with the margins above; no other path moved.
+const BUDGETS: [Budget; 18] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
@@ -346,6 +354,15 @@ const BUDGETS: [Budget; 17] = [
         round_trips: 31,
         nested: 20,
         wal: 7953,
+    },
+    Budget {
+        path: Path::CommitPartyScored,
+        conversions: 8,
+        allocations: 2536,
+        peak_bytes: 132_147,
+        round_trips: 31,
+        nested: 21,
+        wal: 10_594,
     },
     Budget {
         path: Path::AqlMatches,
@@ -508,6 +525,8 @@ struct World {
     template_id: String,
     party: String,
     person: String,
+    /// The PERSON with two ordinals and two scales in its details.
+    scored: String,
     /// An instant after every fixture commit.
     at: String,
     /// The `EHR_STATUS` a status commit writes, without its `uid`.
@@ -614,6 +633,7 @@ impl World {
             flat,
             template_id,
             party: object_id(&headers),
+            scored: scored(&person),
             person,
             at: jiff::Timestamp::now().to_string(),
             status: status_body,
@@ -730,16 +750,51 @@ impl World {
             ),
             Path::CommitStatus => self.status_commit(ehr, n),
             Path::ReadStatus => get(format!("{BASE}/ehr/{ehr}/ehr_status"), "nurse", JSON),
-            Path::CommitParty => Call {
+            Path::CommitParty | Path::CommitPartyScored => Call {
                 method: "POST",
                 uri: format!("{BASE}/demographic/person"),
                 user: "root",
                 accept: JSON,
                 headers: minimal.clone(),
-                body: Some((JSON, self.person.clone())),
+                body: Some((
+                    JSON,
+                    if path == Path::CommitParty {
+                        self.person.clone()
+                    } else {
+                        self.scored.clone()
+                    },
+                )),
             },
         }
     }
+}
+
+/// `person` with details holding two `DV_ORDINAL` and two `DV_SCALE`
+/// values, whose numbers `idx_node_hot_value_number` indexes (#6090).
+fn scored(person: &str) -> String {
+    let mut body: Value = serde_json::from_str(person).expect("the person fixture");
+    let symbol = |code: &str| {
+        serde_json::json!({ "_type": "DV_CODED_TEXT", "value": code,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
+                "code_string": code } })
+    };
+    let element = |at: &str, value: Value| {
+        serde_json::json!({ "_type": "ELEMENT", "archetype_node_id": at,
+            "name": { "_type": "DV_TEXT", "value": at }, "value": value })
+    };
+    body["details"] = serde_json::json!({
+        "_type": "ITEM_TREE",
+        "archetype_node_id": "at0100",
+        "name": { "_type": "DV_TEXT", "value": "details" },
+        "items": [
+            element("at0101", serde_json::json!({ "_type": "DV_ORDINAL", "value": 1, "symbol": symbol("at0111") })),
+            element("at0102", serde_json::json!({ "_type": "DV_ORDINAL", "value": 3, "symbol": symbol("at0113") })),
+            element("at0103", serde_json::json!({ "_type": "DV_SCALE", "value": 2.5, "symbol": symbol("at0122") })),
+            element("at0104", serde_json::json!({ "_type": "DV_SCALE", "value": 4.5, "symbol": symbol("at0124") })),
+        ],
+    });
+    body.to_string()
 }
 
 /// A CONTRIBUTION that creates the IPS composition.
