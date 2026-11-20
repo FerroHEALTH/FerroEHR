@@ -443,8 +443,9 @@ grant whose `subject_namespace` names the EHR's subject namespace;
 names the professional as its composer. Under a `compose_for` grant in force
 on a `ROLE` the professional's `PERSON` performs, its composer may name
 another `PERSON` of the same provider by its `external_ref`, as a scribe or
-a resident records for a physician; the committer is still the professional
-who committed
+a resident records for a physician; a correction that keeps the composer
+of the version it replaces needs no grant. The committer is still the
+professional who committed
 ([Who is the committer](security/committer.md#the-composer-of-a-professionals-composition)).
 The grant names no further element.
 

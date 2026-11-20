@@ -290,7 +290,11 @@ pub(super) async fn resolve_create(
     // a first version can only be `complete`/`incomplete`.
     validate_transition(None, &lifecycle)?;
     person::refuse_composing_for_others(content.kind, &content.body)?;
-    committer::composer::settle(content.kind, &mut content.body)?;
+    if let committer::composer::Settled::UnlessUnchanged(_) =
+        committer::composer::settle(content.kind, &mut content.body)?
+    {
+        return Err(committer::composer::refused());
+    }
     system::admit_content(content.kind, &content.body)?;
     external::admit_content(content.kind, &content.body, content.template_id.as_deref())?;
     let vo_id = content
@@ -346,7 +350,11 @@ pub(super) async fn resolve_modify(
     )
     .await?;
     person::refuse_composing_for_others(kind, &content.body)?;
-    committer::composer::settle(kind, &mut content.body)?;
+    if let committer::composer::Settled::UnlessUnchanged(stated) =
+        committer::composer::settle(kind, &mut content.body)?
+    {
+        committer::composer::confirm_unchanged(tx, vo_id, next.preceding_tree, &stated).await?;
+    }
     system::admit_content(kind, &content.body)?;
     external::admit_content(kind, &content.body, content.template_id.as_deref())?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;

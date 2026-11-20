@@ -11,7 +11,9 @@
 //! ([`super::bound::server_committer`]) and holds the composer: it names the
 //! professional, by the judgement the committer gets ([`super::bound::judge`]),
 //! or, under a `compose_for` grant, another `PERSON` of the provider the
-//! professional acts for. The placeholder naming the caller is filled with
+//! professional acts for; a modify may also keep the composer of the version
+//! it replaces, which claims nothing new while the committer records who
+//! corrected it. The placeholder naming the caller is filled with
 //! the professional's `PARTY_IDENTIFIED` before the body is rendered,
 //! digested and stored; any other composer is kept as stated or refused,
 //! never rewritten. EHDS Art. 13(4) (`docs/law/eu/ehds/text.html`) asks the
@@ -21,13 +23,16 @@
 
 use openehr_base::prelude::ObjectId;
 use openehr_rm::prelude::{PartyIdentified, PartyIdentifiedData, PartyProxy};
+use sqlx::PgConnection;
 
 use super::{CommitterIdentity, REQUEST_COMMITTER, bound};
 use crate::error::ServiceError;
+use crate::ids::VoId;
 use crate::party_binding::grants::capabilities::Capabilities;
 use crate::party_binding::grants::operation::Operation;
 use crate::versioning::Kind;
 use crate::versioning::body::Body;
+use crate::versioning::object_version_id::TreeId;
 
 /// What the judgement makes of a stated composer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,27 +43,62 @@ enum Verdict {
     Fill,
 }
 
+/// What [`settle`] leaves to decide.
+#[derive(Debug)]
+pub(crate) enum Settled {
+    /// The composer is settled: filled, kept, or no rule applies.
+    Done,
+    /// The composer is the bound professional's to state only when it is the
+    /// composer of the version a modify replaces ([`confirm_unchanged`]); a
+    /// create is refused.
+    UnlessUnchanged(Box<PartyProxy>),
+}
+
 /// Settles the composer of a COMPOSITION `body` of `kind` the request's
 /// caller commits: for a bound professional the placeholder naming the
-/// caller is filled, and a composer naming anyone else is refused unless a
-/// `compose_for` grant admits it; any other caller and kind pass unchanged.
+/// caller is filled, and a composer naming anyone else is admitted only
+/// under a `compose_for` grant or, on a modify, when it is unchanged; any
+/// other caller and kind pass unchanged.
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) naming `COMPOSITION.composer` for a
-/// composer the bound professional may not state.
-pub(crate) fn settle(kind: Kind, body: &mut Body) -> Result<(), ServiceError> {
+/// composer that cannot be read.
+pub(crate) fn settle(kind: Kind, body: &mut Body) -> Result<Settled, ServiceError> {
     if kind != Kind::Composition {
-        return Ok(());
+        return Ok(Settled::Done);
     }
     // NOTE: outside a request scope there is no caller to hold the composer to.
     REQUEST_COMMITTER
         .try_with(
             |identity| match identity.as_ref().filter(|i| professional(i)) {
                 Some(identity) => settle_for(identity, body),
-                None => Ok(()),
+                None => Ok(Settled::Done),
             },
         )
-        .unwrap_or(Ok(()))
+        .unwrap_or(Ok(Settled::Done))
+}
+
+/// Admits the composer `stated` of a modify of `vo_id` when it equals the
+/// composer of the version `preceding` it replaces.
+///
+/// # Errors
+/// [`ServiceError::Forbidden`] (`403`) naming `COMPOSITION.composer` for any
+/// other composer; the storage error of the read.
+pub(crate) async fn confirm_unchanged(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+    preceding: TreeId,
+    stated: &PartyProxy,
+) -> Result<(), ServiceError> {
+    let previous =
+        crate::storage::version_repo::placement::composer_of(tx, vo_id, preceding.columns())
+            .await?;
+    // NOTE: a stored composer that does not read as a PARTY_PROXY is no composer
+    // the modify keeps, so the refusal stands.
+    let unchanged = previous
+        .and_then(|text| openehr_its::json::from_canonical_json::<PartyProxy>(&text).ok())
+        .is_some_and(|previous| previous == *stated);
+    if unchanged { Ok(()) } else { Err(refused()) }
 }
 
 /// Whether `identity` is a professional bound to a `PERSON` through a token:
@@ -78,23 +118,26 @@ fn professional(identity: &CommitterIdentity) -> bool {
 }
 
 /// [`settle`] for the bound professional `identity`.
-fn settle_for(identity: &CommitterIdentity, body: &mut Body) -> Result<(), ServiceError> {
+fn settle_for(identity: &CommitterIdentity, body: &mut Body) -> Result<Settled, ServiceError> {
     let Some(ours) = bound::server_committer(identity) else {
-        return Ok(());
+        return Ok(Settled::Done);
     };
     let verdict = match body.composer() {
         // NOTE: RM common master06 §Incomplete Content, a 553|incomplete| body may state no
         // composer yet, and one that names nobody names no one else.
-        None => return Ok(()),
+        None => return Ok(Settled::Done),
         Some(Err(_)) => return Err(refused()),
-        Some(Ok(stated)) => judge(&stated, &ours, identity, || {
+        Some(Ok(stated)) => match judge(&stated, &ours, identity, || {
             Capabilities::current().holds(Operation::ComposeFor)
-        })?,
+        }) {
+            Ok(verdict) => verdict,
+            Err(_) => return Ok(Settled::UnlessUnchanged(Box::new(stated.into_owned()))),
+        },
     };
     if verdict == Verdict::Fill {
         body.set_composer(ours);
     }
-    Ok(())
+    Ok(Settled::Done)
 }
 
 /// Judges the composer `stated` against `ours`, the professional's
@@ -169,7 +212,7 @@ fn another_person(
 }
 
 /// The refusal of a composer the bound professional may not state.
-fn refused() -> ServiceError {
+pub(crate) fn refused() -> ServiceError {
     ServiceError::not_permitted(
         "COMPOSITION.composer: a bound professional's COMPOSITION names the professional as its \
          composer; send the placeholder naming the authenticated caller, which the server \

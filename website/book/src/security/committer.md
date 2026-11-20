@@ -125,6 +125,9 @@ one of these:
   the deployment acts for (`[authz.party_binding] provider`), and none when
   it acts for none. It is stored as sent, and the committer still names the
   professional who committed.
+- **On a modify, the composer of the version it replaces**, unchanged. A
+  correction that keeps the author claims nothing new, so it needs no grant,
+  and the committer records the professional who corrected it.
 
 Any other composer, on a create or a modify, is refused with `403` naming
 `COMPOSITION.composer`; the server never rewrites a composer it was sent. A
@@ -140,7 +143,7 @@ governs who may name whom as composer.
 | Request | Answer |
 |---|---|
 | A stated committer with another name, another identifier or another `external_ref` | `403` naming `AUDIT_DETAILS.committer` |
-| A professional's `COMPOSITION` whose composer names another `PERSON` without a `compose_for` grant, a `PERSON` of another provider, or a name or identifier the server does not hold | `403` naming `COMPOSITION.composer` |
+| A professional's `COMPOSITION` whose composer names another `PERSON` without a `compose_for` grant, a `PERSON` of another provider, or a name or identifier the server does not hold, unless a modify keeps the composer of the version it replaces | `403` naming `COMPOSITION.composer` |
 | A placeholder naming anyone other than the caller | `403` |
 | A stated `PARTY_RELATED`, or a `PARTY_SELF` from anyone but the record's person | `403` |
 | A person's committer stated by a system caller | `403` |

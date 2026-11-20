@@ -242,6 +242,63 @@ async fn a_composer_naming_anyone_else_is_refused_on_create_and_modify() {
     );
 }
 
+/// A modify that keeps the composer of the version it replaces claims
+/// nothing new and needs no grant; the committer records who corrected it.
+/// Changing the composer to another `PERSON` still needs the grant.
+#[tokio::test]
+async fn a_correction_keeping_the_author_needs_no_grant() {
+    let (_db, svc, ehr) = service().await;
+    let vo = professional(&svc, "Dr Jane Roe", KEY).await;
+    let other = professional(&svc, "Dr Colleague", COLLEAGUE_KEY).await;
+    let none = Arc::new(Capabilities::default());
+    // The colleague's entry, composed by the colleague through the placeholder.
+    let author = bound(&svc, "sub-c", COLLEAGUE_KEY).await;
+    let written = commit(
+        &svc,
+        ehr,
+        author,
+        Arc::clone(&none),
+        &composed_by("by the colleague", &placeholder(ISSUER, "sub-c")),
+        None,
+    )
+    .await
+    .expect("the colleague's own entry");
+    let composer = written["data"]["composer"].clone();
+    assert_eq!(composer["external_ref"], person_ref(other));
+    let uid = written["uid_written"].as_str().expect("a uid").to_owned();
+    let corrector = bound(&svc, "sub-a", KEY).await;
+    let corrected = commit(
+        &svc,
+        ehr,
+        corrector.clone(),
+        Arc::clone(&none),
+        &composed_by("corrected", &composer),
+        Some(&uid),
+    )
+    .await
+    .expect("keeping the author needs no grant");
+    assert_eq!(corrected["data"]["composer"], composer);
+    assert_eq!(
+        corrected["commit_audit"]["committer"]["external_ref"],
+        person_ref(vo),
+        "the committer is who corrected it"
+    );
+    // Naming yet another PERSON on the next modify is refused without the grant.
+    let next = corrected["uid_written"].as_str().expect("a uid").to_owned();
+    let third = professional(&svc, "Dr Third", "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b").await;
+    refused(
+        commit(
+            &svc,
+            ehr,
+            corrector,
+            none,
+            &composed_by("reassigned", &colleague(third)),
+            Some(&next),
+        )
+        .await,
+    );
+}
+
 #[tokio::test]
 async fn composing_for_a_colleague_takes_the_compose_for_grant() {
     let (_db, svc, ehr) = service().await;
