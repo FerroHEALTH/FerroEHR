@@ -163,9 +163,8 @@ async fn a_discharge_written_on_one_replica_decides_the_other() {
     let answer = eventually(&world, &other, ("jansen", &world.encounter), StatusCode::OK).await;
     answered(&answer, StatusCode::OK, None);
     let (ward, old_from, old_until) = (day(-2), day(-40), day(-20));
-    world.eva_version = admit(
-        &world,
-        &world.eva_version,
+    admit(
+        &mut world,
         &[
             ("Cardiology", &old_from, Some(&old_until)),
             ("Ward 3", &ward, None),
@@ -323,9 +322,8 @@ async fn a_read_made_beside_a_refusing_decision_leaves_only_the_refusal() {
     );
 
     let (ward, old_from, old_until) = (day(-2), day(-40), day(-20));
-    world.eva_version = admit(
-        &world,
-        &world.eva_version,
+    admit(
+        &mut world,
         &[
             ("Cardiology", &old_from, Some(&old_until)),
             ("Ward 3", &ward, None),

@@ -16,7 +16,7 @@
 # scopes, written into the ID Token's `roles`; and the demo user
 # clinician/clinician. FerroSMART's side is the environment below, the
 # setup FerroSMART documents for Keycloak:
-# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md#1316-upstream-providers-keycloak
+# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md#1316-upstream-providers-keycloak
 #
 # Keycloak runs in development mode (`start-dev`) with its data in the
 # container, on plain http at http://localhost:8380 in the issuer's network
@@ -66,12 +66,14 @@ services:
       ferrosmart-keycloak:
         condition: service_healthy
     environment:
-      FERROSMART__FERROSMART__UPSTREAM__ISSUER: http://localhost:8380/realms/ferroehr
-      FERROSMART__FERROSMART__UPSTREAM__CLIENT_ID: ferrosmart
-      FERROSMART__FERROSMART__UPSTREAM__SCOPES__0: openid
-      FERROSMART__FERROSMART__UPSTREAM__ROLE_CLAIMS__0: roles
-      FERROSMART__FERROSMART__UPSTREAM__PRIVATE_KEY_JWT__ALGORITHM: RS256
-      FERROSMART__FERROSMART__UPSTREAM__PRIVATE_KEY_JWT__KEYS__PRIVATE_KEY_FILE: /run/secrets/ferrosmart_upstream_assertion_key
+      FERROSMART__FERROSMART__UPSTREAM__0__NAME: keycloak
+      FERROSMART__FERROSMART__UPSTREAM__0__PROTOCOL: oidc
+      FERROSMART__FERROSMART__UPSTREAM__0__OIDC__ISSUER: http://localhost:8380/realms/ferroehr
+      FERROSMART__FERROSMART__UPSTREAM__0__OIDC__CLIENT_ID: ferrosmart
+      FERROSMART__FERROSMART__UPSTREAM__0__OIDC__SCOPES__0: openid
+      FERROSMART__FERROSMART__UPSTREAM__0__OIDC__ROLE_CLAIMS__0: roles
+      FERROSMART__FERROSMART__UPSTREAM__0__OIDC__PRIVATE_KEY_JWT__ALGORITHM: RS256
+      FERROSMART__FERROSMART__UPSTREAM__0__OIDC__PRIVATE_KEY_JWT__KEYS__PRIVATE_KEY_FILE: /run/secrets/ferrosmart_upstream_assertion_key
     secrets:
       - ferrosmart_upstream_assertion_key
 

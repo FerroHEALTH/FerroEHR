@@ -22,7 +22,9 @@ use serde_json::json;
 use sqlx::postgres::PgConnectOptions;
 
 use crate::access_eval_examples::update_as_adt as adt;
-use crate::access_eval_examples::{MEMBER, UNDER_CARE, access, care, party, person, policy};
+use crate::access_eval_examples::{
+    MEMBER, access, care, care_of, party, person, policy, relate_as_adt, rerelate_as_adt,
+};
 use crate::fixtures::{composition, create_ehr_for_party, uv};
 use crate::policy_fixtures::{capability, create, granted, granting};
 use ferroehr::access_eval::alongside;
@@ -46,7 +48,9 @@ struct Ward {
     two: Arc<FerroEhrService>,
     team: VoId,
     doctor: (VoId, String),
-    patient: (VoId, String),
+    patient: VoId,
+    /// The patient's care relationship and its version.
+    stay: (VoId, String),
     ehr_id: EhrId,
     vo: VoId,
 }
@@ -91,11 +95,10 @@ impl Ward {
             .expect("the professional commits");
         let roster = person("Dr D", &[care(MEMBER, doctor, ward, &day(-30), None)]);
         let doctor_uid = adt(&one, (doctor, &uid), &roster).await;
-        let (patient, uid) = create(&one, PartyKind::Person, &person("Mr E", &[]))
+        let (patient, _) = create(&one, PartyKind::Person, &person("Mr E", &[]))
             .await
             .expect("the patient commits");
-        let stay = person("Mr E", &[care(UNDER_CARE, patient, ward, &day(-3), None)]);
-        let patient_uid = adt(&one, (patient, &uid), &stay).await;
+        let stay = relate_as_adt(&one, &care_of(patient, ward, &day(-3), Some(&day(30)))).await;
         let ehr_id = create_ehr_for_party(&one, patient).await;
         let vo = one
             .create_composition(ehr_id, uv(&composition("ward note"), "249", None))
@@ -123,7 +126,8 @@ impl Ward {
             two,
             team: ward,
             doctor: (doctor, doctor_uid),
-            patient: (patient, patient_uid),
+            patient,
+            stay,
             ehr_id,
             vo,
         };
@@ -321,18 +325,9 @@ impl PartialEq for Read {
 #[tokio::test]
 async fn an_ended_care_relationship_admits_nothing_on_a_lagging_replica() {
     let ward = Box::pin(Ward::new()).await;
-    let (patient, uid) = &ward.patient;
-    let ended = person(
-        "Mr E",
-        &[care(
-            UNDER_CARE,
-            *patient,
-            ward.team,
-            &day(-30),
-            Some(&day(-20)),
-        )],
-    );
-    adt(&ward.one, (*patient, uid), &ended).await;
+    let (stay, uid) = &ward.stay;
+    let ended = care_of(ward.patient, ward.team, &day(-30), Some(&day(-20)));
+    rerelate_as_adt(&ward.one, (*stay, uid), &ended).await;
     let read = ward.read_on_two().await;
     assert!(
         read.admits_nothing(),
@@ -361,7 +356,7 @@ async fn an_ended_membership_admits_nothing_on_a_lagging_replica() {
 async fn an_erased_person_admits_nothing_on_a_lagging_replica() {
     let ward = Box::pin(Ward::new()).await;
     ward.one
-        .physical_party_delete(ward.patient.0)
+        .physical_party_delete(ward.patient)
         .await
         .expect("the patient is erased");
     let read = ward.read_on_two().await;
@@ -403,18 +398,9 @@ async fn the_decision_runs_the_read_beside_its_party_read() {
 #[tokio::test]
 async fn a_refusal_wins_over_a_read_that_already_ran() {
     let ward = Box::pin(Ward::new()).await;
-    let (patient, uid) = &ward.patient;
-    let ended = person(
-        "Mr E",
-        &[care(
-            UNDER_CARE,
-            *patient,
-            ward.team,
-            &day(-30),
-            Some(&day(-20)),
-        )],
-    );
-    adt(&ward.one, (*patient, uid), &ended).await;
+    let (stay, uid) = &ward.stay;
+    let ended = care_of(ward.patient, ward.team, &day(-30), Some(&day(-20)));
+    rerelate_as_adt(&ward.one, (*stay, uid), &ended).await;
     let handed = ward.handed_on_two(true, alongside::Use::Admitted).await;
     let refused = match &handed.admitted {
         Ok(admitted) => !admitted,

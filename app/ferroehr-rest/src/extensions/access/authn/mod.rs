@@ -586,7 +586,7 @@ pub(crate) async fn middleware(
     let mut req = Request::from_parts(parts, body);
     match outcome {
         Ok(Authenticated { principal, fresh }) => {
-            let granted = match grants::resolve(live, &principal).await {
+            let granted = match grants::resolve(live, &principal, auth.party.as_deref()).await {
                 Ok(granted) => granted,
                 Err(e) => return refusal::response(auth, req.headers(), &e),
             };

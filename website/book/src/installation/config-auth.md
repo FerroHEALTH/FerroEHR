@@ -314,7 +314,7 @@ user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
 external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
 
 [[authz.party_binding.person.template]]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"
+template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0"
 key = { path = "/details[id2]/items[id3]", type = "login" }
 user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
 external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
@@ -322,15 +322,15 @@ external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
 [[authz.party_binding.person.attribute]]
 scim = "name.formatted"
 name = true
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]", "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0" = "/identities[id6]/details[id7]/items[id8]" }
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]", "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0" = "/identities[id6]/details[id7]/items[id8]" }
 
 [[authz.party_binding.person.attribute]]
 scim = "name.givenName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]", "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0" = "/identities[id6]/details[id7]/items[id9]" }
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]", "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0" = "/identities[id6]/details[id7]/items[id9]" }
 
 [[authz.party_binding.person.attribute]]
 scim = "name.familyName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]", "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0" = "/identities[id6]/details[id7]/items[id10]" }
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]", "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0" = "/identities[id6]/details[id7]/items[id10]" }
 
 [[authz.party_binding.person.attribute]]
 scim = 'emails[type eq "work"].value'
@@ -348,7 +348,7 @@ display_name = "/identities[id4]/details[id5]/items[id6]"
 archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
 
 [authz.party_binding.patient]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"
+template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0"
 identifier = "/details[id2]/items[id3]"
 name = "/identities[id6]/details[id7]/items[id8]"
 ```

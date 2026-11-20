@@ -8,7 +8,8 @@
 //! names a code outside a value set it binds is refused `422` naming the
 //! attribute (ITS-REST overview `Requests_and_responses.md` §HTTP status
 //! codes, 422 "semantic errors"); one that breaks the draft model stays
-//! `400`. No openEHR spec governs the access policy: our own
+//! `400`. A care relationship's role is checked against the bound
+//! `care_role` value set (#6055). No openEHR spec governs the access policy: our own
 //! design/extension over FerroEHR's draft access control package.
 
 use std::sync::Arc;
@@ -295,6 +296,101 @@ async fn a_policy_is_checked_against_the_template_it_names() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{answer}");
+}
+
+/// The value set the tests bind care roles to.
+const CARE_ROLE_VS: &str = "http://terminology.example/ValueSet/care-role";
+
+/// A PERSON created by the administrator; its container.
+async fn person(app: &Router) -> String {
+    let req = common::req("POST", format!("{BASE}/demographic/person"))
+        .auth(common::basic_credential("root"))
+        .prefer_representation()
+        .json(crate::demographic_http::person_body().to_string())
+        .build();
+    let (status, headers, body) = common::send(app, req).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    common::etag_uid(&headers)
+        .split("::")
+        .next()
+        .expect("a versioned-object id")
+        .to_owned()
+}
+
+/// A care relationship of its own from `patient` to `carer`'s `PERSON` in
+/// the role `role` of `HL7_ParticipationType`.
+fn care_of(patient: &str, carer: &str, role: &str) -> Value {
+    let reference = |id: &str| {
+        json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+                "id": { "_type": "HIER_OBJECT_ID", "value": id } })
+    };
+    json!({ "_type": "PARTY_RELATIONSHIP",
+        "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.care.v1",
+        "name": access("under_care_of"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0001",
+            "name": { "_type": "DV_TEXT", "value": "details" },
+            "items": [
+                { "_type": "ELEMENT", "archetype_node_id": "at0002", "name": access("care_role"),
+                  "value": coded("HL7_ParticipationType", role) },
+                { "_type": "ELEMENT", "archetype_node_id": "at0003", "name": access("provider"),
+                  "value": { "_type": "DV_IDENTIFIER", "issuer": "urn:example:providers",
+                             "id": "hospital", "type": "ORGANISATION" } }] },
+        "time_validity": { "_type": "DV_INTERVAL",
+            "lower": { "_type": "DV_DATE", "value": "2026-11-01" },
+            "upper": { "_type": "DV_DATE", "value": "2027-11-01" },
+            "lower_unbounded": false, "upper_unbounded": false },
+        "source": reference(patient),
+        "target": reference(carer) })
+}
+
+/// A care relationship's `care_role` is checked against the value set the
+/// access policy binds for it, on the terminology server: a role outside it
+/// is refused `422` naming the element, one inside it commits, here written
+/// outside any request (draft access control package, Care Relationships;
+/// #6055).
+#[tokio::test]
+async fn a_care_role_outside_the_bound_value_set_is_refused() {
+    let (_db, pool) = common::migrated_pool().await;
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/ValueSet/$validate-code"))
+        .and(body_string_contains(format!(
+            r#""name":"url","valueUri":"{CARE_ROLE_VS}""#
+        )))
+        .and(body_string_contains(r#""name":"code","valueCode":"RESP""#))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "resourceType": "Parameters",
+            "parameter": [{ "name": "result", "valueBoolean": true }]
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/ValueSet/$validate-code"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "resourceType": "Parameters",
+            "parameter": [{ "name": "result", "valueBoolean": false }]
+        })))
+        .mount(&server)
+        .await;
+    let (svc, app) = replica(&pool, Some(&server.uri())).await;
+    create(&app, &binding(policy(false), "care_role", CARE_ROLE_VS)).await;
+    let (patient, carer) = (person(&app).await, person(&app).await);
+    let post = |body: Value| {
+        common::req("POST", format!("{EXT}/demographic/party_relationship"))
+            .auth(common::basic_credential("root"))
+            .prefer_representation()
+            .json(body.to_string())
+            .build()
+    };
+    let (status, answer) = common::send_json(&app, post(care_of(&patient, &carer, "ATND"))).await;
+    names(status, &answer, "/details/care_role");
+    let held = openehr_its::json::from_canonical_value(&care_of(&patient, &carer, "RESP"))
+        .expect("a PARTY_RELATIONSHIP");
+    let mut write = ferroehr::service::version_update::WriteRequest::new(held);
+    write.lifecycle_state = Some("532".to_owned());
+    Box::pin(svc.party_relationship_create(write))
+        .await
+        .expect("a role inside the bound value set commits");
 }
 
 /// [`policy`] naming the organisation type `GP` of a synthetic code system

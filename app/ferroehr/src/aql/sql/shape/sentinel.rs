@@ -139,7 +139,9 @@ impl Sentinels {
             ),
             Care::Ehrs(_) => Care::Ehrs(self.ids().into()),
             Care::Projected(care) => Care::Projected(ProjectedCare {
-                teams: self.ids().into(),
+                principals: self.ids().into(),
+                provider_issuers: self.texts().into(),
+                provider_ids: self.texts().into(),
                 day: self.day,
                 grace: care.grace.clone(),
             }),

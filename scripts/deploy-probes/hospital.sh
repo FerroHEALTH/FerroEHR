@@ -65,6 +65,22 @@ x-hospital-env: &hospital-env
   # the telemetry key is set because compose sets it, which outranks RUST_LOG.
   FERROEHR__TELEMETRY__FILTER: info,ferrohealth_smart=debug
 services:
+  # The quickstart issuer signs FerroPIX's PMIR feed token for FerroEHR's
+  # \`ferroehr-system\` audience, which issuer 1 accepts above; any other
+  # client credentials request keeps the quickstart's FerroPIX audience.
+  identity-issuer:
+    environment:
+      JSON_CONFIG: >-
+        {"tokenCallbacks":[{"issuerId":"quickstart",
+        "requestMappings":[{"requestParam":"scope","match":"ferroehr/scim",
+        "claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
+        "aud":["ferroehr-scim"],"scope":"\$\${scope}"}},
+        {"requestParam":"scope","match":"ferroehr/pmir",
+        "claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
+        "aud":["ferroehr-system"],"scope":"\$\${scope}"}},
+        {"requestParam":"grant_type","match":"client_credentials",
+        "claims":{"sub":"\$\${clientId}","client_id":"\$\${clientId}",
+        "aud":["http://localhost:8090/fhir"],"scope":"\$\${scope}"}}]}]}
   ferroehr:
     environment: *hospital-env
   ferroehr-2:
@@ -78,10 +94,12 @@ services:
         source: $(hs_dir)/clients
         target: /etc/ferrosmart/clients
         read_only: true
-  # The viewer launches the hospital's app from an EHR's page (#5880).
+  # The viewer launches the hospital's app from an EHR's page (#5880), and
+  # declares treatment as its purpose of use until its reader chooses (#6105).
   ferroehr-viewer:
     environment:
       FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL: http://localhost:3000
+      FERROEHR_VIEWER__CDR__PURPOSE_OF_USE: TREAT
       FERROEHR_VIEWER__LAUNCH__APP__0__NAME: Hospital app
       FERROEHR_VIEWER__LAUNCH__APP__0__CLIENT_ID: $HS_APP
       FERROEHR_VIEWER__LAUNCH__APP__0__LAUNCH_URL: $HS_LAUNCH_URL
@@ -313,6 +331,32 @@ j_care() {
     time_validity:$v,source:$s,target:$t}'
 }
 
+# The healthcare provider the stack acts for (`[authz.party_binding.provider]`
+# in docker-compose.yml), in whose care each care relationship is.
+H_CARE_PROVIDER_ISSUER="urn:oid:2.999.7.9"
+H_CARE_PROVIDER_ID="quickstart"
+
+# A care relationship of its own (#6055), written with its end as one no
+# relationship_validity entry covers must be (#6073): the PERSON `source` under the care
+# of the party `target` of RM type `ttype` over `validity`, in the role ATND of
+# HL7_ParticipationType, in the care of the stack's provider (draft access
+# control package, Care Relationships).
+j_care_of() {
+  local source="$1" ttype="$2" target="$3" validity="$4"
+  jq -nc --argjson k "$(j_term under_care_of)" --argjson r "$(j_term care_role)" \
+    --argjson p "$(j_term provider)" --argjson role "$(j_coded HL7_ParticipationType ATND)" \
+    --arg pi "$H_CARE_PROVIDER_ISSUER" --arg pid "$H_CARE_PROVIDER_ID" \
+    --argjson s "$(j_party PERSON "$source")" --argjson t "$(j_party "$ttype" "$target")" \
+    --argjson v "$validity" '{_type:"PARTY_RELATIONSHIP",
+    archetype_node_id:"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.hospital_care.v1",
+    name:$k,
+    details:{_type:"ITEM_TREE",archetype_node_id:"at0002",name:{_type:"DV_TEXT",value:"details"},
+      items:[{_type:"ELEMENT",archetype_node_id:"at0003",name:$r,value:$role},
+        {_type:"ELEMENT",archetype_node_id:"at0004",name:$p,
+          value:{_type:"DV_IDENTIFIER",issuer:$pi,id:$pid,type:"ORGANISATION"}}]},
+    time_validity:$v,source:$s,target:$t}'
+}
+
 # A credentials element named by the code `name` holding `value`.
 j_qualifier() {
   jq -nc --argjson n "$(j_term "$1")" --argjson v "$2" \
@@ -472,6 +516,28 @@ h_rerelate() {
   version="$(jq -r '.uid.value' <<<"$H_BODY")"
   body="$(jq -c --argjson r "$rels" 'del(.uid) | .relationships = $r' <<<"$H_BODY")"
   H_IF_MATCH="\"$version\"" h_call "$n" "$who" PUT "/demographic/$kind/$version" "$body"
+  [[ "$H_CODE" = 200 || "$H_CODE" = 204 ]]
+}
+
+# Writes the care relationship `body`, a PARTY_RELATIONSHIP of its own,
+# through instance `n` as `who`; records its container as HV_<name>.
+h_care() {
+  local name="$1" n="$2" who="$3" body="$4"
+  h_call "$n" "$who" POST "$HX/demographic/party_relationship" "$body"
+  hv_set "$name" "$(h_vo)"
+  [[ "$H_CODE" = 201 ]]
+}
+
+# Commits a version of the care relationship HV_<name> over `validity`, its
+# time_validity, through instance `n` as `who`: an admission's end or a
+# readmission.
+h_care_validity() {
+  local name="$1" n="$2" who="$3" validity="$4" body version
+  h_call "$n" admin GET "$HX/demographic/party_relationship/$(hv "$name")"
+  version="$(jq -r '.uid.value' <<<"$H_BODY")"
+  body="$(jq -c --argjson v "$validity" 'del(.uid) | .time_validity = $v' <<<"$H_BODY")"
+  H_IF_MATCH="\"$version\"" h_call "$n" "$who" PUT \
+    "$HX/demographic/party_relationship/$version" "$body"
   [[ "$H_CODE" = 200 || "$H_CODE" = 204 ]]
 }
 
@@ -669,19 +735,22 @@ hospital_setup() {
   # (FerroSMART docs/architecture.md §13.21; the CDR grants act_for_persons).
   h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
     || h_fail_call "the hospital's SMART app"
+  # FerroSMART's patient picker looks the EHR up as the signed-in person, with a
+  # token whose client_id is FerroSMART's own issuer (FerroSMART
+  # docs/architecture.md §13.6 item 4), so the CDR grants it sign_in_persons.
+  h_client picker "$HS_ISSUER" "$(hv hospital)" "$(j_capability "$(j_operation sign_in_persons)")" \
+    || h_fail_call "FerroSMART's patient picker"
 
   # The patients: Eva under the care of three teams since ten days ago,
   # Frank her representative, Gina a patient too, and Piet, anybody else.
   h_patient_person person_eva "Eva Visser" eva || h_fail_call "Eva's PERSON"
   h_party person_piet person "$(j_named_party PERSON "Piet Jansen")" || h_fail_call "Piet's PERSON"
   local admitted team
-  admitted="$(j_dates "$(h_day -10)")"
-  H_EVA_CARE="[]"
+  admitted="$(j_dates "$(h_day -10)" "$(h_day 30)")"
   for team in cardiology ward3 psychiatry; do
-    H_EVA_CARE="$(jq -c --argjson r "$(j_care under_care_of PERSON "$(hv person_eva)" GROUP "$(hv "$team")" \
-      "$admitted")" '. + [$r]' <<<"$H_EVA_CARE")"
+    h_care "care_eva_$team" 2 admin "$(j_care_of "$(hv person_eva)" GROUP "$(hv "$team")" \
+      "$admitted")" || h_fail_call "Eva's admission to $team"
   done
-  h_rerelate 2 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva's admission"
   h_patient_person person_frank "Frank Visser" frank || h_fail_call "Frank's PERSON"
   h_rerelate 1 admin person "$(hv person_frank)" "[$(j_care represents PERSON "$(hv person_frank)" \
     PERSON "$(hv person_eva)" "$(j_dates "$(h_day -365)")")]" || h_fail_call "Frank represents Eva"
@@ -1170,16 +1239,14 @@ hospital_care_and_consent() {
 
   probe "P-HOSP-GRACE" "$PROBE_WORKING" "server" "#5610" \
     "a discharge decides on the other instance: within the grace Dr. Jansen reads, after it she is refused"
-  local team rels
-  rels="$(jq -c --arg c "$(hv cardiology)" --argjson v "$(j_dates "$(h_day -10)" "$(h_day 0)")" \
-    'map(if .target.id.value == $c then .time_validity = $v else . end)' <<<"$H_EVA_CARE")"
-  h_rerelate 1 admin person "$(hv person_eva)" "$rels" || h_fail_call "Eva's discharge today"
+  h_care_validity care_eva_cardiology 1 admin "$(j_dates "$(h_day -10)" "$(h_day 0)")" \
+    || h_fail_call "Eva's discharge today"
   h_read 2 p:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen within the grace"
-  rels="$(jq -c --arg c "$(hv cardiology)" --argjson v "$(j_dates "$(h_day -10)" "$(h_day -3)")" \
-    'map(if .target.id.value == $c then .time_validity = $v else . end)' <<<"$H_EVA_CARE")"
-  h_rerelate 2 admin person "$(hv person_eva)" "$rels" || h_fail_call "Eva's discharge three days ago"
+  h_care_validity care_eva_cardiology 2 admin "$(j_dates "$(h_day -10)" "$(h_day -3)")" \
+    || h_fail_call "Eva's discharge three days ago"
   h_read 1 p:anna "$eva" c_encounter TREAT 403 refused-no-care-relationship "Dr. Jansen after the grace"
-  h_rerelate 1 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva readmitted"
+  h_care_validity care_eva_cardiology 1 admin "$(j_dates "$(h_day -10)" "$(h_day 30)")" \
+    || h_fail_call "Eva readmitted"
   h_read 2 p:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen after the readmission"
   probe_done
 
@@ -1240,9 +1307,8 @@ hospital_scim_lifecycle() {
   local group
   group="$(jq -r '.id // empty' <<<"$H_BODY")"
   if [[ -n "$group" ]]; then
-    H_EVA_CARE="$(jq -c --argjson r "$(j_care under_care_of PERSON "$(hv person_eva)" GROUP "$group" \
-      "$(j_dates "$(h_day -1)")")" '. + [$r]' <<<"$H_EVA_CARE")"
-    h_rerelate 2 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva admitted to the emergency department"
+    h_care care_eva_emergency 2 admin "$(j_care_of "$(hv person_eva)" GROUP "$group" \
+      "$(j_dates "$(h_day -1)" "$(h_day 30)")")" || h_fail_call "Eva admitted to the emergency department"
   fi
   h_read 1 p:dirk "$eva" c_vitals TREAT 200 "" "Dr. Bakker, a member through SCIM, reads the vital signs"
   h_call 2 scim PATCH "/scim/v2/Groups/$group" "$(jq -nc --arg m "$(hv person_dirk)" \
@@ -1367,6 +1433,15 @@ hospital_ehr_launch() {
     --data-urlencode intent=launch --data-urlencode "app=$HS_APP" "$viewer/ehrs/$eva")"
   rm -f "$jar"
   assert_eq 303 "${location%% *}" "the Launch post answers See Other: $(head -c 300 "$PROBE_TMP/launch-body")"
+  if [[ "${location%% *}" != 303 ]]; then
+    local service
+    echo "      the viewer's page says: $(tr -s '\n' ' ' < "$PROBE_TMP/launch-body" \
+      | sed -E 's/.*<main[^>]*>//; s/<[^>]*>/ /g; s/ +/ /g' | cut -c1-600)"
+    for service in ferroehr-viewer ferrosmart; do
+      echo "      log of $service:"
+      hdc logs --no-color --tail 10 "$service" 2>&1 | sed 's/^/        /'
+    done
+  fi
   location="${location#* }"
   assert_contains "$location" "$HS_LAUNCH_URL?" "the new window goes to the app's launch URL"
   iss="$(hs_param iss "$location")"
@@ -1534,6 +1609,11 @@ hospital_pixm() {
   h_party hospital organisation "$(j_named_party ORGANISATION "Sint Example Ziekenhuis")" || h_fail_call "the controller"
   h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
     || h_fail_call "the hospital's SMART app"
+  # FerroSMART's patient picker looks the EHR up as the signed-in person, with a
+  # token whose client_id is FerroSMART's own issuer (FerroSMART
+  # docs/architecture.md §13.6 item 4), so the CDR grants it sign_in_persons.
+  h_client picker "$HS_ISSUER" "$(hv hospital)" "$(j_capability "$(j_operation sign_in_persons)")" \
+    || h_fail_call "FerroSMART's patient picker"
   h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role"
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"
@@ -1541,8 +1621,8 @@ hospital_pixm() {
     "[$(j_care member PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -30)")")]" \
     || h_fail_call "Dr. Jansen joins Cardiology"
   h_patient_person person_eva "Eva Visser" eva || h_fail_call "Eva's PERSON"
-  H_EVA_CARE="[$(j_care under_care_of PERSON "$(hv person_eva)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -10)")")]"
-  h_rerelate 1 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva's admission"
+  h_care care_eva_cardiology 1 admin "$(j_care_of "$(hv person_eva)" GROUP "$(hv cardiology)" \
+    "$(j_dates "$(h_day -10)" "$(h_day 30)")")" || h_fail_call "Eva's admission"
   h_patient_person person_frank "Frank Visser" frank || h_fail_call "Frank's PERSON"
   h_rerelate 2 admin person "$(hv person_frank)" "[$(j_care represents PERSON "$(hv person_frank)" \
     PERSON "$(hv person_eva)" "$(j_dates "$(h_day -365)")")]" || h_fail_call "Frank represents Eva"

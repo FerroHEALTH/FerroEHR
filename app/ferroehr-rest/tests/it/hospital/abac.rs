@@ -134,9 +134,8 @@ async fn past_the_grace_dr_jansen_is_refused_without_a_care_relationship() {
     let mut world = Box::pin(world()).await;
     let mut ledger = Ledger::default();
     let (ward, recent, old_from, old_until) = (day(-2), day(-3), day(-40), day(-20));
-    world.eva_version = admit(
-        &world,
-        &world.eva_version,
+    admit(
+        &mut world,
         &[
             ("Cardiology", &old_from, Some(&recent)),
             ("Ward 3", &ward, None),
@@ -148,9 +147,8 @@ async fn past_the_grace_dr_jansen_is_refused_without_a_care_relationship() {
     answered(&answer, StatusCode::OK, None);
     ledger.note(&world, "within the grace", &answer, TREATMENT);
 
-    world.eva_version = admit(
-        &world,
-        &world.eva_version,
+    admit(
+        &mut world,
         &[
             ("Cardiology", &old_from, Some(&old_until)),
             ("Ward 3", &ward, None),

@@ -57,11 +57,34 @@ fn party_ref(kind: &str, id: VoId) -> Value {
 
 /// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
 pub(crate) const MEMBER: (&str, &str) = ("HL7_RoleClass", "MBR");
-/// A patient under the care of a team or unit.
-pub(crate) const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
+/// The provider the examples' care relationships are in the care of.
+pub(crate) fn provider() -> ferroehr::party_binding::grants::caller::care_of::ProviderKey {
+    ferroehr::party_binding::grants::caller::care_of::ProviderKey::new(
+        "urn:example:providers",
+        "hospital",
+    )
+}
 
-/// A care relationship of `code` from `source` to `team`, over the dates
-/// `from` to `until`, each included.
+/// A care relationship of its own from `source` to `team` in the role
+/// `PART` of `HL7_ParticipationType`, in the care of [`provider`], over the
+/// dates `from` to `until`, each included (draft access control package,
+/// Care Relationships).
+pub(crate) fn care_of(source: VoId, team: VoId, from: &str, until: Option<&str>) -> Value {
+    let mut body = care((TERMINOLOGY, "under_care_of"), source, team, from, until);
+    body["name"] = coded(TERMINOLOGY, "under_care_of");
+    body["details"]["items"] = json!([
+        { "_type": "ELEMENT", "archetype_node_id": "at0003",
+          "name": coded(TERMINOLOGY, "care_role"),
+          "value": coded("HL7_ParticipationType", "PART") },
+        { "_type": "ELEMENT", "archetype_node_id": "at0004",
+          "name": coded(TERMINOLOGY, "provider"),
+          "value": { "_type": "DV_IDENTIFIER", "issuer": "urn:example:providers",
+                     "id": "hospital", "type": "ORGANISATION" } }]);
+    body
+}
+
+/// A relationship of `code` from `source` to `team`, over the dates `from`
+/// to `until`, each included.
 pub(crate) fn care(
     (terminology, code): (&str, &str),
     source: VoId,
@@ -164,6 +187,41 @@ pub(crate) async fn update_as_adt(
         .uid
 }
 
+/// Creates the care relationship `body` as the ADT system; its container
+/// and version uid.
+pub(crate) async fn relate_as_adt(svc: &FerroEhrService, body: &Value) -> (VoId, String) {
+    let mut write = WriteRequest::new(crate::typed_body::typed(body));
+    write.lifecycle_state = Some("532".to_owned());
+    let written: Result<_, ServiceError> = as_client(svc, "adt", async {
+        Box::pin(svc.party_relationship_create(write)).await
+    })
+    .await;
+    let written = written.expect("the ADT system writes the care relationship");
+    let uid = written.meta.as_ref().expect("a version").uid.clone();
+    (crate::fixtures::written_vo(&written), uid)
+}
+
+/// Commits `body` as the next version of the care relationship `vo` after
+/// `uid` as the ADT system; the new version's uid.
+pub(crate) async fn rerelate_as_adt(
+    svc: &FerroEhrService,
+    (vo, uid): (VoId, &str),
+    body: &Value,
+) -> String {
+    let mut write = WriteRequest::new(crate::typed_body::typed(body));
+    write.lifecycle_state = Some("532".to_owned());
+    write.preceding = Some(uid.parse().expect("an OBJECT_VERSION_ID"));
+    let written: Result<_, ServiceError> = as_client(svc, "adt", async {
+        Box::pin(svc.party_relationship_update(vo, if_match(uid), write)).await
+    })
+    .await;
+    written
+        .expect("the ADT system changes the care relationship")
+        .meta
+        .expect("a version")
+        .uid
+}
+
 /// The answer `access` gives on `ehr_id`, the composition `vo` read, and the
 /// compositions a query reads, all as one request.
 async fn decided(
@@ -210,7 +268,10 @@ pub(crate) fn access(
     policy: AccessPolicy,
     now: jiff::Timestamp,
 ) -> Arc<RequestAccess> {
-    let facts = svc.grants().facts_of(party.0, now);
+    let facts = svc
+        .grants()
+        .facts_of(party.0, now)
+        .with_providers([provider()]);
     let acts_for = facts
         .care_teams()
         .iter()
@@ -293,17 +354,11 @@ async fn the_ward_with_its_grace_period() {
         update_as_adt(&svc, (doctor, &uid), &roster).await;
         doctors.push(doctor);
     }
-    let (patient, uid) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
+    let (patient, _) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
         .await
         .expect("the patient commits");
-    let stay = care(
-        UNDER_CARE,
-        patient,
-        cardiology,
-        "2026-11-03",
-        Some("2026-11-10"),
-    );
-    update_as_adt(&svc, (patient, &uid), &person("Mr E", &[stay])).await;
+    let stay = care_of(patient, cardiology, "2026-11-03", Some("2026-11-10"));
+    relate_as_adt(&svc, &stay).await;
     let ehr_id = create_ehr_for_party(&svc, patient).await;
     let vo = svc
         .create_composition(ehr_id, uv(&composition("cardiology note"), "249", None))
@@ -479,9 +534,13 @@ async fn care_and_representation_resolve_under_both_subject_indexes() {
     let (patient, uid) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
         .await
         .expect("the patient commits");
-    let stay = care(UNDER_CARE, patient, cardiology, "2026-11-03", None);
-    let admitted = declaring(person("Mr E", &[stay]), &[(PIXM, &pseudonym)]);
+    let admitted = declaring(person("Mr E", &[]), &[(PIXM, &pseudonym)]);
     update_as_adt(&svc, (patient, &uid), &admitted).await;
+    relate_as_adt(
+        &svc,
+        &care_of(patient, cardiology, "2026-11-03", Some("2027-11-03")),
+    )
+    .await;
     let local = create_ehr_for_party(&svc, patient).await;
     let local_vo = svc
         .create_composition(local, uv(&composition("ward note"), "249", None))
@@ -558,13 +617,10 @@ async fn an_identity_merge_moves_the_record_subject_in_one_contribution() {
         let (vo, uid) = create(&svc, PartyKind::Person, &person(name, &[]))
             .await
             .expect("the patient commits");
-        let stay = care(UNDER_CARE, vo, team, "2026-11-01", None);
-        let body = declaring(
-            person(name, std::slice::from_ref(&stay)),
-            &[(PIXM, pseudonym.as_str())],
-        );
+        let body = declaring(person(name, &[]), &[(PIXM, pseudonym.as_str())]);
         update_as_adt(&svc, (vo, &uid), &body).await;
-        persons.push((vo, stay));
+        relate_as_adt(&svc, &care_of(vo, team, "2026-11-01", Some("2027-11-01"))).await;
+        persons.push(vo);
     }
     let (ehr_a, vo_a) = ehr_of(&svc, &p_a, PIXM).await;
     let (ehr_b, _) = ehr_of(&svc, &p_b, PIXM).await;
@@ -584,8 +640,7 @@ async fn an_identity_merge_moves_the_record_subject_in_one_contribution() {
         Outcome::Refused(Refusal::NoCareRelationship)
     );
 
-    let (a, a_stay) = persons[0].clone();
-    let (b, b_stay) = persons[1].clone();
+    let (a, b) = (persons[0], persons[1]);
     let version = |vo: VoId, body: Value| {
         json!({ "_type": "ORIGINAL_VERSION",
             "commit_audit": { "change_type": change_type("251", "modification"),
@@ -600,7 +655,7 @@ async fn an_identity_merge_moves_the_record_subject_in_one_contribution() {
                 "committer": adt_committer() } })
     };
     let survivor = declaring(
-        person("Mr B", std::slice::from_ref(&b_stay)),
+        person("Mr B", &[]),
         &[(PIXM, p_b.as_str()), (PIXM, p_a.as_str())],
     );
     let doubled = contribution(vec![version(b, survivor.clone())]);
@@ -613,10 +668,7 @@ async fn an_identity_merge_moves_the_record_subject_in_one_contribution() {
     .expect_err("one pseudonym on two PERSONs is refused");
     assert!(matches!(refused, ServiceError::Conflict(_)), "{refused:?}");
 
-    let merged = contribution(vec![
-        version(b, survivor),
-        version(a, person("Mr A", &[a_stay])),
-    ]);
+    let merged = contribution(vec![version(b, survivor), version(a, person("Mr A", &[]))]);
     Box::pin(as_client(
         &svc,
         "adt",

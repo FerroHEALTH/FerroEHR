@@ -87,6 +87,7 @@ pub mod fhir;
 #[cfg(feature = "fhir")]
 mod fhir_accessor;
 pub mod message;
+pub mod purposes;
 pub mod recorder;
 pub mod render;
 pub(crate) mod reservation;

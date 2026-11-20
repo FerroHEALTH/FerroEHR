@@ -78,7 +78,6 @@ use crate::db::parent_statistics;
 use crate::error::ServiceError;
 use crate::error::refusal::{ArchiveDefect, Clash, Malformed, Refusal};
 use crate::ids::{EhrId, VoId};
-use crate::party_binding::store::reindex_loaded;
 use crate::service::FerroEhrService;
 use crate::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
@@ -882,6 +881,16 @@ fn externalize_demographic_documents(
     Ok(())
 }
 
+/// The refusals `violations` as a failure report names them, each its path
+/// and message.
+fn refusals(violations: &[openehr_base::validate::InvariantViolation]) -> String {
+    let named: Vec<String> = violations
+        .iter()
+        .map(|v| format!("{}: {}", v.path, v.message))
+        .collect();
+    named.join("; ")
+}
+
 /// Resolve an `openehr_canonical_xml` record's externalized payloads back into
 /// inline canonical JSON, BEFORE anything is written — so a record with an
 /// unreadable document is reported and skipped whole rather than half loaded.
@@ -1177,6 +1186,10 @@ impl FerroEhrService {
                 .map_err(|e| archive_refusal(dir, commons_entry, e))?;
             self.load_demographic_commons(&commons).await?;
         }
+        // The care relationships the wave lands are judged against the policy
+        // confirmed here, before any of its connections is taken (#6123).
+        self.confirm_policy(false, !manifest.demographic_segments.is_empty())
+            .await?;
         for segment in &manifest.demographic_segments {
             let bytes = archive.read(segment)?;
             let records: Vec<DemographicRecord> =
@@ -1255,94 +1268,9 @@ impl FerroEhrService {
             // The data-minimisation pass refused a body (#3237): that one
             // record is reported and rolled back, the rest of the archive
             // loads, the same per-entity shape a duplicate id takes.
-            Err(ServiceError::ValidationFailed(violations)) => report(
-                violations
-                    .iter()
-                    .map(|v| format!("{}: {}", v.path, v.message))
-                    .collect::<Vec<_>>()
-                    .join("; "),
-            ),
+            Err(ServiceError::ValidationFailed(violations)) => report(refusals(&violations)),
             Err(e) => Err(e),
         }
-    }
-
-    /// Loads one archived demographic record, returning the per-entity failure
-    /// report where the record is skipped rather than loaded.
-    ///
-    /// A duplicate container id and an unreadable canonical-XML payload are
-    /// per-entity reports, never fatal — the same shape as duplicate EHR ids.
-    ///
-    /// # Errors
-    /// The storage errors of the existence check and the load itself.
-    async fn load_demographic_record(
-        &self,
-        archive: &mut ArchiveReader,
-        mut record: DemographicRecord,
-        format: ExportFormat,
-    ) -> Result<Option<DumpLoadFailReport>, ServiceError> {
-        if dump_repo::read::demographic_container_exists(&self.demographic_pool, record.vo_id)
-            .await?
-        {
-            return Ok(Some(DumpLoadFailReport {
-                entity_type: record.kind.clone(),
-                entity_id: record.vo_id.to_string(),
-                dump_status: false,
-                error: Some("a demographic container with this id already exists".to_owned()),
-            }));
-        }
-        if format == ExportFormat::OpenehrCanonicalXml
-            && let Err(message) = resolve_demographic_documents(archive, &mut record)
-        {
-            return Ok(Some(DumpLoadFailReport {
-                entity_type: record.kind.clone(),
-                entity_id: record.vo_id.to_string(),
-                dump_status: false,
-                error: Some(format!(
-                    "the archive's canonical-XML version payload is unreadable: {message}"
-                )),
-            }));
-        }
-        self.load_one_demographic(record)
-            .await
-            .map_err(ServiceError::flattened)?;
-        Ok(None)
-    }
-
-    /// Load the demographic wave's shared rows. Audits and contributions may
-    /// already exist on a partial load into a non-empty repository (one
-    /// demographic contribution can commit several containers), so both
-    /// inserts are identity-preserving no-ops on an existing id.
-    async fn load_demographic_commons(
-        &self,
-        commons: &DemographicCommons,
-    ) -> Result<(), ServiceError> {
-        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
-        let mut tx = conn.begin().await?;
-        dump_repo::write::insert_audits(&mut tx, &commons.audits, StoredAudit::Keep).await?;
-        dump_repo::write::insert_contributions(&mut tx, None, &commons.contributions).await?;
-        self.commit_act_recorded(tx, Vec::new()).await?;
-        Ok(())
-    }
-
-    /// Load one ehr-less demographic container: its per-version audits, every
-    /// version (`version` + re-decomposed `node` rows, `ehr_id` NULL),
-    /// attestations, demographic tags and archive rows — one transaction, so a
-    /// failed container commits nothing.
-    ///
-    /// # Errors
-    /// The storage errors of the load itself.
-    async fn load_one_demographic(&self, record: DemographicRecord) -> Result<(), ServiceError> {
-        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
-        let mut tx = conn.begin().await?;
-        dump_repo::write::insert_audits(&mut tx, &record.audits, StoredAudit::Keep).await?;
-        load_versions(&mut tx, &self.privacy, None, record.versions).await?;
-        dump_repo::write::insert_attestations(&mut tx, &record.attestations).await?;
-        dump_repo::write::insert_item_tags(&mut tx, None, &record.item_tags).await?;
-        dump_repo::write::restore_archives(&mut tx, &record.archives).await?;
-        // The archive carries no index row: each is rebuilt from the loaded head.
-        reindex_loaded(&mut tx, &self.binding, &record.kind, record.vo_id).await?;
-        self.commit_act_recorded(tx, Vec::new()).await?;
-        Ok(())
     }
 
     /// Read every EHR's content into export records (ordered by EHR id for a
@@ -1608,5 +1536,6 @@ async fn load_versions(
 mod archived_access;
 #[cfg(feature = "multimedia")]
 mod blobs;
+mod demographic_load;
 #[cfg(test)]
 mod tests;

@@ -328,7 +328,7 @@ async fn admit(State(gate): State<Gate>, request: Request, next: Next) -> Respon
         ));
     }
     let grants = gate.service.grants();
-    let capabilities = match authn::grants::resolve(grants, &principal).await {
+    let capabilities = match authn::grants::resolve(grants, &principal, None).await {
         Ok(capabilities) => capabilities,
         Err(error) => return refused(&error),
     };

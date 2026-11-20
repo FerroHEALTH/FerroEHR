@@ -29,7 +29,7 @@ use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::party_binding::grants::caller;
-use crate::party_binding::grants::care::care_teams;
+use crate::party_binding::grants::care::care_of;
 use crate::party_binding::grants::live::LiveGrants;
 use crate::service::FerroEhrService;
 use crate::storage::access_care::{self, CareRow, cared_key, subject_digest, subject_key};
@@ -222,8 +222,8 @@ impl Projector {
         let declared = caller::subject::declared_by(snapshot, &cared).await?;
         let mut rows = Vec::new();
         for (person, facts) in &care {
-            let teams = care_teams(facts);
-            if teams.is_empty() {
+            let relations = care_of(facts);
+            if relations.is_empty() {
                 continue;
             }
             let mut keys = vec![cared_key(&EhrSubject::new(namespace, person.to_string()))];
@@ -234,13 +234,15 @@ impl Projector {
                     .map(|(_, subject)| cared_key(subject)),
             );
             for digest in keys.iter().map(|key| subject_digest(key)) {
-                for team in &teams {
+                for care in &relations {
                     rows.push(CareRow {
                         digest: digest.clone(),
                         person: *person,
-                        team: team.team(),
-                        from: team.from(),
-                        until: team.until(),
+                        carer: care.carer(),
+                        provider_issuer: care.provider().issuer.clone(),
+                        provider_id: care.provider().id.clone(),
+                        from: care.from(),
+                        until: care.until(),
                     });
                 }
             }

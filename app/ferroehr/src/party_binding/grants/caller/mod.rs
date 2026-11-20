@@ -43,6 +43,8 @@
               the caller facts are derived from"
 )]
 
+pub(crate) mod bounds;
+pub mod care_of;
 pub mod facts;
 pub mod patient;
 pub mod store;
@@ -127,14 +129,16 @@ impl From<CareRelationship> for FactKind {
     }
 }
 
-/// What one fact names: the `CODE_PHRASE` of a role, or the container a care
-/// relationship targets.
+/// What one fact names: the `CODE_PHRASE` of a role, the container a
+/// membership targets, or what a care relationship states.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum FactValue {
     /// A role code of the terminology the jurisdiction names.
     Code(ForeignCode),
-    /// The care team `GROUP` or the organisational unit.
+    /// The care team `GROUP` or the organisational unit of a membership.
     Team(Uuid),
+    /// The carer, its role and the provider of a care relationship.
+    Care(care_of::CareFact),
 }
 
 /// One caller fact a body holds.
@@ -198,20 +202,23 @@ pub(crate) fn coded_name<'a, T: Tree<'a>>(body: T, kind: FactKind, facts: &mut G
     }
 }
 
-/// Pushes onto `facts` the care relationships `body`, a party of `kind`,
-/// holds, and why one cannot be read: a care relationship is a relationship
-/// of a `PERSON`, its source, to a party of this store, its target, and a
-/// membership (`MBR`) of an `ORGANISATION` is its membership of a `GROUP`, such as
-/// the providers of a region.
+/// Pushes onto `facts` the care relationship or the memberships `body`, of
+/// `kind`, holds, and why one cannot be read: a care relationship is a
+/// `PARTY_RELATIONSHIP` of its own ([`care_of`]), a membership (`MBR`) is
+/// held in the relationships of its member, a `PERSON` or an
+/// `ORGANISATION`, such as a provider's membership of the providers of a
+/// region.
 pub(crate) fn relationships<'a, T: Tree<'a>>(kind: Kind, body: T, facts: &mut GrantFacts) {
     if kind == Kind::PartyRelationship {
-        if let Some(term) = care_kind(body) {
-            facts.unread.push(format!(
-                "a {}::{} relationship is held in its source PERSON's \
-                 relationships, never as a PARTY_RELATIONSHIP of its own",
+        match care_kind(body) {
+            Some(CareRelationship::UnderCareOf) => care_of::read(body, facts),
+            Some(term) => facts.unread.push(format!(
+                "a {}::{} relationship is held in its source's relationships, never as a \
+                 PARTY_RELATIONSHIP of its own",
                 term.terminology(),
                 term.code()
-            ));
+            )),
+            None => {}
         }
         return;
     }
@@ -220,16 +227,18 @@ pub(crate) fn relationships<'a, T: Tree<'a>>(kind: Kind, body: T, facts: &mut Gr
         let Some(code) = care_kind(relationship) else {
             continue;
         };
-        let care = FactKind::from(code);
+        if code == CareRelationship::UnderCareOf {
+            facts.unread.push(care_of::held_inline(ordinal));
+            continue;
+        }
         let target = relationship
             .pointer_text("/target/id/value")
             .and_then(|id| container(&id));
-        let refusal = match (kind, care, target) {
-            (Kind::Person, _, Some(team))
-            | (Kind::Organisation, FactKind::MemberOf, Some(team)) => {
+        let refusal = match (kind, target) {
+            (Kind::Person | Kind::Organisation, Some(team)) => {
                 facts.facts.push(CallerFact {
                     ordinal: i32::try_from(ordinal).unwrap_or(i32::MAX),
-                    kind: care,
+                    kind: FactKind::MemberOf,
                     value: FactValue::Team(team),
                     validity: relationship.get("time_validity").map(Tree::to_value),
                     not_before: Bound::Open,
@@ -237,13 +246,10 @@ pub(crate) fn relationships<'a, T: Tree<'a>>(kind: Kind, body: T, facts: &mut Gr
                 });
                 continue;
             }
-            (Kind::Person, _, None) | (Kind::Organisation, FactKind::MemberOf, None) => {
+            (Kind::Person | Kind::Organisation, None) => {
                 "targets no party of this store by its container"
             }
-            (Kind::Organisation, _, _) => {
-                "is a relationship of a PERSON, its source; an ORGANISATION holds only a membership"
-            }
-            _ => "is a relationship of a PERSON, or a membership of an ORGANISATION, its source",
+            _ => "is a membership of a PERSON or an ORGANISATION, its source",
         };
         facts.unread.push(format!(
             "relationships[{ordinal}]: a {}::{} relationship {refusal}",
@@ -306,19 +312,24 @@ pub(crate) fn check_content(facts: Option<&Facts>) -> Result<(), ServiceError> {
     }
 }
 
-/// Refuses the commit `committed` of a `PERSON` or an `ORGANISATION` when
-/// its version changes what the care relationships or memberships say, or
-/// the record subjects it declares, and its caller may not
-/// ([`check_care_writer`]).
+/// Refuses the commit `committed` of a `PERSON`, an `ORGANISATION` or a
+/// `PARTY_RELATIONSHIP` when its version changes what the memberships or the
+/// care relationship say, or the record subjects it declares, and its caller
+/// may not ([`check_care_writer`]).
 ///
-/// The care relationships and record subjects of `facts`, what the committed
-/// body holds, are compared with those of the last earlier version that
-/// holds a body: a relationship by kind, target and `time_validity`, a
-/// subject by namespace and id, never by position (#5640). A logical
-/// deletion holds no body and changes none: its earlier versions keep them
-/// (RM common `master06-change_control_package.adoc` §Logical Deletion). A
-/// lifecycle state is no relationship content, so a deactivation that keeps
-/// them needs no grant (#5628). Our own design.
+/// The memberships, care relationships and record subjects of `facts`, what
+/// the committed body holds, are compared with those of the last earlier
+/// version that holds a body: a relationship by kind, what it states and
+/// `time_validity`, a subject by namespace and id, never by position
+/// (#5640). A logical deletion of a party holds no body and changes none:
+/// its earlier versions keep them (RM common
+/// `master06-change_control_package.adoc` §Logical Deletion). A logical
+/// deletion of a care relationship removes it from the current set, so it
+/// needs the grant its writing does. A lifecycle state is no relationship
+/// content, so a deactivation that keeps them needs no grant (#5628). Our own
+/// design.
+///
+/// Whether the commit changed them.
 ///
 /// # Errors
 /// The `403` of [`check_care_writer`], and a storage failure.
@@ -327,12 +338,15 @@ pub(crate) async fn check_care(
     mapping: &BindingMapping,
     committed: &crate::versioning::change::Committed,
     facts: Option<&Facts>,
-) -> Result<(), ServiceError> {
-    if !matches!(committed.kind, Kind::Person | Kind::Organisation) {
-        return Ok(());
+) -> Result<bool, ServiceError> {
+    let standalone = committed.kind == Kind::PartyRelationship;
+    if !standalone && !matches!(committed.kind, Kind::Person | Kind::Organisation) {
+        return Ok(false);
     }
-    let Some(after) = facts else {
-        return Ok(());
+    let after = match facts {
+        Some(facts) => &facts.grants,
+        None if standalone => &GrantFacts::default(),
+        None => return Ok(false),
     };
     let before: Option<String> = sqlx::query_scalar(
         "SELECT v.body FROM version v WHERE v.vo_id = $1 AND v.sys_version < $2 \
@@ -350,19 +364,17 @@ pub(crate) async fn check_care(
         }
         None => GrantFacts::default(),
     };
-    if same_care(&before.facts, &after.grants.facts)
-        && same_subjects(&before.subjects, &after.grants.subjects)
-    {
-        return Ok(());
+    if same_care(&before.facts, &after.facts) && same_subjects(&before.subjects, &after.subjects) {
+        return Ok(false);
     }
-    check_care_writer(mapping, committed.vo_id.0)
+    check_care_writer(mapping, committed.vo_id.0).map(|()| true)
 }
 
 /// Whether the care relationships among `before` and `after` say the same:
 /// each of one matches one of the other by kind, target and
 /// `time_validity`, whatever their order.
 fn same_care(before: &[CallerFact], after: &[CallerFact]) -> bool {
-    let care = |fact: &&CallerFact| matches!(fact.value, FactValue::Team(_));
+    let care = |fact: &&CallerFact| matches!(fact.value, FactValue::Team(_) | FactValue::Care(_));
     let mut unmatched: Vec<&CallerFact> = after.iter().filter(care).collect();
     before.iter().filter(care).all(|fact| {
         let found = unmatched.iter().position(|other| {
@@ -419,12 +431,10 @@ fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), Servic
     )))
 }
 
-/// One care relationship: the team or unit it targets and the dates its
-/// `time_validity` holds.
+/// One membership of a care team or unit: the team or unit it targets and
+/// the dates its `time_validity` holds.
 ///
-/// The evaluator reads a caller's from [`facts::CallerFacts::care_teams`] and a
-/// subject's from
-/// [`crate::party_binding::grants::live::LiveGrants::under_care_of`].
+/// The evaluator reads a caller's from [`facts::CallerFacts::care_teams`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CareTeam {
     team: Uuid,
@@ -478,21 +488,6 @@ impl CareTeam {
     pub fn holds_on(&self, day: jiff::civil::Date) -> bool {
         self.dates.holds(day)
     }
-
-    /// Whether it admits access on `day`: it has begun, and it holds or ended
-    /// less than `grace` before `day` (BASE Architecture Overview
-    /// `master07-security.adoc` §Security Policy, "Time-limitation of
-    /// access": the episode of care "plus some further time").
-    #[must_use]
-    pub fn live_on(&self, day: jiff::civil::Date, grace: jiff::Span) -> bool {
-        let begun = self.dates.lower.is_none_or(|lower| lower <= day);
-        // NOTE: our own design, a grace that does not add to the end date admits nothing after it.
-        let open = self
-            .dates
-            .upper
-            .is_none_or(|upper| day < upper || upper.checked_add(grace).is_ok_and(|end| day < end));
-        begun && open
-    }
 }
 
 #[cfg(test)]
@@ -523,8 +518,6 @@ mod tests {
 
     /// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
     const MEMBER: (&str, &str) = ("HL7_RoleClass", "MBR");
-    /// A patient under the care of a team or unit.
-    const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
     /// A representation.
     const REPRESENTS: (&str, &str) = (TERMINOLOGY, "represents");
 
@@ -620,12 +613,11 @@ mod tests {
     }
 
     #[test]
-    fn a_persons_care_relationships_are_read_by_their_code_in_any_archetype() {
+    fn a_persons_memberships_are_read_by_their_code_in_any_archetype() {
         let body = json!({"_type": "PERSON", "relationships": [
             relationship(MEMBER, TEAM),
             relationship(REPRESENTS, TEAM),
-            relationship(UNDER_CARE, TEAM),
-            relationship(UNDER_CARE, "1.2.840.113619")
+            relationship(MEMBER, "1.2.840.113619")
         ]});
         let facts = GrantFacts::of(Kind::Person, &body);
         let team = Uuid::parse_str(TEAM).expect("a uuid");
@@ -634,16 +626,10 @@ mod tests {
             .iter()
             .map(|fact| (fact.ordinal, fact.kind, fact.value.clone()))
             .collect();
-        assert_eq!(
-            read,
-            vec![
-                (0, FactKind::MemberOf, FactValue::Team(team)),
-                (2, FactKind::UnderCareOf, FactValue::Team(team)),
-            ]
-        );
+        assert_eq!(read, vec![(0, FactKind::MemberOf, FactValue::Team(team))]);
         assert!(facts.facts[0].validity.is_some());
         assert_eq!(facts.unread.len(), 1, "{:?}", facts.unread);
-        assert!(facts.unread[0].starts_with("relationships[3]"));
+        assert!(facts.unread[0].starts_with("relationships[2]"));
     }
 
     #[test]
@@ -658,24 +644,9 @@ mod tests {
     }
 
     #[test]
-    fn a_care_relationship_is_a_persons_and_never_one_of_its_own() {
-        let body = json!({"_type": "GROUP", "relationships": [relationship(MEMBER, TEAM)]});
-        let facts = GrantFacts::of(Kind::Group, &body);
-        assert_eq!(facts.facts, Vec::new());
-        assert_eq!(facts.unread.len(), 1);
-        let standalone = GrantFacts::of(Kind::PartyRelationship, &relationship(UNDER_CARE, TEAM));
-        assert_eq!(standalone.unread.len(), 1);
-        assert_eq!(
-            GrantFacts::of(Kind::PartyRelationship, &relationship(REPRESENTS, TEAM)).unread,
-            Vec::<String>::new()
-        );
-    }
-
-    #[test]
     fn an_organisations_member_of_is_its_membership_of_a_group() {
         let body = json!({"_type": "ORGANISATION", "relationships": [
             relationship(MEMBER, TEAM),
-            relationship(UNDER_CARE, TEAM),
             relationship(MEMBER, "1.2.840.113619")
         ]});
         let facts = GrantFacts::of(Kind::Organisation, &body);
@@ -686,14 +657,8 @@ mod tests {
             .map(|fact| (fact.ordinal, fact.kind, fact.value.clone()))
             .collect();
         assert_eq!(read, vec![(0, FactKind::MemberOf, FactValue::Team(group))]);
-        assert_eq!(facts.unread.len(), 2, "{:?}", facts.unread);
-        assert!(
-            facts.unread[0].starts_with("relationships[1]")
-                && facts.unread[0].contains("holds only a membership"),
-            "an ORGANISATION is never under care: {:?}",
-            facts.unread
-        );
-        assert!(facts.unread[1].starts_with("relationships[2]"));
+        assert_eq!(facts.unread.len(), 1, "{:?}", facts.unread);
+        assert!(facts.unread[0].starts_with("relationships[1]"));
     }
 
     #[test]
@@ -708,11 +673,11 @@ mod tests {
         let other = "0190a1bc-3a1e-72e4-b7c5-f78a24c01309";
         let both = facts(vec![
             relationship(MEMBER, TEAM),
-            relationship(UNDER_CARE, other),
+            relationship(MEMBER, other),
         ]);
         let swapped = facts(vec![
             relationship(REPRESENTS, TEAM),
-            relationship(UNDER_CARE, other),
+            relationship(MEMBER, other),
             relationship(MEMBER, TEAM),
         ]);
         assert!(same_care(&both, &swapped), "order and other relationships");
@@ -721,7 +686,7 @@ mod tests {
         let mut ended = relationship(MEMBER, TEAM);
         ended["time_validity"]["upper"] = json!({"_type": "DV_DATE", "value": "2026-11-14"});
         ended["time_validity"]["upper_unbounded"] = json!(false);
-        let ended = facts(vec![ended, relationship(UNDER_CARE, other)]);
+        let ended = facts(vec![ended, relationship(MEMBER, other)]);
         assert!(!same_care(&both, &ended), "a relationship ended");
         let twice = facts(vec![relationship(MEMBER, TEAM), relationship(MEMBER, TEAM)]);
         assert!(!same_care(&twice, &both[..1]), "a repeat removed");

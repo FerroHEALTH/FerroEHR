@@ -61,6 +61,10 @@ pub const TERMINOLOGY_ID_AUDIT_EVENT_ACTION: &str = "HL7_AuditEventAction";
 /// of data carries.
 pub const TERMINOLOGY_ID_CONFIDENTIALITY: &str = "HL7_Confidentiality";
 
+/// HL7 Terminology `v3-ParticipationType` by `HL7_` and its code system
+/// name: the code system of an unbound `care_role`.
+pub const TERMINOLOGY_ID_PARTICIPATION_TYPE: &str = "HL7_ParticipationType";
+
 /// A `DV_CODED_TEXT` of `code` in `terminology`, displayed as `rubric`.
 #[must_use]
 pub fn coded_text(terminology: &str, code: &str, rubric: &str) -> DvCodedText {
@@ -104,6 +108,11 @@ pub enum Group {
     /// `care relationship`: the demographic relationships that put a caller
     /// in care of a subject.
     CareRelationship,
+    /// `care relationship element`: the elements in the `details` of an
+    /// `under_care_of` relationship.
+    CareRelationshipElement,
+    /// `care basis`: who wrote a care relationship.
+    CareBasis,
     /// `group kind`: what kind of group a demographic `GROUP` is.
     GroupKind,
     /// `record subject`: the demographic element naming an EHR subject
@@ -135,7 +144,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 20] = [
+    pub const ALL: [Self; 22] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -145,6 +154,8 @@ impl Group {
         Self::AccessConflict,
         Self::AccessValueSetBinding,
         Self::CareRelationship,
+        Self::CareRelationshipElement,
+        Self::CareBasis,
         Self::GroupKind,
         Self::RecordSubject,
         Self::Representation,
@@ -171,6 +182,8 @@ impl Group {
             Self::AccessConflict => "access conflict",
             Self::AccessValueSetBinding => "access value set binding",
             Self::CareRelationship => "care relationship",
+            Self::CareRelationshipElement => "care relationship element",
+            Self::CareBasis => "care basis",
             Self::GroupKind => "group kind",
             Self::RecordSubject => "record subject",
             Self::Representation => "representation",
@@ -199,6 +212,8 @@ impl Group {
             Self::AccessConflict => phrases::<Conflict>(),
             Self::AccessValueSetBinding => phrases::<ValueSetBinding>(),
             Self::CareRelationship => phrases::<CareRelationship>(),
+            Self::CareRelationshipElement => phrases::<CareElement>(),
+            Self::CareBasis => phrases::<CareBasis>(),
             Self::GroupKind => phrases::<GroupKind>(),
             Self::RecordSubject => phrases::<RecordSubject>(),
             Self::Representation => phrases::<Representation>(),
@@ -519,6 +534,34 @@ group! {
 }
 
 group! {
+    /// The elements in the `details` of an `under_care_of` relationship,
+    /// coded in each `ELEMENT`'s `name`.
+    CareElement in CareRelationshipElement {
+        /// The part the target plays in the care of the subject, of the value
+        /// set bound for `care_role`.
+        CareRole => "care_role",
+        /// The healthcare provider in whose care the relationship is.
+        Provider => "provider",
+        /// The carer the target replaces for the period of the relationship.
+        CoversFor => "covers_for",
+        /// The episode, referral or case the relationship belongs to.
+        Context => "context",
+        /// Who wrote the relationship, of the `care basis` group.
+        Basis => "basis",
+    }
+}
+
+group! {
+    /// Who wrote a care relationship, the value of its `basis` element.
+    CareBasis in CareBasis {
+        /// The care delivery environment wrote it; the default when absent.
+        Assigned => "assigned",
+        /// The professional it names wrote it.
+        SelfDeclared => "self_declared",
+    }
+}
+
+group! {
     /// What kind of group a demographic `GROUP` is, coded in its `name`: RM
     /// demographic `party.adoc` makes `type()` the `name` (`Type_valid`).
     GroupKind in GroupKind {
@@ -690,6 +733,9 @@ pub enum ForeignKind {
     /// A type an `ORGANISATION` is named by, such as a healthcare facility
     /// type code (RM Demographic IM, `PARTY.type()`).
     OrganisationType,
+    /// The part a carer plays in a care relationship, its `care_role`, such
+    /// as an HL7 `ParticipationType` code.
+    CareRole,
 }
 
 impl fmt::Display for ForeignKind {
@@ -701,6 +747,7 @@ impl fmt::Display for ForeignKind {
             Self::LegalGround => "legal ground",
             Self::Role => "role",
             Self::OrganisationType => "organisation type",
+            Self::CareRole => "care role",
         })
     }
 }

@@ -11,10 +11,13 @@
 //! category a classification names, each role, purpose, sensitivity,
 //! category and legal ground a controller rule names, each role and
 //! organisation type a conflict rule names, each legal ground
-//! of a restriction of the access log's subject view, and each provision of
-//! the access log retention, comes from the jurisdiction's terminology
-//! ([`ForeignCode`]); and that the access log retention is one the audit
-//! trail keeps records under ([`crate::access_policy::retention`]).
+//! of a restriction of the access log's subject view, each provision of
+//! the access log retention, and each care role, organisation type and actor
+//! scope of the bounds on care relationships, comes from the jurisdiction's
+//! terminology ([`ForeignCode`]); that each period of `relationship_validity`
+//! adds to a date and `team_targets` does not name the controller; and that
+//! the access log retention is one the audit trail keeps records under
+//! ([`crate::access_policy::retention`]).
 //!
 //! The draft package is FerroEHR's change proposal and no openEHR release:
 //! our own design over our own model (#5512).
@@ -81,6 +84,12 @@ pub enum PolicyDefect {
     /// The controller is not an `ORGANISATION`.
     #[error("the controller is a {0:?} reference; the controller is an ORGANISATION")]
     Controller(String),
+    /// A period of `relationship_validity` does not add to a date.
+    #[error(transparent)]
+    RelationshipPeriod(#[from] crate::access_policy::relationship::ValidityRefusal),
+    /// `team_targets` names the controller, which is never a target.
+    #[error("team_targets names the controller, which is never the target of a care relationship")]
+    TeamTargetController,
     /// The policy sets an attribute no access decision of this server reads
     /// yet.
     #[error("ACCESS_POLICY.{0} is not decided by this server, so it is not stored")]
@@ -133,6 +142,7 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
             scope_codes(scope)?;
         }
     }
+    relationship_codes(&policy)?;
     for restriction in policy.log_restrictions.as_deref().unwrap_or_default() {
         for ground in &restriction.legal_grounds {
             ForeignCode::read(ForeignKind::LegalGround, ground)?;
@@ -157,6 +167,50 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
         return Err(PolicyDefect::Undecided(path));
     }
     Ok(policy)
+}
+
+/// Reads every care role and organisation type of `relationship_validity`
+/// and every scope of `relationship_writers`, none of which the draft access
+/// terminology holds, checks that each period adds to a date, and refuses
+/// the controller among `team_targets`.
+///
+/// # Errors
+/// [`PolicyDefect::NotForeign`] for a code of the draft access terminology,
+/// [`PolicyDefect::RelationshipPeriod`] for a period that does not add, and
+/// [`PolicyDefect::TeamTargetController`].
+fn relationship_codes(policy: &AccessPolicy) -> Result<(), PolicyDefect> {
+    // NOTE: our own design, a period is judged by adding it to a date, as each write adds it.
+    let probe = jiff::civil::date(2000, 1, 1);
+    for entry in policy.relationship_validity.as_deref().unwrap_or_default() {
+        for role in entry.roles.as_deref().unwrap_or_default() {
+            ForeignCode::read(ForeignKind::CareRole, role)?;
+        }
+        for kind in entry.organisation_types.as_deref().unwrap_or_default() {
+            ForeignCode::read(ForeignKind::OrganisationType, kind)?;
+        }
+        for period in [&entry.default_period, &entry.max_period]
+            .into_iter()
+            .flatten()
+        {
+            crate::access_policy::relationship::add(probe, period)?;
+        }
+    }
+    for writer in policy.relationship_writers.as_deref().unwrap_or_default() {
+        for scope in &writer.applies_to {
+            scope_codes(scope)?;
+        }
+    }
+    let controller = crate::service::ehr::access_rule::party_key(&policy.controller);
+    let names_controller = policy
+        .team_targets
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .any(|target| crate::service::ehr::access_rule::party_key(target) == controller);
+    if controller.is_some() && names_controller {
+        return Err(PolicyDefect::TeamTargetController);
+    }
+    Ok(())
 }
 
 /// Reads every role, organisation type, purpose, sensitivity, category and legal ground `rule`

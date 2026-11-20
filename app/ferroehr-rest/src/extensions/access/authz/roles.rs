@@ -46,7 +46,7 @@ pub fn authorize(class: OperationClass, roles: &[String], rbac: &RbacConfig) -> 
         }
     };
     match class {
-        OperationClass::Public => RbacDecision::Allow,
+        OperationClass::Public | OperationClass::Authenticated => RbacDecision::Allow,
         OperationClass::Clinical => require_authenticated(),
         OperationClass::Admin => require_admin(),
     }

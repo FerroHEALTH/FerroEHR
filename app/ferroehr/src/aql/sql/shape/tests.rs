@@ -138,7 +138,9 @@ fn classes(
 
 fn projected(teams: Vec<Uuid>, day: jiff::civil::Date) -> Care {
     Care::Projected(ProjectedCare {
-        teams: teams.into(),
+        principals: teams.into(),
+        provider_issuers: vec!["urn:example:providers".to_owned()].into(),
+        provider_ids: vec!["hospital".to_owned()].into(),
         day,
         grace: "P14D".to_owned(),
     })

@@ -141,6 +141,7 @@ macro_rules! operations {
 /// totality only: the router mounts the manifest above the authentication
 /// layer.
 static OPERATIONS: &[Operation] = operations! {
+    "access_purposes" => Read, None, ApplicationActivity, None;
     "admin_access_delay_register" => Read, None, ApplicationActivity, None;
     "admin_access_log_chain" => Read, None, ApplicationActivity, None;
     "admin_access_log_erase" => Delete, None, ApplicationActivity, None;

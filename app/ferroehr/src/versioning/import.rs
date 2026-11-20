@@ -727,6 +727,7 @@ async fn commit_import_scoped(
         crate::party_binding::store::reindex_imported(
             tx,
             ctx.binding,
+            &ctx.access_policy,
             container.kind,
             container.vo_id,
         )

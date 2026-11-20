@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The side-table row of a standalone representation: a `PARTY_RELATIONSHIP`
-//! of its own carrying the representation code, which is how a patient
-//! authorises a proxy (#5446). Its row names its container, and the key row
-//! of the `PERSON` it names as its source counts it. No openEHR spec governs
-//! the side table: our own design.
+//! The side-table rows of a `PARTY_RELATIONSHIP` of its own: a standalone
+//! representation, carrying the representation code, which is how a patient
+//! authorises a proxy (#5446), and a care relationship, whose caller fact is
+//! about its source (#6055), with the end it takes from the access policy
+//! (#6073). A representation's row names its container, and
+//! the key row of the `PERSON` it names as its source counts it. No openEHR
+//! spec governs the side table: our own design.
 
 use sqlx::PgConnection;
 use uuid::Uuid;
@@ -14,32 +16,46 @@ use super::{DELETED, Scope, head_of, stored_heads, write_persons};
 use crate::error::ServiceError;
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::Facts;
+use crate::party_binding::grants;
+use crate::party_binding::grants::store::GrantHead;
 use crate::party_binding::rows::{self, RepresentationRow};
 use crate::storage::error::StorageError;
 use crate::storage::party_reverse;
-use crate::versioning::Kind;
 use crate::versioning::change::Committed;
+use crate::versioning::{Kind, SigningCtx};
 
 /// Judges the commit `committed` of a standalone `PARTY_RELATIONSHIP` holding
 /// `facts` (`None` for a logical delete) against the protection rules under
-/// `mapping`, then brings its reverse-relationship index and, at its trunk
-/// head, its representation row to it, on its commit transaction `tx`.
+/// `mapping` and, for a care relationship, its writer's grant, then brings
+/// its reverse-relationship index and, at its trunk head, its representation
+/// row and its care fact to it, on its commit transaction `tx`.
 ///
 /// # Errors
-/// The protection refusals and a storage failure.
+/// The protection refusals, the care writer's `403`, and a storage failure.
 pub(super) async fn committed(
     tx: &mut PgConnection,
-    mapping: &BindingMapping,
+    ctx: &SigningCtx<'_>,
     committed: &Committed,
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
+    let mapping = ctx.binding;
     crate::party_binding::protect::check(tx, mapping, committed, facts).await?;
     crate::party_binding::protect::representation(tx, mapping, committed.vo_id, facts).await?;
+    let changed = grants::caller::check_care(tx, mapping, committed, facts).await?;
     let targets = facts.map_or(&[][..], |f| f.targets.as_slice());
     party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
-    let (_, trunk_head) = head_of(tx, committed.vo_id).await?;
+    let (lifecycle_state, trunk_head) = head_of(tx, committed.vo_id).await?;
     if trunk_head == Some(committed.sys_version) {
         reindex(tx, mapping, committed.vo_id.0, facts).await?;
+        let live = facts.filter(|_| lifecycle_state != DELETED);
+        let judged = grants::caller::bounds::Head::from(committed);
+        grants::caller::bounds::judge(tx, &ctx.access_policy, &judged, live, changed).await?;
+        let head = GrantHead {
+            vo_id: committed.vo_id.0,
+            lifecycle_state: &lifecycle_state,
+            facts,
+        };
+        grants::store::write(tx, Kind::PartyRelationship, head).await?;
     }
     Ok(())
 }
