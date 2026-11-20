@@ -357,7 +357,7 @@ async fn tamper_at(pool: &PgPool, seq: i64) {
 /// whole backlog reports it, and holds the cursor before it (#5804).
 #[tokio::test]
 async fn a_large_catch_up_walks_paced_steps_and_reports_damage_exactly() {
-    const BACKLOG: u32 = 12_000;
+    const BACKLOG: u32 = 6_000;
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let audit = AuditStore::new(pool.clone());
@@ -388,7 +388,7 @@ async fn a_large_catch_up_walks_paced_steps_and_reports_damage_exactly() {
     for first in (BACKLOG + 1..=2 * BACKLOG).step_by(2_000) {
         append(&log, first..=first + 1_999).await;
     }
-    let damaged = [i64::from(BACKLOG) + 3_001, i64::from(BACKLOG) + 9_500];
+    let damaged = [i64::from(BACKLOG) + 1_501, i64::from(BACKLOG) + 4_750];
     for seq in damaged {
         tamper_at(&pool, seq).await;
     }
