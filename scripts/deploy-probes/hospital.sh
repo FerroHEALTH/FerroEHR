@@ -313,6 +313,31 @@ j_care() {
     time_validity:$v,source:$s,target:$t}'
 }
 
+# The healthcare provider the stack acts for (`[authz.party_binding.provider]`
+# in docker-compose.yml), in whose care each care relationship is.
+H_CARE_PROVIDER_ISSUER="urn:oid:2.999.7.9"
+H_CARE_PROVIDER_ID="quickstart"
+
+# A care relationship of its own (#6055): the PERSON `source` under the care
+# of the party `target` of RM type `ttype` over `validity`, in the role ATND of
+# HL7_ParticipationType, in the care of the stack's provider (draft access
+# control package, Care Relationships).
+j_care_of() {
+  local source="$1" ttype="$2" target="$3" validity="$4"
+  jq -nc --argjson k "$(j_term under_care_of)" --argjson r "$(j_term care_role)" \
+    --argjson p "$(j_term provider)" --argjson role "$(j_coded HL7_ParticipationType ATND)" \
+    --arg pi "$H_CARE_PROVIDER_ISSUER" --arg pid "$H_CARE_PROVIDER_ID" \
+    --argjson s "$(j_party PERSON "$source")" --argjson t "$(j_party "$ttype" "$target")" \
+    --argjson v "$validity" '{_type:"PARTY_RELATIONSHIP",
+    archetype_node_id:"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.hospital_care.v1",
+    name:$k,
+    details:{_type:"ITEM_TREE",archetype_node_id:"at0002",name:{_type:"DV_TEXT",value:"details"},
+      items:[{_type:"ELEMENT",archetype_node_id:"at0003",name:$r,value:$role},
+        {_type:"ELEMENT",archetype_node_id:"at0004",name:$p,
+          value:{_type:"DV_IDENTIFIER",issuer:$pi,id:$pid,type:"ORGANISATION"}}]},
+    time_validity:$v,source:$s,target:$t}'
+}
+
 # A credentials element named by the code `name` holding `value`.
 j_qualifier() {
   jq -nc --argjson n "$(j_term "$1")" --argjson v "$2" \
@@ -472,6 +497,28 @@ h_rerelate() {
   version="$(jq -r '.uid.value' <<<"$H_BODY")"
   body="$(jq -c --argjson r "$rels" 'del(.uid) | .relationships = $r' <<<"$H_BODY")"
   H_IF_MATCH="\"$version\"" h_call "$n" "$who" PUT "/demographic/$kind/$version" "$body"
+  [[ "$H_CODE" = 200 || "$H_CODE" = 204 ]]
+}
+
+# Writes the care relationship `body`, a PARTY_RELATIONSHIP of its own,
+# through instance `n` as `who`; records its container as HV_<name>.
+h_care() {
+  local name="$1" n="$2" who="$3" body="$4"
+  h_call "$n" "$who" POST "$HX/demographic/party_relationship" "$body"
+  hv_set "$name" "$(h_vo)"
+  [[ "$H_CODE" = 201 ]]
+}
+
+# Commits a version of the care relationship HV_<name> over `validity`, its
+# time_validity, through instance `n` as `who`: an admission's end or a
+# readmission.
+h_care_validity() {
+  local name="$1" n="$2" who="$3" validity="$4" body version
+  h_call "$n" admin GET "$HX/demographic/party_relationship/$(hv "$name")"
+  version="$(jq -r '.uid.value' <<<"$H_BODY")"
+  body="$(jq -c --argjson v "$validity" 'del(.uid) | .time_validity = $v' <<<"$H_BODY")"
+  H_IF_MATCH="\"$version\"" h_call "$n" "$who" PUT \
+    "$HX/demographic/party_relationship/$version" "$body"
   [[ "$H_CODE" = 200 || "$H_CODE" = 204 ]]
 }
 
@@ -676,12 +723,10 @@ hospital_setup() {
   h_party person_piet person "$(j_named_party PERSON "Piet Jansen")" || h_fail_call "Piet's PERSON"
   local admitted team
   admitted="$(j_dates "$(h_day -10)")"
-  H_EVA_CARE="[]"
   for team in cardiology ward3 psychiatry; do
-    H_EVA_CARE="$(jq -c --argjson r "$(j_care under_care_of PERSON "$(hv person_eva)" GROUP "$(hv "$team")" \
-      "$admitted")" '. + [$r]' <<<"$H_EVA_CARE")"
+    h_care "care_eva_$team" 2 admin "$(j_care_of "$(hv person_eva)" GROUP "$(hv "$team")" \
+      "$admitted")" || h_fail_call "Eva's admission to $team"
   done
-  h_rerelate 2 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva's admission"
   h_patient_person person_frank "Frank Visser" frank || h_fail_call "Frank's PERSON"
   h_rerelate 1 admin person "$(hv person_frank)" "[$(j_care represents PERSON "$(hv person_frank)" \
     PERSON "$(hv person_eva)" "$(j_dates "$(h_day -365)")")]" || h_fail_call "Frank represents Eva"
@@ -1170,16 +1215,13 @@ hospital_care_and_consent() {
 
   probe "P-HOSP-GRACE" "$PROBE_WORKING" "server" "#5610" \
     "a discharge decides on the other instance: within the grace Dr. Jansen reads, after it she is refused"
-  local team rels
-  rels="$(jq -c --arg c "$(hv cardiology)" --argjson v "$(j_dates "$(h_day -10)" "$(h_day 0)")" \
-    'map(if .target.id.value == $c then .time_validity = $v else . end)' <<<"$H_EVA_CARE")"
-  h_rerelate 1 admin person "$(hv person_eva)" "$rels" || h_fail_call "Eva's discharge today"
+  h_care_validity care_eva_cardiology 1 admin "$(j_dates "$(h_day -10)" "$(h_day 0)")" \
+    || h_fail_call "Eva's discharge today"
   h_read 2 p:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen within the grace"
-  rels="$(jq -c --arg c "$(hv cardiology)" --argjson v "$(j_dates "$(h_day -10)" "$(h_day -3)")" \
-    'map(if .target.id.value == $c then .time_validity = $v else . end)' <<<"$H_EVA_CARE")"
-  h_rerelate 2 admin person "$(hv person_eva)" "$rels" || h_fail_call "Eva's discharge three days ago"
+  h_care_validity care_eva_cardiology 2 admin "$(j_dates "$(h_day -10)" "$(h_day -3)")" \
+    || h_fail_call "Eva's discharge three days ago"
   h_read 1 p:anna "$eva" c_encounter TREAT 403 refused-no-care-relationship "Dr. Jansen after the grace"
-  h_rerelate 1 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva readmitted"
+  h_care_validity care_eva_cardiology 1 admin "$(j_dates "$(h_day -10)")" || h_fail_call "Eva readmitted"
   h_read 2 p:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen after the readmission"
   probe_done
 
@@ -1240,9 +1282,8 @@ hospital_scim_lifecycle() {
   local group
   group="$(jq -r '.id // empty' <<<"$H_BODY")"
   if [[ -n "$group" ]]; then
-    H_EVA_CARE="$(jq -c --argjson r "$(j_care under_care_of PERSON "$(hv person_eva)" GROUP "$group" \
-      "$(j_dates "$(h_day -1)")")" '. + [$r]' <<<"$H_EVA_CARE")"
-    h_rerelate 2 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva admitted to the emergency department"
+    h_care care_eva_emergency 2 admin "$(j_care_of "$(hv person_eva)" GROUP "$group" \
+      "$(j_dates "$(h_day -1)")")" || h_fail_call "Eva admitted to the emergency department"
   fi
   h_read 1 p:dirk "$eva" c_vitals TREAT 200 "" "Dr. Bakker, a member through SCIM, reads the vital signs"
   h_call 2 scim PATCH "/scim/v2/Groups/$group" "$(jq -nc --arg m "$(hv person_dirk)" \
@@ -1541,8 +1582,8 @@ hospital_pixm() {
     "[$(j_care member PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -30)")")]" \
     || h_fail_call "Dr. Jansen joins Cardiology"
   h_patient_person person_eva "Eva Visser" eva || h_fail_call "Eva's PERSON"
-  H_EVA_CARE="[$(j_care under_care_of PERSON "$(hv person_eva)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -10)")")]"
-  h_rerelate 1 admin person "$(hv person_eva)" "$H_EVA_CARE" || h_fail_call "Eva's admission"
+  h_care care_eva_cardiology 1 admin "$(j_care_of "$(hv person_eva)" GROUP "$(hv cardiology)" \
+    "$(j_dates "$(h_day -10)")")" || h_fail_call "Eva's admission"
   h_patient_person person_frank "Frank Visser" frank || h_fail_call "Frank's PERSON"
   h_rerelate 2 admin person "$(hv person_frank)" "[$(j_care represents PERSON "$(hv person_frank)" \
     PERSON "$(hv person_eva)" "$(j_dates "$(h_day -365)")")]" || h_fail_call "Frank represents Eva"
