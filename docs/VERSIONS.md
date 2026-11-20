@@ -108,13 +108,13 @@ Bumping ZITADEL moves both rows, and the vendor script's tag, together.
 
 | Image | Pin | Licence |
 |---|---|---|
-| `ferrosmart` | `ghcr.io/ferrohealth/ferrosmart:0.1.0@sha256:38b724514e78212c3944e82d8b8f6dc19ed3ac2392489ac3933bae40e256245d` | BUSL-1.1 (FerroHEALTH) |
+| `ferrosmart` | `ghcr.io/ferrohealth/ferrosmart:0.2.0@sha256:8adfd5d1f104314d8feb9a3e08b63e4eb0ff5d52adbf1a3b2f53495a1e1b693a` | BUSL-1.1 (FerroHEALTH) |
 | `keycloak` | `quay.io/keycloak/keycloak:26.8.2@sha256:723b1d6e254c0fc96d5cffec860c7e0744d6a3277822b865bb538cf891575e41` | Apache-2.0, the pin of `docker-compose.keycloak.yml` |
 | `zitadel` | `ghcr.io/zitadel/zitadel:v4.20.3@sha256:1b30fea7ed88826dc0a98dacee4e2f2c8b05201fd26f5e4cb5386615b29f7638` | AGPL-3.0-only, run unmodified |
 | `zitadel-login` | `ghcr.io/zitadel/zitadel-login:v4.20.3@sha256:8f730428dfd65cd8979d07ef4e34a59d44978e956692b7dbbc3bba4e4abb4f92` | MIT (`apps/login/`) |
 
 The ZITADEL digests were resolved from `ghcr.io` on 2026-11-16 and the
-FerroSMART digest on 2026-11-19, each checked against the sha256 of the index
+FerroSMART 0.2.0 digest on 2026-11-20, each checked against the sha256 of the index
 manifest it names. FerroSMART's and ZITADEL's PostgreSQL is the `postgres:18.6`
 digest the quickstart pins.
 

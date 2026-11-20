@@ -84,10 +84,10 @@ FerroSMART's repository:
 
 | Provider | FerroSMART's setup |
 |---|---|
-| Keycloak | the realm and configuration of [`examples/keycloak/`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/app/ferrosmart/examples/keycloak/), run by [`compose.keycloak.yaml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/compose.keycloak.yaml) (architecture §13.16) |
-| ZITADEL | the bootstrap of [`examples/zitadel/`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/app/ferrosmart/examples/zitadel/), run by [`compose.zitadel.yaml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/compose.zitadel.yaml) (§13.20) |
-| Microsoft Entra ID | [`examples/entra/ferrosmart.toml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/app/ferrosmart/examples/entra/ferrosmart.toml) (§13.18) |
-| Okta | [`examples/okta/ferrosmart.toml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/app/ferrosmart/examples/okta/ferrosmart.toml) (§13.19) |
+| Keycloak | the realm and configuration of [`examples/keycloak/`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/app/ferrosmart/examples/keycloak/), run by [`compose.keycloak.yaml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/compose.keycloak.yaml) (architecture §13.16) |
+| ZITADEL | the bootstrap of [`examples/zitadel/`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/app/ferrosmart/examples/zitadel/), run by [`compose.zitadel.yaml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/compose.zitadel.yaml) (§13.20) |
+| Microsoft Entra ID | [`examples/entra/ferrosmart.toml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/app/ferrosmart/examples/entra/ferrosmart.toml) (§13.18) |
+| Okta | [`examples/okta/ferrosmart.toml`](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/app/ferrosmart/examples/okta/ferrosmart.toml) (§13.19) |
 
 FerroEHR's quickstart runs the first two upstream of FerroSMART
 ([Docker Compose](installation/compose.md#behind-ferrosmart)).
@@ -116,9 +116,9 @@ What changes against a provider FerroEHR trusts directly, such as the
   deployment re-provisions their logins.
 - **Roles.** FerroSMART writes the person's roles, as it mapped them from the
   provider, into the access token's `roles` claim (RFC 9068 §2.2.3.1) from
-  FerroSMART 0.2.0 (FerroHEALTH/FerroSMART#649). List FerroSMART in
-  `[authz.rbac] role_issuers` for them to grant `admin_role` or the emergency
-  role. FerroSMART 0.1.0, the release the quickstart pins, writes none.
+  FerroSMART 0.2.0, the release the quickstart pins
+  (FerroHEALTH/FerroSMART#649). List FerroSMART in `[authz.rbac]
+  role_issuers` for them to grant `admin_role` or the emergency role.
 - **The product scope.** A person reaches the ADMIN API only with the
   product scope, which FerroSMART grants through a role that maps to it from
   FerroSMART 0.2.0 (FerroHEALTH/FerroSMART#647).

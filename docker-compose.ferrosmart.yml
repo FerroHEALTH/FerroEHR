@@ -38,7 +38,7 @@
 #
 # FerroSMART's configuration is docker/ferrosmart/ferrosmart.toml
 # (FERROSMART_CONFIG_FILE names another). Its own documentation is
-# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md#13-ferrosmart-the-smart-authorization-server
+# https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md#13-ferrosmart-the-smart-authorization-server
 
 services:
   identity-issuer:
@@ -73,7 +73,7 @@ services:
     restart: unless-stopped
 
   ferrosmart:
-    image: ${FERROSMART_IMAGE:-ghcr.io/ferrohealth/ferrosmart:0.1.0@sha256:38b724514e78212c3944e82d8b8f6dc19ed3ac2392489ac3933bae40e256245d}
+    image: ${FERROSMART_IMAGE:-ghcr.io/ferrohealth/ferrosmart:0.2.0@sha256:8adfd5d1f104314d8feb9a3e08b63e4eb0ff5d52adbf1a3b2f53495a1e1b693a}
     network_mode: service:identity-issuer
     depends_on:
       ferrosmart-postgres:

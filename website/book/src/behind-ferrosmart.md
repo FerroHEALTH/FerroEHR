@@ -10,7 +10,7 @@ carry the launch context: `patient`, `encounter`, `fhirUser` and, at an
 openEHR base, `ehrId`. FerroEHR runs behind it as a resource server. The
 person never signs in to FerroEHR, and FerroEHR never sees the provider's
 tokens. FerroSMART's architecture describes the whole deployment in
-§13.21, A product behind FerroSMART, of its [architecture](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.1.0/docs/architecture.md).
+§13.21, A product behind FerroSMART, of its [architecture](https://github.com/FerroHEALTH/FerroSMART/blob/ferrosmart-v0.2.0/docs/architecture.md).
 This page is FerroEHR's side of it.
 
 ```text
@@ -60,6 +60,13 @@ audience = ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
   the app, and the access record carries `acting_mode = delegated` and the
   app. A token through an app the CDR grants nothing is no caller and is
   refused with `401`.
+- **FerroSMART's patient picker.** The picker looks a patient's EHR up as
+  the person who signed in, with a token whose `client_id` is FerroSMART's
+  own issuer (FerroSMART `docs/architecture.md` §13.6 item 4). Grant that
+  client `sign_in_persons` on an `AGENT` carrying FerroSMART's issuer as its
+  `client_id`, so the lookup reads as the person themselves. Without the
+  grant, FerroEHR refuses the lookup with `401`, and a standalone launch
+  with `launch/patient` stops at the picker.
 - **A Backend Services client.** A client credentials token's `sub` is its
   `client_id` (RFC 9068 §2.2), so the same table reads it as the system: a
   `persons` issuer also signs its machines' app-only tokens. Its grants in
