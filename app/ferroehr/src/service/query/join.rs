@@ -181,10 +181,12 @@ impl FerroEhrService {
         // the caller named no EHR, so the linked EHRs are a population subset.
         // NOTE: our own design (#5699), the clinical half reads only the linked EHRs, so care is
         // read for those and never for the caller's whole census.
-        let mut ehr_access =
-            Box::pin(self.query_access_condition(&job.request.ehr_access, Some(&ehrs)))
-                .await
-                .map_err(Failure::analysis)?;
+        let unresolved = Box::pin(self.unresolved_condition(&job.request.ehr_access))
+            .await
+            .map_err(Failure::analysis)?;
+        let mut ehr_access = Box::pin(self.query_access_condition(&unresolved, Some(&ehrs)))
+            .await
+            .map_err(Failure::analysis)?;
         let own_records = Box::pin(self.delayed_own_records())
             .await
             .map_err(Failure::analysis)?;

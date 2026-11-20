@@ -244,7 +244,9 @@ async fn decided(
             .await
             .is_ok();
         let request = AqlQueryRequest {
-            ehr_access: svc.request_access_condition().await.expect("the condition"),
+            ehr_access: ferroehr::service::query::request::QueryAccess::Given(
+                svc.request_access_condition().await.expect("the condition"),
+            ),
             ..AqlQueryRequest::default()
         };
         let rows = Box::pin(svc.execute_aql(

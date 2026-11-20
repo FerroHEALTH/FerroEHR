@@ -474,7 +474,9 @@ async fn run_query_as(
     let run = async {
         let classes = svc.ehr_access_classes().await.expect("the classes read");
         let request = AqlQueryRequest {
-            ehr_access: access.condition(&classes, care_of(world, ask, form)),
+            ehr_access: ferroehr::service::query::request::QueryAccess::Given(
+                access.condition(&classes, care_of(world, ask, form)),
+            ),
             offset: page.map(|(offset, _)| offset),
             fetch: page.map(|(_, fetch)| fetch),
             ..AqlQueryRequest::default()
@@ -829,7 +831,9 @@ async fn the_projection_reads_the_dates_of_care_as_the_evaluator() {
                 .await
                 .expect("the classes read");
             let request = AqlQueryRequest {
-                ehr_access: access.condition(&classes, projected(today, grace)),
+                ehr_access: ferroehr::service::query::request::QueryAccess::Given(
+                    access.condition(&classes, projected(today, grace)),
+                ),
                 ..AqlQueryRequest::default()
             };
             Box::pin(world.svc.execute_aql(COMPOSITIONS, None, &request))
@@ -1171,7 +1175,7 @@ async fn an_ehr_of_a_class_the_condition_does_not_hold_is_judged_again() {
     .await;
     world.settings(1, &settings("open", &[], &[])).await;
     let request = AqlQueryRequest {
-        ehr_access: stale,
+        ehr_access: ferroehr::service::query::request::QueryAccess::Given(stale),
         ..AqlQueryRequest::default()
     };
     let outcome = Box::pin(with_request_access(
@@ -1406,7 +1410,7 @@ async fn a_query_pinned_to_one_ehr_is_decided_before_the_statement() {
         "a query over two EHRs is not pinned"
     );
     let request = AqlQueryRequest {
-        ehr_access: pinned,
+        ehr_access: ferroehr::service::query::request::QueryAccess::Given(pinned),
         ..AqlQueryRequest::default()
     };
     let outcome = Box::pin(with_request_access(
@@ -1459,10 +1463,16 @@ async fn a_pinned_verdict_judged_on_an_older_copy_is_judged_again_or_refused() {
                     entry.revision.settings = entry.revision.settings.map(|ordinal| ordinal - 1);
                 }
                 let request = AqlQueryRequest {
-                    ehr_access: access.pin(&condition, ehr_id, &entry),
+                    ehr_access: ferroehr::service::query::request::QueryAccess::Given(access.pin(&condition, ehr_id, &entry)),
                     ..AqlQueryRequest::default()
                 };
-                assert!(request.ehr_access.pinned().is_some(), "the EHR is decided");
+                assert!(
+                    matches!(
+                        &request.ehr_access,
+                        ferroehr::service::query::request::QueryAccess::Given(c) if c.pinned().is_some()
+                    ),
+                    "the EHR is decided"
+                );
                 Box::pin(svc.execute_aql(&aql, None, &request)).await
             }))
             .await
@@ -1572,7 +1582,7 @@ async fn served_under(
     aql: &str,
 ) -> Vec<String> {
     let request = AqlQueryRequest {
-        ehr_access: condition,
+        ehr_access: ferroehr::service::query::request::QueryAccess::Given(condition),
         ..AqlQueryRequest::default()
     };
     let outcome = Box::pin(with_request_access(
