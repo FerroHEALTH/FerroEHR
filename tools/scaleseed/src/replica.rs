@@ -238,7 +238,12 @@ pub(crate) async fn measure(party: PgPool, target: Target) -> anyhow::Result<()>
         let (grants, team, providers) = (&grants, *team, &providers);
         async move {
             grants
-                .cared_for_by(&[team], providers, today, jiff::Span::new())
+                .cared_for_by(
+                    &[team],
+                    providers,
+                    today,
+                    &ferroehr::access_eval::procedure::Policy::default(),
+                )
                 .await
                 .context("read a team's patients")?;
             Ok(())
@@ -254,7 +259,7 @@ pub(crate) async fn measure(party: PgPool, target: Target) -> anyhow::Result<()>
             teams.first().map_or(&[][..], std::slice::from_ref),
             &providers,
             today,
-            jiff::Span::new(),
+            &ferroehr::access_eval::procedure::Policy::default(),
         )
         .await
         .context("read one team's patients")?

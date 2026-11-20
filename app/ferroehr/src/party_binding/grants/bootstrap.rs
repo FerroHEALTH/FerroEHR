@@ -56,9 +56,31 @@ pub struct ClientGrant {
     pub client_id: String,
     /// The operation granted.
     pub operation: Operation,
-    /// The scope elements, each a code of the draft access terminology and the
-    /// text it names.
-    pub elements: Vec<(String, String)>,
+    /// The scope elements.
+    pub elements: Vec<GrantElement>,
+}
+
+/// One scope element of a grant, named by a code of the draft access
+/// terminology, with its value typed as the element is read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GrantElement {
+    /// An element whose value is a `DV_TEXT`, such as a `binding_issuer`.
+    Text {
+        /// The element's code.
+        code: String,
+        /// The text.
+        text: String,
+    },
+    /// An element whose value is a `DV_IDENTIFIER`, such as the `provider`
+    /// of a `write_care_relationship` grant.
+    Identifier {
+        /// The element's code.
+        code: String,
+        /// The identifier's issuer.
+        issuer: String,
+        /// The identifier.
+        id: String,
+    },
 }
 
 /// The grant of one operation to the `PERSON` a Basic user binds to.
@@ -68,9 +90,8 @@ pub struct PersonGrant {
     pub person: Uuid,
     /// The operation granted.
     pub operation: Operation,
-    /// The scope elements, each a code of the draft access terminology and the
-    /// text it names.
-    pub elements: Vec<(String, String)>,
+    /// The scope elements.
+    pub elements: Vec<GrantElement>,
 }
 
 /// What a grant committed.
@@ -303,19 +324,29 @@ fn agent(grant: &ClientGrant) -> Party {
 
 /// The `ROLE` the party `performer` (its RM type and container) performs,
 /// whose capability grants `operation` with the scope `elements`.
-fn role(performer: (&str, VoId), operation: Operation, elements: &[(String, String)]) -> Party {
+fn role(performer: (&str, VoId), operation: Operation, elements: &[GrantElement]) -> Party {
     let code = operation.code();
     let mut items = vec![element(
         "at0021",
         plain_text("operation"),
         DataValue::DvText(DvText::DvCodedText(coded(code))),
     )];
-    items.extend(elements.iter().map(|(name, value)| {
-        element(
+    items.extend(elements.iter().map(|named| match named {
+        GrantElement::Text { code, text } => element(
             "at0022",
-            DvText::DvCodedText(coded(name)),
-            DataValue::DvText(plain_text(value)),
-        )
+            DvText::DvCodedText(coded(code)),
+            DataValue::DvText(plain_text(text)),
+        ),
+        GrantElement::Identifier { code, issuer, id } => element(
+            "at0022",
+            DvText::DvCodedText(coded(code)),
+            DataValue::DvIdentifier(DvIdentifier {
+                issuer: Some(issuer.clone()),
+                assigner: None,
+                id: id.clone(),
+                r#type: None,
+            }),
+        ),
     }));
     Party::Role(Box::new(Role {
         name: plain_text(code),
@@ -350,8 +381,9 @@ fn role(performer: (&str, VoId), operation: Operation, elements: &[(String, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::party_binding::grants::caller::care_of::ProviderKey;
     use crate::party_binding::grants::capabilities::Credentials;
-    use crate::party_binding::grants::operation::{BINDING_ISSUER, TOKEN_SCOPE};
+    use crate::party_binding::grants::operation::{BINDING_ISSUER, PROVIDER, TOKEN_SCOPE};
 
     #[test]
     fn the_role_codes_the_operation_and_names_each_element() {
@@ -360,8 +392,19 @@ mod tests {
             client_id: "provisioning".to_owned(),
             operation: Operation::ScimProvision,
             elements: vec![
-                (BINDING_ISSUER.to_owned(), "urn:example:login".to_owned()),
-                (TOKEN_SCOPE.to_owned(), "ferroehr/scim".to_owned()),
+                GrantElement::Text {
+                    code: BINDING_ISSUER.to_owned(),
+                    text: "urn:example:login".to_owned(),
+                },
+                GrantElement::Text {
+                    code: TOKEN_SCOPE.to_owned(),
+                    text: "ferroehr/scim".to_owned(),
+                },
+                GrantElement::Identifier {
+                    code: PROVIDER.to_owned(),
+                    issuer: "urn:example:providers".to_owned(),
+                    id: "hospital".to_owned(),
+                },
             ],
         };
         let body = openehr_its::json::to_canonical_value(&role(
@@ -375,6 +418,10 @@ mod tests {
             ["urn:example:login"]
         );
         assert_eq!(credentials.identified(TOKEN_SCOPE), ["ferroehr/scim"]);
+        assert_eq!(
+            credentials.identifiers(PROVIDER),
+            [ProviderKey::new("urn:example:providers", "hospital")]
+        );
         assert_eq!(
             body.pointer("/capabilities/0/credentials/items/0/value/defining_code/code_string"),
             Some(&serde_json::json!("scim_provision"))

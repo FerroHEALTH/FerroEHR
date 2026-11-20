@@ -21,6 +21,7 @@ use crate::access_eval::procedure::Verdict;
 use crate::access_eval::stale::{STALE_POLL, STALE_WAIT};
 use crate::error::ServiceError;
 use crate::ids::EhrId;
+use crate::party_binding::grants::caller::care_of::CareOf;
 use crate::party_binding::grants::live::GrantsUnavailable;
 use crate::party_binding::grants::live::revisions::Revisions;
 use crate::storage::access_projection::EhrSubject;
@@ -107,9 +108,25 @@ impl RequestAccess {
                 &principals,
                 self.caller.facts.providers(),
                 self.today(),
-                self.policy().grace,
+                &self.policy(),
             )
             .await
+    }
+
+    /// Whether one of a subject's care `relations` is live, targets a
+    /// principal of the caller acting for its provider, and was not written
+    /// by the caller naming itself ([`CareOf::admits_writer`]) (draft
+    /// decision procedure).
+    #[must_use]
+    pub fn cared(&self, relations: &[CareOf]) -> bool {
+        let policy = self.policy();
+        let principals = self.principals_held();
+        relations.iter().any(|care| {
+            care.live_on(self.today(), policy.grace)
+                && principals.binary_search(&care.carer()).is_ok()
+                && care.admits_writer(&principals, policy.self_declared)
+                && self.caller.facts.acts_for_provider(care.provider())
+        })
     }
 
     /// Whether the caller can hold a care relationship at all: it has a
@@ -315,6 +332,9 @@ pub struct ProjectedCare {
     /// The grace after a relationship ends, as a PostgreSQL interval of
     /// calendar units only (`P14D`).
     pub grace: String,
+    /// Whether the policy turns the `self_declared` path on, so a
+    /// self-declared relationship admits its writer.
+    pub self_declared: bool,
 }
 
 /// Increment `access_care_stale_total{outcome}`.

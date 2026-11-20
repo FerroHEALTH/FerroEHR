@@ -200,7 +200,21 @@ impl FerroEhrService {
             .await?;
         let allocated = self.allocate_party_id();
         let id = allocated.id();
-        let body = self.group_body(mapping, writer, None, &state).await?;
+        let mut body = self.group_body(mapping, writer, None, &state).await?;
+        if state.care_team {
+            let organisation = acting_for()?;
+            let membership = self
+                .membership_body(
+                    mapping.membership,
+                    (("GROUP", id), ("ORGANISATION", organisation)),
+                    writer.namespace,
+                    true,
+                )
+                .await?;
+            if let Some(object) = body.as_object_mut() {
+                object.insert("relationships".to_owned(), Value::Array(vec![membership]));
+            }
+        }
         let lifecycle = self.first_state(&body, mapping.template).await?;
         let body = decoded(Kind::Group, body, lifecycle == state::INCOMPLETE)?;
         let envelope = WriteEnvelope {
@@ -295,7 +309,7 @@ impl FerroEhrService {
             let membership = self
                 .membership_body(
                     mapping.membership,
-                    (group, member),
+                    (("PERSON", member), ("GROUP", group)),
                     writer.namespace,
                     care_team,
                 )
@@ -469,6 +483,27 @@ pub(super) fn require_care_writer() -> Result<(), ServiceError> {
         GroupKind::CareTeam.code(),
         Operation::WriteCareRelationship
     )))
+}
+
+/// The `ORGANISATION` the caller's client acts for, which a care-team Group
+/// it creates belongs to, so the memberships of the Group are written for
+/// that provider (draft access control decision procedure, Writing
+/// Relationships). Our own design.
+///
+/// # Errors
+/// [`ServiceError::Forbidden`] (`403`) when the client acts for none.
+fn acting_for() -> Result<VoId, ServiceError> {
+    Capabilities::current()
+        .client()
+        .and_then(|client| client.provider.as_ref())
+        .map(|provider| VoId(provider.party))
+        .ok_or_else(|| {
+            ServiceError::not_permitted(format!(
+                "a care-team Group belongs to the provider its client acts for, and this client's \
+                 ACTOR names none by an {} relationship",
+                crate::party_binding::policy_mark::ACTS_FOR
+            ))
+        })
 }
 
 /// Keeps the inline relationships of `body` that `keep` holds, leaving

@@ -47,10 +47,11 @@ use crate::error::{ServiceError, Violation};
 use crate::extensions::outbox::config::is_reader_name;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
+use crate::party_binding::grants::caller::care_of::CarerKind;
 use crate::party_binding::grants::capabilities::{Credentials, Grant};
 use crate::party_binding::grants::operation::{
     BINDING_ISSUER, DEVICE, DEVICE_IDENTIFIER_ISSUER, FACILITY, FACILITY_PARTS, ORIGIN, Operation,
-    READER, RELAY, ROLE, ROLE_TERMINOLOGY, SUBJECT_NAMESPACE, TOKEN_SCOPE,
+    PROVIDER, READER, RELAY, ROLE, ROLE_TERMINOLOGY, SUBJECT_NAMESPACE, TARGET_KIND, TOKEN_SCOPE,
 };
 use crate::party_binding::grants::trust::FederationTrust;
 
@@ -213,8 +214,36 @@ fn check_elements(facts: &Facts) -> Result<(), ServiceError> {
                     one(ROLE_TERMINOLOGY)?;
                 }
             }
+            Some(Operation::WriteCareRelationship) => care_writer_terms(credentials)?,
             _ => {}
         }
+    }
+    Ok(())
+}
+
+/// Refuses a `write_care_relationship` grant's `credentials` when a
+/// `provider` element is no `DV_IDENTIFIER` with an issuer and an id, or a
+/// `target_kind` element names no target kind of a care relationship. A grant
+/// naming none of either writes none (#6073).
+///
+/// # Errors
+/// [`ServiceError::BadRequest`] (`400`) naming the element.
+fn care_writer_terms(credentials: Credentials<'_>) -> Result<(), ServiceError> {
+    if credentials.named(PROVIDER).len() != credentials.identifiers(PROVIDER).len() {
+        return Err(ServiceError::precondition(
+            "the capability granting write_care_relationship names a provider element that is \
+             no DV_IDENTIFIER with an issuer and an id",
+        ));
+    }
+    if let Some(kind) = credentials
+        .words(TARGET_KIND)
+        .into_iter()
+        .find(|kind| CarerKind::of(kind.trim()).is_none())
+    {
+        return Err(ServiceError::precondition(format!(
+            "the capability granting write_care_relationship names the target_kind {kind:?}: a \
+             target kind is PERSON, ROLE, GROUP or ORGANISATION"
+        )));
     }
     Ok(())
 }

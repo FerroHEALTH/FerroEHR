@@ -27,12 +27,16 @@ use serde_json::{Value, json};
 use super::default_definitions::{seeded, zero_config};
 use super::{CLIENT, LOGIN, MACHINES, OTHER, OTHER_LOGIN, SCOPE, call, created, patch_op};
 use crate::common::{self, BASE};
-use crate::policy_fixture::{capability, grant, scope};
+use crate::policy_fixture::{capability, care_writer, grant, scope};
+use crate::system_grants::{acting_client, provider_group, provider_organisation};
 
 /// The URN of FerroEHR's Group extension.
 const GROUP_EXTENSION: &str = "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group";
 /// The client id of the hospital's ADT system.
 pub(super) const ADT: &str = "adt";
+
+/// The provider [`CLIENT`] acts for and the care writers write for.
+pub(super) const PROVIDER: (&str, &str) = ("urn:example:providers", "hospital");
 
 /// The router over a fresh database holding the default definitions, where
 /// [`CLIENT`] provisions under [`LOGIN`] and holds `write_care_relationship`,
@@ -52,11 +56,12 @@ async fn hospital() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
             ],
         )
     };
-    let care = capability("write_care_relationship", &[]);
-    grant(
+    let hospital = provider_organisation(&service, PROVIDER, &[]).await;
+    let care = care_writer(PROVIDER);
+    acting_client(
         &service,
-        MACHINES,
-        CLIENT,
+        &[(MACHINES, CLIENT)],
+        Some(hospital),
         &[provisioning(LOGIN), care.clone()],
     )
     .await;
@@ -204,11 +209,11 @@ pub(super) fn carries_member_of(relationship: &Value) -> bool {
 /// else stays refused by the party protection.
 #[tokio::test]
 async fn the_adt_system_rosters_a_scim_user_and_changes_nothing_else() {
-    let (_db, _service, app) = hospital().await;
+    let (_db, service, app) = hospital().await;
     let (user, _) = created(&app, CLIENT, "bram", "bram-login").await;
-    let (status, ward) = group(&app, CLIENT, "Ward 3", &[], false).await;
-    assert_eq!(status, StatusCode::CREATED, "{ward}");
-    let ward = id_of(&ward);
+    let ward = provider_group(&service, "Ward 3", PROVIDER)
+        .await
+        .to_string();
 
     let (status, version, person) = read_person(&app, ADT, &user).await;
     assert_eq!(status, StatusCode::OK, "{person}");
@@ -361,12 +366,13 @@ async fn a_care_team_group_needs_the_grant() {
 /// roster stays.
 #[tokio::test]
 async fn a_group_change_leaves_the_adt_roster_in_place() {
-    let (_db, _service, app) = hospital().await;
+    let (_db, service, app) = hospital().await;
     let (user, _) = created(&app, OTHER, "gina", "gina-login").await;
     let (_, first) = group(&app, OTHER, "Night shift", &[&user], false).await;
     let first = id_of(&first);
-    let (_, ward) = group(&app, OTHER, "Ward 3", &[], false).await;
-    let ward = id_of(&ward);
+    let ward = provider_group(&service, "Ward 3", PROVIDER)
+        .await
+        .to_string();
 
     let (_, version, mut person) = read_person(&app, ADT, &user).await;
     let mut held = person["relationships"]

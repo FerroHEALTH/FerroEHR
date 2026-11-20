@@ -362,6 +362,8 @@ async fn project(
             provider_id: PROVIDER.1.to_owned(),
             from: *from,
             until: *until,
+            writer: None,
+            self_declared: false,
         })
         .collect();
     access_care::clear(&mut tx)
@@ -394,6 +396,7 @@ fn projected(day: jiff::civil::Date, grace: &str) -> Care {
         provider_ids: vec![PROVIDER.1.to_owned()].into(),
         day,
         grace: grace.to_owned(),
+        self_declared: false,
     })
 }
 

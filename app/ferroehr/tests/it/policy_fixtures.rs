@@ -117,6 +117,85 @@ pub(crate) fn capability(operation: &str, items: &[Value]) -> Value {
     })
 }
 
+/// The provider the care writers of these tests write for, by issuer and id.
+pub(crate) const CARE_PROVIDER: (&str, &str) = ("urn:example:providers", "hospital");
+
+/// A `write_care_relationship` capability for [`CARE_PROVIDER`], to a target
+/// of every kind.
+pub(crate) fn care_writer() -> Value {
+    let (issuer, id) = CARE_PROVIDER;
+    let mut items = vec![json!({ "_type": "ELEMENT", "archetype_node_id": "at0031",
+        "name": operation_code("provider"),
+        "value": { "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id } })];
+    items.extend(
+        ["PERSON", "ROLE", "GROUP", "ORGANISATION"]
+            .into_iter()
+            .map(|kind| scope("target_kind", kind)),
+    );
+    capability("write_care_relationship", &items)
+}
+
+/// Commits, as an administrator, the provider `ORGANISATION` identified by
+/// `(issuer, id)`, such as [`CARE_PROVIDER`]; its container.
+pub(crate) async fn care_provider(svc: &FerroEhrService, (issuer, id): (&str, &str)) -> VoId {
+    let archetype = "openEHR-DEMOGRAPHIC-ORGANISATION.hospital.v1";
+    let organisation = json!({
+        "_type": "ORGANISATION", "archetype_node_id": archetype,
+        "archetype_details": archetyped(archetype), "name": text("Hospital"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0001", "name": text("details"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0002", "name": text("provider"),
+                "value": { "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id,
+                           "type": "healthcare-provider" } }] },
+        "identities": identities("Hospital")
+    });
+    create(svc, PartyKind::Organisation, &organisation)
+        .await
+        .expect("the provider commits")
+        .0
+}
+
+/// Commits, as an administrator, the `GROUP` `body` belonging to the
+/// provider `ORGANISATION` `provider` by an `MBR` relationship of its own, so
+/// [`care_writer`] writes its memberships; its container and version uid.
+pub(crate) async fn provider_team(
+    svc: &FerroEhrService,
+    provider: VoId,
+    body: &Value,
+) -> (VoId, String) {
+    let (group, uid) = create(svc, PartyKind::Group, body)
+        .await
+        .expect("the GROUP commits");
+    let reference = |kind: &str, id: VoId| {
+        json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": kind,
+                "id": { "_type": "HIER_OBJECT_ID", "value": id.to_string() } })
+    };
+    let mut body = body.clone();
+    body["relationships"] = json!([{
+        "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at0050",
+        "name": { "_type": "DV_CODED_TEXT", "value": "member of",
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_RoleClass" },
+                "code_string": "MBR" } },
+        "source": reference("GROUP", group),
+        "target": reference("ORGANISATION", provider)
+    }]);
+    let mut write = WriteRequest::new(crate::typed_body::typed(&body));
+    write.lifecycle_state = Some("532".to_owned());
+    write.preceding = Some(uid.parse().expect("an OBJECT_VERSION_ID"));
+    let updated = as_admin(async {
+        Box::pin(svc.party_update(
+            PartyKind::Group,
+            group,
+            crate::fixtures::if_match(&uid),
+            write,
+        ))
+        .await
+    })
+    .await
+    .expect("the GROUP belongs to the provider");
+    (group, updated.meta.expect("a version").uid)
+}
+
 /// An `AGENT` of the deployment's own archetype carrying the client
 /// identifier `client_id` of [`ISSUER`].
 fn agent(client_id: &str) -> Value {
@@ -201,7 +280,12 @@ pub(crate) async fn grant_reader(svc: &FerroEhrService, reader: &str) {
         issuer: ISSUER.to_owned(),
         client_id: format!("{reader}-client"),
         operation: Operation::ReadChangeFeed,
-        elements: vec![("reader".to_owned(), reader.to_owned())],
+        elements: vec![
+            ferroehr::party_binding::grants::bootstrap::GrantElement::Text {
+                code: "reader".to_owned(),
+                text: reader.to_owned(),
+            },
+        ],
     })
     .await
     .expect("the reader is granted");

@@ -175,6 +175,9 @@ pub struct Policy {
     pub grace: jiff::Span,
     /// `purpose_required`.
     pub purpose_required: bool,
+    /// Whether `self_declared_care` is set, which turns the `self_declared`
+    /// path on (draft decision procedure, Holding a Care Relationship).
+    pub self_declared: bool,
 }
 
 impl Policy {
@@ -195,6 +198,7 @@ impl Policy {
             care_required: policy.care_relationship_required,
             grace,
             purpose_required: policy.purpose_required,
+            self_declared: policy.self_declared_care.is_some(),
         }
     }
 }

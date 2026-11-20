@@ -110,6 +110,9 @@ pub(crate) struct CareFact {
     pub(crate) role: ForeignCode,
     /// The provider in whose care it is.
     pub(crate) provider: ProviderKey,
+    /// Whether its `basis` is `self_declared`: written by the professional
+    /// it names.
+    pub(crate) self_declared: bool,
 }
 
 /// Pushes onto `facts` the care relationship `body`, a `PARTY_RELATIONSHIP`
@@ -140,11 +143,9 @@ pub(crate) fn read<'a, T: Tree<'a>>(body: T, facts: &mut GrantFacts) {
     }
     let role = care_role(body).map_err(|why| wrong.push(why)).ok();
     let provider = provider(body).map_err(|why| wrong.push(why)).ok();
-    if let Err(why) = basis(body) {
-        wrong.push(why);
-    }
-    if let (true, Some(carer), Some(kind), Some(role), Some(provider)) =
-        (wrong.is_empty(), carer, kind, role, provider)
+    let self_declared = basis(body).map_err(|why| wrong.push(why)).ok();
+    if let (true, Some(carer), Some(kind), Some(role), Some(provider), Some(self_declared)) =
+        (wrong.is_empty(), carer, kind, role, provider, self_declared)
     {
         facts.care_source = source;
         facts.facts.push(CallerFact {
@@ -155,6 +156,7 @@ pub(crate) fn read<'a, T: Tree<'a>>(body: T, facts: &mut GrantFacts) {
                 kind,
                 role,
                 provider,
+                self_declared,
             }),
             validity: body.get("time_validity").map(Tree::to_value),
             not_before: Bound::Open,
@@ -233,18 +235,20 @@ fn provider<'a, T: Tree<'a>>(body: T) -> Result<ProviderKey, String> {
     }
 }
 
-/// Refuses a `basis` other than `assigned`.
-fn basis<'a, T: Tree<'a>>(body: T) -> Result<(), String> {
+/// Whether the `basis` of `body` is `self_declared`; `assigned`, the
+/// default when absent, is not (draft access control package, Care
+/// Relationships). The access policy judges a self-declared one at its
+/// commit ([`super::bounds`]).
+///
+/// # Errors
+/// Why it cannot be read: a basis that is no code of the care basis group.
+fn basis<'a, T: Tree<'a>>(body: T) -> Result<bool, String> {
     let Some(value) = element(body, CareElement::Basis) else {
-        return Ok(());
+        return Ok(false);
     };
     match coded(value).as_deref() {
-        Some(code) if code == CareBasis::Assigned.code() => Ok(()),
-        // TODO(#6073): admit a self_declared relationship within the policy's self_declared_care.
-        Some(code) if code == CareBasis::SelfDeclared.code() => Err(
-            "its basis is self_declared, which no access decision of this server reads yet"
-                .to_owned(),
-        ),
+        Some(code) if code == CareBasis::Assigned.code() => Ok(false),
+        Some(code) if code == CareBasis::SelfDeclared.code() => Ok(true),
         _ => Err("its basis is no code of the care basis group".to_owned()),
     }
 }
@@ -260,6 +264,8 @@ pub struct CareOf {
     dates: Dates,
     role: ForeignCode,
     provider: ProviderKey,
+    writer: Option<Uuid>,
+    self_declared: bool,
 }
 
 impl CareOf {
@@ -271,7 +277,33 @@ impl CareOf {
             dates,
             role,
             provider,
+            writer: None,
+            self_declared: false,
         }
+    }
+
+    /// This relationship as written by the party `writer`, the committer's
+    /// `PERSON` or client `ACTOR`, and self-declared when `self_declared`.
+    #[must_use]
+    pub fn written_by(mut self, writer: Option<Uuid>, self_declared: bool) -> Self {
+        self.writer = writer;
+        self.self_declared = self_declared;
+        self
+    }
+
+    /// Whether a caller whose principals are `principals` (sorted) may be
+    /// admitted on it, as far as its writer goes: never on one it wrote
+    /// naming itself, unless it is self-declared and the policy turns that
+    /// path on (`self_declared_on`); a self-declared one admits only while
+    /// that path is on (draft access control decision procedure, Holding a
+    /// Care Relationship and Writing Relationships).
+    #[must_use]
+    pub fn admits_writer(&self, principals: &[Uuid], self_declared_on: bool) -> bool {
+        if self.self_declared {
+            return self_declared_on;
+        }
+        self.writer
+            .is_none_or(|writer| principals.binary_search(&writer).is_err())
     }
 
     /// The relationship to `carer` from the date `from` until the first date
@@ -312,6 +344,19 @@ impl CareOf {
     #[must_use]
     pub fn provider(&self) -> &ProviderKey {
         &self.provider
+    }
+
+    /// The party that wrote it, the committer's `PERSON` or client `ACTOR`;
+    /// `None` when its committer names none.
+    #[must_use]
+    pub fn writer(&self) -> Option<Uuid> {
+        self.writer
+    }
+
+    /// Whether its `basis` is `self_declared`.
+    #[must_use]
+    pub fn self_declared(&self) -> bool {
+        self.self_declared
     }
 
     /// The first date it holds; `None` when unbounded.
@@ -361,7 +406,7 @@ mod tests {
     use serde_json::{Value, json};
 
     use super::*;
-    use crate::party_binding::grants::caller::same_care;
+    use crate::party_binding::grants::caller::writer::care_changes;
     use crate::party_binding::policy_mark::TERMINOLOGY;
     use crate::versioning::Kind;
 
@@ -446,6 +491,57 @@ mod tests {
         let mut other_role = care_of();
         other_role["details"]["items"][0]["value"] = coded("HL7_ParticipationType", "RESP");
         let other_role = GrantFacts::of(Kind::PartyRelationship, &other_role).facts;
-        assert!(!same_care(&standalone.facts, &other_role), "a role changed");
+        assert!(
+            !care_changes(&standalone.facts, &other_role).is_empty(),
+            "a role changed"
+        );
+    }
+
+    #[test]
+    fn a_relationship_never_admits_its_writer_unless_self_declared_and_switched_on() {
+        let (writer, other) = (Uuid::from_u128(1), Uuid::from_u128(2));
+        let assigned = |by: Option<Uuid>| {
+            CareOf::spanning(
+                writer,
+                (None, None),
+                ForeignCode {
+                    terminology: "HL7_ParticipationType".to_owned(),
+                    code: "PART".to_owned(),
+                },
+                ProviderKey::new("urn:example:providers", "hospital"),
+            )
+            .written_by(by, false)
+        };
+        assert!(!assigned(Some(writer)).admits_writer(&[writer], true));
+        assert!(assigned(Some(other)).admits_writer(&[writer], false));
+        assert!(assigned(None).admits_writer(&[writer], false));
+        let declared = assigned(Some(writer)).written_by(Some(writer), true);
+        assert!(declared.admits_writer(&[writer], true));
+        assert!(!declared.admits_writer(&[writer], false), "the path is off");
+    }
+
+    #[test]
+    fn a_self_declared_basis_reads() {
+        let mut body = care_of();
+        let basis = element(
+            &coded(TERMINOLOGY, "basis"),
+            &coded(TERMINOLOGY, "self_declared"),
+        );
+        body["details"]["items"]
+            .as_array_mut()
+            .expect("items")
+            .push(basis);
+        let facts = GrantFacts::of(Kind::PartyRelationship, &body);
+        assert_eq!(facts.unread, Vec::<String>::new());
+        assert!(matches!(
+            facts.facts.as_slice(),
+            [CallerFact {
+                value: FactValue::Care(CareFact {
+                    self_declared: true,
+                    ..
+                }),
+                ..
+            }]
+        ));
     }
 }
