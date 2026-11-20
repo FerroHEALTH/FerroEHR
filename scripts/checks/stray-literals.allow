@@ -19,3 +19,5 @@ allow ^fhirUser$                            # the SMART scope token, a protocol 
 allow ^attachment; filename=                 # the Content-Disposition header value
 allow ^Prefer$                                  # the Prefer request header name (RFC 7240)
 allow ^[a-z_]+([.][a-z_]+)+( = [^ ]+)? [a-z`]  # a configuration refusal opening with the key it names, or with key = value: the operator reads it at startup, never on a viewer page
+allow ^(Task|Bundle|Patient|Encounter)$  # FHIR resource type names on the wire, never drawn
+allow ^http://hl7\.org/fhir/smart-app-launch/CodeSystem/  # the SMART codes system URI, a protocol identifier

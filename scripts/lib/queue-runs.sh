@@ -21,6 +21,11 @@
 # and `merge_group <tree> <run>` lines, `jobs` holds
 # `<run><TAB><job name><TAB><conclusion>` lines.
 
+# Every read rides out GitHub's transient 5xx answers (scripts/lib/gh-retry.sh,
+# #4173): one 502 on the listing failed change detection on every pull request.
+# shellcheck source=scripts/lib/gh-retry.sh
+. "$(dirname "${BASH_SOURCE[0]}")/gh-retry.sh"
+
 # How far before a commit its merge-queue runs are listed: a queue entry's run
 # starts before its commit lands on main.
 QUEUE_LEAD_DAYS=7
@@ -39,7 +44,7 @@ queue_runs_since() {
   if [[ -n "${CI_RUNS_STUB:-}" ]]; then
     awk '$1 == "merge_group" { print $2, $3 }' "$CI_RUNS_STUB/runs" >"$file"
   else
-    gh api --paginate \
+    gh_retry gh api --paginate \
       "repos/$REPO/actions/workflows/ci.yml/runs?event=merge_group&status=completed&created=>=$since&per_page=100" \
       --jq '.workflow_runs[] | "\(.head_commit.tree_id) \(.id)"' >"$file"
   fi
@@ -51,7 +56,7 @@ run_jobs() {
   if [[ -n "${CI_RUNS_STUB:-}" ]]; then
     awk -F'\t' -v run="$run" '$1 == run { print $2 "\t" $3 }' "$CI_RUNS_STUB/jobs"
   else
-    gh api --paginate "repos/$REPO/actions/runs/$run/jobs?filter=latest&per_page=100" \
+    gh_retry gh api --paginate "repos/$REPO/actions/runs/$run/jobs?filter=latest&per_page=100" \
       --jq '.jobs[] | "\(.name)\t\(.conclusion)"'
   fi
 }
