@@ -151,7 +151,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 23] = [
+    pub const ALL: [Self; 24] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
