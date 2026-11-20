@@ -248,9 +248,10 @@ impl FerroEhrService {
     /// The subject references of the persons the caller of `access` is in
     /// conflict with ([`RequestAccess::conflicted_persons`]), each as the
     /// `ehr` row stores it, this CDR's own read in either case: a query reads
-    /// no row of their EHRs. Each read of a person's references is recorded,
-    /// as every subject-reference read is. No openEHR spec governs this: our
-    /// own design (#6077).
+    /// no row of their EHRs. A read that finds a record subject a person
+    /// declares is recorded, as every subject-reference read is; the
+    /// reference in this CDR's own namespace is the person's container, which
+    /// no read yields. No openEHR spec governs this: our own design (#6077).
     ///
     /// # Errors
     /// [`ServiceError`] when a `PERSON`'s references cannot be read.
@@ -263,8 +264,13 @@ impl FerroEhrService {
         for person in access.conflicted_persons() {
             let references = self.grants.subjects_of(person).await?;
             let count = u64::try_from(references.len()).unwrap_or(u64::MAX);
+            // NOTE: our own design (#6077), the own reference is the PERSON's container, which the
+            // caller facts already hold, so only a declared record subject is a read to record.
+            let declared = references.len() > 1;
             stored_subjects(references, &namespace, &mut subjects);
-            self.emit_resolution(&namespace, None, count).await?;
+            if declared {
+                self.emit_resolution(&namespace, None, count).await?;
+            }
         }
         subjects.sort_unstable();
         subjects.dedup();
