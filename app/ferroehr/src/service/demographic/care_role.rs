@@ -50,9 +50,14 @@ impl FerroEhrService {
     /// ([`crate::party_binding::grants::caller::bounds`]) read the version
     /// that read found and name it.
     ///
+    /// A care relationship's writer is then judged at the confidentiality of
+    /// the subject's record ([`Self::care_writer_check`]), both reads given
+    /// back before the commit takes its party connection.
+    ///
     /// # Errors
     /// [`ServiceError::ValidationFailed`] (`422`) naming the element; the
-    /// `503` of [`Self::confirm_policy`].
+    /// `503` of [`Self::confirm_policy`]; the `403` of
+    /// [`Self::care_writer_check`].
     pub(crate) async fn care_role_check<'a, T: Tree<'a>>(
         &self,
         body: T,
@@ -61,7 +66,8 @@ impl FerroEhrService {
         let represents = Representation::Represents;
         // NOTE: our own design (#6055, #6079), a code that does not read is refused by the
         // commit, which names why; this check judges only one that reads.
-        let (coded, binding, unbound, at) = if carries(body, care.terminology(), care.code()) {
+        let cares = carries(body, care.terminology(), care.code());
+        let (coded, binding, unbound, at) = if cares {
             let Ok(role) = care_of::role_text(body) else {
                 return Ok(());
             };
@@ -85,6 +91,10 @@ impl FerroEhrService {
             return Ok(());
         };
         self.confirm_policy(false, true).await?;
+        if cares {
+            // TODO(#6141): record a write judged for review in the request's access-log entry.
+            self.care_writer_check(body).await?;
+        }
         let in_force = self.access_policy().in_force();
         let facts = CareFacts::of(in_force.policy.as_deref());
         self.bound_code(facts, (binding, unbound), at, &coded)

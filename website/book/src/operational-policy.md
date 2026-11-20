@@ -2338,16 +2338,52 @@ written, and refuses one that breaks a bound with `422`, naming
   with neither period lets the relationship stay open.
 - **Target.** An `ORGANISATION` target must be a unit `team_targets` names,
   and is never the controller or the relationship's own provider.
-- **Writers.** A relationship to a record marked `R` or `V` needs a writer
-  `relationship_writers` names for that level. Records are marked `N` until
-  the confidentiality marking is read, so this check admits every writer
-  the `write_care_relationship` grant admits.
+- **Writers.** The level is the highest marking of the subject's records:
+  every EHR whose subject reference names the relationship's source
+  `PERSON`, directly or through a record subject the `PERSON` declares.
+  FerroEHR reads those markings exactly before the commit takes its
+  connection. At `N` every writer the `write_care_relationship` grant
+  admits writes. At `R` or `V` only a writer a `relationship_writers` entry
+  names for that level writes; every other write is refused `403`, naming
+  the level and the missing entry. The administrator is no exception: a
+  policy that wants the administrator to write such relationships names the
+  administrator's `PERSON` (or a role it performs) for the level. An entry
+  for `V` does not cover `R`; name each level the writer may write.
 - **Self-declared.** A relationship whose `basis` is `self_declared` is
   refused `422` unless the policy sets `self_declared_care`. Its target is
   the writer's own `PERSON` (`403` otherwise), and it ends within that period
   of its start, by its own end or the one `default_period` gives it. While
   the policy sets `self_declared_care`, it admits the professional who wrote
   it; once the policy no longer sets it, it admits no one.
+
+For example, this `relationship_writers` lets the admission system's role
+write relationships to records at `R`, and the administrator's `PERSON`
+write them at `R` and `V` (the role code and the identifiers are your own):
+
+```json
+"relationship_writers": [
+  { "_type": "ACCESS_RELATIONSHIP_WRITER",
+    "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
+      "role": { "_type": "DV_CODED_TEXT", "value": "admission system",
+        "defining_code": { "terminology_id": { "value": "urn:example:roles" },
+          "code_string": "adt" } } }],
+    "confidentialities": [
+      { "_type": "DV_CODED_TEXT", "value": "restricted",
+        "defining_code": { "terminology_id": { "value": "HL7_Confidentiality" },
+          "code_string": "R" } }] },
+  { "_type": "ACCESS_RELATIONSHIP_WRITER",
+    "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
+      "party": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+        "id": { "_type": "HIER_OBJECT_ID", "value": "<the administrator's PERSON>" } } }],
+    "confidentialities": [
+      { "_type": "DV_CODED_TEXT", "value": "restricted",
+        "defining_code": { "terminology_id": { "value": "HL7_Confidentiality" },
+          "code_string": "R" } },
+      { "_type": "DV_CODED_TEXT", "value": "very restricted",
+        "defining_code": { "terminology_id": { "value": "HL7_Confidentiality" },
+          "code_string": "V" } }] }
+]
+```
 
 The end a relationship takes from `default_period` is never written into the
 relationship: the version you committed stays exactly as you sent it, with

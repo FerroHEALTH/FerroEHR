@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The EHRs a set of subject references names.
+//! The EHRs a set of subject references names, and the markings of their
+//! settings.
 //!
 //! A care relationship resource reads them to decide each subject it reveals
-//! by that subject's record (#6076). No openEHR spec governs it: our own
+//! by that subject's record (#6076), and its write to judge its writer at
+//! the subject's confidentiality (#6141). No openEHR spec governs it: our own
 //! design.
 
 use sqlx::PgPool;
@@ -45,4 +47,36 @@ pub async fn ehrs_of_subjects(
         .into_iter()
         .map(|(namespace, id, ehr)| (EhrSubject::new(namespace, id), ehr))
         .collect())
+}
+
+/// The `marking` of the `EHR_ACCESS` settings of every EHR whose subject is
+/// one of `subjects`, as stored JSON text, read in one statement on
+/// `uq_ehr_subject` and the settings' primary key; an EHR whose settings
+/// carry no marking yields none, and an empty `subjects` makes no round trip.
+///
+/// # Errors
+/// [`StorageError`] when no connection is free or the read fails.
+pub async fn markings_of_subjects(
+    pool: &PgPool,
+    subjects: &[EhrSubject],
+) -> Result<Vec<String>, StorageError> {
+    if subjects.is_empty() {
+        return Ok(Vec::new());
+    }
+    let (namespaces, ids): (Vec<&str>, Vec<&str>) = subjects
+        .iter()
+        .map(|subject| (subject.namespace.as_str(), subject.id.as_str()))
+        .unzip();
+    Ok(sqlx::query_scalar(
+        "SELECT (s.settings -> 'marking')::text \
+         FROM unnest($1::text[], $2::text[]) AS r(namespace, id) \
+         JOIN ehr e ON e.subject_id = r.id AND e.subject_namespace = r.namespace \
+         JOIN access_settings s ON s.ehr_id = e.id \
+         WHERE s.settings ? 'marking' \
+         ORDER BY e.id",
+    )
+    .bind(&namespaces)
+    .bind(&ids)
+    .fetch_all(&mut *acquire(pool).await?)
+    .await?)
 }
