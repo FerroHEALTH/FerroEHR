@@ -202,7 +202,7 @@ fn caller(subject: &str) -> CommitterIdentity {
         subject: subject.to_owned(),
         id_type: "oauth2",
         issuer: Some("https://login.example".to_owned()),
-        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: None,
         person: false,
         party: None,

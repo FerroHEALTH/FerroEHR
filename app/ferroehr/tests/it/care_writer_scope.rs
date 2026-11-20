@@ -127,7 +127,7 @@ async fn as_client<F: Future>(
         subject: client_id.to_owned(),
         id_type: "oauth2",
         issuer: Some(ISSUER.to_owned()),
-        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: Some(client_id.to_owned()),
         person: false,
         party: None,

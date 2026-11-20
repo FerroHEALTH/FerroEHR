@@ -112,7 +112,7 @@ async fn commit(app: &Router, ehr: &Value, settings: &Value, preceding: u32) {
                     "code_string": code } })
     };
     let committer = json!({ "_type": "PARTY_IDENTIFIED",
-        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "root" }] });
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": DEFAULT_SYSTEM_ID, "id": "root" }] });
     let contribution = json!({
         "_type": "CONTRIBUTION",
         "versions": [{

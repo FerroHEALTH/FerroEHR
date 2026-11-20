@@ -37,7 +37,7 @@ fn operator() -> CommitterIdentity {
         subject: OPERATOR.to_owned(),
         id_type: "operator",
         issuer: None,
-        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: Some(ACCOUNT.to_owned()),
         person: false,
         party: None,

@@ -47,7 +47,7 @@ pub struct CommitterIdentity {
     /// and an authority whose logins a stated committer is compared with.
     ///
     /// NOTE: no openEHR spec governs the value: our own design (#6143).
-    pub local_issuer: String,
+    pub local_issuer: std::sync::Arc<str>,
     /// The client the request came through: the Basic user, or an access
     /// token's `client_id`, failing that its `azp` (RFC 9068 §2.2).
     pub client: Option<String>,
@@ -216,7 +216,7 @@ pub fn refuse_impersonation(committer: &PartyProxy) -> Result<(), ServiceError> 
              §Audit Information; EHDS Art. 5)",
         ));
     }
-    let local = identity.local_issuer.as_str();
+    let local = &*identity.local_issuer;
     let issuer = identity.issuer.as_deref().unwrap_or(local);
     let verifiable = |authority: &str| authority == issuer || authority == local;
     if logins(committer)
@@ -290,7 +290,11 @@ pub fn default_committer(identity: Option<CommitterIdentity>, system_id: &str) -
             name: Some(identity.subject.clone()),
             identifiers: Some(openehr_base::containers::NonEmptyVec::of(
                 openehr_rm::prelude::DvIdentifier {
-                    issuer: Some(identity.issuer.unwrap_or(identity.local_issuer)),
+                    issuer: Some(
+                        identity
+                            .issuer
+                            .unwrap_or_else(|| identity.local_issuer.to_string()),
+                    ),
                     assigner: None,
                     id: identity.subject,
                     r#type: Some(identity.id_type.to_owned()),
@@ -341,7 +345,7 @@ mod tests {
             subject: "alice".to_owned(),
             id_type,
             issuer: issuer.map(str::to_owned),
-            local_issuer: LOCAL.to_owned(),
+            local_issuer: LOCAL.into(),
             client: None,
             person: false,
             party: None,

@@ -192,7 +192,7 @@ pub fn committer(operator: &str, account: &str, local_issuer: &str) -> Committer
         subject: operator.trim().to_owned(),
         id_type: "operator",
         issuer: None,
-        local_issuer: local_issuer.to_owned(),
+        local_issuer: local_issuer.into(),
         client: Some(account.to_owned()),
         person: false,
         party: None,

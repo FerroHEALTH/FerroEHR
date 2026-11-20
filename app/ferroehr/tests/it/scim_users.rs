@@ -197,7 +197,7 @@ async fn as_client<F: Future>(fut: F) -> F::Output {
         subject: "provisioning".to_owned(),
         id_type: "oauth2",
         issuer: Some("https://as.example".to_owned()),
-        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: Some("provisioning".to_owned()),
         person: false,
         party: None,

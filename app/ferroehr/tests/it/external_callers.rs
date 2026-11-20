@@ -80,7 +80,7 @@ fn external(external: ExternalCaller) -> CommitterIdentity {
         subject: "hp-remote-1".to_owned(),
         id_type: "oauth2",
         issuer: Some("https://federation.example".to_owned()),
-        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: Some("remote-portal".to_owned()),
         person: false,
         party: None,

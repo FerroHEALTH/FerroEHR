@@ -170,7 +170,7 @@ pub(crate) async fn bound(svc: &FerroEhrService, sub: &str, key: &str) -> Commit
         subject: sub.to_owned(),
         id_type: "oauth2",
         issuer: Some(ISSUER.to_owned()),
-        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: Some("app".to_owned()),
         person: false,
         party,
@@ -381,7 +381,7 @@ async fn a_patient_commits_no_demographic_version() {
         subject: "jane".to_owned(),
         id_type: "oauth2",
         issuer: Some(ISSUER.to_owned()),
-        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: None,
         person: true,
         party: None,
@@ -419,7 +419,7 @@ async fn an_import_needs_a_grant_and_refuses_a_local_login_from_an_untrusted_sys
     };
     let ehr = crate::fixtures::create_ehr_subject(&source, &subject).await;
     let local_login = json!({ "_type": "PARTY_IDENTIFIED", "name": "bob",
-        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "bob", "type": "basic" }] });
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": ferroehr::service::DEFAULT_SYSTEM_ID, "id": "bob", "type": "basic" }] });
     let mut stated = WriteRequest::new(crate::typed_body::typed(&composition("from elsewhere")));
     stated.audit = Some(
         openehr_its::json::from_canonical_value(&json!({
@@ -440,7 +440,7 @@ async fn an_import_needs_a_grant_and_refuses_a_local_login_from_an_untrusted_sys
         subject: "clinician".to_owned(),
         id_type: "basic",
         issuer: None,
-        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: None,
         person: false,
         party: None,
@@ -634,7 +634,7 @@ async fn a_representatives_write_is_held_to_the_persons_rules() {
         subject: "jane".to_owned(),
         id_type: "oauth2",
         issuer: Some(ISSUER.to_owned()),
-        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: None,
         person: true,
         party: None,

@@ -400,7 +400,7 @@ pub struct Authenticator {
     /// representative's `PERSON` is named.
     namespace: String,
     /// `[api] basic_issuer`, the issuer of a login this deployment holds.
-    local_issuer: String,
+    local_issuer: Arc<str>,
 }
 
 impl std::fmt::Debug for Authenticator {

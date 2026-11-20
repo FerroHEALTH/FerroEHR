@@ -108,7 +108,7 @@ pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
                         identity
                             .issuer
                             .clone()
-                            .unwrap_or_else(|| identity.local_issuer.clone()),
+                            .unwrap_or_else(|| identity.local_issuer.to_string()),
                     ),
                     assigner: None,
                     id: client,
@@ -252,7 +252,7 @@ fn login(identity: &CommitterIdentity) -> DvIdentifier {
             identity
                 .issuer
                 .clone()
-                .unwrap_or_else(|| identity.local_issuer.clone()),
+                .unwrap_or_else(|| identity.local_issuer.to_string()),
         ),
         assigner: None,
         id,
