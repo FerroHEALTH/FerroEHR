@@ -8,11 +8,14 @@
 //! the providers it acts for. No openEHR spec gives these an access meaning:
 //! our own design (#5621, #5691, #6055).
 
+use std::sync::Arc;
+
 use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind};
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
 use crate::party_binding::grants::caller::CareTeam;
+use crate::party_binding::grants::caller::attestation::Attestation;
 use crate::party_binding::grants::caller::care_of::ProviderKey;
 
 /// What the access evaluator reads about one caller beside its grants.
@@ -22,7 +25,8 @@ use crate::party_binding::grants::caller::care_of::ProviderKey;
 /// a client acts for is a member of on that date, and the types of the
 /// `ORGANISATION` it acts for. A caller admitted under an agreement adds the
 /// roles and organisation types its verified credential attests
-/// ([`Self::with_attested`]). A care relationship reaches it through its
+/// ([`Self::with_attested`]), and the treatment context it attests
+/// ([`Self::with_attestation`]). A care relationship reaches it through its
 /// principals ([`Self::principals`]) while it acts for the relationship's
 /// provider ([`Self::acts_for_provider`]).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -34,6 +38,7 @@ pub struct CallerFacts {
     organisation_types: Vec<ForeignCode>,
     providers: Vec<ProviderKey>,
     party: Option<Uuid>,
+    attestation: Option<Arc<Attestation>>,
 }
 
 impl CallerFacts {
@@ -52,6 +57,7 @@ impl CallerFacts {
             organisation_types: Vec::new(),
             providers: Vec::new(),
             party: None,
+            attestation: None,
         }
     }
 
@@ -114,6 +120,21 @@ impl CallerFacts {
         self.organisation_types.sort();
         self.organisation_types.dedup();
         self
+    }
+
+    /// These facts with `attestation`, the treatment context the caller's
+    /// verified credential attests under the agreement it was admitted by.
+    #[must_use]
+    pub fn with_attestation(mut self, attestation: Arc<Attestation>) -> Self {
+        self.attestation = Some(attestation);
+        self
+    }
+
+    /// The treatment context the caller's verified credential attests, when
+    /// it attests one.
+    #[must_use]
+    pub fn attestation(&self) -> Option<&Attestation> {
+        self.attestation.as_deref()
     }
 
     /// These facts with `groups`, the `GROUP`s the client's provider is a

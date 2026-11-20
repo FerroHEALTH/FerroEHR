@@ -88,7 +88,8 @@ impl FerroEhrService {
     /// registers them ([`Self::observe_authn`]).
     #[must_use]
     pub fn caches_held(&self) -> Vec<(&'static str, Held)> {
-        let (templates, template_bytes) = self.web_templates.held();
+        let definitions = self.definitions.current();
+        let (templates, template_bytes) = definitions.web_templates.held();
         let mut held = vec![
             ("created_ehr", crate::memory::held(&self.created_ehr_repr)),
             (
@@ -101,7 +102,7 @@ impl FerroEhrService {
             ("aql_plan", self.plan_cache.held()),
             (
                 "archetype_lineage",
-                crate::memory::held(&self.archetype_lineage),
+                crate::memory::held(&definitions.lineage),
             ),
         ];
         if let Some(audit) = &self.audit {

@@ -13,74 +13,56 @@
 //! (`adl2_artefact.parent_hrid`), so resolving the lineage is one small indexed
 //! read rather than a re-parse of every stored source.
 //!
-//! No openEHR spec governs the caching — our own design/extension: the index is
-//! memoised in-process so an AQL execution does not pay the read per query,
-//! invalidated on every local artefact write, with a short time-to-live that
-//! doubles as the convergence window for an upload made on another instance.
+//! No openEHR spec governs the caching: our own design. The index is memoised
+//! in the replica's generation of definition copies
+//! ([`crate::service::definition::copies`]), which a request replaces when it
+//! reads a newer definition revision, so an AQL execution does not pay the
+//! read per query and never widens a predicate with a superseded graph.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use crate::aql::lineage::ArchetypeLineage;
+use crate::error::ServiceError;
 use crate::service::FerroEhrService;
 use crate::storage::adl2_repo;
 use crate::storage::error::StorageError;
 
 /// In-process memo of the resolved [`ArchetypeLineage`]. Single-entry (the
-/// index is store-wide, not per-key) and `Arc`-backed, so every clone of the
-/// service shares it.
+/// index is store-wide, not per-key).
 pub(crate) type ArchetypeLineageCache = moka::future::Cache<(), Arc<ArchetypeLineage>>;
 
-/// How long a resolved index is reused. Short enough that an ADL2 upload on a
-/// sibling instance is picked up promptly, long enough that a query stream
-/// costs one artefact-store read per window rather than one per query.
-const LINEAGE_TTL: Duration = Duration::from_mins(1);
-
-/// Build the lineage memo (the service constructs one per instance).
+/// Build the lineage memo of one generation of definition copies.
 pub(crate) fn archetype_lineage_cache() -> ArchetypeLineageCache {
-    moka::future::Cache::builder()
-        .max_capacity(1)
-        .time_to_live(LINEAGE_TTL)
-        .build()
+    moka::future::Cache::builder().max_capacity(1).build()
 }
 
 impl FerroEhrService {
-    /// The stored archetype specialisation graph, memoised.
+    /// The stored archetype specialisation graph, memoised in the current
+    /// generation of definition copies.
     ///
-    /// A read failure is not fatal to querying: the lineage only *widens* an
-    /// archetype predicate's matching set, so an unavailable index degrades to
-    /// exact + ADL 1.4 concept-prefix matching (the pre-lineage behaviour)
-    /// rather than failing the query. The error is logged and an empty index
-    /// returned.
-    pub(crate) async fn archetype_lineage(&self) -> Arc<ArchetypeLineage> {
+    /// # Errors
+    ///
+    /// `service_overloaded` (`503`) when the artefact store does not answer:
+    /// a query answered with a narrower index would match fewer rows than the
+    /// store holds, so it is refused instead.
+    pub(crate) async fn archetype_lineage(&self) -> Result<Arc<ArchetypeLineage>, ServiceError> {
+        let generation = self.definitions.current();
         // `try_get_with` is moka's single-flight: concurrent misses share one
         // artefact-store read instead of stampeding it.
-        let loading = self
-            .archetype_lineage
+        let loading = generation
+            .lineage
             .try_get_with((), self.load_archetype_lineage());
-        match crate::db::acquire::awaiting(loading).await {
-            Ok(lineage) => lineage,
-            Err(error) => {
-                tracing::warn!(
-                    %error,
-                    "archetype lineage unavailable; archetype predicates fall back to \
-                     exact + ADL 1.4 concept-prefix matching"
-                );
-                Arc::new(ArchetypeLineage::default())
-            }
-        }
+        crate::db::acquire::awaiting(loading)
+            .await
+            .map_err(|error| {
+                ServiceError::overloaded("the archetype lineage could not be read", error)
+            })
     }
 
     /// Read every stored `specialize` edge and resolve it into the index.
     async fn load_archetype_lineage(&self) -> Result<Arc<ArchetypeLineage>, StorageError> {
         let edges = adl2_repo::parent_edges(&self.pool).await?;
         Ok(Arc::new(ArchetypeLineage::from_parent_edges(edges)))
-    }
-
-    /// Drop the memoised index after a local artefact write (upload, replace,
-    /// delete), so the next query sees the new family immediately.
-    pub(super) async fn invalidate_archetype_lineage(&self) {
-        self.archetype_lineage.invalidate(&()).await;
     }
 }
 
