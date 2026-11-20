@@ -118,6 +118,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "category_map",
             "commit_audit",
             "contribution",
+            "definition_revision",
             "dpop_proof",
             "ehr",
             "ehr_folder",

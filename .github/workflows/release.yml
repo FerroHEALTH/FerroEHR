@@ -1123,7 +1123,8 @@ jobs:
   # candidate with the access log off and on, failing closed, against the
   # claims of website/book/src/compliance/logging-performance.md. A claim not
   # met refuses the release, and the summary is attached to the draft as
-  # ferroehr-<tag>-logging-performance.md.
+  # ferroehr-<tag>-logging-performance.md. A gate breach passes only as a cost
+  # the owner accepted on a pull request of the milestone (#5927).
   performance:
     name: performance guard (amd64)
     runs-on: ubuntu-26.04
@@ -1131,6 +1132,8 @@ jobs:
     permissions:
       contents: write # attach the logging performance evaluation to the draft
       packages: read # pull the image this run pushed and the previous release's
+      issues: read # the milestone's pull requests and the owner's acceptance on each named issue
+      pull-requests: read # the description of each labelled pull request
     needs: [plan, app-image, github-release]
     env:
       APP_IMAGE: ghcr.io/ferrohealth/ferroehr
@@ -1183,7 +1186,11 @@ jobs:
       # own tree, archived from its tag's commit.
       - name: Install the pinned ferrohealth-perf
         run: bash scripts/perf/gate.sh install
+      # A breach is judged by the next step, which honours the costs the owner
+      # accepted on the milestone's pull requests (#5927); a run that could not
+      # be judged fails here.
       - name: The performance gate
+        id: gate
         env:
           PERF_OUT: perf-gate
           # The population query reads 20 000 seeded EHRs, and the summary
@@ -1201,7 +1208,27 @@ jobs:
             git fetch --no-tags --depth=1 origin "+refs/tags/${PREVIOUS}:refs/tags/${PREVIOUS}"
           fi
           rev="$(git rev-parse "refs/tags/${PREVIOUS}^{commit}")"
-          bash scripts/perf/gate.sh ab ferroehr:perf ferroehr-postgres:perf "$base" "$base_pg" "$rev"
+          status=0
+          bash scripts/perf/gate.sh ab ferroehr:perf ferroehr-postgres:perf "$base" "$base_pg" "$rev" || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          [ "$status" = 0 ] || [ "$status" = 1 ]
+      # The PR-time verdict's rule over the whole release (scripts/perf/accepted.sh
+      # release, docs/release.md): a breach passes only when a pull request merged
+      # into the milestone titled as the tag carries `perf-accepted` and a
+      # `Perf-accepted:` line naming an issue on which the code owner of the
+      # default branch accepted that metric. Each honoured acceptance is listed
+      # with its pull request in perf-gate/summary.md.
+      - name: The gate's verdict, with the costs the owner accepted on the milestone's pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          STATUS: ${{ steps.gate.outputs.status }}
+          MILESTONE: ${{ needs.plan.outputs.tag }}
+          BASE_REF: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          bash scripts/perf/accepted.sh --self-test
+          bash scripts/perf/accepted.sh release "$STATUS" perf-gate/summary.md
       - name: Name the evaluation for the release
         env:
           TAG: ${{ needs.plan.outputs.tag }}

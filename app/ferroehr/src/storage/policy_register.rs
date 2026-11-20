@@ -43,31 +43,52 @@ pub async fn heads(pool: &PgPool) -> Result<Vec<(String, i64)>, StorageError> {
         .collect()
 }
 
-/// The newest version of every register that has one and the newest trunk
-/// version of the access policy, `0` when it has none: the one indexed read a
-/// request confirms its policy copies with (#6048).
+/// The newest stored versions a request confirms its copies with, in one
+/// indexed read (#6048, #5948).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PolicyHeads {
+    /// The newest version of every register that has one, as `(register,
+    /// version)`.
+    pub registers: Vec<(String, i64)>,
+    /// The newest trunk version of the access policy, `0` when it has none.
+    pub access_policy: i32,
+    /// The revision of the definition stores, `definition_revision`.
+    pub definitions: i64,
+}
+
+/// The newest policy versions and the definition revision, in one read.
+///
+/// The one indexed read a request confirms its policy and definition copies
+/// with (#6048, #5948).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
-pub async fn policy_heads(pool: &PgPool) -> Result<(Vec<(String, i64)>, i32), StorageError> {
+pub async fn policy_heads(pool: &PgPool) -> Result<PolicyHeads, StorageError> {
     let rows = sqlx::query(
-        "SELECT register, max(version) AS version, NULL::integer AS policy \
+        "SELECT register, max(version) AS version, NULL::integer AS policy, \
+                NULL::bigint AS definitions \
            FROM policy_register GROUP BY register \
          UNION ALL \
-         SELECT NULL, NULL, max(version) FROM access_policy_version",
+         SELECT NULL, NULL, max(version), NULL FROM access_policy_version \
+         UNION ALL \
+         SELECT NULL, NULL, NULL, revision FROM definition_revision WHERE singleton",
     )
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
-    let mut registers = Vec::with_capacity(rows.len());
-    let mut access_policy = 0_i32;
+    let mut heads = PolicyHeads {
+        registers: Vec::with_capacity(rows.len()),
+        ..PolicyHeads::default()
+    };
     for row in &rows {
         if let Some(register) = row.try_get::<Option<String>, _>("register")? {
-            registers.push((register, row.try_get("version")?));
+            heads.registers.push((register, row.try_get("version")?));
+        } else if let Some(definitions) = row.try_get::<Option<i64>, _>("definitions")? {
+            heads.definitions = definitions;
         } else {
-            access_policy = row.try_get::<Option<i32>, _>("policy")?.unwrap_or(0);
+            heads.access_policy = row.try_get::<Option<i32>, _>("policy")?.unwrap_or(0);
         }
     }
-    Ok((registers, access_policy))
+    Ok(heads)
 }
 
 /// The stored version `version` of `register`, or `None` when it has none.

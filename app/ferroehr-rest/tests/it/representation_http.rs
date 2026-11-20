@@ -7,7 +7,9 @@
 //! A representative reaches only the EHR whose `EHR_STATUS.subject` names the
 //! subject it represents, and is refused with `403`
 //! (`refused-representation-unrecorded`) when the party source records no live
-//! representation of the subject its token asserts. A `persons` token whose
+//! representation of the subject its token asserts, or the CDR stores none
+//! for the provider the deployment acts for (draft access control decision
+//! procedure, step 0 Representation). A `persons` token whose
 //! only clinical grants are `patient/` is a professional confined to its
 //! launch EHR, and its commit never records `PARTY_SELF`. No openEHR spec
 //! governs resolving a login to a party: our own design.
@@ -38,8 +40,6 @@ use crate::party_binding_http::{AUDIENCE, ISSUER, LOGIN, refused, service, token
 const NAMESPACE: &str = "demographic";
 /// The claim naming the subject a representative acts for.
 const REPRESENTS: &str = "represents";
-/// The subject the representative's relationship is recorded to.
-pub(crate) const CHILD: &str = "7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 /// A subject no relationship of the representative names.
 pub(crate) const STRANGER: &str = "8b2c3d4e-5f6a-4b7c-9d8e-0f1a2b3c4d5e";
 
@@ -71,7 +71,64 @@ pub(crate) fn config() -> AppConfig {
     };
     config.auth.smart.patient_issuers =
         vec![ferrohealth_secret::secret_url::SecretUrl::new(ISSUER)];
+    config.party_binding.provider = Some(crate::portal_representatives_http::provider());
     config
+}
+
+/// A representative and a child, two `PERSON`s this CDR holds, and the EHR
+/// whose `EHR_STATUS.subject` names the child.
+pub(crate) struct Family {
+    /// The representative's `PERSON` container.
+    pub(crate) representative: String,
+    /// The child's `PERSON` container.
+    pub(crate) child: String,
+    /// The child's EHR.
+    pub(crate) ehr: String,
+}
+
+/// A fresh [`Family`] in `svc`.
+pub(crate) async fn family(svc: &FerroEhrService) -> Family {
+    let (representative, _) = crate::portal_representatives_http::child(svc).await;
+    let (child, ehr) = crate::portal_representatives_http::child(svc).await;
+    Family {
+        representative: representative.to_string(),
+        child: child.to_string(),
+        ehr,
+    }
+}
+
+impl Recorded {
+    /// The source binding every login to the representative of `family`,
+    /// reporting its live representation of the child.
+    pub(crate) fn of(family: &Family) -> Self {
+        Self {
+            representative: family.representative.clone(),
+            subjects: vec![family.child.clone()],
+        }
+    }
+}
+
+/// Stores the representation of the child of `family` by its
+/// representative, for the provider the deployment acts for, as an
+/// administrator.
+pub(crate) async fn stored(svc: &FerroEhrService, family: &Family) {
+    stored_for(svc, family, None).await;
+}
+
+/// [`stored`], for the provider `provider` when one is named.
+async fn stored_for(svc: &FerroEhrService, family: &Family, provider: Option<(&str, &str)>) {
+    let id = |id: &str| ferroehr::ids::VoId(id.parse().expect("a container"));
+    let mut body = crate::portal_representatives_http::representation(
+        id(&family.representative),
+        id(&family.child),
+        MOTHER,
+        None,
+    );
+    if let Some((issuer, other)) = provider {
+        body["details"]["items"][1]["value"] = json!({ "_type": "DV_IDENTIFIER",
+            "issuer": issuer, "id": other, "type": "ORGANISATION" });
+    }
+    crate::portal_representatives_http::record(svc, &body).await;
 }
 
 /// The router over `svc`, looking every caller up in `source`.
@@ -97,11 +154,10 @@ pub(crate) async fn router(svc: Arc<FerroEhrService>, source: Arc<dyn BindingSou
 /// reports a relationship that has ended as none, so an empty list is the
 /// ended one.
 pub(crate) struct Recorded {
-    pub(crate) subjects: Vec<&'static str>,
+    pub(crate) representative: String,
+    pub(crate) subjects: Vec<String>,
 }
 
-/// The `PERSON` every login of [`Recorded`] binds.
-const REPRESENTATIVE: &str = "9c3d4e5f-6a7b-4c8d-8e9f-1a2b3c4d5e6f";
 /// The openEHR `subject_relationship` code [`Recorded`] records for every
 /// subject (`10|mother|`).
 const MOTHER: &str = "10";
@@ -114,7 +170,7 @@ impl PartySource for Recorded {
         _query: &'a Query<'a>,
     ) -> std::pin::Pin<Box<dyn Future<Output = Result<Lookup, SourceError>> + Send + 'a>> {
         let record = PartyRecord::new(
-            PartyRef::new(NAMESPACE, "PERSON", REPRESENTATIVE),
+            PartyRef::new(NAMESPACE, "PERSON", self.representative.as_str()),
             PartyState::Active,
             Markers {
                 professional: false,
@@ -125,7 +181,7 @@ impl PartySource for Recorded {
             self.subjects
                 .iter()
                 .map(|id| {
-                    Represented::new(PartyRef::new(NAMESPACE, "PERSON", *id))
+                    Represented::new(PartyRef::new(NAMESPACE, "PERSON", id.as_str()))
                         .with_relationship(MOTHER)
                 })
                 .collect(),
@@ -178,16 +234,12 @@ pub(crate) fn representative(subject: &str) -> String {
 #[tokio::test]
 async fn a_representative_reaches_only_the_represented_subjects_ehr() {
     let (_db, svc) = service().await;
-    let child = ehr(&svc, Some(CHILD)).await;
+    let family = family(&svc).await;
+    let child = family.ehr.clone();
+    stored(&svc, &family).await;
     let stranger = ehr(&svc, Some(STRANGER)).await;
-    let app = router(
-        Arc::clone(&svc),
-        Arc::new(Recorded {
-            subjects: vec![CHILD],
-        }),
-    )
-    .await;
-    let credential = representative(CHILD);
+    let app = router(Arc::clone(&svc), Arc::new(Recorded::of(&family))).await;
+    let credential = representative(&family.child);
 
     let (code, body) = status(&app, "GET", &format!("/ehr/{child}"), &credential).await;
     assert_eq!(
@@ -230,14 +282,9 @@ async fn a_representative_reaches_only_the_represented_subjects_ehr() {
 #[tokio::test]
 async fn a_representation_the_source_does_not_record_is_refused() {
     let (_db, svc) = service().await;
-    ehr(&svc, Some(CHILD)).await;
-    let app = router(
-        Arc::clone(&svc),
-        Arc::new(Recorded {
-            subjects: vec![CHILD],
-        }),
-    )
-    .await;
+    let family = family(&svc).await;
+    stored(&svc, &family).await;
+    let app = router(Arc::clone(&svc), Arc::new(Recorded::of(&family))).await;
     refused(
         &app,
         &representative(STRANGER),
@@ -245,13 +292,36 @@ async fn a_representation_the_source_does_not_record_is_refused() {
     )
     .await;
     // A relationship that has ended is no longer reported.
-    let ended = router(Arc::clone(&svc), Arc::new(Recorded { subjects: vec![] })).await;
+    let none = Recorded {
+        subjects: Vec::new(),
+        ..Recorded::of(&family)
+    };
+    let ended = router(Arc::clone(&svc), Arc::new(none)).await;
     refused(
         &ended,
-        &representative(CHILD),
+        &representative(&family.child),
         "refused-representation-unrecorded",
     )
     .await;
+}
+
+/// A representation the party source reports is refused,
+/// `refused-representation-unrecorded`, unless the CDR stores it as a live
+/// representation of that subject recorded for the provider the deployment
+/// acts for (draft access control decision procedure, step 0
+/// Representation): one for another provider, or none, admits nothing.
+#[tokio::test]
+async fn a_representation_the_cdr_does_not_store_for_the_provider_is_refused() {
+    let (_db, svc) = service().await;
+    let family = family(&svc).await;
+    let app = router(Arc::clone(&svc), Arc::new(Recorded::of(&family))).await;
+    let credential = representative(&family.child);
+    refused(&app, &credential, "refused-representation-unrecorded").await;
+    stored_for(&svc, &family, Some(("urn:example:providers", "clinic"))).await;
+    refused(&app, &credential, "refused-representation-unrecorded").await;
+    stored(&svc, &family).await;
+    let (code, body) = status(&app, "GET", &format!("/ehr/{}", family.ehr), &credential).await;
+    assert_eq!(code, StatusCode::OK, "stored for the provider: {body}");
 }
 
 /// #5011: a person login, one asserting no represented subject, on a row
@@ -261,13 +331,8 @@ async fn a_representation_the_source_does_not_record_is_refused() {
 #[tokio::test]
 async fn a_person_login_on_a_representative_row_is_refused_as_the_wrong_marker() {
     let (_db, svc) = service().await;
-    let app = router(
-        Arc::clone(&svc),
-        Arc::new(Recorded {
-            subjects: vec![CHILD],
-        }),
-    )
-    .await;
+    let family = family(&svc).await;
+    let app = router(Arc::clone(&svc), Arc::new(Recorded::of(&family))).await;
     refused(
         &app,
         &token("rep-login", &json!({})),
@@ -344,15 +409,11 @@ async fn a_representatives_commit_names_its_person_and_the_recorded_relationship
     svc.template_adl14_upload(&common::ips_opt_xml())
         .await
         .expect("the template uploads");
-    let child = ehr(&svc, Some(CHILD)).await;
-    let app = router(
-        Arc::clone(&svc),
-        Arc::new(Recorded {
-            subjects: vec![CHILD],
-        }),
-    )
-    .await;
-    let credential = representative(CHILD);
+    let family = family(&svc).await;
+    let child = family.ehr.clone();
+    stored(&svc, &family).await;
+    let app = router(Arc::clone(&svc), Arc::new(Recorded::of(&family))).await;
+    let credential = representative(&family.child);
     let mut composition = common::ips_canonical_composition();
     if let Some(object) = composition.as_object_mut() {
         object.remove("uid");
@@ -397,7 +458,7 @@ async fn a_representatives_commit_names_its_person_and_the_recorded_relationship
             &committer["external_ref"]["type"],
             &committer["external_ref"]["id"]["value"]
         ),
-        (&json!("PERSON"), &json!(REPRESENTATIVE)),
+        (&json!("PERSON"), &json!(family.representative)),
         "the representative's own PERSON: {committer}"
     );
     assert_eq!(

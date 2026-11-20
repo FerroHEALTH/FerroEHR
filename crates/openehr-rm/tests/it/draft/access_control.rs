@@ -192,6 +192,13 @@ fn psychiatry_rule() -> Value {
     )
 }
 
+/// A `CONFIDENTIALITY_MARKING` of the level `level`, set by the controller.
+fn marking(level: &Value) -> Value {
+    json!({ "_type": "CONFIDENTIALITY_MARKING", "confidentiality": level,
+        "set_by": { "_type": "PARTY_SELF" },
+        "set_at": { "_type": "DV_DATE_TIME", "value": "2026-11-19T10:00:00Z" } })
+}
+
 /// Ms A's settings: consent required, herself as gate-keeper, the three
 /// directives of the worked examples (her regional consent copied from the
 /// catalogue with the signed form as evidence) and one sensitivity label.
@@ -479,6 +486,66 @@ fn each_settings_invariant_refuses_settings_that_break_it() {
         named(check_settings(&read(empty_scope))),
         vec!["ACCESS_DATA_SCOPE.Not_empty".to_owned()]
     );
+}
+
+/// Each confidentiality invariant of the settings and of a classification
+/// refuses what breaks it alone, and a marked record with a marked label
+/// holds (#6057).
+#[test]
+fn each_confidentiality_invariant_refuses_settings_that_break_it() {
+    let cases: [Breaking; 4] = [
+        ("CONFIDENTIALITY_MARKING.Confidentiality_valid", |s| {
+            s["marking"] = marking(&coded("HL7_ActCode", "restricted", "R"));
+        }),
+        ("CONFIDENTIALITY_MARKING.Confidentiality_valid", |s| {
+            s["labels"][0]["confidentiality"] =
+                marking(&coded("HL7_Confidentiality", "secret", "S"));
+        }),
+        ("ACCESS_LABEL.Not_empty", |s| {
+            s["labels"][0]
+                .as_object_mut()
+                .expect("an object")
+                .remove("sensitivities");
+        }),
+        ("ACCESS_DATA_SCOPE.Confidentialities_valid", |s| {
+            s["directives"][1]["data"][0]["confidentialities"] =
+                json!([coded("HL7_ActCode", "very restricted", "V")]);
+        }),
+    ];
+    for (invariant, breaking) in cases {
+        let mut s = settings();
+        breaking(&mut s);
+        assert_eq!(
+            named(check_settings(&read(s))),
+            vec![invariant.to_owned()],
+            "{invariant}"
+        );
+    }
+    let mut marked = settings();
+    marked["marking"] = marking(&coded("HL7_Confidentiality", "restricted", "R"));
+    marked["labels"][0]["confidentiality"] =
+        marking(&coded("HL7_Confidentiality", "very restricted", "V"));
+    assert!(check_settings(&read(marked)).is_ok());
+    let policies: [Breaking; 2] = [
+        ("ACCESS_CLASSIFICATION.Confidentiality_valid", |p| {
+            p["classifications"][0]["confidentiality"] = coded("HL7_ActCode", "restricted", "R");
+        }),
+        ("ACCESS_CLASSIFICATION.Not_empty", |p| {
+            p["classifications"][0]
+                .as_object_mut()
+                .expect("an object")
+                .remove("sensitivities");
+        }),
+    ];
+    for (invariant, breaking) in policies {
+        let mut p = policy();
+        breaking(&mut p);
+        assert_eq!(
+            named(check_policy(&read(p))),
+            vec![invariant.to_owned()],
+            "{invariant}"
+        );
+    }
 }
 
 #[test]

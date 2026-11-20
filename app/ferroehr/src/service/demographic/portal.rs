@@ -9,9 +9,10 @@
 //! an RFC 8693 §4.1 `act` claim or a login of their own, FerroEHR binds them
 //! to the `PERSON` whose binding key is that login under the token's issuer,
 //! and admits them only while that `PERSON` holds a live representation of
-//! the EHR's subject: a `PARTY_RELATIONSHIP` carrying the representation code
-//! ([`crate::party_binding::policy_mark::REPRESENTS`]) whose `time_validity`
-//! covers today. A login a live `PERSON` carries is held to that `PERSON`
+//! the EHR's subject: a `PARTY_RELATIONSHIP` named
+//! [`crate::party_binding::policy_mark::REPRESENTS`] whose `time_validity`
+//! covers today, recorded for a provider the caller acts for and not written
+//! by the representative itself ([`lookup::representation_of`]). A login a live `PERSON` carries is held to that `PERSON`
 //! (#5622): it is the patient only when that `PERSON` is the EHR's subject,
 //! a representative only through a live representation, and refused
 //! otherwise, so a former representative is never the patient (#5532) and a
@@ -28,8 +29,9 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
+use crate::party_binding::grants::caller::care_of::ProviderKey;
 use crate::party_binding::key_space::KeySpaceClosed;
-use crate::party_binding::lookup::{self, LookupError};
+use crate::party_binding::lookup::{self, LiveRepresentation, LookupError};
 use crate::service::FerroEhrService;
 use crate::storage::access_projection::EhrSubject;
 
@@ -50,19 +52,20 @@ pub enum PortalLogin {
         person: Uuid,
     },
     /// The `PERSON` `person` carries the login and represents the subject
-    /// today, under the openEHR `subject_relationship` code `relationship`
-    /// when the relationship names one.
+    /// today, on the representation `representation`.
     Represents {
         /// The representative's `PERSON` container.
         person: Uuid,
         /// The subject's `PERSON` container.
         subject: Uuid,
-        /// The openEHR `subject_relationship` code.
-        relationship: Option<String>,
+        /// The representation it is admitted on.
+        representation: LiveRepresentation,
     },
     /// The `PERSON` `person` carries the login and holds no live
-    /// representation of the subject: it never represented them, represents
-    /// someone else, or its representation ended or was deleted; or the EHR
+    /// representation of the subject for a provider the caller acts for: it
+    /// never represented them, represents someone else, its representation
+    /// ended, was deleted, is for another provider or was written by itself;
+    /// or the EHR
     /// names no subject of this store. A known person is never the patient
     /// of another's EHR.
     Unrecorded {
@@ -83,15 +86,16 @@ pub enum PortalLogin {
 
 impl FerroEhrService {
     /// Returns what the login `value` under the token issuer `issuer` is to
-    /// the subject of the EHR `ehr_id` today, the date read in UTC.
+    /// the subject of the EHR `ehr_id` today, the date read in UTC, for a
+    /// caller acting for `providers`.
     ///
     /// # Errors
     /// [`ServiceError`] when the party or the clinical store cannot answer.
     pub async fn portal_login(
         &self,
-        issuer: &str,
-        value: &str,
+        (issuer, value): (&str, &str),
         ehr_id: EhrId,
+        providers: &[ProviderKey],
     ) -> Result<PortalLogin, ServiceError> {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut found = match lookup::representative_keys(&mut conn, issuer, value).await {
@@ -118,20 +122,40 @@ impl FerroEhrService {
             });
         }
         let today = crate::party_binding::source::today();
-        let (live, relationship) = lookup::representation_of(&mut conn, person, subject, &today)
+        let live = lookup::representation_of(&mut conn, (person, subject), &today, providers)
             .await?
-            .unwrap_or((false, None));
-        Ok(if !ACTIVE.contains(&state.as_str()) {
-            PortalLogin::Inactive { person }
-        } else if live {
-            PortalLogin::Represents {
+            .flatten();
+        Ok(match live {
+            _ if !ACTIVE.contains(&state.as_str()) => PortalLogin::Inactive { person },
+            Some(representation) => PortalLogin::Represents {
                 person,
                 subject,
-                relationship,
-            }
-        } else {
-            PortalLogin::Unrecorded { person }
+                representation,
+            },
+            None => PortalLogin::Unrecorded { person },
         })
+    }
+
+    /// The representation the `PERSON` `representative` is admitted on to
+    /// act for the `PERSON` `subject` today, the date read in UTC, for a
+    /// caller acting for `providers`: one exact read of the binding side
+    /// table on the party pool ([`lookup::representation_of`]); `None` when
+    /// none admits it.
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the party store cannot answer.
+    pub async fn live_representation(
+        &self,
+        (representative, subject): (Uuid, Uuid),
+        providers: &[ProviderKey],
+    ) -> Result<Option<LiveRepresentation>, ServiceError> {
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let today = crate::party_binding::source::today();
+        Ok(
+            lookup::representation_of(&mut conn, (representative, subject), &today, providers)
+                .await?
+                .flatten(),
+        )
     }
 
     /// Returns the `PERSON` the `EHR_STATUS` subject reference of the EHR

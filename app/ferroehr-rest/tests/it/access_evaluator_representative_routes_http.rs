@@ -30,7 +30,9 @@ use sqlx::PgPool;
 use crate::access_evaluator_patient_http::{Answer, status};
 use crate::access_evaluator_patient_routes_http::{concrete, ehr_routes};
 use crate::common;
-use crate::representation_http::{CHILD, Recorded, STRANGER, config, ehr, representative, router};
+use crate::representation_http::{
+    Recorded, STRANGER, config, ehr, family, representative, router, stored,
+};
 
 /// What the walk drives: the app, its database, the represented subject's
 /// EHR and another subject's.
@@ -39,6 +41,7 @@ struct Walk {
     pool: PgPool,
     app: Router,
     child: String,
+    subject: String,
     stranger: String,
 }
 
@@ -55,27 +58,28 @@ async fn walk() -> Walk {
             .with_audit(sender)
             .with_audit_store(AuditStore::new(pool.clone())),
     );
-    let child = ehr(&svc, Some(CHILD)).await;
+    let family = family(&svc).await;
+    let child = family.ehr.clone();
     let stranger = ehr(&svc, Some(STRANGER)).await;
-    let source = Arc::new(Recorded {
-        subjects: vec![CHILD],
-    });
+    stored(&svc, &family).await;
+    let source = Arc::new(Recorded::of(&family));
     let app = router(svc, source).await;
     Walk {
         _db: db,
         pool,
         app,
         child,
+        subject: family.child,
         stranger,
     }
 }
 
-/// A request as the representative of [`CHILD`].
-fn as_representative(method: &str, uri: &str) -> http::request::Builder {
+/// A request as the representative of `subject`.
+fn as_representative(subject: &str, method: &str, uri: &str) -> http::request::Builder {
     Request::builder()
         .method(method)
         .uri(common::full(uri))
-        .header("authorization", representative(CHILD))
+        .header("authorization", representative(subject))
         .header("content-type", "application/json")
 }
 
@@ -124,7 +128,7 @@ async fn every_route_naming_another_subjects_ehr_refuses_and_records_alike() {
         "the walk covers the directory, tag, export and import routes: {routes:?}"
     );
     for (n, (method, template)) in routes.iter().enumerate() {
-        let req = as_representative(method, &concrete(template, &walk.stranger))
+        let req = as_representative(&walk.subject, method, &concrete(template, &walk.stranger))
             .body(Body::from("{}"))
             .expect("request");
         assert_refused(&walk, req, n + 1, &format!("{method} {template}")).await;
@@ -139,7 +143,7 @@ async fn every_route_naming_another_subjects_ehr_refuses_and_records_alike() {
 async fn no_route_naming_the_represented_subjects_ehr_refuses() {
     let walk = walk().await;
     for (method, template) in ehr_routes(&config()) {
-        let req = as_representative(&method, &concrete(&template, &walk.child))
+        let req = as_representative(&walk.subject, &method, &concrete(&template, &walk.child))
             .body(Body::from("{}"))
             .expect("request");
         let answer = status(&walk.app, req).await;
@@ -163,21 +167,21 @@ async fn an_ehr_named_outside_the_path_refuses_and_records_alike() {
     let named = [
         (
             "a query scoped by its ehr_id parameter",
-            as_representative("GET", &query).body(Body::empty()),
+            as_representative(&walk.subject, "GET", &query).body(Body::empty()),
         ),
         (
             "a query scoped by its openehr-ehr-id header",
-            as_representative("POST", "/query/aql")
+            as_representative(&walk.subject, "POST", "/query/aql")
                 .header("openehr-ehr-id", stranger)
                 .body(Body::from(aql)),
         ),
         (
             "an import naming the EHR by its ehr_id parameter",
-            as_representative("POST", &import).body(Body::from("{}")),
+            as_representative(&walk.subject, "POST", &import).body(Body::from("{}")),
         ),
         (
             "a manifest export naming another subject's EHR",
-            as_representative("POST", "/message/export")
+            as_representative(&walk.subject, "POST", "/message/export")
                 .body(Body::from(manifest(&[&walk.child, stranger]).to_string())),
         ),
     ];
@@ -196,15 +200,15 @@ async fn an_operation_naming_no_ehr_refuses_and_records_alike() {
     let unnamed = [
         (
             "an EHR create",
-            as_representative("POST", "/ehr").body(Body::from("{}")),
+            as_representative(&walk.subject, "POST", "/ehr").body(Body::from("{}")),
         ),
         (
             "a query with no single-EHR scope",
-            as_representative("POST", "/query/aql").body(Body::from(aql)),
+            as_representative(&walk.subject, "POST", "/query/aql").body(Body::from(aql)),
         ),
         (
             "an import naming no EHR",
-            as_representative("POST", "/message/import").body(Body::from("{}")),
+            as_representative(&walk.subject, "POST", "/message/import").body(Body::from("{}")),
         ),
     ];
     for (n, (label, req)) in unnamed.into_iter().enumerate() {
@@ -219,6 +223,7 @@ async fn a_lookup_by_subject_finds_only_the_represented_ehr() {
     let walk = walk().await;
     let lookup = |subject: &str| {
         as_representative(
+            &walk.subject,
             "GET",
             &format!("/ehr?subject_id={subject}&subject_namespace=demographic"),
         )
@@ -226,7 +231,7 @@ async fn a_lookup_by_subject_finds_only_the_represented_ehr() {
         .body(Body::empty())
         .expect("request")
     };
-    let (found, _, body) = common::send(&walk.app, lookup(CHILD)).await;
+    let (found, _, body) = common::send(&walk.app, lookup(&walk.subject)).await;
     assert_eq!(found, StatusCode::OK, "{body}");
     let ehr: Value = serde_json::from_str(&body).expect("an EHR");
     assert_eq!(ehr["ehr_id"]["value"], json!(walk.child));
