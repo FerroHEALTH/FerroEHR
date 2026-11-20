@@ -408,7 +408,10 @@ async fn the_linkage_domain_does_not_exist() {
             .fetch_one(&pool)
             .await
             .expect("probe the extension");
-    assert!(!extension, "btree_gist, which only the linkage table needed, is absent");
+    assert!(
+        !extension,
+        "btree_gist, which only the linkage table needed, is absent"
+    );
 }
 
 /// A database created by a release older than the storage rewrite is refused at
@@ -513,8 +516,16 @@ async fn a_v5_database_is_refused_with_the_way_forward() {
     // (schema, v5's version-1 description, this build's).
     const SIGNATURES: [(&str, &str, Option<&str>); 5] = [
         ("ext", "schema and roles", Some("baseline roles")),
-        ("clinical", "schema and grants baseline", Some("baseline ehr")),
-        ("party", "schema and grants baseline", Some("baseline schema")),
+        (
+            "clinical",
+            "schema and grants baseline",
+            Some("baseline ehr"),
+        ),
+        (
+            "party",
+            "schema and grants baseline",
+            Some("baseline schema"),
+        ),
         ("audit", "schema and roles", Some("baseline audit event")),
         ("linkage", "schema and role", None),
     ];

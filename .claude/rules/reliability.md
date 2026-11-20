@@ -307,7 +307,7 @@ chapters, the Clippy book, and the Cargo/rustdoc books.)
   and only in the shape that keeps an installation told rather than locked
   out: every shipped file under `app/ferroehr/migrations/<schema>/` goes at
   once (a new set may take the directory), and `<schema>` is named in
-  `FIRST_GENERATION_SETS` (`app/ferroehr/src/db/mod.rs`) in the same change, so
+  `RETIRED_SETS` (`app/ferroehr/src/db/mod.rs`) in the same change, so
   the boot refusal names that database and states the remedy — by the
   bookkeeping's existence where this build owns no set of that name, and by the
   description of its version 1 where the name survives the rewrite. Enforcement

@@ -505,8 +505,7 @@ migrate_url_file = "/run/secrets/db-party-migrate-dsn"   # postgres://ferroehr_m
 The server refuses to start when a domain's `url` and its `storage.migrate`
 URL reach different databases. `[storage.linkage]` and
 `[storage.migrate.linkage]` are refused as unknown keys: the linkage domain is
-gone ([Operations → Upgrading past the linkage
-domain](../operations.md#upgrading-past-the-linkage-domain)).
+gone.
 
 ## `[telemetry]`
 

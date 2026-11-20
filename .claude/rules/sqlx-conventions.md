@@ -45,16 +45,25 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
   only safe in one shape: every shipped file under
   `app/ferroehr/migrations/<schema>/` goes, so no half-set survives for a database to apply against — a NEW set may
   take its place in the same directory, because a schema name can outlive the
-  set that used it — and `<schema>` is named in `FIRST_GENERATION_SETS`
+  set that used it — and `<schema>` is named in `RETIRED_SETS`
   (`app/ferroehr/src/db/mod.rs`) in the same change, so a database carrying that
   set's bookkeeping is refused at boot by name, with the remedy. An installation
   is then TOLD what happened instead of being locked out by a checksum it cannot
   interpret. A single-file edit, a partial turnover, and a turnover the boot
   refusal does not name all stay refused; a rename is judged as the deletion of
   its old path, which is what an installed database sees.
+- **v6.0.0 is a baseline (owner decision 2026-11-20, #6139).** The v5 sets
+  were retired whole: each schema starts again from one baseline that creates
+  every object once, in its final shape (`000N_baseline_<subject>.sql`), and
+  `RETIRED_SETS` refuses a v5 database by name with the way forward (a new
+  database, the records moved through the archive dump and load). From the
+  v6.0.0 tag the baseline is append-only like any shipped file. The templates
+  under `migrations/templates/` are no migration: the guard judges the files
+  they render into.
 - **The refusal is a SIGNATURE, not a schema name.** Where this build owns no
-  set of that name (`ehr`, `demographic`), any bookkeeping in the schema is the
-  signature. Where the name survives the rewrite (`ext`, `linkage`, `audit`),
+  set of that name (`ehr`, `demographic`, `linkage`), any bookkeeping in the
+  schema is the signature. Where the name survives (`ext`, `audit`,
+  `clinical`, `party`),
   bookkeeping exists in more than one generation, so the signature is the description
   sqlx recorded for VERSION 1 — the file that set was opened with. Without
   that half, an old set reaches its own migrator and fails on a checksum
@@ -89,8 +98,8 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
 - `ferroehr::db::prepare` bootstraps the schemas and runs the sets in
   order (`ext`, `clinical`, `party`, `audit`); each keeps its own
   `_sqlx_migrations` table, and a database whose bookkeeping matches a
-  `FIRST_GENERATION_SETS` signature is refused at boot as predating the storage
-  rewrite.
+  `RETIRED_SETS` signature is refused at boot, as predating the storage
+  rewrite or as a v5 database.
 - `sea-query` `Iden` table/column definitions (`db/iden.rs`) + hand-written
   row-mapping structs (over the generated `openehr-rm` types) — no ORM/codegen.
 
