@@ -526,8 +526,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         .collect();
     let rule_permits = rule_permits(&read);
     let naming: Vec<&Permit<'_>> = permits.iter().chain(&rule_permits).collect();
-    sensitivity(&read, &naming, &mut verdict);
-    confidentiality::step(&read, &naming, &mut verdict);
+    confidentiality::step_6(&read, &naming, &mut verdict);
     let keeper = Pred::any(vec![Pred::of(caller.administrator), read.keeper()]);
     let cared = read.cared();
     let live = cared && !held_closed;

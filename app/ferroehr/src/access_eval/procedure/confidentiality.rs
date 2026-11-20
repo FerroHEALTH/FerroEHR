@@ -7,14 +7,14 @@
 
 use openehr_rm::draft::access_control::terminology::Refusal;
 
-use super::{Outcome, Rule, Verdict};
+use super::{Outcome, Rule, Verdict, sensitivity};
 use crate::access_eval::directive::{Permit, Reader, clears_confidentiality};
 use crate::access_eval::scope::{Polarity, Pred};
 
 /// Step 6: data whose confidentiality is above `N` that no applying permit,
 /// a directive of the EHR or a rule of the policy, clears; the highest level
 /// is judged first, so a datum is refused under its own level.
-pub(super) fn step(read: &Reader<'_, '_>, permits: &[&Permit<'_>], verdict: &mut Verdict) {
+fn step(read: &Reader<'_, '_>, permits: &[&Permit<'_>], verdict: &mut Verdict) {
     let scopes = read.judged.scopes;
     for level in scopes.levels().into_iter().rev() {
         let clearing = permits
@@ -36,4 +36,10 @@ pub(super) fn step(read: &Reader<'_, '_>, permits: &[&Permit<'_>], verdict: &mut
             by: Vec::new(),
         });
     }
+}
+
+/// Step 6 in full: sensitivity, then confidentiality.
+pub(super) fn step_6(read: &Reader<'_, '_>, permits: &[&Permit<'_>], verdict: &mut Verdict) {
+    sensitivity(read, permits, verdict);
+    step(read, permits, verdict);
 }
