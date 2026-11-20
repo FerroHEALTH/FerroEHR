@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: Vernum Projecten B.V.
+-- SPDX-FileCopyrightText: Cadasto B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
 -- Change control: the commit audit, the CONTRIBUTION envelope, the append-only
@@ -8,11 +8,14 @@
 -- RENDERED FROM app/ferroehr/migrations/templates/change_control.sql.in by
 -- crate::storage::ddl_template. Both pseudonymisation domains carry the same
 -- change-control relations, so one template renders both and neither can drift
--- from the other; edit the template, never this file.
+-- from the other; edit the template, never this file. A block between
+-- `--@clinical-begin` and `--@clinical-end` renders into the clinical domain
+-- alone, and one between `--@party-begin` and `--@party-end` into the party
+-- domain alone.
 --
 -- openEHR defines no SQL schema: the relational layout is our own design. What
--- the openEHR specifications DO define — the version tree, the CONTRIBUTION as
--- a nested transaction, the audit copied into every version, logical deletion —
+-- the openEHR specifications DO define (the version tree, the CONTRIBUTION as
+-- a nested transaction, the audit copied into every version, logical deletion)
 -- is what the constraints and comments below cite (RM common
 -- master06-change_control_package.adoc). Decomposing a VERSIONED_OBJECT into
 -- rows is explicitly sanctioned there (§Overview: "Although the figure implies
@@ -78,11 +81,9 @@ CREATE TABLE commit_audit (
     CONSTRAINT ck_commit_audit_change_type CHECK (change_type IN
         ('249', '250', '251', '252', '253', '523', '666', '816', '817'))
 );
-
 -- The admin statistics' time-bounded paths filter and order on the commit
 -- instant. No openEHR spec governs indexing: our own design.
 CREATE INDEX idx_commit_audit_time_committed ON commit_audit (time_committed);
-
 COMMENT ON TABLE commit_audit IS 'AUDIT_DETAILS of every committed change (RM common master04-generic_package.adoc §Audit Details), including the ATTESTATION subtype a version may be committed with (master06 §Attestation).';
 COMMENT ON COLUMN commit_audit.time_committed IS 'Server-computed commit instant: RM common master06 §Committal and Audits — time_committed "should reflect the time of committal to an EHR server ... It should therefore be computed on the server".';
 COMMENT ON COLUMN commit_audit.change_type IS 'openEHR `audit change type` group code (AUDIT_DETAILS.Change_type_valid); the CHECK carries the full group as published in TERM SupportTerminology codesets/openehr_terminology-vocabularies.adoc §Audit Change Type.';
@@ -103,15 +104,14 @@ CREATE TABLE contribution (
     ehr_id          uuid,
     commit_audit_id uuid NOT NULL,
     CONSTRAINT pk_contribution PRIMARY KEY (id),
---@ehr-begin
+--@clinical-begin
     CONSTRAINT fk_contribution_ehr FOREIGN KEY (ehr_id) REFERENCES ehr (id) ON DELETE CASCADE,
---@ehr-end
+--@clinical-end
     CONSTRAINT fk_contribution_commit_audit FOREIGN KEY (commit_audit_id)
         REFERENCES commit_audit (id)
 );
 CREATE INDEX idx_contribution_ehr_id ON contribution (ehr_id);
 CREATE INDEX idx_contribution_commit_audit_id ON contribution (commit_audit_id);
-
 COMMENT ON TABLE contribution IS 'The change-set envelope (RM common master06 §Contributions); one per change set, strictly transactional (§Committal and Audits: a Contribution commits only if every member Version/Attestation commits).';
 COMMENT ON COLUMN contribution.ehr_id IS 'Owning EHR, or NULL where no EHR owns the change set.';
 
@@ -240,6 +240,15 @@ CREATE TABLE version (
     -- (specifications/docs/overview/Resources.md §Datetime format). NULL on a
     -- logically deleted version (no content, master06 §Logical Deletion).
     body            text COMPRESSION lz4,
+    -- SHA-256 over the canonical body with the root uid removed, compared
+    -- with the preceding tip's to store identical content once.
+    content_digest  bytea,
+    -- The sys_version whose node rows hold this version's content, when it
+    -- equalled the preceding tip's at commit; NULL when its own rows hold it.
+    content_sys_version integer,
+    -- The sys_version every read of this version's rows joins node on.
+    content_key     integer NOT NULL
+        GENERATED ALWAYS AS (coalesce(content_sys_version, sys_version)) STORED,
     CONSTRAINT pk_version PRIMARY KEY (tier, vo_id, sys_version),
     -- The spec identity tuple {object_id, creating_system_id,
     -- version_tree_id} (master06 §Distributed Versioning). `tier` joins it
@@ -247,7 +256,7 @@ CREATE TABLE version (
     -- partition key; an archived object moves whole, so no version of one
     -- object is ever split across tiers.
     CONSTRAINT uq_version_tree UNIQUE
-        (tier, vo_id, creating_system_id, trunk_version, branch_number, branch_version),
+        (tier, creating_system_id, trunk_version, branch_number, branch_version, vo_id),
     CONSTRAINT ck_version_tier CHECK (tier IN ('hot', 'cold')),
     CONSTRAINT ck_version_sys_version_positive CHECK (sys_version >= 1),
     CONSTRAINT ck_version_trunk_version_positive CHECK (trunk_version >= 1),
@@ -270,18 +279,30 @@ CREATE TABLE version (
             AND wrapped_original ? 'contribution'
             AND wrapped_original ? 'commit_audit')
     ),
---@ehr-begin
+--@clinical-begin
     CONSTRAINT fk_version_ehr FOREIGN KEY (ehr_id) REFERENCES ehr (id) ON DELETE CASCADE,
---@ehr-end
+    -- The template a committed version was validated against, whichever
+    -- definition surface provisioned it (template_ref).
+    CONSTRAINT fk_version_template FOREIGN KEY (template_id)
+        REFERENCES template_ref (template_id),
+--@clinical-end
     CONSTRAINT fk_version_contribution FOREIGN KEY (contribution_id)
         REFERENCES contribution (id),
+    CONSTRAINT ck_version_content_digest_length
+        CHECK (content_digest IS NULL OR octet_length(content_digest) = 32),
+    CONSTRAINT ck_version_content_sys_version
+        CHECK (content_sys_version IS NULL
+               OR (content_sys_version >= 1 AND content_sys_version < sys_version AND body IS NOT NULL)),
     CONSTRAINT fk_version_commit_audit FOREIGN KEY (commit_audit_id)
         REFERENCES commit_audit (id)
 ) PARTITION BY LIST (tier);
-
 CREATE TABLE version_hot  PARTITION OF version FOR VALUES IN ('hot');
 CREATE TABLE version_cold PARTITION OF version FOR VALUES IN ('cold');
-
+-- An object has a few versions, so its id repeats on about every other row:
+-- the planner would otherwise sample the column as near-unique and expect one
+-- version per object (PostgreSQL 18, ALTER TABLE, "n_distinct").
+ALTER TABLE version_hot ALTER COLUMN vo_id SET (n_distinct = -0.5);
+ALTER TABLE version_cold ALTER COLUMN vo_id SET (n_distinct = -0.5);
 -- A TRUNK POSITION is unique across creating systems, while a BRANCH id is
 -- not. master06 §Copying §Subsequent Local Modifications: "When new versions
 -- are added locally to a copied object, the local system id is recorded in the
@@ -294,7 +315,6 @@ CREATE UNIQUE INDEX uq_version_hot_trunk_position
     ON version_hot (vo_id, trunk_version) WHERE branch_number = 0;
 CREATE UNIQUE INDEX uq_version_cold_trunk_position
     ON version_cold (vo_id, trunk_version) WHERE branch_number = 0;
-
 -- The hot tier's access paths. The cold partition deliberately carries the
 -- primary key and the tree uniqueness alone: archived content leaves the
 -- queryable store, so the indexes that serve querying would be maintenance on
@@ -320,7 +340,34 @@ CREATE INDEX idx_version_hot_template ON version_hot (template_id)
 -- https://www.postgresql.org/docs/18/brin-intro.html).
 CREATE INDEX idx_version_hot_committed_brin
     ON version_hot USING brin (committed_at);
-
+-- A read of one version by its VERSION_TREE_ID binds the object and the three
+-- tree columns as parameters. The trunk position index is partial on
+-- branch_number = 0, which a generic plan cannot prove of a parameter
+-- (PostgreSQL 18, "Partial Indexes"), so this index matches the four columns
+-- for any branch, in both tiers, and an archived object stays readable by
+-- version id at the same cost. The object id comes last, as in
+-- uq_version_tree: an index led by vo_id would tie with the primary key on
+-- (tier, vo_id, sys_version) and could be chosen to scan every version of the
+-- object. No openEHR spec governs index layout: our own design.
+CREATE INDEX idx_version_hot_tree
+    ON version_hot (trunk_version, branch_number, branch_version, vo_id);
+CREATE INDEX idx_version_cold_tree
+    ON version_cold (trunk_version, branch_number, branch_version, vo_id);
+-- ORDER BY c/uid/value sorts on the uid the AQL engine synthesizes from the
+-- stored identity columns (crate::aql::sql::value::version_field_expr). This
+-- index holds the same expression, so a serial scan of it feeds the limit in
+-- uid order (PostgreSQL 18, "Indexes and ORDER BY") where the planner would
+-- otherwise sort the rows under a Gather Merge and start a parallel worker
+-- for every such query. The expression must stay identical to the engine's,
+-- which the storage_plans test holds. No openEHR spec governs index layout:
+-- our own design.
+CREATE INDEX idx_version_hot_uid
+    ON version_hot ((
+        vo_id::text || '::' || creating_system_id || '::' || trunk_version::text
+        || CASE WHEN branch_number > 0
+                THEN '.' || branch_number::text || '.' || branch_version::text
+                ELSE '' END
+    ));
 COMMENT ON TABLE version IS 'One write-once row per version of a versioned object (RM common master06 version tree); validity is derived from committed_at, so no row is ever updated after commit. Partitioned by storage tier so archival is row movement inside one relation set.';
 COMMENT ON COLUMN version.tier IS 'The storage tier and the partition key: hot (served and queryable) or cold (archived). Our own design — no openEHR spec governs storage tiering.';
 COMMENT ON COLUMN version.sys_version IS 'Opaque per-object commit ordinal (1..n across trunk AND branch commits) — the node/vo_attestation key. NOT the wire version number: the VERSION_TREE_ID lives in trunk_version/branch_number/branch_version.';
@@ -338,6 +385,9 @@ COMMENT ON COLUMN version.other_input_version_uids IS 'ORIGINAL_VERSION merge pr
 COMMENT ON COLUMN version.origins IS 'The distinct originating systems of this version''s body (FEEDER_AUDIT system ids), or this server''s own when it carries none; NULL when nothing stamped it. EHDS Annex II 3.2(e); our own design.';
 COMMENT ON COLUMN version.stable_compatible IS 'Whether the RELEASED openEHR generation set can express this version''s body; NULL = unstamped, assessed at read. No openEHR spec governs runtime generation selection — our own design.';
 COMMENT ON COLUMN version.body IS 'The version''s canonical openEHR JSON bytes verbatim, served by point reads without re-aggregation; text rather than jsonb so the codec''s field order survives (ITS-REST Resources.md §Datetime format).';
+COMMENT ON COLUMN version.content_digest IS 'SHA-256 over the canonical ITS-JSON body with the root uid removed, compared with the preceding tip''s to store identical content once; NULL on a logical delete and on a row written before the column existed. Our own storage design.';
+COMMENT ON COLUMN version.content_sys_version IS 'The sys_version in the same versioned object whose node rows hold this version''s content, when the content equalled the preceding tip''s at commit; NULL when the version''s own rows hold it. Our own storage design.';
+COMMENT ON COLUMN version.content_key IS 'The sys_version whose node rows hold this version''s content: content_sys_version where set, else the version''s own. Every read of a version''s rows joins node on this column. Our own storage design.';
 
 -- ── vo_head ──────────────────────────────────────────────────────────────────
 -- The ONE mutable row per versioned object, and the only row a commit updates.
@@ -395,17 +445,34 @@ CREATE TABLE vo_head (
     -- storage tiering.
     archived_at            timestamptz,
     archive_reason         text,
+    -- Until when an EHDS Art. 3(3) delay withholds this object from the
+    -- person's own access (Regulation (EU) 2025/327).
+    person_withheld_until  timestamptz,
+    -- The trunk head's version.content_key: the sys_version whose node rows
+    -- hold the head's content, which a LATEST_VERSION read joins on.
+    trunk_head_content_key integer,
+--@party-begin
+    -- When a version of this party that a policy reads was committed; the
+    -- AQL access condition of a demographic query reads it.
+    policy_party_at        timestamptz,
+--@party-end
+    -- The archetype_node_id of the trunk head's root node, which the access
+    -- condition of a query compares.
+    root_archetype         text,
     CONSTRAINT pk_vo_head PRIMARY KEY (vo_id),
---@ehr-begin
+--@clinical-begin
     CONSTRAINT fk_vo_head_ehr FOREIGN KEY (ehr_id) REFERENCES ehr (id) ON DELETE CASCADE,
---@ehr-end
+--@clinical-end
     CONSTRAINT ck_vo_head_tier CHECK (tier IN ('hot', 'cold')),
     CONSTRAINT ck_vo_head_kind CHECK (kind IN ({{kinds}})),
     CONSTRAINT ck_vo_head_head_positive CHECK (head_sys_version >= 1),
     CONSTRAINT ck_vo_head_lifecycle_state CHECK
-        (lifecycle_state IN ('532', '553', '523', '800', '801'))
+        (lifecycle_state IN ('532', '553', '523', '800', '801')),
+    CONSTRAINT ck_vo_head_trunk_head_content_key
+        CHECK ((trunk_head_content_key IS NULL) = (trunk_head_sys_version IS NULL)
+               AND (trunk_head_content_key IS NULL
+                    OR trunk_head_content_key BETWEEN 1 AND trunk_head_sys_version))
 ) WITH (fillfactor = 90);
-
 -- The two access paths that are not the primary key: an EHR's objects of one
 -- kind (status and directory reads, EHR summaries, the persistent-duplicate
 -- probe) and the template-scoped listing. Neither names a column a commit
@@ -413,7 +480,6 @@ CREATE TABLE vo_head (
 CREATE INDEX idx_vo_head_ehr_kind ON vo_head (ehr_id, kind);
 CREATE INDEX idx_vo_head_ehr_template ON vo_head (ehr_id, template_id)
     WHERE template_id IS NOT NULL;
-
 COMMENT ON TABLE vo_head IS 'The one mutable row per versioned object: the current trunk and any-branch heads, the lifecycle state, the tier, and the restriction and retention marks. Its updated columns are in no index, so a commit updates it heap-only (PostgreSQL 18, "Heap-Only Tuples (HOT)").';
 COMMENT ON COLUMN vo_head.head_sys_version IS 'The greatest sys_version on any lineage — the RM''s latest_version (RM common master06 §The ''Virtual Version Tree'').';
 COMMENT ON COLUMN vo_head.trunk_head_sys_version IS 'The greatest sys_version on the trunk — LATEST_VERSION.';
@@ -421,6 +487,17 @@ COMMENT ON COLUMN vo_head.restricted_at IS 'When restriction of processing was r
 COMMENT ON COLUMN vo_head.retention_hold_at IS 'When a retention hold was placed on this object, exempting it from disposal; NULL = no hold. Our own design/extension.';
 COMMENT ON COLUMN vo_head.archived_at IS 'When the object was moved to the cold tier; NULL while it is hot. Realizes the SM I_ADMIN_ARCHIVE marker — our own design/extension, no openEHR spec governs storage tiering.';
 COMMENT ON COLUMN vo_head.archive_reason IS 'The reason the caller gave for archiving (SM I_ADMIN_ARCHIVE); NULL while the object is hot or when no reason was given.';
+--@clinical-begin
+COMMENT ON COLUMN vo_head.person_withheld_until IS 'Until when an EHDS Art. 3(3) delay withholds this object from the person''s own access; NULL or past = not withheld. Our own design/extension.';
+--@clinical-end
+--@party-begin
+COMMENT ON COLUMN vo_head.person_withheld_until IS 'Always NULL in the party domain: the EHDS Art. 3(3) delay of the person''s access applies to the clinical record. Present for the version reads both domains share. Our own design/extension.';
+--@party-end
+COMMENT ON COLUMN vo_head.trunk_head_content_key IS 'The trunk head''s version.content_key: the sys_version whose node rows hold the head''s content. A LATEST_VERSION read joins the node rows on it. Our own storage design.';
+--@party-begin
+COMMENT ON COLUMN vo_head.policy_party_at IS 'When a version of this party first held a grant-coded capability, an acts-for relationship or a client identifier; NULL = never. Set in the commit transaction and never cleared: only an administrator reads or writes any version of a marked party. Our own design.';
+--@party-end
+COMMENT ON COLUMN vo_head.root_archetype IS 'The archetype_node_id of the trunk head''s root node, as committed; NULL when the head carries no content. The access condition of a query compares it. Our own storage design.';
 
 -- ── vo_attestation ───────────────────────────────────────────────────────────
 -- ATTESTATION storage (RM common master06 §Attestation; the class is
@@ -455,16 +532,13 @@ CREATE TABLE vo_attestation (
     CONSTRAINT fk_vo_attestation_contribution FOREIGN KEY (contribution_id)
         REFERENCES contribution (id)
 ) PARTITION BY LIST (tier);
-
 CREATE TABLE vo_attestation_hot  PARTITION OF vo_attestation FOR VALUES IN ('hot');
 CREATE TABLE vo_attestation_cold PARTITION OF vo_attestation FOR VALUES IN ('cold');
-
 CREATE INDEX idx_vo_attestation_hot_version
     ON vo_attestation_hot (vo_id, sys_version);
 CREATE INDEX idx_vo_attestation_cold_version
     ON vo_attestation_cold (vo_id, sys_version);
 CREATE INDEX idx_vo_attestation_hot_contribution
     ON vo_attestation_hot (contribution_id);
-
 COMMENT ON TABLE vo_attestation IS 'ATTESTATIONs appended to a version without a new version (RM common master06 §Attestation); canonical ATTESTATION verbatim in data. Partitioned by tier with the versions it attests.';
 COMMENT ON COLUMN vo_attestation.at_committal IS 'True when the ATTESTATION was on the VERSION at the act of committal and is therefore INSIDE its signed canonical form (RM common master06 §Attestation, §Digital Signature); false for one added afterwards.';

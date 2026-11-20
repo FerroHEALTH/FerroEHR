@@ -9,7 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use super::super::SqlCtx;
-use crate::access_eval::condition::care::{Care, ProjectedCare};
+use crate::access_eval::condition::care::{Care, CaredEhr, CaredSubject, ProjectedCare};
 use crate::access_eval::condition::pinned::PinnedEhr;
 use crate::access_eval::condition::{AccessCondition, CallerKeys, ConditionGroups};
 use crate::aql::ir::{ParamValue, Params};
@@ -144,12 +144,24 @@ impl Sentinels {
                 self.texts()
                     .into_iter()
                     .zip(self.texts())
-                    .map(|(namespace, id)| EhrSubject::new(namespace, id))
+                    .map(|(namespace, id)| CaredSubject {
+                        subject: EhrSubject::new(namespace, id),
+                        ties: Vec::new().into(),
+                    })
                     .collect(),
             ),
-            Care::Ehrs(_) => Care::Ehrs(self.ids().into()),
+            Care::Ehrs(_) => Care::Ehrs(
+                self.ids()
+                    .into_iter()
+                    .map(|ehr| CaredEhr {
+                        ehr,
+                        ties: Vec::new().into(),
+                    })
+                    .collect(),
+            ),
             Care::Projected(care) => Care::Projected(ProjectedCare {
                 principals: self.ids().into(),
+                direct: self.ids().into(),
                 provider_issuers: self.texts().into(),
                 provider_ids: self.texts().into(),
                 day: self.day,

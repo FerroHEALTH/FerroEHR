@@ -51,6 +51,13 @@ agent_tags_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	fa
 agent_tags_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
 agent_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
 audit_event_search	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+care_relationship_create	false	-	-	Some((Create, Demographic))	-	false	false
+care_relationship_delete	false	-	-	Some((Delete, Demographic))	-	false	false
+care_relationship_get	false	-	-	Some((Read, Demographic))	-	false	false
+care_relationship_list	false	-	-	Some((Read, Demographic))	-	false	false
+care_relationship_revision_history	false	-	-	Some((Read, Demographic))	-	false	false
+care_relationship_update	false	-	-	Some((Update, Demographic))	-	false	false
+care_relationship_version_get_by_id	false	-	-	Some((Read, Demographic))	-	false	false
 composition_access_delay_update	false	-	-	Some((Update, Composition))	Update	true	false
 composition_create	true	Some(Clinical)	true	Some((Create, Composition))	Create	true	true
 composition_delete	true	Some(Clinical)	true	Some((Delete, Composition))	Delete	true	true
@@ -160,6 +167,8 @@ party_relationship_update	false	-	-	Some((Update, Demographic))	-	false	false
 party_relationship_version_get_at_time	false	-	-	Some((Read, Demographic))	-	false	false
 party_relationship_version_get_by_id	false	-	-	Some((Read, Demographic))	-	false	false
 party_reverse_relationships_get	false	-	-	Some((Read, Demographic))	-	false	false
+person_care_relationship_create	false	-	-	Some((Create, Demographic))	-	false	false
+person_care_relationship_list	false	-	-	Some((Read, Demographic))	-	false	false
 person_create	true	Some(Clinical)	true	Some((Create, Demographic))	Create	false	false
 person_delete	true	Some(Clinical)	true	Some((Delete, Demographic))	Delete	false	false
 person_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
@@ -205,6 +214,7 @@ terminology_ids	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 terminology_subsumes	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 terminology_value_set	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 terminology_value_set_validate	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+versioned_care_relationship_get	false	-	-	Some((Read, Demographic))	-	false	false
 versioned_composition_get	true	Some(Clinical)	false	Some((Read, Composition))	Read	true	false
 versioned_composition_revision_history	true	Some(Clinical)	false	Some((Read, Composition))	Read	true	false
 versioned_composition_version_get_at_time	true	Some(Clinical)	false	Some((Read, Composition))	Read	true	false

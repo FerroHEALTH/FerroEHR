@@ -370,71 +370,42 @@ mod tests {
     use super::*;
     use sea_query::{Expr, ExprTrait as _, Iden as _, PostgresQueryBuilder, Query};
 
-    /// The relations the emitter names, and the migrations that
-    /// declare them.
+    /// The relations the emitter names, and the baseline files that declare
+    /// them, each in its final shape.
     const DDL: &[(&str, &str)] = &[
         (
             "ehr",
-            include_str!("../../migrations/clinical/0002_ehr.sql"),
+            include_str!("../../migrations/clinical/0001_baseline_ehr.sql"),
         ),
         (
             "version",
-            include_str!("../../migrations/clinical/0003_change_control.sql"),
+            include_str!("../../migrations/clinical/0003_baseline_change_control.sql"),
         ),
         (
             "vo_head",
-            include_str!("../../migrations/clinical/0003_change_control.sql"),
+            include_str!("../../migrations/clinical/0003_baseline_change_control.sql"),
         ),
         (
             "commit_audit",
-            include_str!("../../migrations/clinical/0003_change_control.sql"),
+            include_str!("../../migrations/clinical/0003_baseline_change_control.sql"),
         ),
         (
             "vo_attestation",
-            include_str!("../../migrations/clinical/0003_change_control.sql"),
+            include_str!("../../migrations/clinical/0003_baseline_change_control.sql"),
         ),
         (
             "node",
-            include_str!("../../migrations/clinical/0004_node.sql"),
+            include_str!("../../migrations/clinical/0004_baseline_node.sql"),
         ),
         (
             "access_settings",
-            include_str!("../../migrations/clinical/0040_access_projection.sql"),
+            include_str!("../../migrations/clinical/0009_baseline_access.sql"),
         ),
         (
             "party_relationship_target",
-            include_str!("../../migrations/party/0005_relationships_and_tags.sql"),
+            include_str!("../../migrations/party/0004_baseline_relationships_and_tags.sql"),
         ),
     ];
-
-    /// The later migrations that add columns to those relations with
-    /// `ALTER TABLE … ADD COLUMN`.
-    const ALTERS: &[&str] = &[
-        include_str!("../../migrations/clinical/0019_node_values.sql"),
-        include_str!("../../migrations/clinical/0028_node_header.sql"),
-        include_str!("../../migrations/clinical/0031_node_compact.sql"),
-        include_str!("../../migrations/clinical/0032_version_content.sql"),
-        include_str!("../../migrations/clinical/0034_head_content_key.sql"),
-        include_str!("../../migrations/clinical/0042_access_classes.sql"),
-        include_str!("../../migrations/party/0033_relationship_target_validity.sql"),
-    ];
-
-    /// Whether a later migration adds `col` to `table`, in an `ALTER TABLE`
-    /// statement of one or more actions.
-    fn added_by_alter(table: &str, col: &str) -> bool {
-        let head = format!("ALTER TABLE {table}");
-        let action = format!("ADD COLUMN {col} ");
-        ALTERS.iter().any(|file| {
-            file.split(&head).skip(1).any(|rest| {
-                let statement = rest.split(';').next().unwrap_or_default();
-                statement
-                    .split_whitespace()
-                    .collect::<Vec<_>>()
-                    .join(" ")
-                    .contains(&action)
-            })
-        })
-    }
 
     /// The `CREATE TABLE {table} ( … )` body, comments stripped before the
     /// parentheses are counted: the DDL documents itself in prose, and an
@@ -632,7 +603,7 @@ mod tests {
             let body = create_table_body(&table);
             for column in columns {
                 assert!(
-                    declares_column(&body, &column) || added_by_alter(&table, &column),
+                    declares_column(&body, &column),
                     "the catalog names `{table}.{column}`, which `CREATE TABLE {table}` does not \
                      declare in the migration sets — schema drift"
                 );

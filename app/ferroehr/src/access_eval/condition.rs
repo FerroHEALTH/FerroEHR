@@ -26,6 +26,7 @@ use openehr_rm::draft::access_control::terminology::{AccessDefault, OperationCla
 use tokio::task_local;
 use uuid::Uuid;
 
+use crate::access_eval::care_tie::Cared;
 use crate::access_eval::class::Class;
 use crate::access_eval::condition::care::{Care, CareUnsettled};
 use crate::access_eval::procedure::{
@@ -264,7 +265,7 @@ impl RequestAccess {
         if !self.confined() {
             return Outcome::Admit;
         }
-        let verdict = self.judge_as(&records::Held::default(), None, false);
+        let verdict = self.judge_as(&records::Held::default(), None, &Cared::No);
         self.note_under(None, &verdict, &Item::Ehr)
     }
 
@@ -314,8 +315,17 @@ impl RequestAccess {
 
     /// What the controller requires.
     #[must_use]
-    pub fn policy(&self) -> Policy {
+    pub fn policy(&self) -> Policy<'_> {
         Policy::of(self.policy.as_deref())
+    }
+
+    /// The namespace this CDR names its parties under; empty with no caller
+    /// facts copy.
+    #[must_use]
+    pub fn party_namespace(&self) -> Arc<str> {
+        self.grants
+            .as_ref()
+            .map_or_else(|| Arc::from(""), |grants| grants.namespace())
     }
 
     /// The moment the request began.
@@ -324,11 +334,24 @@ impl RequestAccess {
         self.now
     }
 
-    /// The date of [`Self::now`] in UTC, the date care relationships are
-    /// judged on.
+    /// The day of [`Self::now`], the date care relationships are judged on:
+    /// its date in the time zone of the policy's `time_zone`, or in UTC when
+    /// that is void (draft decision procedure, Terms). `None` when this
+    /// replica knows no zone of that name, which the write check refuses, so
+    /// no care relationship is held.
     #[must_use]
-    pub fn today(&self) -> jiff::civil::Date {
-        self.now.to_zoned(jiff::tz::TimeZone::UTC).date()
+    pub fn today(&self) -> Option<jiff::civil::Date> {
+        let zone = match self.policy.as_deref().and_then(|p| p.time_zone.as_deref()) {
+            None => jiff::tz::TimeZone::UTC,
+            Some(name) => match jiff::tz::TimeZone::get(name) {
+                Ok(zone) => zone,
+                Err(error) => {
+                    tracing::error!(%error, "the access policy names a time zone this replica does not know; no care relationship is held");
+                    return None;
+                }
+            },
+        };
+        Some(self.now.to_zoned(zone).date())
     }
 
     /// The verdict for an EHR with `settings`, held by the caller as `held`.
@@ -336,7 +359,7 @@ impl RequestAccess {
         &self,
         held: &records::Held,
         settings: Option<&EhrAccessSettings>,
-        cared: bool,
+        care: &Cared,
     ) -> Verdict {
         let labels = match settings {
             Some(EhrAccessSettings::Directives(settings)) => {
@@ -345,7 +368,7 @@ impl RequestAccess {
             _ => &[],
         };
         let scopes = Scopes::new(self.categories.clone(), labels, self.classifications());
-        self.decide(settings, cared, held, &scopes)
+        self.decide(settings, care, held, &scopes)
     }
 
     /// Whether `ehr_id` is one of the confined caller's own EHRs.
@@ -359,18 +382,18 @@ impl RequestAccess {
         self.caller.confined()
     }
 
-    /// The verdict for every EHR of `class`, the caller `cared` for its
-    /// subject or not, its facts left to the query. A subject caller is
-    /// judged as on its own EHR, the one EHR the condition confines it to.
+    /// The verdict for every EHR of `class`, the caller's care for its
+    /// subject read as `care`, its facts left to the query. A subject caller
+    /// is judged as on its own EHR, the one EHR the condition confines it to.
     #[must_use]
-    pub fn judge_class(&self, class: &Class, cared: bool) -> Verdict {
+    pub fn judge_class(&self, class: &Class, care: &Cared) -> Verdict {
         let scopes = Scopes::of_class(
             self.categories.clone(),
             Arc::clone(&class.layout),
             self.classifications(),
         );
         let held = records::Held::of_class(self.confined());
-        self.decide((*class.settings).as_ref(), cared, &held, &scopes)
+        self.decide((*class.settings).as_ref(), care, &held, &scopes)
     }
 
     /// The controller's classifications.
@@ -385,7 +408,7 @@ impl RequestAccess {
     fn decide(
         &self,
         settings: Option<&EhrAccessSettings>,
-        cared: bool,
+        care: &Cared,
         held: &records::Held,
         scopes: &Scopes,
     ) -> Verdict {
@@ -402,7 +425,7 @@ impl RequestAccess {
             ehr: Ehr {
                 settings,
                 server_default: self.server_default,
-                cared,
+                care,
                 own: held.own,
                 subject: held.subject,
                 kinships: &held.kinships,
@@ -427,16 +450,18 @@ impl RequestAccess {
         entry: &EhrEntry,
     ) -> Result<Arc<Verdict>, CareUnsettled> {
         self.bind_subject(ehr_id, entry).await?;
-        let mut cared = self.cares_for(entry).await?;
-        if cared && let Some(with_care) = self.care_decided(ehr_id, entry) {
+        let mut care = self.care_for(entry).await?;
+        if care.live()
+            && let Some(with_care) = self.care_decided(ehr_id, entry, &care)
+        {
             // NOTE: our own design (#5959), a read the request handed over runs during the care
             // check's party read when the verdict that check confirms would use it.
             let beside = crate::access_eval::alongside::beside(with_care.item_dependent());
             if !self.care_in_force(beside).await? {
-                cared = self.cares_for(entry).await?;
+                care = self.care_for(entry).await?;
             }
         }
-        let judged = self.judgement_of(ehr_id, entry, cared);
+        let judged = self.judgement_of(ehr_id, entry, &care);
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
             .lock()
@@ -445,11 +470,11 @@ impl RequestAccess {
         Ok(verdict)
     }
 
-    /// The judgement of the EHR `ehr_id` as `entry` reads it, the caller
-    /// `cared` for its subject or not.
-    fn judgement_of(&self, ehr_id: EhrId, entry: &EhrEntry, cared: bool) -> Judgement {
+    /// The judgement of the EHR `ehr_id` as `entry` reads it, the caller's
+    /// care for its subject read as `care`.
+    fn judgement_of(&self, ehr_id: EhrId, entry: &EhrEntry, care: &Cared) -> Judgement {
         Judgement {
-            verdict: Arc::new(self.judge(Some(ehr_id), (*entry.settings).as_ref(), cared)),
+            verdict: Arc::new(self.judge(Some(ehr_id), (*entry.settings).as_ref(), care)),
             settings: Arc::clone(&entry.settings),
             version: entry.version.clone(),
             revision: entry.revision.clone(),
@@ -463,7 +488,8 @@ impl RequestAccess {
     /// Its subject is not known here. A row of it was served, so the caller
     /// cares for its subject when only the verdict with a care relationship
     /// admits anything; when both verdicts admit, care decided nothing and no
-    /// care ground is named. Our own design (#5581).
+    /// care ground is named. Which roles and paths it holds is not known, so
+    /// the care ground names no relationship. Our own design (#5581).
     pub fn judge_unsettled(&self, ehr_id: EhrId) {
         let entry = EhrEntry {
             settings: Arc::new(None),
@@ -472,9 +498,11 @@ impl RequestAccess {
             revision: Revision::default(),
         };
         let at = Some(ehr_id);
-        let cared =
-            self.judge(at, None, true).admits_any() && !self.judge(at, None, false).admits_any();
-        let judged = self.judgement_of(ehr_id, &entry, cared);
+        let left = self.care_left();
+        let cared = self.judge(at, None, &left).admits_any()
+            && !self.judge(at, None, &Cared::No).admits_any();
+        let care = if cared { left } else { Cared::No };
+        let judged = self.judgement_of(ehr_id, &entry, &care);
         self.verdicts
             .lock()
             .unwrap_or_else(PoisonError::into_inner)

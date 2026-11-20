@@ -27,6 +27,7 @@
 //!   ehr-less version loads, commit audits, canonical wire assembly),
 //! - `party` — party CRUD,
 //! - `relationship` — relationship CRUD, the one surface absent from the released Demographic API (our extension),
+//! - `care_relationship` and `care_visible` — the care relationship resources, each read decided per subject it reveals,
 //! - `versioned` — the `VERSIONED_PARTY` read surface,
 //! - `contribution` — the demographic (ehr-less) CONTRIBUTION,
 //! - `tags` — the demographic `ITEM_TAG` surface,
@@ -62,6 +63,7 @@
 //!   (`PARTY_REF.Type_validity`) + `…object_ref.adoc` (`OBJECT_REF.namespace`).
 
 pub mod adopt;
+pub mod care_relationship;
 pub mod default_definitions;
 pub mod group_provision;
 pub mod group_write;
@@ -83,6 +85,7 @@ pub mod user_write;
 
 mod api;
 mod care_role;
+mod care_visible;
 mod contact_erasure;
 mod contribution;
 mod party;

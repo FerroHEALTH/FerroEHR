@@ -10,8 +10,9 @@ use openehr_rm::draft::access_control::terminology::Refusal;
 use uuid::Uuid;
 
 use super::Shapes;
+use crate::access_eval::care_tie::{CareNeed, Tie};
 use crate::access_eval::class::Keepers;
-use crate::access_eval::condition::care::{Care, ProjectedCare};
+use crate::access_eval::condition::care::{Care, CaredEhr, CaredSubject, ProjectedCare};
 use crate::access_eval::condition::pinned::PinnedEhr;
 use crate::access_eval::condition::{AccessCondition, CallerKeys, ConditionGroups, VerdictPair};
 use crate::access_eval::procedure::{Outcome, Rule, Verdict};
@@ -21,6 +22,7 @@ use crate::aql::lineage::ArchetypeLineage;
 use crate::aql::sql::{EhrAccessReaders, EhrScopeKind, PolicyParties, PreparedQuery, SqlCtx};
 use crate::ids::EhrId;
 use crate::storage::access_projection::{EhrSubject, Revision};
+use openehr_rm::draft::access_control::terminology::care::CarePath;
 
 /// A single-EHR query whose EHR is a parameter.
 const PINNED: &str = "SELECT c/uid/value, c/name/value FROM EHR e CONTAINS COMPOSITION c \
@@ -139,6 +141,7 @@ fn classes(
 
 fn projected(teams: Vec<Uuid>, day: jiff::civil::Date) -> Care {
     Care::Projected(ProjectedCare {
+        direct: teams.iter().take(1).copied().collect(),
         principals: teams.into(),
         provider_issuers: vec!["urn:example:providers".to_owned()].into(),
         provider_ids: vec!["hospital".to_owned()].into(),
@@ -305,7 +308,7 @@ fn a_census_confinement_and_scope_bind_from_slots() {
         let condition = classes(
             jiff::Timestamp::now(),
             &["party"],
-            Care::Census(subjects.into()),
+            Care::Census(subjects.into_iter().map(uncared_subject).collect()),
             Some(confined),
         );
         let mut ctx = ctx(condition, &lineage);
@@ -326,12 +329,121 @@ fn a_pinned_care_read_binds_from_a_slot() {
         let condition = classes(
             jiff::Timestamp::now(),
             &["party"],
-            Care::Ehrs(ehrs.into()),
+            Care::Ehrs(
+                ehrs.into_iter()
+                    .map(|ehr| cared_ehr(ehr, Vec::new()))
+                    .collect(),
+            ),
             None,
         );
         prepared(&shapes, &ir, &Params::default(), &ctx(condition, &lineage));
     }
     assert_eq!(shapes.bound(), 2);
+}
+
+/// `subject`, held by no tie.
+fn uncared_subject(subject: EhrSubject) -> CaredSubject {
+    CaredSubject {
+        subject,
+        ties: Vec::new().into(),
+    }
+}
+
+/// The EHR `ehr`, held by `ties`.
+fn cared_ehr(ehr: Uuid, ties: Vec<Tie>) -> CaredEhr {
+    CaredEhr {
+        ehr,
+        ties: ties.into(),
+    }
+}
+
+/// A tie of `path` in the role `code`.
+fn tie(path: CarePath, code: &str) -> Tie {
+    Tie {
+        path,
+        role: openehr_rm::draft::access_control::terminology::ForeignCode {
+            terminology: "HL7_ParticipationType".to_owned(),
+            code: code.to_owned(),
+        },
+        grant: None,
+    }
+}
+
+/// A class condition whose verdict with care admits only an EHR whose subject
+/// the caller holds directly as `RESP`, its care read as `cared`.
+fn needing(cared: Care) -> AccessCondition {
+    let need = Pred::Care(Arc::new(CareNeed::new(
+        Some(vec![tie(CarePath::Direct, "RESP").role]),
+        Some(CarePath::Direct),
+    )));
+    let pair = VerdictPair {
+        cared: refusing(Pred::negate(need)),
+        uncared: refusing(Pred::True),
+    };
+    AccessCondition::from(ConditionGroups {
+        groups: vec![(vec![1], Arc::new(pair.clone()))],
+        closed: Arc::new(pair.clone()),
+        default: Some(Arc::new(pair)),
+        cared,
+        subject_namespace: "local".into(),
+        facts: CallerKeys {
+            now: jiff::Timestamp::now(),
+            parties: Vec::new().into(),
+            keeper: None,
+        },
+        confined: None,
+        conflicts: Arc::from([]),
+    })
+}
+
+/// A rule's care roles and path probe the census, the pinned EHRs' ties and
+/// the projection with values each request binds from its own slot (#6075).
+#[test]
+fn a_care_need_binds_its_care_from_slots_in_every_form() {
+    let ir = plan(POPULATION);
+    let lineage = Arc::new(ArchetypeLineage::default());
+    let forms: [fn(usize) -> Care; 3] = [
+        |round| {
+            Care::Census(
+                (0..=round)
+                    .map(|_| CaredSubject {
+                        subject: EhrSubject::new("local", Uuid::now_v7().to_string()),
+                        ties: vec![tie(CarePath::Direct, "RESP"), tie(CarePath::Team, "PART")]
+                            .into(),
+                    })
+                    .collect(),
+            )
+        },
+        |round| {
+            Care::Ehrs(
+                (0..=round)
+                    .map(|_| cared_ehr(Uuid::now_v7(), vec![tie(CarePath::Direct, "CON")]))
+                    .collect(),
+            )
+        },
+        |round| {
+            projected(
+                (0..=round).map(|_| Uuid::now_v7()).collect(),
+                jiff::civil::date(2026, 11, 20),
+            )
+        },
+    ];
+    for form in forms {
+        let shapes = Shapes::new(&ir);
+        for round in 0..4 {
+            prepared(
+                &shapes,
+                &ir,
+                &Params::default(),
+                &ctx(needing(form(round)), &lineage),
+            );
+        }
+        assert_eq!(
+            shapes.bound(),
+            2,
+            "the third request on binds from the shape"
+        );
+    }
 }
 
 #[test]
@@ -395,7 +507,7 @@ fn a_demographic_statement_carries_no_per_ehr_gate() {
     let condition = classes(
         jiff::Timestamp::now(),
         &["party"],
-        Care::Ehrs(vec![Uuid::now_v7()].into()),
+        Care::Ehrs(vec![cared_ehr(Uuid::now_v7(), Vec::new())].into()),
         None,
     );
     let mut ctx = ctx(condition, &lineage);

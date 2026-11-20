@@ -85,7 +85,9 @@ use openehr_rm::draft::access_control::terminology::{
     AccessDefault, CallerKind, Conflict, DirectiveKind, Effect, ForeignCode, OperationClass,
     Refusal,
 };
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
+use crate::access_eval::care_tie::{Cared, Tie, care_needs, granting};
 use crate::access_eval::directive::{Permit, Reader, kind_and_effect, names_sensitivity};
 use crate::access_eval::scope::{Item, Polarity, Pred, Scopes};
 use crate::ids::EhrId;
@@ -191,7 +193,7 @@ impl Emergency {
 
 /// What the controller's `ACCESS_POLICY` requires of clinical access.
 #[derive(Debug, Clone, Copy, Default)]
-pub struct Policy {
+pub struct Policy<'a> {
     /// `care_relationship_required`.
     pub care_required: bool,
     /// `relationship_grace`.
@@ -201,12 +203,19 @@ pub struct Policy {
     /// Whether `self_declared_care` is set, which turns the `self_declared`
     /// path on (draft decision procedure, Holding a Care Relationship).
     pub self_declared: bool,
+    /// `care_purposes`: the purposes of use for which a care relationship is
+    /// a ground; `None` when void.
+    pub care_purposes: Option<&'a [DvCodedText]>,
 }
 
-impl Policy {
+/// The purposes `care_purposes` reads as when void.
+// NOTE: draft BMM ACCESS_POLICY.care_purposes, void means TREAT, ETREAT and CAREMGT.
+const DEFAULT_CARE_PURPOSES: [&str; 3] = ["TREAT", "ETREAT", "CAREMGT"];
+
+impl<'a> Policy<'a> {
     /// The requirements of `policy`; none when no version is committed.
     #[must_use]
-    pub fn of(policy: Option<&AccessPolicy>) -> Self {
+    pub fn of(policy: Option<&'a AccessPolicy>) -> Self {
         let Some(policy) = policy else {
             return Self::default();
         };
@@ -222,7 +231,21 @@ impl Policy {
             grace,
             purpose_required: policy.purpose_required,
             self_declared: policy.self_declared_care.is_some(),
+            care_purposes: policy.care_purposes.as_deref(),
         }
+    }
+
+    /// Whether a care relationship is a ground for an access that declares
+    /// `purpose`: one that declares none, or one of `care_purposes` (draft
+    /// decision procedure, Terms: a live care relationship).
+    #[must_use]
+    pub fn admits_care(&self, purpose: Option<&str>) -> bool {
+        purpose.is_none_or(|purpose| match self.care_purposes {
+            Some(codes) => codes
+                .iter()
+                .any(|coded| coded.defining_code.code_string == purpose),
+            None => DEFAULT_CARE_PURPOSES.contains(&purpose),
+        })
     }
 }
 
@@ -242,8 +265,8 @@ pub struct Ehr<'a> {
     pub settings: Option<&'a EhrAccessSettings>,
     /// The server-wide default of an EHR with no settings.
     pub server_default: AccessDefault,
-    /// Whether the caller has a live care relationship to its subject.
-    pub cared: bool,
+    /// The caller's live care relationships to its subject.
+    pub care: &'a Cared,
     /// Whether the EHR is one of the [`Caller::own_ehrs`] of a confined caller.
     pub own: bool,
     /// Whether the EHR's `EHR_STATUS.subject` names the `PERSON` the
@@ -298,6 +321,9 @@ pub struct Grounds {
     pub lifted_rules: Vec<(usize, Pred)>,
     /// The verdict reads a live care relationship to the subject.
     pub cared: bool,
+    /// The relationship the access log names, where the verdict reads one
+    /// and its ties are known.
+    pub granting: Option<Box<Tie>>,
     /// The verdict reads the caller as a gate-keeper or the controller.
     pub keeper: bool,
     /// The positions in the settings' `exclusions` of the exclusions an
@@ -434,7 +460,7 @@ pub struct Judged<'a> {
     /// What they ask.
     pub asked: Asked<'a>,
     /// What the controller requires.
-    pub policy: Policy,
+    pub policy: Policy<'a>,
     /// The controller's rules (`ACCESS_POLICY.rules`).
     pub rules: &'a [AccessDirective],
     /// The conflicts the controller allows through the professional path
@@ -453,7 +479,7 @@ pub struct Judged<'a> {
 pub fn decide(judged: &Judged<'_>) -> Verdict {
     let mut verdict = Verdict::admit();
     let caller = judged.caller;
-    if let Some(refusal) = standing(judged) {
+    if let Some(refusal) = crate::access_eval::exclusion::standing(judged) {
         verdict.otherwise = Outcome::Refused(refusal);
         return verdict;
     }
@@ -464,15 +490,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         verdict.grounds.subject = true;
         return verdict;
     }
-    let (directives, exclusions, held_closed) = match judged.ehr.settings {
-        Some(EhrAccessSettings::Directives(settings)) => (
-            settings.directives.as_deref().unwrap_or_default(),
-            settings.exclusions.as_deref().unwrap_or_default(),
-            false,
-        ),
-        Some(EhrAccessSettings::HeldClosed) => (&[][..], &[][..], true),
-        None => (&[][..], &[][..], false),
-    };
+    let (directives, exclusions, held_closed) = lists(judged.ehr.settings);
     let read = Reader { judged };
     let placed = |at: usize| judged.scopes.layout().and_then(|l| l.directives.get(at));
     crate::access_eval::exclusion::excluded(&read, exclusions, &mut verdict);
@@ -523,7 +541,8 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     let naming: Vec<&Permit<'_>> = permits.iter().chain(&rule_permits).collect();
     sensitivity(&read, &naming, &mut verdict);
     let keeper = Pred::any(vec![Pred::of(caller.administrator), read.keeper()]);
-    let live = judged.ehr.cared && !held_closed;
+    let cared = read.cared();
+    let live = cared && !held_closed;
     let default = judged
         .ehr
         .settings
@@ -532,6 +551,14 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     if care_read || default != AccessDefault::Open {
         verdict.grounds.cared = live;
         verdict.grounds.keeper = keeper == Pred::True;
+    }
+    let needs = care_needs(judged.rules, directives);
+    if cared && needs.named {
+        verdict.grounds.cared = true;
+    }
+    if verdict.grounds.cared {
+        verdict.grounds.granting =
+            granting(judged.ehr.care.ties(), &needs.needs).map(|tie| Box::new(tie.clone()));
     }
     // Step 7: a care relationship.
     let uncared = Pred::negate(Pred::any(vec![Pred::of(live), keeper.clone()]));
@@ -557,22 +584,18 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     verdict
 }
 
-/// Step 0: the refusal of a caller whose standing reaches no data of the
-/// EHR, whatever its directives permit.
-fn standing(judged: &Judged<'_>) -> Option<Refusal> {
-    let caller = judged.caller;
-    // NOTE: our own design (#5586, #5606, #5609), SMART master08 §Resource Scopes and EHDS
-    // Art. 4(2) hold a patient context or a representative to one EHR, so every other refuses.
-    if caller.confined() && !judged.ehr.own {
-        return Some(caller.not_own());
+/// The directives and the exclusions of `settings`, and whether the EHR is
+/// held closed; none for an EHR with no settings.
+fn lists(settings: Option<&EhrAccessSettings>) -> (&[AccessDirective], &[AccessDirective], bool) {
+    match settings {
+        Some(EhrAccessSettings::Directives(settings)) => (
+            settings.directives.as_deref().unwrap_or_default(),
+            settings.exclusions.as_deref().unwrap_or_default(),
+            false,
+        ),
+        Some(EhrAccessSettings::HeldClosed) => (&[], &[], true),
+        None => (&[], &[], false),
     }
-    // NOTE: our own design (#5614), a read under an agreement conditioned on consent names
-    // the consent decision, so a caller naming none is refused whatever the EHR permits.
-    let reads = matches!(
-        judged.asked.operation,
-        OperationClass::Read | OperationClass::Query | OperationClass::Export
-    );
-    (caller.lacks_consent_reference && reads).then_some(Refusal::ConsentReferenceMissing)
 }
 
 /// Step 8: what the default disposition `admitted` does not admit, a permit

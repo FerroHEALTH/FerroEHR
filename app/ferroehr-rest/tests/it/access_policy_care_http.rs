@@ -457,3 +457,87 @@ async fn an_organisation_type_the_policy_binds_no_value_set_for_is_refused() {
     let (status, answer) = put(&app, (header::IF_NONE_MATCH, "*"), &bound).await;
     assert_eq!(status, StatusCode::CREATED, "{answer}");
 }
+
+/// [`policy`] with a rule whose actor scope names a care relationship in
+/// the role `role` by the path `direct`, care purposes `purposes` and the
+/// time zone `zone`.
+fn with_care_rule(role: &Value, purposes: &[Value], zone: &str) -> Value {
+    let mut body = policy(true);
+    body["rules"] = json!([{ "_type": "ACCESS_DIRECTIVE", "archetype_node_id": "id9",
+        "name": { "_type": "DV_TEXT", "value": "Only the responsible practitioner" },
+        "kind": access("controller_rule"),
+        "effect": coded("HL7_ConsentProvisionType", "deny"),
+        "emergency_override": false,
+        "exceptions": [{ "_type": "ACCESS_DIRECTIVE", "archetype_node_id": "id10",
+            "name": { "_type": "DV_TEXT", "value": "responsible, directly" },
+            "kind": access("controller_rule"),
+            "effect": coded("HL7_ConsentProvisionType", "permit"),
+            "emergency_override": false,
+            "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "relationship": access("care"),
+                "care_roles": [role], "care_path": access("direct") }] }] }]);
+    body["care_purposes"] = json!(purposes);
+    body["time_zone"] = json!(zone);
+    body
+}
+
+/// A rule's care roles and path, the care purposes and the time zone are
+/// decided, so they round-trip; a care role outside `HL7_ParticipationType`
+/// or the bound `care_role` value set, and a care purpose outside
+/// `HL7_ActReason`, are refused `422` naming the attribute; a time zone the
+/// zone database does not hold is `400` (#6075).
+#[tokio::test]
+async fn a_rules_care_roles_purposes_and_time_zone_are_stored_or_refused() {
+    let (_db, pool) = common::migrated_pool().await;
+    let care_role_vs = "http://terminology.example/ValueSet/care-role";
+    let server = terminology(care_role_vs, &["RESP"]).await;
+    let (_svc, app) = replica(&pool, Some(&server.uri())).await;
+    let treat = coded("HL7_ActReason", "TREAT");
+    let written = with_care_rule(
+        &coded("HL7_ParticipationType", "RESP"),
+        std::slice::from_ref(&treat),
+        "Europe/Amsterdam",
+    );
+    let first = create(&app, &written).await;
+    let (status, _, read) = call(&app, "GET", "root", "", None, None).await;
+    assert_eq!(status, StatusCode::OK, "{read}");
+    for attribute in ["rules", "care_purposes", "time_zone"] {
+        assert_eq!(read[attribute], written[attribute], "{attribute}");
+    }
+    let scope = "/rules/0/exceptions/0/applies_to/0/care_roles/0";
+    let local_role = with_care_rule(
+        &coded("urn:example:roles", "RESP"),
+        std::slice::from_ref(&treat),
+        "UTC",
+    );
+    let (status, answer) = replace(&app, &first, &local_role).await;
+    names(status, &answer, scope);
+    let bound = |role: &str| {
+        binding(
+            with_care_rule(
+                &coded("urn:example:roles", role),
+                std::slice::from_ref(&treat),
+                "UTC",
+            ),
+            "care_role",
+            care_role_vs,
+        )
+    };
+    let (status, answer) = replace(&app, &first, &bound("SPRF")).await;
+    names(status, &answer, scope);
+    let research = with_care_rule(
+        &coded("HL7_ParticipationType", "RESP"),
+        &[coded("urn:example:purposes", "HRESCH")],
+        "UTC",
+    );
+    let (status, answer) = replace(&app, &first, &research).await;
+    names(status, &answer, "/care_purposes/0");
+    let atlantis = with_care_rule(
+        &coded("HL7_ParticipationType", "RESP"),
+        std::slice::from_ref(&treat),
+        "Europe/Atlantis",
+    );
+    let (status, answer) = replace(&app, &first, &atlantis).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{answer}");
+    let (status, answer) = replace(&app, &first, &bound("RESP")).await;
+    assert_eq!(status, StatusCode::OK, "{answer}");
+}

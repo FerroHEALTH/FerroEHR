@@ -47,10 +47,17 @@
         "lower": 0,
         "upper_unbounded": true
       }
+    },
+    "care": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "care",
+      "documentation": "For a treatment relationship, the care relationship the access rested on: where several admitted it, the one the decision procedure chooses (`direct` before `team` before `self_declared` before `attested`, then by the order of the roles in the scope that matched).",
+      "type": "ACCESS_CARE_GROUND"
     }
   },
   "invariants": {
-    "Kind_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_authorisation, kind.defining_code)"
+    "Kind_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_authorisation, kind.defining_code)",
+    "Care_valid": "care /= Void implies kind.defining_code.code_string.is_equal (\"treatment relationship\")"
   }
 }
 --------

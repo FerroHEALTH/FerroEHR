@@ -30,6 +30,7 @@ use crate::v1_2::data_types::text::code_phrase::CodePhrase;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_base::prelude::TerminologyId;
 
+use care::{CareBasis, CareElement, CarePath};
 use log::{AccessorKind, Action, Authorisation, CredentialBinding, Outcome, RefusalReason};
 
 /// The BMMs' `Terminology_id_access`: the draft `openehr_access` terminology,
@@ -96,6 +97,8 @@ pub enum Group {
     AccessEffect,
     /// `access relationship`: the caller's relationship to the subject.
     AccessRelationship,
+    /// `care path`: how a care relationship reaches the caller.
+    AccessCarePath,
     /// `access caller kind`: the kind of caller a directive binds.
     AccessCallerKind,
     /// `access operation`: the operation classes a directive names.
@@ -150,11 +153,12 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 24] = [
+    pub const ALL: [Self; 25] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
         Self::AccessRelationship,
+        Self::AccessCarePath,
         Self::AccessCallerKind,
         Self::AccessOperation,
         Self::AccessConflict,
@@ -185,6 +189,7 @@ impl Group {
             Self::AccessDirectiveKind => "access directive kind",
             Self::AccessEffect => "access effect",
             Self::AccessRelationship => "access relationship",
+            Self::AccessCarePath => "care path",
             Self::AccessCallerKind => "access caller kind",
             Self::AccessOperation => "access operation",
             Self::AccessConflict => "access conflict",
@@ -217,6 +222,7 @@ impl Group {
             Self::AccessDirectiveKind => phrases::<DirectiveKind>(),
             Self::AccessEffect => phrases::<Effect>(),
             Self::AccessRelationship => phrases::<Relationship>(),
+            Self::AccessCarePath => phrases::<CarePath>(),
             Self::AccessCallerKind => phrases::<CallerKind>(),
             Self::AccessOperation => phrases::<OperationClass>(),
             Self::AccessConflict => phrases::<Conflict>(),
@@ -360,6 +366,8 @@ pub trait Term: Copy + PartialEq + Sized + 'static {
 #[macro_use]
 mod group;
 
+pub mod care;
+pub mod hl7;
 pub mod log;
 
 group! {
@@ -495,34 +503,6 @@ group! {
         /// A patient's `PERSON` is under the care of a team `GROUP` or an
         /// organisational unit.
         UnderCareOf => "under_care_of",
-    }
-}
-
-group! {
-    /// The elements in the `details` of an `under_care_of` relationship,
-    /// coded in each `ELEMENT`'s `name`.
-    CareElement in CareRelationshipElement {
-        /// The part the target plays in the care of the subject, of the value
-        /// set bound for `care_role`.
-        CareRole => "care_role",
-        /// The healthcare provider in whose care the relationship is.
-        Provider => "provider",
-        /// The carer the target replaces for the period of the relationship.
-        CoversFor => "covers_for",
-        /// The episode, referral or case the relationship belongs to.
-        Context => "context",
-        /// Who wrote the relationship, of the `care basis` group.
-        Basis => "basis",
-    }
-}
-
-group! {
-    /// Who wrote a care relationship, the value of its `basis` element.
-    CareBasis in CareBasis {
-        /// The care delivery environment wrote it; the default when absent.
-        Assigned => "assigned",
-        /// The professional it names wrote it.
-        SelfDeclared => "self_declared",
     }
 }
 

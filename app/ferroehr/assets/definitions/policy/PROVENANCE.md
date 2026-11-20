@@ -35,10 +35,11 @@ book's "Operational policy" page describes the model.
    holds beyond clinical access (subject audit, access service, identifier
    reader, import).
 6. `openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.1.adls`: the privileged `ROLE`
-   with a fifth kind, `at14` "Compose for", the `compose_for` grant that lets
+   with the kind `at14` "Compose for", the `compose_for` grant that lets
    a professional name another professional of the same provider as the
-   composer of what they commit (#6130). It is a new version beside v1.0.0,
-   which stays as published.
+   composer of what they commit (#6130), and without `at12` "Identifier
+   reader", which grants nothing since the identifier read was removed
+   (#6097). It is a new version beside v1.0.0, which stays as published.
 
 ## Source
 

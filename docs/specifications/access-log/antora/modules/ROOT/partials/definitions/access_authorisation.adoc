@@ -34,7 +34,14 @@ h|*0..1*
 |*legal_grounds*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
 a|The legal provisions the ground rests on.
 
+h|*0..1*
+|*care*: `xref:access_log:access_log_package.adoc#_access_care_ground_class[ACCESS_CARE_GROUND]`
+a|For a treatment relationship, the care relationship the access rested on: where several admitted it, the one the decision procedure chooses (`direct` before `team` before `self_declared` before `attested`, then by the order of the roles in the scope that matched).
+
 h|*Invariants*
 2+a|__Kind_valid__: `terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_authorisation, kind.defining_code)`
+
+h|
+2+a|__Care_valid__: `care /= Void implies kind.defining_code.code_string.is_equal ("treatment relationship")`
 
 |===

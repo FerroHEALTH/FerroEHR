@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The two steps of the decision procedure that bar one caller from one
-//! record whatever else admits it: the controller's exclusion (step 0) and a
-//! conflict of interest (step 5).
+//! The steps of the decision procedure that bar one caller from one record
+//! whatever else admits it: its standing and the controller's exclusion
+//! (step 0), and a conflict of interest (step 5).
 //!
 //! An exclusion is a deny of kind `exclusion` in
 //! `CONFIDENTIALITY_SETTINGS.exclusions`, naming the parties it keeps out by
@@ -17,11 +17,11 @@
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::terminology::{
-    CallerKind, Conflict, DirectiveKind, Effect, ForeignCode, Refusal, Term,
+    CallerKind, Conflict, DirectiveKind, Effect, ForeignCode, OperationClass, Refusal, Term,
 };
 
 use crate::access_eval::directive::Reader;
-use crate::access_eval::procedure::{Lifted, Outcome, Rule, Verdict};
+use crate::access_eval::procedure::{Judged, Lifted, Outcome, Rule, Verdict};
 use crate::access_eval::scope::Pred;
 
 /// Step 0, exclusion: every exclusion of the controller that binds the
@@ -107,4 +107,22 @@ pub(super) fn conflict(read: &Reader<'_, '_>, verdict: &mut Verdict) -> Option<R
         then: Outcome::Refused(Refusal::Conflict),
         by: Vec::new(),
     })
+}
+
+/// Step 0: the refusal of a caller whose standing reaches no data of the
+/// EHR, whatever its directives permit.
+pub(super) fn standing(judged: &Judged<'_>) -> Option<Refusal> {
+    let caller = judged.caller;
+    // NOTE: our own design (#5586, #5606, #5609), SMART master08 §Resource Scopes and EHDS
+    // Art. 4(2) hold a patient context or a representative to one EHR, so every other refuses.
+    if caller.confined() && !judged.ehr.own {
+        return Some(caller.not_own());
+    }
+    // NOTE: our own design (#5614), a read under an agreement conditioned on consent names
+    // the consent decision, so a caller naming none is refused whatever the EHR permits.
+    let reads = matches!(
+        judged.asked.operation,
+        OperationClass::Read | OperationClass::Query | OperationClass::Export
+    );
+    (caller.lacks_consent_reference && reads).then_some(Refusal::ConsentReferenceMissing)
 }

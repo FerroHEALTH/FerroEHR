@@ -12,6 +12,7 @@ use uuid::Uuid;
 use super::care::Care;
 use super::records::Held;
 use super::{AccessCondition, CallerKeys, ConditionGroups, RequestAccess, VerdictPair, pinned};
+use crate::access_eval::care_tie::Cared;
 use crate::access_eval::class::Classes;
 use crate::service::ehr::access_settings::EhrAccessSettings;
 
@@ -23,15 +24,16 @@ impl RequestAccess {
     #[must_use]
     pub fn condition(&self, classes: &Classes, care: Care) -> AccessCondition {
         let held = Held::of_class(self.confined());
+        let left = self.care_left();
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
-            cared: self.judge_as(&held, settings, true).bare(),
-            uncared: self.judge_as(&held, settings, false).bare(),
+            cared: self.judge_as(&held, settings, &left).bare(),
+            uncared: self.judge_as(&held, settings, &Cared::No).bare(),
         };
         let mut groups: BTreeMap<VerdictPair, Vec<i64>> = BTreeMap::new();
         for (id, class) in &classes.classes {
             let judged = VerdictPair {
-                cared: self.judge_class(class, true).bare(),
-                uncared: self.judge_class(class, false).bare(),
+                cared: self.judge_class(class, &left).bare(),
+                uncared: self.judge_class(class, &Cared::No).bare(),
             };
             groups.entry(judged).or_default().push(*id);
         }

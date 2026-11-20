@@ -153,9 +153,7 @@ database:
   # The four runtime roles (ferroehr_clinical, ferroehr_party and a read-only
   # twin of each) are created by the migrations ONLY when the migrator holds
   # CREATEROLE; otherwise they are skipped with a NOTICE and provisioning them
-  # is yours. The released grant files also name ferroehr_linkage, so a first
-  # install without CREATEROLE needs that role too while the migrations run;
-  # the last migration drops it, or tells you to when it cannot. `ferroehr db verify` reports whether the
+  # is yours. `ferroehr db verify` reports whether the
   # boundary holds, and `deployment.profile: production` refuses to boot while a
   # domain role is missing.
   #

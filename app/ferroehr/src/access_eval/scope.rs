@@ -37,6 +37,7 @@ use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind};
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
+use crate::access_eval::care_tie::CareNeed;
 use crate::access_eval::class::{DataLayout, Layout};
 use crate::policy_register::CategoriesInForce;
 use crate::service::ehr::access_projection::{Bound, Validity, validity};
@@ -269,6 +270,10 @@ pub enum Pred {
     /// A fact of the EHR as a whole, which only a query of a settings class
     /// reads; it holds for every item of the EHR or for none.
     Ehr(EhrFact),
+    /// The caller holds a live care relationship to the EHR's subject that
+    /// meets the need, which only a query's statement reads; it holds for
+    /// every item of the EHR or for none.
+    Care(Arc<CareNeed>),
 }
 
 /// A fact of one EHR, named by its position in the EHR's projected facts,
@@ -347,6 +352,7 @@ impl Pred {
             Self::True | Self::Data(..) => Self::True,
             Self::False => Self::False,
             Self::Ehr(fact) => Self::Ehr(*fact),
+            Self::Care(need) => Self::Care(Arc::clone(need)),
             Self::Not(inner) => Self::negate(inner.always()),
             Self::All(preds) => Self::all(preds.iter().map(Self::maybe).collect()),
             Self::Any(preds) => Self::any(preds.iter().map(Self::maybe).collect()),
@@ -361,6 +367,7 @@ impl Pred {
             Self::True => Self::True,
             Self::False | Self::Data(..) => Self::False,
             Self::Ehr(fact) => Self::Ehr(*fact),
+            Self::Care(need) => Self::Care(Arc::clone(need)),
             Self::Not(inner) => Self::negate(inner.maybe()),
             Self::All(preds) => Self::all(preds.iter().map(Self::always).collect()),
             Self::Any(preds) => Self::any(preds.iter().map(Self::always).collect()),
@@ -391,7 +398,7 @@ impl Pred {
             Self::True => true,
             // NOTE: our own design (#5588), a direct read resolves every fact, so only a
             // query reads one; read in memory it covers nothing.
-            Self::False | Self::Ehr(_) => false,
+            Self::False | Self::Ehr(_) | Self::Care(_) => false,
             Self::Not(inner) => !inner.holds(item),
             Self::All(preds) => preds.iter().all(|pred| pred.holds(item)),
             Self::Any(preds) => preds.iter().any(|pred| pred.holds(item)),

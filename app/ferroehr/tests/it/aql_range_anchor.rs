@@ -516,15 +516,22 @@ async fn seed_times(svc: &FerroEhrService) -> usize {
     committed + 1
 }
 
-/// The statements of the clinical migration that fill `event_time` on the
-/// rows stored before it, addressed to the clinical schema.
+/// The statements that fill `event_time` from the stored times, as the v5
+/// migration that introduced the column filled it for the rows stored before
+/// it: the reading the insert path performs, run over rows the test rewrote.
 fn migration_fill() -> Vec<String> {
-    include_str!("../../migrations/clinical/0053_node_event_time.sql")
-        .split(';')
-        .map(str::trim)
-        .filter(|statement| statement.starts_with("UPDATE node"))
-        .map(|statement| statement.replacen("UPDATE node", "UPDATE clinical.node", 1))
-        .collect()
+    [
+        "UPDATE clinical.node \
+            SET event_time = ext.openehr_timestamp( \
+                CASE WHEN time_compact THEN data ->> 'time' ELSE data #>> '{time,value}' END) \
+          WHERE rm_type IN ('POINT_EVENT', 'INTERVAL_EVENT')",
+        "UPDATE clinical.node \
+            SET event_time = ext.openehr_timestamp( \
+                CASE WHEN origin_compact THEN data ->> 'origin' ELSE data #>> '{origin,value}' END) \
+          WHERE rm_type = 'HISTORY'",
+    ]
+    .map(str::to_owned)
+    .to_vec()
 }
 
 /// Rewrites the time of every fifth event and the origin of every fifth

@@ -148,7 +148,12 @@ impl SmartRoutes {
         if is_under(relative, "/demographic/party_relationship") && method != Method::GET {
             return Need::Representation(self.product());
         }
-        if is_under(relative, "/demographic") {
+        // NOTE: our own design (#6076), the care relationship resources read and write
+        // demographic facts, so they carry the Demographic API's need.
+        if is_under(relative, "/demographic")
+            || is_under(relative, "/care_relationship")
+            || is_under(relative, "/versioned_care_relationship")
+        {
             return self.demographic();
         }
         Need::Now(self.extension(method, relative, matched, path))

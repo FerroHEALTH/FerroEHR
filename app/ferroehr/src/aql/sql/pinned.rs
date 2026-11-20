@@ -46,7 +46,7 @@ pub(super) fn on_ehr_id(pinned: &PinnedEhr, target: &Expr) -> Expr {
 /// which PostgreSQL evaluates once per execution, reading the revision from
 /// the view `access_revision_of` inside the statement, and which fails the
 /// statement with SQLSTATE `ZA001` through `access_stale_copy()` when the
-/// revision moved (`clinical/0051_access_revision_view.sql`), so a stale
+/// revision moved (`clinical/0009_baseline_access.sql`), so a stale
 /// verdict answers no row, count or page (#5794, #5888). A missing EHR reads
 /// as the revision of nulls, as the store writes it.
 pub(super) fn in_force(pinned: &PinnedEhr) -> Expr {

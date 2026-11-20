@@ -14,6 +14,7 @@ use openehr_rm::draft::access_control::terminology::ForeignCode;
 use uuid::Uuid;
 
 use super::{EhrEntry, RequestAccess};
+use crate::access_eval::care_tie::Cared;
 use crate::access_eval::procedure::Verdict;
 use crate::ids::EhrId;
 use crate::party_binding::grants::live::GrantsUnavailable;
@@ -43,15 +44,15 @@ impl Held {
 }
 
 impl RequestAccess {
-    /// The verdict for the EHR `ehr_id` with `settings`, the caller `cared`
-    /// for its subject or not; `None` stands for an EHR that is no subject
-    /// caller's own.
+    /// The verdict for the EHR `ehr_id` with `settings`, the caller's care
+    /// for its subject read as `care`; `None` stands for an EHR that is no
+    /// subject caller's own.
     #[must_use]
     pub fn judge(
         &self,
         ehr_id: Option<EhrId>,
         settings: Option<&EhrAccessSettings>,
-        cared: bool,
+        care: &Cared,
     ) -> Verdict {
         let subject = self.is_record(ehr_id);
         // NOTE: our own design (#6106), a confined caller with no launch context reaches the
@@ -73,7 +74,7 @@ impl RequestAccess {
                 kinships,
             },
             settings,
-            cared,
+            care,
         )
     }
 
@@ -148,12 +149,15 @@ impl RequestAccess {
                 subject: Some(*person) == self.bound_person(),
                 kinships: caller.facts.kinships_with(*person),
             };
-            self.judge_as(&held, None, false).rules.iter().any(|rule| {
-                rule.then
-                    == crate::access_eval::procedure::Outcome::Refused(
-                        openehr_rm::draft::access_control::terminology::Refusal::Conflict,
-                    )
-            })
+            self.judge_as(&held, None, &Cared::No)
+                .rules
+                .iter()
+                .any(|rule| {
+                    rule.then
+                        == crate::access_eval::procedure::Outcome::Refused(
+                            openehr_rm::draft::access_control::terminology::Refusal::Conflict,
+                        )
+                })
         });
         persons
     }
