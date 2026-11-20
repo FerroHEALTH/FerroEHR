@@ -368,6 +368,18 @@ fn parties(lookup: &Lookup) -> Vec<PartyRef> {
     }
 }
 
+/// The parties `lookup` reports with the professional marker.
+fn professionals(lookup: &Lookup) -> Vec<PartyRef> {
+    match lookup {
+        Lookup::Parties(records) => records
+            .iter()
+            .filter(|r| r.markers().professional)
+            .map(|r| r.party().clone())
+            .collect(),
+        other => panic!("expected parties, got {other:?}"),
+    }
+}
+
 fn person_ref(vo: VoId) -> PartyRef {
     PartyRef::new(NAMESPACE, "PERSON", vo.to_string())
 }
@@ -452,7 +464,7 @@ async fn a_key_of_another_issuer_type_or_path_does_not_match() {
 }
 
 #[tokio::test]
-async fn a_person_without_a_live_professional_role_does_not_match() {
+async fn a_person_without_a_live_professional_role_carries_no_professional_marker() {
     let (_db, svc) = service().await;
 
     // A PERSON of a template the mapping does not name.
@@ -474,13 +486,20 @@ async fn a_person_without_a_live_professional_role_does_not_match() {
 
     // A PERSON with no ROLE at all.
     let roleless = "3e4f5a6b-7c8d-4e9f-8a1b-2c3d4e5f6a7b";
-    create(
+    let (roleless_vo, _) = create(
         &svc,
         PartyKind::Person,
         &person(PERSON_TEMPLATE, &[key(roleless)]),
     )
     .await;
-    assert_eq!(parties(&lookup(&svc, roleless).await), [], "no ROLE");
+    assert_eq!(professionals(&lookup(&svc, roleless).await), [], "no ROLE");
+    // It is still reported, with no marker: the login binds the person
+    // themself (#6106).
+    assert_eq!(
+        parties(&lookup(&svc, roleless).await),
+        [person_ref(roleless_vo)],
+        "no ROLE"
+    );
 
     // A ROLE of another template.
     let other_role = "4f5a6b7c-8d9e-4f0a-9b2c-3d4e5f6a7b8c";
@@ -493,7 +512,11 @@ async fn a_person_without_a_live_professional_role_does_not_match() {
         "532",
     )
     .await;
-    assert_eq!(parties(&lookup(&svc, other_role).await), [], "another ROLE");
+    assert_eq!(
+        professionals(&lookup(&svc, other_role).await),
+        [],
+        "another ROLE"
+    );
 
     // A ROLE whose time_validity ended before the lookup's date, and one that
     // starts after it.
@@ -507,7 +530,7 @@ async fn a_person_without_a_live_professional_role_does_not_match() {
         "532",
     )
     .await;
-    assert_eq!(parties(&lookup(&svc, ended).await), [], "ended ROLE");
+    assert_eq!(professionals(&lookup(&svc, ended).await), [], "ended ROLE");
     let future = "6b7c8d9e-0f1a-4b2c-9d4e-5f6a7b8c9d0e";
     performer(
         &svc,
@@ -518,7 +541,11 @@ async fn a_person_without_a_live_professional_role_does_not_match() {
         "532",
     )
     .await;
-    assert_eq!(parties(&lookup(&svc, future).await), [], "future ROLE");
+    assert_eq!(
+        professionals(&lookup(&svc, future).await),
+        [],
+        "future ROLE"
+    );
 
     // A reduced date reads as its whole year: a ROLE valid through 2026 is
     // live on the lookup's date.
@@ -532,7 +559,10 @@ async fn a_person_without_a_live_professional_role_does_not_match() {
         "532",
     )
     .await;
-    assert_eq!(parties(&lookup(&svc, this_year).await), [person_ref(vo)]);
+    assert_eq!(
+        professionals(&lookup(&svc, this_year).await),
+        [person_ref(vo)]
+    );
 
     // A retired ROLE: its head inactive.
     let retired = "8d9e0f1a-2b3c-4d4e-9f6a-7b8c9d0e1f2a";
@@ -546,7 +576,7 @@ async fn a_person_without_a_live_professional_role_does_not_match() {
     )
     .await;
     assert_eq!(
-        parties(&lookup(&svc, retired).await),
+        professionals(&lookup(&svc, retired).await),
         [person_ref(vo)],
         "live before"
     );
@@ -559,7 +589,11 @@ async fn a_person_without_a_live_professional_role_does_not_match() {
         "800",
     )
     .await;
-    assert_eq!(parties(&lookup(&svc, retired).await), [], "retired ROLE");
+    assert_eq!(
+        professionals(&lookup(&svc, retired).await),
+        [],
+        "retired ROLE"
+    );
 }
 
 #[tokio::test]
@@ -581,22 +615,14 @@ async fn a_second_person_binding_one_key_is_refused_at_its_commit() {
     let value = "0f1a2b3c-4d5e-4f6a-9b8c-9d0e1f2a3b4c";
     let (first, _) = professional(&svc, value).await;
 
-    // The second PERSON binds the key the moment it lists its professional
-    // ROLE, and the unique index on live keys refuses that commit.
+    // A login identifier binds one PERSON, whatever it does (#6106): the
+    // second PERSON carrying the key is refused at its creation by the unique
+    // index on live keys, before it lists any ROLE.
     let body = person(PERSON_TEMPLATE, &[key(&value.to_ascii_uppercase())]);
-    let (second, uid) = create(&svc, PartyKind::Person, &body).await;
-    let (role_vo, _) = create(&svc, PartyKind::Role, &role(ROLE_TEMPLATE, second, None)).await;
-    let mut listed = body;
-    listed["roles"] = json!([party_ref("ROLE", role_vo)]);
-    let refused = Box::pin(svc.party_update(
-        PartyKind::Person,
-        object(second.to_string()),
-        if_match(&uid),
-        version(&listed, "532", Some(&uid)),
-    ))
-    .await
-    .expect_err("a key another PERSON binds is refused")
-    .classified();
+    let refused = Box::pin(svc.party_create(PartyKind::Person, version(&body, "532", None)))
+        .await
+        .expect_err("a key another PERSON binds is refused")
+        .classified();
     assert!(
         matches!(refused, ferroehr::error::ServiceError::Conflict(_)),
         "{refused:?}"
@@ -1099,7 +1125,8 @@ async fn a_refill_rebuilds_every_row_from_the_versions() {
         "800",
     )
     .await;
-    // A PERSON with neither a ROLE nor a representation gets no row.
+    // A PERSON with neither a ROLE nor a representation holds its key row,
+    // with no professional dates and no representative flag (#6106).
     create(
         &svc,
         PartyKind::Person,
@@ -1113,7 +1140,13 @@ async fn a_refill_rebuilds_every_row_from_the_versions() {
 
     let pool = db.pool();
     let before = key_rows(&pool).await;
-    assert_eq!(before.len(), 4, "{before:#?}");
+    assert_eq!(before.len(), 5, "{before:#?}");
+    assert!(
+        before
+            .iter()
+            .any(|row| row.ends_with("|8b9c0d1e-2f3a-4b4c-9d5e-7f8a9b0c1d2e|532|{}|false|false")),
+        "{before:#?}"
+    );
     let members = "SELECT group_id::text || member_id::text FROM party.binding_membership \
                    WHERE retired_at IS NULL ORDER BY 1";
     let members_before: Vec<String> = sqlx::query_scalar(members)
@@ -1310,11 +1343,14 @@ async fn a_standalone_representation_holds_a_row_of_its_own() {
         &person(PERSON_TEMPLATE, &[key(value)]),
     )
     .await;
-    assert_eq!(
-        lookup(&svc, value).await,
-        Lookup::Parties(Vec::new()),
-        "no representation yet, so no key row"
-    );
+    // No representation yet: the key row binds the person themself, with
+    // no marker (#6106).
+    let found = lookup(&svc, value).await;
+    let Lookup::Parties(records) = &found else {
+        panic!("expected one party, got {found:?}");
+    };
+    assert_eq!(records.len(), 1, "{found:?}");
+    assert_eq!(records[0].markers(), Markers::default(), "{found:?}");
     let mut body = representation(
         REPRESENTATION,
         ("PERSON", proxy),
