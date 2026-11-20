@@ -328,14 +328,20 @@ hs_answered() {
 # ground of a refusal the answer itself withholds.
 hs_lookup_records() {
   local rid
-  # The judgement's traces carry no request id when they run outside its span.
-  hdc logs --no-color --since 2m ferroehr ferroehr-2 2>&1 | sed -E $'s/\x1b\\[[0-9;]*m//g' \
-    | grep -E 'subject this request|bound to no PERSON|against the caller|hides the EHR|as absent' \
-    | sed -E 's/request\{[^}]*\}: //' | tail -n 20 | cut -c1-300 | sed 's/^/        /' >&2
   for rid in $(hdc logs --no-color --since 2m ferroehr ferroehr-2 2>&1 \
     | sed -E $'s/\x1b\\[[0-9;]*m//g' \
     | grep -E 'route="/ferroehr/rest/openehr/v1/ehr" status=4' \
     | sed -nE 's/.*request_id="([^"]+)".*/\1/p' | tail -n 2); do
+    # The judgement's traces carry no request id when they run outside its
+    # span, so the ones of the lookup's second are printed.
+    local logs second
+    logs="$(hdc logs --no-color --since 3m ferroehr ferroehr-2 2>&1 | sed -E $'s/\x1b\\[[0-9;]*m//g')"
+    second="$(grep -F "$rid" <<<"$logs" | sed -nE 's/.*([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8})\..*/\1/p' | sed -n 1p)"
+    if [[ -n "$second" ]]; then
+      grep -F "$second" <<<"$logs" \
+        | grep -E 'subject this request|bound to no PERSON|against the caller|hides the EHR|as absent' \
+        | sed -E 's/request\{[^}]*\}: //' | cut -c1-300 | sed 's/^/        /' >&2
+    fi
     h_call 1 p:hans GET "$HX/admin/access-log?request_id=$rid"
     echo "        the access record of lookup $rid ($H_CODE): $(jq -c '[.entries[]? | del(.uid, .link,
       .system_id, .time_recorded, .action, .operation, .accessor, .retention, .channel)]' <<<"$H_BODY" 2>/dev/null | cut -c1-3000)" >&2
@@ -388,7 +394,7 @@ hs_authorize() {
     echo "        the stored subject of EHR $ehr ($H_CODE): $(jq -c '.subject' <<<"$H_BODY" 2>/dev/null)" >&2
     echo "        its row: $(hdc exec -T ferroehr-postgres psql -qtAX -U "${PG_INIT_USER:-ferroehr}" \
       -d "${PG_INIT_DB:-ferroehr}" -c "SELECT subject_id, subject_namespace FROM clinical.ehr \
-      WHERE id = '$ehr'" 2>&1 | head -3)" >&2
+      WHERE id = '$ehr'" 2>&1 | sed -n 1,3p)" >&2
     hs_answered; return 1 ;; esac
   page="$(curl -sS -c "$HS_JAR" -b "$HS_JAR" "$location")"
   form_token="$(hs_attribute "$page" '<input[^>]*name="form_token"[^>]*>' value)"
