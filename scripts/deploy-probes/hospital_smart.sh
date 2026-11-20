@@ -334,7 +334,7 @@ hs_lookup_records() {
     | sed -nE 's/.*request_id="([^"]+)".*/\1/p' | tail -n 2); do
     h_call 1 p:hans GET "$HX/admin/access-log?request_id=$rid"
     echo "        the access record of lookup $rid ($H_CODE): $(jq -c '[.entries[]? | del(.uid, .link,
-      .system_id, .time_recorded, .action, .operation)]' <<<"$H_BODY" 2>/dev/null | cut -c1-3000)" >&2
+      .system_id, .time_recorded, .action, .operation, .accessor, .retention, .channel)]' <<<"$H_BODY" 2>/dev/null | cut -c1-3000)" >&2
   done
 }
 
