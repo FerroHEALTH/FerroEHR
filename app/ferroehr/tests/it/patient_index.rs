@@ -32,7 +32,7 @@ use ferroehr::service::version_update::WriteRequest;
 use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
 
 /// The patient template the default mapping names.
-pub(crate) const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
+pub(crate) const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0";
 /// The patient's identifier domain, as a TRC's `system` names it.
 pub(crate) const NATIONAL: &str = "urn:oid:2.999.4.1";
 
@@ -47,7 +47,7 @@ pub(crate) fn identifier(issuer: &str, id: &str, kind: &str) -> Value {
 /// A patient `PERSON` of the shipped template carrying `identifiers` of the
 /// patient's domain and declaring `subjects` as its record subjects.
 pub(crate) fn patient(name: &str, identifiers: &[Value], subjects: &[Value]) -> Value {
-    let archetype = "openEHR-DEMOGRAPHIC-PERSON.patient.v1";
+    let archetype = "openEHR-DEMOGRAPHIC-PERSON.patient.v2";
     let mut items: Vec<Value> = identifiers
         .iter()
         .map(|value| {

@@ -226,14 +226,14 @@ hp_steward() {
 # record `mrn` at the patient identifier path and declaring the clinical
 # pseudonym `pseudonym` (#5648, #5634).
 j_patient() {
-  local name="$1" mrn="$2" pseudonym="$3" archetype="openEHR-DEMOGRAPHIC-PERSON.patient.v1"
+  local name="$1" mrn="$2" pseudonym="$3" archetype="openEHR-DEMOGRAPHIC-PERSON.patient.v2"
   jq -nc --arg a "$archetype" --arg n "$name" --arg s "$HP_SOURCE" --arg m "$mrn" \
     --arg c "$HP_CLINICAL" --arg p "$pseudonym" --argjson k "$(j_term record_subject)" '
     def text(v): {_type:"DV_TEXT",value:v};
     {_type:"PERSON",archetype_node_id:$a,
      archetype_details:{_type:"ARCHETYPED",rm_version:"1.1.0",
        archetype_id:{_type:"ARCHETYPE_ID",value:$a},
-       template_id:{_type:"TEMPLATE_ID",value:"openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"}},
+       template_id:{_type:"TEMPLATE_ID",value:"openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0"}},
      name:text($n),
      details:{_type:"ITEM_TREE",archetype_node_id:"id2",name:text("Details"),items:[
        {_type:"ELEMENT",archetype_node_id:"id3",name:text("Patient identifier"),
