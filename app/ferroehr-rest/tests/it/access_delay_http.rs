@@ -543,6 +543,13 @@ async fn the_delay_holds_on_the_callers_own_record_by_the_party_binding() {
     assert_eq!(status, StatusCode::NO_CONTENT, "release: {body}");
     let uids = population_uids(&app, &gina).await;
     assert!(uids.iter().any(|uid| uid.starts_with(&held)), "{uids:?}");
+    assert_eq!(
+        recorded(&pool, "subject-namespace:demographic")
+            .await
+            .as_deref(),
+        Some("gina"),
+        "the read of Gina's own subject references is an access record"
+    );
     for caller in [&gina, &gina_alone] {
         assert_eq!(read(&app, &own, &held, caller).await, StatusCode::OK);
         let uids = composition_uids(&app, &own, caller).await;

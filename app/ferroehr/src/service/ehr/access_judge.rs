@@ -337,8 +337,10 @@ impl FerroEhrService {
             return Ok(None);
         };
         let namespace = self.grants.namespace();
+        let references = self.grants.subjects_of(person).await?;
+        let count = u64::try_from(references.len()).unwrap_or(u64::MAX);
         let mut subjects = Vec::new();
-        for subject in self.grants.subjects_of(person).await? {
+        for subject in references {
             // NOTE: our own design (#6108), this CDR's own references name a PERSON by its
             // UUID, read in either case, as the evaluator reads it (`LiveGrants::person_of`).
             if *subject.namespace == *namespace {
@@ -348,6 +350,9 @@ impl FerroEhrService {
                 subjects.push((subject.id, subject.namespace));
             }
         }
+        // NOTE: our own design (#6108), the read of the caller's own subject references is
+        // recorded as every subject-reference read is, by its namespace and never its ids.
+        self.emit_resolution(&namespace, None, count).await?;
         Ok(Some(crate::aql::sql::OwnRecords {
             subjects: subjects.into(),
         }))
