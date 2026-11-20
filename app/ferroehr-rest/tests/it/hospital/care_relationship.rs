@@ -117,7 +117,7 @@ async fn a_care_relationship_is_written_read_and_versioned_by_party_and_by_subje
     assert_eq!(created.status, StatusCode::CREATED, "{}", created.body);
     let first = created.etag();
     let id = vo_of(&first);
-    assert!(first.ends_with("::1"), "{first}");
+    assert!(first.ends_with("::1"), "the creation is the first version");
     assert_eq!(
         crate::common::header(&created.headers, "location"),
         Some(format!("{EXT}/care_relationship/{first}").as_str())
@@ -151,7 +151,7 @@ async fn updates(world: &World, one: &str, first: &str) -> String {
     let updated = call_matching(&world.app, "client:adt", ("PUT", one), first, &changed).await;
     assert_eq!(updated.status, StatusCode::OK, "{}", updated.body);
     let second = updated.etag();
-    assert!(second.ends_with("::2"), "{second}");
+    assert!(second.ends_with("::2"), "the change is the second version");
     assert_eq!(role_of(&updated.json()), json!("RESP"));
     let stale = call_matching(&world.app, "client:adt", ("PUT", one), first, &changed).await;
     assert_eq!(
