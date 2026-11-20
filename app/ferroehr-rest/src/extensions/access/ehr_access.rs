@@ -87,7 +87,7 @@ pub(crate) async fn enforce(
         .map_err(|e| Box::new(unavailable(principal.as_ref(), e)))?;
     // NOTE: our own design (#5773), a COMPOSITION read judges the object it names on its
     // own row, before anything of the version leaves the server ([`admit_read`]).
-    if defers(state, op, parts, &verdict) {
+    if defers(ehr_id, op, parts, &verdict) {
         return Ok(());
     }
     // NOTE: our own design (#5627), a datum the path names is judged before any step about
@@ -123,12 +123,12 @@ pub(crate) struct Deferred {
 /// Whether `op` judges the object `parts` names on its read's own row under
 /// `verdict`, the verdict of the EHR its path names: a COMPOSITION read by its
 /// version or its latest, whose answer depends on the object, outside an
-/// EHDS Art. 3(3) delay, which answers before the read.
-fn defers(state: &AppState, op: &str, parts: &RequestParts, verdict: &Verdict) -> bool {
+/// EHDS Art. 3(3) delay on that EHR, which answers before the read.
+fn defers(ehr_id: EhrId, op: &str, parts: &RequestParts, verdict: &Verdict) -> bool {
     op == JUDGED_ON_READ
         && verdict.item_dependent()
         && query_param(parts.query.as_deref(), "version_at_time").is_none()
-        && !super::delay::applies(state, op)
+        && !ferroehr::system_log::access_context::access_delay_enforced_on(ehr_id)
         && !named_objects(parts).is_empty()
 }
 
@@ -161,7 +161,7 @@ pub(crate) async fn deferred(
         .ehr_verdict(&access, ehr_id)
         .await
         .map_err(|e| Box::new(unavailable(current_principal().as_ref(), e)))?;
-    Ok(defers(state, op, parts, &verdict).then_some(Deferred {
+    Ok(defers(ehr_id, op, parts, &verdict).then_some(Deferred {
         access,
         ehr_id,
         verdict,

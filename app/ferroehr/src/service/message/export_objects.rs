@@ -27,7 +27,7 @@ impl FerroEhrService {
         &self,
         ehr_id: EhrId,
     ) -> Result<Vec<(VoId, String)>, ServiceError> {
-        let objects = extract_repo::ehr_objects(&self.pool, ehr_id, enforced());
+        let objects = extract_repo::ehr_objects(&self.pool, ehr_id, enforced(ehr_id));
         self.readable_objects(ehr_id, objects.await?).await
     }
 
@@ -39,7 +39,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         vo_id: VoId,
     ) -> Result<Option<String>, ServiceError> {
-        let kind = extract_repo::ehr_object_kind(&self.pool, ehr_id, vo_id, enforced());
+        let kind = extract_repo::ehr_object_kind(&self.pool, ehr_id, vo_id, enforced(ehr_id));
         self.readable_kind(ehr_id, kind.await?).await
     }
 
@@ -88,10 +88,10 @@ impl FerroEhrService {
     }
 }
 
-/// The access marks the current request enforces, which every extract read
-/// honours.
-pub(super) fn enforced() -> Enforced {
+/// The access marks the current request enforces on `ehr_id`, which every
+/// extract read of it honours.
+pub(super) fn enforced(ehr_id: EhrId) -> Enforced {
     Enforced {
-        access_delay: crate::system_log::access_context::access_delay_enforced(),
+        access_delay: crate::system_log::access_context::access_delay_enforced_on(ehr_id),
     }
 }

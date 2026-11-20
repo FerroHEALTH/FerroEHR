@@ -43,7 +43,7 @@ pub(crate) async fn hold_on_creation(
     if committed.kind != Kind::Composition
         || committed.sys_version != 1
         || policy.categories().is_empty()
-        || crate::system_log::access_context::access_delay_enforced()
+        || crate::system_log::access_context::access_delay_enforced_on(ehr_id)
     {
         return Ok(());
     }
@@ -70,14 +70,15 @@ pub(crate) async fn hold_on_creation(
 /// object is withheld; [`ServiceError::Storage`] if the mark cannot be read.
 pub(crate) async fn ensure_not_withheld_tx(
     tx: &mut PgConnection,
+    ehr_id: Option<EhrId>,
     vo_id: Option<VoId>,
 ) -> Result<(), ServiceError> {
     let Some(vo_id) = vo_id else {
         return Ok(());
     };
-    if crate::system_log::access_context::access_delay_enforced()
-        && crate::storage::access_delay::is_withheld(tx, vo_id).await?
-    {
+    let delayed = crate::system_log::access_context::access_delay_enforced()
+        || ehr_id.is_some_and(crate::system_log::access_context::access_delay_enforced_on);
+    if delayed && crate::storage::access_delay::is_withheld(tx, vo_id).await? {
         return Err(ServiceError::not_found(
             Missing::VersionedObject,
             format!("versioned object {vo_id}"),

@@ -798,8 +798,15 @@ default, so the person's access stays immediate.
   as absent: a read answers **404** as for an unknown composition, a query and
   an export leave it out, a CONTRIBUTION lists none of its versions, and a write
   to it is refused as a write to an unknown target.
-- **What a professional sees.** Everything, as before. The hold changes no
-  professional route, query or export.
+- **On a professional's own record.** The person an EHR belongs to is read
+  from the party binding: a caller whose identity is bound to the `PERSON`
+  the EHR's `EHR_STATUS.subject` names is that record's person, whatever
+  roles it holds. On that EHR the hold applies to them as above, in a read,
+  a query pinned to the EHR, a query across the population and an export,
+  and their own write to it is never held. A bound person holding no role
+  reaches only their own records, so the hold applies on every one.
+- **What a professional sees.** Everything else, as before. The hold changes
+  no professional route, query or export on another person's record.
 - **Releasing it.** The treating professional releases a composition once it
   has been explained, from the clinical surface with
   `POST /ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release`.

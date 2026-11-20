@@ -81,13 +81,15 @@ pub async fn contribution_audit(
 /// — deduplicated.
 ///
 /// Returned as `(vo_id, (trunk, branch_number, branch_version),
-/// creating_system_id, kind_text)`.
+/// creating_system_id, kind_text)`. A version withheld from the person is
+/// left out when `person_withheld` (EHDS Art. 3(3)).
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
 pub async fn contribution_version_refs(
     pool: &PgPool,
     contribution_id: Uuid,
+    person_withheld: bool,
 ) -> Result<Vec<(VoId, (i32, i32, i32), String, String)>, StorageError> {
     // NOTE: EHDS Art. 8 and Art. 3(3) (`docs/law/eu/ehds/text.html`), a member the access
     // evaluator does not admit, or withheld from the person, is left out.
@@ -108,7 +110,7 @@ pub async fn contribution_version_refs(
          ORDER BY m.vo_id"
     ))
     .bind(contribution_id)
-    .bind(crate::system_log::access_context::access_delay_enforced())
+    .bind(person_withheld)
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
     let mut refs = Vec::with_capacity(rows.len());

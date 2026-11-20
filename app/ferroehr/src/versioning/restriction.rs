@@ -70,7 +70,7 @@ pub(crate) async fn ensure_not_restricted_tx(
         )));
     }
     let gate = ensure_not_access_restricted_tx(tx, ehr_id, vo_id, seen).await?;
-    crate::versioning::access_delay::ensure_not_withheld_tx(tx, vo_id).await?;
+    crate::versioning::access_delay::ensure_not_withheld_tx(tx, ehr_id, vo_id).await?;
     Ok(gate)
 }
 
