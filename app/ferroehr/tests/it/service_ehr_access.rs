@@ -32,7 +32,7 @@ const STRANGER: uuid::Uuid = uuid::Uuid::from_u128(0x0190_b3a2_5a3e_7c1d_9e2f_3b
 
 /// A caller of the running request.
 #[derive(Clone)]
-struct Caller {
+pub(crate) struct Caller {
     identity: Option<CommitterIdentity>,
     roles: Vec<String>,
 }
@@ -54,14 +54,14 @@ fn identity(login: &str) -> CommitterIdentity {
     }
 }
 
-fn professional() -> Caller {
+pub(crate) fn professional() -> Caller {
     Caller {
         identity: Some(identity("doctor")),
         roles: vec!["USER".to_owned()],
     }
 }
 
-fn administrator() -> Caller {
+pub(crate) fn administrator() -> Caller {
     Caller {
         identity: Some(identity("root")),
         roles: vec!["ADMIN".to_owned()],
@@ -69,7 +69,7 @@ fn administrator() -> Caller {
 }
 
 /// The record's person through a patient-context credential.
-fn subject() -> Caller {
+pub(crate) fn subject() -> Caller {
     Caller {
         identity: Some(CommitterIdentity {
             person: true,
@@ -80,7 +80,7 @@ fn subject() -> Caller {
 }
 
 /// A representative the server bound to the `PERSON` `person`.
-fn representative(person: uuid::Uuid) -> Caller {
+pub(crate) fn representative(person: uuid::Uuid) -> Caller {
     let login = format!("rep-{person}");
     Caller {
         identity: Some(CommitterIdentity {
@@ -111,7 +111,7 @@ fn server() -> Caller {
 }
 
 /// Runs `fut` as `caller`.
-async fn as_caller<F: Future>(caller: &Caller, fut: F) -> F::Output {
+pub(crate) async fn as_caller<F: Future>(caller: &Caller, fut: F) -> F::Output {
     Box::pin(ferroehr::system_log::access_context::with_roles(
         caller.roles.clone(),
         ferroehr::versioning::committer::with_committer(caller.identity.clone(), Box::pin(fut)),
@@ -138,7 +138,7 @@ fn provision(code: &str) -> Value {
 
 /// Restricted settings whose gate-keepers are the subject and the guardian,
 /// the `PERSON` `guardian`.
-fn kept(guardian: uuid::Uuid) -> Value {
+pub(crate) fn kept(guardian: uuid::Uuid) -> Value {
     json!({
         "_type": "ACCESS_DIRECTIVE_SETTINGS",
         "default_access": term("restricted"),
@@ -158,7 +158,7 @@ fn kept(guardian: uuid::Uuid) -> Value {
 /// A service whose administrator role is `ADMIN`, a fresh EHR, and the
 /// `PERSON` of the subject's guardian, a gate-keeper, which the demographic
 /// store holds as every party the settings name must be.
-async fn setup() -> (testkit::TestDb, FerroEhrService, EhrId, uuid::Uuid) {
+pub(crate) async fn setup() -> (testkit::TestDb, FerroEhrService, EhrId, uuid::Uuid) {
     let (db, svc) = crate::fixtures::service().await;
     let svc = svc.with_binding_mapping(BindingMapping::default().with_admin_role("ADMIN"));
     let ehr_id = crate::fixtures::create_ehr(&svc).await;
@@ -193,7 +193,7 @@ fn placeholder(caller: &Caller) -> Value {
 
 /// Commits, as `caller`, an `EHR_ACCESS` version carrying `settings` over the
 /// current version `preceding`; the committed CONTRIBUTION's uid.
-async fn write(
+pub(crate) async fn write(
     svc: &FerroEhrService,
     ehr_id: EhrId,
     caller: &Caller,
@@ -657,7 +657,7 @@ async fn a_commit_projects_the_settings_and_a_refill_rebuilds_them() {
 }
 
 /// `settings` carrying a marking of `level`, set by the controller.
-fn marked(mut settings: Value, level: &str) -> Value {
+pub(crate) fn marked(mut settings: Value, level: &str) -> Value {
     settings["marking"] = json!({ "_type": "CONFIDENTIALITY_MARKING",
         "confidentiality": { "_type": "DV_CODED_TEXT", "value": level,
             "defining_code": { "_type": "CODE_PHRASE",

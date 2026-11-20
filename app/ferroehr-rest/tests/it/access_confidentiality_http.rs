@@ -18,7 +18,7 @@ use crate::common;
 use crate::common::{BASE, EXT, TEST_SUBJECTS};
 
 /// Open settings whose marking is `level`.
-fn marked(level: &str) -> Value {
+pub(crate) fn marked(level: &str) -> Value {
     let mut settings = common::directive_settings(&[]);
     settings["marking"] = json!({ "_type": "CONFIDENTIALITY_MARKING",
         "confidentiality": { "_type": "DV_CODED_TEXT", "value": level,
@@ -32,7 +32,7 @@ fn marked(level: &str) -> Value {
 }
 
 /// Stores the access policy `members` as the controller.
-async fn put_policy(app: &Router, members: &Value) {
+pub(crate) async fn put_policy(app: &Router, members: &Value) {
     let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
     let mut policy = json!({
         "_type": "ACCESS_POLICY",

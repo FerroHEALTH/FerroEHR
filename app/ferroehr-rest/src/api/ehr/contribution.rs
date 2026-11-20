@@ -124,11 +124,12 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     let cid = parse_uuid(&p.contribution_uid, "contribution id")?;
     // `Prefer: resolve_refs` (Requests_and_responses §Representation
     // details negotiation): versions as full ORIGINAL_VERSIONs.
-    let body = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::ResolveRefs) {
-        state.backend().ehr_contribution(ehr_id, cid, true).await?
-    } else {
-        state.backend().ehr_contribution(ehr_id, cid, false).await?
-    };
+    let resolve = negotiate::prefer::prefers(h, negotiate::prefer::Preference::ResolveRefs);
+    let read = state
+        .backend()
+        .ehr_contribution(ehr_id, cid, resolve)
+        .await?;
+    let body = read.body;
     // A weak `ETag` on the contribution uid plus `Last-Modified` from
     // `audit.time_committed`: the released 200_CONTRIBUTION declares
     // neither, so this is our reading of the reach of the SHOULD in
@@ -147,7 +148,8 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
         }
         // The access record carries the categories of the versions the
         // CONTRIBUTION committed, resolved or not (EHDS Annex II 3.2(c)).
-        m.with_content(state.backend().audit_content_of_contribution(cid).await?)
+        m = m.with_content(state.backend().audit_content_of_contribution(cid).await?);
+        if read.redacted { m.redacted() } else { m }
     };
     // The envelope stays canonical JSON; a Simplified `Accept`
     // serializes each `versions[i].data` COMPOSITION into the requested
