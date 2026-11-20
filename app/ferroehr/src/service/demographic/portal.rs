@@ -42,10 +42,13 @@ const ACTIVE: [&str; 2] = ["532", "553"];
 /// the EHR it names.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PortalLogin {
-    /// No `PERSON` carries the login: the login is the patient's.
+    /// No `PERSON` carries the login, so it binds no one.
     Unbound,
     /// The `PERSON` carrying the login is the EHR's subject itself.
-    Subject,
+    Subject {
+        /// The subject's `PERSON` container.
+        person: Uuid,
+    },
     /// The `PERSON` `person` carries the login and represents the subject
     /// today, under the openEHR `subject_relationship` code `relationship`
     /// when the relationship names one.
@@ -108,7 +111,11 @@ impl FerroEhrService {
             return Ok(PortalLogin::Unrecorded { person });
         };
         if subject == person {
-            return Ok(PortalLogin::Subject);
+            return Ok(if ACTIVE.contains(&state.as_str()) {
+                PortalLogin::Subject { person }
+            } else {
+                PortalLogin::Inactive { person }
+            });
         }
         let today = crate::party_binding::source::today();
         let (live, relationship) = lookup::representation_of(&mut conn, person, subject, &today)

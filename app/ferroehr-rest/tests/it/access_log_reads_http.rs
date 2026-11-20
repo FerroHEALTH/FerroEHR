@@ -33,7 +33,7 @@ use sqlx::PgPool;
 
 use crate::common::{self, BASE, EXT};
 use crate::portal_representatives_http::{
-    CHILD_LOGIN, PARENT, PORTAL, child, config, representation, representative, token,
+    CHILD_LOGIN, PARENT, PORTAL, child, config, own_child, representation, representative, token,
 };
 
 /// The role every portal token carries, so the clinical class admits it.
@@ -70,7 +70,7 @@ pub(crate) async fn fixture() -> Fixture {
             .with_audit_store(AuditStore::new(pool.clone()))
             .with_binding_mapping(crate::party_binding_http::mapping()),
     );
-    let (subject, ehr) = child(&svc).await;
+    let (subject, ehr) = own_child(&svc).await;
     let (_, elsewhere) = child(&svc).await;
     let parent = representative(
         &svc,

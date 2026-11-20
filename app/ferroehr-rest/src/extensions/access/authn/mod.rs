@@ -125,6 +125,9 @@ pub struct Principal {
     /// The EHR a bound representative is confined to, `None` for every other
     /// caller (#5086).
     pub represented: Option<portal::RepresentedEhr>,
+    /// The `PERSON` the party binding binds the caller to as the person
+    /// themself, the one source of own access (EHDS Art. 3, #6080).
+    pub own: Option<ferrohealth_smart::party::PartyRef>,
 }
 
 impl Principal {
@@ -152,6 +155,7 @@ impl Principal {
                 AuthMethod::Bearer,
             ),
         };
+        let own = access.caller().and_then(party::own::own_person).cloned();
         Self {
             subject,
             scopes,
@@ -161,6 +165,7 @@ impl Principal {
             access,
             honoured,
             represented: None,
+            own,
         }
     }
 }

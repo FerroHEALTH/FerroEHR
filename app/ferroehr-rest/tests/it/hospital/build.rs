@@ -24,9 +24,8 @@ use ferroehr::service::FerroEhrService;
 use crate::hospital::world::{
     CONFIDENTIALITY, DEVICES, Doc, ENCOUNTER, LAB_TEMPLATE, LOGIN, MACHINES, MENTAL_HEALTH,
     PATIENTS, PORTAL_SCIM, PROVIDERS, Provisioned, ROLES, ROOT, SCIM, SCIM_SCOPE, STAFF, TEAMS,
-    VITALS, World, admit, call, capability, client, coded_in, config, create_party, day, named,
-    party_ref, patient_body, provider, read_party, region, replica, router, scim, term, text,
-    update_party,
+    VITALS, World, admit, call, capability, client, coded_in, config, day, named, party_ref,
+    provider, read_party, region, replica, router, scim, term, text, update_party,
 };
 
 /// The extension FerroEHR's User attributes sit in.
@@ -93,7 +92,9 @@ pub(crate) async fn world() -> World {
     let outside = provider(&app, "outside-clinic", &[]).await;
     let lab = provider(&app, "lab", &[]).await;
     agents.extend(system_clients(&app, (&member, &outside, &lab)).await);
-    let (eva, _) = create_party(&app, ROOT, "person", &patient_body(&[])).await;
+    let eva = user(&app, PORTAL_SCIM, "eva-login", ("Eva Visser", None))
+        .await
+        .person;
     let ehr = ehr_of(&app, &eva).await;
     let other_ehr = ehr_of(&app, &people["gina"].person).await;
     let mut world = World {

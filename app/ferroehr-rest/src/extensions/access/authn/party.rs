@@ -333,6 +333,14 @@ pub(super) async fn bind(
     let Some(caller) = access.caller() else {
         return Ok(access);
     };
+    if matches!(caller.kind(), CallerKind::Patient) {
+        return own::own_patient(binding, caller)
+            .await
+            .map(|bound| match bound {
+                Some(bound) => Access::Caller(Arc::new(bound)),
+                None => access.clone(),
+            });
+    }
     let outcome = match binding.shared.resolve(caller).await {
         // NOTE: GDPR Art. 9(3) and Art. 29, a guest acts only under this controller's
         // responsibility, which `[[auth.party]] guests` declares; our own design.
@@ -572,9 +580,7 @@ pub(super) fn committer_identity(
                 .map(str::to_owned),
         },
         client,
-        person: crate::smart::acts_as_person(principal)
-            || portal.is_some()
-            || caller.is_some_and(|caller| own::own_person(caller).is_some()),
+        person: crate::smart::acts_as_person(principal) || portal.is_some(),
         party: principal
             .access
             .caller()

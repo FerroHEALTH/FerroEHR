@@ -230,9 +230,16 @@ async fn record() -> Record {
     let patients = self::issuer().await;
     let (pg, app) = app(&uri, &patients.uri()).await;
     let professional = token(&uri, "dr-bob", PROFESSIONAL, None);
+    let alice = common::portal_patient(&pg.pool(), &patients.uri(), "alice").await;
     let (status, headers, text) = common::send(
         &app,
-        call("POST", &format!("{BASE}/ehr"), &professional, None, None),
+        call(
+            "POST",
+            &format!("{BASE}/ehr"),
+            &professional,
+            None,
+            Some(&common::person_status(alice)),
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "EHR create: {text}");
