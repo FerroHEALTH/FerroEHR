@@ -9,11 +9,13 @@
 //! the value last (#4437, #6022). An anchor is the condition a top-level
 //! conjunct implies, stated as a FROM item the planner can start from: the
 //! versions some node row of which, under the leaf step's own predicate,
-//! carries a value the conjunct keeps. Four leaves have one:
+//! carries a value the conjunct keeps. Five leaves have one:
 //!
 //! - a text leaf of an `ELEMENT` value under `=` or `matches` over a list of
 //!   strings, by its search text (`ext.node_search_text`,
-//!   `idx_node_hot_value_search`);
+//!   `idx_node_hot_value_search`), and on the `value` member a text in plain
+//!   decimal form also by the number of an ordinal or a scale
+//!   (`ext.node_number`, `idx_node_hot_value_number`, #6090);
 //! - the code of an `ELEMENT` value under `=` or `matches` over a list of
 //!   strings, the `defining_code` of a coded text or of an ordinal's symbol,
 //!   by `ext.node_code` (`idx_node_hot_value_code`);
@@ -21,7 +23,12 @@
 //!   `<=`, `>` or `>=`, by `node.event_time`, which the node insert fills
 //!   with the value the comparison reads (`idx_node_hot_event_time`);
 //! - the `magnitude` of an `ELEMENT` value under `<`, `<=`, `>` or `>=`, by
-//!   `ext.node_magnitude` (`idx_node_hot_value_magnitude`).
+//!   `ext.node_magnitude` (`idx_node_hot_value_magnitude`);
+//! - the `relationships/target/id/value` of a party root under `=` or
+//!   `matches` over a list of strings, in a demographic query that reads the
+//!   trunk head, by the open rows of `party_relationship_target`
+//!   (`uq_party_relationship_target_open`), which hold the party each trunk
+//!   head's relationships name (#6090).
 //!
 //! The conjunct itself stays in the statement and each anchor reads the
 //! value the conjunct reads, so an anchor removes work and no row. A conjunct
@@ -49,9 +56,10 @@ use openehr_query::lexer::CompOp;
 
 use crate::aql::error::AqlError;
 use crate::aql::ir::{
-    self, Bind, Coercion, FragmentStep, LeafPath, Operand, ParamValue, PathTarget, TypedLit,
+    self, Bind, Coercion, FragmentStep, LeafPath, Operand, ParamValue, PathTarget, QueryDomain,
+    TypedLit,
 };
-use crate::db::iden::{Node, VersionRow};
+use crate::db::iden::{Node, RelationshipTarget, VersionRow, VoHead};
 
 use super::Builder;
 use super::expr::{binoper, call, col, hot};
@@ -189,7 +197,7 @@ impl Builder<'_> {
                     let Some(text) = self.anchor_text(&bind) else {
                         continue;
                     };
-                    anchors.extend(self.value_anchor(leaf, &[text])?);
+                    anchors.extend(self.equality_anchor(leaf, &[text])?);
                 }
                 // NOTE: AQL QUERY master03 §matches: a value list holds when the leaf
                 // matches one of its items, so it reads as the equalities above.
@@ -206,7 +214,7 @@ impl Builder<'_> {
                         continue;
                     };
                     if !texts.is_empty() {
-                        anchors.extend(self.value_anchor(leaf, &texts)?);
+                        anchors.extend(self.equality_anchor(leaf, &texts)?);
                     }
                 }
                 // NOTE: AQL QUERY master03 §WHERE (`identifiedExpr`): the grammar puts the
@@ -265,9 +273,92 @@ impl Builder<'_> {
         }
     }
 
+    /// The anchor of the equality of `leaf` with one of `texts`: the
+    /// relationship target's ([`Self::target_anchor`]), or the value's.
+    ///
+    /// # Errors
+    /// [`AqlError`] from the leaf step's predicate lowering.
+    fn equality_anchor(
+        &mut self,
+        leaf: &LeafPath,
+        texts: &[String],
+    ) -> Result<Option<ValueAnchor>, AqlError> {
+        match self.target_anchor(leaf, texts) {
+            Some(anchor) => Ok(Some(anchor)),
+            None => self.value_anchor(leaf, texts),
+        }
+    }
+
+    /// The anchor of the equality of the relationship target
+    /// `relationships/target/id/value` of a party root with one of `texts`:
+    /// the parties whose trunk head names, among its relationships, one of
+    /// the parties the texts name, read from the open rows of
+    /// `party_relationship_target`; `None` for any other leaf, a text that
+    /// names no party, or a scope other than `LATEST_VERSION`.
+    ///
+    /// The table holds the target a reference names as
+    /// [`crate::party_binding::derive::container`] reads it (its root before
+    /// any `::`, case-folded, a hyphenated UUID), so a text the comparison
+    /// keeps names the same party and the parties it yields hold every party
+    /// the comparison keeps, and more. Its open rows name what each trunk head
+    /// names, so the anchor holds only for a query that reads the trunk head;
+    /// under `ALL_VERSIONS` or a version predicate a party's older versions
+    /// would be lost, and the comparison has no entry.
+    fn target_anchor(&mut self, leaf: &LeafPath, texts: &[String]) -> Option<ValueAnchor> {
+        if self.ir.domain != QueryDomain::Demographic || !leaf.anchor.is_empty() {
+            return None;
+        }
+        let names: Vec<&str> = leaf.fragment.iter().map(|s| s.name.as_str()).collect();
+        if names != ["relationships", "target", "id", "value"] {
+            return None;
+        }
+        let mut targets: Vec<uuid::Uuid> = texts
+            .iter()
+            .map(|text| crate::party_binding::derive::container(text))
+            .collect::<Option<_>>()?;
+        targets.sort_unstable();
+        targets.dedup();
+        let version = self.version_alias_of(leaf.source.0)?;
+        if !self.reads_trunk_head(&version) {
+            return None;
+        }
+        let key = self.node_key_of(&version);
+        let alias = format!("ra{}", self.next_ctr());
+        let (rows, head) = (format!("{alias}_t"), format!("{alias}_h"));
+        // The head is read per row by its key, so the entry probes one head a party
+        // and never scans the heads (PostgreSQL 18, "Scalar Subqueries").
+        let mut content_key = Query::select();
+        content_key
+            .column((Alias::new(head.as_str()), VoHead::TrunkHeadContentKey))
+            .from_as(VoHead::Table, Alias::new(head.as_str()))
+            .and_where(col(&head, VoHead::VoId).eq(col(&rows, RelationshipTarget::SourceVoId)));
+        let mut select = Query::select();
+        select
+            .distinct()
+            .expr_as(col(&rows, RelationshipTarget::SourceVoId), Node::VoId)
+            .expr_as(
+                Expr::SubQuery(None, Box::new(content_key.into())),
+                Node::SysVersion,
+            )
+            .from_as(RelationshipTarget::Table, Alias::new(rows.as_str()))
+            .and_where(match targets.as_slice() {
+                [one] => col(&rows, RelationshipTarget::TargetPartyId).eq(Expr::val(*one)),
+                _ => col(&rows, RelationshipTarget::TargetPartyId)
+                    .is_in(targets.iter().map(|target| Expr::val(*target))),
+            })
+            .and_where(col(&rows, RelationshipTarget::ValidTo).is_null());
+        Some(ValueAnchor {
+            alias,
+            version,
+            key,
+            select,
+        })
+    }
+
     /// The anchor of the equality of `leaf` with one of `texts`, or `None`
-    /// when the leaf is neither a text leaf of an `ELEMENT` value for every
-    /// text ([`search_text_leaf`]) nor its code ([`code_leaf`]).
+    /// when no value index holds the leaf ([`text_leaf`]). On the `value`
+    /// member a text in plain decimal form also reads the number of an
+    /// ordinal or a scale ([`plain_decimal`]).
     ///
     /// # Errors
     /// [`AqlError`] from the leaf step's predicate lowering.
@@ -276,15 +367,22 @@ impl Builder<'_> {
         leaf: &LeafPath,
         texts: &[String],
     ) -> Result<Option<ValueAnchor>, AqlError> {
-        let (function, column) = if code_leaf(&leaf.fragment) {
-            ("node_code", Node::ValueCode)
-        } else if texts
-            .iter()
-            .all(|text| search_text_leaf(&leaf.fragment, text))
-        {
-            ("node_search_text", Node::ValueText)
+        let kind = text_leaf(&leaf.fragment);
+        let (function, column) = match kind {
+            Some(TextLeaf::Code) => ("node_code", Node::ValueCode),
+            Some(TextLeaf::Search | TextLeaf::Value) => ("node_search_text", Node::ValueText),
+            None => return Ok(None),
+        };
+        // NOTE: our own design (#6090), a DV_ORDINAL's or DV_SCALE's `value` is a number
+        // that equals a text only when the text is its plain decimal rendering.
+        let numbers: Vec<&str> = if kind == Some(TextLeaf::Value) {
+            texts
+                .iter()
+                .map(String::as_str)
+                .filter(|text| plain_decimal(text))
+                .collect()
         } else {
-            return Ok(None);
+            Vec::new()
         };
         let Some((types, predicate)) = leaf_step(self.ir, leaf) else {
             return Ok(None);
@@ -293,18 +391,30 @@ impl Builder<'_> {
             return Ok(None);
         }
         self.row_anchor(leaf, predicate, false, |node| {
-            let read = call(
-                function,
-                vec![
-                    col(node, Node::ValueType),
-                    col(node, column),
-                    col(node, Node::Data),
-                ],
-            );
-            let test = match texts {
-                [text] => read.eq(Expr::val(text.as_str())),
-                _ => read.is_in(texts.iter().map(|text| Expr::val(text.as_str()))),
+            let read = |function: &str, column: Node| {
+                call(
+                    function,
+                    vec![
+                        col(node, Node::ValueType),
+                        col(node, column),
+                        col(node, Node::Data),
+                    ],
+                )
             };
+            let search = read(function, column);
+            let mut test = match texts {
+                [text] => search.eq(Expr::val(text.as_str())),
+                _ => search.is_in(texts.iter().map(|text| Expr::val(text.as_str()))),
+            };
+            if !numbers.is_empty() {
+                let number = read("node_number", Node::ValueNum);
+                let as_numeric =
+                    |text: &str| Expr::cust_with_exprs("CAST($1 AS numeric)", [Expr::val(text)]);
+                test = test.or(match numbers.as_slice() {
+                    [one] => number.eq(as_numeric(one)),
+                    _ => number.is_in(numbers.iter().map(|text| as_numeric(text))),
+                });
+            }
             (
                 col(node, Node::RmType).eq(Expr::cust(ELEMENT_LITERAL)),
                 test,
@@ -480,38 +590,48 @@ impl ValueAnchor {
     }
 }
 
-/// Whether an equality of the fragment path `steps` compares the code
-/// `ext.node_code` yields for every `ELEMENT` row that can satisfy it: the
-/// `defining_code` of a coded text, or of the symbol of an ordinal or a
-/// scale.
-fn code_leaf(steps: &[FragmentStep]) -> bool {
-    if steps.iter().any(|step| step.predicate.is_some()) {
-        return false;
-    }
-    let names: Vec<&str> = steps.iter().map(|step| step.name.as_str()).collect();
-    matches!(
-        names.as_slice(),
-        ["value", "defining_code", "code_string"]
-            | ["value", "symbol", "defining_code", "code_string"]
-    )
+/// Which value index an equality of a fragment path compares against.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TextLeaf {
+    /// The code `ext.node_code` yields: the `defining_code` of a coded text,
+    /// or of the symbol of an ordinal or a scale.
+    Code,
+    /// The search text `ext.node_search_text` yields: a `DV_IDENTIFIER` id,
+    /// a `DV_QUANTITY`'s units or a symbol's value.
+    Search,
+    /// The `value` member, which is the search text of every value but a
+    /// `DV_ORDINAL` or a `DV_SCALE`, whose `value` is the number
+    /// `ext.node_number` yields.
+    Value,
 }
 
-/// Whether an equality of the fragment path `steps` with `text` compares the
-/// text `ext.node_search_text` yields for every `ELEMENT` row that can
-/// satisfy it: a `DV_IDENTIFIER` id, a `DV_QUANTITY`'s units, a symbol's
-/// value, or the `value` member.
-///
-/// A `DV_ORDINAL` or `DV_SCALE` `value` is a number while its search text is
-/// its symbol, so an equality of `value/value` is anchored only on a text no
-/// number renders as.
-fn search_text_leaf(steps: &[FragmentStep], text: &str) -> bool {
+/// The value index an equality of the fragment path `steps` compares
+/// against, for every `ELEMENT` row that can satisfy it; `None` for a path
+/// no value index holds.
+fn text_leaf(steps: &[FragmentStep]) -> Option<TextLeaf> {
     if steps.iter().any(|step| step.predicate.is_some()) {
-        return false;
+        return None;
     }
     let names: Vec<&str> = steps.iter().map(|step| step.name.as_str()).collect();
     match names.as_slice() {
-        ["value", "id" | "units"] | ["value", "symbol", "value"] => true,
-        ["value", "value"] => text.parse::<f64>().is_err(),
-        _ => false,
+        ["value", "defining_code", "code_string"]
+        | ["value", "symbol", "defining_code", "code_string"] => Some(TextLeaf::Code),
+        ["value", "id" | "units"] | ["value", "symbol", "value"] => Some(TextLeaf::Search),
+        ["value", "value"] => Some(TextLeaf::Value),
+        _ => None,
     }
+}
+
+/// Whether `text` is how a number renders as text, `-?digits[.digits]`: a
+/// `numeric` and a JSON number both render in plain notation (PostgreSQL 18,
+/// "Numeric Types"), so a text of any other form equals no number.
+fn plain_decimal(text: &str) -> bool {
+    let unsigned = text.strip_prefix('-').unwrap_or(text);
+    let (whole, fraction) = unsigned
+        .split_once('.')
+        .map_or((unsigned, None), |(whole, fraction)| {
+            (whole, Some(fraction))
+        });
+    let digits = |part: &str| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit());
+    digits(whole) && fraction.is_none_or(digits)
 }

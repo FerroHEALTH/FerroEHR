@@ -27,6 +27,14 @@
 //! settings the caller may read ([`super::EhrAccessReaders`]), so a
 //! restriction stays invisible to a provider (EHDS Art. 8) in every query
 //! shape. Who reads the settings is our own design (#5508).
+//!
+//! The per-EHR gates hold for a clinical query only. The access-control
+//! decision procedure decides "every access to an EHR" (the FerroEHR access
+//! control draft, its decision procedure §Overview), and a party belongs to
+//! no EHR, so a demographic query reads a party under the Demographic API's
+//! rules: the policy-party mark and the Art. 3(3) delay, never the
+//! evaluator's condition or the settings readers, whose relations the party
+//! store does not hold (#6087). Our own design.
 
 use sea_query::{Expr, ExprTrait as _};
 
@@ -40,8 +48,8 @@ use crate::db::iden::VoHead;
 #[derive(Debug, Clone, Copy)]
 pub(super) struct Gates<'a> {
     /// The access evaluator's condition: a row it does not admit contributes
-    /// nothing.
-    access: &'a AccessCondition,
+    /// nothing. `None` for a demographic query, whose rows belong to no EHR.
+    access: Option<&'a AccessCondition>,
     /// The Art. 3(3) delay: an object withheld from the person contributes no
     /// row.
     person_withheld: bool,
@@ -49,8 +57,9 @@ pub(super) struct Gates<'a> {
     /// whose head carries the policy mark contributes a row. A clinical
     /// query reads no party, so it is [`PolicyParties::Served`] there.
     policy_parties: PolicyParties,
-    /// The EHRs whose `EHR_ACCESS` objects contribute rows.
-    access_settings: &'a EhrAccessReaders,
+    /// The EHRs whose `EHR_ACCESS` objects contribute rows; `None` for a
+    /// demographic query, which reads no `EHR_ACCESS`.
+    access_settings: Option<&'a EhrAccessReaders>,
 }
 
 impl<'a> Gates<'a> {
@@ -65,15 +74,16 @@ impl<'a> Gates<'a> {
         access: &'a AccessCondition,
     ) -> Self {
         use crate::system_log::access_context::access_delay_enforced;
+        let clinical = domain == QueryDomain::Clinical;
         Self {
-            access,
+            access: clinical.then_some(access),
             person_withheld: access_delay_enforced(),
-            policy_parties: if domain == QueryDomain::Demographic {
-                policy_parties
-            } else {
+            policy_parties: if clinical {
                 PolicyParties::Served
+            } else {
+                policy_parties
             },
-            access_settings,
+            access_settings: clinical.then_some(access_settings),
         }
     }
 
@@ -85,7 +95,10 @@ impl<'a> Gates<'a> {
             predicates.push(col(h, VoHead::PolicyPartyAt).is_null());
         }
         // NOTE: our own design (#5513), a row the access evaluator does not admit contributes none.
-        predicates.extend(super::access::on_head(self.access, h));
+        predicates.extend(
+            self.access
+                .and_then(|access| super::access::on_head(access, h)),
+        );
         // NOTE: EHDS Art. 3(3), an object withheld from the person contributes no row.
         if self.person_withheld {
             let until = col(h, VoHead::PersonWithheldUntil);
@@ -93,7 +106,7 @@ impl<'a> Gates<'a> {
         }
         // NOTE: EHDS Art. 8, an EHR_ACCESS whose settings the caller may not read
         // contributes no row, so a restriction stays invisible (our own design).
-        if let EhrAccessReaders::Only(keepers) = self.access_settings {
+        if let Some(EhrAccessReaders::Only(keepers)) = self.access_settings {
             let other_kind = col(h, VoHead::Kind).ne(Expr::val("EHR_ACCESS"));
             predicates.push(if keepers.groups.is_empty() {
                 other_kind
@@ -108,6 +121,7 @@ impl<'a> Gates<'a> {
     /// versioned-object root or an EHR source: an EHR none of whose data the
     /// caller may read contributes no row.
     pub(super) fn on_ehr_id(self, target: &Expr) -> Option<Expr> {
-        super::access::on_ehr_id(self.access, target)
+        self.access
+            .and_then(|access| super::access::on_ehr_id(access, target))
     }
 }

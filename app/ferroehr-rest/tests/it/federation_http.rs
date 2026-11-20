@@ -221,6 +221,9 @@ async fn serve_observed(
         ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
             .expect("a public root"),
     );
+    // NOTE: our own design (#6117), a caller rate is judged on a clock held still, so no
+    // admitted request's duration refills the allowance the next one is judged against.
+    config.rate_clock = ferroehr_rest::config::RateClock::still();
     let app = common::build_full(config, Arc::clone(&svc), None, observability).await;
     (db, svc, app)
 }

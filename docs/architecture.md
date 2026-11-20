@@ -624,7 +624,7 @@ serialized JSON; AQL 1.1.0 leaves this open, so the reading is our own
 never through `float8` (#5753). The emitter uses no
 jsonpath item methods (their date/time conversions depend on the session
 TimeZone and are not index-legal), no `JSON_TABLE`, and no GIN index (it
-emits no GIN-servable operator; the baseline removed the index). Four
+emits no GIN-servable operator; the baseline removed the index). Five
 value indexes give a filter an entry: `idx_node_hot_value_search` on
 `ext.node_search_text`, the text an equality on a text leaf of an ELEMENT
 value compares against from the typed value columns or the stored fragment
@@ -635,7 +635,13 @@ on the `defining_code` of a coded text or of an ordinal's symbol reads from
 `ext.openehr_timestamp` of an event row's `time` and of a history row's
 `origin`, which the node insert stores; and `idx_node_hot_value_magnitude`
 on `ext.node_magnitude`, the number an ordering comparison of an ELEMENT
-value's `magnitude` reads from `value_num` or the stored fragment (#6022).
+value's `magnitude` reads from `value_num` or the stored fragment (#6022);
+and `idx_node_hot_value_number` on `ext.node_number`, the number a
+`DV_ORDINAL`'s or `DV_SCALE`'s `value` holds, from `value_num` or the stored
+fragment, which an equality of `value/value` with a text in plain decimal
+form (`'19500101'`) reads beside the search text, since such a value's
+search text is its symbol (#6090). It costs 72 bytes of WAL per ordinal or
+scale value a commit writes, and nothing on a commit without one.
 The WHERE lowering adds, for a top-level comparison one of them serves, a
 FROM item of the distinct versions some row of which carries a value the
 comparison keeps (`aql::sql::anchor`), so the statement
@@ -645,7 +651,13 @@ value the comparison reads, so an anchor removes work and no row. The
 comparisons of one leaf share one anchor, so a window reads the rows inside
 it. A `matches` over a list of strings reads as the equalities it lists
 (QUERY master03 §matches), so it takes the equality anchor with the members
-as an `IN` list, when every member could anchor its equality (#6084). An
+as an `IN` list, when every member could anchor its equality (#6084). In a
+demographic query that reads the trunk head, an equality of a party's
+`relationships/target/id/value` with a text that names a party enters
+through the open rows of `party_relationship_target`, which hold the party
+each trunk head's relationships name, as the commit derives it (root before
+`::`, case-folded, a hyphenated UUID); the comparison keeps its exact text,
+and under `ALL_VERSIONS` or a version predicate it has no entry (#6090). An
 equality's anchor always applies. A range may keep most of the store,
 so its anchor depends on the statement (`aql::sql::anchor::RangeEntry`): in
 the flat shape the planner places it; a population statement that streams
@@ -691,7 +703,7 @@ each party's class (`version.kind`) and matches the subject reference against
 that class and its demographic RM ancestors. The planner
 marks the IR `QueryDomain::Demographic`, and the same SQL runs on the party
 pool, whose `search_path` names the `party` schema rendered from the same DDL,
-without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`). An `EHR` operand directly under the root is the join to the EHR the
+without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`, and the access evaluator's per-EHR condition, which decides access to an EHR and has no row to judge on a party, #6087). An `EHR` operand directly under the root is the join to the EHR the
 party is the subject of: `aql::join` cuts the AST into a party half and a
 clinical half, the service runs the party half on the party pool, finds the
 EHRs whose subject names those parties, runs the clinical half scoped to them

@@ -366,7 +366,8 @@ async fn a_read_names_the_subject_in_the_store_after_it_moves() {
         "the read judged on the moved subject: {body}"
     );
 
-    let named = patients(&pool, &ehr, 3).await;
+    // The create's record lands beside the three reads', so all four are awaited.
+    let named = patients(&pool, &ehr, 4).await;
     let named: Vec<&str> = named
         .iter()
         .rev()
