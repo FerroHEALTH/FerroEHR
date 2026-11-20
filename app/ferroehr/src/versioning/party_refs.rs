@@ -95,9 +95,8 @@ impl Referent {
                 Kind::Role,
             ],
             Referent::Actor => &[Kind::Agent, Kind::Group, Kind::Organisation, Kind::Person],
-            Referent::Role => &[Kind::Role],
+            Referent::Role | Referent::Carer(CarerKind::Role) => &[Kind::Role],
             Referent::Carer(CarerKind::Person) => &[Kind::Person],
-            Referent::Carer(CarerKind::Role) => &[Kind::Role],
             Referent::Carer(CarerKind::Group) => &[Kind::Group],
             Referent::Carer(CarerKind::Organisation) => &[Kind::Organisation],
         }

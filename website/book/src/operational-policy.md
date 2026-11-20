@@ -1723,7 +1723,8 @@ named by codes of `openehr_access`:
 | --- | --- | --- |
 | `care_role` | 1..1 | A `DV_CODED_TEXT`: the part the carer plays in the patient's care, of the value set the access policy binds for `care_role`, or of `HL7_ParticipationType` when it binds none, such as `RESP`, `ATND` or `PART` when the role is not stated |
 | `provider` | 1..1 | A `DV_IDENTIFIER` of type `ORGANISATION`: the healthcare provider in whose care the relationship is, by the namespace of its reference and its id, or by the issuer and id of its identifier |
-| `covers_for`, `context` | 0..1 | A `DV_IDENTIFIER`: the carer the target replaces, and the episode, referral or case the relationship belongs to |
+| `covers_for` | 0..1 | A `DV_IDENTIFIER` in the provider's form: the carer the target replaces, its `issuer` the namespace of the carer's reference, its `id` the carer's container and its `type` the carer's kind (`PERSON`, `ROLE`, `GROUP` or `ORGANISATION`), never the target itself |
+| `context` | 0..1 | A `DV_IDENTIFIER`: the episode, referral or case the relationship belongs to |
 | `basis` | 0..1 | `assigned` (the default); `self_declared` where the policy sets `self_declared_care` ([Writing a care relationship](#writing-a-care-relationship)) |
 
 A caller holds a live care relationship when the relationship's `target`
@@ -1740,7 +1741,9 @@ namespace and id) or by its identifier (issuer and id), and for the
 upper bound, and the relationship stays, so the evaluator can apply a grace
 period after it. A relationship without a `care_role` or a `provider`, with a
 role outside its value set, or with a target of another kind is refused
-`422`. A care relationship held in a `PERSON`'s `relationships` is refused
+`422`, as is one whose `provider` names no `ORGANISATION` of the store by
+the identifier it carries, or whose `covers_for` names no party of its
+`type`, names the target, or lacks its issuer, container id or type. A care relationship held in a `PERSON`'s `relationships` is refused
 `422`, naming `/demographic/party_relationship`. The default definitions ship
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.1` and
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2.0.0` as examples

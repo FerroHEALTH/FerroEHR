@@ -17,9 +17,7 @@
 
 use serde_json::{Value, json};
 
-use crate::policy_fixtures::{
-    CARE_PROVIDER, as_admin, care_provider, create, deaf, granting,
-};
+use crate::policy_fixtures::{CARE_PROVIDER, as_admin, care_provider, create, deaf, granting};
 use ferroehr::db::domain::{Domain, DomainPools};
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Invalid;
@@ -191,6 +189,7 @@ async fn an_open_relationship_takes_the_default_period_of_the_policy_version_con
     let (patient, _) = create(&reader, PartyKind::Person, &party("PERSON", "Patient"))
         .await
         .expect("the patient");
+    care_provider(&reader, CARE_PROVIDER).await;
     let (team, _) = create(&reader, PartyKind::Group, &party("GROUP", "Cardiology"))
         .await
         .expect("the team");
@@ -300,6 +299,7 @@ async fn a_relationship_past_the_maximum_or_no_entry_covers_open_is_refused() {
     let (patient, _) = create(&svc, PartyKind::Person, &party("PERSON", "Patient"))
         .await
         .expect("the patient");
+    care_provider(&svc, CARE_PROVIDER).await;
     let (team, _) = create(&svc, PartyKind::Group, &party("GROUP", "Cardiology"))
         .await
         .expect("the team");
@@ -336,6 +336,7 @@ async fn an_organisation_target_needs_team_targets_and_is_never_the_controller()
     let (patient, _) = create(&svc, PartyKind::Person, &party("PERSON", "Patient"))
         .await
         .expect("the patient");
+    care_provider(&svc, CARE_PROVIDER).await;
     let (ward, _) = create(
         &svc,
         PartyKind::Organisation,
@@ -379,6 +380,7 @@ async fn an_archive_load_gives_an_open_relationship_the_end_of_the_policy_in_for
     let (patient, _) = create(&source, PartyKind::Person, &party("PERSON", "Patient"))
         .await
         .expect("the patient");
+    care_provider(&source, CARE_PROVIDER).await;
     let (team, _) = create(&source, PartyKind::Group, &party("GROUP", "Cardiology"))
         .await
         .expect("the team");
@@ -458,6 +460,7 @@ async fn an_erasure_drops_the_kept_end() {
     let (patient, _) = create(&svc, PartyKind::Person, &party("PERSON", "Patient"))
         .await
         .expect("the patient");
+    care_provider(&svc, CARE_PROVIDER).await;
     let (team, _) = create(&svc, PartyKind::Group, &party("GROUP", "Cardiology"))
         .await
         .expect("the team");
@@ -509,8 +512,7 @@ async fn amend(
     write.lifecycle_state = Some("532".to_owned());
     write.preceding = Some(version.parse().expect("an OBJECT_VERSION_ID"));
     as_admin(async {
-        Box::pin(svc.party_relationship_update(vo, crate::fixtures::if_match(version), write))
-            .await
+        Box::pin(svc.party_relationship_update(vo, crate::fixtures::if_match(version), write)).await
     })
     .await
     .map(|_| ())
@@ -584,10 +586,26 @@ async fn a_provider_or_covers_for_naming_no_party_is_refused_on_create_and_updat
         relate(&svc, &with_elements(&stay, "nowhere", None)).await,
         "/details",
     );
-    refused_cover(relate(&svc, &with_elements(&stay, hospital, Some(cover("PERSON", dangling)))).await);
-    refused_cover(relate(&svc, &with_elements(&stay, hospital, Some(cover("PERSON", &team)))).await);
+    refused_cover(
+        relate(
+            &svc,
+            &with_elements(&stay, hospital, Some(cover("PERSON", dangling))),
+        )
+        .await,
+    );
+    refused_cover(
+        relate(
+            &svc,
+            &with_elements(&stay, hospital, Some(cover("PERSON", &team))),
+        )
+        .await,
+    );
     refused_unread(
-        relate(&svc, &with_elements(&stay, hospital, Some(cover("PERSON", &carer)))).await,
+        relate(
+            &svc,
+            &with_elements(&stay, hospital, Some(cover("PERSON", &carer))),
+        )
+        .await,
         "names its target",
     );
     let untyped = json!({ "_type": "DV_IDENTIFIER", "issuer": "demographic", "id": covered });
@@ -600,7 +618,12 @@ async fn a_provider_or_covers_for_naming_no_party_is_refused_on_create_and_updat
         .await
         .expect("a cover naming another held PERSON commits");
     refused(
-        amend(&svc, (vo, &version), &with_elements(&stay, "nowhere", covering)).await,
+        amend(
+            &svc,
+            (vo, &version),
+            &with_elements(&stay, "nowhere", covering),
+        )
+        .await,
         "/details",
     );
     refused_cover(

@@ -317,6 +317,32 @@ async fn person(app: &Router) -> String {
         .to_owned()
 }
 
+/// The provider `ORGANISATION` [`care_of`] names, `urn:example:providers`
+/// `hospital`, created by the administrator, so its `provider` names a party.
+async fn provider(app: &Router) {
+    let archetype = "openEHR-DEMOGRAPHIC-ORGANISATION.hospital.v1";
+    let text = |value: &str| json!({ "_type": "DV_TEXT", "value": value });
+    let body = json!({ "_type": "ORGANISATION", "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.1.0",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype } },
+        "name": text("Hospital"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0001", "name": text("details"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0002", "name": text("provider"),
+                "value": { "_type": "DV_IDENTIFIER", "issuer": "urn:example:providers",
+                           "id": "hospital", "type": "healthcare-provider" } }] },
+        "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "at0003",
+            "name": text("name"),
+            "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0004", "name": text("name"),
+                "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0005", "name": text("name"),
+                            "value": text("Hospital") }] } }] });
+    let req = common::req("POST", format!("{BASE}/demographic/organisation"))
+        .auth(common::basic_credential("root"))
+        .json(body.to_string())
+        .build();
+    let (status, _, answer) = common::send(app, req).await;
+    assert_eq!(status, StatusCode::CREATED, "{answer}");
+}
+
 /// A care relationship of its own from `patient` to `carer`'s `PERSON` in
 /// the role `role` of `HL7_ParticipationType`.
 fn care_of(patient: &str, carer: &str, role: &str) -> Value {
@@ -374,6 +400,7 @@ async fn a_care_role_outside_the_bound_value_set_is_refused() {
         .await;
     let (svc, app) = replica(&pool, Some(&server.uri())).await;
     create(&app, &binding(policy(false), "care_role", CARE_ROLE_VS)).await;
+    provider(&app).await;
     let (patient, carer) = (person(&app).await, person(&app).await);
     let post = |body: Value| {
         common::req("POST", format!("{EXT}/demographic/party_relationship"))

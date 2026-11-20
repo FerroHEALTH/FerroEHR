@@ -202,6 +202,7 @@ async fn a_care_relationship_outside_the_grants_providers_or_target_kinds_is_ref
     let db = testkit::db().await.expect("testkit database");
     let svc = replica(&db).await;
     let (adt, _) = granted(&svc, "adt", &[care_writer()]).await;
+    care_provider(&svc, CARE_PROVIDER).await;
     let elsewhere = capability(
         "write_care_relationship",
         &[
@@ -308,6 +309,7 @@ async fn a_relationship_never_admits_the_principal_that_wrote_it() {
     let db = testkit::db().await.expect("testkit database");
     let svc = replica(&db).await;
     let (adt, _) = granted(&svc, "adt", &[care_writer()]).await;
+    care_provider(&svc, CARE_PROVIDER).await;
     let (team, _) = create(&svc, PartyKind::Group, &ward("Cardiology"))
         .await
         .expect("the GROUP commits");
