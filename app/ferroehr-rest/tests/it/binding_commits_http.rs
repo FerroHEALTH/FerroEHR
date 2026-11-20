@@ -206,6 +206,9 @@ async fn a_bound_professionals_attestation_stores_the_servers_committer() {
     let (person_uid, _) = professional(&svc, CLINICIAN, "532").await;
     let credential = token(CLINICIAN, &json!({}));
     let ehr = ehr(&app, &credential).await;
+    // A professional's composer is the placeholder naming them (#6130).
+    let mut composed = crate::access_evaluator_patient_http::composition();
+    composed["composer"] = placeholder(ISSUER, CLINICIAN);
 
     let (_, body) = answered(
         &app,
@@ -213,11 +216,7 @@ async fn a_bound_professionals_attestation_stores_the_servers_committer() {
             "POST",
             &format!("/ehr/{ehr}/contribution"),
             &credential,
-            &contribution(
-                &crate::access_evaluator_patient_http::composition(),
-                &placeholder(ISSUER, CLINICIAN),
-                true,
-            ),
+            &contribution(&composed, &placeholder(ISSUER, CLINICIAN), true),
         ),
         StatusCode::CREATED,
         "the attested contribution",

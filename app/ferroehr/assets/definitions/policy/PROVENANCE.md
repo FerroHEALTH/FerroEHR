@@ -1,6 +1,6 @@
 # Policy definitions: provenance
 
-Five ADL 2 archetypes, the defaults of FerroEHR's authorization model. The
+Six ADL 2 archetypes, the defaults of FerroEHR's authorization model. The
 binary carries them (`ferroehr::party_binding::policy::DEFINITIONS`), and
 each boot stores one when no definition of its id is stored, never over a
 stored one. They are examples: FerroEHR recognises a policy party by the
@@ -34,6 +34,11 @@ book's "Operational policy" page describes the model.
 5. `openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls`: a privilege a person
    holds beyond clinical access (subject audit, access service, identifier
    reader, import).
+6. `openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.1.adls`: the privileged `ROLE`
+   with a fifth kind, `at14` "Compose for", the `compose_for` grant that lets
+   a professional name another professional of the same provider as the
+   composer of what they commit (#6130). It is a new version beside v1.0.0,
+   which stays as published.
 
 ## Source
 
