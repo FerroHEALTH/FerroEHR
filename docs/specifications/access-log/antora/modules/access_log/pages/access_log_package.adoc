@@ -18,7 +18,7 @@ An `ACCESS_LOG_ENTRY` records one access event to the data of at most one EHR. A
 
 === Why and Under Which Authorisation
 
-`_purposes_` holds the purposes of use. `_authorisations_` holds each ground of the access decision: a role, a treatment relationship, an agreement with its version and legal grounds, a consent decision with its reference, a permit, an emergency override, the subject's own access, a representation, or a legal obligation. A treatment relationship carries in `ACCESS_CARE_GROUND` the care relationship the access rested on, as the Access Control Information Model's decision procedure asks: its role, its path with the care team or unit for `team`, the version that holds it, whether the grace after its end admitted the access, the carer it covers for and the provider in whose care it is. `_is_emergency_` marks an access under an emergency override.
+`_purposes_` holds the purposes of use. `_authorisations_` holds each ground of the access decision: a role, a treatment relationship, an agreement with its version and legal grounds, a consent decision with its reference, a permit, an emergency override, the subject's own access, a representation, or a legal obligation. A treatment relationship carries in an `ACCESS_CARE_GROUND` the care relationship the access rested on, as the Access Control Information Model's decision procedure asks: its role and its path, then, for a stored relationship (`ACCESS_STORED_CARE_GROUND`), its carer with the care team or unit for `team`, the version that holds it, whether the grace after its end admitted the access, the carer it covers for and the provider in whose care it is, and, for one a verified credential attests (`ACCESS_ATTESTED_CARE_GROUND`), the assertion and the agreement it was attested under. An access a rule's exception admits through a care relationship carries the same ground. `_is_emergency_` marks an access under an emergency override.
 
 === Outcome, System and Transport
 
@@ -51,6 +51,10 @@ include::ROOT:partial$classes/access_query.adoc[]
 include::ROOT:partial$classes/access_authorisation.adoc[]
 
 include::ROOT:partial$classes/access_care_ground.adoc[]
+
+include::ROOT:partial$classes/access_stored_care_ground.adoc[]
+
+include::ROOT:partial$classes/access_attested_care_ground.adoc[]
 
 include::ROOT:partial$classes/access_channel.adoc[]
 

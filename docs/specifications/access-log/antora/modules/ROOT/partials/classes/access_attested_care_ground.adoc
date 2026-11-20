@@ -1,0 +1,13 @@
+=== ACCESS_ATTESTED_CARE_GROUND Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_attested_care_ground.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_attested_care_ground.adoc[]
+
+====

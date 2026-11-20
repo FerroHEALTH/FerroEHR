@@ -23,6 +23,7 @@ use crate::draft::access_control::terminology::log::{
     AccessorKind, Action, Authorisation, CredentialBinding, Outcome,
 };
 use crate::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
+use crate::draft::access_log::access_log::access_care_ground::AccessCareGround;
 use crate::draft::access_log::access_log::access_credential::AccessCredential;
 use crate::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
 use crate::draft::access_log::access_log::access_log_entry::AccessLogEntry;
@@ -232,10 +233,23 @@ fn authorisation_rules(check: &mut Check, authorisation: &AccessAuthorisation) {
             "ACCESS_AUTHORISATION",
             "Care_valid",
         );
-        check.hold(
-            CarePath::read_coded(&care.path).is_ok(),
-            "ACCESS_CARE_GROUND",
+        care_rules(check, care);
+    }
+}
+
+/// `Path_valid` of each care ground form: a stored relationship reached by
+/// any path but `attested`, an attested one only by `attested`.
+fn care_rules(check: &mut Check, care: &AccessCareGround) {
+    match care {
+        AccessCareGround::AccessStoredCareGround(stored) => check.hold(
+            CarePath::read_coded(&stored.path).is_ok_and(|path| path != CarePath::Attested),
+            "ACCESS_STORED_CARE_GROUND",
             "Path_valid",
-        );
+        ),
+        AccessCareGround::AccessAttestedCareGround(attested) => check.hold(
+            CarePath::read_coded(&attested.path) == Ok(CarePath::Attested),
+            "ACCESS_ATTESTED_CARE_GROUND",
+            "Path_valid",
+        ),
     }
 }
