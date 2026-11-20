@@ -504,12 +504,20 @@ async fn a_rules_care_roles_purposes_and_time_zone_are_stored_or_refused() {
         assert_eq!(read[attribute], written[attribute], "{attribute}");
     }
     let scope = "/rules/0/exceptions/0/applies_to/0/care_roles/0";
-    let local_role = with_care_rule(&coded("urn:example:roles", "RESP"), &[treat.clone()], "UTC");
+    let local_role = with_care_rule(
+        &coded("urn:example:roles", "RESP"),
+        std::slice::from_ref(&treat),
+        "UTC",
+    );
     let (status, answer) = replace(&app, &first, &local_role).await;
     names(status, &answer, scope);
     let bound = |role: &str| {
         binding(
-            with_care_rule(&coded("urn:example:roles", role), &[treat.clone()], "UTC"),
+            with_care_rule(
+                &coded("urn:example:roles", role),
+                std::slice::from_ref(&treat),
+                "UTC",
+            ),
             "care_role",
             care_role_vs,
         )
@@ -525,7 +533,7 @@ async fn a_rules_care_roles_purposes_and_time_zone_are_stored_or_refused() {
     names(status, &answer, "/care_purposes/0");
     let atlantis = with_care_rule(
         &coded("HL7_ParticipationType", "RESP"),
-        &[treat.clone()],
+        std::slice::from_ref(&treat),
         "Europe/Atlantis",
     );
     let (status, answer) = replace(&app, &first, &atlantis).await;

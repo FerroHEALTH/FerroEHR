@@ -332,7 +332,8 @@ impl RequestAccess {
                     care: found
                         .granting
                         .as_ref()
-                        .and_then(|tie| care_ground(tie, &self.party_namespace())),
+                        .and_then(|tie| care_ground(tie, &self.party_namespace()))
+                        .map(Box::new),
                     ..self.policy_ground(Authorisation::TreatmentRelationship)
                 });
             }

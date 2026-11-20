@@ -71,6 +71,7 @@ use openehr_rm::draft::access_control::access_control::access_policy::AccessPoli
 use openehr_rm::draft::access_control::terminology::{
     AccessDefault, CallerKind, DirectiveKind, Effect, OperationClass, Refusal,
 };
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 use crate::access_eval::care_tie::{Cared, Tie, care_needs, granting};
 use crate::access_eval::directive::{Permit, Reader, kind_and_effect, names_sensitivity};
@@ -168,8 +169,8 @@ impl Emergency {
 }
 
 /// What the controller's `ACCESS_POLICY` requires of clinical access.
-#[derive(Debug, Clone)]
-pub struct Policy {
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Policy<'a> {
     /// `care_relationship_required`.
     pub care_required: bool,
     /// `relationship_grace`.
@@ -179,30 +180,19 @@ pub struct Policy {
     /// Whether `self_declared_care` is set, which turns the `self_declared`
     /// path on (draft decision procedure, Holding a Care Relationship).
     pub self_declared: bool,
-    /// The codes of `care_purposes`: the purposes of use for which a care
-    /// relationship is a ground.
-    pub care_purposes: Vec<String>,
+    /// `care_purposes`: the purposes of use for which a care relationship is
+    /// a ground; `None` when void.
+    pub care_purposes: Option<&'a [DvCodedText]>,
 }
 
-impl Default for Policy {
-    /// The requirements of no policy: every attribute void, so
-    /// `care_purposes` holds its default codes.
-    fn default() -> Self {
-        Self {
-            care_required: false,
-            grace: jiff::Span::new(),
-            purpose_required: false,
-            self_declared: false,
-            // NOTE: draft BMM ACCESS_POLICY.care_purposes, void means TREAT, ETREAT and CAREMGT.
-            care_purposes: ["TREAT", "ETREAT", "CAREMGT"].map(str::to_owned).to_vec(),
-        }
-    }
-}
+/// The purposes `care_purposes` reads as when void.
+// NOTE: draft BMM ACCESS_POLICY.care_purposes, void means TREAT, ETREAT and CAREMGT.
+const DEFAULT_CARE_PURPOSES: [&str; 3] = ["TREAT", "ETREAT", "CAREMGT"];
 
-impl Policy {
+impl<'a> Policy<'a> {
     /// The requirements of `policy`; none when no version is committed.
     #[must_use]
-    pub fn of(policy: Option<&AccessPolicy>) -> Self {
+    pub fn of(policy: Option<&'a AccessPolicy>) -> Self {
         let Some(policy) = policy else {
             return Self::default();
         };
@@ -213,21 +203,12 @@ impl Policy {
             .as_ref()
             .and_then(|grace| grace.value.parse::<jiff::Span>().ok())
             .unwrap_or_default();
-        let defaults = Self::default();
         Self {
             care_required: policy.care_relationship_required,
             grace,
             purpose_required: policy.purpose_required,
             self_declared: policy.self_declared_care.is_some(),
-            care_purposes: policy
-                .care_purposes
-                .as_ref()
-                .map_or(defaults.care_purposes, |codes| {
-                    codes
-                        .iter()
-                        .map(|coded| coded.defining_code.code_string.clone())
-                        .collect()
-                }),
+            care_purposes: policy.care_purposes.as_deref(),
         }
     }
 
@@ -236,7 +217,12 @@ impl Policy {
     /// decision procedure, Terms: a live care relationship).
     #[must_use]
     pub fn admits_care(&self, purpose: Option<&str>) -> bool {
-        purpose.is_none_or(|purpose| self.care_purposes.iter().any(|code| code == purpose))
+        purpose.is_none_or(|purpose| match self.care_purposes {
+            Some(codes) => codes
+                .iter()
+                .any(|coded| coded.defining_code.code_string == purpose),
+            None => DEFAULT_CARE_PURPOSES.contains(&purpose),
+        })
     }
 }
 
@@ -311,7 +297,7 @@ pub struct Grounds {
     pub cared: bool,
     /// The relationship the access log names, where the verdict reads one
     /// and its ties are known.
-    pub granting: Option<Tie>,
+    pub granting: Option<Box<Tie>>,
     /// The verdict reads the caller as a gate-keeper or the controller.
     pub keeper: bool,
 }
@@ -433,14 +419,14 @@ impl Verdict {
 }
 
 /// The inputs of one decision.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Judged<'a> {
     /// Who asks.
     pub caller: &'a Caller,
     /// What they ask.
     pub asked: Asked<'a>,
     /// What the controller requires.
-    pub policy: Policy,
+    pub policy: Policy<'a>,
     /// The controller's rules (`ACCESS_POLICY.rules`).
     pub rules: &'a [AccessDirective],
     /// The EHR.
@@ -534,7 +520,8 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         verdict.grounds.cared = true;
     }
     if verdict.grounds.cared {
-        verdict.grounds.granting = granting(judged.ehr.care.ties(), &needs.needs).cloned();
+        verdict.grounds.granting =
+            granting(judged.ehr.care.ties(), &needs.needs).map(|tie| Box::new(tie.clone()));
     }
     // Step 7: a care relationship.
     let uncared = Pred::negate(Pred::any(vec![Pred::of(live), keeper.clone()]));

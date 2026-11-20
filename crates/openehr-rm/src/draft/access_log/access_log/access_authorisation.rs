@@ -28,5 +28,5 @@ pub struct AccessAuthorisation {
     /// The legal provisions the ground rests on.
     pub legal_grounds: Option<Vec<DvCodedText>>,
     /// For a treatment relationship, the care relationship the access rested on: where several admitted it, the one the decision procedure chooses (`direct` before `team` before `self_declared` before `attested`, then by the order of the roles in the scope that matched).
-    pub care: Option<AccessCareGround>,
+    pub care: Option<Box<AccessCareGround>>,
 }

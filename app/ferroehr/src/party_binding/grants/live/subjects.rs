@@ -111,7 +111,7 @@ impl LiveGrants {
         facts: &CallerFacts,
         principals: &[Uuid],
         day: jiff::civil::Date,
-        policy: &crate::access_eval::procedure::Policy,
+        policy: &crate::access_eval::procedure::Policy<'_>,
     ) -> Result<Vec<CaredSubject>, GrantsUnavailable> {
         let namespace = self.namespace();
         let mut subjects: BTreeMap<EhrSubject, BTreeSet<Tie>> = BTreeMap::new();

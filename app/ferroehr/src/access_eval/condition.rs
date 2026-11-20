@@ -309,7 +309,7 @@ impl RequestAccess {
 
     /// What the controller requires.
     #[must_use]
-    pub fn policy(&self) -> Policy {
+    pub fn policy(&self) -> Policy<'_> {
         Policy::of(self.policy.as_deref())
     }
 

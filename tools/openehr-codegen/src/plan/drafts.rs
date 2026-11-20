@@ -255,6 +255,25 @@ pub(crate) fn draft_ref_target(class: &str, attr: &str) -> Option<&'static RefTa
         .find(|r| r.class == class && r.attr == attr)
 }
 
+/// The optional draft attributes emitted as `Option<Box<T>>`, each with the
+/// ground for it. The size policy of [`crate::plan::layout`] boxes large
+/// fields of the RM only; a draft attribute that is large and usually absent
+/// on a value many of which a request holds is named here (#6075).
+const DRAFT_BOXED_FIELDS: &[(&str, &str, &str)] = &[(
+    "ACCESS_AUTHORISATION",
+    "care",
+    "draft openehr_access_log_0.1.0.bmm.json ACCESS_AUTHORISATION.care: set only on a \
+     treatment relationship, of the several grounds every access log entry carries, and \
+     about 700 bytes inline",
+)];
+
+/// Whether the draft attribute `class.attr` is emitted boxed.
+pub(crate) fn boxes_draft_field(class: &str, attr: &str) -> bool {
+    DRAFT_BOXED_FIELDS
+        .iter()
+        .any(|(boxed, field, _)| *boxed == class && *field == attr)
+}
+
 /// A draft resolved into its schema, resolution model and reference index.
 pub(crate) struct ComposedDraft {
     /// The draft's own schema.

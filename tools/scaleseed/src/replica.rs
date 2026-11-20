@@ -183,6 +183,22 @@ where
     Ok(median(&mut samples))
 }
 
+/// The facts of a member of `team`, acting for the seeded hospital.
+fn member(team: Uuid) -> ferroehr::party_binding::grants::caller::facts::CallerFacts {
+    ferroehr::party_binding::grants::caller::facts::CallerFacts::new(
+        Vec::new(),
+        vec![ferroehr::party_binding::grants::caller::CareTeam::spanning(
+            team, None, None,
+        )],
+    )
+    .with_providers([
+        ferroehr::party_binding::grants::caller::care_of::ProviderKey::new(
+            "urn:example:providers",
+            "hospital",
+        ),
+    ])
+}
+
 /// Reads the copy over `party`, fills its care caches to their bounds, and
 /// prints one JSON row of what it holds and costs, a row of the `replica`
 /// rows of the access-path record.
@@ -212,12 +228,6 @@ pub(crate) async fn measure(party: PgPool, target: Target) -> anyhow::Result<()>
     .await
     .context("name the teams")?;
     let today = jiff::Zoned::now().date();
-    let providers = [
-        ferroehr::party_binding::grants::caller::care_of::ProviderKey::new(
-            "urn:example:providers",
-            "hospital",
-        ),
-    ];
     let before = resident_bytes()?;
     let grants = LiveGrants::new(party);
     let started = Instant::now();
@@ -235,12 +245,12 @@ pub(crate) async fn measure(party: PgPool, target: Target) -> anyhow::Result<()>
         }
     };
     let census = |team: &Uuid| {
-        let (grants, team, providers) = (&grants, *team, &providers);
+        let (grants, team) = (&grants, *team);
         async move {
             grants
                 .cared_for_by(
+                    &member(team),
                     &[team],
-                    providers,
                     today,
                     &ferroehr::access_eval::procedure::Policy::default(),
                 )
@@ -254,10 +264,13 @@ pub(crate) async fn measure(party: PgPool, target: Target) -> anyhow::Result<()>
     let census_miss_ns = timed(&teams, census).await?;
     let census_hit_ns = timed(&teams, census).await?;
     let held = resident_bytes()?;
+    let Some(first) = teams.first().copied() else {
+        bail!("the seed holds no team");
+    };
     let cared = grants
         .cared_for_by(
-            teams.first().map_or(&[][..], std::slice::from_ref),
-            &providers,
+            &member(first),
+            &[first],
             today,
             &ferroehr::access_eval::procedure::Policy::default(),
         )
