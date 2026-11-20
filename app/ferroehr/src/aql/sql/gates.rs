@@ -31,7 +31,8 @@
 use sea_query::{Expr, ExprTrait as _};
 
 use super::expr::col;
-use super::{EhrAccessReaders, OwnRecords, PolicyParties};
+use super::own_records::OwnRecords;
+use super::{EhrAccessReaders, PolicyParties};
 use crate::access_eval::condition::AccessCondition;
 use crate::aql::ir::QueryDomain;
 use crate::db::iden::{Ehr, VoHead};

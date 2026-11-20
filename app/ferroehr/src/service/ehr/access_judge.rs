@@ -318,7 +318,7 @@ impl FerroEhrService {
     /// [`ServiceError`] when the `PERSON`'s references cannot be read.
     pub(crate) async fn delayed_own_records(
         &self,
-    ) -> Result<Option<crate::aql::sql::OwnRecords>, ServiceError> {
+    ) -> Result<Option<crate::aql::sql::own_records::OwnRecords>, ServiceError> {
         use crate::system_log::access_context::{AccessDelay, access_delay, access_delay_enforced};
         if access_delay() != AccessDelay::Records || access_delay_enforced() {
             return Ok(None);
@@ -353,7 +353,7 @@ impl FerroEhrService {
         // NOTE: our own design (#6108), the read of the caller's own subject references is
         // recorded as every subject-reference read is, by its namespace and never its ids.
         self.emit_resolution(&namespace, None, count).await?;
-        Ok(Some(crate::aql::sql::OwnRecords {
+        Ok(Some(crate::aql::sql::own_records::OwnRecords {
             subjects: subjects.into(),
         }))
     }

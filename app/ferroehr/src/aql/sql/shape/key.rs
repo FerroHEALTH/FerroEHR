@@ -7,7 +7,8 @@
 use std::sync::Arc;
 use uuid::Uuid;
 
-use super::super::{EhrAccessReaders, EhrScopeKind, OwnRecords, PolicyParties, SqlCtx};
+use super::super::own_records::OwnRecords;
+use super::super::{EhrAccessReaders, EhrScopeKind, PolicyParties, SqlCtx};
 use crate::access_eval::condition::care::Care;
 use crate::access_eval::condition::{AccessCondition, ConditionGroups};
 use crate::aql::ir::{ParamValue, Params, QueryIr};

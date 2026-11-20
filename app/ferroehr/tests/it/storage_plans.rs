@@ -910,7 +910,7 @@ fn aql_sql_owning(
     params: &Params,
     (ehr_ids, limit): (Vec<EhrId>, Option<i64>),
     policy_parties: ferroehr::aql::sql::PolicyParties,
-    own_records: Option<ferroehr::aql::sql::OwnRecords>,
+    own_records: Option<ferroehr::aql::sql::own_records::OwnRecords>,
 ) -> ferroehr::aql::sql::PreparedQuery {
     let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
     let ir = ferroehr::aql::plan(&ast, params, SpecProfile::default()).expect("the AQL plans");
@@ -1051,7 +1051,7 @@ async fn aql_over_the_population_holds_the_delay_on_own_records_by_key() {
     .await
     .expect("hold three objects from the person");
     let person = uuid::Uuid::now_v7().to_string();
-    let own = ferroehr::aql::sql::OwnRecords {
+    let own = ferroehr::aql::sql::own_records::OwnRecords {
         subjects: Arc::from(vec![(person, "demographic".to_owned())]),
     };
     let prepared = aql_sql_owning(
