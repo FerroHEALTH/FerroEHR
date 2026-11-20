@@ -2344,8 +2344,12 @@ written, and refuses one that breaks a bound with `422`, naming
   FerroEHR reads those markings exactly before the commit takes its
   connection. At `N` every writer the `write_care_relationship` grant
   admits writes. At `R` or `V` only a writer a `relationship_writers` entry
-  names for that level writes; every other write is refused `403`, naming
-  the level and the missing entry. The administrator is no exception: a
+  names for that level writes, and its access-log record is flagged for
+  review with the level: the `review` detail (`id40`) of the entry's
+  [details](audit.md), the `review` column of `audit.access_trail`, and a
+  `review` detail on the object of the BALP `AuditEvent` and the DICOM
+  audit message. Every other write is refused `403`, naming the level and
+  the missing entry. The administrator is no exception: a
   policy that wants the administrator to write such relationships names the
   administrator's `PERSON` (or a role it performs) for the level. An entry
   for `V` does not cover `R`; name each level the writer may write.

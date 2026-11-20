@@ -85,6 +85,7 @@ mod binding_issuers_http;
 mod binding_purposes_http;
 mod binding_refusals_http;
 mod caller_kinds_http;
+mod care_writer_review_http;
 mod cohort_http;
 mod composition_not_modified;
 mod composition_validation_http;

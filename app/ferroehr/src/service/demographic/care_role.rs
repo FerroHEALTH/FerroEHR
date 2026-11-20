@@ -91,9 +91,11 @@ impl FerroEhrService {
             return Ok(());
         };
         self.confirm_policy(false, true).await?;
-        if cares {
-            // TODO(#6141): record a write judged for review in the request's access-log entry.
-            self.care_writer_check(body).await?;
+        if cares
+            && let Some(level) = self.care_writer_check(body).await?
+            && let Some(recorder) = crate::system_log::recorder::current()
+        {
+            recorder.mark_for_review(level);
         }
         let in_force = self.access_policy().in_force();
         let facts = CareFacts::of(in_force.policy.as_deref());

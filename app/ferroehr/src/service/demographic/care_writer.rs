@@ -32,8 +32,8 @@ use crate::versioning::tree::Tree;
 impl FerroEhrService {
     /// Refuses the care relationship `body` when its subject's record is
     /// marked above `N` and no `relationship_writers` entry of the policy in
-    /// force names the caller for that level; whether the write is one to
-    /// record for review.
+    /// force names the caller for that level; the level a write is recorded
+    /// for review at, `None` for a write at `N`.
     ///
     /// The policy in force is the one the caller confirmed before
     /// ([`Self::confirm_policy`]). A relationship whose source names no
@@ -46,12 +46,12 @@ impl FerroEhrService {
     pub(super) async fn care_writer_check<'a, T: Tree<'a>>(
         &self,
         body: T,
-    ) -> Result<WriterVerdict, ServiceError> {
+    ) -> Result<Option<Confidentiality>, ServiceError> {
         let Some(person) = body
             .pointer_text("/source/id/value")
             .and_then(|id| crate::party_binding::derive::container(&id))
         else {
-            return Ok(WriterVerdict::Unrestricted);
+            return Ok(None);
         };
         let level = self.subject_confidentiality(person).await?;
         let in_force = self.access_policy().in_force();
@@ -60,6 +60,9 @@ impl FerroEhrService {
         let verdict = relationship::writer(in_force.policy.as_deref(), level, |scope| {
             writer.named_by(scope)
         });
+        if verdict == WriterVerdict::Unrestricted {
+            return Ok(None);
+        }
         if verdict == WriterVerdict::Refused {
             return Err(ServiceError::not_permitted(format!(
                 "the subject's record is marked {}: a care relationship to it is written only \
@@ -69,7 +72,7 @@ impl FerroEhrService {
                 level.code()
             )));
         }
-        Ok(verdict)
+        Ok(Some(level))
     }
 
     /// The highest confidentiality of the records of `person`: the marking
