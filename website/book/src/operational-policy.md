@@ -2115,6 +2115,14 @@ its connection to the demographic store, because the policy lives in the
 clinical store. A policy version committed between that read and the commit
 applies from the next write; the kept end names the version it came from.
 
+An archive load (`load_ehrs`) carries no kept ends, so it checks each care
+relationship it loads against the policy in force on the server it loads
+into, counting a missing start from the day the loaded version was
+committed. A relationship the policy refuses is reported in the load's
+failure report and is not loaded; the rest of the archive loads. Put the
+access policy in place before you load an archive that holds open care
+relationships.
+
 ### Controller rules
 
 Regulation (EU) 2025/327 Art. 11(3) asks each Member State to lay down

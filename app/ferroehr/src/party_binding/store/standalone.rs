@@ -48,7 +48,8 @@ pub(super) async fn committed(
     if trunk_head == Some(committed.sys_version) {
         reindex(tx, mapping, committed.vo_id.0, facts).await?;
         let live = facts.filter(|_| lifecycle_state != DELETED);
-        grants::caller::bounds::judge(tx, &ctx.access_policy, committed, live, changed).await?;
+        let judged = grants::caller::bounds::Head::from(committed);
+        grants::caller::bounds::judge(tx, &ctx.access_policy, &judged, live, changed).await?;
         let head = GrantHead {
             vo_id: committed.vo_id.0,
             lifecycle_state: &lifecycle_state,

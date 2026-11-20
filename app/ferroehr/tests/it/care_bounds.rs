@@ -9,7 +9,9 @@
 //! version; one past the maximum, and an open one no entry covers, are
 //! refused `422`; an `ORGANISATION` target needs `team_targets` and is never
 //! the controller. A later policy version moves no kept end, and a refill of
-//! the caller facts keeps it. Our own design over our own model.
+//! the caller facts keeps it. An archive load judges each relationship it
+//! lands against the policy in force there (#6123), and an erasure takes the
+//! kept end. Our own design over our own model.
 
 use serde_json::{Value, json};
 
@@ -359,4 +361,116 @@ async fn an_organisation_target_needs_team_targets_and_is_never_the_controller()
         .await
         .expect("a named unit is a target");
     refused(relate(&svc, &stay(CONTROLLER)).await, "/target");
+}
+
+#[tokio::test]
+async fn an_archive_load_gives_an_open_relationship_the_end_of_the_policy_in_force() {
+    let source_db = testkit::db().await.expect("testkit database");
+    let source = replica(&source_db.pool()).await;
+    source
+        .put_access_policy(&PolicyPrecondition::Create, &policy("P30D", &json!({})))
+        .await
+        .expect("the source policy");
+    let (patient, _) = create(&source, PartyKind::Person, &party("PERSON", "Patient"))
+        .await
+        .expect("the patient");
+    let (team, _) = create(&source, PartyKind::Group, &party("GROUP", "Cardiology"))
+        .await
+        .expect("the team");
+    let team = team.to_string();
+    let open = care_of(
+        patient,
+        ("GROUP", &team),
+        "ATND",
+        &interval("2026-11-01", None),
+    );
+    let (stay, _) = relate(&source, &open).await.expect("an open stay commits");
+    let dir = crate::admin_fixture::archive_dir();
+    let exported = source
+        .export_ehrs(
+            dir.clone(),
+            ferroehr::service::admin::types::ExportSpec::canonical_json(1),
+        )
+        .await
+        .expect("the export");
+    assert!(exported.iter().all(|r| r.dump_status), "{exported:?}");
+
+    let target_db = testkit::db().await.expect("testkit database");
+    let target_pool = target_db.pool();
+    let target = replica(&target_pool).await;
+    let in_force = target
+        .put_access_policy(&PolicyPrecondition::Create, &policy("P60D", &json!({})))
+        .await
+        .expect("the target policy")
+        .version_uid;
+    let reports = target.load_ehrs(dir.clone()).await.expect("the load");
+    assert!(reports.iter().all(|r| r.dump_status), "{reports:?}");
+    assert_eq!(
+        kept(&target_pool, stay).await,
+        (
+            Some(("2026-12-31".to_owned(), in_force)),
+            Some("2026-12-31".to_owned())
+        ),
+        "the loaded stay takes its start plus the P60D of the policy in force, \
+         and its caller fact ends there"
+    );
+
+    let bare_db = testkit::db().await.expect("testkit database");
+    let bare_pool = bare_db.pool();
+    let bare = replica(&bare_pool).await;
+    let reports = bare.load_ehrs(dir.clone()).await.expect("the load");
+    let refused: Vec<_> = reports.iter().filter(|r| !r.dump_status).collect();
+    assert_eq!(refused.len(), 1, "{reports:?}");
+    assert_eq!(refused[0].entity_id, stay.to_string());
+    assert!(
+        refused[0]
+            .error
+            .as_deref()
+            .is_some_and(|e| e.starts_with("/time_validity: ")),
+        "{refused:?}"
+    );
+    let landed: i64 = sqlx::query_scalar("SELECT count(*) FROM party.version WHERE vo_id = $1")
+        .bind(stay.0)
+        .fetch_one(&bare_pool)
+        .await
+        .expect("the versions count");
+    assert_eq!(
+        landed, 0,
+        "an open stay no policy covers is not loaded, as no write takes it"
+    );
+    assert_eq!(kept(&bare_pool, stay).await, (None, None));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[tokio::test]
+async fn an_erasure_drops_the_kept_end() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = replica(&pool).await;
+    svc.put_access_policy(&PolicyPrecondition::Create, &policy("P30D", &json!({})))
+        .await
+        .expect("the policy");
+    let (patient, _) = create(&svc, PartyKind::Person, &party("PERSON", "Patient"))
+        .await
+        .expect("the patient");
+    let (team, _) = create(&svc, PartyKind::Group, &party("GROUP", "Cardiology"))
+        .await
+        .expect("the team");
+    let team = team.to_string();
+    let open = care_of(
+        patient,
+        ("GROUP", &team),
+        "ATND",
+        &interval("2026-11-01", None),
+    );
+    let (stay, _) = relate(&svc, &open).await.expect("an open stay commits");
+    assert!(kept(&pool, stay).await.0.is_some(), "the stay keeps an end");
+    svc.physical_party_delete(patient)
+        .await
+        .expect("the patient is erased");
+    assert_eq!(
+        kept(&pool, stay).await,
+        (None, None),
+        "the erasure takes the stay, its caller fact and its kept end"
+    );
 }
