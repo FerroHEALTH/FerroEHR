@@ -2997,17 +2997,19 @@ fn a_value_equality_with_a_literal_is_anchored() {
     assert_eq!(value_anchors(&sql), 1);
 }
 
-/// A `value/value` equality is anchored on a text, which a `DV_ORDINAL` or
-/// `DV_SCALE` value (a number whose search text is its symbol) cannot equal,
-/// and not on a text a number renders as.
+/// A `value/value` equality is anchored on its search text, and with a text
+/// a number renders as also on the number of a `DV_ORDINAL` or `DV_SCALE`
+/// value, whose search text is its symbol (#6090).
 #[test]
-fn a_value_value_equality_is_anchored_on_a_text_no_number_renders_as() {
+fn a_value_value_equality_reads_the_number_only_for_a_text_a_number_renders_as() {
     let leaf = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/value";
     let from = "FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o";
     let text = build_sql(&format!("SELECT c/uid/value {from} WHERE {leaf} = 'Mild'"));
     assert_eq!(value_anchors(&text), 1);
+    assert_eq!(text.matches("node_number(").count(), 0, "{text}");
     let number = build_sql(&format!("SELECT c/uid/value {from} WHERE {leaf} = '2'"));
-    assert_eq!(value_anchors(&number), 0);
+    assert_eq!(value_anchors(&number), 1);
+    assert_eq!(number.matches("node_number(").count(), 1, "{number}");
 }
 
 /// A conjunct under `OR` or `NOT`, a comparison other than equality, a

@@ -13,7 +13,9 @@
 //!
 //! - a text leaf of an `ELEMENT` value under `=` or `matches` over a list of
 //!   strings, by its search text (`ext.node_search_text`,
-//!   `idx_node_hot_value_search`);
+//!   `idx_node_hot_value_search`), and on the `value` member a text in plain
+//!   decimal form also by the number of an ordinal or a scale
+//!   (`ext.node_number`, `idx_node_hot_value_number`, #6090);
 //! - the code of an `ELEMENT` value under `=` or `matches` over a list of
 //!   strings, the `defining_code` of a coded text or of an ordinal's symbol,
 //!   by `ext.node_code` (`idx_node_hot_value_code`);
@@ -354,8 +356,9 @@ impl Builder<'_> {
     }
 
     /// The anchor of the equality of `leaf` with one of `texts`, or `None`
-    /// when the leaf is neither a text leaf of an `ELEMENT` value for every
-    /// text ([`search_text_leaf`]) nor its code ([`code_leaf`]).
+    /// when no value index holds the leaf ([`text_leaf`]). On the `value`
+    /// member a text in plain decimal form also reads the number of an
+    /// ordinal or a scale ([`plain_decimal`]).
     ///
     /// # Errors
     /// [`AqlError`] from the leaf step's predicate lowering.
@@ -364,15 +367,22 @@ impl Builder<'_> {
         leaf: &LeafPath,
         texts: &[String],
     ) -> Result<Option<ValueAnchor>, AqlError> {
-        let (function, column) = if code_leaf(&leaf.fragment) {
-            ("node_code", Node::ValueCode)
-        } else if texts
-            .iter()
-            .all(|text| search_text_leaf(&leaf.fragment, text))
-        {
-            ("node_search_text", Node::ValueText)
+        let kind = text_leaf(&leaf.fragment);
+        let (function, column) = match kind {
+            Some(TextLeaf::Code) => ("node_code", Node::ValueCode),
+            Some(TextLeaf::Search | TextLeaf::Value) => ("node_search_text", Node::ValueText),
+            None => return Ok(None),
+        };
+        // NOTE: our own design (#6090), a DV_ORDINAL's or DV_SCALE's `value` is a number
+        // that equals a text only when the text is its plain decimal rendering.
+        let numbers: Vec<&str> = if kind == Some(TextLeaf::Value) {
+            texts
+                .iter()
+                .map(String::as_str)
+                .filter(|text| plain_decimal(text))
+                .collect()
         } else {
-            return Ok(None);
+            Vec::new()
         };
         let Some((types, predicate)) = leaf_step(self.ir, leaf) else {
             return Ok(None);
@@ -381,18 +391,30 @@ impl Builder<'_> {
             return Ok(None);
         }
         self.row_anchor(leaf, predicate, false, |node| {
-            let read = call(
-                function,
-                vec![
-                    col(node, Node::ValueType),
-                    col(node, column),
-                    col(node, Node::Data),
-                ],
-            );
-            let test = match texts {
-                [text] => read.eq(Expr::val(text.as_str())),
-                _ => read.is_in(texts.iter().map(|text| Expr::val(text.as_str()))),
+            let read = |function: &str, column: Node| {
+                call(
+                    function,
+                    vec![
+                        col(node, Node::ValueType),
+                        col(node, column),
+                        col(node, Node::Data),
+                    ],
+                )
             };
+            let search = read(function, column);
+            let mut test = match texts {
+                [text] => search.eq(Expr::val(text.as_str())),
+                _ => search.is_in(texts.iter().map(|text| Expr::val(text.as_str()))),
+            };
+            if !numbers.is_empty() {
+                let number = read("node_number", Node::ValueNum);
+                let as_numeric =
+                    |text: &str| Expr::cust_with_exprs("CAST($1 AS numeric)", [Expr::val(text)]);
+                test = test.or(match numbers.as_slice() {
+                    [one] => number.eq(as_numeric(one)),
+                    _ => number.is_in(numbers.iter().map(|text| as_numeric(text))),
+                });
+            }
             (
                 col(node, Node::RmType).eq(Expr::cust(ELEMENT_LITERAL)),
                 test,
@@ -568,38 +590,48 @@ impl ValueAnchor {
     }
 }
 
-/// Whether an equality of the fragment path `steps` compares the code
-/// `ext.node_code` yields for every `ELEMENT` row that can satisfy it: the
-/// `defining_code` of a coded text, or of the symbol of an ordinal or a
-/// scale.
-fn code_leaf(steps: &[FragmentStep]) -> bool {
-    if steps.iter().any(|step| step.predicate.is_some()) {
-        return false;
-    }
-    let names: Vec<&str> = steps.iter().map(|step| step.name.as_str()).collect();
-    matches!(
-        names.as_slice(),
-        ["value", "defining_code", "code_string"]
-            | ["value", "symbol", "defining_code", "code_string"]
-    )
+/// Which value index an equality of a fragment path compares against.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TextLeaf {
+    /// The code `ext.node_code` yields: the `defining_code` of a coded text,
+    /// or of the symbol of an ordinal or a scale.
+    Code,
+    /// The search text `ext.node_search_text` yields: a `DV_IDENTIFIER` id,
+    /// a `DV_QUANTITY`'s units or a symbol's value.
+    Search,
+    /// The `value` member, which is the search text of every value but a
+    /// `DV_ORDINAL` or a `DV_SCALE`, whose `value` is the number
+    /// `ext.node_number` yields.
+    Value,
 }
 
-/// Whether an equality of the fragment path `steps` with `text` compares the
-/// text `ext.node_search_text` yields for every `ELEMENT` row that can
-/// satisfy it: a `DV_IDENTIFIER` id, a `DV_QUANTITY`'s units, a symbol's
-/// value, or the `value` member.
-///
-/// A `DV_ORDINAL` or `DV_SCALE` `value` is a number while its search text is
-/// its symbol, so an equality of `value/value` is anchored only on a text no
-/// number renders as.
-fn search_text_leaf(steps: &[FragmentStep], text: &str) -> bool {
+/// The value index an equality of the fragment path `steps` compares
+/// against, for every `ELEMENT` row that can satisfy it; `None` for a path
+/// no value index holds.
+fn text_leaf(steps: &[FragmentStep]) -> Option<TextLeaf> {
     if steps.iter().any(|step| step.predicate.is_some()) {
-        return false;
+        return None;
     }
     let names: Vec<&str> = steps.iter().map(|step| step.name.as_str()).collect();
     match names.as_slice() {
-        ["value", "id" | "units"] | ["value", "symbol", "value"] => true,
-        ["value", "value"] => text.parse::<f64>().is_err(),
-        _ => false,
+        ["value", "defining_code", "code_string"]
+        | ["value", "symbol", "defining_code", "code_string"] => Some(TextLeaf::Code),
+        ["value", "id" | "units"] | ["value", "symbol", "value"] => Some(TextLeaf::Search),
+        ["value", "value"] => Some(TextLeaf::Value),
+        _ => None,
     }
+}
+
+/// Whether `text` is how a number renders as text, `-?digits[.digits]`: a
+/// `numeric` and a JSON number both render in plain notation (PostgreSQL 18,
+/// "Numeric Types"), so a text of any other form equals no number.
+fn plain_decimal(text: &str) -> bool {
+    let unsigned = text.strip_prefix('-').unwrap_or(text);
+    let (whole, fraction) = unsigned
+        .split_once('.')
+        .map_or((unsigned, None), |(whole, fraction)| {
+            (whole, Some(fraction))
+        });
+    let digits = |part: &str| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit());
+    digits(whole) && fraction.is_none_or(digits)
 }
