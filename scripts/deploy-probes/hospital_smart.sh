@@ -328,12 +328,14 @@ hs_answered() {
 # ground of a refusal the answer itself withholds.
 hs_lookup_records() {
   local rid
+  # The judgement's traces carry no request id when they run outside its span.
+  hdc logs --no-color --since 2m ferroehr ferroehr-2 2>&1 | sed -E $'s/\x1b\\[[0-9;]*m//g' \
+    | grep -E 'subject this request|bound to no PERSON|against the caller|hides the EHR|as absent' \
+    | sed -E 's/request\{[^}]*\}: //' | tail -n 20 | cut -c1-300 | sed 's/^/        /' >&2
   for rid in $(hdc logs --no-color --since 2m ferroehr ferroehr-2 2>&1 \
     | sed -E $'s/\x1b\\[[0-9;]*m//g' \
     | grep -E 'route="/ferroehr/rest/openehr/v1/ehr" status=4' \
     | sed -nE 's/.*request_id="([^"]+)".*/\1/p' | tail -n 2); do
-    hdc logs --no-color ferroehr ferroehr-2 2>&1 | sed -E $'s/\x1b\\[[0-9;]*m//g' | grep -F "$rid" \
-      | grep -E 'DEBUG|WARN' | cut -c1-400 | sed 's/^/        /' >&2
     h_call 1 p:hans GET "$HX/admin/access-log?request_id=$rid"
     echo "        the access record of lookup $rid ($H_CODE): $(jq -c '[.entries[]? | del(.uid, .link,
       .system_id, .time_recorded, .action, .operation, .accessor, .retention, .channel)]' <<<"$H_BODY" 2>/dev/null | cut -c1-3000)" >&2
