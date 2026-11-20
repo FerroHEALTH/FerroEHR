@@ -11,7 +11,9 @@
 //! to Version container of Actor playing the role", and `actor.adoc` has
 //! `roles` be the "Identifiers of the Version container for each Role played
 //! by this Party". No invariant states either attribute's rule, so each
-//! refusal names the attribute it reads.
+//! refusal names the attribute it reads. A care relationship's `covers_for`
+//! names the carer it replaces by its container and kind (draft access
+//! control package, Care Relationships), judged here as well.
 //!
 //! [`shape`] judges one reference by itself, at the write door. [`check`]
 //! judges that each named container exists and is of the right kind, in the
@@ -26,6 +28,8 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::error::{ServiceError, Violation};
+use crate::party_binding::grants::caller::care_of::{self, CarerKind};
+use crate::party_binding::grants::caller::is_care;
 use crate::versioning::Kind;
 use crate::versioning::tree::Tree;
 
@@ -42,6 +46,8 @@ pub(crate) enum Referent {
     Actor,
     /// A Role: an entry of `ACTOR.roles`.
     Role,
+    /// The carer of the kind a care relationship's `covers_for` names.
+    Carer(CarerKind),
 }
 
 impl Referent {
@@ -71,6 +77,10 @@ impl Referent {
                 "AGENT",
             ],
             Referent::Role => &["ANY", "PARTY", "ROLE"],
+            Referent::Carer(CarerKind::Person) => &["PERSON"],
+            Referent::Carer(CarerKind::Role) => &["ROLE"],
+            Referent::Carer(CarerKind::Group) => &["GROUP"],
+            Referent::Carer(CarerKind::Organisation) => &["ORGANISATION"],
         }
     }
 
@@ -86,6 +96,10 @@ impl Referent {
             ],
             Referent::Actor => &[Kind::Agent, Kind::Group, Kind::Organisation, Kind::Person],
             Referent::Role => &[Kind::Role],
+            Referent::Carer(CarerKind::Person) => &[Kind::Person],
+            Referent::Carer(CarerKind::Role) => &[Kind::Role],
+            Referent::Carer(CarerKind::Group) => &[Kind::Group],
+            Referent::Carer(CarerKind::Organisation) => &[Kind::Organisation],
         }
     }
 
@@ -95,6 +109,7 @@ impl Referent {
             Referent::Party => "RM demographic party_relationship.adoc",
             Referent::Actor => "RM demographic role.adoc performer",
             Referent::Role => "RM demographic actor.adoc roles",
+            Referent::Carer(_) => "draft access control package, Care Relationships covers_for",
         }
     }
 
@@ -104,6 +119,10 @@ impl Referent {
             Referent::Party => "a party",
             Referent::Actor => "an Actor (AGENT, GROUP, ORGANISATION or PERSON)",
             Referent::Role => "a ROLE",
+            Referent::Carer(CarerKind::Person) => "the PERSON its type names",
+            Referent::Carer(CarerKind::Role) => "the ROLE its type names",
+            Referent::Carer(CarerKind::Group) => "the GROUP its type names",
+            Referent::Carer(CarerKind::Organisation) => "the ORGANISATION its type names",
         }
     }
 }
@@ -188,8 +207,8 @@ pub(crate) struct Reference {
 }
 
 /// The references to judge in `body`, a body of `kind`, each at its path: a
-/// ROLE's `performer`, an Actor's `roles` and a standalone relationship's
-/// `source` and `target`.
+/// ROLE's `performer`, an Actor's `roles`, a standalone relationship's
+/// `source` and `target`, and a care relationship's `covers_for`.
 ///
 /// An inline relationship's `target` is not among them: no openEHR rule binds
 /// it to a container this server holds, and the reverse index tolerates one it
@@ -216,6 +235,16 @@ pub(crate) fn of_body<'a, T: Tree<'a>>(kind: Kind, body: T) -> Vec<Reference> {
                     format!("PARTY_RELATIONSHIP.{end}"),
                     Referent::Party,
                 );
+            }
+            // NOTE: a covers_for that does not read is the care fact's refusal (care_of::read).
+            if is_care(body)
+                && let Ok(Some(cover)) = care_of::covers_for(body)
+            {
+                out.push(Reference {
+                    container: Some(cover.carer),
+                    referent: Referent::Carer(cover.kind),
+                    path: "PARTY_RELATIONSHIP.details.covers_for".to_owned(),
+                });
             }
         }
         Kind::Role => add(

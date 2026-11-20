@@ -40,6 +40,9 @@ const TARGET: &str = "/target";
 /// The path a self-declared refusal names.
 const BASIS: &str = "/details";
 
+/// The path a provider refusal names: the details that hold the element.
+const PROVIDER: &str = "/details";
+
 /// The trunk head version of a relationship a bound is judged for.
 #[derive(Debug)]
 pub(crate) struct Head {
@@ -119,8 +122,9 @@ pub(crate) async fn judge_stored(
 /// took, on `tx`.
 ///
 /// # Errors
-/// `422` for a validity or a target the policy refuses, `403` for a writer it
-/// does not name, and a storage failure.
+/// `422` for a provider that names no `ORGANISATION` of the store, a validity
+/// or a target the policy refuses, `403` for a writer it does not name, and a
+/// storage failure.
 pub(crate) async fn judge(
     tx: &mut PgConnection,
     policy: &PolicyInForce,
@@ -147,7 +151,17 @@ pub(crate) async fn judge(
     }
     let rules = policy.policy.as_deref();
     let provider = provider(tx, &care.provider).await?;
-    relationship::target(rules, care.kind, care.carer, provider.party)
+    let Some(provider_party) = provider.party else {
+        return Err(refused(
+            PROVIDER,
+            &format_args!(
+                "its provider {} names no ORGANISATION of this store by an identifier it \
+                 carries",
+                care.provider
+            ),
+        ));
+    };
+    relationship::target(rules, care.kind, care.carer, provider_party)
         .map_err(|refusal| refused(TARGET, &refusal))?;
     // TODO(#6057): judge the writer at the record's marking, and log an admitted write for review.
     if relationship::writer(rules, Confidentiality::Normal, |_| false) == WriterVerdict::Refused {

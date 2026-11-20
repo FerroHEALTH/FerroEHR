@@ -11,13 +11,18 @@
 //! the controller. A later policy version moves no kept end, and a refill of
 //! the caller facts keeps it. An archive load judges each relationship it
 //! lands against the policy in force there (#6123), and an erasure takes the
-//! kept end. Our own design over our own model.
+//! kept end. A provider that names no `ORGANISATION` and a `covers_for` that
+//! names no party of its type, or the target itself, are refused `422` (#6156).
+//! Our own design over our own model.
 
 use serde_json::{Value, json};
 
-use crate::policy_fixtures::{as_admin, create, deaf, granting};
+use crate::policy_fixtures::{
+    CARE_PROVIDER, as_admin, care_provider, create, deaf, granting,
+};
 use ferroehr::db::domain::{Domain, DomainPools};
 use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Invalid;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::FerroEhrService;
@@ -473,4 +478,140 @@ async fn an_erasure_drops_the_kept_end() {
         (None, None),
         "the erasure takes the stay, its caller fact and its kept end"
     );
+}
+
+/// The care relationship `body` with its provider's id set to `provider` and,
+/// when given, the `covers_for` element `cover`.
+fn with_elements(body: &Value, provider: &str, cover: Option<Value>) -> Value {
+    let mut body = body.clone();
+    let items = body["details"]["items"].as_array_mut().expect("items");
+    items[1]["value"]["id"] = json!(provider);
+    if let Some(cover) = cover {
+        items.push(json!({ "_type": "ELEMENT", "archetype_node_id": "at0005",
+                           "name": coded(TERMINOLOGY, "covers_for"), "value": cover }));
+    }
+    body
+}
+
+/// A `covers_for` naming the carer `id` of `kind` in the provider's form.
+fn cover(kind: &str, id: &str) -> Value {
+    json!({ "_type": "DV_IDENTIFIER", "issuer": "demographic", "id": id, "type": kind })
+}
+
+/// Commits `body` as a new version of the care relationship `vo` at `version`
+/// as an administrator.
+async fn amend(
+    svc: &FerroEhrService,
+    (vo, version): (VoId, &str),
+    body: &Value,
+) -> Result<(), ServiceError> {
+    let mut write = WriteRequest::new(crate::typed_body::typed(body));
+    write.lifecycle_state = Some("532".to_owned());
+    write.preceding = Some(version.parse().expect("an OBJECT_VERSION_ID"));
+    as_admin(async {
+        Box::pin(svc.party_relationship_update(vo, crate::fixtures::if_match(version), write))
+            .await
+    })
+    .await
+    .map(|_| ())
+}
+
+/// Asserts `result` is the `422` of the party reference check at the
+/// `covers_for` element.
+fn refused_cover<T: std::fmt::Debug>(result: Result<T, ServiceError>) {
+    match result {
+        Err(ServiceError::Unprocessable {
+            kind: Invalid::Content,
+            violation,
+        }) => assert!(
+            violation
+                .path()
+                .is_some_and(|at| at.ends_with("PARTY_RELATIONSHIP.details.covers_for")),
+            "{violation:?}"
+        ),
+        other => panic!("expected the 422 at covers_for, got {other:?}"),
+    }
+}
+
+/// Asserts `result` is a `422` whose detail names the `covers_for` element.
+fn refused_unread<T: std::fmt::Debug>(result: Result<T, ServiceError>, why: &str) {
+    let error = result.expect_err("a 422");
+    assert!(
+        matches!(error, ServiceError::Unprocessable { .. }),
+        "a 422, got {error:?}"
+    );
+    let detail = format!("{error:?}");
+    assert!(
+        detail.contains("covers_for") && detail.contains(why),
+        "{why}: {detail}"
+    );
+}
+
+#[tokio::test]
+async fn a_provider_or_covers_for_naming_no_party_is_refused_on_create_and_update() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let svc = granting(svc).await;
+    svc.put_access_policy(&PolicyPrecondition::Create, &policy("P30D", &json!({})))
+        .await
+        .expect("the policy");
+    care_provider(&svc, CARE_PROVIDER).await;
+    let person = |name: &'static str| {
+        let svc = &svc;
+        async move {
+            create(svc, PartyKind::Person, &party("PERSON", name))
+                .await
+                .expect("the person")
+                .0
+        }
+    };
+    let patient = person("Patient").await;
+    let carer = person("Meijer").await.to_string();
+    let covered = person("Jansen").await.to_string();
+    let (team, _) = create(&svc, PartyKind::Group, &party("GROUP", "Cardiology"))
+        .await
+        .expect("the team");
+    let team = team.to_string();
+    let dangling = "0198f1f1-0000-7000-8000-00000000dead";
+    let stay = care_of(
+        patient,
+        ("PERSON", &carer),
+        "ATND",
+        &interval("2026-11-01", Some("2026-11-20")),
+    );
+    let (hospital, covering) = (CARE_PROVIDER.1, Some(cover("PERSON", &covered)));
+
+    refused(
+        relate(&svc, &with_elements(&stay, "nowhere", None)).await,
+        "/details",
+    );
+    refused_cover(relate(&svc, &with_elements(&stay, hospital, Some(cover("PERSON", dangling)))).await);
+    refused_cover(relate(&svc, &with_elements(&stay, hospital, Some(cover("PERSON", &team)))).await);
+    refused_unread(
+        relate(&svc, &with_elements(&stay, hospital, Some(cover("PERSON", &carer)))).await,
+        "names its target",
+    );
+    let untyped = json!({ "_type": "DV_IDENTIFIER", "issuer": "demographic", "id": covered });
+    refused_unread(
+        relate(&svc, &with_elements(&stay, hospital, Some(untyped))).await,
+        "as the type",
+    );
+
+    let (vo, version) = relate(&svc, &with_elements(&stay, hospital, covering.clone()))
+        .await
+        .expect("a cover naming another held PERSON commits");
+    refused(
+        amend(&svc, (vo, &version), &with_elements(&stay, "nowhere", covering)).await,
+        "/details",
+    );
+    refused_cover(
+        amend(
+            &svc,
+            (vo, &version),
+            &with_elements(&stay, hospital, Some(cover("ROLE", &covered))),
+        )
+        .await,
+    );
+    amend(&svc, (vo, &version), &with_elements(&stay, hospital, None))
+        .await
+        .expect("a cover can be dropped");
 }
