@@ -31,15 +31,17 @@ use crate::draft::access_control::access_control::access_conflict_rule::AccessCo
 use crate::draft::access_control::access_control::access_data_scope::AccessDataScope;
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
 use crate::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
+use crate::draft::access_control::access_control::access_label::AccessLabel;
 use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use crate::draft::access_control::access_control::access_log_retention::AccessLogRetention;
 use crate::draft::access_control::access_control::access_policy::AccessPolicy;
 use crate::draft::access_control::access_control::access_relationship_validity::AccessRelationshipValidity;
 use crate::draft::access_control::access_control::access_relationship_writer::AccessRelationshipWriter;
+use crate::draft::access_control::access_control::confidentiality_marking::ConfidentialityMarking;
 use crate::draft::access_control::terminology::care::CarePath;
 use crate::draft::access_control::terminology::log::AccessorKind;
 use crate::draft::access_control::terminology::{
-    AccessDefault, CallerKind, Conflict, DirectiveKind, Effect, Relationship,
+    AccessDefault, CallerKind, Confidentiality, Conflict, DirectiveKind, Effect, Relationship,
     TERMINOLOGY_ID_CONFIDENTIALITY, Term, ValueSetBinding, Withheld,
 };
 use crate::draft::invariants::{Check, Violations};
@@ -94,6 +96,32 @@ fn absent_or<T: Term>(coded: Option<&DvCodedText>) -> bool {
     coded.is_none_or(|coded| T::read_coded(coded).is_ok())
 }
 
+/// Whether `coded` is a level of `Terminology_id_confidentiality`.
+fn is_level(coded: &DvCodedText) -> bool {
+    Confidentiality::read(coded).is_ok()
+}
+
+/// `CONFIDENTIALITY_MARKING.Confidentiality_valid`.
+fn marking_rules(check: &mut Check, marking: &ConfidentialityMarking) {
+    check.hold(
+        is_level(&marking.confidentiality),
+        "CONFIDENTIALITY_MARKING",
+        "Confidentiality_valid",
+    );
+}
+
+/// The invariants of an `ACCESS_LABEL` and of its marking.
+fn label_rules(check: &mut Check, label: &AccessLabel) {
+    check.hold(
+        label.sensitivities.is_some() || label.confidentiality.is_some(),
+        "ACCESS_LABEL",
+        "Not_empty",
+    );
+    if let Some(marking) = &label.confidentiality {
+        marking_rules(check, marking);
+    }
+}
+
 /// Checks every invariant of an `ACCESS_DIRECTIVE_SETTINGS`, of the
 /// directives it holds and of the controller's exclusions it carries.
 ///
@@ -119,6 +147,12 @@ pub fn check_settings(settings: &AccessDirectiveSettings) -> Result<(), Violatio
     );
     for directive in directives {
         directive_rules(&mut check, directive);
+    }
+    if let Some(marking) = &settings.marking {
+        marking_rules(&mut check, marking);
+    }
+    for label in settings.labels.as_deref().unwrap_or_default() {
+        label_rules(&mut check, label);
     }
     let exclusions = settings.exclusions.as_deref().unwrap_or_default();
     check.hold(
@@ -533,10 +567,21 @@ fn data_scope_rules(check: &mut Check, scope: &AccessDataScope) {
             || scope.archetypes.is_some()
             || scope.categories.is_some()
             || scope.sensitivities.is_some()
+            || scope.confidentialities.is_some()
             || scope.origins.is_some()
             || scope.recorded.is_some(),
         "ACCESS_DATA_SCOPE",
         "Not_empty",
+    );
+    check.hold(
+        scope
+            .confidentialities
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .all(is_level),
+        "ACCESS_DATA_SCOPE",
+        "Confidentialities_valid",
     );
 }
 
@@ -545,6 +590,16 @@ fn classification_rules(check: &mut Check, classification: &AccessClassification
         classification.data.objects.is_none(),
         "ACCESS_CLASSIFICATION",
         "No_objects",
+    );
+    check.hold(
+        classification.sensitivities.is_some() || classification.confidentiality.is_some(),
+        "ACCESS_CLASSIFICATION",
+        "Not_empty",
+    );
+    check.hold(
+        classification.confidentiality.as_ref().is_none_or(is_level),
+        "ACCESS_CLASSIFICATION",
+        "Confidentiality_valid",
     );
     data_scope_rules(check, &classification.data);
 }

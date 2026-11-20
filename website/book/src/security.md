@@ -456,6 +456,7 @@ write a directive or a rule refuses changes nothing:
 | 5. Conflict | a professional performing a `ROLE` on their own record, or a professional a `related_to` relationship in force joins to the person, unless a `conflict_rules` entry of the access policy allows it | `403 refused-conflict` |
 | 5. Controller rule (EHDS Art. 11(3)) | a deny rule of the access policy that applies; no permit of the person lifts it; which purposes a caller may declare is such a rule | `403 refused-policy-denied` |
 | 6. Sensitivity | data with a label or classification that no applying permit directive or permit rule names | `403 refused-sensitivity` |
+| 6. Confidentiality | data whose confidentiality is `R` or `V` that no applying permit directive or permit rule clears | `403 refused-confidentiality`, or `404` at a level of `concealed_confidentialities` |
 | 7. Care relationship | no live care relationship to the subject, where the access policy requires one | `403 refused-no-care-relationship` |
 | 8. Default access | the settings' `default_access`, or `authz.rbac.ehr_access_default` for an EHR with none | `403 refused-consent-required` |
 
@@ -570,6 +571,44 @@ names, with `403 refused-sensitivity`. Two permits clear a caller: a consent
 permit of the person whose `data` names the sensitivity, and a permit rule
 of the access policy, such as one that clears the psychiatrist role for
 `PSY`. No capability or token claim clears a caller.
+
+### Record confidentiality
+
+The controller can protect a whole record, for example of a public figure,
+a staff member or a person under protection, by setting a confidentiality
+marking in the record's `EHR_ACCESS` settings: the `marking` of
+`ACCESS_DIRECTIVE_SETTINGS`, a `CONFIDENTIALITY_MARKING` with the level, who
+set it, when and why. The level is a code of HL7 `HL7_Confidentiality`: `N`
+normal (the same as no marking), `R` restricted or `V` very restricted
+(`U`, `L` and `M` read as `N`). A label on one object can carry a marking
+too, and a classification of the access policy a `confidentiality`; the
+confidentiality of a datum is the highest of the three.
+
+- **Who sets it.** Only the controller, through `POST /admin/ehr-access`
+  (or a CONTRIBUTION by a holder of the administrator role). A version a
+  patient or another gate-keeper commits must carry the current marking
+  unchanged; one that sets, changes or clears it is refused `403` whole.
+- **Who reads the record.** Step 6 refuses data above `N` that no applying
+  permit clears. A permit clears a datum when one of its `data` scopes
+  names, in `confidentialities`, the datum's level or a higher one, so a
+  permit for `V` also clears `R`. With no rule that names a level, a marked
+  record is read by its subject alone. A typical policy permits `R` to
+  callers with a care relationship (`applies_to` with `relationship` `care`)
+  for a treatment purpose, and `V` to a named role. The patient still reads
+  their own record, and a declared emergency by the break-glass role lifts
+  the step, marked in the access log.
+- **What a refused caller sees.** A named read answers `403
+  refused-confidentiality`, which names neither the level nor the reason, so
+  `R` and `V` answer alike. A level listed in the access policy's
+  `concealed_confidentialities` answers `404`, as an unknown record. A
+  query, an export and `GET /ehr?subject_id=` always leave a refused record
+  out, inside the query's one SQL statement, so `COUNT`, `LIMIT` and paging
+  agree.
+- **The access log.** Every access to a marked record carries the level as
+  the entry's security label (the BALP `entity.securityLabel` in the
+  `v3-Confidentiality` system), a refusal names the marking's level in its
+  description, and the controller's commit that sets or clears a marking is
+  an entry naming the level it set or cleared.
 
 ### The access policy
 

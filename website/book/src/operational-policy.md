@@ -231,6 +231,7 @@ own in it, which the change request does not propose. A `CAPABILITY` grants an o
 | `act_for_persons` | Act for the persons of its token issuer, as a third-party client or as the RFC 8693 actor a person's token names in `act` |
 | `access_without_scope` | Be admitted, as a system caller whose token carries no resource scope, to every SMART on openEHR requirement |
 | `write_care_relationship` | Write the membership (`MBR` of `HL7_RoleClass`) and `under_care_of` care relationships through the Demographic API, as a hospital's ADT system does ([The access control terminology](#the-access-control-terminology)) |
+| `write_representation` | Write a representation (`represents`) through the Demographic API, for the providers its `provider` elements name ([Representatives in the patient portal](#representatives-in-the-patient-portal)) |
 | `write_access_policy` | Write the controller's `ACCESS_POLICY` |
 
 The same terminology names the elements that qualify a grant, by the code
@@ -257,7 +258,7 @@ in the element's `name`:
 | `binding_issuer` | On `scim_provision`: the `identifier_issuer` of the binding keys the client owns, exactly one |
 | `token_scope` | On `scim_provision`: a scope the client's access token must hold, at least one |
 | `role_terminology` | On `scim_provision`: the terminology the client's User `roles` are coded in, exactly one when it names a `role` |
-| `provider` | On `write_care_relationship`: a `DV_IDENTIFIER` (its `issuer` and `id`) naming a provider whose care relationships and memberships the grant writes; none named means none written |
+| `provider` | On `write_care_relationship` and `write_representation`: a `DV_IDENTIFIER` (its `issuer` and `id`) naming a provider whose care relationships and memberships, or representations, the grant writes; none named means none written |
 | `target_kind` | On `write_care_relationship`: `PERSON`, `ROLE`, `GROUP` or `ORGANISATION`, a kind of care relationship target the grant writes; none named means none written |
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
 | `represents` | On a `PARTY_RELATIONSHIP`: the source represents the target, the subject, on the subject's own record ([Representatives in the patient portal](#representatives-in-the-patient-portal)); it makes no policy party |
@@ -347,14 +348,15 @@ design.
 | `access caller kind` | `professional`, `access_service`, `datasubject` of `HL7_SecurityRoleType` (the subject), `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
 | `access operation` | `read`, `write`, `export`, `query` | `ACCESS_DIRECTIVE.operations`: the operation classes a directive applies to. No capability grants one |
 | `care relationship` | `MBR` of `HL7_RoleClass`, `under_care_of` | The `name` or `details` of a `PARTY_RELATIONSHIP`: with `MBR`, the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP`, or the source, a provider `ORGANISATION`, is a member of the target `GROUP`; with `under_care_of`, the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
-| `representation` | `represents` | The `name` or `details` of a `PARTY_RELATIONSHIP`: the source represents the target, the subject ([Representatives in the patient portal](#representatives-in-the-patient-portal)) |
+| `representation` | `represents` | The `name` of a `PARTY_RELATIONSHIP` of its own: the source represents the target, the subject ([Representatives in the patient portal](#representatives-in-the-patient-portal)) |
+| `representation element` | `basis`, `provider`, `evidence` | The `name` of an `ELEMENT` in the `details` of a `represents` relationship |
 | `kinship`, `kinship element` | `related_to`; `kinship` | The `name` or `details` of a `PARTY_RELATIONSHIP` of its own: its source and target, two `PERSON`s, are kin, and its `kinship` element codes how ([Exclusions and conflicts of interest](#exclusions-and-conflicts-of-interest)) |
 | `group kind` | `care_team` | The `name` of a `GROUP`: the `GROUP` is a care team ([Care teams provisioned over SCIM](#care-teams-provisioned-over-scim)) |
-| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing`, `refused-excluded`, `refused-conflict` | The access record of a refusal |
+| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-confidentiality`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing`, `refused-excluded`, `refused-conflict` | The access record of a refusal |
 | `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
 
-Two grants of the operation table belong to access control:
-`write_care_relationship` and `write_access_policy`.
+Three grants of the operation table belong to access control:
+`write_care_relationship`, `write_representation` and `write_access_policy`.
 
 **Codes FerroEHR does not own.** Role, sensitivity, data category, purpose
 of use and legal ground are coded in the terminology your jurisdiction names, such
@@ -1957,22 +1959,49 @@ data the deployment keeps in the CDR. FerroEHR builds in no country's rules.
 
 ### The representation
 
-A representation is a `PARTY_RELATIONSHIP` from the representative's
-`PERSON`, its source, to the subject's `PERSON`, its target, whose `name` or
-`details` carry `openehr_access::represents`. Any archetype may model
-it; FerroEHR reads the code, never the archetype id. It may also name the
-relationship with a `DV_CODED_TEXT` of the openEHR `subject_relationship`
-group (`254|parent|`, `264|guardian|`, `253|unknown|` for a proxy), which the
-committer and the access log carry. The shipped
-`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1` is an example: its
-name is the type (parent, guardian or authorised proxy) and its details hold
-both codes.
+A representation is a `PARTY_RELATIONSHIP` of its own, written at
+`POST /demographic/party_relationship` (FerroEHR's extension), from the
+representative's `PERSON`, its source, to the subject's `PERSON`, its
+target. Its `name` is `openehr_access::represents`, and its `details` hold
+the elements of the `representation element` group, each named by its code:
 
-It holds while its `time_validity` covers today's date in UTC. It is either
-inline, in the representative's `PERSON.relationships`, which an
-administrator writes, or a `PARTY_RELATIONSHIP` of its own
-(`POST /demographic/party_relationship`, FerroEHR's extension), which an
-administrator or the patient writes.
+| Element | Occurrences | Value |
+|---|---|---|
+| `basis` | 1..1 | `DV_CODED_TEXT`: why the representative may act for the subject, a code of the value set the access policy binds for `representation_basis`, or of `HL7_RoleCode` (such as `GUARD`, `RESPRSN`, `DELEGATEE`) when it binds none |
+| `provider` | 1..1 | `DV_IDENTIFIER` of type `ORGANISATION` with an `issuer` and an `id`: the healthcare provider for which the representation is recorded |
+| `evidence` | 0..1 | `DV_IDENTIFIER`: the court order, register entry or written authorisation |
+
+Any archetype may model it; FerroEHR reads the codes, never the archetype
+id. It may also name how the two are related with a `DV_CODED_TEXT` of the
+openEHR `subject_relationship` group (`254|parent|`, `264|guardian|`), which
+the committer and the access log carry. The shipped
+`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2` is an example.
+A representation held in a `PERSON`'s `relationships` is refused `422`,
+naming the resource to write it at, and so is one without a readable
+`basis` or `provider`, or with a `basis` outside its value set. Each
+representation is versioned on its own, with the commit audit of whoever
+wrote it, and is ended by closing its `time_validity`.
+
+It holds while its `time_validity` covers today's date in UTC. These
+callers write one:
+
+- an administrator;
+- a caller holding a `write_representation` grant whose `provider`
+  elements name the representation's provider, before and after the write;
+  a grant that names no provider writes none;
+- the patient it represents, on the basis `HL7_RoleCode::DELEGATEE` alone:
+  the patient authorises a proxy of their choice (EHDS Art. 4(2)). Any other
+  basis, such as a parent's or a court-appointed guardian's, is written by an
+  administrator or a `write_representation` holder.
+
+FerroEHR admits a representative only on a representation that is live on
+the day of the request, whose `provider` is the provider the deployment acts
+for (`[authz.party_binding.provider]`, or the table of the tenant the token
+names), and that the representative did not write itself. A representative
+whose party source reports a representation the CDR does not store is
+refused `403` with `refused-representation-unrecorded`. The access record of
+every admitted request names the representation's container, which the
+access log's `representation` authorisation carries as its reference.
 
 The representative's `PERSON` is of a template
 `[[authz.party_binding.person.template]]` maps and carries a binding key: a
@@ -1982,10 +2011,10 @@ own SCIM client provisions it: a `scim_provision` grant whose
 `binding_issuer` is the portal's `patients` issuer creates each
 representative as a `PERSON` of the patient template, with no professional
 `ROLE`, and deactivates or deletes it ([Users](installation/config-auth.md#users)).
-SCIM provisions the identity only. The client never writes a representation:
-EHDS Art. 4(2) gives the authorisation to the patient (a) and to the legal
-representative under national law (b), so the patient or an administrator
-records it.
+SCIM provisions the identity only. The client never writes a
+representation: EHDS Art. 4(2) gives the authorisation to the patient (a)
+and to the legal representative under national law (b), so the patient, an
+administrator or a `write_representation` holder records it.
 
 ### Legal capacity
 
@@ -1995,9 +2024,11 @@ the representations the deployment records and the `time_validity` it gives
 them: the deployment, or the national identity or authorisation service it
 follows, ends a parent's representation on the date the child decides
 alone, and ends or adds a representation when a court or the patient changes
-who may act. FerroEHR checks only that a live representation covers today,
-so a change is effective on the next request, and holds no age band, no
-country table and no archetype id of its own.
+who may act. FerroEHR checks only that a live representation for its
+provider covers today, so a change is effective on the next request, and
+holds no age band, no capacity rule, no country table and no archetype id of
+its own (draft access control package, The Representation as a Stored
+Fact).
 
 ### Signing in
 
@@ -2246,6 +2277,52 @@ Two more attributes say when a relationship is a ground at all:
 | --- | --- | --- |
 | `care_purposes` | The purposes of use for which a care relationship is a ground: an access declaring another purpose, such as research, rests on no relationship and matches no rule scope naming `care` | `TREAT`, `ETREAT` and `CAREMGT` of `HL7_ActReason` |
 | `time_zone` | The IANA time zone in which the dates of a relationship's `time_validity` are read, such as `Europe/Amsterdam`; a name the zone database does not hold is refused `400` | UTC |
+
+#### The attested care path
+
+A caller from another organisation, admitted under a
+[federation agreement](#federation-agreements), can hold a care
+relationship that is never stored: its verified credential attests a
+treatment context for the patient. This is how a national contact point or a
+national infrastructure reaches the record for cross-border care. The path is
+off until `attested_care` names the agreement:
+
+```json
+"attested_care": [
+  { "_type": "DV_IDENTIFIER",
+    "issuer": "https://federation.example",
+    "id": "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f99" }
+]
+```
+
+- `id` is the container uid of the agreement `ROLE` (the part of its
+  version uid before `::`), so a new version of the agreement keeps the
+  reference.
+- `issuer`, when you set it, must be the federation issuer the partner's
+  client identifiers are held under. A policy that names another issuer, or
+  names under an issuer an id that is no agreement `ROLE`, is refused `422`,
+  naming `/attested_care/<n>/issuer`.
+
+Which claims carry the treatment context is your data, in the issuer's
+`[[auth.federation]]` table. FerroEHR reads these fields:
+
+| Field | What it carries |
+| --- | --- |
+| `patient.id` | The patient, as `system\|value`: the identifier an EHR's subject names |
+| `trc.id` | The id of the assertion that attests the treatment context |
+| `trc.not_on_or_after` | The end of its window, in seconds since the epoch |
+| `trc.not_before` | The start of its window, when the credential states one |
+| `assertion.issuer` | The issuer of the assertion, when the credential states one |
+
+A credential that lacks `patient.id`, `trc.id` or `trc.not_on_or_after`
+attests nothing. On every access FerroEHR checks that the policy names the
+agreement, that the window holds the moment of the access, and that the
+record's subject is the attested patient. The caller then holds a live care
+relationship for the care step, the default disposition and any rule whose
+actor scope names `relationship: care`. The relationship is never stored and
+never in a caseload. The access log names it as a `treatment relationship`
+ground whose `reference` is the assertion (`id` and `issuer`) and whose
+`name` and `version` are the agreement's.
 
 #### Writing a care relationship
 

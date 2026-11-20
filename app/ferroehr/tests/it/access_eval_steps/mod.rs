@@ -14,6 +14,7 @@ mod care_roles;
 mod examples;
 mod grounds;
 mod steps;
+mod steps_confidentiality;
 mod steps_exclusion;
 mod steps_policy;
 mod steps_purpose;
@@ -24,7 +25,7 @@ use std::sync::Arc;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::care::CarePath;
 use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, CallerKind, ForeignCode, OperationClass, Refusal,
+    AccessDefault, CallerKind, Confidentiality, ForeignCode, OperationClass, Refusal,
 };
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -418,7 +419,12 @@ impl Case {
                 .as_ref()
                 .and_then(|p| p.classifications.as_deref())
                 .unwrap_or_default();
-            let scopes = Scopes::of_class(categories(), Arc::clone(&class.layout), classifications);
+            let scopes = Scopes::of_class(categories(), Arc::clone(&class.layout), classifications)
+                .marked(
+                    (*class.settings)
+                        .as_ref()
+                        .map_or(Confidentiality::Normal, EhrAccessSettings::marking),
+                );
             let care = self.care();
             let symbolic = decide(&Judged {
                 caller,
@@ -483,7 +489,11 @@ impl Case {
             .as_ref()
             .and_then(|p| p.classifications.as_deref())
             .unwrap_or_default();
-        let scopes = Scopes::new(categories(), labels, classifications);
+        let scopes = Scopes::new(categories(), labels, classifications).marked(
+            self.settings
+                .as_ref()
+                .map_or(Confidentiality::Normal, EhrAccessSettings::marking),
+        );
         let care = self.care();
         decide(&Judged {
             caller,

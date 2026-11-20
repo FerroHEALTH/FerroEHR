@@ -2,11 +2,13 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The macro that defines one group of the access terminology.
+//! The macro that defines one group of the draft access terminology.
 
-/// Defines one group's term type, its [`Term`](super::Term) impl and its `Display`.
+/// Defines one group's term type, its [`Term`](super::Term) impl and its
+/// `Display`.
 ///
-/// A term is `Name => "code"`, a code of [`TERMINOLOGY_ID_ACCESS`](super::TERMINOLOGY_ID_ACCESS) that is
+/// A term is `Name => "code"`, a code of
+/// [`TERMINOLOGY_ID_ACCESS`](super::TERMINOLOGY_ID_ACCESS) that is
 /// its own rubric, or `Name => "code" of TERMINOLOGY, "rubric"`, the code of
 /// another terminology.
 macro_rules! group {

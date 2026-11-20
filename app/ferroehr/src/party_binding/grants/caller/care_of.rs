@@ -200,12 +200,12 @@ pub(crate) fn held_inline(ordinal: usize) -> String {
     )
 }
 
-/// The `value` of the `ELEMENT` in the `details` of `body` named by the
-/// `care relationship element` code `element`.
-fn element<'a, T: Tree<'a>>(body: T, element: CareElement) -> Option<T> {
+/// The `value` of the first `ELEMENT` in the `details` of `body` whose
+/// `name` is the access terminology's `code`.
+pub(crate) fn named_element<'a, T: Tree<'a>>(body: T, code: &str) -> Option<T> {
     first(body.get("details")?, &mut |item: T| {
         let named = item.get_text("_type").as_deref() == Some("ELEMENT")
-            && item.get("name").and_then(coded).as_deref() == Some(element.code());
+            && item.get("name").and_then(coded).as_deref() == Some(code);
         named.then(|| item.get("value")).flatten()
     })
 }
@@ -226,7 +226,7 @@ pub(crate) fn care_role<'a, T: Tree<'a>>(body: T) -> Result<ForeignCode, String>
 /// # Errors
 /// As [`care_role`].
 pub(crate) fn role_text<'a, T: Tree<'a>>(body: T) -> Result<DvCodedText, String> {
-    let value = element(body, CareElement::CareRole)
+    let value = named_element(body, CareElement::CareRole.code())
         .ok_or_else(|| "it carries no care_role element, which is 1..1".to_owned())?;
     if value.get_text("_type").as_deref() != Some("DV_CODED_TEXT") {
         return Err("its care_role is no DV_CODED_TEXT".to_owned());
@@ -238,8 +238,17 @@ pub(crate) fn role_text<'a, T: Tree<'a>>(body: T) -> Result<DvCodedText, String>
 /// The `provider` of the care relationship `body`: a `DV_IDENTIFIER` of
 /// type `ORGANISATION` with an issuer and an id.
 pub(crate) fn provider<'a, T: Tree<'a>>(body: T) -> Result<ProviderKey, String> {
-    let value = element(body, CareElement::Provider)
+    let value = named_element(body, CareElement::Provider.code())
         .ok_or_else(|| "it carries no provider element, which is 1..1".to_owned())?;
+    organisation(value)
+}
+
+/// The provider the `provider` element `value` names: a `DV_IDENTIFIER` of
+/// type `ORGANISATION` with an issuer and an id.
+///
+/// # Errors
+/// Why it names none.
+pub(crate) fn organisation<'a, T: Tree<'a>>(value: T) -> Result<ProviderKey, String> {
     let identifier: DvIdentifier = openehr_its::json::from_canonical_value(&value.to_value())
         .map_err(|error| format!("its provider is no DV_IDENTIFIER: {error}"))?;
     let issuer = identifier.issuer.filter(|issuer| !issuer.trim().is_empty());
@@ -263,7 +272,7 @@ pub(crate) fn provider<'a, T: Tree<'a>>(body: T) -> Result<ProviderKey, String> 
 /// Why it cannot be read: a `covers_for` that is no `DV_IDENTIFIER` with an
 /// issuer and an id.
 fn covers_for<'a, T: Tree<'a>>(body: T) -> Result<Option<ProviderKey>, String> {
-    let Some(value) = element(body, CareElement::CoversFor) else {
+    let Some(value) = named_element(body, CareElement::CoversFor.code()) else {
         return Ok(None);
     };
     let identifier: DvIdentifier = openehr_its::json::from_canonical_value(&value.to_value())
@@ -284,7 +293,7 @@ fn covers_for<'a, T: Tree<'a>>(body: T) -> Result<Option<ProviderKey>, String> {
 /// # Errors
 /// Why it cannot be read: a basis that is no code of the care basis group.
 fn basis<'a, T: Tree<'a>>(body: T) -> Result<bool, String> {
-    let Some(value) = element(body, CareElement::Basis) else {
+    let Some(value) = named_element(body, CareElement::Basis.code()) else {
         return Ok(false);
     };
     match coded(value).as_deref() {

@@ -34,24 +34,27 @@
               by specification), and its class is the same open object"
 )]
 
-mod normal;
-
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
-use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind};
+use openehr_rm::draft::access_control::terminology::{Confidentiality, ForeignCode, ForeignKind};
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use serde_json::Value;
 use sha2::{Digest as _, Sha256};
 
 use crate::access_eval::condition::CallerKeys;
 use crate::access_eval::procedure::{Rule, Verdict};
+use crate::access_eval::scope::confidential::label_level;
 use crate::access_eval::scope::{DataMatch, Edge, EhrFact, Held, Pred, Recorded};
 use crate::service::ehr::access_projection::{Validity, validity};
 use crate::service::ehr::access_rule::{SettingsCaller, party_key, proxy_key};
 use crate::service::ehr::access_settings::{EhrAccessSettings, UnreadableSettings, object_id};
+
+mod normalize;
+
+use normalize::{normal_coded, normalize_marking, normalize_settings};
 
 /// The instant a class holds in place of an instant of its EHRs.
 const INSTANT: &str = "1970-01-01T00:00:00Z";
@@ -70,6 +73,8 @@ pub struct Layout {
     pub labels: Vec<(ForeignCode, usize)>,
     /// Each exclusion of the controller, in the order of the settings.
     pub exclusions: Vec<DirectiveLayout>,
+    /// The objects labelled with each confidentiality above `N`.
+    pub confidential: Vec<(Confidentiality, usize)>,
     /// How many facts the class's EHRs hold.
     pub facts: usize,
 }
@@ -323,7 +328,7 @@ pub fn resolve(pred: &Pred, facts: &[Value], keys: &CallerKeys) -> Pred {
 pub fn classify(settings: &AccessDirectiveSettings) -> Result<Classified, serde_json::Error> {
     let walked = Walk::default().settings(settings);
     let mut class = serde_json::to_value(settings)?;
-    normal::normalize_settings(&mut class);
+    normalize_settings(&mut class);
     for edit in &walked.edits {
         edit.apply(&mut class);
     }
@@ -345,7 +350,7 @@ pub fn classify(settings: &AccessDirectiveSettings) -> Result<Classified, serde_
             walked
                 .labels
                 .iter()
-                .filter_map(|(at, coded)| labels.get(*at).map(|l| label_class(l, *coded)))
+                .filter_map(|(at, part)| labels.get(*at).map(|l| label_class(l, *part)))
                 .collect()
         })
         .unwrap_or_default();
@@ -361,15 +366,25 @@ pub fn classify(settings: &AccessDirectiveSettings) -> Result<Classified, serde_
 
 /// What one walk of a settings yields: the layout, the facts, the edits that
 /// make the class, each gate-keeper kept by its position and whether it is
-/// `PARTY_SELF`, and for each sensitivity the label and the code that first
-/// name it.
+/// `PARTY_SELF`, and for each sensitivity and each confidentiality the label
+/// that first names it, with the part of it that does.
 #[derive(Debug, Default)]
 struct Walked {
     layout: Layout,
     facts: Vec<Value>,
     edits: Vec<Edit>,
     keepers: Vec<(usize, bool)>,
-    labels: Vec<(usize, usize)>,
+    labels: Vec<(usize, LabelPart)>,
+}
+
+/// The part of a label a class keeps: one sensitivity, by its position, or
+/// the marking.
+#[derive(Debug, Clone, Copy)]
+enum LabelPart {
+    /// The sensitivity at this position.
+    Sensitivity(usize),
+    /// The label's marking.
+    Marking,
 }
 
 /// One change the class makes to the settings at a JSON pointer.
@@ -460,6 +475,7 @@ impl Walk {
             }
         }
         let mut labelled: BTreeMap<ForeignCode, (Vec<String>, (usize, usize))> = BTreeMap::new();
+        let mut marked: BTreeMap<Confidentiality, (Vec<String>, usize)> = BTreeMap::new();
         for (index, label) in settings
             .labels
             .as_deref()
@@ -470,6 +486,14 @@ impl Walk {
             let Some(vo_id) = object_id(&label.target) else {
                 continue;
             };
+            let level = label_level(label);
+            if level > Confidentiality::Normal {
+                marked
+                    .entry(level)
+                    .or_insert_with(|| (Vec::new(), index))
+                    .0
+                    .push(vo_id.to_string());
+            }
             for (position, coded) in label
                 .sensitivities
                 .as_deref()
@@ -487,10 +511,17 @@ impl Walk {
                     .push(vo_id.to_string());
             }
         }
-        for (code, (objects, first)) in labelled {
+        for (code, (objects, (index, position))) in labelled {
             let at = self.fact(Value::from(objects));
             self.out.layout.labels.push((code, at));
-            self.out.labels.push(first);
+            self.out
+                .labels
+                .push((index, LabelPart::Sensitivity(position)));
+        }
+        for (level, (objects, index)) in marked {
+            let at = self.fact(Value::from(objects));
+            self.out.layout.confidential.push((level, at));
+            self.out.labels.push((index, LabelPart::Marking));
         }
         for (at, exclusion) in settings
             .exclusions
@@ -629,21 +660,38 @@ fn keeper_class(keeper: &Value, subject: bool) -> Value {
     keeper
 }
 
-/// The class of the label `label` for the sensitivity at `coded`: a label
-/// of that one code on no particular object.
-fn label_class(label: &Value, coded: usize) -> Value {
+/// The class of the label `label` for its `part`: a label of that one
+/// sensitivity, or of its marking's level alone, on no particular object.
+fn label_class(label: &Value, part: LabelPart) -> Value {
     let mut label = label.clone();
-    retain(&mut label, &["_type", "target", "sensitivities"]);
+    retain(
+        &mut label,
+        &["_type", "target", "sensitivities", "confidentiality"],
+    );
     if let Some(target) = label.get_mut("target") {
         nil_reference(target);
         set(target, "_type", "OBJECT_REF");
     }
-    let code = label
-        .get("sensitivities")
-        .and_then(|codes| codes.get(coded))
-        .map(normal_coded);
-    if let (Some(object), Some(code)) = (label.as_object_mut(), code) {
-        object.insert("sensitivities".to_owned(), Value::Array(vec![code]));
+    let Some(object) = label.as_object_mut() else {
+        return label;
+    };
+    match part {
+        LabelPart::Sensitivity(coded) => {
+            object.remove("confidentiality");
+            let code = object
+                .get("sensitivities")
+                .and_then(|codes| codes.get(coded))
+                .map(normal_coded);
+            if let Some(code) = code {
+                object.insert("sensitivities".to_owned(), Value::Array(vec![code]));
+            }
+        }
+        LabelPart::Marking => {
+            object.remove("sensitivities");
+            if let Some(marking) = object.get_mut("confidentiality") {
+                normalize_marking(marking);
+            }
+        }
     }
     label
 }
@@ -671,24 +719,4 @@ fn set_or_remove(object: &mut Value, key: &str, members: Vec<Value>) {
             object.insert(key.to_owned(), Value::Array(members));
         }
     }
-}
-
-/// A `DV_CODED_TEXT` by its code phrase alone, its value the code.
-fn normal_coded(coded: &Value) -> Value {
-    let mut coded = coded.clone();
-    retain(&mut coded, &["_type", "value", "defining_code"]);
-    let code = coded
-        .pointer("/defining_code/code_string")
-        .cloned()
-        .unwrap_or(Value::Null);
-    if let Some(object) = coded.as_object_mut() {
-        object.insert("value".to_owned(), code);
-    }
-    if let Some(phrase) = coded.get_mut("defining_code") {
-        retain(phrase, &["_type", "terminology_id", "code_string"]);
-        if let Some(terminology) = phrase.get_mut("terminology_id") {
-            retain(terminology, &["_type", "value"]);
-        }
-    }
-    coded
 }

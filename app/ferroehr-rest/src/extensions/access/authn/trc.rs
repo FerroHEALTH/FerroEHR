@@ -25,6 +25,7 @@ use std::sync::Arc;
 
 use axum::extract::Request;
 use axum::response::{IntoResponse as _, Response};
+use ferroehr::party_binding::grants::caller::care_of::ProviderKey;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferrohealth_smart::federation::contact::{EhdsiCode, TrcPatientId};
 use ferrohealth_smart::guard::Requirement;
@@ -73,7 +74,8 @@ impl Shape {
 
 /// Holds the caller of `principal` to its agreement's `caller_rate`, then to
 /// the patient it may reach on `req`: a contact point's caller to the EHR of
-/// its TRC patient ([`confine`]), then a bound representative, of a `persons`
+/// its TRC patient ([`confine`]), then the treatment context an external
+/// person attests ([`super::attested::attest`]), then a bound representative, of a `persons`
 /// or a `patients` issuer, to the EHR of its subject, and the person
 /// themself to their own `PERSON` ([`super::portal::bound`]); the refusal of
 /// any, before any patient lookup of the request itself.
@@ -94,8 +96,20 @@ pub(super) fn patient_context<'a>(
         if let Some(refusal) = confine(layer, principal, shape, &headers).await {
             return Some(refusal);
         }
+        if let Some(refusal) = super::attested::attest(layer, principal, &headers).await {
+            return Some(refusal);
+        }
         let namespace = &layer.authenticator.namespace;
-        match super::portal::bound(&layer.service, namespace, principal).await {
+        // NOTE: draft access control decision procedure step 0 Representation, a
+        // representative acts for the provider the party binding names for its issuer.
+        let providers: Vec<ProviderKey> = principal
+            .access
+            .caller()
+            .and_then(|caller| layer.authenticator.deployment.provider_of(caller))
+            .map(|(issuer, id)| ProviderKey::new(issuer, id))
+            .into_iter()
+            .collect();
+        match super::portal::bound(&layer.service, (namespace, &providers), principal).await {
             Ok(bound) => {
                 principal.represented = bound.represented;
                 if bound.own.is_some() {

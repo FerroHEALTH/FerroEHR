@@ -43,6 +43,7 @@
               the caller facts are derived from"
 )]
 
+pub mod attestation;
 pub(crate) mod bounds;
 pub mod care_of;
 pub mod facts;
@@ -64,8 +65,9 @@ use crate::party_binding::grants::store::Dates;
 use crate::party_binding::policy_mark::carries;
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
+use openehr_rm::draft::access_control::terminology::kinship::Kinship;
 use openehr_rm::draft::access_control::terminology::{
-    CareRelationship, ForeignCode, ForeignKind, Kinship, Term,
+    CareRelationship, ForeignCode, ForeignKind, Term,
 };
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 

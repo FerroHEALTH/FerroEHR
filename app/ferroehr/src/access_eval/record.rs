@@ -31,7 +31,9 @@ use std::sync::{Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::terminology::log::Authorisation;
-use openehr_rm::draft::access_control::terminology::{DirectiveKind, Refusal, Term as _};
+use openehr_rm::draft::access_control::terminology::{
+    Confidentiality, DirectiveKind, Refusal, Term as _,
+};
 use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
@@ -41,6 +43,7 @@ use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId
 use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
+use openehr_rm::draft::access_control::terminology::care::CarePath;
 use openehr_rm::draft::access_control::terminology::coded_text;
 use openehr_rm::draft::access_log::access_log::access_care_ground::AccessCareGround;
 
@@ -89,6 +92,8 @@ pub enum Step {
     ControllerRule,
     /// 6, a sensitivity no applying permit names.
     Sensitivity,
+    /// 6, a confidentiality above `N` no applying permit clears.
+    Confidentiality,
     /// 7, a care relationship the policy requires.
     CareRelationship,
     /// 8, the default disposition.
@@ -105,6 +110,7 @@ impl Step {
             Refusal::ConsentDenied => Self::ConsentDeny,
             Refusal::PolicyDenied => Self::ControllerRule,
             Refusal::Sensitivity => Self::Sensitivity,
+            Refusal::Confidentiality => Self::Confidentiality,
             Refusal::NoCareRelationship => Self::CareRelationship,
             Refusal::PurposeMissing => Self::Purpose,
             Refusal::ConsentRequired => Self::DefaultDisposition,
@@ -126,7 +132,7 @@ impl Step {
             Self::ConsentDeny => 3,
             Self::Purpose => 4,
             Self::Conflict | Self::ControllerRule => 5,
-            Self::Sensitivity => 6,
+            Self::Sensitivity | Self::Confidentiality => 6,
             Self::CareRelationship => 7,
             Self::DefaultDisposition => 8,
         }
@@ -147,6 +153,7 @@ impl Step {
             Self::Conflict => "conflict",
             Self::ControllerRule => "controller rule",
             Self::Sensitivity => "sensitivity",
+            Self::Confidentiality => "confidentiality",
             Self::CareRelationship => "care relationship",
             Self::DefaultDisposition => "default disposition",
         }
@@ -195,6 +202,10 @@ pub struct Decision {
     /// The versions of the policies the grounds are defined in, in order and
     /// without repeats: the `ehds-logging` record's authorisation reference.
     pub policies: Vec<String>,
+    /// The confidentiality of the record the access reached, its marking's
+    /// level, when it is above `N`: the entry's security label (draft access
+    /// control, The Decision Procedure, Refusals).
+    pub confidentiality: Option<Confidentiality>,
 }
 
 impl Decision {
@@ -212,6 +223,7 @@ impl Decision {
             policies: policies_of(&grounds),
             grounds,
             refused: None,
+            confidentiality: None,
         };
         (!decision.grounds.is_empty()).then(|| Box::new(decision))
     }
@@ -257,10 +269,14 @@ impl RequestAccess {
             let covering = ehr_id.and_then(|ehr_id| self.lifted_covers().of(ehr_id));
             self.verdict_grounds(judged, refused.is_none(), covering.as_ref(), &mut grounds);
         }
+        let confidentiality = settings_of(judged.as_ref())
+            .map(EhrAccessSettings::marking)
+            .filter(|level| *level > Confidentiality::Normal);
         Decision {
             refused,
             policies: policies_of(&grounds),
             grounds,
+            confidentiality,
         }
     }
 
@@ -340,14 +356,7 @@ impl RequestAccess {
                 });
             }
             if found.cared {
-                grounds.push(AccessAuthorisation {
-                    care: found
-                        .granting
-                        .as_ref()
-                        .and_then(|tie| care_ground(tie, &self.party_namespace()))
-                        .map(Box::new),
-                    ..self.policy_ground(Authorisation::TreatmentRelationship)
-                });
+                grounds.push(self.care_authorisation(found.granting.as_deref()));
             }
             // NOTE: draft decision procedure step 5, an access a conflict rule allowed is marked.
             grounds.extend(found.conflicts.iter().map(|conflict| AccessAuthorisation {
@@ -384,6 +393,33 @@ impl RequestAccess {
         );
         if verdict.lifted.contains(&Lifted::Policy) {
             grounds.push(self.policy_ground(Authorisation::Emergency));
+        }
+    }
+
+    /// The treatment relationship ground of a tie `granting` names: for the
+    /// `attested` path, the assertion it rests on and the agreement it was
+    /// attested under (draft decision procedure, Refusals: "the assertion
+    /// and agreement for `attested`"); otherwise the relationship, as a
+    /// ground of the access policy in force.
+    fn care_authorisation(&self, granting: Option<&Tie>) -> AccessAuthorisation {
+        let attested = granting
+            .filter(|tie| tie.path == CarePath::Attested)
+            .and_then(|_| self.caller().facts.attestation());
+        match attested {
+            // NOTE: draft access log ACCESS_CARE_GROUND, its carer and provider are 1..1 and an
+            // attested relationship names neither here, so the ground carries no care element.
+            Some(attestation) => AccessAuthorisation {
+                name: Some(attestation.agreement.name.clone()),
+                version: Some(attestation.agreement.version.clone()),
+                reference: Some(attestation.assertion_ref()),
+                ..authorisation(Authorisation::TreatmentRelationship)
+            },
+            None => AccessAuthorisation {
+                care: granting
+                    .and_then(|tie| care_ground(tie, &self.party_namespace()))
+                    .map(Box::new),
+                ..self.policy_ground(Authorisation::TreatmentRelationship)
+            },
         }
     }
 
@@ -459,6 +495,14 @@ impl RequestAccess {
         } else if noted.by.is_empty() {
             match step {
                 Step::Sensitivity => format!("{} and the labels of {}", policy(), carrier()),
+                Step::Confidentiality => {
+                    match settings_of(judged).map(EhrAccessSettings::marking) {
+                        Some(level) if level > Confidentiality::Normal => {
+                            format!("the marking {} of {}", level.code(), carrier())
+                        }
+                        _ => format!("{} and the labels of {}", policy(), carrier()),
+                    }
+                }
                 Step::CareRelationship | Step::Purpose => policy(),
                 Step::Conflict => format!("the conflict rules of {}", policy()),
                 Step::Subject => "the EHR of the caller's patient context".to_owned(),
@@ -747,6 +791,7 @@ mod tests {
             refused: None,
             policies: policies_of(&grounds),
             grounds: grounds.to_vec(),
+            confidentiality: None,
         }));
         let retention = crate::access_log::retention::stated(
             None,
@@ -775,7 +820,7 @@ mod tests {
                 "refused-consent-denied" => 3,
                 "refused-purpose-missing" => 4,
                 "refused-policy-denied" | "refused-conflict" => 5,
-                "refused-sensitivity" => 6,
+                "refused-sensitivity" | "refused-confidentiality" => 6,
                 "refused-no-care-relationship" => 7,
                 "refused-consent-required" => 8,
                 "refused-not-subject"

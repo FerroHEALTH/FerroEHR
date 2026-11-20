@@ -519,6 +519,15 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             "ACCESS_POLICY",
         ),
         (
+            Refusal::Confidentiality,
+            professional(DR_B),
+            None,
+            None,
+            steps_confidentiality::marked(Some("R"), &[], &[]),
+            Item::Ehr,
+            "the marking R of EHR_ACCESS",
+        ),
+        (
             Refusal::NoCareRelationship,
             professional(DR_B),
             None,

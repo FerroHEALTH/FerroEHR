@@ -13,9 +13,8 @@
 //! person's facts name the other. Why one cannot be read is the refusal of
 //! its commit (`422`). Our own design (#6077).
 
-use openehr_rm::draft::access_control::terminology::{
-    ForeignCode, ForeignKind, Kinship, KinshipElement, Term,
-};
+use openehr_rm::draft::access_control::terminology::kinship::{Kinship, KinshipElement};
+use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind, Term};
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 

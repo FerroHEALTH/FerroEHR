@@ -547,6 +547,9 @@ const fn reason(code: Refusal) -> &'static str {
         Refusal::ConsentDenied => "a directive of the subject denies this access",
         Refusal::PolicyDenied => "a rule of the controller's access policy denies this access",
         Refusal::Sensitivity => "the data carry a sensitivity the caller is not cleared for",
+        Refusal::Confidentiality => {
+            "the data's confidentiality is one the caller is not cleared for"
+        }
         Refusal::NoCareRelationship => {
             "the access policy requires a care relationship to the subject and the caller has none"
         }
@@ -613,6 +616,7 @@ mod tests {
             Refusal::ConsentDenied,
             Refusal::PolicyDenied,
             Refusal::Sensitivity,
+            Refusal::Confidentiality,
             Refusal::NoCareRelationship,
             Refusal::PurposeMissing,
             Refusal::ConsentRequired,

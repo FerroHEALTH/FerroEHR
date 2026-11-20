@@ -97,7 +97,9 @@ impl FerroEhrService {
     /// anything, on one indexed read of the newest versions in the store
     /// (#6048): the registers when `registers` holds, the controller's access
     /// policy when `access_policy` holds. A copy at the version read stands;
-    /// one behind it is read. No notification's delay decides the request.
+    /// one behind it is read. The same read carries the definition revision,
+    /// and the definition copies built before it are dropped (#5948). No
+    /// notification's delay decides the request.
     ///
     /// # Errors
     /// `service_overloaded` (`503`) when the store does not answer.
@@ -109,18 +111,25 @@ impl FerroEhrService {
         if !registers && !access_policy {
             return Ok(());
         }
-        let (heads, head) = crate::storage::policy_register::policy_heads(self.registers.pool())
+        let heads = crate::storage::policy_register::policy_heads(self.registers.pool())
             .await
             .map_err(|error| ServiceError::overloaded("the policy could not be read", error))?;
+        self.definitions.confirm(heads.definitions);
         if registers {
-            self.registers.confirm(&heads).await.map_err(|error| {
-                ServiceError::overloaded("the policy registers could not be read", error)
-            })?;
+            self.registers
+                .confirm(&heads.registers)
+                .await
+                .map_err(|error| {
+                    ServiceError::overloaded("the policy registers could not be read", error)
+                })?;
         }
         if access_policy {
-            self.access_policy.confirm(head).await.map_err(|error| {
-                ServiceError::overloaded("the access policy could not be read", error)
-            })?;
+            self.access_policy
+                .confirm(heads.access_policy)
+                .await
+                .map_err(|error| {
+                    ServiceError::overloaded("the access policy could not be read", error)
+                })?;
         }
         Ok(())
     }

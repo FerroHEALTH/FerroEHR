@@ -1,1 +1,0 @@
-- A catch-up of the audit chain verification no longer starves the requests or nears the statement timeout under load. Each step is sized to take about half a second, from how long the step before it took, and the run pauses as long as a step took before the next, so it takes at most about half a database core while it is behind.

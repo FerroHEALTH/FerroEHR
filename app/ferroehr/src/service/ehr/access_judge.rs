@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 
-use openehr_rm::draft::access_control::terminology::AccessDefault;
+use openehr_rm::draft::access_control::terminology::{AccessDefault, Refusal};
 
 use crate::access_eval::condition::care::{Care, CareUnsettled};
 use crate::access_eval::condition::{AccessCondition, InForce, RequestAccess, current};
@@ -185,7 +185,9 @@ impl FerroEhrService {
         let verdict = self.ehr_verdict(&access, ehr_id).await?;
         let caller = access.caller();
         let hidden = match verdict.outcome(&Item::Ehr) {
-            Outcome::Absent(_) => true,
+            // NOTE: draft access control, The Decision Procedure, Refusals: a look-up of an EHR
+            // by its subject always leaves a record refused for its confidentiality out.
+            Outcome::Absent(_) | Outcome::Refused(Refusal::Confidentiality) => true,
             Outcome::Refused(refusal) => caller.confined() && refusal == caller.not_own(),
             Outcome::Admit => false,
         };
@@ -338,9 +340,10 @@ impl FerroEhrService {
                 let entries = self.ehr_access_entries(ehrs).await?;
                 Care::Ehrs(access.cared_ehrs(&entries).await?.into())
             }
-            None => match projected_care(access) {
-                Some(care) if self.care_projection_current() => Care::Projected(care),
-                _ => Care::Census(access.cared_subjects().await?.into()),
+            None => match (access.attested_care(), projected_care(access)) {
+                (Some(attested), _) => attested,
+                (None, Some(care)) if self.care_projection_current() => Care::Projected(care),
+                (None, _) => Care::Census(access.cared_subjects().await?.into()),
             },
         })
     }

@@ -215,6 +215,14 @@ fn check_elements(facts: &Facts) -> Result<(), ServiceError> {
                 }
             }
             Some(Operation::WriteCareRelationship) => care_writer_terms(credentials)?,
+            Some(Operation::WriteRepresentation)
+                if credentials.named(PROVIDER).len() != credentials.identifiers(PROVIDER).len() =>
+            {
+                return Err(ServiceError::precondition(
+                    "the capability granting write_representation names a provider element that \
+                     is no DV_IDENTIFIER with an issuer and an id",
+                ));
+            }
             _ => {}
         }
     }

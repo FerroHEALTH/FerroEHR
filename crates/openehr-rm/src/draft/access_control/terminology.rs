@@ -31,7 +31,12 @@ use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_base::prelude::TerminologyId;
 
 use care::{CareBasis, CareElement, CarePath};
+use kinship::{Kinship, KinshipElement};
 use log::{AccessorKind, Action, Authorisation, CredentialBinding, Outcome, RefusalReason};
+use representation::{Representation, RepresentationElement};
+
+#[macro_use]
+mod group_macro;
 
 /// The BMMs' `Terminology_id_access`: the draft `openehr_access` terminology,
 /// which holds the access groups' own codes until openEHR adopts them.
@@ -124,6 +129,9 @@ pub enum Group {
     /// `representation`: the demographic relationship that makes its source
     /// a representative of its target.
     Representation,
+    /// `representation element`: the elements in the `details` of a
+    /// `represents` relationship.
+    RepresentationElement,
     /// `kinship`: the demographic relationship that states a kinship between
     /// two persons.
     Kinship,
@@ -153,7 +161,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 25] = [
+    pub const ALL: [Self; 26] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -169,6 +177,7 @@ impl Group {
         Self::GroupKind,
         Self::RecordSubject,
         Self::Representation,
+        Self::RepresentationElement,
         Self::Kinship,
         Self::KinshipElement,
         Self::AccessRefusal,
@@ -200,6 +209,7 @@ impl Group {
             Self::GroupKind => "group kind",
             Self::RecordSubject => "record subject",
             Self::Representation => "representation",
+            Self::RepresentationElement => "representation element",
             Self::Kinship => "kinship",
             Self::KinshipElement => "kinship element",
             Self::AccessRefusal => "access refusal",
@@ -233,6 +243,7 @@ impl Group {
             Self::GroupKind => phrases::<GroupKind>(),
             Self::RecordSubject => phrases::<RecordSubject>(),
             Self::Representation => phrases::<Representation>(),
+            Self::RepresentationElement => phrases::<RepresentationElement>(),
             Self::Kinship => phrases::<Kinship>(),
             Self::KinshipElement => phrases::<KinshipElement>(),
             Self::AccessRefusal => phrases::<Refusal>(),
@@ -363,12 +374,11 @@ pub trait Term: Copy + PartialEq + Sized + 'static {
     }
 }
 
-#[macro_use]
-mod group;
-
 pub mod care;
 pub mod hl7;
+pub mod kinship;
 pub mod log;
+pub mod representation;
 
 group! {
     /// The disposition of an EHR where no directive applies
@@ -529,37 +539,6 @@ group! {
 }
 
 group! {
-    /// The demographic relationship of representation, coded in the `name`
-    /// or `details` of a `PARTY_RELATIONSHIP`.
-    Representation in Representation {
-        /// The relationship's source represents its target, the subject, on
-        /// the subject's own record; the openEHR `subject_relationship` code
-        /// beside it says how.
-        Represents => "represents",
-    }
-}
-
-group! {
-    /// The demographic relationship of kinship, coded in the `name` or
-    /// `details` of a `PARTY_RELATIONSHIP`.
-    Kinship in Kinship {
-        /// The relationship's source and target, two persons, are kin; the
-        /// `kinship` element in its `details` says how. Kinship never
-        /// grants access: it can refuse it as a conflict of interest.
-        RelatedTo => "related_to",
-    }
-}
-
-group! {
-    /// The element in the `details` of a `related_to` relationship, coded in
-    /// the `ELEMENT`'s `name`.
-    KinshipElement in KinshipElement {
-        /// The kinship, of the value set bound for `kinship`.
-        Kinship => "kinship",
-    }
-}
-
-group! {
     /// The code an access refusal is recorded under, one per step of the
     /// decision procedure that can refuse.
     Refusal in AccessRefusal {
@@ -574,6 +553,9 @@ group! {
         PolicyDenied => "refused-policy-denied",
         /// The data carry a sensitivity the caller is not cleared for.
         Sensitivity => "refused-sensitivity",
+        /// The data's confidentiality is above `N` and no applying permit
+        /// clears its level; answered without the level or the reason.
+        Confidentiality => "refused-confidentiality",
         /// The policy needs a care relationship and the caller has none.
         NoCareRelationship => "refused-no-care-relationship",
         /// The policy needs a declared purpose and the request has none.
@@ -664,6 +646,35 @@ pub struct NotConfidentiality {
 }
 
 impl Confidentiality {
+    /// Every level, in the package's order.
+    pub const ALL: [Self; 3] = [Self::Normal, Self::Restricted, Self::VeryRestricted];
+
+    /// The level's code in [`TERMINOLOGY_ID_CONFIDENTIALITY`].
+    #[must_use]
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Normal => "N",
+            Self::Restricted => "R",
+            Self::VeryRestricted => "V",
+        }
+    }
+
+    /// The level's display name in the code system.
+    #[must_use]
+    pub const fn rubric(self) -> &'static str {
+        match self {
+            Self::Normal => "normal",
+            Self::Restricted => "restricted",
+            Self::VeryRestricted => "very restricted",
+        }
+    }
+
+    /// The level as a `DV_CODED_TEXT` of [`TERMINOLOGY_ID_CONFIDENTIALITY`].
+    #[must_use]
+    pub fn coded(self) -> DvCodedText {
+        coded_text(TERMINOLOGY_ID_CONFIDENTIALITY, self.code(), self.rubric())
+    }
+
     /// Reads the level `coded` names.
     ///
     /// # Errors
@@ -707,6 +718,8 @@ pub enum ForeignKind {
     /// The part a carer plays in a care relationship, its `care_role`, such
     /// as an HL7 `ParticipationType` code.
     CareRole,
+    /// The `basis` of a representation, such as an HL7 `RoleCode` code.
+    RepresentationBasis,
     /// The kinship a `related_to` relationship codes, such as a code of the
     /// openEHR Terminology group `subject relationship`.
     Kinship,
@@ -722,6 +735,7 @@ impl fmt::Display for ForeignKind {
             Self::Role => "role",
             Self::OrganisationType => "organisation type",
             Self::CareRole => "care role",
+            Self::RepresentationBasis => "representation basis",
             Self::Kinship => "kinship",
         })
     }
