@@ -16,7 +16,7 @@ use secrecy::ExposeSecret as _;
 use serde_json::Value;
 
 use super::super::Projection;
-use super::{EHR, TEMPLATE, VERSION, classified_read, policy, stored_entry};
+use super::{EHR, TEMPLATE, VERSION, cared_read, classified_read, policy, stored_entry};
 use crate::system_log::access_binding::tests::{organisation, representative};
 use crate::system_log::event::{
     AccessDecision, AuditEvent, EntryScope, EventActionCode, EventOutcome, EventType, ObjectClass,
@@ -150,3 +150,58 @@ fn export(policy: &CompiledPolicy) -> Projected {
 mod balp;
 mod dicom;
 mod ehds;
+
+/// The care relationship an access rested on reaches every projection, in
+/// either form (#6173): the entry keeps the ground under its form's `_type`,
+/// the BALP `AuditEvent` carries its role at `agent:user` `role` in the HL7
+/// `ParticipationType` code system, and the DICOM message as a `RoleIDCode`.
+#[test]
+fn the_care_ground_reaches_each_projection_in_either_form() {
+    const PARTICIPATION: &str = "http://terminology.hl7.org/CodeSystem/v3-ParticipationType";
+    let policy = policy();
+    for (attested, form, role) in [
+        (false, "ACCESS_STORED_CARE_GROUND", "RESP"),
+        (true, "ACCESS_ATTESTED_CARE_GROUND", "PART"),
+    ] {
+        let projected = project(&policy, &cared_read(&policy, attested), Some("subject-1"));
+        let care = projected.entry["authorisations"]
+            .as_array()
+            .and_then(|grounds| grounds.iter().find_map(|ground| ground.get("care")))
+            .cloned()
+            .unwrap_or(Value::Null);
+        let roles = user(&projected.document)["role"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        let rows: Vec<Row> = vec![
+            (
+                "authorisations.care: the entry keeps the form",
+                care["_type"] == form,
+            ),
+            (
+                "authorisations.care, attested: the assertion and the agreement",
+                !attested
+                    || (care["assertion"]["id"] == "trc-1" && care["agreement"]["type"] == "ROLE"),
+            ),
+            (
+                "authorisations.care: agent:user role in ParticipationType",
+                roles.iter().any(|r| {
+                    r["coding"][0]["system"] == PARTICIPATION && r["coding"][0]["code"] == role
+                }),
+            ),
+            (
+                "authorisations.care: a DICOM RoleIDCode",
+                projected.message.contains(&format!(
+                    r#"csd-code="{role}" codeSystemName="{PARTICIPATION}""#
+                )),
+            ),
+        ];
+        assert_eq!(
+            failing(&rows),
+            Vec::<&str>::new(),
+            "{form}: {} {}",
+            projected.document,
+            projected.message
+        );
+    }
+}

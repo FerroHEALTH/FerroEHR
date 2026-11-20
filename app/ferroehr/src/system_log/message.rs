@@ -190,11 +190,20 @@ fn requesting_participants(
     client_role: Code,
     role_code_system: &str,
 ) -> Vec<ActiveParticipant> {
-    let roles: Vec<CodedValue> = event
+    let held = event
         .roles
         .iter()
-        .map(|role| CodedValue::new(role, role_code_system, role))
-        .collect();
+        .map(|role| CodedValue::new(role, role_code_system, role));
+    // NOTE: DICOM PS3.15 A.5.2 RoleIDCode, "the role(s) the user plays", so the role of the
+    // care relationship the access rested on follows the held roles in its own code system.
+    let cared = event.care_role_codings().into_iter().map(|coding| {
+        CodedValue::new(
+            &coding.code,
+            coding.system.as_deref().unwrap_or(role_code_system),
+            &coding.code,
+        )
+    });
+    let roles: Vec<CodedValue> = held.chain(cared).collect();
     let professional = event
         .actor
         .professional_id

@@ -16,6 +16,7 @@ use std::borrow::Cow;
 use jiff::Timestamp;
 
 use ferrohealth_smart::assurance::AssuranceLevel;
+use openehr_rm::draft::access_log::access_log::access_care_ground::AccessCareGround;
 
 /// DICOM `EventActionCode` (PS3.15 §A.5.1): the CRUD/execute class of the op.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -467,13 +468,25 @@ impl AuditEvent {
             .token
             .iter()
             .flat_map(|token| token.roles.iter().cloned());
-        let cared = self
-            .decided
+        held.chain(stated).chain(self.care_role_codings()).collect()
+    }
+
+    /// The role of the care relationship the access rested on, stored or
+    /// attested, its HL7 terminology identifier mapped to the code system's
+    /// canonical URL (draft access control Terminology, Codes from HL7 Code
+    /// Systems); empty when no ground names one.
+    #[must_use]
+    pub fn care_role_codings(&self) -> Vec<Coding> {
+        self.decided
             .iter()
             .flat_map(|decided| &decided.grounds)
-            .filter_map(|ground| ground.care.as_ref())
+            .filter_map(|ground| ground.care.as_deref())
             .map(|care| {
-                let phrase = &care.role.defining_code;
+                let role = match care {
+                    AccessCareGround::AccessStoredCareGround(stored) => &stored.role,
+                    AccessCareGround::AccessAttestedCareGround(attested) => &attested.role,
+                };
+                let phrase = &role.defining_code;
                 let terminology = phrase.terminology_id.value.as_str();
                 Coding {
                     system: Some(
@@ -485,8 +498,8 @@ impl AuditEvent {
                     ),
                     code: phrase.code_string.clone(),
                 }
-            });
-        held.chain(stated).chain(cared).collect()
+            })
+            .collect()
     }
 
     /// Whether the audited data moves from this server to the client, which

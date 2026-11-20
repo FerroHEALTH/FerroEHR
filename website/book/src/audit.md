@@ -139,7 +139,7 @@ whose `name` and `version` name the document the ground is defined in:
 | `subject of care` | the person reads their own record | |
 | `consent` | a consent permit admitted the access, or the caller is a gate-keeper of the settings | `EHR_ACCESS` and the uid of its version; the directive by its uid, its first identifier or its position from 1, and its legal grounds |
 | `representation` | a `delegation` permit admitted a representative | as `consent` |
-| `treatment relationship` | the decision read a live care relationship | `ACCESS_POLICY` and the uid of its version, and in `care` the relationship the access rested on: its `role`, its `path` (`direct`, `team` or `self_declared`), its target (`carer`: the professional's `PERSON` or `ROLE`, or the care team or unit), the uid of its version (`relationship`), whether the grace after its end admitted the access (`in_grace`), the carer it covers for (`covers_for`) and its `provider`. Where several admitted it, `direct` comes before `team` before `self_declared`, then the order of the roles in the rule that matched |
+| `treatment relationship` | the decision read a live care relationship, also when only a controller rule's exception reads it | in `care` the relationship the access rested on, with its `role` and `path`. A stored relationship is an `ACCESS_STORED_CARE_GROUND` under `ACCESS_POLICY` and the uid of its version: its target (`carer`: the professional's `PERSON` or `ROLE`, or the care team or unit), the uid of its version (`relationship`), whether the grace after its end admitted the access (`in_grace`), the carer it covers for (`covers_for`) and its `provider`. One a verified credential attests is an `ACCESS_ATTESTED_CARE_GROUND` on the `attested` path under the agreement's name and version: the `assertion` (`id`, `issuer`) and the `agreement` (the container uid of its `ROLE`, with the partner's federation issuer); the ground's `reference` names the assertion too. Where several admitted it, `direct` comes before `team` before `self_declared` before `attested`, then the order of the roles in the rule that matched |
 | `emergency` | an emergency lifted a directive, a controller rule or steps 6 to 8 | the directive it lifted, or the `ACCESS_POLICY` version with the rule it lifted by its uid, its first identifier or its position from 1; an entry naming the objects it delivered names only the directives and rules whose data scope covers one of them |
 
 The entry of each EHR an AQL query served names the same grounds a read of
@@ -152,7 +152,10 @@ the relationship itself. In the FHIR `AuditEvent` the care relationship's
 role is an `agent.role` coding of the requestor, its HL7 code system named by
 its canonical URL (`HL7_ParticipationType` as
 `http://terminology.hl7.org/CodeSystem/v3-ParticipationType`), and the
-policy version that named it is among the requestor's `agent.policy`.
+policy version that named it is among the requestor's `agent.policy`. In
+the DICOM message the same role follows the held roles as a `RoleIDCode` in
+that code system. Both forms carry it, and a projection written from the log
+reads the ground back, so it carries the role as the live record does.
 
 `accessor.binding` says how FerroEHR bound the login to the party, or why
 it could not, in the `credential binding` group of the `openehr_access`
@@ -301,7 +304,7 @@ not classify is a BALP exchange without the EHDS entities. Each row is a test
 | `time_recorded` | `EventDateTime` | `occurred` |
 | `outcome` | `EventOutcomeIndicator`, `EventOutcomeDescription` | the reason's code |
 | `accessor.credential` | the requestor's `UserID` (the subject, or the professional a client acts for) | the issuer, the token id, the assurance |
-| `accessor.roles` | `RoleIDCode` in the `codeSystemName` of `[audit] role_code_system`, by default the deployment's `[api] system_id` | none |
+| `accessor.roles` | `RoleIDCode` in the `codeSystemName` of `[audit] role_code_system`, by default the deployment's `[api] system_id`; the role of the care relationship the access rested on in its HL7 code system | none |
 | `accessor.party`, `binding`, `groups`, `delegation` | details of the `ehds-accessor` participant object | no element; details |
 | `accessor.provider` | nothing | lost |
 | `system_id` | `AuditSourceID`, with `AuditEnterpriseSiteID` from the deployment | none |
