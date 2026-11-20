@@ -20,6 +20,8 @@ use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::{Marker, Outcome, PartyRef};
 use ferrohealth_smart::resource::Caller;
 
+use super::super::AuthError;
+
 /// Whether `outcome`, the binding of a caller of `kind`, binds the person
 /// themself: a plain `persons` login, neither a guest nor a delegate, or a
 /// token read as the patient's own, whose one live `PERSON` carries neither
@@ -70,6 +72,65 @@ pub(in crate::extensions::access::authn) fn as_person(caller: &Caller) -> Caller
     match caller.issuer() {
         Some(issuer) => probe.with_issuer(issuer.to_owned()),
         None => probe,
+    }
+}
+
+/// The caller `caller`, a token `ferrohealth-smart` reads as the patient's
+/// own, carrying the binding of its login when its issuer is a `persons`
+/// issuer with an `[[auth.party]]` table; `None` for a `patients` issuer's
+/// token, whose login the patient-portal binding reads ([`super::portal`]).
+///
+/// The token's reading never grants: its login has to bind the person
+/// themself ([`binds_the_person`]), looked up as a person's
+/// ([`as_person`]). No openEHR spec governs resolving a login to a
+/// party: our own design (#6080).
+///
+/// # Errors
+/// [`AuthError::PartyRefused`] when the login binds no `PERSON`
+/// (`refused-unbound`, `refused-key-claim-missing`), one with a marker
+/// (`refused-wrong-marker`) or one the binding refuses for its state, and
+/// [`AuthError::PartyUnavailable`] when the source could not answer.
+pub(super) async fn own_patient(
+    binding: &super::Binding,
+    caller: &Caller,
+) -> Result<Option<Caller>, AuthError> {
+    let Some(issuer) = caller
+        .issuer()
+        .filter(|issuer| binding.identifier_issuers.contains_key(*issuer))
+    else {
+        return Ok(None);
+    };
+    let outcome = binding
+        .shared
+        .resolve(&as_person(caller))
+        .await
+        .map_err(|error| super::closed::unanswered(&error))?
+        .unwrap_or(Outcome::Unbound);
+    if binds_the_person(caller.kind(), &outcome) {
+        return Ok(Some(Caller::clone(caller).with_party(outcome)));
+    }
+    // NOTE: our own design (#6080), a patient's token bound to a party with a marker binds a
+    // party of another kind than the token claims, so it reads as `refused-wrong-marker`.
+    let refusal = match outcome {
+        Outcome::Party(_) => wrong_marker(),
+        outcome => super::refusal(&outcome).unwrap_or_else(wrong_marker),
+    };
+    tracing::warn!(
+        issuer,
+        outcome = refusal.label(),
+        "the login binding names no person for a patient's own token"
+    );
+    Err(refusal)
+}
+
+/// The refusal of a login bound to a party of another kind than its caller
+/// claims.
+const fn wrong_marker() -> AuthError {
+    AuthError::PartyRefused {
+        code: "refused-wrong-marker",
+        principal: None,
+        party: None,
+        named: None,
     }
 }
 

@@ -223,6 +223,20 @@ pub(crate) async fn child(svc: &FerroEhrService) -> (VoId, String) {
         .await
         .expect("the child commits");
     let person = vo(&uid(&created));
+    (person, ehr_naming(svc, person).await)
+}
+
+/// The child's `PERSON`, carrying the child's portal login [`CHILD_LOGIN`] as
+/// its binding key, and the EHR whose `EHR_STATUS` names it: a `patients`
+/// token is the patient only when its login binds the launch EHR's subject
+/// (#6080).
+pub(crate) async fn own_child(svc: &FerroEhrService) -> (VoId, String) {
+    let person = representative(svc, CHILD_LOGIN, json!([])).await;
+    (person, ehr_naming(svc, person).await)
+}
+
+/// The EHR whose `EHR_STATUS` names the `PERSON` `person` as its subject.
+async fn ehr_naming(svc: &FerroEhrService, person: VoId) -> String {
     let status = json!({
         "_type": "EHR_STATUS",
         "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
@@ -237,7 +251,7 @@ pub(crate) async fn child(svc: &FerroEhrService) -> (VoId, String) {
     let (ehr, _) = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status))))
         .await
         .expect("the EHR commits");
-    (person, ehr.to_string())
+    ehr.to_string()
 }
 
 /// An EHR with no subject, which no representation reaches.
@@ -253,7 +267,7 @@ async fn other_ehr(svc: &FerroEhrService) -> String {
 #[tokio::test]
 async fn a_parent_reads_the_childs_ehr_on_either_portal_path() {
     let (_db, svc) = service().await;
-    let (subject, ehr) = child(&svc).await;
+    let (subject, ehr) = own_child(&svc).await;
     representative(
         &svc,
         PARENT,
@@ -321,7 +335,7 @@ async fn a_representation_not_recorded_or_ended_is_refused() {
 #[tokio::test]
 async fn a_deleted_representation_never_leaves_the_patient_behind() {
     let (_db, svc) = service().await;
-    let (subject, ehr) = child(&svc).await;
+    let (subject, ehr) = own_child(&svc).await;
     let (other, _) = child(&svc).await;
     let (parent, preceding) = representative_at(
         &svc,
@@ -373,7 +387,7 @@ async fn a_deleted_representation_never_leaves_the_patient_behind() {
 #[tokio::test]
 async fn the_patient_authorises_a_proxy_and_revokes_it() {
     let (_db, svc) = service().await;
-    let (subject, ehr) = child(&svc).await;
+    let (subject, ehr) = own_child(&svc).await;
     let proxy = representative(&svc, PROXY, json!([])).await;
     let (stranger, _) = child(&svc).await;
     let app = router(&svc).await;
@@ -430,7 +444,7 @@ async fn the_patient_authorises_a_proxy_and_revokes_it() {
 #[tokio::test]
 async fn the_patient_does_not_revoke_a_representation_they_did_not_insert() {
     let (_db, svc) = service().await;
-    let (subject, ehr) = child(&svc).await;
+    let (subject, ehr) = own_child(&svc).await;
     let guardian = representative(&svc, PARENT, json!([])).await;
     let mut recorded = representation(guardian, subject, "264", None);
     recorded["archetype_details"] = json!({ "_type": "ARCHETYPED", "rm_version": "1.1.0",

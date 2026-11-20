@@ -28,6 +28,7 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
 use http::{Request, StatusCode};
 use serde_json::{Value, json};
+use sqlx::PgPool;
 use testkit::syslog_tls::SyslogTlsListener;
 use tower::ServiceExt;
 
@@ -129,10 +130,14 @@ async fn service_and_seed_app() -> (testkit::TestDb, Arc<FerroEhrService>, Route
 /// Seed the EHRs `ehr_ids` through an auth-off app over `svc`, so a refusal
 /// is the evaluator's on an EHR that exists: an EHR the store does not hold
 /// answers `404` before any step (#5623).
-async fn seed_ehrs(svc: &Arc<FerroEhrService>, ehr_ids: &[&str]) {
+async fn seed_ehrs(svc: &Arc<FerroEhrService>, pool: &PgPool, ehr_ids: &[&str]) {
     let seed = common::build_with(seed_config(), Arc::clone(svc)).await;
     for ehr_id in ehr_ids {
-        seed_ehr(&seed, ehr_id).await;
+        if *ehr_id == EHR_OWN {
+            seed_own(&seed, pool).await;
+        } else {
+            seed_ehr(&seed, ehr_id).await;
+        }
     }
 }
 
@@ -145,6 +150,35 @@ pub(crate) async fn seed_ehr(seed: &Router, ehr_id: &str) {
         .expect("request");
     let resp = seed.clone().oneshot(req).await.expect("seed ehr");
     assert_eq!(resp.status(), StatusCode::CREATED, "seed EHR {ehr_id}");
+}
+
+/// Seeds the person's own EHR, [`EHR_OWN`], whose subject is the `PERSON` the
+/// person's portal login is a key of: a `patients` token is the patient only
+/// when its login binds the launch EHR's subject (#6080).
+pub(crate) async fn seed_own(seed: &Router, pool: &PgPool) {
+    seed_own_as(seed, pool, EHR_OWN).await;
+}
+
+/// Seeds `ehr_id` as the person's own EHR ([`seed_own`]); the id of their
+/// `PERSON`.
+async fn seed_own_as(seed: &Router, pool: &PgPool, ehr_id: &str) -> uuid::Uuid {
+    let person = common::portal_patient(pool, PATIENTS, SUBJECT).await;
+    let req = Request::builder()
+        .method("PUT")
+        .uri(format!("{BASE}/ehr/{ehr_id}"))
+        .header("content-type", "application/json")
+        .body(Body::from(common::person_status(person).to_string()))
+        .expect("request");
+    let (code, _, body) = common::send(seed, req).await;
+    assert_eq!(code, StatusCode::CREATED, "seed EHR {ehr_id}: {body}");
+    person
+}
+
+/// Whether `req` is refused as a `patients` token whose launch context binds
+/// no `PERSON` is: `403` with `refused-unbound` (#6080).
+async fn unbound(app: &Router, req: Request<Body>) -> bool {
+    let (code, body) = common::send_body(app, req).await;
+    code == StatusCode::FORBIDDEN && body.contains("refused-unbound")
 }
 
 /// Commit `body` into `ehr_id` through the direct composition route; return its
@@ -374,8 +408,8 @@ async fn query_first_column(
 
 #[tokio::test]
 async fn create_for_other_patient_is_pre_check_forbidden() {
-    let (_pg, svc) = service(None).await;
-    seed_ehrs(&svc, &[EHR_OTHER]).await;
+    let (pg, svc) = service(None).await;
+    seed_ehrs(&svc, &pg.pool(), &[EHR_OWN, EHR_OTHER]).await;
     let app = gated_app(svc).await;
     let s = probe(
         &app,
@@ -393,8 +427,8 @@ async fn create_for_other_patient_is_pre_check_forbidden() {
 
 #[tokio::test]
 async fn create_for_own_patient_clears_the_gate() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr(&seed, EHR_OWN).await;
+    let (pg, svc, seed) = service_and_seed_app().await;
+    seed_own(&seed, &pg.pool()).await;
 
     let app = gated_app(svc).await;
     let s = probe(
@@ -414,7 +448,8 @@ async fn create_for_own_patient_clears_the_gate() {
 
 #[tokio::test]
 async fn read_of_other_patient_is_post_check_forbidden() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
+    let (pg, svc, seed) = service_and_seed_app().await;
+    seed_own(&seed, &pg.pool()).await;
     seed_ehr(&seed, EHR_OTHER).await;
     let uid = seed_composition(&seed, EHR_OTHER).await;
 
@@ -435,8 +470,8 @@ async fn read_of_other_patient_is_post_check_forbidden() {
 
 #[tokio::test]
 async fn read_of_own_patient_is_served() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr(&seed, EHR_OWN).await;
+    let (pg, svc, seed) = service_and_seed_app().await;
+    seed_own(&seed, &pg.pool()).await;
     let uid = seed_composition(&seed, EHR_OWN).await;
 
     let app = gated_app(svc).await;
@@ -450,27 +485,32 @@ async fn read_of_own_patient_is_served() {
     assert_eq!(s.status, StatusCode::OK, "own-patient read is served");
 }
 
-/// A patient context that names no EHR reaches none.
+/// A patient context that names no EHR reaches none: its login binds no
+/// launch EHR's subject, so the token is refused unbound (#6080).
 #[tokio::test]
 async fn a_patient_context_naming_no_ehr_is_forbidden() {
-    let (_pg, svc) = service(None).await;
-    seed_ehrs(&svc, &[EHR_OWN]).await;
+    let (pg, svc) = service(None).await;
+    seed_ehrs(&svc, &pg.pool(), &[EHR_OWN]).await;
     let app = gated_app(svc).await;
-    let s = probe(&app, "POST", &format!("/ehr/{EHR_OWN}/composition"), None).await;
-    assert_eq!(
-        s,
-        not_subject(),
+    let req = request(
+        "POST",
+        &format!("/ehr/{EHR_OWN}/composition"),
+        &patient(None),
+        &own_composition(),
+    );
+    assert!(
+        unbound(&app, req).await,
         "a patient context naming no EHR is denied"
     );
 }
 
 /// The SMART `patient` claim is no openEHR launch context: master07 §Context
 /// Selection names `ehrId` for the EHR, so a token carrying `patient` alone
-/// makes its caller the subject of no EHR.
+/// makes its caller the subject of no EHR, and its login binds none (#6080).
 #[tokio::test]
 async fn the_patient_claim_is_no_launch_context() {
-    let (_pg, svc) = service(None).await;
-    seed_ehrs(&svc, &[EHR_OWN]).await;
+    let (pg, svc) = service(None).await;
+    seed_ehrs(&svc, &pg.pool(), &[EHR_OWN]).await;
     let app = gated_app(svc).await;
     let token = common::bearer(&json!({
         "sub": SUBJECT, "iss": PATIENTS, "aud": AUDIENCE,
@@ -478,17 +518,13 @@ async fn the_patient_claim_is_no_launch_context() {
         "scope": "patient/composition-*.crud patient/aql-*.s",
         "patient": EHR_OWN,
     }));
-    let s = status(
-        &app,
-        request(
-            "POST",
-            &format!("/ehr/{EHR_OWN}/composition"),
-            &token,
-            &own_composition(),
-        ),
-    )
-    .await;
-    assert_eq!(s, not_subject(), "a `patient` claim names no EHR");
+    let req = request(
+        "POST",
+        &format!("/ehr/{EHR_OWN}/composition"),
+        &token,
+        &own_composition(),
+    );
+    assert!(unbound(&app, req).await, "a `patient` claim names no EHR");
 }
 
 /// A professional is held to no patient context: a create for any EHR is
@@ -519,8 +555,8 @@ async fn a_patient_deny_is_audited() {
     // failure audit for the denied caller: a minor-failure outcome
     // (`EventOutcomeIndicator="4"`) attributed to `svc`.
     let (_audit, mut socket, sender) = audit_capture().await;
-    let (_pg, svc) = service(Some(sender)).await;
-    seed_ehrs(&svc, &[EHR_OTHER]).await;
+    let (pg, svc) = service(Some(sender)).await;
+    seed_ehrs(&svc, &pg.pool(), &[EHR_OWN, EHR_OTHER]).await;
     let app = gated_app(svc).await;
 
     let s = probe(
@@ -547,8 +583,8 @@ async fn a_patient_deny_is_audited() {
 /// row alone.
 #[tokio::test]
 async fn query_is_filtered_to_the_callers_patient() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr_in(&seed, EHR_OWN, "test.patients", "PATIENT-1").await;
+    let (pg, svc, seed) = service_and_seed_app().await;
+    seed_own(&seed, &pg.pool()).await;
     seed_ehr_in(&seed, EHR_OTHER, "test.patients", "PATIENT-2").await;
     seed_composition(&seed, EHR_OWN).await;
     seed_composition(&seed, EHR_OTHER).await;
@@ -583,26 +619,28 @@ async fn query_is_filtered_to_the_callers_patient() {
 /// patient's subject answers as one no EHR names (#6106).
 #[tokio::test]
 async fn a_patients_lookup_by_subject_finds_only_their_own_ehr() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr_in(&seed, EHR_OWN, "test.patients", "PATIENT-1").await;
-    seed_ehr_in(&seed, EHR_OTHER, "test.patients", "PATIENT-2").await;
+    let (pg, svc, seed) = service_and_seed_app().await;
+    let person = seed_own_as(&seed, &pg.pool(), EHR_OWN).await;
+    let another = uuid::Uuid::now_v7().to_string();
+    seed_ehr_in(&seed, EHR_OTHER, "demographic", &another).await;
     let app = gated_app(svc).await;
     let lookup = |subject: &str| {
         Request::builder()
             .uri(format!(
-                "{BASE}/ehr?subject_id={subject}&subject_namespace=test.patients"
+                "{BASE}/ehr?subject_id={subject}&subject_namespace=demographic"
             ))
             .header("authorization", patient(Some(EHR_OWN)))
             .header("accept", "application/json")
             .body(Body::empty())
             .expect("request")
     };
-    let (own, _, body) = common::send(&app, lookup("PATIENT-1")).await;
+    let (own, _, body) = common::send(&app, lookup(&person.to_string())).await;
     assert_eq!(own, StatusCode::OK, "{body}");
     let found: Value = serde_json::from_str(&body).expect("an EHR");
     assert_eq!(found["ehr_id"]["value"], json!(EHR_OWN));
-    let (other, _, other_body) = common::send(&app, lookup("PATIENT-2")).await;
-    let (none, _, none_body) = common::send(&app, lookup("PATIENT-9")).await;
+    let (other, _, other_body) = common::send(&app, lookup(&another)).await;
+    let unknown = uuid::Uuid::now_v7().to_string();
+    let (none, _, none_body) = common::send(&app, lookup(&unknown)).await;
     assert_eq!(other, StatusCode::NOT_FOUND, "{other_body}");
     assert_eq!(none, StatusCode::NOT_FOUND, "{none_body}");
 }
@@ -616,11 +654,11 @@ const EHR_UNIQUE: &str = "aaaaaaaa-0000-4000-8000-000000000004";
 /// subject shares an id across two namespaces, nor a subject-less EHR.
 #[tokio::test]
 async fn the_direct_route_gate_refuses_ambiguous_and_subject_less_ehrs() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
+    let (pg, svc, seed) = service_and_seed_app().await;
     seed_ehr_in(&seed, EHR_SHARED_A, "test.patients", "PATIENT-X").await;
     seed_ehr_in(&seed, EHR_SHARED_B, "other.patients", "PATIENT-X").await;
     seed_ehr(&seed, EHR_ANONYMOUS).await;
-    seed_ehr_in(&seed, EHR_UNIQUE, "test.patients", "PATIENT-U").await;
+    seed_own_as(&seed, &pg.pool(), EHR_UNIQUE).await;
     let app = gated_app(svc).await;
 
     for ehr in [EHR_SHARED_A, EHR_SHARED_B] {
@@ -665,9 +703,9 @@ async fn the_direct_route_gate_refuses_ambiguous_and_subject_less_ehrs() {
 /// operation: there is no switch that leaves it out.
 #[tokio::test]
 async fn a_directory_of_another_patient_is_refused() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
+    let (pg, svc, seed) = service_and_seed_app().await;
     seed_ehr(&seed, EHR_OTHER).await;
-    seed_ehr(&seed, EHR_OWN).await;
+    seed_own(&seed, &pg.pool()).await;
     let app = gated_app(svc).await;
 
     let folder = json!({
@@ -707,9 +745,9 @@ async fn a_directory_of_another_patient_is_refused() {
 /// direct route and through a query.
 #[tokio::test]
 async fn a_shared_subject_id_reaches_only_the_launch_ehr() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr_in(&seed, EHR_SHARED_A, "test.patients", "PATIENT-X").await;
-    seed_ehr_in(&seed, EHR_SHARED_B, "other.patients", "PATIENT-X").await;
+    let (pg, svc, seed) = service_and_seed_app().await;
+    let person = seed_own_as(&seed, &pg.pool(), EHR_SHARED_A).await;
+    seed_ehr_in(&seed, EHR_SHARED_B, "other.patients", &person.to_string()).await;
     let app = gated_app(svc).await;
 
     assert_eq!(
@@ -776,7 +814,8 @@ async fn status_vo(seed: &Router, ehr_id: &str) -> String {
 
 #[tokio::test]
 async fn an_item_tag_of_another_patient_is_refused_as_its_target_is() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
+    let (pg, svc, seed) = service_and_seed_app().await;
+    seed_own(&seed, &pg.pool()).await;
     seed_ehr(&seed, EHR_OTHER).await;
     let uid = seed_composition(&seed, EHR_OTHER).await;
     let vo = uid.split("::").next().expect("object id").to_owned();
@@ -849,8 +888,8 @@ async fn an_item_tag_of_another_patient_is_refused_as_its_target_is() {
 
 #[tokio::test]
 async fn an_item_tag_of_the_callers_patient_is_served() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr(&seed, EHR_OWN).await;
+    let (pg, svc, seed) = service_and_seed_app().await;
+    seed_own(&seed, &pg.pool()).await;
     let uid = seed_composition(&seed, EHR_OWN).await;
     let vo = uid.split("::").next().expect("object id").to_owned();
     let status_id = status_vo(&seed, EHR_OWN).await;
@@ -917,8 +956,8 @@ pub(crate) fn manifest_export(ehr_ids: &[&str], launch: &str) -> Request<Body> {
 /// through a manifest that also names the caller's own EHR.
 #[tokio::test]
 async fn an_export_of_another_patients_ehr_is_forbidden() {
-    let (_pg, svc) = service(None).await;
-    seed_ehrs(&svc, &[EHR_OWN, EHR_OTHER]).await;
+    let (pg, svc) = service(None).await;
+    seed_ehrs(&svc, &pg.pool(), &[EHR_OWN, EHR_OTHER]).await;
     let app = gated_app(svc).await;
 
     assert_eq!(
@@ -944,8 +983,8 @@ async fn an_export_of_another_patients_ehr_is_forbidden() {
 /// and permission, and the evaluator admits the caller's own EHR (#5606).
 #[tokio::test]
 async fn an_export_of_the_own_patients_ehr_is_served() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr(&seed, EHR_OWN).await;
+    let (pg, svc, seed) = service_and_seed_app().await;
+    seed_own(&seed, &pg.pool()).await;
     let app = gated_app(svc).await;
 
     assert_eq!(
@@ -987,11 +1026,11 @@ fn import(path: &str, name: &str, launch: Option<&str>) -> Request<Body> {
 
 /// Both EHR Extract import routes are held as a direct write is: an import
 /// into another patient's EHR is refused with `403`, and so is either import
-/// in a patient context that names no EHR.
+/// in a patient context that names no EHR, whose login binds none (#6080).
 #[tokio::test]
 async fn an_import_outside_the_patient_context_is_forbidden() {
-    let (_pg, svc) = service(None).await;
-    seed_ehrs(&svc, &[EHR_OWN, EHR_OTHER]).await;
+    let (pg, svc) = service(None).await;
+    seed_ehrs(&svc, &pg.pool(), &[EHR_OWN, EHR_OTHER]).await;
     let app = gated_app(svc).await;
 
     assert_eq!(
@@ -1011,9 +1050,8 @@ async fn an_import_outside_the_patient_context_is_forbidden() {
         "/message/import".to_owned(),
         format!("/message/import/{EHR_OWN}"),
     ] {
-        assert_eq!(
-            status(&app, import(&path, "ehr_extract.v1.json", None)).await,
-            not_subject(),
+        assert!(
+            unbound(&app, import(&path, "ehr_extract.v1.json", None)).await,
             "{path} needs a patient context naming the EHR"
         );
     }
@@ -1022,8 +1060,8 @@ async fn an_import_outside_the_patient_context_is_forbidden() {
 /// An import into the caller's own EHR lands.
 #[tokio::test]
 async fn an_import_into_the_own_patients_ehr_lands() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr(&seed, EHR_OWN).await;
+    let (pg, svc, seed) = service_and_seed_app().await;
+    seed_own(&seed, &pg.pool()).await;
     let app = gated_app(svc).await;
 
     let (code, body) = common::send_body(

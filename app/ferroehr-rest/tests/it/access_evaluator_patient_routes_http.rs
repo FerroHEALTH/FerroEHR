@@ -33,7 +33,8 @@ use serde_json::{Value, json};
 use sqlx::PgPool;
 
 use crate::access_evaluator_patient_http::{
-    EHR_OTHER, EHR_OWN, manifest_export, not_subject, patient, rest_config, seed_ehr, status,
+    EHR_OTHER, EHR_OWN, manifest_export, not_subject, patient, rest_config, seed_ehr, seed_own,
+    status,
 };
 use crate::common;
 
@@ -54,7 +55,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
             .with_audit_store(AuditStore::new(pool.clone())),
     );
     let seed = common::build_with(common::api_config(false), Arc::clone(&svc)).await;
-    seed_ehr(&seed, EHR_OWN).await;
+    seed_own(&seed, &pool).await;
     seed_ehr(&seed, EHR_OTHER).await;
     let app = common::build_full(rest_config(), svc, None, Observability::default()).await;
     (db, pool, app)

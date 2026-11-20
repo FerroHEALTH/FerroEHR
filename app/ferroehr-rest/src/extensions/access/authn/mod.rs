@@ -125,11 +125,8 @@ pub struct Principal {
     /// The EHR a bound representative is confined to, `None` for every other
     /// caller (#5086).
     pub represented: Option<portal::RepresentedEhr>,
-    /// The `PERSON` the caller's authenticated identity binds as the person
-    /// themself: the login binding's for a `persons` issuer, the
-    /// patient-portal binding's for a `patients` issuer. It is the one source
-    /// of own access (EHDS Art. 3); a token's reading of the patient never
-    /// sets it (#6080).
+    /// The `PERSON` the party binding binds the caller to as the person
+    /// themself, the one source of own access (EHDS Art. 3, #6080).
     pub own: Option<ferrohealth_smart::party::PartyRef>,
 }
 

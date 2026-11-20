@@ -842,6 +842,68 @@ pub(crate) async fn bind_subjects(pool: &PgPool, bound: &[(&str, &str)]) {
     }
 }
 
+/// Commits into `pool` the `PERSON` of the patient whose portal login is
+/// `login` under the `patients` issuer `issuer`, unless one carries that key
+/// already; its container id. A `patients` token is the patient only when its
+/// login is a key of the launch EHR's subject (#6080).
+pub(crate) async fn portal_patient(pool: &PgPool, issuer: &str, login: &str) -> uuid::Uuid {
+    open_key_spaces(pool, &[(issuer, true)]).await;
+    if let Some(person) = bound_person(pool, issuer, login).await {
+        return person;
+    }
+    let committer = binding_service(pool);
+    let body = crate::party_binding_http::person(issuer, login);
+    let created = Box::pin(committer.party_create(
+        ferroehr::service::demographic::types::PartyKind::Person,
+        crate::party_binding_http::write(&body, "532", None),
+    ))
+    .await
+    .expect("the patient's PERSON commits");
+    crate::party_binding_http::vo(&crate::party_binding_http::uid(&created)).0
+}
+
+/// An `EHR_STATUS` whose subject is the `PERSON` `person` of this CDR's
+/// demographic namespace, the body of an EHR create that stores it.
+pub(crate) fn person_status(person: uuid::Uuid) -> Value {
+    serde_json::json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "namespace": "demographic",
+                "type": "PERSON",
+                "id": { "_type": "HIER_OBJECT_ID", "value": person.to_string() }
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    })
+}
+
+/// Creates through `svc` the EHR whose subject is the `PERSON` `person`
+/// ([`person_status`]); its id.
+pub(crate) async fn person_ehr(svc: &FerroEhrService, person: uuid::Uuid) -> String {
+    let status = openehr_its::json::from_canonical_value::<openehr_rm::prelude::EhrStatus>(
+        &person_status(person),
+    )
+    .expect("an EHR_STATUS");
+    let (ehr, _) = Box::pin(svc.create_ehr_meta(
+        ferroehr::service::version_update::WriteRequest::new(Some(status)),
+    ))
+    .await
+    .expect("the EHR commits");
+    ehr.to_string()
+}
+
 /// Grants the `PERSON` of the Basic user `user` of [`with_basic_users`]
 /// `operation` in `pool`, and lets `service` honour it: an operation such as
 /// `read_subject_audit` or `access_service` a deployment grants a person.

@@ -822,21 +822,6 @@ pub(crate) fn care(role: &str, source: &str, team: &str, span: (&str, Option<&st
     })
 }
 
-/// The patient's `PERSON` holding `relationships`.
-pub(crate) fn patient_body(relationships: &[Value]) -> Value {
-    let archetype = "openEHR-DEMOGRAPHIC-PERSON.person.v1";
-    let mut body = json!({
-        "_type": "PERSON", "archetype_node_id": archetype,
-        "archetype_details": archetyped(archetype),
-        "name": text("Eva Visser"),
-        "identities": identities("Eva Visser")
-    });
-    if !relationships.is_empty() {
-        body["relationships"] = Value::Array(relationships.to_vec());
-    }
-    body
-}
-
 /// Today in UTC, moved by `days`, as `YYYY-MM-DD`.
 pub(crate) fn day(days: i64) -> String {
     jiff::Timestamp::now()
