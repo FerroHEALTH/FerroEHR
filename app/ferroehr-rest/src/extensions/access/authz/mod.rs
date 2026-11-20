@@ -156,6 +156,15 @@ const EXTENSION_READ_ROUTES: &[(&str, &str)] = &[
     ("POST", "/query/cohort"),
 ];
 
+/// Extension routes that are [`OperationClass::Authenticated`]: any caller the
+/// authentication layer admitted reads them, a bound person and a roleless
+/// principal included, because they disclose no personal data.
+///
+/// The accepted purposes of use are what a caller must declare to reach any
+/// record (#6105). Our own design: no openEHR spec governs role semantics.
+/// Matched by method + path SUFFIX so the configured base path is irrelevant.
+const EXTENSION_AUTHENTICATED_ROUTES: &[(&str, &str)] = &[("GET", "/access/purposes")];
+
 /// Extension routes that are [`OperationClass::Admin`] despite not sitting under
 /// `/admin/` — the destructive half of the shared-definition surface.
 ///
@@ -235,8 +244,13 @@ impl RbacGate {
                         || EXTENSION_ADMIN_ROUTES
                             .iter()
                             .any(|(verb, suffix)| method.as_str() == *verb && mp.ends_with(suffix));
+                    let authenticated = EXTENSION_AUTHENTICATED_ROUTES
+                        .iter()
+                        .any(|(verb, suffix)| method.as_str() == *verb && mp.ends_with(suffix));
                     if admin {
                         OperationClass::Admin
+                    } else if authenticated {
+                        OperationClass::Authenticated
                     } else {
                         OperationClass::Clinical
                     }
@@ -348,6 +362,19 @@ mod tests {
         assert_eq!(
             g.class_for(&Method::GET, Some("/x/admin/unknown")),
             OperationClass::Admin
+        );
+    }
+
+    #[test]
+    fn the_purposes_are_read_by_any_authenticated_caller() {
+        let g = gate();
+        let purposes = "/ferroehr/rest/extensions/v1/access/purposes";
+        let class = g.class_for(&Method::GET, Some(purposes));
+        assert_eq!(class, OperationClass::Authenticated);
+        assert_eq!(g.decide(class, &[]), RbacDecision::Allow);
+        assert_eq!(
+            g.class_for(&Method::POST, Some(purposes)),
+            OperationClass::Clinical
         );
     }
 

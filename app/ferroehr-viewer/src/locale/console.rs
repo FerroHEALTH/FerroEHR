@@ -162,6 +162,12 @@ crate::locale::messages! {
         AccessWho = "access-who",
         /// `Teal`
         BrandAccent = "brand-accent",
+        /// `The configured default`
+        PurposeDefault = "purpose-default",
+        /// `Why you read records in this session, declared on every request; the CDR's access policy may require one.`
+        PurposeDescription = "purpose-description",
+        /// `Purpose of use`
+        PurposeLabel = "purpose-label",
         /// `How long a subject id stays shown after you reveal it; the viewer caps it at 2 minutes.`
         RevealDescription = "reveal-description",
         /// `Show a revealed identifier for`

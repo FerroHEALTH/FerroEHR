@@ -143,7 +143,7 @@ const SECURITY_SCHEME: &str = "openehr_auth";
         (name = "Query", description = "Ad-hoc + stored AQL execution and stored-query definitions (ITS-REST)."),
         (name = "ADMIN", description = "The Admin API's own-design routes — template delete, stored-query-version delete, the redacted config read. The released Admin API defines only the two EHR physical deletes (tagged `EHR`); everything under this tag is OUR OWN EXTENSION (no ITS-REST operation governs it)."),
         (name = "system", description = "The ITS-REST System API (STABLE): the single `OPTIONS` Options-and-Conformance manifest at the API base-path root."),
-        (name = "audit", description = "IHE RESTful-ATNA ITI-81 Retrieve ATNA Audit Event over the local Audit Record Repository. Governed by IHE ITI TF-2 (transaction ITI-81), not by any openEHR specification — our own extension (config-gated: the `[audit.store]` local repository)."),
+        (name = "audit", description = "IHE RESTful-ATNA ITI-81 Retrieve ATNA Audit Event over the local Audit Record Repository. Governed by IHE ITI TF-2 (transaction ITI-81), not by any openEHR specification — our own extension (config-gated: the `[audit.store]` local repository). Beside it, `GET /access/purposes` lists the purposes of use a caller may declare, which any authenticated caller reads (our own extension)."),
         (name = "status", description = "Public operational status + the always-on health family (unauthenticated, never config-gated); each says only what a client or probe needs, the detail is under the `management` tag."),
         (name = "smart", description = "SMART App Launch service discovery (config-gated: FERROEHR__AUTH__SMART__DISCOVERY)."),
         (name = "openapi", description = "`OpenAPI` document + Swagger UI discoverability (config-gated: FERROEHR__API__OPENAPI_UI)."),
@@ -644,7 +644,8 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         "FerroEHR: Audit",
         "audit",
         // The ITI-81 AuditEvent retrieval under the FHIR root `/fhir/r4`, gated
-        // by the local audit repository.
+        // by the local audit repository, and the purposes of use an access
+        // record carries (`/access/purposes`, #6105).
         Members::Tags(&["audit"]),
     ),
     (

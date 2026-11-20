@@ -78,10 +78,12 @@ services:
         source: $(hs_dir)/clients
         target: /etc/ferrosmart/clients
         read_only: true
-  # The viewer launches the hospital's app from an EHR's page (#5880).
+  # The viewer launches the hospital's app from an EHR's page (#5880), and
+  # declares treatment as its purpose of use until its reader chooses (#6105).
   ferroehr-viewer:
     environment:
       FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL: http://localhost:3000
+      FERROEHR_VIEWER__CDR__PURPOSE_OF_USE: TREAT
       FERROEHR_VIEWER__LAUNCH__APP__0__NAME: Hospital app
       FERROEHR_VIEWER__LAUNCH__APP__0__CLIENT_ID: $HS_APP
       FERROEHR_VIEWER__LAUNCH__APP__0__LAUNCH_URL: $HS_LAUNCH_URL

@@ -83,6 +83,46 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/access/purposes": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "The purposes of use a caller may declare (`GET /access/purposes`).",
+        "description": "**Our own extension, no ITS-REST operation governs this** (module docs).",
+        "operationId": "access_purposes",
+        "responses": {
+          "200": {
+            "description": "The header a purpose is declared in, the code system of the codes, and the accepted codes in configured order, each with its display text when the terminology server gives one. An empty `codes` accepts any code.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "No valid credential.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Access logging is off, so no purpose is recorded.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/admin/access-delay": {
       "get": {
         "tags": [
@@ -27904,7 +27944,7 @@
     },
     {
       "name": "audit",
-      "description": "IHE RESTful-ATNA ITI-81 Retrieve ATNA Audit Event over the local Audit Record Repository. Governed by IHE ITI TF-2 (transaction ITI-81), not by any openEHR specification — our own extension (config-gated: the `[audit.store]` local repository)."
+      "description": "IHE RESTful-ATNA ITI-81 Retrieve ATNA Audit Event over the local Audit Record Repository. Governed by IHE ITI TF-2 (transaction ITI-81), not by any openEHR specification — our own extension (config-gated: the `[audit.store]` local repository). Beside it, `GET /access/purposes` lists the purposes of use a caller may declare, which any authenticated caller reads (our own extension)."
     },
     {
       "name": "status",

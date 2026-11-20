@@ -25,6 +25,13 @@ storage. Nothing here names a patient, and nothing changes what you may do.
 - **First day of the week** in the date pickers.
 - **Show a revealed identifier for** 15 seconds to 2 minutes: how long a
   subject id stays shown after **Reveal**.
+- **Purpose of use:** why you read records in this session, one of the codes
+  the CDR accepts (its `[audit] purpose_codes`, each named by the CDR's
+  terminology server when it has one). The viewer declares it on every
+  request to the CDR, in the CDR's `[audit] purpose_header`, until you sign
+  out; **The configured default** declares `cdr.purpose_of_use`. An access
+  policy that requires a purpose refuses every read that declares none. The
+  row shows only when the CDR lists its codes.
 
 ## Keyboard
 

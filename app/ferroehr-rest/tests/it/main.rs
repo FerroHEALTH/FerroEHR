@@ -56,6 +56,7 @@ mod access_log_queries_http;
 mod access_log_reads_http;
 mod access_opt_out_http;
 mod access_policy_http;
+mod access_purposes_http;
 mod access_restriction_http;
 mod access_writes_http;
 mod admin_access_log_http;

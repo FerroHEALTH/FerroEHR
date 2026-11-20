@@ -73,6 +73,9 @@ about-manifest-line = What the CDR answers at OPTIONS on its base path.
 about-manifest-refused = The conformance manifest could not be read.
 about-no-state = The viewer's state is not in reach.
 
+purpose-label = Purpose of use
+purpose-description = Why you read records in this session, declared on every request; the CDR's access policy may require one.
+purpose-default = The configured default
 reveal-label = Show a revealed identifier for
 reveal-description = How long a subject id stays shown after you reveal it; the viewer caps it at 2 minutes.
 reveal-seconds = { $count } seconds

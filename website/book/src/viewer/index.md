@@ -187,6 +187,7 @@ override, because the viewer's variables share its prefix:
 | `cdr.base_url` | `http://localhost:8080` | The CDR origin (`cdr.base_path` is appended). |
 | `cdr.base_path` | `/ferroehr/rest/openehr/v1` | The CDR's ITS-REST base path. Mirror of the CDR's own `api.base_path`: set the same value here when a deployment [shortens it](../installation/config-server.md#base_path-shortening-the-rest-base-path), or the viewer calls paths the CDR does not serve. The status document, the OpenAPI documents and the SMART discovery document are derived from it by the same rule the CDR uses. |
 | `cdr.timeout` | `"30s"` | How long one request to the CDR may take. |
+| `cdr.purpose_of_use` | unset | The purpose of use the viewer declares when the reader chose none on [Preferences](preferences.md#reading). It must be a code the CDR's `GET {extensions}/access/purposes` lists: an unlisted code stops the first request after sign-in with an error naming it, and is never sent. Unset declares nothing until the reader chooses. |
 | `cdr.tls.trust_roots_file` | unset | A PEM bundle of certificate authorities trusted for the CDR beside the platform's roots, for a CDR behind a private PKI. |
 | `cdr.tls.client_identity` (`_file`) | unset | The client certificate chain and its private key, in one PEM, presented to a CDR that asks for mutual TLS. |
 | `cdr.tls.min_version` | `"1.3"` | The oldest TLS version the CDR client speaks; `"1.2"` lowers it. |
