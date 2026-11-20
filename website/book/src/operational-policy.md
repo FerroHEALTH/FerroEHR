@@ -1651,9 +1651,11 @@ A caller holds a live care relationship when the relationship's `target`
 names its `PERSON` or a `ROLE` it performs (the direct path), or a care team
 or unit it is a member of (the team path), and it acts for the relationship's
 `provider`: a bound professional acts for the provider the party binding
-names (`[authz.party_binding.provider]`), and a system client for the
-`ORGANISATION` its `AGENT` acts for and the `GROUP`s that provider is a
-member of. Its `time_validity` is the period of the care: the end is the
+names (`[authz.party_binding.provider]`, or the table of its tenant when the
+binding names one per tenant), and a system client for the `ORGANISATION`
+its `AGENT` acts for, matched by that organisation's own reference (its
+namespace and id) or by its identifier (issuer and id), and for the
+`GROUP`s that provider is a member of. Its `time_validity` is the period of the care: the end is the
 upper bound, and the relationship stays, so the evaluator can apply a grace
 period after it. A relationship without a `care_role` or a `provider`, with a
 role outside its value set, or with a target of another kind is refused
