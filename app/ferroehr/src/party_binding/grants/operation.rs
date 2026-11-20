@@ -275,7 +275,7 @@ pub enum Operation {
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 22] = [
+    pub const ALL: [Self; 23] = [
         Self::CommitComposition,
         Self::ComposeFor,
         Self::ImportEhr,
