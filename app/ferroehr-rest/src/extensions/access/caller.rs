@@ -43,6 +43,7 @@ use openehr_rm::draft::access_control::terminology::{
 };
 use uuid::Uuid;
 
+use super::authn::party::own::own_person;
 use super::authn::trc::TrcPatientEhr;
 use super::authn::{Principal, current_principal};
 use super::authz::AuthzHandle;
@@ -117,7 +118,9 @@ fn caller_of(
         .is_some_and(AuthzHandle::rbac_active);
     let kind = kind(
         principal,
-        settings.subject() || (rbac && principal.is_some_and(bound_person_alone)),
+        settings.subject()
+            || principal.is_some_and(binds_the_person)
+            || (rbac && principal.is_some_and(bound_person_alone)),
         capabilities,
     );
     let roles = principal.map_or_else(Vec::new, |p| p.roles.clone());
@@ -147,7 +150,10 @@ fn caller_of(
     let patient_grants_only = op.is_some_and(|op| patient_grants_only(principal, op));
     Caller {
         kind,
-        party: settings.party().map(str::to_owned),
+        party: settings
+            .party()
+            .map(str::to_owned)
+            .or_else(|| principal.and_then(own_person_id)),
         own_ehrs: own_ehrs(principal, kind, patient_grants_only),
         patient_grants_only,
         acts_for,
@@ -228,6 +234,23 @@ pub(crate) fn bound_person_alone(principal: &Principal) -> bool {
                     .and_then(ferrohealth_smart::party::Outcome::bound)
                     .is_some_and(|bound| bound.party.type_name() == "PERSON")
         })
+}
+
+/// Whether the login binding bound `principal` to a patient's `PERSON` as
+/// the person themself ([`own_person`]): the evaluator confines it to the
+/// records whose subject is that `PERSON`, whatever the role gate (#6106).
+fn binds_the_person(principal: &Principal) -> bool {
+    principal.access.caller().and_then(own_person).is_some()
+}
+
+/// The id of the `PERSON` the login binding bound `principal` to as the
+/// person themself, whose commits name no party (`PARTY_SELF`).
+fn own_person_id(principal: &Principal) -> Option<String> {
+    principal
+        .access
+        .caller()
+        .and_then(own_person)
+        .map(|party| party.id().to_owned())
 }
 
 /// The caller's kind (`access caller kind`).

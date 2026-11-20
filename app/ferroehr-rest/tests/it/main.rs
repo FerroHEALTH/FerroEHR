@@ -123,6 +123,7 @@ mod management_flamegraph_signing;
 mod message_extension_http;
 mod outbox_http;
 mod overload_http;
+mod own_person_http;
 mod party_binding_http;
 mod party_key_space_replicas;
 mod party_reverse_relationships_http;
