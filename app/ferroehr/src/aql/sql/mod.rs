@@ -133,8 +133,7 @@ pub struct SqlCtx {
     /// Art. 3(3) delay withholds held data from the query (#6108); `None`
     /// where the delay holds on no record or on every one.
     pub own_records: Option<own_records::OwnRecords>,
-    /// The caseload the request narrows the query to
-    /// ([`crate::access_eval::caseload`]); `None` for no narrowing.
+    /// The caseload ([`crate::access_eval::caseload`]) narrowing the query.
     pub caseload: Option<crate::access_eval::caseload::Caseload>,
 }
 
