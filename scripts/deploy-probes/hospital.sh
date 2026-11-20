@@ -63,7 +63,7 @@ x-hospital-env: &hospital-env
   FERROEHR__AUTH__SMART__PATIENT_ISSUERS: "$honoured"
   # ferrohealth-smart logs why it refuses a token at debug, and nowhere else;
   # the telemetry key is set because compose sets it, which outranks RUST_LOG.
-  FERROEHR__TELEMETRY__FILTER: info,ferrohealth_smart=debug
+  FERROEHR__TELEMETRY__FILTER: info,ferrohealth_smart=debug,ferroehr::access_eval=debug,ferroehr::service::ehr=debug
 services:
   # The quickstart issuer signs FerroPIX's PMIR feed token for FerroEHR's
   # \`ferroehr-system\` audience, which issuer 1 accepts above; any other

@@ -96,6 +96,11 @@ impl RequestAccess {
     /// caller is bound to ([`Caller::party`](crate::access_eval::procedure::Caller::party)).
     async fn names_the_caller(&self, entry: &EhrEntry) -> Result<bool, GrantsUnavailable> {
         let (Some(grants), Some(subject)) = (&self.grants, &entry.subject) else {
+            tracing::debug!(
+                grants = self.grants.is_some(),
+                subject = entry.subject.is_some(),
+                "the EHR names no subject this request can bind"
+            );
             return Ok(false);
         };
         // NOTE: the local source names each party by its container's UUID, so a bound
@@ -106,8 +111,18 @@ impl RequestAccess {
             .as_deref()
             .and_then(|p| p.parse::<Uuid>().ok())
         else {
+            tracing::debug!(
+                party = self.caller().party.is_some(),
+                "the caller is bound to no PERSON of this store"
+            );
             return Ok(false);
         };
-        Ok(grants.person_of(subject).await? == Some(party))
+        let person = grants.person_of(subject).await?;
+        tracing::debug!(
+            resolved = person.is_some(),
+            named = person == Some(party),
+            "the subject's PERSON against the caller's"
+        );
+        Ok(person == Some(party))
     }
 }

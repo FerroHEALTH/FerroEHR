@@ -332,6 +332,8 @@ hs_lookup_records() {
     | sed -E $'s/\x1b\\[[0-9;]*m//g' \
     | grep -E 'route="/ferroehr/rest/openehr/v1/ehr" status=4' \
     | sed -nE 's/.*request_id="([^"]+)".*/\1/p' | tail -n 2); do
+    hdc logs --no-color ferroehr ferroehr-2 2>&1 | sed -E $'s/\x1b\\[[0-9;]*m//g' | grep -F "$rid" \
+      | grep -E 'DEBUG|WARN' | cut -c1-400 | sed 's/^/        /' >&2
     h_call 1 p:hans GET "$HX/admin/access-log?request_id=$rid"
     echo "        the access record of lookup $rid ($H_CODE): $(jq -c '[.entries[]? | del(.uid, .link,
       .system_id, .time_recorded, .action, .operation, .accessor, .retention, .channel)]' <<<"$H_BODY" 2>/dev/null | cut -c1-3000)" >&2

@@ -164,6 +164,12 @@ impl FerroEhrService {
         // NOTE: EHDS Art. 9(1) and Annex II 3.2, the refusal that hides the EHR is noted for the
         // request's access record, so a query or a lookup it answers as absent is logged (#5611).
         if hidden {
+            tracing::debug!(
+                outcome = ?verdict.outcome(&Item::Ehr),
+                confined = access.caller().confined(),
+                record = access.is_record(Some(ehr_id)),
+                "the request reads the EHR as absent"
+            );
             access.note(ehr_id, &verdict, &Item::Ehr);
         }
         Ok(hidden)
@@ -190,6 +196,12 @@ impl FerroEhrService {
             Outcome::Admit => false,
         };
         if hidden {
+            tracing::debug!(
+                outcome = ?verdict.outcome(&Item::Ehr),
+                confined = access.caller().confined(),
+                record = access.is_record(Some(ehr_id)),
+                "a lookup by subject hides the EHR it found"
+            );
             access.note(ehr_id, &verdict, &Item::Ehr);
         }
         Ok(hidden)
