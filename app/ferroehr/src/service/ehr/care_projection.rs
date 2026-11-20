@@ -173,7 +173,7 @@ impl Projector {
     /// One run: the projection brought to the party facts revision it reads,
     /// then every undigested EHR row digested; the revision reached.
     async fn project(&self) -> Result<i64, StorageError> {
-        let key_check = access_care::digest_check();
+        let key_check = subject_digest(access_care::DIGEST_CHECK);
         let mut clinical = acquire(&self.clinical).await?;
         let mut tx = clinical.begin().await?;
         let (held, check) = access_care::lock_state(&mut tx).await?;

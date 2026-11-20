@@ -36,7 +36,7 @@ use crate::service::FerroEhrService;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::support;
 use crate::service::demographic::written::{demographic_answer, locked_tip};
-use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
+use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
 use crate::versioning::Kind;
@@ -220,21 +220,6 @@ impl FerroEhrService {
             return Ok(ServiceResponse::plain(Value::Null));
         }
         Ok(support::version_response(vo_id, read)?)
-    }
-
-    /// [`Self::read_relationship`], with the body kept as the stored text where
-    /// nothing needs it parsed ([`crate::versioning::read::read_raw`]).
-    ///
-    /// # Errors
-    /// As [`Self::read_relationship`].
-    pub(super) async fn read_relationship_raw(
-        &self,
-        vo_id: VoId,
-        version: Option<TreeId>,
-        at: Option<jiff::Timestamp>,
-    ) -> Result<RawServiceResponse, ServiceError> {
-        self.demographic_read_raw(Kind::PartyRelationship, vo_id, version, at)
-            .await
     }
 
     /// Commit a new version of an already-resolved relationship.

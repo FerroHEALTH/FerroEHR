@@ -266,9 +266,9 @@ fn login(identity: &CommitterIdentity) -> DvIdentifier {
 /// no `external_ref`, is accepted when it names the caller (the token's `iss`
 /// and `sub`, or `ferroehr` and the Basic user). Any other stated committer
 /// is accepted when it states nothing `server` does not: a name equal to its
-/// name, no identifier other than the caller's login, no `external_ref` other
-/// than the bound `PERSON`. A stated `PARTY_RELATED` is never the client's to
-/// state.
+/// name, no identifier other than its own (the caller's login and, for a
+/// professional, the provider identifier), no `external_ref` other than the
+/// bound `PERSON`. A stated `PARTY_RELATED` is never the client's to state.
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`, `auth_failure`) naming
@@ -306,7 +306,7 @@ pub fn judge(
 
 /// Whether `party` is the placeholder form: exactly one `DV_IDENTIFIER` with
 /// an issuer and no type, assigner, name or `external_ref`.
-fn placeholder(party: &PartyIdentifiedData) -> bool {
+pub(super) fn placeholder(party: &PartyIdentifiedData) -> bool {
     party.name.is_none()
         && party.external_ref.is_none()
         && party.identifiers.as_ref().is_some_and(|ids| {
@@ -318,7 +318,7 @@ fn placeholder(party: &PartyIdentifiedData) -> bool {
 }
 
 /// Whether the placeholder `party` names the authenticated caller.
-fn names_caller(party: &PartyIdentifiedData, identity: &CommitterIdentity) -> bool {
+pub(super) fn names_caller(party: &PartyIdentifiedData, identity: &CommitterIdentity) -> bool {
     let issuer = identity.issuer.as_deref().unwrap_or(LOCAL_ISSUER);
     party.identifiers.as_ref().is_some_and(|ids| {
         ids.iter()
@@ -327,20 +327,22 @@ fn names_caller(party: &PartyIdentifiedData, identity: &CommitterIdentity) -> bo
 }
 
 /// Whether `party` states nothing `ours` does not: its name is ours, each of
-/// its identifiers is our login (its type, when stated, ours), and its
+/// its identifiers is one of ours (its type, when stated, ours), and its
 /// `external_ref`, when stated, is ours.
-fn states_nothing_more(party: &PartyIdentifiedData, ours: &PartyIdentifiedData) -> bool {
+pub(super) fn states_nothing_more(party: &PartyIdentifiedData, ours: &PartyIdentifiedData) -> bool {
     let name = party.name.is_none() || party.name == ours.name;
     let reference = party.external_ref.is_none() || party.external_ref == ours.external_ref;
-    let login = ours.identifiers.as_ref().and_then(|ids| ids.iter().next());
     let identifiers = party.identifiers.as_ref().is_none_or(|ids| {
         ids.iter().all(|id| {
-            login.is_some_and(|login| {
-                id.issuer == login.issuer
-                    && id.id == login.id
-                    && id.assigner.is_none()
-                    && (id.r#type.is_none() || id.r#type == login.r#type)
-            })
+            ours.identifiers
+                .iter()
+                .flat_map(|own| own.iter())
+                .any(|own| {
+                    id.issuer == own.issuer
+                        && id.id == own.id
+                        && id.assigner.is_none()
+                        && (id.r#type.is_none() || id.r#type == own.r#type)
+                })
         })
     });
     name && reference && identifiers

@@ -43,7 +43,7 @@ pub(crate) const ISSUER: &str = "https://login.example";
 /// The `identifier_issuer` of its `[[auth.party]]` table.
 const LOGIN: &str = "https://login.example/tenant";
 const NAME_PATH: &str = "/identities[at0002]/details[at0003]/items[at0004]";
-const PROVIDER: (&str, &str) = ("urn:oid:2.16.528.1.1007.3.3", "12345678");
+pub(crate) const PROVIDER: (&str, &str) = ("urn:oid:2.16.528.1.1007.3.3", "12345678");
 
 fn mapping() -> BindingMapping {
     let key = IdentifierSelector::new(
@@ -186,9 +186,10 @@ pub(crate) async fn bound(svc: &FerroEhrService, sub: &str, key: &str) -> Commit
     }
 }
 
-/// A composition commit naming `committer`, or with no stated audit.
-fn version(committer: Option<&Value>) -> WriteRequest<openehr_rm::prelude::Composition> {
-    let mut request = write(&composition("c"), None);
+/// A composition commit naming `committer`, or with no stated audit, whose
+/// composer is the placeholder naming the login `sub` (#6130).
+fn version(committer: Option<&Value>, sub: &str) -> WriteRequest<openehr_rm::prelude::Composition> {
+    let mut request = write(&composed_by("c", &placeholder(ISSUER, sub)), None);
     if let Some(committer) = committer {
         request.audit = Some(
             openehr_its::json::from_canonical_value(&json!({
@@ -208,9 +209,10 @@ async fn commit(
     identity: CommitterIdentity,
     committer: Option<&Value>,
 ) -> Result<Value, ServiceError> {
+    let request = version(committer, &identity.subject);
     let written = with_committer(
         Some(identity),
-        Box::pin(svc.create_composition(ehr, version(committer))),
+        Box::pin(svc.create_composition(ehr, request)),
     )
     .await?;
     let landed = &written;
@@ -643,9 +645,15 @@ async fn a_representatives_write_is_held_to_the_persons_rules() {
         other => panic!("expected 403, got {other:?}"),
     };
 
-    let by_professional = write_as(&svc, ehr, clinician, &composition("by Dr Roe"), None)
-        .await
-        .expect("the professional's entry");
+    let by_professional = write_as(
+        &svc,
+        ehr,
+        clinician,
+        &composed_by("by Dr Roe", &placeholder(ISSUER, "sub-a")),
+        None,
+    )
+    .await
+    .expect("the professional's entry");
     refused(
         write_as(
             &svc,

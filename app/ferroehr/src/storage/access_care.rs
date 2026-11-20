@@ -47,12 +47,10 @@ pub fn subject_digest(key: &str) -> Vec<u8> {
     sha2::Sha256::digest(key.as_bytes()).to_vec()
 }
 
-/// The check value of the digest form, which tells the projector that the
-/// stored digests were taken in another form and must be taken again.
-#[must_use]
-pub fn digest_check() -> Vec<u8> {
-    subject_digest("ferroehr-care-subject-sha256")
-}
+/// The text whose [`subject_digest`] is the check value of the digest form,
+/// which tells the projector that the stored digests were taken in another
+/// form and must be taken again.
+pub const DIGEST_CHECK: &str = "ferroehr-care-subject-sha256";
 
 /// The text a subject reference a `PERSON` is named by is digested from.
 ///

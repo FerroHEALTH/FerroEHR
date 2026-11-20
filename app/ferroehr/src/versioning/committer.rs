@@ -19,6 +19,7 @@ use tokio::task_local;
 use crate::error::ServiceError;
 
 pub mod bound;
+pub(crate) mod composer;
 pub mod external;
 
 /// The `DV_IDENTIFIER.issuer` stamped on a committer whose credential this
