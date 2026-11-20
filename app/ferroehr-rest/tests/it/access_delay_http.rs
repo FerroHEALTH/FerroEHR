@@ -41,6 +41,8 @@ const PATIENTS: &str = "https://patients.example";
 const AUDIENCE: &str = "ferroehr";
 /// The professional's subject.
 const PROFESSIONAL: &str = "dr-jansen";
+/// The person's portal login.
+const PATIENT: &str = "patient-7";
 
 /// A deployment with the delay on for patient summaries (72 hours) when
 /// `delayed`, the professional's and the patient's issuer bound, auditing to
@@ -126,11 +128,9 @@ fn staff(sub: &str, roles: &[&str]) -> String {
 /// The person's token: `patient/` read and query grants in the launch context
 /// of `ehr`.
 fn patient(ehr: &str) -> String {
-    common::bearer(
-        &json!({ "sub": "patient-7", "iss": PATIENTS, "aud": AUDIENCE,
+    common::bearer(&json!({ "sub": PATIENT, "iss": PATIENTS, "aud": AUDIENCE,
         "exp": jiff::Timestamp::now().as_second() + 3600,
-        "scope": "patient/composition-*.r patient/aql-*.s", "ehrId": ehr }),
-    )
+        "scope": "patient/composition-*.r patient/aql-*.s", "ehrId": ehr }))
 }
 
 /// Sends `method uri` with `credential` and an optional body.
@@ -157,10 +157,12 @@ async fn send(
     common::send_body(app, req).await
 }
 
-/// Creates an EHR and commits the IPS composition into it as the
+/// Creates the person's EHR, whose subject is the `PERSON` their portal
+/// login is a key of, and commits the IPS composition into it as the
 /// professional; returns the EHR id and the composition's object id.
-async fn record(app: &Router) -> (String, String) {
-    let ehr = ehr_as(app, &professional(), None).await;
+async fn record(app: &Router, pool: &PgPool) -> (String, String) {
+    let person = common::portal_patient(pool, PATIENTS, PATIENT).await;
+    let ehr = ehr_as(app, &professional(), Some(&common::person_status(person))).await;
     let vo = commit(app, &ehr).await;
     (ehr, vo)
 }
@@ -317,7 +319,7 @@ async fn recorded(pool: &PgPool, resource: &str) -> Option<String> {
 #[tokio::test]
 async fn a_new_result_is_withheld_from_the_person_until_a_professional_releases_it() {
     let (_db, pool, _svc, app) = app(true).await;
-    let (ehr, vo) = record(&app).await;
+    let (ehr, vo) = record(&app, &pool).await;
     let person = patient(&ehr);
 
     assert_eq!(read(&app, &ehr, &vo, &person).await, StatusCode::NOT_FOUND);
@@ -362,7 +364,7 @@ async fn a_new_result_is_withheld_from_the_person_until_a_professional_releases_
 #[tokio::test]
 async fn a_hold_ends_at_its_limit_and_the_expiry_is_recorded() {
     let (_db, pool, svc, app) = app(true).await;
-    let (ehr, vo) = record(&app).await;
+    let (ehr, vo) = record(&app, &pool).await;
     let person = patient(&ehr);
     assert_eq!(read(&app, &ehr, &vo, &person).await, StatusCode::NOT_FOUND);
 
@@ -394,8 +396,8 @@ async fn a_hold_ends_at_its_limit_and_the_expiry_is_recorded() {
 /// and an end past the limit is refused.
 #[tokio::test]
 async fn a_professional_holds_a_composition_within_the_limit() {
-    let (_db, _pool, _svc, app) = app(true).await;
-    let (ehr, vo) = record(&app).await;
+    let (_db, pool, _svc, app) = app(true).await;
+    let (ehr, vo) = record(&app, &pool).await;
     let person = patient(&ehr);
     let (status, body) = admin(
         &app,
@@ -452,18 +454,14 @@ async fn a_professional_holds_a_composition_within_the_limit() {
 /// beside its `patient/` ones.
 #[tokio::test]
 async fn the_treating_professional_releases_from_a_clinical_route() {
-    let (_db, _pool, _svc, app) = app(true).await;
-    let (ehr, vo) = record(&app).await;
-    let mixed = common::bearer(
-        &json!({ "sub": "patient-7", "iss": PATIENTS, "aud": AUDIENCE,
+    let (_db, pool, _svc, app) = app(true).await;
+    let (ehr, vo) = record(&app, &pool).await;
+    let mixed = common::bearer(&json!({ "sub": PATIENT, "iss": PATIENTS, "aud": AUDIENCE,
         "exp": jiff::Timestamp::now().as_second() + 3600,
-        "scope": "patient/composition-*.r user/composition-*.cruds", "ehrId": ehr }),
-    );
-    let person = common::bearer(
-        &json!({ "sub": "patient-7", "iss": PATIENTS, "aud": AUDIENCE,
+        "scope": "patient/composition-*.r user/composition-*.cruds", "ehrId": ehr }));
+    let person = common::bearer(&json!({ "sub": PATIENT, "iss": PATIENTS, "aud": AUDIENCE,
         "exp": jiff::Timestamp::now().as_second() + 3600,
-        "scope": "patient/composition-*.ru", "ehrId": ehr }),
-    );
+        "scope": "patient/composition-*.ru", "ehrId": ehr }));
     let release = format!("{EXT}/ehr/{ehr}/versioned_composition/{vo}/access-delay/release");
 
     assert_eq!(
@@ -570,8 +568,8 @@ async fn the_delay_holds_on_the_callers_own_record_by_the_party_binding() {
 /// and no hold may be placed.
 #[tokio::test]
 async fn a_deployment_without_the_delay_withholds_nothing() {
-    let (_db, _pool, _svc, app) = app(false).await;
-    let (ehr, vo) = record(&app).await;
+    let (_db, pool, _svc, app) = app(false).await;
+    let (ehr, vo) = record(&app, &pool).await;
     assert_eq!(read(&app, &ehr, &vo, &patient(&ehr)).await, StatusCode::OK);
     let (status, body) = admin(&app, "access-delay", &json!({ "ehr_id": ehr, "vo_id": vo })).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
@@ -582,8 +580,8 @@ async fn a_deployment_without_the_delay_withholds_nothing() {
 /// reading a hold, on the admin routes and the clinical release route alike.
 #[tokio::test]
 async fn a_malformed_id_is_refused_on_every_access_delay_route() {
-    let (_db, _pool, _svc, app) = app(true).await;
-    let (ehr, vo) = record(&app).await;
+    let (_db, pool, _svc, app) = app(true).await;
+    let (ehr, vo) = record(&app, &pool).await;
     let cases = [
         (
             json!({ "ehr_id": "not-a-uuid", "vo_id": vo }),

@@ -430,11 +430,13 @@ async fn only_an_administrator_versions_a_professionals_person() {
 
 #[tokio::test]
 async fn a_patients_demographic_write_is_refused() {
-    let (_db, svc, app) = app().await;
+    let (db, svc, app) = app().await;
     professional(&svc, COLLEAGUE, "532").await;
+    let jane = common::portal_patient(&db.pool(), PATIENTS, "jane").await;
+    let ehr = common::person_ehr(&svc, jane).await;
     let exp = jiff::Timestamp::now().as_second() + 3600;
     let patient = common::bearer(&json!({
-        "iss": PATIENTS, "aud": AUDIENCE, "exp": exp, "sub": "jane",
+        "iss": PATIENTS, "aud": AUDIENCE, "exp": exp, "sub": "jane", "ehrId": ehr,
         "scope": "patient/composition-*.cruds __ferroehr.platform"
     }));
     let (_, body) = answered(

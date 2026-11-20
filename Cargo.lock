@@ -2084,9 +2084,9 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferrobridge-term"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39f9fd9fea13cd73d2672c797d8a54f0dc578627dc0747c978a779116a2a4c3e"
+checksum = "11b793a9dba5e15f76d96aefbb155a5af0d5e6429e0184e87a377fd02a05f36a"
 dependencies = [
  "async-trait",
  "backon",
@@ -2418,9 +2418,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-session"
-version = "0.25.1"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10dfe7af6316b82f6c7247c15e9182d5b81f0398a72c0e027bedd6d8cd407a25"
+checksum = "9076067d33d3b7af79442e29a54e01e1e72452c4cb6c31f398736dc5376d3e22"
 dependencies = [
  "aws-lc-rs",
  "axum",
@@ -2443,9 +2443,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-smart"
-version = "0.30.2"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff945c28376b515ef212c95b76f88f8f838c2fa2b9db36bc0c441a9d8956502b"
+checksum = "8d401b16d0cdfa5c238920f0403caae82a4d87b1041a03ec7de41d55c5719f95"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
@@ -3482,9 +3482,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6bef109be636948d0cb1c67b13bab790e468b8b4c00bffffc283c49ddd8a3a1"
+checksum = "cd6527273b5017bf5b283b7d61fec922800d0b17c5213da3981356b8a8fceb8b"
 dependencies = [
  "ferrohealth-smart",
  "fhir-search",
@@ -6956,7 +6956,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
@@ -7028,9 +7028,9 @@ dependencies = [
 
 [[package]]
 name = "thirtyfour"
-version = "0.38.1"
+version = "0.38.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ee66d96cfd32e01668efd6ec62caf5f7000438d771a9d673bf0c727bc05fbb6"
+checksum = "bd5b97143d859c32e767eb1f57ad64d2319358a2005d39c7d5f13a5e7568349a"
 dependencies = [
  "arc-swap",
  "async-trait",

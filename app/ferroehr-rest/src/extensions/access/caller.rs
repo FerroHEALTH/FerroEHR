@@ -43,7 +43,6 @@ use openehr_rm::draft::access_control::terminology::{
 };
 use uuid::Uuid;
 
-use super::authn::party::own::own_person;
 use super::authn::trc::TrcPatientEhr;
 use super::authn::{Principal, current_principal};
 use super::authz::AuthzHandle;
@@ -237,20 +236,16 @@ pub(crate) fn bound_person_alone(principal: &Principal) -> bool {
 }
 
 /// Whether the login binding bound `principal` to a patient's `PERSON` as
-/// the person themself ([`own_person`]): the evaluator confines it to the
+/// the person themself ([`Principal::own`]): the evaluator confines it to the
 /// records whose subject is that `PERSON`, whatever the role gate (#6106).
 fn binds_the_person(principal: &Principal) -> bool {
-    principal.access.caller().and_then(own_person).is_some()
+    principal.own.is_some()
 }
 
 /// The id of the `PERSON` the login binding bound `principal` to as the
 /// person themself, whose commits name no party (`PARTY_SELF`).
 fn own_person_id(principal: &Principal) -> Option<String> {
-    principal
-        .access
-        .caller()
-        .and_then(own_person)
-        .map(|party| party.id().to_owned())
+    principal.own.as_ref().map(|party| party.id().to_owned())
 }
 
 /// The caller's kind (`access caller kind`).
@@ -266,7 +261,9 @@ fn kind(principal: Option<&Principal>, subject: bool, capabilities: &Capabilitie
     if represents || principal.represented.is_some() {
         return CallerKind::Representative;
     }
-    if subject || smart.is_some_and(ferrohealth_smart::resource::Caller::is_the_person) {
+    // NOTE: EHDS Art. 3, the party binding is the one source of who a record's person is, so
+    // a token's reading of the patient never makes its caller the subject (#6080).
+    if subject {
         return CallerKind::Subject;
     }
     let external = smart.is_some_and(|caller| {

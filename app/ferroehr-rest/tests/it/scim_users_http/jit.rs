@@ -701,10 +701,14 @@ fn callers_config() -> AppConfig {
 /// admission admits guests.
 #[tokio::test]
 async fn a_patient_a_system_caller_and_a_guest_without_admit_guests_create_nothing() {
-    let (_db, pool, _service, app) = Box::pin(jit_app(callers_config())).await;
+    let (_db, pool, service, app) = Box::pin(jit_app(callers_config())).await;
+    let portal = "6a1f6c1e-0000-4000-8000-00000000e001";
+    let person = common::portal_patient(&pool, PATIENTS, portal).await;
+    let ehr = common::person_ehr(&service, person).await;
+    let registered = person_count(&pool).await;
     let exp = jiff::Timestamp::now().as_second() + 3600;
     let patient = common::bearer(&json!({ "iss": PATIENTS, "aud": AUDIENCE, "exp": exp,
-        "sub": "6a1f6c1e-0000-4000-8000-00000000e001", "name": "A. Patient",
+        "sub": portal, "name": "A. Patient", "ehrId": ehr,
         "scope": "patient/template-*.r" }));
     let (status, body) = request(&app, &patient).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
@@ -730,7 +734,7 @@ async fn a_patient_a_system_caller_and_a_guest_without_admit_guests_create_nothi
     assert!(body.contains("refused-unbound"), "{body}");
     assert_eq!(
         person_count(&pool).await,
-        0,
+        registered,
         "no caller here creates a PERSON"
     );
 }
