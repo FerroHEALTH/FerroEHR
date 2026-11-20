@@ -494,6 +494,7 @@ async fn plan_of(
         archetype_lineage: std::sync::Arc::default(),
         policy_parties,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        own_records: None,
     };
     let prepared = ferroehr::aql::sql::build(&ir, &params, &ctx).expect("the AQL lowers");
     let party = ferroehr::db::domain_pool_from(&db.pool(), ferroehr::db::domain::Domain::Party);

@@ -51,6 +51,50 @@ pub struct AppConfig {
     /// feed route receives; absent, the route is not mounted.
     pub pix:
         Option<std::sync::Arc<ferroehr::service::demographic::identity_feed::config::PixConfig>>,
+    /// The clock an external caller's `caller_rate` is read against: the
+    /// runtime's, unless the assembly holds another.
+    pub rate_clock: RateClock,
+}
+
+/// The clock an agreement's caller rate reads each request's instant from.
+///
+/// The binary keeps the runtime's monotonic clock; a test that judges the
+/// rate holds one still, so the refusal does not depend on how long the
+/// admitted requests took. No specification governs it: our own design.
+#[derive(Clone)]
+pub struct RateClock(std::sync::Arc<dyn Fn() -> tokio::time::Instant + Send + Sync>);
+
+impl RateClock {
+    /// A clock reading `now` for each instant.
+    #[must_use]
+    pub fn new(now: impl Fn() -> tokio::time::Instant + Send + Sync + 'static) -> Self {
+        Self(std::sync::Arc::new(now))
+    }
+
+    /// A clock that reads the instant it was made at, every time.
+    #[must_use]
+    pub fn still() -> Self {
+        let at = tokio::time::Instant::now();
+        Self::new(move || at)
+    }
+
+    /// The instant now, by this clock.
+    #[must_use]
+    pub fn now(&self) -> tokio::time::Instant {
+        (self.0)()
+    }
+}
+
+impl Default for RateClock {
+    fn default() -> Self {
+        Self::new(tokio::time::Instant::now)
+    }
+}
+
+impl std::fmt::Debug for RateClock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("RateClock")
+    }
 }
 
 impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
@@ -66,6 +110,7 @@ impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
             spec_profile: config.deployment.spec_profile,
             party_binding: config.authz.party_binding.clone(),
             pix: config.pix.clone().map(std::sync::Arc::new),
+            rate_clock: RateClock::default(),
         }
     }
 }
@@ -95,6 +140,18 @@ mod tests {
             ferroehr::config::rest::SystemOptionsConfig::restapi_specs_version(),
             ferroehr::telemetry::provenance::ITS_REST
         );
+    }
+
+    #[tokio::test]
+    async fn a_still_rate_clock_reads_one_instant_and_the_default_moves() {
+        let still = RateClock::still();
+        let first = still.now();
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        assert_eq!(still.now(), first);
+        let running = RateClock::default();
+        let before = running.now();
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        assert!(running.now() > before);
     }
 
     #[test]

@@ -77,6 +77,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
+use ferroehr::system_log::access_context::{self, AccessDelay};
 use http::{HeaderMap, Method};
 use indexmap::IndexMap;
 use openehr_its::rest::routes::{Param, ParamLocation, PathParam, RouteMatch};
@@ -412,7 +413,7 @@ where
     }
     // NOTE: EHDS Art. 3(3) (`docs/law/eu/ehds/text.html`), data a professional has not
     // released reads as absent to a patient-context request on a deployment that delays.
-    let delayed = delay::applies(&state, op);
+    let delay = delay::of(&state, op);
     // NOTE: our own design (#5513), every operation but the controller's own is judged by
     // the access evaluator, which holds the EHDS Art. 8 restriction and Art. 10 opt-out.
     let access = caller::request_access(&state, op);
@@ -424,7 +425,7 @@ where
             // Boxed: the handler and the decision are each large, and a debug build's stack
             // overflows on the copies made while the overlap is built.
             let overlapped = admission::overlap(
-                Box::pin(admit(&state, op, &decided_on, delayed)),
+                Box::pin(admit(&state, op, &decided_on, delay)),
                 Box::pin(handler(state.clone(), parts)),
             );
             return match overlapped.await {
@@ -435,7 +436,7 @@ where
                 Err(deny) => *deny,
             };
         }
-        if let Err(deny) = admit(&state, op, &parts, delayed).await {
+        if let Err(deny) = admit(&state, op, &parts, delay).await {
             return *deny;
         }
         let resp = handler(state.clone(), parts)
@@ -443,7 +444,7 @@ where
             .unwrap_or_else(IntoResponse::into_response);
         pep::post_check(&state, op, resp).await
     });
-    let delayed_guard = ferroehr::system_log::access_context::with_access_delay(delayed, guarded);
+    let delayed_guard = access_context::with_access_delay(delay, guarded);
     let mut resp = match access {
         Some(access) => {
             let judged = Arc::clone(&access);
@@ -462,16 +463,32 @@ where
 }
 
 /// The decision on `op` before its handler answers: the access evaluator,
-/// the EHDS Art. 3(3) delay when `delayed`, and the PEP pre-check, each
+/// the EHDS Art. 3(3) delay where `delay` holds, and the PEP pre-check, each
 /// answering its refusal.
 async fn admit(
     state: &AppState,
     op: &'static str,
     parts: &RequestParts,
-    delayed: bool,
+    delay: AccessDelay,
 ) -> Result<(), Box<Response>> {
     ehr_access::enforce(state, op, parts).await?;
-    if delayed {
+    // NOTE: EHDS Art. 3(3), a caller reading its own record by the party binding has the
+    // delay held on that record, which the decision above found (#6108).
+    let withheld = match delay {
+        AccessDelay::Off => false,
+        AccessDelay::Person => true,
+        AccessDelay::Records => {
+            access_context::access_delay_enforced()
+                || parts
+                    .path
+                    .get("ehr_id")
+                    .and_then(|raw| uuid::Uuid::parse_str(raw).ok())
+                    .is_some_and(|ehr| {
+                        access_context::access_delay_enforced_on(ferroehr::ids::EhrId(ehr))
+                    })
+        }
+    };
+    if withheld {
         match delay::refuse_withheld(state, op, parts).await {
             Ok(Some(absent)) => return Err(Box::new(absent)),
             Ok(None) => {}

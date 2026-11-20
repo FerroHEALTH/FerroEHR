@@ -43,7 +43,7 @@ pub(crate) mod declared;
 mod gates;
 pub(crate) mod grants;
 mod issuer;
-mod party;
+pub(crate) mod party;
 pub(crate) mod portal;
 pub(crate) mod purpose;
 pub(crate) mod record;
@@ -492,7 +492,7 @@ impl Authenticator {
             return Err(refusal);
         }
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
-        let roles = self.role_issuers.roles(caller);
+        let roles = party::own::roles(caller, || self.role_issuers.roles(caller));
         let honoured = self.gate.honoured(&access);
         // NOTE: no specification governs this: our own design; a credential the
         // verified-credential cache admitted was authenticated on an earlier request.
