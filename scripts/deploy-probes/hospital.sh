@@ -153,7 +153,7 @@ hdc() { dc "${HOSPITAL_FILES[@]}" --profile replicas --profile s3 --profile view
 hospital_up() {
   local namespace="${1:-demographic}"
   export FERROEHR_REPLICA_PORT="$HOSPITAL_REPLICA_PORT"
-  hs_export
+  hs_export "$namespace"
   # The overlay changes the identity issuer that both instances share a
   # network namespace with, so the quickstart goes down first, its volumes
   # with it: the hospital starts on a database of its own.
@@ -608,11 +608,32 @@ h_example() {
     "$H1$HB/definition/template/adl1.4/$(jq -rn --arg t "$1" '$t|@uri')/example"
 }
 
+# The placeholder composer naming the professional `who` (`p:<user>`) by the
+# `iss` and `sub` of their token, which the server fills with the
+# professional's PARTY_IDENTIFIED (#6130).
+h_placeholder() {
+  local claims
+  claims="$(hs_person_token "${1#p:}" | cut -d. -f2 | tr '_-' '/+')"
+  while (( ${#claims} % 4 )); do claims+="="; done
+  base64 -d <<<"$claims" 2>/dev/null \
+    | jq -c '{_type:"PARTY_IDENTIFIED",identifiers:[{_type:"DV_IDENTIFIER",issuer:.iss,id:.sub}]}'
+}
+
+# The composition `body` as `who` commits it: a professional names themself
+# as its composer through the placeholder (#6130).
+h_composed() {
+  local who="$1" body="$2"
+  case "$who" in
+    p:*) jq -c --argjson c "$(h_placeholder "$who")" '.composer = $c' <<<"$body" ;;
+    *) printf '%s' "$body" ;;
+  esac
+}
+
 # Commits the example of `template` into the EHR `ehr` through instance `n`
 # as `who`, declaring `purpose`; records the composition as HV_<name>.
 h_commit() {
   local name="$1" n="$2" who="$3" ehr="$4" template="$5" purpose="${6:-TREAT}"
-  h_call "$n" "$who" POST "/ehr/$ehr/composition" "$(h_example "$template")" "$purpose"
+  h_call "$n" "$who" POST "/ehr/$ehr/composition" "$(h_composed "$who" "$(h_example "$template")")" "$purpose"
   hv_set "$name" "$(h_vo)"
   [[ "$H_CODE" = 201 ]]
 }
@@ -1124,7 +1145,7 @@ hospital_rbac() {
   probe "P-HOSP-RBAC-NURSE" "$PROBE_WORKING" "server" "#5621 #5624" \
     "a nurse reads the vital signs and cannot commit the diagnosis template her role may not write"
   h_read 2 p:bram "$eva" c_vitals TREAT 200 "" "Nurse de Vries reads the vital signs"
-  h_call 1 p:bram POST "/ehr/$eva/composition" "$(h_example "$H_T_DIAGNOSIS")" TREAT
+  h_call 1 p:bram POST "/ehr/$eva/composition" "$(h_composed p:bram "$(h_example "$H_T_DIAGNOSIS")")" TREAT
   h_assert_code 403 "a NURSE commits the diagnosis template (#5621): ${H_BODY:0:300}"
   # A commit that was stored is named, so the probes after this one judge
   # the record as it stands.
