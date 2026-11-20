@@ -81,7 +81,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 16);
-    assert_eq!(applied("clinical").await, 59);
+    assert_eq!(applied("clinical").await, 60);
     assert_eq!(applied("party").await, 63);
     assert_eq!(applied("audit").await, 50);
 
@@ -118,6 +118,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "category_map",
             "commit_audit",
             "contribution",
+            "definition_revision",
             "dpop_proof",
             "ehr",
             "ehr_folder",

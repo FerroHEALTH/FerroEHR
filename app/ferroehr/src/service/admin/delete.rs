@@ -34,7 +34,7 @@ use crate::system_log::event::EventActionCode;
 impl FerroEhrService {
     /// Admin extension `DELETE /admin/template/{template_id}`: physically delete
     /// one operational template by its wire `template_id` (case-insensitive,
-    /// §Composite Identifiers and Case), evicting its `WebTemplate` cache entry.
+    /// §Composite Identifiers and Case), dropping the `WebTemplate`s built before it.
     ///
     /// NOTE: no openEHR spec governs this operation, the ITS-REST Admin API
     /// defining only EHR deletes — our own design/extension, addressed by the
@@ -79,13 +79,13 @@ impl FerroEhrService {
         // addresses; the FK blocks the deregistration if a concurrent commit
         // referenced it after the count above).
         template_repo::release_template_ref(&mut tx, &stored).await?;
+        let revision = template_repo::definition_revision(&mut tx).await?;
         self.commit_act_recorded(tx, Vec::new()).await?;
         self.registered_templates.changed();
-        // Evict the derived-runtime cache for the deleted id (case-canonical
-        // key). No openEHR spec governs the cache.
-        self.web_templates
-            .invalidate(&crate::templates::identity::canonical_key(&stored))
-            .await;
+        // The delete moved the definition revision, so this replica drops the
+        // Web Templates built before it, and every other replica does at its
+        // next request (#5948). No openEHR spec governs the cache.
+        self.definitions.confirm(revision);
         Ok(())
     }
 

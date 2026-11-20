@@ -1728,6 +1728,17 @@ may wait for the next request, which fails closed. The counter
 `access_care_stale_total{outcome}` counts each case. **Our own design:** the
 check, its place before the decision, and the wait.
 
+**The definition copies on a replica that did not make the change** (#5948).
+A replica keeps the Web Template of each stored template and the archetype
+lineage index in one generation, tagged with the `definition_revision`
+(`clinical/0060`) a request read. A statement trigger on `template_store` and
+`adl2_artefact` moves the revision once per transaction, and the request reads
+it in its read of the policy heads, so a generation older than the revision is
+replaced by an empty one before the request answers, with no added statement.
+A build that read the store before a newer generation was installed lands in
+the replaced one. A lineage that cannot be read refuses the query with `503`.
+**Our own design:** the revision, the generation and the refusal.
+
 **The patient's EHRs** (#5648, #5649). `FerroEhrService::subject_ehrs`, the
 index lookup a subject cohort makes, answers the EHR the clinical subject
 names and the EHR of every other record subject of the `PERSON` that declares
