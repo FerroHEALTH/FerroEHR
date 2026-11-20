@@ -9,10 +9,10 @@
 //! `200`, and out of them exactly when it answers `403`.
 //!
 //! The access-control decision procedure decides "every access to an EHR"
-//! (`docs/specifications/access-control/antora/modules/access_control/pages/decision_procedure.adoc`
-//! §Overview), and a party belongs to no EHR, so a party is read under the
-//! Demographic API's rules (`party_binding::protect::check_read`). No openEHR
-//! spec governs AQL over a demographic repository: our own design.
+//! (the FerroEHR access control draft, its decision procedure §Overview), and
+//! a party belongs to no EHR, so a party is read under the Demographic API's
+//! rules (`party_binding::protect::check_read`). No openEHR spec governs AQL
+//! over a demographic repository: our own design.
 
 use std::collections::BTreeSet;
 

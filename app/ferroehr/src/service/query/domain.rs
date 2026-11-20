@@ -4,11 +4,11 @@
 //! The access gates a query of each domain takes from the access evaluator.
 //!
 //! The access-control decision procedure decides "every access to an EHR"
-//! (`docs/specifications/access-control/antora/modules/access_control/pages/decision_procedure.adoc`
-//! §Overview), so a clinical query carries the evaluator's condition and the
-//! `EHR_ACCESS` readers, and a demographic query, whose parties belong to no
-//! EHR, carries neither and reads each party under the Demographic API's
-//! rules (`crate::aql::sql`'s gates, #6087). Our own design.
+//! (the FerroEHR access control draft, its decision procedure §Overview), so
+//! a clinical query carries the evaluator's condition and the `EHR_ACCESS`
+//! readers, and a demographic query, whose parties belong to no EHR, carries
+//! neither and reads each party under the Demographic API's rules
+//! (`crate::aql::sql`'s gates, #6087). Our own design.
 
 use crate::access_eval::condition::AccessCondition;
 use crate::aql::ir::QueryDomain;

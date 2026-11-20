@@ -29,13 +29,12 @@
 //! shape. Who reads the settings is our own design (#5508).
 //!
 //! The per-EHR gates hold for a clinical query only. The access-control
-//! decision procedure decides "every access to an EHR"
-//! (`docs/specifications/access-control/antora/modules/access_control/pages/decision_procedure.adoc`
-//! §Overview, §Queries), and a party belongs to no EHR, so a demographic
-//! query reads a party under the Demographic API's rules: the policy-party
-//! mark and the Art. 3(3) delay, never the evaluator's condition or the
-//! settings readers, whose relations the party store does not hold (#6087).
-//! Our own design.
+//! decision procedure decides "every access to an EHR" (the FerroEHR access
+//! control draft, its decision procedure §Overview), and a party belongs to
+//! no EHR, so a demographic query reads a party under the Demographic API's
+//! rules: the policy-party mark and the Art. 3(3) delay, never the
+//! evaluator's condition or the settings readers, whose relations the party
+//! store does not hold (#6087). Our own design.
 
 use sea_query::{Expr, ExprTrait as _};
 
