@@ -212,7 +212,9 @@ struct Budget {
 /// The demographic population query (#6087) runs as a caller with access
 /// groups after the `matches`, for the same reason; its ceilings are the
 /// figures of three runs (2,630 to 2,644 allocations, a median peak of
-/// 98,022 bytes, 2,062 WAL bytes) with the same margins.
+/// 98,022 bytes, 2,062 WAL bytes) with the same margins. It has since judged
+/// no `EHR_ACCESS` condition (#6110): 2,619 to 2,621 allocations and a median
+/// peak of 97,454 bytes over three runs, and its ceilings fell by as much.
 /// The commit of a PERSON holding two ordinals and two scales holds the WAL
 /// the index on their numbers costs (#6090): 4 entries of 72 bytes, 288 of
 /// the 10,489 bytes it wrote in each of three runs. Its ceilings are the
@@ -377,8 +379,8 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::AqlParty,
         conversions: 2,
-        allocations: 2697,
-        peak_bytes: 107_824,
+        allocations: 2674,
+        peak_bytes: 107_199,
         round_trips: 8,
         nested: 6,
         wal: 2083,
