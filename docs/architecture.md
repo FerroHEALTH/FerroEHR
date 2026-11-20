@@ -691,7 +691,7 @@ each party's class (`version.kind`) and matches the subject reference against
 that class and its demographic RM ancestors. The planner
 marks the IR `QueryDomain::Demographic`, and the same SQL runs on the party
 pool, whose `search_path` names the `party` schema rendered from the same DDL,
-without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`). An `EHR` operand directly under the root is the join to the EHR the
+without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`, and the access evaluator's per-EHR condition, which decides access to an EHR and has no row to judge on a party, #6087). An `EHR` operand directly under the root is the join to the EHR the
 party is the subject of: `aql::join` cuts the AST into a party half and a
 clinical half, the service runs the party half on the party pool, finds the
 EHRs whose subject names those parties, runs the clinical half scoped to them

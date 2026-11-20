@@ -13,6 +13,8 @@
 //!   execution orchestration (parse → plan → execute → assemble), paging
 //!   composition, `ehr_ids` resolution, and the per-query execution budget.
 //!   The AQL *engine* it drives is [`crate::aql`].
+//! - `domain` — the access gates a query of each domain takes: the access
+//!   evaluator's on a clinical query, none on a demographic one (#6087).
 //! - `budget` — the page, the row ceiling and the time budget of one
 //!   execution, shared by every execution path.
 //! - `join` — a query that joins a demographic root to its EHR, run as one
@@ -32,6 +34,7 @@
 mod access_log;
 mod budget;
 pub mod config;
+mod domain;
 mod execute;
 mod join;
 pub mod plan_cache;
