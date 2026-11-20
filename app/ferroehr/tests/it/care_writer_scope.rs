@@ -328,20 +328,32 @@ async fn a_relationship_never_admits_the_principal_that_wrote_it() {
     assert_eq!(held[0].writer(), Some(adt.0), "the fact names its writer");
     let provider = [ProviderKey::new(CARE_PROVIDER.0, CARE_PROVIDER.1)];
     let day = "2026-11-20".parse().expect("a date");
-    let cared = |principals: Vec<uuid::Uuid>| {
+    let cared = |person: Option<uuid::Uuid>| {
         let svc = &svc;
         let provider = &provider;
         async move {
-            let mut principals = principals;
-            principals.sort_unstable();
+            let mut facts = ferroehr::party_binding::grants::caller::facts::CallerFacts::new(
+                Vec::new(),
+                vec![ferroehr::party_binding::grants::caller::CareTeam::spanning(
+                    team.0, None, None,
+                )],
+            )
+            .with_providers(provider.iter().cloned());
+            if let Some(person) = person {
+                facts = facts.with_party(person);
+            }
+            let principals = facts.principals();
             svc.grants()
-                .cared_for_by(&principals, provider, day, &Policy::default())
+                .cared_for_by(&facts, &principals, day, &Policy::default())
                 .await
                 .expect("the census reads")
+                .into_iter()
+                .map(|cared| cared.subject)
+                .collect::<Vec<_>>()
         }
     };
     assert_eq!(
-        cared(vec![team.0]).await,
+        cared(None).await,
         vec![EhrSubject::new(
             &*svc.grants().namespace(),
             patient.0.to_string()
@@ -349,7 +361,7 @@ async fn a_relationship_never_admits_the_principal_that_wrote_it() {
         "a caller of the team that did not write it"
     );
     assert_eq!(
-        cared(vec![team.0, adt.0]).await,
+        cared(Some(adt.0)).await,
         Vec::<EhrSubject>::new(),
         "a caller among whose principals is its writer"
     );

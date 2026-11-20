@@ -40,7 +40,7 @@
 pub(crate) mod assurance;
 mod build;
 pub(crate) mod declared;
-mod gates;
+pub(crate) mod gates;
 pub(crate) mod grants;
 mod issuer;
 pub(crate) mod party;
@@ -677,9 +677,7 @@ pub(crate) async fn middleware(
             // mutations, so the principal is republished onto the response.
             resp.extensions_mut().insert(principal);
             resp.extensions_mut().insert(actor);
-            if fresh {
-                resp.extensions_mut().insert(FreshAuthentication);
-            }
+            gates::finish(auth, &mut resp, fresh);
             resp
         }
         Err(e) => refusal::refusal_of(auth, req.headers(), &e),

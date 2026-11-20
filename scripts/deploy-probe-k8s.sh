@@ -120,7 +120,7 @@ kp() { kubectl -n "$K8S_PROD_NS" "$@"; }
 
 # The compose project, host port, login role and the group role it joins, per
 # domain. The audit set grants to ferroehr_clinical
-# (app/ferroehr/migrations/audit/0006_grants.sql), so the audit pool's login
+# (app/ferroehr/migrations/audit/0008_baseline_grants.sql), so the audit pool's login
 # role joins that group.
 k8s_prod_project() { printf '%s-prod-%s' "$COMPOSE_PROJECT" "$1"; }
 k8s_prod_port() {

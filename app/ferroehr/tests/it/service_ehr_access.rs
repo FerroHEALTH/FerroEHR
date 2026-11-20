@@ -478,67 +478,6 @@ async fn a_missing_ehr_access_is_restored_at_boot() {
     }
 }
 
-/// The migration drops an `EHR_ACCESS` any version of which carries the
-/// removed scheme, whole, and leaves every other EHR's alone; the boot then
-/// restores the default.
-#[tokio::test]
-#[expect(
-    clippy::disallowed_methods,
-    reason = "a test reads the database on a raw pool connection, outside any request"
-)]
-async fn the_migration_drops_an_ehr_access_of_the_removed_scheme() {
-    let (db, svc, ehr_id, _guardian) = setup().await;
-    let other = crate::fixtures::create_ehr(&svc).await;
-    let pool = db.pool();
-    let head = |ehr: EhrId| {
-        let pool = pool.clone();
-        async move {
-            sqlx::query_scalar::<_, uuid::Uuid>(
-                "SELECT vo_id FROM vo_head WHERE ehr_id = $1 AND kind = 'EHR_ACCESS'",
-            )
-            .bind(ehr)
-            .fetch_optional(&pool)
-            .await
-            .expect("the head reads")
-        }
-    };
-    let old = head(ehr_id).await.expect("an EHR_ACCESS");
-    sqlx::query(
-        "UPDATE version SET body = jsonb_set(body::jsonb, '{settings}', \
-         '{\"_type\": \"FERROEHR_ACCESS_CONTROL_V1\", \"default_access\": \"restricted\"}')::text \
-         WHERE vo_id = $1",
-    )
-    .bind(old)
-    .execute(&pool)
-    .await
-    .expect("store a body of the removed scheme");
-    let kept = head(other).await;
-
-    let mut tx = pool.begin().await.expect("a transaction");
-    sqlx::raw_sql(include_str!(
-        "../../migrations/clinical/0037_drop_access_control_v1.sql"
-    ))
-    .execute(&mut *tx)
-    .await
-    .expect("the migration runs");
-    tx.commit().await.expect("the migration commits");
-
-    assert_eq!(
-        head(ehr_id).await,
-        None,
-        "the old scheme's EHR_ACCESS is dropped"
-    );
-    let versions: i64 = sqlx::query_scalar("SELECT count(*) FROM version WHERE vo_id = $1")
-        .bind(old)
-        .fetch_one(&pool)
-        .await
-        .expect("the versions count");
-    assert_eq!(versions, 0, "with every version");
-    assert_eq!(head(other).await, kept, "another EHR's EHR_ACCESS stays");
-    assert_eq!(svc.restore_default_ehr_access().await.expect("restored"), 1);
-    assert!(head(ehr_id).await.is_some(), "the default is restored");
-}
-
 /// The default `EHR_ACCESS` definition of the scheme is stored at boot when
 /// absent and kept at every later boot.
 #[tokio::test]

@@ -260,7 +260,12 @@ fn main() {
             for _ in 0..DECISIONS.div_euclid(BATCH) {
                 let started = Instant::now();
                 for _ in 0..BATCH {
-                    admitted += usize::from(access.judge(None, read.as_ref(), cared).admits_any());
+                    let care = if cared {
+                        ferroehr::access_eval::care_tie::Cared::Left
+                    } else {
+                        ferroehr::access_eval::care_tie::Cared::No
+                    };
+                    admitted += usize::from(access.judge(None, read.as_ref(), &care).admits_any());
                 }
                 samples.push(started.elapsed().as_nanos().div_euclid(u128::from(BATCH)));
             }

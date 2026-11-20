@@ -11,6 +11,7 @@ use std::sync::PoisonError;
 use uuid::Uuid;
 
 use super::{EhrEntry, RequestAccess};
+use crate::access_eval::care_tie::Cared;
 use crate::access_eval::procedure::Verdict;
 use crate::ids::EhrId;
 use crate::party_binding::grants::live::GrantsUnavailable;
@@ -37,21 +38,21 @@ impl Held {
 }
 
 impl RequestAccess {
-    /// The verdict for the EHR `ehr_id` with `settings`, the caller `cared`
-    /// for its subject or not; `None` stands for an EHR that is no subject
-    /// caller's own.
+    /// The verdict for the EHR `ehr_id` with `settings`, the caller's care
+    /// for its subject read as `care`; `None` stands for an EHR that is no
+    /// subject caller's own.
     #[must_use]
     pub fn judge(
         &self,
         ehr_id: Option<EhrId>,
         settings: Option<&EhrAccessSettings>,
-        cared: bool,
+        care: &Cared,
     ) -> Verdict {
         let subject = self.is_record(ehr_id);
         // NOTE: our own design (#6106), a confined caller with no launch context reaches the
         // records the party binding names as its own, and one with a context only that EHR.
         let own = self.owns(ehr_id) || (subject && self.caller.own_ehrs.is_empty());
-        self.judge_as(Held { own, subject }, settings, cared)
+        self.judge_as(Held { own, subject }, settings, care)
     }
 
     /// Whether a read of this request found `ehr_id`'s subject to be the

@@ -9,7 +9,7 @@
 //! operation) form the system chain, whose retention leaves recorded gaps.
 //! Each chain has its own head, locked by its writers, its own verification
 //! and its own verification cursor
-//! (`migrations/audit/0031_access_log_own_chain.sql`). A record is named by
+//! (`migrations/audit/0002_baseline_audit_chain.sql`). A record is named by
 //! its chain and its position in it. No openEHR spec governs audit tamper
 //! detection: our own design.
 

@@ -6,7 +6,7 @@
 //! The access condition of a query is judged from this replica's copies of
 //! the settings classes and, for a query pinned to one EHR, of that EHR's
 //! settings and subject. The statement fails when a copy is older than the
-//! store (`clinical/0049_access_stale_copy.sql`), so a stale verdict never
+//! store (`clinical/0009_baseline_access.sql`), so a stale verdict never
 //! answers rows, a count or a page, and never an empty result that reads as
 //! "nothing recorded". The service then drops the stale copy, judges the
 //! query again from a fresh read, as a direct read judged on an older

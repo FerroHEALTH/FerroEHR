@@ -19,38 +19,32 @@
 //! this: our own design (#5513, #5588).
 
 use sea_query::extension::postgres::PgFunc;
-use sea_query::{
-    Alias, CommonTableExpression, Expr, ExprTrait, Func, Query, SelectStatement, WithClause,
-};
+use sea_query::{Alias, Expr, ExprTrait, Func, Query, SelectStatement};
 use uuid::Uuid;
 
 use super::expr::col;
 use super::fold::simplified;
 use crate::access_eval::class::Keepers;
-use crate::access_eval::condition::care::{Care, ProjectedCare};
 use crate::access_eval::condition::{AccessCondition, CallerKeys, ConditionGroups, VerdictPair};
 use crate::access_eval::scope::{
     CategoryMatch, DataMatch, Edge, EhrFact, Held, Polarity, Pred, Recorded,
 };
-use crate::db::iden::{AccessSettings, Ehr, VersionRow, VoHead};
-use crate::storage::access_projection::EhrSubject;
+use crate::db::iden::{AccessSettings, VersionRow, VoHead};
 
 /// The alias of the trunk head version an origin probe reads.
 const TRUNK: &str = "access_trunk";
 /// The alias of the `ehr` row a care probe reads.
-const CARE: &str = "access_ehr";
+pub(super) const CARE: &str = "access_ehr";
 /// The alias of the projected settings row of the EHR.
 const SETTINGS: &str = "access_settings_row";
-/// The common table that holds the subjects the caller cares for.
-const CARED: &str = "access_cared";
-/// The one column of [`CARED`]: a `jsonb` object keyed by subject id.
-const SUBJECTS: &str = "subjects";
 
 /// What a predicate is read against: the caller's facts, which a class's
-/// facts are compared with; `None` outside a class.
+/// facts are compared with, `None` outside a class; and the caller's care
+/// with the EHR id it is probed by, `None` where no care is read.
 #[derive(Clone, Copy)]
 struct Facts<'a> {
     caller: Option<&'a CallerKeys>,
+    care: Option<(&'a ConditionGroups, &'a Expr)>,
 }
 
 /// The predicate on the head row `h` of a versioned object; `None` when the
@@ -74,13 +68,17 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
         } else if pair.admits_none() {
             None
         } else {
-            Some(admitted(condition, pair, h, target.clone(), facts))
+            Some(admitted(condition, pair, h, &target, facts))
         }
     };
     let caller = Facts {
         caller: Some(&condition.facts),
+        care: None,
     };
-    let none = Facts { caller: None };
+    let none = Facts {
+        caller: None,
+        care: None,
+    };
     let mut branches = Vec::new();
     if let Some(admitted) = admits(&condition.closed, none) {
         branches.push(col(SETTINGS, AccessSettings::HeldClosed).and(admitted));
@@ -121,22 +119,30 @@ pub(super) fn on_ehr_id(condition: &AccessCondition, target: &Expr) -> Option<Ex
         if cared == Pred::False && uncared == Pred::False {
             return None;
         }
+        let with_care = Facts {
+            care: Some((condition, target)),
+            ..facts
+        };
         if cared == uncared {
-            return Some(pred(&cared, CARE, facts));
+            return Some(pred(&cared, CARE, with_care));
         }
         Some(Expr::cust_with_exprs(
             "CASE WHEN $1 THEN $2 ELSE $3 END",
             [
-                self::cared(condition, target.clone()),
-                pred(&cared, CARE, facts),
-                pred(&uncared, CARE, facts),
+                super::care::cared(condition, target.clone()),
+                pred(&cared, CARE, with_care),
+                pred(&uncared, CARE, with_care),
             ],
         ))
     };
     let caller = Facts {
         caller: Some(&condition.facts),
+        care: None,
     };
-    let none = Facts { caller: None };
+    let none = Facts {
+        caller: None,
+        care: None,
+    };
     let mut branches = Vec::new();
     if let Some(reach) = reaches(&condition.closed, none) {
         branches.push(col(SETTINGS, AccessSettings::HeldClosed).and(reach));
@@ -195,7 +201,7 @@ fn known_classes(condition: &ConditionGroups) -> Vec<i64> {
 
 /// The settings row is held closed or of a class `condition` holds; any
 /// other row fails the statement through `access_class_unknown` (SQLSTATE
-/// `ZA002`, `clinical/0049_access_stale_copy.sql`), so a class this
+/// `ZA002`, `clinical/0009_baseline_access.sql`), so a class this
 /// replica's copy has not yet heard of is waited for or refused, and never
 /// answered as an EHR with nothing to read. The function takes the row's
 /// EHR id, so the planner cannot fold it as a constant. No openEHR spec
@@ -235,6 +241,7 @@ pub(super) fn keeper_reads(keepers: &Keepers, h: &str) -> Expr {
     };
     let facts = Facts {
         caller: Some(&facts),
+        care: None,
     };
     let branches = keepers
         .groups
@@ -312,149 +319,26 @@ fn admitted(
     condition: &ConditionGroups,
     pair: &VerdictPair,
     h: &str,
-    target: Expr,
+    target: &Expr,
     facts: Facts<'_>,
 ) -> Expr {
     let (with, without) = (
         simplified(&pair.cared.admitted()),
         simplified(&pair.uncared.admitted()),
     );
+    let facts = Facts {
+        care: Some((condition, target)),
+        ..facts
+    };
     if with == without {
         return pred(&with, h, facts);
     }
     Expr::cust_with_exprs(
         "CASE WHEN $1 THEN $2 ELSE $3 END",
         [
-            cared(condition, target),
+            super::care::cared(condition, target.clone()),
             pred(&with, h, facts),
             pred(&without, h, facts),
-        ],
-    )
-}
-
-/// The `WITH` clause that binds the subjects the caller cares for once per
-/// statement, which every [`cared`] probe reads; `None` when no verdict of
-/// the condition reads care.
-///
-/// The subjects are one `jsonb` object keyed by subject id: the planner
-/// estimates `jsonb ? text` at a fixed selectivity whatever the census, where
-/// it walks a bound array element by element, and a probe is one search of
-/// the object's sorted keys (PostgreSQL 18 §9.16, `jsonb ? text`). No openEHR
-/// spec governs this: our own design (#5645).
-pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
-    if condition.pinned().is_some() {
-        return None;
-    }
-    let condition = condition.groups()?;
-    let pairs = std::iter::once(&condition.closed)
-        .chain(condition.groups.iter().map(|(_, pair)| pair))
-        .chain(condition.default.iter());
-    if pairs.into_iter().all(|pair| pair.cared == pair.uncared) {
-        return None;
-    }
-    let Care::Census(cared) = &condition.cared else {
-        return None;
-    };
-    let mut row = Query::select();
-    row.expr_as(
-        Expr::val(census_text(cared)).cast_as(Alias::new("jsonb")),
-        Alias::new(SUBJECTS),
-    );
-    let mut table = CommonTableExpression::new();
-    table.query(row).table_name(Alias::new(CARED));
-    let mut with = WithClause::new();
-    with.cte(table);
-    Some(with)
-}
-
-/// The [`census`] of the subjects `cared`: a `jsonb` object text keyed by
-/// [`census_key`].
-pub(super) fn census_text(cared: &[EhrSubject]) -> String {
-    // NOTE: our own design (#5667), each key is escaped by serde_json as it is written, with
-    // no map to build: jsonb keeps one of a repeated key, so `?` answers as before.
-    let keys: Vec<String> = cared
-        .iter()
-        .map(|subject| format!("{}:true", serde_json::Value::String(census_key(subject))))
-        .collect();
-    format!("{{{}}}", keys.join(","))
-}
-
-/// The key of `subject` in the [`census`]: its namespace and its id joined by
-/// U+001F, which no `OBJECT_REF.namespace` holds (BASE `OBJECT_REF`), as a
-/// [`cared`] probe builds it from the `ehr` row.
-fn census_key(subject: &EhrSubject) -> String {
-    format!("{}\u{1f}{}", subject.namespace, subject.id)
-}
-
-/// Whether the subject of the EHR `target` is under the care of the caller:
-/// a `CASE` condition, since an EHR names one subject. The subjects are the
-/// [`census`] the statement binds once, each keyed by [`census_key`]: its
-/// reference matches a cared one by namespace and id, the id of a reference
-/// in this CDR's own namespace by its container's UUID in any case, as
-/// [`crate::party_binding::grants::live::LiveGrants::person_of`] reads it.
-fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
-    match &condition.cared {
-        Care::Census(_) => {}
-        // NOTE: our own design (#5699), a query pinned to EHRs binds the ones found cared for.
-        Care::Ehrs(ehrs) => {
-            return target.eq(Expr::from(PgFunc::any(Expr::val(ehrs.to_vec()))));
-        }
-        Care::Projected(care) => return projected(care, target),
-        Care::Unresolved => return Expr::val(false),
-    }
-    let mut subjects = Query::select();
-    subjects
-        .column(Alias::new(SUBJECTS))
-        .from(Alias::new(CARED));
-    let mut probe = Query::select();
-    probe
-        .expr(Expr::val(1))
-        .from_as(Ehr::Table, Alias::new(CARE))
-        .and_where(col(CARE, Ehr::Id).eq(target))
-        .and_where(Expr::cust_with_exprs(
-            "$1 ? ($2 || chr(31) || CASE WHEN $2 = $4 THEN lower($3) ELSE $3 END)",
-            [
-                Expr::SubQuery(None, Box::new(subjects.into())),
-                col(CARE, Ehr::SubjectNamespace),
-                col(CARE, Ehr::SubjectId),
-                Expr::val(condition.subject_namespace.to_string()),
-            ],
-        ));
-    Expr::exists(probe)
-}
-
-/// Whether the subject of the EHR `target` is under the care of one of the
-/// caller's principals, in the care of a provider it acts for, read from the
-/// clinical care projection by the EHR row's subject digest: one index
-/// probe, binding the principals, the providers, the day and the grace, with
-/// the dates read as
-/// [`crate::party_binding::grants::caller::care_of::CareOf::live_on`] reads
-/// them and the writer as
-/// [`crate::party_binding::grants::caller::care_of::CareOf::admits_writer`]
-/// does. No openEHR spec governs this: our own design (#5699, #6055, #6073).
-fn projected(care: &ProjectedCare, target: Expr) -> Expr {
-    Expr::cust_with_exprs(
-        "EXISTS (SELECT 1 FROM ehr access_care_ehr \
-         JOIN access_care access_care_row \
-           ON access_care_row.subject_digest = access_care_ehr.subject_digest \
-         WHERE access_care_ehr.id = $1 AND access_care_row.carer_id = ANY($2) \
-         AND (access_care_row.provider_issuer, access_care_row.provider_id) IN \
-             (SELECT * FROM unnest(CAST($5 AS text[]), CAST($6 AS text[]))) \
-         AND (access_care_row.care_from IS NULL OR access_care_row.care_from <= CAST($3 AS date)) \
-         AND (access_care_row.care_until IS NULL \
-              OR CAST($3 AS date) < access_care_row.care_until \
-              OR CAST($3 AS date) < access_care_row.care_until + CAST($4 AS interval)) \
-         AND CASE WHEN access_care_row.self_declared THEN CAST($7 AS boolean) \
-                  ELSE access_care_row.writer_id IS NULL \
-                       OR access_care_row.writer_id <> ALL($2) END)",
-        [
-            target,
-            Expr::val(care.principals.to_vec()),
-            Expr::val(care.day.to_string()),
-            Expr::val(care.grace.clone()),
-            Expr::val(care.provider_issuers.to_vec()),
-            Expr::val(care.provider_ids.to_vec()),
-            Expr::val(care.self_declared),
         ],
     )
 }
@@ -473,12 +357,23 @@ fn pred(pred: &Pred, h: &str, facts: Facts<'_>) -> Expr {
         Pred::Any(preds) => or_all(preds.iter().map(|p| self::pred(p, h, facts)).collect()),
         Pred::Data(data, polarity) => data_match(data, *polarity, h),
         Pred::Ehr(fact) => ehr_fact(*fact, facts),
+        Pred::Care(need) => match facts.care {
+            Some((condition, target)) => super::care::care_need(need, condition, target.clone()),
+            None => Expr::val(false),
+        },
     }
 }
 
 /// `pred` on the head row `h`, over the facts of the object alone.
 pub(super) fn item_pred(pred: &Pred, h: &str) -> Expr {
-    self::pred(&simplified(pred), h, Facts { caller: None })
+    self::pred(
+        &simplified(pred),
+        h,
+        Facts {
+            caller: None,
+            care: None,
+        },
+    )
 }
 
 /// The text of the fact at `at` of the settings row.

@@ -9,10 +9,10 @@
 //! access log's own chain, apart from the `audit_event` records, with the
 //! columns the search filters on, read from the entry's projection, and the
 //! render policy that projection is written under on the entry's own row
-//! (`migrations/audit/0046_access_log_entry_one_row.sql`). A read renders the
+//! (`migrations/audit/0004_baseline_access_log.sql`). A read renders the
 //! document from the entry's content. The entry is written into the intake
 //! before the response and chained after
-//! (`migrations/audit/0042_audit_intake.sql`). A record an act wrote as its
+//! (`migrations/audit/0006_baseline_intake.sql`). A record an act wrote as its
 //! entry in its own transaction ([`EntryScope::Written`]) is written by that
 //! act alone, so it is stored once. No openEHR spec governs
 //! audit storage: our own design.
