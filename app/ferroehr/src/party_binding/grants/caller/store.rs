@@ -335,6 +335,9 @@ async fn insert(
                 t.target_kind, t.provider_issuer, t.provider_id, $3, \
                 party.binding_validity($4::jsonb), \
                 CASE WHEN t.unreadable THEN 'empty'::daterange \
+                     WHEN c.effective_until IS NOT NULL AND t.kind = 'under_care_of' \
+                          AND NOT isempty(party.binding_validity(t.validity)) \
+                     THEN daterange(lower(party.binding_validity(t.validity)), c.effective_until) \
                      ELSE party.binding_validity(t.validity) END, \
                 t.not_before, t.not_after \
          FROM unnest($5::integer[], $6::text[], $7::text[], $8::text[], $9::uuid[], \
@@ -342,6 +345,7 @@ async fn insert(
                      $13::jsonb[], $14::boolean[], $15::timestamptz[], $16::timestamptz[]) \
               AS t(ordinal, kind, terminology_id, code_string, target_id, target_kind, \
                    provider_issuer, provider_id, validity, unreadable, not_before, not_after) \
+         LEFT JOIN binding_care_validity c ON c.vo_id = $1 \
          ON CONFLICT DO NOTHING \
          RETURNING party_id, {FACT_TEXT} AS fact"
     );
@@ -387,13 +391,22 @@ async fn stamp(tx: &mut PgConnection, parties: &[Uuid]) -> Result<(), StorageErr
     Ok(())
 }
 
-/// Deletes every fact a party of `vo_ids` holds or is about, and their
-/// stamps, on the erasure transaction `tx`; whether any fact went. The
+/// Deletes every fact a party of `vo_ids` holds or is about, the kept ends
+/// of the care relationships among them, and their stamps, on the erasure
+/// transaction `tx`; whether any fact went. The
 /// caller moves the grant revision, which reads every fact again.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub(crate) async fn erase(tx: &mut PgConnection, vo_ids: &[Uuid]) -> Result<bool, StorageError> {
+    sqlx::query(
+        "DELETE FROM binding_care_validity c WHERE c.vo_id = ANY($1) OR EXISTS ( \
+             SELECT FROM binding_caller_fact f WHERE f.holder_id = c.vo_id \
+               AND f.kind = 'under_care_of' AND f.party_id = ANY($1))",
+    )
+    .bind(vo_ids)
+    .execute(&mut *tx)
+    .await?;
     let gone = sqlx::query(
         "DELETE FROM binding_caller_fact WHERE holder_id = ANY($1) OR party_id = ANY($1)",
     )

@@ -40,6 +40,17 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 /// A term of the draft `openehr_access` terminology, its code the rubric.
+/// An `ACCESS_RELATIONSHIP_VALIDITY` with the periods given.
+fn validity(default: Option<&str>, max: Option<&str>) -> Value {
+    let mut entry = json!({ "_type": "ACCESS_RELATIONSHIP_VALIDITY" });
+    for (name, period) in [("default_period", default), ("max_period", max)] {
+        if let Some(period) = period {
+            entry[name] = json!({ "_type": "DV_DURATION", "value": period });
+        }
+    }
+    entry
+}
+
 fn term(rubric: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": rubric,
             "defining_code": { "_type": "CODE_PHRASE",
@@ -561,6 +572,46 @@ fn each_policy_invariant_refuses_a_policy_that_breaks_it() {
         }),
         ("ACCESS_LOG_RETENTION.Period_ceilings", |p| {
             p["log_retention"]["period"]["value"] = json!("P3653D");
+        }),
+    ];
+    for (invariant, breaking) in cases {
+        let mut p = policy();
+        breaking(&mut p);
+        assert_eq!(
+            named(check_policy(&read(p))),
+            vec![invariant.to_owned()],
+            "{invariant}"
+        );
+    }
+}
+
+/// Each invariant of `ACCESS_RELATIONSHIP_VALIDITY`, `ACCESS_RELATIONSHIP_WRITER`
+/// and the policy's `team_targets` refuses a policy that breaks it (#6073).
+#[test]
+fn each_relationship_invariant_refuses_a_policy_that_breaks_it() {
+    let cases: [Breaking; 6] = [
+        ("ACCESS_RELATIONSHIP_VALIDITY.Default_valid", |p| {
+            p["relationship_validity"] = json!([validity(Some("P0D"), Some("P1D"))]);
+        }),
+        ("ACCESS_RELATIONSHIP_VALIDITY.Max_valid", |p| {
+            p["relationship_validity"] = json!([validity(None, Some("P0D"))]);
+        }),
+        ("ACCESS_RELATIONSHIP_VALIDITY.Default_within_max", |p| {
+            p["relationship_validity"] = json!([validity(Some("P31D"), Some("P30D"))]);
+        }),
+        ("ACCESS_RELATIONSHIP_VALIDITY.Bounded_together", |p| {
+            p["relationship_validity"] = json!([validity(Some("P30D"), None)]);
+        }),
+        ("ACCESS_RELATIONSHIP_WRITER.Confidentialities_valid", |p| {
+            p["relationship_writers"] = json!([{ "_type": "ACCESS_RELATIONSHIP_WRITER",
+                "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
+                    "caller_kind": term("system") }],
+                "confidentialities": [coded("local", "R", "restricted")] }]);
+        }),
+        ("ACCESS_POLICY.Team_targets_valid", |p| {
+            p["team_targets"] = json!([{ "_type": "PARTY_REF", "namespace": "demographic",
+                "type": "GROUP",
+                "id": { "_type": "HIER_OBJECT_ID", "value": "8849182c-82ad-4088-a07f-48ead4180516" } }]);
         }),
     ];
     for (invariant, breaking) in cases {

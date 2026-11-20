@@ -406,7 +406,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
     let (stay, admitted) = relate_as(
         &one,
         "adt",
-        &care_of(patient, ward, &interval(&day(0), None)),
+        &care_of(patient, ward, &interval(&day(0), Some(&day(365)))),
     )
     .await
     .expect("the ADT system admits the patient");
@@ -494,7 +494,7 @@ async fn only_a_write_care_relationship_grant_changes_a_care_relationship() {
     let (patient, _) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
         .await
         .expect("the patient commits");
-    let admitted = care_of(patient, ward, &interval(&day(0), None));
+    let admitted = care_of(patient, ward, &interval(&day(0), Some(&day(365))));
     let refused = relate_as(&svc, "registry", &admitted)
         .await
         .expect_err("a client without the grant is refused");
@@ -605,7 +605,10 @@ async fn a_care_relationship_is_its_own_with_a_role_and_a_provider() {
         &svc,
         "adt",
         (PartyKind::Person, patient, &uid),
-        &person("Mr E", &[care_of(patient, ward, &interval(&day(0), None))]),
+        &person(
+            "Mr E",
+            &[care_of(patient, ward, &interval(&day(0), Some(&day(365))))],
+        ),
     )
     .await
     .expect_err("a care relationship in a PERSON's relationships is refused");
@@ -614,7 +617,7 @@ async fn a_care_relationship_is_its_own_with_a_role_and_a_provider() {
             && format!("{inline:?}").contains("/demographic/party_relationship"),
         "{inline:?}"
     );
-    let valid = care_of(patient, ward, &interval(&day(0), None));
+    let valid = care_of(patient, ward, &interval(&day(0), Some(&day(365))));
     let mut no_role = valid.clone();
     no_role["details"]["items"]
         .as_array_mut()
@@ -1021,7 +1024,7 @@ async fn a_discharge_on_one_replica_is_never_read_stale_from_the_projection_on_a
     let (stay, admitted) = relate_as(
         &one,
         "adt",
-        &care_of(patient, ward, &interval(&day(-3), None)),
+        &care_of(patient, ward, &interval(&day(-3), Some(&day(365)))),
     )
     .await
     .expect("the ADT system admits the patient");

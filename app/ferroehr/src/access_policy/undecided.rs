@@ -54,16 +54,6 @@ pub fn in_policy(policy: &AccessPolicy) -> Option<String> {
         // TODO(#6075): decide in the policy's time zone and care purposes.
         ("time_zone", policy.time_zone.is_some()),
         ("care_purposes", policy.care_purposes.is_some()),
-        // TODO(#6073): bound and scope the writers of care relationships.
-        (
-            "relationship_validity",
-            policy.relationship_validity.is_some(),
-        ),
-        (
-            "relationship_writers",
-            policy.relationship_writers.is_some(),
-        ),
-        ("team_targets", policy.team_targets.is_some()),
     ];
     if let Some((name, _)) = set.iter().find(|(_, is_set)| *is_set) {
         return Some((*name).to_owned());

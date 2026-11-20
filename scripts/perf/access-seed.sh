@@ -117,14 +117,18 @@ care_json() {
 }
 
 # care_of_json <patient> <team>: a care relationship of its own from the
-# first of January this year, unbounded, from the patient's PERSON to the
-# team's GROUP, in the role RESP under CARE_PROVIDER (draft access control
-# package, Care Relationships).
+# first of January this year until the last day of next year, written with
+# its end as a relationship no relationship_validity entry covers must be,
+# from the patient's PERSON to the team's GROUP, in the role RESP under
+# CARE_PROVIDER (draft access control package, Care Relationships; decision
+# procedure, Writing Relationships).
 care_of_json() {
-  local from issuer id
+  local from until issuer id
   from="$(date -u +%Y)-01-01"
+  until="$(($(date -u +%Y) + 1))-12-31"
   read -r issuer id <<<"$CARE_PROVIDER"
-  jq -cn --arg source "$1" --arg team "$2" --arg from "$from" --arg t "$ACCESS_TERMINOLOGY" \
+  jq -cn --arg source "$1" --arg team "$2" --arg from "$from" --arg until "$until" \
+    --arg t "$ACCESS_TERMINOLOGY" \
     --arg roles "$PARTICIPATION_TERMINOLOGY" --arg issuer "$issuer" --arg id "$id" '
     def text($v): {_type: "DV_TEXT", value: $v};
     def code($term; $c): {_type: "DV_CODED_TEXT", value: $c, defining_code: {_type: "CODE_PHRASE",
@@ -141,8 +145,9 @@ care_of_json() {
          {_type: "ELEMENT", archetype_node_id: "at0003", name: code($t; "provider"),
           value: {_type: "DV_IDENTIFIER", issuer: $issuer, id: $id, type: "ORGANISATION"}}]},
      time_validity: {_type: "DV_INTERVAL", lower: {_type: "DV_DATE", value: $from},
-       lower_unbounded: false, upper_unbounded: true, lower_included: true,
-       upper_included: false},
+       upper: {_type: "DV_DATE", value: $until},
+       lower_unbounded: false, upper_unbounded: false, lower_included: true,
+       upper_included: true},
      source: ref("PERSON"; $source), target: ref("GROUP"; $team)}'
 }
 

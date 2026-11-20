@@ -536,7 +536,11 @@ async fn care_and_representation_resolve_under_both_subject_indexes() {
         .expect("the patient commits");
     let admitted = declaring(person("Mr E", &[]), &[(PIXM, &pseudonym)]);
     update_as_adt(&svc, (patient, &uid), &admitted).await;
-    relate_as_adt(&svc, &care_of(patient, cardiology, "2026-11-03", None)).await;
+    relate_as_adt(
+        &svc,
+        &care_of(patient, cardiology, "2026-11-03", Some("2027-11-03")),
+    )
+    .await;
     let local = create_ehr_for_party(&svc, patient).await;
     let local_vo = svc
         .create_composition(local, uv(&composition("ward note"), "249", None))
@@ -615,7 +619,7 @@ async fn an_identity_merge_moves_the_record_subject_in_one_contribution() {
             .expect("the patient commits");
         let body = declaring(person(name, &[]), &[(PIXM, pseudonym.as_str())]);
         update_as_adt(&svc, (vo, &uid), &body).await;
-        relate_as_adt(&svc, &care_of(vo, team, "2026-11-01", None)).await;
+        relate_as_adt(&svc, &care_of(vo, team, "2026-11-01", Some("2027-11-01"))).await;
         persons.push(vo);
     }
     let (ehr_a, vo_a) = ehr_of(&svc, &p_a, PIXM).await;

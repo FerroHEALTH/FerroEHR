@@ -124,8 +124,8 @@ pub(crate) async fn world() -> World {
         .iter()
         .map(|team| (*team, admitted.as_str(), None))
         .collect();
-    admit(&mut world, &stays).await;
     world.policy = policy(&world, &hospital, None).await;
+    admit(&mut world, &stays).await;
     directives(&mut world, None).await;
     world
 }
@@ -534,6 +534,9 @@ pub(crate) async fn policy(world: &World, controller: &str, preceding: Option<&s
         "rules": rules(world),
         "care_relationship_required": true,
         "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" },
+        "relationship_validity": [{ "_type": "ACCESS_RELATIONSHIP_VALIDITY",
+            "default_period": { "_type": "DV_DURATION", "value": "P30D" },
+            "max_period": { "_type": "DV_DURATION", "value": "P180D" } }],
         "purpose_required": true,
         "log_restrictions": [{ "_type": "ACCESS_LOG_RESTRICTION",
             "name": text("Professionals withheld"),

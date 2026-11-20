@@ -43,6 +43,7 @@
               the caller facts are derived from"
 )]
 
+pub(crate) mod bounds;
 pub mod care_of;
 pub mod facts;
 pub mod patient;
@@ -328,6 +329,8 @@ pub(crate) fn check_content(facts: Option<&Facts>) -> Result<(), ServiceError> {
 /// content, so a deactivation that keeps them needs no grant (#5628). Our own
 /// design.
 ///
+/// Whether the commit changed them.
+///
 /// # Errors
 /// The `403` of [`check_care_writer`], and a storage failure.
 pub(crate) async fn check_care(
@@ -335,15 +338,15 @@ pub(crate) async fn check_care(
     mapping: &BindingMapping,
     committed: &crate::versioning::change::Committed,
     facts: Option<&Facts>,
-) -> Result<(), ServiceError> {
+) -> Result<bool, ServiceError> {
     let standalone = committed.kind == Kind::PartyRelationship;
     if !standalone && !matches!(committed.kind, Kind::Person | Kind::Organisation) {
-        return Ok(());
+        return Ok(false);
     }
     let after = match facts {
         Some(facts) => &facts.grants,
         None if standalone => &GrantFacts::default(),
-        None => return Ok(()),
+        None => return Ok(false),
     };
     let before: Option<String> = sqlx::query_scalar(
         "SELECT v.body FROM version v WHERE v.vo_id = $1 AND v.sys_version < $2 \
@@ -362,9 +365,9 @@ pub(crate) async fn check_care(
         None => GrantFacts::default(),
     };
     if same_care(&before.facts, &after.facts) && same_subjects(&before.subjects, &after.subjects) {
-        return Ok(());
+        return Ok(false);
     }
-    check_care_writer(mapping, committed.vo_id.0)
+    check_care_writer(mapping, committed.vo_id.0).map(|()| true)
 }
 
 /// Whether the care relationships among `before` and `after` say the same:

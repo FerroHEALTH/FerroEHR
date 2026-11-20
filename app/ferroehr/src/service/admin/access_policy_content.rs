@@ -132,11 +132,65 @@ impl FerroEhrService {
                 wrong.extend(self.organisation_types(facts, &path, scopes).await);
             }
         }
+        wrong.extend(self.relationship_codes(facts, policy).await);
         if wrong.is_empty() {
             Ok(())
         } else {
             Err(ServiceError::ValidationFailed(wrong))
         }
+    }
+
+    /// The refusals of the care roles and organisation types
+    /// `relationship_validity` names and of the organisation types the scopes
+    /// of `relationship_writers` name (#6073).
+    async fn relationship_codes(
+        &self,
+        facts: CareFacts<'_>,
+        policy: &AccessPolicy,
+    ) -> Vec<InvariantViolation> {
+        let mut wrong = Vec::new();
+        for (at, entry) in policy
+            .relationship_validity
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
+            for (index, role) in entry
+                .roles
+                .as_deref()
+                .unwrap_or_default()
+                .iter()
+                .enumerate()
+            {
+                let path = format!("/relationship_validity/{at}/roles/{index}");
+                wrong.extend(self.care_role(facts, &path, role).await);
+            }
+            for (index, kind) in entry
+                .organisation_types
+                .as_deref()
+                .unwrap_or_default()
+                .iter()
+                .enumerate()
+            {
+                let path = format!("/relationship_validity/{at}/organisation_types/{index}");
+                wrong.extend(self.organisation_type(facts, &path, kind).await);
+            }
+        }
+        for (at, writer) in policy
+            .relationship_writers
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
+            let path = format!("/relationship_writers/{at}/applies_to");
+            wrong.extend(
+                self.organisation_types(facts, &path, &writer.applies_to)
+                    .await,
+            );
+        }
+        wrong
     }
 
     /// The refusal of the kinship at `path`: outside the bound value set,

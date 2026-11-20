@@ -623,6 +623,7 @@ impl FerroEhrService {
             privacy: &self.privacy,
             access_delay: self.registers.access_delay().policy.clone(),
             direct_origin: crate::origins::DirectOrigin::current(&self.system_id),
+            access_policy: self.access_policy.in_force(),
         }
     }
 }

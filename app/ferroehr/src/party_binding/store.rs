@@ -121,7 +121,7 @@ pub(crate) async fn reindex_committed(
         key_space::gate_shared(tx).await?;
     }
     if committed.kind == Kind::PartyRelationship {
-        return standalone::committed(tx, ctx.binding, committed, facts).await;
+        return standalone::committed(tx, ctx, committed, facts).await;
     }
     if crate::versioning::committer::person_commits() {
         // NOTE: RM common master04 §Audit Details, PARTY_SELF names the record
@@ -165,7 +165,7 @@ pub(crate) async fn reindex_committed(
         .as_ref()
         .map_or(&[][..], |f| f.targets.as_slice());
     party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
-    grants::caller::check_care(tx, ctx.binding, committed, facts).await?;
+    let _changed = grants::caller::check_care(tx, ctx.binding, committed, facts).await?;
     reindex_heads(tx, ctx.binding, committed.kind, vec![head])
         .await
         .map_err(selector_in_use)

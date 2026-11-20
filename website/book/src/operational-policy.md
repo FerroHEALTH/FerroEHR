@@ -2061,6 +2061,9 @@ least.
 | `conflict_rules` | The conflicts of interest (`self`, `related`, with the kinships) allowed through the professional path, and for whom | none: a professional who is the patient, or is related to them, is refused |
 | `concealed_confidentialities` | The `HL7_Confidentiality` levels whose refused records answer as absent | every refused record answers as forbidden |
 | `value_sets` | The value set on your terminology server that each coded attribute (`care_role`, `representation_basis`, `kinship`, `organisation_type`, `care_purpose`, `emergency_purpose`) is bound to | the package's default code system |
+| `relationship_validity` | The default and maximum period of a care relationship, by its `care_role` and the type of its provider | every care relationship is written with an end |
+| `relationship_writers` | The writers that may write a care relationship to a record marked `R` or `V` | none |
+| `team_targets` | The `ORGANISATION` units a care relationship may name as its target | none: a care team is a `GROUP` |
 
 FerroEHR ships no value set and no country content. A code of a bound
 attribute is checked against its value set on the
@@ -2075,9 +2078,42 @@ fixes some of these attributes for many controllers is a profile: write the
 policy with its `template_id`, and FerroEHR validates it against the
 template.
 
-The time zone, the care purposes, the validity periods and the writers of
-care relationships, and the team targets, are refused until the access
-decision reads them.
+The time zone and the care purposes are refused until the access decision
+reads them.
+
+#### Writing a care relationship
+
+FerroEHR checks each care relationship against the policy when it is
+written, and refuses one that breaks a bound with `422`, naming
+`/time_validity` or `/target`:
+
+- **Validity.** A relationship written without an end takes the
+  `default_period` of the first `relationship_validity` entry that covers its
+  role and its provider's type, counted from its start (or from the day of
+  the write when it names no start). One longer than that entry's
+  `max_period` is refused. One that no entry covers, or whose entry has a
+  `max_period` and no `default_period`, must be written with an end. An entry
+  with neither period lets the relationship stay open.
+- **Target.** An `ORGANISATION` target must be a unit `team_targets` names,
+  and is never the controller or the relationship's own provider.
+- **Writers.** A relationship to a record marked `R` or `V` needs a writer
+  `relationship_writers` names for that level. Records are marked `N` until
+  the confidentiality marking is read, so this check admits every writer
+  the `write_care_relationship` grant admits.
+
+The end a relationship takes from `default_period` is never written into the
+relationship: the version you committed stays exactly as you sent it, with
+its digest and signature. FerroEHR computes the end once, in the commit's
+transaction, from the policy version the write read, and keeps it beside the
+relationship with the uid of that policy version. Every access decision and
+query reads that end. A later policy version does not move it: a changed
+period applies to the relationships written after the change. To change the
+end of a relationship, write a new version of it.
+
+Each write reads the newest policy version from the store before it takes
+its connection to the demographic store, because the policy lives in the
+clinical store. A policy version committed between that read and the commit
+applies from the next write; the kept end names the version it came from.
 
 ### Controller rules
 
