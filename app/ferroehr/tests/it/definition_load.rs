@@ -119,7 +119,7 @@ async fn a_source_the_upload_refuses_is_refused_and_not_stored() {
 
 /// The default demographic definitions, each under `deploy/definitions/` in
 /// the order the binary seeds them.
-const DEFAULT_SET: [&str; 12] = [
+const DEFAULT_SET: [&str; 13] = [
     "professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
     "professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls",
     "care-team/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls",
@@ -131,6 +131,7 @@ const DEFAULT_SET: [&str; 12] = [
     "care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2.0.0.adls",
     "representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls",
     "patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls",
+    "patient/openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls",
     "provider/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls",
 ];
 
@@ -491,6 +492,28 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
         .party_template_fit(&patient, patient_id)
         .await
         .expect("the patient fits");
+    assert_eq!(fit, TemplateFit::Complete);
+
+    // NOTE: AM Overview, Semantic Overview; v2.0.0 drops the care relationship node (#6113).
+    let current = ferroehr::party_binding::shipped::PATIENT;
+    assert_eq!(current, "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0");
+    let mut held = patient.clone();
+    held["archetype_node_id"] = json!("openEHR-DEMOGRAPHIC-PERSON.patient.v2");
+    held["archetype_details"]["archetype_id"]["value"] =
+        json!("openEHR-DEMOGRAPHIC-PERSON.patient.v2");
+    held["archetype_details"]["template_id"]["value"] = json!(current);
+    let refused = svc.party_template_fit(&held, current).await;
+    assert!(
+        refused.is_err(),
+        "v2.0.0 holds no care relationship node: {refused:?}"
+    );
+    if let Some(relationships) = held["relationships"].as_array_mut() {
+        relationships.retain(|relationship| relationship["archetype_node_id"] != "id32");
+    }
+    let fit = svc
+        .party_template_fit(&held, current)
+        .await
+        .expect("the patient without a care relationship fits v2.0.0");
     assert_eq!(fit, TemplateFit::Complete);
 
     let provider_id = "openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0";

@@ -332,6 +332,24 @@ async fn bound(svc: &FerroEhrService, value: &str) -> Vec<String> {
     }
 }
 
+/// The containers of the `PERSON`s whose live key row is `value`, carrying the
+/// professional marker.
+async fn professionals(svc: &FerroEhrService, value: &str) -> Vec<String> {
+    let lookup = svc
+        .party_source(NAMESPACE)
+        .read(LOGIN, GUID, value, None, "2026-06-01")
+        .await
+        .expect("the source answers");
+    match lookup {
+        Lookup::Parties(records) => records
+            .iter()
+            .filter(|r| r.markers().professional)
+            .map(|r| r.party().id().to_owned())
+            .collect(),
+        other => vec![format!("{other:?}")],
+    }
+}
+
 /// The live selector rows of `party`, as `selector issuer type folded`.
 async fn rows(pool: &sqlx::PgPool, party: VoId) -> Vec<String> {
     sqlx::query_scalar(
@@ -431,8 +449,8 @@ async fn concurrent_creations_binding_one_key_commit_once() {
     let (_db, svc) = service().await;
     let value = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
     let (first, second) = tokio::join!(
-        professional_or_refusal(&svc, value),
-        professional_or_refusal(&svc, value)
+        person_or_refusal(&svc, value),
+        person_or_refusal(&svc, value)
     );
     let outcomes = [first, second];
     assert_eq!(
@@ -443,16 +461,12 @@ async fn concurrent_creations_binding_one_key_commit_once() {
     assert_eq!(bound(&svc, value).await.len(), 1);
 }
 
-/// A professional binding `value`, or the refusal of its binding commit.
-async fn professional_or_refusal(svc: &FerroEhrService, value: &str) -> Result<VoId, String> {
-    let body = person(&[key(value)]);
-    let (vo, uid) = create(svc, PartyKind::Person, &body).await;
-    let (role_vo, _) = create(svc, PartyKind::Role, &role(vo, None)).await;
-    let mut listed = body;
-    listed["roles"] = json!([party_ref("ROLE", role_vo)]);
-    try_update(svc, PartyKind::Person, vo, &uid, &listed)
+/// A `PERSON` binding `value`, or the refusal of its commit: every `PERSON`
+/// holds its key, so the creation is the binding commit (#6106).
+async fn person_or_refusal(svc: &FerroEhrService, value: &str) -> Result<VoId, String> {
+    try_create(svc, PartyKind::Person, &person(&[key(value)]))
         .await
-        .map(|_| vo)
+        .map(|(vo, _)| vo)
         .map_err(|e| e.classified().to_string())
 }
 
@@ -663,7 +677,8 @@ async fn only_an_administrator_writes_a_protected_party() {
     .expect_err("a protected PERSON");
     assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
 
-    // The administrator retires the ROLE, and the PERSON stops binding.
+    // The administrator retires the ROLE, and the PERSON stops binding as a
+    // professional; its login still binds the person themself (#6106).
     as_caller(
         admin(),
         &[ADMIN],
@@ -677,7 +692,8 @@ async fn only_an_administrator_writes_a_protected_party() {
     )
     .await
     .expect("an administrator retires the ROLE");
-    assert_eq!(bound(&svc, value).await, Vec::<String>::new());
+    assert_eq!(bound(&svc, value).await, [vo.to_string()]);
+    assert_eq!(professionals(&svc, value).await, Vec::<String>::new());
 }
 
 /// Runs `fut` as a request of the SCIM client whose `binding_issuer` is

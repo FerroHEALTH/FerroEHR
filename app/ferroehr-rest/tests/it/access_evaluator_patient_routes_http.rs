@@ -180,8 +180,9 @@ async fn an_ehr_named_outside_the_path_refuses_and_records_alike() {
 }
 
 /// An operation that reaches EHR data and names no EHR names none of the
-/// caller's own: an EHR create, a lookup by subject, a query with no
-/// single-EHR scope and an import that names no EHR.
+/// caller's own: an EHR create, a query with no single-EHR scope and an
+/// import that names no EHR. A lookup by subject judges the EHR it finds
+/// (`a_patients_lookup_by_subject_finds_only_their_own_ehr`).
 #[tokio::test]
 async fn an_operation_naming_no_ehr_refuses_and_records_alike() {
     let (_db, pool, app) = app().await;
@@ -190,14 +191,6 @@ async fn an_operation_naming_no_ehr_refuses_and_records_alike() {
         (
             "an EHR create",
             as_patient("POST", "/ehr").body(Body::from("{}")),
-        ),
-        (
-            "a lookup by subject",
-            as_patient(
-                "GET",
-                "/ehr?subject_id=PATIENT-2&subject_namespace=test.patients",
-            )
-            .body(Body::empty()),
         ),
         (
             "a query with no single-EHR scope",

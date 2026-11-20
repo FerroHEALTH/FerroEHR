@@ -624,7 +624,7 @@ serialized JSON; AQL 1.1.0 leaves this open, so the reading is our own
 never through `float8` (#5753). The emitter uses no
 jsonpath item methods (their date/time conversions depend on the session
 TimeZone and are not index-legal), no `JSON_TABLE`, and no GIN index (it
-emits no GIN-servable operator; the baseline removed the index). Four
+emits no GIN-servable operator; the baseline removed the index). Five
 value indexes give a filter an entry: `idx_node_hot_value_search` on
 `ext.node_search_text`, the text an equality on a text leaf of an ELEMENT
 value compares against from the typed value columns or the stored fragment
@@ -635,7 +635,13 @@ on the `defining_code` of a coded text or of an ordinal's symbol reads from
 `ext.openehr_timestamp` of an event row's `time` and of a history row's
 `origin`, which the node insert stores; and `idx_node_hot_value_magnitude`
 on `ext.node_magnitude`, the number an ordering comparison of an ELEMENT
-value's `magnitude` reads from `value_num` or the stored fragment (#6022).
+value's `magnitude` reads from `value_num` or the stored fragment (#6022);
+and `idx_node_hot_value_number` on `ext.node_number`, the number a
+`DV_ORDINAL`'s or `DV_SCALE`'s `value` holds, from `value_num` or the stored
+fragment, which an equality of `value/value` with a text in plain decimal
+form (`'19500101'`) reads beside the search text, since such a value's
+search text is its symbol (#6090). It costs 72 bytes of WAL per ordinal or
+scale value a commit writes, and nothing on a commit without one.
 The WHERE lowering adds, for a top-level comparison one of them serves, a
 FROM item of the distinct versions some row of which carries a value the
 comparison keeps (`aql::sql::anchor`), so the statement
@@ -645,7 +651,13 @@ value the comparison reads, so an anchor removes work and no row. The
 comparisons of one leaf share one anchor, so a window reads the rows inside
 it. A `matches` over a list of strings reads as the equalities it lists
 (QUERY master03 §matches), so it takes the equality anchor with the members
-as an `IN` list, when every member could anchor its equality (#6084). An
+as an `IN` list, when every member could anchor its equality (#6084). In a
+demographic query that reads the trunk head, an equality of a party's
+`relationships/target/id/value` with a text that names a party enters
+through the open rows of `party_relationship_target`, which hold the party
+each trunk head's relationships name, as the commit derives it (root before
+`::`, case-folded, a hyphenated UUID); the comparison keeps its exact text,
+and under `ALL_VERSIONS` or a version predicate it has no entry (#6090). An
 equality's anchor always applies. A range may keep most of the store,
 so its anchor depends on the statement (`aql::sql::anchor::RangeEntry`): in
 the flat shape the planner places it; a population statement that streams
@@ -691,7 +703,7 @@ each party's class (`version.kind`) and matches the subject reference against
 that class and its demographic RM ancestors. The planner
 marks the IR `QueryDomain::Demographic`, and the same SQL runs on the party
 pool, whose `search_path` names the `party` schema rendered from the same DDL,
-without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`). An `EHR` operand directly under the root is the join to the EHR the
+without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`, and the access evaluator's per-EHR condition, which decides access to an EHR and has no row to judge on a party, #6087). An `EHR` operand directly under the root is the join to the EHR the
 party is the subject of: `aql::join` cuts the AST into a party half and a
 clinical half, the service runs the party half on the party pool, finds the
 EHRs whose subject names those parties, runs the clinical half scoped to them
@@ -863,7 +875,25 @@ which is what makes an optional stage safe to disable:
    one, `403` `refused-no-care-relationship` (BASE Architecture Overview
    §Security Policy, "Time-limitation of access"); (8) the default disposition, `403` `refused-consent-required`, an EHR with no
    settings taking `[authz.rbac] ehr_access_default`. The subject skips every
-   step on their own EHR (Art. 3). A confined caller is refused `403`
+   step on their own EHR (Art. 3). Who the subject is has one source, the
+   party binding (#6106): a caller is the subject of an EHR whose
+   `EHR_STATUS.subject` names the `PERSON` its authenticated identity is
+   bound to, whatever roles it holds and with no purpose declared. The
+   evaluator reads that subject reference from its per-EHR copy, whose
+   revision every read checks against the store, and resolves its `PERSON`
+   as the care step does, so the decision adds no statement; it then
+   records the access as the subject's own and reads the caller as the
+   subject for that EHR's `EHR_ACCESS` settings. A bound person holding no
+   role passes the role gate and is confined to those records: it is the
+   subject kind, and every other EHR refuses it `refused-not-subject`. A
+   `persons` login whose one `PERSON` carries neither the professional nor
+   the representative marker is that patient: the shared binding answers it
+   `wrong_marker`, and FerroEHR admits it as the person themself, with no
+   role, `PARTY_SELF` as its committer and the binding `self` on its access
+   record, confined in the same way. An
+   openEHR launch token carries no `fhirUser` and no `patient` claim (SMART
+   on openEHR `master07` §Context Selection names the `ehrId`), so no
+   reading of the token alone can name the person. A confined caller is refused `403`
    `refused-not-subject` on every other EHR, before step 1 (#5605): the
    `subject` kind, through a SMART App Launch patient-context credential, and
    any caller whose grants on the EHR's data are `patient/` grants alone. Its
@@ -873,8 +903,9 @@ which is what makes an optional stage safe to disable:
    evaluator alone confines it, on every route that names an EHR in its path,
    its single-EHR query or import scope, its manifest or its result, and on
    every row, count and page of a query; an operation on EHR data that names
-   no EHR (an EHR create, a lookup by subject, an unscoped query or import)
-   is refused at step 0. The SMART layer checks only a grant's family and
+   no EHR (an EHR create, an unscoped query or import) is refused at step 0.
+   A lookup by subject judges the EHR it finds, and a confined caller finds
+   only its own: any other answers `404` as a subject no EHR names does. The SMART layer checks only a grant's family and
    permission (#5586, #5606, our own design: SMART App Launch requires the
    patient context held and names no layer). On its own EHR a confined
    professional takes every step. A representative is confined the same way
@@ -1200,7 +1231,11 @@ of exceptions are our own design.
   is the categories and origins a data scope names; Art. 9 and Annex II 3.2
   are the access record with its grounds. Art. 3(3), the delay of the
   person's own access, stays the access-delay register: a controller rule on
-  categories, not a patient's choice. Art. 3 is why the subject skips every
+  categories, not a patient's choice. It holds wherever the caller is the
+  record's person: on every EHR for a request that acts for the person, and
+  on each EHR whose subject the caller's bound `PERSON` is, which a query
+  across the population checks per row against that `PERSON`'s subject
+  references (#6108). Art. 3 is why the subject skips every
   step on their own EHR.
 - **GDPR** (`docs/law/eu/gdpr/text.html`): care runs on Art. 9(2)(h) with
   Art. 6(1)(c) or (e), so a directive in care is often a choice under

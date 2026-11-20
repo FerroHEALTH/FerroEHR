@@ -238,10 +238,6 @@ impl LocalPartySource {
             lookup::key_rows(&mut conn, issuer, identifier_type, value, today).await?;
         let (live, tombstones): (Vec<KeyRow>, Vec<KeyRow>) =
             rows.into_iter().partition(|row| row.live);
-        let live: Vec<KeyRow> = live
-            .into_iter()
-            .filter(|row| row.professional || row.representative)
-            .collect();
         if live.is_empty() {
             let lookup = if tombstones.is_empty() {
                 Lookup::Parties(Vec::new())

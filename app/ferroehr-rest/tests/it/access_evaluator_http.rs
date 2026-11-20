@@ -70,6 +70,18 @@ pub(crate) async fn app() -> (
     Arc<ferroehr::service::FerroEhrService>,
     Router,
 ) {
+    Box::pin(app_with(crate::party_binding_http::mapping())).await
+}
+
+/// [`app`] over the binding mapping `mapping`.
+pub(crate) async fn app_with(
+    mapping: ferroehr::party_binding::BindingMapping,
+) -> (
+    testkit::TestDb,
+    PgPool,
+    Arc<ferroehr::service::FerroEhrService>,
+    Router,
+) {
     let (db, pool) = common::migrated_pool().await;
     let audit = ferroehr::system_log::config::AuditConfig {
         purpose_codes: vec!["TREAT".to_owned(), "ETREAT".to_owned()],
@@ -80,9 +92,12 @@ pub(crate) async fn app() -> (
         .await
         .expect("the audit sender");
     let svc = Arc::new(
-        common::binding_service(&pool)
-            .with_audit(sender)
-            .with_audit_store(AuditStore::new(pool.clone())),
+        ferroehr::service::FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
+            &pool,
+        ))
+        .with_binding_mapping(mapping)
+        .with_audit(sender)
+        .with_audit_store(AuditStore::new(pool.clone())),
     );
     let mut config = common::api_config(true);
     common::with_basic_users(
