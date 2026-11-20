@@ -4,7 +4,8 @@
 //! The side-table rows of a `PARTY_RELATIONSHIP` of its own: a standalone
 //! representation, carrying the representation code, which is how a patient
 //! authorises a proxy (#5446), and a care relationship, whose caller fact is
-//! about its source (#6055). A representation's row names its container, and
+//! about its source (#6055), with the end it takes from the access policy
+//! (#6073). A representation's row names its container, and
 //! the key row of the `PERSON` it names as its source counts it. No openEHR
 //! spec governs the side table: our own design.
 
@@ -20,8 +21,8 @@ use crate::party_binding::grants::store::GrantHead;
 use crate::party_binding::rows::{self, RepresentationRow};
 use crate::storage::error::StorageError;
 use crate::storage::party_reverse;
-use crate::versioning::Kind;
 use crate::versioning::change::Committed;
+use crate::versioning::{Kind, SigningCtx};
 
 /// Judges the commit `committed` of a standalone `PARTY_RELATIONSHIP` holding
 /// `facts` (`None` for a logical delete) against the protection rules under
@@ -33,18 +34,21 @@ use crate::versioning::change::Committed;
 /// The protection refusals, the care writer's `403`, and a storage failure.
 pub(super) async fn committed(
     tx: &mut PgConnection,
-    mapping: &BindingMapping,
+    ctx: &SigningCtx<'_>,
     committed: &Committed,
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
+    let mapping = ctx.binding;
     crate::party_binding::protect::check(tx, mapping, committed, facts).await?;
     crate::party_binding::protect::representation(tx, mapping, committed.vo_id, facts).await?;
-    grants::caller::check_care(tx, mapping, committed, facts).await?;
+    let changed = grants::caller::check_care(tx, mapping, committed, facts).await?;
     let targets = facts.map_or(&[][..], |f| f.targets.as_slice());
     party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
     let (lifecycle_state, trunk_head) = head_of(tx, committed.vo_id).await?;
     if trunk_head == Some(committed.sys_version) {
         reindex(tx, mapping, committed.vo_id.0, facts).await?;
+        let live = facts.filter(|_| lifecycle_state != DELETED);
+        grants::caller::bounds::judge(tx, &ctx.access_policy, committed, live, changed).await?;
         let head = GrantHead {
             vo_id: committed.vo_id.0,
             lifecycle_state: &lifecycle_state,

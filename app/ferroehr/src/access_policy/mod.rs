@@ -22,6 +22,7 @@
 
 pub mod care;
 pub mod check;
+pub mod relationship;
 pub mod retention;
 pub mod undecided;
 

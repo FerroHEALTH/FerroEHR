@@ -98,7 +98,7 @@ impl Ward {
         let (patient, _) = create(&one, PartyKind::Person, &person("Mr E", &[]))
             .await
             .expect("the patient commits");
-        let stay = relate_as_adt(&one, &care_of(patient, ward, &day(-3), None)).await;
+        let stay = relate_as_adt(&one, &care_of(patient, ward, &day(-3), Some(&day(30)))).await;
         let ehr_id = create_ehr_for_party(&one, patient).await;
         let vo = one
             .create_composition(ehr_id, uv(&composition("ward note"), "249", None))

@@ -318,7 +318,8 @@ j_care() {
 H_CARE_PROVIDER_ISSUER="urn:oid:2.999.7.9"
 H_CARE_PROVIDER_ID="quickstart"
 
-# A care relationship of its own (#6055): the PERSON `source` under the care
+# A care relationship of its own (#6055), written with its end as one no
+# relationship_validity entry covers must be (#6073): the PERSON `source` under the care
 # of the party `target` of RM type `ttype` over `validity`, in the role ATND of
 # HL7_ParticipationType, in the care of the stack's provider (draft access
 # control package, Care Relationships).
@@ -722,7 +723,7 @@ hospital_setup() {
   h_patient_person person_eva "Eva Visser" eva || h_fail_call "Eva's PERSON"
   h_party person_piet person "$(j_named_party PERSON "Piet Jansen")" || h_fail_call "Piet's PERSON"
   local admitted team
-  admitted="$(j_dates "$(h_day -10)")"
+  admitted="$(j_dates "$(h_day -10)" "$(h_day 30)")"
   for team in cardiology ward3 psychiatry; do
     h_care "care_eva_$team" 2 admin "$(j_care_of "$(hv person_eva)" GROUP "$(hv "$team")" \
       "$admitted")" || h_fail_call "Eva's admission to $team"
@@ -1221,7 +1222,8 @@ hospital_care_and_consent() {
   h_care_validity care_eva_cardiology 2 admin "$(j_dates "$(h_day -10)" "$(h_day -3)")" \
     || h_fail_call "Eva's discharge three days ago"
   h_read 1 p:anna "$eva" c_encounter TREAT 403 refused-no-care-relationship "Dr. Jansen after the grace"
-  h_care_validity care_eva_cardiology 1 admin "$(j_dates "$(h_day -10)")" || h_fail_call "Eva readmitted"
+  h_care_validity care_eva_cardiology 1 admin "$(j_dates "$(h_day -10)" "$(h_day 30)")" \
+    || h_fail_call "Eva readmitted"
   h_read 2 p:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen after the readmission"
   probe_done
 
@@ -1283,7 +1285,7 @@ hospital_scim_lifecycle() {
   group="$(jq -r '.id // empty' <<<"$H_BODY")"
   if [[ -n "$group" ]]; then
     h_care care_eva_emergency 2 admin "$(j_care_of "$(hv person_eva)" GROUP "$group" \
-      "$(j_dates "$(h_day -1)")")" || h_fail_call "Eva admitted to the emergency department"
+      "$(j_dates "$(h_day -1)" "$(h_day 30)")")" || h_fail_call "Eva admitted to the emergency department"
   fi
   h_read 1 p:dirk "$eva" c_vitals TREAT 200 "" "Dr. Bakker, a member through SCIM, reads the vital signs"
   h_call 2 scim PATCH "/scim/v2/Groups/$group" "$(jq -nc --arg m "$(hv person_dirk)" \
@@ -1583,7 +1585,7 @@ hospital_pixm() {
     || h_fail_call "Dr. Jansen joins Cardiology"
   h_patient_person person_eva "Eva Visser" eva || h_fail_call "Eva's PERSON"
   h_care care_eva_cardiology 1 admin "$(j_care_of "$(hv person_eva)" GROUP "$(hv cardiology)" \
-    "$(j_dates "$(h_day -10)")")" || h_fail_call "Eva's admission"
+    "$(j_dates "$(h_day -10)" "$(h_day 30)")")" || h_fail_call "Eva's admission"
   h_patient_person person_frank "Frank Visser" frank || h_fail_call "Frank's PERSON"
   h_rerelate 2 admin person "$(hv person_frank)" "[$(j_care represents PERSON "$(hv person_frank)" \
     PERSON "$(hv person_eva)" "$(j_dates "$(h_day -365)")")]" || h_fail_call "Frank represents Eva"

@@ -84,6 +84,7 @@ mod audit_store;
 mod audit_text;
 mod caller_facts;
 mod canonical_json_literals;
+mod care_bounds;
 mod codec_corpus;
 mod cohort_bench;
 mod cohort_query;

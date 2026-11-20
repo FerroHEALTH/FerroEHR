@@ -34,6 +34,8 @@ use crate::draft::access_control::access_control::access_directive_settings::Acc
 use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use crate::draft::access_control::access_control::access_log_retention::AccessLogRetention;
 use crate::draft::access_control::access_control::access_policy::AccessPolicy;
+use crate::draft::access_control::access_control::access_relationship_validity::AccessRelationshipValidity;
+use crate::draft::access_control::access_control::access_relationship_writer::AccessRelationshipWriter;
 use crate::draft::access_control::terminology::log::AccessorKind;
 use crate::draft::access_control::terminology::{
     AccessDefault, CallerKind, Conflict, DirectiveKind, Effect, Relationship,
@@ -207,6 +209,74 @@ fn care_rules(check: &mut Check, policy: &AccessPolicy) {
             "ACCESS_VALUE_SET",
             "Binding_valid",
         );
+    }
+    for entry in policy.relationship_validity.as_deref().unwrap_or_default() {
+        relationship_validity_rules(check, entry);
+    }
+    for writer in policy.relationship_writers.as_deref().unwrap_or_default() {
+        relationship_writer_rules(check, writer);
+    }
+    check.hold(
+        policy
+            .team_targets
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .all(|target| target.r#type == "ORGANISATION"),
+        "ACCESS_POLICY",
+        "Team_targets_valid",
+    );
+}
+
+/// The `ACCESS_RELATIONSHIP_VALIDITY` invariants, comparing durations by RM
+/// `DV_DURATION.magnitude`.
+fn relationship_validity_rules(check: &mut Check, entry: &AccessRelationshipValidity) {
+    const CLASS: &str = "ACCESS_RELATIONSHIP_VALIDITY";
+    let positive = |period: Option<&DvDuration>| {
+        period.is_none_or(|period| period.magnitude().is_some_and(|seconds| seconds > 0.0))
+    };
+    for period in [&entry.default_period, &entry.max_period]
+        .into_iter()
+        .flatten()
+    {
+        duration(check, period);
+    }
+    check.hold(
+        positive(entry.default_period.as_ref()),
+        CLASS,
+        "Default_valid",
+    );
+    check.hold(positive(entry.max_period.as_ref()), CLASS, "Max_valid");
+    check.hold(
+        match (&entry.default_period, &entry.max_period) {
+            (Some(default), Some(max)) => default
+                .magnitude()
+                .zip(max.magnitude())
+                .is_some_and(|(default, max)| default <= max),
+            _ => true,
+        },
+        CLASS,
+        "Default_within_max",
+    );
+    check.hold(
+        entry.default_period.is_none() || entry.max_period.is_some(),
+        CLASS,
+        "Bounded_together",
+    );
+}
+
+/// The `ACCESS_RELATIONSHIP_WRITER` invariants and those of the actor
+/// scopes it names.
+fn relationship_writer_rules(check: &mut Check, writer: &AccessRelationshipWriter) {
+    check.hold(
+        writer.confidentialities.iter().all(|level| {
+            level.defining_code.terminology_id.value == TERMINOLOGY_ID_CONFIDENTIALITY
+        }),
+        "ACCESS_RELATIONSHIP_WRITER",
+        "Confidentialities_valid",
+    );
+    for scope in &writer.applies_to {
+        actor_scope_rules(check, scope);
     }
 }
 

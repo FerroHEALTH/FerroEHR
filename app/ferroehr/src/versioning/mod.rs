@@ -221,6 +221,10 @@ pub(crate) struct SigningCtx<'a> {
     /// (`version.origins`): the origin of the committer's `data_origin` grant,
     /// or [`Self::system_id`] (EHDS Annex II 3.4, [`crate::origins`]).
     pub(crate) direct_origin: crate::origins::DirectOrigin,
+    /// The access policy in force as the request confirmed it before the
+    /// commit took its connection, whose bounds a care relationship takes
+    /// ([`crate::party_binding::grants::caller::bounds`]).
+    pub(crate) access_policy: std::sync::Arc<crate::access_policy::PolicyInForce>,
     /// `[record.versioning] idempotent_resend`: a direct update whose content
     /// equals the current version's answers with that version and commits
     /// nothing (#4415).

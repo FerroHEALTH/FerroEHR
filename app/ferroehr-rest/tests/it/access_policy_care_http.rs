@@ -337,7 +337,8 @@ fn care_of(patient: &str, carer: &str, role: &str) -> Value {
                              "id": "hospital", "type": "ORGANISATION" } }] },
         "time_validity": { "_type": "DV_INTERVAL",
             "lower": { "_type": "DV_DATE", "value": "2026-11-01" },
-            "lower_unbounded": false, "upper_unbounded": true },
+            "upper": { "_type": "DV_DATE", "value": "2027-11-01" },
+            "lower_unbounded": false, "upper_unbounded": false },
         "source": reference(patient),
         "target": reference(carer) })
 }
