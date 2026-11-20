@@ -155,7 +155,7 @@ impl Shapes {
         params: &Params,
         ctx: &SqlCtx,
     ) -> Result<PreparedQuery, AqlError> {
-        let person_withheld = crate::system_log::access_context::access_delay_enforced();
+        let person_withheld = super::gates::person_withheld(&ctx.ehr_access);
         let found = self.find(ir, params, ctx, person_withheld);
         if let Some(Entry {
             state: State::Shaped(shape),

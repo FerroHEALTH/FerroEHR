@@ -27,7 +27,7 @@ task_local! {
     static DECLARED_PURPOSE: Option<String>;
     static DECLARED_PERMIT: Option<String>;
     static REQUEST_ROLES: Vec<String>;
-    static ACCESS_DELAY_ENFORCED: bool;
+    static ACCESS_DELAY: AccessDelay;
     static COMMITTED_FACILITIES: FacilitySink;
     static REQUEST_BINDING: Option<crate::system_log::binding::BindingRecord>;
 }
@@ -213,18 +213,53 @@ pub fn permit_identifier(declared: &str) -> Option<String> {
 /// delay of the person's access: our own design/extension.
 #[must_use]
 pub fn access_delay_enforced() -> bool {
-    ACCESS_DELAY_ENFORCED
-        .try_with(|enforced| *enforced)
-        .unwrap_or(false)
+    access_delay() == AccessDelay::Person
 }
 
-/// Run `fut` with the EHDS Art. 3(3) delay of the person's access enforced or
-/// not.
-pub async fn with_access_delay<F>(enforced: bool, fut: F) -> F::Output
+/// Whether the EHDS Art. 3(3) delay holds for the current request on `ehr_id`.
+///
+/// It holds on every EHR for a request that acts for the person, and on the
+/// EHRs the request found to be the caller's own records by the party binding
+/// (#6108).
+#[must_use]
+pub fn access_delay_enforced_on(ehr_id: crate::ids::EhrId) -> bool {
+    match access_delay() {
+        AccessDelay::Off => false,
+        AccessDelay::Person => true,
+        AccessDelay::Records => crate::access_eval::condition::current()
+            .is_some_and(|access| access.is_record(Some(ehr_id))),
+    }
+}
+
+/// The EHDS Art. 3(3) delay the current request runs under; [`AccessDelay::Off`]
+/// outside a request scope.
+#[must_use]
+pub fn access_delay() -> AccessDelay {
+    ACCESS_DELAY
+        .try_with(|delay| *delay)
+        .unwrap_or(AccessDelay::Off)
+}
+
+/// Where the EHDS Art. 3(3) delay of the person's own access holds in one
+/// request. No openEHR spec governs it: our own design.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AccessDelay {
+    /// Nowhere: the deployment delays nothing, or the caller is no person.
+    #[default]
+    Off,
+    /// On every EHR: the request acts for the person.
+    Person,
+    /// On each EHR whose subject is the `PERSON` the caller is bound to, which
+    /// it reads as that record's person (#6106).
+    Records,
+}
+
+/// Run `fut` with the EHDS Art. 3(3) delay of the person's access `delay`.
+pub async fn with_access_delay<F>(delay: AccessDelay, fut: F) -> F::Output
 where
     F: Future,
 {
-    ACCESS_DELAY_ENFORCED.scope(enforced, fut).await
+    ACCESS_DELAY.scope(delay, fut).await
 }
 
 #[cfg(test)]

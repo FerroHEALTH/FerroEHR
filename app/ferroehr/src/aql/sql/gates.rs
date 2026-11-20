@@ -53,6 +53,17 @@ pub(super) struct Gates<'a> {
     access_settings: &'a EhrAccessReaders,
 }
 
+/// Whether the EHDS Art. 3(3) delay withholds held data from a query under
+/// `access`: for a request that acts for the person, and for a query pinned
+/// to an EHR the request found to be the caller's own record (#6108).
+pub(super) fn person_withheld(access: &AccessCondition) -> bool {
+    use crate::system_log::access_context::{access_delay_enforced, access_delay_enforced_on};
+    access_delay_enforced()
+        || access
+            .pinned()
+            .is_some_and(|pinned| access_delay_enforced_on(crate::ids::EhrId(pinned.ehr)))
+}
+
 impl<'a> Gates<'a> {
     /// The gates the current request publishes for a query of `domain`
     /// that reads the policy parties as `policy_parties` says, the
@@ -64,10 +75,9 @@ impl<'a> Gates<'a> {
         access_settings: &'a EhrAccessReaders,
         access: &'a AccessCondition,
     ) -> Self {
-        use crate::system_log::access_context::access_delay_enforced;
         Self {
             access,
-            person_withheld: access_delay_enforced(),
+            person_withheld: person_withheld(access),
             policy_parties: if domain == QueryDomain::Demographic {
                 policy_parties
             } else {
