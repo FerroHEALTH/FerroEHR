@@ -33,6 +33,7 @@ pub mod alongside;
 pub mod care_tie;
 pub mod class;
 pub mod condition;
+mod delegation;
 mod directive;
 mod exclusion;
 pub mod procedure;

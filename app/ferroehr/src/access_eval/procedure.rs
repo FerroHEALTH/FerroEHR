@@ -93,7 +93,7 @@ use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 use crate::access_eval::care_tie::{Cared, Tie, care_needs, granting};
 use crate::access_eval::directive::{Permit, Reader, kind_and_effect, names_sensitivity};
-use crate::access_eval::scope::{Item, Polarity, Pred, Scopes};
+use crate::access_eval::scope::{Item, Pred, Scopes};
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::service::ehr::access_rule::SettingsCaller;
@@ -518,7 +518,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     crate::access_eval::exclusion::excluded(&read, exclusions, &mut verdict);
     denials(&read, directives, &mut verdict);
     if caller.kind == CallerKind::Representative {
-        delegation(&read, directives, &mut verdict);
+        crate::access_eval::delegation::delegation(&read, directives, &mut verdict);
         controller_denials(&read, &mut verdict);
         return verdict;
     }
@@ -703,47 +703,6 @@ const fn step(outcome: Outcome) -> u8 {
         Outcome::Absent(_) => 2,
         _ => 3,
     }
-}
-
-/// Step 3 for a representative: one a `delegation` directive names reads
-/// only what an applying delegation permit covers (EHDS Art. 4(2)).
-fn delegation(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut Verdict) {
-    let naming: Vec<(usize, &AccessDirective, Pred)> = directives
-        .iter()
-        .enumerate()
-        .filter(|(_, d)| kind_and_effect(d) == (DirectiveKind::Delegation, Effect::Permit))
-        .filter(|(_, d)| d.applies_to.is_some())
-        .map(|(at, d)| (at, d, read.actor(d, read.placed(at))))
-        .filter(|(_, _, named)| *named != Pred::False)
-        .collect();
-    if naming.is_empty() {
-        return;
-    }
-    let applying: Vec<(usize, &AccessDirective, Pred)> = naming
-        .iter()
-        .map(|(at, d, _)| (*at, *d, read.applies(d, Polarity::Permit, read.placed(*at))))
-        .filter(|(_, _, applies)| *applies != Pred::False)
-        .collect();
-    verdict.grounds.permits = applying
-        .iter()
-        .filter(|(_, _, applies)| *applies == Pred::True)
-        .map(|(at, _, _)| *at)
-        .collect();
-    let covered = applying
-        .iter()
-        .map(|(at, d, applies)| {
-            Pred::all(vec![
-                applies.clone(),
-                read.cover(d, Effect::Permit, read.placed(*at)),
-            ])
-        })
-        .collect();
-    let named = Pred::any(naming.iter().map(|(_, _, named)| named.clone()).collect());
-    verdict.rules.push(Rule {
-        when: Pred::all(vec![named, Pred::negate(Pred::any(covered))]),
-        then: Outcome::Refused(Refusal::ConsentDenied),
-        by: naming.iter().map(|(at, _, _)| *at).collect(),
-    });
 }
 
 /// The permit rules of the controller's policy that may bind the caller.
