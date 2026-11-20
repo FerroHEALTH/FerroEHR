@@ -383,7 +383,7 @@ impl FerroEhrService {
 /// `declared` is the body's RM class, `None` for a root whose `_type` is
 /// legitimately absent (canonical JSON requires it only on polymorphic slots),
 /// which is then read as the template's root class.
-fn fit(
+pub(in crate::service) fn fit(
     declared: Option<&str>,
     body: &Value,
     wt: &WebTemplate,
@@ -424,7 +424,7 @@ fn violations(messages: Vec<ValidationMessage>) -> Vec<InvariantViolation> {
 
 /// The `422` of a template refusal, counted under the `template` pass the
 /// COMPOSITION commit counts its own under.
-fn refusal(violations: Vec<InvariantViolation>) -> ServiceError {
+pub(in crate::service) fn refusal(violations: Vec<InvariantViolation>) -> ServiceError {
     crate::telemetry::metrics::metrics()
         .validation_failures
         .add(

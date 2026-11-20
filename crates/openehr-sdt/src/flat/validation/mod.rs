@@ -43,6 +43,7 @@
               (#1694)"
 )]
 
+mod declared;
 pub(crate) mod leaf;
 mod name_type;
 pub(crate) mod node_ids;
@@ -62,6 +63,7 @@ use crate::flat::path;
 use crate::flat::rmpath;
 use crate::flat::sim::{SimDocument, SimNode, is_present};
 use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
+use declared::rm_declares_attribute;
 use plan::{ChildGroup, NodeWalk};
 
 /// Validate only the archetype-conformance pass against a resolved
@@ -467,22 +469,6 @@ struct Validator {
     bindings: Vec<ConstraintBindingCheck>,
     /// Whether [`WebTemplate::archetype_refs`] is set (an OPT2 template).
     slot_fills_enumerated: bool,
-}
-
-/// Does the generated RM model declare an attribute named `attr` on ANY class?
-///
-/// Name-only by design: an OPT constrains attributes at several RM levels and
-/// the walker does not carry the declaring class here, while the defect this
-/// answers — a constraint on an attribute NO RM class declares — is fully
-/// decided by the name.
-fn rm_declares_attribute(attr: &str) -> bool {
-    static DECLARED: std::sync::LazyLock<std::collections::BTreeSet<&str>> =
-        std::sync::LazyLock::new(|| {
-            openehr_rm::v1_2::model::classes()
-                .flat_map(|c| c.attributes.iter().map(|a| a.name))
-                .collect()
-        });
-    DECLARED.contains(attr)
 }
 
 /// Why a template constraint cannot be evaluated against any instance.

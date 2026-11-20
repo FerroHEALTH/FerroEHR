@@ -57,6 +57,9 @@ flat = [
 ]
 # The async WebTemplate cache (`flat::cache`) — the crate's only `moka` user.
 cache = ["flat", "dep:moka"]
+# The classes of FerroEHR's draft packages (`openehr-rm/draft`), whose
+# attributes a template of a draft class, such as an `ACCESS_POLICY`, constrains.
+draft = ["flat", "openehr-rm/draft"]
 
 [dev-dependencies]
 serde_json.workspace = true

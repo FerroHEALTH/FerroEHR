@@ -8,7 +8,11 @@
 //! confidentiality, exclusions). A server that stored
 //! one and decided without it would admit what the attribute narrows, so a
 //! settings or policy version that sets one is refused whole, naming the
-//! attribute, until the decision reads it. Our own design.
+//! attribute, until the decision reads it. An attribute whose unread value
+//! admits nothing more than its void (the self-declared and attested paths,
+//! the caseload switch, conflict allowances, concealed levels and value-set
+//! bindings) is stored, read through [`crate::access_policy::care`]. Our own
+//! design.
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
@@ -60,20 +64,6 @@ pub fn in_policy(policy: &AccessPolicy) -> Option<String> {
             policy.relationship_writers.is_some(),
         ),
         ("team_targets", policy.team_targets.is_some()),
-        ("self_declared_care", policy.self_declared_care.is_some()),
-        // TODO(#6078): admit an attested care relationship.
-        ("attested_care", policy.attested_care.is_some()),
-        // TODO(#6056): switch the caseload.
-        ("caseload", policy.caseload.is_some()),
-        // TODO(#6077): decide on the conflict rules.
-        ("conflict_rules", policy.conflict_rules.is_some()),
-        // TODO(#6057): conceal the levels the policy names.
-        (
-            "concealed_confidentialities",
-            policy.concealed_confidentialities.is_some(),
-        ),
-        // TODO(#6072): read the value sets the policy binds.
-        ("value_sets", policy.value_sets.is_some()),
     ];
     if let Some((name, _)) = set.iter().find(|(_, is_set)| *is_set) {
         return Some((*name).to_owned());

@@ -56,6 +56,11 @@ pub const TERMINOLOGY_ID_ROLE_CLASS: &str = "HL7_RoleClass";
 /// delete of an audited access.
 pub const TERMINOLOGY_ID_AUDIT_EVENT_ACTION: &str = "HL7_AuditEventAction";
 
+/// HL7 Terminology `http://terminology.hl7.org/CodeSystem/v3-Confidentiality`,
+/// the BMMs' `Terminology_id_confidentiality`: the levels a record or a kind
+/// of data carries.
+pub const TERMINOLOGY_ID_CONFIDENTIALITY: &str = "HL7_Confidentiality";
+
 /// A `DV_CODED_TEXT` of `code` in `terminology`, displayed as `rubric`.
 #[must_use]
 pub fn coded_text(terminology: &str, code: &str, rubric: &str) -> DvCodedText {
@@ -91,6 +96,11 @@ pub enum Group {
     AccessCallerKind,
     /// `access operation`: the operation classes a directive names.
     AccessOperation,
+    /// `access conflict`: a conflict of interest between a professional
+    /// caller and the subject.
+    AccessConflict,
+    /// `access value set binding`: what a value set of the policy codes.
+    AccessValueSetBinding,
     /// `care relationship`: the demographic relationships that put a caller
     /// in care of a subject.
     CareRelationship,
@@ -125,13 +135,15 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 18] = [
+    pub const ALL: [Self; 20] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
         Self::AccessRelationship,
         Self::AccessCallerKind,
         Self::AccessOperation,
+        Self::AccessConflict,
+        Self::AccessValueSetBinding,
         Self::CareRelationship,
         Self::GroupKind,
         Self::RecordSubject,
@@ -156,6 +168,8 @@ impl Group {
             Self::AccessRelationship => "access relationship",
             Self::AccessCallerKind => "access caller kind",
             Self::AccessOperation => "access operation",
+            Self::AccessConflict => "access conflict",
+            Self::AccessValueSetBinding => "access value set binding",
             Self::CareRelationship => "care relationship",
             Self::GroupKind => "group kind",
             Self::RecordSubject => "record subject",
@@ -182,6 +196,8 @@ impl Group {
             Self::AccessRelationship => phrases::<Relationship>(),
             Self::AccessCallerKind => phrases::<CallerKind>(),
             Self::AccessOperation => phrases::<OperationClass>(),
+            Self::AccessConflict => phrases::<Conflict>(),
+            Self::AccessValueSetBinding => phrases::<ValueSetBinding>(),
             Self::CareRelationship => phrases::<CareRelationship>(),
             Self::GroupKind => phrases::<GroupKind>(),
             Self::RecordSubject => phrases::<RecordSubject>(),
@@ -460,6 +476,36 @@ group! {
 }
 
 group! {
+    /// A conflict of interest between a professional caller and the subject
+    /// (`ACCESS_CONFLICT_RULE.conflict`).
+    Conflict in AccessConflict {
+        /// The caller's own `PERSON` is the subject's.
+        SelfAccess => "self",
+        /// A `related_to` relationship in force joins the caller and the
+        /// subject.
+        Related => "related",
+    }
+}
+
+group! {
+    /// What a value set of the policy codes (`ACCESS_VALUE_SET.binding`).
+    ValueSetBinding in AccessValueSetBinding {
+        /// The role of a care relationship and of a rule's care roles.
+        CareRole => "care_role",
+        /// The basis of a representation.
+        RepresentationBasis => "representation_basis",
+        /// The kinship of a `related_to` relationship and of a conflict rule.
+        Kinship => "kinship",
+        /// The type of an `ORGANISATION` a rule or a validity entry names.
+        OrganisationType => "organisation_type",
+        /// The purposes for which a care relationship is a ground.
+        CarePurpose => "care_purpose",
+        /// The purposes the system reads as declaring an emergency.
+        EmergencyPurpose => "emergency_purpose",
+    }
+}
+
+group! {
     /// The demographic relationships of care, coded in the `name` of a
     /// `PARTY_RELATIONSHIP`.
     CareRelationship in CareRelationship {
@@ -575,6 +621,55 @@ impl Refusal {
     #[must_use]
     pub const fn is_invisible(self) -> bool {
         matches!(self, Self::OptOut | Self::Restricted)
+    }
+}
+
+/// A confidentiality level of [`TERMINOLOGY_ID_CONFIDENTIALITY`], in the
+/// package's order `N` < `R` < `V`.
+///
+/// The code system's `U`, `L` and `M` read as `N`, as the package fixes
+/// (draft access control Terminology, Codes from Other Terminologies).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Confidentiality {
+    /// `N`, normal, and the `U`, `L` and `M` that read as it.
+    Normal,
+    /// `R`, restricted.
+    Restricted,
+    /// `V`, very restricted.
+    VeryRestricted,
+}
+
+/// A coded value that is no confidentiality level.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{terminology}::{code} is no {TERMINOLOGY_ID_CONFIDENTIALITY} level")]
+pub struct NotConfidentiality {
+    /// The value's terminology id.
+    pub terminology: String,
+    /// The value's code.
+    pub code: String,
+}
+
+impl Confidentiality {
+    /// Reads the level `coded` names.
+    ///
+    /// # Errors
+    /// [`NotConfidentiality`] when `coded` is of another terminology than
+    /// [`TERMINOLOGY_ID_CONFIDENTIALITY`], or names no code of it.
+    pub fn read(coded: &DvCodedText) -> Result<Self, NotConfidentiality> {
+        let phrase = &coded.defining_code;
+        let level = match (
+            phrase.terminology_id.value.as_str(),
+            phrase.code_string.as_str(),
+        ) {
+            (TERMINOLOGY_ID_CONFIDENTIALITY, "U" | "L" | "M" | "N") => Some(Self::Normal),
+            (TERMINOLOGY_ID_CONFIDENTIALITY, "R") => Some(Self::Restricted),
+            (TERMINOLOGY_ID_CONFIDENTIALITY, "V") => Some(Self::VeryRestricted),
+            _ => None,
+        };
+        level.ok_or_else(|| NotConfidentiality {
+            terminology: phrase.terminology_id.value.clone(),
+            code: phrase.code_string.clone(),
+        })
     }
 }
 

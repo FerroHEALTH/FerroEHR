@@ -31,9 +31,18 @@ const ARCHETYPE: &str = "openEHR-EHR-ACCESS_POLICY.controller.v1";
 /// One replica of a deployment over `pool`: `root` holds `admin_role`, and
 /// the `write_access_policy` grant when `granted`; `dr` holds neither. Its access policy listener runs when `listening`.
 async fn replica(pool: &PgPool, listening: bool, granted: bool) -> (Arc<FerroEhrService>, Router) {
-    let svc = Arc::new(FerroEhrService::new(
-        &ferroehr::db::domain::DomainPools::from_shared(pool),
-    ));
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool));
+    replica_of(svc, pool, listening, granted).await
+}
+
+/// [`replica`] over `svc`, a service built over `pool`.
+pub(crate) async fn replica_of(
+    svc: FerroEhrService,
+    pool: &PgPool,
+    listening: bool,
+    granted: bool,
+) -> (Arc<FerroEhrService>, Router) {
+    let svc = Arc::new(svc);
     let mut config = common::api_config(true);
     common::with_basic_users(
         &mut config,
@@ -68,7 +77,7 @@ async fn replica(pool: &PgPool, listening: bool, granted: bool) -> (Arc<FerroEhr
 
 /// A policy over the default archetype, with `care` as its care relationship
 /// requirement.
-fn policy(care: bool) -> Value {
+pub(crate) fn policy(care: bool) -> Value {
     json!({
         "_type": "ACCESS_POLICY",
         "name": { "_type": "DV_TEXT", "value": "Hospital access policy" },
@@ -85,7 +94,7 @@ fn policy(care: bool) -> Value {
 
 /// `method` on `/admin/access_policy{tail}` as `user`, with the conditional
 /// header `condition` and an optional JSON body.
-async fn call(
+pub(crate) async fn call(
     app: &Router,
     method: &str,
     user: &str,
@@ -114,7 +123,7 @@ async fn call(
 }
 
 /// Create the first version as the admin; its `ETag`.
-async fn create(app: &Router, body: &Value) -> String {
+pub(crate) async fn create(app: &Router, body: &Value) -> String {
     let (status, headers, answer) = call(
         app,
         "PUT",
