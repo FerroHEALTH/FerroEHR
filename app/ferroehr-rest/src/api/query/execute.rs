@@ -53,15 +53,7 @@ pub(crate) async fn serve(
     parts: RequestParts,
     execution: Execution,
 ) -> Result<Response, RestError> {
-    // EHR_ACCESS: the access evaluator's verdict the path routes apply, held
-    // over every row the query could reach (RM ehr `ehr_access.adoc`
-    // §`EHR_ACCESS` Class).
-    let ehr_access = match crate::extensions::access::ehr_access::query_condition(&state).await {
-        Ok(ehr_access) => ehr_access,
-        Err(deny) => return Ok(*deny),
-    };
     let scope = QueryScope {
-        ehr_access,
         log_standing: crate::api::access_log_query::standing(&state),
     };
 

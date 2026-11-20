@@ -381,3 +381,56 @@ async fn a_new_connections_session_setup_is_not_a_round_trip() {
         "the two statements, and not the new connection's session setup"
     );
 }
+
+/// The read of the access settings classes a query's condition is judged
+/// from (`storage::access_projection::every_class`).
+const SETTINGS_READ: &str = "SELECT id, settings::text AS settings FROM access_class";
+
+/// The settings reads of `requests` queries `body` sends as the nurse, each
+/// answering `200`.
+async fn settings_reads(app: &Router, pool: &PgPool, body: &str, requests: u64) -> u64 {
+    let evicted = testkit::statements::statement_window(pool)
+        .await
+        .expect("the statement counts reset");
+    for _ in 0..requests {
+        let (status, answer) = send(
+            app,
+            "POST",
+            &format!("{BASE}/query/aql"),
+            "nurse",
+            None,
+            Some(("application/json", body.to_owned())),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{body}: {answer}");
+    }
+    let statements = counted(pool).await;
+    testkit::statements::assert_statements_kept(pool, evicted)
+        .await
+        .expect("no statement evicted while the test counted them");
+    calls(&statements, SETTINGS_READ)
+}
+
+/// A demographic query judges no `EHR_ACCESS` condition, so it reads no
+/// access settings, while a clinical query reads them on every request on a
+/// replica that holds no copy of them (#6110).
+#[tokio::test]
+async fn a_demographic_query_reads_no_access_settings() {
+    let (_db, pool, _svc, app) = Box::pin(app()).await;
+    sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
+        .execute(&pool)
+        .await
+        .expect("pg_stat_statements: the server loads it (shared_preload_libraries)");
+    ehr_with_composition(&app).await;
+    let demographic = json!({ "q": "SELECT p/uid/value, p/name/value FROM PERSON p LIMIT 20" });
+    assert_eq!(
+        settings_reads(&app, &pool, &demographic.to_string(), REQUESTS).await,
+        0,
+        "a demographic query reads no access settings"
+    );
+    let clinical = settings_reads(&app, &pool, &population(""), REQUESTS).await;
+    assert!(
+        clinical >= REQUESTS,
+        "a clinical query reads the settings it is judged by: {clinical} reads"
+    );
+}
