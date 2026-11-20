@@ -26,7 +26,9 @@ use crate::access_eval_examples::{
     MEMBER, access, care, care_of, party, person, policy, relate_as_adt, rerelate_as_adt,
 };
 use crate::fixtures::{composition, create_ehr_for_party, uv};
-use crate::policy_fixtures::{capability, create, granted, granting};
+use crate::policy_fixtures::{
+    CARE_PROVIDER, care_provider, care_writer, create, granted, granting, provider_team,
+};
 use ferroehr::access_eval::alongside;
 use ferroehr::access_eval::condition::{RequestAccess, current, with_request_access};
 use ferroehr::access_eval::procedure::Outcome;
@@ -82,14 +84,10 @@ impl Ward {
         let elsewhere = testkit::db().await.expect("a second database");
         let one = replica(&db).await;
         let two = Arc::new(replica(&db).await);
-        granted(&one, "adt", &[capability("write_care_relationship", &[])]).await;
-        let (ward, _) = create(
-            &one,
-            PartyKind::Group,
-            &party("GROUP", "openEHR-DEMOGRAPHIC-GROUP.ward.v1", "Ward", &[]),
-        )
-        .await
-        .expect("the GROUP commits");
+        granted(&one, "adt", &[care_writer()]).await;
+        let provider = care_provider(&one, CARE_PROVIDER).await;
+        let ward = party("GROUP", "openEHR-DEMOGRAPHIC-GROUP.ward.v1", "Ward", &[]);
+        let (ward, _) = provider_team(&one, provider, &ward).await;
         let (doctor, uid) = create(&one, PartyKind::Person, &person("Dr D", &[]))
             .await
             .expect("the professional commits");

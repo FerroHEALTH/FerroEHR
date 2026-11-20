@@ -131,9 +131,19 @@ pub const DEVICE: &str = "device";
 /// identifier a [`DEVICE`] grant may name as its composer.
 pub const DEVICE_IDENTIFIER_ISSUER: &str = "device_identifier_issuer";
 
+/// The code naming a [`Operation::WriteCareRelationship`] grant's element
+/// whose `DV_IDENTIFIER` names, by issuer and id, a provider whose care
+/// relationships and memberships the grant writes.
+pub const PROVIDER: &str = "provider";
+
+/// The code naming a [`Operation::WriteCareRelationship`] grant's element
+/// whose word is the RM type of a care relationship target the grant writes:
+/// `PERSON`, `ROLE`, `GROUP` or `ORGANISATION`.
+pub const TARGET_KIND: &str = "target_kind";
+
 /// The codes naming a grant's scope elements, which a check reads with
 /// [`crate::party_binding::grants::capabilities::Credentials::named`].
-pub const SCOPES: [&str; 8] = [
+pub const SCOPES: [&str; 10] = [
     TEMPLATE,
     FACILITY,
     SUBJECT_NAMESPACE,
@@ -142,6 +152,8 @@ pub const SCOPES: [&str; 8] = [
     READER,
     BINDING_ISSUER,
     TOKEN_SCOPE,
+    PROVIDER,
+    TARGET_KIND,
 ];
 
 /// Whether `code` names a grant's bound or scope element, or the acts-for,
@@ -241,7 +253,9 @@ pub enum Operation {
     /// Write the membership (`MBR`) and `under_care_of` relationships of
     /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] and the
     /// [`openehr_rm::draft::access_control::terminology::RecordSubject`] element of a
-    /// `PERSON` through the Demographic API, as a hospital's ADT system does.
+    /// `PERSON` through the Demographic API, as a hospital's ADT system does,
+    /// for the providers its [`PROVIDER`] elements name and, for a care
+    /// relationship, the target kinds its [`TARGET_KIND`] elements name.
     WriteCareRelationship,
     /// Write the controller's `ACCESS_POLICY`.
     WriteAccessPolicy,
@@ -426,6 +440,7 @@ mod tests {
         assert!(is_qualifier("under_care_of") && !is_qualifier("member_of"));
         assert!(is_qualifier("care_team"));
         assert!(is_qualifier("record_subject"));
+        assert!(is_qualifier(PROVIDER) && is_qualifier(TARGET_KIND));
     }
 
     #[test]

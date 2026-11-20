@@ -77,6 +77,25 @@ pub(crate) fn scope(code: &str, value: &str) -> Value {
             "value": text(value) })
 }
 
+/// The scope element `code` whose value is the `DV_IDENTIFIER` `id` of
+/// `issuer`, such as a `write_care_relationship` grant's `provider`.
+pub(crate) fn identifier(code: &str, (issuer, id): (&str, &str)) -> Value {
+    json!({ "_type": "ELEMENT", "archetype_node_id": "at0030", "name": coded(code),
+            "value": { "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id } })
+}
+
+/// The `write_care_relationship` grant of the care relationships and
+/// memberships of the provider `provider`, to a target of each kind.
+pub(crate) fn care_writer(provider: (&str, &str)) -> Value {
+    let mut items = vec![identifier("provider", provider)];
+    items.extend(
+        ["PERSON", "ROLE", "GROUP", "ORGANISATION"]
+            .into_iter()
+            .map(|kind| scope("target_kind", kind)),
+    );
+    capability("write_care_relationship", &items)
+}
+
 /// A capability granting `operation`, with the further credentials `items`.
 pub(crate) fn capability(operation: &str, items: &[Value]) -> Value {
     let mut all = vec![json!({ "_type": "ELEMENT", "archetype_node_id": "at0021",

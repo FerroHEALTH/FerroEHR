@@ -272,11 +272,13 @@ impl FerroEhrService {
 }
 
 impl FerroEhrService {
-    /// Returns a membership of the `GROUP` `group` held by the `PERSON`
-    /// `member`: an inline `PARTY_RELATIONSHIP` of `archetype_id` whose
-    /// `source` is the member and whose `target` is the group, each named
-    /// under `namespace`, named by the coded membership, HL7 v3 `RoleClass#MBR`, when the group is a
-    /// care team, as RM `PARTY_RELATIONSHIP.type()` is its `name` (#5617).
+    /// Returns a membership held by `member`, a `PERSON` of a `GROUP` or a
+    /// `GROUP` of the `ORGANISATION` it belongs to, each given as its RM class
+    /// and container: an inline `PARTY_RELATIONSHIP` of `archetype_id` whose
+    /// `source` is the member and whose `target` is `group`, each named
+    /// under `namespace`, named by the coded membership, HL7 v3
+    /// `RoleClass#MBR`, when the group is a care team, as RM
+    /// `PARTY_RELATIONSHIP.type()` is its `name` (#5617).
     ///
     /// RM demographic master02 §Party Relationships: a relationship is stored
     /// in the version of its source.
@@ -287,15 +289,18 @@ impl FerroEhrService {
     pub async fn membership_body(
         &self,
         archetype_id: &str,
-        (group, member): (VoId, VoId),
+        (member, group): ((&str, VoId), (&str, VoId)),
         namespace: &str,
         care_team: bool,
     ) -> Result<Value, ServiceError> {
         let wt = self.web_template(archetype_id).await?;
         let mut body = new_party(&wt);
         if let Some(object) = body.as_object_mut() {
-            object.insert("source".to_owned(), party_ref(namespace, "PERSON", member));
-            object.insert("target".to_owned(), party_ref(namespace, "GROUP", group));
+            object.insert(
+                "source".to_owned(),
+                party_ref(namespace, member.0, member.1),
+            );
+            object.insert("target".to_owned(), party_ref(namespace, group.0, group.1));
         }
         if care_team {
             name_coded(&mut body, CareRelationship::MemberOf, "member of");

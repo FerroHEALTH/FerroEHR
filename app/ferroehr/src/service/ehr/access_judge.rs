@@ -523,6 +523,7 @@ fn projected_care(
         provider_ids: provider_ids.into(),
         day: access.today(),
         grace: grace.to_string(),
+        self_declared: access.policy().self_declared,
     })
 }
 

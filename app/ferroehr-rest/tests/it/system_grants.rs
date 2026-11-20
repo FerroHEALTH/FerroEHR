@@ -131,6 +131,41 @@ pub(crate) async fn group(svc: &FerroEhrService, name: &str) -> VoId {
     create(svc, PartyKind::Group, &body).await.0
 }
 
+/// Commits, as the server, a `GROUP` named `name` belonging to a provider
+/// `ORGANISATION` identified by `provider` (`(issuer, id)`) by an `MBR`
+/// relationship of its own, so a `write_care_relationship` grant naming that
+/// provider writes its memberships (#6073); the `GROUP`'s container.
+pub(crate) async fn provider_group(
+    svc: &FerroEhrService,
+    name: &str,
+    provider: (&str, &str),
+) -> VoId {
+    let hospital = provider_organisation(svc, provider, &[]).await;
+    let archetype = "openEHR-DEMOGRAPHIC-GROUP.region.v1";
+    let mut body = json!({
+        "_type": "GROUP", "archetype_node_id": archetype,
+        "archetype_details": archetyped(archetype), "name": text(name),
+        "identities": identities(name)
+    });
+    let (team, uid) = create(svc, PartyKind::Group, &body).await;
+    body["relationships"] = json!([{ "_type": "PARTY_RELATIONSHIP",
+        "archetype_node_id": "at0050",
+        "name": { "_type": "DV_CODED_TEXT", "value": "member of",
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_RoleClass" },
+                "code_string": "MBR" } },
+        "source": reference("GROUP", team), "target": reference("ORGANISATION", hospital) }]);
+    Box::pin(svc.party_update(
+        PartyKind::Group,
+        team,
+        Precondition::parse(Some(uid.as_str()), None).expect("a well-formed If-Match"),
+        write(&body, Some(&uid)),
+    ))
+    .await
+    .expect("the GROUP belongs to the provider");
+    team
+}
+
 /// Commits, as the server, a provider `ORGANISATION` identified by
 /// `(issuer, id)`, a member of each `GROUP` of `groups` by a relationship
 /// coded HL7 v3 `RoleClass#MBR`; its container.

@@ -31,8 +31,8 @@ use ferroehr::db::domain::DomainPools;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::check::{Administrator, BasicUser, CheckInput, Expected, Report};
 use ferroehr::party_binding::fill::{LEASE_RENEWAL, LEASE_TTL, Lease};
-use ferroehr::party_binding::grants::bootstrap::{ClientGrant, Granted, PersonGrant};
-use ferroehr::party_binding::grants::operation::Operation;
+use ferroehr::party_binding::grants::bootstrap::{ClientGrant, GrantElement, Granted, PersonGrant};
+use ferroehr::party_binding::grants::operation::{Operation, PROVIDER};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::adopt::{AdoptInput, AdoptReport};
 use ferroehr::service::message::import_policy::ImportPolicy;
@@ -109,6 +109,19 @@ pub struct GrantArgs {
     /// and the text it names, such as `binding_issuer=urn:example:login`.
     #[arg(long = "element", value_name = "CODE=TEXT")]
     pub elements: Vec<String>,
+    /// The issuer of a `provider` element's `DV_IDENTIFIER`, paired in order
+    /// with `--provider-id`: a provider whose care relationships and
+    /// memberships a `write_care_relationship` grant writes.
+    #[arg(
+        long = "provider-issuer",
+        value_name = "ISSUER",
+        requires = "provider_ids"
+    )]
+    pub provider_issuers: Vec<String>,
+    /// The id of a `provider` element's `DV_IDENTIFIER`, paired in order with
+    /// `--provider-issuer`.
+    #[arg(long = "provider-id", value_name = "ID", requires = "provider_issuers")]
+    pub provider_ids: Vec<String>,
 }
 
 /// Who the provenance rule accepts as the committer that introduced a key.
@@ -450,16 +463,7 @@ pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<
             args.operation
         )
     })?;
-    let elements = args
-        .elements
-        .iter()
-        .map(|element| {
-            element
-                .split_once('=')
-                .map(|(code, text)| (code.trim().to_owned(), text.trim().to_owned()))
-                .with_context(|| format!("--element {element:?} is not CODE=TEXT"))
-        })
-        .collect::<anyhow::Result<Vec<_>>>()?;
+    let elements = elements(args)?;
     let pools = crate::pools::connect(config, crate::pools::Opening::OneShot).await?;
     let (service, handle) = audited(&pools, config).await?;
     let granted = match (&args.basic_user, &args.issuer, &args.client_id) {
@@ -492,6 +496,45 @@ pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<
         handle.shutdown(crate::AUDIT_STOP_TIMEOUT).await;
     }
     granted
+}
+
+/// The scope elements `args` give: each `--element` as a text, and each
+/// `--provider-issuer` with the `--provider-id` in the same position as a
+/// `provider` identifier.
+///
+/// # Errors
+/// An element that is not `CODE=TEXT`, and provider flags that do not pair.
+fn elements(args: &GrantArgs) -> anyhow::Result<Vec<GrantElement>> {
+    let mut elements = args
+        .elements
+        .iter()
+        .map(|element| {
+            element
+                .split_once('=')
+                .map(|(code, text)| GrantElement::Text {
+                    code: code.trim().to_owned(),
+                    text: text.trim().to_owned(),
+                })
+                .with_context(|| format!("--element {element:?} is not CODE=TEXT"))
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    anyhow::ensure!(
+        args.provider_issuers.len() == args.provider_ids.len(),
+        "give each --provider-issuer with one --provider-id: {} issuers and {} ids",
+        args.provider_issuers.len(),
+        args.provider_ids.len()
+    );
+    elements.extend(
+        args.provider_issuers
+            .iter()
+            .zip(&args.provider_ids)
+            .map(|(issuer, id)| GrantElement::Identifier {
+                code: PROVIDER.to_owned(),
+                issuer: issuer.trim().to_owned(),
+                id: id.trim().to_owned(),
+            }),
+    );
+    Ok(elements)
 }
 
 /// The `PERSON` the Basic user `user` binds to: the one live `PERSON`

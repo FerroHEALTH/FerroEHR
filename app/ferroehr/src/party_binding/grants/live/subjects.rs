@@ -90,7 +90,9 @@ impl LiveGrants {
 
     /// The subject references of the `PERSON`s under the care of any of
     /// `principals` on `day` in the care of one of `providers` (sorted), with
-    /// `grace` after each relationship ends: the patients a caller whose
+    /// the `policy`'s grace after each relationship ends, on a relationship
+    /// that admits its writer under the `policy`
+    /// ([`CareOf::admits_writer`]): the patients a caller whose
     /// principals and acting providers these are has a live care relationship
     /// to ([`CareOf::live_on`]), each by its own reference in this CDR's
     /// namespace and by every record subject it declares, sorted and
@@ -103,14 +105,16 @@ impl LiveGrants {
         principals: &[Uuid],
         providers: &[ProviderKey],
         day: jiff::civil::Date,
-        grace: jiff::Span,
+        policy: &crate::access_eval::procedure::Policy,
     ) -> Result<Vec<EhrSubject>, GrantsUnavailable> {
         let namespace = self.namespace();
         let mut subjects = Vec::new();
         for principal in principals {
             let census = self.care.of_team(&self.pool, *principal).await?;
             for (person, _) in census.cared.iter().filter(|(_, care)| {
-                care.live_on(day, grace) && providers.binary_search(care.provider()).is_ok()
+                care.live_on(day, policy.grace)
+                    && care.admits_writer(principals, policy.self_declared)
+                    && providers.binary_search(care.provider()).is_ok()
             }) {
                 subjects.push(EhrSubject::new(&*namespace, person.to_string()));
                 subjects.extend(census.declared.get(person).into_iter().flatten().cloned());

@@ -448,8 +448,10 @@ h_boot_log() {
 # Demographic API (`ferroehr party-binding grant` is the first grant only):
 # its `scim_provision` capability gains the role ceiling, the clinical roles of
 # the hospital's role code system its Users may perform (#5625), and its AGENT
-# a ROLE granting `write_care_relationship` for care-team Groups (#5617). The
-# AGENT and the ROLE are the ones the compose one-shot's report names.
+# a ROLE granting `write_care_relationship` for care-team Groups (#5617) of
+# the stack's provider, the one its `provider` element names (#6073). The
+# AGENT and the ROLE are the ones the compose one-shot's report names; the
+# AGENT is recorded as HV_scim_agent.
 h_scim_client_grants() {
   local report agent role version body
   report="$(hdc logs --no-color ferroehr-grant-ferrosmart 2>&1)"
@@ -459,6 +461,7 @@ h_scim_client_grants() {
     H_CODE=none H_BODY="the grant report names no AGENT and ROLE: ${report:0:300}" H_RID=""
     return 1
   fi
+  hv_set scim_agent "$agent"
   h_call 1 admin GET "/demographic/role/$role"
   version="$(jq -r '.uid.value // empty' <<<"$H_BODY")"
   [[ -n "$version" ]] || return 1
@@ -470,7 +473,23 @@ h_scim_client_grants() {
   H_IF_MATCH="\"$version\"" h_call 1 admin PUT "/demographic/role/$version" "$body"
   [[ "$H_CODE" = 200 || "$H_CODE" = 204 ]] || return 1
   h_party scim_care_role role "$(j_role "SCIM client care teams" AGENT "$agent" \
-    "$(j_capability "$(j_operation write_care_relationship)")")"
+    "$(j_capability "$(j_operation write_care_relationship)" "$(j_qualifier provider \
+      "$(jq -nc --arg i "$H_CARE_PROVIDER_ISSUER" --arg p "$H_CARE_PROVIDER_ID" \
+        '{_type:"DV_IDENTIFIER",issuer:$i,id:$p}')")")")"
+}
+
+# The hospital, the ORGANISATION carrying the stack's provider identifier,
+# recorded as HV_hospital; the SCIM client acts for it, so a care-team Group
+# it creates belongs to that provider (#6073).
+h_hospital() {
+  h_party hospital organisation "$(j_named_party ORGANISATION "Sint Example Ziekenhuis" \
+    "$(jq -nc --arg i "$H_CARE_PROVIDER_ISSUER" --arg p "$H_CARE_PROVIDER_ID" \
+      '{details:{_type:"ITEM_TREE",archetype_node_id:"at0001",name:{_type:"DV_TEXT",value:"details"},
+        items:[{_type:"ELEMENT",archetype_node_id:"at0002",name:{_type:"DV_TEXT",value:"provider"},
+          value:{_type:"DV_IDENTIFIER",issuer:$i,id:$p,type:"healthcare-provider"}}]}}')")" \
+    || return 1
+  h_relate 1 admin agent "$(hv scim_agent)" \
+    "[$(j_care acts_for AGENT "$(hv scim_agent)" ORGANISATION "$(hv hospital)" "$(j_dates "$(h_day -365)")")]"
 }
 
 # A SCIM User for the provider's user `user`, through instance `n`, with the
@@ -670,8 +689,7 @@ hospital_setup() {
   h_party ward3 group "$(j_named_party GROUP "Ward 3")" || h_fail_call "the Ward 3 team"
   h_party psychiatry group "$(j_named_party GROUP Psychiatry)" || h_fail_call "the Psychiatry team"
   h_party region group "$(j_named_party GROUP "Regional health network")" || h_fail_call "the regional GROUP"
-  h_party hospital organisation "$(j_named_party ORGANISATION "Sint Example Ziekenhuis")" \
-    || h_fail_call "the controller"
+  h_hospital || h_fail_call "the controller, which the SCIM client acts for"
   local org
   for org in lab_org member_org outside_org; do
     h_party "$org" organisation "$(j_named_party ORGANISATION "$org")" || h_fail_call "the $org"
@@ -1606,7 +1624,7 @@ hospital_pixm() {
   scim_user 1 anna "Dr. Anna Jansen" CLINICIAN || h_fail_call "SCIM creates anna"
   scim_user 2 controller "Ferro EHR" || h_fail_call "SCIM creates the controller's administrator"
   h_party cardiology group "$(j_named_party GROUP Cardiology)" || h_fail_call "the Cardiology team"
-  h_party hospital organisation "$(j_named_party ORGANISATION "Sint Example Ziekenhuis")" || h_fail_call "the controller"
+  h_hospital || h_fail_call "the controller, which the SCIM client acts for"
   h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
     || h_fail_call "the hospital's SMART app"
   # FerroSMART's patient picker looks the EHR up as the signed-in person, with a

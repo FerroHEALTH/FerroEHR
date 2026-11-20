@@ -144,6 +144,7 @@ impl Sentinels {
                 provider_ids: self.texts().into(),
                 day: self.day,
                 grace: care.grace.clone(),
+                self_declared: care.self_declared,
             }),
         }
     }

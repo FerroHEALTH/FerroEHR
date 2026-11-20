@@ -44,6 +44,7 @@ ROLE_CLASS_TERMINOLOGY=""
 # holds it in the patient's relationships.
 PARTICIPATION_TERMINOLOGY=""
 CARE_PROVIDER=""
+CARE_WRITER_SCOPED=""
 readonly ACT_CODE=2.16.840.1.113883.5.25
 readonly ACT_REASON=2.16.840.1.113883.5.8
 # The code system and code of the clinician's functional role.
@@ -114,6 +115,25 @@ care_json() {
        lower_unbounded: false, upper_unbounded: true, lower_included: true,
        upper_included: false},
      source: ref("PERSON"; $source), target: ref("GROUP"; $team)}'
+}
+
+# member_json <source-type> <source> <target-type> <target>: a membership,
+# HL7 v3 RoleClass#MBR, of <source> in <target>, open from the first of
+# January this year.
+member_json() {
+  jq -cn --arg st "$1" --arg s "$2" --arg tt "$3" --arg t "$4" --arg c "$ROLE_CLASS_TERMINOLOGY" \
+    --arg from "$(date -u +%Y)-01-01" '
+    def text($v): {_type: "DV_TEXT", value: $v};
+    def ref($type; $id): {_type: "PARTY_REF", namespace: "demographic", type: $type,
+      id: {_type: "HIER_OBJECT_ID", value: $id}};
+    {_type: "PARTY_RELATIONSHIP",
+     archetype_node_id: "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1",
+     name: {_type: "DV_CODED_TEXT", value: "member of", defining_code: {_type: "CODE_PHRASE",
+       terminology_id: {_type: "TERMINOLOGY_ID", value: $c}, code_string: "MBR"}},
+     time_validity: {_type: "DV_INTERVAL", lower: {_type: "DV_DATE", value: $from},
+       lower_unbounded: false, upper_unbounded: true, lower_included: true,
+       upper_included: false},
+     source: ref($st; $s), target: ref($tt; $t)}'
 }
 
 # care_of_json <patient> <team>: a care relationship of its own from the
@@ -341,6 +361,10 @@ access_vocabulary() {
   fi
   PARTICIPATION_TERMINOLOGY=""
   CARE_PROVIDER=""
+  CARE_WRITER_SCOPED=""
+  if [[ -f "$1/app/ferroehr/src/party_binding/grants/caller/writer.rs" ]]; then
+    CARE_WRITER_SCOPED=1
+  fi
   if [[ -f "$1/app/ferroehr/src/party_binding/grants/caller/care_of.rs" ]]; then
     PARTICIPATION_TERMINOLOGY=$(sed -nE 's/^pub const TERMINOLOGY_ID_PARTICIPATION_TYPE: &str = "([^"]+)";$/\1/p' "$terms")
     CARE_PROVIDER=$(sed -nE 's/^provider = \{ issuer = "([^"]+)", id = "([^"]+)" \}$/\1 \2/p' "$1/perf/ferroehr.toml")
@@ -355,11 +379,26 @@ access_vocabulary() {
 # membership and role, and the parties the directives name, through
 # ACCESS_FERROEHR and ACCESS_IDS, in the vocabulary of <tree> (default ROOT).
 access_seed() {
-  local op clinician version org
+  local clinician version org issuer id
+  local scope=() hospital='{}'
   access_vocabulary "${1:-$ROOT}"
-  for op in write_care_relationship write_access_policy; do
-    "${ACCESS_FERROEHR[@]}" party-binding grant --basic-user ferroehr --operation "$op" >/dev/null
-  done
+  if [[ -n "$CARE_WRITER_SCOPED" ]]; then
+    # A write_care_relationship grant writes for the providers and target
+    # kinds it names, and the team belongs to the provider (#6073).
+    read -r issuer id <<<"$CARE_PROVIDER"
+    scope=(--provider-issuer "$issuer" --provider-id "$id" --element target_kind=GROUP)
+    hospital=$(jq -cn --arg issuer "$issuer" --arg id "$id" '
+      {details: {_type: "ITEM_TREE", archetype_node_id: "at0004",
+        name: {_type: "DV_TEXT", value: "details"},
+        items: [{_type: "ELEMENT", archetype_node_id: "at0005",
+          name: {_type: "DV_TEXT", value: "provider"},
+          value: {_type: "DV_IDENTIFIER", issuer: $issuer, id: $id,
+                  type: "healthcare-provider"}}]}}')
+  fi
+  "${ACCESS_FERROEHR[@]}" party-binding grant --basic-user ferroehr \
+    --operation write_care_relationship "${scope[@]}" >/dev/null
+  "${ACCESS_FERROEHR[@]}" party-binding grant --basic-user ferroehr \
+    --operation write_access_policy >/dev/null
   NAMED_PROFESSIONAL=$(post_json /demographic/person \
     "$(party_json PERSON openEHR-DEMOGRAPHIC-PERSON.person.v1 "Named professional")" \
     | jq -er '.uid.value | split("::")[0]')
@@ -367,15 +406,22 @@ access_seed() {
     "$(party_json PERSON openEHR-DEMOGRAPHIC-PERSON.person.v1 Representative)" \
     | jq -er '.uid.value | split("::")[0]')
   org=$(post_json /demographic/organisation \
-    "$(party_json ORGANISATION openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1 Hospital)" \
+    "$(party_json ORGANISATION openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1 Hospital \
+      | jq -c --argjson x "$hospital" '. + $x')" \
     | jq -er '.uid.value | split("::")[0]')
   printf '%s' "$(policy_json "$org")" >"$OUT/access-policy.json"
   curl -fsS -o /dev/null -X PUT -H "authorization: $AUTH" -H "content-type: application/json" \
     -H "if-none-match: *" --data-binary "@$OUT/access-policy.json" \
     "$SERVER_URL$EXT/admin/access_policy" || die "seed: the access policy was refused"
-  ACCESS_TEAM=$(post_json /demographic/group \
+  version=$(post_json /demographic/group \
     "$(party_json GROUP openEHR-DEMOGRAPHIC-GROUP.care_team.v1 Cardiology)" \
-    | jq -er '.uid.value | split("::")[0]')
+    | jq -er '.uid.value')
+  ACCESS_TEAM="${version%%::*}"
+  if [[ -n "$CARE_WRITER_SCOPED" ]]; then
+    put_json "/demographic/group/$ACCESS_TEAM" "$version" \
+      "$(party_json GROUP openEHR-DEMOGRAPHIC-GROUP.care_team.v1 Cardiology \
+        "[$(member_json GROUP "$ACCESS_TEAM" ORGANISATION "$org")]")"
+  fi
   clinician=$(awk '$1 == "clinician" { print $2 }' "$ACCESS_IDS")
   [[ -n "$clinician" ]] || die "seed: SCIM created no clinician"
   # The PERSON SCIM wrote, kept whole, with the membership added.

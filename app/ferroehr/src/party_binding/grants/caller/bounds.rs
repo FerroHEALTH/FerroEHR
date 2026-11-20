@@ -23,7 +23,7 @@ use uuid::Uuid;
 
 use super::{FactValue, care_of};
 use crate::access_policy::PolicyInForce;
-use crate::access_policy::relationship::{self, WriterVerdict, Written};
+use crate::access_policy::relationship::{self, SelfDeclaredRefusal, WriterVerdict, Written};
 use crate::error::ServiceError;
 use crate::ids::VoId;
 use crate::party_binding::derive::Facts;
@@ -36,6 +36,9 @@ const VALIDITY: &str = "/time_validity";
 
 /// The path a target refusal names.
 const TARGET: &str = "/target";
+
+/// The path a self-declared refusal names.
+const BASIS: &str = "/details";
 
 /// The trunk head version of a relationship a bound is judged for.
 #[derive(Debug)]
@@ -167,6 +170,18 @@ pub(crate) async fn judge(
     };
     let end = relationship::effective_end(rules, &written)
         .map_err(|refusal| refused(VALIDITY, &refusal))?;
+    if care.self_declared {
+        let writer = writer_of(tx, head.vo_id).await?;
+        let target = (care.kind, care.carer);
+        relationship::self_declared(rules, &written, end.or(upper), target, writer).map_err(
+            |refusal| match refusal {
+                SelfDeclaredRefusal::NotTheWriter => {
+                    ServiceError::not_permitted(format!("an under_care_of relationship: {refusal}"))
+                }
+                _ => refused(BASIS, &refusal),
+            },
+        )?;
+    }
     match (end, policy.uid.as_deref()) {
         (Some(until), Some(policy_version)) => {
             keep_end(tx, head.vo_id, &head.version_uid, until, policy_version).await?;
@@ -264,6 +279,16 @@ async fn keep_end(
     .execute(&mut *tx)
     .await?;
     Ok(())
+}
+
+/// The party that wrote the trunk head of `vo_id` ([`super::store::WRITER`]),
+/// on `tx`.
+async fn writer_of(tx: &mut PgConnection, vo_id: Uuid) -> Result<Option<Uuid>, StorageError> {
+    let statement = format!("SELECT {}", super::store::WRITER);
+    Ok(sqlx::query_scalar(sqlx::AssertSqlSafe(statement))
+        .bind(vo_id)
+        .fetch_one(&mut *tx)
+        .await?)
 }
 
 /// Drops the end the relationship `vo_id` took, on `tx`.

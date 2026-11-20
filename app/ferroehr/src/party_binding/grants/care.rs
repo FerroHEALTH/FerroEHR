@@ -390,12 +390,10 @@ pub(crate) fn care_of(rows: &[FactRow]) -> Vec<CareOf> {
         .filter(|row| row.kind == FactKind::UnderCareOf)
         .filter(|row| matches!(row.term.lifecycle_state.as_str(), "532" | "553"))
         .filter_map(|row| match (&row.value, row.term.dates) {
-            (FactValue::Care(care), Some(dates)) => Some(CareOf::new(
-                care.carer,
-                dates,
-                care.role.clone(),
-                care.provider.clone(),
-            )),
+            (FactValue::Care(care), Some(dates)) => Some(
+                CareOf::new(care.carer, dates, care.role.clone(), care.provider.clone())
+                    .written_by(row.writer, care.self_declared),
+            ),
             _ => None,
         })
         .collect();
