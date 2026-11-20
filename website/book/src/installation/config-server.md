@@ -195,7 +195,8 @@ The openEHR REST surface the listener serves.
 [api]
 base_path = "/ferroehr/rest/openehr/v1"
 openapi_ui = "private"
-system_id = "ferroehr.local"
+system_id = "cdr.hospital.example"   # unset: the host of server.public_base_url
+# basic_issuer = "cdr.hospital.example" # unset: system_id
 # body_limit = "16MiB"
 ```
 
@@ -207,7 +208,8 @@ system_id = "ferroehr.local"
 | `body_limit` | size | unset | The largest body the ordinary clinical surface accepts, below [`server.body_limit`](#server), which the bulk routes keep. Unset, every route takes the listener's limit. A value at or above the listener's is refused at startup. The largest example composition in the vendored corpus is 526 KB; raise it if your compositions embed large `DV_MULTIMEDIA` data. |
 | `admin` | bool | `false` | Serve the ADMIN API group (physical delete); off, every admin route answers `405`. |
 | `terminology` | bool | `false` | Mount the terminology extension API; the server it asks is [`[terminology]`](config-integrations.md#terminology). |
-| `system_id` | string | `ferroehr.local` | **This deployment's own openEHR system identifier**; see [below](#system_id-the-data-authoring-identity). Set a stable, deployment-unique name in production (`FERROEHR__API__SYSTEM_ID`). |
+| `system_id` | string | unset ⇒ the host of [`server.public_base_url`](#server); with neither, `localhost` in a `sandbox` and a refused start in `production` | **This deployment's own openEHR system identifier**; see [below](#system_id-the-data-authoring-identity). Set a stable, deployment-unique name in production (`FERROEHR__API__SYSTEM_ID`). |
+| `basic_issuer` | string | unset ⇒ `system_id` | The `DV_IDENTIFIER.issuer` of a Basic user's login: the issuer a commit's committer names a Basic caller by, and a placeholder committer must name (`FERROEHR__API__BASIC_ISSUER`). A client that sends the placeholder for a Basic user, such as the viewer's `[cdr] basic_issuer`, names the same value. |
 
 ### `base_path`: shortening the REST base path
 
@@ -299,6 +301,13 @@ appears on the wire in three places:
 
 Practical notes:
 
+- **Unset, it is derived.** The host of `server.public_base_url` names the
+  system, so `https://cdr.hospital.example` stamps `cdr.hospital.example`.
+  With neither key a `production` deployment refuses to start, and a
+  `sandbox` stamps `localhost`. No default names the product: the identifier
+  is written into every record and read by every system the data reaches.
+  `[audit] source_id`, `[audit] role_code_system` and `[api] basic_issuer`
+  take this value when they are unset.
 - **The value must be a legal openEHR UID:** a UUID, an ISO OID, or an
   internet id (a reverse-domain / DNS-style name) per the openEHR BASE
   identification grammar. The server judges it with the same validating
@@ -313,8 +322,9 @@ Practical notes:
   rewritten, and previously issued `OBJECT_VERSION_ID`s stay valid.
 - **Make it unique per system**, so data exchanged between openEHR systems
   keeps unambiguous provenance. A node of a federation must hold a
-  `system_id` no other member uses (Federation Tier N42a); the default
-  `ferroehr.local` is the same on every node that leaves it unset. See
+  `system_id` no other member uses (Federation Tier N42a); the sandbox
+  fallback `localhost` is the same on every node that leaves it and
+  `server.public_base_url` unset. See
   [FerroEHR as a federation node](../beyond-core/federation-node.md#admission-n42a).
 - **`system_id` is not `[api.options]`.** `system_id` says *which system
   authored the data*; [`[api.options]`](#apioptions) is the *display*

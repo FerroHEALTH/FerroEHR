@@ -59,12 +59,12 @@ services:
       FERROEHR__AUTH__ISSUER__2__CLIENT_CLAIMS: "client_id,azp,aud"
       FERROEHR__AUTH__ISSUER__2__JWKS_FILE: /etc/ferroehr/cnf-smart-jwks.json
       FERROEHR__AUTH__PARTY__1__ISSUER: "https://as.cnf.test"
-      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: "urn:ferroehr:cnf-smart-login"
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: "urn:example:cnf-smart-login"
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: "login"
       # The group claim and its identifier issuer, under which a SCIM client's
       # Groups are written once the party mapping provisions Groups.
       FERROEHR__AUTH__PARTY__1__GROUP_CLAIM: "groups"
-      FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: "urn:ferroehr:cnf-smart-groups"
+      FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: "urn:example:cnf-smart-groups"
     volumes:
       - ./docs/conformance/party/smart/jwks.json:/etc/ferroehr/cnf-smart-jwks.json:ro
       - ./docs/conformance/party/smart/issuer-metadata.json:/etc/ferroehr/cnf-smart-issuer-metadata.json:ro

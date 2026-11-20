@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! FerroEHR's access details: the facts of an access the draft's core
+//! The access log details: the facts of an access the draft's core
 //! attributes do not hold, kept in the entry's `other_details` (#5127).
 //!
 //! The draft gives `ACCESS_LOG_ENTRY.other_details`, an archetypable
@@ -13,10 +13,16 @@
 //! belongs to, the authentication facts, the category evidence and the
 //! binding fields, so a projection reads the stored entry and nothing else.
 //! The tree is one `ITEM_TREE` of `ELEMENT`s under the archetype id
-//! [`ARCHETYPE`], each element named by its at-code ([`Detail`]). No openEHR
+//! [`ARCHETYPE`], each element named by its id-code ([`Detail`]), a
+//! definition shipped and published like the access control archetypes
+//! ([`crate::access_log::definition::DEFINITIONS`]), so another system reads the tree by its node ids. The
+//! codes all have two digits, so their byte order, which orders the tree
+//! here and in the audit schema, is their numeric order (#6143). No openEHR
 //! spec governs these fields: our own design.
 
 use openehr_base::prelude::ArchetypeId;
+
+use crate::access_log::definition::ARCHETYPE;
 use openehr_rm::v1_2::common::archetyped::archetyped::Archetyped;
 use openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure;
 use openehr_rm::v1_2::data_structures::item_structure::item_tree::ItemTree;
@@ -29,13 +35,10 @@ use openehr_rm::v1_2::data_types::encapsulated::dv_parsable::DvParsable;
 use openehr_rm::v1_2::data_types::quantity::dv_count::DvCount;
 use openehr_rm::v1_2::data_types::text::dv_text::{DvText, DvTextData};
 
-/// The archetype id the details tree is kept under.
-pub const ARCHETYPE: &str = "openEHR-EHR-ITEM_TREE.ferroehr_access_details.v0";
-
 /// The formalism of a detail kept as JSON.
 pub const JSON: &str = "application/json";
 
-/// One detail of the tree, named by its at-code.
+/// One detail of the tree, named by its id-code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Detail {
     /// The DICOM `EventActionCode` (PS3.15 A.5.1): `C`, `R`, `U`, `D` or `E`.
@@ -131,38 +134,38 @@ impl Detail {
         Self::EventType,
     ];
 
-    /// The at-code of the detail's element.
+    /// The id-code of the detail's element.
     #[must_use]
     pub const fn code(self) -> &'static str {
         match self {
-            Self::EventAction => "at0001",
-            Self::ResourceClass => "at0002",
-            Self::OutcomeIndicator => "at0003",
-            Self::Principal => "at0004",
-            Self::Issuer => "at0005",
-            Self::ClientId => "at0006",
-            Self::TokenId => "at0007",
-            Self::Role => "at0009",
-            Self::Domain => "at0010",
-            Self::EhrId => "at0011",
-            Self::Subject => "at0012",
-            Self::SubjectLookupFailed => "at0013",
-            Self::ObjectId => "at0014",
-            Self::Purpose => "at0015",
-            Self::LegalBasis => "at0016",
-            Self::ResultCount => "at0017",
-            Self::Origin => "at0018",
-            Self::OriginCount => "at0019",
-            Self::CategoryMapDigest => "at0020",
-            Self::CategoryContent => "at0021",
-            Self::ActingMode => "at0022",
-            Self::AssuranceLevel => "at0023",
-            Self::AssuranceValue => "at0024",
-            Self::ProfessionalId => "at0025",
-            Self::TokenAttributes => "at0026",
-            Self::Binding => "at0027",
-            Self::Summary => "at0028",
-            Self::EventType => "at0029",
+            Self::EventAction => "id11",
+            Self::ResourceClass => "id12",
+            Self::OutcomeIndicator => "id13",
+            Self::Principal => "id14",
+            Self::Issuer => "id15",
+            Self::ClientId => "id16",
+            Self::TokenId => "id17",
+            Self::Role => "id19",
+            Self::Domain => "id20",
+            Self::EhrId => "id21",
+            Self::Subject => "id22",
+            Self::SubjectLookupFailed => "id23",
+            Self::ObjectId => "id24",
+            Self::Purpose => "id25",
+            Self::LegalBasis => "id26",
+            Self::ResultCount => "id27",
+            Self::Origin => "id28",
+            Self::OriginCount => "id29",
+            Self::CategoryMapDigest => "id30",
+            Self::CategoryContent => "id31",
+            Self::ActingMode => "id32",
+            Self::AssuranceLevel => "id33",
+            Self::AssuranceValue => "id34",
+            Self::ProfessionalId => "id35",
+            Self::TokenAttributes => "id36",
+            Self::Binding => "id37",
+            Self::Summary => "id38",
+            Self::EventType => "id39",
         }
     }
 
@@ -336,8 +339,8 @@ fn text(value: &str) -> DvText {
 /// Why the details of an entry do not read.
 #[derive(Debug, thiserror::Error)]
 pub enum DetailsError {
-    /// The entry's `other_details` is no tree of FerroEHR's access details.
-    #[error("the entry's other_details is not FerroEHR's access details tree")]
+    /// The entry's `other_details` is no access log details tree.
+    #[error("the entry's other_details is not the access log details tree")]
     Foreign,
     /// A detail holds a value of another type than the one it is written as.
     #[error("the {0:?} detail holds a value of another type")]
@@ -364,7 +367,7 @@ impl<'a> Details<'a> {
     ///
     /// # Errors
     /// [`DetailsError::Foreign`] when it holds a structure other than
-    /// FerroEHR's access details tree.
+    /// the access log details tree.
     pub fn of(other_details: Option<&'a ItemStructure>) -> Result<Self, DetailsError> {
         let Some(structure) = other_details else {
             return Ok(Self::default());
@@ -477,5 +480,90 @@ impl<'a> Details<'a> {
                 _ => Err(DetailsError::Type(detail)),
             })
             .transpose()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The shipped definition is the archetype the tree is written under,
+    /// and it constrains every detail at the node id and with the data type
+    /// the writer gives it, so another system reads a stored tree by it.
+    #[test]
+    fn the_shipped_definition_describes_every_detail() {
+        let [(file, text)] = crate::access_log::definition::DEFINITIONS;
+        let id = file.strip_suffix(".adls").expect("an .adls file");
+        assert_eq!(text.lines().nth(1).map(str::trim), Some(id));
+        assert!(id.starts_with(&format!("{ARCHETYPE}.")), "{id}");
+        assert!(text.contains("ITEM_TREE[id1]"));
+        let typed = |detail: Detail| match detail {
+            Detail::OutcomeIndicator | Detail::ResultCount | Detail::OriginCount => "DV_COUNT",
+            Detail::Subject => "DV_IDENTIFIER",
+            Detail::SubjectLookupFailed => "DV_BOOLEAN",
+            Detail::CategoryContent
+            | Detail::TokenAttributes
+            | Detail::Binding
+            | Detail::Summary => "DV_PARSABLE",
+            _ => "DV_TEXT",
+        };
+        for detail in Detail::ALL {
+            let code = detail.code();
+            let element = format!("ELEMENT[{code}]");
+            let at = text
+                .find(&element)
+                .unwrap_or_else(|| panic!("{detail:?} has no {element}"));
+            let constraint = text
+                .get(at..)
+                .and_then(|rest| rest.lines().nth(1))
+                .unwrap_or("");
+            assert!(
+                constraint.contains(typed(detail)),
+                "{detail:?}: {constraint}"
+            );
+            assert!(
+                text.contains(&format!("[\"{code}\"] = <text")),
+                "{detail:?} has no term"
+            );
+        }
+    }
+
+    /// Every code has two digits, so the byte order the server and the audit
+    /// schema order a tree by is the order of the details.
+    #[test]
+    fn the_byte_order_of_the_codes_is_the_order_of_the_details() {
+        let codes = Detail::ALL.map(Detail::code);
+        assert!(
+            codes
+                .iter()
+                .all(|code| code.len() == 4 && code.starts_with("id"))
+        );
+        assert!(codes.windows(2).all(|pair| pair[0] < pair[1]), "{codes:?}");
+    }
+
+    /// A written tree names the shipped archetype, and a tree under another
+    /// archetype is foreign.
+    #[test]
+    fn a_tree_is_written_and_read_under_the_shipped_archetype() {
+        let mut writer = DetailsWriter::default();
+        writer.text(Detail::Principal, Some("alice"));
+        let tree = writer.finish().expect("a tree");
+        let ItemStructure::ItemTree(written) = &tree else {
+            panic!("an ITEM_TREE");
+        };
+        assert_eq!(written.archetype_node_id, ARCHETYPE);
+        let details = Details::of(Some(&tree)).expect("the tree reads");
+        assert_eq!(
+            details.text(Detail::Principal).expect("a text"),
+            Some("alice".to_owned())
+        );
+        let mut foreign = tree.clone();
+        if let ItemStructure::ItemTree(tree) = &mut foreign {
+            tree.archetype_node_id = "openEHR-EHR-ITEM_TREE.other.v1".to_owned();
+        }
+        assert!(matches!(
+            Details::of(Some(&foreign)),
+            Err(DetailsError::Foreign)
+        ));
     }
 }

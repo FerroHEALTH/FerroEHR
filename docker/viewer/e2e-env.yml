@@ -46,12 +46,12 @@ services:
       FERROEHR__AUTH__ISSUER__2__APP_ONLY__0__VALUE: ferroehr-service
       FERROEHR__AUTH__ISSUER__2__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
       FERROEHR__AUTH__PARTY__1__ISSUER: https://keycloak:8443/auth/realms/ferroehr
-      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:ferroehr:keycloak-dev-login
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:example:keycloak-dev-login
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
       # The group claim and its identifier issuer, under which a SCIM client's
       # Groups are written once the party mapping provisions Groups.
       FERROEHR__AUTH__PARTY__1__GROUP_CLAIM: groups
-      FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: urn:ferroehr:keycloak-dev-groups
+      FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: urn:example:keycloak-dev-groups
       FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: https://keycloak:8443/auth/realms/ferroehr
       FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
     volumes:

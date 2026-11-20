@@ -39,7 +39,7 @@ use crate::fixtures::{composition, uv};
 
 /// The service's own system id (`DEFAULT_SYSTEM_ID`) — the local
 /// `creating_system_id` every non-import write records.
-const LOCAL: &str = "ferroehr.local";
+const LOCAL: &str = ferroehr::service::DEFAULT_SYSTEM_ID;
 /// The pretend foreign system a copied version tree originates from.
 const FOREIGN: &str = "sysA.example.org";
 

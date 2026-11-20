@@ -160,6 +160,7 @@ impl FerroEhrService {
             subject: sender.client_id.clone(),
             id_type: "oauth2",
             issuer: Some(sender.issuer.clone()),
+            local_issuer: self.basic_issuer().into(),
             client: Some(sender.client_id.clone()),
             person: false,
             party: None,

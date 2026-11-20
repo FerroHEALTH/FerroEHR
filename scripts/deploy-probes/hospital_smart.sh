@@ -30,7 +30,7 @@ HS_KC_ISSUER="$HS_KC/realms/ferroehr"
 HS_ZITADEL="http://localhost:8480"
 # The binding issuer of FerroSMART's subjects, as docker-compose.ferrosmart.yml
 # names it in `[[auth.party]]`.
-HS_LOGIN_ISSUER="urn:ferroehr:ferrosmart-login"
+HS_LOGIN_ISSUER="urn:example:ferrosmart-login"
 # The system clients, each a FerroSMART Backend Services client with its own
 # key; `hospital-scim` provisions the people.
 HS_SYSTEMS="lab-system hie-member hie-outside access-service hospital-scim"

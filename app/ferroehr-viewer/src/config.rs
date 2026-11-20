@@ -124,6 +124,8 @@ pub struct CdrConfig {
     /// error naming it and is never sent. No openEHR spec governs the purpose
     /// of use: our own design (#6105).
     pub purpose_of_use: Option<String>,
+    /// The CDR's `[api] basic_issuer`, which a Basic session's committer names.
+    pub basic_issuer: String,
     /// The trust roots beside the platform's and the client identity the CDR
     /// client presents (`[cdr.tls]`).
     pub tls: TlsClientSection,
@@ -137,6 +139,7 @@ impl Default for CdrConfig {
             management_base_url: String::new(),
             timeout: ferrohealth_config::units::Duration::from_secs(30),
             purpose_of_use: None,
+            basic_issuer: "localhost".to_owned(),
             tls: TlsClientSection::default(),
         }
     }
