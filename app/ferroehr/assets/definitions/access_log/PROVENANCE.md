@@ -2,7 +2,7 @@
 
 One ADL 2 archetype, the definition of the `ITEM_TREE` an access log entry
 keeps in `ACCESS_LOG_ENTRY.other_details`. The binary carries it
-(`ferroehr::access_log::details::DEFINITIONS`), each boot stores it when no
+(`ferroehr::access_log::definition::DEFINITIONS`), each boot stores it when no
 definition of its id is stored, never over a stored one, and
 `deploy/definitions/published.sha256` records its content.
 

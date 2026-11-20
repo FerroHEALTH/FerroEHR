@@ -316,7 +316,7 @@ fn balp_authorisation_rows(f: &Balp) -> Vec<Row> {
         (
             "other_details, loss: the access log details are written as their values only",
             !doc.to_string()
-                .contains(crate::access_log::details::ARCHETYPE),
+                .contains(crate::access_log::definition::ARCHETYPE),
         ),
     ]
 }

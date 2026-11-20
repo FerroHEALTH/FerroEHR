@@ -128,7 +128,7 @@ async fn the_default_definitions_are_seeded_once_and_never_overwritten() {
             + ferroehr::access_policy::DEFINITIONS.len()
             + ferroehr::party_binding::shipped::DEFINITIONS.len()
             + ferroehr::service::ehr::access_settings::DEFINITIONS.len()
-            + ferroehr::access_log::details::DEFINITIONS.len()
+            + ferroehr::access_log::definition::DEFINITIONS.len()
     );
     assert!(
         first

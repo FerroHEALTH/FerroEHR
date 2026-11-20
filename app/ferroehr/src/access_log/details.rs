@@ -15,12 +15,14 @@
 //! The tree is one `ITEM_TREE` of `ELEMENT`s under the archetype id
 //! [`ARCHETYPE`], each element named by its id-code ([`Detail`]), a
 //! definition shipped and published like the access control archetypes
-//! ([`DEFINITIONS`]), so another system reads the tree by its node ids. The
+//! ([`crate::access_log::definition::DEFINITIONS`]), so another system reads the tree by its node ids. The
 //! codes all have two digits, so their byte order, which orders the tree
 //! here and in the audit schema, is their numeric order (#6143). No openEHR
 //! spec governs these fields: our own design.
 
 use openehr_base::prelude::ArchetypeId;
+
+use crate::access_log::definition::ARCHETYPE;
 use openehr_rm::v1_2::common::archetyped::archetyped::Archetyped;
 use openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure;
 use openehr_rm::v1_2::data_structures::item_structure::item_tree::ItemTree;
@@ -32,18 +34,6 @@ use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use openehr_rm::v1_2::data_types::encapsulated::dv_parsable::DvParsable;
 use openehr_rm::v1_2::data_types::quantity::dv_count::DvCount;
 use openehr_rm::v1_2::data_types::text::dv_text::{DvText, DvTextData};
-
-/// The archetype id the details tree is kept under.
-pub const ARCHETYPE: &str = "openEHR-EHR-ITEM_TREE.access_log_details.v1";
-
-/// The shipped definition of [`ARCHETYPE`], its file name and its ADL 2 text,
-/// which each boot stores when no definition of its id is stored.
-pub const DEFINITIONS: [(&str, &str); 1] = [(
-    "openEHR-EHR-ITEM_TREE.access_log_details.v1.0.0.adls",
-    include_str!(
-        "../../assets/definitions/access_log/openEHR-EHR-ITEM_TREE.access_log_details.v1.0.0.adls"
-    ),
-)];
 
 /// The formalism of a detail kept as JSON.
 pub const JSON: &str = "application/json";
@@ -502,7 +492,7 @@ mod tests {
     /// the writer gives it, so another system reads a stored tree by it.
     #[test]
     fn the_shipped_definition_describes_every_detail() {
-        let [(file, text)] = DEFINITIONS;
+        let [(file, text)] = crate::access_log::definition::DEFINITIONS;
         let id = file.strip_suffix(".adls").expect("an .adls file");
         assert_eq!(text.lines().nth(1).map(str::trim), Some(id));
         assert!(id.starts_with(&format!("{ARCHETYPE}.")), "{id}");

@@ -10,7 +10,7 @@
 //! ([`crate::party_binding::shipped::DEFINITIONS`]), and the default
 //! `EHR_ACCESS` definition of the `access_directives` scheme
 //! ([`crate::service::ehr::access_settings::DEFINITIONS`]), and the access
-//! log details archetype ([`crate::access_log::details::DEFINITIONS`]). Every boot stores each
+//! log details archetype ([`crate::access_log::definition::DEFINITIONS`]). Every boot stores each
 //! one through the normal definition path when no definition of its id is
 //! stored, and leaves a stored one alone whatever its text: it never
 //! overwrites a deployment's definition and never re-seeds over its change.
@@ -47,7 +47,7 @@ impl FerroEhrService {
             .chain(&crate::access_policy::DEFINITIONS)
             .chain(&crate::party_binding::shipped::DEFINITIONS)
             .chain(&crate::service::ehr::access_settings::DEFINITIONS)
-            .chain(&crate::access_log::details::DEFINITIONS);
+            .chain(&crate::access_log::definition::DEFINITIONS);
         let mut seeded = Vec::new();
         for (file, text) in definitions {
             seeded.push(match self.definition_load(SourceFormat::Adl2, text).await {

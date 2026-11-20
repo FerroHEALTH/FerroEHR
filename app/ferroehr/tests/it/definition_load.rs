@@ -617,7 +617,7 @@ fn a_shipped_definition_never_changes_under_its_id() {
         .chain(&ferroehr::party_binding::policy::DEFINITIONS)
         .chain(&ferroehr::access_policy::DEFINITIONS)
         .chain(&ferroehr::service::ehr::access_settings::DEFINITIONS)
-        .chain(&ferroehr::access_log::details::DEFINITIONS)
+        .chain(&ferroehr::access_log::definition::DEFINITIONS)
         .copied()
         .collect();
     for (name, text) in &carried {

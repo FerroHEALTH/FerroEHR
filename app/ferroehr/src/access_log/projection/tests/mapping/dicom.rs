@@ -173,7 +173,7 @@ fn dicom_object_rows(f: &Dicom) -> Vec<Row> {
             "retention, security_labels, link and other_details, loss: none is written",
             !xml.contains("retention")
                 && !xml.contains("ParticipantObjectSensitivity")
-                && !xml.contains(crate::access_log::details::ARCHETYPE),
+                && !xml.contains(crate::access_log::definition::ARCHETYPE),
         ),
     ]
 }

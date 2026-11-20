@@ -137,7 +137,7 @@ impl FerroEhrService {
     /// not admit (`403`), a scope element the operation is read by named
     /// other than once (`400`), a storage failure.
     pub async fn grant_client(&self, grant: &ClientGrant) -> Result<Granted, ServiceError> {
-        self.seed_default_definitions().await?;
+        Box::pin(self.seed_default_definitions()).await?;
         let grants = self.fresh_grants().await?;
         let held = grants.capabilities(
             Actor::Client {
@@ -191,7 +191,7 @@ impl FerroEhrService {
     /// The refusals of the commit, as [`Self::grant_client`]'s, and the
     /// refusal of a `ROLE` whose performer is no `PERSON` of this store.
     pub async fn grant_person(&self, grant: &PersonGrant) -> Result<Granted, ServiceError> {
-        self.seed_default_definitions().await?;
+        Box::pin(self.seed_default_definitions()).await?;
         let grants = self.fresh_grants().await?;
         let held = grants.capabilities(Actor::Party(grant.person), jiff::Timestamp::now());
         if held.holds(grant.operation) {
