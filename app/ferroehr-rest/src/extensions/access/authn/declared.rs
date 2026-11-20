@@ -32,6 +32,7 @@ use ferrohealth_smart::resource::{Access, Caller};
 use uuid::Uuid;
 
 use super::AuthError;
+use crate::config::RateClock;
 
 /// The agreement an external caller was admitted under, carried on its
 /// [`Caller`] as an extension.
@@ -46,6 +47,7 @@ struct Held {
     agreement: Arc<Agreement>,
     correlation_source: Option<String>,
     limit: Option<CallerLimit>,
+    clock: RateClock,
     contact_point: bool,
 }
 
@@ -57,15 +59,25 @@ const NEUTRAL: [&str; 5] = ["openid", "profile", "fhirUser", "online_access", "l
 /// The caller limit of one agreement's rate, kept while the rate stands.
 type Limits = BTreeMap<(Uuid, Accessor), (CallerRate, CallerLimit)>;
 
-/// The caller limit of each agreement admitted under so far.
-#[derive(Debug, Default)]
+/// The caller limit of each agreement admitted under so far, and the clock
+/// each is read against.
+#[derive(Debug)]
 pub(super) struct Declared {
     /// The caller limit of each agreement, by its `ROLE` and accessor, so a
     /// caller's allowance outlives the request.
     limits: Mutex<Limits>,
+    clock: RateClock,
 }
 
 impl Declared {
+    /// No limit yet, each to be read against `clock`.
+    pub(super) fn new(clock: RateClock) -> Self {
+        Self {
+            limits: Mutex::default(),
+            clock,
+        }
+    }
+
     /// The caller limit of the agreement of `accessor` the `ROLE` `role`
     /// grants at `rate`: the one held while its rate stands.
     fn limit(&self, role: Uuid, accessor: Accessor, rate: CallerRate) -> CallerLimit {
@@ -176,6 +188,7 @@ impl Declared {
             agreement: Arc::new(agreement),
             correlation_source: partner.correlation_source,
             limit,
+            clock: self.clock.clone(),
             contact_point: partner.contact_point,
         };
         Ok(Access::Caller(Arc::new(
@@ -219,9 +232,10 @@ pub(super) fn contact_point(access: &Access) -> Option<&Arc<Agreement>> {
 /// for the access log, which counts it into the caller's summary record.
 /// `None` within the rate or for any other caller.
 pub(super) fn over_rate(principal: &super::Principal) -> Option<Response> {
-    let limit = held(&principal.access)?.limit.as_ref()?;
+    let held = held(&principal.access)?;
+    let limit = held.limit.as_ref()?;
     let caller = CallerKey(Arc::from(principal.subject.as_str()));
-    let wait = limit.take(&caller, tokio::time::Instant::now()).err()?;
+    let wait = limit.take(&caller, held.clock.now()).err()?;
     let mut refusal = caller_rate::refusal(wait);
     let granted = Capabilities::default();
     let committer = super::party::committer_identity(principal, &granted);
