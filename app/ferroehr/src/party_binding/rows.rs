@@ -39,8 +39,8 @@ pub(crate) struct IdentifierRow {
     pub(crate) value: String,
     /// The head's `version_lifecycle_state` code.
     pub(crate) lifecycle_state: String,
-    /// Whether the `PERSON` is the source of a representation relationship,
-    /// inline or of its own; read on a key row only.
+    /// Whether the `PERSON` is the source of a representation; read on a key
+    /// row only.
     pub(crate) representative: bool,
 }
 
@@ -53,17 +53,13 @@ pub(crate) struct Professional {
     pub(crate) validity: Option<Value>,
 }
 
-/// One representation relationship a representative holds.
+/// One representation a representative holds.
 #[derive(Debug, Clone)]
 pub(crate) struct RepresentationRow {
     /// The representative's container.
     pub(crate) representative: Uuid,
-    /// The subject's container.
-    pub(crate) subject: Uuid,
-    /// The openEHR `subject_relationship` code the relationship names.
-    pub(crate) code: Option<String>,
-    /// The relationship's `time_validity`.
-    pub(crate) validity: Option<Value>,
+    /// What the relationship states about the subject.
+    pub(crate) representation: crate::party_binding::derive::Representation,
 }
 
 /// The identifier rows the parties should hold, with the professional date
@@ -301,102 +297,49 @@ pub(crate) async fn revive_keys(
     Ok(())
 }
 
-/// The representation rows wanted, their validities joined: the `wanted`
-/// relation of the representation statements, over `$2` to `$6`, `$6` the
-/// standalone container of every row (NULL for inline rows).
-macro_rules! wanted_representations {
+/// The columns of a representation row, over `$2` to `$9`: the
+/// representative, the subject, the basis, the provider, the validity and
+/// the `subject_relationship` code.
+macro_rules! representation_rows {
     () => {
-        "WITH wanted AS ( \
-             SELECT r.representative, r.subject, r.code AS relationship, \
-                    $6::uuid AS container, \
-                    range_agg(party.binding_validity(r.validity)) AS validity \
-             FROM unnest($2::uuid[], $3::uuid[], $4::text[], $5::jsonb[]) \
-                  AS r(representative, subject, code, validity) \
-             GROUP BY 1, 2, 3, 4 \
-         ) "
+        "unnest($2::uuid[], $3::uuid[], $4::text[], $5::text[], $6::text[], $7::text[], \
+                $8::jsonb[], $9::text[]) WITH ORDINALITY \
+         AS r(representative, subject, basis_terminology, basis_code, provider_issuer, \
+              provider_id, validity, relationship, ord)"
     };
 }
-/// The condition that the side-table row `b` and the wanted row `w` are the
-/// same representation.
-macro_rules! same_representation {
-    () => {
-        "w.representative = b.representative_id AND w.subject = b.subject_id \
-         AND w.relationship IS NOT DISTINCT FROM b.relationship AND w.validity = b.validity"
-    };
-}
-/// Retires the live inline representation rows the representatives `$1` no
-/// longer hold.
-const RETIRE_REPRESENTATIONS: &str = concat!(
-    wanted_representations!(),
-    "UPDATE binding_representation b SET retired_at = now() \
-     WHERE b.representative_id = ANY($1) AND b.retired_at IS NULL \
-       AND b.relationship_id IS NULL \
-       AND NOT EXISTS (SELECT 1 FROM wanted w WHERE ",
-    same_representation!(),
-    ")"
-);
-/// Inserts the held inline representation rows with no live twin.
-const INSERT_REPRESENTATIONS: &str = concat!(
-    wanted_representations!(),
-    "INSERT INTO binding_representation \
-         (representative_id, subject_id, relationship, validity) \
-     SELECT w.representative, w.subject, w.relationship, w.validity FROM wanted w \
-     WHERE NOT EXISTS (SELECT 1 FROM binding_representation b \
-                       WHERE b.retired_at IS NULL AND b.relationship_id IS NULL AND ",
-    same_representation!(),
-    ")"
-);
-/// Retires the live row of each standalone container `$1` the wanted rows
-/// do not hold.
+/// Retires the live row of the container `$1` unless the wanted row, of the
+/// same representative, subject, basis, provider and validity, matches it.
 const RETIRE_STANDALONE: &str = concat!(
-    wanted_representations!(),
     "UPDATE binding_representation b SET retired_at = now() \
-     WHERE b.relationship_id = ANY($1) AND b.retired_at IS NULL \
-       AND NOT EXISTS (SELECT 1 FROM wanted w WHERE ",
-    same_representation!(),
-    " AND w.container = b.relationship_id)"
+     WHERE b.relationship_id = $1 AND b.retired_at IS NULL \
+       AND NOT EXISTS (SELECT 1 FROM ",
+    representation_rows!(),
+    " WHERE r.representative = b.representative_id AND r.subject = b.subject_id \
+         AND r.basis_terminology = b.basis_terminology AND r.basis_code = b.basis_code \
+         AND r.provider_issuer = b.provider_issuer AND r.provider_id = b.provider_id \
+         AND r.relationship IS NOT DISTINCT FROM b.relationship \
+         AND datemultirange(party.binding_validity(r.validity)) = b.validity)"
 );
-/// Inserts the wanted row of each standalone container with no live twin.
+/// Inserts the wanted row of the container `$1` when it has no live row,
+/// naming the writer of its head, `{WRITER}`
+/// ([`crate::party_binding::grants::caller::store::WRITER`]).
 const INSERT_STANDALONE: &str = concat!(
-    wanted_representations!(),
     "INSERT INTO binding_representation \
-         (representative_id, subject_id, relationship, validity, relationship_id) \
-     SELECT w.representative, w.subject, w.relationship, w.validity, w.container FROM wanted w \
-     WHERE NOT EXISTS (SELECT 1 FROM binding_representation b \
-                       WHERE b.retired_at IS NULL AND b.relationship_id = w.container AND ",
-    same_representation!(),
-    ")"
+         (representative_id, subject_id, basis_terminology, basis_code, provider_issuer, \
+          provider_id, validity, relationship, relationship_id, writer_id) \
+     SELECT r.representative, r.subject, r.basis_terminology, r.basis_code, \
+            r.provider_issuer, r.provider_id, datemultirange(party.binding_validity(r.validity)), \
+            r.relationship, $1, {WRITER} \
+     FROM ",
+    representation_rows!(),
+    " WHERE NOT EXISTS (SELECT 1 FROM binding_representation b \
+                        WHERE b.relationship_id = $1 AND b.retired_at IS NULL)"
 );
 
-/// Writes the inline representation rows the representatives `parties`
-/// should hold: `rows`, the validities of one representative, subject and
-/// code joined into one date range. The rows of a standalone container are
-/// [`write_standalone`]'s.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub(crate) async fn write_representations(
-    tx: &mut PgConnection,
-    parties: &[Uuid],
-    rows: &[RepresentationRow],
-) -> Result<(), StorageError> {
-    crate::party_binding::live::note_change();
-    if parties.is_empty() {
-        return Ok(());
-    }
-    write(
-        tx,
-        parties,
-        rows,
-        None,
-        [RETIRE_REPRESENTATIONS, INSERT_REPRESENTATIONS],
-    )
-    .await
-}
-
-/// Writes the row the standalone representation container `container`
-/// should hold: `row`, `None` for a container that is deleted or represents
-/// no one.
+/// Writes the row the representation container `container` should hold:
+/// `row`, `None` for a container that is deleted or represents no one, with
+/// the writer of its head.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -406,42 +349,70 @@ pub(crate) async fn write_standalone(
     row: Option<&RepresentationRow>,
 ) -> Result<(), StorageError> {
     crate::party_binding::live::note_change();
-    let rows: Vec<RepresentationRow> = row.into_iter().cloned().collect();
-    write(
-        tx,
-        &[container],
-        &rows,
-        Some(container),
-        [RETIRE_STANDALONE, INSERT_STANDALONE],
-    )
-    .await
-}
-
-/// Runs `statements` over `rows`, scoped by `scope`, the containers of each
-/// row being `container`.
-async fn write(
-    tx: &mut PgConnection,
-    scope: &[Uuid],
-    rows: &[RepresentationRow],
-    container: Option<Uuid>,
-    statements: [&'static str; 2],
-) -> Result<(), StorageError> {
-    let representative: Vec<Uuid> = rows.iter().map(|r| r.representative).collect();
-    let subject: Vec<Uuid> = rows.iter().map(|r| r.subject).collect();
-    let code: Vec<Option<&str>> = rows.iter().map(|r| r.code.as_deref()).collect();
-    let validity: Vec<Option<&Value>> = rows.iter().map(|r| r.validity.as_ref()).collect();
-    for statement in statements {
-        sqlx::query(statement)
-            .bind(scope)
-            .bind(&representative)
-            .bind(&subject)
-            .bind(&code)
-            .bind(&validity)
-            .bind(container)
+    let rows: Vec<&RepresentationRow> = row.into_iter().collect();
+    let columns = Columns::of(&rows);
+    let insert = INSERT_STANDALONE.replace(
+        "{WRITER}",
+        crate::party_binding::grants::caller::store::WRITER,
+    );
+    for statement in [RETIRE_STANDALONE, insert.as_str()] {
+        columns
+            .bind(sqlx::query(sqlx::AssertSqlSafe(statement)).bind(container))
             .execute(&mut *tx)
             .await?;
     }
     Ok(())
+}
+
+/// The column arrays of some representation rows.
+struct Columns<'r> {
+    representative: Vec<Uuid>,
+    subject: Vec<Uuid>,
+    basis_terminology: Vec<&'r str>,
+    basis_code: Vec<&'r str>,
+    provider_issuer: Vec<&'r str>,
+    provider_id: Vec<&'r str>,
+    validity: Vec<Option<&'r Value>>,
+    relationship: Vec<Option<&'r str>>,
+}
+
+impl<'r> Columns<'r> {
+    /// The columns of `rows`.
+    fn of(rows: &[&'r RepresentationRow]) -> Self {
+        let held = |row: &&'r RepresentationRow| &row.representation;
+        Self {
+            representative: rows.iter().map(|r| r.representative).collect(),
+            subject: rows.iter().map(|r| held(r).subject).collect(),
+            basis_terminology: rows
+                .iter()
+                .map(|r| held(r).basis.terminology.as_str())
+                .collect(),
+            basis_code: rows.iter().map(|r| held(r).basis.code.as_str()).collect(),
+            provider_issuer: rows
+                .iter()
+                .map(|r| held(r).provider.issuer.as_str())
+                .collect(),
+            provider_id: rows.iter().map(|r| held(r).provider.id.as_str()).collect(),
+            validity: rows.iter().map(|r| held(r).validity.as_ref()).collect(),
+            relationship: rows.iter().map(|r| held(r).code.as_deref()).collect(),
+        }
+    }
+
+    /// `query` with the columns bound as `$2` to `$9`.
+    fn bind<'q>(
+        &'q self,
+        query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    ) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
+        query
+            .bind(&self.representative)
+            .bind(&self.subject)
+            .bind(&self.basis_terminology)
+            .bind(&self.basis_code)
+            .bind(&self.provider_issuer)
+            .bind(&self.provider_id)
+            .bind(&self.validity)
+            .bind(&self.relationship)
+    }
 }
 
 /// The representatives among `parties` that are, or ever were, the source of
@@ -467,40 +438,39 @@ pub(crate) async fn representatives(
     .await?)
 }
 
-/// Inserts each of `held`, a representation with its standalone container
-/// (`None` for an inline one), as a retired row: what the representatives
-/// once held, which a refill keeps.
+/// Inserts each of `held`, a representation with its container, as a
+/// retired row: what the representatives once held, which a refill keeps.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub(crate) async fn write_history(
     tx: &mut PgConnection,
-    held: &[(RepresentationRow, Option<Uuid>)],
+    held: &[(RepresentationRow, Uuid)],
 ) -> Result<(), StorageError> {
     crate::party_binding::live::note_change();
     if held.is_empty() {
         return Ok(());
     }
-    let representative: Vec<Uuid> = held.iter().map(|(r, _)| r.representative).collect();
-    let subject: Vec<Uuid> = held.iter().map(|(r, _)| r.subject).collect();
-    let code: Vec<Option<&str>> = held.iter().map(|(r, _)| r.code.as_deref()).collect();
-    let validity: Vec<Option<&Value>> = held.iter().map(|(r, _)| r.validity.as_ref()).collect();
-    let container: Vec<Option<Uuid>> = held.iter().map(|(_, c)| *c).collect();
-    sqlx::query(
+    let rows: Vec<&RepresentationRow> = held.iter().map(|(row, _)| row).collect();
+    let containers: Vec<Uuid> = held.iter().map(|(_, container)| *container).collect();
+    let columns = Columns::of(&rows);
+    let statement = concat!(
         "INSERT INTO binding_representation \
-             (representative_id, subject_id, relationship, validity, relationship_id, retired_at) \
-         SELECT r.representative, r.subject, r.code, datemultirange(party.binding_validity(r.validity)), \
-                r.container, now() \
-         FROM unnest($1::uuid[], $2::uuid[], $3::text[], $4::jsonb[], $5::uuid[]) \
-              AS r(representative, subject, code, validity, container)",
-    )
-    .bind(&representative)
-    .bind(&subject)
-    .bind(&code)
-    .bind(&validity)
-    .bind(&container)
-    .execute(&mut *tx)
-    .await?;
+             (representative_id, subject_id, basis_terminology, basis_code, provider_issuer, \
+              provider_id, validity, relationship, relationship_id, retired_at) \
+         SELECT r.representative, r.subject, r.basis_terminology, r.basis_code, \
+                r.provider_issuer, r.provider_id, \
+                datemultirange(party.binding_validity(r.validity)), r.relationship, \
+                c.container, now() \
+         FROM ",
+        representation_rows!(),
+        " JOIN unnest($1::uuid[]) WITH ORDINALITY AS c(container, ord) \
+            ON c.ord = r.ord"
+    );
+    columns
+        .bind(sqlx::query(statement).bind(&containers))
+        .execute(&mut *tx)
+        .await?;
     Ok(())
 }
 

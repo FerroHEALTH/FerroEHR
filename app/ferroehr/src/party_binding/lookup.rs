@@ -13,6 +13,7 @@
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
+use crate::party_binding::grants::caller::care_of::ProviderKey;
 use crate::party_binding::key_space::{KeySpaceClosed, KeySpaceState};
 use crate::storage::error::StorageError;
 
@@ -195,15 +196,16 @@ pub async fn memberships(
     Ok(out)
 }
 
-/// One live representation relationship: the representative, the subject and
-/// the mapped `subject_relationship` code.
+/// One live representation: the representative, the subject and the
+/// openEHR `subject_relationship` code it names.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RepresentationRow {
     /// The representative `PERSON`'s container.
     pub representative_id: Uuid,
     /// The subject `PERSON`'s container.
     pub subject_id: Uuid,
-    /// The openEHR `subject_relationship` code, when the type maps to one.
+    /// The openEHR `subject_relationship` code, when the relationship names
+    /// one.
     pub relationship: Option<String>,
 }
 
@@ -220,7 +222,7 @@ pub async fn representations(
     let rows = sqlx::query(
         "SELECT representative_id, subject_id, relationship FROM binding_representation \
          WHERE representative_id = ANY($1) AND retired_at IS NULL AND validity @> $2::date \
-         ORDER BY representative_id, subject_id, relationship",
+         ORDER BY representative_id, subject_id, relationship_id",
     )
     .bind(representatives)
     .bind(today)
@@ -279,30 +281,57 @@ pub async fn representative_keys(
     Ok(out)
 }
 
+/// The representation a representative is admitted on.
+///
+/// It is live on the day, recorded for a provider the caller acts for, and
+/// not written by the representative itself (draft access control decision
+/// procedure, step 0 Representation, and Writing Relationships).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LiveRepresentation {
+    /// The `PARTY_RELATIONSHIP` container of the representation.
+    pub container: Uuid,
+    /// The openEHR `subject_relationship` code it names, when it names one.
+    pub relationship: Option<String>,
+}
+
 /// Whether `representative` has ever represented `subject`.
 ///
-/// `None` when no representation row, live or retired, names the pair, else
-/// whether one is live on `today` (`YYYY-MM-DD`), with the openEHR
-/// `subject_relationship` code of the row that decides it; answered from
-/// `ix_binding_representation_history`.
+/// `None` when no representation row, live or retired, names the pair; else
+/// the representation the representative is admitted on, on `today`
+/// (`YYYY-MM-DD`) and for one of `providers`, `Some(None)` when none is.
+/// Answered from `ix_binding_representation_history`.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn representation_of(
     conn: &mut PgConnection,
-    representative: Uuid,
-    subject: Uuid,
+    (representative, subject): (Uuid, Uuid),
     today: &str,
-) -> Result<Option<(bool, Option<String>)>, StorageError> {
-    Ok(sqlx::query_as(
-        "SELECT retired_at IS NULL AND validity @> $3::date AS live, relationship \
-         FROM binding_representation \
-         WHERE representative_id = $1 AND subject_id = $2 \
-         ORDER BY live DESC, relationship LIMIT 1",
+    providers: &[ProviderKey],
+) -> Result<Option<Option<LiveRepresentation>>, StorageError> {
+    let issuers: Vec<&str> = providers.iter().map(|p| p.issuer.as_str()).collect();
+    let ids: Vec<&str> = providers.iter().map(|p| p.id.as_str()).collect();
+    let row: Option<(bool, Uuid, Option<String>)> = sqlx::query_as(
+        "SELECT (r.retired_at IS NULL AND r.validity @> $3::date AND p.id IS NOT NULL \
+                 AND r.writer_id IS DISTINCT FROM r.representative_id) AS admits, \
+                r.relationship_id, r.relationship \
+         FROM binding_representation r \
+         LEFT JOIN unnest($4::text[], $5::text[]) AS p(issuer, id) \
+           ON p.issuer = r.provider_issuer AND p.id = r.provider_id \
+         WHERE r.representative_id = $1 AND r.subject_id = $2 \
+         ORDER BY admits DESC, r.relationship_id LIMIT 1",
     )
     .bind(representative)
     .bind(subject)
     .bind(today)
+    .bind(&issuers)
+    .bind(&ids)
     .fetch_optional(&mut *conn)
-    .await?)
+    .await?;
+    Ok(row.map(|(admits, container, relationship)| {
+        admits.then_some(LiveRepresentation {
+            container,
+            relationship,
+        })
+    }))
 }

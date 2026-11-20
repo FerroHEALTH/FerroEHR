@@ -260,32 +260,34 @@ CREATE TRIGGER binding_membership_changed
 COMMENT ON TABLE binding_membership IS 'The live members of each GROUP of the mapped group template, from the inline PARTY_RELATIONSHIPs of the membership archetype each member PERSON holds with the GROUP as target; standalone relationship containers never count. No openEHR spec governs it, our own design.';
 
 -- ── binding_representation ──────────────────────────────────────────────────
--- One row per representation relationship a PERSON is the source of: an
--- inline PARTY_RELATIONSHIP of the mapped representation archetype, from the
--- representative's PERSON to the subject's, with the subject_relationship
--- code its type maps to and its validity.
+-- One row per representation a PERSON is the source of: a PARTY_RELATIONSHIP
+-- of its own named openehr_access::represents, from the representative's
+-- PERSON to the subject's, with its basis, its provider, the
+-- subject_relationship code it names, its validity and the party that wrote
+-- it (draft access control package, "A representation is" and The
+-- Relationship Store, #6079). A representative is admitted only on a live row
+-- for that subject whose provider the caller acts for and that it did not
+-- write itself (decision procedure, step 0 Representation; Writing
+-- Relationships).
 CREATE TABLE binding_representation (
     representative_id uuid NOT NULL,
     subject_id        uuid NOT NULL,
-    -- The openEHR subject_relationship code the relationship's type maps to;
-    -- NULL when the mapping maps none.
+    -- The openEHR subject_relationship code the relationship names; NULL when
+    -- it names none.
     relationship      text,
-    -- The union of the time_validity of the relationships of this coded type
-    -- between the two.
     validity          datemultirange NOT NULL,
     written_at        timestamptz NOT NULL DEFAULT now(),
     retired_at        timestamptz,
-    -- The standalone PARTY_RELATIONSHIP container the row is derived from;
-    -- NULL for an inline relationship.
-    relationship_id   uuid
+    relationship_id   uuid NOT NULL,
+    basis_terminology text NOT NULL,
+    basis_code        text NOT NULL,
+    provider_issuer   text NOT NULL,
+    provider_id       text NOT NULL,
+    writer_id         uuid
 );
-CREATE UNIQUE INDEX uq_binding_representation_pair
-    ON binding_representation (representative_id, subject_id, relationship, relationship_id)
-    NULLS NOT DISTINCT WHERE retired_at IS NULL;
--- A standalone container's live row, which its commit retires.
-CREATE INDEX ix_binding_representation_container
-    ON binding_representation (relationship_id)
-    WHERE retired_at IS NULL AND relationship_id IS NOT NULL;
+-- A container's live row, which its commit retires.
+CREATE UNIQUE INDEX uq_binding_representation_container
+    ON binding_representation (relationship_id) WHERE retired_at IS NULL;
 -- Who ever represented whom.
 --
 -- A patient-portal login whose PERSON has ever represented the EHR's subject
@@ -294,17 +296,23 @@ CREATE INDEX ix_binding_representation_container
 -- patient. binding_representation keeps its retired rows, and a refill
 -- rebuilds them from every version that carried the representation code; this
 -- index answers whether a representative has ever represented a subject, live
--- or retired. No openEHR spec governs the side table: our own design.
+-- or retired, and is the one read a representative's admission takes. No
+-- openEHR spec governs the side table: our own design.
 CREATE INDEX ix_binding_representation_history
     ON binding_representation (representative_id, subject_id)
     INCLUDE (retired_at, validity, relationship);
 CREATE TRIGGER binding_representation_changed
     AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON binding_representation
     FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
-COMMENT ON COLUMN binding_representation.relationship IS 'The openEHR subject_relationship code the relationship names in its name or details; NULL when it names none.';
-COMMENT ON COLUMN binding_representation.relationship_id IS 'The standalone PARTY_RELATIONSHIP container the row is derived from; NULL for an inline relationship.';
-COMMENT ON INDEX ix_binding_representation_history IS 'Whether a representative ever represented a subject, live or retired: the patient-portal check that a former representative is never the patient (#5532).';
-COMMENT ON TABLE binding_representation IS 'The representation relationships each PERSON is the source of: its inline PARTY_RELATIONSHIPs and the standalone PARTY_RELATIONSHIP containers that carry the openehr_access::represents code. No openEHR spec governs it, our own design.';
+COMMENT ON COLUMN binding_representation.relationship IS 'The openEHR subject_relationship code the relationship names; NULL when it names none.';
+COMMENT ON COLUMN binding_representation.relationship_id IS 'The PARTY_RELATIONSHIP container the row is derived from.';
+COMMENT ON COLUMN binding_representation.basis_terminology IS 'The terminology of the representation''s basis.';
+COMMENT ON COLUMN binding_representation.basis_code IS 'The code of the representation''s basis.';
+COMMENT ON COLUMN binding_representation.provider_issuer IS 'The issuer of the representation''s provider DV_IDENTIFIER.';
+COMMENT ON COLUMN binding_representation.provider_id IS 'The id of the representation''s provider DV_IDENTIFIER.';
+COMMENT ON COLUMN binding_representation.writer_id IS 'The container the committer of the relationship''s head names in external_ref: the PERSON or client ACTOR that wrote it; NULL when the committer names none.';
+COMMENT ON INDEX ix_binding_representation_history IS 'Whether a representative ever represented a subject, live or retired: the patient-portal check that a former representative is never the patient (#5532), and the read a representative is admitted on (#6079).';
+COMMENT ON TABLE binding_representation IS 'The representations each PERSON is the source of: the PARTY_RELATIONSHIP containers of their own named openehr_access::represents, with their basis, provider and writer, live at the head and retired for every earlier one. No openEHR spec governs it, our own design.';
 
 -- ── binding_lease ───────────────────────────────────────────────────────────
 -- One row per running replica, renewed while it runs: a refill refuses while

@@ -35,6 +35,11 @@ use crate::portal_representatives_http::{PORTAL, child, representation, token};
 
 /// The portal's provisioning client.
 const PORTAL_CLIENT: &str = "portal-sync";
+/// The client that records representations for the hospital: it holds
+/// `write_representation` for [`crate::portal_representatives_http::PROVIDER`].
+const WRITER: &str = "registry";
+/// A client holding `write_representation` for another provider only.
+const CLINIC: &str = "clinic-registry";
 /// Frank's portal login, the binding key of his `PERSON`.
 const FRANK: &str = "frank-login";
 
@@ -49,6 +54,7 @@ fn config() -> ferroehr_rest::config::AppConfig {
     });
     config.auth.smart.patient_issuers =
         vec![ferrohealth_secret::secret_url::SecretUrl::new(PORTAL)];
+    config.party_binding.provider = Some(crate::portal_representatives_http::provider());
     config
 }
 
@@ -96,6 +102,23 @@ async fn portal() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
         &[scope("binding_issuer", LOGIN), scope("token_scope", SCOPE)],
     );
     grant(&service, MACHINES, CLIENT, &[hospital]).await;
+    let writes = |provider: (&str, &str)| {
+        capability(
+            "write_representation",
+            &[crate::policy_fixture::identifier("provider", provider)],
+        )
+    };
+    let demographic = capability("access_demographic", &[]);
+    let hospital = crate::portal_representatives_http::PROVIDER;
+    grant(
+        &service,
+        MACHINES,
+        WRITER,
+        &[demographic.clone(), writes(hospital)],
+    )
+    .await;
+    let clinic = writes(("urn:example:providers", "clinic"));
+    grant(&service, MACHINES, CLINIC, &[demographic, clinic]).await;
     let app = common::router_with(config, Arc::clone(&service)).await;
     (db, service, app)
 }
@@ -149,11 +172,7 @@ fn next<T: serde::de::DeserializeOwned>(body: &Value, uid: &str) -> WriteRequest
 /// `subject`, of a deployment's own archetype, as the patient authorises a
 /// proxy or an administrator records a guardian.
 fn standalone(source: ferroehr::ids::VoId, subject: ferroehr::ids::VoId) -> Value {
-    let mut relationship = representation(source, subject, "253", None);
-    relationship["archetype_details"] = json!({ "_type": "ARCHETYPED", "rm_version": "1.1.0",
-        "archetype_id": { "_type": "ARCHETYPE_ID",
-            "value": "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.custodian.v2" } });
-    relationship
+    representation(source, subject, "253", None)
 }
 
 /// A client-credentials token of `client` for the Demographic API.
@@ -233,14 +252,65 @@ async fn the_portal_client_is_refused_a_representation() {
         .build();
     let (status, _, refused) = common::send(&app, request).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
+    assert!(refused.contains("write_representation"), "{refused}");
     let (status, refused) = read_as_frank(&app, &ehr).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
 }
 
-/// Inside a SCIM request, a version of a `PERSON` the client owns that adds,
-/// changes or drops an inline representation is refused by the party
-/// protection, whatever route carries it: here a professional User, whose
-/// template draws an inline representation.
+/// The `POST` of `relationship` at `/demographic/party_relationship` as the
+/// client `client`; its status and body.
+async fn post_as(app: &Router, client: &str, relationship: &Value) -> (StatusCode, String) {
+    let request = common::req("POST", format!("{EXT}/demographic/party_relationship"))
+        .auth(&system(client))
+        .accept("application/json")
+        .json(relationship.to_string())
+        .build();
+    let (status, _, body) = common::send(app, request).await;
+    (status, body)
+}
+
+/// A representation is written under a `write_representation` grant whose
+/// `provider` elements name its provider (draft access control decision
+/// procedure, Writing Relationships): a grant for another provider is
+/// refused `403`, the hospital's own records it, and Frank then reads Eva's
+/// record.
+#[tokio::test]
+async fn a_representation_is_written_under_a_grant_for_its_provider() {
+    let (_db, service, app) = portal().await;
+    let (eva, ehr) = child(&service).await;
+    let user = frank(&app).await;
+    let frank_id = ferroehr::ids::VoId(user.parse().expect("a container id"));
+    let guardian = representation(frank_id, eva, "264", None);
+
+    let (status, refused) = post_as(&app, CLINIC, &guardian).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
+    assert!(
+        refused.contains("hospital"),
+        "names the provider: {refused}"
+    );
+    let (status, refused) = read_as_frank(&app, &ehr).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
+
+    let (status, body) = post_as(&app, WRITER, &guardian).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (status, body) = read_as_frank(&app, &ehr).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    // NOTE: EHDS Art. 4(2), the subject authorises a proxy; a representative writes no
+    // authorisation of themself, so Frank's own write of one is refused.
+    let request = common::req("POST", format!("{EXT}/demographic/party_relationship"))
+        .auth(&token(FRANK, &ehr, &json!({})))
+        .accept("application/json")
+        .json(representation(frank_id, eva, "253", None).to_string())
+        .build();
+    let (status, _, refused) = common::send(&app, request).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
+}
+
+/// Inside a SCIM request, a version of a `PERSON` the client owns that adds
+/// a representation to its relationships is refused: a representation is a
+/// `PARTY_RELATIONSHIP` of its own (draft access control package, The
+/// Relationship Store), whatever route carries it.
 #[tokio::test]
 async fn a_scim_version_that_touches_a_representation_is_refused() {
     let (_db, service, app) = portal().await;
@@ -249,7 +319,7 @@ async fn a_scim_version_that_touches_a_representation_is_refused() {
     let anna = ferroehr::ids::VoId(user.parse().expect("a container id"));
     let (uid, body) = head(&service, &user).await;
     let mut represented = body;
-    represented["relationships"] = json!([default_representation(anna, eva)]);
+    represented["relationships"] = json!([representation(anna, eva, "254", None)]);
     let refused = Box::pin(ferroehr::party_binding::protect::provisioning(
         LOGIN.to_owned(),
         service.party_update(
@@ -262,46 +332,9 @@ async fn a_scim_version_that_touches_a_representation_is_refused() {
     .await
     .expect_err("a SCIM client writes no representation");
     assert!(
-        refused.to_string().contains("changes its representations"),
-        "{refused}"
+        format!("{refused:?}").contains("/demographic/party_relationship"),
+        "{refused:?}"
     );
-}
-
-/// A representation of the default representation archetype from `source`
-/// to `subject`: its name is its type, and its details carry the
-/// representation code and the openEHR `subject_relationship` code.
-fn default_representation(source: ferroehr::ids::VoId, subject: ferroehr::ids::VoId) -> Value {
-    let archetype = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1";
-    let coded = |terminology: &str, code: &str, value: &str| {
-        json!({ "_type": "DV_CODED_TEXT", "value": value,
-            "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
-                "code_string": code } })
-    };
-    let reference = |id: ferroehr::ids::VoId| {
-        json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-                "id": { "_type": "HIER_OBJECT_ID", "value": id.to_string() } })
-    };
-    json!({
-        "_type": "PARTY_RELATIONSHIP",
-        "archetype_node_id": archetype,
-        "archetype_details": { "_type": "ARCHETYPED",
-            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
-            "rm_version": "1.1.0" },
-        "name": coded("local", "at10", "Parent"),
-        "details": { "_type": "ITEM_TREE", "archetype_node_id": "id3",
-            "name": { "_type": "DV_TEXT", "value": "Details" },
-            "items": [
-                { "_type": "ELEMENT", "archetype_node_id": "id4",
-                    "name": { "_type": "DV_TEXT", "value": "Representation code" },
-                    "value": coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "represents", "represents") },
-                { "_type": "ELEMENT", "archetype_node_id": "id6",
-                    "name": { "_type": "DV_TEXT", "value": "Relationship" },
-                    "value": coded("openehr", "254", "parent") }
-            ] },
-        "source": reference(source),
-        "target": reference(subject)
-    })
 }
 
 /// A patient portal's representative holds no role: the portal client's

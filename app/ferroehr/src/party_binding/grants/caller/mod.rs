@@ -43,6 +43,7 @@
               the caller facts are derived from"
 )]
 
+pub mod attestation;
 pub(crate) mod bounds;
 pub mod care_of;
 pub mod facts;

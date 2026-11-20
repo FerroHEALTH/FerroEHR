@@ -52,7 +52,6 @@ pub mod response;
 pub mod version_update;
 mod write;
 
-use crate::service::definition::lineage::{ArchetypeLineageCache, archetype_lineage_cache};
 use crate::service::ehr::access_cache::EhrAccessCache;
 use crate::service::query::config::QueryConfig;
 use crate::service::query::plan_cache::PlanCache;
@@ -67,7 +66,6 @@ use crate::db::domain::DomainPools;
 use crate::system_log::sender::AuditSender;
 use crate::versioning::SigningCtx;
 use crate::versioning::signature::signer::Signer;
-use openehr_sdt::flat::cache::WebTemplateCache;
 
 /// The default openEHR system identifier stamped into `EHR.system_id`,
 /// `AUDIT_DETAILS.system_id`, and every `OBJECT_VERSION_ID.creating_system_id`.
@@ -99,14 +97,15 @@ pub struct FerroEhrService {
     /// Boot-fixed; the AQL planner's profile gate and the ingress acceptance
     /// boundary read it.
     pub(crate) spec_profile: crate::config::profile::SpecProfile,
-    /// Cache of `WebTemplate`s built from stored OPTs, used by composition
-    /// validation on create/update. Cheaply cloneable (moka-backed).
+    /// The `WebTemplate`s built from the stored templates and the archetype
+    /// lineage index, held at the definition revision a request confirms
+    /// (#5948). Shared across service clones.
     ///
     /// NOTE: cache health is telemetry only — no wire introspection endpoint
     /// exists or is planned (adjudicated 2026-07-25 on the tracker: an
     /// internal optimisation's state is a metric, not a REST surface; no
     /// openEHR spec governs the cache — our own design).
-    pub(crate) web_templates: WebTemplateCache,
+    pub(crate) definitions: Arc<definition::copies::DefinitionCopies>,
     /// The template addresses `template_ref` registers, held in memory so a
     /// commit asks no statement of a registered template (#5775).
     registered_templates: Arc<definition::registered::RegisteredTemplates>,
@@ -173,12 +172,6 @@ pub struct FerroEhrService {
     /// across service clones (moka-backed). No openEHR spec governs it — our
     /// own performance design.
     pub(crate) plan_cache: PlanCache,
-    /// Memo of the stored archetype specialisation graph
-    /// (`adl2_artefact.parent_hrid` edges) the AQL archetype predicate widens a
-    /// parent query through (BASE Artefact Identification
-    /// §Supporting Archetype-based Querying). Invalidated on every local ADL2 artefact
-    /// write; the memo itself is spec-silent — our own performance design.
-    pub(crate) archetype_lineage: ArchetypeLineageCache,
     /// Per-query DB execution budget (`[record.query] timeout`); `None` disables it
     /// (the global request timeout is then the only guard). On overrun the
     /// query is reported as `408`. No openEHR spec governs a query timeout —
@@ -303,7 +296,7 @@ impl FerroEhrService {
             pool: pools.clinical.clone(),
             system_id: DEFAULT_SYSTEM_ID.to_owned(),
             spec_profile: crate::config::profile::SpecProfile::default(),
-            web_templates: WebTemplateCache::default(),
+            definitions: Arc::default(),
             registered_templates: Arc::new(definition::registered::RegisteredTemplates::new(
                 pools.clinical.clone(),
             )),
@@ -331,7 +324,6 @@ impl FerroEhrService {
                 crate::db::domain::Domain::Party,
             )),
             plan_cache: PlanCache::default(),
-            archetype_lineage: archetype_lineage_cache(),
             query_timeout: None,
             query_result_ceiling: None,
             outbox_gate: crate::extensions::outbox::OutboxGate::Always,

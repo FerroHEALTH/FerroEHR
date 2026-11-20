@@ -458,6 +458,7 @@ pub(crate) mod tests {
             represented: "subject-9".to_owned(),
             ground: Some("guardian".to_owned()),
             relationship: Some("10".to_owned()),
+            relationship_id: None,
         });
         record.actor_chain = vec!["https://idp.example.org app-1".to_owned()];
         record

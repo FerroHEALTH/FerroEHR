@@ -259,3 +259,16 @@ pub async fn delete_template(tx: &mut PgConnection, template_id: &str) -> Result
         .await?;
     Ok(())
 }
+
+/// The `definition_revision` as `tx` sees it, after its own changes of
+/// `template_store` or `adl2_artefact` moved it (#5948).
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn definition_revision(tx: &mut PgConnection) -> Result<i64, StorageError> {
+    Ok(
+        sqlx::query_scalar("SELECT revision FROM definition_revision WHERE singleton")
+            .fetch_one(tx)
+            .await?,
+    )
+}

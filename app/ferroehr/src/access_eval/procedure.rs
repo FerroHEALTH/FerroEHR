@@ -29,7 +29,11 @@
 //!    request that declares one of them.
 //! 6. **Sensitivity**: data carrying a sensitivity, from an `ACCESS_LABEL` or
 //!    the controller's classifications, that no applying permit directive or
-//!    permit rule names (`refused-sensitivity`).
+//!    permit rule names (`refused-sensitivity`). **Confidentiality**: data
+//!    whose level, the highest of the EHR's marking, a label's and a
+//!    classification's, is above `N` and that no applying permit clears by
+//!    naming that level or a higher one (`refused-confidentiality`, answered
+//!    as absent at a level the policy conceals).
 //! 7. **Care relationship**: where the policy requires one, a professional
 //!    needs a live care relationship to the subject, a permit naming them, or
 //!    a gate-keeper entry (`refused-no-care-relationship`; BASE Architecture
@@ -69,7 +73,7 @@
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, CallerKind, DirectiveKind, Effect, OperationClass, Refusal,
+    AccessDefault, CallerKind, Confidentiality, DirectiveKind, Effect, OperationClass, Refusal,
 };
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
@@ -80,6 +84,8 @@ use crate::ids::EhrId;
 use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::service::ehr::access_rule::SettingsCaller;
 use crate::service::ehr::access_settings::EhrAccessSettings;
+
+mod confidentiality;
 
 /// Who asks, as the procedure reads them.
 #[derive(Debug, Clone, PartialEq)]
@@ -183,6 +189,9 @@ pub struct Policy<'a> {
     /// `care_purposes`: the purposes of use for which a care relationship is
     /// a ground; `None` when void.
     pub care_purposes: Option<&'a [DvCodedText]>,
+    /// The levels of `concealed_confidentialities`, whose refused records
+    /// answer as absent: `R`, then `V`.
+    pub concealed: [bool; 2],
 }
 
 impl<'a> Policy<'a> {
@@ -199,12 +208,17 @@ impl<'a> Policy<'a> {
             .as_ref()
             .and_then(|grace| grace.value.parse::<jiff::Span>().ok())
             .unwrap_or_default();
+        let concealed = crate::access_policy::care::CareFacts::of(Some(policy)).concealed();
         Self {
             care_required: policy.care_relationship_required,
             grace,
             purpose_required: policy.purpose_required,
             self_declared: policy.self_declared_care.is_some(),
             care_purposes: policy.care_purposes.as_deref(),
+            concealed: [
+                concealed.contains(&Confidentiality::Restricted),
+                concealed.contains(&Confidentiality::VeryRestricted),
+            ],
         }
     }
 
@@ -220,6 +234,16 @@ impl<'a> Policy<'a> {
             // NOTE: draft BMM ACCESS_POLICY.care_purposes, void means TREAT, ETREAT and CAREMGT.
             None => ["TREAT", "ETREAT", "CAREMGT"].contains(&purpose),
         })
+    }
+
+    /// Whether a record refused at `level` answers as absent.
+    #[must_use]
+    pub const fn conceals(self, level: Confidentiality) -> bool {
+        match level {
+            Confidentiality::Normal => false,
+            Confidentiality::Restricted => self.concealed[0],
+            Confidentiality::VeryRestricted => self.concealed[1],
+        }
     }
 }
 
@@ -239,7 +263,8 @@ pub struct Ehr<'a> {
     pub settings: Option<&'a EhrAccessSettings>,
     /// The server-wide default of an EHR with no settings.
     pub server_default: AccessDefault,
-    /// The caller's live care relationships to its subject.
+    /// The caller's live care relationships to its subject, stored or
+    /// attested by its credential.
     pub care: &'a Cared,
     /// Whether the EHR is one of the [`Caller::own_ehrs`] of a confined caller.
     pub own: bool,
@@ -499,7 +524,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         .collect();
     let rule_permits = rule_permits(&read);
     let naming: Vec<&Permit<'_>> = permits.iter().chain(&rule_permits).collect();
-    sensitivity(&read, &naming, &mut verdict);
+    confidentiality::step_6(&read, &naming, &mut verdict);
     let keeper = Pred::any(vec![Pred::of(caller.administrator), read.keeper()]);
     let cared = read.cared();
     let live = cared && !held_closed;

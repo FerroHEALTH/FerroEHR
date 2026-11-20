@@ -51,7 +51,7 @@ fn access(code: &str) -> Value {
 fn with_care(kinship: &Value) -> Value {
     let mut body = policy(true);
     body["self_declared_care"] = json!({ "_type": "DV_DURATION", "value": "P1D" });
-    body["attested_care"] = json!([{ "_type": "DV_IDENTIFIER", "issuer": "Regional exchange",
+    body["attested_care"] = json!([{ "_type": "DV_IDENTIFIER",
         "id": "urn:example:agreement:attested-care" }]);
     body["caseload"] = json!(false);
     body["conflict_rules"] = json!([{ "_type": "ACCESS_CONFLICT_RULE",
