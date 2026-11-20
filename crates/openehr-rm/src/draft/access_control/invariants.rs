@@ -38,6 +38,7 @@ use crate::draft::access_control::access_control::access_policy::AccessPolicy;
 use crate::draft::access_control::access_control::access_relationship_validity::AccessRelationshipValidity;
 use crate::draft::access_control::access_control::access_relationship_writer::AccessRelationshipWriter;
 use crate::draft::access_control::access_control::confidentiality_marking::ConfidentialityMarking;
+use crate::draft::access_control::terminology::care::CarePath;
 use crate::draft::access_control::terminology::log::AccessorKind;
 use crate::draft::access_control::terminology::{
     AccessDefault, CallerKind, Confidentiality, Conflict, DirectiveKind, Effect, Relationship,
@@ -493,6 +494,20 @@ fn actor_scope_rules(check: &mut Check, scope: &AccessActorScope) {
         absent_or::<CallerKind>(scope.caller_kind.as_ref()),
         "ACCESS_ACTOR_SCOPE",
         "Caller_kind_valid",
+    );
+    let care = scope
+        .relationship
+        .as_ref()
+        .is_some_and(|coded| Relationship::read_coded(coded) == Ok(Relationship::Care));
+    check.hold(
+        scope.care_roles.is_none() || care,
+        "ACCESS_ACTOR_SCOPE",
+        "Care_roles_valid",
+    );
+    check.hold(
+        scope.care_path.is_none() || care && absent_or::<CarePath>(scope.care_path.as_ref()),
+        "ACCESS_ACTOR_SCOPE",
+        "Care_path_valid",
     );
 }
 

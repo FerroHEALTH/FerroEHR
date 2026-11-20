@@ -9,7 +9,7 @@
 //! against the CONTRIBUTION / version audit `time_committed`. No openEHR spec
 //! governs the calls or the SQL that answers them —
 //! our own design over the greenfield `contribution` / `version` /
-//! `commit_audit` tables (`clinical/0003_change_control.sql`), whose
+//! `commit_audit` tables (`clinical/0003_baseline_change_control.sql`), whose
 //! statements are `crate::storage::statistics`.
 
 use crate::error::ServiceError;

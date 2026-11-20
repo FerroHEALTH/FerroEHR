@@ -791,7 +791,9 @@ names them.
 **Default definitions.** The binary carries a default template of each,
 version `1.0.0` (for example `openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0`).
 The privileged `ROLE` also ships as `1.0.1`, which adds the kind `Compose for`
-(`at14`) for a `compose_for` grant; `1.0.0` stays as published.
+(`at14`) for a `compose_for` grant and drops the kind `Identifier reader`
+(`at12`), which grants nothing; `1.0.0` stays as published, and a `ROLE`
+committed against it still validates.
 At boot FerroEHR stores each one through the normal definition path only
 when no definition of its id is stored. It never overwrites a stored
 definition, never refuses one you changed, and never seeds over your change.
@@ -841,7 +843,7 @@ credentials at `/capabilities[id6]/credentials[id8]`, and its `time_validity` th
 | `ROLE.federation_partner` | Access class: `automated` or `chained` | `/capabilities[id6]/credentials[id8]/items[id28]` | `DV_CODED_TEXT` |
 | `ROLE.federation_partner` | Requester log retention | `/capabilities[id6]/credentials[id8]/items[id29]` | `DV_DURATION` |
 | `ROLE.federation_partner` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id30]`, `[id31]`, `[id32]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
-| `ROLE.privileged` | Kind (privilege) | `at10` subject audit, `at11` access service, `at12` identifier reader, `at13` import | |
+| `ROLE.privileged` | Kind (privilege) | `at10` subject audit, `at11` access service, `at13` import, `at14` compose for (`1.0.1`); `1.0.0` also lists `at12` identifier reader, which grants nothing | |
 | `ROLE.privileged` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id9]`, `[id10]`, `[id11]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
 
 ### Worked examples
@@ -1720,12 +1722,14 @@ named by codes of `openehr_access`:
 | `care_role` | 1..1 | A `DV_CODED_TEXT`: the part the carer plays in the patient's care, of the value set the access policy binds for `care_role`, or of `HL7_ParticipationType` when it binds none, such as `RESP`, `ATND` or `PART` when the role is not stated |
 | `provider` | 1..1 | A `DV_IDENTIFIER` of type `ORGANISATION`: the healthcare provider in whose care the relationship is, by the namespace of its reference and its id, or by the issuer and id of its identifier |
 | `covers_for`, `context` | 0..1 | A `DV_IDENTIFIER`: the carer the target replaces, and the episode, referral or case the relationship belongs to |
-| `basis` | 0..1 | `assigned` (the default); `self_declared` is refused until the access decision reads it |
+| `basis` | 0..1 | `assigned` (the default); `self_declared` where the policy sets `self_declared_care` ([Writing a care relationship](#writing-a-care-relationship)) |
 
 A caller holds a live care relationship when the relationship's `target`
-names its `PERSON` or a `ROLE` it performs (the direct path), or a care team
-or unit it is a member of (the team path), and it acts for the relationship's
-`provider`: a bound professional acts for the provider the party binding
+names its `PERSON` or a `ROLE` it performs (the `direct` path), or a care
+team or unit it is a member of (the `team` path), or, for a `self_declared`
+relationship, its own `PERSON` (the `self_declared` path), the access
+declares no purpose or one of the policy's `care_purposes`, and it acts for
+the relationship's `provider`: a bound professional acts for the provider the party binding
 names (`[authz.party_binding.provider]`, or the table of its tenant when the
 binding names one per tenant), and a system client for the `ORGANISATION`
 its `AGENT` acts for, matched by that organisation's own reference (its
@@ -1821,6 +1825,50 @@ reading a `ROLE`'s coded name as the role a rule names, reading
 relationships as care relationships and group memberships, the
 `write_care_relationship` rule, and holding them in memory are FerroEHR's
 own design.
+
+### The care relationship resources
+
+These resources are an extension of the openEHR REST API: ITS-REST 1.1.0
+has no resource for a relationship, so FerroEHR serves them under the
+extensions root (`/ferroehr/rest/extensions/v1`), after the draft access
+control package (ITS-REST Resources, Care Relationships). Each is the
+`under_care_of` `PARTY_RELATIONSHIP` above in a narrower form, so a write
+needs the same `write_care_relationship` grant and commits a version with its
+audit details in a contribution.
+
+| Resource | What it does |
+| --- | --- |
+| `GET /care_relationship?subject_id=&subject_namespace=` | The care relationships of the subject that reference names, live ones by default; `at=YYYY-MM-DD` the day they are live on, `all=true` ended ones too |
+| `GET /demographic/person/{uid_based_id}/care_relationship` | The same, for the subject this `PERSON` is |
+| `POST` on either | Adds a relationship whose `source` is that subject's `PERSON`: `201` with `ETag` and `Location`; `422` for a body that is no care relationship of that subject |
+| `GET /care_relationship/{relationship_uid}` | One relationship, its current version or the version the uid names; `204` once it is deleted |
+| `PUT /care_relationship/{relationship_uid}` | Changes the role or the period, with `If-Match` naming the current version (`400` without it, `412` with `ETag` naming the current one when it is stale); closing `time_validity` ends it |
+| `DELETE /care_relationship/{relationship_uid}` | Removes one written in error, with `If-Match`; its earlier versions keep it |
+| `GET /versioned_care_relationship/{relationship_uid}`, `.../revision_history`, `.../version/{version_uid}` | The versioned object, its revision history with the audit details of each version, and one version |
+| `GET /care_relationship?carer={uid}` | The relationships that reach a carer's party, `role=terminology_id\|code` and `path=direct` or `team` to narrow them, `at` as above, paged by `offset` and `fetch` (100 by default, at most 1000) |
+
+That a person is under the care of a given professional or service is data
+concerning health (GDPR Art 4(15), Art 9), so every read is decided per
+subject it reveals. A relationship is served only to a caller who may read
+the subject's record, judged as a read of each of the subject's EHRs, or to a
+caller who writes care relationships for the relationship's provider (an
+administrator, or a `write_care_relationship` grant naming that provider). A
+list leaves every other relationship out, and a read of one answers `404`, so
+its role and context never reach that caller. A subject with no EHR has no
+record to read, so only a writer for the provider sees its relationships.
+Each read writes one access record per subject it reveals: an access-log
+entry on the subject's EHR, or, for a subject with no EHR, an access record
+naming its `PERSON`. The resources carry the Demographic API's SMART
+requirement: a client granted `access_demographic`, or the product scope.
+
+```sh
+curl "$BASE/ferroehr/rest/extensions/v1/demographic/person/$PATIENT/care_relationship" \
+  -H "Authorization: Bearer $ADT_TOKEN"
+```
+
+The resources, the per-subject decision and the writer's exception are
+FerroEHR's own design over its draft access control package; no openEHR
+specification defines them.
 
 ### Care teams provisioned over SCIM
 
@@ -2189,8 +2237,12 @@ fixes some of these attributes for many controllers is a profile: write the
 policy with its `template_id`, and FerroEHR validates it against the
 template.
 
-The time zone and the care purposes are refused until the access decision
-reads them.
+Two more attributes say when a relationship is a ground at all:
+
+| Attribute | What it says | Left out |
+| --- | --- | --- |
+| `care_purposes` | The purposes of use for which a care relationship is a ground: an access declaring another purpose, such as research, rests on no relationship and matches no rule scope naming `care` | `TREAT`, `ETREAT` and `CAREMGT` of `HL7_ActReason` |
+| `time_zone` | The IANA time zone in which the dates of a relationship's `time_validity` are read, such as `Europe/Amsterdam`; a name the zone database does not hold is refused `400` | UTC |
 
 #### Writing a care relationship
 
@@ -2263,6 +2315,14 @@ the role may do.
   hold.
 - **A deny rule with a permit exception says "only"**: the exception carves
   what it covers out of the deny.
+- **A scope naming `care` can name care roles and a path.** With
+  `relationship` `care`, an actor scope's `care_roles` lists the roles a
+  caller's live care relationship must have, compared by terminology and
+  code, and `care_path` says how it must reach the caller: `direct`, `team`
+  or `self_declared` (`attested` matches no caller until it is built). Left
+  out, any role and the paths the policy turns on. No role implies another:
+  `RESP` does not cover `ATND`. The same scope decides a read and narrows a
+  query inside its one statement, so a `COUNT` agrees with the reads.
 - **For a write**, the data are the version being committed: its template,
   root archetype, origins and the sensitivities your classifications give it.
 
@@ -2295,6 +2355,14 @@ Four rules, as you write them in the policy body (a role code of
   declaring none is refused `refused-purpose-missing` where the policy sets
   `purpose_required`, and otherwise `refused-policy-denied`, since the
   exception names no request without a purpose.
+- **Only the responsible practitioner, directly, signs the discharge
+  summary:** a `deny` rule on `write` whose `data` names the discharge
+  summary template, with one `permit` exception whose `applies_to` is
+  `relationship` `care`, `care_roles` `[RESP]` and `care_path` `direct`. A
+  second in chain (`SPRF`), a consultant (`CON`) and a team member are
+  refused `refused-policy-denied`; a professional covering for the
+  responsible one holds a `RESP` relationship of their own for the period
+  and is admitted.
 - **A system client writes only its laboratory templates:** a `deny` rule on
   `write` whose `applies_to` names the client's `AGENT` by `party`, with one
   `permit` exception whose `data` lists the templates.

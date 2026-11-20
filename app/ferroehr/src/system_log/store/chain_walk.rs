@@ -10,7 +10,7 @@
 //! are intact, so no statement grows with the backlog and every step's
 //! progress is kept. A walk that finds damage goes on to the head from the
 //! stored links, so it reports every finding, and moves the cursor no more
-//! (`migrations/audit/0041_chain_verification_steps.sql`). No openEHR spec
+//! (`migrations/audit/0004_baseline_access_log.sql`). No openEHR spec
 //! governs audit tamper detection: our own design.
 
 use std::time::{Duration, Instant};

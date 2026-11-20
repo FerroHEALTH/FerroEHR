@@ -557,6 +557,7 @@ pub(crate) fn authorisation(kind: Authorisation) -> AccessAuthorisation {
         version: None,
         reference: None,
         legal_grounds: None,
+        care: None,
     }
 }
 

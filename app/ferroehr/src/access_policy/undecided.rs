@@ -4,92 +4,24 @@
 //! The attributes of the draft access control package that no access
 //! decision of this server reads yet, refused at write.
 //!
-//! The draft package states each attribute's meaning (care relationships,
-//! exclusions). A server that stored
+//! The draft package states each attribute's meaning. A server that stored
 //! one and decided without it would admit what the attribute narrows, so a
-//! settings or policy version that sets one is refused whole, naming the
-//! attribute, until the decision reads it. An attribute whose unread value
-//! admits nothing more than its void (the self-declared and attested paths,
-//! the caseload switch, conflict allowances, concealed levels and value-set
-//! bindings) is stored, read through [`crate::access_policy::care`]. Our own
-//! design.
+//! settings version that sets one is refused whole, naming the attribute,
+//! until the decision reads it. A rule's care roles and care path, the
+//! policy's care purposes and its time zone are decided (#6075), and so are
+//! the record's marking, a label's and a classification's confidentiality
+//! and a data scope's confidentialities (#6057). Our own design.
 
-use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
-use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 
 /// The path of the first attribute of `settings` no decision reads yet.
 #[must_use]
 pub fn in_settings(settings: &AccessDirectiveSettings) -> Option<String> {
     // TODO(#6077): decide on the controller's exclusions.
-    if settings.exclusions.is_some() {
-        return Some("exclusions".to_owned());
-    }
-    directives(
-        "directives",
-        settings.directives.as_deref().unwrap_or_default(),
-    )
-}
-
-/// The path of the first attribute of `policy` no decision reads yet.
-#[must_use]
-pub fn in_policy(policy: &AccessPolicy) -> Option<String> {
-    let set = [
-        // TODO(#6075): decide in the policy's time zone and care purposes.
-        ("time_zone", policy.time_zone.is_some()),
-        ("care_purposes", policy.care_purposes.is_some()),
-    ];
-    if let Some((name, _)) = set.iter().find(|(_, is_set)| *is_set) {
-        return Some((*name).to_owned());
-    }
-    directives("rules", policy.rules.as_deref().unwrap_or_default())
-        .or_else(|| directives("catalogue", policy.catalogue.as_deref().unwrap_or_default()))
-}
-
-/// The path of the first undecided attribute of the directives at `path`
-/// and their exceptions.
-fn directives(path: &str, directives: &[AccessDirective]) -> Option<String> {
-    directives
-        .iter()
-        .enumerate()
-        .find_map(|(index, directive)| {
-            let at = format!("{path}[{index}]");
-            directive_attribute(&at, directive).or_else(|| {
-                directives_of(
-                    &format!("{at}.exceptions"),
-                    directive.exceptions.as_deref().unwrap_or_default(),
-                )
-            })
-        })
-}
-
-/// [`directives`] one level down, for exceptions, which hold none of their
-/// own.
-fn directives_of(path: &str, exceptions: &[AccessDirective]) -> Option<String> {
-    exceptions
-        .iter()
-        .enumerate()
-        .find_map(|(index, exception)| directive_attribute(&format!("{path}[{index}]"), exception))
-}
-
-/// The path of the first undecided attribute of one directive at `path`.
-fn directive_attribute(path: &str, directive: &AccessDirective) -> Option<String> {
-    directive
-        .applies_to
-        .as_deref()
-        .unwrap_or_default()
-        .iter()
-        .enumerate()
-        .find_map(|(index, scope)| {
-            // TODO(#6075): match a rule's care roles and care path.
-            if scope.care_roles.is_some() {
-                Some(format!("{path}.applies_to[{index}].care_roles"))
-            } else if scope.care_path.is_some() {
-                Some(format!("{path}.applies_to[{index}].care_path"))
-            } else {
-                None
-            }
-        })
+    settings
+        .exclusions
+        .is_some()
+        .then(|| "exclusions".to_owned())
 }
 
 #[cfg(test)]
@@ -135,7 +67,7 @@ mod tests {
     }
 
     #[test]
-    fn a_care_role_in_a_directive_exception_is_refused() {
+    fn a_care_role_in_a_directive_exception_is_decided() {
         let exception = format!(
             r#"{{ "_type": "ACCESS_DIRECTIVE", "archetype_node_id": "id2",
                 "name": {{ "_type": "DV_TEXT", "value": "exception" }},
@@ -156,9 +88,6 @@ mod tests {
             term("HL7_ConsentProvisionType", "deny")
         );
         let with_role = settings(&format!(r#", "directives": [{directive}]"#));
-        assert_eq!(
-            in_settings(&with_role).as_deref(),
-            Some("directives[0].exceptions[0].applies_to[0].care_roles")
-        );
+        assert_eq!(in_settings(&with_role), None);
     }
 }

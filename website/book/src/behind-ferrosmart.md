@@ -115,7 +115,8 @@ role:
 
 - A person holding no role reaches only the EHRs whose subject is their
   `PERSON`.
-- A patient signs in at the same `persons` issuer as staff. Their `PERSON`
+- A patient signs in at the same `persons` issuer as staff, through the
+  picker or an app the CDR grants `act_for_persons`. Their `PERSON`
   holds no professional `ROLE`, so FerroEHR binds the login as that person:
   they hold no role, whatever the token asserts, and reach only the EHRs
   whose subject is their `PERSON`. Their commits name `PARTY_SELF`.

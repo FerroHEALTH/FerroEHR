@@ -563,12 +563,17 @@ h_care_validity() {
 # Declares the EHR subject reference `id` under `namespace` on the PERSON
 # `person` through instance `n` as `who`: a record_subject element of its
 # details, coded in the probe's terminology ($H_TERM), as the registering system writes it (#5634).
+# The element takes the node its template gives record_subject: `id36` in
+# openEHR-DEMOGRAPHIC-PERSON.patient.v2, `at0010` in an ADL 1.4 tree.
 h_declare_subject() {
-  local n="$1" who="$2" person="$3" namespace="$4" id="$5" body version element
+  local n="$1" who="$2" person="$3" namespace="$4" id="$5" body version element node
   h_call "$n" admin GET "/demographic/person/$person"
   version="$(jq -r '.uid.value' <<<"$H_BODY")"
-  element="$(jq -nc --argjson k "$(j_term record_subject)" --arg ns "$namespace" --arg id "$id" \
-    '{_type:"ELEMENT",archetype_node_id:"at0010",name:$k,
+  node="at0010"
+  [[ "$(jq -r '.archetype_details.template_id.value // empty' <<<"$H_BODY")" == openEHR-DEMOGRAPHIC-PERSON.patient.v2* ]] \
+    && node="id36"
+  element="$(jq -nc --argjson k "$(j_term record_subject)" --arg ns "$namespace" --arg id "$id" --arg node "$node" \
+    '{_type:"ELEMENT",archetype_node_id:$node,name:$k,
       value:{_type:"DV_IDENTIFIER",issuer:$ns,id:$id,type:"PI"}}')"
   body="$(jq -c --argjson e "$element" 'del(.uid)
     | .details = ((.details // {_type:"ITEM_TREE",archetype_node_id:"at0009",
@@ -675,6 +680,26 @@ h_patient_person() {
     | .name.value = $n
     | .details.items = [.details.items[0] | .value = {_type:"DV_IDENTIFIER",issuer:$i,id:$s,type:"login"}]
     | .identities[0].details.items[0].value.value = $n' <<<"$H_BODY")"
+}
+
+# A patient's PERSON named `name` in the patient template, its login
+# identifier the provider's user `user`'s FerroSMART subject, so the binding
+# keys it and its details can declare a record_subject (#5634); records it
+# as HV_<key>.
+h_patient_template_person() {
+  local key="$1" name="$2" user="$3" archetype="openEHR-DEMOGRAPHIC-PERSON.patient.v2"
+  h_party "$key" person "$(jq -nc --arg a "$archetype" --arg n "$name" --arg i "$HS_LOGIN_ISSUER" \
+    --arg s "$(hv "sub_$user")" 'def text(v): {_type:"DV_TEXT",value:v};
+    {_type:"PERSON",archetype_node_id:$a,
+     archetype_details:{_type:"ARCHETYPED",rm_version:"1.1.0",archetype_id:{_type:"ARCHETYPE_ID",value:$a},
+       template_id:{_type:"TEMPLATE_ID",value:"openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0"}},
+     name:text($n),
+     details:{_type:"ITEM_TREE",archetype_node_id:"id2",name:text("Details"),items:[
+       {_type:"ELEMENT",archetype_node_id:"id3",name:text("Patient identifier"),
+        value:{_type:"DV_IDENTIFIER",issuer:$i,id:$s,type:"login"}}]},
+     identities:[{_type:"PARTY_IDENTITY",archetype_node_id:"id6",name:text("Legal name"),
+       details:{_type:"ITEM_TREE",archetype_node_id:"id7",name:text("Name structure"),
+         items:[{_type:"ELEMENT",archetype_node_id:"id8",name:text("Full name"),value:text($n)}]}}]}')"
 }
 
 # Creates the people, the parties, the record and the controller's policy;
@@ -1462,6 +1487,7 @@ hospital_ehr_launch() {
     "the viewer's Launch button launches the app for Eva's EHR, and its token response carries that EHR"
   local eva viewer jar answer location launch iss response
   eva="$(hv ehr_eva)"
+  h_viewer_clinician || h_fail_call "the viewer's user, a clinician of Cardiology"
   viewer="http://localhost:${FERROEHR_VIEWER_PORT:-3000}"
   jar="$(mktemp "$PROBE_TMP/viewer.XXXXXX")"
   curl -s -o /dev/null -c "$jar" -b "$jar" -H "Origin: $viewer" -H 'Sec-Fetch-Site: same-origin' \
@@ -1498,6 +1524,29 @@ hospital_ehr_launch() {
   assert_contains "$(jq -r '.scope // empty' <<<"$answer" 2>/dev/null)" "launch" \
     "the app keeps the launch scope"
   probe_done
+}
+
+# Makes the PERSON of the Basic user `ferroehr`, whom the viewer signs in as,
+# a clinician of Cardiology, which treats Eva: the controller's rules admit a
+# professional under a clinical role alone and with a care relationship
+# (j_rules, j_policy). The controller's administrator writes the ROLE and the
+# membership, since a caller is never admitted on a fact it wrote naming
+# itself (#6073). The quickstart SCIM client provisioned that PERSON, so its
+# User names it.
+h_viewer_clinician() {
+  local token person
+  token="$(hp_token quickstart-scim ferroehr/scim)"
+  person="$(curl -s -H "Authorization: Bearer $token" -H 'Accept: application/scim+json' \
+    "$(h_base 1)/scim/v2/Users?filter=userName%20eq%20%22ferroehr%22" \
+    | jq -r '[.Resources[]? | select(.userName == "ferroehr") | .id] | first // empty')"
+  [[ -n "$person" ]] || { H_CODE="none"; H_BODY="no SCIM User ferroehr"; return 1; }
+  hv_set person_ferroehr "$person"
+  h_call 1 p:controller POST /demographic/role "$(j_named_party ROLE "ferroehr CLINICIAN" "$(jq -nc \
+    --argjson p "$(j_party PERSON "$person")" --argjson n "$(j_role_code CLINICIAN)" \
+    '{performer:$p,name:$n}')")"
+  [[ "$H_CODE" = 201 ]] || return 1
+  h_relate 1 p:controller person "$person" \
+    "[$(j_care member PERSON "$person" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -1)")")]"
 }
 
 # The controller's administrator writes the ACCESS_POLICY through the admin
@@ -1659,7 +1708,9 @@ hospital_pixm() {
   h_relate 2 admin person "$(hv person_anna)" \
     "[$(j_care member PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -30)")")]" \
     || h_fail_call "Dr. Jansen joins Cardiology"
-  h_patient_person person_eva "Eva Visser" eva || h_fail_call "Eva's PERSON"
+  # In the patient template, whose details carry the record_subject she
+  # declares below (#5634).
+  h_patient_template_person person_eva "Eva Visser" eva || h_fail_call "Eva's PERSON"
   h_care care_eva_cardiology 1 admin "$(j_care_of "$(hv person_eva)" GROUP "$(hv cardiology)" \
     "$(j_dates "$(h_day -10)" "$(h_day 30)")")" || h_fail_call "Eva's admission"
   h_patient_person person_frank "Frank Visser" frank || h_fail_call "Frank's PERSON"

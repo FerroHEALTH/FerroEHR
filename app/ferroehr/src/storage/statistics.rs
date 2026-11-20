@@ -9,7 +9,7 @@
 //! that side open. Each scope is a static statement chosen in Rust: a
 //! `($3 AND …) OR (NOT $3 AND …)` scoping predicate resists index planning at
 //! the measured corpus scale. No openEHR spec governs the SQL: our own design
-//! over `clinical/0003_change_control.sql`.
+//! over `clinical/0003_baseline_change_control.sql`.
 
 use sqlx::PgPool;
 

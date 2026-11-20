@@ -91,8 +91,7 @@ Which EHR belongs to which subject is the EHR's own
 relation promotes to its subject columns on every EHR create and `EHR_STATUS`
 update, so the cohort, the AQL demographic join and the subject lookups all
 read it there. Releases before 5.6.0 kept a third domain, `linkage`, for a
-cross-reference table; `audit/0021_drop_linkage_domain.sql` drops what was
-left of it.
+cross-reference table; v6 creates none of it.
 
 The wire is unaffected. The ITS-REST Demographic API, the RM change-control
 semantics and every version identifier are exactly what they were; only where

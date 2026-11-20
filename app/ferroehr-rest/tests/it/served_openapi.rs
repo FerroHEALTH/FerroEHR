@@ -1435,6 +1435,16 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         operations: 8,
     },
     NonSpecFamily {
+        label: "the care relationship resources (#6076)",
+        prefixes: &[
+            "/ferroehr/rest/extensions/v1/care_relationship",
+            "/ferroehr/rest/extensions/v1/versioned_care_relationship",
+            "/ferroehr/rest/extensions/v1/demographic/person/",
+        ],
+        flag: "an extension of its-rest: no its-rest operation governs this",
+        operations: 10,
+    },
+    NonSpecFamily {
         // ITS-REST publishes an ad-hoc and a stored query and nothing else;
         // AQL has no demographic source at all.
         label: "the cohort-query extension",

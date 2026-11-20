@@ -692,6 +692,69 @@ fn each_relationship_invariant_refuses_a_policy_that_breaks_it() {
     }
 }
 
+/// A rule's care roles and care path narrow a care relationship, so each
+/// needs the scope's `relationship` to be `care`, and the path is a term of
+/// the `care path` group (draft BMM `ACCESS_ACTOR_SCOPE`, #6075).
+#[test]
+fn care_roles_and_a_care_path_need_a_care_relationship() {
+    let care_scope = |extra: Value| {
+        let mut scope = json!({ "_type": "ACCESS_ACTOR_SCOPE", "relationship": term("care") });
+        if let (Some(scope), Some(extra)) = (scope.as_object_mut(), extra.as_object()) {
+            scope.extend(extra.clone());
+        }
+        scope
+    };
+    let roles =
+        json!({ "care_roles": [coded("HL7_ParticipationType", "responsible party", "RESP")] });
+    let held = [
+        care_scope(roles.clone()),
+        care_scope(json!({ "care_path": term("direct") })),
+        care_scope(json!({ "care_path": term("team") })),
+    ];
+    for scope in held {
+        let mut p = policy();
+        p["rules"][0]["applies_to"] = json!([scope]);
+        assert_eq!(
+            named(check_policy(&read(p))),
+            Vec::<String>::new(),
+            "{scope}"
+        );
+    }
+    let cases: [(&str, Value); 4] = [
+        ("ACCESS_ACTOR_SCOPE.Care_roles_valid", {
+            let mut scope = care_scope(roles);
+            scope["relationship"] = term("representative");
+            scope
+        }),
+        ("ACCESS_ACTOR_SCOPE.Care_path_valid", {
+            let mut scope = care_scope(json!({ "care_path": term("direct") }));
+            scope
+                .as_object_mut()
+                .expect("an object")
+                .remove("relationship");
+            scope["role"] = coded("urn:example:roles", "nurse", "NURSE");
+            scope
+        }),
+        (
+            "ACCESS_ACTOR_SCOPE.Care_path_valid",
+            care_scope(json!({ "care_path": term("ward") })),
+        ),
+        (
+            "ACCESS_ACTOR_SCOPE.Care_path_valid",
+            care_scope(json!({ "care_path": term("care") })),
+        ),
+    ];
+    for (invariant, scope) in cases {
+        let mut p = policy();
+        p["rules"][0]["applies_to"] = json!([scope]);
+        assert_eq!(
+            named(check_policy(&read(p))),
+            vec![invariant.to_owned()],
+            "{scope}"
+        );
+    }
+}
+
 /// A ceiling below a floor leaves no period between them: the period breaks
 /// one of the two as well, and a period kept without end breaks every
 /// ceiling (`Ceilings_need_period`).

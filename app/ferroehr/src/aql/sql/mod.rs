@@ -53,6 +53,7 @@ mod access;
 mod anchor;
 mod archetype;
 mod attestation;
+mod care;
 mod coerce;
 mod compact;
 mod condition;
@@ -771,7 +772,7 @@ impl Builder<'_> {
         if ir.distinct {
             b.q.distinct();
         }
-        let (sql, values) = match access::census(&ctx.ehr_access) {
+        let (sql, values) = match care::census(&ctx.ehr_access) {
             Some(census) => b.q.with(census).build_sqlx(PostgresQueryBuilder),
             None => b.q.build_sqlx(PostgresQueryBuilder),
         };
