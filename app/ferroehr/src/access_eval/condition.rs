@@ -47,6 +47,7 @@ task_local! {
 pub mod care;
 mod decisions;
 pub mod pinned;
+mod records;
 /// The evaluator of one request: the caller, what it asks, the policy and
 /// the category map in force when it began, and each EHR's verdict once
 /// judged.
@@ -69,6 +70,9 @@ pub struct RequestAccess {
     stale: Option<Arc<StaleCopies>>,
     pub(super) written: Mutex<BTreeSet<Uuid>>,
     care: care::CareInForce,
+    /// The EHRs whose subject a read of this request found to be the
+    /// `PERSON` the caller is bound to ([`Self::bind_subject`]).
+    records: Mutex<BTreeSet<EhrId>>,
 }
 
 /// One EHR as the access evaluator reads it from this replica's copy: its
@@ -182,6 +186,7 @@ impl RequestAccess {
             stale: None,
             written: Mutex::new(BTreeSet::new()),
             care: care::CareInForce::default(),
+            records: Mutex::new(BTreeSet::new()),
         }
     }
 
@@ -253,7 +258,7 @@ impl RequestAccess {
         if !self.confined() {
             return Outcome::Admit;
         }
-        let verdict = self.judge_as(false, None, false);
+        let verdict = self.judge_as(records::Held::default(), None, false);
         self.note_under(None, &verdict, &Item::Ehr)
     }
 
@@ -331,21 +336,13 @@ impl RequestAccess {
         })
     }
 
-    /// The verdict for the EHR `ehr_id` with `settings`, the caller `cared`
-    /// for its subject or not; `None` stands for an EHR that is no subject
-    /// caller's own.
-    #[must_use]
-    pub fn judge(
+    /// The verdict for an EHR with `settings`, held by the caller as `held`.
+    fn judge_as(
         &self,
-        ehr_id: Option<EhrId>,
+        held: records::Held,
         settings: Option<&EhrAccessSettings>,
         cared: bool,
     ) -> Verdict {
-        self.judge_as(self.owns(ehr_id), settings, cared)
-    }
-
-    /// The verdict for an EHR with `settings`, the caller's own when `own`.
-    fn judge_as(&self, own: bool, settings: Option<&EhrAccessSettings>, cared: bool) -> Verdict {
         let labels = match settings {
             Some(EhrAccessSettings::Directives(settings)) => {
                 settings.labels.as_deref().unwrap_or_default()
@@ -353,7 +350,7 @@ impl RequestAccess {
             _ => &[],
         };
         let scopes = Scopes::new(self.categories.clone(), labels, self.classifications());
-        self.decide(settings, cared, own, &scopes)
+        self.decide(settings, cared, held, &scopes)
     }
 
     /// Whether `ehr_id` is one of the confined caller's own EHRs.
@@ -377,7 +374,8 @@ impl RequestAccess {
             Arc::clone(&class.layout),
             self.classifications(),
         );
-        self.decide((*class.settings).as_ref(), cared, self.confined(), &scopes)
+        let held = records::Held::of_class(self.confined());
+        self.decide((*class.settings).as_ref(), cared, held, &scopes)
     }
 
     /// The controller's classifications.
@@ -393,7 +391,7 @@ impl RequestAccess {
         &self,
         settings: Option<&EhrAccessSettings>,
         cared: bool,
-        own: bool,
+        held: records::Held,
         scopes: &Scopes,
     ) -> Verdict {
         decide(&Judged {
@@ -409,7 +407,8 @@ impl RequestAccess {
                 settings,
                 server_default: self.server_default,
                 cared,
-                own,
+                own: held.own,
+                subject: held.subject,
             },
             scopes,
             now: self.now,
@@ -430,6 +429,7 @@ impl RequestAccess {
         ehr_id: EhrId,
         entry: &EhrEntry,
     ) -> Result<Arc<Verdict>, CareUnsettled> {
+        self.bind_subject(ehr_id, entry).await?;
         let mut cared = self.cares_for(entry).await?;
         if cared && let Some(with_care) = self.care_decided(ehr_id, entry) {
             // NOTE: our own design (#5959), a read the request handed over runs during the care
@@ -555,10 +555,10 @@ impl RequestAccess {
     /// this replica does not hold is withheld.
     #[must_use]
     pub fn condition(&self, classes: &Classes, care: Care) -> AccessCondition {
-        let confined = self.confined();
+        let held = records::Held::of_class(self.confined());
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
-            cared: self.judge_as(confined, settings, true).bare(),
-            uncared: self.judge_as(confined, settings, false).bare(),
+            cared: self.judge_as(held, settings, true).bare(),
+            uncared: self.judge_as(held, settings, false).bare(),
         };
         let mut groups: BTreeMap<VerdictPair, Vec<i64>> = BTreeMap::new();
         for (id, class) in &classes.classes {
@@ -588,7 +588,8 @@ impl RequestAccess {
             facts,
             // NOTE: our own design (#5586), a confined caller reads only the EHR its patient
             // context names, so a query of it reaches no other EHR whatever its class.
-            confined.then(|| self.caller.own_ehrs.iter().map(|own| own.0).collect()),
+            held.own
+                .then(|| self.caller.own_ehrs.iter().map(|own| own.0).collect()),
         )
     }
 }

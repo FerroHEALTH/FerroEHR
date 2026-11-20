@@ -228,8 +228,7 @@ enum Addressed {
     /// The single EHR a query or an import names outside its path, raw, if
     /// any (ITS-REST `query/Request.md` §About the `ehr_id` parameter).
     Scope(Option<String>),
-    /// The operation reaches EHR data and names no EHR: an EHR create, a
-    /// lookup by subject.
+    /// The operation reaches EHR data and names no EHR: an EHR create.
     None,
 }
 
@@ -248,7 +247,9 @@ fn addressed(op: &str, parts: &RequestParts) -> Addressed {
         })),
         "message_import_ehr" => Addressed::Scope(query_scope()),
         "message_export_ehr_extracts" => Addressed::Body,
-        "ehr_create" | "ehr_get_by_subject" => Addressed::None,
+        "ehr_create" => Addressed::None,
+        // NOTE: our own design (#6106), a lookup by subject judges the EHR it finds, which
+        // answers as absent to a confined caller unless it is that caller's own.
         _ => Addressed::Elsewhere,
     }
 }

@@ -219,6 +219,10 @@ pub struct Ehr<'a> {
     pub cared: bool,
     /// Whether the EHR is one of the [`Caller::own_ehrs`] of a confined caller.
     pub own: bool,
+    /// Whether the EHR's `EHR_STATUS.subject` names the `PERSON` the
+    /// caller's authenticated identity is bound to ([`Caller::party`]), which
+    /// makes the caller the record's person on it.
+    pub subject: bool,
 }
 
 /// What one step answers for the items it covers.
@@ -413,7 +417,8 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         return verdict;
     }
     // NOTE: EHDS Art. 3, the subject reads their own record; only the access delay holds it.
-    if caller.kind == CallerKind::Subject {
+    // The party binding is the one source of who that is (#6106), whatever roles the caller holds.
+    if caller.kind == CallerKind::Subject || judged.ehr.subject {
         verdict.grounds.subject = true;
         return verdict;
     }

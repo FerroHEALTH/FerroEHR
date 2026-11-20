@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use openehr_rm::draft::access_control::terminology::AccessDefault;
 
-use crate::access_eval::condition::care::Care;
+use crate::access_eval::condition::care::{Care, CareUnsettled};
 use crate::access_eval::condition::{AccessCondition, InForce, RequestAccess, current};
 use crate::access_eval::procedure::{Lifted, Outcome, Verdict};
 use crate::access_eval::scope::{CategoryIndex, Item};
@@ -169,6 +169,32 @@ impl FerroEhrService {
         Ok(hidden)
     }
 
+    /// Whether the EHR `ehr_id`, found by its subject, reads as absent to the
+    /// running request's lookup: as [`Self::ehr_hidden_from_request`], and
+    /// for a confined caller every EHR but its own, so a lookup of someone
+    /// else's subject answers as one no EHR names and tells nothing of it.
+    ///
+    /// No openEHR spec governs this: our own design (#6106).
+    ///
+    /// # Errors
+    /// As [`Self::ehr_verdict`].
+    pub(crate) async fn ehr_hidden_from_lookup(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
+        let Some(access) = current() else {
+            return Ok(false);
+        };
+        let verdict = self.ehr_verdict(&access, ehr_id).await?;
+        let caller = access.caller();
+        let hidden = match verdict.outcome(&Item::Ehr) {
+            Outcome::Absent(_) => true,
+            Outcome::Refused(refusal) => caller.confined() && refusal == caller.not_own(),
+            Outcome::Admit => false,
+        };
+        if hidden {
+            access.note(ehr_id, &verdict, &Item::Ehr);
+        }
+        Ok(hidden)
+    }
+
     /// The ids of `ids` that name an EHR of this store the running request
     /// may see: an EHR the evaluator answers as absent (EHDS Art. 8 and 10)
     /// is named by no query.
@@ -303,6 +329,10 @@ impl FerroEhrService {
             return Ok(resolved);
         }
         let entry = Box::pin(self.ehr_access_entry(*ehr_id)).await?;
+        access
+            .bind_subject(*ehr_id, &entry)
+            .await
+            .map_err(CareUnsettled::from)?;
         Ok(access.pin(&resolved, *ehr_id, &entry))
     }
 

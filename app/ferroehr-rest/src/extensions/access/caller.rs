@@ -43,6 +43,7 @@ use openehr_rm::draft::access_control::terminology::{
 };
 use uuid::Uuid;
 
+use super::authn::party::own::own_person;
 use super::authn::trc::TrcPatientEhr;
 use super::authn::{Principal, current_principal};
 use super::authz::AuthzHandle;
@@ -111,7 +112,17 @@ fn caller_of(
     op: Option<&str>,
 ) -> Caller {
     let settings = state.backend().settings_caller();
-    let kind = kind(principal, settings.subject(), capabilities);
+    let rbac = state
+        .authz()
+        .as_deref()
+        .is_some_and(AuthzHandle::rbac_active);
+    let kind = kind(
+        principal,
+        settings.subject()
+            || principal.is_some_and(binds_the_person)
+            || (rbac && principal.is_some_and(bound_person_alone)),
+        capabilities,
+    );
     let roles = principal.map_or_else(Vec::new, |p| p.roles.clone());
     let admin_role = state.authz().as_deref().map_or_else(
         || "ADMIN".to_owned(),
@@ -139,7 +150,10 @@ fn caller_of(
     let patient_grants_only = op.is_some_and(|op| patient_grants_only(principal, op));
     Caller {
         kind,
-        party: settings.party().map(str::to_owned),
+        party: settings
+            .party()
+            .map(str::to_owned)
+            .or_else(|| principal.and_then(own_person_id)),
         own_ehrs: own_ehrs(principal, kind, patient_grants_only),
         patient_grants_only,
         acts_for,
@@ -202,6 +216,41 @@ fn lacks_consent_reference(principal: &Principal) -> bool {
             .caller()
             .and_then(ferrohealth_smart::resource::Caller::consent_reference)
             .is_none()
+}
+
+/// Whether `principal` is a person the party binding bound to a `PERSON`,
+/// holding no role, for themself: under the role gate such a caller reaches
+/// only the records whose `EHR_STATUS.subject` names that `PERSON`, as the
+/// record's person (EHDS Art. 3), and the evaluator confines it to them.
+///
+/// No openEHR spec governs this: our own design (#6106).
+pub(crate) fn bound_person_alone(principal: &Principal) -> bool {
+    principal.roles.is_empty()
+        && principal.represented.is_none()
+        && principal.access.caller().is_some_and(|caller| {
+            matches!(caller.kind(), SmartKind::Person)
+                && caller
+                    .party()
+                    .and_then(ferrohealth_smart::party::Outcome::bound)
+                    .is_some_and(|bound| bound.party.type_name() == "PERSON")
+        })
+}
+
+/// Whether the login binding bound `principal` to a patient's `PERSON` as
+/// the person themself ([`own_person`]): the evaluator confines it to the
+/// records whose subject is that `PERSON`, whatever the role gate (#6106).
+fn binds_the_person(principal: &Principal) -> bool {
+    principal.access.caller().and_then(own_person).is_some()
+}
+
+/// The id of the `PERSON` the login binding bound `principal` to as the
+/// person themself, whose commits name no party (`PARTY_SELF`).
+fn own_person_id(principal: &Principal) -> Option<String> {
+    principal
+        .access
+        .caller()
+        .and_then(own_person)
+        .map(|party| party.id().to_owned())
 }
 
 /// The caller's kind (`access caller kind`).
