@@ -16,9 +16,10 @@
 //! reported until a full pass finds the trail intact again.
 //!
 //! Each chain is walked in steps sized to a time budget, each of which moves
-//! its cursor ([`AuditStore::chain_step_paced`]), with a pause as long as the
-//! step between two steps (#5804), so a run verifies a backlog of any length
-//! to the head it started with, and a backlog reads as a lag: the
+//! its cursor ([`AuditStore::chain_step_paced`]), with a pause between two
+//! steps that grows with the load the step measured (#5804), so a run
+//! verifies a backlog of any length to the head it started with, leaves a
+//! loaded database to the requests, and a backlog reads as a lag: the
 //! `audit_chain_verification_lag` and `audit_chain_unverified_age` metrics
 //! by chain, and an `audit_chain` indicator that reads `DEGRADED` once the
 //! oldest unverified record is older than `[audit.store] max_verify_lag`
@@ -87,6 +88,7 @@ pub struct ChainCheck {
     lags: Arc<RwLock<BTreeMap<AuditChain, VerificationLag>>>,
     max_lag: Option<Duration>,
     first_step: StepPace,
+    paces: Arc<RwLock<BTreeMap<AuditChain, StepPace>>>,
 }
 
 impl ChainCheck {
@@ -100,11 +102,25 @@ impl ChainCheck {
         }
     }
 
-    /// This check with each walk's first step verifying `pace`'s records.
+    /// This check with the first walk of each chain starting at `pace`; a
+    /// later walk starts where the one before it left the pace.
     #[must_use]
     pub fn with_first_step(mut self, pace: StepPace) -> Self {
         self.first_step = pace;
         self
+    }
+
+    /// The pace `chain`'s next walk starts at: the first step's before any
+    /// walk, then as the last full step of a walk left it, with the quiet
+    /// cost per record every walk of the chain has measured.
+    #[must_use]
+    pub fn pace(&self, chain: AuditChain) -> StepPace {
+        self.paces
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&chain)
+            .copied()
+            .unwrap_or(self.first_step)
     }
 
     /// `chain`'s lag as the most recent step measured it, `None` before the
@@ -202,7 +218,7 @@ impl ChainCheck {
 
 impl ChainCheck {
     /// Walk each chain step by step, the system chain first, measuring its
-    /// lag after each step.
+    /// lag after each step and keeping its pace for the next walk.
     async fn verify(
         &self,
         store: &AuditStore,
@@ -211,16 +227,18 @@ impl ChainCheck {
         let mut findings = Vec::new();
         for chain in AuditChain::ALL {
             let mut walk = store.chain_walk(chain, scope).await?;
-            let mut pace = self.first_step;
+            let mut pace = self.pace(chain);
             while !walk.done() {
-                let (found, took) = store.chain_step_paced(&mut walk, &mut pace).await?;
+                let (found, pause) = store.chain_step_paced(&mut walk, &mut pace).await?;
+                self.paces
+                    .write()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .insert(chain, pace);
                 findings.extend(found);
                 self.refresh_lag(store, chain).await?;
-                // NOTE: our own design (#5804), a walk behind its head leaves the database
-                // as long between steps as a step took, so it takes at most half a core.
-                if !walk.done() {
-                    tokio::time::sleep(took).await;
-                }
+                // NOTE: our own design (#5804), a walk behind its head pauses longer the more
+                // a step's cost per record rose over the quiet cost, so load slows the walk.
+                tokio::time::sleep(pause).await;
             }
         }
         Ok(findings)
