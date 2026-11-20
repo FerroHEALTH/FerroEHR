@@ -68,7 +68,7 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
         } else if pair.admits_none() {
             None
         } else {
-            Some(admitted(condition, pair, h, target.clone(), facts))
+            Some(admitted(condition, pair, h, &target, facts))
         }
     };
     let caller = Facts {
@@ -319,7 +319,7 @@ fn admitted(
     condition: &ConditionGroups,
     pair: &VerdictPair,
     h: &str,
-    target: Expr,
+    target: &Expr,
     facts: Facts<'_>,
 ) -> Expr {
     let (with, without) = (
@@ -327,7 +327,7 @@ fn admitted(
         simplified(&pair.uncared.admitted()),
     );
     let facts = Facts {
-        care: Some((condition, &target)),
+        care: Some((condition, target)),
         ..facts
     };
     if with == without {

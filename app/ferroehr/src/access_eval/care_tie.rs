@@ -296,10 +296,12 @@ impl Cared {
     }
 }
 
-/// The tie the access log names among `ties`, given the needs of the scopes
-/// that read care in the order the rules and directives name them: of the
-/// ties that meet one of them (all, when none does), the first by path, then
-/// by the position of its role in the first need that names it.
+/// The tie the access log names among `ties`.
+///
+/// `needs` are those of the scopes that read care, in the order the rules
+/// and directives name them. Of the ties that meet one of them (all, when
+/// none does), it is the first by path, then by the position of its role in
+/// the first need that names it.
 #[must_use]
 pub fn granting<'a>(ties: &'a [Tie], needs: &[CareNeed]) -> Option<&'a Tie> {
     let meeting: Vec<&Tie> = ties

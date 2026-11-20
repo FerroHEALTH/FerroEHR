@@ -637,7 +637,7 @@ fn care_ground(tie: &Tie, namespace: &str) -> Option<AccessCareGround> {
                 .map_or("PARTY", CarerKind::rm_type)
                 .to_owned(),
             // NOTE: BASE HIER_OBJECT_ID, a UUID always reads as one.
-            id: ObjectId::HierObjectId(HierObjectId::new(&grant.carer.to_string()).ok()?),
+            id: ObjectId::HierObjectId(HierObjectId::new(grant.carer.to_string()).ok()?),
         },
         relationship: grant
             .version
