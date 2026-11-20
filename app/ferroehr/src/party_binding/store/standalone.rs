@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The side-table rows of a `PARTY_RELATIONSHIP` of its own: a standalone
-//! representation, carrying the representation code, which is how a patient
-//! authorises a proxy (#5446), and a care relationship, whose caller fact is
-//! about its source (#6055), with the end it takes from the access policy
-//! (#6073). A representation's row names its container, and
-//! the key row of the `PERSON` it names as its source counts it. No openEHR
-//! spec governs the side table: our own design.
+//! The side-table rows of a `PARTY_RELATIONSHIP` of its own: a
+//! representation, named `represents`, with its basis, provider and writer
+//! (#6079), and a care relationship, whose caller fact is about its source
+//! (#6055), with the end it takes from the access policy (#6073). A
+//! representation's row names its container, and the key row of the
+//! `PERSON` it names as its source counts it. No openEHR spec governs the
+//! side table: our own design.
 
 use sqlx::PgConnection;
 use uuid::Uuid;
@@ -72,12 +72,9 @@ pub(super) async fn reindex(
 ) -> Result<(), StorageError> {
     let before = rows::standalone_representative(tx, container).await?;
     let row = facts.and_then(|facts| {
-        let representation = facts.representations.first()?;
         Some(RepresentationRow {
             representative: facts.representative?,
-            subject: representation.subject,
-            code: representation.code.clone(),
-            validity: representation.validity.clone(),
+            representation: facts.representations.first()?.clone(),
         })
     });
     rows::write_standalone(tx, container, row.as_ref()).await?;
@@ -128,17 +125,17 @@ pub(super) async fn refill(tx: &mut PgConnection) -> Result<(), StorageError> {
 /// The versions [`history`] reads per page.
 const HISTORY_PAGE: i64 = 500;
 
-/// Writes a retired row for every representation any version of a `PERSON`
-/// or a standalone `PARTY_RELATIONSHIP` ever held, on `tx`, so a refill keeps
+/// Writes a retired row for every representation any version of a
+/// `PARTY_RELATIONSHIP` ever held, on `tx`, so a refill keeps
 /// who once represented whom: a former representative is judged as one and
 /// never as the patient (#5532). The live rows follow from the heads.
 async fn history(tx: &mut PgConnection) -> Result<(), StorageError> {
     let mut after: (Uuid, i32) = (Uuid::nil(), -1);
     loop {
-        let page: Vec<(Uuid, i32, String, String)> = sqlx::query_as(
-            "SELECT v.vo_id, v.sys_version, h.kind, v.body FROM version v \
+        let page: Vec<(Uuid, i32, String)> = sqlx::query_as(
+            "SELECT v.vo_id, v.sys_version, v.body FROM version v \
              JOIN vo_head h ON h.tier = v.tier AND h.vo_id = v.vo_id \
-             WHERE h.kind IN ('PERSON', 'PARTY_RELATIONSHIP') AND v.body IS NOT NULL \
+             WHERE h.kind = 'PARTY_RELATIONSHIP' AND v.body IS NOT NULL \
                AND (v.vo_id, v.sys_version) > ($1, $2) \
                AND jsonb_path_exists(v.body::jsonb, \
                    '$.**?(@.code_string == \"represents\")') \
@@ -153,27 +150,18 @@ async fn history(tx: &mut PgConnection) -> Result<(), StorageError> {
             return Ok(());
         };
         after = (*vo_id, *sys_version);
-        let mut held: Vec<(RepresentationRow, Option<Uuid>)> = Vec::new();
-        for (vo_id, _, kind, body) in &page {
-            let Some(kind) = Kind::from_type(kind) else {
+        let mut held: Vec<(RepresentationRow, Uuid)> = Vec::new();
+        for (vo_id, _, body) in &page {
+            let facts = super::parsed(Kind::PartyRelationship, body, &BindingMapping::default())?;
+            let Some(representative) = facts.representative else {
                 continue;
             };
-            let facts = super::parsed(kind, body, &BindingMapping::default())?;
-            let (representative, container) = match kind {
-                Kind::PartyRelationship => (facts.representative, Some(*vo_id)),
-                _ => (Some(*vo_id), None),
-            };
-            let Some(representative) = representative else {
-                continue;
-            };
-            held.extend(facts.representations.iter().map(|r| {
+            held.extend(facts.representations.iter().map(|representation| {
                 let row = RepresentationRow {
                     representative,
-                    subject: r.subject,
-                    code: r.code.clone(),
-                    validity: r.validity.clone(),
+                    representation: representation.clone(),
                 };
-                (row, container)
+                (row, *vo_id)
             }));
         }
         rows::write_history(tx, &held).await?;

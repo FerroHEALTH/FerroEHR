@@ -524,6 +524,31 @@ pub async fn provisioning_clients(
     Ok(rows)
 }
 
+/// The federation issuers the partner holds its client identifiers under,
+/// for the agreement the `ROLE` container `role` grants, sorted; empty when
+/// `role` grants no federation agreement.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn agreement_issuers(
+    pool: &sqlx::PgPool,
+    role: Uuid,
+) -> Result<Vec<String>, StorageError> {
+    use crate::party_binding::grants::agreement::Accessor;
+    let mut conn = acquire(pool).await?;
+    let operations = [Accessor::Person, Accessor::Organisation].map(|a| a.operation().code());
+    let issuers: Vec<String> = sqlx::query_scalar(
+        "SELECT DISTINCT c.issuer FROM binding_capability k \
+         JOIN binding_client c ON c.party_id = k.performer_id \
+         WHERE k.role_id = $1 AND k.operation = ANY($2) ORDER BY c.issuer",
+    )
+    .bind(role)
+    .bind(&operations[..])
+    .fetch_all(&mut *conn)
+    .await?;
+    Ok(issuers)
+}
+
 /// Reads every grant row in one repeatable-read snapshot on `conn`.
 ///
 /// # Errors

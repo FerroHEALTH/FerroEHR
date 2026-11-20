@@ -131,9 +131,12 @@ pub const DEVICE: &str = "device";
 /// identifier a [`DEVICE`] grant may name as its composer.
 pub const DEVICE_IDENTIFIER_ISSUER: &str = "device_identifier_issuer";
 
-/// The code naming a [`Operation::WriteCareRelationship`] grant's element
-/// whose `DV_IDENTIFIER` names, by issuer and id, a provider whose care
-/// relationships and memberships the grant writes.
+/// The code naming a grant's element whose `DV_IDENTIFIER` names a provider.
+///
+/// On [`Operation::WriteCareRelationship`] it names, by issuer and id, a
+/// provider whose care relationships and memberships the grant writes, and
+/// on [`Operation::WriteRepresentation`] one whose representations it
+/// writes.
 pub const PROVIDER: &str = "provider";
 
 /// The code naming a [`Operation::WriteCareRelationship`] grant's element
@@ -261,13 +264,18 @@ pub enum Operation {
     /// for the providers its [`PROVIDER`] elements name and, for a care
     /// relationship, the target kinds its [`TARGET_KIND`] elements name.
     WriteCareRelationship,
+    /// Write a representation, a `PARTY_RELATIONSHIP` of its own named
+    /// [`openehr_rm::draft::access_control::terminology::representation::Representation::Represents`],
+    /// through the Demographic API, for the providers its [`PROVIDER`]
+    /// elements name.
+    WriteRepresentation,
     /// Write the controller's `ACCESS_POLICY`.
     WriteAccessPolicy,
 }
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 22] = [
+    pub const ALL: [Self; 23] = [
         Self::CommitComposition,
         Self::ComposeFor,
         Self::ImportEhr,
@@ -289,6 +297,7 @@ impl Operation {
         Self::ActForPersons,
         Self::AccessWithoutScope,
         Self::WriteCareRelationship,
+        Self::WriteRepresentation,
         Self::WriteAccessPolicy,
     ];
 
@@ -317,6 +326,7 @@ impl Operation {
             Self::ActForPersons => "act_for_persons",
             Self::AccessWithoutScope => "access_without_scope",
             Self::WriteCareRelationship => "write_care_relationship",
+            Self::WriteRepresentation => "write_representation",
             Self::WriteAccessPolicy => "write_access_policy",
         }
     }

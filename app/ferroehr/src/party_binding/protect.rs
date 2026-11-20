@@ -42,10 +42,12 @@ use uuid::Uuid;
 use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
 use crate::party_binding::BindingMapping;
-use crate::party_binding::derive::Facts;
+use crate::party_binding::derive::{Facts, Representation};
+use crate::party_binding::grants::caller::care_of::ProviderKey;
 use crate::party_binding::grants::caller::only_care_differs;
 use crate::party_binding::grants::capabilities::Capabilities;
 use crate::party_binding::grants::operation::Operation;
+use crate::party_binding::grants::operation::PROVIDER;
 use crate::party_binding::policy_mark::{self, PolicyContent};
 use crate::party_binding::store::parsed;
 use crate::versioning::Kind;
@@ -110,8 +112,7 @@ struct Protected {
     /// The selector identifiers of a `PERSON` of a mapped template.
     identifiers: BTreeSet<Held>,
     /// Whether the body is of a template the protection covers as a whole:
-    /// the professional `ROLE`, the group, a `PERSON` that is the source of a
-    /// representation relationship, or a policy party.
+    /// the professional `ROLE`, the group, or a policy party.
     whole: bool,
     /// Why the party is a policy party, which only an administrator writes.
     policy: Option<String>,
@@ -192,9 +193,6 @@ pub(crate) async fn check(
         return Ok(());
     }
     refuse_policy(mapping, (kind, vo_id), &before, &after)?;
-    if kind == Kind::Person && PROVISIONER.try_with(|_| ()).is_ok() {
-        refuse_scim_representation(tx, mapping, vo_id, previous, facts).await?;
-    }
     let owner = match PROVISIONER.try_with(Clone::clone) {
         Ok(issuer) => {
             let held = [current, previous];
@@ -275,42 +273,6 @@ fn unowned(kind: Kind, vo_id: VoId) -> ServiceError {
     ))
 }
 
-/// Refuses a SCIM client's version of the `PERSON` `vo_id` that adds,
-/// changes or drops a representation: its stored version `previous` and the
-/// committed `facts` (`None` for a deletion) must hold the same ones.
-///
-/// SCIM provisions an identity, never the authority to act for someone: a
-/// representation is written by the patient it represents or by an
-/// administrator (Regulation (EU) 2025/327 Art. 4(2)), so a portal client's
-/// representative reaches a record only once one of them records it
-/// (#5622). Our own design.
-async fn refuse_scim_representation(
-    tx: &mut PgConnection,
-    mapping: &BindingMapping,
-    vo_id: VoId,
-    previous: Option<i32>,
-    facts: Option<&Facts>,
-) -> Result<(), ServiceError> {
-    let before = match previous {
-        Some(sys_version) => match body(tx, vo_id, sys_version).await? {
-            Some(body) => parsed(Kind::Person, &body, mapping)?.representations,
-            None => Vec::new(),
-        },
-        None => Vec::new(),
-    };
-    let after = facts.map(|facts| facts.representations.as_slice());
-    match after {
-        Some(after) if after != before.as_slice() => Err(ServiceError::not_permitted(format!(
-            "this version of PERSON {vo_id} changes its representations ({}::{}): a SCIM client \
-             provisions the identity only, and a representation is written by the patient it \
-             represents or an administrator",
-            policy_mark::TERMINOLOGY,
-            policy_mark::REPRESENTS
-        ))),
-        _ => Ok(()),
-    }
-}
-
 /// Whether the commit of the `PERSON` `vo_id`, whose versions `held` are the
 /// new head and the one before it, is a holder of
 /// [`Operation::WriteCareRelationship`] changing only its care relationships.
@@ -357,9 +319,14 @@ async fn care_writer_roster(
 /// (`None` for a logical delete), beside [`check`].
 ///
 /// A representation, before or after the write, is written by an
-/// administrator, or by the patient whose `PERSON` it targets before and
-/// after ([`patient`]); a patient writes no other relationship. No openEHR
-/// spec governs who may write a relationship: our own design.
+/// administrator, or by a caller holding a [`Operation::WriteRepresentation`]
+/// grant whose [`PROVIDER`] elements name its provider (draft access control
+/// decision procedure, Writing Relationships). The patient whose `PERSON` it
+/// targets, before and after ([`patient`]), writes one on the basis
+/// [`SUBJECT_AUTHORISATION`] alone: the authorisation of a proxy of their
+/// choice (Regulation (EU) 2025/327 Art. 4(2)), which the Regulation ranks
+/// above the draft. No openEHR spec governs who may write a relationship:
+/// our own design over that procedure.
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) for a write no rule admits; a storage
@@ -371,54 +338,78 @@ pub(crate) async fn representation(
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     let (current, previous) = versions(tx, vo_id).await?;
-    let subjects =
-        |facts: &Facts| -> Vec<Uuid> { facts.representations.iter().map(|r| r.subject).collect() };
-    let mut held = Vec::new();
+    let mut held: Vec<Representation> = Vec::new();
     match (current, facts) {
-        (Some(_), Some(facts)) => held.push(subjects(facts)),
-        (Some(sys_version), None) => held.push(standalone(tx, mapping, vo_id, sys_version).await?),
+        (Some(_), Some(facts)) => held.extend(facts.representations.iter().cloned()),
+        (Some(sys_version), None) => {
+            held.extend(standalone(tx, mapping, vo_id, sys_version).await?);
+        }
         (None, _) => {}
     }
     if let Some(sys_version) = previous {
-        held.push(standalone(tx, mapping, vo_id, sys_version).await?);
+        held.extend(standalone(tx, mapping, vo_id, sys_version).await?);
     }
-    let represents = held.iter().any(|subjects| !subjects.is_empty());
-    let patient = patient_person();
-    if patient.is_none() && (!represents || administrator(mapping)) {
+    if held.is_empty() || administrator(mapping) {
         return Ok(());
     }
-    let own = patient.is_some_and(|person| {
-        represents
-            && held
-                .iter()
-                .all(|subjects| subjects.iter().all(|subject| *subject == person))
-    });
-    if own {
-        return Ok(());
+    if let Some(person) = patient_person() {
+        let authorises = |r: &Representation| {
+            r.subject == person
+                && r.basis.terminology == SUBJECT_AUTHORISATION.0
+                && r.basis.code == SUBJECT_AUTHORISATION.1
+        };
+        if held.iter().all(authorises) {
+            return Ok(());
+        }
+        return Err(ServiceError::not_permitted(format!(
+            "the PARTY_RELATIONSHIP {vo_id} is a representation ({}::{}): the patient it \
+             represents writes one only on the basis {}::{}, the authorisation of a proxy; \
+             any other is written by an administrator or under a {} grant",
+            policy_mark::TERMINOLOGY,
+            policy_mark::REPRESENTS,
+            SUBJECT_AUTHORISATION.0,
+            SUBJECT_AUTHORISATION.1,
+            Operation::WriteRepresentation
+        )));
     }
-    Err(ServiceError::not_permitted(format!(
-        "the PARTY_RELATIONSHIP {vo_id} is a representation ({}::{}): only an \
-         administrator, or the patient it represents, writes it",
-        policy_mark::TERMINOLOGY,
-        policy_mark::REPRESENTS
-    )))
+    let capabilities = Capabilities::current();
+    let providers: Vec<ProviderKey> = capabilities
+        .of(Operation::WriteRepresentation)
+        .flat_map(|grant| grant.credentials().identifiers(PROVIDER))
+        .collect();
+    match held.iter().find(|r| !providers.contains(&r.provider)) {
+        None => Ok(()),
+        Some(uncovered) => Err(ServiceError::not_permitted(format!(
+            "the PARTY_RELATIONSHIP {vo_id} is a representation ({}::{}) for the provider {}: \
+             only an administrator, or a caller holding a {} grant whose {PROVIDER} elements \
+             name that provider, writes it",
+            policy_mark::TERMINOLOGY,
+            policy_mark::REPRESENTS,
+            uncovered.provider,
+            Operation::WriteRepresentation
+        ))),
+    }
 }
 
-/// The subjects the stored version `sys_version` of the standalone
-/// `PARTY_RELATIONSHIP` `vo_id` represents; none for a version without a
-/// body or without the representation code.
+/// The basis of a representation the patient it represents writes: HL7 v3
+/// `RoleCode` `DELEGATEE`, "a party to whom some right or authority is
+/// granted by a delegator" (HL7 Terminology `v3-RoleCode`).
+pub const SUBJECT_AUTHORISATION: (&str, &str) = (
+    openehr_rm::draft::access_control::terminology::representation::TERMINOLOGY_ID_ROLE_CODE,
+    "DELEGATEE",
+);
+
+/// The representations the stored version `sys_version` of the standalone
+/// `PARTY_RELATIONSHIP` `vo_id` states; none for a version without a body or
+/// without the representation code.
 async fn standalone(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
     vo_id: VoId,
     sys_version: i32,
-) -> Result<Vec<Uuid>, ServiceError> {
+) -> Result<Vec<Representation>, ServiceError> {
     Ok(match body(tx, vo_id, sys_version).await? {
-        Some(body) => parsed(Kind::PartyRelationship, &body, mapping)?
-            .representations
-            .iter()
-            .map(|r| r.subject)
-            .collect(),
+        Some(body) => parsed(Kind::PartyRelationship, &body, mapping)?.representations,
         None => Vec::new(),
     })
 }
@@ -742,7 +733,6 @@ fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
                     identifier.canonical(),
                 ));
             }
-            protected.whole = facts.represents;
         }
         _ => {}
     }

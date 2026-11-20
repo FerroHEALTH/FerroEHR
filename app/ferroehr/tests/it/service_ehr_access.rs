@@ -17,10 +17,12 @@ use ferroehr::ids::EhrId;
 use ferroehr::party_binding::BindingMapping;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_projection::Rebuild;
+use ferroehr::service::ehr::access_settings::EhrAccessSettings;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr::versioning::committer::CommitterIdentity;
 use ferroehr::versioning::committer::bound::{BoundDetails, PortalParty};
+use openehr_rm::draft::access_control::terminology::Confidentiality;
 use serde_json::{Value, json};
 
 use crate::fixtures::change_type;
@@ -651,5 +653,70 @@ async fn a_commit_projects_the_settings_and_a_refill_rebuilds_them() {
         projected(&pool, ehr_id).await,
         (None, vec![], None),
         "a version with no settings leaves no row"
+    );
+}
+
+/// `settings` carrying a marking of `level`, set by the controller.
+fn marked(mut settings: Value, level: &str) -> Value {
+    settings["marking"] = json!({ "_type": "CONFIDENTIALITY_MARKING",
+        "confidentiality": { "_type": "DV_CODED_TEXT", "value": level,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_Confidentiality" },
+                "code_string": level } },
+        "set_by": { "_type": "PARTY_IDENTIFIED", "name": "privacy officer" },
+        "set_at": { "_type": "DV_DATE_TIME", "value": "2026-11-19T10:00:00Z" },
+        "reason": { "_type": "DV_TEXT", "value": "public figure" } });
+    settings
+}
+
+/// Only the controller sets, changes or clears the marking: a gate-keeper's
+/// version that changes it is refused `403` whole, and one that carries it
+/// unchanged commits (draft access control, The Decision Procedure, Reading
+/// and Writing the Settings).
+#[tokio::test]
+async fn only_the_controller_sets_or_clears_the_marking() {
+    let (_db, svc, ehr_id, guardian) = setup().await;
+    forbidden(
+        &write(&svc, ehr_id, &subject(), 1, &marked(kept(guardian), "R")).await,
+        "the subject setting a marking",
+    );
+    write(
+        &svc,
+        ehr_id,
+        &administrator(),
+        1,
+        &marked(kept(guardian), "R"),
+    )
+    .await
+    .expect("the controller sets the marking");
+    forbidden(
+        &write(&svc, ehr_id, &subject(), 2, &kept(guardian)).await,
+        "the subject clearing the marking",
+    );
+    forbidden(
+        &write(
+            &svc,
+            ehr_id,
+            &representative(guardian),
+            2,
+            &marked(kept(guardian), "V"),
+        )
+        .await,
+        "a gate-keeper raising the marking",
+    );
+    write(&svc, ehr_id, &subject(), 2, &marked(kept(guardian), "R"))
+        .await
+        .expect("the subject carries the marking unchanged");
+    write(&svc, ehr_id, &administrator(), 3, &kept(guardian))
+        .await
+        .expect("the controller clears the marking");
+    let settings = svc
+        .current_ehr_access_settings(ehr_id)
+        .await
+        .expect("the settings read");
+    assert_eq!(
+        (*settings).as_ref().map(EhrAccessSettings::marking),
+        Some(Confidentiality::Normal),
+        "the cleared settings are current"
     );
 }

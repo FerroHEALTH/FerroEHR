@@ -145,6 +145,7 @@ impl Authenticator {
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
         let party = super::party::binding(config, &resolved, source)
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
+        let deployment = super::party::Deployment::of(config, &resolved);
         let mut gate = Gate::open();
         let mut primary = None;
         let mut bearer = None;
@@ -226,6 +227,7 @@ impl Authenticator {
             party,
             declared: super::declared::Declared::new(config.rate_clock.clone()),
             namespace: config.party_binding.namespace.clone(),
+            deployment,
         }))
     }
 }

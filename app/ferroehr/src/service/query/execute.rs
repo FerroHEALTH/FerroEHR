@@ -177,7 +177,7 @@ impl FerroEhrService {
         // parent query through (BASE Artefact Identification
         // §Supporting Archetype-based Querying): resolved here, once per execution,
         // because SQL building is synchronous.
-        let archetype_lineage = self.archetype_lineage().await;
+        let archetype_lineage = self.archetype_lineage().await.map_err(Failure::analysis)?;
         let (own_records, caseload) = Box::pin(self.own_and_caseload(ir.domain, request))
             .await
             .map_err(Failure::analysis)?;

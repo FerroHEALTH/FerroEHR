@@ -102,6 +102,7 @@ mod db_lease;
 mod db_outage;
 mod db_request_scope;
 mod decommission;
+mod definition_copies;
 mod definition_load;
 mod directory_item_refs;
 mod ehr_index_ihe;

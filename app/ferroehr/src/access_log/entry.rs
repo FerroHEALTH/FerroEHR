@@ -143,7 +143,11 @@ pub fn entry_of(
         authorisations: nonempty(authorisations(event)),
         is_emergency: event.emergency_access,
         channel: channel(event),
-        security_labels: None,
+        security_labels: event
+            .decided
+            .as_ref()
+            .and_then(|decided| decided.confidentiality)
+            .map(|level| vec![level.coded()]),
         retention,
         other_details: None,
     };
@@ -579,9 +583,12 @@ fn authorisations(event: &AuditEvent) -> Vec<AccessAuthorisation> {
             ..kind(Authorisation::Agreement)
         });
     }
+    // NOTE: draft access control package, The Representation as a Stored Fact: the log
+    // records which stored representation the access rested on, by its container.
     if let Some(representation) = binding.and_then(|binding| binding.representation.as_ref()) {
+        let rested_on = representation.relationship_id.as_ref();
         authorisations.push(AccessAuthorisation {
-            reference: Some(identifier(&representation.represented)),
+            reference: Some(identifier(rested_on.unwrap_or(&representation.represented))),
             ..kind(Authorisation::Representation)
         });
     }
