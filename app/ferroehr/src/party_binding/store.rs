@@ -37,6 +37,7 @@ use serde_json::Value;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
+use crate::access_policy::PolicyInForce;
 use crate::error::ServiceError;
 use crate::ids::VoId;
 use crate::party_binding::BindingMapping;
@@ -175,15 +176,19 @@ pub(crate) async fn reindex_committed(
 /// Rebuilds the reverse-relationship index of the party `vo_id` of `kind` from
 /// its stored versions and brings its side-table rows to its stored head, on
 /// `tx`: what an import or an archive load writes after the versions it lands.
+/// A care relationship's head is judged against `policy`, the version the
+/// caller confirmed before taking `tx`, as a commit judges it
+/// ([`grants::caller::bounds::judge_stored`]).
 ///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure.
+/// The refusals of the care relationship bounds, and a storage failure.
 pub(crate) async fn reindex_stored(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
+    policy: &PolicyInForce,
     kind: Kind,
     vo_id: VoId,
-) -> Result<(), StorageError> {
+) -> Result<(), ServiceError> {
     if !mapping.is_empty() {
         key_space::gate_shared(tx).await?;
     }
@@ -193,33 +198,40 @@ pub(crate) async fn reindex_stored(
         return Ok(());
     };
     if kind == Kind::PartyRelationship {
+        let live = head
+            .facts
+            .as_ref()
+            .filter(|_| head.lifecycle_state != DELETED);
+        grants::caller::bounds::judge_stored(tx, policy, vo_id.0, live).await?;
         grants::store::write(tx, kind, head.grant_head()).await?;
         let facts = head.facts.filter(|_| head.lifecycle_state != DELETED);
-        return standalone::reindex(tx, mapping, vo_id.0, facts.as_ref()).await;
+        return Ok(standalone::reindex(tx, mapping, vo_id.0, facts.as_ref()).await?);
     }
     let head = with_last(tx, mapping, kind, head).await?;
-    reindex_heads(tx, mapping, kind, vec![head]).await
+    Ok(reindex_heads(tx, mapping, kind, vec![head]).await?)
 }
 
 /// What an import does after it lands the versions of `vo_id` of `kind`, on
 /// `tx`: marks a demographic object one of whose versions is a policy party
 /// ([`crate::party_binding::policy_mark::mark_stored`]), and brings a
 /// demographic object's reverse-relationship index and a party's side-table
-/// rows to its stored head ([`reindex_stored`]).
+/// rows to its stored head ([`reindex_stored`]). An extract lands no
+/// `PARTY_RELATIONSHIP` of its own, `X_VERSIONED_PARTY` being the "form of
+/// `X_VERSIONED_OBJECT` for `PARTY` demographic object" (RM `ehr_extract`,
+/// `X_VERSIONED_PARTY` class), so no care relationship meets `policy` here.
 ///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure.
+/// The refusals of the care relationship bounds, and a storage failure.
 pub(crate) async fn reindex_imported(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
+    policy: &PolicyInForce,
     kind: Kind,
     vo_id: VoId,
-) -> Result<(), StorageError> {
+) -> Result<(), ServiceError> {
     if kind.is_demographic() {
         crate::party_binding::policy_mark::mark_stored(tx, Some(vo_id)).await?;
-    }
-    if kind.is_demographic() {
-        reindex_stored(tx, mapping, kind, vo_id).await?;
+        reindex_stored(tx, mapping, policy, kind, vo_id).await?;
     }
     Ok(())
 }
@@ -232,17 +244,18 @@ pub(crate) async fn reindex_imported(
 /// with a policy version is marked ([`crate::party_binding::policy_mark::mark_stored`]).
 ///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure.
+/// The refusals of the care relationship bounds, and a storage failure.
 pub(crate) async fn reindex_loaded(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
+    policy: &PolicyInForce,
     kind: &str,
     vo_id: VoId,
-) -> Result<(), StorageError> {
+) -> Result<(), ServiceError> {
     crate::party_binding::policy_mark::mark_stored(tx, Some(vo_id)).await?;
     match Kind::from_type(kind) {
-        Some(kind) => reindex_stored(tx, mapping, kind, vo_id).await,
-        None => party_reverse::rebuild(tx, vo_id).await,
+        Some(kind) => reindex_stored(tx, mapping, policy, kind, vo_id).await,
+        None => Ok(party_reverse::rebuild(tx, vo_id).await?),
     }
 }
 
