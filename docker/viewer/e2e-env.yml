@@ -31,6 +31,8 @@ services:
         condition: service_healthy
     environment:
       FERROEHR__API__TERMINOLOGY: "true"
+      # The purposes of use the viewer's Reading tab offers (#6105).
+      FERROEHR__AUDIT__PURPOSE_CODES: TREAT,ETREAT
       # The realm is the third [[auth.issuer]] table (index 2), after the issuer
       # the Basic users of docker/ferroehr.dev.toml bind under and its SCIM
       # client's issuer.

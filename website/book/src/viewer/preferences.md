@@ -33,6 +33,8 @@ storage. Nothing here names a patient, and nothing changes what you may do.
   policy that requires a purpose refuses every read that declares none. The
   row shows only when the CDR lists its codes.
 
+![The Reading tab with the purpose of use](img/preferences/reading.png)
+
 ## Keyboard
 
 **Shortcut hints**, the key caps after a label: on wide screens with a

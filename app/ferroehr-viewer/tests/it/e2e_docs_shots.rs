@@ -401,7 +401,7 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review("/audit?patient=no-such-patient", "audit/audit-empty"),
         review("/configuration", "configuration/configuration"),
         light("/preferences", "preferences/preferences"),
-        review("/preferences/reading", "preferences/reading"),
+        light("/preferences/reading", "preferences/reading"),
         review("/preferences/keyboard", "preferences/keyboard"),
         light("/access", "access/access"),
         review("/about", "about/about"),
