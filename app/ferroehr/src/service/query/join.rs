@@ -129,6 +129,7 @@ impl FerroEhrService {
             archetype_lineage: self.archetype_lineage().await,
             policy_parties: PolicyParties::of_request(&self.binding),
             access_settings: EhrAccessReaders::Every,
+            own_records: None,
         };
         let party = aql::exec::execute(
             &self.demographic_pool,
@@ -184,6 +185,9 @@ impl FerroEhrService {
             Box::pin(self.query_access_condition(&job.request.ehr_access, Some(&ehrs)))
                 .await
                 .map_err(Failure::analysis)?;
+        let own_records = Box::pin(self.delayed_own_records())
+            .await
+            .map_err(Failure::analysis)?;
         let mut stale_since = None;
         let result = loop {
             let access_settings = Box::pin(self.query_access_readers(&ehr_access))
@@ -194,6 +198,7 @@ impl FerroEhrService {
                 ehr_scope_kind: EhrScopeKind::PopulationSubset,
                 ehr_access: ehr_access.clone(),
                 access_settings,
+                own_records: own_records.clone(),
                 ..party_ctx.clone()
             };
             let run = aql::exec::execute(

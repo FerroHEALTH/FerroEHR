@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! `sea-query` identifier vocabulary for the relations the AQL SQL generator
-//! builds against (`migrations/clinical/`, and the party domain rendered from
-//! the same DDL template).
+//! builds against.
+//!
+//! They are `migrations/clinical/`, the party domain rendered from the same
+//! DDL template, and the party domain's relationship index.
 //!
 //! No openEHR spec governs the SQL schema — this is our own PG18-native
 //! design.
@@ -13,8 +15,8 @@
 //! and every other variant renders its `snake_cased` column name. This is the
 //! typed name catalog the generator reaches for instead of writing a column as
 //! a string, and its tests hold both ends of that: every name here is declared
-//! by the clinical migration set, and nothing under `aql/sql/` names a column
-//! any other way.
+//! by the clinical migration set, or the party set for a party relation, and
+//! nothing under `aql/sql/` names a column any other way.
 //!
 //! It covers the relations the generator reads and nothing else. A
 //! relation reached only through a static, compile-time-checked `sqlx::query!`
@@ -198,6 +200,23 @@ pub enum AccessSettings {
     Facts,
 }
 
+/// `party_relationship_target` — the party domain's target-side index of
+/// the relationships a party carries inline, one row per interval over which
+/// the source's trunk named the target.
+#[derive(Debug, Clone, Copy, sea_query::Iden)]
+pub enum RelationshipTarget {
+    /// The `party_relationship_target` table itself.
+    #[iden = "party_relationship_target"]
+    Table,
+    /// `target_party_id` — the container the relationship's target names.
+    TargetPartyId,
+    /// `source_vo_id` — the container of the party that carries it.
+    SourceVoId,
+    /// `valid_to` — when the source's trunk stopped naming the target;
+    /// `NULL` while its trunk head names it.
+    ValidTo,
+}
+
 /// `vo_head` — the one mutable row per versioned object.
 #[derive(Debug, Clone, Copy, sea_query::Iden)]
 pub enum VoHead {
@@ -348,7 +367,7 @@ mod tests {
     use super::*;
     use sea_query::{Expr, ExprTrait as _, Iden as _, PostgresQueryBuilder, Query};
 
-    /// The relations the emitter names, and the clinical migrations that
+    /// The relations the emitter names, and the migrations that
     /// declare them.
     const DDL: &[(&str, &str)] = &[
         (
@@ -379,9 +398,13 @@ mod tests {
             "access_settings",
             include_str!("../../migrations/clinical/0040_access_projection.sql"),
         ),
+        (
+            "party_relationship_target",
+            include_str!("../../migrations/party/0005_relationships_and_tags.sql"),
+        ),
     ];
 
-    /// The later clinical migrations that add columns to those relations with
+    /// The later migrations that add columns to those relations with
     /// `ALTER TABLE … ADD COLUMN`.
     const ALTERS: &[&str] = &[
         include_str!("../../migrations/clinical/0019_node_values.sql"),
@@ -390,12 +413,24 @@ mod tests {
         include_str!("../../migrations/clinical/0032_version_content.sql"),
         include_str!("../../migrations/clinical/0034_head_content_key.sql"),
         include_str!("../../migrations/clinical/0042_access_classes.sql"),
+        include_str!("../../migrations/party/0033_relationship_target_validity.sql"),
     ];
 
-    /// Whether a later migration adds `col` to `table`.
+    /// Whether a later migration adds `col` to `table`, in an `ALTER TABLE`
+    /// statement of one or more actions.
     fn added_by_alter(table: &str, col: &str) -> bool {
-        let statement = format!("ALTER TABLE {table} ADD COLUMN {col} ");
-        ALTERS.iter().any(|file| file.contains(&statement))
+        let head = format!("ALTER TABLE {table}");
+        let action = format!("ADD COLUMN {col} ");
+        ALTERS.iter().any(|file| {
+            file.split(&head).skip(1).any(|rest| {
+                let statement = rest.split(';').next().unwrap_or_default();
+                statement
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ")
+                    .contains(&action)
+            })
+        })
     }
 
     /// The `CREATE TABLE {table} ( … )` body, comments stripped before the
@@ -408,7 +443,7 @@ mod tests {
             .iter()
             .filter(|(name, _)| *name == table)
             .find_map(|(_, file)| file.split_once(&head))
-            .unwrap_or_else(|| panic!("no `{head}` in the clinical migration set"))
+            .unwrap_or_else(|| panic!("no `{head}` in the migration sets"))
             .1;
         let code: String = body
             .lines()
@@ -428,7 +463,7 @@ mod tests {
                 _ => {}
             }
         }
-        panic!("unterminated CREATE TABLE {table} in the clinical migration set");
+        panic!("unterminated CREATE TABLE {table} in the migration sets");
     }
 
     /// Whether `body` declares a column named exactly `col` — a line whose
@@ -566,6 +601,14 @@ mod tests {
             ),
             (Node::Table.to_string(), node_columns()),
             (AccessSettings::Table.to_string(), access_settings_columns()),
+            (
+                RelationshipTarget::Table.to_string(),
+                vec![
+                    RelationshipTarget::TargetPartyId.to_string(),
+                    RelationshipTarget::SourceVoId.to_string(),
+                    RelationshipTarget::ValidTo.to_string(),
+                ],
+            ),
         ]
     }
 
@@ -587,7 +630,7 @@ mod tests {
                 assert!(
                     declares_column(&body, &column) || added_by_alter(&table, &column),
                     "the catalog names `{table}.{column}`, which `CREATE TABLE {table}` does not \
-                     declare in the clinical migration set — schema drift"
+                     declare in the migration sets — schema drift"
                 );
             }
         }
@@ -602,6 +645,10 @@ mod tests {
         assert_eq!(Node::Table.to_string(), "node");
         assert_eq!(VoAttestation::Table.to_string(), "vo_attestation");
         assert_eq!(AccessSettings::Table.to_string(), "access_settings");
+        assert_eq!(
+            RelationshipTarget::Table.to_string(),
+            "party_relationship_target"
+        );
     }
 
     #[test]

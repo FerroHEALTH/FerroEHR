@@ -21,5 +21,6 @@ mod discovery;
 pub(crate) mod ledger;
 mod lifecycle;
 mod matrix;
+mod own_record;
 mod replicas;
 pub(crate) mod world;

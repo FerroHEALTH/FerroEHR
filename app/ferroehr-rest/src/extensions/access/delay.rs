@@ -17,8 +17,10 @@
 //! person's access: our own design/extension.
 
 use axum::response::{IntoResponse, Response};
+use ferroehr::system_log::access_context::AccessDelay;
 use ferrohealth_smart::kind::CallerKind;
 
+use super::authn::party::own::own_person;
 use super::authn::{Principal, current_principal};
 use crate::api::RequestParts;
 use crate::overview::error::RestError;
@@ -30,14 +32,39 @@ use crate::state::AppState;
 /// that acts for the person, on every operation but the controller's own
 /// (`admin_*`).
 pub(crate) fn applies(state: &AppState, op: &str) -> bool {
+    of(state, op) == AccessDelay::Person
+}
+
+/// Where the EHDS Art. 3(3) delay holds for `op` from the current caller: on
+/// every EHR for a caller that acts for the person, and otherwise, for a
+/// caller bound to a `PERSON`, on each EHR whose subject that `PERSON` is,
+/// which it reads as that record's person (#6108).
+pub(crate) fn of(state: &AppState, op: &str) -> AccessDelay {
     if op.starts_with("admin_") || !state.backend().access_delay_enabled() {
-        return false;
+        return AccessDelay::Off;
     }
-    current_principal().is_some_and(|principal| acts_for_the_person(&principal))
+    let Some(principal) = current_principal() else {
+        return AccessDelay::Off;
+    };
+    if acts_for_the_person(&principal) {
+        return AccessDelay::Person;
+    }
+    let bound = principal.access.caller().is_some_and(|caller| {
+        caller
+            .party()
+            .and_then(ferrohealth_smart::party::Outcome::bound)
+            .is_some_and(|bound| bound.party.type_name() == "PERSON")
+    });
+    if bound {
+        AccessDelay::Records
+    } else {
+        AccessDelay::Off
+    }
 }
 
 /// Whether `principal` may be the person's own access: a caller
-/// `ferrohealth-smart` classifies as the patient, or one representing the
+/// `ferrohealth-smart` classifies as the patient, a `persons` login the party
+/// binding binds to the person themself (#6106), or one representing the
 /// person, through a `persons` or a `patients` issuer.
 pub(crate) fn acts_for_the_person(principal: &Principal) -> bool {
     // NOTE: EHDS Art. 3(3), the owner's ruling of 2026-10-31: a mixed token is withheld
@@ -48,7 +75,9 @@ pub(crate) fn acts_for_the_person(principal: &Principal) -> bool {
         .is_some_and(|represented| represented.portal.is_some());
     portal
         || principal.access.caller().is_some_and(|caller| {
-            caller.is_the_person() || matches!(caller.kind(), CallerKind::Representative { .. })
+            caller.is_the_person()
+                || own_person(caller).is_some()
+                || matches!(caller.kind(), CallerKind::Representative { .. })
         })
 }
 

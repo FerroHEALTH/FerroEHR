@@ -157,7 +157,9 @@ the binding-key selector of a mapped `PERSON` template, under the
 `identifier_issuer` of the issuer's `[[auth.party]]` table. A `PERSON`
 binds a professional only while it performs a live professional `ROLE`, and
 a representative only while it is the source of a recorded representation
-relationship. The identifier gets there in one of four ways:
+relationship. A `PERSON` that is neither binds a `persons` login as the person
+themself: no role, `PARTY_SELF` as the committer, and only the EHRs whose
+subject is that `PERSON` (#6106). The identifier gets there in one of four ways:
 
 1. **SCIM.** Your identity provider provisions the person through
    [FerroEHR's SCIM 2.0 endpoint](../installation/config-auth.md#authscim) at
