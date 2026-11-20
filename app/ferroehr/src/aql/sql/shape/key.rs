@@ -191,7 +191,9 @@ fn same_care(a: &Care, b: &Care) -> bool {
         (Care::Unresolved, Care::Unresolved)
         | (Care::Census(_), Care::Census(_))
         | (Care::Ehrs(_), Care::Ehrs(_)) => true,
-        (Care::Projected(a), Care::Projected(b)) => a.grace == b.grace,
+        (Care::Projected(a), Care::Projected(b)) => {
+            a.grace == b.grace && a.self_declared == b.self_declared
+        }
         _ => false,
     }
 }

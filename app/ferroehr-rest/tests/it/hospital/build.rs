@@ -17,7 +17,7 @@ use http::StatusCode;
 use serde_json::{Value, json};
 
 use crate::common::{self, BASE, EXT};
-use ferroehr::party_binding::grants::bootstrap::{ClientGrant, PersonGrant};
+use ferroehr::party_binding::grants::bootstrap::{ClientGrant, GrantElement, Granted, PersonGrant};
 use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::FerroEhrService;
 
@@ -57,7 +57,7 @@ pub(crate) async fn world() -> World {
         .expect("the audit sender");
     let svc = Arc::new(replica(&config, &pool, Some(sender)).await);
     let app = router(&config, &svc).await;
-    bootstrap(&svc).await;
+    let scim_agent = bootstrap(&svc).await;
     let mut people = BTreeMap::new();
     let root = STAFF.iter().find(|staff| staff.name == ROOT).expect("root");
     people.insert(
@@ -65,6 +65,8 @@ pub(crate) async fn world() -> World {
         user(&app, SCIM, ROOT, (root.display, Some(root.role))).await,
     );
     grant_policy_writer(&svc, &people[ROOT].person).await;
+    let hospital = provider(&app, "sint-example", &[]).await;
+    acts_for(&app, &scim_agent, &hospital).await;
     let mut agents = clients(&app).await;
     for staff in STAFF.iter().filter(|staff| staff.name != ROOT) {
         people.insert(
@@ -86,7 +88,6 @@ pub(crate) async fn world() -> World {
         teams.insert(team, group(&app, team, &members).await);
     }
     let region = region(&app, "Regional health network").await;
-    let hospital = provider(&app, "sint-example", &[]).await;
     let member = provider(&app, "member-clinic", &[&region]).await;
     let outside = provider(&app, "outside-clinic", &[]).await;
     let lab = provider(&app, "lab", &[]).await;
@@ -175,21 +176,21 @@ pub(crate) async fn group(app: &axum::Router, name: &str, members: &[&str]) -> S
 /// The operator grants the hospital's SCIM client, as `ferroehr
 /// party-binding grant` does before any person is provisioned (#5620): it
 /// provisions the logins of [`LOGIN`], assigns the staff's role codes and
-/// keeps the care-team Groups.
-async fn bootstrap(svc: &FerroEhrService) {
+/// keeps the care-team Groups of the hospital; its `AGENT`.
+async fn bootstrap(svc: &FerroEhrService) -> String {
+    let text = |code: &str, text: &str| GrantElement::Text {
+        code: code.to_owned(),
+        text: text.to_owned(),
+    };
     let mut elements = vec![
-        ("binding_issuer".to_owned(), LOGIN.to_owned()),
-        ("token_scope".to_owned(), SCIM_SCOPE.to_owned()),
-        ("role_terminology".to_owned(), ROLES.to_owned()),
+        text("binding_issuer", LOGIN),
+        text("token_scope", SCIM_SCOPE),
+        text("role_terminology", ROLES),
     ];
     let mut roles: Vec<&str> = STAFF.iter().map(|staff| staff.role).collect();
     roles.sort_unstable();
     roles.dedup();
-    elements.extend(
-        roles
-            .into_iter()
-            .map(|role| ("role".to_owned(), role.to_owned())),
-    );
+    elements.extend(roles.into_iter().map(|role| text("role", role)));
     svc.grant_client(&ClientGrant {
         issuer: MACHINES.to_owned(),
         client_id: SCIM.to_owned(),
@@ -198,14 +199,37 @@ async fn bootstrap(svc: &FerroEhrService) {
     })
     .await
     .expect("the operator grants the SCIM client");
-    svc.grant_client(&ClientGrant {
-        issuer: MACHINES.to_owned(),
-        client_id: SCIM.to_owned(),
-        operation: Operation::WriteCareRelationship,
-        elements: Vec::new(),
-    })
-    .await
-    .expect("the operator grants the SCIM client its care teams");
+    let granted = svc
+        .grant_client(&ClientGrant {
+            issuer: MACHINES.to_owned(),
+            client_id: SCIM.to_owned(),
+            operation: Operation::WriteCareRelationship,
+            elements: vec![GrantElement::Identifier {
+                code: "provider".to_owned(),
+                issuer: PROVIDERS.to_owned(),
+                id: "sint-example".to_owned(),
+            }],
+        })
+        .await
+        .expect("the operator grants the SCIM client its care teams");
+    match granted {
+        Granted::Created { agent, .. }
+        | Granted::Added { agent, .. }
+        | Granted::Already { agent } => agent.to_string(),
+    }
+}
+
+/// `root` makes the client `AGENT` `agent` act for the `ORGANISATION`
+/// `provider`, so a care-team Group it creates belongs to that provider.
+async fn acts_for(app: &axum::Router, agent: &str, provider: &str) {
+    let (version, mut body) = read_party(app, "agent", agent).await;
+    body["relationships"] = json!([{
+        "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at0040", "name": term("acts_for"),
+        "source": party_ref("AGENT", agent),
+        "target": party_ref("ORGANISATION", provider)
+    }]);
+    let answer = update_party(app, ROOT, ("agent", agent, &version), &body).await;
+    assert_eq!(answer.status, StatusCode::OK, "acts for: {}", answer.body);
 }
 
 /// The operator grants `root`'s `PERSON` the writing of the controller's
@@ -241,12 +265,25 @@ async fn clients(app: &axum::Router) -> BTreeMap<&'static str, String> {
         ROOT,
         ("adt", None),
         &[
-            capability("write_care_relationship", &[]),
+            capability("write_care_relationship", &care_writer()),
             capability("access_demographic", &[]),
         ],
     )
     .await;
     BTreeMap::from([("adt", adt)])
+}
+
+/// The terms of the ADT system's `write_care_relationship` grant: the
+/// hospital's care relationships and memberships, to a target of any kind.
+fn care_writer() -> Vec<Value> {
+    let provider = json!({ "_type": "DV_IDENTIFIER", "issuer": PROVIDERS, "id": "sint-example" });
+    let mut items = vec![named("provider", &provider)];
+    items.extend(
+        ["PERSON", "ROLE", "GROUP", "ORGANISATION"]
+            .into_iter()
+            .map(|kind| named("target_kind", &text(kind))),
+    );
+    items
 }
 
 /// The lab system, the regional exchange's clients of a member provider and

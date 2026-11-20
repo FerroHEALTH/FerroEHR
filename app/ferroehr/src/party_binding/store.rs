@@ -167,7 +167,7 @@ pub(crate) async fn reindex_committed(
         .as_ref()
         .map_or(&[][..], |f| f.targets.as_slice());
     party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
-    let _changed = grants::caller::check_care(tx, ctx.binding, committed, facts).await?;
+    let _changed = grants::caller::writer::check_care(tx, ctx.binding, committed, facts).await?;
     reindex_heads(tx, ctx.binding, committed.kind, vec![head])
         .await
         .map_err(selector_in_use)

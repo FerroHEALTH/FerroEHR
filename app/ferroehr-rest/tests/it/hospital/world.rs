@@ -724,7 +724,8 @@ pub(crate) async fn region(app: &Router, name: &str) -> String {
 }
 
 /// A provider `ORGANISATION` identified by `id` under [`PROVIDERS`], a
-/// member of each `GROUP` of `groups`, written by the ADT system.
+/// member of each `GROUP` of `groups`, written by `root`: a membership of a
+/// `GROUP` that belongs to no provider is an administrator's to write.
 pub(crate) async fn provider(app: &Router, id: &str, groups: &[&str]) -> String {
     let archetype = "openEHR-DEMOGRAPHIC-ORGANISATION.hospital.v1";
     let mut organisation = json!({
@@ -750,7 +751,7 @@ pub(crate) async fn provider(app: &Router, id: &str, groups: &[&str]) -> String 
         organisation["relationships"] = Value::Array(memberships);
         let answer = update_party(
             app,
-            "client:adt",
+            ROOT,
             ("organisation", &organisation_id, &version),
             &organisation,
         )

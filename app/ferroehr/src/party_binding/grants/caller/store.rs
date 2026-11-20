@@ -36,7 +36,8 @@ use openehr_rm::draft::access_control::terminology::ForeignCode;
 macro_rules! fact_columns {
     () => {
         "f.holder_id, f.kind, f.terminology_id, f.code_string, f.target_id, f.target_kind, \
-         f.provider_issuer, f.provider_id, f.lifecycle_state, isempty(f.role_validity) AS role_empty, \
+         f.provider_issuer, f.provider_id, f.self_declared, f.writer_id, f.lifecycle_state, \
+         isempty(f.role_validity) AS role_empty, \
          lower(f.role_validity) AS role_lower, upper(f.role_validity) AS role_upper, \
          isempty(f.validity) AS empty, lower(f.validity) AS lower, upper(f.validity) AS upper, \
          f.not_before, f.not_after"
@@ -112,8 +113,22 @@ const DECLARED: &str = "SELECT r.namespace, r.subject_id FROM binding_caller_fac
 /// The text of one stored fact, as a commit compares the facts of a head
 /// before and after.
 const FACT_TEXT: &str = "ROW(kind, ordinal, party_id, terminology_id, code_string, target_id, \
-     target_kind, provider_issuer, provider_id, lifecycle_state, role_validity, validity, \
-     not_before, not_after)::text";
+     target_kind, provider_issuer, provider_id, self_declared, writer_id, lifecycle_state, \
+     role_validity, validity, not_before, not_after)::text";
+
+/// The party that wrote the trunk head of the holder `$1`: the container its
+/// commit audit's committer names in `external_ref`, the bound `PERSON` of a
+/// professional or the client `ACTOR` of a system caller
+/// ([`crate::versioning::committer::bound::server_committer`]); `NULL` for a
+/// committer that names none. Draft access control decision procedure,
+/// Writing Relationships: a caller is never admitted on a relationship it
+/// wrote naming itself.
+pub(crate) const WRITER: &str = "(SELECT CASE WHEN w.ref ~ \
+     '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN w.ref::uuid END \
+     FROM (SELECT lower(split_part(a.committer #>> '{external_ref,id,value}', '::', 1)) AS ref \
+           FROM vo_head h JOIN version v ON v.tier = h.tier AND v.vo_id = h.vo_id \
+                AND v.sys_version = h.trunk_head_sys_version \
+           JOIN commit_audit a ON a.id = v.commit_audit_id WHERE h.vo_id = $1) w)";
 
 /// One stored fact about a party.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -126,6 +141,9 @@ pub(crate) struct FactRow {
     pub(crate) value: FactValue,
     /// When it holds.
     pub(crate) term: Term,
+    /// The party that wrote the holder's head ([`WRITER`]); `None` when its
+    /// committer names none.
+    pub(crate) writer: Option<Uuid>,
 }
 
 impl crate::memory::Weigh for FactRow {
@@ -319,6 +337,10 @@ async fn insert(
         .iter()
         .map(|f| care_of(f).map(|care| care.provider.id.as_str()))
         .collect();
+    let self_declared: Vec<bool> = facts
+        .iter()
+        .map(|f| care_of(f).is_some_and(|care| care.self_declared))
+        .collect();
     let validity: Vec<Option<&Value>> = facts.iter().map(|f| f.validity.as_ref()).collect();
     let unreadable: Vec<bool> = facts
         .iter()
@@ -329,10 +351,10 @@ async fn insert(
     let statement = format!(
         "INSERT INTO binding_caller_fact \
              (holder_id, ordinal, kind, party_id, terminology_id, code_string, target_id, \
-              target_kind, provider_issuer, provider_id, lifecycle_state, role_validity, \
-              validity, not_before, not_after) \
+              target_kind, provider_issuer, provider_id, self_declared, writer_id, \
+              lifecycle_state, role_validity, validity, not_before, not_after) \
          SELECT $1, t.ordinal, t.kind, $2, t.terminology_id, t.code_string, t.target_id, \
-                t.target_kind, t.provider_issuer, t.provider_id, $3, \
+                t.target_kind, t.provider_issuer, t.provider_id, t.self_declared, writer.id, $3, \
                 party.binding_validity($4::jsonb), \
                 CASE WHEN t.unreadable THEN 'empty'::daterange \
                      WHEN c.effective_until IS NOT NULL AND t.kind = 'under_care_of' \
@@ -342,9 +364,12 @@ async fn insert(
                 t.not_before, t.not_after \
          FROM unnest($5::integer[], $6::text[], $7::text[], $8::text[], $9::uuid[], \
                      $10::text[], $11::text[], $12::text[], \
-                     $13::jsonb[], $14::boolean[], $15::timestamptz[], $16::timestamptz[]) \
+                     $13::jsonb[], $14::boolean[], $15::timestamptz[], $16::timestamptz[], \
+                     $17::boolean[]) \
               AS t(ordinal, kind, terminology_id, code_string, target_id, target_kind, \
-                   provider_issuer, provider_id, validity, unreadable, not_before, not_after) \
+                   provider_issuer, provider_id, validity, unreadable, not_before, not_after, \
+                   self_declared) \
+         CROSS JOIN (SELECT {WRITER} AS id) writer \
          LEFT JOIN binding_care_validity c ON c.vo_id = $1 \
          ON CONFLICT DO NOTHING \
          RETURNING party_id, {FACT_TEXT} AS fact"
@@ -366,6 +391,7 @@ async fn insert(
         .bind(&unreadable)
         .bind(&not_before)
         .bind(&not_after)
+        .bind(&self_declared)
         .fetch_all(&mut *tx)
         .await?)
 }
@@ -585,6 +611,7 @@ fn fact_row(holder: Uuid, row: &sqlx::postgres::PgRow) -> Result<FactRow, Storag
     let target_kind: Option<String> = row.try_get("target_kind")?;
     let provider_issuer: Option<String> = row.try_get("provider_issuer")?;
     let provider_id: Option<String> = row.try_get("provider_id")?;
+    let self_declared: bool = row.try_get("self_declared")?;
     let care = (
         target_kind.as_deref().and_then(CarerKind::of),
         provider_issuer,
@@ -603,6 +630,7 @@ fn fact_row(holder: Uuid, row: &sqlx::postgres::PgRow) -> Result<FactRow, Storag
             kind: carer_kind,
             role: ForeignCode { terminology, code },
             provider: ProviderKey::new(issuer, id),
+            self_declared,
         }),
         (
             FactKind::Role | FactKind::OrganisationType,
@@ -622,6 +650,7 @@ fn fact_row(holder: Uuid, row: &sqlx::postgres::PgRow) -> Result<FactRow, Storag
         kind,
         value,
         term: Term::of(row)?,
+        writer: row.try_get("writer_id")?,
     })
 }
 

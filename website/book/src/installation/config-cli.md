@@ -279,13 +279,17 @@ is a JSON document on stdout with the CONTRIBUTION and each new `ROLE`.
 ```text
 ferroehr party-binding grant --issuer <ISSUER> --client-id <CLIENT_ID>
                              --operation <CODE> [--element <CODE>=<TEXT>]...
+                             [--provider-issuer <ISSUER> --provider-id <ID>]...
 ```
 
 Grants an operation of the `openehr_access` terminology to a client, on
 the operator's authority: an `AGENT` carrying the client identifier under the
 token issuer, unless an `ACTOR` names the client already, and a `ROLE` it
 performs whose capability grants the operation, with one scope element per
-`--element`. It is the first grant of a new deployment, typically the
+`--element`, whose value is a `DV_TEXT`, and one `provider` element per
+`--provider-issuer` and the `--provider-id` in the same position, whose value
+is a `DV_IDENTIFIER` with that issuer and id, as a `write_care_relationship`
+grant names the providers it writes for. It is the first grant of a new deployment, typically the
 `scim_provision` of the client that provisions the administrators, since no
 administrator can log in before their `PERSON` exists; every later grant is
 an administrator's write through the Demographic API. The commits take the

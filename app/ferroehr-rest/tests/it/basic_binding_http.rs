@@ -65,7 +65,12 @@ async fn scoped(svc: &FerroEhrService, person_uid: &str) {
         operation: Operation::HoldScopes,
         elements: common::FULL_SCOPES
             .split_whitespace()
-            .map(|scope| ("scope".to_owned(), scope.to_owned()))
+            .map(
+                |scope| ferroehr::party_binding::grants::bootstrap::GrantElement::Text {
+                    code: "scope".to_owned(),
+                    text: scope.to_owned(),
+                },
+            )
             .collect(),
     })
     .await

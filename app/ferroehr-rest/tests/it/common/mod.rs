@@ -594,11 +594,21 @@ pub(crate) async fn grant_basic_users(
         let person = crate::party_binding_http::vo(&uid).0;
         let scopes = FULL_SCOPES
             .split_whitespace()
-            .map(|scope| ("scope".to_owned(), scope.to_owned()))
+            .map(
+                |scope| ferroehr::party_binding::grants::bootstrap::GrantElement::Text {
+                    code: "scope".to_owned(),
+                    text: scope.to_owned(),
+                },
+            )
             .collect();
         let held = roles
             .iter()
-            .map(|role| ("role".to_owned(), (*role).to_owned()))
+            .map(
+                |role| ferroehr::party_binding::grants::bootstrap::GrantElement::Text {
+                    code: "role".to_owned(),
+                    text: (*role).to_owned(),
+                },
+            )
             .collect::<Vec<_>>();
         let mut grants = vec![(Operation::HoldScopes, scopes)];
         if !held.is_empty() {
