@@ -429,7 +429,9 @@ fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
 /// probe, binding the principals, the providers, the day and the grace, with
 /// the dates read as
 /// [`crate::party_binding::grants::caller::care_of::CareOf::live_on`] reads
-/// them. No openEHR spec governs this: our own design (#5699, #6055).
+/// them and the writer as
+/// [`crate::party_binding::grants::caller::care_of::CareOf::admits_writer`]
+/// does. No openEHR spec governs this: our own design (#5699, #6055, #6073).
 fn projected(care: &ProjectedCare, target: Expr) -> Expr {
     Expr::cust_with_exprs(
         "EXISTS (SELECT 1 FROM ehr access_care_ehr \
@@ -441,7 +443,10 @@ fn projected(care: &ProjectedCare, target: Expr) -> Expr {
          AND (access_care_row.care_from IS NULL OR access_care_row.care_from <= CAST($3 AS date)) \
          AND (access_care_row.care_until IS NULL \
               OR CAST($3 AS date) < access_care_row.care_until \
-              OR CAST($3 AS date) < access_care_row.care_until + CAST($4 AS interval)))",
+              OR CAST($3 AS date) < access_care_row.care_until + CAST($4 AS interval)) \
+         AND CASE WHEN access_care_row.self_declared THEN CAST($7 AS boolean) \
+                  ELSE access_care_row.writer_id IS NULL \
+                       OR access_care_row.writer_id <> ALL($2) END)",
         [
             target,
             Expr::val(care.principals.to_vec()),
@@ -449,6 +454,7 @@ fn projected(care: &ProjectedCare, target: Expr) -> Expr {
             Expr::val(care.grace.clone()),
             Expr::val(care.provider_issuers.to_vec()),
             Expr::val(care.provider_ids.to_vec()),
+            Expr::val(care.self_declared),
         ],
     )
 }

@@ -46,7 +46,7 @@ use uuid::Uuid;
 use crate::ehr_index_ihe::CLINICAL;
 use crate::fixtures::create_ehr_subject;
 use crate::patient_index::{NATIONAL, identifier, patient, replica, sorted};
-use crate::policy_fixtures::{ISSUER, capability, create, granted};
+use crate::policy_fixtures::{ISSUER, care_writer, create, granted};
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::identity_feed::apply::Applied;
@@ -221,7 +221,7 @@ impl Patients {
 async fn replicas(db: &testkit::TestDb) -> (FerroEhrService, FerroEhrService) {
     let one = replica(db, EhrIndexProvider::Local).await;
     let two = replica(db, EhrIndexProvider::Local).await;
-    granted(&one, CLIENT, &[capability("write_care_relationship", &[])]).await;
+    granted(&one, CLIENT, &[care_writer()]).await;
     (one, two)
 }
 

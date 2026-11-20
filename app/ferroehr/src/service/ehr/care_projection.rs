@@ -243,6 +243,8 @@ impl Projector {
                         provider_id: care.provider().id.clone(),
                         from: care.from(),
                         until: care.until(),
+                        writer: care.writer(),
+                        self_declared: care.self_declared(),
                     });
                 }
             }

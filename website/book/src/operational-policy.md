@@ -254,6 +254,8 @@ in the element's `name`:
 | `binding_issuer` | On `scim_provision`: the `identifier_issuer` of the binding keys the client owns, exactly one |
 | `token_scope` | On `scim_provision`: a scope the client's access token must hold, at least one |
 | `role_terminology` | On `scim_provision`: the terminology the client's User `roles` are coded in, exactly one when it names a `role` |
+| `provider` | On `write_care_relationship`: a `DV_IDENTIFIER` (its `issuer` and `id`) naming a provider whose care relationships and memberships the grant writes; none named means none written |
+| `target_kind` | On `write_care_relationship`: `PERSON`, `ROLE`, `GROUP` or `ORGANISATION`, a kind of care relationship target the grant writes; none named means none written |
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
 | `represents` | On a `PARTY_RELATIONSHIP`: the source represents the target, the subject, on the subject's own record ([Representatives in the patient portal](#representatives-in-the-patient-portal)); it makes no policy party |
 | `role` | A `DV_TEXT`: a role a `hold_roles` grant gives, or a role code a `scim_provision` grant lets its client assign its Users ([SCIM roles](installation/config-auth.md#roles)) |
@@ -1687,9 +1689,38 @@ deliverer' into particular identities ... must be done in each care
 delivery environment, not in the EHR" (BASE Architecture Overview, §The
 Problem of Roles). A care relationship, its change or its deletion, and a
 version of a `PERSON` that adds, changes or removes a membership, commits
-only for a caller holding the `write_care_relationship` grant, such as your
-hospital's ADT system, or for an administrator; anyone else is refused
-`403`. A version that leaves the memberships as they were needs no grant.
+only for a caller holding a `write_care_relationship` grant that covers it,
+such as your hospital's ADT system, or for an administrator; anyone else is
+refused `403`. A version that leaves the memberships as they were needs no
+grant. The grant covers what its elements name (draft access control
+decision procedure, Writing Relationships):
+
+- **A care relationship** is covered when one `provider` element names its
+  `provider` and one `target_kind` element names the RM type of its target.
+- **A membership** is covered when one `provider` element names a provider
+  of the `ORGANISATION` it targets, or of the `ORGANISATION` the `GROUP` it
+  targets belongs to. A `GROUP` belongs to an `ORGANISATION` by its own
+  `MBR` relationship to it; a `GROUP` that belongs to none, such as a
+  region, takes memberships from an administrator alone.
+
+A grant with no `provider` or no `target_kind` element writes nothing it
+would need them for. The operator grants one with typed flags:
+
+```sh
+ferroehr party-binding grant --issuer https://machines.example --client-id adt \
+  --operation write_care_relationship \
+  --provider-issuer urn:oid:2.999.7 --provider-id sint-example \
+  --element target_kind=GROUP --element target_kind=PERSON
+```
+
+**A writer never admits itself.** Each caller fact and each row of the care
+projection names the party that wrote it: the `PERSON` of a professional or
+the client `ACTOR` of a system, as the commit audit's committer names it in
+`external_ref`. A caller is never admitted on a care relationship or a
+membership that it, or a party among its principals, wrote, so a
+professional who rosters themselves onto a ward reads nothing through it.
+The one exception is a `self_declared` care relationship where the policy
+allows it ([Writing a care relationship](#writing-a-care-relationship)).
 FerroEHR compares what each relationship says (its code, target, role,
 provider and validity), never its position in `relationships`, so removing
 another relationship before it changes none.
@@ -1741,7 +1772,11 @@ Group never changes kind with its members in it.
 Creating a care-team Group, and every membership change of one, needs the
 client's `write_care_relationship` grant in the CDR beside its
 `scim_provision` grant; without it the request is refused `403` naming the
-grant. A membership from SCIM has no `time_validity`, since RFC 7643 has
+grant. The Group belongs to the provider the client acts for: its `GROUP`
+carries an `MBR` relationship to the client's `acts_for` `ORGANISATION`,
+written when the Group is created, so the grant's `provider` element names
+that provider's identifier. A client that acts for no provider creates no
+care-team Group (`403`). A membership from SCIM has no `time_validity`, since RFC 7643 has
 none: it holds until the client removes the member or the Group. Plain
 Groups, with `careTeam` left out or `false`, carry no care relationship and
 need no grant.
@@ -2104,6 +2139,12 @@ written, and refuses one that breaks a bound with `422`, naming
   `relationship_writers` names for that level. Records are marked `N` until
   the confidentiality marking is read, so this check admits every writer
   the `write_care_relationship` grant admits.
+- **Self-declared.** A relationship whose `basis` is `self_declared` is
+  refused `422` unless the policy sets `self_declared_care`. Its target is
+  the writer's own `PERSON` (`403` otherwise), and it ends within that period
+  of its start, by its own end or the one `default_period` gives it. While
+  the policy sets `self_declared_care`, it admits the professional who wrote
+  it; once the policy no longer sets it, it admits no one.
 
 The end a relationship takes from `default_period` is never written into the
 relationship: the version you committed stays exactly as you sent it, with

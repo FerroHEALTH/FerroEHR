@@ -499,7 +499,8 @@ impl LiveGrants {
 
     /// The caller facts of the party `party` at `now`, from the copy held:
     /// the `ROLE`s it performs that hold on the date of `now` in UTC with
-    /// their roles, and the care teams it is a member of on that date.
+    /// their roles, and the care teams it is a member of on that date by a
+    /// membership it did not write itself.
     #[must_use]
     pub fn facts_of(&self, party: Uuid, now: jiff::Timestamp) -> CallerFacts {
         let held = self.held_facts();
@@ -519,7 +520,9 @@ impl LiveGrants {
                     roles.push(code.clone());
                     performed.push(row.holder);
                 }
-                (FactKind::MemberOf, FactValue::Team(team)) => {
+                // NOTE: draft decision procedure, Writing Relationships, a caller is never
+                // admitted on a relationship it wrote naming itself, a membership included.
+                (FactKind::MemberOf, FactValue::Team(team)) if row.writer != Some(party) => {
                     care_teams.extend(row.term.dates.map(|dates| CareTeam::new(*team, dates)));
                 }
                 _ => {}

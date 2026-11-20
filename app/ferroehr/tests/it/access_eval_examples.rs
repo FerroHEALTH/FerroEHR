@@ -17,7 +17,10 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 
 use crate::fixtures::{change_type, composition, create_ehr_for_party, if_match, object, uv};
-use crate::policy_fixtures::{capability, create, granted, granting, of_client};
+use crate::policy_fixtures::{
+    CARE_PROVIDER, capability, care_provider, care_writer, create, granted, granting, of_client,
+    provider_team,
+};
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
 use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
 use ferroehr::access_eval::scope::{CategoryIndex, Item};
@@ -337,14 +340,11 @@ async fn the_ward_with_its_grace_period() {
         &ferroehr::db::domain::DomainPools::from_shared(&db.pool()),
     ))
     .await;
-    granted(&svc, "adt", &[capability("write_care_relationship", &[])]).await;
+    granted(&svc, "adt", &[care_writer()]).await;
     let group = |name: &str| party("GROUP", "openEHR-DEMOGRAPHIC-GROUP.ward.v1", name, &[]);
-    let (cardiology, _) = create(&svc, PartyKind::Group, &group("Cardiology"))
-        .await
-        .expect("the GROUP commits");
-    let (nephrology, _) = create(&svc, PartyKind::Group, &group("Nephrology"))
-        .await
-        .expect("the GROUP commits");
+    let provider = care_provider(&svc, CARE_PROVIDER).await;
+    let (cardiology, _) = provider_team(&svc, provider, &group("Cardiology")).await;
+    let (nephrology, _) = provider_team(&svc, provider, &group("Nephrology")).await;
     let mut doctors = Vec::new();
     for (name, team) in [("Dr D", cardiology), ("Dr F", nephrology)] {
         let (doctor, uid) = create(&svc, PartyKind::Person, &person(name, &[]))
@@ -485,14 +485,13 @@ fn declaring(mut body: Value, subjects: &[(&str, &str)]) -> Value {
 /// Cardiology and nephrology with Dr D a member of the first and Dr F of the
 /// second, written by the ADT system: the two teams and the two doctors.
 async fn two_wards(svc: &FerroEhrService) -> ([VoId; 2], [VoId; 2]) {
-    granted(svc, "adt", &[capability("write_care_relationship", &[])]).await;
+    granted(svc, "adt", &[care_writer()]).await;
     let group = |name: &str| party("GROUP", "openEHR-DEMOGRAPHIC-GROUP.ward.v1", name, &[]);
+    let provider = care_provider(svc, CARE_PROVIDER).await;
     let mut teams = Vec::new();
     let mut doctors = Vec::new();
     for (team, doctor) in [("Cardiology", "Dr D"), ("Nephrology", "Dr F")] {
-        let (team, _) = create(svc, PartyKind::Group, &group(team))
-            .await
-            .expect("the GROUP commits");
+        let (team, _) = provider_team(svc, provider, &group(team)).await;
         let (person_id, uid) = create(svc, PartyKind::Person, &person(doctor, &[]))
             .await
             .expect("the professional commits");
