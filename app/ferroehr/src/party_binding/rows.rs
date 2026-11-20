@@ -42,9 +42,6 @@ pub(crate) struct IdentifierRow {
     /// Whether the `PERSON` is the source of a representation relationship,
     /// inline or of its own; read on a key row only.
     pub(crate) representative: bool,
-    /// Whether the key is a portal login, issued by a `patients` issuer,
-    /// held with no professional `ROLE` (#5622); read on a key row only.
-    pub(crate) portal: bool,
 }
 
 /// The validity a professional `ROLE` gives the `PERSON` that performs it.
@@ -72,12 +69,12 @@ pub(crate) struct RepresentationRow {
 /// The identifier rows the parties should hold, with the professional date
 /// ranges and the stored compared form beside each: the `wanted` relation the
 /// two identifier statements of [`write_identifiers`] share, over the
-/// parameters `$3` to `$12`.
+/// parameters `$3` to `$11`.
 ///
-/// A key row is held only while the `PERSON` performs a professional `ROLE`,
-/// represents someone, or the key is a portal login (`$12`), which binds
-/// only through a live representation. A display name is held once per
-/// folded value, the first in document order.
+/// Every key row is held, whatever the `PERSON` does: its professional date
+/// ranges and its representative flag say what it is bound for, and a
+/// `PERSON` that is neither binds as the person themself (#6106). A display
+/// name is held once per folded value, the first in document order.
 macro_rules! wanted_identifiers {
     () => {
         "WITH professional AS ( \
@@ -92,12 +89,10 @@ macro_rules! wanted_identifiers {
                      ELSE '{}'::datemultirange END AS professional, \
                 w.selector = 'key' AND w.representative AS representative, w.ord \
          FROM unnest($3::uuid[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], \
-                     $9::boolean[], $12::boolean[]) WITH ORDINALITY \
+                     $9::boolean[]) WITH ORDINALITY \
               AS w(party, selector, issuer, identifier_type, value, lifecycle_state, \
-                   representative, portal, ord) \
+                   representative, ord) \
          LEFT JOIN professional pr ON pr.party = w.party \
-         WHERE w.selector <> 'key' OR NOT isempty(coalesce(pr.dates, '{}')) OR w.representative \
-            OR w.portal \
      ), wanted AS ( \
          SELECT DISTINCT ON (h.party, h.selector, h.issuer, \
                              CASE WHEN h.selector = 'group_display_name' THEN h.folded \
@@ -128,7 +123,7 @@ const RETIRE_IDENTIFIERS: &str = concat!(
     wanted_identifiers!(),
     "UPDATE binding_identifier b SET retired_at = now() \
      WHERE b.party_id = ANY($1) AND b.selector = ANY($2) AND b.retired_at IS NULL \
-       AND ($13::text IS NULL OR b.issuer = $13) \
+       AND ($12::text IS NULL OR b.issuer = $12) \
        AND NOT EXISTS (SELECT 1 FROM wanted w WHERE ",
     same_identifier!(),
     ")"
@@ -200,7 +195,6 @@ struct IdentifierColumns<'a> {
     lifecycle_state: Vec<&'a str>,
     representative: Vec<bool>,
     professional_party: Vec<Uuid>,
-    portal: Vec<bool>,
     professional_validity: Vec<Option<&'a Value>>,
 }
 
@@ -216,7 +210,6 @@ impl<'a> IdentifierColumns<'a> {
             representative: rows.iter().map(|r| r.representative).collect(),
             professional_party: professional.iter().map(|p| p.party).collect(),
             professional_validity: professional.iter().map(|p| p.validity.as_ref()).collect(),
-            portal: rows.iter().map(|r| r.portal).collect(),
         }
     }
 
@@ -234,7 +227,6 @@ impl<'a> IdentifierColumns<'a> {
             .bind(&self.representative)
             .bind(&self.professional_party)
             .bind(&self.professional_validity)
-            .bind(&self.portal)
     }
 }
 
