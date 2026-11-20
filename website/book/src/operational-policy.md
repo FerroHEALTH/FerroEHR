@@ -791,7 +791,9 @@ names them.
 **Default definitions.** The binary carries a default template of each,
 version `1.0.0` (for example `openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0`).
 The privileged `ROLE` also ships as `1.0.1`, which adds the kind `Compose for`
-(`at14`) for a `compose_for` grant; `1.0.0` stays as published.
+(`at14`) for a `compose_for` grant and drops the kind `Identifier reader`
+(`at12`), which grants nothing; `1.0.0` stays as published, and a `ROLE`
+committed against it still validates.
 At boot FerroEHR stores each one through the normal definition path only
 when no definition of its id is stored. It never overwrites a stored
 definition, never refuses one you changed, and never seeds over your change.
@@ -841,7 +843,7 @@ credentials at `/capabilities[id6]/credentials[id8]`, and its `time_validity` th
 | `ROLE.federation_partner` | Access class: `automated` or `chained` | `/capabilities[id6]/credentials[id8]/items[id28]` | `DV_CODED_TEXT` |
 | `ROLE.federation_partner` | Requester log retention | `/capabilities[id6]/credentials[id8]/items[id29]` | `DV_DURATION` |
 | `ROLE.federation_partner` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id30]`, `[id31]`, `[id32]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
-| `ROLE.privileged` | Kind (privilege) | `at10` subject audit, `at11` access service, `at12` identifier reader, `at13` import | |
+| `ROLE.privileged` | Kind (privilege) | `at10` subject audit, `at11` access service, `at13` import, `at14` compose for (`1.0.1`); `1.0.0` also lists `at12` identifier reader, which grants nothing | |
 | `ROLE.privileged` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id9]`, `[id10]`, `[id11]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
 
 ### Worked examples
