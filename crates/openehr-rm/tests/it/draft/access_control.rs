@@ -482,6 +482,11 @@ fn each_policy_invariant_refuses_a_policy_that_breaks_it() {
         }),
         ("ACCESS_CONFLICT_RULE.Conflict_valid", |p| {
             p["conflict_rules"][0]["conflict"] = term("kinship");
+            // NOTE: draft BMM ACCESS_CONFLICT_RULE.Kinships_valid, kinships need `related`.
+            p["conflict_rules"][0]
+                .as_object_mut()
+                .expect("an object")
+                .remove("kinships");
         }),
         ("ACCESS_CONFLICT_RULE.Kinships_valid", |p| {
             p["conflict_rules"][0]["conflict"] = term("self");
