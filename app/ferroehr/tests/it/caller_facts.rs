@@ -511,6 +511,7 @@ async fn only_a_write_care_relationship_grant_changes_a_care_relationship() {
     let svc = replica(&db.pool()).await;
     granted(&svc, "registry", &[capability("access_demographic", &[])]).await;
     granted(&svc, "adt", &[care_writer()]).await;
+    care_provider(&svc, CARE_PROVIDER).await;
     let (ward, _) = create(&svc, PartyKind::Group, &team())
         .await
         .expect("the GROUP commits");
@@ -617,6 +618,7 @@ async fn a_care_relationship_is_its_own_with_a_role_and_a_provider() {
     let db = testkit::db().await.expect("testkit database");
     let svc = replica(&db.pool()).await;
     granted(&svc, "adt", &[care_writer()]).await;
+    care_provider(&svc, CARE_PROVIDER).await;
     let (ward, _) = create(&svc, PartyKind::Group, &team())
         .await
         .expect("the GROUP commits");
@@ -1022,6 +1024,7 @@ async fn a_discharge_on_one_replica_is_never_read_stale_from_the_projection_on_a
     let pool = db.pool();
     let (one, two) = (replica(&pool).await, replica(&pool).await);
     granted(&one, "adt", &[care_writer()]).await;
+    care_provider(&one, CARE_PROVIDER).await;
     let (ward, _) = create(&one, PartyKind::Group, &team())
         .await
         .expect("the GROUP commits");

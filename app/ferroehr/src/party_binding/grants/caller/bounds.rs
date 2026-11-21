@@ -40,6 +40,9 @@ const TARGET: &str = "/target";
 /// The path a self-declared refusal names.
 const BASIS: &str = "/details";
 
+/// The path a provider refusal names: the details that hold the element.
+const PROVIDER: &str = "/details";
+
 /// The trunk head version of a relationship a bound is judged for.
 #[derive(Debug)]
 pub(crate) struct Head {
@@ -119,10 +122,10 @@ pub(crate) async fn judge_stored(
 /// took, on `tx`.
 ///
 /// # Errors
-/// `422` for a validity or a target the policy refuses, `403` for a
-/// self-declared relationship its writer may not write, and a storage
-/// failure. The writer at the subject's marking is judged before the commit
-/// (`FerroEhrService::care_writer_check`).
+/// `422` for a provider that names no `ORGANISATION` of the store, a validity
+/// or a target the policy refuses, `403` for a self-declared relationship its
+/// writer may not write, and a storage failure. The writer at the subject's
+/// marking is judged before the commit (`FerroEhrService::care_writer_check`).
 pub(crate) async fn judge(
     tx: &mut PgConnection,
     policy: &PolicyInForce,
@@ -149,7 +152,17 @@ pub(crate) async fn judge(
     }
     let rules = policy.policy.as_deref();
     let provider = provider(tx, &care.provider).await?;
-    relationship::target(rules, care.kind, care.carer, provider.party)
+    let Some(provider_party) = provider.party else {
+        return Err(refused(
+            PROVIDER,
+            &format_args!(
+                "its provider {} names no ORGANISATION of this store by an identifier it \
+                 carries",
+                care.provider
+            ),
+        ));
+    };
+    relationship::target(rules, care.kind, care.carer, provider_party)
         .map_err(|refusal| refused(TARGET, &refusal))?;
     let Some((lower, upper)) = dates(tx, validity).await? else {
         // NOTE: our own design, a validity that does not read holds no date, so it takes no end.

@@ -21,6 +21,7 @@ use serde_json::{Value, json};
 use super::*;
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess};
 use ferroehr::access_eval::procedure::{Emergency, Lifted};
+use ferroehr::party_binding::grants::caller::care_of::{CarerKind, Cover};
 
 /// Dr. Jansen, the responsible practitioner.
 const JANSEN: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7fa1";
@@ -116,8 +117,11 @@ fn relationships() -> Vec<CareOf> {
         held(CARDIOLOGY, "PART", "2026-11-18", None),
         held(MEIJER, "RESP", "2026-11-21", Some("2026-11-24")).stored_as(
             (uuid(OBJECT), Some(format!("{OBJECT}::cdr.example.org::1"))),
-            ferroehr::party_binding::grants::caller::care_of::CarerKind::Person,
-            Some(ProviderKey::new("urn:example:staff", "jansen")),
+            CarerKind::Person,
+            Some(Cover::new(
+                ProviderKey::new("urn:example:staff", "jansen"),
+                CarerKind::Person,
+            )),
         ),
     ]
 }
@@ -297,8 +301,11 @@ fn an_ended_relationship_admits_within_the_grace_alone() {
         .expect("the record names the relationship");
     assert_eq!(
         grant.covers_for,
-        Some(ProviderKey::new("urn:example:staff", "jansen")),
-        "the record names whom the relationship covers for"
+        Some(Cover::new(
+            ProviderKey::new("urn:example:staff", "jansen"),
+            CarerKind::Person
+        )),
+        "the record names whom the relationship covers for, with its kind"
     );
     assert_eq!(grant.relationship, Some(uuid(OBJECT)));
     assert!(!grant.in_grace);
