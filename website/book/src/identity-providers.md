@@ -51,7 +51,7 @@ Three things do all the work:
    audience list is mandatory, so a server with none refuses to boot rather
    than accepting another service's token. See the
    [bearer settings table](security.md#authentication).
-2. **Role mining** (`[[auth.issuer]]`): `FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS`
+2. **Role mining** (`[auth.issuer.<name>]`): `FERROEHR__AUTH__ISSUER__<NAME>__ROLE_CLAIMS`
    (default `["roles","groups","entitlements"]`, the RFC 9068 §2.2.3.1
    carriers; a Keycloak realm adds `realm_access.roles`) names the
    JWT claim paths whose values become the caller's roles for the
@@ -76,7 +76,7 @@ runs upstream of FerroSMART for login only
 ([Behind FerroSMART](behind-ferrosmart.md)). FerroEHR never sees the provider's
 tokens: FerroSMART logs the person in at the provider, applies its own policy
 and consent, and issues the RFC 9068 access tokens FerroEHR reads under the
-`ferrosmart` issuer preset (`profile = "ferrosmart"`: `typ` `at+jwt` alone,
+`ferrosmart` issuer preset (`preset = "ferrosmart"`: `typ` `at+jwt` alone,
 `scope` required).
 
 FerroSMART supports these upstream providers, each with its setup in
@@ -102,8 +102,8 @@ What changes against a provider FerroEHR trusts directly, such as the
 - **Launch context.** FerroSMART puts `ehrId` (at an openEHR base), `patient`
   and `fhirUser` in the token response and the access token, from the
   viewer's EHR launch or its own patient picker
-  ([SMART App Launch](smart-app-launch.md)). Name FerroSMART in
-  `[auth.smart] patient_issuers` so its `patient/` grants count. That list is
+  ([SMART App Launch](smart-app-launch.md)). The `ferrosmart` preset sets
+  `patient_context`, so FerroSMART's `patient/` grants count. That setting is
   trust in the grants and nothing more: whether a caller is the record's
   person comes from the party binding alone
   ([A person's own record](behind-ferrosmart.md#a-persons-own-record)).
@@ -114,13 +114,13 @@ What changes against a provider FerroEHR trusts directly, such as the
 - **The person's key is FerroSMART's subject.** FerroSMART's `sub` is
   pairwise per provider: base64url of the SHA-256 of the provider's issuer,
   a zero octet and the provider's `sub`. A PERSON's SCIM `loginIdentifier` is
-  that value, under the `[[auth.party]]` identifier issuer of FerroSMART's
+  that value, under the `[auth.issuer.<name>.party]` identifier issuer of FerroSMART's
   table. Moving people to another provider changes every key, and a
   deployment re-provisions their logins.
 - **Roles.** FerroSMART writes the person's roles, as it mapped them from the
   provider, into the access token's `roles` claim (RFC 9068 §2.2.3.1) from
   FerroSMART 0.2.0, the release the quickstart pins
-  (FerroHEALTH/FerroSMART#649). List FerroSMART in `[authz.rbac]
+  (FerroHEALTH/FerroSMART#649). Name FerroSMART's table in `[authz.rbac]
   role_issuers` for them to grant `admin_role` or the emergency role.
 - **The product scope.** A person reaches the ADMIN API only with the
   product scope, which FerroSMART grants through a role that maps to it from
@@ -130,23 +130,23 @@ What changes against a provider FerroEHR trusts directly, such as the
   caller.
 
 ```toml
-[[auth.issuer]]
-issuer = "https://smart.example.org"
-kind = "persons"
-profile = "ferrosmart"
-audience = ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
+[server]
+public_base_url = "https://ehr.example.org"
 
-[[auth.party]]
+[auth.issuer.smart]
 issuer = "https://smart.example.org"
+preset = "ferrosmart"
+
+[auth.issuer.smart.party]
 identifier_issuer = "urn:example:ferrosmart-login"
 identifier_type = "login"
 
-[auth.smart]
-patient_issuers = ["https://smart.example.org"]
-
 [authz.rbac]
-role_issuers = ["https://smart.example.org"]
+role_issuers = ["smart"]
 ```
+
+The audience is the openEHR base FerroEHR derives from `public_base_url`,
+the base FerroSMART names in `aud`.
 
 ## Who the caller is
 
@@ -183,7 +183,7 @@ profile, and the server acts on the kind:
   impersonation at all.
 - **A guest**, by the profile's `guest` markers (Entra ID marks one with
   `acct = 1` or an `idp` other than the issuer), is refused with `403`
-  (`refused-guest`) unless the issuer's `[[auth.party]]` table sets
+  (`refused-guest`) unless the issuer's `[auth.issuer.<name>.party]` table sets
   `guests = true`. Admit guests only for people acting under your own
   responsibility (GDPR Art. 9(3) and Art. 29), such as contractors.
 - **A system caller** is an app-only token by the profile's `app_only`
@@ -211,7 +211,8 @@ profile, and the server acts on the kind:
   - it holds only the `patient/` scopes the agreement `reads` (beside
     `openid`, `profile`, `fhirUser`, `online_access` and `launch`), so a token
     with any other scope is refused, and it reaches only the EHR of its
-    launch context, which needs the issuer in `[auth.smart] patient_issuers`;
+    launch context, which needs the issuer's `patient_context` in its
+    `[auth.issuer.<name>.profile]` table;
   - it is an access-service caller by its kind, so an opted-out EHR answers
     `404` as an unknown one does (EHDS Art. 10(1)). Only an external person
     under an agreement with `opt_out_override` reaches one, under an emergency
@@ -219,13 +220,13 @@ profile, and the server acts on the kind:
   - a read under an agreement with a `consent` condition needs the consent
     decision reference for the patient (Wabvpz Art. 1(j) and Art. 15a(1)):
     the token carries it in the claim or `authorization_details` member its
-    `[[auth.federation]]` table maps to `consent.reference`, as one string
+    `[auth.issuer.<name>.federation]` table maps to `consent.reference`, as one string
     (a coded value refuses the token with `401`), and its `patient/` grant
     holds it to the launch-context patient. A read without it is refused with
     `403`, and the access record carries the reference with the other
     external fields;
   - the professional roles and the facility types its token attests, in the
-    claims its `[[auth.federation]]` table maps to
+    claims its `[auth.issuer.<name>.federation]` table maps to
     `professional.hp_professional_role` and `provider.facility_type`, are
     read as the caller's roles and its organisation's types, each a code of
     the system the value names. The controller's rules name callers by them
@@ -235,7 +236,7 @@ profile, and the server acts on the kind:
     `refused-policy-denied`. A value that names no system matches no rule;
   - a `chained` organisation request carries the requester's correlation id
     in the claim or attested `authorization_details` member its
-    `[[auth.federation]]` table maps to `correlation_id`, as one string; a
+    `[auth.issuer.<name>.federation]` table maps to `correlation_id`, as one string; a
     request without it is refused with `403`, and a request header never
     stands in for it;
   - a caller above its agreement's `caller_rate` is answered `429` with
@@ -255,7 +256,7 @@ profile, and the server acts on the kind:
     NFC-normalised with its white space trimmed and collapsed and may hold no
     `:`, control or bidi character. A missing or failing field is refused
     with `403` naming it. Map the authority with a `constant` source in the
-    `[[auth.federation]]` table when the token does not carry it;
+    `[auth.issuer.<name>.federation]` table when the token does not carry it;
   - the COMPOSITION names the healthcare provider the token asserts in
     `EVENT_CONTEXT.health_care_facility`, or with no context in
     `feeder_audit.originating_system_audit.location`: a `DV_IDENTIFIER` with
@@ -270,11 +271,12 @@ profile, and the server acts on the kind:
 
 ### The MyHealth@EU contact-point route
 
-A `federation` issuer with `contact_point = true` in its `[[auth.federation]]`
+A `federation` issuer with `contact_point = true` in its `[auth.issuer.<name>.federation]`
 table is a MyHealth@EU national contact point (NCPeH-A's authorization
 server). Its person agreement names the service it serves in `ehdsi_service`
 (`patient_summary`, `eprescription` or `orcd`), and its issuer goes into
-`[auth.smart] patient_issuers`. Every request runs with a sender-constrained token
+sets `patient_context` in its `[auth.issuer.<name>.profile]` table. Every
+request runs with a sender-constrained token
 (`sender_constraint = "required"`). On every patient-data route:
 
 - The token carries the patient of the treatment relationship confirmation
@@ -343,7 +345,7 @@ server). Its person agreement names the service it serves in `ehdsi_service`
 
 Every walk-through on this page configures the same three things: an issuer
 of kind `persons` that signs your professionals' access tokens, the
-`[[auth.party]]` table their logins are bound through, and a SCIM client that
+`[auth.issuer.<name>.party]` table their logins are bound through, and a SCIM client that
 provisions their `PERSON`s. Configure them first against a standards-only
 authorization server; the vendor sections after this one are the same
 configuration through a preset (`entra`, `keycloak`, `okta`), each listing
@@ -355,7 +357,7 @@ the issuer table, which wins over the preset.
    `scope`.
 
    ```toml
-   [[auth.issuer]]
+   [auth.issuer.as]
    issuer = "https://as.example.com"
    kind = "persons"
    audience = ["ferroehr"]
@@ -368,12 +370,11 @@ the issuer table, which wins over the preset.
 
 2. **The binding, on `sub`.** OpenID Connect Core 1.0 §5.7 names `iss` with
    `sub` as the only stable identifier of an end-user, so the `rfc9068`
-   profile binds on `sub`. The `[[auth.party]]` table names the identifier
+   profile binds on `sub`. The `[auth.issuer.<name>.party]` table names the identifier
    the key is matched against:
 
    ```toml
-   [[auth.party]]
-   issuer = "https://as.example.com"
+   [auth.issuer.as.party]
    identifier_issuer = "urn:example:staff-login"
    identifier_type = "uuid"
    ```
@@ -412,15 +413,15 @@ Entra ID exposes a standards-compliant OIDC issuer per tenant.
 4. **Point the CDR at the tenant issuer** and mine the `roles` claim:
 
    ```bash
-   export FERROEHR__AUTH__ISSUER__0__ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
-   export FERROEHR__AUTH__ISSUER__0__KIND=persons
+   export FERROEHR__AUTH__ISSUER__ENTRA__ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
+   export FERROEHR__AUTH__ISSUER__ENTRA__KIND=persons
    # Entra ID mints no RFC 9068 tokens (`typ` JWT, the scopes in `scp`), which
    # the `entra` profile reads.
-   export FERROEHR__AUTH__ISSUER__0__PROFILE=entra
-   export FERROEHR__AUTH__ISSUER__0__AUDIENCE=api://ferroehr
-   export FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS=roles
+   export FERROEHR__AUTH__ISSUER__ENTRA__PRESET=entra
+   export FERROEHR__AUTH__ISSUER__ENTRA__AUDIENCE=api://ferroehr
+   export FERROEHR__AUTH__ISSUER__ENTRA__ROLE_CLAIMS=roles
    # Its roles may grant the administrator role.
-   export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=https://login.microsoftonline.com/<tenant-id>/v2.0
+   export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=entra
    ```
 
    Then grant your app `sign_in_persons` in the CDR, on the `AGENT` carrying
@@ -494,7 +495,7 @@ every service such as FerroBRIDGE that calls it, needs:
 Cross-tenant synchronisation and converted guests: a member-type user of
 another tenant carries `acct = 0`, but an `idp` naming their home tenant. The
 preset treats them as a guest by `idp`, so they bind only where the
-`[[auth.party]]` table sets `guests = true`, and never as staff.
+`[auth.issuer.<name>.party]` table sets `guests = true`, and never as staff.
 
 A person in more groups than fit in a token (the groups overage: "150 for
 SAML tokens, 200 for JWT tokens", claims) carries no `groups` claim, and the
@@ -539,14 +540,14 @@ broker) rather than pointing anything at LDAP.
 3. **Point the CDR at the AD FS issuer** and mine the `role` claim:
 
    ```bash
-   export FERROEHR__AUTH__ISSUER__0__ISSUER=https://adfs.example.com/adfs
-   export FERROEHR__AUTH__ISSUER__0__KIND=persons
-   export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
+   export FERROEHR__AUTH__ISSUER__ADFS__ISSUER=https://adfs.example.com/adfs
+   export FERROEHR__AUTH__ISSUER__ADFS__KIND=persons
+   export FERROEHR__AUTH__ISSUER__ADFS__AUDIENCE=ferroehr-api
    # AD FS mints no RFC 9068 tokens: name the type and the claims its tokens carry.
-   export FERROEHR__AUTH__ISSUER__0__TOKEN_TYPES=JWT
-   export FERROEHR__AUTH__ISSUER__0__REQUIRED_CLAIMS=iss,sub,aud,exp
-   export FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS=role
-   export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=https://adfs.example.com/adfs
+   export FERROEHR__AUTH__ISSUER__ADFS__PROFILE__TOKEN_TYPES=JWT
+   export FERROEHR__AUTH__ISSUER__ADFS__PROFILE__REQUIRED_CLAIMS=iss,sub,aud,exp
+   export FERROEHR__AUTH__ISSUER__ADFS__ROLE_CLAIMS=role
+   export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=adfs
    ```
 
    Grant your app `sign_in_persons` in the CDR, as for Entra ID above.
@@ -586,12 +587,14 @@ The `okta` preset reads Okta's access tokens (Okta, *OpenID Connect & OAuth
 | `token_types` | none | the page names no `typ`, so an `okta` issuer fails to load until you set `token_types` to what your Okta server writes |
 
 ```toml
-[[auth.issuer]]
+[auth.issuer.default]
 issuer = "https://example.okta.com/oauth2/default"
 kind = "persons"
-profile = "okta"
-token_types = ["<the typ header your server writes>"]
+preset = "okta"
 audience = ["api://ferroehr"]
+
+[auth.issuer.default.profile]
+token_types = ["<the typ header your server writes>"]
 ```
 
 Read the `typ` header of one of your server's access tokens and set it in
@@ -624,11 +627,13 @@ binding as follows.
    person, so the list must be complete.
 
    ```toml
-   [[auth.issuer]]
+   [auth.issuer.staff]
    issuer = "https://keycloak.example.com/realms/staff"
    kind = "persons"
-   profile = "keycloak"
+   preset = "keycloak"
    audience = ["ferroehr"]
+
+   [auth.issuer.staff.profile]
    app_only = [{ subjects = ["<the sub of service-account-lab>"] }]
    ```
 

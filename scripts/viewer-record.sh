@@ -102,8 +102,8 @@ else
     FERROEHR__AUTHZ__RBAC__ENABLED=false
     FERROEHR__USAGE_REPORT__ENABLED=false
     FERROEHR__TELEMETRY__FORMAT=json
-    FERROEHR__AUTH__ISSUER__0__JWKS_FILE="$ROOT/deploy/hosted/basic-users-jwks.json"
-    FERROEHR__AUTH__ISSUER__1__JWKS_FILE="$ROOT/docs/conformance/party/scim/jwks.json")
+    FERROEHR__AUTH__ISSUER__BASIC_USERS__JWKS_FILE="$ROOT/deploy/hosted/basic-users-jwks.json"
+    FERROEHR__AUTH__ISSUER__SCIM__JWKS_FILE="$ROOT/docs/conformance/party/scim/jwks.json")
   echo "── starting ferroehr on $CDR_URL"
   env "${SERVER_ENV[@]}" "$ROOT/target/debug/ferroehr" >"$WORK/ferroehr.log" 2>&1 &
   SERVER_PID=$!

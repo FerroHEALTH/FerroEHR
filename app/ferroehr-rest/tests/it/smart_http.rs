@@ -71,8 +71,7 @@ fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
             .expect("a public root"),
     );
     if patient_bound {
-        cfg.auth.smart.patient_issuers =
-            vec![ferrohealth_secret::secret_url::SecretUrl::new(issuer)];
+        common::patient_context(&mut cfg, issuer);
     }
     cfg
 }
@@ -576,4 +575,73 @@ async fn a_person_scoped_token_without_a_role_is_refused() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "a user/ token with a role: {body}");
+}
+
+/// FerroEHR starts before its authorization server answers (#6140): until
+/// the issuer's metadata and key set are read, the discovery document
+/// answers `503` with `Retry-After` and the reason `issuer-unread`, and so
+/// does a token of the issuer; once the issuer answers, the background read
+/// takes it and both are served.
+#[tokio::test]
+async fn an_unread_issuer_answers_503_until_it_appears() {
+    let issuer = MockServer::start().await;
+    let (_pg, app) = common::app(config(&issuer.uri(), true, false)).await;
+    let response = app.clone().oneshot(get(DISCOVERY, None)).await.unwrap();
+    assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    assert!(
+        response.headers().contains_key(header::RETRY_AFTER),
+        "a 503 carries Retry-After"
+    );
+    let (_status, body) = send_body(&app, get(DISCOVERY, None)).await;
+    assert!(body.contains("issuer-unread"), "{body}");
+    let bearer = token(&issuer.uri(), "user/template-*.r", &json!({}));
+    let (status, _body) = send_body(
+        &app,
+        get(&format!("{BASE}/definition/template/adl1.4"), Some(&bearer)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+
+    // The same issuer now answers: its metadata and key set are mounted.
+    let uri = issuer.uri();
+    Mock::given(method("GET"))
+        .and(path("/.well-known/oauth-authorization-server"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "issuer": uri,
+            "jwks_uri": format!("{uri}/jwks"),
+            "authorization_endpoint": format!("{uri}/authorize"),
+            "token_endpoint": format!("{uri}/token"),
+        })))
+        .mount(&issuer)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/jwks"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(include_str!(
+            "../../../../docs/conformance/party/smart/jwks.json"
+        )))
+        .mount(&issuer)
+        .await;
+    let mut status = StatusCode::SERVICE_UNAVAILABLE;
+    for _ in 0..150 {
+        status = app
+            .clone()
+            .oneshot(get(DISCOVERY, None))
+            .await
+            .unwrap()
+            .status();
+        if status == StatusCode::OK {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    assert_eq!(status, StatusCode::OK, "the issuer is read once it answers");
+    let (_status, doc) = common::send_json(&app, get(DISCOVERY, None)).await;
+    assert_eq!(doc["token_endpoint"], format!("{uri}/token"));
+    let (status, body) = send_body(
+        &app,
+        get(&format!("{BASE}/definition/template/adl1.4"), Some(&bearer)),
+    )
+    .await;
+    assert_ne!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+    assert_ne!(status, StatusCode::UNAUTHORIZED, "{body}");
 }

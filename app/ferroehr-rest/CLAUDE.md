@@ -58,7 +58,7 @@ copy of any of it.
 - **Authz/authn** live in `extensions::access`. `authn/` is the
   `ferrohealth-smart` `Gate` (bearer tokens from the `[auth]` issuers, Basic
   users from `[[auth.basic.users]]`) behind FerroEHR's middleware, plus
-  `authn::build` (the `Authenticator`: every `[[auth.issuer]]`, `[auth.dpop]`
+  `authn::build` (the `Authenticator`: every `[auth.issuer.<name>]`, `[auth.dpop]`
   through `Gate::with_dpop`, and the `[authz.rbac] role_issuers` filter of
   the privileged roles), `authn::assurance`, the patient-data gate over
   `[authz.assurance]`: RFC 9470 step-up `401`, judged before RBAC, and the

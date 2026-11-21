@@ -45,7 +45,7 @@ pub(super) struct Jit {
     user_name_claim: Option<String>,
     /// The claim the identity provider is read from.
     idp_claim: String,
-    /// The `identifier_issuer` of the issuer's `[[auth.party]]` table.
+    /// The `identifier_issuer` of the issuer's `[auth.issuer.<name>.party]` table.
     key_issuer: String,
     /// The `group_claim` of that table.
     group_claim: String,
@@ -97,7 +97,7 @@ impl NotAdmitted {
     }
 }
 
-/// The just-in-time creation of each `persons` issuer an `[[auth.party]]`
+/// The just-in-time creation of each `persons` issuer an `[auth.issuer.<name>.party]`
 /// table binds, keyed by issuer, read with its `[[authz.party_binding.issuer]]`
 /// table when it has one.
 ///
@@ -352,23 +352,26 @@ mod tests {
     fn resolved() -> Resolved {
         let section = AuthSection {
             enabled: true,
-            issuer: vec![IssuerEntry {
-                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
-                kind: Some(IssuerKind::Persons),
-                audience: vec!["ferroehr".to_owned()],
-                ..IssuerEntry::default()
-            }],
-            party: vec![PartySection {
-                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
-                identifier_issuer: "urn:login".to_owned(),
-                identifier_type: "guid".to_owned(),
-                group_claim: "groups".to_owned(),
-                group_identifier_issuer: "urn:groups".to_owned(),
-                ..PartySection::default()
-            }],
+            issuer: [(
+                "login".to_owned(),
+                IssuerEntry {
+                    issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
+                    kind: Some(IssuerKind::Persons),
+                    audience: vec!["ferroehr".to_owned()],
+                    party: Some(PartySection {
+                        identifier_issuer: "urn:login".to_owned(),
+                        identifier_type: "guid".to_owned(),
+                        group_claim: "groups".to_owned(),
+                        group_identifier_issuer: "urn:groups".to_owned(),
+                        ..PartySection::default()
+                    }),
+                    ..IssuerEntry::default()
+                },
+            )]
+            .into(),
             ..AuthSection::default()
         };
-        ferroehr::config::auth::resolve(&section).expect("the [auth] section resolves")
+        ferroehr::config::auth::resolve(&section, &[]).expect("the [auth] section resolves")
     }
 
     fn attribute(oidc: &str, path: &str, jit: bool, name: bool) -> PersonAttribute {

@@ -45,8 +45,9 @@ governs maintenance and extension, not initial build.
   — one place, never per-handler. The authenticated principal goes into
   request extensions; the `access` PEP consumes it.
 - **Config-driven** (one TOML file, `ferroehr.toml`, with environment-variable
-  overrides): the crate's `[auth]` section (`[[auth.issuer]]` tables with
-  their `kind` and profile, `[[auth.party]]`, `[[auth.federation]]`,
+  overrides): the crate's `[auth]` section (`[auth.issuer.<name>]` tables with
+  their `preset`, `kind`, `profile` and the `party`, `federation` and
+  `attributes` tables under each,
   `[auth.dpop]`, the Basic user store, the product scope), FerroEHR's
   `[auth.idp]` beside it (`config::auth_section`), FerroEHR's `[authz]`
   (`party_binding`, `federation.agreement`, `import`, `grants`,

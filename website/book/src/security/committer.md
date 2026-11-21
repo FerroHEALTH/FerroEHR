@@ -195,7 +195,7 @@ values and their renderings are under
 
 The binding matches the token's `person_key` claim against the identifier at
 the binding-key selector of a mapped `PERSON` template, under the
-`identifier_issuer` of the issuer's `[[auth.party]]` table. A `PERSON`
+`identifier_issuer` of the issuer's `[auth.issuer.<name>.party]` table. A `PERSON`
 binds a professional only while it performs a live professional `ROLE`, and
 a representative only while it is the source of a recorded representation
 relationship. A `PERSON` that is neither binds a `persons` login as the person
@@ -217,7 +217,7 @@ subject is that `PERSON` (#6106). The identifier gets there in one of four ways:
 
 In the `openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2` shape, the key is
 one `DV_IDENTIFIER` in the cluster `PARTY.details` holds, with the
-`[[auth.party]] identifier_issuer` as `issuer` and its `identifier_type` as
+party table's `identifier_issuer` as `issuer` and its `identifier_type` as
 `type`:
 
 ```json

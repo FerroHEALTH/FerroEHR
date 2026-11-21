@@ -17,7 +17,6 @@
 //! (`[management.endpoints]`, one level per endpoint) is its single authority,
 //! enforced by the per-route guard in `ferroehr-rest`.
 
-use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
 
 use crate::party_binding::grants::operation::GrantCeiling;
@@ -80,16 +79,17 @@ pub struct RbacConfig {
     /// design/extension.
     pub emergency_access_role: Option<String>,
     /// The issuers whose role claims may grant `admin_role` and
-    /// `emergency_access_role`, each a `persons` issuer; empty, the default,
-    /// lets no token grant them. Each renders with any userinfo masked.
-    pub role_issuers: Vec<SecretUrl>,
+    /// `emergency_access_role`, each the name of an `[auth.issuer.<name>]`
+    /// table of a `persons` issuer; empty, the default, lets no token grant
+    /// them.
+    pub role_issuers: Vec<String>,
     /// The Basic user of `[[auth.basic.users]]` that holds `admin_role` and
     /// `[auth] product_scope` from this file
     /// (`FERROEHR__AUTHZ__RBAC__FIRST_ADMIN`, default unset).
     ///
     /// No policy grant gives `admin_role`, so this user is the administrator
     /// who writes the first policy parties through the Demographic API.
-    /// Beside an `[[auth.party]]` table it is a person's credential, mapped by
+    /// Beside an `[auth.issuer.<name>.party]` table it is a person's credential, mapped by
     /// `[[authz.party_binding.basic_user]]` to the key of a `PERSON` that SCIM
     /// provisions after the operator grant (`ferroehr party-binding grant`).
     /// Unset, no Basic user holds `admin_role`. Our own design.

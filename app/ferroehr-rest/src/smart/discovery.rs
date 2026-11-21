@@ -23,7 +23,7 @@
 )]
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use axum::Router;
 use axum::extract::Extension;
@@ -39,6 +39,7 @@ use utoipa_axum::routes;
 
 use crate::config::AppConfig;
 use crate::extensions::access::authn::Authenticator;
+use crate::extensions::access::authn::described::Described;
 use crate::state::AppState;
 
 use ferroehr::config::smart::SmartConfig;
@@ -72,7 +73,7 @@ const LAUNCH_BASE64_JSON: &str = "launch-base64-json";
 /// episode capability rides its flag, and `[auth] capabilities` are added
 /// (`launch-base64-json` among them when a deployment advertises it).
 #[must_use]
-pub fn options(cfg: &AppConfig) -> SmartOptions {
+pub fn options(cfg: &AppConfig, patient_context: bool) -> SmartOptions {
     let smart = &cfg.auth.smart;
     let mut capabilities = vec![
         CONTEXT_OPENEHR_EHR.to_owned(),
@@ -87,7 +88,7 @@ pub fn options(cfg: &AppConfig) -> SmartOptions {
         }
     }
     let mut permissions = BTreeSet::from([PermissionCapability::User]);
-    if !smart.patient_issuers.is_empty() {
+    if patient_context {
         permissions.insert(PermissionCapability::Patient);
     }
     let mut services = BTreeMap::new();
@@ -99,7 +100,7 @@ pub fn options(cfg: &AppConfig) -> SmartOptions {
         }),
     );
     SmartOptions {
-        scopes_supported: scopes_supported(cfg),
+        scopes_supported: scopes_supported(cfg, patient_context),
         capabilities,
         permissions,
         services,
@@ -126,7 +127,7 @@ fn absolute_base(cfg: &AppConfig, base: &str) -> String {
 /// identity scopes). "The server SHALL support all scopes listed here" (SMART
 /// App Launch 2.2.0, Conformance, §Metadata), so a `patient/` scope is listed
 /// only when an issuer is bound for it.
-fn scopes_supported(cfg: &AppConfig) -> Vec<String> {
+fn scopes_supported(cfg: &AppConfig, patient_context: bool) -> Vec<String> {
     if !cfg.auth.shared.scopes_supported.is_empty() {
         return cfg.auth.shared.scopes_supported.clone();
     }
@@ -144,7 +145,7 @@ fn scopes_supported(cfg: &AppConfig) -> Vec<String> {
     .iter()
     .map(|scope| (*scope).to_owned())
     .collect();
-    if !cfg.auth.smart.patient_issuers.is_empty() {
+    if patient_context {
         scopes.extend(
             [
                 "launch/patient",
@@ -185,34 +186,80 @@ fn served(cfg: &AppConfig) -> bool {
         && ferroehr::config::auth::has_bearer(&cfg.auth.shared)
 }
 
-/// The document, serialized once at assembly.
+/// The document's source: the described issuer, read in the background, and
+/// the document serialized once that issuer is read.
 #[derive(Debug, Clone)]
-struct Document(Arc<Bytes>);
+struct Document {
+    /// The authenticator that describes the issuer.
+    authenticator: Arc<Authenticator>,
+    /// What FerroEHR adds to the issuer's metadata.
+    options: Arc<SmartOptions>,
+    /// The document, once the described issuer has been read.
+    serialized: Arc<OnceLock<Bytes>>,
+}
+
+/// The reason code of a `503` while the described issuer is unread, the code
+/// `ferrohealth-smart` refuses that issuer's tokens with.
+const ISSUER_UNREAD: &str = "issuer-unread";
+
+/// The reason code of a `503` for a described issuer whose metadata names no
+/// `token_endpoint`, which the document requires (SMART App Launch 2.2.0,
+/// Conformance, §Metadata).
+const NO_TOKEN_ENDPOINT: &str = "issuer-metadata-incomplete";
 
 /// Build the pre-auth discovery router.
 ///
-/// Returns an empty router when `smart.enabled` is off or no issuer's metadata
-/// was read, so a merge is a no-op and the path is absent (a `404`) — the
+/// Returns an empty router when `smart.enabled` is off or no issuer is
+/// described, so a merge is a no-op and the path is absent (a `404`), the
 /// extension-group `404`-when-off convention. The document is a pure function
-/// of the issuer's metadata read at boot and of static configuration, so it is
-/// built once here and served as ready [`Bytes`].
+/// of the described issuer's metadata and of static configuration, so it is
+/// serialized once, on the first request after that issuer is read; until
+/// then the route answers `503` (`issuer-unread`).
 ///
 /// Mount it in `crate::router::router` beside `overview::status::router`,
 /// outside the auth layer (the document is unauthenticated, master04).
-pub fn router(cfg: &AppConfig, rest_root: &str, authenticator: &Authenticator) -> Router<AppState> {
-    if !served(cfg) {
+pub fn router(
+    cfg: &AppConfig,
+    rest_root: &str,
+    authenticator: &Arc<Authenticator>,
+) -> Router<AppState> {
+    if !served(cfg) || !authenticator.describes() {
         return Router::new();
     }
-    let Some(document) = authenticator.smart_configuration(&options(cfg)) else {
-        return Router::new();
+    let document = Document {
+        authenticator: Arc::clone(authenticator),
+        options: Arc::new(options(cfg, authenticator.patient_context())),
+        serialized: Arc::new(OnceLock::new()),
     };
-    let body = Bytes::from(document.to_string());
     Router::new()
         .route(
             &discovery_path(&cfg.auth.smart, rest_root),
             get(smart_configuration),
         )
-        .layer(Extension(Document(Arc::new(body))))
+        .layer(Extension(document))
+}
+
+/// The document of the described issuer, read first when it is read in the
+/// background and not read yet.
+async fn described(document: &Document) -> Described {
+    document.authenticator.read_described().await;
+    document
+        .authenticator
+        .smart_configuration(&document.options)
+}
+
+/// The `503` of a document that cannot be built yet, naming `reason` (RFC
+/// 9110 §15.6.4: the condition is temporary, so `Retry-After` hints when to
+/// ask again).
+fn unavailable(reason: &'static str) -> Response {
+    let mut response = crate::overview::error::status_error_response(
+        http::StatusCode::SERVICE_UNAVAILABLE,
+        reason,
+    );
+    response
+        .headers_mut()
+        .insert(header::RETRY_AFTER, http::HeaderValue::from_static("5"));
+    response
 }
 
 /// The SMART App Launch service-discovery document — our SMART platform
@@ -244,7 +291,8 @@ pub fn router(cfg: &AppConfig, rest_root: &str, authenticator: &Authenticator) -
                         `server.public_base_url`. `capabilities` advertises what \
                         this server enforces: `context-openehr-ehr` and \
                         `openehr-permission-v1` always, `permission-user`, \
-                        `permission-patient` only with `smart.patient_issuers`, \
+                        `permission-patient` only with an issuer whose profile \
+                        sets `patient_context`, \
                         the experimental pair only when their flags are on, plus \
                         `[auth] capabilities`. This route exists only when \
                         `smart.enabled` is on (otherwise absent => `404`).",
@@ -273,15 +321,36 @@ pub fn router(cfg: &AppConfig, rest_root: &str, authenticator: &Authenticator) -
                  "client-confidential-asymmetric", "launch-standalone",
                  "sso-openid-connect", "context-openehr-ehr", "openehr-permission-v1"
              ]
-         }))
+         })),
+        (status = 503,
+         description = "The described `[auth]` issuer has not been read yet \
+                        (`issuer-unread`), or its metadata names no \
+                        `token_endpoint` (`issuer-metadata-incomplete`); the \
+                        problem detail names the reason and `Retry-After` \
+                        hints when to ask again.",
+         content_type = "application/problem+json")
     )
 )]
 async fn smart_configuration(Extension(document): Extension<Document>) -> Response {
-    (
-        [(header::CONTENT_TYPE, "application/json")],
-        Bytes::clone(&document.0),
-    )
-        .into_response()
+    let body = match document.serialized.get() {
+        Some(body) => body.clone(),
+        None => match described(&document).await {
+            Described::Document(built) if built.get("token_endpoint").is_none() => {
+                tracing::warn!(
+                    reason = NO_TOKEN_ENDPOINT,
+                    "the described issuer's metadata names no token_endpoint; the SMART \
+                     discovery document is not served"
+                );
+                return unavailable(NO_TOKEN_ENDPOINT);
+            }
+            Described::Document(built) => document
+                .serialized
+                .get_or_init(|| Bytes::from(built.to_string()))
+                .clone(),
+            Described::Unread | Described::None => return unavailable(ISSUER_UNREAD),
+        },
+    };
+    ([(header::CONTENT_TYPE, "application/json")], body).into_response()
 }
 
 /// The SMART discovery document's `OpenAPI`, its path derived from the SAME
@@ -328,7 +397,7 @@ mod tests {
         let mut cfg = enabled_cfg();
         cfg.public_root =
             Some(PublicRoot::new("https://gw.example.com/cdr", "/ehr").expect("a root"));
-        let options = options(&cfg);
+        let options = options(&cfg, false);
         assert_eq!(
             options.services[OPENEHR_REST_SERVICE]["baseUrl"],
             "https://gw.example.com/cdr/ehr/ferroehr/rest/openehr/v1"
@@ -337,7 +406,7 @@ mod tests {
 
     #[test]
     fn options_carry_the_openehr_service_and_the_enforced_capabilities() {
-        let options = options(&enabled_cfg());
+        let options = options(&enabled_cfg(), false);
         // master04 §Services: org.openehr.rest is required, its baseUrl ABSOLUTE.
         assert_eq!(
             options.services[OPENEHR_REST_SERVICE]["baseUrl"],
@@ -384,9 +453,7 @@ mod tests {
 
     #[test]
     fn a_bound_issuer_declares_the_patient_capability_and_scopes() {
-        let mut cfg = enabled_cfg();
-        cfg.auth.smart.patient_issuers = vec![SecretUrl::new("https://as.example")];
-        let options = options(&cfg);
+        let options = options(&enabled_cfg(), true);
         assert!(options.permissions.contains(&PermissionCapability::Patient));
         assert!(
             options
@@ -400,7 +467,7 @@ mod tests {
         let mut cfg = enabled_cfg();
         cfg.auth.smart.episode_launch = true;
         cfg.auth.shared.capabilities = vec![LAUNCH_BASE64_JSON.to_owned()];
-        let options = options(&cfg);
+        let options = options(&cfg, false);
         assert!(
             options
                 .capabilities
@@ -423,7 +490,7 @@ mod tests {
         let mut cfg = enabled_cfg();
         cfg.auth.shared.scopes_supported = vec!["openid".to_owned(), "user/aql-*.s".to_owned()];
         assert_eq!(
-            options(&cfg).scopes_supported,
+            options(&cfg, false).scopes_supported,
             vec!["openid", "user/aql-*.s"]
         );
     }
@@ -435,7 +502,7 @@ mod tests {
             "launch-ehr".to_owned(),
             CONTEXT_OPENEHR_EHR.to_owned(), // duplicate of a derived one
         ];
-        let options = options(&cfg);
+        let options = options(&cfg, false);
         assert!(options.capabilities.contains(&"launch-ehr".to_owned()));
         assert_eq!(
             options

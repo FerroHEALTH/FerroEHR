@@ -86,7 +86,13 @@ fn documented_config() -> ferroehr_rest::config::AppConfig {
 pub(super) fn zero_config() -> ferroehr_rest::config::AppConfig {
     let mut config = config();
     config.party_binding = party_binding("");
-    for table in &mut config.auth.shared.party {
+    for table in config
+        .auth
+        .shared
+        .issuer
+        .values_mut()
+        .filter_map(|entry| entry.party.as_mut())
+    {
         "login".clone_into(&mut table.identifier_type);
         table.group_claim.clear();
         table.group_identifier_issuer.clear();

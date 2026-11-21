@@ -234,7 +234,7 @@ A key passes the provenance rule when the version that introduced it was
 committed by a SCIM client, a client whose `ACTOR` holds or held a
 `scim_provision` grant (its client identifier under its token issuer), by an
 administrator, by a declared migration, or by just-in-time creation at a first
-login of a `persons` issuer an `[[auth.party]]` table binds (a
+login of a `persons` issuer an `[auth.issuer.<name>.party]` table binds (a
 `249|creation|` version carrying its description, committed
 by the new `PERSON` itself). A stored version
 records no role its committer held, so you name the administrators: by the
@@ -470,9 +470,10 @@ controller is asked for.
 
 ## What belongs in a mounted file (versus the environment)
 
-The environment sets an array of tables only by element index
-(`FERROEHR__AUTH__ISSUER__0__ISSUER`), so the **issuers**, the **party
-tables** and the **Basic-auth user store** read more clearly from a file.
+The environment sets an issuer key by key under its name
+(`FERROEHR__AUTH__ISSUER__STAFF__ISSUER`), and an array of tables only by
+element index, so the **issuers**, their **party tables** and the
+**Basic-auth user store** read more clearly from a file.
 
 Genuinely file-shaped material (the **PGP signing key**, the **ATNA and
 terminology-server PEMs**, a **JWKS blob**) is referenced by an

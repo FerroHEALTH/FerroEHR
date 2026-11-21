@@ -76,10 +76,7 @@ async fn replica(
     }
     let mut app = common::api_config(true);
     common::first_admin_only(&mut app, "root");
-    app.auth
-        .shared
-        .issuer
-        .push(machines(MACHINES, Preset::Rfc9068));
+    common::add_issuer(&mut app, machines(MACHINES, Preset::Rfc9068));
     common::router_with(app, svc).await
 }
 

@@ -260,9 +260,83 @@ pub(crate) fn jwks_file() -> PathBuf {
 /// The client every test token names unless it names its own.
 pub(crate) const TEST_CLIENT: &str = "ferroehr-test-client";
 
-/// The `[[auth.issuer]]` table of a `persons` issuer at `issuer` for
+/// The `[auth.issuer.<name>]` table of a `persons` issuer at `issuer` for
 /// `audience`, whose first-party client [`TEST_CLIENT`] is a grant in the
 /// CDR ([`first_party`]).
+/// The `[auth.issuer.<name>]` name the tests give the issuer `issuer`: its
+/// identifier in lower case with every other character `_`, after `i_`, the
+/// last 62 characters kept, the name form `ferrohealth-smart` holds a table
+/// name to.
+pub(crate) fn name_of(issuer: &str) -> String {
+    let folded: String = issuer
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let tail = folded.len().saturating_sub(62);
+    format!("i_{}", &folded[tail..])
+}
+
+/// The `[auth.issuer.<name>]` tables of `entries`, each under
+/// [`name_of`] its identifier.
+pub(crate) fn named(
+    entries: impl IntoIterator<Item = IssuerEntry>,
+) -> std::collections::BTreeMap<String, IssuerEntry> {
+    entries
+        .into_iter()
+        .map(|entry| (name_of(entry.issuer.expose()), entry))
+        .collect()
+}
+
+/// The `[auth.issuer.<name>]` tables of `entries` as [`named`] names them,
+/// each holding the one of `parties` whose `issuer` is its identifier as its
+/// `[auth.issuer.<name>.party]` table.
+pub(crate) fn bound(
+    entries: impl IntoIterator<Item = IssuerEntry>,
+    parties: impl IntoIterator<Item = ferrohealth_smart::party::config::PartySection>,
+) -> std::collections::BTreeMap<String, IssuerEntry> {
+    let mut tables = named(entries);
+    for party in parties {
+        let entry = tables
+            .values_mut()
+            .find(|entry| entry.issuer == party.issuer)
+            .expect("a party table names a trusted issuer");
+        entry.party = Some(party);
+    }
+    tables
+}
+
+/// Adds the table of `entry` to `config` under [`name_of`] its identifier.
+pub(crate) fn add_issuer(config: &mut AppConfig, entry: IssuerEntry) {
+    config
+        .auth
+        .shared
+        .issuer
+        .insert(name_of(entry.issuer.expose()), entry);
+}
+
+/// The table of the issuer `issuer` in `config`.
+pub(crate) fn issuer_table<'a>(config: &'a mut AppConfig, issuer: &str) -> &'a mut IssuerEntry {
+    config
+        .auth
+        .shared
+        .issuer
+        .values_mut()
+        .find(|entry| entry.issuer.expose() == issuer)
+        .expect("the issuer is trusted")
+}
+
+/// Trusts the issuer `issuer` of `config` to assert a patient context, so
+/// its `patient/` grants count (its profile's `patient_context`).
+pub(crate) fn patient_context(config: &mut AppConfig, issuer: &str) {
+    issuer_table(config, issuer).profile.patient_context = Some(true);
+}
+
 pub(crate) fn entry(issuer: &str, audience: &str) -> IssuerEntry {
     IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
@@ -296,7 +370,7 @@ pub(crate) async fn first_party(service: &FerroEhrService, config: &AppConfig) {
         .auth
         .shared
         .issuer
-        .iter()
+        .values()
         .filter(|entry| entry.kind == Some(IssuerKind::Persons))
         .map(|entry| entry.issuer.expose().to_owned())
         .filter(|issuer| issuer != BASIC_ISSUER)
@@ -364,7 +438,7 @@ pub(crate) fn auth(section: AuthSection) -> AuthConfig {
 /// The `[auth]` table trusting the issuers `entries`.
 pub(crate) fn trusting(entries: Vec<IssuerEntry>) -> AuthConfig {
     auth(AuthSection {
-        issuer: entries,
+        issuer: named(entries),
         ..AuthSection::default()
     })
 }
@@ -456,7 +530,7 @@ pub(crate) fn persons_and_patients(persons: &str, patients: &str, audience: &str
 /// The RBAC rules whose privileged roles the tokens of `issuer` may grant.
 pub(crate) fn rbac_trusting(issuer: &str) -> ferroehr::config::authz::RbacConfig {
     ferroehr::config::authz::RbacConfig {
-        role_issuers: vec![ferrohealth_secret::secret_url::SecretUrl::new(issuer)],
+        role_issuers: vec![name_of(issuer)],
         ..ferroehr::config::authz::RbacConfig::default()
     }
 }
@@ -533,25 +607,22 @@ pub(crate) fn basic_users(config: &mut AppConfig, users: &[(&str, &[&str])]) {
     shared.basic = Some(basic_section(&entries));
     shared
         .issuer
-        .retain(|entry| entry.issuer.expose() != BASIC_ISSUER);
-    shared
-        .party
-        .retain(|table| table.issuer.expose() != BASIC_ISSUER);
-    shared.issuer.push(IssuerEntry {
-        jwks_file: jwks_file().display().to_string(),
-        audience: vec!["ferroehr-basic-users".to_owned()],
-        ..entry(BASIC_ISSUER, "ferroehr-basic-users")
-    });
-    shared
-        .party
-        .push(ferrohealth_smart::party::config::PartySection {
-            issuer: ferrohealth_secret::secret_url::SecretUrl::new(BASIC_ISSUER),
-            identifier_issuer: BASIC_LOGIN.to_owned(),
-            identifier_type: "guid".to_owned(),
-            group_claim: "groups".to_owned(),
-            group_identifier_issuer: "urn:ferroehr:groups".to_owned(),
-            ..ferrohealth_smart::party::config::PartySection::default()
-        });
+        .retain(|_, entry| entry.issuer.expose() != BASIC_ISSUER);
+    add_issuer(
+        config,
+        IssuerEntry {
+            jwks_file: jwks_file().display().to_string(),
+            audience: vec!["ferroehr-basic-users".to_owned()],
+            party: Some(ferrohealth_smart::party::config::PartySection {
+                identifier_issuer: BASIC_LOGIN.to_owned(),
+                identifier_type: "guid".to_owned(),
+                group_claim: "groups".to_owned(),
+                group_identifier_issuer: "urn:ferroehr:groups".to_owned(),
+                ..ferrohealth_smart::party::config::PartySection::default()
+            }),
+            ..entry(BASIC_ISSUER, "ferroehr-basic-users")
+        },
+    );
     config.party_binding.basic_user = users
         .iter()
         .map(|(user, _)| ferroehr::config::binding::BasicUserKey {
@@ -826,19 +897,14 @@ pub(crate) fn logins_of(issuer: &str) -> String {
 }
 
 /// Binds the logins of the `persons` issuer `issuer` in `config`: once a
-/// `[[auth.party]]` table binds the Basic users, every person is bound, the
-/// tokens of every `persons` issuer included.
+/// party table binds the Basic users, every person is bound, the tokens of
+/// every `persons` issuer included.
 pub(crate) fn bind_issuer(config: &mut AppConfig, issuer: &str) {
-    config
-        .auth
-        .shared
-        .party
-        .push(ferrohealth_smart::party::config::PartySection {
-            issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer),
-            identifier_issuer: logins_of(issuer),
-            identifier_type: "guid".to_owned(),
-            ..ferrohealth_smart::party::config::PartySection::default()
-        });
+    issuer_table(config, issuer).party = Some(ferrohealth_smart::party::config::PartySection {
+        identifier_issuer: logins_of(issuer),
+        identifier_type: "guid".to_owned(),
+        ..ferrohealth_smart::party::config::PartySection::default()
+    });
 }
 
 /// Commits into `pool` the `PERSON` each login `(issuer, sub)` binds to under
@@ -1068,13 +1134,15 @@ pub(crate) async fn open_key_spaces(pool: &PgPool, issuers: &[(&str, bool)]) {
     }
 }
 
-/// Records the key issuers `config` declares, each `[[auth.party]]`
+/// Records the key issuers `config` declares, each `[auth.issuer.<name>.party]`
 /// `identifier_issuer` and each `patients` issuer, as `active` key spaces in
 /// every live database of this test process that holds no lease, as a
 /// replica booting on `config` fills them; a database with a lease has its
 /// key spaces kept by its replicas.
 pub(crate) async fn open_configured_key_spaces(config: &AppConfig) {
-    let Ok(resolved) = ferroehr::config::auth::resolve(&config.auth.shared) else {
+    let Ok(resolved) =
+        ferroehr::config::auth::resolve(&config.auth.shared, &config.audience_bases())
+    else {
         return;
     };
     let portal = ferroehr::config::binding::portal_issuers(&resolved);

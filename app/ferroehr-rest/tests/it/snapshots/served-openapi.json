@@ -2738,7 +2738,7 @@
         "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
         "operationId": "admin_rekey_party",
         "requestBody": {
-          "description": "`{ \"party_id\": …, \"issuer\": …, \"id\": … }`: the `PERSON`'s container and the new key, under the `identifier_issuer` of its `[[auth.party]]` table.",
+          "description": "`{ \"party_id\": …, \"issuer\": …, \"id\": … }`: the `PERSON`'s container and the new key, under the `identifier_issuer` of its `[auth.issuer.<name>.party]` table.",
           "content": {
             "application/json": {
               "schema": {},

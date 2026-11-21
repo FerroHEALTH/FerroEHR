@@ -127,8 +127,9 @@ its resource family and permission, and the
 [access evaluator](security.md#a-patients-own-ehr) holds a caller whose
 grants are `patient/` grants alone to that one EHR:
 
-- the grant counts only for an issuer listed in `[auth.smart] patient_issuers`, because an
-  `ehrId` names an EHR of the platform that issued it;
+- the grant counts only for an issuer whose profile sets `patient_context`
+  (on under the `ferrosmart` preset), because an `ehrId` names an EHR of the
+  platform that issued it;
 - any operation on another EHR is refused with `403` `refused-not-subject`,
   recorded as step 0 (subject), whether its path, its single-EHR query or
   import scope, its manifest or its result names that EHR; so is an operation
@@ -177,9 +178,9 @@ stand anywhere in the list, beside a Basic users' issuer listed first. Without
 it, `enabled = true` refuses the start.
 
 ```bash
-export FERROEHR__AUTH__ISSUER__0__ISSUER=https://as.example/realms/ferroehr
-export FERROEHR__AUTH__ISSUER__0__KIND=persons
-export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
+export FERROEHR__AUTH__ISSUER__IDP__ISSUER=https://as.example/realms/ferroehr
+export FERROEHR__AUTH__ISSUER__IDP__KIND=persons
+export FERROEHR__AUTH__ISSUER__IDP__AUDIENCE=ferroehr-api
 export FERROEHR__AUTH__SMART__DISCOVERY=true
 # The URL clients reach the server at, which the absolute service URLs hang
 # off; required.
@@ -232,7 +233,7 @@ A document looks like:
   `server.base_path` and `api.base_path`, which is why that key is required.
 - **`capabilities`** carries what the server enforces: `context-openehr-ehr`
   and `openehr-permission-v1` always, `permission-user`, and
-  `permission-patient` only when `patient_issuers` binds an issuer; the client
+  `permission-patient` only when an issuer sets `patient_context`; the client
   types and launch modes the issuer supports; `sso-openid-connect`, with the
   `issuer` member it requires, when the issuer's metadata lists the `openid`
   scope; `context-openehr-episode` when `episode_launch` is on;
@@ -417,7 +418,7 @@ The keys live in `[auth]` and `[auth.smart]`; see the
 | `FERROEHR__AUTH__SMART__DISCOVERY` | `false` | Serve the discovery document. |
 | `FERROEHR__SERVER__PUBLIC_BASE_URL` | unset (**required when enabled**) | The URL clients reach the server at, e.g. `https://cdr.example.com`: the absolute `services.*.baseUrl` values are it, `server.base_path` and `api.base_path`. |
 | `FERROEHR__AUTH__SMART__PLATFORM_BASE_URL` | unset | Base the discovery document hangs off. Unset = the REST root (`/ferroehr/rest`). A leading path is honoured (`/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`). |
-| `FERROEHR__AUTH__SMART__PATIENT_ISSUERS` | `[]` | The issuers whose `patient/` grants count. |
+| `FERROEHR__AUTH__ISSUER__<NAME>__PROFILE__PATIENT_CONTEXT` | the preset's | Whether the issuer's `patient/` grants count. |
 | `FERROEHR__AUTH__SMART__EPISODE_LAUNCH` | `false` | Advertise and accept episode launch context (experimental; advisory only, no episode filtering). |
 | `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | The scope that admits the ADMIN API and, beside a client the CDR grants `access_demographic`, the DEMOGRAPHIC API. |
 | `FERROEHR__AUTH__CAPABILITIES` | `[]` | Capabilities the discovery document adds. |

@@ -67,6 +67,9 @@ pub struct RequestAccess {
     now: jiff::Timestamp,
     grants: Option<Arc<LiveGrants>>,
     verdicts: Mutex<BTreeMap<EhrId, Judgement>>,
+    /// The EHRs a write judged before it took its connections, each kept
+    /// for the write's gate ([`Self::judge_ahead`]).
+    ahead: Mutex<BTreeMap<EhrId, Judgement>>,
     /// The subject each EHR's revision named when a read of this request
     /// found it in the store.
     read_subjects: Mutex<BTreeMap<EhrId, Option<EhrSubject>>>,
@@ -189,6 +192,7 @@ impl RequestAccess {
             now: in_force.now,
             grants: in_force.grants,
             verdicts: Mutex::new(BTreeMap::new()),
+            ahead: Mutex::new(BTreeMap::new()),
             read_subjects: Mutex::new(BTreeMap::new()),
             recorded: Recorded::default(),
             stale: None,
@@ -457,6 +461,60 @@ impl RequestAccess {
         ehr_id: EhrId,
         entry: &EhrEntry,
     ) -> Result<Arc<Verdict>, CareUnsettled> {
+        let judged = self.judged(ehr_id, entry).await?;
+        let verdict = Arc::clone(&judged.verdict);
+        self.verdicts
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(ehr_id, judged);
+        Ok(verdict)
+    }
+
+    /// Judges the EHR `ehr_id` as `entry` reads it for a write that creates
+    /// it, before the write takes a connection, and keeps the judgement for
+    /// the write's gate ([`Self::take_ahead`]) without counting the EHR as
+    /// one the request judged.
+    ///
+    /// The decision reads the party store, so judged inside the write's
+    /// transaction it would wait for the party pool while the request holds
+    /// its audit and clinical connections. No openEHR spec governs this: our
+    /// own design (#6186).
+    ///
+    /// # Errors
+    /// As [`Self::judge_ehr`].
+    pub async fn judge_ahead(&self, ehr_id: EhrId, entry: &EhrEntry) -> Result<(), CareUnsettled> {
+        let judged = self.judged(ehr_id, entry).await?;
+        self.ahead
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(ehr_id, judged);
+        Ok(())
+    }
+
+    /// The verdict [`Self::judge_ahead`] kept for `ehr_id`, when it was
+    /// judged on `seen`, the revision the write's transaction reads; it is
+    /// then kept for the rest of the request as [`Self::judge_ehr`] keeps
+    /// one. A judgement on another revision is dropped, and the gate judges
+    /// from the rows its transaction reads.
+    #[must_use]
+    pub fn take_ahead(&self, ehr_id: EhrId, seen: &Revision) -> Option<Arc<Verdict>> {
+        let judged = self
+            .ahead
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remove(&ehr_id)
+            .filter(|judged| judged.revision == *seen)?;
+        let verdict = Arc::clone(&judged.verdict);
+        self.verdicts
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(ehr_id, judged);
+        Some(verdict)
+    }
+
+    /// The judgement of the EHR `ehr_id` as `entry` reads it, with the
+    /// caller's care read and confirmed as [`Self::judge_ehr`] describes.
+    async fn judged(&self, ehr_id: EhrId, entry: &EhrEntry) -> Result<Judgement, CareUnsettled> {
         self.bind_subject(ehr_id, entry).await?;
         let mut care = self.care_for(entry).await?;
         if care.live()
@@ -470,13 +528,7 @@ impl RequestAccess {
             }
         }
         let care = self.with_attested(ehr_id, care);
-        let judged = self.judgement_of(ehr_id, entry, &care);
-        let verdict = Arc::clone(&judged.verdict);
-        self.verdicts
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .insert(ehr_id, judged);
-        Ok(verdict)
+        Ok(self.judgement_of(ehr_id, entry, &care))
     }
 
     /// The judgement of the EHR `ehr_id` as `entry` reads it, the caller's

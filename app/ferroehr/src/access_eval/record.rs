@@ -742,7 +742,10 @@ fn care_ground(tie: &Tie, namespace: &str) -> Option<AccessCareGround> {
             .as_deref()
             .and_then(|version| version.parse::<ObjectVersionId>().ok()),
         in_grace: grant.in_grace,
-        covers_for: grant.covers_for.as_ref().map(|key| identifier(key, None)),
+        covers_for: grant
+            .covers_for
+            .as_ref()
+            .map(|cover| identifier(&cover.key, Some(cover.kind.rm_type()))),
         provider: identifier(&grant.provider, Some("ORGANISATION")),
     })
 }

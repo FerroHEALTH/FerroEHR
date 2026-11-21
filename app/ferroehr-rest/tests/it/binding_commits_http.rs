@@ -55,27 +55,32 @@ const ADMINISTRATOR: &str = "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f";
 fn deployment() -> AppConfig {
     let mut config = config(None);
     let jwks_file = common::jwks_file().display().to_string();
-    {
-        let entries = &mut config.auth.shared.issuer;
-        entries.push(IssuerEntry {
+    common::add_issuer(
+        &mut config,
+        IssuerEntry {
             issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
             kind: Some(IssuerKind::Machines),
             audience: vec![MACHINE_AUDIENCE.to_owned()],
             jwks_file: jwks_file.clone(),
             // NOTE: the test key signs RFC 9068 `at+jwt` tokens, which the
             // profile's overridable `token_types` admits here.
-            token_types: Some(vec!["at+jwt".to_owned()]),
+            profile: ferrohealth_smart::profile::ProfileKeys {
+                token_types: Some(vec!["at+jwt".to_owned()]),
+                ..ferrohealth_smart::profile::ProfileKeys::default()
+            },
             ..IssuerEntry::default()
-        });
-        entries.push(IssuerEntry {
+        },
+    );
+    common::add_issuer(
+        &mut config,
+        IssuerEntry {
             kind: Some(IssuerKind::Patients),
             jwks_file,
             ..common::entry(PATIENTS, AUDIENCE)
-        });
-    }
+        },
+    );
     config.rbac = common::rbac_trusting(ISSUER);
-    config.auth.smart.patient_issuers =
-        vec![ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS)];
+    common::patient_context(&mut config, PATIENTS);
     config
 }
 

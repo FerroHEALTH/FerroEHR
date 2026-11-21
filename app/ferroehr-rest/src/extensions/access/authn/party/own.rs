@@ -103,7 +103,7 @@ pub(crate) fn own_person(caller: &Caller) -> Option<&PartyRef> {
 
 /// The caller of the login of `caller`, a token read as the patient's own,
 /// as a `persons` login of the same issuer, client, scopes and claims, which
-/// the shared binding looks up under the issuer's `[[auth.party]]` table.
+/// the shared binding looks up under the issuer's `[auth.issuer.<name>.party]` table.
 pub(in crate::extensions::access::authn) fn as_person(caller: &Caller) -> Caller {
     let probe = Caller::new(
         caller.subject().to_owned(),
@@ -126,7 +126,7 @@ pub(in crate::extensions::access::authn) fn as_person(caller: &Caller) -> Caller
 
 /// The caller `caller`, a token `ferrohealth-smart` reads as the patient's
 /// own, carrying the binding of its login when its issuer is a `persons`
-/// issuer with an `[[auth.party]]` table; `None` for a `patients` issuer's
+/// issuer with an `[auth.issuer.<name>.party]` table; `None` for a `patients` issuer's
 /// token, whose login the patient-portal binding reads ([`super::super::portal`]).
 ///
 /// The token's reading never grants: its login has to bind the person

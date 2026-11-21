@@ -74,7 +74,7 @@ honour **refuses to boot** rather than degrading at the first request:
 | `[authz.assurance] minimum` with an empty `levels` map, or with no mapped value at or above it | error: every patient-data request would be refused |
 | an `[authz.assurance] levels` value that is blank or carries whitespace, a quote or a backslash | error: the step-up challenge names the values in one quoted `acr_values` parameter (RFC 9470 §3) |
 | `[authz.professional]` | error: removed; the issuer's `kind` and profile classify the caller |
-| a `persons` issuer with no `[[auth.party]]` table, two issuers sharing an audience, or no `[authz.party_binding] provider` | error: every person is bound to a party, under the provider the deployment acts for |
+| a `persons` issuer with no `[auth.issuer.<name>.party]` table, two issuers sharing an audience, or no `[authz.party_binding] provider` | error: every person is bound to a party, under the provider the deployment acts for |
 | a Basic user with no `[[authz.party_binding.basic_user]]` mapping | error: a Basic user is a person, bound by its key |
 | an `[authz.rbac] role_issuers` entry that is not a `persons` issuer | error: only a person holds an administrator or emergency role |
 
@@ -92,16 +92,16 @@ The bearer settings:
 
 | Environment variable | Default | Meaning |
 |---|---|---|
-| `FERROEHR__AUTH__ISSUER__0__ISSUER` | unset (required for bearer tokens) | the first `[[auth.issuer]]` table's expected `iss`, and where the metadata is read: RFC 8414 §3 first, OpenID Connect Discovery 1.0 §4 after a `404`; index `1` is the second table |
-| `FERROEHR__AUTH__ISSUER__0__KIND` | **required** | `persons`, `patients`, `machines` or `federation`: whose tokens the issuer signs |
-| `FERROEHR__AUTH__ISSUER__0__PROFILE` | `rfc9068` | the preset of the issuer's token shape: `rfc9068`, `entra`, `keycloak`, `okta` or `nl` |
-| `FERROEHR__AUTH__ISSUER__0__AUDIENCE` | unset (**required with an issuer**) | accepted `aud` values |
-| `FERROEHR__AUTH__ISSUER__0__ALGORITHMS` | `RS256,RS384,PS256,PS384,ES256,ES384` | accepted signing algorithms, asymmetric only |
-| `FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW` | `60s` | leeway on `exp`, `nbf` and `iat`; capped at `5min` |
-| `FERROEHR__AUTH__ISSUER__0__JWKS_FILE` | unset | a static JWK Set of public keys, read instead of the issuer's metadata |
-| `FERROEHR__AUTH__ISSUER__0__JWKS_MAX_AGE` | `10min` | a key set older than this is read again |
-| `FERROEHR__AUTH__ISSUER__0__JWKS_REFRESH_INTERVAL` | `1min` | an unknown `kid` reads the key set again at most once per interval |
-| `FERROEHR__AUTH__ISSUER__0__TIMEOUT` | `10s` | one call to the authorization server |
+| `FERROEHR__AUTH__ISSUER__<NAME>__ISSUER` | unset (required for bearer tokens) | the expected `iss` of the `[auth.issuer.<name>]` table `<name>` names, and where the metadata is read, in the background from the start: RFC 8414 §3 first, OpenID Connect Discovery 1.0 §4 after a `404` |
+| `FERROEHR__AUTH__ISSUER__<NAME>__KIND` | the preset's | `persons`, `patients`, `machines` or `federation`: whose tokens the issuer signs; required under `rfc9068` |
+| `FERROEHR__AUTH__ISSUER__<NAME>__PRESET` | `rfc9068` | the preset of the issuer's token shape: `rfc9068`, `ferrosmart`, `entra`, `keycloak` or `okta` |
+| `FERROEHR__AUTH__ISSUER__<NAME>__AUDIENCE` | the openEHR base | accepted `aud` values; unset, the openEHR REST API's `baseUrl` under `server.public_base_url` |
+| `FERROEHR__AUTH__ISSUER__<NAME>__ALGORITHMS` | `RS256,RS384,PS256,PS384,ES256,ES384` | accepted signing algorithms, asymmetric only |
+| `FERROEHR__AUTH__ISSUER__<NAME>__CLOCK_SKEW` | `60s` | leeway on `exp`, `nbf` and `iat`; capped at `5min` |
+| `FERROEHR__AUTH__ISSUER__<NAME>__JWKS_FILE` | unset | a static JWK Set of public keys, read instead of the issuer's metadata |
+| `FERROEHR__AUTH__ISSUER__<NAME>__JWKS_MAX_AGE` | `10min` | a key set older than this is read again |
+| `FERROEHR__AUTH__ISSUER__<NAME>__JWKS_REFRESH_INTERVAL` | `1min` | an unknown `kid` reads the key set again at most once per interval |
+| `FERROEHR__AUTH__ISSUER__<NAME>__TIMEOUT` | `10s` | one call to the authorization server |
 | `FERROEHR__AUTH__REALM` | `ferroehr` | the realm every challenge names |
 | `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | the scope that admits the ADMIN and DEMOGRAPHIC APIs |
 
@@ -119,10 +119,10 @@ Basic user whose scopes do not grant the operation is refused with `403`. See
 > rest:
 >
 > ```bash
-> export FERROEHR__AUTH__ISSUER__0__ISSUER=https://keycloak.example/realms/ferroehr
-> export FERROEHR__AUTH__ISSUER__0__KIND=persons
-> export FERROEHR__AUTH__ISSUER__0__PROFILE=keycloak
-> export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
+> export FERROEHR__AUTH__ISSUER__KEYCLOAK__ISSUER=https://keycloak.example/realms/ferroehr
+> export FERROEHR__AUTH__ISSUER__KEYCLOAK__KIND=persons
+> export FERROEHR__AUTH__ISSUER__KEYCLOAK__PRESET=keycloak
+> export FERROEHR__AUTH__ISSUER__KEYCLOAK__AUDIENCE=ferroehr-api
 > ```
 >
 > A person signs in through a client the CDR grants `sign_in_persons`, such
@@ -183,7 +183,7 @@ authentication of them; Implementing Regulation (EU) 2026/2099 Art. 6(3) sets
 `substantial` for cross-border exchange, and `high` from 26 March 2032.
 
 **The natural person** behind a token is the issuer's to say. Each
-`[[auth.issuer]]` declares its `kind`, and `ferrohealth-smart` classifies every
+`[auth.issuer.<name>]` declares its `kind`, and `ferrohealth-smart` classifies every
 token by it and by the issuer's profile: a `persons` token through a client
 the CDR grants `sign_in_persons` is the person, a token through a client the
 CDR grants `act_for_persons` is that client acting for the person the token
@@ -777,7 +777,7 @@ the marker is the RM's own.
 
 - **Who counts as the person.** A bearer token with a `patient/` scope and no
   `user/` or `system/` scope (for example `patient/composition-*.cruds`), from an
-  issuer in [`[auth.smart] patient_issuers`](smart-app-launch.md#launch-context-binding-to-one-ehr).
+  issuer whose [`patient_context`](smart-app-launch.md#launch-context-binding-to-one-ehr) is on.
   The SMART scope grammar reserves `patient/` for "applications acting in the
   context of a specific patient/EHR" and `user/` for those acting for a
   logged-in practitioner, so a clinician's app uses `user/` scopes and keeps
@@ -905,8 +905,8 @@ Admin operation) and `READONLY` (`readonly_role`, refused on every write).
 | `FERROEHR__AUTHZ__RBAC__ENABLED` | `true` | the coarse role gate (active only when auth is enabled) |
 | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE` | `ADMIN` | role required for admin operations |
 | `FERROEHR__AUTHZ__RBAC__READONLY_ROLE` | `READONLY` | role marking a principal read-only: refused on every write |
-| `FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS` | `["roles","groups","entitlements"]` | JWT claim paths mined for roles, per issuer; a Keycloak issuer adds `realm_access.roles` |
-| `FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS` | empty | the `persons` issuers whose role claims may grant the administrator and emergency roles; a token of any other issuer never holds them |
+| `FERROEHR__AUTH__ISSUER__<NAME>__ROLE_CLAIMS` | `["roles","groups","entitlements"]` | JWT claim paths mined for roles, per issuer; a Keycloak issuer adds `realm_access.roles` |
+| `FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS` | empty | the names of the `persons` issuers whose role claims may grant the administrator and emergency roles; a token of any other issuer never holds them |
 
 Roles come from the JWT claims listed in `ROLE_CLAIMS`, or from a Basic user's
 configured roles. The defaults are the carriers
@@ -985,8 +985,8 @@ role gate).
 A caller is the patient, the `subject` caller kind of the
 [access evaluator](#access-directives), through a SMART App Launch
 patient-context credential: a bearer token with a `patient/` scope and no
-`user/` or `system/` one, from an issuer in
-[`[auth.smart] patient_issuers`](smart-app-launch.md#launch-context-binding-to-one-ehr).
+`user/` or `system/` one, from an issuer whose
+[`patient_context`](smart-app-launch.md#launch-context-binding-to-one-ehr) is on.
 The patient's own EHR is the `ehrId` of that token's launch context
 (ITS-REST SMART App Launch §Context Selection). The evaluator skips every step
 of the decision procedure for the patient on their own EHR (EHDS Art. 3) and
