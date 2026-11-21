@@ -142,6 +142,7 @@ async fn flagged(pool: &PgPool, expected: i64) -> i64 {
 async fn a_write_to_a_marked_record_is_flagged_for_review() {
     let mapping = crate::party_binding_http::mapping().with_admin_role("ADMIN");
     let (_db, pool, svc, app) = Box::pin(app_with(mapping)).await;
+    crate::access_policy_care_http::provider(&app).await;
     let (patient, carer) = (person(&app).await, person(&app).await);
     let ehr = record_of(&app, &patient).await;
     let writers = json!({ "relationship_writers": [{
