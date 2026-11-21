@@ -681,7 +681,7 @@ form (`'19500101'`) reads beside the search text, since such a value's
 search text is its symbol (#6090). It costs 72 bytes of WAL per ordinal or
 scale value a commit writes, and nothing on a commit without one.
 The WHERE lowering adds, for a top-level comparison one of them serves, a
-FROM item of the distinct versions some row of which carries a value the
+FROM item of the versions some row of which carries a value the
 comparison keeps (`aql::sql::anchor`), so the statement
 reads the objects the filter keeps instead of every node of the archetype.
 The comparison itself stays in the statement, and each anchor reads the
@@ -701,7 +701,14 @@ so its anchor depends on the statement (`aql::sql::anchor::RangeEntry`): in
 the flat shape the planner places it; a population statement that streams
 toward its LIMIT is led by the first row of each version the range keeps,
 read from the index row by row; and a statement that names its EHRs takes
-none, because their versions are its entry.
+none, because their versions are its entry. In the flat shape a range's
+anchor is the first row of each version too, which the planner pulls up into
+a node row it can enter from the index or probe per version through
+`node_hot_pkey`: a set of distinct versions is an item no join can probe, and
+on statistics that predate the rows it missed the planner rescanned it once
+per outer row. The probe for an earlier row states its conditions as
+`(…) IS TRUE`, which no index matches, so it reads the one version through
+`node_hot_pkey` whatever the statistics say (#6243).
 `event_time` is a stored copy of a `STABLE` function's value: it equals the
 comparison's reading because every session runs under `TimeZone = UTC`,
 which the driver sets at connection start. The feature envelope is

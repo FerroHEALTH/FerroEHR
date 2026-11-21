@@ -1044,18 +1044,36 @@ fn full_scalar_function_set_plans() {
 
 /// Anchor-probe `EXISTS` count. The population gate is no longer an `EXISTS`
 /// subquery (a direct `ehr.is_queryable` column filter over a join),
-/// so every remaining `EXISTS` is a containment anchor (OR / NOT CONTAINS).
+/// so every remaining `EXISTS` is a containment anchor (OR / NOT CONTAINS),
+/// once the currency probes and the earlier-row probes of a range anchor's
+/// first row (#6243) are set aside.
 fn anchor_exists(sql: &str) -> usize {
     sql.matches("EXISTS(SELECT")
         .count()
         .saturating_sub(currency_probes(sql))
+        .saturating_sub(earlier_row_probes(sql))
+}
+
+/// The earlier-row probes in `sql`, one per range anchor that is the first
+/// row of each version: each compares its row's `num` with the anchor row's.
+fn earlier_row_probes(sql: &str) -> usize {
+    sql.matches(r#"_e"."num" < "va"#).count()
 }
 
 /// The trunk-head currency probes in `sql`: the `EXISTS` over `vo_head` every
 /// `LATEST_VERSION` version alias carries (`vo_head.trunk_head_sys_version` IS
 /// the trunk head — RM common master06 §The 'Virtual Version Tree').
 fn currency_probes(sql: &str) -> usize {
-    sql.matches(r#"FROM "vo_head" AS "#).count()
+    sql.matches(r#"FROM "vo_head" AS "#)
+        .count()
+        .saturating_sub(anchor_head_reads(sql))
+}
+
+/// The head reads of the range anchors in `sql`: a flat anchor under
+/// `LATEST_VERSION` reads its row's trunk head version by the head's key
+/// (#6243), a scalar subquery and no `EXISTS`.
+fn anchor_head_reads(sql: &str) -> usize {
+    sql.matches(r#"FROM "vo_head" AS "va"#).count()
 }
 
 /// A predicate whose leaf crosses a MULTI-VALUED FRAGMENT attribute
