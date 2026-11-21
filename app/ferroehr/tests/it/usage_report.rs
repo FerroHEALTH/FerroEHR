@@ -369,7 +369,10 @@ async fn start_and_daily_payloads_carry_exactly_the_v2_fields() {
     assert_eq!(start["deployment"], "compose");
     assert_eq!(start["status"]["db_ok"], true);
     assert_eq!(start["status"]["migrations_ok"], true);
-    assert_eq!(start["status"]["postgres_major"], 18);
+    assert_eq!(
+        start["status"]["postgres_major"],
+        ferroehr::db::server_version::MINIMUM / 10_000
+    );
     assert_eq!(start["instance_id"], daily["instance_id"]);
 
     let window = &daily["metrics"]["window_24h"];
