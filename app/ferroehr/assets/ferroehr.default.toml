@@ -935,8 +935,8 @@ profile = "sandbox"
 #? [[authz.party_binding.basic_user]]
 # The `[auth.basic.users]` user-id. Optional (trust).
 #? user = ""
-# The `identifier_issuer` of the `[auth.party]` table the key belongs to.
-# Optional (trust).
+# The `identifier_issuer` of the `[auth.issuer.<name>.party]` table the key
+# belongs to. Optional (trust).
 #? key_issuer = ""
 # The binding key the user's `PERSON` carries. Optional (trust).
 #? key = ""

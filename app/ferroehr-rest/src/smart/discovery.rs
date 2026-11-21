@@ -214,7 +214,7 @@ const NO_TOKEN_ENDPOINT: &str = "issuer-metadata-incomplete";
 /// extension-group `404`-when-off convention. The document is a pure function
 /// of the described issuer's metadata and of static configuration, so it is
 /// serialized once, on the first request after that issuer is read; until
-/// then the route answers `503` ([`ISSUER_UNREAD`]).
+/// then the route answers `503` (`issuer-unread`).
 ///
 /// Mount it in `crate::router::router` beside `overview::status::router`,
 /// outside the auth layer (the document is unauthenticated, master04).

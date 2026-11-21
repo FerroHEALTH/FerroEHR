@@ -129,7 +129,7 @@ impl Authenticator {
     /// Builds the authenticator of `config`. A JWT issuer read from its
     /// metadata is read in the background from the start: until it is, its
     /// tokens are refused with `503` (`issuer-unread`) and the readiness
-    /// route reports the server not ready ([`Authenticator::issuers_ready`]),
+    /// route reports the server not ready (its `auth_issuers` indicator),
     /// so the server starts whether or not its authorization server is up. A
     /// `jwks_file` issuer and an introspected issuer are read here, from a
     /// local file and the introspection endpoint, and one that cannot be

@@ -66,7 +66,7 @@ x-hospital-env: &hospital-env
   FERROEHR__TELEMETRY__FILTER: info,ferrohealth_smart=debug
 services:
   # The quickstart issuer signs FerroPIX's PMIR feed token for FerroEHR's
-  # \`ferroehr-system\` audience, which the `quickstart` issuer accepts above; any other
+  # \`ferroehr-system\` audience, which the \`quickstart\` issuer accepts above; any other
   # client credentials request keeps the quickstart's FerroPIX audience.
   identity-issuer:
     environment:
