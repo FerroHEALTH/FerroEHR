@@ -202,8 +202,9 @@ forwarder renders its DICOM message from the stored record when it reads
 it. It holds one connection open, retries a failed send with an exponential
 backoff and jitter, and closes the connection with a TLS `close_notify` on
 shutdown, so nothing is lost to a reset (ITI TF-2 §3.20.4.1.1, RFC 5425
-§4.4). A record of the system chain is stamped `delivered_syslog_at` once the
-repository takes it. `spool_dir`, `spool_max_events` and `spool_max_size` are
+§4.4). A record leaves `audit.syslog_outbox` once the repository takes it;
+the forwarder's depth, the records the outbox still holds, is reported on
+`GET /management/health` as `audit_delivery`. `spool_dir`, `spool_max_events` and `spool_max_size` are
 unknown keys, refused at load.
 
 ### `[audit.fhir_feed]`: the RESTful-ATNA feed (ITI-20 ATX:FHIR Feed)
@@ -214,9 +215,10 @@ unknown keys, refused at load.
 | `poll_interval` | duration | `"2s"` | How long the forwarder waits for a new record before it reads the store again. |
 
 `ihe-atna`'s forwarder delivers the feed from the local store, oldest record
-first: a record not yet delivered has
-no `delivered_fhir_feed_at`, so a repository outage loses nothing, and the
-record is stamped once the repository accepts it. A record the repository
+first: a record not yet delivered keeps its row in `audit.fhir_feed_outbox`,
+so a repository outage loses nothing, and the row goes once the repository
+accepts the record. The records the outbox still holds are the forwarder's
+depth on `GET /management/health` (`audit_delivery`). A record the repository
 refuses (a `4xx` other than `401`, `408` or `429`) is set aside until the next
 start. It is reported on `GET /management/health` as `audit_delivery`, and
 the records behind it keep flowing. The forwarder retries until the

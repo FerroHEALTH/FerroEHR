@@ -251,6 +251,12 @@ struct Budget {
 /// FLAT commits of the IPS composition, 13,520 on a CONTRIBUTION commit, and
 /// 64 and 136 on the two party commits, measured beside the merge base, and
 /// each WAL ceiling fell by its path's figure.
+/// A system audit record has since been written once, into `audit_event`,
+/// with an id-list intake row and a narrow link the chainer adds, in place of
+/// a whole intake row copied into the chain (#6203): 370 to 456 fewer WAL
+/// bytes on each path that writes one (the party read and commits and the
+/// demographic query), measured beside the merge base, and each of those WAL
+/// ceilings fell by its path's figure.
 const BUDGETS: [Budget; 20] = [
     Budget {
         path: Path::CommitJson,
@@ -349,7 +355,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 78_848,
         round_trips: 8,
         nested: 6,
-        wal: 1974,
+        wal: 1596,
     },
     Budget {
         path: Path::CommitContribution,
@@ -394,7 +400,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 117_146,
         round_trips: 31,
         nested: 20,
-        wal: 7697,
+        wal: 7241,
     },
     Budget {
         path: Path::AqlMatches,
@@ -412,7 +418,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 107_199,
         round_trips: 8,
         nested: 6,
-        wal: 1971,
+        wal: 1601,
     },
     Budget {
         path: Path::CommitPartyScored,
@@ -421,7 +427,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 132_147,
         round_trips: 31,
         nested: 21,
-        wal: 10_266,
+        wal: 9810,
     },
     Budget {
         path: Path::ReadVersion,

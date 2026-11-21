@@ -6,7 +6,8 @@
 //! A request writes each of its records into the intake in its own
 //! transaction before it answers: an access the access log covers as its
 //! entry with its index row (`audit.access_log_intake`), any other record by
-//! its columns (`audit.audit_event_intake`). A record is durable once that
+//! its columns, written once into `audit.audit_event` with an
+//! `audit.audit_event_intake` row naming it. A record is durable once that
 //! transaction commits, and no request waits on the head of a chain. The
 //! chainer moves the intake into the chains: the access log through
 //! [`AccessLogStore::chain_round`], the system chain through

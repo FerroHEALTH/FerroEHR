@@ -277,7 +277,8 @@ async fn the_system_chain_walks_in_bounded_steps() {
     crate::audit_chain::seed(&audit, 6).await;
     crate::audit_chain::with_triggers_disabled(
         &pool,
-        "UPDATE audit.audit_event SET principal = 'nobody' WHERE chain_seq = 10",
+        "UPDATE audit.audit_event SET principal = 'nobody' \
+         WHERE id = (SELECT event_id FROM audit.audit_event_link WHERE chain_seq = 10)",
     )
     .await;
     let mut walk = audit

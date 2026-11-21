@@ -22,23 +22,16 @@
 
 COMMENT ON SCHEMA audit IS 'The local IHE ATNA Audit Record Repository (IHE ITI TF-1 §9): the node''s security-surveillance record, strictly outside the EHR content (BASE architecture_overview/master07-security.adoc §Access logging).';
 
--- Comparing the whole row minus the two delivery stamps fails CLOSED: a column
--- added later is immutable unless this exclusion list says otherwise.
+-- A record is never updated, from its insert on, before its link and after
+-- it (#6203): the outbox row of a sink is its delivery state.
 CREATE FUNCTION audit.audit_event_reject_mutation() RETURNS trigger
     LANGUAGE plpgsql
     SET search_path = audit, pg_catalog
     AS $$
 BEGIN
-    IF to_jsonb(NEW) - 'delivered_syslog_at' - 'delivered_fhir_feed_at'
-       IS DISTINCT FROM
-       to_jsonb(OLD) - 'delivered_syslog_at' - 'delivered_fhir_feed_at'
-    THEN
-        RAISE EXCEPTION
-            'audit.audit_event is append-only: only delivered_syslog_at and delivered_fhir_feed_at may change (record %)',
-            OLD.id
-            USING ERRCODE = 'restrict_violation';
-    END IF;
-    RETURN NEW;
+    RAISE EXCEPTION 'audit.% is append-only: a record and its link are never changed',
+        TG_TABLE_NAME
+        USING ERRCODE = 'restrict_violation';
 END;
 $$;
 
@@ -47,13 +40,34 @@ CREATE FUNCTION audit.audit_event_reject_deletion() RETURNS trigger
     SET search_path = audit, pg_catalog
     AS $$
 BEGIN
-    IF coalesce(current_setting('ferroehr.audit_reaping', true), 'off') <> 'on' THEN
-        RAISE EXCEPTION
-            'audit.audit_event records are deleted only by audit.reap_audit_events_due() (record %)',
-            OLD.id
-            USING ERRCODE = 'restrict_violation';
+    IF coalesce(current_setting('ferroehr.audit_reaping', true), 'off') = 'on' THEN
+        RETURN OLD;
     END IF;
-    RETURN OLD;
+    IF coalesce(current_setting('ferroehr.audit_discarding', true), 'off') = 'on'
+       AND NOT EXISTS (SELECT 1 FROM audit.audit_event_link l WHERE l.event_id = OLD.id)
+    THEN
+        RETURN OLD;
+    END IF;
+    RAISE EXCEPTION
+        'audit.audit_event records are deleted only by audit.reap_audit_events_due(), or unlinked by the discard of a reservation that never committed (record %)',
+        OLD.id
+        USING ERRCODE = 'restrict_violation';
+END;
+$$;
+
+-- A link leaves only with its record, by retention reaping.
+CREATE FUNCTION audit.audit_event_link_reject_deletion() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path = audit, pg_catalog
+    AS $$
+BEGIN
+    IF coalesce(current_setting('ferroehr.audit_reaping', true), 'off') = 'on' THEN
+        RETURN OLD;
+    END IF;
+    RAISE EXCEPTION
+        'audit.audit_event_link rows are deleted only by audit.reap_audit_events_due() (position %)',
+        OLD.chain_seq
+        USING ERRCODE = 'restrict_violation';
 END;
 $$;
 
@@ -65,7 +79,7 @@ CREATE FUNCTION audit.audit_event_reject_truncate() RETURNS trigger
     SET search_path = audit, pg_catalog
     AS $$
 BEGIN
-    RAISE EXCEPTION 'audit.audit_event cannot be truncated: it is the tamper-evident audit trail'
+    RAISE EXCEPTION 'audit.% cannot be truncated: it is the tamper-evident audit trail', TG_TABLE_NAME
         USING ERRCODE = 'restrict_violation';
 END;
 $$;
@@ -122,6 +136,8 @@ CREATE FUNCTION audit.audit_event_chain_link() RETURNS trigger
 DECLARE
     cursor_value text := current_setting('ferroehr.audit_chain_head', true);
     preceding    smallint;
+    own_version  smallint;
+    own_digest   bytea;
 BEGIN
     IF cursor_value IS NULL OR cursor_value = '' THEN
         RAISE EXCEPTION 'the audit chain cursor is unset: refusing to append an unchained record'
@@ -129,15 +145,24 @@ BEGIN
     END IF;
     NEW.chain_seq := split_part(cursor_value, ':', 1)::bigint + 1;
     NEW.prev_hash := decode(split_part(cursor_value, ':', 2), 'hex');
-    SELECT e.digest_version INTO preceding
+    SELECT e.digest_version, audit.audit_event_row_digest(e, NEW.chain_seq, NEW.prev_hash)
+      INTO own_version, own_digest
       FROM audit_event e
-     WHERE e.chain_seq = NEW.chain_seq - 1;
-    IF preceding IS NOT NULL AND NEW.digest_version < preceding THEN
+     WHERE e.id = NEW.event_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'audit record % does not exist: refusing to link it', NEW.event_id
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    SELECT e.digest_version INTO preceding
+      FROM audit_event_link l
+      JOIN audit_event e ON e.id = l.event_id
+     WHERE l.chain_seq = NEW.chain_seq - 1;
+    IF preceding IS NOT NULL AND own_version < preceding THEN
         RAISE EXCEPTION 'audit record digest version % follows version %: refusing a downgrade',
-            NEW.digest_version, preceding
+            own_version, preceding
             USING ERRCODE = 'restrict_violation';
     END IF;
-    NEW.row_hash := audit.audit_event_row_digest(NEW);
+    NEW.row_hash := own_digest;
     PERFORM set_config('ferroehr.audit_chain_head',
                        NEW.chain_seq || ':' || encode(NEW.row_hash, 'hex'), true);
     RETURN NEW;
@@ -176,7 +201,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION audit_event_leave_outbox() IS
-    'Removes a reaped audit_event record from the FHIR Feed''s outbox, as the foreign key that cascaded did.';
+    'Removes the outbox rows of a reaped record''s link, as the foreign key that cascaded did.';
 
 -- The statements the database runs inside the access-log writes, per
 -- search token and per chained record, are taken out of the path (#5885).
@@ -384,10 +409,11 @@ COMMENT ON TABLE audit_search_set IS
 -- profiles, the document the RESTful-ATNA ITI-81 search serves, is rendered
 -- from these columns under the record's render policy; nothing stores it.
 --
--- Append-only: the only permitted mutations are the delivery stamp and
--- retention reaping, both enforced by the triggers below. chain_seq,
--- prev_hash and row_hash are the tamper-evidence hash chain, filled by the
--- insert trigger under the chain-state row lock.
+-- Written once, by the request whose access it records, before its
+-- response (#5747, #6203); never updated. Its link in the hash chain is its
+-- audit_event_link row, which the chainer adds under the chain-state row
+-- lock. A record leaves only by retention reaping, or unlinked by the discard
+-- of a reservation that never committed.
 CREATE TABLE audit_event (
     id                     uuid        NOT NULL DEFAULT uuidv7(),
     -- The event time (FHIR AuditEvent.recorded / DICOM EventDateTime).
@@ -420,16 +446,6 @@ CREATE TABLE audit_event (
     -- The bearer token jti (IHE BALP OAUTHaccessTokenUse.Minimal), never
     -- token contents.
     token_id               text,
-    -- The delivery stamps: delivered_syslog_at is unused (the syslog sink
-    -- delivers from its own spool), delivered_fhir_feed_at is when the FHIR
-    -- Feed delivered the record (NULL = pending).
-    delivered_syslog_at    timestamptz,
-    delivered_fhir_feed_at timestamptz,
-    -- The record's position in the hash chain (gapless), its predecessor's
-    -- row_hash, and its own digest (audit.audit_event_row_digest).
-    chain_seq              bigint      NOT NULL,
-    prev_hash              bytea       NOT NULL,
-    row_hash               bytea       NOT NULL,
     -- The pseudonymisation domain read or written.
     domain                 text,
     -- The purpose-of-use and legal-basis codes of the access.
@@ -498,7 +514,6 @@ CREATE TABLE audit_event (
     -- The purposes of use and professional roles the access token states.
     token_attributes       jsonb,
     CONSTRAINT pk_audit_event PRIMARY KEY (id),
-    CONSTRAINT uq_audit_event_chain_seq UNIQUE (chain_seq),
     CONSTRAINT fk_audit_event_render_policy
         FOREIGN KEY (render_policy) REFERENCES audit_render_policy (digest),
     CONSTRAINT ck_audit_event_action CHECK (action IN ('C', 'R', 'U', 'D', 'E')),
@@ -580,15 +595,6 @@ CREATE INDEX ix_audit_event_patient ON audit_event (patient_id, recorded_at)
     WHERE patient_id IS NOT NULL;
 CREATE INDEX ix_audit_event_principal ON audit_event (principal, recorded_at)
     WHERE principal IS NOT NULL;
-CREATE TRIGGER audit_event_chain_begin
-    BEFORE INSERT ON audit_event
-    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_chain_begin();
-CREATE TRIGGER audit_event_chain_link
-    BEFORE INSERT ON audit_event
-    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_chain_link();
-CREATE TRIGGER audit_event_chain_commit
-    AFTER INSERT ON audit_event
-    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_chain_commit();
 CREATE TRIGGER audit_event_reject_mutation
     BEFORE UPDATE ON audit_event
     FOR EACH ROW EXECUTE FUNCTION audit.audit_event_reject_mutation();
@@ -598,11 +604,8 @@ CREATE TRIGGER audit_event_reject_deletion
 CREATE TRIGGER audit_event_reject_truncate
     BEFORE TRUNCATE ON audit_event
     FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_reject_truncate();
-CREATE TRIGGER audit_event_leave_outbox
-    AFTER DELETE ON audit_event
-    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_leave_outbox();
 COMMENT ON COLUMN audit_event.recorded_at IS 'The event time (FHIR AuditEvent.recorded / DICOM EventDateTime).';
-COMMENT ON COLUMN audit_event.stored_at IS 'When the row was persisted (drain-side).';
+COMMENT ON COLUMN audit_event.stored_at IS 'When the request wrote the record.';
 COMMENT ON COLUMN audit_event.action IS 'DICOM EventActionCode (PS3.15 §A.5.1): C/R/U/D/E.';
 COMMENT ON COLUMN audit_event.outcome IS 'DICOM EventOutcomeIndicator (PS3.15 §A.5.1): 0/4/8/12.';
 COMMENT ON COLUMN audit_event.event_code IS 'DICOM EventID csd-code (PS3.15 §A.5.1).';
@@ -613,11 +616,6 @@ COMMENT ON COLUMN audit_event.resource_class IS 'The touched resource class (the
 COMMENT ON COLUMN audit_event.resource_id IS 'The touched resource id (version uid / template id / party uid / stored-query name).';
 COMMENT ON COLUMN audit_event.client_ip IS 'The requesting network address.';
 COMMENT ON COLUMN audit_event.token_id IS 'The bearer token jti (IHE BALP OAUTHaccessTokenUse.Minimal); never token contents.';
-COMMENT ON COLUMN audit_event.delivered_fhir_feed_at IS 'When the FHIR-feed forwarding sink (ITI-20 ATX:FHIR Feed) delivered this record; NULL = pending.';
-COMMENT ON COLUMN audit_event.chain_seq IS
-    'Position in the tamper-evidence hash chain, assigned by the insert trigger under the chain-state row lock: gapless, so a missing number is a deleted record.';
-COMMENT ON COLUMN audit_event.prev_hash IS
-    'The row_hash of this record''s predecessor in the chain (the genesis digest for the first record).';
 COMMENT ON COLUMN audit_event.domain IS
     'The pseudonymisation domain read or written: clinical | party | linkage | system (no domain). NULL when the operation names none.';
 COMMENT ON COLUMN audit_event.purpose IS
@@ -654,12 +652,10 @@ COMMENT ON COLUMN audit_event.retention_ends IS
     'The first UTC date the record may be deleted on (Annex II 3.4): the access record''s own end, or the store horizon''s for any other record; NULL when it is kept without end or states no end.';
 COMMENT ON COLUMN audit_event.retention_stated IS
     'Whether the record states its retention end; false for a record written before 0013, which the store horizon reaps.';
-COMMENT ON COLUMN audit_event.delivered_syslog_at IS
-    'Unused: the syslog sink delivers from its own spool and never stamps a record.';
 COMMENT ON COLUMN audit_event.permit IS
     'The identifier of the data permit the caller declared it acts under (EHDS Art. 68), from [audit] permit_header; NULL when none was declared or the value was not an identifier.';
 COMMENT ON TABLE audit_event IS
-    'The local IHE ATNA Audit Record Repository: one row per audit record, whose FHIR R4 AuditEvent (IHE BALP shape) is rendered from the columns under the record''s render policy. Strictly outside the EHR content (BASE architecture_overview/master07-security.adoc §Access logging); append-only except per-sink delivery stamps and retention reaping.';
+    'The local IHE ATNA Audit Record Repository: one row per audit record, whose FHIR R4 AuditEvent (IHE BALP shape) is rendered from the columns under the record''s render policy. Strictly outside the EHR content (BASE architecture_overview/master07-security.adoc §Access logging); written once by the request and never changed; its link in the hash chain is its audit_event_link row, and only retention reaping or the discard of an unlinked record removes it.';
 COMMENT ON COLUMN audit_event.issuer IS
     'The issuer (iss) of the bearer token that authenticated the caller; NULL for a Basic-authenticated or anonymous caller.';
 COMMENT ON COLUMN audit_event.client_id IS
@@ -678,8 +674,6 @@ COMMENT ON COLUMN audit_event.render_policy IS
     'The digest of the audit_render_policy row the record is rendered under.';
 COMMENT ON COLUMN audit_event.search_tokens IS
     'The ITI-81 search tokens of the record''s FHIR AuditEvent: the ids of its audit_search_token rows, and its audit_search_set id negated.';
-COMMENT ON COLUMN audit_event.row_hash IS
-    'SHA-256 over every column of the record but row_hash and the delivery stamps (audit.audit_event_row_digest); recomputed by audit.verify_audit_chain().';
 COMMENT ON COLUMN audit_event.acting_mode IS
     'How the credential acts: a natural person (person), a client application for a person (client or delegated), a verified external accessor (external), or a client acting for nobody (system); NULL when the credential says nothing.';
 COMMENT ON COLUMN audit_event.binding IS
@@ -710,6 +704,56 @@ COMMENT ON COLUMN audit_event.digest_version IS
     'The column list the chain digest of this row hashes (audit.audit_event_digest_columns).';
 COMMENT ON COLUMN audit_event.token_attributes IS
     'The purposes of use and the professional roles the access token states under its issuer''s [[auth.attributes]] table, {"purposes": [{system, code}], "roles": [{system, code}]}; NULL when it states none.';
+
+-- ── audit_event_link ─────────────────────────────────────────────────────────
+-- The hash chain of the system records (#6203): the chainer adds one row per
+-- released record, in intake order, under the chain-state row lock, and the
+-- insert trigger fills the record's position, its predecessor's digest and
+-- its own (audit.audit_event_row_digest over the record and these two). A
+-- record without a link is in the intake and in no read. Append-only; a link
+-- leaves only with its record, by retention reaping.
+CREATE TABLE audit_event_link (
+    chain_seq bigint      NOT NULL,
+    event_id  uuid        NOT NULL,
+    prev_hash bytea       NOT NULL,
+    row_hash  bytea       NOT NULL,
+    linked_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_audit_event_link PRIMARY KEY (chain_seq),
+    CONSTRAINT uq_audit_event_link_event UNIQUE (event_id)
+);
+CREATE TRIGGER audit_event_chain_begin
+    BEFORE INSERT ON audit_event_link
+    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_chain_begin();
+CREATE TRIGGER audit_event_chain_link
+    BEFORE INSERT ON audit_event_link
+    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_chain_link();
+CREATE TRIGGER audit_event_chain_commit
+    AFTER INSERT ON audit_event_link
+    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_chain_commit();
+CREATE TRIGGER audit_event_link_reject_mutation
+    BEFORE UPDATE ON audit_event_link
+    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_reject_mutation();
+CREATE TRIGGER audit_event_link_reject_deletion
+    BEFORE DELETE ON audit_event_link
+    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_link_reject_deletion();
+CREATE TRIGGER audit_event_link_reject_truncate
+    BEFORE TRUNCATE ON audit_event_link
+    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_reject_truncate();
+CREATE TRIGGER audit_event_leave_outbox
+    AFTER DELETE ON audit_event_link
+    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_leave_outbox();
+COMMENT ON TABLE audit_event_link IS
+    'The tamper-evidence hash chain of the system records: one row per linked audit_event record, added by the chainer under the chain-state row lock. Append-only; a link leaves only with its record, by retention reaping.';
+COMMENT ON COLUMN audit_event_link.chain_seq IS
+    'The record''s position in the chain, assigned by the insert trigger under the chain-state row lock: gapless, so a missing number is a deleted record.';
+COMMENT ON COLUMN audit_event_link.event_id IS
+    'The audit_event record this link chains.';
+COMMENT ON COLUMN audit_event_link.prev_hash IS
+    'The row_hash of the preceding link (the genesis digest for the first).';
+COMMENT ON COLUMN audit_event_link.row_hash IS
+    'SHA-256 over every column of the record and its chain_seq and prev_hash (audit.audit_event_row_digest); recomputed by audit.verify_audit_chain().';
+COMMENT ON COLUMN audit_event_link.linked_at IS
+    'When the chainer linked the record.';
 
 CREATE FUNCTION audit.audit_event_digest_columns(p_version smallint) RETURNS text[]
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
@@ -749,9 +793,13 @@ CREATE FUNCTION audit.audit_event_digest_columns(p_version smallint) RETURNS tex
         ]) AS v2(columns)
 $$;
 COMMENT ON FUNCTION audit_event_digest_columns(smallint) IS
-    'The columns the chain digest of a version-p_version row hashes: every column but row_hash and the delivery stamps that version knows.';
+    'The columns the chain digest of a version-p_version row hashes: every column of the record that version knows, and the chain_seq and prev_hash of its link.';
 
-CREATE FUNCTION audit.audit_event_row_digest(p_row audit.audit_event) RETURNS bytea
+-- The record's position and its predecessor's digest come from its link,
+-- and enter the document under the names the column list gives them, so the
+-- digest is the bytes it was when they were columns of the record (#6203).
+CREATE FUNCTION audit.audit_event_row_digest(
+    p_row audit.audit_event, p_chain_seq bigint, p_prev_hash bytea) RETURNS bytea
     LANGUAGE sql STABLE PARALLEL SAFE
     SET search_path = pg_catalog
     SET TimeZone = 'UTC'
@@ -761,11 +809,13 @@ CREATE FUNCTION audit.audit_event_row_digest(p_row audit.audit_event) RETURNS by
                'ferroehr.audit_chain'::text,
                jsonb_object_agg(listed.name, whole.doc -> listed.name)
            )::text, 'UTF8'))
-      FROM to_jsonb(p_row) AS whole(doc),
+      FROM (SELECT to_jsonb(p_row)
+                   || jsonb_build_object('chain_seq', p_chain_seq, 'prev_hash', p_prev_hash))
+           AS whole(doc),
            unnest(audit.audit_event_digest_columns(p_row.digest_version)) AS listed(name)
 $$;
-COMMENT ON FUNCTION audit_event_row_digest(audit.audit_event) IS
-    'The chain digest of one stored record over the column list of its own digest_version: the single definition the insert trigger and the verifier both call.';
+COMMENT ON FUNCTION audit_event_row_digest(audit.audit_event, bigint, bytea) IS
+    'The chain digest of one stored record and its link''s position and predecessor digest, over the column list of its own digest_version: the single definition the link trigger and the verifier both call.';
 
 -- The runtime role registers the policy it writes under through this function
 -- and holds no INSERT on the table, so it can add a policy and never alter one.
@@ -850,12 +900,27 @@ BEGIN
     PERFORM audit.lock_search_tokens();
     PERFORM 1 FROM audit.audit_chain_state WHERE singleton FOR UPDATE;
     PERFORM set_config('ferroehr.audit_reaping', 'on', true);
-    WITH gone AS (
-        DELETE FROM audit.audit_event
-         WHERE (retention_stated AND retention_ends IS NOT NULL AND retention_ends <= p_today)
-            OR (NOT retention_stated AND p_unstated_cutoff IS NOT NULL
-                AND recorded_at < p_unstated_cutoff)
-        RETURNING chain_seq, row_hash, search_tokens
+    WITH due AS MATERIALIZED (
+        SELECT e.id, l.chain_seq
+          FROM audit.audit_event e
+          JOIN audit.audit_event_link l ON l.event_id = e.id
+         WHERE (e.retention_stated AND e.retention_ends IS NOT NULL
+                AND e.retention_ends <= p_today)
+            OR (NOT e.retention_stated AND p_unstated_cutoff IS NOT NULL
+                AND e.recorded_at < p_unstated_cutoff)
+    ),
+    unlinked AS (
+        DELETE FROM audit.audit_event_link l
+         USING due d WHERE l.chain_seq = d.chain_seq
+        RETURNING l.chain_seq, l.row_hash
+    ),
+    removed_events AS (
+        DELETE FROM audit.audit_event e
+         USING due d WHERE e.id = d.id
+        RETURNING e.search_tokens
+    ),
+    gone AS (
+        SELECT u.chain_seq, u.row_hash FROM unlinked u
     ),
     islanded AS (
         SELECT chain_seq, row_hash,
@@ -873,7 +938,7 @@ BEGIN
         RETURNING 1
     )
     SELECT (SELECT count(*) FROM gone),
-           (SELECT array_agg(DISTINCT t.id) FROM gone g, unnest(g.search_tokens) AS t(id)
+           (SELECT array_agg(DISTINCT t.id) FROM removed_events r, unnest(r.search_tokens) AS t(id)
              WHERE t.id > 0)
       INTO removed, released;
     PERFORM audit.release_search_tokens(released);

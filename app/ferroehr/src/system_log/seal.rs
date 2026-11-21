@@ -161,7 +161,7 @@ impl Seals {
     /// sign, and the store errors when a statement fails.
     pub async fn seal(&self) -> Result<Option<ChainSeal>, SealError> {
         let head = sqlx::query(
-            "SELECT chain_seq, encode(row_hash, 'hex') AS digest FROM audit.audit_event \
+            "SELECT chain_seq, encode(row_hash, 'hex') AS digest FROM audit.audit_event_link \
              ORDER BY chain_seq DESC LIMIT 1",
         )
         .fetch_optional(&mut *acquire(&self.pool).await?)
