@@ -1335,9 +1335,9 @@ checksum = "fd121741cf3eb82c08dd3023eb55bf2665e5f60ec20f89760cf836ae4562e6a0"
 
 [[package]]
 name = "crc32fast"
-version = "1.5.0"
+version = "1.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9481c1c90cbf2ac953f07c8d4a58aa3945c425b7185c9154d67a65e4230da511"
+checksum = "2b929dd2a135771f40afabd1073f85eed59c800b7c61901e5c254270497dad64"
 dependencies = [
  "cfg-if",
 ]
@@ -1916,9 +1916,9 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "870bb093329606aeb22f429b473ff08392a68b8a4bdb81b880caa19dbed65b64"
+checksum = "a19997e543b17cbba3dbf1aca5d973b882feb8007f94029fb79c8a2e79c62658"
 dependencies = [
  "async-trait",
  "ihe-atna",
@@ -3458,12 +3458,13 @@ dependencies = [
 
 [[package]]
 name = "ihe-atna"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f3b6f7c35c130608acf28416c65c0e68a4de5a1981f1e87e164716019944c7e"
+checksum = "48877a3d54d4975c889ba035c48af3f5731cac6f05ce1723367aff609103873e"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
+ "crc32fast",
  "ferrohealth-secret",
  "fhir-search",
  "fhir-types",
@@ -3483,9 +3484,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b7a8f5a30091d9a2c3aea54d40c12b6a043e66d6ef39ec9daccd33b58864790"
+checksum = "de4f59c990d5100559aae1e6ecc0343a2354fea08d37c31cbc7d431ab3e3595f"
 dependencies = [
  "ferrohealth-smart",
  "fhir-search",
