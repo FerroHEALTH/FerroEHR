@@ -226,6 +226,10 @@ struct Budget {
 /// grant rows (#6013): 34 to 54 fewer allocations on every path, each of
 /// which authenticates a Basic user, measured beside the merge base, and
 /// each ceiling fell by its path's figure.
+/// The version-tree uniqueness has since been declared per partition without
+/// the tier and served the read by version id, and the separate tree index is
+/// gone (#6207): every commit that writes a version writes 96 bytes of WAL
+/// fewer, measured beside the merge base, and each WAL ceiling fell by it.
 /// The token index has since taken the request and resource ids as keys of
 /// its own, in place of two hash B-trees on each record of both chains
 /// (#6202): 96 to 616 fewer WAL bytes on every path that writes an access
@@ -239,7 +243,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_530_778,
         round_trips: 9,
         nested: 13,
-        wal: 245_120,
+        wal: 245_024,
     },
     Budget {
         path: Path::CommitXml,
@@ -248,7 +252,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_533_031,
         round_trips: 9,
         nested: 14,
-        wal: 245_193,
+        wal: 245_097,
     },
     Budget {
         path: Path::CommitFlat,
@@ -257,7 +261,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_528_525,
         round_trips: 9,
         nested: 13,
-        wal: 245_167,
+        wal: 245_071,
     },
     Budget {
         path: Path::ReadJson,
@@ -338,7 +342,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_649_934,
         round_trips: 13,
         nested: 14,
-        wal: 245_680,
+        wal: 245_584,
     },
     Budget {
         path: Path::ReadAtTime,
@@ -356,7 +360,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 144_180,
         round_trips: 15,
         nested: 11,
-        wal: 6117,
+        wal: 6021,
     },
     Budget {
         path: Path::ReadStatus,
@@ -374,7 +378,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 117_146,
         round_trips: 31,
         nested: 20,
-        wal: 7857,
+        wal: 7761,
     },
     Budget {
         path: Path::AqlMatches,
@@ -401,7 +405,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 132_147,
         round_trips: 31,
         nested: 21,
-        wal: 10_498,
+        wal: 10_402,
     },
 ];
 
