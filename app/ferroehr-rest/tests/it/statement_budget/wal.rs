@@ -414,9 +414,12 @@ fn corpus(file: &str) -> String {
 /// ELEMENT value (#6033) adds 36 entries of 72 bytes to an IPS commit, which
 /// measured 239,966: its ceiling is that measurement, 2% above, the rise that
 /// issue's 3% allows and the orchestrator accepted on 2026-11-19. A lab
-/// commit carries no coded ELEMENT value and keeps its ceiling.
+/// commit carries no coded ELEMENT value and keeps its ceiling. The version
+/// tree uniqueness has since served the read by version id in place of a
+/// separate index (#6207): 96 bytes fewer on each commit, and both ceilings
+/// fell by it.
 const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
-    [(Fixture::Ips, 244_765, 8), (Fixture::Lab, 10_293, 8)];
+    [(Fixture::Ips, 244_669, 8), (Fixture::Lab, 10_197, 8)];
 
 /// Whether `relation` is written by a commit rather than by the access log or
 /// the audit intake beside it.
