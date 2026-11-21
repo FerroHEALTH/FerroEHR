@@ -55,36 +55,36 @@ impl<'a> Sharing<'a> {
     ///
     /// `member` gives a member's key and the JSON text of its value as the
     /// row would store it, or `None` for a member the row stores in another
-    /// form, which is never shared. A key the fragment carries more than
-    /// once is never shared either: the fragment keeps its last value.
+    /// form, which is never shared. A key outside `[A-Za-z0-9_]` is never
+    /// shared, so `shared` needs no escaping, and a row whose fragment carries
+    /// a key more than once shares nothing: the fragment keeps the key's last
+    /// value.
     pub fn take<T>(
         &mut self,
         num: i32,
         members: &mut Vec<T>,
         member: impl Fn(&T) -> Option<(&'a str, &'a [u8])>,
     ) -> Option<String> {
-        let eligible =
-            |key: &str, value: &[u8]| value.len() >= MIN_BYTES && !UNSHARED.contains(&key);
+        let eligible = |key: &str, value: &[u8]| {
+            value.len() >= MIN_BYTES
+                && !UNSHARED.contains(&key)
+                && key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
+        };
+        let offered = || members.iter().filter_map(&member);
         // Most rows carry no member this long, and leave without allocating.
-        if !members
-            .iter()
-            .filter_map(&member)
-            .any(|(key, value)| eligible(key, value))
+        if !offered().any(|(key, value)| eligible(key, value))
+            || offered()
+                .enumerate()
+                .any(|(i, (key, _))| offered().skip(i + 1).any(|(other, _)| other == key))
         {
             return None;
         }
-        let keys: Vec<&str> = members
-            .iter()
-            .filter_map(&member)
-            .map(|(key, _)| key)
-            .collect();
-        let once = |key: &str| keys.iter().filter(|k| **k == key).count() == 1;
         let mut taken: Vec<(&'a str, i32)> = Vec::new();
         members.retain(|candidate| {
             let Some((key, value)) = member(candidate) else {
                 return true;
             };
-            if !eligible(key, value) || !once(key) {
+            if !eligible(key, value) {
                 return true;
             }
             if let Some(holder) = self.holders.get(&(key, value)) {
@@ -244,7 +244,7 @@ mod tests {
     }
 
     #[test]
-    fn short_unshared_differing_duplicated_and_other_form_members_stay() {
+    fn short_unshared_differing_duplicated_and_unusual_members_stay() {
         let mut sharing = Sharing::default();
         let short: &[u8] = &[b'x'; MIN_BYTES - 1];
         let first: Vec<Offered> = vec![
@@ -253,8 +253,7 @@ mod tests {
             ("origin", long(b'o')),
             ("narrative", short),
             ("feeder_audit", long(b'f')),
-            ("links", long(b'l')),
-            ("links", long(b'l')),
+            ("other-key", long(b'k')),
         ];
         let mut members = first.clone();
         assert_eq!(sharing.take(1, &mut members, |m| Some(*m)), None);
@@ -276,8 +275,15 @@ mod tests {
         let mut members = first;
         let shared = sharing.take(3, &mut members, |m| Some(*m));
         assert_eq!(shared, Some(r#"{"feeder_audit":1}"#.to_owned()));
-        for kept in ["value", "time", "origin", "narrative", "links"] {
+        for kept in ["value", "time", "origin", "narrative", "other-key"] {
             assert!(members.iter().any(|m| m.0 == kept), "{kept} stays");
         }
+        let mut twice: Vec<Offered> = vec![("links", long(b'l')), ("links", long(b'l'))];
+        assert_eq!(
+            sharing.take(4, &mut twice, |m| Some(*m)),
+            None,
+            "a repeated key"
+        );
+        assert_eq!(twice.len(), 2);
     }
 }

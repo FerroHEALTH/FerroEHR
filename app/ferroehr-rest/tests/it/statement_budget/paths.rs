@@ -251,6 +251,12 @@ struct Budget {
 /// FLAT commits of the IPS composition, 13,520 on a CONTRIBUTION commit, and
 /// 64 and 136 on the two party commits, measured beside the merge base, and
 /// each WAL ceiling fell by its path's figure.
+/// A member repeated across a version's node rows has since been stored once
+/// and referenced from the later rows (#6229): 42,733, 42,662 and 42,781
+/// bytes fewer on the JSON, XML and FLAT commits of the IPS composition,
+/// whose entries repeat one participation list, and 42,405 on a CONTRIBUTION
+/// commit, measured beside the merge base, and each WAL ceiling fell by its
+/// path's figure. No other path moved.
 const BUDGETS: [Budget; 20] = [
     Budget {
         path: Path::CommitJson,
@@ -259,7 +265,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_530_778,
         round_trips: 9,
         nested: 13,
-        wal: 230_926,
+        wal: 188_193,
     },
     Budget {
         path: Path::CommitXml,
@@ -268,7 +274,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_533_031,
         round_trips: 9,
         nested: 14,
-        wal: 231_081,
+        wal: 188_419,
     },
     Budget {
         path: Path::CommitFlat,
@@ -277,7 +283,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_528_525,
         round_trips: 9,
         nested: 13,
-        wal: 231_191,
+        wal: 188_410,
     },
     Budget {
         path: Path::ReadJson,
@@ -358,7 +364,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_649_934,
         round_trips: 13,
         nested: 14,
-        wal: 232_064,
+        wal: 189_659,
     },
     Budget {
         path: Path::ReadAtTime,
