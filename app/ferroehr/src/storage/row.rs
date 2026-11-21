@@ -58,9 +58,9 @@ pub struct NodeRow {
     /// `name/defining_code/terminology_id/value` when the name is coded;
     /// `None` otherwise.
     pub name_terminology: Option<String>,
-    /// Materialized path from the root: full attribute names, array index
-    /// appended, `.`-terminated steps (`content0.data.events1.`) so byte
-    /// order under `COLLATE "C"` equals tree order.
+    /// The node's own step under its parent: the full attribute name, the
+    /// array index appended when the attribute holds an array, and a closing
+    /// `.` (`events1.`); empty on the root.
     pub path: String,
     /// The node's canonical JSON fragment, structure children pruned.
     pub data: Value,
@@ -80,7 +80,7 @@ pub struct NodeRow {
 /// columns (`rm_type`/`archetype`/`arch_*`/`name`) live inside `data` and are
 /// not needed to reconstruct the canonical tree.
 ///
-/// `num_cap`/`parent_num` are surfaced (unused by reassembly) because they are
+/// `parent_num` places each row under its parent in reassembly; `num_cap` is
 /// the nested-set interval contract the AQL engine consumes when it reads the
 /// `node` table directly.
 #[derive(Debug, Clone, PartialEq)]
@@ -91,16 +91,17 @@ pub struct ReadRow {
     pub num_cap: i32,
     /// `num` of the parent structure node.
     pub parent_num: i32,
-    /// Materialized path from the root: full attribute names, array index
-    /// appended, `.`-terminated steps (`content0.data.events1.`).
+    /// The node's own step under its parent: the full attribute name, the
+    /// array index appended when the attribute holds an array, and a closing
+    /// `.` (`events1.`); empty on the root.
     pub path: String,
     /// The node's canonical JSON fragment.
     pub data: Value,
 }
 
-/// Read access to the three fields [`crate::storage::codec::reassemble`]
-/// needs from a node row — its pre-order number, its materialized path, and
-/// its JSON fragment.
+/// Read access to the four fields [`crate::storage::codec::reassemble`]
+/// needs from a node row: its pre-order number, its parent's, its own step
+/// and its JSON fragment.
 ///
 /// Implemented by the lean [`ReadRow`] and by the `NodeRow` the unit tests
 /// state a decomposition in, so reassembly works from either shape without
@@ -108,7 +109,9 @@ pub struct ReadRow {
 pub trait NodeContent {
     /// Pre-order number within the versioned object (root = 0).
     fn num(&self) -> i32;
-    /// Materialized path from the root.
+    /// Pre-order number of the parent structure node (the root names itself).
+    fn parent_num(&self) -> i32;
+    /// The node's own step under its parent, empty on the root.
     fn path(&self) -> &str;
     /// The node's canonical JSON fragment.
     fn data(&self) -> &Value;
@@ -118,6 +121,9 @@ pub trait NodeContent {
 impl NodeContent for NodeRow {
     fn num(&self) -> i32 {
         self.num
+    }
+    fn parent_num(&self) -> i32 {
+        self.parent_num
     }
     fn path(&self) -> &str {
         &self.path
@@ -130,6 +136,9 @@ impl NodeContent for NodeRow {
 impl NodeContent for ReadRow {
     fn num(&self) -> i32 {
         self.num
+    }
+    fn parent_num(&self) -> i32 {
+        self.parent_num
     }
     fn path(&self) -> &str {
         &self.path
