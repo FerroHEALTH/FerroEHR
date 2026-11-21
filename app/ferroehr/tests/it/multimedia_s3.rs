@@ -686,29 +686,47 @@ async fn the_sweep_deletes_an_orphan_past_the_grace_and_nothing_a_version_refere
 /// `refresh_after`, half the sweep's grace period, so a commit that
 /// deduplicates onto an old blob never loses it to the sweep; a younger blob is
 /// left as it is.
+///
+/// S3 records a write to the whole second, so the young case writes through a
+/// store whose refresh age dwarfs that resolution, and the old case through one
+/// whose age the wait below exceeds wherever the first write fell within its
+/// second; both stores share the bucket (#6193).
 #[tokio::test]
 async fn a_write_of_stored_bytes_renews_a_blob_past_the_refresh_age() {
     let sw = Seaweed::start().await;
-    let store = s3_store(
-        &sw,
-        Limits {
-            refresh_after: Duration::from_secs(1),
-            ..Limits::default()
-        },
-    );
+    let store_with = |refresh_after| {
+        s3_store(
+            &sw,
+            Limits {
+                refresh_after,
+                ..Limits::default()
+            },
+        )
+    };
+    let patient = store_with(Duration::from_hours(1));
+    let store = store_with(Duration::from_secs(1));
     let key = BlobKey::of(b"renewed");
-    let write = || store.write_if_absent(&key, 7, [Ok(Bytes::from_static(b"renewed"))]);
+    let bytes = || [Ok(Bytes::from_static(b"renewed"))];
     let written = || async {
         let listing = store.content_listing().await.expect("the listing");
         assert_eq!(1, listing.len(), "{listing:?}");
         listing[0].1.expect("an S3 store records each write")
     };
-    write().await.expect("the first write");
+    store
+        .write_if_absent(&key, 7, bytes())
+        .await
+        .expect("the first write");
     let first = written().await;
-    write().await.expect("a write at once");
+    patient
+        .write_if_absent(&key, 7, bytes())
+        .await
+        .expect("a write within the refresh age");
     assert_eq!(first, written().await, "a young blob is left as it is");
     tokio::time::sleep(Duration::from_millis(2_500)).await;
-    write().await.expect("a write past the refresh age");
+    store
+        .write_if_absent(&key, 7, bytes())
+        .await
+        .expect("a write past the refresh age");
     let renewed = written().await;
     assert!(
         renewed > first,
