@@ -31,7 +31,7 @@ pub(crate) const CACHE_ENTRY: usize = 256;
 
 /// What an `Arc` allocation holds beside its value: the two reference
 /// counts.
-const ARC_COUNTS: usize = 2 * size_of::<usize>();
+pub(crate) const ARC_COUNTS: usize = 2 * size_of::<usize>();
 
 /// A value whose heap bytes this replica weighs.
 pub(crate) trait Weigh {

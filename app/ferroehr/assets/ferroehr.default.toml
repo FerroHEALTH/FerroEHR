@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 875 keys. A deployment that holds real data sets the 8 below,
+# This file lists 876 keys. A deployment that holds real data sets the 8 below,
 # the only live lines; every other key is optional and runs on the built-in
 # default its `#?` line shows, or stays unset where its note says so.
 #
@@ -118,6 +118,14 @@ profile = "sandbox"
 #? compression = true
 # The smallest response body that is compressed. Optional (infrastructure).
 #? compression_min_size = "1KiB"
+# Whether a request body in `Content-Encoding: gzip` or `br` is decoded before
+# a handler reads it. On, any other coding is refused `415` with
+# `Accept-Encoding` (RFC 9110 §15.5.16, RFC 7694 §3), and `body_limit` holds
+# the decoded bytes too: a body that decodes past it is refused `413` and the
+# rest is never decoded. Off by default: decoding spends server CPU a client
+# chose to save on its upload, and a product turns it on (no specification
+# governs this: our own design). Optional (infrastructure).
+#? request_decompression = true
 # The URL clients reach this listener at, through any proxy in front of it:
 # `https://cdr.example.com`, or with a path when a proxy serves the server
 # under one. Every public URL derives from it, after `server.base_path`: the

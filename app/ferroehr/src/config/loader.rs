@@ -361,12 +361,14 @@ mod tests {
     }
 
     /// With no source, `[server]` takes FerroEHR's defaults: every interface
-    /// at port 8080 and a 64 MiB body ceiling.
+    /// at port 8080, a 64 MiB body ceiling and gzip and Brotli request bodies
+    /// decoded.
     #[test]
     fn the_server_defaults_are_the_products() {
         let (loaded, config) = assemble_from(None, &env(&[]), &[]).expect("zero-config load");
         assert_eq!(config.server.shared.listen.to_string(), "0.0.0.0:8080");
         assert_eq!(config.server.shared.body_limit_bytes(), 64 * 1024 * 1024);
+        assert!(config.server.shared.request_decompression);
         assert_eq!(
             loaded.provenance().source("server.body_limit"),
             ferrohealth_config::provenance::Source::Default
