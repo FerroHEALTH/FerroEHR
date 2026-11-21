@@ -52,8 +52,9 @@ impl FerroEhrService {
     /// first version); [`ServiceError::Conflict`] when the EHR already
     /// exists or the subject already owns another EHR (`ehr_subject_uq`, kept
     /// in sync by [`Self::sync_ehr_subject`] → 409, ITS-REST `409_EHR.yaml`;
-    /// CNF `create_ehr-two_ehrs_same_patient`); [`ServiceError::Database`] on
-    /// a storage failure.
+    /// CNF `create_ehr-two_ehrs_same_patient`); `service_overloaded` when the
+    /// access decision on the new EHR cannot read the party store;
+    /// [`ServiceError::Database`] on a storage failure.
     pub(in crate::service) async fn commit_new_ehr(
         &self,
         ehr_id: EhrId,
@@ -79,6 +80,9 @@ impl FerroEhrService {
             "EHR creation",
         )?;
 
+        let subject = promoted.subject();
+        self.judge_created_ahead(ehr_id, subject.as_ref()).await?;
+
         let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
 
@@ -87,7 +91,6 @@ impl FerroEhrService {
         // promoted subject / is_queryable columns ride the same INSERT, so no
         // separate `sync_ehr_subject` UPDATE runs. A subject already owned by
         // another EHR is a distinct 409 (RM ehr master04 §EHR Status).
-        let subject = promoted.subject();
         let digest = self.care_subject_digest(subject.as_ref());
         let time_created = match crate::storage::ehr_repo::insert_ehr(
             &mut tx,

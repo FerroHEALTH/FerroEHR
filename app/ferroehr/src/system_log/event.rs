@@ -118,6 +118,14 @@ impl EventType {
     }
 }
 
+/// The name of the detail an access recorded for review carries.
+///
+/// It is a BALP `entity.detail` and a DICOM `ParticipantObjectDetail` of the
+/// object the record names, whose value is the `HL7_Confidentiality` code of
+/// the level the access was recorded at. No specification governs it: our
+/// own design (#6141).
+pub const REVIEW_DETAIL: &str = "review";
+
 /// A fully-resolved audit event, ready to be rendered into a DICOM
 /// `AuditMessage` ([`super::message`]).
 #[derive(Debug, Clone)]
@@ -188,6 +196,10 @@ pub struct AuditEvent {
     /// the person. Stamped by the sender at emit, so every emitter carries it.
     /// The mark records the declaration; it lifts no restriction.
     pub emergency_access: bool,
+    /// The level an access is recorded for review at ([`REVIEW_DETAIL`]): a
+    /// care relationship written to a record marked above `N` (draft access
+    /// control, The Decision Procedure, Writing Relationships, item 2).
+    pub review: Option<openehr_rm::draft::access_control::terminology::Confidentiality>,
     /// The legal-basis code the deployment attributes to this access.
     pub legal_basis: Option<String>,
     /// How many records the operation served: AQL result rows, search entries.
@@ -540,6 +552,7 @@ impl AuditEvent {
             purpose: None,
             permit: None,
             emergency_access: false,
+            review: None,
             legal_basis: None,
             result_count: None,
             origins: Vec::new(),

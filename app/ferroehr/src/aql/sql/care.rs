@@ -195,40 +195,93 @@ pub(super) fn care_need(need: &CareNeed, condition: &ConditionGroups, target: Ex
     }
 }
 
+/// The rows of the clinical care projection, as `access_care_row`, that the
+/// caller's principals (`$2`) hold in the care of a provider it acts for
+/// (`$5`, `$6`), live on the day `$3` or within the grace `$4` after,
+/// with the dates read as
+/// [`crate::party_binding::grants::caller::care_of::CareOf::live_on`] reads
+/// them.
+const HELD: &str = "access_care_row.carer_id = ANY($2) \
+     AND (access_care_row.provider_issuer, access_care_row.provider_id) IN \
+         (SELECT * FROM unnest(CAST($5 AS text[]), CAST($6 AS text[]))) \
+     AND (access_care_row.care_from IS NULL OR access_care_row.care_from <= CAST($3 AS date)) \
+     AND (access_care_row.care_until IS NULL \
+          OR CAST($3 AS date) < access_care_row.care_until \
+          OR CAST($3 AS date) < access_care_row.care_until + CAST($4 AS interval))";
+
+/// Of [`HELD`], a row that admits the caller as
+/// [`crate::party_binding::grants::caller::care_of::CareOf::admits_writer`]
+/// does: a self-declared one only where the policy turns that path on
+/// (`$7`), any other one only when no principal of the caller wrote it.
+const ADMITS: &str = "CASE WHEN access_care_row.self_declared THEN CAST($7 AS boolean) \
+     ELSE access_care_row.writer_id IS NULL OR access_care_row.writer_id <> ALL($2) END";
+
+/// The values [`HELD`] and [`ADMITS`] bind as `$2` to `$7`, after the EHR
+/// `target` as `$1`.
+fn held_values(care: &ProjectedCare, target: Expr) -> Vec<Expr> {
+    vec![
+        target,
+        Expr::val(care.principals.to_vec()),
+        Expr::val(care.day.to_string()),
+        Expr::val(care.grace.clone()),
+        Expr::val(care.provider_issuers.to_vec()),
+        Expr::val(care.provider_ids.to_vec()),
+        Expr::val(care.self_declared),
+    ]
+}
+
 /// Whether the subject of the EHR `target` is under the care of one of the
 /// caller's principals, in the care of a provider it acts for, read from the
-/// clinical care projection by the EHR row's subject digest: one index
-/// probe, binding the principals, the providers, the day and the grace, with
-/// the dates read as
-/// [`crate::party_binding::grants::caller::care_of::CareOf::live_on`] reads
-/// them and the writer as
-/// [`crate::party_binding::grants::caller::care_of::CareOf::admits_writer`]
-/// does. No openEHR spec governs this: our own design (#5699, #6055, #6073).
+/// clinical care projection by the EHR row's subject digest: one probe of
+/// `ix_access_care_subject`, binding the principals, the providers, the day
+/// and the grace ([`HELD`], [`ADMITS`]). No openEHR spec governs this: our
+/// own design (#5699, #6055, #6073).
 fn projected(care: &ProjectedCare, target: Expr) -> Expr {
     Expr::cust_with_exprs(
-        "EXISTS (SELECT 1 FROM ehr access_care_ehr \
-         JOIN access_care access_care_row \
-           ON access_care_row.subject_digest = access_care_ehr.subject_digest \
-         WHERE access_care_ehr.id = $1 AND access_care_row.carer_id = ANY($2) \
-         AND (access_care_row.provider_issuer, access_care_row.provider_id) IN \
-             (SELECT * FROM unnest(CAST($5 AS text[]), CAST($6 AS text[]))) \
-         AND (access_care_row.care_from IS NULL OR access_care_row.care_from <= CAST($3 AS date)) \
-         AND (access_care_row.care_until IS NULL \
-              OR CAST($3 AS date) < access_care_row.care_until \
-              OR CAST($3 AS date) < access_care_row.care_until + CAST($4 AS interval)) \
-         AND CASE WHEN access_care_row.self_declared THEN CAST($7 AS boolean) \
-                  ELSE access_care_row.writer_id IS NULL \
-                       OR access_care_row.writer_id <> ALL($2) END)",
-        [
-            target,
-            Expr::val(care.principals.to_vec()),
-            Expr::val(care.day.to_string()),
-            Expr::val(care.grace.clone()),
-            Expr::val(care.provider_issuers.to_vec()),
-            Expr::val(care.provider_ids.to_vec()),
-            Expr::val(care.self_declared),
-        ],
+        format!(
+            "EXISTS (SELECT 1 FROM ehr access_care_ehr \
+             JOIN access_care access_care_row \
+               ON access_care_row.subject_digest = access_care_ehr.subject_digest \
+             WHERE access_care_ehr.id = $1 AND {HELD} AND {ADMITS})"
+        ),
+        held_values(care, target),
     )
+}
+
+/// The caseload bound on the EHR `target` of a statement whose condition
+/// admits no row of an EHR outside the caller's care: the EHRs whose subject
+/// the clinical care projection holds in the caller's care as [`projected`]
+/// reads it, beside every EHR of a settings class the condition does not
+/// know (`known`), whose rows the condition must still reach so the
+/// statement fails on them ([`super::access`]). `None` unless the condition
+/// reads care from the projection.
+///
+/// The bound only restates what the condition already requires, so it admits
+/// no row the condition refuses; it is an uncorrelated `IN`, which
+/// PostgreSQL turns into a semi-join, so the planner may start from the
+/// caller's rows of `ix_access_care_caseload` and reach each EHR by
+/// `ix_ehr_subject_digest`, or keep starting from the clinical rows and probe
+/// per row, by the statistics of the caseload's size (PostgreSQL 18 §14.1).
+/// No openEHR spec governs this: our own design (#6074).
+pub(super) fn caseload(condition: &ConditionGroups, target: Expr, known: Vec<i64>) -> Option<Expr> {
+    let Care::Projected(care) = &condition.cared else {
+        return None;
+    };
+    let mut values = held_values(care, target);
+    values.push(Expr::val(known));
+    Some(Expr::cust_with_exprs(
+        format!(
+            "$1 IN (SELECT access_care_ehr.id FROM access_care access_care_row \
+             JOIN ehr access_care_ehr \
+               ON access_care_ehr.subject_digest = access_care_row.subject_digest \
+             WHERE {HELD} AND {ADMITS} \
+             UNION ALL SELECT access_unknown.ehr_id FROM access_settings access_unknown \
+             WHERE access_unknown.class_id IN \
+                 (SELECT access_known.id FROM access_class access_known \
+                  WHERE access_known.id <> ALL($8)))"
+        ),
+        values,
+    ))
 }
 
 /// Whether the subject of the EHR `target` is under the care of the caller
@@ -244,10 +297,7 @@ fn projected_need(care: &ProjectedCare, need: &CareNeed, target: Expr) -> Expr {
     let assigned = "NOT access_care_row.self_declared \
          AND (access_care_row.writer_id IS NULL OR access_care_row.writer_id <> ALL($2))";
     let path = match need.path() {
-        None => "CASE WHEN access_care_row.self_declared THEN CAST($7 AS boolean) \
-                 ELSE access_care_row.writer_id IS NULL \
-                      OR access_care_row.writer_id <> ALL($2) END"
-            .to_owned(),
+        None => ADMITS.to_owned(),
         Some(CarePath::Direct) => format!("access_care_row.carer_id = ANY($8) AND {assigned}"),
         Some(CarePath::Team) => format!("access_care_row.carer_id <> ALL($8) AND {assigned}"),
         Some(CarePath::SelfDeclared) => "access_care_row.carer_id = ANY($8) \
@@ -271,28 +321,13 @@ fn projected_need(care: &ProjectedCare, need: &CareNeed, target: Expr) -> Expr {
         "EXISTS (SELECT 1 FROM ehr access_care_ehr \
          JOIN access_care access_care_row \
            ON access_care_row.subject_digest = access_care_ehr.subject_digest \
-         WHERE access_care_ehr.id = $1 AND access_care_row.carer_id = ANY($2) \
-         AND (access_care_row.provider_issuer, access_care_row.provider_id) IN \
-             (SELECT * FROM unnest(CAST($5 AS text[]), CAST($6 AS text[]))) \
-         AND (access_care_row.care_from IS NULL OR access_care_row.care_from <= CAST($3 AS date)) \
-         AND (access_care_row.care_until IS NULL \
-              OR CAST($3 AS date) < access_care_row.care_until \
-              OR CAST($3 AS date) < access_care_row.care_until + CAST($4 AS interval)) \
-         AND {path}{roles})"
+         WHERE access_care_ehr.id = $1 AND {HELD} AND {path}{roles})"
     );
-    Expr::cust_with_exprs(
-        statement,
-        [
-            target,
-            Expr::val(care.principals.to_vec()),
-            Expr::val(care.day.to_string()),
-            Expr::val(care.grace.clone()),
-            Expr::val(care.provider_issuers.to_vec()),
-            Expr::val(care.provider_ids.to_vec()),
-            Expr::val(care.self_declared),
-            Expr::val(care.direct.to_vec()),
-            Expr::val(terminologies),
-            Expr::val(codes),
-        ],
-    )
+    let mut values = held_values(care, target);
+    values.extend([
+        Expr::val(care.direct.to_vec()),
+        Expr::val(terminologies),
+        Expr::val(codes),
+    ]);
+    Expr::cust_with_exprs(statement, values)
 }

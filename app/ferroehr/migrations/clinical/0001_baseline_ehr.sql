@@ -135,6 +135,10 @@ CREATE TABLE ehr (
     CONSTRAINT ck_ehr_subject_digest CHECK (octet_length(subject_digest) = 32)
 ) WITH (fillfactor = 90);
 CREATE INDEX idx_ehr_time_created ON ehr (time_created DESC, id);
+-- The EHRs of a caseload, found from the subject digests the care
+-- projection's caseload index answers (access_care).
+CREATE INDEX ix_ehr_subject_digest ON ehr (subject_digest) INCLUDE (id)
+    WHERE subject_digest IS NOT NULL;
 -- Subject uniqueness is wire-hard and RM-soft. The wire refuses a second EHR
 -- for a subject (ITS-REST 409_EHR.yaml), while the RM explicitly tolerates it
 -- — RM ehr master04 §EHR Identifier Allocation: "providers routinely create

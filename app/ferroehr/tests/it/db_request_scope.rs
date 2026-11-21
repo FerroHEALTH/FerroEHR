@@ -269,3 +269,116 @@ async fn a_task_working_for_a_request_cannot_ask_for_the_pool_the_request_holds(
     let refused = spawned.expect_err("the spawned acquire is refused");
     assert!(refused.is_panic(), "{refused:?}");
 }
+
+/// A request that turns from the party pool to the clinical one gives its
+/// party connection back to the pool as its clinical work begins, and one
+/// that turns back checks a party connection out again and gives back the
+/// clinical one (#5774).
+#[tokio::test]
+async fn a_request_turning_to_the_other_domain_gives_back_the_first_domains_connection() {
+    let db = testkit::db().await.expect("testkit database");
+    let pools = one_connection_pools(&db).await;
+    let (clinical, party) = (pools.get(Domain::Clinical), pools.get(Domain::Party));
+
+    request_scope(async {
+        touch(party).await;
+        assert_eq!(in_use(party), 1, "the scope keeps the party connection");
+        touch(party).await;
+        assert_eq!(in_use(party), 1, "a second party statement reuses it");
+
+        touch(clinical).await;
+        assert_eq!(
+            settled_in_use(party, 0).await,
+            0,
+            "the party connection is back in its pool once the clinical work begins"
+        );
+        assert_eq!(
+            in_use(clinical),
+            1,
+            "the scope keeps the clinical connection"
+        );
+
+        touch(party).await;
+        assert_eq!(
+            in_use(party),
+            1,
+            "turning back checks a party connection out again"
+        );
+        assert_eq!(
+            settled_in_use(clinical, 0).await,
+            0,
+            "and gives the clinical one back"
+        );
+    })
+    .await;
+    pools.close().await;
+}
+
+/// The audit connection a write takes before its domain connection stays
+/// kept when the request turns to the domain pool: the audit pool is taken
+/// first and never asked again while a domain connection is held (#5964).
+#[tokio::test]
+async fn a_request_keeps_its_audit_connection_when_it_turns_to_a_domain() {
+    let db = testkit::db().await.expect("testkit database");
+    let pools = one_connection_pools(&db).await;
+    let (audit, clinical) = (pools.get(Domain::Audit), pools.get(Domain::Clinical));
+
+    request_scope(async {
+        touch(audit).await;
+        touch(clinical).await;
+        assert_eq!(in_use(audit), 1, "the audit connection stays kept");
+        assert_eq!(in_use(clinical), 1);
+        touch(audit).await;
+        assert_eq!(in_use(audit), 1, "the kept audit connection serves again");
+    })
+    .await;
+    pools.close().await;
+}
+
+/// A write holds its audit connection and its domain's for its transaction,
+/// so a request that asks the other domain's pool for a connection inside
+/// it is refused in a debug build: writes each holding one domain and
+/// waiting for the other's pool stall until the acquire timeout (#6186).
+#[tokio::test]
+#[should_panic(expected = "inside a write of the other")]
+async fn a_write_asking_the_other_domains_pool_is_refused_in_a_debug_build() {
+    let db = testkit::db().await.expect("testkit database");
+    let pools = one_connection_pools(&db).await;
+    let (audit, clinical, party) = (
+        pools.get(Domain::Audit),
+        pools.get(Domain::Clinical),
+        pools.get(Domain::Party),
+    );
+    request_scope(async {
+        let _audit = acquire(audit).await.expect("the audit connection");
+        let _clinical = acquire(clinical).await.expect("the clinical connection");
+        let _party = acquire(party).await;
+    })
+    .await;
+}
+
+/// A request that reads the other domain before it takes a write's audit
+/// and domain connections, or that holds no audit connection, is not
+/// refused (#6186).
+#[tokio::test]
+async fn a_read_of_the_other_domain_before_a_write_is_not_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let pools = one_connection_pools(&db).await;
+    let (audit, clinical, party) = (
+        pools.get(Domain::Audit),
+        pools.get(Domain::Clinical),
+        pools.get(Domain::Party),
+    );
+    request_scope(async {
+        touch(party).await;
+        let _audit = acquire(audit).await.expect("the audit connection");
+        let _clinical = acquire(clinical).await.expect("the clinical connection");
+    })
+    .await;
+    request_scope(async {
+        let _clinical = acquire(clinical).await.expect("the clinical connection");
+        touch(party).await;
+    })
+    .await;
+    pools.close().await;
+}
