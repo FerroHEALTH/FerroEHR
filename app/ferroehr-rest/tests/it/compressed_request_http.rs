@@ -122,7 +122,7 @@ async fn stored(app: &Router, ehr: &str, version: &str) -> Value {
             .build(),
     )
     .await;
-    assert_eq!(status, StatusCode::OK, "read {version}: {body}");
+    assert_eq!(status, StatusCode::OK, "read the stored version: {body}");
     let mut composition: Value = serde_json::from_str(&body).expect("a composition");
     composition
         .as_object_mut()
