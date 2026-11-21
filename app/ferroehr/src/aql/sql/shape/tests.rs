@@ -48,6 +48,7 @@ fn ctx(ehr_access: AccessCondition, lineage: &Arc<ArchetypeLineage>) -> SqlCtx {
         policy_parties: PolicyParties::Served,
         access_settings: EhrAccessReaders::Every,
         own_records: None,
+        caseload: None,
     }
 }
 

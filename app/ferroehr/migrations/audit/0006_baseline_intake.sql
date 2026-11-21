@@ -358,7 +358,7 @@ BEGIN
         ON CONFLICT (digest) DO NOTHING;
     END IF;
     WITH held AS (
-        SELECT s.digest, s.retain_until
+        SELECT s.digest
           FROM audit.access_log_shared s
          WHERE s.digest IN (SELECT DISTINCT decode(t.c, 'hex')
                               FROM unnest(p_shared) AS t(c)
@@ -373,12 +373,15 @@ BEGIN
          WHERE t.c IS NOT NULL
          GROUP BY t.c
     ),
+    -- The raise is judged on the part's row, which a concurrent raise this
+    -- statement waited on is read again at (READ COMMITTED), so it never
+    -- writes an end the part already has (#6192).
     kept AS (
         UPDATE audit.access_log_shared s
            SET retain_until = n.until
           FROM needed n
           JOIN held h ON h.digest = n.digest
-         WHERE s.digest = n.digest AND h.retain_until < n.until
+         WHERE s.digest = n.digest AND s.retain_until < n.until
         RETURNING 1
     ),
     written AS (

@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use super::super::own_records::OwnRecords;
 use super::super::{EhrAccessReaders, EhrScopeKind, PolicyParties, SqlCtx};
+use crate::access_eval::caseload::Caseload;
 use crate::access_eval::condition::care::Care;
 use crate::access_eval::condition::{AccessCondition, ConditionGroups};
 use crate::aql::ir::{ParamValue, Params, QueryIr};
@@ -33,6 +34,7 @@ pub(super) struct Key {
     condition: AccessCondition,
     person_withheld: bool,
     own_records: Option<OwnRecords>,
+    caseload: Option<Arc<Caseload>>,
 }
 
 /// One parameter of the plan, in [`QueryIr::params`] order.
@@ -69,6 +71,7 @@ impl Key {
             condition: ctx.ehr_access.clone(),
             person_withheld,
             own_records: ctx.own_records.clone(),
+            caseload: ctx.caseload.clone(),
         }
     }
 
@@ -98,6 +101,7 @@ impl Key {
             && self.access_settings == ctx.access_settings
             && same_condition(&self.condition, &ctx.ehr_access)
             && self.own_records == ctx.own_records
+            && self.caseload == ctx.caseload
     }
 }
 
@@ -114,6 +118,7 @@ impl PartialEq for Key {
             && self.access_settings == other.access_settings
             && same_condition(&self.condition, &other.condition)
             && self.own_records == other.own_records
+            && self.caseload == other.caseload
     }
 }
 

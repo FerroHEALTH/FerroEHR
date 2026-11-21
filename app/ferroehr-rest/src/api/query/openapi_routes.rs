@@ -483,7 +483,15 @@ guarded_handler! {
                            un-prefixed: \"provided query parameters SHOULD NOT be \
                            prefixed with `$` sign\" (§Query parameters). The EHR \
                            scope is NOT a body member: it is the `ehr_id` query \
-                           parameter or the `openehr-ehr-id` header."
+                           parameter or the `openehr-ehr-id` header. FerroEHR extension, no \
+                           ITS-REST member: `caseload` (`direct`, `team`, `all` or \
+                           `none`) and `caseload_roles` (role codes, \
+                           `terminology::code` or a bare `HL7_ParticipationType` code) narrow the query to \
+                           the EHRs whose subjects the caller holds a live care \
+                           relationship to, inside its one statement; an unknown \
+                           value, roles without a caseload, a policy that turns the \
+                           caseload off or a purpose outside its care purposes is \
+                           `400` naming the member."
         ),
         responses(
             (
@@ -986,7 +994,15 @@ guarded_handler! {
                            example binds `temperature_from` as a number and \
                            `temperature_unit` as a string. The EHR scope is not a \
                            body member: it is the `ehr_id` query parameter or the \
-                           `openehr-ehr-id` header."
+                           `openehr-ehr-id` header. FerroEHR extension, no \
+                           ITS-REST member: `caseload` (`direct`, `team`, `all` or \
+                           `none`) and `caseload_roles` (role codes, \
+                           `terminology::code` or a bare `HL7_ParticipationType` code) narrow the query to \
+                           the EHRs whose subjects the caller holds a live care \
+                           relationship to, inside its one statement; an unknown \
+                           value, roles without a caseload, a policy that turns the \
+                           caseload off or a purpose outside its care purposes is \
+                           `400` naming the member."
         ),
         responses(
             (
@@ -1510,7 +1526,15 @@ guarded_handler! {
                            un-prefixed (\"provided query parameters SHOULD NOT be \
                            prefixed with `$` sign\", §Query parameters). The EHR \
                            scope is not a body member: it is the `ehr_id` query \
-                           parameter or the `openehr-ehr-id` header."
+                           parameter or the `openehr-ehr-id` header. FerroEHR extension, no \
+                           ITS-REST member: `caseload` (`direct`, `team`, `all` or \
+                           `none`) and `caseload_roles` (role codes, \
+                           `terminology::code` or a bare `HL7_ParticipationType` code) narrow the query to \
+                           the EHRs whose subjects the caller holds a live care \
+                           relationship to, inside its one statement; an unknown \
+                           value, roles without a caseload, a policy that turns the \
+                           caseload off or a purpose outside its care purposes is \
+                           `400` naming the member."
         ),
         responses(
             (
@@ -1791,60 +1815,4 @@ guarded_handler! {
 
 /// The answers several query operations declare word for word, each as a
 /// response map an operation's `responses(...)` names.
-mod refusals {
-    /// A projected version body the active `spec_profile` cannot express.
-    #[derive(utoipa::IntoResponses)]
-    #[response(
-        status = 409,
-        description = "OUR OWN EXTENSION — no openEHR spec \
-                      governs runtime \
-                      specification-generation selection. A \
-                      whole-object projection (`SELECT c FROM \
-                      EHR e CONTAINS COMPOSITION c`) serves a \
-                      stored version BODY, so it takes the \
-                      same generation gate the version reads \
-                      take: under `spec_profile = \"stable\"` \
-                      a projected version the released \
-                      generations cannot express refuses the \
-                      query — never elided from the rows, \
-                      never down-converted — naming the \
-                      version and the remedy. Leaf/scalar \
-                      projections over the same rows serve \
-                      data values rather than version bodies \
-                      and are NOT gated. Unreachable under the \
-                      default `development` profile."
-    )]
-    pub(super) struct SpecProfileConflict;
-
-    /// A query stopped by the configured execution budget.
-    #[derive(utoipa::IntoResponses)]
-    #[response(
-        status = 408,
-        description = "The released trigger, verbatim: `408 \
-                      Request Timeout` \"is returned when there \
-                      is a query execution timeout (i.e. \
-                      maximum query execution time reached, \
-                      therefore the server aborted the \
-                      execution of the query)\" (ITS-REST \
-                      `specifications/responses/408_Query.yaml`) \
-                      — here the configured per-query execution \
-                      budget (`FERROEHR__RECORD__QUERY__TIMEOUT`)."
-    )]
-    pub(super) struct QueryTimeout;
-
-    /// An `Accept` a `RESULT_SET` cannot satisfy.
-    #[derive(utoipa::IntoResponses)]
-    #[response(
-        status = 406,
-        description = "The `Accept` header cannot be satisfied: \
-                      a RESULT_SET is served as canonical \
-                      `application/json` only (the canonical \
-                      XML ITS defines no RESULT_SET shape), so \
-                      an exclusively-XML `Accept` is refused \
-                      (`Resources.md` §\"JSON Format\": \"If \
-                      the service cannot fulfill this aspect of \
-                      the request, it MUST respond with HTTP \
-                      status code `406 Not Acceptable`\")."
-    )]
-    pub(super) struct ResultSetNotAcceptable;
-}
+mod refusals;

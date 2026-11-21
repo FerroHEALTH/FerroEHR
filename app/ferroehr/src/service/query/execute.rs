@@ -178,7 +178,7 @@ impl FerroEhrService {
         // §Supporting Archetype-based Querying): resolved here, once per execution,
         // because SQL building is synchronous.
         let archetype_lineage = self.archetype_lineage().await.map_err(Failure::analysis)?;
-        let own_records = Box::pin(self.delayed_own_records())
+        let (own_records, caseload) = Box::pin(self.own_and_caseload(ir.domain, request))
             .await
             .map_err(Failure::analysis)?;
         let exec_start = Instant::now();
@@ -198,6 +198,7 @@ impl FerroEhrService {
                 policy_parties: PolicyParties::of_request(&self.binding),
                 access_settings,
                 own_records: own_records.clone(),
+                caseload: caseload.clone(),
             };
             // `[record.query] timeout` bounds the DB execution so an over-long query is
             // `408` rather than hanging to the global request timeout.
@@ -761,6 +762,7 @@ mod tests {
             policy_parties: crate::aql::sql::PolicyParties::Served,
             access_settings: crate::aql::sql::EhrAccessReaders::Every,
             own_records: None,
+            caseload: None,
         };
         let pool = closed_pool().await;
         let failure = crate::aql::exec::execute(&pool, &ir, None, &params, &ctx, profile)
