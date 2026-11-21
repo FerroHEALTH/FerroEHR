@@ -14,7 +14,7 @@ use std::borrow::Cow;
 
 use crate::access_eval::condition::AccessCondition;
 use crate::aql::ir::QueryDomain;
-use crate::aql::sql::EhrAccessReaders;
+use crate::aql::sql::readers::EhrAccessReaders;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;

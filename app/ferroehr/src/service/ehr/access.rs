@@ -31,7 +31,7 @@ use std::sync::Arc;
 use crate::access_eval::class::{Class, Classes, Keepers};
 use crate::access_eval::condition::EhrEntry;
 use crate::access_eval::stale::StaleCopies;
-use crate::aql::sql::EhrAccessReaders;
+use crate::aql::sql::readers::EhrAccessReaders;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::ehr::access_cache::{EHR, Lookup, looked_up, owned_or_reload, refilled};
@@ -326,17 +326,20 @@ impl FerroEhrService {
     /// write a `marking` other than the current one: the marking is the
     /// controller's alone, and a version committed by anyone else carries it
     /// unchanged (draft access control, The Decision Procedure, Reading and
-    /// Writing the Settings).
+    /// Writing the Settings). The controller's current exclusions are carried
+    /// into each `EHR_ACCESS` version of `changes` such a caller commits
+    /// ([`crate::service::ehr::access_exclusions::carry`]).
     ///
     /// # Errors
     /// [`ServiceError::Forbidden`] (`403`) for a caller who is neither an
     /// administrator nor a gate-keeper of the current settings, or who
-    /// changes the marking, and the storage error of the read.
+    /// changes the marking or the exclusions, and the storage error of the
+    /// read.
     pub(in crate::service) async fn check_ehr_access_writer(
         &self,
         tx: &mut PgConnection,
         ehr_id: EhrId,
-        markings: &[Option<&Value>],
+        changes: &mut [(crate::versioning::audit::AuditInput, Change)],
     ) -> Result<(), ServiceError> {
         let caller = self.settings_caller_on(ehr_id);
         if caller.administrator() {
@@ -354,16 +357,20 @@ impl FerroEhrService {
             .as_ref()
             .and_then(|value| value.get("settings"))
             .and_then(|settings| settings.get("marking"));
-        if markings
+        if changes
             .iter()
-            .any(|written| !same_marking(*written, marking))
+            .filter(|(_, c)| c.kind() == Kind::EhrAccess)
+            .any(|(_, c)| !same_marking(written_marking(c), marking))
         {
             return Err(ServiceError::not_permitted(
                 "only the controller sets, changes or clears the EHR_ACCESS marking; a version \
                  committed by anyone else carries it unchanged",
             ));
         }
-        Ok(())
+        let held = stored
+            .as_ref()
+            .and_then(crate::service::ehr::access_exclusions::held);
+        crate::service::ehr::access_exclusions::carry(held, changes)
     }
 
     /// Who the running request's caller is to the `EHR_ACCESS` settings.
@@ -402,15 +409,19 @@ impl FerroEhrService {
     }
 
     /// The EHRs whose `EHR_ACCESS` objects the running request's query reads:
-    /// every EHR's for a caller who reads them all, otherwise the EHRs whose
-    /// settings name the caller a gate-keeper, judged per class.
+    /// every EHR's for the controller, every EHR's whose settings hold no
+    /// exclusions for the subject, otherwise the EHRs whose settings name the
+    /// caller a gate-keeper and hold no exclusions, judged per class.
     ///
     /// # Errors
     /// [`ServiceError`] when the classes cannot be read.
     pub async fn ehr_access_readers(&self) -> Result<EhrAccessReaders, ServiceError> {
         let caller = self.settings_caller();
-        if caller.reads_every() {
+        if caller.administrator() {
             return Ok(EhrAccessReaders::Every);
+        }
+        if caller.reads_every() {
+            return Ok(EhrAccessReaders::Unexcluded);
         }
         let classes = self.ehr_access_classes().await?;
         Ok(EhrAccessReaders::Only(Arc::new(Keepers::of(
@@ -436,9 +447,11 @@ impl FerroEhrService {
         let Some(pinned) = condition.pinned() else {
             return self.ehr_access_readers().await;
         };
+        let unexcluded = !self.settings_caller().administrator();
         Ok(match self.ehr_access_view(EhrId(pinned.ehr)).await? {
+            SettingsView::Whole if unexcluded => EhrAccessReaders::Unexcluded,
             SettingsView::Whole => EhrAccessReaders::Every,
-            SettingsView::WithoutMarking => EhrAccessReaders::EveryWithoutMarking,
+            SettingsView::WithoutMarking => EhrAccessReaders::UnexcludedWithoutMarking,
             SettingsView::Hidden => EhrAccessReaders::Only(Arc::new(Keepers {
                 groups: Vec::new(),
                 party: None,

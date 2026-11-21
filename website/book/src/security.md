@@ -448,10 +448,12 @@ write a directive or a rule refuses changes nothing:
 | 0. Subject | a patient (the `subject` caller kind), or a caller whose grants are `patient/` grants alone, on an EHR other than the one its launch context names, or on an operation that names no EHR | `403 refused-not-subject` |
 | 0. Representation | a representative on an EHR other than the one whose subject its recorded representation names, or on an operation that names no EHR | `403 refused-not-represented` |
 | 0. Consent reference | a read, query or export by a caller admitted under a federation agreement whose `consent` condition applies, whose token names no consent decision reference | `403 refused-consent-reference-missing` |
+| 0. Exclusion | an exclusion of the controller in the settings' `exclusions` that names the caller, a representative and a gate-keeper included; never the person | `403 refused-excluded`, naming neither the exclusion nor its reason |
 | 1. Opt-out (EHDS Art. 10) | an `opt_out` directive, for an access service | `404`, as for an unknown EHR |
-| 2. Restriction (EHDS Art. 8) | a `restriction` directive, for a professional, a system or an access service, over the data it covers | `404`, as for unknown data |
+| 2. Restriction (EHDS Art. 8) | a `restriction` directive, for a professional, a system or an access service, and for a representative its `applies_to` names by party or by the `representative` relationship, over the data it covers | `404`, as for unknown data |
 | 3. Consent deny | any other deny directive that applies; a representative a `delegation` directive names reads only what it permits | `403 refused-consent-denied` |
 | 4. Purpose | no declared purpose, where the access policy requires one, whatever rules the policy holds; checked before any rule is read | `403 refused-purpose-missing` |
+| 5. Conflict | a professional performing a `ROLE` on their own record, or a professional a `related_to` relationship in force joins to the person, unless a `conflict_rules` entry of the access policy allows it | `403 refused-conflict` |
 | 5. Controller rule (EHDS Art. 11(3)) | a deny rule of the access policy that applies; no permit of the person lifts it; which purposes a caller may declare is such a rule | `403 refused-policy-denied` |
 | 6. Sensitivity | data with a label or classification that no applying permit directive or permit rule names | `403 refused-sensitivity` |
 | 6. Confidentiality | data whose confidentiality is `R` or `V` that no applying permit directive or permit rule clears | `403 refused-confidentiality`, or `404` at a level of `concealed_confidentialities` |
@@ -460,7 +462,10 @@ write a directive or a rule refuses changes nothing:
 
 - **Who is bound.** The record's person skips every step on their own EHR
   (EHDS Art. 3), so no controller rule limits a patient's own access, and is
-  refused at step 0 on any other. A
+  refused at step 0 on any other. A caller bound to the person reads their own
+  record as the person, unless it performs a professional `ROLE`: then its
+  read is a professional's, refused at step 5 as a conflict of interest, and
+  the staff member reads their own record through the patient portal. A
   representative reaches only the EHR of the subject it represents, refused
   at step 0 on any other, and is held there to steps 1 to 3 and 5 and skips
   the others (Art. 4(2)): a controller rule can keep, say, a minor's confidential

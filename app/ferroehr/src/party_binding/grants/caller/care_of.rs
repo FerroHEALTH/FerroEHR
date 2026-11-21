@@ -188,6 +188,7 @@ pub(crate) fn read<'a, T: Tree<'a>>(body: T, facts: &mut GrantFacts) {
             validity: body.get("time_validity").map(Tree::to_value),
             not_before: Bound::Open,
             not_after: Bound::Open,
+            about: None,
         });
         return;
     }

@@ -19,7 +19,8 @@ use crate::access_eval::procedure::{Outcome, Rule, Verdict};
 use crate::access_eval::scope::{DataMatch, EhrFact, Polarity, Pred};
 use crate::aql::ir::{ParamValue, Params, QueryIr};
 use crate::aql::lineage::ArchetypeLineage;
-use crate::aql::sql::{EhrAccessReaders, EhrScopeKind, PolicyParties, PreparedQuery, SqlCtx};
+use crate::aql::sql::readers::{EhrAccessReaders, PolicyParties};
+use crate::aql::sql::{EhrScopeKind, PreparedQuery, SqlCtx};
 use crate::ids::EhrId;
 use crate::storage::access_projection::{EhrSubject, Revision};
 use openehr_rm::draft::access_control::terminology::care::CarePath;
@@ -136,6 +137,7 @@ fn classes(
             keeper: None,
         },
         confined: confined.map(Into::into),
+        conflicts: Arc::from([]),
     })
 }
 
@@ -392,6 +394,7 @@ fn needing(cared: Care) -> AccessCondition {
             keeper: None,
         },
         confined: None,
+        conflicts: Arc::from([]),
     })
 }
 

@@ -459,8 +459,8 @@ async fn a_bounded_query_still_fails_on_a_class_its_condition_does_not_know() {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ferroehr::aql::lineage::ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
         caseload: None,
     };

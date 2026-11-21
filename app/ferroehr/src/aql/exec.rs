@@ -175,8 +175,8 @@ pub async fn execute(
         fill_whole_object_cells(&mut out_rows, pending, &subtrees);
     }
     // NOTE: draft access control, Reading and Writing the Settings, only the subject and the
-    // controller (`Every`) read the marking.
-    if ctx.access_settings != super::sql::EhrAccessReaders::Every {
+    // controller read the marking.
+    if ctx.access_settings.redacts() {
         super::redact::strip_cells(ir, &mut out_rows);
     }
 

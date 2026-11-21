@@ -561,6 +561,13 @@ const fn reason(code: Refusal) -> &'static str {
             "the caller's agreement conditions this read on a consent decision it names no \
              reference to"
         }
+        // NOTE: draft access control decision procedure, Refusals, a shown refused-excluded
+        // carries neither the exclusion nor its reason.
+        Refusal::Excluded => "the controller keeps the caller from this record",
+        Refusal::Conflict => {
+            "the caller is the subject, or is related to the subject, and no conflict rule of the \
+             access policy allows it"
+        }
         Refusal::OptOut | Refusal::Restricted => "the data cannot be read",
     }
 }
@@ -616,6 +623,8 @@ mod tests {
             Refusal::NotSubject,
             Refusal::NotRepresented,
             Refusal::ConsentReferenceMissing,
+            Refusal::Excluded,
+            Refusal::Conflict,
         ] {
             assert!(!code.is_invisible());
             assert_eq!(

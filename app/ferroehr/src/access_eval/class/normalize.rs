@@ -27,8 +27,10 @@ pub(super) fn normalize_settings(value: &mut Value) {
     if let Some(default) = object.get_mut("default_access") {
         *default = normal_coded(default);
     }
-    if let Some(Value::Array(directives)) = object.get_mut("directives") {
-        directives.iter_mut().for_each(normalize_directive);
+    for key in ["directives", "exclusions"] {
+        if let Some(Value::Array(directives)) = object.get_mut(key) {
+            directives.iter_mut().for_each(normalize_directive);
+        }
     }
     if let Some(marking) = object.get_mut("marking") {
         normalize_marking(marking);

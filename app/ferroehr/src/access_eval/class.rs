@@ -10,8 +10,9 @@
 //! ([`crate::storage::access_projection`]). The class is the settings with
 //! every value the decision reads that is particular to the EHR replaced by a
 //! fixed value: the instants of a validity or a `recorded` interval, the
-//! party of an actor scope or a gate-keeper, the objects of a data scope, its
-//! origins and the objects each sensitivity labels. What the decision does
+//! party of an actor scope, an exclusion's included, or a gate-keeper, the
+//! objects of a data scope, its origins and the objects each sensitivity
+//! labels. What the decision does
 //! not read, such as a directive's name or its evidence, is left out, and
 //! every coded value keeps only its code phrase. The facts are the values
 //! set aside, in the order of a depth-first walk ([`Layout`]).
@@ -70,6 +71,8 @@ pub struct Layout {
     pub keepers: Vec<KeeperLayout>,
     /// The objects labelled with each sensitivity.
     pub labels: Vec<(ForeignCode, usize)>,
+    /// Each exclusion of the controller, in the order of the settings.
+    pub exclusions: Vec<DirectiveLayout>,
     /// The objects labelled with each confidentiality above `N`.
     pub confidential: Vec<(Confidentiality, usize)>,
     /// How many facts the class's EHRs hold.
@@ -519,6 +522,16 @@ impl Walk {
             let at = self.fact(Value::from(objects));
             self.out.layout.confidential.push((level, at));
             self.out.labels.push((index, LabelPart::Marking));
+        }
+        for (at, exclusion) in settings
+            .exclusions
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
+            let placed = self.directive(exclusion, &format!("/exclusions/{at}"));
+            self.out.layout.exclusions.push(placed);
         }
         self.out.layout.facts = self.out.facts.len();
         self.out

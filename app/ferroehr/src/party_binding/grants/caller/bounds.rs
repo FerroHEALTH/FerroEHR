@@ -140,7 +140,7 @@ pub(crate) async fn judge(
             .iter()
             .find_map(|fact| match &fact.value {
                 FactValue::Care(care) => Some((care, fact.validity.as_ref())),
-                FactValue::Code(_) | FactValue::Team(_) => None,
+                FactValue::Code(_) | FactValue::Team(_) | FactValue::Kin(_) => None,
             })
     });
     let Some((care, validity)) = care else {

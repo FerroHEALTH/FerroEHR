@@ -72,16 +72,23 @@ fn is_controller_rule(directive: &AccessDirective) -> bool {
     DirectiveKind::ControllerRule.is(&directive.kind)
 }
 
+/// `ACCESS_DIRECTIVE.is_exclusion`: the kind is the `exclusion` code.
+fn is_exclusion(directive: &AccessDirective) -> bool {
+    DirectiveKind::Exclusion.is(&directive.kind)
+}
+
 /// Whether `directive` and each of its exceptions are controller rules, all
-/// of them when `rules` and none of them otherwise.
+/// of them when `rules` and none of them otherwise, and none of them an
+/// exclusion.
 fn all_rules_or_none(directive: &AccessDirective, rules: bool) -> bool {
-    is_controller_rule(directive) == rules
+    let kept = |d: &AccessDirective| is_controller_rule(d) == rules && !is_exclusion(d);
+    kept(directive)
         && directive
             .exceptions
             .as_deref()
             .unwrap_or_default()
             .iter()
-            .all(|e| is_controller_rule(e) == rules)
+            .all(kept)
 }
 
 /// Whether `coded`, when present, is a term of the group `T`.
@@ -115,8 +122,8 @@ fn label_rules(check: &mut Check, label: &AccessLabel) {
     }
 }
 
-/// Checks every invariant of an `ACCESS_DIRECTIVE_SETTINGS` and of the
-/// directives it holds.
+/// Checks every invariant of an `ACCESS_DIRECTIVE_SETTINGS`, of the
+/// directives it holds and of the controller's exclusions it carries.
 ///
 /// # Errors
 /// [`Violations`] naming each invariant the settings break.
@@ -146,6 +153,15 @@ pub fn check_settings(settings: &AccessDirectiveSettings) -> Result<(), Violatio
     }
     for label in settings.labels.as_deref().unwrap_or_default() {
         label_rules(&mut check, label);
+    }
+    let exclusions = settings.exclusions.as_deref().unwrap_or_default();
+    check.hold(
+        exclusions.iter().all(is_exclusion),
+        "CONFIDENTIALITY_SETTINGS",
+        "Exclusions_kind",
+    );
+    for exclusion in exclusions {
+        directive_rules(&mut check, exclusion);
     }
     check.finish()
 }
@@ -449,6 +465,11 @@ fn directive_rules(check: &mut Check, directive: &AccessDirective) {
         !is_opt_out(directive) || (deny && directive.data.is_none()),
         "ACCESS_DIRECTIVE",
         "Opt_out_denies_whole_record",
+    );
+    check.hold(
+        !is_exclusion(directive) || (deny && directive.exceptions.is_none()),
+        "ACCESS_DIRECTIVE",
+        "Exclusion_denies",
     );
     let exceptions = directive.exceptions.as_deref().unwrap_or_default();
     check.hold(

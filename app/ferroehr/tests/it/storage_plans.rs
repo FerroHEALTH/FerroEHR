@@ -889,7 +889,7 @@ pub(crate) fn aql_sql_with(
         aql,
         params,
         (ehr_ids, limit),
-        ferroehr::aql::sql::PolicyParties::Served,
+        ferroehr::aql::sql::readers::PolicyParties::Served,
     )
 }
 
@@ -898,7 +898,7 @@ fn aql_sql_for(
     aql: &str,
     params: &Params,
     (ehr_ids, limit): (Vec<EhrId>, Option<i64>),
-    policy_parties: ferroehr::aql::sql::PolicyParties,
+    policy_parties: ferroehr::aql::sql::readers::PolicyParties,
 ) -> ferroehr::aql::sql::PreparedQuery {
     aql_sql_owning(aql, params, (ehr_ids, limit), policy_parties, None)
 }
@@ -909,7 +909,7 @@ fn aql_sql_owning(
     aql: &str,
     params: &Params,
     (ehr_ids, limit): (Vec<EhrId>, Option<i64>),
-    policy_parties: ferroehr::aql::sql::PolicyParties,
+    policy_parties: ferroehr::aql::sql::readers::PolicyParties,
     own_records: Option<ferroehr::aql::sql::own_records::OwnRecords>,
 ) -> ferroehr::aql::sql::PreparedQuery {
     let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
@@ -923,7 +923,7 @@ fn aql_sql_owning(
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
         policy_parties,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records,
         caseload: None,
     };
@@ -1059,7 +1059,7 @@ async fn aql_over_the_population_holds_the_delay_on_own_records_by_key() {
         CONTAINS_AQL,
         &Params::default(),
         (Vec::new(), None),
-        ferroehr::aql::sql::PolicyParties::Served,
+        ferroehr::aql::sql::readers::PolicyParties::Served,
         Some(own),
     );
     let plan = explain_aql(&pool, prepared).await;
@@ -2095,7 +2095,7 @@ fn relationship_with_identifier(person: VoId, index: u32) -> Value {
 /// statistics are taken after they land, so the plan is the one they choose.
 #[tokio::test]
 async fn a_lookup_under_every_demographic_root_reads_the_one_object() {
-    use ferroehr::aql::sql::PolicyParties;
+    use ferroehr::aql::sql::readers::PolicyParties;
     const EACH: u32 = 50;
     const MIDDLE: u32 = 25;
     let db = testkit::db().await.expect("testkit database");

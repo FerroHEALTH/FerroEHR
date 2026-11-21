@@ -45,6 +45,7 @@ impl RequestAccess {
                     Lifted::Consent => "consent",
                     Lifted::Rule => "rule",
                     Lifted::Policy => "policy",
+                    Lifted::Exclusion => "exclusion",
                 };
                 metrics
                     .emergency_overrides

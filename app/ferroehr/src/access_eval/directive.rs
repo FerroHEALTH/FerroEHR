@@ -8,6 +8,7 @@
 //! scope names a role the caller performs in the demographic service. No
 //! openEHR spec governs the reading: our own design (#5513, #5588, #5621).
 
+use openehr_rm::draft::access_control::access_control::access_actor_scope::AccessActorScope;
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::terminology::{
     CallerKind, Confidentiality, DirectiveKind, Effect, ForeignCode, ForeignKind, OperationClass,
@@ -15,8 +16,6 @@ use openehr_rm::draft::access_control::terminology::{
 };
 
 use std::sync::Arc;
-
-use openehr_rm::draft::access_control::access_control::access_actor_scope::AccessActorScope;
 
 use crate::access_eval::care_tie::{CareNeed, Cared};
 use crate::access_eval::class::{DirectiveLayout, keeper};
@@ -82,6 +81,14 @@ impl Reader<'_, '_> {
             .and_then(|layout| layout.directives.get(at))
     }
 
+    /// Where the facts of the exclusion at `at` sit, for a settings class.
+    pub(super) fn placed_exclusion(&self, at: usize) -> Option<&DirectiveLayout> {
+        self.judged
+            .scopes
+            .layout()
+            .and_then(|layout| layout.exclusions.get(at))
+    }
+
     /// Whether the caller is a gate-keeper of the EHR.
     pub(super) fn keeper(&self) -> Pred {
         let caller = &self.judged.caller.settings;
@@ -105,13 +112,28 @@ impl Reader<'_, '_> {
         // the data for a provider, an opt-out the access services, a delegation a representative.
         let bindable = match kind {
             DirectiveKind::OptOut => caller == CallerKind::AccessService,
+            // NOTE: draft decision procedure step 2, a restriction binds a representative only
+            // through a scope that names it by party or by the representative relationship.
+            DirectiveKind::Restriction if caller == CallerKind::Representative => {
+                let polarity = Polarity::Deny;
+                return Pred::all(vec![
+                    self.conditions(directive, polarity, placed),
+                    self.names_where(
+                        directive.applies_to.as_deref().unwrap_or_default(),
+                        placed,
+                        names_a_representative,
+                    ),
+                ]);
+            }
             DirectiveKind::Restriction => matches!(
                 caller,
                 CallerKind::Professional | CallerKind::System | CallerKind::AccessService
             ),
-            // NOTE: our own design (#5621), a rule of the policy binds every caller but the
-            // subject, whose own right of access (EHDS Art. 3) is not the controller's to deny.
-            DirectiveKind::Consent | DirectiveKind::ControllerRule => caller != CallerKind::Subject,
+            // NOTE: our own design (#5621, #6077), a rule of the policy and an exclusion bind every
+            // caller but the subject, whose own right of access (EHDS Art. 3) is not theirs to deny.
+            DirectiveKind::Consent | DirectiveKind::ControllerRule | DirectiveKind::Exclusion => {
+                caller != CallerKind::Subject
+            }
             DirectiveKind::Delegation => caller == CallerKind::Representative,
         };
         if !bindable {
@@ -127,6 +149,22 @@ impl Reader<'_, '_> {
     /// Whether `directive` applies to the request now: in force, naming the
     /// caller, the operation and the purpose.
     pub(super) fn applies(
+        &self,
+        directive: &AccessDirective,
+        polarity: Polarity,
+        placed: Option<&DirectiveLayout>,
+    ) -> Pred {
+        let actor = if directive.applies_to.is_none() {
+            Pred::True
+        } else {
+            self.actor(directive, placed)
+        };
+        Pred::all(vec![self.conditions(directive, polarity, placed), actor])
+    }
+
+    /// Whether `directive` is in force and names the operation and the
+    /// purpose of the request, whoever asks.
+    fn conditions(
         &self,
         directive: &AccessDirective,
         polarity: Polarity,
@@ -166,12 +204,7 @@ impl Reader<'_, '_> {
                     .any(|coded| coded.defining_code.code_string == declared)
             })
         });
-        let actor = if directive.applies_to.is_none() {
-            Pred::True
-        } else {
-            self.actor(directive, placed)
-        };
-        Pred::all(vec![in_force, Pred::of(operation && purpose), actor])
+        Pred::all(vec![in_force, Pred::of(operation && purpose)])
     }
 
     /// Whether an actor scope of `directive` names the caller: every
@@ -181,14 +214,27 @@ impl Reader<'_, '_> {
         directive: &AccessDirective,
         placed: Option<&DirectiveLayout>,
     ) -> Pred {
+        self.names_where(
+            directive.applies_to.as_deref().unwrap_or_default(),
+            placed,
+            |_| true,
+        )
+    }
+
+    /// Whether one of `scopes` that `keep` keeps names the caller, the
+    /// parties they name at the facts `placed` holds for a settings class.
+    pub(super) fn names_where(
+        &self,
+        scopes: &[AccessActorScope],
+        placed: Option<&DirectiveLayout>,
+        keep: impl Fn(&AccessActorScope) -> bool,
+    ) -> Pred {
         let caller = self.judged.caller;
         let class = self.judged.scopes.layout().is_some();
-        let scopes = directive
-            .applies_to
-            .as_deref()
-            .unwrap_or_default()
+        let scopes = scopes
             .iter()
             .enumerate()
+            .filter(|(_, scope)| keep(scope))
             .map(|(at, scope)| {
                 let party = match scope.party.as_ref() {
                     None => Pred::True,
@@ -232,6 +278,12 @@ impl Reader<'_, '_> {
             })
             .collect();
         Pred::any(scopes)
+    }
+
+    /// Whether one of `scopes`, the callers a conflict rule allows, names
+    /// the caller; void scopes name every professional.
+    pub(super) fn allows(&self, scopes: Option<&[AccessActorScope]>) -> bool {
+        scopes.is_none_or(|scopes| self.names_where(scopes, None, |_| true) == Pred::True)
     }
 
     /// Whether the caller holds a live care relationship that is a ground for
@@ -298,4 +350,13 @@ impl Reader<'_, '_> {
             Pred::negate(Pred::any(excepted)),
         ])
     }
+}
+
+/// Whether `scope` names a caller by party or by the `representative`
+/// relationship, the scopes by which a restriction binds a representative.
+fn names_a_representative(scope: &AccessActorScope) -> bool {
+    scope.party.is_some()
+        || scope.relationship.as_ref().is_some_and(|coded| {
+            Relationship::read_coded(coded) == Ok(Relationship::Representative)
+        })
 }

@@ -857,14 +857,23 @@ which is what makes an optional stage safe to disable:
    (`party_binding::grants::live`, #5511, #5621), and the controller's
    `ACCESS_POLICY` with its rules (`access_policy`, #5512, #5621). The first step that refuses
    decides, deny overrides permit, and one level of exceptions narrows each
-   directive: (1) an `opt_out` binding an access service, `404`
-   `refused-opt-out` (EHDS Art. 10); (2) a `restriction` binding a
-   professional, a system or an access service, its data `404`
-   `refused-restricted` (Art. 8); (3) any other deny that applies, `403`
+   directive: (0) an exclusion of the controller in the settings'
+   `exclusions` naming the caller, a representative and a gate-keeper
+   included, `403` `refused-excluded`, the answer naming neither the
+   exclusion nor its reason (#6077); (1) an `opt_out` binding an access
+   service, `404` `refused-opt-out` (EHDS Art. 10); (2) a `restriction`
+   binding a professional, a system or an access service, and a
+   representative it names by party or by the `representative`
+   relationship, its data `404` `refused-restricted` (Art. 8); (3) any other
+   deny that applies, `403`
    `refused-consent-denied`, and a representative a `delegation` names reads
    only what it permits (Art. 4(2)); (4) no declared purpose where the
    policy requires one, `403` `refused-purpose-missing`, checked as input
-   before any rule is read (#5737); (5) a deny rule of the controller's
+   before any rule is read (#5737); (5) a professional in conflict with the
+   subject, performing a `ROLE` on its own record or joined to the subject's
+   `PERSON` by a `related_to` kinship, `403` `refused-conflict` unless a
+   `conflict_rules` entry allows it, and a query leaves those EHRs out by
+   their subject references (#6077); then a deny rule of the controller's
    policy that applies, `403` `refused-policy-denied`, which no permit of the
    subject lifts (Art. 11(3)), a rule's purposes matching only a declared
    purpose, and the purposes a caller may declare being such a rule; (6) a
@@ -877,7 +886,8 @@ which is what makes an optional stage safe to disable:
    step on their own EHR (Art. 3). Who the subject is has one source, the
    party binding (#6106): a caller is the subject of an EHR whose
    `EHR_STATUS.subject` names the `PERSON` its authenticated identity is
-   bound to, whatever roles it holds and with no purpose declared. The
+   bound to, with no purpose declared, unless it performs a professional
+   `ROLE`, which makes its read a professional's and a conflict (#6077). The
    evaluator reads that subject reference from its per-EHR copy, whose
    revision every read checks against the store, and resolves its `PERSON`
    as the care step does, so the decision adds no statement; it then

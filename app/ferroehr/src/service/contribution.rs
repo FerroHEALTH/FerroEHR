@@ -262,13 +262,7 @@ async fn write_contribution(
             .iter()
             .any(|(_, c)| c.kind() == Kind::EhrAccess)
     {
-        let markings: Vec<Option<&Value>> = write
-            .changes
-            .iter()
-            .filter(|(_, c)| c.kind() == Kind::EhrAccess)
-            .map(|(_, c)| crate::service::ehr::access::written_marking(c))
-            .collect();
-        cx.check_ehr_access_writer(&mut tx, ehr_id, &markings)
+        cx.check_ehr_access_writer(&mut tx, ehr_id, &mut write.changes)
             .await?;
     }
     for (_, change) in &write.changes {
