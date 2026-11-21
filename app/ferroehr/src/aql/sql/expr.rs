@@ -91,7 +91,7 @@ pub(super) fn member_data(alias: &str, member: &str) -> Expr {
     for (i, part) in sql.split('\u{0}').enumerate() {
         if i > 0 {
             keys.push(Expr::val(member.to_owned()));
-            text.push_str(&format!("${i}"));
+            let _ = write!(text, "${i}");
         }
         text.push_str(part);
     }

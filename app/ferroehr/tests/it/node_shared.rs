@@ -144,7 +144,7 @@ async fn a_version_with_no_repeated_member_writes_no_shared_column() {
         .await
         .expect("commit");
     let rows = shared_rows(&pool, created.vo_id).await;
-    assert!(!rows.is_empty());
+    assert_ne!(rows.len(), 0, "the version has node rows");
     assert!(
         rows.iter().all(|(_, shared, _)| shared.is_none()),
         "{rows:?}"

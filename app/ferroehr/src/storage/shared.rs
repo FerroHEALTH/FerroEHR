@@ -23,15 +23,15 @@
 //! our own design.
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 
-/// The members never shared: the ones an index on `node` reads from the
-/// row's own `data` (`value`, read by the four value indexes through
-/// `ext.node_search_text`, `ext.node_magnitude`, `ext.node_code` and
-/// `ext.node_number`), and the ones the writer reads from the row's own
-/// fragment into a column (`time` and `origin`, into `event_time`). An index
-/// expression and a write-time derivation see one row and cannot follow a
-/// reference to another; an integration test holds every index on `node`
-/// to this set.
+/// The members never shared, because something reads them from the row's own
+/// `data` and cannot follow a reference to another row.
+///
+/// `value` is read by the four value indexes through `ext.node_search_text`,
+/// `ext.node_magnitude`, `ext.node_code` and `ext.node_number`; `time` and
+/// `origin` are read by the writer into `event_time`. An integration test
+/// holds every index on `node` to this set.
 pub const UNSHARED: [&str; 3] = ["value", "time", "origin"];
 
 /// The smallest member value, in bytes of its JSON text, that is shared: a
@@ -63,43 +63,58 @@ impl<'a> Sharing<'a> {
         members: &mut Vec<T>,
         member: impl Fn(&T) -> Option<(&'a str, &'a [u8])>,
     ) -> Option<String> {
-        let mut once: BTreeMap<&str, usize> = BTreeMap::new();
-        for (key, _) in members.iter().filter_map(&member) {
-            *once.entry(key).or_default() += 1;
+        let eligible =
+            |key: &str, value: &[u8]| value.len() >= MIN_BYTES && !UNSHARED.contains(&key);
+        // Most rows carry no member this long, and leave without allocating.
+        if !members
+            .iter()
+            .filter_map(&member)
+            .any(|(key, value)| eligible(key, value))
+        {
+            return None;
         }
-        let mut taken: BTreeMap<&'a str, i32> = BTreeMap::new();
+        let keys: Vec<&str> = members
+            .iter()
+            .filter_map(&member)
+            .map(|(key, _)| key)
+            .collect();
+        let once = |key: &str| keys.iter().filter(|k| **k == key).count() == 1;
+        let mut taken: Vec<(&'a str, i32)> = Vec::new();
         members.retain(|candidate| {
             let Some((key, value)) = member(candidate) else {
                 return true;
             };
-            if value.len() < MIN_BYTES || UNSHARED.contains(&key) || once.get(key) != Some(&1) {
+            if !eligible(key, value) || !once(key) {
                 return true;
             }
-            match self.holders.get(&(key, value)) {
-                Some(holder) => {
-                    taken.insert(key, *holder);
-                    false
-                }
-                None => {
-                    self.holders.insert((key, value), num);
-                    true
-                }
+            if let Some(holder) = self.holders.get(&(key, value)) {
+                taken.push((key, *holder));
+                return false;
             }
+            self.holders.insert((key, value), num);
+            true
         });
         if taken.is_empty() {
             return None;
         }
-        let entries: Vec<String> = taken
-            .iter()
-            .map(|(key, holder)| format!("{}:{holder}", serde_json::Value::from(*key)))
-            .collect();
-        Some(format!("{{{}}}", entries.join(",")))
+        taken.sort_unstable();
+        let mut shared = String::from("{");
+        for (i, (key, holder)) in taken.iter().enumerate() {
+            if i > 0 {
+                shared.push(',');
+            }
+            let _ = write!(shared, "\"{key}\":{holder}");
+        }
+        shared.push('}');
+        Some(shared)
     }
 }
 
-/// The tier a reader reads a holder in: the row's own, or the hot tier a
-/// reader that binds its rows to `tier = 'hot'` names as a literal, so the
-/// planner prunes the cold partition from the holder's read too.
+/// The tier a reader reads a holder in.
+///
+/// The row's own, or the hot tier a reader that binds its rows to
+/// `tier = 'hot'` names as a literal, so the planner prunes the cold
+/// partition from the holder's read too.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tier {
     /// The tier of the row whose member is read.
@@ -122,7 +137,12 @@ impl Tier {
 /// subquery over `node`: the row of the same tier and version whose `num`
 /// the row's `shared` column records under `key` (an SQL expression).
 fn holder_member(alias: &str, key: &str, tier: Tier) -> String {
-    holder_member_at(alias, key, &format!("(\"{alias}\".shared ->> {key})::int"), tier)
+    holder_member_at(
+        alias,
+        key,
+        &format!("(\"{alias}\".shared ->> {key})::int"),
+        tier,
+    )
 }
 
 /// The member `key` of the row `num` of the version and tier of the row
@@ -137,8 +157,10 @@ fn holder_member_at(alias: &str, key: &str, num: &str, tier: Tier) -> String {
 }
 
 /// The `data` of the row `alias` as a path that starts at the member `key`
-/// reads it: the row's own `data`, or, when the row shares that member, an
-/// object of the member alone, read from its holder. `key` is an SQL
+/// reads it (an SQL expression).
+///
+/// The row's own `data`, or, when the row shares that member, an object of
+/// the member alone, read from its holder. `key` is an SQL
 /// expression (a quoted literal or a bound parameter). This and
 /// [`resolved_data`] are the only readers of `node.data` but the index
 /// expressions, which read only [`UNSHARED`] members, and the writer.
@@ -164,9 +186,11 @@ pub fn resolved_data(alias: &str, tier: Tier) -> String {
     )
 }
 
-/// Whether every reference of the row `alias` holds (an SQL boolean): each
-/// names an earlier row of the same tier and version that stores the member
-/// itself and does not share it. A row that shares nothing holds trivially.
+/// Whether every reference of the row `alias` holds (an SQL boolean).
+///
+/// Each names an earlier row of the same tier and version that stores the
+/// member itself and does not share it. A row that shares nothing holds
+/// trivially.
 #[must_use]
 pub fn references_hold(alias: &str) -> String {
     format!(

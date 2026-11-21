@@ -312,7 +312,7 @@ mod tests {
         let shared: Value = serde_json::from_str(shared).expect("shared is JSON");
         let mut map = match own {
             Some(Value::Object(map)) => map,
-            _ => serde_json::Map::new(),
+            _ => Map::new(),
         };
         for (key, holder) in shared.as_object().expect("an object") {
             let holder = usize::try_from(holder.as_i64().expect("a num")).expect("a num");
