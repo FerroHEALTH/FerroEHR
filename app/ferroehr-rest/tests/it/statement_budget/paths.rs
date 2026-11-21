@@ -235,6 +235,12 @@ struct Budget {
 /// (#6202): 96 to 616 fewer WAL bytes on every path that writes an access
 /// record or a system audit record, measured beside the merge base, and each
 /// WAL ceiling fell by its path's figure.
+/// A system audit record has since been written once, into `audit_event`,
+/// with an id-list intake row and a narrow link the chainer adds, in place of
+/// a whole intake row copied into the chain (#6203): 370 to 456 fewer WAL
+/// bytes on each path that writes one (the party read and commits and the
+/// demographic query), measured beside the merge base, and each of those WAL
+/// ceilings fell by its path's figure.
 const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::CommitJson,
@@ -333,7 +339,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 78_848,
         round_trips: 8,
         nested: 6,
-        wal: 1974,
+        wal: 1596,
     },
     Budget {
         path: Path::CommitContribution,
@@ -378,7 +384,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 117_146,
         round_trips: 31,
         nested: 20,
-        wal: 7761,
+        wal: 7305,
     },
     Budget {
         path: Path::AqlMatches,
@@ -396,7 +402,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 107_199,
         round_trips: 8,
         nested: 6,
-        wal: 1971,
+        wal: 1601,
     },
     Budget {
         path: Path::CommitPartyScored,
@@ -405,7 +411,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 132_147,
         round_trips: 31,
         nested: 21,
-        wal: 10_402,
+        wal: 9946,
     },
 ];
 
