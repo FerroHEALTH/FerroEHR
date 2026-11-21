@@ -8,9 +8,10 @@
 //! condition binds only the caller's team ids.
 //!
 //! It reads the party domain on the party pool, in one repeatable-read
-//! snapshot, and writes the clinical domain on the clinical pool, under the
-//! projection's state row, so one projector of the cluster writes at a time
-//! and no role reaches both domains. Each run applies every `PERSON` stamped
+//! snapshot, and gives that connection back before it writes the clinical
+//! domain on the clinical pool, under the projection's state row, so one
+//! projector of the cluster writes at a time, no role reaches both domains
+//! and no pool is waited for while another's connection is held. Each run applies every `PERSON` stamped
 //! since the revision the projection holds, or every `PERSON` in care when
 //! it holds none or its digests were taken in another form, then digests
 //! the EHR rows that carry a subject and no digest. Only then does this
@@ -33,7 +34,9 @@ use crate::party_binding::grants::caller::care_of::{CareOf, CarerKind};
 use crate::party_binding::grants::care::care_of;
 use crate::party_binding::grants::live::LiveGrants;
 use crate::service::FerroEhrService;
-use crate::storage::access_care::{self, CareRow, cared_key, subject_digest, subject_key};
+use crate::storage::access_care::{
+    self, CareRow, StateRead, cared_key, subject_digest, subject_key,
+};
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 
@@ -78,6 +81,18 @@ struct Projector {
     party: PgPool,
     grants: Arc<LiveGrants>,
     projected: Arc<Projected>,
+}
+
+/// The party side of one projector run, read before its clinical
+/// transaction begins.
+#[derive(Debug)]
+struct PartyRead {
+    /// The party facts revision the snapshot read.
+    revision: i64,
+    /// Whether the projection is rebuilt whole.
+    whole: bool,
+    /// The `PERSON`s to replace, a chunk at a time, each with its rows.
+    chunks: Vec<(Vec<Uuid>, Vec<CareRow>)>,
 }
 
 impl FerroEhrService {
@@ -173,12 +188,55 @@ impl Projector {
 
     /// One run: the projection brought to the party facts revision it reads,
     /// then every undigested EHR row digested; the revision reached.
+    ///
+    /// The party side is read whole first, from the state the projection
+    /// held, and its connection given back before the clinical transaction
+    /// begins, which writes it only while the state row still holds that
+    /// state, so no pool is waited for while another's connection is held
+    /// (#5879, #5986). No openEHR spec governs this: our own design (#6187).
     async fn project(&self) -> Result<i64, StorageError> {
         let key_check = subject_digest(access_care::DIGEST_CHECK);
-        let mut clinical = acquire(&self.clinical).await?;
-        let mut tx = clinical.begin().await?;
-        let (held, check) = access_care::lock_state(&mut tx).await?;
-        let whole = held.is_none() || check.as_deref() != Some(key_check.as_slice());
+        let namespace = self.grants.namespace();
+        loop {
+            let seen =
+                access_care::state(&mut *acquire(&self.clinical).await?, StateRead::Unlocked)
+                    .await?;
+            let read = self.read_party(&seen, &key_check, &namespace).await?;
+            let mut clinical = acquire(&self.clinical).await?;
+            let mut tx = clinical.begin().await?;
+            if access_care::state(&mut tx, StateRead::Locked).await? != seen {
+                // NOTE: our own design (#6187), another projector wrote since the state was read,
+                // so the party side is read again from the state it left.
+                tx.rollback().await?;
+                continue;
+            }
+            if read.whole {
+                access_care::clear(&mut tx).await?;
+            }
+            for (persons, rows) in &read.chunks {
+                access_care::replace(&mut tx, persons, rows).await?;
+            }
+            access_care::set_state(&mut tx, read.revision, &key_check).await?;
+            // NOTE: our own design (#5762), the care projector, which runs in the background.
+            tx.commit().await?;
+            drop(clinical);
+            self.digest_ehrs(&namespace).await?;
+            return Ok(read.revision);
+        }
+    }
+
+    /// The party side of a run from the projection's state `seen`, read in
+    /// one repeatable-read snapshot: every `PERSON` stamped since the
+    /// revision it holds, or every `PERSON` in care when it holds none or its
+    /// digests were taken in a form other than `key_check`.
+    async fn read_party(
+        &self,
+        seen: &access_care::State,
+        key_check: &[u8],
+        namespace: &str,
+    ) -> Result<PartyRead, StorageError> {
+        let (held, check) = seen;
+        let whole = held.is_none() || check.as_deref() != Some(key_check);
         let mut party = acquire(&self.party).await?;
         let mut snapshot = party.begin().await?;
         sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
@@ -187,26 +245,23 @@ impl Projector {
         let revision = crate::party_binding::grants::store::revisions(&mut snapshot)
             .await?
             .facts;
-        let persons = match held {
+        let persons = match *held {
             Some(held) if !whole && held >= revision => Vec::new(),
             Some(held) if !whole => caller::store::stamped_since(&mut snapshot, held).await?,
-            _ => {
-                access_care::clear(&mut tx).await?;
-                caller::store::cared_persons(&mut snapshot).await?
-            }
+            _ => caller::store::cared_persons(&mut snapshot).await?,
         };
-        let namespace = self.grants.namespace();
+        let mut chunks = Vec::new();
         for chunk in persons.chunks(CHUNK) {
-            let rows = self.rows_of(&mut snapshot, chunk, &namespace).await?;
-            access_care::replace(&mut tx, chunk, &rows).await?;
+            let rows = self.rows_of(&mut snapshot, chunk, namespace).await?;
+            chunks.push((chunk.to_vec(), rows));
         }
         // NOTE: our own design (#5762), the care projector, which runs in the background.
         snapshot.commit().await?;
-        access_care::set_state(&mut tx, revision, &key_check).await?;
-        // NOTE: our own design (#5762), the care projector, which runs in the background.
-        tx.commit().await?;
-        self.digest_ehrs(&namespace).await?;
-        Ok(revision)
+        Ok(PartyRead {
+            revision,
+            whole,
+            chunks,
+        })
     }
 
     /// The projected rows of `persons`: each care relationship of a live head,
