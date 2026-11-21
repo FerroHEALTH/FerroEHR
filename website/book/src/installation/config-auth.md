@@ -153,7 +153,7 @@ and a `scopeless_subjects` list on the issuer table is the
 An issuer whose table names no `audience` admits the tokens whose `aud`
 names the openEHR REST API's `baseUrl`: [`[server]
 public_base_url`](config-server.md#public_base_url-the-one-public-url) with
-`server.base_path` and `[api] base_path`, the `baseUrl` the SMART discovery
+`server.base_path` and `api.base_path`, the `baseUrl` the SMART discovery
 document publishes (master04 §Services). An authorization server names the
 resource the app asked for in `aud` (RFC 8707 §2), and a SMART app asks for
 that `baseUrl`, so a deployment writes its public URL once. Without
