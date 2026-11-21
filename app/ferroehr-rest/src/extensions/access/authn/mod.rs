@@ -121,8 +121,8 @@ pub struct Principal {
     pub access: Access,
     /// What FerroEHR honours for the caller beyond a `user/` grant: whether it
     /// is a backend client, a client the CDR grants `query_system_wide`, and
-    /// whether its issuer's `patient/` grants count
-    /// (`[auth.smart] patient_issuers`).
+    /// whether its issuer's `patient/` grants count (the issuer profile's
+    /// `patient_context`).
     pub honoured: Honoured,
     /// The EHR a bound representative is confined to, `None` for every other
     /// caller (#5086).

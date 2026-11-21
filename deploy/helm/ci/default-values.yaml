@@ -44,7 +44,7 @@ config:
       # under the OID arc 2.999).
       provider: { issuer: "urn:oid:2.999.7.9", id: "default" }
       # The professional PERSON of the default party mapping, its key written
-      # under the identifier_type the [[auth.party]] table above looks logins
+      # under the identifier_type the party table above looks logins
       # up under, or no login of the issuer binds; the rest of the mapping is
       # the default.
       person:

@@ -254,8 +254,11 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # (#6049), and 0.30.2 makes the RFC 3986 normalization public (`uri`) and
 # names `resource` on a refresh (`refresh_for`) for the viewer's launch Tasks
 # (#5930), and 0.31 reads a FerroSMART patient token as `CallerKind::Patient`,
-# which FerroEHR checks against the party binding (#6080). Verified on
-# crates.io 2026-11-20.
+# which FerroEHR checks against the party binding (#6080), and 0.32 names each
+# issuer (`[auth.issuer.<name>]`), derives its audience and kind, reads the
+# patient context per issuer, carries a reason code on every refusal, reads
+# an issuer in the background (`Rejection::Unread`) and adds the federation
+# field `trc.care_role` (#6140). Verified on crates.io 2026-11-21.
 ferrohealth-smart = { version = "=0.32.0", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
@@ -265,7 +268,8 @@ ferrohealth-smart = { version = "=0.32.0", default-features = false, features = 
 # 0.28, 0.24 the release on ferrohealth-smart 0.29, and 0.25 the release on
 # ferrohealth-smart 0.30, whose 0.25.1 gives a session a token for a second
 # resource server (`token_for`) for the viewer's launch Tasks (#5930), and 0.26
-# the release on ferrohealth-smart 0.31. Verified on crates.io 2026-11-20.
+# the release on ferrohealth-smart 0.31, and 0.27 the release on 0.32.
+# Verified on crates.io 2026-11-21.
 ferrohealth-session = { version = "=0.27.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
