@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! AQL comparisons and ORDER BY keys that read a value's type, executed
-//! against a real PostgreSQL 18 (shared testkit harness).
+//! against a real PostgreSQL 19 (shared testkit harness).
 //!
 //! - A whole data value compares with a literal of its own kind and with no
 //!   other, never by its serialized JSON (#5751): a number with the magnitude

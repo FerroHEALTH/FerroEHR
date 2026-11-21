@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! What a verified external caller of a `federation` issuer commits (#5101),
-//! over a real PostgreSQL 18: an external person only a COMPOSITION of a
+//! over a real PostgreSQL 19: an external person only a COMPOSITION of a
 //! template its agreement's `writes` lists, and an external organisation
 //! nothing (EHDS Art. 13(4)). What an external caller may commit is our own
 //! design.

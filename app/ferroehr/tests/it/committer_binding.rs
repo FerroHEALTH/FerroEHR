@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The committer the server writes for a bound caller, and the judgement of a
-//! stated one (#5005), over a real PostgreSQL 18.
+//! stated one (#5005), over a real PostgreSQL 19.
 //!
 //! RM common `org.openehr.rm.common.audit_details.adoc`: `committer` is the
 //! "Identity and optional reference into identity management service, of user

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! What a system caller commits and who attests (#5100), over a real
-//! PostgreSQL 18.
+//! PostgreSQL 19.
 //!
 //! EHDS Art. 13(4) asks the record to identify the professional and the
 //! provider, so a system commit is authorized by the policy parties (the

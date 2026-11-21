@@ -1,4 +1,4 @@
-# A THROWAWAY PostgreSQL 18 for cluster testing — never a deployment pattern.
+# A THROWAWAY PostgreSQL 19 for cluster testing — never a deployment pattern.
 #
 # The chart ships no database on purpose (a CDR's PostgreSQL must be externally
 # managed, backed up and PITR-capable), so a cluster test has to supply one. This

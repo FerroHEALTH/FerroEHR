@@ -7,7 +7,7 @@
 //! They are `migrations/clinical/`, the party domain rendered from the same
 //! DDL template, and the party domain's relationship index.
 //!
-//! No openEHR spec governs the SQL schema — this is our own PG18-native
+//! No openEHR spec governs the SQL schema — this is our own PG19-native
 //! design.
 //!
 //! One enum per table, in the official `sea-query` derive shape: the `Table`

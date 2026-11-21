@@ -5,13 +5,13 @@
 {{ template "chart.badgesSection" . }}
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
-API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
+API, AQL 1.1 as the query language, PostgreSQL 19-native storage, shipped as a
 single static binary. This chart deploys the server.
 
 ## Before you install: four things that surprise people
 
 **This chart does not deploy a database.** It expects an **external PostgreSQL
-18** (18.6 or newer) and will not start without one. Point it at your own
+18** (19.0 or newer) and will not start without one. Point it at your own
 instance, a managed service, or a separate PostgreSQL chart: `database.url`
 or, for production, `database.existingSecret`.
 

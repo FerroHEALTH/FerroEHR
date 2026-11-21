@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The one `PERSON` mapping SCIM, just-in-time creation and the login binding
-//! share (#5013), over a real PostgreSQL 18 (shared testkit harness).
+//! share (#5013), over a real PostgreSQL 19 (shared testkit harness).
 //!
 //! It covers the selectors the side table holds to one live party, the fold
 //! a `userName` is compared by (RFC 8265 §3.3, RFC 7643 §4.1.1), the first

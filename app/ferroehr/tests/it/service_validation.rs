@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end composition-validation tests against a real PostgreSQL 18
+//! End-to-end composition-validation tests against a real PostgreSQL 19
 //! (shared testkit harness): a COMPOSITION committed via the ITS-REST create/update
 //! path is validated against its operational template *before* persistence.
 //!

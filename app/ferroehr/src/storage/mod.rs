@@ -7,7 +7,7 @@
 //! row I/O for the versioned-object spine
 //! (`version`/`audit`/`contribution`/`vo_attestation`).
 //!
-//! No openEHR spec governs the physical storage; this is our own PG18-native
+//! No openEHR spec governs the physical storage; this is our own PG19-native
 //! design, grounded on docs-verified `PostgreSQL` physics (no partial jsonb
 //! detoast, GIN serves no ordering). The change-control law the row I/O upholds
 //! is RM common master06; the identifier forms preserved verbatim in each

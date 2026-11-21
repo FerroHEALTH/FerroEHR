@@ -42,7 +42,7 @@ feature newer than that. The edition is 2024.
 
 Two extra tools are needed for the full test suite:
 
-- **A PostgreSQL 18 server** for the database-backed tests. The shared test
+- **A PostgreSQL 19 server** for the database-backed tests. The shared test
   harness starts (or re-adopts) one reusable container if Docker is running;
   otherwise point it at a server you already run with `FERROEHR_TEST_PG_URL`
   (its role must be able to `CREATE DATABASE`). See
@@ -58,7 +58,7 @@ are advisory:
 
 ```bash
 cargo build --workspace
-cargo nextest run --workspace          # unit + integration (real PostgreSQL 18)
+cargo nextest run --workspace          # unit + integration (real PostgreSQL 19)
 cargo fmt --all --check
 
 cargo clippy --workspace --all-targets --all-features -- -D warnings

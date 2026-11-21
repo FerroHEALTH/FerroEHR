@@ -6,7 +6,7 @@ the server behaves the way it does: why the conformance claims are checkable, wh
 versioning is exact, and why AQL does not degenerate into a document scan. Two
 ideas run through everything: the openEHR *specification layer* is generated from
 the official machine-readable models, and the *storage* is designed natively for
-PostgreSQL 18.
+PostgreSQL 19.
 
 <!-- toc -->
 
@@ -23,11 +23,11 @@ flowchart TB
     subgraph app ["Application layer (the server)"]
         rest["REST adapter (axum)<br/>authentication · authorization · wire mapping"]
         sm["Service layer<br/>(our own design)"]
-        core["Platform: PG18 storage · versioning ·<br/>AQL→SQL engine · validation · signing"]
+        core["Platform: PG19 storage · versioning ·<br/>AQL→SQL engine · validation · signing"]
         ext["Optional integrations<br/>(FHIR audit and terminology · events · multimedia — compiled in by cargo feature)"]
     end
 
-    db[("PostgreSQL 18")]
+    db[("PostgreSQL 19")]
 
     specs -->|deterministic codegen, drift-checked in CI| gen
     rest --> sm
@@ -151,7 +151,7 @@ Repository is written on the clinical pool, into its own `audit` schema. See
 roles and [the threat model](../threat-model.md#what-each-database-credential-can-reach)
 for what each credential can reach.
 
-## Storage: the node model on PostgreSQL 18
+## Storage: the node model on PostgreSQL 19
 
 A clinical composition is a deep tree. Storing each as one large JSON blob makes
 queries slow: extracting a single value forces the database to read and
@@ -233,5 +233,5 @@ language and its supported feature envelope.
   [Conformance](../conformance.md).
 - **Exact versioning.** Nothing is overwritten; every version and its audit are
   retained and readable.
-- **Operational simplicity.** One self-contained binary and a PostgreSQL 18
+- **Operational simplicity.** One self-contained binary and a PostgreSQL 19
   database; see [Installation](../installation/index.md).

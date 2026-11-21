@@ -14,7 +14,7 @@ operator-facing HTTP surfaces have their own page:
 
 ## Database roles and least privilege
 
-FerroEHR connects to an **external** PostgreSQL 18: a managed service or an
+FerroEHR connects to an **external** PostgreSQL 19: a managed service or an
 operator-run cluster, never a chart-side sidecar, because a database holding
 PHI must be independently backed up and recoverable. The server carries only a
 connection string, ideally sourced from a secret.
@@ -204,7 +204,7 @@ DSN cannot show that half honestly.
 
 A recommendation nothing runs is a guess. This is what the suites cover.
 
-Exercised against a real PostgreSQL 18:
+Exercised against a real PostgreSQL 19:
 
 - Two runtime credentials serving both domains through the assembled router,
   each of the server's own pools refused every relation of the other domain
@@ -885,7 +885,7 @@ Move the records instead:
 1. With the v5 server still running, dump the repository with
    [`POST {ext}/admin/dump`](operations-admin-apis.md) to a location both
    servers can reach.
-2. Create a new, empty PostgreSQL 18 database (or one per relocated domain,
+2. Create a new, empty PostgreSQL 19 database (or one per relocated domain,
    as the v5 deployment had), and start the v6 server against it. With
    `[database] migrations = "apply"` it applies the baseline at its first
    boot; with `"verify"`, run `ferroehr db migrate` under the migrator

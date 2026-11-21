@@ -7,7 +7,7 @@
 //! part of the versioned-object spine ([`crate::storage::version_repo`]).
 //!
 //! No openEHR spec governs the `ehr` / `ehr_folder` schema — it is our own
-//! PG18-native design. The EHR concepts these
+//! PG19-native design. The EHR concepts these
 //! rows realize are arch-overview `master06-design_of_the_ehr.adoc` §The EHR
 //! (root, `system_id`, `time_created`) and RM ehr `master04-ehr_package.adoc`
 //! §EHR Creation / §Folders / §EHR Status. All *semantics* (subject sync
