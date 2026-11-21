@@ -331,22 +331,19 @@ data:
         [[auth.basic.users]]
           password_hash_file = "/etc/ferroehr-secrets/auth.basic.users.clinician.password_hash"
           user = "clinician"
-    
-      [[auth.issuer]]
-        audience = ["ferroehr-basic-users"]
-        issuer = "https://basic-users.ferroehr.invalid"
-        jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
-        kind = "persons"
-    
-      [[auth.issuer]]
-        audience = ["ferroehr-machines"]
-        issuer = "https://machines.example.org/realms/ferroehr"
-        kind = "machines"
-    
-      [[auth.party]]
-        identifier_issuer = "urn:example:basic-user"
-        identifier_type = "login"
-        issuer = "https://basic-users.ferroehr.invalid"
+      [auth.issuer]
+        [auth.issuer.basic_users]
+          audience = ["ferroehr-basic-users"]
+          issuer = "https://basic-users.ferroehr.invalid"
+          jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
+          kind = "persons"
+          [auth.issuer.basic_users.party]
+            identifier_issuer = "urn:example:basic-user"
+            identifier_type = "login"
+        [auth.issuer.machines]
+          audience = ["ferroehr-machines"]
+          issuer = "https://machines.example.org/realms/ferroehr"
+          kind = "machines"
     
     [authz]
       [authz.party_binding]
@@ -642,7 +639,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: b8421278c5b842d17beb29157ecce313619798be51434097b6349b7a5d47814b
+        checksum/config: fe1106a146c8fd17f0c23df3d3febe9977d956330cfbf8429bc3c402ffd9e1e8
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/management/prometheus"

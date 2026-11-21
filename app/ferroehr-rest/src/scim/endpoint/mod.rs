@@ -11,7 +11,7 @@
 //! `ACTOR`, named by its token's issuer and `client_id`, holds a grant of
 //! `scim_provision` in force, read per request from the policy grants. The
 //! grant names the `binding_issuer` of the Users the client owns, the
-//! identifier issuer of an `[[auth.party]]` table no other client's grant
+//! identifier issuer of an `[auth.issuer.<name>.party]` table no other client's grant
 //! names, and the `token_scope` the token must hold. A person's token is
 //! refused, since provisioning is a client's act. The client's requests count
 //! against `[server.caller_rate]` like any other caller's. No openEHR spec
@@ -399,7 +399,7 @@ fn provisioning_client(
     {
         return Err(forbidden(format!(
             "the scim_provision grant names the binding_issuer {binding_issuer:?}, which is the \
-             identifier_issuer of no [[auth.party]] table and no patients issuer"
+             identifier_issuer of no party table and no patients issuer"
         )));
     }
     let own = capabilities.client().map(|client| client.party);

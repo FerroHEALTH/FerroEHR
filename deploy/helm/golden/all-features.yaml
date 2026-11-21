@@ -640,25 +640,23 @@ data:
     [auth]
       enabled = true
       product_scope = "__ferroehr.platform"
-    
-      [[auth.issuer]]
-        audience = ["ferroehr"]
-        issuer = "https://keycloak.example.com/realms/ferroehr"
-        kind = "persons"
-    
-      [[auth.issuer]]
-        audience = ["ferroehr-machines"]
-        issuer = "https://machines.example.org/realms/ferroehr"
-        kind = "machines"
-    
-      [[auth.party]]
-        identifier_issuer = "urn:example:ferroehr-login"
-        identifier_type = "uuid"
-        issuer = "https://keycloak.example.com/realms/ferroehr"
+      [auth.issuer]
+        [auth.issuer.keycloak]
+          audience = ["ferroehr"]
+          issuer = "https://keycloak.example.com/realms/ferroehr"
+          kind = "persons"
+          [auth.issuer.keycloak.party]
+            identifier_issuer = "urn:example:ferroehr-login"
+            identifier_type = "uuid"
+          [auth.issuer.keycloak.profile]
+            patient_context = true
+        [auth.issuer.machines]
+          audience = ["ferroehr-machines"]
+          issuer = "https://machines.example.org/realms/ferroehr"
+          kind = "machines"
       [auth.scim]
       [auth.smart]
         discovery = true
-        patient_issuers = ["https://keycloak.example.com/realms/ferroehr"]
     
     [authz]
       [authz.grants]
@@ -697,7 +695,7 @@ data:
           id = "all-features"
           issuer = "urn:oid:2.999.7.9"
       [authz.rbac]
-        role_issuers = ["https://keycloak.example.com/realms/ferroehr"]
+        role_issuers = ["keycloak"]
     
     [database]
       connection_budget = 36
@@ -1573,7 +1571,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: b1f03b3a9a54f1b06645a7d240922c0ab3bb02758d74d371e1a6c4d29a292ef4
+        checksum/config: 99de18a0f882dc1fcefe0d25bf08b26b7c3bf5d808d1763b59ad8d6fa4290a6f
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"

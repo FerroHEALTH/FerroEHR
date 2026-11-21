@@ -58,7 +58,7 @@ const ASSERTION: &str = "urn:example:assertion:trc-1";
 /// The issuer of that assertion.
 const ASSERTION_ISSUER: &str = "urn:example:assertion-service";
 
-/// The issuer's `[[auth.federation]]` table: IHE IUA claims, and the
+/// The issuer's `[auth.issuer.<name>.federation]` table: IHE IUA claims, and the
 /// treatment context under `treatment`, as a deployment maps them.
 fn federation_table() -> FederationSection {
     let claim = |path: &str| vec![Source::Claim(path.to_owned())];

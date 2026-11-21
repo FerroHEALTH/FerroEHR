@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The login binding on every request (#5004): a bearer token of a `persons`
-//! issuer with an `[[auth.party]]` table is looked up in the local party
+//! issuer with an `[auth.issuer.<name>.party]` table is looked up in the local party
 //! source, read from the binding side table with no cache, and the request is
 //! refused with `403` and its binding code for every outcome that binds no
 //! usable party. Driven through the assembled router over a real
@@ -38,7 +38,7 @@ use crate::common::{self, BASE};
 
 pub(crate) const ISSUER: &str = "https://login.example";
 pub(crate) const AUDIENCE: &str = "ferroehr";
-/// The `identifier_issuer` of the issuer's `[[auth.party]]` table.
+/// The `identifier_issuer` of the issuer's `[auth.issuer.<name>.party]` table.
 pub(crate) const LOGIN: &str = "https://login.example/tenant";
 /// The `group_identifier_issuer` of that table.
 const GROUPS: &str = "https://login.example/groups";
@@ -63,7 +63,7 @@ pub(crate) fn professionals(mapping: BindingMapping) -> BindingMapping {
         .with_professional_role(ROLE_TEMPLATE)
 }
 
-/// The `[auth]` table trusting `ISSUER`, whose logins the `[[auth.party]]`
+/// The `[auth]` table trusting `ISSUER`, whose logins the `[auth.issuer.<name>.party]`
 /// table binds by `person_key`, reading groups from `groups`.
 pub(crate) fn config(person_key: Option<&str>) -> AppConfig {
     let mut auth = common::auth(AuthSection {

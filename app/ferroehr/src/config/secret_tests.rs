@@ -392,7 +392,7 @@ fn redacted_json_masks_every_secret_field() {
 
     // Non-secret identifiers stay visible (they are not credentials).
     assert_eq!(value["auth"]["basic"]["users"][0]["user"], "alice");
-    assert_eq!(value["auth"]["issuer"][0]["issuer"], "https://idp.example");
+    assert_eq!(value["auth"]["issuer"]["machines"]["issuer"], "https://idp.example");
     assert_eq!(
         value["record"]["multimedia"]["s3"]["access_key_id"],
         "AKIA_PUBLIC_ID"
@@ -401,7 +401,7 @@ fn redacted_json_masks_every_secret_field() {
 
 /// The `[auth]` section every key that names an issuer is written under:
 /// one trusted persons issuer, with no userinfo.
-const NAMED_ISSUER: &str = "[auth]\nenabled = true\n\n[[auth.issuer]]\nissuer = \"https://idp.example/realms/ferroehr\"\nkind = \"persons\"\naudience = [\"ferroehr\"]\n";
+const NAMED_ISSUER: &str = "[auth]\nenabled = true\n\n[auth.issuer.staff]\nissuer = \"https://idp.example/realms/ferroehr\"\nkind = \"persons\"\naudience = [\"ferroehr\"]\n";
 
 /// Loads `[auth]` with `table` beside its trusted issuer, and asserts the
 /// password `sentinel` in the table's issuer reaches no rendering of the
@@ -438,33 +438,34 @@ fn rendered_masked(table: &str, sentinel: &str, host: &str) -> FerroEhrConfig {
     c
 }
 
-/// An `[[auth.attributes]]` issuer renders and refuses with its userinfo
-/// masked.
+/// An issuer whose `[auth.issuer.<name>.attributes]` table it may not take
+/// renders and refuses with its userinfo masked.
 #[test]
 fn an_attributes_issuer_never_renders_its_userinfo() {
     assert_table_issuer_masked(
-        "[[auth.attributes]]\nissuer = \"https://u:ATTRIBUTES_PW_SENTINEL@attributes.example/realms/ferroehr\"\nmapping = \"iua\"\n",
+        "[auth.issuer.attributes]\nissuer = \"https://u:ATTRIBUTES_PW_SENTINEL@attributes.example/realms/ferroehr\"\nkind = \"federation\"\naudience = [\"ferroehr-federation\"]\n\n[auth.issuer.attributes.attributes]\nmapping = \"iua\"\n",
         "ATTRIBUTES_PW_SENTINEL",
         "attributes.example",
     );
 }
 
-/// An `[[auth.federation]]` issuer renders and refuses with its userinfo
-/// masked.
+/// An issuer whose `[auth.issuer.<name>.federation]` table it may not take
+/// renders and refuses with its userinfo masked.
 #[test]
 fn a_federation_issuer_never_renders_its_userinfo() {
     assert_table_issuer_masked(
-        "[[auth.federation]]\nissuer = \"https://u:FEDERATION_PW_SENTINEL@federation.example/realms/ferroehr\"\ncontact_point = false\n",
+        "[auth.issuer.federation]\nissuer = \"https://u:FEDERATION_PW_SENTINEL@federation.example/realms/ferroehr\"\nkind = \"machines\"\naudience = [\"ferroehr-machines\"]\n\n[auth.issuer.federation.federation]\ncontact_point = false\n",
         "FEDERATION_PW_SENTINEL",
         "federation.example",
     );
 }
 
-/// An `[[auth.party]]` issuer renders and refuses with its userinfo masked.
+/// An issuer whose `[auth.issuer.<name>.party]` table it may not take renders
+/// and refuses with its userinfo masked.
 #[test]
 fn a_party_issuer_never_renders_its_userinfo() {
     assert_table_issuer_masked(
-        "[[auth.party]]\nissuer = \"https://u:PARTY_PW_SENTINEL@party.example/realms/ferroehr\"\nidentifier_issuer = \"urn:example:login\"\nidentifier_type = \"guid\"\n",
+        "[auth.issuer.party]\nissuer = \"https://u:PARTY_PW_SENTINEL@party.example/realms/ferroehr\"\nkind = \"machines\"\naudience = [\"ferroehr-machines\"]\n\n[auth.issuer.party.party]\nidentifier_issuer = \"urn:example:login\"\nidentifier_type = \"guid\"\n",
         "PARTY_PW_SENTINEL",
         "party.example",
     );

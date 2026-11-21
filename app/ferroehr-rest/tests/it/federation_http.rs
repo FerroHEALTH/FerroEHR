@@ -64,7 +64,7 @@ const PRESENTATIONS: &str = "vps";
 /// The credential type the deployment declares user-authenticated.
 const EMPLOYEE_CREDENTIAL: &str = "NutsEmployeeCredential";
 
-/// The `[[auth.federation]]` table of [`FEDERATION`]: IHE IUA claims, the
+/// The `[auth.issuer.<name>.federation]` table of [`FEDERATION`]: IHE IUA claims, the
 /// country and issuing authority beside them, the consent decision
 /// reference, and the organisation statement with its correlation id.
 fn federation_table() -> FederationSection {
@@ -147,7 +147,7 @@ async fn serve(agreements: Vec<Terms>) -> (testkit::TestDb, Arc<FerroEhrService>
     Box::pin(serve_also(agreements, None)).await
 }
 
-/// [`serve`], also trusting `issuer` with its `[[auth.federation]]` table and
+/// [`serve`], also trusting `issuer` with its `[auth.issuer.<name>.federation]` table and
 /// the `[auth.dpop]` table a sender-constrained issuer needs.
 async fn serve_also(
     agreements: Vec<Terms>,
@@ -766,7 +766,7 @@ async fn an_external_caller_above_its_caller_rate_is_refused_before_any_patient_
 /// NCPeH-A's authorization server, a MyHealth@EU contact point.
 const CONTACT_POINT: &str = "https://ncpeh-a.example";
 
-/// The contact point's issuer table, its `[[auth.federation]]` table with the
+/// The contact point's issuer table, its `[auth.issuer.<name>.federation]` table with the
 /// eHDSI mapping, and the `[auth.dpop]` table its sender constraint needs.
 fn contact_point() -> (IssuerEntry, FederationSection, DpopSection) {
     let entry = IssuerEntry {

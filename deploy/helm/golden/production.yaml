@@ -243,16 +243,14 @@ data:
     
     [auth]
       enabled = true
-    
-      [[auth.issuer]]
-        audience = ["ferroehr"]
-        issuer = "https://idp.example.com/realms/ferroehr"
-        kind = "persons"
-    
-      [[auth.party]]
-        identifier_issuer = "urn:example:ferroehr-login"
-        identifier_type = "uuid"
-        issuer = "https://idp.example.com/realms/ferroehr"
+      [auth.issuer]
+        [auth.issuer.idp]
+          audience = ["ferroehr"]
+          issuer = "https://idp.example.com/realms/ferroehr"
+          kind = "persons"
+          [auth.issuer.idp.party]
+            identifier_issuer = "urn:example:ferroehr-login"
+            identifier_type = "uuid"
     
     [authz]
       [authz.party_binding]
@@ -276,7 +274,7 @@ data:
       [authz.rbac]
         ehr_access_default = "restricted"
         enabled = true
-        role_issuers = ["https://idp.example.com/realms/ferroehr"]
+        role_issuers = ["idp"]
     
     [database]
       connection_budget = 30
@@ -529,7 +527,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: c0aa8a37d42369978105a6c0359e7ca32737fc1a974aa764e7e4d311aaeaa5b1
+        checksum/config: fed763ad27b57f719fbea2e8f7a4e21674680396ea9863955eca654e6e9997a2
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

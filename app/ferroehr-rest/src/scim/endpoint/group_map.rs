@@ -6,7 +6,7 @@
 //! A Group's `displayName` is its `GROUP`'s `PARTY_IDENTITY`, its `externalId`
 //! a `DV_IDENTIFIER` under the client's group issuer
 //! ([`ferroehr::config::scim::group_issuer`]): the `group_identifier_issuer` of the
-//! `[[auth.party]]` table whose `identifier_issuer` is the client's
+//! `[auth.issuer.<name>.party]` table whose `identifier_issuer` is the client's
 //! `binding_issuer`, so the token's group claim of that client's people
 //! matches it, or one derived from the `binding_issuer` when the table sets
 //! none. Each member is served with its

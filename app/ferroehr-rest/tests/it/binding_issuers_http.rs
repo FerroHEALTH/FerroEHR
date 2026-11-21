@@ -37,17 +37,17 @@ use crate::party_binding_http::{
 
 const ENTRA: &str = "https://login.entra.example/tenant/v2.0";
 const ENTRA_AUDIENCE: &str = "ferroehr-entra";
-/// The `identifier_issuer` of the Entra-shaped issuer's `[[auth.party]]` table.
+/// The `identifier_issuer` of the Entra-shaped issuer's `[auth.issuer.<name>.party]` table.
 const ENTRA_LOGIN: &str = "https://login.entra.example/tenant";
 const KEYCLOAK: &str = "https://keycloak.example/realms/care";
 const KEYCLOAK_AUDIENCE: &str = "ferroehr-keycloak";
-/// The `identifier_issuer` of the Keycloak-shaped issuer's `[[auth.party]]`
+/// The `identifier_issuer` of the Keycloak-shaped issuer's `[auth.issuer.<name>.party]`
 /// table.
 const KEYCLOAK_LOGIN: &str = "https://keycloak.example/realms/care/users";
 /// The one identifier value both issuers issue, to different persons.
 const SHARED: &str = "6c7d8e9f-0a1b-4c2d-8e3f-4a5b6c7d8e9f";
 
-/// A `[[auth.party]]` table binding the logins of `issuer` under
+/// A `[auth.issuer.<name>.party]` table binding the logins of `issuer` under
 /// `identifier_issuer`.
 fn party(issuer: &str, identifier_issuer: &str) -> PartySection {
     PartySection {

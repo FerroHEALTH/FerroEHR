@@ -36,14 +36,13 @@ terminology = true
 # deploy/hosted/basic-users-jwks.json, which every FerroEHR image carries, is
 # the public half of a key pair whose private key was discarded, for local
 # lanes only, so no token of it exists.
-[[auth.issuer]]
+[auth.issuer.basic_users]
 issuer = "https://basic-users.ferroehr.invalid"
 kind = "persons"
 audience = ["ferroehr-basic-users"]
 jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 
-[[auth.party]]
-issuer = "https://basic-users.ferroehr.invalid"
+[auth.issuer.basic_users.party]
 identifier_issuer = "urn:example:basic-user"
 identifier_type = "login"
 group_claim = "groups"
@@ -53,13 +52,15 @@ group_identifier_issuer = "urn:example:groups"
 # over the COMMITTED TEST key set of docs/conformance/party/scim/ (never
 # production material), whose private half scripts/scim-provision.sh signs
 # with. Each lane mounts the key set at this path. Overlays add their own
-# issuers after it (index 2 on).
-[[auth.issuer]]
+# issuers under their own names.
+[auth.issuer.scim]
 issuer = "https://scim.ferroehr.invalid"
 kind = "machines"
 audience = ["ferroehr-scim"]
-token_types = ["at+jwt"]
 jwks_file = "/etc/ferroehr/scim-jwks.json"
+
+[auth.issuer.scim.profile]
+token_types = ["at+jwt"]
 
 # Dev-only: expose the ops-introspection surface (`/management/...`) on the main
 # listener so the viewer's Operations panel has something to read and the

@@ -260,7 +260,7 @@ pub(crate) fn jwks_file() -> PathBuf {
 /// The client every test token names unless it names its own.
 pub(crate) const TEST_CLIENT: &str = "ferroehr-test-client";
 
-/// The `[[auth.issuer]]` table of a `persons` issuer at `issuer` for
+/// The `[auth.issuer.<name>]` table of a `persons` issuer at `issuer` for
 /// `audience`, whose first-party client [`TEST_CLIENT`] is a grant in the
 /// CDR ([`first_party`]).
 /// The `[auth.issuer.<name>]` name the tests give the issuer `issuer`: its
@@ -1134,7 +1134,7 @@ pub(crate) async fn open_key_spaces(pool: &PgPool, issuers: &[(&str, bool)]) {
     }
 }
 
-/// Records the key issuers `config` declares, each `[[auth.party]]`
+/// Records the key issuers `config` declares, each `[auth.issuer.<name>.party]`
 /// `identifier_issuer` and each `patients` issuer, as `active` key spaces in
 /// every live database of this test process that holds no lease, as a
 /// replica booting on `config` fills them; a database with a lease has its

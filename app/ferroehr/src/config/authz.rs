@@ -89,7 +89,7 @@ pub struct RbacConfig {
     ///
     /// No policy grant gives `admin_role`, so this user is the administrator
     /// who writes the first policy parties through the Demographic API.
-    /// Beside an `[[auth.party]]` table it is a person's credential, mapped by
+    /// Beside an `[auth.issuer.<name>.party]` table it is a person's credential, mapped by
     /// `[[authz.party_binding.basic_user]]` to the key of a `PERSON` that SCIM
     /// provisions after the operator grant (`ferroehr party-binding grant`).
     /// Unset, no Basic user holds `admin_role`. Our own design.

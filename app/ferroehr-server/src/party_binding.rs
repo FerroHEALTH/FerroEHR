@@ -164,7 +164,7 @@ pub struct CheckArgs {
     #[arg(long, value_name = "FILE")]
     pub expected: Option<PathBuf>,
     /// The `identifier_issuer` the `--expected` logins are keys of; needed
-    /// when more than one `[[auth.party]]` table is configured.
+    /// when more than one `[auth.issuer.<name>.party]` table is configured.
     #[arg(long, value_name = "ISSUER", requires = "expected")]
     pub expected_issuer: Option<String>,
 }
@@ -543,7 +543,7 @@ fn elements(args: &GrantArgs) -> anyhow::Result<Vec<GrantElement>> {
 /// read from the binding side table of `pools`.
 ///
 /// # Errors
-/// No mapping names `user`, no `[[auth.party]]` table names the key's
+/// No mapping names `user`, no `[auth.issuer.<name>.party]` table names the key's
 /// issuer, no live `PERSON` or more than one carries the key, or the party
 /// store fails.
 async fn basic_user_person(
@@ -567,7 +567,7 @@ async fn basic_user_person(
         .map(|table| table.identifier_type.clone())
         .with_context(|| {
             format!(
-                "no [[auth.party]] table names the identifier issuer {:?} of {user:?}",
+                "no party table names the identifier issuer {:?} of {user:?}",
                 mapped.key_issuer
             )
         })?;

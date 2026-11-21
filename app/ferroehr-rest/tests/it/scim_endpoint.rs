@@ -310,7 +310,7 @@ async fn a_missing_scope_an_undeclared_client_and_a_person_are_refused() {
     assert_error(status, &headers, &body, StatusCode::FORBIDDEN);
 }
 
-/// A grant naming a `binding_issuer` no `[[auth.party]]` table issues, one
+/// A grant naming a `binding_issuer` no `[auth.issuer.<name>.party]` table issues, one
 /// another client's grant names too, two of them, or no grant at all admits
 /// nothing.
 #[tokio::test]
@@ -334,7 +334,7 @@ async fn a_grant_that_cannot_own_its_users_is_refused() {
     .await;
     let app = common::router_with(config(None), service).await;
     for (client, refusal) in [
-        ("unbound", "identifier_issuer of no [[auth.party]] table"),
+        ("unbound", "identifier_issuer of no party table"),
         (CLIENT, "another client's scim_provision grant"),
         ("second", "another client's scim_provision grant"),
         ("split", "name 2 binding issuers"),

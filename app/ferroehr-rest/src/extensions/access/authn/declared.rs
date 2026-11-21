@@ -100,7 +100,7 @@ impl Declared {
     /// returned carrying [`Admitted`]; any other caller unchanged.
     ///
     /// A `chained` organisation request carries its correlation id in the
-    /// field its issuer's `[[auth.federation]]` table maps, which the token
+    /// field its issuer's `[auth.issuer.<name>.federation]` table maps, which the token
     /// attests; no request header stands in for it.
     ///
     /// # Errors

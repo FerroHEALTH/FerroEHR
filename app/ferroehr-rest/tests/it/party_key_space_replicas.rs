@@ -29,7 +29,7 @@ use crate::party_binding_http::{AUDIENCE, ISSUER, LOGIN, config, router_with, ui
 
 /// The persons issuer the rolling deploy adds.
 const ADDED: &str = "https://added.example";
-/// The `identifier_issuer` of its `[[auth.party]]` table.
+/// The `identifier_issuer` of its `[auth.issuer.<name>.party]` table.
 const ADDED_LOGIN: &str = "https://added.example/tenant";
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
 
@@ -47,7 +47,7 @@ fn mapping(issuers: &[&str]) -> BindingMapping {
 }
 
 /// The `[auth]` table of a replica trusting `ISSUER` and, with `added`, the
-/// added issuer too, each with its `[[auth.party]]` table.
+/// added issuer too, each with its `[auth.issuer.<name>.party]` table.
 fn trusting(added: bool) -> AppConfig {
     let mut config = config(None);
     if added {

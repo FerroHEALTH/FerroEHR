@@ -93,14 +93,14 @@ impl std::fmt::Debug for Binding {
     }
 }
 
-/// Why the party binding of `[[auth.party]]` and `[authz.party_binding]`
+/// Why the party binding of `[auth.issuer.<name>.party]` and `[authz.party_binding]`
 /// cannot be built.
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum BindingRefused {
-    /// `[[auth.party]]` tables bind logins, but no party source was given to
+    /// `[auth.issuer.<name>.party]` tables bind logins, but no party source was given to
     /// look them up in, so every caller would be served unbound.
     #[error(
-        "[[auth.party]] binds logins to parties, but no party source was given to look them up in"
+        "a party table binds logins to parties, but no party source was given to look them up in"
     )]
     NoSource,
     /// The shared crate refuses the binding.
@@ -108,12 +108,12 @@ pub(crate) enum BindingRefused {
     Shared(#[source] ferroehr::config::binding::BindingError),
 }
 
-/// Returns the party binding of `config`'s `[[auth.party]]` tables and
+/// Returns the party binding of `config`'s `[auth.issuer.<name>.party]` tables and
 /// `[authz.party_binding]`, looking logins up in `source`; `None` when
 /// `[auth]` is off or binds no issuer.
 ///
 /// # Errors
-/// [`BindingRefused::NoSource`] for `[[auth.party]]` tables without a
+/// [`BindingRefused::NoSource`] for `[auth.issuer.<name>.party]` tables without a
 /// `source`, and [`BindingRefused::Shared`] for a binding the shared crate
 /// refuses.
 pub(super) fn binding(
@@ -365,7 +365,7 @@ pub(super) async fn bind(
     }
     let outcome = match binding.shared.resolve(caller).await {
         // NOTE: GDPR Art. 9(3) and Art. 29, a guest acts only under this controller's
-        // responsibility, which `[[auth.party]] guests` declares; our own design.
+        // responsibility, which the party table's `guests` declares; our own design.
         Ok(None) if matches!(caller.kind(), CallerKind::Guest(_)) => {
             return Err(AuthError::PartyRefused {
                 code: "refused-guest",
@@ -786,7 +786,7 @@ mod tests {
         )
         .await
         else {
-            panic!("[[auth.party]] without a party source builds no authenticator");
+            panic!("a party table without a party source builds no authenticator");
         };
         assert!(message.contains("no party source"), "{message}");
     }

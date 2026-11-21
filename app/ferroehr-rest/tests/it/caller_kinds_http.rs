@@ -5,7 +5,7 @@
 //! router over a real `FerroEhrService` on a real `PostgreSQL` 18: a system
 //! caller holds `system/` scopes only and commits only as a client the policy
 //! parties grant `commit_composition` (#5436),
-//! a guest is admitted only where its issuer's `[[auth.party]]` table admits
+//! a guest is admitted only where its issuer's `[auth.issuer.<name>.party]` table admits
 //! guests, and a delegated person is bound to their own `PERSON`, which
 //! covers a Keycloak impersonation (#5167).
 //!
@@ -50,7 +50,7 @@ const SERVICE_ACCOUNT: &str = "service-account-lab";
 const GATEWAY: &str = "gateway";
 /// The Keycloak realm whose staff sign in, a `persons` issuer.
 const KEYCLOAK_STAFF: &str = "https://keycloak.example/realms/staff";
-/// The `identifier_issuer` of that realm's `[[auth.party]]` table.
+/// The `identifier_issuer` of that realm's `[auth.issuer.<name>.party]` table.
 const KEYCLOAK_LOGIN: &str = "https://keycloak.example/realms/staff/users";
 /// The realm's first-party client, named in `azp`.
 const VIEWER: &str = "ferroehr-viewer";
@@ -101,7 +101,7 @@ fn keycloak_staff(impersonation_marker: Option<&str>) -> IssuerEntry {
 }
 
 /// The configuration trusting the persons issuer, whose guests the
-/// `[[auth.party]]` table admits when `guests`, and the three machines
+/// `[auth.issuer.<name>.party]` table admits when `guests`, and the three machines
 /// issuers.
 fn config(guests: bool) -> AppConfig {
     config_marked(guests, None)

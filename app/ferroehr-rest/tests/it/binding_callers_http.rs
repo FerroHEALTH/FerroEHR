@@ -40,11 +40,11 @@ const OTHER_MACHINES: &str = "https://other-machines.callers.example";
 const PATIENTS: &str = "https://patients.callers.example";
 /// An Entra ID `persons` issuer.
 const ENTRA: &str = "https://login.microsoftonline.example/callers/v2.0";
-/// The `identifier_issuer` of the Entra issuer's `[[auth.party]]` table.
+/// The `identifier_issuer` of the Entra issuer's `[auth.issuer.<name>.party]` table.
 const ENTRA_LOGIN: &str = "https://login.microsoftonline.example/callers";
 /// A Keycloak `persons` realm.
 const KEYCLOAK: &str = "https://keycloak.example/realms/callers";
-/// The `identifier_issuer` of the realm's `[[auth.party]]` table.
+/// The `identifier_issuer` of the realm's `[auth.issuer.<name>.party]` table.
 const KEYCLOAK_LOGIN: &str = "https://keycloak.example/realms/callers/users";
 /// The realm's first-party client.
 const VIEWER: &str = "ferroehr-viewer";
@@ -60,7 +60,7 @@ fn persons(issuer: &str, profile: Preset) -> IssuerEntry {
     }
 }
 
-/// A `[[auth.party]]` table binding the logins of `issuer`.
+/// A `[auth.issuer.<name>.party]` table binding the logins of `issuer`.
 fn party(issuer: &str, identifier_issuer: &str) -> PartySection {
     PartySection {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer),

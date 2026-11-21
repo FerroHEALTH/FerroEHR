@@ -408,7 +408,7 @@ pub struct Authenticator {
     reads: build::BackgroundReads,
     /// The issuers whose tokens may grant a privileged role.
     role_issuers: build::RoleIssuers,
-    /// The binding every caller is looked up in, when `[[auth.party]]` binds an issuer.
+    /// The binding every caller is looked up in, when `[auth.issuer.<name>.party]` binds an issuer.
     party: Option<Arc<party::Binding>>,
     /// The federation agreements' caller limits.
     declared: declared::Declared,

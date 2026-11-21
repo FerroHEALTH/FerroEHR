@@ -27,18 +27,18 @@ config:
       # One table per issuer: `kind` says whose tokens it signs, and a
       # persons token is admitted only through a client the CDR
       # grants `sign_in_persons`.
-      - issuer: https://idp.example.com/realms/ferroehr
+      idp:
+        issuer: https://idp.example.com/realms/ferroehr
         kind: persons
         audience: [ferroehr]
-    # The issuer's logins bind to the PERSON carrying their `sub` under this
-    # identifier issuer.
-    party:
-      - issuer: https://idp.example.com/realms/ferroehr
-        identifier_issuer: urn:example:ferroehr-login
-        identifier_type: uuid
+        # The issuer's logins bind to the PERSON carrying their `sub` under this
+        # identifier issuer.
+        party:
+          identifier_issuer: urn:example:ferroehr-login
+          identifier_type: uuid
   authz:
     rbac:
-      role_issuers: [https://idp.example.com/realms/ferroehr]
+      role_issuers: [idp]
     party_binding:
       # The healthcare provider this deployment acts for (an example id
       # under the OID arc 2.999).

@@ -364,7 +364,7 @@ pub(crate) mod test_support {
         .clone()
     }
 
-    /// The `[[auth.issuer]]` table of a `persons` issuer at `issuer` for the
+    /// The `[auth.issuer.<name>]` table of a `persons` issuer at `issuer` for the
     /// test audience, admitting the test client.
     pub(crate) fn entry(issuer: &str) -> IssuerEntry {
         IssuerEntry {

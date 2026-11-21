@@ -5,7 +5,7 @@
 //! assembled router (#5323), over a real `FerroEhrService` on a real
 //! `PostgreSQL` 18 with the local party source and the audit store.
 //!
-//! An issuer's `[[auth.attributes]]` table with `mapping = "iua"` reads the IHE
+//! An issuer's `[auth.issuer.<name>.attributes]` table with `mapping = "iua"` reads the IHE
 //! IUA `purpose_of_use` and `subject_role` claims (IHE ITI TF-2
 //! §3.71.4.2.2.1.1). The access record carries them; the `[audit]
 //! purpose_header` keeps working alone; and a header naming a purpose the

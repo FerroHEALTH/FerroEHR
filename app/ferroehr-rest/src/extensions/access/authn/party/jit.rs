@@ -45,7 +45,7 @@ pub(super) struct Jit {
     user_name_claim: Option<String>,
     /// The claim the identity provider is read from.
     idp_claim: String,
-    /// The `identifier_issuer` of the issuer's `[[auth.party]]` table.
+    /// The `identifier_issuer` of the issuer's `[auth.issuer.<name>.party]` table.
     key_issuer: String,
     /// The `group_claim` of that table.
     group_claim: String,
@@ -97,7 +97,7 @@ impl NotAdmitted {
     }
 }
 
-/// The just-in-time creation of each `persons` issuer an `[[auth.party]]`
+/// The just-in-time creation of each `persons` issuer an `[auth.issuer.<name>.party]`
 /// table binds, keyed by issuer, read with its `[[authz.party_binding.issuer]]`
 /// table when it has one.
 ///

@@ -25,40 +25,38 @@ fn full() -> String {
 [record]
 subject_index = "local"
 
-[[auth.issuer]]
+[auth.issuer.staff]
 issuer = "https://idp.example/realms/staff"
 kind = "persons"
 audience = ["ferroehr"]
 
-[[auth.issuer]]
+[auth.issuer.patients]
 issuer = "https://idp.example/realms/patients"
 kind = "patients"
 audience = ["ferroehr-patients"]
 
-[[auth.issuer]]
+[auth.issuer.machines]
 issuer = "https://idp.example/realms/machines"
 kind = "machines"
 audience = ["ferroehr-machines"]
 
-[[auth.issuer]]
+[auth.issuer.federation]
 issuer = "https://federation.example"
 kind = "federation"
 audience = ["ferroehr-federation"]
 
-[[auth.federation]]
-issuer = "https://federation.example"
+[auth.issuer.federation.federation]
 mapping = "iua"
 contact_point = false
 countries = ["DE"]
 issuing_authorities = ["BAEK"]
 provider_identifier_prefixes = ["urn:example:de:"]
 
-[auth.federation.fields]
+[auth.issuer.federation.federation.fields]
 "professional.country_code" = [{{ constant = "DE" }}]
 "professional.issuing_authority_name" = [{{ constant = "BAEK" }}]
 
-[[auth.party]]
-issuer = "https://idp.example/realms/staff"
+[auth.issuer.staff.party]
 identifier_issuer = "urn:example:staff-login"
 identifier_type = "guid"
 
@@ -67,7 +65,7 @@ user = "alice"
 password_hash = "{HASH}"
 
 [authz.rbac]
-role_issuers = ["https://idp.example/realms/staff"]
+role_issuers = ["staff"]
 
 [authz.party_binding]
 provider = {{ issuer = "urn:oid:2.16.528.1.1007.3.3", id = "12345678" }}
@@ -82,7 +80,7 @@ key = "3f2b0c1e-0000-4000-8000-000000000001"
 }
 
 /// A person template whose key is of the `guid` type the staff issuer's
-/// `[[auth.party]]` table looks logins up under, with its professional role.
+/// `[auth.issuer.<name>.party]` table looks logins up under, with its professional role.
 const KEY_TEMPLATE: &str = r#"
 [[authz.party_binding.person.template]]
 template_id = "FerroEHR professional"
@@ -167,25 +165,25 @@ fn a_mapped_basic_user_is_named_while_no_assurance_minimum_is_set() {
 #[test]
 fn a_persons_issuer_with_no_party_table_is_refused() {
     let text = refusal(&with(
-        "[[auth.party]]\nissuer = \"https://idp.example/realms/staff\"\nidentifier_issuer = \"urn:example:staff-login\"\nidentifier_type = \"guid\"\n",
+        "[auth.issuer.staff.party]\nidentifier_issuer = \"urn:example:staff-login\"\nidentifier_type = \"guid\"\n",
         "",
     ));
     assert!(
         text.contains(
-            "the persons issuer \"https://idp.example/realms/staff\" has no [[auth.party]] table"
+            "the persons issuer \"https://idp.example/realms/staff\" has no party table"
         ),
         "{text}"
     );
 }
 
-/// An `[[auth.party]]` table looks logins up under an `identifier_type` some
+/// An `[auth.issuer.<name>.party]` table looks logins up under an `identifier_type` some
 /// person template's key is written under, or no login of its issuer binds.
 #[test]
 fn a_party_table_whose_identifier_type_no_template_key_carries_is_refused() {
     let text = refusal(&full());
     assert!(
         text.contains(
-            "the [[auth.party]] table of \"https://idp.example/realms/staff\" looks logins up \
+            "the party table of \"https://idp.example/realms/staff\" looks logins up \
              under identifier_type \"guid\", which no person template's key carries: the person \
              templates' keys are of the types {\"login\"}"
         ),
@@ -194,7 +192,7 @@ fn a_party_table_whose_identifier_type_no_template_key_carries_is_refused() {
     let text = refusal(&format!("{}\n[authz.party_binding.person]\n", full()));
     assert!(
         text.contains(
-            "the [[auth.party]] table of \"https://idp.example/realms/staff\" looks logins up \
+            "the party table of \"https://idp.example/realms/staff\" looks logins up \
              under identifier_type \"guid\", which no person template's key carries: no \
              [[authz.party_binding.person.template]] is declared"
         ),
@@ -252,7 +250,7 @@ fn an_explicit_section_overrides_its_default_and_leaves_the_others() {
     assert_ne!(binding.group, default.group);
 }
 
-/// `[authz.rbac] first_admin` beside a `persons` `[[auth.party]]` table is a
+/// `[authz.rbac] first_admin` beside a `persons` `[auth.issuer.<name>.party]` table is a
 /// person's credential: unmapped it is refused with the remedy, the operator
 /// grant that lets SCIM provision its `PERSON`, and mapped to a key it boots
 /// before that `PERSON` exists (#5620).
@@ -305,16 +303,18 @@ fn a_basic_user_with_no_mapping_is_refused_naming_the_user() {
 }
 
 #[test]
-fn a_table_for_an_issuer_of_the_wrong_kind_or_twice_is_refused() {
-    let party = "[[auth.party]]\nissuer = \"https://idp.example/realms/staff\"\nidentifier_issuer = \"urn:example:staff-login\"\nidentifier_type = \"guid\"\n";
+fn a_party_table_under_an_issuer_of_another_kind_is_refused() {
+    let party = "[auth.issuer.staff.party]\nidentifier_issuer = \"urn:example:staff-login\"\nidentifier_type = \"guid\"\n";
     let text = refusal(&with(
         party,
         &format!(
-            "{party}\n[[auth.party]]\nissuer = \"https://idp.example/realms/staff\"\nidentifier_issuer = \"urn:example:b\"\nidentifier_type = \"guid\"\n"
+            "{party}\n[auth.issuer.machines.party]\nidentifier_issuer = \"urn:example:b\"\nidentifier_type = \"guid\"\n"
         ),
     ));
     assert!(
-        text.contains("two [[auth.party]] tables name the issuer"),
+        text.contains(
+            "the party table of \"https://idp.example/realms/machines\" names no trusted persons issuer"
+        ),
         "{text}"
     );
 }
@@ -364,22 +364,26 @@ fn a_removed_key_is_refused_as_unknown() {
 
 #[test]
 fn a_role_issuer_of_another_kind_is_refused() {
-    for issuer in [
-        "https://federation.example",
-        "https://idp.example/realms/patients",
-        "https://idp.example/realms/machines",
-    ] {
+    for issuer in ["federation", "patients", "machines"] {
         let text = refusal(&with(
-            "role_issuers = [\"https://idp.example/realms/staff\"]",
+            "role_issuers = [\"staff\"]",
             &format!("role_issuers = [\"{issuer}\"]"),
         ));
         assert!(
             text.contains(&format!(
-                "the authz.rbac.role_issuers list names the issuer {issuer:?}, which is not a trusted persons issuer"
+                "the authz.rbac.role_issuers list names the issuer {issuer:?}, which is not a persons issuer"
             )),
             "{text}"
         );
     }
+    let text = refusal(&with(
+        "role_issuers = [\"staff\"]",
+        "role_issuers = [\"https://idp.example/realms/staff\"]",
+    ));
+    assert!(
+        text.contains("authz.rbac.role_issuers names the issuer \"https://idp.example/realms/staff\""),
+        "an issuer is named by its table, never by its URL: {text}"
+    );
 }
 
 #[test]
@@ -457,6 +461,21 @@ fn the_client_lists_and_basic_roles_are_refused_as_unknown() {
             "delegates = [{ client = \"ferrobridge\" }]",
             "delegates",
         ),
+        (
+            "audience = [\"ferroehr\"]",
+            "\n[auth.issuer.staff.profile]\nfirst_party_clients = [\"ferroehr-viewer\"]",
+            "first_party_clients",
+        ),
+        (
+            "audience = [\"ferroehr\"]",
+            "\n[auth.issuer.staff.profile]\ndelegates = [{ client = \"ferrobridge\" }]",
+            "delegates",
+        ),
+        (
+            "audience = [\"ferroehr\"]",
+            "\n[auth.issuer.staff.profile]\naudience_delegates = true",
+            "audience_delegates",
+        ),
     ] {
         let text = refusal(&with(old, &format!("{old}\n{key}")));
         assert!(
@@ -465,8 +484,8 @@ fn the_client_lists_and_basic_roles_are_refused_as_unknown() {
         );
     }
     let text = refusal(&with(
-        "[[auth.issuer]]\n",
-        "[auth]\nscopeless_subjects = []\n\n[[auth.issuer]]\n",
+        "[auth.issuer.staff]\n",
+        "[auth]\nscopeless_subjects = []\n\n[auth.issuer.staff]\n",
     ));
     assert!(
         text.contains("unknown field `scopeless_subjects`"),
@@ -520,7 +539,7 @@ fn the_keys_the_cdr_now_holds_are_refused_as_unknown() {
 /// grants of the policy parties now.
 #[test]
 fn the_privileged_roles_the_cdr_now_grants_are_refused_as_unknown() {
-    let issuers = "role_issuers = [\"https://idp.example/realms/staff\"]\n";
+    let issuers = "role_issuers = [\"staff\"]\n";
     for (key, value) in [
         ("subject_audit_role", "\"PORTAL\""),
         ("access_service_roles", "[\"EHDS-ACCESS-SERVICE\"]"),
@@ -714,7 +733,7 @@ fn an_unknown_scim_key_is_named() {
 
 /// The person mapping the server installs holds a portal representative's
 /// binding key, the login under the `patients` issuer, beside the keys of the
-/// `persons` issuer's `[[auth.party]]` table (#5622): the boot compiles the
+/// `persons` issuer's `[auth.issuer.<name>.party]` table (#5622): the boot compiles the
 /// mapping from the one key-issuer set the SCIM gate reads too.
 #[test]
 fn the_installed_mapping_holds_a_patients_issuer_key_beside_a_party_table() {

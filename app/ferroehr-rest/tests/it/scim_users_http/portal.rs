@@ -3,7 +3,7 @@
 
 //! A patient portal's representatives, provisioned over SCIM by the portal's
 //! own client (#5622), in a deployment that also binds its professionals
-//! through a `persons` issuer's `[[auth.party]]` table (#5652).
+//! through a `persons` issuer's `[auth.issuer.<name>.party]` table (#5652).
 //!
 //! The portal client's `binding_issuer` is the `patients` issuer, one of the
 //! key issuers the server compiles its person mapping from. Its Users are

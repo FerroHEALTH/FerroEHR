@@ -241,7 +241,7 @@ pub struct AgreementRecord {
     /// The correlation id of a `chained` request, as its token attests it.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub correlation_id: Option<String>,
-    /// Where the issuer's `[[auth.federation]]` table reads the correlation id
+    /// Where the issuer's `[auth.issuer.<name>.federation]` table reads the correlation id
     /// from, such as `claim:correlation_id`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub correlation_source: Option<String>,

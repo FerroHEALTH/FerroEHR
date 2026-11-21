@@ -74,7 +74,7 @@ pub fn errors(binding: &PartyBindingConfig, resolved: &Resolved) -> Vec<String> 
         let persons = resolved.kinds.get(table.issuer.expose()) == Some(&IssuerKind::Persons);
         if !(bound && persons) {
             errors.push(format!(
-                "{at} names no persons issuer an [[auth.party]] table binds"
+                "{at} names no persons issuer an party table binds"
             ));
             continue;
         }
@@ -95,7 +95,7 @@ pub fn errors(binding: &PartyBindingConfig, resolved: &Resolved) -> Vec<String> 
     errors
 }
 
-/// The `persons` issuers an `[[auth.party]]` table of `resolved` binds: the
+/// The `persons` issuers an `[auth.issuer.<name>.party]` table of `resolved` binds: the
 /// issuers whose first logins a `create_at_login` grant may create a
 /// `PERSON` for.
 #[must_use]

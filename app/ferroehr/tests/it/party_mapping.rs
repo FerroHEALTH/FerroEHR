@@ -49,7 +49,7 @@ const MEMBERSHIP: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1";
 const REPRESENTATION: &str = "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.custodian.v2";
 /// The identifier cluster every person selector reads.
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
-/// The `identifier_issuer` of the login's `[[auth.party]]` table.
+/// The `identifier_issuer` of the login's `[auth.issuer.<name>.party]` table.
 const LOGIN: &str = "https://login.example/tenant";
 /// The issuer a SCIM client writes `userName` and `externalId` under.
 const SCIM: &str = "https://login.example/tenant#scim";
