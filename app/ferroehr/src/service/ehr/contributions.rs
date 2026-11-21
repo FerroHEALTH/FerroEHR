@@ -98,7 +98,9 @@ impl FerroEhrService {
     /// ([`Self::ehr_access_view`]), since a restriction must not be visible
     /// to a provider (EHDS Art. 8); our own design. To a gate-keeper who is
     /// not the subject, a resolved `EHR_ACCESS` version is served without
-    /// its marking and its signature (#6165).
+    /// its marking and its signature (#6165). Resolved for anyone but the
+    /// controller, a CONTRIBUTION one of whose `EHR_ACCESS` versions holds
+    /// the controller's exclusions is answered as unknown (#6077).
     ///
     /// # Errors
     /// [`ServiceError`] when the CONTRIBUTION does not exist in this EHR
@@ -124,8 +126,13 @@ impl FerroEhrService {
                 redacted: false,
             });
         }
+        // NOTE: draft access control decision procedure, Reading and Writing the Settings, the
+        // signed versions of a CONTRIBUTION are never served altered, so exclusions hide it.
+        let excluded = resolve_refs
+            && !self.settings_caller().administrator()
+            && carries_exclusions(&contribution);
         let view = Box::pin(self.ehr_access_view(ehr_id)).await?;
-        if !view.reads() {
+        if excluded || !view.reads() {
             return Err(ServiceError::not_found(
                 Missing::Contribution,
                 format!("CONTRIBUTION {contribution_id}"),
@@ -291,6 +298,22 @@ fn commits_ehr_access(contribution: &Value) -> bool {
             versions.iter().any(|version| {
                 version.get("type").and_then(Value::as_str) == Some("EHR_ACCESS")
                     || version.pointer("/data/_type").and_then(Value::as_str) == Some("EHR_ACCESS")
+            })
+        })
+}
+
+/// Whether a resolved version of the CONTRIBUTION `contribution` is an
+/// `EHR_ACCESS` whose settings carry the controller's exclusions.
+fn carries_exclusions(contribution: &Value) -> bool {
+    contribution
+        .get("versions")
+        .and_then(Value::as_array)
+        .is_some_and(|versions| {
+            versions.iter().any(|version| {
+                version
+                    .get("data")
+                    .and_then(super::access_exclusions::held)
+                    .is_some()
             })
         })
 }

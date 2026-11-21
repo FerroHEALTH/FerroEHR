@@ -198,6 +198,9 @@ pub enum AccessSettings {
     ClassId,
     /// `facts` — the values the class sets aside, as a JSON array.
     Facts,
+    /// `settings` — the `ACCESS_DIRECTIVE_SETTINGS` in canonical JSON;
+    /// `NULL` when held closed.
+    Settings,
 }
 
 /// `party_relationship_target` — the party domain's target-side index of
@@ -590,6 +593,7 @@ mod tests {
             AccessSettings::HeldClosed.to_string(),
             AccessSettings::ClassId.to_string(),
             AccessSettings::Facts.to_string(),
+            AccessSettings::Settings.to_string(),
         ]
     }
 

@@ -15,6 +15,7 @@ mod examples;
 mod grounds;
 mod steps;
 mod steps_confidentiality;
+mod steps_exclusion;
 mod steps_policy;
 mod steps_purpose;
 mod steps_rules;
@@ -36,6 +37,7 @@ use ferroehr::access_eval::procedure::{
     Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide,
 };
 use ferroehr::access_eval::scope::{CategoryIndex, Item, Object, Scopes};
+use ferroehr::access_policy::care::CareFacts;
 use ferroehr::party_binding::grants::caller::CareTeam;
 use ferroehr::party_binding::grants::caller::care_of::{CareOf, ProviderKey};
 use ferroehr::party_binding::grants::caller::facts::CallerFacts;
@@ -169,6 +171,38 @@ pub(super) fn settings(
     }
     if !labels.is_empty() {
         s["labels"] = json!(labels);
+    }
+    if !gate_keepers.is_empty() {
+        s["gate_keepers"] = json!(gate_keepers);
+    }
+    ferroehr::service::ehr::access_settings::check_written_settings(&s)
+        .expect("the test settings hold every invariant");
+    EhrAccessSettings::from_ehr_access(&json!({ "_type": "EHR_ACCESS", "settings": s }))
+        .expect("the settings read")
+        .expect("settings")
+}
+
+/// An exclusion of the controller naming `scope`, with `extra` members.
+pub(super) fn exclusion(scope: &Value, extra: &Value) -> Value {
+    let mut scope = scope.clone();
+    scope["_type"] = json!("ACCESS_ACTOR_SCOPE");
+    let mut members = json!({ "applies_to": [scope] });
+    if let (Some(members), Some(extra)) = (members.as_object_mut(), extra.as_object()) {
+        members.extend(extra.clone());
+    }
+    directive("exclusion", "deny", &members)
+}
+
+/// Open settings with `directives` and `gate_keepers`, carrying `exclusions`.
+pub(super) fn excluding(
+    exclusions: &[Value],
+    directives: &[Value],
+    gate_keepers: &[Value],
+) -> EhrAccessSettings {
+    let mut s = json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS", "default_access": term("open"),
+                        "exclusions": exclusions });
+    if !directives.is_empty() {
+        s["directives"] = json!(directives);
     }
     if !gate_keepers.is_empty() {
         s["gate_keepers"] = json!(gate_keepers);
@@ -343,6 +377,10 @@ pub(super) struct Case {
     pub(super) now: Option<jiff::Timestamp>,
     /// The EHR is not the subject caller's own.
     pub(super) foreign: bool,
+    /// The EHR's subject is the `PERSON` the caller is bound to.
+    pub(super) subject: bool,
+    /// The kinships that join the caller to the EHR's subject.
+    pub(super) kinships: Vec<ForeignCode>,
 }
 
 impl Case {
@@ -393,12 +431,14 @@ impl Case {
                 asked,
                 policy: Policy::of(self.policy.as_ref()),
                 rules: self.rules(),
+                conflict_rules: CareFacts::of(self.policy.as_ref()).conflict_allowances(),
                 ehr: Ehr {
                     settings: (*class.settings).as_ref(),
                     server_default: self.server_default.unwrap_or(AccessDefault::Open),
                     care: &care,
                     own: !self.foreign,
-                    subject: false,
+                    subject: self.subject,
+                    kinships: &self.kinships,
                 },
                 scopes: &scopes,
                 now: self.now.unwrap_or_else(now),
@@ -460,12 +500,14 @@ impl Case {
             asked,
             policy: Policy::of(self.policy.as_ref()),
             rules: self.rules(),
+            conflict_rules: CareFacts::of(self.policy.as_ref()).conflict_allowances(),
             ehr: Ehr {
                 settings: self.settings.as_ref(),
                 server_default: self.server_default.unwrap_or(AccessDefault::Open),
                 care: &care,
                 own: !self.foreign,
-                subject: false,
+                subject: self.subject,
+                kinships: &self.kinships,
             },
             scopes: &scopes,
             now: self.now.unwrap_or_else(now),

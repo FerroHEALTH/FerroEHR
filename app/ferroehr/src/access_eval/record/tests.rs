@@ -101,13 +101,14 @@ fn each_refusal_belongs_to_its_step() {
             "refused-restricted" => 2,
             "refused-consent-denied" => 3,
             "refused-purpose-missing" => 4,
-            "refused-policy-denied" => 5,
+            "refused-policy-denied" | "refused-conflict" => 5,
             "refused-sensitivity" | "refused-confidentiality" => 6,
             "refused-no-care-relationship" => 7,
             "refused-consent-required" => 8,
             "refused-not-subject"
             | "refused-not-represented"
-            | "refused-consent-reference-missing" => 0,
+            | "refused-consent-reference-missing"
+            | "refused-excluded" => 0,
             other => panic!("an unknown refusal code {other}"),
         };
         assert_eq!(number, expected, "{code}");

@@ -101,12 +101,20 @@ pub(super) fn care_changes<'f>(
     before: &'f [CallerFact],
     after: &'f [CallerFact],
 ) -> Vec<&'f FactValue> {
-    let care = |fact: &&CallerFact| matches!(fact.value, FactValue::Team(_) | FactValue::Care(_));
+    let care = |fact: &&CallerFact| {
+        matches!(
+            fact.value,
+            FactValue::Team(_) | FactValue::Care(_) | FactValue::Kin(_)
+        )
+    };
     let mut added: Vec<&CallerFact> = after.iter().filter(care).collect();
     let mut removed = Vec::new();
     for fact in before.iter().filter(care) {
         let found = added.iter().position(|other| {
-            other.kind == fact.kind && other.value == fact.value && other.validity == fact.validity
+            other.kind == fact.kind
+                && other.value == fact.value
+                && other.validity == fact.validity
+                && other.about == fact.about
         });
         match found {
             Some(at) => {
@@ -141,7 +149,8 @@ pub(super) fn same_subjects(
 /// of `mapping` and no [`Operation::WriteCareRelationship`] grant it holds
 /// covers each of `changed`, what the commit removed and added, on `tx`.
 ///
-/// A care relationship is covered by a grant whose [`PROVIDER`] elements
+/// A kinship is covered by any such grant. A care relationship is covered by
+/// a grant whose [`PROVIDER`] elements
 /// name its provider and whose [`TARGET_KIND`] elements name the RM type of
 /// its target. A membership is covered by a grant whose [`PROVIDER`]
 /// elements name a provider of the `ORGANISATION` it targets, or of the
@@ -191,7 +200,9 @@ async fn check_care_writer(
                         .any(|provider| providers.contains(provider))
                 })
             }
-            FactValue::Code(_) => true,
+            // NOTE: draft decision procedure, Writing Relationships, a kinship names no provider
+            // and admits no one, so any write_care_relationship grant covers it.
+            FactValue::Code(_) | FactValue::Kin(_) => true,
         };
         if !covered {
             return Err(uncovered(party, value));
@@ -226,8 +237,9 @@ async fn membership_providers(
 /// grant that changed what the party `party` says.
 fn no_grant(party: Uuid) -> ServiceError {
     ServiceError::not_permitted(format!(
-        "this version changes the care relationships of party {party} ({}::{} or {}::{}) or \
-         the record subjects it declares ({TERMINOLOGY}::{}): only a caller holding the {} \
+        "this version changes the care relationships of party {party} ({}::{} or {}::{}), a \
+         kinship ({TERMINOLOGY}::related_to) or the record subjects it declares \
+         ({TERMINOLOGY}::{}): only a caller holding the {} \
          grant, such as the care delivery environment's ADT system, or an administrator \
          writes them",
         CareRelationship::MemberOf.terminology(),
@@ -252,7 +264,7 @@ fn uncovered(party: Uuid, value: &FactValue) -> ServiceError {
             "a membership of {team}, whose providers no grant names (a GROUP that belongs to \
              no ORGANISATION carrying an identifier is written by an administrator alone)"
         ),
-        FactValue::Code(_) => String::new(),
+        FactValue::Code(_) | FactValue::Kin(_) => String::new(),
     };
     ServiceError::not_permitted(format!(
         "this version of party {party} writes {what}: no {} grant of the caller names that \
@@ -260,7 +272,7 @@ fn uncovered(party: Uuid, value: &FactValue) -> ServiceError {
         Operation::WriteCareRelationship,
         match value {
             FactValue::Care(_) => format!(" with that kind among its {TARGET_KIND} elements"),
-            FactValue::Team(_) | FactValue::Code(_) => String::new(),
+            FactValue::Team(_) | FactValue::Code(_) | FactValue::Kin(_) => String::new(),
         }
     ))
 }

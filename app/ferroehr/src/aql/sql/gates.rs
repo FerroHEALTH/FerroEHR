@@ -24,7 +24,7 @@
 //!
 //! The same head row carries the read rule of the `EHR_ACCESS` settings: an
 //! `EHR_ACCESS` object contributes a row only when its EHR is one whose
-//! settings the caller may read ([`super::EhrAccessReaders`]), so a
+//! settings the caller may read ([`super::readers::EhrAccessReaders`]), so a
 //! restriction stays invisible to a provider (EHDS Art. 8) in every query
 //! shape. Who reads the settings is our own design (#5508).
 //!
@@ -40,7 +40,7 @@ use sea_query::{Expr, ExprTrait as _};
 
 use super::expr::col;
 use super::own_records::OwnRecords;
-use super::{EhrAccessReaders, PolicyParties};
+use super::readers::{EhrAccessReaders, PolicyParties};
 use crate::access_eval::caseload::Caseload;
 use crate::access_eval::condition::AccessCondition;
 use crate::aql::ir::QueryDomain;
@@ -138,13 +138,23 @@ impl<'a> Gates<'a> {
         }
         // NOTE: EHDS Art. 8, an EHR_ACCESS whose settings the caller may not read
         // contributes no row, so a restriction stays invisible (our own design).
-        if let Some(EhrAccessReaders::Only(keepers)) = self.access_settings {
-            let other_kind = col(h, VoHead::Kind).ne(Expr::val("EHR_ACCESS"));
-            predicates.push(if keepers.groups.is_empty() {
-                other_kind
-            } else {
-                other_kind.or(super::access::keeper_reads(keepers, h))
-            });
+        let other_kind = || col(h, VoHead::Kind).ne(Expr::val("EHR_ACCESS"));
+        match self.access_settings {
+            Some(EhrAccessReaders::Only(keepers)) => {
+                predicates.push(if keepers.groups.is_empty() {
+                    other_kind()
+                } else {
+                    other_kind()
+                        .or(super::access::keeper_reads(keepers, h)
+                            .and(super::access::unexcluded(h)))
+                });
+            }
+            // NOTE: draft access control decision procedure, Reading and Writing the Settings,
+            // only the controller reads an EHR_ACCESS whose settings hold exclusions (#6077).
+            Some(EhrAccessReaders::Unexcluded | EhrAccessReaders::UnexcludedWithoutMarking) => {
+                predicates.push(other_kind().or(super::access::unexcluded(h)));
+            }
+            Some(EhrAccessReaders::Every) | None => {}
         }
         predicates
     }

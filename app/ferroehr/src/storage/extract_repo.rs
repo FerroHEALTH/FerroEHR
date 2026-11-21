@@ -90,6 +90,21 @@ pub async fn ehr_object_kind(
     }
 }
 
+/// Whether a version of the `EHR_ACCESS` of `ehr_id` carries the
+/// controller's exclusions in its settings, which only the controller reads.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn ehr_access_excluded(pool: &PgPool, ehr_id: EhrId) -> Result<bool, StorageError> {
+    Ok(sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM version v WHERE v.ehr_id = $1 AND v.kind = 'EHR_ACCESS' \
+         AND v.body IS NOT NULL AND v.body::jsonb #> '{settings,exclusions}' IS NOT NULL)",
+    )
+    .bind(ehr_id)
+    .fetch_one(&mut *acquire(pool).await?)
+    .await?)
+}
+
 /// The `sys_version`s of a version container, in order, each flagged with
 /// whether it is the current trunk version (`vo_head.trunk_head_sys_version`).
 ///

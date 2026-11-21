@@ -89,6 +89,9 @@ group! {
         Representation => "representation",
         /// A legal obligation.
         LegalObligation => "legal obligation",
+        /// A conflict rule of the controller's policy allowed a professional
+        /// in conflict with the subject.
+        ConflictAllowance => "conflict allowance",
     }
 }
 

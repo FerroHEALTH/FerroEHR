@@ -520,7 +520,7 @@ CREATE TABLE binding_caller_fact (
     covers_id       text,
     covers_kind     text,
     CONSTRAINT ck_binding_caller_fact_kind
-        CHECK (kind IN ('role', 'organisation_type', 'MBR', 'under_care_of')),
+        CHECK (kind IN ('role', 'organisation_type', 'MBR', 'under_care_of', 'related_to')),
     CONSTRAINT ck_binding_caller_fact_value
         CHECK (CASE WHEN kind = 'under_care_of'
                     THEN target_id IS NOT NULL
@@ -530,6 +530,10 @@ CREATE TABLE binding_caller_fact (
                     WHEN kind = 'MBR'
                     THEN target_id IS NOT NULL AND target_kind IS NULL
                          AND terminology_id IS NULL AND code_string IS NULL
+                         AND provider_issuer IS NULL AND provider_id IS NULL
+                    WHEN kind = 'related_to'
+                    THEN target_id IS NOT NULL AND target_kind IS NULL
+                         AND terminology_id IS NOT NULL AND code_string IS NOT NULL
                          AND provider_issuer IS NULL AND provider_id IS NULL
                     ELSE target_id IS NULL AND target_kind IS NULL
                          AND terminology_id IS NOT NULL AND code_string IS NOT NULL
@@ -562,7 +566,7 @@ CREATE INDEX ix_binding_caller_fact_party ON binding_caller_fact (party_id);
 -- No openEHR spec governs the side table or its index: our own design.
 CREATE INDEX ix_binding_caller_fact_care_team ON binding_caller_fact (target_id)
     WHERE kind = 'under_care_of';
-COMMENT ON COLUMN binding_caller_fact.kind IS 'What the fact is: role, the coded name of a ROLE the party performs, organisation_type, the coded name of the ORGANISATION itself, or the code of a care relationship, MBR of v3-RoleClass or under_care_of of openehr_access.';
+COMMENT ON COLUMN binding_caller_fact.kind IS 'What the fact is: role, the coded name of a ROLE the party performs, organisation_type, the coded name of the ORGANISATION itself, the code of a care relationship, MBR of v3-RoleClass or under_care_of of openehr_access, or related_to of openehr_access, a kinship of the party to the person target_id names (#6077).';
 COMMENT ON COLUMN binding_caller_fact.target_kind IS 'The RM type of a care relationship''s target: PERSON, ROLE, GROUP or ORGANISATION; NULL for every other fact.';
 COMMENT ON COLUMN binding_caller_fact.provider_issuer IS 'The issuer of a care relationship''s provider DV_IDENTIFIER; NULL for every other fact.';
 COMMENT ON COLUMN binding_caller_fact.provider_id IS 'The id of a care relationship''s provider DV_IDENTIFIER; NULL for every other fact.';
@@ -572,7 +576,7 @@ COMMENT ON COLUMN binding_caller_fact.covers_id IS 'The id of a care relationshi
 COMMENT ON COLUMN binding_caller_fact.covers_kind IS 'The type of a care relationship''s covers_for DV_IDENTIFIER: the RM type of the carer it covers for, PERSON, ROLE, GROUP or ORGANISATION; NULL when it names none and for every other fact.';
 COMMENT ON COLUMN binding_caller_fact.terminology_id IS 'The terminology of a role, an organisation type or a care relationship''s care_role.';
 COMMENT ON COLUMN binding_caller_fact.code_string IS 'The code of a role, an organisation type or a care relationship''s care_role.';
-COMMENT ON TABLE binding_caller_fact IS 'The roles each ROLE head that is not deleted names for its performer, the type each ORGANISATION head names for itself, the memberships of each PERSON and ORGANISATION head, and the care relationship each PARTY_RELATIONSHIP head of its own states about its source. Derived from the party versions in each commit''s transaction; no openEHR spec governs reading them as access facts, our own design.';
+COMMENT ON TABLE binding_caller_fact IS 'The roles each ROLE head that is not deleted names for its performer, the type each ORGANISATION head names for itself, the memberships of each PERSON and ORGANISATION head, the care relationship each PARTY_RELATIONSHIP head of its own states about its source, and the kinship each related_to PARTY_RELATIONSHIP head states about each of its two persons. Derived from the party versions in each commit''s transaction; no openEHR spec governs reading them as access facts, our own design.';
 COMMENT ON COLUMN binding_caller_fact.writer_id IS 'The container the committer of the holder''s head names in external_ref: the PERSON or client ACTOR that wrote the fact; NULL when the committer names none.';
 COMMENT ON COLUMN binding_caller_fact.self_declared IS 'Whether a care relationship''s basis is self_declared; false for every other fact.';
 

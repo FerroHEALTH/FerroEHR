@@ -25,12 +25,16 @@ use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
 use super::care_of::{CareFact, CarerKind, Cover, ProviderKey};
+use super::kin::KinFact;
 use super::{CallerFact, FactKind, FactValue};
-use crate::party_binding::grants::derive::Bound;
 use crate::party_binding::grants::store::{CHANNEL, GrantHead, Term};
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
+
+mod insert;
+
+use insert::insert;
 
 /// The columns of one fact, over `binding_caller_fact f`.
 macro_rules! fact_columns {
@@ -184,6 +188,11 @@ impl crate::memory::Weigh for FactRow {
                 .capacity()
                 .saturating_add(code.code.capacity()),
             FactValue::Team(_) => 0,
+            FactValue::Kin(kin) => kin
+                .kinship
+                .terminology
+                .capacity()
+                .saturating_add(kin.kinship.code.capacity()),
             FactValue::Care(care) => care
                 .role
                 .terminology
@@ -298,9 +307,14 @@ async fn replace(
     let facts = head
         .live()
         .map_or(&[][..], |facts| facts.grants.facts.as_slice());
-    let came = match party {
-        Some(party) if !facts.is_empty() => insert(tx, head, party, role_validity, facts).await?,
-        _ => Vec::new(),
+    let (facts, about): (Vec<&CallerFact>, Vec<Uuid>) = facts
+        .iter()
+        .filter_map(|fact| fact.about.or(party).map(|about| (fact, about)))
+        .unzip();
+    let came = if facts.is_empty() {
+        Vec::new()
+    } else {
+        insert(tx, head, &about, role_validity, &facts).await?
     };
     if sorted(&gone) == sorted(&came) {
         return Ok(Vec::new());
@@ -313,154 +327,6 @@ fn sorted(rows: &[(Uuid, String)]) -> Vec<&str> {
     let mut texts: Vec<&str> = rows.iter().map(|(_, text)| text.as_str()).collect();
     texts.sort_unstable();
     texts
-}
-
-/// The code a fact names: a role's, an organisation type's, or a care
-/// relationship's `care_role`; `None` for a membership.
-fn code_of(fact: &CallerFact) -> Option<&ForeignCode> {
-    match &fact.value {
-        FactValue::Code(code) => Some(code),
-        FactValue::Care(care) => Some(&care.role),
-        FactValue::Team(_) => None,
-    }
-}
-
-/// What a care relationship fact states; `None` for any other fact.
-fn care_of(fact: &CallerFact) -> Option<&CareFact> {
-    match &fact.value {
-        FactValue::Care(care) => Some(care),
-        FactValue::Code(_) | FactValue::Team(_) => None,
-    }
-}
-
-/// The issuer, the id and the kind of the `covers_for` each of `facts`
-/// names, each `None` for a fact that names none.
-type CoversColumns<'a> = (
-    Vec<Option<&'a str>>,
-    Vec<Option<&'a str>>,
-    Vec<Option<&'static str>>,
-);
-
-/// The [`CoversColumns`] of `facts`.
-fn covers_of(facts: &[CallerFact]) -> CoversColumns<'_> {
-    let covers: Vec<Option<&Cover>> = facts
-        .iter()
-        .map(|f| care_of(f).and_then(|care| care.covers_for.as_ref()))
-        .collect();
-    (
-        covers.iter().map(|c| c.map(|c| &*c.key.issuer)).collect(),
-        covers.iter().map(|c| c.map(|c| &*c.key.id)).collect(),
-        covers.iter().map(|c| c.map(|c| c.kind.rm_type())).collect(),
-    )
-}
-
-/// Inserts `facts` of `head` about `party`; the inserted rows as their party
-/// and text.
-async fn insert(
-    tx: &mut PgConnection,
-    head: GrantHead<'_>,
-    party: Uuid,
-    role_validity: Option<&Value>,
-    facts: &[CallerFact],
-) -> Result<Vec<(Uuid, String)>, StorageError> {
-    let instant = |bound: Bound| match bound {
-        Bound::At(at) => Some(jiff_sqlx::Timestamp::from(at)),
-        Bound::Open | Bound::Unreadable => None,
-    };
-    let ordinal: Vec<i32> = facts.iter().map(|f| f.ordinal).collect();
-    let kind: Vec<&str> = facts.iter().map(|f| f.kind.code()).collect();
-    let terminology: Vec<Option<&str>> = facts
-        .iter()
-        .map(|f| code_of(f).map(|code| code.terminology.as_str()))
-        .collect();
-    let code_string: Vec<Option<&str>> = facts
-        .iter()
-        .map(|f| code_of(f).map(|code| code.code.as_str()))
-        .collect();
-    let target: Vec<Option<Uuid>> = facts
-        .iter()
-        .map(|f| match &f.value {
-            FactValue::Team(team) => Some(*team),
-            FactValue::Care(care) => Some(care.carer),
-            FactValue::Code(_) => None,
-        })
-        .collect();
-    let target_kind: Vec<Option<&str>> = facts
-        .iter()
-        .map(|f| care_of(f).map(|care| care.kind.rm_type()))
-        .collect();
-    let provider_issuer: Vec<Option<&str>> = facts
-        .iter()
-        .map(|f| care_of(f).map(|care| care.provider.issuer.as_str()))
-        .collect();
-    let provider_id: Vec<Option<&str>> = facts
-        .iter()
-        .map(|f| care_of(f).map(|care| care.provider.id.as_str()))
-        .collect();
-    let self_declared: Vec<bool> = facts
-        .iter()
-        .map(|f| care_of(f).is_some_and(|care| care.self_declared))
-        .collect();
-    let (covers_issuer, covers_id, covers_kind) = covers_of(facts);
-    let validity: Vec<Option<&Value>> = facts.iter().map(|f| f.validity.as_ref()).collect();
-    let unreadable: Vec<bool> = facts
-        .iter()
-        .map(|f| f.not_before == Bound::Unreadable || f.not_after == Bound::Unreadable)
-        .collect();
-    let not_before: Vec<_> = facts.iter().map(|f| instant(f.not_before)).collect();
-    let not_after: Vec<_> = facts.iter().map(|f| instant(f.not_after)).collect();
-    let statement = format!(
-        "INSERT INTO binding_caller_fact \
-             (holder_id, ordinal, kind, party_id, terminology_id, code_string, target_id, \
-              target_kind, provider_issuer, provider_id, self_declared, writer_id, \
-              lifecycle_state, role_validity, validity, not_before, not_after, \
-              holder_version, covers_issuer, covers_id, covers_kind) \
-         SELECT $1, t.ordinal, t.kind, $2, t.terminology_id, t.code_string, t.target_id, \
-                t.target_kind, t.provider_issuer, t.provider_id, t.self_declared, writer.id, $3, \
-                party.binding_validity($4::jsonb), \
-                CASE WHEN t.unreadable THEN 'empty'::daterange \
-                     WHEN c.effective_until IS NOT NULL AND t.kind = 'under_care_of' \
-                          AND NOT isempty(party.binding_validity(t.validity)) \
-                     THEN daterange(lower(party.binding_validity(t.validity)), c.effective_until) \
-                     ELSE party.binding_validity(t.validity) END, \
-                t.not_before, t.not_after, holder.version, t.covers_issuer, t.covers_id, \
-                t.covers_kind \
-         FROM unnest($5::integer[], $6::text[], $7::text[], $8::text[], $9::uuid[], \
-                     $10::text[], $11::text[], $12::text[], \
-                     $13::jsonb[], $14::boolean[], $15::timestamptz[], $16::timestamptz[], \
-                     $17::boolean[], $18::text[], $19::text[], $20::text[]) \
-              AS t(ordinal, kind, terminology_id, code_string, target_id, target_kind, \
-                   provider_issuer, provider_id, validity, unreadable, not_before, not_after, \
-                   self_declared, covers_issuer, covers_id, covers_kind) \
-         CROSS JOIN (SELECT {WRITER} AS id) writer \
-         CROSS JOIN (SELECT {HOLDER_VERSION} AS version) holder \
-         LEFT JOIN binding_care_validity c ON c.vo_id = $1 \
-         ON CONFLICT DO NOTHING \
-         RETURNING party_id, {FACT_TEXT} AS fact"
-    );
-    Ok(sqlx::query_as(sqlx::AssertSqlSafe(statement))
-        .bind(head.vo_id)
-        .bind(party)
-        .bind(head.lifecycle_state)
-        .bind(role_validity)
-        .bind(&ordinal)
-        .bind(&kind)
-        .bind(&terminology)
-        .bind(&code_string)
-        .bind(&target)
-        .bind(&target_kind)
-        .bind(&provider_issuer)
-        .bind(&provider_id)
-        .bind(&validity)
-        .bind(&unreadable)
-        .bind(&not_before)
-        .bind(&not_after)
-        .bind(&self_declared)
-        .bind(&covers_issuer)
-        .bind(&covers_id)
-        .bind(&covers_kind)
-        .fetch_all(&mut *tx)
-        .await?)
 }
 
 /// Moves the facts revision, stamps `parties` with it and notifies
@@ -759,6 +625,12 @@ fn fact_row(holder: Uuid, row: &sqlx::postgres::PgRow) -> Result<FactRow, Storag
             Some(code),
             (None, None, None),
         ) => FactValue::Code(ForeignCode { terminology, code }),
+        (FactKind::RelatedTo, Some(person), Some(terminology), Some(code), (None, None, None)) => {
+            FactValue::Kin(KinFact {
+                person,
+                kinship: ForeignCode { terminology, code },
+            })
+        }
         _ => {
             return Err(StorageError::InvalidRows(
                 "binding_caller_fact holds a row ck_binding_caller_fact_value refuses".to_owned(),

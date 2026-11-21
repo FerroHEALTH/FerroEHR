@@ -96,8 +96,9 @@ starts with the refusal code (`refused-consent-denied`,
 `refused-confidentiality`,
 `refused-no-care-relationship`, `refused-purpose-missing`,
 `refused-not-subject`, `refused-not-represented`,
-`refused-consent-reference-missing`; see
-[Access directives](../security.md)).
+`refused-consent-reference-missing`, `refused-excluded`,
+`refused-conflict`; see [Access directives](../security.md)). A
+`refused-excluded` names neither the exclusion nor its reason.
 
 With `Prefer: return=representation`: `refusal`, that code, and for
 `refused-policy-denied` `legal_grounds`, the provisions the refusing

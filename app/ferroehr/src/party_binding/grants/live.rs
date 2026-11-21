@@ -35,7 +35,7 @@ use crate::db::acquire::acquire;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::caller::care_of::ProviderKey;
-use crate::party_binding::grants::caller::facts::CallerFacts;
+use crate::party_binding::grants::caller::facts::{CallerFacts, Kin};
 use crate::party_binding::grants::caller::store::{Changed, FactRow};
 use crate::party_binding::grants::caller::{self, CareTeam, FactKind, FactValue};
 use crate::party_binding::grants::capabilities::{
@@ -475,37 +475,36 @@ impl LiveGrants {
             .filter(|row| row.kind == FactKind::MemberOf && row.term.holds(today, now))
             .filter_map(|row| match row.value {
                 FactValue::Team(group) => Some(group),
-                FactValue::Code(_) | FactValue::Care(_) => None,
+                FactValue::Code(_) | FactValue::Care(_) | FactValue::Kin(_) => None,
             })
             .collect()
     }
 
-    /// The types the coded name of the `ORGANISATION` `organisation` names,
-    /// from the copy held.
+    /// The types the coded name of the `ORGANISATION` `organisation` names, from the copy held.
     #[must_use]
     pub fn organisation_types(&self, organisation: Uuid) -> Vec<ForeignCode> {
-        let held = self.held_facts();
-        held.by_party
+        self.held_facts()
+            .by_party
             .get(&organisation)
             .into_iter()
             .flat_map(|rows| rows.iter())
             .filter(|row| row.kind == FactKind::OrganisationType)
             .filter_map(|row| match &row.value {
                 FactValue::Code(code) => Some(code.clone()),
-                FactValue::Team(_) | FactValue::Care(_) => None,
+                FactValue::Team(_) | FactValue::Care(_) | FactValue::Kin(_) => None,
             })
             .collect()
     }
 
     /// The caller facts of the party `party` at `now`, from the copy held:
     /// the `ROLE`s it performs that hold on the date of `now` in UTC with
-    /// their roles, and the care teams it is a member of on that date by a
-    /// membership it did not write itself.
+    /// their roles, the care teams it is a member of on that date by a
+    /// membership it did not write itself, and the persons it is kin to.
     #[must_use]
     pub fn facts_of(&self, party: Uuid, now: jiff::Timestamp) -> CallerFacts {
         let held = self.held_facts();
         let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
-        let (mut roles, mut performed, mut care_teams) = (Vec::new(), Vec::new(), Vec::new());
+        let (mut roles, mut performed, mut care_teams, mut kin) = (vec![], vec![], vec![], vec![]);
         for row in held
             .by_party
             .get(&party)
@@ -525,11 +524,13 @@ impl LiveGrants {
                 (FactKind::MemberOf, FactValue::Team(team)) if row.writer != Some(party) => {
                     care_teams.extend(row.term.dates.map(|dates| CareTeam::new(*team, dates)));
                 }
+                (FactKind::RelatedTo, FactValue::Kin(fact)) => kin.push(Kin::from(fact)),
                 _ => {}
             }
         }
         CallerFacts::new(roles, care_teams)
             .with_performed(performed)
+            .with_kin(kin)
             .with_party(party)
     }
 

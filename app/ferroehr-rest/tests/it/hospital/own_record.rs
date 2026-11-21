@@ -3,8 +3,9 @@
 
 //! A person's own record, by the party binding (#6106): the caller is the
 //! subject of an EHR whose `EHR_STATUS.subject` names the `PERSON` its
-//! authenticated identity is bound to, whatever roles it holds and with no
-//! purpose of use (EHDS Art. 3). A person holding no role reaches only those
+//! authenticated identity is bound to, with no purpose of use (EHDS Art. 3),
+//! unless it performs a professional `ROLE`, which makes its read a
+//! professional's and a conflict of interest (#6077). A person holding no role reaches only those
 //! records, and a lookup by subject finds no one else's EHR. The access log
 //! records each access as the subject's own. Our own design.
 
@@ -98,19 +99,32 @@ async fn a_person_with_no_role_reaches_no_one_elses_ehr() {
     ledger.verify(&world).await;
 }
 
-/// Gina, a professional holding her roles, reads her own record as its
-/// subject with no purpose of use, while Dr. Jansen, whose record Eva's is
-/// not, reads it under the policy's rule for a purpose.
+/// Gina, a professional performing her `ROLE`, is refused her own record
+/// through the professional path, for a declared purpose of treatment, as a
+/// conflict of interest (draft access
+/// control decision procedure, step 5; #6077), and reads it through the
+/// subject path, her picker login holding no role, as its subject with no
+/// purpose of use, where the EHDS Art. 3(3) delay holds (#6108). Dr.
+/// Jansen, whose record Eva's is not, reads it under the policy's rule for a
+/// purpose.
 #[tokio::test]
-async fn a_professional_reads_their_own_record_as_its_subject() {
+async fn a_professional_is_refused_their_own_record_and_reads_it_as_its_subject() {
     let world = Box::pin(world()).await;
     let mut ledger = Ledger::default();
     let own = format!("{BASE}/ehr/{}", world.other_ehr);
-    let answer = call(&world.app, "gina", "GET", &own, None, None).await;
+    let answer = call(&world.app, "gina", "GET", &own, Some("TREAT"), None).await;
+    answered(&answer, StatusCode::FORBIDDEN, Some("refused-conflict"));
+    ledger.note(
+        &world,
+        "her own EHR as a professional",
+        &answer,
+        Expect::refused("refused-conflict", 5),
+    );
+    let answer = get(&world, &picker("gina"), &own).await;
     answered(&answer, StatusCode::OK, None);
     ledger.note(
         &world,
-        "her own EHR",
+        "her own EHR as its subject",
         &answer,
         Expect::granted(&["subject of care"]),
     );

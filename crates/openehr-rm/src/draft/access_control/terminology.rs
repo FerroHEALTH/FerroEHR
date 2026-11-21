@@ -31,6 +31,7 @@ use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_base::prelude::TerminologyId;
 
 use care::{CareBasis, CareElement, CarePath};
+use kinship::{Kinship, KinshipElement};
 use log::{AccessorKind, Action, Authorisation, CredentialBinding, Outcome, RefusalReason};
 use representation::{Representation, RepresentationElement};
 
@@ -131,6 +132,12 @@ pub enum Group {
     /// `representation element`: the elements in the `details` of a
     /// `represents` relationship.
     RepresentationElement,
+    /// `kinship`: the demographic relationship that states a kinship between
+    /// two persons.
+    Kinship,
+    /// `kinship element`: the element in the `details` of a `related_to`
+    /// relationship that codes the kinship.
+    KinshipElement,
     /// `access refusal`: the code an access refusal is recorded under.
     AccessRefusal,
     /// `access log withheld`: the attributes of an access-log accessor the
@@ -154,7 +161,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 24] = [
+    pub const ALL: [Self; 26] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -171,6 +178,8 @@ impl Group {
         Self::RecordSubject,
         Self::Representation,
         Self::RepresentationElement,
+        Self::Kinship,
+        Self::KinshipElement,
         Self::AccessRefusal,
         Self::AccessLogWithheld,
         Self::AccessAction,
@@ -201,6 +210,8 @@ impl Group {
             Self::RecordSubject => "record subject",
             Self::Representation => "representation",
             Self::RepresentationElement => "representation element",
+            Self::Kinship => "kinship",
+            Self::KinshipElement => "kinship element",
             Self::AccessRefusal => "access refusal",
             Self::AccessLogWithheld => "access log withheld",
             Self::AccessAction => "access action",
@@ -233,6 +244,8 @@ impl Group {
             Self::RecordSubject => phrases::<RecordSubject>(),
             Self::Representation => phrases::<Representation>(),
             Self::RepresentationElement => phrases::<RepresentationElement>(),
+            Self::Kinship => phrases::<Kinship>(),
+            Self::KinshipElement => phrases::<KinshipElement>(),
             Self::AccessRefusal => phrases::<Refusal>(),
             Self::AccessLogWithheld => phrases::<Withheld>(),
             Self::AccessAction => phrases::<Action>(),
@@ -363,6 +376,7 @@ pub trait Term: Copy + PartialEq + Sized + 'static {
 
 pub mod care;
 pub mod hl7;
+pub mod kinship;
 pub mod log;
 pub mod representation;
 
@@ -395,6 +409,9 @@ group! {
         /// A rule of the controller's `ACCESS_POLICY` for every EHR it keeps,
         /// never a directive of an EHR (EHDS Art. 11(3)).
         ControllerRule => "controller_rule",
+        /// The controller's exclusion of a named party from one EHR, held in
+        /// `CONFIDENTIALITY_SETTINGS.exclusions` alone; always a deny.
+        Exclusion => "exclusion",
     }
 }
 
@@ -555,6 +572,12 @@ group! {
         /// A caller admitted under an agreement that conditions its reads on
         /// a consent decision asks to read with no reference to one.
         ConsentReferenceMissing => "refused-consent-reference-missing",
+        /// An exclusion of the controller names the caller: its exclusion and
+        /// its reason are never shown.
+        Excluded => "refused-excluded",
+        /// A professional caller is the subject, or is related to the
+        /// subject, and no conflict rule of the policy allows it.
+        Conflict => "refused-conflict",
     }
 }
 
@@ -697,6 +720,9 @@ pub enum ForeignKind {
     CareRole,
     /// The `basis` of a representation, such as an HL7 `RoleCode` code.
     RepresentationBasis,
+    /// The kinship a `related_to` relationship codes, such as a code of the
+    /// openEHR Terminology group `subject relationship`.
+    Kinship,
 }
 
 impl fmt::Display for ForeignKind {
@@ -710,6 +736,7 @@ impl fmt::Display for ForeignKind {
             Self::OrganisationType => "organisation type",
             Self::CareRole => "care role",
             Self::RepresentationBasis => "representation basis",
+            Self::Kinship => "kinship",
         })
     }
 }

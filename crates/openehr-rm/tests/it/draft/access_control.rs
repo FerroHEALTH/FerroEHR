@@ -488,6 +488,67 @@ fn each_settings_invariant_refuses_settings_that_break_it() {
     );
 }
 
+/// The controller's exclusion of a named party: a deny of kind `exclusion`
+/// with no exception, naming Dr B.
+fn exclusion() -> Value {
+    directive(
+        "Not Dr B on this record",
+        "exclusion",
+        "deny",
+        json!({
+            "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "party": party("PERSON", DR_B) }]
+        }),
+    )
+}
+
+/// An exclusion sits only in `exclusions`, always denies with no exception,
+/// and nothing else sits there or in `directives` as one.
+#[test]
+fn each_exclusion_invariant_refuses_settings_that_break_it() {
+    let mut held = settings();
+    held["exclusions"] = json!([exclusion()]);
+    assert_eq!(named(check_settings(&read(held))), Vec::<String>::new());
+    let cases: [Breaking; 3] = [
+        ("CONFIDENTIALITY_SETTINGS.Exclusions_kind", |s| {
+            s["exclusions"] = json!([ex_partner()]);
+        }),
+        ("ACCESS_DIRECTIVE.Exclusion_denies", |s| {
+            let mut permit = exclusion();
+            permit["effect"] = effect("permit");
+            s["exclusions"] = json!([permit]);
+        }),
+        (
+            "ACCESS_DIRECTIVE_SETTINGS.Directives_not_controller_rules",
+            |s| {
+                s["directives"][0]["kind"] = term("exclusion");
+            },
+        ),
+    ];
+    for (invariant, breaking) in cases {
+        let mut s = settings();
+        breaking(&mut s);
+        assert_eq!(
+            named(check_settings(&read(s))),
+            vec![invariant.to_owned()],
+            "{invariant}"
+        );
+    }
+    let mut nested = settings();
+    nested["directives"][1]["exceptions"][0]["kind"] = term("exclusion");
+    assert!(
+        named(check_settings(&read(nested)))
+            .contains(&"ACCESS_DIRECTIVE_SETTINGS.Directives_not_controller_rules".to_owned())
+    );
+    let mut excepted = settings();
+    let mut with_exception = exclusion();
+    with_exception["exceptions"] = json!([directive("Unless", "consent", "permit", json!({}))]);
+    excepted["exclusions"] = json!([with_exception]);
+    assert!(
+        named(check_settings(&read(excepted)))
+            .contains(&"ACCESS_DIRECTIVE.Exclusion_denies".to_owned())
+    );
+}
+
 /// Each confidentiality invariant of the settings and of a classification
 /// refuses what breaks it alone, and a marked record with a marked label
 /// holds (#6057).

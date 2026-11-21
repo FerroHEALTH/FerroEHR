@@ -44,6 +44,7 @@
 mod accept;
 pub(in crate::service) mod access;
 pub(in crate::service) mod access_cache;
+pub mod access_exclusions;
 pub mod care_projection;
 mod composition;
 pub mod composition_read;

@@ -353,8 +353,8 @@ async fn the_projected_caseload_probe_starts_from_the_caseload_index() {
         limit: None,
         offset: None,
         archetype_lineage: Arc::default(),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
         caseload: Some(Arc::new(caseload)),
     };

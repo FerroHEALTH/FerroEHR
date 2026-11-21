@@ -196,10 +196,6 @@ enum Defect {
     /// The settings break a BMM invariant of the draft access control.
     #[error("EHR_ACCESS.settings break the invariant {0}")]
     Invariant(openehr_rm::draft::invariants::Violation),
-    /// The settings set an attribute no access decision of this server
-    /// reads yet.
-    #[error("EHR_ACCESS.settings.{0} is not decided by this server, so it is not stored")]
-    Undecided(String),
 }
 
 /// Reads written settings as the scheme, checking every invariant.
@@ -217,9 +213,6 @@ fn read_settings(settings: &Value) -> Result<AccessDirectiveSettings, Defect> {
         return Err(Defect::Invariant(*first));
     }
     check_codes(&read)?;
-    if let Some(path) = crate::access_policy::undecided::in_settings(&read) {
-        return Err(Defect::Undecided(path));
-    }
     Ok(read)
 }
 
@@ -236,6 +229,15 @@ fn check_codes(settings: &AccessDirectiveSettings) -> Result<(), Defect> {
         .enumerate()
     {
         check_directive(&format!("directives[{index}]"), directive)?;
+    }
+    for (index, exclusion) in settings
+        .exclusions
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+    {
+        check_directive(&format!("exclusions[{index}]"), exclusion)?;
     }
     for (index, label) in settings
         .labels
