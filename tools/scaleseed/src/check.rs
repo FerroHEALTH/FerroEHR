@@ -183,7 +183,7 @@ async fn served(
     }
     let latest = |body: ReadBody| match body {
         ReadBody::Value(value) => value.to_string(),
-        ReadBody::RawJson(text) => text,
+        ReadBody::RawJson(text) => text.to_string(),
     };
     let clone = latest(
         svc.read_composition_raw(EhrId(ehr), VoId(vo), None)

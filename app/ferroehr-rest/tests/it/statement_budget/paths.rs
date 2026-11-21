@@ -97,10 +97,11 @@ enum Path {
     ReadStatus,
     CommitParty,
     CommitPartyScored,
+    ReadVersion,
 }
 
 impl Path {
-    const ALL: [Self; 19] = [
+    const ALL: [Self; 20] = [
         Self::CommitJson,
         Self::CommitXml,
         Self::CommitFlat,
@@ -120,6 +121,7 @@ impl Path {
         Self::ReadStatus,
         Self::CommitParty,
         Self::CommitPartyScored,
+        Self::ReadVersion,
     ];
 
     fn name(self) -> &'static str {
@@ -143,6 +145,7 @@ impl Path {
             Self::ReadStatus => "EHR_STATUS read",
             Self::CommitParty => "party commit",
             Self::CommitPartyScored => "party commit with scores",
+            Self::ReadVersion => "read JSON from the version copy",
         }
     }
 }
@@ -230,7 +233,14 @@ struct Budget {
 /// the tier and served the read by version id, and the separate tree index is
 /// gone (#6207): every commit that writes a version writes 96 bytes of WAL
 /// fewer, measured beside the merge base, and each WAL ceiling fell by it.
-const BUDGETS: [Budget; 19] = [
+/// The read by version id served from the version copy (#5778) is measured
+/// last, on EHRs of its own whose settings name an object, so each read is
+/// judged on its own row; its median request is a copy hit. The copy has
+/// since held the body as shared text (#6205): a hit allocated 564 KiB with a
+/// peak of 272,547 bytes before and 431 to 439 KiB with a peak of at most
+/// 147,965 bytes after, over three runs, and a fill one copy of the body
+/// less. Its ceilings are those figures with the margins above.
+const BUDGETS: [Budget; 20] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
@@ -402,6 +412,15 @@ const BUDGETS: [Budget; 19] = [
         nested: 21,
         wal: 10_498,
     },
+    Budget {
+        path: Path::ReadVersion,
+        conversions: 0,
+        allocations: 1341,
+        peak_bytes: 162_800,
+        round_trips: 3,
+        nested: 2,
+        wal: 2757,
+    },
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
@@ -563,6 +582,10 @@ struct World {
     /// The current `EHR_STATUS` version uid of each EHR, which the next status
     /// commit names in `If-Match`.
     status_uids: Mutex<Vec<String>>,
+    /// The EHRs whose settings make a read depend on the object, so it is
+    /// judged on its own row and served from the version copy, each with the
+    /// version uid of its composition; built right before their path.
+    judged: Mutex<Vec<(String, String)>>,
 }
 
 /// The `ETag` value of a response, unquoted.
@@ -667,7 +690,39 @@ impl World {
             at: jiff::Timestamp::now().to_string(),
             status: status_body,
             status_uids: Mutex::new(status_uids),
+            judged: Mutex::new(Vec::new()),
         }
+    }
+
+    /// Builds the EHRs of [`Path::ReadVersion`]: each restricts an object it
+    /// does not hold, so its settings name an object and a read of its
+    /// composition by version id is judged on the object's own row (#5959)
+    /// and read from the version copy (#5778).
+    async fn judge_on_objects(&self, app: &Router, svc: &ferroehr::service::FerroEhrService) {
+        let mut judged = Vec::new();
+        for _ in 0..EHRS {
+            let (ehr, vo) = ehr_with_composition(app).await;
+            let elsewhere = uuid::Uuid::now_v7().to_string();
+            let restriction = common::access_directive("restriction", &[elsewhere.as_str()]);
+            common::commit_access_settings(
+                svc,
+                ehr.parse().expect("an EHR id"),
+                common::directive_settings(&[restriction]),
+            )
+            .await;
+            let version = format!("{vo}::{}::1", self.system_id());
+            judged.push((ehr, version));
+        }
+        *self.judged.lock().unwrap() = judged;
+    }
+
+    /// The system id the server stamps into the version uids it writes.
+    fn system_id(&self) -> String {
+        self.status_uids.lock().unwrap()[0]
+            .split("::")
+            .nth(1)
+            .expect("a system id")
+            .to_owned()
     }
 
     /// Records what the answer to the `n`th request of `path` changed.
@@ -784,6 +839,14 @@ impl World {
             Path::ReadStatus => get(format!("{BASE}/ehr/{ehr}/ehr_status"), "nurse", JSON),
             Path::CommitParty => Self::party_commit(self.person.clone()),
             Path::CommitPartyScored => Self::party_commit(self.scored.clone()),
+            Path::ReadVersion => {
+                let (ehr, version) = self.judged.lock().unwrap()[n % EHRS].clone();
+                get(
+                    format!("{BASE}/ehr/{ehr}/composition/{version}"),
+                    "nurse",
+                    JSON,
+                )
+            }
         }
     }
 
@@ -888,8 +951,11 @@ impl Measure {
     }
 
     /// The allocations and the peak of each request, for the report.
-    fn requests(&self) -> Vec<(u64, i64)> {
-        self.each.iter().map(|a| (a.count, a.peak)).collect()
+    fn requests(&self) -> Vec<(u64, i64, u64)> {
+        self.each
+            .iter()
+            .map(|a| (a.count, a.peak, a.bytes))
+            .collect()
     }
 
     /// The conversions of the request's own body and answer, per request.
@@ -1105,7 +1171,7 @@ async fn every_hot_path_stays_within_its_budget() {
         tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
     // The budgets count what a release build does, without the debug reference cells.
     ferroehr::aql::sql::without_reference_cells();
-    let (_db, pool, _svc, app) = Box::pin(super::served()).await;
+    let (_db, pool, svc, app) = Box::pin(super::served()).await;
     sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
         .execute(&pool)
         .await
@@ -1124,6 +1190,9 @@ async fn every_hot_path_stays_within_its_budget() {
     let mut over = Vec::new();
     for budget in &BUDGETS {
         let path = budget.path;
+        if path == Path::ReadVersion {
+            world.judge_on_objects(&app, &svc).await;
+        }
         let m = Box::pin(measure(&app, &pool, &world, &counter, path)).await;
         let allocations = m.median(|a| a.count);
         let kib = m.median(|a| a.bytes).div_euclid(1024);
@@ -1162,7 +1231,7 @@ async fn every_hot_path_stays_within_its_budget() {
         writeln!(ledger, "{}: {}", path.name(), ops.join(", ")).unwrap();
         writeln!(
             statements,
-            "{}: allocations and peak of each request {:?}\n{}row records by relation:\n{}",
+            "{}: allocations, peak and bytes of each request {:?}\n{}row records by relation:\n{}",
             path.name(),
             m.requests(),
             m.statements,
