@@ -24,9 +24,9 @@ use ferroehr::party_binding::source::LocalPartySource;
 use sqlx::PgPool;
 
 /// The identifier issuer the seeded keys sit under.
-pub(crate) const KEY_ISSUER: &str = "urn:ferroehr:scaleseed:login";
+pub(crate) const KEY_ISSUER: &str = "urn:example:scaleseed:login";
 /// The issuer the seeded groups' `externalId`s sit under.
-pub(crate) const GROUP_ISSUER: &str = "urn:ferroehr:scaleseed:groups";
+pub(crate) const GROUP_ISSUER: &str = "urn:example:scaleseed:groups";
 /// The type of every seeded key.
 const KEY_TYPE: &str = "guid";
 /// The groups each seeded person belongs to.

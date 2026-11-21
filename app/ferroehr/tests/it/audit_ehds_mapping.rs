@@ -34,7 +34,8 @@ use secrecy::ExposeSecret as _;
 
 fn ctx() -> AuditContext {
     AuditContext {
-        source_id: "ferroehr".to_owned(),
+        source_id: "cdr.example.org".to_owned(),
+        role_code_system: "cdr.example.org".to_owned(),
         enterprise_site_id: "site-1".to_owned(),
         server_ip: "10.42.23.77".to_owned(),
         value_if_missing: "UNKNOWN".to_owned(),
@@ -476,7 +477,7 @@ fn nen_7513_the_actor_roles_are_recorded_and_rendered_in_both_formats() {
 
     let (xml, _json) = renderings(&event);
     assert!(
-        xml.contains(r#"csd-code="clinician" codeSystemName="urn:ferroehr:role""#),
+        xml.contains(r#"csd-code="clinician" codeSystemName="cdr.example.org""#),
         "the role must reach the DICOM source participant as a RoleIDCode: {xml}"
     );
 

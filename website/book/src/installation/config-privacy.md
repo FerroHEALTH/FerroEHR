@@ -54,11 +54,11 @@ that reference must name one of them and carry a UUID as its `id.value`:
 
 ```toml
 [privacy]
-subject_namespaces = ["urn:ferroehr:pseudonym"]
+subject_namespaces = ["urn:example:pseudonym"]
 ```
 
 ```bash
-FERROEHR__PRIVACY__SUBJECT_NAMESPACES=urn:ferroehr:pseudonym,mpi.example
+FERROEHR__PRIVACY__SUBJECT_NAMESPACES=urn:example:pseudonym,mpi.example
 ```
 
 What a deployment gets by default, and what declaring a namespace adds:

@@ -17,7 +17,7 @@ sink.
 ```toml
 [audit]
 enabled = true
-source_id = "ferroehr"
+# source_id = "cdr.hospital.example"   # unset: [api] system_id
 value_if_missing = "UNKNOWN"
 suppress_login_events = true
 resolve_subject = true
@@ -32,7 +32,8 @@ emergency_purpose_codes = []
 |---|---|---|---|
 | `enabled` | bool | `true` | Master audit switch. |
 | `enterprise_site_id` | string | unset | The `AuditEnterpriseSiteID` field. |
-| `source_id` | string | `ferroehr` | The audit source id, also used for the destination participant. |
+| `source_id` | string | unset ⇒ `[api] system_id` | The audit source id (`AuditSourceID`, the BALP `AuditEvent.source`), also used for the destination participant. |
+| `role_code_system` | string | unset ⇒ `[api] system_id` | The `codeSystemName` of the `RoleIDCode` a caller's roles are written as in the DICOM audit message: the deployment's own role vocabulary, which no published code system names. |
 | `value_if_missing` | string | `UNKNOWN` | Fill value for empty mandatory fields. |
 | `suppress_login_events` | bool | `true` | Skip successful-login records. Rejected accesses (`401`/`403`) are always recorded. |
 | `resolve_subject` | bool | `true` | Enrich the patient participant with an indexed lookup of the EHR's subject, remembered per EHR for an hour, so a request seldom asks. The IHE BALP patient patterns and the patient-centric audit search need the subject. |

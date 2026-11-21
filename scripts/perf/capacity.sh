@@ -660,11 +660,11 @@ seed_capacity() {
   read -r -a ACCESS_FERROEHR <<<"$ferroehr"
   if [[ ! -s "$STATE/seed.env" ]]; then
     SCIM_GRANT="$ferroehr" bash "$CAPACITY_ROOT/scripts/scim-provision.sh" "$SERVER_URL" \
-      basic-users urn:ferroehr:basic-user ferroehr >/dev/null
+      basic-users urn:example:basic-user ferroehr >/dev/null
     ACCESS_IDS="$PERF_OUT/scim-ids"
     : >"$ACCESS_IDS"
     SCIM_IDS="$ACCESS_IDS" SCIM_GRANT="$ferroehr" bash "$CAPACITY_ROOT/scripts/scim-provision.sh" \
-      "$SERVER_URL" basic-users urn:ferroehr:basic-user --roles USER clinician >/dev/null
+      "$SERVER_URL" basic-users urn:example:basic-user --roles USER clinician >/dev/null
     seed "$CAPACITY_ROOT"
     printf '%s\n' "${SEED[@]}" "NAMED_PROFESSIONAL=$NAMED_PROFESSIONAL" \
       "REPRESENTATIVE=$REPRESENTATIVE" >"$STATE/seed.env"

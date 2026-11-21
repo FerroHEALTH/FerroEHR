@@ -19,7 +19,7 @@
 #
 # A Basic user is a credential alone: what it may do is a grant on its
 # PERSON. With SCIM_GRANT set and the Basic users' binding issuer
-# (urn:ferroehr:basic-user), each user is then granted, through
+# (urn:example:basic-user), each user is then granted, through
 # `ferroehr party-binding grant --basic-user`, the scopes of every SMART on
 # openEHR resource family with the product scope (`hold_scopes`) and its
 # roles (`hold_roles`); a PERSON that holds the operation already gets
@@ -98,7 +98,7 @@ body_file="$(mktemp)"
 trap 'rm -f "$body_file"' EXIT
 
 # The Basic users' binding issuer, whose users the script grants.
-basic_users_issuer="urn:ferroehr:basic-user"
+basic_users_issuer="urn:example:basic-user"
 scopes="user/composition-*.cruds user/template-*.cruds user/aql-*.cruds __ferroehr.platform"
 
 # hold <user> <roles>: grants the Basic user's PERSON the scopes and <roles>.

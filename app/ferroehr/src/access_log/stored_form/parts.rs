@@ -331,7 +331,7 @@ fn details(tree: &[(&str, &str)]) -> Option<(String, String)> {
 }
 
 /// Whether the canonical element `element` is a shared access detail: an
-/// object whose at-code is one the shared part keeps.
+/// object whose id-code is one the shared part keeps.
 fn shared_detail(element: &str) -> bool {
     members(element).is_some_and(|members| {
         members.iter().any(|(name, value)| {
@@ -608,7 +608,7 @@ type Member<'t> = (Cow<'t, str>, Cow<'t, str>);
 /// `_type`, and a member the row part keeps itself replaces one of theirs.
 /// The shared part's members join the row's, `outcome` and `query` merge
 /// their members, and the access details merge their envelope and their
-/// elements in the order of their at-codes (byte order, an element without
+/// elements in the order of their id-codes (byte order, an element without
 /// one first), the shared elements before the row's under one code.
 ///
 /// # Errors
@@ -739,7 +739,7 @@ fn canonical_order(left: &str, right: &str) -> Ordering {
 
 /// The access details of the shared part, `common`, and of the row, `own`,
 /// merged: the envelope's members, the row's replacing the shared ones, and
-/// the elements of both in the order of their at-codes; `None` when neither
+/// the elements of both in the order of their id-codes; `None` when neither
 /// part has them.
 fn merged_details(
     common: Option<&str>,
@@ -777,7 +777,7 @@ fn merged_details(
     Ok(Some(object_text(envelope)))
 }
 
-/// The at-code an element names as `->> 'archetype_node_id'` reads it: a
+/// The id-code an element names as `->> 'archetype_node_id'` reads it: a
 /// string decoded, any other value but `null` as its text; `None` for no
 /// code, which sorts first.
 fn element_code(element: &str) -> Option<Cow<'_, str>> {

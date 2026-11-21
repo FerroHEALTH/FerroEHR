@@ -27,7 +27,7 @@ jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 
 [[auth.party]]
 issuer = "https://basic-users.ferroehr.invalid"
-identifier_issuer = "urn:ferroehr:basic-user"
+identifier_issuer = "urn:example:basic-user"
 identifier_type = "login"
 
 # The issuer of the provisioning client scripts/perf/gate.sh binds the Basic
@@ -72,12 +72,12 @@ provider = { issuer = "urn:oid:2.999.7.9", id = "perf" }
 
 [[authz.party_binding.basic_user]]
 user = "ferroehr"
-key_issuer = "urn:ferroehr:basic-user"
+key_issuer = "urn:example:basic-user"
 key = "ferroehr"
 
 [[authz.party_binding.basic_user]]
 user = "clinician"
-key_issuer = "urn:ferroehr:basic-user"
+key_issuer = "urn:example:basic-user"
 key = "clinician"
 
 # The ADMIN group, through which the gate commits the access policy and each

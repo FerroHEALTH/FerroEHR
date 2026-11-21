@@ -48,7 +48,7 @@ CARE_WRITER_SCOPED=""
 readonly ACT_CODE=2.16.840.1.113883.5.25
 readonly ACT_REASON=2.16.840.1.113883.5.8
 # The code system and code of the clinician's functional role.
-readonly ROLE_SYSTEM=urn:ferroehr:perf:roles
+readonly ROLE_SYSTEM=urn:example:perf:roles
 readonly ROLE_CODE=INFECTIOUS_DISEASE
 # What access_seed creates: the care team, the professional the mental-health
 # restriction excepts and the subjects' representative (parties the
@@ -176,19 +176,20 @@ clinician_role_json() {
   jq -cn --arg performer "$1" --argjson name "$(coded_json "$ROLE_SYSTEM" "$ROLE_CODE")" \
     --argjson op "$(coded_json "$ACCESS_TERMINOLOGY" access_demographic)" '
     def text($v): {_type: "DV_TEXT", value: $v};
-    {_type: "ROLE", archetype_node_id: "openEHR-DEMOGRAPHIC-ROLE.ferroehr_grant.v1",
+    {_type: "ROLE", archetype_node_id: "openEHR-DEMOGRAPHIC-ROLE.grant.v1",
      archetype_details: {_type: "ARCHETYPED", rm_version: "1.2.0",
-       archetype_id: {_type: "ARCHETYPE_ID", value: "openEHR-DEMOGRAPHIC-ROLE.ferroehr_grant.v1"}},
+       archetype_id: {_type: "ARCHETYPE_ID", value: "openEHR-DEMOGRAPHIC-ROLE.grant.v1"},
+       template_id: {_type: "TEMPLATE_ID", value: "openEHR-DEMOGRAPHIC-ROLE.grant.v1.0.0"}},
      name: $name,
-     identities: [{_type: "PARTY_IDENTITY", archetype_node_id: "at0001", name: text("name"),
-       details: {_type: "ITEM_TREE", archetype_node_id: "at0002", name: text("details"),
-         items: [{_type: "ELEMENT", archetype_node_id: "at0003", name: text("name"),
+     identities: [{_type: "PARTY_IDENTITY", archetype_node_id: "id2", name: text("name"),
+       details: {_type: "ITEM_TREE", archetype_node_id: "id3", name: text("details"),
+         items: [{_type: "ELEMENT", archetype_node_id: "id4", name: text("name"),
            value: text("access_demographic")}]}}],
      performer: {_type: "PARTY_REF", namespace: "demographic", type: "PERSON",
        id: {_type: "HIER_OBJECT_ID", value: $performer}},
-     capabilities: [{_type: "CAPABILITY", name: text("grant"), archetype_node_id: "at0020",
-       credentials: {_type: "ITEM_TREE", name: text("terms"), archetype_node_id: "at0023",
-         items: [{_type: "ELEMENT", name: text("operation"), archetype_node_id: "at0021",
+     capabilities: [{_type: "CAPABILITY", name: text("grant"), archetype_node_id: "id6",
+       credentials: {_type: "ITEM_TREE", name: text("terms"), archetype_node_id: "id8",
+         items: [{_type: "ELEMENT", name: text("operation"), archetype_node_id: "id90",
            value: $op}]}}]}'
 }
 
