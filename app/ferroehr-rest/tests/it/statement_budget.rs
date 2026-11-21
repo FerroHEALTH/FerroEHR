@@ -39,6 +39,7 @@ use ferroehr::db::pool::SESSION_SETUP_SPAN;
 mod entry;
 mod intake;
 mod paths;
+mod settings;
 mod wal;
 
 /// The assembled router of [`app`] as a server runs it: with the `LISTEN`

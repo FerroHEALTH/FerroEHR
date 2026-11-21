@@ -177,21 +177,15 @@ pub async fn ensure_instance(pool: &PgPool) -> Result<Instance, StoreError> {
 /// # Errors
 /// [`StoreError::Sqlx`] when a statement fails.
 pub async fn ensure_instance_on(conn: &mut PgConnection) -> Result<Instance, StoreError> {
-    let created: Option<Uuid> = sqlx::query_scalar(
+    // NOTE: PostgreSQL 19 INSERT, DO SELECT returns a row a concurrent replica committed while
+    // the insert waited on it, and `old` is NULL only when this statement inserted the row.
+    let (id, created): (Uuid, bool) = sqlx::query_as(
         "INSERT INTO usage_report_instance (singleton) VALUES (true) \
-         ON CONFLICT (singleton) DO NOTHING RETURNING instance_id",
+         ON CONFLICT (singleton) DO SELECT RETURNING instance_id, old.instance_id IS NULL",
     )
-    .fetch_optional(&mut *conn)
+    .fetch_one(&mut *conn)
     .await?;
-    if let Some(id) = created {
-        return Ok(Instance { id, created: true });
-    }
-    // A fresh statement, so READ COMMITTED sees a row a concurrent replica
-    // committed while the insert above waited on it.
-    let id: Uuid = sqlx::query_scalar("SELECT instance_id FROM usage_report_instance")
-        .fetch_one(&mut *conn)
-        .await?;
-    Ok(Instance { id, created: false })
+    Ok(Instance { id, created })
 }
 
 /// Claims the start report: true when no start report was claimed in the last

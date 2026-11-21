@@ -771,3 +771,57 @@ async fn boot_and_readiness_are_unaffected_when_the_collector_hangs() {
     assert_eq!(readiness.state, State::Up);
     handle.abort();
 }
+
+/// Two replicas creating the installation id at once both answer with the
+/// one row: the second insert waits for the first and takes its row, and only
+/// the first reports that it created it (#6222).
+#[tokio::test]
+async fn two_replicas_creating_the_instance_at_once_share_its_row() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = replica_pool(&db);
+    let mut first = ferroehr::db::acquire::acquire(&pool)
+        .await
+        .expect("the first replica");
+    let mut tx = sqlx::Connection::begin(&mut *first)
+        .await
+        .expect("the first replica's transaction");
+    let created = ferroehr::usage_report::store::ensure_instance_on(&mut tx)
+        .await
+        .expect("the first replica creates the instance");
+    assert!(created.created, "the first replica creates the row");
+    let second = tokio::spawn({
+        let pool = pool.clone();
+        async move {
+            let mut conn = ferroehr::db::acquire::acquire(&pool)
+                .await
+                .expect("the second replica");
+            ferroehr::usage_report::store::ensure_instance_on(&mut conn).await
+        }
+    });
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let waiting: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid \
+             WHERE NOT l.granted AND l.locktype = 'transactionid' \
+             AND a.datname = current_database())",
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("pg_locks reads");
+        if waiting {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "the second replica waits for the first"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    tx.commit().await.expect("the first replica commits");
+    let read = second
+        .await
+        .expect("the second replica settles")
+        .expect("the second replica reads the instance");
+    assert_eq!(read.id, created.id, "the first replica's row");
+    assert!(!read.created, "the second replica created nothing");
+}

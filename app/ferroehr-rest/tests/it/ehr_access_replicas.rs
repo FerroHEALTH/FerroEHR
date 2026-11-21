@@ -517,3 +517,90 @@ async fn a_settings_store_that_cannot_answer_is_503() {
     .await;
     assert_eq!(code, StatusCode::SERVICE_UNAVAILABLE);
 }
+
+/// Whether the test database has a backend waiting on a lock of `locktype`.
+async fn waiting_on(pool: &PgPool, locktype: &str) -> bool {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid \
+         WHERE NOT l.granted AND l.locktype = $1 AND a.datname = current_database())",
+    )
+    .bind(locktype)
+    .fetch_one(pool)
+    .await
+    .expect("pg_locks reads")
+}
+
+/// Two replicas committing settings of one class no EHR made before, at
+/// once, both reference the one class row: the second insert waits for the
+/// first and takes its row once it commits (#6222).
+#[tokio::test]
+async fn two_replicas_storing_one_new_class_at_once_share_its_row() {
+    let (_db, pool) = common::migrated_pool().await;
+    let (first, _) = replica(&pool, false).await;
+    let (second, _) = replica(&pool, false).await;
+    let mut ehrs = Vec::new();
+    for svc in [&first, &second] {
+        let ehr_id: EhrId = uuid::Uuid::now_v7().to_string().parse().expect("an EHR id");
+        Box::pin(svc.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
+            .await
+            .expect("create the EHR");
+        ehrs.push(ehr_id);
+    }
+    let settings = settings_with("open", vec![consent()]);
+    // Each commit stores the class and then stops at its settings row, so the
+    // second reaches the class while the first holds it uncommitted.
+    let mut held = ferroehr::db::acquire::acquire(&pool)
+        .await
+        .expect("a connection");
+    let mut gate = sqlx::Connection::begin(&mut *held)
+        .await
+        .expect("a transaction");
+    sqlx::query("LOCK TABLE access_settings IN SHARE MODE")
+        .execute(&mut *gate)
+        .await
+        .expect("hold the settings rows");
+    let commits: Vec<_> = [&first, &second]
+        .into_iter()
+        .zip(ehrs.iter().copied())
+        .map(|(svc, ehr_id)| {
+            let svc = Arc::clone(svc);
+            let settings = settings.clone();
+            tokio::spawn(
+                async move { common::commit_access_settings(&svc, ehr_id, settings).await },
+            )
+        })
+        .collect();
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    while !(waiting_on(&pool, "transactionid").await && waiting_on(&pool, "relation").await) {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "one commit waits on the other's class, the other on the settings rows"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    gate.commit().await.expect("release the settings rows");
+    for commit in commits {
+        commit.await.expect("the commit settles");
+    }
+    let classes: Vec<i64> = sqlx::query_scalar(
+        "SELECT class_id FROM access_settings WHERE ehr_id = ANY($1) ORDER BY ehr_id",
+    )
+    .bind(
+        ehrs.iter()
+            .map(|e| uuid::Uuid::from(*e))
+            .collect::<Vec<_>>(),
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the settings rows read");
+    let stored: Vec<i64> = sqlx::query_scalar("SELECT id FROM access_class")
+        .fetch_all(&pool)
+        .await
+        .expect("the classes read");
+    assert_eq!(stored.len(), 1, "one class row: {stored:?}");
+    assert_eq!(
+        classes,
+        vec![stored[0], stored[0]],
+        "both EHRs reference it"
+    );
+}

@@ -56,10 +56,6 @@ pub(crate) const ELEMENTS: [AuditElement; 8] = [
     AuditElement::Subtype,
 ];
 
-/// How many times a token or set id is read again when another writer
-/// stored it between this writer's insert and its read.
-const READ_AGAIN: usize = 3;
-
 /// One search token of a rendered document.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct SearchToken {
@@ -318,8 +314,11 @@ pub(crate) fn resource_tokens(
 /// yet and returns the `search_tokens` value of each record.
 ///
 /// Only a token the store does not hold reaches the `INSERT`: an `ON CONFLICT`
-/// row still draws its identity value (PostgreSQL 18 docs, "INSERT", the
-/// `ON CONFLICT` clause), and a held token would spend one per batch.
+/// row still draws its identity value (PostgreSQL 19 docs, "INSERT", the
+/// `ON CONFLICT` clause), and a held token would spend one per batch. A token
+/// another writer stores after this statement began is returned by the
+/// insert once that writer commits ("ON CONFLICT DO SELECT ... allows an
+/// atomic INSERT or SELECT outcome").
 const STORE_TOKENS: &str = "WITH input AS (\
      SELECT * FROM unnest($1::text[], $2::text[], $3::text[]) AS i(parameter, system, code)), \
      keyed AS (SELECT parameter, system, code, \
@@ -327,18 +326,16 @@ const STORE_TOKENS: &str = "WITH input AS (\
      inserted AS (INSERT INTO audit.audit_search_token (parameter, system, code, digest) \
      SELECT k.parameter, k.system, k.code, k.digest FROM keyed k \
      WHERE NOT EXISTS (SELECT FROM audit.audit_search_token h WHERE h.digest = k.digest) \
-     ON CONFLICT (digest) DO NOTHING \
+     ON CONFLICT (digest) DO SELECT \
      RETURNING id, digest) \
      SELECT k.parameter, k.system, k.code, coalesce(n.id, t.id) AS id FROM keyed k \
      LEFT JOIN inserted n ON n.digest = k.digest \
      LEFT JOIN audit.audit_search_token t ON t.digest = k.digest";
 
-/// Stores a shared set unless the store holds it and returns its id.
-const STORE_SET: &str = "WITH inserted AS (\
-     INSERT INTO audit.audit_search_set (tokens, digest) \
-     VALUES ($1, audit.search_set_digest($1)) ON CONFLICT (tokens) DO NOTHING RETURNING id) \
-     SELECT id FROM inserted UNION ALL \
-     SELECT id FROM audit.audit_search_set WHERE tokens = $1 LIMIT 1";
+/// Stores a shared set unless the store holds it and returns its id, also
+/// when another writer stores it after this statement began.
+const STORE_SET: &str = "INSERT INTO audit.audit_search_set (tokens, digest) \
+     VALUES ($1, audit.search_set_digest($1)) ON CONFLICT (tokens) DO SELECT RETURNING id";
 
 /// The key a token is looked up by in the rows the store answers with.
 type TokenKey = (String, Option<String>, Option<String>);
@@ -440,69 +437,46 @@ impl TokenRegistry {
         if let Some(id) = learned.0.get(&tokens) {
             return Ok(*id);
         }
-        for _ in 0..READ_AGAIN {
-            let id: Option<i32> = sqlx::query_scalar(STORE_SET)
-                .bind(&tokens)
-                .fetch_optional(&mut *conn)
-                .await?;
-            if let Some(id) = id {
-                learned.0.insert(tokens, id);
-                return Ok(id);
-            }
-        }
-        Err(AuditError::SearchToken)
+        let id: i32 = sqlx::query_scalar(STORE_SET)
+            .bind(&tokens)
+            .fetch_one(&mut *conn)
+            .await?;
+        learned.0.insert(tokens, id);
+        Ok(id)
     }
 }
 
 /// The id of every token of `records`, storing the ones the store does not
-/// hold yet; a token another writer stored after this statement began is read
-/// again.
+/// hold yet.
 async fn token_ids(
     conn: &mut PgConnection,
     records: &[BTreeSet<SearchToken>],
 ) -> Result<BTreeMap<TokenKey, i32>, AuditError> {
-    let mut wanted: BTreeSet<&SearchToken> = records.iter().flatten().collect();
+    let wanted: BTreeSet<&SearchToken> = records.iter().flatten().collect();
     let mut ids = BTreeMap::new();
-    for _ in 0..READ_AGAIN {
-        if wanted.is_empty() {
-            return Ok(ids);
-        }
-        let parameters: Vec<&str> = wanted.iter().map(|token| token.parameter).collect();
-        let systems: Vec<Option<&str>> =
-            wanted.iter().map(|token| token.system.as_deref()).collect();
-        let codes: Vec<Option<&str>> = wanted.iter().map(|token| token.code.as_deref()).collect();
-        let rows = sqlx::query(STORE_TOKENS)
-            .bind(parameters)
-            .bind(systems)
-            .bind(codes)
-            .fetch_all(&mut *conn)
-            .await?;
-        for row in rows {
-            let Some(id) = row.try_get::<Option<i32>, _>("id")? else {
-                continue;
-            };
-            ids.insert(
-                (
-                    row.try_get::<String, _>("parameter")?,
-                    row.try_get::<Option<String>, _>("system")?,
-                    row.try_get::<Option<String>, _>("code")?,
-                ),
-                id,
-            );
-        }
-        wanted.retain(|token| {
-            !ids.contains_key(&(
-                token.parameter.to_owned(),
-                token.system.clone(),
-                token.code.clone(),
-            ))
-        });
-    }
     if wanted.is_empty() {
-        Ok(ids)
-    } else {
-        Err(AuditError::SearchToken)
+        return Ok(ids);
     }
+    let parameters: Vec<&str> = wanted.iter().map(|token| token.parameter).collect();
+    let systems: Vec<Option<&str>> = wanted.iter().map(|token| token.system.as_deref()).collect();
+    let codes: Vec<Option<&str>> = wanted.iter().map(|token| token.code.as_deref()).collect();
+    let rows = sqlx::query(STORE_TOKENS)
+        .bind(parameters)
+        .bind(systems)
+        .bind(codes)
+        .fetch_all(&mut *conn)
+        .await?;
+    for row in rows {
+        ids.insert(
+            (
+                row.try_get::<String, _>("parameter")?,
+                row.try_get::<Option<String>, _>("system")?,
+                row.try_get::<Option<String>, _>("code")?,
+            ),
+            row.try_get::<i32, _>("id")?,
+        );
+    }
+    Ok(ids)
 }
 
 /// What a criterion on the document resolved to: the ids of the stored tokens
