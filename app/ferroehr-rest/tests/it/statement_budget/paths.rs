@@ -234,7 +234,7 @@ struct Budget {
 /// judged on its own row; its median request is a copy hit. The copy has
 /// since held the body as shared text (#6205): a hit allocated 564 KiB with a
 /// peak of 272,547 bytes before and 431 to 439 KiB with a peak of at most
-/// 147,965 bytes after, over three runs, and a fill some 140 KiB less. Its
+/// 147,965 bytes after, over three runs, and a fill one copy of the body less. Its
 /// ceilings are those figures with the margins above.
 const BUDGETS: [Budget; 20] = [
     Budget {
