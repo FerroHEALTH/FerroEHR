@@ -191,18 +191,19 @@ async fn serve_observed(
             levels: BTreeMap::from([("high".to_owned(), AssuranceLevel::High)]),
             ..AssuranceSection::default()
         }),
+        federation: Some(federation_table()),
         ..IssuerEntry::default()
     }];
-    let mut tables = vec![federation_table()];
     let mut dpop = None;
     if let Some((entry, table, proof)) = issuer {
-        entries.push(entry);
-        tables.push(table);
+        entries.push(IssuerEntry {
+            federation: Some(table),
+            ..entry
+        });
         dpop = Some(proof);
     }
     let mut auth = common::auth(AuthSection {
-        issuer: entries,
-        federation: tables,
+        issuer: common::named(entries),
         dpop,
         ..AuthSection::default()
     });
@@ -212,6 +213,7 @@ async fn serve_observed(
     svc.grants()
         .set_federation(ferroehr::config::federation::trust(
             &auth.shared,
+            &[],
             Retention::Years(10),
         ));
     crate::agreement_parties::commit_all(&svc, &agreements, clients).await;
@@ -219,8 +221,7 @@ async fn serve_observed(
         auth,
         ..common::api_config(true)
     };
-    config.auth.smart.patient_issuers =
-        vec![ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION)];
+    common::patient_context(&mut config, FEDERATION);
     config.public_root = Some(
         ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
             .expect("a public root"),

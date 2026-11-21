@@ -324,7 +324,10 @@ fn unavailable(reason: &'static str) -> Response {
 async fn smart_configuration(Extension(document): Extension<Document>) -> Response {
     let body = match document.serialized.get() {
         Some(body) => body.clone(),
-        None => match document.authenticator.smart_configuration(&document.options) {
+        None => match document
+            .authenticator
+            .smart_configuration(&document.options)
+        {
             Described::Document(built) if built.get("token_endpoint").is_none() => {
                 tracing::warn!(
                     reason = NO_TOKEN_ENDPOINT,
@@ -387,7 +390,7 @@ mod tests {
         let mut cfg = enabled_cfg();
         cfg.public_root =
             Some(PublicRoot::new("https://gw.example.com/cdr", "/ehr").expect("a root"));
-        let options = options(&cfg);
+        let options = options(&cfg, false);
         assert_eq!(
             options.services[OPENEHR_REST_SERVICE]["baseUrl"],
             "https://gw.example.com/cdr/ehr/ferroehr/rest/openehr/v1"
@@ -396,7 +399,7 @@ mod tests {
 
     #[test]
     fn options_carry_the_openehr_service_and_the_enforced_capabilities() {
-        let options = options(&enabled_cfg());
+        let options = options(&enabled_cfg(), false);
         // master04 §Services: org.openehr.rest is required, its baseUrl ABSOLUTE.
         assert_eq!(
             options.services[OPENEHR_REST_SERVICE]["baseUrl"],
@@ -443,9 +446,7 @@ mod tests {
 
     #[test]
     fn a_bound_issuer_declares_the_patient_capability_and_scopes() {
-        let mut cfg = enabled_cfg();
-        cfg.auth.smart.patient_issuers = vec![SecretUrl::new("https://as.example")];
-        let options = options(&cfg);
+        let options = options(&enabled_cfg(), true);
         assert!(options.permissions.contains(&PermissionCapability::Patient));
         assert!(
             options
@@ -459,7 +460,7 @@ mod tests {
         let mut cfg = enabled_cfg();
         cfg.auth.smart.episode_launch = true;
         cfg.auth.shared.capabilities = vec![LAUNCH_BASE64_JSON.to_owned()];
-        let options = options(&cfg);
+        let options = options(&cfg, false);
         assert!(
             options
                 .capabilities
@@ -482,7 +483,7 @@ mod tests {
         let mut cfg = enabled_cfg();
         cfg.auth.shared.scopes_supported = vec!["openid".to_owned(), "user/aql-*.s".to_owned()];
         assert_eq!(
-            options(&cfg).scopes_supported,
+            options(&cfg, false).scopes_supported,
             vec!["openid", "user/aql-*.s"]
         );
     }
@@ -494,7 +495,7 @@ mod tests {
             "launch-ehr".to_owned(),
             CONTEXT_OPENEHR_EHR.to_owned(), // duplicate of a derived one
         ];
-        let options = options(&cfg);
+        let options = options(&cfg, false);
         assert!(options.capabilities.contains(&"launch-ehr".to_owned()));
         assert_eq!(
             options

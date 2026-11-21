@@ -47,13 +47,15 @@ const FRANK: &str = "frank-login";
 /// issuer beside the professionals' `persons` issuer and its table.
 fn config() -> ferroehr_rest::config::AppConfig {
     let mut config = zero_config();
-    config.auth.shared.issuer.push(IssuerEntry {
-        kind: Some(IssuerKind::Patients),
-        jwks_file: common::jwks_file().display().to_string(),
-        ..common::entry(PORTAL, super::AUDIENCE)
-    });
-    config.auth.smart.patient_issuers =
-        vec![ferrohealth_secret::secret_url::SecretUrl::new(PORTAL)];
+    common::add_issuer(
+        &mut config,
+        IssuerEntry {
+            kind: Some(IssuerKind::Patients),
+            jwks_file: common::jwks_file().display().to_string(),
+            ..common::entry(PORTAL, super::AUDIENCE)
+        },
+    );
+    common::patient_context(&mut config, PORTAL);
     config.party_binding.provider = Some(crate::portal_representatives_http::provider());
     config
 }
@@ -66,7 +68,8 @@ fn config() -> ferroehr_rest::config::AppConfig {
 async fn portal() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let config = config();
     let (db, pool) = common::migrated_pool().await;
-    let resolved = ferroehr::config::auth::resolve(&config.auth.shared).expect("[auth] resolves");
+    let resolved = ferroehr::config::auth::resolve(&config.auth.shared, &config.audience_bases())
+        .expect("[auth] resolves");
     let mapping = ferroehr::config::binding::installed_mapping(
         &config.party_binding.sections(),
         &resolved,

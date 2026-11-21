@@ -35,15 +35,18 @@ fn config() -> AppConfig {
     let machines = IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
         kind: Some(IssuerKind::Machines),
-        profile: Preset::Rfc9068,
+        preset: Preset::Rfc9068,
         audience: vec![AUDIENCE.to_owned()],
         jwks_file: common::jwks_file().display().to_string(),
-        // NOTE: the test key signs RFC 9068 `at+jwt` tokens.
-        token_types: Some(vec!["at+jwt".to_owned()]),
+        profile: ferrohealth_smart::profile::ProfileKeys {
+            // NOTE: the test key signs RFC 9068 `at+jwt` tokens.
+            token_types: Some(vec!["at+jwt".to_owned()]),
+            ..ferrohealth_smart::profile::ProfileKeys::default()
+        },
         ..IssuerEntry::default()
     };
     let mut auth = common::auth(AuthSection {
-        issuer: vec![machines],
+        issuer: common::named(vec![machines]),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;

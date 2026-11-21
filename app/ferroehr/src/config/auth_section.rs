@@ -101,16 +101,25 @@ impl beside::Own for Own {
     }
 }
 
-/// Returns the issuer key of one `machines` issuer `issuer` for the
-/// `ferroehr` audience, the table the configuration tests trust.
+/// Returns the table of one `machines` issuer `issuer` for the `ferroehr`
+/// audience, the table the configuration tests trust.
 #[cfg(test)]
-pub(crate) fn machines(issuer: &str) -> Vec<ferrohealth_smart::config::IssuerEntry> {
-    vec![ferrohealth_smart::config::IssuerEntry {
+pub(crate) fn machine(issuer: &str) -> ferrohealth_smart::config::IssuerEntry {
+    ferrohealth_smart::config::IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
         kind: Some(ferrohealth_smart::kind::IssuerKind::Machines),
         audience: vec!["ferroehr".to_owned()],
         ..ferrohealth_smart::config::IssuerEntry::default()
-    }]
+    }
+}
+
+/// Returns the issuer key holding [`machine`] `issuer` as the table
+/// `[auth.issuer.machines]`.
+#[cfg(test)]
+pub(crate) fn machines(
+    issuer: &str,
+) -> std::collections::BTreeMap<String, ferrohealth_smart::config::IssuerEntry> {
+    [("machines".to_owned(), machine(issuer))].into()
 }
 
 #[cfg(test)]

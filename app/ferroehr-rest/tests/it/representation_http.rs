@@ -49,20 +49,25 @@ pub(crate) const STRANGER: &str = "8b2c3d4e-5f6a-4b7c-9d8e-0f1a2b3c4d5e";
 /// claim is `represents`, with its `patient/` grants honoured.
 pub(crate) fn config() -> AppConfig {
     let mut auth = common::auth(AuthSection {
-        issuer: vec![IssuerEntry {
-            jwks_file: common::jwks_file().display().to_string(),
-            representation: Some(Representation {
-                claim: REPRESENTS.to_owned(),
-                ground_claim: None,
-            }),
-            ..common::entry(ISSUER, AUDIENCE)
-        }],
-        party: vec![PartySection {
-            issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
-            identifier_issuer: LOGIN.to_owned(),
-            identifier_type: "guid".to_owned(),
-            ..PartySection::default()
-        }],
+        issuer: common::bound(
+            vec![IssuerEntry {
+                jwks_file: common::jwks_file().display().to_string(),
+                profile: ferrohealth_smart::profile::ProfileKeys {
+                    representation: Some(Representation {
+                        claim: REPRESENTS.to_owned(),
+                        ground_claim: None,
+                    }),
+                    ..ferrohealth_smart::profile::ProfileKeys::default()
+                },
+                ..common::entry(ISSUER, AUDIENCE)
+            }],
+            vec![PartySection {
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
+                identifier_issuer: LOGIN.to_owned(),
+                identifier_type: "guid".to_owned(),
+                ..PartySection::default()
+            }],
+        ),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -71,8 +76,7 @@ pub(crate) fn config() -> AppConfig {
         auth,
         ..AppConfig::default()
     };
-    config.auth.smart.patient_issuers =
-        vec![ferrohealth_secret::secret_url::SecretUrl::new(ISSUER)];
+    common::patient_context(&mut config, ISSUER);
     config.party_binding.provider = Some(crate::portal_representatives_http::provider());
     config
 }

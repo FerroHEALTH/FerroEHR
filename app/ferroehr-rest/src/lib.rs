@@ -413,7 +413,7 @@ pub(crate) mod test_support {
     pub(crate) fn trusting(entry: IssuerEntry) -> AuthConfig {
         AuthConfig {
             shared: Box::new(AuthSection {
-                issuer: vec![entry],
+                issuer: [("test".to_owned(), entry)].into(),
                 ..AuthSection::default()
             }),
             ..AuthConfig::default()

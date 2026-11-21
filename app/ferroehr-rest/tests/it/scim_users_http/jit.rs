@@ -657,41 +657,35 @@ const PATIENTS: &str = "https://patients.example";
 const SERVICE_ACCOUNT: &str = "service-account-lab";
 
 /// [`jit_config`] beside a patients issuer, whose persons issuer marks a
-/// guest by `acct = 1` and its service account app-only, its `[[auth.party]]` table admitting guests.
+/// guest by `acct = 1` and its service account app-only, its party table admitting guests.
 fn callers_config() -> AppConfig {
     let mut config = jit_config();
     if let Some(persons) = config
         .auth
         .shared
         .issuer
-        .iter_mut()
+        .values_mut()
         .find(|entry| entry.issuer.expose() == PERSONS)
     {
-        persons.guest = Some(vec![Marker::Claim {
+        persons.profile.guest = Some(vec![Marker::Claim {
             claim: "acct".to_owned(),
             value: "1".to_owned(),
         }]);
-        persons.app_only = Some(vec![Marker::Subjects(vec![SERVICE_ACCOUNT.to_owned()])]);
+        persons.profile.app_only = Some(vec![Marker::Subjects(vec![SERVICE_ACCOUNT.to_owned()])]);
+        if let Some(party) = persons.party.as_mut() {
+            party.guests = true;
+        }
     }
-    {
-        let entries = &mut config.auth.shared.issuer;
-        entries.push(IssuerEntry {
+    common::add_issuer(
+        &mut config,
+        IssuerEntry {
             issuer: ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS),
             kind: Some(IssuerKind::Patients),
             audience: vec![AUDIENCE.to_owned()],
             jwks_file: common::jwks_file().display().to_string(),
             ..IssuerEntry::default()
-        });
-    }
-    if let Some(party) = config
-        .auth
-        .shared
-        .party
-        .iter_mut()
-        .find(|party| party.issuer.expose() == PERSONS)
-    {
-        party.guests = true;
-    }
+        },
+    );
     config
 }
 

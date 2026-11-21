@@ -450,7 +450,9 @@ impl Authenticator {
     /// readiness indicator: an issuer read in the background answers its
     /// tokens with `503` until it is.
     pub(crate) fn issuers_ready(&self) -> bool {
-        self.bearer.as_ref().is_none_or(verdicts::TokenVerdicts::is_ready)
+        self.bearer
+            .as_ref()
+            .is_none_or(verdicts::TokenVerdicts::is_ready)
     }
 
     /// Whether the SMART discovery document describes an issuer.
@@ -1324,8 +1326,11 @@ mod tests {
     async fn token_types_admit_a_plain_jwt_and_refuse_another_kind() {
         let auth = test_support::trusting(ferrohealth_smart::config::IssuerEntry {
             jwks_file: test_support::jwks_file().display().to_string(),
-            token_types: Some(vec!["JWT".to_owned()]),
-            required_claims: Some(["iss", "exp", "aud", "sub"].map(str::to_owned).to_vec()),
+            profile: ferrohealth_smart::profile::ProfileKeys {
+                token_types: Some(vec!["JWT".to_owned()]),
+                required_claims: Some(["iss", "exp", "aud", "sub"].map(str::to_owned).to_vec()),
+                ..ferrohealth_smart::profile::ProfileKeys::default()
+            },
             ..test_support::entry(ISSUER)
         });
         let authenticator = Authenticator::new(
@@ -1703,7 +1708,9 @@ mod tests {
         let with = with_metadata_file(Some(&good))
             .await
             .expect("authenticator");
-        let document = with.smart_configuration(&options).expect("a document");
+        let Described::Document(document) = with.smart_configuration(&options) else {
+            panic!("a document");
+        };
         assert_eq!(
             document.get("token_endpoint").and_then(Value::as_str),
             Some("https://issuer.example/token"),

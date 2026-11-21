@@ -728,24 +728,28 @@ mod tests {
         ));
     }
 
-    /// An `[auth]` section with one `persons` issuer and its `[[auth.party]]`
-    /// table.
-    fn bound_section() -> ferrohealth_smart::config::AuthSection {
+    /// An `[auth]` section with one `persons` issuer, bound by its party
+    /// table when `bound`.
+    fn section(bound: bool) -> ferrohealth_smart::config::AuthSection {
         let issuer = ferrohealth_secret::secret_url::SecretUrl::new("https://login.example");
+        let party = bound.then(|| ferrohealth_smart::party::config::PartySection {
+            identifier_issuer: "urn:login".to_owned(),
+            identifier_type: "guid".to_owned(),
+            ..ferrohealth_smart::party::config::PartySection::default()
+        });
         ferrohealth_smart::config::AuthSection {
             enabled: true,
-            issuer: vec![ferrohealth_smart::config::IssuerEntry {
-                issuer: issuer.clone(),
-                kind: Some(ferrohealth_smart::kind::IssuerKind::Persons),
-                audience: vec!["ferroehr".to_owned()],
-                ..ferrohealth_smart::config::IssuerEntry::default()
-            }],
-            party: vec![ferrohealth_smart::party::config::PartySection {
-                issuer,
-                identifier_issuer: "urn:login".to_owned(),
-                identifier_type: "guid".to_owned(),
-                ..ferrohealth_smart::party::config::PartySection::default()
-            }],
+            issuer: [(
+                "login".to_owned(),
+                ferrohealth_smart::config::IssuerEntry {
+                    issuer,
+                    kind: Some(ferrohealth_smart::kind::IssuerKind::Persons),
+                    audience: vec!["ferroehr".to_owned()],
+                    party,
+                    ..ferrohealth_smart::config::IssuerEntry::default()
+                },
+            )]
+            .into(),
             ..ferrohealth_smart::config::AuthSection::default()
         }
     }
@@ -753,29 +757,25 @@ mod tests {
     #[test]
     fn party_tables_without_a_source_are_refused_naming_the_source() {
         let config = crate::config::AppConfig::default();
-        let resolved =
-            ferroehr::config::auth::resolve(&bound_section()).expect("the [auth] section resolves");
+        let resolved = ferroehr::config::auth::resolve(&section(true), &[])
+            .expect("the [auth] section resolves");
         let refused = binding(&config, &resolved, None);
         assert!(
             matches!(refused, Err(BindingRefused::NoSource)),
             "{refused:?}"
         );
-        let unbound = ferrohealth_smart::config::AuthSection {
-            party: Vec::new(),
-            ..bound_section()
-        };
-        let resolved =
-            ferroehr::config::auth::resolve(&unbound).expect("the [auth] section resolves");
+        let resolved = ferroehr::config::auth::resolve(&section(false), &[])
+            .expect("the [auth] section resolves");
         assert!(
             matches!(binding(&config, &resolved, None), Ok(None)),
-            "no [[auth.party]] table needs no source"
+            "no party table needs no source"
         );
     }
 
     #[tokio::test]
     async fn the_authenticator_refuses_party_tables_without_a_source() {
         let mut config = crate::config::AppConfig::default();
-        *config.auth.shared = bound_section();
+        *config.auth.shared = section(true);
         let replay: Arc<dyn ferrohealth_smart::sender::replay::ReplayStore> =
             Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new());
         let Err(message) = super::super::Authenticator::new(

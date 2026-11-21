@@ -174,21 +174,24 @@ mod tests {
     fn resolved() -> Resolved {
         let section = AuthSection {
             enabled: true,
-            issuer: vec![IssuerEntry {
-                issuer: SecretUrl::new(ISSUER),
-                kind: Some(IssuerKind::Persons),
-                audience: vec!["ferroehr".to_owned()],
-                ..IssuerEntry::default()
-            }],
-            party: vec![PartySection {
-                issuer: SecretUrl::new(ISSUER),
-                identifier_issuer: "urn:login".to_owned(),
-                identifier_type: "guid".to_owned(),
-                ..PartySection::default()
-            }],
+            issuer: [(
+                "login".to_owned(),
+                IssuerEntry {
+                    issuer: SecretUrl::new(ISSUER),
+                    kind: Some(IssuerKind::Persons),
+                    audience: vec!["ferroehr".to_owned()],
+                    party: Some(PartySection {
+                        identifier_issuer: "urn:login".to_owned(),
+                        identifier_type: "guid".to_owned(),
+                        ..PartySection::default()
+                    }),
+                    ..IssuerEntry::default()
+                },
+            )]
+            .into(),
             ..AuthSection::default()
         };
-        crate::config::auth::resolve(&section).expect("the [auth] section resolves")
+        crate::config::auth::resolve(&section, &[]).expect("the [auth] section resolves")
     }
 
     fn mapped() -> PartyBindingConfig {

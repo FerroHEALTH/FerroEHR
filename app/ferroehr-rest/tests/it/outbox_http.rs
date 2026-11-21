@@ -71,10 +71,10 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     // The replica's refresher reads the grants on the commits' notification.
     svc.grants().refresh().await.expect("the grants read");
     let svc = Arc::new(svc);
-    config.auth.shared.issuer.push(machines(
-        MACHINES,
-        ferrohealth_smart::profile::Preset::Rfc9068,
-    ));
+    common::add_issuer(
+        &mut config,
+        machines(MACHINES, ferrohealth_smart::profile::Preset::Rfc9068),
+    );
     let app = common::build_full(config, svc, None, Observability::default()).await;
     (db, pool, app)
 }

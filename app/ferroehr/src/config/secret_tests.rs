@@ -262,13 +262,16 @@ fn url_userinfo_reaches_no_rendering() {
         endpoint: leaky(13),
         ..ferrohealth_telemetry::section::OtlpSection::default()
     });
-    c.auth.shared.issuer = vec![ferrohealth_smart::config::IssuerEntry {
+    c.auth.shared.issuer = [(
+        "machines".to_owned(),
+        ferrohealth_smart::config::IssuerEntry {
         introspection: Some(ferrohealth_smart::config::IntrospectionSection {
             endpoint: leaky(21),
             ..ferrohealth_smart::config::IntrospectionSection::default()
         }),
-        ..auth_section::machines("https://idp.example").remove(0)
-    }];
+        ..auth_section::machine("https://idp.example")
+    })]
+    .into();
     c.record.multimedia.s3.url = Some(leaky(14));
     c.audit.syslog = Some(crate::system_log::config::SyslogConfig {
         url: leaky(16),
@@ -553,30 +556,3 @@ fn the_removed_identifier_reader_role_is_refused() {
     removed_rbac_key("identifier_reader_role", "\"IDENTIFIER_READER\"");
 }
 
-/// An `authz.rbac.role_issuers` issuer renders and refuses with its userinfo
-/// masked.
-#[test]
-fn a_role_issuer_never_renders_its_userinfo() {
-    assert_table_issuer_masked(
-        "[authz.rbac]\nrole_issuers = [\"https://u:ROLE_PW_SENTINEL@role.example/realms/ferroehr\"]\n",
-        "ROLE_PW_SENTINEL",
-        "role.example",
-    );
-}
-
-/// An `auth.smart.patient_issuers` issuer renders with its userinfo masked,
-/// and no refusal of the configuration carries it.
-#[test]
-fn a_patient_issuer_never_renders_its_userinfo() {
-    let c = rendered_masked(
-        "[auth.smart]\npatient_issuers = [\"https://u:PATIENT_PW_SENTINEL@patient.example/realms/ferroehr\"]\n",
-        "PATIENT_PW_SENTINEL",
-        "patient.example",
-    );
-    if let Err(refused) = c.validate() {
-        assert!(
-            !refused.to_string().contains("PATIENT_PW_SENTINEL"),
-            "{refused}"
-        );
-    }
-}

@@ -66,16 +66,19 @@ pub(crate) fn audience(issuer: &str) -> String {
 }
 
 /// A `machines` issuer at `issuer` under `profile`.
-pub(crate) fn machines(issuer: &str, profile: Preset) -> IssuerEntry {
+pub(crate) fn machines(issuer: &str, preset: Preset) -> IssuerEntry {
     IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
         kind: Some(IssuerKind::Machines),
-        profile,
+        preset,
         audience: vec![audience(issuer)],
         jwks_file: common::jwks_file().display().to_string(),
         // NOTE: the test key signs RFC 9068 `at+jwt` tokens, which each
         // profile's overridable `token_types` admits here.
-        token_types: Some(vec!["at+jwt".to_owned()]),
+        profile: ferrohealth_smart::profile::ProfileKeys {
+            token_types: Some(vec!["at+jwt".to_owned()]),
+            ..ferrohealth_smart::profile::ProfileKeys::default()
+        },
         ..IssuerEntry::default()
     }
 }
@@ -86,10 +89,13 @@ pub(crate) fn machines(issuer: &str, profile: Preset) -> IssuerEntry {
 fn keycloak_staff(impersonation_marker: Option<&str>) -> IssuerEntry {
     IssuerEntry {
         kind: Some(IssuerKind::Persons),
-        app_only: Some(vec![Marker::Subjects(vec![
-            "service-account-viewer".to_owned(),
-        ])]),
-        impersonation_marker: impersonation_marker.map(str::to_owned),
+        profile: ferrohealth_smart::profile::ProfileKeys {
+            app_only: Some(vec![Marker::Subjects(vec![
+                "service-account-viewer".to_owned(),
+            ])]),
+            impersonation_marker: impersonation_marker.map(str::to_owned),
+            ..machines(KEYCLOAK_STAFF, Preset::Keycloak).profile
+        },
         ..machines(KEYCLOAK_STAFF, Preset::Keycloak)
     }
 }
@@ -105,39 +111,47 @@ fn config(guests: bool) -> AppConfig {
 fn config_marked(guests: bool, impersonation_marker: Option<&str>) -> AppConfig {
     let persons = IssuerEntry {
         jwks_file: common::jwks_file().display().to_string(),
-        guest: Some(vec![Marker::Claim {
-            claim: "acct".to_owned(),
-            value: "1".to_owned(),
-        }]),
+        profile: ferrohealth_smart::profile::ProfileKeys {
+            guest: Some(vec![Marker::Claim {
+                claim: "acct".to_owned(),
+                value: "1".to_owned(),
+            }]),
+            ..ferrohealth_smart::profile::ProfileKeys::default()
+        },
         ..common::entry(ISSUER, AUDIENCE)
     };
     let keycloak = IssuerEntry {
-        app_only: Some(vec![Marker::Subjects(vec![SERVICE_ACCOUNT.to_owned()])]),
+        profile: ferrohealth_smart::profile::ProfileKeys {
+            app_only: Some(vec![Marker::Subjects(vec![SERVICE_ACCOUNT.to_owned()])]),
+            ..machines(KEYCLOAK, Preset::Keycloak).profile
+        },
         ..machines(KEYCLOAK, Preset::Keycloak)
     };
     let mut auth = common::auth(AuthSection {
-        issuer: vec![
-            persons,
-            machines(MACHINES, Preset::Rfc9068),
-            machines(ENTRA, Preset::Entra),
-            keycloak,
-            keycloak_staff(impersonation_marker),
-        ],
-        party: vec![
-            PartySection {
-                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
-                identifier_issuer: LOGIN.to_owned(),
-                identifier_type: "guid".to_owned(),
-                guests,
-                ..PartySection::default()
-            },
-            PartySection {
-                issuer: ferrohealth_secret::secret_url::SecretUrl::new(KEYCLOAK_STAFF),
-                identifier_issuer: KEYCLOAK_LOGIN.to_owned(),
-                identifier_type: "guid".to_owned(),
-                ..PartySection::default()
-            },
-        ],
+        issuer: common::bound(
+            vec![
+                persons,
+                machines(MACHINES, Preset::Rfc9068),
+                machines(ENTRA, Preset::Entra),
+                keycloak,
+                keycloak_staff(impersonation_marker),
+            ],
+            vec![
+                PartySection {
+                    issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
+                    identifier_issuer: LOGIN.to_owned(),
+                    identifier_type: "guid".to_owned(),
+                    guests,
+                    ..PartySection::default()
+                },
+                PartySection {
+                    issuer: ferrohealth_secret::secret_url::SecretUrl::new(KEYCLOAK_STAFF),
+                    identifier_issuer: KEYCLOAK_LOGIN.to_owned(),
+                    identifier_type: "guid".to_owned(),
+                    ..PartySection::default()
+                },
+            ],
+        ),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -482,12 +496,18 @@ async fn a_token_acting_for_a_patient_without_a_representation_is_refused() {
         (None, StatusCode::UNAUTHORIZED),
     ] {
         let mut config = config(false);
-        config.auth.shared.issuer.push(IssuerEntry {
-            kind: Some(IssuerKind::Patients),
-            jwks_file: common::jwks_file().display().to_string(),
-            act_represents_patient: represents,
-            ..common::entry(PATIENTS, AUDIENCE)
-        });
+        common::add_issuer(
+            &mut config,
+            IssuerEntry {
+                kind: Some(IssuerKind::Patients),
+                jwks_file: common::jwks_file().display().to_string(),
+                profile: ferrohealth_smart::profile::ProfileKeys {
+                    act_represents_patient: represents,
+                    ..ferrohealth_smart::profile::ProfileKeys::default()
+                },
+                ..common::entry(PATIENTS, AUDIENCE)
+            },
+        );
         let app = router(Arc::clone(&svc), config).await;
         let token = bearer(
             PATIENTS,

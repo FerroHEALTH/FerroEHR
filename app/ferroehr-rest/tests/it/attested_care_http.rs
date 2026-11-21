@@ -118,7 +118,7 @@ async fn serve(restricted: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrServic
             .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
     );
     let mut auth = common::auth(AuthSection {
-        issuer: vec![IssuerEntry {
+        issuer: common::named([IssuerEntry {
             issuer: ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION),
             kind: Some(IssuerKind::Federation),
             audience: vec![AUDIENCE.to_owned()],
@@ -127,9 +127,9 @@ async fn serve(restricted: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrServic
                 levels: BTreeMap::from([("high".to_owned(), AssuranceLevel::High)]),
                 ..AssuranceSection::default()
             }),
+            federation: Some(federation_table()),
             ..IssuerEntry::default()
-        }],
-        federation: vec![federation_table()],
+        }]),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -138,6 +138,7 @@ async fn serve(restricted: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrServic
     svc.grants()
         .set_federation(ferroehr::config::federation::trust(
             &auth.shared,
+            &[],
             Retention::Years(10),
         ));
     crate::agreement_parties::commit(&svc, FEDERATION, &["remote-portal"], &[agreement()])
@@ -147,8 +148,7 @@ async fn serve(restricted: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrServic
         auth,
         ..common::api_config(true)
     };
-    config.auth.smart.patient_issuers =
-        vec![ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION)];
+    common::patient_context(&mut config, FEDERATION);
     config.public_root = Some(
         ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
             .expect("a public root"),

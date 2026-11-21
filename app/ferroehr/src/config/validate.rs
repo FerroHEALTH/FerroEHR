@@ -594,15 +594,23 @@ mod tests {
     /// and a `persons` issuer passes.
     #[test]
     fn the_described_issuer_names_a_user_facing_auth_issuer() {
-        let mut issuer = crate::config::auth_section::machines("https://as.example/machines");
-        issuer.extend(crate::config::auth_section::machines(
-            "https://as.example/persons",
-        ));
-        issuer[1].kind = Some(ferrohealth_smart::kind::IssuerKind::Persons);
-        let resolved = auth::resolve(&AuthSection {
-            issuer,
-            ..AuthSection::default()
-        })
+        let mut persons = crate::config::auth_section::machine("https://as.example/persons");
+        persons.kind = Some(ferrohealth_smart::kind::IssuerKind::Persons);
+        let issuer = [
+            (
+                "machines".to_owned(),
+                crate::config::auth_section::machine("https://as.example/machines"),
+            ),
+            ("persons".to_owned(), persons),
+        ]
+        .into();
+        let resolved = auth::resolve(
+            &AuthSection {
+                issuer,
+                ..AuthSection::default()
+            },
+            &[],
+        )
         .expect("two issuers resolve");
         let unknown =
             described_issuer_error(&SecretUrl::new("https://elsewhere.example"), &resolved)

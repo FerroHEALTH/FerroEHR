@@ -75,9 +75,12 @@ fn party(issuer: &str, identifier_issuer: &str) -> PartySection {
 fn config() -> AppConfig {
     let entra = persons(ENTRA, Preset::Entra);
     let keycloak = IssuerEntry {
-        app_only: Some(vec![Marker::Subjects(vec![
-            "service-account-viewer".to_owned(),
-        ])]),
+        profile: ferrohealth_smart::profile::ProfileKeys {
+            app_only: Some(vec![Marker::Subjects(vec![
+                "service-account-viewer".to_owned(),
+            ])]),
+            ..persons(KEYCLOAK, Preset::Keycloak).profile
+        },
         ..persons(KEYCLOAK, Preset::Keycloak)
     };
     let patients = IssuerEntry {
@@ -85,14 +88,16 @@ fn config() -> AppConfig {
         ..machines(PATIENTS, Preset::Rfc9068)
     };
     let mut auth = common::auth(AuthSection {
-        issuer: vec![
-            machines(MACHINES, Preset::Rfc9068),
-            machines(OTHER_MACHINES, Preset::Rfc9068),
-            patients,
-            entra,
-            keycloak,
-        ],
-        party: vec![party(ENTRA, ENTRA_LOGIN), party(KEYCLOAK, KEYCLOAK_LOGIN)],
+        issuer: common::bound(
+            vec![
+                machines(MACHINES, Preset::Rfc9068),
+                machines(OTHER_MACHINES, Preset::Rfc9068),
+                patients,
+                entra,
+                keycloak,
+            ],
+            vec![party(ENTRA, ENTRA_LOGIN), party(KEYCLOAK, KEYCLOAK_LOGIN)],
+        ),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;

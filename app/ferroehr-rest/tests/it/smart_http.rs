@@ -71,8 +71,7 @@ fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
             .expect("a public root"),
     );
     if patient_bound {
-        cfg.auth.smart.patient_issuers =
-            vec![ferrohealth_secret::secret_url::SecretUrl::new(issuer)];
+        common::patient_context(&mut cfg, issuer);
     }
     cfg
 }

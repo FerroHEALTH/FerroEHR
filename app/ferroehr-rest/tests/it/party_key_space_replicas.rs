@@ -51,17 +51,18 @@ fn mapping(issuers: &[&str]) -> BindingMapping {
 fn trusting(added: bool) -> AppConfig {
     let mut config = config(None);
     if added {
-        let shared = &mut config.auth.shared;
-        shared.issuer.push(IssuerEntry {
-            jwks_file: common::jwks_file().display().to_string(),
-            ..common::entry(ADDED, AUDIENCE)
-        });
-        shared.party.push(PartySection {
-            issuer: ferrohealth_secret::secret_url::SecretUrl::new(ADDED),
-            identifier_issuer: ADDED_LOGIN.to_owned(),
-            identifier_type: "guid".to_owned(),
-            ..PartySection::default()
-        });
+        common::add_issuer(
+            &mut config,
+            IssuerEntry {
+                jwks_file: common::jwks_file().display().to_string(),
+                party: Some(PartySection {
+                    identifier_issuer: ADDED_LOGIN.to_owned(),
+                    identifier_type: "guid".to_owned(),
+                    ..PartySection::default()
+                }),
+                ..common::entry(ADDED, AUDIENCE)
+            },
+        );
     }
     config
 }

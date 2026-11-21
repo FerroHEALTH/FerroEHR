@@ -720,7 +720,7 @@ fn an_unknown_scim_key_is_named() {
 fn the_installed_mapping_holds_a_patients_issuer_key_beside_a_party_table() {
     let config = assemble(&bound(&full())).expect("assembles");
     config.validate().expect("validates");
-    let resolved = ferroehr::config::auth::resolve(&config.auth.shared).expect("resolves");
+    let resolved = config.resolve_auth().expect("resolves");
     let issuers = ferroehr::config::binding::key_issuers(&resolved);
     assert_eq!(
         issuers,

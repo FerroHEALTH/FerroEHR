@@ -1251,7 +1251,7 @@ mod tests {
             .expect("write");
         let mut c = standalone();
         let mut issuer = auth_section::machines("https://idp.example.test");
-        issuer[0].jwks_file = jwks.path().display().to_string();
+        issuer.get_mut("machines").expect("one issuer").jwks_file = jwks.path().display().to_string();
         c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("an oct key must refuse the tree");
         let text = err.to_string();
@@ -1273,7 +1273,7 @@ mod tests {
         assert!(err.to_string().contains("auth:"), "{err}");
 
         let mut issuer = auth_section::machines("https://idp.example.test");
-        issuer[0].audience = Vec::new();
+        issuer.get_mut("machines").expect("one issuer").audience = Vec::new();
         c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("no audience must refuse");
         assert!(err.to_string().contains("audience"), "{err}");

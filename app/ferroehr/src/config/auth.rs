@@ -218,7 +218,7 @@ pub enum AuthConfigError {
 #[cfg(test)]
 mod tests {
     use ferrohealth_smart::assurance::{AssuranceError, AssuranceLevel, AssuranceSection};
-    use ferrohealth_smart::config::{BasicSection, BasicUser, IssuerEntry, ScopelessSubject};
+    use ferrohealth_smart::config::{BasicSection, BasicUser, IssuerEntry};
     use ferrohealth_smart::kind::IssuerKind;
     use secrecy::SecretString;
 
@@ -228,23 +228,37 @@ mod tests {
     /// `ferroehr` audience.
     fn section(issuer: &str) -> AuthSection {
         AuthSection {
-            issuer: vec![IssuerEntry {
-                issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
-                kind: Some(IssuerKind::Machines),
-                audience: vec!["ferroehr".to_owned()],
-                ..IssuerEntry::default()
-            }],
+            issuer: [(
+                "idp".to_owned(),
+                IssuerEntry {
+                    issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
+                    kind: Some(IssuerKind::Machines),
+                    audience: vec!["ferroehr".to_owned()],
+                    ..IssuerEntry::default()
+                },
+            )]
+            .into(),
             ..AuthSection::default()
         }
     }
 
     /// The one issuer table of a section [`section`] built.
     fn entry(cfg: &mut AuthSection) -> &mut IssuerEntry {
-        cfg.issuer.first_mut().expect("one issuer")
+        cfg.issuer.get_mut("idp").expect("one issuer")
     }
 
-    /// The `[[auth.issuer]]` table head of the parsed cases.
-    const ISSUER: &str = "[[issuer]]\nissuer = \"https://idp.example\"\nkind = \"machines\"\naudience = [\"ferroehr\"]\n";
+    /// Validates `section` for a deployment that names no public URL.
+    fn validate(section: &AuthSection) -> Result<(), AuthConfigError> {
+        super::validate(section, &[])
+    }
+
+    /// Resolves `section` for a deployment that names no public URL.
+    fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
+        super::resolve(section, &[])
+    }
+
+    /// The `[auth.issuer.idp]` table head of the parsed cases.
+    const ISSUER: &str = "[issuer.idp]\nissuer = \"https://idp.example\"\nkind = \"machines\"\naudience = [\"ferroehr\"]\n";
 
     /// A section that satisfies every boot rule.
     fn valid() -> AuthSection {
@@ -290,12 +304,12 @@ mod tests {
     fn token_introspection_is_served_and_its_table_needs_the_mode() {
         let served = parse(&format!(
             "{ISSUER}mode = \"introspection\"\n\
-             [issuer.introspection.client]\nclient_id = \"cdr\"\nclient_secret = \"s3cret\"\n"
+             [issuer.idp.introspection.client]\nclient_id = \"cdr\"\nclient_secret = \"s3cret\"\n"
         ))
         .expect("parses");
         assert!(validate(&served).is_ok(), "{:?}", validate(&served));
         let ignored = parse(&format!(
-            "{ISSUER}[issuer.introspection]\nendpoint = \"https://idp.example/introspect\"\n"
+            "{ISSUER}[issuer.idp.introspection]\nendpoint = \"https://idp.example/introspect\"\n"
         ))
         .expect("parses");
         assert!(
@@ -633,14 +647,9 @@ mod tests {
     #[test]
     fn a_client_list_beside_the_policy_grants_is_refused() {
         let mut scopeless = valid();
-        scopeless.scopeless_subjects = vec![ScopelessSubject {
-            issuer: ferrohealth_secret::secret_url::SecretUrl::new(
-                "https://idp.example/realms/ferroehr",
-            ),
-            sub: "svc".to_owned(),
-        }];
+        entry(&mut scopeless).scopeless_subjects = vec!["svc".to_owned()];
         let mut first_party = valid();
-        entry(&mut first_party).first_party_clients = Some(vec!["portal".to_owned()]);
+        entry(&mut first_party).profile.first_party_clients = Some(vec!["portal".to_owned()]);
         for cfg in [scopeless, first_party] {
             assert!(
                 matches!(validate(&cfg), Err(AuthConfigError::Section { .. })),
@@ -670,6 +679,26 @@ mod tests {
             validate(&AuthSection::default()).is_ok(),
             "no mechanism is require_mechanism's refusal, not validate's"
         );
+    }
+
+    /// An issuer that names no audience takes the openEHR REST API's
+    /// `baseUrl` under the public root (#6140), and one with no public root
+    /// and no audience is refused.
+    #[test]
+    fn an_issuer_without_an_audience_takes_the_rest_base_url() {
+        let root = PublicRoot::new("https://cdr.example.com", "").expect("a root");
+        let bases = audience_bases(Some(&root), "/ferroehr/rest/openehr/v1");
+        assert_eq!(bases, ["https://cdr.example.com/ferroehr/rest/openehr/v1"]);
+        assert!(audience_bases(None, "/ferroehr/rest/openehr/v1").is_empty());
+        assert_eq!(
+            audience_bases(None, "https://gw.example/openehr/v1"),
+            ["https://gw.example/openehr/v1"]
+        );
+        let mut cfg = valid();
+        entry(&mut cfg).audience = Vec::new();
+        assert!(resolve(&cfg).is_err(), "no audience and no base");
+        let resolved = super::resolve(&cfg, &bases).expect("resolves");
+        assert_eq!(resolved.issuers[0].audience, bases);
     }
 
     /// The realm and the product scope fall back to FerroEHR's when unset, and

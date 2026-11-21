@@ -112,25 +112,20 @@ pub(crate) async fn app_with(
     )
     .await;
     common::grant_to(&svc, &pool, "root", Operation::WriteAccessPolicy).await;
-    config
-        .auth
-        .shared
-        .issuer
-        .push(ferrohealth_smart::config::IssuerEntry {
+    common::add_issuer(
+        &mut config,
+        ferrohealth_smart::config::IssuerEntry {
             jwks_file: common::jwks_file().display().to_string(),
             ..common::entry(MEDICS, "ferroehr")
-        });
-    config
-        .auth
-        .shared
-        .issuer
-        .push(crate::caller_kinds_http::machines(
-            MACHINES,
-            ferrohealth_smart::profile::Preset::Rfc9068,
-        ));
+        },
+    );
+    common::add_issuer(
+        &mut config,
+        crate::caller_kinds_http::machines(MACHINES, ferrohealth_smart::profile::Preset::Rfc9068),
+    );
     common::bind_issuer(&mut config, MEDICS);
     common::bind_subjects(&pool, &[(MEDICS, "drb")]).await;
-    config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(MEDICS)];
+    config.rbac.role_issuers = vec![common::name_of(MEDICS)];
     config.rbac.emergency_access_role = Some("EMERGENCY".to_owned());
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;

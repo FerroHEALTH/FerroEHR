@@ -62,27 +62,35 @@ fn party(issuer: &str, identifier_issuer: &str) -> PartySection {
 /// Keycloak-shaped issuer, bound on `sub`.
 fn two_issuers() -> AppConfig {
     let mut auth = common::auth(AuthSection {
-        issuer: vec![
-            IssuerEntry {
-                profile: Preset::Entra,
-                person_key: Some("oid".to_owned()),
-                jwks_file: common::jwks_file().display().to_string(),
-                token_types: Some(vec!["at+jwt".to_owned()]),
-                ..common::entry(ENTRA, ENTRA_AUDIENCE)
-            },
-            IssuerEntry {
-                profile: Preset::Keycloak,
-                // NOTE: the Keycloak profile names its service accounts by
-                // their declared `sub`, which it has no default for.
-                app_only: Some(vec![Marker::Subjects(vec![
-                    "service-account-ferroehr".to_owned(),
-                ])]),
-                jwks_file: common::jwks_file().display().to_string(),
-                token_types: Some(vec!["at+jwt".to_owned()]),
-                ..common::entry(KEYCLOAK, KEYCLOAK_AUDIENCE)
-            },
-        ],
-        party: vec![party(ENTRA, ENTRA_LOGIN), party(KEYCLOAK, KEYCLOAK_LOGIN)],
+        issuer: common::bound(
+            vec![
+                IssuerEntry {
+                    preset: Preset::Entra,
+                    jwks_file: common::jwks_file().display().to_string(),
+                    profile: ferrohealth_smart::profile::ProfileKeys {
+                        person_key: Some("oid".to_owned()),
+                        token_types: Some(vec!["at+jwt".to_owned()]),
+                        ..ferrohealth_smart::profile::ProfileKeys::default()
+                    },
+                    ..common::entry(ENTRA, ENTRA_AUDIENCE)
+                },
+                IssuerEntry {
+                    preset: Preset::Keycloak,
+                    jwks_file: common::jwks_file().display().to_string(),
+                    profile: ferrohealth_smart::profile::ProfileKeys {
+                        // NOTE: the Keycloak profile names its service accounts by
+                        // their declared `sub`, which it has no default for.
+                        app_only: Some(vec![Marker::Subjects(vec![
+                            "service-account-ferroehr".to_owned(),
+                        ])]),
+                        token_types: Some(vec!["at+jwt".to_owned()]),
+                        ..ferrohealth_smart::profile::ProfileKeys::default()
+                    },
+                    ..common::entry(KEYCLOAK, KEYCLOAK_AUDIENCE)
+                },
+            ],
+            vec![party(ENTRA, ENTRA_LOGIN), party(KEYCLOAK, KEYCLOAK_LOGIN)],
+        ),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -227,10 +235,13 @@ const PROVIDER_ISSUER: &str = "urn:oid:2.16.528.1.1007.3.3";
 fn entra_tenant(tenant: &str) -> (IssuerEntry, PartySection) {
     let issuer = format!("https://login.entra.example/{tenant}/v2.0");
     let entry = IssuerEntry {
-        profile: Preset::Entra,
-        person_key: Some("oid".to_owned()),
+        preset: Preset::Entra,
         jwks_file: common::jwks_file().display().to_string(),
-        token_types: Some(vec!["at+jwt".to_owned()]),
+        profile: ferrohealth_smart::profile::ProfileKeys {
+            person_key: Some("oid".to_owned()),
+            token_types: Some(vec!["at+jwt".to_owned()]),
+            ..ferrohealth_smart::profile::ProfileKeys::default()
+        },
         ..common::entry(&issuer, &format!("ferroehr-{tenant}"))
     };
     let table = party(&issuer, &format!("https://login.entra.example/{tenant}"));
@@ -321,8 +332,7 @@ async fn each_tenants_person_is_recorded_with_its_own_provider() {
     let (a_uid, _) = professional_of(&svc, &a_table.identifier_issuer, a_key, "532").await;
     let (b_uid, _) = professional_of(&svc, &b_table.identifier_issuer, b_key, "532").await;
     let mut auth = common::auth(AuthSection {
-        issuer: vec![a_entry, b_entry],
-        party: vec![a_table, b_table],
+        issuer: common::bound(vec![a_entry, b_entry], vec![a_table, b_table]),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -362,21 +372,26 @@ const REPRESENTS: &str = "represents";
 /// `represents`.
 fn representing() -> AppConfig {
     let mut auth = common::auth(AuthSection {
-        issuer: vec![IssuerEntry {
-            jwks_file: common::jwks_file().display().to_string(),
-            representation: Some(Representation {
-                claim: REPRESENTS.to_owned(),
-                ground_claim: None,
-            }),
-            ..common::entry(
+        issuer: common::bound(
+            vec![IssuerEntry {
+                jwks_file: common::jwks_file().display().to_string(),
+                profile: ferrohealth_smart::profile::ProfileKeys {
+                    representation: Some(Representation {
+                        claim: REPRESENTS.to_owned(),
+                        ground_claim: None,
+                    }),
+                    ..ferrohealth_smart::profile::ProfileKeys::default()
+                },
+                ..common::entry(
+                    crate::party_binding_http::ISSUER,
+                    crate::party_binding_http::AUDIENCE,
+                )
+            }],
+            vec![party(
                 crate::party_binding_http::ISSUER,
-                crate::party_binding_http::AUDIENCE,
-            )
-        }],
-        party: vec![party(
-            crate::party_binding_http::ISSUER,
-            crate::party_binding_http::LOGIN,
-        )],
+                crate::party_binding_http::LOGIN,
+            )],
+        ),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;

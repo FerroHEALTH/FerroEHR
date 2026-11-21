@@ -56,12 +56,15 @@ const SCOPES: &str = "patient/composition-*.cruds";
 /// honoured.
 pub(crate) fn config() -> AppConfig {
     let mut auth = common::auth(AuthSection {
-        issuer: vec![IssuerEntry {
+        issuer: common::named(vec![IssuerEntry {
             kind: Some(IssuerKind::Patients),
             jwks_file: common::jwks_file().display().to_string(),
-            act_represents_patient: Some(true),
+            profile: ferrohealth_smart::profile::ProfileKeys {
+                act_represents_patient: Some(true),
+                ..ferrohealth_smart::profile::ProfileKeys::default()
+            },
             ..common::entry(PORTAL, AUDIENCE)
-        }],
+        }]),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -70,8 +73,7 @@ pub(crate) fn config() -> AppConfig {
         auth,
         ..AppConfig::default()
     };
-    config.auth.smart.patient_issuers =
-        vec![ferrohealth_secret::secret_url::SecretUrl::new(PORTAL)];
+    common::patient_context(&mut config, PORTAL);
     config.party_binding.provider = Some(provider());
     config
 }

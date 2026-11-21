@@ -12,9 +12,9 @@
 use std::sync::Arc;
 
 use ferroehr::party_binding::source::BindingSource;
+use ferrohealth_smart::config::Resolved;
 use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::kind::standing::Standing;
-use ferrohealth_smart::config::Resolved;
 use ferrohealth_smart::resource::described::{Candidate, DescribeError, Metadata, describe};
 use ferrohealth_smart::resource::introspection::{IntrospectionSettings, Introspector};
 use ferrohealth_smart::resource::{

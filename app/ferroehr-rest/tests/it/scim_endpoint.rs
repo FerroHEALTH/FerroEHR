@@ -67,11 +67,14 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
     let machines = IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
         kind: Some(IssuerKind::Machines),
-        profile: Preset::Rfc9068,
+        preset: Preset::Rfc9068,
         audience: vec![AUDIENCE.to_owned()],
         jwks_file: common::jwks_file().display().to_string(),
-        // NOTE: the test key signs RFC 9068 `at+jwt` tokens.
-        token_types: Some(vec!["at+jwt".to_owned()]),
+        profile: ferrohealth_smart::profile::ProfileKeys {
+            // NOTE: the test key signs RFC 9068 `at+jwt` tokens.
+            token_types: Some(vec!["at+jwt".to_owned()]),
+            ..ferrohealth_smart::profile::ProfileKeys::default()
+        },
         ..IssuerEntry::default()
     };
     let persons = IssuerEntry {
@@ -79,13 +82,15 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
         ..common::entry(PERSONS, AUDIENCE)
     };
     let mut auth = common::auth(AuthSection {
-        issuer: vec![machines, persons],
-        party: vec![PartySection {
-            issuer: ferrohealth_secret::secret_url::SecretUrl::new(PERSONS),
-            identifier_issuer: LOGIN.to_owned(),
-            identifier_type: "guid".to_owned(),
-            ..PartySection::default()
-        }],
+        issuer: common::bound(
+            vec![machines, persons],
+            vec![PartySection {
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(PERSONS),
+                identifier_issuer: LOGIN.to_owned(),
+                identifier_type: "guid".to_owned(),
+                ..PartySection::default()
+            }],
+        ),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;

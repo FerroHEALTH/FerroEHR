@@ -204,7 +204,10 @@ pub(crate) fn router(
             return None;
         }
     };
-    let resolved = match ferroehr::config::auth::resolve(&config.auth.shared, &config.audience_bases()) {
+    let resolved = match ferroehr::config::auth::resolve(
+        &config.auth.shared,
+        &config.audience_bases(),
+    ) {
         Ok(resolved) => resolved,
         Err(error) => {
             tracing::error!(%error, "the SCIM endpoint is not mounted: [auth] does not resolve");
