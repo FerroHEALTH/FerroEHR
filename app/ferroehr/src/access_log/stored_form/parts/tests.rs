@@ -86,13 +86,13 @@ fn object_of(names: &'static [&'static str]) -> impl Strategy<Value = Value> {
         })
 }
 
-/// An element of the access details: a shared or own at-code, a code that
+/// An element of the access details: a shared or own id-code, a code that
 /// is no string, or none.
 fn element() -> impl Strategy<Value = Value> {
     let code = prop_oneof![
         proptest::sample::select(SHARED_DETAILS.to_vec()).prop_map(Value::from),
-        Just(Value::from("at0012")),
-        Just(Value::from("at0018")),
+        Just(Value::from("id22")),
+        Just(Value::from("id28")),
         any::<i64>().prop_map(Value::from),
         Just(Value::Null),
     ];
@@ -121,7 +121,7 @@ fn details() -> impl Strategy<Value = Value> {
             .prop_map(|(items, with_items, extra)| {
                 let mut tree = Map::new();
                 tree.insert("_type".to_owned(), Value::from("ITEM_TREE"));
-                tree.insert("archetype_node_id".to_owned(), Value::from("at0000"));
+                tree.insert("archetype_node_id".to_owned(), Value::from("id1"));
                 tree.insert("extra".to_owned(), extra);
                 if with_items {
                     tree.insert("items".to_owned(), Value::Array(items));
@@ -440,7 +440,7 @@ fn the_columns_and_both_parts_assemble_back() {
     let entry = read_entry();
     let written = parts(&entry, &[LINK]).expect("the parts write");
     assert!(
-        written.row.contains("at0018") && !written.row.contains("at0004"),
+        written.row.contains("id28") && !written.row.contains("id14"),
         "{}",
         written.row
     );

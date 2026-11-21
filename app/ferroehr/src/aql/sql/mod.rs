@@ -149,8 +149,11 @@ pub enum EhrAccessReaders {
     /// Every EHR's: an administrator, or the subject in their own EHR.
     #[default]
     Every,
+    /// Every EHR's, without the marking: a gate-keeper who is not the
+    /// subject, in the one EHR a query is pinned to.
+    EveryWithoutMarking,
     /// Only the EHRs whose settings name the caller a gate-keeper, judged
-    /// per settings class.
+    /// per settings class, without the marking.
     Only(Arc<crate::access_eval::class::Keepers>),
 }
 

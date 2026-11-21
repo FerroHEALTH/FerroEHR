@@ -131,6 +131,8 @@ CREATE TABLE audit_event_intake (
     ehr_id                 text,
     subject_namespace      text,
     subject_lookup_failed  boolean     NOT NULL DEFAULT false,
+    -- The HL7_Confidentiality level the access is recorded for review at.
+    review                 text        CHECK (review IN ('R', 'V')),
     -- What the category classification read.
     category_content       jsonb,
     -- The render policy the record is rendered under, and its ITI-81 search

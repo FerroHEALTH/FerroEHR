@@ -18,6 +18,7 @@ pub mod chain;
 pub mod chainer;
 pub mod checkpoint;
 pub mod config;
+pub mod definition;
 #[cfg(feature = "fhir")]
 pub mod details;
 pub mod entry;

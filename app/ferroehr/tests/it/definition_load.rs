@@ -119,7 +119,7 @@ async fn a_source_the_upload_refuses_is_refused_and_not_stored() {
 
 /// The default demographic definitions, each under `deploy/definitions/` in
 /// the order the binary seeds them.
-const DEFAULT_SET: [&str; 14] = [
+const DEFAULT_SET: [&str; 15] = [
     "professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
     "professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls",
     "care-team/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls",
@@ -133,6 +133,7 @@ const DEFAULT_SET: [&str; 14] = [
     "representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2.0.0.adls",
     "patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls",
     "patient/openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls",
+    "patient/openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0.adls",
     "provider/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls",
 ];
 
@@ -385,6 +386,42 @@ fn element(id: &str, name: &str, value: &serde_json::Value) -> serde_json::Value
 }
 
 /// A `PARTY_REF` to the party `id` of `class`.
+/// `patient` declared under the patient archetype `version` and the template
+/// `template_id`.
+fn as_version(patient: &serde_json::Value, version: &str, template_id: &str) -> serde_json::Value {
+    let archetype = format!("openEHR-DEMOGRAPHIC-PERSON.patient.{version}");
+    let mut held = patient.clone();
+    held["archetype_node_id"] = serde_json::json!(archetype);
+    held["archetype_details"]["archetype_id"]["value"] = serde_json::json!(archetype);
+    held["archetype_details"]["template_id"]["value"] = serde_json::json!(template_id);
+    held
+}
+
+/// A representation by the `PERSON` `me` held in its own `relationships`,
+/// archetyped by `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1`.
+fn inline_representation(me: &str) -> serde_json::Value {
+    let archetype = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1";
+    serde_json::json!({
+        "_type": "PARTY_RELATIONSHIP", "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.1.0" },
+        "name": { "_type": "DV_CODED_TEXT", "value": "Guardian",
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
+                "code_string": "at11" } },
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "id3", "name": dv_text("Details"),
+            "items": [element("id4", "Representation code", &serde_json::json!({
+                "_type": "DV_CODED_TEXT", "value": "represents",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID",
+                        "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
+                    "code_string": "represents" } }))] },
+        "source": party_ref("PERSON", me),
+        "target": party_ref("PERSON", "6a1f3c9e-2d7b-4e5a-8c0f-9b3d1e7a5c24")
+    })
+}
+
 fn party_ref(class: &str, id: &str) -> serde_json::Value {
     serde_json::json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": class,
         "id": { "_type": "HIER_OBJECT_ID", "value": id } })
@@ -496,14 +533,9 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
     assert_eq!(fit, TemplateFit::Complete);
 
     // NOTE: AM Overview, Semantic Overview; v2.0.0 drops the care relationship node (#6113).
-    let current = ferroehr::party_binding::shipped::PATIENT;
-    assert_eq!(current, "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0");
-    let mut held = patient.clone();
-    held["archetype_node_id"] = json!("openEHR-DEMOGRAPHIC-PERSON.patient.v2");
-    held["archetype_details"]["archetype_id"]["value"] =
-        json!("openEHR-DEMOGRAPHIC-PERSON.patient.v2");
-    held["archetype_details"]["template_id"]["value"] = json!(current);
-    let refused = svc.party_template_fit(&held, current).await;
+    let second = "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0";
+    let mut held = as_version(&patient, "v2", second);
+    let refused = svc.party_template_fit(&held, second).await;
     assert!(
         refused.is_err(),
         "v2.0.0 holds no care relationship node: {refused:?}"
@@ -512,10 +544,35 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
         relationships.retain(|relationship| relationship["archetype_node_id"] != "id32");
     }
     let fit = svc
-        .party_template_fit(&held, current)
+        .party_template_fit(&held, second)
         .await
         .expect("the patient without a care relationship fits v2.0.0");
     assert_eq!(fit, TemplateFit::Complete);
+
+    // NOTE: AM Overview, Semantic Overview; v3.0.0 drops the representation slot (#6170).
+    let current = ferroehr::party_binding::shipped::PATIENT;
+    assert_eq!(current, "openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0");
+    let representative = as_version(&held, "v3", current);
+    let fit = svc
+        .party_template_fit(&representative, current)
+        .await
+        .expect("the patient without a care relationship fits v3.0.0");
+    assert_eq!(fit, TemplateFit::Complete);
+    let mut inline = held.clone();
+    if let Some(relationships) = inline["relationships"].as_array_mut() {
+        relationships.push(inline_representation(me));
+    }
+    let fit = svc
+        .party_template_fit(&inline, second)
+        .await
+        .expect("v2.0.0 offers a representation slot");
+    assert_eq!(fit, TemplateFit::Complete);
+    let inline = as_version(&inline, "v3", current);
+    let refused = svc.party_template_fit(&inline, current).await;
+    assert!(
+        refused.is_err(),
+        "v3.0.0 holds no representation slot: {refused:?}"
+    );
 
     let provider_id = "openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0";
     let provider = json!({
@@ -618,6 +675,7 @@ fn a_shipped_definition_never_changes_under_its_id() {
         .chain(&ferroehr::party_binding::policy::DEFINITIONS)
         .chain(&ferroehr::access_policy::DEFINITIONS)
         .chain(&ferroehr::service::ehr::access_settings::DEFINITIONS)
+        .chain(&ferroehr::access_log::definition::DEFINITIONS)
         .copied()
         .collect();
     for (name, text) in &carried {

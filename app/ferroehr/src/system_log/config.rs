@@ -239,8 +239,17 @@ pub struct AuditConfig {
     /// (`FERROEHR__AUDIT__ENTERPRISE_SITE_ID`).
     pub enterprise_site_id: Option<String>,
     /// Audit source id → `AuditSourceID` and the destination participant
-    /// (`FERROEHR__AUDIT__SOURCE_ID`).
-    pub source_id: String,
+    /// (`FERROEHR__AUDIT__SOURCE_ID`). Unset, it is `[api] system_id`, which
+    /// names this system and never the product (#6143).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_id: Option<String>,
+    /// The `codeSystemName` of the deployment's own role vocabulary on a DICOM
+    /// `RoleIDCode`: the RBAC roles a caller held, which no published code
+    /// system names (`FERROEHR__AUDIT__ROLE_CODE_SYSTEM`). Unset, it is
+    /// `[api] system_id`. No standard governs the name: our own design.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role_code_system: Option<String>,
     /// Fill value for empty mandatory fields
     /// (`FERROEHR__AUDIT__VALUE_IF_MISSING`).
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
@@ -335,12 +344,35 @@ pub struct AuditConfig {
     pub access_log: crate::access_log::config::AccessLogConfig,
 }
 
+impl AuditConfig {
+    /// The `AuditSourceID`: `[audit] source_id`, or the system identifier
+    /// the assembled configuration fills it with; the service's default
+    /// system identifier in a configuration built without one.
+    #[must_use]
+    pub fn source_id(&self) -> &str {
+        self.source_id
+            .as_deref()
+            .unwrap_or(crate::service::DEFAULT_SYSTEM_ID)
+    }
+
+    /// The `codeSystemName` of the deployment's role vocabulary:
+    /// `[audit] role_code_system`, or the system identifier as
+    /// [`Self::source_id`] falls back.
+    #[must_use]
+    pub fn role_code_system(&self) -> &str {
+        self.role_code_system
+            .as_deref()
+            .unwrap_or(crate::service::DEFAULT_SYSTEM_ID)
+    }
+}
+
 impl Default for AuditConfig {
     fn default() -> Self {
         Self {
             enabled: true,
             enterprise_site_id: None,
-            source_id: "ferroehr".to_owned(),
+            source_id: None,
+            role_code_system: None,
             value_if_missing: "UNKNOWN".to_owned(),
             suppress_login_events: true,
             resolve_subject: true,

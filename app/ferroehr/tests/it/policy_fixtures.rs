@@ -49,6 +49,7 @@ pub(crate) async fn as_admin<F: Future>(fut: F) -> F::Output {
         subject: "admin".to_owned(),
         id_type: "oauth2",
         issuer: Some("https://login.example".to_owned()),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: None,
         person: false,
         party: None,

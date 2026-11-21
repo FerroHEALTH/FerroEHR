@@ -241,7 +241,8 @@ async fn contribution_versions_are_signed() {
             false,
         )
         .await
-        .expect("get_contribution");
+        .expect("get_contribution")
+        .body;
     let ovid = contribution["versions"][0]["id"]["value"]
         .as_str()
         .unwrap()
@@ -286,7 +287,8 @@ async fn client_supplied_signature_is_stored_verbatim() {
             false,
         )
         .await
-        .expect("get_contribution");
+        .expect("get_contribution")
+        .body;
     let ovid = contribution["versions"][0]["id"]["value"]
         .as_str()
         .unwrap()
@@ -638,7 +640,8 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
             false,
         )
         .await
-        .expect("get_contribution");
+        .expect("get_contribution")
+        .body;
     let c_ovid = contribution["versions"][0]["id"]["value"]
         .as_str()
         .expect("contribution version uid")

@@ -173,7 +173,7 @@ services:
       - --operation
       - scim_provision
       - --element
-      - binding_issuer=urn:ferroehr:basic-user
+      - binding_issuer=urn:example:basic-user
       - --element
       - token_scope=ferroehr/scim
     cap_drop: [ALL]

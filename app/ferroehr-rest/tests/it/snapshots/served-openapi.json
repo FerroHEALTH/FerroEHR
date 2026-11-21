@@ -7964,6 +7964,14 @@
         "responses": {
           "200": {
             "description": "The bare EHR_ACCESS with its `uid`, its `settings` the `ACCESS_DIRECTIVE_SETTINGS` of the EHR's directives, as canonical JSON. `ETag` is the weak `W/\"<version_uid>\"` of the version served and `Last-Modified` its commit instant.",
+            "headers": {
+              "redacted": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`marking` when the caller is a gate-keeper who is not the subject, who reads the settings without their marking and a version without its `signature`."
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {}
@@ -8063,6 +8071,14 @@
         "responses": {
           "200": {
             "description": "The bare EHR_ACCESS of that version, its weak `ETag` and its `Last-Modified`.",
+            "headers": {
+              "redacted": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`marking` when the caller is a gate-keeper who is not the subject, who reads the settings without their marking and a version without its `signature`."
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {}
@@ -8417,6 +8433,14 @@
         "responses": {
           "200": {
             "description": "The ORIGINAL_VERSION or IMPORTED_VERSION wrapping the EHR_ACCESS, with its commit audit, its weak `ETag` and its `Last-Modified`.",
+            "headers": {
+              "redacted": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`marking` when the caller is a gate-keeper who is not the subject, who reads the settings without their marking and a version without its `signature`."
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {}
@@ -8516,6 +8540,14 @@
         "responses": {
           "200": {
             "description": "The ORIGINAL_VERSION or IMPORTED_VERSION of that uid, with its weak `ETag` and its `Last-Modified`.",
+            "headers": {
+              "redacted": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`marking` when the caller is a gate-keeper who is not the subject, who reads the settings without their marking and a version without its `signature`."
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {}

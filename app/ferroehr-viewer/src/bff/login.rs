@@ -12,10 +12,6 @@
 
 use ferrohealth_session::record::{Credential, Session};
 
-/// The `DV_IDENTIFIER.issuer` the CDR stamps on a login whose credential it
-/// holds itself (HTTP Basic).
-const LOCAL_ISSUER: &str = "ferroehr";
-
 /// A login the CDR authenticates: its issuer and its id under that issuer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Login {
@@ -24,22 +20,28 @@ pub struct Login {
 }
 
 impl Login {
-    /// The Basic login `username`, which the CDR issues itself.
+    /// The Basic login `username`, which the CDR issues itself under
+    /// `basic_issuer`, its `[api] basic_issuer` (`[cdr] basic_issuer`).
     #[must_use]
-    pub fn basic(username: impl Into<String>) -> Self {
+    pub fn basic(username: impl Into<String>, basic_issuer: impl Into<String>) -> Self {
         Self {
-            issuer: LOCAL_ISSUER.to_owned(),
+            issuer: basic_issuer.into(),
             id: username.into(),
         }
     }
 
     /// The login of `session` whose OpenID Provider is `oidc_issuer`: the
     /// provider and the verified `sub` of an OpenID Connect sign-in, or
-    /// `ferroehr` and the user name of a Basic one; `None` for a bearer
+    /// `basic_issuer` and the user name of a Basic one; `None` for a bearer
     /// session without a `sub`.
     #[must_use]
-    pub fn of(session: &Session, oidc_issuer: &str) -> Option<Self> {
-        Self::from_credential(session.credential(), session.subject(), oidc_issuer)
+    pub fn of(session: &Session, oidc_issuer: &str, basic_issuer: &str) -> Option<Self> {
+        Self::from_credential(
+            session.credential(),
+            session.subject(),
+            oidc_issuer,
+            basic_issuer,
+        )
     }
 
     /// The login a session holding `credential` and `subject` signs in as.
@@ -47,9 +49,10 @@ impl Login {
         credential: &Credential,
         subject: Option<&str>,
         oidc_issuer: &str,
+        basic_issuer: &str,
     ) -> Option<Self> {
         match credential {
-            Credential::Basic { username, .. } => Some(Self::basic(username.clone())),
+            Credential::Basic { username, .. } => Some(Self::basic(username.clone(), basic_issuer)),
             Credential::Bearer(_) => subject.map(|subject| Self {
                 issuer: oidc_issuer.to_owned(),
                 id: subject.to_owned(),
@@ -82,16 +85,24 @@ mod tests {
             username: "ferroehr".to_owned(),
             password: Secret::new("x".to_owned()),
         };
-        let login =
-            Login::from_credential(&basic, None, "https://idp.example.org").expect("a Basic login");
-        assert_eq!((login.issuer(), login.id()), ("ferroehr", "ferroehr"));
+        let login = Login::from_credential(&basic, None, "https://idp.example.org", "cdr.example")
+            .expect("a Basic login");
+        assert_eq!((login.issuer(), login.id()), ("cdr.example", "ferroehr"));
         let bearer = Credential::Bearer(Secret::new("t".to_owned()));
-        let login = Login::from_credential(&bearer, Some("aca7c611"), "https://idp.example.org")
-            .expect("a bearer login");
+        let login = Login::from_credential(
+            &bearer,
+            Some("aca7c611"),
+            "https://idp.example.org",
+            "cdr.example",
+        )
+        .expect("a bearer login");
         assert_eq!(
             (login.issuer(), login.id()),
             ("https://idp.example.org", "aca7c611")
         );
-        assert!(Login::from_credential(&bearer, None, "https://idp.example.org").is_none());
+        assert!(
+            Login::from_credential(&bearer, None, "https://idp.example.org", "cdr.example")
+                .is_none()
+        );
     }
 }

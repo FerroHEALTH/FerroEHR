@@ -1,0 +1,1 @@
+- A controller rule limits attested callers by data scope and confidentiality: an actor scope with `relationship: care` and `care_path: attested` names them, so a deny rule keeps them from the data its scope names, and a record marked `R` or `V` is refused to them `refused-confidentiality` unless a permit rule for that path clears the level (#6078).

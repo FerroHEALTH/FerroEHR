@@ -203,7 +203,7 @@ whose tag carries both fixes, was deployed.
 
 The demo login `ferroehr` is a Basic user, and a Basic user is a person: it
 binds the `PERSON` that carries its binding key `ferroehr` under
-`urn:ferroehr:basic-user` (`[[authz.party_binding.basic_user]]`), and every
+`urn:example:basic-user` (`[[authz.party_binding.basic_user]]`), and every
 request is refused `refused-unbound` while none does. The nightly wipe deletes
 every `PERSON`, so the compose file's `ferroehr-provision` one-shot provisions
 it again the way an identity provider provisions people: as the

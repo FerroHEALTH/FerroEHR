@@ -40,12 +40,12 @@ pub const UNDER_CARE_OF: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_ca
 pub const REPRESENTATION: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2";
 
 /// The patient's `PERSON` template.
-pub const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0";
+pub const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0";
 
 /// The default demographic definitions, each its file name and its ADL 2
 /// text, in the order the book's "Default demographic definitions" page
 /// lists them.
-pub const DEFINITIONS: [(&str, &str); 14] = [
+pub const DEFINITIONS: [(&str, &str); 15] = [
     (
         "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
         include_str!(
@@ -122,6 +122,12 @@ pub const DEFINITIONS: [(&str, &str); 14] = [
         "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls",
         include_str!(
             "../../../../deploy/definitions/patient/openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls"
+        ),
+    ),
+    (
+        "openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0.adls",
+        include_str!(
+            "../../../../deploy/definitions/patient/openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0.adls"
         ),
     ),
     (
