@@ -51,6 +51,7 @@ pub mod intake;
 pub(crate) mod lax;
 #[cfg(feature = "fhir")]
 pub mod outbox;
+#[cfg(feature = "fhir")]
 mod review;
 #[cfg(feature = "fhir")]
 mod search_page;
