@@ -254,7 +254,7 @@ pub fn target(
     policy: Option<&AccessPolicy>,
     kind: CarerKind,
     target: Uuid,
-    provider: Option<Uuid>,
+    provider: Uuid,
 ) -> Result<(), TargetRefusal> {
     if kind != CarerKind::Organisation {
         return Ok(());
@@ -262,7 +262,7 @@ pub fn target(
     let controller = policy
         .and_then(|p| party_key(&p.controller))
         .and_then(|k| container(&k));
-    if controller == Some(target) || provider == Some(target) {
+    if controller == Some(target) || provider == target {
         return Err(TargetRefusal::Controller(target));
     }
     let named = policy
@@ -483,11 +483,12 @@ mod tests {
         let ward = Uuid::parse_str(WARD).expect("a uuid");
         let controller = Uuid::parse_str(CONTROLLER).expect("a uuid");
         let other = Uuid::now_v7();
+        let provider = Uuid::now_v7();
         for kind in [CarerKind::Person, CarerKind::Role, CarerKind::Group] {
-            assert_eq!(target(None, kind, other, None), Ok(()), "{kind:?}");
+            assert_eq!(target(None, kind, other, provider), Ok(()), "{kind:?}");
         }
         assert_eq!(
-            target(Some(&policy("")), CarerKind::Organisation, ward, None),
+            target(Some(&policy("")), CarerKind::Organisation, ward, provider),
             Err(TargetRefusal::NotATeamTarget(ward)),
             "void team_targets names no unit"
         );
@@ -497,20 +498,20 @@ mod tests {
                 "id": {{ "_type": "HIER_OBJECT_ID", "value": "{WARD}" }} }}]"#
         ));
         assert_eq!(
-            target(Some(&units), CarerKind::Organisation, ward, None),
+            target(Some(&units), CarerKind::Organisation, ward, provider),
             Ok(())
         );
         assert_eq!(
-            target(Some(&units), CarerKind::Organisation, ward, Some(ward)),
+            target(Some(&units), CarerKind::Organisation, ward, ward),
             Err(TargetRefusal::Controller(ward)),
             "the provider whose care it is"
         );
         assert_eq!(
-            target(Some(&units), CarerKind::Organisation, controller, None),
+            target(Some(&units), CarerKind::Organisation, controller, provider),
             Err(TargetRefusal::Controller(controller))
         );
         assert_eq!(
-            target(Some(&units), CarerKind::Organisation, other, None),
+            target(Some(&units), CarerKind::Organisation, other, provider),
             Err(TargetRefusal::NotATeamTarget(other))
         );
     }
