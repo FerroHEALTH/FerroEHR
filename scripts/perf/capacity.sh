@@ -136,6 +136,10 @@
 #                        (default "50 100 200 500 1000 1500 2000 3000")
 #   CAPACITY_REPEAT      the runs of each step (default 1); a step that
 #                        reports a p99 a target is judged on runs at least 3
+#   CAPACITY_CARE_WEIGHT the care_commit entries in each round of the mix
+#                        (default 0, the mix without relationship writes): a
+#                        weight above 0 puts an ADT feed's care relationship
+#                        commits beside the reads (#6074)
 #   CAPACITY_CONTINUE    1: a sweep runs every rate past a failed step, and
 #                        records each step's outcome (default 0)
 #   CAPACITY_FRESH       1: each run of a step starts from the snapshot
@@ -193,6 +197,8 @@ readonly PRIME_WIDTH="${CAPACITY_PRIME_WIDTH:-32}"
 readonly REPEAT="${CAPACITY_REPEAT:-1}"
 [[ "$REPEAT" =~ ^[1-9][0-9]*$ ]] || { echo "capacity: CAPACITY_REPEAT must be a positive count" >&2; exit 2; }
 readonly CONTINUE="${CAPACITY_CONTINUE:-0}"
+readonly CARE_WEIGHT="${CAPACITY_CARE_WEIGHT:-0}"
+[[ "$CARE_WEIGHT" =~ ^[0-9]+$ ]] || { echo "capacity: CAPACITY_CARE_WEIGHT must be a count" >&2; exit 2; }
 readonly FRESH="${CAPACITY_FRESH:-0}"
 readonly ARM="${CAPACITY_ARM:-}"
 [[ "$ARM" =~ ^[A-Za-z0-9._-]*$ ]] || { echo "capacity: CAPACITY_ARM takes letters, digits, '.', '_' and '-'" >&2; exit 2; }
@@ -216,7 +222,9 @@ source "$CAPACITY_ROOT/scripts/perf/capacity-measure.sh"
 source "$CAPACITY_ROOT/scripts/perf/capacity-report.sh"
 
 # The groups a sweep takes one by one, each with its caller; the mix takes
-# them at once, each as many times per round as its weight.
+# them at once, each as many times per round as its weight. aql_caseload
+# reads the newest compositions of the clinician's whole caseload, and
+# care_commit writes care relationships as an ADT feed does (#6074).
 #   group               weight  caller
 readonly GROUPS_TABLE="
 ehr_read             3  clinician
@@ -225,11 +233,16 @@ composition_commit   3  clinician
 aql_ehr              3  clinician
 aql_chart            1  clinician
 aql_population       1  clinician
+aql_caseload         0  clinician
 access_log_read      1  administrator
 party_read           2  administrator
+care_commit          $CARE_WEIGHT  administrator
 export               0  clinician
 health               0  none
 "
+# The newest compositions of every EHR the clinician's team cares for.
+readonly CASELOAD_AQL="SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+ORDER BY c/context/start_time/value DESC LIMIT 20"
 
 cap_die() {
   echo "capacity: $*" >&2
@@ -667,7 +680,9 @@ seed_capacity() {
       "$SERVER_URL" basic-users urn:example:basic-user --roles USER clinician >/dev/null
     seed "$CAPACITY_ROOT"
     printf '%s\n' "${SEED[@]}" "NAMED_PROFESSIONAL=$NAMED_PROFESSIONAL" \
-      "REPRESENTATIVE=$REPRESENTATIVE" >"$STATE/seed.env"
+      "REPRESENTATIVE=$REPRESENTATIVE" "ACCESS_TEAM=$ACCESS_TEAM" \
+      "CARE_PROVIDER=$CARE_PROVIDER" "PARTICIPATION_TERMINOLOGY=$PARTICIPATION_TERMINOLOGY" \
+      >"$STATE/seed.env"
   fi
   # The parties the directives name, for a seed that resumes.
   NAMED_PROFESSIONAL=$(seed_value NAMED_PROFESSIONAL)
@@ -740,6 +755,31 @@ plan_request() {
   echo
 }
 
+# care_commit_requests <auth> <body>: one care relationship from the patient
+# of each EHR the commits take to the clinician's team, in the role RESP
+# under the provider the clinician acts for, as access_seed writes them. The
+# step sends each entry again on every round, so each patient gains a
+# relationship per round, as an ADT feed adds one per encounter, and every
+# commit moves the party domain's facts revision (#6074).
+care_commit_requests() {
+  local auth="$1" body="$2" team patient i=0 ids
+  team=$(seed_value ACCESS_TEAM)
+  CARE_PROVIDER=$(seed_value CARE_PROVIDER)
+  PARTICIPATION_TERMINOLOGY=$(seed_value PARTICIPATION_TERMINOLOGY)
+  [[ -n "$team" && -n "$CARE_PROVIDER" && -n "$PARTICIPATION_TERMINOLOGY" ]] \
+    || cap_die "the seed records no care team or provider: seed again with a tree that writes care relationships of their own"
+  ids=$(paste -sd, "$STATE/writes.ids")
+  while read -r patient; do
+    care_of_json "$patient" "$team" >"$body.$i"
+    plan_request care_commit POST "$EXT/demographic/party_relationship" 201 "$auth" \
+      "$body.$i" application/json
+    rm -f "$body.$i"
+    i=$((i + 1))
+  done < <(cap_sql "SELECT subject_id FROM clinical.ehr WHERE id = ANY('{$ids}'::uuid[]) \
+    AND subject_id IS NOT NULL ORDER BY id")
+  ((i > 0)) || cap_die "no EHR the commits take names a patient"
+}
+
 # group_requests <group>: the entries of one group, spread over the seeded
 # EHRs where the group names one.
 group_requests() {
@@ -782,6 +822,14 @@ group_requests() {
     plan_request aql_population POST "$BASE/query/aql" 200 "$clinician" "$body" application/json
     rm -f "$body"
     ;;
+  aql_caseload)
+    jq -cn --arg q "$CASELOAD_AQL" '{q: $q}' >"$body"
+    plan_request aql_caseload POST "$BASE/query/aql" 200 "$clinician" "$body" application/json
+    rm -f "$body"
+    ;;
+  care_commit)
+    care_commit_requests "$admin" "$body"
+    ;;
   access_log_read)
     plan_request access_log_read GET "/ferroehr/rest/fhir/r4/AuditEvent?date=ge2026-01-01&_count=20" \
       200 "$admin"
@@ -808,7 +856,7 @@ group_weight() { # <group>
 # group_slo <group>: its p99 SLO in milliseconds.
 group_slo() {
   case "$1" in
-  aql_population | access_log_read | export) echo "$SLO_SLOW_MS" ;;
+  aql_population | aql_caseload | access_log_read | export) echo "$SLO_SLOW_MS" ;;
   *) echo "$SLO_MS" ;;
   esac
 }
