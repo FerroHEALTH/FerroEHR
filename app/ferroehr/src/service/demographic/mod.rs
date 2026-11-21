@@ -86,6 +86,7 @@ pub mod user_write;
 mod api;
 mod care_role;
 mod care_visible;
+mod care_writer;
 mod contact_erasure;
 mod contribution;
 mod party;

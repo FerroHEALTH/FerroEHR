@@ -201,14 +201,34 @@ pub fn assemble_from<S: std::hash::BuildHasher>(
     Ok((loaded, config))
 }
 
-/// Resolves every `*_file` secret sibling of `config`.
+/// Resolves every `*_file` secret sibling of `config` and the identifiers
+/// derived from another key ([`derive_identifiers`]).
 fn finish(mut config: FerroEhrConfig) -> Result<FerroEhrConfig, ConfigErrors> {
     let mut errors = Vec::new();
     resolve_secret_files(&mut config, &mut errors);
+    derive_identifiers(&mut config);
     if errors.is_empty() {
         Ok(config)
     } else {
         Err(ConfigErrors(errors))
+    }
+}
+
+/// Fills an unset `[api] system_id` with the host of `[server]
+/// public_base_url`, so the system identifier this deployment writes into its
+/// records is its own and no default names the product (#6143). No openEHR
+/// spec governs configuration: our own design.
+fn derive_identifiers(config: &mut FerroEhrConfig) {
+    if config.api.system_id.is_none()
+        && let Some(host) = config
+            .server
+            .public_base_url
+            .as_ref()
+            // NOTE: a URL that does not parse is refused by the validation of `server.public_base_url`.
+            .and_then(|url| url::Url::parse(url.expose()).ok())
+            .and_then(|url| url.host_str().map(str::to_owned))
+    {
+        config.api.system_id = Some(host);
     }
 }
 

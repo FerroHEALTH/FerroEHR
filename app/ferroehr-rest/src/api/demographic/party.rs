@@ -56,7 +56,7 @@ pub(crate) async fn create(
             kind,
             crate::overview::committal::write_request(
                 h,
-                ferroehr::versioning::committer::request_committer(),
+                ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
                 body,
                 None,
             )?,
@@ -109,7 +109,7 @@ pub(crate) async fn update(
     let pending_tags = item_tags::pending(h)?;
     let request = crate::overview::committal::write_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         body,
         None,
     )?;
@@ -377,7 +377,7 @@ pub(crate) async fn delete(
     let p = parts.decode(AgentDeleteParams::from_request, AgentDeleteParams::PARAMS)?;
     let request = crate::overview::committal::delete_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         None,
     )?;
     // NOTE: the preceding version comes from the path `uid_based_id`, so

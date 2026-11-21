@@ -682,7 +682,8 @@ async fn audited(
     FerroEhrService,
     Option<ferroehr::system_log::sender::AuditHandle>,
 )> {
-    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await?;
+    let (sender, handle) =
+        crate::start_audit(&config.audit_section(), &pools.clinical, &pools.audit).await?;
     let mut service = judged(pools, config).await?;
     if let Some(sender) = sender {
         service = service.with_audit(sender);

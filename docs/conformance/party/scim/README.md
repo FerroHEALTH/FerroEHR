@@ -39,9 +39,9 @@ no two clients share a `binding_issuer`:
 
 | Client | `binding_issuer` | Lane | Provisions |
 |---|---|---|---|
-| `basic-users` | `urn:ferroehr:basic-user` | every lane on `docker/ferroehr.dev.toml` | `ferroehr`, `ferroehr-admin`, `ferroehr-readonly` |
-| `cnf-smart` | `urn:ferroehr:cnf-smart-login` | `docker/sut-smart.yml` | `cnf-smart-app`, the subject the conformance runner mints |
-| `keycloak-dev` | `urn:ferroehr:keycloak-dev-login` | `docker/viewer/e2e-env.yml` | the dev realm's users, by their fixed ids |
+| `basic-users` | `urn:example:basic-user` | every lane on `docker/ferroehr.dev.toml` | `ferroehr`, `ferroehr-admin`, `ferroehr-readonly` |
+| `cnf-smart` | `urn:example:cnf-smart-login` | `docker/sut-smart.yml` | `cnf-smart-app`, the subject the conformance runner mints |
+| `keycloak-dev` | `urn:example:keycloak-dev-login` | `docker/viewer/e2e-env.yml` | the dev realm's users, by their fixed ids |
 
 Each lane starts `serve`, then runs `scripts/scim-provision.sh` with its
 client, its binding issuer and its users.

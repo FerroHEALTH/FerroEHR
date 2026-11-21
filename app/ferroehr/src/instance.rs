@@ -267,7 +267,7 @@ mod tests {
         own.database.max_connections = Some(7);
         assert_eq!(of(&base), of(&own));
         let mut shared = base.clone();
-        shared.api.system_id = "another.example.org".to_owned();
+        shared.api.system_id = Some("another.example.org".to_owned());
         assert_ne!(of(&base).configuration, of(&shared).configuration);
         assert_eq!(of(&base).signing_key, "digest");
     }

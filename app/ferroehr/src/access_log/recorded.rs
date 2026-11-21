@@ -65,7 +65,7 @@ pub enum RecordedError {
     Time,
     /// The entry holds no details: it was not written by this build's
     /// recording path, such as an entry imported from another system.
-    #[error("the entry holds no FerroEHR access details")]
+    #[error("the entry holds no access log details")]
     NoDetails,
 }
 
@@ -123,6 +123,7 @@ pub fn details(
         );
     }
     tree.flag(Detail::SubjectLookupFailed, event.subject_lookup_failed);
+    tree.level(Detail::Review, event.review);
     // NOTE: GDPR Art 5(1)(c) (`docs/law/eu/gdpr/text.html`), a read of the log names its
     // search by digest, so the entry keeps no object the search named.
     if event.entry != EntryScope::LogRead && core.object_id() != event.object_id.as_deref() {
@@ -219,7 +220,7 @@ const fn outcome_indicator(outcome: EventOutcome) -> u64 {
 /// position `chain_seq`.
 ///
 /// # Errors
-/// [`RecordedError::NoDetails`] for an entry without FerroEHR's access
+/// [`RecordedError::NoDetails`] for an entry without access log
 /// details, [`RecordedError::Details`] when they do not read, and
 /// [`RecordedError::Value`] for a value this build does not write.
 pub(crate) fn stored(
@@ -356,6 +357,7 @@ fn accessor_and_access(
     }
     event.ehr_id = text(Detail::EhrId)?.or_else(|| core.ehr_id().map(str::to_owned));
     event.subject_lookup_failed = details.flag(Detail::SubjectLookupFailed)?;
+    event.review = details.level(Detail::Review)?;
     event.object_id = text(Detail::ObjectId)?.or_else(|| core.object_id().map(str::to_owned));
     event.purpose = text(Detail::Purpose)?.or_else(|| core.purpose(token_purposes));
     event.legal_basis = text(Detail::LegalBasis)?;

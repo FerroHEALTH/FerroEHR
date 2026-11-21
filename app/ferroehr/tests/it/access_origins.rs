@@ -216,6 +216,7 @@ async fn a_granted_origin_stamps_a_direct_commit() {
         subject: "dr.jansen".to_owned(),
         id_type: "oauth2",
         issuer: Some("https://idp.example".to_owned()),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: Some(client.to_owned()),
         person: false,
         party: None,

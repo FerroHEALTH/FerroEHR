@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The login of a record's person: a `persons` caller whose one `PERSON`
-//! carries no professional and no representative marker.
+//! carries no professional and no representative marker; and the login of a
+//! representative whose one `PERSON` carries the representative marker alone.
 //!
 //! The shared binding answers such a login `wrong_marker`, since a `Person`
 //! or a `Delegated` caller needs a professional party there. An identity bound to a
@@ -13,8 +14,11 @@
 //! is never looked up by the shared binding, so FerroEHR looks its login up
 //! as a person's ([`as_person`]): the binding stays the one source of own
 //! access, and the token's reading is only checked against it.
+//! A representative's `PERSON` is answered `wrong_marker` too: FerroEHR
+//! admits it for a subject its stored representation names, and for its
+//! own record as the person themself ([`binds_a_representative`]).
 //! No openEHR spec governs resolving a login to a party: our own design
-//! (#6106, #6080, #6146).
+//! (#6106, #6080, #6146, #6147, #6167).
 
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::{Marker, Outcome, PartyRef};
@@ -44,6 +48,46 @@ pub(in crate::extensions::access::authn) fn binds_the_person(
             needed: Marker::Professional,
         } if party.type_name() == "PERSON" && !markers.professional && !markers.representative
     )
+}
+
+/// Whether `outcome`, the binding of a caller of `kind`, binds a
+/// representative FerroEHR admits from its own facts: a plain `persons`
+/// login, through a first-party client or a SMART app the CDR grants
+/// `act_for_persons`, never a guest nor an RFC 8693 actor's, whose one live
+/// `PERSON` carries the representative marker alone.
+///
+/// The token carries no representation, so the request is admitted only for
+/// a subject a live stored representation names this `PERSON` for, or as
+/// the person themself when the subject is this `PERSON`
+/// ([`super::super::portal`]), as own access is read from the binding
+/// alone. No openEHR spec governs resolving a login to a party: our own
+/// design (#6147, #6167).
+pub(in crate::extensions::access::authn) fn binds_a_representative(
+    kind: &CallerKind,
+    outcome: &Outcome,
+) -> bool {
+    matches!(
+        kind,
+        CallerKind::Person | CallerKind::Delegated { actor: None }
+    ) && matches!(
+        outcome,
+        Outcome::WrongMarker {
+            party,
+            markers,
+            needed: Marker::Professional,
+        } if party.type_name() == "PERSON" && !markers.professional && markers.representative
+    )
+}
+
+/// The `PERSON` the login binding bound `caller` to as a representative
+/// ([`binds_a_representative`]); `None` for any other caller.
+pub(crate) fn representative_person(caller: &Caller) -> Option<&PartyRef> {
+    let outcome = caller.party()?;
+    if binds_a_representative(caller.kind(), outcome) {
+        outcome.party()
+    } else {
+        None
+    }
 }
 
 /// The `PERSON` the login binding bound `caller` to as the person themself
@@ -140,13 +184,14 @@ const fn wrong_marker() -> AuthError {
 }
 
 /// The roles `caller` holds: `honoured`, or none for the person themself,
-/// who reads their record for who they are and holds no professional right
-/// (EHDS Art. 3).
+/// who reads their record for who they are, and for a representative the
+/// binding bound, who reads it for whom they represent; neither holds a
+/// professional right (EHDS Art. 3 and Art. 4(2)).
 pub(in crate::extensions::access::authn) fn roles(
     caller: &Caller,
     honoured: impl FnOnce() -> Vec<String>,
 ) -> Vec<String> {
-    if own_person(caller).is_some() {
+    if own_person(caller).is_some() || representative_person(caller).is_some() {
         Vec::new()
     } else {
         honoured()
@@ -214,6 +259,50 @@ mod tests {
             &CallerKind::Delegated { actor: None },
             &professional
         ));
+    }
+
+    #[test]
+    fn a_person_or_delegated_login_on_a_representative_person_binds_a_representative() {
+        let rep = Markers {
+            professional: false,
+            representative: true,
+        };
+        let outcome = wrong("PERSON", rep, Marker::Professional);
+        assert!(binds_a_representative(&CallerKind::Person, &outcome));
+        assert!(binds_a_representative(
+            &CallerKind::Delegated { actor: None },
+            &outcome
+        ));
+        assert!(!binds_a_representative(&CallerKind::Patient, &outcome));
+        assert!(!binds_a_representative(
+            &CallerKind::Guest(Box::new(CallerKind::Person)),
+            &outcome
+        ));
+        assert!(!binds_a_representative(
+            &CallerKind::Person,
+            &wrong("AGENT", rep, Marker::Professional)
+        ));
+        assert!(!binds_a_representative(
+            &CallerKind::Person,
+            &wrong("PERSON", rep, Marker::Representative)
+        ));
+    }
+
+    #[test]
+    fn a_plain_or_professional_person_binds_no_representative() {
+        for markers in [
+            Markers::default(),
+            Markers {
+                professional: true,
+                representative: true,
+            },
+        ] {
+            let outcome = wrong("PERSON", markers, Marker::Professional);
+            assert!(
+                !binds_a_representative(&CallerKind::Person, &outcome),
+                "{markers:?}"
+            );
+        }
     }
 
     #[test]

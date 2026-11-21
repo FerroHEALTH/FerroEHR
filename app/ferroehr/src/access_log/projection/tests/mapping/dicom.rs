@@ -98,7 +98,7 @@ fn dicom_accessor_rows(f: &Dicom) -> Vec<Row> {
     vec![
         (
             "accessor.roles: RoleIDCode in the deployment's role vocabulary",
-            xml.contains(r#"csd-code="clinician" codeSystemName="urn:ferroehr:role""#),
+            xml.contains(r#"csd-code="clinician" codeSystemName="cdr.example.org""#),
         ),
         (
             "accessor.party and binding: details of the ehds-accessor object",
@@ -173,7 +173,7 @@ fn dicom_object_rows(f: &Dicom) -> Vec<Row> {
             "retention, security_labels, link and other_details, loss: none is written",
             !xml.contains("retention")
                 && !xml.contains("ParticipantObjectSensitivity")
-                && !xml.contains("ferroehr_access_details"),
+                && !xml.contains(crate::access_log::definition::ARCHETYPE),
         ),
     ]
 }

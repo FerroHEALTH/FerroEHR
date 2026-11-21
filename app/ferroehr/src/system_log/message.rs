@@ -27,7 +27,7 @@ use crate::system_log::codes::{
     self, Code, NETWORK_ACCESS_POINT_IP, OBJ_ID_ENTITY_OTHER, OBJECT_ROLE_PATIENT,
     OBJECT_ROLE_QUERY, OBJECT_TYPE_OTHER, OBJECT_TYPE_PERSON, OBJECT_TYPE_SYSTEM,
 };
-use crate::system_log::event::{ActingMode, AuditEvent, EventType};
+use crate::system_log::event::{ActingMode, AuditEvent, EventType, REVIEW_DETAIL};
 
 /// The server-side identity shared by every emitted record.
 ///
@@ -38,6 +38,9 @@ use crate::system_log::event::{ActingMode, AuditEvent, EventType};
 pub struct AuditContext {
     /// `AuditSourceID` and the destination `ActiveParticipant.UserID`.
     pub source_id: String,
+    /// The `codeSystemName` of the deployment's role vocabulary on a
+    /// `RoleIDCode` (`[audit] role_code_system`).
+    pub role_code_system: String,
     /// `AuditEnterpriseSiteID`.
     pub enterprise_site_id: String,
     /// This node's `NetworkAccessPointID` (destination participant).
@@ -48,11 +51,6 @@ pub struct AuditContext {
     #[cfg(feature = "fhir")]
     pub recording: crate::system_log::fhir::Recording,
 }
-
-/// The `codeSystemName` of the deployment's own role vocabulary on a
-/// `RoleIDCode`: the RBAC roles a caller held, which no published code system
-/// names.
-const ROLE_VOCABULARY: &str = "urn:ferroehr:role";
 
 /// Builds the DICOM audit message of a resolved [`AuditEvent`], with the server
 /// [`AuditContext`] and the optionally-resolved patient subject id (`None` →
@@ -78,7 +76,13 @@ pub fn build(
     } else {
         (codes::ROLE_SOURCE, codes::ROLE_DESTINATION)
     };
-    let mut participants = requesting_participants(event, user_id, client_ip, client_role);
+    let mut participants = requesting_participants(
+        event,
+        user_id,
+        client_ip,
+        client_role,
+        &ctx.role_code_system,
+    );
     participants.push(ActiveParticipant {
         user_id: nonempty(&ctx.source_id, missing),
         alternative_user_id: None,
@@ -184,11 +188,12 @@ fn requesting_participants(
     user_id: String,
     client_ip: String,
     client_role: Code,
+    role_code_system: &str,
 ) -> Vec<ActiveParticipant> {
     let roles: Vec<CodedValue> = event
         .roles
         .iter()
-        .map(|role| CodedValue::new(role, ROLE_VOCABULARY, role))
+        .map(|role| CodedValue::new(role, role_code_system, role))
         .collect();
     let professional = event
         .actor
@@ -278,7 +283,14 @@ fn build_objects(
         if let Some(id) = uri {
             // NOTE: DICOM PS3.15 Annex A.5, Tables A.5.1.2.2-1 and A.5.1.2.4-1: a System
             // Object (type 2) whose role "may be omitted", with the URI ID type 12.
-            objects.push(object(id, OBJECT_TYPE_SYSTEM, None, codes::OBJ_ID_URI));
+            let mut uri = object(id, OBJECT_TYPE_SYSTEM, None, codes::OBJ_ID_URI);
+            if let Some(level) = event.review {
+                // NOTE: DICOM PS3.15 A.5.3, a ParticipantObjectDetail carries what the object's
+                // other elements do not; the detail name is our own (#6141).
+                uri.details
+                    .push((REVIEW_DETAIL.to_owned(), SecretString::from(level.code())));
+            }
+            objects.push(uri);
         }
     }
 
@@ -329,6 +341,7 @@ mod tests {
     use super::*;
     use crate::system_log::event::{EventActionCode, EventOutcome, EventType, ObjectClass};
     use jiff::Timestamp;
+    use openehr_rm::draft::access_control::terminology::Confidentiality;
 
     fn ctx() -> AuditContext {
         AuditContext {
@@ -542,6 +555,40 @@ mod tests {
         assert!(xml.contains(r#"originalText="demographic""#));
         assert!(xml.contains(r#"ParticipantObjectID="party-77""#));
         assert_audit_snapshot!("demographic_read_R", xml);
+    }
+
+    /// A write recorded for review carries the detail on the object it
+    /// names, as a DICOM `ParticipantObjectDetail` and a BALP
+    /// `entity.detail`, and no other write carries it (#6141).
+    #[test]
+    fn a_write_recorded_for_review_carries_the_detail() {
+        let mut e = event(
+            EventActionCode::Create,
+            ObjectClass::Demographic,
+            EventOutcome::Success,
+        );
+        e.object_id = Some("party-78".to_owned());
+        let detail = r#"ParticipantObjectDetail type="review" value="Ug==""#;
+        let review = |v: &serde_json::Value| {
+            v["entity"].as_array().is_some_and(|entities| {
+                entities.iter().any(|entity| {
+                    entity["detail"].as_array().is_some_and(|details| {
+                        details
+                            .iter()
+                            .any(|d| d["type"] == "review" && d["valueString"] == "R")
+                    })
+                })
+            })
+        };
+        let plain = crate::system_log::fhir::to_fhir(&e, &ctx(), None).expect("render");
+        assert!(
+            !xml(&e, None).contains(detail) && !review(&plain),
+            "{plain}"
+        );
+        e.review = Some(Confidentiality::Restricted);
+        let flagged = crate::system_log::fhir::to_fhir(&e, &ctx(), None).expect("render");
+        assert!(xml(&e, None).contains(detail), "{}", xml(&e, None));
+        assert!(review(&flagged), "{flagged}");
     }
 
     #[test]

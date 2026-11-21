@@ -113,7 +113,7 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
     let body = decode_composition_body(&state, &parts).await?;
     let uv = crate::overview::committal::write_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         body,
         None,
     )?;
@@ -372,7 +372,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
     }
     let uv = crate::overview::committal::write_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         body,
         Some(require_if_match(&p.if_match)?),
     )?;
@@ -451,7 +451,7 @@ pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Respo
     // apply here too (overview §"openehr-version and openehr-audit-details").
     let request = crate::overview::committal::delete_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         volunteered_if_match,
     )?;
     match state

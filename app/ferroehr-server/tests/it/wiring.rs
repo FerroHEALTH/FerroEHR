@@ -193,8 +193,9 @@ fn a_pmir_act_names_the_operator_and_the_effective_user() {
         account.ends_with(&uid),
         "the account names the effective uid"
     );
-    let committer = ferroehr_server::pmir::committer(" steward ", &account);
+    let committer = ferroehr_server::pmir::committer(" steward ", &account, "cdr.example.org");
     assert_eq!(committer.subject, "steward");
+    assert_eq!(&*committer.local_issuer, "cdr.example.org");
     assert!(
         committer.client.as_deref() == Some(account.as_str()),
         "the committer's client is the account"

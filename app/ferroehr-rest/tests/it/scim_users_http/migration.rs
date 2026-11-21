@@ -17,7 +17,6 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::adopt::AdoptInput;
 use ferroehr::service::demographic::party_set::NewParty;
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::versioning::committer::SYSTEM_COMMITTER_NAME;
 use http::StatusCode;
 use serde_json::{Value, json};
 
@@ -189,7 +188,7 @@ async fn an_adopted_person_is_updated_by_the_cycle_and_never_duplicated() {
             check: CheckInput {
                 key_types: [(LOGIN.to_owned(), "guid".to_owned())].into(),
                 administrators: vec![Administrator::Party(administrator.0)],
-                migrations: vec![SYSTEM_COMMITTER_NAME.to_owned()],
+                migrations: vec![svc.system_id().to_owned()],
                 today: ferroehr::support::today_utc().to_string(),
                 ..CheckInput::default()
             },

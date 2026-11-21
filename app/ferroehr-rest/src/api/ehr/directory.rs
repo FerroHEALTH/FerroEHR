@@ -104,7 +104,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
     let body = negotiate::decode::rm_value::<Folder>(h, &parts.body)?;
     let uv = crate::overview::committal::write_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         body,
         Some(require_if_match(&p.if_match)?),
     )?;
@@ -181,7 +181,7 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
     let body = negotiate::decode::rm_value::<Folder>(h, &parts.body)?;
     let uv = crate::overview::committal::write_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         body,
         None,
     )?;
@@ -238,7 +238,7 @@ pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Respo
     // here too (overview §"openehr-version and openehr-audit-details").
     let mut request = crate::overview::committal::delete_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         None,
     )?;
     request.preceding = Some(require_if_match(&p.if_match)?);

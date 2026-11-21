@@ -150,6 +150,7 @@ async fn as_client<F: Future>(svc: &FerroEhrService, client_id: &str, fut: F) ->
         subject: client_id.to_owned(),
         id_type: "oauth2",
         issuer: Some(crate::policy_fixtures::ISSUER.to_owned()),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: Some(client_id.to_owned()),
         person: false,
         party: None,

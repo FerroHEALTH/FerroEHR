@@ -68,7 +68,10 @@ fn assert_framed(frame: Vec<u8>) {
     let (count, record) = text.split_once(' ').expect("an octet count");
     assert_eq!(count.parse::<usize>().ok(), Some(record.len()), "{text}");
     let message = record
-        .strip_prefix("<85>1 2026-07-06T12:00:00.000000Z cdr-01 ferroehr - IHE+RFC-3881 - ")
+        .strip_prefix(&format!(
+            "<85>1 2026-07-06T12:00:00.000000Z cdr-01 {} - IHE+RFC-3881 - ",
+            ferroehr::service::DEFAULT_SYSTEM_ID
+        ))
         .unwrap_or_else(|| panic!("the RFC 5424 header: {text}"));
     assert!(
         message.starts_with("<?xml") && message.contains("<AuditMessage>"),

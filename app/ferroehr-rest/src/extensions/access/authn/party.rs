@@ -388,9 +388,10 @@ pub(super) async fn bind(
             .unwrap_or(Outcome::Unbound),
         outcome => outcome,
     };
-    if let Some(mut refusal) =
-        refusal(&outcome).filter(|_| !own::binds_the_person(caller.kind(), &outcome))
-    {
+    if let Some(mut refusal) = refusal(&outcome).filter(|_| {
+        !own::binds_the_person(caller.kind(), &outcome)
+            && !own::binds_a_representative(caller.kind(), &outcome)
+    }) {
         let issuer = caller.issuer().unwrap_or("-");
         // NOTE: GDPR Art. 5(1)(c), the line names the issuer and the outcome, never the claim
         // value, which the access record of the request carries under its retention.
@@ -579,6 +580,7 @@ pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
 pub(super) fn committer_identity(
     principal: &super::Principal,
     granted: &Capabilities,
+    local_issuer: &Arc<str>,
 ) -> ferroehr::versioning::committer::CommitterIdentity {
     let caller = principal.access.caller();
     let system = caller.is_some_and(|caller| matches!(caller.kind(), CallerKind::System));
@@ -601,6 +603,7 @@ pub(super) fn committer_identity(
                 .and_then(Caller::issuer)
                 .map(str::to_owned),
         },
+        local_issuer: Arc::clone(local_issuer),
         client,
         person: crate::smart::acts_as_person(principal) || portal.is_some(),
         party: principal

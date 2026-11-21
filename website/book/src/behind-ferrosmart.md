@@ -125,6 +125,33 @@ role:
 - A professional's lookup through the picker needs their roles on the
   picker's token (FerroHEALTH/FerroSMART#716).
 
+A representative signs in at the same `persons` issuer, through the picker
+or an app the CDR grants `act_for_persons`. FerroSMART's tokens carry no
+representation, so FerroEHR reads it from its own records:
+
+- The login binds a `PERSON` that carries the representative marker and no
+  professional `ROLE`. FerroEHR admits it as a representative holding no
+  role, whatever the token asserts.
+- It reaches a subject's record only while a representation the CDR stores
+  names that `PERSON` for that subject: live today, recorded for the provider
+  the deployment acts for, and not written by the representative itself
+  ([Operational policy](operational-policy.md)).
+- The subject is the one of the EHR the token's launch context names, which
+  then holds the caller to that EHR. Without a launch context it is the
+  subject of the EHR the request names, or the subject the picker's lookup
+  names.
+- A request for any other subject, or one that names no subject, is refused
+  `403` with `refused-representation-unrecorded`.
+- Its commits name its own `PERSON` as a `PARTY_RELATED`, and the access log
+  names the representation each access rested on.
+- A representative who is also a patient reaches their own record as
+  themself. When the subject a request reaches is their own `PERSON`, by
+  the launch EHR, the EHR the request names or the picker's lookup, FerroEHR
+  admits them as the person themself with no stored representation: their
+  commits name `PARTY_SELF`, the access log records them as the subject of
+  care, and a result held under the access delay stays held from them. A
+  launch context that names someone else's EHR still holds them to that EHR.
+
 ## The discovery document describes FerroSMART
 
 With `[auth.smart] discovery = true`,

@@ -65,6 +65,20 @@ pub(crate) fn set_etag(resp: &mut Response, uid: &str) {
     }
 }
 
+/// The response header that says the body leaves out what the caller may
+/// not read: an `EHR_ACCESS` without its marking, and with no signature on a
+/// version. No openEHR spec governs it: our own design (#6165).
+pub(crate) const H_REDACTED: &str = "redacted";
+
+/// What a redacted body leaves out, the value of [`H_REDACTED`].
+const REDACTED: &str = "marking";
+
+/// Set the [`H_REDACTED`] header on a response.
+pub(crate) fn set_redacted(resp: &mut Response) {
+    resp.headers_mut()
+        .insert(H_REDACTED, HeaderValue::from_static(REDACTED));
+}
+
 /// Set the `Last-Modified` header to `at`, an HTTP-date (RFC 9110 §8.8.2).
 pub(crate) fn set_last_modified(resp: &mut Response, at: jiff::Timestamp) {
     if let Ok(lm) = HeaderValue::from_str(&http_date(at)) {
@@ -82,6 +96,9 @@ pub(crate) fn set_versioning_headers(resp: &mut Response, meta: &ResourceMeta, t
     set_etag(resp, &meta.uid);
     if let Some(at) = meta.last_modified {
         set_last_modified(resp, at);
+    }
+    if meta.redacted {
+        set_redacted(resp);
     }
     let (ehr_id, domain) = match tree {
         Tree::Ehr => (Some(meta.ehr_id.clone()), None),

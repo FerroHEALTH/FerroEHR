@@ -12,15 +12,17 @@
 //! master06, delegated to [`crate::versioning`]. ITS-REST 1.1.0 serves these
 //! reads for `EHR_STATUS` only; FerroEHR serves the same reads for
 //! `EHR_ACCESS` as its own extension (#5517), to the callers who may read
-//! its settings: an administrator, the subject and a gate-keeper
-//! ([`FerroEhrService::may_read_ehr_access`]).
+//! its settings: an administrator and the subject whole, and a gate-keeper
+//! who is neither without the record's marking and with no signature on a
+//! version ([`FerroEhrService::ehr_access_view`], #6165).
 
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
-use crate::service::response::{RawServiceResponse, ServiceResponse};
+use crate::service::ehr::access_view::{self, SettingsView};
+use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::object_version_id::{VersionIdError, parse_tree_id};
@@ -98,7 +100,7 @@ impl FerroEhrService {
         object: EhrObject,
         a_time: Option<String>,
     ) -> Result<RawServiceResponse, ServiceError> {
-        self.ensure_object_readable(ehr_id, object).await?;
+        let view = self.object_view(ehr_id, object).await?;
         let kind = object.kind().as_str();
         let at = match a_time.as_deref().map(parse_at_time).transpose()? {
             Some(at) => VersionAt::InstantOfKind(ehr_id, kind, at),
@@ -110,7 +112,7 @@ impl FerroEhrService {
             .await?
             .ok_or_else(|| missing_object(ehr_id, object))?;
         let vo_id = raw.read.vo_id;
-        self.raw_version_response(ehr_id, vo_id, raw)
+        redacted_object(self.raw_version_response(ehr_id, vo_id, raw)?, view)
     }
 
     /// The **bare** `object` at a specific version (not the
@@ -148,7 +150,7 @@ impl FerroEhrService {
         vo_id: VoId,
         a_version: &str,
     ) -> Result<RawServiceResponse, ServiceError> {
-        self.ensure_object_readable(ehr_id, object).await?;
+        let view = self.object_view(ehr_id, object).await?;
         let version = parse_tree_id(a_version).map_err(VersionIdError::into_argument)?;
         let raw = self
             .tree_version_raw(ehr_id, object.kind(), vo_id, version)
@@ -159,7 +161,7 @@ impl FerroEhrService {
                     format!("{} {vo_id} v{version}", object.rm_type()),
                 )
             })?;
-        self.raw_version_response(ehr_id, vo_id, raw)
+        redacted_object(self.raw_version_response(ehr_id, vo_id, raw)?, view)
     }
 
     /// The versioned object of the EHR's `object` with the container
@@ -176,7 +178,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         object: EhrObject,
     ) -> Result<ServiceResponse<openehr_rm::prelude::VersionedObject>, ServiceError> {
-        self.ensure_object_readable(ehr_id, object).await?;
+        self.object_view(ehr_id, object).await?;
         let vo_id = self.object_vo(ehr_id, object).await?;
         let (body, last_modified) =
             versioned_object(&self.pool, vo_id, ehr_id, object.versioned_rm_type())
@@ -205,7 +207,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         object: EhrObject,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.ensure_object_readable(ehr_id, object).await?;
+        self.object_view(ehr_id, object).await?;
         let vo_id = self.object_vo(ehr_id, object).await?;
         let (body, last_modified) = revision_history(&self.pool, ehr_id, vo_id).await?;
         Ok(ServiceResponse::new(
@@ -232,11 +234,14 @@ impl FerroEhrService {
         vo_id: VoId,
         a_version: &str,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.ensure_object_readable(ehr_id, object).await?;
+        let view = self.object_view(ehr_id, object).await?;
         let read = self
             .object_version_read(ehr_id, object, vo_id, a_version)
             .await?;
-        self.envelope_response(ehr_id, &read)
+        Ok(redacted_version(
+            self.envelope_response(ehr_id, &read)?,
+            view,
+        ))
     }
 
     /// The VERSION envelope of the EHR's `object` extant at `a_time`, or the
@@ -254,7 +259,7 @@ impl FerroEhrService {
         object: EhrObject,
         a_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.ensure_object_readable(ehr_id, object).await?;
+        let view = self.object_view(ehr_id, object).await?;
         let at = a_time.as_deref().map(parse_at_time).transpose()?;
         let vo_id = self.object_vo(ehr_id, object).await?;
         let at = match at {
@@ -269,27 +274,34 @@ impl FerroEhrService {
                     format!("{} version at time for EHR {ehr_id}", object.rm_type()),
                 )
             })?;
-        self.envelope_response(ehr_id, &read)
+        Ok(redacted_version(
+            self.envelope_response(ehr_id, &read)?,
+            view,
+        ))
     }
 
-    /// Refuses a read of the `EHR_ACCESS` of `ehr_id` by a caller who may not
-    /// read its settings ([`Self::may_read_ehr_access`]) as a read of an EHR
-    /// that holds none, as the CONTRIBUTION and extract reads hide it, since
-    /// a restriction must not be visible to a provider (EHDS Art. 8); our own
-    /// design.
+    /// How the caller reads the EHR's `object`: an `EHR_STATUS` whole, and an
+    /// `EHR_ACCESS` as [`Self::ehr_access_view`] says. A caller who may not
+    /// read the settings is answered as for an EHR that holds none, as the
+    /// CONTRIBUTION and extract reads hide it, since a restriction must not
+    /// be visible to a provider (EHDS Art. 8); our own design.
     ///
     /// # Errors
     /// [`ServiceError::NotFound`] for such a caller; the refusals of
-    /// [`Self::may_read_ehr_access`].
-    async fn ensure_object_readable(
+    /// [`Self::ehr_access_view`].
+    async fn object_view(
         &self,
         ehr_id: EhrId,
         object: EhrObject,
-    ) -> Result<(), ServiceError> {
-        if object == EhrObject::Access && !Box::pin(self.may_read_ehr_access(ehr_id)).await? {
+    ) -> Result<SettingsView, ServiceError> {
+        if object != EhrObject::Access {
+            return Ok(SettingsView::Whole);
+        }
+        let view = Box::pin(self.ehr_access_view(ehr_id)).await?;
+        if !view.reads() {
             return Err(missing_object(ehr_id, object));
         }
-        Ok(())
+        Ok(view)
     }
 
     /// The `vo_id` of the EHR's `object` container.
@@ -343,4 +355,35 @@ fn missing_object(ehr_id: EhrId, object: EhrObject) -> ServiceError {
         Missing::Ehr,
         format!("{} for EHR {ehr_id}", object.rm_type()),
     )
+}
+
+/// `response`, an `EHR_ACCESS`, without its marking where `view` redacts it.
+///
+/// # Errors
+/// An internal fault when the stored body does not parse.
+fn redacted_object(
+    response: RawServiceResponse,
+    view: SettingsView,
+) -> Result<RawServiceResponse, ServiceError> {
+    if !view.redacts() {
+        return Ok(response);
+    }
+    let ServiceResponse { mut body, meta } = response
+        .into_value_response()
+        .map_err(|e| ServiceError::internal("read a stored EHR object body", e))?;
+    access_view::redact_object(&mut body);
+    Ok(RawServiceResponse {
+        body: ReadBody::Value(body),
+        meta: meta.map(ResourceMeta::redacted),
+    })
+}
+
+/// `response`, a `VERSION` of an `EHR_ACCESS`, without its marking and its
+/// signature where `view` redacts it.
+fn redacted_version(mut response: ServiceResponse, view: SettingsView) -> ServiceResponse {
+    if view.redacts() {
+        access_view::redact_version(&mut response.body);
+        response.meta = response.meta.map(ResourceMeta::redacted);
+    }
+    response
 }
