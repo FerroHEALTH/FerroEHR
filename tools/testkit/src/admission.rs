@@ -120,7 +120,7 @@ mod tests {
     fn the_slots_follow_the_servers_connections() {
         assert_eq!(slots(400, 3), 22, "the testkit container");
         assert_eq!(slots(200, 3), 10);
-        assert_eq!(slots(100, 3), 5, "a default server, as CI runs");
+        assert_eq!(slots(100, 3), 5, "a default server");
         assert_eq!(slots(10, 3), 1, "a server too small still admits one");
     }
 
