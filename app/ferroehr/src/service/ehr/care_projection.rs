@@ -33,7 +33,9 @@ use crate::party_binding::grants::caller;
 use crate::party_binding::grants::care::care_of;
 use crate::party_binding::grants::live::LiveGrants;
 use crate::service::FerroEhrService;
-use crate::storage::access_care::{self, CareRow, cared_key, subject_digest, subject_key};
+use crate::storage::access_care::{
+    self, CareRow, StateRead, cared_key, subject_digest, subject_key,
+};
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 
@@ -195,11 +197,13 @@ impl Projector {
         let key_check = subject_digest(access_care::DIGEST_CHECK);
         let namespace = self.grants.namespace();
         loop {
-            let seen = access_care::state(&mut *acquire(&self.clinical).await?).await?;
+            let seen =
+                access_care::state(&mut *acquire(&self.clinical).await?, StateRead::Unlocked)
+                    .await?;
             let read = self.read_party(&seen, &key_check, &namespace).await?;
             let mut clinical = acquire(&self.clinical).await?;
             let mut tx = clinical.begin().await?;
-            if access_care::lock_state(&mut tx).await? != seen {
+            if access_care::state(&mut tx, StateRead::Locked).await? != seen {
                 // NOTE: our own design (#6187), another projector wrote since the state was read,
                 // so the party side is read again from the state it left.
                 tx.rollback().await?;
