@@ -82,15 +82,13 @@ async fn app_with(
         .expect("mirror the category map");
     let mut config = common::api_config(true);
     config.auth = common::persons_and_patients(ISSUER, PATIENTS, AUDIENCE);
-    config.auth.smart.patient_issuers = vec![
-        ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
-        ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS),
-    ];
+    common::patient_context(&mut config, ISSUER);
+    common::patient_context(&mut config, PATIENTS);
     let mut authz = None;
     let mut uploader = professional();
     if !bound.is_empty() {
         common::bind_issuer(&mut config, ISSUER);
-        config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(ISSUER)];
+        config.rbac.role_issuers = vec![common::name_of(ISSUER)];
         let logins: Vec<_> = bound.iter().map(|sub| (ISSUER, *sub)).collect();
         common::bind_subjects(&pool, &logins).await;
         let mut rbac = AuthzConfig::default();

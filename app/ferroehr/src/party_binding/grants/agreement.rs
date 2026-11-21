@@ -348,7 +348,7 @@ impl Agreement {
         let Some(partner) = trust.issuer(issuer) else {
             errors.push(format!(
                 "its partner's client identifier names the issuer {}, which is no \
-                 [[auth.issuer]] of kind federation",
+                 [auth.issuer.<name>] of kind federation",
                 SecretUrl::new(issuer).redacted()
             ));
             return errors;
@@ -434,11 +434,10 @@ impl Agreement {
     fn chained(&self, partner: &PartnerIssuer, holder: Retention, errors: &mut Vec<String>) {
         match partner.correlation {
             Correlation::None => errors.push(
-                "it is chained and its issuer's [[auth.federation]] table maps no correlation_id"
-                    .to_owned(),
+                "it is chained and its issuer's federation table maps no correlation_id".to_owned(),
             ),
             Correlation::Constant => errors.push(
-                "it is chained and its issuer's [[auth.federation]] table maps correlation_id \
+                "it is chained and its issuer's federation table maps correlation_id \
                  from a constant: the id is read only from the token"
                     .to_owned(),
             ),
@@ -620,7 +619,7 @@ mod tests {
         );
         let refused = agreement.refusals("https://persons", &none);
         assert!(
-            refused[0].contains("no [[auth.issuer]] of kind federation"),
+            refused[0].contains("no [auth.issuer.<name>] of kind federation"),
             "{refused:?}"
         );
     }

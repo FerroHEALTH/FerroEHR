@@ -231,7 +231,7 @@ fn required<'a>(value: Option<&'a str>, field: &str) -> Result<&'a str, ServiceE
 
 /// `code` when it is an ISO 3166-1 alpha-2 code in upper case.
 // NOTE: no vetted crate lists the assigned codes; the shape is checked here and the
-// `[[auth.federation]] countries` the classification enforces bound the values.
+// federation table's `countries` the classification enforces bound the values.
 fn country_code(code: &str) -> Result<&str, ServiceError> {
     if code.len() == 2 && code.bytes().all(|b| b.is_ascii_uppercase()) {
         return Ok(code);

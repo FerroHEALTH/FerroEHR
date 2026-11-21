@@ -64,7 +64,7 @@ impl Default for ScimConfig {
 
 /// The issuer a SCIM client's Groups' `externalId`s are written under.
 ///
-/// It is the `group_identifier_issuer` of the `[[auth.party]]` table of
+/// It is the `group_identifier_issuer` of the `[auth.issuer.<name>.party]` table of
 /// `party` whose `identifier_issuer` is the client's `binding_issuer`, and
 /// when that table sets none, the `binding_issuer` with `/groups` appended.
 #[must_use]

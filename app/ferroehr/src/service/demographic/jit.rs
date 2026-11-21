@@ -43,7 +43,7 @@ pub struct ProvisionalPerson {
     /// The access token's issuer, which the description and the committer's
     /// login identifier name.
     pub login_issuer: String,
-    /// The `identifier_issuer` of the issuer's `[[auth.party]]` table, which
+    /// The `identifier_issuer` of the issuer's `[auth.issuer.<name>.party]` table, which
     /// issues the binding key and the `userName`.
     pub key_issuer: String,
     /// The binding key: its selector's path, the key claim's value and the

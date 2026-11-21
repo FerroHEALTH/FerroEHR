@@ -379,3 +379,51 @@ async fn the_care_projector_waits_for_the_party_pool_holding_no_clinical_connect
         .expect("the projector completes once the party pool has a connection");
     pools.close().await;
 }
+
+/// A write holds its audit connection and its domain's for its transaction,
+/// so a request that asks the other domain's pool for a connection inside
+/// it is refused in a debug build: writes each holding one domain and
+/// waiting for the other's pool stall until the acquire timeout (#6186).
+#[tokio::test]
+#[should_panic(expected = "inside a write of the other")]
+async fn a_write_asking_the_other_domains_pool_is_refused_in_a_debug_build() {
+    let db = testkit::db().await.expect("testkit database");
+    let pools = one_connection_pools(&db).await;
+    let (audit, clinical, party) = (
+        pools.get(Domain::Audit),
+        pools.get(Domain::Clinical),
+        pools.get(Domain::Party),
+    );
+    request_scope(async {
+        let _audit = acquire(audit).await.expect("the audit connection");
+        let _clinical = acquire(clinical).await.expect("the clinical connection");
+        let _party = acquire(party).await;
+    })
+    .await;
+}
+
+/// A request that reads the other domain before it takes a write's audit
+/// and domain connections, or that holds no audit connection, is not
+/// refused (#6186).
+#[tokio::test]
+async fn a_read_of_the_other_domain_before_a_write_is_not_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let pools = one_connection_pools(&db).await;
+    let (audit, clinical, party) = (
+        pools.get(Domain::Audit),
+        pools.get(Domain::Clinical),
+        pools.get(Domain::Party),
+    );
+    request_scope(async {
+        touch(party).await;
+        let _audit = acquire(audit).await.expect("the audit connection");
+        let _clinical = acquire(clinical).await.expect("the clinical connection");
+    })
+    .await;
+    request_scope(async {
+        let _clinical = acquire(clinical).await.expect("the clinical connection");
+        touch(party).await;
+    })
+    .await;
+    pools.close().await;
+}

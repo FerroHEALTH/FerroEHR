@@ -145,8 +145,10 @@ impl WriteGate {
 /// yet, or judged on a revision of its settings row other than `seen`, the
 /// one the commit's transaction reads, is judged from the rows that
 /// transaction reads, so a change another replica committed is never written
-/// past; an object of a verdict that depends on the object is judged by its
-/// head row. No openEHR spec governs this: our own design (#5513, #5589).
+/// past, unless the write judged it before its transaction on that revision
+/// ([`RequestAccess::judge_ahead`], #6186); an object of a verdict that
+/// depends on the object is judged by its head row. No openEHR spec governs
+/// this: our own design (#5513, #5589).
 ///
 /// # Errors
 /// [`ServiceError::NotFound`] (`ehr_id_does_not_exist` or
@@ -166,6 +168,8 @@ async fn ensure_not_access_restricted_tx(
     let named = judged.is_some();
     let verdict = if let Some(judged) = judged.filter(|judged| judged.revision == seen) {
         judged.verdict
+    } else if let Some(verdict) = access.take_ahead(ehr_id, &seen) {
+        verdict
     } else {
         let body =
             crate::storage::version_repo::ehr_access::current_ehr_access_body(&mut *tx, ehr_id)

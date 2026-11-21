@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The issuer's key set, read over its `jwks_uri`: the boot read, the
-//! refetch on an unknown key, and the failures of each. No openEHR spec
-//! governs auth transport hardening — the crate's design, held here at
-//! FerroEHR's seam.
+//! The issuer's key set, read over its `jwks_uri`: the background read from
+//! the start, the refetch on an unknown key, and the failures of each. No
+//! openEHR spec governs auth transport hardening — the crate's design, held
+//! here at FerroEHR's seam.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
@@ -104,9 +104,9 @@ impl Respond for Rotation {
     }
 }
 
-/// A fetched key set that does not parse refuses the start with its
-/// failure class and position, never with the parser's message, which
-/// quotes the offending value.
+/// A fetched key set that does not parse leaves the issuer unread: the
+/// server starts, its tokens answer `503` with a body that never quotes the
+/// offending value, and readiness reports the issuer down.
 #[tokio::test]
 async fn unparsable_fetched_jwks_does_not_quote_its_input() {
     let server = MockServer::start().await;
@@ -118,29 +118,64 @@ async fn unparsable_fetched_jwks_does_not_quote_its_input() {
         )
         .mount(&server)
         .await;
-    let Err(message) = authenticator(section(&server.uri(), 60, 5_000)).await else {
-        panic!("the set does not parse");
-    };
-    assert!(!message.contains("s3cr3t"), "{message}");
-    assert!(message.contains("line 1"), "{message}");
+    let auth = authenticator(section(&server.uri(), 60, 5_000))
+        .await
+        .expect("an unread issuer refuses no start");
+    let err = auth
+        .authenticate(&token_under(&server.uri(), "boot"))
+        .await
+        .expect_err("the set does not parse");
+    assert!(matches!(err, AuthError::KeyResolution), "got {err:?}");
+    let body = err.to_api_error().to_string();
+    assert!(!body.contains("s3cr3t"), "{body}");
+    assert!(!auth.issuers_ready());
 }
 
-/// An issuer whose metadata cannot be read refuses the start rather
-/// than the first request, so no request ever answers with its URL.
+/// An issuer whose metadata cannot be read refuses no start (#6140): the
+/// server reports the issuer not ready and answers its tokens with `503`,
+/// whose body never names the issuer's URL, until the issuer answers and
+/// the background read takes it.
 #[tokio::test]
-async fn a_failed_discovery_refuses_the_start() {
+async fn a_failed_discovery_is_unready_until_the_issuer_answers() {
+    use ferrohealth_health::registry::HealthIndicator as _;
     let server = MockServer::start().await;
+    let auth = authenticator(section(&server.uri(), 60, 5_000))
+        .await
+        .expect("an unreachable issuer refuses no start");
+    let health = verdicts::IssuersHealth(Arc::clone(&auth));
+    assert_eq!(
+        health.check().await.state(),
+        ferrohealth_health::document::State::Down
+    );
+    let err = auth
+        .authenticate(&token_under(&server.uri(), "boot"))
+        .await
+        .expect_err("an unread issuer admits no token");
+    let api = err.to_api_error();
+    assert_eq!(api.status(), StatusCode::SERVICE_UNAVAILABLE);
+    assert!(!api.to_string().contains("127.0.0.1"), "{api}");
+
+    mount_metadata(&server).await;
     Mock::given(method("GET"))
-        .respond_with(ResponseTemplate::new(500))
+        .and(path(JWKS_PATH))
+        .respond_with(ResponseTemplate::new(200).set_body_json(jwks("boot")))
         .mount(&server)
         .await;
-    assert!(
-        authenticator(section(&server.uri(), 60, 5_000))
-            .await
-            .is_err()
+    described::read_issuers(&auth).await;
+    assert_eq!(
+        health.check().await.state(),
+        ferrohealth_health::document::State::Up
     );
+    let principal = auth
+        .authenticate(&token_under(&server.uri(), "boot"))
+        .await
+        .expect("the issuer is read")
+        .principal;
+    assert_eq!(principal.subject, "alice");
 }
 
+/// The first token of an issuer that stalls waits for the read only as long
+/// as the configured request timeout, then answers `503`.
 #[tokio::test]
 async fn stalled_issuer_fails_within_the_configured_request_timeout() {
     let server = MockServer::start().await;
@@ -153,7 +188,10 @@ async fn stalled_issuer_fails_within_the_configured_request_timeout() {
         .mount(&server)
         .await;
     let started = Instant::now();
-    let refused = authenticator(section(&server.uri(), 60, 300)).await;
+    let auth = authenticator(section(&server.uri(), 60, 300))
+        .await
+        .expect("a stalled issuer refuses no start");
+    let refused = auth.authenticate(&token_under(&server.uri(), "boot")).await;
     let elapsed = started.elapsed();
     assert!(refused.is_err(), "the timeout must fire");
     // The 300 ms budget, generously slacked; without it the request
@@ -180,7 +218,8 @@ async fn a_failed_key_set_read_is_a_503_backed_off_until_the_issuer_recovers() {
         .await;
     let auth = authenticator(section(&server.uri(), 1, 5_000))
         .await
-        .expect("the boot read succeeds");
+        .expect("the start refuses nothing");
+    described::read_issuers(&auth).await;
     let issuer = server.uri();
 
     tokio::time::sleep(Duration::from_millis(1_100)).await;

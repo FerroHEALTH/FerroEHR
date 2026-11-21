@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The login binding on every request (#5004): a bearer token of a `persons`
-//! issuer with an `[[auth.party]]` table is looked up in the local party
+//! issuer with an `[auth.issuer.<name>.party]` table is looked up in the local party
 //! source, read from the binding side table with no cache, and the request is
 //! refused with `403` and its binding code for every outcome that binds no
 //! usable party. Driven through the assembled router over a real
@@ -38,7 +38,7 @@ use crate::common::{self, BASE};
 
 pub(crate) const ISSUER: &str = "https://login.example";
 pub(crate) const AUDIENCE: &str = "ferroehr";
-/// The `identifier_issuer` of the issuer's `[[auth.party]]` table.
+/// The `identifier_issuer` of the issuer's `[auth.issuer.<name>.party]` table.
 pub(crate) const LOGIN: &str = "https://login.example/tenant";
 /// The `group_identifier_issuer` of that table.
 const GROUPS: &str = "https://login.example/groups";
@@ -63,23 +63,28 @@ pub(crate) fn professionals(mapping: BindingMapping) -> BindingMapping {
         .with_professional_role(ROLE_TEMPLATE)
 }
 
-/// The `[auth]` table trusting `ISSUER`, whose logins the `[[auth.party]]`
+/// The `[auth]` table trusting `ISSUER`, whose logins the `[auth.issuer.<name>.party]`
 /// table binds by `person_key`, reading groups from `groups`.
 pub(crate) fn config(person_key: Option<&str>) -> AppConfig {
     let mut auth = common::auth(AuthSection {
-        issuer: vec![IssuerEntry {
-            jwks_file: common::jwks_file().display().to_string(),
-            person_key: person_key.map(str::to_owned),
-            ..common::entry(ISSUER, AUDIENCE)
-        }],
-        party: vec![PartySection {
-            issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
-            identifier_issuer: LOGIN.to_owned(),
-            identifier_type: "guid".to_owned(),
-            group_claim: "groups".to_owned(),
-            group_identifier_issuer: GROUPS.to_owned(),
-            ..PartySection::default()
-        }],
+        issuer: common::bound(
+            vec![IssuerEntry {
+                jwks_file: common::jwks_file().display().to_string(),
+                profile: ferrohealth_smart::profile::ProfileKeys {
+                    person_key: person_key.map(str::to_owned),
+                    ..ferrohealth_smart::profile::ProfileKeys::default()
+                },
+                ..common::entry(ISSUER, AUDIENCE)
+            }],
+            vec![PartySection {
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
+                identifier_issuer: LOGIN.to_owned(),
+                identifier_type: "guid".to_owned(),
+                group_claim: "groups".to_owned(),
+                group_identifier_issuer: GROUPS.to_owned(),
+                ..PartySection::default()
+            }],
+        ),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -472,8 +477,8 @@ async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retr
     let key = "7d8e9f0a-1b2c-4d3e-9f4a-5b6c7d8e9f0a";
     professional(&svc, key, "532").await;
     let mut config = config(None);
-    if let Some(entry) = config.auth.shared.issuer.first_mut() {
-        entry.adapter = Some(ferrohealth_smart::idp::entra::NAME.to_owned());
+    if let Some(entry) = config.auth.shared.issuer.values_mut().next() {
+        entry.profile.adapter = Some(ferrohealth_smart::idp::entra::NAME.to_owned());
     }
     config.auth.shared.idp.entra = Some(Box::new(ferrohealth_smart::idp::entra::GraphSection {
         base_url: format!("{}/v1.0", graph.uri()),

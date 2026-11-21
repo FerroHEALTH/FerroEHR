@@ -80,7 +80,7 @@ pub(crate) async fn fixture() -> Fixture {
     .await;
     let mut config = config();
     config.api.admin = true;
-    config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(PORTAL)];
+    config.rbac.role_issuers = vec![common::name_of(PORTAL)];
     common::with_basic_users(
         &mut config,
         &svc,

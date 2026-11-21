@@ -60,7 +60,7 @@ fn rest_config() -> AppConfig {
     config.auth = common::issuer_auth(ISSUER, AUDIENCE);
     common::bind_issuer(&mut config, ISSUER);
     common::basic_users(&mut config, USERS);
-    config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(ISSUER)];
+    config.rbac.role_issuers = vec![common::name_of(ISSUER)];
     config
 }
 
@@ -654,14 +654,14 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
     });
     cfg.auth.smart.platform_base_url = Some(leaky(9));
     cfg.server.public_base_url = Some(leaky(10));
-    cfg.auth.shared.issuer = vec![ferrohealth_smart::config::IssuerEntry {
+    cfg.auth.shared.issuer = common::named([ferrohealth_smart::config::IssuerEntry {
         issuer: SecretUrl::new("https://idp.example"),
         introspection: Some(ferrohealth_smart::config::IntrospectionSection {
             endpoint: leaky(13),
             ..ferrohealth_smart::config::IntrospectionSection::default()
         }),
         ..ferrohealth_smart::config::IssuerEntry::default()
-    }];
+    }]);
     let snapshot = cfg.to_redacted_json().expect("redacted json");
 
     let (_pg, svc) = service(None).await;

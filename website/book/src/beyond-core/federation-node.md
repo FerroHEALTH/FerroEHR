@@ -90,8 +90,8 @@ token of a `federation` issuer, never with a login bound to a local
 their rights come from an agreement, never from a role
 ([Who the caller is](../identity-providers.md#who-the-caller-is)).
 
-- **The issuer and its bounds.** An `[[auth.issuer]]` of kind `federation`
-  with an `[[auth.federation]]` table: how its claims map to the
+- **The issuer and its bounds.** An `[auth.issuer.<name>]` of kind `federation`
+  with an `[auth.issuer.<name>.federation]` table: how its claims map to the
   professional's or the organisation's fields, and the countries, issuing
   authorities and provider identifier prefixes a token must stay within.
   A token outside them is refused with `401`.

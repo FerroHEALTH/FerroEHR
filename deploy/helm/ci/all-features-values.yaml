@@ -69,28 +69,30 @@ config:
       # One table per issuer: `kind` says whose tokens it signs, and a
       # persons token is admitted only through a client the CDR
       # grants `sign_in_persons`.
-      - issuer: https://keycloak.example.com/realms/ferroehr
+      keycloak:
+        issuer: https://keycloak.example.com/realms/ferroehr
         kind: persons
         audience: [ferroehr]
+        profile:
+          patient_context: true
+        # The issuer's logins bind to the PERSON carrying their `sub` under this
+        # identifier issuer.
+        party:
+          identifier_issuer: urn:example:ferroehr-login
+          identifier_type: uuid
       # The machines issuer FerroBRIDGE's client credentials tokens come from
       # (RFC 6749 §4.4): the CDR trusts its tokens, and bridge.cdr.oauth
       # names FerroBRIDGE's client at it.
-      - issuer: https://machines.example.org/realms/ferroehr
+      machines:
+        issuer: https://machines.example.org/realms/ferroehr
         kind: machines
         audience: [ferroehr-machines]
-    # The issuer's logins bind to the PERSON carrying their `sub` under this
-    # identifier issuer.
-    party:
-      - issuer: https://keycloak.example.com/realms/ferroehr
-        identifier_issuer: urn:example:ferroehr-login
-        identifier_type: uuid
     # FerroEHR's product scope, which admits the ADMIN and DEMOGRAPHIC APIs.
     product_scope: __ferroehr.platform
     smart:
       # Serves the discovery document, built at boot from the [auth] issuer's
       # metadata, so it needs no endpoint list of its own.
       discovery: true
-      patient_issuers: [https://keycloak.example.com/realms/ferroehr]
     # Who provisions is a scim_provision grant in the CDR, written through the
     # Demographic API; the table only serves the endpoint.
     scim: {}
@@ -120,7 +122,7 @@ config:
       professional_role:
         template_id: FerroEHR professional role
     rbac:
-      role_issuers: [https://keycloak.example.com/realms/ferroehr]
+      role_issuers: [keycloak]
     # The operations the party store may grant: FerroBRIDGE reads the change
     # feed and Entra ID provisions under grants in the CDR.
     grants:
