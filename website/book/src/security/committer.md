@@ -42,7 +42,7 @@ then writes the committer from the bound party:
 |---|---|
 | A person, at a `persons` issuer through a first-party client | `PARTY_IDENTIFIED` with the `PERSON`'s name, an `external_ref` to the `PERSON`, the login identifier `{issuer = <token iss>, id = <person_key value>, type = "oauth2"}` and the provider identifier `{issuer, id, type = "healthcare-provider"}` |
 | A delegated person (a client or RFC 8693 actor the CDR grants `act_for_persons`) | the person's own committer, as above; the client and the actor go into the access record, never into the committer |
-| A Basic user | the committer of the `PERSON` its `[[authz.party_binding.basic_user]]` table maps it to, with the login identifier `{issuer = "ferroehr", id = <user>, type = "basic"}` |
+| A Basic user | the committer of the `PERSON` its `[[authz.party_binding.basic_user]]` table maps it to, with the login identifier `{issuer = <[api] basic_issuer>, id = <user>, type = "basic"}` |
 | A representative | `PARTY_RELATED` naming the representative's own `PERSON` in `external_ref`, their login identifier, and the coded `relationship` from the openEHR `subject_relationship` group (`253\|unknown\|` when no code fits) |
 | A patient of a `patients` issuer | `PARTY_SELF` with no `external_ref` (RM common master04, the first scheme of §Referring to the Patient) |
 | A verified external person of a `federation` issuer | `PARTY_IDENTIFIED` with no `external_ref`: the asserted name, the professional's `hp_identifier` under `"<country>:<issuing authority>"`, and the token's `iss` and `sub` with type `oauth2` |
@@ -90,10 +90,17 @@ caller and nothing else:
 {
   "_type": "PARTY_IDENTIFIED",
   "identifiers": [
-    { "_type": "DV_IDENTIFIER", "issuer": "<token iss, or ferroehr>", "id": "<sub, or the Basic user>" }
+    { "_type": "DV_IDENTIFIER", "issuer": "<token iss, or the Basic issuer>", "id": "<sub, or the Basic user>" }
   ]
 }
 ```
+
+For a Basic user the issuer is the deployment's `[api] basic_issuer`, which
+defaults to `[api] system_id`
+([Server configuration](../installation/config-server.md)). On the
+quickstart that is `localhost`, the host of its `public_base_url`. A
+placeholder naming any other issuer, the product name included, is refused
+`403`.
 
 The server replaces it with the committer above. A committer that states
 nothing the server's does not (the same name, the caller's own login or

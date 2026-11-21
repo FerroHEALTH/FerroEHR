@@ -779,6 +779,55 @@ async fn authenticated_write_attributes_the_default_committer() {
     );
 }
 
+/// The placeholder committer of a Basic user names the deployment's Basic
+/// issuer (`[api] basic_issuer`, by default its system id), which on the
+/// quickstart is `localhost`: a CONTRIBUTION stating it is accepted, and one
+/// naming the product as issuer is refused (#6143, #6240). No openEHR spec
+/// governs the issuer string: our own design.
+#[tokio::test]
+async fn a_basic_users_placeholder_names_the_deployments_basic_issuer() {
+    let (_pg, app) = app(true).await;
+    let req = common::req("POST", format!("{BASE}/ehr"))
+        .auth(basic("alice", "pw"))
+        .build();
+    let (status, headers, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let ehr_id = common::etag_uid(&headers);
+    let coded = |code: &str, value: &str| {
+        serde_json::json!({ "_type": "DV_CODED_TEXT", "value": value,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": code } })
+    };
+    let contribution = |issuer: &str| {
+        let committer = serde_json::json!({ "_type": "PARTY_IDENTIFIED",
+            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": issuer, "id": "alice" }] });
+        serde_json::json!({
+            "versions": [{
+                "_type": "ORIGINAL_VERSION",
+                "commit_audit": { "change_type": coded("249", "creation"), "committer": committer },
+                "lifecycle_state": coded("532", "complete"),
+                "data": crate::access_evaluator_patient_http::composition()
+            }],
+            "audit": { "change_type": coded("251", "modification"), "committer": committer }
+        })
+    };
+    for (issuer, expected) in [
+        (ferroehr::service::DEFAULT_SYSTEM_ID, StatusCode::CREATED),
+        ("ferroehr", StatusCode::FORBIDDEN),
+    ] {
+        let req = common::req("POST", format!("{BASE}/ehr/{ehr_id}/contribution"))
+            .auth(basic("alice", "pw"))
+            .json(contribution(issuer).to_string())
+            .build();
+        let (status, _headers, body) = send(&app, req).await;
+        assert_eq!(
+            status, expected,
+            "the placeholder issued by {issuer}: {body}"
+        );
+    }
+}
+
 /// The group-9 POST-body disciplines (#481): a stored-query POST accepts `{}`
 /// (all three body members are OPTIONAL — the released OAS required-list loses
 /// to the docs text: offset defaults 0, fetch is implementation-default), the
