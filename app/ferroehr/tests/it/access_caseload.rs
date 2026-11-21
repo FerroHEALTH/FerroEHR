@@ -317,10 +317,11 @@ async fn a_policy_without_the_caseload_refuses_it() {
     );
 }
 
-/// The caseload probe of the projection enters by the subject index, one
-/// probe per EHR, inside the query's one statement.
+/// The caseload probe of the projection starts from the caller's rows of the
+/// caseload index (#6188) inside the query's one statement, and never scans
+/// the projection whole.
 #[tokio::test]
-async fn the_projected_caseload_probe_uses_the_subject_index() {
+async fn the_projected_caseload_probe_starts_from_the_caseload_index() {
     let ward = Ward::new().await;
     ward.svc.project_care().await.expect("the projector runs");
     let ask = ask(Path::All, &[]).expect("a caseload");
@@ -379,7 +380,24 @@ async fn the_projected_caseload_probe_uses_the_subject_index() {
     .expect("explain the query");
     let text = plan.to_string();
     assert!(
-        text.contains("ix_access_care_subject"),
-        "the probe enters by the subject index: {text}"
+        text.contains("ix_access_care_caseload"),
+        "the probe starts from the caseload index: {text}"
     );
+    assert!(
+        !scans_whole(&plan, "access_care"),
+        "the probe never scans the projection whole: {text}"
+    );
+}
+
+/// Whether a node of the JSON plan `plan` is a sequential scan of `relation`.
+fn scans_whole(plan: &Value, relation: &str) -> bool {
+    match plan {
+        Value::Object(node) => {
+            let seq = node.get("Node Type").and_then(Value::as_str) == Some("Seq Scan")
+                && node.get("Relation Name").and_then(Value::as_str) == Some(relation);
+            seq || node.values().any(|child| scans_whole(child, relation))
+        }
+        Value::Array(nodes) => nodes.iter().any(|child| scans_whole(child, relation)),
+        _ => false,
+    }
 }
