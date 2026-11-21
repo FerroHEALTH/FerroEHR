@@ -258,6 +258,75 @@ async fn the_sweep_skips_a_shared_part_an_intake_write_names() {
     );
 }
 
+/// Two intake writes that both read a part's passed end and both raise it:
+/// the second waits on the first's raise and, once that commits, finds the
+/// part already kept as long as its entry needs, so it writes its entry and
+/// leaves the part as it is (#6192).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test holds an intake write open on a raw pool connection, outside any request"
+)]
+async fn a_write_waiting_on_another_raise_of_a_part_writes_its_entry() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AccessLogStore::new(pool.clone());
+    store
+        .append(vec![entry(1, "2099-01-01")])
+        .await
+        .expect("the first entry appends");
+    age_parts(&pool, "2025-01-02").await;
+    let digest: String =
+        sqlx::query_scalar("SELECT encode(digest, 'hex') FROM audit.access_log_shared")
+            .fetch_one(&pool)
+            .await
+            .expect("the one shared part");
+    let mut first = entry(2, "2099-01-01");
+    let first = ferroehr::access_log::intake::IntakeEntry::of(&mut first, None).expect("intake");
+    let known = std::collections::BTreeSet::from([digest.as_str()]);
+
+    let mut conn = pool.acquire().await.expect("connection");
+    let mut raising = conn.begin().await.expect("begin");
+    ferroehr::access_log::intake::take_in(&mut raising, &[first], &[Vec::new()], None, &known)
+        .await
+        .expect("the first write raises the part");
+    let waiting = {
+        let pool = pool.clone();
+        let digest = digest.clone();
+        tokio::spawn(async move {
+            let mut second = entry(3, "2099-01-01");
+            let second =
+                ferroehr::access_log::intake::IntakeEntry::of(&mut second, None).expect("intake");
+            let mut conn = pool.acquire().await.expect("connection");
+            ferroehr::access_log::intake::take_in(
+                &mut conn,
+                &[second],
+                &[Vec::new()],
+                None,
+                &std::collections::BTreeSet::from([digest.as_str()]),
+            )
+            .await
+        })
+    };
+    crate::commit_lock_order::wait_for_a_lock_waiter(&pool).await;
+    raising.commit().await.expect("the first write commits");
+    waiting
+        .await
+        .expect("the second write task")
+        .expect("the second write meets the raised part and writes its entry");
+    let kept: Vec<String> =
+        sqlx::query_scalar("SELECT retain_until::text FROM audit.access_log_shared")
+            .fetch_all(&pool)
+            .await
+            .expect("the parts");
+    assert_eq!(kept, ["2099-01-01"]);
+    let entries: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_entry")
+        .fetch_one(&pool)
+        .await
+        .expect("the entries");
+    assert_eq!(entries, 3, "every write stored its entry");
+}
+
 /// The entries whose shared part the store does not hold.
 async fn dangling(pool: &PgPool) -> i64 {
     sqlx::query_scalar(

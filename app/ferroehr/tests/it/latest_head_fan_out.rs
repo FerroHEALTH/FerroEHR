@@ -134,6 +134,7 @@ fn lowered(aql: &str) -> ferroehr::aql::sql::PreparedQuery {
         policy_parties: ferroehr::aql::sql::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
         own_records: None,
+        caseload: None,
     };
     ferroehr::aql::sql::build(&ir, &params, &ctx).expect("the AQL lowers to SQL")
 }

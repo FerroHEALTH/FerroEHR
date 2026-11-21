@@ -102,19 +102,32 @@ pub const fn kind_code(kind: CarerKind) -> &'static str {
     }
 }
 
-/// The facts revision the projection reflects and the check value of the
-/// digest form its digests were taken in, the state row locked until the
-/// transaction on `tx` ends, so one projector writes at a time.
+/// What the state row of the projection holds: the facts revision it
+/// reflects and the check value of the digest form its digests were taken
+/// in, each `None` before the first run.
+pub type State = (Option<i64>, Option<Vec<u8>>);
+
+/// How a projector reads the state row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StateRead {
+    /// Without a lock, before the projector reads the party side.
+    Unlocked,
+    /// Locked until the transaction ends, so one projector writes at a time.
+    Locked,
+}
+
+/// The [`State`] of the projection, read as `read` says.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
-pub async fn lock_state(
-    tx: &mut PgConnection,
-) -> Result<(Option<i64>, Option<Vec<u8>>), StorageError> {
-    let row =
-        sqlx::query("SELECT revision, key_check FROM access_care_state WHERE singleton FOR UPDATE")
-            .fetch_one(&mut *tx)
-            .await?;
+pub async fn state(conn: &mut PgConnection, read: StateRead) -> Result<State, StorageError> {
+    let sql = match read {
+        StateRead::Unlocked => "SELECT revision, key_check FROM access_care_state WHERE singleton",
+        StateRead::Locked => {
+            "SELECT revision, key_check FROM access_care_state WHERE singleton FOR UPDATE"
+        }
+    };
+    let row = sqlx::query(sql).fetch_one(&mut *conn).await?;
     Ok((row.try_get("revision")?, row.try_get("key_check")?))
 }
 

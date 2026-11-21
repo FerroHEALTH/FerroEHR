@@ -68,6 +68,7 @@ fn build_sql(q: &str) -> ferroehr::aql::sql::PreparedQuery {
         policy_parties: ferroehr::aql::sql::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
         own_records: None,
+        caseload: None,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))

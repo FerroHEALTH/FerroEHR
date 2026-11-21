@@ -911,6 +911,7 @@ async fn explain_population(pool: &PgPool, corpus: &Corpus) -> Value {
         policy_parties: ferroehr::aql::sql::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
         own_records: None,
+        caseload: None,
     };
     let prepared =
         ferroehr::aql::sql::build(&ir, &params, &ctx).expect("the population AQL lowers to SQL");
@@ -1289,6 +1290,7 @@ fn from_shape(aql: &str) -> &'static str {
         policy_parties: ferroehr::aql::sql::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
         own_records: None,
+        caseload: None,
     };
     let sql = ferroehr::aql::sql::build(&ir, &params, &ctx)
         .expect("the path AQL lowers to SQL")

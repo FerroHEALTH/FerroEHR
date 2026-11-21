@@ -54,6 +54,7 @@ mod anchor;
 mod archetype;
 mod attestation;
 mod care;
+mod caseload;
 mod coerce;
 mod compact;
 mod condition;
@@ -64,6 +65,7 @@ mod gates;
 mod head;
 pub(crate) mod jsonpath;
 pub mod own_records;
+mod param;
 mod pinned;
 mod predicate;
 mod project;
@@ -78,14 +80,14 @@ use crate::ids::EhrId;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use sea_query::{PostgresQueryBuilder, Query, SelectStatement, Value};
+use sea_query::{PostgresQueryBuilder, Query, SelectStatement};
 use sea_query_sqlx::{SqlxBinder as _, SqlxValues};
 
 use super::error::{AqlError, SqlError};
 use super::ir::{Bind, Coercion, ParamValue, Params, QueryDomain, QueryIr};
 use super::lineage::ArchetypeLineage;
 
-use expr::{col, literal_value};
+use expr::col;
 
 /// Static execution context the SQL generator needs beyond the IR: the CDR
 /// system id (for `OBJECT_VERSION_ID` synthesis), the optional REST `ehr_id`
@@ -132,6 +134,8 @@ pub struct SqlCtx {
     /// Art. 3(3) delay withholds held data from the query (#6108); `None`
     /// where the delay holds on no record or on every one.
     pub own_records: Option<own_records::OwnRecords>,
+    /// The caseload ([`crate::access_eval::caseload`]) narrowing the query.
+    pub caseload: Option<Arc<crate::access_eval::caseload::Caseload>>,
 }
 
 /// The EHRs whose `EHR_ACCESS` settings a query may read rows of.
@@ -535,6 +539,7 @@ impl<'a> Builder<'a> {
                 &ctx.access_settings,
                 &ctx.ehr_access,
                 ctx.own_records.as_ref(),
+                ctx.caseload.as_deref(),
             ),
             step_bindings: Vec::new(),
             node_groups: Vec::new(),
@@ -581,36 +586,6 @@ impl<'a> Builder<'a> {
         let n = self.sub_ctr;
         self.sub_ctr += 1;
         n
-    }
-
-    pub(super) fn bind_value(&self, b: &Bind) -> Result<Value, AqlError> {
-        match b {
-            Bind::Literal(lit) => Ok(literal_value(lit)),
-            Bind::Param(p) => self.param_value(p),
-        }
-    }
-
-    pub(super) fn param_value(&self, name: &str) -> Result<Value, AqlError> {
-        match self.params.get(name) {
-            Some(ParamValue::Int(i)) => Ok(Value::from(*i)),
-            Some(ParamValue::Real(r)) => Ok(Value::from(*r)),
-            Some(ParamValue::Bool(b)) => Ok(Value::from(*b)),
-            Some(ParamValue::Str(s)) => Ok(Value::from(s.clone())),
-            Some(ParamValue::Null) => Ok(Value::from(Option::<String>::None)),
-            None => Err(SqlError::UnboundParameter(name.to_owned()).into()),
-        }
-    }
-
-    pub(super) fn param_str(&self, name: &str) -> Result<String, AqlError> {
-        match self.params.get(name) {
-            Some(ParamValue::Str(s)) => Ok(s.clone()),
-            Some(ParamValue::Int(i)) => Ok(i.to_string()),
-            Some(ParamValue::Real(r)) => Ok(r.to_string()),
-            Some(ParamValue::Bool(b)) => Ok(b.to_string()),
-            Some(ParamValue::Null) | None => {
-                Err(SqlError::UnboundParameter(name.to_owned()).into())
-            }
-        }
     }
 }
 
