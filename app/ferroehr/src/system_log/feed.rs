@@ -27,8 +27,8 @@ use std::time::Duration;
 
 use ferrohealth_smart::client::outbound::{OutboundClient, SendError};
 use ferrohealth_smart::config::ServerTls;
-use http::header::CONTENT_TYPE;
 use http::Method;
+use http::header::CONTENT_TYPE;
 use ihe_atna::atna::feed::{FeedAnswer, FeedClient, FeedRepository, FeedSendError};
 use ihe_atna::atna::forwarder::{Outbox, OutboxError};
 use ihe_atna::atna::spool::{Depth, Stored};
