@@ -219,6 +219,37 @@ $$;
 COMMENT ON FUNCTION search_set_digest(integer[]) IS
     'SHA-256 over the sorted token ids of one search set.';
 
+-- The keys of a record's ITI-81 index: its search token and negated set ids,
+-- and the 32-bit hash of its request id and of its resource id, each moved
+-- into a range of its own (column 1 or 2 times 2^33), so no key of one kind
+-- equals a key of another. One GIN entry of these keys answers the token
+-- parameters and the request and resource ids together, where a GIN entry and
+-- two B-tree entries did (#6202). A hash narrows; the search compares the text.
+--
+-- No openEHR or IHE specification governs how a repository indexes its
+-- records: our own design.
+-- Not STRICT, so PostgreSQL inlines it into the statements and the index
+-- expression that call it (PostgreSQL 18, "Inlining of SQL Functions").
+CREATE FUNCTION audit.search_key(p_column integer, p_value text) RETURNS bigint[]
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$
+    SELECT CASE WHEN p_value IS NOT NULL
+                THEN ARRAY[p_column::pg_catalog.int8 * 8589934592 + pg_catalog.hashtext(p_value)]
+           END
+$$;
+COMMENT ON FUNCTION search_key(integer, text) IS
+    'The ITI-81 index key of a column value, as a one-element array: the 32-bit hash of p_value in the range of column p_column (1 the request id, 2 the resource id), apart from every token id; NULL for a NULL value.';
+
+CREATE FUNCTION audit.search_keys(p_tokens integer[], p_request_id text, p_resource_id text)
+    RETURNS bigint[]
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$
+    SELECT coalesce(p_tokens::pg_catalog.int8[], '{}')
+           || audit.search_key(1, p_request_id) || audit.search_key(2, p_resource_id)
+$$;
+COMMENT ON FUNCTION search_keys(integer[], text, text) IS
+    'The ITI-81 index keys of a record: its search tokens, and audit.search_key of its request id and of its resource id.';
+
 CREATE FUNCTION audit.audit_render_policy_reject_change() RETURNS trigger
     LANGUAGE plpgsql
     SET search_path = audit, pg_catalog
@@ -248,7 +279,11 @@ BEGIN
     IF TG_OP = 'DELETE'
        AND coalesce(current_setting('ferroehr.audit_reaping', true), 'off') = 'on'
        AND NOT EXISTS (SELECT 1 FROM audit.audit_event e
-                        WHERE e.search_tokens @> ARRAY[OLD.id])
+                        WHERE audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
+                              @> ARRAY[OLD.id::bigint])
+       AND NOT EXISTS (SELECT 1 FROM audit.access_log_entry e
+                        WHERE audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
+                              @> ARRAY[OLD.id::bigint])
        AND NOT EXISTS (SELECT 1 FROM audit.audit_search_set s
                         WHERE s.tokens @> ARRAY[OLD.id]) THEN
         RETURN OLD;
@@ -509,30 +544,23 @@ CREATE TABLE audit_event (
 );
 CREATE INDEX ix_audit_event_retention_ends ON audit_event (retention_ends)
     WHERE retention_ends IS NOT NULL;
--- The token parameters match through this index. New entries go to the
+-- The token parameters, entity and an entity.identifier answered from a column
+-- match through this index of audit.search_keys. New entries go to the
 -- pending list in one append and move into the posting trees in bulk; a
 -- search reads the pending list whole, so its limit is 512 kB rather than the
 -- 4 MB default (PostgreSQL 18, "GIN Fast Update Technique",
 -- https://www.postgresql.org/docs/18/gin.html#GIN-FAST-UPDATE).
-CREATE INDEX ix_audit_event_search_tokens ON audit_event USING gin (search_tokens)
-    WITH (fastupdate = on, gin_pending_list_limit = 512);
--- entity matches resource_id through its hash, since a resource id can be a
--- stored query name longer than a B-tree entry holds.
-CREATE INDEX ix_audit_event_resource_id ON audit_event (hashtextextended(resource_id, 0));
-CREATE INDEX ix_audit_event_recorded_at ON audit_event (recorded_at);
-CREATE INDEX ix_audit_event_patient ON audit_event (patient_id, recorded_at)
-    WHERE patient_id IS NOT NULL;
-CREATE INDEX ix_audit_event_principal ON audit_event (principal, recorded_at)
-    WHERE principal IS NOT NULL;
+--
 -- An entity.identifier that carries the record's request id or resource id
 -- is answered from that column (RESTful ATNA ITI-81 §3.81.4.1.2.2 searches
 -- entity.identifier, which matches AuditEvent.entity.what.identifier): the
 -- record names, in its shared search set, a token of the parameter
 -- 'entity.identifier=request_id' or 'entity.identifier=resource_id' with the
 -- system the document writes the identifier in and no code, and a search reads
--- the value from the column, through this index and ix_audit_event_resource_id.
--- A per-record token row for a value unique to its request would cost about
--- 200 bytes per audited request.
+-- the value from the column through its key here, then compares the text. A
+-- resource id is matched by its hash, since it can be a stored query name
+-- longer than a B-tree entry holds. A per-record token row for a value unique
+-- to its request would cost about 200 bytes per audited request.
 --
 -- Retention: the reaping bodies collect the token ids the reaped records named,
 -- and audit.release_search_tokens deletes those no remaining record and no
@@ -544,7 +572,14 @@ CREATE INDEX ix_audit_event_principal ON audit_event (principal, recorded_at)
 --
 -- No openEHR or IHE specification governs how a repository indexes its records:
 -- our own design.
-CREATE INDEX ix_audit_event_request_id ON audit_event (hashtextextended(request_id, 0));
+CREATE INDEX ix_audit_event_search_tokens
+    ON audit_event USING gin (audit.search_keys(search_tokens, request_id, resource_id))
+    WITH (fastupdate = on, gin_pending_list_limit = 512);
+CREATE INDEX ix_audit_event_recorded_at ON audit_event (recorded_at);
+CREATE INDEX ix_audit_event_patient ON audit_event (patient_id, recorded_at)
+    WHERE patient_id IS NOT NULL;
+CREATE INDEX ix_audit_event_principal ON audit_event (principal, recorded_at)
+    WHERE principal IS NOT NULL;
 CREATE TRIGGER audit_event_chain_begin
     BEFORE INSERT ON audit_event
     FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_chain_begin();
@@ -769,23 +804,34 @@ COMMENT ON FUNCTION hold_search_tokens() IS
 
 -- Deletes the tokens among p_tokens that no record and no search set names.
 -- Called by the reaping bodies with the reaping flag set.
+-- PL/pgSQL, so its body is read when it first runs, once access_log_entry
+-- (0004) exists.
 CREATE FUNCTION audit.release_search_tokens(p_tokens integer[]) RETURNS bigint
-    LANGUAGE sql VOLATILE
+    LANGUAGE plpgsql VOLATILE
     SET search_path = audit, pg_catalog
     AS $$
+DECLARE
+    v_released bigint;
+BEGIN
     WITH released AS (
         DELETE FROM audit.audit_search_token t
          WHERE t.id = ANY (coalesce(p_tokens, '{}'))
            AND NOT EXISTS (SELECT 1 FROM audit.audit_event e
-                            WHERE e.search_tokens @> ARRAY[t.id])
+                            WHERE audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
+                                  @> ARRAY[t.id::bigint])
+           AND NOT EXISTS (SELECT 1 FROM audit.access_log_entry e
+                            WHERE audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
+                                  @> ARRAY[t.id::bigint])
            AND NOT EXISTS (SELECT 1 FROM audit.audit_search_set s
                             WHERE s.tokens @> ARRAY[t.id])
         RETURNING 1
     )
-    SELECT count(*) FROM released
+    SELECT count(*) INTO v_released FROM released;
+    RETURN v_released;
+END;
 $$;
 COMMENT ON FUNCTION release_search_tokens(integer[]) IS
-    'Deletes the search tokens among p_tokens that no record and no search set names; the reaping bodies call it with the token ids of the records they removed.';
+    'Deletes the search tokens among p_tokens that no system audit record, no access-log entry and no search set names; the reaping bodies call it with the token ids of the records they removed.';
 
 CREATE FUNCTION audit.reap_audit_events_due(p_today date, p_unstated_cutoff timestamptz)
     RETURNS bigint

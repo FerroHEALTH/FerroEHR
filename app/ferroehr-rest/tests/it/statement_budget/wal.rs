@@ -28,12 +28,14 @@ const REQUESTS: u64 = 20;
 /// `pg_walinspect`, 2% above: per entry 2746, 2196, 1876 and 2639 once the
 /// row part leaves the request and the version to their columns and the
 /// shared part keeps what the classification read (#6005), and 207 per pass
-/// that links (#6010).
+/// that links (#6010). The token index taking the request and resource ids
+/// as keys in place of their two hash B-trees (#6202) measured 2634, 2087,
+/// 1777 and 2543 per entry, and each entry ceiling fell by its drop.
 const CEILINGS: [(Kind, (u64, u64)); 4] = [
-    (Kind::Read, (2801, 211)),
-    (Kind::Single, (2240, 211)),
-    (Kind::Population, (1914, 211)),
-    (Kind::Write, (2692, 211)),
+    (Kind::Read, (2705, 211)),
+    (Kind::Single, (2135, 211)),
+    (Kind::Population, (1815, 211)),
+    (Kind::Write, (2596, 211)),
 ];
 
 /// A kind of request, and how to send one.

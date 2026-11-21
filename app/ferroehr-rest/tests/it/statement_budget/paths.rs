@@ -240,6 +240,12 @@ struct Budget {
 /// peak of 272,547 bytes before and 431 to 439 KiB with a peak of at most
 /// 147,965 bytes after, over three runs, and a fill one copy of the body
 /// less. Its ceilings are those figures with the margins above.
+/// The token index has since taken the request and resource ids as keys of
+/// its own, in place of two hash B-trees on each record of both chains
+/// (#6202): 96 to 616 fewer WAL bytes on every path that writes an access
+/// record or a system audit record, the read from the version copy among
+/// them, measured beside the merge base, and each WAL ceiling fell by its
+/// path's figure.
 /// A node row has since stored its own path step, and the node key carries no
 /// tier (#6204): 14,098, 14,016 and 13,880 bytes fewer on the JSON, XML and
 /// FLAT commits of the IPS composition, 13,520 on a CONTRIBUTION commit, and
@@ -253,7 +259,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_530_778,
         round_trips: 9,
         nested: 13,
-        wal: 231_022,
+        wal: 230_926,
     },
     Budget {
         path: Path::CommitXml,
@@ -262,7 +268,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_533_031,
         round_trips: 9,
         nested: 14,
-        wal: 231_177,
+        wal: 231_081,
     },
     Budget {
         path: Path::CommitFlat,
@@ -271,7 +277,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_528_525,
         round_trips: 9,
         nested: 13,
-        wal: 231_287,
+        wal: 231_191,
     },
     Budget {
         path: Path::ReadJson,
@@ -280,7 +286,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 617_268,
         round_trips: 3,
         nested: 2,
-        wal: 2773,
+        wal: 2677,
     },
     Budget {
         path: Path::ReadXml,
@@ -289,7 +295,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_017_140,
         round_trips: 3,
         nested: 2,
-        wal: 2773,
+        wal: 2677,
     },
     Budget {
         path: Path::ReadFlat,
@@ -298,7 +304,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_634_407,
         round_trips: 3,
         nested: 2,
-        wal: 2773,
+        wal: 2677,
     },
     Budget {
         path: Path::EhrRead,
@@ -307,7 +313,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 100_250,
         round_trips: 3,
         nested: 2,
-        wal: 1989,
+        wal: 1877,
     },
     Budget {
         path: Path::AqlSingle,
@@ -316,7 +322,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 118_273,
         round_trips: 4,
         nested: 2,
-        wal: 4439,
+        wal: 4231,
     },
     Budget {
         path: Path::AqlPopulation,
@@ -325,7 +331,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 158_823,
         round_trips: 3,
         nested: 2,
-        wal: 11_380,
+        wal: 10_764,
     },
     Budget {
         path: Path::Iti81,
@@ -334,7 +340,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 624_026,
         round_trips: 3,
         nested: 2,
-        wal: 1852,
+        wal: 1740,
     },
     Budget {
         path: Path::PartyRead,
@@ -343,7 +349,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 78_848,
         round_trips: 8,
         nested: 6,
-        wal: 2070,
+        wal: 1974,
     },
     Budget {
         path: Path::CommitContribution,
@@ -352,7 +358,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_649_934,
         round_trips: 13,
         nested: 14,
-        wal: 232_168,
+        wal: 232_064,
     },
     Budget {
         path: Path::ReadAtTime,
@@ -361,7 +367,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 701_748,
         round_trips: 3,
         nested: 2,
-        wal: 2773,
+        wal: 2677,
     },
     Budget {
         path: Path::CommitStatus,
@@ -370,7 +376,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 144_180,
         round_trips: 15,
         nested: 11,
-        wal: 6117,
+        wal: 6021,
     },
     Budget {
         path: Path::ReadStatus,
@@ -379,7 +385,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 102_503,
         round_trips: 3,
         nested: 2,
-        wal: 2102,
+        wal: 2006,
     },
     Budget {
         path: Path::CommitParty,
@@ -388,7 +394,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 117_146,
         round_trips: 31,
         nested: 20,
-        wal: 7793,
+        wal: 7697,
     },
     Budget {
         path: Path::AqlMatches,
@@ -397,7 +403,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 192_267,
         round_trips: 4,
         nested: 2,
-        wal: 13_312,
+        wal: 12_720,
     },
     Budget {
         path: Path::AqlParty,
@@ -406,7 +412,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 107_199,
         round_trips: 8,
         nested: 6,
-        wal: 2083,
+        wal: 1971,
     },
     Budget {
         path: Path::CommitPartyScored,
@@ -415,7 +421,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 132_147,
         round_trips: 31,
         nested: 21,
-        wal: 10_362,
+        wal: 10_266,
     },
     Budget {
         path: Path::ReadVersion,
@@ -424,7 +430,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 162_800,
         round_trips: 3,
         nested: 2,
-        wal: 2757,
+        wal: 2661,
     },
 ];
 
