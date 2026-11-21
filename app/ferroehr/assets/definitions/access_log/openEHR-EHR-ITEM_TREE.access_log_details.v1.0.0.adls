@@ -105,6 +105,9 @@ definition
                 ELEMENT[id39] occurrences matches {0..1} matches {
                     value matches { DV_TEXT[id79] }
                 }
+                ELEMENT[id40] occurrences matches {0..1} matches {
+                    value matches { DV_CODED_TEXT[id80] }
+                }
         }
     }
 
@@ -140,5 +143,6 @@ terminology
             ["id37"] = <text = <"Binding"> description = <"The binding of the caller's credential to a party, with every field, as application/json.">>
             ["id38"] = <text = <"Summary"> description = <"The count and the EHRs of a summary of refusals, as application/json.">>
             ["id39"] = <text = <"Event type"> description = <"The DICOM EventTypeCode of an authentication record: 110122 Login or 110123 Logout.">>
+            ["id40"] = <text = <"Review"> description = <"The HL7_Confidentiality level of the record at which the access is recorded for review: a care relationship written to a record marked R or V (draft access control, The Decision Procedure, Writing Relationships).">>
         >
     >

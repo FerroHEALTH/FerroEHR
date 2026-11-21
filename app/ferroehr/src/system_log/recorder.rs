@@ -15,6 +15,7 @@
 //! the adapter then releases what the request reserved. No openEHR spec
 //! governs the audit trail: our own design.
 
+use openehr_rm::draft::access_control::terminology::Confidentiality;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use tokio::task_local;
@@ -83,6 +84,8 @@ struct State {
     reserved: Vec<Reserved>,
     /// The act's own records its next commit holds.
     deferred: Vec<AuditEvent>,
+    /// The level the write is recorded for review at.
+    review: Option<Confidentiality>,
 }
 
 /// The recorder of one request.
@@ -126,13 +129,25 @@ impl WriteRecorder {
         };
         state.built = true;
         drop(state);
-        let records = build(facts);
+        let mut records = build(facts);
+        if let Some(level) = self.lock().review {
+            for record in &mut records {
+                record.review = Some(level);
+            }
+        }
         // NOTE: our own design (#5762), a commit before the operation is known (a party the
         // authentication layer provisions) builds nothing, so a later commit records it.
         if records.is_empty() {
             self.unbuild();
         }
         records
+    }
+
+    /// Records the request's write for review at `level`: its operation
+    /// records carry the mark (draft access control, The Decision Procedure,
+    /// Writing Relationships, item 2).
+    pub(crate) fn mark_for_review(&self, level: Confidentiality) {
+        self.lock().review = Some(level);
     }
 
     /// Hand the operation records back after their commit failed, so a later

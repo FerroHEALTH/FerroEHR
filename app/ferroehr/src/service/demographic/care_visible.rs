@@ -91,6 +91,32 @@ impl FerroEhrService {
     /// subject it declares, read on the party pool and then on the clinical
     /// pool, never both at once.
     async fn subject_records(&self, persons: &[Uuid]) -> Result<Records, ServiceError> {
+        let owners = self.subject_references(persons).await?;
+        let references: Vec<EhrSubject> = owners.keys().cloned().collect();
+        let mut records = Records::new();
+        for (subject, ehr) in
+            crate::storage::subject_ehrs::ehrs_of_subjects(&self.pool, &references).await?
+        {
+            if let Some(person) = owners.get(&subject) {
+                records.entry(*person).or_default().push(ehr);
+            }
+        }
+        for ehrs in records.values_mut() {
+            ehrs.sort_unstable();
+            ehrs.dedup();
+        }
+        Ok(records)
+    }
+
+    /// The subject references that name each of `persons`, with the person
+    /// each names: its own reference in this CDR's namespace, in either case,
+    /// and each record subject it declares, read on the party pool and given
+    /// back before this returns (draft decision procedure, Terms, the
+    /// subject's `PERSON`).
+    pub(super) async fn subject_references(
+        &self,
+        persons: &[Uuid],
+    ) -> Result<BTreeMap<EhrSubject, Uuid>, ServiceError> {
         let declared = {
             let mut conn = crate::db::acquire::acquire(&self.demographic_pool).await?;
             declared_by(&mut conn, persons).await?
@@ -107,20 +133,7 @@ impl FerroEhrService {
                 .into_iter()
                 .map(|(person, subject)| (subject, person)),
         );
-        let references: Vec<EhrSubject> = owners.keys().cloned().collect();
-        let mut records = Records::new();
-        for (subject, ehr) in
-            crate::storage::subject_ehrs::ehrs_of_subjects(&self.pool, &references).await?
-        {
-            if let Some(person) = owners.get(&subject) {
-                records.entry(*person).or_default().push(ehr);
-            }
-        }
-        for ehrs in records.values_mut() {
-            ehrs.sort_unstable();
-            ehrs.dedup();
-        }
-        Ok(records)
+        Ok(owners)
     }
 
     /// The subjects of `persons` whose record the running request may read:

@@ -242,6 +242,7 @@ specification governs the details: they are FerroEHR's own.
 | `id37` | binding | `DV_PARSABLE` (`application/json`) | the party binding with every field |
 | `id38` | summary | `DV_PARSABLE` (`application/json`) | the count and EHRs of a summary of refusals |
 | `id39` | event type | `DV_TEXT` | the DICOM `EventTypeCode` of an authentication record: `110122` Login, `110123` Logout |
+| `id40` | review | `DV_CODED_TEXT` (`HL7_Confidentiality`) | the level, `R` or `V`, of the record a care relationship was written to, when the write is recorded for review |
 
 The subject of care is kept so the BALP `entity:patient` and the
 `patient` search parameter name the patient as they did when the access
