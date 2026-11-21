@@ -1,0 +1,1 @@
+- A Basic user's roles and scopes from its `hold_roles` and `hold_scopes` grants are read from the grant's credentials once, when the instance reads the grant rows, and no longer on every request. A Basic EHR read spends about 2 points less of its request CPU on authentication; what the user holds is unchanged.

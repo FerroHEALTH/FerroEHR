@@ -27,7 +27,10 @@ use uuid::Uuid;
 use crate::party_binding::grants::caller::care_of::ProviderKey;
 use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::party_binding::grants::derive::walk;
-use crate::party_binding::grants::operation::{NO_SUBJECT_NAMESPACE, Operation, SCOPES};
+use crate::party_binding::grants::operation::{
+    NO_SUBJECT_NAMESPACE, Operation, ROLE, SCOPE, SCOPES,
+};
+use crate::party_binding::grants::store::CapabilityRow;
 use crate::party_binding::policy_mark::coded;
 
 tokio::task_local! {
@@ -135,6 +138,7 @@ pub struct Grant {
     operation: Operation,
     role: Uuid,
     credentials: Option<Arc<Value>>,
+    held: Arc<[String]>,
 }
 
 impl std::fmt::Debug for Grant {
@@ -149,10 +153,23 @@ impl std::fmt::Debug for Grant {
 impl Grant {
     /// The grant of `operation` by the `ROLE` `role`, holding `credentials`.
     pub(crate) fn new(operation: Operation, role: Uuid, credentials: Option<Arc<Value>>) -> Self {
+        let held = held(operation, credentials.as_deref());
         Self {
             operation,
             role,
             credentials,
+            held,
+        }
+    }
+
+    /// The grant of `operation` a stored capability `row` holds, sharing what
+    /// the row's credentials give with every grant built from it.
+    pub(crate) fn of_row(operation: Operation, row: &CapabilityRow) -> Self {
+        Self {
+            operation,
+            role: row.role_id,
+            credentials: row.credentials.clone(),
+            held: Arc::clone(&row.held),
         }
     }
 
@@ -173,6 +190,31 @@ impl Grant {
     pub fn credentials(&self) -> Credentials<'_> {
         Credentials(self.credentials.as_deref())
     }
+
+    /// The roles an [`Operation::HoldRoles`] grant gives a Basic user, or the
+    /// scopes an [`Operation::HoldScopes`] grant gives, trimmed and without
+    /// the blank ones; empty for any other operation.
+    #[must_use]
+    pub fn held(&self) -> &[String] {
+        &self.held
+    }
+}
+
+/// What a grant of `operation` holding `credentials` gives a Basic user
+/// ([`Grant::held`]), read once from the credentials tree.
+pub(crate) fn held(operation: Operation, credentials: Option<&Value>) -> Arc<[String]> {
+    let code = match operation {
+        Operation::HoldRoles => ROLE,
+        Operation::HoldScopes => SCOPE,
+        _ => return Arc::default(),
+    };
+    Credentials(credentials)
+        .texts(code)
+        .into_iter()
+        .map(str::trim)
+        .filter(|text| !text.is_empty())
+        .map(str::to_owned)
+        .collect()
 }
 
 /// The `credentials` of a grant, or one `CLUSTER` of them, read by the
@@ -481,6 +523,45 @@ mod tests {
                 .credentials()
                 .texts("template"),
             Vec::<&str>::new()
+        );
+    }
+
+    #[test]
+    fn a_held_grant_gives_its_trimmed_texts_read_once_with_its_row() {
+        let tree = Arc::new(json!({"_type": "ITEM_TREE", "items": [
+            named(ROLE, &json!({"_type": "DV_TEXT", "value": " Nurse "})),
+            named(ROLE, &json!({"_type": "DV_TEXT", "value": "  "})),
+            named(SCOPE, &json!({"_type": "DV_TEXT", "value": "user/ehr.r"}))
+        ]}));
+        let roles = Grant::new(Operation::HoldRoles, Uuid::nil(), Some(Arc::clone(&tree)));
+        assert_eq!(roles.held(), ["Nurse"]);
+        let scopes = Grant::new(Operation::HoldScopes, Uuid::nil(), Some(Arc::clone(&tree)));
+        assert_eq!(scopes.held(), ["user/ehr.r"]);
+        let other = Grant::new(Operation::ImportEhr, Uuid::nil(), Some(Arc::clone(&tree)));
+        let none: &[String] = &[];
+        assert_eq!(other.held(), none);
+        let term = crate::party_binding::grants::store::Term {
+            lifecycle_state: "532".to_owned(),
+            role_dates: None,
+            dates: None,
+            not_before: None,
+            not_after: None,
+        };
+        let row = CapabilityRow::new(
+            Uuid::nil(),
+            Uuid::nil(),
+            Operation::HoldRoles.code().to_owned(),
+            term,
+            Some(tree),
+        );
+        let first = Grant::of_row(Operation::HoldRoles, &row);
+        assert_eq!(first, roles);
+        assert!(
+            std::ptr::eq(
+                first.held(),
+                Grant::of_row(Operation::HoldRoles, &row).held()
+            ),
+            "every grant of the row shares what it gives"
         );
     }
 

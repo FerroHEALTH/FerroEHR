@@ -440,7 +440,7 @@ impl LiveGrants {
             .flatten()
             .filter_map(|row| {
                 let operation = in_force(row, &ceiling, today, now)?;
-                Some(Grant::new(operation, row.role_id, row.credentials.clone()))
+                Some(Grant::of_row(operation, row))
             })
             .collect();
         let provider = client.as_ref().and_then(|client| client.provider.as_ref());
@@ -555,7 +555,7 @@ impl LiveGrants {
                 else {
                     continue;
                 };
-                let grant = Grant::new(accessor.operation(), row.role_id, row.credentials.clone());
+                let grant = Grant::of_row(accessor.operation(), row);
                 // NOTE: an agreement that does not read is listed without its terms,
                 // and the admission refuses every caller under it.
                 let agreement = Agreement::read(accessor, grant.credentials()).ok();
@@ -649,12 +649,7 @@ impl LiveGrants {
             .filter(|(performer, _)| !silenced.contains(performer))
             .flat_map(|(performer, rows)| rows.iter().map(move |row| (*performer, row)))
             .filter(|(_, row)| in_force(row, &ceiling, today, now) == Some(operation))
-            .map(|(performer, row)| {
-                (
-                    performer,
-                    Grant::new(operation, row.role_id, row.credentials.clone()),
-                )
-            })
+            .map(|(performer, row)| (performer, Grant::of_row(operation, row)))
             .collect()
     }
 
@@ -669,7 +664,7 @@ impl LiveGrants {
             .values()
             .flatten()
             .filter(|row| Operation::of(&row.operation) == Some(operation))
-            .map(|row| Grant::new(operation, row.role_id, row.credentials.clone()))
+            .map(|row| Grant::of_row(operation, row))
             .collect()
     }
 }
@@ -730,11 +725,11 @@ mod tests {
     }
 
     fn row(code: &str) -> CapabilityRow {
-        CapabilityRow {
-            role_id: Uuid::nil(),
-            performer_id: Uuid::nil(),
-            operation: code.to_owned(),
-            term: Term {
+        CapabilityRow::new(
+            Uuid::nil(),
+            Uuid::nil(),
+            code.to_owned(),
+            Term {
                 lifecycle_state: "532".to_owned(),
                 role_dates: Some(Dates {
                     lower: None,
@@ -747,8 +742,8 @@ mod tests {
                 not_before: None,
                 not_after: None,
             },
-            credentials: None,
-        }
+            None,
+        )
     }
 
     #[test]
