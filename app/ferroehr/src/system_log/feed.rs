@@ -22,7 +22,7 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use ferrohealth_smart::client::outbound::{OutboundClient, SendError};
@@ -114,8 +114,6 @@ pub(super) struct StoreOutbox {
     refused: Mutex<BTreeSet<i64>>,
     /// The rows awaiting delivery at the last read.
     waiting: AtomicUsize,
-    /// Whether the records written before the outbox existed are entered in it.
-    backlog: AtomicBool,
 }
 
 impl StoreOutbox {
@@ -130,7 +128,6 @@ impl StoreOutbox {
             idle,
             refused: Mutex::new(BTreeSet::new()),
             waiting: AtomicUsize::new(0),
-            backlog: AtomicBool::new(false),
         }
     }
 
@@ -179,20 +176,6 @@ fn outbox_error(error: AuditError) -> OutboxError {
 #[async_trait::async_trait]
 impl Outbox for StoreOutbox {
     async fn oldest(&self) -> Result<Option<Stored>, OutboxError> {
-        if self.sink == Sink::FhirFeed && !self.backlog.load(Ordering::Relaxed) {
-            let moved = self
-                .store
-                .enqueue_fhir_feed_backlog()
-                .await
-                .map_err(outbox_error)?;
-            if moved > 0 {
-                tracing::info!(
-                    records = moved,
-                    "ATNA audit FHIR feed: records stored before the outbox existed are owed"
-                );
-            }
-            self.backlog.store(true, Ordering::Relaxed);
-        }
         let (sequence, delivered) = loop {
             let (oldest, waiting) = self
                 .store

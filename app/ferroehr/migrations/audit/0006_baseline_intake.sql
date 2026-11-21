@@ -44,164 +44,28 @@ END;
 $$;
 
 -- ── audit_event_intake ───────────────────────────────────────────────────────
--- The intake of the system chain: an audit record of no access-log entry is
--- written here, in its own transaction, before the response that reports it.
--- The table is not chained, so concurrent requests never wait on a head;
--- audit.audit_event_chain_move() moves each row into audit_event, whose own
--- triggers link it. An intake row is append-only: the runtime role may insert
--- and read it and nothing else, and the triggers below refuse every UPDATE,
--- DELETE and TRUNCATE. A write's records are held under a reservation id
--- (reserved_by) until the write's own transaction commits it
--- (audit_intake_release, audit_intake_discard). It carries the columns and
--- the checks of audit_event, less the stamps and links the chain fills, and
--- keeps the checks' names so a refusal reads the same in both tables.
+-- The intake of the system chain (#6203): a request writes each audit record
+-- of no access-log entry once, into audit_event, in its own transaction before
+-- the response that reports it, with one row here naming the records of its
+-- statement. Neither table is chained, so concurrent requests never wait on a
+-- head; audit.audit_event_chain_move() links the records of each released row
+-- in the order the row names them and removes the row. An intake row is
+-- append-only: the runtime role may insert and read it and nothing else, and
+-- the triggers below refuse every UPDATE, DELETE and TRUNCATE. A write's
+-- records are held under a reservation id (reserved_by) until the write's own
+-- transaction commits it (audit_intake_release, audit_intake_discard).
 --
 -- vacuum_truncate is off: the chainer empties the table milliseconds after
 -- each insert, and truncating its tail at every vacuum would take an ACCESS
 -- EXCLUSIVE lock the intake writers queue behind (PostgreSQL 18, CREATE
 -- TABLE, "vacuum_truncate").
 CREATE TABLE audit_event_intake (
-    id                     uuid        NOT NULL DEFAULT uuidv7(),
-    -- The event time (FHIR AuditEvent.recorded / DICOM EventDateTime).
-    recorded_at            timestamptz NOT NULL,
-    -- The DICOM EventActionCode (PS3.15 §A.5.1).
-    action                 text        NOT NULL,
-    -- The DICOM EventOutcomeIndicator (PS3.15 §A.5.1).
-    outcome                smallint    NOT NULL,
-    -- The DICOM EventID csd-code (110110/110112/110106/110107/110114/110100).
-    event_code             text        NOT NULL,
-    -- The concrete operation: the ITS-REST operation id, or the DCM
-    -- login/logout EventTypeCode csd-code for authentication records.
-    operation              text,
-    -- The authenticated principal (Basic username / OAuth sub); NULL when the
-    -- caller was unauthenticated.
-    principal              text,
-    -- The resolved EHR subject (patient) id, when the touched resource is
-    -- patient-centric and resolution succeeded.
-    patient_id             text,
-    -- The resource class the operation touched (the event model's
-    -- ObjectClass, lower-case).
-    resource_class         text        NOT NULL,
-    -- The touched resource id (version uid / template id / party uid /
-    -- qualified stored-query name).
-    resource_id            text,
-    -- The requesting network address.
-    client_ip              text,
-    -- The bearer token jti (IHE BALP OAUTHaccessTokenUse.Minimal), never
-    -- token contents.
-    token_id               text,
-    -- The pseudonymisation domain read or written.
-    domain                 text,
-    -- The purpose-of-use and legal-basis codes of the access.
-    purpose                text,
-    legal_basis            text,
-    -- How many records the operation served, when it serves a countable set.
-    result_count           bigint,
-    -- The request correlation id (the x-request-id of the response).
-    request_id             text,
-    -- The roles the caller held, and the originating systems of the data
-    -- served (EHDS Annex II 3.2(e)), capped, with their full count.
-    roles                  jsonb,
-    origins                jsonb,
-    origin_count           bigint,
-    -- The EHDS Art. 14(1) classification of the data: the categories, what
-    -- the classification rests on, its evidence and the map in force.
-    categories             jsonb,
-    category_basis         text,
-    category_evidence      jsonb,
-    category_map_digest    text,
-    -- How the credential acts, and its eIDAS level of assurance.
-    acting_mode            text,
-    assurance_level        text,
-    assurance_value        text,
-    professional_id        text,
-    -- Whether the access was declared an emergency access (EHDS Art. 11(5)).
-    emergency_access       boolean     NOT NULL DEFAULT false,
-    -- The first date the record may be deleted on (EHDS Annex II 3.4), and
-    -- whether the record states it.
-    retention_ends         date,
-    retention_stated       boolean     NOT NULL DEFAULT false,
-    -- The data permit the caller declared it acts under (EHDS Art. 68).
-    permit                 text,
-    -- The token issuer and client the caller was authenticated by.
-    issuer                 text,
-    client_id              text,
-    -- The EHR a classified access reached, the namespace of patient_id, and
-    -- whether the subject lookup failed.
-    ehr_id                 text,
-    subject_namespace      text,
-    subject_lookup_failed  boolean     NOT NULL DEFAULT false,
-    -- The HL7_Confidentiality level the access is recorded for review at.
-    review                 text        CHECK (review IN ('R', 'V')),
-    -- What the category classification read.
-    category_content       jsonb,
-    -- The render policy the record is rendered under, and its ITI-81 search
-    -- tokens (audit_search_token ids, its audit_search_set id negated).
-    render_policy          bytea       NOT NULL,
-    search_tokens          integer[]   NOT NULL,
-    -- The outcome of the party binding and what it names.
-    binding                text,
-    party                  jsonb,
-    party_groups           jsonb,
-    provider               jsonb,
-    guest                  boolean     NOT NULL DEFAULT false,
-    representation         jsonb,
-    external_fields        jsonb,
-    agreement              jsonb,
-    actor_chain            jsonb,
-    facilities             jsonb,
-    binding_detail         jsonb,
-    summary                jsonb,
-    -- The purposes of use and professional roles the access token states.
-    token_attributes       jsonb,
-    -- The intake's own key, when the row was taken, and the reservation
-    -- that holds it.
-    intake_id              bigint      NOT NULL GENERATED ALWAYS AS IDENTITY,
-    taken_at               timestamptz NOT NULL DEFAULT now(),
-    reserved_by            uuid,
-    CONSTRAINT pk_audit_event_intake PRIMARY KEY (intake_id),
-    CONSTRAINT uq_audit_event_intake_id UNIQUE (id),
-    CONSTRAINT fk_audit_event_intake_policy FOREIGN KEY (render_policy)
-        REFERENCES audit_render_policy (digest),
-    CONSTRAINT ck_audit_event_action CHECK (action IN ('C', 'R', 'U', 'D', 'E')),
-    CONSTRAINT ck_audit_event_outcome CHECK (outcome IN (0, 4, 8, 12)),
-    CONSTRAINT ck_audit_event_domain
-        CHECK (domain IS NULL OR domain IN ('clinical', 'party', 'linkage', 'system')),
-    CONSTRAINT ck_audit_event_result_count
-        CHECK (result_count IS NULL OR result_count >= 0),
-    CONSTRAINT ck_audit_event_categories
-        CHECK (categories IS NULL OR jsonb_typeof(categories) = 'array'),
-    CONSTRAINT ck_audit_event_category_basis
-        CHECK (category_basis IS NULL
-               OR category_basis IN ('returned', 'written', 'queried', 'resource-kind',
-                                     'template', 'archetype', 'query')),
-    CONSTRAINT ck_audit_event_category_evidence
-        CHECK (category_evidence IS NULL OR jsonb_typeof(category_evidence) = 'array'),
-    -- A classification is the categories, the basis and the evidence together;
-    -- a record never carries one without the others.
-    CONSTRAINT ck_audit_event_category_whole
-        CHECK ((categories IS NULL) = (category_basis IS NULL)
-               AND (categories IS NULL) = (category_evidence IS NULL)),
-    CONSTRAINT ck_audit_event_category_content
-        CHECK ((category_content IS NULL) = (categories IS NULL)),
-    CONSTRAINT ck_audit_event_acting_mode
-        CHECK (acting_mode IS NULL
-               OR acting_mode IN ('person', 'client', 'delegated', 'external', 'system')),
-    CONSTRAINT ck_audit_event_assurance_level
-        CHECK (assurance_level IS NULL
-               OR assurance_level IN ('low', 'substantial', 'high')),
-    CONSTRAINT ck_audit_event_retention_stated
-        CHECK (retention_ends IS NULL OR retention_stated),
-    CONSTRAINT ck_audit_event_binding
-        CHECK (binding IS NULL OR binding IN (
-            'bound', 'provisional', 'external', 'organisation', 'system', 'self',
-            'refused-unbound', 'refused-ambiguous', 'refused-inactive', 'refused-abandoned',
-            'refused-deprovisioned', 'refused-wrong-marker',
-            'refused-representation-unrecorded', 'refused-key-claim-missing',
-            'refused-groups-unavailable', 'refused-guest', 'refused-external-incomplete',
-            'refused-trc-patient-mismatch', 'refused-trc-missing',
-            'refused-system-personal-scope', 'refused-no-agreement',
-            'refused-scope-beyond-agreement', 'refused-correlation-missing'))
+    id          bigint      NOT NULL GENERATED ALWAYS AS IDENTITY,
+    taken_at    timestamptz NOT NULL DEFAULT now(),
+    events      uuid[]      NOT NULL,
+    reserved_by uuid,
+    CONSTRAINT pk_audit_event_intake PRIMARY KEY (id),
+    CONSTRAINT ck_audit_event_intake_events CHECK (cardinality(events) > 0)
 ) WITH (vacuum_truncate = off);
 CREATE INDEX ix_audit_event_intake_reserved ON audit_event_intake (reserved_by)
     WHERE reserved_by IS NOT NULL;
@@ -212,7 +76,13 @@ CREATE TRIGGER audit_event_intake_no_truncate
     BEFORE TRUNCATE ON audit_event_intake
     FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_intake_reject_change();
 COMMENT ON TABLE audit_event_intake IS
-    'The audit records of no access-log entry written before the response that reports them and not chained yet: append-only, left only by audit.audit_event_chain_move(), which writes each into the system chain.';
+    'One row per intake statement of the system chain: the audit_event ids it wrote, which no link chains yet. Append-only; left only by audit.audit_event_chain_move(), which links its records in the same statement, or by the discard of a reservation that never committed.';
+COMMENT ON COLUMN audit_event_intake.taken_at IS
+    'When the request wrote the records, for the age of the oldest not chained yet.';
+COMMENT ON COLUMN audit_event_intake.events IS
+    'The audit_event ids, in the order the chainer links them.';
+COMMENT ON COLUMN audit_event_intake.reserved_by IS
+    'The reservation a write''s records are held under until its commit is confirmed (#5762); the chainer takes no held row. NULL for records that are not held.';
 
 CREATE TABLE access_log_intake (
     id          bigint      NOT NULL GENERATED ALWAYS AS IDENTITY,
@@ -453,8 +323,12 @@ BEGIN
         RETURNING cardinality(entries) AS n
     )
     SELECT coalesce(sum(r.n), 0) INTO v_entries FROM released r;
-    UPDATE audit.audit_event_intake SET reserved_by = NULL WHERE reserved_by = ANY (p_ids);
-    GET DIAGNOSTICS v_others = ROW_COUNT;
+    WITH released AS (
+        UPDATE audit.audit_event_intake SET reserved_by = NULL
+         WHERE reserved_by = ANY (p_ids)
+        RETURNING cardinality(events) AS n
+    )
+    SELECT coalesce(sum(r.n), 0) INTO v_others FROM released r;
     PERFORM set_config('ferroehr.audit_releasing', 'off', true);
     RETURN v_entries + v_others;
 END;
@@ -463,7 +337,7 @@ COMMENT ON FUNCTION audit_intake_release(uuid[]) IS
     'Release the records held under the reservations named: their writes committed, so the chainer takes them.';
 
 -- Discards the held intake rows of reservations that never committed,
--- removing the entries they name, which no link chains.
+-- removing the entries and the records they name, which no link chains.
 CREATE FUNCTION audit.audit_intake_discard(p_ids uuid[]) RETURNS bigint
     LANGUAGE plpgsql VOLATILE SECURITY DEFINER
     SET search_path = audit, pg_catalog
@@ -484,8 +358,17 @@ BEGIN
         RETURNING 1
     )
     SELECT count(*) INTO v_entries FROM removed;
-    DELETE FROM audit.audit_event_intake WHERE reserved_by = ANY (p_ids);
-    GET DIAGNOSTICS v_others = ROW_COUNT;
+    WITH dropped AS (
+        DELETE FROM audit.audit_event_intake WHERE reserved_by = ANY (p_ids)
+        RETURNING events
+    ),
+    removed AS (
+        DELETE FROM audit.audit_event e
+         USING dropped d
+         WHERE e.id = ANY (d.events)
+        RETURNING 1
+    )
+    SELECT count(*) INTO v_others FROM removed;
     PERFORM set_config('ferroehr.audit_discarding', 'off', true);
     RETURN v_entries + v_others;
 END;

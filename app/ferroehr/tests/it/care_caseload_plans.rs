@@ -82,14 +82,63 @@ fn own() -> String {
     ferroehr::config::binding::PartyBindingConfig::default().namespace
 }
 
+/// The EHRs one seeding statement writes, with their compositions and their
+/// care, so that no statement's work grows with the store and each stays far
+/// inside the pool's statement timeout on a loaded host (#6227).
+const CHUNK: i64 = 10_000;
+
+/// The object id of the seed's `m`-th composition: ordered as it is written,
+/// as UUID v7 object ids are, so each index on the object id grows at its
+/// right edge instead of touching a random page per row (#6227).
+const CLONE_ID: &str = "('00000000-0000-4000-8000-' || lpad(to_hex(m), 12, '0'))::uuid";
+
+/// The EHR of the `m`-th composition, each EHR holding [`COMPOSITIONS`].
+const CLONE_EHR: &str = "md5('ehr-' || ((m + $3 - 1) / $3))::uuid";
+
+/// The compositions of the EHRs `$1` to `$2`, `$3` to an EHR, each a clone of
+/// the prototype `$4` under [`CLONE_ID`]: its head, its version row and its
+/// root node, every other column the prototype's.
+fn clone_statements() -> [String; 3] {
+    let series = "generate_series(($1 - 1) * $3 + 1, $2 * $3) AS m";
+    [
+        format!(
+            "INSERT INTO vo_head (vo_id, kind, ehr_id, tier, head_sys_version, \
+                 trunk_head_sys_version, lifecycle_state, template_id, committed_at, \
+                 trunk_head_content_key, root_archetype) \
+             SELECT {CLONE_ID}, h.kind, {CLONE_EHR}, h.tier, h.head_sys_version, \
+                    h.trunk_head_sys_version, h.lifecycle_state, h.template_id, \
+                    h.committed_at, h.trunk_head_content_key, h.root_archetype \
+             FROM vo_head h, {series} WHERE h.vo_id = $4"
+        ),
+        format!(
+            "INSERT INTO version_hot (vo_id, kind, ehr_id, sys_version, trunk_version, \
+                 lifecycle_state, creating_system_id, contribution_id, commit_audit_id, \
+                 template_id, committed_at, body, content_digest) \
+             SELECT {CLONE_ID}, v.kind, {CLONE_EHR}, v.sys_version, v.trunk_version, \
+                    v.lifecycle_state, v.creating_system_id, v.contribution_id, \
+                    v.commit_audit_id, v.template_id, v.committed_at, v.body, v.content_digest \
+             FROM version_hot v, {series} WHERE v.vo_id = $4"
+        ),
+        format!(
+            "INSERT INTO node_hot (vo_id, sys_version, num, num_cap, parent_num, ehr_id, \
+                 rm_type, archetype, arch_entity, arch_concept, arch_major, name, path, data, \
+                 context_start, rm_version, language) \
+             SELECT {CLONE_ID}, d.sys_version, d.num, d.num_cap, d.parent_num, {CLONE_EHR}, \
+                    d.rm_type, d.archetype, d.arch_entity, d.arch_concept, d.arch_major, \
+                    d.name, d.path, d.data, d.context_start, d.rm_version, d.language \
+             FROM node_hot d, {series} WHERE d.vo_id = $4 AND d.num = 0"
+        ),
+    ]
+}
+
 /// Seeds the EHRs, their compositions and the care projection, and takes
 /// the statistics.
 ///
 /// The patients of each scale are in the care of its team, the others
 /// spread over the other teams, each subject digested as the projector
 /// digests it (`ferroehr::storage::access_care::subject_key`). Each
-/// composition is a clone of one committed through the service: its head,
-/// its version row and its root node, under a fresh object id.
+/// composition is a clone of one committed through the service. The seed
+/// writes [`CHUNK`] EHRs at a time.
 async fn seed(svc: &FerroEhrService, pool: &PgPool) {
     let prototype_ehr = create_ehr(svc).await;
     let prototype = svc
@@ -106,83 +155,64 @@ async fn seed(svc: &FerroEhrService, pool: &PgPool) {
         first += patients;
     }
     let last = first + OTHERS - 1;
-    sqlx::query(
-        "INSERT INTO ehr (id, system_id, subject_id, subject_namespace, subject_digest) \
-         SELECT md5('ehr-' || n)::uuid, 'plans.test', md5('person-' || n)::uuid::text, $2, \
-                sha256(convert_to($2 || chr(31) || md5('person-' || n)::uuid::text, 'UTF8')) \
-         FROM generate_series(1, $1::bigint) AS n",
-    )
-    .bind(last)
-    .bind(own())
-    .execute(pool)
-    .await
-    .expect("seed the EHRs");
-    // One clone of the prototype per EHR and ordinal, under the object id
-    // the seed derives from both; the version and the root node keep every
-    // other column of the prototype's.
-    for statement in [
-        "INSERT INTO vo_head (vo_id, kind, ehr_id, tier, head_sys_version, \
-             trunk_head_sys_version, lifecycle_state, template_id, committed_at, \
-             trunk_head_content_key, root_archetype) \
-         SELECT md5('composition-' || n || '-' || k)::uuid, h.kind, md5('ehr-' || n)::uuid, \
-                h.tier, h.head_sys_version, h.trunk_head_sys_version, h.lifecycle_state, \
-                h.template_id, h.committed_at, h.trunk_head_content_key, h.root_archetype \
-         FROM vo_head h, generate_series(1, $1::bigint) AS n, \
-              generate_series(1, $2::bigint) AS k \
-         WHERE h.vo_id = $3",
-        "INSERT INTO version_hot (vo_id, kind, ehr_id, sys_version, trunk_version, \
-             lifecycle_state, creating_system_id, contribution_id, commit_audit_id, \
-             template_id, committed_at, body, content_digest) \
-         SELECT md5('composition-' || n || '-' || k)::uuid, v.kind, md5('ehr-' || n)::uuid, \
-                v.sys_version, v.trunk_version, v.lifecycle_state, v.creating_system_id, \
-                v.contribution_id, v.commit_audit_id, v.template_id, v.committed_at, v.body, \
-                v.content_digest \
-         FROM version_hot v, generate_series(1, $1::bigint) AS n, \
-              generate_series(1, $2::bigint) AS k \
-         WHERE v.vo_id = $3",
-        "INSERT INTO node_hot (vo_id, sys_version, num, num_cap, parent_num, ehr_id, \
-             rm_type, archetype, arch_entity, arch_concept, arch_major, name, path, data, \
-             context_start, rm_version, language) \
-         SELECT md5('composition-' || n || '-' || k)::uuid, d.sys_version, d.num, d.num_cap, \
-                d.parent_num, md5('ehr-' || n)::uuid, d.rm_type, d.archetype, d.arch_entity, \
-                d.arch_concept, d.arch_major, d.name, d.path, d.data, d.context_start, \
-                d.rm_version, d.language \
-         FROM node_hot d, generate_series(1, $1::bigint) AS n, \
-              generate_series(1, $2::bigint) AS k \
-         WHERE d.vo_id = $3 AND d.num = 0",
-    ] {
-        sqlx::query(statement)
-            .bind(last)
-            .bind(COMPOSITIONS)
-            .bind(prototype.0)
-            .execute(pool)
-            .await
-            .expect("seed the compositions");
+    let clones = clone_statements();
+    let mut from = 1_i64;
+    while from <= last {
+        let to = (from + CHUNK - 1).min(last);
+        sqlx::query(
+            "INSERT INTO ehr (id, system_id, subject_id, subject_namespace, subject_digest) \
+             SELECT md5('ehr-' || n)::uuid, 'plans.test', md5('person-' || n)::uuid::text, $3, \
+                    sha256(convert_to($3 || chr(31) || md5('person-' || n)::uuid::text, 'UTF8')) \
+             FROM generate_series($1::bigint, $2::bigint) AS n",
+        )
+        .bind(from)
+        .bind(to)
+        .bind(own())
+        .execute(pool)
+        .await
+        .expect("seed the EHRs");
+        for statement in &clones {
+            sqlx::query(sqlx::AssertSqlSafe(statement.as_str()))
+                .bind(from)
+                .bind(to)
+                .bind(COMPOSITIONS)
+                .bind(prototype.0)
+                .execute(pool)
+                .await
+                .expect("seed the compositions");
+        }
+        sqlx::query(
+            "INSERT INTO access_care (subject_digest, person_id, carer_id, carer_kind, \
+                 care_from, care_until, provider_issuer, provider_id, writer_id, self_declared, \
+                 role_terminology, role_code) \
+             SELECT e.subject_digest, md5('person-' || n)::uuid, \
+                    COALESCE((SELECT r.team FROM unnest($3::bigint[], $4::bigint[], $5::uuid[]) \
+                                  AS r(first, last, team) WHERE n BETWEEN r.first AND r.last), \
+                             md5('team-' || (n % $6))::uuid), \
+                    'G', date '2026-01-01', NULL, $7, $8, NULL, false, \
+                    'HL7_ParticipationType', 'PART' \
+             FROM generate_series($1::bigint, $2::bigint) AS n \
+             JOIN ehr e ON e.id = md5('ehr-' || n)::uuid",
+        )
+        .bind(from)
+        .bind(to)
+        .bind(&starts)
+        .bind(&ends)
+        .bind(&teams)
+        .bind(OTHER_TEAMS)
+        .bind(PROVIDER.0)
+        .bind(PROVIDER.1)
+        .execute(pool)
+        .await
+        .expect("seed the care projection");
+        from = to + 1;
     }
-    sqlx::query(
-        "INSERT INTO access_care (subject_digest, person_id, carer_id, carer_kind, care_from, \
-             care_until, provider_issuer, provider_id, writer_id, self_declared, \
-             role_terminology, role_code) \
-         SELECT e.subject_digest, md5('person-' || n)::uuid, \
-                COALESCE((SELECT r.team FROM unnest($2::bigint[], $3::bigint[], $4::uuid[]) \
-                              AS r(first, last, team) WHERE n BETWEEN r.first AND r.last), \
-                         md5('team-' || (n % $5))::uuid), \
-                'G', date '2026-01-01', NULL, $6, $7, NULL, false, \
-                'HL7_ParticipationType', 'PART' \
-         FROM generate_series(1, $1::bigint) AS n \
-         JOIN ehr e ON e.id = md5('ehr-' || n)::uuid",
-    )
-    .bind(last)
-    .bind(&starts)
-    .bind(&ends)
-    .bind(&teams)
-    .bind(OTHER_TEAMS)
-    .bind(PROVIDER.0)
-    .bind(PROVIDER.1)
-    .execute(pool)
-    .await
-    .expect("seed the care projection");
-    pool.execute("VACUUM (ANALYZE)")
+    for relation in ["ehr", "vo_head", "version_hot", "node_hot", "access_care"] {
+        pool.execute(sqlx::AssertSqlSafe(format!("VACUUM {relation}")))
+            .await
+            .expect("vacuum a seeded relation");
+    }
+    pool.execute("ANALYZE")
         .await
         .expect("take the seed's statistics");
     ferroehr::db::parent_statistics::refresh_pools(

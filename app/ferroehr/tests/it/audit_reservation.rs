@@ -87,7 +87,8 @@ async fn held(pool: &PgPool, reservation: Uuid) -> (Vec<(Uuid, Vec<u8>)>, Vec<Uu
     .await
     .expect("the held entries");
     let records = sqlx::query_scalar(
-        "SELECT id FROM audit.audit_event_intake WHERE reserved_by = $1 ORDER BY id",
+        "SELECT e.id FROM audit.audit_event_intake i \
+         CROSS JOIN LATERAL unnest(i.events) AS e(id) WHERE i.reserved_by = $1 ORDER BY e.id",
     )
     .bind(reservation)
     .fetch_all(pool)
@@ -109,7 +110,7 @@ async fn chained(pool: &PgPool, uids: &[Uuid]) -> Vec<(Uuid, Vec<u8>)> {
 
 /// How many system-log records among `ids` are chained.
 async fn stored(pool: &PgPool, ids: &[Uuid]) -> i64 {
-    sqlx::query_scalar("SELECT count(*) FROM audit.audit_event WHERE id = ANY($1)")
+    sqlx::query_scalar("SELECT count(*) FROM audit.audit_event_link WHERE event_id = ANY($1)")
         .bind(ids)
         .fetch_one(pool)
         .await
