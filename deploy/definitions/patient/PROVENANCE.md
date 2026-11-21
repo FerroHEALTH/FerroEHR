@@ -1,20 +1,28 @@
 # Patient PERSON definition: provenance
 
-Two ADL 2 archetypes of FerroEHR's default demographic definitions, which
+Three ADL 2 archetypes of FerroEHR's default demographic definitions, which
 the binary carries and stores at boot when absent:
-`openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls`, named by the default of
-`[authz.party_binding.patient]`, and its former version
-`openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`, which stays published
-under its id.
+`openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0.adls`, named by the default of
+`[authz.party_binding.patient]`, and its former versions
+`openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls` and
+`openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`, which stay published
+under their ids.
 
 v2.0.0 drops the care relationship node (`id32` to `id35`) of v1.0.0 and
 changes nothing else (#6113). A care relationship is a `PARTY_RELATIONSHIP`
 of its own at `/demographic/party_relationship`, and FerroEHR refuses one
-held in a `PERSON`'s `relationships` (#6055). Removing a node makes data
-valid under v1.0.0 invalid, a breaking change, so the major version moves
-(AM Overview, Semantic Overview: "different major versions are considered
-different artefacts"). The rest of this file describes v1.0.0, and v2.0.0
-without its `id32`.
+held in a `PERSON`'s `relationships` (#6055).
+
+v3.0.0 drops the representation slot (`id37`) of v2.0.0 and changes
+nothing else (#6170). A representation is a `PARTY_RELATIONSHIP` of its own
+(`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2.0.0`), and
+FerroEHR refuses one held in a `PERSON`'s `relationships` (#6079).
+
+Removing a node makes data valid under the former version invalid, a
+breaking change, so the major version moves each time (AM Overview,
+Semantic Overview: "different major versions are considered different
+artefacts"). The rest of this file describes v1.0.0; v2.0.0 is it without
+its `id32`, and v3.0.0 without its `id32` and its `id37`.
 
 It is a patient's `PERSON`, the subject of an EHR and the target of a
 representation relationship, or the representative who is its source. In `details`: its patient identifiers at
