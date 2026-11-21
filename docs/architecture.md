@@ -191,11 +191,13 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   version, or to a byte range of the body 8 times slower. A member repeated
   across a version's rows is stored once (#6229, `crate::storage::shared`):
   the first row that carries it keeps it, and a later row whose member is
-  byte-identical, 128 bytes or more and not one of `UNSHARED` (`value`,
+  byte-identical, 512 bytes or more and not one of `UNSHARED` (`value`,
   `time`, `origin`, which an index or the writer reads from the row itself)
   leaves it out and records the holder's `num` under the key in its `shared`
-  column. A reference always names the first holder, and a root row never
-  shares. Every reader reads `data` through `member_data` or
+  column. The threshold keeps a common predicate target such as
+  `ism_transition` (about 220 bytes) out of reach of the function call a
+  shared member costs on read. A reference always names the first holder,
+  and a root row never shares. Every reader reads `data` through `member_data` or
   `resolved_data`, which put the member back through the domain's
   `node_shared_member` and `node_shared`, one probe of the node key each, so
   fragments, bodies and AQL results are unchanged. The two are functions of

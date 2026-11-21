@@ -120,11 +120,11 @@ async fn an_ips_commit_stores_the_repeated_list_once_and_reads_back_whole() {
             holders.entry(key.clone()).or_default().push(holder);
         }
     }
-    for (key, named) in &holders {
-        let mut distinct = named.clone();
-        distinct.dedup();
-        eprintln!("shared {key}: {} rows, holders {distinct:?}", named.len());
-    }
+    assert_eq!(
+        holders.keys().collect::<Vec<_>>(),
+        ["other_participations"],
+        "only the list is long enough to share; an ism_transition is not"
+    );
     let report = svc
         .verify_storage_parity(StorageParityScope::default())
         .await

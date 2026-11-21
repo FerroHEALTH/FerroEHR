@@ -15,6 +15,8 @@
 -- No openEHR spec governs database roles: our own design/extension.
 
 REVOKE ALL ON FUNCTION
+    node_shared_member(a_key text, a_num integer, a_tier text, a_vo_id uuid, a_sys_version integer),
+    node_shared(a_shared jsonb, a_tier text, a_vo_id uuid, a_sys_version integer),
     binding_date(p_value text, p_upper boolean),
     binding_validity(p_interval jsonb),
     binding_fold(p_value text),
@@ -126,6 +128,10 @@ BEGIN
             binding_validity(p_interval jsonb),
             binding_fold(p_value text)
             TO ferroehr_party;
+        GRANT EXECUTE ON FUNCTION
+            node_shared_member(a_key text, a_num integer, a_tier text, a_vo_id uuid, a_sys_version integer),
+            node_shared(a_shared jsonb, a_tier text, a_vo_id uuid, a_sys_version integer)
+            TO ferroehr_party, ferroehr_party_reader;
         ALTER DEFAULT PRIVILEGES IN SCHEMA party GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO ferroehr_party;
         ALTER DEFAULT PRIVILEGES IN SCHEMA party GRANT SELECT ON TABLES TO ferroehr_party_reader;
     ELSE

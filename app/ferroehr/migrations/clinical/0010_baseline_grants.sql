@@ -16,6 +16,8 @@
 -- No openEHR spec governs database roles: our own design/extension.
 
 REVOKE ALL ON FUNCTION
+    node_shared_member(a_key text, a_num integer, a_tier text, a_vo_id uuid, a_sys_version integer),
+    node_shared(a_shared jsonb, a_tier text, a_vo_id uuid, a_sys_version integer),
     subject_pseudonym_guard(),
     access_class_notify(),
     access_settings_notify(),
@@ -134,6 +136,10 @@ BEGIN
             access_class_unknown(ehr uuid),
             access_stale_copy()
             TO ferroehr_clinical_reader;
+        GRANT EXECUTE ON FUNCTION
+            node_shared_member(a_key text, a_num integer, a_tier text, a_vo_id uuid, a_sys_version integer),
+            node_shared(a_shared jsonb, a_tier text, a_vo_id uuid, a_sys_version integer)
+            TO ferroehr_clinical, ferroehr_clinical_reader;
         ALTER DEFAULT PRIVILEGES IN SCHEMA clinical GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO ferroehr_clinical;
         ALTER DEFAULT PRIVILEGES IN SCHEMA clinical GRANT SELECT ON TABLES TO ferroehr_clinical_reader;
     ELSE

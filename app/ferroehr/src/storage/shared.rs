@@ -34,10 +34,14 @@ use std::fmt::Write as _;
 /// holds every index on `node` to this set.
 pub const UNSHARED: [&str; 3] = ["value", "time", "origin"];
 
-/// The smallest member value, in bytes of its JSON text, that is shared: a
-/// reference costs a key and a number in `shared` and a probe of the
-/// holder's key on read, which a smaller value does not repay.
-pub const MIN_BYTES: usize = 128;
+/// The smallest member value, in bytes of its JSON text, that is shared.
+///
+/// A reader of a shared member pays a function call and a probe of its
+/// holder, so only a member whose copies cost more than that is shared: the
+/// participation list a FLAT commit copies into every entry (1,027 bytes on
+/// the IPS composition) is, and an `ism_transition` (about 220 bytes), one of
+/// the commonest predicate targets, is not (#6229).
+pub const MIN_BYTES: usize = 512;
 
 /// The holders of one version's shared members, as the writer meets its
 /// rows in `num` order.
