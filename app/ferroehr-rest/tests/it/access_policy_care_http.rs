@@ -319,7 +319,7 @@ async fn person(app: &Router) -> String {
 
 /// The provider `ORGANISATION` [`care_of`] names, `urn:example:providers`
 /// `hospital`, created by the administrator, so its `provider` names a party.
-async fn provider(app: &Router) {
+pub(crate) async fn provider(app: &Router) {
     let archetype = "openEHR-DEMOGRAPHIC-ORGANISATION.hospital.v1";
     let text = |value: &str| json!({ "_type": "DV_TEXT", "value": value });
     let body = json!({ "_type": "ORGANISATION", "archetype_node_id": archetype,
