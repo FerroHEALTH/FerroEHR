@@ -376,7 +376,7 @@ runs in CI and on a developer machine too, so its pin lives here and
 
 | Tool | Pin | Read by |
 |---|---|---|
-| `ferrohealth-perf` | `0.14.0` (crates.io, 2026-11-17) | `scripts/perf/gate.sh` |
+| `ferrohealth-perf` | `0.15.0` (crates.io, 2026-11-21) | `scripts/perf/gate.sh` |
 
 The SemVer judge of the published `openehr-*` crates (#5353) runs on a pull
 request, in the merge queue, in the release plan and on a developer machine,
