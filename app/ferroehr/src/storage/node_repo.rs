@@ -27,7 +27,7 @@ use crate::storage::codec::reassemble;
 use crate::storage::compact::{Compact, RootIdentity};
 use crate::storage::error::StorageError;
 use crate::storage::row::ReadRow;
-use crate::storage::shared::{Tier, resolved_data};
+use crate::storage::shared::resolved_data;
 
 /// The columns [`row_fragment`] reads after `data`, in the order every read
 /// statement selects them: the fragment's columns, the header columns, the
@@ -66,7 +66,7 @@ static READ_ROWS_SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| 
          {ROOT_COLUMNS}, n.shared \
          FROM version v {CONTENT_ROWS_JOIN} \
          WHERE v.vo_id = $1 AND v.sys_version = $2 ORDER BY n.num",
-        resolved_data("n", Tier::OfRow)
+        resolved_data("n")
     )
 });
 
@@ -286,7 +286,7 @@ pub async fn read_version_rows_all(
              FROM unnest($1::uuid[], $2::int[]) AS k(vo_id, sys_version) \
              JOIN version v ON v.vo_id = k.vo_id AND v.sys_version = k.sys_version \
              {CONTENT_ROWS_JOIN}",
-            resolved_data("n", Tier::OfRow)
+            resolved_data("n")
         )
     });
     if keys.is_empty() {
@@ -380,7 +380,7 @@ pub async fn read_subtrees_canonical(
                   AS a(idx, vo_id, sys_version, anum, acap) \
              JOIN version v ON v.vo_id = a.vo_id AND v.sys_version = a.sys_version \
              {CONTENT_ROWS_JOIN} AND n.num BETWEEN a.anum AND a.acap",
-            resolved_data("n", Tier::OfRow)
+            resolved_data("n")
         )
     });
     if anchors.is_empty() {

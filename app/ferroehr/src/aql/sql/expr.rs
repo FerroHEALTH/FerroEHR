@@ -62,10 +62,6 @@ pub(super) fn hot_unaliased() -> Expr {
 /// pruning from plan time to execution time.
 const HOT_TIER_LITERAL: &str = "'hot'";
 
-/// The tier the AQL engine reads a shared member's holder in: the hot one it
-/// binds every node row to, as the same literal.
-const HOT: crate::storage::shared::Tier = crate::storage::shared::Tier::Hot;
-
 /// A typed custom-function call `name(args...)`.
 pub(super) fn call(name: &str, args: Vec<Expr>) -> Expr {
     let mut f = Func::cust(Alias::new(name));
@@ -85,7 +81,7 @@ pub(super) fn to_jsonb(e: Expr) -> Expr {
 /// ([`crate::storage::shared::member_data`]). The member is bound, never
 /// written into the statement.
 pub(super) fn member_data(alias: &str, member: &str) -> Expr {
-    let sql = crate::storage::shared::member_data(alias, "\u{0}", HOT);
+    let sql = crate::storage::shared::member_data(alias, "\u{0}");
     let mut text = String::with_capacity(sql.len());
     let mut keys = Vec::new();
     for (i, part) in sql.split('\u{0}').enumerate() {
@@ -101,7 +97,7 @@ pub(super) fn member_data(alias: &str, member: &str) -> Expr {
 /// The whole `data` of the node row `alias`, every shared member put back
 /// from its holder ([`crate::storage::shared::resolved_data`]).
 pub(super) fn resolved_data(alias: &str) -> Expr {
-    Expr::cust(crate::storage::shared::resolved_data(alias, HOT))
+    Expr::cust(crate::storage::shared::resolved_data(alias))
 }
 
 /// The member a fragment jsonpath reads first (`$.value.magnitude` →

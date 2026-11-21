@@ -110,79 +110,35 @@ impl<'a> Sharing<'a> {
     }
 }
 
-/// The tier a reader reads a holder in.
-///
-/// The row's own, or the hot tier a reader that binds its rows to
-/// `tier = 'hot'` names as a literal, so the planner prunes the cold
-/// partition from the holder's read too.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Tier {
-    /// The tier of the row whose member is read.
-    OfRow,
-    /// The hot tier, as the literal `'hot'`.
-    Hot,
-}
-
-impl Tier {
-    /// The SQL the holder's `tier` is compared with.
-    fn sql(self, alias: &str) -> String {
-        match self {
-            Self::OfRow => format!("\"{alias}\".tier"),
-            Self::Hot => "'hot'".to_owned(),
-        }
-    }
-}
-
-/// The holder of the shared member `key` of the row `alias`, as a scalar
-/// subquery over `node`: the row of the same tier and version whose `num`
-/// the row's `shared` column records under `key` (an SQL expression).
-fn holder_member(alias: &str, key: &str, tier: Tier) -> String {
-    holder_member_at(
-        alias,
-        key,
-        &format!("(\"{alias}\".shared ->> {key})::int"),
-        tier,
-    )
-}
-
-/// The member `key` of the row `num` of the version and tier of the row
-/// `alias`, as a scalar subquery: one probe of the node key.
-fn holder_member_at(alias: &str, key: &str, num: &str, tier: Tier) -> String {
-    let tier = tier.sql(alias);
-    format!(
-        "(SELECT h.data -> {key} FROM node h WHERE h.tier = {tier} \
-         AND h.vo_id = \"{alias}\".vo_id AND h.sys_version = \"{alias}\".sys_version \
-         AND h.num = {num})"
-    )
-}
-
 /// The `data` of the row `alias` as a path that starts at the member `key`
 /// reads it (an SQL expression).
 ///
 /// The row's own `data`, or, when the row shares that member, an object of
-/// the member alone, read from its holder. `key` is an SQL
-/// expression (a quoted literal or a bound parameter). This and
-/// [`resolved_data`] are the only readers of `node.data` but the index
-/// expressions, which read only [`UNSHARED`] members, and the writer.
+/// the member alone, read from its holder by the domain's
+/// `node_shared_member`. `key` is an SQL expression (a quoted literal or a
+/// bound parameter). This and [`resolved_data`] are the only readers of
+/// `node.data` but the index expressions, which read only [`UNSHARED`]
+/// members, the writer, and a reader of a root row alone.
 #[must_use]
-pub fn member_data(alias: &str, key: &str, tier: Tier) -> String {
+pub fn member_data(alias: &str, key: &str) -> String {
     format!(
         "CASE WHEN (\"{alias}\".shared ->> {key}) IS NOT NULL \
-         THEN jsonb_build_object({key}, {}) ELSE \"{alias}\".data END",
-        holder_member(alias, key, tier)
+         THEN jsonb_build_object({key}, node_shared_member({key}, \
+         (\"{alias}\".shared ->> {key})::integer, \"{alias}\".tier, \"{alias}\".vo_id, \
+         \"{alias}\".sys_version)) ELSE \"{alias}\".data END"
     )
 }
 
 /// The whole `data` of the row `alias`, every shared member put back from its
-/// holder (an SQL expression). A row that shares nothing reads its own
-/// `data` with no further read.
+/// holder by the domain's `node_shared` (an SQL expression).
+///
+/// A row that shares nothing reads its own `data` with no further read.
 #[must_use]
-pub fn resolved_data(alias: &str, tier: Tier) -> String {
+pub fn resolved_data(alias: &str) -> String {
     format!(
         "CASE WHEN \"{alias}\".shared IS NULL THEN \"{alias}\".data \
-         ELSE COALESCE(\"{alias}\".data, '{{}}'::jsonb) || (SELECT jsonb_object_agg(s.key, {}) \
-         FROM jsonb_each_text(\"{alias}\".shared) AS s(key, num)) END",
-        holder_member_at(alias, "s.key", "s.num::int", tier)
+         ELSE COALESCE(\"{alias}\".data, '{{}}'::jsonb) || node_shared(\"{alias}\".shared, \
+         \"{alias}\".tier, \"{alias}\".vo_id, \"{alias}\".sys_version) END"
     )
 }
 

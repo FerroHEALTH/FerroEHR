@@ -976,7 +976,7 @@ async fn node_codec_round_trips_through_the_database() {
             "SELECT num, num_cap, parent_num, rm_type, archetype, name, name_code,
                     name_terminology, path, {} AS data, shared
              FROM node n WHERE vo_id = $1 AND sys_version = 1 ORDER BY num",
-            ferroehr::storage::shared::resolved_data("n", ferroehr::storage::shared::Tier::OfRow)
+            ferroehr::storage::shared::resolved_data("n")
         )))
         .bind(vo)
         .fetch_all(&pool)

@@ -140,6 +140,23 @@ CREATE TABLE node (
 ) PARTITION BY LIST (tier);
 CREATE TABLE node_hot  PARTITION OF node FOR VALUES IN ('hot');
 CREATE TABLE node_cold PARTITION OF node FOR VALUES IN ('cold');
+-- A member a row leaves out for an earlier row of its version
+-- (crate::storage::shared), read back from that row: one probe of the node
+-- key. node_shared puts back every member a row leaves out. The bodies are
+-- SQL-standard, so each domain's copy is bound to its own node relation when
+-- it is created, whatever the caller's search_path. COST 1: a reader calls
+-- them only on a row that shares, so a statement's plan is the plan it would
+-- have without them. No openEHR spec governs storage: our own design.
+CREATE FUNCTION node_shared_member(a_key text, a_num integer, a_tier text,
+                                   a_vo_id uuid, a_sys_version integer)
+    RETURNS jsonb LANGUAGE sql STABLE PARALLEL SAFE COST 1
+    RETURN (SELECT h.data -> a_key FROM node h WHERE h.tier = a_tier
+            AND h.vo_id = a_vo_id AND h.sys_version = a_sys_version AND h.num = a_num);
+CREATE FUNCTION node_shared(a_shared jsonb, a_tier text, a_vo_id uuid, a_sys_version integer)
+    RETURNS jsonb LANGUAGE sql STABLE PARALLEL SAFE COST 1
+    RETURN (SELECT jsonb_object_agg(s.key, node_shared_member(s.key, s.num::integer, a_tier,
+                                                             a_vo_id, a_sys_version))
+            FROM jsonb_each_text(a_shared) AS s(key, num));
 -- One row per node of a version: reassembly reads one row per num, and the
 -- AQL joins that pin a node by its number (the root at num = 0, CONTAINS
 -- over num..=num_cap) enter through this key. Declared on each partition

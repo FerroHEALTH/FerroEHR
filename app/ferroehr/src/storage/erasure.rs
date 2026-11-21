@@ -148,13 +148,7 @@ pub async fn relationships_naming(
 ) -> Result<Vec<VoId>, StorageError> {
     // The two refs are read as every reader reads a member (crate::storage::shared).
     static SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        let member = |key: &str| {
-            crate::storage::shared::member_data(
-                "n",
-                &format!("'{key}'"),
-                crate::storage::shared::Tier::OfRow,
-            )
-        };
+        let member = |key: &str| crate::storage::shared::member_data("n", &format!("'{key}'"));
         format!(
             "SELECT DISTINCT n.vo_id FROM node n \
              JOIN version v ON v.vo_id = n.vo_id AND v.sys_version = n.sys_version \
