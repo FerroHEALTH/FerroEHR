@@ -18,7 +18,7 @@ use openehr_rm::draft::access_control::terminology::{AccessDefault, Refusal};
 
 use crate::access_eval::caseload::{Ask, Caseload};
 use crate::access_eval::condition::care::{Care, CareUnsettled};
-use crate::access_eval::condition::{AccessCondition, InForce, RequestAccess, current};
+use crate::access_eval::condition::{AccessCondition, EhrEntry, InForce, RequestAccess, current};
 use crate::access_eval::procedure::{Lifted, Outcome, Verdict};
 use crate::access_eval::scope::{CategoryIndex, Item};
 use crate::error::ServiceError;
@@ -117,6 +117,37 @@ impl FerroEhrService {
         if let Ok(entry) = Box::pin(self.ehr_access_entry(ehr_id)).await {
             access.care_ahead(ehr_id, &entry).await;
         }
+    }
+
+    /// Judges for the running request the EHR `ehr_id` that its write is
+    /// about to create, naming `subject`, as the write's transaction will
+    /// read it: no settings, and that subject. The decision reads the party
+    /// store here, before the write takes its audit and clinical
+    /// connections, so no pool is waited for while another's connection is
+    /// held (#5879, #5986). No openEHR spec governs this: our own design
+    /// (#6186).
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when the caller's care or the subject's
+    /// `PERSON` cannot be read, as the gate's own judgement answers it.
+    pub(crate) async fn judge_created_ahead(
+        &self,
+        ehr_id: EhrId,
+        subject: Option<&EhrSubject>,
+    ) -> Result<(), ServiceError> {
+        let Some(access) = current() else {
+            return Ok(());
+        };
+        let entry = EhrEntry {
+            settings: Arc::new(None),
+            subject: subject.cloned(),
+            version: None,
+            revision: Revision {
+                settings: None,
+                subject: subject.cloned(),
+            },
+        };
+        Ok(access.judge_ahead(ehr_id, &entry).await?)
     }
 
     /// What the evaluator reads of each of `vo_ids` this store holds.
