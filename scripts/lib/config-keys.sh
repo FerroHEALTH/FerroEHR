@@ -24,7 +24,7 @@ config_keys() {
   awk '
     { line = $0
       sub(/^[[:space:]]*/, "", line)
-      if (line ~ /^# \[[A-Za-z0-9_.]+\.<name>\]$/) {
+      if (line ~ /^# \[[A-Za-z0-9_.]+\.<name>(\.[A-Za-z0-9_.]+)?\]$/) {
         sec = line; gsub(/^# \[|\]$/, "", sec); gsub(/<name>/, "*", sec); named = 1; next
       }
       if (named && line ~ /^# [A-Za-z0-9_]+ = /) sub(/^# /, "", line)

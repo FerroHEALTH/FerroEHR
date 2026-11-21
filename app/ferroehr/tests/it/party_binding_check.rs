@@ -36,7 +36,7 @@ const PERSON_TEMPLATE: &str = "FerroEHR professional";
 const ROLE_TEMPLATE: &str = "FerroEHR professional role";
 /// The identifier cluster the key selector reads.
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
-/// The `identifier_issuer` of the login's `[[auth.party]]` table.
+/// The `identifier_issuer` of the login's `[auth.issuer.<name>.party]` table.
 const LOGIN: &str = "https://login.example/tenant";
 /// The token issuer of the SCIM client.
 const MACHINES: &str = "https://auth.example";

@@ -906,7 +906,7 @@ which is what makes an optional stage safe to disable:
    preset's `fhir_user_patient`, a `persons` token whose `fhirUser` is the
    `Patient` its `patient` claim names, with `patient/` scopes alone) is a
    check against the binding and never a grant (#6080). On a `persons` issuer
-   its login is looked up as a person's through the `[[auth.party]]` table,
+   its login is looked up as a person's through the `[auth.issuer.<name>.party]` table,
    which the shared binding never does for a `Patient` caller, and has to bind
    a `PERSON` with neither marker, else `refused-unbound`,
    `refused-key-claim-missing` or `refused-wrong-marker`. On a `patients`
@@ -1470,7 +1470,7 @@ carried and seeded the same way
 mapping section defaults to them (the `Default` of `PartyBindingConfig`), so
 an empty configuration boots with SCIM Users, Groups and representation. A
 section a deployment sets replaces that section's default whole, and nothing
-is seeded under a deployment's own ids. A SCIM client whose `[[auth.party]]`
+is seeded under a deployment's own ids. A SCIM client whose `[auth.issuer.<name>.party]`
 table names no `group_identifier_issuer` writes its Groups' `externalId`s
 under its `binding_issuer` with `/groups` appended
 (`config::scim::group_issuer`). **Our own design.**
@@ -1842,8 +1842,8 @@ grants before the RBAC and SMART gates and reads both from them
 (`authn::grants::client_holds`), so `[auth.smart] backend_clients` and
 `demographic_clients` are gone. A grant counts only for a caller resolved as
 a client, the app-only token of a `machines` issuer; a person signed in
-through that client holds the person's grants. `[auth.smart]
-patient_issuers` stays in the file: it is trust, the issuers whose `ehrId`
+through that client holds the person's grants. Each issuer's
+`patient_context` profile key stays in the file: it is trust, the issuers whose `ehrId`
 claim names an EHR of this platform (master07 §Context Selection), which the
 server needs before it believes a `patient/` token. It never makes a caller
 the record's person, which the party binding alone decides (#6080). The person-token client
@@ -1862,7 +1862,7 @@ and `hold_scopes` grants of its `PERSON`, granted onto the caller with
 `Caller::with_granted_scope` and `with_granted_roles`, and `[authz.rbac]
 first_admin` names the one Basic user holding `admin_role` and the product
 scope from the file, the trust anchor that writes the first policy parties.
-Beside an `[[auth.party]]` table a Basic user is a person's credential
+Beside an `[auth.issuer.<name>.party]` table a Basic user is a person's credential
 (`PartyBinding::check_basic`), so `first_admin` must map to the key of a
 `PERSON`, and the deployment starts with the operator grant
 (`ferroehr party-binding grant`, `party_binding::grants::bootstrap`): the
@@ -1901,7 +1901,7 @@ reader is the `reader` element of a `read_change_feed` grant: the binary's
 the registry is reconciled with the grants at boot, on every feed call and
 before every prune; only a caller whose own grant names a reader reads it. A
 SCIM client is a client `ACTOR` holding `scim_provision`, whose
-`binding_issuer` is an `[[auth.party]]` identifier issuer no other client's
+`binding_issuer` is an `[auth.issuer.<name>.party]` identifier issuer no other client's
 grant names and whose `token_scope` its token holds; the contact erasure
 reaches the binding issuers of every stored grant, ended ones included, so
 revoking a client stops no GDPR Art. 17 erasure. The `ROLE` commit refuses a
@@ -2059,7 +2059,7 @@ representative only through a live representation, refused
 over the issuer's claim of the EHR; a login no `PERSON` carries is the
 patient. The key issuers the server compiles the person mapping from and the
 SCIM gate admits a `binding_issuer` from are one set,
-`config::binding::key_issuers`: the `[[auth.party]]` identifier issuers and
+`config::binding::key_issuers`: the `[auth.issuer.<name>.party]` identifier issuers and
 every `patients` issuer (#5652, `installed_mapping`). A key under a
 `patients` issuer is held in `binding_identifier` with no professional
 `ROLE`. A SCIM client whose `binding_issuer` is a `patients` issuer

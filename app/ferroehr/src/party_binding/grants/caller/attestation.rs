@@ -9,7 +9,7 @@
 //! credential, issued under an agreement `ACCESS_POLICY.attested_care` names,
 //! attests a treatment context for this subject that is current at the
 //! access. The credential's issuer and its claims are the deployment's data
-//! (`[[auth.federation]]`); the CDR reads the attested patient, the
+//! (`[auth.issuer.<name>.federation]`); the CDR reads the attested patient, the
 //! assertion's id and its window, and resolves the patient to the EHRs whose
 //! subject the patient identifier names. An agreement is named by the
 //! container of its `ROLE`, so a new version of the agreement keeps the

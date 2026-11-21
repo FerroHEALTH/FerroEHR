@@ -272,7 +272,7 @@ impl Sections<'_> {
     /// The boot refusals a configuration can be judged by alone, each naming
     /// its key.
     ///
-    /// `key_issuers` are the `identifier_issuer`s of the `[[auth.party]]`
+    /// `key_issuers` are the `identifier_issuer`s of the `[auth.issuer.<name>.party]`
     /// tables.
     #[must_use]
     pub fn errors(&self, key_issuers: &[String]) -> Vec<String> {

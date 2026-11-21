@@ -236,7 +236,7 @@ pub struct AuditEvent {
     /// EHR ids they named; `None` on every other record.
     pub summary: Option<crate::system_log::binding::Summary>,
     /// What the access token states about the professional under its
-    /// issuer's `[[auth.attributes]]` table: the purposes of use and the
+    /// issuer's `[auth.issuer.<name>.attributes]` table: the purposes of use and the
     /// roles (IHE ITI TF-2 §3.71.4.2.2.1.1, RFC 9396 §2); `None` for a token
     /// of an issuer without one, or no token.
     pub token: Option<TokenAttributes>,

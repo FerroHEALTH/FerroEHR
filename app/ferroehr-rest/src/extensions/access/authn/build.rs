@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Building the [`Authenticator`]: the issuers of `[auth]`, read at start,
-//! each asking the policy grants for a client's standing, the `DPoP` proof
+//! Building the [`Authenticator`]: the issuers of `[auth]`, each read in the
+//! background from the start and asking the policy grants for a client's
+//! standing, the `DPoP` proof
 //! check of `[auth.dpop]`, the Basic store, the issuers whose role claims may
 //! grant a privileged role (`[authz.rbac] role_issuers`) and the first
 //! administrator (`[authz.rbac] first_admin`). No openEHR spec governs
@@ -11,24 +12,29 @@
 use std::sync::Arc;
 
 use ferroehr::party_binding::source::BindingSource;
+use ferrohealth_smart::config::Resolved;
 use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::kind::standing::Standing;
-use ferrohealth_smart::resource::described::{Candidate, DescribeError, describe};
+use ferrohealth_smart::resource::described::{Candidate, DescribeError, Metadata, describe};
 use ferrohealth_smart::resource::introspection::{IntrospectionSettings, Introspector};
-use ferrohealth_smart::resource::{Caller, Honoured, IssuerSet, ResourceServer, Via};
+use ferrohealth_smart::resource::{
+    Caller, Honoured, IssuerSet, LazyResourceServer, ResourceServer, Settings, Via,
+};
 use ferrohealth_smart::sender::proof::ProofCheck;
 use ferrohealth_smart::sender::replay::ReplayStore;
 
 use super::verdicts::TokenVerdicts;
 use super::{Authenticator, issuer, upper_cased};
 use crate::config::AppConfig;
-use ferrohealth_secret::secret_url::SecretUrl;
 
 /// The check of the described issuer, whose metadata the SMART discovery
 /// document is built from.
 pub(super) enum Primary {
-    /// A JWT access token checked against the issuer's keys.
+    /// A JWT access token checked against the issuer's keys, read at start.
     Jwt(Arc<ResourceServer>),
+    /// A JWT access token checked against the issuer's keys, read in the
+    /// background, so the document waits for that read.
+    Lazy(Arc<LazyResourceServer>),
     /// An opaque access token checked by the issuer's introspection endpoint
     /// (RFC 7662).
     Introspection(Arc<Introspector>),
@@ -40,8 +46,8 @@ pub(super) enum Primary {
 pub(super) struct RoleIssuers {
     /// `admin_role` and `emergency_access_role`, upper-cased.
     privileged: Vec<String>,
-    /// `role_issuers`.
-    issuers: Vec<SecretUrl>,
+    /// The identifiers of the issuers `role_issuers` names.
+    issuers: Vec<String>,
     /// `first_admin`, with what it holds.
     first_admin: Option<FirstAdmin>,
 }
@@ -59,17 +65,33 @@ pub(super) struct FirstAdmin {
 }
 
 impl RoleIssuers {
-    /// Returns the rule of `config`'s `[authz.rbac]`.
-    fn of(config: &AppConfig) -> Self {
-        Self {
+    /// Returns the rule of `config`'s `[authz.rbac]`, its issuer names read
+    /// through `resolved`; the configuration check holds each to a
+    /// `persons` issuer.
+    ///
+    /// # Errors
+    /// A message naming a role issuer that names no table of `[auth]`.
+    fn of(config: &AppConfig, resolved: &Resolved) -> Result<Self, String> {
+        let issuers = config
+            .rbac
+            .role_issuers
+            .iter()
+            .map(|name| {
+                resolved
+                    .issuer_named("authz.rbac.role_issuers", name)
+                    .map(str::to_owned)
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
+        Ok(Self {
             privileged: config.rbac.privileged_roles(),
-            issuers: config.rbac.role_issuers.clone(),
+            issuers,
             first_admin: config.rbac.first_admin.clone().map(|user| FirstAdmin {
                 user,
                 role: config.rbac.admin_role.trim().to_ascii_uppercase(),
                 scope: ferroehr::config::auth::product_scope(&config.auth.shared).to_owned(),
             }),
-        }
+        })
     }
 
     /// The first administrator, when `caller` is that Basic user.
@@ -90,7 +112,7 @@ impl RoleIssuers {
     pub(super) fn roles(&self, caller: &Caller) -> Vec<String> {
         let mut roles = upper_cased(caller.roles());
         if let Some(issuer) = caller.issuer()
-            && !self.issuers.iter().any(|listed| listed.expose() == issuer)
+            && !self.issuers.iter().any(|listed| listed == issuer)
         {
             roles.retain(|role| !self.privileged.contains(role));
         }
@@ -104,9 +126,14 @@ impl RoleIssuers {
 }
 
 impl Authenticator {
-    /// Builds the authenticator of `config`: each `[auth]` issuer's metadata
-    /// and key set are read here, so an authorization server that cannot be
-    /// reached refuses the start rather than the first request.
+    /// Builds the authenticator of `config`. A JWT issuer read from its
+    /// metadata is read in the background from the start: until it is, its
+    /// tokens are refused with `503` (`issuer-unread`) and the readiness
+    /// route reports the server not ready (its `auth_issuers` indicator),
+    /// so the server starts whether or not its authorization server is up. A
+    /// `jwks_file` issuer and an introspected issuer are read here, from a
+    /// local file and the introspection endpoint, and one that cannot be
+    /// read refuses the start.
     ///
     /// `[auth.smart] issuer_metadata_file` is the metadata of the issuer it names,
     /// whose key set is a `jwks_file`, so its discovery document can name a
@@ -120,35 +147,44 @@ impl Authenticator {
     /// the request path, and records each accepted proof in `replay`, which
     /// the server builds over the clinical pool every replica shares.
     ///
-    /// With a party `source` and an `[[auth.party]]` table, every caller is
-    /// looked up in the party binding the tables and `[authz.party_binding]`
-    /// describe, on every request. `standing` answers which clients a
-    /// person's token comes through, which actors are delegates and which
-    /// system subjects need no scope, as the token is classified.
+    /// With a party `source` and an `[auth.issuer.<name>.party]` table, every
+    /// caller is looked up in the party binding the tables and
+    /// `[authz.party_binding]` describe, on every request. `standing` answers
+    /// which clients a person's token comes through, which actors are
+    /// delegates and which system subjects need no scope, as the token is
+    /// classified.
     ///
     /// # Errors
-    /// A message naming the refused setting, the issuer that could not be
-    /// read, the metadata file that could not be read, names no `[auth]`
-    /// issuer or does not fit the issuer it names, a served document whose
-    /// issuer `describe` refuses (an `[auth] described_issuer` that names no
-    /// issuer the document can describe, or no `described_issuer` and several
-    /// or no issuers it can describe), an `[auth.dpop]` table without a public
-    /// root, or a party binding the shared crate refuses or that has
-    /// `[[auth.party]]` tables and no `source`.
+    /// A message naming the refused setting, the `jwks_file` or introspected
+    /// issuer that could not be read, the metadata file that could not be
+    /// read, names no `[auth]` issuer or does not fit the issuer it names, a
+    /// served document whose issuer `describe` refuses (an `[auth]
+    /// described_issuer` that names no issuer the document can describe, or
+    /// no `described_issuer` and several or no issuers it can describe), an
+    /// `[auth.dpop]` table without a public root, a role issuer that names no
+    /// `persons` issuer, or a party binding the shared crate refuses or that
+    /// has party tables and no `source`.
     pub async fn new(
         config: &AppConfig,
         source: Option<Arc<dyn BindingSource>>,
         replay: Arc<dyn ReplayStore>,
         standing: Arc<dyn Standing>,
     ) -> Result<Arc<Self>, String> {
-        let resolved = ferroehr::config::auth::resolve_with(&config.auth.shared, standing)
-            .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
+        let resolved = ferroehr::config::auth::resolve_with(
+            &config.auth.shared,
+            standing,
+            &config.audience_bases(),
+        )
+        .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
         let party = super::party::binding(config, &resolved, source)
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
         let deployment = super::party::Deployment::of(config, &resolved);
+        let role_issuers = RoleIssuers::of(config, &resolved)?;
+        let patient = patient_context(&resolved);
         let mut gate = Gate::open();
         let mut primary = None;
         let mut bearer = None;
+        let mut reads = BackgroundReads::default();
         if resolved.enabled {
             let mut issuers = IssuerSet::new();
             let mut candidates = Vec::new();
@@ -158,30 +194,13 @@ impl Authenticator {
                 None => None,
             };
             for settings in resolved.issuers {
-                let issuer = settings.issuer.clone();
-                let mut server = ResourceServer::discover(settings)
-                    .await
-                    .map_err(|e| issuer::unreadable_issuer(&issuer, &e))?;
-                let named = supplied.as_ref().is_some_and(|m| m.issuer == issuer);
-                if let Some(metadata) = supplied.take_if(|_| named) {
-                    server = server.with_metadata(metadata).map_err(|e| {
-                        format!(
-                            "auth.smart.issuer_metadata_file does not fit the [auth] issuer \
-                             {issuer}: {}",
-                            ferroehr::error::ErrorChain::new(&e)
-                        )
-                    })?;
-                }
-                let server = Arc::new(server);
-                candidates.push(Candidate::of_server(
-                    &server,
-                    Primary::Jwt(Arc::clone(&server)),
-                ));
-                issuers = issuers.with(server);
+                // NOTE: clippy large_futures, a `jwks_file` issuer's read is a large future, so it is boxed.
+                issuers = Box::pin(jwt(settings, issuers, &mut supplied, &mut candidates)).await?;
             }
             if let Some(metadata) = supplied {
                 return Err(format!(
-                    "auth.smart.issuer_metadata_file names the issuer {}, which is no [auth] issuer",
+                    "auth.smart.issuer_metadata_file names the issuer {}, which is no [auth] \
+                     issuer with a jwks_file",
                     metadata.issuer
                 ));
             }
@@ -193,6 +212,7 @@ impl Authenticator {
             }
             if !issuers.is_empty() {
                 let issuers = Arc::new(issuers);
+                reads = BackgroundReads(issuers.read_in_background());
                 bearer = Some(TokenVerdicts(Arc::clone(&issuers)));
                 gate = gate.with_bearer(issuers);
             }
@@ -215,7 +235,7 @@ impl Authenticator {
             }
             gate = gate
                 .with_realm(ferroehr::config::auth::realm(&config.auth.shared))
-                .with_honoured(honoured(config));
+                .with_honoured(honoured(patient.clone()));
         }
         Ok(Arc::new(Self {
             enabled: config.auth.shared.enabled,
@@ -223,13 +243,97 @@ impl Authenticator {
             bearer,
             realm: ferroehr::config::auth::realm(&config.auth.shared).to_owned(),
             primary,
-            role_issuers: RoleIssuers::of(config),
+            patient_context: !patient.is_empty(),
+            reads,
+            role_issuers,
             party,
             declared: super::declared::Declared::new(config.rate_clock.clone()),
             namespace: config.party_binding.namespace.clone(),
             local_issuer: config.api.basic_issuer().into(),
             deployment,
         }))
+    }
+}
+
+/// The background reads of the lazily read issuers, stopped when the
+/// authenticator that started them is dropped.
+#[derive(Debug, Default)]
+pub(super) struct BackgroundReads(Vec<tokio::task::JoinHandle<()>>);
+
+impl BackgroundReads {
+    /// Whether any read was started.
+    pub(super) fn started(&self) -> bool {
+        !self.0.is_empty()
+    }
+}
+
+impl Drop for BackgroundReads {
+    fn drop(&mut self) {
+        for read in &self.0 {
+            read.abort();
+        }
+    }
+}
+
+/// Adds the JWT issuer of `settings` to `issuers`, offering it to the
+/// discovery document as one of `candidates`: read in the background when
+/// its metadata is read from it, read here from its `jwks_file` otherwise,
+/// with the metadata `supplied` names.
+///
+/// # Errors
+/// A message naming the refused settings, or the `jwks_file` issuer that
+/// could not be read.
+async fn jwt(
+    settings: Settings,
+    issuers: IssuerSet,
+    supplied: &mut Option<ferrohealth_smart::metadata::ServerMetadata>,
+    candidates: &mut Vec<Candidate<Primary>>,
+) -> Result<IssuerSet, String> {
+    if settings.jwks_file.is_none() {
+        let lazy = Arc::new(
+            ResourceServer::lazy(settings)
+                .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?,
+        );
+        let settings = lazy.settings();
+        candidates.push(Candidate::new(
+            settings.issuer.clone(),
+            settings.kind,
+            Metadata::Available,
+            Primary::Lazy(Arc::clone(&lazy)),
+        ));
+        return Ok(issuers.with_lazy(lazy));
+    }
+    let server = Arc::new(local(settings, supplied).await?);
+    candidates.push(Candidate::of_server(
+        &server,
+        Primary::Jwt(Arc::clone(&server)),
+    ));
+    Ok(issuers.with(server))
+}
+
+/// Reads the `jwks_file` issuer of `settings` from its local file, with the
+/// metadata of `[auth.smart] issuer_metadata_file` when `supplied` names it.
+///
+/// # Errors
+/// A message naming the issuer whose key set could not be read, or the
+/// metadata file that does not fit it.
+async fn local(
+    settings: Settings,
+    supplied: &mut Option<ferrohealth_smart::metadata::ServerMetadata>,
+) -> Result<ResourceServer, String> {
+    let issuer = settings.issuer.clone();
+    let server = ResourceServer::discover(settings)
+        .await
+        .map_err(|e| issuer::unreadable_issuer(&issuer, &e))?;
+    let named = supplied.as_ref().is_some_and(|m| m.issuer == issuer);
+    match supplied.take_if(|_| named) {
+        Some(metadata) => server.with_metadata(metadata).map_err(|e| {
+            format!(
+                "auth.smart.issuer_metadata_file does not fit the [auth] issuer {issuer}: {}",
+                ferroehr::error::ErrorChain::new(&e)
+            )
+        }),
+        None => Ok(server),
     }
 }
 
@@ -261,16 +365,34 @@ async fn introspected(
     Ok(issuers)
 }
 
-/// Returns what `[auth.smart]` honours for a caller: a `patient_issuers`
-/// issuer. Whether it is a backend client is its `query_system_wide` grant,
-/// which the middleware reads from the CDR once the caller's grants resolve.
-fn honoured(config: &AppConfig) -> impl Fn(&Caller) -> Honoured + Send + Sync + 'static {
-    let patient = config.auth.smart.patient_issuers.clone();
+/// Returns the identifiers of the issuers trusted to assert a patient
+/// context: those whose profile sets `patient_context` (SMART App Launch
+/// 2.2.0, Scopes and Launch Context, `launch/patient`).
+fn patient_context(resolved: &Resolved) -> Vec<String> {
+    let jwt = resolved
+        .issuers
+        .iter()
+        .filter(|settings| settings.profile.patient_context)
+        .map(|settings| settings.issuer.clone());
+    let introspected = resolved
+        .introspection
+        .iter()
+        .filter(|settings| settings.profile.patient_context)
+        .map(|settings| settings.issuer.clone());
+    jwt.chain(introspected).collect()
+}
+
+/// Returns what FerroEHR honours for a caller: a `patient/` grant of an
+/// issuer trusted to assert a patient context, confined to the `ehrId` of
+/// that context. Whether it is a backend client is its `query_system_wide`
+/// grant, which the middleware reads from the CDR once the caller's grants
+/// resolve.
+fn honoured(patient: Vec<String>) -> impl Fn(&Caller) -> Honoured + Send + Sync + 'static {
     move |caller| Honoured {
         backend: false,
         patient: caller
             .issuer()
-            .is_some_and(|issuer| patient.iter().any(|listed| listed.expose() == issuer)),
+            .is_some_and(|issuer| patient.iter().any(|listed| listed == issuer)),
     }
 }
 

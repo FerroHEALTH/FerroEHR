@@ -112,15 +112,15 @@ config:
       # One table per issuer: `kind` says whose tokens it signs, and a
       # persons token is admitted only through a client the CDR
       # grants `sign_in_persons`.
-      - issuer: https://idp.example.com/realms/ferroehr
+      idp:
+        issuer: https://idp.example.com/realms/ferroehr
         kind: persons
         audience: [ferroehr]
-    # The issuer's logins bind to the PERSON carrying their `sub` under this
-    # identifier issuer.
-    party:
-      - issuer: https://idp.example.com/realms/ferroehr
-        identifier_issuer: urn:example:ferroehr-login
-        identifier_type: uuid
+        # The issuer's logins bind to the PERSON carrying their `sub` under this
+        # identifier issuer.
+        party:
+          identifier_issuer: urn:example:ferroehr-login
+          identifier_type: uuid
 
   authz:
     party_binding:
@@ -128,7 +128,7 @@ config:
       # under the OID arc 2.999).
       provider: { issuer: "urn:oid:2.999.7.9", id: "00000000" }
       # The professional PERSON of the default party mapping, its key written
-      # under the identifier_type the [[auth.party]] table above looks logins
+      # under the identifier_type the party table above looks logins
       # up under, or no login of the issuer binds; the rest of the mapping is
       # the default.
       person:
@@ -142,7 +142,7 @@ config:
       # Stated, as every separation this overlay claims (validate.sh checks
       # the render names it).
       enabled: true
-      role_issuers: [https://idp.example.com/realms/ferroehr]
+      role_issuers: [idp]
       # An EHR without ACCESS_CONTROL_SETTINGS admits no one until its settings
       # are authored.
       ehr_access_default: restricted

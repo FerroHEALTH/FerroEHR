@@ -58,7 +58,7 @@ const ASSERTION: &str = "urn:example:assertion:trc-1";
 /// The issuer of that assertion.
 const ASSERTION_ISSUER: &str = "urn:example:assertion-service";
 
-/// The issuer's `[[auth.federation]]` table: IHE IUA claims, and the
+/// The issuer's `[auth.issuer.<name>.federation]` table: IHE IUA claims, and the
 /// treatment context under `treatment`, as a deployment maps them.
 fn federation_table() -> FederationSection {
     let claim = |path: &str| vec![Source::Claim(path.to_owned())];
@@ -84,6 +84,7 @@ fn federation_table() -> FederationSection {
             (Field::TrcNotBefore, claim("treatment.not_before")),
             (Field::TrcNotOnOrAfter, claim("treatment.not_on_or_after")),
             (Field::AssertionIssuer, claim("treatment.issuer")),
+            (Field::TrcCareRole, claim("treatment.care_role")),
         ]),
         countries: vec!["DE".to_owned()],
         issuing_authorities: vec!["Registry".to_owned()],
@@ -118,7 +119,7 @@ async fn serve(restricted: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrServic
             .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
     );
     let mut auth = common::auth(AuthSection {
-        issuer: vec![IssuerEntry {
+        issuer: common::named([IssuerEntry {
             issuer: ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION),
             kind: Some(IssuerKind::Federation),
             audience: vec![AUDIENCE.to_owned()],
@@ -127,9 +128,9 @@ async fn serve(restricted: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrServic
                 levels: BTreeMap::from([("high".to_owned(), AssuranceLevel::High)]),
                 ..AssuranceSection::default()
             }),
+            federation: Some(federation_table()),
             ..IssuerEntry::default()
-        }],
-        federation: vec![federation_table()],
+        }]),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -138,6 +139,7 @@ async fn serve(restricted: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrServic
     svc.grants()
         .set_federation(ferroehr::config::federation::trust(
             &auth.shared,
+            &[],
             Retention::Years(10),
         ));
     crate::agreement_parties::commit(&svc, FEDERATION, &["remote-portal"], &[agreement()])
@@ -147,8 +149,7 @@ async fn serve(restricted: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrServic
         auth,
         ..common::api_config(true)
     };
-    config.auth.smart.patient_issuers =
-        vec![ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION)];
+    common::patient_context(&mut config, FEDERATION);
     config.public_root = Some(
         ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
             .expect("a public root"),
@@ -289,6 +290,12 @@ async fn commit(svc: &FerroEhrService, body: &Value) {
 /// treatment context for `patient` whose window ends `ends_in` seconds from
 /// now, when a patient is given.
 fn token(ehr: &str, patient: Option<&str>, ends_in: i64) -> String {
+    token_in_role(ehr, patient, ends_in, None)
+}
+
+/// [`token`], the treatment context attesting the care role `role`, a
+/// FHIR Coding `{ system, code }`, when given.
+fn token_in_role(ehr: &str, patient: Option<&str>, ends_in: i64, role: Option<Value>) -> String {
     let now = jiff::Timestamp::now().as_second();
     let mut claims = json!({
         "iss": FEDERATION, "aud": AUDIENCE, "exp": now + 3600, "scope": READ,
@@ -311,6 +318,9 @@ fn token(ehr: &str, patient: Option<&str>, ends_in: i64) -> String {
             "not_before": now - 3600,
             "not_on_or_after": now + ends_in,
         });
+        if let Some(role) = role {
+            claims["treatment"]["care_role"] = json!([role]);
+        }
     }
     common::bearer(&claims)
 }
@@ -484,6 +494,36 @@ async fn a_rule_names_the_attested_path_and_its_role() {
             read(&app, &target, &token(&target, Some(PATIENT), 600)).await,
             expected,
             "{care}"
+        );
+    }
+}
+
+/// The care role a credential attests in `trc.care_role` is the attested
+/// relationship's role: a rule naming it admits the caller and one naming
+/// `PART` no longer does, and a role of another terminology counts as none,
+/// so the relationship keeps `PART` (draft decision procedure, Holding a Care
+/// Relationship, `attested`).
+#[tokio::test]
+async fn the_attested_care_role_is_the_relationship_s_role() {
+    let participation = "HL7_ParticipationType";
+    let attending = json!({ "system": participation, "code": "ATND" });
+    let elsewhere = json!({ "system": "urn:example:roles", "code": "ATND" });
+    for (attested, named, expected) in [
+        (&attending, "ATND", StatusCode::OK),
+        (&attending, "PART", StatusCode::FORBIDDEN),
+        (&elsewhere, "PART", StatusCode::OK),
+        (&elsewhere, "ATND", StatusCode::FORBIDDEN),
+    ] {
+        let (_db, pool, svc, app) = Box::pin(serve(false)).await;
+        let target = patient_ehr(&svc, PATIENT).await;
+        let role = agreement_role(&pool).await;
+        let care = json!({ "care_roles": [coded(participation, named)] });
+        commit(&svc, &policy_in(Some(naming(&role, None)), &care)).await;
+        let credential = token_in_role(&target, Some(PATIENT), 600, Some(attested.clone()));
+        assert_eq!(
+            read(&app, &target, &credential).await,
+            expected,
+            "attested {attested}, the rule names {named}"
         );
     }
 }

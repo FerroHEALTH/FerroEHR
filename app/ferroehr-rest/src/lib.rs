@@ -74,6 +74,7 @@ use tokio::net::TcpListener;
 
 use crate::config::AppConfig;
 use crate::extensions::access::authn::Authenticator;
+use crate::extensions::access::authn::described::Described;
 use crate::extensions::access::authz::AuthzHandle;
 use crate::extensions::management::Observability;
 use crate::router::{management_router, router};
@@ -133,13 +134,15 @@ pub async fn build_full(
     observability: Observability,
 ) -> Result<axum::Router, ServeError> {
     let authenticator = authenticator_over(&config, &backend).await?;
+    let observability = with_issuers(observability, &authenticator);
     let state = AppState::with_parts(config, backend, authz, observability);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
 }
 
-/// Builds the [`Authenticator`] of `config`, reading each `[auth]` issuer's
-/// metadata and key set, looking every caller up in the party `source`.
+/// Builds the [`Authenticator`] of `config`, each `[auth]` issuer's metadata
+/// and key set read in the background, looking every caller up in the party
+/// `source`.
 ///
 /// The role-claim paths are `[auth] role_claims`, which `ferrohealth-smart`
 /// reads whether or not an authorization gate is wired. A served SMART discovery document needs the issuer's
@@ -158,11 +161,17 @@ async fn build_authenticator(
     let authenticator = Authenticator::new(config, source, replay, standing)
         .await
         .map_err(ServeError::Auth)?;
+    let described = authenticator.smart_configuration(&smart::discovery::options(
+        config,
+        authenticator.patient_context(),
+    ));
     if config.auth.smart.discovery
         && config.auth.shared.enabled
-        && authenticator
-            .smart_configuration(&smart::discovery::options(config))
-            .is_none_or(|document| document.get("token_endpoint").is_none())
+        && match described {
+            Described::None => true,
+            Described::Unread => false,
+            Described::Document(document) => document.get("token_endpoint").is_none(),
+        }
     {
         return Err(ServeError::Auth(
             "auth.smart.discovery = true needs an [auth] issuer whose metadata names a \
@@ -199,6 +208,21 @@ async fn authenticator_over(
         backend.observe_authn(Arc::new(verdicts));
     }
     Ok(authenticator)
+}
+
+/// Returns `observability` whose readiness also reports whether every bearer
+/// issuer of `authenticator` has been read, when it reads any in the
+/// background.
+fn with_issuers(observability: Observability, authenticator: &Arc<Authenticator>) -> Observability {
+    if !authenticator.reads_in_background() {
+        return observability;
+    }
+    Observability {
+        health: observability.health.and(Arc::new(
+            extensions::access::authn::verdicts::IssuersHealth(Arc::clone(authenticator)),
+        )),
+        ..observability
+    }
 }
 
 /// The local party source over `backend`'s party pool, naming each party
@@ -274,6 +298,7 @@ where
     F: Future<Output = ()> + Send + 'static,
 {
     let authenticator = authenticator_over(&config, &backend).await?;
+    let observability = with_issuers(observability, &authenticator);
     let section = config.server.clone();
     let state = AppState::with_parts(config, backend, authz, observability);
     let lifecycle = state.observability().lifecycle.clone();
@@ -344,7 +369,7 @@ pub(crate) mod test_support {
         .clone()
     }
 
-    /// The `[[auth.issuer]]` table of a `persons` issuer at `issuer` for the
+    /// The `[auth.issuer.<name>]` table of a `persons` issuer at `issuer` for the
     /// test audience, admitting the test client.
     pub(crate) fn entry(issuer: &str) -> IssuerEntry {
         IssuerEntry {
@@ -393,7 +418,7 @@ pub(crate) mod test_support {
     pub(crate) fn trusting(entry: IssuerEntry) -> AuthConfig {
         AuthConfig {
             shared: Box::new(AuthSection {
-                issuer: vec![entry],
+                issuer: [("test".to_owned(), entry)].into(),
                 ..AuthSection::default()
             }),
             ..AuthConfig::default()

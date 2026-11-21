@@ -29,7 +29,7 @@ use crate::party_binding_http::{AUDIENCE, ISSUER, LOGIN, config, router_with, ui
 
 /// The persons issuer the rolling deploy adds.
 const ADDED: &str = "https://added.example";
-/// The `identifier_issuer` of its `[[auth.party]]` table.
+/// The `identifier_issuer` of its `[auth.issuer.<name>.party]` table.
 const ADDED_LOGIN: &str = "https://added.example/tenant";
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
 
@@ -47,21 +47,22 @@ fn mapping(issuers: &[&str]) -> BindingMapping {
 }
 
 /// The `[auth]` table of a replica trusting `ISSUER` and, with `added`, the
-/// added issuer too, each with its `[[auth.party]]` table.
+/// added issuer too, each with its `[auth.issuer.<name>.party]` table.
 fn trusting(added: bool) -> AppConfig {
     let mut config = config(None);
     if added {
-        let shared = &mut config.auth.shared;
-        shared.issuer.push(IssuerEntry {
-            jwks_file: common::jwks_file().display().to_string(),
-            ..common::entry(ADDED, AUDIENCE)
-        });
-        shared.party.push(PartySection {
-            issuer: ferrohealth_secret::secret_url::SecretUrl::new(ADDED),
-            identifier_issuer: ADDED_LOGIN.to_owned(),
-            identifier_type: "guid".to_owned(),
-            ..PartySection::default()
-        });
+        common::add_issuer(
+            &mut config,
+            IssuerEntry {
+                jwks_file: common::jwks_file().display().to_string(),
+                party: Some(PartySection {
+                    identifier_issuer: ADDED_LOGIN.to_owned(),
+                    identifier_type: "guid".to_owned(),
+                    ..PartySection::default()
+                }),
+                ..common::entry(ADDED, AUDIENCE)
+            },
+        );
     }
     config
 }

@@ -67,11 +67,14 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
     let machines = IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
         kind: Some(IssuerKind::Machines),
-        profile: Preset::Rfc9068,
+        preset: Preset::Rfc9068,
         audience: vec![AUDIENCE.to_owned()],
         jwks_file: common::jwks_file().display().to_string(),
-        // NOTE: the test key signs RFC 9068 `at+jwt` tokens.
-        token_types: Some(vec!["at+jwt".to_owned()]),
+        profile: ferrohealth_smart::profile::ProfileKeys {
+            // NOTE: the test key signs RFC 9068 `at+jwt` tokens.
+            token_types: Some(vec!["at+jwt".to_owned()]),
+            ..ferrohealth_smart::profile::ProfileKeys::default()
+        },
         ..IssuerEntry::default()
     };
     let persons = IssuerEntry {
@@ -79,13 +82,15 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
         ..common::entry(PERSONS, AUDIENCE)
     };
     let mut auth = common::auth(AuthSection {
-        issuer: vec![machines, persons],
-        party: vec![PartySection {
-            issuer: ferrohealth_secret::secret_url::SecretUrl::new(PERSONS),
-            identifier_issuer: LOGIN.to_owned(),
-            identifier_type: "guid".to_owned(),
-            ..PartySection::default()
-        }],
+        issuer: common::bound(
+            vec![machines, persons],
+            vec![PartySection {
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(PERSONS),
+                identifier_issuer: LOGIN.to_owned(),
+                identifier_type: "guid".to_owned(),
+                ..PartySection::default()
+            }],
+        ),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -305,7 +310,7 @@ async fn a_missing_scope_an_undeclared_client_and_a_person_are_refused() {
     assert_error(status, &headers, &body, StatusCode::FORBIDDEN);
 }
 
-/// A grant naming a `binding_issuer` no `[[auth.party]]` table issues, one
+/// A grant naming a `binding_issuer` no `[auth.issuer.<name>.party]` table issues, one
 /// another client's grant names too, two of them, or no grant at all admits
 /// nothing.
 #[tokio::test]
@@ -329,7 +334,7 @@ async fn a_grant_that_cannot_own_its_users_is_refused() {
     .await;
     let app = common::router_with(config(None), service).await;
     for (client, refusal) in [
-        ("unbound", "identifier_issuer of no [[auth.party]] table"),
+        ("unbound", "identifier_issuer of no party table"),
         (CLIENT, "another client's scim_provision grant"),
         ("second", "another client's scim_provision grant"),
         ("split", "name 2 binding issuers"),
