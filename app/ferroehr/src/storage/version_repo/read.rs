@@ -23,6 +23,8 @@
               round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
 )]
 
+use std::sync::Arc;
+
 use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::{PgPool, Row};
@@ -132,8 +134,9 @@ pub struct StoredVersion {
     /// The body as the database's own jsonb text rendering, populated ONLY by
     /// a [`Body::Text`] read ([`read_one`]) —
     /// the JSON-accept passthrough source. `None` on every parsed read and on
-    /// a logically deleted version.
-    pub canonical_text: Option<String>,
+    /// a logically deleted version. Shared, so the version copy and a
+    /// response hold the one text without copying it (#6205).
+    pub canonical_text: Option<Arc<str>>,
     /// The `ORIGINAL_VERSION.attestations` that were on the version AT the act
     /// of committal, in commit order (master06 §Attestation "Signing content at
     /// committal") — the ones inside the version's signed canonical form.
@@ -209,7 +212,7 @@ fn stored_version(vo_id: VoId, row: &PgRow) -> Result<StoredVersion, StorageErro
 /// JSON-accept passthrough source (the caller parses the text wherever a
 /// typed value is still needed).
 pub(super) fn stored_version_raw(vo_id: VoId, row: &PgRow) -> Result<StoredVersion, StorageError> {
-    let canonical_text: Option<String> = row.try_get("body")?;
+    let canonical_text = row.try_get::<Option<&str>, _>("body")?.map(Arc::from);
     stored_version_fields(vo_id, row, Value::Null, canonical_text)
 }
 
@@ -220,7 +223,7 @@ fn stored_version_fields(
     vo_id: VoId,
     row: &PgRow,
     canonical: Value,
-    canonical_text: Option<String>,
+    canonical_text: Option<Arc<str>>,
 ) -> Result<StoredVersion, StorageError> {
     let sys_version: i32 = row.try_get("sys_version")?;
     // A stored `other_input_version_uids` that does not decode is OUR data

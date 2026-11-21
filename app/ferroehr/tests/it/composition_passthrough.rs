@@ -28,7 +28,7 @@ async fn stored_body(db: &testkit::TestDb, vo_id: &str, tree: i32) -> String {
 /// body instead.
 fn passthrough(read: RawServiceResponse) -> String {
     match read.body {
-        ReadBody::RawJson(text) => text,
+        ReadBody::RawJson(text) => text.to_string(),
         ReadBody::Value(value) => panic!("the read parsed the stored body: {value}"),
     }
 }
