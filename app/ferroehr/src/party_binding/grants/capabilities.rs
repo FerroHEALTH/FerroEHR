@@ -538,7 +538,8 @@ mod tests {
         let scopes = Grant::new(Operation::HoldScopes, Uuid::nil(), Some(Arc::clone(&tree)));
         assert_eq!(scopes.held(), ["user/ehr.r"]);
         let other = Grant::new(Operation::ImportEhr, Uuid::nil(), Some(Arc::clone(&tree)));
-        assert!(other.held().is_empty());
+        let none: &[String] = &[];
+        assert_eq!(other.held(), none);
         let term = crate::party_binding::grants::store::Term {
             lifecycle_state: "532".to_owned(),
             role_dates: None,
