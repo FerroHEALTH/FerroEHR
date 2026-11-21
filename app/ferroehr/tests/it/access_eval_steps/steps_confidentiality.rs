@@ -234,3 +234,91 @@ fn a_label_and_a_classification_mark_their_data() {
         assert_outcome(&verdict, &plain, on_plain, name);
     }
 }
+
+/// A rule limits attested callers by data scope and confidentiality (#6078):
+/// a deny whose actor scope names the `attested` path refuses the template
+/// its data scope names, and a permit for the same path clears `R` and
+/// nothing above it; the deny, a step-5 rule, answers before step 6 does.
+/// Without that permit an attested caller is refused `R`,
+/// and a caller holding a stored relationship is not cleared by a rule that
+/// names `attested`, since a path implies no other (draft decision
+/// procedure, Holding a Care Relationship and step 6).
+#[test]
+fn step_6_a_rule_limits_attested_callers_by_data_scope_and_confidentiality() {
+    let attested = json!({ "relationship": term("care"), "care_path": term("attested") });
+    let clearing = rule(
+        "permit",
+        &json!({ "applies_to": [attested.clone()],
+                 "data": [{ "confidentialities": [coded(LEVELS, "R")] }] }),
+    );
+    let excluding = rule(
+        "deny",
+        &json!({ "applies_to": [attested],
+                 "data": [{ "templates": ["lab_hiv.v1"] }] }),
+    );
+    let limited = policy(&json!({ "rules": [clearing, excluding.clone()] }));
+    let uncleared = policy(&json!({ "rules": [excluding] }));
+    let tie = |path: CarePath| Tie {
+        path,
+        role: code("HL7_ParticipationType", "PART"),
+        grant: None,
+    };
+    let service = caller(CallerKind::AccessService, NURSE);
+    let note = object(OBJECT, Some("psych_note.v1"));
+    let lab = object(OTHER, Some("lab_hiv.v1"));
+    let denied = Outcome::Refused(Refusal::PolicyDenied);
+    for (name, policy, path, level, outcomes) in [
+        (
+            "attested, normal; the lab is the step-5 deny",
+            &limited,
+            CarePath::Attested,
+            None,
+            [Outcome::Admit, denied],
+        ),
+        (
+            "attested, R cleared; the lab is the step-5 deny",
+            &limited,
+            CarePath::Attested,
+            Some("R"),
+            [Outcome::Admit, denied],
+        ),
+        (
+            "attested, V above the clearance; the step-5 deny answers the lab first",
+            &limited,
+            CarePath::Attested,
+            Some("V"),
+            [REFUSED, denied],
+        ),
+        (
+            "attested, R with no permit; the step-5 deny answers the lab first",
+            &uncleared,
+            CarePath::Attested,
+            Some("R"),
+            [REFUSED, denied],
+        ),
+        (
+            "direct, R under a rule naming attested",
+            &limited,
+            CarePath::Direct,
+            Some("R"),
+            [REFUSED, REFUSED],
+        ),
+        (
+            "direct, normal, outside the deny",
+            &limited,
+            CarePath::Direct,
+            None,
+            [Outcome::Admit, Outcome::Admit],
+        ),
+    ] {
+        let case = Case {
+            policy: Some(policy.clone()),
+            ties: Some(vec![tie(path)]),
+            ..Case::of(marked(level, &[], &[]))
+        };
+        let verdict = case.verdict(&service, read(None));
+        for (item, expected) in [&note, &lab].into_iter().zip(outcomes) {
+            assert_outcome(&verdict, item, expected, name);
+        }
+    }
+}

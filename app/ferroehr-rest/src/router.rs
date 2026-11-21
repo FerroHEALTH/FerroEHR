@@ -89,7 +89,8 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
 }
 
 /// Runs the request inside [`ferroehr::db::acquire::request_scope`], so it
-/// checks a connection out of each pool once and keeps it until it answers.
+/// keeps the connection a pool lent it between its statements and queues
+/// for that pool once for each stretch of statements on it.
 ///
 /// No openEHR spec governs connection handling: our own design.
 pub(crate) async fn one_connection_per_request(

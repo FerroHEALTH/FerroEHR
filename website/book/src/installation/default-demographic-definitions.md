@@ -51,7 +51,8 @@ change under a recorded id that does not update its digest.
 | [`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls) | The former example representation, whose coded name is its type, `at10` (parent), `at11` (guardian) or `at12` (authorised proxy), and whose details carry `openehr_access::represents` and the openEHR `subject_relationship` code, held in a `PERSON`'s `relationships` or of its own. FerroEHR refuses that form, a representation with no `basis` and no `provider`; it stays published under its id. | none |
 | [`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2.0.0.adls) | An example representation of its own, written at `/demographic/party_relationship`, from a representative's `PERSON` to the subject's, with the period of the representation as its `time_validity`, named `openehr_access::represents`, whose details carry its `basis` and `provider` (1..1), an optional `evidence` and an optional openEHR `subject_relationship` code. FerroEHR recognises it by those codes in any archetype. | none |
 | [`openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls) | The former patient `PERSON`, which also held care relationships (`id32`) in its `relationships`. FerroEHR refuses that form; the definition stays published under its id, and a `PERSON` committed against it still validates. | none |
-| [`openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls) | The patient's `PERSON`, the subject of an EHR, and the `PERSON` a patient portal provisions for a representative: its patient identifiers, date of birth, sex and the EHR subject references it stands for in `details`, its names, a postal and an electronic address, its personal, payer and provider relationships, and a slot (`id37`) for a representation held in its `relationships`, of the former representation archetype, which FerroEHR refuses: a representation is written as one of its own. | `[authz.party_binding.patient] template_id`, as `openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0` |
+| [`openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls) | The former patient `PERSON`, which also held a slot (`id37`) for a representation in its `relationships`, of the former representation archetype. FerroEHR refuses that form, since a representation is written as one of its own; the definition stays published under its id, and a `PERSON` committed against it still validates. | none |
+| [`openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0.adls) | The patient's `PERSON`, the subject of an EHR, and the `PERSON` a patient portal provisions for a representative: its patient identifiers, date of birth, sex and the EHR subject references it stands for in `details`, its names, a postal and an electronic address, and its personal, payer and provider relationships. Its care relationships and representations are written as `PARTY_RELATIONSHIP`s of their own. | `[authz.party_binding.patient] template_id`, as `openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0` |
 | [`openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls) | A healthcare provider's `ORGANISATION`: its provider identifiers in `details` (`/details[id2]/items[id3]`, such as the Dutch URA, mandatory), its names named by their usage, and a postal and an electronic address. The acts-for relationship targets it, and a federation partner is one. | none |
 
 The links above fetch the newest release's copy. To fetch the copy of a
@@ -71,6 +72,7 @@ for file in \
   openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v2.0.0.adls \
   openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls \
   openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0.adls \
+  openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0.adls \
   openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls; do
   curl -fsSLO "$base/$file"
   curl -fsSLO "$base/$file.sha256sum"
@@ -126,7 +128,7 @@ With no mapping key set, `[authz.party_binding]` maps all of them but the
 provider `ORGANISATION`, which the acts-for relationship of the policy parties
 targets ([the default mapping](config-auth.md#the-party-mapping)). SCIM serves
 `/scim/v2/Groups`, and each client's Groups' `externalId`s are written under
-its `[[auth.party]]` table's `group_identifier_issuer`, or under one derived
+its `[auth.issuer.<name>.party]` table's `group_identifier_issuer`, or under one derived
 from its `binding_issuer` when the table sets none
 ([Groups](config-auth.md#groups)). A test boots an empty configuration,
 stores the set as boot does, and provisions a SCIM User, a Group with the

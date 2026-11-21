@@ -33,26 +33,24 @@ services:
       FERROEHR__API__TERMINOLOGY: "true"
       # The purposes of use the viewer's Reading tab offers (#6105).
       FERROEHR__AUDIT__PURPOSE_CODES: TREAT,ETREAT
-      # The realm is the third [[auth.issuer]] table (index 2), after the issuer
-      # the Basic users of docker/ferroehr.dev.toml bind under and its SCIM
-      # client's issuer.
-      FERROEHR__AUTH__ISSUER__2__ISSUER: https://keycloak:8443/auth/realms/ferroehr
-      FERROEHR__AUTH__ISSUER__2__KIND: persons
-      FERROEHR__AUTH__ISSUER__2__PROFILE: keycloak
-      FERROEHR__AUTH__ISSUER__2__AUDIENCE: ferroehr
+      # The realm is the issuer named `keycloak`, beside the `basic_users` and
+      # `scim` issuers of docker/ferroehr.dev.toml.
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__ISSUER: https://keycloak:8443/auth/realms/ferroehr
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__KIND: persons
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__PRESET: keycloak
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__AUDIENCE: ferroehr
       # A person signs in through the viewer, the client scripts/ui-e2e.sh
       # grants sign_in_persons in the CDR.
-      FERROEHR__AUTH__ISSUER__2__APP_ONLY__0__CLAIM: client_id
-      FERROEHR__AUTH__ISSUER__2__APP_ONLY__0__VALUE: ferroehr-service
-      FERROEHR__AUTH__ISSUER__2__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
-      FERROEHR__AUTH__PARTY__1__ISSUER: https://keycloak:8443/auth/realms/ferroehr
-      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:example:keycloak-dev-login
-      FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__PROFILE__APP_ONLY__0__CLAIM: client_id
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__PROFILE__APP_ONLY__0__VALUE: ferroehr-service
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__PARTY__IDENTIFIER_ISSUER: urn:example:keycloak-dev-login
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__PARTY__IDENTIFIER_TYPE: login
       # The group claim and its identifier issuer, under which a SCIM client's
       # Groups are written once the party mapping provisions Groups.
-      FERROEHR__AUTH__PARTY__1__GROUP_CLAIM: groups
-      FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: urn:example:keycloak-dev-groups
-      FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: https://keycloak:8443/auth/realms/ferroehr
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__PARTY__GROUP_CLAIM: groups
+      FERROEHR__AUTH__ISSUER__KEYCLOAK__PARTY__GROUP_IDENTIFIER_ISSUER: urn:example:keycloak-dev-groups
+      FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: keycloak
       FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro

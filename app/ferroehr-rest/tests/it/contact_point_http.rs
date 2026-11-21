@@ -100,29 +100,29 @@ async fn serve_over(
     );
     let constant = |value: &str| vec![Source::Constant(value.to_owned())];
     let mut auth = common::auth(AuthSection {
-        issuer: vec![IssuerEntry {
+        issuer: common::named([IssuerEntry {
             issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
             kind: Some(IssuerKind::Federation),
             audience: vec![AUDIENCE.to_owned()],
             jwks_file: common::jwks_file().display().to_string(),
             sender_constraint: SenderConstraint::Required,
+            federation: Some(FederationSection {
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
+                contact_point: Some(true),
+                mapping: Some(Mapping::Ehdsi),
+                fields: BTreeMap::from([
+                    (Field::ProfessionalCountryCode, constant("BE")),
+                    (
+                        Field::ProfessionalIssuingAuthorityName,
+                        constant("NCP-B Belgium"),
+                    ),
+                    (Field::ProviderIssuingAuthorityName, constant(AUTHORITY)),
+                ]),
+                countries: vec!["BE".to_owned()],
+                ..FederationSection::default()
+            }),
             ..IssuerEntry::default()
-        }],
-        federation: vec![FederationSection {
-            issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
-            contact_point: Some(true),
-            mapping: Some(Mapping::Ehdsi),
-            fields: BTreeMap::from([
-                (Field::ProfessionalCountryCode, constant("BE")),
-                (
-                    Field::ProfessionalIssuingAuthorityName,
-                    constant("NCP-B Belgium"),
-                ),
-                (Field::ProviderIssuingAuthorityName, constant(AUTHORITY)),
-            ]),
-            countries: vec!["BE".to_owned()],
-            ..FederationSection::default()
-        }],
+        }]),
         dpop: Some(DpopSection::default()),
         ..AuthSection::default()
     });
@@ -132,6 +132,7 @@ async fn serve_over(
     svc.grants()
         .set_federation(ferroehr::config::federation::trust(
             &auth.shared,
+            &[],
             Retention::Forever,
         ));
     crate::agreement_parties::commit(&svc, CONTACT_POINT, &["ncpeh-b"], &[agreement])
@@ -141,9 +142,7 @@ async fn serve_over(
         auth,
         ..common::api_config(true)
     };
-    config.auth.smart.patient_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(
-        CONTACT_POINT,
-    )];
+    common::patient_context(&mut config, CONTACT_POINT);
     config.public_root = Some(
         ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
             .expect("a public root"),
@@ -553,12 +552,12 @@ async fn a_contact_points_access_record_carries_its_assertion_ids_and_never_the_
 }
 
 /// The shipped patient template, which the default mapping names.
-const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v2.0.0";
+const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v3.0.0";
 
 /// A patient `PERSON` of [`PATIENT`] carrying `id` under [`NAMESPACE`] at
 /// the patient identifier path.
 fn patient_person(id: &str) -> Value {
-    let archetype = "openEHR-DEMOGRAPHIC-PERSON.patient.v2";
+    let archetype = "openEHR-DEMOGRAPHIC-PERSON.patient.v3";
     let named = |value: &str| json!({ "_type": "DV_TEXT", "value": value });
     json!({
         "_type": "PERSON", "archetype_node_id": archetype, "name": named("Patient"),

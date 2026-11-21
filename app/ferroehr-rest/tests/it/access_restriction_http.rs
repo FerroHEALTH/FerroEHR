@@ -92,17 +92,16 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         &[("root", &["ADMIN"]), ("clinician", &["USER"])],
     )
     .await;
-    config
-        .auth
-        .shared
-        .issuer
-        .push(ferrohealth_smart::config::IssuerEntry {
+    common::add_issuer(
+        &mut config,
+        ferrohealth_smart::config::IssuerEntry {
             jwks_file: common::jwks_file().display().to_string(),
             ..common::entry(MEDICS, "ferroehr")
-        });
+        },
+    );
     common::bind_issuer(&mut config, MEDICS);
     common::bind_subjects(&pool, &[(MEDICS, "medic")]).await;
-    config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(MEDICS)];
+    config.rbac.role_issuers = vec![common::name_of(MEDICS)];
     config.rbac.emergency_access_role = Some("EMERGENCY".to_owned());
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;

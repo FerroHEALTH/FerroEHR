@@ -5,8 +5,8 @@
 //! that hold the shared `[auth]` section, the binding and FerroEHR's per-issuer
 //! tables together.
 //!
-//! `ferrohealth-smart` owns the issuer kinds and profiles, `[[auth.party]]` and
-//! `[[auth.federation]]`, and refuses what breaks its own rules. FerroEHR adds
+//! `ferrohealth-smart` owns the issuer kinds and profiles, `[auth.issuer.<name>.party]` and
+//! `[auth.issuer.<name>.federation]`, and refuses what breaks its own rules. FerroEHR adds
 //! the provider it acts for, the `PARTY_REF.namespace` a bound party is
 //! written under, the key each Basic user is bound by, and the rules no single
 //! table can see: every `persons` issuer is bound, no two issuers share an
@@ -185,7 +185,7 @@ impl<'de> Visitor<'de> for ProvidersVisitor {
 pub struct BasicUserKey {
     /// The `[[auth.basic.users]]` user-id.
     pub user: String,
-    /// The `identifier_issuer` of the `[[auth.party]]` table the key belongs
+    /// The `identifier_issuer` of the `[auth.issuer.<name>.party]` table the key belongs
     /// to.
     pub key_issuer: String,
     /// The binding key the user's `PERSON` carries.
@@ -198,10 +198,10 @@ pub enum BindingError {
     /// The shared crate refuses a party table or a Basic user's key.
     #[error(transparent)]
     Party(#[from] PartyError),
-    /// A Basic user maps to no key while an `[[auth.party]]` table binds
+    /// A Basic user maps to no key while an `[auth.issuer.<name>.party]` table binds
     /// logins, so the user resolves to no `PERSON`.
     #[error(
-        "beside an [[auth.party]] table a Basic user is a person's credential: map it with \
+        "beside an party table a Basic user is a person's credential: map it with \
          [[authz.party_binding.basic_user]] to the key of its PERSON, which SCIM provisions \
          once the operator grant (`ferroehr party-binding grant --operation scim_provision`) \
          admits the SCIM client"
@@ -290,28 +290,27 @@ pub fn errors(authz: &crate::config::authz::AuthzConfig, resolved: &Resolved) ->
     shared_audiences(resolved, &mut errors);
     providers(binding, resolved, &mut errors);
     errors.extend(jit::errors(binding, resolved));
-    if let Err(e) = resolved.check_role_issuers("authz.rbac.role_issuers", &authz.rbac.role_issuers)
-    {
+    if let Err(e) = resolved.role_issuers("authz.rbac.role_issuers", &authz.rbac.role_issuers) {
         errors.push(crate::error::ErrorChain::new(&e).to_string());
     }
     errors
 }
 
-/// Refuses a `persons` issuer with no `[[auth.party]]` table: binding is how
+/// Refuses a `persons` issuer with no `[auth.issuer.<name>.party]` table: binding is how
 /// FerroEHR attributes a person, with no unbound mode.
 fn unbound_persons(resolved: &Resolved, errors: &mut Vec<String>) {
     let bound: BTreeSet<&str> = resolved.party.iter().map(|t| t.issuer.expose()).collect();
     for (issuer, kind) in &resolved.kinds {
         if *kind == IssuerKind::Persons && !bound.contains(issuer.as_str()) {
             errors.push(format!(
-                "the persons issuer {issuer:?} has no [[auth.party]] table: every persons issuer \
+                "the persons issuer {issuer:?} has no party table: every persons issuer \
                  binds its logins to a party"
             ));
         }
     }
 }
 
-/// Refuses an `[[auth.party]]` table whose `identifier_type` no person
+/// Refuses an `[auth.issuer.<name>.party]` table whose `identifier_type` no person
 /// template's `key` selector writes: the lookup matches the type exactly
 /// (`party_binding::lookup::LOOKUP`), and SCIM, just-in-time creation and the
 /// refill write the key under the template's type, so no login of the issuer
@@ -334,7 +333,7 @@ fn key_types(binding: &PartyBindingConfig, resolved: &Resolved, errors: &mut Vec
             format!("the person templates' keys are of the types {written:?}")
         };
         errors.push(format!(
-            "the [[auth.party]] table of {:?} looks logins up under identifier_type {:?}, \
+            "the party table of {:?} looks logins up under identifier_type {:?}, \
              which no person template's key carries: {writes}, so no login of the issuer \
              matches a party",
             table.issuer, table.identifier_type
@@ -432,7 +431,7 @@ impl crate::config::FerroEhrConfig {
     /// itself are [`crate::config::auth::validate`]'s.
     pub(crate) fn identity_errors(&self) -> Vec<String> {
         let mut errors = Vec::new();
-        let Ok(resolved) = crate::config::auth::resolve(&self.auth.shared) else {
+        let Ok(resolved) = self.resolve_auth() else {
             return errors;
         };
         if !resolved.enabled {
@@ -450,7 +449,7 @@ impl crate::config::FerroEhrConfig {
 }
 
 /// Every `patients` issuer, sorted: a binding key under one is a portal
-/// representative's login, held with no `[[auth.party]]` table and bound
+/// representative's login, held with no `[auth.issuer.<name>.party]` table and bound
 /// only through a live representation (#5446, #5622).
 #[must_use]
 pub fn portal_issuers(resolved: &Resolved) -> Vec<String> {
@@ -481,8 +480,8 @@ pub fn installed_mapping(
         .with_portal_issuers(portal_issuers(resolved)))
 }
 
-/// The issuers a binding key is held under: the `identifier_issuer` of every
-/// `[[auth.party]]` table, and every `patients` issuer, under which a portal
+/// The issuers a binding key is held under: every party table's
+/// `identifier_issuer`, and every `patients` issuer, under which a portal
 /// representative's login is their key with no table (#5622).
 ///
 /// The server compiles the person mapping from this one set, and the SCIM
@@ -547,22 +546,31 @@ pub struct BoundIssuer {
 }
 
 impl BindingPosture {
-    /// Returns the posture `config` declares.
+    /// Returns the posture `config` declares, each issuer's kind and
+    /// identifier issuer as `[auth]` resolves them.
     #[must_use]
     pub fn of(config: &crate::config::FerroEhrConfig) -> Self {
-        let party = &config.auth.shared.party;
+        // NOTE: no openEHR spec governs this: the posture is logged after the configuration check, which refuses a section that does not resolve.
+        let resolved = config.resolve_auth().ok();
         let issuers = config
             .auth
             .shared
             .issuers()
-            .iter()
-            .map(|entry| BoundIssuer {
-                issuer: entry.issuer.redacted(),
-                kind: entry.kind,
-                identifier_issuer: party
-                    .iter()
-                    .find(|table| table.issuer == entry.issuer)
-                    .map(|table| table.identifier_issuer.clone()),
+            .map(|(_, entry)| {
+                let issuer = entry.issuer.expose();
+                BoundIssuer {
+                    issuer: entry.issuer.redacted(),
+                    kind: resolved
+                        .as_ref()
+                        .and_then(|r| r.kinds.get(issuer).copied())
+                        .or(entry.kind),
+                    identifier_issuer: resolved.as_ref().and_then(|r| {
+                        r.party
+                            .iter()
+                            .find(|table| table.issuer.expose() == issuer)
+                            .map(|table| table.identifier_issuer.clone())
+                    }),
+                }
             })
             .collect();
         let unassured_basic = if config.authz.assurance.minimum.is_none() {
@@ -657,7 +665,7 @@ mod tests {
                 "FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE",
                 "BREAK_GLASS",
             ),
-            ("FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS", "https://a,https://b"),
+            ("FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS", "a,b"),
         ]);
         assert_eq!(c.authz.assurance.claim, "loa");
         assert_eq!(
@@ -680,12 +688,6 @@ mod tests {
             c.authz.rbac.emergency_access_role.as_deref(),
             Some("BREAK_GLASS")
         );
-        assert_eq!(
-            c.authz.rbac.role_issuers,
-            [
-                ferrohealth_secret::secret_url::SecretUrl::new("https://a"),
-                ferrohealth_secret::secret_url::SecretUrl::new("https://b")
-            ]
-        );
+        assert_eq!(c.authz.rbac.role_issuers, ["a", "b"]);
     }
 }

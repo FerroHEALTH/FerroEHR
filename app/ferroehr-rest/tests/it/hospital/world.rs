@@ -285,11 +285,14 @@ pub(crate) fn config() -> AppConfig {
     let machines = IssuerEntry {
         issuer: SecretUrl::new(MACHINES),
         kind: Some(IssuerKind::Machines),
-        profile: Preset::Rfc9068,
+        preset: Preset::Rfc9068,
         audience: vec![AUDIENCE.to_owned()],
         jwks_file: common::jwks_file().display().to_string(),
-        // NOTE: the test key signs RFC 9068 `at+jwt` tokens.
-        token_types: Some(vec!["at+jwt".to_owned()]),
+        profile: ferrohealth_smart::profile::ProfileKeys {
+            // NOTE: the test key signs RFC 9068 `at+jwt` tokens.
+            token_types: Some(vec!["at+jwt".to_owned()]),
+            ..ferrohealth_smart::profile::ProfileKeys::default()
+        },
         ..IssuerEntry::default()
     };
     let persons = IssuerEntry {
@@ -310,15 +313,14 @@ pub(crate) fn config() -> AppConfig {
         ..PartySection::default()
     };
     let mut auth = common::auth(AuthSection {
-        issuer: vec![machines, persons, patients],
-        party: vec![staff],
+        issuer: common::bound(vec![machines, persons, patients], vec![staff]),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
     let mut config = common::api_config(true);
     config.auth = auth;
     config.auth.scim = Some(ScimConfig::default());
-    config.auth.smart.patient_issuers = vec![SecretUrl::new(PATIENTS)];
+    common::patient_context(&mut config, PATIENTS);
     config.public_root = Some(
         ferroehr::config::server::PublicRoot::new("https://cdr.sint-example.example", "")
             .expect("a public root"),
@@ -330,7 +332,7 @@ pub(crate) fn config() -> AppConfig {
         })),
         ..PartyBindingConfig::default()
     };
-    config.rbac.role_issuers = vec![SecretUrl::new(PERSONS)];
+    config.rbac.role_issuers = vec![common::name_of(PERSONS)];
     config.rbac.emergency_access_role = Some("EMERGENCY".to_owned());
     config
 }

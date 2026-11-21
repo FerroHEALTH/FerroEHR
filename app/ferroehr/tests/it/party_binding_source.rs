@@ -57,7 +57,7 @@ const MEMBERSHIP: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1";
 const REPRESENTATION: &str = "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.custodian.v2";
 /// The identifier cluster the key selector reads.
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
-/// The `identifier_issuer` of the login's `[[auth.party]]` table.
+/// The `identifier_issuer` of the login's `[auth.issuer.<name>.party]` table.
 pub(crate) const LOGIN: &str = "https://login.example/tenant";
 /// The `group_identifier_issuer` of that table.
 const GROUPS: &str = "https://login.example/groups";
@@ -426,7 +426,7 @@ fn group_ref(vo: VoId) -> PartyRef {
 }
 
 /// A key stored in upper case binds a lower-case GUID claim: the side table
-/// holds the canonical form the `[[auth.party]]` type declares.
+/// holds the canonical form the `[auth.issuer.<name>.party]` type declares.
 const UPPER_KEY: &str = "5BA552D6-0F3C-4D0B-9C11-6A5B0C2E7F10";
 
 #[tokio::test]

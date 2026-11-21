@@ -30,8 +30,8 @@ const SCIM: &str = "scim";
 /// The `[auth]` table.
 #[derive(Debug, Clone, Default, Serialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = {"enabled": "trust", "realm": "optional", "capabilities": "optional", "scopes_supported": "optional", "product_scope": "trust", "described_issuer": "trust", "issuer": "trust", "basic": "trust", "basic.cache_ttl": "optional", "dpop": "trust", "tls": "trust", "federation": "trust", "attributes": "trust", "party": "trust", "idp": "infrastructure"})))]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = ["issuer.issuer", "issuer.kind", "issuer.audience"])))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = {"enabled": "trust", "realm": "optional", "capabilities": "optional", "scopes_supported": "optional", "product_scope": "trust", "described_issuer": "trust", "issuer": "trust", "basic": "trust", "basic.cache_ttl": "optional", "dpop": "trust", "tls": "trust", "idp": "infrastructure"})))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = ["issuer.<name>.issuer"])))]
 pub struct AuthConfig {
     /// Every key `ferrohealth-smart` reads: the issuers, the party and
     /// federation tables, the vendor adapter tables (`[auth.idp]`), the Basic
@@ -101,16 +101,25 @@ impl beside::Own for Own {
     }
 }
 
-/// Returns the issuer key of one `machines` issuer `issuer` for the
-/// `ferroehr` audience, the table the configuration tests trust.
+/// Returns the table of one `machines` issuer `issuer` for the `ferroehr`
+/// audience, the table the configuration tests trust.
 #[cfg(test)]
-pub(crate) fn machines(issuer: &str) -> Vec<ferrohealth_smart::config::IssuerEntry> {
-    vec![ferrohealth_smart::config::IssuerEntry {
+pub(crate) fn machine(issuer: &str) -> ferrohealth_smart::config::IssuerEntry {
+    ferrohealth_smart::config::IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
         kind: Some(ferrohealth_smart::kind::IssuerKind::Machines),
         audience: vec!["ferroehr".to_owned()],
         ..ferrohealth_smart::config::IssuerEntry::default()
-    }]
+    }
+}
+
+/// Returns the issuer key holding [`machine`] `issuer` as the table
+/// `[auth.issuer.machines]`.
+#[cfg(test)]
+pub(crate) fn machines(
+    issuer: &str,
+) -> std::collections::BTreeMap<String, ferrohealth_smart::config::IssuerEntry> {
+    [("machines".to_owned(), machine(issuer))].into()
 }
 
 #[cfg(test)]
@@ -144,8 +153,10 @@ mod tests {
     fn the_client_lists_the_policy_grants_answer_are_unknown_keys() {
         for body in [
             "scopeless_subjects = []\n",
-            "[[issuer]]\nissuer = \"https://idp.example\"\nfirst_party_clients = [\"portal\"]\n",
-            "[[issuer]]\nissuer = \"https://idp.example\"\ndelegates = [{ client = \"bridge\" }]\n",
+            "[issuer.idp]\nissuer = \"https://idp.example\"\nscopeless_subjects = [\"svc\"]\n",
+            "[issuer.idp]\nissuer = \"https://idp.example\"\n[issuer.idp.profile]\nfirst_party_clients = [\"portal\"]\n",
+            "[issuer.idp]\nissuer = \"https://idp.example\"\n[issuer.idp.profile]\ndelegates = [{ client = \"bridge\" }]\n",
+            "[issuer.idp]\nissuer = \"https://idp.example\"\n[issuer.idp.profile]\naudience_delegates = true\n",
         ] {
             let err = toml::from_str::<AuthConfig>(body).expect_err("a removed key");
             assert!(err.to_string().contains("unknown field"), "{body}: {err}");

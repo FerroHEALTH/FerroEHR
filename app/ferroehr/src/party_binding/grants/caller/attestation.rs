@@ -9,13 +9,16 @@
 //! credential, issued under an agreement `ACCESS_POLICY.attested_care` names,
 //! attests a treatment context for this subject that is current at the
 //! access. The credential's issuer and its claims are the deployment's data
-//! (`[[auth.federation]]`); the CDR reads the attested patient, the
+//! (`[auth.issuer.<name>.federation]`); the CDR reads the attested patient, the
 //! assertion's id and its window, and resolves the patient to the EHRs whose
 //! subject the patient identifier names. An agreement is named by the
 //! container of its `ROLE`, so a new version of the agreement keeps the
 //! policy's reference, and by the partner's federation issuer when the
 //! policy sets one (owner decision on #6078). Our own design.
 
+use openehr_rm::draft::access_control::terminology::{
+    ForeignCode, TERMINOLOGY_ID_PARTICIPATION_TYPE,
+};
 use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use uuid::Uuid;
 
@@ -55,6 +58,9 @@ pub struct Attestation {
     pub not_before: Option<jiff::Timestamp>,
     /// The end of the assertion's window, excluded.
     pub not_on_or_after: jiff::Timestamp,
+    /// The care role the credential attests, already held to the policy's
+    /// `care_role` value set; `None` when it attests none of it.
+    pub role: Option<ForeignCode>,
     /// The EHRs whose subject the attested patient identifier names.
     pub ehrs: Vec<EhrId>,
 }
@@ -99,6 +105,17 @@ impl Attestation {
         self.ehrs.contains(&ehr) && self.current_at(now) && self.named_by(agreements)
     }
 
+    /// The role of the attested relationship: the one the credential attests
+    /// of the `care_role` value set, else `PART` (draft access control
+    /// decision procedure, Holding a Care Relationship, `attested`).
+    #[must_use]
+    pub fn care_role(&self) -> ForeignCode {
+        self.role.clone().unwrap_or_else(|| ForeignCode {
+            terminology: TERMINOLOGY_ID_PARTICIPATION_TYPE.to_owned(),
+            code: "PART".to_owned(),
+        })
+    }
+
     /// The assertion as the access log names it.
     #[must_use]
     pub fn assertion_ref(&self) -> DvIdentifier {
@@ -130,6 +147,7 @@ mod tests {
             assertion_issuer: None,
             not_before: Some(at(1_000)),
             not_on_or_after: at(2_000),
+            role: None,
             ehrs: vec![EhrId(Uuid::from_u128(1))],
         }
     }
@@ -173,6 +191,24 @@ mod tests {
             "another subject"
         );
         assert!(!held.holds(&[], ehr, at(1_500)), "no agreement named");
+    }
+
+    #[test]
+    fn its_role_is_the_attested_one_else_part() {
+        let mut held = attestation();
+        assert_eq!(
+            held.care_role(),
+            ForeignCode {
+                terminology: TERMINOLOGY_ID_PARTICIPATION_TYPE.to_owned(),
+                code: "PART".to_owned(),
+            }
+        );
+        let attending = ForeignCode {
+            terminology: TERMINOLOGY_ID_PARTICIPATION_TYPE.to_owned(),
+            code: "ATND".to_owned(),
+        };
+        held.role = Some(attending.clone());
+        assert_eq!(held.care_role(), attending);
     }
 
     #[test]

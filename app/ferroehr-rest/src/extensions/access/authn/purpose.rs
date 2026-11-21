@@ -4,7 +4,7 @@
 //! The purposes of use and the professional roles an access token states, and
 //! the refusal of a request whose declared purpose the token contradicts.
 //!
-//! An issuer's `[[auth.attributes]]` table reads them from the token: the IHE
+//! An issuer's `[auth.issuer.<name>.attributes]` table reads them from the token: the IHE
 //! IUA `subject_role` and `purpose_of_use` claims under `extensions.ihe_iua`
 //! (IHE ITI TF-2 §3.71.4.2.2.1.1) and the `purpose_of_use` of each RFC 9396
 //! `authorization_details` entry (RFC 9396 §2). The authorization server
@@ -21,7 +21,7 @@ use ferrohealth_smart::federation::Code;
 use super::{AuthError, AuthLayer, Principal};
 
 /// What the access token of `principal` states, or `None` for a caller whose
-/// issuer has no `[[auth.attributes]]` table or whose token states neither a
+/// issuer has no `[auth.issuer.<name>.attributes]` table or whose token states neither a
 /// purpose nor a role.
 #[must_use]
 pub(crate) fn token_attributes(principal: &Principal) -> Option<TokenAttributes> {

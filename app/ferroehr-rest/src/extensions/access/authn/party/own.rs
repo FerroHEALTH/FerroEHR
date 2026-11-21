@@ -15,10 +15,10 @@
 //! as a person's ([`as_person`]): the binding stays the one source of own
 //! access, and the token's reading is only checked against it.
 //! A representative's `PERSON` is answered `wrong_marker` too: FerroEHR
-//! admits it only for a subject its stored representation names
-//! ([`binds_a_representative`]).
+//! admits it for a subject its stored representation names, and for its
+//! own record as the person themself ([`binds_a_representative`]).
 //! No openEHR spec governs resolving a login to a party: our own design
-//! (#6106, #6080, #6146, #6147).
+//! (#6106, #6080, #6146, #6147, #6167).
 
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::{Marker, Outcome, PartyRef};
@@ -57,10 +57,11 @@ pub(in crate::extensions::access::authn) fn binds_the_person(
 /// `PERSON` carries the representative marker alone.
 ///
 /// The token carries no representation, so the request is admitted only for
-/// a subject a live stored representation names this `PERSON` for
+/// a subject a live stored representation names this `PERSON` for, or as
+/// the person themself when the subject is this `PERSON`
 /// ([`super::super::portal`]), as own access is read from the binding
 /// alone. No openEHR spec governs resolving a login to a party: our own
-/// design (#6147).
+/// design (#6147, #6167).
 pub(in crate::extensions::access::authn) fn binds_a_representative(
     kind: &CallerKind,
     outcome: &Outcome,
@@ -102,7 +103,7 @@ pub(crate) fn own_person(caller: &Caller) -> Option<&PartyRef> {
 
 /// The caller of the login of `caller`, a token read as the patient's own,
 /// as a `persons` login of the same issuer, client, scopes and claims, which
-/// the shared binding looks up under the issuer's `[[auth.party]]` table.
+/// the shared binding looks up under the issuer's `[auth.issuer.<name>.party]` table.
 pub(in crate::extensions::access::authn) fn as_person(caller: &Caller) -> Caller {
     let probe = Caller::new(
         caller.subject().to_owned(),
@@ -125,7 +126,7 @@ pub(in crate::extensions::access::authn) fn as_person(caller: &Caller) -> Caller
 
 /// The caller `caller`, a token `ferrohealth-smart` reads as the patient's
 /// own, carrying the binding of its login when its issuer is a `persons`
-/// issuer with an `[[auth.party]]` table; `None` for a `patients` issuer's
+/// issuer with an `[auth.issuer.<name>.party]` table; `None` for a `patients` issuer's
 /// token, whose login the patient-portal binding reads ([`super::super::portal`]).
 ///
 /// The token's reading never grants: its login has to bind the person

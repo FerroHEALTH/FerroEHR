@@ -15,8 +15,9 @@
 //! role is one of its `care_roles` by the path its `care_path` names; void
 //! means any role and the paths the policy turns on. A caller holds a tie by
 //! the `attested` path when its verified credential attests a treatment
-//! context under an agreement the policy names, in the role `PART`, and no
-//! stored relationship backs it (#6078). No role implies another and no path
+//! context under an agreement the policy names, in the role of the
+//! `care_role` value set it attests or else `PART`, and no stored
+//! relationship backs it (#6078). No role implies another and no path
 //! another.
 //!
 //! Where several relationships admit an access the access log names one:
@@ -35,7 +36,7 @@ use openehr_rm::draft::access_control::terminology::{
 };
 use uuid::Uuid;
 
-use crate::party_binding::grants::caller::care_of::{CareOf, CarerKind, ProviderKey};
+use crate::party_binding::grants::caller::care_of::{CareOf, CarerKind, Cover, ProviderKey};
 use crate::party_binding::grants::caller::facts::CallerFacts;
 
 /// One live care relationship by which the caller holds the subject.
@@ -65,8 +66,8 @@ pub struct Grant {
     pub provider: ProviderKey,
     /// Whether it had ended and the grace after its end admitted the access.
     pub in_grace: bool,
-    /// The carer it covers for.
-    pub covers_for: Option<ProviderKey>,
+    /// The carer it covers for, with its kind.
+    pub covers_for: Option<Cover>,
 }
 
 impl Tie {

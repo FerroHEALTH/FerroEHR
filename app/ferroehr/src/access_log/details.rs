@@ -21,6 +21,7 @@
 //! spec governs these fields: our own design.
 
 use openehr_base::prelude::ArchetypeId;
+use openehr_rm::draft::access_control::terminology::Confidentiality;
 
 use crate::access_log::definition::ARCHETYPE;
 use openehr_rm::v1_2::common::archetyped::archetyped::Archetyped;
@@ -99,11 +100,13 @@ pub enum Detail {
     /// The DICOM `EventTypeCode` of an authentication record: `110122` Login
     /// or `110123` Logout.
     EventType,
+    /// The level the access is recorded for review at.
+    Review,
 }
 
 impl Detail {
     /// Every detail, in the order the tree holds them.
-    pub const ALL: [Self; 28] = [
+    pub const ALL: [Self; 29] = [
         Self::EventAction,
         Self::ResourceClass,
         Self::OutcomeIndicator,
@@ -132,6 +135,7 @@ impl Detail {
         Self::Binding,
         Self::Summary,
         Self::EventType,
+        Self::Review,
     ];
 
     /// The id-code of the detail's element.
@@ -166,6 +170,7 @@ impl Detail {
             Self::Binding => "id37",
             Self::Summary => "id38",
             Self::EventType => "id39",
+            Self::Review => "id40",
         }
     }
 
@@ -201,6 +206,7 @@ impl Detail {
             Self::Binding => "binding",
             Self::Summary => "summary",
             Self::EventType => "event type",
+            Self::Review => "review",
         }
     }
 }
@@ -266,6 +272,17 @@ impl DetailsWriter {
     pub fn flag(&mut self, detail: Detail, value: bool) {
         if value {
             self.value(detail, DataValue::DvBoolean(DvBoolean { value }));
+        }
+    }
+
+    /// Adds `level` as a `DV_CODED_TEXT` element of `detail`, of
+    /// `HL7_Confidentiality`, when there is one.
+    pub fn level(&mut self, detail: Detail, level: Option<Confidentiality>) {
+        if let Some(level) = level {
+            self.value(
+                detail,
+                DataValue::DvText(DvText::DvCodedText(level.coded())),
+            );
         }
     }
 
@@ -447,6 +464,22 @@ impl<'a> Details<'a> {
         }
     }
 
+    /// The `HL7_Confidentiality` level of `detail`, when it holds one.
+    ///
+    /// # Errors
+    /// [`DetailsError::Type`] when its value is no level of that code system.
+    pub fn level(&self, detail: Detail) -> Result<Option<Confidentiality>, DetailsError> {
+        self.values(detail)
+            .next()
+            .map(|value| match value {
+                DataValue::DvText(DvText::DvCodedText(coded)) => {
+                    Confidentiality::read(coded).map_err(|_other| DetailsError::Type(detail))
+                }
+                _ => Err(DetailsError::Type(detail)),
+            })
+            .transpose()
+    }
+
     /// The identifier of `detail`, when it holds one.
     ///
     /// # Errors
@@ -501,6 +534,7 @@ mod tests {
             Detail::OutcomeIndicator | Detail::ResultCount | Detail::OriginCount => "DV_COUNT",
             Detail::Subject => "DV_IDENTIFIER",
             Detail::SubjectLookupFailed => "DV_BOOLEAN",
+            Detail::Review => "DV_CODED_TEXT",
             Detail::CategoryContent
             | Detail::TokenAttributes
             | Detail::Binding

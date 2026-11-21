@@ -156,6 +156,24 @@ impl Default for FerroEhrConfig {
 pub const DEFAULT_TEMPLATE: &str = include_str!("../../assets/ferroehr.default.toml");
 
 impl FerroEhrConfig {
+    /// Returns the base URLs `[auth]` is resolved for, the audience of an
+    /// issuer that names none ([`auth::audience_bases`]).
+    #[must_use]
+    pub fn audience_bases(&self) -> Vec<String> {
+        auth::audience_bases(self.server.public_root().as_ref(), &self.api.base_path)
+    }
+
+    /// Resolves `[auth]` for a reader that classifies no token
+    /// ([`auth::resolve`]).
+    ///
+    /// # Errors
+    /// [`auth::AuthConfigError::Section`] when the crate refuses the section.
+    pub fn resolve_auth(
+        &self,
+    ) -> Result<ferrohealth_smart::config::Resolved, auth::AuthConfigError> {
+        auth::resolve(&self.auth.shared, &self.audience_bases())
+    }
+
     /// The `[audit]` section the audit trail runs with: `source_id` and
     /// `role_code_system`, where unset, name this system by `[api]
     /// system_id`, never the product (#6143).
@@ -501,10 +519,10 @@ mod tests {
             None,
             &env(&[
                 ("FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS", "64"),
-                ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp"),
-                ("FERROEHR__AUTH__ISSUER__0__KIND", "persons"),
-                ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr,other"),
-                ("FERROEHR__AUTH__ISSUER__0__TIMEOUT", "1500ms"),
+                ("FERROEHR__AUTH__ISSUER__IDP__ISSUER", "https://idp"),
+                ("FERROEHR__AUTH__ISSUER__IDP__KIND", "persons"),
+                ("FERROEHR__AUTH__ISSUER__IDP__AUDIENCE", "ferroehr,other"),
+                ("FERROEHR__AUTH__ISSUER__IDP__TIMEOUT", "1500ms"),
                 (
                     "FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__ARCHETYPE",
                     "openEHR-DEMOGRAPHIC-ADDRESS.address.v1",
@@ -518,8 +536,8 @@ mod tests {
             &[],
         );
         assert_eq!(c.server.shared.max_concurrent_requests.get(), 64);
-        let [issuer] = c.auth.shared.issuers() else {
-            panic!("one issuer table from the env");
+        let [("idp", issuer)] = c.auth.shared.issuers().collect::<Vec<_>>()[..] else {
+            panic!("one issuer table named idp from the env");
         };
         assert_eq!(issuer.issuer.expose(), "https://idp");
         assert_eq!(
@@ -578,14 +596,10 @@ mod tests {
                     "/etc/ferroehr/retired-2025.pub.asc",
                 ),
                 ("FERROEHR__AUTH__CAPABILITIES", "launch-ehr"),
-                ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp"),
-                ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
-                ("FERROEHR__AUTH__ISSUER__0__ALGORITHMS", "ES256"),
+                ("FERROEHR__AUTH__ISSUER__IDP__ISSUER", "https://idp"),
+                ("FERROEHR__AUTH__ISSUER__IDP__AUDIENCE", "ferroehr"),
+                ("FERROEHR__AUTH__ISSUER__IDP__ALGORITHMS", "ES256"),
                 ("FERROEHR__AUTH__SCOPES_SUPPORTED", "openid"),
-                (
-                    "FERROEHR__AUTH__SMART__PATIENT_ISSUERS",
-                    "https://as.example",
-                ),
             ]),
             &[],
         );
@@ -595,16 +609,12 @@ mod tests {
             "a single retired key path must parse as a one-element list"
         );
         assert_eq!(c.auth.shared.capabilities, vec!["launch-ehr".to_owned()]);
-        let [issuer] = c.auth.shared.issuers() else {
-            panic!("one issuer table from the env");
+        let [("idp", issuer)] = c.auth.shared.issuers().collect::<Vec<_>>()[..] else {
+            panic!("one issuer table named idp from the env");
         };
         assert_eq!(issuer.audience, vec!["ferroehr".to_owned()]);
         assert_eq!(issuer.algorithms.len(), 1);
         assert_eq!(c.auth.shared.scopes_supported, vec!["openid".to_owned()]);
-        assert_eq!(
-            c.auth.smart.patient_issuers,
-            vec![SecretUrl::new("https://as.example")]
-        );
     }
 
     /// The same keys with SEVERAL values, since comma-splitting is the other
@@ -645,32 +655,32 @@ mod tests {
         let c = assemble_ok(
             None,
             &env(&[
-                ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp"),
-                ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
-                ("FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW", "2min"),
-                ("FERROEHR__AUTH__ISSUER__0__PROFILE", "keycloak"),
+                ("FERROEHR__AUTH__ISSUER__IDP__ISSUER", "https://idp"),
+                ("FERROEHR__AUTH__ISSUER__IDP__AUDIENCE", "ferroehr"),
+                ("FERROEHR__AUTH__ISSUER__IDP__CLOCK_SKEW", "2min"),
+                ("FERROEHR__AUTH__ISSUER__IDP__PRESET", "keycloak"),
             ]),
             &[],
         );
-        let [issuer] = c.auth.shared.issuers() else {
-            panic!("one issuer table from the env");
+        let [("idp", issuer)] = c.auth.shared.issuers().collect::<Vec<_>>()[..] else {
+            panic!("one issuer table named idp from the env");
         };
         assert_eq!(
             issuer.clock_skew,
             ferrohealth_config::units::Duration::from_mins(2)
         );
-        assert_eq!(issuer.profile, ferrohealth_smart::profile::Preset::Keycloak);
+        assert_eq!(issuer.preset, ferrohealth_smart::profile::Preset::Keycloak);
 
         // Unset, the issuers carry their documented defaults.
         let d = assemble_ok(None, &env(&[]), &[]);
-        assert_eq!(d.auth.shared.issuers(), []);
+        assert_eq!(d.auth.shared.issuers().count(), 0);
         let entry = ferrohealth_smart::config::IssuerEntry::default();
         assert_eq!(
             entry.clock_skew,
             ferrohealth_config::units::Duration::from_secs(60),
             "the default leeway is the conventional 60 s"
         );
-        assert_eq!(entry.profile, ferrohealth_smart::profile::Preset::Rfc9068);
+        assert_eq!(entry.preset, ferrohealth_smart::profile::Preset::Rfc9068);
     }
 
     // ── 3. Strictness ─────────────────────────────────────────────────────────
@@ -1241,7 +1251,8 @@ mod tests {
             .expect("write");
         let mut c = standalone();
         let mut issuer = auth_section::machines("https://idp.example.test");
-        issuer[0].jwks_file = jwks.path().display().to_string();
+        issuer.get_mut("machines").expect("one issuer").jwks_file =
+            jwks.path().display().to_string();
         c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("an oct key must refuse the tree");
         let text = err.to_string();
@@ -1263,7 +1274,7 @@ mod tests {
         assert!(err.to_string().contains("auth:"), "{err}");
 
         let mut issuer = auth_section::machines("https://idp.example.test");
-        issuer[0].audience = Vec::new();
+        issuer.get_mut("machines").expect("one issuer").audience = Vec::new();
         c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("no audience must refuse");
         assert!(err.to_string().contains("audience"), "{err}");
@@ -1540,12 +1551,18 @@ mod tests {
         let c = assemble_ok(
             None,
             &env(&[
-                ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp.example/r"),
-                ("FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS", "app_roles,roles"),
+                (
+                    "FERROEHR__AUTH__ISSUER__IDP__ISSUER",
+                    "https://idp.example/r",
+                ),
+                (
+                    "FERROEHR__AUTH__ISSUER__IDP__ROLE_CLAIMS",
+                    "app_roles,roles",
+                ),
             ]),
             &[],
         );
-        let roles = c.auth.shared.issuers()[0].role_claims.as_deref();
+        let roles = c.auth.shared.issuer["idp"].role_claims.as_deref();
         assert_eq!(
             roles,
             Some(&["app_roles".to_owned(), "roles".to_owned()][..])

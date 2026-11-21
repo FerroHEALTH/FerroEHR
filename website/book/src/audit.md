@@ -139,7 +139,7 @@ whose `name` and `version` name the document the ground is defined in:
 | `subject of care` | the person reads their own record | |
 | `consent` | a consent permit admitted the access, or the caller is a gate-keeper of the settings | `EHR_ACCESS` and the uid of its version; the directive by its uid, its first identifier or its position from 1, and its legal grounds |
 | `representation` | a `delegation` permit admitted a representative | as `consent` |
-| `treatment relationship` | the decision read a live care relationship, also when only a controller rule's exception reads it | in `care` the relationship the access rested on, with its `role` and `path`. A stored relationship is an `ACCESS_STORED_CARE_GROUND` under `ACCESS_POLICY` and the uid of its version: its target (`carer`: the professional's `PERSON` or `ROLE`, or the care team or unit), the uid of its version (`relationship`), whether the grace after its end admitted the access (`in_grace`), the carer it covers for (`covers_for`) and its `provider`. One a verified credential attests is an `ACCESS_ATTESTED_CARE_GROUND` on the `attested` path under the agreement's name and version: the `assertion` (`id`, `issuer`) and the `agreement` (the container uid of its `ROLE`, with the partner's federation issuer); the ground's `reference` names the assertion too. Where several admitted it, `direct` comes before `team` before `self_declared` before `attested`, then the order of the roles in the rule that matched |
+| `treatment relationship` | the decision read a live care relationship, also when only a controller rule's exception reads it | in `care` the relationship the access rested on, with its `role` and `path`. A stored relationship is an `ACCESS_STORED_CARE_GROUND` under `ACCESS_POLICY` and the uid of its version: its target (`carer`: the professional's `PERSON` or `ROLE`, or the care team or unit), the uid of its version (`relationship`), whether the grace after its end admitted the access (`in_grace`), the carer it covers for (`covers_for`, with the carer's kind as its `type`) and its `provider`. One a verified credential attests is an `ACCESS_ATTESTED_CARE_GROUND` on the `attested` path under the agreement's name and version: the `assertion` (`id`, `issuer`) and the `agreement` (the container uid of its `ROLE`, with the partner's federation issuer); the ground's `reference` names the assertion too. Where several admitted it, `direct` comes before `team` before `self_declared` before `attested`, then the order of the roles in the rule that matched |
 | `emergency` | an emergency lifted a directive, a controller rule or steps 6 to 8 | the directive it lifted, or the `ACCESS_POLICY` version with the rule it lifted by its uid, its first identifier or its position from 1; an entry naming the objects it delivered names only the directives and rules whose data scope covers one of them |
 
 The entry of each EHR an AQL query served names the same grounds a read of
@@ -245,6 +245,7 @@ specification governs the details: they are FerroEHR's own.
 | `id37` | binding | `DV_PARSABLE` (`application/json`) | the party binding with every field |
 | `id38` | summary | `DV_PARSABLE` (`application/json`) | the count and EHRs of a summary of refusals |
 | `id39` | event type | `DV_TEXT` | the DICOM `EventTypeCode` of an authentication record: `110122` Login, `110123` Logout |
+| `id40` | review | `DV_CODED_TEXT` (`HL7_Confidentiality`) | the level, `R` or `V`, of the record a care relationship was written to, when the write is recorded for review |
 
 The subject of care is kept so the BALP `entity:patient` and the
 `patient` search parameter name the patient as they did when the access
@@ -352,7 +353,7 @@ Each record additionally carries:
 |---|---|
 | `domain` | The pseudonymisation domain read: `ehr`, `demographic`, `linkage` for a crossing that resolves a party or a subject to its EHRs, or `system` for an operation that touches no domain. |
 | `purpose` | The purpose of use the caller declared in the `x-purpose-of-use` header, when the deployment accepts it. |
-| `token_attributes` | The purposes of use and the professional roles the access token states, each with its code system, for an issuer with an `[[auth.attributes]]` table ([where the purpose comes from](#where-the-purpose-of-use-comes-from)). |
+| `token_attributes` | The purposes of use and the professional roles the access token states, each with its code system, for an issuer with an `[auth.issuer.<name>.attributes]` table ([where the purpose comes from](#where-the-purpose-of-use-comes-from)). |
 | `emergency_access` | `true` when the declared purpose, or a purpose the token states, is one of `[audit] emergency_purpose_codes`: an [emergency access](#emergency-access-ehds-art-115) (EHDS Art. 11(5)). |
 | `legal_basis` | The basis the deployment processes under, from `[audit] legal_basis`. |
 | `result_count` | How many records the operation served. |
@@ -544,7 +545,7 @@ side it is a limit of the format, not something this code withholds.
 
 The purpose of use reaches the record from two places:
 
-- **The access token.** An issuer with an `[[auth.attributes]]` table
+- **The access token.** An issuer with an `[auth.issuer.<name>.attributes]` table
   (`mapping = "iua"`) states its professionals' attributes in the token: the
   IHE IUA `purpose_of_use` and `subject_role` claims under
   `extensions.ihe_iua` (IHE ITI TF-2 §3.71.4.2.2.1.1), and with
@@ -554,7 +555,7 @@ The purpose of use reaches the record from two places:
   the purposes at the requesting agent's `purposeOfUse`, the roles at its
   `role`, beside the roles the caller held.
 - **The `[audit] purpose_header`** (`x-purpose-of-use`), which the caller
-  sets. It works alone for an issuer without an `[[auth.attributes]]` table,
+  sets. It works alone for an issuer without an `[auth.issuer.<name>.attributes]` table,
   as before.
 
 The token is the authorization server's statement, so it decides. A request

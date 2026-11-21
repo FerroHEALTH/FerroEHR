@@ -64,7 +64,7 @@ const PRESENTATIONS: &str = "vps";
 /// The credential type the deployment declares user-authenticated.
 const EMPLOYEE_CREDENTIAL: &str = "NutsEmployeeCredential";
 
-/// The `[[auth.federation]]` table of [`FEDERATION`]: IHE IUA claims, the
+/// The `[auth.issuer.<name>.federation]` table of [`FEDERATION`]: IHE IUA claims, the
 /// country and issuing authority beside them, the consent decision
 /// reference, and the organisation statement with its correlation id.
 fn federation_table() -> FederationSection {
@@ -147,7 +147,7 @@ async fn serve(agreements: Vec<Terms>) -> (testkit::TestDb, Arc<FerroEhrService>
     Box::pin(serve_also(agreements, None)).await
 }
 
-/// [`serve`], also trusting `issuer` with its `[[auth.federation]]` table and
+/// [`serve`], also trusting `issuer` with its `[auth.issuer.<name>.federation]` table and
 /// the `[auth.dpop]` table a sender-constrained issuer needs.
 async fn serve_also(
     agreements: Vec<Terms>,
@@ -191,18 +191,19 @@ async fn serve_observed(
             levels: BTreeMap::from([("high".to_owned(), AssuranceLevel::High)]),
             ..AssuranceSection::default()
         }),
+        federation: Some(federation_table()),
         ..IssuerEntry::default()
     }];
-    let mut tables = vec![federation_table()];
     let mut dpop = None;
     if let Some((entry, table, proof)) = issuer {
-        entries.push(entry);
-        tables.push(table);
+        entries.push(IssuerEntry {
+            federation: Some(table),
+            ..entry
+        });
         dpop = Some(proof);
     }
     let mut auth = common::auth(AuthSection {
-        issuer: entries,
-        federation: tables,
+        issuer: common::named(entries),
         dpop,
         ..AuthSection::default()
     });
@@ -212,6 +213,7 @@ async fn serve_observed(
     svc.grants()
         .set_federation(ferroehr::config::federation::trust(
             &auth.shared,
+            &[],
             Retention::Years(10),
         ));
     crate::agreement_parties::commit_all(&svc, &agreements, clients).await;
@@ -219,8 +221,7 @@ async fn serve_observed(
         auth,
         ..common::api_config(true)
     };
-    config.auth.smart.patient_issuers =
-        vec![ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION)];
+    common::patient_context(&mut config, FEDERATION);
     config.public_root = Some(
         ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
             .expect("a public root"),
@@ -765,7 +766,7 @@ async fn an_external_caller_above_its_caller_rate_is_refused_before_any_patient_
 /// NCPeH-A's authorization server, a MyHealth@EU contact point.
 const CONTACT_POINT: &str = "https://ncpeh-a.example";
 
-/// The contact point's issuer table, its `[[auth.federation]]` table with the
+/// The contact point's issuer table, its `[auth.issuer.<name>.federation]` table with the
 /// eHDSI mapping, and the `[auth.dpop]` table its sender constraint needs.
 fn contact_point() -> (IssuerEntry, FederationSection, DpopSection) {
     let entry = IssuerEntry {
@@ -1333,7 +1334,7 @@ fn professional_edited(
 }
 
 /// A `federation` token that fits no caller is refused with `401`, and the
-/// gate logs the typed reason naming the field, never its value: a token
+/// gate logs its stable reason code, never a value: a token
 /// naming neither a professional nor an organisation statement, a
 /// professional missing a field, a country outside the issuer's `countries`,
 /// and an attribute holding U+202E (#5011).
@@ -1349,28 +1350,28 @@ async fn a_federation_token_that_fits_no_caller_is_refused_naming_why() {
             token(
                 &json!({ "sub": "remote-system", "client_id": "remote-system", "ehrId": target }),
             ),
-            "names no professional and states no organisation access",
+            "organisation-statement-missing",
         ),
         (
             "a professional without a name",
             professional_edited(&target, |iua| {
                 iua.remove("subject_name");
             }),
-            "names a professional and misses",
+            "professional-incomplete",
         ),
         (
             "a country outside the issuer's countries",
             professional_edited(&target, |iua| {
                 iua.insert("country".to_owned(), json!("FR"));
             }),
-            "outside the declared bounds",
+            "attribute-out-of-bounds",
         ),
         (
             "a name holding U+202E",
             professional_edited(&target, |iua| {
                 iua.insert("subject_name".to_owned(), json!("Dr \u{202e}etomeR"));
             }),
-            "holds a refused character",
+            "attribute-refused",
         ),
     ];
     for (case, credential, reason) in cases {
@@ -1386,8 +1387,8 @@ async fn a_federation_token_that_fits_no_caller_is_refused_naming_why() {
         assert!(
             lines
                 .iter()
-                .any(|line| line.contains("an access token names no caller kind")
-                    && line.contains(reason)),
+                .any(|line| line.contains("a request was refused")
+                    && line.contains(&format!("reason={reason}"))),
             "{case}: the reason {reason:?} is logged: {lines:?}"
         );
         for line in &lines {

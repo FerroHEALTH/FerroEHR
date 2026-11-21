@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The controller's bounds on a care relationship, judged in its commit's
-//! transaction: its validity, its target and its writer
+//! transaction: its validity, its target and a self-declared writer
 //! ([`crate::access_policy::relationship`]).
 //!
 //! The policy is the version the request confirmed on its one indexed read
@@ -17,13 +17,13 @@
 //! design over the draft access control decision procedure, Writing
 //! Relationships.
 
-use openehr_rm::draft::access_control::terminology::{Confidentiality, ForeignCode};
+use openehr_rm::draft::access_control::terminology::ForeignCode;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
 use super::{FactValue, care_of};
 use crate::access_policy::PolicyInForce;
-use crate::access_policy::relationship::{self, SelfDeclaredRefusal, WriterVerdict, Written};
+use crate::access_policy::relationship::{self, SelfDeclaredRefusal, Written};
 use crate::error::ServiceError;
 use crate::ids::VoId;
 use crate::party_binding::derive::Facts;
@@ -39,6 +39,9 @@ const TARGET: &str = "/target";
 
 /// The path a self-declared refusal names.
 const BASIS: &str = "/details";
+
+/// The path a provider refusal names: the details that hold the element.
+const PROVIDER: &str = "/details";
 
 /// The trunk head version of a relationship a bound is judged for.
 #[derive(Debug)]
@@ -119,8 +122,10 @@ pub(crate) async fn judge_stored(
 /// took, on `tx`.
 ///
 /// # Errors
-/// `422` for a validity or a target the policy refuses, `403` for a writer it
-/// does not name, and a storage failure.
+/// `422` for a provider that names no `ORGANISATION` of the store, a validity
+/// or a target the policy refuses, `403` for a self-declared relationship its
+/// writer may not write, and a storage failure. The writer at the subject's
+/// marking is judged before the commit (`FerroEhrService::care_writer_check`).
 pub(crate) async fn judge(
     tx: &mut PgConnection,
     policy: &PolicyInForce,
@@ -147,15 +152,18 @@ pub(crate) async fn judge(
     }
     let rules = policy.policy.as_deref();
     let provider = provider(tx, &care.provider).await?;
-    relationship::target(rules, care.kind, care.carer, provider.party)
-        .map_err(|refusal| refused(TARGET, &refusal))?;
-    // TODO(#6141): judge the writer at the record's marking, and log an admitted write for review.
-    if relationship::writer(rules, Confidentiality::Normal, |_| false) == WriterVerdict::Refused {
-        return Err(ServiceError::not_permitted(
-            "no writer the access policy's relationship_writers names writes this care \
-             relationship",
+    let Some(provider_party) = provider.party else {
+        return Err(refused(
+            PROVIDER,
+            &format_args!(
+                "its provider {} names no ORGANISATION of this store by an identifier it \
+                 carries",
+                care.provider
+            ),
         ));
-    }
+    };
+    relationship::target(rules, care.kind, care.carer, provider_party)
+        .map_err(|refusal| refused(TARGET, &refusal))?;
     let Some((lower, upper)) = dates(tx, validity).await? else {
         // NOTE: our own design, a validity that does not read holds no date, so it takes no end.
         drop_end(tx, head.vo_id).await?;

@@ -26,14 +26,14 @@ config:
     # which every FerroEHR image carries, is the public half of a key pair
     # whose private key was discarded, for local lanes only.
     issuer:
-      - issuer: https://basic-users.ferroehr.invalid
+      basic_users:
+        issuer: https://basic-users.ferroehr.invalid
         kind: persons
         audience: [ferroehr-basic-users]
         jwks_file: /opt/sandbox-posture/basic-users-jwks.json
-    party:
-      - issuer: https://basic-users.ferroehr.invalid
-        identifier_issuer: urn:example:basic-user
-        identifier_type: login
+        party:
+          identifier_issuer: urn:example:basic-user
+          identifier_type: login
     basic:
       users:
         - user: clinician

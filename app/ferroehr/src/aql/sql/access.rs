@@ -93,6 +93,7 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
         .as_deref()
         .map(|pair| admits(pair, none).unwrap_or_else(|| Expr::val(false)));
     let held = by_settings(condition, target.clone(), or_all(branches), default);
+    let held = bounded(condition, &target, held, |pair| pair.uncared.admitted());
     Some(confine(condition, &target, held))
 }
 
@@ -157,7 +158,36 @@ pub(super) fn on_ehr_id(condition: &AccessCondition, target: &Expr) -> Option<Ex
         .as_deref()
         .map(|pair| reaches(pair, none).unwrap_or_else(|| Expr::val(false)));
     let held = by_settings(condition, target.clone(), or_all(branches), default);
+    let held = bounded(condition, target, held, |pair| pair.uncared.reaches());
     Some(confine(condition, target, held))
+}
+
+/// `held` on the EHR `target`, and in the caller's caseload
+/// ([`super::care::caseload`]) when every verdict of `condition` refuses an
+/// EHR outside the caller's care, as `uncared` reads a verdict pair: the
+/// closed one, each class's and the default; a void default admits every
+/// row of an EHR with no settings, so it leaves `held` unbounded. No openEHR
+/// spec governs this: our own design (#6074).
+fn bounded(
+    condition: &ConditionGroups,
+    target: &Expr,
+    held: Expr,
+    uncared: impl Fn(&VerdictPair) -> Pred,
+) -> Expr {
+    let Some(default) = condition.default.as_deref() else {
+        return held;
+    };
+    let needs_care = std::iter::once(condition.closed.as_ref())
+        .chain(condition.groups.iter().map(|(_, pair)| pair.as_ref()))
+        .chain(std::iter::once(default))
+        .all(|pair| simplified(&uncared(pair)) == Pred::False);
+    if !needs_care {
+        return held;
+    }
+    match super::care::caseload(condition, target.clone(), known_classes(condition)) {
+        Some(caseload) => held.and(caseload),
+        None => held,
+    }
 }
 
 /// Whether every class `condition` knows, an EHR held closed and an EHR with

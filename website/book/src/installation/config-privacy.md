@@ -239,11 +239,20 @@ database volumes and every backup at rest. The
 
 A clinical query that names no EHR asks, for each EHR it reads, whether one of
 your care teams cares for the EHR's subject. Each replica keeps a copy of the
-care relationships in the clinical database (`clinical.access_care`). It holds
-only the patient's and the team's container UUIDs, the care dates, and the
-SHA-256 digest of each subject reference. The `ehr` row holds the same digest
-of its own subject. A subject reference is a pseudonym, so its digest needs no
-key.
+care relationships in the clinical database (`clinical.access_care`). Each row
+holds the patient's and the carer's container UUIDs, what the carer is (a
+`PERSON`, a `ROLE`, a `GROUP` or an `ORGANISATION`), the care role code, the
+provider's identifier, the care dates, the container UUID of the party that
+wrote the relationship, and the SHA-256 digest of one subject reference. The
+`ehr` row holds the same digest of its own subject. A subject reference is a
+pseudonym, so its digest needs no key.
+
+Two indexes serve the projection. One finds a patient's relationships by the
+subject digest, which is how each EHR a query reads is checked. The other
+finds a carer's patients by the carer and its role. When your policy admits
+no EHR outside your care, a query also starts from your own rows of that
+second index, so its cost grows with your caseload, whatever the size of the
+store; each EHR it reaches is still checked one by one.
 
 A replica reads the projection only while it is as recent as the care facts
 the replica holds. A discharge, a removed membership or an erasure is never

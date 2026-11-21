@@ -9,10 +9,11 @@
 //! credential, issued under an agreement `ACCESS_POLICY.attested_care`
 //! names, attests a treatment context for the subject that is current at the
 //! access. Which claims carry it is the deployment's data: the issuer's
-//! `[[auth.federation]]` table maps them to `patient.id` (the patient, as
+//! `[auth.issuer.<name>.federation]` table maps them to `patient.id` (the patient, as
 //! `system|value`), `trc.id` (the assertion), `trc.not_before` and
 //! `trc.not_on_or_after` (its window, in seconds since the epoch) and,
-//! optionally, `assertion.issuer`. The patient is resolved to the EHRs whose
+//! optionally, `assertion.issuer` and `trc.care_role` (the care role it
+//! attests, one code with its code system). The patient is resolved to the EHRs whose
 //! subject its identifier names, one read of the party store, and only when
 //! the policy in force names an agreement at all; the decision checks the
 //! agreement, the window and the subject on every access
@@ -25,9 +26,11 @@ use std::sync::Arc;
 use axum::response::Response;
 use ferroehr::party_binding::grants::caller::attestation::Attestation;
 use ferroehr::service::ehr_index::types::SubjectRef;
-use ferrohealth_smart::federation::{Attribute, External, Field};
+use ferrohealth_smart::federation::{Attribute, Code, External, Field};
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::resource::{Access, Caller};
+use openehr_base::prelude::TerminologyId;
+use openehr_rm::prelude::{CodePhrase, DvCodedText};
 
 use super::{AuthError, AuthLayer, Principal};
 
@@ -85,6 +88,10 @@ pub(super) async fn attest(
         assertion_issuer: context.assertion_issuer,
         not_before: context.not_before,
         not_on_or_after: context.not_on_or_after,
+        role: layer
+            .service
+            .attested_care_role(context.care_role.as_ref())
+            .await,
         ehrs,
     };
     principal.access = Access::Caller(Arc::new(
@@ -100,6 +107,7 @@ struct Context {
     assertion_issuer: Option<String>,
     not_before: Option<jiff::Timestamp>,
     not_on_or_after: jiff::Timestamp,
+    care_role: Option<DvCodedText>,
 }
 
 impl Context {
@@ -128,6 +136,41 @@ impl Context {
             assertion_issuer: text(Field::AssertionIssuer).map(str::to_owned),
             not_before,
             not_on_or_after: instant(Field::TrcNotOnOrAfter)??,
+            care_role: care_role(external),
         })
     }
+}
+
+/// The care role `external` attests (`trc.care_role`), as the coded text
+/// whose `defining_code` is the code in its code system; `None` when it
+/// attests none. `ferrohealth-smart` refuses a token whose `trc.care_role`
+/// is not one code with its system, so a value here always names both.
+fn care_role(external: &External) -> Option<DvCodedText> {
+    let Attribute::Codes(codes) = external.field(Field::TrcCareRole)? else {
+        return None;
+    };
+    let [
+        Code {
+            system: Some(system),
+            code,
+        },
+    ] = codes.as_slice()
+    else {
+        return None;
+    };
+    Some(DvCodedText {
+        value: code.clone(),
+        hyperlink: None,
+        formatting: None,
+        mappings: None,
+        language: None,
+        encoding: None,
+        defining_code: CodePhrase {
+            terminology_id: TerminologyId {
+                value: system.clone(),
+            },
+            code_string: code.clone(),
+            preferred_term: None,
+        },
+    })
 }

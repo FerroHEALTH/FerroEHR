@@ -436,6 +436,8 @@ CREATE TABLE audit_event (
     ehr_id                 text,
     subject_namespace      text,
     subject_lookup_failed  boolean     NOT NULL DEFAULT false,
+    -- The HL7_Confidentiality level the access is recorded for review at.
+    review                 text        CHECK (review IN ('R', 'V')),
     -- What the category classification read.
     category_content       jsonb,
     -- The render policy the record is rendered under, and its ITI-81 search
@@ -457,7 +459,7 @@ CREATE TABLE audit_event (
     summary                jsonb,
     -- The column list the row's chain digest hashes
     -- (audit.audit_event_digest_columns).
-    digest_version         smallint    NOT NULL DEFAULT 4,
+    digest_version         smallint    NOT NULL DEFAULT 5,
     -- The purposes of use and professional roles the access token states.
     token_attributes       jsonb,
     CONSTRAINT pk_audit_event PRIMARY KEY (id),
@@ -503,7 +505,7 @@ CREATE TABLE audit_event (
             'refused-trc-patient-mismatch', 'refused-trc-missing',
             'refused-system-personal-scope', 'refused-no-agreement',
             'refused-scope-beyond-agreement', 'refused-correlation-missing')),
-    CONSTRAINT ck_audit_event_digest_version CHECK (digest_version IN (1, 2, 3, 4))
+    CONSTRAINT ck_audit_event_digest_version CHECK (digest_version IN (1, 2, 3, 4, 5))
 );
 CREATE INDEX ix_audit_event_retention_ends ON audit_event (retention_ends)
     WHERE retention_ends IS NOT NULL;
@@ -633,6 +635,8 @@ COMMENT ON COLUMN audit_event.subject_namespace IS
     'The namespace of the subject id in patient_id, as EHR_STATUS.subject names it.';
 COMMENT ON COLUMN audit_event.subject_lookup_failed IS
     'Whether the subject of ehr_id could not be looked up when the record was written.';
+COMMENT ON COLUMN audit_event.review IS
+    'The HL7_Confidentiality level (R or V) at which the access is recorded for review: a care relationship written to a record marked above N (draft access control, The Decision Procedure, Writing Relationships); NULL on every other record.';
 COMMENT ON COLUMN audit_event.category_content IS
     'What the category classification read (the objects with their template and archetype ids, or the query constraints), from which the classification is computed again under the render policy''s category map; NULL exactly when categories is NULL.';
 COMMENT ON COLUMN audit_event.render_policy IS
@@ -681,6 +685,8 @@ CREATE FUNCTION audit.audit_event_digest_columns(p_version smallint) RETURNS tex
         WHEN 2 THEN v1.columns || v2.columns
         WHEN 3 THEN v1.columns || v2.columns || ARRAY['token_attributes']
         WHEN 4 THEN array_remove(v1.columns || v2.columns || ARRAY['token_attributes'],
+                                 'organisation')
+        WHEN 5 THEN array_remove(v1.columns || v2.columns || ARRAY['token_attributes', 'review'],
                                  'organisation')
     END
       FROM (SELECT ARRAY[

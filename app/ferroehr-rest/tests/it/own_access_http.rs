@@ -69,8 +69,8 @@ impl PartySource for Source {
 /// as FerroSMART's preset does.
 fn patient_reading() -> AppConfig {
     let mut config = config();
-    for entry in &mut config.auth.shared.issuer {
-        entry.fhir_user_patient = Some(true);
+    for entry in config.auth.shared.issuer.values_mut() {
+        entry.profile.fhir_user_patient = Some(true);
     }
     config
 }
