@@ -222,11 +222,15 @@ struct Budget {
 /// bytes, 20 nested statements) with the margins above; no other path moved.
 /// It is measured last, so the PERSONs it commits stay out of the population
 /// the demographic query reads, which they grew by some 100 allocations.
+/// A Basic user's held roles and scopes have since been read once with the
+/// grant rows (#6013): 34 to 54 fewer allocations on every path, each of
+/// which authenticates a Basic user, measured beside the merge base, and
+/// each ceiling fell by its path's figure.
 const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
-        allocations: 18_149,
+        allocations: 18_109,
         peak_bytes: 1_530_778,
         round_trips: 9,
         nested: 13,
@@ -235,7 +239,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        allocations: 39_578,
+        allocations: 39_537,
         peak_bytes: 1_533_031,
         round_trips: 9,
         nested: 14,
@@ -244,7 +248,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        allocations: 32_731,
+        allocations: 32_697,
         peak_bytes: 1_528_525,
         round_trips: 9,
         nested: 13,
@@ -253,7 +257,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::ReadJson,
         conversions: 0,
-        allocations: 1376,
+        allocations: 1335,
         peak_bytes: 617_268,
         round_trips: 3,
         nested: 2,
@@ -262,7 +266,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::ReadXml,
         conversions: 2,
-        allocations: 10_852,
+        allocations: 10_812,
         peak_bytes: 1_017_140,
         round_trips: 3,
         nested: 2,
@@ -271,7 +275,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::ReadFlat,
         conversions: 2,
-        allocations: 15_577,
+        allocations: 15_529,
         peak_bytes: 1_634_407,
         round_trips: 3,
         nested: 2,
@@ -280,7 +284,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::EhrRead,
         conversions: 1,
-        allocations: 1162,
+        allocations: 1121,
         peak_bytes: 100_250,
         round_trips: 3,
         nested: 2,
@@ -289,7 +293,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::AqlSingle,
         conversions: 2,
-        allocations: 2505,
+        allocations: 2451,
         peak_bytes: 118_273,
         round_trips: 4,
         nested: 2,
@@ -298,7 +302,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::AqlPopulation,
         conversions: 2,
-        allocations: 3344,
+        allocations: 3303,
         peak_bytes: 158_823,
         round_trips: 3,
         nested: 2,
@@ -307,7 +311,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        allocations: 9023,
+        allocations: 8985,
         peak_bytes: 624_026,
         round_trips: 3,
         nested: 2,
@@ -316,7 +320,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::PartyRead,
         conversions: 0,
-        allocations: 1107,
+        allocations: 1066,
         peak_bytes: 78_848,
         round_trips: 8,
         nested: 6,
@@ -325,7 +329,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::CommitContribution,
         conversions: 6,
-        allocations: 18_339,
+        allocations: 18_298,
         peak_bytes: 1_649_934,
         round_trips: 13,
         nested: 14,
@@ -334,7 +338,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::ReadAtTime,
         conversions: 0,
-        allocations: 1388,
+        allocations: 1346,
         peak_bytes: 701_748,
         round_trips: 3,
         nested: 2,
@@ -343,7 +347,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::CommitStatus,
         conversions: 4,
-        allocations: 1809,
+        allocations: 1761,
         peak_bytes: 144_180,
         round_trips: 15,
         nested: 11,
@@ -352,7 +356,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::ReadStatus,
         conversions: 0,
-        allocations: 1231,
+        allocations: 1190,
         peak_bytes: 102_503,
         round_trips: 3,
         nested: 2,
@@ -361,7 +365,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        allocations: 2047,
+        allocations: 2006,
         peak_bytes: 117_146,
         round_trips: 31,
         nested: 20,
@@ -370,7 +374,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::AqlMatches,
         conversions: 2,
-        allocations: 5752,
+        allocations: 5711,
         peak_bytes: 192_267,
         round_trips: 4,
         nested: 2,
@@ -379,7 +383,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::AqlParty,
         conversions: 2,
-        allocations: 2674,
+        allocations: 2634,
         peak_bytes: 107_199,
         round_trips: 8,
         nested: 6,
@@ -388,7 +392,7 @@ const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        allocations: 2536,
+        allocations: 2495,
         peak_bytes: 132_147,
         round_trips: 31,
         nested: 21,
