@@ -339,7 +339,7 @@ impl FerroEhrService {
         &self,
         domain: crate::aql::ir::QueryDomain,
         ask: Option<&Ask>,
-    ) -> Result<Option<Caseload>, ServiceError> {
+    ) -> Result<Option<Arc<Caseload>>, ServiceError> {
         let Some(ask) = ask else {
             return Ok(None);
         };
@@ -348,10 +348,10 @@ impl FerroEhrService {
             return Err(ServiceError::bad_request(refused.to_string(), refused));
         }
         let Some(access) = current() else {
-            return Ok(Some(Caseload::Census {
+            return Ok(Some(Arc::new(Caseload::Census {
                 namespace: Arc::from(""),
                 subjects: Vec::new().into(),
-            }));
+            })));
         };
         access
             .caseload_allowed()
@@ -360,10 +360,10 @@ impl FerroEhrService {
         // store's revisions, so a discharge another replica committed narrows it at once.
         access.care_in_force(std::future::ready(())).await?;
         if let Some(care) = projected_care(&access).filter(|_| self.care_projection_current()) {
-            return Ok(Some(Caseload::Projected {
+            return Ok(Some(Arc::new(Caseload::Projected {
                 care,
                 needs: ask.needs(),
-            }));
+            })));
         }
         let subjects: Vec<EhrSubject> = access
             .cared_subjects()
@@ -372,10 +372,10 @@ impl FerroEhrService {
             .filter(|cared| ask.holds(&cared.ties))
             .map(|cared| cared.subject)
             .collect();
-        Ok(Some(Caseload::Census {
+        Ok(Some(Arc::new(Caseload::Census {
             namespace: access.party_namespace(),
             subjects: subjects.into(),
-        }))
+        })))
     }
 
     /// The caller's own records the Art. 3(3) delay reads
@@ -388,7 +388,7 @@ impl FerroEhrService {
     ) -> Result<
         (
             Option<crate::aql::sql::own_records::OwnRecords>,
-            Option<Caseload>,
+            Option<Arc<Caseload>>,
         ),
         ServiceError,
     > {

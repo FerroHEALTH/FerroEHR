@@ -34,7 +34,7 @@ pub(super) struct Key {
     condition: AccessCondition,
     person_withheld: bool,
     own_records: Option<OwnRecords>,
-    caseload: Option<Caseload>,
+    caseload: Option<Arc<Caseload>>,
 }
 
 /// One parameter of the plan, in [`QueryIr::params`] order.

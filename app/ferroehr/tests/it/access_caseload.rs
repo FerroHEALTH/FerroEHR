@@ -355,7 +355,7 @@ async fn the_projected_caseload_probe_uses_the_subject_index() {
         policy_parties: ferroehr::aql::sql::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
         own_records: None,
-        caseload: Some(caseload),
+        caseload: Some(Arc::new(caseload)),
     };
     let prepared = ferroehr::aql::sql::build(&ir, &params, &ctx).expect("the AQL lowers");
     assert!(prepared.sql.contains("access_care"), "{}", prepared.sql);
