@@ -1507,3 +1507,87 @@ async fn retention_removes_the_tokens_only_its_records_named() {
             .is_empty()
     );
 }
+
+/// Retention keeps a token a live access-log entry names when it reaps the
+/// last system audit record that also named it (#6209): the caller's
+/// `agent.identifier` token is named by a composition read, which the store
+/// keeps as its access-log entry, and by an old party read, the only system
+/// audit record.
+#[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+async fn retention_keeps_a_token_an_access_log_entry_names() {
+    use ferroehr::system_log::config::Retention;
+
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let store = store_over(&pool);
+    let mut access = AuditEvent::new(
+        EventActionCode::Read,
+        ObjectClass::Composition,
+        EventOutcome::Success,
+    );
+    "alice".clone_into(&mut access.user_id);
+    access.object_id = Some("8fa1::ferroehr::1".to_owned());
+    access.event_type = Some(EventType::rest("composition_get"));
+    store
+        .insert(&access, None)
+        .await
+        .expect("insert the access");
+    let shared: i32 = sqlx::query_scalar(
+        "SELECT t.id FROM audit.access_log_entry e, unnest(e.search_tokens) AS u(id) \
+           JOIN audit.audit_search_token t ON t.id = u.id \
+          WHERE t.parameter = 'agent.identifier' AND t.code = 'alice'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the entry names the caller's token");
+    let audit_events: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_event")
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(audit_events, 0, "the access is kept as its entry alone");
+
+    sqlx::query(
+        "INSERT INTO audit.audit_event \
+         (recorded_at, action, outcome, event_code, resource_class, render_policy, search_tokens) \
+         SELECT now() - interval '40 days', 'R', 0, '110110', 'demographic', p.digest, ARRAY[$1] \
+           FROM audit.audit_render_policy p LIMIT 1",
+    )
+    .bind(shared)
+    .execute(&pool)
+    .await
+    .expect("an old party read naming the token");
+
+    let mut tx = pool.begin().await.expect("tx");
+    sqlx::query("SELECT set_config('ferroehr.audit_reaping', 'on', true)")
+        .execute(&mut *tx)
+        .await
+        .expect("flag");
+    let named = sqlx::query("DELETE FROM audit.audit_search_token WHERE id = $1")
+        .bind(shared)
+        .execute(&mut *tx)
+        .await;
+    assert!(
+        named.is_err(),
+        "a token a live access-log entry names was deleted"
+    );
+    tx.rollback().await.expect("rollback");
+
+    assert_eq!(
+        store
+            .reap_due(
+                Timestamp::now().to_zoned(jiff::tz::TimeZone::UTC).date(),
+                Retention::Days(30),
+            )
+            .await
+            .expect("reap"),
+        1
+    );
+    assert!(
+        token_ids(&pool).await.contains(&shared),
+        "a token a live access-log entry names was removed"
+    );
+}

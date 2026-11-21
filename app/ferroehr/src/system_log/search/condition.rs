@@ -9,7 +9,8 @@ use crate::system_log::store::{AuditCriterion, AuditSearchFilter};
 
 /// The `WHERE` condition for the ITI-81 filter: the date window, and each
 /// criterion on its column or, with the token ids it resolved to in
-/// `resolved` (one entry per criterion), on `search_tokens`.
+/// `resolved` (one entry per criterion), on `search_keys`, the keys of the
+/// records' token index (`audit.search_keys`).
 ///
 /// Every column name is a literal here; every caller-supplied value goes through
 /// `Expr::val` and therefore binds as a parameter rather than entering the SQL
@@ -62,14 +63,14 @@ fn criterion_condition(criterion: &AuditCriterion) -> sea_query::Cond {
     match criterion {
         AuditCriterion::Patient(values) => column_in("patient_id", values),
         AuditCriterion::Agent(values) => column_in("principal", values),
-        // NOTE: our own design: resource_id is indexed by its hash, which a long stored query
-        // name fits, so the hash narrows through the index and the text decides.
+        // NOTE: our own design (#6202): resource_id is keyed by its hash in the token index, which
+        // a long stored query name fits, so the key narrows through the index and the text decides.
         AuditCriterion::Entity(values) => {
             values.iter().fold(sea_query::Cond::any(), |any, value| {
                 any.add(
                     sea_query::Cond::all()
                         .add(Expr::cust_with_values(
-                            "hashtextextended(resource_id, 0) = hashtextextended($1, 0)",
+                            crate::system_log::search::IdentifierColumn::ResourceId.hashed(),
                             [value.clone()],
                         ))
                         .add(Expr::col(Alias::new("resource_id")).eq(value.clone())),
@@ -93,27 +94,45 @@ fn criterion_condition(criterion: &AuditCriterion) -> sea_query::Cond {
 fn token_condition(found: &TokenMatch) -> sea_query::Cond {
     use sea_query::{Alias, Expr, ExprTrait};
 
-    let carries = |ids: &[i32]| {
+    let ids_of = |ids: &[i32]| {
         let ids: Vec<String> = ids.iter().map(ToString::to_string).collect();
-        Expr::cust_with_values(
-            "search_tokens && CAST($1 AS integer[])",
-            [format!("{{{}}}", ids.join(","))],
-        )
+        format!("{{{}}}", ids.join(","))
+    };
+    // NOTE: our own design (#6202), a token id is a key of the index and an element of the row's
+    // own tokens alike: the index reads the first, and a scan in time order tests the second,
+    // which costs less than the keys computed again for every row it passes.
+    let carries = |ids: &[i32]| {
+        let ids = ids_of(ids);
+        sea_query::Cond::all()
+            .add(Expr::cust_with_values(
+                "search_keys && CAST($1 AS bigint[])",
+                [ids.clone()],
+            ))
+            .add(Expr::cust_with_values(
+                "search_tokens && CAST($1 AS integer[])",
+                [ids],
+            ))
     };
     let mut any = sea_query::Cond::any();
     if !found.ids.is_empty() {
         any = any.add(carries(&found.ids));
     }
     for column in &found.columns {
-        let mut all = sea_query::Cond::all().add(carries(&column.sets));
-        if let Some(value) = &column.value {
-            all = all
+        let all = match &column.value {
+            // NOTE: our own design (#6202), with a value the sets are tested on the row, so the
+            // index reads the value's key alone rather than every record of every set.
+            Some(value) => sea_query::Cond::all()
+                .add(Expr::cust_with_values(
+                    "search_tokens && CAST($1 AS integer[])",
+                    [ids_of(&column.sets)],
+                ))
                 .add(Expr::cust_with_values(
                     column.column.hashed(),
                     [value.clone()],
                 ))
-                .add(Expr::col(Alias::new(column.column.column())).eq(value.clone()));
-        }
+                .add(Expr::col(Alias::new(column.column.column())).eq(value.clone())),
+            None => carries(&column.sets),
+        };
         any = any.add(all);
     }
     any

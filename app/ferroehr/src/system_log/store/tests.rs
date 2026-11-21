@@ -338,7 +338,7 @@ fn a_token_matches_the_document_element_it_names() {
     }
 }
 
-/// A criterion on the document becomes a condition on `search_tokens`
+/// A criterion on the document becomes a condition on `search_keys`
 /// with the token ids it resolved to, bound as one value, and one with no
 /// resolved ids matches nothing.
 #[test]
@@ -360,8 +360,8 @@ fn a_resolved_token_criterion_reads_the_token_index() {
             Some(crate::system_log::search::TokenMatch::from(vec![3, 17])),
         ],
     );
-    assert!(sql.contains("search_tokens && CAST($"), "{sql}");
-    assert!(count_sql.contains("search_tokens && CAST($"), "{count_sql}");
+    assert!(sql.contains("search_keys && CAST($"), "{sql}");
+    assert!(count_sql.contains("search_keys && CAST($"), "{count_sql}");
     assert!(format!("{values:?}").contains("{3,17}"), "{values:?}");
     let (_, _, unresolved, _) = build_search_statements(&filter, &[]);
     assert!(unresolved.contains("false"), "{unresolved}");

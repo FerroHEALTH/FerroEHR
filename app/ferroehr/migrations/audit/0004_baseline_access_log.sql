@@ -353,6 +353,14 @@ CREATE INDEX ix_access_log_entry_time ON access_log_entry (time_recorded)
     INCLUDE (render_policy_id, id);
 CREATE INDEX ix_access_log_entry_fold_after ON access_log_entry (fold_after)
     WHERE fold_after IS NOT NULL;
+-- Each index serves a read (#6202): ehr the person's trail and an AQL
+-- condition on the EHR; time the ITI-81 page and total and the trail across
+-- EHRs; fold_after the fold and retain_until the retention sweep; party the
+-- party filter of the ITS-REST log and an AQL condition on the accessing
+-- party; patient and principal the ITI-81 patient and agent, newest first;
+-- tokens the ITI-81 token parameters, address, entity and an
+-- entity.identifier answered from the request or resource id
+-- (audit.search_keys), and the token retention.
 CREATE INDEX ix_access_log_entry_party ON access_log_entry (party_id, time_recorded)
     WHERE party_id IS NOT NULL;
 CREATE INDEX ix_access_log_entry_retain_until ON access_log_entry (retain_until)
@@ -361,9 +369,8 @@ CREATE INDEX ix_access_log_entry_patient ON access_log_entry (patient_id, time_r
     WHERE patient_id IS NOT NULL;
 CREATE INDEX ix_access_log_entry_principal ON access_log_entry (principal, time_recorded)
     WHERE principal IS NOT NULL;
-CREATE INDEX ix_access_log_entry_request_id ON access_log_entry (hashtextextended(request_id, 0));
-CREATE INDEX ix_access_log_entry_resource_id ON access_log_entry (hashtextextended(resource_id, 0));
-CREATE INDEX ix_access_log_entry_tokens ON access_log_entry USING gin (search_tokens);
+CREATE INDEX ix_access_log_entry_tokens
+    ON access_log_entry USING gin (audit.search_keys(search_tokens, request_id, resource_id));
 CREATE TRIGGER access_log_entry_tombstone_only
     BEFORE UPDATE ON access_log_entry
     FOR EACH ROW EXECUTE FUNCTION audit.access_log_entry_tombstone_only();

@@ -226,6 +226,11 @@ struct Budget {
 /// grant rows (#6013): 34 to 54 fewer allocations on every path, each of
 /// which authenticates a Basic user, measured beside the merge base, and
 /// each ceiling fell by its path's figure.
+/// The token index has since taken the request and resource ids as keys of
+/// its own, in place of two hash B-trees on each record of both chains
+/// (#6202): 96 to 616 fewer WAL bytes on every path that writes an access
+/// record or a system audit record, measured beside the merge base, and each
+/// WAL ceiling fell by its path's figure.
 const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::CommitJson,
@@ -234,7 +239,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_530_778,
         round_trips: 9,
         nested: 13,
-        wal: 245_216,
+        wal: 245_120,
     },
     Budget {
         path: Path::CommitXml,
@@ -243,7 +248,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_533_031,
         round_trips: 9,
         nested: 14,
-        wal: 245_289,
+        wal: 245_193,
     },
     Budget {
         path: Path::CommitFlat,
@@ -252,7 +257,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_528_525,
         round_trips: 9,
         nested: 13,
-        wal: 245_263,
+        wal: 245_167,
     },
     Budget {
         path: Path::ReadJson,
@@ -261,7 +266,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 617_268,
         round_trips: 3,
         nested: 2,
-        wal: 2773,
+        wal: 2677,
     },
     Budget {
         path: Path::ReadXml,
@@ -270,7 +275,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_017_140,
         round_trips: 3,
         nested: 2,
-        wal: 2773,
+        wal: 2677,
     },
     Budget {
         path: Path::ReadFlat,
@@ -279,7 +284,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_634_407,
         round_trips: 3,
         nested: 2,
-        wal: 2773,
+        wal: 2677,
     },
     Budget {
         path: Path::EhrRead,
@@ -288,7 +293,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 100_250,
         round_trips: 3,
         nested: 2,
-        wal: 1989,
+        wal: 1877,
     },
     Budget {
         path: Path::AqlSingle,
@@ -297,7 +302,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 118_273,
         round_trips: 4,
         nested: 2,
-        wal: 4439,
+        wal: 4231,
     },
     Budget {
         path: Path::AqlPopulation,
@@ -306,7 +311,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 158_823,
         round_trips: 3,
         nested: 2,
-        wal: 11_380,
+        wal: 10_764,
     },
     Budget {
         path: Path::Iti81,
@@ -315,7 +320,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 624_026,
         round_trips: 3,
         nested: 2,
-        wal: 1852,
+        wal: 1740,
     },
     Budget {
         path: Path::PartyRead,
@@ -324,7 +329,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 78_848,
         round_trips: 8,
         nested: 6,
-        wal: 2070,
+        wal: 1974,
     },
     Budget {
         path: Path::CommitContribution,
@@ -333,7 +338,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_649_934,
         round_trips: 13,
         nested: 14,
-        wal: 245_784,
+        wal: 245_680,
     },
     Budget {
         path: Path::ReadAtTime,
@@ -342,7 +347,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 701_748,
         round_trips: 3,
         nested: 2,
-        wal: 2773,
+        wal: 2677,
     },
     Budget {
         path: Path::CommitStatus,
@@ -351,7 +356,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 144_180,
         round_trips: 15,
         nested: 11,
-        wal: 6213,
+        wal: 6117,
     },
     Budget {
         path: Path::ReadStatus,
@@ -360,7 +365,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 102_503,
         round_trips: 3,
         nested: 2,
-        wal: 2102,
+        wal: 2006,
     },
     Budget {
         path: Path::CommitParty,
@@ -369,7 +374,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 117_146,
         round_trips: 31,
         nested: 20,
-        wal: 7953,
+        wal: 7857,
     },
     Budget {
         path: Path::AqlMatches,
@@ -378,7 +383,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 192_267,
         round_trips: 4,
         nested: 2,
-        wal: 13_312,
+        wal: 12_720,
     },
     Budget {
         path: Path::AqlParty,
@@ -387,7 +392,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 107_199,
         round_trips: 8,
         nested: 6,
-        wal: 2083,
+        wal: 1971,
     },
     Budget {
         path: Path::CommitPartyScored,
@@ -396,7 +401,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 132_147,
         round_trips: 31,
         nested: 21,
-        wal: 10_594,
+        wal: 10_498,
     },
 ];
 
