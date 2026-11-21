@@ -171,3 +171,113 @@ fn a_request_id_and_a_resource_id_become_column_tokens() {
     assert!(AuditElement::shares("entity.identifier=resource_id"));
     assert!(!AuditElement::shares("entity.identifier"));
 }
+
+/// Whether a backend of the test database waits for another transaction.
+async fn waiting_on_a_transaction(pool: &PgPool) -> bool {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid \
+         WHERE NOT l.granted AND l.locktype = 'transactionid' \
+         AND a.datname = current_database())",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("pg_locks reads")
+}
+
+/// Waits until a backend of the test database waits for another transaction.
+async fn until_waiting(pool: &PgPool) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while !waiting_on_a_transaction(pool).await {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the second writer waits for the first"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+}
+
+/// A token another writer stores while this writer stores it too, committed
+/// once this writer's insert waits on it, is answered with that writer's row
+/// by the one statement (#6222).
+#[tokio::test]
+async fn a_token_stored_by_another_writer_at_once_is_its_row() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let mut held = acquire(&pool).await.expect("the first writer");
+    let mut first = sqlx::Connection::begin(&mut *held)
+        .await
+        .expect("the first writer's transaction");
+    let stored: i32 = sqlx::query_scalar(
+        "INSERT INTO audit.audit_search_token (parameter, system, code, digest) \
+         VALUES ('purpose', 'urn:example:race', 'one', \
+                 audit.search_token_digest('purpose', 'urn:example:race', 'one')) RETURNING id",
+    )
+    .fetch_one(&mut *first)
+    .await
+    .expect("the first writer stores the token");
+    let second = tokio::spawn({
+        let pool = pool.clone();
+        async move {
+            let mut conn = acquire(&pool).await.expect("the second writer");
+            let records = [BTreeSet::from([SearchToken {
+                parameter: "purpose",
+                system: Some("urn:example:race".to_owned()),
+                code: Some("one".to_owned()),
+            }])];
+            token_ids(&mut conn, &records).await
+        }
+    });
+    until_waiting(&pool).await;
+    // NOTE: our own design (#5762), a test's writer of the audit store, which no request makes.
+    first.commit().await.expect("the first writer commits");
+    let ids = second
+        .await
+        .expect("the second writer settles")
+        .expect("the second writer reads the token");
+    let key = (
+        "purpose".to_owned(),
+        Some("urn:example:race".to_owned()),
+        Some("one".to_owned()),
+    );
+    assert_eq!(ids.get(&key), Some(&stored), "the first writer's row");
+}
+
+/// A shared set another writer stores while this writer stores it too is
+/// answered with that writer's row by the one statement (#6222).
+#[tokio::test]
+async fn a_set_stored_by_another_writer_at_once_is_its_row() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let tokens = vec![7, 11];
+    let mut held = acquire(&pool).await.expect("the first writer");
+    let mut first = sqlx::Connection::begin(&mut *held)
+        .await
+        .expect("the first writer's transaction");
+    let stored: i32 = sqlx::query_scalar(
+        "INSERT INTO audit.audit_search_set (tokens, digest) \
+         VALUES ($1, audit.search_set_digest($1)) RETURNING id",
+    )
+    .bind(&tokens)
+    .fetch_one(&mut *first)
+    .await
+    .expect("the first writer stores the set");
+    let second = tokio::spawn({
+        let pool = pool.clone();
+        let tokens = tokens.clone();
+        async move {
+            let mut conn = acquire(&pool).await.expect("the second writer");
+            let mut learned = LearnedSets::default();
+            TokenRegistry::default()
+                .set_id(&mut conn, tokens, &mut learned)
+                .await
+        }
+    });
+    until_waiting(&pool).await;
+    // NOTE: our own design (#5762), a test's writer of the audit store, which no request makes.
+    first.commit().await.expect("the first writer commits");
+    let id = second
+        .await
+        .expect("the second writer settles")
+        .expect("the second writer reads the set");
+    assert_eq!(id, stored, "the first writer's row");
+}

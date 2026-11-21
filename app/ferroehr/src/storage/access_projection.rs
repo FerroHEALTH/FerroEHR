@@ -114,41 +114,22 @@ pub async fn replace(
 }
 
 /// The id of the class of `classed`, stored on `tx` when no EHR made it
-/// before. A class a concurrent commit stores first is read once that commit
-/// ends: the insert waits for it, and the read after it is a statement of its
-/// own (PostgreSQL 18, `INSERT … ON CONFLICT`).
+/// before, in one statement: a class a concurrent commit stores first is
+/// returned once that commit ends, the insert waiting for it (PostgreSQL 19,
+/// `INSERT`, "ON CONFLICT DO SELECT ... allows an atomic INSERT or SELECT
+/// outcome").
 ///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure, and
-/// [`StorageError::InvalidRows`] when no class row can be found after the
-/// insert.
+/// [`StorageError::Database`] on a driver failure.
 async fn class_id(tx: &mut PgConnection, classed: &Classed) -> Result<i64, StorageError> {
-    let find = "SELECT id FROM access_class WHERE digest = $1";
-    if let Some(id) = sqlx::query_scalar::<_, i64>(find)
-        .bind(&classed.digest)
-        .fetch_optional(&mut *tx)
-        .await?
-    {
-        return Ok(id);
-    }
-    let inserted = sqlx::query_scalar::<_, i64>(
+    Ok(sqlx::query_scalar::<_, i64>(
         "INSERT INTO access_class (digest, settings) VALUES ($1, $2::jsonb) \
-         ON CONFLICT (digest) DO NOTHING RETURNING id",
+         ON CONFLICT (digest) DO SELECT RETURNING id",
     )
     .bind(&classed.digest)
     .bind(&classed.class)
-    .fetch_optional(&mut *tx)
-    .await?;
-    if let Some(id) = inserted {
-        return Ok(id);
-    }
-    sqlx::query_scalar::<_, i64>(find)
-        .bind(&classed.digest)
-        .fetch_optional(&mut *tx)
-        .await?
-        .ok_or_else(|| {
-            StorageError::InvalidRows("a settings class vanished after its insert".into())
-        })
+    .fetch_one(&mut *tx)
+    .await?)
 }
 
 /// One EHR's settings row as stored.
