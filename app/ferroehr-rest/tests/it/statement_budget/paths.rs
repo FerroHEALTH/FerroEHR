@@ -229,13 +229,17 @@ struct Budget {
 /// grant rows (#6013): 34 to 54 fewer allocations on every path, each of
 /// which authenticates a Basic user, measured beside the merge base, and
 /// each ceiling fell by its path's figure.
+/// The version-tree uniqueness has since been declared per partition without
+/// the tier and served the read by version id, and the separate tree index is
+/// gone (#6207): every commit that writes a version writes 96 bytes of WAL
+/// fewer, measured beside the merge base, and each WAL ceiling fell by it.
 /// The read by version id served from the version copy (#5778) is measured
 /// last, on EHRs of its own whose settings name an object, so each read is
 /// judged on its own row; its median request is a copy hit. The copy has
 /// since held the body as shared text (#6205): a hit allocated 564 KiB with a
 /// peak of 272,547 bytes before and 431 to 439 KiB with a peak of at most
-/// 147,965 bytes after, over three runs, and a fill one copy of the body less. Its
-/// ceilings are those figures with the margins above.
+/// 147,965 bytes after, over three runs, and a fill one copy of the body
+/// less. Its ceilings are those figures with the margins above.
 const BUDGETS: [Budget; 20] = [
     Budget {
         path: Path::CommitJson,
@@ -244,7 +248,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_530_778,
         round_trips: 9,
         nested: 13,
-        wal: 245_216,
+        wal: 245_120,
     },
     Budget {
         path: Path::CommitXml,
@@ -253,7 +257,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_533_031,
         round_trips: 9,
         nested: 14,
-        wal: 245_289,
+        wal: 245_193,
     },
     Budget {
         path: Path::CommitFlat,
@@ -262,7 +266,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_528_525,
         round_trips: 9,
         nested: 13,
-        wal: 245_263,
+        wal: 245_167,
     },
     Budget {
         path: Path::ReadJson,
@@ -343,7 +347,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_649_934,
         round_trips: 13,
         nested: 14,
-        wal: 245_784,
+        wal: 245_688,
     },
     Budget {
         path: Path::ReadAtTime,
@@ -361,7 +365,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 144_180,
         round_trips: 15,
         nested: 11,
-        wal: 6213,
+        wal: 6117,
     },
     Budget {
         path: Path::ReadStatus,
@@ -379,7 +383,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 117_146,
         round_trips: 31,
         nested: 20,
-        wal: 7953,
+        wal: 7857,
     },
     Budget {
         path: Path::AqlMatches,
@@ -406,7 +410,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 132_147,
         round_trips: 31,
         nested: 21,
-        wal: 10_594,
+        wal: 10_498,
     },
     Budget {
         path: Path::ReadVersion,
