@@ -258,8 +258,9 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # issuer (`[auth.issuer.<name>]`), derives its audience and kind, reads the
 # patient context per issuer, carries a reason code on every refusal, reads
 # an issuer in the background (`Rejection::Unread`) and adds the federation
-# field `trc.care_role` (#6140). Verified on crates.io 2026-11-21.
-ferrohealth-smart = { version = "=0.32.0", default-features = false, features = ["fetch", "idp-entra"] }
+# field `trc.care_role` (#6140), and 0.33 builds on ferrohealth-server 0.12
+# (#6213). Verified on crates.io 2026-11-21.
+ferrohealth-smart = { version = "=0.33.0", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
@@ -268,9 +269,10 @@ ferrohealth-smart = { version = "=0.32.0", default-features = false, features = 
 # 0.28, 0.24 the release on ferrohealth-smart 0.29, and 0.25 the release on
 # ferrohealth-smart 0.30, whose 0.25.1 gives a session a token for a second
 # resource server (`token_for`) for the viewer's launch Tasks (#5930), and 0.26
-# the release on ferrohealth-smart 0.31, and 0.27 the release on 0.32.
+# the release on ferrohealth-smart 0.31, 0.27 the release on 0.32, and 0.28
+# the release on 0.33, on ferrohealth-server 0.12 (#6213).
 # Verified on crates.io 2026-11-21.
-ferrohealth-session = { version = "=0.27.0", default-features = false }
+ferrohealth-session = { version = "=0.28.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -320,10 +322,10 @@ ferrohealth-usage-report = { version = "=0.5.0", features = ["telemetry"] }
 # Licensor's BUSL-1.1 code (deny.toml). FerroBRIDGE's published crates follow
 # Cargo SemVer (a breaking change moves the minor while 0.x), so it is required
 # by a caret range (The Cargo Book, "Specifying Dependencies"). Verified on
-# crates.io 2026-11-21 (0.16.0), on ferrohealth-smart 0.32; `smart` builds its client
+# crates.io 2026-11-21 (0.17.0), on ferrohealth-smart 0.33; `smart` builds its client
 # from ferrohealth-smart's outbound client, and `r4b` the one wire release the
 # terminology client speaks.
-ferrobridge-term = { version = "0.16.0", default-features = false, features = ["r4b", "smart"] }
+ferrobridge-term = { version = "0.17.0", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -358,9 +360,9 @@ fhir-search = { version = "0.1.131", default-features = false }
 # ferrohealth-smart's outbound client; `pmir` is the PMIR Patient Identity
 # Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, which reads every
 # Patient's `active` and links and rebuilds a subscription from its stored
-# Location. Verified on crates.io 2026-11-21 (0.17.0, on ihe-atna 0.23), on
-# ferrohealth-smart 0.32.
-ihe-iti = { version = "=0.17.0", default-features = false }
+# Location. Verified on crates.io 2026-11-21 (0.18.0, on ihe-atna 0.23), on
+# ferrohealth-smart 0.33.
+ihe-iti = { version = "=0.18.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
