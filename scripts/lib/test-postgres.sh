@@ -7,12 +7,15 @@
 # data ("Non-Durable Settings"), and pg_stat_statements loaded with
 # track = all, which the statement budget of an AQL request reads (#5885),
 # and 1 GB of past WAL kept, so a checkpoint removes no segment a WAL budget
-# is about to read with pg_walinspect (#6035).
-# The testkit container starts with the same settings.
+# is about to read with pg_walinspect (#6035), and room for 400 connections:
+# at the default 100, a test with two replicas over pools of their own drew
+# hundreds of refusals beside the admitted processes (#6197).
+# The testkit container starts with the same settings
+# (tools/testkit/src/server_settings.rs).
 #
-# shared_preload_libraries takes effect only at server start (PostgreSQL 18
-# docs, "Shared Library Preloading"), so the container is restarted and
-# waited for.
+# shared_preload_libraries and max_connections take effect only at server
+# start (PostgreSQL 18 docs, "Shared Library Preloading" and "Connections and
+# Authentication"), so the container is restarted and waited for.
 #
 # Usage:
 #   scripts/lib/test-postgres.sh <service-container-id>
@@ -27,6 +30,7 @@ psql -h localhost -U openehr -d postgres -v ON_ERROR_STOP=1 \
   -c "ALTER SYSTEM SET fsync = off" \
   -c "ALTER SYSTEM SET synchronous_commit = off" \
   -c "ALTER SYSTEM SET full_page_writes = off" \
+  -c "ALTER SYSTEM SET max_connections = 400" \
   -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'" \
   -c "ALTER SYSTEM SET pg_stat_statements.track = 'all'" \
   -c "ALTER SYSTEM SET pg_stat_statements.max = 100000" \
@@ -37,6 +41,11 @@ for _ in $(seq 1 60); do
     loaded=$(psql -h localhost -U openehr -d postgres -Atc "SHOW shared_preload_libraries")
     [[ "$loaded" == *pg_stat_statements* ]] || {
       echo "::error::the test server did not load pg_stat_statements: '$loaded'" >&2
+      exit 1
+    }
+    connections=$(psql -h localhost -U openehr -d postgres -Atc "SHOW max_connections")
+    [[ "$connections" == 400 ]] || {
+      echo "::error::the test server allows $connections connections, not 400" >&2
       exit 1
     }
     exit 0
