@@ -1187,8 +1187,9 @@ fn contained_rows(alias: &str, parent: &str) -> sea_query::FunctionCall {
 /// per probe of a node's children, where a set-returning function over an
 /// array it cannot see into is estimated at ten rows: a chain of such
 /// bindings multiplied the estimate tenfold per step, which chose the join
-/// order and switched on JIT compilation from the inflated total cost
-/// (PostgreSQL 18 §30.2 When to JIT?, #4430, #4431). sea-query builds a
+/// order and, where `jit` is on (off by default since PostgreSQL 19),
+/// switched on JIT compilation from the inflated total cost
+/// (PostgreSQL 19 §30.2 When to JIT?, #4430, #4431). sea-query builds a
 /// `LATERAL` subquery only as a join, which a comma-separated item cannot be,
 /// so the item is written as a call of `LATERAL` on the parenthesized
 /// subquery, which PostgreSQL's grammar reads as `LATERAL select_with_parens`.

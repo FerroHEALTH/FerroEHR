@@ -1634,8 +1634,12 @@ fn plan_row_estimates(node: &Value, out: &mut Vec<f64>) {
 /// default), so a chain of eleven multiplied the estimate by 10^11: the
 /// storage bench's wide projection over one EHR spent a second in LLVM
 /// compilation on every execution, because the planner JIT-compiles a
-/// statement whose estimated cost passes `jit_above_cost` (PostgreSQL 18
-/// §30.2 "When to JIT?"). The flat shape's bindings are probed in the same
+/// statement whose estimated cost passes `jit_above_cost` (PostgreSQL 19
+/// §30.2 "When to JIT?"). PostgreSQL 19 turns `jit` off by default
+/// (<https://www.postgresql.org/docs/19/runtime-config-query.html>), so a
+/// plan without a `JIT` section proves nothing on its own; the total cost is
+/// held under `jit_above_cost` for a deployment that turns it on. The flat
+/// shape's bindings are probed in the same
 /// order and are planned from their own subquery plans. No estimate of a
 /// binding chain can exceed the node rows the store holds: each binding
 /// yields the children of one row, or one all-`NULL` row.
@@ -1665,6 +1669,11 @@ async fn a_chain_of_path_bindings_is_estimated_at_the_rows_it_reads() {
         .fetch_one(&pool)
         .await
         .expect("count the node rows");
+    let jit_above_cost: f64 =
+        sqlx::query_scalar("SELECT current_setting('jit_above_cost')::float8")
+            .fetch_one(&pool)
+            .await
+            .expect("read jit_above_cost");
 
     let magnitude = wide_leaf(WIDE_ITEMS[0]);
     let ordered = format!(
@@ -1718,6 +1727,15 @@ async fn a_chain_of_path_bindings_is_estimated_at_the_rows_it_reads() {
             root.get("JIT").is_none(),
             "#4430, #4431: {name} is not JIT-compiled: {}",
             root.get("JIT").map(Value::to_string).unwrap_or_default()
+        );
+        let cost = root
+            .pointer("/Plan/Total Cost")
+            .and_then(Value::as_f64)
+            .expect("the root plan node reports its total cost");
+        assert!(
+            cost < jit_above_cost,
+            "#4430, #4431: {name} costs {cost}, under the jit_above_cost of {jit_above_cost} \
+             a deployment with jit on compiles from"
         );
     }
 }
