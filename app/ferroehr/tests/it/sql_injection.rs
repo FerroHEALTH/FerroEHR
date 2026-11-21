@@ -127,8 +127,8 @@ fn ctx() -> SqlCtx {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
     }
 }

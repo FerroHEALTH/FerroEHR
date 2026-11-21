@@ -31,7 +31,7 @@ use std::sync::Arc;
 use crate::access_eval::class::{Class, Classes, Keepers};
 use crate::access_eval::condition::EhrEntry;
 use crate::access_eval::stale::StaleCopies;
-use crate::aql::sql::EhrAccessReaders;
+use crate::aql::sql::readers::EhrAccessReaders;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::ehr::access_cache::{EHR, Lookup, looked_up, owned_or_reload, refilled};

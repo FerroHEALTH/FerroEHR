@@ -29,7 +29,8 @@ use crate::access_eval::condition::{AccessCondition, current};
 use crate::aql;
 use crate::aql::error::{AqlError, ExecError};
 use crate::aql::ir::{Params, QueryDomain, QueryIr};
-use crate::aql::sql::{PolicyParties, SqlCtx};
+use crate::aql::sql::SqlCtx;
+use crate::aql::sql::readers::PolicyParties;
 use crate::error::refusal::{Missing, Refusal};
 use crate::error::{ErrorChain, ServiceError};
 use crate::service::FerroEhrService;
@@ -758,8 +759,8 @@ mod tests {
             limit: None,
             offset: None,
             archetype_lineage: std::sync::Arc::new(crate::aql::lineage::ArchetypeLineage::default()),
-            policy_parties: crate::aql::sql::PolicyParties::Served,
-            access_settings: crate::aql::sql::EhrAccessReaders::Every,
+            policy_parties: crate::aql::sql::readers::PolicyParties::Served,
+            access_settings: crate::aql::sql::readers::EhrAccessReaders::Every,
             own_records: None,
         };
         let pool = closed_pool().await;

@@ -472,7 +472,7 @@ fn relations(plan: &Value) -> Vec<String> {
 async fn plan_of(
     db: &testkit::TestDb,
     aql: &str,
-    policy_parties: ferroehr::aql::sql::PolicyParties,
+    policy_parties: ferroehr::aql::sql::readers::PolicyParties,
 ) -> Value {
     use ferroehr::aql::sql::{EhrScopeKind, SqlCtx};
 
@@ -493,7 +493,7 @@ async fn plan_of(
         offset: None,
         archetype_lineage: std::sync::Arc::default(),
         policy_parties,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
     };
     let prepared = ferroehr::aql::sql::build(&ir, &params, &ctx).expect("the AQL lowers");
@@ -512,7 +512,7 @@ async fn plan_of(
 /// head row each root reaches by its primary key.
 #[tokio::test]
 async fn the_filter_reads_no_relation_the_query_does_not_read() {
-    use ferroehr::aql::sql::PolicyParties;
+    use ferroehr::aql::sql::readers::PolicyParties;
 
     let (db, svc) = mapped().await;
     fixture(&svc).await;
@@ -802,7 +802,7 @@ const SEEDED_ROLES: usize = 120;
 /// plan carries no such predicate (#5485).
 #[tokio::test]
 async fn the_mark_is_tested_on_the_head_row_reached_by_its_key() {
-    use ferroehr::aql::sql::PolicyParties;
+    use ferroehr::aql::sql::readers::PolicyParties;
 
     let (db, svc) = mapped().await;
     let fixture = fixture(&svc).await;

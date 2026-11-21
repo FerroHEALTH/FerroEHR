@@ -25,7 +25,8 @@ use serde_json::{Value, json};
 use crate::aql::error::AqlError;
 use crate::aql::ir::{ParamValue, Params};
 use crate::aql::lineage::ArchetypeLineage;
-use crate::aql::sql::{PolicyParties, SqlCtx};
+use crate::aql::sql::SqlCtx;
+use crate::aql::sql::readers::PolicyParties;
 use crate::aql::terminology::TerminologyExpander;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
@@ -248,7 +249,7 @@ impl FerroEhrService {
                 offset: None,
                 archetype_lineage: Arc::new(ArchetypeLineage::default()),
                 policy_parties: PolicyParties::Hidden,
-                access_settings: crate::aql::sql::EhrAccessReaders::Every,
+                access_settings: crate::aql::sql::readers::EhrAccessReaders::Every,
                 own_records: None,
             };
             crate::aql::sql::build(&ir, &params, &ctx).map_err(refused)?;

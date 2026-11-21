@@ -24,7 +24,7 @@
 //!
 //! The same head row carries the read rule of the `EHR_ACCESS` settings: an
 //! `EHR_ACCESS` object contributes a row only when its EHR is one whose
-//! settings the caller may read ([`super::EhrAccessReaders`]), so a
+//! settings the caller may read ([`super::readers::EhrAccessReaders`]), so a
 //! restriction stays invisible to a provider (EHDS Art. 8) in every query
 //! shape. Who reads the settings is our own design (#5508).
 //!
@@ -40,7 +40,7 @@ use sea_query::{Expr, ExprTrait as _};
 
 use super::expr::col;
 use super::own_records::OwnRecords;
-use super::{EhrAccessReaders, PolicyParties};
+use super::readers::{EhrAccessReaders, PolicyParties};
 use crate::access_eval::condition::AccessCondition;
 use crate::aql::ir::QueryDomain;
 use crate::db::iden::{Ehr, VoHead};

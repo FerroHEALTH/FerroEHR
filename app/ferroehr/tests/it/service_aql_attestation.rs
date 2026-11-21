@@ -65,8 +65,8 @@ fn build_sql(q: &str) -> ferroehr::aql::sql::PreparedQuery {
         limit: None,
         offset: None,
         archetype_lineage: std::sync::Arc::new(ferroehr::aql::lineage::ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)

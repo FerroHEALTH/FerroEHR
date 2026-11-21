@@ -42,8 +42,8 @@ fn build_sql(q: &str) -> String {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
@@ -63,8 +63,8 @@ fn build_prepared(q: &str) -> ferroehr::aql::sql::PreparedQuery {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
@@ -1650,8 +1650,8 @@ fn build_sql_limited(q: &str) -> String {
         limit: Some(50),
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
@@ -1850,8 +1850,8 @@ fn a_named_ehr_scope_streams_on_its_spine() {
         limit: Some(50),
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
     };
     let named = ferroehr::aql::sql::build(
@@ -2172,8 +2172,8 @@ fn build_err(q: &str) -> AqlError {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
@@ -2445,8 +2445,8 @@ fn prepare(
         limit,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
@@ -2943,8 +2943,8 @@ fn build_sql_with(q: &str, params: &Params) -> String {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+        policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
     };
     ferroehr::aql::sql::build(&ir, params, &ctx)
