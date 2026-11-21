@@ -30,7 +30,7 @@ use axum::response::Response;
 use ferroehr::party_binding::grants::caller::care_of::ProviderKey;
 use ferroehr::party_binding::grants::capabilities::{Actor, Capabilities, with_capabilities};
 use ferroehr::party_binding::grants::live::{LiveGrants, tracking};
-use ferroehr::party_binding::grants::operation::{Operation, ROLE, SCOPE};
+use ferroehr::party_binding::grants::operation::Operation;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::Outcome;
 use ferrohealth_smart::resource::{Access, Via};
@@ -185,22 +185,20 @@ pub(super) fn basic(
     granted: &Capabilities,
     issuers: &RoleIssuers,
 ) -> Principal {
-    let texts = |operation: Operation, code: &str| -> Vec<String> {
+    let held = |operation: Operation| -> Vec<String> {
         granted
             .of(operation)
-            .flat_map(|grant| grant.credentials().texts(code))
-            .map(|text| text.trim().to_owned())
-            .filter(|text| !text.is_empty())
+            .flat_map(|grant| grant.held().iter().cloned())
             .collect()
     };
     let Some(caller) = principal.access.caller().filter(|c| c.via() == Via::Basic) else {
         return principal;
     };
-    let mut roles: Vec<String> = upper_cased(&texts(Operation::HoldRoles, ROLE))
+    let mut roles: Vec<String> = upper_cased(&held(Operation::HoldRoles))
         .into_iter()
         .filter(|role| !issuers.is_privileged(role))
         .collect();
-    let mut scopes = texts(Operation::HoldScopes, SCOPE);
+    let mut scopes = held(Operation::HoldScopes);
     if let Some(admin) = issuers.first_admin(caller) {
         roles.push(admin.role.clone());
         scopes.push(admin.scope.clone());

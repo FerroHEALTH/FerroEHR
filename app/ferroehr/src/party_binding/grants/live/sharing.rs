@@ -67,11 +67,11 @@ fn live() -> LiveGrants {
             provider_id: None,
             provider: None,
         }],
-        capabilities: vec![CapabilityRow {
-            role_id: Uuid::from_u128(8),
-            performer_id: party,
-            operation: Operation::CommitComposition.code().to_owned(),
-            term: Term {
+        capabilities: vec![CapabilityRow::new(
+            Uuid::from_u128(8),
+            party,
+            Operation::CommitComposition.code().to_owned(),
+            Term {
                 lifecycle_state: "532".to_owned(),
                 role_dates: Some(Dates {
                     lower: None,
@@ -84,8 +84,8 @@ fn live() -> LiveGrants {
                 not_before: None,
                 not_after: None,
             },
-            credentials: Some(Arc::new(credentials)),
-        }],
+            Some(Arc::new(credentials)),
+        )],
         facts: Changed::default(),
     });
     live

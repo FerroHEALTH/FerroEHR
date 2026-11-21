@@ -28,6 +28,7 @@ use crate::db::acquire::acquire;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::derive::{Bound, GrantFacts};
 use crate::party_binding::grants::live::revisions::Revisions;
+use crate::party_binding::grants::operation::Operation;
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
 
@@ -396,6 +397,33 @@ pub(crate) struct CapabilityRow {
     /// Shared with every [`super::capabilities::Grant`] built from it, so a
     /// request takes a reference count, never a copy (#5754).
     pub(crate) credentials: Option<std::sync::Arc<Value>>,
+    /// What the credentials give a Basic user ([`super::capabilities::Grant::held`]),
+    /// read from them once when the row is read, so no request walks them.
+    pub(crate) held: std::sync::Arc<[String]>,
+}
+
+impl CapabilityRow {
+    /// The capability `role_id` grants `performer_id`: `operation` while
+    /// `term` holds, under `credentials`.
+    pub(crate) fn new(
+        role_id: Uuid,
+        performer_id: Uuid,
+        operation: String,
+        term: Term,
+        credentials: Option<std::sync::Arc<Value>>,
+    ) -> Self {
+        let held = Operation::of(&operation).map_or_else(std::sync::Arc::default, |operation| {
+            super::capabilities::held(operation, credentials.as_deref())
+        });
+        Self {
+            role_id,
+            performer_id,
+            operation,
+            term,
+            credentials,
+            held,
+        }
+    }
 }
 
 impl crate::memory::Weigh for CapabilityRow {
@@ -404,6 +432,7 @@ impl crate::memory::Weigh for CapabilityRow {
             .heap()
             .saturating_add(self.term.lifecycle_state.heap())
             .saturating_add(self.credentials.heap())
+            .saturating_add(self.held.heap())
     }
 }
 
@@ -518,7 +547,7 @@ pub async fn provisioning_clients(
          JOIN binding_capability k ON k.performer_id = c.party_id \
          WHERE k.operation = $1 ORDER BY c.issuer, c.client_id",
     )
-    .bind(crate::party_binding::grants::operation::Operation::ScimProvision.code())
+    .bind(Operation::ScimProvision.code())
     .fetch_all(&mut *conn)
     .await?;
     Ok(rows)
@@ -589,15 +618,14 @@ pub(crate) async fn load(conn: &mut PgConnection) -> Result<Loaded, StorageError
         .fetch_all(&mut *tx)
         .await?
     {
-        capabilities.push(CapabilityRow {
-            role_id: row.try_get("role_id")?,
-            performer_id: row.try_get("performer_id")?,
-            operation: row.try_get("operation")?,
-            term: Term::of(&row)?,
-            credentials: row
-                .try_get::<Option<Value>, _>("credentials")?
+        capabilities.push(CapabilityRow::new(
+            row.try_get("role_id")?,
+            row.try_get("performer_id")?,
+            row.try_get("operation")?,
+            Term::of(&row)?,
+            row.try_get::<Option<Value>, _>("credentials")?
                 .map(std::sync::Arc::new),
-        });
+        ));
     }
     let facts = super::caller::store::load(&mut tx, None).await?;
     // NOTE: our own design (#5762), a read-only snapshot that writes nothing.
