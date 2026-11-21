@@ -671,6 +671,9 @@ seed_capacity() {
   # The gate's seed through the first instance, whose binary grants.
   SERVER_URL="$first_instance"
   read -r -a ACCESS_FERROEHR <<<"$ferroehr"
+  # The tree whose vocabulary the access seed writes, which gate.sh's `up`
+  # sets for an arm and the capacity topology's servers are built from.
+  CODE_TREE="$CAPACITY_ROOT"
   if [[ ! -s "$STATE/seed.env" ]]; then
     SCIM_GRANT="$ferroehr" bash "$CAPACITY_ROOT/scripts/scim-provision.sh" "$SERVER_URL" \
       basic-users urn:example:basic-user ferroehr >/dev/null
