@@ -81,17 +81,12 @@ pub(super) fn to_jsonb(e: Expr) -> Expr {
 /// ([`crate::storage::shared::member_data`]). The member is bound, never
 /// written into the statement.
 pub(super) fn member_data(alias: &str, member: &str) -> Expr {
-    let sql = crate::storage::shared::member_data(alias, "\u{0}");
-    let mut text = String::with_capacity(sql.len());
-    let mut keys = Vec::new();
-    for (i, part) in sql.split('\u{0}').enumerate() {
-        if i > 0 {
-            keys.push(Expr::val(member.to_owned()));
-            let _ = write!(text, "${i}");
-        }
-        text.push_str(part);
-    }
-    Expr::cust_with_exprs(text, keys)
+    // NOTE: sea-query binds `$1` once per occurrence (`Expr::cust_with_exprs`), so the member is
+    // a parameter wherever the statement names it.
+    Expr::cust_with_exprs(
+        crate::storage::shared::member_data(alias, "$1"),
+        [Expr::val(member.to_owned())],
+    )
 }
 
 /// The whole `data` of the node row `alias`, every shared member put back
