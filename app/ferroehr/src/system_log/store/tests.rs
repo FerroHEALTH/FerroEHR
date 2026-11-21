@@ -146,6 +146,7 @@ fn every_identifier_comes_from_the_closed_set() {
         "audit",
         "audit_record",
         "access_log_search",
+        "system_search",
         "system_page",
         "access_log_candidate",
         "access_log_page",

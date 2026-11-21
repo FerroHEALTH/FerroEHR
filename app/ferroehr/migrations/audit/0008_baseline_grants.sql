@@ -100,6 +100,7 @@ BEGIN
             access_log_intake,
             syslog_outbox,
             access_log_search,
+            system_search,
             audit_record,
             access_trail
             TO ferroehr_clinical_reader;
@@ -120,6 +121,7 @@ BEGIN
             audit_event_intake,
             access_log_intake,
             access_log_search,
+            system_search,
             audit_record,
             access_trail
             TO ferroehr_clinical;

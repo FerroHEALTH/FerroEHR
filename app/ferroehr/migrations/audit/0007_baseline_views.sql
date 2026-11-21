@@ -66,6 +66,22 @@ CREATE VIEW access_log_search AS
 COMMENT ON VIEW access_log_search IS
     'The ITI-81 index of the access-log entries: what the search filters on, read from the entry''s row (search_keys through its index), the position of a linked entry (NULL for one the chainer has not linked yet) and the entry''s id. A tombstone is not in it.';
 
+-- The ITI-81 index of the system chain (#6203): what the search filters on,
+-- read from the records, and the position of a linked record (NULL for one the
+-- chainer has not linked yet). A plain join, so a page reads it in the search's
+-- order through ix_audit_event_recorded_at, where the system member of
+-- audit_record's union is planned without that order; a total counts the
+-- records without reading a link, less those the intake still names.
+CREATE VIEW system_search AS
+    SELECT l.chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.principal,
+           e.patient_id, e.resource_id, e.request_id, e.client_ip, e.ehr_id, e.search_tokens,
+           audit.search_keys(e.search_tokens, e.request_id, e.resource_id) AS search_keys,
+           'system'::text AS chain, e.id AS event_id
+      FROM audit_event e
+      LEFT JOIN audit_event_link l ON l.event_id = e.id;
+COMMENT ON VIEW system_search IS
+    'The ITI-81 index of the system chain: what the search filters on, read from each audit_event record, the position of a linked record (NULL for one the chainer has not linked yet) and the record''s id.';
+
 CREATE VIEW audit_record AS
     SELECT l.chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.operation,
            e.principal, e.patient_id, e.resource_class, e.resource_id,
