@@ -319,6 +319,11 @@ on, so hot paths never open the JSON:
   the array index, a closing dot). Reassembly places each row under its
   `parent_num`, and an AQL attribute step matches the step with `parent_num`
   bound.
+- `shared`, the members of `data` the row leaves out because an earlier row
+  of the same version stores them byte for byte (the participation list a
+  FLAT commit copies into every entry, for one), each with that row's
+  number. Every read puts the member back from that row, so a fragment reads
+  back as written.
 
 ## The write path: one transaction per commit
 

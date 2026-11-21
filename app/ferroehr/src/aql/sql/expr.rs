@@ -76,6 +76,25 @@ pub(super) fn to_jsonb(e: Expr) -> Expr {
     call("to_jsonb", vec![e])
 }
 
+/// The `data` of the node row `alias` as a path that starts at `member`
+/// reads it, a shared member read from its holder
+/// ([`crate::storage::shared::member_data`]). The member is bound, never
+/// written into the statement.
+pub(super) fn member_data(alias: &str, member: &str) -> Expr {
+    // NOTE: sea-query binds `$1` once per occurrence (`Expr::cust_with_exprs`), so the member is
+    // a parameter wherever the statement names it.
+    Expr::cust_with_exprs(
+        crate::storage::shared::member_data(alias, "$1"),
+        [Expr::val(member.to_owned())],
+    )
+}
+
+/// The whole `data` of the node row `alias`, every shared member put back
+/// from its holder ([`crate::storage::shared::resolved_data`]).
+pub(super) fn resolved_data(alias: &str) -> Expr {
+    Expr::cust(crate::storage::shared::resolved_data(alias))
+}
+
 /// The member a fragment jsonpath reads first (`$.value.magnitude` →
 /// `value`), `None` for the bare `$`.
 fn first_member(jp: &str) -> Option<&str> {
@@ -100,7 +119,9 @@ fn first_member(jp: &str) -> Option<&str> {
 /// fragment path the whole rebuilt fragment is read (`node_fragment`). No
 /// openEHR spec governs storage: our own design.
 pub(super) fn fragment_source(alias: &str, jp: Option<&str>, root: Option<&str>) -> Expr {
-    let data = col(alias, Node::Data);
+    let data = jp
+        .and_then(first_member)
+        .map_or_else(|| resolved_data(alias), |member| member_data(alias, member));
     let (version_uid, template_id) = root_columns(alias, root);
     let Some(jp) = jp else {
         return whole_fragment(alias, version_uid, template_id);
@@ -217,7 +238,7 @@ pub(super) fn node_columns(
     template_id: Expr,
 ) -> Vec<Expr> {
     vec![
-        col(alias, Node::Data),
+        resolved_data(alias),
         col(alias, Node::RmType),
         col(alias, Node::Archetype),
         col(alias, Node::Name),

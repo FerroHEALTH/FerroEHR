@@ -878,6 +878,7 @@ pub(crate) fn read_rows(
             parent_num: row.parent_num,
             path: row.path.clone(),
             data: data.clone(),
+            shared: None,
         })
         .collect()
 }

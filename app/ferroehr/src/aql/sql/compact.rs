@@ -107,7 +107,8 @@ pub(super) struct CompactRead {
 pub(super) fn compact_read(alias: &str, names: &[&str], root: Option<&str>) -> Option<CompactRead> {
     let string_member = |member: &str, marker: Node| CompactRead {
         marker: col(alias, marker),
-        value: col(alias, Node::Data).binary(BinOper::Custom("->"), Expr::val(member.to_owned())),
+        value: super::expr::member_data(alias, member)
+            .binary(BinOper::Custom("->"), Expr::val(member.to_owned())),
     };
     match names {
         ["origin", "value"] => Some(string_member("origin", Node::OriginCompact)),

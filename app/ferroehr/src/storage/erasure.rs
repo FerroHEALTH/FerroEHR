@@ -146,15 +146,22 @@ pub async fn relationships_naming(
     tx: &mut PgConnection,
     party_id: VoId,
 ) -> Result<Vec<VoId>, StorageError> {
-    Ok(sqlx::query_scalar(
-        "SELECT DISTINCT n.vo_id FROM node n \
-         JOIN version v ON v.vo_id = n.vo_id AND v.sys_version = n.sys_version \
-         WHERE v.kind = 'PARTY_RELATIONSHIP' \
-           AND (n.data #>> '{source,id,value}' = $1 OR n.data #>> '{target,id,value}' = $1)",
-    )
-    .bind(party_id.to_string())
-    .fetch_all(tx)
-    .await?)
+    // The two refs are read as every reader reads a member (crate::storage::shared).
+    static SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        let member = |key: &str| crate::storage::shared::member_data("n", &format!("'{key}'"));
+        format!(
+            "SELECT DISTINCT n.vo_id FROM node n \
+             JOIN version v ON v.vo_id = n.vo_id AND v.sys_version = n.sys_version \
+             WHERE v.kind = 'PARTY_RELATIONSHIP' \
+               AND (({}) #>> '{{source,id,value}}' = $1 OR ({}) #>> '{{target,id,value}}' = $1)",
+            member("source"),
+            member("target")
+        )
+    });
+    Ok(sqlx::query_scalar(sqlx::AssertSqlSafe(SQL.as_str()))
+        .bind(party_id.to_string())
+        .fetch_all(tx)
+        .await?)
 }
 
 /// The contribution ids the versions and attestations of `vo_ids` reference.
