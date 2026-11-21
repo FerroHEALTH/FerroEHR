@@ -128,7 +128,7 @@ With no mapping key set, `[authz.party_binding]` maps all of them but the
 provider `ORGANISATION`, which the acts-for relationship of the policy parties
 targets ([the default mapping](config-auth.md#the-party-mapping)). SCIM serves
 `/scim/v2/Groups`, and each client's Groups' `externalId`s are written under
-its `[[auth.party]]` table's `group_identifier_issuer`, or under one derived
+its `[auth.issuer.<name>.party]` table's `group_identifier_issuer`, or under one derived
 from its `binding_issuer` when the table sets none
 ([Groups](config-auth.md#groups)). A test boots an empty configuration,
 stores the set as boot does, and provisions a SCIM User, a Group with the

@@ -87,14 +87,12 @@ pub(crate) fn composition() -> Value {
 // ── config + app assembly ─────────────────────────────────────────────────────
 
 /// The professionals' and the patients' issuers trusted, each one's
-/// `patient/` grants counted (`[auth.smart] patient_issuers`).
+/// `patient/` grants counted (each profile's `patient_context`).
 pub(crate) fn rest_config() -> AppConfig {
     let mut config = common::api_config(false);
     config.auth = common::persons_and_patients(ISSUER, PATIENTS, AUDIENCE);
-    config.auth.smart.patient_issuers = vec![
-        ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
-        ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS),
-    ];
+    common::patient_context(&mut config, ISSUER);
+    common::patient_context(&mut config, PATIENTS);
     config
 }
 

@@ -538,7 +538,7 @@ url = "tls://u8:URL_PW_SENTINEL_8@h8:6514/p8"
 
     let (ok, text) = config_check(
         r#"
-[[auth.issuer]]
+[auth.issuer.r]
 issuer = "https://u7:URL_PW_SENTINEL_7@idp.example/realms/r"
 kind = "machines"
 audience = ["ferroehr"]
@@ -659,18 +659,17 @@ fn config_check_refuses_a_scim_endpoint_without_its_mapping() {
 [auth]
 enabled = true
 
-[[auth.issuer]]
+[auth.issuer.as]
 issuer = "https://as.example"
 kind = "machines"
 audience = ["ferroehr-machines"]
 
-[[auth.issuer]]
+[auth.issuer.login]
 issuer = "https://login.example"
 kind = "persons"
 audience = ["ferroehr"]
 
-[[auth.party]]
-issuer = "https://login.example"
+[auth.issuer.login.party]
 identifier_issuer = "urn:example:login"
 identifier_type = "guid"
 

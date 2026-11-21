@@ -100,10 +100,18 @@ struct Ward {
     records: Vec<(EhrId, VoId)>,
     /// The version of P0's relationship to Dr A.
     responsible: String,
+    /// The `PERSON` P0's relationship to Dr A covers for, when it covers.
+    covered: Option<VoId>,
 }
 
 impl Ward {
     async fn new() -> Self {
+        Self::build(false).await
+    }
+
+    /// The ward, with P0's relationship to Dr A covering for Dr B when
+    /// `covering`.
+    async fn build(covering: bool) -> Self {
         let db = testkit::db().await.expect("testkit database");
         let svc = granting(FerroEhrService::new(
             &ferroehr::db::domain::DomainPools::from_shared(&db.pool()),
@@ -126,6 +134,14 @@ impl Ward {
             &[care(MEMBER, doctor, cardiology, "2026-10-01", None)],
         );
         update_as_adt(&svc, (doctor, &uid), &roster).await;
+        let covered = if covering {
+            let (covered, _) = create(&svc, PartyKind::Person, &person("Dr B", &[]))
+                .await
+                .expect("the covered professional commits");
+            Some(covered)
+        } else {
+            None
+        };
         let mut records = Vec::new();
         let mut responsible = String::new();
         let carers: [&[((&str, VoId), &str)]; 3] = [
@@ -141,7 +157,17 @@ impl Ward {
                 .await
                 .expect("the patient commits");
             for (carer, role) in carers {
-                let (_, version) = relate_as_adt(&svc, &under_care(patient, *carer, role)).await;
+                let mut body = under_care(patient, *carer, role);
+                if let (0, "RESP", Some(covered)) = (index, *role, covered) {
+                    body["details"]["items"]
+                        .as_array_mut()
+                        .expect("items")
+                        .push(json!({ "_type": "ELEMENT", "archetype_node_id": "at0005",
+                            "name": coded(TERMINOLOGY, "covers_for"),
+                            "value": { "_type": "DV_IDENTIFIER", "issuer": "demographic",
+                                       "id": covered.to_string(), "type": "PERSON" } }));
+                }
+                let (_, version) = relate_as_adt(&svc, &body).await;
                 if index == 0 && *role == "RESP" {
                     responsible = version;
                 }
@@ -161,6 +187,7 @@ impl Ward {
             doctor,
             records,
             responsible,
+            covered,
         }
     }
 
@@ -271,6 +298,39 @@ async fn a_responsible_direct_rule_refuses_the_team_and_the_consultant_in_a_read
         assert_eq!(rows, 1, "{form}: the query reads P0's composition alone");
         assert_eq!(count, json!(1), "{form}: the count agrees with the reads");
     }
+}
+
+/// The access record names the carer a relationship covers for in full:
+/// P0's relationship to Dr A covers for Dr B, and the care ground's
+/// `covers_for` carries Dr B's issuer, container and kind as its `type`,
+/// read back from the stored caller fact (#6171).
+#[tokio::test]
+async fn the_access_record_names_the_kind_of_the_carer_a_relationship_covers_for() {
+    let ward = Box::pin(Ward::build(true)).await;
+    let covered = ward.covered.expect("the relationship covers for Dr B");
+    let access = ward.request();
+    let (each, _, _) = ward.reads(Arc::clone(&access)).await;
+    assert_eq!(each[0], (Outcome::Admit, true));
+    let decision = access.decision(Some(ward.records[0].0));
+    let care = decision
+        .grounds
+        .iter()
+        .find_map(|ground| ground.care.as_ref())
+        .expect("the treatment relationship ground names the relationship");
+    let cover = care.covers_for.as_ref().expect("the relationship covers");
+    assert_eq!(
+        (
+            cover.issuer.as_deref(),
+            cover.id.as_str(),
+            cover.r#type.as_deref()
+        ),
+        (
+            Some("demographic"),
+            covered.to_string().as_str(),
+            Some("PERSON")
+        ),
+        "the issuer, the container and the kind the covers_for carries"
+    );
 }
 
 /// The access record of an access the rule admitted names the relationship

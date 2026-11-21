@@ -115,11 +115,11 @@ async fn app() -> (testkit::TestDb, Router) {
         public_base_url: Some(SecretUrl::new(PUBLIC)),
     };
     let mut auth = common::auth(AuthSection {
-        issuer: vec![IssuerEntry {
+        issuer: common::named(vec![IssuerEntry {
             jwks_file: common::jwks_file().display().to_string(),
             sender_constraint: SenderConstraint::Required,
             ..common::entry(ISSUER, AUDIENCE)
-        }],
+        }]),
         dpop: Some(DpopSection::default()),
         ..AuthSection::default()
     });

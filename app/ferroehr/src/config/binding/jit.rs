@@ -73,9 +73,7 @@ pub fn errors(binding: &PartyBindingConfig, resolved: &Resolved) -> Vec<String> 
         let bound = resolved.party.iter().any(|p| p.issuer == table.issuer);
         let persons = resolved.kinds.get(table.issuer.expose()) == Some(&IssuerKind::Persons);
         if !(bound && persons) {
-            errors.push(format!(
-                "{at} names no persons issuer an [[auth.party]] table binds"
-            ));
+            errors.push(format!("{at} names no persons issuer an party table binds"));
             continue;
         }
         if table.idp_claim.trim().is_empty() {
@@ -95,7 +93,7 @@ pub fn errors(binding: &PartyBindingConfig, resolved: &Resolved) -> Vec<String> 
     errors
 }
 
-/// The `persons` issuers an `[[auth.party]]` table of `resolved` binds: the
+/// The `persons` issuers an `[auth.issuer.<name>.party]` table of `resolved` binds: the
 /// issuers whose first logins a `create_at_login` grant may create a
 /// `PERSON` for.
 #[must_use]
@@ -174,21 +172,24 @@ mod tests {
     fn resolved() -> Resolved {
         let section = AuthSection {
             enabled: true,
-            issuer: vec![IssuerEntry {
-                issuer: SecretUrl::new(ISSUER),
-                kind: Some(IssuerKind::Persons),
-                audience: vec!["ferroehr".to_owned()],
-                ..IssuerEntry::default()
-            }],
-            party: vec![PartySection {
-                issuer: SecretUrl::new(ISSUER),
-                identifier_issuer: "urn:login".to_owned(),
-                identifier_type: "guid".to_owned(),
-                ..PartySection::default()
-            }],
+            issuer: [(
+                "login".to_owned(),
+                IssuerEntry {
+                    issuer: SecretUrl::new(ISSUER),
+                    kind: Some(IssuerKind::Persons),
+                    audience: vec!["ferroehr".to_owned()],
+                    party: Some(PartySection {
+                        identifier_issuer: "urn:login".to_owned(),
+                        identifier_type: "guid".to_owned(),
+                        ..PartySection::default()
+                    }),
+                    ..IssuerEntry::default()
+                },
+            )]
+            .into(),
             ..AuthSection::default()
         };
-        crate::config::auth::resolve(&section).expect("the [auth] section resolves")
+        crate::config::auth::resolve(&section, &[]).expect("the [auth] section resolves")
     }
 
     fn mapped() -> PartyBindingConfig {

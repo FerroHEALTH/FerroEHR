@@ -310,7 +310,7 @@ fn written_vo_of(uid: &str) -> VoId {
 async fn an_agreement_whose_partner_is_no_federation_issuers_is_refused() {
     let said = refused(&[PERSONS], Accessor::Person, &person()).await;
     assert!(
-        said.contains("no [[auth.issuer]] of kind federation"),
+        said.contains("no [auth.issuer.<name>] of kind federation"),
         "{said}"
     );
     let (_db, svc) = service().await;

@@ -5,7 +5,7 @@
 //! `ferrohealth-smart`'s `describe`: `[auth] described_issuer`, else the one
 //! issuer that serves a user launch and whose metadata FerroEHR has, else, with
 //! only `machines` issuers trusted, the one `machines` issuer for SMART Backend
-//! Services alone; never by the order of the `[[auth.issuer]]` tables. SMART
+//! Services alone; never by the names of the `[auth.issuer.<name>]` tables. SMART
 //! App Launch 2.2.0, Conformance, §Metadata requires the
 //! `authorization_endpoint` a user launch starts at, and Backend Services,
 //! §Retrieve `.well-known/smart-configuration`, the `token_endpoint` a backend
@@ -43,7 +43,7 @@ async fn issuer_server() -> MockServer {
     server
 }
 
-/// The `[[auth.issuer]]` table of a `kind` issuer at `issuer`, its metadata
+/// The `[auth.issuer.<name>]` table of a `kind` issuer at `issuer`, its metadata
 /// read from it.
 fn read(issuer: &str, kind: IssuerKind) -> IssuerEntry {
     IssuerEntry {
@@ -52,7 +52,7 @@ fn read(issuer: &str, kind: IssuerKind) -> IssuerEntry {
     }
 }
 
-/// The `[[auth.issuer]]` table of a `persons` issuer whose key set is a file,
+/// The `[auth.issuer.<name>]` table of a `persons` issuer whose key set is a file,
 /// so FerroEHR has none of its metadata.
 fn file_only(issuer: &str) -> IssuerEntry {
     IssuerEntry {
@@ -61,20 +61,30 @@ fn file_only(issuer: &str) -> IssuerEntry {
     }
 }
 
-/// The authenticator trusting `entries`, the document served when `served`,
-/// describing `described` when set.
+/// The authenticator trusting `entries`, the n-th as `[auth.issuer.i<n>]`,
+/// the document served when `served`, describing the issuer `described`
+/// names by its identifier, or by that name when no entry is at it; every
+/// issuer read before it is handed back.
 async fn authenticator(
     entries: Vec<IssuerEntry>,
     served: bool,
     described: Option<&str>,
 ) -> Result<Arc<Authenticator>, String> {
+    let described = described.map(|named| {
+        entries
+            .iter()
+            .position(|entry| entry.issuer.expose() == named)
+            .map_or_else(|| named.to_owned(), |at| format!("i{at}"))
+    });
     let mut config = AppConfig {
         auth: ferroehr::config::auth_section::AuthConfig {
             shared: Box::new(AuthSection {
-                issuer: entries,
-                described_issuer: described.map(|issuer| {
-                    ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned())
-                }),
+                issuer: entries
+                    .into_iter()
+                    .enumerate()
+                    .map(|(at, entry)| (format!("i{at}"), entry))
+                    .collect(),
+                described_issuer: described,
                 ..AuthSection::default()
             }),
             ..ferroehr::config::auth_section::AuthConfig::default()
@@ -82,14 +92,35 @@ async fn authenticator(
         ..AppConfig::default()
     };
     config.auth.smart.discovery = served;
-    Authenticator::new(&config, None, memory(), test_support::standing()).await
+    let authenticator =
+        Authenticator::new(&config, None, memory(), test_support::standing()).await?;
+    read_issuers(&authenticator).await;
+    Ok(authenticator)
+}
+
+/// Waits until every issuer `authenticator` reads in the background is read.
+pub(crate) async fn read_issuers(authenticator: &Authenticator) {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while !authenticator.issuers_ready() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("every issuer is read");
+}
+
+/// The document `authenticator` describes under the default options.
+fn document(authenticator: &Authenticator) -> Value {
+    let Described::Document(document) = authenticator.smart_configuration(&SmartOptions::default())
+    else {
+        panic!("a document");
+    };
+    document
 }
 
 /// The `token_endpoint` and `authorization_endpoint` of the document.
 fn endpoints(authenticator: &Authenticator) -> (Value, Value) {
-    let document = authenticator
-        .smart_configuration(&SmartOptions::default())
-        .expect("a document");
+    let document = document(authenticator);
     (
         document["authorization_endpoint"].clone(),
         document["token_endpoint"].clone(),
@@ -132,9 +163,7 @@ async fn a_machines_only_deployment_is_described_for_backend_services() {
     )
     .await
     .expect("a machines-only deployment boots");
-    let document = authenticator
-        .smart_configuration(&SmartOptions::default())
-        .expect("a document");
+    let document = document(&authenticator);
     assert_eq!(
         document["token_endpoint"],
         json!(format!("{}/token", machines.uri()))
@@ -276,16 +305,14 @@ async fn a_named_unknown_issuer_is_refused() {
     let Err(message) = authenticator(
         vec![read(&persons.uri(), IssuerKind::Persons)],
         true,
-        Some("https://elsewhere.example"),
+        Some("elsewhere"),
     )
     .await
     else {
         panic!("a named unknown issuer is refused");
     };
     assert!(
-        message.contains(
-            "described_issuer names https://elsewhere.example, which is no trusted issuer"
-        ),
+        message.contains("auth.described_issuer names the issuer \"elsewhere\""),
         "{message}"
     );
 }
@@ -327,9 +354,8 @@ async fn an_unserved_document_refuses_nothing() {
     )
     .await
     .expect("discovery off boots");
-    assert!(
-        authenticator
-            .smart_configuration(&SmartOptions::default())
-            .is_none()
-    );
+    assert!(matches!(
+        authenticator.smart_configuration(&SmartOptions::default()),
+        Described::None
+    ));
 }

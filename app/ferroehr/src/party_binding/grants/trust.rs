@@ -18,7 +18,7 @@ use serde::Serialize;
 use crate::party_binding::grants::agreement::Accessor;
 use crate::system_log::config::Retention;
 
-/// Where a `federation` issuer's `[[auth.federation]]` table reads a
+/// Where a `federation` issuer's `[auth.issuer.<name>.federation]` table reads a
 /// `chained` request's correlation id from.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Correlation {

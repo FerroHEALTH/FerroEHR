@@ -15,12 +15,16 @@
 #
 # FerroSMART issues every token FerroEHR reads under this overlay; the
 # provider serves only the login (FerroSMART docs/architecture.md §13.21, A
-# product behind FerroSMART). FerroEHR trusts it in one `[[auth.issuer]]`
-# table with `kind = "persons"` and the `ferrosmart` profile, the persons it
-# issues tokens for bind to their PERSONs under their FerroSMART subject
-# (the pairwise `sub`, §13.6 item 9), and its patient/ grants count, so a
-# standalone launch with `launch/patient` through FerroSMART's picker reads
-# the EHR it chose.
+# product behind FerroSMART). FerroEHR trusts it in the `[auth.issuer.ferrosmart]`
+# table under the `ferrosmart` preset, which reads it as a `persons` issuer:
+# the persons it issues tokens for bind to their PERSONs under their
+# FerroSMART subject (the pairwise `sub`, §13.6 item 9), its patient/ grants
+# count (the preset's `patient_context`), so a standalone launch with
+# `launch/patient` through FerroSMART's picker reads the EHR it chose, and a
+# token of the picker itself is read as the person who signed in (the
+# preset's `issuer_client_is_person`), with no grant of its own in the CDR.
+# FerroEHR starts before FerroSMART answers: it reads FerroSMART's metadata in
+# the background and reports ready once it has.
 #
 # NETWORK. FerroSMART and the provider join the issuer's network namespace,
 # as FerroEHR does, so every party reaches every other on `localhost`,
@@ -112,27 +116,16 @@ services:
       start_period: 10s
 
   ferroehr:
-    depends_on:
-      ferrosmart:
-        condition: service_healthy
     environment: &ferrosmart-trust
-      # FerroSMART is the third [[auth.issuer]] table (index 2): the first is
-      # the issuer the quickstart's Basic user binds under, the second the
-      # machines issuer of its SCIM provisioning client.
-      FERROEHR__AUTH__ISSUER__2__ISSUER: http://localhost:8280
-      FERROEHR__AUTH__ISSUER__2__KIND: persons
-      FERROEHR__AUTH__ISSUER__2__PROFILE: ferrosmart
-      # FerroSMART names the base the app asked for in `aud` (RFC 8707 §2).
-      FERROEHR__AUTH__ISSUER__2__AUDIENCE: http://localhost:8080/ferroehr/rest/openehr/v1
-      # A person binds to the PERSON whose SCIM loginIdentifier is their
+      # FerroSMART is the issuer named `ferrosmart`, beside the quickstart's
+      # `basic_users` and `quickstart` issuers.
+      FERROEHR__AUTH__ISSUER__FERROSMART__ISSUER: http://localhost:8280
+      FERROEHR__AUTH__ISSUER__FERROSMART__PRESET: ferrosmart
+      # Its audience is the base the app asked for (RFC 8707 §2), the openEHR
+      # base FerroEHR derives from its public URL below. A person binds to the PERSON whose SCIM loginIdentifier is their
       # FerroSMART subject.
-      FERROEHR__AUTH__PARTY__1__ISSUER: http://localhost:8280
-      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:example:ferrosmart-login
-      FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
-      # A patient/ grant of FerroSMART's tokens counts, with the EHR its
-      # `ehrId` claim names as the launch context (SMART on openEHR, master07
-      # §Context Selection).
-      FERROEHR__AUTH__SMART__PATIENT_ISSUERS: http://localhost:8280
+      FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_ISSUER: urn:example:ferrosmart-login
+      FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_TYPE: login
       # The discovery document describes FerroSMART, so an app that starts at
       # FerroEHR's base finds it.
       FERROEHR__AUTH__SMART__DISCOVERY: "true"

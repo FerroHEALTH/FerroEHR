@@ -1,0 +1,1 @@
+- The access record's care ground now names the carer a care relationship covers for in full: its `covers_for` identifier carries the carer's kind (`PERSON`, `ROLE`, `GROUP` or `ORGANISATION`) as its `type`, beside the issuer and id it carried before.
