@@ -31,7 +31,7 @@ admin = true
 terminology = true
 
 # The issuer the Basic users bind under. A Basic user is a person and maps to
-# the PERSON carrying its binding key, which [[auth.party]] places under the
+# the PERSON carrying its binding key, which its party table places under the
 # identifier issuer of a persons issuer. This one signs nothing: its key set,
 # deploy/hosted/basic-users-jwks.json, which every FerroEHR image carries, is
 # the public half of a key pair whose private key was discarded, for local

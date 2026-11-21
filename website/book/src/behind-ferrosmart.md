@@ -37,20 +37,36 @@ subject_namespace = "examples"
 
 ## FerroEHR trusts FerroSMART
 
-One `[[auth.issuer]]` table names FerroSMART's issuer with `kind =
-"persons"` and `profile = "ferrosmart"`
-([Authentication & access](installation/config-auth.md)). The preset keeps
-every `rfc9068` default but two: `typ` is `at+jwt` alone (RFC 9068 §2.1),
-and every token carries `scope` (SMART App Launch 2.2.0, Obtain access
-token, Response). A token without `scope` is refused with `401`.
+One `[auth.issuer.<name>]` table names FerroSMART's issuer with `preset =
+"ferrosmart"` ([Authentication & access](installation/config-auth.md)). The
+preset reads FerroSMART as a `persons` issuer and keeps every `rfc9068`
+default but these: `typ` is `at+jwt` alone (RFC 9068 §2.1), every token
+carries `scope` (SMART App Launch 2.2.0, Obtain access token, Response), the
+issuer may assert a patient context (`patient_context`), a token of
+FerroSMART's own patient picker is read as the person who signed in
+(`issuer_client_is_person`), and its party table's `identifier_type` is
+`pairwise`. A token without `scope` is refused with `401`.
+
+The audience is the openEHR base FerroEHR derives from `[server]
+public_base_url`, the base FerroSMART names in `aud` (RFC 8707 §2), so the
+table names none:
 
 ```toml
-[[auth.issuer]]
+[server]
+public_base_url = "https://ehr.example.org"
+
+[auth.issuer.ferrosmart]
 issuer = "https://smart.example.org"
-kind = "persons"
-profile = "ferrosmart"
-audience = ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
+preset = "ferrosmart"
+
+[auth.issuer.ferrosmart.party]
+identifier_issuer = "urn:example:ferrosmart-login"
+identifier_type = "login"
 ```
+
+FerroEHR starts whether or not FerroSMART answers: it reads FerroSMART's
+metadata and key set in the background, refuses its tokens with `503`
+(`issuer-unread`) and reports not ready until it has, then serves them.
 
 - **A person through a SMART app.** FerroEHR reads who may act for a person
   from the CDR, never from the configuration. Grant each SMART app
@@ -62,17 +78,18 @@ audience = ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
   refused with `401`.
 - **FerroSMART's patient picker.** The picker looks a patient's EHR up as
   the person who signed in, with a token whose `client_id` is FerroSMART's
-  own issuer (FerroSMART `docs/architecture.md` §13.6 item 4). Grant that
-  client `sign_in_persons` on an `AGENT` carrying FerroSMART's issuer as its
-  `client_id`, so the lookup reads as the person themselves. Without the
-  grant, FerroEHR refuses the lookup with `401`, and a standalone launch
-  with `launch/patient` stops at the picker.
+  own issuer (FerroSMART `docs/architecture.md` §13.6 item 4). The
+  `ferrosmart` preset reads that token as the person acting with no app
+  (SMART App Launch 2.2.0 makes the authorization server responsible for the
+  picker, so trusting FerroSMART covers it), so the picker needs no `AGENT`
+  and no grant in the CDR. The access record still names FerroSMART as the
+  client (Regulation (EU) 2025/327 Annex II).
 - **A Backend Services client.** A client credentials token's `sub` is its
   `client_id` (RFC 9068 §2.2), so the same table reads it as the system: a
   `persons` issuer also signs its machines' app-only tokens. Its grants in
   the CDR decide what it reaches, as for any system caller.
 - **One table per issuer.** Name FerroSMART in this one table. A second
-  `[[auth.issuer]]` table of the same issuer, such as a `machines` table
+  `[auth.issuer.<name>]` table of the same issuer, such as a `machines` table
   beside it, refuses the start, naming the issuer
   (FerroHEALTH/FerroSMART#591).
 
@@ -94,7 +111,7 @@ A FHIR-paired launch token can carry both. Since `ferrohealth-smart` 0.31 the
 `Patient/<x>`, its `patient` claim is `x` and its scopes are `patient/`
 alone. FerroEHR uses that reading only as a check, never as a grant:
 
-- FerroEHR looks the token's login up in FerroSMART's `[[auth.party]]` table,
+- FerroEHR looks the token's login up in FerroSMART's party table,
   as it does for any person. The login has to bind a `PERSON` with no
   professional `ROLE` and no representation. That `PERSON` decides what the
   caller reaches, exactly as for an openEHR launch.
@@ -155,7 +172,9 @@ describes the issuer `ferrohealth-smart`'s shared rule picks
 `authorization_endpoint` and `token_endpoint`, so an app that starts at
 FerroEHR's base finds FerroSMART (SMART App Launch 2.2.0, Conformance,
 Metadata). When FerroEHR trusts another issuer that signs user tokens
-beside it, `[auth] described_issuer` names FerroSMART.
+beside it, `[auth] described_issuer = "ferrosmart"` names FerroSMART's table.
+Until FerroSMART's metadata is read, the document answers `503` with
+`Retry-After` and the reason `issuer-unread`.
 
 ## Try it
 

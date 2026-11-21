@@ -349,7 +349,7 @@ Each record additionally carries:
 |---|---|
 | `domain` | The pseudonymisation domain read: `ehr`, `demographic`, `linkage` for a crossing that resolves a party or a subject to its EHRs, or `system` for an operation that touches no domain. |
 | `purpose` | The purpose of use the caller declared in the `x-purpose-of-use` header, when the deployment accepts it. |
-| `token_attributes` | The purposes of use and the professional roles the access token states, each with its code system, for an issuer with an `[[auth.attributes]]` table ([where the purpose comes from](#where-the-purpose-of-use-comes-from)). |
+| `token_attributes` | The purposes of use and the professional roles the access token states, each with its code system, for an issuer with an `[auth.issuer.<name>.attributes]` table ([where the purpose comes from](#where-the-purpose-of-use-comes-from)). |
 | `emergency_access` | `true` when the declared purpose, or a purpose the token states, is one of `[audit] emergency_purpose_codes`: an [emergency access](#emergency-access-ehds-art-115) (EHDS Art. 11(5)). |
 | `legal_basis` | The basis the deployment processes under, from `[audit] legal_basis`. |
 | `result_count` | How many records the operation served. |
@@ -541,7 +541,7 @@ side it is a limit of the format, not something this code withholds.
 
 The purpose of use reaches the record from two places:
 
-- **The access token.** An issuer with an `[[auth.attributes]]` table
+- **The access token.** An issuer with an `[auth.issuer.<name>.attributes]` table
   (`mapping = "iua"`) states its professionals' attributes in the token: the
   IHE IUA `purpose_of_use` and `subject_role` claims under
   `extensions.ihe_iua` (IHE ITI TF-2 §3.71.4.2.2.1.1), and with
@@ -551,7 +551,7 @@ The purpose of use reaches the record from two places:
   the purposes at the requesting agent's `purposeOfUse`, the roles at its
   `role`, beside the roles the caller held.
 - **The `[audit] purpose_header`** (`x-purpose-of-use`), which the caller
-  sets. It works alone for an issuer without an `[[auth.attributes]]` table,
+  sets. It works alone for an issuer without an `[auth.issuer.<name>.attributes]` table,
   as before.
 
 The token is the authorization server's statement, so it decides. A request

@@ -379,7 +379,7 @@ That starts **Keycloak** with a small demo realm (`ferroehr`) defined inline and
 points the server's bearer validation at it. Basic auth from the base file keeps
 working, so the server then advertises `Basic, Bearer`.
 
-The overlay adds the realm's `[[auth.party]]` table, which changes the party
+The overlay adds the realm's `[auth.issuer.<name>.party]` table, which changes the party
 mapping. On a volume the base quickstart already started, the server refuses
 to boot on the changed mapping until the binding side table is refilled, so
 add or remove the overlay with the server stopped and refill first:
@@ -403,10 +403,11 @@ the CA's private key; the server (`[auth.tls] trust_roots_file`) and the viewer
 `docker compose down --volumes` deletes the volume, and the next `up`
 generates a new CA. Keycloak also answers plain HTTP on port 8081 for the token
 call below, and the tokens it mints there name the HTTPS issuer. Keycloak's
-access tokens carry `typ: JWT`, so the overlay adds the realm as a third
-`[[auth.issuer]]` table with `profile = "keycloak"`
-(`FERROEHR__AUTH__ISSUER__2__PROFILE=keycloak`), beside the issuer the
-quickstart's Basic user binds under and the issuer of its SCIM client.
+access tokens carry `typ: JWT`, so the overlay adds the realm as the
+`[auth.issuer.keycloak]` table with `preset = "keycloak"`
+(`FERROEHR__AUTH__ISSUER__KEYCLOAK__PRESET=keycloak`), beside the
+quickstart's `basic_users` issuer, which its Basic user binds under, and its
+`quickstart` issuer, which signs its SCIM client's tokens.
 
 Start the viewer too and sign in at <http://localhost:3000> as any user below:
 
@@ -492,9 +493,9 @@ TOKEN=$(curl -s -d client_id=ferroehr-service -d client_secret=ferroehr-service-
 > [!WARNING]
 > The realm, the client secret, the user passwords and the CA are demo values,
 > served by a Keycloak in `start-dev` mode. For a real deployment, drop this
-> overlay and point an `[[auth.issuer]]` table (or
-> `FERROEHR__AUTH__ISSUER__0__ISSUER` and its siblings) at your own issuer over
-> HTTPS.
+> overlay and point an `[auth.issuer.<name>]` table (or
+> `FERROEHR__AUTH__ISSUER__<NAME>__ISSUER` and its siblings, `<NAME>` the
+> table's name) at your own issuer over HTTPS.
 
 ## The terminology overlay (FerroTERM)
 

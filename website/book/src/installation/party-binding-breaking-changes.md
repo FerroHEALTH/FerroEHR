@@ -13,7 +13,7 @@ Changed or Removed in the changelog. The order to apply them in is on
   `ihe-iti`, `ferrohealth-config`, `ferrohealth-server` and
   `ferrohealth-ui`. Upgrade: nothing to set; the configuration changes
   below follow from the `ferrohealth-smart` 0.9 shape.
-- **Every issuer is an `[[auth.issuer]]` table with a required `kind`**
+- **Every issuer is an `[auth.issuer.<name>]` table with a required `kind`**
   (`persons`, `patients`, `machines` or `federation`) and a profile, and
   holds every setting of its tokens itself. Upgrade: write each issuer as
   its own table, move the section-level settings (`audience`, `algorithms`,
@@ -21,7 +21,7 @@ Changed or Removed in the changelog. The order to apply them in is on
   `role_claims`, `[auth.introspection]`) onto it, give it its `kind`, and
   put patients and professionals at separate issuers.
 - **`token_profile`, the section-level issuer settings and the `claim` key
-  of `[[auth.party]]` are deleted.** A configuration that still names them
+  of `[auth.issuer.<name>.party]` are deleted.** A configuration that still names them
   refuses the start, naming what replaces it. Upgrade: replace
   `token_profile = "jwt"` with `token_types = ["JWT"]` and the
   `required_claims` the issuer's tokens carry, drop

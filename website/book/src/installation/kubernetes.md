@@ -977,7 +977,7 @@ Secret you own through `extraEnv` instead. Another PIX Manager:
 own: `ferropix.enabled: false` and `config.record.subject_index: local`.
 
 The chart pins FerroPIX 0.0.26 by digest (`ferropix.image`) with the
-FerroPIX chart built for it. Since FerroPIX 0.0.19 every `[[auth.issuer]]`
+FerroPIX chart built for it. Since FerroPIX 0.0.19 every `[auth.issuer.<name>]`
 entry carries its `kind` and its own `audience`: an issuer that signs only
 the client credentials tokens of the Source and of FerroEHR is
 `kind: machines`, and FerroPIX refuses an audience written on the auth
@@ -985,7 +985,7 @@ section itself. Since 0.0.21 a
 Patient Identity Source is admitted only with a client credentials token,
 and a Basic user holding a `system/` scope refuses the start. Since FerroPIX 0.0.8, `public_base_url` is a
 top-level key and the clients that may act as a Patient Identity Source sit
-in the `[[trust.issuer]]` table, apart from the `[[auth.issuer]]` entry that
+in the `[[trust.issuer]]` table, apart from the `[auth.issuer.<name>]` entry that
 names the issuer; FerroPIX refuses the older `server.public_base_url` and `auth.issuer[].clients`, so an
 upgrade from a chart that pinned FerroPIX 0.0.7 moves those two keys in your
 values.
