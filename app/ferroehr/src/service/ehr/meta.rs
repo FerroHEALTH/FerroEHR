@@ -207,7 +207,7 @@ impl FerroEhrService {
         &self,
         vo_id: VoId,
         read: VersionRead,
-        raw_json: Option<String>,
+        raw_json: Option<std::sync::Arc<str>>,
     ) -> Result<ReadBody, ServiceError> {
         // NOTE: draft access control decision procedure, Reading and Writing the Settings, only
         // the controller reads the exclusions of an EHR_ACCESS (#6077).
@@ -225,7 +225,7 @@ impl FerroEhrService {
             )?));
         };
         if withhold && let Some(withheld) = super::access_exclusions::withheld(&text)? {
-            text = withheld;
+            text = std::sync::Arc::from(withheld);
         }
         let uid = object_version_id(vo_id, &read.creating_system_id, read.tree);
         if carries_version_uid(&text, &uid) {

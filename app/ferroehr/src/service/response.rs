@@ -150,8 +150,9 @@ pub enum ReadBody {
     /// The parsed canonical value.
     Value(Value),
     /// The stored body's own jsonb text rendering, served verbatim for a
-    /// JSON accept; a consumer needing the typed value parses it.
-    RawJson(String),
+    /// JSON accept; a consumer needing the typed value parses it. Shared
+    /// with the version copy, so serving it copies nothing (#6205).
+    RawJson(std::sync::Arc<str>),
 }
 
 impl ReadBody {

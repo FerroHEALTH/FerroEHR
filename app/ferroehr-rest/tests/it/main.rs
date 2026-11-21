@@ -90,6 +90,7 @@ mod care_writer_review_http;
 mod cohort_http;
 mod composition_not_modified;
 mod composition_validation_http;
+mod compressed_request_http;
 mod connection_bounds;
 mod connection_per_request;
 mod contact_point_http;

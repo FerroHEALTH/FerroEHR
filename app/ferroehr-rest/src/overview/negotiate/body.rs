@@ -10,7 +10,11 @@
               step per route, consumed by the typed decode"
 )]
 
+use std::sync::Arc;
+
+use axum::body::Body;
 use axum::response::{IntoResponse, Response};
+use bytes::Bytes;
 use ferroehr::service::response::ReadBody;
 use http::{HeaderMap, HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
@@ -25,11 +29,26 @@ use super::{
 
 /// A response whose body is the pre-formed `text` under the media type
 /// `media`: the one place a response body and its `Content-Type` are paired.
-pub(crate) fn body(status: StatusCode, media: &'static str, text: String) -> Response {
-    let mut resp = (status, text).into_response();
+pub(crate) fn body(status: StatusCode, media: &'static str, text: impl Into<Body>) -> Response {
+    let mut resp = (status, text.into()).into_response();
     resp.headers_mut()
         .insert(header::CONTENT_TYPE, HeaderValue::from_static(media));
     resp
+}
+
+/// A stored text served as a response body: the body holds the shared text
+/// itself, so serving it copies none of it (#6205).
+fn shared(text: Arc<str>) -> Body {
+    Body::from(Bytes::from_owner(Shared(text)))
+}
+
+/// A shared text as the bytes of a body.
+struct Shared(Arc<str>);
+
+impl AsRef<[u8]> for Shared {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
 }
 
 /// Render a serializable payload as a JSON response. Used for responses that
@@ -147,7 +166,7 @@ where
         ReadBody::Value(value) => return respond_rm::<T>(headers, status, &value, root_tag),
     };
     match resolve_accept(headers, CANONICAL, WireFormat::CanonicalJson) {
-        Some(WireFormat::CanonicalJson) => body(status, APPLICATION_JSON, text),
+        Some(WireFormat::CanonicalJson) => body(status, APPLICATION_JSON, shared(text)),
         Some(WireFormat::CanonicalXml) => {
             match openehr_its::json::from_canonical_json::<T>(&text) {
                 Ok(typed) => respond_xml(headers, status, &typed, root_tag),

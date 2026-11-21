@@ -339,7 +339,7 @@ pub(crate) struct RawVersionRead {
     /// representation).
     pub(crate) read: VersionRead,
     /// The stored body's own jsonb text, when it never needed parsing.
-    pub(crate) raw_json: Option<String>,
+    pub(crate) raw_json: Option<std::sync::Arc<str>>,
 }
 
 /// Compose a [`RawVersionRead`]: parse the raw text back into a typed value
