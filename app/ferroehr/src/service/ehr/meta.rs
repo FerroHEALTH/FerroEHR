@@ -347,11 +347,100 @@ pub(in crate::service) fn container_meta(
 }
 
 /// Whether `text`, a stored body in the compact form the commit writes
-/// (`canonical_body_text`), carries `uid` as its stamped `OBJECT_VERSION_ID`
-/// member, so the JSON read can serve it verbatim (#5755).
+/// (`canonical_body_text`), carries `uid` as its root `OBJECT_VERSION_ID`, so
+/// the JSON read can serve it verbatim (#5755).
+///
+/// It reads only the root members the codec writes before the uid (`_type`,
+/// `name`, `archetype_node_id`; RM BMM LOCATABLE), so the cost is that short
+/// prefix (#6198). A root uid elsewhere, or any other shape, answers `false`
+/// and takes the parse path, which serves the same document.
 fn carries_version_uid(text: &str, uid: &str) -> bool {
-    const OPEN: &str = r#""uid":{"_type":"OBJECT_VERSION_ID","value":""#;
-    text.split(OPEN)
-        .skip(1)
-        .any(|rest| rest.strip_prefix(uid).is_some_and(|r| r.starts_with("\"}")))
+    const LEADING: [&[u8]; 3] = [b"_type", b"name", b"archetype_node_id"];
+    let bytes = text.as_bytes();
+    let Some(mut at) = expect(bytes, 0, b'{') else {
+        return false;
+    };
+    loop {
+        let Some((key, after_key)) = plain_string(bytes, at) else {
+            return false;
+        };
+        let Some(value) = expect(bytes, after_key, b':') else {
+            return false;
+        };
+        if key == b"uid" {
+            return stamped_uid_at(bytes, value, uid.as_bytes());
+        }
+        if !LEADING.contains(&key) {
+            return false;
+        }
+        let Some(next) = skip_value(bytes, value).and_then(|end| expect(bytes, end, b',')) else {
+            return false;
+        };
+        at = next;
+    }
 }
+
+/// The index past `byte` when it sits at `at`.
+fn expect(bytes: &[u8], at: usize, byte: u8) -> Option<usize> {
+    (bytes.get(at) == Some(&byte)).then_some(at + 1)
+}
+
+/// The content of the JSON string opening at `at` and the index past it;
+/// `None` for one with an escape, which no root key the codec writes has.
+fn plain_string(bytes: &[u8], at: usize) -> Option<(&[u8], usize)> {
+    let start = expect(bytes, at, b'"')?;
+    let len = bytes.get(start..)?.iter().position(|&b| b == b'"')?;
+    let content = bytes.get(start..start + len)?;
+    (!content.contains(&b'\\')).then_some((content, start + len + 1))
+}
+
+/// Whether the value at `at` is exactly `{"_type":"OBJECT_VERSION_ID","value":"<uid>"}`.
+fn stamped_uid_at(bytes: &[u8], at: usize, uid: &[u8]) -> bool {
+    const OPEN: &[u8] = br#"{"_type":"OBJECT_VERSION_ID","value":""#;
+    bytes
+        .get(at..)
+        .and_then(|rest| rest.strip_prefix(OPEN))
+        .and_then(|rest| rest.strip_prefix(uid))
+        .and_then(|rest| rest.strip_prefix(br#""}"#))
+        .is_some_and(|rest| matches!(rest.first(), Some(b',' | b'}')))
+}
+
+/// The index past the compact JSON value starting at `at`.
+fn skip_value(bytes: &[u8], at: usize) -> Option<usize> {
+    let mut depth = 0_usize;
+    let mut in_string = false;
+    let mut escaped = false;
+    for (i, &b) in bytes.iter().enumerate().skip(at) {
+        if in_string {
+            match (escaped, b) {
+                (true, _) => escaped = false,
+                (false, b'\\') => escaped = true,
+                (false, b'"') => {
+                    in_string = false;
+                    if depth == 0 {
+                        return Some(i + 1);
+                    }
+                }
+                _ => {}
+            }
+            continue;
+        }
+        match b {
+            b'"' => in_string = true,
+            b'{' | b'[' => depth += 1,
+            b'}' | b']' => {
+                depth = depth.checked_sub(1)?;
+                if depth == 0 {
+                    return Some(i + 1);
+                }
+            }
+            b',' if depth == 0 => return Some(i),
+            _ => {}
+        }
+    }
+    None
+}
+
+#[cfg(test)]
+#[path = "meta_tests.rs"]
+mod tests;
