@@ -55,22 +55,13 @@ impl Sink {
         }
     }
 
-    /// The statement that removes the record the sink owes under `$1` and
-    /// stamps it as delivered when it is a record of the system chain.
+    /// The statement that removes the record the sink owes under `$1`: the
+    /// outbox row is the record's delivery state, and no record is changed
+    /// (#6203).
     const fn delivered(self) -> &'static str {
         match self {
-            Self::FhirFeed => {
-                "WITH delivered AS (DELETE FROM audit.fhir_feed_outbox WHERE id = $1 \
-                 RETURNING chain, chain_seq) \
-                 UPDATE audit.audit_event e SET delivered_fhir_feed_at = now() FROM delivered d \
-                 WHERE d.chain = 'system' AND e.chain_seq = d.chain_seq"
-            }
-            Self::Syslog => {
-                "WITH delivered AS (DELETE FROM audit.syslog_outbox WHERE id = $1 \
-                 RETURNING chain, chain_seq) \
-                 UPDATE audit.audit_event e SET delivered_syslog_at = now() FROM delivered d \
-                 WHERE d.chain = 'system' AND e.chain_seq = d.chain_seq"
-            }
+            Self::FhirFeed => "DELETE FROM audit.fhir_feed_outbox WHERE id = $1",
+            Self::Syslog => "DELETE FROM audit.syslog_outbox WHERE id = $1",
         }
     }
 
@@ -163,9 +154,9 @@ impl AuditStore {
         Ok(Delivered::Message(event.timestamp, message))
     }
 
-    /// Removes the record `sink` owes under `owed` from its outbox, and
-    /// stamps it as delivered by the sink when it is a record of the system
-    /// chain, in one statement.
+    /// Removes the record `sink` owes under `owed` from its outbox: the
+    /// outbox row is the record's delivery state, and the record is never
+    /// changed (#6203).
     ///
     /// # Errors
     /// [`AuditError::Store`] when the statement fails; the record is then

@@ -151,7 +151,7 @@ async fn the_intake_refuses_every_change_but_the_chainers_move() {
         "UPDATE audit.access_log_entry SET content = '{}'",
         "DELETE FROM audit.access_log_entry",
         "TRUNCATE audit.access_log_entry",
-        "UPDATE audit.audit_event_intake SET action = 'R'",
+        "UPDATE audit.audit_event_intake SET events = events",
         "DELETE FROM audit.audit_event_intake",
         "TRUNCATE audit.audit_event_intake",
     ] {

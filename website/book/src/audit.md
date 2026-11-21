@@ -1143,10 +1143,15 @@ its own content. The chain is built by the database itself, not by the server,
 which means it covers every writer: the chainer and any statement typed by
 hand.
 
-Each record's digest covers every column of the record except the digest
-itself (`row_hash`) and the two per-sink forwarding stamps
-(`delivered_syslog_at`, `delivered_fhir_feed_at`). A column added by a later
-release joins the digest in the same release.
+A request writes each record once, in `audit.audit_event`, and never changes
+it. The chainer links it into the chain with a row of its own in
+`audit.audit_event_link`, which holds the record's position, its
+predecessor's digest and its own. A record's digest covers every column of
+the record and that position and predecessor digest. A column added by a
+later release joins the digest in the same release. Until the chainer links
+it, a record is in no search, no feed and no verification. Which records a
+sink still owes is the sink's outbox (`audit.fhir_feed_outbox`,
+`audit.syslog_outbox`): a record leaves it when the repository takes it.
 
 The store keeps a record's facts in columns and renders its FHIR `AuditEvent`
 from them when the record is read (ITI-81) or delivered (the FHIR feed). What

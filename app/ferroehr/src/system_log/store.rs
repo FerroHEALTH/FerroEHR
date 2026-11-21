@@ -79,13 +79,14 @@ use writers::{Pinned, WritePolicy, Writers};
 #[cfg(feature = "fhir")]
 use ferrohealth_smart::assurance::AssuranceLevel;
 
-/// The batched intake of the system chain: one row per element of the
-/// parallel column arrays, every row under the one render policy in `$38`;
-/// each record's search tokens arrive as the text of an `integer[]` in `$39`,
+/// The batched intake of the system chain: each record written once into
+/// `audit.audit_event`, one row per element of the parallel column arrays,
+/// every row under the one render policy in `$38`, and one intake row naming
+/// them in their order, held under the reservation in `$54`, or none (#6203).
+/// Each record's search tokens arrive as the text of an `integer[]` in `$39`,
 /// since an array of arrays unnests element by element, and its id in `$53`;
-/// every row is held under the reservation in `$54`, or none; `$55` is the
-/// level each record is recorded for review at.
-const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, reserved_by, recorded_at, action, outcome, \
+/// `$55` is the level each record is recorded for review at.
+const INSERT_BATCH: &str = "WITH written AS (INSERT INTO audit.audit_event (id, recorded_at, action, outcome, \
      event_code, operation, principal, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
@@ -94,7 +95,7 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, reserved_b
      subject_lookup_failed, category_content, render_policy, search_tokens, binding, guest, \
      party, party_groups, provider, representation, external_fields, agreement, actor_chain, \
      facilities, binding_detail, summary, token_attributes, review) \
-     SELECT u.id, $54::uuid, u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, \
+     SELECT u.id, u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, \
      u.c13, u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, \
      u.c26, u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, \
      $38::bytea, u.tokens::integer[], u.c40, u.c41, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, \
@@ -111,7 +112,12 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, reserved_b
      $52::jsonb[], $53::uuid[], $55::text[]) \
      AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, \
      c19, c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, \
-     c37, tokens, c40, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, id, review)";
+     c37, tokens, c40, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, id, review) \
+     RETURNING id) \
+     INSERT INTO audit.audit_event_intake (events, reserved_by) \
+     SELECT array_agg(w.id ORDER BY o.n), $54::uuid FROM written w \
+     JOIN unnest($53::uuid[]) WITH ORDINALITY AS o(id, n) ON o.id = w.id \
+     HAVING count(*) > 0";
 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
@@ -752,19 +758,6 @@ impl AuditStore {
             Some(row) => value_of(&self.resource(&row).await?).map(Some),
             None => Ok(None),
         }
-    }
-
-    /// Enters the records written before the store kept an outbox, and never
-    /// delivered by the FHIR Feed, in the outbox; the first call does it and
-    /// every later one finds nothing to do. Returns how many it entered.
-    ///
-    /// # Errors
-    /// [`AuditError::Store`] when the statement fails.
-    pub async fn enqueue_fhir_feed_backlog(&self) -> Result<u64, AuditError> {
-        let moved: i64 = sqlx::query_scalar("SELECT audit.enqueue_fhir_feed_backlog()")
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await?;
-        u64::try_from(moved).map_err(|e| AuditError::Store(sqlx::Error::Decode(Box::new(e))))
     }
 
     /// Delete every record whose own retention end is on or before `today`,

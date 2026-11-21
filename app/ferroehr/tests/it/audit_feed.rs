@@ -5,10 +5,16 @@
 //! events emitted through the sender land in the local store, and the outbox
 //! worker POSTs each stored FHIR R4 `AuditEvent` to the ARR
 //! (`{url}/AuditEvent`, `application/fhir+json`), removes it from
-//! `audit.fhir_feed_outbox` and stamps `delivered_fhir_feed_at` — a real `PostgreSQL` 18 (shared testkit harness) plus a
-//! `wiremock` ARR.
+//! `audit.fhir_feed_outbox`, whose row is the record's delivery state — a real `PostgreSQL` 18
+//! (shared testkit harness) plus a `wiremock` ARR.
 
 use std::time::Duration;
+
+/// The linked system records the FHIR Feed owes none of: every record once
+/// the outbox is empty, since a record leaves the outbox only when the
+/// repository accepted it (#6203).
+const DELIVERED: &str = "SELECT CASE WHEN EXISTS (SELECT 1 FROM audit.fhir_feed_outbox) THEN 0 \
+     ELSE (SELECT count(*) FROM audit.audit_event_link) END";
 
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -44,7 +50,7 @@ fn config(arr_url: &str) -> AuditConfig {
 }
 
 /// A party read: an access outside the access log, which the store keeps as
-/// an `audit_event` record with its delivery stamp.
+/// an `audit_event` record.
 fn event() -> AuditEvent {
     let mut e = AuditEvent::new(
         EventActionCode::Read,
@@ -110,21 +116,19 @@ async fn stored_records_are_fed_to_the_fhir_arr_and_stamped() {
             .expect("the record is written");
     }
 
-    // Both rows are stored and, via the outbox worker, delivered + stamped.
+    // Both rows are stored and, via the outbox worker, delivered.
     let delivered = eventually(
         || async {
-            sqlx::query_scalar::<_, i64>(
-                "SELECT count(*) FROM audit.audit_event WHERE delivered_fhir_feed_at IS NOT NULL",
-            )
-            .fetch_one(&pool)
-            .await
-            .unwrap_or(0)
+            sqlx::query_scalar::<_, i64>(DELIVERED)
+                .fetch_one(&pool)
+                .await
+                .unwrap_or(0)
                 == 2
         },
         Duration::from_secs(10),
     )
     .await;
-    assert!(delivered, "both records delivered to the ARR and stamped");
+    assert!(delivered, "both records delivered to the ARR");
 
     drop(sender);
     handle.shutdown(Duration::from_secs(2)).await;
@@ -227,15 +231,13 @@ async fn arr_outage_leaves_rows_pending_then_delivers_on_recovery() {
     .await;
     assert!(stored, "the record is stored while the ARR is down");
 
-    // …and delivered + stamped once the ARR recovers (the 503 mock expires).
+    // …and delivered once the ARR recovers (the 503 mock expires).
     let delivered = eventually(
         || async {
-            sqlx::query_scalar::<_, i64>(
-                "SELECT count(*) FROM audit.audit_event WHERE delivered_fhir_feed_at IS NOT NULL",
-            )
-            .fetch_one(&pool)
-            .await
-            .unwrap_or(0)
+            sqlx::query_scalar::<_, i64>(DELIVERED)
+                .fetch_one(&pool)
+                .await
+                .unwrap_or(0)
                 == 1
         },
         Duration::from_secs(15),
@@ -307,12 +309,10 @@ async fn the_feed_authenticates_with_a_client_credentials_token() {
 
     let delivered = eventually(
         || async {
-            sqlx::query_scalar::<_, i64>(
-                "SELECT count(*) FROM audit.audit_event WHERE delivered_fhir_feed_at IS NOT NULL",
-            )
-            .fetch_one(&pool)
-            .await
-            .unwrap_or(0)
+            sqlx::query_scalar::<_, i64>(DELIVERED)
+                .fetch_one(&pool)
+                .await
+                .unwrap_or(0)
                 == 1
         },
         Duration::from_secs(10),
@@ -363,7 +363,7 @@ async fn settle_and_stop(sender: AuditSender, handle: AuditHandle) {
 
 /// With no feed configured no sink is owed a record, so the outbox stays
 /// empty however many records the store holds, and no index covers the
-/// records by an unset delivery stamp.
+/// records by their delivery.
 #[tokio::test]
 async fn with_no_feed_configured_no_record_is_owed() {
     let db = testkit::db().await.expect("testkit database");
@@ -397,68 +397,4 @@ async fn with_no_feed_configured_no_record_is_owed() {
         0,
         "no index grows with records no sink is owed"
     );
-}
-
-/// A record stored before the outbox existed and never delivered stays owed
-/// to a feed configured later: the first delivery run enters it in the
-/// outbox, once, and the feed delivers it.
-#[tokio::test]
-async fn records_stored_before_the_outbox_are_fed_once_a_feed_runs() {
-    let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
-    let (sender, handle) = sender::start(store_only(), None, pool.clone())
-        .await
-        .expect("start");
-    for _ in 0..2 {
-        sender
-            .record(vec![event()], None)
-            .await
-            .expect("the record is written");
-    }
-    settle_and_stop(sender, handle).await;
-    // The migration records the newest position written before it.
-    sqlx::query("UPDATE audit.fhir_feed_backlog SET through_seq = 2")
-        .execute(&pool)
-        .await
-        .expect("the backlog position");
-
-    let arr = MockServer::start().await;
-    Mock::given(method("POST"))
-        .and(path("/fhir/AuditEvent"))
-        .respond_with(ResponseTemplate::new(201))
-        .expect(2)
-        .mount(&arr)
-        .await;
-    let (sender, handle) =
-        sender::start(config(&format!("{}/fhir", arr.uri())), None, pool.clone())
-            .await
-            .expect("start");
-    let delivered = eventually(
-        || async {
-            count(
-                &pool,
-                "SELECT count(*) FROM audit.audit_event WHERE delivered_fhir_feed_at IS NOT NULL",
-            )
-            .await
-                == 2
-        },
-        Duration::from_secs(10),
-    )
-    .await;
-    assert!(delivered, "both earlier records delivered and stamped");
-    assert_eq!(
-        count(&pool, "SELECT count(*) FROM audit.fhir_feed_outbox").await,
-        0
-    );
-    assert_eq!(
-        count(
-            &pool,
-            "SELECT count(*) FROM audit.fhir_feed_backlog WHERE enqueued_at IS NOT NULL"
-        )
-        .await,
-        1,
-        "the backlog is entered once"
-    );
-    drop(sender);
-    handle.shutdown(Duration::from_secs(2)).await;
 }

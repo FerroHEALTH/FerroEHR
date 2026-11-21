@@ -1296,9 +1296,10 @@ CREATE FUNCTION audit.chain_verification_lag(p_chain text)
      WHERE p_chain = 'access_log'
     UNION ALL
     SELECT greatest(coalesce(s.head_seq, 0) - coalesce(c.through_seq, 0), 0),
-           (SELECT e.recorded_at FROM audit.audit_event e
-             WHERE e.chain_seq > coalesce(c.through_seq, 0)
-             ORDER BY e.chain_seq LIMIT 1)
+           (SELECT e.recorded_at FROM audit.audit_event_link l
+              JOIN audit.audit_event e ON e.id = l.event_id
+             WHERE l.chain_seq > coalesce(c.through_seq, 0)
+             ORDER BY l.chain_seq LIMIT 1)
       FROM (SELECT 1) AS one
       LEFT JOIN audit.audit_chain_state s ON s.singleton
       LEFT JOIN audit.audit_chain_checkpoint c ON c.singleton

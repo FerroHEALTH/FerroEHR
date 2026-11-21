@@ -124,9 +124,9 @@ CREATE TYPE audit_chain_finding AS (
     finding     text
 );
 
--- Move up to p_limit records of the system intake, oldest first, into the
--- system chain, whose triggers link them; rows another replica holds are
--- skipped.
+-- Link the records of up to p_limit released intake rows, oldest first, in
+-- the order each row names them; the link's triggers chain them. Rows another
+-- replica holds are skipped, and each row leaves in the same statement.
 CREATE FUNCTION audit.audit_event_chain_move(p_limit integer, p_fhir_feed boolean, p_syslog boolean)
     RETURNS bigint
     LANGUAGE plpgsql VOLATILE SECURITY DEFINER
@@ -138,54 +138,35 @@ BEGIN
     PERFORM set_config('ferroehr.audit_chaining', 'on', true);
     WITH taken AS (
         DELETE FROM audit.audit_event_intake i
-         WHERE i.intake_id IN (SELECT t.intake_id FROM audit.audit_event_intake t
-                                WHERE t.reserved_by IS NULL
-                                ORDER BY t.intake_id LIMIT p_limit FOR UPDATE SKIP LOCKED)
-        RETURNING i.*
+         WHERE i.id IN (SELECT t.id FROM audit.audit_event_intake t
+                         WHERE t.reserved_by IS NULL
+                         ORDER BY t.id LIMIT p_limit FOR UPDATE SKIP LOCKED)
+        RETURNING i.id, i.events
     ),
-    stored AS (
-        INSERT INTO audit.audit_event (id, recorded_at, action, outcome, event_code, operation,
-               principal, patient_id, resource_class, resource_id, client_ip, token_id, domain,
-               purpose, legal_basis, result_count, request_id, roles, origins, origin_count,
-               categories, category_basis, category_evidence, category_map_digest, acting_mode,
-               assurance_level, assurance_value, professional_id, emergency_access,
-               retention_ends, retention_stated, permit, issuer, client_id, ehr_id,
-               subject_namespace, subject_lookup_failed, review, category_content, render_policy,
-               search_tokens, binding, guest, party, party_groups, provider, representation,
-               external_fields, agreement, actor_chain, facilities, binding_detail, summary,
-               token_attributes)
-        SELECT t.id, t.recorded_at, t.action, t.outcome, t.event_code, t.operation,
-               t.principal, t.patient_id, t.resource_class, t.resource_id, t.client_ip,
-               t.token_id, t.domain, t.purpose, t.legal_basis, t.result_count, t.request_id,
-               t.roles, t.origins, t.origin_count, t.categories, t.category_basis,
-               t.category_evidence, t.category_map_digest, t.acting_mode, t.assurance_level,
-               t.assurance_value, t.professional_id, t.emergency_access, t.retention_ends,
-               t.retention_stated, t.permit, t.issuer, t.client_id, t.ehr_id,
-               t.subject_namespace, t.subject_lookup_failed, t.review, t.category_content,
-               t.render_policy, t.search_tokens, t.binding, t.guest, t.party, t.party_groups,
-               t.provider, t.representation, t.external_fields, t.agreement, t.actor_chain,
-               t.facilities, t.binding_detail, t.summary, t.token_attributes
-          FROM taken t
-         ORDER BY t.intake_id
+    linked AS (
+        INSERT INTO audit.audit_event_link (event_id)
+        SELECT u.event_id
+          FROM taken t, unnest(t.events) WITH ORDINALITY AS u(event_id, n)
+         ORDER BY t.id, u.n
         RETURNING chain_seq
     ),
     fed AS (
         INSERT INTO audit.fhir_feed_outbox (chain, chain_seq)
-        SELECT 'system', s.chain_seq FROM stored s WHERE p_fhir_feed ORDER BY s.chain_seq
+        SELECT 'system', l.chain_seq FROM linked l WHERE p_fhir_feed ORDER BY l.chain_seq
         RETURNING 1
     ),
     logged AS (
         INSERT INTO audit.syslog_outbox (chain, chain_seq)
-        SELECT 'system', s.chain_seq FROM stored s WHERE p_syslog ORDER BY s.chain_seq
+        SELECT 'system', l.chain_seq FROM linked l WHERE p_syslog ORDER BY l.chain_seq
         RETURNING 1
     )
-    SELECT count(*) INTO moved FROM stored;
+    SELECT count(*) INTO moved FROM linked;
     PERFORM set_config('ferroehr.audit_chaining', 'off', true);
     RETURN moved;
 END;
 $$;
 COMMENT ON FUNCTION audit_event_chain_move(integer, boolean, boolean) IS
-    'The one path a record of no access-log entry enters the system chain by: up to p_limit intake rows, oldest first, with their outbox rows; the intake rows leave in the same statement.';
+    'The one path a record of no access-log entry enters the system chain by: links the records of up to p_limit released intake rows, oldest first, with their outbox rows; the intake rows leave in the same statement.';
 
 -- The link digest of the system chain at a position, in lower-case
 -- hexadecimal: the record's row_hash, or the link of the retention gap that
@@ -195,7 +176,7 @@ CREATE FUNCTION audit.audit_chain_link_at(p_sequence bigint) RETURNS text
     SET search_path = audit, pg_catalog
     AS $$
     SELECT coalesce(
-        (SELECT encode(e.row_hash, 'hex') FROM audit.audit_event e WHERE e.chain_seq = p_sequence),
+        (SELECT encode(l.row_hash, 'hex') FROM audit.audit_event_link l WHERE l.chain_seq = p_sequence),
         (SELECT encode(g.link_hash, 'hex') FROM audit.audit_chain_gap g WHERE g.to_seq = p_sequence))
 $$;
 COMMENT ON FUNCTION audit_chain_link_at(bigint) IS
@@ -233,9 +214,9 @@ CREATE FUNCTION audit.audit_chain_verification_step_end(
     SET search_path = audit, pg_catalog
     AS $$
     SELECT greatest(p_after, coalesce(
-        (SELECT e.chain_seq FROM audit.audit_event e
-          WHERE e.chain_seq > p_after AND e.chain_seq < p_head
-          ORDER BY e.chain_seq OFFSET greatest(p_records, 1) - 1 LIMIT 1),
+        (SELECT l.chain_seq FROM audit.audit_event_link l
+          WHERE l.chain_seq > p_after AND l.chain_seq < p_head
+          ORDER BY l.chain_seq OFFSET greatest(p_records, 1) - 1 LIMIT 1),
         p_head))
 $$;
 COMMENT ON FUNCTION audit_chain_verification_step_end(bigint, integer, bigint) IS
@@ -275,7 +256,8 @@ $$;
 COMMENT ON FUNCTION verify_audit_chain_step(bigint, text, bigint, boolean, boolean, boolean) IS
     'One bounded step of a verification walk of the system chain: verifies (p_after, p_upto] from p_after_digest, the whole-table and head checks on the last step, and moves the cursor to p_upto when the step is intact and p_advance.';
 
--- The verification of the records of audit_event in (p_after_seq, p_upto],
+-- The verification of the links of audit_event_link in (p_after_seq, p_upto],
+-- each with the record it names (a missing record reads as modified),
 -- linked from p_after_hash; with p_check_head, the whole-table checks of
 -- the render policies and search tokens and the head check as well.
 CREATE FUNCTION audit.verify_audit_chain_window(
@@ -323,17 +305,19 @@ BEGIN
 
     RETURN QUERY
     WITH linked AS (
-        SELECT e.chain_seq, e.id, e.recorded_at, e.prev_hash, e.row_hash,
-               coalesce(lag(e.row_hash) OVER (ORDER BY e.chain_seq), p_after_hash)
+        SELECT l.chain_seq, l.event_id AS id, e.recorded_at, l.prev_hash, l.row_hash,
+               coalesce(lag(l.row_hash) OVER (ORDER BY l.chain_seq), p_after_hash)
                    AS before_hash,
-               coalesce(lag(e.chain_seq) OVER (ORDER BY e.chain_seq), p_after_seq)
+               coalesce(lag(l.chain_seq) OVER (ORDER BY l.chain_seq), p_after_seq)
                    AS before_seq,
-               audit.audit_event_row_digest(e) AS recomputed,
-               EXISTS (SELECT 1 FROM audit.audit_render_policy p
-                        WHERE p.digest = e.render_policy) AS policy_present
-          FROM audit.audit_event e
-         WHERE e.chain_seq > p_after_seq
-           AND (p_upto IS NULL OR e.chain_seq <= p_upto)
+               audit.audit_event_row_digest(e, l.chain_seq, l.prev_hash) AS recomputed,
+               e.id IS NULL
+                   OR EXISTS (SELECT 1 FROM audit.audit_render_policy p
+                               WHERE p.digest = e.render_policy) AS policy_present
+          FROM audit.audit_event_link l
+          LEFT JOIN audit.audit_event e ON e.id = l.event_id
+         WHERE l.chain_seq > p_after_seq
+           AND (p_upto IS NULL OR l.chain_seq <= p_upto)
     ),
     judged AS (
         SELECT l.*,
@@ -370,8 +354,8 @@ BEGIN
         RETURN;
     END IF;
 
-    SELECT e.chain_seq, e.row_hash INTO highest, highest_row
-      FROM audit.audit_event e ORDER BY e.chain_seq DESC LIMIT 1;
+    SELECT l.chain_seq, l.row_hash INTO highest, highest_row
+      FROM audit.audit_event_link l ORDER BY l.chain_seq DESC LIMIT 1;
     highest := coalesce(highest, 0);
 
     IF highest = head_position THEN

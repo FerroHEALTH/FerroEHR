@@ -3,7 +3,7 @@
 
 -- audit: the grants.
 --
--- The clinical writer role writes the intakes and reads what it chains, the
+-- The clinical writer role writes the records and the intakes and reads what it chains, the
 -- reader role reads; neither may change a chained record. The chain moves,
 -- the verification walks and the retention sweeps that must cross those
 -- rules are SECURITY DEFINER functions the writer role may execute. The
@@ -31,7 +31,7 @@ REVOKE ALL ON FUNCTION
     verify_audit_chain_step(p_after bigint, p_after_digest text, p_upto bigint, p_advance boolean, p_last boolean, p_full boolean),
     verify_audit_chain_window(p_after_seq bigint, p_after_hash bytea, p_upto bigint, p_check_head boolean),
     verify_audit_chain_after(p_after_seq bigint, p_after_hash bytea),
-    enqueue_fhir_feed_backlog(),
+    audit_event_link_reject_deletion(),
     access_log_entry_unindex(),
     access_log_link_append(),
     access_log_shared_unchanged(),
@@ -66,11 +66,10 @@ BEGIN
         GRANT USAGE ON SCHEMA audit TO ferroehr_clinical_reader;
         GRANT SELECT ON TABLE
             audit_render_policy,
-            audit_event,
+            audit_event_link,
             audit_chain_state,
             audit_chain_gap,
             audit_chain_checkpoint,
-            fhir_feed_backlog,
             access_log_chain_state,
             access_log_chain_verified,
             access_log_chain_gap
@@ -80,6 +79,7 @@ BEGIN
             audit_search_token,
             audit_search_set,
             audit_event,
+            audit_event_link,
             audit_chain_state,
             audit_chain_gap,
             audit_chain_checkpoint,
@@ -107,6 +107,7 @@ BEGIN
             audit_search_token,
             audit_search_set,
             audit_chain_seal,
+            audit_event,
             access_log_shared,
             access_log_entry,
             access_log_link,
@@ -135,7 +136,6 @@ BEGIN
             verify_audit_chain_window(p_after_seq bigint, p_after_hash bytea, p_upto bigint, p_check_head boolean),
             verify_audit_chain_after(p_after_seq bigint, p_after_hash bytea),
             verify_audit_chain(),
-            enqueue_fhir_feed_backlog(),
             access_log_link_at(p_sequence bigint),
             access_log_sealed_link(p_sequence bigint, p_proof text),
             access_log_chain_move(p_batches bigint[], p_entries bigint[], p_seqs bigint[], p_previous text[], p_digests text[], p_fhir_feed boolean, p_syslog boolean),
@@ -175,8 +175,6 @@ BEGIN
             access_log_record
             TO ferroehr_clinical;
         GRANT UPDATE(shared) ON TABLE access_log_entry TO ferroehr_clinical;
-        GRANT UPDATE(delivered_syslog_at) ON TABLE audit_event TO ferroehr_clinical;
-        GRANT UPDATE(delivered_fhir_feed_at) ON TABLE audit_event TO ferroehr_clinical;
         GRANT UPDATE(published_at) ON TABLE access_log_checkpoint TO ferroehr_clinical;
         GRANT UPDATE(digest) ON TABLE access_log_shared TO ferroehr_clinical;
         GRANT UPDATE(retain_until) ON TABLE access_log_shared TO ferroehr_clinical;
