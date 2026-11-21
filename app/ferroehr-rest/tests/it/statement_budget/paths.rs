@@ -226,6 +226,10 @@ struct Budget {
 /// grant rows (#6013): 34 to 54 fewer allocations on every path, each of
 /// which authenticates a Basic user, measured beside the merge base, and
 /// each ceiling fell by its path's figure.
+/// The version-tree key has since served the read by version id, and the
+/// separate tree index is gone (#6207): every commit that writes a version
+/// writes 88 bytes of WAL fewer (96 on a CONTRIBUTION commit), measured
+/// beside the merge base, and each WAL ceiling fell by its path's figure.
 const BUDGETS: [Budget; 19] = [
     Budget {
         path: Path::CommitJson,
@@ -234,7 +238,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_530_778,
         round_trips: 9,
         nested: 13,
-        wal: 245_216,
+        wal: 245_128,
     },
     Budget {
         path: Path::CommitXml,
@@ -243,7 +247,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_533_031,
         round_trips: 9,
         nested: 14,
-        wal: 245_289,
+        wal: 245_201,
     },
     Budget {
         path: Path::CommitFlat,
@@ -252,7 +256,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_528_525,
         round_trips: 9,
         nested: 13,
-        wal: 245_263,
+        wal: 245_175,
     },
     Budget {
         path: Path::ReadJson,
@@ -333,7 +337,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 1_649_934,
         round_trips: 13,
         nested: 14,
-        wal: 245_784,
+        wal: 245_688,
     },
     Budget {
         path: Path::ReadAtTime,
@@ -351,7 +355,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 144_180,
         round_trips: 15,
         nested: 11,
-        wal: 6213,
+        wal: 6125,
     },
     Budget {
         path: Path::ReadStatus,
@@ -369,7 +373,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 117_146,
         round_trips: 31,
         nested: 20,
-        wal: 7953,
+        wal: 7865,
     },
     Budget {
         path: Path::AqlMatches,
@@ -396,7 +400,7 @@ const BUDGETS: [Budget; 19] = [
         peak_bytes: 132_147,
         round_trips: 31,
         nested: 21,
-        wal: 10_594,
+        wal: 10_506,
     },
 ];
 

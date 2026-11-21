@@ -252,9 +252,16 @@ CREATE TABLE version (
     -- version_tree_id} (master06 §Distributed Versioning). `tier` joins it
     -- because a unique constraint on a partitioned table must contain the
     -- partition key; an archived object moves whole, so no version of one
-    -- object is ever split across tiers.
+    -- object is ever split across tiers. Led by the three tree columns, it
+    -- also serves a read of one version by its VERSION_TREE_ID, for any branch
+    -- and in both tiers: the trunk position index is partial on
+    -- branch_number = 0, which a generic plan cannot prove of a parameter
+    -- (PostgreSQL 18, "Partial Indexes"). The object id follows them: led by
+    -- vo_id, the key would tie with the vo_id-led indexes below when no
+    -- statistics separate them, and could be chosen to scan every version of
+    -- the object. No openEHR spec governs index layout: our own design.
     CONSTRAINT uq_version_tree UNIQUE
-        (tier, creating_system_id, trunk_version, branch_number, branch_version, vo_id),
+        (trunk_version, branch_number, branch_version, vo_id, creating_system_id, tier),
     CONSTRAINT ck_version_tier CHECK (tier IN ('hot', 'cold')),
     CONSTRAINT ck_version_sys_version_positive CHECK (sys_version >= 1),
     CONSTRAINT ck_version_trunk_version_positive CHECK (trunk_version >= 1),
@@ -336,19 +343,6 @@ CREATE INDEX idx_version_hot_template ON version_hot (template_id)
 -- https://www.postgresql.org/docs/18/brin-intro.html).
 CREATE INDEX idx_version_hot_committed_brin
     ON version_hot USING brin (committed_at);
--- A read of one version by its VERSION_TREE_ID binds the object and the three
--- tree columns as parameters. The trunk position index is partial on
--- branch_number = 0, which a generic plan cannot prove of a parameter
--- (PostgreSQL 18, "Partial Indexes"), so this index matches the four columns
--- for any branch, in both tiers, and an archived object stays readable by
--- version id at the same cost. The object id comes last, as in
--- uq_version_tree: an index led by vo_id would tie with the primary key on
--- (tier, vo_id, sys_version) and could be chosen to scan every version of the
--- object. No openEHR spec governs index layout: our own design.
-CREATE INDEX idx_version_hot_tree
-    ON version_hot (trunk_version, branch_number, branch_version, vo_id);
-CREATE INDEX idx_version_cold_tree
-    ON version_cold (trunk_version, branch_number, branch_version, vo_id);
 -- ORDER BY c/uid/value sorts on the uid the AQL engine synthesizes from the
 -- stored identity columns (crate::aql::sql::value::version_field_expr). This
 -- index holds the same expression, so a serial scan of it feeds the limit in
