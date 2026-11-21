@@ -18,7 +18,8 @@ use openehr_rm::draft::access_control::terminology::representation::{
     Representation, TERMINOLOGY_ID_ROLE_CODE,
 };
 use openehr_rm::draft::access_control::terminology::{
-    CareRelationship, TERMINOLOGY_ID_PARTICIPATION_TYPE, Term, ValueSetBinding,
+    CareRelationship, ForeignCode, ForeignKind, TERMINOLOGY_ID_PARTICIPATION_TYPE, Term,
+    ValueSetBinding,
 };
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
@@ -92,6 +93,35 @@ impl FerroEhrService {
             .map_or(Ok(()), |violation| {
                 Err(ServiceError::ValidationFailed(vec![violation]))
             })
+    }
+
+    /// The care role a verified credential attests for the `attested` path,
+    /// when `attested` is a code of the `care_role` value set the policy in
+    /// force binds, or, unbound, of `HL7_ParticipationType`; `None` when it
+    /// attests none, so the relationship takes `PART` (draft access control
+    /// decision procedure, Holding a Care Relationship, `attested`).
+    ///
+    /// A code the value set does not hold, or one no terminology server could
+    /// check under `terminology.on_error = "refuse"`, is no role of the value
+    /// set, so it reads as `PART` and never as the role it names.
+    pub async fn attested_care_role(&self, attested: Option<&DvCodedText>) -> Option<ForeignCode> {
+        let coded = attested?;
+        // NOTE: our own design (#6078), a code of the access terminology is no care role, so the
+        // credential attests none and the relationship takes PART.
+        let role = ForeignCode::read(ForeignKind::CareRole, coded).ok()?;
+        let in_force = self.access_policy().in_force();
+        let facts = CareFacts::of(in_force.policy.as_deref());
+        match self.care_role(facts, "trc.care_role", coded).await {
+            None => Some(role),
+            Some(violation) => {
+                tracing::info!(
+                    reason = %violation.message,
+                    "an attested care role is outside the care_role value set; the attested \
+                     relationship takes PART"
+                );
+                None
+            }
+        }
     }
 
     /// The refusal of the care role `role` at `path`: outside the value set

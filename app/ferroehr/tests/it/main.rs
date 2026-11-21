@@ -178,6 +178,7 @@ mod service_demographic_refs;
 mod service_dump_load;
 mod service_ehr;
 mod service_ehr_access;
+mod service_ehr_access_view;
 mod service_ehr_package;
 mod service_events;
 mod service_extract;

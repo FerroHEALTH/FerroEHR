@@ -95,6 +95,10 @@ guarded_handler! {
                                           `ETag` is the weak `W/\"<version_uid>\"` of \
                                           the version served and `Last-Modified` its \
                                           commit instant.",
+             headers(("redacted" = String, description = "`marking` when the \
+                      caller is a gate-keeper who is not the subject, who reads the \
+                      settings without their marking and a version without its \
+                      `signature`.")),
              body = serde_json::Value),
             EhrAccessRefusal,
             SpecProfileConflict
@@ -118,6 +122,10 @@ guarded_handler! {
         responses(
             (status = 200, description = "The bare EHR_ACCESS of that version, its \
                                           weak `ETag` and its `Last-Modified`.",
+             headers(("redacted" = String, description = "`marking` when the \
+                      caller is a gate-keeper who is not the subject, who reads the \
+                      settings without their marking and a version without its \
+                      `signature`.")),
              body = serde_json::Value),
             EhrAccessRefusal,
             SpecProfileConflict
@@ -183,6 +191,10 @@ guarded_handler! {
                                           wrapping the EHR_ACCESS, with its commit \
                                           audit, its weak `ETag` and its \
                                           `Last-Modified`.",
+             headers(("redacted" = String, description = "`marking` when the \
+                      caller is a gate-keeper who is not the subject, who reads the \
+                      settings without their marking and a version without its \
+                      `signature`.")),
              body = serde_json::Value),
             EhrAccessRefusal,
             SpecProfileConflict
@@ -209,6 +221,10 @@ guarded_handler! {
             (status = 200, description = "The ORIGINAL_VERSION or IMPORTED_VERSION of \
                                           that uid, with its weak `ETag` and its \
                                           `Last-Modified`.",
+             headers(("redacted" = String, description = "`marking` when the \
+                      caller is a gate-keeper who is not the subject, who reads the \
+                      settings without their marking and a version without its \
+                      `signature`.")),
              body = serde_json::Value),
             EhrAccessRefusal,
             SpecProfileConflict

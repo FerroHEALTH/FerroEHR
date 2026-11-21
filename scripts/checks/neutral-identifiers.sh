@@ -34,10 +34,10 @@ cd "$(dirname "$0")/../.."
 readonly BANNED='openehr-[a-z_]+-[a-z_]+\.[a-z0-9_-]*ferro[a-z0-9_-]*\.v[0-9]|urn:[^"[:space:]]*ferro|issuer[a-z_]*"?[[:space:]]*(:|=|=>)[[:space:]]*(some\()?"[^"]*ferro|issuer[a-z_]*:[[:space:]]*&str[[:space:]]*=[[:space:]]*"[^"]*ferro'
 
 # The one exception: the FerroHEALTH family's SCIM extension schema
-# (app/ferroehr-rest/src/scim/endpoint/schemas.rs lines 43 and 48,
-# app/ferroehr/src/config/binding/person.rs line 41), the provisioning
-# interface the family's products share, an API contract and no stored
-# content; #6154 settles it with them.
+# (app/ferroehr-rest/src/scim/endpoint/schemas.rs, app/ferroehr/src/config/
+# binding/person.rs), the provisioning contract like the /scim/v2 base path.
+# It keeps the name Microsoft Entra's custom attribute pattern requires,
+# decided on #6154 and documented in the book's `[auth.scim]` section.
 readonly FAMILY_SCIM='urn:ietf:params:scim:schemas:extension:ferrohealth:2\.0:'
 
 sources() {
