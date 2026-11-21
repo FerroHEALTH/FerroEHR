@@ -228,6 +228,7 @@ async fn a_token_stored_by_another_writer_at_once_is_its_row() {
         }
     });
     until_waiting(&pool).await;
+    // NOTE: our own design (#5762), a test's writer of the audit store, which no request makes.
     first.commit().await.expect("the first writer commits");
     let ids = second
         .await
@@ -272,6 +273,7 @@ async fn a_set_stored_by_another_writer_at_once_is_its_row() {
         }
     });
     until_waiting(&pool).await;
+    // NOTE: our own design (#5762), a test's writer of the audit store, which no request makes.
     first.commit().await.expect("the first writer commits");
     let id = second
         .await
