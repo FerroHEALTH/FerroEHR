@@ -197,6 +197,38 @@ those resources do not have). They speak canonical JSON/XML only.
 The query API is **JSON only**: it does not accept XML or the simplified media
 types.
 
+## Compressed bodies
+
+The server compresses a response with gzip or Brotli when your client sends
+`Accept-Encoding` naming one, for bodies of 1 KiB and more.
+
+You can compress a request body too. Send it with `Content-Encoding: gzip`
+(or `x-gzip`) or `Content-Encoding: br`, and the server decodes it before
+any route reads it, so a compressed commit stores the same version as the
+uncompressed one. An IPS composition commit of 128,474 bytes is 8,483 bytes
+in gzip.
+
+```shell
+# Commit a composition compressed with gzip
+gzip -c composition.json | curl -u ferroehr:ferroehr \
+  -H 'Content-Type: application/json' \
+  -H 'Content-Encoding: gzip' \
+  --data-binary @- \
+  http://localhost:8080/ferroehr/rest/openehr/v1/ehr/$EHR_ID/composition
+```
+
+- Any other content coding, or more than one, is answered **415 Unsupported
+  Media Type** with `Accept-Encoding: gzip, br` naming the codings the server
+  decodes (RFC 9110 §15.5.16, RFC 7694 §3).
+- The body limits hold the **decoded** size: a body that decodes past
+  [`api.body_limit`](../installation/config-server.md#api) or
+  `server.body_limit` is answered **413**, and the server stops decoding at
+  the limit.
+- A body that does not decode in the coding it names is answered **400**.
+
+An operator turns this off with `server.request_decompression = false`
+([the `[server]` section](../installation/config-server.md)).
+
 ## The `Prefer` header
 
 Write operations (create/update) accept a `Prefer` header controlling the

@@ -33,6 +33,7 @@ trusted_proxies = []
 forwarded_header = "forwarded"
 compression = true
 compression_min_size = "1KiB"
+request_decompression = true
 # public_base_url = "https://cdr.example.com"
 ```
 
@@ -54,6 +55,7 @@ compression_min_size = "1KiB"
 | `forwarded_header` | enum{forwarded,x-forwarded-for} | `forwarded` | The header a trusted proxy names the client in (`Forwarded` is RFC 7239). |
 | `compression` | bool | `true` | Compress a response with gzip or Brotli when the client accepts one. |
 | `compression_min_size` | size | `"1KiB"` | The smallest response body that is compressed. |
+| `request_decompression` | bool | `true` | Decode a request body sent with `Content-Encoding: gzip` (or `x-gzip`) or `br` before any route reads it. Any other coding is refused `415` with `Accept-Encoding: gzip, br`, and `body_limit` and `api.body_limit` hold the decoded size, so a body that decodes past them is refused `413` without decoding the rest. FerroEHR turns it on, since compressing a request is the client's choice; `false` serves a compressed body undecoded. |
 | `public_base_url` | string | unset | The URL clients reach the server at, through any proxy in front of it: `https://cdr.example.com`, or with the path a proxy serves it under (`https://gw.example.com/cdr`). FerroEHR's own key beside the shared section, and the one place a deployment names its public URL; see [below](#public_base_url-the-one-public-url). An absolute `http(s)` URL with no userinfo, query or fragment. Required with `auth.smart.discovery`, `[auth.scim]` or `[auth.dpop]` under `auth.enabled`. |
 
 ### Sizing `max_concurrent_requests`

@@ -120,8 +120,10 @@ pub struct FerroEhrConfig {
 impl Default for FerroEhrConfig {
     /// Every section's own default, except FerroEHR's `[server]`: the
     /// listener on every interface at port 8080, the port the images expose,
-    /// and a 64 MiB body ceiling, since the largest operational template in
-    /// the vendored CKM corpus is 5.4 MB. The loader layers this section
+    /// a 64 MiB body ceiling, since the largest operational template in the
+    /// vendored CKM corpus is 5.4 MB, and gzip and Brotli request bodies
+    /// decoded, since compressing a commit is the client's choice (an IPS
+    /// commit is 128,474 B, 8,483 B in gzip). The loader layers this section
     /// under the file ([`loader::loader`]), so a partial `[server]` table
     /// keeps both. No openEHR spec governs configuration: our own design.
     fn default() -> Self {
@@ -131,6 +133,7 @@ impl Default for FerroEhrConfig {
                 shared: ferrohealth_server::section::ServerSection {
                     listen: std::net::SocketAddr::from(([0, 0, 0, 0], 8080)),
                     body_limit: ferrohealth_config::units::ByteSize::from_mib(64),
+                    request_decompression: true,
                     ..ferrohealth_server::section::ServerSection::default()
                 },
                 public_base_url: None,
