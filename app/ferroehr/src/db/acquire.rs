@@ -211,6 +211,24 @@ fn holds_a_domain() -> bool {
     .unwrap_or(false)
 }
 
+/// Whether the current [`request_scope`] has an audit connection checked
+/// out beside one of a storage domain other than `domain`: it is inside a
+/// write of that other domain, which takes the audit connection first and
+/// its domain's next and keeps both for its transaction (#5964).
+fn writes_another_domain(domain: Domain) -> bool {
+    OUT.try_with(|out| {
+        out.try_borrow().is_ok_and(|out| {
+            let holds = |of: &dyn Fn(Domain) -> bool| {
+                out.iter()
+                    .any(|(_, name)| name.is_some_and(|name| of(name.domain())))
+            };
+            holds(&|held| held == Domain::Audit)
+                && holds(&|held| held != Domain::Audit && held != domain)
+        })
+    })
+    .unwrap_or(false)
+}
+
 /// Notes in the current [`request_scope`] that a connection of the pool `key`
 /// named `name` is checked out (`out`) or back (`!out`).
 fn note_checkout(key: usize, name: Option<PoolName>, out: bool) {
@@ -571,6 +589,13 @@ pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
     if name.is_some_and(|name| name.domain() == Domain::Audit) && holds_a_domain() {
         out_of_order(label(name));
     }
+    if let Some(domain) = name
+        .map(PoolName::domain)
+        .filter(|domain| *domain != Domain::Audit)
+        && writes_another_domain(domain)
+    {
+        inside_a_write(label(name));
+    }
     // Boxed: the probe and the pool's connect future are large, and every
     // caller's state machine would otherwise carry them inline.
     let mut waiting = Box::pin(acquire_unmetered(pool));
@@ -639,6 +664,35 @@ fn out_of_order(label: &'static str) {
     tracing::warn!(
         pool = label,
         "a request asked the audit pool for a connection while it held a clinical or party one"
+    );
+}
+
+/// A request asks one storage domain's pool for a connection inside a write
+/// of the other domain, holding the write's audit and domain connections:
+/// once each pool is held so, the writes wait for each other until the
+/// acquire timeout. A write reads what it needs of the other domain before
+/// it takes its connections. Debug builds refuse it; a release build counts
+/// it on
+/// [`DB_POOL_NESTED_ACQUIRES`](crate::telemetry::metrics::DB_POOL_NESTED_ACQUIRES)
+/// with `order="inside_a_write"` and warns. No openEHR spec governs this:
+/// our own design (#6186).
+fn inside_a_write(label: &'static str) {
+    debug_assert!(
+        false,
+        "a request asked one domain's pool for a connection inside a write of the other (#6186)"
+    );
+    crate::telemetry::metrics::metrics()
+        .db_pool_nested_acquires
+        .add(
+            1,
+            &[
+                KeyValue::new(POOL, label),
+                KeyValue::new("order", "inside_a_write"),
+            ],
+        );
+    tracing::warn!(
+        pool = label,
+        "a request asked one domain's pool for a connection inside a write of the other"
     );
 }
 
