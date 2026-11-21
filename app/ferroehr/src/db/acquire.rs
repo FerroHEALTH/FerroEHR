@@ -37,10 +37,13 @@
 //! connection to the pool once: at [`release_held`], which the HTTP layer calls
 //! when the handler has answered, so the work after its last statement (the
 //! audit record, the response's way out) holds no connection, or else when
-//! the scope ends. While the request waits for a pool or for another task's
-//! work ([`handoff`]), the scope keeps nothing: what it kept goes back before
-//! the wait, and a connection a read beside the wait gives back goes to its
-//! pool (#6027). How long the request held each connection is recorded on
+//! the scope ends. A request that turns from one storage domain to the other
+//! gives back what it keeps of the first ([`acquire`]): the party connection
+//! its authentication and access decision read on goes back when its clinical
+//! work begins, instead of staying idle until the handler answers. While the
+//! request waits for a pool or for another task's work ([`handoff`]), the
+//! scope keeps nothing: what it kept goes back before the wait, and a
+//! connection a read beside the wait gives back goes to its pool (#6027). How long the request held each connection is recorded on
 //! [`DB_POOL_HOLD_DURATION`](crate::telemetry::metrics::DB_POOL_HOLD_DURATION)
 //! (#5774). Outside a scope every guard returns its connection to the pool,
 //! as before.
@@ -208,6 +211,24 @@ fn holds_a_domain() -> bool {
     .unwrap_or(false)
 }
 
+/// Whether the current [`request_scope`] has an audit connection checked
+/// out beside one of a storage domain other than `domain`: it is inside a
+/// write of that other domain, which takes the audit connection first and
+/// its domain's next and keeps both for its transaction (#5964).
+fn writes_another_domain(domain: Domain) -> bool {
+    OUT.try_with(|out| {
+        out.try_borrow().is_ok_and(|out| {
+            let holds = |of: &dyn Fn(Domain) -> bool| {
+                out.iter()
+                    .any(|(_, name)| name.is_some_and(|name| of(name.domain())))
+            };
+            holds(&|held| held == Domain::Audit)
+                && holds(&|held| held != Domain::Audit && held != domain)
+        })
+    })
+    .unwrap_or(false)
+}
+
 /// Notes in the current [`request_scope`] that a connection of the pool `key`
 /// named `name` is checked out (`out`) or back (`!out`).
 fn note_checkout(key: usize, name: Option<PoolName>, out: bool) {
@@ -254,8 +275,9 @@ pub fn release_held() {
 /// connection one of them gives back while the other waits here is not kept
 /// either ([`Checkout`]): kept, it would be held across the rest of this
 /// wait, and requests each keeping one pool's connection so while they wait
-/// for another's stall as above (#6027). No specification governs this: our
-/// own design.
+/// for another's stall as above (#6027). A request's wait on another
+/// server, the terminology server or the blob store, goes through here too
+/// (#5774). No specification governs this: our own design.
 pub async fn handoff<F: Future>(wait: F) -> F::Output {
     let _waiting = Waiting::begin();
     release_held();
@@ -360,6 +382,50 @@ fn held_for(since: Instant, name: Option<PoolName>) {
 /// options every handle of it reads.
 fn pool_key(pool: &PgPool) -> usize {
     std::ptr::from_ref(pool.options()).addr()
+}
+
+/// Gives back to its pool every connection the current [`request_scope`]
+/// keeps of a storage domain other than the one of `pool`, whose key is
+/// `key`, recording how long the request held each.
+///
+/// A request reads the party store for its authentication and access
+/// decision and then does its clinical work, or the reverse, and seldom
+/// turns back: kept, the first domain's connection would sit idle until the
+/// handler answers, several times as long as its statements ran (#5774). A
+/// request that does turn back checks out again. An audit connection is
+/// never given back here: a write takes it before its domain connection and
+/// keeps it for its transaction (#5964), and the audit pool is never asked
+/// for one while a domain connection is held. No openEHR spec governs
+/// this: our own design.
+fn release_other_domain(pool: &PgPool, key: usize) {
+    let other = |kept: &Held, domain: Domain| {
+        kept.pool != key
+            && kept
+                .name
+                .is_some_and(|name| name.domain() != Domain::Audit && name.domain() != domain)
+    };
+    // NOTE: our own design (#5774), outside a scope nothing is kept.
+    let _outside_a_scope = HELD.try_with(|held| {
+        let Ok(mut held) = held.try_borrow_mut() else {
+            return;
+        };
+        if !held.iter().any(|kept| other(kept, Domain::Audit)) {
+            return;
+        }
+        let Some(domain) = name_of(pool)
+            .map(PoolName::domain)
+            .filter(|domain| *domain != Domain::Audit)
+        else {
+            return;
+        };
+        held.retain(|kept| {
+            let give_back = other(kept, domain);
+            if give_back {
+                held_for(kept.since, kept.name);
+            }
+            !give_back
+        });
+    });
 }
 
 /// The connection the current [`request_scope`] keeps for the pool `key`,
@@ -511,6 +577,7 @@ impl Drop for Checkout {
 /// new connection.
 pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
     let key = pool_key(pool);
+    release_other_domain(pool, key);
     if let Some(held) = take_held(key) {
         return Ok(Checkout::new(held.conn, key, held.since, held.name));
     }
@@ -521,6 +588,13 @@ pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
     }
     if name.is_some_and(|name| name.domain() == Domain::Audit) && holds_a_domain() {
         out_of_order(label(name));
+    }
+    if let Some(domain) = name
+        .map(PoolName::domain)
+        .filter(|domain| *domain != Domain::Audit)
+        && writes_another_domain(domain)
+    {
+        inside_a_write(label(name));
     }
     // Boxed: the probe and the pool's connect future are large, and every
     // caller's state machine would otherwise carry them inline.
@@ -590,6 +664,35 @@ fn out_of_order(label: &'static str) {
     tracing::warn!(
         pool = label,
         "a request asked the audit pool for a connection while it held a clinical or party one"
+    );
+}
+
+/// A request asks one storage domain's pool for a connection inside a write
+/// of the other domain, holding the write's audit and domain connections:
+/// once each pool is held so, the writes wait for each other until the
+/// acquire timeout. A write reads what it needs of the other domain before
+/// it takes its connections. Debug builds refuse it; a release build counts
+/// it on
+/// [`DB_POOL_NESTED_ACQUIRES`](crate::telemetry::metrics::DB_POOL_NESTED_ACQUIRES)
+/// with `order="inside_a_write"` and warns. No openEHR spec governs this:
+/// our own design (#6186).
+fn inside_a_write(label: &'static str) {
+    debug_assert!(
+        false,
+        "a request asked one domain's pool for a connection inside a write of the other (#6186)"
+    );
+    crate::telemetry::metrics::metrics()
+        .db_pool_nested_acquires
+        .add(
+            1,
+            &[
+                KeyValue::new(POOL, label),
+                KeyValue::new("order", "inside_a_write"),
+            ],
+        );
+    tracing::warn!(
+        pool = label,
+        "a request asked one domain's pool for a connection inside a write of the other"
     );
 }
 
