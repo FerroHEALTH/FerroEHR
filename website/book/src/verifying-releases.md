@@ -406,7 +406,7 @@ an action statement saying what to do until the fix ships. `trivy --vex`
 leaves those findings in its output on purpose; only `not_affected` and
 `fixed` statements remove one.
 
-The `ferroehr-postgres` image is the upstream `postgres:18.6` image with
+The `ferroehr-postgres` image is the upstream `postgres:19.0` image with
 Debian's security updates applied at build time, minus two things: GnuPG and
 the libraries only it uses (upstream needs it only to import a package signing
 key while building the image), and upstream's `gosu`, a Go binary, which a

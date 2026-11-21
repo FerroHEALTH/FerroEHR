@@ -1,7 +1,7 @@
 # Docker Compose
 
 Docker Compose is the quickest way to run FerroEHR together with a
-preconfigured PostgreSQL 18, for local development and evaluation. The
+preconfigured PostgreSQL 19, for local development and evaluation. The
 quickstart is **one file and zero configuration**: download
 `docker-compose.yml`, run `docker compose up`, and the published images are
 pulled and started: no repository checkout, no bind mounts, no environment
@@ -31,7 +31,7 @@ FerroEHR publishes three container images to GHCR:
 | Image | Contents |
 |---|---|
 | `ghcr.io/ferrohealth/ferroehr` | The `ferroehr` server binary on a distroless, non-root, shell-less multi-arch base (amd64 + arm64). Configured by a mounted TOML file and/or `FERROEHR__*` environment variables. |
-| `ghcr.io/ferrohealth/ferroehr-postgres` | `postgres:18.6` (with Debian security updates applied at image build) plus init scripts that pre-create the application login role, the `NOLOGIN` group roles (`ferroehr_migrator` and the four database roles `ferroehr_clinical`, `ferroehr_party`, `ferroehr_clinical_reader`, `ferroehr_party_reader`), the database and the schemas (`clinical`, `ext`, `audit`), so the app role never needs superuser. |
+| `ghcr.io/ferrohealth/ferroehr-postgres` | `postgres:19.0` (with Debian security updates applied at image build) plus init scripts that pre-create the application login role, the `NOLOGIN` group roles (`ferroehr_migrator` and the four database roles `ferroehr_clinical`, `ferroehr_party`, `ferroehr_clinical_reader`, `ferroehr_party_reader`), the database and the schemas (`clinical`, `ext`, `audit`), so the app role never needs superuser. |
 | `ghcr.io/ferrohealth/ferroehr-viewer` | The [viewer](../viewer/index.md), a standalone web application that talks to the CDR strictly over ITS-REST. Optional; see the `viewer` profile below. |
 
 Each image is published under several tags:
@@ -70,7 +70,7 @@ schema](../operations.md#which-credential-prepares-the-schema) and
 
 The PostgreSQL image is **init-scripts only**: it creates roles and schemas,
 and bakes in no migration state. The schema needs no extension, so a plain
-PostgreSQL 18 serves just as well. The server owns the schema content
+PostgreSQL 19 serves just as well. The server owns the schema content
 and applies its migrations idempotently at every boot, so a fresh database
 self-provisions and a restart is a no-op.
 
@@ -134,7 +134,7 @@ for the API credential; `api.openapi_ui` chooses who may read it).
 > for constrained machines.
 
 > [!WARNING]
-> PostgreSQL 18's official image stores data in a major-version subdirectory,
+> PostgreSQL 19's official image stores data in a major-version subdirectory,
 > so the data volume mounts at `/var/lib/postgresql` (the parent), **not** the
 > pre-18 `/var/lib/postgresql/data`. The bundled Compose file already does this
 > correctly; keep the convention if you adapt it.

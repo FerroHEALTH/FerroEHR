@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! A bound of the wrong JSON type against a temporal AQL path, executed
-//! against a real PostgreSQL 18 (shared testkit harness, #5064).
+//! against a real PostgreSQL 19 (shared testkit harness, #5064).
 //!
 //! QUERY master03 §Built-in Types (Dates and Times): a date/time operand is an
 //! ISO 8601 string, so a number, boolean or `null` bound against a temporal

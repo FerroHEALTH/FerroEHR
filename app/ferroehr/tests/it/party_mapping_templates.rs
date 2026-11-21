@@ -3,7 +3,7 @@
 
 //! The boot rules of the shared party mapping that read its templates, a
 //! mapped write that keeps what it does not map, and the refusal to delete a
-//! template the mapping names (#5013), over a real PostgreSQL 18.
+//! template the mapping names (#5013), over a real PostgreSQL 19.
 //!
 //! The definitions are synthetic ADL 2 archetypes the ADL 2 store compiles to
 //! their OPT2: a professional `PERSON` with an identifier `ELEMENT` and an

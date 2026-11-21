@@ -1,15 +1,15 @@
 # `testkit` — the shared test-database harness (tooling, not part of the app)
 
-One PostgreSQL 18 server + one migrated **template database** per migration
+One PostgreSQL 19 server + one migrated **template database** per migration
 fingerprint + one `CREATE DATABASE … TEMPLATE` clone per test. Every
 DB-backed test in the workspace gets its database from `testkit::db()`
 (migrated clone) or `testkit::empty_db()` (bare clone) — never by starting its
 own container or running its own migrations.
 
 - **Server resolution:** `FERROEHR_TEST_PG_URL` (CI, local dev server) →
-  else the reusable named container `ferroehr-testkit-pg18` (testcontainers
+  else the reusable named container `ferroehr-testkit-pg19` (testcontainers
   `reusable-containers`; deliberately left running across runs — reclaim
-  with `docker rm -f ferroehr-testkit-pg18`). The container runs the
+  with `docker rm -f ferroehr-testkit-pg19`). The container runs the
   non-durable settings the PostgreSQL docs describe for throwaway data
   (`fsync=off` etc.) — never copy those flags anywhere near production
   config — with `pg_stat_statements` loaded at `track = all` for the
@@ -18,7 +18,7 @@ own container or running its own migrations.
   the image default is 64 MB, see the failure mode below). The shm size is
   applied at container CREATION: a container that already exists is adopted
   as-is, so changing the value or the settings needs
-  `docker rm -f ferroehr-testkit-pg18`.
+  `docker rm -f ferroehr-testkit-pg19`.
 - **Clone lifetime:** `TestDb::drop` drops the clone and JOINS the thread
   that does it, so a passing test and a panicking one both leave nothing (a
   detached thread died with the test process, which leaked hundreds of clones
@@ -68,7 +68,7 @@ could not resize shared memory segment "/PostgreSQL.<n>" to <n> bytes:
 No space left on device
 ```
 
-and `docker exec ferroehr-testkit-pg18 df -h /dev/shm` shows `/dev/shm` nearly
+and `docker exec ferroehr-testkit-pg19 df -h /dev/shm` shows `/dev/shm` nearly
 full at idle.
 
 **Cause.** Leaked clone databases accumulating on the reusable container
@@ -85,9 +85,9 @@ symptom of the shm ceiling.
 reclaims unused stale clones on the next test process, and the container is
 created with a 1 GiB `/dev/shm`. To force it: `testkit::sweep_stale()`, or
 drop every `ferroehr_tk_*` database except the live `ferroehr_tk_tpl_*` template
-and restart the container (`docker restart ferroehr-testkit-pg18`) so the
+and restart the container (`docker restart ferroehr-testkit-pg19`) so the
 statistics area is rebuilt. A pre-existing container still carries the old
-64 MB — `docker rm -f ferroehr-testkit-pg18` to recreate it with the explicit
+64 MB — `docker rm -f ferroehr-testkit-pg19` to recreate it with the explicit
 size.
 
 **Prevention (in place).** Explicit `--shm-size` on the container (the

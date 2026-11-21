@@ -14,7 +14,7 @@
 # schedule is refused rather than reported. Each step is one
 # `ferrohealth-perf run` at one rate.
 #
-# The topology is one or more FerroEHR instances on one PostgreSQL 18, with
+# The topology is one or more FerroEHR instances on one PostgreSQL 19, with
 # Caddy in front when there is more than one (round robin, no sticky
 # sessions). The seed is the perf gate's (scripts/perf/access-seed.sh): an
 # ACCESS_POLICY with a controller rule, a care team with the clinician as
@@ -95,7 +95,7 @@
 #   CAPACITY_OUT         the output directory (default target/capacity)
 #   CAPACITY_TOPOLOGY    native (default) or docker
 #   CAPACITY_FERROEHR    native: the ferroehr binary
-#   CAPACITY_PG_BIN      native: the directory of PostgreSQL 18's binaries
+#   CAPACITY_PG_BIN      native: the directory of PostgreSQL 19's binaries
 #   CAPACITY_CADDY       native: the caddy binary, for more than one instance
 #   CAPACITY_IMAGE       docker: the FerroEHR image
 #   CAPACITY_PG_IMAGE    docker: the FerroEHR PostgreSQL image
@@ -304,7 +304,7 @@ EOF
 }
 
 up_native() { # <instances>
-  local count="$1" pg_bin="${CAPACITY_PG_BIN:?CAPACITY_PG_BIN names the bin directory of PostgreSQL 18}"
+  local count="$1" pg_bin="${CAPACITY_PG_BIN:?CAPACITY_PG_BIN names the bin directory of PostgreSQL 19}"
   local bin="${CAPACITY_FERROEHR:?CAPACITY_FERROEHR names the ferroehr binary}" i pgdata="$CAP_OUT_ABS/pg"
   [[ -x "$bin" ]] || cap_die "$bin is not executable"
   if [[ ! -d "$pgdata" ]]; then

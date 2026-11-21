@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end tests against a real PostgreSQL 18 (shared testkit harness): the
+//! End-to-end tests against a real PostgreSQL 19 (shared testkit harness): the
 //! `PARTY_RELATIONSHIP` CRUD + versioning + `VERSIONED_OBJECT` + revision
 //! history + error cases (driven through the `PartyRelationshipService` seam).
 

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! A migration as a system client (#5432), over a real PostgreSQL 18: an
+//! A migration as a system client (#5432), over a real PostgreSQL 19: an
 //! `AGENT` whose `ROLE` grants `import_ehr`, `import_ehr_extract` or
 //! `export_ehr_extract` for a subject namespace imports and exports the EHRs
 //! of that namespace with no person's token, under its own `ACTOR`, and a

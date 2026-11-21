@@ -14,7 +14,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>FerroEHR: a pure-Rust openEHR Clinical Data Repository</title>
-  <meta name="description" content="FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0, AQL 1.1 and PostgreSQL 18-native storage, shipped as a single self-contained binary, with its openEHR conformance measured and machine-verified.">
+  <meta name="description" content="FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0, AQL 1.1 and PostgreSQL 19-native storage, shipped as a single self-contained binary, with its openEHR conformance measured and machine-verified.">
   <link rel="canonical" href="https://ferroehr.eu/">
   <link rel="stylesheet" href="./style.css?v={{hash:style.css}}">
   <link rel="icon" href="./assets/brand/favicon.svg" type="image/svg+xml">
@@ -24,7 +24,7 @@
   <meta property="og:url" content="https://ferroehr.eu/">
   <meta property="og:site_name" content="FerroEHR">
   <meta property="og:title" content="FerroEHR: a pure-Rust openEHR Clinical Data Repository">
-  <meta property="og:description" content="openEHR conformance, measured: ITS-REST 1.1.0, AQL 1.1 and PostgreSQL 18, in one self-contained binary.">
+  <meta property="og:description" content="openEHR conformance, measured: ITS-REST 1.1.0, AQL 1.1 and PostgreSQL 19, in one self-contained binary.">
   <meta property="og:image" content="https://ferroehr.eu/assets/social-card.png">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1280">
@@ -84,13 +84,13 @@
         "@type": "SoftwareSourceCode",
         "@id": "https://ferroehr.eu/#software",
         "name": "FerroEHR",
-        "description": "A pure-Rust openEHR Clinical Data Repository implementing ITS-REST 1.1.0 and AQL 1.1 on PostgreSQL 18, shipped as a single self-contained binary.",
+        "description": "A pure-Rust openEHR Clinical Data Repository implementing ITS-REST 1.1.0 and AQL 1.1 on PostgreSQL 19, shipped as a single self-contained binary.",
         "url": "https://ferroehr.eu/",
         "codeRepository": "https://github.com/FerroHEALTH/FerroEHR",
         "programmingLanguage": "Rust",
         "license": "https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE",
         "applicationCategory": "HealthApplication",
-        "runtimePlatform": "PostgreSQL 18",
+        "runtimePlatform": "PostgreSQL 19",
         "isBasedOn": "https://specifications.openehr.org/",
         "documentation": "https://ferroehr.eu/docs/latest/"
       }
@@ -134,7 +134,7 @@
           store and query structured health records through a vendor-neutral
           REST API and the Archetype Query Language. FerroEHR implements that
           standard natively in Rust: headless, API-first, one self-contained
-          binary on PostgreSQL 18.
+          binary on PostgreSQL 19.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="./docs/latest/getting-started.html">Run the quickstart</a>
@@ -182,7 +182,7 @@
           </a>
 
           <a class="card" href="./docs/latest/concepts/storage.html">
-            <span class="tag">PostgreSQL 18</span>
+            <span class="tag">PostgreSQL 19</span>
             <h3>Full versioning</h3>
             <p>
               Contribution-atomic commits, indelible version history with
@@ -301,7 +301,7 @@
           <h2>From a laptop to a Kubernetes cluster</h2>
           <p>
             The server is one self-contained binary on a minimal distroless
-            image, beside PostgreSQL 18. The viewer is its own image.
+            image, beside PostgreSQL 19. The viewer is its own image.
           </p>
         </div>
         <div class="grid">

@@ -129,7 +129,7 @@ pub(super) async fn kept(pool: &PgPool) {
         kept >= 1 << 30,
         "the test server keeps {kept} bytes of past WAL, so a checkpoint can remove a segment a \
          WAL budget reads: start it with wal_keep_size=1GB (remove a testkit container started \
-         before #6035, `docker rm -f -v ferroehr-testkit-pg18`, and the next run starts one that \
+         before #6035, `docker rm -f -v ferroehr-testkit-pg19`, and the next run starts one that \
          does)"
     );
 }

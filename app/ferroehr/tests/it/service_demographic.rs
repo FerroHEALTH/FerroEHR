@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end DEMOGRAPHIC service tests against a real PostgreSQL 18
+//! End-to-end DEMOGRAPHIC service tests against a real PostgreSQL 19
 //! (shared testkit harness): the party CRUD + versioning + `VERSIONED_PARTY` +
 //! contribution + tags lifecycle, driven through the `DemographicService`
 //! envelope seam exactly as the REST layer calls it. Verifies the 0003 party

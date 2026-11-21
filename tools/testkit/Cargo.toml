@@ -1,7 +1,7 @@
 [package]
 name = "testkit"
 version.workspace = true
-description = "Shared test-database harness: one PostgreSQL 18 server + template-database cloning for every DB-backed test"
+description = "Shared test-database harness: one PostgreSQL 19 server + template-database cloning for every DB-backed test"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true

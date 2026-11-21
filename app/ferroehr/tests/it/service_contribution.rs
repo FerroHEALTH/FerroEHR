@@ -691,7 +691,7 @@ fn ehr_status(queryable: bool) -> Value {
     })
 }
 
-/// The EHR read with its counts, against a real PG 18.
+/// The EHR read with its counts, against a real PG 19.
 #[tokio::test]
 async fn ehr_read_with_its_counts() {
     let (_db, svc) = crate::fixtures::service().await;

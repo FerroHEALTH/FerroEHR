@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! A `VERSION` standard predicate on `commit_audit/time_committed`, executed
-//! against a real PostgreSQL 18 (shared testkit harness, #5062).
+//! against a real PostgreSQL 19 (shared testkit harness, #5062).
 //!
 //! QUERY master03 §Standard predicate: a standard predicate has a left-hand
 //! operand, an operator from `>, >=, =, <, <=, !=`, and a right-hand operand,

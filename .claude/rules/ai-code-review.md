@@ -90,7 +90,7 @@ lanes; for pure Rust it mostly re-reports what the gates already enforce,
 and its added value is the multi-language sweep, PR decoration on new code,
 and a stable rule taxonomy to adjudicate class-by-class. Coverage IS wired
 (owner directive 2026-08-24, reversing the #2630 deferral): the sonar lane
-runs the instrumented nextest suites against a real PG18 and imports the
+runs the instrumented nextest suites against a real PG19 and imports the
 merged lcov via `sonar.rust.lcov.reportPaths`; the former ci.yml coverage
 job and the badges-branch machinery are gone — the README's coverage badge
 is Sonar's own, measured over the hand-written scan scope. SQL is excluded from scope entirely: the

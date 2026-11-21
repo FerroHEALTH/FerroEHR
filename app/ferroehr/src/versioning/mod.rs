@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Versioning and integrity: the openEHR change-control model realized over the
-//! greenfield PG18 storage.
+//! greenfield PG19 storage.
 //!
 //! Spec oracles, in precedence order:
 //! - RM common `master06-change_control_package.adoc` — the change-control law

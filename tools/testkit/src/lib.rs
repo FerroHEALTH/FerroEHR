@@ -9,8 +9,8 @@
 //!
 //! The server is `FERROEHR_TEST_PG_URL` when set (a DSN whose role may
 //! `CREATE DATABASE`), otherwise the reusable named container
-//! `ferroehr-testkit-pg18` (`postgres:18`), which is left running across runs
-//! and reclaimed with `docker rm -f ferroehr-testkit-pg18`.
+//! `ferroehr-testkit-pg19` (`postgres:19`), which is left running across runs
+//! and reclaimed with `docker rm -f ferroehr-testkit-pg19`.
 //!
 //! The template (`ferroehr_tk_tpl_<fingerprint>`) is built once per
 //! fingerprint under a `PostgreSQL` advisory lock, migrated under a staging
@@ -55,7 +55,7 @@ use crate::statements::Force;
 const DB_PREFIX: &str = "ferroehr_tk_";
 
 /// The fixed name of the reusable local `PostgreSQL` container.
-const CONTAINER_NAME: &str = "ferroehr-testkit-pg18";
+const CONTAINER_NAME: &str = "ferroehr-testkit-pg19";
 
 /// Explicit shared-memory (`/dev/shm`) size for the reusable container, in
 /// bytes — one gibibyte.
@@ -447,7 +447,7 @@ async fn start_container() -> Result<ContainerAsync<Postgres>, TestkitError> {
             tokio::time::sleep(Duration::from_millis(250 * u64::from(attempt))).await;
         }
         let request = Postgres::default()
-            .with_tag("18")
+            .with_tag("19")
             .with_cmd(server_settings::COMMAND)
             .with_shm_size(SHM_SIZE_BYTES)
             .with_container_name(CONTAINER_NAME)

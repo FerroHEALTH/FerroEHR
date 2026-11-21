@@ -3,7 +3,7 @@
 
 //! A party of a mapped template is validated against that template, with the
 //! `553|incomplete|` relaxation of RM common master06 §Incomplete Content
-//! (#5042), over a real PostgreSQL 18 (shared testkit harness).
+//! (#5042), over a real PostgreSQL 19 (shared testkit harness).
 //!
 //! RM common `master06-change_control_package.adoc` §Incomplete Content: data
 //! "committed in the `incomplete` state therefore respects the same template

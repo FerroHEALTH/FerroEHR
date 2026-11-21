@@ -2,7 +2,7 @@
 
 A pure-Rust, **openEHR-spec-conformant** Clinical Data Repository (CDR):
 ITS-REST 1.1.0 at the API, AQL 1.1 as the query language, greenfield
-PostgreSQL-18-native internals. Two layers:
+PostgreSQL-19-native internals. Two layers:
 
 1. **The openEHR foundation (`openehr-*`) — generated from the official
    machine-readable specs, and done.** The spec types, canonical serialization,
@@ -26,7 +26,7 @@ endpoint-map document (a standing map goes stale).
 Key architectural decisions (described in full in the sections below): the
 spec + ITS layer is generated from the vendored machine-readable specs
 (BMM/XSD/OAS) by `openehr-codegen`; the application is idiomatic Rust of our
-own design on those generated crates, with its own PG18-native storage (one
+own design on those generated crates, with its own PG19-native storage (one
 `node` table, an append-only `version` table with one mutable `vo_head` row
 per object, and tier partitions instead of mirror tables) and its own typed AQL
 engine,
@@ -81,7 +81,7 @@ duplicate keys refused) is pinned by the canonical-output contract gate.
 Fidelity is proven by gates (`openehr-its/tests/`); a `codegen-drift` CI job
 regenerates everything and fails on any diff.
 
-## Storage (ours, PG18-native)
+## Storage (ours, PG19-native)
 
 Grounded in docs-verified PostgreSQL physics (JSONB has no partial detoast —
 big single documents pay whole-document decompression per leaf access; GIN
@@ -2312,9 +2312,9 @@ counts only by the key that heads it, and a delta of rendered HTML, tooling
 or amendment records alone opens no issue. No openEHR specification governs
 this filtering: our own design.
 
-## PostgreSQL 18
+## PostgreSQL 19
 
-We target **PG 18** (18.6+). In use: `uuidv7()` for database-minted ids,
+We target **PG 19** (19.0+); the boot path refuses an older server (`db::server_version`). In use: `uuidv7()` for database-minted ids,
 `PARTITION BY LIST (tier)` on `version`, `node` and `vo_attestation` with the
 cold partition pruned at plan time, the SQL/JSON path functions
 (`jsonb_path_query*`, PG 17), and the planner-side gains that need no code
@@ -2410,7 +2410,7 @@ adapter (`ferroehr-rest`) calls directly:
 | `ferroehr-server` | The wiring-only binary (config → pool → migrations → service → serve); bin name `ferroehr` | application |
 | `ferroehr-ext` | Optional integrations behind additive features (`multimedia`): the content-addressed multimedia store, one OpenDAL operator over S3 | application |
 | `ferroehr-viewer` | The server-rendered viewer on FerroUI: its own binary and OCI image, consuming the CDR strictly over ITS-REST | application |
-| `testkit` | Shared test-database harness: one PG18 server + template-database cloning (`tools/*`) | tooling |
+| `testkit` | Shared test-database harness: one PG19 server + template-database cloning (`tools/*`) | tooling |
 
 ## Regulatory position (EHDS and CRA)
 

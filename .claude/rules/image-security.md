@@ -108,7 +108,7 @@ touch:
 - `.github/workflows/ci.yml` — the test job heading
 - `docs/VERSIONS.md` §Database, `docs/postgres-features.md` §Versioning note
   (latest-patch version + date, from postgresql.org — never copied forward),
-  root `CLAUDE.md` §Tech stack, `docs/architecture.md` §PostgreSQL 18,
+  root `CLAUDE.md` §Tech stack, `docs/architecture.md` §PostgreSQL 19,
   the root `Cargo.toml` database comment, `.claude/rules/sqlx-conventions.md`
 - `app/ferroehr/src/telemetry/provenance.rs` `PG_TARGET` + its
   `build_info.rs` test
