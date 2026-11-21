@@ -30,6 +30,7 @@ use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::party_binding::grants::caller;
+use crate::party_binding::grants::caller::care_of::{CareOf, CarerKind};
 use crate::party_binding::grants::care::care_of;
 use crate::party_binding::grants::live::LiveGrants;
 use crate::service::FerroEhrService;
@@ -294,6 +295,7 @@ impl Projector {
                         digest: digest.clone(),
                         person: *person,
                         carer: care.carer(),
+                        carer_kind: stored_kind(care),
                         provider_issuer: care.provider().issuer.clone(),
                         provider_id: care.provider().id.clone(),
                         from: care.from(),
@@ -334,4 +336,14 @@ impl Projector {
             }
         }
     }
+}
+
+/// What the carer of `care` is, as its stored fact names it.
+#[expect(
+    clippy::expect_used,
+    reason = "care_of builds every relationship with stored_as, which records the carer's kind"
+)]
+fn stored_kind(care: &CareOf) -> CarerKind {
+    care.carer_kind()
+        .expect("a relationship read from the facts should carry its carer's kind")
 }

@@ -18,6 +18,7 @@ use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::ids::EhrId;
+use crate::party_binding::grants::caller::care_of::CarerKind;
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 
@@ -72,6 +73,8 @@ pub struct CareRow {
     pub person: Uuid,
     /// The carer: a `PERSON`, a `ROLE`, a `GROUP` or an `ORGANISATION`.
     pub carer: Uuid,
+    /// What the carer is.
+    pub carer_kind: CarerKind,
     /// The issuer of the provider in whose care it is.
     pub provider_issuer: String,
     /// The id of that provider.
@@ -86,6 +89,17 @@ pub struct CareRow {
     pub self_declared: bool,
     /// Its `care_role`.
     pub role: ForeignCode,
+}
+
+/// The code the projection's `carer_kind` column holds for `kind`.
+#[must_use]
+pub const fn kind_code(kind: CarerKind) -> &'static str {
+    match kind {
+        CarerKind::Person => "P",
+        CarerKind::Role => "R",
+        CarerKind::Group => "G",
+        CarerKind::Organisation => "O",
+    }
 }
 
 /// What the state row of the projection holds: the facts revision it
@@ -172,6 +186,7 @@ pub async fn replace(
     let digests: Vec<&[u8]> = rows.iter().map(|row| row.digest.as_slice()).collect();
     let people: Vec<Uuid> = rows.iter().map(|row| row.person).collect();
     let carers: Vec<Uuid> = rows.iter().map(|row| row.carer).collect();
+    let kinds: Vec<&str> = rows.iter().map(|row| kind_code(row.carer_kind)).collect();
     let issuers: Vec<&str> = rows
         .iter()
         .map(|row| row.provider_issuer.as_str())
@@ -195,9 +210,10 @@ pub async fn replace(
     sqlx::query(
         "INSERT INTO access_care (subject_digest, person_id, carer_id, provider_issuer, \
              provider_id, care_from, care_until, writer_id, self_declared, role_terminology, \
-             role_code) \
+             role_code, carer_kind) \
          SELECT * FROM unnest($1::bytea[], $2::uuid[], $3::uuid[], $4::text[], $5::text[], \
-             $6::date[], $7::date[], $8::uuid[], $9::boolean[], $10::text[], $11::text[])",
+             $6::date[], $7::date[], $8::uuid[], $9::boolean[], $10::text[], $11::text[], \
+             $12::\"char\"[])",
     )
     .bind(&digests)
     .bind(&people)
@@ -210,6 +226,7 @@ pub async fn replace(
     .bind(&declared)
     .bind(&role_terminologies)
     .bind(&role_codes)
+    .bind(&kinds)
     .execute(&mut *tx)
     .await?;
     Ok(())
