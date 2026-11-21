@@ -344,7 +344,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
     let body = negotiate::decode::rm_value::<PartyRelationship>(h, &parts.body)?;
     let request = crate::overview::committal::write_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         body,
         None,
     )?;
@@ -370,7 +370,7 @@ pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Respo
     let (vo_id, precondition) = target(&parts)?;
     let request = crate::overview::committal::delete_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         None,
     )?;
     match state
@@ -401,7 +401,7 @@ async fn created(
     let body = negotiate::decode::rm_value::<PartyRelationship>(h, &parts.body)?;
     let request = crate::overview::committal::write_request(
         h,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         body,
         None,
     )?;

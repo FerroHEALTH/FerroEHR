@@ -37,7 +37,7 @@ pub const ACTS_FOR_ARCHETYPE: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.act
 
 /// The default policy definitions, each its file name and its ADL 2 text,
 /// the `AGENT` and the acts-for relationship before the `ROLE`s.
-pub const DEFINITIONS: [(&str, &str); 6] = [
+pub const DEFINITIONS: [(&str, &str); 7] = [
     (
         "openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls",
         include_str!(
@@ -74,6 +74,10 @@ pub const DEFINITIONS: [(&str, &str); 6] = [
             "../../assets/definitions/policy/openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.1.adls"
         ),
     ),
+    (
+        "openEHR-DEMOGRAPHIC-ROLE.grant.v1.0.0.adls",
+        include_str!("../../assets/definitions/policy/openEHR-DEMOGRAPHIC-ROLE.grant.v1.0.0.adls"),
+    ),
 ];
 
 /// The kind of grant a policy `ROLE` archetype carries.
@@ -86,14 +90,19 @@ pub enum PolicyRole {
     FederationPartner,
     /// A privilege a professional's `PERSON` holds beyond clinical access.
     Privileged,
+    /// One operation an operator granted a client's `AGENT` or a person's
+    /// `PERSON`, with its scope elements
+    /// ([`crate::party_binding::grants::bootstrap`]).
+    Grant,
 }
 
 impl PolicyRole {
     /// Every kind.
-    pub const ALL: [Self; 3] = [
+    pub const ALL: [Self; 4] = [
         Self::SystemClient,
         Self::FederationPartner,
         Self::Privileged,
+        Self::Grant,
     ];
 
     /// The kind's name.
@@ -103,6 +112,7 @@ impl PolicyRole {
             Self::SystemClient => "system_client",
             Self::FederationPartner => "federation_partner",
             Self::Privileged => "privileged",
+            Self::Grant => "grant",
         }
     }
 
@@ -113,6 +123,7 @@ impl PolicyRole {
             Self::SystemClient => "openEHR-DEMOGRAPHIC-ROLE.system_client.v1",
             Self::FederationPartner => "openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1",
             Self::Privileged => "openEHR-DEMOGRAPHIC-ROLE.privileged.v1",
+            Self::Grant => "openEHR-DEMOGRAPHIC-ROLE.grant.v1",
         }
     }
 }
@@ -131,7 +142,7 @@ pub enum PolicyKind {
 impl PolicyKind {
     /// Every kind, with its archetype.
     #[must_use]
-    pub fn all() -> [(Self, &'static str); 5] {
+    pub fn all() -> [(Self, &'static str); 6] {
         [
             (Self::Agent, AGENT_ARCHETYPE),
             (Self::ActsFor, ACTS_FOR_ARCHETYPE),
@@ -146,6 +157,10 @@ impl PolicyKind {
             (
                 Self::Role(PolicyRole::Privileged),
                 PolicyRole::Privileged.archetype_id(),
+            ),
+            (
+                Self::Role(PolicyRole::Grant),
+                PolicyRole::Grant.archetype_id(),
             ),
         ]
     }

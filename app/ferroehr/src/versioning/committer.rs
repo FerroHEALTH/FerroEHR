@@ -22,30 +22,6 @@ pub mod bound;
 pub(crate) mod composer;
 pub mod external;
 
-/// The `DV_IDENTIFIER.issuer` stamped on a committer whose credential this
-/// deployment holds itself (Basic auth) — there is no external authority to
-/// name, so the product identifies itself.
-///
-/// NOTE: no openEHR spec governs the value — our own design/extension (see
-/// [`default_committer`]).
-const LOCAL_ISSUER: &str = "ferroehr";
-
-/// The `PARTY_IDENTIFIED.name` for a **system-generated** commit.
-///
-/// It is the `AUDIT_DETAILS.committer` (1..1) of a write with no authenticated
-/// principal (auth disabled, or an internal write such as an import or a
-/// synthesized composition).
-///
-/// RM common `master04-generic_package.adoc` §Audit Details makes
-/// `AUDIT_DETAILS.committer` mandatory but says nothing about what a system
-/// calls itself when it is the committer — no openEHR spec governs this value,
-/// it is our own design. It is a single constant so the platform library and
-/// the protocol adapter attribute such commits identically; the deployment's
-/// machine-readable identity is [`crate::service::DEFAULT_SYSTEM_ID`] / `[server] system_id`,
-/// which is a different attribute (`AUDIT_DETAILS.system_id`) and stays
-/// separately configurable.
-pub const SYSTEM_COMMITTER_NAME: &str = "FerroEHR";
-
 /// The authenticated identity a protocol adapter attributes commits to.
 #[derive(Debug, Clone)]
 pub struct CommitterIdentity {
@@ -66,6 +42,12 @@ pub struct CommitterIdentity {
     /// for a subject minted by an identity provider that authority is the
     /// provider, not this CDR, and which concrete string names it is spec-silent.
     pub issuer: Option<String>,
+    /// The issuer this deployment names a login it holds itself by, a Basic
+    /// user's (`[api] basic_issuer`): the issuer of a Basic caller's login,
+    /// and an authority whose logins a stated committer is compared with.
+    ///
+    /// NOTE: no openEHR spec governs the value: our own design (#6143).
+    pub local_issuer: std::sync::Arc<str>,
     /// The client the request came through: the Basic user, or an access
     /// token's `client_id`, failing that its `azp` (RFC 9068 §2.2).
     pub client: Option<String>,
@@ -234,7 +216,7 @@ pub fn refuse_impersonation(committer: &PartyProxy) -> Result<(), ServiceError> 
              §Audit Information; EHDS Art. 5)",
         ));
     }
-    let local = LOCAL_ISSUER;
+    let local = &*identity.local_issuer;
     let issuer = identity.issuer.as_deref().unwrap_or(local);
     let verifiable = |authority: &str| authority == issuer || authority == local;
     if logins(committer)
@@ -287,7 +269,9 @@ where
 /// A caller the server knows is its [`bound::server_committer`]. Any other
 /// caller is a `PARTY_IDENTIFIED` named by its subject, with one
 /// `DV_IDENTIFIER` whose `issuer` is the token issuer for a Bearer caller and
-/// this deployment's `ferroehr` for a Basic one ([`CommitterIdentity::issuer`]).
+/// this deployment's own ([`CommitterIdentity::local_issuer`]) for a Basic
+/// one. With no caller the committer is the system itself, named by its
+/// `system_id`.
 /// `DV_IDENTIFIER.issuer` is the "authority which issues the kind of id used
 /// in the id field of this object" (RM `data_types`
 /// `UML/classes/org.openehr.rm.data_types.dv_identifier.adoc` §Attributes), and
@@ -296,7 +280,7 @@ where
 /// adapter, comes from here.
 // NOTE: no openEHR spec governs which string names the issuing authority; our own design.
 #[must_use]
-pub fn default_committer(identity: Option<CommitterIdentity>) -> PartyProxy {
+pub fn default_committer(identity: Option<CommitterIdentity>, system_id: &str) -> PartyProxy {
     if let Some(server) = identity.as_ref().and_then(bound::server_committer) {
         return server;
     }
@@ -306,32 +290,54 @@ pub fn default_committer(identity: Option<CommitterIdentity>) -> PartyProxy {
             name: Some(identity.subject.clone()),
             identifiers: Some(openehr_base::containers::NonEmptyVec::of(
                 openehr_rm::prelude::DvIdentifier {
-                    issuer: Some(identity.issuer.unwrap_or_else(|| LOCAL_ISSUER.to_owned())),
+                    issuer: Some(
+                        identity
+                            .issuer
+                            .unwrap_or_else(|| identity.local_issuer.to_string()),
+                    ),
                     assigner: None,
                     id: identity.subject,
                     r#type: Some(identity.id_type.to_owned()),
                 },
             )),
         },
-        None => openehr_rm::prelude::PartyIdentifiedData {
-            external_ref: None,
-            name: Some(SYSTEM_COMMITTER_NAME.to_owned()),
-            identifiers: None,
-        },
+        None => return system_committer(system_id),
     };
     PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party))
 }
 
-/// The default committer of the current request ([`default_committer`] over
-/// [`current_committer`]).
+/// The committer of a commit no caller made (auth disabled, or an internal
+/// write such as an import or a synthesized composition): the system,
+/// named by its `system_id`.
+///
+/// RM common `master04-generic_package.adoc` §Audit Details makes
+/// `AUDIT_DETAILS.committer` mandatory and says nothing about what a system
+/// calls itself when it is the committer.
+// NOTE: no openEHR spec governs the name; our own design names the system by its system_id (#6143).
 #[must_use]
-pub fn request_committer() -> PartyProxy {
-    default_committer(current_committer())
+pub fn system_committer(system_id: &str) -> PartyProxy {
+    PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(
+        openehr_rm::prelude::PartyIdentifiedData {
+            external_ref: None,
+            name: Some(system_id.to_owned()),
+            identifiers: None,
+        },
+    ))
+}
+
+/// The default committer of the current request ([`default_committer`] over
+/// [`current_committer`]) on the system `system_id`.
+#[must_use]
+pub fn request_committer(system_id: &str) -> PartyProxy {
+    default_committer(current_committer(), system_id)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{CommitterIdentity, SYSTEM_COMMITTER_NAME, default_committer};
+    use super::{CommitterIdentity, default_committer};
+
+    const SYSTEM: &str = "cdr.hospital.example";
+    const LOCAL: &str = "basic.hospital.example";
     use openehr_rm::prelude::{PartyIdentified, PartyProxy};
 
     fn caller(id_type: &'static str, issuer: Option<&str>) -> CommitterIdentity {
@@ -339,6 +345,7 @@ mod tests {
             subject: "alice".to_owned(),
             id_type,
             issuer: issuer.map(str::to_owned),
+            local_issuer: LOCAL.into(),
             client: None,
             person: false,
             party: None,
@@ -363,16 +370,17 @@ mod tests {
 
     #[test]
     fn a_basic_caller_is_issued_by_this_deployment() {
-        let committer = default_committer(Some(caller("basic", None)));
+        let committer = default_committer(Some(caller("basic", None)), SYSTEM);
         assert_eq!(
             identifier(&committer),
-            (Some("ferroehr"), "alice", Some("basic"))
+            (Some(LOCAL), "alice", Some("basic"))
         );
     }
 
     #[test]
     fn a_bearer_caller_is_issued_by_its_token_issuer() {
-        let committer = default_committer(Some(caller("oauth2", Some("https://idp.example"))));
+        let committer =
+            default_committer(Some(caller("oauth2", Some("https://idp.example"))), SYSTEM);
         assert_eq!(
             identifier(&committer),
             (Some("https://idp.example"), "alice", Some("oauth2"))
@@ -382,11 +390,11 @@ mod tests {
     #[test]
     fn no_caller_is_the_system_identity() {
         let PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party)) =
-            default_committer(None)
+            default_committer(None, SYSTEM)
         else {
             panic!("the system committer is a PARTY_IDENTIFIED");
         };
-        assert_eq!(party.name.as_deref(), Some(SYSTEM_COMMITTER_NAME));
+        assert_eq!(party.name.as_deref(), Some(SYSTEM));
         assert!(party.identifiers.is_none());
     }
 }

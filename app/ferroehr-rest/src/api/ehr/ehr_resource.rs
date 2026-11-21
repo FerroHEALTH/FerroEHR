@@ -68,7 +68,7 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
     // The service returns the created EHR's own resource metadata
     // (ehr_id + creation instant) — the write path never rebuilds a
     // metadata-less envelope, so `Last-Modified` survives to the wire.
-    let request = create_request(h, status)?;
+    let request = create_request(h, status, state.config().api.system_id())?;
     let (ehr_id, meta) = Box::pin(state.backend().create_ehr_meta(request)).await?;
     ehr_write_response(&state, h, &base, ehr_id, meta).await
 }
@@ -90,7 +90,7 @@ pub(crate) async fn create_with_id(
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let status = negotiate::decode::optional_rm_value::<EhrStatus>(h, &parts.body)?;
-    let request = create_request(h, status)?;
+    let request = create_request(h, status, state.config().api.system_id())?;
     let meta = Box::pin(state.backend().create_ehr_with_id_meta(ehr_id, request)).await?;
     ehr_write_response(&state, h, &base, ehr_id, meta).await
 }
@@ -166,10 +166,11 @@ pub(crate) async fn tags_get(state: AppState, parts: RequestParts) -> Result<Res
 fn create_request(
     headers: &http::HeaderMap,
     status: Option<EhrStatus>,
+    system_id: &str,
 ) -> Result<ferroehr::service::version_update::WriteRequest<Option<EhrStatus>>, ApiError> {
     crate::overview::committal::write_request(
         headers,
-        ferroehr::versioning::committer::request_committer(),
+        ferroehr::versioning::committer::request_committer(system_id),
         status,
         None,
     )

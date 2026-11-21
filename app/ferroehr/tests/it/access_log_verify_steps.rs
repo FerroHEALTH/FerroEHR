@@ -20,7 +20,8 @@ use sqlx::{AssertSqlSafe, Connection, PgPool};
 use ferroehr::access_log::store::AccessLogStore;
 use ferroehr::system_log::chain_check::{ChainCheck, ChainCheckState};
 use ferroehr::system_log::store::AuditStore;
-use ferroehr::system_log::store::chains::{AuditChain, VerifyScope};
+use ferroehr::system_log::store::chain_walk::{STEP_FLOOR, StepPace};
+use ferroehr::system_log::store::chains::{AuditChain, AuditChainFinding, VerifyScope};
 use ferroehr::telemetry::indicators::AuditChainHealth;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 
@@ -308,8 +309,7 @@ async fn the_scheduled_check_paces_its_steps_to_the_head() {
     let log = AccessLogStore::new(pool.clone());
     append(&log, 1..=40).await;
 
-    let check = ChainCheck::new(None)
-        .with_first_step(ferroehr::system_log::store::chain_walk::StepPace::starting_at(3));
+    let check = ChainCheck::new(None).with_first_step(StepPace::starting_at(3));
     assert!(matches!(
         check.run_scope(&audit, VerifyScope::SinceCheckpoint).await,
         ChainCheckState::Intact { .. }
@@ -318,5 +318,113 @@ async fn the_scheduled_check_paces_its_steps_to_the_head() {
     assert_eq!(
         check.lag(AuditChain::AccessLog).map(|lag| lag.entries),
         Some(0)
+    );
+}
+
+/// Modify the access-log entry at chain position `seq` with the table's
+/// triggers off, as only its owner can.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+async fn tamper_at(pool: &PgPool, seq: i64) {
+    let mut conn = pool.acquire().await.expect("connection");
+    let mut tx = conn.begin().await.expect("begin");
+    sqlx::query("ALTER TABLE audit.access_log_entry DISABLE TRIGGER USER")
+        .execute(&mut *tx)
+        .await
+        .expect("disable the triggers");
+    let changed = sqlx::query(
+        "UPDATE audit.access_log_entry \
+         SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
+         WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = $1)",
+    )
+    .bind(seq)
+    .execute(&mut *tx)
+    .await
+    .expect("the tampering statement itself must succeed");
+    assert_eq!(changed.rows_affected(), 1, "the entry at {seq} was changed");
+    sqlx::query("ALTER TABLE audit.access_log_entry ENABLE TRIGGER USER")
+        .execute(&mut *tx)
+        .await
+        .expect("enable the triggers");
+    tx.commit().await.expect("commit");
+}
+
+/// A catch-up over a backlog of many steps verifies every entry to the head
+/// in paced steps and keeps the pace it measured for the next walk; damage
+/// deep in the next backlog is reported exactly as one window over the
+/// whole backlog reports it, and holds the cursor before it (#5804).
+#[tokio::test]
+async fn a_large_catch_up_walks_paced_steps_and_reports_damage_exactly() {
+    const BACKLOG: u32 = 6_000;
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let audit = AuditStore::new(pool.clone());
+    let log = AccessLogStore::new(pool.clone());
+    for first in (1..=BACKLOG).step_by(2_000) {
+        append(&log, first..=first + 1_999).await;
+    }
+
+    let first = StepPace::starting_at(STEP_FLOOR);
+    let check = ChainCheck::new(None).with_first_step(first);
+    assert!(matches!(
+        check.run_scope(&audit, VerifyScope::SinceCheckpoint).await,
+        ChainCheckState::Intact { .. }
+    ));
+    assert_eq!(
+        cursor(&pool).await,
+        i64::from(BACKLOG),
+        "every entry verified"
+    );
+    assert_eq!(
+        check.lag(AuditChain::AccessLog).map(|lag| lag.entries),
+        Some(0)
+    );
+    let kept = check.pace(AuditChain::AccessLog);
+    assert_ne!(kept, first, "the walk keeps the pace it measured");
+    assert!(kept.pause() > Duration::ZERO);
+
+    for first in (BACKLOG + 1..=2 * BACKLOG).step_by(2_000) {
+        append(&log, first..=first + 1_999).await;
+    }
+    let damaged = [i64::from(BACKLOG) + 1_501, i64::from(BACKLOG) + 4_750];
+    for seq in damaged {
+        tamper_at(&pool, seq).await;
+    }
+    let mut window = audit
+        .chain_walk(AuditChain::AccessLog, VerifyScope::SinceCheckpoint)
+        .await
+        .expect("the walk starts");
+    let whole = audit
+        .chain_step(&mut window, i32::MAX)
+        .await
+        .expect("one window over the whole backlog");
+    assert!(window.done());
+    let ChainCheckState::Damaged {
+        total, findings, ..
+    } = check.run_scope(&audit, VerifyScope::SinceCheckpoint).await
+    else {
+        panic!("the damage is reported");
+    };
+    assert_eq!(total, 2);
+    let reported = |found: &[AuditChainFinding]| {
+        found
+            .iter()
+            .map(|finding| (finding.chain_seq, finding.finding.clone()))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(reported(&findings), reported(&whole));
+    assert_eq!(
+        findings
+            .iter()
+            .map(|finding| finding.chain_seq)
+            .collect::<Vec<_>>(),
+        damaged.map(Some)
+    );
+    let held = cursor(&pool).await;
+    assert!(
+        (i64::from(BACKLOG)..damaged[0]).contains(&held),
+        "the cursor stops before the first damage, at {held}"
     );
 }

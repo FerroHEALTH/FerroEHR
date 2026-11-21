@@ -1,0 +1,74 @@
+archetype (adl_version=2.0.6; rm_release=1.1.0)
+    openEHR-DEMOGRAPHIC-ROLE.grant.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["organisation"] = <"Cadasto B.V.">
+    >
+    lifecycle_state = <"unmanaged">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The ROLE that grants one operation to its performer, a client's AGENT or a person's PERSON, with the scope elements the operation is read by: what an operator grants before any administrator can log in, such as the provisioning of persons or the scopes a Basic user holds.">
+            use = <"One CAPABILITY per grant. Its credentials hold the operation, a DV_CODED_TEXT of the draft openEHR access terminology openehr_access, and the scope elements, each named by a DV_CODED_TEXT of that terminology naming what it holds, with a text (a binding issuer, a token scope) or an identifier (a provider) as its value. The ROLE is adapted from the openEHR CKM archetype the derived_from entry names. Its CAPABILITY, whose credentials hold an authorization grant, is FerroEHR's own design: the openEHR RM and CKM use CAPABILITY for the professional qualifications of a performer, and no openEHR specification gives it an authorization meaning.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+    other_details = <
+        ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0 (openEHR CKM 1013.1.482, modified 2019-08-09)">
+    >
+
+definition
+    ROLE[id1] matches {
+        identities matches {
+            PARTY_IDENTITY[id2] matches {
+                details matches {
+                    ITEM_TREE[id3] matches {
+                        items matches {
+                            ELEMENT[id4] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id5] }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        capabilities matches {
+            CAPABILITY[id6] occurrences matches {1..*} matches {
+                credentials matches {
+                    ITEM_TREE[id8] matches {
+                        items matches {
+                            ELEMENT[id90] occurrences matches {1} matches {
+                                value matches { DV_CODED_TEXT[id91] }
+                            }
+                            ELEMENT[id9] occurrences matches {0..*} matches {
+                                value matches { DV_TEXT[id30] }
+                            }
+                            ELEMENT[id10] occurrences matches {0..*} matches {
+                                value matches { DV_IDENTIFIER[id31] }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"Grant role"> description = <"The role through which a party holds one operation an operator granted.">>
+            ["id2"] = <text = <"Role name"> description = <"The name of the role.">>
+            ["id3"] = <text = <"Name"> description = <"The structure of the name.">>
+            ["id4"] = <text = <"Full name"> description = <"The name of the role as it is written in full: the code of the operation granted.">>
+            ["id6"] = <text = <"Grant"> description = <"One operation the performer holds, with its terms.">>
+            ["id8"] = <text = <"Grant"> description = <"What the capability grants, held in its credentials.">>
+            ["id90"] = <text = <"Operation"> description = <"The operation the capability grants, a code of the draft openEHR access terminology openehr_access.">>
+            ["id9"] = <text = <"Text element"> description = <"A scope element with a text value, named by the openehr_access code of what it holds, such as binding_issuer or token_scope.">>
+            ["id10"] = <text = <"Identifier element"> description = <"A scope element with an identifier value, named by the openehr_access code of what it holds, such as provider.">>
+        >
+    >

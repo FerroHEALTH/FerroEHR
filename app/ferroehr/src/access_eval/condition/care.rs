@@ -178,24 +178,18 @@ impl RequestAccess {
     }
 
     /// The tie by which the caller holds the subject of `ehr_id` on the
-    /// `attested` path ([`Self::attested_on`]), in the role `PART`, which the
-    /// credential states no other of; none when the access declares a
-    /// purpose outside the policy's `care_purposes`.
+    /// `attested` path ([`Self::attested_on`]), in the role its credential
+    /// attests, else `PART` ([`Attestation::care_role`]); none when the
+    /// access declares a purpose outside the policy's `care_purposes`.
     pub(super) fn attested_tie(&self, ehr_id: EhrId) -> Option<Tie> {
         use openehr_rm::draft::access_control::terminology::care::CarePath;
-        use openehr_rm::draft::access_control::terminology::{
-            ForeignCode, TERMINOLOGY_ID_PARTICIPATION_TYPE,
-        };
         if !self.policy().admits_care(self.purpose.as_deref()) {
             return None;
         }
-        self.attested_on(ehr_id)?;
+        let attestation = self.attested_on(ehr_id)?;
         Some(Tie {
             path: CarePath::Attested,
-            role: ForeignCode {
-                terminology: TERMINOLOGY_ID_PARTICIPATION_TYPE.to_owned(),
-                code: "PART".to_owned(),
-            },
+            role: attestation.care_role(),
             grant: None,
         })
     }

@@ -1491,6 +1491,7 @@ async fn a_representation_its_representative_wrote_admits_nothing() {
         subject: "proxy".to_owned(),
         id_type: "oauth2",
         issuer: Some(LOGIN.to_owned()),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: None,
         person: false,
         party: None,

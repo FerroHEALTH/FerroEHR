@@ -128,6 +128,7 @@ async fn the_default_definitions_are_seeded_once_and_never_overwritten() {
             + ferroehr::access_policy::DEFINITIONS.len()
             + ferroehr::party_binding::shipped::DEFINITIONS.len()
             + ferroehr::service::ehr::access_settings::DEFINITIONS.len()
+            + ferroehr::access_log::definition::DEFINITIONS.len()
     );
     assert!(
         first
@@ -201,6 +202,7 @@ fn caller(subject: &str) -> CommitterIdentity {
         subject: subject.to_owned(),
         id_type: "oauth2",
         issuer: Some("https://login.example".to_owned()),
+        local_issuer: ferroehr::service::DEFAULT_SYSTEM_ID.into(),
         client: None,
         person: false,
         party: None,

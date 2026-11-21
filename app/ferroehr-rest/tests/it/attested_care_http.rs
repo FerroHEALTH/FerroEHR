@@ -487,3 +487,71 @@ async fn a_rule_names_the_attested_path_and_its_role() {
         );
     }
 }
+
+/// Settings that mark the record `level` as the controller.
+fn marked(level: &str) -> Value {
+    let mut settings = common::directive_settings(&[]);
+    settings["marking"] = json!({ "_type": "CONFIDENTIALITY_MARKING",
+        "confidentiality": coded("HL7_Confidentiality", level),
+        "set_by": { "_type": "PARTY_IDENTIFIED", "name": "privacy officer" },
+        "set_at": { "_type": "DV_DATE_TIME", "value": "2026-11-19T10:00:00Z" },
+        "reason": { "_type": "DV_TEXT", "value": "public figure" } });
+    settings
+}
+
+/// A rule limits attested callers by confidentiality: on a record marked
+/// `R`, an attested caller is refused `refused-confidentiality` until a
+/// permit whose actor scope names the `attested` path clears `R`, and a
+/// permit that clears `R` for the `direct` path alone clears no attested
+/// caller (draft decision procedure, step 6; #6078).
+#[tokio::test]
+async fn an_attested_caller_reads_a_restricted_record_only_where_a_rule_clears_it() {
+    let clearing = |path: &str| {
+        rule(
+            "permit",
+            &json!({
+                "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
+                    "relationship": coded(TERMINOLOGY_ID_ACCESS, "care"),
+                    "care_path": coded(TERMINOLOGY_ID_ACCESS, path) }],
+                "data": [{ "_type": "ACCESS_DATA_SCOPE",
+                    "confidentialities": [coded("HL7_Confidentiality", "R")] }] }),
+        )
+    };
+    for (case, extra, expected) in [
+        ("no clearing rule", None, StatusCode::FORBIDDEN),
+        (
+            "a rule clearing R for the direct path",
+            Some(clearing("direct")),
+            StatusCode::FORBIDDEN,
+        ),
+        (
+            "a rule clearing R for the attested path",
+            Some(clearing("attested")),
+            StatusCode::OK,
+        ),
+    ] {
+        let (_db, pool, svc, app) = Box::pin(serve(false)).await;
+        let target = patient_ehr(&svc, PATIENT).await;
+        common::commit_access_settings(&svc, target.parse().expect("an EHR id"), marked("R")).await;
+        let role = agreement_role(&pool).await;
+        let mut body = policy(Some(naming(&role, None)));
+        if let (Some(extra), Some(rules)) = (extra, body["rules"].as_array_mut()) {
+            rules.push(extra);
+        }
+        commit(&svc, &body).await;
+        let request = common::req("GET", format!("{BASE}/ehr/{target}"))
+            .auth(&token(&target, Some(PATIENT), 600))
+            .accept("application/json")
+            .prefer_representation();
+        let (status, answer) = common::send_body(&app, request.build()).await;
+        assert_eq!(status, expected, "{case}: {answer}");
+        if expected == StatusCode::FORBIDDEN {
+            let problem: Value = serde_json::from_str(&answer).expect("a problem body");
+            assert_eq!(
+                problem["refusal"],
+                json!("refused-confidentiality"),
+                "{case}: {answer}"
+            );
+        }
+    }
+}

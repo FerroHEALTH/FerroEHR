@@ -17,10 +17,12 @@ use ferroehr::ids::EhrId;
 use ferroehr::party_binding::BindingMapping;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_projection::Rebuild;
+use ferroehr::service::ehr::access_settings::EhrAccessSettings;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr::versioning::committer::CommitterIdentity;
 use ferroehr::versioning::committer::bound::{BoundDetails, PortalParty};
+use openehr_rm::draft::access_control::terminology::Confidentiality;
 use serde_json::{Value, json};
 
 use crate::fixtures::change_type;
@@ -30,7 +32,7 @@ const STRANGER: uuid::Uuid = uuid::Uuid::from_u128(0x0190_b3a2_5a3e_7c1d_9e2f_3b
 
 /// A caller of the running request.
 #[derive(Clone)]
-struct Caller {
+pub(crate) struct Caller {
     identity: Option<CommitterIdentity>,
     roles: Vec<String>,
 }
@@ -41,6 +43,7 @@ fn identity(login: &str) -> CommitterIdentity {
         subject: login.to_owned(),
         id_type: "basic",
         issuer: None,
+        local_issuer: DEFAULT_SYSTEM_ID.into(),
         client: None,
         person: false,
         party: None,
@@ -52,14 +55,14 @@ fn identity(login: &str) -> CommitterIdentity {
     }
 }
 
-fn professional() -> Caller {
+pub(crate) fn professional() -> Caller {
     Caller {
         identity: Some(identity("doctor")),
         roles: vec!["USER".to_owned()],
     }
 }
 
-fn administrator() -> Caller {
+pub(crate) fn administrator() -> Caller {
     Caller {
         identity: Some(identity("root")),
         roles: vec!["ADMIN".to_owned()],
@@ -67,7 +70,7 @@ fn administrator() -> Caller {
 }
 
 /// The record's person through a patient-context credential.
-fn subject() -> Caller {
+pub(crate) fn subject() -> Caller {
     Caller {
         identity: Some(CommitterIdentity {
             person: true,
@@ -78,7 +81,7 @@ fn subject() -> Caller {
 }
 
 /// A representative the server bound to the `PERSON` `person`.
-fn representative(person: uuid::Uuid) -> Caller {
+pub(crate) fn representative(person: uuid::Uuid) -> Caller {
     let login = format!("rep-{person}");
     Caller {
         identity: Some(CommitterIdentity {
@@ -89,7 +92,7 @@ fn representative(person: uuid::Uuid) -> Caller {
                 portal: Some(PortalParty {
                     person,
                     relationship: Some("10".to_owned()),
-                    login_issuer: "ferroehr".to_owned(),
+                    login_issuer: DEFAULT_SYSTEM_ID.to_owned(),
                     login: login.clone(),
                 }),
                 ..BoundDetails::default()
@@ -109,7 +112,7 @@ fn server() -> Caller {
 }
 
 /// Runs `fut` as `caller`.
-async fn as_caller<F: Future>(caller: &Caller, fut: F) -> F::Output {
+pub(crate) async fn as_caller<F: Future>(caller: &Caller, fut: F) -> F::Output {
     Box::pin(ferroehr::system_log::access_context::with_roles(
         caller.roles.clone(),
         ferroehr::versioning::committer::with_committer(caller.identity.clone(), Box::pin(fut)),
@@ -136,7 +139,7 @@ fn provision(code: &str) -> Value {
 
 /// Restricted settings whose gate-keepers are the subject and the guardian,
 /// the `PERSON` `guardian`.
-fn kept(guardian: uuid::Uuid) -> Value {
+pub(crate) fn kept(guardian: uuid::Uuid) -> Value {
     json!({
         "_type": "ACCESS_DIRECTIVE_SETTINGS",
         "default_access": term("restricted"),
@@ -156,7 +159,7 @@ fn kept(guardian: uuid::Uuid) -> Value {
 /// A service whose administrator role is `ADMIN`, a fresh EHR, and the
 /// `PERSON` of the subject's guardian, a gate-keeper, which the demographic
 /// store holds as every party the settings name must be.
-async fn setup() -> (testkit::TestDb, FerroEhrService, EhrId, uuid::Uuid) {
+pub(crate) async fn setup() -> (testkit::TestDb, FerroEhrService, EhrId, uuid::Uuid) {
     let (db, svc) = crate::fixtures::service().await;
     let svc = svc.with_binding_mapping(BindingMapping::default().with_admin_role("ADMIN"));
     let ehr_id = crate::fixtures::create_ehr(&svc).await;
@@ -186,12 +189,12 @@ fn placeholder(caller: &Caller) -> Value {
         .as_ref()
         .map_or("system", |identity| identity.subject.as_str());
     json!({ "_type": "PARTY_IDENTIFIED",
-            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": login }] })
+            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": DEFAULT_SYSTEM_ID, "id": login }] })
 }
 
 /// Commits, as `caller`, an `EHR_ACCESS` version carrying `settings` over the
 /// current version `preceding`; the committed CONTRIBUTION's uid.
-async fn write(
+pub(crate) async fn write(
     svc: &FerroEhrService,
     ehr_id: EhrId,
     caller: &Caller,
@@ -651,5 +654,70 @@ async fn a_commit_projects_the_settings_and_a_refill_rebuilds_them() {
         projected(&pool, ehr_id).await,
         (None, vec![], None),
         "a version with no settings leaves no row"
+    );
+}
+
+/// `settings` carrying a marking of `level`, set by the controller.
+pub(crate) fn marked(mut settings: Value, level: &str) -> Value {
+    settings["marking"] = json!({ "_type": "CONFIDENTIALITY_MARKING",
+        "confidentiality": { "_type": "DV_CODED_TEXT", "value": level,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_Confidentiality" },
+                "code_string": level } },
+        "set_by": { "_type": "PARTY_IDENTIFIED", "name": "privacy officer" },
+        "set_at": { "_type": "DV_DATE_TIME", "value": "2026-11-19T10:00:00Z" },
+        "reason": { "_type": "DV_TEXT", "value": "public figure" } });
+    settings
+}
+
+/// Only the controller sets, changes or clears the marking: a gate-keeper's
+/// version that changes it is refused `403` whole, and one that carries it
+/// unchanged commits (draft access control, The Decision Procedure, Reading
+/// and Writing the Settings).
+#[tokio::test]
+async fn only_the_controller_sets_or_clears_the_marking() {
+    let (_db, svc, ehr_id, guardian) = setup().await;
+    forbidden(
+        &write(&svc, ehr_id, &subject(), 1, &marked(kept(guardian), "R")).await,
+        "the subject setting a marking",
+    );
+    write(
+        &svc,
+        ehr_id,
+        &administrator(),
+        1,
+        &marked(kept(guardian), "R"),
+    )
+    .await
+    .expect("the controller sets the marking");
+    forbidden(
+        &write(&svc, ehr_id, &subject(), 2, &kept(guardian)).await,
+        "the subject clearing the marking",
+    );
+    forbidden(
+        &write(
+            &svc,
+            ehr_id,
+            &representative(guardian),
+            2,
+            &marked(kept(guardian), "V"),
+        )
+        .await,
+        "a gate-keeper raising the marking",
+    );
+    write(&svc, ehr_id, &subject(), 2, &marked(kept(guardian), "R"))
+        .await
+        .expect("the subject carries the marking unchanged");
+    write(&svc, ehr_id, &administrator(), 3, &kept(guardian))
+        .await
+        .expect("the controller clears the marking");
+    let settings = svc
+        .current_ehr_access_settings(ehr_id)
+        .await
+        .expect("the settings read");
+    assert_eq!(
+        (*settings).as_ref().map(EhrAccessSettings::marking),
+        Some(Confidentiality::Normal),
+        "the cleared settings are current"
     );
 }

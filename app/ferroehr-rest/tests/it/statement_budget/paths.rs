@@ -829,7 +829,7 @@ fn contribution() -> Value {
                 "code_string": code } })
     };
     let committer = serde_json::json!({ "_type": "PARTY_IDENTIFIED",
-        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "root" }] });
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": ferroehr::service::DEFAULT_SYSTEM_ID, "id": "root" }] });
     serde_json::json!({
         "_type": "CONTRIBUTION",
         "versions": [ {

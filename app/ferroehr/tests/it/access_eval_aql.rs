@@ -113,6 +113,7 @@ fn administrator() -> CommitterIdentity {
         subject: "root".to_owned(),
         id_type: "basic",
         issuer: None,
+        local_issuer: DEFAULT_SYSTEM_ID.into(),
         client: None,
         person: false,
         party: None,
@@ -181,7 +182,7 @@ impl World {
             .to_owned();
         let audit = json!({ "change_type": change_type("251", "modification"),
             "committer": { "_type": "PARTY_IDENTIFIED",
-                "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "root" }] } });
+                "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": DEFAULT_SYSTEM_ID, "id": "root" }] } });
         let archetype = "openEHR-EHR-EHR_ACCESS.access_directives.v1";
         let contribution = json!({
             "_type": "CONTRIBUTION",
