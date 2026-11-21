@@ -95,8 +95,12 @@ pub struct ReadRow {
     /// array index appended when the attribute holds an array, and a closing
     /// `.` (`events1.`); empty on the root.
     pub path: String,
-    /// The node's canonical JSON fragment.
+    /// The node's canonical JSON fragment, its shared members put back.
     pub data: Value,
+    /// The members the row leaves out for an earlier holder, with the
+    /// holder's `num` ([`crate::storage::shared`]); `None` when it shares
+    /// nothing.
+    pub shared: Option<Value>,
 }
 
 /// Read access to the four fields [`crate::storage::codec::reassemble`]

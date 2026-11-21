@@ -91,6 +91,12 @@ CREATE TABLE node (
     -- which PostgreSQL considers compressing a value at all (PostgreSQL 18,
     -- "TOAST", https://www.postgresql.org/docs/18/storage-toast.html).
     data        jsonb,
+    -- The members of data stored once per version (crate::storage::shared): a
+    -- JSON object of each member this row leaves out because an earlier row of
+    -- the version stores it byte for byte, and that row's num. NULL when the
+    -- row shares nothing. Every reader puts the members back from their
+    -- holders, so data reads back as written.
+    shared      jsonb,
     -- Promoted EVENT_CONTEXT.start_time.value on the COMPOSITION root row
     -- (num = 0); NULL elsewhere and for context-less persistent compositions.
     -- Populated at write through ext.openehr_timestamp rather than as a
@@ -129,7 +135,8 @@ CREATE TABLE node (
     -- and a parent precedes its child in pre-order. The root (num = 0,
     -- parent_num = 0) is exempt from the ordering check.
     CONSTRAINT ck_node_num_cap CHECK (num_cap >= num),
-    CONSTRAINT ck_node_parent CHECK (num = 0 OR parent_num < num)
+    CONSTRAINT ck_node_parent CHECK (num = 0 OR parent_num < num),
+    CONSTRAINT ck_node_shared CHECK (shared IS NULL OR jsonb_typeof(shared) = 'object')
 ) PARTITION BY LIST (tier);
 CREATE TABLE node_hot  PARTITION OF node FOR VALUES IN ('hot');
 CREATE TABLE node_cold PARTITION OF node FOR VALUES IN ('cold');
@@ -228,6 +235,7 @@ COMMENT ON COLUMN node.arch_entity IS 'qualified_rm_entity of a full archetype H
 COMMENT ON COLUMN node.arch_concept IS 'The full domain_concept (specialisation segments included) of a full archetype HRID, lowercased, so a parent query matches a child by prefix (BASE architecture_overview master10 §Design-time Relationships).';
 COMMENT ON COLUMN node.arch_major IS 'The major version of a full archetype HRID; the interface-reference major boundary is hard (AM master07 §Querying). NULL on at/id-code nodes.';
 COMMENT ON COLUMN node.path IS 'The node''s own step under its parent (attribute, array index, closing dot), empty on the root; reassembly places the row under parent_num, and an AQL attribute step matches it with parent_num bound. Our own storage design.';
+COMMENT ON COLUMN node.shared IS 'The members of data this row leaves out because an earlier row of the same version stores them byte for byte, each with that row''s num; NULL when the row shares nothing. Our own storage design.';
 COMMENT ON COLUMN node.context_start IS 'Promoted EVENT_CONTEXT.start_time.value on the COMPOSITION root; NULL elsewhere and for context-less persistent compositions. Our own storage design.';
 COMMENT ON COLUMN node.value_type IS 'The RM type of the ELEMENT value the typed value columns hold; NULL when data holds the value. Our own storage design.';
 COMMENT ON COLUMN node.value_num IS 'A DV_QUANTITY or DV_COUNT magnitude, or a DV_ORDINAL value, as the canonical JSON carried it.';

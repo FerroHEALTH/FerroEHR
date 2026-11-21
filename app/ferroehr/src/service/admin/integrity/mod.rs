@@ -279,6 +279,13 @@ fn rows_are_current(stored: &[ReadRow], body: &Value) -> bool {
                     && stored.parent_num == fresh.parent_num
                     && stored.path == fresh.path
                     && serde_json::from_str::<Value>(whole).is_ok_and(|w| stored.data == w)
+                    && fresh
+                        .shared
+                        .as_deref()
+                        .map(serde_json::from_str::<Value>)
+                        .transpose()
+                        .ok()
+                        == Some(stored.shared.clone())
             })
 }
 

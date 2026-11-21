@@ -972,11 +972,12 @@ async fn node_codec_round_trips_through_the_database() {
         let rows = decompose(&composition).unwrap_or_else(|e| panic!("decompose {path:?}: {e}"));
         insert_nodes(&pool, vo, 1, ehr_id, &rows).await;
 
-        let read: Vec<ReadRow> = sqlx::query(
+        let read: Vec<ReadRow> = sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT num, num_cap, parent_num, rm_type, archetype, name, name_code,
-                    name_terminology, path, data
-             FROM node WHERE vo_id = $1 AND sys_version = 1 ORDER BY num",
-        )
+                    name_terminology, path, {} AS data, shared
+             FROM node n WHERE vo_id = $1 AND sys_version = 1 ORDER BY num",
+            ferroehr::storage::shared::resolved_data("n", ferroehr::storage::shared::Tier::OfRow)
+        )))
         .bind(vo)
         .fetch_all(&pool)
         .await
@@ -988,6 +989,7 @@ async fn node_codec_round_trips_through_the_database() {
             parent_num: r.get("parent_num"),
             path: r.get("path"),
             data: r.get("data"),
+            shared: r.get("shared"),
         })
         .collect();
 

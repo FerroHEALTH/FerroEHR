@@ -122,7 +122,10 @@ fn folder_items_exists(parent_node: &str, child_node: &str) -> Expr {
     sub.and_where(Expr::cust_with_exprs(
         "EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE($1 -> 'items', '[]'::jsonb)) AS item \
          WHERE split_part(item.value #>> '{id,value}', '::', 1) = ($2)::text)",
-        [col(&sf, Node::Data), col(child_node, Node::VoId)],
+        [
+            super::expr::member_data(&sf, "items"),
+            col(child_node, Node::VoId),
+        ],
     ));
     Expr::exists(sub)
 }

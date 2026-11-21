@@ -298,6 +298,33 @@ mod tests {
         serde_json::to_string(&Value::Object(out)).expect("serializable")
     }
 
+    /// The stored `data` of a row with its shared members put back from the
+    /// stored `data` of their holders, as `crate::storage::shared::resolved_data`
+    /// reads it.
+    fn shared_back(
+        own: Option<Value>,
+        shared: Option<&str>,
+        stored: &[Option<Value>],
+    ) -> Option<Value> {
+        let Some(shared) = shared else {
+            return own;
+        };
+        let shared: Value = serde_json::from_str(shared).expect("shared is JSON");
+        let mut map = match own {
+            Some(Value::Object(map)) => map,
+            _ => serde_json::Map::new(),
+        };
+        for (key, holder) in shared.as_object().expect("an object") {
+            let holder = usize::try_from(holder.as_i64().expect("a num")).expect("a num");
+            let member = stored[holder]
+                .as_ref()
+                .and_then(|d| d.get(key))
+                .expect("the holder holds it");
+            map.insert(key.clone(), member.clone());
+        }
+        Some(Value::Object(map))
+    }
+
     /// Every row of `composition` rebuilds to the fragment the codec cut, and
     /// serializes with the keys in the order a read served before the header
     /// columns existed.
@@ -320,14 +347,17 @@ mod tests {
         let rendered = crate::storage::render::index::render(&composition).expect("renders");
         let (rows, whole) =
             decompose(&rendered, &identity, true).expect("the composition decomposes");
+        let mut stored_data: Vec<Option<Value>> = Vec::new();
         for (row, whole) in rows.iter().zip(&whole) {
             let root = (row.num == 0).then_some(&identity);
             let fragment: Value = serde_json::from_str(whole).expect("a fragment is JSON");
+            let own: Option<Value> = row
+                .data
+                .as_deref()
+                .map(|d| serde_json::from_str(d).expect("a stored fragment is JSON"));
+            stored_data.push(own.clone());
             let stored = SlimmedValue {
-                data: row
-                    .data
-                    .as_deref()
-                    .map(|d| serde_json::from_str(d).expect("a stored fragment is JSON")),
+                data: shared_back(own, row.shared.as_deref(), &stored_data),
                 value: row.value.clone(),
                 header: row.header.clone(),
                 compact: row.compact,

@@ -127,6 +127,8 @@ impl Ranged {
     fn read(self, node: &str) -> Expr {
         match self {
             Self::EventTime | Self::Origin => col(node, Node::EventTime),
+            // NOTE: crate::storage::shared::UNSHARED, `value` is never shared, so the row's own
+            // data is the whole value and the expression stays the index's (#6229).
             Self::Magnitude => call(
                 "node_magnitude",
                 vec![
@@ -391,6 +393,8 @@ impl Builder<'_> {
             return Ok(None);
         }
         self.row_anchor(leaf, predicate, false, |node| {
+            // NOTE: crate::storage::shared::UNSHARED, `value` is never shared, so the row's own
+            // data is the whole value and the expression stays the index's (#6229).
             let read = |function: &str, column: Node| {
                 call(
                     function,

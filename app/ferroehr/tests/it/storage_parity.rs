@@ -1258,9 +1258,13 @@ async fn stored_demographic_body(pool: &PgPool, vo_id: VoId, sys_version: i32) -
 /// The stored node rows of one demographic version, in the read shape the
 /// codec reassembles from.
 async fn stored_demographic_rows(pool: &PgPool, vo_id: VoId, sys_version: i32) -> Vec<ReadRow> {
-    let rows: Vec<(i32, i32, i32, String, Value)> = sqlx::query_as(
+    // The shared members read back from their holders in the party schema.
+    let data =
+        ferroehr::storage::shared::resolved_data("n", ferroehr::storage::shared::Tier::OfRow)
+            .replace(" node h ", " party.node h ");
+    let rows: Vec<(i32, i32, i32, String, Value)> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
         "SELECT n.num, n.num_cap, n.parent_num, n.path, \
-                ext.node_fragment(n.data, n.rm_type, n.archetype, n.name, n.name_code, \
+                ext.node_fragment({data}, n.rm_type, n.archetype, n.name, n.name_code, \
                 n.name_terminology, n.value_type, n.value_num, n.value_text, n.value_code, \
                 n.value_terminology, n.rm_version, n.language, n.encoding, n.origin_compact, \
                 n.time_compact, n.party_self, n.uid_derived, \
@@ -1269,8 +1273,8 @@ async fn stored_demographic_rows(pool: &PgPool, vo_id: VoId, sys_version: i32) -
                 CASE WHEN n.num = 0 THEN v.template_id END) \
          FROM party.node n JOIN party.version v ON v.vo_id = n.vo_id \
               AND v.sys_version = n.sys_version \
-         WHERE n.vo_id = $1 AND n.sys_version = $2 ORDER BY n.num",
-    )
+         WHERE n.vo_id = $1 AND n.sys_version = $2 ORDER BY n.num"
+    )))
     .bind(vo_id.0)
     .bind(sys_version)
     .fetch_all(pool)
@@ -1283,6 +1287,7 @@ async fn stored_demographic_rows(pool: &PgPool, vo_id: VoId, sys_version: i32) -
             parent_num,
             path,
             data,
+            shared: None,
         })
         .collect()
 }

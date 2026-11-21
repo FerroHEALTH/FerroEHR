@@ -27,6 +27,7 @@ use crate::storage::codec::reassemble;
 use crate::storage::compact::{Compact, RootIdentity};
 use crate::storage::error::StorageError;
 use crate::storage::row::ReadRow;
+use crate::storage::shared::{Tier, resolved_data};
 
 /// The columns [`row_fragment`] reads after `data`, in the order every read
 /// statement selects them: the fragment's columns, the header columns, the
@@ -61,10 +62,11 @@ pub(crate) const CONTENT_ROWS_JOIN: &str =
 /// through — the promoted query columns are not read back.
 static READ_ROWS_SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     format!(
-        "SELECT n.num, n.num_cap, n.parent_num, n.path, n.data, {FRAGMENT_COLUMNS}, \
-         {ROOT_COLUMNS} \
+        "SELECT n.num, n.num_cap, n.parent_num, n.path, {} AS data, {FRAGMENT_COLUMNS}, \
+         {ROOT_COLUMNS}, n.shared \
          FROM version v {CONTENT_ROWS_JOIN} \
-         WHERE v.vo_id = $1 AND v.sys_version = $2 ORDER BY n.num"
+         WHERE v.vo_id = $1 AND v.sys_version = $2 ORDER BY n.num",
+        resolved_data("n", Tier::OfRow)
     )
 });
 
@@ -165,6 +167,7 @@ where
             parent_num: row.try_get("parent_num")?,
             path: row.try_get("path")?,
             data: row_fragment(&row, 4)?,
+            shared: row.try_get("shared")?,
         });
     }
     Ok(read)
@@ -278,11 +281,12 @@ pub async fn read_version_rows_all(
 ) -> Result<BTreeMap<(VoId, i32), Vec<ReadRow>>, StorageError> {
     static SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         format!(
-            "SELECT v.vo_id, v.sys_version, n.num, n.num_cap, n.parent_num, n.path, n.data, \
-             {FRAGMENT_COLUMNS}, {ROOT_COLUMNS} \
+            "SELECT v.vo_id, v.sys_version, n.num, n.num_cap, n.parent_num, n.path, {} AS data, \
+             {FRAGMENT_COLUMNS}, {ROOT_COLUMNS}, n.shared \
              FROM unnest($1::uuid[], $2::int[]) AS k(vo_id, sys_version) \
              JOIN version v ON v.vo_id = k.vo_id AND v.sys_version = k.sys_version \
-             {CONTENT_ROWS_JOIN}"
+             {CONTENT_ROWS_JOIN}",
+            resolved_data("n", Tier::OfRow)
         )
     });
     if keys.is_empty() {
@@ -306,6 +310,7 @@ pub async fn read_version_rows_all(
             parent_num: row.try_get("parent_num")?,
             path: row.try_get("path")?,
             data: row_fragment(&row, 6)?,
+            shared: row.try_get("shared")?,
         });
     }
 
@@ -369,12 +374,13 @@ pub async fn read_subtrees_canonical(
     // version, whose row resolves the content key the rows are read under.
     static SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         format!(
-            "SELECT a.idx, n.num, n.parent_num, n.path, n.data, {FRAGMENT_COLUMNS}, \
-                    NULL::text AS version_uid, NULL::text AS template_id \
+            "SELECT a.idx, n.num, n.parent_num, n.path, {} AS data, {FRAGMENT_COLUMNS}, \
+                    NULL::text AS version_uid, NULL::text AS template_id, n.shared \
              FROM unnest($1::int[], $2::uuid[], $3::int[], $4::int[], $5::int[]) \
                   AS a(idx, vo_id, sys_version, anum, acap) \
              JOIN version v ON v.vo_id = a.vo_id AND v.sys_version = a.sys_version \
-             {CONTENT_ROWS_JOIN} AND n.num BETWEEN a.anum AND a.acap"
+             {CONTENT_ROWS_JOIN} AND n.num BETWEEN a.anum AND a.acap",
+            resolved_data("n", Tier::OfRow)
         )
     });
     if anchors.is_empty() {
@@ -432,6 +438,7 @@ pub async fn read_subtrees_canonical(
             parent_num: row.try_get("parent_num")?,
             path: row.try_get("path")?,
             data: row_fragment(&row, 4)?,
+            shared: row.try_get("shared")?,
         });
     }
 

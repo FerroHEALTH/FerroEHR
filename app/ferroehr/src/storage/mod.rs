@@ -140,6 +140,7 @@ pub mod policy_register;
 pub mod promoted;
 pub mod render;
 pub mod row;
+pub mod shared;
 pub mod slim;
 pub mod statistics;
 pub mod stored_query_repo;

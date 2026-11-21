@@ -32,9 +32,10 @@ use crate::typed_body::typed;
 const DOMAINS: [&str; 2] = ["clinical", "party"];
 
 /// The breaches of the invariant in `schema`: node row sets no version of
-/// the same tier reads, content versions without their root row, and
-/// bodiless versions with rows.
-async fn breaches(pool: &PgPool, schema: &str) -> (i64, i64, i64) {
+/// the same tier reads, content versions without their root row, bodiless
+/// versions with rows, and rows whose shared members name no earlier holder
+/// of their version and tier (#6229).
+async fn breaches(pool: &PgPool, schema: &str) -> (i64, i64, i64, i64) {
     let unreached: i64 = sqlx::query_scalar(AssertSqlSafe(format!(
         "SELECT count(*) FROM (SELECT DISTINCT n.tier, n.vo_id, n.sys_version \
          FROM {schema}.node n WHERE NOT EXISTS (SELECT 1 FROM {schema}.version v \
@@ -60,7 +61,25 @@ async fn breaches(pool: &PgPool, schema: &str) -> (i64, i64, i64) {
     .fetch_one(pool)
     .await
     .expect("count the bodiless versions with rows");
-    (unreached, missing, bodiless)
+    let dangling: i64 = sqlx::query_scalar(AssertSqlSafe(format!(
+        "SELECT count(*) FROM {schema}.node n WHERE NOT {}",
+        ferroehr::storage::shared::references_hold("n")
+            .replace(" node h ", &format!(" {schema}.node h "))
+    )))
+    .fetch_one(pool)
+    .await
+    .expect("count the rows with a dangling reference");
+    (unreached, missing, bodiless, dangling)
+}
+
+/// How many node rows of `schema` leave a member to an earlier holder.
+async fn sharing_rows(pool: &PgPool, schema: &str) -> i64 {
+    sqlx::query_scalar(AssertSqlSafe(format!(
+        "SELECT count(*) FROM {schema}.node WHERE shared IS NOT NULL"
+    )))
+    .fetch_one(pool)
+    .await
+    .expect("count the sharing rows")
 }
 
 /// The invariant holds in both domains after `step`, and the sweep agrees.
@@ -68,9 +87,9 @@ async fn holds(pool: &PgPool, svc: &FerroEhrService, step: &str) {
     for schema in DOMAINS {
         assert_eq!(
             breaches(pool, schema).await,
-            (0, 0, 0),
+            (0, 0, 0, 0),
             "{step}: {schema}: (unreached row sets, content versions without rows, \
-             bodiless versions with rows)"
+             bodiless versions with rows, dangling shared references)"
         );
     }
     let report = svc
@@ -132,6 +151,20 @@ async fn seeded(svc: &FerroEhrService) -> (EhrId, EhrId, EhrId, ferroehr::ids::V
             "the unchanged update is a version of its own"
         );
     }
+    // The IPS composition repeats one participation list on its entries, so
+    // its rows share it (#6229) through every step that follows.
+    svc.template_adl14_upload(&ips_file(
+        "../../crates/openehr-its/tests/fixtures/sdk/ips.v0.opt",
+    ))
+    .await
+    .expect("upload the IPS template");
+    let ips: serde_json::Value = serde_json::from_str(&ips_file(
+        "../../crates/openehr-its/tests/vendor/openehr_sdk/composition/canonical_json/ips_canonical.json",
+    ))
+    .expect("the IPS composition parses");
+    svc.create_composition(ehr, uv(&ips, "249", None))
+        .await
+        .expect("commit the IPS composition");
     let person = svc
         .party_create(PartyKind::Person, WriteRequest::new(typed(&a_person())))
         .await
@@ -139,10 +172,20 @@ async fn seeded(svc: &FerroEhrService) -> (EhrId, EhrId, EhrId, ferroehr::ids::V
     (ehr, other, full, crate::fixtures::written_vo(&person))
 }
 
+/// A file of the workspace, relative to this crate.
+fn ips_file(rel: &str) -> String {
+    let path = format!("{}/{rel}", env!("CARGO_MANIFEST_DIR"));
+    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"))
+}
+
 #[tokio::test]
 async fn a_versions_nodes_exist_exactly_when_the_version_does() {
     let (db, pool, svc) = repository().await;
     let (ehr, other, full, person) = Box::pin(seeded(&svc)).await;
+    assert!(
+        sharing_rows(&pool, "clinical").await > 0,
+        "the IPS rows share their list"
+    );
     holds(
         &pool,
         &svc,
@@ -152,6 +195,17 @@ async fn a_versions_nodes_exist_exactly_when_the_version_does() {
 
     svc.archive_ehrs(&[ehr, full]).await.expect("archive");
     holds(&pool, &svc, "archive").await;
+    let cold: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM clinical.node WHERE tier = 'cold' AND shared IS NOT NULL",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("count the archived sharing rows");
+    assert_eq!(
+        cold,
+        sharing_rows(&pool, "clinical").await,
+        "the sharing rows move to the cold tier with their holders"
+    );
     svc.restore_archived_ehrs(&[ehr, full])
         .await
         .expect("restore");

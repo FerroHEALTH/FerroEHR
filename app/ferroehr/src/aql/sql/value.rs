@@ -809,6 +809,7 @@ fn fragment_read(
         return to_jsonb(col(alias, Node::Num));
     }
     let names: Vec<&str> = leaf.fragment.iter().map(|s| s.name.as_str()).collect();
+    let first = names.first().copied().unwrap_or_default();
     let plain = leaf.fragment.iter().all(|step| step.predicate.is_none());
     if let (Some(path), true, Some(read)) = (jp, plain, compact_read(alias, &names, root)) {
         // The marker says the row holds the scalar in its compact form; the
@@ -818,7 +819,7 @@ fn fragment_read(
             [
                 read.marker,
                 read.value,
-                extract_base(col(alias, Node::Data), Some(path), vars),
+                extract_base(super::expr::member_data(alias, first), Some(path), vars),
             ],
         );
     }
@@ -830,10 +831,10 @@ fn fragment_read(
         return Expr::cust_with_exprs(
             "CASE WHEN ($1 -> $2) IS NULL THEN to_jsonb($3) ELSE $4 END",
             [
-                col(alias, Node::Data),
+                super::expr::member_data(alias, first),
                 Expr::val(member),
                 column,
-                extract_base(col(alias, Node::Data), Some(path), vars),
+                extract_base(super::expr::member_data(alias, first), Some(path), vars),
             ],
         );
     }
@@ -846,7 +847,7 @@ fn fragment_read(
     let value_type = || col(alias, Node::ValueType);
     let mut case = sea_query::CaseStatement::new().case(
         value_type().is_null(),
-        extract_base(col(alias, Node::Data), Some(path), vars),
+        extract_base(super::expr::member_data(alias, first), Some(path), vars),
     );
     for (types, column) in reads {
         let read = match column {

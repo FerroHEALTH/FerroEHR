@@ -125,6 +125,7 @@ mod node_compact;
 mod node_header;
 mod node_lean_plans;
 mod node_readers;
+mod node_shared;
 mod node_version_integrity;
 mod one_schema_per_statement;
 mod opt_resource_meta;

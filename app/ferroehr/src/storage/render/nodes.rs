@@ -53,6 +53,8 @@ pub struct StoredNode {
     pub path: String,
     /// The slimmed fragment text, `None` when nothing is left of it.
     pub data: Option<String>,
+    /// The members left out for an earlier holder ([`crate::storage::shared`]).
+    pub shared: Option<String>,
     /// The `ELEMENT.value` the typed columns hold.
     pub value: Option<TypedValue>,
     /// The header columns.
@@ -85,6 +87,7 @@ struct Walk<'a, 'r> {
     rows: Vec<StoredNode>,
     /// The whole fragment of each row, when asked for.
     whole: Option<Vec<String>>,
+    sharing: crate::storage::shared::Sharing<'a>,
 }
 
 /// The node rows of `body`, and each row's whole fragment when `whole` is set.
@@ -112,6 +115,7 @@ pub fn decompose(
         root,
         rows: Vec::new(),
         whole: whole.then(Vec::new),
+        sharing: crate::storage::shared::Sharing::default(),
     };
     walk.node(top, String::new(), -1)?;
     let Walk {
@@ -169,7 +173,7 @@ impl Walk<'_, '_> {
             .and_then(|c| body.get(c, "terminology_id"))
             .and_then(|t| body.get_str(t, "value"))
             .map(Cow::into_owned);
-        let promoted = promoted(body, num, &rm_type, node);
+        let promoted = crate::storage::promoted::of_root(body, num, &rm_type, node);
 
         let mut kept: Vec<&Member> = Vec::new();
         let mut structure: Vec<&Member> = Vec::new();
@@ -181,16 +185,11 @@ impl Walk<'_, '_> {
             }
         }
         if let Some(whole) = self.whole.as_mut() {
-            let members: Vec<Kept<'_>> = kept
-                .iter()
-                .map(|member| Kept {
-                    member,
-                    replaced: None,
-                })
-                .collect();
+            let members: Vec<Kept<'_>> = kept.iter().copied().map(Kept::of).collect();
             whole.push(fragment(body, &members).unwrap_or_else(|| "{}".to_owned()));
         }
-        let slimmed = slim(body, &rm_type, (num == 0).then_some(root), kept);
+        let at = (num, &mut self.sharing);
+        let slimmed = slim(body, &rm_type, (num == 0).then_some(root), kept, at);
         self.rows.push(StoredNode {
             num,
             num_cap: num,
@@ -205,6 +204,7 @@ impl Walk<'_, '_> {
             name_terminology,
             path: String::new(),
             data: slimmed.data,
+            shared: slimmed.shared,
             value: slimmed.value,
             header: slimmed.header,
             compact: slimmed.compact,
@@ -251,36 +251,10 @@ fn is_structure(body: &Rendered, node: NodeId) -> bool {
     body.rm_type(node).as_deref().is_some_and(is_structure_type)
 }
 
-/// The promoted leaves of a root row
-/// ([`crate::storage::promoted::PROMOTED_LEAVES`]).
-fn promoted(body: &Rendered, num: i32, rm_type: &str, node: NodeId) -> Vec<Option<String>> {
-    if num != 0 {
-        return Vec::new();
-    }
-    crate::storage::promoted::PROMOTED_LEAVES
-        .iter()
-        .map(|leaf| {
-            if rm_type != leaf.rm_type {
-                return None;
-            }
-            let mut at = node;
-            for step in leaf.path {
-                at = body.get(at, step)?;
-            }
-            match body.kind(at)? {
-                Kind::String | Kind::EscapedString => body.str(at).map(Cow::into_owned),
-                Kind::Scalar if body.raw(at) != b"null" => {
-                    std::str::from_utf8(body.raw(at)).ok().map(str::to_owned)
-                }
-                Kind::Scalar | Kind::Object | Kind::Array => None,
-            }
-        })
-        .collect()
-}
-
 /// What a row stores of its fragment.
 struct Slimmed {
     data: Option<String>,
+    shared: Option<String>,
     value: Option<TypedValue>,
     header: Header,
     compact: Compact,
@@ -293,20 +267,25 @@ struct Kept<'a> {
     replaced: Option<&'a [u8]>,
 }
 
+impl<'a> Kept<'a> {
+    /// The member as written.
+    fn of(member: &'a Member) -> Self {
+        Self {
+            member,
+            replaced: None,
+        }
+    }
+}
+
 /// Slims the members `kept` of one fragment ([`crate::storage::slim`]).
 fn slim<'a>(
     body: &'a Rendered,
     rm_type: &str,
     root: Option<&RootIdentity<'_>>,
     kept: Vec<&'a Member>,
+    (num, sharing): (i32, &mut crate::storage::shared::Sharing<'a>),
 ) -> Slimmed {
-    let mut members: Vec<Kept<'a>> = kept
-        .into_iter()
-        .map(|member| Kept {
-            member,
-            replaced: None,
-        })
-        .collect();
+    let mut members: Vec<Kept<'a>> = kept.into_iter().map(Kept::of).collect();
     let find =
         |members: &[Kept<'a>], key: &str| members.iter().rposition(|k| body.key(k.member) == key);
     let value_of = |members: &[Kept<'a>], key: &str| {
@@ -386,8 +365,14 @@ fn slim<'a>(
         remove(&mut members, "value");
         value = Some(typed);
     }
+    let shared = sharing.take(num, &mut members, |k| {
+        k.replaced
+            .is_none()
+            .then(|| (body.key(k.member), body.raw(Rendered::value(k.member))))
+    });
     Slimmed {
         data: fragment(body, &members),
+        shared,
         value,
         header,
         compact,
@@ -645,7 +630,8 @@ pub(crate) fn slim_value(
 ) -> SlimmedValue {
     let body = super::index::render(fragment).expect("a fragment renders");
     let kept: Vec<&Member> = body.members(body.root()).iter().collect();
-    let slimmed = slim(&body, rm_type, root, kept);
+    let mut sharing = crate::storage::shared::Sharing::default();
+    let slimmed = slim(&body, rm_type, root, kept, (0, &mut sharing));
     SlimmedValue {
         data: slimmed
             .data
@@ -759,10 +745,25 @@ mod tests {
                         compact: row.compact,
                         root: (row.num == 0).then_some(root),
                     };
-                    let data = row
+                    let mut data = row
                         .data
                         .as_deref()
                         .map(|d| serde_json::from_str::<Value>(d).unwrap());
+                    // A shared member reads back from its holder, as every reader reads it.
+                    let shared: Option<Value> = row
+                        .shared
+                        .as_deref()
+                        .map(|s| serde_json::from_str(s).unwrap());
+                    for (key, holder) in shared.iter().flat_map(|s| s.as_object().unwrap()) {
+                        let holder: &ReadRow =
+                            &read[usize::try_from(holder.as_i64().unwrap()).unwrap()];
+                        assert!(holder.shared.as_ref().is_none_or(|s| s.get(key).is_none()));
+                        let member = holder.data[key].clone();
+                        data.get_or_insert_with(|| Value::Object(serde_json::Map::new()))
+                            .as_object_mut()
+                            .unwrap()
+                            .insert(key.clone(), member);
+                    }
                     let rebuilt = rebuild(data, &columns, row.value.as_ref()).unwrap();
                     assert_eq!(
                         rebuilt,
@@ -776,6 +777,7 @@ mod tests {
                         parent_num: row.parent_num,
                         path: row.path.clone(),
                         data: rebuilt,
+                        shared,
                     });
                 }
                 assert_eq!(

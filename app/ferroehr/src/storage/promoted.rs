@@ -73,6 +73,43 @@ pub static PROMOTED_LEAVES: &[PromotedLeaf] = &[
     },
 ];
 
+/// The promoted leaves of a root row
+/// ([`PROMOTED_LEAVES`]), read off the rendering of its body.
+pub(crate) fn of_root(
+    body: &crate::storage::render::index::Rendered,
+    num: i32,
+    rm_type: &str,
+    node: crate::storage::render::index::NodeId,
+) -> Vec<Option<String>> {
+    if num != 0 {
+        return Vec::new();
+    }
+    PROMOTED_LEAVES
+        .iter()
+        .map(|leaf| {
+            if rm_type != leaf.rm_type {
+                return None;
+            }
+            let mut at = node;
+            for step in leaf.path {
+                at = body.get(at, step)?;
+            }
+            match body.kind(at)? {
+                crate::storage::render::index::Kind::String
+                | crate::storage::render::index::Kind::EscapedString => {
+                    body.str(at).map(std::borrow::Cow::into_owned)
+                }
+                crate::storage::render::index::Kind::Scalar if body.raw(at) != b"null" => {
+                    std::str::from_utf8(body.raw(at)).ok().map(str::to_owned)
+                }
+                crate::storage::render::index::Kind::Scalar
+                | crate::storage::render::index::Kind::Object
+                | crate::storage::render::index::Kind::Array => None,
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 #[expect(
     clippy::disallowed_types,

@@ -62,6 +62,10 @@ pub(super) fn hot_unaliased() -> Expr {
 /// pruning from plan time to execution time.
 const HOT_TIER_LITERAL: &str = "'hot'";
 
+/// The tier the AQL engine reads a shared member's holder in: the hot one it
+/// binds every node row to, as the same literal.
+const HOT: crate::storage::shared::Tier = crate::storage::shared::Tier::Hot;
+
 /// A typed custom-function call `name(args...)`.
 pub(super) fn call(name: &str, args: Vec<Expr>) -> Expr {
     let mut f = Func::cust(Alias::new(name));
@@ -74,6 +78,30 @@ pub(super) fn call(name: &str, args: Vec<Expr>) -> Expr {
 /// `to_jsonb(x)` — normalizes any scalar into a canonical-JSON cell.
 pub(super) fn to_jsonb(e: Expr) -> Expr {
     call("to_jsonb", vec![e])
+}
+
+/// The `data` of the node row `alias` as a path that starts at `member`
+/// reads it, a shared member read from its holder
+/// ([`crate::storage::shared::member_data`]). The member is bound, never
+/// written into the statement.
+pub(super) fn member_data(alias: &str, member: &str) -> Expr {
+    let sql = crate::storage::shared::member_data(alias, "\u{0}", HOT);
+    let mut text = String::with_capacity(sql.len());
+    let mut keys = Vec::new();
+    for (i, part) in sql.split('\u{0}').enumerate() {
+        if i > 0 {
+            keys.push(Expr::val(member.to_owned()));
+            text.push_str(&format!("${i}"));
+        }
+        text.push_str(part);
+    }
+    Expr::cust_with_exprs(text, keys)
+}
+
+/// The whole `data` of the node row `alias`, every shared member put back
+/// from its holder ([`crate::storage::shared::resolved_data`]).
+pub(super) fn resolved_data(alias: &str) -> Expr {
+    Expr::cust(crate::storage::shared::resolved_data(alias, HOT))
 }
 
 /// The member a fragment jsonpath reads first (`$.value.magnitude` →
@@ -100,7 +128,9 @@ fn first_member(jp: &str) -> Option<&str> {
 /// fragment path the whole rebuilt fragment is read (`node_fragment`). No
 /// openEHR spec governs storage: our own design.
 pub(super) fn fragment_source(alias: &str, jp: Option<&str>, root: Option<&str>) -> Expr {
-    let data = col(alias, Node::Data);
+    let data = jp
+        .and_then(first_member)
+        .map_or_else(|| resolved_data(alias), |member| member_data(alias, member));
     let (version_uid, template_id) = root_columns(alias, root);
     let Some(jp) = jp else {
         return whole_fragment(alias, version_uid, template_id);
@@ -217,7 +247,7 @@ pub(super) fn node_columns(
     template_id: Expr,
 ) -> Vec<Expr> {
     vec![
-        col(alias, Node::Data),
+        resolved_data(alias),
         col(alias, Node::RmType),
         col(alias, Node::Archetype),
         col(alias, Node::Name),

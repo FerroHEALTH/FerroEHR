@@ -38,6 +38,15 @@ fn promoted_insert_parts(first_param: usize) -> (String, String, String, String)
         let _ = write!(arrays, ", ${}::text[]", first_param + i);
         let _ = write!(names, ", p{i}");
     }
+    // The shared members (crate::storage::shared) bind after the promoted leaves.
+    columns.push_str(", shared");
+    selects.push_str(", t.shared::jsonb");
+    let _ = write!(
+        arrays,
+        ", ${}::text[]",
+        first_param + crate::storage::promoted::PROMOTED_LEAVES.len()
+    );
+    names.push_str(", shared");
     (columns, selects, arrays, names)
 }
 
@@ -271,8 +280,8 @@ pub async fn write_nodes_batch(
     Ok(())
 }
 
-/// Bind the twenty-five per-node column arrays plus the promoted-leaf arrays
-/// onto a node-insert statement whose storage-context parameters (`$1..$3`)
+/// Bind the twenty-five per-node column arrays, the promoted-leaf arrays and
+/// the shared members onto a node-insert statement whose storage-context parameters (`$1..$3`)
 /// are already bound.
 ///
 /// Each row arrives slimmed ([`crate::storage::render::nodes`]): its fragment
@@ -371,5 +380,6 @@ pub(crate) fn bind_node_arrays<'q>(
             .collect();
         query = query.bind(leaf_values);
     }
-    query
+    let shared: Vec<Option<&str>> = rows.iter().map(|row| row.shared.as_deref()).collect();
+    query.bind(shared)
 }
