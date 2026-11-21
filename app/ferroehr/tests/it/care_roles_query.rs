@@ -37,6 +37,7 @@ use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, Obj
 use ferroehr::system_log::message::AuditContext;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{AccessDefault, OperationClass, Refusal};
+use openehr_rm::draft::access_log::access_log::access_care_ground::AccessCareGround;
 
 /// The version of the policy the access record names.
 const POLICY_VERSION: &str = "4b1f2c3d-5e6f-4a7b-8c9d-0e1f2a3b4c5d::cdr.example.org::1";
@@ -317,6 +318,9 @@ async fn the_access_record_names_the_kind_of_the_carer_a_relationship_covers_for
         .iter()
         .find_map(|ground| ground.care.as_ref())
         .expect("the treatment relationship ground names the relationship");
+    let AccessCareGround::AccessStoredCareGround(care) = care.as_ref() else {
+        panic!("a stored relationship is named in the stored form: {care:?}");
+    };
     let cover = care.covers_for.as_ref().expect("the relationship covers");
     assert_eq!(
         (
@@ -353,6 +357,9 @@ async fn the_access_record_names_the_relationship_the_rule_admitted() {
                 .flatten()
         })
         .expect("the treatment relationship ground names the relationship");
+    let AccessCareGround::AccessStoredCareGround(care) = care.as_ref() else {
+        panic!("a stored relationship is named in the stored form: {care:?}");
+    };
     assert_eq!(care.role.defining_code.code_string, "RESP");
     assert_eq!(
         care.role.defining_code.terminology_id.value,

@@ -206,3 +206,77 @@ fn each_checkpoint_invariant_refuses_a_checkpoint_that_breaks_it() {
         Some(vec!["ACCESS_LOG_CHECKPOINT.Proof_valid".to_owned()])
     );
 }
+
+/// A treatment relationship ground carrying `care`.
+fn treated(care: &Value) -> Value {
+    let mut entry = example();
+    if let Some(members) = entry.as_object_mut() {
+        members.insert(
+            "authorisations".to_owned(),
+            json!([{ "_type": "ACCESS_AUTHORISATION",
+                "kind": coded("openehr_access", "treatment relationship", "treatment relationship"),
+                "care": care }]),
+        );
+    }
+    entry
+}
+
+/// A stored care ground reached by `path`.
+fn stored(path: &str) -> Value {
+    json!({ "_type": "ACCESS_STORED_CARE_GROUND",
+        "role": coded("HL7_ParticipationType", "PART", "PART"),
+        "path": coded("openehr_access", path, path),
+        "carer": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f81" } },
+        "in_grace": false,
+        "provider": { "_type": "DV_IDENTIFIER", "issuer": "urn:example:providers", "id": "p-1" } })
+}
+
+/// An attested care ground reached by `path`.
+fn attested(path: &str) -> Value {
+    json!({ "_type": "ACCESS_ATTESTED_CARE_GROUND",
+        "role": coded("HL7_ParticipationType", "PART", "PART"),
+        "path": coded("openehr_access", path, path),
+        "assertion": { "_type": "DV_IDENTIFIER", "issuer": "urn:example:assertions",
+            "id": "trc-1" },
+        "agreement": { "_type": "DV_IDENTIFIER", "issuer": "https://federation.example",
+            "id": "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f99", "type": "ROLE" } })
+}
+
+/// Each care ground form reads and writes back under its own `_type`, holds
+/// `Path_valid` by its own paths only (a stored relationship by any path
+/// but `attested`, an attested one by `attested` alone), and a member of
+/// the other form is refused by the strict reader (#6173).
+#[test]
+fn each_care_ground_form_holds_its_own_paths() {
+    for (care, form) in [
+        (stored("direct"), "ACCESS_STORED_CARE_GROUND"),
+        (attested("attested"), "ACCESS_ATTESTED_CARE_GROUND"),
+    ] {
+        let record = read(treated(&care));
+        let written = serde_json::to_value(&record).expect("the record writes");
+        assert_eq!(
+            written["authorisations"][0]["care"]["_type"], form,
+            "{written}"
+        );
+        assert_eq!(read(written), record, "{form} reads back");
+        assert_eq!(check_record(&record), Ok(()), "{form}");
+    }
+    assert_eq!(
+        broken(treated(&stored("attested"))),
+        vec!["ACCESS_STORED_CARE_GROUND.Path_valid".to_owned()]
+    );
+    for path in ["direct", "team", "self_declared"] {
+        assert_eq!(
+            broken(treated(&attested(path))),
+            vec!["ACCESS_ATTESTED_CARE_GROUND.Path_valid".to_owned()],
+            "{path}"
+        );
+    }
+    let mut mixed = attested("attested");
+    mixed["in_grace"] = json!(false);
+    assert!(
+        serde_json::from_value::<AccessLogRecord>(treated(&mixed)).is_err(),
+        "an attested ground carries no member of the stored form"
+    );
+}

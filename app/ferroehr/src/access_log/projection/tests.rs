@@ -124,6 +124,82 @@ pub(super) fn classified_read(policy: &CompiledPolicy) -> AuditEvent {
     event
 }
 
+/// [`classified_read`] admitted on a care relationship: an attested one,
+/// named by the assertion and the agreement, when `attested`, else a stored
+/// one, named by its carer and provider (#6173).
+pub(super) fn cared_read(policy: &CompiledPolicy, attested: bool) -> AuditEvent {
+    use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
+    use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
+    use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
+    use openehr_rm::draft::access_control::terminology::care::CarePath;
+    use openehr_rm::draft::access_control::terminology::log::Authorisation;
+    use openehr_rm::draft::access_control::terminology::{Term as _, coded_text};
+    use openehr_rm::draft::access_log::access_log::access_attested_care_ground::AccessAttestedCareGround;
+    use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
+    use openehr_rm::draft::access_log::access_log::access_care_ground::AccessCareGround;
+    use openehr_rm::draft::access_log::access_log::access_stored_care_ground::AccessStoredCareGround;
+    use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
+    let identifier = |issuer: &str, id: &str, r#type: Option<&str>| DvIdentifier {
+        issuer: Some(issuer.to_owned()),
+        assigner: None,
+        id: id.to_owned(),
+        r#type: r#type.map(str::to_owned),
+    };
+    let ground = if attested {
+        AccessAuthorisation {
+            name: Some("Regional exchange".to_owned()),
+            version: Some("3".to_owned()),
+            reference: Some(identifier("urn:example:assertions", "trc-1", None)),
+            care: Some(Box::new(AccessCareGround::AccessAttestedCareGround(
+                AccessAttestedCareGround {
+                    role: coded_text("HL7_ParticipationType", "PART", "PART"),
+                    path: CarePath::Attested.coded(),
+                    assertion: identifier("urn:example:assertions", "trc-1", None),
+                    agreement: identifier(
+                        "https://federation.example.org",
+                        "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f99",
+                        Some("ROLE"),
+                    ),
+                },
+            ))),
+            ..crate::access_log::entry::authorisation(Authorisation::TreatmentRelationship)
+        }
+    } else {
+        AccessAuthorisation {
+            name: Some("ACCESS_POLICY".to_owned()),
+            version: Some("policy::cdr.example.org::2".to_owned()),
+            care: Some(Box::new(AccessCareGround::AccessStoredCareGround(
+                AccessStoredCareGround {
+                    role: coded_text("HL7_ParticipationType", "RESP", "RESP"),
+                    path: CarePath::Direct.coded(),
+                    carer: PartyRef {
+                        namespace: "demographic".to_owned(),
+                        r#type: "PERSON".to_owned(),
+                        id: ObjectId::HierObjectId(
+                            HierObjectId::new("0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f81")
+                                .expect("a UUID"),
+                        ),
+                    },
+                    relationship: None,
+                    in_grace: false,
+                    covers_for: None,
+                    provider: identifier("urn:example:providers", "p-1", Some("ORGANISATION")),
+                },
+            ))),
+            ..crate::access_log::entry::authorisation(Authorisation::TreatmentRelationship)
+        }
+    };
+    let mut event = classified_read(policy);
+    let policies = ground.version.iter().cloned().collect();
+    event.decided = Some(Box::new(crate::access_eval::record::Decision {
+        refused: None,
+        grounds: vec![ground],
+        policies,
+        confidentiality: None,
+    }));
+    event
+}
+
 /// The events the parity test projects: the classified read, and the
 /// records of every other shape an entry is written for.
 fn events(policy: &CompiledPolicy) -> Vec<(&'static str, AuditEvent, Option<&'static str>)> {
@@ -195,6 +271,8 @@ fn events(policy: &CompiledPolicy) -> Vec<(&'static str, AuditEvent, Option<&'st
         ("failed update", failed, None),
         ("representative", represented, Some("subject-9")),
         ("relayed organisation", relayed, Some("subject-1")),
+        ("stored care", cared_read(policy, false), Some("subject-1")),
+        ("attested care", cared_read(policy, true), Some("subject-1")),
     ]
 }
 

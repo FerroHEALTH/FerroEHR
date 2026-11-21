@@ -432,6 +432,10 @@ async fn the_access_log_names_the_assertion_and_the_agreement() {
     assert_eq!(care["reference"]["issuer"], ASSERTION_ISSUER, "{entry}");
     assert_eq!(care["name"], "Cross-border exchange", "{entry}");
     assert_eq!(care["version"], "3", "{entry}");
+    assert_eq!(
+        care["care"]["_type"], "ACCESS_ATTESTED_CARE_GROUND",
+        "the ground names the attested relationship: {entry}"
+    );
 }
 
 /// A policy whose `attested_care` names the agreement under another issuer
@@ -496,6 +500,59 @@ async fn a_rule_names_the_attested_path_and_its_role() {
             "{care}"
         );
     }
+}
+
+/// The treatment relationship ground of the granted access-log entry for
+/// `target`.
+async fn treatment_ground(pool: &PgPool, target: &str) -> Value {
+    let kept = crate::access_log_http::entries(pool, 1, |stored| {
+        stored.ehr_id.as_deref() == Some(target) && stored.result.as_deref() == Some("granted")
+    })
+    .await;
+    let entry: Value = serde_json::from_str(&kept[0].content).expect("a canonical entry");
+    entry["authorisations"]
+        .as_array()
+        .and_then(|grounds| {
+            grounds
+                .iter()
+                .find(|ground| ground["kind"]["value"] == "treatment relationship")
+                .cloned()
+        })
+        .unwrap_or_else(|| panic!("a treatment relationship ground: {entry}"))
+}
+
+/// An access a rule's permit exception admits through the attested path
+/// records the care ground the decision used, in the attested form: its path,
+/// its role, the assertion and the agreement (#6173). The record is open, so
+/// only the controller rule's exception reads care.
+#[tokio::test]
+async fn an_access_a_rules_exception_admits_records_the_attested_care_ground() {
+    let (_db, pool, svc, app) = Box::pin(serve(false)).await;
+    let target = patient_ehr(&svc, PATIENT).await;
+    let role = agreement_role(&pool).await;
+    commit(&svc, &policy(Some(naming(&role, None)))).await;
+    assert_eq!(
+        read(&app, &target, &token(&target, Some(PATIENT), 600)).await,
+        StatusCode::OK
+    );
+    let care = &treatment_ground(&pool, &target).await["care"];
+    assert_eq!(care["_type"], "ACCESS_ATTESTED_CARE_GROUND", "{care}");
+    assert_eq!(
+        care["path"]["defining_code"]["code_string"], "attested",
+        "{care}"
+    );
+    assert_eq!(
+        care["role"]["defining_code"]["code_string"], "PART",
+        "{care}"
+    );
+    assert_eq!(care["assertion"]["id"], ASSERTION, "{care}");
+    assert_eq!(care["assertion"]["issuer"], ASSERTION_ISSUER, "{care}");
+    assert_eq!(care["agreement"]["id"], role.as_str(), "{care}");
+    assert_eq!(care["agreement"]["issuer"], FEDERATION, "{care}");
+    assert!(
+        care.get("carer").is_none() && care.get("provider").is_none(),
+        "{care}"
+    );
 }
 
 /// The care role a credential attests in `trc.care_role` is the attested

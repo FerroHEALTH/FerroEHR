@@ -1,0 +1,29 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_ATTESTED_CARE_GROUND",
+  "documentation": "A care relationship a verified credential attests under an agreement the access policy's `attested_care` names, which is never stored: the assertion that attests it and the agreement it was attested under.",
+  "ancestors": [
+    "ACCESS_CARE_GROUND"
+  ],
+  "properties": {
+    "assertion": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "assertion",
+      "documentation": "The assertion that attests the treatment context: its `id`, and its `issuer` when the credential names one.",
+      "is_mandatory": true,
+      "type": "DV_IDENTIFIER"
+    },
+    "agreement": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "agreement",
+      "documentation": "The agreement the caller was admitted under: `id` is the container uid of the agreement's `ROLE`, `issuer` the federation issuer the partner's client identifiers are held under.",
+      "is_mandatory": true,
+      "type": "DV_IDENTIFIER"
+    }
+  },
+  "invariants": {
+    "Path_valid": "path.defining_code.terminology_id.value.is_equal (Terminology_id_access) and path.defining_code.code_string.is_equal (\"attested\")"
+  }
+}
+--------

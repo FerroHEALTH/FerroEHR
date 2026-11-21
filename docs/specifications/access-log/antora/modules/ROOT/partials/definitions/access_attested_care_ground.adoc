@@ -1,0 +1,27 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_ATTESTED_CARE_GROUND*
+
+h|*Description*
+2+a|A care relationship a verified credential attests under an agreement the access policy's `attested_care` names, which is never stored: the assertion that attests it and the agreement it was attested under.
+
+h|*Inherit*
+2+|`xref:access_log:access_log_package.adoc#_access_care_ground_class[ACCESS_CARE_GROUND]`
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*assertion*: `xref:data_types:basic_package.adoc#_dv_identifier_class[DV_IDENTIFIER]`
+a|The assertion that attests the treatment context: its `id`, and its `issuer` when the credential names one.
+
+h|*1..1*
+|*agreement*: `xref:data_types:basic_package.adoc#_dv_identifier_class[DV_IDENTIFIER]`
+a|The agreement the caller was admitted under: `id` is the container uid of the agreement's `ROLE`, `issuer` the federation issuer the partner's client identifiers are held under.
+
+h|*Invariants*
+2+a|__Path_valid__: `path.defining_code.terminology_id.value.is_equal (Terminology_id_access) and path.defining_code.code_string.is_equal ("attested")`
+
+|===

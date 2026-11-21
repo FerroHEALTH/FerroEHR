@@ -539,6 +539,165 @@ impl<'de> ::serde::Deserialize<'de> for crate::draft::access_log::access_log::ac
 }
 
 impl ::serde::Serialize
+    for crate::draft::access_log::access_log::access_attested_care_ground::AccessAttestedCareGround
+{
+    fn serialize<__S: ::serde::Serializer>(
+        &self,
+        __serializer: __S,
+    ) -> ::core::result::Result<__S::Ok, __S::Error> {
+        let mut __n = 5usize;
+        let mut __st = ::serde::Serializer::serialize_struct(
+            __serializer,
+            "ACCESS_ATTESTED_CARE_GROUND",
+            __n,
+        )?;
+        ::serde::ser::SerializeStruct::serialize_field(
+            &mut __st,
+            "_type",
+            "ACCESS_ATTESTED_CARE_GROUND",
+        )?;
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "role", &self.role)?;
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "path", &self.path)?;
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "assertion", &self.assertion)?;
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "agreement", &self.agreement)?;
+        ::serde::ser::SerializeStruct::end(__st)
+    }
+}
+
+impl<'de> ::serde::Deserialize<'de>
+    for crate::draft::access_log::access_log::access_attested_care_ground::AccessAttestedCareGround
+{
+    fn deserialize<__D: ::serde::Deserializer<'de>>(
+        __deserializer: __D,
+    ) -> ::core::result::Result<Self, __D::Error> {
+        const __FIELDS: &[&str] = &["agreement", "assertion", "path", "role"];
+        enum __Field {
+            __Type,
+            __F0,
+            __F1,
+            __F2,
+            __F3,
+        }
+        impl<'de> ::serde::Deserialize<'de> for __Field {
+            fn deserialize<__D: ::serde::Deserializer<'de>>(
+                __deserializer: __D,
+            ) -> ::core::result::Result<Self, __D::Error> {
+                struct __KeyVisitor;
+                impl<'de> ::serde::de::Visitor<'de> for __KeyVisitor {
+                    type Value = __Field;
+                    fn expecting(
+                        &self,
+                        __f: &mut ::core::fmt::Formatter<'_>,
+                    ) -> ::core::fmt::Result {
+                        __f.write_str("an object member name")
+                    }
+                    fn visit_str<__E: ::serde::de::Error>(
+                        self,
+                        __v: &str,
+                    ) -> ::core::result::Result<__Field, __E> {
+                        match __v {
+                            "_type" => ::core::result::Result::Ok(__Field::__Type),
+                            "role" => ::core::result::Result::Ok(__Field::__F0),
+                            "path" => ::core::result::Result::Ok(__Field::__F1),
+                            "assertion" => ::core::result::Result::Ok(__Field::__F2),
+                            "agreement" => ::core::result::Result::Ok(__Field::__F3),
+                            _ => ::core::result::Result::Err(
+                                ::openehr_base::serde_support::unknown_field(
+                                    __v,
+                                    "ACCESS_ATTESTED_CARE_GROUND",
+                                    __FIELDS,
+                                ),
+                            ),
+                        }
+                    }
+                }
+                ::serde::Deserializer::deserialize_identifier(__deserializer, __KeyVisitor)
+            }
+        }
+        struct __Visitor;
+        impl<'de> ::serde::de::Visitor<'de> for __Visitor {
+            type Value = crate::draft::access_log::access_log::access_attested_care_ground::AccessAttestedCareGround;
+            fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                __f.write_str("an openEHR `ACCESS_ATTESTED_CARE_GROUND` object")
+            }
+            #[inline(never)]
+            fn visit_map<__A: ::serde::de::MapAccess<'de>>(
+                self,
+                mut __map: __A,
+            ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let mut __seen_type = false;
+                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s3: ::core::option::Option<::core::option::Option<_>> = None;
+                while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
+                    match __key {
+                        __Field::__Type => {
+                            if __seen_type {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("_type"),
+                                );
+                            }
+                            __seen_type = true;
+                            ::serde::de::MapAccess::next_value_seed(
+                                &mut __map,
+                                ::openehr_base::serde_support::ExpectedType(
+                                    "ACCESS_ATTESTED_CARE_GROUND",
+                                ),
+                            )?;
+                        }
+                        __Field::__F0 => {
+                            if __s0.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("role"),
+                                );
+                            }
+                            __s0 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F1 => {
+                            if __s1.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("path"),
+                                );
+                            }
+                            __s1 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F2 => {
+                            if __s2.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("assertion"),
+                                );
+                            }
+                            __s2 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F3 => {
+                            if __s3.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("agreement"),
+                                );
+                            }
+                            __s3 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                    }
+                }
+                ::core::result::Result::Ok(crate::draft::access_log::access_log::access_attested_care_ground::AccessAttestedCareGround {
+role: __s0.flatten().ok_or_else(|| ::serde::de::Error::missing_field("role"))?,
+path: __s1.flatten().ok_or_else(|| ::serde::de::Error::missing_field("path"))?,
+assertion: __s2.flatten().ok_or_else(|| ::serde::de::Error::missing_field("assertion"))?,
+agreement: __s3.flatten().ok_or_else(|| ::serde::de::Error::missing_field("agreement"))?,
+})
+            }
+        }
+        ::serde::Deserializer::deserialize_struct(
+            __deserializer,
+            "ACCESS_ATTESTED_CARE_GROUND",
+            __FIELDS,
+            __Visitor,
+        )
+    }
+}
+
+impl ::serde::Serialize
     for crate::draft::access_log::access_log::access_authorisation::AccessAuthorisation
 {
     fn serialize<__S: ::serde::Serializer>(
@@ -779,28 +938,10 @@ impl ::serde::Serialize
         &self,
         __serializer: __S,
     ) -> ::core::result::Result<__S::Ok, __S::Error> {
-        let mut __n = 6usize;
-        if self.relationship.is_some() {
-            __n += 1;
-        }
-        if self.covers_for.is_some() {
-            __n += 1;
-        }
-        let mut __st =
-            ::serde::Serializer::serialize_struct(__serializer, "ACCESS_CARE_GROUND", __n)?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "ACCESS_CARE_GROUND")?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "role", &self.role)?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "path", &self.path)?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "carer", &self.carer)?;
-        if let Some(__v) = &self.relationship {
-            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "relationship", __v)?;
-        }
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "in_grace", &self.in_grace)?;
-        if let Some(__v) = &self.covers_for {
-            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "covers_for", __v)?;
-        }
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "provider", &self.provider)?;
-        ::serde::ser::SerializeStruct::end(__st)
+        match self {
+crate::draft::access_log::access_log::access_care_ground::AccessCareGround::AccessAttestedCareGround(__x) => ::serde::Serialize::serialize(__x, __serializer),
+crate::draft::access_log::access_log::access_care_ground::AccessCareGround::AccessStoredCareGround(__x) => ::serde::Serialize::serialize(__x, __serializer),
+}
     }
 }
 
@@ -810,184 +951,49 @@ impl<'de> ::serde::Deserialize<'de>
     fn deserialize<__D: ::serde::Deserializer<'de>>(
         __deserializer: __D,
     ) -> ::core::result::Result<Self, __D::Error> {
-        const __FIELDS: &[&str] = &[
-            "carer",
-            "covers_for",
-            "in_grace",
-            "path",
-            "provider",
-            "relationship",
-            "role",
-        ];
-        enum __Field {
-            __Type,
-            __F0,
-            __F1,
-            __F2,
-            __F3,
-            __F4,
-            __F5,
-            __F6,
-        }
-        impl<'de> ::serde::Deserialize<'de> for __Field {
-            fn deserialize<__D: ::serde::Deserializer<'de>>(
-                __deserializer: __D,
-            ) -> ::core::result::Result<Self, __D::Error> {
-                struct __KeyVisitor;
-                impl<'de> ::serde::de::Visitor<'de> for __KeyVisitor {
-                    type Value = __Field;
-                    fn expecting(
-                        &self,
-                        __f: &mut ::core::fmt::Formatter<'_>,
-                    ) -> ::core::fmt::Result {
-                        __f.write_str("an object member name")
-                    }
-                    fn visit_str<__E: ::serde::de::Error>(
-                        self,
-                        __v: &str,
-                    ) -> ::core::result::Result<__Field, __E> {
-                        match __v {
-                            "_type" => ::core::result::Result::Ok(__Field::__Type),
-                            "role" => ::core::result::Result::Ok(__Field::__F0),
-                            "path" => ::core::result::Result::Ok(__Field::__F1),
-                            "carer" => ::core::result::Result::Ok(__Field::__F2),
-                            "relationship" => ::core::result::Result::Ok(__Field::__F3),
-                            "in_grace" => ::core::result::Result::Ok(__Field::__F4),
-                            "covers_for" => ::core::result::Result::Ok(__Field::__F5),
-                            "provider" => ::core::result::Result::Ok(__Field::__F6),
-                            _ => ::core::result::Result::Err(
-                                ::openehr_base::serde_support::unknown_field(
-                                    __v,
-                                    "ACCESS_CARE_GROUND",
-                                    __FIELDS,
-                                ),
-                            ),
-                        }
-                    }
-                }
-                ::serde::Deserializer::deserialize_identifier(__deserializer, __KeyVisitor)
-            }
-        }
+        const __TAGS: &[&str] = &["ACCESS_ATTESTED_CARE_GROUND", "ACCESS_STORED_CARE_GROUND"];
         struct __Visitor;
         impl<'de> ::serde::de::Visitor<'de> for __Visitor {
             type Value = crate::draft::access_log::access_log::access_care_ground::AccessCareGround;
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACCESS_CARE_GROUND` object")
             }
-            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
-                let mut __seen_type = false;
-                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s3: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s4: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s5: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s6: ::core::option::Option<::core::option::Option<_>> = None;
-                while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
-                    match __key {
-                        __Field::__Type => {
-                            if __seen_type {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("_type"),
-                                );
-                            }
-                            __seen_type = true;
-                            ::serde::de::MapAccess::next_value_seed(
-                                &mut __map,
-                                ::openehr_base::serde_support::ExpectedType("ACCESS_CARE_GROUND"),
-                            )?;
-                        }
-                        __Field::__F0 => {
-                            if __s0.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("role"),
-                                );
-                            }
-                            __s0 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F1 => {
-                            if __s1.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("path"),
-                                );
-                            }
-                            __s1 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F2 => {
-                            if __s2.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("carer"),
-                                );
-                            }
-                            __s2 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F3 => {
-                            if __s3.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("relationship"),
-                                );
-                            }
-                            __s3 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F4 => {
-                            if __s4.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("in_grace"),
-                                );
-                            }
-                            __s4 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F5 => {
-                            if __s5.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("covers_for"),
-                                );
-                            }
-                            __s5 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F6 => {
-                            if __s6.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("provider"),
-                                );
-                            }
-                            __s6 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
+                let (__tag, __buffered) =
+                    ::openehr_base::serde_support::read_slot_tag(&mut __map, __TAGS)?;
+                match __tag {
+                    Some(::openehr_base::serde_support::TagMatch::Known(__t)) => {
+                        let __rest = ::openehr_base::serde_support::TaggedRest::new(
+                            Some(__t),
+                            __buffered,
+                            __map,
+                        );
+                        match __t {
+"ACCESS_ATTESTED_CARE_GROUND" => ::core::result::Result::Ok(crate::draft::access_log::access_log::access_care_ground::AccessCareGround::AccessAttestedCareGround(::serde::Deserialize::deserialize(__rest)?)),
+"ACCESS_STORED_CARE_GROUND" => ::core::result::Result::Ok(crate::draft::access_log::access_log::access_care_ground::AccessCareGround::AccessStoredCareGround(::serde::Deserialize::deserialize(__rest)?)),
+__other => ::core::result::Result::Err(::openehr_base::serde_support::unexpected_type("ACCESS_CARE_GROUND", __other, "ACCESS_ATTESTED_CARE_GROUND, ACCESS_STORED_CARE_GROUND")),
+}
+                    }
+                    Some(::openehr_base::serde_support::TagMatch::Unknown(__other)) => {
+                        ::core::result::Result::Err(::openehr_base::serde_support::unexpected_type(
+                            "ACCESS_CARE_GROUND",
+                            &__other,
+                            "ACCESS_ATTESTED_CARE_GROUND, ACCESS_STORED_CARE_GROUND",
+                        ))
+                    }
+                    None => {
+                        ::core::result::Result::Err(::openehr_base::serde_support::missing_type(
+                            "ACCESS_CARE_GROUND",
+                            "ACCESS_ATTESTED_CARE_GROUND, ACCESS_STORED_CARE_GROUND",
+                        ))
                     }
                 }
-                ::core::result::Result::Ok(
-                    crate::draft::access_log::access_log::access_care_ground::AccessCareGround {
-                        role: __s0
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("role"))?,
-                        path: __s1
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("path"))?,
-                        carer: __s2
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("carer"))?,
-                        relationship: __s3.flatten(),
-                        in_grace: __s4
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("in_grace"))?,
-                        covers_for: __s5.flatten(),
-                        provider: __s6
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("provider"))?,
-                    },
-                )
             }
         }
-        ::serde::Deserializer::deserialize_struct(
-            __deserializer,
-            "ACCESS_CARE_GROUND",
-            __FIELDS,
-            __Visitor,
-        )
+        ::serde::Deserializer::deserialize_map(__deserializer, __Visitor)
     }
 }
 
@@ -3152,6 +3158,219 @@ impl<'de> ::serde::Deserialize<'de>
         ::serde::Deserializer::deserialize_struct(
             __deserializer,
             "ACCESS_RETENTION",
+            __FIELDS,
+            __Visitor,
+        )
+    }
+}
+
+impl ::serde::Serialize
+    for crate::draft::access_log::access_log::access_stored_care_ground::AccessStoredCareGround
+{
+    fn serialize<__S: ::serde::Serializer>(
+        &self,
+        __serializer: __S,
+    ) -> ::core::result::Result<__S::Ok, __S::Error> {
+        let mut __n = 6usize;
+        if self.relationship.is_some() {
+            __n += 1;
+        }
+        if self.covers_for.is_some() {
+            __n += 1;
+        }
+        let mut __st =
+            ::serde::Serializer::serialize_struct(__serializer, "ACCESS_STORED_CARE_GROUND", __n)?;
+        ::serde::ser::SerializeStruct::serialize_field(
+            &mut __st,
+            "_type",
+            "ACCESS_STORED_CARE_GROUND",
+        )?;
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "role", &self.role)?;
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "path", &self.path)?;
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "carer", &self.carer)?;
+        if let Some(__v) = &self.relationship {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "relationship", __v)?;
+        }
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "in_grace", &self.in_grace)?;
+        if let Some(__v) = &self.covers_for {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "covers_for", __v)?;
+        }
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "provider", &self.provider)?;
+        ::serde::ser::SerializeStruct::end(__st)
+    }
+}
+
+impl<'de> ::serde::Deserialize<'de>
+    for crate::draft::access_log::access_log::access_stored_care_ground::AccessStoredCareGround
+{
+    fn deserialize<__D: ::serde::Deserializer<'de>>(
+        __deserializer: __D,
+    ) -> ::core::result::Result<Self, __D::Error> {
+        const __FIELDS: &[&str] = &[
+            "carer",
+            "covers_for",
+            "in_grace",
+            "path",
+            "provider",
+            "relationship",
+            "role",
+        ];
+        enum __Field {
+            __Type,
+            __F0,
+            __F1,
+            __F2,
+            __F3,
+            __F4,
+            __F5,
+            __F6,
+        }
+        impl<'de> ::serde::Deserialize<'de> for __Field {
+            fn deserialize<__D: ::serde::Deserializer<'de>>(
+                __deserializer: __D,
+            ) -> ::core::result::Result<Self, __D::Error> {
+                struct __KeyVisitor;
+                impl<'de> ::serde::de::Visitor<'de> for __KeyVisitor {
+                    type Value = __Field;
+                    fn expecting(
+                        &self,
+                        __f: &mut ::core::fmt::Formatter<'_>,
+                    ) -> ::core::fmt::Result {
+                        __f.write_str("an object member name")
+                    }
+                    fn visit_str<__E: ::serde::de::Error>(
+                        self,
+                        __v: &str,
+                    ) -> ::core::result::Result<__Field, __E> {
+                        match __v {
+                            "_type" => ::core::result::Result::Ok(__Field::__Type),
+                            "role" => ::core::result::Result::Ok(__Field::__F0),
+                            "path" => ::core::result::Result::Ok(__Field::__F1),
+                            "carer" => ::core::result::Result::Ok(__Field::__F2),
+                            "relationship" => ::core::result::Result::Ok(__Field::__F3),
+                            "in_grace" => ::core::result::Result::Ok(__Field::__F4),
+                            "covers_for" => ::core::result::Result::Ok(__Field::__F5),
+                            "provider" => ::core::result::Result::Ok(__Field::__F6),
+                            _ => ::core::result::Result::Err(
+                                ::openehr_base::serde_support::unknown_field(
+                                    __v,
+                                    "ACCESS_STORED_CARE_GROUND",
+                                    __FIELDS,
+                                ),
+                            ),
+                        }
+                    }
+                }
+                ::serde::Deserializer::deserialize_identifier(__deserializer, __KeyVisitor)
+            }
+        }
+        struct __Visitor;
+        impl<'de> ::serde::de::Visitor<'de> for __Visitor {
+            type Value = crate::draft::access_log::access_log::access_stored_care_ground::AccessStoredCareGround;
+            fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                __f.write_str("an openEHR `ACCESS_STORED_CARE_GROUND` object")
+            }
+            #[inline(never)]
+            fn visit_map<__A: ::serde::de::MapAccess<'de>>(
+                self,
+                mut __map: __A,
+            ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let mut __seen_type = false;
+                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s3: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s4: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s5: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s6: ::core::option::Option<::core::option::Option<_>> = None;
+                while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
+                    match __key {
+                        __Field::__Type => {
+                            if __seen_type {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("_type"),
+                                );
+                            }
+                            __seen_type = true;
+                            ::serde::de::MapAccess::next_value_seed(
+                                &mut __map,
+                                ::openehr_base::serde_support::ExpectedType(
+                                    "ACCESS_STORED_CARE_GROUND",
+                                ),
+                            )?;
+                        }
+                        __Field::__F0 => {
+                            if __s0.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("role"),
+                                );
+                            }
+                            __s0 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F1 => {
+                            if __s1.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("path"),
+                                );
+                            }
+                            __s1 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F2 => {
+                            if __s2.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("carer"),
+                                );
+                            }
+                            __s2 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F3 => {
+                            if __s3.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("relationship"),
+                                );
+                            }
+                            __s3 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F4 => {
+                            if __s4.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("in_grace"),
+                                );
+                            }
+                            __s4 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F5 => {
+                            if __s5.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("covers_for"),
+                                );
+                            }
+                            __s5 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F6 => {
+                            if __s6.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("provider"),
+                                );
+                            }
+                            __s6 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                    }
+                }
+                ::core::result::Result::Ok(crate::draft::access_log::access_log::access_stored_care_ground::AccessStoredCareGround {
+role: __s0.flatten().ok_or_else(|| ::serde::de::Error::missing_field("role"))?,
+path: __s1.flatten().ok_or_else(|| ::serde::de::Error::missing_field("path"))?,
+carer: __s2.flatten().ok_or_else(|| ::serde::de::Error::missing_field("carer"))?,
+relationship: __s3.flatten(),
+in_grace: __s4.flatten().ok_or_else(|| ::serde::de::Error::missing_field("in_grace"))?,
+covers_for: __s5.flatten(),
+provider: __s6.flatten().ok_or_else(|| ::serde::de::Error::missing_field("provider"))?,
+})
+            }
+        }
+        ::serde::Deserializer::deserialize_struct(
+            __deserializer,
+            "ACCESS_STORED_CARE_GROUND",
             __FIELDS,
             __Visitor,
         )

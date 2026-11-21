@@ -5,6 +5,7 @@
 
 //! The openEHR spec package `draft/access_log/access_log` — generated module tree.
 
+pub mod access_attested_care_ground;
 pub mod access_authorisation;
 pub mod access_care_ground;
 pub mod access_channel;
@@ -18,5 +19,6 @@ pub mod access_origin;
 pub mod access_outcome;
 pub mod access_query;
 pub mod access_retention;
+pub mod access_stored_care_ground;
 pub mod accessed_item;
 pub mod accessor;

@@ -39,13 +39,10 @@ use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
-use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
-use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
-use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
-use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
 use openehr_rm::draft::access_control::terminology::care::CarePath;
-use openehr_rm::draft::access_control::terminology::coded_text;
 use openehr_rm::draft::access_log::access_log::access_care_ground::AccessCareGround;
+
+mod care;
 
 use crate::access_eval::care_tie::Tie;
 use crate::access_eval::condition::{Judgement, Noted, RequestAccess};
@@ -53,7 +50,6 @@ use crate::access_eval::procedure::{Lifted, Verdict};
 use crate::access_eval::scope::{Item, Pred};
 use crate::access_log::entry::authorisation;
 use crate::ids::EhrId;
-use crate::party_binding::grants::caller::care_of::{CarerKind, ProviderKey};
 use crate::service::ehr::access_settings::EhrAccessSettings;
 use crate::system_log::event::{AccessDecision, AuditEvent, EventActionCode, EventOutcome};
 
@@ -211,12 +207,17 @@ pub struct Decision {
 impl Decision {
     /// The decision a stored entry's `authorisations` hold, as every
     /// projection reads it back: the grounds defined in an `EHR_ACCESS` or
-    /// the `ACCESS_POLICY`, and their versions; `None` when it holds none.
+    /// the `ACCESS_POLICY`, the treatment relationship ground that names the
+    /// care relationship an access rested on, stored or attested, and their
+    /// versions; `None` when it holds none.
     #[must_use]
     pub fn of_recorded(authorisations: &[AccessAuthorisation]) -> Option<Box<Self>> {
         let grounds: Vec<AccessAuthorisation> = authorisations
             .iter()
-            .filter(|ground| matches!(ground.name.as_deref(), Some(EHR_ACCESS | ACCESS_POLICY)))
+            .filter(|ground| {
+                matches!(ground.name.as_deref(), Some(EHR_ACCESS | ACCESS_POLICY))
+                    || ground.care.is_some()
+            })
             .cloned()
             .collect();
         let decision = Self {
@@ -399,25 +400,27 @@ impl RequestAccess {
     /// The treatment relationship ground of a tie `granting` names: for the
     /// `attested` path, the assertion it rests on and the agreement it was
     /// attested under (draft decision procedure, Refusals: "the assertion
-    /// and agreement for `attested`"); otherwise the relationship, as a
-    /// ground of the access policy in force.
+    /// and agreement for `attested`"), in an `ACCESS_ATTESTED_CARE_GROUND`;
+    /// otherwise the stored relationship, as a ground of the access policy in
+    /// force.
     fn care_authorisation(&self, granting: Option<&Tie>) -> AccessAuthorisation {
         let attested = granting
             .filter(|tie| tie.path == CarePath::Attested)
-            .and_then(|_| self.caller().facts.attestation());
+            .and_then(|tie| Some((tie, self.caller().facts.attestation()?)));
         match attested {
-            // NOTE: draft access log ACCESS_CARE_GROUND, its carer and provider are 1..1 and an
-            // attested relationship names neither here, so the ground carries no care element.
-            Some(attestation) => AccessAuthorisation {
+            Some((tie, attestation)) => AccessAuthorisation {
                 name: Some(attestation.agreement.name.clone()),
                 version: Some(attestation.agreement.version.clone()),
                 reference: Some(attestation.assertion_ref()),
+                care: Some(Box::new(AccessCareGround::AccessAttestedCareGround(
+                    care::attested_ground(tie, attestation),
+                ))),
                 ..authorisation(Authorisation::TreatmentRelationship)
             },
             None => AccessAuthorisation {
                 care: granting
-                    .and_then(|tie| care_ground(tie, &self.party_namespace()))
-                    .map(Box::new),
+                    .and_then(|tie| care::care_ground(tie, &self.party_namespace()))
+                    .map(|stored| Box::new(AccessCareGround::AccessStoredCareGround(stored))),
                 ..self.policy_ground(Authorisation::TreatmentRelationship)
             },
         }
@@ -709,45 +712,6 @@ fn position(at: usize) -> DvIdentifier {
         id: at.saturating_add(1).to_string(),
         r#type: Some("position".to_owned()),
     }
-}
-
-/// The care relationship `tie` rests on as the access log names it: its
-/// role, its path, its carer, the version that holds it, whether grace
-/// admitted the access, the carer it covers for and its provider (draft
-/// access control decision procedure, Refusals); `None` for a tie read
-/// without its relationship. The carer is named under `namespace`, the one
-/// this CDR names its parties under.
-fn care_ground(tie: &Tie, namespace: &str) -> Option<AccessCareGround> {
-    let grant = tie.grant.as_deref()?;
-    let identifier = |key: &ProviderKey, r#type: Option<&str>| DvIdentifier {
-        issuer: Some(key.issuer.clone()),
-        assigner: None,
-        id: key.id.clone(),
-        r#type: r#type.map(str::to_owned),
-    };
-    Some(AccessCareGround {
-        role: coded_text(&tie.role.terminology, &tie.role.code, &tie.role.code),
-        path: tie.path.coded(),
-        carer: PartyRef {
-            namespace: namespace.to_owned(),
-            r#type: grant
-                .carer_kind
-                .map_or("PARTY", CarerKind::rm_type)
-                .to_owned(),
-            // NOTE: BASE HIER_OBJECT_ID, a UUID always reads as one.
-            id: ObjectId::HierObjectId(HierObjectId::new(grant.carer.to_string()).ok()?),
-        },
-        relationship: grant
-            .version
-            .as_deref()
-            .and_then(|version| version.parse::<ObjectVersionId>().ok()),
-        in_grace: grant.in_grace,
-        covers_for: grant
-            .covers_for
-            .as_ref()
-            .map(|cover| identifier(&cover.key, Some(cover.kind.rm_type()))),
-        provider: identifier(&grant.provider, Some("ORGANISATION")),
-    })
 }
 
 /// The identifier of the `ROLE` container whose `CAPABILITY` grants a

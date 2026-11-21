@@ -29,6 +29,8 @@
         "ACCESS_QUERY",
         "ACCESS_AUTHORISATION",
         "ACCESS_CARE_GROUND",
+        "ACCESS_STORED_CARE_GROUND",
+        "ACCESS_ATTESTED_CARE_GROUND",
         "ACCESS_CHANNEL",
         "ACCESS_RETENTION"
       ]
@@ -734,7 +736,8 @@
     },
     "ACCESS_CARE_GROUND": {
       "name": "ACCESS_CARE_GROUND",
-      "documentation": "The care relationship an access rested on, as the draft access control decision procedure records it: its role, its path, the version that holds it, whether the grace after its end admitted the access, the carer it covers for and the provider in whose care it is.",
+      "documentation": "Abstract parent of the care relationship an access rested on, as the draft access control decision procedure records it: its role and the path by which it reached the accessor. A stored relationship is an `ACCESS_STORED_CARE_GROUND`, one a verified credential attests an `ACCESS_ATTESTED_CARE_GROUND`.",
+      "is_abstract": true,
       "properties": {
         "role": {
           "_type": "P_BMM_SINGLE_PROPERTY",
@@ -749,7 +752,16 @@
           "documentation": "How the relationship reached the accessor, coded in the draft `openehr_access` terminology's `care path` group: `direct`, `team`, `self_declared` or `attested`.",
           "is_mandatory": true,
           "type": "DV_CODED_TEXT"
-        },
+        }
+      }
+    },
+    "ACCESS_STORED_CARE_GROUND": {
+      "name": "ACCESS_STORED_CARE_GROUND",
+      "documentation": "A stored care relationship an access rested on: its carer, the version that holds it, whether the grace after its end admitted the access, the carer it covers for and the provider in whose care it is.",
+      "ancestors": [
+        "ACCESS_CARE_GROUND"
+      ],
+      "properties": {
         "carer": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "carer",
@@ -785,7 +797,33 @@
         }
       },
       "invariants": {
-        "Path_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_care_path, path.defining_code)"
+        "Path_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_care_path, path.defining_code) and not path.defining_code.code_string.is_equal (\"attested\")"
+      }
+    },
+    "ACCESS_ATTESTED_CARE_GROUND": {
+      "name": "ACCESS_ATTESTED_CARE_GROUND",
+      "documentation": "A care relationship a verified credential attests under an agreement the access policy's `attested_care` names, which is never stored: the assertion that attests it and the agreement it was attested under.",
+      "ancestors": [
+        "ACCESS_CARE_GROUND"
+      ],
+      "properties": {
+        "assertion": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "assertion",
+          "documentation": "The assertion that attests the treatment context: its `id`, and its `issuer` when the credential names one.",
+          "is_mandatory": true,
+          "type": "DV_IDENTIFIER"
+        },
+        "agreement": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "agreement",
+          "documentation": "The agreement the caller was admitted under: `id` is the container uid of the agreement's `ROLE`, `issuer` the federation issuer the partner's client identifiers are held under.",
+          "is_mandatory": true,
+          "type": "DV_IDENTIFIER"
+        }
+      },
+      "invariants": {
+        "Path_valid": "path.defining_code.terminology_id.value.is_equal (Terminology_id_access) and path.defining_code.code_string.is_equal (\"attested\")"
       }
     },
     "ACCESS_CHANNEL": {

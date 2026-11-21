@@ -2,7 +2,8 @@
 --------
 {
   "name": "ACCESS_CARE_GROUND",
-  "documentation": "The care relationship an access rested on, as the draft access control decision procedure records it: its role, its path, the version that holds it, whether the grace after its end admitted the access, the carer it covers for and the provider in whose care it is.",
+  "documentation": "Abstract parent of the care relationship an access rested on, as the draft access control decision procedure records it: its role and the path by which it reached the accessor. A stored relationship is an `ACCESS_STORED_CARE_GROUND`, one a verified credential attests an `ACCESS_ATTESTED_CARE_GROUND`.",
+  "is_abstract": true,
   "properties": {
     "role": {
       "_type": "P_BMM_SINGLE_PROPERTY",
@@ -17,43 +18,7 @@
       "documentation": "How the relationship reached the accessor, coded in the draft `openehr_access` terminology's `care path` group: `direct`, `team`, `self_declared` or `attested`.",
       "is_mandatory": true,
       "type": "DV_CODED_TEXT"
-    },
-    "carer": {
-      "_type": "P_BMM_SINGLE_PROPERTY",
-      "name": "carer",
-      "documentation": "The relationship's target: the accessor's `PERSON` or a `ROLE` it performs for `direct` and `self_declared`, the care team `GROUP` or the `ORGANISATION` unit for `team`.",
-      "is_mandatory": true,
-      "type": "PARTY_REF"
-    },
-    "relationship": {
-      "_type": "P_BMM_SINGLE_PROPERTY",
-      "name": "relationship",
-      "documentation": "The version of the relationship the decision read: its `object_id` is the relationship's uid.",
-      "type": "OBJECT_VERSION_ID"
-    },
-    "in_grace": {
-      "_type": "P_BMM_SINGLE_PROPERTY",
-      "name": "in_grace",
-      "documentation": "True when the relationship had ended and the policy's `relationship_grace` admitted the access.",
-      "is_mandatory": true,
-      "type": "Boolean"
-    },
-    "covers_for": {
-      "_type": "P_BMM_SINGLE_PROPERTY",
-      "name": "covers_for",
-      "documentation": "The carer the relationship's target replaces, as its `covers_for` element names it.",
-      "type": "DV_IDENTIFIER"
-    },
-    "provider": {
-      "_type": "P_BMM_SINGLE_PROPERTY",
-      "name": "provider",
-      "documentation": "The healthcare provider in whose care the relationship is, as its `provider` element names it.",
-      "is_mandatory": true,
-      "type": "DV_IDENTIFIER"
     }
-  },
-  "invariants": {
-    "Path_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_care_path, path.defining_code)"
   }
 }
 --------

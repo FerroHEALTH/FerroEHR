@@ -6,29 +6,19 @@
 //! The openEHR `ACCESS_CARE_GROUND` spec class, generated from the vendored BMM
 //! meta-model.
 
-use crate::v1_2::data_types::basic::dv_identifier::DvIdentifier;
-use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
-use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
-use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
+use crate::draft::access_log::access_log::access_attested_care_ground::AccessAttestedCareGround;
+use crate::draft::access_log::access_log::access_stored_care_ground::AccessStoredCareGround;
 
-/// The openEHR `ACCESS_CARE_GROUND` class.
+/// Closed subtype set of `ACCESS_CARE_GROUND`, dispatched on each payload's `_type`.
 ///
-/// The care relationship an access rested on, as the draft access control decision procedure records it: its role, its path, the version that holds it, whether the grace after its end admitted the access, the carer it covers for and the provider in whose care it is.
+/// Abstract parent of the care relationship an access rested on, as the draft access control decision procedure records it: its role and the path by which it reached the accessor.
+///
+/// A stored relationship is an `ACCESS_STORED_CARE_GROUND`, one a verified credential attests an `ACCESS_ATTESTED_CARE_GROUND`.
 #[doc(alias = "ACCESS_CARE_GROUND")]
 #[derive(Debug, Clone, PartialEq)]
-pub struct AccessCareGround {
-    /// The relationship's `care_role`.
-    pub role: DvCodedText,
-    /// How the relationship reached the accessor, coded in the draft `openehr_access` terminology's `care path` group: `direct`, `team`, `self_declared` or `attested`.
-    pub path: DvCodedText,
-    /// The relationship's target: the accessor's `PERSON` or a `ROLE` it performs for `direct` and `self_declared`, the care team `GROUP` or the `ORGANISATION` unit for `team`.
-    pub carer: PartyRef,
-    /// The version of the relationship the decision read: its `object_id` is the relationship's uid.
-    pub relationship: Option<ObjectVersionId>,
-    /// True when the relationship had ended and the policy's `relationship_grace` admitted the access.
-    pub in_grace: bool,
-    /// The carer the relationship's target replaces, as its `covers_for` element names it.
-    pub covers_for: Option<DvIdentifier>,
-    /// The healthcare provider in whose care the relationship is, as its `provider` element names it.
-    pub provider: DvIdentifier,
+pub enum AccessCareGround {
+    /// The `ACCESS_ATTESTED_CARE_GROUND` subtype of `ACCESS_CARE_GROUND`.
+    AccessAttestedCareGround(AccessAttestedCareGround),
+    /// The `ACCESS_STORED_CARE_GROUND` subtype of `ACCESS_CARE_GROUND`.
+    AccessStoredCareGround(AccessStoredCareGround),
 }
