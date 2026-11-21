@@ -199,6 +199,7 @@ server_latency() {
         elif ($k | test("^POST .*/query/aql$")) then (if ($what | startswith("aql_")) then $what else "aql" end)
         elif ($k | test("^GET .*/AuditEvent$")) then "access_log_read"
         elif ($k | test("^GET .*/demographic/person/\\{[^}/]+\\}$")) then "party_read"
+        elif ($k | test("^POST .*/demographic/party_relationship$")) then "care_commit"
         elif ($k | test("^GET .*/export/\\{[^}/]+\\}$")) then "export"
         else null end;
     def q($s; $p): $s[([($p * ($s | length) | ceil) - 1, 0] | max)];

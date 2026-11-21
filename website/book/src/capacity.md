@@ -51,8 +51,10 @@ FerroEHR's access path at scale and sweeps each request group on its own.
 | `aql_ehr` | the lab-results AQL with `ORDER BY`, one EHR of 20 results, over 500 EHRs | clinician | 3 |
 | `aql_chart` | the same AQL, one EHR of 100 results, over 50 EHRs | clinician | 1 |
 | `aql_population` | `SELECT e/ehr_id/value FROM EHR e LIMIT 20` | clinician | 1 |
+| `aql_caseload` | the newest 20 compositions of the clinician's whole caseload | clinician | 0 |
 | `access_log_read` | ITI-81 `AuditEvent?date=ge2026-01-01&_count=20` | administrator | 1 |
 | `party_read` | `GET /demographic/person/{id}` | administrator | 2 |
+| `care_commit` | `POST /demographic/party_relationship`: a new care relationship for each of 500 patients per round, as an ADT feed writes one per encounter | administrator | `CAPACITY_CARE_WEIGHT` (0) |
 | `export` | the EHR export, over 500 EHRs | clinician | 0 |
 | `health` | `GET /health/liveness`, the harness's own ceiling | none | 0 |
 
@@ -132,6 +134,34 @@ one store: their commits grow the store the other groups read, or set
 `CAPACITY_FRESH=1` so every run starts from the seeded store. A variant,
 such as a longer `[auth.basic] cache_ttl`, goes in
 `CAPACITY_SERVER_ENV` and belongs in the label of every figure it produced.
+
+## Care relationships at practice scale
+
+The seed puts `CAPACITY_POPULATION` patients in the care of the clinician's
+team, so the population groups read a caseload of that size. Every
+`care_commit` request is a new relationship, and each one moves the party
+domain's single facts revision, which every replica's copy of the caller
+facts and the care projection follow. A sweep of `care_commit` on its own
+measures how many relationship commits per second that revision allows; a
+mix with `CAPACITY_CARE_WEIGHT` above 0 measures the reads while an ADT feed
+writes.
+
+```sh
+export CAPACITY_POPULATION=50000          # a GP practice's list; 1600 for a ward
+bash scripts/perf/capacity.sh up 1
+bash scripts/perf/capacity.sh seed
+bash scripts/perf/capacity.sh snapshot
+CAPACITY_FRESH=1 CAPACITY_REPEAT=3 CAPACITY_SLO_MS=30 \
+  bash scripts/perf/capacity.sh sweep care_commit 100 200 500 1000 2000 3000
+CAPACITY_FRESH=1 CAPACITY_REPEAT=3 CAPACITY_SLO_SLOW_MS=100 \
+  bash scripts/perf/capacity.sh sweep aql_caseload 100 500 1000
+CAPACITY_FRESH=1 CAPACITY_REPEAT=3 CAPACITY_CARE_WEIGHT=1 CAPACITY_SLO_MS=30 \
+  CAPACITY_SLO_SLOW_MS=100 bash scripts/perf/capacity.sh sweep mix 1000 2000 3000
+bash scripts/perf/capacity.sh summary
+```
+
+The plans these queries take at 100, 1 600 and 50 000 patients per caseload
+are held by the integration test `care_caseload_plans`.
 
 ## Trusting a number
 

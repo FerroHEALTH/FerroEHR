@@ -361,6 +361,7 @@ async fn project(
             digest: subject_digest(&cared_key(subject)),
             person: subject.id.parse().unwrap_or(uuid::Uuid::nil()),
             carer: TEAM,
+            carer_kind: ferroehr::party_binding::grants::caller::care_of::CarerKind::Group,
             provider_issuer: PROVIDER.0.to_owned(),
             provider_id: PROVIDER.1.to_owned(),
             from: *from,
