@@ -143,6 +143,22 @@ $$;
 COMMENT ON FUNCTION access_log_intake_unknown(text, text, boolean) IS
     'Raises foreign_key_violation for an intake row naming a shared part or a render policy the store does not hold, and serialization_failure for a part of the batch removed while it was written (#5887).';
 
+-- Whether the shared part p_digest is gone, read with a snapshot of its own:
+-- VOLATILE, so it sees a removal committed while the intake statement waited
+-- on the part's row. Called only for a part the statement had to raise and
+-- did not (#6241).
+CREATE FUNCTION audit.access_log_intake_part_gone(p_digest text) RETURNS boolean
+    LANGUAGE plpgsql VOLATILE
+    SET search_path = pg_catalog
+    AS $$
+BEGIN
+    RETURN NOT EXISTS (SELECT 1 FROM audit.access_log_shared s
+                        WHERE s.digest = decode(p_digest, 'hex'));
+END;
+$$;
+COMMENT ON FUNCTION access_log_intake_part_gone(text) IS
+    'Whether a shared part is gone, read with a snapshot of its own; the intake asks it of a part it had to raise and did not (#6241).';
+
 -- Writes each entry once into access_log_entry and one intake row naming
 -- them; a shared part's retain_until follows its entries'.
 CREATE FUNCTION audit.access_log_intake_take(
@@ -225,16 +241,22 @@ BEGIN
                    current_date)
           FROM unnest(p_shared_digests, p_shared_contents) AS t(digest, content)
          ORDER BY decode(t.digest, 'hex')
-        ON CONFLICT (digest) DO NOTHING;
+        ON CONFLICT (digest) DO UPDATE SET retain_until = excluded.retain_until
+         WHERE audit.access_log_shared.retain_until < excluded.retain_until;
     END IF;
+    -- No row lock is taken on a part an entry names (#6241). A part the batch
+    -- carries is stored, or raised under the row lock its upsert takes, or
+    -- already kept through today, and the collector removes a part only a day
+    -- after its retain_until, so none of them goes before this transaction
+    -- commits. A part the batch leaves out and the statement must raise is
+    -- raised under its row lock below, and refused when the collector removed
+    -- it while the raise waited.
     WITH held AS (
-        SELECT s.digest
+        SELECT s.digest, s.retain_until
           FROM audit.access_log_shared s
          WHERE s.digest IN (SELECT DISTINCT decode(t.c, 'hex')
                               FROM unnest(p_shared) AS t(c)
                              WHERE t.c IS NOT NULL)
-         ORDER BY s.digest
-           FOR KEY SHARE
     ),
     needed AS (
         SELECT decode(t.c, 'hex') AS digest,
@@ -252,7 +274,7 @@ BEGIN
           FROM needed n
           JOIN held h ON h.digest = n.digest
          WHERE s.digest = n.digest AND s.retain_until < n.until
-        RETURNING 1
+        RETURNING s.digest
     ),
     written AS (
         INSERT INTO audit.access_log_entry (record_type, uid, time_recorded, content, shared,
@@ -262,8 +284,12 @@ BEGIN
             render_policy_id)
         SELECT u.c1, u.c2::uuid, u.c3::timestamptz, u.c4,
                CASE
-                   WHEN u.c5 IS NOT NULL AND held.digest IS NULL
-                   THEN audit.access_log_intake_unknown('shared part', u.c5, batch.digest IS NOT NULL)
+                   WHEN u.c5 IS NOT NULL
+                        AND (held.digest IS NULL
+                             OR (held.retain_until < need.until AND raised.digest IS NULL
+                                 AND audit.access_log_intake_part_gone(u.c5)))
+                   THEN audit.access_log_intake_unknown('shared part', u.c5,
+                            batch.digest IS NOT NULL OR held.digest IS NOT NULL)
                    ELSE decode(u.c5, 'hex')
                END,
                decode(u.c6, 'hex'),
@@ -292,6 +318,8 @@ BEGIN
           LEFT JOIN unnest(v_entries, v_shared, v_own) AS g(e, shared, own) ON g.e = u.n
           LEFT JOIN audit.audit_search_set x ON x.tokens = g.shared::integer[]
           LEFT JOIN held ON held.digest = decode(u.c5, 'hex')
+          LEFT JOIN needed need ON need.digest = decode(u.c5, 'hex')
+          LEFT JOIN kept raised ON raised.digest = decode(u.c5, 'hex')
           LEFT JOIN unnest(p_shared_digests) AS batch(digest) ON batch.digest = u.c5
           LEFT JOIN audit.audit_render_policy policy ON policy.digest = u.c24
          ORDER BY u.n

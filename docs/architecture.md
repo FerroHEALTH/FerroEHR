@@ -493,13 +493,15 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (`audit/0006_baseline_intake.sql`). The intake rows carry no
   foreign keys either (#5887): the intake statement refuses a render policy or
   shared part the store does not hold in the statement that writes the rows,
-  and locks each distinct stored part its batch names once, so the
-  retention sweep's collection of shared parts skips a part a write in
-  flight names (`audit/0006_baseline_intake.sql`). A shared part
+  and takes no lock on a part it names (#6241): a part the batch carries is
+  stored or raised by an upsert, the sweep removes a part only a day after its
+  `retain_until`, and a raise that finds the part removed while it waited is
+  refused as a serialization failure and written again
+  (`audit/0006_baseline_intake.sql`). A shared part
   keeps the latest `retain_until` of its entries, never earlier than the day
   the intake last named it; a write judges its raise on the part's current
   row, so two writes raising one part never rewrite it to the end it already
-  has (#6192), and the sweep removes the parts past it that no
+  has (#6192), and the sweep removes the parts a day past it that no
   entry names, in batches read through the entries' `retain_until` index
   (`audit.access_log_shared_collect`, #5968). The ferroehr-rest test
   `statement_budget` holds an AQL request to its round trips and nested

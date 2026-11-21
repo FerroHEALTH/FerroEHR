@@ -448,3 +448,108 @@ async fn the_sweep_racing_writes_of_a_known_part_leaves_no_entry_without_its_par
         "the chain verifies"
     );
 }
+
+/// An orphaned part stays one day past its `retain_until` and goes the day
+/// after: the day of grace that lets an intake statement name a part without
+/// locking it (#6241).
+#[tokio::test]
+async fn the_sweep_keeps_an_orphaned_part_one_day_past_its_end() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AccessLogStore::new(pool.clone());
+    sqlx::query(
+        "INSERT INTO audit.access_log_shared (digest, content, retain_until) \
+         SELECT sha256(convert_to(c, 'UTF8')), c, current_date - 1 \
+           FROM (SELECT '{\"grace\":1}'::text AS c) AS t",
+    )
+    .execute(&pool)
+    .await
+    .expect("an orphaned part that ended yesterday");
+    assert_eq!(
+        store.collect_shared(today(), 10).await.expect("a pass"),
+        0,
+        "a part that ended yesterday is kept"
+    );
+    let before_yesterday = today()
+        .yesterday()
+        .and_then(|day| day.yesterday())
+        .expect("a date");
+    age_parts(&pool, &before_yesterday.to_string()).await;
+    assert_eq!(
+        store.collect_shared(today(), 10).await.expect("a pass"),
+        1,
+        "a part that ended the day before yesterday goes"
+    );
+    assert_eq!(parts(&pool).await, 0);
+}
+
+/// An intake statement that has to raise a part it left out, while the
+/// sweep removes that part, waits on the sweep's row lock and is refused as
+/// a serialization failure, so no entry names a part the store does not hold
+/// (#6241).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test holds the sweep's removal open on a raw pool connection, outside any request"
+)]
+async fn a_raise_that_meets_the_sweeps_removal_is_refused() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AccessLogStore::new(pool.clone());
+    let written = store
+        .append(vec![entry(1, "2099-01-01")])
+        .await
+        .expect("the first entry appends");
+    store
+        .settle(ferroehr::access_log::chainer::Owed::default())
+        .await
+        .expect("the intake chains");
+    store
+        .tombstone(written[0].uid.value(), at("2026-01-01T00:00:00Z"), expiry())
+        .await
+        .expect("the tombstone")
+        .expect("the entry");
+    age_parts(&pool, "2025-01-02").await;
+    let digest: String =
+        sqlx::query_scalar("SELECT encode(digest, 'hex') FROM audit.access_log_shared")
+            .fetch_one(&pool)
+            .await
+            .expect("the one shared part");
+
+    let mut conn = pool.acquire().await.expect("connection");
+    let mut sweeping = conn.begin().await.expect("begin");
+    sqlx::query("DELETE FROM audit.access_log_shared WHERE digest = decode($1, 'hex')")
+        .bind(&digest)
+        .execute(&mut *sweeping)
+        .await
+        .expect("the sweep's removal, held open");
+    let raising = {
+        let pool = pool.clone();
+        let digest = digest.clone();
+        tokio::spawn(async move {
+            let mut second = entry(2, "2099-01-01");
+            let second =
+                ferroehr::access_log::intake::IntakeEntry::of(&mut second, None).expect("intake");
+            let mut conn = pool.acquire().await.expect("connection");
+            ferroehr::access_log::intake::take_in(
+                &mut conn,
+                &[second],
+                &[Vec::new()],
+                None,
+                &std::collections::BTreeSet::from([digest.as_str()]),
+            )
+            .await
+        })
+    };
+    crate::commit_lock_order::wait_for_a_lock_waiter(&pool).await;
+    sweeping.commit().await.expect("the removal commits");
+    let refused = raising
+        .await
+        .expect("the write task")
+        .expect_err("the raise found the part removed");
+    assert!(
+        refused.to_string().contains("removed while it was written"),
+        "{refused}"
+    );
+    assert_eq!(dangling(&pool).await, 0, "no entry names the removed part");
+}

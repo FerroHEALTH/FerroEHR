@@ -221,9 +221,9 @@ const INTAKE: &str = "SELECT audit.access_log_intake_take($1, $2, $3, $4, $5, $6
 ///
 /// The shared parts they name go in with them, but for those whose digest
 /// `stored` names, which the store already keeps for at least as long as the
-/// entries need: the statement still locks every part an entry names, raises
-/// its `retain_until` when an entry outlives it, and refuses an entry whose
-/// part the store does not hold. `tokens` holds, by the
+/// entries need: the statement still raises a part's `retain_until` when an
+/// entry outlives it, and refuses an entry whose part the store does not hold
+/// or whose part it had to raise and found removed. `tokens` holds, by the
 /// position of its entry, the search tokens of each entry whose index row
 /// leaves them to the statement (an empty `search_tokens`); the statement
 /// stores or finds them and their shared set. They are held under
@@ -359,12 +359,12 @@ pub struct GroupWriter {
 /// A part is learned only from a statement that committed on its own, and the
 /// store only ever raises a part's `retain_until`, so the store keeps every
 /// part learned until at least its learned date. The retention sweep removes
-/// only parts whose `retain_until` has passed (`audit.access_log_shared_collect`),
-/// so a part is skipped only while its learned date is past tomorrow. The
-/// intake statement still locks every part an entry names and refuses an
-/// entry whose part is gone; such a refusal forgets the skipped parts and
-/// writes the statement again with them. No specification governs it: our
-/// own design.
+/// only parts whose `retain_until` passed more than a day ago
+/// (`audit.access_log_shared_collect`), so a part is skipped only while its
+/// learned date is past tomorrow. The intake statement still refuses an entry
+/// whose part is gone; such a refusal forgets the skipped parts and writes
+/// the statement again with them. No specification governs it: our own
+/// design.
 #[derive(Debug, Default)]
 pub(crate) struct StoredParts {
     known: std::sync::Mutex<BTreeMap<String, Option<jiff::civil::Date>>>,

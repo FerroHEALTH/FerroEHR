@@ -921,13 +921,15 @@ $$;
 COMMENT ON FUNCTION access_log_chain_take() IS
     'Lock the head of the access log without waiting and return its position and link digest; no row when another chainer holds it.';
 
--- Remove up to p_limit shared parts whose retain_until is before p_today and
--- the database's own date and that no entry names. An entry that names a
--- part has a retain_until at or before the part's, or the part's is
--- infinity, so the check reads only the entries the retention sweep has not
--- tombstoned yet, through the retain_until index. A part an intake statement
--- holds is skipped, and one it named since this statement began no longer
--- qualifies, since the intake raised its retain_until to today at least.
+-- Remove up to p_limit shared parts whose retain_until is more than a day
+-- before p_today and the database's own date and that no entry names. An
+-- entry that names a part has a retain_until at or before the part's, or the
+-- part's is infinity, so the check reads only the entries the retention sweep
+-- has not tombstoned yet, through the retain_until index. The intake keeps a
+-- part it names until at least its own date and takes no lock on it (#6241):
+-- the day of grace covers an intake statement that saw the part before
+-- midnight and commits after it, and an intake that has to raise a part this
+-- removes finds it gone and is refused as a serialization failure.
 CREATE FUNCTION audit.access_log_shared_collect(p_today date, p_limit integer) RETURNS bigint
     LANGUAGE sql VOLATILE SECURITY DEFINER
     SET search_path = audit, pg_catalog
@@ -935,7 +937,7 @@ CREATE FUNCTION audit.access_log_shared_collect(p_today date, p_limit integer) R
     WITH due AS (
         SELECT s.digest, s.retain_until
           FROM audit.access_log_shared s
-         WHERE s.retain_until < least(p_today, current_date)
+         WHERE s.retain_until < least(p_today, current_date) - 1
          ORDER BY s.retain_until, s.digest
          LIMIT greatest(p_limit, 0)
            FOR UPDATE SKIP LOCKED
