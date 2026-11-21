@@ -334,3 +334,48 @@ async fn a_request_keeps_its_audit_connection_when_it_turns_to_a_domain() {
     .await;
     pools.close().await;
 }
+
+/// The care projector reads the party store and gives that connection back
+/// before it takes a clinical one for its transaction: while the party pool
+/// is exhausted, the projector waits for it holding no clinical connection,
+/// and it completes once the party pool has a connection again (#6187).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_care_projector_waits_for_the_party_pool_holding_no_clinical_connection() {
+    let db = testkit::db().await.expect("testkit database");
+    let mut settings = DbConfig::new(db.url());
+    settings.max_connections = Some(1);
+    settings.min_connections = Some(0);
+    settings.connection_budget = 8;
+    settings.acquire_timeout = ferrohealth_config::units::Duration::from_secs(20);
+    let pools = ferroehr::db::connect_domains(&settings)
+        .await
+        .expect("the pools connect");
+    let (clinical, party) = (
+        pools.get(Domain::Clinical).clone(),
+        pools.get(Domain::Party).clone(),
+    );
+    let svc = std::sync::Arc::new(ferroehr::service::FerroEhrService::new(&pools));
+
+    let held = acquire(&party).await.expect("the one party connection");
+    let projecting = {
+        let svc = std::sync::Arc::clone(&svc);
+        tokio::spawn(async move { svc.project_care().await })
+    };
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    assert!(
+        !projecting.is_finished(),
+        "the projector waits for the party pool"
+    );
+    assert_eq!(
+        settled_in_use(&clinical, 0).await,
+        0,
+        "the waiting projector holds no clinical connection"
+    );
+
+    drop(held);
+    projecting
+        .await
+        .expect("the projector task")
+        .expect("the projector completes once the party pool has a connection");
+    pools.close().await;
+}

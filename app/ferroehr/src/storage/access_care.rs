@@ -88,19 +88,39 @@ pub struct CareRow {
     pub role: ForeignCode,
 }
 
-/// The facts revision the projection reflects and the check value of the
-/// digest form its digests were taken in, the state row locked until the
+/// What the state row of the projection holds: the facts revision it
+/// reflects and the check value of the digest form its digests were taken
+/// in, each `None` before the first run.
+pub type State = (Option<i64>, Option<Vec<u8>>);
+
+/// The [`State`] of the projection, read without a lock.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn state(conn: &mut PgConnection) -> Result<State, StorageError> {
+    read_state(
+        conn,
+        "SELECT revision, key_check FROM access_care_state WHERE singleton",
+    )
+    .await
+}
+
+/// The [`State`] of the projection, the state row locked until the
 /// transaction on `tx` ends, so one projector writes at a time.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
-pub async fn lock_state(
-    tx: &mut PgConnection,
-) -> Result<(Option<i64>, Option<Vec<u8>>), StorageError> {
-    let row =
-        sqlx::query("SELECT revision, key_check FROM access_care_state WHERE singleton FOR UPDATE")
-            .fetch_one(&mut *tx)
-            .await?;
+pub async fn lock_state(tx: &mut PgConnection) -> Result<State, StorageError> {
+    read_state(
+        tx,
+        "SELECT revision, key_check FROM access_care_state WHERE singleton FOR UPDATE",
+    )
+    .await
+}
+
+/// The [`State`] the statement `sql` reads off the state row.
+async fn read_state(conn: &mut PgConnection, sql: &'static str) -> Result<State, StorageError> {
+    let row = sqlx::query(sql).fetch_one(&mut *conn).await?;
     Ok((row.try_get("revision")?, row.try_get("key_check")?))
 }
 
