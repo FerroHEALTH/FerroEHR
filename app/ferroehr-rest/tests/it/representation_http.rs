@@ -11,7 +11,8 @@
 //! for the provider the deployment acts for (draft access control decision
 //! procedure, step 0 Representation). A login whose `PERSON` carries the
 //! representative marker alone, asserting no subject, reaches the subject a
-//! stored representation names it for (#6147). A `persons` token whose
+//! stored representation names it for (#6147), and its own record as the
+//! person themself (#6167). A `persons` token whose
 //! only clinical grants are `patient/` is a professional confined to its
 //! launch EHR, and its commit never records `PARTY_SELF`. No openEHR spec
 //! governs resolving a login to a party: our own design.
@@ -20,6 +21,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::party_binding::source::BindingSource;
+use ferroehr::policy_register::Register;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr_rest::config::AppConfig;
@@ -32,7 +34,7 @@ use ferrohealth_smart::party::source::{Lookup, PartyRecord, PartySource, Query, 
 use ferrohealth_smart::party::{Markers, PartyRef, PartyState, Represented};
 use ferrohealth_smart::profile::Representation;
 use http::StatusCode;
-use openehr_rm::prelude::EhrStatus;
+use openehr_rm::prelude::{Composition, EhrStatus};
 use serde_json::{Value, json};
 
 use crate::common::{self, BASE};
@@ -392,6 +394,185 @@ async fn a_person_login_on_a_representative_row_reaches_only_a_stored_representa
     unrecorded(
         "a launch EHR of a subject no representation names",
         status(&app, "GET", &format!("/ehr/{stranger}"), &elsewhere).await,
+    );
+}
+
+/// A [`Family`] whose representative is the subject of an EHR of their own,
+/// with that EHR's id.
+async fn with_own_record(svc: &FerroEhrService) -> (Family, String) {
+    let (representative, own) = crate::portal_representatives_http::child(svc).await;
+    let (child, ehr) = crate::portal_representatives_http::child(svc).await;
+    let family = Family {
+        representative: representative.to_string(),
+        child: child.to_string(),
+        ehr,
+    };
+    (family, own)
+}
+
+/// Turns the EHDS Art. 3(3) delay on for patient summaries and commits one
+/// into `own` outside any request, so it is held from the person; its
+/// versioned object id.
+async fn held_summary(svc: &FerroEhrService, own: &str) -> String {
+    svc.put_policy_register(
+        Register::AccessDelay,
+        0,
+        r#"{"enabled": true, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#,
+    )
+    .await
+    .expect("turn the access delay on");
+    svc.mirror_category_map()
+        .await
+        .expect("mirror the category map");
+    svc.template_adl14_upload(&common::ips_opt_xml())
+        .await
+        .expect("the template uploads");
+    let summary = openehr_its::json::from_canonical_value::<Composition>(
+        &common::ips_canonical_composition(),
+    )
+    .expect("a COMPOSITION");
+    svc.create_composition(
+        ferroehr::ids::EhrId(own.parse().expect("an EHR id")),
+        WriteRequest::new(summary),
+    )
+    .await
+    .expect("the summary commits")
+    .vo_id
+    .to_string()
+}
+
+/// #6167: a login whose `PERSON` carries the representative marker and is
+/// the subject of its own EHR reaches that EHR as the person themself, with
+/// no stored representation of itself (EHDS Art. 3): it finds and reads it,
+/// a new result stays held from it under the Art. 3(3) delay, it alters no
+/// data a professional inserted (Art. 5), and its own entry names no party
+/// (`PARTY_SELF`). Another subject still needs the stored representation.
+/// Our own design.
+#[tokio::test]
+async fn a_representative_reaches_their_own_record_as_the_person_themself() {
+    let (_db, svc) = service().await;
+    let (family, own) = with_own_record(&svc).await;
+    let child = family.ehr.clone();
+    let held = held_summary(&svc, &own).await;
+    let app = router(Arc::clone(&svc), Arc::new(Recorded::of(&family))).await;
+    let credential = token("rep-login", &json!({}));
+    let lookup = |subject: &str| format!("/ehr?subject_id={subject}&subject_namespace={NAMESPACE}");
+
+    let (code, body) = status(&app, "GET", &format!("/ehr/{own}"), &credential).await;
+    assert_eq!(code, StatusCode::OK, "their own EHR: {body}");
+    let (code, body) = status(&app, "GET", &lookup(&family.representative), &credential).await;
+    assert_eq!(code, StatusCode::OK, "the lookup of their own EHR: {body}");
+    assert!(body.contains(&own), "their own EHR is found: {body}");
+    let (code, body) = status(
+        &app,
+        "GET",
+        &format!("/ehr/{own}/composition/{held}"),
+        &credential,
+    )
+    .await;
+    assert_eq!(
+        code,
+        StatusCode::NOT_FOUND,
+        "a held result reads as absent to the person: {body}"
+    );
+    let (code, body) = status(&app, "GET", &format!("/ehr/{child}"), &credential).await;
+    assert_eq!(code, StatusCode::FORBIDDEN, "the unrecorded child: {body}");
+    assert!(body.contains("refused-representation-unrecorded"), "{body}");
+
+    let (code, headers, body) = common::send(
+        &app,
+        common::req("GET", format!("{BASE}/ehr/{own}/ehr_status"))
+            .auth(&credential)
+            .accept("application/json")
+            .build(),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "their own EHR's status: {body}");
+    let current = common::etag_uid(&headers);
+    let (code, _, body) = common::send(
+        &app,
+        common::req("PUT", format!("{BASE}/ehr/{own}/ehr_status"))
+            .auth(&credential)
+            .accept("application/json")
+            .if_match(format!("\"{current}\""))
+            .json(body.clone())
+            .build(),
+    )
+    .await;
+    assert_eq!(
+        code,
+        StatusCode::FORBIDDEN,
+        "the person alters no data a professional inserted: {body}"
+    );
+    assert!(body.contains("EHDS Art. 5"), "{body}");
+    let mut entry = common::ips_canonical_composition();
+    if let Some(object) = entry.as_object_mut() {
+        object.remove("uid");
+        object.insert("composer".to_owned(), json!({ "_type": "PARTY_SELF" }));
+    }
+    let (code, headers, body) = common::send(
+        &app,
+        common::req("POST", format!("{BASE}/ehr/{own}/composition"))
+            .auth(&credential)
+            .accept("application/json")
+            .json(entry.to_string())
+            .build(),
+    )
+    .await;
+    assert_eq!(code, StatusCode::CREATED, "their own entry: {body}");
+    let uid = common::etag_uid(&headers);
+    let vo = uid.split("::").next().expect("a versioned object id");
+    let (code, body) = status(
+        &app,
+        "GET",
+        &format!("/ehr/{own}/versioned_composition/{vo}/version/{uid}"),
+        &credential,
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "their own entry's version: {body}");
+    let version: Value = serde_json::from_str(&body).expect("a version");
+    let committer = &version["commit_audit"]["committer"];
+    assert_eq!(committer["_type"], "PARTY_SELF", "{committer}");
+}
+
+/// #6167: the representative who is also a patient reaches a represented
+/// subject only on the stored representation, and a launch context holds it
+/// to the launch EHR, its own or the represented subject's. Our own design.
+#[tokio::test]
+async fn a_representative_with_a_record_of_their_own_is_held_to_the_launch_ehr() {
+    let (_db, svc) = service().await;
+    let (family, own) = with_own_record(&svc).await;
+    let child = family.ehr.clone();
+    let app = router(Arc::clone(&svc), Arc::new(Recorded::of(&family))).await;
+    let credential = token("rep-login", &json!({}));
+    let (code, body) = status(&app, "GET", &format!("/ehr/{child}"), &credential).await;
+    assert_eq!(code, StatusCode::FORBIDDEN, "the unrecorded child: {body}");
+    let (code, body) = status(&app, "GET", &format!("/ehr/{own}"), &credential).await;
+    assert_eq!(code, StatusCode::OK, "their own EHR: {body}");
+    stored(&svc, &family).await;
+    let (code, body) = status(&app, "GET", &format!("/ehr/{child}"), &credential).await;
+    assert_eq!(code, StatusCode::OK, "the represented child: {body}");
+    let for_child = token(
+        "rep-login",
+        &json!({ "scope": "patient/composition-*.r", "ehrId": child }),
+    );
+    let (code, body) = status(&app, "GET", &format!("/ehr/{own}"), &for_child).await;
+    assert_eq!(
+        code,
+        StatusCode::FORBIDDEN,
+        "their own EHR under the child's launch: {body}"
+    );
+    let for_self = token(
+        "rep-login",
+        &json!({ "scope": "patient/composition-*.r", "ehrId": own }),
+    );
+    let (code, body) = status(&app, "GET", &format!("/ehr/{own}"), &for_self).await;
+    assert_eq!(code, StatusCode::OK, "their own launch EHR: {body}");
+    let (code, body) = status(&app, "GET", &format!("/ehr/{child}"), &for_self).await;
+    assert_eq!(
+        code,
+        StatusCode::FORBIDDEN,
+        "the child's EHR under their own launch: {body}"
     );
 }
 

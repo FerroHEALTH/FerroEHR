@@ -123,6 +123,7 @@ pub fn details(
         );
     }
     tree.flag(Detail::SubjectLookupFailed, event.subject_lookup_failed);
+    tree.level(Detail::Review, event.review);
     // NOTE: GDPR Art 5(1)(c) (`docs/law/eu/gdpr/text.html`), a read of the log names its
     // search by digest, so the entry keeps no object the search named.
     if event.entry != EntryScope::LogRead && core.object_id() != event.object_id.as_deref() {
@@ -356,6 +357,7 @@ fn accessor_and_access(
     }
     event.ehr_id = text(Detail::EhrId)?.or_else(|| core.ehr_id().map(str::to_owned));
     event.subject_lookup_failed = details.flag(Detail::SubjectLookupFailed)?;
+    event.review = details.level(Detail::Review)?;
     event.object_id = text(Detail::ObjectId)?.or_else(|| core.object_id().map(str::to_owned));
     event.purpose = text(Detail::Purpose)?.or_else(|| core.purpose(token_purposes));
     event.legal_basis = text(Detail::LegalBasis)?;

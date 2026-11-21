@@ -905,7 +905,9 @@ which is what makes an optional stage safe to disable:
    and reaches the subject of the EHR its launch context names, else of the
    EHR the request names, else the `PERSON` an EHR lookup by subject names,
    only on a live stored representation of that subject (#6079), else
-   `refused-representation-unrecorded`. An
+   `refused-representation-unrecorded`. When that subject is its own
+   `PERSON`, it is admitted as the person themself, as above, with no
+   representation (#6167, EHDS Art. 3). An
    openEHR launch token carries no `fhirUser` and no `patient` claim (SMART
    on openEHR `master07` §Context Selection names the `ehrId`), so no
    reading of the token alone can name the person. A token

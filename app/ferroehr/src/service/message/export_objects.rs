@@ -45,7 +45,7 @@ impl FerroEhrService {
 
     /// Whether an extract for the request's caller carries the `EHR_ACCESS` of
     /// `ehr_id`: for a caller who reads its settings
-    /// ([`FerroEhrService::may_read_ehr_access`]), and for the holder of an
+    /// ([`FerroEhrService::ehr_access_view`]), and for the holder of an
     /// `export_ehr_extract` grant covering the EHR, whose extract transfers
     /// the whole EHR (RM EHR Extract IM, `X_VERSIONED_EHR_ACCESS`); our own
     /// design (#5559). A reader of the settings who is no controller carries
@@ -53,7 +53,7 @@ impl FerroEhrService {
     /// which only the controller reads (draft access control decision
     /// procedure, Reading and Writing the Settings; #6077).
     async fn carries_ehr_access(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        if !Box::pin(self.may_read_ehr_access(ehr_id)).await? {
+        if !Box::pin(self.ehr_access_view(ehr_id)).await?.reads() {
             return self.export_granted(ehr_id).await;
         }
         if self.settings_caller().administrator() {
@@ -63,6 +63,40 @@ impl FerroEhrService {
             !extract_repo::ehr_access_excluded(&self.pool, ehr_id).await?
                 || self.export_granted(ehr_id).await?,
         )
+    }
+
+    /// Whether an extract for the request's caller carries the `EHR_ACCESS`
+    /// versions of `ehr_id` without their marking and signature: for a
+    /// gate-keeper who is not the subject and holds no `export_ehr_extract`
+    /// grant covering the EHR, whose extract would transfer the marking with
+    /// the record (draft access control, The Decision Procedure, Reading and
+    /// Writing the Settings and Exchange; our own design, #6165).
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the settings or the subject cannot be read.
+    pub async fn extract_redacts(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
+        Ok(Box::pin(self.ehr_access_view(ehr_id)).await?.redacts()
+            && !self.export_granted(ehr_id).await?)
+    }
+
+    /// Redacts `version`, an `ORIGINAL_VERSION` of a container of `kind` in
+    /// `ehr_id`, where the extract carries it without its marking
+    /// ([`Self::extract_redacts`]).
+    #[expect(
+        clippy::disallowed_types,
+        reason = "owner-approved 2026-08-03 (#1694 family 3): EHR-Extract/dump-load compose over \
+                  verbatim stored content (RM common master06 §Copying)"
+    )]
+    pub(super) async fn redact_extracted(
+        &self,
+        ehr_id: EhrId,
+        kind: &str,
+        version: &mut serde_json::Value,
+    ) -> Result<(), ServiceError> {
+        if kind == Kind::EhrAccess.as_str() && self.extract_redacts(ehr_id).await? {
+            crate::service::ehr::access_view::redact_version(version);
+        }
+        Ok(())
     }
 
     /// `objects` without the `EHR_ACCESS` when the extract may not carry it

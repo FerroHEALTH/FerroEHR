@@ -137,7 +137,7 @@ impl<'a> Gates<'a> {
             }
             // NOTE: draft access control decision procedure, Reading and Writing the Settings,
             // only the controller reads an EHR_ACCESS whose settings hold exclusions (#6077).
-            Some(EhrAccessReaders::Unexcluded) => {
+            Some(EhrAccessReaders::Unexcluded | EhrAccessReaders::UnexcludedWithoutMarking) => {
                 predicates.push(other_kind().or(super::access::unexcluded(h)));
             }
             Some(EhrAccessReaders::Every) | None => {}

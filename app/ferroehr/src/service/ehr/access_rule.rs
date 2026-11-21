@@ -28,6 +28,7 @@ use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use crate::error::ServiceError;
 use crate::party_binding::BindingMapping;
 use crate::service::ehr::access_settings::EhrAccessSettings;
+use crate::service::ehr::access_view::SettingsView;
 
 /// Who the running request's caller is to the `EHR_ACCESS` settings.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -141,6 +142,22 @@ impl SettingsCaller {
     #[must_use]
     pub fn may_read(&self, current: Option<&EhrAccessSettings>) -> bool {
         self.administrator || self.subject || self.is_gate_keeper(current)
+    }
+
+    /// How the caller reads the settings `current` of an EHR: whole for an
+    /// administrator and the subject, without the marking for a gate-keeper
+    /// who is neither, a representative included, and not at all otherwise
+    /// (draft access control, The Decision Procedure, Reading and Writing the
+    /// Settings, item 3).
+    #[must_use]
+    pub fn view(&self, current: Option<&EhrAccessSettings>) -> SettingsView {
+        if self.reads_every() {
+            SettingsView::Whole
+        } else if self.is_gate_keeper(current) {
+            SettingsView::WithoutMarking
+        } else {
+            SettingsView::Hidden
+        }
     }
 
     /// Whether the caller reads the settings of every EHR it reaches, with no
@@ -338,5 +355,25 @@ mod tests {
         assert!(administrator().reads_every());
         assert!(subject().reads_every());
         assert!(!party(DOCTOR).reads_every());
+    }
+
+    /// The subject and the administrator read the settings whole; a
+    /// representative or a professional named a gate-keeper reads them
+    /// without the marking; anyone else reads nothing.
+    #[test]
+    fn a_gate_keeper_who_is_not_the_subject_reads_without_the_marking() {
+        let kept = kept();
+        assert_eq!(administrator().view(Some(&kept)), SettingsView::Whole);
+        assert_eq!(subject().view(Some(&kept)), SettingsView::Whole);
+        assert_eq!(
+            party(GUARDIAN).view(Some(&kept)),
+            SettingsView::WithoutMarking
+        );
+        assert_eq!(
+            party(DOCTOR).view(Some(&kept)),
+            SettingsView::WithoutMarking
+        );
+        assert_eq!(party(NURSE).view(Some(&kept)), SettingsView::Hidden);
+        assert_eq!(party(GUARDIAN).view(None), SettingsView::Hidden);
     }
 }

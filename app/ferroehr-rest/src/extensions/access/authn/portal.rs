@@ -93,8 +93,8 @@ pub(super) struct Reached {
 pub(super) struct Bound {
     /// The EHRs a bound representative is confined to.
     pub(super) represented: Option<RepresentedEhr>,
-    /// The `PERSON` a `patients` issuer's patient binds as the person
-    /// themself.
+    /// The `PERSON` a `patients` issuer's patient, or a representative's
+    /// login reaching their own record, binds as the person themself.
     pub(super) own: Option<PartyRef>,
 }
 
@@ -113,7 +113,8 @@ pub(super) struct Bound {
 /// person themself and whose token names a launch EHR is held to that EHR's
 /// subject being their `PERSON` ([`own_context`]). A caller the login
 /// binding bound as a representative is admitted for the subject the request
-/// `reached` names ([`represented_by_store`]).
+/// `reached` names, as the person themself when that subject is their own
+/// `PERSON` ([`by_store`]).
 ///
 /// # Errors
 /// [`AuthError::PartyRefused`] when the bound party represents no such
@@ -135,12 +136,7 @@ pub(super) async fn bound(
         return Ok(Bound::default());
     }
     if let Some(person) = super::party::own::representative_person(caller) {
-        return represented_by_store(service, (namespace, providers), caller, person, reached)
-            .await
-            .map(|represented| Bound {
-                represented: Some(represented),
-                own: None,
-            });
+        return by_store(service, (namespace, providers), caller, person, reached).await;
     }
     let represented = match caller.kind() {
         CallerKind::Representative { represented, .. } => represented,
@@ -223,9 +219,11 @@ pub(super) async fn bound(
     })
 }
 
-/// The EHRs `caller`, bound by the login binding to the representative's
-/// `PERSON` `person`, reaches on a request that `reached` names, with the
-/// representation it is admitted on.
+/// What `caller`, bound by the login binding to the representative's
+/// `PERSON` `person`, is admitted as on a request that `reached` names: the
+/// person themself when the subject it reaches is `person`, else a
+/// representative confined to the subject's EHRs, with the representation it
+/// is admitted on.
 ///
 /// The subject is that of the EHR the token's launch context names (`ehrId`,
 /// master07 §Context Selection), which then holds the caller to that EHR,
@@ -233,21 +231,23 @@ pub(super) async fn bound(
 /// subject names. The caller is admitted only on a live representation of
 /// that subject for a provider it acts for, not written by itself, read in
 /// one exact indexed read (draft access control decision procedure, step 0
-/// Representation). No openEHR spec governs resolving a login to a party: our
-/// own design (#6147).
+/// Representation). A person who represents others is still the subject of
+/// their own record, which they reach with everything own access carries
+/// (EHDS Art. 3). No openEHR spec governs resolving a login to a party: our
+/// own design (#6147, #6167).
 ///
 /// # Errors
 /// [`AuthError::PartyRefused`] (`refused-representation-unrecorded`) when
 /// the request names no subject of this store or no such representation
 /// names the caller for it, and [`AuthError::PartyUnavailable`] when a store
 /// cannot answer.
-async fn represented_by_store(
+async fn by_store(
     service: &ferroehr::service::FerroEhrService,
     (namespace, providers): (&str, &[ProviderKey]),
     caller: &Caller,
     person: &PartyRef,
     reached: &Reached,
-) -> Result<RepresentedEhr, AuthError> {
+) -> Result<Bound, AuthError> {
     let unrecorded = |why: &'static str| {
         tracing::warn!(
             issuer = caller.issuer().unwrap_or("-"),
@@ -295,6 +295,9 @@ async fn represented_by_store(
             "the request of a representative names no subject of this store",
         ));
     };
+    if let Some(own) = as_the_person(person, representative, subject) {
+        return Ok(own);
+    }
     let Some(representation) = service
         .live_representation((representative, subject), providers)
         .await
@@ -313,17 +316,39 @@ async fn represented_by_store(
                 "the EHRs of the represented subject could not be read",
             ))?,
     };
-    Ok(RepresentedEhr {
-        ehr_ids,
-        representation: representation.container,
-        portal: Some(PortalRepresentative {
-            person: representative,
-            subject,
-            relationship: representation.relationship,
-            login_issuer: caller.issuer().unwrap_or_default().to_owned(),
-            login: caller.subject().to_owned(),
-            namespace: namespace.to_owned(),
+    Ok(Bound {
+        represented: Some(RepresentedEhr {
+            ehr_ids,
+            representation: representation.container,
+            portal: Some(PortalRepresentative {
+                person: representative,
+                subject,
+                relationship: representation.relationship,
+                login_issuer: caller.issuer().unwrap_or_default().to_owned(),
+                login: caller.subject().to_owned(),
+                namespace: namespace.to_owned(),
+            }),
         }),
+        own: None,
+    })
+}
+
+/// What a representative's login bound to `person`, the container
+/// `representative`, binds as the person themself on a request reaching
+/// `subject`: their own `PERSON`, when `subject` is that `PERSON`.
+///
+/// No openEHR spec governs resolving a login to a party: our own design
+/// (#6167).
+fn as_the_person(
+    person: &PartyRef,
+    representative: uuid::Uuid,
+    subject: uuid::Uuid,
+) -> Option<Bound> {
+    // NOTE: EHDS Art. 3, the orchestrator's ruling on #6167: the subject's own PERSON reaches
+    // its record as the person themself, whatever representative marker it also carries.
+    (subject == representative).then(|| Bound {
+        represented: None,
+        own: Some(person.clone()),
     })
 }
 
@@ -527,5 +552,21 @@ pub(super) async fn as_patient<F: Future>(patient: Option<uuid::Uuid>, fut: F) -
     match patient {
         Some(person) => ferroehr::party_binding::protect::patient(person, fut).await,
         None => fut.await,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_representative_reaching_their_own_subject_is_the_person_themself() {
+        let own = uuid::Uuid::from_u128(1);
+        let child = uuid::Uuid::from_u128(2);
+        let person = PartyRef::new("demographic", "PERSON", own.to_string());
+        let bound = as_the_person(&person, own, own).expect("their own subject");
+        assert_eq!(bound.own, Some(person.clone()));
+        assert!(bound.represented.is_none());
+        assert!(as_the_person(&person, own, child).is_none());
     }
 }

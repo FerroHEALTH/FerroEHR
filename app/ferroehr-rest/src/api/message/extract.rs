@@ -302,7 +302,9 @@ pub(crate) async fn export_ehrs(
     let h = &parts.headers;
     let ehr_id = super::path_ehr_id(&parts)?;
     let extracts = state.backend().extract_ehrs(ehr_id).await?;
-    Ok(negotiate::body::respond(h, StatusCode::OK, &extracts))
+    let mut resp = negotiate::body::respond(h, StatusCode::OK, &extracts);
+    mark_redacted(&state, &mut resp, &extracts, &[ehr_id]).await?;
+    Ok(resp)
 }
 
 /// The `message_export_ehr_extracts` operation.
@@ -319,7 +321,45 @@ pub(crate) async fn export_ehr_extracts(
         return Ok(*refusal);
     }
     let extracts = state.backend().export_ehr_extracts(spec).await?;
-    Ok(negotiate::body::respond(h, StatusCode::OK, &extracts))
+    let mut resp = negotiate::body::respond(h, StatusCode::OK, &extracts);
+    mark_redacted(&state, &mut resp, &extracts, &ehr_ids).await?;
+    Ok(resp)
+}
+
+/// Says in a response header that `extracts`, read from `ehr_ids`, carry an
+/// `EHR_ACCESS` version without its marking and signature
+/// (`FerroEhrService::extract_redacts`); our own design (#6165).
+async fn mark_redacted(
+    state: &AppState,
+    resp: &mut Response,
+    extracts: &[serde_json::Value],
+    ehr_ids: &[EhrId],
+) -> Result<(), RestError> {
+    let carries = extracts
+        .iter()
+        .filter_map(|extract| extract.get("chapters")?.as_array())
+        .flatten()
+        .filter_map(|chapter| chapter.get("items")?.as_array())
+        .flatten()
+        .any(|item| {
+            item.pointer("/item/_type")
+                .and_then(serde_json::Value::as_str)
+                == Some("X_VERSIONED_EHR_ACCESS")
+                && item
+                    .pointer("/item/versions")
+                    .and_then(serde_json::Value::as_array)
+                    .is_some_and(|versions| !versions.is_empty())
+        });
+    if !carries {
+        return Ok(());
+    }
+    for ehr_id in ehr_ids {
+        if state.backend().extract_redacts(*ehr_id).await? {
+            negotiate::resource::set_redacted(resp);
+            break;
+        }
+    }
+    Ok(())
 }
 
 /// The `message_import_ehr` operation.

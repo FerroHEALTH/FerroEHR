@@ -18,7 +18,8 @@ use openehr_rm::draft::access_control::terminology::representation::{
     Representation, TERMINOLOGY_ID_ROLE_CODE,
 };
 use openehr_rm::draft::access_control::terminology::{
-    CareRelationship, TERMINOLOGY_ID_PARTICIPATION_TYPE, Term, ValueSetBinding,
+    CareRelationship, ForeignCode, ForeignKind, TERMINOLOGY_ID_PARTICIPATION_TYPE, Term,
+    ValueSetBinding,
 };
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
@@ -50,9 +51,14 @@ impl FerroEhrService {
     /// ([`crate::party_binding::grants::caller::bounds`]) read the version
     /// that read found and name it.
     ///
+    /// A care relationship's writer is then judged at the confidentiality of
+    /// the subject's record ([`Self::care_writer_check`]), both reads given
+    /// back before the commit takes its party connection.
+    ///
     /// # Errors
     /// [`ServiceError::ValidationFailed`] (`422`) naming the element; the
-    /// `503` of [`Self::confirm_policy`].
+    /// `503` of [`Self::confirm_policy`]; the `403` of
+    /// [`Self::care_writer_check`].
     pub(crate) async fn care_role_check<'a, T: Tree<'a>>(
         &self,
         body: T,
@@ -61,7 +67,8 @@ impl FerroEhrService {
         let represents = Representation::Represents;
         // NOTE: our own design (#6055, #6079), a code that does not read is refused by the
         // commit, which names why; this check judges only one that reads.
-        let (coded, binding, unbound, at) = if carries(body, care.terminology(), care.code()) {
+        let cares = carries(body, care.terminology(), care.code());
+        let (coded, binding, unbound, at) = if cares {
             let Ok(role) = care_of::role_text(body) else {
                 return Ok(());
             };
@@ -85,6 +92,12 @@ impl FerroEhrService {
             return Ok(());
         };
         self.confirm_policy(false, true).await?;
+        if cares
+            && let Some(level) = self.care_writer_check(body).await?
+            && let Some(recorder) = crate::system_log::recorder::current()
+        {
+            recorder.mark_for_review(level);
+        }
         let in_force = self.access_policy().in_force();
         let facts = CareFacts::of(in_force.policy.as_deref());
         self.bound_code(facts, (binding, unbound), at, &coded)
@@ -92,6 +105,35 @@ impl FerroEhrService {
             .map_or(Ok(()), |violation| {
                 Err(ServiceError::ValidationFailed(vec![violation]))
             })
+    }
+
+    /// The care role a verified credential attests for the `attested` path,
+    /// when `attested` is a code of the `care_role` value set the policy in
+    /// force binds, or, unbound, of `HL7_ParticipationType`; `None` when it
+    /// attests none, so the relationship takes `PART` (draft access control
+    /// decision procedure, Holding a Care Relationship, `attested`).
+    ///
+    /// A code the value set does not hold, or one no terminology server could
+    /// check under `terminology.on_error = "refuse"`, is no role of the value
+    /// set, so it reads as `PART` and never as the role it names.
+    pub async fn attested_care_role(&self, attested: Option<&DvCodedText>) -> Option<ForeignCode> {
+        let coded = attested?;
+        // NOTE: our own design (#6078), a code of the access terminology is no care role, so the
+        // credential attests none and the relationship takes PART.
+        let role = ForeignCode::read(ForeignKind::CareRole, coded).ok()?;
+        let in_force = self.access_policy().in_force();
+        let facts = CareFacts::of(in_force.policy.as_deref());
+        match self.care_role(facts, "trc.care_role", coded).await {
+            None => Some(role),
+            Some(violation) => {
+                tracing::info!(
+                    reason = %violation.message,
+                    "an attested care role is outside the care_role value set; the attested \
+                     relationship takes PART"
+                );
+                None
+            }
+        }
     }
 
     /// The refusal of the care role `role` at `path`: outside the value set

@@ -66,6 +66,7 @@ pub(in crate::service) mod access_parties;
 pub mod access_projection;
 pub mod access_rule;
 pub mod access_settings;
+pub mod access_view;
 
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 

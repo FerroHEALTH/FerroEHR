@@ -149,9 +149,25 @@ pub enum EhrAccessReaders {
     /// Every EHR's whose settings hold no exclusions of the controller: the
     /// subject in their own EHR.
     Unexcluded,
+    /// Every EHR's whose settings hold no exclusions of the controller,
+    /// without the marking: a gate-keeper who is not the subject, in the one
+    /// EHR a query is pinned to.
+    UnexcludedWithoutMarking,
     /// Only the EHRs whose settings name the caller a gate-keeper, judged
-    /// per settings class, and hold no exclusions of the controller.
+    /// per settings class, and hold no exclusions of the controller, without
+    /// the marking.
     Only(Arc<crate::access_eval::class::Keepers>),
+}
+
+impl EhrAccessReaders {
+    /// Whether the query serves the settings it reads without the marking,
+    /// which only the subject and the controller read (draft access
+    /// control, The Decision Procedure, Reading and Writing the Settings,
+    /// item 3; #6165).
+    #[must_use]
+    pub fn redacts(&self) -> bool {
+        matches!(self, Self::UnexcludedWithoutMarking | Self::Only(_))
+    }
 }
 
 /// Whether a demographic query serves the policy parties

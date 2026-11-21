@@ -52,6 +52,8 @@ pub(crate) mod lax;
 #[cfg(feature = "fhir")]
 pub mod outbox;
 #[cfg(feature = "fhir")]
+mod review;
+#[cfg(feature = "fhir")]
 mod search_page;
 mod writers;
 
@@ -81,7 +83,8 @@ use ferrohealth_smart::assurance::AssuranceLevel;
 /// parallel column arrays, every row under the one render policy in `$38`;
 /// each record's search tokens arrive as the text of an `integer[]` in `$39`,
 /// since an array of arrays unnests element by element, and its id in `$53`;
-/// every row is held under the reservation in `$54`, or none.
+/// every row is held under the reservation in `$54`, or none; `$55` is the
+/// level each record is recorded for review at.
 const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, reserved_by, recorded_at, action, outcome, \
      event_code, operation, principal, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
@@ -90,12 +93,12 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, reserved_b
      retention_ends, retention_stated, permit, issuer, client_id, ehr_id, subject_namespace, \
      subject_lookup_failed, category_content, render_policy, search_tokens, binding, guest, \
      party, party_groups, provider, representation, external_fields, agreement, actor_chain, \
-     facilities, binding_detail, summary, token_attributes) \
+     facilities, binding_detail, summary, token_attributes, review) \
      SELECT u.id, $54::uuid, u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, \
      u.c13, u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, \
      u.c26, u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, \
      $38::bytea, u.tokens::integer[], u.c40, u.c41, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, \
-     u.c48, u.c49, u.c50, u.c51, u.c52 \
+     u.c48, u.c49, u.c50, u.c51, u.c52, u.review \
      FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
      $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], \
      $11::text[], $12::text[], $13::text[], $14::text[], $15::bigint[], $16::text[], \
@@ -105,15 +108,15 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, reserved_b
      $33::text[], $34::text[], $35::text[], $36::boolean[], $37::jsonb[], $39::text[], \
      $40::text[], $41::boolean[], $42::jsonb[], $43::jsonb[], $44::jsonb[], $45::jsonb[], \
      $46::jsonb[], $47::jsonb[], $48::jsonb[], $49::jsonb[], $50::jsonb[], $51::jsonb[], \
-     $52::jsonb[], $53::uuid[]) \
+     $52::jsonb[], $53::uuid[], $55::text[]) \
      AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, \
      c19, c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, \
-     c37, tokens, c40, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, id)";
+     c37, tokens, c40, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, id, review)";
 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
 #[cfg(feature = "fhir")]
-const RECORD_COLUMNS: [&str; 45] = [
+const RECORD_COLUMNS: [&str; 46] = [
     "chain",
     "chain_seq",
     "recorded_at",
@@ -147,6 +150,7 @@ const RECORD_COLUMNS: [&str; 45] = [
     "ehr_id",
     "subject_namespace",
     "subject_lookup_failed",
+    "review",
     "category_content",
     "render_policy",
     "token_attributes",
@@ -664,6 +668,7 @@ impl AuditStore {
             .bind(c.token_attributes)
             .bind(c.ids)
             .bind(reserved_by)
+            .bind(c.reviews)
             .execute(&mut *conn)
             .await?;
         Ok(ids)
@@ -1311,6 +1316,7 @@ pub(super) fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), Audi
     event.ehr_id = row.try_get("ehr_id")?;
     event.subject_namespace = row.try_get("subject_namespace")?;
     event.subject_lookup_failed = row.try_get("subject_lookup_failed")?;
+    event.review = review::level(row, chain_seq)?;
     event.object_id = row.try_get("resource_id")?;
     event.token_id = row.try_get("token_id")?;
     event.domain = access_domain(row.try_get("domain")?)

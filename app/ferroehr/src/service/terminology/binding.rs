@@ -227,6 +227,12 @@ mod tests {
     /// A service whose terminology server is `base`, with the given fail-open /
     /// fail-closed posture.
     async fn service(base: &str, fail_on_error: bool) -> FerroEhrService {
+        let db = testkit::db().await.expect("testkit database");
+        service_on(base, fail_on_error, &db.pool())
+    }
+
+    /// [`service`] over the database `pool` reaches, which the caller keeps.
+    fn service_on(base: &str, fail_on_error: bool, pool: &sqlx::PgPool) -> FerroEhrService {
         let cfg = TerminologyServerConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
                 url: ferrohealth_secret::secret_url::SecretUrl::new(base),
@@ -240,8 +246,7 @@ mod tests {
             },
         };
         let server = FhirTerminologyProvider::new(&cfg).expect("build the terminology client");
-        let db = testkit::db().await.expect("testkit database");
-        FerroEhrService::new(&crate::db::domain::DomainPools::from_shared(&db.pool()))
+        FerroEhrService::new(&crate::db::domain::DomainPools::from_shared(pool))
             .with_terminology_server(Arc::new(server))
     }
 
@@ -381,5 +386,59 @@ mod tests {
             .await;
         assert_eq!(violations, Vec::<ValidationMessage>::new());
         assert_eq!(ts.received_requests().await.unwrap().len(), 0);
+    }
+
+    /// A request waiting on the terminology server keeps no connection: the
+    /// one its earlier statements left kept is back in the pool while the
+    /// server answers (#5774).
+    #[tokio::test]
+    async fn a_request_keeps_no_connection_while_the_terminology_server_answers() {
+        let ts = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/ValueSet/$validate-code"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_delay(std::time::Duration::from_millis(400))
+                    .set_body_json(json!({
+                        "resourceType": "Parameters",
+                        "parameter": [{"name": "result", "valueBoolean": true}]
+                    })),
+            )
+            .mount(&ts)
+            .await;
+        let db = testkit::db().await.expect("testkit database");
+        let service = service_on(&ts.uri(), false, &db.pool());
+        let clinical = service.pool.clone();
+        let in_use = || {
+            clinical
+                .size()
+                .saturating_sub(u32::try_from(clinical.num_idle()).expect("an idle count fits u32"))
+        };
+        crate::db::acquire::request_scope(Box::pin(async {
+            sqlx::query("SELECT 1")
+                .execute(
+                    &mut *crate::db::acquire::acquire(&clinical)
+                        .await
+                        .expect("a connection"),
+                )
+                .await
+                .expect("an earlier statement");
+            assert_eq!(in_use(), 1, "the scope keeps the connection");
+            let instance = coded_instance("278149003");
+            let template = bound_template();
+            let (violations, during) = tokio::join!(
+                service.constraint_binding_violations(Submitted::Canonical(&instance), &template),
+                async {
+                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                    in_use()
+                }
+            );
+            assert!(
+                violations.is_empty(),
+                "unexpected violations: {violations:?}"
+            );
+            assert_eq!(during, 0, "no connection is kept while the server answers");
+        }))
+        .await;
     }
 }

@@ -37,6 +37,7 @@ use crate::ids::EhrId;
 use crate::service::ehr::access_cache::{EHR, Lookup, looked_up, owned_or_reload, refilled};
 use crate::service::ehr::access_rule::SettingsCaller;
 use crate::service::ehr::access_settings::{EhrAccessSettings, UnreadableSettings};
+use crate::service::ehr::access_view::SettingsView;
 use openehr_rm::prelude::{DvText, DvTextData, EhrAccess};
 use serde_json::Value;
 use sqlx::PgConnection;
@@ -393,18 +394,18 @@ impl FerroEhrService {
         caller
     }
 
-    /// Whether the running request's caller may read the `EHR_ACCESS`
-    /// settings of `ehr_id` ([`SettingsCaller::may_read`]).
+    /// How the running request's caller reads the `EHR_ACCESS` settings of
+    /// `ehr_id` ([`SettingsCaller::view`]).
     ///
     /// # Errors
     /// [`ServiceError`] when the settings cannot be read.
-    pub async fn may_read_ehr_access(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
+    pub async fn ehr_access_view(&self, ehr_id: EhrId) -> Result<SettingsView, ServiceError> {
         let caller = self.settings_caller_on(ehr_id);
         if caller.reads_every() {
-            return Ok(true);
+            return Ok(SettingsView::Whole);
         }
         let settings = self.current_ehr_access_settings(ehr_id).await?;
-        Ok(caller.may_read((*settings).as_ref()))
+        Ok(caller.view((*settings).as_ref()))
     }
 
     /// The EHRs whose `EHR_ACCESS` objects the running request's query reads:
@@ -430,15 +431,15 @@ impl FerroEhrService {
 
     /// The EHRs whose `EHR_ACCESS` objects a query under `condition` reads.
     ///
-    /// A query pinned to one EHR reads that EHR's alone, so whether the
-    /// caller may read its settings is decided once from this replica's copy
-    /// ([`Self::may_read_ehr_access`]), the copy the pinned verdict was judged
+    /// A query pinned to one EHR reads that EHR's alone, so how the caller
+    /// reads its settings is decided once from this replica's copy
+    /// ([`Self::ehr_access_view`]), the copy the pinned verdict was judged
     /// on, and the statement probes no settings row for it; any other query
     /// reads them as [`Self::ehr_access_readers`] says. No openEHR spec
     /// governs this: our own design (#5746).
     ///
     /// # Errors
-    /// As [`Self::may_read_ehr_access`] and [`Self::ehr_access_readers`].
+    /// As [`Self::ehr_access_view`] and [`Self::ehr_access_readers`].
     pub async fn query_access_readers(
         &self,
         condition: &crate::access_eval::condition::AccessCondition,
@@ -446,17 +447,16 @@ impl FerroEhrService {
         let Some(pinned) = condition.pinned() else {
             return self.ehr_access_readers().await;
         };
-        if self.may_read_ehr_access(EhrId(pinned.ehr)).await? {
-            return Ok(if self.settings_caller().administrator() {
-                EhrAccessReaders::Every
-            } else {
-                EhrAccessReaders::Unexcluded
-            });
-        }
-        Ok(EhrAccessReaders::Only(Arc::new(Keepers {
-            groups: Vec::new(),
-            party: None,
-        })))
+        let unexcluded = !self.settings_caller().administrator();
+        Ok(match self.ehr_access_view(EhrId(pinned.ehr)).await? {
+            SettingsView::Whole if unexcluded => EhrAccessReaders::Unexcluded,
+            SettingsView::Whole => EhrAccessReaders::Every,
+            SettingsView::WithoutMarking => EhrAccessReaders::UnexcludedWithoutMarking,
+            SettingsView::Hidden => EhrAccessReaders::Only(Arc::new(Keepers {
+                groups: Vec::new(),
+                party: None,
+            })),
+        })
     }
 
     /// The miss path of [`Self::ehr_access_classes`]: every class the store

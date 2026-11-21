@@ -382,7 +382,12 @@ statement_timeout = "1min"
 
 A request checks a connection out of a pool at its first statement and gives
 it back when its handler has answered, so the audit record and the response's
-way out hold none. How long that is shows in `db_pool_hold_duration_seconds`,
+way out hold none. It gives a pool's connection back earlier when it turns to
+the other domain's pool: the party connection its authentication and access
+decision read on goes back when its clinical work begins. A request also
+gives back what it keeps while it waits on the terminology server or uploads
+large media to the blob store. How long a
+request holds each connection shows in `db_pool_hold_duration_seconds`,
 and how long requests wait for a connection in
 `db_pool_acquire_duration_seconds`. A pool needs about the arrival rate times
 the hold time, and room for a burst above that: every request that arrives

@@ -150,7 +150,7 @@ BEGIN
                categories, category_basis, category_evidence, category_map_digest, acting_mode,
                assurance_level, assurance_value, professional_id, emergency_access,
                retention_ends, retention_stated, permit, issuer, client_id, ehr_id,
-               subject_namespace, subject_lookup_failed, category_content, render_policy,
+               subject_namespace, subject_lookup_failed, review, category_content, render_policy,
                search_tokens, binding, guest, party, party_groups, provider, representation,
                external_fields, agreement, actor_chain, facilities, binding_detail, summary,
                token_attributes)
@@ -161,7 +161,7 @@ BEGIN
                t.category_evidence, t.category_map_digest, t.acting_mode, t.assurance_level,
                t.assurance_value, t.professional_id, t.emergency_access, t.retention_ends,
                t.retention_stated, t.permit, t.issuer, t.client_id, t.ehr_id,
-               t.subject_namespace, t.subject_lookup_failed, t.category_content,
+               t.subject_namespace, t.subject_lookup_failed, t.review, t.category_content,
                t.render_policy, t.search_tokens, t.binding, t.guest, t.party, t.party_groups,
                t.provider, t.representation, t.external_fields, t.agreement, t.actor_chain,
                t.facilities, t.binding_detail, t.summary, t.token_attributes

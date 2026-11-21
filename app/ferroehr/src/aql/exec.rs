@@ -174,6 +174,11 @@ pub async fn execute(
             .map_err(ExecError::from)?;
         fill_whole_object_cells(&mut out_rows, pending, &subtrees);
     }
+    // NOTE: draft access control, Reading and Writing the Settings, only the subject and the
+    // controller read the marking.
+    if ctx.access_settings.redacts() {
+        super::redact::strip_cells(ir, &mut out_rows);
+    }
 
     // The versions the served rows came from: every bound root's locator
     // columns, plus the whole-object anchors for a plan that carries no root
