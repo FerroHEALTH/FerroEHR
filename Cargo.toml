@@ -315,10 +315,10 @@ ferrohealth-usage-report = { version = "=0.5.0", features = ["telemetry"] }
 # Licensor's BUSL-1.1 code (deny.toml). FerroBRIDGE's published crates follow
 # Cargo SemVer (a breaking change moves the minor while 0.x), so it is required
 # by a caret range (The Cargo Book, "Specifying Dependencies"). Verified on
-# crates.io 2026-11-20 (0.15.0), on ferrohealth-smart 0.31; `smart` builds its client
+# crates.io 2026-11-21 (0.16.0), on ferrohealth-smart 0.32; `smart` builds its client
 # from ferrohealth-smart's outbound client, and `r4b` the one wire release the
 # terminology client speaks.
-ferrobridge-term = { version = "0.15.0", default-features = false, features = ["r4b", "smart"] }
+ferrobridge-term = { version = "0.16.0", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family

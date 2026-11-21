@@ -21,7 +21,7 @@ that carries its binding key, with `[[authz.party_binding.basic_user]]`:
 ```toml
 [[authz.party_binding.basic_user]]
 user = "clinician"
-key_issuer = "urn:example:staff-login"   # the identifier_issuer of an [auth.issuer.<name>.party] table
+key_issuer = "urn:example:staff-login"   # the identifier_issuer of an [[auth.party]] table
 key = "clinician"                        # the binding key the PERSON carries
 ```
 
@@ -45,7 +45,7 @@ start from, so it starts in this order:
    refuses a mapping whose templates the store lacks.
 2. **Grant the identity provider's SCIM client.** It is an OAuth 2.0
    client-credentials client (RFC 6749 §4.4) of the deployment's
-   authorization server with the provisioning scope: an `[auth.issuer.<name>]`
+   authorization server with the provisioning scope: an `[[auth.issuer]]`
    of kind `machines` issues its tokens, and `ferroehr party-binding grant`
    grants it `scim_provision` in the CDR with the scope as `token_scope` and
    the `binding_issuer` its Users' keys are written under
@@ -146,7 +146,7 @@ For each key it reports the committer of the version that introduced the
 key, and fails unless that committer was a SCIM client (one whose `ACTOR`
 holds or held a `scim_provision` grant), an
 administrator you name, a migration you declare, or just-in-time creation
-on a `persons` issuer an `[auth.issuer.<name>.party]` table binds. A stored version records no role its
+on a `persons` issuer an `[[auth.party]]` table binds. A stored version records no role its
 committer held, so you name the administrators (`--admin`, `--admin-key`),
 and the report repeats them.
 
@@ -157,7 +157,7 @@ duplicate, a missing person or a key that fails the provenance rule.
 
 ### 4. Add the `persons` issuers
 
-Add each `persons` issuer with its `[auth.issuer.<name>.party]` table. Every login with
+Add each `persons` issuer with its `[[auth.party]]` table. Every login with
 no `PERSON` is refused from then on; the `warn` lines and the
 `binding_refusals` metric show any the pre-flight missed.
 

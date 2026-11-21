@@ -1429,7 +1429,7 @@ Read on the tree after commit `a6ce1927d`, for the FerroEHR release candidate
 ### Changed on 2026-11-10, for 5.7.0-rc1
 
 - **The chart description and README** said `config.deployment_profile` names the posture, and the README's install command set that key, which the chart refuses to render since #5259. #5341 renamed both to `config.deployment.profile` before this review. It also made the chart's boot check judge the production overlay's posture again.
-- **The CRA risk assessment's outbound data flows** named `[auth] mode = "introspection"` with `[auth.introspection.client]` and `[pixm] subject_index`. They now name `mode = "introspection"` in an `[auth.issuer.<name>]` table, `[auth.issuer.introspection.client]` and `[record] subject_index` (#5259). #5331 had already moved the integrations' `oauth` tables to `[<x>.endpoint.credentials.oauth]`. Revision 29 records the release.
+- **The CRA risk assessment's outbound data flows** named `[auth] mode = "introspection"` with `[auth.introspection.client]` and `[pixm] subject_index`. They now name `mode = "introspection"` in an `[[auth.issuer]]` table, `[auth.issuer.introspection.client]` and `[record] subject_index` (#5259). #5331 had already moved the integrations' `oauth` tables to `[<x>.endpoint.credentials.oauth]`. Revision 29 records the release.
 - **The hazard log:**
   - H2 named two assurance tests #5003 renamed.
   - H5 named its floor tests in `config/mod.rs` and `system_log/config.rs`, which moved to `config/audit_tests.rs` and `system_log/retention.rs`.
