@@ -417,8 +417,10 @@ under the pool it was taken from. Read each pool by itself: a wait on the
 audit pool and one on the clinical pool have different causes.
 `db_pool_nested_acquires_total` also counts, with an `order` label, a
 request that took its audit connection after a domain one
-(`audit_after_domain`) and a request that kept a connection idle while it
-waited for a pool or for another request's work (`kept_while_waiting`). Each
+(`audit_after_domain`), a request that kept a connection idle while it
+waited for a pool or for another request's work (`kept_while_waiting`), and
+a write that asked the other domain's pool for a connection while it held
+its own audit and domain connections (`inside_a_write`). Each
 is 0 on a server that works as designed; a count above 0 is a defect to
 report.
 

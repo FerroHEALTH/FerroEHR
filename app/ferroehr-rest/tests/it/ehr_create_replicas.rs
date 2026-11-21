@@ -230,6 +230,21 @@ async fn creates_on_two_replicas_are_answered_201_and_found_on_the_other() {
     }
 }
 
+/// A create naming a subject in another namespace, as the bound user: the
+/// access decision reads the subject's `PERSON` on the party pool before the
+/// create takes its audit and clinical connections, so it never waits for
+/// the party pool inside its write, which a debug build refuses (#6186).
+#[tokio::test]
+async fn a_create_reads_the_party_store_before_it_takes_its_write_connections() {
+    let db = testkit::db().await.expect("testkit database");
+    let app = replica(&db).await;
+    for n in 0..4 {
+        let subject = subject("p", n);
+        let (status, body) = common::send_body(&app, create(&subject)).await;
+        assert_eq!(status, StatusCode::CREATED, "{subject}: {body}");
+    }
+}
+
 /// Two creates naming one subject, one on each replica at once: one is
 /// answered `201` and the other `409`, never `500`.
 #[tokio::test]
