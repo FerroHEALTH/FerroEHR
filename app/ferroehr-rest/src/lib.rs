@@ -211,9 +211,10 @@ async fn authenticator_over(
 }
 
 /// Returns `observability` whose readiness also reports whether every bearer
-/// issuer of `authenticator` has been read, when it trusts any.
+/// issuer of `authenticator` has been read, when it reads any in the
+/// background.
 fn with_issuers(observability: Observability, authenticator: &Arc<Authenticator>) -> Observability {
-    if authenticator.token_verdicts().is_none() {
+    if !authenticator.reads_in_background() {
         return observability;
     }
     Observability {

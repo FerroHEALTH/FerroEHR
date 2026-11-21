@@ -25,6 +25,11 @@ pub(crate) enum Described {
 }
 
 impl Authenticator {
+    /// Whether an issuer is read in the background, so readiness waits for it.
+    pub(crate) fn reads_in_background(&self) -> bool {
+        self.reads.started()
+    }
+
     /// Whether every bearer issuer has been read, the answer of the
     /// readiness indicator: an issuer read in the background answers its
     /// tokens with `503` until it is.

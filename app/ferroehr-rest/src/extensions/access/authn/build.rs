@@ -260,6 +260,13 @@ impl Authenticator {
 #[derive(Debug, Default)]
 pub(super) struct BackgroundReads(Vec<tokio::task::JoinHandle<()>>);
 
+impl BackgroundReads {
+    /// Whether any read was started.
+    pub(super) fn started(&self) -> bool {
+        !self.0.is_empty()
+    }
+}
+
 impl Drop for BackgroundReads {
     fn drop(&mut self) {
         for read in &self.0 {
