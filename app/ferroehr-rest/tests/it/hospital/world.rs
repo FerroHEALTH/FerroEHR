@@ -176,9 +176,12 @@ pub(crate) struct Doc {
 
 /// The assembled server and the ids of what the scenario wrote.
 pub(crate) struct World {
-    pub(crate) _db: testkit::TestDb,
+    /// The test database, dropped with the world.
+    pub(crate) db: testkit::TestDb,
     pub(crate) _drain: AuditHandle,
     pub(crate) pool: PgPool,
+    /// The service the router serves, whose copies a budget confirms.
+    pub(crate) svc: Arc<FerroEhrService>,
     pub(crate) app: Router,
     pub(crate) config: AppConfig,
     /// Each member of staff and the representative, by name.

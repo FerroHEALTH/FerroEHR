@@ -98,9 +98,10 @@ pub(crate) async fn world() -> World {
     let ehr = ehr_of(&app, &eva).await;
     let other_ehr = ehr_of(&app, &people["gina"].person).await;
     let mut world = World {
-        _db: db,
+        db,
         _drain: drain,
         pool,
+        svc,
         app,
         config,
         people,
