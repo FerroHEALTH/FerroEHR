@@ -188,8 +188,21 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   entry. It would also move the attributes AQL names most often in a WHERE
   clause (`composer`, `category`, `ism_transition`, `other_participations`,
   `subject`) from the row to a body parse measured 30 to 40 times slower per
-  version, or to a byte range of the body 8 times slower. Storing the
-  repeated fragment once per version is measured on #6229.
+  version, or to a byte range of the body 8 times slower. A member repeated
+  across a version's rows is stored once (#6229, `crate::storage::shared`):
+  the first row that carries it keeps it, and a later row whose member is
+  byte-identical, 128 bytes or more and not one of `UNSHARED` (`value`,
+  `time`, `origin`, which an index or the writer reads from the row itself)
+  leaves it out and records the holder's `num` under the key in its `shared`
+  column. A reference always names the first holder, and a root row never
+  shares. Every reader reads `data` through `member_data` or
+  `resolved_data`, which put the member back with one probe of the node
+  key, so fragments, bodies and AQL results are unchanged. An IPS commit,
+  whose 38 entries repeat one participation list, writes 42,545 bytes less
+  WAL (226,199 to 183,654, 18.8%). The price is a probe per shared row on a
+  read into the shared member: a predicate and projection into
+  `other_participations` went from 0.14 to 0.42 ms over one IPS EHR, 2.3 to
+  5.7 ms over 20 and 116 to 168 ms over 1,000.
 - **Tiers are partitions.** `version`, `node` and `vo_attestation` are each
   `PARTITION BY LIST (tier)` with a `hot` and a `cold` partition and no default
   partition. Archiving an EHR is `UPDATE version SET tier = 'cold' WHERE
