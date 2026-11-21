@@ -204,7 +204,7 @@ pub(crate) fn router(
             return None;
         }
     };
-    let resolved = match ferroehr::config::auth::resolve(&config.auth.shared) {
+    let resolved = match ferroehr::config::auth::resolve(&config.auth.shared, &config.audience_bases()) {
         Ok(resolved) => resolved,
         Err(error) => {
             tracing::error!(%error, "the SCIM endpoint is not mounted: [auth] does not resolve");
@@ -214,7 +214,7 @@ pub(crate) fn router(
     let gate = Gate {
         authenticator: Arc::clone(authenticator),
         service,
-        parties: config.auth.shared.party.iter().cloned().collect(),
+        parties: resolved.party.iter().cloned().collect(),
         key_issuers: ferroehr::config::binding::key_issuers(&resolved).into(),
         portal_issuers: ferroehr::config::binding::portal_issuers(&resolved).into(),
     };

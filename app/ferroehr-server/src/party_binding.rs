@@ -185,7 +185,7 @@ pub fn install(
     service: FerroEhrService,
     config: &FerroEhrConfig,
 ) -> anyhow::Result<FerroEhrService> {
-    let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
+    let resolved = config.resolve_auth()
         .context("resolving [auth] for the party mapping")?;
     let key_issuers = ferroehr::config::binding::key_issuers(&resolved);
     let logins = resolved
@@ -200,6 +200,7 @@ pub fn install(
         .with_party_namespace(&config.authz.party_binding.namespace)
         .with_federation_trust(ferroehr::config::federation::trust(
             &config.auth.shared,
+            &config.audience_bases(),
             holder,
         ));
     let sections = config.authz.party_binding.sections();
@@ -557,7 +558,7 @@ async fn basic_user_person(
         .iter()
         .find(|mapped| mapped.user == user)
         .with_context(|| format!("no [[authz.party_binding.basic_user]] maps {user:?}"))?;
-    let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
+    let resolved = config.resolve_auth()
         .context("resolving [auth] for the binding key")?;
     let identifier_type = resolved
         .party
@@ -619,7 +620,7 @@ async fn scim_clients(pools: &DomainPools) -> anyhow::Result<Vec<(String, String
 /// # Errors
 /// `[auth]` does not resolve.
 fn provenance_input(args: &ProvenanceArgs, config: &FerroEhrConfig) -> anyhow::Result<CheckInput> {
-    let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
+    let resolved = config.resolve_auth()
         .context("resolving [auth] for the party mapping")?;
     Ok(CheckInput {
         key_types: resolved

@@ -290,8 +290,7 @@ pub fn errors(authz: &crate::config::authz::AuthzConfig, resolved: &Resolved) ->
     shared_audiences(resolved, &mut errors);
     providers(binding, resolved, &mut errors);
     errors.extend(jit::errors(binding, resolved));
-    if let Err(e) = resolved.check_role_issuers("authz.rbac.role_issuers", &authz.rbac.role_issuers)
-    {
+    if let Err(e) = resolved.role_issuers("authz.rbac.role_issuers", &authz.rbac.role_issuers) {
         errors.push(crate::error::ErrorChain::new(&e).to_string());
     }
     errors
@@ -432,7 +431,7 @@ impl crate::config::FerroEhrConfig {
     /// itself are [`crate::config::auth::validate`]'s.
     pub(crate) fn identity_errors(&self) -> Vec<String> {
         let mut errors = Vec::new();
-        let Ok(resolved) = crate::config::auth::resolve(&self.auth.shared) else {
+        let Ok(resolved) = self.resolve_auth() else {
             return errors;
         };
         if !resolved.enabled {
@@ -547,22 +546,31 @@ pub struct BoundIssuer {
 }
 
 impl BindingPosture {
-    /// Returns the posture `config` declares.
+    /// Returns the posture `config` declares, each issuer's kind and
+    /// identifier issuer as `[auth]` resolves them.
     #[must_use]
     pub fn of(config: &crate::config::FerroEhrConfig) -> Self {
-        let party = &config.auth.shared.party;
+        // NOTE: no openEHR spec governs this: the posture is logged after the configuration check, which refuses a section that does not resolve.
+        let resolved = config.resolve_auth().ok();
         let issuers = config
             .auth
             .shared
             .issuers()
-            .iter()
-            .map(|entry| BoundIssuer {
-                issuer: entry.issuer.redacted(),
-                kind: entry.kind,
-                identifier_issuer: party
-                    .iter()
-                    .find(|table| table.issuer == entry.issuer)
-                    .map(|table| table.identifier_issuer.clone()),
+            .map(|(_, entry)| {
+                let issuer = entry.issuer.expose();
+                BoundIssuer {
+                    issuer: entry.issuer.redacted(),
+                    kind: resolved
+                        .as_ref()
+                        .and_then(|r| r.kinds.get(issuer).copied())
+                        .or(entry.kind),
+                    identifier_issuer: resolved.as_ref().and_then(|r| {
+                        r.party
+                            .iter()
+                            .find(|table| table.issuer.expose() == issuer)
+                            .map(|table| table.identifier_issuer.clone())
+                    }),
+                }
             })
             .collect();
         let unassured_basic = if config.authz.assurance.minimum.is_none() {
@@ -657,7 +665,7 @@ mod tests {
                 "FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE",
                 "BREAK_GLASS",
             ),
-            ("FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS", "https://a,https://b"),
+            ("FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS", "a,b"),
         ]);
         assert_eq!(c.authz.assurance.claim, "loa");
         assert_eq!(
@@ -682,10 +690,7 @@ mod tests {
         );
         assert_eq!(
             c.authz.rbac.role_issuers,
-            [
-                ferrohealth_secret::secret_url::SecretUrl::new("https://a"),
-                ferrohealth_secret::secret_url::SecretUrl::new("https://b")
-            ]
+            ["a", "b"]
         );
     }
 }

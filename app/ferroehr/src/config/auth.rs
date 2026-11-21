@@ -23,6 +23,8 @@ use ferrohealth_smart::config::{AuthSection, ConfigError, ProductStandingSection
 use ferrohealth_smart::kind::Actor;
 use ferrohealth_smart::kind::standing::{Answer, ClientStanding, Issued, Standing, StandingError};
 
+use crate::config::server::PublicRoot;
+
 /// The protection space every challenge names when `[auth] realm` is empty
 /// (RFC 6750 §3, RFC 7617 §2).
 pub const DEFAULT_REALM: &str = "ferroehr";
@@ -88,7 +90,24 @@ pub fn product_scope(section: &AuthSection) -> &str {
     }
 }
 
-/// Resolves `[auth]` for a reader that classifies no token.
+/// Returns the base URLs an issuer that names no `audience` is resolved
+/// for: the openEHR REST API's `baseUrl` the SMART discovery document
+/// publishes, `[server] public_base_url` with `server.base_path` and
+/// `api.base_path`, or none when the deployment names no public URL.
+///
+/// An authorization server names the resource the app asked for in `aud`
+/// (RFC 8707 §2), and SMART on openEHR has the app ask for that `baseUrl`
+/// (master04 §Services).
+#[must_use]
+pub fn audience_bases(root: Option<&PublicRoot>, api_base_path: &str) -> Vec<String> {
+    if api_base_path.starts_with("http://") || api_base_path.starts_with("https://") {
+        return vec![api_base_path.to_owned()];
+    }
+    root.map(|root| root.at(api_base_path)).into_iter().collect()
+}
+
+/// Resolves `[auth]` for a reader that classifies no token, each issuer
+/// that names no audience resolved for `bases` ([`audience_bases`]).
 ///
 /// The boot checks, the party mapping and the federation trust read the
 /// issuers and the Basic store; a standing question asked of the result fails
@@ -96,8 +115,8 @@ pub fn product_scope(section: &AuthSection) -> &str {
 ///
 /// # Errors
 /// [`AuthConfigError::Section`] when the crate refuses the section.
-pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
-    resolve_with(section, Arc::new(Unasked))
+pub fn resolve(section: &AuthSection, bases: &[String]) -> Result<Resolved, AuthConfigError> {
+    resolve_with(section, Arc::new(Unasked), bases)
 }
 
 /// Resolves `[auth]` with every issuer's standing questions answered by
@@ -115,9 +134,11 @@ pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
 pub fn resolve_with(
     section: &AuthSection,
     standing: Arc<dyn Standing>,
+    bases: &[String],
 ) -> Result<Resolved, AuthConfigError> {
+    let bases: Vec<&str> = bases.iter().map(String::as_str).collect();
     ProductStandingSection(section.clone())
-        .resolve_with_tls(&ferrohealth_smart::config::ServerTls, standing)
+        .resolve_with_tls(&ferrohealth_smart::config::ServerTls, standing, &bases)
         .map_err(|source| AuthConfigError::Section { source })
 }
 
@@ -152,13 +173,13 @@ impl Standing for Unasked {
 ///
 /// # Errors
 /// [`AuthConfigError::Section`] naming the rule the crate reports broken.
-pub fn validate(section: &AuthSection) -> Result<(), AuthConfigError> {
+pub fn validate(section: &AuthSection, bases: &[String]) -> Result<(), AuthConfigError> {
     // NOTE: RFC 9110 §11.6.1, a section with no mechanism is refused by
     // `require_mechanism`, whose message names the keys that fix it.
     if require_mechanism(section).is_err() {
         return Ok(());
     }
-    resolve(section).map(|_resolved| ())
+    resolve(section, bases).map(|_resolved| ())
 }
 
 /// Refuses an enabled `[auth]` that names neither an issuer nor a Basic user.

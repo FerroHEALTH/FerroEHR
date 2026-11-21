@@ -51,7 +51,7 @@ pub(crate) mod record;
 pub(crate) mod refusal;
 mod scope;
 pub(crate) mod trc;
-mod verdicts;
+pub(crate) mod verdicts;
 
 use std::sync::Arc;
 
@@ -76,6 +76,18 @@ use build::Primary;
 use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::system_log::event::ActorAuthentication;
 use gates::patient_data_refusal;
+
+/// The SMART discovery document of the described issuer, as far as it is
+/// known.
+#[derive(Debug)]
+pub(crate) enum Described {
+    /// No issuer is described: the document is not served.
+    None,
+    /// The described issuer has not been read yet.
+    Unread,
+    /// The document.
+    Document(serde_json::Value),
+}
 
 /// The state the [`middleware`] runs on: the authenticator, the optional
 /// authorization handle (`None` is authentication-only), the optional
@@ -389,6 +401,11 @@ pub struct Authenticator {
     /// The issuer whose metadata the SMART discovery document is built from,
     /// with what `describe` describes it for.
     primary: Option<(Primary, Purpose)>,
+    /// Whether an issuer is trusted to assert a patient context, so a
+    /// `patient/` grant counts.
+    patient_context: bool,
+    /// The background reads of the issuers read on their first token.
+    reads: build::BackgroundReads,
     /// The issuers whose tokens may grant a privileged role.
     role_issuers: build::RoleIssuers,
     /// The binding every caller is looked up in, when `[[auth.party]]` binds an issuer.
@@ -408,6 +425,7 @@ impl std::fmt::Debug for Authenticator {
         f.debug_struct("Authenticator")
             .field("enabled", &self.enabled)
             .field("gate", &self.gate)
+            .field("reads", &self.reads)
             .finish_non_exhaustive()
     }
 }
@@ -428,23 +446,45 @@ impl Authenticator {
         self.gate.schemes().bearer
     }
 
-    /// The SMART discovery document of the described issuer under `options`, or
-    /// `None` when no issuer's metadata was read.
+    /// Whether every bearer issuer has been read, the answer of the
+    /// readiness indicator: an issuer read in the background answers its
+    /// tokens with `503` until it is.
+    pub(crate) fn issuers_ready(&self) -> bool {
+        self.bearer.as_ref().is_none_or(verdicts::TokenVerdicts::is_ready)
+    }
+
+    /// Whether the SMART discovery document describes an issuer.
+    pub(crate) fn describes(&self) -> bool {
+        self.primary.is_some()
+    }
+
+    /// Whether an issuer is trusted to assert a patient context, so a
+    /// `patient/` grant counts and the discovery document says so.
+    pub(crate) fn patient_context(&self) -> bool {
+        self.patient_context
+    }
+
+    /// The SMART discovery document of the described issuer under `options`.
     ///
     /// The document is built for what `describe` describes the issuer for: a
     /// `machines` issuer of a deployment that trusts no user-token issuer gets
     /// the Backend Services document, with no app-launch member (SMART App
     /// Launch 2.2.0, Backend Services, §Retrieve `.well-known/smart-configuration`).
-    pub(crate) fn smart_configuration(&self, options: &SmartOptions) -> Option<serde_json::Value> {
-        self.primary.as_ref().map(|(primary, purpose)| {
-            let options = SmartOptions {
-                purpose: *purpose,
-                ..options.clone()
-            };
-            match primary {
-                Primary::Jwt(server) => server.smart_configuration(&options),
-                Primary::Introspection(introspector) => introspector.smart_configuration(&options),
-            }
+    pub(crate) fn smart_configuration(&self, options: &SmartOptions) -> Described {
+        let Some((primary, purpose)) = &self.primary else {
+            return Described::None;
+        };
+        let options = SmartOptions {
+            purpose: *purpose,
+            ..options.clone()
+        };
+        Described::Document(match primary {
+            Primary::Jwt(server) => server.smart_configuration(&options),
+            Primary::Lazy(lazy) => match lazy.get() {
+                Some(server) => server.smart_configuration(&options),
+                None => return Described::Unread,
+            },
+            Primary::Introspection(introspector) => introspector.smart_configuration(&options),
         })
     }
 

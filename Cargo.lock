@@ -2085,8 +2085,6 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 [[package]]
 name = "ferrobridge-term"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11b793a9dba5e15f76d96aefbb155a5af0d5e6429e0184e87a377fd02a05f36a"
 dependencies = [
  "async-trait",
  "backon",
@@ -2418,9 +2416,7 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-session"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9076067d33d3b7af79442e29a54e01e1e72452c4cb6c31f398736dc5376d3e22"
+version = "0.27.0"
 dependencies = [
  "aws-lc-rs",
  "axum",
@@ -2443,9 +2439,7 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-smart"
-version = "0.31.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d401b16d0cdfa5c238920f0403caae82a4d87b1041a03ec7de41d55c5719f95"
+version = "0.32.0"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
@@ -3483,8 +3477,6 @@ dependencies = [
 [[package]]
 name = "ihe-iti"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd6527273b5017bf5b283b7d61fec922800d0b17c5213da3981356b8a8fceb8b"
 dependencies = [
  "ferrohealth-smart",
  "fhir-search",
@@ -6956,7 +6948,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

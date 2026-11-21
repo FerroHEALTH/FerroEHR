@@ -396,7 +396,7 @@ impl FerroEhrConfig {
     /// patient-data assurance blocks; SMART what the discovery document
     /// publishes.
     fn validate_mechanisms(&self, errors: &mut Vec<ConfigError>) {
-        if let Err(e) = auth::validate(&self.auth.shared) {
+        if let Err(e) = auth::validate(&self.auth.shared, &self.audience_bases()) {
             errors.push(ConfigError::semantic(format!(
                 "auth: {}",
                 crate::error::ErrorChain::new(&e)
@@ -421,7 +421,7 @@ impl FerroEhrConfig {
                 .into_iter()
                 .map(ConfigError::semantic),
         );
-        let resolved = auth::resolve(&self.auth.shared).ok();
+        let resolved = self.resolve_auth().ok();
         errors.extend(
             self.auth
                 .scim
