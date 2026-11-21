@@ -112,7 +112,7 @@ data, wiped nightly.
 - **Runtime.** The distroless, non-root container image on Kubernetes through
   the Helm chart, on Docker Compose, or the binary built from source, on Linux
   (amd64 or arm64) ([installation](../installation/index.md)).
-- **Database.** A PostgreSQL 18 cluster the deploying organisation provisions;
+- **Database.** A PostgreSQL 19 cluster the deploying organisation provisions;
   the Helm chart deploys none.
 - **Profile.** `deployment.profile = "production"`, which refuses to start
   while a separation is open and not accepted by name

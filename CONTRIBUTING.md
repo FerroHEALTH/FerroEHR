@@ -29,7 +29,7 @@ documentation correction, or measurement from your own hardware all count.
 
 - The Rust toolchain is pinned by [`rust-toolchain.toml`](rust-toolchain.toml);
   `rustup` installs it automatically on first build.
-- Docker is required for the PostgreSQL 18 integration tests (testcontainers).
+- Docker is required for the PostgreSQL 19 integration tests (testcontainers).
 - `xmllint` (`libxml2-utils` on Debian/Ubuntu, part of libxml2 on macOS) is
   required by the canonical-XML parity tests.
 - Install the shared git hooks once: `bash scripts/install-hooks.sh`.
@@ -38,7 +38,7 @@ documentation correction, or measurement from your own hardware all count.
 
 ```shell
 cargo build --workspace
-cargo nextest run --workspace          # unit + integration (real PG 18 via Docker)
+cargo nextest run --workspace          # unit + integration (real PG 19 via Docker)
 cargo test --workspace --doc
 # clippy is THREE lanes: the viewer's hydrate/ssr features are mutually
 # exclusive (compile_error!-guarded), so it is excluded from --all-features

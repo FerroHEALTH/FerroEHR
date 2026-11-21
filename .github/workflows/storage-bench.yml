@@ -4,7 +4,7 @@
 # .github/workflows/storage-bench.yml
 #
 # Runs the storage benchmark (app/ferroehr/benches/storage.rs) against a
-# PostgreSQL 18 service for two builds on ONE runner, a baseline and a
+# PostgreSQL 19 service for two builds on ONE runner, a baseline and a
 # candidate, in interleaved rounds, and judges the candidate's latency against
 # the baseline measured there (#4318). The candidate's storage sizes, which do
 # not depend on the machine, are judged against the record committed for its

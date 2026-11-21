@@ -5,7 +5,7 @@
 //! per-schema migration sequence.
 //!
 //! No openEHR spec governs the persistence mechanism; the storage substrate is
-//! our own PG18-native design. This module is the single place the rest of the
+//! our own PG19-native design. This module is the single place the rest of the
 //! crate obtains a database handle. [`DbConfig`] (the `[database]` config section)
 //! carries the shared DSN and the pool tuning; [`domain::DomainDsn`] (each
 //! `[database.<domain>]` section) carries one DSN per storage domain, each defaulting to
@@ -41,6 +41,7 @@ pub mod parent_statistics;
 pub mod pool;
 pub mod pool_name;
 mod retired;
+pub mod server_version;
 mod session;
 
 use std::path::PathBuf;
@@ -314,6 +315,21 @@ pub enum DbError {
         /// `PostgreSQL`'s own refusal (`SQLSTATE` 42501).
         #[source]
         source: sqlx::Error,
+    },
+
+    /// A domain's database runs a `PostgreSQL` older than
+    /// [`server_version::MINIMUM`].
+    #[error(
+        "the {domain} database runs PostgreSQL server_version_num {found}, and FerroEHR needs \
+         {required} or newer"
+    )]
+    UnsupportedServer {
+        /// The domain whose pool reached the server.
+        domain: Domain,
+        /// The `server_version_num` the server reported.
+        found: i32,
+        /// [`server_version::MINIMUM`].
+        required: i32,
     },
 
     /// The database was created by a release older than the storage rewrite.
@@ -1081,13 +1097,16 @@ async fn close_quietly(conn: PgConnection) {
 /// [`DbError::SchemaNotReady`] when a database does not carry exactly this
 /// build's migrations, [`DbError::SchemaUnreadable`] when the migration
 /// credential cannot read a set's bookkeeping at all, or [`DbError::Sqlx`]
-/// when the check itself cannot run. In both modes, whatever
+/// when the check itself cannot run. In both modes, first
+/// [`DbError::UnsupportedServer`] when a domain's server is older than
+/// [`server_version::MINIMUM`], and last whatever
 /// [`verify_domain_isolation`] returns.
 pub async fn prepare(
     settings: &DbConfig,
     pools: &DomainPools,
     profile: DeploymentProfile,
 ) -> Result<(), DbError> {
+    server_version::verify(pools).await?;
     match settings.migrations {
         MigrationMode::Apply => apply_schema(settings).await?,
         MigrationMode::Verify => {

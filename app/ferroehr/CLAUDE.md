@@ -79,7 +79,7 @@ module.**
   `docs/specs/openehr/` (`/spec-lookup`) — never from memory or EHRbase
   behaviour. Cite spec file + section in comments; the only citable references
   are the vendored specs and official external docs — NEVER an internal doc.
-- **Storage is greenfield PG18, second generation:** an APPEND-ONLY `version`
+- **Storage is greenfield PG19, second generation:** an APPEND-ONLY `version`
   table (no validity interval, no close-out statement — validity is derived
   from `committed_at`; a version whose content equals the preceding tip's
   shares that tip's node rows through `content_sys_version`, so every

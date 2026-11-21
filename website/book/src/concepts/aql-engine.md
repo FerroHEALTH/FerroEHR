@@ -24,7 +24,7 @@ flowchart LR
     ast --> an["path analysis + typing<br/>(generated RM model)"]
     an --> ir["typed query IR<br/>(cached per query text)"]
     ir --> sql["SQL builder<br/>(sea-query)"]
-    sql --> pg[("PostgreSQL 18")]
+    sql --> pg[("PostgreSQL 19")]
     pg --> rs["RESULT_SET"]
 ```
 
@@ -175,7 +175,7 @@ flags:
    canonical bytes.
 3. **Plans are cached.** The IR is request-independent and cached on query
    text; repeated and stored queries skip lexing, parsing and typing.
-4. **PostgreSQL 18 does the heavy lifting.** B-tree skip scan, `OR` to
+4. **PostgreSQL 19 does the heavy lifting.** B-tree skip scan, `OR` to
    `= ANY` rewriting, self-join elimination, asynchronous I/O and the
    SQL/JSON function family are exactly the features the generated SQL
    leans on.

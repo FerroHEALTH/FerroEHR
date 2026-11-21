@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! AQL rooted at a demographic class against a real PostgreSQL 18 (shared
+//! AQL rooted at a demographic class against a real PostgreSQL 19 (shared
 //! testkit harness): parties are created through the demographic service, then
 //! queried through the `QueryService` seam.
 //!

@@ -213,7 +213,7 @@ default, and the committed baseline is what this page renders.
 ### Comparing two builds on one runner
 
 A dispatch-only workflow (`.github/workflows/storage-bench.yml`) runs the same
-benchmark on one GitHub-hosted runner, against a PostgreSQL 18 service with its
+benchmark on one GitHub-hosted runner, against a PostgreSQL 19 service with its
 durability left on, for two builds: a baseline and a candidate. The candidate
 is the dispatched ref, and the baseline is its merge base with `main` unless
 the dispatch names another revision, so a dispatch on `main` measures the same

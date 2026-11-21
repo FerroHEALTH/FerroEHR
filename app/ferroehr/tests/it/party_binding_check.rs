@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The pre-flight of a migration to party binding (#5009) over a fixture
-//! store on a real PostgreSQL 18 (shared testkit harness).
+//! store on a real PostgreSQL 19 (shared testkit harness).
 //!
 //! The parties are committed through the demographic service with the
 //! committer each history would carry: a SCIM client's client identifier

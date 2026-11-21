@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The policy parties (#5434) over a real PostgreSQL 18: the default policy
+//! The policy parties (#5434) over a real PostgreSQL 19: the default policy
 //! definitions are seeded when absent and never overwritten, no
 //! configuration key names them, each worked example on the book's
 //! "Operational policy" page fits its definition and carries the codes that

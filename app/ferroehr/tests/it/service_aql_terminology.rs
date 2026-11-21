@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! End-to-end AQL `TERMINOLOGY('expand', …)` tests (B4 stage (a)) against a real
-//! PostgreSQL 18 (shared testkit harness): seed COMPOSITIONs with a coded ELEMENT leaf,
+//! PostgreSQL 19 (shared testkit harness): seed COMPOSITIONs with a coded ELEMENT leaf,
 //! then run `matches TERMINOLOGY('expand', …)` / `matches {…, TERMINOLOGY(…)}`
 //! through the `QueryService` seam and assert the expansion is merged into the
 //! generated `IN (…)` predicate.

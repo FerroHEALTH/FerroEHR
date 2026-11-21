@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The federation agreements in the CDR (#5440) over a real PostgreSQL 18: an
+//! The federation agreements in the CDR (#5440) over a real PostgreSQL 19: an
 //! agreement is a grant of `federated_person_access` or
 //! `federated_organisation_access` held by the partner's `ACTOR`, its terms
 //! the coded elements of `openehr_access` in the capability's

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! End-to-end tests of the `spec_profile` compatibility stamp and its
-//! read-time gate, against a real PostgreSQL 18 (shared testkit harness).
+//! read-time gate, against a real PostgreSQL 19 (shared testkit harness).
 //!
 //! No openEHR spec governs runtime specification-generation selection — our own
 //! design/extension. The development-only construct these tests commit is

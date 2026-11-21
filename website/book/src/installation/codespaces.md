@@ -12,7 +12,7 @@ published images in your browser, with nothing installed on your machine.
 Creating a Codespace on the FerroEHR repository starts a container that pulls
 the published quickstart images and runs `docker compose up` for you:
 
-- the FerroEHR server with a preconfigured PostgreSQL 18,
+- the FerroEHR server with a preconfigured PostgreSQL 19,
 - the viewer,
 - the Swagger UI for the full REST API.
 

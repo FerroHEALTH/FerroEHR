@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The COMPOSITION commit against an ADL 2 operational template, over a real
-//! PostgreSQL 18 (shared testkit harness), driven by the Veredictum catalogue's
+//! PostgreSQL 19 (shared testkit harness), driven by the Veredictum catalogue's
 //! ADL 2 content cases (`corpus/veredictum/adl2-content/`).
 //!
 //! Every case's template is uploaded through the ADL 2 definition service and

@@ -59,7 +59,7 @@ NOTE: config.management.enabled=false — the ops-introspection surface (info,
 ────────────────────────────────────────────────────────────────────────────
 DATABASE / MIGRATIONS
 ────────────────────────────────────────────────────────────────────────────
-This chart NEVER ships a PostgreSQL. It connects to an EXTERNAL PostgreSQL 18
+This chart NEVER ships a PostgreSQL. It connects to an EXTERNAL PostgreSQL 19
 as the unprivileged app role.
 {{ if .Values.database.existingSecret -}}
   DSN source: existing Secret "{{ .Values.database.existingSecret }}" key "{{ .Values.database.existingSecretKey }}"  [OK]

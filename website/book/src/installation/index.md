@@ -1,6 +1,6 @@
 # Installation
 
-FerroEHR is one self-contained binary that connects to a PostgreSQL 18
+FerroEHR is one self-contained binary that connects to a PostgreSQL 19
 database. There is no application server to install and no language runtime to
 provision: the binary links a pure-Rust TLS stack and needs no OpenSSL and no
 JVM, so all you choose is how to run it and where the database lives. This part
@@ -11,11 +11,11 @@ covers the three paths and the full configuration surface.
   viewer forwarded. Nothing to install. Made for evaluating FerroEHR; a real
   deployment uses one of the paths below.
 - **[Docker Compose](compose.md):** the fastest way to run the server plus a
-  preconfigured PostgreSQL 18, for development and evaluation. One downloadable
+  preconfigured PostgreSQL 19, for development and evaluation. One downloadable
   file that pulls the published images and needs no configuration. Optional
   viewer, OIDC, and observability overlays.
 - **[Kubernetes & Helm](kubernetes.md):** the production path, a hardened
-  non-root workload that connects to an externally managed PostgreSQL 18. Its
+  non-root workload that connects to an externally managed PostgreSQL 19. Its
   companion, [Cluster hardening](kubernetes-hardening.md), covers what the
   chart cannot do for you.
 - **[From source](from-source.md):** building the binary yourself with the
@@ -72,6 +72,6 @@ semantics, defaults, and the direction contract are in
 
 > [!NOTE]
 > A Clinical Data Repository stores PHI. In production the database must be an
-> externally managed, backed-up, point-in-time-recoverable PostgreSQL 18, never
+> externally managed, backed-up, point-in-time-recoverable PostgreSQL 19, never
 > a throwaway sidecar. The Kubernetes chart deliberately ships **no** in-cluster
 > database for this reason.

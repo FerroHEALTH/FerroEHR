@@ -89,10 +89,10 @@ serviceAccount:
   automountServiceAccountToken: false
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Database credential (external PostgreSQL 18).
+# Database credential (external PostgreSQL 19).
 #
 # There is NO in-chart PostgreSQL. A clinical data repository stores PHI; its
-# database MUST be an externally-managed, backed-up, PITR-capable PostgreSQL 18
+# database MUST be an externally-managed, backed-up, PITR-capable PostgreSQL 19
 # (managed service or an operator-run cluster) — never a chart-side sidecar.
 #
 # The application connects as the UNPRIVILEGED `ferroehr_clinical` writer role: a
@@ -381,7 +381,7 @@ backup:
   # the render is refused.
   enabled: false
   image:
-    # -- Image carrying `pg_dump`. The project's own PostgreSQL 18 image, so the
+    # -- Image carrying `pg_dump`. The project's own PostgreSQL 19 image, so the
     # dump is taken by the same major version the server runs against.
     repository: ghcr.io/ferrohealth/ferroehr-postgres
     # -- Pull policy.

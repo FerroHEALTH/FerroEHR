@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The local party source over the binding side table (#5004), over a real
-//! PostgreSQL 18 (shared testkit harness).
+//! PostgreSQL 19 (shared testkit harness).
 //!
 //! Parties are committed through the demographic service calls the REST
 //! routes make, so every side-table row is the one a commit derives. A

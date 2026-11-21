@@ -13,7 +13,7 @@ published container images ([Docker Compose](compose.md),
   automatically the first time you build in the checkout; you do not choose a
   version by hand.
 - **Docker:** required only for the integration tests, which spin up a real
-  PostgreSQL 18 in a container.
+  PostgreSQL 19 in a container.
 - **`xmllint`:** required only for the canonical-XML tests.
 
 ## Building
@@ -43,10 +43,10 @@ cargo nextest run --workspace
 ```
 
 Every database-backed test takes its database from a shared harness: one
-PostgreSQL 18 server, one migrated template database, and a fast clone per
-test. By default the harness starts (or re-adopts) a single reusable `postgres:18` container, so
+PostgreSQL 19 server, one migrated template database, and a fast clone per
+test. By default the harness starts (or re-adopts) a single reusable `postgres:19` container, so
 Docker must be running; reclaim it afterwards with
-`docker rm -f ferroehr-testkit-pg18`. To use a PostgreSQL 18 server you already
+`docker rm -f ferroehr-testkit-pg19`. To use a PostgreSQL 19 server you already
 run instead, point the suite at it and Docker is not needed at all:
 
 ```shell

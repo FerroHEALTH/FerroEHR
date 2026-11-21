@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! `SUM` and `AVG` over a whole data value add numbers and amounts only
-//! (#5917), executed against a real PostgreSQL 18 (shared testkit harness).
+//! (#5917), executed against a real PostgreSQL 19 (shared testkit harness).
 //!
 //! QUERY master03 §SUM, §AVG: "Input values type should be either Integer or
 //! Real". RM `data_types` §`DV_AMOUNT` defines `+` on the relative amounts

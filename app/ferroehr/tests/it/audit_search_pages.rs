@@ -273,7 +273,7 @@ async fn a_page_renders_only_the_documents_it_serves() {
         .await
         .expect(
             "pg_stat_statements: the server loads it (shared_preload_libraries); a testkit \
-             container started before #5885 does not: docker rm -f ferroehr-testkit-pg18",
+             container started before #5885 does not: docker rm -f ferroehr-testkit-pg19",
         );
     let store = AuditStore::new(pool.clone());
     for n in 0..12 {

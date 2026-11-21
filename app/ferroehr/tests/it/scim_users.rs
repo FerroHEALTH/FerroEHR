@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The Users of a SCIM client as the demographic service holds them (#5014),
-//! over a real PostgreSQL 18: a creation commits the `PERSON` and its
+//! over a real PostgreSQL 19: a creation commits the `PERSON` and its
 //! professional `ROLE` in one demographic CONTRIBUTION, each naming the other
 //! (RM demographic `org.openehr.rm.demographic.actor.adoc`, `…role.adoc`), and
 //! a client finds only its own Users, by `id`, `userName` (compared by its
