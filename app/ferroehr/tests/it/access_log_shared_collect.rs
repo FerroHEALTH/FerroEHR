@@ -472,7 +472,7 @@ async fn the_sweep_keeps_an_orphaned_part_one_day_past_its_end() {
     );
     let before_yesterday = today()
         .yesterday()
-        .and_then(|day| day.yesterday())
+        .and_then(jiff::civil::Date::yesterday)
         .expect("a date");
     age_parts(&pool, &before_yesterday.to_string()).await;
     assert_eq!(
@@ -547,9 +547,17 @@ async fn a_raise_that_meets_the_sweeps_removal_is_refused() {
         .await
         .expect("the write task")
         .expect_err("the raise found the part removed");
+    let mut chain = Vec::new();
+    let mut cause: Option<&(dyn std::error::Error + 'static)> = Some(&refused);
+    while let Some(error) = cause {
+        chain.push(error.to_string());
+        cause = error.source();
+    }
     assert!(
-        refused.to_string().contains("removed while it was written"),
-        "{refused}"
+        chain
+            .iter()
+            .any(|text| text.contains("removed while it was written")),
+        "{chain:?}"
     );
     assert_eq!(dangling(&pool).await, 0, "no entry names the removed part");
 }
