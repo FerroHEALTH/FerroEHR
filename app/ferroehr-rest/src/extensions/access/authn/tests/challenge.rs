@@ -47,7 +47,10 @@ async fn every_invalid_token_renders_one_status_and_names_its_reason_code() {
                 .authenticate(&headers(&format!("Bearer {token}")))
                 .await
                 .expect_err("refused");
-            auth.challenge(Some(&err)).to_str().expect("ASCII").to_owned()
+            auth.challenge(Some(&err))
+                .to_str()
+                .expect("ASCII")
+                .to_owned()
         }
     };
     let cases = invalid_tokens();

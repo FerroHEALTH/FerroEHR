@@ -1334,7 +1334,7 @@ fn professional_edited(
 }
 
 /// A `federation` token that fits no caller is refused with `401`, and the
-/// gate logs the typed reason naming the field, never its value: a token
+/// gate logs its stable reason code, never a value: a token
 /// naming neither a professional nor an organisation statement, a
 /// professional missing a field, a country outside the issuer's `countries`,
 /// and an attribute holding U+202E (#5011).
@@ -1350,28 +1350,28 @@ async fn a_federation_token_that_fits_no_caller_is_refused_naming_why() {
             token(
                 &json!({ "sub": "remote-system", "client_id": "remote-system", "ehrId": target }),
             ),
-            "names no professional and states no organisation access",
+            "organisation-statement-missing",
         ),
         (
             "a professional without a name",
             professional_edited(&target, |iua| {
                 iua.remove("subject_name");
             }),
-            "names a professional and misses",
+            "professional-incomplete",
         ),
         (
             "a country outside the issuer's countries",
             professional_edited(&target, |iua| {
                 iua.insert("country".to_owned(), json!("FR"));
             }),
-            "outside the declared bounds",
+            "attribute-out-of-bounds",
         ),
         (
             "a name holding U+202E",
             professional_edited(&target, |iua| {
                 iua.insert("subject_name".to_owned(), json!("Dr \u{202e}etomeR"));
             }),
-            "holds a refused character",
+            "attribute-refused",
         ),
     ];
     for (case, credential, reason) in cases {
@@ -1387,8 +1387,8 @@ async fn a_federation_token_that_fits_no_caller_is_refused_naming_why() {
         assert!(
             lines
                 .iter()
-                .any(|line| line.contains("an access token names no caller kind")
-                    && line.contains(reason)),
+                .any(|line| line.contains("a request was refused")
+                    && line.contains(&format!("reason={reason}"))),
             "{case}: the reason {reason:?} is logged: {lines:?}"
         );
         for line in &lines {

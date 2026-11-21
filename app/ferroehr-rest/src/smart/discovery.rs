@@ -239,6 +239,15 @@ pub fn router(
         .layer(Extension(document))
 }
 
+/// The document of the described issuer, read first when it is read in the
+/// background and not read yet.
+async fn described(document: &Document) -> Described {
+    document.authenticator.read_described().await;
+    document
+        .authenticator
+        .smart_configuration(&document.options)
+}
+
 /// The `503` of a document that cannot be built yet, naming `reason` (RFC
 /// 9110 §15.6.4: the condition is temporary, so `Retry-After` hints when to
 /// ask again).
@@ -325,10 +334,7 @@ fn unavailable(reason: &'static str) -> Response {
 async fn smart_configuration(Extension(document): Extension<Document>) -> Response {
     let body = match document.serialized.get() {
         Some(body) => body.clone(),
-        None => match {
-            document.authenticator.read_described().await;
-            document.authenticator.smart_configuration(&document.options)
-        } {
+        None => match described(&document).await {
             Described::Document(built) if built.get("token_endpoint").is_none() => {
                 tracing::warn!(
                     reason = NO_TOKEN_ENDPOINT,

@@ -90,8 +90,9 @@ pub fn product_scope(section: &AuthSection) -> &str {
     }
 }
 
-/// Returns the base URLs an issuer that names no `audience` is resolved
-/// for: the openEHR REST API's `baseUrl` the SMART discovery document
+/// Returns the base URLs an issuer that names no `audience` is resolved for.
+///
+/// It is the openEHR REST API's `baseUrl` the SMART discovery document
 /// publishes, `[server] public_base_url` with `server.base_path` and
 /// `api.base_path`, or none when the deployment names no public URL.
 ///

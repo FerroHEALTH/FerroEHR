@@ -211,8 +211,11 @@ async fn authenticator_over(
 }
 
 /// Returns `observability` whose readiness also reports whether every bearer
-/// issuer of `authenticator` has been read.
+/// issuer of `authenticator` has been read, when it trusts any.
 fn with_issuers(observability: Observability, authenticator: &Arc<Authenticator>) -> Observability {
+    if authenticator.token_verdicts().is_none() {
+        return observability;
+    }
     Observability {
         health: observability.health.and(Arc::new(
             extensions::access::authn::verdicts::IssuersHealth(Arc::clone(authenticator)),

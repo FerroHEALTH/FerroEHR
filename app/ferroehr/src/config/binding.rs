@@ -480,8 +480,8 @@ pub fn installed_mapping(
         .with_portal_issuers(portal_issuers(resolved)))
 }
 
-/// The issuers a binding key is held under: the `identifier_issuer` of every
-/// `[auth.issuer.<name>.party]` table, and every `patients` issuer, under which a portal
+/// The issuers a binding key is held under: every party table's
+/// `identifier_issuer`, and every `patients` issuer, under which a portal
 /// representative's login is their key with no table (#5622).
 ///
 /// The server compiles the person mapping from this one set, and the SCIM

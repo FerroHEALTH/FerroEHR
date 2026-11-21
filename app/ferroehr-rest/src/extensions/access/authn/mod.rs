@@ -41,6 +41,7 @@ pub(crate) mod assurance;
 pub(crate) mod attested;
 mod build;
 pub(crate) mod declared;
+pub(crate) mod described;
 pub(crate) mod gates;
 pub(crate) mod grants;
 mod issuer;
@@ -52,7 +53,6 @@ pub(crate) mod refusal;
 mod scope;
 pub(crate) mod trc;
 pub(crate) mod verdicts;
-pub(crate) mod described;
 
 use std::sync::Arc;
 
@@ -62,7 +62,7 @@ use axum::response::Response;
 use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::refusal::{Denied, Reason, Refusal};
-use ferrohealth_smart::resource::configuration::{Purpose, SmartOptions};
+use ferrohealth_smart::resource::configuration::Purpose;
 use ferrohealth_smart::resource::{Access, Honoured, Via};
 use http::request::Parts;
 use http::{HeaderValue, StatusCode};
@@ -74,7 +74,6 @@ use crate::overview::error::RestError;
 use crate::smart::routes::SmartRoutes;
 use assurance::PatientDataGate;
 use build::Primary;
-use described::Described;
 use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::system_log::event::ActorAuthentication;
 use gates::patient_data_refusal;
@@ -756,8 +755,10 @@ mod tests {
     use secrecy::SecretString;
     use serde_json::{Value, json};
 
+    use super::described::Described;
     use super::*;
     use crate::test_support::{self, AUDIENCE, ISSUER};
+    use ferrohealth_smart::resource::configuration::SmartOptions;
 
     fn hash(pw: &str) -> String {
         Argon2::default()
@@ -1576,12 +1577,12 @@ mod tests {
             .find(|fields| {
                 fields
                     .get("message")
-                    .is_some_and(|m| m == "an access token was refused")
+                    .is_some_and(|m| m == "a request was refused")
             })
             .expect("the crate logs which check failed");
         assert_eq!(
             check.get("reason").map(String::as_str),
-            Some("malformed"),
+            Some("malformed-token"),
             "{check:?}"
         );
         for fields in &events {
@@ -1709,8 +1710,8 @@ mod tests {
     }
 
     mod basic;
-    mod challenge;
     mod basic_cache;
+    mod challenge;
     mod described;
     mod outcome_status;
     mod remote_issuer;

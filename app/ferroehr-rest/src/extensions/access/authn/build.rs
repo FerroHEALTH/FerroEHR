@@ -66,14 +66,22 @@ pub(super) struct FirstAdmin {
 
 impl RoleIssuers {
     /// Returns the rule of `config`'s `[authz.rbac]`, its issuer names read
-    /// through `resolved`.
+    /// through `resolved`; the configuration check holds each to a
+    /// `persons` issuer.
     ///
     /// # Errors
-    /// A message naming a role issuer that names no `persons` issuer of
-    /// `[auth]`.
+    /// A message naming a role issuer that names no table of `[auth]`.
     fn of(config: &AppConfig, resolved: &Resolved) -> Result<Self, String> {
-        let issuers = resolved
-            .role_issuers("authz.rbac.role_issuers", &config.rbac.role_issuers)
+        let issuers = config
+            .rbac
+            .role_issuers
+            .iter()
+            .map(|name| {
+                resolved
+                    .issuer_named("authz.rbac.role_issuers", name)
+                    .map(str::to_owned)
+            })
+            .collect::<Result<Vec<_>, _>>()
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
         Ok(Self {
             privileged: config.rbac.privileged_roles(),
@@ -186,27 +194,8 @@ impl Authenticator {
                 None => None,
             };
             for settings in resolved.issuers {
-                if settings.jwks_file.is_none() {
-                    let lazy = Arc::new(
-                        ResourceServer::lazy(settings)
-                            .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?,
-                    );
-                    let settings = lazy.settings();
-                    candidates.push(Candidate::new(
-                        settings.issuer.clone(),
-                        settings.kind,
-                        Metadata::Available,
-                        Primary::Lazy(Arc::clone(&lazy)),
-                    ));
-                    issuers = issuers.with_lazy(lazy);
-                    continue;
-                }
-                let server = Arc::new(local(settings, &mut supplied).await?);
-                candidates.push(Candidate::of_server(
-                    &server,
-                    Primary::Jwt(Arc::clone(&server)),
-                ));
-                issuers = issuers.with(server);
+                // NOTE: clippy large_futures, a `jwks_file` issuer's read is a large future, so it is boxed.
+                issuers = Box::pin(jwt(settings, issuers, &mut supplied, &mut candidates)).await?;
             }
             if let Some(metadata) = supplied {
                 return Err(format!(
@@ -277,6 +266,42 @@ impl Drop for BackgroundReads {
             read.abort();
         }
     }
+}
+
+/// Adds the JWT issuer of `settings` to `issuers`, offering it to the
+/// discovery document as one of `candidates`: read in the background when
+/// its metadata is read from it, read here from its `jwks_file` otherwise,
+/// with the metadata `supplied` names.
+///
+/// # Errors
+/// A message naming the refused settings, or the `jwks_file` issuer that
+/// could not be read.
+async fn jwt(
+    settings: Settings,
+    issuers: IssuerSet,
+    supplied: &mut Option<ferrohealth_smart::metadata::ServerMetadata>,
+    candidates: &mut Vec<Candidate<Primary>>,
+) -> Result<IssuerSet, String> {
+    if settings.jwks_file.is_none() {
+        let lazy = Arc::new(
+            ResourceServer::lazy(settings)
+                .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?,
+        );
+        let settings = lazy.settings();
+        candidates.push(Candidate::new(
+            settings.issuer.clone(),
+            settings.kind,
+            Metadata::Available,
+            Primary::Lazy(Arc::clone(&lazy)),
+        ));
+        return Ok(issuers.with_lazy(lazy));
+    }
+    let server = Arc::new(local(settings, supplied).await?);
+    candidates.push(Candidate::of_server(
+        &server,
+        Primary::Jwt(Arc::clone(&server)),
+    ));
+    Ok(issuers.with(server))
 }
 
 /// Reads the `jwks_file` issuer of `settings` from its local file, with the

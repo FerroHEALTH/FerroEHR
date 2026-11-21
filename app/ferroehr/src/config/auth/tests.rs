@@ -476,7 +476,10 @@ fn an_issuer_without_an_audience_takes_the_rest_base_url() {
     let root = PublicRoot::new("https://cdr.example.com", "").expect("a root");
     let bases = audience_bases(Some(&root), "/ferroehr/rest/openehr/v1");
     assert_eq!(bases, ["https://cdr.example.com/ferroehr/rest/openehr/v1"]);
-    assert!(audience_bases(None, "/ferroehr/rest/openehr/v1").is_empty());
+    assert_eq!(
+        audience_bases(None, "/ferroehr/rest/openehr/v1"),
+        Vec::<String>::new()
+    );
     assert_eq!(
         audience_bases(None, "https://gw.example/openehr/v1"),
         ["https://gw.example/openehr/v1"]

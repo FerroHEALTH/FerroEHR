@@ -623,7 +623,12 @@ async fn an_unread_issuer_answers_503_until_it_appears() {
         .await;
     let mut status = StatusCode::SERVICE_UNAVAILABLE;
     for _ in 0..150 {
-        status = app.clone().oneshot(get(DISCOVERY, None)).await.unwrap().status();
+        status = app
+            .clone()
+            .oneshot(get(DISCOVERY, None))
+            .await
+            .unwrap()
+            .status();
         if status == StatusCode::OK {
             break;
         }
