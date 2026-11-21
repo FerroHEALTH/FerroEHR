@@ -40,11 +40,11 @@ const OTHER_MACHINES: &str = "https://other-machines.callers.example";
 const PATIENTS: &str = "https://patients.callers.example";
 /// An Entra ID `persons` issuer.
 const ENTRA: &str = "https://login.microsoftonline.example/callers/v2.0";
-/// The `identifier_issuer` of the Entra issuer's `[[auth.party]]` table.
+/// The `identifier_issuer` of the Entra issuer's `[auth.issuer.<name>.party]` table.
 const ENTRA_LOGIN: &str = "https://login.microsoftonline.example/callers";
 /// A Keycloak `persons` realm.
 const KEYCLOAK: &str = "https://keycloak.example/realms/callers";
-/// The `identifier_issuer` of the realm's `[[auth.party]]` table.
+/// The `identifier_issuer` of the realm's `[auth.issuer.<name>.party]` table.
 const KEYCLOAK_LOGIN: &str = "https://keycloak.example/realms/callers/users";
 /// The realm's first-party client.
 const VIEWER: &str = "ferroehr-viewer";
@@ -60,7 +60,7 @@ fn persons(issuer: &str, profile: Preset) -> IssuerEntry {
     }
 }
 
-/// A `[[auth.party]]` table binding the logins of `issuer`.
+/// A `[auth.issuer.<name>.party]` table binding the logins of `issuer`.
 fn party(issuer: &str, identifier_issuer: &str) -> PartySection {
     PartySection {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer),
@@ -75,9 +75,12 @@ fn party(issuer: &str, identifier_issuer: &str) -> PartySection {
 fn config() -> AppConfig {
     let entra = persons(ENTRA, Preset::Entra);
     let keycloak = IssuerEntry {
-        app_only: Some(vec![Marker::Subjects(vec![
-            "service-account-viewer".to_owned(),
-        ])]),
+        profile: ferrohealth_smart::profile::ProfileKeys {
+            app_only: Some(vec![Marker::Subjects(vec![
+                "service-account-viewer".to_owned(),
+            ])]),
+            ..persons(KEYCLOAK, Preset::Keycloak).profile
+        },
         ..persons(KEYCLOAK, Preset::Keycloak)
     };
     let patients = IssuerEntry {
@@ -85,14 +88,16 @@ fn config() -> AppConfig {
         ..machines(PATIENTS, Preset::Rfc9068)
     };
     let mut auth = common::auth(AuthSection {
-        issuer: vec![
-            machines(MACHINES, Preset::Rfc9068),
-            machines(OTHER_MACHINES, Preset::Rfc9068),
-            patients,
-            entra,
-            keycloak,
-        ],
-        party: vec![party(ENTRA, ENTRA_LOGIN), party(KEYCLOAK, KEYCLOAK_LOGIN)],
+        issuer: common::bound(
+            vec![
+                machines(MACHINES, Preset::Rfc9068),
+                machines(OTHER_MACHINES, Preset::Rfc9068),
+                patients,
+                entra,
+                keycloak,
+            ],
+            vec![party(ENTRA, ENTRA_LOGIN), party(KEYCLOAK, KEYCLOAK_LOGIN)],
+        ),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -135,7 +140,7 @@ fn entra(oid: &str, extra: &serde_json::Value) -> String {
 }
 
 /// A token of each issuer kind that fits no step of that kind, with the
-/// reason the classification gives it.
+/// reason code the classification gives it.
 fn unfit() -> Vec<(&'static str, String, &'static str)> {
     vec![
         (
@@ -145,7 +150,7 @@ fn unfit() -> Vec<(&'static str, String, &'static str)> {
                 &audience(MACHINES),
                 &json!({ "sub": "a-person", "client_id": "lab", "scope": "system/template-*.r" }),
             ),
-            "a machines token is not app-only",
+            "not-app-only",
         ),
         (
             "a persons token of a client neither first-party nor a delegate",
@@ -154,7 +159,7 @@ fn unfit() -> Vec<(&'static str, String, &'static str)> {
                 &audience(KEYCLOAK),
                 &json!({ "sub": "9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d", "azp": "stranger" }),
             ),
-            "the client is neither first-party nor a declared delegate",
+            "delegate-not-granted",
         ),
         (
             "an Entra user token without acct",
@@ -162,7 +167,7 @@ fn unfit() -> Vec<(&'static str, String, &'static str)> {
                 "8b7c6d5e-4f3a-4b2c-9d1e-0f9a8b7c6d5e",
                 &json!({ "acct": null }),
             ),
-            "a user token lacks the claim acct",
+            "user-claim-missing",
         ),
         (
             "a patients token with a user/ scope",
@@ -172,14 +177,14 @@ fn unfit() -> Vec<(&'static str, String, &'static str)> {
                 &json!({ "sub": "a-patient", "client_id": "app",
                          "scope": "patient/composition-*.r user/composition-*.r" }),
             ),
-            "a patients token does not name only the record subject",
+            "not-patient-context",
         ),
     ]
 }
 
 /// Every local issuer kind refuses a token that fits none of its steps with
-/// `401`, and the gate logs why by the typed reason, naming a claim and never
-/// a claim value. The federation kind is in `federation_http`.
+/// `401`, and the gate logs why by its stable reason code, never a claim
+/// value. The federation kind is in `federation_http`.
 #[tokio::test]
 async fn a_token_that_fits_no_kind_of_its_issuer_is_refused_naming_why() {
     use tracing_subscriber::layer::SubscriberExt as _;
@@ -197,7 +202,7 @@ async fn a_token_that_fits_no_kind_of_its_issuer_is_refused_naming_why() {
         }
         let lines = lines.lock().unwrap().clone();
         let logged = lines.iter().any(|line| {
-            line.contains("an access token names no caller kind") && line.contains(reason)
+            line.contains("a request was refused") && line.contains(&format!("reason={reason}"))
         });
         assert!(logged, "{case}: the reason {reason:?} is logged: {lines:?}");
         for line in &lines {

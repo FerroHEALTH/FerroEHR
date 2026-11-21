@@ -97,7 +97,7 @@ pub enum Administrator {
     Party(Uuid),
     /// By a binding key its `PERSON` carries.
     Key {
-        /// The `identifier_issuer` of the key's `[[auth.party]]` table.
+        /// The `identifier_issuer` of the key's `[auth.issuer.<name>.party]` table.
         issuer: String,
         /// The key.
         key: String,
@@ -127,7 +127,7 @@ pub struct Expected {
 /// What the pre-flight reads besides the party versions.
 #[derive(Debug, Clone, Default)]
 pub struct CheckInput {
-    /// The `identifier_type` of each `[[auth.party]]` table, by its
+    /// The `identifier_type` of each `[auth.issuer.<name>.party]` table, by its
     /// `identifier_issuer`, which says how a given key is compared.
     pub key_types: BTreeMap<String, String>,
     /// The mapped Basic users.
@@ -145,7 +145,7 @@ pub struct CheckInput {
     /// `[authz.party_binding] provisional_report_after`: the age past which a
     /// provisional `PERSON` is reported.
     pub provisional_report_after: ferrohealth_config::units::Duration,
-    /// The `persons` issuers an `[[auth.party]]` table binds, whose first
+    /// The `persons` issuers an `[auth.issuer.<name>.party]` table binds, whose first
     /// logins a `create_at_login` grant may create a `PERSON` for.
     pub jit_issuers: Vec<ferrohealth_secret::secret_url::SecretUrl>,
     /// The date a professional `ROLE` is judged on (`YYYY-MM-DD`).

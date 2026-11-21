@@ -97,6 +97,15 @@ impl std::fmt::Debug for RateClock {
     }
 }
 
+impl AppConfig {
+    /// Returns the base URLs `[auth]` is resolved for, the audience of an
+    /// issuer that names none ([`ferroehr::config::auth::audience_bases`]).
+    #[must_use]
+    pub fn audience_bases(&self) -> Vec<String> {
+        ferroehr::config::auth::audience_bases(self.public_root.as_ref(), &self.api.base_path)
+    }
+}
+
 impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
     /// The REST adapter's runtime view of the platform configuration tree.
     fn from(config: &ferroehr::config::FerroEhrConfig) -> Self {

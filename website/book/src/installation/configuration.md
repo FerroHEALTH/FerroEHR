@@ -83,14 +83,15 @@ including after the `FERROEHR` prefix.** A single underscore only ever appears
 
 Scalars are typed automatically (bool / int / float, else string).
 **List-typed keys take comma-separated values**
-(`FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=https://a,https://b`). Map-keyed tables
-are reachable too: the map key is just another segment
-(`FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__NODE`). An array of tables is
-set by element index: `FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr` sets
-`audience` of the first `[[auth.issuer]]` table key by key over the file's,
-and the next index past the end adds a table. An index with a leading zero,
-one that skips an element, or one under a key that holds no array of tables
-refuses the start.
+(`FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=staff,patients`). Map-keyed tables
+are reachable too: the map key is just another segment, in lower case in the
+file (`FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__NODE`,
+`FERROEHR__AUTH__ISSUER__STAFF__AUDIENCE=ferroehr` sets `audience` of the
+`[auth.issuer.staff]` table key by key over the file's, and adds the table
+when the file has none). An array of tables, such as `[[auth.basic.users]]`,
+is set by element index, and the next index past the end adds a table. An
+index with a leading zero, one that skips an element, or one under a key that
+holds no array of tables refuses the start.
 
 > [!NOTE]
 > Enum values are lowercase / `snake_case` tokens, exactly as the tables show.

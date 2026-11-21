@@ -40,7 +40,7 @@ const ROLE_TEMPLATE: &str = "FerroEHR professional role";
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
 /// The token issuer.
 pub(crate) const ISSUER: &str = "https://login.example";
-/// The `identifier_issuer` of its `[[auth.party]]` table.
+/// The `identifier_issuer` of its `[auth.issuer.<name>.party]` table.
 const LOGIN: &str = "https://login.example/tenant";
 const NAME_PATH: &str = "/identities[at0002]/details[at0003]/items[at0004]";
 pub(crate) const PROVIDER: (&str, &str) = ("urn:oid:2.16.528.1.1007.3.3", "12345678");

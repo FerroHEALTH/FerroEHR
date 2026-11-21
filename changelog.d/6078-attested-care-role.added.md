@@ -1,1 +1,1 @@
-- An attested care relationship takes the role its credential attests when that role is in the `care_role` value set the access policy binds (unbound, a code of `HL7_ParticipationType`), and `PART` otherwise; no `[[auth.federation]]` field carries an attested role yet, so `PART` is the role it holds today (#6078).
+- An attested care relationship takes the role its credential attests when that role is in the `care_role` value set the access policy binds (unbound, a code of `HL7_ParticipationType`), and `PART` otherwise (#6078).

@@ -115,13 +115,12 @@ async fn service() -> (testkit::TestDb, FerroEhrService) {
 fn config(mapping: &str) -> FerroEhrConfig {
     let toml = format!(
         r#"
-[[auth.issuer]]
+[auth.issuer.staff]
 issuer = "https://idp.example/realms/staff"
 kind = "persons"
 audience = ["ferroehr"]
 
-[[auth.party]]
-issuer = "https://idp.example/realms/staff"
+[auth.issuer.staff.party]
 identifier_issuer = "urn:example:staff-login"
 identifier_type = "guid"
 

@@ -36,23 +36,23 @@ H_ROLES="urn:example:hospital-roles"
 # The overlay of this family, written to `out`: FerroSMART trusted as the
 # `persons` issuer and as an issuer of roles on both instances, break-glass
 # and the purposes, the one-shot that grants the SCIM client, and, with
-# `patients` set, FerroSMART's patient/ grants honoured
-# (`[auth.smart] patient_issuers`).
+# `patients` set, FerroSMART's patient/ grants honoured (the issuer's
+# `patient_context`, on under the `ferrosmart` preset and off here without
+# `patients`). FerroSMART's audience is the openEHR base the server derives
+# from its public URL.
 hospital_overlay() {
-  local out="$1" patients="${2:-}" honoured=""
-  [[ -n "$patients" ]] && honoured="$HS_ISSUER"
+  local out="$1" patients="${2:-}" honoured="false"
+  [[ -n "$patients" ]] && honoured="true"
   {
     cat <<YAML
 x-hospital-env: &hospital-env
-  FERROEHR__AUTH__ISSUER__1__AUDIENCE: ferroehr-scim,ferroehr-system
-  FERROEHR__AUTH__ISSUER__2__ISSUER: $HS_ISSUER
-  FERROEHR__AUTH__ISSUER__2__KIND: persons
-  FERROEHR__AUTH__ISSUER__2__PROFILE: ferrosmart
-  FERROEHR__AUTH__ISSUER__2__AUDIENCE: $HS_BASE
-  FERROEHR__AUTH__PARTY__1__ISSUER: $HS_ISSUER
-  FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: $HS_LOGIN_ISSUER
-  FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
-  FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: $HS_ISSUER
+  FERROEHR__AUTH__ISSUER__QUICKSTART__AUDIENCE: ferroehr-scim,ferroehr-system
+  FERROEHR__AUTH__ISSUER__FERROSMART__ISSUER: $HS_ISSUER
+  FERROEHR__AUTH__ISSUER__FERROSMART__KIND: persons
+  FERROEHR__AUTH__ISSUER__FERROSMART__PRESET: ferrosmart
+  FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_ISSUER: $HS_LOGIN_ISSUER
+  FERROEHR__AUTH__ISSUER__FERROSMART__PARTY__IDENTIFIER_TYPE: login
+  FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: ferrosmart
   FERROEHR__AUTHZ__RBAC__ENABLED: "true"
   FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE: EMERGENCY
   FERROEHR__AUDIT__PURPOSE_CODES: TREAT,ETREAT
@@ -60,13 +60,13 @@ x-hospital-env: &hospital-env
   FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision,hold_scopes,sign_in_persons,act_for_persons,access_service,write_access_policy,write_care_relationship
   FERROEHR__AUTH__SMART__DISCOVERY: "true"
   FERROEHR__SERVER__PUBLIC_BASE_URL: http://localhost:8080
-  FERROEHR__AUTH__SMART__PATIENT_ISSUERS: "$honoured"
+  FERROEHR__AUTH__ISSUER__FERROSMART__PROFILE__PATIENT_CONTEXT: "$honoured"
   # ferrohealth-smart logs why it refuses a token at debug, and nowhere else;
   # the telemetry key is set because compose sets it, which outranks RUST_LOG.
   FERROEHR__TELEMETRY__FILTER: info,ferrohealth_smart=debug
 services:
   # The quickstart issuer signs FerroPIX's PMIR feed token for FerroEHR's
-  # \`ferroehr-system\` audience, which issuer 1 accepts above; any other
+  # \`ferroehr-system\` audience, which the \`quickstart\` issuer accepts above; any other
   # client credentials request keeps the quickstart's FerroPIX audience.
   identity-issuer:
     environment:
@@ -146,10 +146,10 @@ hospital_files() {
 hdc() { dc "${HOSPITAL_FILES[@]}" --profile replicas --profile s3 --profile viewer "$@"; }
 
 # Brings the whole stack up on fresh volumes, its EHR subjects named in
-# `namespace` for FerroSMART's picker: the upstream provider and FerroSMART
-# first, since both instances read FerroSMART's metadata at load, then both
+# `namespace` for FerroSMART's picker: the upstream provider, FerroSMART, both
 # instances, the viewer, the bucket, the provisioning of the Basic user and
-# the grant of the SCIM client.
+# the grant of the SCIM client, all at once, since an instance reads
+# FerroSMART's metadata in the background and is ready once it has.
 hospital_up() {
   local namespace="${1:-demographic}"
   export FERROEHR_REPLICA_PORT="$HOSPITAL_REPLICA_PORT"
@@ -160,9 +160,8 @@ hospital_up() {
   hdc down -v --remove-orphans >/dev/null 2>&1 || true
   hs_prepare "$namespace" || return 1
   # shellcheck disable=SC2046 # one word per service
-  hdc up -d --wait $(hs_upstream_services) ferrosmart >/dev/null 2>&1 || return 1
-  hdc up -d --wait ferroehr ferroehr-2 ferroehr-viewer seaweedfs seaweedfs-init \
-    ferroehr-provision >/dev/null 2>&1
+  hdc up -d --wait $(hs_upstream_services) ferrosmart ferroehr ferroehr-2 ferroehr-viewer \
+    seaweedfs seaweedfs-init ferroehr-provision >/dev/null 2>&1
   hdc up ferroehr-grant-ferrosmart >/dev/null 2>&1
   wait_http "$HS_ISSUER/.well-known/smart-configuration" 60 \
     && wait_http "$H1/health/readiness" 120 && wait_http "$H2/health/readiness" 120
@@ -809,11 +808,6 @@ hospital_setup() {
   # (FerroSMART docs/architecture.md §13.21; the CDR grants act_for_persons).
   h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
     || h_fail_call "the hospital's SMART app"
-  # FerroSMART's patient picker looks the EHR up as the signed-in person, with a
-  # token whose client_id is FerroSMART's own issuer (FerroSMART
-  # docs/architecture.md §13.6 item 4), so the CDR grants it sign_in_persons.
-  h_client picker "$HS_ISSUER" "$(hv hospital)" "$(j_capability "$(j_operation sign_in_persons)")" \
-    || h_fail_call "FerroSMART's patient picker"
 
   # The patients: Eva under the care of three teams since ten days ago,
   # Frank her representative, Gina a patient too, and Piet, anybody else.
@@ -1410,8 +1404,8 @@ ${H_BODY:0:300}"
   probe_done
 }
 
-# Restarts both instances, one after the other, with FerroSMART in
-# `[auth.smart] patient_issuers`, so the patient/ grants of Eva's and Frank's
+# Restarts both instances, one after the other, with FerroSMART's
+# `patient_context` on, so the patient/ grants of Eva's and Frank's
 # standalone launches count; the discovery document still names FerroSMART.
 # The owner approved this re-plan on 2026-11-19 (#5832): behind FerroSMART
 # patients and professionals sign in through one issuer, so the separate
@@ -1448,8 +1442,8 @@ h_portal_bound() {
   done
 }
 
-# Restarts the first instance without FerroSMART in `[auth.smart]
-# patient_issuers`: there a patient's launch is refused for its patient/
+# Restarts the first instance with FerroSMART's `patient_context` off: there
+# a patient's launch is refused for its patient/
 # grant (403, `insufficient_scope`, RFC 6750 §3.1), the second instance still
 # honours it, and the professionals read on both. Owner-approved re-plan of
 # #5688's issuer removal, 2026-11-19 (#5832): the setting is each instance's
@@ -1711,11 +1705,6 @@ hospital_pixm() {
   h_hospital || h_fail_call "the controller, which the SCIM client acts for"
   h_client app "$HS_APP" "$(hv hospital)" "$(j_capability "$(j_operation act_for_persons)")" \
     || h_fail_call "the hospital's SMART app"
-  # FerroSMART's patient picker looks the EHR up as the signed-in person, with a
-  # token whose client_id is FerroSMART's own issuer (FerroSMART
-  # docs/architecture.md §13.6 item 4), so the CDR grants it sign_in_persons.
-  h_client picker "$HS_ISSUER" "$(hv hospital)" "$(j_capability "$(j_operation sign_in_persons)")" \
-    || h_fail_call "FerroSMART's patient picker"
   h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role"
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"

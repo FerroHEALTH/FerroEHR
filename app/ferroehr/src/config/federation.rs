@@ -5,7 +5,7 @@
 //!
 //! The federation agreements in the CDR are judged against it
 //! ([`crate::party_binding::grants::agreement`]): whether it is a MyHealth@EU
-//! contact point, where its `[[auth.federation]]` table reads a `chained`
+//! contact point, where its `[auth.issuer.<name>.federation]` table reads a `chained`
 //! request's correlation id from, and how long this node keeps its access
 //! records. No openEHR spec governs configuration: our own design.
 
@@ -18,12 +18,12 @@ use ferrohealth_smart::kind::IssuerKind;
 use crate::party_binding::grants::trust::{Correlation, FederationTrust, PartnerIssuer};
 use crate::system_log::config::Retention;
 
-/// The trust `auth` declares of its `federation` issuers, with this node's
-/// access records kept for `holder`; none when `[auth]` does not resolve,
-/// which the configuration check refuses first.
+/// The trust `auth`, resolved for `bases`, declares of its `federation`
+/// issuers, with this node's access records kept for `holder`; none when
+/// `[auth]` does not resolve, which the configuration check refuses first.
 #[must_use]
-pub fn trust(auth: &AuthSection, holder: Retention) -> FederationTrust {
-    let Ok(resolved) = crate::config::auth::resolve(auth) else {
+pub fn trust(auth: &AuthSection, bases: &[String], holder: Retention) -> FederationTrust {
+    let Ok(resolved) = crate::config::auth::resolve(auth, bases) else {
         return FederationTrust::new(BTreeMap::new(), holder);
     };
     let issuers = resolved
@@ -34,7 +34,11 @@ pub fn trust(auth: &AuthSection, holder: Retention) -> FederationTrust {
             let sources = correlation_sources(auth, issuer);
             let correlation = match sources {
                 None => Correlation::None,
-                Some(sources) if sources.iter().any(|s| matches!(s, Source::Constant(_))) => {
+                Some(sources)
+                    if sources
+                        .iter()
+                        .any(|s| matches!(s, Source::Constant(_) | Source::Coded { .. })) =>
+                {
                     Correlation::Constant
                 }
                 Some(_) => Correlation::Token,
@@ -67,12 +71,12 @@ fn is_contact_point(resolved: &Resolved, issuer: &str) -> bool {
     })
 }
 
-/// The sources the `[[auth.federation]]` table of `issuer` reads the
-/// correlation id of a `chained` request from, when it maps any.
+/// The sources the `[auth.issuer.<name>.federation]` table of `issuer` reads
+/// the correlation id of a `chained` request from, when it maps any.
 fn correlation_sources<'a>(auth: &'a AuthSection, issuer: &str) -> Option<&'a [Source]> {
-    auth.federation
-        .iter()
-        .find(|table| table.issuer.expose() == issuer)
+    auth.issuers()
+        .find(|(_, entry)| entry.issuer.expose() == issuer)
+        .and_then(|(_, entry)| entry.federation.as_ref())
         .and_then(|table| table.fields.get(&Field::CorrelationId))
         .map(Vec::as_slice)
         .filter(|sources| !sources.is_empty())
@@ -82,7 +86,7 @@ fn correlation_sources<'a>(auth: &'a AuthSection, issuer: &str) -> Option<&'a [S
 fn describe_source(source: &Source) -> String {
     match source {
         Source::Claim(path) => format!("claim:{path}"),
-        Source::Constant(_) => "constant".to_owned(),
+        Source::Constant(_) | Source::Coded { .. } => "constant".to_owned(),
         Source::AuthorizationDetails(path) => format!("authorization_details:{path}"),
         Source::Presentation(path) => format!("presentation:{path}"),
     }

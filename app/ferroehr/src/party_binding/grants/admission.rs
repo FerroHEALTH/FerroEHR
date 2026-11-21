@@ -33,7 +33,7 @@ pub const LOGIN_ISSUER: &str = "login_issuer";
 pub const ADMIT_IDP: &str = "admit_idp";
 
 /// The code naming an element whose text is a group, read from the
-/// `[[auth.party]]` table's `group_claim`, one of which an admitted login
+/// `[auth.issuer.<name>.party]` table's `group_claim`, one of which an admitted login
 /// holds.
 pub const ADMIT_GROUP: &str = "admit_group";
 
@@ -46,7 +46,7 @@ pub const ADMIT_ROLE: &str = "admit_role";
 pub const ADMIT_ASSURANCE: &str = "admit_assurance";
 
 /// The code naming the element whose `DV_BOOLEAN` admits a guest the
-/// issuer's `[[auth.party]]` table admits.
+/// issuer's `[auth.issuer.<name>.party]` table admits.
 pub const ADMIT_GUESTS: &str = "admit_guests";
 
 /// Why a `create_at_login` grant's credentials admit nothing.

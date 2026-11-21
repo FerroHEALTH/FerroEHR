@@ -9,16 +9,15 @@
 //! authentication is on: the route table in `ferroehr_rest::smart` declares a
 //! requirement per operation, and the `ferrohealth-smart` crate checks it.
 //! This section holds what FerroEHR decides beside that table: whether the
-//! `/.well-known/smart-configuration` document is served and where, and
-//! which issuers' `patient/` grants count. Which clients count as backend
+//! `/.well-known/smart-configuration` document is served and where. Whether
+//! an issuer's `patient/` grants count is its profile's `patient_context`
+//! (`[auth.issuer.<name>.profile]`). Which clients count as backend
 //! clients and which reach the DEMOGRAPHIC API is policy the CDR holds: the
 //! `query_system_wide` and `access_demographic` grants of a client's `ACTOR`
 //! (`crate::party_binding::grants`).
 //!
 //! This is the `[auth.smart]` table of the one server configuration tree; it
-//! carries no loader of its own. `patient_issuers` applies whether or not the
-//! discovery document is served, so the table is always read and `discovery` alone
-//! turns the document on.
+//! carries no loader of its own, and `discovery` alone turns the document on.
 
 use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
@@ -64,13 +63,6 @@ pub struct SmartConfig {
     /// no first-class Episode resource; master09 calls the semantics
     /// "currently implementation-defined").
     pub episode_launch: bool,
-
-    /// The issuers whose `patient/` grants count, each confined to the `ehrId`
-    /// of the token's launch context (master07 §Context Selection: the `ehrId`
-    /// names an EHR of the platform that issued it). Empty, a `patient/` grant
-    /// grants nothing. Each renders with any userinfo masked.
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-    pub patient_issuers: Vec<SecretUrl>,
 }
 
 impl SmartConfig {
@@ -112,15 +104,15 @@ mod tests {
         assert!(!c.discovery);
         assert!(c.platform_base_url.is_none());
         assert!(!c.episode_launch);
-        assert_eq!(c.patient_issuers, Vec::<SecretUrl>::new());
         assert!(c.validate().is_ok());
     }
 
-    /// The client lists are grants the CDR holds (#5437), so the keys that
-    /// carried them are unknown keys.
+    /// The client lists are grants the CDR holds (#5437), and whether an
+    /// issuer's `patient/` grants count is its profile's `patient_context`
+    /// (#6140), so the keys that carried them are unknown keys.
     #[test]
-    fn the_client_lists_are_unknown_keys() {
-        for key in ["backend_clients", "demographic_clients"] {
+    fn the_client_lists_and_the_patient_issuers_are_unknown_keys() {
+        for key in ["backend_clients", "demographic_clients", "patient_issuers"] {
             let err = toml::from_str::<SmartConfig>(&format!("{key} = [\"etl\"]"))
                 .expect_err("a removed key is refused");
             assert!(err.to_string().contains("unknown field"), "{key}: {err}");

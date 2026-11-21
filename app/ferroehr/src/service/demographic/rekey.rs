@@ -36,7 +36,7 @@ use crate::versioning::body::decoded;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BindingKey {
     /// The `DV_IDENTIFIER.issuer`, the `identifier_issuer` of an
-    /// `[[auth.party]]` table.
+    /// `[auth.issuer.<name>.party]` table.
     pub issuer: String,
     /// The `DV_IDENTIFIER.id`.
     pub value: String,

@@ -42,7 +42,7 @@ async fn app() -> (testkit::TestDb, Router) {
     let (db, pool) = common::migrated_pool().await;
     let mut config = common::api_config(false);
     config.auth = common::trusting(vec![IssuerEntry {
-        profile: Preset::Ferrosmart,
+        preset: Preset::Ferrosmart,
         jwks_file: common::jwks_file().display().to_string(),
         ..common::entry(ISSUER, AUDIENCE)
     }]);

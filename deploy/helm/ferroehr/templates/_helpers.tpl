@@ -1040,7 +1040,7 @@ FerroBRIDGE reaches the CDR as a machine: a client credentials token
 (RFC 6749 §4.4) of a `machines` issuer this release's CDR trusts. From
 ferrohealth-smart 0.9 a Basic credential is a person's and holds no `system/`
 scope, so the chart offers no Basic machine user. Refused here: no client,
-and an issuer the CDR's config.auth.issuer does not list as `machines`.
+and an issuer no table of the CDR's config.auth.issuer names as `machines`.
 */}}
 {{- define "ferroehr.bridgeCdrClient" -}}
 {{- $oauth := .Values.bridge.cdr.oauth -}}

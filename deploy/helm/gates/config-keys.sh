@@ -40,6 +40,14 @@ map_keys="$(sed -E 's/^#\? ?//' "$DEFAULT_TOML" | yq -p toml -o json '.' | jq -r
   [paths(type == "object" and length == 0) | map(select(type == "string")) | join(".")]
   | unique[]')"
 
+# The keys of a table the operator names (`# [auth.issuer.<name>]`) and the
+# tables above them, each a pattern whose `<name>` segment matches any one
+# segment.
+# shellcheck source=scripts/lib/config-keys.sh
+. "${REPO_ROOT}/scripts/lib/config-keys.sh"
+named_keys="$(config_keys "$DEFAULT_TOML" | grep -E '(^|\.)auth\.issuer(\.|$)|\*' \
+  | sed -E 's/\./\\./g; s/\*/[^.]+/g; s/^/^/; s/$/$/' || true)"
+
 toml="$(yq "select(.kind == \"ConfigMap\" and .metadata.name == \"${RELEASE}\") | .data.\"ferroehr.toml\"" "$RENDER")"
 if [[ -z "$toml" || "$toml" == "null" ]]; then
   toml="$(yq "select(.kind == \"Secret\" and .metadata.name == \"${RELEASE}-config\") | .stringData.\"ferroehr.toml\"" "$RENDER")"
@@ -62,6 +70,7 @@ while IFS= read -r key; do
   while IFS= read -r table; do
     [[ -n "$table" && "$key" == "$table".* ]] && { mapped=1; break; }
   done <<<"$map_keys"
+  [[ "$mapped" -eq 0 && -n "$named_keys" ]] && grep -qEf <(printf '%s\n' "$named_keys") <<<"$key" && mapped=1
   [[ "$mapped" -eq 1 ]] && continue
   echo "${key} is not a key of ferroehr.default.toml"
   unknown=1

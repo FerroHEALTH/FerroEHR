@@ -50,7 +50,7 @@ guarded_handler! {
         request_body(content = serde_json::Value,
                      description = "`{ \"party_id\": …, \"issuer\": …, \"id\": … }`: the \
                                     `PERSON`'s container and the new key, under the \
-                                    `identifier_issuer` of its `[[auth.party]]` table.",
+                                    `identifier_issuer` of its `[auth.issuer.<name>.party]` table.",
                      example = json!({
                          "party_id": "0d6c7f1e-3b7a-4c2e-9f61-2a8e5d4c3b21",
                          "issuer": "https://login.example/tenant",

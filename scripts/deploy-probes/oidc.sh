@@ -19,8 +19,8 @@ KC_REALM="$KC/auth/realms/ferroehr"
 OIDC_LAYER="compose"
 
 # The stack for this family: the quickstart PLUS the Keycloak overlay, which is
-# how the book tells an operator to get an issuer. The overlay adds an
-# [[auth.party]] table, so the binding side table the quickstart filled is
+# how the book tells an operator to get an issuer. The overlay adds a
+# party table under its issuer, so the binding side table the quickstart filled is
 # refilled under the overlay's mapping before the server starts on it, and
 # under the quickstart's again when the family hands the stack back.
 oidc_files=(-f docker-compose.yml -f docker-compose.keycloak.yml)

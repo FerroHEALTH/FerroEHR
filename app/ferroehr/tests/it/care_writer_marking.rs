@@ -11,7 +11,7 @@
 use serde_json::{Value, json};
 
 use crate::care_bounds::{care_of, coded, interval, party, policy, relate};
-use crate::policy_fixtures::{create, granting};
+use crate::policy_fixtures::{CARE_PROVIDER, care_provider, create, granting};
 use ferroehr::error::ServiceError;
 use ferroehr::ids::EhrId;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
@@ -65,6 +65,7 @@ fn refused<T: std::fmt::Debug>(result: Result<T, ServiceError>, level: &str) {
 async fn a_relationship_to_a_marked_record_needs_a_writer_named_for_its_level() {
     let (_db, svc) = crate::fixtures::service().await;
     let svc = granting(svc).await;
+    care_provider(&svc, CARE_PROVIDER).await;
     let named_for_r = json!({ "relationship_writers": [{
         "_type": "ACCESS_RELATIONSHIP_WRITER",
         "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",

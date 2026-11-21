@@ -164,7 +164,7 @@ pub struct CheckArgs {
     #[arg(long, value_name = "FILE")]
     pub expected: Option<PathBuf>,
     /// The `identifier_issuer` the `--expected` logins are keys of; needed
-    /// when more than one `[[auth.party]]` table is configured.
+    /// when more than one `[auth.issuer.<name>.party]` table is configured.
     #[arg(long, value_name = "ISSUER", requires = "expected")]
     pub expected_issuer: Option<String>,
 }
@@ -185,7 +185,8 @@ pub fn install(
     service: FerroEhrService,
     config: &FerroEhrConfig,
 ) -> anyhow::Result<FerroEhrService> {
-    let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
+    let resolved = config
+        .resolve_auth()
         .context("resolving [auth] for the party mapping")?;
     let key_issuers = ferroehr::config::binding::key_issuers(&resolved);
     let logins = resolved
@@ -200,6 +201,7 @@ pub fn install(
         .with_party_namespace(&config.authz.party_binding.namespace)
         .with_federation_trust(ferroehr::config::federation::trust(
             &config.auth.shared,
+            &config.audience_bases(),
             holder,
         ));
     let sections = config.authz.party_binding.sections();
@@ -542,7 +544,7 @@ fn elements(args: &GrantArgs) -> anyhow::Result<Vec<GrantElement>> {
 /// read from the binding side table of `pools`.
 ///
 /// # Errors
-/// No mapping names `user`, no `[[auth.party]]` table names the key's
+/// No mapping names `user`, no `[auth.issuer.<name>.party]` table names the key's
 /// issuer, no live `PERSON` or more than one carries the key, or the party
 /// store fails.
 async fn basic_user_person(
@@ -557,7 +559,8 @@ async fn basic_user_person(
         .iter()
         .find(|mapped| mapped.user == user)
         .with_context(|| format!("no [[authz.party_binding.basic_user]] maps {user:?}"))?;
-    let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
+    let resolved = config
+        .resolve_auth()
         .context("resolving [auth] for the binding key")?;
     let identifier_type = resolved
         .party
@@ -566,7 +569,7 @@ async fn basic_user_person(
         .map(|table| table.identifier_type.clone())
         .with_context(|| {
             format!(
-                "no [[auth.party]] table names the identifier issuer {:?} of {user:?}",
+                "no party table names the identifier issuer {:?} of {user:?}",
                 mapped.key_issuer
             )
         })?;
@@ -619,7 +622,8 @@ async fn scim_clients(pools: &DomainPools) -> anyhow::Result<Vec<(String, String
 /// # Errors
 /// `[auth]` does not resolve.
 fn provenance_input(args: &ProvenanceArgs, config: &FerroEhrConfig) -> anyhow::Result<CheckInput> {
-    let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
+    let resolved = config
+        .resolve_auth()
         .context("resolving [auth] for the party mapping")?;
     Ok(CheckInput {
         key_types: resolved

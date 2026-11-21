@@ -56,8 +56,8 @@ store, or before it can trust anything:
   first_admin`, the one Basic user that holds `admin_role` and the product
   scope from the file: the first administrator, who writes the first policy
   parties;
-- `[auth.smart] patient_issuers`, the issuers whose `ehrId` claim the server
-  believes, which is issuer trust;
+- each issuer's `patient_context`, whether the server believes its `ehrId`
+  claim, which is issuer trust;
 - the grant ceiling, `[authz.grants] allowed`: the operations the party store
   may grant at all, so a compromised administrator account cannot grant
   more than the operator allows ([The grant ceiling](#the-grant-ceiling)).
@@ -410,7 +410,7 @@ whose own `read_change_feed` grant does not name it.
 **The SCIM provisioning clients.** A request to `/scim/v2/` is admitted for a
 client-credentials token whose client's `ACTOR` holds a `scim_provision` grant
 in force. Its `binding_issuer` is the `identifier_issuer` of an
-`[[auth.party]]` table that no other client's grant names, and the token must
+`[auth.issuer.<name>.party]` table that no other client's grant names, and the token must
 hold one of its `token_scope` values (`403` with `insufficient_scope`
 otherwise). The client owns the Users whose binding key that issuer issues.
 The contacts of a deleted User are erased for every client that ever held the
@@ -570,12 +570,12 @@ ferroehr party-binding grant --basic-user clinician --operation hold_scopes \
 
 Every later grant is an administrator's write through the Demographic API.
 `[authz.rbac] first_admin` is that administrator in a deployment whose people
-sign in with HTTP Basic and no `[[auth.party]]` table binds logins: it holds
+sign in with HTTP Basic and no `[auth.issuer.<name>.party]` table binds logins: it holds
 `admin_role` and the product scope before any policy party exists.
 
 No HTTP route grants an operation before an administrator exists. A
 deployment whose staff sign in through a `persons` issuer bound by an
-`[[auth.party]]` table starts in this order:
+`[auth.issuer.<name>.party]` table starts in this order:
 
 1. The operator grants the SCIM client `scim_provision` with
    `ferroehr party-binding grant`, as above.
@@ -584,7 +584,7 @@ deployment whose staff sign in through a `persons` issuer bound by an
    issuer `[authz.rbac] role_issuers` lists, carrying `admin_role`. The
    second is `first_admin`, mapped with `[[authz.party_binding.basic_user]]`
    to the key of the `PERSON` the SCIM client provisioned. A Basic user beside
-   an `[[auth.party]]` table must map to a key, so an unmapped `first_admin`
+   an `[auth.issuer.<name>.party]` table must map to a key, so an unmapped `first_admin`
    refuses the start, and a mapped one is refused as unbound until its
    `PERSON` exists.
 4. The administrator writes every other policy party through the Demographic
@@ -654,7 +654,7 @@ A coded value is read by its `code_string` in any terminology, a text by its
 commit with `422`, and the problem names every rule it breaks:
 
 - the partner carries a `client_id` identifier, and each identifier's issuer
-  is an `[[auth.issuer]]` of kind `federation`;
+  is an `[auth.issuer.<name>]` of kind `federation`;
 - a partner holds one agreement per accessor: a second capability for the same
   accessor, in this `ROLE` or another, is refused;
 - every element holds a value of its kind;
@@ -668,7 +668,7 @@ commit with `422`, and the problem names every rule it breaks:
   is no contact point;
 - a `chained` organisation agreement sets a `requester_log_retention` at
   least as long as the period of the access policy's `log_retention`, and its issuer's
-  `[[auth.federation]]` table maps `correlation_id` from the token, never from
+  `[auth.issuer.<name>.federation]` table maps `correlation_id` from the token, never from
   a constant.
 
 The partner's client identifiers are read when the `ROLE` commits, so commit
@@ -1506,13 +1506,13 @@ hospital admits its own staff". Its capability names the issuer by
 - `admit_idp`: the identity providers whose logins are created, read from
   the issuer's `[[authz.party_binding.issuer]] idp_claim` (`idp` by
   default);
-- `admit_group`: the groups, read from the issuer's `[[auth.party]]
-  group_claim`, one of which an admitted login holds;
+- `admit_group`: the groups, read from the `group_claim` of the issuer's
+  party table, one of which an admitted login holds;
 - `admit_role`: the roles, read from `[auth] role_claims`, one of which an
   admitted login holds;
 - `admit_assurance`: the lowest `[authz.assurance]` level an admitted login
   carries;
-- `admit_guests`: true to admit a guest the issuer's `[[auth.party]]`
+- `admit_guests`: true to admit a guest the issuer's `[auth.issuer.<name>.party]`
   table admits.
 
 A login is admitted when it meets every condition the grant declares; each
@@ -1725,7 +1725,8 @@ named by codes of `openehr_access`:
 | --- | --- | --- |
 | `care_role` | 1..1 | A `DV_CODED_TEXT`: the part the carer plays in the patient's care, of the value set the access policy binds for `care_role`, or of `HL7_ParticipationType` when it binds none, such as `RESP`, `ATND` or `PART` when the role is not stated |
 | `provider` | 1..1 | A `DV_IDENTIFIER` of type `ORGANISATION`: the healthcare provider in whose care the relationship is, by the namespace of its reference and its id, or by the issuer and id of its identifier |
-| `covers_for`, `context` | 0..1 | A `DV_IDENTIFIER`: the carer the target replaces, and the episode, referral or case the relationship belongs to |
+| `covers_for` | 0..1 | A `DV_IDENTIFIER` in the provider's form: the carer the target replaces, its `issuer` the namespace of the carer's reference, its `id` the carer's container and its `type` the carer's kind (`PERSON`, `ROLE`, `GROUP` or `ORGANISATION`), never the target itself |
+| `context` | 0..1 | A `DV_IDENTIFIER`: the episode, referral or case the relationship belongs to |
 | `basis` | 0..1 | `assigned` (the default); `self_declared` where the policy sets `self_declared_care` ([Writing a care relationship](#writing-a-care-relationship)) |
 
 A caller holds a live care relationship when the relationship's `target`
@@ -1742,7 +1743,9 @@ namespace and id) or by its identifier (issuer and id), and for the
 upper bound, and the relationship stays, so the evaluator can apply a grace
 period after it. A relationship without a `care_role` or a `provider`, with a
 role outside its value set, or with a target of another kind is refused
-`422`. A care relationship held in a `PERSON`'s `relationships` is refused
+`422`, as is one whose `provider` names no `ORGANISATION` of the store by
+the identifier it carries, or whose `covers_for` names no party of its
+`type`, names the target, or lacks its issuer, container id or type. A care relationship held in a `PERSON`'s `relationships` is refused
 `422`, naming `/demographic/party_relationship`. The default definitions ship
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.1` and
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v2.0.0` as examples
@@ -2303,7 +2306,7 @@ off until `attested_care` names the agreement:
   naming `/attested_care/<n>/issuer`.
 
 Which claims carry the treatment context is your data, in the issuer's
-`[[auth.federation]]` table. FerroEHR reads these fields:
+`[auth.issuer.<name>.federation]` table. FerroEHR reads these fields:
 
 | Field | What it carries |
 | --- | --- |
@@ -2312,6 +2315,7 @@ Which claims carry the treatment context is your data, in the issuer's
 | `trc.not_on_or_after` | The end of its window, in seconds since the epoch |
 | `trc.not_before` | The start of its window, when the credential states one |
 | `assertion.issuer` | The issuer of the assertion, when the credential states one |
+| `trc.care_role` | The care role the treatment relationship attests for the professional, one code with its code system |
 
 A credential that lacks `patient.id`, `trc.id` or `trc.not_on_or_after`
 attests nothing. On every access FerroEHR checks that the policy names the
@@ -2324,11 +2328,16 @@ ground whose `reference` is the assertion (`id` and `issuer`) and whose
 `name` and `version` are the agreement's.
 
 The attested relationship holds the role `PART` unless the credential
-attests a role of the `care_role` value set the policy binds (unbound, a
-code of `HL7_ParticipationType`). A role outside that value set, or one no
-terminology server could check, counts as no role, and the relationship
-keeps `PART`. No `[[auth.federation]]` field carries an attested role yet,
-so `PART` is the role every attested relationship holds today.
+attests a role in `trc.care_role` of the `care_role` value set the policy
+binds (unbound, a code of `HL7_ParticipationType`). The code system of the
+attested role is the terminology its code is read in, so a credential whose
+role carries the system `HL7_ParticipationType` names a code of that
+terminology, and a field mapped as `{ constant = "ATND", system =
+"HL7_ParticipationType" }` attests that role for every credential of the
+issuer. A role outside that value set, or one no terminology server could
+check, counts as no role, and the relationship keeps `PART`.
+`ferrohealth-smart` refuses a token whose `trc.care_role` is not one code
+with its system.
 
 A rule limits attested callers like any other: give its actor scope
 `relationship: care` with `care_path: attested`. A deny rule's `data` keeps
