@@ -144,6 +144,13 @@ representation, so FerroEHR reads it from its own records:
   `403` with `refused-representation-unrecorded`.
 - Its commits name its own `PERSON` as a `PARTY_RELATED`, and the access log
   names the representation each access rested on.
+- A representative who is also a patient reaches their own record as
+  themself. When the subject a request reaches is their own `PERSON`, by
+  the launch EHR, the EHR the request names or the picker's lookup, FerroEHR
+  admits them as the person themself with no stored representation: their
+  commits name `PARTY_SELF`, the access log records them as the subject of
+  care, and a result held under the access delay stays held from them. A
+  launch context that names someone else's EHR still holds them to that EHR.
 
 ## The discovery document describes FerroSMART
 
