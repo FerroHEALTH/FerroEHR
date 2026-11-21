@@ -533,6 +533,7 @@ impl FerroEhrService {
             if !sel.include_multimedia {
                 strip_inline_multimedia(&mut version);
             }
+            self.redact_extracted(ehr_id, kind, &mut version).await?;
             versions.push(version);
         }
         let extract_version_count = i32::try_from(versions.len()).unwrap_or(i32::MAX);

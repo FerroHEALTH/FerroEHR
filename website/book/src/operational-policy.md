@@ -2323,6 +2323,31 @@ never in a caseload. The access log names it as a `treatment relationship`
 ground whose `reference` is the assertion (`id` and `issuer`) and whose
 `name` and `version` are the agreement's.
 
+The attested relationship holds the role `PART` unless the credential
+attests a role of the `care_role` value set the policy binds (unbound, a
+code of `HL7_ParticipationType`). A role outside that value set, or one no
+terminology server could check, counts as no role, and the relationship
+keeps `PART`. No `[[auth.federation]]` field carries an attested role yet,
+so `PART` is the role every attested relationship holds today.
+
+A rule limits attested callers like any other: give its actor scope
+`relationship: care` with `care_path: attested`. A deny rule's `data` keeps
+attested callers from the templates or categories it names, and on a record
+the controller marks `R` or `V` an attested caller is refused
+`refused-confidentiality` until a permit rule for that path names the level
+in its `data` `confidentialities`:
+
+```json
+{ "_type": "ACCESS_DIRECTIVE", "kind": "controller_rule", "effect": "permit",
+  "applies_to": [ { "_type": "ACCESS_ACTOR_SCOPE",
+    "relationship": "care", "care_path": "attested" } ],
+  "data": [ { "_type": "ACCESS_DATA_SCOPE", "confidentialities": [ "R" ] } ] }
+```
+
+The codes are shown short here; write each as a `DV_CODED_TEXT`. A permit
+that names `R` clears `R` and nothing above it, and one written for the
+`direct` path clears no attested caller.
+
 #### Writing a care relationship
 
 FerroEHR checks each care relationship against the policy when it is
@@ -2437,9 +2462,9 @@ the role may do.
 - **A scope naming `care` can name care roles and a path.** With
   `relationship` `care`, an actor scope's `care_roles` lists the roles a
   caller's live care relationship must have, compared by terminology and
-  code, and `care_path` says how it must reach the caller: `direct`, `team`
-  or `self_declared` (`attested` matches no caller until it is built). Left
-  out, any role and the paths the policy turns on. No role implies another:
+  code, and `care_path` says how it must reach the caller: `direct`, `team`,
+  `self_declared` or `attested`. Left out, any role and the paths the policy
+  turns on. No role implies another:
   `RESP` does not cover `ATND`. The same scope decides a read and narrows a
   query inside its one statement, so a `COUNT` agrees with the reads.
 - **For a write**, the data are the version being committed: its template,

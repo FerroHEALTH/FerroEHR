@@ -235,7 +235,8 @@ async fn ehr_composition_lifecycle_end_to_end() {
             false,
         )
         .await
-        .expect("contribution_get");
+        .expect("contribution_get")
+        .body;
     assert_eq!(contribution["_type"], "CONTRIBUTION");
     assert_eq!(contribution["audit"]["change_type"]["value"], "creation");
     assert_ne!(
@@ -634,7 +635,8 @@ async fn ehr_creation_merges_the_committal_metadata() {
             false,
         )
         .await
-        .expect("contribution_get");
+        .expect("contribution_get")
+        .body;
     assert_eq!(
         contribution["audit"]["description"]["value"],
         "EHR opened at triage"

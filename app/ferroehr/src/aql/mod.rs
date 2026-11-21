@@ -28,6 +28,7 @@ pub mod join;
 pub mod lineage;
 mod lower;
 mod read;
+pub mod redact;
 pub mod sql;
 pub mod terminology;
 mod version_path;

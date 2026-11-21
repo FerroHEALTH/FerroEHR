@@ -599,6 +599,20 @@ confidentiality of a datum is the highest of the three.
   query, an export and `GET /ehr?subject_id=` always leave a refused record
   out, inside the query's one SQL statement, so `COUNT`, `LIMIT` and paging
   agree.
+- **Who reads the marking.** The subject and the controller read the
+  `EHR_ACCESS` settings whole. A representative, and any other gate-keeper
+  who is not the subject, reads them without `marking`, since the marking
+  itself says the record is protected. That holds on every route that
+  serves the settings: `GET /ehr/{ehr_id}/ehr_access` and the
+  `versioned_ehr_access` reads, a CONTRIBUTION read with `Prefer:
+  resolve_refs`, an EHR Extract (unless the caller holds an
+  `export_ehr_extract` grant, whose extract moves the marking with the
+  record) and AQL, where a whole `EHR_ACCESS` or its `settings` comes
+  without the marking (no path below `settings` resolves in AQL, for any
+  reader, so no query filters on the marking). A version served this way no
+  longer holds the data its `signature` signs, so it carries no `signature`,
+  and the REST response says so in the header `Redacted: marking`, a header
+  of this CDR's own design (no openEHR or HTTP specification defines one).
 - **The access log.** Every access to a marked record carries the level as
   the entry's security label (the BALP `entity.securityLabel` in the
   `v3-Confidentiality` system), a refusal names the marking's level in its

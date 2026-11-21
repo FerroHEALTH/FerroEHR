@@ -15,8 +15,9 @@
 //! role is one of its `care_roles` by the path its `care_path` names; void
 //! means any role and the paths the policy turns on. A caller holds a tie by
 //! the `attested` path when its verified credential attests a treatment
-//! context under an agreement the policy names, in the role `PART`, and no
-//! stored relationship backs it (#6078). No role implies another and no path
+//! context under an agreement the policy names, in the role of the
+//! `care_role` value set it attests or else `PART`, and no stored
+//! relationship backs it (#6078). No role implies another and no path
 //! another.
 //!
 //! Where several relationships admit an access the access log names one:

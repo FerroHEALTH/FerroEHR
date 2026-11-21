@@ -1272,7 +1272,8 @@ async fn contribution_resolve_refs() {
     let plain = svc
         .ehr_contribution(ehr_id, cid, false)
         .await
-        .expect("plain");
+        .expect("plain")
+        .body;
     assert_eq!(
         plain["versions"][0]["_type"], "OBJECT_REF",
         "unresolved versions are OBJECT_REFs: {plain}"
@@ -1281,7 +1282,8 @@ async fn contribution_resolve_refs() {
     let resolved = svc
         .ehr_contribution(ehr_id, cid, true)
         .await
-        .expect("resolved");
+        .expect("resolved")
+        .body;
     let v = &resolved["versions"][0];
     assert_eq!(
         v["_type"], "ORIGINAL_VERSION",

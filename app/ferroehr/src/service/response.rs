@@ -63,6 +63,11 @@ pub struct ResourceMeta {
     /// §"openehr-item-tag and openehr-version-item-tag": the two headers
     /// address a `VERSIONED_OBJECT` and a specific VERSION within it).
     pub version_item_tags: Option<Vec<ItemTag>>,
+    /// Whether the body leaves out what the caller may not read: an
+    /// `EHR_ACCESS` without its marking, and with no signature on a version
+    /// (`crate::service::ehr::access_view`). The protocol adapter says so in
+    /// a response header.
+    pub redacted: bool,
 }
 
 impl ResourceMeta {
@@ -78,7 +83,15 @@ impl ResourceMeta {
             content: Vec::new(),
             item_tags: None,
             version_item_tags: None,
+            redacted: false,
         }
+    }
+
+    /// Mark the body as leaving out what the caller may not read.
+    #[must_use]
+    pub fn redacted(mut self) -> Self {
+        self.redacted = true;
+        self
     }
 
     /// Attach the origins of the data this response serves.
@@ -225,4 +238,15 @@ impl ServiceResponse {
     pub fn is_empty(&self) -> bool {
         self.body.is_null()
     }
+}
+
+/// A stored `CONTRIBUTION` as a caller reads it: the body, and whether it
+/// leaves out what the caller may not read ([`ResourceMeta::redacted`]).
+#[derive(Debug, Clone)]
+pub struct ContributionRead {
+    /// The `CONTRIBUTION`.
+    pub body: Value,
+    /// Whether a resolved `EHR_ACCESS` version in it is served without its
+    /// marking and its signature.
+    pub redacted: bool,
 }
