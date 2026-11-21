@@ -21,6 +21,7 @@ use super::{
 };
 use crate::system_log::AuditError;
 use crate::system_log::event::ActingMode;
+use openehr_rm::draft::access_control::terminology::Confidentiality;
 
 /// Declares [`BatchColumns`] with one `Vec` per column and its
 /// `with_capacity`, so a column is named once.
@@ -80,6 +81,7 @@ batch_columns! {
     ehr_ids: Option<&'a str>,
     namespaces: Option<&'a str>,
     lookups_failed: bool,
+    reviews: Option<&'static str>,
     contents: Option<serde_json::Value>,
     bindings: Option<&'static str>,
     guests: bool,
@@ -151,6 +153,7 @@ impl<'a> BatchColumns<'a> {
         self.ehr_ids.push(access_ehr_id(event));
         self.namespaces.push(event.subject_namespace.as_deref());
         self.lookups_failed.push(event.subject_lookup_failed);
+        self.reviews.push(event.review.map(Confidentiality::code));
         self.contents.push(category_content_json(event)?);
         let (binding, guest, json) = binding_columns(event);
         self.bindings.push(binding);

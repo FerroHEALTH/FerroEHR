@@ -32,21 +32,21 @@ fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
 }
 
-fn coded(terminology: &str, code: &str) -> Value {
+pub(crate) fn coded(terminology: &str, code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code,
             "defining_code": { "_type": "CODE_PHRASE",
                 "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
                 "code_string": code } })
 }
 
-fn party_ref(kind: &str, id: &str) -> Value {
+pub(crate) fn party_ref(kind: &str, id: &str) -> Value {
     json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": kind,
             "id": { "_type": "HIER_OBJECT_ID", "value": id } })
 }
 
 /// A policy whose `relationship_validity` gives the role `ATND` a default of
 /// `default` within `P180D`, with `extra` members.
-fn policy(default: &str, extra: &Value) -> Value {
+pub(crate) fn policy(default: &str, extra: &Value) -> Value {
     let archetype = ferroehr::access_policy::ARCHETYPE;
     let mut body = json!({
         "_type": "ACCESS_POLICY",
@@ -71,7 +71,7 @@ fn policy(default: &str, extra: &Value) -> Value {
 
 /// A `DV_INTERVAL<DV_DATE>` from `lower` to `upper`, each included; an upper
 /// of `None` is written without an end.
-fn interval(lower: &str, upper: Option<&str>) -> Value {
+pub(crate) fn interval(lower: &str, upper: Option<&str>) -> Value {
     let mut interval = json!({ "_type": "DV_INTERVAL",
         "lower": { "_type": "DV_DATE", "value": lower },
         "lower_unbounded": false, "upper_unbounded": upper.is_none(),
@@ -84,7 +84,7 @@ fn interval(lower: &str, upper: Option<&str>) -> Value {
 
 /// A care relationship of its own from `source` to the `target_type`
 /// `target` in the role `role` over `validity`.
-fn care_of(
+pub(crate) fn care_of(
     source: VoId,
     (target_type, target): (&str, &str),
     role: &str,
@@ -110,7 +110,7 @@ fn care_of(
 }
 
 /// A plain party of `rm_type` named `name`.
-fn party(rm_type: &str, name: &str) -> Value {
+pub(crate) fn party(rm_type: &str, name: &str) -> Value {
     let archetype = format!("openEHR-DEMOGRAPHIC-{rm_type}.plain.v1");
     json!({
         "_type": rm_type, "archetype_node_id": archetype,
@@ -127,7 +127,10 @@ fn party(rm_type: &str, name: &str) -> Value {
 
 /// Commits the care relationship `body` as an administrator; its container
 /// and version uid.
-async fn relate(svc: &FerroEhrService, body: &Value) -> Result<(VoId, String), ServiceError> {
+pub(crate) async fn relate(
+    svc: &FerroEhrService,
+    body: &Value,
+) -> Result<(VoId, String), ServiceError> {
     let mut write = WriteRequest::new(crate::typed_body::typed(body));
     write.lifecycle_state = Some("532".to_owned());
     let created = as_admin(async { Box::pin(svc.party_relationship_create(write)).await }).await?;

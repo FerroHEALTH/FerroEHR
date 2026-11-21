@@ -37,10 +37,13 @@
 //! connection to the pool once: at [`release_held`], which the HTTP layer calls
 //! when the handler has answered, so the work after its last statement (the
 //! audit record, the response's way out) holds no connection, or else when
-//! the scope ends. While the request waits for a pool or for another task's
-//! work ([`handoff`]), the scope keeps nothing: what it kept goes back before
-//! the wait, and a connection a read beside the wait gives back goes to its
-//! pool (#6027). How long the request held each connection is recorded on
+//! the scope ends. A request that turns from one storage domain to the other
+//! gives back what it keeps of the first ([`acquire`]): the party connection
+//! its authentication and access decision read on goes back when its clinical
+//! work begins, instead of staying idle until the handler answers. While the
+//! request waits for a pool or for another task's work ([`handoff`]), the
+//! scope keeps nothing: what it kept goes back before the wait, and a
+//! connection a read beside the wait gives back goes to its pool (#6027). How long the request held each connection is recorded on
 //! [`DB_POOL_HOLD_DURATION`](crate::telemetry::metrics::DB_POOL_HOLD_DURATION)
 //! (#5774). Outside a scope every guard returns its connection to the pool,
 //! as before.
@@ -254,8 +257,9 @@ pub fn release_held() {
 /// connection one of them gives back while the other waits here is not kept
 /// either ([`Checkout`]): kept, it would be held across the rest of this
 /// wait, and requests each keeping one pool's connection so while they wait
-/// for another's stall as above (#6027). No specification governs this: our
-/// own design.
+/// for another's stall as above (#6027). A request's wait on another
+/// server, the terminology server or the blob store, goes through here too
+/// (#5774). No specification governs this: our own design.
 pub async fn handoff<F: Future>(wait: F) -> F::Output {
     let _waiting = Waiting::begin();
     release_held();
@@ -360,6 +364,50 @@ fn held_for(since: Instant, name: Option<PoolName>) {
 /// options every handle of it reads.
 fn pool_key(pool: &PgPool) -> usize {
     std::ptr::from_ref(pool.options()).addr()
+}
+
+/// Gives back to its pool every connection the current [`request_scope`]
+/// keeps of a storage domain other than the one of `pool`, whose key is
+/// `key`, recording how long the request held each.
+///
+/// A request reads the party store for its authentication and access
+/// decision and then does its clinical work, or the reverse, and seldom
+/// turns back: kept, the first domain's connection would sit idle until the
+/// handler answers, several times as long as its statements ran (#5774). A
+/// request that does turn back checks out again. An audit connection is
+/// never given back here: a write takes it before its domain connection and
+/// keeps it for its transaction (#5964), and the audit pool is never asked
+/// for one while a domain connection is held. No openEHR spec governs
+/// this: our own design.
+fn release_other_domain(pool: &PgPool, key: usize) {
+    let other = |kept: &Held, domain: Domain| {
+        kept.pool != key
+            && kept
+                .name
+                .is_some_and(|name| name.domain() != Domain::Audit && name.domain() != domain)
+    };
+    // NOTE: our own design (#5774), outside a scope nothing is kept.
+    let _outside_a_scope = HELD.try_with(|held| {
+        let Ok(mut held) = held.try_borrow_mut() else {
+            return;
+        };
+        if !held.iter().any(|kept| other(kept, Domain::Audit)) {
+            return;
+        }
+        let Some(domain) = name_of(pool)
+            .map(PoolName::domain)
+            .filter(|domain| *domain != Domain::Audit)
+        else {
+            return;
+        };
+        held.retain(|kept| {
+            let give_back = other(kept, domain);
+            if give_back {
+                held_for(kept.since, kept.name);
+            }
+            !give_back
+        });
+    });
 }
 
 /// The connection the current [`request_scope`] keeps for the pool `key`,
@@ -511,6 +559,7 @@ impl Drop for Checkout {
 /// new connection.
 pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
     let key = pool_key(pool);
+    release_other_domain(pool, key);
     if let Some(held) = take_held(key) {
         return Ok(Checkout::new(held.conn, key, held.since, held.name));
     }

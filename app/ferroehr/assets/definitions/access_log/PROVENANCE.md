@@ -18,7 +18,7 @@ no openEHR release, and openEHR CKM publishes no archetype of its
 
 ## Our own modelling
 
-- The element node ids are two-digit id-codes, `id11` to `id39`, so their
+- The element node ids are two-digit id-codes, `id11` to `id40`, so their
   byte order is their numeric order: the server and the audit schema order
   the elements of a tree by that byte order.
 - An element is written only where the entry's core does not state the fact

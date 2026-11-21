@@ -85,6 +85,7 @@ mod canonical_json_literals;
 mod care_bounds;
 mod care_caseload_plans;
 mod care_roles_query;
+mod care_writer_marking;
 mod care_writer_scope;
 mod codec_corpus;
 mod cohort_bench;

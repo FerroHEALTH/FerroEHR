@@ -455,6 +455,8 @@ mod wire {
         Absence, CHILD_RELATION, ENDPOINT_REFUSED, Expansion, FhirTerminologyProvider,
         TerminologyServerConfig,
     };
+    // NOTE: our own design (#5774), a request keeps no connection while the server answers.
+    use crate::db::acquire::handoff;
     use crate::error::{ErrorChain, INTERNAL_MESSAGE, ServiceError};
     use crate::service::terminology::types::{DefinedTerm, TermCode, TermEntry, TermRelationship};
 
@@ -541,8 +543,8 @@ mod wire {
             at_date: Option<&str>,
         ) -> Result<Result<String, Absence>, ServiceError> {
             let answer = match at_date {
-                Some(date) => self.wire.lookup_at(system, code, None, date).await,
-                None => self.wire.lookup(system, code, None).await,
+                Some(date) => handoff(self.wire.lookup_at(system, code, None, date)).await,
+                None => handoff(self.wire.lookup(system, code, None)).await,
             };
             match answer {
                 Ok(LookupOutcome::Found { display, .. }) => Ok(Ok(display)),
@@ -576,7 +578,7 @@ mod wire {
                 },
             );
             validation.date = at_date;
-            match self.wire.validate(&validation).await {
+            match handoff(self.wire.validate(&validation)).await {
                 Ok(ValidateOutcome::Valid { .. }) => Ok(Ok(true)),
                 Ok(ValidateOutcome::Invalid { .. }) => Ok(Ok(false)),
                 Ok(_) => Err(self.provider_fault(
@@ -597,11 +599,8 @@ mod wire {
             code_a: &str,
             code_b: &str,
         ) -> Result<Result<bool, Absence>, ServiceError> {
-            match self
-                .wire
-                .subsumes(&Subsumption::new(system, code_a, code_b))
-                .await
-            {
+            let asked = Subsumption::new(system, code_a, code_b);
+            match handoff(self.wire.subsumes(&asked)).await {
                 Ok(outcome) => Ok(Ok(outcome == SubsumesOutcome::Subsumes)),
                 Err(e) => self
                     .absence_or_fault(ferrobridge_term::SUBSUMES, &e)
@@ -614,11 +613,8 @@ mod wire {
             &self,
             value_set_url: &str,
         ) -> Result<Result<Expansion, Absence>, ServiceError> {
-            match self
-                .wire
-                .expand(&ferrobridge_term::request::Expansion::new(value_set_url))
-                .await
-            {
+            let asked = ferrobridge_term::request::Expansion::new(value_set_url);
+            match handoff(self.wire.expand(&asked)).await {
                 Ok(ExpandOutcome::Expanded(expanded)) => {
                     let mut expansion = Expansion::default();
                     for member in &expanded.contains {
@@ -640,7 +636,8 @@ mod wire {
         /// `CodeSystem?url=<system>&_summary=count`: how many code systems the
         /// server holds under `system`.
         pub(super) async fn code_system_count(&self, system: &str) -> Result<u32, ServiceError> {
-            self.wire.code_system_count(system).await.map_err(|e| {
+            let counted = handoff(self.wire.code_system_count(system)).await;
+            counted.map_err(|e| {
                 self.provider_fault(ferrobridge_term::CODE_SYSTEM_SEARCH, &ErrorChain::new(&e))
             })
         }

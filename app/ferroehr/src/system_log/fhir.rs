@@ -30,7 +30,7 @@ use ehds_logging::record::{
 use ehds_logging::retention::RetentionPolicy;
 use ihe_atna::balp::{
     APPLICATION, CREATE, CUSTODIAN, Coded, DELETE, DESTINATION_ROLE, DOMAIN_RESOURCE, Described,
-    Direction, EXPORT, Entity, EventKind, Exchange, IMPORT, LOGIN, LOGOUT, NetworkAddress,
+    Detail, Direction, EXPORT, Entity, EventKind, Exchange, IMPORT, LOGIN, LOGOUT, NetworkAddress,
     OPERATION, Observer, Peer, READ, REST, SEARCH, SOURCE_APPLICATION_SERVER, SOURCE_ROLE,
     SYSTEM_OBJECT, SecurityLabel, UPDATE, USER_AUTHENTICATION, What,
 };
@@ -40,6 +40,7 @@ use secrecy::SecretString;
 use crate::system_log::AuditError;
 use crate::system_log::event::{
     AuditEvent, EventActionCode, EventOutcome, EventType, OPERATION_SYSTEM, ObjectClass,
+    REVIEW_DETAIL,
 };
 use crate::system_log::fhir_accessor::accessor;
 use crate::system_log::message::AuditContext;
@@ -541,7 +542,11 @@ fn entities(event: &AuditEvent, subject: Option<&str>, missing: &str) -> Vec<Ent
             role: crud.then_some(DOMAIN_RESOURCE),
             name: Some(operation(event)),
             description: None,
-            details: Vec::new(),
+            details: event
+                .review
+                .map(|level| Detail::new(REVIEW_DETAIL, level.code()))
+                .into_iter()
+                .collect(),
             security_labels: security_labels(event),
         }));
     }
