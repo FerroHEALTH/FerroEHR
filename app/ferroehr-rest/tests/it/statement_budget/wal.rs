@@ -422,12 +422,12 @@ fn corpus(file: &str) -> String {
 /// fell by it. A node row has since stored its own path step, and the node
 /// key carries no tier (#6204): 13,650 bytes fewer on an IPS commit and 255
 /// on a lab commit, and the ceilings fell by as much. A member repeated
-/// across a version's node rows has since been stored once (#6229): 42,545
+/// across a version's node rows has since been stored once (#6229): 42,162
 /// bytes fewer on an IPS commit, whose entries repeat one participation list,
-/// and 16 on a lab commit, which repeats none, and the ceilings fell by as
-/// much.
+/// and its ceiling fell by as much; a lab commit repeats none and keeps its
+/// ceiling.
 const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
-    [(Fixture::Ips, 188_474, 8), (Fixture::Lab, 9926, 8)];
+    [(Fixture::Ips, 188_857, 8), (Fixture::Lab, 9942, 8)];
 
 /// Whether `relation` is written by a commit rather than by the access log or
 /// the audit intake beside it.

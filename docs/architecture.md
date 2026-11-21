@@ -204,10 +204,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   cost 1, so a statement's plan is the plan it has without sharing: every
   statement of `aql_planner.rs` plans the same over a store with no shared
   row. An IPS commit, whose 38 entries repeat one participation list, writes
-  42,545 bytes less WAL (226,199 to 183,654, 18.8%). The price is a function
+  42,162 bytes less WAL (226,008 to 183,846, 18.7%). The price is a function
   call per shared row on a read into the shared member: a predicate and
-  projection into `other_participations` went from 0.14 to 0.53 ms over one
-  IPS EHR, 2.3 to 9.3 ms over 20 and 116 to 256 ms over 1,000.
+  projection into `other_participations` went from 0.15 to 0.62 ms over one
+  IPS EHR, 2.2 to 9.0 ms over 20 and 114 to 256 ms over 1,000 (2.2x), while
+  a predicate on `ism_transition/current_state`, which is not shared, holds
+  at 86 ms over 1,000.
 - **Tiers are partitions.** `version`, `node` and `vo_attestation` are each
   `PARTITION BY LIST (tier)` with a `hot` and a `cold` partition and no default
   partition. Archiving an EHR is `UPDATE version SET tier = 'cold' WHERE
