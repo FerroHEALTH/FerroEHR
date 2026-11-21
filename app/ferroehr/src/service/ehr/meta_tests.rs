@@ -46,7 +46,9 @@ fn a_body_without_its_own_uid_takes_the_parse_path() {
 #[test]
 fn a_body_with_another_versions_uid_takes_the_parse_path() {
     assert!(!carries_version_uid(&body(Some(OTHER), OWN), OWN));
-    let prefix = OWN.strip_suffix(":2").expect("the own uid ends in its version");
+    let prefix = OWN
+        .strip_suffix(":2")
+        .expect("the own uid ends in its version");
     assert!(
         !carries_version_uid(&body(Some(OWN), OTHER), prefix),
         "a uid that only starts with the version's is another one"
