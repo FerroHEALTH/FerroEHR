@@ -259,6 +259,9 @@ CREATE TABLE access_care (
     -- The carer, by its container: a PERSON, a ROLE, a GROUP or an
     -- ORGANISATION.
     carer_id        uuid    NOT NULL,
+    -- What the carer is: P (PERSON), R (ROLE), G (GROUP) or O (ORGANISATION).
+    carer_kind      "char"  NOT NULL
+        CONSTRAINT ck_access_care_carer_kind CHECK (carer_kind IN ('P', 'R', 'G', 'O')),
     -- The first date the relationship holds; NULL when unbounded.
     care_from       date,
     -- The first date it no longer holds; NULL when unbounded.
@@ -277,10 +280,19 @@ CREATE TABLE access_care (
     role_code        text   NOT NULL
 );
 CREATE INDEX ix_access_care_person ON access_care (person_id);
+-- The check: one probe per EHR, by its subject digest and the caller's
+-- principals.
 CREATE INDEX ix_access_care_subject ON access_care (subject_digest, carer_id);
+-- The caseload: a range scan per principal, led by the carer and its role,
+-- that answers the subject digests and everything the probe judges a row by,
+-- so a query over a caller's caseload starts from the caller's rows.
+CREATE INDEX ix_access_care_caseload ON access_care (carer_id, role_terminology, role_code)
+    INCLUDE (subject_digest, care_from, care_until, provider_issuer, provider_id, writer_id,
+             self_declared);
 COMMENT ON TABLE access_care IS 'The care relationships of the party domain, one row per subject reference and relationship, keyed by digest; written only by the care projector. Our own design.';
 COMMENT ON COLUMN access_care.subject_digest IS 'The SHA-256 digest of one subject reference that names the PERSON: its own reference in this CDR''s namespace, or a record subject it declares. Our own design.';
 COMMENT ON COLUMN access_care.carer_id IS 'The carer of the relationship, by its container: a PERSON, a ROLE, a GROUP or an ORGANISATION. Our own design.';
+COMMENT ON COLUMN access_care.carer_kind IS 'What the carer is: P (PERSON), R (ROLE), G (GROUP) or O (ORGANISATION). Our own design.';
 COMMENT ON COLUMN access_care.role_terminology IS 'The terminology of the relationship''s care_role. Our own design.';
 COMMENT ON COLUMN access_care.role_code IS 'The code of the relationship''s care_role. Our own design.';
 COMMENT ON COLUMN access_care.provider_issuer IS 'The issuer of the provider DV_IDENTIFIER in whose care the relationship is. Our own design.';
