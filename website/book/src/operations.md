@@ -673,9 +673,12 @@ version), which is what a WAL archive for point-in-time recovery receives.
 Set `wal_compression = lz4`. The first change to a page after a checkpoint
 writes the whole page to the WAL, and lz4 compresses those images at a CPU
 cost far below the flush it saves: a composition commit wrote about 52 KB of
-WAL without it and about 24 KB with it (PostgreSQL 18 docs,
-[WAL Configuration](https://www.postgresql.org/docs/18/runtime-config-wal.html#GUC-WAL-COMPRESSION)).
-The quickstart and the capacity harness both run with it.
+WAL without it and about 24 KB with it. Since PostgreSQL 19, `on` picks
+the first of zstd, lz4 and pglz the server was built with, where it always
+meant pglz before (PostgreSQL 19 docs,
+[WAL Configuration](https://www.postgresql.org/docs/19/runtime-config-wal.html#GUC-WAL-COMPRESSION));
+naming `lz4` keeps the measured method. The quickstart and the capacity
+harness both run with it.
 
 ### Vacuum and fillfactor
 

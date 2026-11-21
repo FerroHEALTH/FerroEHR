@@ -7,9 +7,10 @@ register of the PG 17, PG 18 and PG 19 features that matter to a JSONB-heavy
 openEHR CDR, and for each one it says whether the code USES it, where, or why
 it is deliberately NOT used. A feature listed here is not a claim that the code
 uses it; the "status" column is. The PG 17 and PG 18 reasons cite the
-PostgreSQL 18 documentation (`https://www.postgresql.org/docs/18/`), where they
-still hold on 19 (#6224 re-cites the ones 19 changed); the PG 19 rows cite the
-19 release notes (`https://www.postgresql.org/docs/19/release-19.html`).
+PostgreSQL 18 documentation (`https://www.postgresql.org/docs/18/`), each
+checked against the 19 documentation and still true there (#6224); the PG 19
+rows cite the 19 release notes
+(`https://www.postgresql.org/docs/19/release-19.html`).
 
 ## Versioning note (why the feature list is 17.0, 18.0 and 19.0)
 
