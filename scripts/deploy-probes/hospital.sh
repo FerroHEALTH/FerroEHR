@@ -464,8 +464,9 @@ h_boot_log() {
 }
 
 # The SCIM client's later grants, an administrator's writes through the
-# Demographic API (`ferroehr party-binding grant` is the first grant only):
-# its `scim_provision` capability gains the role ceiling, the clinical roles of
+# Demographic API (`ferroehr party-binding grant` is the first grant only,
+# under the shipped grant ROLE, whose text elements are `id9`): its
+# `scim_provision` capability gains the role ceiling, the clinical roles of
 # the hospital's role code system its Users may perform (#5625), and its AGENT
 # a ROLE granting `write_care_relationship` for care-team Groups (#5617) of
 # the stack's provider, the one its `provider` element names (#6073). The
@@ -488,7 +489,8 @@ h_scim_client_grants() {
     --argjson t "$(j_qualifier role_terminology "$(jq -nc --arg v "$H_ROLES" '{_type:"DV_TEXT",value:$v}')")" \
     --argjson c "$(j_qualifier role "$(jq -nc '{_type:"DV_TEXT",value:"CLINICIAN"}')")" \
     --argjson n "$(j_qualifier role "$(jq -nc '{_type:"DV_TEXT",value:"NURSE"}')")" \
-    'del(.uid) | .capabilities[0].credentials.items += [$t, $c, $n]' <<<"$H_BODY")"
+    'del(.uid) | .capabilities[0].credentials.items += ([$t, $c, $n] | map(.archetype_node_id = "id9"))' \
+    <<<"$H_BODY")"
   H_IF_MATCH="\"$version\"" h_call 1 admin PUT "/demographic/role/$version" "$body"
   [[ "$H_CODE" = 200 || "$H_CODE" = 204 ]] || return 1
   h_party scim_care_role role "$(j_role "SCIM client care teams" AGENT "$agent" \

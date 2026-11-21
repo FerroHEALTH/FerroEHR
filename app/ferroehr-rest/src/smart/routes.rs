@@ -135,6 +135,14 @@ impl SmartRoutes {
         }
     }
 
+    /// Whether a request with `method` on the matched route template
+    /// `matched` is the EHR lookup by subject (ITS-REST EHR API `GET /ehr`).
+    pub(crate) fn looks_up_by_subject(&self, method: &Method, matched: Option<&str>) -> bool {
+        matched
+            .and_then(|matched| self.ops.get(&(method.clone(), matched.to_owned())))
+            .is_some_and(|(op, _group)| *op == "ehr_get_by_subject")
+    }
+
     /// Returns what a request with `method` on the matched route template
     /// `matched` needs; `path` is the request path the template matched.
     pub(crate) fn need(&self, method: &Method, matched: Option<&str>, path: &str) -> Need {

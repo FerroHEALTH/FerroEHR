@@ -92,7 +92,7 @@ async fn settings_of(pool: &sqlx::PgPool, (default, keepers): Scheme) -> Value {
 /// which the server writes.
 fn committer(user: &str) -> Value {
     json!({ "_type": "PARTY_IDENTIFIED",
-            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": user }] })
+            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": DEFAULT_SYSTEM_ID, "id": user }] })
 }
 
 fn coded(code: &str, value: &str) -> Value {

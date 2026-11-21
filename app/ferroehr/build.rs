@@ -137,13 +137,40 @@ fn main() {
     println!("cargo:rerun-if-env-changed=REVISION");
     println!("cargo:rerun-if-env-changed=FERROEHR_RELEASE_TAG");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
-    println!("cargo:rerun-if-changed=../../.git/HEAD");
-    println!("cargo:rerun-if-changed=../../.git/refs");
+    // NOTE: in a linked worktree `.git` is a file, so a fixed `../../.git/HEAD`
+    // never exists and Cargo reran this script on every build; git names the
+    // real places (git-rev-parse `--git-dir`, `--git-common-dir`).
+    for (flag, entries) in [
+        ("--git-dir", &["HEAD"][..]),
+        ("--git-common-dir", &["refs", "packed-refs"][..]),
+    ] {
+        let Some(dir) = git_path(flag) else {
+            continue;
+        };
+        for entry in entries {
+            let path = std::path::Path::new(&dir).join(entry);
+            if path.exists() {
+                println!("cargo:rerun-if-changed={}", path.display());
+            }
+        }
+    }
     // `sqlx::migrate!` cannot see a newly added file on stable, and the
     // directives above switch off Cargo's rerun-on-any-change, so the
     // embedded migration sets follow the directory here
     // (https://docs.rs/sqlx/latest/sqlx/macro.migrate.html).
     println!("cargo:rerun-if-changed=migrations");
+}
+
+/// The absolute path git reports for `flag` (`--git-dir` or
+/// `--git-common-dir`); `None` outside a git checkout or without git.
+fn git_path(flag: &str) -> Option<String> {
+    Command::new("git")
+        .args(["rev-parse", "--path-format=absolute", flag])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+        .filter(|s| !s.is_empty())
 }
 
 /// The date of the `## [<version>] - YYYY-MM-DD` heading in a Keep a Changelog

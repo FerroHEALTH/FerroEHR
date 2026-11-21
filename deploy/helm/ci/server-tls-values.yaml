@@ -41,7 +41,7 @@ config:
         audience: [ferroehr-machines]
     party:
       - issuer: https://basic-users.ferroehr.invalid
-        identifier_issuer: urn:ferroehr:basic-user
+        identifier_issuer: urn:example:basic-user
         identifier_type: login
     basic:
       users:
@@ -57,7 +57,7 @@ config:
       provider: { issuer: "urn:oid:2.999.7.9", id: "server-tls" }
       basic_user:
         - user: clinician
-          key_issuer: urn:ferroehr:basic-user
+          key_issuer: urn:example:basic-user
           key: clinician
   server:
     tls:

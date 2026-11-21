@@ -40,8 +40,7 @@
 
 use openehr_base::prelude::{ObjectVersionId, TerminologyId};
 use openehr_its::rest::generated::common::{UpdateAttestation, UpdateAudit};
-use openehr_rm::prelude::{DvCodedText, DvText, PartyProxy};
-use openehr_rm::v1_2::common::generic::party_identified::{PartyIdentified, PartyIdentifiedData};
+use openehr_rm::prelude::{DvCodedText, DvText};
 use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
 use openehr_rm::v1_2::data_types::text::dv_text::DvTextData;
 
@@ -117,21 +116,6 @@ pub fn plain_text(value: &str) -> DvText {
         language: None,
         encoding: None,
     })
-}
-
-/// The `PARTY_PROXY` this server attributes a commit to when nothing else
-/// names a committer: its own system identity.
-///
-/// Built with the generated constructor rather than decoded from a JSON
-/// literal: the value is a compile-time constant of the RM model, so there is
-/// no fallible step to handle.
-#[must_use]
-pub fn system_committer() -> PartyProxy {
-    PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(PartyIdentifiedData {
-        external_ref: None,
-        name: Some(crate::versioning::committer::SYSTEM_COMMITTER_NAME.to_owned()),
-        identifiers: None,
-    }))
 }
 
 /// The caller's side of one direct write: the content and the commit metadata

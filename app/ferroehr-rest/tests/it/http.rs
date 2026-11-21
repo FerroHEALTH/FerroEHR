@@ -770,9 +770,11 @@ async fn authenticated_write_attributes_the_default_committer() {
     // A Basic credential is held by this deployment, so the authority that
     // issues that kind of id (`DV_IDENTIFIER.issuer` — RM data_types
     // UML/classes/org.openehr.rm.data_types.dv_identifier.adoc §Attributes) is
-    // the product itself. No openEHR spec governs the concrete string.
+    // the deployment: `[api] basic_issuer`, by default its system id, never
+    // the product (#6143). No openEHR spec governs the concrete string.
     assert_eq!(
-        audit["committer"]["identifiers"][0]["issuer"], "ferroehr",
+        audit["committer"]["identifiers"][0]["issuer"],
+        ferroehr::service::DEFAULT_SYSTEM_ID,
         "a locally-held credential names this deployment as issuer"
     );
 }

@@ -111,6 +111,7 @@ mod ehr_access_gate;
 mod ehr_access_read_http;
 mod ehr_access_repair_http;
 mod ehr_access_replicas;
+mod ehr_create_replicas;
 mod error_chain;
 mod example_http;
 mod exclusion_conflict_http;

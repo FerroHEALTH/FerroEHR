@@ -33,7 +33,7 @@ config:
         jwks_file: /opt/sandbox-posture/basic-users-jwks.json
     party:
       - issuer: https://basic-users.ferroehr.invalid
-        identifier_issuer: urn:ferroehr:basic-user
+        identifier_issuer: urn:example:basic-user
         identifier_type: login
     basic:
       users:
@@ -49,7 +49,7 @@ config:
       provider: { issuer: "urn:oid:2.999.7.9", id: "terminology" }
       basic_user:
         - user: clinician
-          key_issuer: urn:ferroehr:basic-user
+          key_issuer: urn:example:basic-user
           key: clinician
   # The CDR's own terminology extension API, so the routes that answer FROM
   # FerroTERM are mounted in this render. `config.terminology.server` is NOT
