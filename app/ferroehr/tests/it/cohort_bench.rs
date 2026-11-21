@@ -362,6 +362,7 @@ async fn explain_clinical(pool: &sqlx::PgPool, ehr_ids: &[EhrId]) -> Value {
         policy_parties: ferroehr::aql::sql::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
         own_records: None,
+        caseload: None,
     };
     let ast = openehr_query::parser::parse_str(BENCH_AQL).expect("the AQL parses");
     let params = Params::default();

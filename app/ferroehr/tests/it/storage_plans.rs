@@ -925,6 +925,7 @@ fn aql_sql_owning(
         policy_parties,
         access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
         own_records,
+        caseload: None,
     };
     ferroehr::aql::sql::build(&ir, params, &ctx).expect("the AQL lowers to SQL")
 }
