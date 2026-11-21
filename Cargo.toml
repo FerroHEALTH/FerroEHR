@@ -353,9 +353,9 @@ fhir-search = { version = "0.1.131", default-features = false }
 # ferrohealth-smart's outbound client; `pmir` is the PMIR Patient Identity
 # Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, which reads every
 # Patient's `active` and links and rebuilds a subscription from its stored
-# Location. Verified on crates.io 2026-11-20 (0.16.0, on ihe-atna 0.23), on
-# ferrohealth-smart 0.31.
-ihe-iti = { version = "=0.16.0", default-features = false }
+# Location. Verified on crates.io 2026-11-21 (0.17.0, on ihe-atna 0.23), on
+# ferrohealth-smart 0.32.
+ihe-iti = { version = "=0.17.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
