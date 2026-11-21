@@ -181,7 +181,15 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   never from the version body, whose per-row parse measured 50 to 300 times
   slower than a fragment read. Point reads do not reassemble the fragments: the
   whole canonical body is also stored verbatim as `version.body text` and
-  served from there in one statement.
+  served from there in one statement. Structure rows keep their own `data`
+  (#6210): leaving it out and reading whole structures from the body would
+  save 22% of an IPS commit's WAL (225,507 to 175,405 bytes) and 42% of its
+  node heap, but 90% of that is one participation list repeated on every
+  entry. It would also move the attributes AQL names most often in a WHERE
+  clause (`composer`, `category`, `ism_transition`, `other_participations`,
+  `subject`) from the row to a body parse measured 30 to 40 times slower per
+  version, or to a byte range of the body 8 times slower. Storing the
+  repeated fragment once per version is measured on #6229.
 - **Tiers are partitions.** `version`, `node` and `vo_attestation` are each
   `PARTITION BY LIST (tier)` with a `hot` and a `cold` partition and no default
   partition. Archiving an EHR is `UPDATE version SET tier = 'cold' WHERE
