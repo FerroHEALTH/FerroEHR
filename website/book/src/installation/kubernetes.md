@@ -3,7 +3,7 @@
 The `ferroehr` Helm chart deploys FerroEHR as a hardened, production-shaped
 Kubernetes workload (non-root, read-only root filesystem, a NetworkPolicy that
 admits its serving port only, its own user namespace) against an **external**
-PostgreSQL 18. This chapter
+PostgreSQL 19. This chapter
 covers installing it, verifying what you installed, the database role model it
 expects, the security posture it pins, the health probes, the optional
 integrations, and upgrades.
@@ -23,7 +23,7 @@ integrations, and upgrades.
 
 > [!IMPORTANT]
 > There is **no in-chart PostgreSQL**. A CDR stores PHI, so its database must be
-> an externally managed, backed-up, point-in-time-recoverable PostgreSQL 18 (a
+> an externally managed, backed-up, point-in-time-recoverable PostgreSQL 19 (a
 > managed service or an operator-run cluster). The chart carries only the
 > connection string, preferably from an existing Secret.
 

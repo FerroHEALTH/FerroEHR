@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `ferroehr party-binding adopt` (#5009) over a real PostgreSQL 18: each
+//! `ferroehr party-binding adopt` (#5009) over a real PostgreSQL 19: each
 //! prepared `PERSON` gets a professional `ROLE` of the mapping's role
 //! template naming it as `performer` and a new version listing it in `roles`
 //! (RM demographic `org.openehr.rm.demographic.actor.adoc`, `…role.adoc`), in

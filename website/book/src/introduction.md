@@ -49,7 +49,7 @@ what you query and what you read back.
 - **One self-contained binary.** No JVM, no language runtime, and a pure-Rust
   TLS stack, so there is nothing to provision beside PostgreSQL. The container
   image is shell-less and runs as non-root.
-- **PostgreSQL 18-native storage.** Clinical documents are decomposed into an
+- **PostgreSQL 19-native storage.** Clinical documents are decomposed into an
   indexed node model with time-bounded, versioned rows; canonical openEHR JSON
   is stored verbatim so storage and API never disagree.
 

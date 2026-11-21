@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! AQL over the demographic store leaves the policy parties out for a caller
-//! who is no administrator (#5450), over a real PostgreSQL 18: a party with a
+//! who is no administrator (#5450), over a real PostgreSQL 19: a party with a
 //! version holding a capability coded in the draft access terminology,
 //! an acts-for relationship or a client identifier, in any archetype, and an
 //! acts-for `PARTY_RELATIONSHIP` of its own contribute no row, no count and

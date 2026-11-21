@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `ferroehr definitions load` over a real PostgreSQL 18: a definition is
+//! `ferroehr definitions load` over a real PostgreSQL 19: a definition is
 //! stored through the upload path of its format, a second load of the same
 //! text writes nothing, other text under a stored id is refused, and a source
 //! the upload refuses is refused here too. No openEHR spec governs loading

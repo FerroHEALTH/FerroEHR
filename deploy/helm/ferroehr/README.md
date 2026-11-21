@@ -1,17 +1,17 @@
 # ferroehr
 
-Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment.profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
+Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 19 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment.profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
 ![Version: 40.0.0](https://img.shields.io/badge/Version-40.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.7.1-rc1](https://img.shields.io/badge/AppVersion-5.7.1--rc1-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
-API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
+API, AQL 1.1 as the query language, PostgreSQL 19-native storage, shipped as a
 single static binary. This chart deploys the server.
 
 ## Before you install: four things that surprise people
 
 **This chart does not deploy a database.** It expects an **external PostgreSQL
-18** (18.6 or newer) and will not start without one. Point it at your own
+18** (19.0 or newer) and will not start without one. Point it at your own
 instance, a managed service, or a separate PostgreSQL chart: `database.url`
 or, for production, `database.existingSecret`.
 
@@ -269,7 +269,7 @@ each one holds.
 | backup.enabled | bool | `false` | Render the per-domain backup CronJobs: clinical, party, and audit when `database.audit.existingSecret` gives it a database of its own. Each rendered domain then needs its own `persistentVolumeClaim` below, or the render is refused. |
 | backup.image.digest | string | `""` | Image digest (`sha256:…`); wins over `tag` entirely when set. |
 | backup.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
-| backup.image.repository | string | `"ghcr.io/ferrohealth/ferroehr-postgres"` | Image carrying `pg_dump`. The project's own PostgreSQL 18 image, so the dump is taken by the same major version the server runs against. |
+| backup.image.repository | string | `"ghcr.io/ferrohealth/ferroehr-postgres"` | Image carrying `pg_dump`. The project's own PostgreSQL 19 image, so the dump is taken by the same major version the server runs against. |
 | backup.image.tag | string | `""` | Image tag. Empty falls back to .Chart.appVersion, as the server's does. |
 | backup.nodeSelector | object | `{}` | Node selector for the dump pods. |
 | backup.party.existingSecret | string | `""` | REQUIRED when enabled: Secret holding the party BACKUP DSN — a read-only role on the party schema, and a DIFFERENT role from the clinical one. This credential reads every identity the instance holds; treat it accordingly. |

@@ -5,7 +5,7 @@
 #
 # The capacity test (#5722): how many requests per second an image sustains
 # before it degrades, and what saturates first. scripts/perf/capacity.sh
-# brings the image up on one PostgreSQL 18 (one instance, or two behind
+# brings the image up on one PostgreSQL 19 (one instance, or two behind
 # Caddy), seeds the perf gate's access seed and steps an open-loop arrival
 # rate up through each group and the mix until the knee. The generator runs
 # in a container on the servers' network, so no port forwarder sits in the

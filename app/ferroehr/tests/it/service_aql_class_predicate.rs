@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! A comparison in a class-expression or node predicate answers as the same
-//! comparison in `WHERE` (#5910), executed against a real PostgreSQL 18
+//! comparison in `WHERE` (#5910), executed against a real PostgreSQL 19
 //! (shared testkit harness).
 //!
 //! QUERY master03 §Standard predicate gives a predicate the operators of

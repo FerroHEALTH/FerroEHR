@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 #
-# Preconfigured PostgreSQL 18 for ferroehr (mirrors the official
+# Preconfigured PostgreSQL 19 for ferroehr (mirrors the official
 # `ehrbase/ehrbase-v2-postgres` two-image model, built fresh for this stack).
 #
-# The stock postgres:18.6 image with Debian's security updates applied, the
+# The stock postgres:19.0 image with Debian's security updates applied, the
 # build-time GnuPG toolchain purged, upstream's Go `gosu` replaced by a
 # `setpriv` wrapper, plus init scripts that create the app login role, its
 # owned database, the `ehr` + `ext` schemas it owns, and the required
@@ -11,14 +11,13 @@
 # superuser. Schema CONTENT is owned by the app's sqlx migrators at boot; this
 # image bakes NO migration state (see README.md).
 #
-# Digest-pinned (resolved 2026-11-09, the upstream same-version respin the
-# base-image watcher reported on #5332): a mutable tag can be re-pointed, a
-# digest cannot (docs.docker.com/build/building/best-practices — "pinning to
-# a digest guarantees the same image version"). 18.6 is the latest PG 18
-# patch (docs/VERSIONS.md; 18.5 was never released upstream); bump the tag
-# AND the digest together — the full pin-site checklist is
-# .claude/rules/image-security.md.
-FROM postgres:18.6@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42
+# Digest-pinned (resolved 2026-11-21, the first PostgreSQL 19 release): a
+# mutable tag can be re-pointed, a digest cannot
+# (docs.docker.com/build/building/best-practices — "pinning to a digest
+# guarantees the same image version"). 19.0 is the latest PG 19 release
+# (docs/VERSIONS.md); bump the tag AND the digest together — the full pin-site
+# checklist is .claude/rules/image-security.md.
+FROM postgres:19.0@sha256:bb6e70add742cd868fb62cb3b2f67d1dd2bdd2b65a521e778420748753687c60
 
 # Debian security updates, applied at OUR build time (issue #2408). The
 # upstream image rebuilds on its own cadence, so a fix already published in
@@ -65,7 +64,7 @@ COPY initdb/ /docker-entrypoint-initdb.d/
 # is PostgreSQL-licensed. Claiming only BUSL-1.1 would understate what the image
 # contains.
 LABEL org.opencontainers.image.title="FerroEHR PostgreSQL" \
-      org.opencontainers.image.description="PostgreSQL 18 preconfigured (role/db/schemas/extensions) for ferroehr" \
+      org.opencontainers.image.description="PostgreSQL 19 preconfigured (role/db/schemas/extensions) for ferroehr" \
       org.opencontainers.image.url="https://ferroehr.eu/" \
       org.opencontainers.image.documentation="https://ferroehr.eu/docs/latest/" \
       org.opencontainers.image.source="https://github.com/FerroHEALTH/FerroEHR" \

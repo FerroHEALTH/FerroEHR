@@ -612,7 +612,7 @@ metadata:
   name: ferroehr
   annotations:
     kubernetes.io/description: >-
-      The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
+      The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 19. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
     helm.sh/chart: ferroehr-40.0.0
     app.kubernetes.io/name: ferroehr

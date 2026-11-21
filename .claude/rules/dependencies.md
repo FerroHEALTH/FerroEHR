@@ -6,7 +6,7 @@ paths: ["Cargo.toml", "**/Cargo.toml", "Cargo.lock", "deny.toml", "rust-toolchai
 
 Toolchain: Rust stable **1.99** (1.99.1), MSRV 1.98, **edition 2024**,
 resolver v3. Pin via `rust-toolchain.toml`.
-Database: **PostgreSQL 18** (target 18.6+): `uuidv7()`, the SQL/JSON path
+Database: **PostgreSQL 19** (target 19.0+): `uuidv7()`, the SQL/JSON path
 functions, and the planner-side gains (skip scan, AIO);
 `docs/postgres-features.md` says which features the code uses and which are
 available and deliberately not. No extension.
@@ -135,7 +135,7 @@ Testing & benches (dev-deps): `cargo-nextest`, `insta` 1 (snapshots — the key
 tool for canonical JSON/XML parity), `proptest` 1, `rstest` 0.26 *(verify)*,
 `wiremock` 0.6, `mockall` 0.15 *(verify)*, `fake` 5 *(verify)*, `assert_cmd`
 2, `assert_fs` 1, `testcontainers` 0.27 *(verify)* + `testcontainers-modules`
-0.12 *(verify)* (real PG 18), `criterion` 0.5 + `divan` 0.1.
+0.12 *(verify)* (real PG 19), `criterion` 0.5 + `divan` 0.1.
 
 Dev tooling (CI, not deps): `cargo-nextest`, `cargo-audit`, `cargo-deny`,
 `cargo-machete`, `cargo-hakari`, `cargo-llvm-cov`, `sccache`; `mold` linker

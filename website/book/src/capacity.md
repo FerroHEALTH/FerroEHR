@@ -13,7 +13,7 @@ FerroEHR's own design.
 ## What it measures
 
 `scripts/perf/capacity.sh` runs one or more FerroEHR instances on one
-PostgreSQL 18, with Caddy in front when there is more than one (round robin,
+PostgreSQL 19, with Caddy in front when there is more than one (round robin,
 no sticky sessions, as [Running several
 instances](installation/several-instances.md) deploys them). It seeds them
 with the performance gate's access seed (`scripts/perf/access-seed.sh`):
@@ -95,14 +95,14 @@ that.
 
 ## Running it
 
-On a Linux workstation, with PostgreSQL 18, Caddy and a release build of the
+On a Linux workstation, with PostgreSQL 19, Caddy and a release build of the
 server:
 
 ```sh
 cargo build --locked --release -p ferroehr-server
 bash scripts/perf/gate.sh install
 export CAPACITY_FERROEHR=target/release/ferroehr
-export CAPACITY_PG_BIN=/usr/lib/postgresql/18/bin CAPACITY_CADDY=$(command -v caddy)
+export CAPACITY_PG_BIN=/usr/lib/postgresql/19/bin CAPACITY_CADDY=$(command -v caddy)
 bash scripts/perf/capacity.sh up 1          # or 2, behind Caddy
 bash scripts/perf/capacity.sh seed          # about 30 minutes at 20 000 patients
 bash scripts/perf/capacity.sh snapshot      # keep the seeded store for `restore`

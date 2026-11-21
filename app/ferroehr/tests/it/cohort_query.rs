@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end cohort queries against a real PostgreSQL 18 (shared testkit
+//! End-to-end cohort queries against a real PostgreSQL 19 (shared testkit
 //! harness): seed parties in the demographic domain, each the subject of its
 //! own EHR's `EHR_STATUS`, then select a population by a demographic
 //! predicate and run AQL over exactly the EHRs it resolves to.

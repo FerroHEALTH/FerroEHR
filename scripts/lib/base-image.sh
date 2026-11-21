@@ -94,14 +94,14 @@ self_test() {
 org.opencontainers.image.base.digest=$b" "$out"
 
   # shellcheck disable=SC2016 # the Dockerfile's own \${…} is the literal under test
-  printf 'FROM --platform=$BUILDPLATFORM postgres:18.6@%s\n' "$a" >"$dir/flagged"
+  printf 'FROM --platform=$BUILDPLATFORM postgres:19.0@%s\n' "$a" >"$dir/flagged"
   out="$(labels "$dir/flagged")"
   expect "a FROM with a flag" \
-    "org.opencontainers.image.base.name=postgres:18.6
+    "org.opencontainers.image.base.name=postgres:19.0
 org.opencontainers.image.base.digest=$a" "$out"
-  expect "the reference of a FROM with a flag" "postgres:18.6@$a" "$(literal_ref "$dir/flagged")"
+  expect "the reference of a FROM with a flag" "postgres:19.0@$a" "$(literal_ref "$dir/flagged")"
 
-  printf 'FROM postgres:18.6\n' >"$dir/tagged"
+  printf 'FROM postgres:19.0\n' >"$dir/tagged"
   if labels "$dir/tagged" >/dev/null 2>&1; then
     echo "base-image self-test: a tag-only FROM was read as a base" >&2
     failures=$((failures + 1))
