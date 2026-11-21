@@ -132,6 +132,7 @@ impl FerroEhrService {
             policy_parties: PolicyParties::of_request(&self.binding),
             access_settings: EhrAccessReaders::Every,
             own_records: None,
+            caseload: None,
         };
         let party = aql::exec::execute(
             &self.demographic_pool,
@@ -192,6 +193,10 @@ impl FerroEhrService {
         let own_records = Box::pin(self.delayed_own_records())
             .await
             .map_err(Failure::analysis)?;
+        let caseload =
+            Box::pin(self.query_caseload(QueryDomain::Clinical, job.request.caseload.as_ref()))
+                .await
+                .map_err(Failure::analysis)?;
         let mut stale_since = None;
         let result = loop {
             let access_settings = Box::pin(self.query_access_readers(&ehr_access))
@@ -203,6 +208,7 @@ impl FerroEhrService {
                 ehr_access: ehr_access.clone(),
                 access_settings,
                 own_records: own_records.clone(),
+                caseload: caseload.clone(),
                 ..party_ctx.clone()
             };
             let run = aql::exec::execute(

@@ -44,7 +44,7 @@ async fn advisory_lock_is_free(pool: &PgPool, vo_id: Uuid) -> bool {
 }
 
 /// Waits until some session of this database waits on a lock.
-async fn wait_for_a_lock_waiter(pool: &PgPool) {
+pub(crate) async fn wait_for_a_lock_waiter(pool: &PgPool) {
     for _ in 0..200 {
         let waiting: i64 = sqlx::query_scalar(
             "SELECT count(*) FROM pg_stat_activity \

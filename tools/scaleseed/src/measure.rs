@@ -196,6 +196,7 @@ async fn query(dsn: &str, case: &Case, ehr: Uuid, plan: &Path) -> anyhow::Result
         policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
+        caseload: None,
     };
     let prepared = ferroehr::aql::sql::build(&ir, &params, &ctx)
         .map_err(|e| anyhow!("lower {}: {e}", case.name))?;

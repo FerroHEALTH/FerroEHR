@@ -130,6 +130,7 @@ fn ctx() -> SqlCtx {
         policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
+        caseload: None,
     }
 }
 

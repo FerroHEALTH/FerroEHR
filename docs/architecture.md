@@ -468,7 +468,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   retention sweep's collection of shared parts skips a part a write in
   flight names (`audit/0006_baseline_intake.sql`). A shared part
   keeps the latest `retain_until` of its entries, never earlier than the day
-  the intake last named it, and the sweep removes the parts past it that no
+  the intake last named it; a write judges its raise on the part's current
+  row, so two writes raising one part never rewrite it to the end it already
+  has (#6192), and the sweep removes the parts past it that no
   entry names, in batches read through the entries' `retain_until` index
   (`audit.access_log_shared_collect`, #5968). The ferroehr-rest test
   `statement_budget` holds an AQL request to its round trips and nested

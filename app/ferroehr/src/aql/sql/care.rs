@@ -90,6 +90,18 @@ pub(super) fn census_text(cared: &[CaredSubject]) -> String {
     .to_string()
 }
 
+/// The subjects `subjects` as a `jsonb` object text keyed by
+/// [`census_key`], which a caseload probe asks with `?`.
+pub(super) fn census_text_of(subjects: &[EhrSubject]) -> String {
+    serde_json::Value::Object(
+        subjects
+            .iter()
+            .map(|subject| (census_key(subject), serde_json::Value::Bool(true)))
+            .collect(),
+    )
+    .to_string()
+}
+
 /// The ties by which the caller holds each EHR of `ehrs`: a `jsonb` object
 /// text keyed by EHR id, each value the array of the tokens of its ties,
 /// which a [`care_need`] probe of a query pinned to its EHRs reads.
@@ -292,7 +304,7 @@ pub(super) fn caseload(condition: &ConditionGroups, target: Expr, known: Vec<i64
 /// principal for `self_declared` where the policy turns that path on; the
 /// writer of an assigned one is never a principal of the caller. No openEHR
 /// spec governs this: our own design (#6075).
-fn projected_need(care: &ProjectedCare, need: &CareNeed, target: Expr) -> Expr {
+pub(super) fn projected_need(care: &ProjectedCare, need: &CareNeed, target: Expr) -> Expr {
     use openehr_rm::draft::access_control::terminology::care::CarePath;
     let assigned = "NOT access_care_row.self_declared \
          AND (access_care_row.writer_id IS NULL OR access_care_row.writer_id <> ALL($2))";

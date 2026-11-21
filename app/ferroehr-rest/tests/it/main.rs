@@ -146,6 +146,7 @@ mod policy_registers_http;
 mod portal_callers_http;
 mod portal_representatives_http;
 mod protocol_tail;
+mod query_caseload_http;
 mod query_ehr_id_header;
 mod query_refusals_http;
 mod rbac_e2e;

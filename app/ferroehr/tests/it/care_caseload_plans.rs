@@ -462,6 +462,7 @@ async fn a_bounded_query_still_fails_on_a_class_its_condition_does_not_know() {
         policy_parties: ferroehr::aql::sql::readers::PolicyParties::Served,
         access_settings: ferroehr::aql::sql::readers::EhrAccessReaders::Every,
         own_records: None,
+        caseload: None,
     };
     let refused = ferroehr::aql::exec::execute(&pool, &ir, None, &params, &ctx, profile)
         .await

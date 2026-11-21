@@ -16,6 +16,7 @@
 //! the demographic domain. No openEHR spec governs it — our own extension.
 
 mod adhoc;
+mod caseload;
 mod cohort;
 pub(crate) mod execute;
 pub(crate) mod openapi_routes;
