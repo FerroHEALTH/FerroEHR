@@ -1251,7 +1251,8 @@ mod tests {
             .expect("write");
         let mut c = standalone();
         let mut issuer = auth_section::machines("https://idp.example.test");
-        issuer.get_mut("machines").expect("one issuer").jwks_file = jwks.path().display().to_string();
+        issuer.get_mut("machines").expect("one issuer").jwks_file =
+            jwks.path().display().to_string();
         c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("an oct key must refuse the tree");
         let text = err.to_string();
@@ -1550,8 +1551,14 @@ mod tests {
         let c = assemble_ok(
             None,
             &env(&[
-                ("FERROEHR__AUTH__ISSUER__IDP__ISSUER", "https://idp.example/r"),
-                ("FERROEHR__AUTH__ISSUER__IDP__ROLE_CLAIMS", "app_roles,roles"),
+                (
+                    "FERROEHR__AUTH__ISSUER__IDP__ISSUER",
+                    "https://idp.example/r",
+                ),
+                (
+                    "FERROEHR__AUTH__ISSUER__IDP__ROLE_CLAIMS",
+                    "app_roles,roles",
+                ),
             ]),
             &[],
         );

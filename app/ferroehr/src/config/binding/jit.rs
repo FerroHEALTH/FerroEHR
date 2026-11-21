@@ -73,9 +73,7 @@ pub fn errors(binding: &PartyBindingConfig, resolved: &Resolved) -> Vec<String> 
         let bound = resolved.party.iter().any(|p| p.issuer == table.issuer);
         let persons = resolved.kinds.get(table.issuer.expose()) == Some(&IssuerKind::Persons);
         if !(bound && persons) {
-            errors.push(format!(
-                "{at} names no persons issuer an party table binds"
-            ));
+            errors.push(format!("{at} names no persons issuer an party table binds"));
             continue;
         }
         if table.idp_claim.trim().is_empty() {

@@ -688,9 +688,6 @@ mod tests {
             c.authz.rbac.emergency_access_role.as_deref(),
             Some("BREAK_GLASS")
         );
-        assert_eq!(
-            c.authz.rbac.role_issuers,
-            ["a", "b"]
-        );
+        assert_eq!(c.authz.rbac.role_issuers, ["a", "b"]);
     }
 }

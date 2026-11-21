@@ -52,6 +52,7 @@ pub(crate) mod refusal;
 mod scope;
 pub(crate) mod trc;
 pub(crate) mod verdicts;
+pub(crate) mod described;
 
 use std::sync::Arc;
 
@@ -60,7 +61,7 @@ use axum::middleware::Next;
 use axum::response::Response;
 use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::kind::CallerKind;
-use ferrohealth_smart::refusal::Refusal;
+use ferrohealth_smart::refusal::{Denied, Reason, Refusal};
 use ferrohealth_smart::resource::configuration::{Purpose, SmartOptions};
 use ferrohealth_smart::resource::{Access, Honoured, Via};
 use http::request::Parts;
@@ -73,21 +74,10 @@ use crate::overview::error::RestError;
 use crate::smart::routes::SmartRoutes;
 use assurance::PatientDataGate;
 use build::Primary;
+use described::Described;
 use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::system_log::event::ActorAuthentication;
 use gates::patient_data_refusal;
-
-/// The SMART discovery document of the described issuer, as far as it is
-/// known.
-#[derive(Debug)]
-pub(crate) enum Described {
-    /// No issuer is described: the document is not served.
-    None,
-    /// The described issuer has not been read yet.
-    Unread,
-    /// The document.
-    Document(serde_json::Value),
-}
 
 /// The state the [`middleware`] runs on: the authenticator, the optional
 /// authorization handle (`None` is authentication-only), the optional
@@ -231,18 +221,25 @@ pub enum AuthError {
     /// because it is a request defect rather than a credential decision.
     #[error("malformed authorization header: {0}")]
     MalformedRequest(String),
-    /// A bearer token that does not hold.
+    /// A bearer token that does not hold, refused by the check `ferrohealth-smart`
+    /// names, when it names one.
     ///
-    /// RFC 9068 §4 gives every failed check the one `invalid_token` answer; the
-    /// crate logs which check failed at debug level and nothing else.
+    /// RFC 9068 §4 gives every failed check the one `invalid_token` answer, and
+    /// the challenge names the check's reason code as its `error_description`
+    /// (RFC 6750 §3).
     #[error("invalid bearer token")]
-    InvalidToken,
+    InvalidToken(Option<Reason>),
     /// A `DPoP` token that does not hold (RFC 9449 §7.1).
     #[error("invalid DPoP token")]
-    InvalidDpopToken,
+    InvalidDpopToken(Option<Reason>),
     /// A `DPoP` proof that does not hold (RFC 9449 §4.3).
     #[error("invalid DPoP proof")]
-    InvalidDpopProof,
+    InvalidDpopProof(Option<Reason>),
+    /// A credential `ferrohealth-smart` admitted whose scopes do not permit the
+    /// request, or a route it does not classify, refused by the check it
+    /// names; the challenge carries that reason code.
+    #[error("forbidden: the credential does not permit this request")]
+    NotPermitted(Option<Reason>),
     /// The issuer's signing keys could not be read, so no bearer token can be
     /// validated.
     #[error("the authorization server's signing keys could not be read")]
@@ -294,19 +291,19 @@ pub enum AuthError {
 }
 
 impl AuthError {
-    /// The outcome of a [`Refusal`] the gate answered.
-    fn from_refusal(refusal: &Refusal) -> Self {
-        match refusal {
+    /// The outcome of the denial the gate answered, with the reason the
+    /// refusing check names.
+    fn from_denied(denied: &Denied) -> Self {
+        let reason = denied.reason();
+        match denied.refusal() {
             Refusal::Missing(_) => AuthError::MissingCredentials,
             Refusal::InvalidRequest => AuthError::MalformedRequest(
                 "the Authorization header carries no single well-formed credential".to_owned(),
             ),
-            Refusal::InvalidToken => AuthError::InvalidToken,
-            Refusal::InvalidDpopToken => AuthError::InvalidDpopToken,
-            Refusal::InvalidDpopProof => AuthError::InvalidDpopProof,
-            Refusal::Forbidden | Refusal::Unclassified => {
-                AuthError::Forbidden("the credential does not permit this request".to_owned())
-            }
+            Refusal::InvalidToken => AuthError::InvalidToken(reason),
+            Refusal::InvalidDpopToken => AuthError::InvalidDpopToken(reason),
+            Refusal::InvalidDpopProof => AuthError::InvalidDpopProof(reason),
+            Refusal::Forbidden | Refusal::Unclassified => AuthError::NotPermitted(reason),
             Refusal::Unavailable => AuthError::KeyResolution,
             // NOTE: `Refusal` is non-exhaustive; an outcome added later is a
             // credential that does not hold until it is read here.
@@ -323,6 +320,9 @@ impl AuthError {
         match self {
             AuthError::Forbidden(m) | AuthError::KindRefused { message: m, .. } => {
                 ApiError::Forbidden(m.clone())
+            }
+            AuthError::NotPermitted(_) => {
+                ApiError::Forbidden("the credential does not permit this request".to_owned())
             }
             AuthError::VerificationUnavailable(m) => {
                 crate::overview::error::internal_fault("verify the supplied credentials", m)
@@ -341,25 +341,32 @@ impl AuthError {
             // forged. The reason stays in the debug log.
             AuthError::MissingCredentials
             | AuthError::InvalidCredentials
-            | AuthError::InvalidToken
-            | AuthError::InvalidDpopToken
-            | AuthError::InvalidDpopProof => {
+            | AuthError::InvalidToken(_)
+            | AuthError::InvalidDpopToken(_)
+            | AuthError::InvalidDpopProof(_) => {
                 ApiError::Unauthorized("authentication failed".to_owned())
             }
         }
     }
 
-    /// The refusal whose challenge this outcome carries, or `None` for an
-    /// outcome that carries none.
-    const fn refusal(&self, schemes: ferrohealth_smart::refusal::Schemes) -> Option<Refusal> {
+    /// The refusal whose challenge this outcome carries, with the reason the
+    /// refusing check of `ferrohealth-smart` names, or `None` for an outcome
+    /// that carries no challenge.
+    const fn refusal(
+        &self,
+        schemes: ferrohealth_smart::refusal::Schemes,
+    ) -> Option<(Refusal, Option<Reason>)> {
         match self {
-            AuthError::MissingCredentials => Some(Refusal::Missing(schemes)),
-            AuthError::InvalidCredentials => Some(Refusal::InvalidBasic),
-            AuthError::InvalidToken => Some(Refusal::InvalidToken),
-            AuthError::InvalidDpopToken => Some(Refusal::InvalidDpopToken),
-            AuthError::InvalidDpopProof => Some(Refusal::InvalidDpopProof),
-            AuthError::MalformedRequest(_) => Some(Refusal::InvalidRequest),
-            AuthError::Forbidden(_) | AuthError::KindRefused { .. } => Some(Refusal::Forbidden),
+            AuthError::MissingCredentials => Some((Refusal::Missing(schemes), None)),
+            AuthError::InvalidCredentials => Some((Refusal::InvalidBasic, None)),
+            AuthError::InvalidToken(reason) => Some((Refusal::InvalidToken, *reason)),
+            AuthError::InvalidDpopToken(reason) => Some((Refusal::InvalidDpopToken, *reason)),
+            AuthError::InvalidDpopProof(reason) => Some((Refusal::InvalidDpopProof, *reason)),
+            AuthError::NotPermitted(reason) => Some((Refusal::Forbidden, *reason)),
+            AuthError::MalformedRequest(_) => Some((Refusal::InvalidRequest, None)),
+            AuthError::Forbidden(_) | AuthError::KindRefused { .. } => {
+                Some((Refusal::Forbidden, None))
+            }
             AuthError::KeyResolution
             | AuthError::VerificationUnavailable(_)
             | AuthError::PartyRefused { .. }
@@ -376,11 +383,11 @@ impl AuthError {
             AuthError::MissingCredentials => "missing_credentials",
             AuthError::InvalidCredentials => "invalid_credentials",
             AuthError::MalformedRequest(_) => "malformed_request",
-            AuthError::InvalidToken => "invalid_token",
-            AuthError::InvalidDpopToken => "invalid_dpop_token",
-            AuthError::InvalidDpopProof => "invalid_dpop_proof",
+            AuthError::InvalidToken(_) => "invalid_token",
+            AuthError::InvalidDpopToken(_) => "invalid_dpop_token",
+            AuthError::InvalidDpopProof(_) => "invalid_dpop_proof",
             AuthError::KeyResolution => "key_resolution",
-            AuthError::Forbidden(_) => "forbidden",
+            AuthError::Forbidden(_) | AuthError::NotPermitted(_) => "forbidden",
             AuthError::VerificationUnavailable(_) => "verification_unavailable",
             AuthError::PartyRefused { code, .. } | AuthError::KindRefused { code, .. } => code,
             AuthError::PartyUnavailable { .. } => "party_unavailable",
@@ -446,59 +453,21 @@ impl Authenticator {
         self.gate.schemes().bearer
     }
 
-    /// Whether every bearer issuer has been read, the answer of the
-    /// readiness indicator: an issuer read in the background answers its
-    /// tokens with `503` until it is.
-    pub(crate) fn issuers_ready(&self) -> bool {
-        self.bearer
-            .as_ref()
-            .is_none_or(verdicts::TokenVerdicts::is_ready)
-    }
-
-    /// Whether the SMART discovery document describes an issuer.
-    pub(crate) fn describes(&self) -> bool {
-        self.primary.is_some()
-    }
-
-    /// Whether an issuer is trusted to assert a patient context, so a
-    /// `patient/` grant counts and the discovery document says so.
-    pub(crate) fn patient_context(&self) -> bool {
-        self.patient_context
-    }
-
-    /// The SMART discovery document of the described issuer under `options`.
-    ///
-    /// The document is built for what `describe` describes the issuer for: a
-    /// `machines` issuer of a deployment that trusts no user-token issuer gets
-    /// the Backend Services document, with no app-launch member (SMART App
-    /// Launch 2.2.0, Backend Services, §Retrieve `.well-known/smart-configuration`).
-    pub(crate) fn smart_configuration(&self, options: &SmartOptions) -> Described {
-        let Some((primary, purpose)) = &self.primary else {
-            return Described::None;
-        };
-        let options = SmartOptions {
-            purpose: *purpose,
-            ..options.clone()
-        };
-        Described::Document(match primary {
-            Primary::Jwt(server) => server.smart_configuration(&options),
-            Primary::Lazy(lazy) => match lazy.get() {
-                Some(server) => server.smart_configuration(&options),
-                None => return Described::Unread,
-            },
-            Primary::Introspection(introspector) => introspector.smart_configuration(&options),
-        })
-    }
-
     /// Builds the `WWW-Authenticate` challenge of `outcome`: the schemes the
     /// gate admits with no error code when no credential was presented
     /// (RFC 6750 §3.1), the refused scheme's otherwise.
+    /// A refusal of `ferrohealth-smart` names the refusing check's reason code
+    /// as the challenge's `error_description` (RFC 6750 §3); one FerroEHR
+    /// makes itself names none.
     pub(crate) fn challenge(&self, outcome: Option<&AuthError>) -> HeaderValue {
-        let refusal = outcome.map_or(Some(Refusal::Missing(self.gate.schemes())), |e| {
+        let refusal = outcome.map_or(Some((Refusal::Missing(self.gate.schemes()), None)), |e| {
             e.refusal(self.gate.schemes())
         });
         let value = refusal
-            .and_then(|refusal| refusal.challenge(Some(&self.realm)))
+            .and_then(|(refusal, reason)| match reason {
+                Some(reason) => Denied::new(refusal, Some(reason)).challenge(Some(&self.realm)),
+                None => refusal.challenge(Some(&self.realm)),
+            })
             .unwrap_or_else(|| format!(r#"Bearer realm="{}""#, self.realm));
         HeaderValue::from_str(&value)
             .unwrap_or_else(|_invalid| HeaderValue::from_static(r#"Bearer realm="ferroehr""#))
@@ -516,7 +485,7 @@ impl Authenticator {
             .gate
             .authenticate_request(parts)
             .await
-            .map_err(|denied| AuthError::from_refusal(denied.refusal()))?;
+            .map_err(|denied| AuthError::from_denied(&denied))?;
         self.admitted(access.clone())
             .await
             .map_err(|refusal| self.naming_caller(refusal, &access))
@@ -1104,7 +1073,7 @@ mod tests {
                 assert_eq!(err.to_api_error().status(), StatusCode::BAD_REQUEST);
             } else {
                 assert!(
-                    matches!(err, AuthError::InvalidToken),
+                    matches!(err, AuthError::InvalidToken(_)),
                     "`{malformed}`: {err:?}"
                 );
                 assert_eq!(err.to_api_error().status(), StatusCode::UNAUTHORIZED);
@@ -1289,37 +1258,6 @@ mod tests {
         ]
     }
 
-    /// RFC 9068 §4 rejects a token "in case of any failure in the validation
-    /// checks" with one `invalid_token` answer (RFC 6750 §3.1): neither the
-    /// status nor the challenge a client sees may vary with the reason.
-    #[tokio::test]
-    async fn every_invalid_token_renders_one_status_and_one_challenge() {
-        let auth = bearer_only().await;
-        let mut challenges: Vec<HeaderValue> = Vec::new();
-        for (case, token) in invalid_tokens() {
-            let err = auth
-                .authenticate(&headers(&format!("Bearer {token}")))
-                .await
-                .expect_err(case);
-            assert!(matches!(err, AuthError::InvalidToken), "{case}: {err:?}");
-            assert_eq!(
-                err.to_api_error().status(),
-                StatusCode::UNAUTHORIZED,
-                "{case}"
-            );
-            challenges.push(auth.challenge(Some(&err)));
-        }
-        let first = challenges.first().expect("cases exist").clone();
-        assert!(
-            challenges.iter().all(|c| *c == first),
-            "the challenge must not vary with the refusal reason: {challenges:?}"
-        );
-        assert_eq!(
-            first,
-            HeaderValue::from_static(r#"Bearer realm="ferroehr", error="invalid_token""#)
-        );
-    }
-
     /// RFC 9068 §4: an issuer whose `token_types` names `JWT` admits a plainly
     /// typed token, and refuses an untyped one and another kind of JWT.
     #[tokio::test]
@@ -1368,7 +1306,7 @@ mod tests {
                 .authenticate(&headers(&format!("Bearer {}", mint(typ))))
                 .await
                 .expect_err("an untyped token and an ID token are refused");
-            assert!(matches!(err, AuthError::InvalidToken), "got {err:?}");
+            assert!(matches!(err, AuthError::InvalidToken(_)), "got {err:?}");
         }
     }
 
@@ -1491,7 +1429,7 @@ mod tests {
             AuthError::MissingCredentials,
             AuthError::InvalidCredentials,
             AuthError::MalformedRequest(String::new()),
-            AuthError::InvalidToken,
+            AuthError::InvalidToken(None),
             AuthError::KeyResolution,
             AuthError::Forbidden(String::new()),
             AuthError::VerificationUnavailable(String::new()),
@@ -1520,7 +1458,7 @@ mod tests {
         };
         assert_eq!(code(&AuthError::MissingCredentials), None);
         assert_eq!(
-            code(&AuthError::InvalidToken).as_deref(),
+            code(&AuthError::InvalidToken(None)).as_deref(),
             Some("invalid_token")
         );
         assert_eq!(
@@ -1771,6 +1709,7 @@ mod tests {
     }
 
     mod basic;
+    mod challenge;
     mod basic_cache;
     mod described;
     mod outcome_status;

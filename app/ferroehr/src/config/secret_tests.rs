@@ -265,12 +265,13 @@ fn url_userinfo_reaches_no_rendering() {
     c.auth.shared.issuer = [(
         "machines".to_owned(),
         ferrohealth_smart::config::IssuerEntry {
-        introspection: Some(ferrohealth_smart::config::IntrospectionSection {
-            endpoint: leaky(21),
-            ..ferrohealth_smart::config::IntrospectionSection::default()
-        }),
-        ..auth_section::machine("https://idp.example")
-    })]
+            introspection: Some(ferrohealth_smart::config::IntrospectionSection {
+                endpoint: leaky(21),
+                ..ferrohealth_smart::config::IntrospectionSection::default()
+            }),
+            ..auth_section::machine("https://idp.example")
+        },
+    )]
     .into();
     c.record.multimedia.s3.url = Some(leaky(14));
     c.audit.syslog = Some(crate::system_log::config::SyslogConfig {
@@ -392,7 +393,10 @@ fn redacted_json_masks_every_secret_field() {
 
     // Non-secret identifiers stay visible (they are not credentials).
     assert_eq!(value["auth"]["basic"]["users"][0]["user"], "alice");
-    assert_eq!(value["auth"]["issuer"]["machines"]["issuer"], "https://idp.example");
+    assert_eq!(
+        value["auth"]["issuer"]["machines"]["issuer"],
+        "https://idp.example"
+    );
     assert_eq!(
         value["record"]["multimedia"]["s3"]["access_key_id"],
         "AKIA_PUBLIC_ID"
@@ -556,4 +560,3 @@ fn the_removed_import_role_is_refused() {
 fn the_removed_identifier_reader_role_is_refused() {
     removed_rbac_key("identifier_reader_role", "\"IDENTIFIER_READER\"");
 }
-

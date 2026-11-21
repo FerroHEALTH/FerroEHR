@@ -434,8 +434,7 @@ impl Agreement {
     fn chained(&self, partner: &PartnerIssuer, holder: Retention, errors: &mut Vec<String>) {
         match partner.correlation {
             Correlation::None => errors.push(
-                "it is chained and its issuer's federation table maps no correlation_id"
-                    .to_owned(),
+                "it is chained and its issuer's federation table maps no correlation_id".to_owned(),
             ),
             Correlation::Constant => errors.push(
                 "it is chained and its issuer's federation table maps correlation_id \

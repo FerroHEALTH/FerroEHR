@@ -38,7 +38,8 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::config::AppConfig;
-use crate::extensions::access::authn::{Authenticator, Described};
+use crate::extensions::access::authn::Authenticator;
+use crate::extensions::access::authn::described::Described;
 use crate::state::AppState;
 
 use ferroehr::config::smart::SmartConfig;
@@ -324,10 +325,10 @@ fn unavailable(reason: &'static str) -> Response {
 async fn smart_configuration(Extension(document): Extension<Document>) -> Response {
     let body = match document.serialized.get() {
         Some(body) => body.clone(),
-        None => match document
-            .authenticator
-            .smart_configuration(&document.options)
-        {
+        None => match {
+            document.authenticator.read_described().await;
+            document.authenticator.smart_configuration(&document.options)
+        } {
             Described::Document(built) if built.get("token_endpoint").is_none() => {
                 tracing::warn!(
                     reason = NO_TOKEN_ENDPOINT,

@@ -73,7 +73,8 @@ use ferrohealth_smart::sender::replay::ReplayStore;
 use tokio::net::TcpListener;
 
 use crate::config::AppConfig;
-use crate::extensions::access::authn::{Authenticator, Described};
+use crate::extensions::access::authn::Authenticator;
+use crate::extensions::access::authn::described::Described;
 use crate::extensions::access::authz::AuthzHandle;
 use crate::extensions::management::Observability;
 use crate::router::{management_router, router};

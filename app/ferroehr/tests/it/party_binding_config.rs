@@ -127,7 +127,9 @@ fn a_full_configuration_loads_and_states_its_binding() {
     config.validate().expect("validates");
     let posture = BindingPosture::of(&config);
     assert_eq!(posture.issuers.len(), 4);
-    let staff = &posture.issuers[0];
+    // The issuers are in name order: federation, machines, patients, staff.
+    let staff = &posture.issuers[3];
+    assert_eq!(staff.issuer, "https://idp.example/realms/staff");
     assert_eq!(
         staff.identifier_issuer.as_deref(),
         Some("urn:example:staff-login")
@@ -142,7 +144,7 @@ fn a_full_configuration_loads_and_states_its_binding() {
         &config,
     ))
     .expect("renders");
-    assert_eq!(info["binding"]["issuers"][0]["kind"], "persons", "{info}");
+    assert_eq!(info["binding"]["issuers"][3]["kind"], "persons", "{info}");
     assert_eq!(
         info["binding"]["agreements"],
         serde_json::json!([]),
@@ -169,9 +171,7 @@ fn a_persons_issuer_with_no_party_table_is_refused() {
         "",
     ));
     assert!(
-        text.contains(
-            "the persons issuer \"https://idp.example/realms/staff\" has no party table"
-        ),
+        text.contains("the persons issuer \"https://idp.example/realms/staff\" has no party table"),
         "{text}"
     );
 }
@@ -381,7 +381,9 @@ fn a_role_issuer_of_another_kind_is_refused() {
         "role_issuers = [\"https://idp.example/realms/staff\"]",
     ));
     assert!(
-        text.contains("authz.rbac.role_issuers names the issuer \"https://idp.example/realms/staff\""),
+        text.contains(
+            "authz.rbac.role_issuers names the issuer \"https://idp.example/realms/staff\""
+        ),
         "an issuer is named by its table, never by its URL: {text}"
     );
 }
