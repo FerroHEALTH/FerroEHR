@@ -122,11 +122,17 @@ impl Tier {
 /// subquery over `node`: the row of the same tier and version whose `num`
 /// the row's `shared` column records under `key` (an SQL expression).
 fn holder_member(alias: &str, key: &str, tier: Tier) -> String {
+    holder_member_at(alias, key, &format!("(\"{alias}\".shared ->> {key})::int"), tier)
+}
+
+/// The member `key` of the row `num` of the version and tier of the row
+/// `alias`, as a scalar subquery: one probe of the node key.
+fn holder_member_at(alias: &str, key: &str, num: &str, tier: Tier) -> String {
     let tier = tier.sql(alias);
     format!(
         "(SELECT h.data -> {key} FROM node h WHERE h.tier = {tier} \
          AND h.vo_id = \"{alias}\".vo_id AND h.sys_version = \"{alias}\".sys_version \
-         AND h.num = (\"{alias}\".shared ->> {key})::int)"
+         AND h.num = {num})"
     )
 }
 
@@ -150,13 +156,11 @@ pub fn member_data(alias: &str, key: &str, tier: Tier) -> String {
 /// `data` with no further read.
 #[must_use]
 pub fn resolved_data(alias: &str, tier: Tier) -> String {
-    let tier = tier.sql(alias);
     format!(
         "CASE WHEN \"{alias}\".shared IS NULL THEN \"{alias}\".data \
-         ELSE COALESCE(\"{alias}\".data, '{{}}'::jsonb) || (SELECT jsonb_object_agg(s.key, \
-         h.data -> s.key) FROM jsonb_each_text(\"{alias}\".shared) AS s(key, num) JOIN node h \
-         ON h.tier = {tier} AND h.vo_id = \"{alias}\".vo_id \
-         AND h.sys_version = \"{alias}\".sys_version AND h.num = s.num::int) END"
+         ELSE COALESCE(\"{alias}\".data, '{{}}'::jsonb) || (SELECT jsonb_object_agg(s.key, {}) \
+         FROM jsonb_each_text(\"{alias}\".shared) AS s(key, num)) END",
+        holder_member_at(alias, "s.key", "s.num::int", tier)
     )
 }
 
