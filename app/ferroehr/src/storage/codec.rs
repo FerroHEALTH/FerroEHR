@@ -21,6 +21,8 @@
               round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
 )]
 
+use std::collections::BTreeMap;
+
 use serde_json::{Map, Value};
 
 use crate::storage::error::StorageError;
@@ -178,13 +180,26 @@ pub fn reassemble<R: NodeContent>(rows: &[R]) -> Result<Value, StorageError> {
         )));
     }
     let mut root = root_row.data().clone();
+    // A row stores its own step only; its path from the root is its parent's
+    // path and that step, and a parent precedes its children in `num` order.
+    let mut paths: BTreeMap<i32, String> = BTreeMap::new();
+    paths.insert(0, String::new());
     for row in ordered.iter().skip(1) {
-        attach(&mut root, row.path(), row.data().clone())?;
+        let parent = paths.get(&row.parent_num()).ok_or_else(|| {
+            StorageError::InvalidRows(format!(
+                "row {} names parent {}, which no earlier row is",
+                row.num(),
+                row.parent_num()
+            ))
+        })?;
+        let path = format!("{parent}{}", row.path());
+        attach(&mut root, &path, row.data().clone())?;
+        paths.insert(row.num(), path);
     }
     Ok(root)
 }
 
-/// Re-attaches one pruned fragment at its materialized path. Parents come
+/// Re-attaches one pruned fragment at its path from the root. Parents come
 /// before children (`num` order), so every ancestor is already in place.
 fn attach(root: &mut Value, path: &str, fragment: Value) -> Result<(), StorageError> {
     let missing =
@@ -253,6 +268,21 @@ mod tests {
         reassemble(rows).unwrap()
     }
 
+    /// Each row's path from the root, rebuilt from the stored steps through
+    /// `parent_num`, as [`reassemble`] rebuilds it.
+    fn full_paths(rows: &[NodeRow]) -> Vec<String> {
+        let mut paths: Vec<String> = Vec::with_capacity(rows.len());
+        for row in rows {
+            let parent = if row.num == 0 {
+                String::new()
+            } else {
+                paths[usize::try_from(row.parent_num).unwrap()].clone()
+            };
+            paths.push(format!("{parent}{}", row.path));
+        }
+        paths
+    }
+
     fn sample() -> Value {
         json!({
             "_type": "COMPOSITION",
@@ -287,12 +317,14 @@ mod tests {
     #[test]
     fn decomposes_with_nested_set_numbers() {
         let rows = decompose(sample()).unwrap();
+        let paths = full_paths(&rows);
         let brief: Vec<BriefRow> = rows
             .iter()
-            .map(|r| {
+            .zip(&paths)
+            .map(|(r, path)| {
                 (
                     r.rm_type.as_str(),
-                    r.path.as_str(),
+                    path.as_str(),
                     r.num,
                     r.num_cap,
                     r.parent_num,
@@ -308,6 +340,12 @@ mod tests {
                 ("HISTORY", "content0.data.", 3, 4, 2),
                 ("POINT_EVENT", "content0.data.events0.", 4, 4, 3),
             ]
+        );
+        // Each row stores its own step under its parent alone.
+        let steps: Vec<&str> = rows.iter().map(|r| r.path.as_str()).collect();
+        assert_eq!(
+            steps,
+            vec!["", "context.", "content0.", "data.", "events0."]
         );
         // Structure children are pruned out of the parent fragments.
         assert!(rows[0].data.get("context").is_none());
@@ -524,9 +562,11 @@ mod tests {
                 "{attribute} is pruned off the party root"
             );
         }
+        let full = full_paths(&rows);
         let paths: Vec<(&str, &str)> = rows
             .iter()
-            .map(|r| (r.rm_type.as_str(), r.path.as_str()))
+            .zip(&full)
+            .map(|(r, path)| (r.rm_type.as_str(), path.as_str()))
             .collect();
         assert_eq!(
             paths,
@@ -550,9 +590,11 @@ mod tests {
     fn role_round_trips_losslessly() {
         let original = role();
         let rows = decompose(original.clone()).unwrap();
+        let full = full_paths(&rows);
         let paths: Vec<(&str, &str)> = rows
             .iter()
-            .map(|r| (r.rm_type.as_str(), r.path.as_str()))
+            .zip(&full)
+            .map(|(r, path)| (r.rm_type.as_str(), path.as_str()))
             .collect();
         assert_eq!(
             paths,
@@ -579,10 +621,14 @@ mod tests {
         original["contacts"][0]["addresses"][0]["archetype_node_id"] =
             json!("openEHR-DEMOGRAPHIC-ADDRESS.address.v1");
         let rows = decompose(original.clone()).unwrap();
+        let full = full_paths(&rows);
         let row = |path: &str| {
-            rows.iter()
-                .find(|r| r.path == path)
-                .unwrap_or_else(|| panic!("no row at {path}"))
+            let (row, _) = rows
+                .iter()
+                .zip(&full)
+                .find(|(_, full)| *full == path)
+                .unwrap_or_else(|| panic!("no row at {path}"));
+            row
         };
         let address = row("contacts0.addresses0.");
         assert_eq!(

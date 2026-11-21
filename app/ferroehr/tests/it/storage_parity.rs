@@ -1287,6 +1287,24 @@ async fn stored_demographic_rows(pool: &PgPool, vo_id: VoId, sys_version: i32) -
         .collect()
 }
 
+/// Each row's path from the root, rebuilt from the stored steps through
+/// `parent_num`, as reassembly rebuilds it; `rows` are in `num` order.
+fn full_paths(rows: &[ReadRow]) -> Vec<String> {
+    let mut by_num: std::collections::BTreeMap<i32, String> = std::collections::BTreeMap::new();
+    rows.iter()
+        .map(|row| {
+            let parent = if row.num == 0 {
+                String::new()
+            } else {
+                by_num[&row.parent_num].clone()
+            };
+            let path = format!("{parent}{}", row.path);
+            by_num.insert(row.num, path.clone());
+            path
+        })
+        .collect()
+}
+
 /// Rewrite one party version's rows into the shape the decomposition wrote
 /// before the demographic containers earned rows of their own: the
 /// `identities` and `contacts` subtrees inline on the party root, and only the
@@ -1297,8 +1315,12 @@ async fn stored_demographic_rows(pool: &PgPool, vo_id: VoId, sys_version: i32) -
 /// written them through this build's commit path.
 async fn write_the_old_party_shape(pool: &PgPool, vo_id: VoId, sys_version: i32) {
     let removed = sqlx::query(
-        "DELETE FROM party.node WHERE vo_id = $1 AND sys_version = $2 \
-         AND (path LIKE 'identities%' OR path LIKE 'contacts%')",
+        "DELETE FROM party.node n USING party.node c \
+         WHERE n.vo_id = $1 AND n.sys_version = $2 \
+         AND c.vo_id = n.vo_id AND c.sys_version = n.sys_version \
+         AND c.num > 0 AND c.parent_num = 0 \
+         AND (c.path LIKE 'identities%' OR c.path LIKE 'contacts%') \
+         AND n.num BETWEEN c.num AND c.num_cap",
     )
     .bind(vo_id.0)
     .bind(sys_version)
@@ -1399,13 +1421,13 @@ async fn a_stale_decomposition_is_reported_and_rebuilt() {
         "one rebuild is the whole upgrade step: {after:?}"
     );
     let current_rows = stored_demographic_rows(&pool, vo_id, sys_version).await;
+    let current_paths = full_paths(&current_rows);
     assert!(
-        current_rows
+        current_paths
             .iter()
-            .any(|row| row.path == "contacts0.addresses0."),
+            .any(|path| path == "contacts0.addresses0."),
         "the contact address is a row of its own now, so a predicate bound to \
-         its archetype reaches this version: {:?}",
-        current_rows.iter().map(|row| &row.path).collect::<Vec<_>>()
+         its archetype reaches this version: {current_paths:?}"
     );
 
     assert_eq!(

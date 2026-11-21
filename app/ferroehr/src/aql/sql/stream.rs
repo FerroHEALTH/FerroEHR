@@ -476,7 +476,7 @@ impl Builder<'_> {
     /// filter already pins: a versioned object's `num = 0` row has
     /// `rm_type = kind` by construction — and (b) no identified path reads the
     /// root's node row ([`root_node_referenced`]). It is then one wasted
-    /// `pk_node` probe per spine row, and the root's subtree interval spans the
+    /// `node_hot_pkey` probe per spine row, and the root's subtree interval spans the
     /// whole versioned object, so first-level containment reduces to sharing
     /// the version.
     ///

@@ -78,8 +78,10 @@ CREATE TABLE node (
     -- half; name_terminology is that code's terminology_id.
     name_code        text,
     name_terminology text,
-    -- Materialized path from the root; byte order under COLLATE "C" equals
-    -- tree order. Used for reassembly, never as an AQL predicate.
+    -- The node's own step under its parent: the attribute, the array index
+    -- when the attribute holds an array, and a closing '.' (`events1.`);
+    -- empty on the root. Reassembly places a row under its parent_num, and
+    -- an AQL attribute step matches it with parent_num bound.
     path        text COLLATE "C" NOT NULL,
     -- The node's canonical openEHR JSON fragment, with structure children
     -- pruned and without the keys the row's columns hold
@@ -122,7 +124,6 @@ CREATE TABLE node (
     -- ext.openehr_timestamp at write; the column an AQL time filter enters
     -- through (idx_node_hot_event_time).
     event_time  timestamptz,
-    CONSTRAINT pk_node PRIMARY KEY (tier, vo_id, sys_version, num),
     CONSTRAINT ck_node_tier CHECK (tier IN ('hot', 'cold')),
     -- The nested-set invariant: a subtree cap is at or after its own number,
     -- and a parent precedes its child in pre-order. The root (num = 0,
@@ -132,6 +133,16 @@ CREATE TABLE node (
 ) PARTITION BY LIST (tier);
 CREATE TABLE node_hot  PARTITION OF node FOR VALUES IN ('hot');
 CREATE TABLE node_cold PARTITION OF node FOR VALUES IN ('cold');
+-- One row per node of a version: reassembly reads one row per num, and the
+-- AQL joins that pin a node by its number (the root at num = 0, CONTAINS
+-- over num..=num_cap) enter through this key. Declared on each partition
+-- rather than on the parent, so it needs no tier column of its own: tier is
+-- constant within a partition, and on the parent a unique key would have to
+-- carry it (https://www.postgresql.org/docs/18/sql-createtable.html), eight
+-- of the forty bytes of every entry. An archived object moves whole, so no version's rows are split
+-- across tiers. No openEHR spec governs index layout: our own design.
+ALTER TABLE node_hot ADD CONSTRAINT node_hot_pkey PRIMARY KEY (vo_id, sys_version, num);
+ALTER TABLE node_cold ADD CONSTRAINT node_cold_pkey PRIMARY KEY (vo_id, sys_version, num);
 -- The dashboard ORDER BY: the COMPOSITION roots of one EHR by context start
 -- time. COMPOSITION occurs only at a root, so the rm_type predicate is exactly
 -- what the query proves.
@@ -238,7 +249,7 @@ COMMENT ON COLUMN node.name_terminology IS 'The terminology_id of the node''s na
 COMMENT ON COLUMN node.arch_entity IS 'qualified_rm_entity of a full archetype HRID, lowercased for comparison (BASE base_types master05 §Archetype Identifiers); NULL on at/id-code nodes.';
 COMMENT ON COLUMN node.arch_concept IS 'The full domain_concept (specialisation segments included) of a full archetype HRID, lowercased, so a parent query matches a child by prefix (BASE architecture_overview master10 §Design-time Relationships).';
 COMMENT ON COLUMN node.arch_major IS 'The major version of a full archetype HRID; the interface-reference major boundary is hard (AM master07 §Querying). NULL on at/id-code nodes.';
-COMMENT ON COLUMN node.path IS 'Materialized path from the root; byte order under COLLATE "C" equals tree order. Reassembly only — never an AQL predicate.';
+COMMENT ON COLUMN node.path IS 'The node''s own step under its parent (attribute, array index, closing dot), empty on the root; reassembly places the row under parent_num, and an AQL attribute step matches it with parent_num bound. Our own storage design.';
 COMMENT ON COLUMN node.context_start IS 'Promoted EVENT_CONTEXT.start_time.value on the COMPOSITION root; NULL elsewhere and for context-less persistent compositions. Our own storage design.';
 COMMENT ON COLUMN node.value_type IS 'The RM type of the ELEMENT value the typed value columns hold; NULL when data holds the value. Our own storage design.';
 COMMENT ON COLUMN node.value_num IS 'A DV_QUANTITY or DV_COUNT magnitude, or a DV_ORDINAL value, as the canonical JSON carried it.';

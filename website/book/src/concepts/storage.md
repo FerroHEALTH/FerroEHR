@@ -315,8 +315,10 @@ on, so hot paths never open the JSON:
   roots, serving ordering from two partial indexes: one per EHR for a
   dashboard, one over the whole population for a query that orders every
   composition and takes the first page;
-- `path`, the materialized path from the root (`COLLATE "C"`, so byte order
-  equals tree order), used only for reassembly, never as an AQL predicate.
+- `path`, the node's own step under its parent (`events1.`: the attribute,
+  the array index, a closing dot). Reassembly places each row under its
+  `parent_num`, and an AQL attribute step matches the step with `parent_num`
+  bound.
 
 ## The write path: one transaction per commit
 

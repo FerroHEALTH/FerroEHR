@@ -186,8 +186,8 @@ fn descendant_in_from(child: &str, parent: &str, parent_types: &crate::aql::ir::
 
 /// Whether `child` is the node an attribute step `attribute` reaches from
 /// `parent`: a strict descendant whose structure parent IS `parent` and whose
-/// stored path continues `parent`'s by exactly that attribute (the codec
-/// writes `<parent path><attribute>[<index>].`).
+/// stored step under it is exactly that attribute (the codec writes
+/// `<attribute>[<index>].`).
 ///
 /// BASE `architecture_overview/master11-paths.adoc` §Basic Syntax: a path
 /// "select\[s\] the object which is the value of the final attribute name in the
@@ -202,12 +202,8 @@ pub(super) fn attribute_child(child: &str, parent: &str, attribute: &str) -> Exp
     strict_descendant(child, parent)
         .and(col(child, Node::ParentNum).eq(col(parent, Node::Num)))
         .and(Expr::cust_with_exprs(
-            "substr($1, length($2) + 1) ~ $3",
-            [
-                col(child, Node::Path),
-                col(parent, Node::Path),
-                Expr::val(pattern),
-            ],
+            "$1 ~ $2",
+            [col(child, Node::Path), Expr::val(pattern)],
         ))
 }
 

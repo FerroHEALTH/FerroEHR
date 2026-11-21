@@ -419,9 +419,11 @@ fn corpus(file: &str) -> String {
 /// commit carries no coded ELEMENT value and keeps its ceiling. The version
 /// tree uniqueness has since served the read by version id in place of a
 /// separate index (#6207): 96 bytes fewer on each commit, and both ceilings
-/// fell by it.
+/// fell by it. A node row has since stored its own path step, and the node
+/// key carries no tier (#6204): 13,650 bytes fewer on an IPS commit and 255
+/// on a lab commit, and the ceilings fell by as much.
 const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
-    [(Fixture::Ips, 244_669, 8), (Fixture::Lab, 10_197, 8)];
+    [(Fixture::Ips, 231_019, 8), (Fixture::Lab, 9942, 8)];
 
 /// Whether `relation` is written by a commit rather than by the access log or
 /// the audit intake beside it.

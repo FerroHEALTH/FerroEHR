@@ -246,6 +246,11 @@ struct Budget {
 /// record or a system audit record, the read from the version copy among
 /// them, measured beside the merge base, and each WAL ceiling fell by its
 /// path's figure.
+/// A node row has since stored its own path step, and the node key carries no
+/// tier (#6204): 14,098, 14,016 and 13,880 bytes fewer on the JSON, XML and
+/// FLAT commits of the IPS composition, 13,520 on a CONTRIBUTION commit, and
+/// 64 and 136 on the two party commits, measured beside the merge base, and
+/// each WAL ceiling fell by its path's figure.
 const BUDGETS: [Budget; 20] = [
     Budget {
         path: Path::CommitJson,
@@ -254,7 +259,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_530_778,
         round_trips: 9,
         nested: 13,
-        wal: 245_024,
+        wal: 230_926,
     },
     Budget {
         path: Path::CommitXml,
@@ -263,7 +268,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_533_031,
         round_trips: 9,
         nested: 14,
-        wal: 245_097,
+        wal: 231_081,
     },
     Budget {
         path: Path::CommitFlat,
@@ -272,7 +277,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_528_525,
         round_trips: 9,
         nested: 13,
-        wal: 245_071,
+        wal: 231_191,
     },
     Budget {
         path: Path::ReadJson,
@@ -353,7 +358,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 1_649_934,
         round_trips: 13,
         nested: 14,
-        wal: 245_584,
+        wal: 232_064,
     },
     Budget {
         path: Path::ReadAtTime,
@@ -389,7 +394,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 117_146,
         round_trips: 31,
         nested: 20,
-        wal: 7761,
+        wal: 7697,
     },
     Budget {
         path: Path::AqlMatches,
@@ -416,7 +421,7 @@ const BUDGETS: [Budget; 20] = [
         peak_bytes: 132_147,
         round_trips: 31,
         nested: 21,
-        wal: 10_402,
+        wal: 10_266,
     },
     Budget {
         path: Path::ReadVersion,

@@ -47,7 +47,9 @@ pub struct StoredNode {
     pub name_code: Option<String>,
     /// The terminology id of a coded name.
     pub name_terminology: Option<String>,
-    /// The materialized path from the root (`content0.data.events1.`).
+    /// The node's own step under its parent (`events1.`), empty on the root:
+    /// the attribute, the array index when the attribute holds an array, and a
+    /// closing `.`.
     pub path: String,
     /// The slimmed fragment text, `None` when nothing is left of it.
     pub data: Option<String>,
@@ -143,7 +145,7 @@ pub fn decompose(
 impl Walk<'_, '_> {
     /// Pushes the row of `node` and then, in written order, the rows of its
     /// structure children.
-    fn node(&mut self, node: NodeId, path: String, parent: i32) -> Result<(), StorageError> {
+    fn node(&mut self, node: NodeId, step: String, parent: i32) -> Result<(), StorageError> {
         let (body, root) = (self.body, self.root);
         let index = self.rows.len();
         let num = i32::try_from(index).unwrap_or(i32::MAX);
@@ -212,15 +214,15 @@ impl Walk<'_, '_> {
             let attribute = body.key(member);
             let child = Rendered::value(member);
             if body.kind(child) == Some(Kind::Object) {
-                self.node(child, format!("{path}{attribute}."), num)?;
+                self.node(child, format!("{attribute}."), num)?;
             } else {
                 for (i, item) in body.items(child).iter().enumerate() {
-                    self.node(*item, format!("{path}{attribute}{i}."), num)?;
+                    self.node(*item, format!("{attribute}{i}."), num)?;
                 }
             }
         }
         if let Some(row) = self.rows.get_mut(index) {
-            row.path = path;
+            row.path = step;
         }
         Ok(())
     }
