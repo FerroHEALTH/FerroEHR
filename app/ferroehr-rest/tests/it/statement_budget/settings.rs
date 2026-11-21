@@ -43,21 +43,23 @@ struct Budget {
 /// 3% on the WAL bytes and none on the counts. A write of a new class sent 16
 /// round trips, two of them for its class, before the class took one
 /// statement; the WAL bytes did not move (12,073 to 12,075 and 9,791 to 9,797
-/// per write before and after).
+/// per write before and after). The access-log write taking no row lock on a
+/// shared part (#6241) wrote 108 and 111 bytes fewer per write, measured
+/// beside the merge base, and each WAL ceiling fell by as much.
 const BUDGETS: [Budget; 2] = [
     Budget {
         name: "a new class",
         round_trips: 15,
         nested: 9,
         class_statements: 1,
-        wal: 12_437,
+        wal: 12_329,
     },
     Budget {
         name: "a stored class",
         round_trips: 15,
         nested: 6,
         class_statements: 1,
-        wal: 10_090,
+        wal: 9_979,
     },
 ];
 

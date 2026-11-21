@@ -30,11 +30,14 @@ const REQUESTS: u64 = 20;
 /// shared part keeps what the classification read (#6005), and 207 per pass
 /// that links (#6010). The token index taking the request and resource ids
 /// as keys in place of their two hash B-trees (#6202) measured 2634, 2087,
-/// 1777 and 2543 per entry, and each entry ceiling fell by its drop.
+/// 1777 and 2543 per entry, and each entry ceiling fell by its drop. The
+/// access-log write taking no row lock on a shared part (#6241) measured
+/// 2580, 2033, 1759 and 2543 beside the merge base, and each entry ceiling
+/// fell by its drop.
 const CEILINGS: [(Kind, (u64, u64)); 4] = [
-    (Kind::Read, (2705, 211)),
-    (Kind::Single, (2135, 211)),
-    (Kind::Population, (1815, 211)),
+    (Kind::Read, (2651, 211)),
+    (Kind::Single, (2081, 211)),
+    (Kind::Population, (1797, 211)),
     (Kind::Write, (2596, 211)),
 ];
 

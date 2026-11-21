@@ -465,9 +465,9 @@ impl AccessLogStore {
 }
 
 impl AccessLogStore {
-    /// Remove up to `limit` shared parts whose `retain_until` is before
-    /// `today` and that no entry names (`audit.access_log_shared_collect`),
-    /// and return how many.
+    /// Remove up to `limit` shared parts whose `retain_until` is more than a
+    /// day before `today` and that no entry names
+    /// (`audit.access_log_shared_collect`), and return how many.
     ///
     /// # Errors
     /// The store errors when the statement fails.

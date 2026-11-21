@@ -54,6 +54,7 @@ REVOKE ALL ON FUNCTION
     fold_access_log_imported(p_now timestamp with time zone, p_limit integer),
     audit_intake_reject_change(),
     access_log_intake_unknown(p_what text, p_digest text, p_removed boolean),
+    access_log_intake_part_gone(p_digest text),
     access_log_intake_take(p_record_types text[], p_uids text[], p_times text[], p_contents text[], p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[], p_retain_until text[], p_action_terminologies text[], p_action_codes text[], p_result_terminologies text[], p_result_codes text[], p_actions text[], p_outcomes smallint[], p_principals text[], p_patient_ids text[], p_resource_ids text[], p_request_ids text[], p_client_ips text[], p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[], p_shared_digests text[], p_shared_contents text[], p_token_entries integer[], p_token_parameters text[], p_token_systems text[], p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid, p_token_digests bytea[]),
     audit_intake_release(p_ids uuid[]),
     audit_intake_discard(p_ids uuid[])
@@ -154,6 +155,7 @@ BEGIN
             chain_verification_lag(p_chain text),
             fold_access_log_imported(p_now timestamp with time zone, p_limit integer),
             access_log_intake_unknown(p_what text, p_digest text, p_removed boolean),
+            access_log_intake_part_gone(p_digest text),
             access_log_intake_take(p_record_types text[], p_uids text[], p_times text[], p_contents text[], p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[], p_retain_until text[], p_action_terminologies text[], p_action_codes text[], p_result_terminologies text[], p_result_codes text[], p_actions text[], p_outcomes smallint[], p_principals text[], p_patient_ids text[], p_resource_ids text[], p_request_ids text[], p_client_ips text[], p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[], p_shared_digests text[], p_shared_contents text[], p_token_entries integer[], p_token_parameters text[], p_token_systems text[], p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid, p_token_digests bytea[]),
             audit_intake_release(p_ids uuid[]),
             audit_intake_discard(p_ids uuid[])
