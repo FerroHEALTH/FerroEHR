@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The policy grants (#5435) over a real PostgreSQL 18, every party built on
+//! The policy grants (#5435) over a real PostgreSQL 19, every party built on
 //! a deployment's own archetypes with no template: a client resolves to the
 //! `ACTOR` carrying its `client_id` identifier, its grants are the operation
 //! codes of `openehr_access` in the credentials of the `ROLE`s it

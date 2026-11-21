@@ -7,11 +7,11 @@ paths: ["app/ferroehr/**"]
 `ferroehr` is the only crate that talks to PostgreSQL, using `sqlx` 0.9 (driver,
 pool, migrations) + `sea-query` 1.0 + `sea-query-sqlx` (the dynamic SQL builder
 + binder; `sea-query-binder` is the obsolete sea-query-0.32 pairing — do not
-use it). **Not sea-orm.** Target PostgreSQL 18.6+.
+use it). **Not sea-orm.** Target PostgreSQL 19.0+.
 
 ## Migrations
 
-- The schema is **our own PG18-native design**: the append-only `version`
+- The schema is **our own PG19-native design**: the append-only `version`
   table with its mutable `vo_head` row, the unified `node` table, the
   tier partitions that hold the archival tier, supporting tables, and our
   `ext` helper functions. It is live and CNF-pipeline-verified. The clinical
@@ -93,7 +93,7 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
   files (#5741).
 - Create migrations with the official CLI only:
   `sqlx migrate add --source app/ferroehr/migrations/<schema> --sequential <desc>`,
-  written as modern PG 18 SQL (`uuidv7()`, temporal `WITHOUT OVERLAPS`,
+  written as modern PG 19 SQL (`uuidv7()`, temporal `WITHOUT OVERLAPS`,
   `RETURNING OLD/NEW` where the design calls for them).
 - `ferroehr::db::prepare` bootstraps the schemas and runs the sets in
   order (`ext`, `clinical`, `party`, `audit`); each keeps its own
@@ -108,7 +108,7 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
 - Prefer `sqlx::query!`/`query_as!` (compile-time checked) wherever the SQL
   is static; drop to `sea-query` when the AQL engine needs to build SQL
   dynamically (ASL → SQL is inherently dynamic — see `aql-engine.md`).
-- Use native PG 18 features where the plan calls for them: `uuidv7()` for
+- Use native PG 19 features where the plan calls for them: `uuidv7()` for
   generated IDs, `RETURNING OLD/NEW` for audit/history writes, temporal
   constraints where the schema models versioned rows, skip scan/JSON_TABLE
   where they simplify AQL-generated SQL.
@@ -135,7 +135,7 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
 
 ## Testing
 
-- Integration tests get a real PostgreSQL 18 database from the shared
+- Integration tests get a real PostgreSQL 19 database from the shared
   harness (`testkit::db()`, `tools/testkit` — one server, template-clone per
   test); the template build verifies the vendored migrations apply cleanly.
   See `testing.md` for the full test discipline.

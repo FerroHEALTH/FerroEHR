@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end AQL engine tests against a real PostgreSQL 18 (shared testkit harness):
+//! End-to-end AQL engine tests against a real PostgreSQL 19 (shared testkit harness):
 //! seed EHRs + COMPOSITIONs through the service, then execute AQL through the
 //! `QueryService` seam and assert on the assembled ITS-REST 1.1.0 `RESULT_SET`.
 //!
@@ -1758,7 +1758,7 @@ async fn create_comp_body(svc: &FerroEhrService, ehr_id: &str, body: Value, name
         .version_uid()
 }
 
-/// uid synthesis, end to end against real PG 18: the patient-dashboard shape orders
+/// uid synthesis, end to end against real PG 19: the patient-dashboard shape orders
 /// by the promoted `node.context_start` column (verified byte-equal to the
 /// pre-promotion correlated-subquery ordering in both directions, including the
 /// NULL-context row), and `c/uid/value` returns the exact server-assigned

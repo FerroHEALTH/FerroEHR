@@ -289,7 +289,7 @@ async fn an_aql_request_stays_within_its_statement_budget() {
         .await
         .expect(
             "pg_stat_statements: the server loads it (shared_preload_libraries); a testkit \
-             container started before #5885 does not: docker rm -f ferroehr-testkit-pg18",
+             container started before #5885 does not: docker rm -f ferroehr-testkit-pg19",
         );
     let track: String = sqlx::query_scalar("SELECT current_setting('pg_stat_statements.track')")
         .fetch_one(&pool)

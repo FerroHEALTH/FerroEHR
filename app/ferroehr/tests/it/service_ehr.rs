@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end service tests against a real PostgreSQL 18 (shared testkit harness):
+//! End-to-end service tests against a real PostgreSQL 19 (shared testkit harness):
 //! the EHR / `EHR_STATUS` / COMPOSITION / DIRECTORY / CONTRIBUTION lifecycle,
 //! including versioning, optimistic concurrency, time-travel, and logical
 //! delete — driven through the `EhrService` envelope seam exactly as the

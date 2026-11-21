@@ -1,7 +1,7 @@
 # docs/ — map of the documentation tree
 
 A pure-Rust, openEHR-spec-conformant CDR (ITS-REST 1.1.0 + AQL 1.1) with
-greenfield PG18-native internals. This file says what lives where and which
+greenfield PG19-native internals. This file says what lives where and which
 document is authoritative for what. When two docs disagree, the **newer
 decision wins**. The vendored specs are the only doc oracle; live behaviour
 is documented in the code + the user website.
@@ -25,7 +25,7 @@ or cites an ADR; the only citable references are the vendored specs and
 official external documentation.** (The current design in brief: the spec +
 ITS layer is generated from the vendored machine-readable specs by
 `openehr-codegen`; the application is idiomatic Rust of our own design on
-those crates, with its own PG18-native storage and typed AQL engine, four
+those crates, with its own PG19-native storage and typed AQL engine, four
 app crates with zero re-exports, a service layer of our own design, and enterprise
 capabilities — eventing, multi-tenancy, multimedia
 externalization; acceptance is the openEHR conformance suite. See

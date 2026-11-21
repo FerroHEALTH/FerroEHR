@@ -12,7 +12,7 @@
 //! `architecture_overview/master07-security.adoc` §Access logging).
 
 use jiff::Timestamp;
-use sqlx::Row;
+use sqlx::{AssertSqlSafe, Row};
 
 use ferroehr::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
@@ -98,8 +98,7 @@ async fn insert_persists_the_columns_and_serves_the_rendered_document() {
 
     let row = sqlx::query(
         "SELECT action, outcome, event_code, operation, principal, patient_id, \
-         resource_class, resource_id, client_ip, token_id, \
-         delivered_syslog_at, delivered_fhir_feed_at \
+         resource_class, resource_id, client_ip, token_id \
          FROM audit.audit_event",
     )
     .fetch_one(&pool)
@@ -133,12 +132,6 @@ async fn insert_persists_the_columns_and_serves_the_rendered_document() {
     assert_eq!(
         row.get::<Option<String>, _>("token_id").as_deref(),
         Some("jti-1")
-    );
-    // Both forwarding outbox stamps start pending.
-    assert_eq!(
-        row.get::<Option<jiff_sqlx::Timestamp>, _>("delivered_syslog_at")
-            .map(jiff_sqlx::Timestamp::to_jiff),
-        None
     );
 
     // The served document is the BALP AuditEvent the drain renders.
@@ -388,8 +381,8 @@ async fn reap_due_deletes_each_record_at_its_own_end() {
         1
     );
     let ends_left: Vec<Option<String>> = sqlx::query_scalar(
-        "SELECT retention_ends::text FROM audit.audit_event \
-         WHERE retention_stated ORDER BY chain_seq",
+        "SELECT e.retention_ends::text FROM audit.audit_event e JOIN audit.audit_event_link l ON l.event_id = e.id \
+         WHERE e.retention_stated ORDER BY l.chain_seq",
     )
     .fetch_all(&pool)
     .await
@@ -695,17 +688,18 @@ async fn the_access_trail_refuses_rewriting_deletion_and_truncation() {
         "the access trail was truncated: TRUNCATE bypasses row triggers and needs its own refusal"
     );
 
-    // The one sanctioned mutation still works, so the refusals above are
-    // specific rather than a blanket lock.
-    let seq: i64 = sqlx::query_scalar("SELECT chain_seq FROM audit.audit_event WHERE id = $1")
-        .bind(id)
-        .fetch_one(&pool)
-        .await
-        .expect("the record's chain position");
+    // Removing the record from a sink's outbox, its delivery, changes no
+    // record (#6203).
+    let seq: i64 =
+        sqlx::query_scalar("SELECT chain_seq FROM audit.audit_event_link WHERE event_id = $1")
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .expect("the record's chain position");
     store
         .mark_delivered(ferroehr::system_log::store::outbox::Sink::FhirFeed, seq)
         .await
-        .expect("a delivery stamp is the one sanctioned mutation");
+        .expect("a delivery removes the outbox row and changes no record");
 
     let survives: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_event")
         .fetch_one(&pool)
@@ -754,7 +748,7 @@ async fn both_inserts_persist_the_authentication_columns() {
 
     let rows = sqlx::query(
         "SELECT acting_mode, assurance_level, assurance_value, professional_id \
-         FROM audit.audit_event ORDER BY chain_seq",
+         FROM audit.audit_event e JOIN audit.audit_event_link l ON l.event_id = e.id ORDER BY l.chain_seq",
     )
     .fetch_all(&pool)
     .await
@@ -824,7 +818,7 @@ async fn both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten() {
         .expect("batch insert");
 
     let marks: Vec<bool> =
-        sqlx::query_scalar("SELECT emergency_access FROM audit.audit_event ORDER BY chain_seq")
+        sqlx::query_scalar("SELECT e.emergency_access FROM audit.audit_event e JOIN audit.audit_event_link l ON l.event_id = e.id ORDER BY l.chain_seq")
             .fetch_all(&pool)
             .await
             .expect("rows");
@@ -1446,12 +1440,13 @@ async fn retention_removes_the_tokens_only_its_records_named() {
     .await
     .expect("the old token");
     sqlx::query(
-        "INSERT INTO audit.audit_event \
+        "WITH written AS (INSERT INTO audit.audit_event \
          (recorded_at, action, outcome, event_code, resource_class, request_id, \
           render_policy, search_tokens) \
          SELECT now() - interval '40 days', 'R', 0, '110110', 'composition', 'req-before', \
                 render_policy, ARRAY[$1, $2] \
-           FROM audit.audit_event LIMIT 1",
+           FROM audit.audit_event LIMIT 1 RETURNING id) \
+         INSERT INTO audit.audit_event_link (event_id) SELECT id FROM written",
     )
     .bind(own)
     .bind(live)
@@ -1551,10 +1546,11 @@ async fn retention_keeps_a_token_an_access_log_entry_names() {
     assert_eq!(audit_events, 0, "the access is kept as its entry alone");
 
     sqlx::query(
-        "INSERT INTO audit.audit_event \
+        "WITH written AS (INSERT INTO audit.audit_event \
          (recorded_at, action, outcome, event_code, resource_class, render_policy, search_tokens) \
          SELECT now() - interval '40 days', 'R', 0, '110110', 'demographic', p.digest, ARRAY[$1] \
-           FROM audit.audit_render_policy p LIMIT 1",
+           FROM audit.audit_render_policy p LIMIT 1 RETURNING id) \
+         INSERT INTO audit.audit_event_link (event_id) SELECT id FROM written",
     )
     .bind(shared)
     .execute(&pool)
@@ -1589,5 +1585,118 @@ async fn retention_keeps_a_token_an_access_log_entry_names() {
     assert!(
         token_ids(&pool).await.contains(&shared),
         "a token a live access-log entry names was removed"
+    );
+}
+
+/// A record the intake still names, which no link chains yet, is in no read
+/// (#6203): not in `audit.audit_record` or `audit.access_trail`, not in an
+/// ITI-81 page or its total, owed to no sink and outside the verification;
+/// once released and linked it is in every one of them.
+#[tokio::test]
+async fn an_unlinked_record_is_in_no_read() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let store = store_over(&pool);
+    store
+        .insert(&read_event(Timestamp::now()), Some("patient-42"))
+        .await
+        .expect("insert");
+    let reservation = uuid::Uuid::now_v7();
+    sqlx::query(AssertSqlSafe(format!(
+        "DO $$ DECLARE cols text; copy uuid; BEGIN \
+         SELECT string_agg(quote_ident(column_name), ', ') INTO cols \
+           FROM information_schema.columns \
+          WHERE table_schema = 'audit' AND table_name = 'audit_event' \
+            AND column_name NOT IN ('id', 'stored_at'); \
+         EXECUTE format('INSERT INTO audit.audit_event (%s) \
+             SELECT %s FROM audit.audit_event LIMIT 1 RETURNING id', cols, cols) INTO copy; \
+         INSERT INTO audit.audit_event_intake (events, reserved_by) \
+         VALUES (ARRAY[copy], '{reservation}'); \
+         END $$"
+    )))
+    .execute(&pool)
+    .await
+    .expect("a held record");
+    let count = |sql: &'static str| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>(sql)
+                .fetch_one(&pool)
+                .await
+                .expect("count")
+        }
+    };
+    let total = |store: &AuditStore| {
+        let store = store.clone();
+        async move {
+            store
+                .search(&AuditSearchFilter {
+                    count: 1000,
+                    total: true,
+                    ..AuditSearchFilter::default()
+                })
+                .await
+                .expect("search")
+        }
+    };
+    assert_eq!(count("SELECT count(*) FROM audit.audit_event").await, 2);
+    assert_eq!(
+        count("SELECT count(*) FROM audit.audit_record WHERE chain = 'system'").await,
+        1
+    );
+    assert_eq!(
+        count("SELECT count(*) FROM audit.access_trail WHERE chain = 'system'").await,
+        1
+    );
+    let page = total(&store).await;
+    assert_eq!((page.total, page.documents.len()), (Some(1), 1));
+    assert_eq!(
+        count(
+            "SELECT (SELECT count(*) FROM audit.fhir_feed_outbox) \
+             + (SELECT count(*) FROM audit.syslog_outbox)"
+        )
+        .await,
+        0
+    );
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty()
+    );
+
+    sqlx::query("SELECT audit.audit_intake_release(ARRAY[$1])")
+        .bind(reservation)
+        .execute(&pool)
+        .await
+        .expect("release");
+    let moved: i64 = sqlx::query_scalar("SELECT audit.audit_event_chain_move(16, true, true)")
+        .fetch_one(&pool)
+        .await
+        .expect("link");
+    assert_eq!(moved, 1);
+    assert_eq!(
+        count("SELECT count(*) FROM audit.audit_record WHERE chain = 'system'").await,
+        2
+    );
+    assert_eq!(
+        count("SELECT count(*) FROM audit.access_trail WHERE chain = 'system'").await,
+        2
+    );
+    let page = total(&store).await;
+    assert_eq!((page.total, page.documents.len()), (Some(2), 2));
+    assert_eq!(
+        count(
+            "SELECT (SELECT count(*) FROM audit.fhir_feed_outbox) \
+             + (SELECT count(*) FROM audit.syslog_outbox)"
+        )
+        .await,
+        2
+    );
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty()
     );
 }

@@ -31,7 +31,7 @@ docker compose up --wait
 ```
 
 This pulls and starts two services: the server (`ferroehr`) on port **8080**,
-and a preconfigured **PostgreSQL 18** database. The server runs its schema
+and a preconfigured **PostgreSQL 19** database. The server runs its schema
 migrations automatically on first boot, so the database is ready as soon as it
 reports healthy. Nothing else is needed: the server's configuration travels
 inside the Compose file, which also ships one Basic-auth user (`ferroehr` /

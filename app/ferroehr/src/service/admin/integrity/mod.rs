@@ -247,7 +247,7 @@ struct VersionKey {
 /// reassembly are inverses, so rows in the current shape are byte for byte
 /// what `decompose` returns, and any difference is a shape the codec no longer
 /// produces. Compared over every field the read row carries — the nested-set
-/// index, the materialized path, the fragment; the promoted query columns are
+/// index, the step under the parent, the fragment; the promoted query columns are
 /// derived from the fragment and the archetype chain, so rows agreeing on
 /// these agree on those.
 ///

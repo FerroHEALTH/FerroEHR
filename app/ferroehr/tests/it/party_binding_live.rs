@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Each replica's copy of the binding lookups and the bound `PERSON`s' names
-//! (#5771), over a real PostgreSQL 18 with two services on one store: a held
+//! (#5771), over a real PostgreSQL 19 with two services on one store: a held
 //! lookup reads nothing, a deprovisioning, a binding change and a rename hold
 //! on the next request of every replica once its notification arrives, a
 //! request whose commit changed the side table marks it for its own replica,

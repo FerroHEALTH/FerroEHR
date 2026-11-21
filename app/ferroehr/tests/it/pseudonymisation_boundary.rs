@@ -599,15 +599,16 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
         .insert(&access, None)
         .await
         .expect("the clinical role inserts an access-log entry");
-    let seq: i64 = sqlx::query_scalar("SELECT chain_seq FROM audit.audit_event WHERE id = $1")
-        .bind(id)
-        .fetch_one(&clinical)
-        .await
-        .expect("the record's chain position");
+    let seq: i64 =
+        sqlx::query_scalar("SELECT chain_seq FROM audit.audit_event_link WHERE event_id = $1")
+            .bind(id)
+            .fetch_one(&clinical)
+            .await
+            .expect("the record's chain position");
     store
         .mark_delivered(ferroehr::system_log::store::outbox::Sink::FhirFeed, seq)
         .await
-        .expect("a delivery stamp is the one sanctioned mutation");
+        .expect("a delivery removes the outbox row and changes no record");
     crate::fixtures::verify_chain(&clinical)
         .await
         .expect("the clinical role verifies the chain");

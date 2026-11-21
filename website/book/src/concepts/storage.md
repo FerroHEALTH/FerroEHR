@@ -10,7 +10,7 @@ One thing up front: **openEHR defines no SQL schema.** What the specs do
 define, and what this storage realizes, are the versioning and change-control
 semantics (RM `common` change control), canonical data fidelity (ITS-JSON),
 and the contribution and audit duties. The relational layout below is
-FerroEHR's own PostgreSQL-18-native design, and the RM explicitly sanctions
+FerroEHR's own PostgreSQL-19-native design, and the RM explicitly sanctions
 that freedom: "Although the figure implies physical containment of Versions
 by a Versioned object, this is only one possible implementation. Other
 implementations (e.g. using orthodox relational structures) might use
@@ -45,7 +45,7 @@ flowchart LR
     node -. "AQL: interval joins + promoted columns" .-> rest
 ```
 
-The database is PostgreSQL 18, split into four schemas:
+The database is PostgreSQL 19, split into four schemas:
 
 | Schema | Holds |
 |---|---|
@@ -216,7 +216,7 @@ FerroEHR does not, and it does not carry a validity interval either.
   triple and held unique together. `sys_version` is deliberately not that
   number: it is an opaque per-object commit ordinal (1..n across trunk and
   branch commits) used as the join key for `node` and `vo_attestation`.
-- Generated ids use PostgreSQL 18's native `uuidv7()`, so keys are time-ordered
+- Generated ids use PostgreSQL 19's native `uuidv7()`, so keys are time-ordered
   and index-friendly.
 - A logical delete writes a content-less version with lifecycle state `523`;
   nothing is physically deleted.
@@ -315,8 +315,10 @@ on, so hot paths never open the JSON:
   roots, serving ordering from two partial indexes: one per EHR for a
   dashboard, one over the whole population for a query that orders every
   composition and takes the first page;
-- `path`, the materialized path from the root (`COLLATE "C"`, so byte order
-  equals tree order), used only for reassembly, never as an AQL predicate.
+- `path`, the node's own step under its parent (`events1.`: the attribute,
+  the array index, a closing dot). Reassembly places each row under its
+  `parent_num`, and an AQL attribute step matches the step with `parent_num`
+  bound.
 
 ## The write path: one transaction per commit
 
@@ -329,7 +331,7 @@ write:
 sequenceDiagram
     participant R as REST adapter
     participant S as service layer
-    participant PG as PostgreSQL 18
+    participant PG as PostgreSQL 19
 
     R->>S: commit (COMPOSITION, EHR_STATUS, ...)
     S->>S: validate (RM invariants, WebTemplate, terminology)

@@ -7,7 +7,7 @@
 //! They are `migrations/clinical/`, the party domain rendered from the same
 //! DDL template, and the party domain's relationship index.
 //!
-//! No openEHR spec governs the SQL schema — this is our own PG18-native
+//! No openEHR spec governs the SQL schema — this is our own PG19-native
 //! design.
 //!
 //! One enum per table, in the official `sea-query` derive shape: the `Table`
@@ -315,9 +315,9 @@ pub enum Node {
     NameCode,
     /// `name_terminology` — the `terminology_id` of that defining code.
     NameTerminology,
-    /// `path` — the materialized path from the root, whose byte order under
-    /// `COLLATE "C"` equals tree order; used for reassembly, never as an AQL
-    /// predicate.
+    /// `path` — the node's own step under its parent (`events1.`), empty on
+    /// the root; reassembly places the row under `parent_num`, and an AQL
+    /// attribute step matches it with `parent_num` bound.
     Path,
     /// `data` — the node's canonical openEHR JSON fragment, structure children
     /// pruned, without the keys the row's columns hold

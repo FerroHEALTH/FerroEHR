@@ -35,8 +35,8 @@ applies to every crate — generated and hand-written alike.
 - **Properties:** `proptest` for RM round-trips (serialize → parse → equal),
   parser stability, and AQL parse/print round-trips.
 - **Database:** every DB-backed test takes its database from the shared
-  harness — `testkit::db()` (`tools/testkit`): one PostgreSQL 18 server
-  (`FERROEHR_TEST_PG_URL` in CI, a reusable `ferroehr-testkit-pg18`
+  harness — `testkit::db()` (`tools/testkit`): one PostgreSQL 19 server
+  (`FERROEHR_TEST_PG_URL` in CI, a reusable `ferroehr-testkit-pg19`
   testcontainer locally), one migrated template database per migration
   fingerprint, one `CREATE DATABASE … TEMPLATE` clone per call. **Never
   start a per-test PostgreSQL container or run migrations in a test** — it

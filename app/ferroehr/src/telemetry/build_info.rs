@@ -191,7 +191,7 @@ mod tests {
                 openehr_am::Generation::V2_4.spec_version()
             )
         );
-        assert_eq!(info.postgres_target, "18.6+");
+        assert_eq!(info.postgres_target, "19.0+");
         assert_eq!(info.manufacturer, crate::manufacturer::MANUFACTURER);
         // build_date parses to a real timestamp (not the "unknown" fallback) in
         // a normal build where build.rs ran.

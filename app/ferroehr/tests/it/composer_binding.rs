@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The composer of a bound professional's COMPOSITION (#6130), over a real
-//! PostgreSQL 18.
+//! PostgreSQL 19.
 //!
 //! RM `COMPOSITION.composer` is "the person primarily responsible for the
 //! content of the Composition" (`org.openehr.rm.composition.composition.adoc`)

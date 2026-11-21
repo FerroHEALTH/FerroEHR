@@ -76,21 +76,19 @@ check --rust-version`, the book's named tool), not just by
 
 | Item | Pin |
 |---|---|
-| PostgreSQL | 18, target 18.6 or newer (CI runs `postgres:18.6`) |
+| PostgreSQL | 19, target 19.0 or newer (CI runs `postgres:19.0`; the server refuses an older one at boot) |
 | Required extension | `btree_gist`, installed by the server at boot |
 
 PostgreSQL is the only component in the stack with a meaningful version delta
-(upstream EHRbase targets PG 15/16; we target PG 18). PG 18 brings asynchronous I/O,
-native `uuidv7()`, B-tree skip scan, temporal `PRIMARY KEY`/`UNIQUE`/`FOREIGN
-KEY`, `RETURNING OLD/NEW`, virtual generated columns, self-join elimination, and
-OR-to-`ANY` planning, plus `JSON_TABLE()` + the SQL/JSON functions inherited
-from PG 17. **See `docs/postgres-features.md`** for the full PG 17+18 feature
-delta over PG 16 and where each app phase (P09/P12/P16/P11/P20) uses it —
-"the best possible system" means exploiting these. Minor releases (18.1–18.6,
-17.x) are bugfix/security only (no new features); pin the latest patch (18.6,
-2026-08-13 — a security release fixing 28 CVEs; 18.5 was never released, a
-regression was found post-wrap). Managed providers may lag on `io_uring`; still
-target PG 18 and let the AIO benefit follow.
+(upstream EHRbase targets PG 15/16; we target PG 19, and 18 is no longer
+supported). PG 19 adds `wal_compression = on` choosing the best method,
+full-page-image bytes in `pg_stat_wal` and `EXPLAIN (WAL)`, lz4 as the default
+TOAST compression, all-visible marking by table scans, parallel autovacuum of
+indexes, faster foreign-key checks, `NOT IN` to anti-join planning and JIT off
+by default, on top of the PG 17 and PG 18 features. **See
+`docs/postgres-features.md`** for the feature delta over PG 16 and where the
+code uses each one. Minor releases are bugfix/security only (no new
+features); pin the latest patch (19.0, 2026-11-19, the first PG 19 release).
 
 ## FerroSMART and its example upstream providers
 
@@ -115,7 +113,7 @@ Bumping ZITADEL moves both rows, and the vendor script's tag, together.
 
 The ZITADEL digests were resolved from `ghcr.io` on 2026-11-16 and the
 FerroSMART 0.2.0 digest on 2026-11-20, each checked against the sha256 of the index
-manifest it names. FerroSMART's and ZITADEL's PostgreSQL is the `postgres:18.6`
+manifest it names. FerroSMART's and ZITADEL's PostgreSQL is the `postgres:19.0`
 digest the quickstart pins.
 
 ## openEHR specification matrix

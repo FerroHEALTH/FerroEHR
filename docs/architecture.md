@@ -2,7 +2,7 @@
 
 A pure-Rust, **openEHR-spec-conformant** Clinical Data Repository (CDR):
 ITS-REST 1.1.0 at the API, AQL 1.1 as the query language, greenfield
-PostgreSQL-18-native internals. Two layers:
+PostgreSQL-19-native internals. Two layers:
 
 1. **The openEHR foundation (`openehr-*`) — generated from the official
    machine-readable specs, and done.** The spec types, canonical serialization,
@@ -26,7 +26,7 @@ endpoint-map document (a standing map goes stale).
 Key architectural decisions (described in full in the sections below): the
 spec + ITS layer is generated from the vendored machine-readable specs
 (BMM/XSD/OAS) by `openehr-codegen`; the application is idiomatic Rust of our
-own design on those generated crates, with its own PG18-native storage (one
+own design on those generated crates, with its own PG19-native storage (one
 `node` table, an append-only `version` table with one mutable `vo_head` row
 per object, and tier partitions instead of mirror tables) and its own typed AQL
 engine,
@@ -81,7 +81,7 @@ duplicate keys refused) is pinned by the canonical-output contract gate.
 Fidelity is proven by gates (`openehr-its/tests/`); a `codegen-drift` CI job
 regenerates everything and fails on any diff.
 
-## Storage (ours, PG18-native)
+## Storage (ours, PG19-native)
 
 Grounded in docs-verified PostgreSQL physics (JSONB has no partial detoast —
 big single documents pay whole-document decompression per leaf access; GIN
@@ -181,7 +181,15 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   never from the version body, whose per-row parse measured 50 to 300 times
   slower than a fragment read. Point reads do not reassemble the fragments: the
   whole canonical body is also stored verbatim as `version.body text` and
-  served from there in one statement.
+  served from there in one statement. Structure rows keep their own `data`
+  (#6210): leaving it out and reading whole structures from the body would
+  save 22% of an IPS commit's WAL (225,507 to 175,405 bytes) and 42% of its
+  node heap, but 90% of that is one participation list repeated on every
+  entry. It would also move the attributes AQL names most often in a WHERE
+  clause (`composer`, `category`, `ism_transition`, `other_participations`,
+  `subject`) from the row to a body parse measured 30 to 40 times slower per
+  version, or to a byte range of the body 8 times slower. Storing the
+  repeated fragment once per version is measured on #6229.
 - **Tiers are partitions.** `version`, `node` and `vo_attestation` are each
   `PARTITION BY LIST (tier)` with a `hot` and a `cold` partition and no default
   partition. Archiving an EHR is `UPDATE version SET tier = 'cold' WHERE
@@ -429,9 +437,10 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   policy) and every column the log derives from its content, into the
   intake in one short transaction of the audit pool: each entry is written
   once, into `access_log_entry`, with one `access_log_intake` row naming the
-  entries of the statement until the chainer links them, and the other
-  records into `audit_event_intake` (`audit/0006_baseline_intake.sql`,
-  `audit/0004_baseline_access_log.sql`, #5968). The intake statement finds each entry's
+  entries of the statement until the chainer links them, and each other
+  record once, into `audit_event`, with one `audit_event_intake` row naming
+  the records of the statement (`audit/0006_baseline_intake.sql`,
+  `audit/0004_baseline_access_log.sql`, #5968, #6203). The intake statement finds each entry's
   search tokens by the digests the server computes
   (`system_log::token_digest`, the bytes of `audit.search_token_digest`)
   and groups them by entry in one pass, so its cost grows with the batch's
@@ -475,7 +484,17 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (`audit.access_log_shared_collect`, #5968). The ferroehr-rest test
   `statement_budget` holds an AQL request to its round trips and nested
   statements, read from `pg_stat_statements`. `audit.audit_event_chain_move()`
-  moves the system intake into the system chain the same way. A
+  links the system intake the same way: it inserts one narrow
+  `audit_event_link` row per record of the oldest released intake rows, in
+  their order, whose insert trigger fills the position, the predecessor's
+  digest and the record's digest under the chain-state row lock
+  (`audit.audit_event_row_digest` over the record and those two, the bytes
+  the digest had when they were columns of the record), writes the outbox
+  rows and deletes the intake rows (#6203). A record is never updated, linked
+  or not; a record without a link is in no read and no verification, and
+  leaves only by the discard of its reservation; a linked one leaves only
+  with its link, by retention reaping. A sink's outbox row is the record's
+  delivery state, and no record carries a delivery stamp. A
   request-scoped write commits through one choke point,
   `FerroEhrService::commit_recorded` (`system_log::reservation`, #5762): its
   records go into the intake held under a reservation id (`reserved_by`,
@@ -496,7 +515,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   IHE BALP `AuditEvent`, the DICOM audit message and the EHDS access record
   are projections of the stored entry (`access_log::projection`): the ITI-81
   search, the person's own trail and the FHIR Feed read it through
-  `audit.audit_record`, the view of the `audit_event` records and the
+  `audit.audit_record`, the view of the linked `audit_event` records and the
   indexed entries. An entry is one row of `access_log_entry`, and
   `access_log_record` is the view of the entries with their link: its index
   columns (the search columns, the search tokens of the projection and the
@@ -2312,9 +2331,9 @@ counts only by the key that heads it, and a delta of rendered HTML, tooling
 or amendment records alone opens no issue. No openEHR specification governs
 this filtering: our own design.
 
-## PostgreSQL 18
+## PostgreSQL 19
 
-We target **PG 18** (18.6+). In use: `uuidv7()` for database-minted ids,
+We target **PG 19** (19.0+); the boot path refuses an older server (`db::server_version`). In use: `uuidv7()` for database-minted ids,
 `PARTITION BY LIST (tier)` on `version`, `node` and `vo_attestation` with the
 cold partition pruned at plan time, the SQL/JSON path functions
 (`jsonb_path_query*`, PG 17), and the planner-side gains that need no code
@@ -2410,7 +2429,7 @@ adapter (`ferroehr-rest`) calls directly:
 | `ferroehr-server` | The wiring-only binary (config → pool → migrations → service → serve); bin name `ferroehr` | application |
 | `ferroehr-ext` | Optional integrations behind additive features (`multimedia`): the content-addressed multimedia store, one OpenDAL operator over S3 | application |
 | `ferroehr-viewer` | The server-rendered viewer on FerroUI: its own binary and OCI image, consuming the CDR strictly over ITS-REST | application |
-| `testkit` | Shared test-database harness: one PG18 server + template-database cloning (`tools/*`) | tooling |
+| `testkit` | Shared test-database harness: one PG19 server + template-database cloning (`tools/*`) | tooling |
 
 ## Regulatory position (EHDS and CRA)
 

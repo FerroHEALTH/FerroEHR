@@ -29,6 +29,11 @@ const RECORD: &str = "audit_record";
 /// The ITI-81 index of the access log, the view of the entries' index
 /// columns, which holds every column a search criterion names (#5784).
 const ACCESS_LOG_SEARCH: &str = "access_log_search";
+/// The ITI-81 index of the system chain, the view of the linked records'
+/// search columns: a plain join the planner reads in the search's order
+/// through the time index, where a member of `audit_record`'s union is
+/// planned without that order (#6203).
+const SYSTEM_SEARCH: &str = "system_search";
 
 /// Build the ITI-81 retrieval's two statements, the count and the page, from a
 /// filter and the token ids its criteria on the document resolved to, with no
@@ -112,22 +117,30 @@ pub(super) fn page_size(filter: &AuditSearchFilter) -> usize {
     usize::try_from(filter.count.clamp(1, 1000)).unwrap_or(50)
 }
 
-/// The number of records `condition` selects: those of the system chain,
-/// plus the indexed entries of the access log a page can return, the linked
-/// ones (#6000).
+/// The number of records `condition` selects: the linked records of the
+/// system chain and the linked indexed entries of the access log, those a
+/// page can return (#6000, #6203).
 ///
-/// The access log's are counted from the entries' index columns alone, less
-/// those of the entries an intake row still names, which no link chains yet:
-/// an entry is linked or named by an intake row, never both, so neither
-/// count reads a link, and the first is read from the time index.
+/// Each chain's are counted from its index columns alone, less those of the
+/// records an intake row still names, which no link chains yet: a record is
+/// linked or named by an intake row, never both, so neither count reads a
+/// link.
 fn total(condition: &Cond) -> SelectStatement {
-    let system = count_of(
+    let records = || {
         Query::select()
             .expr(Expr::col(Asterisk).count())
-            .from((Alias::new(AUDIT), Alias::new(RECORD)))
-            .cond_where(on_chain(condition, "system"))
+            .from((Alias::new(AUDIT), Alias::new(SYSTEM_SEARCH)))
+            .cond_where(condition.clone())
+            .to_owned()
+    };
+    // NOTE: our own design (#6203), the intake names the records no link chains yet.
+    let system = count_of(records()).sub(count_of(
+        records()
+            .and_where(Expr::cust(
+                "event_id = ANY (ARRAY(SELECT unnest(i.events) FROM audit.audit_event_intake i))",
+            ))
             .to_owned(),
-    );
+    ));
     let indexed = || {
         Query::select()
             .expr(Expr::col(Asterisk).count())
@@ -173,8 +186,9 @@ fn page(condition: &Cond, count: u64, offset: u64, served: u64) -> SelectStateme
     let mut system = Query::select();
     system
         .columns(KEYS.map(Alias::new))
-        .from((Alias::new(AUDIT), Alias::new(RECORD)))
-        .cond_where(on_chain(condition, "system"));
+        .from((Alias::new(AUDIT), Alias::new(SYSTEM_SEARCH)))
+        .cond_where(condition.clone())
+        .and_where(Expr::col(Alias::new("chain_seq")).is_not_null());
     within_chain(&mut system, None).limit(first);
     let mut chains = Query::select();
     chains
@@ -297,13 +311,6 @@ fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
         );
     within_chain(&mut page, Some(&record)).limit(first);
     page
-}
-
-/// `condition` on the records of `chain`.
-fn on_chain(condition: &Cond, chain: &str) -> Cond {
-    condition
-        .clone()
-        .add(Expr::col(Alias::new("chain")).eq(chain))
 }
 
 /// `select` ordered as the search orders the records of one chain, its

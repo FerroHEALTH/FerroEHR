@@ -678,7 +678,7 @@ async fn each_chain_verifies_apart_from_its_own_cursor_on() {
     );
     assert_eq!(opening.link.previous_digest, genesis());
     let system: Vec<(i64, Vec<u8>, Vec<u8>)> = sqlx::query_as(
-        "SELECT chain_seq, prev_hash, row_hash FROM audit.audit_event ORDER BY chain_seq",
+        "SELECT chain_seq, prev_hash, row_hash FROM audit.audit_event_link ORDER BY chain_seq",
     )
     .fetch_all(&pool)
     .await
