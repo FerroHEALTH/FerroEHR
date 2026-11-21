@@ -58,12 +58,13 @@ CREATE VIEW access_log_search AS
     SELECT l.chain_seq, e.time_recorded AS recorded_at, e.event_action AS action,
            e.event_outcome AS outcome, e.principal, e.patient_id, e.resource_id,
            e.request_id, e.client_ip, e.classified_ehr_id AS ehr_id, e.search_tokens,
+           audit.search_keys(e.search_tokens, e.request_id, e.resource_id) AS search_keys,
            e.id AS entry_id
       FROM access_log_entry e
       LEFT JOIN access_log_link l ON l.entry_id = e.id
      WHERE e.render_policy_id IS NOT NULL;
 COMMENT ON VIEW access_log_search IS
-    'The ITI-81 index of the access-log entries: what the search filters on, read from the entry''s row, the position of a linked entry (NULL for one the chainer has not linked yet) and the entry''s id. A tombstone is not in it.';
+    'The ITI-81 index of the access-log entries: what the search filters on, read from the entry''s row (search_keys through its index), the position of a linked entry (NULL for one the chainer has not linked yet) and the entry''s id. A tombstone is not in it.';
 
 CREATE VIEW audit_record AS
     SELECT e.chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.operation,
@@ -74,6 +75,7 @@ CREATE VIEW audit_record AS
            e.emergency_access, e.permit, e.issuer, e.client_id, e.ehr_id,
            e.subject_namespace, e.subject_lookup_failed, e.review, e.category_content,
            e.render_policy, e.token_attributes, e.search_tokens,
+           audit.search_keys(e.search_tokens, e.request_id, e.resource_id) AS search_keys,
            NULL::text AS row_part, NULL::text AS shared_part, NULL::text AS entry_type,
            NULL::uuid AS entry_uid, NULL::uuid AS entry_ehr,
            NULL::text AS algorithm, NULL::text AS previous_digest,
@@ -89,6 +91,7 @@ CREATE VIEW audit_record AS
            false, NULL::text, NULL::text, NULL::text, r.classified_ehr_id,
            NULL::text, false, NULL::text, NULL::jsonb,
            p.digest, NULL::jsonb, r.search_tokens,
+           audit.search_keys(r.search_tokens, r.request_id, r.resource_id),
            r.content, sh.content, r.record_type, r.uid, r.ehr_id,
            r.algorithm, encode(r.previous_digest, 'hex'),
            encode(r.content_digest, 'hex'), encode(r.digest, 'hex'),

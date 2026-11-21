@@ -12,7 +12,8 @@
 //! `entity-role`, `source.identifier`) take few values, so a record names
 //! their combination by one shared set (`audit.audit_search_set`). The
 //! record keeps the ids of its other tokens and its set, negated, in
-//! `search_tokens` under a GIN index.
+//! `search_tokens`, indexed by a GIN index of `audit.search_keys` with its
+//! request and resource ids.
 //!
 //! An `entity.identifier` that carries the record's request id or resource id
 //! is unique to few records, so it is answered from that column
@@ -140,11 +141,12 @@ impl IdentifierColumn {
         }
     }
 
-    /// The condition on the hash index of the column.
+    /// The condition on the column's key in the records' token index
+    /// (`audit.search_key`, #6202).
     pub(super) const fn hashed(self) -> &'static str {
         match self {
-            Self::RequestId => "hashtextextended(request_id, 0) = hashtextextended($1, 0)",
-            Self::ResourceId => "hashtextextended(resource_id, 0) = hashtextextended($1, 0)",
+            Self::RequestId => "search_keys @> audit.search_key(1, $1)",
+            Self::ResourceId => "search_keys @> audit.search_key(2, $1)",
         }
     }
 

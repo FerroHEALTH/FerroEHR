@@ -1371,13 +1371,17 @@ parameter on an element of the document (`address` and the `.identifier`,
 search tokens the store takes from the record's rendered document when it
 writes the record (`audit.audit_search_token`, `audit.audit_search_set` and
 the record's `search_tokens`, for an entry a column of its own row in
-`audit.access_log_record`, which goes with the entry's content when a
+`audit.access_log_entry`, which goes with the entry's content when a
 tombstone replaces it), so the search finds what the served document
 says and renders only the page it serves. An `entity.identifier` that carries
 the record's request id or the object it names (the version uid of a create)
 is read from the record's own column instead, so a request adds no row to
-`audit.audit_search_token`. Retention deletes the tokens that no remaining
-record names, and never one a kept record names.
+`audit.audit_search_token`. One GIN index per record table holds the search
+tokens and a key for each of the request id and the touched resource id
+(`audit.search_keys`), which answers `entity` and such an `entity.identifier`
+as well; the search then compares the text. Retention deletes the tokens
+that no remaining system audit record, access-log entry or search set names,
+and never one a kept record names.
 
 | Parameter | Matches |
 |---|---|
