@@ -623,11 +623,12 @@ mod tests {
         let rows = decompose(original.clone()).unwrap();
         let full = full_paths(&rows);
         let row = |path: &str| {
-            rows.iter()
+            let (row, _) = rows
+                .iter()
                 .zip(&full)
                 .find(|(_, full)| *full == path)
-                .map(|(r, _)| r)
-                .unwrap_or_else(|| panic!("no row at {path}"))
+                .unwrap_or_else(|| panic!("no row at {path}"));
+            row
         };
         let address = row("contacts0.addresses0.");
         assert_eq!(
