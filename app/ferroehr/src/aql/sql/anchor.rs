@@ -62,7 +62,7 @@ use crate::aql::ir::{
 use crate::db::iden::{Node, RelationshipTarget, VersionRow, VoHead};
 
 use super::Builder;
-use super::expr::{binoper, call, col, hot};
+use super::expr::{binoper, call, col, derived_col, hot};
 
 /// The RM type of the one structure node that carries a `value`, as a SQL
 /// LITERAL: the value indexes are partial on it, and a partial index serves a
@@ -75,8 +75,15 @@ const ELEMENT_LITERAL: &str = "'ELEMENT'";
 /// No openEHR spec governs access paths: our own design.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(super) enum RangeEntry {
-    /// The flat shape: the anchor is one more FROM item, the distinct
-    /// versions, which the planner places by its estimate of the range.
+    /// The flat shape: the anchor is one more FROM item, the first row of
+    /// each version the range keeps, which the planner places by its
+    /// estimate of the range.
+    ///
+    /// The first-row form has no `DISTINCT`, so the planner pulls it up
+    /// into a node row it can probe per version through `node_hot_pkey`.
+    /// The distinct versions it replaced were an item no join could probe:
+    /// on statistics older than the rows they missed, the planner rescanned
+    /// it per outer row, 7 M head probes for 1,470 OBSERVATIONs (#6243).
     #[default]
     Free,
     /// A population statement that streams toward its LIMIT: one anchor
@@ -353,6 +360,7 @@ impl Builder<'_> {
             alias,
             version,
             key,
+            head: None,
             select,
         })
     }
@@ -430,7 +438,8 @@ impl Builder<'_> {
     /// leaf's step can bind a row that does not carry the value.
     ///
     /// `first` asks for the first row of each version the range keeps
-    /// instead of the distinct versions ([`RangeEntry::Leading`]).
+    /// instead of the distinct versions ([`RangeEntry::Leading`]); the flat
+    /// shape always takes it ([`RangeEntry::Free`]).
     ///
     /// # Errors
     /// [`AqlError`] from the leaf step's predicate lowering.
@@ -446,6 +455,7 @@ impl Builder<'_> {
             return Ok(None);
         }
         let ranged = range.ranged;
+        let first = first || !self.streaming;
         self.row_anchor(range.leaf, predicate, first, |node| {
             let tests = range
                 .bounds
@@ -469,8 +479,10 @@ impl Builder<'_> {
     /// leaf's source has no version row.
     ///
     /// With `first` the item is the first such row of each version, found
-    /// by the absence of an earlier one, which a scan toward a LIMIT reads
-    /// row by row; without it, the distinct versions.
+    /// by the absence of an earlier one: a scan toward a LIMIT reads it row
+    /// by row, and the planner pulls it up into a node row it can enter from
+    /// the value index or probe per version ([`RangeEntry::Free`]).
+    /// Without it, the distinct versions.
     ///
     /// # Errors
     /// [`AqlError`] from the predicate lowering.
@@ -487,13 +499,13 @@ impl Builder<'_> {
         let key = self.node_key_of(&version);
         let alias = format!("va{}", self.next_ctr());
         let node = format!("{alias}_n");
-        let mut select = self.anchor_rows(&node, predicate, &of)?;
+        let mut select = self.anchor_rows(&node, predicate, &of, false)?;
         select
             .column((Alias::new(node.as_str()), Node::VoId))
             .column((Alias::new(node.as_str()), Node::SysVersion));
         if first {
             let earlier = format!("{alias}_e");
-            let mut before = self.anchor_rows(&earlier, predicate, &of)?;
+            let mut before = self.anchor_rows(&earlier, predicate, &of, true)?;
             before
                 .expr(Expr::val(1))
                 .and_where(col(&earlier, Node::VoId).eq(col(&node, Node::VoId)))
@@ -506,33 +518,65 @@ impl Builder<'_> {
         } else {
             select.distinct();
         }
+        // The trunk head's own version, read per anchor row by the head's
+        // key, so the version row is probed by its whole key and never by
+        // its object alone, every version a shared tree spans (#4944).
+        let head = (first && !self.streaming && self.reads_trunk_head(&version)).then(|| {
+            let h = format!("{alias}_h");
+            let mut head = Query::select();
+            head.column((Alias::new(h.as_str()), VoHead::TrunkHeadSysVersion))
+                .from_as(VoHead::Table, Alias::new(h.as_str()))
+                .and_where(col(&h, VoHead::VoId).eq(col(&node, Node::VoId)))
+                .and_where(col(&h, VoHead::TrunkHeadContentKey).eq(col(&node, Node::SysVersion)));
+            select.expr_as(
+                Expr::SubQuery(None, Box::new(head.into())),
+                Alias::new(HEAD_VERSION),
+            );
+            derived_col(&alias, HEAD_VERSION).eq(col(&version, VersionRow::SysVersion))
+        });
         Ok(Some(ValueAnchor {
             alias,
             version,
             key,
+            head,
             select,
         }))
     }
 
     /// The hot node rows `node` that satisfy `of` under `predicate`, with no
     /// column selected yet.
+    ///
+    /// `probe` states each condition but the tier as `(…) IS TRUE`, which
+    /// holds exactly when the condition does and which no index matches, so
+    /// the earlier-row probe of a version reads that version's rows by
+    /// `node_hot_pkey` whatever the statistics say. On statistics that held
+    /// none of the rows, the probe entered through the value index instead,
+    /// once per candidate row (#6243).
     fn anchor_rows(
         &self,
         node: &str,
         predicate: Option<&ir::NodeConstraint>,
         of: &impl Fn(&str) -> (Expr, Expr),
+        probe: bool,
     ) -> Result<SelectStatement, AqlError> {
+        let fence = |cond: Expr| {
+            if probe {
+                Expr::cust_with_exprs("($1) IS TRUE", [cond])
+            } else {
+                cond
+            }
+        };
         let mut select = Query::select();
         select.from_as(Node::Table, Alias::new(node));
         select.and_where(hot(node, Node::Tier));
         let (of_type, test) = of(node);
-        select.and_where(of_type);
+        select.and_where(fence(of_type));
         if let Some(predicate) = predicate {
             for cond in self.node_constraint_conds(node, predicate)? {
-                select.and_where(cond);
+                select.and_where(fence(cond));
             }
         }
-        select.and_where(test);
+        select.and_where(fence(test));
         Ok(select)
     }
 }
@@ -580,17 +624,29 @@ pub(super) struct ValueAnchor {
     /// The column the item's `sys_version` joins: the node key of the version
     /// row under its scope (`head::node_key`, #4944).
     key: Expr,
+    /// The version row is the trunk head the item's row names, its
+    /// [`HEAD_VERSION`]: a condition the key already implies, which gives
+    /// the planner the version row's whole key.
+    head: Option<Expr>,
     /// The item: `SELECT DISTINCT vo_id, sys_version FROM node …`, or the
-    /// first row of each version.
+    /// first row of each version for a range.
     pub(super) select: SelectStatement,
 }
+
+/// The column of a flat range anchor under `LATEST_VERSION` that holds the
+/// trunk head's version of its row's object.
+const HEAD_VERSION: &str = "head_version";
 
 impl ValueAnchor {
     /// The join condition between the item and its version row.
     pub(super) fn link(&self) -> Expr {
-        col(&self.alias, Node::VoId)
+        let link = col(&self.alias, Node::VoId)
             .eq(col(&self.version, VersionRow::VoId))
-            .and(col(&self.alias, Node::SysVersion).eq(self.key.clone()))
+            .and(col(&self.alias, Node::SysVersion).eq(self.key.clone()));
+        match &self.head {
+            Some(head) => link.and(head.clone()),
+            None => link,
+        }
     }
 }
 
