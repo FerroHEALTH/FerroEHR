@@ -196,13 +196,16 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   leaves it out and records the holder's `num` under the key in its `shared`
   column. A reference always names the first holder, and a root row never
   shares. Every reader reads `data` through `member_data` or
-  `resolved_data`, which put the member back with one probe of the node
-  key, so fragments, bodies and AQL results are unchanged. An IPS commit,
-  whose 38 entries repeat one participation list, writes 42,545 bytes less
-  WAL (226,199 to 183,654, 18.8%). The price is a probe per shared row on a
-  read into the shared member: a predicate and projection into
-  `other_participations` went from 0.14 to 0.42 ms over one IPS EHR, 2.3 to
-  5.7 ms over 20 and 116 to 168 ms over 1,000.
+  `resolved_data`, which put the member back through the domain's
+  `node_shared_member` and `node_shared`, one probe of the node key each, so
+  fragments, bodies and AQL results are unchanged. The two are functions of
+  cost 1, so a statement's plan is the plan it has without sharing: every
+  statement of `aql_planner.rs` plans the same over a store with no shared
+  row. An IPS commit, whose 38 entries repeat one participation list, writes
+  42,545 bytes less WAL (226,199 to 183,654, 18.8%). The price is a function
+  call per shared row on a read into the shared member: a predicate and
+  projection into `other_participations` went from 0.14 to 0.53 ms over one
+  IPS EHR, 2.3 to 9.3 ms over 20 and 116 to 256 ms over 1,000.
 - **Tiers are partitions.** `version`, `node` and `vo_attestation` are each
   `PARTITION BY LIST (tier)` with a `hot` and a `cold` partition and no default
   partition. Archiving an EHR is `UPDATE version SET tier = 'cold' WHERE
