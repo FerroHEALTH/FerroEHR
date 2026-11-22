@@ -130,8 +130,13 @@ const FIXED_ARRAYS: usize = 25 + SPARSE.len();
 /// count, with no per-row placeholders (PostgreSQL caps a statement at 65,535
 /// parameters), one prepared statement forever. The arrays start at
 /// `first_param`. `context` is the storage context's select and, when it
-/// unnests per row, its arrays and names; `tail` follows the joins.
-fn node_insert(context: (&str, Option<(&str, &str)>), first_param: usize, tail: &str) -> String {
+/// unnests per row, its arrays and names; with `version`, the insert cross
+/// joins that CTE of the caller's.
+fn node_insert(
+    context: (&str, Option<(&str, &str)>),
+    first_param: usize,
+    version: Option<&str>,
+) -> String {
     use std::fmt::Write as _;
     let (context_select, per_row) = context;
     let mut param = first_param;
@@ -171,6 +176,12 @@ fn node_insert(context: (&str, Option<(&str, &str)>), first_param: usize, tail: 
         let _ = write!(joins, ") ON {alias}.pos = t.ord");
     }
     let (columns, selects, arrays, names) = promoted_insert_parts(param);
+    let cross = if version.is_some() {
+        " CROSS JOIN "
+    } else {
+        ""
+    };
+    let version = version.unwrap_or_default();
     format!(
         "INSERT INTO node (vo_id, sys_version, ehr_id, num, num_cap, parent_num, \
          rm_type, archetype, arch_entity, arch_concept, arch_major, name, name_code, \
@@ -186,7 +197,7 @@ fn node_insert(context: (&str, Option<(&str, &str)>), first_param: usize, tail: 
          node_marks.time_compact, node_marks.party_self, node_marks.uid_derived, \
          {EVENT_TIME}{selects} \
          FROM unnest({dense_arrays}{arrays}) WITH ORDINALITY \
-         AS t({dense_names}{names}, ord){joins}{tail}"
+         AS t({dense_names}{names}, ord){joins}{cross}{version}"
     )
 }
 
@@ -205,10 +216,10 @@ fn write_nodes_sql(per_row_context: bool) -> String {
                 )),
             ),
             4,
-            "",
+            None,
         )
     } else {
-        node_insert(("$1, $2, $3", None), 4, "")
+        node_insert(("$1, $2, $3", None), 4, None)
     }
 }
 
@@ -240,7 +251,7 @@ pub(crate) fn node_insert_cte(
     node_insert(
         (&format!("{vo}, {sys}, {ehr}"), None),
         first_array_param,
-        &format!(" CROSS JOIN {version}"),
+        Some(version),
     )
 }
 
