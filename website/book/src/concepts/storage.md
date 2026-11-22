@@ -340,10 +340,9 @@ sequenceDiagram
 
     R->>S: commit (COMPOSITION, EHR_STATUS, ...)
     S->>S: validate (RM invariants, WebTemplate, terminology)
-    S->>PG: BEGIN
-    S->>PG: advisory lock on vo_id (serializes the lineage)
     S->>PG: gate read (EHR state, tip, restriction marks, revisions, now())
-    S->>PG: INSERT commit_audit (change_type, committer, time_committed = now())
+    S->>PG: BEGIN
+    S->>PG: INSERT commit_audit (change_type, committer, time_committed = the gate read's now())
     S->>PG: INSERT contribution (commit_audit_id, ehr_id)
     S->>PG: INSERT version (new tip, committed_at = now(), body bytes)
     S->>PG: UPSERT vo_head (the object's new heads) — heap-only
@@ -359,6 +358,12 @@ Details that matter:
   restricted, the object's current tip and next ordinal with its own
   restriction mark, the policy and definition revisions, and the database
   `now()` the commit stamps.
+- The commit statement writes nothing unless what the gate read judged still
+  holds: it reads the EHR row `FOR SHARE`, the object's head row and the
+  policy and definition revisions. When something moved, the write is judged
+  again from a new gate read, at most eight times. No lock serializes two
+  writers of one object: a second version at a place already taken is
+  refused by the version's keys, and that write is judged again too.
 - `time_committed` is always server-computed, never client-supplied; the RM
   requires the committal time to reflect the EHR server's own clock.
 - There is no close-out statement: the head row advancing past the previous

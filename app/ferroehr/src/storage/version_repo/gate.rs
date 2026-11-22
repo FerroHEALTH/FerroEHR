@@ -79,6 +79,10 @@ pub struct Gate {
     /// The database `now()` of the statement, the commit instant of the
     /// write.
     pub now: jiff::Timestamp,
+    /// The policy revision the statement read.
+    pub policy: Option<i64>,
+    /// The definition revision the statement read.
+    pub definitions: Option<i64>,
     /// Whether a live persistent sibling [`Ask::persistent`] names exists in
     /// the EHR.
     pub persistent_exists: bool,
@@ -96,6 +100,9 @@ pub struct Target {
     pub placement: Placement,
     /// Whether the object carries a restriction mark of its own.
     pub restricted: bool,
+    /// The head ordinal of any lineage its head row records, which a guarded
+    /// commit requires unchanged; `None` when the object has no head row.
+    pub head: Option<i32>,
     /// The tip body's template id ([`Shape::Update`]).
     pub stored_template: Option<String>,
     /// The first content version's `(archetype_node_id, category code)`
@@ -179,6 +186,7 @@ fn statement(shape: Shape) -> String {
             " WHERE s.vo_id = t.vo_id) AS next_ordinal, ",
             "COALESCE((SELECT h.restricted_at IS NOT NULL FROM vo_head h WHERE h.vo_id = t.vo_id), ",
             "         false) AS object_restricted, ",
+            "(SELECT h.head_sys_version FROM vo_head h WHERE h.vo_id = t.vo_id) AS head, ",
             "tip.ehr_id, tip.kind, tip.sys_version, tip.trunk_version, tip.branch_number, ",
             "tip.branch_version, tip.creating_system_id, tip.lifecycle_state, ",
             "tip.committed_at AS tip_committed_at, tip.content_digest, tip.content_key, ",
@@ -247,6 +255,8 @@ pub async fn read(conn: &mut PgConnection, ask: Ask<'_>) -> Result<Gate, Storage
         is_modifiable,
         restriction,
         now,
+        policy: first.try_get("policy_revision")?,
+        definitions: first.try_get("definition_revision")?,
         persistent_exists: first.try_get("persistent_exists")?,
         targets: found,
     })
@@ -283,6 +293,7 @@ fn target(
             now,
         },
         restricted: row.try_get("object_restricted")?,
+        head: row.try_get("head")?,
         stored_template,
         first_root,
         content,

@@ -132,23 +132,29 @@ fn exceeds_node_count(value: &Value, limit: usize) -> bool {
     false
 }
 
-/// The live persistent sibling a create of `body` is refused by, under the
-/// CNF persistent-COMPOSITION uniqueness convention: an EHR may hold only one
-/// *live* persistent COMPOSITION per template; `None` for a body that is not
-/// persistent or declares no template, which no sibling refuses.
+/// The template of the live persistent sibling a create of `body` is refused
+/// by, under the CNF persistent-COMPOSITION uniqueness convention: an EHR may
+/// hold only one *live* persistent COMPOSITION per template; `None` for a
+/// body that is not persistent or declares no template, which no sibling
+/// refuses.
 ///
 /// NOTE: the openEHR RM does not define this cardinality; the CNF schedule
 /// records it as "under debate in the openEHR SEC"
 /// (`CNF/docs/platform_test_schedule/master07-func_tc_ehr_composition.adoc`).
-pub(super) fn persistent_sibling(body: &Body) -> Option<Persistent<'_>> {
-    if body.category_code() != Some(code::PERSISTENT) {
-        return None;
-    }
-    Some(Persistent {
-        template_id: body.template_id()?,
+pub(super) fn persistent_template(body: &Body) -> Option<String> {
+    (body.category_code() == Some(code::PERSISTENT))
+        .then(|| body.template_id().map(str::to_owned))
+        .flatten()
+}
+
+/// What the gate read asks of a persistent sibling of `template_id`
+/// ([`persistent_template`]).
+pub(super) fn persistent_sibling(template_id: &str) -> Persistent<'_> {
+    Persistent {
+        template_id,
         category_code: code::PERSISTENT,
         deleted_state: lifecycle::state::DELETED,
-    })
+    }
 }
 
 /// The `409` of a create whose live persistent sibling of the same template

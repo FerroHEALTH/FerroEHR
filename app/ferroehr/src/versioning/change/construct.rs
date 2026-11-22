@@ -6,6 +6,7 @@
 
 use super::{Change, Write, WriteEnvelope};
 use crate::ids::{AllocatedVoId, EhrId, VoId};
+use crate::storage::version_repo::commit::Guard;
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::body::Body;
@@ -101,6 +102,7 @@ impl Write {
             known: restriction::Known::default(),
             placement: None,
             deleted: None,
+            guard: None,
         }
     }
 
@@ -115,14 +117,23 @@ impl Write {
         }
     }
 
-    /// The same write off the placement the caller already read under the
-    /// per-object lock it holds.
+    /// The same write off the placement the caller already read, under the
+    /// per-object lock it holds or in the gate read a guard requires unchanged.
     pub(crate) fn placed(
         self,
         placement: crate::storage::version_repo::placement::Placement,
     ) -> Self {
         Self {
             placement: Some(placement),
+            ..self
+        }
+    }
+
+    /// The same write, committed only while what its gate read judged still
+    /// holds ([`Guard`]).
+    pub(crate) fn guarded(self, guard: Guard) -> Self {
+        Self {
+            guard: Some(guard),
             ..self
         }
     }

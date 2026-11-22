@@ -689,7 +689,7 @@ pub fn outbox_envelope(
     contribution_id: Uuid,
     ehr_id: Option<EhrId>,
     committed_at: jiff::Timestamp,
-    versions: Vec<Value>,
+    versions: &[Value],
 ) -> Value {
     serde_json::json!({
         "contribution_id": contribution_id,
@@ -727,7 +727,7 @@ pub async fn write_outbox(
     committed_at: jiff::Timestamp,
     versions: Vec<Value>,
 ) -> Result<(), StorageError> {
-    let envelope = outbox_envelope(contribution_id, ehr_id, committed_at, versions);
+    let envelope = outbox_envelope(contribution_id, ehr_id, committed_at, &versions);
     // The party domain carries no `ehr` relation, and a demographic commit has
     // no EHR to mark, so the marked-EHR filter is on the clinical statement
     // alone: naming `ehr` in the party domain would fail at parse time.

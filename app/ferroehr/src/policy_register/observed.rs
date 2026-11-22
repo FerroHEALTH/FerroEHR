@@ -55,6 +55,17 @@ pub(crate) fn current() -> Option<Observed> {
     SEEN.try_with(Cell::get).ok().and_then(|seen| seen.observed)
 }
 
+/// Notes that the running request's write landed nothing after all: its
+/// guarded statement refused it (#6256), so the request may run again.
+pub(crate) fn not_written() {
+    let _outside = SEEN.try_with(|seen| {
+        seen.set(Seen {
+            wrote: false,
+            ..seen.get()
+        });
+    });
+}
+
 /// Notes that the running request committed a write; outside a [`scope`]
 /// nothing is noted.
 pub(crate) fn wrote() {
