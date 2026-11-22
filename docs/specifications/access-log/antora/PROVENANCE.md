@@ -1,7 +1,7 @@
 # Provenance: the draft access log specification, in the openEHR Antora layout
 
 This tree is the draft openEHR specification change of the access log
-design (`docs/plans/access-log.md`), laid out to drop into the openEHR RM
+design (#5121, #6242), laid out to drop into the openEHR RM
 specification repository as a new Antora module. It is FerroEHR's own text
 under BUSL-1.1, written for submission to openEHR; nothing here has been
 submitted.

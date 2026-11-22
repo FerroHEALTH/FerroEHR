@@ -318,7 +318,7 @@ ferroehr access-log import --input <file>
 ```
 
 The access log's integrity and transfer, described on the
-[audit page](../audit.md#checkpoints-and-the-transfer-of-a-log). `checkpoint`
+[audit page](../audit.md#seals-checkpoints-and-the-transfer-of-a-log). `checkpoint`
 and `export` need the keyring's OpenPGP key (`record.signing.mode = "pgp"`).
 `verify` prints each finding and exits 1 when the log does not verify, so a
 scheduled job can alert on it; pass `--checkpoint` a checkpoint you kept
@@ -335,7 +335,7 @@ ferroehr audit-chain verify [--seal <file>]  # verify against the newest or a ke
 ```
 
 The system chain holds the records outside the access log, described on the
-[audit page](../audit.md#checkpoints-and-the-transfer-of-a-log). Both need
+[audit page](../audit.md#seals-checkpoints-and-the-transfer-of-a-log). Both need
 the keyring's OpenPGP key (`record.signing.mode = "pgp"`) to seal or to
 verify a seal. `verify` prints each finding and exits 1 when the chain does
 not verify; pass `--seal` a seal you kept outside this system to verify

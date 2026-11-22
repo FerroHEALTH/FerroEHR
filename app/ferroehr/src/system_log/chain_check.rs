@@ -180,9 +180,9 @@ impl ChainCheck {
                 record(u64::try_from(total).unwrap_or(u64::MAX), "damage");
                 tracing::error!(
                     findings = total,
-                    "the audit hash chain is damaged: records were modified or deleted outside \
-                     retention; see audit.verify_audit_chain() and \
-                     audit.verify_access_log_chain()"
+                    "the audit trail is damaged: records were modified or deleted outside \
+                     retention; see audit.verify_audit_chain() and POST \
+                     /admin/access-log/verify"
                 );
                 findings.truncate(KEPT_FINDINGS);
                 for finding in &findings {

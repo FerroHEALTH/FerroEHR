@@ -6,7 +6,7 @@
 //!
 //! The draft gives `ACCESS_LOG_ENTRY.other_details`, an archetypable
 //! `ITEM_STRUCTURE` as on `FEEDER_AUDIT_DETAILS`, to the fields a
-//! jurisdiction adds (`docs/plans/access-log.md` §The model). FerroEHR keeps
+//! jurisdiction adds (`docs/specifications/access-log`, the package page). FerroEHR keeps
 //! there what its projections to the IHE BALP `AuditEvent`, the DICOM audit
 //! message and the EHDS access record carry beside the core: the audit forms
 //! of the action, the outcome and the resource class, the subject the EHR

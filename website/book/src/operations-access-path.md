@@ -158,8 +158,7 @@ controller reviews.
 |---|---|---|---|
 | `access_log_entries_total` | counter | `outcome` | Audit records a request wrote into the intake before its response: `ok` or `failed`. A `failed` write refused its request with `503`. |
 | `access_log_append_duration_seconds` | histogram | `outcome` | Time of one request's intake write, one transaction: the time a request waits for its records. |
-| `access_log_chain_hold_duration_seconds` | histogram | `outcome` | How long one chainer round held the head of the access log. Its rate of sum is the lock occupancy: the fraction of time the head is held. |
-| `audit_chained_total` | counter | `chain` | Records the chainer linked, `access_log` or `system`. Beside `access_log_entries_total` it shows whether the chainer keeps up. |
+| `audit_chained_total` | counter | `chain` | Records sealed (`access_log`) or linked by the chainer (`system`). Beside `access_log_entries_total` it shows whether the sealer keeps up. |
 | `audit_reservations_held` | gauge | none | Reservations whose records a write held and nobody released for two minutes: a replica stopped between a write's commit and the chainer round that releases it. The reconciler resolves them within seconds; a value that stays above 0 means no reconciler runs. |
 | `audit_reservation_age_seconds` | gauge | none | Age of the oldest such reservation at the reconciler's last look. |
 | `audit_reservations_reconciled_total` | counter | `outcome` | Reservations the reconciler resolved: `released` (the write committed, its records go to the chain), `discarded` (it never did) or `removed` (a spent reservation row). |
@@ -290,9 +289,10 @@ recording while you investigate.
 
 ### The chainer falls behind
 
-- **Metric:** `audit_chained_total` growing slower than
-  `access_log_entries_total{outcome="ok"}`, and the rate of
-  `access_log_chain_hold_duration_seconds_sum` near 1.
+- **Metric:** `audit_chained_total{chain="system"}` growing slower than the
+  system records written, or `audit_chained_total{chain="access_log"}` far
+  behind `access_log_entries_total{outcome="ok"}` for longer than a few
+  minutes (a long writing transaction holding the frontier back).
 - **Health:** `audit_sender` reads `DEGRADED` with the age of the oldest
   intake record.
 - **What happens:** the records are stored and nothing is lost; the chains,
@@ -322,12 +322,12 @@ recording while you investigate.
      the indicator's detail and the log, which is usually the audit
      database.
   2. For `damaged`, run `SELECT * FROM audit.verify_audit_chain();` and
-     `SELECT * FROM audit.verify_access_log_chain();` to list each finding.
+     `ferroehr access-log verify` to list each finding.
      Then run `ferroehr access-log verify` to check the newest checkpoint,
      and `ferroehr access-log verify --checkpoint <file>` with the newest
      checkpoint published outside the database.
   3. Compare the findings with a checkpoint kept outside the database
-     ([Checkpoints and the transfer of a log](audit.md#checkpoints-and-the-transfer-of-a-log)).
+     ([Seals, checkpoints and the transfer of a log](audit.md#seals-checkpoints-and-the-transfer-of-a-log)).
      A record changed or deleted outside retention is a security incident:
      follow [complaints, incidents and
      vulnerabilities](compliance/post-market.md).

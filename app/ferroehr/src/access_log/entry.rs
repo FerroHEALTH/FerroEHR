@@ -53,7 +53,6 @@ use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAutho
 use openehr_rm::draft::access_log::access_log::access_channel::AccessChannel;
 use openehr_rm::draft::access_log::access_log::access_credential::AccessCredential;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
-use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_origin::AccessOrigin;
 use openehr_rm::draft::access_log::access_log::access_outcome::AccessOutcome;
 use openehr_rm::draft::access_log::access_log::access_query::AccessQuery;
@@ -92,9 +91,7 @@ pub fn writes_entry(event: &AuditEvent) -> bool {
 ///
 /// `subject` is the subject of care of the event's EHR, when the drain found
 /// one; the entry keeps it with the other facts its projections carry in
-/// `other_details` ([`crate::access_log::recorded::details`]). The entry's
-/// link is a placeholder the store replaces, since the chain decides a
-/// record's position and digests.
+/// `other_details` ([`crate::access_log::recorded::details`]).
 #[must_use]
 pub fn entry_of(
     event: &AuditEvent,
@@ -114,14 +111,6 @@ pub fn entry_of(
         uid: HierObjectId::from(uuid::Uuid::now_v7()),
         system_id: system_id.to_owned(),
         time_recorded: dv_date_time(&event.timestamp),
-        link: AccessLogLink {
-            sequence: 0,
-            algorithm: String::new(),
-            previous_digest: String::new(),
-            content_digest: String::new(),
-            digest: String::new(),
-            signature: None,
-        },
         occurred: None,
         action: Term::coded(action(event)),
         operation: operation(event),

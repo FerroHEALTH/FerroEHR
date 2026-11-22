@@ -66,8 +66,8 @@ and `Retry-After`. There is no fail mode and no queue: `fail_mode` and
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `verify_interval` | duration | `"1h"` | The time between two scheduled verifications of the store's hash chain; `"0s"` turns the schedule off. Each run verifies the records written since the newest link an earlier run found intact. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit.md#tamper-evidence). |
-| `full_verify_interval` | duration | `"7d"` | The time between two scheduled full passes over the hash chain, which also recompute the records before the checkpoint; `"0s"` leaves the full pass to `SELECT * FROM audit.verify_audit_chain()` on demand. A run that found damage is always followed by a full pass. |
+| `verify_interval` | duration | `"1h"` | The time between two scheduled verifications of the system chain and the access log's sealed windows; `"0s"` turns the schedule off. Each run verifies the records written since the newest link or window an earlier run found intact. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit.md#tamper-evidence). |
+| `full_verify_interval` | duration | `"7d"` | The time between two scheduled full passes over the system chain and every sealed window; `"0s"` leaves the full pass to `SELECT * FROM audit.verify_audit_chain()` on demand. A run that found damage is always followed by a full pass. |
 | `max_verify_lag` | duration | `"4h"` | How long a record may wait past its chain's verification cursor before the `audit_chain` indicator reads `DEGRADED`; `"0s"` reports the lag only as the `audit_chain_verification_lag` and `audit_chain_unverified_age_seconds` metrics. Set it above `verify_interval`. |
 
 The local store is always on while auditing is: every record is written to
@@ -247,17 +247,16 @@ outage or a restart.
 
 Signing the access log needs no key of this section. Whenever
 `[record.signing]` holds an OpenPGP key (`mode = "pgp"` with a `key_file`),
-every append of the access log ends, in its own transaction, with one signed
-checkpoint of its last link; without one nothing is sealed. Use an Ed25519
-key: every audit write waits while an append holds the head of the chain, and
-RSA signing is far slower. The key is the one `[record.signing]` configures
+each seal window of the access log, about one a minute, is signed as the
+checkpoint of the log up to its last entry; without one the windows are
+sealed unsigned. Use an Ed25519 key: RSA signing is far slower. The key is the one `[record.signing]` configures
 for version signatures, with its retired certificates: one key per
 deployment, kept in the secret store its `key_file` and `key_passphrase_file`
 name.
 
 Set `publish_directory` in production. Someone who can write the database
-can remove the newest entries together with the checkpoints that seal them,
+can remove the newest windows together with the checkpoints that seal them,
 and only a checkpoint published where that person cannot write shows it.
 Mount the directory from write-once storage, or from storage another system
 collects from, and give every instance the same one. See the
-[audit page](../audit.md#checkpoints-and-the-transfer-of-a-log).
+[audit page](../audit.md#seals-checkpoints-and-the-transfer-of-a-log).

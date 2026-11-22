@@ -17,14 +17,14 @@ NOTE: This page proposes an addition to the xref:ITS-REST::index.adoc[openEHR RE
 |`GET {baseUrl}/admin/access-log`
 |Entries across EHRs, for review. Query parameters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`, `offset`, `fetch`.
 
-|`GET {baseUrl}/admin/access-log/chain`
-|The `uid` and `link` of each record between `from_sequence` and `to_sequence`.
+|`GET {baseUrl}/admin/access-log/seals`
+|The seal of each window that covers a record number between `from_id` and `to_id`.
 
 |`GET {baseUrl}/admin/access-log/checkpoint`
 |The latest checkpoint, or the one at `sequence`.
 
 |`GET {baseUrl}/admin/access-log/export?ehr_id=`
-|The records of one EHR with the checkpoint they verify against, for a transfer of the EHR to another system.
+|The records of one EHR, each with its content digest, signed whole, for a transfer of the EHR to another system.
 |===
 
 A list response is a JSON object with `offset`, `fetch` and `entries`, each entry in its ITS-JSON form with `_type`. The caller's authorisation selects the full or the subject view (xref:semantics.adoc#_views[Views]). A request for an EHR the caller may not see MUST be answered as for an EHR that does not exist (`404`). Every read of these resources is itself recorded.

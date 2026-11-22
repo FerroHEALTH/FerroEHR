@@ -1,28 +1,27 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The fold of expired access-log tombstones into gaps of the chain (#5619)
-//! against a real `PostgreSQL` 18: a tombstone is kept as long again as its
-//! entry was, then each run of tombstones past their end folds into one gap,
-//! and the chain, its incremental verification, the checkpoints, an export
-//! and an import all verify across it, while a deletion outside the fold is
-//! still reported.
+//! The fold of expired access-log tombstones (#5619, #6242) against a real
+//! `PostgreSQL` 19: a tombstone is kept as long again as its entry was, then
+//! the entries of a sealed window whose records are all tombstones past their
+//! end leave together, the window recorded as folded with its seal kept, and
+//! the verification, the checkpoints, an export and an import all hold after
+//! it, while a deletion outside the fold is still reported.
 //!
 //! No openEHR spec governs audit retention: our own design.
 
 use jiff::Timestamp;
 use openehr_base::containers::NonEmptyVec;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
-use serde_json::{Value, json};
+use serde_json::json;
 use sqlx::PgPool;
 
-use ferroehr::access_log::chain::{self, ChainFinding};
+use ferroehr::access_log::chain::ChainFinding;
 use ferroehr::access_log::checkpoint::Checkpoints;
 use ferroehr::access_log::expiry::{Log, expire, fold};
 use ferroehr::access_log::gap::Folded;
 use ferroehr::access_log::publish::Publication;
 use ferroehr::access_log::store::AccessLogStore;
-use ferroehr::access_log::transfer::LogExport;
 use ferroehr::versioning::signature::trust::TrustedCertificates;
 use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
@@ -105,15 +104,24 @@ async fn incremental(pool: &PgPool) -> Vec<(Option<i64>, String)> {
         .collect()
 }
 
-/// The stored gaps, as (first, last).
-async fn gaps(pool: &PgPool) -> Vec<(i64, i64)> {
-    sqlx::query_as("SELECT first_seq, last_seq FROM audit.access_log_chain_gap ORDER BY first_seq")
-        .fetch_all(pool)
-        .await
-        .expect("read the gaps")
+/// The folded windows, as (first, last).
+async fn folds(pool: &PgPool) -> Vec<(i64, i64)> {
+    sqlx::query_as(
+        "SELECT s.first_id, s.last_id FROM audit.access_log_seal_fold f \
+         JOIN audit.access_log_seal s ON s.window_no = f.window_no ORDER BY s.window_no",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("read the folds")
 }
 
-/// The positions that still hold a record.
+/// Append `entries` and seal them in a window of their own.
+async fn sealed(store: &AccessLogStore, entries: Vec<AccessLogEntry>) {
+    store.append(entries).await.expect("the entries append");
+    store.seal_committed().await.expect("sealed");
+}
+
+/// The entry ids that still hold a record.
 async fn positions(pool: &PgPool) -> Vec<i64> {
     sqlx::query_scalar("SELECT chain_seq FROM audit.access_log_record ORDER BY chain_seq")
         .fetch_all(pool)
@@ -141,330 +149,206 @@ fn signed_log(pool: &PgPool) -> (Checkpoints, pgp::composed::SignedSecretKey) {
 }
 
 /// A tombstone is not folded before its own end, an entry never is, and once
-/// past it each run of consecutive tombstones folds into one gap that keeps
-/// the link of the run's last record and the grounds of its tombstones. The
-/// chain and its incremental verification hold across the gaps, the head
-/// included, a record appended after a gap links to it, and a record deleted
-/// outside the fold is still reported.
+/// every record of a sealed window is a tombstone past its end the window's
+/// entries leave together and the window is recorded as folded; the
+/// verification and its incremental run hold after it, a later window
+/// follows the folded one, and a record deleted outside the fold is still
+/// reported.
 #[tokio::test]
-async fn a_run_of_expired_tombstones_folds_into_one_gap() {
+async fn a_window_of_expired_tombstones_folds() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AccessLogStore::new(pool.clone());
-    let written = store
-        .append(entries(&[
-            "2029-01-01",
-            "2029-01-01",
-            "2029-01-01",
-            "2029-01-01",
-            "2040-01-01",
-            "2029-01-01",
-        ]))
-        .await
-        .expect("the entries append");
-    assert_eq!(incremental(&pool).await, [], "the log verifies before");
-
+    sealed(&store, entries(&["2029-01-01"; 4])).await;
     assert_eq!(
         expire(&store, Log::Local, expiry_run())
             .await
             .expect("expire"),
-        5
+        4
     );
     assert_eq!(
         fold(&store, Log::Local, expiry_run()).await.expect("fold"),
         Folded::default(),
-        "a tombstone is kept past its removal"
+        "no tombstone is past its own end yet"
     );
-    assert_eq!(
-        fold(&store, Log::Local, at("2034-10-30T00:00:00Z"))
-            .await
-            .expect("fold"),
-        Folded::default(),
-        "a tombstone is kept as long again as its entry was"
-    );
-
     let folded = fold(&store, Log::Local, fold_run()).await.expect("fold");
     assert_eq!(
         folded,
         Folded {
-            tombstones: 5,
-            gaps: 2
-        }
-    );
-    assert_eq!(gaps(&pool).await, [(1, 4), (6, 6)]);
-    assert_eq!(positions(&pool).await, [5], "the entry kept longer stays");
-    let stored = store.gaps(1, 6).await.expect("read the gaps");
-    let links: Vec<&str> = stored.iter().map(|gap| gap.link.as_str()).collect();
-    let expected: Vec<&str> = [3, 5]
-        .iter()
-        .map(|&index| written[index].link.digest.as_str())
-        .collect();
-    assert_eq!(links, expected, "each gap keeps its last record's link");
-    for gap in &stored {
-        assert_eq!(
-            gap.grounds.as_ref(),
-            written[0].retention.grounds.as_ref(),
-            "the fold names the grounds of its tombstones"
-        );
-        assert_eq!(gap.time_folded.value, "2035-01-01T00:00:00Z");
-    }
-
-    assert_eq!(
-        findings(&pool).await,
-        [],
-        "the log verifies across the gaps"
-    );
-    assert_eq!(incremental(&pool).await, [], "and incrementally");
-    assert_eq!(
-        fold(&store, Log::Local, fold_run())
-            .await
-            .expect("fold again"),
-        Folded::default(),
-        "a second run finds nothing"
-    );
-
-    store
-        .append(vec![entry(7, STAYS, "2040-01-01")])
-        .await
-        .expect("an entry follows the folded head");
-    assert_eq!(findings(&pool).await, [], "the new entry links to the gap");
-    assert_eq!(incremental(&pool).await, []);
-
-    crate::access_log_checkpoint::tamper(
-        &pool,
-        "audit.access_log_link",
-        &["DELETE FROM audit.access_log_link WHERE chain_seq = 5"],
-    )
-    .await;
-    let found = findings(&pool).await;
-    assert!(
-        found
-            .iter()
-            .any(|(at, text)| *at == Some(6) && text.contains("deleted between chain position 4")),
-        "a deletion outside the fold is tampering: {found:?}"
-    );
-}
-
-/// Entries expire in any order: a longer-kept entry pins the runs on both
-/// sides apart, each run folds on its own, and the pinning entry folds into a
-/// gap of its own once its tombstone's end passes, leaving adjacent gaps that
-/// verify.
-#[tokio::test]
-async fn out_of_order_expiry_folds_into_adjacent_gaps() {
-    let testdb = testkit::db().await.expect("testkit database");
-    let pool = testdb.pool();
-    let store = AccessLogStore::new(pool.clone());
-    store
-        .append(entries(&[
-            "2029-01-01",
-            "2033-01-01",
-            "2029-01-01",
-            "2029-01-01",
-            "2040-01-01",
-        ]))
-        .await
-        .expect("the entries append");
-
-    assert_eq!(
-        expire(&store, Log::Local, expiry_run())
-            .await
-            .expect("expire"),
-        3
-    );
-    let folded = fold(&store, Log::Local, fold_run()).await.expect("fold");
-    assert_eq!(folded.gaps, 2, "the pinning entry splits the run");
-    assert_eq!(gaps(&pool).await, [(1, 1), (3, 4)]);
-    assert_eq!(findings(&pool).await, []);
-    assert_eq!(incremental(&pool).await, []);
-
-    let later = at("2034-01-01T00:00:00Z");
-    assert_eq!(expire(&store, Log::Local, later).await.expect("expire"), 1);
-    assert_eq!(
-        fold(&store, Log::Local, fold_run()).await.expect("fold"),
-        Folded::default(),
-        "its tombstone is kept as long as it was an entry"
-    );
-    let folded = fold(&store, Log::Local, at("2043-01-01T00:00:00Z"))
-        .await
-        .expect("fold");
-    assert_eq!(
-        folded,
-        Folded {
-            tombstones: 1,
+            tombstones: 4,
             gaps: 1
         }
     );
-    assert_eq!(gaps(&pool).await, [(1, 1), (2, 2), (3, 4)]);
-    assert_eq!(positions(&pool).await, [5]);
+    assert_eq!(positions(&pool).await, Vec::<i64>::new());
+    assert_eq!(folds(&pool).await, [(1, 4)]);
     assert_eq!(findings(&pool).await, []);
     assert_eq!(incremental(&pool).await, []);
+
+    sealed(
+        &store,
+        vec![entry(5, STAYS, "2040-01-01"), entry(6, STAYS, "2040-01-01")],
+    )
+    .await;
+    assert_eq!(
+        findings(&pool).await,
+        [],
+        "a later window follows the folded one"
+    );
+    sqlx::query("ALTER TABLE audit.access_log_entry DISABLE TRIGGER USER")
+        .execute(&pool)
+        .await
+        .expect("as the owner");
+    sqlx::query("DELETE FROM audit.access_log_entry WHERE id = 5")
+        .execute(&pool)
+        .await
+        .expect("the deletion");
+    sqlx::query("ALTER TABLE audit.access_log_entry ENABLE TRIGGER USER")
+        .execute(&pool)
+        .await
+        .expect("as the owner");
+    assert!(
+        !findings(&pool).await.is_empty(),
+        "a record deleted outside the fold is reported"
+    );
 }
 
-/// A run of tombstones folds whole across the checkpoints of the appends that
-/// wrote it: a checkpoint inside the run leaves with it, and the one at its
-/// last position stays and verifies against the gap's link. A gap of this
-/// system's log carries no signature, since it signs checkpoints and no link
-/// (#5704).
+/// Entries expire in any order: a longer-kept entry keeps its window's
+/// tombstones until its own tombstone's end has passed, and then the window
+/// folds whole.
 #[tokio::test]
-async fn a_run_folds_across_the_checkpoints_inside_it() {
+async fn a_longer_kept_entry_keeps_its_window() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AccessLogStore::new(pool.clone());
+    sealed(&store, entries(&["2029-01-01", "2030-01-01", "2029-01-01"])).await;
+    expire(&store, Log::Local, at("2029-06-01T00:00:00Z"))
+        .await
+        .expect("expire");
+    assert_eq!(
+        fold(&store, Log::Local, at("2033-01-01T00:00:00Z"))
+            .await
+            .expect("fold"),
+        Folded::default(),
+        "the entry kept to 2030 keeps the window"
+    );
+    assert_eq!(positions(&pool).await, [1, 2, 3]);
+    expire(&store, Log::Local, at("2030-06-01T00:00:00Z"))
+        .await
+        .expect("expire");
+    let folded = fold(&store, Log::Local, at("2040-01-01T00:00:00Z"))
+        .await
+        .expect("fold");
+    assert_eq!(folded.tombstones, 3);
+    assert_eq!(folds(&pool).await, [(1, 3)]);
+    assert_eq!(findings(&pool).await, []);
+}
+
+/// A folded window keeps its seal, so a checkpoint published before the fold
+/// still verifies after it, and one whose proof was replaced does not.
+#[tokio::test]
+async fn a_published_checkpoint_verifies_after_its_window_folds() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let (log, _key) = signed_log(&pool);
+    let directory = std::env::temp_dir().join(format!(
+        "ferroehr-fold-publication-{}-{}",
+        std::process::id(),
+        uuid::Uuid::now_v7()
+    ));
+    std::fs::create_dir_all(&directory).expect("the publication directory");
+    let publication = Publication::new(Some(directory.clone()));
     let all = entries(&["2029-01-01"; 6]);
-    log.store()
-        .append(all[..3].to_vec())
-        .await
-        .expect("the first entries append");
-    let early = log
-        .at(3)
-        .await
-        .expect("read")
-        .expect("the first append's checkpoint");
-    log.store()
-        .append(all[3..].to_vec())
-        .await
-        .expect("the rest append");
-    let late = log
-        .at(6)
-        .await
-        .expect("read")
-        .expect("the second append's checkpoint");
+    sealed(log.store(), all[..3].to_vec()).await;
+    assert_eq!(publication.publish(&log).await.expect("publish"), Some(3));
+    sealed(log.store(), all[3..].to_vec()).await;
 
-    expire(log.store(), Log::Local, expiry_run())
-        .await
-        .expect("expire");
-    let folded = fold(log.store(), Log::Local, fold_run())
-        .await
-        .expect("fold");
-    assert_eq!(folded.tombstones, 6);
-    assert_eq!(gaps(&pool).await, [(1, 6)], "one gap for the whole run");
-    assert!(
-        log.store()
-            .gaps(1, 6)
-            .await
-            .expect("read the gaps")
-            .iter()
-            .all(|gap| gap.signature.is_none()),
-        "a gap of this system's log carries no signature"
-    );
-    assert_eq!(
-        log.at(early.sequence).await.expect("read"),
-        None,
-        "the checkpoint inside the run leaves with it"
-    );
-    let verification = log.verify(Some(late.clone())).await.expect("verify");
-    assert!(verification.intact(), "{verification:?}");
-    assert_eq!(
-        log.seal().await.expect("seal"),
-        Some(late),
-        "the folded head keeps its checkpoint"
-    );
-    let refused = sqlx::query("DELETE FROM audit.access_log_checkpoint")
-        .execute(&pool)
-        .await
-        .expect_err("a checkpoint leaves only through the fold");
-    assert!(refused.to_string().contains("append-only"), "{refused}");
-}
-
-/// An export of one EHR whose records have another EHR's folded tombstones
-/// between them carries the gap, verifies across it and imports into another
-/// system, which keeps the gap; an export missing the gap, or with its link
-/// changed, does not verify.
-#[tokio::test]
-async fn an_export_spans_a_gap() {
-    let source_db = testkit::db().await.expect("source database");
-    let target_db = testkit::db().await.expect("target database");
-    let pool = source_db.pool();
-    let (log, key) = signed_log(&pool);
-    log.store()
-        .append(vec![
-            entry(1, MOVED, "2040-01-01"),
-            entry(2, STAYS, "2029-01-01"),
-            entry(3, STAYS, "2029-01-01"),
-            entry(4, MOVED, "2040-01-01"),
-        ])
-        .await
-        .expect("the entries append");
     expire(log.store(), Log::Local, expiry_run())
         .await
         .expect("expire");
     fold(log.store(), Log::Local, fold_run())
         .await
         .expect("fold");
-    assert_eq!(gaps(&pool).await, [(2, 3)]);
+    assert_eq!(folds(&pool).await, [(1, 3), (4, 6)]);
 
-    let export = log.export(MOVED).await.expect("the export verifies");
+    let file = std::fs::read_dir(&directory)
+        .expect("the directory")
+        .next()
+        .expect("one published file")
+        .expect("a directory entry")
+        .path();
+    let published: AccessLogCheckpoint =
+        serde_json::from_str(&std::fs::read_to_string(file).expect("the published file"))
+            .expect("the published checkpoint reads");
+    assert_eq!(published.sequence, 3);
+    let verification = log.verify(Some(published.clone())).await.expect("verify");
+    assert!(verification.intact(), "{verification:?}");
+
+    let mut forged = published;
+    forged.proof = log
+        .at(6)
+        .await
+        .expect("read")
+        .expect("the newest checkpoint")
+        .proof;
+    let verification = log.verify(Some(forged)).await.expect("verify");
+    assert!(
+        verification
+            .findings
+            .contains(&ChainFinding::CheckpointProof { sequence: 3 }),
+        "a proof over another checkpoint does not verify: {verification:?}"
+    );
+    std::fs::remove_dir_all(directory).expect("clean up");
+}
+
+/// An export of one EHR after the windows of another EHR's records folded
+/// verifies and imports into another system.
+#[tokio::test]
+async fn an_export_after_a_fold_verifies_and_imports() {
+    let source_db = testkit::db().await.expect("source database");
+    let target_db = testkit::db().await.expect("target database");
+    let pool = source_db.pool();
+    let (log, key) = signed_log(&pool);
+    sealed(log.store(), entries(&["2029-01-01"; 3])).await;
+    sealed(
+        log.store(),
+        vec![entry(4, MOVED, "2040-01-01"), entry(5, MOVED, "2040-01-01")],
+    )
+    .await;
+    expire(log.store(), Log::Local, expiry_run())
+        .await
+        .expect("expire");
+    fold(log.store(), Log::Local, fold_run())
+        .await
+        .expect("fold");
+    assert_eq!(folds(&pool).await, [(1, 3)]);
+
+    let export = log.export(MOVED).await.expect("export");
     assert_eq!(export.records.len(), 2);
-    let linked: Vec<i64> = export.links.iter().map(|link| link.sequence).collect();
-    assert_eq!(linked, [1, 4]);
-    let spans: Vec<(i64, i64)> = export
-        .gaps
-        .iter()
-        .map(|gap| (gap.first_sequence, gap.last_sequence))
-        .collect();
-    assert_eq!(spans, [(2, 3)]);
-    let trusted = |data: &[u8], signature: &str| log.signed(data, signature);
-    assert_eq!(chain::verify(export.span(), &trusted).expect("verify"), []);
-
-    let without = LogExport {
-        gaps: Vec::new(),
-        ..export.clone()
-    };
-    assert_eq!(
-        chain::verify(without.span(), &trusted).expect("verify"),
-        [ChainFinding::NotAdjacent {
-            sequence: 4,
-            previous: 1
-        }],
-        "a gap left out is a hole in the span"
-    );
-    let mut changed: Value = serde_json::to_value(&export).expect("the export writes");
-    changed["gaps"][0]["link"] = json!("0".repeat(64));
-    let changed: LogExport = serde_json::from_value(changed).expect("the export reads");
-    let found = chain::verify(changed.span(), &trusted).expect("verify");
-    assert_eq!(
-        found,
-        [ChainFinding::PreviousDigest { sequence: 4 }],
-        "a changed gap breaks the link after it"
-    );
-
-    let wire = serde_json::to_string(&export).expect("the export writes");
-    let received: LogExport = serde_json::from_str(&wire).expect("the export reads");
-    assert_eq!(received, export);
-    let target = Checkpoints::new(
+    assert_eq!(log.verify_bundle(&export).expect("verify"), Vec::new());
+    let receiver = Checkpoints::new(
         target_db.pool(),
         RECEIVER.to_owned(),
         keyring(&generate_key()),
         trusting(&key),
     );
-    target
-        .import(&received, import_record())
+    let imported = receiver
+        .import(&export, import_record())
         .await
-        .expect("the import verifies across the gap");
-    let kept: Vec<(String, i64, i64)> =
-        sqlx::query_as("SELECT system_id, first_seq, last_seq FROM audit.access_log_imported_gap")
-            .fetch_all(&target_db.pool())
-            .await
-            .expect("read the imported gaps");
-    assert_eq!(kept, [(SYSTEM.to_owned(), 2, 3)]);
-    target
-        .import(&received, import_record())
-        .await
-        .expect("a repeated import keeps the gap once");
+        .expect("the import verifies");
+    assert_eq!(imported.records, 2);
 }
 
-/// An erasure a law orders is a tombstone like any other: it folds once it
-/// has been a tombstone as long as it was an entry, alone between entries
-/// still kept, and the gap names the erasure's grounds.
+/// An erasure a law orders is a tombstone like any other: its window folds
+/// once it has been a tombstone as long as it was an entry, and the fold
+/// names the erasure's grounds.
 #[tokio::test]
 async fn an_erased_entry_folds_like_any_other() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AccessLogStore::new(pool.clone());
-    store
-        .append(entries(&["2040-01-01"; 3]))
-        .await
-        .expect("the entries append");
+    for n in 1..=3 {
+        sealed(&store, vec![entry(n, STAYS, "2040-01-01")]).await;
+    }
     let removed = serde_json::from_value(json!({ "_type": "DV_DATE_TIME",
         "value": "2027-01-01T00:00:00Z" }))
     .expect("the time reads");
@@ -494,49 +378,44 @@ async fn an_erased_entry_folds_like_any_other() {
             gaps: 1
         }
     );
-    let stored = store.gaps(1, 3).await.expect("read the gaps");
-    let codes: Vec<(i64, i64, &str)> = stored
-        .iter()
-        .flat_map(|gap| {
-            gap.grounds.iter().map(|ground| {
-                (
-                    gap.first_sequence,
-                    gap.last_sequence,
-                    ground.defining_code.code_string.as_str(),
-                )
-            })
-        })
-        .collect();
-    assert_eq!(codes, [(2, 2, "court-order")]);
+    let grounds: Vec<String> = sqlx::query_scalar(
+        "SELECT g ->> 'value' FROM audit.access_log_seal_fold f, \
+         jsonb_array_elements(f.grounds) AS g",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the fold's grounds");
+    assert_eq!(grounds, ["court-order"]);
     assert_eq!(positions(&pool).await, [1, 3]);
     assert_eq!(findings(&pool).await, []);
 }
 
-/// Two replicas folding at once never fold a tombstone twice: their gaps do
-/// not overlap, together they hold every expired position, and the chain
-/// verifies.
+/// Two replicas folding at once never fold a window twice: together they
+/// fold every expired window once, and the windows verify.
 #[tokio::test]
 async fn two_replicas_fold_at_once() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AccessLogStore::new(pool.clone());
-    let count = 600_u32;
-    store
-        .append((1..=count).map(|n| entry(n, STAYS, "2029-01-01")).collect())
+    let windows = 60_u32;
+    for window in 0..windows {
+        sealed(
+            &store,
+            (1..=10)
+                .map(|n| entry(window * 10 + n, STAYS, "2029-01-01"))
+                .collect(),
+        )
+        .await;
+    }
+    expire(&store, Log::Local, expiry_run())
         .await
-        .expect("the entries append");
-    assert_eq!(
-        expire(&store, Log::Local, expiry_run())
-            .await
-            .expect("expire"),
-        u64::from(count)
-    );
+        .expect("expire");
 
     let replica = |store: AccessLogStore| async move {
         let mut total = 0_u64;
         loop {
             let batch = store
-                .fold_expired(Log::Local, fold_run(), 25)
+                .fold_expired(Log::Local, fold_run(), 5)
                 .await
                 .expect("a replica folds");
             total += batch.tombstones;
@@ -551,127 +430,86 @@ async fn two_replicas_fold_at_once() {
     );
     let one = one.expect("the first replica runs");
     let two = two.expect("the second replica runs");
-    assert_eq!(one + two, u64::from(count), "every tombstone folds once");
-
-    let held = gaps(&pool).await;
-    let mut next = 1_i64;
-    for (first, last) in &held {
-        assert_eq!(
-            *first, next,
-            "the gaps do not overlap or leave a hole: {held:?}"
-        );
-        next = last + 1;
-    }
-    assert_eq!(next, i64::from(count) + 1);
+    assert_eq!(
+        one + two,
+        u64::from(windows * 10),
+        "every tombstone folds once"
+    );
+    assert_eq!(
+        folds(&pool).await.len(),
+        usize::try_from(windows).expect("a count")
+    );
     assert_eq!(positions(&pool).await, Vec::<i64>::new());
     assert_eq!(findings(&pool).await, []);
 }
 
-/// The fold is the one way out: a tombstone deleted directly and a gap
-/// changed or removed are refused.
+/// The fold is the one way out: a tombstone deleted directly and a fold
+/// record changed or removed are refused.
 #[tokio::test]
-async fn a_gap_and_a_tombstone_leave_only_through_the_fold() {
+async fn a_fold_and_a_tombstone_leave_only_through_the_fold() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AccessLogStore::new(pool.clone());
-    store
-        .append(entries(&["2029-01-01"; 3]))
-        .await
-        .expect("the entries append");
+    sealed(&store, entries(&["2029-01-01"; 3])).await;
     expire(&store, Log::Local, expiry_run())
         .await
         .expect("expire");
     assert!(
-        sqlx::query(
-            "DELETE FROM audit.access_log_entry \
-             WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 1)",
-        )
-        .execute(&pool)
-        .await
-        .is_err(),
+        sqlx::query("DELETE FROM audit.access_log_entry WHERE id = 1")
+            .execute(&pool)
+            .await
+            .is_err(),
         "a tombstone is not deleted outside the fold"
     );
     fold(&store, Log::Local, fold_run()).await.expect("fold");
     for statement in [
-        "UPDATE audit.access_log_chain_gap SET link = repeat('0', 64)",
-        "DELETE FROM audit.access_log_chain_gap",
-        "TRUNCATE audit.access_log_chain_gap",
+        "UPDATE audit.access_log_seal_fold SET grounds = '[]'",
+        "DELETE FROM audit.access_log_seal_fold",
+        "TRUNCATE audit.access_log_seal_fold",
     ] {
         assert!(
             sqlx::query(statement).execute(&pool).await.is_err(),
             "{statement} is refused"
         );
     }
-    assert_eq!(gaps(&pool).await, [(1, 3)]);
+    assert_eq!(folds(&pool).await, [(1, 3)]);
     assert_eq!(findings(&pool).await, []);
 }
 
-/// A checkpoint published outside the database before retention folds the
-/// run it sealed still verifies after the fold: the fold keeps it, and the
-/// gap records the link it seals and the digest of its proof. A checkpoint
-/// the gap did not record for that proof does not verify through it (#5727).
+/// One fold run folds every sealed window whose records are all tombstones
+/// past their end, across the seals between them, and the windows, their
+/// seals and the newest checkpoint verify after it (#6242).
 #[tokio::test]
-async fn a_published_checkpoint_verifies_after_its_run_folds() {
+async fn a_run_folds_across_the_windows_inside_it() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let (log, _key) = signed_log(&pool);
-    let directory = std::env::temp_dir().join(format!(
-        "ferroehr-gap-publication-{}-{}",
-        std::process::id(),
-        uuid::Uuid::now_v7()
-    ));
-    std::fs::create_dir_all(&directory).expect("the publication directory");
-    let publication = Publication::new(Some(directory.clone()));
-    let all = entries(&["2029-01-01"; 6]);
-    log.store()
-        .append(all[..3].to_vec())
-        .await
-        .expect("the first entries append");
-    assert_eq!(publication.publish(&log).await.expect("publish"), Some(3));
-    log.store()
-        .append(all[3..].to_vec())
-        .await
-        .expect("the rest append");
-
-    expire(log.store(), Log::Local, expiry_run())
+    let store = log.store();
+    for window in 0..3_u32 {
+        sealed(
+            store,
+            vec![
+                entry(window * 2 + 1, STAYS, "2029-01-01"),
+                entry(window * 2 + 2, STAYS, "2029-01-01"),
+            ],
+        )
+        .await;
+    }
+    let checkpoint = log.seal().await.expect("seal").expect("a checkpoint");
+    expire(store, Log::Local, expiry_run())
         .await
         .expect("expire");
-    fold(log.store(), Log::Local, fold_run())
-        .await
-        .expect("fold");
-    assert_eq!(gaps(&pool).await, [(1, 6)], "one gap for the whole run");
-
-    let file = std::fs::read_dir(&directory)
-        .expect("the directory")
-        .next()
-        .expect("one published file")
-        .expect("a directory entry")
-        .path();
-    let published: AccessLogCheckpoint =
-        serde_json::from_str(&std::fs::read_to_string(file).expect("the published file"))
-            .expect("the published checkpoint reads");
-    assert_eq!(published.sequence, 3);
-    let verification = log.verify(Some(published.clone())).await.expect("verify");
-    assert!(verification.intact(), "{verification:?}");
+    let folded = fold(store, Log::Local, fold_run()).await.expect("fold");
     assert_eq!(
-        log.at(3).await.expect("read").map(|kept| kept.sequence),
-        Some(3),
-        "the fold keeps the published checkpoint"
+        folded,
+        Folded {
+            tombstones: 6,
+            gaps: 3
+        },
+        "three windows fold in one run"
     );
-
-    let mut forged = published;
-    forged.proof = log
-        .at(6)
-        .await
-        .expect("read")
-        .expect("the head's checkpoint")
-        .proof;
-    let verification = log.verify(Some(forged)).await.expect("verify");
-    assert!(
-        verification
-            .findings
-            .contains(&ChainFinding::CheckpointDigest { sequence: 3 }),
-        "a proof the gap did not record names no link: {verification:?}"
-    );
-    std::fs::remove_dir_all(directory).expect("clean up");
+    assert_eq!(folds(&pool).await, [(1, 2), (3, 4), (5, 6)]);
+    assert_eq!(findings(&pool).await, []);
+    let verification = log.verify(Some(checkpoint)).await.expect("verify");
+    assert!(verification.intact(), "{verification:?}");
 }

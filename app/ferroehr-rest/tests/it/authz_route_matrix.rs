@@ -448,10 +448,10 @@ const ADMIN_READ: &[(&str, &str)] = &[
     // (#5129), and its export reads the log.
     ("POST", "/admin/access-log/verify"),
     ("GET", "/admin/access-log/export"),
-    // The review of the access log across EHRs, the links of a span of its
-    // chain and a stored checkpoint (#5130).
+    // The review of the access log across EHRs, the seals over a span of
+    // its entry ids and a stored checkpoint (#5130, #6242).
     ("GET", "/admin/access-log"),
-    ("GET", "/admin/access-log/chain"),
+    ("GET", "/admin/access-log/seals"),
     ("GET", "/admin/access-log/checkpoint"),
     // The legal registers, read side: the restriction sequence a controller
     // answers an Art. 18(3) notice from, the declared retention periods, and

@@ -4,7 +4,7 @@ h|*Class*
 2+^h|*ACCESS_LOG_TOMBSTONE*
 
 h|*Description*
-2+a|What remains of an `ACCESS_LOG_ENTRY` after its retention period: the uid, the recording time and the chain link, so the chain still verifies, and nothing that identifies a person or the data.
+2+a|What remains of an `ACCESS_LOG_ENTRY` after its retention period: the uid and the recording time, while the system keeps the digest of the entry it replaced, so its window's seal still verifies, and nothing that identifies a person or the data.
 
 h|*Inherit*
 2+|`xref:access_log:access_log_package.adoc#_access_log_record_class[ACCESS_LOG_RECORD]`

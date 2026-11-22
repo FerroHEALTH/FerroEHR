@@ -6,12 +6,13 @@
 //! The openEHR `ACCESS_LOG_TOMBSTONE` spec class, generated from the vendored BMM
 //! meta-model.
 
-use crate::draft::access_log::access_log::access_log_link::AccessLogLink;
 use crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
 
-/// What remains of an `ACCESS_LOG_ENTRY` after its retention period: the uid, the recording time and the chain link, so the chain still verifies, and nothing that identifies a person or the data.
+/// The openEHR `ACCESS_LOG_TOMBSTONE` class.
+///
+/// What remains of an `ACCESS_LOG_ENTRY` after its retention period: the uid and the recording time, while the system keeps the digest of the entry it replaced, so its window's seal still verifies, and nothing that identifies a person or the data.
 #[doc(alias = "ACCESS_LOG_TOMBSTONE")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessLogTombstone {
@@ -22,8 +23,6 @@ pub struct AccessLogTombstone {
     pub system_id: String,
     /// Time at which the record was written to the log.
     pub time_recorded: DvDateTime,
-    /// This record's link in the log's hash chain.
-    pub link: AccessLogLink,
     /// Time at which the entry's content was removed.
     pub time_removed: DvDateTime,
     /// The grounds of the removal: the end of the retention period, or an erasure a law orders.

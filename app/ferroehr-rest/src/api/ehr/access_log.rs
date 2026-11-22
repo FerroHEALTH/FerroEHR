@@ -7,7 +7,7 @@
 //!
 //! No openEHR ITS-REST operation governs these routes: the access log is a
 //! draft openEHR package FerroEHR proposes, and its ITS-REST resources are
-//! part of that proposal (`docs/plans/access-log.md` §ITS-REST resources).
+//! part of that proposal (`docs/specifications/access-log`, the ITS-REST page).
 //! The log has its own access control apart from any clinical grant (the
 //! draft's recording rule 8), so the SMART requirement of the routes is an
 //! authenticated caller and this module decides the view:

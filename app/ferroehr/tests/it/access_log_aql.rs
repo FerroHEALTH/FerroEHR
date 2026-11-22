@@ -107,7 +107,7 @@ async fn a_reviewer_queries_across_ehrs() {
     let reviewer = request(LogStanding::Reviewer);
     let all = rows(
         &fx.svc,
-        "SELECT l/ehr_id/value, l/link/sequence, l/accessor/credential/subject \
+        "SELECT l/ehr_id/value, l/uid/value, l/accessor/credential/subject \
          FROM ACCESS_LOG_ENTRY l",
         &reviewer,
     )
@@ -116,7 +116,11 @@ async fn a_reviewer_queries_across_ehrs() {
     let ehrs: Vec<&Value> = all.iter().map(|row| &row[0]).collect();
     assert!(ehrs.contains(&&json!(fx.first.to_string())), "{all:?}");
     assert!(ehrs.contains(&&json!(fx.second.to_string())), "{all:?}");
-    assert_eq!(all[0][1], json!(5), "newest first: {all:?}");
+    assert_eq!(
+        all[0][1],
+        json!("0193f1a2-7c1e-7b4a-9f00-000000000005"),
+        "newest first: {all:?}"
+    );
     assert_eq!(all[0][2], json!("a1b2c3"), "the full view: {all:?}");
 
     let second = rows(
@@ -139,7 +143,7 @@ async fn a_reviewer_queries_across_ehrs() {
 
     let page = rows(
         &fx.svc,
-        "SELECT l/link/sequence FROM ACCESS_LOG_ENTRY l ORDER BY l/link/sequence ASC",
+        "SELECT l/uid/value FROM ACCESS_LOG_ENTRY l ORDER BY l/uid/value ASC",
         &AqlQueryRequest {
             fetch: Some(2),
             offset: Some(1),
@@ -147,7 +151,13 @@ async fn a_reviewer_queries_across_ehrs() {
         },
     )
     .await;
-    assert_eq!(page, vec![json!([2]), json!([3])]);
+    assert_eq!(
+        page,
+        vec![
+            json!(["0193f1a2-7c1e-7b4a-9f00-000000000002"]),
+            json!(["0193f1a2-7c1e-7b4a-9f00-000000000003"]),
+        ]
+    );
 
     let versions = rows(
         &fx.svc,

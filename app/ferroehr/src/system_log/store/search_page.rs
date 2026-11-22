@@ -148,18 +148,9 @@ fn total(condition: &Cond) -> SelectStatement {
             .cond_where(condition.clone())
             .to_owned()
     };
+    // NOTE: our own design (#6242), access_log_search holds no entry a write still holds.
     let access_log = count_of(indexed());
-    // NOTE: our own design (#6000), the intake names the entries no link chains yet.
-    let unchained = count_of(
-        indexed()
-            .and_where(Expr::cust(
-                "entry_id = ANY (ARRAY(SELECT unnest(i.entries) FROM audit.access_log_intake i))",
-            ))
-            .to_owned(),
-    );
-    Query::select()
-        .expr(system.add(access_log).sub(unchained))
-        .to_owned()
+    Query::select().expr(system.add(access_log)).to_owned()
 }
 
 /// A scalar subquery of `count`.

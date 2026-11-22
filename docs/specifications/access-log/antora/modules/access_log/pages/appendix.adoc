@@ -12,7 +12,7 @@ include::partial$module_vars.adoc[]
 |writes entries by xref:semantics.adoc#_recording[Recording] and serves the full view to reviewers.
 
 |AL-2 Integrity
-|chains every record by xref:semantics.adoc#_integrity[Integrity] and serves `chain` and `checkpoint`.
+|seals every record by xref:semantics.adoc#_integrity[Integrity] and serves `seals` and `checkpoint`.
 
 |AL-3 Retention
 |states and applies retention by xref:semantics.adoc#_retention[Retention].
@@ -21,7 +21,7 @@ include::partial$module_vars.adoc[]
 |serves the subject view through `/ehr/{ehr_id}/access_log`.
 
 |AL-5 Exchange
-|exports and imports an EHR's records with their checkpoint.
+|exports and imports an EHR's records as a signed bundle.
 
 |AL-6 Query
 |supports `ACCESS_LOG_ENTRY` as an AQL root.
@@ -31,7 +31,7 @@ include::partial$module_vars.adoc[]
 
 An entry projects onto the records other standards define. The projection writes what the target can hold and loses the rest:
 
-* *FHIR `AuditEvent` under IHE Basic Audit Log Patterns 1.1.4:* the action, times, outcome, purposes, accessor, provider, credential, client, items, query, request id and system map to `action`, `recorded`, `period`, `outcome`, `purposeOfEvent`, `agent`, `entity` and `source`. The order of the delegation chain, the legal grounds, the origins, the retention and the hash chain have no element. `_ehr_id_` is carried as an identifier, since BALP expects a `Patient` reference.
+* *FHIR `AuditEvent` under IHE Basic Audit Log Patterns 1.1.4:* the action, times, outcome, purposes, accessor, provider, credential, client, items, query, request id and system map to `action`, `recorded`, `period`, `outcome`, `purposeOfEvent`, `agent`, `entity` and `source`. The order of the delegation chain, the legal grounds, the origins, the retention and the seals have no element. `_ehr_id_` is carried as an identifier, since BALP expects a `Patient` reference.
 * *DICOM PS3.15 A.5 audit message:* the action, outcome, accessor and items map to `EventIdentification`, `ActiveParticipant`, `AuditSourceIdentification` and `ParticipantObjectIdentification`, with 110101 "Audit Log Used" for a read of the log (A.5.3.2). Purposes, authorisations and the emergency mark have no element in the A.5.1 schema.
 * *EHDS Annex II 3.2:* (a) `_accessor.provider_`, (b) `_accessor.party_`, (c) `_items.categories_`, (d) `_time_recorded_`, (e) `_items.origins_`.
 * *NEN 7513:2024 (Netherlands):* the DICOM-derived fields map as above; `participantSegments` maps to `_items.paths_`, `behandelrelatieProtocol` and `toestemmingsProfiel` to `_authorisations_`, and the list of checks the access decision ran (`controles`) goes to `_other_details_` under a national archetype.
@@ -80,9 +80,7 @@ An entry projects onto the records other standards define. The projection writes
       "defining_code": {"terminology_id": {"value": "http://data.europa.eu/eli/reg/2025/327/oj"},
         "code_string": "art_9.par_2"}}],
     "policy": {"_type": "OBJECT_VERSION_ID",
-      "value": "5e6f7a8b-9c0d-4e1f-8a2b-c3d4e5f6a7b8::cdr.example.org::2"}},
-  "link": {"_type": "ACCESS_LOG_LINK", "sequence": 48213, "algorithm": "SHA-256",
-    "previous_digest": "<64 hex>", "content_digest": "<64 hex>", "digest": "<64 hex>"}
+      "value": "5e6f7a8b-9c0d-4e1f-8a2b-c3d4e5f6a7b8::cdr.example.org::2"}}
 }
 ----
 

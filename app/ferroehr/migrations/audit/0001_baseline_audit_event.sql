@@ -295,6 +295,22 @@ BEGIN
 END;
 $$;
 
+-- ── the token generation ─────────────────────────────────────────────────────
+-- A writer that names search tokens by the ids it holds in memory names the
+-- generation those ids were read under; retention moves the generation each
+-- time it deletes a token, and a write naming another generation is refused,
+-- so the writer reads its ids again (#6242). A search set is never deleted,
+-- so its id needs no generation.
+CREATE TABLE audit_search_token_generation (
+    singleton  boolean NOT NULL DEFAULT true,
+    generation bigint  NOT NULL DEFAULT 0,
+    CONSTRAINT pk_audit_search_token_generation PRIMARY KEY (singleton),
+    CONSTRAINT ck_audit_search_token_generation_singleton CHECK (singleton)
+);
+INSERT INTO audit_search_token_generation (singleton, generation) VALUES (true, 0);
+COMMENT ON TABLE audit_search_token_generation IS
+    'The generation of the search token ids: moved by retention each time it deletes a token, so a writer that names tokens by ids it holds in memory is refused once one of them may be gone.';
+
 -- ── deleting a token ─────────────────────────────────────────────────────────
 CREATE FUNCTION audit.audit_search_token_reject_change() RETURNS trigger
     LANGUAGE plpgsql
@@ -877,6 +893,10 @@ BEGIN
         RETURNING 1
     )
     SELECT count(*) INTO v_released FROM released;
+    IF v_released > 0 THEN
+        UPDATE audit.audit_search_token_generation SET generation = generation + 1
+         WHERE singleton;
+    END IF;
     RETURN v_released;
 END;
 $$;

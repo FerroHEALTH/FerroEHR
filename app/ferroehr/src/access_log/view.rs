@@ -5,8 +5,7 @@
 //! reads, and the subject view the subject of care and their representative
 //! read under EHDS Art. 9(2) (`docs/law/eu/ehds/text.html`).
 //!
-//! The draft's semantics page (`docs/plans/access-log.md` §Patient access,
-//! the proposal's §Views) fixes the subject view as a reduction of the entry:
+//! The draft's semantics page (`docs/specifications/access-log`, §Views) fixes the subject view as a reduction of the entry:
 //! it keeps who accessed, when, the action and outcome, the items and
 //! categories, the purposes and the emergency mark (Art. 9(2)(a) to (c), Art.
 //! 11(5)), and leaves out the credential, the delegation chain, the binding
@@ -41,7 +40,7 @@ use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecor
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 /// The members of the entry the subject view leaves out.
-const ENTRY_WITHHELD: [&str; 4] = ["link", "channel", "security_labels", "other_details"];
+const ENTRY_WITHHELD: [&str; 3] = ["channel", "security_labels", "other_details"];
 /// The members of `ACCESSOR` the subject view leaves out.
 const ACCESSOR_WITHHELD: [&str; 3] = ["credential", "delegation", "binding"];
 /// The members of `ACCESS_QUERY` the subject view leaves out.

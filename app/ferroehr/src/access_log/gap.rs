@@ -1,83 +1,42 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The gaps of the access log's chain: each run of expired tombstones folded
-//! into one record of the fold (#5619).
+//! The fold of the access log's tombstones (#5619, #6242).
 //!
-//! A tombstone keeps an expired entry's link so the records after it verify.
-//! It is kept one more retention horizon, its entry's own: as long after its
-//! removal as the entry was kept before it. After that, a run of consecutive
-//! tombstones that are all past it folds into one gap, which keeps the
-//! positions the run held, the link digest of its last record and the
-//! grounds its tombstones named. The record after the run
-//! links to the gap's link, so the chain verifies across it, and a missing
-//! position no gap accounts for is still a deletion. A run folds whole, and
-//! the checkpoints inside it, before its last position, leave with it: the
-//! checkpoints after the run still seal every link below them through the
-//! chain, and one at the run's last position verifies against the gap's link
-//! (#5704).
-//!
-//! The draft access log defines no gap: the gap is FerroEHR's own record, and
-//! no openEHR spec governs audit retention: our own design.
-
-use serde::{Deserialize, Serialize};
-use sqlx::Row;
-use sqlx::postgres::PgRow;
+//! A tombstone is kept one more retention horizon, its entry's own: as long
+//! after its removal as the entry was kept before it. After that, the
+//! entries of a sealed window whose records are all tombstones past their end
+//! leave the log together, and the window is recorded as folded with the
+//! grounds its tombstones named; its seal stays, so the seals still follow
+//! one another. The imported logs fold their tombstones past their end one by
+//! one, keeping each one's uid, bundle and content digest. No openEHR spec
+//! governs audit retention: our own design.
 
 use crate::access_log::expiry::Log;
 use crate::access_log::store::{AccessLogError, AccessLogStore};
-use crate::db::acquire::acquire;
-use crate::versioning::audit::dv_date_time;
-use openehr_base::containers::NonEmptyVec;
-use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
-use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
+use sqlx::Row as _;
 
-/// A run of positions of one system's access log whose tombstones were
-/// folded: the record of the fold.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ChainGap {
-    /// The first position the run held.
-    pub first_sequence: i64,
-    /// The last position the run held.
-    pub last_sequence: i64,
-    /// `ACCESS_LOG_LINK.digest` of the run's last record, which the record
-    /// after the run links to.
-    pub link: String,
-    /// `ACCESS_LOG_LINK.signature` of the run's last record, the signature of
-    /// `link`, when its exporter signed that link; this system signs no link,
-    /// so a gap of its own log carries none.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub signature: Option<String>,
-    /// Every distinct ground the run's tombstones named.
-    pub grounds: NonEmptyVec<DvCodedText>,
-    /// When the run was folded.
-    pub time_folded: DvDateTime,
-}
+use crate::db::acquire::acquire;
 
 /// What one fold removed and wrote.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Folded {
     /// The tombstones removed.
     pub tombstones: u64,
-    /// The gaps written, one per run.
+    /// The windows or imported tombstones recorded as folded.
     pub gaps: u64,
 }
 
 impl AccessLogStore {
-    /// Fold the tombstones of `log` whose own retention ended before `now`
-    /// into one gap per run, in one transaction.
+    /// Fold the tombstones of `log` whose own retention ended before `now`,
+    /// in one transaction.
     ///
-    /// On the local chain, up to `limit` tombstones fold, oldest end first,
-    /// through `audit.fold_access_log_tombstones()`, the one path a record
-    /// leaves the log by; a caller repeats the call until fewer than `limit`
-    /// come back. On the imported logs, per exporting system and within each
-    /// span between two imported checkpoints, the positions before the first
-    /// record still kept fold in whole runs that hold a tombstone, oldest
-    /// first, up to about `limit` positions, through
-    /// `audit.fold_access_log_imported()` (#5664); a caller repeats the call
-    /// until it writes no gap. Replicas serialise on each function's advisory
-    /// lock, so two runs never fold the same position.
+    /// On the local log, up to `limit` sealed windows whose records are all
+    /// tombstones past their end fold, oldest first, through
+    /// `audit.fold_access_log_tombstones()`, the one path a record leaves the
+    /// log by. On the imported logs, up to `limit` tombstones past their end
+    /// fold through `audit.fold_access_log_imported()`. A caller repeats the
+    /// call until it folds nothing.
     ///
     /// # Errors
     /// The store errors when the statement fails.
@@ -111,48 +70,4 @@ impl AccessLogStore {
             gaps: count("gaps")?,
         })
     }
-
-    /// The gaps that hold a position from `from` to `to`, both included, in
-    /// chain order.
-    ///
-    /// # Errors
-    /// The store errors when the statement fails, and
-    /// [`AccessLogError::Unreadable`] when a stored gap does not read.
-    pub async fn gaps(&self, from: i64, to: i64) -> Result<Vec<ChainGap>, AccessLogError> {
-        let rows = sqlx::query(
-            "SELECT first_seq, last_seq, link, NULL::text AS signature, grounds::text AS grounds, \
-             time_folded FROM audit.access_log_chain_gap WHERE last_seq >= $1 AND first_seq <= $2 \
-             ORDER BY first_seq",
-        )
-        .bind(from)
-        .bind(to)
-        .fetch_all(&mut *acquire(self.pool()).await?)
-        .await?;
-        rows.iter().map(gap).collect()
-    }
-}
-
-/// The gap `row` holds: `first_seq`, `last_seq`, `link`, `signature`,
-/// `grounds` as text and `time_folded`.
-///
-/// # Errors
-/// [`AccessLogError::Unreadable`] when its grounds do not read.
-pub(crate) fn gap(row: &PgRow) -> Result<ChainGap, AccessLogError> {
-    let first_sequence: i64 = row.try_get("first_seq")?;
-    let grounds: String = row.try_get("grounds")?;
-    let grounds = serde_json::from_str(&grounds).map_err(|source| AccessLogError::Unreadable {
-        chain_seq: first_sequence,
-        source,
-    })?;
-    let time_folded = row
-        .try_get::<jiff_sqlx::Timestamp, _>("time_folded")?
-        .to_jiff();
-    Ok(ChainGap {
-        first_sequence,
-        last_sequence: row.try_get("last_seq")?,
-        link: row.try_get("link")?,
-        signature: row.try_get("signature")?,
-        grounds,
-        time_folded: dv_date_time(&time_folded),
-    })
 }

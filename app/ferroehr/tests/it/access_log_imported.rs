@@ -1,14 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The retention of the access logs imported from another system (#5664)
-//! against a real `PostgreSQL` 18: an imported entry is replaced by its
-//! tombstone at the `retain_until` it states, its tombstone is kept as long
-//! again, and then the positions before the first record still kept in each
-//! span between two imported checkpoints fold into imported gaps. The stored
-//! imported log verifies against its checkpoints after every step, with or
-//! without the exporter's link signatures, across a later import from the
-//! same system, and with two replicas folding at once.
+//! The retention of the access logs imported from another system (#5664,
+//! #6242) against a real `PostgreSQL` 19: an imported entry is replaced by
+//! its tombstone at the `retain_until` it states, its tombstone is kept as
+//! long again and then folds, leaving its uid, bundle and content digest. The
+//! stored bundle verifies after every step, across a later import from the
+//! same system, and reports an imported record changed afterwards.
 //!
 //! No openEHR spec governs audit retention: our own design.
 
@@ -16,12 +14,9 @@ use jiff::Timestamp;
 use serde_json::json;
 use sqlx::PgPool;
 
-use ferroehr::access_log::chain::ChainFinding;
 use ferroehr::access_log::checkpoint::Checkpoints;
 use ferroehr::access_log::expiry::{Log, expire, fold};
-use ferroehr::access_log::gap::Folded;
-use ferroehr::access_log::imported::ImportedFinding;
-use ferroehr::access_log::store::AccessLogStore;
+use ferroehr::access_log::imported::ImportedFailure;
 use ferroehr::versioning::signature::trust::TrustedCertificates;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 
@@ -89,71 +84,43 @@ fn importer(pool: &PgPool, key: &pgp::composed::SignedSecretKey) -> Checkpoints 
     )
 }
 
-/// The imported gaps, as (first, last).
-async fn gaps(pool: &PgPool) -> Vec<(i64, i64)> {
+/// The imported records, as (uid number, record type).
+async fn records(pool: &PgPool) -> Vec<(String, String)> {
     sqlx::query_as(
-        "SELECT first_seq, last_seq FROM audit.access_log_imported_gap \
-         ORDER BY first_seq, last_seq",
-    )
-    .fetch_all(pool)
-    .await
-    .expect("read the imported gaps")
-}
-
-/// The imported records, as (sequence, record type).
-async fn records(pool: &PgPool) -> Vec<(i64, String)> {
-    sqlx::query_as(
-        "SELECT sequence, record_type FROM audit.access_log_imported_record ORDER BY sequence",
+        "SELECT right(uid, 2), record_type FROM audit.access_log_imported_record ORDER BY uid",
     )
     .fetch_all(pool)
     .await
     .expect("read the imported records")
 }
 
-/// The imported links' positions.
-async fn links(pool: &PgPool) -> Vec<i64> {
-    sqlx::query_scalar("SELECT sequence FROM audit.access_log_imported_link ORDER BY sequence")
-        .fetch_all(pool)
-        .await
-        .expect("read the imported links")
-}
-
-/// A tombstone and an entry, as their record types.
-fn typed(rows: &[(i64, &str)]) -> Vec<(i64, String)> {
-    rows.iter()
-        .map(|(sequence, kind)| (*sequence, (*kind).to_owned()))
-        .collect()
-}
-
+/// The record type of an entry.
 const ENTRY: &str = "ACCESS_LOG_ENTRY";
+/// The record type of a tombstone.
 const TOMBSTONE: &str = "ACCESS_LOG_TOMBSTONE";
 
-/// An imported span ages out: its entries are replaced by their tombstones at
-/// the `retain_until` they state, the tombstones are kept as long again, and
-/// then everything before the first record still kept, other EHRs' links
-/// included, folds into one imported gap that keeps the exporter's link. The
-/// imported log verifies after each step, and through `verify`, which
-/// reports an imported record changed afterwards.
+/// An imported bundle ages out: its entries are replaced by their tombstones
+/// at the `retain_until` they state, the tombstones are kept as long again
+/// and then fold, and the bundle verifies after each step and reports an
+/// imported record changed afterwards.
 #[tokio::test]
-async fn an_imported_span_ages_out_and_still_verifies() {
+async fn an_imported_bundle_ages_out_and_still_verifies() {
     let source_db = testkit::db().await.expect("source database");
     let target_db = testkit::db().await.expect("target database");
     let key = generate_key();
     let source = exporter(&source_db.pool(), &key);
-    let written = source
+    source
         .store()
         .append(vec![
             entry(1, MOVED, "2029-01-01"),
             entry(2, OTHER, "2029-01-01"),
             entry(3, MOVED, "2029-01-01"),
-            entry(4, OTHER, "2040-01-01"),
             entry(5, MOVED, "2040-01-01"),
-            entry(6, OTHER, "2040-01-01"),
         ])
         .await
         .expect("the entries append");
-    let export = source.export(MOVED).await.expect("the export verifies");
-    assert_eq!(export.checkpoint.sequence, 6);
+    let export = source.export(MOVED).await.expect("the export");
+    assert_eq!(export.records.len(), 3);
 
     let pool = target_db.pool();
     let target = importer(&pool, &key);
@@ -179,10 +146,14 @@ async fn an_imported_span_ages_out_and_still_verifies() {
     );
     assert_eq!(
         records(&pool).await,
-        typed(&[(1, TOMBSTONE), (3, TOMBSTONE), (5, ENTRY)])
+        [
+            ("01".to_owned(), TOMBSTONE.to_owned()),
+            ("03".to_owned(), TOMBSTONE.to_owned()),
+            ("05".to_owned(), ENTRY.to_owned()),
+        ]
     );
     let content: String = sqlx::query_scalar(
-        "SELECT content FROM audit.access_log_imported_record WHERE sequence = 1",
+        "SELECT content FROM audit.access_log_imported_record WHERE right(uid, 2) = '01'",
     )
     .fetch_one(&pool)
     .await
@@ -193,403 +164,248 @@ async fn an_imported_span_ages_out_and_still_verifies() {
     );
     assert_eq!(target.verify_imported().await.expect("verify"), []);
 
-    assert_eq!(
-        fold(store, Log::Imported, expiry_run())
-            .await
-            .expect("fold"),
-        Folded::default(),
-        "an imported tombstone is kept past its removal"
-    );
-    assert_eq!(
-        fold(store, Log::Imported, fold_run()).await.expect("fold"),
-        Folded {
-            tombstones: 2,
-            gaps: 1
-        }
-    );
-    assert_eq!(
-        gaps(&pool).await,
-        [(1, 4)],
-        "the other EHR's links fold too"
-    );
-    assert_eq!(links(&pool).await, [5, 6]);
-    assert_eq!(records(&pool).await, typed(&[(5, ENTRY)]));
-    let link: String = sqlx::query_scalar("SELECT link FROM audit.access_log_imported_gap")
+    let folded = fold(store, Log::Imported, fold_run()).await.expect("fold");
+    assert_eq!(folded.tombstones, 2);
+    assert_eq!(records(&pool).await, [("05".to_owned(), ENTRY.to_owned())]);
+    let kept: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_imported_folded")
         .fetch_one(&pool)
         .await
-        .expect("read the gap");
-    let fourth = source.store().links(4, 4).await.expect("read the link");
-    assert_eq!(link, fourth[0].digest, "the gap keeps the exporter's link");
+        .expect("the folded");
     assert_eq!(
-        target.verify_imported().await.expect("verify"),
+        kept, 2,
+        "each folded tombstone keeps its uid, bundle and digest"
+    );
+    assert_eq!(target.verify_imported().await.expect("verify"), []);
+    assert_eq!(
+        target.verify(None).await.expect("verify").imported,
         [],
-        "the imported log verifies across the gap"
+        "every bundle verifies"
     );
-    assert_eq!(
-        fold(store, Log::Imported, fold_run())
-            .await
-            .expect("fold again"),
-        Folded::default()
-    );
-    assert_eq!(written.len(), 6);
 
     tamper(
         &pool,
         "audit.access_log_imported_record",
-        &["UPDATE audit.access_log_imported_record \
-           SET content = replace(content, '2040-01-01', '2041-01-01') WHERE sequence = 5"],
+        &[
+            "UPDATE audit.access_log_imported_record SET content = replace(content, \
+           '\"was_delivered\":true', '\"was_delivered\":false')",
+        ],
     )
     .await;
-    let verification = target.verify(None).await.expect("verify");
-    assert!(!verification.intact());
-    assert_eq!(
-        verification.imported,
-        [ImportedFinding {
-            system_id: SYSTEM.to_owned(),
-            checkpoint: 6,
-            finding: ChainFinding::ContentDigest { sequence: 5 }
-        }]
-    );
-}
-
-/// An exporter that signs no link: a record kept in the middle stays
-/// hash-chained to the checkpoint, so the tombstones after it wait, and a
-/// rewritten link of the kept record is caught by the tombstone after it.
-/// Once the kept record ends too, everything folds, and the log verifies
-/// against the checkpoint through the gaps alone.
-#[tokio::test]
-async fn a_kept_record_holds_the_tombstones_after_it_without_signatures() {
-    let source_db = testkit::db().await.expect("source database");
-    let target_db = testkit::db().await.expect("target database");
-    let key = generate_key();
-    let source = exporter(&source_db.pool(), &key);
-    AccessLogStore::new(source_db.pool())
-        .append(vec![
-            entry(1, MOVED, "2029-01-01"),
-            entry(2, MOVED, "2029-01-01"),
-            entry(3, MOVED, "2040-01-01"),
-            entry(4, MOVED, "2029-01-01"),
-            entry(5, MOVED, "2029-01-01"),
-        ])
-        .await
-        .expect("the unsigned entries append");
-    let export = source.export(MOVED).await.expect("the export verifies");
+    let findings = target.verify_imported().await.expect("verify");
     assert!(
-        export.links.iter().all(|link| link.signature.is_none()),
-        "the exporter signs no link"
-    );
-
-    let pool = target_db.pool();
-    let target = importer(&pool, &key);
-    target
-        .import(&export, import_record())
-        .await
-        .expect("the import verifies");
-    let store = target.store();
-    assert_eq!(
-        expire(store, Log::Imported, expiry_run())
-            .await
-            .expect("expire"),
-        4
-    );
-    assert_eq!(
-        fold(store, Log::Imported, fold_run()).await.expect("fold"),
-        Folded {
-            tombstones: 2,
-            gaps: 1
-        },
-        "only the positions before the kept record fold"
-    );
-    assert_eq!(gaps(&pool).await, [(1, 2)]);
-    assert_eq!(
-        records(&pool).await,
-        typed(&[(3, ENTRY), (4, TOMBSTONE), (5, TOMBSTONE)])
-    );
-    assert_eq!(target.verify_imported().await.expect("verify"), []);
-
-    let later = at("2041-01-01T00:00:00Z");
-    assert_eq!(
-        expire(store, Log::Imported, later).await.expect("expire"),
-        1
-    );
-    assert_eq!(
-        fold(store, Log::Imported, at("2057-01-01T00:00:00Z"))
-            .await
-            .expect("fold"),
-        Folded {
-            tombstones: 3,
-            gaps: 1
-        }
-    );
-    assert_eq!(gaps(&pool).await, [(1, 2), (3, 5)]);
-    assert_eq!(records(&pool).await, typed(&[]));
-    assert_eq!(links(&pool).await, Vec::<i64>::new());
-    assert_eq!(
-        target.verify_imported().await.expect("verify"),
-        [],
-        "the checkpoint seals the last gap's link"
+        findings
+            .iter()
+            .any(|finding| matches!(finding.finding, ImportedFailure::Record(_))),
+        "{findings:?}"
     );
 }
 
-/// The kept record's own link, rewritten consistently, no longer links to
-/// the tombstone after it, which the fold keeps for that reason: without
-/// link signatures the chain to the checkpoint is the proof.
+/// A record removed from the imported table outside the fold breaks its
+/// bundle's records digest.
 #[tokio::test]
-async fn a_rewritten_kept_link_is_caught_by_the_tombstone_after_it() {
+async fn an_imported_record_removed_outside_the_fold_is_found() {
     let source_db = testkit::db().await.expect("source database");
     let target_db = testkit::db().await.expect("target database");
     let key = generate_key();
     let source = exporter(&source_db.pool(), &key);
-    AccessLogStore::new(source_db.pool())
-        .append(vec![
-            entry(1, MOVED, "2029-01-01"),
-            entry(2, MOVED, "2040-01-01"),
-            entry(3, MOVED, "2029-01-01"),
-        ])
-        .await
-        .expect("the unsigned entries append");
-    let export = source.export(MOVED).await.expect("the export verifies");
-    let pool = target_db.pool();
-    let target = importer(&pool, &key);
-    target
-        .import(&export, import_record())
-        .await
-        .expect("the import verifies");
-    expire(target.store(), Log::Imported, expiry_run())
-        .await
-        .expect("expire");
-    fold(target.store(), Log::Imported, fold_run())
-        .await
-        .expect("fold");
-    assert_eq!(gaps(&pool).await, [(1, 1)]);
-    assert_eq!(links(&pool).await, [2, 3], "the tombstone after it stays");
-
-    tamper(
-        &pool,
-        "audit.access_log_imported_link",
-        &["UPDATE audit.access_log_imported_link \
-           SET content_digest = repeat('a', 64), \
-               digest = encode(sha256(convert_to(previous_digest || E'\\n' || sequence \
-                        || E'\\n' || repeat('a', 64), 'UTF8')), 'hex') \
-           WHERE sequence = 2"],
-    )
-    .await;
-    let found: Vec<ChainFinding> = target
-        .verify_imported()
-        .await
-        .expect("verify")
-        .into_iter()
-        .map(|finding| finding.finding)
-        .collect();
-    assert!(
-        found.contains(&ChainFinding::PreviousDigest { sequence: 3 }),
-        "the tombstone's link no longer follows: {found:?}"
-    );
-}
-
-/// A later import from the same system after a fold brings another EHR's
-/// records at positions a gap already holds: they are kept and verify
-/// through their own links, a repeated import of the first EHR does not
-/// bring back the entries whose retention ended here, and once the later
-/// records end, the fold writes no second gap over the same span.
-#[tokio::test]
-async fn a_later_import_after_a_fold_still_verifies() {
-    let source_db = testkit::db().await.expect("source database");
-    let target_db = testkit::db().await.expect("target database");
-    let key = generate_key();
-    let source = exporter(&source_db.pool(), &key);
-    let recorded = "2020-01-01T00:00:00Z";
     source
         .store()
         .append(vec![
-            entry_recorded(1, MOVED, recorded, "2023-01-01"),
-            entry(2, OTHER, "2040-01-01"),
-            entry_recorded(3, MOVED, recorded, "2023-01-01"),
-            entry(4, OTHER, "2040-01-01"),
+            entry(1, MOVED, "2040-01-01"),
+            entry(3, MOVED, "2040-01-01"),
         ])
         .await
         .expect("the entries append");
-    let first = source.export(MOVED).await.expect("the export verifies");
+    let export = source.export(MOVED).await.expect("the export");
+    let pool = target_db.pool();
+    let target = importer(&pool, &key);
+    target
+        .import(&export, import_record())
+        .await
+        .expect("the import verifies");
+    tamper(
+        &pool,
+        "audit.access_log_imported_record",
+        &["DELETE FROM audit.access_log_imported_record WHERE right(uid, 2) = '01'"],
+    )
+    .await;
+    let findings = target.verify_imported().await.expect("verify");
+    assert!(
+        findings
+            .iter()
+            .any(|finding| finding.finding == ImportedFailure::Records),
+        "{findings:?}"
+    );
+}
 
+/// A later import of another EHR from the same system after a fold is kept
+/// and verifies, and a repeated import of the first EHR does not bring back
+/// the records whose tombstones folded here.
+#[tokio::test]
+async fn a_later_import_after_a_fold_keeps_what_ended_here_ended() {
+    let source_db = testkit::db().await.expect("source database");
+    let target_db = testkit::db().await.expect("target database");
+    let key = generate_key();
+    let source = exporter(&source_db.pool(), &key);
+    source
+        .store()
+        .append(vec![
+            entry(1, MOVED, "2029-01-01"),
+            entry(2, OTHER, "2040-01-01"),
+            entry(3, MOVED, "2029-01-01"),
+        ])
+        .await
+        .expect("the entries append");
+    let first = source.export(MOVED).await.expect("the first export");
     let pool = target_db.pool();
     let target = importer(&pool, &key);
     target
         .import(&first, import_record())
         .await
         .expect("the first import");
-    assert_eq!(
-        expire(target.store(), Log::Imported, expiry_run())
-            .await
-            .expect("expire"),
-        2
-    );
-    fold(target.store(), Log::Imported, at("2045-01-01T00:00:00Z"))
+    let store = target.store();
+    expire(store, Log::Imported, expiry_run())
         .await
-        .expect("fold");
-    assert_eq!(
-        gaps(&pool).await,
-        [(1, 4)],
-        "nothing is kept: all of it folds"
-    );
-    assert_eq!(records(&pool).await, typed(&[]));
+        .expect("expire");
+    fold(store, Log::Imported, fold_run()).await.expect("fold");
+    assert_eq!(records(&pool).await, Vec::<(String, String)>::new());
 
-    let second = source.export(OTHER).await.expect("the export verifies");
-    assert_eq!(second.checkpoint.sequence, 4);
+    let later = source.export(OTHER).await.expect("the later export");
     target
-        .import(&second, import_record())
+        .import(&later, import_record())
         .await
-        .expect("the later import is kept beside the gap");
-    assert_eq!(records(&pool).await, typed(&[(2, ENTRY), (4, ENTRY)]));
-    assert_eq!(links(&pool).await, [2, 3, 4]);
-    assert_eq!(
-        target.verify_imported().await.expect("verify"),
-        [],
-        "the later records verify through their own links"
-    );
-
+        .expect("the later import");
+    assert_eq!(records(&pool).await, [("02".to_owned(), ENTRY.to_owned())]);
     target
         .import(&first, import_record())
         .await
-        .expect("the repeated import");
+        .expect("a repeated import is recorded again");
     assert_eq!(
         records(&pool).await,
-        typed(&[(2, ENTRY), (4, ENTRY)]),
-        "an entry whose retention ended here is not stored again"
+        [("02".to_owned(), ENTRY.to_owned())],
+        "the folded records stay folded"
     );
-    assert_eq!(target.verify_imported().await.expect("verify"), []);
-
-    let later = at("2041-01-01T00:00:00Z");
-    assert_eq!(
-        expire(target.store(), Log::Imported, later)
-            .await
-            .expect("expire"),
-        2
-    );
-    let folded = fold(target.store(), Log::Imported, at("2057-01-01T00:00:00Z"))
-        .await
-        .expect("fold");
-    assert_eq!(folded.tombstones, 2);
-    assert_eq!(gaps(&pool).await, [(1, 4)], "the same span is held once");
-    assert_eq!(links(&pool).await, Vec::<i64>::new());
     assert_eq!(target.verify_imported().await.expect("verify"), []);
 }
 
-/// Two replicas folding at once never fold a position twice: the logs of
-/// twenty EHRs, each imported with its own checkpoint, fold into one gap per
-/// span between two checkpoints, without overlap or hole, and verify.
+/// A kept imported record rewritten together with its content digest, so
+/// that its own digest still matches, breaks its bundle's records digest
+/// (#6242).
 #[tokio::test]
-async fn two_replicas_fold_imported_logs_at_once() {
-    let source_db = testkit::db().await.expect("source database");
-    let target_db = testkit::db().await.expect("target database");
-    let key = generate_key();
-    let source = exporter(&source_db.pool(), &key);
-    let pool = target_db.pool();
-    let target = importer(&pool, &key);
-    let per_ehr = 30_u32;
-    let ehrs = 20_u32;
-    for ehr in 0..ehrs {
-        let ehr_id = format!("7d44b88c-4199-4bad-97dc-{:012}", 100 + ehr);
-        let batch = (1..=per_ehr)
-            .map(|n| entry(ehr * per_ehr + n, &ehr_id, "2029-01-01"))
-            .collect();
-        source
-            .store()
-            .append(batch)
-            .await
-            .expect("the entries append");
-        source.seal().await.expect("seal").expect("a checkpoint");
-        let export = source.export(&ehr_id).await.expect("the export verifies");
-        target
-            .import(&export, import_record())
-            .await
-            .expect("the import verifies");
-    }
-    let count = u64::from(per_ehr * ehrs);
-    assert_eq!(
-        expire(target.store(), Log::Imported, expiry_run())
-            .await
-            .expect("expire"),
-        count
-    );
-
-    let replica = |store: AccessLogStore| async move {
-        let mut total = 0_u64;
-        loop {
-            let batch = store
-                .fold_expired(Log::Imported, fold_run(), 25)
-                .await
-                .expect("a replica folds");
-            total += batch.tombstones;
-            if batch.gaps == 0 {
-                return total;
-            }
-        }
-    };
-    let (one, two) = tokio::join!(
-        tokio::spawn(replica(AccessLogStore::new(pool.clone()))),
-        tokio::spawn(replica(AccessLogStore::new(pool.clone())))
-    );
-    let one = one.expect("the first replica runs");
-    let two = two.expect("the second replica runs");
-    assert_eq!(one + two, count, "every tombstone folds once");
-
-    let held = gaps(&pool).await;
-    let expected: Vec<(i64, i64)> = (0..i64::from(ehrs))
-        .map(|ehr| {
-            let size = i64::from(per_ehr);
-            (ehr * size + 1, (ehr + 1) * size)
-        })
-        .collect();
-    assert_eq!(held, expected, "one gap per span, cut at each checkpoint");
-    assert_eq!(records(&pool).await, typed(&[]));
-    assert_eq!(links(&pool).await, Vec::<i64>::new());
-    assert_eq!(target.verify_imported().await.expect("verify"), []);
-}
-
-/// The fold is the one way out: an imported tombstone or link deleted
-/// directly is refused.
-#[tokio::test]
-async fn an_imported_tombstone_leaves_only_through_the_fold() {
+async fn a_kept_record_rewritten_with_its_digest_breaks_the_bundle() {
     let source_db = testkit::db().await.expect("source database");
     let target_db = testkit::db().await.expect("target database");
     let key = generate_key();
     let source = exporter(&source_db.pool(), &key);
     source
         .store()
-        .append(vec![entry(1, MOVED, "2029-01-01")])
+        .append(vec![
+            entry(1, MOVED, "2040-01-01"),
+            entry(3, MOVED, "2040-01-01"),
+        ])
         .await
-        .expect("the entry appends");
-    let export = source.export(MOVED).await.expect("the export verifies");
+        .expect("the entries append");
+    let export = source.export(MOVED).await.expect("the export");
     let pool = target_db.pool();
     let target = importer(&pool, &key);
     target
         .import(&export, import_record())
         .await
         .expect("the import verifies");
+    tamper(
+        &pool,
+        "audit.access_log_imported_record",
+        &[
+            "UPDATE audit.access_log_imported_record \
+           SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
+           WHERE right(uid, 2) = '01'",
+            "UPDATE audit.access_log_imported_record \
+           SET content_digest = encode(sha256(convert_to(content, 'UTF8')), 'hex') \
+           WHERE right(uid, 2) = '01'",
+        ],
+    )
+    .await;
+    let findings = target.verify_imported().await.expect("verify");
+    assert!(
+        findings
+            .iter()
+            .any(|finding| finding.finding == ImportedFailure::Records),
+        "{findings:?}"
+    );
+    assert!(
+        !findings
+            .iter()
+            .any(|finding| matches!(finding.finding, ImportedFailure::Record(_))),
+        "the record's own digest matches its rewritten content: {findings:?}"
+    );
+}
+
+/// Two replicas folding the imported tombstones at once fold each one once,
+/// and every bundle verifies after them (#6242).
+#[tokio::test]
+async fn two_replicas_fold_imported_bundles_at_once() {
+    let source_db = testkit::db().await.expect("source database");
+    let target_db = testkit::db().await.expect("target database");
+    let key = generate_key();
+    let source = exporter(&source_db.pool(), &key);
+    let ehrs: Vec<String> = (1..=6_u32)
+        .map(|n| format!("7d44b88c-4199-4bad-97dc-{n:012x}"))
+        .collect();
+    let mut n = 0_u32;
+    for ehr in &ehrs {
+        let batch: Vec<AccessLogEntry> = (0..10)
+            .map(|_| {
+                n += 1;
+                entry(n, ehr, "2029-01-01")
+            })
+            .collect();
+        source
+            .store()
+            .append(batch)
+            .await
+            .expect("the entries append");
+    }
+    let pool = target_db.pool();
+    let target = importer(&pool, &key);
+    for ehr in &ehrs {
+        let export = source.export(ehr).await.expect("the export");
+        target
+            .import(&export, import_record())
+            .await
+            .expect("the import verifies");
+    }
     expire(target.store(), Log::Imported, expiry_run())
         .await
         .expect("expire");
-    for statement in [
-        "DELETE FROM audit.access_log_imported_record",
-        "DELETE FROM audit.access_log_imported_link",
-        "UPDATE audit.access_log_imported_link SET digest = repeat('0', 64)",
-    ] {
-        assert!(
-            sqlx::query(statement).execute(&pool).await.is_err(),
-            "{statement} is refused"
-        );
-    }
-    fold(target.store(), Log::Imported, fold_run())
+
+    let replica = |store: ferroehr::access_log::store::AccessLogStore| async move {
+        let mut total = 0_u64;
+        loop {
+            let batch = store
+                .fold_expired(Log::Imported, fold_run(), 5)
+                .await
+                .expect("a replica folds");
+            total += batch.tombstones;
+            if batch.tombstones == 0 {
+                return total;
+            }
+        }
+    };
+    let (one, two) = tokio::join!(
+        tokio::spawn(replica(ferroehr::access_log::store::AccessLogStore::new(
+            pool.clone()
+        ))),
+        tokio::spawn(replica(ferroehr::access_log::store::AccessLogStore::new(
+            pool.clone()
+        )))
+    );
+    let one = one.expect("the first replica runs");
+    let two = two.expect("the second replica runs");
+    assert_eq!(one + two, 60, "every imported tombstone folds once");
+    let folded: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_imported_folded")
+        .fetch_one(&pool)
         .await
-        .expect("fold");
-    for statement in [
-        "UPDATE audit.access_log_imported_gap SET link = repeat('0', 64)",
-        "DELETE FROM audit.access_log_imported_gap",
-    ] {
-        assert!(
-            sqlx::query(statement).execute(&pool).await.is_err(),
-            "{statement} is refused"
-        );
-    }
-    assert_eq!(gaps(&pool).await, [(1, 1)]);
+        .expect("the folded");
+    assert_eq!(folded, 60);
+    assert_eq!(target.verify_imported().await.expect("verify"), []);
 }

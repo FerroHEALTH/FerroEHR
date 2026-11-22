@@ -506,10 +506,9 @@ pub(crate) async fn subject_ehr_ids(
 }
 
 /// Every finding of the full tamper checks of both chains,
-/// `audit.verify_audit_chain()` (the system chain) and
-/// `audit.verify_access_log_chain()` with the server's content check of each
-/// entry (the access log, #5703), the system chain's first, run on `pool`
-/// without moving either verification cursor.
+/// `audit.verify_audit_chain()` (the system chain), the system chain's first,
+/// and the access log's sealed windows after every committed entry is sealed
+/// (#6242), run on `pool` without moving the system chain's cursor.
 pub(crate) async fn verify_chain(
     pool: &sqlx::PgPool,
 ) -> Result<
@@ -518,29 +517,17 @@ pub(crate) async fn verify_chain(
 > {
     use ferroehr::system_log::store::chains::{AuditChain, AuditChainFinding};
     use sqlx::Row;
-    let (_, modified) = ferroehr::system_log::store::AuditStore::new(pool.clone())
-        .access_log_contents(true)
-        .await?;
     let rows = sqlx::query(
-        "SELECT 'system' AS chain, chain_seq, record_id, recorded_at, finding \
-         FROM audit.verify_audit_chain() \
-         UNION ALL \
-         SELECT 'access_log', chain_seq, record_id, recorded_at, finding \
-         FROM audit.verify_access_log_chain() \
-         UNION ALL \
-         SELECT 'access_log', r.chain_seq, r.uid::uuid, r.time_recorded, \
-                'record content was modified after it was written' \
-         FROM audit.access_log_record r WHERE r.chain_seq = ANY ($1) \
-         ORDER BY 1 DESC, 2 NULLS FIRST",
+        "SELECT chain_seq, record_id, recorded_at, finding FROM audit.verify_audit_chain() \
+         ORDER BY chain_seq NULLS FIRST",
     )
-    .bind(&modified)
     .fetch_all(pool)
     .await?;
-    rows.iter()
+    let mut findings = rows
+        .iter()
         .map(|row| {
-            let chain: String = row.try_get("chain")?;
             Ok(AuditChainFinding {
-                chain: AuditChain::named(&chain).unwrap_or(AuditChain::System),
+                chain: AuditChain::System,
                 chain_seq: row.try_get("chain_seq")?,
                 record_id: row.try_get("record_id")?,
                 recorded_at: row
@@ -549,8 +536,11 @@ pub(crate) async fn verify_chain(
                 finding: row.try_get("finding")?,
             })
         })
-        .collect::<Result<_, sqlx::Error>>()
-        .map_err(Into::into)
+        .collect::<Result<Vec<_>, sqlx::Error>>()?;
+    let log = ferroehr::access_log::store::AccessLogStore::new(pool.clone());
+    log.seal_committed().await?;
+    findings.extend(log.verify_windows(false).await?);
+    Ok(findings)
 }
 
 /// Whether an ADL 1.4 archetype with `id` is stored, read off the store; identity

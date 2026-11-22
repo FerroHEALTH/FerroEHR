@@ -317,8 +317,8 @@ async fn a_page_renders_only_the_documents_it_serves() {
 }
 
 /// The ITI-81 total counts exactly the records a full paging of the same
-/// search returns while some entries wait unchained in the intake, held by a
-/// reservation the chainer does not take (#6000, FHIR R4 `Bundle.total`).
+/// search returns while some entries are held by a reservation whose write
+/// is not confirmed (#6000, #6242, FHIR R4 `Bundle.total`).
 #[tokio::test]
 async fn the_total_counts_only_what_the_pages_return() {
     let db = testkit::db().await.expect("testkit database");
@@ -335,12 +335,11 @@ async fn the_total_counts_only_what_the_pages_return() {
         .write_held(batch(3), &[], reservation)
         .await
         .expect("the held batch is written");
-    let unchained: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM audit.access_log_search WHERE chain_seq IS NULL")
-            .fetch_one(&pool)
-            .await
-            .expect("the unchained entries count");
-    assert!(unchained > 0, "the held entries wait unchained");
+    let held: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_hold")
+        .fetch_one(&pool)
+        .await
+        .expect("the held entries count");
+    assert!(held > 0, "the held entries wait for their release");
     for case in cases() {
         let counted = store
             .search(&AuditSearchFilter {

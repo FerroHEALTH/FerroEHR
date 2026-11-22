@@ -145,7 +145,7 @@ macro_rules! rm_1_2_draft_doc {
     };
 }
 
-/// The draft access log of `docs/plans/access-log.md` and the draft access
+/// The draft access log of `docs/specifications/access-log` and the draft access
 /// control of tracker issue #5487, emitted into `openehr-rm` under
 /// `draft` until openEHR adopts the packages.
 pub(crate) const DRAFTS: &[DraftModule] = &[

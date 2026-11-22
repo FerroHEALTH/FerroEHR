@@ -14,7 +14,6 @@
 
 use openehr_query::ast::{ColumnExpr, Primitive};
 use openehr_query::parser::parse_str;
-use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 use proptest::prelude::*;
 use serde_json::Value;
@@ -29,7 +28,7 @@ use crate::aql::cell::Cell;
 use crate::system_log::retention::LogRetention;
 
 /// The paths the cells are compared on.
-const PATHS: [&str; 30] = [
+const PATHS: [&str; 28] = [
     "l",
     "l/uid",
     "l/uid/value",
@@ -57,8 +56,6 @@ const PATHS: [&str; 30] = [
     "l/query",
     "l/query/text_digest",
     "l/query/rows",
-    "l/link",
-    "l/link/sequence",
     "l/other_details/items/value",
 ];
 
@@ -86,18 +83,10 @@ fn through_value(
     Cell::of_value(&path.read(&view))
 }
 
-/// `entry` as a chained record.
+/// `entry` as a stored record.
 fn record_of(
-    mut entry: openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry,
+    entry: openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry,
 ) -> AccessLogRecord {
-    entry.link = AccessLogLink {
-        sequence: 7,
-        algorithm: "SHA-256".to_owned(),
-        previous_digest: "0".repeat(64),
-        content_digest: "1".repeat(64),
-        digest: "2".repeat(64),
-        signature: None,
-    };
     AccessLogRecord::AccessLogEntry(entry)
 }
 

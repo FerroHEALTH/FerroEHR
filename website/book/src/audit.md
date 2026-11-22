@@ -178,7 +178,7 @@ recorded" (FHIR R4 `AuditEvent.agent.policy`), read from the entry's grounds
 when the record is rendered. Which grounds are named is FerroEHR's own design.
 
 **The entry is the record.** The store keeps an access to EHR data as its
-entry alone, in `audit.access_log_record`, chained under one hash chain (see
+entry alone, in `audit.access_log_record`, sealed in windows (see
 [Tamper evidence](#tamper-evidence)), and each entry states the date it is
 kept until and why. The FHIR `AuditEvent` the ITI-81 search and the ITI-20
 FHIR feed serve, the DICOM message the syslog sink sends and the EHDS access
@@ -202,7 +202,7 @@ that the core holds no attribute for are kept in the entry's
 one `ELEMENT` per fact, named by its node id. A fact the core states as the
 access holds it, such as the principal the credential names or the count the
 outcome delivered, is not repeated there: read the core first and the
-details beside it. They are part of the entry, so the hash chain covers
+details beside it. They are part of the entry, so its window's seal covers
 them, and a tombstone removes them with the rest of its content.
 
 The archetype is published, so another system reads the details of an
@@ -250,7 +250,7 @@ specification governs the details: they are FerroEHR's own.
 The subject of care is kept so the BALP `entity:patient` and the
 `patient` search parameter name the patient as they did when the access
 was recorded, whatever happens to the EHR after. An entry imported from
-another system ([Checkpoints and the transfer of a log](#checkpoints-and-the-transfer-of-a-log))
+another system ([Seals, checkpoints and the transfer of a log](#seals-checkpoints-and-the-transfer-of-a-log))
 keeps that system's details, and FerroEHR projects none of it.
 
 To read the trail with SQL, `audit.access_trail` holds every record of
@@ -293,7 +293,7 @@ not classify is a BALP exchange without the EHDS entities. Each row is a test
 | `system_id` | `source.observer.identifier`; `source.site` from `[audit] enterprise_site_id` | none |
 | `security_labels` | the `securityLabel` of the entity they label | no `meta.security` is written |
 | `retention` | details of `ehds-categories` | no element; details |
-| `link`, checkpoints | nothing | the chain does not travel; verify it on the openEHR side |
+| checkpoints | nothing | the seals do not travel; verify them on the openEHR side |
 | `other_details` | the values it holds, where the rows above put them | the tree itself is not written |
 
 **To the DICOM PS3.15 A.5 audit message (the syslog sink).**
@@ -314,7 +314,7 @@ not classify is a BALP exchange without the EHDS entities. Each row is a test
 | `items` | a System Object (type `2`, ID type URI) naming the version | the categories, origins, template and archetype |
 | `query` | the query object of the Query event | the text digest |
 | `purposes`, `authorisations`, `is_emergency` | nothing in the A.5.1 schema | lost |
-| `retention`, `security_labels`, `link`, `other_details` | nothing | lost |
+| `retention`, `security_labels`, `other_details` | nothing | lost |
 
 **To the EHDS access record (`ehds-logging` `AccessRecord`).**
 
@@ -329,7 +329,6 @@ not classify is a BALP exchange without the EHDS entities. Each row is a test
 | `delivered`, `origins`, `origin_count` | `outcome.delivered`, `items.origins`, the origin count | none |
 | `request` (id, operation, resource, stored query, client address, correlation) | `channel`, `operation`, `items`, `query` | the query text is never carried |
 | `retention`, `labels`, `emergency` | `retention`, the categories and origins, `is_emergency` | none |
-| none | `link` | the chain |
 
 ## Reads are logged too, per record
 
@@ -800,9 +799,10 @@ declared floor and ceiling as the controller coded it. The ELI coding is our
 own design (Council conclusions 2012/C 325/02 define the identifier). The
 same hourly worker replaces every entry whose `retain_until` has passed by an
 `ACCESS_LOG_TOMBSTONE` in place, in any order of expiry. The tombstone keeps the
-entry's uid, `system_id`, `time_recorded` and chain link, names the grounds of
-the period that ended, and holds nothing else of the entry, so the chain
-verifies after the content is gone ([Tamper evidence](#tamper-evidence)). A
+entry's uid, `system_id` and `time_recorded`, names the grounds of the period
+that ended, and holds nothing else of the entry; its row keeps the entry's
+content digest, so its window's seal verifies after the content is gone
+([Tamper evidence](#tamper-evidence)). A
 tombstone is never replaced again, and the database refuses any other change
 to it. An erasure a law orders before the period ends takes the same path
 through `POST {ext}/admin/access-log/erase`, with the law's provisions as the
@@ -810,58 +810,37 @@ tombstone's grounds; the erasure is an access record of its own
 (`access-log-erasure:<uid>`) naming the administrator
 ([Admin APIs](operations-admin-apis.md)).
 
-**A tombstone is kept as long again, then folds into a gap.** A tombstone
+**A tombstone is kept as long again, then its window folds.** A tombstone
 holds no EHR, no accessor and no purpose, but its content digest is a hash
 of the entry it replaced, and a copy of that entry elsewhere (a forwarded
 BALP `AuditEvent`, an export, a backup) can be matched against it. It is
-kept only while the records after it need it to verify (GDPR Art. 5(1)(e)):
-for one more retention horizon, its entry's own, so a tombstone stays as long
-after its removal as its entry was kept before it. After that, the same
-hourly run folds each run of consecutive tombstones that are all past their
-end into one gap of the chain (`audit.access_log_chain_gap`). The gap keeps
-the positions the run held, the link of its last record, and every ground
-its tombstones named, and it records when the run was
-folded. The record after the run links to the gap's link, so the chain
-verifies across it. The gap row is the record of the fold: it is never
-changed or removed, and a record that leaves the log any other way is
-reported as tampering. A run folds whole. A checkpoint inside the run
-that was never published leaves with it, since the checkpoints after it seal
-every link below them through the chain. A published checkpoint stays, and
-the gap records the link it sealed and the digest of its proof, so a
-checkpoint you kept outside the database verifies after the fold as it did
-before. A checkpoint at the run's last position verifies against the gap's
-link. An entry kept longer pins
-the runs on both sides apart, and each folds on its own. An erasure a law
-orders is a tombstone like any other and folds the same way. Several
-replicas fold on a PostgreSQL advisory lock, so no tombstone is folded twice.
-The metrics are `access_log_folded_total` and `access_log_gaps_total`
+kept only while its window needs it to verify (GDPR Art. 5(1)(e)): for one
+more retention horizon, its entry's own, so a tombstone stays as long after
+its removal as its entry was kept before it. Once every record of a sealed
+window is a tombstone past its end, the same hourly run removes the
+window's entries and records the window as folded
+(`audit.access_log_seal_fold`), with every ground its tombstones named and
+when it was folded. The window's seal stays, so the seals still follow one
+another, and a record that leaves the log any other way is reported as
+tampering. A window folds whole: an entry kept longer keeps its window's
+tombstones until it has folded too. An erasure a law orders is a tombstone
+like any other and folds the same way. Several replicas fold on a
+PostgreSQL advisory lock, so no window is folded twice. The metrics are
+`access_log_folded_total` and `access_log_gaps_total`
 ([Access path](operations-access-path.md)). No configuration key sets the
 second horizon. No openEHR specification governs audit retention: our own
 design.
 
 **An imported entry ends at its own `retain_until` too.** An entry imported
 with an EHR from another system
-([Checkpoints and the transfer of a log](#checkpoints-and-the-transfer-of-a-log))
+([Seals, checkpoints and the transfer of a log](#seals-checkpoints-and-the-transfer-of-a-log))
 keeps the `retain_until` its recording system stated, and the same hourly
 run replaces it by its tombstone once that day has passed, on the entry's
-own grounds. Its tombstone is kept as long again, as a local one is. An
-imported log usually holds one checkpoint, at its end, and the links of the
-other EHRs' records between the moved EHR's own. A gap does not commit to
-the link before it, so a record kept before a gap would be tied to its
-checkpoint only by its own link signature, and by nothing when the
-exporting system signed no link. The fold of an imported log therefore
-takes, per exporting system and within each span between two of its
-imported checkpoints, only the positions before the first record still
-kept: the tombstones past their end and the other EHRs' links alike, one
-gap (`audit.access_log_imported_gap`) per run that holds a tombstone. Every
-kept imported record stays hash-chained to the checkpoint after it whether
-or not its links were signed, and a tombstone after a kept record waits
-until that record has folded too. A later import from the same system can
-bring another EHR's records at positions a gap already holds: they are
-kept, and verify through their own links. A repeated import does not bring
-back a tombstone or an expired entry at a position a gap holds. The
+own grounds. Its tombstone is kept as long again, as a local one is, and
+then folds, leaving its uid, its bundle and its content digest
+(`audit.access_log_imported_folded`), so its bundle still verifies. The
 metrics count both logs, with `chain` = `local` or `imported`. No openEHR
-specification governs this: our own design (#5664).
+specification governs this: our own design (#5664, #6242).
 
 Choosing the period is a legal question for the controller. NEN 7513 is the
 Dutch reference for this log and the Besluit vaststelling bewaartermijn
@@ -884,11 +863,10 @@ With entries written at a rate of `r` a day and kept for `P` days, the log
 levels off once the first tombstones fold, after `2P`:
 
 - the entries of the last `P` days: `r × P × 3.9 kB` (2.5 kB of row and 1.4
-  kB of indexes each, with signed links);
+  kB of indexes each, measured when each entry still had its link row);
 - their tombstones, kept another `P` days: `r × P × 1.1 kB`;
-- the gaps: about 0.6 kB each, one for each run an entry kept longer cut
-  apart. A checkpoint inside a run leaves with it; gaps and the remaining
-  checkpoints are kept without end.
+- the seals: one row of about 0.3 kB a minute, and one folded-window row for
+  each window the fold removed, kept without end.
 
 These figures predate the storage of #5703, which keeps the part an
 entry's caller shares once and compresses each row in place; the
@@ -899,8 +877,7 @@ stored per entry, 1 079 bytes per tombstone, and 2.08 entries per request at
 floor of three years (`P` = 1 096 days) that is about 14 GB of entries a day,
 and the log levels off near 15.3 TB of entries and 4.2 TB of tombstones,
 where before it grew by 3.9 GB of tombstones a day for as long as the
-deployment ran. The 0.6 kB of a gap was measured on the same schema with
-signed links (#5619). `VACUUM` reuses the space a fold frees for later rows
+deployment ran. `VACUUM` reuses the space a fold frees for later rows
 (PostgreSQL 18 docs, Routine Vacuuming, Recovering Disk Space).
 
 ### Getting the log out
@@ -934,7 +911,7 @@ API's and ISO 8601 date-times.
 | `GET /ehr/{ehr_id}/access_log` | the subject of care, their representative, a reviewer | The entries of one EHR, newest first. Filters: `from`, `to`, `action`, `outcome`, `accessor_kind` (each a term by its coded content, the token `terminology_id\|code`, such as `HL7_AuditEventAction\|R`, `openehr_access\|refused` or `HL7_SecurityRoleType\|datasubject`; a rubric or a bare code is a `400`), `emergency`, `include_self`; `offset`, `fetch` (1 to 1000, default 100). |
 | `GET /ehr/{ehr_id}/access_log/{uid}` | as above | One entry. |
 | `GET /admin/access-log` | a reviewer | Records across EHRs, entries and tombstones. Filters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`; `offset`, `fetch`. |
-| `GET /admin/access-log/chain` | a reviewer | The `uid` and `link` of each record from `from_sequence` to `to_sequence` (at most 10000), without content, and the `gaps` of folded tombstones between, for verification. |
+| `GET /admin/access-log/seals` | a reviewer | The seal of each window that covers an entry id from `from_id` to `to_id` (less than 10000 apart), with whether the window was folded, for verification. |
 | `GET /admin/access-log/checkpoint` | a reviewer | The newest stored checkpoint, or the one at `sequence`. |
 
 A list answers `offset`, `fetch` and `entries`, and no total count, since a
@@ -952,13 +929,13 @@ value outside its form, is a `400`.
   provider and the party), when, the action and outcome, the items and their
   categories, the purposes and the emergency mark, and leaves out the
   credential, the delegation chain, the binding outcome, the channel, the
-  query text and its digest, the security labels, `other_details` and the
-  link, and the accessor members a
+  query text and its digest, the security labels and `other_details`, and the
+  accessor members a
   [restriction](#restricting-the-subject-view-ehds-art-93) withholds. An entry about a composition held from the person under EHDS Art.
   3(3) is left out until the hold ends, as in the [subject-scoped ITI-81
   read](#while-a-composition-is-held-from-the-person). Any other EHR answers
   `404`, the same as an unknown one, so its existence is not disclosed.
-- The **full view**, each record in its ITS-JSON form with its link, goes to
+- The **full view**, each record in its ITS-JSON form, goes to
   a reviewer: a caller the admin class admits (`admin_role` under RBAC), the
   same caller `GET /admin/access-log` admits.
 - Every other caller is refused with `403`. The log has its own access
@@ -1056,46 +1033,44 @@ writes itself: subject resolutions, EHR-Extract transfers, the access-log
 erasure and the access-policy write. There is no queue in memory and no fail
 mode (`fail_mode` and `queue_capacity` are unknown keys).
 
-The records go into an **intake**: two append-only tables, one for the
-access-log entries and one for the other records, that no request waits on.
-A request whose records are all access-log entries hands them to a small set
-of intake writers. Each writer writes everything waiting in one statement that
-commits on its own, with the entries' search tokens, and answers each request
-once that commit is durable, so under load one commit serves many requests.
-A **chainer** on every replica links the intake into the hash chains
-moments later: it takes the head of the access log without waiting, so one
-replica chains at a time and the others skip, computes the links, writes the
-records with their index rows, the checkpoint and the outbox rows of the
-feeds, and commits. The intake refuses every update and delete except the
-chainer's move, which writes each row into its chain in the same statement.
-A request wakes its replica's chainer, which gathers what the requests of the
-next fifth of a second write into one round; every replica also looks at the
-intake every two seconds for the rows a stopped replica left, and a graceful
-stop chains what the intake holds. The window between the intake and the chain
-is therefore about a fifth of a second; the
-`audit_sender` readiness indicator reads `DEGRADED` when the oldest intake row
-has waited longer than 10 seconds. A record in the intake is durable: a
-restart, a crash or a lost replica leaves it for the next chainer.
+Each access-log entry is written once, into `audit.access_log_entry`, and
+each other record once, into `audit.audit_event` with an intake row naming
+it; no request waits on a chain. A request whose records are all access-log
+entries hands them to a small set of writers. Each writer writes everything
+waiting in one statement that commits on its own, with the entries' search
+tokens, and answers each request once that commit is durable, so under load
+one commit serves many requests. An entry is in every read of the log from
+that commit on.
 
-The reference host sustains about 15 000 chained access-log entries per
-second in one chain ([capacity](capacity.md)).
+A round on every replica's audit runtime, about once a second, moves the
+access log's frontier, owes the entries below it to the configured feeds in
+one statement, and about once a minute seals them in one window
+([Seals, checkpoints and the transfer of a log](#seals-checkpoints-and-the-transfer-of-a-log)).
+The same runtime's **chainer** links the system records into the system
+chain moments after they are written: it gathers what the requests of the
+next fifth of a second write into one round, every replica looks every two
+seconds for the rows a stopped replica left, and a graceful stop chains what
+the intake holds and seals what the access log holds. The
+`audit_sender` readiness indicator reads `DEGRADED` when the oldest system
+intake row has waited longer than 10 seconds. A record is durable from its
+commit: a restart, a crash or a lost replica leaves nothing behind.
 
 A write's records live in the audit cluster, which production keeps apart
 from the clinical and party ones, so they cannot join the write's own
-transaction. They are written first, into the intake, **held** under a
-reservation id the chainer skips; the id goes into the write's own domain in
-the write's transaction, and the write commits. Once the response is built,
-the reservation goes to the chainer, whose next round releases the held
-records in the same transaction that chains them, so a write costs two
-commits. A replica that stops before that round leaves the records held:
-two minutes later the reconciler of any running replica
-releases those records, exactly as they were written and once, and discards
-the held records of a write that never committed. The reservation holds the
-id alone, no identity of the caller. While a reservation waits past those two
-minutes the `audit_sender` indicator reads `DEGRADED` with their count and
-age, and the metrics `audit_reservations_held`,
-`audit_reservation_age_seconds` and `audit_reservations_reconciled_total`
-show them.
+transaction. They are written first, **held** under a reservation id (an
+`audit.access_log_hold` row per entry, the reservation on a system intake
+row), which every read, the feeds and the sealer skip; the id goes into the
+write's own domain in the write's transaction, and the write commits. Once
+the response is built, the reservation goes to the chainer, whose next round
+releases the held records, so a write costs two commits. A replica that
+stops before that round leaves the records held: two minutes later the
+reconciler of any running replica releases those records, exactly as they
+were written and once, and discards the held records of a write that never
+committed. The reservation holds the id alone, no identity of the caller.
+While a reservation waits past those two minutes the `audit_sender`
+indicator reads `DEGRADED` with their count and age, and the metrics
+`audit_reservations_held`, `audit_reservation_age_seconds` and
+`audit_reservations_reconciled_total` show them.
 
 ### While a composition is held from the person
 
@@ -1137,11 +1112,12 @@ puts the same duty on the deployment's side.
 
 An audit trail that anything with the application's database password can
 quietly rewrite is a log, not an accountability record. The local store is
-therefore tamper-**evident**: every record is linked into a SHA-256 hash chain
-maintained inside PostgreSQL, so each record commits to its predecessor and to
-its own content. The chain is built by the database itself, not by the server,
-which means it covers every writer: the chainer and any statement typed by
-hand.
+therefore tamper-**evident**. The system chain's records (`audit.audit_event`)
+are linked into a SHA-256 hash chain maintained inside PostgreSQL, so each
+record commits to its predecessor and to its own content; the chain is built
+by the database itself, so it covers every writer. The access log's entries
+are sealed in windows, each seal following the one before it
+([Seals, checkpoints and the transfer of a log](#seals-checkpoints-and-the-transfer-of-a-log)).
 
 A request writes each record once, in `audit.audit_event`, and never changes
 it. The chainer links it into the chain with a row of its own in
@@ -1181,13 +1157,14 @@ Four controls sit on top of it, and they are separate on purpose:
   [Operations](operations.md#database-roles-and-least-privilege), because a
   self-migrating server owns the schema and can therefore turn the enforcement
   off.
-- **Verification is a query you can run yourself.** It recomputes every digest,
-  re-walks every link, and checks both ends of the chain, one query per
-  chain:
+- **Verification is something you can run yourself.** For the system chain
+  it is a query that recomputes every digest, re-walks every link, and checks
+  both ends of the chain; for the access log it is `ferroehr access-log
+  verify` (or `POST /admin/access-log/verify`), which recomputes every
+  sealed window:
 
   ```sql
   SELECT * FROM audit.verify_audit_chain();       -- the system chain
-  SELECT * FROM audit.verify_access_log_chain();  -- the access log
   ```
 
   An empty result means the trail is intact. Any row names one record (its
@@ -1203,8 +1180,8 @@ Four controls sit on top of it, and they are separate on purpose:
   earlier run found intact, and the chain head, so its cost follows the
   records written since rather than the size of the trail. It walks each
   chain from its own cursor to the head it started with, one statement per
-  step (`audit.verify_audit_chain_step()` and
-  `audit.verify_access_log_chain_step()`), each sized to take about half a
+  step (`audit.verify_audit_chain_step()`, and for the access log the
+  sealed windows after the last one found intact), each sized to take about half a
   second, and each intact step moves the cursor, so a backlog of any size is
   verified in one run and no statement nears the
   `[database] statement_timeout`. After each step the run pauses at least as
@@ -1235,103 +1212,101 @@ Four controls sit on top of it, and they are separate on purpose:
 
 > [!IMPORTANT]
 > This is **detection, not prevention**, and the boundary is worth stating
-> plainly. The chain is unkeyed, so a party with unrestricted write access to
-> the `audit` schema (the database owner, or a superuser) can delete a record
-> and recompute every hash after it. What closes that case is keeping the trail
+> plainly. The chain and the unsigned seals are unkeyed, so a party with
+> unrestricted write access to the `audit` schema (the database owner, or a
+> superuser) can delete a record and recompute every hash after it; a signed
+> checkpoint published outside the database shows that for the access log. What closes that case is keeping the trail
 > somewhere that party does not control. Enable
 > `[audit.syslog]` or `[audit.fhir_feed]` so records leave the box as they are
 > written, and give the server an app-role-only DSN so it is not that party.
 
-## Checkpoints and the transfer of a log
+## Seals, checkpoints and the transfer of a log
 
-The records of the openEHR access log (`audit.access_log_record`) form a
-chain of their own: the access log holds only the accesses to EHR data, one
-chain from position 1 with no gaps, apart from the `audit_event` records
-above, which form the system chain (an authentication, a template, party or
-application operation). Each chain has its own head, its own verification
-and its own signing; writers of one chain wait on its head in the database,
-so every replica writes the same chain. `SELECT * FROM
-audit.verify_access_log_chain();` verifies the access log as
-`audit.verify_audit_chain()` verifies the system chain, and the scheduled
-check runs both. A chain proves order and completeness
-against someone who cannot rewrite its whole tail. A **checkpoint** closes
-that case: an `ACCESS_LOG_CHECKPOINT` names the position and digest of the
-head of the chain and is signed with the deployment's OpenPGP key, in the
-form an openEHR `ATTESTATION` carries its proof (RM common, Generic Package
-§Attestation). A verifier that holds a checkpoint detects any later rewrite
-of the records it covers. No openEHR specification governs log signing; this
-is our own design. No law requires a signature on each entry: EHDS Art. 9
-and Annex II 3.2 ask for a complete log each person can read, and GDPR
-Art. 32(1)(b) for integrity appropriate to the risk. The eHDSI Audit Trail
-Profile's per-event signature binds the MyHealth@EU national contact
-points, which sign with their own certificate.
+The records of the openEHR access log (`audit.access_log_record`) hold only
+the accesses to EHR data, apart from the `audit_event` records above, which
+form the system chain (an authentication, a template, party or application
+operation). The access log carries no chain (#6242). A request writes each
+entry once, before its response, and every reader, the delivery and the
+sealer read that row.
 
-- **The key** is the keyring of [version signing](signing/pgp.md):
-  `[record.signing]` in `pgp` mode, with its `retired_key_files` still
-  verifying what an earlier key signed. With that key the log is sealed; a
-  deployment without it seals nothing, and `ferroehr access-log checkpoint`
-  answers that the keyring holds no key.
-- **A checkpoint a second, and one at rest.** While requests keep writing,
-  the chainer seals the last link of a round once the last checkpoint is a
-  second old, and when it comes to rest it seals the head of the chain, so
-  every chained entry is covered by a signature within a second under load
-  and at once when the load stops. A write that settles its own entries
-  (an import, an erasure) seals them in the same transaction. A change,
-  removal, insertion or reordering of a record below a checkpoint breaks the
-  chain under that checkpoint's signature. The links carry no signature of
-  their own. Within the second before a checkpoint, someone who can write
-  the database but holds no key could change the newest entries unseen; a
-  checkpoint per round closed that second at the cost of one signature and
-  its wait in every round, about 20 a second at 3000 requests a second.
-  There is no switch and no interval to set. `ferroehr access-log checkpoint` and
-  `POST /admin/access-log/checkpoint` answer the checkpoint of the head, and
-  seal one only for a head appended while the keyring held no key.
-- **Use an Ed25519 key.** An RSA signature is far slower than an Ed25519
-  one, and every other audit write waits while one append holds the head.
+- **The frontier.** A round on every replica's audit runtime, about once a
+  second, moves the log's frontier: the highest entry id at or below which
+  every entry is committed or never will be. Every insert takes its
+  transaction's id before any row draws its entry id, so an entry id the
+  round has seen belongs to a transaction that a later snapshot shows ended.
+  A long writing transaction anywhere in the database delays the frontier
+  and loses nothing: an entry is in the log from its own commit. The
+  entries of a write whose commit is not yet confirmed are held, in no read,
+  and the frontier the sealer and the delivery use stops below them.
+- **A window a minute.** About once a minute the sealer seals every entry
+  id past the last window, up to that bound, as one window. A seal is the
+  SHA-256 of this text, which you can rebuild from the stored rows:
+
+  ```text
+  27:ferroehr.access_log.seal.v1
+  <length>:<window number>
+  <length>:<first entry id>
+  <length>:<last entry id>
+  <length>:<number of entries>
+  64:<the previous seal's digest>
+  then, for each entry of the window in id order:
+  <length>:<entry id>
+  64:<the entry's content digest>
+  ```
+
+  Each field is its length in bytes in decimal, a colon, the field and a
+  line feed; integers are decimal, digests lower-case hexadecimal. The first
+  window follows the SHA-256 of the version tag. A tombstone keeps the content
+  digest of the entry it replaced, so its window verifies after the content
+  is gone. `GET /admin/access-log/seals` answers the seals over a span of
+  entry ids.
+- **The signed checkpoint.** With an OpenPGP key in the version-signing
+  keyring, each seal is signed as the `ACCESS_LOG_CHECKPOINT` of the log up
+  to the window's last entry id, whose `digest` is the seal's digest, in the
+  form RM common `master04-generic_package.adoc` §Attestation gives
+  `ATTESTATION._proof_`. A deployment without a key seals without signing,
+  and `ferroehr access-log checkpoint` refuses. `ferroehr access-log
+  checkpoint` and `POST /admin/access-log/checkpoint` seal every committed
+  entry and answer the newest checkpoint; `GET /admin/access-log/checkpoint`
+  answers the newest stored one, or the one at `sequence`.
+- **What is left unsealed.** An entry newer than the last seal, at most a
+  minute and the frontier's lag, is protected by the refused `UPDATE` and
+  `DELETE` and by the runtime role's grants alone. The CRA risk assessment
+  (C4, C5) and hazard H7 state that window.
 - **Publish the checkpoints outside the database.** Someone who can write
-  the database can remove the newest entries together with the checkpoints
-  that seal them, and nothing left in the database shows it. A checkpoint
-  kept where that person cannot write does. Set
-  `[audit.access_log] publish_directory` to a directory on write-once
-  storage (an object-lock bucket mounted as a file system, a WORM volume, a
-  directory another system collects from): every 30 seconds the server
-  writes the newest checkpoint there as its own file,
-  `access-log-checkpoint-<sequence>.json`, created once and never
-  rewritten. Replicas publish the same files. This is the recommended
-  setup; without it the `access_log_checkpoints` health indicator reads
-  `DEGRADED`, and it reads `DEGRADED` while a publication fails. To check
-  the log against a published checkpoint, run
+  the database can remove the newest windows together with their seals, and
+  nothing left in the database shows it. Set `[audit.access_log]
+  publish_directory` to storage that person cannot rewrite: every 30 seconds
+  the server writes the newest checkpoint there as its own file,
+  `access-log-checkpoint-<last entry id>.json`, created once and never
+  rewritten. Without it the `access_log_checkpoints` health indicator reads
+  `DEGRADED`. To verify the log against a published checkpoint, run
   `ferroehr access-log verify --checkpoint <file>` with the newest file.
-- **Verification.** `ferroehr access-log verify` and
-  `POST /admin/access-log/verify` recompute the whole chain (an entry
-  replaced by its tombstone verifies through the content digest the
-  tombstone keeps, and a gap of folded tombstones as one link whose digest
-  is its link), and check the checkpoint's signature and that the link at
-  its position, a record's or a gap's, is the one it sealed. A checkpoint
-  published outside the database whose link the log no longer holds is
-  reported as `the link at <n> is not the link the checkpoint seals`. They
-  also verify every log
-  imported from another system against each of its checkpoints: the stored
-  links, gaps and records from the checkpoint before it, through the same
-  verifier the import runs, under the keyring and
-  `[audit.access_log] trusted_key_files`, reported under `imported`. Each finding is reported; the command exits 1 when the log does not
-  verify, and the route answers `200` with `intact: false`.
-- **Moving the log with the EHR.** EHDS Annex II 2.6 and Art 9(2) keep the
-  access information available when an EHR moves to another system.
-  `ferroehr access-log export --ehr-id <id>` and
-  `GET /admin/access-log/export?ehr_id=` write the EHR's records with their
-  links, every link and gap from the first of them to the checkpoint they
-  verify against, and that checkpoint, sealing one when none covers them. The
-  receiving system runs `ferroehr access-log import --input <file>`: it
-  verifies the export against its checkpoint and the certificates in
-  `[audit.access_log] trusted_key_files`, keeps the records with their
-  `system_id`, links, gaps and `retain_until` apart from its own chain, and records
-  the import as an `import` entry of its own log, built like every other
-  entry and naming the system as its accessor. An import repeated stores
-  nothing twice. The span holds the links of the other EHRs' entries between
-  the EHR's own, without their content, and never a record outside the
-  access log, so an export is never refused for what else the server
-  recorded meanwhile.
+- **Verification.** `ferroehr access-log verify` and `POST
+  /admin/access-log/verify` recompute every window from its rows and every
+  column the log derives from an entry's content, follow the seals from one
+  to the next to the sealer's state, and check the checkpoint's signature and
+  that the seal at its position is the one it signs. A changed, removed or
+  inserted record inside a sealed window is reported, as is a removed seal.
+  They also verify every imported bundle.
+- **The fold.** Once every record of a sealed window is a tombstone past its
+  end, the retention run removes the window's entries and records the window
+  as folded with the grounds its tombstones named. Its seal stays, so the
+  seals still follow one another.
+- **Moving the log with the EHR.** `ferroehr access-log export <ehr_id>` and
+  `POST /admin/access-log/export?ehr_id=…` export one EHR's records as a
+  bundle: each record with its content digest, signed whole by this system's
+  keyring over its RFC 8785 form without its proof. It carries no record or
+  digest of another person. `ferroehr access-log import <file>` verifies the
+  signature against the certificates in `[audit.access_log]
+  trusted_key_files` and every entry's digest, keeps the records with their
+  `system_id`, `retain_until` and content digest, and records the import as
+  an entry of this log that names the bundle's digest and a digest over the
+  imported records' uids and content digests, so this log's seal covers
+  them. An imported entry ends at the `retain_until` it states; its
+  tombstone is kept as long again and then folds, leaving its uid, bundle
+  and content digest so the bundle still verifies. A repeated import stores
+  nothing twice.
 - **The system chain is sealed too.** The same schedule and key seal the
   head of the system chain (`audit.audit_chain_seal`).
   `ferroehr audit-chain seal` seals one on demand and prints it, and

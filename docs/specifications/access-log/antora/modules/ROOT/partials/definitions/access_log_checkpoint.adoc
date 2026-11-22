@@ -4,7 +4,7 @@ h|*Class*
 2+^h|*ACCESS_LOG_CHECKPOINT*
 
 h|*Description*
-2+a|A signed statement by the recording system of the head of its log at a point in time. A checkpoint commits to every record up to `_sequence_`, so a verifier that holds it can detect a later rewrite of the log, and an export carries the checkpoint its records verify against.
+2+a|A signed statement by the recording system of the seal of its log up to a record. A checkpoint commits to every record up to `_sequence_` through the seal digest of the window that ends there, so a verifier that holds it can detect a later rewrite of the log.
 
 h|*Attributes*
 ^h|*Signature*
@@ -16,15 +16,15 @@ a|The system whose log the checkpoint seals.
 
 h|*1..1*
 |*sequence*: `xref:{class_integer64}[Integer64]`
-a|The `_link.sequence_` of the last record the checkpoint covers.
+a|The number of the last record the checkpoint covers: the last of the window its seal closes.
 
 h|*1..1*
 |*digest*: `xref:{class_string}[String]`
-a|The `_link.digest_` of that record.
+a|The seal digest of that window, which follows the seal of the window before it.
 
 h|*1..1*
 |*algorithm*: `xref:{class_string}[String]`
-a|Name of the digest algorithm of the chain.
+a|Name of the digest algorithm of the seals.
 
 h|*1..1*
 |*time_sealed*: `xref:data_types:date_time_package.adoc#_dv_date_time_class[DV_DATE_TIME]`

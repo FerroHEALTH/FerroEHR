@@ -4,7 +4,7 @@ include::partial$module_vars.adoc[]
 
 == Overview
 
-An `ACCESS_LOG_ENTRY` records one access event to the data of at most one EHR. An access that reaches several EHRs is recorded as one entry per EHR, and the entries of one request share `_channel.request_id_`. Every record, entry or tombstone, holds one `ACCESS_LOG_LINK` of the log's hash chain. A signed `ACCESS_LOG_CHECKPOINT` seals the head of the chain.
+An `ACCESS_LOG_ENTRY` records one access event to the data of at most one EHR. An access that reaches several EHRs is recorded as one entry per EHR, and the entries of one request share `_channel.request_id_`. The system seals its records in windows, and an `ACCESS_LOG_CHECKPOINT` signs the seal of a window. A signed `ACCESS_LOG_CHECKPOINT` seals the head of the chain.
 
 == Design
 
@@ -32,7 +32,6 @@ include::ROOT:partial$classes/access_log_entry.adoc[]
 
 include::ROOT:partial$classes/access_log_tombstone.adoc[]
 
-include::ROOT:partial$classes/access_log_link.adoc[]
 
 include::ROOT:partial$classes/access_log_checkpoint.adoc[]
 

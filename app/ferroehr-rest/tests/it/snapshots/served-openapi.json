@@ -569,97 +569,6 @@
         }
       }
     },
-    "/ferroehr/rest/extensions/v1/admin/access-log/chain": {
-      "get": {
-        "tags": [
-          "admin-access-log"
-        ],
-        "summary": "The uid and link of each record of a span of the access log's chain,\nwithout their content, and the gaps of folded tombstones between\n(`GET /admin/access-log/chain`). **Our own extension.**",
-        "operationId": "admin_access_log_chain",
-        "parameters": [
-          {
-            "name": "from_sequence",
-            "in": "query",
-            "description": "The first position of the span.",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "name": "to_sequence",
-            "in": "query",
-            "description": "The last position of the span, at most 10000 after the first.",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "`links`: the `uid` and `link` of each record from `from_sequence` to `to_sequence`, in chain order. `gaps`: each run of folded tombstones that holds a position of the span, with the positions it held, the `link` of its last record and the `grounds` of its tombstones.",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "A bound is missing or outside its form, or the span is longer than 10000.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthenticated.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not in the Admin class.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "The admin API is disabled on this server.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The local audit store, which holds the access log, is off.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/ferroehr/rest/extensions/v1/admin/access-log/checkpoint": {
       "get": {
         "tags": [
@@ -986,6 +895,97 @@
           },
           "409": {
             "description": "No checkpoint covers the records and the keyring holds no OpenPGP key to seal one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access-log/seals": {
+      "get": {
+        "tags": [
+          "admin-access-log"
+        ],
+        "summary": "The seals of the windows that cover a span of the access log's entry\nids (`GET /admin/access-log/seals`). **Our own extension.**",
+        "operationId": "admin_access_log_seals",
+        "parameters": [
+          {
+            "name": "from_id",
+            "in": "query",
+            "description": "The first entry id of the span.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "to_id",
+            "in": "query",
+            "description": "The last entry id of the span, less than 10000 after the first.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`seals`: each window that covers an entry id of the span, in window order, with its `window_no`, `first_id`, `last_id`, `entries`, `previous_digest`, `digest` and whether it was `folded`.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A bound is missing or outside its form, or the span is 10000 or longer.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The local audit store, which holds the access log, is off.",
             "content": {
               "application/problem+json": {
                 "schema": {
