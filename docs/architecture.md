@@ -363,12 +363,18 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   materialized CTE every row is joined to, so it runs before any row's
   identity value is drawn, with no trigger and no nested statement. A frontier
   round on the audit runtime reads the id sequence's last value `X` and then,
-  in a statement of its own, a snapshot. A transaction that drew an id at or
-  below `X` drew it before `X` was read, so it held its xid before that
-  snapshot and lies below the snapshot's `xmax`. Once a later snapshot's
-  `xmin` reaches that `xmax`, every such transaction has ended: each entry at
-  or below `X` is visible or never will be (PostgreSQL 19, "Transaction ID
-  and Snapshot Information Functions"). The identity sequence keeps
+  in a statement of its own that commits at once, takes an xid `R` of its
+  own. A transaction that drew an id at or below `X` drew it before `X` was
+  read, so it held its xid before `R` was assigned, and xids are assigned in
+  increasing order: its xid is below `R`. Once a later snapshot's `xmin` is
+  above `R`, every such transaction has ended: each entry at or below `X` is
+  visible or never will be. A snapshot's `xmax` taken after `X` would not do,
+  since it is one past the newest xid that has ended and a transaction still
+  running can hold an xid at or above it (PostgreSQL 19, "Transaction ID and
+  Snapshot Information Functions"); the stress of
+  `sealers_on_several_replicas_keep_one_run_of_windows` sealed a window over
+  such a transaction's entry before `R` replaced it. Each round spends one
+  xid. The identity sequence keeps
   `CACHE 1`, so a value is drawn when a row takes it, which a test asserts.
   A long writing transaction holds `xmin` back and only delays the frontier;
   an entry is in the log from its own commit, so none is lost

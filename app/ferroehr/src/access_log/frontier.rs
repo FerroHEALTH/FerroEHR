@@ -6,29 +6,36 @@
 //!
 //! Every insert into `audit.access_log_entry` takes its transaction's xid
 //! before any row draws an id: both statements that insert entries read
-//! `pg_current_xact_id()` in a materialized CTE the rows are joined to.
-//! A round reads the id sequence's last value `X`, then, in a statement of
-//! its own, a snapshot. A transaction that drew an id at or below `X` drew it
-//! before `X` was read, so it held its xid before that snapshot was taken
-//! and lies below its `xmax`. Once a later snapshot's `xmin` reaches that
-//! `xmax`, every such transaction has ended, so each entry at or below `X` is
-//! visible to it or never will be. A long writing transaction anywhere in
-//! the cluster holds `xmin` back: the frontier waits and no entry is lost,
-//! since an entry is readable from its own commit, before its response. The
-//! identity sequence keeps `CACHE 1`, so a value is drawn when a row takes
-//! it. The sealer and the delivery read up to the frontier. No specification
-//! governs it: our own design.
+//! `pg_current_xact_id()` in a materialized CTE the rows are joined to. A
+//! round reads the id sequence's last value `X`, then takes an xid of its
+//! own in a statement of its own, which commits at once. A transaction that
+//! drew an id at or below `X` drew it before `X` was read, so it held its xid
+//! before the round took its own, and xids are assigned in increasing order:
+//! its xid is below the round's. Once a later snapshot's `xmin` is above the
+//! round's xid, every such transaction has ended, so each entry at or below
+//! `X` is visible to it or never will be. A snapshot's `xmax` would not do: it
+//! is one past the newest xid that has ended, and a transaction still running
+//! can hold an xid at or above it (PostgreSQL 19, "Transaction ID and
+//! Snapshot Information Functions", `pg_current_snapshot`). Each round
+//! spends one xid. A long writing transaction anywhere in the cluster holds
+//! `xmin` back: the frontier waits and no entry is lost, since an entry is
+//! readable from its own commit, before its response. The identity sequence
+//! keeps `CACHE 1`, so a value is drawn when a row takes it. The sealer and
+//! the delivery read up to the frontier. No specification governs it: our
+//! own design.
 
 use std::collections::VecDeque;
 
 use sqlx::PgConnection;
 
-/// A sequence value read before a snapshot, with that snapshot's `xmax`.
+/// A sequence value with the xid a round took after reading it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Mark {
     /// The sequence's last value, read first.
     pub last_value: i64,
-    /// The `xmax` of a snapshot taken after it.
+    /// One past the xid the round took after it: a snapshot whose `xmin`
+    /// reaches it shows every transaction that drew a value up to
+    /// `last_value` ended.
     pub xmax: u64,
 }
 
@@ -64,9 +71,10 @@ impl Frontier {
         self.reached
     }
 
-    /// One round on `conn`: the sequence's last value, then a snapshot in a
-    /// statement of its own, whose `xmin` moves the frontier and whose
-    /// `xmax` marks the value; returns the frontier.
+    /// One round on `conn`, outside a transaction: the sequence's last value,
+    /// then an xid of the round's own in a statement that commits at once,
+    /// which marks the value, then a snapshot whose `xmin` moves the frontier;
+    /// returns the frontier.
     ///
     /// # Errors
     /// The store errors when a statement fails, and a decode error when the
@@ -77,19 +85,21 @@ impl Frontier {
         )
         .fetch_one(&mut *conn)
         .await?;
-        let (xmin, xmax): (String, String) = sqlx::query_as(
-            "SELECT pg_snapshot_xmin(s)::text, pg_snapshot_xmax(s)::text FROM pg_current_snapshot() AS s",
-        )
-        .fetch_one(&mut *conn)
-        .await?;
+        let taken: String = sqlx::query_scalar("SELECT pg_current_xact_id()::text")
+            .fetch_one(&mut *conn)
+            .await?;
+        let xmin: String =
+            sqlx::query_scalar("SELECT pg_snapshot_xmin(pg_current_snapshot())::text")
+                .fetch_one(&mut *conn)
+                .await?;
         let bound = |text: &str| {
             text.parse::<u64>()
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))
         };
-        let (xmin, xmax) = (bound(&xmin)?, bound(&xmax)?);
+        let (taken, xmin) = (bound(&taken)?, bound(&xmin)?);
         self.mark(Mark {
             last_value: last_value.unwrap_or(0),
-            xmax,
+            xmax: taken.saturating_add(1),
         });
         Ok(self.reach(xmin))
     }
