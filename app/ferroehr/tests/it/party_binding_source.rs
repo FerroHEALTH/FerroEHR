@@ -845,7 +845,7 @@ async fn the_source_reports_the_live_groups_a_person_belongs_to() {
     let (_db, svc) = service().await;
     let value = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
     let (vo, _) = professional(&svc, value).await;
-    team(&svc, GROUP_TEMPLATE, "ward", &[vo], "532").await;
+    let ward = team(&svc, GROUP_TEMPLATE, "ward", &[vo], "532").await;
     let theatre = team(&svc, GROUP_TEMPLATE, "theatre", &[vo], "532").await;
     let clinic = team(&svc, GROUP_TEMPLATE, "clinic", &[vo], "553").await;
     // An inactive GROUP lists no member, nor does a GROUP of another template.

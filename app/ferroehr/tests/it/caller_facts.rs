@@ -1020,11 +1020,11 @@ async fn of_two_creates_declaring_one_record_subject_one_commits() {
         let kept = recorder.clone();
         let svc = &svc;
         async move {
-            let outcome = ferroehr::db::acquire::request_scope(
+            let outcome = Box::pin(ferroehr::db::acquire::request_scope(
                 ferroehr::system_log::recorder::with_recorder(recorder, async move {
-                    create(svc, PartyKind::Person, &body).await
+                    Box::pin(create(svc, PartyKind::Person, &body)).await
                 }),
-            )
+            ))
             .await;
             (outcome, kept)
         }

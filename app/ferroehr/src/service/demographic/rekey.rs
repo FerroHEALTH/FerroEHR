@@ -63,8 +63,7 @@ impl FerroEhrService {
                 ServiceError::not_found(Missing::VersionedObject, format!("PERSON {party}"))
             })?
             .tree;
-        let read =
-            Box::pin(self.read_party(PartyKind::Person, party, Some(tree), None)).await?;
+        let read = Box::pin(self.read_party(PartyKind::Person, party, Some(tree), None)).await?;
         let mut body = read.body;
         let template = body
             .pointer("/archetype_details/template_id/value")
