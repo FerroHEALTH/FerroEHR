@@ -213,6 +213,9 @@ compose_up() {
   # A conformance deployment sends no usage report, whatever the caller's shell holds.
   export FERROEHR__USAGE_REPORT__ENABLED=false
   if [[ "$MEASUREMENT" == 1 ]]; then
+    # A measured run logs warnings only: one request line per request is
+    # journald and server CPU inside the measured window (#6244).
+    export FERROEHR__TELEMETRY__FILTER=warn
     echo "==> Composing FerroEHR and FerroTERM on fresh volumes, measurement posture"
   else
     echo "==> Composing FerroEHR and FerroTERM on fresh volumes (the exclusive-server ground)"
