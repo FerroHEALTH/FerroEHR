@@ -385,8 +385,9 @@ fn unwritten(error: &ServiceError) -> bool {
 }
 
 /// Whether `error` is a version key refusing a second version at the place a
-/// concurrent commit of the same object took first (`23505`, PostgreSQL docs
-/// Appendix A), which a guarded write judges again.
+/// concurrent commit of the same object took first, or the folder key a new
+/// hierarchy's rank another took first (`23505`, PostgreSQL docs Appendix A),
+/// which a guarded write judges again.
 fn place_taken(error: &ServiceError) -> bool {
     let ServiceError::Storage(StorageError::Database(sqlx::Error::Database(db))) = error else {
         return false;
@@ -395,7 +396,10 @@ fn place_taken(error: &ServiceError) -> bool {
         && db.constraint().is_some_and(|name| {
             matches!(
                 name,
-                "version_hot_pkey" | "uq_version_hot_trunk_position" | "uq_version_hot_tree"
+                "version_hot_pkey"
+                    | "uq_version_hot_trunk_position"
+                    | "uq_version_hot_tree"
+                    | "pk_ehr_folder"
             )
         })
 }

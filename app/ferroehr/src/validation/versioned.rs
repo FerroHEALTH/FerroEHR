@@ -219,21 +219,37 @@ pub(crate) async fn check_folder_item_refs<'e>(
     ehr_id: EhrId,
     refs: &[LocalItemRef],
 ) -> Result<(), ServiceError> {
-    // NOTE: no released openEHR text constrains FOLDER.items resolvability
-    // (BASE object_ref.adoc; no ITS-REST directory 422) — own-design safety
-    // net, register AMB-211: refs claiming this system must resolve.
     if refs.is_empty() {
         return Ok(());
     }
-    let roots: Vec<uuid::Uuid> = refs
-        .iter()
+    let known =
+        crate::storage::ehr_repo::existing_vo_roots(executor, ehr_id, &item_ref_roots(refs))
+            .await?;
+    judge_folder_item_refs(ehr_id, refs, &known)
+}
+
+/// The versioned-object roots `refs` name, which a FOLDER commit's gate read
+/// reads the existing ones of.
+pub(crate) fn item_ref_roots(refs: &[LocalItemRef]) -> Vec<uuid::Uuid> {
+    refs.iter()
         .filter_map(|item| item_ref_root(&item.id_value))
-        .collect();
-    let known: std::collections::HashSet<uuid::Uuid> =
-        crate::storage::ehr_repo::existing_vo_roots(executor, ehr_id, &roots)
-            .await?
-            .into_iter()
-            .collect();
+        .collect()
+}
+
+/// [`check_folder_item_refs`] judged on `known`, the roots of `refs` that
+/// exist as versioned objects in `ehr_id`.
+///
+/// # Errors
+/// [`ServiceError::ValidationFailed`] naming every unresolvable local
+/// reference at its tree path (→ 422).
+pub(crate) fn judge_folder_item_refs(
+    ehr_id: EhrId,
+    refs: &[LocalItemRef],
+    known: &[uuid::Uuid],
+) -> Result<(), ServiceError> {
+    // NOTE: no released openEHR text constrains FOLDER.items resolvability
+    // (BASE object_ref.adoc; no ITS-REST directory 422) — own-design safety
+    // net, register AMB-211: refs claiming this system must resolve.
     let violations: Vec<InvariantViolation> = refs
         .iter()
         .filter(|item| !item_ref_root(&item.id_value).is_some_and(|root| known.contains(&root)))

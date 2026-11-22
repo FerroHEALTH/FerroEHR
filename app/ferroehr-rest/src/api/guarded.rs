@@ -59,12 +59,15 @@ where
 /// The commits that confirm their policy copies after they were decided:
 /// each one's gate read returns the revisions before anything is written
 /// (#6256, #6257).
-const COMMITS_AFTER: [&str; 5] = [
+const COMMITS_AFTER: [&str; 8] = [
     "composition_create",
     "composition_update",
     "composition_delete",
     "contribution_create",
     "ehr_status_update",
+    "directory_create",
+    "directory_update",
+    "directory_delete",
 ];
 
 /// Whether `op` confirms its policy copies after it was decided ([`after`]).

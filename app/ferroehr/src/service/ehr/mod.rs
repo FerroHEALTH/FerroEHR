@@ -51,6 +51,7 @@ pub mod composition_read;
 mod contributions;
 pub(in crate::service) mod created;
 mod directory;
+mod directory_commit;
 pub(in crate::service) mod kind_rules;
 pub(in crate::service) mod meta;
 pub mod object;

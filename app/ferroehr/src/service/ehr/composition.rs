@@ -99,6 +99,7 @@ impl FerroEhrService {
                         shape: Shape::Plain,
                         persistent: persistent.as_deref().map(persistent_sibling),
                         addressed: None,
+                        items: &[],
                     },
                 )
                 .await?;
@@ -430,6 +431,7 @@ impl FerroEhrService {
                         shape: Shape::Update,
                         persistent: None,
                         addressed: None,
+                        items: &[],
                     },
                 )
                 .await?;
@@ -596,6 +598,7 @@ impl FerroEhrService {
                         shape: Shape::Delete,
                         persistent: None,
                         addressed: Some(tree.columns()),
+                        items: &[],
                     },
                 )
                 .await?;
@@ -727,6 +730,7 @@ pub(super) fn guard_of(gate: &Gate, head: Option<i32>) -> Guard {
         outbox: None,
         reservation: None,
         status: None,
+        folder: false,
     }
 }
 

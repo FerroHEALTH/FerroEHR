@@ -338,7 +338,7 @@ enum Shape {
 /// so one binder serves all three.
 fn folded_statement(shape: Shape) -> String {
     if matches!(shape, Shape::Guarded) {
-        return super::guarded::statement(false);
+        return super::guarded::statement(super::guarded::Beside::Nothing);
     }
     let contribution = matches!(shape, Shape::Contribution | Shape::Standalone);
     let version = matches!(shape, Shape::Standalone | Shape::Into);
@@ -491,7 +491,10 @@ pub async fn commit_folded(
     static STANDALONE: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Standalone));
     static INTO: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Into));
     static GUARDED: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Guarded));
-    static STATUS: LazyLock<String> = LazyLock::new(|| super::guarded::statement(true));
+    static STATUS: LazyLock<String> =
+        LazyLock::new(|| super::guarded::statement(super::guarded::Beside::Status));
+    static FOLDER: LazyLock<String> =
+        LazyLock::new(|| super::guarded::statement(super::guarded::Beside::Folder));
     let status = matches!(&folded, Folded::Guarded { guard, .. } if guard.status.is_some());
     let (sql, id, ehr_id, version, guard) = match folded {
         Folded::Contribution { id, ehr_id } => (&CONTRIBUTION, id, ehr_id, None, None),
@@ -501,6 +504,9 @@ pub async fn commit_folded(
         Folded::Into { id, version } => (&INTO, id, version.ehr_id, Some(version), None),
         Folded::Guarded { id, version, guard } if guard.status.is_some() => {
             (&STATUS, id, version.ehr_id, Some(version), Some(guard))
+        }
+        Folded::Guarded { id, version, guard } if guard.folder => {
+            (&FOLDER, id, version.ehr_id, Some(version), Some(guard))
         }
         Folded::Guarded { id, version, guard } => {
             (&GUARDED, id, version.ehr_id, Some(version), Some(guard))

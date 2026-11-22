@@ -105,10 +105,13 @@ enum Path {
     ReadVersion,
     CommitUpdate,
     CommitDelete,
+    DirectoryCreate,
+    DirectoryUpdate,
+    DirectoryDelete,
 }
 
 impl Path {
-    const ALL: [Self; 22] = [
+    const ALL: [Self; 25] = [
         Self::CommitJson,
         Self::CommitXml,
         Self::CommitFlat,
@@ -131,6 +134,9 @@ impl Path {
         Self::ReadVersion,
         Self::CommitUpdate,
         Self::CommitDelete,
+        Self::DirectoryCreate,
+        Self::DirectoryUpdate,
+        Self::DirectoryDelete,
     ];
 
     fn name(self) -> &'static str {
@@ -157,6 +163,9 @@ impl Path {
             Self::ReadVersion => "read JSON from the version copy",
             Self::CommitUpdate => "update JSON",
             Self::CommitDelete => "delete",
+            Self::DirectoryCreate => "directory create",
+            Self::DirectoryUpdate => "directory update",
+            Self::DirectoryDelete => "directory delete",
         }
     }
 }
@@ -360,7 +369,19 @@ struct Budget {
 /// (#6238): 4 round trips where it sent 5, 1,492 allocations where it made
 /// 1,567, a median peak 3 KiB lower and 323 wire bytes fewer, measured beside
 /// the merge base, and those ceilings fell by those figures.
-const BUDGETS: [Budget; 22] = [
+/// A directory create, update and delete are measured last, each on an EHR of
+/// its own with a composition its FOLDER references, and have since been
+/// judged on one gate read and written by one guarded statement after their
+/// access record, a new hierarchy's `ehr_folder` row with it (#6257): 4 round
+/// trips where they sent 14, 13 and 12, 1,542, 1,518 and 1,388 allocations
+/// where they made 1,687, 1,656 and 1,505, and 4,921, 4,731 and 4,088 wire
+/// bytes where they moved 5,739, 5,551 and 4,787, measured beside the merge
+/// base, with the same WAL. Their ceilings are the merge base's
+/// figures with the margins above, lowered by those drops; their median peaks
+/// rose from 136,915, 138,815 and 131,027 bytes to 145,604, 143,951 and
+/// 133,880, since the access record is rendered while the prepared version is
+/// held, inside the margin.
+const BUDGETS: [Budget; 25] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
@@ -559,6 +580,33 @@ const BUDGETS: [Budget; 22] = [
         nested: 0,
         wal: 5267,
     },
+    Budget {
+        path: Path::DirectoryCreate,
+        conversions: 5,
+        allocations: 1576,
+        peak_bytes: 150_606,
+        round_trips: 4,
+        nested: 1,
+        wal: 6504,
+    },
+    Budget {
+        path: Path::DirectoryUpdate,
+        conversions: 4,
+        allocations: 1551,
+        peak_bytes: 152_696,
+        round_trips: 4,
+        nested: 1,
+        wal: 5410,
+    },
+    Budget {
+        path: Path::DirectoryDelete,
+        conversions: 2,
+        allocations: 1418,
+        peak_bytes: 144_129,
+        round_trips: 4,
+        nested: 1,
+        wal: 4823,
+    },
 ];
 
 /// The bytes each path may move over the database wire per request, both
@@ -576,7 +624,7 @@ const BUDGETS: [Budget; 22] = [
 /// CONTRIBUTION commit, the `EHR_STATUS` commit, the update and the delete,
 /// measured beside the merge base, and each ceiling fell by its path's
 /// figure.
-const WIRE_BUDGETS: [(Path, u64); 22] = [
+const WIRE_BUDGETS: [(Path, u64); 25] = [
     (Path::CommitJson, 215_668),
     (Path::CommitXml, 215_814),
     (Path::CommitFlat, 215_808),
@@ -599,6 +647,9 @@ const WIRE_BUDGETS: [(Path, u64); 22] = [
     (Path::ReadVersion, 3336),
     (Path::CommitUpdate, 216_095),
     (Path::CommitDelete, 4875),
+    (Path::DirectoryCreate, 4985),
+    (Path::DirectoryUpdate, 4795),
+    (Path::DirectoryDelete, 4152),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
@@ -799,6 +850,10 @@ struct World {
     /// The compositions the deletes remove, each with its EHR and the version
     /// uid the delete names; built right before their path.
     deletable: Mutex<Vec<(String, String)>>,
+    /// The EHRs the directory paths write, one per request, each with the
+    /// object id of its composition, which its FOLDER references, and its
+    /// directory's current version uid; built right before their paths.
+    directories: Mutex<Vec<(String, String, String)>>,
 }
 
 /// The `ETag` value of a response, unquoted.
@@ -910,6 +965,52 @@ impl World {
             status_uids: Mutex::new(status_uids),
             judged: Mutex::new(Vec::new()),
             deletable: Mutex::new(Vec::new()),
+            directories: Mutex::new(Vec::new()),
+        }
+    }
+
+    /// Builds the EHRs of the directory paths, one per request, each with a
+    /// composition its FOLDER references.
+    async fn directories(&self, app: &Router) {
+        let mut directories = Vec::new();
+        for _ in 0..WARM + REQUESTS {
+            let (ehr, vo) = ehr_with_composition(app).await;
+            directories.push((ehr, vo, String::new()));
+        }
+        *self.directories.lock().unwrap() = directories;
+    }
+
+    /// The `n`th request of a directory path: a create, an update or a delete
+    /// of the directory of the `n`th EHR [`Self::directories`] built.
+    fn directory(&self, path: Path, n: usize) -> Call {
+        let (ehr, vo, tip) = self.directories.lock().unwrap()[n].clone();
+        let folder = serde_json::json!({
+            "_type": "FOLDER",
+            "name": { "_type": "DV_TEXT", "value": format!("directory {n}") },
+            "archetype_node_id": "openEHR-EHR-FOLDER.directory.v1",
+            "archetype_details": { "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID",
+                    "value": "openEHR-EHR-FOLDER.directory.v1" },
+                "rm_version": "1.1.0" },
+            "items": [{ "_type": "OBJECT_REF", "namespace": "local", "type": "COMPOSITION",
+                "id": { "_type": "HIER_OBJECT_ID", "value": vo } }],
+        });
+        let mut headers = vec![("Prefer", "return=minimal".to_owned())];
+        if path != Path::DirectoryCreate {
+            headers.push(("If-Match", format!("\"{tip}\"")));
+        }
+        let (method, body) = match path {
+            Path::DirectoryCreate => ("POST", Some((JSON, folder.to_string()))),
+            Path::DirectoryUpdate => ("PUT", Some((JSON, folder.to_string()))),
+            _ => ("DELETE", None),
+        };
+        Call {
+            method,
+            uri: format!("{BASE}/ehr/{ehr}/directory"),
+            user: "root",
+            accept: JSON,
+            headers,
+            body,
         }
     }
 
@@ -976,6 +1077,9 @@ impl World {
             }
             Path::CommitUpdate => {
                 self.update_uids.lock().unwrap()[n % self.ehrs.len()] = etag(headers);
+            }
+            Path::DirectoryCreate | Path::DirectoryUpdate => {
+                self.directories.lock().unwrap()[n].2 = etag(headers);
             }
             _ => {}
         }
@@ -1125,14 +1229,24 @@ impl World {
             Path::CommitPartyScored => Self::party_commit(self.scored.clone()),
             Path::CommitUpdate => self.update(ehr, n),
             Path::CommitDelete => self.delete(n),
-            Path::ReadVersion => {
-                let (ehr, version) = self.judged.lock().unwrap()[n % EHRS].clone();
-                get(
-                    format!("{BASE}/ehr/{ehr}/composition/{version}"),
-                    "nurse",
-                    JSON,
-                )
+            Path::DirectoryCreate | Path::DirectoryUpdate | Path::DirectoryDelete => {
+                self.directory(path, n)
             }
+            Path::ReadVersion => self.read_version(n),
+        }
+    }
+
+    /// The `n`th read by version id, of a composition of the EHRs
+    /// [`Self::judge_on_objects`] built.
+    fn read_version(&self, n: usize) -> Call {
+        let (ehr, version) = self.judged.lock().unwrap()[n % EHRS].clone();
+        Call {
+            method: "GET",
+            uri: format!("{BASE}/ehr/{ehr}/composition/{version}"),
+            user: "nurse",
+            accept: JSON,
+            headers: Vec::new(),
+            body: None,
         }
     }
 
@@ -1550,6 +1664,9 @@ async fn measure_all(
         }
         if path == Path::CommitDelete {
             world.deletable(app).await;
+        }
+        if path == Path::DirectoryCreate {
+            world.directories(app).await;
         }
         let m = Box::pin(measure(app, pool, wire, &world, counter, path)).await;
         measured.push((budget, m));
