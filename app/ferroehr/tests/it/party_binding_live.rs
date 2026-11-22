@@ -336,7 +336,11 @@ async fn only_a_change_of_the_side_table_moves_the_binding_revision_once() {
         }
         tx.commit().await.expect("commit");
         assert_eq!(revision().await, before + 1, "{statements:?}");
-        assert_eq!(heard_now(&mut heard).await, [String::new()], "{statements:?}");
+        assert_eq!(
+            heard_now(&mut heard).await,
+            [String::new()],
+            "{statements:?}"
+        );
     }
     let before = revision().await;
     for unchanged in [
