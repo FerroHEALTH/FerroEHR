@@ -36,6 +36,7 @@ use crate::access_evaluator_http::{app, ehr_with_composition, send};
 use crate::common::BASE;
 use ferroehr::db::pool::SESSION_SETUP_SPAN;
 
+mod care;
 mod entry;
 mod intake;
 mod paths;
@@ -53,6 +54,14 @@ async fn served() -> (
     Router,
 ) {
     let (db, pool, svc, app) = Box::pin(app()).await;
+    listening(&db, &svc).await;
+    (db, pool, svc, app)
+}
+
+/// Connects the `LISTEN` session of every copy `svc` holds over the database
+/// of `db`, as `ferroehr-server` `policy::listen` does, and waits until each
+/// one listens.
+async fn listening(db: &testkit::TestDb, svc: &ferroehr::service::FerroEhrService) {
     let listened: Vec<_> = svc
         .policy_listeners()
         .into_iter()
@@ -72,7 +81,6 @@ async fn served() -> (
         );
         tokio::time::sleep(std::time::Duration::from_millis(20)).await;
     }
-    (db, pool, svc, app)
 }
 
 /// The EHRs the population query serves, each with one composition.
