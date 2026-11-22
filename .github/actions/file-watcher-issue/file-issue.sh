@@ -10,8 +10,9 @@
 #
 # Callers: the sibling `action.yml` (the workflow-facing interface, used by
 # image-scan, base-image-watcher, latest-deps and link-check-external) and the
-# two probe shells `scripts/watch/spec-{update,release}.sh`, which file N issues
-# per run and therefore call this script directly. The engine lives in the
+# two probe shells `scripts/watch/spec-{update,release}.sh` and the
+# `pin-freshness.yml` lane, which file N issues per run and therefore call
+# this script directly. The engine lives in the
 # action directory because the action must be self-contained — a composite
 # resolves its own files through `$GITHUB_ACTION_PATH`
 # (https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax#runsstepsrun)

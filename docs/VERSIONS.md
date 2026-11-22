@@ -103,6 +103,11 @@ the two ZITADEL rows each week against the release zitadel/zitadel marks
 Latest. The ZITADEL documentation and sources the overlay cites are vendored
 at the same release (`scripts/vendor/zitadel-docs.sh`, `docs/specs/zitadel/`).
 Bumping ZITADEL moves both rows, and the vendor script's tag, together.
+The weekly `.github/workflows/pin-freshness.yml` reads the `ferrosmart` row,
+and every other FerroHEALTH product image the compose files, the hosted
+sandbox and the Helm chart pin, against that product's latest release and the
+digest of its image index (`scripts/checks/pin-freshness.sh`), and files one
+issue per image behind.
 
 | Image | Pin | Licence |
 |---|---|---|
