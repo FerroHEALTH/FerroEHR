@@ -537,10 +537,11 @@ impl AuditStore {
         // and durable on its own with synchronous_commit on, so they need no transaction.
         #[cfg(feature = "fhir")]
         if Self::only_entries(&records) {
-            let (_, learned, _) = self
-                .take_in(conn, &writing, records, ends, Some(reservation))
+            let entered = self.with_entries(&writing, records).await?;
+            let (_, intake, tokens) = self.entry_rows(&writing, entered).await?;
+            self.group()
+                .write_on(conn, &intake, &tokens, Some(reservation))
                 .await?;
-            self.remember(learned);
             return Ok(());
         }
         let mut tx = conn.begin().await?;

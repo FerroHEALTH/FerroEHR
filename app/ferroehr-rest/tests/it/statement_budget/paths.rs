@@ -333,32 +333,38 @@ struct Budget {
 /// where it sent 8, and 39, 45, 38, 45 and 44 fewer allocations on the JSON,
 /// XML and FLAT commits, the update and the delete, measured beside the merge
 /// base; each of those ceilings fell by its path's figure.
+/// A held write's access-log entries have since gone in with what the
+/// gathered writers know the store holds, its shared part left out and its
+/// search tokens named by id (#6244): 4 nested statements fewer on the three
+/// composition commits, the CONTRIBUTION commit, the `EHR_STATUS` commit, the
+/// update and the delete, and 8 to 17 fewer allocations, measured beside the
+/// merge base, and each of those ceilings fell by its path's figure.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
-        allocations: 18_037,
+        allocations: 18_029,
         peak_bytes: 1_530_778,
         round_trips: 4,
-        nested: 13,
+        nested: 9,
         wal: 188_205,
     },
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        allocations: 39_459,
+        allocations: 39_451,
         peak_bytes: 1_533_031,
         round_trips: 4,
-        nested: 14,
+        nested: 10,
         wal: 188_507,
     },
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        allocations: 32_620,
+        allocations: 32_612,
         peak_bytes: 1_528_525,
         round_trips: 4,
-        nested: 13,
+        nested: 9,
         wal: 188_849,
     },
     Budget {
@@ -436,10 +442,10 @@ const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitContribution,
         conversions: 6,
-        allocations: 18_290,
+        allocations: 18_282,
         peak_bytes: 1_649_934,
         round_trips: 4,
-        nested: 14,
+        nested: 10,
         wal: 189_586,
     },
     Budget {
@@ -454,10 +460,10 @@ const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitStatus,
         conversions: 4,
-        allocations: 1753,
+        allocations: 1736,
         peak_bytes: 144_180,
         round_trips: 15,
-        nested: 11,
+        nested: 7,
         wal: 5457,
     },
     Budget {
@@ -517,19 +523,19 @@ const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitUpdate,
         conversions: 5,
-        allocations: 17_766,
+        allocations: 17_758,
         peak_bytes: 1_525_458,
         round_trips: 4,
-        nested: 4,
+        nested: 0,
         wal: 187_688,
     },
     Budget {
         path: Path::CommitDelete,
         conversions: 2,
-        allocations: 1571,
+        allocations: 1563,
         peak_bytes: 150_537,
         round_trips: 5,
-        nested: 4,
+        nested: 0,
         wal: 5267,
     },
 ];
@@ -539,10 +545,16 @@ const BUDGETS: [Budget; 22] = [
 /// counts them (#6244): the largest median of three runs on main 4411906444
 /// plus 64 bytes, since a request's figure moves only by the width of the
 /// instants it sends, a few bytes between runs.
+/// A held write's access-log entries have since gone in without the shared
+/// part the store holds and with their search tokens named by id (#6244):
+/// 5,974 to 6,157 bytes fewer on the three composition commits, the
+/// CONTRIBUTION commit, the `EHR_STATUS` commit, the update and the delete,
+/// measured beside the merge base, and each ceiling fell by its path's
+/// figure.
 const WIRE_BUDGETS: [(Path, u64); 22] = [
-    (Path::CommitJson, 221_825),
-    (Path::CommitXml, 221_825),
-    (Path::CommitFlat, 221_821),
+    (Path::CommitJson, 215_668),
+    (Path::CommitXml, 215_814),
+    (Path::CommitFlat, 215_808),
     (Path::ReadJson, 131_668),
     (Path::ReadXml, 131_668),
     (Path::ReadFlat, 131_668),
@@ -551,17 +563,17 @@ const WIRE_BUDGETS: [(Path, u64); 22] = [
     (Path::AqlPopulation, 6566),
     (Path::Iti81, 100_255),
     (Path::PartyRead, 5524),
-    (Path::CommitContribution, 222_644),
+    (Path::CommitContribution, 216_630),
     (Path::ReadAtTime, 131_699),
-    (Path::CommitStatus, 11_869),
+    (Path::CommitStatus, 5895),
     (Path::ReadStatus, 3142),
     (Path::CommitParty, 10_513),
     (Path::AqlMatches, 17_539),
     (Path::AqlParty, 11_509),
     (Path::CommitPartyScored, 13_090),
     (Path::ReadVersion, 3336),
-    (Path::CommitUpdate, 222_106),
-    (Path::CommitDelete, 10_885),
+    (Path::CommitUpdate, 216_095),
+    (Path::CommitDelete, 4875),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
