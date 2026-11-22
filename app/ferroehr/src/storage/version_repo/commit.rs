@@ -286,6 +286,64 @@ pub enum Folded<'a> {
         /// The version, its head upsert and its node rows.
         version: FoldedVersion<'a>,
     },
+    /// A [`Folded::Standalone`] COMPOSITION write that writes nothing unless
+    /// what its gate read judged still holds ([`Guard`]), with its event
+    /// outbox row in the same statement (#6256).
+    Guarded {
+        /// The CONTRIBUTION uid.
+        id: Uuid,
+        /// The version, its head upsert and its node rows.
+        version: FoldedVersion<'a>,
+        /// What the gate read judged.
+        guard: Guard,
+    },
+}
+
+/// What a guarded commit ([`Folded::Guarded`]) still requires when it runs:
+/// the facts its gate read judged the write on.
+#[derive(Debug, Clone)]
+pub struct Guard {
+    /// The object's head ordinal the write was placed after (`None` for a
+    /// create, whose object has no head yet).
+    pub expected_head: Option<i32>,
+    /// The policy revision the gate read returned.
+    pub policy: Option<i64>,
+    /// The definition revision the gate read returned.
+    pub definitions: Option<i64>,
+    /// The event outbox envelope, when eventing is enabled.
+    pub outbox: Option<Value>,
+}
+
+/// Which of a guarded commit's requirements held when it ran, and the
+/// policy and definition revisions it read; written nothing unless all held.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each flag is one requirement of the guarded statement, read off its result row"
+)]
+pub struct GuardFlags {
+    /// The EHR still exists, is modifiable and is not restricted.
+    pub ehr: bool,
+    /// The object's head is still the one the write was placed after.
+    pub tip: bool,
+    /// The object still carries no restriction mark of its own.
+    pub mark: bool,
+    /// The policy and definition revisions are still those judged on.
+    pub policy: bool,
+    /// The write's commit instant is not earlier than the head's.
+    pub order: bool,
+    /// The policy revision the statement read.
+    pub policy_now: Option<i64>,
+    /// The definition revision the statement read.
+    pub definitions_now: Option<i64>,
+}
+
+impl GuardFlags {
+    /// Whether every requirement held.
+    #[must_use]
+    pub fn held(&self) -> bool {
+        self.ehr && self.tip && self.mark && self.policy && self.order
+    }
 }
 
 /// The rows one folded commit wrote.
@@ -308,6 +366,8 @@ enum Shape {
     Standalone,
     /// [`Folded::Into`].
     Into,
+    /// [`Folded::Guarded`].
+    Guarded,
 }
 
 /// The statement text of one [`Folded`] shape.
@@ -317,6 +377,9 @@ enum Shape {
 /// version, `$27` the version's root archetype and `$28` on the node arrays,
 /// so one binder serves all three.
 fn folded_statement(shape: Shape) -> String {
+    if matches!(shape, Shape::Guarded) {
+        return guarded_statement();
+    }
     let contribution = matches!(shape, Shape::Contribution | Shape::Standalone);
     let version = matches!(shape, Shape::Standalone | Shape::Into);
     let audit_time = if version { ", time_committed" } else { "" };
@@ -384,6 +447,96 @@ fn folded_statement(shape: Shape) -> String {
     )
 }
 
+/// The statement text of [`Folded::Guarded`].
+///
+/// The parameters of [`Folded::Standalone`] up to `$27`, then `$28` the
+/// expected head ordinal, `$29` the policy revision, `$30` the definition
+/// revision and `$31` the outbox envelope, and the node arrays from `$32`.
+/// The leading CTEs read what the gate read judged: the EHR row under `FOR
+/// SHARE` (the lock a concurrent `EHR_STATUS` flip waits on), the object's
+/// head row and the policy and definition revisions. The audit insert reads
+/// from `g`, which holds a row only when every requirement still holds, and
+/// every later insert reads from the audit's, so nothing is written
+/// otherwise. The last row names each requirement's flag.
+fn guarded_statement() -> String {
+    format!(
+        "WITH e AS ( \
+             SELECT COALESCE(x.is_modifiable, true) AS modifiable, \
+                    x.restricted_at IS NOT NULL AS restricted \
+             FROM ehr x WHERE x.id = $7 FOR SHARE \
+         ), t AS ( \
+             SELECT h.head_sys_version, h.restricted_at IS NOT NULL AS restricted, h.committed_at \
+             FROM vo_head h WHERE h.vo_id = $8 \
+         ), p AS ( \
+             SELECT rr.policy, rr.definitions FROM request_revisions rr \
+         ), k AS ( \
+             SELECT COALESCE((SELECT e.modifiable AND NOT e.restricted FROM e), false) AS ehr_held, \
+                    (SELECT t.head_sys_version FROM t) IS NOT DISTINCT FROM $28::int AS tip_held, \
+                    NOT COALESCE((SELECT t.restricted FROM t), false) AS mark_held, \
+                    (SELECT p.policy FROM p) IS NOT DISTINCT FROM $29::bigint \
+                      AND (SELECT p.definitions FROM p) IS NOT DISTINCT FROM $30::bigint \
+                      AS policy_held, \
+                    COALESCE((SELECT t.committed_at <= $22::timestamptz FROM t), true) AS order_held, \
+                    (SELECT p.policy FROM p) AS policy_now, \
+                    (SELECT p.definitions FROM p) AS definitions_now \
+         ), g AS ( \
+             SELECT 1 AS held FROM k \
+             WHERE k.ehr_held AND k.tip_held AND k.mark_held AND k.policy_held AND k.order_held \
+         ), a AS ( \
+             INSERT INTO commit_audit (system_id, change_type, description, committer, \
+                                       attestation, time_committed) \
+             SELECT $1, $2, $3::jsonb, $4::jsonb, $5, $22::timestamptz FROM g \
+             RETURNING id, time_committed \
+         ), c AS ( \
+             INSERT INTO contribution (id, ehr_id, commit_audit_id) \
+             SELECT $6, $7, a.id FROM a \
+             ON CONFLICT (id) DO NOTHING \
+             RETURNING id \
+         ), v AS ( \
+             INSERT INTO version \
+               (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
+                lifecycle_state, creating_system_id, preceding_version_uid, \
+                contribution_id, commit_audit_id, template_id, signature, \
+                signature_client_supplied, stable_compatible, body, origins, committed_at, \
+                other_input_version_uids, content_digest, content_sys_version) \
+             SELECT $8, $9, $7, $10, $11, $12, $13, \
+                    $14, $15, $16, c.id, a.id, $17, $18, $19, $20, $21, $23, \
+                    $22::timestamptz, $24, $25, $26 \
+             FROM a, c \
+             RETURNING content_key \
+         ), h AS ( {} \
+         ), n AS ( {} \
+         ), o AS ( \
+             INSERT INTO event_outbox (contribution_id, ehr_id, envelope, committed_at) \
+             SELECT $6, $7, $31::jsonb, $22::timestamptz \
+             FROM (SELECT pg_advisory_xact_lock_shared( \
+                       hashtext(current_schema() || '.event_outbox'), 0) \
+                   FROM v WHERE $31::jsonb IS NOT NULL) l \
+             WHERE NOT EXISTS (SELECT 1 FROM ehr m WHERE m.id = $7 \
+                 AND (m.restricted_at IS NOT NULL \
+                      OR (m.research_objected_at IS NOT NULL \
+                          AND m.research_objection_ground IS NULL))) \
+         ) \
+         SELECT k.ehr_held, k.tip_held, k.mark_held, k.policy_held, k.order_held, \
+                k.policy_now, k.definitions_now, \
+                a.id AS commit_audit_id, a.time_committed, c.id AS contribution_id \
+         FROM k LEFT JOIN a ON true LEFT JOIN c ON true",
+        HeadUpsert {
+            vo: "$8",
+            kind: "$9",
+            ehr: "$7",
+            ordinal: "$10",
+            branch: "$12",
+            lifecycle: "$14",
+            template: "$17",
+            archetype: "$27",
+            committed_at: "$22",
+        }
+        .sql(),
+        crate::storage::node_write::node_insert_cte("$8", "$10", "$7", 32)
+    )
+}
+
 /// Run one folded commit statement ([`Folded`]), returning the rows it wrote.
 ///
 /// A version's audit `time_committed` and its row's `committed_at` are both the
@@ -411,10 +564,16 @@ pub async fn commit_folded(
     static CONTRIBUTION: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Contribution));
     static STANDALONE: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Standalone));
     static INTO: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Into));
-    let (sql, id, ehr_id, version) = match folded {
-        Folded::Contribution { id, ehr_id } => (&CONTRIBUTION, id, ehr_id, None),
-        Folded::Standalone { id, version } => (&STANDALONE, id, version.ehr_id, Some(version)),
-        Folded::Into { id, version } => (&INTO, id, version.ehr_id, Some(version)),
+    static GUARDED: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Guarded));
+    let (sql, id, ehr_id, version, guard) = match folded {
+        Folded::Contribution { id, ehr_id } => (&CONTRIBUTION, id, ehr_id, None, None),
+        Folded::Standalone { id, version } => {
+            (&STANDALONE, id, version.ehr_id, Some(version), None)
+        }
+        Folded::Into { id, version } => (&INTO, id, version.ehr_id, Some(version), None),
+        Folded::Guarded { id, version, guard } => {
+            (&GUARDED, id, version.ehr_id, Some(version), Some(guard))
+        }
     };
     let query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(audit.system_id)
@@ -448,6 +607,14 @@ pub async fn commit_folded(
                 .bind(v.content_digest)
                 .bind(v.content_sys_version)
                 .bind(v.root_archetype);
+            let query = match &guard {
+                Some(guard) => query
+                    .bind(guard.expected_head)
+                    .bind(guard.policy)
+                    .bind(guard.definitions)
+                    .bind(&guard.outbox),
+                None => query,
+            };
             let row = crate::storage::node_write::bind_node_arrays(
                 query,
                 &v.rows.iter().collect::<Vec<_>>(),
@@ -457,6 +624,20 @@ pub async fn commit_folded(
             (row, Some((v.vo_id, v.sys_version, v.blob_uris)))
         }
     };
+    if guard.is_some() {
+        let flags = GuardFlags {
+            ehr: row.try_get("ehr_held")?,
+            tip: row.try_get("tip_held")?,
+            mark: row.try_get("mark_held")?,
+            policy: row.try_get("policy_held")?,
+            order: row.try_get("order_held")?,
+            policy_now: row.try_get("policy_now")?,
+            definitions_now: row.try_get("definitions_now")?,
+        };
+        if !flags.held() {
+            return Err(StorageError::GuardMoved(flags));
+        }
+    }
     let contribution_id: Option<Uuid> = row.try_get("contribution_id")?;
     let rows = FoldedRows {
         contribution_id: contribution_id.ok_or(StorageError::ContributionUidInUse(Some(id)))?,
@@ -500,6 +681,24 @@ pub async fn insert_ehr_folder_rank(
 
 // ── event outbox ──────────────────────────────────────────────────────────────
 
+/// The fixed envelope shape the outbox feed serves around the PHI-free
+/// per-version entries (`{contribution_id, ehr_id, committed_at, versions[]}`).
+/// No openEHR spec governs eventing: our own extension.
+#[must_use]
+pub fn outbox_envelope(
+    contribution_id: Uuid,
+    ehr_id: Option<EhrId>,
+    committed_at: jiff::Timestamp,
+    versions: Vec<Value>,
+) -> Value {
+    serde_json::json!({
+        "contribution_id": contribution_id,
+        "ehr_id": ehr_id,
+        "committed_at": committed_at.to_string(),
+        "versions": versions,
+    })
+}
+
 /// Write the contribution-outbox event row **inside the commit transaction**
 /// it announces — no commit without its event, no event without its commit.
 ///
@@ -528,12 +727,7 @@ pub async fn write_outbox(
     committed_at: jiff::Timestamp,
     versions: Vec<Value>,
 ) -> Result<(), StorageError> {
-    let envelope = serde_json::json!({
-        "contribution_id": contribution_id,
-        "ehr_id": ehr_id,
-        "committed_at": committed_at.to_string(),
-        "versions": versions,
-    });
+    let envelope = outbox_envelope(contribution_id, ehr_id, committed_at, versions);
     // The party domain carries no `ehr` relation, and a demographic commit has
     // no EHR to mark, so the marked-EHR filter is on the clinical statement
     // alone: naming `ehr` in the party domain would fail at parse time.
