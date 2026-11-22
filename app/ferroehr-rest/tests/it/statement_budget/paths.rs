@@ -317,6 +317,11 @@ struct Budget {
 /// statements fewer on the party read, the demographic query and both party
 /// commits, and 541, 537, 532 and 532 WAL bytes fewer, measured beside the
 /// merge base, and each of those ceilings fell by its path's figure.
+/// A CONTRIBUTION of COMPOSITION members has since read its EHR and targets
+/// in one gate read after planning and committed in one guarded statement
+/// (#6256): 7 round trips where it sent 11, measured beside the merge base,
+/// and its round-trip ceiling fell by four; its allocations moved from 17,591
+/// to 17,626, under their ceiling, which stays.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
@@ -422,7 +427,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 6,
         allocations: 18_290,
         peak_bytes: 1_649_934,
-        round_trips: 11,
+        round_trips: 7,
         nested: 14,
         wal: 189_586,
     },
