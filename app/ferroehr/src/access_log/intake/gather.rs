@@ -267,20 +267,37 @@ pub(super) async fn write_jobs(pool: &sqlx::PgPool, known: &Known, jobs: Vec<Job
 /// serialization failure is run in all.
 pub(super) const ATTEMPTS: u32 = 3;
 
-/// Writes `entries` in one statement on a connection of its own, running it
-/// again while the database refuses it as a deadlock or a serialization
-/// failure (SQLSTATE `40P01`, `40001`): the refused statement committed
-/// nothing, so running it again writes each entry once.
-///
-/// The parts `parts` knows stored are left out of the statement; when the
-/// store no longer holds one (SQLSTATE `23503`), they are forgotten and the
-/// statement runs again with every part. A committed statement teaches
-/// `parts` the parts it stored or kept.
+/// Writes `entries` in one statement on a connection of its own, as
+/// [`write_known`] writes them.
 pub(super) async fn write_retrying(
     pool: &sqlx::PgPool,
     known: &Known,
     entries: &[IntakeEntry],
     tokens: &[Vec<IntakeToken>],
+) -> Result<(), AccessLogError> {
+    let mut conn = acquire(pool).await?;
+    write_known(&mut conn, known, entries, tokens, None).await
+}
+
+/// Writes `entries` on `conn`, which holds no transaction, in one statement
+/// that commits on its own, held under `reserved_by` when it names a
+/// reservation, running it again while the database refuses it as a
+/// deadlock or a serialization failure (SQLSTATE `40P01`, `40001`): the
+/// refused statement committed nothing, so running it again writes each
+/// entry once.
+///
+/// The parts `known` knows stored are left out of the statement and the
+/// search tokens whose ids it knows are named by id; when the store no
+/// longer holds such a part (SQLSTATE `23503`) or the ids are of another
+/// generation (`FE001`), they are forgotten and the statement runs again
+/// with every part or with the tokens to resolve. A committed statement
+/// teaches `known` the parts it stored or kept and the ids it resolved.
+pub(super) async fn write_known(
+    conn: &mut sqlx::PgConnection,
+    known: &Known,
+    entries: &[IntakeEntry],
+    tokens: &[Vec<IntakeToken>],
+    reserved_by: Option<uuid::Uuid>,
 ) -> Result<(), AccessLogError> {
     let today = jiff::Timestamp::now()
         .to_zoned(jiff::tz::TimeZone::UTC)
@@ -292,14 +309,13 @@ pub(super) async fn write_retrying(
         let unnamed = named.search_tokens.len() < entries.len()
             || named.search_tokens.iter().any(Option::is_none);
         let written = async {
-            let mut conn = acquire(pool).await?;
-            take_in(&mut conn, entries, tokens, None, &stored, &named).await?;
+            take_in(&mut *conn, entries, tokens, reserved_by, &stored, &named).await?;
             // NOTE: our own design (#6242), the ids the committed statement resolved are learned,
             // and a failure to learn them never fails the write.
-            if unnamed && let Err(failed) = known.ids.learn(&mut conn, tokens).await {
+            if unnamed && let Err(failed) = known.ids.learn(&mut *conn, tokens).await {
                 tracing::warn!(error = %failed, "the search token ids could not be learned; the next write resolves them");
             }
-            Ok(())
+            Ok::<(), AccessLogError>(())
         }
         .await;
         match written {

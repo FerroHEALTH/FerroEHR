@@ -464,6 +464,7 @@ pub const GATHER_WINDOW_MAX: std::time::Duration = std::time::Duration::from_mil
 #[derive(Debug, Clone)]
 pub struct GroupWriter {
     jobs: tokio::sync::mpsc::Sender<Job>,
+    known: std::sync::Arc<Known>,
 }
 
 impl GroupWriter {
@@ -490,7 +491,31 @@ impl GroupWriter {
                 window,
             ));
         }
-        Self { jobs }
+        Self { jobs, known }
+    }
+
+    /// Write `entries`, with their search `tokens` by position, held under
+    /// `reserved_by`, on `conn`, which holds no transaction, in one statement
+    /// that commits on its own (#6244).
+    ///
+    /// It knows what the gathered writers learned the store holds, so it
+    /// sends no shared part the store keeps and names the search tokens it
+    /// knows by id, as they do, and teaches them what its committed statement
+    /// stored (`gather::write_known`).
+    ///
+    /// # Errors
+    /// The store errors when the statement fails.
+    pub async fn write_on(
+        &self,
+        conn: &mut PgConnection,
+        entries: &[IntakeEntry],
+        tokens: &[Vec<IntakeToken>],
+        reserved_by: Option<uuid::Uuid>,
+    ) -> Result<(), AccessLogError> {
+        if entries.is_empty() {
+            return Ok(());
+        }
+        gather::write_known(conn, &self.known, entries, tokens, reserved_by).await
     }
 
     /// Write `entries`, with their search `tokens` by position, durably in
