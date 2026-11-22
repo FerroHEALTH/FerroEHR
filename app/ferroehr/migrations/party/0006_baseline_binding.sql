@@ -108,18 +108,26 @@ CREATE FUNCTION binding_changed() RETURNS trigger
     SET search_path = party, pg_catalog
     AS $$
 BEGIN
+    -- A statement trigger fires on a statement that changed no row
+    -- (PostgreSQL CREATE TRIGGER), so its transition table says whether any
+    -- did; TRUNCATE has none and a row trigger fires for a changed row.
+    IF TG_LEVEL = 'STATEMENT' AND TG_OP <> 'TRUNCATE' THEN
+        IF NOT EXISTS (SELECT FROM changed) THEN
+            RETURN NULL;
+        END IF;
+    END IF;
     IF current_setting('ferroehr.binding_revised', true) IS DISTINCT FROM pg_current_xact_id()::text THEN
         UPDATE binding_grant_revision
            SET binding_revision = binding_revision + 1, revised_at = now()
          WHERE singleton;
         PERFORM set_config('ferroehr.binding_revised', pg_current_xact_id()::text, true);
+        PERFORM pg_notify('ferroehr_party_binding', '');
     END IF;
-    PERFORM pg_notify('ferroehr_party_binding', '');
     RETURN NULL;
 END;
 $$;
 COMMENT ON FUNCTION binding_changed() IS
-    'Moves binding_grant_revision.binding_revision once in the transaction and notifies ferroehr_party_binding that the binding side table changed, so every replica drops the lookups it holds and no request takes one read before the change.';
+    'When the statement changed at least one binding row (its transition table changed is not empty, or it is a TRUNCATE or a row trigger), moves binding_grant_revision.binding_revision and notifies ferroehr_party_binding, once in the transaction, so every replica drops the lookups it holds and no request takes one read before the change; a statement that changed no row moves and notifies nothing (#6284).';
 
 CREATE FUNCTION person_version_changed() RETURNS trigger
     LANGUAGE plpgsql
@@ -228,8 +236,17 @@ CREATE UNIQUE INDEX uq_binding_identifier_display_name
 -- displayName).
 CREATE INDEX ix_binding_identifier_folded
     ON binding_identifier (selector, folded) WHERE retired_at IS NULL;
-CREATE TRIGGER binding_identifier_changed
-    AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON binding_identifier
+CREATE TRIGGER binding_identifier_inserted
+    AFTER INSERT ON binding_identifier REFERENCING NEW TABLE AS changed
+    FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_identifier_updated
+    AFTER UPDATE ON binding_identifier REFERENCING NEW TABLE AS changed
+    FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_identifier_deleted
+    AFTER DELETE ON binding_identifier REFERENCING OLD TABLE AS changed
+    FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_identifier_truncated
+    AFTER TRUNCATE ON binding_identifier
     FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
 COMMENT ON TABLE binding_identifier IS 'The selector identifiers of each party head the login binding reads: a PERSON''s binding key with its lifecycle, professional ROLE and representation state, and a GROUP''s externalId. Derived from the party versions in each commit''s transaction; no openEHR spec governs it, our own design.';
 COMMENT ON COLUMN binding_identifier.professional IS 'The dates of the PERSON''s professional ROLEs: the union of the time_validity (DV_INTERVAL<DV_DATE>) of each listed ROLE of the mapped role template whose performer names the PERSON and whose head is complete or incomplete.';
@@ -254,8 +271,17 @@ CREATE INDEX ix_binding_membership_group
     ON binding_membership (group_id) WHERE retired_at IS NULL;
 CREATE INDEX ix_binding_membership_group_order
     ON binding_membership (group_id, written_at, member_id) WHERE retired_at IS NULL;
-CREATE TRIGGER binding_membership_changed
-    AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON binding_membership
+CREATE TRIGGER binding_membership_inserted
+    AFTER INSERT ON binding_membership REFERENCING NEW TABLE AS changed
+    FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_membership_updated
+    AFTER UPDATE ON binding_membership REFERENCING NEW TABLE AS changed
+    FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_membership_deleted
+    AFTER DELETE ON binding_membership REFERENCING OLD TABLE AS changed
+    FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_membership_truncated
+    AFTER TRUNCATE ON binding_membership
     FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
 COMMENT ON TABLE binding_membership IS 'The live members of each GROUP of the mapped group template, from the inline PARTY_RELATIONSHIPs of the membership archetype each member PERSON holds with the GROUP as target; standalone relationship containers never count. No openEHR spec governs it, our own design.';
 
@@ -301,8 +327,17 @@ CREATE UNIQUE INDEX uq_binding_representation_container
 CREATE INDEX ix_binding_representation_history
     ON binding_representation (representative_id, subject_id)
     INCLUDE (retired_at, validity, relationship);
-CREATE TRIGGER binding_representation_changed
-    AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON binding_representation
+CREATE TRIGGER binding_representation_inserted
+    AFTER INSERT ON binding_representation REFERENCING NEW TABLE AS changed
+    FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_representation_updated
+    AFTER UPDATE ON binding_representation REFERENCING NEW TABLE AS changed
+    FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_representation_deleted
+    AFTER DELETE ON binding_representation REFERENCING OLD TABLE AS changed
+    FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_representation_truncated
+    AFTER TRUNCATE ON binding_representation
     FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
 COMMENT ON COLUMN binding_representation.relationship IS 'The openEHR subject_relationship code the relationship names; NULL when it names none.';
 COMMENT ON COLUMN binding_representation.relationship_id IS 'The PARTY_RELATIONSHIP container the row is derived from.';
@@ -658,9 +693,19 @@ CREATE TABLE binding_key_space (
         CHECK (state = 'filling' OR fill_after IS NULL)
 );
 -- A key space's fill progress decides no lookup; its state does.
-CREATE TRIGGER binding_key_space_changed
-    AFTER INSERT OR DELETE OR TRUNCATE OR UPDATE OF state ON binding_key_space
+CREATE TRIGGER binding_key_space_inserted
+    AFTER INSERT ON binding_key_space REFERENCING NEW TABLE AS changed
     FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_key_space_deleted
+    AFTER DELETE ON binding_key_space REFERENCING OLD TABLE AS changed
+    FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_key_space_truncated
+    AFTER TRUNCATE ON binding_key_space
+    FOR EACH STATEMENT EXECUTE FUNCTION binding_changed();
+CREATE TRIGGER binding_key_space_state_changed
+    AFTER UPDATE OF state ON binding_key_space
+    FOR EACH ROW WHEN (OLD.state IS DISTINCT FROM NEW.state)
+    EXECUTE FUNCTION binding_changed();
 COMMENT ON TABLE binding_key_space IS 'The key space of each binding-key issuer: its portal flag and its state, pending until every live replica names it, filling while its key rows are filled online, active while they bind, retiring once a live replica no longer names it. Our own design.';
 COMMENT ON COLUMN binding_key_space.fill_after IS 'The last PERSON container the online fill of a filling key space has written, so the next page resumes after it.';
 
