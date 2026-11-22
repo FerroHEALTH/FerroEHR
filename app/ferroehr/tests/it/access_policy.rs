@@ -478,3 +478,49 @@ async fn the_policy_revision_moves_once_with_every_policy_write() {
     assert_eq!(reader.policy_registers().version(Register::AccessDelay), 1);
     assert_eq!(reader.access_policy().in_force().version, 1);
 }
+
+/// A policy write installs, and confirms, every change up to the revision its
+/// own transaction produced: a replica that heard nothing of another
+/// replica's policy version holds it once it writes a register itself, and a
+/// write that fails leaves its copies as they were (#6265).
+#[tokio::test]
+async fn a_policy_write_installs_every_earlier_change_with_its_own() {
+    use ferroehr::policy_register::Register;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let elsewhere = replica(&pool);
+    let writer = replica(&pool);
+    let _deaf = crate::policy_fixtures::deaf(&[
+        std::sync::Arc::clone(writer.policy_registers().listened()),
+        std::sync::Arc::clone(writer.access_policy().listened()),
+    ])
+    .await;
+    writer.confirm_policy(true, true).await.expect("a read");
+    create(&elsewhere, &policy(true)).await;
+    assert_eq!(
+        writer.access_policy().in_force().version,
+        0,
+        "heard nothing"
+    );
+    let delay = r#"{"enabled": true, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#;
+    writer
+        .put_policy_register(Register::AccessDelay, 7, delay)
+        .await
+        .expect_err("a write over a version that is not the newest fails");
+    assert_eq!(
+        writer.access_policy().in_force().version,
+        0,
+        "a failed write installs nothing"
+    );
+    assert_eq!(writer.policy_registers().version(Register::AccessDelay), 0);
+    writer
+        .put_policy_register(Register::AccessDelay, 0, delay)
+        .await
+        .expect("the register is written");
+    assert_eq!(writer.policy_registers().version(Register::AccessDelay), 1);
+    assert_eq!(
+        writer.access_policy().in_force().version,
+        1,
+        "the write installed the version another replica committed before it"
+    );
+}

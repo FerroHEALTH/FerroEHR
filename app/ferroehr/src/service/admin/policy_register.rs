@@ -165,6 +165,29 @@ impl FerroEhrService {
             && self.access_policy.holds(policy))
     }
 
+    /// Bring the register and access-policy copies to `heads`, read inside
+    /// the policy write this replica just committed, after its write moved
+    /// `policy_revision` (#6265). That read saw every earlier writer's change
+    /// and its own, so both copies hold every change up to the revision the
+    /// committed transaction produced and are confirmed at it: the writer's
+    /// next read decides on them at once.
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when a version the heads name does not
+    /// read.
+    pub(crate) async fn confirm_written_policy(
+        &self,
+        heads: &store::PolicyHeads,
+    ) -> Result<(), ServiceError> {
+        self.registers.confirm(heads).await.map_err(|error| {
+            ServiceError::overloaded("the policy registers could not be read", error)
+        })?;
+        self.access_policy
+            .confirm(heads)
+            .await
+            .map_err(|error| ServiceError::overloaded("the access policy could not be read", error))
+    }
+
     /// Read the newest version of every register and install each one this
     /// replica does not hold, whatever the listener says.
     ///
@@ -262,11 +285,14 @@ impl FerroEhrService {
             .execute(&mut *tx)
             .await
             .map_err(ServiceError::Database)?;
+        let heads = store::policy_heads_on(&mut tx)
+            .await
+            .map_err(ServiceError::Storage)?;
         self.commit_act_recorded(tx, Vec::new()).await?;
         // NOTE: our own design (#5879), the connection goes back before the next read, which
         // would otherwise wait for a second one while every connection is held so.
         drop(conn);
-        self.read_policy_registers().await?;
+        self.confirm_written_policy(&heads).await?;
         Ok(version)
     }
 

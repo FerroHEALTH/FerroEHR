@@ -186,3 +186,24 @@ async fn a_read_refused_before_its_statement_still_confirms_the_policy() {
         "the copy the 400 confirmed decides the next read at once"
     );
 }
+
+/// The replica that writes a policy change confirms its own copies at the
+/// revision its transaction produced, so its next read is decided on them at
+/// once and runs once (#6265).
+#[tokio::test]
+async fn the_replica_that_writes_a_policy_change_reads_without_running_again() {
+    let (provider, exporter) = instruments();
+    let mut world = Box::pin(world()).await;
+    let uri = encounter(&world);
+    let read = || call(&world.app, "jansen", "GET", &uri, Some("TREAT"), None);
+    answered(&read().await, StatusCode::OK, None);
+    world.policy = classify_the_encounter(&world).await;
+    let before = reruns(&provider, &exporter);
+    let refused = call(&world.app, "jansen", "GET", &uri, Some("TREAT"), None).await;
+    answered(&refused, StatusCode::FORBIDDEN, Some("refused-sensitivity"));
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before,
+        "the writer's copy holds its own change"
+    );
+}
