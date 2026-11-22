@@ -33,8 +33,8 @@ pub struct SealView {
     pub folded: bool,
 }
 
-/// A row of the seals and the fold, as [`Queries::seals`] and
-/// [`Queries::next_seals`] select it.
+/// A row of the seals and the fold, as [`super::Queries::seals`] and
+/// [`super::Queries::next_seals`] select it.
 type SealRow = (i64, i64, i64, i32, String, String, bool);
 
 impl AccessLogStore {
