@@ -23,11 +23,12 @@ use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal
 use serde_json::Value;
 
 use super::validation::{duplicate_persistent, persistent_sibling, persistent_template};
-use crate::error::refusal::Missing;
+use crate::error::refusal::{Missing, Refusal};
 use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
+use crate::service::ehr::scope::ScopeJudge;
 use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Materials, Resolved, first_attempt};
@@ -97,6 +98,7 @@ impl FerroEhrService {
                         targets: &[],
                         shape: Shape::Plain,
                         persistent: persistent.as_deref().map(persistent_sibling),
+                        addressed: None,
                     },
                 )
                 .await?;
@@ -427,6 +429,7 @@ impl FerroEhrService {
                         targets: &[vo_id],
                         shape: Shape::Update,
                         persistent: None,
+                        addressed: None,
                     },
                 )
                 .await?;
@@ -561,9 +564,12 @@ impl FerroEhrService {
     /// `preceding_version_uid` of `composition_delete.yaml`; the request's
     /// `preceding` is a volunteered `If-Match`.
     ///
+    /// `scope` is judged first, on the template of the version addressed.
+    ///
     /// # Errors
-    /// [`ServiceError::NotFound`] when the COMPOSITION does not exist in this
-    /// EHR; [`ServiceError::BadRequest`] when it is already deleted;
+    /// [`ServiceError::ScopeRefused`] when `scope` does not cover that
+    /// template; [`ServiceError::NotFound`] when the COMPOSITION does not
+    /// exist in this EHR; [`ServiceError::BadRequest`] when it is already deleted;
     /// [`ServiceError::Conflict`] when the EHR is not modifiable or the
     /// `preceding_version_uid` is stale (→ 409);
     /// [`ServiceError::VersionConflict`] when the `If-Match` names another
@@ -573,8 +579,9 @@ impl FerroEhrService {
         ehr_id: EhrId,
         a_version_uid: &ObjectVersionId,
         request: WriteRequest,
+        scope: &dyn ScopeJudge,
     ) -> Result<Committed, ServiceError> {
-        let (vo_id, _) = components(a_version_uid)?;
+        let (vo_id, tree) = components(a_version_uid)?;
         let request = &request;
         self.commit_gated(&self.pool, move || {
             async move |conn| {
@@ -588,6 +595,7 @@ impl FerroEhrService {
                         targets: &[vo_id],
                         shape: Shape::Delete,
                         persistent: None,
+                        addressed: Some(tree.columns()),
                     },
                 )
                 .await?;
@@ -595,6 +603,14 @@ impl FerroEhrService {
                 let target = gate.targets.pop().ok_or_else(|| {
                     ServiceError::exception(format!("the gate read returned no row for {vo_id}"))
                 })?;
+                // NOTE: SMART on openEHR master08 §Resource Scopes, the scope is judged first, on
+                // the addressed version's template, where the pre-check judged it before (#6271).
+                if !scope.covers(target.addressed_template.as_deref()) {
+                    return Err(ServiceError::ScopeRefused(Refusal::new(
+                        (),
+                        "the credential does not permit this request",
+                    )));
+                }
                 let Some(tip) = target
                     .placement
                     .tip

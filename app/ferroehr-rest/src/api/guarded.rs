@@ -206,7 +206,7 @@ async fn admit(
             Err(fault) => return Err(fault),
         }
     }
-    pep::pre_check(state, op, parts).await.map_err(Box::new)
+    pep::pre_check(op, parts).map_err(Box::new)
 }
 
 /// The operations of the admin group that consult a policy register: the hold

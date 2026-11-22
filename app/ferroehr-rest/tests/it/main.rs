@@ -164,6 +164,7 @@ mod served_openapi;
 mod served_openapi_snapshot;
 mod server_tls;
 mod service_query;
+mod smart_delete_http;
 mod smart_http;
 mod smart_metadata_file;
 mod spec_profile_http;

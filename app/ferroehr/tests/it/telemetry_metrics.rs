@@ -13,6 +13,7 @@
 //! §Contributions). No openEHR spec governs telemetry — the counter is our own
 //! operational surface.
 
+use ferroehr::service::ehr::scope::Unscoped;
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::OnceLock;
 
@@ -122,7 +123,7 @@ async fn compositions_committed_total_counts_every_committed_composition_version
 
     // (4) The direct delete route: one 523|deleted| version.
     let latest: ObjectVersionId = v2.parse().expect("OBJECT_VERSION_ID");
-    svc.delete_composition(ehr_id, &latest, WriteRequest::new(()))
+    svc.delete_composition(ehr_id, &latest, WriteRequest::new(()), &Unscoped)
         .await
         .expect("delete_composition");
     assert_eq!(
