@@ -349,3 +349,122 @@ async fn a_status_writing_contribution_and_a_put_of_its_composition_both_complet
         )
     );
 }
+
+/// A CONTRIBUTION member creating a COMPOSITION named `name`.
+fn creation(name: &str) -> serde_json::Value {
+    serde_json::json!({
+        "_type": "ORIGINAL_VERSION",
+        "commit_audit": {
+            "change_type": crate::fixtures::change_type("249", "creation"),
+            "committer": crate::fixtures::committer("author")
+        },
+        "lifecycle_state": crate::fixtures::change_type("532", "complete"),
+        "data": composition(name)
+    })
+}
+
+/// Two CONTRIBUTIONs of COMPOSITION members supplying one uid, held at their
+/// one statement: one commits and the other answers `409`, the uid already
+/// in use (ITS-REST `contribution_create`), leaving nothing of its own.
+#[tokio::test]
+async fn two_contributions_supplying_one_uid_one_commits_the_other_is_409() {
+    let (db, svc, ehr, _) = object().await;
+    let uid = uuid::Uuid::now_v7().to_string();
+    let held = hold(&db, ehr).await;
+    let tasks: Vec<_> = (0..2)
+        .map(|n| {
+            let svc = Arc::clone(&svc);
+            let body = serde_json::json!({
+                "uid": { "_type": "HIER_OBJECT_ID", "value": uid },
+                "versions": [creation(&format!("set {n}"))],
+                "audit": crate::fixtures::commit_audit("249", "creation", "author")
+            });
+            tokio::spawn(async move { Box::pin(svc.create_ehr_contribution(ehr, body)).await })
+        })
+        .collect();
+    settle().await;
+    held.commit().await.expect("release the hold");
+    let mut outcomes = Vec::new();
+    for task in tasks {
+        outcomes.push(task.await.expect("the CONTRIBUTION completes"));
+    }
+    assert_eq!(
+        outcomes.iter().filter(|outcome| outcome.is_ok()).count(),
+        1,
+        "exactly one CONTRIBUTION commits"
+    );
+    for refused in outcomes.into_iter().filter_map(Result::err) {
+        assert!(
+            refused.message().contains("already in use"),
+            "the other names the uid in use: {refused:?}"
+        );
+        assert!(
+            matches!(refused.classified(), ServiceError::Conflict(_)),
+            "and answers 409"
+        );
+    }
+    let stored: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM version WHERE ehr_id = $1 AND kind = 'COMPOSITION'",
+    )
+    .bind(ehr)
+    .fetch_one(&db.pool())
+    .await
+    .expect("the versions");
+    assert_eq!(
+        stored, 2,
+        "the first version and the one CONTRIBUTION's member"
+    );
+}
+
+/// A CONTRIBUTION that creates, modifies and deletes COMPOSITIONs commits
+/// every member in its one statement at one instant, each version at the
+/// place the per-member path gives it, and its delete classified by what
+/// the deleted version held.
+#[tokio::test]
+async fn a_contribution_creating_modifying_and_deleting_commits_every_member() {
+    let (db, svc, ehr, created) = object().await;
+    let doomed = Box::pin(svc.create_composition(ehr, uv(&composition("doomed"), "249", None)))
+        .await
+        .expect("a composition to delete");
+    let body = serde_json::json!({
+        "versions": [
+            creation("created"),
+            modification(&composition("modified"), &created.version_uid()),
+            {
+                "_type": "ORIGINAL_VERSION",
+                "commit_audit": {
+                    "change_type": crate::fixtures::change_type("523", "deleted"),
+                    "committer": crate::fixtures::committer("author")
+                },
+                "lifecycle_state": crate::fixtures::change_type("523", "deleted"),
+                "preceding_version_uid": { "value": doomed.version_uid() }
+            }
+        ],
+        "audit": crate::fixtures::commit_audit("251", "modification", "author")
+    });
+    let committed = Box::pin(svc.create_ehr_contribution(ehr, body))
+        .await
+        .expect("the CONTRIBUTION commits");
+    let versions = committed.body["versions"].as_array().expect("versions");
+    assert_eq!(
+        versions.len(),
+        3,
+        "every member is listed: {:?}",
+        committed.body
+    );
+    let modified = svc
+        .composition_latest_meta(ehr, created.vo_id)
+        .await
+        .expect("the meta")
+        .expect("the composition");
+    assert!(
+        modified.uid.ends_with("::2"),
+        "the modification is version 2"
+    );
+    let state: String = sqlx::query_scalar("SELECT lifecycle_state FROM vo_head WHERE vo_id = $1")
+        .bind(doomed.vo_id)
+        .fetch_one(&db.pool())
+        .await
+        .expect("the head");
+    assert_eq!(state, "523", "the deleted composition's head is deleted");
+}

@@ -76,7 +76,9 @@ fn modification(preceding: &str, name: &str) -> Value {
 
 /// A CONTRIBUTION modifying two objects listed in DESCENDING `vo_id` order
 /// waits on the lower one before it holds the higher one, so it takes its
-/// locks in the order an import takes them.
+/// locks in the order an import takes them. The set also writes the
+/// `EHR_STATUS`, so it commits on the per-member path that takes object
+/// locks; a set of COMPOSITION members alone takes none (#6256).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[expect(
     clippy::disallowed_methods,
@@ -122,10 +124,26 @@ async fn a_contribution_takes_its_object_locks_in_vo_id_order() {
         .await
         .expect("hold the lower object's lock");
 
+    let status = svc
+        .ehr_object(ehr, ferroehr::service::ehr::object::EhrObject::Status, None)
+        .await
+        .expect("the EHR_STATUS")
+        .body;
+    let mut status_body = status.clone();
+    status_body
+        .as_object_mut()
+        .expect("an object")
+        .shift_remove("uid");
+    let status_member = json!({
+        "preceding_version_uid": { "value": status["uid"]["value"] },
+        "lifecycle_state": change_type("532", "complete"),
+        "commit_audit": commit_audit("251", "modification", "lock order"),
+        "data": status_body
+    });
     let writer = {
         let svc = svc.clone();
         let body = json!({
-            "versions": [modification(&high, "high"), modification(&low, "low")],
+            "versions": [status_member, modification(&high, "high"), modification(&low, "low")],
             "audit": commit_audit("251", "modification", "lock order")
         });
         tokio::spawn(async move { svc.create_ehr_contribution(ehr, body).await })
@@ -262,4 +280,51 @@ async fn a_composition_update_takes_the_ehr_row_lock_and_no_object_lock() {
         .await
         .expect("the writer task")
         .expect("the update lands once the EHR row is free");
+}
+
+/// A CONTRIBUTION of COMPOSITION members alone takes no per-object lock: it
+/// waits on the EHR row at its one guarded statement and holds no object lock
+/// while it waits, the version keys arbitrating its members (#6256).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+async fn a_composition_contribution_takes_the_ehr_row_lock_and_no_object_lock() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&DomainPools::from_shared(&pool));
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let created = svc
+        .create_composition(ehr, uv(&composition("first"), "249", None))
+        .await
+        .expect("the first version");
+    let version = created.version_uid();
+
+    let mut blocker = pool.begin().await.expect("blocker transaction");
+    sqlx::query("SELECT 1 FROM ehr WHERE id = $1 FOR UPDATE")
+        .bind(ehr)
+        .execute(&mut *blocker)
+        .await
+        .expect("hold the EHR row");
+
+    let writer = {
+        let svc = svc.clone();
+        let body = json!({
+            "versions": [modification(&version, "second")],
+            "audit": commit_audit("251", "modification", "lock order")
+        });
+        tokio::spawn(async move { svc.create_ehr_contribution(ehr, body).await })
+    };
+    wait_for_a_lock_waiter(&pool).await;
+    assert!(
+        advisory_lock_is_free(&pool, created.vo_id.0).await,
+        "the CONTRIBUTION holds no object lock while it waits for the EHR row"
+    );
+
+    blocker.rollback().await.expect("release the blocker");
+    writer
+        .await
+        .expect("the writer task")
+        .expect("the modification lands once the EHR row is free");
 }

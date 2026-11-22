@@ -109,6 +109,13 @@ fn write_nodes_sql(per_row_context: bool) -> String {
     )
 }
 
+/// The parameters [`node_insert_cte`] reads from its first array on, which
+/// [`bind_node_arrays`] binds: the 25 fixed columns, one per promoted leaf and
+/// the shared members.
+pub(crate) fn node_array_count() -> usize {
+    25 + crate::storage::promoted::PROMOTED_LEAVES.len() + 1
+}
+
 /// The single-version node insert (constant-scalar storage context).
 static WRITE_NODES_SQL: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| write_nodes_sql(false));
@@ -117,11 +124,15 @@ static WRITE_NODES_SQL: std::sync::LazyLock<String> =
 /// the same fixed-text `unnest` shape as [`write_nodes_sql`], with the
 /// storage context spelled as the CALLER's parameter placeholders
 /// (`vo`/`sys`/`ehr`, e.g. `"$8"`) and the array binds starting at
-/// `first_array_param`. `CROSS JOIN v` orders this CTE after the caller's
-/// version-row CTE `v`, which is also what makes the node rows' FK to the
+/// `first_array_param`. `CROSS JOIN` the caller's version-row CTE `version`
+/// orders this CTE after it, which is also what makes the node rows' FK to the
 /// version row satisfiable inside the one statement. Empty arrays insert
 /// nothing — a logical delete folds through unchanged.
-pub(crate) fn node_insert_cte(vo: &str, sys: &str, ehr: &str, first_array_param: usize) -> String {
+pub(crate) fn node_insert_cte(
+    (vo, sys, ehr): (&str, &str, &str),
+    version: &str,
+    first_array_param: usize,
+) -> String {
     let (columns, selects, arrays, names) = promoted_insert_parts(first_array_param + 25);
     let p = |offset: usize| first_array_param + offset;
     format!(
@@ -144,7 +155,7 @@ pub(crate) fn node_insert_cte(vo: &str, sys: &str, ehr: &str, first_array_param:
          arch_concept, arch_major, name, name_code, name_terminology, path, data, value_type, \
          value_num, value_text, value_code, value_terminology, rm_version, language, \
          encoding, origin_compact, time_compact, party_self, uid_derived{names}) \
-         CROSS JOIN v",
+         CROSS JOIN {version}",
         p(0),
         p(1),
         p(2),

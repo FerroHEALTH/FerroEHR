@@ -208,12 +208,20 @@ fn token(system: AuditTokenSystem, code: Option<&str>) -> AuditToken {
 }
 
 /// Each sink that delivers from the store reads a record back by the same
-/// columns the search does, after the outbox id it delivers the record by.
+/// columns the search does, after whether it is a retried parked record:
+/// the retried record and each log's next one alike.
 #[test]
 fn every_sink_reads_every_record_column() {
-    for sink in [super::outbox::Sink::FhirFeed, super::outbox::Sink::Syslog] {
-        let selected: Vec<&str> = sink
-            .oldest()
+    let branches: Vec<&str> = super::outbox::next_statement().split("UNION ALL").collect();
+    assert_eq!(
+        branches.len(),
+        3,
+        "a retried record and each log's next one"
+    );
+    for branch in branches {
+        let selected: Vec<&str> = branch
+            .trim()
+            .trim_start_matches('(')
             .split(" FROM ")
             .next()
             .unwrap_or_default()
@@ -221,9 +229,9 @@ fn every_sink_reads_every_record_column() {
             .split(',')
             .map(|column| column.trim().trim_start_matches("e."))
             .collect();
-        let (owed, record) = selected.split_first().expect("the select list");
-        assert_eq!(*owed, "o.id AS owed");
-        assert_eq!(record, RECORD_COLUMNS, "{sink:?}");
+        let (retry, record) = selected.split_first().expect("the select list");
+        assert!(retry.ends_with("AS retry"), "{retry}");
+        assert_eq!(record, RECORD_COLUMNS, "{branch}");
     }
 }
 

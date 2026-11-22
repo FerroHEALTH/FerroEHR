@@ -31,9 +31,8 @@ use crate::service::datetime::parse_at_time;
 use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Materials, Resolved, first_attempt};
-use crate::storage::version_repo::commit::Guard;
 use crate::storage::version_repo::gate::{self, Ask, Gate, Shape, Target};
-
+use crate::storage::version_repo::guarded::Guard;
 use crate::storage::version_repo::read::VersionAt;
 use crate::system_log::categories::ContentIds;
 use crate::versioning::Kind;

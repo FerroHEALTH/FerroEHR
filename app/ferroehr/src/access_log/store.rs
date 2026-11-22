@@ -348,7 +348,10 @@ impl AccessLogStore {
     /// day it is kept (`docs/specifications/access-log`, semantics §Retention); an entry that
     /// states none is kept without end. Entries expire in any order, in the
     /// middle of the log as at its start, and each tombstone names the grounds
-    /// of the period that ended. The entries come oldest end first and one
+    /// of the period that ended. An indexed entry a sink has not delivered
+    /// waits one day more
+    /// ([`crate::system_log::store::delivery::DELIVERY_GRACE_DAYS`]), and its
+    /// tombstone parks it for that sink then. The entries come oldest end first and one
     /// call replaces them in one transaction; a caller repeats it until fewer
     /// than `limit` come back. Rows another run holds are skipped, so two
     /// replicas never replace the same entry.
@@ -367,6 +370,9 @@ impl AccessLogStore {
         let rows = sqlx::query(concat!(
             records!(),
             " WHERE r.record_type = 'ACCESS_LOG_ENTRY' AND r.retain_until < $1::text::date \
+                 AND (r.render_policy_id IS NULL OR r.retain_until < $1::text::date - 1 \
+                      OR NOT EXISTS (SELECT 1 FROM audit.delivery_cursor c \
+                                      WHERE c.chain = 'access_log' AND c.through_id < r.chain_seq)) \
                  ORDER BY r.retain_until, r.chain_seq LIMIT $2 FOR UPDATE OF r SKIP LOCKED"
         ))
         .bind(today.to_string())

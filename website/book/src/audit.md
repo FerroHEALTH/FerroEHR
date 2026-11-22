@@ -1014,11 +1014,44 @@ Records fan out to independently configured sinks (`[audit]` in
 |---|---|---|
 | `[audit.store]` | **always on** | The local **Audit Record Repository**: records persist in the dedicated `audit` PostgreSQL schema (append-only and tamper-evident, strictly outside the EHR content), served back via the ITI-81 search below. Every record is written here before its access is reported. |
 | `[audit.syslog]` | off | The classic ATNA feed: DICOM PS3.15 XML as RFC 5424 syslog over RFC 5425 TLS to an external ARR, per IHE ITI-20. |
-| `[audit.fhir_feed]` | off | The RESTful-ATNA feed (ITI-20 **ATX: FHIR Feed**): each FHIR `AuditEvent` is `POST`ed to an external FHIR ARR. Delivery is **outbox-driven** from the store: an ARR outage loses nothing, pending records ship on recovery. The outbox holds the records stored while the feed is configured; with the feed off, no record is owed. Records stored before FerroEHR kept an outbox and never delivered ship once a feed runs. |
+| `[audit.fhir_feed]` | off | The RESTful-ATNA feed (ITI-20 **ATX: FHIR Feed**): each FHIR `AuditEvent` is `POST`ed to an external FHIR ARR. Delivery runs from the store by a cursor: an ARR outage loses nothing, pending records ship on recovery. The feed is owed every record written from the moment it is configured; with the feed off, no record is owed. |
 
-syslog delivers from the store the same way, from its own outbox, so both
+syslog delivers from the store the same way, by its own cursor, so both
 feeds are projections of the stored records and neither holds a record in
 memory.
+
+### How a record is delivered
+
+No loss and no skip: a sink delivers each log in id order from its cursor,
+and the cursor moves only after the repository accepted the record, so
+after a crash it repeats at most the record it had in flight (a FHIR
+`AuditEvent` keeps its id; a syslog receiver may see one message twice).
+
+- **The cursor.** Each feed keeps one cursor per log (the system records and
+  the access log): every record at or below it was accepted by the
+  repository or parked. The feed reads the next record past it, up to the
+  frontier the chainer moves about once a second and below every record a
+  write still holds, renders it from the store, sends it, and moves the
+  cursor once the repository accepted it.
+- **A new feed** starts at the last record written when the server that
+  first runs with it starts, and is owed every record from then on.
+- **A parked record.** A record the feed cannot render, or the repository
+  refuses (a `4xx` other than `401`, `408` or `429`), is parked: counted in
+  `atna_audit_parked_total`, logged at `ERROR` with its log and id, and the
+  `audit_delivery` indicator reads `DEGRADED` while any record is parked.
+  The cursor moves past it only because it is parked; it is never skipped.
+  `GET {ext}/admin/audit-delivery` lists the parked records and every
+  cursor; `POST {ext}/admin/audit-delivery/retry` offers a parked record
+  again before the next one, and `POST {ext}/admin/audit-delivery/dismiss`
+  removes it for good. Each act is recorded naming its operator.
+- **Retention waits a day.** A record a configured feed has not delivered
+  is removed, or replaced by its tombstone, only one day after its end; it
+  is then parked for that feed (`reaped`, `tombstoned`), so an outage of a
+  working day loses nothing and a longer one is still shown.
+- **A feed taken out of the configuration** keeps its cursors and parked
+  records: the server names it at `WARN` at start with how many records it
+  has not received, the view shows it as not configured, and only
+  `POST {ext}/admin/audit-delivery/forget` removes it.
 
 ### How a record is written
 
@@ -1129,9 +1162,9 @@ strings, instants as `YYYY-MM-DDTHH:MM:SS.ffffffZ` in UTC, dates as
 (`system_log::content_digest`, with the SQL that builds the object for an
 auditor). A column added by a later release joins the digest under a new
 form in the same release. A record a write still holds is in no search, no
-feed and no window. Which records a sink still owes is the sink's outbox
-(`audit.fhir_feed_outbox`, `audit.syslog_outbox`): a record leaves it when
-the repository takes it.
+feed and no window. Which records a sink still owes is told by its cursor
+(`audit.delivery_cursor`): the records past it up to the delivery frontier,
+and those it parked ([How a record is delivered](#how-a-record-is-delivered)).
 
 The store keeps a record's facts in columns and renders its FHIR `AuditEvent`
 from them when the record is read (ITI-81) or delivered (the FHIR feed). What

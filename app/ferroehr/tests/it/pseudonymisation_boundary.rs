@@ -605,9 +605,16 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
         .await
         .expect("the record's position");
     store
-        .mark_delivered(ferroehr::system_log::store::outbox::Sink::FhirFeed, seq)
+        .mark_delivered(
+            ferroehr::system_log::store::delivery::Sink::FhirFeed,
+            ferroehr::system_log::store::delivery::Due {
+                chain: ferroehr::system_log::store::chains::AuditChain::System,
+                id: seq,
+                retry: false,
+            },
+        )
         .await
-        .expect("a delivery removes the outbox row and changes no record");
+        .expect("a delivery moves the cursor and changes no record");
     crate::fixtures::verify_chain(&clinical)
         .await
         .expect("the clinical role verifies the chain");
