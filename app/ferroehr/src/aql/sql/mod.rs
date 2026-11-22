@@ -51,6 +51,7 @@
 
 mod access;
 mod anchor;
+mod anchorable;
 mod archetype;
 mod attestation;
 mod care;
@@ -58,6 +59,7 @@ mod caseload;
 mod coerce;
 mod compact;
 mod condition;
+mod contained;
 pub(crate) mod expr;
 mod fold;
 mod from;
