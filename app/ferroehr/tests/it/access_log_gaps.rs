@@ -118,7 +118,10 @@ async fn folds(pool: &PgPool) -> Vec<(i64, i64)> {
 /// Append `entries` and seal them in a window of their own.
 async fn sealed(store: &AccessLogStore, entries: Vec<AccessLogEntry>) {
     store.append(entries).await.expect("the entries append");
-    store.seal_committed().await.expect("sealed");
+    store
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+        .await
+        .expect("sealed");
 }
 
 /// The entry ids that still hold a record.

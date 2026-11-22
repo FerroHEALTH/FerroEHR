@@ -126,6 +126,45 @@ impl Sealer {
     }
 }
 
+impl Sealer {
+    /// Sign the seal of the system records' window ending at position
+    /// `last_id` whose digest is `digest`, as the
+    /// [`crate::system_log::seal::ChainSeal`] at that position over that
+    /// digest (#6242), on the blocking pool.
+    ///
+    /// # Errors
+    /// [`AccessLogError::Clock`] when the time cannot be named to the
+    /// microsecond, [`AccessLogError::Canonical`] when the seal has no
+    /// canonical form, and [`AccessLogError::Sign`] or
+    /// [`AccessLogError::Signing`] when the signature fails.
+    pub async fn sign_system_seal(
+        &self,
+        last_id: i64,
+        digest: &str,
+    ) -> Result<SignedSeal, AccessLogError> {
+        let sealed = Timestamp::from_microsecond(Timestamp::now().as_microsecond())
+            .map_err(AccessLogError::Clock)?;
+        let seal = crate::system_log::seal::ChainSeal::unsigned(
+            &self.system_id,
+            last_id,
+            digest.to_owned(),
+            sealed,
+        );
+        let form = canonical_form(&seal)?;
+        let signer = Arc::clone(&self.signer);
+        let proof = match tokio::task::spawn_blocking(move || signer.attest(form.as_bytes())).await
+        {
+            Ok(attested) => attested.map_err(AccessLogError::Sign)?,
+            Err(unfinished) => return Err(AccessLogError::Signing(unfinished)),
+        };
+        Ok(SignedSeal {
+            proof,
+            system_id: self.system_id.clone(),
+            sealed,
+        })
+    }
+}
+
 /// A checkpoint whose signature is being made.
 #[derive(Debug)]
 pub struct PendingSeal {
@@ -312,7 +351,9 @@ impl Checkpoints {
             }
             return self.latest(None).await;
         }
-        self.store.seal_committed().await?;
+        self.store
+            .seal_committed(&crate::access_log::seal::ACCESS_LOG)
+            .await?;
         self.latest(None).await
     }
 
@@ -385,7 +426,10 @@ impl Checkpoints {
             Some(checkpoint) => Some(checkpoint),
             None => self.latest(None).await?,
         };
-        let chain = self.store.verify_windows(false).await?;
+        let chain = self
+            .store
+            .verify_windows(&crate::access_log::seal::ACCESS_LOG, false)
+            .await?;
         let mut findings = Vec::new();
         if let Some(checkpoint) = &checkpoint {
             self.verify_checkpoint(checkpoint, &mut findings).await?;

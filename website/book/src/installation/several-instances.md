@@ -24,7 +24,7 @@ docker compose -f docker-compose.yml -f docker-compose.replicas.yml \
 The first instance answers on `localhost:8080` and the second on
 `localhost:8081`. The deployment probe runs this stack on every change: it
 writes through one instance and reads through the other, sends writes to both
-at once, verifies the access log and the system chain both instances appended
+at once, verifies the access log and the system records both instances appended
 to, and starts the second instance with another key to see it reported.
 
 ## Every instance connects to the primary
@@ -171,10 +171,9 @@ connections and only the listener connections against PostgreSQL's.
 
 ## Every instance shares the same signing key and configuration
 
-The system chain is one hash chain: every instance appends to it under a row
-lock on its head. The access log is sealed in windows: one instance's sealer
-at a time seals the entries every instance wrote, in a signed checkpoint when
-an OpenPGP key is configured ([version signing](../signing/index.md)). Give every instance the same
+The system records and the access log are each sealed in windows: one
+instance's sealer at a time seals the records every instance wrote, each
+window signed when an OpenPGP key is configured ([version signing](../signing/index.md)). Give every instance the same
 `[record.signing]` key and the same configuration file, the same
 `[audit.access_log] publish_directory` included. An instance with another
 key writes checkpoints the others cannot vouch for.

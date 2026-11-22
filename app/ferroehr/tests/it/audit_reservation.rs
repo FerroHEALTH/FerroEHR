@@ -87,8 +87,8 @@ async fn held(pool: &PgPool, reservation: Uuid) -> (Vec<(Uuid, Vec<u8>)>, Vec<Uu
     .await
     .expect("the held entries");
     let records = sqlx::query_scalar(
-        "SELECT e.id FROM audit.audit_event_intake i \
-         CROSS JOIN LATERAL unnest(i.events) AS e(id) WHERE i.reserved_by = $1 ORDER BY e.id",
+        "SELECT e.id FROM audit.audit_event_hold h JOIN audit.audit_event e ON e.seq = h.seq \
+         WHERE h.reserved_by = $1 ORDER BY e.id",
     )
     .bind(reservation)
     .fetch_all(pool)
@@ -108,13 +108,16 @@ async fn chained(pool: &PgPool, uids: &[Uuid]) -> Vec<(Uuid, Vec<u8>)> {
     .expect("the chained entries")
 }
 
-/// How many system-log records among `ids` are chained.
+/// How many system-log records among `ids` are stored and held by no write.
 async fn stored(pool: &PgPool, ids: &[Uuid]) -> i64 {
-    sqlx::query_scalar("SELECT count(*) FROM audit.audit_event_link WHERE event_id = ANY($1)")
-        .bind(ids)
-        .fetch_one(pool)
-        .await
-        .expect("the chained records")
+    sqlx::query_scalar(
+        "SELECT count(*) FROM audit.audit_event e WHERE e.id = ANY($1) \
+         AND NOT EXISTS (SELECT 1 FROM audit.audit_event_hold h WHERE h.seq = e.seq)",
+    )
+    .bind(ids)
+    .fetch_one(pool)
+    .await
+    .expect("the chained records")
 }
 
 /// Whether the clinical domain still holds `reservation`.
@@ -230,11 +233,7 @@ async fn a_confirmed_write_is_released_by_the_chainer_round() {
         if held(&pool, reservation).await == (Vec::new(), Vec::new()) {
             break;
         }
-        sender
-            .store()
-            .chain_round(512, Chains::default())
-            .await
-            .expect("a chainer round");
+        sender.store().chain_round().await.expect("a chainer round");
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     assert_eq!(

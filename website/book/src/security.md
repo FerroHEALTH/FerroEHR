@@ -1422,10 +1422,10 @@ the RESTful-ATNA **ITI-81** FHIR search, and optionally forwarded to an
 external ARR over syslog and/or the ITI-20 FHIR feed. Node authentication
 (ITI-19) is available as native mutual TLS on the listener.
 
-Stored records are **tamper-evident**: each is linked into a SHA-256 hash
-chain maintained by the database, the table refuses every rewrite path except
-the forwarding stamp, and `SELECT * FROM audit.verify_audit_chain()` names any
-record that was modified or removed. That is detection, not prevention: the
+Stored records are **tamper-evident**: each is covered by its content digest
+in a signed seal window, the table refuses every rewrite path, and `ferroehr
+audit-chain verify` and `ferroehr access-log verify` name any record that was
+modified, removed or inserted inside a sealed window. That is detection, not prevention: the
 controls that make it hard to forge wholesale are the least-privilege database
 role and the off-box sinks.
 

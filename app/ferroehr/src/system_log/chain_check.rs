@@ -6,11 +6,11 @@
 //!
 //! No openEHR spec governs audit tamper detection — our own design/extension.
 //! `docs/law/eu/cra/text.html Annex I Part I(2)(f)` asks a product to "protect
-//! the integrity of stored … data … and report on corruptions": the chain makes
-//! a corruption detectable, and this task makes the server report one without
-//! an operator running `SELECT * FROM audit.verify_audit_chain()` by hand.
+//! the integrity of stored … data … and report on corruptions": the sealed
+//! windows make a corruption detectable, and this task makes the server report
+//! one without an operator running `ferroehr audit-chain verify` by hand.
 //!
-//! A scheduled run verifies the records written since the last link a run
+//! A scheduled run verifies the windows sealed since the last window a run
 //! found intact, and a full pass runs every `full_verify_interval_seconds`
 //! and after any run that found damage, so damage to an older record stays
 //! reported until a full pass finds the trail intact again.
@@ -181,7 +181,7 @@ impl ChainCheck {
                 tracing::error!(
                     findings = total,
                     "the audit trail is damaged: records were modified or deleted outside \
-                     retention; see audit.verify_audit_chain() and POST \
+                     retention; see ferroehr audit-chain verify and POST \
                      /admin/access-log/verify"
                 );
                 findings.truncate(KEPT_FINDINGS);

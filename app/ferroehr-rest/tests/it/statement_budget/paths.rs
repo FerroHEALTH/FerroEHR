@@ -49,7 +49,7 @@ use tracing::field::{Field, Visit};
 use tracing_subscriber::layer::{Context, SubscriberExt as _};
 use tracing_subscriber::registry::LookupSpan;
 
-use super::{CHAINER_RELEASE, SYSTEM_ROUND, calls, counted, drained};
+use super::{CHAINER_RELEASE, calls, counted, drained};
 use crate::access_evaluator_http::{credential, ehr_with_composition};
 use crate::common::{self, BASE, FHIR};
 
@@ -305,6 +305,12 @@ struct Budget {
 /// before (#6256): one round trip fewer on the three composition commits, the
 /// update, the delete and the CONTRIBUTION commit, measured beside the merge
 /// base, and each of those round-trip ceilings fell by one.
+/// A system audit record has since been written once with the content
+/// digest its writer computes, and sealed by window, with no link, intake
+/// row, chain head or row digest in the database (#6242): 5 nested
+/// statements fewer on the party read, the demographic query and both party
+/// commits, and 541, 537, 532 and 532 WAL bytes fewer, measured beside the
+/// merge base, and each of those ceilings fell by its path's figure.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
@@ -402,8 +408,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 1058,
         peak_bytes: 78_848,
         round_trips: 8,
-        nested: 6,
-        wal: 1596,
+        nested: 1,
+        wal: 1055,
     },
     Budget {
         path: Path::CommitContribution,
@@ -447,8 +453,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 1998,
         peak_bytes: 117_146,
         round_trips: 31,
-        nested: 20,
-        wal: 7241,
+        nested: 15,
+        wal: 6709,
     },
     Budget {
         path: Path::AqlMatches,
@@ -465,8 +471,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 2626,
         peak_bytes: 107_199,
         round_trips: 8,
-        nested: 6,
-        wal: 1601,
+        nested: 1,
+        wal: 1064,
     },
     Budget {
         path: Path::CommitPartyScored,
@@ -474,8 +480,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 2487,
         peak_bytes: 132_147,
         round_trips: 31,
-        nested: 21,
-        wal: 9810,
+        nested: 16,
+        wal: 9278,
     },
     Budget {
         path: Path::ReadVersion,
@@ -1174,11 +1180,11 @@ impl Measure {
     }
 }
 
-/// Whether `relation` is a chain head: the access log's and the system
-/// audit trail's, which a chainer pass writes once whatever it links, so how
-/// often depends on how the passes fall among the requests.
+/// Whether `relation` is a seal or owing state of either log, which a
+/// chainer pass writes once whatever it seals, so how often depends on how
+/// the passes fall among the requests.
 fn head_relation(relation: &str) -> bool {
-    super::wal::pass_relation(relation) || relation == "audit_chain_state"
+    super::wal::pass_relation(relation)
 }
 
 /// The row records of the lower-quartile request, and the ledger of the
@@ -1258,7 +1264,8 @@ async fn updates_in_place(pool: &PgPool, from: &str, to: &str) -> u64 {
             AND b.resource_manager = 'Heap' \
             AND split_part(b.record_type, '+', 1) IN ('UPDATE', 'HOT_UPDATE') \
             AND c.relkind = 'r' \
-            AND c.relname NOT IN ('access_log_seal_state', 'access_log_owed', 'audit_chain_state') \
+            AND c.relname NOT IN ('access_log_seal_state', 'access_log_owed', \
+                                  'audit_event_seal_state', 'audit_event_owed') \
             AND c.relnamespace NOT IN \
                 ('pg_catalog'::regnamespace, 'information_schema'::regnamespace)",
     )
@@ -1319,8 +1326,7 @@ async fn measure(
         .filter(|s| !s.toplevel)
         .map(|s| s.calls)
         .sum();
-    let chainer = calls(&statements, "SELECT audit.audit_event_chain_move") * SYSTEM_ROUND
-        + calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
+    let chainer = calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
     let counts = std::mem::take(&mut *counter.0.lock().unwrap());
     out.conversions = counts.conversions;
     out.round_trips = counts.round_trips.div_euclid(REQUESTS);

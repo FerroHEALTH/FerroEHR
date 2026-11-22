@@ -118,15 +118,15 @@ impl HealthIndicator for MigrationsHealth {
     }
 }
 
-/// `audit_sender`: reports the audit posture and how far the chainer is
-/// behind the intake.
+/// `audit_sender`: reports the audit posture and how far the sealer is
+/// behind the records.
 ///
 /// Registered whether or not auditing is on (#3238): a deployment that writes
 /// no access log reads `DEGRADED` with the consequence spelled out, so
 /// monitoring can see the silence instead of a missing row. With auditing on,
-/// an intake whose oldest record waits longer than [`INTAKE_LAG`] for the
-/// chainer reads `DEGRADED` with its age: the records are durable, and the
-/// chains and the sinks that deliver from them are behind. Records held
+/// a log whose oldest unsealed record waits longer than [`SEAL_LAG`] for its
+/// seal reads `DEGRADED` with its age: the records are durable and readable,
+/// and the seals are behind. Records held
 /// longer than the reconciler's grace belong to a write whose process stopped
 /// before releasing them (#5762) and read `DEGRADED` with their count and
 /// age until a reconciler resolves them. None of these flips readiness, only
@@ -137,9 +137,9 @@ pub struct AuditHealth {
     posture: AuditPosture,
 }
 
-/// How long the oldest intake record may wait for the chainer before the
-/// indicator reads `DEGRADED`; our own design, many chainer rounds.
-pub const INTAKE_LAG: std::time::Duration = std::time::Duration::from_secs(10);
+/// How long the oldest record may wait past the last sealed window before
+/// the indicator reads `DEGRADED`; our own design, three seal intervals.
+pub const SEAL_LAG: std::time::Duration = std::time::Duration::from_secs(180);
 
 impl AuditHealth {
     /// Construct over the live audit sender and the configured posture.
@@ -199,16 +199,16 @@ impl HealthIndicator for AuditHealth {
                     oldest.as_secs()
                 ));
             }
-            match store.intake_age().await {
-                Ok(Some(age)) if age > INTAKE_LAG => Outcome::degraded(format!(
-                    "the oldest audit record has waited {}s for the chainer; the records are \
-                     stored and the chains are behind",
+            match store.unsealed_age().await {
+                Ok(Some(age)) if age > SEAL_LAG => Outcome::degraded(format!(
+                    "the oldest audit record has waited {}s for its seal; the records are \
+                     stored and readable and the sealer is behind",
                     age.as_secs()
                 )),
                 Ok(_) => Outcome::up(),
                 Err(e) => {
-                    tracing::error!(error = %e, "health: the audit intake could not be read");
-                    Outcome::degraded("the audit intake could not be read")
+                    tracing::error!(error = %e, "health: the audit seal state could not be read");
+                    Outcome::degraded("the audit seal state could not be read")
                 }
             }
         })
@@ -339,8 +339,8 @@ impl HealthIndicator for AuditChainHealth {
                         )
                     });
                     Outcome::degraded(format!(
-                        "hash chain DAMAGED at {at}: {total} finding(s){first}; see \
-                         audit.verify_audit_chain() and POST /admin/access-log/verify"
+                        "audit trail DAMAGED at {at}: {total} finding(s){first}; see \
+                         ferroehr audit-chain verify and POST /admin/access-log/verify"
                     ))
                 }
                 ChainCheckState::Unverifiable { at, reason } => Outcome::degraded(format!(

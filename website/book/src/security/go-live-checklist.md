@@ -203,10 +203,10 @@ entry is kept without end and the `log_retention` readiness indicator reads
 `degraded`. The [audit trail page](../audit.md#retention-and-who-chooses-it)
 sets out the rules a policy write is refused under.
 
-Verify the chain works before you need it:
+Verify the seals work before you need it:
 
 ```sh
-psql -c 'SELECT * FROM audit.verify_audit_chain();'
+ferroehr audit-chain verify
 ferroehr access-log verify
 ```
 
@@ -215,8 +215,8 @@ ferroehr access-log verify
       cannot rewrite.
 - [ ] `retention` (or `retention`) is `0` or at or above the floor
       that applies to you.
-- [ ] `audit.verify_audit_chain()` returns no rows and
-      `ferroehr access-log verify` reports the log intact on a healthy trail.
+- [ ] `ferroehr audit-chain verify` and `ferroehr access-log verify` report
+      the trail intact on a healthy trail.
 
 ## 6. Schema preparation runs on its own credential
 

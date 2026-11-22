@@ -50,7 +50,10 @@ async fn append_sealed(store: &AccessLogStore, numbers: std::ops::RangeInclusive
     while from <= last {
         let to = from.saturating_add(size - 1).min(last);
         append(store, from..=to).await;
-        store.seal_committed().await.expect("the window seals");
+        store
+            .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+            .await
+            .expect("the window seals");
         from = to + 1;
     }
 }
@@ -130,7 +133,9 @@ async fn a_walk_reaches_the_head_in_bounded_steps_that_each_move_the_cursor() {
     assert_eq!(lag.entries, 3, "the entries appended during the walk");
     assert!(lag.oldest.is_some());
 
-    log.seal_committed().await.expect("the window seals");
+    log.seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+        .await
+        .expect("the window seals");
     let mut next = audit
         .chain_walk(AuditChain::AccessLog, VerifyScope::SinceCheckpoint)
         .await
@@ -250,7 +255,9 @@ async fn a_lag_past_its_bound_reads_degraded_until_a_run_catches_up() {
         health.detail()
     );
 
-    log.seal_committed().await.expect("the window seals");
+    log.seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+        .await
+        .expect("the window seals");
     assert!(matches!(
         check.run_scope(&audit, VerifyScope::SinceCheckpoint).await,
         ChainCheckState::Intact { .. }
@@ -263,7 +270,8 @@ async fn a_lag_past_its_bound_reads_degraded_until_a_run_catches_up() {
     assert_eq!(cursor(&pool).await, 5);
 }
 
-/// The system chain walks in the same bounded steps: each moves its cursor,
+/// The system records' windows walk in the same bounded steps (one window
+/// per record [`crate::audit_chain::seed`] writes): each moves its cursor,
 /// and a modified record inside the backlog is reported at its position and
 /// holds the cursor before it.
 #[tokio::test]
@@ -275,7 +283,7 @@ async fn the_system_chain_walks_in_bounded_steps() {
 
     let checkpoint = || async {
         sqlx::query_scalar::<_, i64>(
-            "SELECT coalesce((SELECT through_seq FROM audit.audit_chain_checkpoint), 0)",
+            "SELECT coalesce((SELECT through_window FROM audit.audit_event_seal_verified), 0)",
         )
         .fetch_one(&pool)
         .await
@@ -301,8 +309,7 @@ async fn the_system_chain_walks_in_bounded_steps() {
     crate::audit_chain::seed(&audit, 6).await;
     crate::audit_chain::with_triggers_disabled(
         &pool,
-        "UPDATE audit.audit_event SET principal = 'nobody' \
-         WHERE id = (SELECT event_id FROM audit.audit_event_link WHERE chain_seq = 10)",
+        "UPDATE audit.audit_event SET principal = 'nobody' WHERE seq = 10",
     )
     .await;
     let mut walk = audit

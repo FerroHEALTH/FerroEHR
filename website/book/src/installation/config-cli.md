@@ -330,14 +330,14 @@ of this system's log.
 ### `ferroehr audit-chain …`
 
 ```text
-ferroehr audit-chain seal                    # seal the head of the system chain, print the seal
+ferroehr audit-chain seal                    # seal the system records, print the newest seal
 ferroehr audit-chain verify [--seal <file>]  # verify against the newest or a kept seal
 ```
 
-The system chain holds the records outside the access log, described on the
+The system records are the records outside the access log, described on the
 [audit page](../audit.md#seals-checkpoints-and-the-transfer-of-a-log). Both need
 the keyring's OpenPGP key (`record.signing.mode = "pgp"`) to seal or to
-verify a seal. `verify` prints each finding and exits 1 when the chain does
+verify a seal. `verify` prints each finding and exits 1 when the records do
 not verify; pass `--seal` a seal you kept outside this system to verify
 against it.
 

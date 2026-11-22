@@ -158,13 +158,13 @@ controller reviews.
 |---|---|---|---|
 | `access_log_entries_total` | counter | `outcome` | Audit records a request wrote into the intake before its response: `ok` or `failed`. A `failed` write refused its request with `503`. |
 | `access_log_append_duration_seconds` | histogram | `outcome` | Time of one request's intake write, one transaction: the time a request waits for its records. |
-| `audit_chained_total` | counter | `chain` | Records sealed (`access_log`) or linked by the chainer (`system`). Beside `access_log_entries_total` it shows whether the sealer keeps up. |
+| `audit_chained_total` | counter | `chain` | Records sealed, by log (`access_log`, `system`). Beside `access_log_entries_total` it shows whether the sealer keeps up. |
 | `audit_reservations_held` | gauge | none | Reservations whose records a write held and nobody released for two minutes: a replica stopped between a write's commit and the chainer round that releases it. The reconciler resolves them within seconds; a value that stays above 0 means no reconciler runs. |
 | `audit_reservation_age_seconds` | gauge | none | Age of the oldest such reservation at the reconciler's last look. |
 | `audit_reservations_reconciled_total` | counter | `outcome` | Reservations the reconciler resolved: `released` (the write committed, its records go to the chain), `discarded` (it never did) or `removed` (a spent reservation row). |
 | `access_log_sign_duration_seconds` | histogram | `outcome` | Time from the start of a chainer round's checkpoint signature to its end, measured when the round stores the checkpoint; it runs beside the insert of the records while the head is held. Present only with an OpenPGP key. |
-| `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run of the system chain (`chain` is `system`); `outcome` is `sealed`, `empty` or `failed`. The access log needs no schedule: its chainer signs a checkpoint at least once a second while it appends, seals the head when it comes to rest, and seals a head another replica left unsealed on its two-second poll. |
-| `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest seal run of the system chain that did not fail. |
+| `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each sealing of a log by the chainer's frontier round (`chain` is `system` or `access_log`), about once a minute and every second until one seals; `outcome` is `sealed`, `empty` or `failed`. |
+| `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest sealing of the log that did not fail. |
 | `access_log_tombstones_total` | counter | `chain` | Entries the retention run replaced by their tombstones, `local` or `imported` from another system. |
 | `access_log_folded_total` | counter | `chain` | Tombstones the retention run folded into gaps of the chain once they were past their own end, `local` or `imported`. |
 | `access_log_gaps_total` | counter | `chain` | Gaps the retention run wrote, one per folded run of tombstones, `local` or `imported`. |
@@ -225,7 +225,7 @@ recording while you investigate.
 | `policy_listeners` | a listener is lost, naming each one |
 | `instances` | another live instance signs with another key or runs another configuration, naming each one |
 | `audit_chain` | the newest verification found damage, or could not run |
-| `audit_sender` | auditing is off, or the oldest intake record has waited more than 10 seconds for the chainer |
+| `audit_sender` | auditing is off, or the oldest record of either log has waited more than three minutes past the last sealed window |
 | `audit_delivery` | a forwarder cannot reach its Audit Record Repository |
 
 ## Runbooks
@@ -287,25 +287,23 @@ recording while you investigate.
      and the audit database's own load. `access_log_append_duration_seconds` is the time a
      request waits for its records.
 
-### The chainer falls behind
+### The sealer falls behind
 
-- **Metric:** `audit_chained_total{chain="system"}` growing slower than the
-  system records written, or `audit_chained_total{chain="access_log"}` far
-  behind `access_log_entries_total{outcome="ok"}` for longer than a few
-  minutes (a long writing transaction holding the frontier back).
+- **Metric:** `audit_chained_total` of a log far behind the records written
+  (`access_log_entries_total{outcome="ok"}` for the access log) for longer
+  than a few minutes: a long writing transaction holding the frontier back.
 - **Health:** `audit_sender` reads `DEGRADED` with the age of the oldest
-  intake record.
-- **What happens:** the records are stored and nothing is lost; the chains,
-  the checkpoints and the feeds that deliver from the store are behind.
+  record past the last sealed window.
+- **What happens:** the records are stored and readable and nothing is
+  lost; the seals and the feeds that deliver from the store are behind.
 - **What to do:**
-  1. Check `access_log_sign_duration_seconds`: each round signs one
-     checkpoint while the head is held, and an RSA key is far slower than
-     Ed25519 ([PGP signing](signing/pgp.md)).
-  2. Read the log for `an audit chainer round failed`: a round that fails
-     repeats every half second, and the error names the record it refused.
-  3. One chain carries about 15 000 entries per second on the reference
-     host; a sustained rate above it needs partitioned chains, the recorded
-     next step (#5745).
+  1. Look for a long-running transaction anywhere on the database server
+     (`pg_stat_activity`): its snapshot holds every log's frontier back.
+  2. Check `access_log_sign_duration_seconds`: each window's seal is
+     signed, and an RSA key is far slower than Ed25519
+     ([PGP signing](signing/pgp.md)).
+  3. Read the log for `the audit frontier did not move`: a round that fails
+     repeats every second, and the error names its cause.
 
 ### A chain verification that fails
 
@@ -321,7 +319,7 @@ recording while you investigate.
   1. `unverifiable` means the verification could not run: read the reason in
      the indicator's detail and the log, which is usually the audit
      database.
-  2. For `damaged`, run `SELECT * FROM audit.verify_audit_chain();` and
+  2. For `damaged`, run `ferroehr audit-chain verify` and
      `ferroehr access-log verify` to list each finding.
      Then run `ferroehr access-log verify` to check the newest checkpoint,
      and `ferroehr access-log verify --checkpoint <file>` with the newest
@@ -372,18 +370,19 @@ recording while you investigate.
      different keys in the meantime write checkpoints the others cannot
      verify until the old public certificate is retired everywhere.
   3. Run `ferroehr access-log verify` after the next append. Watch
-     `audit_seal_last_success_seconds` move for the system chain at the next
-     run.
+     `audit_seal_last_success_seconds` move for both logs at the next
+     sealing.
 
-### A system chain seal that keeps failing
+### A seal that keeps failing
 
-- **Metric:** `time() - audit_seal_last_success_seconds{chain="system"}`
-  above fifteen minutes, with
+- **Metric:** `time() - audit_seal_last_success_seconds` above five minutes
+  for either `chain`, with
   `audit_seal_duration_seconds_count{outcome="failed"}` rising.
-- **What to do:** read the log for `the system chain could not be sealed`. A
+- **What to do:** read the log for `the audit frontier did not move`. A
   sign error means the keyring lost its OpenPGP key or its passphrase; a
-  store error means the audit database. The next run tries again five
-  minutes later, and `ferroehr audit-chain seal` seals one on demand.
+  store error means the audit database. The chainer tries again every
+  second, and `ferroehr audit-chain seal` and `ferroehr access-log
+  checkpoint` seal on demand.
 
 ### A checkpoint publication that fails
 

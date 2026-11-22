@@ -11,13 +11,26 @@ use sha2::Digest as _;
 /// The SHA-256 of `text`'s UTF-8 octets, in lower-case hexadecimal.
 #[must_use]
 pub fn sha256_hex(text: &str) -> String {
-    sha2::Sha256::digest(text.as_bytes())
-        .iter()
-        .fold(String::with_capacity(64), |mut hex, byte| {
+    hex(&sha2::Sha256::digest(text.as_bytes()))
+}
+
+/// `bytes` in lower-case hexadecimal.
+#[must_use]
+pub fn hex(bytes: &[u8]) -> String {
+    bytes.iter().fold(
+        String::with_capacity(bytes.len().saturating_mul(2)),
+        |mut hex, byte| {
             use std::fmt::Write as _;
             // NOTE: `impl fmt::Write for String` never fails
             // (<https://doc.rust-lang.org/std/fmt/trait.Write.html#impl-Write-for-String>).
             let _written = write!(hex, "{byte:02x}");
             hex
-        })
+        },
+    )
+}
+
+/// The SHA-256 of `text`'s UTF-8 octets.
+#[must_use]
+pub fn sha256(text: &str) -> [u8; 32] {
+    sha2::Sha256::digest(text.as_bytes()).into()
 }

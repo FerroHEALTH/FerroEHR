@@ -1,17 +1,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The verification of the hash chains in bounded steps (#5779).
+//! The verification of the sealed windows of both logs in bounded steps
+//! (#5779, #6242).
 //!
-//! A walk of a chain takes the chain head when it starts and verifies the
-//! chain up to it one window at a time. Each window holds at most a given
-//! number of records and is one statement, which moves the verification
-//! cursor to the window's end when it and every window before it in the walk
-//! are intact, so no statement grows with the backlog and every step's
-//! progress is kept. A walk that finds damage goes on to the head from the
-//! stored links, so it reports every finding, and moves the cursor no more
-//! (`migrations/audit/0004_baseline_access_log.sql`). No openEHR spec
-//! governs audit tamper detection: our own design.
+//! A walk of a log verifies its sealed windows from the cursor, or the first,
+//! one step at a time. Each step reads windows up to a budget of records in
+//! one snapshot ([`crate::access_log::seal`]) and moves the verification
+//! cursor to its last window when it and every step before it in the walk
+//! are intact, so no step grows with the backlog and every step's progress is
+//! kept. A walk that finds damage goes on to the last window, so it reports
+//! every finding, and moves the cursor no more. No openEHR spec governs audit
+//! tamper detection: our own design.
 
 use std::time::{Duration, Instant};
 
@@ -25,7 +25,7 @@ use sqlx::postgres::{PgConnection, PgRow};
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 use crate::system_log::store::AuditStore;
-use crate::system_log::store::chains::{AuditChain, AuditChainFinding, VerifyScope, finding};
+use crate::system_log::store::chains::{AuditChain, AuditChainFinding, VerifyScope};
 
 /// How long one step of a walk aims to take: well under any statement
 /// timeout, and short enough that a step holds the database briefly.
@@ -153,11 +153,8 @@ pub struct ChainWalk {
     /// The chain head the walk verifies up to; `None` when the chain state
     /// row is missing, which the walk's one step reports.
     head: Option<i64>,
-    /// The position the walk has verified through.
+    /// The window the walk has verified through.
     after: i64,
-    /// The link at `after` in hexadecimal, the next window's anchor; `None`
-    /// when no record or gap ends there any more.
-    link: Option<String>,
     /// Whether every step so far was intact, so the next may move the cursor.
     intact: bool,
     /// Whether the walk has reached its head.
@@ -208,46 +205,28 @@ impl AuditStore {
         scope: VerifyScope,
     ) -> Result<ChainWalk, AuditError> {
         let full = scope == VerifyScope::Full;
-        // NOTE: our own design (#6242), the access log's walk steps over its sealed windows,
-        // its position a window number.
-        if chain == AuditChain::AccessLog {
-            let store = self.chaining_store();
-            let after = if full {
-                0
-            } else {
-                store.verified_window().await.map_err(AuditError::from)?
-            };
-            return Ok(ChainWalk {
-                chain,
-                full,
-                head: Some(after),
-                after,
-                link: None,
-                intact: true,
-                done: false,
-            });
-        }
-        let row = sqlx::query(statements(chain).start)
-            .bind(full)
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await?;
+        let after = if full {
+            0
+        } else {
+            self.chaining_store()
+                .verified_window(crate::access_log::seal::log(chain))
+                .await
+                .map_err(AuditError::from)?
+        };
         Ok(ChainWalk {
             chain,
             full,
-            head: row.try_get("head_seq")?,
-            after: row.try_get("after_seq")?,
-            link: row.try_get("after_digest")?,
+            head: Some(after),
+            after,
             intact: true,
             done: false,
         })
     }
 
-    /// Verify the next window of `walk`, at most `records` records, and move
-    /// the cursor to its end when it and every window before it are intact.
-    /// The last window, which ends at the walk's head, also checks the head.
-    /// The access log's entries in the window are digested again here first,
-    /// since only the server writes their canonical form (#5703). Returns the
-    /// window's findings; a walk that is done returns none.
+    /// Verify the next windows of `walk`, up to `records` records, and move
+    /// the cursor to the last of them when they and every window before them
+    /// are intact; the last step also checks the seal state. Returns the
+    /// step's findings; a walk that is done returns none.
     ///
     /// # Errors
     /// [`AuditError::Store`] when a statement fails, which is itself a
@@ -260,55 +239,22 @@ impl AuditStore {
         if walk.done {
             return Ok(Vec::new());
         }
-        if walk.chain == AuditChain::AccessLog {
-            let step = self
-                .chaining_store()
-                .verify_window_step(walk.after, i64::from(records), walk.full, walk.intact)
-                .await
-                .map_err(AuditError::from)?;
-            walk.intact &= step.findings.is_empty();
-            walk.after = step.through;
-            walk.head = Some(step.through);
-            walk.done = step.done;
-            return Ok(step.findings);
-        }
-        let sql = statements(walk.chain);
-        let mut conn = acquire(&self.pool).await?;
-        let upto = match walk.head {
-            Some(head) => {
-                sqlx::query_scalar::<_, i64>(sql.step_end)
-                    .bind(walk.after)
-                    .bind(records)
-                    .bind(head)
-                    .fetch_one(&mut *conn)
-                    .await?
-            }
-            None => walk.after,
-        };
-        let last = walk.head.is_none_or(|head| upto >= head);
-        let rows = sqlx::query(sql.step)
-            .bind(walk.after)
-            .bind(walk.link.as_deref())
-            .bind(upto)
-            .bind(walk.intact)
-            .bind(last)
-            .bind(walk.full)
-            .fetch_all(&mut *conn)
-            .await?;
-        let findings = rows
-            .iter()
-            .map(|row| finding(walk.chain, row))
-            .collect::<Result<Vec<_>, _>>()?;
-        walk.intact &= findings.is_empty();
-        walk.done = last;
-        if !last {
-            walk.link = sqlx::query_scalar(sql.link)
-                .bind(upto)
-                .fetch_one(&mut *conn)
-                .await?;
-            walk.after = upto;
-        }
-        Ok(findings)
+        let step = self
+            .chaining_store()
+            .verify_window_step(
+                crate::access_log::seal::log(walk.chain),
+                walk.after,
+                i64::from(records),
+                walk.full,
+                walk.intact,
+            )
+            .await
+            .map_err(AuditError::from)?;
+        walk.intact &= step.findings.is_empty();
+        walk.after = step.through;
+        walk.head = Some(step.through);
+        walk.done = step.done;
+        Ok(step.findings)
     }
 
     /// [`Self::chain_step`] sized by `pace`, which then adapts to how long
@@ -351,36 +297,56 @@ impl AuditStore {
     }
 }
 
-/// The statements of a walk over one chain.
-struct Statements {
-    /// Where the walk starts: `head_seq`, `after_seq`, `after_digest`.
-    start: &'static str,
-    /// Where the window after `$1` of at most `$2` records before head `$3`
-    /// ends.
-    step_end: &'static str,
-    /// One step; the access log's takes the modified positions first.
-    step: &'static str,
-    /// The link at a position, the next window's anchor.
-    link: &'static str,
-}
+/// How many system records one page of the content check reads.
+const SYSTEM_PAGE: i64 = 1000;
 
-/// The statements of a walk over `chain`.
-const fn statements(chain: AuditChain) -> Statements {
-    match chain {
-        AuditChain::System => Statements {
-            start: "SELECT head_seq, after_seq, after_digest \
-                    FROM audit.audit_chain_verification_start($1)",
-            step_end: "SELECT audit.audit_chain_verification_step_end($1, $2, $3)",
-            step: "SELECT chain_seq, record_id, recorded_at, finding \
-                   FROM audit.verify_audit_chain_step($1, $2, $3, $4, $5, $6)",
-            link: "SELECT audit.audit_chain_verification_link($1)",
-        },
-        AuditChain::AccessLog => Statements {
-            start: "",
-            step_end: "",
-            step: "",
-            link: "",
-        },
+/// A system record that no longer digests to its `content_digest`: its
+/// position, id and event time.
+pub type Modified = (i64, uuid::Uuid, jiff::Timestamp);
+
+/// One page of the system records from `$1` (exclusive) to `$2`, at most
+/// `$3`, each with its position, uuid, time, stored digest and the object
+/// its content digest is computed over.
+static MODIFIED_PAGE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+    format!(
+        "SELECT e.seq, e.id, e.recorded_at, e.content_digest, {} FROM audit.audit_event e \
+         WHERE e.seq > $1 AND e.seq <= $2 ORDER BY e.seq LIMIT $3",
+        crate::system_log::content_digest::STORED
+    )
+});
+
+/// The system records in `(after, upto]` that no longer digest to their
+/// `content_digest` ([`crate::system_log::content_digest`]), read a page at a
+/// time.
+///
+/// # Errors
+/// [`AuditError::Store`] when a statement fails, and [`AuditError::Digest`]
+/// when a record read back has no RFC 8785 form.
+pub async fn system_modified_between(
+    conn: &mut PgConnection,
+    mut after: i64,
+    upto: i64,
+) -> Result<Vec<Modified>, AuditError> {
+    let mut modified = Vec::new();
+    loop {
+        let rows: Vec<(i64, uuid::Uuid, Timestamp, Vec<u8>, serde_json::Value)> =
+            sqlx::query_as(sqlx::AssertSqlSafe(MODIFIED_PAGE.as_str()))
+                .bind(after)
+                .bind(upto)
+                .bind(SYSTEM_PAGE)
+                .fetch_all(&mut *conn)
+                .await?;
+        let Some((last, ..)) = rows.last() else {
+            return Ok(modified);
+        };
+        after = *last;
+        for (seq, id, recorded_at, stored, document) in rows {
+            let recomputed = crate::system_log::content_digest::of_stored(document)
+                .map_err(AuditError::Digest)?;
+            if recomputed.as_slice() != stored.as_slice() {
+                modified.push((seq, id, recorded_at.to_jiff()));
+            }
+        }
     }
 }
 
