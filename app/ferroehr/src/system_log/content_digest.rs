@@ -36,8 +36,8 @@
               columns are JSON values"
 )]
 
-use serde::Serialize;
 use serde_json::Value;
+use sha2::Digest as _;
 
 use crate::digest::sha256;
 use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json;
@@ -52,7 +52,7 @@ pub const VERSION: i16 = 6;
 /// An instant as the digest writes it: UTC, six fractional digits, `Z`.
 #[must_use]
 pub fn instant(at: jiff::Timestamp) -> String {
-    at.strftime("%Y-%m-%dT%H:%M:%S%.6fZ").to_string()
+    at.strftime(INSTANT).to_string()
 }
 
 /// `at` cut to the microsecond, the precision `timestamptz` keeps.
@@ -62,22 +62,22 @@ pub fn to_microsecond(at: jiff::Timestamp) -> jiff::Timestamp {
 }
 
 /// The columns of one record, borrowed, as the digest writes them.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Copy)]
 #[expect(
     clippy::struct_excessive_bools,
     reason = "the record's four boolean columns, each its own member of the digested object"
 )]
 pub struct Record<'a> {
     /// `id`.
-    pub id: String,
+    pub id: uuid::Uuid,
     /// `recorded_at`.
-    pub recorded_at: String,
+    pub recorded_at: jiff::Timestamp,
     /// `stored_at`.
-    pub stored_at: &'a str,
+    pub stored_at: jiff::Timestamp,
     /// `action`.
     pub action: &'a str,
     /// `outcome`.
-    pub outcome: String,
+    pub outcome: i16,
     /// `event_code`.
     pub event_code: &'a str,
     /// `operation`.
@@ -101,7 +101,7 @@ pub struct Record<'a> {
     /// `legal_basis`.
     pub legal_basis: Option<&'a str>,
     /// `result_count`.
-    pub result_count: Option<String>,
+    pub result_count: Option<i64>,
     /// `request_id`.
     pub request_id: Option<&'a str>,
     /// `roles`.
@@ -109,7 +109,7 @@ pub struct Record<'a> {
     /// `origins`.
     pub origins: Option<&'a Value>,
     /// `origin_count`.
-    pub origin_count: Option<String>,
+    pub origin_count: Option<i64>,
     /// `categories`.
     pub categories: Option<&'a Value>,
     /// `category_basis`.
@@ -148,10 +148,10 @@ pub struct Record<'a> {
     pub review: Option<&'a str>,
     /// `category_content`.
     pub category_content: Option<&'a Value>,
-    /// `render_policy`.
-    pub render_policy: &'a str,
-    /// `search_tokens`.
-    pub search_tokens: Vec<&'a str>,
+    /// `render_policy`, its bytes.
+    pub render_policy: &'a [u8],
+    /// `search_tokens`, as its array text `{1,2,-3}`.
+    pub search_tokens: &'a str,
     /// `binding`.
     pub binding: Option<&'a str>,
     /// `guest`.
@@ -177,20 +177,18 @@ pub struct Record<'a> {
     /// `summary`.
     pub summary: Option<&'a Value>,
     /// `digest_version`.
-    pub digest_version: String,
+    pub digest_version: i16,
     /// `token_attributes`.
     pub token_attributes: Option<&'a Value>,
 }
 
 /// The ids of an `integer[]` written as its text, `{1,2,-3}`, each as its
 /// decimal text.
-#[must_use]
-pub fn token_ids(text: &str) -> Vec<&str> {
+pub fn token_ids(text: &str) -> impl Iterator<Item = &str> {
     text.trim_start_matches('{')
         .trim_end_matches('}')
         .split(',')
         .filter(|id| !id.is_empty())
-        .collect()
 }
 
 /// Why a content digest could not be computed.
@@ -198,15 +196,262 @@ pub fn token_ids(text: &str) -> Vec<&str> {
 #[error("the record has no RFC 8785 form")]
 pub struct Unwritable(#[source] serde_json::Error);
 
-/// The content digest of `record`, its SHA-256.
+/// The content digest of `record`, its SHA-256, written member by member in
+/// RFC 8785 order straight into the hash.
 ///
 /// # Errors
 /// [`Unwritable`] when a JSON value of the record holds a number with no
 /// finite double form.
 pub fn of(record: &Record<'_>) -> Result<[u8; 32], Unwritable> {
-    canonical_to_string(&(TAG, record))
-        .map(|text| sha256(&text))
-        .map_err(Unwritable)
+    let mut w = Members::open();
+    // NOTE: RFC 8785 section 3.2.3, the members in the order of their names, which are ASCII.
+    w.optional_text("acting_mode", record.acting_mode);
+    w.text("action", record.action);
+    w.json("actor_chain", record.actor_chain)?;
+    w.json("agreement", record.agreement)?;
+    w.optional_text("assurance_level", record.assurance_level);
+    w.optional_text("assurance_value", record.assurance_value);
+    w.optional_text("binding", record.binding);
+    w.json("binding_detail", record.binding_detail)?;
+    w.json("categories", record.categories)?;
+    w.optional_text("category_basis", record.category_basis);
+    w.json("category_content", record.category_content)?;
+    w.json("category_evidence", record.category_evidence)?;
+    w.optional_text("category_map_digest", record.category_map_digest);
+    w.optional_text("client_id", record.client_id);
+    w.optional_text("client_ip", record.client_ip);
+    w.integer("digest_version", Some(i64::from(record.digest_version)));
+    w.text("domain", record.domain);
+    w.optional_text("ehr_id", record.ehr_id);
+    w.boolean("emergency_access", record.emergency_access);
+    w.text("event_code", record.event_code);
+    w.json("external_fields", record.external_fields)?;
+    w.json("facilities", record.facilities)?;
+    w.boolean("guest", record.guest);
+    w.uuid("id", record.id);
+    w.optional_text("issuer", record.issuer);
+    w.optional_text("legal_basis", record.legal_basis);
+    w.optional_text("operation", record.operation);
+    w.integer("origin_count", record.origin_count);
+    w.json("origins", record.origins)?;
+    w.integer("outcome", Some(i64::from(record.outcome)));
+    w.json("party", record.party)?;
+    w.json("party_groups", record.party_groups)?;
+    w.optional_text("patient_id", record.patient_id);
+    w.optional_text("permit", record.permit);
+    w.optional_text("principal", record.principal);
+    w.optional_text("professional_id", record.professional_id);
+    w.json("provider", record.provider)?;
+    w.optional_text("purpose", record.purpose);
+    w.instant("recorded_at", record.recorded_at);
+    w.hex("render_policy", record.render_policy);
+    w.json("representation", record.representation)?;
+    w.optional_text("request_id", record.request_id);
+    w.text("resource_class", record.resource_class);
+    w.optional_text("resource_id", record.resource_id);
+    w.integer("result_count", record.result_count);
+    w.optional_text("retention_ends", record.retention_ends);
+    w.boolean("retention_stated", record.retention_stated);
+    w.optional_text("review", record.review);
+    w.json("roles", record.roles)?;
+    w.tokens("search_tokens", record.search_tokens);
+    w.instant("stored_at", record.stored_at);
+    w.boolean("subject_lookup_failed", record.subject_lookup_failed);
+    w.optional_text("subject_namespace", record.subject_namespace);
+    w.json("summary", record.summary)?;
+    w.json("token_attributes", record.token_attributes)?;
+    w.optional_text("token_id", record.token_id);
+    Ok(w.close())
+}
+
+/// The writer of the digested array: each member's name and value in their
+/// RFC 8785 form, fed to the hash as they are written.
+struct Members {
+    hash: sha2::Sha256,
+    first: bool,
+}
+
+impl Members {
+    /// The hash with the array, its tag and the object opened.
+    fn open() -> Self {
+        let mut members = Self {
+            hash: sha2::Sha256::new(),
+            first: true,
+        };
+        members.put(b"[");
+        members.string(TAG);
+        members.put(b",{");
+        members
+    }
+
+    /// The object and the array closed, and the digest.
+    fn close(mut self) -> [u8; 32] {
+        self.put(b"}]");
+        self.hash.finalize().into()
+    }
+
+    fn put(&mut self, bytes: &[u8]) {
+        self.hash.update(bytes);
+    }
+
+    /// The separator before a member, and its name.
+    fn name(&mut self, name: &str) {
+        if !std::mem::take(&mut self.first) {
+            self.put(b",");
+        }
+        self.string(name);
+        self.put(b":");
+    }
+
+    /// `text` as an RFC 8785 string (section 3.2.2.2): `"` and `\\` escaped,
+    /// the control characters as their short escape or `\\u00xx`.
+    fn string(&mut self, text: &str) {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        self.put(b"\"");
+        let bytes = text.as_bytes();
+        let mut start = 0;
+        for (at, &byte) in bytes.iter().enumerate() {
+            let short: &[u8] = match byte {
+                b'"' => b"\\\"",
+                b'\\' => b"\\\\",
+                0x08 => b"\\b",
+                0x0c => b"\\f",
+                b'\n' => b"\\n",
+                b'\r' => b"\\r",
+                b'\t' => b"\\t",
+                0x00..=0x1f => b"",
+                _ => continue,
+            };
+            self.put(bytes.get(start..at).unwrap_or_default());
+            if short.is_empty() {
+                let high = HEX.get(usize::from(byte >> 4)).copied().unwrap_or(b'0');
+                let low = HEX.get(usize::from(byte & 0x0f)).copied().unwrap_or(b'0');
+                self.put(&[b'\\', b'u', b'0', b'0', high, low]);
+            } else {
+                self.put(short);
+            }
+            start = at.saturating_add(1);
+        }
+        self.put(bytes.get(start..).unwrap_or_default());
+        self.put(b"\"");
+    }
+
+    fn text(&mut self, name: &str, value: &str) {
+        self.name(name);
+        self.string(value);
+    }
+
+    fn optional_text(&mut self, name: &str, value: Option<&str>) {
+        if let Some(value) = value {
+            self.text(name, value);
+        } else {
+            self.name(name);
+            self.put(b"null");
+        }
+    }
+
+    fn boolean(&mut self, name: &str, value: bool) {
+        self.name(name);
+        self.put(if value { b"true" } else { b"false" });
+    }
+
+    /// An integer as its decimal text in a string.
+    fn integer(&mut self, name: &str, value: Option<i64>) {
+        self.name(name);
+        match value {
+            Some(value) => {
+                use std::fmt::Write as _;
+                let mut digits = Stack::default();
+                // NOTE: the buffer holds the 20 octets of any i64, so the write never fails.
+                let _written = write!(digits, "{value}");
+                self.string(digits.as_str());
+            }
+            None => self.put(b"null"),
+        }
+    }
+
+    fn uuid(&mut self, name: &str, value: uuid::Uuid) {
+        let mut text = [0_u8; uuid::fmt::Hyphenated::LENGTH];
+        self.name(name);
+        self.put(b"\"");
+        self.put(value.hyphenated().encode_lower(&mut text).as_bytes());
+        self.put(b"\"");
+    }
+
+    fn instant(&mut self, name: &str, value: jiff::Timestamp) {
+        use std::fmt::Write as _;
+        let mut text = Stack::default();
+        // NOTE: the buffer holds the 27 octets of the instant's form, so the write never fails.
+        let _written = write!(text, "{}", value.strftime(INSTANT));
+        self.text(name, text.as_str());
+    }
+
+    /// Bytes as lower-case hexadecimal in a string.
+    fn hex(&mut self, name: &str, value: &[u8]) {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        self.name(name);
+        self.put(b"\"");
+        for byte in value {
+            let high = HEX.get(usize::from(byte >> 4)).copied().unwrap_or(b'0');
+            let low = HEX.get(usize::from(byte & 0x0f)).copied().unwrap_or(b'0');
+            self.put(&[high, low]);
+        }
+        self.put(b"\"");
+    }
+
+    /// An `integer[]` written as its text, as an array of decimal strings.
+    fn tokens(&mut self, name: &str, value: &str) {
+        self.name(name);
+        self.put(b"[");
+        for (index, id) in token_ids(value).enumerate() {
+            if index > 0 {
+                self.put(b",");
+            }
+            self.string(id);
+        }
+        self.put(b"]");
+    }
+
+    /// A JSON value in its RFC 8785 form.
+    fn json(&mut self, name: &str, value: Option<&Value>) -> Result<(), Unwritable> {
+        self.name(name);
+        match value {
+            Some(value) => {
+                let text = canonical_to_string(value).map_err(Unwritable)?;
+                self.put(text.as_bytes());
+            }
+            None => self.put(b"null"),
+        }
+        Ok(())
+    }
+}
+
+/// The `strftime` form of an instant: UTC, six fractional digits, `Z`.
+const INSTANT: &str = "%Y-%m-%dT%H:%M:%S%.6fZ";
+
+/// A short text written on the stack: an instant's form or an integer's.
+#[derive(Default)]
+struct Stack {
+    bytes: [u8; 32],
+    len: usize,
+}
+
+impl Stack {
+    fn as_str(&self) -> &str {
+        std::str::from_utf8(self.bytes.get(..self.len).unwrap_or_default()).unwrap_or_default()
+    }
+}
+
+impl std::fmt::Write for Stack {
+    fn write_str(&mut self, text: &str) -> std::fmt::Result {
+        let end = self.len.checked_add(text.len()).ok_or(std::fmt::Error)?;
+        self.bytes
+            .get_mut(self.len..end)
+            .ok_or(std::fmt::Error)?
+            .copy_from_slice(text.as_bytes());
+        self.len = end;
+        Ok(())
+    }
 }
 
 /// The content digest of a record read back as the object [`STORED`]
@@ -258,13 +503,19 @@ pub const STORED: &str = "jsonb_build_object(\
 mod tests {
     use super::*;
 
-    fn record<'a>(roles: &'a Value, stored_at: &'a str) -> Record<'a> {
+    fn at(text: &str) -> jiff::Timestamp {
+        text.parse().expect("an instant")
+    }
+
+    fn record<'a>(roles: &'a Value, stored_at: &str) -> Record<'a> {
         Record {
-            id: "0193a3c4-0000-7000-8000-000000000001".to_owned(),
-            recorded_at: "2026-11-22T04:31:28.123456Z".to_owned(),
-            stored_at,
+            id: "0193a3c4-0000-7000-8000-000000000001"
+                .parse()
+                .expect("a uuid"),
+            recorded_at: at("2026-11-22T04:31:28.123456Z"),
+            stored_at: at(stored_at),
             action: "R",
-            outcome: "0".to_owned(),
+            outcome: 0,
             event_code: "110106",
             operation: Some("getTemplate"),
             principal: Some("alice"),
@@ -276,7 +527,7 @@ mod tests {
             domain: "system",
             purpose: None,
             legal_basis: None,
-            result_count: Some("9007199254740993".to_owned()),
+            result_count: Some(9_007_199_254_740_993),
             request_id: Some("req-1"),
             roles: Some(roles),
             origins: None,
@@ -300,8 +551,8 @@ mod tests {
             subject_lookup_failed: false,
             review: None,
             category_content: None,
-            render_policy: "00ff",
-            search_tokens: vec!["3", "-1"],
+            render_policy: &[0x00, 0xff],
+            search_tokens: "{3,-1}",
             binding: None,
             guest: false,
             party: None,
@@ -314,9 +565,79 @@ mod tests {
             facilities: None,
             binding_detail: None,
             summary: None,
-            digest_version: VERSION.to_string(),
+            digest_version: VERSION,
             token_attributes: None,
         }
+    }
+
+    /// The object [`STORED`] reads back for [`record`], written by hand.
+    fn stored(roles: &Value) -> Value {
+        let text = |value: &str| Value::String(value.to_owned());
+        let members = [
+            ("id", text("0193a3c4-0000-7000-8000-000000000001")),
+            ("recorded_at", text("2026-11-22T04:31:28.123456Z")),
+            ("stored_at", text("2026-11-22T04:31:28.200000Z")),
+            ("action", text("R")),
+            ("outcome", text("0")),
+            ("event_code", text("110106")),
+            ("operation", text("getTemplate")),
+            ("principal", text("alice")),
+            ("patient_id", Value::Null),
+            ("resource_class", text("template")),
+            ("resource_id", text("vital_signs.v1")),
+            ("client_ip", text("192.0.2.7")),
+            ("token_id", Value::Null),
+            ("domain", text("system")),
+            ("purpose", Value::Null),
+            ("legal_basis", Value::Null),
+            ("result_count", text("9007199254740993")),
+            ("request_id", text("req-1")),
+            ("roles", roles.clone()),
+            ("origins", Value::Null),
+            ("origin_count", Value::Null),
+            ("categories", Value::Null),
+            ("category_basis", Value::Null),
+            ("category_evidence", Value::Null),
+            ("category_map_digest", Value::Null),
+            ("acting_mode", text("person")),
+            ("assurance_level", Value::Null),
+            ("assurance_value", Value::Null),
+            ("professional_id", Value::Null),
+            ("emergency_access", Value::Bool(false)),
+            ("retention_ends", text("2029-11-22")),
+            ("retention_stated", Value::Bool(true)),
+            ("permit", Value::Null),
+            ("issuer", Value::Null),
+            ("client_id", Value::Null),
+            ("ehr_id", Value::Null),
+            ("subject_namespace", Value::Null),
+            ("subject_lookup_failed", Value::Bool(false)),
+            ("review", Value::Null),
+            ("category_content", Value::Null),
+            ("render_policy", text("00ff")),
+            ("search_tokens", serde_json::json!(["3", "-1"])),
+            ("binding", Value::Null),
+            ("guest", Value::Bool(false)),
+            ("party", Value::Null),
+            ("party_groups", Value::Null),
+            ("provider", Value::Null),
+            ("representation", Value::Null),
+            ("external_fields", Value::Null),
+            ("agreement", Value::Null),
+            ("actor_chain", Value::Null),
+            ("facilities", Value::Null),
+            ("binding_detail", Value::Null),
+            ("summary", Value::Null),
+            ("digest_version", text("6")),
+            ("token_attributes", Value::Null),
+        ];
+        assert_eq!(members.len(), 56, "every column but seq and content_digest");
+        Value::Object(
+            members
+                .into_iter()
+                .map(|(name, value)| (name.to_owned(), value))
+                .collect(),
+        )
     }
 
     /// The digest of one fixed record, pinned so a change of the form is a
@@ -324,23 +645,40 @@ mod tests {
     #[test]
     fn the_digest_of_a_fixed_record_is_pinned() {
         let roles = serde_json::json!(["nurse", "doctor"]);
-        let digest = of(&record(&roles, "2026-11-22T04:31:28.200000Z")).expect("a digest");
+        let digest = of(&record(&roles, "2026-11-22T04:31:28.2Z")).expect("a digest");
         assert_eq!(
             crate::digest::hex(&digest),
             "74cea798d83a2e263a69c5d25c94ba5fc8943ae4b89e8433627ff081e7b30168"
         );
     }
 
-    /// The writer's form and the form of the same record read back as JSON
-    /// digest alike.
+    /// The writer's form and the same record read back as JSON digest alike.
     #[test]
     fn the_written_and_the_stored_form_digest_alike() {
         let roles = serde_json::json!(["nurse", "doctor"]);
-        let record = record(&roles, "2026-11-22T04:31:28.200000Z");
-        let stored = serde_json::to_value(&record).expect("a value");
         assert_eq!(
-            of(&record).expect("a digest"),
-            of_stored(stored).expect("a digest")
+            of(&record(&roles, "2026-11-22T04:31:28.2Z")).expect("a digest"),
+            of_stored(stored(&roles)).expect("a digest")
+        );
+    }
+
+    /// Text that needs escaping, text beyond ASCII and a JSON value whose
+    /// members are out of order are written as RFC 8785 writes them.
+    #[test]
+    fn escaped_text_and_unordered_values_digest_as_their_canonical_form() {
+        let roles = serde_json::json!({"z": [1.5, 1e21, -0.0], "a": "\u{e9}\u{1}\"\\\n/"});
+        let mut written = record(&roles, "2026-11-22T04:31:28.2Z");
+        written.principal = Some("\u{1f600} \"quoted\" \\ \u{8}\u{c}\n\r\t\u{1f}\u{7f}");
+        let mut expected = stored(&roles);
+        if let Some(members) = expected.as_object_mut() {
+            members.insert(
+                "principal".to_owned(),
+                Value::String("\u{1f600} \"quoted\" \\ \u{8}\u{c}\n\r\t\u{1f}\u{7f}".to_owned()),
+            );
+        }
+        assert_eq!(
+            of(&written).expect("a digest"),
+            of_stored(expected).expect("a digest")
         );
     }
 
@@ -356,7 +694,10 @@ mod tests {
 
     #[test]
     fn the_token_ids_are_read_from_the_array_text() {
-        assert_eq!(token_ids("{1,22,-3}"), vec!["1", "22", "-3"]);
-        assert_eq!(token_ids("{}"), Vec::<&str>::new());
+        assert_eq!(
+            token_ids("{1,22,-3}").collect::<Vec<_>>(),
+            vec!["1", "22", "-3"]
+        );
+        assert_eq!(token_ids("{}").count(), 0);
     }
 }

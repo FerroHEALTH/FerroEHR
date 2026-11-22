@@ -717,7 +717,7 @@ async fn findings_after(pool: &PgPool, statements: &[String]) -> Vec<(Option<i64
     let mut findings = Vec::new();
     let mut after = 0;
     loop {
-        let step = ferroehr::access_log::seal::verify_on(
+        let step = ferroehr::access_log::seal::verify::verify_on(
             &mut tx,
             &ferroehr::access_log::seal::SYSTEM,
             after,
