@@ -14,7 +14,8 @@
 //! party read, all over the
 //! IPS composition (128 KB, 402 node rows), and the commit of that composition
 //! as a CONTRIBUTION, its read at an instant, the `EHR_STATUS` commit and read,
-//! and the commit of a PERSON, plain and with ordinal and scale values.
+//! the commit of a PERSON, plain and with ordinal and scale values, and the
+//! update and the delete of a COMPOSITION.
 //!
 //! The conversions are the `trace` events under
 //! [`openehr_its::conversion::TARGET`]: the codec entry points record each
@@ -283,6 +284,15 @@ struct Budget {
 /// its rows, in place of a read of the policy revision before it (#6251): one
 /// round trip fewer on the six read paths those operations serve, measured
 /// beside the merge base, and each of those round-trip ceilings fell by one.
+/// A COMPOSITION update (a PUT with new content) and a delete are measured
+/// last, on the EHRs' own compositions and on compositions committed for
+/// them, and a COMPOSITION write judges its pre-checks on one gate read
+/// (#6256): an update sends 10 round trips where it sent 12, a delete 11
+/// where it sent 16, and a CONTRIBUTION 12 where it sent 13, measured beside
+/// the merge base, and the CONTRIBUTION's ceiling fell by one. The new paths'
+/// ceilings are the figures of two runs (17,495 and 1,623 allocations, median
+/// peaks of 1,386,366 and 134,395 bytes, 186,380 and 5,765 WAL bytes) with
+/// the margins above.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
@@ -388,7 +398,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 6,
         allocations: 18_290,
         peak_bytes: 1_649_934,
-        round_trips: 13,
+        round_trips: 12,
         nested: 14,
         wal: 190_142,
     },
@@ -466,21 +476,21 @@ const BUDGETS: [Budget; 22] = [
     },
     Budget {
         path: Path::CommitUpdate,
-        conversions: 99,
-        allocations: 999_999,
-        peak_bytes: 9_999_999,
-        round_trips: 99,
-        nested: 99,
-        wal: 999_999,
+        conversions: 5,
+        allocations: 17_848,
+        peak_bytes: 1_525_458,
+        round_trips: 10,
+        nested: 4,
+        wal: 188_244,
     },
     Budget {
         path: Path::CommitDelete,
-        conversions: 99,
-        allocations: 999_999,
-        peak_bytes: 9_999_999,
-        round_trips: 99,
-        nested: 99,
-        wal: 999_999,
+        conversions: 2,
+        allocations: 1657,
+        peak_bytes: 150_537,
+        round_trips: 11,
+        nested: 4,
+        wal: 5823,
     },
 ];
 
@@ -841,7 +851,11 @@ impl World {
                 },
             )
             .await;
-            assert_eq!(status, StatusCode::CREATED, "a composition to delete: {body}");
+            assert_eq!(
+                status,
+                StatusCode::CREATED,
+                "a composition to delete: {body}"
+            );
             deletable.push((ehr.clone(), etag(&headers)));
         }
         *self.deletable.lock().unwrap() = deletable;
@@ -879,9 +893,7 @@ impl World {
         let tip = self.update_uids.lock().unwrap()[n % self.ehrs.len()].clone();
         let vo = tip.split("::").next().expect("an object id");
         let mut body = common::ips_canonical_composition();
-        body.as_object_mut()
-            .expect("an object")
-            .shift_remove("uid");
+        body.as_object_mut().expect("an object").shift_remove("uid");
         body["context"]["start_time"]["value"] =
             Value::from(format!("2021-12-03T17:34:{:02}.849379+01:00", n % 60));
         Call {

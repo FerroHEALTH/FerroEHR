@@ -6,11 +6,11 @@
 
 use super::{Change, Write, WriteEnvelope};
 use crate::ids::{AllocatedVoId, EhrId, VoId};
-use crate::versioning::audit::AuditInput;
-use crate::versioning::restriction;
 use crate::versioning::Kind;
+use crate::versioning::audit::AuditInput;
 use crate::versioning::body::Body;
 use crate::versioning::object_version_id::TreeId;
+use crate::versioning::restriction;
 
 impl Change {
     /// A [`Change::Create`] of `canonical` with the caller's envelope.
@@ -128,7 +128,10 @@ impl Write {
     }
 
     /// The same write, a logical delete of a version that held `deleted`.
-    pub(crate) fn deleting(self, deleted: Option<crate::system_log::categories::ContentIds>) -> Self {
+    pub(crate) fn deleting(
+        self,
+        deleted: Option<crate::system_log::categories::ContentIds>,
+    ) -> Self {
         Self { deleted, ..self }
     }
 }
