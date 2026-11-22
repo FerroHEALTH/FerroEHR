@@ -395,7 +395,7 @@ pub(crate) async fn modified_between(
 fn record_intact(row: &PgRow) -> Result<bool, AuditError> {
     // NOTE: our own design (#6005); a record whose parts no longer join was changed after it was
     // written.
-    let document = match crate::access_log::store::document_of(row) {
+    let document = match crate::access_log::store::document_of(row, row.try_get("shared_part")?) {
         Ok(document) => document,
         Err(crate::access_log::store::AccessLogError::Unreadable { .. }) => return Ok(false),
         Err(other) => return Err(other.into()),

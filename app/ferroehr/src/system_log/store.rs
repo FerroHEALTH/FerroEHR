@@ -735,21 +735,6 @@ impl AuditStore {
         Ok(compiled)
     }
 
-    /// The typed FHIR R4 `AuditEvent` of a stored row, rendered under the
-    /// policy it names.
-    ///
-    /// # Errors
-    /// [`AuditError::Unreadable`] and [`AuditError::UnreadableJson`] when the
-    /// row or its policy does not read.
-    #[cfg(feature = "fhir")]
-    pub(super) async fn resource(
-        &self,
-        row: &PgRow,
-    ) -> Result<ihe_atna::balp::AuditEventResource, AuditError> {
-        let (policy, stored) = self.record_of(row).await?;
-        crate::system_log::render::render(stored, &policy)
-    }
-
     /// The FHIR R4 `AuditEvent` of the record at position `chain_seq` of
     /// `chain`, rendered as the ITI-81 search serves it; `None` when no
     /// record holds that position.
@@ -764,7 +749,9 @@ impl AuditStore {
         chain_seq: i64,
     ) -> Result<Option<serde_json::Value>, AuditError> {
         match self.row_at(chain, chain_seq).await? {
-            Some(row) => value_of(&self.resource(&row).await?).map(Some),
+            Some(row) => {
+                value_of(&self.resource(&row, row.try_get("shared_part")?).await?).map(Some)
+            }
             None => Ok(None),
         }
     }
@@ -846,10 +833,7 @@ impl AuditStore {
         // page exists without counting the matches.
         let more = rows.len() > search_page::page_size(filter);
         rows.truncate(search_page::page_size(filter));
-        let mut documents = Vec::with_capacity(rows.len());
-        for row in &rows {
-            documents.push(self.resource(row).await?.into_resource());
-        }
+        let documents = self.page_documents(&rows).await?;
         Ok(AuditPage {
             total,
             documents,

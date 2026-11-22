@@ -150,6 +150,19 @@ fn count_of(count: SelectStatement) -> Expr {
 /// is taken by before any record is read whole.
 const KEYS: [&str; 4] = ["chain", "chain_seq", "recorded_at", "stored_at"];
 
+/// The shared part of an access-log entry, in `audit_record`.
+const SHARED_PART: &str = "shared_part";
+
+/// The digest that names an access-log entry's shared part, in
+/// `audit_record`.
+const SHARED_DIGEST: &str = "shared_digest";
+
+/// A page record's shared part, carried only by the first record of the page
+/// that names it, so a part many entries share crosses the wire once a page
+/// (#6244); the server reuses it for the records after.
+const FIRST_NAMING: &str = "CASE WHEN row_number() OVER (PARTITION BY \"page_record\".\"shared_digest\" \
+     ORDER BY \"page_key\".\"position\") = 1 THEN \"page_record\".\"shared_part\" END";
+
 /// The page: the `count` records after the first `offset` of those
 /// `condition` selects, newest first, the first `served` of them read whole
 /// and the rest by their keys alone.
@@ -196,6 +209,7 @@ fn page(condition: &Cond, count: u64, offset: u64, served: u64) -> SelectStateme
     // is found by its chain and position rather than by a read of the whole store.
     let by_key = Query::select()
         .columns(record_columns().map(Alias::new))
+        .column(Alias::new(SHARED_DIGEST))
         .from((Alias::new(AUDIT), Alias::new(RECORD)))
         .and_where(Expr::col(Alias::new("chain")).eq(Expr::col((key.clone(), Alias::new("chain")))))
         .and_where(
@@ -207,7 +221,13 @@ fn page(condition: &Cond, count: u64, offset: u64, served: u64) -> SelectStateme
         .to_owned();
     let mut page = Query::select();
     page.columns(KEYS.map(|column| (key.clone(), Alias::new(column))))
-        .columns(record_columns().map(|column| (record.clone(), Alias::new(column))))
+        .columns(
+            record_columns()
+                .filter(|column| *column != SHARED_PART)
+                .map(|column| (record.clone(), Alias::new(column))),
+        )
+        .column((record.clone(), Alias::new(SHARED_DIGEST)))
+        .expr_as(Expr::cust(FIRST_NAMING), Alias::new(SHARED_PART))
         .from_subquery(keys, key.clone())
         .join_lateral(
             sea_query::JoinType::LeftJoin,

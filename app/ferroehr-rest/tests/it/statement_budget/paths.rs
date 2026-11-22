@@ -549,6 +549,10 @@ const BUDGETS: [Budget; 22] = [
 /// counts them (#6244): the largest median of three runs on main 4411906444
 /// plus 64 bytes, since a request's figure moves only by the width of the
 /// instants it sends, a few bytes between runs.
+/// The ITI-81 page has since carried each shared part on the first record
+/// naming it, where it carried it on every record (#6244): 29,476 bytes
+/// against 100,191, measured beside the merge base, and its ceiling fell by
+/// the 70,715 bytes it no longer moves.
 /// A held write's access-log entries have since gone in without the shared
 /// part the store holds and with their search tokens named by id (#6244):
 /// 5,974 to 6,157 bytes fewer on the three composition commits, the
@@ -565,7 +569,7 @@ const WIRE_BUDGETS: [(Path, u64); 22] = [
     (Path::EhrRead, 1831),
     (Path::AqlSingle, 5131),
     (Path::AqlPopulation, 6566),
-    (Path::Iti81, 100_255),
+    (Path::Iti81, 29_540),
     (Path::PartyRead, 5524),
     (Path::CommitContribution, 216_630),
     (Path::ReadAtTime, 131_699),

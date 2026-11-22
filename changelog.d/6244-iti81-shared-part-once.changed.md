@@ -1,0 +1,1 @@
+- The ITI-81 `AuditEvent` search reads the shared part of an access-log entry once a page, on the first record that names it, where it read it again for every record: a page of 20 events moves 29 kB from the database where it moved 100 kB. The served documents are unchanged.
