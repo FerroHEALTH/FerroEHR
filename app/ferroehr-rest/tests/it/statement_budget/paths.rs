@@ -1449,10 +1449,16 @@ fn wire_ledger(m: &Measure) -> String {
         total.sent.div_euclid(REQUESTS),
         total.received.div_euclid(REQUESTS),
     );
-    let mut lines: Vec<_> = m.wire.0.iter().collect();
-    lines.sort_by_key(|(_, tally)| std::cmp::Reverse(tally.bytes()));
-    for (statement, tally) in lines {
-        let text: String = statement.chars().take(160).collect();
+    let mut lines: Vec<_> = m
+        .wire
+        .own
+        .iter()
+        .map(|line| ("", line))
+        .chain(m.wire.background.iter().map(|line| ("(background) ", line)))
+        .collect();
+    lines.sort_by_key(|(_, (_, tally))| std::cmp::Reverse(tally.bytes()));
+    for (apart, (statement, tally)) in lines {
+        let text: String = apart.chars().chain(statement.chars()).take(160).collect();
         writeln!(
             out,
             "  {:>5} calls {:>8} B sent {:>8} B received  {text}",
