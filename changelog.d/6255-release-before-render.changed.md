@@ -1,0 +1,1 @@
+- A composition read gives its database connections back before it renders the response, so rendering FLAT, STRUCTURED or canonical XML no longer holds a connection of the clinical pool.
