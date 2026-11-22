@@ -62,6 +62,9 @@ BEGIN
             OLD.id
             USING ERRCODE = 'restrict_violation';
     END IF;
+    IF OLD.render_policy_id IS NOT NULL THEN
+        PERFORM audit.delivery_park_undelivered('access_log', ARRAY[OLD.id], 'tombstoned');
+    END IF;
     NEW.event_action := NULL;
     NEW.event_outcome := NULL;
     NEW.principal := NULL;
