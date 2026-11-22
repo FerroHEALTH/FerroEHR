@@ -53,9 +53,11 @@ use crate::versioning::{Kind, SigningCtx};
 
 mod conflict;
 pub mod held;
+mod last;
 mod standalone;
 
 use conflict::selector_in_use;
+use last::{with_last, with_prior};
 
 /// The `version_lifecycle_state` code of a logically deleted head.
 const DELETED: &str = "523";
@@ -697,52 +699,6 @@ async fn stored_heads(
         });
     }
     Ok(out)
-}
-
-/// `head` with what its last version with a body holds, when it is a deleted
-/// `PERSON`: the key its tombstone keeps.
-async fn with_last(
-    tx: &mut PgConnection,
-    mapping: &BindingMapping,
-    kind: Kind,
-    mut head: Head,
-) -> Result<Head, StorageError> {
-    if kind != Kind::Person || head.lifecycle_state != DELETED {
-        return Ok(head);
-    }
-    let row = sqlx::query(
-        "SELECT v.body, v.lifecycle_state FROM version v \
-         WHERE v.vo_id = $1 AND v.body IS NOT NULL ORDER BY v.sys_version DESC LIMIT 1",
-    )
-    .bind(head.vo_id)
-    .fetch_optional(&mut *tx)
-    .await?;
-    if let Some(row) = row {
-        let body: String = row.try_get("body")?;
-        head.last = Some((
-            row.try_get("lifecycle_state")?,
-            parsed(kind, &body, mapping)?,
-        ));
-    }
-    Ok(head)
-}
-
-/// [`with_last`] off what the gate read found of the versions before the
-/// commit, `prior`, in place of a read: a delete writes no body, so the last
-/// body before it is the last one.
-fn with_prior(
-    mapping: &BindingMapping,
-    kind: Kind,
-    mut head: Head,
-    prior: &crate::storage::version_repo::gate::Prior,
-) -> Result<Head, StorageError> {
-    if kind != Kind::Person || head.lifecycle_state != DELETED {
-        return Ok(head);
-    }
-    if let Some((_, lifecycle_state, body)) = &prior.last_body {
-        head.last = Some((lifecycle_state.clone(), parsed(kind, body, mapping)?));
-    }
-    Ok(head)
 }
 
 /// The `PERSON` containers every version of the `ROLE` `role` names as its

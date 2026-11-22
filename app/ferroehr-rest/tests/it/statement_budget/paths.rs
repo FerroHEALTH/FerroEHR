@@ -1132,9 +1132,16 @@ impl World {
         }
     }
 
-    /// A commit of the party of the `kind` fixture: an ORGANISATION, GROUP or
-    /// AGENT as the corpus holds it, a ROLE performed by the world's PERSON.
-    fn kind_commit(&self, kind: &str) -> Call {
+    /// The commit of `path`'s party kind from its fixture: an ORGANISATION,
+    /// GROUP or AGENT as the corpus holds it, a ROLE performed by the world's
+    /// PERSON.
+    fn kind_commit(&self, path: Path) -> Call {
+        let kind = match path {
+            Path::CommitOrganisation => "organisation",
+            Path::CommitGroup => "group",
+            Path::CommitRole => "role",
+            _ => "agent",
+        };
         let mut body: Value = serde_json::from_str(&demographic_fixture(kind)).expect("a fixture");
         if kind == "role" {
             body["performer"]["id"]["value"] = Value::from(self.party.clone());
@@ -1408,19 +1415,23 @@ impl World {
             ),
             Path::CommitStatus => self.status_commit(ehr, n),
             Path::ReadStatus => get(format!("{BASE}/ehr/{ehr}/ehr_status"), "nurse", JSON),
-            Path::CommitParty => Self::party_commit(self.person.clone()),
-            Path::CommitPartyScored => Self::party_commit(self.scored.clone()),
             Path::CommitUpdate => self.update(ehr, n),
             Path::CommitDelete => self.delete(n),
             Path::DirectoryCreate | Path::DirectoryUpdate | Path::DirectoryDelete => {
                 self.directory(path, n)
             }
             Path::ReadVersion => self.read_version(n),
+            _ => self.party_call(path, n),
+        }
+    }
+
+    /// The `n`th request of a party path.
+    fn party_call(&self, path: Path, n: usize) -> Call {
+        match path {
+            Path::CommitParty => Self::party_commit(self.person.clone()),
+            Path::CommitPartyScored => Self::party_commit(self.scored.clone()),
             Path::PartyUpdate | Path::PartyDelete => self.party_write(path, n),
-            Path::CommitOrganisation => self.kind_commit("organisation"),
-            Path::CommitGroup => self.kind_commit("group"),
-            Path::CommitRole => self.kind_commit("role"),
-            Path::CommitAgent => self.kind_commit("agent"),
+            _ => self.kind_commit(path),
         }
     }
 
