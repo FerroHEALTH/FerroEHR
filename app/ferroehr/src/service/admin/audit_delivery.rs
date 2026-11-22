@@ -60,16 +60,19 @@ impl FerroEhrService {
             .map_err(|error| ServiceError::internal(DELIVERY_STORE, error))
     }
 
-    /// Asks `sink_name` to deliver its parked record `id` of `chain_name`
-    /// again.
+    /// Does `act` to `sink_name`'s parked record `id` of `chain_name`: a
+    /// retry offers it again before the next record past the cursor, a
+    /// dismissal removes it, which the operator decided the sink will not
+    /// deliver.
     ///
     /// # Errors
     /// - `400`: a name of no sink or no log.
     /// - `404`: the sink parked no such record.
     /// - `conflict` (`409`): the local audit store is off.
     /// - `exception`: the store failed.
-    pub async fn retry_parked_audit_record(
+    pub async fn act_on_parked_audit_record(
         &self,
+        act: ParkedAct,
         sink_name: &str,
         chain_name: &str,
         id: i64,
@@ -77,35 +80,17 @@ impl FerroEhrService {
         let (sink, chain) = (sink(sink_name)?, chain(chain_name)?);
         let found = self
             .delivering_store()?
-            .act_on_parked(ParkedAct::Retry, sink, chain, id)
+            .act_on_parked(act, sink, chain, id)
             .await
             .map_err(|error| ServiceError::internal(DELIVERY_STORE, error))?;
-        parked_or_missing(found, sink_name, chain_name, id)
-    }
-
-    /// Removes `sink_name`'s parked record `id` of `chain_name`, which the
-    /// operator decided it will not deliver.
-    ///
-    /// # Errors
-    /// As [`Self::retry_parked_audit_record`].
-    pub async fn dismiss_parked_audit_record(
-        &self,
-        sink_name: &str,
-        chain_name: &str,
-        id: i64,
-    ) -> Result<(), ServiceError> {
-        let (sink, chain) = (sink(sink_name)?, chain(chain_name)?);
-        let found = self
-            .delivering_store()?
-            .act_on_parked(ParkedAct::Dismiss, sink, chain, id)
-            .await
-            .map_err(|error| ServiceError::internal(DELIVERY_STORE, error))?;
-        tracing::warn!(
-            sink = sink_name,
-            chain = chain_name,
-            record = id,
-            "an operator dismissed a parked audit record: the sink will not deliver it"
-        );
+        if found && act == ParkedAct::Dismiss {
+            tracing::warn!(
+                sink = sink_name,
+                chain = chain_name,
+                record = id,
+                "an operator dismissed a parked audit record: the sink will not deliver it"
+            );
+        }
         parked_or_missing(found, sink_name, chain_name, id)
     }
 

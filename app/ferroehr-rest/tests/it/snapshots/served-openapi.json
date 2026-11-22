@@ -1872,7 +1872,7 @@
         "summary": "Forget a sink: remove its cursors and parked records\n(`POST /admin/audit-delivery/forget`). **Our own extension.**",
         "operationId": "admin_forget_audit_sink",
         "requestBody": {
-          "description": "`{ \"sink\": … }`, a sink (`fhir_feed`, `syslog`) the configuration no longer names, or one an operator restarts from the delivery frontier.",
+          "description": "`{ \"sink\": … }`, a sink (`fhir_feed`, `syslog`) the configuration no longer names, or one an operator restarts from the records written after the server next starts.",
           "content": {
             "application/json": {
               "schema": {},
@@ -1885,7 +1885,7 @@
         },
         "responses": {
           "200": {
-            "description": "`cursors` and `parked`: how many of each went. A sink configured again starts at the delivery frontier of its first frontier round.",
+            "description": "`cursors` and `parked`: how many of each went. A sink configured again starts at the last id each log has drawn when the server next starts.",
             "content": {
               "application/json": {
                 "schema": {}

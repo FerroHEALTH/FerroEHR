@@ -33,9 +33,11 @@ use utoipa_axum::routes;
 use super::body::{AdminRefusal, required_str};
 use crate::api::RequestParts;
 use crate::api::guarded_handler;
+use crate::api::refusals::{ResponseMap, json_responses};
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
+use ferroehr::system_log::store::delivery::ParkedAct;
 
 /// The audit-delivery extension routes: **no ITS-REST contract** (module
 /// docs).
@@ -85,16 +87,13 @@ guarded_handler! {
             (status = 204, description = "The sink offers the record before the next record \
                                           past its cursor; delivered, it leaves the parked \
                                           set, refused again, it stays parked."),
-            (status = 400, description = "The body is not the object above.",
-             body = serde_json::Value),
-            (status = 404, description = "The sink parked no such record.",
-             body = serde_json::Value),
-            (status = 409, description = "The local audit store is off.",
-             body = serde_json::Value),
+            ParkedRefusal,
             AdminRefusal
         )
     )]
-    admin_retry_parked_audit_record => |state, parts| super::body::gated(state, parts, retry)
+    admin_retry_parked_audit_record => |state, parts| super::body::gated(state, parts, |state, parts| {
+        on_parked(state, parts, ParkedAct::Retry)
+    })
 }
 
 guarded_handler! {
@@ -109,16 +108,13 @@ guarded_handler! {
         responses(
             (status = 204, description = "The record leaves the parked set; the sink never \
                                           delivers it. The record stays in the store."),
-            (status = 400, description = "The body is not the object above.",
-             body = serde_json::Value),
-            (status = 404, description = "The sink parked no such record.",
-             body = serde_json::Value),
-            (status = 409, description = "The local audit store is off.",
-             body = serde_json::Value),
+            ParkedRefusal,
             AdminRefusal
         )
     )]
-    admin_dismiss_parked_audit_record => |state, parts| super::body::gated(state, parts, dismiss)
+    admin_dismiss_parked_audit_record => |state, parts| super::body::gated(state, parts, |state, parts| {
+        on_parked(state, parts, ParkedAct::Dismiss)
+    })
 }
 
 guarded_handler! {
@@ -129,12 +125,12 @@ guarded_handler! {
         request_body(content = serde_json::Value,
                      description = "`{ \"sink\": … }`, a sink (`fhir_feed`, `syslog`) the \
                                     configuration no longer names, or one an operator \
-                                    restarts from the delivery frontier.",
+                                    restarts from the records written after the server next starts.",
                      example = json!({ "sink": "syslog" })),
         responses(
             (status = 200, description = "`cursors` and `parked`: how many of each went. A \
-                                          sink configured again starts at the delivery \
-                                          frontier of its first frontier round.",
+                                          sink configured again starts at the last id \
+                                          each log has drawn when the server next starts.",
              body = serde_json::Value),
             (status = 400, description = "The body does not name a sink.",
              body = serde_json::Value),
@@ -172,24 +168,34 @@ fn parked(parts: &RequestParts) -> Result<(String, String, i64), RestError> {
     Ok((sink, chain, record_id))
 }
 
-/// The `admin_retry_parked_audit_record` operation.
-async fn retry(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+/// The `admin_retry_parked_audit_record` and
+/// `admin_dismiss_parked_audit_record` operations: `act` done to the parked
+/// record the body names.
+async fn on_parked(
+    state: AppState,
+    parts: RequestParts,
+    act: ParkedAct,
+) -> Result<Response, RestError> {
     let (sink, chain, id) = parked(&parts)?;
     state
         .backend()
-        .retry_parked_audit_record(&sink, &chain, id)
+        .act_on_parked_audit_record(act, &sink, &chain, id)
         .await?;
     Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }
 
-/// The `admin_dismiss_parked_audit_record` operation.
-async fn dismiss(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
-    let (sink, chain, id) = parked(&parts)?;
-    state
-        .backend()
-        .dismiss_parked_audit_record(&sink, &chain, id)
-        .await?;
-    Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
+/// The refusals of a retry and a dismissal past the admin gate, as one
+/// response map for the OpenAPI document.
+struct ParkedRefusal;
+
+impl utoipa::IntoResponses for ParkedRefusal {
+    fn responses() -> ResponseMap {
+        json_responses(&[
+            (400, "The body is not the object above."),
+            (404, "The sink parked no such record."),
+            (409, "The local audit store is off."),
+        ])
+    }
 }
 
 /// The `admin_forget_audit_sink` operation.
