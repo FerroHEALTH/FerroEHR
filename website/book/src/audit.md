@@ -1042,24 +1042,23 @@ tokens, and answers each request once that commit is durable, so under load
 one commit serves many requests. An entry is in every read of the log from
 that commit on.
 
-A round on every replica's audit runtime, about once a second, moves the
-access log's frontier, owes the entries below it to the configured feeds in
-one statement, and about once a minute seals them in one window
-([Seals, checkpoints and the transfer of a log](#seals-checkpoints-and-the-transfer-of-a-log)).
-The same runtime's **chainer** links the system records into the system
-chain moments after they are written: it gathers what the requests of the
-next fifth of a second write into one round, every replica looks every two
-seconds for the rows a stopped replica left, and a graceful stop chains what
-the intake holds and seals what the access log holds. The
-`audit_sender` readiness indicator reads `DEGRADED` when the oldest system
-intake row has waited longer than 10 seconds. A record is durable from its
+A system record is written the same way, once, into `audit.audit_event`,
+by one statement per batch, and is in every read from its commit on.
+
+A round on every replica's audit runtime, the **chainer**, about once a
+second moves the frontier of both logs, owes the records below it to the
+configured feeds, and about once a minute seals them in windows
+([Seals, checkpoints and the transfer of a log](#seals-checkpoints-and-the-transfer-of-a-log));
+a graceful stop seals what both logs hold. The `audit_sender` readiness
+indicator reads `DEGRADED` when the oldest record of either log has waited
+longer than three minutes for its seal. A record is durable from its
 commit: a restart, a crash or a lost replica leaves nothing behind.
 
 A write's records live in the audit cluster, which production keeps apart
 from the clinical and party ones, so they cannot join the write's own
 transaction. They are written first, **held** under a reservation id (an
-`audit.access_log_hold` row per entry, the reservation on a system intake
-row), which every read, the feeds and the sealer skip; the id goes into the
+`audit.access_log_hold` row per entry, an `audit.audit_event_hold` row per
+system record), which every read, the feeds and the sealer skip; the id goes into the
 write's own domain in the write's transaction, and the write commits. Once
 the response is built, the reservation goes to the chainer, whose next round
 releases the held records, so a write costs two commits. A replica that
@@ -1112,22 +1111,27 @@ puts the same duty on the deployment's side.
 
 An audit trail that anything with the application's database password can
 quietly rewrite is a log, not an accountability record. The local store is
-therefore tamper-**evident**. The system chain's records (`audit.audit_event`)
-are linked into a SHA-256 hash chain maintained inside PostgreSQL, so each
-record commits to its predecessor and to its own content; the chain is built
-by the database itself, so it covers every writer. The access log's entries
-are sealed in windows, each seal following the one before it
+therefore tamper-**evident**. The system records (`audit.audit_event`, the
+system chain) and the access log's entries are each sealed in windows, each
+seal following the one before it and covering every record of its window by
+its position and content digest
 ([Seals, checkpoints and the transfer of a log](#seals-checkpoints-and-the-transfer-of-a-log)).
 
-A request writes each record once, in `audit.audit_event`, and never changes
-it. The chainer links it into the chain with a row of its own in
-`audit.audit_event_link`, which holds the record's position, its
-predecessor's digest and its own. A record's digest covers every column of
-the record and that position and predecessor digest. A column added by a
-later release joins the digest in the same release. Until the chainer links
-it, a record is in no search, no feed and no verification. Which records a
-sink still owes is the sink's outbox (`audit.fhir_feed_outbox`,
-`audit.syslog_outbox`): a record leaves it when the repository takes it.
+A request writes each system record once, in `audit.audit_event`, and never
+changes it. Its position (`seq`) is drawn after its transaction took its
+id, and its content digest is computed by the server when it writes the
+record: the SHA-256 of the RFC 8785 form of the array
+`["ferroehr.audit_event.v6", {column: value}]` over every column but `seq`
+and the digest, with SQL `NULL` as `null`, booleans as booleans, text and
+UUIDs as strings, integers (`integer[]` element by element) as decimal
+strings, instants as `YYYY-MM-DDTHH:MM:SS.ffffffZ` in UTC, dates as
+`YYYY-MM-DD`, `bytea` as lower-case hexadecimal and `jsonb` as its value
+(`system_log::content_digest`, with the SQL that builds the object for an
+auditor). A column added by a later release joins the digest under a new
+form in the same release. A record a write still holds is in no search, no
+feed and no window. Which records a sink still owes is the sink's outbox
+(`audit.fhir_feed_outbox`, `audit.syslog_outbox`): a record leaves it when
+the repository takes it.
 
 The store keeps a record's facts in columns and renders its FHIR `AuditEvent`
 from them when the record is read (ITI-81) or delivered (the FHIR feed). What
@@ -1143,45 +1147,40 @@ that holds records written by an earlier release, and names the remedy.
 
 Four controls sit on top of it, and they are separate on purpose:
 
-- **The table refuses the ordinary rewrite paths outright.** The only permitted
-  change to a stored record is the per-sink forwarding stamp; an `UPDATE` of any
-  other column, a `DELETE`, and a `TRUNCATE` are refused by the database.
-  Retention pruning goes through the one sanctioned deletion path, which records
-  *which* records it removed and what the surviving chain must link back to, so
-  reaping does not look like tampering, and tampering does not look like
-  reaping.
+- **The table refuses the ordinary rewrite paths outright.** An `UPDATE`, a
+  `DELETE` and a `TRUNCATE` of a stored record are refused by the database,
+  and so are a change to a seal or to a reaped position.
+  Retention pruning goes through the one sanctioned deletion path, which keeps
+  each removed record's position and content digest
+  (`audit.audit_event_reaped`) so its window still verifies, and removes those
+  only once every record of a sealed window is reaped, recording the window as
+  folded; so reaping does not look like tampering, and tampering does not look
+  like reaping.
 - **The privileges are narrow.** The runtime role may record an event, stamp it
   forwarded, and read the trail back. It holds nothing that can rewrite a
-  record, remove one, or alter the chain's own bookkeeping. That posture is only
+  record, remove one, or alter a reaped position. That posture is only
   fully in force with `database.migrations = "verify"`; see
   [Operations](operations.md#database-roles-and-least-privilege), because a
   self-migrating server owns the schema and can therefore turn the enforcement
   off.
-- **Verification is something you can run yourself.** For the system chain
-  it is a query that recomputes every digest, re-walks every link, and checks
-  both ends of the chain; for the access log it is `ferroehr access-log
-  verify` (or `POST /admin/access-log/verify`), which recomputes every
-  sealed window:
-
-  ```sql
-  SELECT * FROM audit.verify_audit_chain();       -- the system chain
-  ```
-
-  An empty result means the trail is intact. Any row names one record (its
-  chain position, its id, when it was recorded) and what is wrong with it:
-  content modified after it was written, a render policy changed or missing,
-  records deleted with no retention record for the removal,
-  or records removed from the end of the chain where no successor would have
-  noticed.
+- **Verification is something you can run yourself.** For the system
+  records it is `ferroehr audit-chain verify`, for the access log
+  `ferroehr access-log verify` (or `POST /admin/access-log/verify`); each
+  recomputes every sealed window, every record's content digest, and follows
+  every seal from the one before it to the seal state. No finding means the
+  trail is intact. A finding names one record or window (its position, the
+  record's id and time when it is still there) and what is wrong with it:
+  content modified after it was written, a render policy, search token or
+  search set changed or missing, a record changed, removed or inserted inside
+  a sealed window, or seals removed from the end.
 - **The server runs the check itself, on a schedule.** With the local store on,
   the check runs one minute after boot and then every
   `[audit.store] verify_interval` (default `3600`, one hour; `0` turns
-  it off). Each run verifies the records written since the newest link an
-  earlier run found intact, and the chain head, so its cost follows the
-  records written since rather than the size of the trail. It walks each
-  chain from its own cursor to the head it started with, one statement per
-  step (`audit.verify_audit_chain_step()`, and for the access log the
-  sealed windows after the last one found intact), each sized to take about half a
+  it off). Each run verifies the windows sealed since the newest window an
+  earlier run found intact, and the seal state, so its cost follows the
+  records sealed since rather than the size of the trail. It walks each
+  log's sealed windows from its own cursor, one snapshot per step, each
+  sized to take about half a
   second, and each intact step moves the cursor, so a backlog of any size is
   verified in one run and no statement nears the
   `[database] statement_timeout`. After each step the run pauses at least as
@@ -1197,7 +1196,7 @@ Four controls sit on top of it, and they are separate on purpose:
   indicator reads `DEGRADED` and names the chain.
   A full pass
   runs every `[audit.store] full_verify_interval` (default `604800`,
-  one week; `0` leaves it to the query above) and after every run that found
+  one week; `0` leaves it to the commands above) and after every run that found
   damage, so damage to an older record stays reported. A run that finds damage logs at `ERROR`, one summary line with the
   finding count and one line per finding (the first 20), and adds the count to
   the `atna_audit_chain_findings` counter with `kind = "damage"`. A run that
@@ -1207,15 +1206,17 @@ Four controls sit on top of it, and they are separate on purpose:
   when damaged or unverifiable; its detail on `GET /management/health` names
   the first finding. It never flips
   readiness, because the trail keeps recording while the damage is
-  investigated. Alert on the counter or on that component, and use the query
-  above to see every finding. Each replica runs its own check.
+  investigated. Alert on the counter or on that component, and use the
+  commands above to see every finding. Each replica runs its own check.
 
 > [!IMPORTANT]
 > This is **detection, not prevention**, and the boundary is worth stating
-> plainly. The chain and the unsigned seals are unkeyed, so a party with
-> unrestricted write access to the `audit` schema (the database owner, or a
-> superuser) can delete a record and recompute every hash after it; a signed
-> checkpoint published outside the database shows that for the access log. What closes that case is keeping the trail
+> plainly. The unsigned seals are unkeyed, so a party with unrestricted
+> write access to the `audit` schema (the database owner, or a superuser) can
+> delete a record and recompute every seal after it; a signed seal kept
+> outside the database shows that. A record newer than the last seal, at
+> most a minute plus the frontier's lag, is protected by the refused changes
+> and the grants alone. What closes that case is keeping the trail
 > somewhere that party does not control. Enable
 > `[audit.syslog]` or `[audit.fhir_feed]` so records leave the box as they are
 > written, and give the server an app-role-only DSN so it is not that party.
@@ -1223,11 +1224,12 @@ Four controls sit on top of it, and they are separate on purpose:
 ## Seals, checkpoints and the transfer of a log
 
 The records of the openEHR access log (`audit.access_log_record`) hold only
-the accesses to EHR data, apart from the `audit_event` records above, which
-form the system chain (an authentication, a template, party or application
-operation). The access log carries no chain (#6242). A request writes each
-entry once, before its response, and every reader, the delivery and the
-sealer read that row.
+the accesses to EHR data, apart from the `audit_event` records above, the
+system chain (an authentication, a template, party or application
+operation). Neither carries a chain (#6242). A request writes each entry or
+system record once, before its response, and every reader, the delivery and
+the sealer read that row. What follows holds for both logs, each with its
+own id sequence, holds, seals and tag, unless it names one.
 
 - **The frontier.** A round on every replica's audit runtime, about once a
   second, moves the log's frontier: the highest entry id at or below which
@@ -1243,7 +1245,7 @@ sealer read that row.
   SHA-256 of this text, which you can rebuild from the stored rows:
 
   ```text
-  27:ferroehr.access_log.seal.v1
+  27:ferroehr.access_log.seal.v1   (the system records: 27:ferroehr.system_log.seal.v1)
   <length>:<window number>
   <length>:<first entry id>
   <length>:<last entry id>
@@ -1257,9 +1259,10 @@ sealer read that row.
   Each field is its length in bytes in decimal, a colon, the field and a
   line feed; integers are decimal, digests lower-case hexadecimal. The first
   window follows the SHA-256 of the version tag. A tombstone keeps the content
-  digest of the entry it replaced, so its window verifies after the content
-  is gone. `GET /admin/access-log/seals` answers the seals over a span of
-  entry ids.
+  digest of the entry it replaced, and a reaped system record leaves its
+  position and content digest, so its window verifies after the content is
+  gone. `GET /admin/access-log/seals` answers the access log's seals over a
+  span of entry ids.
 - **The signed checkpoint.** With an OpenPGP key in the version-signing
   keyring, each seal is signed as the `ACCESS_LOG_CHECKPOINT` of the log up
   to the window's last entry id, whose `digest` is the seal's digest, in the
@@ -1269,10 +1272,10 @@ sealer read that row.
   checkpoint` and `POST /admin/access-log/checkpoint` seal every committed
   entry and answer the newest checkpoint; `GET /admin/access-log/checkpoint`
   answers the newest stored one, or the one at `sequence`.
-- **What is left unsealed.** An entry newer than the last seal, at most a
-  minute and the frontier's lag, is protected by the refused `UPDATE` and
-  `DELETE` and by the runtime role's grants alone. The CRA risk assessment
-  (C4, C5) and hazard H7 state that window.
+- **What is left unsealed.** A record of either log newer than the last
+  seal, at most a minute and the frontier's lag, is protected by the refused
+  `UPDATE` and `DELETE` and by the runtime role's grants alone. The CRA risk
+  assessment (C4, C5) and hazard H7 state that window.
 - **Publish the checkpoints outside the database.** Someone who can write
   the database can remove the newest windows together with their seals, and
   nothing left in the database shows it. Set `[audit.access_log]
@@ -1307,12 +1310,16 @@ sealer read that row.
   tombstone is kept as long again and then folds, leaving its uid, bundle
   and content digest so the bundle still verifies. A repeated import stores
   nothing twice.
-- **The system chain is sealed too.** The same schedule and key seal the
-  head of the system chain (`audit.audit_chain_seal`).
-  `ferroehr audit-chain seal` seals one on demand and prints it, and
-  `ferroehr audit-chain verify [--seal <file>]` recomputes the system chain,
-  checks the seal's signature and that the link at its position is the one
-  it fixes, and exits 1 when the chain does not verify.
+- **The system records are sealed too.** The same sealer and key seal their
+  windows (`audit.audit_event_seal`), each signed as a seal naming the
+  window's last position and its digest. `ferroehr audit-chain seal` seals
+  every committed record on demand and prints the newest signed seal, and
+  `ferroehr audit-chain verify [--seal <file>]` recomputes every window,
+  checks the seal's signature and that the window ending at its position has
+  the digest it fixes, and exits 1 when the records do not verify. Retention
+  removes a system record at its own end and keeps its position and content
+  digest; once every record of a sealed window is reaped, the window's
+  reaped positions are removed and the window recorded as folded.
 - **The erasure is recorded once.** `POST /admin/access-log/erase` writes the
   tombstone and the entry that records the erasure in one transaction; the
   erasure is not written a second time as an `audit_event` record.

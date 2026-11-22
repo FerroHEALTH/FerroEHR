@@ -1386,9 +1386,9 @@ profile = "sandbox"
 #? verify_interval = "1h"
 # The time between two scheduled full passes over the hash chain
 # (`FERROEHR__AUDIT__STORE__FULL_VERIFY_INTERVAL`), which also recompute the
-# records before the checkpoint; `"0s"` leaves the full pass to `SELECT * FROM
-# audit.verify_audit_chain()` on demand. Default one week. A run that found
-# damage is always followed by a full pass. Optional.
+# windows before the cursor; `"0s"` leaves the full pass to `ferroehr
+# audit-chain verify` on demand. Default one week. A run that found damage is
+# always followed by a full pass. Optional.
 #? full_verify_interval = "7d"
 # How long a record may wait past its chain's verification cursor before the
 # `audit_chain` health indicator reads `DEGRADED`

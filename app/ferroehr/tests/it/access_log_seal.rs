@@ -39,9 +39,9 @@ async fn id_of(pool: &PgPool, n: u32) -> i64 {
 )]
 async fn settled_frontier(pool: &PgPool, frontier: &mut Frontier) -> i64 {
     let mut conn = pool.acquire().await.expect("connection");
-    let mut reached = frontier.round(&mut conn).await.expect("a round");
+    let mut reached = frontier.round(&mut conn).await.expect("a round").access_log;
     for _ in 0..5 {
-        let next = frontier.round(&mut conn).await.expect("a round");
+        let next = frontier.round(&mut conn).await.expect("a round").access_log;
         if next == reached {
             break;
         }
@@ -60,7 +60,7 @@ async fn frontier_reaching(pool: &PgPool, frontier: &mut Frontier, target: i64) 
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
     let mut conn = pool.acquire().await.expect("connection");
     loop {
-        let reached = frontier.round(&mut conn).await.expect("a round");
+        let reached = frontier.round(&mut conn).await.expect("a round").access_log;
         if reached >= target || std::time::Instant::now() > deadline {
             return reached;
         }
@@ -71,7 +71,7 @@ async fn frontier_reaching(pool: &PgPool, frontier: &mut Frontier, target: i64) 
 /// The findings of a full verification of the windows.
 async fn findings(store: &AccessLogStore) -> Vec<String> {
     store
-        .verify_windows(false)
+        .verify_windows(&ferroehr::access_log::seal::ACCESS_LOG, false)
         .await
         .expect("the verification runs")
         .into_iter()
@@ -147,7 +147,10 @@ async fn open_write_stays_unsealed(tokens: Vec<ferroehr::access_log::intake::Int
         reached < later,
         "the frontier stops below the open write's id while it runs: {reached} against {later}"
     );
-    let first = store.seal_to(reached).await.expect("a seal");
+    let first = store
+        .seal_to(&ferroehr::access_log::seal::ACCESS_LOG, reached)
+        .await
+        .expect("a seal");
     let sealed_through: i64 =
         sqlx::query_scalar("SELECT last_id FROM audit.access_log_seal_state WHERE singleton")
             .fetch_one(&pool)
@@ -161,7 +164,10 @@ async fn open_write_stays_unsealed(tokens: Vec<ferroehr::access_log::intake::Int
     assert!(reached >= later, "the frontier passes both once both ended");
     assert!(
         matches!(
-            store.seal_to(reached).await.expect("a seal"),
+            store
+                .seal_to(&ferroehr::access_log::seal::ACCESS_LOG, reached)
+                .await
+                .expect("a seal"),
             SealRound::Sealed { .. }
         ),
         "the entries below the frontier are sealed"
@@ -225,7 +231,10 @@ async fn sealed_three(pool: &PgPool) -> AccessLogStore {
         .append(vec![entry(1), entry(2), entry(3)])
         .await
         .expect("the entries");
-    store.seal_committed().await.expect("sealed");
+    store
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+        .await
+        .expect("sealed");
     assert_eq!(
         findings(&store).await,
         Vec::<String>::new(),
@@ -303,7 +312,10 @@ async fn an_inserted_record_in_a_sealed_window_is_reported() {
         rolled.rollback().await.expect("rollback");
     }
     store.append(vec![entry(3)]).await.expect("the last entry");
-    store.seal_committed().await.expect("sealed");
+    store
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+        .await
+        .expect("sealed");
     assert_eq!(findings(&store).await, Vec::<String>::new());
     let (first, last) = (id_of(&pool, 1).await, id_of(&pool, 3).await);
     assert!(
@@ -483,8 +495,9 @@ async fn every_inserting_statement_takes_its_xid_before_its_first_id() {
 }
 
 /// Every statement in the server's code and migrations that inserts into
-/// `audit.access_log_entry` reads `pg_current_xact_id()` in the CTE its rows
-/// join, so a new inserting path that leaves it out fails here (#6242).
+/// `audit.access_log_entry` or `audit.audit_event` reads
+/// `pg_current_xact_id()` in the CTE its rows join, so a new inserting path
+/// that leaves it out fails here (#6242).
 #[test]
 fn no_statement_inserts_an_entry_without_taking_its_xid_first() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -508,7 +521,7 @@ fn no_statement_inserts_an_entry_without_taking_its_xid_first() {
             }
         }
     }
-    let mut inserts = 0;
+    let mut inserts = std::collections::BTreeMap::new();
     for file in files {
         let text = std::fs::read_to_string(&file).expect("a source file");
         let code: String = if file.extension().is_some_and(|ext| ext == "sql") {
@@ -520,34 +533,41 @@ fn no_statement_inserts_an_entry_without_taking_its_xid_first() {
             text
         };
         let flat: String = code.split_whitespace().collect::<Vec<_>>().join(" ");
-        let mut rest = flat.as_str();
-        while let Some(at) = rest.find("INSERT INTO audit.access_log_entry ") {
-            let before = &rest[..at];
-            let statement_start = before
-                .rfind(';')
-                .into_iter()
-                .chain(before.rfind("const "))
-                .max()
-                .unwrap_or(0);
-            let statement = &rest[statement_start..];
-            let end = statement[at - statement_start..]
-                .find(';')
-                .map_or(statement.len(), |end| at - statement_start + end);
-            let statement = &statement[..end];
-            inserts += 1;
-            assert!(
-                statement.contains(
-                    "own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken)"
-                ) && statement.contains("FROM own_xid CROSS JOIN"),
-                "{}: an insert into access_log_entry joins no own_xid CTE: {statement}",
-                file.display()
-            );
-            rest = &rest[at + 1..];
+        for table in ["audit.access_log_entry", "audit.audit_event"] {
+            let needle = format!("INSERT INTO {table} ");
+            let mut rest = flat.as_str();
+            while let Some(at) = rest.find(&needle) {
+                let before = &rest[..at];
+                let statement_start = before
+                    .rfind(';')
+                    .into_iter()
+                    .chain(before.rfind("const "))
+                    .max()
+                    .unwrap_or(0);
+                let statement = &rest[statement_start..];
+                let end = statement[at - statement_start..]
+                    .find(';')
+                    .map_or(statement.len(), |end| at - statement_start + end);
+                let statement = &statement[..end];
+                *inserts.entry(table).or_insert(0) += 1;
+                assert!(
+                    statement.contains(
+                        "own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken)"
+                    ) && statement.contains("FROM own_xid CROSS JOIN"),
+                    "{}: an insert into {table} joins no own_xid CTE: {statement}",
+                    file.display()
+                );
+                rest = &rest[at + 1..];
+            }
         }
     }
     assert!(
-        inserts >= 2,
-        "the plain insert and the intake statement are found"
+        inserts.get("audit.access_log_entry").copied().unwrap_or(0) >= 2,
+        "the plain insert and the intake statement are found: {inserts:?}"
+    );
+    assert!(
+        inserts.get("audit.audit_event").copied().unwrap_or(0) >= 1,
+        "the system records' write is found: {inserts:?}"
     );
 }
 

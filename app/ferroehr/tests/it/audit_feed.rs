@@ -10,11 +10,12 @@
 
 use std::time::Duration;
 
-/// The linked system records the FHIR Feed owes none of: every record once
-/// the outbox is empty, since a record leaves the outbox only when the
-/// repository accepted it (#6203).
+/// The system records owed to the sinks that the FHIR Feed owes none of
+/// any more: every owed record once the outbox is empty, since a record
+/// leaves the outbox only when the repository accepted it (#6203, #6242).
 const DELIVERED: &str = "SELECT CASE WHEN EXISTS (SELECT 1 FROM audit.fhir_feed_outbox) THEN 0 \
-     ELSE (SELECT count(*) FROM audit.audit_event_link) END";
+     ELSE (SELECT count(*) FROM audit.audit_event e \
+            WHERE e.seq <= (SELECT o.through_id FROM audit.audit_event_owed o)) END";
 
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -346,7 +347,7 @@ async fn count(pool: &sqlx::PgPool, sql: &'static str) -> i64 {
         .expect("count")
 }
 
-/// Chains every record the intake holds, then stops the sender, so a count
+/// Seals every committed record, then stops the sender, so a count
 /// read afterwards never depends on the shutdown's bounded drain (#6128).
 #[expect(
     clippy::expect_used,
@@ -358,7 +359,7 @@ async fn settle_and_stop(sender: AuditSender, handle: AuditHandle) {
         .store()
         .settle(Chains::BOTH)
         .await
-        .expect("the intake is chained");
+        .expect("the records are sealed");
     drop(sender);
     handle.shutdown(Duration::from_secs(2)).await;
 }

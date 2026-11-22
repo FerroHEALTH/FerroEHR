@@ -157,9 +157,6 @@ pub async fn reconcile(
         // NOTE: our own design (#5762), the lease's transaction, which no request makes.
         tx.commit().await?;
         drop(lease);
-        if done.released > 0 {
-            store.mark_released();
-        }
         for (pool, spent) in [&domains.clinical, &domains.party].into_iter().zip(spent) {
             done.removed = done.removed.saturating_add(remove(pool, &spent).await?);
         }

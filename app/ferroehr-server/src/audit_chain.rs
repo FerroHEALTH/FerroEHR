@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `ferroehr audit-chain …`: the seal of the system chain and its
-//! verification (#5573).
+//! `ferroehr audit-chain …`: the seals of the system records and their
+//! verification (#5573, #6242).
 //!
-//! The system chain holds the records outside the access log. The keyring
+//! The system records are the audit records outside the access log. The keyring
 //! and the trusted certificates are the access log's (`[record.signing]`,
 //! `[audit.access_log] trusted_key_files`). No openEHR spec governs audit
 //! signing: our own design.
@@ -20,12 +20,12 @@ use ferroehr::versioning::signature::signer::Signer;
 /// `ferroehr audit-chain …` subcommands.
 #[derive(Debug, Subcommand)]
 pub enum AuditChainCmd {
-    /// Seal the head of the system chain with the keyring's key, and print
-    /// the seal.
+    /// Seal every committed system record in windows with the keyring's
+    /// key, and print the newest window's seal.
     Seal,
-    /// Verify the system chain against its newest seal, or the one in
-    /// `--seal`, and print every finding. Exits non-zero when the chain does
-    /// not verify.
+    /// Verify every sealed window of the system records against the newest
+    /// seal, or the one in `--seal`, and print every finding. Exits non-zero
+    /// when the records do not verify.
     Verify {
         /// A seal kept outside this system, as the JSON
         /// `ferroehr audit-chain seal` printed.
@@ -62,7 +62,7 @@ pub async fn run(
                 Ok(())
             }
             None => Err(anyhow::anyhow!(
-                "the system chain is empty: nothing to seal"
+                "no window of the system records is sealed and signed"
             )),
         },
         AuditChainCmd::Verify { seal } => verify(&seals, seal.as_deref()).await,

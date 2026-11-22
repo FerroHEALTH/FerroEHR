@@ -60,10 +60,10 @@ mod writers;
 
 use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
-use crate::system_log::AuditError;
 use crate::system_log::event::{AuditEvent, EventOutcome, EventType, ObjectClass};
 use crate::system_log::render::RenderPolicy;
 use crate::system_log::store::frontier::Owed;
+use crate::system_log::{AuditError, content_digest};
 #[cfg(feature = "fhir")]
 use crate::system_log::{
     categories::{ClassifiedContent, MapDigest},
@@ -80,14 +80,19 @@ use writers::{Pinned, WritePolicy, Writers};
 #[cfg(feature = "fhir")]
 use ferrohealth_smart::assurance::AssuranceLevel;
 
-/// The batched intake of the system chain: each record written once into
+/// The batched write of the system records: each record written once into
 /// `audit.audit_event`, one row per element of the parallel column arrays,
-/// every row under the one render policy in `$38`, and one intake row naming
-/// them in their order, held under the reservation in `$54`, or none (#6203).
+/// every row under the one render policy in `$38`, with the content digest
+/// its writer computed in `$57` and its write time in `$56`, and held under
+/// the reservation in `$54`, when there is one, by a row of
+/// `audit.audit_event_hold` (#6203, #6242). The transaction takes its xid in
+/// the materialized `own_xid` every row joins, before any row draws its
+/// position, which the frontier proof rests on ([`crate::access_log::frontier`]).
 /// Each record's search tokens arrive as the text of an `integer[]` in `$39`,
 /// since an array of arrays unnests element by element, and its id in `$53`;
 /// `$55` is the level each record is recorded for review at.
-const INSERT_BATCH: &str = "WITH written AS (INSERT INTO audit.audit_event (id, recorded_at, action, outcome, \
+const INSERT_BATCH: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken), \
+     written AS (INSERT INTO audit.audit_event (id, recorded_at, action, outcome, \
      event_code, operation, principal, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
@@ -95,13 +100,13 @@ const INSERT_BATCH: &str = "WITH written AS (INSERT INTO audit.audit_event (id, 
      retention_ends, retention_stated, permit, issuer, client_id, ehr_id, subject_namespace, \
      subject_lookup_failed, category_content, render_policy, search_tokens, binding, guest, \
      party, party_groups, provider, representation, external_fields, agreement, actor_chain, \
-     facilities, binding_detail, summary, token_attributes, review) \
+     facilities, binding_detail, summary, token_attributes, review, stored_at, content_digest) \
      SELECT u.id, u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, \
      u.c13, u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, \
      u.c26, u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, \
      $38::bytea, u.tokens::integer[], u.c40, u.c41, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, \
-     u.c48, u.c49, u.c50, u.c51, u.c52, u.review \
-     FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
+     u.c48, u.c49, u.c50, u.c51, u.c52, u.review, u.stored_at, u.content_digest \
+     FROM own_xid CROSS JOIN UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
      $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], \
      $11::text[], $12::text[], $13::text[], $14::text[], $15::bigint[], $16::text[], \
      $17::jsonb[], $18::jsonb[], $19::bigint[], $20::jsonb[], $21::text[], \
@@ -110,15 +115,14 @@ const INSERT_BATCH: &str = "WITH written AS (INSERT INTO audit.audit_event (id, 
      $33::text[], $34::text[], $35::text[], $36::boolean[], $37::jsonb[], $39::text[], \
      $40::text[], $41::boolean[], $42::jsonb[], $43::jsonb[], $44::jsonb[], $45::jsonb[], \
      $46::jsonb[], $47::jsonb[], $48::jsonb[], $49::jsonb[], $50::jsonb[], $51::jsonb[], \
-     $52::jsonb[], $53::uuid[], $55::text[]) \
+     $52::jsonb[], $53::uuid[], $55::text[], $56::timestamptz[], $57::bytea[]) \
      AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, \
      c19, c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, \
-     c37, tokens, c40, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, id, review) \
-     RETURNING id) \
-     INSERT INTO audit.audit_event_intake (events, reserved_by) \
-     SELECT array_agg(w.id ORDER BY o.n), $54::uuid FROM written w \
-     JOIN unnest($53::uuid[]) WITH ORDINALITY AS o(id, n) ON o.id = w.id \
-     HAVING count(*) > 0";
+     c37, tokens, c40, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, id, review, \
+     stored_at, content_digest) \
+     RETURNING seq) \
+     INSERT INTO audit.audit_event_hold (seq, reserved_by) \
+     SELECT w.seq, $54::uuid FROM written w WHERE $54::uuid IS NOT NULL";
 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
@@ -227,9 +231,6 @@ pub struct AuditStore {
     /// signs their links as `[audit.access_log]` asks once the server installs
     /// it ([`Self::use_access_log`]); an unsigning one until then.
     access_log: Arc<std::sync::OnceLock<AccessLogStore>>,
-    /// Which chains have intake rows this process wrote and no chainer
-    /// round has looked at since.
-    pending: Arc<intake::Pending>,
     /// The committed reservations the chainer's next round releases.
     releases: Arc<intake::Releases>,
     /// The gathered intake write of the entries, started on first use.
@@ -253,7 +254,6 @@ impl AuditStore {
             #[cfg(feature = "fhir")]
             tokens: Arc::new(crate::system_log::search::TokenRegistry::default()),
             access_log: Arc::default(),
-            pending: Arc::default(),
             releases: Arc::default(),
             #[cfg(feature = "fhir")]
             group: Arc::default(),
@@ -443,7 +443,7 @@ impl AuditStore {
         std::future::ready(Ok((records.iter().map(|_| "{}".to_owned()).collect(), ())))
     }
 
-    /// Store one audit record and chain it before this returns: an access
+    /// Store one audit record and seal it before this returns: an access
     /// the log covers as its entry, any other record by its columns. Returns
     /// the record's id: the entry's uid, or the system record's own.
     ///
@@ -464,12 +464,12 @@ impl AuditStore {
         taken.first().copied().ok_or(AuditError::SearchToken)
     }
 
-    /// Store a batch of records and chain them before this returns, each
+    /// Store a batch of records and seal them before this returns, each
     /// with its own retention end (`ends`, one per record, or empty when no
     /// record states one, so each keeps the store horizon).
     ///
     /// # Errors
-    /// As [`Self::write`], and the chaining errors of [`Self::settle`].
+    /// As [`Self::write`], and the sealing errors of [`Self::settle`].
     pub async fn insert_batch(
         &self,
         records: &[AuditRecord],
@@ -479,9 +479,9 @@ impl AuditStore {
         self.settle(wrote).await
     }
 
-    /// Write a batch of records into the intake in one transaction, each with
-    /// its own retention end (`ends`, one per record, or empty), so they are
-    /// durable when this returns; the chainer links them after.
+    /// Write a batch of records in one transaction, each with its own
+    /// retention end (`ends`, one per record, or empty), so they are durable
+    /// and readable when this returns; the sealer seals them after.
     ///
     /// A record that carries its access-log entry, or whose access writes
     /// one, is written as the entry with its index row, every other one by
@@ -566,7 +566,6 @@ impl AuditStore {
                 access_log: !uids.is_empty(),
                 system: false,
             };
-            self.pending.mark(wrote);
             return Ok((uids, wrote));
         }
         let mut conn = acquire(&self.pool).await?;
@@ -577,10 +576,6 @@ impl AuditStore {
         // NOTE: our own design (#5762), the audit domain's own store, whose records are this
         // transaction's rows.
         tx.commit().await?;
-        // NOTE: our own design (#5762), a held row waits for its release, which marks it.
-        if reserved_by.is_none() {
-            self.pending.mark(wrote);
-        }
         self.remember(learned);
         Ok((ids, wrote))
     }
@@ -615,10 +610,12 @@ impl AuditStore {
         reserved_by: Option<Uuid>,
     ) -> Result<Vec<Uuid>, AuditError> {
         let mut c = BatchColumns::with_capacity(records.len());
+        let stored_at = content_digest::to_microsecond(jiff::Timestamp::now());
         for (index, record) in records.iter().enumerate() {
-            c.push(record, ends.get(index))?;
+            c.push(record, ends.get(index), stored_at)?;
         }
         let ids = c.ids.clone();
+        let digests = c.content_digests(&policy, &tokens)?;
         sqlx::query(INSERT_BATCH)
             .bind(c.recorded_at)
             .bind(c.actions)
@@ -675,6 +672,8 @@ impl AuditStore {
             .bind(c.ids)
             .bind(reserved_by)
             .bind(c.reviews)
+            .bind(c.stored_at)
+            .bind(digests)
             .execute(&mut *conn)
             .await?;
         Ok(ids)

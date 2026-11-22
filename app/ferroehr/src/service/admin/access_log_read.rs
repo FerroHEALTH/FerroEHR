@@ -138,9 +138,9 @@ impl FerroEhrService {
         &self,
         from: i64,
         to: i64,
-    ) -> Result<Vec<crate::access_log::seal::SealView>, ServiceError> {
+    ) -> Result<Vec<crate::access_log::seal::verify::SealView>, ServiceError> {
         let log = self.access_log_store()?;
-        log.seals(from, to)
+        log.seals(&crate::access_log::seal::ACCESS_LOG, from, to)
             .await
             .map_err(|error| ServiceError::internal(LOG_STORE, error))
     }

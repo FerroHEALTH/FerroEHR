@@ -84,9 +84,11 @@ pub fn build(
     ))
 }
 
-/// Start the system chain's scheduled seal and the publication of the
-/// access log's checkpoints when the keyring holds an `OpenPGP` key; the
-/// publication, which the `access_log_checkpoints` indicator reads.
+/// Start the publication of the access log's checkpoints.
+///
+/// It runs when the keyring holds an `OpenPGP` key and returns the
+/// publication, which the `access_log_checkpoints` indicator reads. The
+/// chainer signs both logs' windows as it seals them.
 #[must_use]
 pub fn spawn_schedule(config: &FerroEhrConfig, checkpoints: &Checkpoints) -> Publication {
     let publication = Publication::new(config.audit.access_log.publish_directory.clone());
@@ -94,12 +96,6 @@ pub fn spawn_schedule(config: &FerroEhrConfig, checkpoints: &Checkpoints) -> Pub
         tracing::info!("no OpenPGP key in the keyring: the access log is not sealed");
         return publication;
     }
-    let interval = ferroehr::access_log::schedule::INTERVAL;
-    tracing::info!(?interval, "system chain seals scheduled");
-    drop(tokio::spawn(ferroehr::access_log::schedule::scheduled(
-        checkpoints.clone(),
-        interval,
-    )));
     if let Some(directory) = publication.directory() {
         tracing::info!(
             directory = %directory.display(),
