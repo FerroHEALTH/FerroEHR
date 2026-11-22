@@ -550,3 +550,56 @@ fn no_statement_inserts_an_entry_without_taking_its_xid_first() {
         "the plain insert and the intake statement are found"
     );
 }
+
+/// A frontier round never passes an entry whose transaction holds the
+/// newest xid, which no other transaction completed after: a snapshot's
+/// `xmax` stays at that xid, so a frontier marked by it would pass the entry
+/// while its write runs (#6242).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test holds a write open on a raw pool connection, outside any request"
+)]
+async fn a_round_never_passes_a_write_holding_the_newest_xid() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AccessLogStore::new(pool.clone());
+    store
+        .append(vec![entry(9)])
+        .await
+        .expect("the shared part is stored");
+    let part: String =
+        sqlx::query_scalar("SELECT encode(digest, 'hex') FROM audit.access_log_shared")
+            .fetch_one(&pool)
+            .await
+            .expect("the one shared part");
+
+    let mut conn = pool.acquire().await.expect("connection");
+    let mut open = conn.begin().await.expect("begin");
+    let mut early = entry(1);
+    let intake = ferroehr::access_log::intake::IntakeEntry::of(&mut early, None).expect("intake");
+    ferroehr::access_log::intake::take_in(
+        &mut open,
+        &[intake],
+        &[Vec::new()],
+        None,
+        &std::collections::BTreeSet::from([part.as_str()]),
+        &ferroehr::access_log::intake::Named::default(),
+    )
+    .await
+    .expect("the open write");
+    let drawn: i64 = sqlx::query_scalar(
+        "SELECT pg_sequence_last_value(pg_get_serial_sequence('audit.access_log_entry', 'id')::regclass)",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the id the open write drew");
+
+    let mut frontier = Frontier::default();
+    let reached = settled_frontier(&pool, &mut frontier).await;
+    assert!(
+        reached < drawn,
+        "the frontier stops below the open write's id: {reached} against {drawn}"
+    );
+    open.rollback().await.expect("the open write ends");
+}

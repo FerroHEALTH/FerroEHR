@@ -55,13 +55,33 @@ pub(crate) async fn write(pool: &PgPool, numbers: impl Iterator<Item = u32>) {
 /// window and derived column checked by the verifier, and each window's seal
 /// a checkpoint that verifies under the key.
 #[tokio::test]
+async fn sealers_on_several_replicas_keep_one_run_of_windows() {
+    let db = testkit::db().await.expect("testkit database");
+    sealers_keep_one_run(&db.pool()).await;
+}
+
+/// The run of [`sealers_on_several_replicas_keep_one_run_of_windows`] forty
+/// times over, each on a fresh store, so a frontier that lets a window pass
+/// a write still in flight is caught: such a frontier failed about one run in
+/// eleven (#6242).
+#[tokio::test]
+async fn sealers_keep_one_run_of_windows_forty_times_over() {
+    // NOTE: (#6242), a snapshot's xmax is one past the newest ended xid, so a write still
+    // running can hold an xid at or above it; the frontier marks by an xid it takes itself.
+    for _ in 0..40 {
+        let db = testkit::db().await.expect("testkit database");
+        sealers_keep_one_run(&db.pool()).await;
+    }
+}
+
+/// Four writers and three sealers on `pool` leave one run of windows that
+/// seals every entry once and verifies.
 #[expect(
     clippy::disallowed_methods,
     reason = "a test moves the frontier on a raw pool connection, outside any request"
 )]
-async fn sealers_on_several_replicas_keep_one_run_of_windows() {
-    let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
+async fn sealers_keep_one_run(pool: &PgPool) {
+    let pool = pool.clone();
     let log = Arc::new(checkpoints(&pool, SYSTEM, keyring(&generate_key())));
     let writing = Arc::new(AtomicBool::new(true));
 
