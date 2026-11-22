@@ -519,10 +519,6 @@ impl AuditStore {
     /// [`Self::write_held`] on `conn`, a connection of the store's pool the
     /// caller took before its own transaction's (#5964).
     ///
-    /// Records that are all access-log entries go in by one statement, which
-    /// commits on its own and is durable when this returns; any other batch
-    /// goes in by one transaction (#6256).
-    ///
     /// # Errors
     /// As [`Self::write`].
     pub async fn write_held_on(
