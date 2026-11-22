@@ -152,7 +152,7 @@ async fn view(state: AppState, parts: RequestParts) -> Result<Response, RestErro
     Ok(negotiate::body::respond(
         &parts.headers,
         StatusCode::OK,
-        &serde_json::to_value(view).map_err(|e| ApiError::Internal(e.to_string()))?,
+        &view,
     ))
 }
 
