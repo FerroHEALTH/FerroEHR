@@ -83,6 +83,21 @@ pub(crate) async fn app_with(
     Router,
 ) {
     let (db, pool) = common::migrated_pool().await;
+    Box::pin(app_over(mapping, db, pool)).await
+}
+
+/// [`app_with`] over the database `db`, every pool of the server built from
+/// `pool`.
+pub(crate) async fn app_over(
+    mapping: ferroehr::party_binding::BindingMapping,
+    db: testkit::TestDb,
+    pool: PgPool,
+) -> (
+    testkit::TestDb,
+    PgPool,
+    Arc<ferroehr::service::FerroEhrService>,
+    Router,
+) {
     let audit = ferroehr::system_log::config::AuditConfig {
         purpose_codes: vec!["TREAT".to_owned(), "ETREAT".to_owned()],
         emergency_purpose_codes: vec!["ETREAT".to_owned()],
