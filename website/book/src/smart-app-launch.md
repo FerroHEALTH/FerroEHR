@@ -298,6 +298,7 @@ kind = "confidential_asymmetric"
 jwks_file = "/run/secrets/ferroehr-viewer.jwks.json"
 scopes = ["system/launch.c"]
 grant_types = ["client_credentials"]
+resources = ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
 
 # Each app it launches, a client of the authorization code grant.
 [[ferrosmart.client]]
@@ -307,6 +308,7 @@ kind = "public"
 redirect_uris = ["https://apps.example.org/growth/callback"]
 scopes = ["openid", "fhirUser", "launch", "patient/composition-*.r"]
 grant_types = ["authorization_code"]
+resources = ["https://ehr.example.org/ferroehr/rest/openehr/v1"]
 ```
 
 ```toml
