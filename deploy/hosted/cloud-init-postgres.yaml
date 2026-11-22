@@ -1,7 +1,8 @@
 #cloud-config
 # The sandbox DATABASE box (ferroehr-sandbox-postgres): a dedicated CX33
-# running the project's own ferroehr-postgres image (PG 18 with btree_gist,
-# the one extension the schema needs), reachable ONLY over the Hetzner private network
+# running the project's own ferroehr-postgres image (PostgreSQL 19, whose init
+# script creates the CDR's role, database and schemas), reachable ONLY over the
+# Hetzner private network
 # (ferroehr-sandbox-net, 10.0.0.0/24). Pass this as the server's user data at
 # creation; provisioned 2026-09-01 (#3015).
 #
@@ -10,7 +11,9 @@
 # box's posture is owned by THIS file — no deploy lane touches it, the
 # release pipeline never connects to it, and the database image moves only by
 # hand: the compose default below pins a release by its index digest, and
-# step 6 of sandbox-ferropix-rollout.sh moves the box onto it (#4252).
+# step 6 of sandbox-ferropix-rollout.sh moves the box onto it within one major
+# (#4252). A new major is a fresh box: the databases are recreated, never
+# upgraded (#6301, README "Moving the database box to a new major").
 #
 # The network posture, layer by layer: PostgreSQL binds to the box's PRIVATE
 # address only (the compose ports entry — Docker's published ports bypass
@@ -74,6 +77,9 @@ write_files:
         postgres:
           # A release tag and its index digest, read from the registry. The pin
           # moves after a release publishes, since its digest exists only then.
+          # No release carries PostgreSQL 19 before v6.0.0, so until that cut
+          # moves this default the box's .env sets FERROEHR_POSTGRES_IMAGE to
+          # the PostgreSQL 19 image built from main, by its index digest.
           image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0@sha256:7e4ee7a8a18a5bd3bf4c1b03afd9f584131f717d088cd6844a4a845ece6a9c1b}
           container_name: ferroehr-sandbox-postgres
           restart: unless-stopped
@@ -106,16 +112,17 @@ write_files:
             timeout: 5s
             retries: 3
             start_period: 30s
-          # The PG 18 image expects its volume at /var/lib/postgresql (data
-          # lands in a subdirectory, which is what lets pg_upgrade --link
-          # work across majors); mounting the old …/data path crash-loops.
-          # Learned live at provisioning — do not "correct" this back.
+          # The image expects its volume at /var/lib/postgresql (data lands
+          # in a per-major subdirectory); mounting the old …/data path
+          # crash-loops. Learned live at provisioning — do not "correct" this
+          # back. The volume is named for its major, so a move to a new major
+          # starts on an empty volume and keeps the previous one for rollback.
           volumes:
-            - pgdata:/var/lib/postgresql
+            - pgdata19:/var/lib/postgresql
           env_file:
             - .env
       volumes:
-        pgdata:
+        pgdata19:
 
 runcmd:
   # Two firewalls that agree. The Hetzner Cloud Firewall keeps public traffic

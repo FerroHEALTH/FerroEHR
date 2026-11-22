@@ -37,8 +37,9 @@ physical hosts, so one host failure never takes both):
   resize they move with it, and neither is a code change.
 - **The database box** (`ferroehr-sandbox-postgres`, 2.28.64.110 /
   2a01:4f8:1c16:c964::/64, private 10.0.0.2): the published
-  `ferroehr-postgres` image (PostgreSQL 18), provisioned once from
-  `cloud-init-postgres.yaml` on 2026-09-01 (#3015). It holds two databases:
+  `ferroehr-postgres` image (PostgreSQL 19), provisioned once from
+  `cloud-init-postgres.yaml` on 2026-09-01 (#3015) and recreated on
+  PostgreSQL 19 on 2026-11-22 (#6301). It holds two databases:
   `ferroehr` for the CDR and `ferropix` for FerroPIX, each with its own
   role. PostgreSQL binds to the
   private address alone; the public side carries key-only SSH and nothing
@@ -49,13 +50,18 @@ The connection strings (`DATABASE_URL` for the CDR, `FERROPIX_DATABASE_URL`
 for FerroPIX) and FerroPIX's sealing key (`FERROPIX_DATA_KEY`) live in the
 app box's `.env` and nowhere else; CI never holds them. The release deploy
 lane touches the APP box only — the
-database box has no deploy lane, and its image moves by hand. It runs
-`ghcr.io/ferrohealth/ferroehr-postgres:5.6.0@sha256:7e4ee7a8a18a5bd3bf4c1b03afd9f584131f717d088cd6844a4a845ece6a9c1b`,
-the release tag and index digest `cloud-init-postgres.yaml` pins as the
-`FERROEHR_POSTGRES_IMAGE` default (`scripts/checks/compose-image-tags.sh`
-holds the two to the same reference). The pin moves after a release
-publishes, since the digest exists only then, and step 6 of the rollout
-script below moves the box onto it.
+database box has no deploy lane, and its image moves by hand.
+`cloud-init-postgres.yaml` pins
+`ghcr.io/ferrohealth/ferroehr-postgres:5.6.0@sha256:7e4ee7a8a18a5bd3bf4c1b03afd9f584131f717d088cd6844a4a845ece6a9c1b`
+as the `FERROEHR_POSTGRES_IMAGE` default, a release tag and its index digest
+(`scripts/checks/compose-image-tags.sh` holds the two to the same reference).
+The pin moves after a release publishes, since the digest exists only then,
+and step 6 of the rollout script below moves the box onto it within one
+major. No release carries PostgreSQL 19 before v6.0.0, so until that cut
+moves the default, the box's `/opt/ferroehr-postgres/.env` sets
+`FERROEHR_POSTGRES_IMAGE` to the PostgreSQL 19 image built from `main`
+(`ghcr.io/ferrohealth/ferroehr-postgres:main@sha256:7d71098414533dadb712d01a4ca5846a1b1a88b11dfcbffec6e6a8a2bcd59fd2`,
+the build of 69ae480).
 
 Two operational lessons, learned live at the cutover and load-bearing:
 
@@ -437,6 +443,43 @@ Run steps 1 to 4 when this change merges, before the v5.5.0 release, and the
 whole script again after the release's `sandbox` job.
 Step 6 runs whenever the pin moves, and it is the one step that interrupts
 the sandbox.
+
+## Moving the database box to a new major
+
+A new PostgreSQL major is a fresh database box, never an upgrade: nothing on
+it is production data, FerroPIX refuses a server older than its floor and
+offers no upgrade path, and the sandbox reseeds from scratch anyway. The
+compose volume carries the major in its name (`pgdata19`), so the new server
+starts on an empty volume and the previous one stays for rollback. The move to
+PostgreSQL 19 on 2026-11-22 (#6301) ran these steps, as `deploy` on both boxes:
+
+1. On the app box, stop the database clients:
+   `docker compose stop ferroehr ferropix viewer ferroehr-provision`.
+2. On the DB box, keep `docker-compose.yml` and `.env` as `*.pg18`, then
+   `docker compose stop postgres` and `docker compose rm -f postgres`. The old
+   volume (`ferroehr-postgres_pgdata`) is left alone.
+3. Install the compose file from `cloud-init-postgres.yaml`, keep the three
+   passwords in `.env` (so the app box's connection strings do not change),
+   set `FERROEHR_POSTGRES_IMAGE` there when the default does not yet name the
+   new major, and run `docker compose pull` and `docker compose up -d`. The
+   image's init script creates the `ferroehr` role, database and schemas.
+4. Create the `ferropix` role with the stored `FERROPIX_DB_PASSWORD`, its
+   database, `REVOKE ALL ON DATABASE ferropix FROM PUBLIC` and
+   `GRANT CONNECT, CREATE, TEMPORARY ON DATABASE ferropix TO ferropix`, as
+   step 2 of the rollout script does. A CDR release whose grant files name a
+   role the new image no longer creates needs that role first (5.7.1-rc1
+   needed `ferroehr_linkage`).
+5. On the app box, `docker compose rm --stop --force ferroehr ferropix` and
+   `docker compose up -d --remove-orphans`. The CDR and FerroPIX migrate their
+   empty databases at boot.
+6. Register the demo patients with the `identities` verb and run
+   `scripts/sandbox/reseed.sh` from the tag the sandbox serves, as step 5 of
+   the rollout script does.
+
+To go back, stop the CDR and FerroPIX, run `docker compose down` on the DB box
+(volumes stay), restore the `*.pg18` files, run `docker compose up -d`, and
+start the app stack again. The old volume is deleted once the new box has
+served for a while and nobody needs the rollback.
 
 ## How it is watched
 
