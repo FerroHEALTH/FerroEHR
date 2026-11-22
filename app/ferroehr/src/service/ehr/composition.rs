@@ -719,13 +719,14 @@ fn ensure_ehr_writable(gate: &Gate, ehr_id: EhrId) -> Result<(), ServiceError> {
 /// What the guarded commit of a write its gate read judged requires still
 /// holds: the object's head at `head` (none for a create) and the policy and
 /// definition revisions the gate read returned.
-fn guard_of(gate: &Gate, head: Option<i32>) -> Guard {
+pub(super) fn guard_of(gate: &Gate, head: Option<i32>) -> Guard {
     Guard {
         expected_head: head,
         policy: gate.policy,
         definitions: gate.definitions,
         outbox: None,
         reservation: None,
+        status: None,
     }
 }
 

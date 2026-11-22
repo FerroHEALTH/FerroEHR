@@ -41,6 +41,9 @@ pub enum Shape {
     Delete,
     /// Both, for the members of a CONTRIBUTION that update and delete.
     Members,
+    /// The tip alone of the EHR's `EHR_STATUS`, found by its kind in the EHR
+    /// in place of [`Ask::targets`] (#6257).
+    Status,
 }
 
 impl Shape {
@@ -201,10 +204,10 @@ fn statement(shape: Shape) -> String {
     format!(
         concat!(
             "WITH tv AS (UPDATE version SET tier = 'hot' ",
-            "            WHERE vo_id = ANY($2) AND tier = 'cold'), ",
-            "tn AS (UPDATE node SET tier = 'hot' WHERE tier = 'cold' AND vo_id = ANY($2)), ",
+            "            WHERE vo_id = ANY({targets}) AND tier = 'cold'), ",
+            "tn AS (UPDATE node SET tier = 'hot' WHERE tier = 'cold' AND vo_id = ANY({targets})), ",
             "th AS (UPDATE vo_head SET tier = 'hot', archived_at = NULL, archive_reason = NULL ",
-            "       WHERE vo_id = ANY($2) AND tier = 'cold') ",
+            "       WHERE vo_id = ANY({targets}) AND tier = 'cold') ",
             "SELECT e.is_modifiable, e.restricted_at IS NOT NULL AS restricted, ",
             access_revision!("e.id"),
             ", now() AS ts, ",
@@ -227,7 +230,7 @@ fn statement(shape: Shape) -> String {
             "true AS open{}{}{} ",
             "FROM (VALUES (1)) AS one (x) ",
             "LEFT JOIN ehr e ON e.id = $1 ",
-            "LEFT JOIN LATERAL unnest($2::uuid[]) WITH ORDINALITY AS t (vo_id, ord) ON true ",
+            "LEFT JOIN LATERAL unnest({targets}) WITH ORDINALITY AS t (vo_id, ord) ON true ",
             // The trunk tip is the newest ordinal on branch 0, which no later
             // ordinal of its own branch supersedes, so it is open by definition.
             "LEFT JOIN LATERAL ( ",
@@ -240,8 +243,28 @@ fn statement(shape: Shape) -> String {
             ") tip ON true{}{} ",
             "ORDER BY t.ord"
         ),
-        update, delete, addressed, update_join, delete_join
+        update,
+        delete,
+        addressed,
+        update_join,
+        delete_join,
+        targets = targets(shape),
     )
+}
+
+/// The targets of `shape`'s statement: `$2`, or the EHR's current
+/// `EHR_STATUS` found by its kind ([`Shape::Status`]), as
+/// `meta::current_vo` finds it.
+fn targets(shape: Shape) -> &'static str {
+    if shape == Shape::Status {
+        concat!(
+            "ARRAY(SELECT sv.vo_id FROM version sv JOIN vo_head sh ON sh.vo_id = sv.vo_id ",
+            "AND sh.trunk_head_sys_version = sv.sys_version ",
+            "WHERE sv.ehr_id = $1 AND sv.kind = 'EHR_STATUS')"
+        )
+    } else {
+        "$2::uuid[]"
+    }
 }
 
 /// Runs one gate read ([`Ask`]) on `conn`.
@@ -253,11 +276,13 @@ pub async fn read(conn: &mut PgConnection, ask: Ask<'_>) -> Result<Gate, Storage
     static UPDATE: LazyLock<String> = LazyLock::new(|| statement(Shape::Update));
     static DELETE: LazyLock<String> = LazyLock::new(|| statement(Shape::Delete));
     static MEMBERS: LazyLock<String> = LazyLock::new(|| statement(Shape::Members));
+    static STATUS: LazyLock<String> = LazyLock::new(|| statement(Shape::Status));
     let sql = match ask.shape {
         Shape::Plain => &PLAIN,
         Shape::Update => &UPDATE,
         Shape::Delete => &DELETE,
         Shape::Members => &MEMBERS,
+        Shape::Status => &STATUS,
     };
     let targets: Vec<Uuid> = ask.targets.iter().map(|vo_id| vo_id.0).collect();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))

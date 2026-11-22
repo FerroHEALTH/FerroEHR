@@ -335,7 +335,7 @@ enum Shape {
 /// so one binder serves all three.
 fn folded_statement(shape: Shape) -> String {
     if matches!(shape, Shape::Guarded) {
-        return super::guarded::statement();
+        return super::guarded::statement(false);
     }
     let contribution = matches!(shape, Shape::Contribution | Shape::Standalone);
     let version = matches!(shape, Shape::Standalone | Shape::Into);
@@ -488,12 +488,16 @@ pub async fn commit_folded(
     static STANDALONE: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Standalone));
     static INTO: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Into));
     static GUARDED: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Guarded));
+    static STATUS: LazyLock<String> = LazyLock::new(|| super::guarded::statement(true));
     let (sql, id, ehr_id, version, guard) = match folded {
         Folded::Contribution { id, ehr_id } => (&CONTRIBUTION, id, ehr_id, None, None),
         Folded::Standalone { id, version } => {
             (&STANDALONE, id, version.ehr_id, Some(version), None)
         }
         Folded::Into { id, version } => (&INTO, id, version.ehr_id, Some(version), None),
+        Folded::Guarded { id, version, guard } if guard.status.is_some() => {
+            (&STATUS, id, version.ehr_id, Some(version), Some(guard))
+        }
         Folded::Guarded { id, version, guard } => {
             (&GUARDED, id, version.ehr_id, Some(version), Some(guard))
         }
@@ -519,12 +523,23 @@ pub async fn commit_folded(
                     .bind(guard.reservation),
                 None => query,
             };
-            let row = crate::storage::node_write::bind_node_arrays(
+            let query = crate::storage::node_write::bind_node_arrays(
                 query,
                 &v.rows.iter().collect::<Vec<_>>(),
-            )
-            .fetch_one(&mut *tx)
-            .await?;
+            );
+            let row = match guard.as_ref().and_then(|guard| guard.status.as_deref()) {
+                Some(status) => query
+                    .bind(status.subject_id.as_deref())
+                    .bind(status.subject_namespace.as_deref())
+                    .bind(status.is_queryable)
+                    .bind(status.is_modifiable)
+                    .bind(status.subject_digest.as_deref())
+                    .bind(crate::storage::access_projection::CHANNEL)
+                    .fetch_one(&mut *tx)
+                    .await
+                    .map_err(|e| subject_in_use(e, status))?,
+                None => query.fetch_one(&mut *tx).await?,
+            };
             (row, Some((v.vo_id, v.sys_version, v.blob_uris)))
         }
     };
@@ -543,6 +558,23 @@ pub async fn commit_folded(
         crate::storage::blob_ref::record_uris(tx, vo_id, sys_version, uris).await?;
     }
     Ok(rows)
+}
+
+/// `error` as [`StorageError::SubjectInUse`] when `uq_ehr_subject` refused
+/// the subject `status` names (ITS-REST EHR API `409_EHR`).
+fn subject_in_use(error: sqlx::Error, status: &super::guarded::StatusSync) -> StorageError {
+    match &error {
+        sqlx::Error::Database(db) if db.constraint() == Some("uq_ehr_subject") => {
+            StorageError::SubjectInUse(
+                status.subject_id.clone().unwrap_or_else(|| "?".to_owned()),
+                status
+                    .subject_namespace
+                    .clone()
+                    .unwrap_or_else(|| "?".to_owned()),
+            )
+        }
+        _ => StorageError::Database(error),
+    }
 }
 
 // ── folder membership ─────────────────────────────────────────────────────────

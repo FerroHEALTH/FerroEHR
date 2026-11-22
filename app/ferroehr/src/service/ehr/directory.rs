@@ -37,7 +37,7 @@ use serde_json::Value;
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
 use crate::service::version_update::WriteRequest;
-use crate::service::write::{Mode, Resolved};
+use crate::service::write::Resolved;
 use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
@@ -96,7 +96,7 @@ impl FerroEhrService {
         // The large media go to the blob store before the commit holds a connection.
         self.externalize_body(&mut folder).await?;
         let committed = self
-            .commit_one(&self.pool, Mode::Transaction, async move |_| {
+            .commit_one(&self.pool, async move |_| {
                 Ok(Write::new(
                     Some(ehr_id),
                     Change::create(Kind::Folder, folder, None, envelope),
@@ -285,7 +285,7 @@ impl FerroEhrService {
         }
         .await;
         let committed = self
-            .commit_one(&self.pool, Mode::Transaction, async move |tx| {
+            .commit_one(&self.pool, async move |tx| {
                 let placement = lock_current(tx, Some(ehr_id), vo_id, Kind::Folder).await?;
                 if let Some(tip) = placement.tip.as_ref() {
                     ensure_preceding(&tip_uid(vo_id, tip), preceding.as_ref())?;
@@ -323,7 +323,7 @@ impl FerroEhrService {
         request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
         let committed = self
-            .commit_one(&self.pool, Mode::Transaction, async move |tx| {
+            .commit_one(&self.pool, async move |tx| {
                 let placement = lock_current(tx, Some(ehr_id), vo_id, Kind::Folder).await?;
                 if let Some(tip) = placement.tip.as_ref() {
                     ensure_preceding(&tip_uid(vo_id, tip), request.preceding.as_ref())?;

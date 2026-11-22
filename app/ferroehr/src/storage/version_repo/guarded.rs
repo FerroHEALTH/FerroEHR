@@ -37,6 +37,35 @@ pub struct Guard {
     /// its rows so it commits with them or not at all (#5762); `None` when
     /// nothing is held.
     pub reservation: Option<uuid::Uuid>,
+    /// The promoted `ehr` columns an `EHR_STATUS` commit writes beside its
+    /// version (#6257); `None` for any other write.
+    pub status: Option<Box<StatusSync>>,
+}
+
+/// The promoted `ehr` columns of an `EHR_STATUS` commit, written by its
+/// guarded statement, which then requires no modifiable EHR: the status is
+/// what sets `is_modifiable` (RM ehr master04 §EHR Active Status).
+#[derive(Clone)]
+pub struct StatusSync {
+    /// The subject's `external_ref` id.
+    pub subject_id: Option<String>,
+    /// The subject's `external_ref` namespace.
+    pub subject_namespace: Option<String>,
+    /// `EHR_STATUS.is_queryable`.
+    pub is_queryable: bool,
+    /// `EHR_STATUS.is_modifiable`.
+    pub is_modifiable: bool,
+    /// The digest of the subject reference the care projection matches.
+    pub subject_digest: Option<Vec<u8>>,
+}
+
+impl std::fmt::Debug for StatusSync {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StatusSync")
+            .field("is_queryable", &self.is_queryable)
+            .field("is_modifiable", &self.is_modifiable)
+            .finish_non_exhaustive()
+    }
 }
 
 /// Which of a guarded commit's requirements held when it ran, and the
@@ -102,6 +131,8 @@ impl GuardFlags {
 
 /// The leading CTEs of a guarded statement and its gate `g`: the EHR row
 /// `ehr` read `FOR SHARE` (the lock a concurrent `EHR_STATUS` flip waits on),
+/// or `FOR UPDATE` by the `status` commit that flips it, which alone requires
+/// no modifiable EHR,
 /// each target's head row (`targets`, each object with the head it must
 /// still have), the policy and definition revisions against `revisions`, and
 /// every head no later than the commit instant `time`. `g` holds a row only
@@ -110,14 +141,19 @@ fn guard_ctes(
     ehr: &str,
     targets: &[(String, String)],
     time: &str,
-    revisions: (&str, &str),
+    (revisions, status): ((&str, &str), bool),
 ) -> String {
     use std::fmt::Write as _;
+    let (lock, writable) = if status {
+        ("UPDATE", "NOT e.restricted")
+    } else {
+        ("SHARE", "e.modifiable AND NOT e.restricted")
+    };
     let mut sql = format!(
         "WITH e AS ( \
              SELECT COALESCE(x.is_modifiable, true) AS modifiable, \
                     x.restricted_at IS NOT NULL AS restricted \
-             FROM ehr x WHERE x.id = {ehr} FOR SHARE \
+             FROM ehr x WHERE x.id = {ehr} FOR {lock} \
          ), p AS (SELECT rr.policy, rr.definitions FROM request_revisions rr)"
     );
     let (mut tips, mut marks, mut orders) = (
@@ -148,7 +184,7 @@ fn guard_ctes(
     let _ = write!(
         sql,
         ", k AS ( \
-             SELECT COALESCE((SELECT e.modifiable AND NOT e.restricted FROM e), false) AS ehr_held, \
+             SELECT COALESCE((SELECT {writable} FROM e), false) AS ehr_held, \
                     ({tips}) AS tip_held, NOT ({marks}) AS mark_held, \
                     (SELECT p.policy FROM p) IS NOT DISTINCT FROM {policy}::bigint \
                       AND (SELECT p.definitions FROM p) IS NOT DISTINCT FROM {definitions}::bigint \
@@ -196,13 +232,35 @@ fn reservation_cte(reservation: &str) -> String {
 }
 
 /// The last row of a guarded statement: each requirement's flag, the
-/// revisions it read, and the audit `audit` and CONTRIBUTION `c` it wrote.
-fn flags_row(audit: &str) -> String {
+/// revisions it read, the audit `audit` and CONTRIBUTION `c` it wrote, and
+/// `extra` columns.
+fn flags_row(audit: &str, extra: &str) -> String {
     format!(
         " SELECT k.ehr_held, k.tip_held, k.mark_held, k.policy_held, k.order_held, \
                 k.policy_now, k.definitions_now, \
-                {audit}.id AS commit_audit_id, {audit}.time_committed, c.id AS contribution_id \
+                {audit}.id AS commit_audit_id, {audit}.time_committed, c.id AS contribution_id{extra} \
          FROM k LEFT JOIN {audit} ON true LEFT JOIN c ON true"
+    )
+}
+
+/// The `ehr` column CTEs of an `EHR_STATUS` commit in EHR `ehr`, from `$first`
+/// (the five columns, then the notification channel), written once the
+/// CONTRIBUTION is, as `ehr_repo::update_promoted_columns` writes them; a
+/// moved subject notifies every replica's access copy (#5513).
+fn status_ctes(ehr: &str, first: usize) -> String {
+    format!(
+        ", es AS ( \
+             UPDATE ehr SET subject_id = ${}, subject_namespace = ${}, is_queryable = ${}, \
+                            is_modifiable = ${}, subject_digest = ${} \
+             FROM c WHERE ehr.id = {ehr} \
+             RETURNING OLD.subject_id IS DISTINCT FROM NEW.subject_id AS moved \
+         ), en AS (SELECT pg_notify(${}, {ehr}::text) FROM es WHERE es.moved)",
+        first,
+        first + 1,
+        first + 2,
+        first + 3,
+        first + 4,
+        first + 5
     )
 }
 
@@ -229,26 +287,36 @@ fn audit_cte(name: &str, first: usize, time: &str, from: &str) -> String {
 /// The parameters of [`super::commit::Folded::Standalone`] up to `$27`, then
 /// `$28` the expected head ordinal, `$29` the policy revision, `$30` the
 /// definition revision, `$31` the outbox envelope and `$32` the audit
-/// reservation, and the node arrays from `$33`. The audit insert reads from `g`, and every later insert from the
-/// audit's, so nothing is written unless every requirement holds; the last
-/// row names a flag per requirement.
-pub(super) fn statement() -> String {
+/// reservation, and the node arrays from `$33`, then for a `status` commit
+/// the columns of [`status_ctes`]. The audit insert reads from `g`, and every
+/// later insert from the audit's, so nothing is written unless every
+/// requirement holds; the last row names a flag per requirement.
+pub(super) fn statement(status: bool) -> String {
+    let (sync, notified) = if status {
+        (
+            status_ctes("$7", 33 + crate::storage::node_write::node_array_count()),
+            ", (SELECT count(*) FROM en) AS notified",
+        )
+    } else {
+        (String::new(), "")
+    };
     format!(
         "{}, {}, c AS ( \
              INSERT INTO contribution (id, ehr_id, commit_audit_id) \
              SELECT $6, $7, a.id FROM a ON CONFLICT (id) DO NOTHING RETURNING id \
-         ){}{}{}{}",
+         ){}{}{}{}{}",
         guard_ctes(
             "$7",
             &[("$8".to_owned(), "$28".to_owned())],
             "$22",
-            ("$29", "$30")
+            (("$29", "$30"), status)
         ),
         audit_cte("a", 1, "$22", "g"),
         super::commit::version_ctes("", ("$7", "c.id", "a.id", "a, c"), 8, 33),
+        sync,
         outbox_cte("$6", "$7", ("$31", "$22"), "v"),
         reservation_cte("$32"),
-        flags_row("a")
+        flags_row("a", notified)
     )
 }
 
@@ -303,7 +371,7 @@ fn set_statement(n: usize) -> String {
              INSERT INTO contribution (id, ehr_id, commit_audit_id) \
              SELECT $1, $2, ca.id FROM ca ON CONFLICT (id) DO NOTHING RETURNING id \
          )",
-        guard_ctes("$2", &targets, "$6", ("$3", "$4")),
+        guard_ctes("$2", &targets, "$6", (("$3", "$4"), false)),
         audit_cte("ca", 7, "$6", "g"),
     );
     for i in 0..n {
@@ -325,7 +393,7 @@ fn set_statement(n: usize) -> String {
         "{}{}{}",
         outbox_cte("$1", "$2", ("$5", "$6"), "c"),
         reservation_cte("$12"),
-        flags_row("ca")
+        flags_row("ca", "")
     );
     sql
 }

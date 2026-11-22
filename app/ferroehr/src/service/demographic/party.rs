@@ -28,7 +28,7 @@ use crate::service::demographic::validate::Container;
 use crate::service::demographic::written::{demographic_answer, locked_tip};
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
-use crate::service::write::{Mode, Resolved};
+use crate::service::write::Resolved;
 use crate::versioning::audit::change_type;
 use crate::versioning::body::Body;
 use crate::versioning::change::{Change, Write};
@@ -153,7 +153,7 @@ impl FerroEhrService {
         let (body, served) = self.demographic_stored(request.data, true).await?;
         let create = Change::create_allocated(allocated, support::kind_of(kind), body, envelope);
         let committed = self
-            .commit_one(&self.demographic_pool, Mode::Transaction, async move |_| {
+            .commit_one(&self.demographic_pool, async move |_| {
                 Ok(Write::new(None, create, audit))
             })
             .await?;
@@ -268,7 +268,7 @@ impl FerroEhrService {
         let kind = current.kind;
         let vo_id = current.vo_id;
         let committed = self
-            .commit_one(&self.demographic_pool, Mode::Transaction, async move |tx| {
+            .commit_one(&self.demographic_pool, async move |tx| {
                 let placement =
                     locked_tip(tx, support::kind_of(kind), vo_id, &precondition).await?;
                 if let Some(tip) = placement.tip.as_ref() {

@@ -347,6 +347,14 @@ struct Budget {
 /// gate read returns (#6271): 4 round trips where it sent 5, and 1,514
 /// allocations where it made 1,533, measured twice beside the merge base, and
 /// both ceilings fell by those figures.
+/// An `EHR_STATUS` commit has since been judged on one gate read and written,
+/// its promoted `ehr` columns with it, by one guarded statement after its
+/// access record (#6257): 5 round trips where it sent 14, 1,575 allocations
+/// where it made 1,707 and 54 WAL bytes fewer, measured twice beside the merge
+/// base, and those ceilings fell by those figures. Its peak rose from 141,897
+/// to 148,825 bytes, since the access record is rendered while the prepared
+/// version is held; its ceiling is that figure plus 1%, the one rise the
+/// orchestrator approved as the price of the records-first order.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
@@ -468,11 +476,11 @@ const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitStatus,
         conversions: 4,
-        allocations: 1736,
-        peak_bytes: 144_180,
-        round_trips: 15,
+        allocations: 1604,
+        peak_bytes: 150_314,
+        round_trips: 6,
         nested: 7,
-        wal: 5457,
+        wal: 5403,
     },
     Budget {
         path: Path::ReadStatus,
