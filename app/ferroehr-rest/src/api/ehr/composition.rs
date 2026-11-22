@@ -409,17 +409,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
             Ok(resp)
         }
         Err(e @ ferroehr::error::ServiceError::VersionConflict(_)) => {
-            let meta = state
-                .backend()
-                .composition_latest_meta(ehr_id, uid.vo_id)
-                .await
-                .ok()
-                .flatten();
-            Ok(negotiate::resource::error_with_meta(
-                crate::overview::service_error::api_error(e),
-                meta.as_ref(),
-                Tree::Ehr,
-            ))
+            Ok(with_latest(&state, (ehr_id, uid.vo_id), e).await)
         }
         Err(e) => Err(RestError::from(e)),
     }
@@ -459,22 +449,31 @@ pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Respo
         Err(
             e @ (ferroehr::error::ServiceError::Conflict(_)
             | ferroehr::error::ServiceError::VersionConflict(_)),
-        ) => {
-            let meta = state
-                .backend()
-                .composition_latest_meta(ehr_id, vo_id)
-                .await
-                .ok()
-                .flatten();
-            Ok(negotiate::resource::error_with_meta(
-                crate::overview::service_error::api_error(e),
-                meta.as_ref(),
-                Tree::Ehr,
-            ))
-        }
+        ) => Ok(with_latest(&state, (ehr_id, vo_id), e).await),
         Err(ferroehr::error::ServiceError::ScopeRefused(_)) => Ok(scope.refusal()),
         Err(e) => Err(RestError::from(e)),
     }
+}
+
+/// The refusal `error` of a write to the COMPOSITION `vo_id` of `ehr_id`,
+/// carrying its latest `version_uid` in `ETag` when it is known (overview
+/// §"If-Match and accidental overwrites").
+async fn with_latest(
+    state: &AppState,
+    (ehr_id, vo_id): (EhrId, VoId),
+    error: ferroehr::error::ServiceError,
+) -> Response {
+    let meta = state
+        .backend()
+        .composition_latest_meta(ehr_id, vo_id)
+        .await
+        .ok()
+        .flatten();
+    negotiate::resource::error_with_meta(
+        crate::overview::service_error::api_error(error),
+        meta.as_ref(),
+        Tree::Ehr,
+    )
 }
 
 /// What a `composition_delete` asks, read off its parameters and committal
