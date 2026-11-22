@@ -459,8 +459,7 @@ async fn a_contribution_creating_modifying_and_deleting_commits_every_member() {
         .expect("the composition");
     assert!(
         modified.uid.ends_with("::2"),
-        "the modification is version 2: {}",
-        modified.uid
+        "the modification is version 2"
     );
     let state: String = sqlx::query_scalar("SELECT lifecycle_state FROM vo_head WHERE vo_id = $1")
         .bind(doomed.vo_id)
