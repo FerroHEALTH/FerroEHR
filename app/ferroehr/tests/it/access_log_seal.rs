@@ -603,3 +603,29 @@ async fn a_round_never_passes_a_write_holding_the_newest_xid() {
     );
     open.rollback().await.expect("the open write ends");
 }
+
+/// A round over an idle log takes no xid: forty rounds after the last entry
+/// spend none, and the next entry is marked by the next round (#6242).
+#[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test moves the frontier on a raw pool connection, outside any request"
+)]
+async fn rounds_over_an_idle_log_take_no_xid() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AccessLogStore::new(pool.clone());
+    store.append(vec![entry(1)]).await.expect("an entry");
+    let mut frontier = Frontier::default();
+    let mut conn = pool.acquire().await.expect("connection");
+    frontier.round(&mut conn).await.expect("a round");
+    let marked = frontier.xids_taken();
+    assert_eq!(marked, 1, "the first round marks the entry");
+    for _ in 0..40 {
+        frontier.round(&mut conn).await.expect("an idle round");
+    }
+    assert_eq!(frontier.xids_taken(), marked, "an idle log spends no xid");
+    store.append(vec![entry(2)]).await.expect("a later entry");
+    frontier.round(&mut conn).await.expect("a round");
+    assert_eq!(frontier.xids_taken(), marked + 1, "a new entry is marked");
+}

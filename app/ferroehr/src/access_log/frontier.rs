@@ -47,6 +47,7 @@ pub struct Frontier {
     marked: Option<i64>,
     owed: i64,
     sealed: i64,
+    xids: u64,
 }
 
 impl Frontier {
@@ -72,6 +73,13 @@ impl Frontier {
     #[must_use]
     pub fn reached(&self) -> i64 {
         self.reached
+    }
+
+    /// How many xids the rounds took: one for each round that found the
+    /// sequence moved, none for a round over an idle log.
+    #[must_use]
+    pub fn xids_taken(&self) -> u64 {
+        self.xids
     }
 
     /// Whether the frontier moved past the entries already owed to the
@@ -127,6 +135,7 @@ impl Frontier {
         let xmin = bound(&xmin)?;
         let reached = self.reach(xmin);
         if let (Some(last_value), Some(taken)) = (last_value, taken) {
+            self.xids = self.xids.saturating_add(1);
             self.marked = Some(last_value);
             self.mark(Mark {
                 last_value,
