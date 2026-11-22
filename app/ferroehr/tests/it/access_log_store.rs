@@ -86,7 +86,7 @@ async fn findings(pool: &PgPool) -> Vec<(Option<i64>, String)> {
 )]
 async fn tamper(pool: &PgPool, statements: &[&str]) {
     AccessLogStore::new(pool.clone())
-        .seal_committed()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
         .await
         .expect("sealed before the change");
     let mut conn = pool.acquire().await.expect("connection");
@@ -534,7 +534,10 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
     let pool = testdb.pool();
     let store = AccessLogStore::new(pool.clone());
     let written = append(&store, 1..=2).await;
-    store.seal_committed().await.expect("sealed");
+    store
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+        .await
+        .expect("sealed");
     let first = written.first().expect("the first entry");
 
     let mut changed = first.clone();
@@ -619,7 +622,7 @@ fn legacy_event(at: Timestamp) -> AuditEvent {
 
 /// The access log and the `audit_event` records are kept apart: an entry
 /// written between two `audit_event` records holds no position of the system
-/// chain, the `audit_event` records stay adjacent and link to each other, and
+/// records, the `audit_event` records stay adjacent in windows of their own, and
 /// each verifies from its own cursor, the access log's incremental run finding
 /// a change to an entry sealed after its cursor.
 #[tokio::test]
@@ -639,23 +642,24 @@ async fn each_log_verifies_apart_from_its_own_cursor_on() {
         .await
         .expect("an audit_event record after the entries");
 
-    let system: Vec<(i64, Vec<u8>, Vec<u8>)> = sqlx::query_as(
-        "SELECT chain_seq, prev_hash, row_hash FROM audit.audit_event_link ORDER BY chain_seq",
-    )
-    .fetch_all(&pool)
-    .await
-    .expect("the audit_event records");
-    let positions: Vec<i64> = system.iter().map(|(seq, _, _)| *seq).collect();
+    let system: Vec<i64> = sqlx::query_scalar("SELECT seq FROM audit.audit_event ORDER BY seq")
+        .fetch_all(&pool)
+        .await
+        .expect("the audit_event records");
     assert_eq!(
-        positions,
+        system,
         [1, 2],
-        "the system chain holds no access-log entry"
+        "the system records hold no access-log entry"
     );
-    let (_, second_previous, _) = system.get(1).expect("the second record");
-    let (_, _, first_link) = system.first().expect("the first record");
+    let windows: Vec<(i64, i64)> =
+        sqlx::query_as("SELECT first_id, last_id FROM audit.audit_event_seal ORDER BY window_no")
+            .fetch_all(&pool)
+            .await
+            .expect("the system windows");
     assert_eq!(
-        second_previous, first_link,
-        "an audit_event record links to the audit_event record before it"
+        windows,
+        [(1, 1), (2, 2)],
+        "each audit_event record is sealed in a window of its own log, after the one before it"
     );
 
     assert_eq!(findings(&pool).await, Vec::new());
@@ -680,13 +684,15 @@ async fn each_log_verifies_apart_from_its_own_cursor_on() {
     let windows = "SELECT s.last_id FROM audit.access_log_seal_verified v \
                    JOIN audit.access_log_seal s ON s.window_no = v.through_window";
     assert_eq!(
-        cursor("SELECT through_seq FROM audit.audit_chain_checkpoint").await,
+        cursor("SELECT through_window FROM audit.audit_event_seal_verified").await,
         2
     );
     assert_eq!(cursor(windows).await, 2);
 
     append(&log, 3..=4).await;
-    log.seal_committed().await.expect("sealed");
+    log.seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+        .await
+        .expect("sealed");
     assert!(
         audit
             .verify_chain_advancing(AuditChain::AccessLog, VerifyScope::SinceCheckpoint)
@@ -700,9 +706,9 @@ async fn each_log_verifies_apart_from_its_own_cursor_on() {
         "the access log's cursor moves to its newest window"
     );
     assert_eq!(
-        cursor("SELECT through_seq FROM audit.audit_chain_checkpoint").await,
+        cursor("SELECT through_window FROM audit.audit_event_seal_verified").await,
         2,
-        "the system chain's cursor stays where it was"
+        "the system records' cursor stays where it was"
     );
 
     append(&log, 5..=5).await;
@@ -754,7 +760,10 @@ async fn the_application_role_appends_and_replaces_by_a_tombstone_only() {
         .expect("the app role replaces an entry by its tombstone")
         .expect("the entry is there");
 
-    store.seal_committed().await.expect("the app role seals");
+    store
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+        .await
+        .expect("the app role seals");
     let mut conn = PgConnection::connect(&url).await.expect("connect");
     for statement in [
         "UPDATE audit.access_log_seal SET digest = decode(repeat('0', 64), 'hex')",
@@ -775,7 +784,7 @@ async fn the_application_role_appends_and_replaces_by_a_tombstone_only() {
         );
     }
     let clean = AccessLogStore::new(app.clone())
-        .verify_windows(false)
+        .verify_windows(&ferroehr::access_log::seal::ACCESS_LOG, false)
         .await
         .expect("the application role verifies the access log");
     assert!(clean.is_empty(), "{clean:?}");

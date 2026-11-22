@@ -94,26 +94,6 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION audit.access_log_seal_reject_change() RETURNS trigger
-    LANGUAGE plpgsql
-    SET search_path = audit, pg_catalog
-    AS $$
-BEGIN
-    IF TG_OP = 'UPDATE' AND TG_TABLE_NAME = 'access_log_seal'
-       AND OLD.published_at IS NULL AND NEW.published_at IS NOT NULL
-       AND (NEW.window_no, NEW.first_id, NEW.last_id, NEW.entries, NEW.previous_digest,
-            NEW.digest, NEW.sealed_at, NEW.proof, NEW.system_id)
-           IS NOT DISTINCT FROM (OLD.window_no, OLD.first_id, OLD.last_id, OLD.entries,
-                                 OLD.previous_digest, OLD.digest, OLD.sealed_at, OLD.proof,
-                                 OLD.system_id)
-    THEN
-        RETURN NEW;
-    END IF;
-    RAISE EXCEPTION 'audit.% is append-only: a seal is marked published once and never removed', TG_TABLE_NAME
-        USING ERRCODE = 'restrict_violation';
-END;
-$$;
-
 -- ── the seals ────────────────────────────────────────────────────────────────
 -- What the first sealed window follows: the SHA-256 of the seal text's
 -- version tag (access_log::seal).
@@ -350,10 +330,10 @@ CREATE TABLE access_log_seal (
 );
 CREATE TRIGGER access_log_seal_append_only
     BEFORE UPDATE OR DELETE ON access_log_seal
-    FOR EACH ROW EXECUTE FUNCTION audit.access_log_seal_reject_change();
+    FOR EACH ROW EXECUTE FUNCTION audit.seal_reject_change();
 CREATE TRIGGER access_log_seal_no_truncate
     BEFORE TRUNCATE ON access_log_seal
-    FOR EACH STATEMENT EXECUTE FUNCTION audit.access_log_seal_reject_change();
+    FOR EACH STATEMENT EXECUTE FUNCTION audit.seal_reject_change();
 COMMENT ON TABLE access_log_seal IS
     'The sealed windows of the access log, append-only: each covers every entry id from first_id to last_id and follows the window before it.';
 COMMENT ON COLUMN access_log_seal.digest IS
@@ -386,10 +366,10 @@ CREATE TABLE access_log_seal_fold (
 );
 CREATE TRIGGER access_log_seal_fold_append_only
     BEFORE UPDATE OR DELETE ON access_log_seal_fold
-    FOR EACH ROW EXECUTE FUNCTION audit.access_log_seal_reject_change();
+    FOR EACH ROW EXECUTE FUNCTION audit.seal_reject_change();
 CREATE TRIGGER access_log_seal_fold_no_truncate
     BEFORE TRUNCATE ON access_log_seal_fold
-    FOR EACH STATEMENT EXECUTE FUNCTION audit.access_log_seal_reject_change();
+    FOR EACH STATEMENT EXECUTE FUNCTION audit.seal_reject_change();
 COMMENT ON TABLE access_log_seal_fold IS
     'The sealed windows the fold removed, one row each, append-only: the grounds of their tombstones.';
 
@@ -792,14 +772,13 @@ CREATE FUNCTION audit.chain_verification_lag(p_chain text)
                    AS through_id) AS b
      WHERE p_chain = 'access_log'
     UNION ALL
-    SELECT greatest(coalesce(s.head_seq, 0) - coalesce(c.through_seq, 0), 0),
-           (SELECT e.recorded_at FROM audit.audit_event_link l
-              JOIN audit.audit_event e ON e.id = l.event_id
-             WHERE l.chain_seq > coalesce(c.through_seq, 0)
-             ORDER BY l.chain_seq LIMIT 1)
-      FROM (SELECT 1) AS one
-      LEFT JOIN audit.audit_chain_state s ON s.singleton
-      LEFT JOIN audit.audit_chain_checkpoint c ON c.singleton
+    SELECT (SELECT count(*) FROM audit.audit_event e WHERE e.seq > b.through_id),
+           (SELECT e.recorded_at FROM audit.audit_event e
+             WHERE e.seq > b.through_id ORDER BY e.seq LIMIT 1)
+      FROM (SELECT coalesce((SELECT s.last_id FROM audit.audit_event_seal s
+                              JOIN audit.audit_event_seal_verified v
+                                ON v.singleton AND s.window_no = v.through_window), 0)
+                   AS through_id) AS b
      WHERE p_chain = 'system'
 $$;
 

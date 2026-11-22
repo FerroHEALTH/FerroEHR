@@ -104,8 +104,8 @@ on three levels (high, medium, low).
 | C1 | An unauthenticated caller reads or writes clinical data | high | low under the intended purpose; high when `auth.enabled = false` is misused under `sandbox` or accepted by name under `production` | authentication on by default with a boot refusal when no mechanism is configured; `production` refuses `auth.enabled = false` unless `auth_off` is accepted by name; per-request authorisation | (b), (d) |
 | C2 | An authenticated caller reaches EHRs outside their remit | high | medium: the shipped `EHR_ACCESS` default is `open`, which `production` refuses unless accepted by name | RBAC, the access evaluator over per-EHR `EHR_ACCESS` and the access policy, which confines a patient to their own EHR; `production` refuses the role gate off (`rbac_off`) and an `open` `EHR_ACCESS` default (`open_ehr_access_default`) unless each is accepted by name; every access recorded | (d), (l) |
 | C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address and a separate plain-HTTP management listener unless `plaintext_listener` is accepted by name; the syslog audit feed sends over TLS only (`ihe-atna`); a boot warning on a plaintext routable bind | (e) |
-| C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the access log sealed in signed windows, its newest entries protected by the refused `UPDATE` and `DELETE` until sealed | (e), (f) |
-| C5 | An access happens and the log does not show it, or the log is altered | high | low with an off-box sink; a write's record waits on #5762 between its clinical commit and the audit intake | every record written before its response and an access refused when it cannot be; refusals always recorded; `production` refuses audit off unless accepted; the signed seal windows, which report a change inside a sealed window, the newest minute protected by the refused `UPDATE` and `DELETE` | (f), (l) |
+| C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the access log and the system audit records sealed in signed windows, their newest records (at most a minute and the frontier's lag) protected by the grants and the refused `UPDATE` and `DELETE` until sealed | (e), (f) |
+| C5 | An access happens and the log does not show it, or the log is altered | high | low with an off-box sink; a write's record waits on #5762 between its clinical commit and the audit intake | every record written before its response and an access refused when it cannot be; refusals always recorded; `production` refuses audit off unless accepted; the signed seal windows of both audit logs, which report a change, removal or insertion inside a sealed window, the newest records (at most a minute and the frontier's lag) protected by the grants and the refused `UPDATE` and `DELETE` | (f), (l) |
 | C6 | A national identifier or identifying content leaks into the clinical record, telemetry or a report | high | low | the data-minimisation pass over the subject reference and identified parties; log sanitising; reports with no identifiers | (e), (g) |
 | C7 | A malformed or hostile payload crashes or corrupts the server | medium | low | memory-safe Rust with `unsafe` forbidden; overflow checks in release; fuzzed parsers; caught panics | (j), (k) |
 | C8 | The service is made unavailable | high (clinical availability) | medium: an authorised caller holding resources is not defended against | admission limit with `503` shedding; rate limits; body, header and statement limits; replicas and a disruption budget | (h) |
@@ -410,7 +410,7 @@ corruptions"
   `app/ferroehr/src/system_log/chain_check.rs`;
   `app/ferroehr/tests/it/audit_chain.rs`
   (`the_chain_check_reports_a_tampered_record_on_the_health_surface`,
-  `the_current_digest_covers_every_column`,
+  `the_digest_covers_every_column`,
   `every_hashed_column_is_tamper_evident`);
   `app/ferroehr/migrations/clinical/0010_baseline_grants.sql` and its
   party twin;
@@ -418,7 +418,7 @@ corruptions"
   [tamper evidence](../audit.md#tamper-evidence);
   [verifying releases](../verifying-releases.md).
 - **Status:** met. A signature failure on read is refused and logged. The
-  server verifies the system chain and the access log's sealed windows one
+  server verifies the sealed windows of the system records and the access log one
   minute after boot and then every
   `[audit.store] verify_interval` (default `86400`; `0` turns it off).
   A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` with
@@ -426,7 +426,7 @@ corruptions"
   on `GET /health/readiness` (`DEGRADED` when damaged or
   unverifiable), which never flips readiness. Each replica runs its own check.
   A deployment that sets the interval to `0` reports a corruption only when
-  an operator runs `audit.verify_audit_chain()`.
+  an operator runs `ferroehr audit-chain verify` or `ferroehr access-log verify`.
 - **Open:** none.
 
 ### (g) Data minimisation

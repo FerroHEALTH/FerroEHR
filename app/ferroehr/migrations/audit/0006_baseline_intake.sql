@@ -1,89 +1,21 @@
 -- SPDX-FileCopyrightText: Cadasto B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
--- audit: the access log's write, the system intake and the syslog outbox.
+-- audit: the access log's write, the holds' release and discard, and the
+-- syslog outbox.
 --
 -- Every audit record is written durably before the response that reports the
 -- access: a request writes its access-log entries and every other audit
 -- record in its own transaction, before it answers, so concurrent requests
 -- never wait on a head. An access-log entry is written once into
--- access_log_entry and sealed later by window (#6242); a system record goes
--- into the system intake, which the chainer links into the system chain. A
--- write's records are held under a reservation id until the write's own
--- transaction commits it; the reconciler releases or discards what a process
--- that died left held.
+-- access_log_entry and a system record once into audit_event, each sealed
+-- later by window (#6242). A write's records are held under a reservation id
+-- until the write's own transaction commits it; the reconciler releases or
+-- discards what a process that died left held.
 --
 -- No openEHR spec governs audit storage mechanics: our own design.
 --
 -- Runs with search_path = audit, ext, public.
-
--- ── what the intake refuses ─────────────────────────────────────────────────
-CREATE FUNCTION audit.audit_intake_reject_change() RETURNS trigger
-    LANGUAGE plpgsql
-    SET search_path = audit, pg_catalog
-    AS $$
-BEGIN
-    IF TG_OP = 'DELETE'
-       AND coalesce(current_setting('ferroehr.audit_chaining', true), 'off') = 'on'
-    THEN
-        RETURN OLD;
-    END IF;
-    IF TG_OP = 'DELETE' AND OLD.reserved_by IS NOT NULL
-       AND coalesce(current_setting('ferroehr.audit_discarding', true), 'off') = 'on'
-    THEN
-        RETURN OLD;
-    END IF;
-    IF TG_OP = 'UPDATE' AND OLD.reserved_by IS NOT NULL AND NEW.reserved_by IS NULL
-       AND coalesce(current_setting('ferroehr.audit_releasing', true), 'off') = 'on'
-       AND to_jsonb(NEW) - 'reserved_by' = to_jsonb(OLD) - 'reserved_by'
-    THEN
-        RETURN NEW;
-    END IF;
-    RAISE EXCEPTION 'audit.% is append-only: a record leaves it only by being chained', TG_TABLE_NAME
-        USING ERRCODE = 'restrict_violation';
-END;
-$$;
-
--- ── audit_event_intake ───────────────────────────────────────────────────────
--- The intake of the system chain (#6203): a request writes each audit record
--- of no access-log entry once, into audit_event, in its own transaction before
--- the response that reports it, with one row here naming the records of its
--- statement. Neither table is chained, so concurrent requests never wait on a
--- head; audit.audit_event_chain_move() links the records of each released row
--- in the order the row names them and removes the row. An intake row is
--- append-only: the runtime role may insert and read it and nothing else, and
--- the triggers below refuse every UPDATE, DELETE and TRUNCATE. A write's
--- records are held under a reservation id (reserved_by) until the write's own
--- transaction commits it (audit_intake_release, audit_intake_discard).
---
--- vacuum_truncate is off: the chainer empties the table milliseconds after
--- each insert, and truncating its tail at every vacuum would take an ACCESS
--- EXCLUSIVE lock the intake writers queue behind (PostgreSQL 18, CREATE
--- TABLE, "vacuum_truncate").
-CREATE TABLE audit_event_intake (
-    id          bigint      NOT NULL GENERATED ALWAYS AS IDENTITY,
-    taken_at    timestamptz NOT NULL DEFAULT now(),
-    events      uuid[]      NOT NULL,
-    reserved_by uuid,
-    CONSTRAINT pk_audit_event_intake PRIMARY KEY (id),
-    CONSTRAINT ck_audit_event_intake_events CHECK (cardinality(events) > 0)
-) WITH (vacuum_truncate = off);
-CREATE INDEX ix_audit_event_intake_reserved ON audit_event_intake (reserved_by)
-    WHERE reserved_by IS NOT NULL;
-CREATE TRIGGER audit_event_intake_append_only
-    BEFORE UPDATE OR DELETE ON audit_event_intake
-    FOR EACH ROW EXECUTE FUNCTION audit.audit_intake_reject_change();
-CREATE TRIGGER audit_event_intake_no_truncate
-    BEFORE TRUNCATE ON audit_event_intake
-    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_intake_reject_change();
-COMMENT ON TABLE audit_event_intake IS
-    'One row per intake statement of the system chain: the audit_event ids it wrote, which no link chains yet. Append-only; left only by audit.audit_event_chain_move(), which links its records in the same statement, or by the discard of a reservation that never committed.';
-COMMENT ON COLUMN audit_event_intake.taken_at IS
-    'When the request wrote the records, for the age of the oldest not chained yet.';
-COMMENT ON COLUMN audit_event_intake.events IS
-    'The audit_event ids, in the order the chainer links them.';
-COMMENT ON COLUMN audit_event_intake.reserved_by IS
-    'The reservation a write''s records are held under until its commit is confirmed (#5762); the chainer takes no held row. NULL for records that are not held.';
 
 -- ── the syslog outbox ───────────────────────────────────────────────────────
 CREATE TABLE syslog_outbox (
@@ -95,7 +27,7 @@ CREATE TABLE syslog_outbox (
     CONSTRAINT ck_syslog_outbox_chain CHECK (chain IN ('system', 'access_log'))
 );
 COMMENT ON TABLE syslog_outbox IS
-    'The records the ITI-20 syslog route still owes, each by its chain and position: written when the chainer stores a system record or a frontier round owes an access-log entry while syslog is configured, removed when the repository accepted it. The frame is rendered from the stored record when it is read.';
+    'The records the ITI-20 syslog route still owes, each by its chain and position: written when a frontier round owes a record while syslog is configured, removed when the repository accepted it. The frame is rendered from the stored record when it is read.';
 
 -- The access-log entries owed to the sinks that deliver from the store
 -- (#6242): every entry up to through_id that its writer indexed is owed by
@@ -156,6 +88,65 @@ END;
 $$;
 COMMENT ON FUNCTION access_log_owe(bigint, boolean, boolean) IS
     'Owes the indexed access-log entries past the last owed one, up to the frontier and below every held entry, to the configured sinks (#6242).';
+
+-- The system records owed to the sinks that deliver from the store
+-- (#6242): every record up to through_id is owed by its outbox rows; the
+-- frontier round moves it.
+CREATE TABLE audit_event_owed (
+    singleton  boolean NOT NULL DEFAULT true,
+    through_id bigint  NOT NULL DEFAULT 0,
+    CONSTRAINT pk_audit_event_owed PRIMARY KEY (singleton),
+    CONSTRAINT ck_audit_event_owed_singleton CHECK (singleton)
+) WITH (fillfactor = 10);
+INSERT INTO audit_event_owed (singleton, through_id) VALUES (true, 0);
+
+-- Owes the system records past through_id up to p_upto and below every
+-- record a write holds to the sinks named, and moves through_id; returns how
+-- many records it owed and the through_id it left, none and 0 while another
+-- replica's round holds the row.
+CREATE FUNCTION audit.audit_event_owe(p_upto bigint, p_fhir_feed boolean, p_syslog boolean)
+    RETURNS TABLE (owed_count bigint, owed_through bigint)
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    SET search_path = audit, pg_catalog
+    AS $$
+DECLARE
+    v_from  bigint;
+    v_upto  bigint;
+    v_owed  bigint;
+BEGIN
+    SELECT o.through_id INTO v_from FROM audit.audit_event_owed o
+     WHERE o.singleton FOR UPDATE SKIP LOCKED;
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT 0::bigint, 0::bigint;
+        RETURN;
+    END IF;
+    v_upto := least(p_upto, coalesce((SELECT min(h.seq) - 1 FROM audit.audit_event_hold h), p_upto));
+    IF v_upto <= v_from THEN
+        RETURN QUERY SELECT 0::bigint, v_from;
+        RETURN;
+    END IF;
+    WITH owed AS (
+        SELECT e.seq FROM audit.audit_event e WHERE e.seq > v_from AND e.seq <= v_upto
+    ),
+    fed AS (
+        INSERT INTO audit.fhir_feed_outbox (chain, chain_seq)
+        SELECT 'system', o.seq FROM owed o WHERE p_fhir_feed ORDER BY o.seq
+        ON CONFLICT (chain, chain_seq) DO NOTHING
+        RETURNING 1
+    ),
+    logged AS (
+        INSERT INTO audit.syslog_outbox (chain, chain_seq)
+        SELECT 'system', o.seq FROM owed o WHERE p_syslog ORDER BY o.seq
+        ON CONFLICT (chain, chain_seq) DO NOTHING
+        RETURNING 1
+    )
+    SELECT count(*) INTO v_owed FROM owed, (SELECT count(*) FROM fed) f, (SELECT count(*) FROM logged) l;
+    UPDATE audit.audit_event_owed SET through_id = v_upto WHERE singleton;
+    RETURN QUERY SELECT v_owed, v_upto;
+END;
+$$;
+COMMENT ON FUNCTION audit_event_owe(bigint, boolean, boolean) IS
+    'Owes the system records past the last owed one, up to the frontier and below every held record, to the configured sinks (#6242).';
 
 -- Refuses an access-log entry naming a shared part or a render policy the store
 -- does not hold, as the foreign keys did; called only for such a row. A part
@@ -405,8 +396,7 @@ $$;
 COMMENT ON FUNCTION access_log_intake_take(text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], smallint[], text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[], text[], text[], text[], boolean[], uuid, bytea[], bigint) IS
     'One batch''s access-log entries, each written once: their search tokens, found by the digests the server computed, grouped by entry in one pass, their shared sets and shared parts stored or found, checked and kept as long as the entries, their rows in access_log_entry, and a hold per entry of a reservation until its write commits; the ids a writer names from memory are checked against their generation (#5770, #5887, #5889, #5968, #6242).';
 
--- Releases the held intake rows of committed reservations, counting the
--- entries they name.
+-- Releases the records held under committed reservations, counting them.
 CREATE FUNCTION audit.audit_intake_release(p_ids uuid[]) RETURNS bigint
     LANGUAGE plpgsql VOLATILE SECURITY DEFINER
     SET search_path = audit, pg_catalog
@@ -415,27 +405,24 @@ DECLARE
     v_entries bigint;
     v_others  bigint;
 BEGIN
-    PERFORM set_config('ferroehr.audit_releasing', 'on', true);
     WITH released AS (
         DELETE FROM audit.access_log_hold WHERE reserved_by = ANY (p_ids)
         RETURNING 1
     )
     SELECT count(*) INTO v_entries FROM released r;
     WITH released AS (
-        UPDATE audit.audit_event_intake SET reserved_by = NULL
-         WHERE reserved_by = ANY (p_ids)
-        RETURNING cardinality(events) AS n
+        DELETE FROM audit.audit_event_hold WHERE reserved_by = ANY (p_ids)
+        RETURNING 1
     )
-    SELECT coalesce(sum(r.n), 0) INTO v_others FROM released r;
-    PERFORM set_config('ferroehr.audit_releasing', 'off', true);
+    SELECT count(*) INTO v_others FROM released r;
     RETURN v_entries + v_others;
 END;
 $$;
 COMMENT ON FUNCTION audit_intake_release(uuid[]) IS
-    'Release the records held under the reservations named: their writes committed, so the chainer takes them.';
+    'Release the records held under the reservations named: their writes committed, so the reads, the sealer and the deliveries take them.';
 
--- Discards the held intake rows of reservations that never committed,
--- removing the entries and the records they name, which no link chains.
+-- Discards the records held under reservations that never committed, which
+-- no seal covers.
 CREATE FUNCTION audit.audit_intake_discard(p_ids uuid[]) RETURNS bigint
     LANGUAGE plpgsql VOLATILE SECURITY DEFINER
     SET search_path = audit, pg_catalog
@@ -456,17 +443,17 @@ BEGIN
         RETURNING 1
     )
     SELECT count(*) INTO v_entries FROM removed, (SELECT count(*) FROM dropped) AS d;
-    WITH dropped AS (
-        DELETE FROM audit.audit_event_intake WHERE reserved_by = ANY (p_ids)
-        RETURNING events
-    ),
-    removed AS (
+    WITH removed AS (
         DELETE FROM audit.audit_event e
-         USING dropped d
-         WHERE e.id = ANY (d.events)
+         USING audit.audit_event_hold h
+         WHERE h.seq = e.seq AND h.reserved_by = ANY (p_ids)
+        RETURNING 1
+    ),
+    dropped AS (
+        DELETE FROM audit.audit_event_hold WHERE reserved_by = ANY (p_ids)
         RETURNING 1
     )
-    SELECT count(*) INTO v_others FROM removed;
+    SELECT count(*) INTO v_others FROM removed, (SELECT count(*) FROM dropped) AS d;
     PERFORM set_config('ferroehr.audit_discarding', 'off', true);
     RETURN v_entries + v_others;
 END;

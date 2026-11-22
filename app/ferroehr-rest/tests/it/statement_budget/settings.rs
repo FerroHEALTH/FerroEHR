@@ -20,7 +20,7 @@ use sqlx::PgPool;
 use tracing::Instrument as _;
 use tracing_subscriber::layer::SubscriberExt as _;
 
-use super::{CHAINER_RELEASE, REQUEST_SPAN, RoundTrips, SYSTEM_ROUND, calls, counted, drained};
+use super::{CHAINER_RELEASE, REQUEST_SPAN, RoundTrips, calls, counted, drained};
 use crate::access_evaluator_http::ehr_with_composition;
 use crate::common;
 
@@ -84,10 +84,10 @@ fn settings(k: usize) -> Value {
     common::directive_settings(&directives)
 }
 
-/// Whether `relation` is a chain head, which a chainer pass writes once
-/// whatever it links.
+/// Whether `relation` is a seal or owing state, which a chainer pass writes
+/// once whatever it seals.
 fn head_relation(relation: &str) -> bool {
-    super::wal::pass_relation(relation) || relation == "audit_chain_state"
+    super::wal::pass_relation(relation)
 }
 
 /// Commits the settings of class `k + 1` on the `k`th EHR of `ehrs` and
@@ -122,8 +122,7 @@ async fn measure(
         .filter(|s| !s.toplevel)
         .map(|s| s.calls)
         .sum();
-    let chainer = calls(&statements, "SELECT audit.audit_event_chain_move") * SYSTEM_ROUND
-        + calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
+    let chainer = calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
     let mut out = Measured {
         round_trips: sent.div_euclid(WRITES),
         nested: nested.saturating_sub(chainer).div_euclid(WRITES),

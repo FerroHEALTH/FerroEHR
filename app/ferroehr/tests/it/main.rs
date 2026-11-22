@@ -206,6 +206,7 @@ mod storage_plans;
 mod subject_pseudonym_guard;
 mod system_callers;
 mod system_grants;
+mod system_log_seal;
 mod system_log_tls_roundtrip;
 mod system_migration;
 mod telemetry;
