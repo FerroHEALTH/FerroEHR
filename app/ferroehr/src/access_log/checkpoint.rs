@@ -98,8 +98,8 @@ impl Sealer {
     ///
     /// # Errors
     /// [`AccessLogError::Clock`], [`AccessLogError::Canonical`],
-    /// [`AccessLogError::Sign`] and [`AccessLogError::Signing`] as
-    /// [`Self::begin`] names them, and [`AccessLogError::Sign`] or
+    /// [`AccessLogError::Sign`] and [`AccessLogError::Signing`] when the
+    /// checkpoint cannot be built or signed, and [`AccessLogError::Sign`] or
     /// [`AccessLogError::Signing`] when the signature fails.
     pub async fn sign_seal(
         &self,

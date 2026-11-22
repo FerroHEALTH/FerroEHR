@@ -113,8 +113,8 @@ pub enum SealRound {
 
 impl AccessLogStore {
     /// Seal the entries past the last window up to `frontier` and below every
-    /// entry a write still holds, as one window of at most
-    /// [`WINDOW_ENTRIES`] ids, signed when the store has a sealer.
+    /// entry a write still holds, as one window of at most 100,000 ids,
+    /// signed when the store has a sealer.
     ///
     /// # Errors
     /// The store errors when a statement fails, and the signing errors of the
@@ -203,6 +203,7 @@ impl AccessLogStore {
         .bind(&seal_digest)
         .execute(&mut *tx)
         .await?;
+        // NOTE: our own design (#5762), the sealer's own round, which no request makes.
         tx.commit().await?;
         Ok(SealRound::Sealed {
             window_no,
@@ -537,6 +538,7 @@ impl AccessLogStore {
                 ));
             }
         }
+        // NOTE: our own design (#5762), a read-only snapshot of the verifier, no request's write.
         snapshot.commit().await?;
         if advance && findings.is_empty() && through > 0 {
             sqlx::query(
@@ -563,7 +565,7 @@ impl AccessLogStore {
 
     /// Verify every sealed window, from the first, or with `since_verified`
     /// after the newest window an earlier run found intact, in steps of
-    /// [`STEP_ENTRIES`] entries, each moving the cursor while every step
+    /// 20,000 entries, each moving the cursor while every step
     /// before it was intact.
     ///
     /// # Errors

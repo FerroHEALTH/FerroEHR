@@ -68,3 +68,25 @@ impl AuditStore {
         Ok((owed, sealed))
     }
 }
+
+impl AuditStore {
+    /// This store's gathered write waiting up to `window` after the first
+    /// entry for more (`[audit.store] gather_window`); set before the first
+    /// write.
+    #[must_use]
+    #[cfg_attr(
+        not(feature = "fhir"),
+        expect(
+            unused_mut,
+            unused_variables,
+            reason = "a slim build writes no entry through the gathered writer"
+        )
+    )]
+    pub fn with_gather_window(mut self, window: std::time::Duration) -> Self {
+        #[cfg(feature = "fhir")]
+        {
+            self.group = std::sync::Arc::new(crate::access_log::intake::Gathered::new(window));
+        }
+        self
+    }
+}

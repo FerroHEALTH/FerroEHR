@@ -29,10 +29,9 @@ use sqlx::PgConnection;
 use crate::access_log::store::AccessLogError;
 use crate::access_log::stored_form;
 use crate::access_log::stored_form::parts::Derived;
-use crate::db::acquire::acquire;
 use crate::digest::sha256_hex;
 use crate::system_log::token_digest::token_digest;
-
+use gather::{Job, Known, QUEUE, WRITERS, gather};
 /// The ITI-81 index row of an entry: what the search filters on and the
 /// render policy its projection is written under.
 #[derive(Debug, Clone)]
@@ -332,8 +331,8 @@ const PLAIN: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_
 /// leaves them to the statement (an empty `search_tokens`); the statement
 /// stores or finds them and their shared set. A batch that leaves the
 /// statement no token to resolve goes in by one plain insert with no
-/// function around it ([`PLAIN`]), which stores the parts it carries too. They are held under
-/// `reserved_by` when it names a reservation (#5762). An entry whose search
+/// function around it, which stores the parts it carries too. They are held
+/// under `reserved_by` when it names a reservation (#5762). An entry whose search
 /// tokens its index row names by id holds them under `generation`, which the
 /// statement checks against the store's (#6242). On a connection
 /// outside a transaction the statement commits on its own.
@@ -450,239 +449,10 @@ impl Named {
     }
 }
 
-/// The ids of the search tokens and shared sets the gathered writes stored,
-/// with the generation of the token ids, so a later write names an entry's
-/// tokens by id and the statement resolves none (#6242).
-///
-/// A token id holds while the store's generation is the one it was read
-/// under: retention moves the generation each time it deletes a token, and
-/// the statement refuses a write that names another (SQLSTATE `FE001`), on
-/// which the writer forgets every id and writes again. A shared set is never
-/// deleted. No specification governs it: our own design.
-#[derive(Debug, Default)]
-pub(crate) struct TokenIds {
-    known: std::sync::Mutex<Option<KnownIds>>,
-}
-
-/// The ids read under one generation.
-#[derive(Debug, Default)]
-struct KnownIds {
-    generation: i64,
-    tokens: BTreeMap<[u8; 16], i32>,
-    sets: BTreeMap<Vec<i32>, i32>,
-}
-
-impl KnownIds {
-    /// The text of the `integer[]` naming `tokens` by id, as the statement
-    /// writes it: the shared set's id negated, then the entry's own token ids
-    /// in order; `None` when a token or the set is not known.
-    fn text_of(&self, tokens: &[IntakeToken]) -> Option<String> {
-        let mut shared = Vec::new();
-        let mut own = Vec::new();
-        for token in tokens {
-            let digest = token_digest(
-                token.parameter,
-                token.system.as_deref(),
-                token.code.as_deref(),
-            );
-            let id = *self.tokens.get(&digest)?;
-            if token.shares {
-                shared.push(id);
-            } else {
-                own.push(id);
-            }
-        }
-        shared.sort_unstable();
-        shared.dedup();
-        own.sort_unstable();
-        let set = if shared.is_empty() {
-            None
-        } else {
-            Some(*self.sets.get(&shared)?)
-        };
-        let ids: Vec<String> = set
-            .map(i32::saturating_neg)
-            .into_iter()
-            .chain(own)
-            .map(|id| id.to_string())
-            .collect();
-        Some(format!("{{{}}}", ids.join(",")))
-    }
-}
-
-/// The most token ids [`TokenIds`] remembers before it starts again.
-const KNOWN_TOKENS: usize = 65_536;
-
-impl TokenIds {
-    fn known(&self) -> std::sync::MutexGuard<'_, Option<KnownIds>> {
-        self.known
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-    }
-
-    /// Names by id the search tokens of each entry whose every token and
-    /// shared set is known and whose index row names none yet.
-    fn resolve(&self, entries: &[IntakeEntry], tokens: &[Vec<IntakeToken>]) -> Named {
-        let known = self.known();
-        let Some(known) = known.as_ref() else {
-            return Named::default();
-        };
-        let mut named = Named {
-            generation: None,
-            search_tokens: Vec::with_capacity(entries.len()),
-        };
-        for (position, entry) in entries.iter().enumerate() {
-            let text = entry
-                .index
-                .as_ref()
-                .filter(|index| index.search_tokens.is_empty())
-                .and_then(|_| known.text_of(tokens.get(position).map_or(&[][..], Vec::as_slice)));
-            if text.is_some() {
-                named.generation = Some(known.generation);
-            }
-            named.search_tokens.push(text);
-        }
-        named
-    }
-
-    /// Learns, after a committed statement, the ids of the tokens and shared
-    /// sets of `tokens` with the generation, read in one statement.
-    async fn learn(
-        &self,
-        conn: &mut PgConnection,
-        tokens: &[Vec<IntakeToken>],
-    ) -> Result<(), AccessLogError> {
-        let digests: Vec<[u8; 16]> = tokens
-            .iter()
-            .flatten()
-            .map(|token| {
-                token_digest(
-                    token.parameter,
-                    token.system.as_deref(),
-                    token.code.as_deref(),
-                )
-            })
-            .collect::<BTreeSet<_>>()
-            .into_iter()
-            .collect();
-        if digests.is_empty() {
-            return Ok(());
-        }
-        let rows: Vec<(i64, Vec<u8>, i32)> = sqlx::query_as(
-            "SELECT g.generation, t.digest, t.id \
-               FROM audit.audit_search_token t, audit.audit_search_token_generation g \
-              WHERE g.singleton AND t.digest = ANY($1)",
-        )
-        .bind(digests.iter().map(<[u8; 16]>::as_slice).collect::<Vec<_>>())
-        .fetch_all(&mut *conn)
-        .await?;
-        let Some(generation) = rows.first().map(|(generation, _, _)| *generation) else {
-            return Ok(());
-        };
-        let ids: BTreeMap<[u8; 16], i32> = rows
-            .into_iter()
-            .filter_map(|(_, digest, id)| {
-                <[u8; 16]>::try_from(digest.as_slice())
-                    .ok()
-                    .map(|d| (d, id))
-            })
-            .collect();
-        let shared: BTreeSet<Vec<i32>> = tokens
-            .iter()
-            .filter_map(|entry_tokens| {
-                let mut set: Vec<i32> = entry_tokens
-                    .iter()
-                    .filter(|token| token.shares)
-                    .map(|token| {
-                        ids.get(&token_digest(
-                            token.parameter,
-                            token.system.as_deref(),
-                            token.code.as_deref(),
-                        ))
-                        .copied()
-                    })
-                    .collect::<Option<Vec<_>>>()?;
-                set.sort_unstable();
-                set.dedup();
-                (!set.is_empty()).then_some(set)
-            })
-            .collect();
-        let sets: Vec<(String, i32)> = if shared.is_empty() {
-            Vec::new()
-        } else {
-            let texts: Vec<String> = shared
-                .iter()
-                .map(|set| {
-                    let ids: Vec<String> = set.iter().map(ToString::to_string).collect();
-                    format!("{{{}}}", ids.join(","))
-                })
-                .collect();
-            sqlx::query_as(
-                "SELECT s.tokens::text, s.id FROM unnest($1::text[]) AS t(tokens) \
-                   JOIN audit.audit_search_set s ON s.tokens = t.tokens::integer[]",
-            )
-            .bind(texts)
-            .fetch_all(&mut *conn)
-            .await?
-        };
-        let mut known = self.known();
-        let fresh = known
-            .as_ref()
-            .is_none_or(|held| held.generation != generation || held.tokens.len() > KNOWN_TOKENS);
-        if fresh {
-            *known = Some(KnownIds {
-                generation,
-                ..KnownIds::default()
-            });
-        }
-        if let Some(held) = known.as_mut() {
-            held.tokens.extend(ids);
-            for (text, id) in sets {
-                let set: Option<Vec<i32>> = text
-                    .trim_matches(|c| c == '{' || c == '}')
-                    .split(',')
-                    .filter(|part| !part.is_empty())
-                    .map(|part| part.parse().ok())
-                    .collect();
-                if let Some(set) = set {
-                    held.sets.insert(set, id);
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Forgets every id: the store's generation moved.
-    fn forget(&self) {
-        *self.known() = None;
-    }
-}
-
-/// One request's entries waiting for the gathered intake write.
-struct Job {
-    entries: Vec<IntakeEntry>,
-    tokens: Vec<Vec<IntakeToken>>,
-    done: tokio::sync::oneshot::Sender<Result<(), std::sync::Arc<AccessLogError>>>,
-}
-
-/// The most entries one gathered write takes.
-const GATHER_MAX: usize = 512;
-
 /// The longest gather window a deployment may set
 /// (`[audit.store] gather_window`): each request that writes an entry waits
 /// up to it, against a read target of 15 ms (#6242).
 pub const GATHER_WINDOW_MAX: std::time::Duration = std::time::Duration::from_millis(1);
-
-/// How many jobs may wait for the writers before a request waits to queue.
-const QUEUE: usize = 4096;
-
-/// How many gathered writes may be in flight at once, each on its own
-/// connection.
-///
-/// Two, so one slow flush of the write-ahead log never holds every request.
-/// More writers send more statements of fewer entries, which costs the store
-/// more for each entry and puts more commits behind each flush (#6058).
-const WRITERS: usize = 2;
 
 /// The gathered intake write (#5770).
 ///
@@ -694,141 +464,6 @@ const WRITERS: usize = 2;
 #[derive(Debug, Clone)]
 pub struct GroupWriter {
     jobs: tokio::sync::mpsc::Sender<Job>,
-}
-
-/// The shared parts the gathered writes stored, each with the `retain_until`
-/// the store keeps it until at least (`None` for no end), so a later write
-/// sends only the parts it does not know stored (#6005).
-///
-/// A part is learned only from a statement that committed on its own, and the
-/// store only ever raises a part's `retain_until`, so the store keeps every
-/// part learned until at least its learned date. The retention sweep removes
-/// only parts whose `retain_until` passed more than a day ago
-/// (`audit.access_log_shared_collect`), so a part is skipped only while its
-/// learned date is past tomorrow. The intake statement still refuses an entry
-/// whose part is gone; such a refusal forgets the skipped parts and writes
-/// the statement again with them. No specification governs it: our own
-/// design.
-#[derive(Debug, Default)]
-pub(crate) struct StoredParts {
-    known: std::sync::Mutex<BTreeMap<String, Option<jiff::civil::Date>>>,
-}
-
-/// The most parts [`StoredParts`] remembers before it starts again.
-const KNOWN_PARTS: usize = 4096;
-
-impl StoredParts {
-    /// The guard of the known parts, recovered from a poisoned lock, which
-    /// leaves the map whole: each change is one insert or removal.
-    fn known(&self) -> std::sync::MutexGuard<'_, BTreeMap<String, Option<jiff::civil::Date>>> {
-        self.known
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-    }
-
-    /// The digests of the parts `entries` name that the store keeps at least
-    /// as long as every entry naming them needs, past `today`'s next day.
-    fn stored<'e>(
-        &self,
-        entries: &'e [IntakeEntry],
-        today: jiff::civil::Date,
-    ) -> BTreeSet<&'e str> {
-        let Ok(tomorrow) = today.tomorrow() else {
-            return BTreeSet::new();
-        };
-        let known = self.known();
-        needed(entries)
-            .into_iter()
-            .filter(|(digest, need)| match (known.get(*digest), need) {
-                (Some(None), Need::Until(_) | Need::Forever) => true,
-                (Some(Some(kept)), Need::Until(until)) => *kept > tomorrow && until <= kept,
-                _ => false,
-            })
-            .map(|(digest, _)| digest)
-            .collect()
-    }
-
-    /// Learns the parts `entries` name, which a committed statement stored
-    /// or kept for at least as long as each entry naming it needs; a part
-    /// whose need does not read is not learned.
-    fn learn(&self, entries: &[IntakeEntry]) {
-        let mut known = self.known();
-        if known.len() > KNOWN_PARTS {
-            known.clear();
-        }
-        for (digest, need) in needed(entries) {
-            let until = match need {
-                Need::Until(until) => Some(until),
-                Need::Forever => None,
-                Need::Unread => continue,
-            };
-            let kept = known.entry(digest.to_owned()).or_insert(until);
-            *kept = match (*kept, until) {
-                (None, _) | (_, None) => None,
-                (Some(kept), Some(until)) => Some(kept.max(until)),
-            };
-        }
-    }
-
-    /// Forgets the parts `digests` names.
-    fn forget(&self, digests: &BTreeSet<&str>) {
-        let mut known = self.known();
-        for digest in digests {
-            known.remove(*digest);
-        }
-    }
-}
-
-/// How long the entries naming a shared part need it kept.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Need {
-    /// Until this date.
-    Until(jiff::civil::Date),
-    /// Without end: an entry states no `retain_until`.
-    Forever,
-    /// An entry's `retain_until` does not read as a date here, so how long
-    /// the store keeps the part is not known.
-    Unread,
-}
-
-impl Need {
-    /// The need of both `self` and `other`.
-    fn and(self, other: Self) -> Self {
-        match (self, other) {
-            (Self::Unread, _) | (_, Self::Unread) => Self::Unread,
-            (Self::Forever, _) | (_, Self::Forever) => Self::Forever,
-            (Self::Until(left), Self::Until(right)) => Self::Until(left.max(right)),
-        }
-    }
-}
-
-/// Each shared part `entries` name, with how long the entries naming it need
-/// it kept.
-fn needed(entries: &[IntakeEntry]) -> BTreeMap<&str, Need> {
-    let mut needed: BTreeMap<&str, Need> = BTreeMap::new();
-    for entry in entries {
-        let Some((digest, _)) = &entry.shared else {
-            continue;
-        };
-        // NOTE: our own design (#6005), an end that does not read here is never assumed.
-        let need = match entry.derived.retain_until.as_deref() {
-            None => Need::Forever,
-            Some(text) => text.parse().map_or(Need::Unread, Need::Until),
-        };
-        needed
-            .entry(digest.as_str())
-            .and_modify(|kept| *kept = kept.and(need))
-            .or_insert(need);
-    }
-    needed
-}
-
-impl std::fmt::Debug for Job {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Job")
-            .field("entries", &self.entries.len())
-            .finish_non_exhaustive()
-    }
 }
 
 impl GroupWriter {
@@ -895,197 +530,33 @@ impl GroupWriter {
     }
 }
 
-/// What the gathered writers learned the store holds: the shared parts and
-/// the ids of the search tokens and shared sets.
+/// The gathered writer of a store, started on first use, waiting up to its
+/// window after the first entry for more.
 #[derive(Debug, Default)]
-struct Known {
-    parts: StoredParts,
-    ids: TokenIds,
-}
-
-/// One writer's loop, until every sender is gone: it takes what waits, and
-/// what arrives within `window` of the first, lets the next writer take what
-/// arrives meanwhile, and writes.
-async fn gather(
-    pool: sqlx::PgPool,
-    queue: std::sync::Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<Job>>>,
-    known: std::sync::Arc<Known>,
+pub struct Gathered {
+    writer: std::sync::OnceLock<GroupWriter>,
     window: std::time::Duration,
-) {
-    loop {
-        let mut waiting = queue.lock().await;
-        let Some(first) = waiting.recv().await else {
-            return;
-        };
-        let until = tokio::time::Instant::now() + window;
-        let mut jobs = vec![first];
-        let mut count = jobs.iter().map(|job| job.entries.len()).sum::<usize>();
-        while count < GATHER_MAX {
-            let job = match waiting.try_recv() {
-                Ok(job) => job,
-                Err(_) if window.is_zero() => break,
-                Err(_) => match tokio::time::timeout_at(until, waiting.recv()).await {
-                    Ok(Some(job)) => job,
-                    Ok(None) | Err(_) => break,
-                },
-            };
-            count = count.saturating_add(job.entries.len());
-            jobs.push(job);
+}
+
+impl Gathered {
+    /// A writer not yet started, gathering for up to `window`.
+    #[must_use]
+    pub fn new(window: std::time::Duration) -> Self {
+        Self {
+            writer: std::sync::OnceLock::new(),
+            window,
         }
-        drop(waiting);
-        write_jobs(&pool, &known, jobs, count).await;
+    }
+
+    /// The writer over `pool`, started on the running runtime on first use.
+    pub fn writer(&self, pool: &sqlx::PgPool) -> &GroupWriter {
+        self.writer
+            .get_or_init(|| GroupWriter::spawn_gathering(pool, self.window))
     }
 }
 
-/// Writes `jobs`, `count` entries in all, in one statement, and answers each
-/// job by its own outcome.
-///
-/// When the database refuses the gathered statement, which then committed
-/// nothing, each job is written again on its own, so an entry that fails
-/// refuses only its own request. Any other failure leaves the outcome of the
-/// statement unknown, or no statement ran, and every job is refused: none is
-/// written twice and none is answered as written when it may not be.
-async fn write_jobs(pool: &sqlx::PgPool, known: &Known, jobs: Vec<Job>, count: usize) {
-    let mut entries = Vec::with_capacity(count);
-    let mut tokens = Vec::with_capacity(count);
-    let mut spans = Vec::with_capacity(jobs.len());
-    let mut answers = Vec::with_capacity(jobs.len());
-    for job in jobs {
-        let start = entries.len();
-        let mut job_tokens = job.tokens;
-        job_tokens.resize(job.entries.len(), Vec::new());
-        entries.extend(job.entries);
-        tokens.extend(job_tokens);
-        spans.push(start..entries.len());
-        answers.push(job.done);
-    }
-    let written = write_retrying(pool, known, &entries, &tokens).await;
-    match written {
-        Err(refused) if answers.len() > 1 && refused_by_database(&refused) => {
-            tracing::warn!(
-                requests = answers.len(),
-                error = %refused,
-                "the gathered access-log intake write was refused; writing each request on its own"
-            );
-            for (answer, span) in answers.into_iter().zip(spans) {
-                let own = match (entries.get(span.clone()), tokens.get(span)) {
-                    (Some(own), Some(own_tokens)) => {
-                        write_retrying(pool, known, own, own_tokens).await
-                    }
-                    _ => Err(AccessLogError::Gathered(None)),
-                };
-                // NOTE: our own design (#5770), a request that stopped waiting needs no answer.
-                let _gone = answer.send(own.map_err(std::sync::Arc::new));
-            }
-        }
-        written => {
-            let written = written.map_err(std::sync::Arc::new);
-            for answer in answers {
-                // NOTE: our own design (#5770), a request that stopped waiting needs no answer.
-                let _gone = answer.send(written.clone());
-            }
-        }
-    }
-}
-
-/// How many times a statement the database refused as a deadlock or a
-/// serialization failure is run in all.
-const ATTEMPTS: u32 = 3;
-
-/// Writes `entries` in one statement on a connection of its own, running it
-/// again while the database refuses it as a deadlock or a serialization
-/// failure (SQLSTATE `40P01`, `40001`): the refused statement committed
-/// nothing, so running it again writes each entry once.
-///
-/// The parts `parts` knows stored are left out of the statement; when the
-/// store no longer holds one (SQLSTATE `23503`), they are forgotten and the
-/// statement runs again with every part. A committed statement teaches
-/// `parts` the parts it stored or kept.
-async fn write_retrying(
-    pool: &sqlx::PgPool,
-    known: &Known,
-    entries: &[IntakeEntry],
-    tokens: &[Vec<IntakeToken>],
-) -> Result<(), AccessLogError> {
-    let today = jiff::Timestamp::now()
-        .to_zoned(jiff::tz::TimeZone::UTC)
-        .date();
-    let mut stored = known.parts.stored(entries, today);
-    let mut attempt = 1;
-    loop {
-        let named = known.ids.resolve(entries, tokens);
-        let unnamed = named.search_tokens.len() < entries.len()
-            || named.search_tokens.iter().any(Option::is_none);
-        let written = async {
-            let mut conn = acquire(pool).await?;
-            take_in(&mut conn, entries, tokens, None, &stored, &named).await?;
-            // NOTE: our own design (#6242), the ids the committed statement resolved are learned,
-            // and a failure to learn them never fails the write.
-            if unnamed && let Err(failed) = known.ids.learn(&mut conn, tokens).await {
-                tracing::warn!(error = %failed, "the search token ids could not be learned; the next write resolves them");
-            }
-            Ok(())
-        }
-        .await;
-        match written {
-            Err(refused) if !stored.is_empty() && unknown_part(&refused) => {
-                tracing::warn!(error = %refused, "a shared part the intake knew stored is gone; it is written again");
-                known.parts.forget(&stored);
-                stored.clear();
-            }
-            Err(refused) if stale_ids(&refused) => {
-                tracing::info!("the search token ids moved on; the intake reads them again");
-                known.ids.forget();
-            }
-            Err(refused) if attempt < ATTEMPTS && transient(&refused) => {
-                tracing::warn!(attempt, error = %refused, "the access-log intake write runs again");
-                tokio::time::sleep(std::time::Duration::from_millis(u64::from(attempt) * 5)).await;
-                attempt += 1;
-            }
-            Ok(()) => {
-                known.parts.learn(entries);
-                return Ok(());
-            }
-            written => return written,
-        }
-    }
-}
-
-/// Whether the database refused `error` because the search token ids the
-/// writer named are of another generation (`audit.access_log_intake_take`).
-fn stale_ids(error: &AccessLogError) -> bool {
-    sqlstate(error).is_some_and(|code| code == "FE001")
-}
-
-/// Whether the database refused `error` because an entry names a shared part
-/// it does not hold (`audit.access_log_intake_unknown`).
-fn unknown_part(error: &AccessLogError) -> bool {
-    sqlstate(error).is_some_and(|code| code == "23503")
-}
-
-/// The SQLSTATE of the error the database answered `error` with, `None` when
-/// the database did not answer one.
-fn sqlstate(error: &AccessLogError) -> Option<String> {
-    match error {
-        AccessLogError::Store(sqlx::Error::Database(database)) => {
-            database.code().map(std::borrow::Cow::into_owned)
-        }
-        _ => None,
-    }
-}
-
-/// Whether the database answered `error`, so the statement it refused rolled
-/// back whole (`PostgreSQL` 18 docs, "Transactions": a statement outside a
-/// transaction block runs in one of its own).
-fn refused_by_database(error: &AccessLogError) -> bool {
-    matches!(error, AccessLogError::Store(sqlx::Error::Database(_)))
-}
-
-/// Whether `error` is a deadlock or a serialization failure, which a run of
-/// the same statement may not meet again.
-fn transient(error: &AccessLogError) -> bool {
-    sqlstate(error).is_some_and(|code| code == "40P01" || code == "40001")
-}
+mod gather;
+mod ids;
 
 #[cfg(test)]
 mod tests;

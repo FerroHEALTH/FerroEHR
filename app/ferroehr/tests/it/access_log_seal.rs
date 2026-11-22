@@ -424,7 +424,10 @@ async fn every_inserting_statement_takes_its_xid_before_its_first_id() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AccessLogStore::new(pool.clone());
-    store.append(vec![entry(1)]).await.expect("the part and a token are stored");
+    store
+        .append(vec![entry(1)])
+        .await
+        .expect("the part and a token are stored");
     let part: String =
         sqlx::query_scalar("SELECT encode(digest, 'hex') FROM audit.access_log_shared")
             .fetch_one(&pool)
@@ -441,8 +444,8 @@ async fn every_inserting_statement_takes_its_xid_before_its_first_id() {
         let part = part.clone();
         async move {
             let mut written = entry(n);
-            let intake = ferroehr::access_log::intake::IntakeEntry::of(&mut written, None)
-                .expect("intake");
+            let intake =
+                ferroehr::access_log::intake::IntakeEntry::of(&mut written, None).expect("intake");
             let stored = if known {
                 std::collections::BTreeSet::from([part.as_str()])
             } else {
@@ -542,5 +545,8 @@ fn no_statement_inserts_an_entry_without_taking_its_xid_first() {
             rest = &rest[at + 1..];
         }
     }
-    assert!(inserts >= 2, "the plain insert and the intake statement are found");
+    assert!(
+        inserts >= 2,
+        "the plain insert and the intake statement are found"
+    );
 }

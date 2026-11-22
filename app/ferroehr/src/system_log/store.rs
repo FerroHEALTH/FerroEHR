@@ -234,10 +234,7 @@ pub struct AuditStore {
     releases: Arc<intake::Releases>,
     /// The gathered intake write of the entries, started on first use.
     #[cfg(feature = "fhir")]
-    group: Arc<std::sync::OnceLock<crate::access_log::intake::GroupWriter>>,
-    /// How long the gathered write waits for more entries after the first.
-    #[cfg(feature = "fhir")]
-    gather_window: std::time::Duration,
+    group: Arc<crate::access_log::intake::Gathered>,
 }
 
 impl AuditStore {
@@ -260,29 +257,7 @@ impl AuditStore {
             releases: Arc::default(),
             #[cfg(feature = "fhir")]
             group: Arc::default(),
-            #[cfg(feature = "fhir")]
-            gather_window: std::time::Duration::ZERO,
         }
-    }
-
-    /// This store's gathered write waiting up to `window` after the first
-    /// entry for more (`[audit.store] gather_window`); set before the first
-    /// write.
-    #[must_use]
-    #[cfg_attr(
-        not(feature = "fhir"),
-        expect(
-            unused_mut,
-            unused_variables,
-            reason = "a slim build writes no entry through the gathered writer"
-        )
-    )]
-    pub fn with_gather_window(mut self, window: std::time::Duration) -> Self {
-        #[cfg(feature = "fhir")]
-        {
-            self.gather_window = window;
-        }
-        self
     }
 
     /// This store over `pool`, its policies, tokens and access-log store
@@ -614,9 +589,7 @@ impl AuditStore {
     /// running runtime on first use.
     #[cfg(feature = "fhir")]
     fn group(&self) -> &crate::access_log::intake::GroupWriter {
-        self.group.get_or_init(|| {
-            crate::access_log::intake::GroupWriter::spawn_gathering(&self.pool, self.gather_window)
-        })
+        self.group.writer(&self.pool)
     }
 
     /// Whether every one of `records` is written as its access-log entry, so
