@@ -22,8 +22,9 @@
 //! one, and the server records the changes it makes itself
 //! (`ferroehr::telemetry::conversion`). The allocations are counted on the
 //! thread that polls the request, so the audit runtime's threads do not
-//! count; the peak is the most the request held at once. Both are judged on
-//! the median request of the measured ones ([`Measure::median`]).
+//! count; the peak is the most the request held at once. The allocations are
+//! judged on the median request of the measured ones ([`Measure::median`]),
+//! the peak on the lower-quartile one ([`Measure::peak`]).
 //!
 //! The bytes a request moves over the database wire are counted on their own
 //! run, through a relay that splits the protocol messages by statement
@@ -1200,10 +1201,29 @@ impl Measure {
     fn median(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
         // NOTE: our own design (#6007), a connection the pool opens inside a request is the
         // pool's work, as its session setup is for the round trips (#5899).
+        self.ranked(figure, 2)
+    }
+
+    /// The lower-quartile request's peak, the third smallest of ten.
+    ///
+    /// A request handed a connection whose read or write buffer has not grown
+    /// to the path's messages yet grows it, 8 KiB a step, and that growth is
+    /// the largest single allocation it holds: on CI the party read's peaks
+    /// ran from 70 to 101 KB in one window, beside 73,238 bytes for most
+    /// requests here, and the median crossed its ceiling when half the window
+    /// met such connections. The growth lands on single requests by which
+    /// connection the pool hands out; what a request itself holds more, every
+    /// request holds more, so the lower quartile still moves with it (#6238).
+    fn peak(&self) -> u64 {
+        self.ranked(|a| u64::try_from(a.peak.max(0)).unwrap(), 4)
+    }
+
+    /// The `figure` of the request at `1 / of` of the window, smallest first.
+    fn ranked(&self, figure: impl Fn(&Allocated) -> u64, of: usize) -> u64 {
         let mut figures: Vec<u64> = self.each.iter().map(figure).collect();
         figures.sort_unstable();
         figures
-            .get(figures.len().div_euclid(2))
+            .get(figures.len().div_euclid(of))
             .copied()
             .unwrap_or(0)
     }
@@ -1525,7 +1545,7 @@ async fn every_hot_path_stays_within_its_budget() {
         let path = budget.path;
         let allocations = m.median(|a| a.count);
         let kib = m.median(|a| a.bytes).div_euclid(1024);
-        let peak = m.median(|a| u64::try_from(a.peak.max(0)).unwrap());
+        let peak = m.peak();
         let cells = [
             ("conversions", judged(m.conversions(), budget.conversions)),
             ("allocations", judged(allocations, budget.allocations)),
