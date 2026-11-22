@@ -22,9 +22,8 @@
 //! one, and the server records the changes it makes itself
 //! (`ferroehr::telemetry::conversion`). The allocations are counted on the
 //! thread that polls the request, so the audit runtime's threads do not
-//! count; the peak is the most the request held at once. The allocations are
-//! judged on the median request of the measured ones ([`Measure::median`]),
-//! the peak on the lower-quartile one ([`Measure::peak`]).
+//! count; the peak is the most the request held at once. Both are judged on
+//! the lower-quartile request of the measured ones ([`Measure::low`]).
 //!
 //! The bytes a request moves over the database wire are counted on their own
 //! run, through a relay that splits the protocol messages by statement
@@ -1191,31 +1190,22 @@ struct Measure {
 }
 
 impl Measure {
-    /// The median request's `figure`.
+    /// The lower-quartile request's `figure`, the third smallest of ten.
     ///
-    /// One request in a window sometimes opens a pool connection, or is
-    /// handed one whose buffers have not grown yet, when the chainer holds
-    /// the pool's other connection, so the mean and the largest moved with
-    /// the host. A change in what a request itself allocates moves every
-    /// request, and so the median.
-    fn median(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
+    /// A request handed a pool connection whose buffers have not grown to
+    /// the path's messages yet, or that opens one, grows them inside its
+    /// window, 8 KiB a step, with the allocations around it: on CI the party
+    /// read made 974 allocations with a peak of 72,870 bytes on four requests
+    /// of ten and up to 1,234 and 101,773 on the others, and the demographic
+    /// query 2,543 against up to 2,682, so the median crossed a ceiling
+    /// whenever half a window met such connections. Which requests do depends
+    /// on what the pool hands out; what a request itself allocates more,
+    /// every request allocates more, so the lower quartile still moves with
+    /// it (#6238).
+    fn low(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
         // NOTE: our own design (#6007), a connection the pool opens inside a request is the
         // pool's work, as its session setup is for the round trips (#5899).
-        self.ranked(figure, 2)
-    }
-
-    /// The lower-quartile request's peak, the third smallest of ten.
-    ///
-    /// A request handed a connection whose read or write buffer has not grown
-    /// to the path's messages yet grows it, 8 KiB a step, and that growth is
-    /// the largest single allocation it holds: on CI the party read's peaks
-    /// ran from 70 to 101 KB in one window, beside 73,238 bytes for most
-    /// requests here, and the median crossed its ceiling when half the window
-    /// met such connections. The growth lands on single requests by which
-    /// connection the pool hands out; what a request itself holds more, every
-    /// request holds more, so the lower quartile still moves with it (#6238).
-    fn peak(&self) -> u64 {
-        self.ranked(|a| u64::try_from(a.peak.max(0)).unwrap(), 4)
+        self.ranked(figure, 4)
     }
 
     /// The `figure` of the request at `1 / of` of the window, smallest first.
@@ -1543,9 +1533,9 @@ async fn every_hot_path_stays_within_its_budget() {
     let mut over = Vec::new();
     for (budget, m) in &measured {
         let path = budget.path;
-        let allocations = m.median(|a| a.count);
-        let kib = m.median(|a| a.bytes).div_euclid(1024);
-        let peak = m.peak();
+        let allocations = m.low(|a| a.count);
+        let kib = m.low(|a| a.bytes).div_euclid(1024);
+        let peak = m.low(|a| u64::try_from(a.peak.max(0)).unwrap());
         let cells = [
             ("conversions", judged(m.conversions(), budget.conversions)),
             ("allocations", judged(allocations, budget.allocations)),
