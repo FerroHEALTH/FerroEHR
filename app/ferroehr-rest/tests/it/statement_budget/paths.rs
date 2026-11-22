@@ -342,6 +342,12 @@ struct Budget {
 /// where it sent 8, and 39, 45, 38, 45 and 44 fewer allocations on the JSON,
 /// XML and FLAT commits, the update and the delete, measured beside the merge
 /// base; each of those ceilings fell by its path's figure.
+/// A held write's access-log entries have since gone in with what the
+/// gathered writers know the store holds, its shared part left out and its
+/// search tokens named by id (#6244): 4 nested statements fewer on the three
+/// composition commits, the CONTRIBUTION commit, the `EHR_STATUS` commit, the
+/// update and the delete, and 8 to 17 fewer allocations, measured beside the
+/// merge base, and each of those ceilings fell by its path's figure.
 /// The binding side table's trigger has since moved the binding revision and
 /// notified only for a statement that changed a row (#6284): 2 nested
 /// statements and 87 WAL bytes fewer on both party commits, measured beside
@@ -360,16 +366,17 @@ struct Budget {
 /// orchestrator approved as the price of the records-first order.
 /// An `EHR_STATUS` commit has since dropped the EHR's access copy only when it
 /// moved the subject, the one part of the status the copy is revised by
-/// (#6238): 4 round trips where it sent 5, 1,519 allocations where it made
-/// 1,580, a median peak 3 KiB lower and 298 wire bytes fewer, measured beside
+/// (#6238): 4 round trips where it sent 5, 1,492 allocations where it made
+/// 1,567, a median peak 3 KiB lower and 323 wire bytes fewer, measured beside
 /// the merge base, and those ceilings fell by those figures.
 /// A directory create, update and delete are measured last, each on an EHR of
 /// its own with a composition its FOLDER references, and have since been
 /// judged on one gate read and written by one guarded statement after their
 /// access record, a new hierarchy's `ehr_folder` row with it (#6257): 4 round
-/// trips where they sent 14, 13 and 12, and 1,571, 1,545 and 1,415
-/// allocations where they made 1,716, 1,665 and 1,515, measured twice beside
-/// the merge base, with the same WAL. Their ceilings are the merge base's
+/// trips where they sent 14, 13 and 12, 1,542, 1,518 and 1,388 allocations
+/// where they made 1,687, 1,656 and 1,505, and 4,921, 4,731 and 4,088 wire
+/// bytes where they moved 5,739, 5,551 and 4,787, measured beside the merge
+/// base, with the same WAL. Their ceilings are the merge base's
 /// figures with the margins above, lowered by those drops; their median peaks
 /// rose from 136,915, 138,815 and 131,027 bytes to 145,604, 143,951 and
 /// 133,880, since the access record is rendered while the prepared version is
@@ -378,28 +385,28 @@ const BUDGETS: [Budget; 25] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
-        allocations: 18_037,
+        allocations: 18_029,
         peak_bytes: 1_530_778,
         round_trips: 4,
-        nested: 13,
+        nested: 9,
         wal: 188_205,
     },
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        allocations: 39_459,
+        allocations: 39_451,
         peak_bytes: 1_533_031,
         round_trips: 4,
-        nested: 14,
+        nested: 10,
         wal: 188_507,
     },
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        allocations: 32_620,
+        allocations: 32_612,
         peak_bytes: 1_528_525,
         round_trips: 4,
-        nested: 13,
+        nested: 9,
         wal: 188_849,
     },
     Budget {
@@ -477,10 +484,10 @@ const BUDGETS: [Budget; 25] = [
     Budget {
         path: Path::CommitContribution,
         conversions: 6,
-        allocations: 18_290,
+        allocations: 18_282,
         peak_bytes: 1_649_934,
         round_trips: 4,
-        nested: 14,
+        nested: 10,
         wal: 189_586,
     },
     Budget {
@@ -495,10 +502,10 @@ const BUDGETS: [Budget; 25] = [
     Budget {
         path: Path::CommitStatus,
         conversions: 4,
-        allocations: 1560,
+        allocations: 1529,
         peak_bytes: 147_242,
         round_trips: 5,
-        nested: 11,
+        nested: 7,
         wal: 5403,
     },
     Budget {
@@ -558,47 +565,47 @@ const BUDGETS: [Budget; 25] = [
     Budget {
         path: Path::CommitUpdate,
         conversions: 5,
-        allocations: 17_766,
+        allocations: 17_758,
         peak_bytes: 1_525_458,
         round_trips: 4,
-        nested: 4,
+        nested: 0,
         wal: 187_688,
     },
     Budget {
         path: Path::CommitDelete,
         conversions: 2,
-        allocations: 1552,
+        allocations: 1544,
         peak_bytes: 150_537,
         round_trips: 4,
-        nested: 4,
+        nested: 0,
         wal: 5267,
     },
     Budget {
         path: Path::DirectoryCreate,
         conversions: 5,
-        allocations: 1605,
+        allocations: 1576,
         peak_bytes: 150_606,
         round_trips: 4,
-        nested: 5,
-        wal: 6560,
+        nested: 1,
+        wal: 6504,
     },
     Budget {
         path: Path::DirectoryUpdate,
         conversions: 4,
-        allocations: 1578,
+        allocations: 1551,
         peak_bytes: 152_696,
         round_trips: 4,
-        nested: 5,
-        wal: 5465,
+        nested: 1,
+        wal: 5410,
     },
     Budget {
         path: Path::DirectoryDelete,
         conversions: 2,
-        allocations: 1445,
+        allocations: 1418,
         peak_bytes: 144_129,
         round_trips: 4,
-        nested: 5,
-        wal: 4879,
+        nested: 1,
+        wal: 4823,
     },
 ];
 
@@ -611,10 +618,16 @@ const BUDGETS: [Budget; 25] = [
 /// naming it, where it carried it on every record (#6244): 29,476 bytes
 /// against 100,191, measured beside the merge base, and its ceiling fell by
 /// the 70,715 bytes it no longer moves.
+/// A held write's access-log entries have since gone in without the shared
+/// part the store holds and with their search tokens named by id (#6244):
+/// 5,974 to 6,157 bytes fewer on the three composition commits, the
+/// CONTRIBUTION commit, the `EHR_STATUS` commit, the update and the delete,
+/// measured beside the merge base, and each ceiling fell by its path's
+/// figure.
 const WIRE_BUDGETS: [(Path, u64); 25] = [
-    (Path::CommitJson, 221_825),
-    (Path::CommitXml, 221_825),
-    (Path::CommitFlat, 221_821),
+    (Path::CommitJson, 215_668),
+    (Path::CommitXml, 215_814),
+    (Path::CommitFlat, 215_808),
     (Path::ReadJson, 131_668),
     (Path::ReadXml, 131_668),
     (Path::ReadFlat, 131_668),
@@ -623,20 +636,20 @@ const WIRE_BUDGETS: [(Path, u64); 25] = [
     (Path::AqlPopulation, 6566),
     (Path::Iti81, 29_540),
     (Path::PartyRead, 5524),
-    (Path::CommitContribution, 222_644),
+    (Path::CommitContribution, 216_630),
     (Path::ReadAtTime, 131_699),
-    (Path::CommitStatus, 11_571),
+    (Path::CommitStatus, 5572),
     (Path::ReadStatus, 3142),
     (Path::CommitParty, 10_513),
     (Path::AqlMatches, 17_539),
     (Path::AqlParty, 11_509),
     (Path::CommitPartyScored, 13_090),
     (Path::ReadVersion, 3336),
-    (Path::CommitUpdate, 222_106),
-    (Path::CommitDelete, 10_885),
-    (Path::DirectoryCreate, 10_957),
-    (Path::DirectoryUpdate, 10_768),
-    (Path::DirectoryDelete, 10_072),
+    (Path::CommitUpdate, 216_095),
+    (Path::CommitDelete, 4875),
+    (Path::DirectoryCreate, 4985),
+    (Path::DirectoryUpdate, 4795),
+    (Path::DirectoryDelete, 4152),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
