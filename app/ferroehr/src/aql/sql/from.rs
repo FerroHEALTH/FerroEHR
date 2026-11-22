@@ -801,7 +801,17 @@ impl Builder<'_> {
         match structural {
             Some(parent) if self.ctx.names_ehrs() => {
                 self.q.from_function(
-                    contained_rows(&node, &parent.node),
+                    contained_rows(&node, &parent.node, Vec::new()),
+                    Alias::new(node.as_str()),
+                );
+            }
+            // NOTE: our own design (#6263), with an anchor on a leaf no SELECT column binds the
+            // anchor is the entry and a contained node is read inside its object.
+            Some(parent) if !self.streaming && self.anchors_an_unbound_leaf() => {
+                let inner = format!("{node}_s");
+                let conds = self.rm_conds(&inner, r)?;
+                self.q.from_function(
+                    contained_rows(&node, &parent.node, conds),
                     Alias::new(node.as_str()),
                 );
             }
@@ -1157,8 +1167,9 @@ pub(super) fn is_vo_root_type(t: &str) -> bool {
 }
 
 /// The `LATERAL` FROM item of the content node `alias` contained in the node
-/// `parent` on a query scoped to EHRs its caller named: the strict
-/// descendants of `parent`, behind the `OFFSET 0` fence.
+/// `parent` on a query scoped to EHRs its caller named, or on a flat
+/// statement whose WHERE clause anchors a leaf no SELECT column binds: the
+/// strict descendants of `parent`, behind the `OFFSET 0` fence.
 ///
 /// The fence holds the join order whatever the statistics: the planner reads
 /// the named EHRs' objects first and each object's own nodes after them
@@ -1167,16 +1178,27 @@ pub(super) fn is_vo_root_type(t: &str) -> bool {
 /// over the whole population, whenever the archetype's rows fell out of the
 /// most-common-value list of the archetype statistics and were estimated at
 /// one row; the storage bench's wide projection over one EHR then read ten
-/// times its pages in the rounds that sampled so (#4487). No openEHR spec
-/// governs the join mechanics: our own design.
-fn contained_rows(alias: &str, parent: &str) -> sea_query::FunctionCall {
+/// times its pages in the rounds that sampled so (#4487). With such an anchor
+/// the anchor is the entry, and a contained node estimated at one row was
+/// rescanned with the WHERE clause's `EXISTS` once per anchor version, 32.7 M
+/// buffers for 500 rows (#6263). No openEHR spec governs the join mechanics:
+/// our own design.
+///
+/// `conds`, over the alias `<alias>_s`, keep only the rows the source admits.
+/// Each is stated as `(…) IS TRUE`, which holds exactly when it does and
+/// which no index matches, so the item still reads the parent's object
+/// through `node_hot_pkey` and returns only the rows it keeps.
+fn contained_rows(alias: &str, parent: &str, conds: Vec<Expr>) -> sea_query::FunctionCall {
     let inner = format!("{alias}_s");
     let mut rows = Query::select();
     rows.column((Alias::new(inner.as_str()), Asterisk))
         .from_as(Node::Table, Alias::new(inner.as_str()))
         .and_where(hot(&inner, Node::Tier))
-        .and_where(strict_descendant(&inner, parent))
-        .offset(0);
+        .and_where(strict_descendant(&inner, parent));
+    for cond in conds {
+        rows.and_where(Expr::cust_with_exprs("($1) IS TRUE", [cond]));
+    }
+    rows.offset(0);
     sea_query::Func::cust(Alias::new("LATERAL")).arg(Expr::from(rows))
 }
 

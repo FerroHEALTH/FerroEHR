@@ -160,6 +160,22 @@ impl Ranged {
     }
 }
 
+/// A top-level conjunct of the WHERE clause an index serves
+/// ([`Builder::anchorable`]).
+enum Anchorable<'q> {
+    /// An equality or a `matches` of a text leaf with one of `texts`.
+    Equality {
+        leaf: &'q LeafPath,
+        texts: Vec<String>,
+    },
+    /// The range comparisons of one leaf, each operator with its bound.
+    Range {
+        leaf: &'q LeafPath,
+        ranged: Ranged,
+        bounds: Vec<(CompOp, &'q Operand)>,
+    },
+}
+
 /// The range comparisons of one leaf: what they read and each operator with
 /// its bound.
 struct Range<'a> {
@@ -176,12 +192,105 @@ impl Builder<'_> {
     /// [`AqlError`] from the leaf steps' predicate lowering and from a bound
     /// the comparison itself refuses.
     pub(super) fn value_anchors(&mut self) -> Result<Vec<ValueAnchor>, AqlError> {
-        let Some(filter) = self.ir.filter.clone() else {
+        let ir = self.ir;
+        let Some(filter) = ir.filter.as_ref() else {
             return Ok(Vec::new());
         };
         let mut anchors = Vec::new();
         let mut ranges: Vec<Range<'_>> = Vec::new();
-        let mut conjuncts = vec![&filter];
+        for conjunct in self.anchorable(filter) {
+            match conjunct {
+                Anchorable::Equality { leaf, texts } => {
+                    anchors.extend(self.equality_anchor(leaf, &texts)?);
+                }
+                Anchorable::Range {
+                    leaf,
+                    ranged,
+                    bounds,
+                } => {
+                    let bounds = bounds
+                        .into_iter()
+                        .map(|(op, bound)| Ok((op, self.operand_value(bound, ranged.coercion())?)))
+                        .collect::<Result<Vec<_>, AqlError>>()?;
+                    ranges.push(Range {
+                        leaf,
+                        ranged,
+                        bounds,
+                    });
+                }
+            }
+        }
+        // A leading anchor is the one entry of a streaming statement, which an
+        // equality already gives.
+        let leading = self.range_entry == RangeEntry::Leading;
+        if leading && !anchors.is_empty() {
+            return Ok(anchors);
+        }
+        for range in ranges {
+            let anchor = self.range_anchor(&range, leading)?;
+            let found = anchor.is_some();
+            anchors.extend(anchor);
+            if leading && found {
+                break;
+            }
+        }
+        Ok(anchors)
+    }
+
+    /// Whether the WHERE clause has a conjunct a value index serves, which
+    /// [`Builder::value_anchors`] makes an anchor of.
+    #[cfg(test)]
+    fn takes_anchor(&self) -> bool {
+        self.ir
+            .filter
+            .as_ref()
+            .is_some_and(|filter| !self.anchorable(filter).is_empty())
+    }
+
+    /// Whether the WHERE clause anchors a leaf no SELECT column binds: the
+    /// flat FROM then reads each contained node inside its object
+    /// (`from::Builder::emit_rm`), so a node estimated at one row is never
+    /// rescanned with the clause's `EXISTS` per anchor version (#6263). An
+    /// anchor on a bound leaf is tied to the bound row (#6249), and the
+    /// contained node keeps its archetype-index entry.
+    pub(super) fn anchors_an_unbound_leaf(&self) -> bool {
+        self.ir.filter.as_ref().is_some_and(|filter| {
+            self.anchorable(filter).iter().any(|conjunct| {
+                let (Anchorable::Equality { leaf, .. } | Anchorable::Range { leaf, .. }) = conjunct;
+                !self.select_binds(leaf)
+            })
+        })
+    }
+
+    /// Whether a SELECT column binds the node `leaf` reads, as
+    /// `select::Builder::bind_select_paths` binds every step prefix of a
+    /// projected path: the leaf's source itself, or a projected path of the
+    /// same source through the leaf's steps.
+    fn select_binds(&self, leaf: &LeafPath) -> bool {
+        if leaf.anchor.is_empty() {
+            return true;
+        }
+        let mut binds = false;
+        for column in &self.ir.select {
+            if matches!(column.value, ir::SelectValue::Aggregate { .. }) {
+                continue;
+            }
+            column.value.for_each_path(&mut |target| {
+                if let PathTarget::Data(other) = target {
+                    binds |= other.source == leaf.source && other.anchor.starts_with(&leaf.anchor);
+                }
+            });
+        }
+        binds
+    }
+
+    /// The top-level conjuncts of `filter` an index serves, in the order the
+    /// statement takes them, with the comparisons of one leaf's ranges
+    /// together: the one walk [`Builder::value_anchors`] builds its anchors
+    /// from and [`Builder::takes_anchor`] decides by.
+    fn anchorable<'q>(&self, filter: &'q ir::Expr) -> Vec<Anchorable<'q>> {
+        let mut found = Vec::new();
+        let mut conjuncts = vec![filter];
         while let Some(expr) = conjuncts.pop() {
             match expr {
                 ir::Expr::And(a, b) => {
@@ -210,7 +319,10 @@ impl Builder<'_> {
                     let Some(text) = self.anchor_text(&bind) else {
                         continue;
                     };
-                    anchors.extend(self.equality_anchor(leaf, &[text])?);
+                    let texts = vec![text];
+                    if self.equality_anchorable(leaf, &texts) {
+                        found.push(Anchorable::Equality { leaf, texts });
+                    }
                 }
                 // NOTE: AQL QUERY master03 §matches: a value list holds when the leaf
                 // matches one of its items, so it reads as the equalities above.
@@ -226,8 +338,8 @@ impl Builder<'_> {
                     else {
                         continue;
                     };
-                    if !texts.is_empty() {
-                        anchors.extend(self.equality_anchor(leaf, &texts)?);
+                    if !texts.is_empty() && self.equality_anchorable(leaf, &texts) {
+                        found.push(Anchorable::Equality { leaf, texts });
                     }
                 }
                 // NOTE: AQL QUERY master03 §WHERE (`identifiedExpr`): the grammar puts the
@@ -241,11 +353,21 @@ impl Builder<'_> {
                     let Some(reads) = ranged(leaf, *op, *coercion) else {
                         continue;
                     };
-                    let bound = self.operand_value(bound, reads.coercion())?;
                     let leaf: &LeafPath = leaf;
-                    match ranges.iter_mut().find(|range| range.leaf == leaf) {
-                        Some(range) => range.bounds.push((*op, bound)),
-                        None => ranges.push(Range {
+                    if !leaf_step(self.ir, leaf).is_some_and(|(types, _)| reads.binds(types)) {
+                        continue;
+                    }
+                    let same = found.iter_mut().find_map(|conjunct| match conjunct {
+                        Anchorable::Range {
+                            leaf: other,
+                            bounds,
+                            ..
+                        } if *other == leaf => Some(bounds),
+                        _ => None,
+                    });
+                    match same {
+                        Some(bounds) => bounds.push((*op, bound)),
+                        None => found.push(Anchorable::Range {
                             leaf,
                             ranged: reads,
                             bounds: vec![(*op, bound)],
@@ -255,21 +377,31 @@ impl Builder<'_> {
                 _ => {}
             }
         }
-        // A leading anchor is the one entry of a streaming statement, which an
-        // equality already gives.
-        let leading = self.range_entry == RangeEntry::Leading;
-        if leading && !anchors.is_empty() {
-            return Ok(anchors);
-        }
-        for range in ranges {
-            let anchor = self.range_anchor(&range, leading)?;
-            let found = anchor.is_some();
-            anchors.extend(anchor);
-            if leading && found {
-                break;
-            }
-        }
-        Ok(anchors)
+        found
+    }
+
+    /// Whether an equality of `leaf` with one of `texts` has an anchor: the
+    /// relationship target's ([`Self::target_anchor`]) or the value's
+    /// ([`Self::value_anchor`]).
+    fn equality_anchorable(&self, leaf: &LeafPath, texts: &[String]) -> bool {
+        let target = self.ir.domain == QueryDomain::Demographic
+            && leaf.anchor.is_empty()
+            && leaf.fragment.iter().map(|s| s.name.as_str()).eq([
+                "relationships",
+                "target",
+                "id",
+                "value",
+            ])
+            && texts
+                .iter()
+                .all(|text| crate::party_binding::derive::container(text).is_some())
+            && matches!(
+                self.ir.sources.get(leaf.source.0),
+                Some(ir::Source::Rm(source)) if matches!(source.scope, ir::VersionScope::Latest)
+            );
+        let value = text_leaf(&leaf.fragment).is_some()
+            && leaf_step(self.ir, leaf).is_some_and(|(types, _)| types.contains("ELEMENT"));
+        target || value
     }
 
     /// The string a bound value compares as, a string literal or a string
@@ -709,4 +841,181 @@ fn plain_decimal(text: &str) -> bool {
         });
     let digits = |part: &str| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit());
     digits(whole) && fraction.is_none_or(digits)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::aql::ir::Params;
+    use crate::aql::lineage::ArchetypeLineage;
+    use crate::aql::sql::{Builder, SqlCtx};
+
+    /// A population context with no access condition.
+    fn population() -> SqlCtx {
+        SqlCtx {
+            system_id: "anchor.test".to_owned(),
+            ehr_ids: Vec::new(),
+            ehr_scope_kind: crate::aql::sql::EhrScopeKind::Named,
+            ehr_access: crate::access_eval::condition::AccessCondition::default(),
+            limit: None,
+            offset: None,
+            archetype_lineage: Arc::new(ArchetypeLineage::default()),
+            policy_parties: crate::aql::sql::readers::PolicyParties::Served,
+            access_settings: crate::aql::sql::readers::EhrAccessReaders::Every,
+            own_records: None,
+            caseload: None,
+        }
+    }
+
+    /// The conjuncts the shared walk finds in `aql` and the anchors the
+    /// flat statement builds from them.
+    fn walked_and_built(aql: &str) -> (usize, bool, usize) {
+        let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
+        let params = Params::default();
+        let ir = crate::aql::plan(
+            &ast,
+            &params,
+            crate::config::profile::SpecProfile::default(),
+        )
+        .expect("the AQL plans");
+        let ctx = population();
+        let mut builder = Builder::new(&ir, &params, &ctx);
+        builder.build_from(&ir.contains).expect("the FROM builds");
+        let walked = ir
+            .filter
+            .as_ref()
+            .map_or(0, |filter| builder.anchorable(filter).len());
+        let takes = builder.takes_anchor();
+        let built = builder.value_anchors().expect("the anchors build").len();
+        (walked, takes, built)
+    }
+
+    /// Whether the flat FROM of `aql` reads its contained nodes inside their
+    /// objects.
+    fn fences(aql: &str) -> bool {
+        let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
+        let params = Params::default();
+        let ir = crate::aql::plan(
+            &ast,
+            &params,
+            crate::config::profile::SpecProfile::default(),
+        )
+        .expect("the AQL plans");
+        let ctx = population();
+        let builder = Builder::new(&ir, &params, &ctx);
+        builder.anchors_an_unbound_leaf()
+    }
+
+    /// An anchor on a leaf only the WHERE clause reads fences the contained
+    /// nodes; one on a leaf a SELECT column binds, its source's own value, or
+    /// no anchor at all leaves them their archetype-index entry (#6263).
+    #[test]
+    fn only_an_anchor_on_a_where_only_leaf_fences_the_contained_nodes() {
+        let from = "FROM EHR e CONTAINS COMPOSITION c \
+                    CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.timed.v1]";
+        let leaf = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
+        let events = "o/data[at0001]/events[at0002]";
+        for (aql, fenced) in [
+            (
+                format!("SELECT c/uid/value {from} WHERE {leaf} >= 140"),
+                true,
+            ),
+            (
+                format!("SELECT c/uid/value, {leaf} {from} WHERE {leaf} >= 140"),
+                false,
+            ),
+            (
+                format!(
+                    "SELECT c/uid/value, {events}/data[at0003]/items[at0004]/value/units {from} WHERE {leaf} >= 140"
+                ),
+                false,
+            ),
+            (
+                format!("SELECT {events}/time/value {from} WHERE {leaf} >= 140"),
+                true,
+            ),
+            (
+                format!("SELECT count({leaf}) {from} WHERE {leaf} >= 140"),
+                true,
+            ),
+            (format!("SELECT c/uid/value {from} WHERE {leaf} = 7"), false),
+            (format!("SELECT c/uid/value {from}"), false),
+            (
+                "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c CONTAINS ELEMENT s[at0004] \
+                 WHERE s/value/magnitude > 7"
+                    .to_owned(),
+                false,
+            ),
+        ] {
+            assert_eq!(fences(&aql), fenced, "{aql}");
+        }
+    }
+
+    /// The walk that decides whether the flat FROM reads its contained nodes
+    /// inside their objects finds exactly the conjuncts the anchor builder
+    /// makes anchors of (#6263).
+    #[test]
+    fn the_walk_and_the_anchor_builder_agree() {
+        let observation = "FROM EHR e CONTAINS COMPOSITION c \
+                           CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.timed.v1]";
+        let items = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]";
+        let time = "o/data[at0001]/events[at0002]/time/value";
+        for (filter, anchors) in [
+            (format!("{items}/value/magnitude >= 140"), 1),
+            (
+                format!("{items}/value/magnitude > 1 AND {items}/value/magnitude < 9"),
+                1,
+            ),
+            (
+                format!("{time} >= '2026-01-01' AND {items}/value/magnitude < 9"),
+                2,
+            ),
+            (format!("{items}/value/units = 'kPa'"), 1),
+            (
+                format!("{items}/value/defining_code/code_string = 'at0008'"),
+                1,
+            ),
+            (format!("{items}/value/value matches {{'a', 'b'}}"), 1),
+            (format!("{items}/value/magnitude = 7"), 0),
+            (format!("{items}/value/magnitude != 7"), 0),
+            (
+                format!("{items}/value/magnitude > 1 OR {items}/value/magnitude > 1"),
+                0,
+            ),
+            (format!("NOT {items}/value/magnitude > 1"), 0),
+            ("c/context/start_time/value >= '2026'".to_owned(), 0),
+            (
+                format!("{items}/value/magnitude > {items}/value/precision"),
+                0,
+            ),
+        ] {
+            let aql = format!("SELECT c/uid/value {observation} WHERE {filter}");
+            let (walked, takes, built) = walked_and_built(&aql);
+            assert_eq!((walked, built), (anchors, anchors), "{filter}");
+            assert_eq!(takes, anchors > 0, "{filter}");
+        }
+        for (aql, anchors) in [
+            (
+                "SELECT p/uid/value FROM PERSON p WHERE p/relationships/target/id/value \
+                 = '0190d5a8-2f4e-7c52-9a1e-4f6b2c3d4e5f::ferroehr::1'",
+                1,
+            ),
+            (
+                "SELECT p/uid/value FROM PERSON p WHERE p/relationships/target/id/value \
+                 = 'not a party'",
+                0,
+            ),
+            (
+                "SELECT p/uid/value FROM VERSION v[ALL_VERSIONS] CONTAINS PERSON p \
+                 WHERE p/relationships/target/id/value \
+                 = '0190d5a8-2f4e-7c52-9a1e-4f6b2c3d4e5f::ferroehr::1'",
+                0,
+            ),
+        ] {
+            let (walked, takes, built) = walked_and_built(aql);
+            assert_eq!((walked, built), (anchors, anchors), "{aql}");
+            assert_eq!(takes, anchors > 0, "{aql}");
+        }
+    }
 }
