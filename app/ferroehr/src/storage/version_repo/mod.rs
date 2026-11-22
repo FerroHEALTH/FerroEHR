@@ -22,6 +22,7 @@
 //!   folded one-statement version commit, lineage-tip close, and the
 //!   ride-along folder-membership + event-outbox writes.
 //! - [`gate`] — the one-statement gate read of a composition write (#6256).
+//! - [`guarded`] — the guarded commit statement of a composition write (#6256).
 //! - [`import`] — the EHR-Extract / archive-load write path: explicit
 //!   `committed_at` version rows, the head sync, container-state read.
 //! - [`read`] — the full version reads ([`read::StoredVersion`]: metadata + body +
@@ -129,6 +130,7 @@ pub mod commit;
 pub mod contribution;
 pub mod ehr_access;
 pub mod gate;
+pub mod guarded;
 pub mod import;
 pub mod judged;
 pub mod meta;

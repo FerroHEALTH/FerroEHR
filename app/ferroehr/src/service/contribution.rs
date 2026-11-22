@@ -26,6 +26,7 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::demographic::validate::Container;
 use crate::service::ehr::status::SubjectColumns;
+use crate::storage::version_repo::gate::{self, Ask, Gate, Shape};
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::AccessDomain;
 use crate::system_log::recorder::WriteFacts;
@@ -88,47 +89,45 @@ pub(crate) async fn commit_version_set(
     audit: &UpdateAudit,
     party_only: bool,
 ) -> Result<CommittedContribution, ServiceError> {
-    // The EHR-existence check (the CONTRIBUTION's target EHR must exist) and
-    // its writability, which the inactive-EHR refusal below is judged on, in
-    // one read (#6256).
-    let modifiable = match ehr_id {
+    // Planning reads no store, so the EHR's existence and writability, the
+    // policy revisions and every target's head are read in one gate read after
+    // it, and the 404 of a missing EHR still answers before a planning refusal
+    // (#6256).
+    let planned = plan_set(cx, uid, versions, audit);
+    let gate = match ehr_id {
         Some(ehr_id) => {
-            let read =
-                crate::storage::ehr_repo::ehr_writability(&mut *acquire(&cx.pool).await?, ehr_id)
-                    .await?;
+            // NOTE: our own design (#6256), a set that does not plan names no targets; its
+            // refusal answers once the EHR is known to exist.
+            let targets = planned
+                .as_ref()
+                .map(|(_, _, plan)| plan_targets(plan))
+                .unwrap_or_default();
+            let ask = Ask {
+                ehr_id,
+                targets: &targets,
+                shape: Shape::Members,
+                persistent: None,
+            };
+            let gate = gate::read(&mut *acquire(&cx.pool).await?, ask).await?;
             cx.ensure_gate_policy_held().await?;
-            let Some(modifiable) = read.is_modifiable else {
+            if gate.is_modifiable.is_none() {
                 return Err(ServiceError::not_found(
                     crate::error::refusal::Missing::Ehr,
                     format!("EHR {ehr_id}"),
                 ));
-            };
-            Some((ehr_id, modifiable))
+            }
+            Some(gate)
         }
         None => None,
     };
+    let (supplied_uid, contribution_audit, plan) = planned?;
 
-    // NOTE: `schemas/ehr/NewContribution.yaml` gives `versions` no `minItems`, so
-    // an empty list is schema-valid and refused as a semantic error (422).
-    if versions.is_empty() {
-        return Err(ServiceError::content_invalid(
-            Violation::new("must contain at least one version").with_path("versions"),
-        ));
-    }
+    let target_kinds = match &gate {
+        Some(gate) => kinds_of(gate),
+        None => read_target_kinds(cx, &plan, party_only).await?,
+    };
 
-    let supplied_uid = parse_supplied_uid(uid)?;
-    let contribution_audit = parse_contribution_audit(audit, &cx.effective_system_id())?;
-
-    // Each UPDATE_VERSION is read exactly once into a typed plan entry; the
-    // modification targets are then existence/kind-checked in ONE batched
-    // statement and resolved without re-reading any member.
-    let mut plan: Vec<PlannedVersion> = Vec::with_capacity(versions.len());
-    for (index, version) in versions.into_iter().enumerate() {
-        plan.push(plan_version(version, index, &contribution_audit.system_id)?);
-    }
-
-    let target_kinds = read_target_kinds(cx, &plan, party_only).await?;
-
+    let modifiable = ehr_id.zip(gate.as_ref().and_then(|gate| gate.is_modifiable));
     refuse_content_into_inactive_ehr(modifiable, &plan)?;
 
     let mut changes: Vec<(AuditInput, Change)> = Vec::with_capacity(plan.len());
@@ -186,6 +185,7 @@ pub(crate) async fn commit_version_set(
             status_commits,
             folder_commits,
             needs_content_permission,
+            gate,
         },
     )
     .await?;
@@ -228,6 +228,9 @@ struct ContributionWrite<'a> {
     /// Whether the set needs the content-write gate
     /// ([`needs_content_write_permission`]); evaluated in-transaction.
     needs_content_permission: bool,
+    /// The set's gate read, which a set of COMPOSITION members commits on
+    /// first (#6256); `None` for a demographic set.
+    gate: Option<Gate>,
 }
 
 /// Writes the resolved change set in one transaction, with the cross-area
@@ -251,6 +254,9 @@ async fn write_contribution(
     // The set's large media go to the blob store before a connection is held.
     for (_, change) in &mut write.changes {
         cx.externalize_change(change).await?;
+    }
+    if let Some(outcome) = commit_member_set(cx, ehr_id, party_only, &mut write).await? {
+        return Ok(outcome);
     }
     let mut conn = cx.recorded_conn(domain_pool(cx, party_only)).await?;
     let mut tx = conn.begin().await?;
@@ -344,6 +350,89 @@ async fn write_contribution(
     };
     cx.commit_recorded(tx, &facts, Vec::new()).await?;
     Ok(outcome)
+}
+
+/// The CONTRIBUTION's uid and audit, and each `UPDATE_VERSION` read exactly
+/// once into a typed plan entry, which reads no store.
+///
+/// # Errors
+/// The `422` of an empty `versions` list, and the uid, audit and member
+/// refusals of planning.
+fn plan_set(
+    cx: &FerroEhrService,
+    uid: Option<&HierObjectId>,
+    versions: Vec<UpdateVersion<MemberData>>,
+    audit: &UpdateAudit,
+) -> Result<(Option<Uuid>, AuditInput, Vec<PlannedVersion>), ServiceError> {
+    // NOTE: `schemas/ehr/NewContribution.yaml` gives `versions` no `minItems`, so
+    // an empty list is schema-valid and refused as a semantic error (422).
+    if versions.is_empty() {
+        return Err(ServiceError::content_invalid(
+            Violation::new("must contain at least one version").with_path("versions"),
+        ));
+    }
+    let supplied_uid = parse_supplied_uid(uid)?;
+    let contribution_audit = parse_contribution_audit(audit, &cx.effective_system_id())?;
+    let mut plan: Vec<PlannedVersion> = Vec::with_capacity(versions.len());
+    for (index, version) in versions.into_iter().enumerate() {
+        plan.push(plan_version(version, index, &contribution_audit.system_id)?);
+    }
+    Ok((supplied_uid, contribution_audit, plan))
+}
+
+/// The objects the plan's members modify, delete or attest, each once.
+fn plan_targets(plan: &[PlannedVersion]) -> Vec<VoId> {
+    let mut targets: Vec<VoId> = plan
+        .iter()
+        .filter_map(|v| v.target.map(|(vo_id, _)| vo_id))
+        .collect();
+    targets.sort_unstable();
+    targets.dedup();
+    targets
+}
+
+/// The stored kind of every target the gate read found.
+fn kinds_of(gate: &Gate) -> HashMap<VoId, Kind> {
+    gate.targets
+        .iter()
+        .filter_map(|target| {
+            let tip = target.placement.tip.as_ref()?;
+            Kind::from_type(&tip.kind).map(|kind| (target.vo_id, kind))
+        })
+        .collect()
+}
+
+/// Commit a set of COMPOSITION members in one guarded statement (#6256),
+/// when `write` is one the statement covers; `None` leaves `write` to the
+/// per-member path.
+///
+/// # Errors
+/// The [`FerroEhrService::commit_member_set`] refusals.
+async fn commit_member_set(
+    cx: &FerroEhrService,
+    ehr_id: Option<EhrId>,
+    party_only: bool,
+    write: &mut ContributionWrite<'_>,
+) -> Result<Option<CommittedContribution>, ServiceError> {
+    let Some(ehr_id) = ehr_id.filter(|_| {
+        !party_only
+            && write.attests.is_empty()
+            && crate::service::contribution_set::covers(&write.changes)
+    }) else {
+        return Ok(None);
+    };
+    let changes = std::mem::take(&mut write.changes);
+    let first = write.gate.take();
+    match cx
+        .commit_member_set(ehr_id, (write.supplied_uid, write.audit), changes, first)
+        .await?
+    {
+        crate::service::contribution_set::Outcome::Committed(outcome) => Ok(Some(outcome)),
+        crate::service::contribution_set::Outcome::PerMember(changes) => {
+            write.changes = changes;
+            Ok(None)
+        }
+    }
 }
 
 /// Reads the stored kind of every modification target of the plan in ONE

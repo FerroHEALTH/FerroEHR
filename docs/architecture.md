@@ -269,6 +269,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `uq_version_hot_tree`) refuse a second version at a taken place, and that
   write is judged again too. `commit_retries_total{reason}` counts both
   (#6256).
+  A CONTRIBUTION of at most eight COMPOSITION members (`SET_LIMIT`, set by
+  measured planning and execution time), every modify and delete naming the
+  trunk tip this server created, is planned before any read, judged on one
+  gate read of the EHR and every target (`gate::Shape::Members`), and written
+  by one guarded statement that repeats the single write's audit, version,
+  head and node CTEs once per member (`guarded::commit_set`); any other set
+  keeps the per-member path, its EHR row and object locks taken in that
+  order.
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers

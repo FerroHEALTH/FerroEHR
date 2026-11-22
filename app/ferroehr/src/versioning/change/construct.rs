@@ -2,15 +2,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The constructors of a [`Change`] a service write builds, and of the
-//! [`Write`] that carries it, and the folded statement a write commits in.
+//! [`Write`] that carries it.
 
-use uuid::Uuid;
-
-use super::{Change, Committed, ContributionCtx, Write, WriteEnvelope};
+use super::{Change, Write, WriteEnvelope};
 use crate::ids::{AllocatedVoId, EhrId, VoId};
-use crate::storage::version_repo::commit::{Folded, FoldedVersion, Guard, outbox_envelope};
+use crate::storage::version_repo::guarded::Guard;
 use crate::versioning::Kind;
-use crate::versioning::SigningCtx;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::body::Body;
 use crate::versioning::object_version_id::TreeId;
@@ -147,40 +144,5 @@ impl Write {
         deleted: Option<crate::system_log::categories::ContentIds>,
     ) -> Self {
         Self { deleted, ..self }
-    }
-}
-
-/// The folded statement of `version` under `contribution`: a guarded one
-/// carrying `committed`'s outbox row when eventing is enabled, a standalone
-/// one, or one into an existing CONTRIBUTION.
-pub(super) fn folded_shape<'a>(
-    contribution: ContributionCtx,
-    contribution_id: Uuid,
-    version: FoldedVersion<'a>,
-    ctx: &SigningCtx<'_>,
-    committed: &Committed,
-) -> Folded<'a> {
-    match contribution {
-        ContributionCtx::New(Some(guard)) => Folded::Guarded {
-            id: contribution_id,
-            guard: Guard {
-                outbox: ctx.outbox_enabled.then(|| {
-                    let entry = [committed.envelope_entry()];
-                    outbox_envelope(
-                        contribution_id,
-                        version.ehr_id,
-                        committed.time_committed,
-                        &entry,
-                    )
-                }),
-                ..guard
-            },
-            version,
-        },
-        ContributionCtx::New(None) => Folded::Standalone {
-            id: contribution_id,
-            version,
-        },
-        ContributionCtx::Existing(id) => Folded::Into { id, version },
     }
 }

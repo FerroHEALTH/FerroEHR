@@ -39,6 +39,20 @@ pub enum Shape {
     /// The content identity of the tip, which a logical delete's access
     /// record is classified by (EHDS Annex II 3.2(c)).
     Delete,
+    /// Both, for the members of a CONTRIBUTION that update and delete.
+    Members,
+}
+
+impl Shape {
+    /// Whether the read carries the update facts.
+    fn updates(self) -> bool {
+        matches!(self, Self::Update | Self::Members)
+    }
+
+    /// Whether the read carries the delete facts.
+    fn deletes(self) -> bool {
+        matches!(self, Self::Delete | Self::Members)
+    }
 }
 
 /// One gate read: the EHR, the targets and what to read beside them.
@@ -118,7 +132,7 @@ pub struct Target {
 /// `$1` the EHR, `$2` the targets, `$3` the persistent template, `$4` the
 /// persistent category code and `$5` the deleted lifecycle state.
 fn statement(shape: Shape) -> String {
-    let update = if shape == Shape::Update {
+    let update = if shape.updates() {
         concat!(
             ", tb.stored_template, fv.found AS first_found, fv.ani AS first_ani, ",
             "fv.category AS first_category"
@@ -126,7 +140,7 @@ fn statement(shape: Shape) -> String {
     } else {
         ""
     };
-    let update_join = if shape == Shape::Update {
+    let update_join = if shape.updates() {
         concat!(
             " LEFT JOIN LATERAL ( ",
             "    SELECT (b.body)::jsonb #>> '{archetype_details,template_id,value}' ",
@@ -147,12 +161,12 @@ fn statement(shape: Shape) -> String {
     } else {
         ""
     };
-    let delete = if shape == Shape::Delete {
+    let delete = if shape.deletes() {
         ", tip.has_body, tip.template_id AS content_template, dc.archetype AS content_archetype"
     } else {
         ""
     };
-    let delete_join = if shape == Shape::Delete {
+    let delete_join = if shape.deletes() {
         concat!(
             " LEFT JOIN LATERAL ( ",
             "    SELECT COALESCE(n.data->>'archetype_node_id', ",
@@ -218,10 +232,12 @@ pub async fn read(conn: &mut PgConnection, ask: Ask<'_>) -> Result<Gate, Storage
     static PLAIN: LazyLock<String> = LazyLock::new(|| statement(Shape::Plain));
     static UPDATE: LazyLock<String> = LazyLock::new(|| statement(Shape::Update));
     static DELETE: LazyLock<String> = LazyLock::new(|| statement(Shape::Delete));
+    static MEMBERS: LazyLock<String> = LazyLock::new(|| statement(Shape::Members));
     let sql = match ask.shape {
         Shape::Plain => &PLAIN,
         Shape::Update => &UPDATE,
         Shape::Delete => &DELETE,
+        Shape::Members => &MEMBERS,
     };
     let targets: Vec<Uuid> = ask.targets.iter().map(|vo_id| vo_id.0).collect();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
@@ -270,7 +286,7 @@ fn target(
     shape: Shape,
 ) -> Result<Target, StorageError> {
     let tip = crate::storage::version_repo::placement::tip_from_row(row)?;
-    let (stored_template, first_root) = if shape == Shape::Update {
+    let (stored_template, first_root) = if shape.updates() {
         let first_root = match row.try_get::<Option<bool>, _>("first_found")? {
             Some(true) => Some((row.try_get("first_ani")?, row.try_get("first_category")?)),
             _ => None,
@@ -280,7 +296,9 @@ fn target(
         (None, None)
     };
     let content = match (&tip, shape) {
-        (Some(tip), Shape::Delete) if row.try_get::<Option<bool>, _>("has_body")? == Some(true) => {
+        (Some(tip), shape)
+            if shape.deletes() && row.try_get::<Option<bool>, _>("has_body")? == Some(true) =>
+        {
             Some(content_of(tip, row)?)
         }
         _ => None,
