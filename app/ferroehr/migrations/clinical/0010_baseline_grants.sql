@@ -23,7 +23,8 @@ REVOKE ALL ON FUNCTION
     access_settings_notify(),
     access_class_unknown(ehr uuid),
     access_stale_copy(),
-    definition_changed()
+    definition_changed(),
+    policy_changed()
     FROM PUBLIC;
 
 DO $$
@@ -71,6 +72,7 @@ BEGIN
             dpop_proof,
             policy_register,
             access_policy_version,
+            policy_revision,
             access_delay,
             access_class,
             access_settings,
@@ -124,6 +126,7 @@ BEGIN
             dpop_proof,
             policy_register,
             access_policy_version,
+            policy_revision,
             access_delay,
             access_class,
             access_settings,

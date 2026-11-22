@@ -440,3 +440,41 @@ async fn a_register_whose_notification_is_withheld_decides_the_next_request() {
         .expect("the request's read");
     assert_eq!(reader.policy_registers().version(Register::AccessDelay), 1);
 }
+
+/// The policy revision moves once in each transaction that writes a register
+/// or the access policy, the one row a request confirms its policy copies
+/// with; a replica whose notification never arrives still installs both
+/// changes at its next request (#6251).
+#[tokio::test]
+async fn the_policy_revision_moves_once_with_every_policy_write() {
+    use ferroehr::policy_register::Register;
+    use ferroehr::storage::policy_register::revisions;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let writer = replica(&pool);
+    let reader = replica(&pool);
+    let _elsewhere = crate::policy_fixtures::deaf(&[
+        std::sync::Arc::clone(reader.policy_registers().listened()),
+        std::sync::Arc::clone(reader.access_policy().listened()),
+    ])
+    .await;
+    reader.confirm_policy(true, true).await.expect("a read");
+    assert_eq!(revisions(&pool).await.expect("a read").policy, 0);
+    writer
+        .put_policy_register(
+            Register::AccessDelay,
+            0,
+            r#"{"enabled": true, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#,
+        )
+        .await
+        .expect("the register is written");
+    assert_eq!(revisions(&pool).await.expect("a read").policy, 1);
+    create(&writer, &policy(true)).await;
+    assert_eq!(revisions(&pool).await.expect("a read").policy, 2);
+    reader
+        .confirm_policy(true, true)
+        .await
+        .expect("the request's read");
+    assert_eq!(reader.policy_registers().version(Register::AccessDelay), 1);
+    assert_eq!(reader.access_policy().in_force().version, 1);
+}

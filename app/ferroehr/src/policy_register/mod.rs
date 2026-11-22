@@ -23,6 +23,7 @@ pub mod listen;
 use crate::db::domain::Domain;
 use std::fmt;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, PoisonError, RwLock};
 
 use sqlx::PgPool;
@@ -123,6 +124,9 @@ pub struct LiveRegisters {
     /// The listener on [`CHANNEL`], which says when the registers in force
     /// must be read again.
     listened: Arc<Listened>,
+    /// The `policy_revision` the registers in force were confirmed at: they
+    /// hold every register version committed up to it (#6251).
+    confirmed: AtomicI64,
 }
 
 impl fmt::Debug for LiveRegisters {
@@ -176,6 +180,7 @@ impl LiveRegisters {
             })),
             audit: RwLock::new(None),
             installing: tokio::sync::Mutex::new(()),
+            confirmed: AtomicI64::new(0),
         }
     }
 
@@ -244,18 +249,27 @@ impl LiveRegisters {
         self.install(&heads).await
     }
 
+    /// Whether the registers in force hold every version committed up to the
+    /// policy revision `revision` the request read (#6251).
+    #[must_use]
+    pub(crate) fn holds(&self, revision: i64) -> bool {
+        revision <= self.confirmed.load(Ordering::Acquire)
+    }
+
     /// Bring the registers in force to `heads`, the newest stored version of
-    /// each register as the request read them in its one read of the policy
-    /// heads ([`store::policy_heads`]), so what the request decides rests on
-    /// that read and on no notification's delay (#6048): nothing is read
-    /// when this replica holds every one of them.
+    /// each register read with the policy revision at one snapshot
+    /// ([`store::policy_heads`]), and mark them confirmed at that revision,
+    /// so what a request decides rests on its own read of the revision and on
+    /// no notification's delay (#6048, #6251).
     ///
     /// # Errors
     /// As [`Self::refresh`].
-    pub(crate) async fn confirm(&self, heads: &[(String, i64)]) -> Result<(), RegisterError> {
+    pub(crate) async fn confirm(&self, heads: &store::PolicyHeads) -> Result<(), RegisterError> {
         // NOTE: our own design (#6048), the pending notification is taken: `heads` is newer.
         let _notified = self.listened.must_read();
-        self.install(heads).await
+        self.install(&heads.registers).await?;
+        self.confirmed.fetch_max(heads.revision, Ordering::AcqRel);
+        Ok(())
     }
 
     /// Install each register whose newest version in `heads` is past the one

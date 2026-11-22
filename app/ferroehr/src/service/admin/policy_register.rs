@@ -94,12 +94,14 @@ impl FerroEhrService {
     }
 
     /// Bring the policy a request reads up to date before it decides
-    /// anything, on one indexed read of the newest versions in the store
-    /// (#6048): the registers when `registers` holds, the controller's access
-    /// policy when `access_policy` holds. A copy at the version read stands;
-    /// one behind it is read. The same read carries the definition revision,
-    /// and the definition copies built before it are dropped (#5948). No
-    /// notification's delay decides the request.
+    /// anything, on one indexed read of the policy and definition revisions
+    /// (#6048, #6251): the registers when `registers` holds, the controller's
+    /// access policy when `access_policy` holds. A copy confirmed at the
+    /// policy revision read holds every change committed up to it and
+    /// stands; otherwise the newest versions are read with the revision at
+    /// one snapshot and the copy brought to them. The same read carries the
+    /// definition revision, and the definition copies built before it are
+    /// dropped (#5948). No notification's delay decides the request.
     ///
     /// # Errors
     /// `service_overloaded` (`503`) when the store does not answer.
@@ -111,25 +113,28 @@ impl FerroEhrService {
         if !registers && !access_policy {
             return Ok(());
         }
-        let heads = crate::storage::policy_register::policy_heads(self.registers.pool())
+        let unread = |error| ServiceError::overloaded("the policy could not be read", error);
+        let read = store::revisions(self.registers.pool())
             .await
-            .map_err(|error| ServiceError::overloaded("the policy could not be read", error))?;
-        self.definitions.confirm(heads.definitions);
+            .map_err(unread)?;
+        self.definitions.confirm(read.definitions);
+        let registers = registers && !self.registers.holds(read.policy);
+        let access_policy = access_policy && !self.access_policy.holds(read.policy);
+        if !registers && !access_policy {
+            return Ok(());
+        }
+        let heads = store::policy_heads(self.registers.pool())
+            .await
+            .map_err(unread)?;
         if registers {
-            self.registers
-                .confirm(&heads.registers)
-                .await
-                .map_err(|error| {
-                    ServiceError::overloaded("the policy registers could not be read", error)
-                })?;
+            self.registers.confirm(&heads).await.map_err(|error| {
+                ServiceError::overloaded("the policy registers could not be read", error)
+            })?;
         }
         if access_policy {
-            self.access_policy
-                .confirm(heads.access_policy)
-                .await
-                .map_err(|error| {
-                    ServiceError::overloaded("the access policy could not be read", error)
-                })?;
+            self.access_policy.confirm(&heads).await.map_err(|error| {
+                ServiceError::overloaded("the access policy could not be read", error)
+            })?;
         }
         Ok(())
     }

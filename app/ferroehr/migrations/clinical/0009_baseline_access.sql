@@ -94,6 +94,47 @@ COMMENT ON COLUMN access_policy_version.vo_id IS 'VERSIONED_ACCESS_POLICY.uid: t
 COMMENT ON COLUMN access_policy_version.commit_audit IS 'ORIGINAL_VERSION.commit_audit, the canonical AUDIT_DETAILS.';
 COMMENT ON COLUMN access_policy_version.data IS 'ORIGINAL_VERSION.data, the canonical ACCESS_POLICY.';
 
+-- ── policy_revision ──────────────────────────────────────────────────────────
+-- The revision of policy_register and access_policy_version (#6251). A
+-- replica keeps the registers and the access policy in memory; a request
+-- reads this one row to confirm them, and reads the newest versions only when
+-- the revision passed the one the copies were confirmed at, so no decision
+-- rests on a notification and the request pays a primary-key read of one row.
+-- The statement trigger moves it once per transaction, the mechanism of
+-- definition_revision, on a row of its own so a policy writer never waits on
+-- a template writer. No openEHR spec governs the copies: our own design.
+CREATE TABLE policy_revision (
+    singleton  boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+    revision   bigint NOT NULL,
+    revised_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO policy_revision (singleton, revision) VALUES (true, 0);
+COMMENT ON TABLE policy_revision IS 'The revision of policy_register and access_policy_version, which moves once in each transaction that changes either. A request reads it to confirm the policy copies a replica holds. Our own design.';
+
+CREATE FUNCTION policy_changed() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path = clinical, pg_catalog
+    AS $$
+BEGIN
+    IF current_setting('ferroehr.policy_revised', true) IS DISTINCT FROM pg_current_xact_id()::text THEN
+        UPDATE policy_revision
+           SET revision = revision + 1, revised_at = now()
+         WHERE singleton;
+        PERFORM set_config('ferroehr.policy_revised', pg_current_xact_id()::text, true);
+    END IF;
+    RETURN NULL;
+END;
+$$;
+COMMENT ON FUNCTION policy_changed() IS
+    'Moves policy_revision.revision once in the transaction, so every replica reads the policy versions again at its next request.';
+
+CREATE TRIGGER policy_register_policy_changed
+    AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON policy_register
+    FOR EACH STATEMENT EXECUTE FUNCTION policy_changed();
+CREATE TRIGGER access_policy_version_policy_changed
+    AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON access_policy_version
+    FOR EACH STATEMENT EXECUTE FUNCTION policy_changed();
+
 -- ── access_delay ─────────────────────────────────────────────────────────────
 -- The EHDS Art. 3(3) delay of the person's own access.
 --

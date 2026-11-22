@@ -88,7 +88,7 @@ the archetype specialisation lineage AQL widens an archetype predicate with
 (the `web_template` and `archetype_lineage` caches below). Every template or
 ADL2 artefact upload and delete moves a definition revision in its own
 transaction, and a request reads that revision in the same indexed read as the
-policy heads. When the revision moved, the instance drops both caches before
+policy revision. When the revision moved, the instance drops both caches before
 the request answers, so after a template delete or replacement, or an ADL2
 artefact write, on any instance, the next FLAT or STRUCTURED commit, `wt+json`
 read and AQL query on every instance uses what the store holds. No
