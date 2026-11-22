@@ -1717,6 +1717,322 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/admin/audit-delivery": {
+      "get": {
+        "tags": [
+          "admin-audit-delivery"
+        ],
+        "summary": "Read the delivery of the audit records to each sink\n(`GET /admin/audit-delivery`). **Our own extension.**",
+        "operationId": "admin_audit_delivery",
+        "responses": {
+          "200": {
+            "description": "`cursors`: each sink's cursor of each log (`system`, `access_log`) with its `through_id`, how many records it is `behind`, and whether the configuration names the sink (`configured`); `parked`: the records a sink parked, oldest first, at most 1000, each with its `reason` (`unrenderable`, `refused`, `reaped`, `tombstoned`), `parked_at` and whether a `retry` is asked.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The local audit store is off.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/audit-delivery/dismiss": {
+      "post": {
+        "tags": [
+          "admin-audit-delivery"
+        ],
+        "summary": "Dismiss a parked record, which the sink will not deliver\n(`POST /admin/audit-delivery/dismiss`). **Our own extension.**",
+        "operationId": "admin_dismiss_parked_audit_record",
+        "requestBody": {
+          "description": "`{ \"sink\": …, \"chain\": …, \"record_id\": … }`, as for a retry.",
+          "content": {
+            "application/json": {
+              "schema": {},
+              "example": {
+                "sink": "syslog",
+                "chain": "access_log",
+                "record_id": 7
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The record leaves the parked set; the sink never delivers it. The record stays in the store."
+          },
+          "400": {
+            "description": "The body is not the object above.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The sink parked no such record.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The local audit store is off.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/audit-delivery/forget": {
+      "post": {
+        "tags": [
+          "admin-audit-delivery"
+        ],
+        "summary": "Forget a sink: remove its cursors and parked records\n(`POST /admin/audit-delivery/forget`). **Our own extension.**",
+        "operationId": "admin_forget_audit_sink",
+        "requestBody": {
+          "description": "`{ \"sink\": … }`, a sink (`fhir_feed`, `syslog`) the configuration no longer names, or one an operator restarts from the delivery frontier.",
+          "content": {
+            "application/json": {
+              "schema": {},
+              "example": {
+                "sink": "syslog"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "`cursors` and `parked`: how many of each went. A sink configured again starts at the delivery frontier of its first frontier round.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "The body does not name a sink.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The local audit store is off.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/audit-delivery/retry": {
+      "post": {
+        "tags": [
+          "admin-audit-delivery"
+        ],
+        "summary": "Ask a sink to deliver a parked record again\n(`POST /admin/audit-delivery/retry`). **Our own extension.**",
+        "operationId": "admin_retry_parked_audit_record",
+        "requestBody": {
+          "description": "`{ \"sink\": …, \"chain\": …, \"record_id\": … }`: the sink (`fhir_feed`, `syslog`), the log (`system`, `access_log`) and the record's id in it.",
+          "content": {
+            "application/json": {
+              "schema": {},
+              "example": {
+                "sink": "fhir_feed",
+                "chain": "system",
+                "record_id": 42
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The sink offers the record before the next record past its cursor; delivered, it leaves the parked set, refused again, it stays parked."
+          },
+          "400": {
+            "description": "The body is not the object above.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The sink parked no such record.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The local audit store is off.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/admin/config": {
       "get": {
         "tags": [
@@ -28925,6 +29241,10 @@
     {
       "name": "ACCESS_LOG",
       "description": "One EHR's access log, newest first, and one entry of it: the subject view for the subject of care and their representative (EHDS Art. 9(2)), the full ITS-JSON records for a reviewer the admin class admits; any other EHR answers 404 to the person. Every read writes its own access-log entry. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes."
+    },
+    {
+      "name": "admin-audit-delivery",
+      "description": "The delivery of the audit records to the ITI-20 sinks that deliver from the local store: each sink's cursors and how far each is behind, the records a sink parked, and the retry or dismissal of a parked record and the forgetting of a sink. OUR OWN EXTENSION: no ITS-REST operation or IHE profile governs these routes (same admin gate + RBAC Admin class)."
     },
     {
       "name": "admin-access-log",

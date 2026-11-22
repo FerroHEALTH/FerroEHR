@@ -34,6 +34,7 @@ pub mod access_log_erasure;
 pub mod access_policy;
 pub mod access_repair;
 pub mod archive;
+pub mod audit_delivery;
 pub mod binding_key;
 mod body;
 pub mod dump_load;

@@ -4,8 +4,10 @@ admin_access_log_erase	false	-	-	Some((Delete, ApplicationActivity))	-	false	fal
 admin_access_log_seals	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_archive_ehrs	false	-	-	Some((Update, ApplicationActivity))	-	false	false
 admin_archive_parties	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_audit_delivery	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_config	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_delay_access	false	-	-	Some((Create, ApplicationActivity))	-	false	false
+admin_dismiss_parked_audit_record	false	-	-	Some((Update, ApplicationActivity))	-	false	false
 admin_dump	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_ehr_access_commit	false	-	-	Some((Update, ApplicationActivity))	-	false	false
 admin_ehr_access_repair	false	-	-	Some((Update, ApplicationActivity))	-	false	false
@@ -13,6 +15,7 @@ admin_ehr_access_versions	false	-	-	Some((Read, ApplicationActivity))	-	false	fa
 admin_ehr_delete	true	Some(Admin)	true	Some((Delete, Ehr))	Delete	false	false
 admin_ehr_delete_all	true	Some(Admin)	true	Some((Delete, Ehr))	Delete	false	false
 admin_export_access_log	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_forget_audit_sink	false	-	-	Some((Delete, ApplicationActivity))	-	false	false
 admin_get_access_log_checkpoint	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_lift_restriction	false	-	-	Some((Update, ApplicationActivity))	-	false	false
 admin_list_access_log	false	-	-	Some((Read, ApplicationActivity))	-	false	false
@@ -39,6 +42,7 @@ admin_retention_anchor	false	-	-	Some((Update, ApplicationActivity))	-	false	fal
 admin_retention_due	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_retention_hold	false	-	-	Some((Create, ApplicationActivity))	-	false	false
 admin_retention_policies	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_retry_parked_audit_record	false	-	-	Some((Update, ApplicationActivity))	-	false	false
 admin_seal_access_log_checkpoint	false	-	-	Some((Create, ApplicationActivity))	-	false	false
 admin_template_delete	false	-	-	Some((Delete, Template))	-	false	false
 admin_verify_access_log	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
