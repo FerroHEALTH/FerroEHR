@@ -14,7 +14,8 @@
 //! party read, all over the
 //! IPS composition (128 KB, 402 node rows), and the commit of that composition
 //! as a CONTRIBUTION, its read at an instant, the `EHR_STATUS` commit and read,
-//! and the commit of a PERSON, plain and with ordinal and scale values.
+//! the commit of a PERSON, plain and with ordinal and scale values, and the
+//! update and the delete of a COMPOSITION.
 //!
 //! The conversions are the `trace` events under
 //! [`openehr_its::conversion::TARGET`]: the codec entry points record each
@@ -98,10 +99,12 @@ enum Path {
     CommitParty,
     CommitPartyScored,
     ReadVersion,
+    CommitUpdate,
+    CommitDelete,
 }
 
 impl Path {
-    const ALL: [Self; 20] = [
+    const ALL: [Self; 22] = [
         Self::CommitJson,
         Self::CommitXml,
         Self::CommitFlat,
@@ -122,6 +125,8 @@ impl Path {
         Self::CommitParty,
         Self::CommitPartyScored,
         Self::ReadVersion,
+        Self::CommitUpdate,
+        Self::CommitDelete,
     ];
 
     fn name(self) -> &'static str {
@@ -146,6 +151,8 @@ impl Path {
             Self::CommitParty => "party commit",
             Self::CommitPartyScored => "party commit with scores",
             Self::ReadVersion => "read JSON from the version copy",
+            Self::CommitUpdate => "update JSON",
+            Self::CommitDelete => "delete",
         }
     }
 }
@@ -277,7 +284,16 @@ struct Budget {
 /// its rows, in place of a read of the policy revision before it (#6251): one
 /// round trip fewer on the six read paths those operations serve, measured
 /// beside the merge base, and each of those round-trip ceilings fell by one.
-const BUDGETS: [Budget; 20] = [
+/// A COMPOSITION update (a PUT with new content) and a delete are measured
+/// last, on the EHRs' own compositions and on compositions committed for
+/// them, and a COMPOSITION write judges its pre-checks on one gate read
+/// (#6256): an update sends 10 round trips where it sent 12, a delete 11
+/// where it sent 16, and a CONTRIBUTION 12 where it sent 13, measured beside
+/// the merge base, and the CONTRIBUTION's ceiling fell by one. The new paths'
+/// ceilings are the figures of two runs (17,495 and 1,623 allocations, median
+/// peaks of 1,386,366 and 134,395 bytes, 186,380 and 5,765 WAL bytes) with
+/// the margins above.
+const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
@@ -382,7 +398,7 @@ const BUDGETS: [Budget; 20] = [
         conversions: 6,
         allocations: 18_290,
         peak_bytes: 1_649_934,
-        round_trips: 13,
+        round_trips: 12,
         nested: 14,
         wal: 190_142,
     },
@@ -458,6 +474,24 @@ const BUDGETS: [Budget; 20] = [
         nested: 2,
         wal: 2607,
     },
+    Budget {
+        path: Path::CommitUpdate,
+        conversions: 5,
+        allocations: 17_848,
+        peak_bytes: 1_525_458,
+        round_trips: 10,
+        nested: 4,
+        wal: 188_244,
+    },
+    Budget {
+        path: Path::CommitDelete,
+        conversions: 2,
+        allocations: 1657,
+        peak_bytes: 150_537,
+        round_trips: 11,
+        nested: 4,
+        wal: 5823,
+    },
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
@@ -470,16 +504,22 @@ struct Counter(Arc<Mutex<Counts>>);
 struct Counts {
     round_trips: u64,
     conversions: BTreeMap<String, u64>,
+    /// The round trips by the opening words of their statement.
+    sent: BTreeMap<String, u64>,
 }
 
-/// Reads the `op` field of a conversion event.
+/// Reads the `op` field of a conversion event, and the statement of a
+/// `sqlx::query` event.
 #[derive(Default)]
-struct Op(String);
+struct Op(String, String);
 
 impl Visit for Op {
     fn record_str(&mut self, field: &Field, value: &str) {
-        if field.name() == "op" {
-            value.clone_into(&mut self.0);
+        match field.name() {
+            "op" => value.clone_into(&mut self.0),
+            "db.statement" if !value.is_empty() => value.clone_into(&mut self.1),
+            "summary" if self.1.is_empty() => value.clone_into(&mut self.1),
+            _ => {}
         }
     }
 
@@ -488,6 +528,22 @@ impl Visit for Op {
             self.0 = format!("{value:?}");
         }
     }
+}
+
+/// Whether the report lists each path's round trips by statement: set it to
+/// see them, and leave it off for the budget, since reading them allocates on
+/// the measured thread.
+const LIST_SENT: bool = false;
+
+/// The opening words of `statement`, its whitespace collapsed.
+fn opening(statement: &str) -> String {
+    statement
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .chars()
+        .take(100)
+        .collect()
 }
 
 impl<S> tracing_subscriber::Layer<S> for Counter
@@ -514,6 +570,13 @@ where
             *counts.conversions.entry(op.0).or_default() += 1;
         } else if !names.contains(&ferroehr::db::pool::SESSION_SETUP_SPAN) {
             counts.round_trips += 1;
+            // The statements are read only on request: reading them allocates on
+            // the measured thread.
+            if LIST_SENT {
+                let mut op = Op::default();
+                event.record(&mut op);
+                *counts.sent.entry(opening(&op.1)).or_default() += 1;
+            }
         }
     }
 }
@@ -623,6 +686,12 @@ struct World {
     /// judged on its own row and served from the version copy, each with the
     /// version uid of its composition; built right before their path.
     judged: Mutex<Vec<(String, String)>>,
+    /// The current version uid of each EHR's composition, which the next
+    /// update names in `If-Match`.
+    update_uids: Mutex<Vec<String>>,
+    /// The compositions the deletes remove, each with its EHR and the version
+    /// uid the delete names; built right before their path.
+    deletable: Mutex<Vec<(String, String)>>,
 }
 
 /// The `ETag` value of a response, unquoted.
@@ -717,7 +786,6 @@ impl World {
             status_body = value.to_string();
         }
         Self {
-            ehrs,
             xml,
             flat,
             template_id,
@@ -725,9 +793,16 @@ impl World {
             scored: scored(&person),
             person,
             at: jiff::Timestamp::now().to_string(),
+            update_uids: Mutex::new(
+                ehrs.iter()
+                    .map(|(_, vo)| format!("{vo}::{}::1", system_id(&status_uids)))
+                    .collect(),
+            ),
+            ehrs,
             status: status_body,
             status_uids: Mutex::new(status_uids),
             judged: Mutex::new(Vec::new()),
+            deletable: Mutex::new(Vec::new()),
         }
     }
 
@@ -755,17 +830,82 @@ impl World {
 
     /// The system id the server stamps into the version uids it writes.
     fn system_id(&self) -> String {
-        self.status_uids.lock().unwrap()[0]
-            .split("::")
-            .nth(1)
-            .expect("a system id")
-            .to_owned()
+        system_id(&self.status_uids.lock().unwrap())
+    }
+
+    /// Commits the compositions [`Path::CommitDelete`] removes, one per
+    /// request, spread over the EHRs.
+    async fn deletable(&self, app: &Router) {
+        let mut deletable = Vec::new();
+        for n in 0..usize::try_from(WARM + REQUESTS).unwrap() {
+            let (ehr, _) = &self.ehrs[n % self.ehrs.len()];
+            let (status, headers, body) = plain(
+                app,
+                &Call {
+                    method: "POST",
+                    uri: format!("{BASE}/ehr/{ehr}/composition"),
+                    user: "root",
+                    accept: JSON,
+                    headers: vec![("Prefer", "return=minimal".to_owned())],
+                    body: Some((JSON, common::ips_canonical_composition().to_string())),
+                },
+            )
+            .await;
+            assert_eq!(
+                status,
+                StatusCode::CREATED,
+                "a composition to delete: {body}"
+            );
+            deletable.push((ehr.clone(), etag(&headers)));
+        }
+        *self.deletable.lock().unwrap() = deletable;
     }
 
     /// Records what the answer to the `n`th request of `path` changed.
     fn observe(&self, path: Path, n: usize, headers: &HeaderMap) {
-        if path == Path::CommitStatus {
-            self.status_uids.lock().unwrap()[n % self.ehrs.len()] = etag(headers);
+        match path {
+            Path::CommitStatus => {
+                self.status_uids.lock().unwrap()[n % self.ehrs.len()] = etag(headers);
+            }
+            Path::CommitUpdate => {
+                self.update_uids.lock().unwrap()[n % self.ehrs.len()] = etag(headers);
+            }
+            _ => {}
+        }
+    }
+
+    /// The `n`th delete, of a composition [`Self::deletable`] committed.
+    fn delete(&self, n: usize) -> Call {
+        let (ehr, version) = self.deletable.lock().unwrap()[n].clone();
+        Call {
+            method: "DELETE",
+            uri: format!("{BASE}/ehr/{ehr}/composition/{version}"),
+            user: "root",
+            accept: JSON,
+            headers: Vec::new(),
+            body: None,
+        }
+    }
+
+    /// The `n`th update, of the composition of the EHR `ehr`, with a start
+    /// time of its own so each one stores new content.
+    fn update(&self, ehr: &str, n: usize) -> Call {
+        let tip = self.update_uids.lock().unwrap()[n % self.ehrs.len()].clone();
+        let vo = tip.split("::").next().expect("an object id");
+        let mut body = common::ips_canonical_composition();
+        body.as_object_mut().expect("an object").shift_remove("uid");
+        body["context"]["start_time"]["value"] =
+            Value::from(format!("2021-12-03T17:34:{:02}.849379+01:00", n % 60));
+        Call {
+            method: "PUT",
+            uri: format!("{BASE}/ehr/{ehr}/composition/{vo}"),
+            user: "root",
+            accept: JSON,
+            headers: vec![
+                ("Prefer", "return=minimal".to_owned()),
+                ("If-Match", format!("\"{tip}\"")),
+            ],
+            body: Some((JSON, body.to_string())),
         }
     }
 
@@ -876,6 +1016,8 @@ impl World {
             Path::ReadStatus => get(format!("{BASE}/ehr/{ehr}/ehr_status"), "nurse", JSON),
             Path::CommitParty => Self::party_commit(self.person.clone()),
             Path::CommitPartyScored => Self::party_commit(self.scored.clone()),
+            Path::CommitUpdate => self.update(ehr, n),
+            Path::CommitDelete => self.delete(n),
             Path::ReadVersion => {
                 let (ehr, version) = self.judged.lock().unwrap()[n % EHRS].clone();
                 get(
@@ -898,6 +1040,11 @@ impl World {
             body: Some((JSON, body)),
         }
     }
+}
+
+/// The system id in the version uids `uids`.
+fn system_id(uids: &[String]) -> String {
+    uids[0].split("::").nth(1).expect("a system id").to_owned()
 }
 
 /// `person` with details holding two `DV_ORDINAL` and two `DV_SCALE`
@@ -1171,11 +1318,20 @@ async fn measure(
     out.conversions = counts.conversions;
     out.round_trips = counts.round_trips.div_euclid(REQUESTS);
     out.nested = nested.saturating_sub(chainer).div_euclid(REQUESTS);
-    out.statements = nested_ledger(&statements, nested, chainer);
+    out.statements = sent_ledger(&counts.sent) + &nested_ledger(&statements, nested, chainer);
     (out.wal, out.wal_ledger) = row_records(pool, &marks).await;
     testkit::statements::assert_statements_kept(pool, evicted)
         .await
         .expect("no statement evicted while the test counted them");
+    out
+}
+
+/// The round trips of a window by their statement, per request.
+fn sent_ledger(sent: &BTreeMap<String, u64>) -> String {
+    let mut out = format!("round trips by statement over {REQUESTS} requests:\n");
+    for (statement, n) in sent {
+        writeln!(out, "  {n:>5}  {statement}").unwrap();
+    }
     out
 }
 
@@ -1229,6 +1385,9 @@ async fn every_hot_path_stays_within_its_budget() {
         let path = budget.path;
         if path == Path::ReadVersion {
             world.judge_on_objects(&app, &svc).await;
+        }
+        if path == Path::CommitDelete {
+            world.deletable(&app).await;
         }
         let m = Box::pin(measure(&app, &pool, &world, &counter, path)).await;
         let allocations = m.median(|a| a.count);

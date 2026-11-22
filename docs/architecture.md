@@ -247,8 +247,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   COMPOSITION commit asks the store only of an address the copy does not hold
   (#5775, our own design); the `version.template_id` foreign key and the
   template delete guard still refuse a template released at the same moment.
-  A COMPOSITION commit reads its EHR's existence, `is_modifiable`, restriction
-  mark and settings revision in one statement (`ehr_repo::ehr_writability`).
+  A COMPOSITION create, update or delete reads everything its pre-checks are
+  judged on in one gate read (`version_repo::gate`, #6256): the EHR's
+  existence, `is_modifiable`, restriction mark and settings revision with the
+  policy and definition revisions, the database `now()` the commit stamps, and
+  per target object its trunk tip, next ordinal and restriction mark, with the
+  stored template and first root of an update, the content identity of the
+  version a delete deletes, which its access record is classified by, and
+  whether a persistent create has a live sibling of its template.
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers

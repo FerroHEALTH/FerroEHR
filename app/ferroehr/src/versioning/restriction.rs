@@ -32,9 +32,9 @@ use crate::storage::ehr_repo::Restriction;
 /// recorded. No openEHR spec governs restriction of processing — our own
 /// design/extension.
 ///
-/// `known` is the EHR's mark and settings revision the caller already read on
-/// the commit's connection ([`Known`]), taken instead of reading them again
-/// (#5775).
+/// `known` is what the caller already read on the commit's connection
+/// ([`Known`]): the EHR's mark and settings revision (#5775) and the object's
+/// own mark (#6256), each taken instead of reading it again.
 ///
 /// The answer carries the access evaluator's verdict of the EHR, which
 /// [`WriteGate::admit_written`] then holds the content the write is about to
@@ -47,11 +47,11 @@ pub(crate) async fn ensure_not_restricted_tx(
     tx: &mut PgConnection,
     ehr_id: Option<EhrId>,
     vo_id: Option<VoId>,
-    known: Option<Restriction>,
+    known: &Known,
 ) -> Result<Option<WriteGate>, ServiceError> {
     let mut seen = Revision::default();
     if let Some(ehr_id) = ehr_id {
-        let read = match known {
+        let read = match known.restriction.clone() {
             Some(read) => read,
             None => crate::storage::ehr_repo::restriction_and_revision(&mut *tx, ehr_id).await?,
         };
@@ -62,8 +62,13 @@ pub(crate) async fn ensure_not_restricted_tx(
             seen = revision;
         }
     }
+    let object_restricted = match (vo_id, known.object_restricted) {
+        (Some(_), Some(known)) => known,
+        (Some(vo_id), None) => crate::storage::marks::is_restricted(&mut *tx, vo_id).await?,
+        (None, _) => false,
+    };
     if let Some(vo_id) = vo_id
-        && crate::storage::marks::is_restricted(&mut *tx, vo_id).await?
+        && object_restricted
     {
         return Err(ServiceError::restricted(&format!(
             "versioned object {vo_id}"
@@ -287,6 +292,9 @@ pub(crate) struct Known {
     pub(crate) now: Option<jiff::Timestamp>,
     /// The restriction read; `None` makes the gate read its own.
     pub(crate) restriction: Option<Restriction>,
+    /// The written object's own restriction mark; `None` makes the gate read
+    /// it.
+    pub(crate) object_restricted: Option<bool>,
 }
 
 impl Known {
@@ -295,6 +303,7 @@ impl Known {
         Self {
             now: Some(now),
             restriction: None,
+            object_restricted: None,
         }
     }
 }
@@ -306,6 +315,18 @@ impl super::change::Write {
         Self {
             known: Known {
                 restriction: Some(restriction),
+                ..self.known
+            },
+            ..self
+        }
+    }
+
+    /// The same write, the written object's own restriction mark already read
+    /// as `restricted` on the commit's connection.
+    pub(crate) fn object_marked(self, restricted: bool) -> Self {
+        Self {
+            known: Known {
+                object_restricted: Some(restricted),
                 ..self.known
             },
             ..self
