@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 40.0.1 -n ferroehr \
+  --version 41.0.0 -n ferroehr \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.7.1-rc1 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 40.0.1
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 41.0.0
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 40.0.1` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 41.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.7.1-rc1` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 40.0.1 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 41.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -323,7 +323,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 40.0.1 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 41.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -832,7 +832,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 40.0.1 -n ferroehr --reuse-values \
+  --version 41.0.0 -n ferroehr --reuse-values \
   --set config.record.query.plan_cache_capacity=512
 ```
 
@@ -949,9 +949,9 @@ ferropix:
     public_base_url: https://pix.example.org
     auth:
       issuer:
-        - {issuer: https://idp.example.org/realms/pix, kind: machines, audience: [https://pix.example.org/fhir]}
+        pix: {issuer: https://idp.example.org/realms/pix, kind: machines, audience: [https://pix.example.org/fhir]}
     trust:
-      issuer: [{issuer: https://idp.example.org/realms/pix, clients: [hospital-source]}]
+      issuer: [{issuer: pix, clients: [hospital-source]}]
     pseudonym_domain:
       - {namespace: urn:oid:2.999.7.1, name: Clinical domain, consumer_client_id: ferroehr}
 config:
@@ -988,7 +988,8 @@ top-level key and the clients that may act as a Patient Identity Source sit
 in the `[[trust.issuer]]` table, apart from the `[auth.issuer.<name>]` entry that
 names the issuer; FerroPIX refuses the older `server.public_base_url` and `auth.issuer[].clients`, so an
 upgrade from a chart that pinned FerroPIX 0.0.7 moves those two keys in your
-values.
+values. Since FerroPIX 0.0.37, `config.auth.issuer` is a map of issuers by name,
+and `trust.issuer[].issuer` names the issuer by that name, never by its URL.
 
 The restricted-profile gate holds FerroPIX's pods to the Pod Security
 Standards `restricted` profile like every other pod in the release. FerroPIX's
@@ -1011,7 +1012,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 40.0.1 -n ferroehr --reuse-values \
+  --version 41.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1139,12 +1140,12 @@ holding its configuration file, and a NetworkPolicy.
 
 The chart writes three sections of that file for you:
 
-- **`[cdr]`:** `base_url` is this release's CDR Service with its REST base path
-  (`http://<release>:<service.port><config.api.base_path>`), and
-  `[cdr.credentials.oauth]` names the client of `bridge.cdr.oauth` and its
-  secret, a file mounted from your Secret.
-- **`[terminology]`:** with `terminology.enabled` on, `base_url` is the chart's
-  FerroTERM Service at `/r4` and `wire_version` is `r4`. With it off the
+- **`[cdr.endpoint]`:** `url` is this release's CDR Service with its REST base
+  path (`http://<release>:<service.port><config.api.base_path>`), and
+  `[cdr.endpoint.credentials.oauth]` names the client of `bridge.cdr.oauth` and
+  its secret, a file mounted from your Secret.
+- **`[terminology]`:** with `terminology.enabled` on, `endpoint.url` is the
+  chart's FerroTERM Service at `/r4` and `wire_version` is `r4`. With it off the
   section is absent, and you may set your own under `bridge.config`.
 - **`[mappings]`:** `directory` is where the mapping files below are mounted.
 
@@ -1222,8 +1223,10 @@ bridge:
       - blood_pressure.yml
   config:
     auth:
-      issuer: https://idp.example.org
-      audience: [https://bridge.example.org/fhir]
+      issuer:
+        - issuer: https://idp.example.org
+          kind: machines
+          audience: [https://bridge.example.org/fhir]
   networkPolicy:
     ingressFrom:
       - podSelector:
@@ -1247,7 +1250,7 @@ chart adds FerroBRIDGE's pods to it, and FerroTERM's policy admits them too.
 the keys of FerroBRIDGE's
 [configuration reference](https://ferrobridge.eu/docs/operate/configuration.html).
 FerroBRIDGE refuses an unknown key at boot. The render refuses a key the chart
-writes (`cdr.base_url`, `cdr.credentials`, `server.listen`, `terminology` while
+writes (`cdr.endpoint`, `server.listen`, `terminology` while
 FerroTERM runs, `mappings.directory` while the chart mounts the mappings) and
 any secret-shaped key, such as a password, a token or `cdm.url`: set its
 `_file` sibling and mount the file with `bridge.extraVolumes` and
@@ -1387,7 +1390,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 40.0.1 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 41.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

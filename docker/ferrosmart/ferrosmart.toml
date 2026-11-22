@@ -54,6 +54,8 @@ kind = "confidential_asymmetric"
 jwks_file = "/run/secrets/ferrosmart_viewer_jwks"
 scopes = ["system/launch.c"]
 grant_types = ["client_credentials"]
+# The resource server whose launches the viewer registers (RFC 8707).
+resources = ["http://localhost:8080/ferroehr/rest/openehr/v1"]
 
 # An example SMART app: a public client with PKCE alone (SMART App Launch
 # 2.2.0, Client Types, client-public), launched from the viewer or
@@ -69,3 +71,5 @@ scopes = [
   "patient/composition-*.crs", "patient/aql-*.rs",
 ]
 grant_types = ["authorization_code"]
+# The resource server the app's tokens may name in `aud` (RFC 8707).
+resources = ["http://localhost:8080/ferroehr/rest/openehr/v1"]

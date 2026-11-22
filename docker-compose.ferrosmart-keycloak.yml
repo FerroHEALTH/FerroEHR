@@ -67,7 +67,6 @@ services:
         condition: service_healthy
     environment:
       FERROSMART__FERROSMART__UPSTREAM__0__NAME: keycloak
-      FERROSMART__FERROSMART__UPSTREAM__0__PROTOCOL: oidc
       FERROSMART__FERROSMART__UPSTREAM__0__OIDC__ISSUER: http://localhost:8380/realms/ferroehr
       FERROSMART__FERROSMART__UPSTREAM__0__OIDC__CLIENT_ID: ferrosmart
       FERROSMART__FERROSMART__UPSTREAM__0__OIDC__SCOPES__0: openid
