@@ -29,9 +29,9 @@ const WARM: u64 = 3;
 /// The measured requests.
 const REQUESTS: u64 = 10;
 
-/// The round trips one care-gated read sends: the party store's revisions,
-/// the policy heads and the version read, measured over three runs (#6251).
-const ROUND_TRIPS: u64 = 3;
+/// The round trips one care-gated read sends: the party store's revisions
+/// and the version read, which carries the policy revision (#6251).
+const ROUND_TRIPS: u64 = 2;
 
 /// The statements nested in one care-gated read's round trips, the chainer's
 /// rounds left out, measured over three runs (#6251).

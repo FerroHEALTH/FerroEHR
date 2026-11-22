@@ -624,3 +624,27 @@ async fn a_malformed_id_is_refused_on_every_access_delay_route() {
         "{answer}"
     );
 }
+
+/// The delay turned off through another replica decides the person's next
+/// read, whose first run judged the delay on the register as this replica
+/// still held it: the read's own statement saw the newer policy revision, so
+/// it runs once more behind the up-front confirm and the delay is judged on
+/// the register then in force, as a read decided after the change is
+/// (#6251).
+#[tokio::test]
+async fn a_delay_turned_off_elsewhere_decides_the_next_read() {
+    let (_db, pool, _svc, app) = app(true).await;
+    let (ehr, vo) = record(&app, &pool).await;
+    let person = patient(&ehr);
+    assert_eq!(read(&app, &ehr, &vo, &person).await, StatusCode::NOT_FOUND);
+    let elsewhere = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    elsewhere
+        .put_policy_register(
+            Register::AccessDelay,
+            1,
+            r#"{"enabled": false, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#,
+        )
+        .await
+        .expect("turn the access delay off on another replica");
+    assert_eq!(read(&app, &ehr, &vo, &person).await, StatusCode::OK);
+}

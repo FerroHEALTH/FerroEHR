@@ -213,7 +213,7 @@ async fn a_scim_deactivation_on_one_replica_refuses_on_the_other() {
 /// A second replica none of whose copies hears a notification: every
 /// listener connects to a database of its own, so what its requests decide
 /// rests on what they read (#6048). With its audit drain, and that database.
-async fn deaf(world: &World) -> (Router, AuditHandle, testkit::TestDb) {
+pub(crate) async fn deaf(world: &World) -> (Router, AuditHandle, testkit::TestDb) {
     let (sender, drain) = start(audit(), None, world.pool.clone())
         .await
         .expect("the audit sender");

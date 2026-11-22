@@ -85,8 +85,13 @@ So a deprovisioned login, a removed membership, a revoked grant, an ended care
 relationship, a policy change and a template or artefact change committed on
 one instance decide the next request on every instance, whatever the delay of
 the notification. The notification still drops the copies early; the two
-reads are what a decision rests on. A read request sends its own read, its access record and these two
-statements.
+reads are what a decision rests on. A read of a COMPOSITION or an EHR makes
+the clinical read inside its own statement: that statement returns the policy
+and definition revisions beside the rows it reads, and the answer leaves only
+once the instance's copies held them. When they did not, the instance reads the
+newest versions and runs the request once more, and only that second answer is
+served and recorded. Such a read request sends its own read, its access record
+and the party store's revisions; other requests send the clinical read as well.
 
 ## The listeners share one connection per database
 

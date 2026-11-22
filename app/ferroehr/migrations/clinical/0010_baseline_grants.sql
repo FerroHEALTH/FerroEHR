@@ -79,7 +79,8 @@ BEGIN
             access_projection_state,
             access_care,
             access_care_state,
-            access_revision_of
+            access_revision_of,
+            request_revisions
             TO ferroehr_clinical_reader;
         GRANT EXECUTE ON FUNCTION
             subject_pseudonym_guard(),
@@ -133,7 +134,8 @@ BEGIN
             access_projection_state,
             access_care,
             access_care_state,
-            access_revision_of
+            access_revision_of,
+            request_revisions
             TO ferroehr_clinical;
         GRANT EXECUTE ON FUNCTION
             access_class_unknown(ehr uuid),

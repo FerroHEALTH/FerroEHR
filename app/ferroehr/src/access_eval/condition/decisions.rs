@@ -19,7 +19,7 @@ impl RequestAccess {
     /// directive or step an emergency lifted. The labels are the closed sets
     /// of the outcome, the `refused-*` code and [`Lifted`], never the EHR.
     /// No openEHR spec governs the metrics: our own design (#5591).
-    pub(super) fn count_decisions(&self) {
+    pub fn count_decisions(&self) {
         let metrics = crate::telemetry::access_path::metrics();
         let mut refused: BTreeMap<Option<EhrId>, Refusal> = self
             .recorded

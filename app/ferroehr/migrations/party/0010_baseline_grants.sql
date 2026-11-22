@@ -74,7 +74,8 @@ BEGIN
             pmir_identity,
             pmir_merge,
             pmir_suppression,
-            access_revision_of
+            access_revision_of,
+            request_revisions
             TO ferroehr_party_reader;
         GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE
             commit_audit,
@@ -116,7 +117,8 @@ BEGIN
             pmir_identity,
             pmir_merge,
             pmir_suppression,
-            access_revision_of
+            access_revision_of,
+            request_revisions
             TO ferroehr_party;
         GRANT SELECT, INSERT, DELETE, MAINTAIN, UPDATE ON TABLE
             version,

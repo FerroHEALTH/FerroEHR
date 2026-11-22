@@ -272,6 +272,11 @@ struct Budget {
 /// of `policy_revision` in place of the newest version of every register and
 /// of the access policy (#6251): 8 fewer allocations on every path, measured
 /// beside the merge base, and each allocation ceiling fell by as much.
+/// A read of a COMPOSITION or an EHR has since confirmed its policy copies on
+/// its own statement, which reads the policy and definition revisions beside
+/// its rows, in place of a read of the policy revision before it (#6251): one
+/// round trip fewer on the six read paths those operations serve, measured
+/// beside the merge base, and each of those round-trip ceilings fell by one.
 const BUDGETS: [Budget; 20] = [
     Budget {
         path: Path::CommitJson,
@@ -305,7 +310,7 @@ const BUDGETS: [Budget; 20] = [
         conversions: 0,
         allocations: 1327,
         peak_bytes: 617_268,
-        round_trips: 3,
+        round_trips: 2,
         nested: 2,
         wal: 2623,
     },
@@ -314,7 +319,7 @@ const BUDGETS: [Budget; 20] = [
         conversions: 2,
         allocations: 10_804,
         peak_bytes: 1_017_140,
-        round_trips: 3,
+        round_trips: 2,
         nested: 2,
         wal: 2623,
     },
@@ -323,7 +328,7 @@ const BUDGETS: [Budget; 20] = [
         conversions: 2,
         allocations: 15_521,
         peak_bytes: 1_634_407,
-        round_trips: 3,
+        round_trips: 2,
         nested: 2,
         wal: 2623,
     },
@@ -332,7 +337,7 @@ const BUDGETS: [Budget; 20] = [
         conversions: 1,
         allocations: 1113,
         peak_bytes: 100_250,
-        round_trips: 3,
+        round_trips: 2,
         nested: 2,
         wal: 1823,
     },
@@ -386,7 +391,7 @@ const BUDGETS: [Budget; 20] = [
         conversions: 0,
         allocations: 1338,
         peak_bytes: 701_748,
-        round_trips: 3,
+        round_trips: 2,
         nested: 2,
         wal: 2623,
     },
@@ -449,7 +454,7 @@ const BUDGETS: [Budget; 20] = [
         conversions: 0,
         allocations: 1333,
         peak_bytes: 162_800,
-        round_trips: 3,
+        round_trips: 2,
         nested: 2,
         wal: 2607,
     },

@@ -214,6 +214,7 @@ impl Revision {
     /// [`sqlx::Error`] when the column does not decode or does not read as a
     /// revision.
     pub fn read(row: &sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
+        observe_revisions(row)?;
         let Some(text) = row.try_get::<Option<String>, _>("access_revision")? else {
             return Ok(Self::default());
         };
@@ -227,6 +228,28 @@ impl Revision {
             subject: EhrSubject::stored(namespace, id),
         })
     }
+}
+
+/// Notes the policy and definition revisions a row selecting
+/// `access_revision!` read beside the settings revision, for the running
+/// request (`policy_register::observed`, #6251). A row of the party schema,
+/// or of a statement that selects the view itself, holds none.
+///
+/// # Errors
+/// [`sqlx::Error`] when a column does not decode.
+fn observe_revisions(row: &sqlx::postgres::PgRow) -> Result<(), sqlx::Error> {
+    let read = |column: &str| match row.try_get::<Option<i64>, _>(column) {
+        Ok(value) => Ok(value),
+        // NOTE: sqlx Error::ColumnNotFound, a statement that selects the view itself reads none.
+        Err(sqlx::Error::ColumnNotFound(_)) => Ok(None),
+        Err(error) => Err(error),
+    };
+    if let (Some(policy), Some(definitions)) =
+        (read("policy_revision")?, read("definition_revision")?)
+    {
+        crate::policy_register::observed::observe(policy, definitions);
+    }
+    Ok(())
 }
 
 /// One EHR's settings row and subject as stored.

@@ -15,3 +15,11 @@
 CREATE VIEW access_revision_of AS
 SELECT NULL::uuid AS ehr_id, NULL::text AS revision WHERE false;
 COMMENT ON VIEW access_revision_of IS 'No rows: no party object belongs to an EHR, so none carries EHR access settings. Our own design.';
+
+-- The clinical schema reads the policy and definition revisions from the view
+-- request_revisions beside an EHR's access revision. The party schema keeps
+-- the policy copies in no store of its own, so its view has the same shape and
+-- no rows (#6251).
+CREATE VIEW request_revisions AS
+SELECT NULL::bigint AS policy, NULL::bigint AS definitions WHERE false;
+COMMENT ON VIEW request_revisions IS 'No rows: the party schema holds no policy or definition revision. Our own design.';

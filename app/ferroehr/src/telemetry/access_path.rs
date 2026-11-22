@@ -58,6 +58,9 @@ pub const ACCESS_CARE_STALE: &str = "access_care_stale";
 /// What [`ACCESS_CARE_STALE`] counts.
 const CARE_STALE_HELP: &str = "Care decisions that found the caller facts copy older than the \
                                store (outcome = judged_again | refused)";
+/// Overlapped reads run again because the policy copies they were decided on
+/// were behind the revisions their statements read (`op`, #6251).
+pub const ACCESS_POLICY_RERUNS: &str = "access_policy_reruns";
 /// Access decisions, one per EHR a request reached (`outcome`, `code`).
 pub const ACCESS_DECISIONS: &str = "access_decisions";
 /// Directives and steps an emergency lifted (`lifted`).
@@ -189,6 +192,8 @@ pub struct AccessPathMetrics {
     pub grants_refresh_duration: Histogram<f64>,
     /// Care decisions taken on a copy older than the store, by outcome.
     pub care_stale: Counter<u64>,
+    /// Overlapped reads run again on confirmed policy copies, by operation.
+    pub policy_reruns: Counter<u64>,
     /// Access decisions by outcome and refusal code.
     pub decisions: Counter<u64>,
     /// Directives and steps an emergency lifted.
@@ -265,6 +270,11 @@ impl AccessPathMetrics {
                 PATH_BUCKETS,
             ),
             care_stale: make.counter(ACCESS_CARE_STALE, CARE_STALE_HELP),
+            policy_reruns: make.counter(
+                ACCESS_POLICY_RERUNS,
+                "Overlapped reads run again because their policy copies were behind the \
+                 revisions their statements read (op = the operation id)",
+            ),
             decisions: make.counter(
                 ACCESS_DECISIONS,
                 "Access decisions, one per EHR a request reached \
@@ -409,6 +419,12 @@ impl Make<'_> {
 
 /// The process-wide instruments.
 static METRICS: OnceLock<AccessPathMetrics> = OnceLock::new();
+
+/// Increment `access_policy_reruns_total{op}`: an overlapped read of `op` ran
+/// again behind the up-front confirm (#6251).
+pub fn count_policy_rerun(op: &'static str) {
+    metrics().policy_reruns.add(1, &[KeyValue::new("op", op)]);
+}
 
 /// The instruments; on the global no-op meter until [`init`] runs, as
 /// [`super::metrics::metrics`].

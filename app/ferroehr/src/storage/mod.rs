@@ -77,13 +77,18 @@
 /// read runs no statement of its own (#5888). Each domain's schema defines
 /// the view, so a statement both domains run reads it: the clinical one reads
 /// the row, the party one has none and reads `NULL` (migrations
-/// `clinical/0051` and `party/0053`).
+/// `clinical/0051` and `party/0053`). Beside it, the policy and definition
+/// revisions from the view `request_revisions` at the same snapshot, which a
+/// request that confirms its policy copies after it ran checks them against
+/// (`policy_register::observed`, #6251).
 macro_rules! access_revision {
     ($ehr:literal) => {
         concat!(
             "(SELECT ar.revision FROM access_revision_of ar WHERE ar.ehr_id = ",
             $ehr,
-            ") AS access_revision"
+            ") AS access_revision, ",
+            "(SELECT rr.policy FROM request_revisions rr) AS policy_revision, ",
+            "(SELECT rr.definitions FROM request_revisions rr) AS definition_revision"
         )
     };
 }

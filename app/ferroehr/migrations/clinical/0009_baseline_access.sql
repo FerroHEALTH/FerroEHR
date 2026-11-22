@@ -390,3 +390,18 @@ SELECT e.id AS ehr_id,
   FROM clinical.ehr e
   LEFT JOIN clinical.access_settings s ON s.ehr_id = e.id;
 COMMENT ON VIEW access_revision_of IS 'The storage ordinal of the EHR_ACCESS version each EHR''s settings row was projected from and the EHR''s promoted subject_namespace and subject_id, as the JSON array [<ordinal>, <namespace>, <id>], each null when absent; read in a scalar subquery by the statement that selects it. Our own design.';
+
+-- ── request_revisions ────────────────────────────────────────────────────────
+-- The policy and definition revisions, one row (#6251). A statement that
+-- selects an EHR's settings revision selects these beside it, at the same
+-- snapshot, so a read that confirms its policy copies after it ran knows what
+-- the rows it read were decided under. The party schema keeps a view of the
+-- same shape with no rows, so a statement both domains run reads NULL there.
+--
+-- No openEHR spec governs the copies: our own design.
+CREATE VIEW request_revisions WITH (security_invoker = true) AS
+SELECT p.revision AS policy, d.revision AS definitions
+  FROM clinical.policy_revision p
+  CROSS JOIN clinical.definition_revision d
+ WHERE p.singleton AND d.singleton;
+COMMENT ON VIEW request_revisions IS 'The policy_revision and the definition_revision, one row; read in scalar subqueries beside access_revision_of by the statement that selects it. Our own design.';

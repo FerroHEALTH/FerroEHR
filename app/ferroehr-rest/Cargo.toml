@@ -106,6 +106,9 @@ fhir-search = { workspace = true }
 allocation-counter.workspace = true
 openehr-lang = { path = "../../crates/openehr-lang" }
 testkit = { path = "../../tools/testkit" }
+# The policy confirm tests read the run-again counter from an in-memory
+# exporter (#6251).
+opentelemetry_sdk = { workspace = true, features = ["testing"] }
 # The audit tests read the access record `ehds-logging` writes by its names.
 ehds-logging = { workspace = true, features = ["balp"] }
 sqlx.workspace = true

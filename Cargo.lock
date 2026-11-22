@@ -2242,6 +2242,7 @@ dependencies = [
  "openehr-rm",
  "openehr-sdt",
  "opentelemetry",
+ "opentelemetry_sdk",
  "pem 4.0.0",
  "pgp",
  "pprof",

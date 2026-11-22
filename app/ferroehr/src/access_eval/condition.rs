@@ -746,6 +746,16 @@ where
     output
 }
 
+/// Run `fut` with `access` as the running request's evaluator, its decisions
+/// left for the caller to count ([`RequestAccess::count_decisions`]) once it
+/// keeps the answer, so a run it drops counts none (#6251).
+pub async fn with_request_access_uncounted<F>(access: Arc<RequestAccess>, fut: F) -> F::Output
+where
+    F: Future,
+{
+    REQUEST_ACCESS.scope(access, fut).await
+}
+
 /// Whether `item` of `ehr_id` may leave the store for the running request.
 ///
 /// The object a write of this request committed leaves for its response
