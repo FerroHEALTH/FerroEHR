@@ -976,7 +976,8 @@ async fn directory_versions_are_signed_over_their_stored_commit_instant() {
 }
 
 /// Asserts the party version `meta` answered is served signed, its digest
-/// recomputing over the `time_committed` the write answered.
+/// recomputing over its stored `time_committed`, which is the instant the
+/// write answered when it answered one (a delete answers none).
 async fn assert_party_signed(
     svc: &FerroEhrService,
     meta: &ferroehr::service::response::ResourceMeta,
@@ -997,11 +998,12 @@ async fn assert_party_signed(
         .expect("time_committed")
         .parse()
         .expect("an instant");
-    assert_eq!(
-        Some(stored),
-        meta.last_modified,
-        "the signed instant is the one stored and answered"
-    );
+    if let Some(answered) = meta.last_modified {
+        assert_eq!(
+            stored, answered,
+            "the signed instant is the one stored and answered"
+        );
+    }
 }
 
 /// A PERSON create, update and delete each commit behind one guarded version
@@ -1021,6 +1023,10 @@ async fn party_versions_are_signed_over_their_stored_commit_instant() {
     .expect("party_create")
     .meta
     .expect("the create answers its version");
+    assert!(
+        created.last_modified.is_some(),
+        "a create answers its instant"
+    );
     assert_party_signed(&svc, &created).await;
     let vo = created
         .uid
@@ -1038,6 +1044,10 @@ async fn party_versions_are_signed_over_their_stored_commit_instant() {
     .expect("party_update")
     .meta
     .expect("the update answers its version");
+    assert!(
+        updated.last_modified.is_some(),
+        "an update answers its instant"
+    );
     assert_party_signed(&svc, &updated).await;
     let deleted = Box::pin(svc.party_delete(
         ferroehr::service::demographic::types::PartyKind::Person,
