@@ -298,31 +298,37 @@ struct Budget {
 /// before (#6256): one round trip fewer on the three composition commits, the
 /// update, the delete and the CONTRIBUTION commit, measured beside the merge
 /// base, and each of those round-trip ceilings fell by one.
+/// A COMPOSITION create, update and delete have since committed in one guarded
+/// statement with their outbox row, and taken no per-object lock (#6256): 7
+/// round trips where the commits sent 8, the update 9 and the delete 10, the
+/// delete 8, and 25, 25, 31, 37 and 42 fewer allocations on the JSON, XML and
+/// FLAT commits, the update and the delete, measured beside the merge base;
+/// each of those ceilings fell by its path's figure.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
-        allocations: 18_101,
+        allocations: 18_076,
         peak_bytes: 1_530_778,
-        round_trips: 8,
+        round_trips: 7,
         nested: 13,
         wal: 188_764,
     },
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        allocations: 39_529,
+        allocations: 39_504,
         peak_bytes: 1_533_031,
-        round_trips: 8,
+        round_trips: 7,
         nested: 14,
         wal: 189_063,
     },
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        allocations: 32_689,
+        allocations: 32_658,
         peak_bytes: 1_528_525,
-        round_trips: 8,
+        round_trips: 7,
         nested: 13,
         wal: 189_405,
     },
@@ -482,18 +488,18 @@ const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitUpdate,
         conversions: 5,
-        allocations: 17_848,
+        allocations: 17_811,
         peak_bytes: 1_525_458,
-        round_trips: 9,
+        round_trips: 7,
         nested: 4,
         wal: 188_244,
     },
     Budget {
         path: Path::CommitDelete,
         conversions: 2,
-        allocations: 1657,
+        allocations: 1615,
         peak_bytes: 150_537,
-        round_trips: 10,
+        round_trips: 8,
         nested: 4,
         wal: 5823,
     },
