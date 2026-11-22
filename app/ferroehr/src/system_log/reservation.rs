@@ -20,6 +20,12 @@
 //! `docs/plans/access-log.md` rule 3; no openEHR spec governs it: our own
 //! design.
 //!
+//! A COMPOSITION write and a CONTRIBUTION of COMPOSITION members, which
+//! commit in one guarded statement, write their records first
+//! ([`FerroEhrService::hold_records`]) and let that statement insert the
+//! reservation beside their rows, so the write costs no transaction of its
+//! own; a statement that writes nothing discards them at once (#6256).
+//!
 //! A recorded write takes its connections in one fixed order (#5964): the
 //! audit connection its records are written on first ([`RecordedConn`]), then
 //! the connection of its own domain, so its transaction never waits for the

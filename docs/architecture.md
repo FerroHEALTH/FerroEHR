@@ -269,6 +269,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `uq_version_hot_tree`) refuse a second version at a taken place, and that
   write is judged again too. `commit_retries_total{reason}` counts both
   (#6256).
+  Before that statement runs, the write's audit records are written into the
+  audit intake under a fresh reservation, durable when the intake returns,
+  and the statement inserts the reservation into `audit_reservation` beside
+  the version, so the access record is durable before the write is visible
+  and the reservation commits with the write or not at all (#5747, #5762).
+  A statement that writes nothing discards those records at once, and a
+  connection lost while it ran leaves them to the reconciler, which releases
+  them when the reservation committed.
   A CONTRIBUTION of at most eight COMPOSITION members (`SET_LIMIT`, set by
   measured planning and execution time), every modify and delete naming the
   trunk tip this server created, is planned before any read, judged on one
