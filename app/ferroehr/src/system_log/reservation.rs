@@ -20,6 +20,12 @@
 //! the draft's recording rule 3 (`docs/specifications/access-log`, semantics §Recording); no openEHR spec governs it: our own
 //! design.
 //!
+//! A COMPOSITION write and a CONTRIBUTION of COMPOSITION members, which
+//! commit in one guarded statement, write their records first
+//! ([`FerroEhrService::hold_records`]) and let that statement insert the
+//! reservation beside their rows, so the write costs no transaction of its
+//! own; a statement that writes nothing discards them at once (#6256).
+//!
 //! A recorded write takes its connections in one fixed order (#5964): the
 //! audit connection its records are written on first ([`RecordedConn`]), then
 //! the connection of its own domain, so its transaction never waits for the
@@ -110,9 +116,35 @@ impl DerefMut for RecordedTx<'_> {
     }
 }
 
+/// The records a write holds under its reservation before its statement
+/// ([`FerroEhrService::hold_records`]).
+#[derive(Debug)]
+pub(crate) struct Held {
+    /// The reservation the write's statement inserts beside its rows.
+    pub(crate) reservation: Uuid,
+    /// Whether the request's operation record is among the records.
+    built: bool,
+    /// The act's own records among them, handed back if the write fails.
+    deferred: Vec<AuditEvent>,
+}
+
 /// The statement that reserves a write's records in its own transaction;
 /// the pool's search path names the domain's schema.
 const RESERVE: &str = "INSERT INTO audit_reservation (id) VALUES ($1) ON CONFLICT (id) DO NOTHING";
+
+/// Insert `reservation` into the write's domain on `conn`, for a write that
+/// holds records and commits no guarded statement of its own (an identical
+/// re-send the opt-in rule answers).
+///
+/// # Errors
+/// The database error of the insert.
+pub(crate) async fn reserve(conn: &mut PgConnection, reservation: Uuid) -> Result<(), sqlx::Error> {
+    sqlx::query(RESERVE)
+        .bind(reservation)
+        .execute(conn)
+        .await
+        .map(drop)
+}
 
 impl FerroEhrService {
     /// The connections of a write on `pool` whose records
@@ -214,6 +246,109 @@ impl FerroEhrService {
             None => self.confirm_reserved(&[reserved]),
         }
         Ok(())
+    }
+
+    /// Write the running request's operation record built from `facts`, with
+    /// the act's deferred records, into the audit intake on `audit` under a
+    /// fresh reservation, before the write's statement runs (#6256).
+    ///
+    /// The intake is durable when this returns, so the reservation the
+    /// write's own statement inserts beside its rows can only commit after
+    /// its records are (#5747, #5986). `clinical` is the write's connection,
+    /// on which the record subjects not yet known are read; it holds no
+    /// transaction. `None` when nothing is recorded: the audit trail is off,
+    /// no adapter primed the request, or no record is due.
+    ///
+    /// # Errors
+    /// [`ServiceError::Unrecorded`] when the records cannot be written, and
+    /// the database error of the subjects' read; nothing is held then.
+    pub(crate) async fn hold_records(
+        &self,
+        conn: &mut RecordedConn,
+        facts: &WriteFacts,
+    ) -> Result<Option<Held>, ServiceError> {
+        let RecordedConn {
+            audit,
+            conn: clinical,
+        } = conn;
+        let (Some(sender), Some(audit)) = (
+            self.audit.as_ref().filter(|sender| sender.enabled()),
+            audit.as_deref_mut(),
+        ) else {
+            return Ok(None);
+        };
+        let recorder = super::recorder::current();
+        let mut events = recorder
+            .as_ref()
+            .map(|recorder| recorder.records_for(facts))
+            .unwrap_or_default();
+        let built = !events.is_empty();
+        let deferred = recorder
+            .as_ref()
+            .map(WriteRecorder::take_deferred)
+            .unwrap_or_default();
+        events.extend(deferred.iter().cloned().map(|mut record| {
+            super::stamp_caller(&mut record);
+            record
+        }));
+        if events.is_empty() {
+            return Ok(None);
+        }
+        let held = Held {
+            reservation: Uuid::now_v7(),
+            built,
+            deferred,
+        };
+        if let Err(error) = sender.learn_subjects(&mut *clinical, &events).await {
+            Self::unhold(&held);
+            return Err(error.into());
+        }
+        if let Err(unwritten) = Box::pin(sender.record_on(audit, events, held.reservation)).await {
+            Self::unhold(&held);
+            return Err(ServiceError::Unrecorded(
+                Refusal::new((), "audit trail unavailable").with_source(unwritten),
+            ));
+        }
+        Ok(Some(held))
+    }
+
+    /// Discard at once the records `held` holds, whose write did not commit:
+    /// they record no access, and the request's next write or its adapter
+    /// records them instead. A discard that fails leaves them to the
+    /// reconciler, which discards a reservation that never committed.
+    pub(crate) async fn discard_held(&self, conn: &mut RecordedConn, held: &Held) {
+        Self::unhold(held);
+        let Some(audit) = conn.audit.as_deref_mut() else {
+            return;
+        };
+        // NOTE: our own design (#5762), a held record of a write that never committed
+        // records no access; the reconciler discards it when this fails.
+        let _discarded = super::store::AuditStore::discard(audit, &[held.reservation]).await;
+    }
+
+    /// Hand `held`, whose write committed with its reservation, to the
+    /// request's recorder, or confirm it at once outside a request.
+    pub(crate) fn written_held(&self, held: &Held) {
+        let reserved = Reserved {
+            id: held.reservation,
+        };
+        match super::recorder::current() {
+            Some(recorder) => recorder.committed(reserved),
+            None => self.confirm_reserved(&[reserved]),
+        }
+    }
+
+    /// Hand the request's operation record and deferred records back to its
+    /// recorder after their write did not commit.
+    fn unhold(held: &Held) {
+        if let Some(recorder) = super::recorder::current() {
+            if held.built {
+                recorder.unbuild();
+            }
+            if !held.deferred.is_empty() {
+                recorder.defer(held.deferred.clone());
+            }
+        }
     }
 
     /// Whether a write of the running request has its audit records reserved

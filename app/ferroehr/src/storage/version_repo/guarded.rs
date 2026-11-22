@@ -33,6 +33,10 @@ pub struct Guard {
     pub definitions: Option<i64>,
     /// The event outbox envelope, when eventing is enabled.
     pub outbox: Option<Value>,
+    /// The reservation of the audit records the write holds, inserted beside
+    /// its rows so it commits with them or not at all (#5762); `None` when
+    /// nothing is held.
+    pub reservation: Option<uuid::Uuid>,
 }
 
 /// Which of a guarded commit's requirements held when it ran, and the
@@ -180,6 +184,17 @@ fn outbox_cte(id: &str, ehr: &str, (envelope, time): (&str, &str), from: &str) -
     )
 }
 
+/// The reservation CTE of a guarded statement: `reservation`, the audit
+/// records' reservation, inserted once the CONTRIBUTION is, when one is held.
+fn reservation_cte(reservation: &str) -> String {
+    format!(
+        ", r AS ( \
+             INSERT INTO audit_reservation (id) \
+             SELECT {reservation} FROM c WHERE {reservation}::uuid IS NOT NULL \
+         )"
+    )
+}
+
 /// The last row of a guarded statement: each requirement's flag, the
 /// revisions it read, and the audit `audit` and CONTRIBUTION `c` it wrote.
 fn flags_row(audit: &str) -> String {
@@ -213,8 +228,8 @@ fn audit_cte(name: &str, first: usize, time: &str, from: &str) -> String {
 ///
 /// The parameters of [`super::commit::Folded::Standalone`] up to `$27`, then
 /// `$28` the expected head ordinal, `$29` the policy revision, `$30` the
-/// definition revision and `$31` the outbox envelope, and the node arrays from
-/// `$32`. The audit insert reads from `g`, and every later insert from the
+/// definition revision, `$31` the outbox envelope and `$32` the audit
+/// reservation, and the node arrays from `$33`. The audit insert reads from `g`, and every later insert from the
 /// audit's, so nothing is written unless every requirement holds; the last
 /// row names a flag per requirement.
 pub(super) fn statement() -> String {
@@ -222,7 +237,7 @@ pub(super) fn statement() -> String {
         "{}, {}, c AS ( \
              INSERT INTO contribution (id, ehr_id, commit_audit_id) \
              SELECT $6, $7, a.id FROM a ON CONFLICT (id) DO NOTHING RETURNING id \
-         ){}{}{}",
+         ){}{}{}{}",
         guard_ctes(
             "$7",
             &[("$8".to_owned(), "$28".to_owned())],
@@ -230,8 +245,9 @@ pub(super) fn statement() -> String {
             ("$29", "$30")
         ),
         audit_cte("a", 1, "$22", "g"),
-        super::commit::version_ctes("", ("$7", "c.id", "a.id", "a, c"), 8, 32),
+        super::commit::version_ctes("", ("$7", "c.id", "a.id", "a, c"), 8, 33),
         outbox_cte("$6", "$7", ("$31", "$22"), "v"),
+        reservation_cte("$32"),
         flags_row("a")
     )
 }
@@ -270,14 +286,15 @@ const MEMBER_SCALARS: usize = 26;
 ///
 /// `$1` the CONTRIBUTION uid, `$2` the EHR, `$3` the policy revision, `$4`
 /// the definition revision, `$5` the outbox envelope, `$6` the commit instant
-/// and `$7` to `$11` the CONTRIBUTION's audit; then each member's audit,
+/// `$7` to `$11` the CONTRIBUTION's audit and `$12` the audit reservation;
+/// then each member's audit,
 /// version, expected head and node arrays in turn. Each member repeats the
 /// single write's audit, version, head-upsert and node CTEs under its own
 /// names.
 fn set_statement(n: usize) -> String {
     use std::fmt::Write as _;
     let stride = MEMBER_SCALARS + crate::storage::node_write::node_array_count();
-    let base = |i: usize| 12 + i * stride;
+    let base = |i: usize| 13 + i * stride;
     let targets: Vec<(String, String)> = (0..n)
         .map(|i| (format!("${}", base(i) + 5), format!("${}", base(i) + 25)))
         .collect();
@@ -305,8 +322,9 @@ fn set_statement(n: usize) -> String {
     }
     let _ = write!(
         sql,
-        "{}{}",
+        "{}{}{}",
         outbox_cte("$1", "$2", ("$5", "$6"), "c"),
+        reservation_cte("$12"),
         flags_row("ca")
     );
     sql
@@ -344,7 +362,8 @@ pub async fn commit_set(
         .bind(head.audit.change_type)
         .bind(&head.audit.description)
         .bind(&head.audit.committer)
-        .bind(&head.audit.attestation);
+        .bind(&head.audit.attestation)
+        .bind(guard.reservation);
     for member in members {
         let a = &member.audit;
         query = query

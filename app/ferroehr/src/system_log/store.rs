@@ -535,6 +535,16 @@ impl AuditStore {
         }
         let writing = self.writing.pin();
         Self::register_policies_on(conn, &writing, &records).await?;
+        // NOTE: our own design (#6256), access-log entries alone go in by one statement, atomic
+        // and durable on its own with synchronous_commit on, so they need no transaction.
+        #[cfg(feature = "fhir")]
+        if Self::only_entries(&records) {
+            let (_, learned, _) = self
+                .take_in(conn, &writing, records, ends, Some(reservation))
+                .await?;
+            self.remember(learned);
+            return Ok(());
+        }
         let mut tx = conn.begin().await?;
         let (_, learned, _) = self
             .take_in(&mut tx, &writing, records, ends, Some(reservation))
