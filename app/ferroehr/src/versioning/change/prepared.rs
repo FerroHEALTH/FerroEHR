@@ -156,6 +156,13 @@ impl Prepared {
         self.r.is_first_folder || !self.attestations.is_empty()
     }
 
+    /// Whether the version writes rows after its statement in the same
+    /// connection: [`Self::has_more`]'s, or the blob references its
+    /// statement's caller records.
+    pub(super) fn writes_after(&self) -> bool {
+        self.has_more() || !self.stored.blob_uris.is_empty()
+    }
+
     /// Write what the version's statement leaves: a newly created FOLDER
     /// hierarchy joins `EHR.folders` (RM ehr master04 §Folders), and the
     /// accompanying attestations land beside the version.

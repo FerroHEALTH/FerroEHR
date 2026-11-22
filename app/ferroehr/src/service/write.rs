@@ -26,6 +26,7 @@ use crate::system_log::event::{
 use crate::system_log::recorder::WriteFacts;
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
+use crate::versioning::change::ready::prepare_write;
 use crate::versioning::change::{Committed, Write, WriteEnvelope, commit, record_commit};
 use crate::versioning::lifecycle;
 
@@ -183,7 +184,6 @@ impl FerroEhrService {
     pub(in crate::service) fn commit_gated<'s, M, J>(
         &'s self,
         pool: &'s PgPool,
-        transaction: bool,
         judge: M,
     ) -> Pin<Box<impl Future<Output = Result<Committed, ServiceError>> + 's>>
     where
@@ -193,35 +193,64 @@ impl FerroEhrService {
         // Boxed, as `commit_one`.
         Box::pin(async move {
             let signing_ctx = self.signing_ctx();
-            // NOTE: our own design (#5762), a request's write reserves its audit records in its
-            // own transaction, so the guarded statement runs inside one when they are recorded.
-            let transaction = transaction || self.records_writes();
             for _ in 0..ATTEMPTS {
                 let mut conn = self.recorded_conn(pool).await?;
                 let write = judge()(&mut conn).await?;
-                crate::policy_register::observed::wrote();
                 let ehr_id = write.ehr_id;
-                let outcome = if transaction {
-                    let mut tx = conn.begin().await?;
-                    match commit(&mut tx, write, &signing_ctx).await {
-                        Ok(committed) => {
-                            let facts = Self::written_facts(ehr_id, &committed);
-                            self.commit_recorded(tx, &facts, Vec::new()).await?;
-                            Ok(committed)
-                        }
+                let guard = write.guard.clone().ok_or_else(|| {
+                    ServiceError::exception("a COMPOSITION write reached its commit unguarded")
+                })?;
+                let ready = prepare_write(&mut conn, write, guard, &signing_ctx).await?;
+                let facts = Self::written_facts(ehr_id, ready.committed());
+                // NOTE: our own design (#5747, #5986, #6256), the records are durable before the
+                // statement that makes the write visible inserts their reservation beside it.
+                let held = self.hold_records(&mut conn, &facts).await?;
+                crate::policy_register::observed::wrote();
+                let reservation = held.as_ref().map(|held| held.reservation);
+                let outcome = if ready.needs_transaction(&signing_ctx) {
+                    let mut tx = sqlx::Connection::begin(&mut *conn).await?;
+                    match ready.commit(&mut tx, &signing_ctx, reservation).await {
+                        Ok(committed) => tx.commit().await.map(|()| committed).map_err(Into::into),
                         Err(error) => Err(error),
                     }
                 } else {
-                    commit(&mut conn, write, &signing_ctx).await
+                    ready.commit(&mut conn, &signing_ctx, reservation).await
                 };
-                drop(conn);
-                match outcome {
-                    Ok(committed) => return self.counted(ehr_id, committed).await,
-                    Err(error) => moved(error)?,
+                if let Some(committed) = self.settle_held(&mut conn, held, outcome).await? {
+                    drop(conn);
+                    return self.counted(ehr_id, committed).await;
                 }
             }
             Err(contended())
         })
+    }
+
+    /// What a held write's `outcome` leaves (#6256): its records handed on
+    /// when it committed, and discarded at once when it surely wrote nothing,
+    /// the write then judged again or answered ([`moved`]); `None` judges it
+    /// again.
+    ///
+    /// # Errors
+    /// The write's answer when it is not judged again.
+    pub(in crate::service) async fn settle_held<T>(
+        &self,
+        conn: &mut crate::system_log::reservation::RecordedConn,
+        held: Option<crate::system_log::reservation::Held>,
+        outcome: Result<T, ServiceError>,
+    ) -> Result<Option<T>, ServiceError> {
+        match (outcome, held) {
+            (Ok(written), held) => {
+                if let Some(held) = held {
+                    self.written_held(&held);
+                }
+                Ok(Some(written))
+            }
+            (Err(error), Some(held)) if unwritten(&error) => {
+                self.discard_held(conn, &held).await;
+                moved(error).map(|()| None)
+            }
+            (Err(error), _) => moved(error).map(|()| None),
+        }
     }
 
     /// Count a committed write, or record a skipped identical re-send.
@@ -322,7 +351,7 @@ struct Spent;
 /// # Errors
 /// `error` itself when the write is not judged again, and
 /// `access-refreshing` for a moved policy.
-pub(in crate::service) fn moved(error: ServiceError) -> Result<(), ServiceError> {
+fn moved(error: ServiceError) -> Result<(), ServiceError> {
     match error {
         ServiceError::Storage(StorageError::GuardMoved(flags)) => {
             crate::policy_register::observed::not_written();
@@ -362,6 +391,25 @@ pub(in crate::service) fn first_attempt<T>(slot: &std::sync::Mutex<Option<T>>) -
 /// one after the first follows a commit that landed in between, so the bound
 /// is the contention one write survives, which is our own design.
 pub(in crate::service) const ATTEMPTS: usize = 8;
+
+/// Whether a write that answered `error` surely wrote nothing: any failure
+/// the server answered, or that came before the statement. A connection lost
+/// while the statement ran may have committed it, so its records are left to
+/// the reconciler, which releases them when their reservation committed.
+fn unwritten(error: &ServiceError) -> bool {
+    let lost = |error: &sqlx::Error| {
+        matches!(
+            error,
+            sqlx::Error::Io(_) | sqlx::Error::Tls(_) | sqlx::Error::Protocol(_)
+        )
+    };
+    match error {
+        ServiceError::Storage(StorageError::Database(error)) | ServiceError::Database(error) => {
+            !lost(error)
+        }
+        _ => true,
+    }
+}
 
 /// Whether `error` is a version key refusing a second version at the place a
 /// concurrent commit of the same object took first (`23505`, PostgreSQL docs

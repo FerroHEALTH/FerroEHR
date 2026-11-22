@@ -126,6 +126,20 @@ pub(crate) struct Held {
 /// the pool's search path names the domain's schema.
 const RESERVE: &str = "INSERT INTO audit_reservation (id) VALUES ($1) ON CONFLICT (id) DO NOTHING";
 
+/// Insert `reservation` into the write's domain on `conn`, for a write that
+/// holds records and commits no guarded statement of its own (an identical
+/// re-send the opt-in rule answers).
+///
+/// # Errors
+/// The database error of the insert.
+pub(crate) async fn reserve(conn: &mut PgConnection, reservation: Uuid) -> Result<(), sqlx::Error> {
+    sqlx::query(RESERVE)
+        .bind(reservation)
+        .execute(conn)
+        .await
+        .map(drop)
+}
+
 impl FerroEhrService {
     /// The connections of a write on `pool` whose records
     /// [`Self::commit_recorded`] reserves: an audit connection first while
@@ -244,10 +258,17 @@ impl FerroEhrService {
     /// the database error of the subjects' read; nothing is held then.
     pub(crate) async fn hold_records(
         &self,
-        (audit, clinical): (&mut PgConnection, &mut PgConnection),
+        conn: &mut RecordedConn,
         facts: &WriteFacts,
     ) -> Result<Option<Held>, ServiceError> {
-        let Some(sender) = self.audit.as_ref().filter(|sender| sender.enabled()) else {
+        let RecordedConn {
+            audit,
+            conn: clinical,
+        } = conn;
+        let (Some(sender), Some(audit)) = (
+            self.audit.as_ref().filter(|sender| sender.enabled()),
+            audit.as_deref_mut(),
+        ) else {
             return Ok(None);
         };
         let recorder = super::recorder::current();
@@ -272,12 +293,12 @@ impl FerroEhrService {
             built,
             deferred,
         };
-        if let Err(error) = sender.learn_subjects(clinical, &events).await {
-            self.unhold(&held);
+        if let Err(error) = sender.learn_subjects(&mut *clinical, &events).await {
+            Self::unhold(&held);
             return Err(error.into());
         }
         if let Err(unwritten) = Box::pin(sender.record_on(audit, events, held.reservation)).await {
-            self.unhold(&held);
+            Self::unhold(&held);
             return Err(ServiceError::Unrecorded(
                 Refusal::new((), "audit trail unavailable").with_source(unwritten),
             ));
@@ -289,8 +310,11 @@ impl FerroEhrService {
     /// they record no access, and the request's next write or its adapter
     /// records them instead. A discard that fails leaves them to the
     /// reconciler, which discards a reservation that never committed.
-    pub(crate) async fn discard_held(&self, audit: &mut PgConnection, held: &Held) {
-        self.unhold(held);
+    pub(crate) async fn discard_held(&self, conn: &mut RecordedConn, held: &Held) {
+        Self::unhold(held);
+        let Some(audit) = conn.audit.as_deref_mut() else {
+            return;
+        };
         // NOTE: our own design (#5762), a held record of a write that never committed
         // records no access; the reconciler discards it when this fails.
         let _discarded = super::store::AuditStore::discard(audit, &[held.reservation]).await;
@@ -310,7 +334,7 @@ impl FerroEhrService {
 
     /// Hand the request's operation record and deferred records back to its
     /// recorder after their write did not commit.
-    fn unhold(&self, held: &Held) {
+    fn unhold(held: &Held) {
         if let Some(recorder) = super::recorder::current() {
             if held.built {
                 recorder.unbuild();

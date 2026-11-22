@@ -33,6 +33,10 @@ pub struct Guard {
     pub definitions: Option<i64>,
     /// The event outbox envelope, when eventing is enabled.
     pub outbox: Option<Value>,
+    /// The reservation of the audit records the write holds, inserted beside
+    /// its rows so it commits with them or not at all (#5762); `None` when
+    /// nothing is held.
+    pub reservation: Option<uuid::Uuid>,
 }
 
 /// Which of a guarded commit's requirements held when it ran, and the
@@ -71,7 +75,8 @@ impl GuardFlags {
 ///
 /// The parameters of [`super::commit::Folded::Standalone`] up to `$27`, then `$28` the
 /// expected head ordinal, `$29` the policy revision, `$30` the definition
-/// revision and `$31` the outbox envelope, and the node arrays from `$32`.
+/// revision, `$31` the outbox envelope and `$32` the audit reservation, and
+/// the node arrays from `$33`.
 /// The leading CTEs read what the gate read judged: the EHR row under `FOR
 /// SHARE` (the lock a concurrent `EHR_STATUS` flip waits on), the object's
 /// head row and the policy and definition revisions. The audit insert reads
@@ -136,6 +141,9 @@ pub(super) fn statement() -> String {
                  AND (m.restricted_at IS NOT NULL \
                       OR (m.research_objected_at IS NOT NULL \
                           AND m.research_objection_ground IS NULL))) \
+         ), r AS ( \
+             INSERT INTO audit_reservation (id) \
+             SELECT $32 FROM c WHERE $32::uuid IS NOT NULL \
          ) \
          SELECT k.ehr_held, k.tip_held, k.mark_held, k.policy_held, k.order_held, \
                 k.policy_now, k.definitions_now, \
@@ -154,7 +162,7 @@ pub(super) fn statement() -> String {
             version: "v",
         }
         .sql(),
-        crate::storage::node_write::node_insert_cte(("$8", "$10", "$7"), "v", 32)
+        crate::storage::node_write::node_insert_cte(("$8", "$10", "$7"), "v", 33)
     )
 }
 
@@ -192,13 +200,14 @@ const MEMBER_SCALARS: usize = 25;
 ///
 /// `$1` the CONTRIBUTION uid, `$2` the EHR, `$3` the policy revision, `$4`
 /// the definition revision, `$5` the outbox envelope, `$6` the commit instant
-/// and `$7` to `$11` the CONTRIBUTION's audit; then each member's audit,
+/// `$7` to `$11` the CONTRIBUTION's audit and `$12` the audit reservation;
+/// then each member's audit,
 /// version, expected head and node arrays in turn. Each member repeats the
 /// single write's version, head-upsert and node CTEs under its own names.
 fn set_statement(n: usize) -> String {
     use std::fmt::Write as _;
     let stride = MEMBER_SCALARS + crate::storage::node_write::node_array_count();
-    let base = |i: usize| 12 + i * stride;
+    let base = |i: usize| 13 + i * stride;
     let mut sql = String::from(
         "WITH e AS ( \
              SELECT COALESCE(x.is_modifiable, true) AS modifiable, \
@@ -273,6 +282,9 @@ fn set_statement(n: usize) -> String {
                  AND (m.restricted_at IS NOT NULL \
                       OR (m.research_objected_at IS NOT NULL \
                           AND m.research_objection_ground IS NULL))) \
+         ), r AS ( \
+             INSERT INTO audit_reservation (id) \
+             SELECT $12 FROM c WHERE $12::uuid IS NOT NULL \
          ) \
          SELECT k.ehr_held, k.tip_held, k.mark_held, k.policy_held, k.order_held, \
                 k.policy_now, k.definitions_now, \
@@ -383,7 +395,8 @@ pub async fn commit_set(
         .bind(head.audit.change_type)
         .bind(&head.audit.description)
         .bind(&head.audit.committer)
-        .bind(&head.audit.attestation);
+        .bind(&head.audit.attestation)
+        .bind(guard.reservation);
     for member in members {
         let (a, v) = (&member.audit, &member.version);
         query = query

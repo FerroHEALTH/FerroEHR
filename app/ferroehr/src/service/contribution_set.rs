@@ -16,15 +16,15 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::write::{ATTEMPTS, Materials, contended, moved};
+use crate::service::write::{ATTEMPTS, Materials, contended};
 use crate::storage::version_repo::gate::{self, Ask, Gate, Shape};
 use crate::storage::version_repo::guarded::Guard;
 use crate::system_log::categories::{AccessedContent, ContentIds};
 use crate::system_log::recorder::WriteFacts;
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
-use crate::versioning::change::set::{Member, Set, commit_guarded_set};
-use crate::versioning::change::{Change, CommittedContribution};
+use crate::versioning::change::set::{Member, Set, prepare_guarded_set};
+use crate::versioning::change::{Change, Committed, CommittedContribution};
 use crate::versioning::object_version_id::TreeId;
 use crate::versioning::restriction;
 
@@ -111,7 +111,6 @@ impl FerroEhrService {
         let named: Vec<_> = changes.iter().map(|(_, change)| target(change)).collect();
         let materials = Materials::once(changes);
         let signing_ctx = self.signing_ctx();
-        let transaction = self.records_writes();
         for attempt in 0..ATTEMPTS {
             let mut conn = self.recorded_conn(&self.pool).await?;
             // The first attempt commits on the gate read the set's planning made.
@@ -152,35 +151,39 @@ impl FerroEhrService {
                     policy: gate.policy,
                     definitions: gate.definitions,
                     outbox: None,
+                    reservation: None,
                 },
             };
+            let ready =
+                Box::pin(prepare_guarded_set(&mut conn, set, members, &signing_ctx)).await?;
+            let mut content: Vec<ContentIds> = ready
+                .versions()
+                .filter_map(Committed::content_ids)
+                .collect();
+            content.sort();
+            content.dedup();
+            let facts = WriteFacts {
+                ehr_id: Some(ehr_id.to_string()),
+                object_id: Some(ready.id().to_string()),
+                content: (!content.is_empty()).then_some(AccessedContent::Objects(content)),
+                ..WriteFacts::default()
+            };
+            // NOTE: our own design (#5747, #5986, #6256), the records are durable before the
+            // statement that makes the set visible inserts their reservation beside it.
+            let held = self.hold_records(&mut conn, &facts).await?;
             crate::policy_register::observed::wrote();
-            let outcome = if transaction {
-                let mut tx = conn.begin().await?;
-                match Box::pin(commit_guarded_set(&mut tx, set, members, &signing_ctx)).await {
-                    Ok(outcome) => {
-                        let content = self
-                            .written_content(Some(&mut *tx), &outcome.versions)
-                            .await;
-                        let facts = WriteFacts {
-                            ehr_id: Some(ehr_id.to_string()),
-                            object_id: Some(outcome.id.to_string()),
-                            content: (!content.is_empty())
-                                .then_some(AccessedContent::Objects(content)),
-                            ..WriteFacts::default()
-                        };
-                        self.commit_recorded(tx, &facts, Vec::new()).await?;
-                        Ok(outcome)
-                    }
+            let reservation = held.as_ref().map(|held| held.reservation);
+            let outcome = if ready.needs_transaction(&signing_ctx) {
+                let mut tx = sqlx::Connection::begin(&mut *conn).await?;
+                match Box::pin(ready.commit(&mut tx, &signing_ctx, reservation)).await {
+                    Ok(outcome) => tx.commit().await.map(|()| outcome).map_err(Into::into),
                     Err(error) => Err(error),
                 }
             } else {
-                Box::pin(commit_guarded_set(&mut conn, set, members, &signing_ctx)).await
+                Box::pin(ready.commit(&mut conn, &signing_ctx, reservation)).await
             };
-            drop(conn);
-            match outcome {
-                Ok(outcome) => return Ok(Outcome::Committed(outcome)),
-                Err(error) => moved(error)?,
+            if let Some(outcome) = self.settle_held(&mut conn, held, outcome).await? {
+                return Ok(Outcome::Committed(outcome));
             }
         }
         Err(contended())
