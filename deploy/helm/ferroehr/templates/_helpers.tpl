@@ -744,7 +744,7 @@ FerroTERM is this line plus `terminology.image.digest` in values.yaml; the
 annotation is then checked against both rather than maintained a third time.
 */}}
 {{- define "ferroehr.terminologyPinnedVersion" -}}
-0.4.5
+0.4.7
 {{- end }}
 
 {{/*
@@ -852,7 +852,7 @@ entry in Chart.yaml to it. Bumping FerroBRIDGE is this line plus
 `bridge.image.digest` in values.yaml.
 */}}
 {{- define "ferroehr.bridgePinnedVersion" -}}
-0.0.21
+0.0.27
 {{- end }}
 
 {{/*
@@ -966,8 +966,8 @@ config.server.tls says, so the scheme there is always http.
 {{- end }}
 
 {{/*
-The in-cluster ITS-REST root of the release's own CDR, as FerroBRIDGE's `[cdr]
-base_url` names it: the origin plus the REST base path, which is the server's
+The in-cluster ITS-REST root of the release's own CDR, as FerroBRIDGE's
+`[cdr.endpoint] url` names it: the origin plus the REST base path, which is the server's
 own default when config.api.base_path is unset.
 */}}
 {{- define "ferroehr.cdrRestUrl" -}}
@@ -1028,7 +1028,7 @@ other HTTPS peers that verify through the same platform verifier.
 
 {{/*
 FerroBRIDGE's config.toml: `bridge.config` with the sections the chart owns
-injected — `[cdr]` at the release's CDR Service with its credential read from a
+injected — `[cdr.endpoint]` at the release's CDR Service with its credential read from a
 mounted file, `[terminology]` at the release's FerroTERM when that runs, and
 `[mappings] directory` when the chart mounts the mapping files. A value of the
 operator's that the injection would overwrite is refused rather than silently
@@ -1073,9 +1073,7 @@ and an issuer no table of the CDR's config.auth.issuer names as `machines`.
 {{- end -}}
 {{- $owned := list -}}
 {{- $cdr := dig "cdr" (dict) $config -}}
-{{- range $key := list "base_url" "credentials" -}}
-{{- if hasKey $cdr $key -}}{{- $owned = append $owned (printf "bridge.config.cdr.%s (the chart points [cdr] at this release's CDR Service, under the OAuth client of bridge.cdr.oauth)" $key) -}}{{- end -}}
-{{- end -}}
+{{- if hasKey $cdr "endpoint" -}}{{- $owned = append $owned "bridge.config.cdr.endpoint (the chart points [cdr.endpoint] at this release's CDR Service, under the OAuth client of bridge.cdr.oauth)" -}}{{- end -}}
 {{- if and $.Values.terminology.enabled (hasKey $config "terminology") -}}
 {{- $owned = append $owned "bridge.config.terminology (terminology.enabled=true points [terminology] at this release's FerroTERM; set terminology.enabled=false to name another server)" -}}
 {{- end -}}
@@ -1096,7 +1094,7 @@ and an issuer no table of the CDR's config.auth.issuer names as `machines`.
 {{- end -}}
 {{- if not (hasKey $config "cdr") -}}{{- $_ := set $config "cdr" (dict) -}}{{- end -}}
 {{- $cdr = get $config "cdr" -}}
-{{- $_ := set $cdr "base_url" (include "ferroehr.cdrRestUrl" $) -}}
+{{- $endpoint := dict "url" (include "ferroehr.cdrRestUrl" $) -}}
 {{- $oauth := dict "client_id" $.Values.bridge.cdr.oauth.clientId "client_secret_file" (printf "%s/client_secret" (include "ferroehr.bridgeSecretDir" $)) -}}
 {{- if $.Values.bridge.cdr.oauth.tokenEndpoint -}}
 {{- $_ := set $oauth "token_endpoint" $.Values.bridge.cdr.oauth.tokenEndpoint -}}
@@ -1106,9 +1104,10 @@ and an issuer no table of the CDR's config.auth.issuer names as `machines`.
 {{- range $key, $value := dict "scope" $.Values.bridge.cdr.oauth.scope "audience" $.Values.bridge.cdr.oauth.audience "resource" $.Values.bridge.cdr.oauth.resource -}}
 {{- if $value -}}{{- $_ := set $oauth $key $value -}}{{- end -}}
 {{- end -}}
-{{- $_ := set $cdr "credentials" (dict "oauth" $oauth) -}}
+{{- $_ := set $endpoint "credentials" (dict "oauth" $oauth) -}}
+{{- $_ := set $cdr "endpoint" $endpoint -}}
 {{- if $.Values.terminology.enabled -}}
-{{- $_ := set $config "terminology" (dict "base_url" (printf "http://%s:%v/r4" (include "ferroehr.terminologyFullname" $) $.Values.terminology.service.port) "wire_version" "r4") -}}
+{{- $_ := set $config "terminology" (dict "endpoint" (dict "url" (printf "http://%s:%v/r4" (include "ferroehr.terminologyFullname" $) $.Values.terminology.service.port)) "wire_version" "r4") -}}
 {{- end -}}
 {{- if $readsReport -}}
 {{- if not (hasKey $config "usage_report") -}}{{- $_ := set $config "usage_report" (dict) -}}{{- end -}}
@@ -1126,8 +1125,8 @@ and an issuer no table of the CDR's config.auth.issuer names as `machines`.
 {{/*
 The secret-shaped LEAF keys of a `bridge.config` subtree, one dotted path per
 line. Unlike `ferroehr.secretScan`, a map is always descended into rather than
-judged by its name: FerroBRIDGE's `[cdr.credentials]` and
-`[terminology.credentials]` are sections whose `user` is not a secret, and
+judged by its name: FerroBRIDGE's `[cdr.endpoint.credentials]` and
+`[terminology.endpoint.credentials]` are sections whose `user` is not a secret, and
 whose `password` is.
 */}}
 {{- define "ferroehr.bridgeSecretScan" -}}

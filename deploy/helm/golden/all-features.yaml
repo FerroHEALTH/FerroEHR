@@ -7,9 +7,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.26"
+    app.kubernetes.io/version: "0.0.39"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.19
+    helm.sh/chart: ferropix-0.4.3
 spec:
   podSelector:
     matchLabels:
@@ -288,9 +288,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.26"
+    app.kubernetes.io/version: "0.0.39"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.19
+    helm.sh/chart: ferropix-0.4.3
 spec:
   maxUnavailable: 1
   unhealthyPodEvictionPolicy: AlwaysAllow
@@ -388,9 +388,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.26"
+    app.kubernetes.io/version: "0.0.39"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.19
+    helm.sh/chart: ferropix-0.4.3
 automountServiceAccountToken: false
 
 ---
@@ -508,20 +508,20 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.26"
+    app.kubernetes.io/version: "0.0.39"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.19
+    helm.sh/chart: ferropix-0.4.3
 data:
   ferropix.toml: |
     profile = "production"
     public_base_url = "https://pix.example.com"
     
     [auth]
-    
-      [[auth.issuer]]
-        audience = ["https://pix.example.com/fhir"]
-        issuer = "https://idp.example.com/realms/pix"
-        kind = "machines"
+      [auth.issuer]
+        [auth.issuer.pix]
+          audience = ["https://pix.example.com/fhir"]
+          issuer = "https://idp.example.com/realms/pix"
+          kind = "machines"
     
     [db]
       data_key_file = "/run/secrets/ferropix/data-key"
@@ -554,7 +554,7 @@ data:
     
       [[trust.issuer]]
         clients = ["hospital-source"]
-        issuer = "https://idp.example.com/realms/pix"
+        issuer = "pix"
     
     [usage_report]
       deployment = "helm"
@@ -582,18 +582,20 @@ metadata:
 data:
   config.toml: |
     [cdr]
-      base_url = "http://ferroehr:8080/ferroehr/rest/openehr/v1"
-      [cdr.credentials]
-        [cdr.credentials.oauth]
-          audience = "ferroehr-machines"
-          client_id = "ferrobridge"
-          client_secret_file = "/etc/ferrobridge/secrets/cdr/client_secret"
-          issuer = "https://machines.example.org/realms/ferroehr"
-          scope = "system/composition-*.cruds system/template-*.r system/aql-*.rs"
+      [cdr.endpoint]
+        url = "http://ferroehr:8080/ferroehr/rest/openehr/v1"
+        [cdr.endpoint.credentials]
+          [cdr.endpoint.credentials.oauth]
+            audience = "ferroehr-machines"
+            client_id = "ferrobridge"
+            client_secret_file = "/etc/ferrobridge/secrets/cdr/client_secret"
+            issuer = "https://machines.example.org/realms/ferroehr"
+            scope = "system/composition-*.cruds system/template-*.r system/aql-*.rs"
     
     [terminology]
-      base_url = "http://ferroehr-terminology:8080/r4"
       wire_version = "r4"
+      [terminology.endpoint]
+        url = "http://ferroehr-terminology:8080/r4"
     
     [usage_report]
       deployment = "helm"
@@ -1190,9 +1192,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.26"
+    app.kubernetes.io/version: "0.0.39"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.19
+    helm.sh/chart: ferropix-0.4.3
     app.kubernetes.io/component: server
 spec:
   type: ClusterIP
@@ -1297,9 +1299,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.26"
+    app.kubernetes.io/version: "0.0.39"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.19
+    helm.sh/chart: ferropix-0.4.3
     app.kubernetes.io/component: server
 spec:
   replicas: 1
@@ -1313,12 +1315,12 @@ spec:
       labels:
         app.kubernetes.io/name: ferropix
         app.kubernetes.io/instance: ferroehr
-        app.kubernetes.io/version: "0.0.26"
+        app.kubernetes.io/version: "0.0.39"
         app.kubernetes.io/managed-by: Helm
-        helm.sh/chart: ferropix-0.3.19
+        helm.sh/chart: ferropix-0.4.3
         app.kubernetes.io/component: server
       annotations:
-        checksum/config: d5e7ab5f0a2198f10d040e7be8caf30b16aca8e9c5cbf423bf5881316ca9a12f
+        checksum/config: 74e849c8881cdc336e08362fd467890124973c5877fe600d6b1e5b4ce8c947a6
     spec:
       serviceAccountName: ferroehr-ferropix
       automountServiceAccountToken: false
@@ -1334,7 +1336,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: ferropix
-          image: "ghcr.io/ferrohealth/ferropix@sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a"
+          image: "ghcr.io/ferrohealth/ferropix@sha256:b91cff886b9ec1413706630c25e80c08c6bf09a223e1916704a2421f7071a674"
           imagePullPolicy: IfNotPresent
           args: ["serve"]
           env:
@@ -1437,7 +1439,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: c1b18a5dc105ba2d804e7f22026cb983fc1fb947e4290228ec43fa29b56132da
+        checksum/config: 87e85bcea52c6166986f70e02a261fd4c9ee752336822b491f10834df6549fae
       labels:
         app.kubernetes.io/name: ferroehr-bridge
         app.kubernetes.io/instance: ferroehr
@@ -1458,7 +1460,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: bridge
-          image: "ghcr.io/ferrohealth/ferrobridge@sha256:83bd9d2cb5e4ef6b19617c9434242f88489b0fd4150b2238a22acf17435c9a35"
+          image: "ghcr.io/ferrohealth/ferrobridge@sha256:55cd3c398a58e9ebb5817fe5a694980c36f23b06258ee808574050b5249d521c"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -1850,7 +1852,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: terminology
-          image: "ghcr.io/ferrohealth/ferroterm@sha256:7c20d39e1989fce1dfb92e6ddfd853dfa9a52bb9b7b973fbba42430963ef75bd"
+          image: "ghcr.io/ferrohealth/ferroterm@sha256:52411e76ea664f9470fda0a7a08202a0ad6f7c39069322f42a754d971cf37a82"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

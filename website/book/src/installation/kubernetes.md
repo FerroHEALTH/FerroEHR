@@ -949,9 +949,9 @@ ferropix:
     public_base_url: https://pix.example.org
     auth:
       issuer:
-        - {issuer: https://idp.example.org/realms/pix, kind: machines, audience: [https://pix.example.org/fhir]}
+        pix: {issuer: https://idp.example.org/realms/pix, kind: machines, audience: [https://pix.example.org/fhir]}
     trust:
-      issuer: [{issuer: https://idp.example.org/realms/pix, clients: [hospital-source]}]
+      issuer: [{issuer: pix, clients: [hospital-source]}]
     pseudonym_domain:
       - {namespace: urn:oid:2.999.7.1, name: Clinical domain, consumer_client_id: ferroehr}
 config:
@@ -988,7 +988,8 @@ top-level key and the clients that may act as a Patient Identity Source sit
 in the `[[trust.issuer]]` table, apart from the `[auth.issuer.<name>]` entry that
 names the issuer; FerroPIX refuses the older `server.public_base_url` and `auth.issuer[].clients`, so an
 upgrade from a chart that pinned FerroPIX 0.0.7 moves those two keys in your
-values.
+values. Since FerroPIX 0.0.37, `config.auth.issuer` is a map of issuers by name,
+and `trust.issuer[].issuer` names the issuer by that name, never by its URL.
 
 The restricted-profile gate holds FerroPIX's pods to the Pod Security
 Standards `restricted` profile like every other pod in the release. FerroPIX's
@@ -1139,12 +1140,12 @@ holding its configuration file, and a NetworkPolicy.
 
 The chart writes three sections of that file for you:
 
-- **`[cdr]`:** `base_url` is this release's CDR Service with its REST base path
-  (`http://<release>:<service.port><config.api.base_path>`), and
-  `[cdr.credentials.oauth]` names the client of `bridge.cdr.oauth` and its
-  secret, a file mounted from your Secret.
-- **`[terminology]`:** with `terminology.enabled` on, `base_url` is the chart's
-  FerroTERM Service at `/r4` and `wire_version` is `r4`. With it off the
+- **`[cdr.endpoint]`:** `url` is this release's CDR Service with its REST base
+  path (`http://<release>:<service.port><config.api.base_path>`), and
+  `[cdr.endpoint.credentials.oauth]` names the client of `bridge.cdr.oauth` and
+  its secret, a file mounted from your Secret.
+- **`[terminology]`:** with `terminology.enabled` on, `endpoint.url` is the
+  chart's FerroTERM Service at `/r4` and `wire_version` is `r4`. With it off the
   section is absent, and you may set your own under `bridge.config`.
 - **`[mappings]`:** `directory` is where the mapping files below are mounted.
 
@@ -1222,8 +1223,10 @@ bridge:
       - blood_pressure.yml
   config:
     auth:
-      issuer: https://idp.example.org
-      audience: [https://bridge.example.org/fhir]
+      issuer:
+        - issuer: https://idp.example.org
+          kind: machines
+          audience: [https://bridge.example.org/fhir]
   networkPolicy:
     ingressFrom:
       - podSelector:
@@ -1247,7 +1250,7 @@ chart adds FerroBRIDGE's pods to it, and FerroTERM's policy admits them too.
 the keys of FerroBRIDGE's
 [configuration reference](https://ferrobridge.eu/docs/operate/configuration.html).
 FerroBRIDGE refuses an unknown key at boot. The render refuses a key the chart
-writes (`cdr.base_url`, `cdr.credentials`, `server.listen`, `terminology` while
+writes (`cdr.endpoint`, `server.listen`, `terminology` while
 FerroTERM runs, `mappings.directory` while the chart mounts the mappings) and
 any secret-shaped key, such as a password, a token or `cdm.url`: set its
 `_file` sibling and mount the file with `bridge.extraVolumes` and

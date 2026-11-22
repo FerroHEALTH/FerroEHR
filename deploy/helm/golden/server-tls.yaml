@@ -281,14 +281,15 @@ metadata:
 data:
   config.toml: |
     [cdr]
-      base_url = "https://ferroehr:8080/ferroehr/rest/openehr/v1"
-      [cdr.credentials]
-        [cdr.credentials.oauth]
-          audience = "ferroehr-machines"
-          client_id = "ferrobridge"
-          client_secret_file = "/etc/ferrobridge/secrets/cdr/client_secret"
-          issuer = "https://machines.example.org/realms/ferroehr"
-          scope = "system/composition-*.cruds system/template-*.r system/aql-*.rs"
+      [cdr.endpoint]
+        url = "https://ferroehr:8080/ferroehr/rest/openehr/v1"
+        [cdr.endpoint.credentials]
+          [cdr.endpoint.credentials.oauth]
+            audience = "ferroehr-machines"
+            client_id = "ferrobridge"
+            client_secret_file = "/etc/ferrobridge/secrets/cdr/client_secret"
+            issuer = "https://machines.example.org/realms/ferroehr"
+            scope = "system/composition-*.cruds system/template-*.r system/aql-*.rs"
     
     [usage_report]
       deployment = "helm"
@@ -493,7 +494,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 9da9bc007f8198ef2a8bfeb2ce1aad821db3cc12dd19488fbb9407fe76e76145
+        checksum/config: aeb414e435a4e971b7523aa3705c52431aac6edc68c758c4177304ef365acece
       labels:
         app.kubernetes.io/name: ferroehr-bridge
         app.kubernetes.io/instance: ferroehr
@@ -514,7 +515,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: bridge
-          image: "ghcr.io/ferrohealth/ferrobridge@sha256:83bd9d2cb5e4ef6b19617c9434242f88489b0fd4150b2238a22acf17435c9a35"
+          image: "ghcr.io/ferrohealth/ferrobridge@sha256:55cd3c398a58e9ebb5817fe5a694980c36f23b06258ee808574050b5249d521c"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

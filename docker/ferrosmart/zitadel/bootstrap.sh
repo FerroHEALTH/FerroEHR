@@ -121,7 +121,6 @@ printf '%s' "$org" > "$OUT/organization"
 # login (FerroSMART docs/architecture.md §13.20).
 [[ferrosmart.upstream]]
 name = "zitadel"
-protocol = "oidc"
 
 [ferrosmart.upstream.oidc]
 issuer = "$ZITADEL_API"

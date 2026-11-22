@@ -401,7 +401,7 @@ services:
   # below names the client `ferroehr`). Pinned by tag and by the digest of its
   # image index.
   ferropix:
-    image: ghcr.io/ferrohealth/ferropix:0.0.26@sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a
+    image: ghcr.io/ferrohealth/ferropix:0.0.39@sha256:b91cff886b9ec1413706630c25e80c08c6bf09a223e1916704a2421f7071a674
     network_mode: service:identity-issuer
     depends_on:
       identity-issuer:
@@ -1153,18 +1153,20 @@ configs:
       # Source and of FerroEHR, so it is a `machines` issuer. It signs plain
       # JWTs (`typ` JWT) rather than the `at+jwt` of RFC 9068 and names the
       # client in `client_id`, so the issuer takes the claims it carries.
-      [[auth.issuer]]
+      [auth.issuer.quickstart]
       issuer = "http://localhost:8180/quickstart"
       kind = "machines"
       audience = ["http://localhost:8090/fhir"]
+
+      [auth.issuer.quickstart.profile]
       token_types = ["JWT"]
       required_claims = ["iss", "exp", "aud", "sub"]
       client_claims = ["client_id", "azp"]
 
-      # The clients the issuer signs for that may act as a Patient Identity
-      # Source.
+      # The clients the issuer, named by its table, signs for that may act as
+      # a Patient Identity Source.
       [[trust.issuer]]
-      issuer = "http://localhost:8180/quickstart"
+      issuer = "quickstart"
       clients = ["quickstart-source"]
 
       [[domain]]

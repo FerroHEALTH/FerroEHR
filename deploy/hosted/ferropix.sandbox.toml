@@ -30,18 +30,20 @@ data_key_file = "/etc/ferropix/data-key"
 # of the CDR, so it is a `machines` issuer; it signs plain JWTs (`typ` JWT)
 # and names the client in `client_id`, so the issuer takes the claims it
 # carries.
-[[auth.issuer]]
+[auth.issuer.sandbox]
 issuer = "http://localhost:8180/sandbox"
 kind = "machines"
-profile = "rfc9068"
+preset = "rfc9068"
 audience = ["http://localhost:8090/fhir"]
+
+[auth.issuer.sandbox.profile]
 token_types = ["JWT"]
 required_claims = ["iss", "exp", "aud", "sub"]
 client_claims = ["client_id", "azp"]
 
 # The one client that may feed patients, the on-box seed (PIXm ITI-104).
 [[trust.issuer]]
-issuer = "http://localhost:8180/sandbox"
+issuer = "sandbox"
 clients = ["sandbox-source"]
 
 # The synthetic identifier domain the demo patients are registered in. The

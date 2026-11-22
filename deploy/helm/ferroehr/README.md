@@ -216,7 +216,7 @@ Kubernetes: `>=1.36.0-0`
 
 | Repository | Name | Version |
 |------------|------|---------|
-| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.19 |
+| oci://ghcr.io/ferrohealth/charts | ferropix | 0.4.3 |
 
 > [!NOTE]
 > Rows under `config.*` carry no description here on purpose. Those keys are the
@@ -290,12 +290,12 @@ each one holds.
 | bridge.cdr.oauth.resource | string | `""` | A `resource` parameter (RFC 8707 §2), for an authorization server that selects the CDR by it. Empty sends none. |
 | bridge.cdr.oauth.scope | string | `""` | The `scope` FerroBRIDGE asks for (RFC 6749 §3.3), the SMART `system/` scopes the CDR grants it. Empty sends none. |
 | bridge.cdr.oauth.tokenEndpoint | string | `""` | The token endpoint (RFC 6749 §3.2), for an authorization server whose metadata FerroBRIDGE cannot read at `issuer`. Set, FerroBRIDGE requests its token here and reads no metadata; `issuer` still names the issuer the CDR trusts. |
-| bridge.config | object | `{}` | Further FerroBRIDGE configuration, rendered into its config.toml beside the keys the chart writes (FerroBRIDGE's configuration reference: https://ferrobridge.eu/docs/operate/configuration.html). FerroBRIDGE refuses an unknown key at boot, so a typo here is a crash loop, not a silent default. Refused at render: `cdr.base_url`, `cdr.credentials`, `server.listen`, `terminology` while `terminology.enabled` is on, `mappings.directory` while `mappings.existingConfigMap` is set, and any secret-shaped key (a password, a token, `cdm.url`), whose `_file` sibling takes a file you mount with `extraVolumes`. A mapping set turns the FHIRconnect operations on, and FerroBRIDGE then refuses to start until `auth.issuer` and `auth.audience` name the issuer of its callers' tokens, or `auth.enabled` is false. |
+| bridge.config | object | `{}` | Further FerroBRIDGE configuration, rendered into its config.toml beside the keys the chart writes (FerroBRIDGE's configuration reference: https://ferrobridge.eu/docs/operate/configuration.html). FerroBRIDGE refuses an unknown key at boot, so a typo here is a crash loop, not a silent default. Refused at render: `cdr.endpoint`, `server.listen`, `terminology` while `terminology.enabled` is on, `mappings.directory` while `mappings.existingConfigMap` is set, and any secret-shaped key (a password, a token, `cdm.url`), whose `_file` sibling takes a file you mount with `extraVolumes`. A mapping set turns the FHIRconnect operations on, and FerroBRIDGE then refuses to start until `auth.issuer` and `auth.audience` name the issuer of its callers' tokens, or `auth.enabled` is false. |
 | bridge.enabled | bool | `false` | Deploy FerroBRIDGE alongside the CDR. Needs `bridge.cdr.oauth`, a client of a `machines` issuer in `config.auth.issuer`, `bridge.cdr.existingSecret` with its client secret, and at least one `bridge.networkPolicy.ingressFrom` peer; the render is refused without any of them. |
 | bridge.extraEnv | list | `[]` | Extra environment for FerroBRIDGE (escape hatch). |
 | bridge.extraVolumeMounts | list | `[]` | Extra volume mounts for the FerroBRIDGE container. |
 | bridge.extraVolumes | list | `[]` | Extra volumes for the FerroBRIDGE pod, such as a Secret holding a `_file` credential named in `config`. |
-| bridge.image.digest | string | `"sha256:83bd9d2cb5e4ef6b19617c9434242f88489b0fd4150b2238a22acf17435c9a35"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
+| bridge.image.digest | string | `"sha256:55cd3c398a58e9ebb5817fe5a694980c36f23b06258ee808574050b5249d521c"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
 | bridge.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
 | bridge.image.repository | string | `"ghcr.io/ferrohealth/ferrobridge"` | FerroBRIDGE image repository. A separate product on its own release line (https://github.com/FerroHEALTH/FerroBRIDGE), BUSL-1.1 from the same Licensor as FerroEHR. |
 | bridge.image.tag | string | `""` | Image tag. Empty falls back to the FerroBRIDGE release this chart is pinned to (0.0.21), never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert. Clear `digest` to deploy a tag. |
@@ -359,8 +359,8 @@ each one holds.
 | extraVolumes | list | `[]` | Extra volumes / volumeMounts (e.g. an external secret store for the PGP key). |
 | ferropix.config.server.base_path | string | `""` | FerroPIX's `[server] base_path`, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.enabled | bool | `true` | Deploy FerroPIX beside the CDR and point config.pixm at it. |
-| ferropix.image.digest | string | `"sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
-| ferropix.image.tag | string | `"0.0.26"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
+| ferropix.image.digest | string | `"sha256:b91cff886b9ec1413706630c25e80c08c6bf09a223e1916704a2421f7071a674"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
+| ferropix.image.tag | string | `"0.0.39"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
 | ferropix.service.port | int | `8080` | FerroPIX's Service port, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.usageReport.enabled | bool | `true` | FerroPIX's own usage report switch, read by the dependency chart. A dependency chart cannot read this chart's `usageReport.enabled`, so with that set to false, set this false too: the render refuses the pair `usageReport.enabled=false` and `ferropix.usageReport.enabled=true`. |
 | fullnameOverride | string | `""` | Override the full resource name. |
@@ -468,7 +468,7 @@ each one holds.
 | terminology.enabled | bool | `false` | Deploy FerroTERM alongside the CDR. |
 | terminology.extraEnv | list | `[]` | Extra environment for FerroTERM (escape hatch). |
 | terminology.failOnError | bool | `false` | What the CDR does when the terminology server cannot answer. `false` (the server's own shipped default) accepts the binding; `true` turns an unreachable server into a 422 refusal. No released openEHR text decides between the two. |
-| terminology.image.digest | string | `"sha256:7c20d39e1989fce1dfb92e6ddfd853dfa9a52bb9b7b973fbba42430963ef75bd"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
+| terminology.image.digest | string | `"sha256:52411e76ea664f9470fda0a7a08202a0ad6f7c39069322f42a754d971cf37a82"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
 | terminology.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
 | terminology.image.repository | string | `"ghcr.io/ferrohealth/ferroterm"` | FerroTERM image repository. A separate product on its own release line (https://github.com/FerroHEALTH/FerroTERM), BUSL-1.1 from the same Licensor as FerroEHR. |
 | terminology.image.tag | string | `""` | Image tag. Empty falls back to the FerroTERM release this chart is pinned to (0.4.5) — never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert while the values file claimed otherwise. Clear `digest` to deploy a tag. |
