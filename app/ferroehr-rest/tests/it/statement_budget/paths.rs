@@ -333,6 +333,10 @@ struct Budget {
 /// where it sent 8, and 39, 45, 38, 45 and 44 fewer allocations on the JSON,
 /// XML and FLAT commits, the update and the delete, measured beside the merge
 /// base; each of those ceilings fell by its path's figure.
+/// The binding side table's trigger has since moved the binding revision and
+/// notified only for a statement that changed a row (#6284): 2 nested
+/// statements and 87 WAL bytes fewer on both party commits, measured beside
+/// the merge base, and each of those ceilings fell by as much.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
@@ -475,8 +479,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 1998,
         peak_bytes: 117_146,
         round_trips: 31,
-        nested: 15,
-        wal: 6709,
+        nested: 13,
+        wal: 6622,
     },
     Budget {
         path: Path::AqlMatches,
@@ -502,8 +506,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 2487,
         peak_bytes: 132_147,
         round_trips: 31,
-        nested: 16,
-        wal: 9278,
+        nested: 14,
+        wal: 9191,
     },
     Budget {
         path: Path::ReadVersion,
