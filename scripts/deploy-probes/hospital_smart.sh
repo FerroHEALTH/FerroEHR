@@ -107,6 +107,7 @@ kind = "confidential_asymmetric"
 jwks_file = "/run/secrets/ferrosmart_viewer_jwks"
 scopes = ["system/launch.c"]
 grant_types = ["client_credentials"]
+resources = ["$HS_BASE"]
 
 [[ferrosmart.client]]
 client_id = "$HS_APP"
@@ -115,12 +116,13 @@ kind = "public"
 redirect_uris = ["$HS_REDIRECT"]
 scopes = ["openid", "launch", "launch/patient", "user/composition-*.cruds", "user/aql-*.cruds", "user/template-*.r", "patient/composition-*.crs", "patient/aql-*.rs", "patient/composition-*.rs", "patient/composition-*.r", "__ferroehr.platform"]
 grant_types = ["authorization_code"]
+resources = ["$HS_BASE"]
 TOML
     for client in $HS_SYSTEMS; do
       local scopes='"system/composition-*.cruds", "system/aql-*.cruds", "system/template-*.r"'
       [[ "$client" == hospital-scim ]] && scopes='"ferroehr/scim"'
-      printf '\n[[ferrosmart.client]]\nclient_id = "%s"\nname = "%s"\nkind = "confidential_asymmetric"\njwks_file = "/etc/ferrosmart/clients/%s.jwks.json"\nscopes = [%s]\ngrant_types = ["client_credentials"]\n' \
-        "$client" "$client" "$client" "$scopes"
+      printf '\n[[ferrosmart.client]]\nclient_id = "%s"\nname = "%s"\nkind = "confidential_asymmetric"\njwks_file = "/etc/ferrosmart/clients/%s.jwks.json"\nscopes = [%s]\ngrant_types = ["client_credentials"]\nresources = ["%s"]\n' \
+        "$client" "$client" "$client" "$scopes" "$HS_BASE"
     done
   } > "$(hs_dir)/ferrosmart.toml"
 }

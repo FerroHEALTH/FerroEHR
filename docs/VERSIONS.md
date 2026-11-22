@@ -103,10 +103,15 @@ the two ZITADEL rows each week against the release zitadel/zitadel marks
 Latest. The ZITADEL documentation and sources the overlay cites are vendored
 at the same release (`scripts/vendor/zitadel-docs.sh`, `docs/specs/zitadel/`).
 Bumping ZITADEL moves both rows, and the vendor script's tag, together.
+The weekly `.github/workflows/pin-freshness.yml` reads the `ferrosmart` row,
+and every other FerroHEALTH product image the compose files, the hosted
+sandbox and the Helm chart pin, against that product's latest release and the
+digest of its image index (`scripts/checks/pin-freshness.sh`), and files one
+issue per image behind.
 
 | Image | Pin | Licence |
 |---|---|---|
-| `ferrosmart` | `ghcr.io/ferrohealth/ferrosmart:0.2.0@sha256:8adfd5d1f104314d8feb9a3e08b63e4eb0ff5d52adbf1a3b2f53495a1e1b693a` | BUSL-1.1 (FerroHEALTH) |
+| `ferrosmart` | `ghcr.io/ferrohealth/ferrosmart:0.3.0@sha256:ee09ccd1526dbb8200b17d1ab30c6cf39a62a43b786bb13caf84e75e732b456c` | BUSL-1.1 (FerroHEALTH) |
 | `keycloak` | `quay.io/keycloak/keycloak:26.8.2@sha256:723b1d6e254c0fc96d5cffec860c7e0744d6a3277822b865bb538cf891575e41` | Apache-2.0, the pin of `docker-compose.keycloak.yml` |
 | `zitadel` | `ghcr.io/zitadel/zitadel:v4.20.3@sha256:1b30fea7ed88826dc0a98dacee4e2f2c8b05201fd26f5e4cb5386615b29f7638` | AGPL-3.0-only, run unmodified |
 | `zitadel-login` | `ghcr.io/zitadel/zitadel-login:v4.20.3@sha256:8f730428dfd65cd8979d07ef4e34a59d44978e956692b7dbbc3bba4e4abb4f92` | MIT (`apps/login/`) |

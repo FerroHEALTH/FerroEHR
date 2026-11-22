@@ -624,10 +624,18 @@ const BUDGETS: [Budget; 25] = [
 /// CONTRIBUTION commit, the `EHR_STATUS` commit, the update and the delete,
 /// measured beside the merge base, and each ceiling fell by its path's
 /// figure.
+/// The node columns most rows leave `NULL` have since travelled in groups,
+/// each sparse (the positions of the rows that set one of its columns) or
+/// dense, whichever is smaller (#6244): 13,525 bytes fewer on the three IPS
+/// composition commits, the CONTRIBUTION commit and the update, and 52 and
+/// 282 on the two party commits, measured beside the merge base, and each
+/// ceiling fell by its path's figure; the `EHR_STATUS` commit and the delete,
+/// whose few rows go dense with a `NULL` for each group's positions, moved
+/// 15 and 16 bytes up, under their ceilings.
 const WIRE_BUDGETS: [(Path, u64); 25] = [
-    (Path::CommitJson, 215_668),
-    (Path::CommitXml, 215_814),
-    (Path::CommitFlat, 215_808),
+    (Path::CommitJson, 202_143),
+    (Path::CommitXml, 202_289),
+    (Path::CommitFlat, 202_283),
     (Path::ReadJson, 131_668),
     (Path::ReadXml, 131_668),
     (Path::ReadFlat, 131_668),
@@ -636,16 +644,16 @@ const WIRE_BUDGETS: [(Path, u64); 25] = [
     (Path::AqlPopulation, 6566),
     (Path::Iti81, 29_540),
     (Path::PartyRead, 5524),
-    (Path::CommitContribution, 216_630),
+    (Path::CommitContribution, 203_105),
     (Path::ReadAtTime, 131_699),
     (Path::CommitStatus, 5572),
     (Path::ReadStatus, 3142),
-    (Path::CommitParty, 10_513),
+    (Path::CommitParty, 10_461),
     (Path::AqlMatches, 17_539),
     (Path::AqlParty, 11_509),
-    (Path::CommitPartyScored, 13_090),
+    (Path::CommitPartyScored, 12_808),
     (Path::ReadVersion, 3336),
-    (Path::CommitUpdate, 216_095),
+    (Path::CommitUpdate, 202_571),
     (Path::CommitDelete, 4875),
     (Path::DirectoryCreate, 4985),
     (Path::DirectoryUpdate, 4795),

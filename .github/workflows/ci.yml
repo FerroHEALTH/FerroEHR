@@ -742,6 +742,13 @@ jobs:
         if: ${{ !cancelled() }}
         run: bash scripts/checks/ferropix-pins.sh
 
+      # ---- pin-freshness -----------------------------------------------
+      # The product image freshness readers over fixtures, with no network;
+      # the weekly pin-freshness.yml runs them against the releases.
+      - name: pin-freshness / product image freshness self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/pin-freshness.sh --self-test
+
       # ---- veredictum-action -------------------------------------------
       - name: veredictum-action / Veredictum pin guard self-test
         if: ${{ !cancelled() }}

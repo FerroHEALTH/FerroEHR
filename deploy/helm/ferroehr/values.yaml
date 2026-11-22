@@ -1400,7 +1400,7 @@ terminology:
     tag: ""
     # -- Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an
     # install runs the exact image this chart was validated against.
-    digest: sha256:7c20d39e1989fce1dfb92e6ddfd853dfa9a52bb9b7b973fbba42430963ef75bd
+    digest: sha256:52411e76ea664f9470fda0a7a08202a0ad6f7c39069322f42a754d971cf37a82
   service:
     # -- Service type. ClusterIP deliberately: the CDR is the only caller.
     type: ClusterIP
@@ -1517,10 +1517,10 @@ terminology:
 # FerroBRIDGE: the FHIR and openEHR bridge, beside the CDR.
 #
 # One Deployment, one ClusterIP Service and a NetworkPolicy, with FerroBRIDGE's
-# config.toml rendered as a ConfigMap: [cdr] points at this release's CDR
-# Service, [cdr.credentials.oauth] reads a file mounted from bridge.cdr.existingSecret,
-# and [terminology] points at this release's FerroTERM when terminology.enabled
-# is set. Off by default.
+# config.toml rendered as a ConfigMap: [cdr.endpoint] points at this release's
+# CDR Service, [cdr.endpoint.credentials.oauth] reads a file mounted from
+# bridge.cdr.existingSecret, and [terminology.endpoint] points at this
+# release's FerroTERM when terminology.enabled is set. Off by default.
 #
 # CLUSTER-INTERNAL. FerroBRIDGE checks the caller of its FHIRconnect
 # operations, FHIR facade and operator API through `[auth]` (`config.auth`
@@ -1564,7 +1564,7 @@ bridge:
     tag: ""
     # -- Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an
     # install runs the exact image this chart was validated against.
-    digest: sha256:83bd9d2cb5e4ef6b19617c9434242f88489b0fd4150b2238a22acf17435c9a35
+    digest: sha256:55cd3c398a58e9ebb5817fe5a694980c36f23b06258ee808574050b5249d521c
   service:
     # -- Service port. The Service is always ClusterIP and the container always
     # listens on 8080.
@@ -1578,7 +1578,7 @@ bridge:
     existingSecret: ""
     # FerroBRIDGE reaches the CDR as a machine, under a client credentials
     # token (RFC 6749 §4.4) it obtains and renews itself
-    # ([cdr.credentials.oauth]). From ferrohealth-smart 0.9 a Basic credential
+    # ([cdr.endpoint.credentials.oauth]). From ferrohealth-smart 0.9 a Basic credential
     # is a person's and holds no `system/` scope, so there is no Basic mode.
     oauth:
       # -- The issuer identifier of the authorization server, an https URL
@@ -1624,7 +1624,7 @@ bridge:
   # the keys the chart writes (FerroBRIDGE's configuration reference:
   # https://ferrobridge.eu/docs/operate/configuration.html). FerroBRIDGE
   # refuses an unknown key at boot, so a typo here is a crash loop, not a
-  # silent default. Refused at render: `cdr.base_url`, `cdr.credentials`,
+  # silent default. Refused at render: `cdr.endpoint`,
   # `server.listen`, `terminology` while `terminology.enabled` is on,
   # `mappings.directory` while `mappings.existingConfigMap` is set, and any
   # secret-shaped key (a password, a token, `cdm.url`), whose `_file` sibling
@@ -1725,9 +1725,9 @@ bridge:
 #       public_base_url: https://pix.example.org
 #       auth:
 #         issuer:
-#           - {issuer: https://idp.example.org, kind: machines, audience: [https://pix.example.org/fhir]}
+#           idp: {issuer: https://idp.example.org, kind: machines, audience: [https://pix.example.org/fhir]}
 #       trust:
-#         issuer: [{issuer: https://idp.example.org, clients: [hospital-source]}]
+#         issuer: [{issuer: idp, clients: [hospital-source]}]
 #       pseudonym_domain:
 #         - {namespace: urn:oid:2.999.7.1, name: Clinical domain, consumer_client_id: ferroehr}
 # Any conformant PIX Manager can serve instead: set `enabled: false` and
@@ -1739,10 +1739,10 @@ ferropix:
   image:
     # -- The FerroPIX release the pinned `digest` belongs to. The dependency
     # chart deploys the digest, and the Artifact Hub entry names this tag.
-    tag: "0.0.26"
+    tag: "0.0.39"
     # -- FerroPIX image digest of release `tag`. Pinned here so
     # the image this chart deploys is stated by this chart.
-    digest: "sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a"
+    digest: "sha256:b91cff886b9ec1413706630c25e80c08c6bf09a223e1916704a2421f7071a674"
   config:
     server:
       # -- FerroPIX's `[server] base_path`, read here to build the FHIR base the

@@ -212,14 +212,15 @@ ferropix:
     public_base_url: https://pix.example.com
     auth:
       issuer:
-        - issuer: https://idp.example.com/realms/pix
+        pix:
+          issuer: https://idp.example.com/realms/pix
           kind: machines
           audience: [https://pix.example.com/fhir]
-    # The clients the issuer signs for that may act as a Patient Identity
-    # Source.
+    # The clients the issuer, named by its key, signs for that may act as a
+    # Patient Identity Source.
     trust:
       issuer:
-        - issuer: https://idp.example.com/realms/pix
+        - issuer: pix
           clients: [hospital-source]
     domain:
       - system: urn:oid:2.999.1.1

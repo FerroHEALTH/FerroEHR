@@ -77,7 +77,7 @@ services:
     restart: unless-stopped
 
   ferrosmart:
-    image: ${FERROSMART_IMAGE:-ghcr.io/ferrohealth/ferrosmart:0.2.0@sha256:8adfd5d1f104314d8feb9a3e08b63e4eb0ff5d52adbf1a3b2f53495a1e1b693a}
+    image: ${FERROSMART_IMAGE:-ghcr.io/ferrohealth/ferrosmart:0.3.0@sha256:ee09ccd1526dbb8200b17d1ab30c6cf39a62a43b786bb13caf84e75e732b456c}
     network_mode: service:identity-issuer
     depends_on:
       ferrosmart-postgres:
