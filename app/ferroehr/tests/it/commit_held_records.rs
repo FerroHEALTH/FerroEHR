@@ -24,7 +24,9 @@ use ferroehr::error::ServiceError;
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::AuditConfig;
-use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass};
+use ferroehr::system_log::event::{
+    AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
+};
 use ferroehr::system_log::recorder::{WriteFacts, WriteRecorder, with_recorder};
 use ferroehr::system_log::sender;
 use ferroehr::versioning::change::Committed;
@@ -67,14 +69,10 @@ fn primed() -> WriteRecorder {
 
 /// The access-log entries held under any reservation.
 async fn held(pool: &PgPool) -> Vec<Uuid> {
-    sqlx::query_scalar(
-        "SELECT i.reserved_by FROM audit.access_log_intake i \
-         CROSS JOIN LATERAL unnest(i.entries) AS n(id) \
-         WHERE i.reserved_by IS NOT NULL ORDER BY 1",
-    )
-    .fetch_all(pool)
-    .await
-    .expect("the held entries")
+    sqlx::query_scalar("SELECT h.reserved_by FROM audit.access_log_hold h ORDER BY 1")
+        .fetch_all(pool)
+        .await
+        .expect("the held entries")
 }
 
 /// Whether the clinical domain holds `reservation`.
@@ -210,7 +208,10 @@ async fn a_write_judged_again_holds_one_record() {
         outcome.expect("every unconditioned update commits");
         let reservations = recorder.reserved();
         assert_eq!(reservations.len(), 1, "each write keeps one reservation");
-        assert!(reserved(&pool, reservations[0].id).await, "and committed it");
+        assert!(
+            reserved(&pool, reservations[0].id).await,
+            "and committed it"
+        );
         kept.push(reservations[0].id);
     }
     kept.sort_unstable();
@@ -218,5 +219,117 @@ async fn a_write_judged_again_holds_one_record() {
         held(&pool).await,
         kept,
         "each write holds its one final record, and no attempt's record is left"
+    );
+}
+
+/// The audit store over its own pool of `db`, and an access record of an EHR
+/// read, which writes an access-log entry.
+async fn store_and_entry(
+    db: &testkit::TestDb,
+) -> (
+    ferroehr::system_log::store::AuditStore,
+    sqlx::PgPool,
+    ferroehr::system_log::store::AuditRecord,
+) {
+    let config = ferroehr::db::DbConfig::new(db.url());
+    let audit = ferroehr::db::connect_domain(&config, ferroehr::db::domain::Domain::Audit)
+        .await
+        .expect("the audit pool connects");
+    let mut event = AuditEvent::new(
+        EventActionCode::Read,
+        ObjectClass::Ehr,
+        EventOutcome::Success,
+    );
+    event.ehr_id = Some(Uuid::now_v7().to_string());
+    "clinician-7".clone_into(&mut event.user_id);
+    let record = ferroehr::system_log::store::AuditRecord {
+        event,
+        subject: None,
+        entry: None,
+    };
+    (
+        ferroehr::system_log::store::AuditStore::new(audit.clone()),
+        audit,
+        record,
+    )
+}
+
+/// A held write of access-log entries alone is one statement on the caller's
+/// connection: it leaves no transaction open there, and its entry is
+/// committed, so another connection sees it held, when the write returns.
+#[tokio::test]
+async fn a_held_write_of_entries_alone_commits_on_its_own() {
+    let db = testkit::db().await.expect("testkit database");
+    let (store, audit, record) = store_and_entry(&db).await;
+    let reservation = Uuid::now_v7();
+    let mut conn = audit.acquire().await.expect("an audit connection");
+    let pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+        .fetch_one(&mut *conn)
+        .await
+        .expect("the backend");
+    Box::pin(store.write_held_on(&mut conn, vec![record], &[], reservation))
+        .await
+        .expect("the held write");
+    let state: String = sqlx::query_scalar("SELECT state FROM pg_stat_activity WHERE pid = $1")
+        .bind(pid)
+        .fetch_one(&db.pool())
+        .await
+        .expect("the writer's state");
+    assert_eq!(state, "idle", "the write left no transaction open");
+    let held: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM audit.access_log_hold WHERE reserved_by = $1")
+            .bind(reservation)
+            .fetch_one(&db.pool())
+            .await
+            .expect("the hold");
+    assert_eq!(
+        held, 1,
+        "the entry is durable and held when the write returns"
+    );
+}
+
+/// A held write of an entry beside a system-log record takes a transaction:
+/// when its entry fails after the record went in, nothing of it is left.
+#[tokio::test]
+async fn a_held_write_of_more_than_entries_leaves_nothing_when_a_later_statement_fails() {
+    let db = testkit::db().await.expect("testkit database");
+    let (store, audit, record) = store_and_entry(&db).await;
+    sqlx::raw_sql(
+        "CREATE FUNCTION audit.refuse_hold() RETURNS trigger LANGUAGE plpgsql AS \
+         $$ BEGIN RAISE EXCEPTION 'refused by the test'; END $$; \
+         CREATE TRIGGER refuse_hold BEFORE INSERT ON audit.access_log_hold \
+         FOR EACH ROW EXECUTE FUNCTION audit.refuse_hold()",
+    )
+    .execute(&db.pool())
+    .await
+    .expect("a trigger that refuses every hold");
+    let mut login = AuditEvent::new(
+        EventActionCode::Execute,
+        ObjectClass::Authentication,
+        EventOutcome::Success,
+    );
+    login.event_type = Some(EventType::Login);
+    "clinician-7".clone_into(&mut login.user_id);
+    let system = ferroehr::system_log::store::AuditRecord {
+        event: login,
+        subject: None,
+        entry: None,
+    };
+    let reservation = Uuid::now_v7();
+    let mut conn = audit.acquire().await.expect("an audit connection");
+    Box::pin(store.write_held_on(&mut conn, vec![system, record], &[], reservation))
+        .await
+        .expect_err("the entry's hold is refused");
+    let left: i64 = sqlx::query_scalar(
+        "SELECT (SELECT count(*) FROM audit.audit_event_intake WHERE reserved_by = $1) \
+              + (SELECT count(*) FROM audit.access_log_hold WHERE reserved_by = $1)",
+    )
+    .bind(reservation)
+    .fetch_one(&db.pool())
+    .await
+    .expect("what is left");
+    assert_eq!(
+        left, 0,
+        "the system record went back with the refused entry"
     );
 }

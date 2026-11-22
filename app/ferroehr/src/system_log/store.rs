@@ -519,6 +519,10 @@ impl AuditStore {
     /// [`Self::write_held`] on `conn`, a connection of the store's pool the
     /// caller took before its own transaction's (#5964).
     ///
+    /// Records that are all access-log entries go in by one statement, which
+    /// commits on its own and is durable when this returns; any other batch
+    /// goes in by one transaction (#6256).
+    ///
     /// # Errors
     /// As [`Self::write`].
     pub async fn write_held_on(
@@ -533,6 +537,16 @@ impl AuditStore {
         }
         let writing = self.writing.pin();
         Self::register_policies_on(conn, &writing, &records).await?;
+        // NOTE: our own design (#6256), access-log entries alone go in by one statement, atomic
+        // and durable on its own with synchronous_commit on, so they need no transaction.
+        #[cfg(feature = "fhir")]
+        if Self::only_entries(&records) {
+            let (_, learned, _) = self
+                .take_in(conn, &writing, records, ends, Some(reservation))
+                .await?;
+            self.remember(learned);
+            return Ok(());
+        }
         let mut tx = conn.begin().await?;
         let (_, learned, _) = self
             .take_in(&mut tx, &writing, records, ends, Some(reservation))
