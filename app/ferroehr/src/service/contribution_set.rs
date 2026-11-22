@@ -16,7 +16,7 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::write::{ATTEMPTS, Materials, contended};
+use crate::service::write::{ATTEMPTS, Contended, MOVED, Materials};
 use crate::storage::version_repo::gate::{self, Ask, Gate, Shape};
 use crate::storage::version_repo::guarded::Guard;
 use crate::system_log::categories::{AccessedContent, ContentIds};
@@ -138,7 +138,7 @@ impl FerroEhrService {
                         "expected version {tree} has been superseded"
                     )));
                 }
-                Placed::Elsewhere => return Err(contended()),
+                Placed::Elsewhere => return Err(ServiceError::overloaded(MOVED, Contended)),
             };
             let members = members(materials.take_first()?, placed, &gate)?;
             let set = Set {
@@ -186,7 +186,7 @@ impl FerroEhrService {
                 return Ok(Outcome::Committed(outcome));
             }
         }
-        Err(contended())
+        Err(ServiceError::overloaded(MOVED, Contended))
     }
 
     /// Where each member's target sits in `gate`, judged as the per-member

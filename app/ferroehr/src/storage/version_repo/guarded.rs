@@ -69,100 +69,186 @@ impl GuardFlags {
     pub fn held(&self) -> bool {
         self.ehr && self.tip && self.mark && self.policy && self.order
     }
+
+    /// The flags off the last row of a guarded statement.
+    ///
+    /// # Errors
+    /// [`StorageError::Database`] when a column does not decode.
+    pub(super) fn read(row: &sqlx::postgres::PgRow) -> Result<Self, StorageError> {
+        use sqlx::Row as _;
+        Ok(Self {
+            ehr: row.try_get("ehr_held")?,
+            tip: row.try_get("tip_held")?,
+            mark: row.try_get("mark_held")?,
+            policy: row.try_get("policy_held")?,
+            order: row.try_get("order_held")?,
+            policy_now: row.try_get("policy_now")?,
+            definitions_now: row.try_get("definitions_now")?,
+        })
+    }
+
+    /// Nothing, when every requirement held.
+    ///
+    /// # Errors
+    /// [`StorageError::GuardMoved`] naming the flags otherwise.
+    pub(super) fn require(self) -> Result<(), StorageError> {
+        if self.held() {
+            Ok(())
+        } else {
+            Err(StorageError::GuardMoved(self))
+        }
+    }
 }
 
-/// The statement text of [`super::commit::Folded::Guarded`].
-///
-/// The parameters of [`super::commit::Folded::Standalone`] up to `$27`, then `$28` the
-/// expected head ordinal, `$29` the policy revision, `$30` the definition
-/// revision, `$31` the outbox envelope and `$32` the audit reservation, and
-/// the node arrays from `$33`.
-/// The leading CTEs read what the gate read judged: the EHR row under `FOR
-/// SHARE` (the lock a concurrent `EHR_STATUS` flip waits on), the object's
-/// head row and the policy and definition revisions. The audit insert reads
-/// from `g`, which holds a row only when every requirement still holds, and
-/// every later insert reads from the audit's, so nothing is written
-/// otherwise. The last row names each requirement's flag.
-pub(super) fn statement() -> String {
-    format!(
+/// The leading CTEs of a guarded statement and its gate `g`: the EHR row
+/// `ehr` read `FOR SHARE` (the lock a concurrent `EHR_STATUS` flip waits on),
+/// each target's head row (`targets`, each object with the head it must
+/// still have), the policy and definition revisions against `revisions`, and
+/// every head no later than the commit instant `time`. `g` holds a row only
+/// when every requirement holds; `k` names each one's flag.
+fn guard_ctes(
+    ehr: &str,
+    targets: &[(String, String)],
+    time: &str,
+    revisions: (&str, &str),
+) -> String {
+    use std::fmt::Write as _;
+    let mut sql = format!(
         "WITH e AS ( \
              SELECT COALESCE(x.is_modifiable, true) AS modifiable, \
                     x.restricted_at IS NOT NULL AS restricted \
-             FROM ehr x WHERE x.id = $7 FOR SHARE \
-         ), t AS ( \
-             SELECT h.head_sys_version, h.restricted_at IS NOT NULL AS restricted, h.committed_at \
-             FROM vo_head h WHERE h.vo_id = $8 \
-         ), p AS ( \
-             SELECT rr.policy, rr.definitions FROM request_revisions rr \
-         ), k AS ( \
+             FROM ehr x WHERE x.id = {ehr} FOR SHARE \
+         ), p AS (SELECT rr.policy, rr.definitions FROM request_revisions rr)"
+    );
+    let (mut tips, mut marks, mut orders) = (
+        String::from("true"),
+        String::from("false"),
+        String::from("true"),
+    );
+    for (i, (vo, head)) in targets.iter().enumerate() {
+        let _ = write!(
+            sql,
+            ", t{i} AS (SELECT h.head_sys_version, h.restricted_at IS NOT NULL AS restricted, \
+             h.committed_at FROM vo_head h WHERE h.vo_id = {vo})"
+        );
+        let _ = write!(
+            tips,
+            " AND (SELECT t.head_sys_version FROM t{i} t) IS NOT DISTINCT FROM {head}::int"
+        );
+        let _ = write!(
+            marks,
+            " OR COALESCE((SELECT t.restricted FROM t{i} t), false)"
+        );
+        let _ = write!(
+            orders,
+            " AND COALESCE((SELECT t.committed_at <= {time}::timestamptz FROM t{i} t), true)"
+        );
+    }
+    let (policy, definitions) = revisions;
+    let _ = write!(
+        sql,
+        ", k AS ( \
              SELECT COALESCE((SELECT e.modifiable AND NOT e.restricted FROM e), false) AS ehr_held, \
-                    (SELECT t.head_sys_version FROM t) IS NOT DISTINCT FROM $28::int AS tip_held, \
-                    NOT COALESCE((SELECT t.restricted FROM t), false) AS mark_held, \
-                    (SELECT p.policy FROM p) IS NOT DISTINCT FROM $29::bigint \
-                      AND (SELECT p.definitions FROM p) IS NOT DISTINCT FROM $30::bigint \
+                    ({tips}) AS tip_held, NOT ({marks}) AS mark_held, \
+                    (SELECT p.policy FROM p) IS NOT DISTINCT FROM {policy}::bigint \
+                      AND (SELECT p.definitions FROM p) IS NOT DISTINCT FROM {definitions}::bigint \
                       AS policy_held, \
-                    COALESCE((SELECT t.committed_at <= $22::timestamptz FROM t), true) AS order_held, \
+                    ({orders}) AS order_held, \
                     (SELECT p.policy FROM p) AS policy_now, \
                     (SELECT p.definitions FROM p) AS definitions_now \
          ), g AS ( \
              SELECT 1 AS held FROM k \
              WHERE k.ehr_held AND k.tip_held AND k.mark_held AND k.policy_held AND k.order_held \
-         ), a AS ( \
-             INSERT INTO commit_audit (system_id, change_type, description, committer, \
-                                       attestation, time_committed) \
-             SELECT $1, $2, $3::jsonb, $4::jsonb, $5, $22::timestamptz FROM g \
-             RETURNING id, time_committed \
-         ), c AS ( \
-             INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-             SELECT $6, $7, a.id FROM a \
-             ON CONFLICT (id) DO NOTHING \
-             RETURNING id \
-         ), v AS ( \
-             INSERT INTO version \
-               (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
-                lifecycle_state, creating_system_id, preceding_version_uid, \
-                contribution_id, commit_audit_id, template_id, signature, \
-                signature_client_supplied, stable_compatible, body, origins, committed_at, \
-                other_input_version_uids, content_digest, content_sys_version) \
-             SELECT $8, $9, $7, $10, $11, $12, $13, \
-                    $14, $15, $16, c.id, a.id, $17, $18, $19, $20, $21, $23, \
-                    $22::timestamptz, $24, $25, $26 \
-             FROM a, c \
-             RETURNING content_key \
-         ), h AS ( {} \
-         ), n AS ( {} \
-         ), o AS ( \
+         )"
+    );
+    sql
+}
+
+/// The outbox CTE of a guarded statement: the event of CONTRIBUTION `id` in
+/// EHR `ehr` with `envelope` at `time`, written once `from` wrote, under the
+/// shared outbox lock and unless the EHR carries a legal mark, as
+/// [`super::commit::write_outbox`] writes it.
+fn outbox_cte(id: &str, ehr: &str, (envelope, time): (&str, &str), from: &str) -> String {
+    format!(
+        ", o AS ( \
              INSERT INTO event_outbox (contribution_id, ehr_id, envelope, committed_at) \
-             SELECT $6, $7, $31::jsonb, $22::timestamptz \
+             SELECT {id}, {ehr}, {envelope}::jsonb, {time}::timestamptz \
              FROM (SELECT pg_advisory_xact_lock_shared( \
                        hashtext(current_schema() || '.event_outbox'), 0) \
-                   FROM v WHERE $31::jsonb IS NOT NULL) l \
-             WHERE NOT EXISTS (SELECT 1 FROM ehr m WHERE m.id = $7 \
+                   FROM {from} WHERE {envelope}::jsonb IS NOT NULL) l \
+             WHERE NOT EXISTS (SELECT 1 FROM ehr m WHERE m.id = {ehr} \
                  AND (m.restricted_at IS NOT NULL \
                       OR (m.research_objected_at IS NOT NULL \
                           AND m.research_objection_ground IS NULL))) \
-         ), r AS ( \
+         )"
+    )
+}
+
+/// The reservation CTE of a guarded statement: `reservation`, the audit
+/// records' reservation, inserted once the CONTRIBUTION is, when one is held.
+fn reservation_cte(reservation: &str) -> String {
+    format!(
+        ", r AS ( \
              INSERT INTO audit_reservation (id) \
-             SELECT $32 FROM c WHERE $32::uuid IS NOT NULL \
-         ) \
-         SELECT k.ehr_held, k.tip_held, k.mark_held, k.policy_held, k.order_held, \
+             SELECT {reservation} FROM c WHERE {reservation}::uuid IS NOT NULL \
+         )"
+    )
+}
+
+/// The last row of a guarded statement: each requirement's flag, the
+/// revisions it read, and the audit `audit` and CONTRIBUTION `c` it wrote.
+fn flags_row(audit: &str) -> String {
+    format!(
+        " SELECT k.ehr_held, k.tip_held, k.mark_held, k.policy_held, k.order_held, \
                 k.policy_now, k.definitions_now, \
-                a.id AS commit_audit_id, a.time_committed, c.id AS contribution_id \
-         FROM k LEFT JOIN a ON true LEFT JOIN c ON true",
-        super::commit::HeadUpsert {
-            vo: "$8",
-            kind: "$9",
-            ehr: "$7",
-            ordinal: "$10",
-            branch: "$12",
-            lifecycle: "$14",
-            template: "$17",
-            archetype: "$27",
-            committed_at: "$22",
-            version: "v",
-        }
-        .sql(),
-        crate::storage::node_write::node_insert_cte(("$8", "$10", "$7"), "v", 33)
+                {audit}.id AS commit_audit_id, {audit}.time_committed, c.id AS contribution_id \
+         FROM k LEFT JOIN {audit} ON true LEFT JOIN c ON true"
+    )
+}
+
+/// The audit insert of a guarded statement, `name`, of the audit at `first`
+/// (five parameters) at `time`, written once `from` holds a row.
+fn audit_cte(name: &str, first: usize, time: &str, from: &str) -> String {
+    format!(
+        "{name} AS ( \
+             INSERT INTO commit_audit (system_id, change_type, description, committer, \
+                                       attestation, time_committed) \
+             SELECT ${}, ${}, ${}::jsonb, ${}::jsonb, ${}, {time}::timestamptz FROM {from} \
+             RETURNING id, time_committed \
+         )",
+        first,
+        first + 1,
+        first + 2,
+        first + 3,
+        first + 4
+    )
+}
+
+/// The statement text of [`super::commit::Folded::Guarded`].
+///
+/// The parameters of [`super::commit::Folded::Standalone`] up to `$27`, then
+/// `$28` the expected head ordinal, `$29` the policy revision, `$30` the
+/// definition revision, `$31` the outbox envelope and `$32` the audit
+/// reservation, and the node arrays from `$33`. The audit insert reads from `g`, and every later insert from the
+/// audit's, so nothing is written unless every requirement holds; the last
+/// row names a flag per requirement.
+pub(super) fn statement() -> String {
+    format!(
+        "{}, {}, c AS ( \
+             INSERT INTO contribution (id, ehr_id, commit_audit_id) \
+             SELECT $6, $7, a.id FROM a ON CONFLICT (id) DO NOTHING RETURNING id \
+         ){}{}{}{}",
+        guard_ctes(
+            "$7",
+            &[("$8".to_owned(), "$28".to_owned())],
+            "$22",
+            ("$29", "$30")
+        ),
+        audit_cte("a", 1, "$22", "g"),
+        super::commit::version_ctes("", ("$7", "c.id", "a.id", "a, c"), 8, 33),
+        outbox_cte("$6", "$7", ("$31", "$22"), "v"),
+        reservation_cte("$32"),
+        flags_row("a")
     )
 }
 
@@ -193,8 +279,8 @@ pub struct SetHead<'a> {
 }
 
 /// The parameters one member binds beside its node arrays: five of its audit,
-/// nineteen of its version and its expected head.
-const MEMBER_SCALARS: usize = 25;
+/// twenty of its version and its expected head.
+const MEMBER_SCALARS: usize = 26;
 
 /// The statement text of a guarded CONTRIBUTION of `n` members.
 ///
@@ -203,173 +289,50 @@ const MEMBER_SCALARS: usize = 25;
 /// `$7` to `$11` the CONTRIBUTION's audit and `$12` the audit reservation;
 /// then each member's audit,
 /// version, expected head and node arrays in turn. Each member repeats the
-/// single write's version, head-upsert and node CTEs under its own names.
+/// single write's audit, version, head-upsert and node CTEs under its own
+/// names.
 fn set_statement(n: usize) -> String {
     use std::fmt::Write as _;
     let stride = MEMBER_SCALARS + crate::storage::node_write::node_array_count();
     let base = |i: usize| 13 + i * stride;
-    let mut sql = String::from(
-        "WITH e AS ( \
-             SELECT COALESCE(x.is_modifiable, true) AS modifiable, \
-                    x.restricted_at IS NOT NULL AS restricted \
-             FROM ehr x WHERE x.id = $2 FOR SHARE \
-         ), p AS (SELECT rr.policy, rr.definitions FROM request_revisions rr)",
-    );
-    let (mut tips, mut marks, mut orders) = (
-        String::from("true"),
-        String::from("false"),
-        String::from("true"),
+    let targets: Vec<(String, String)> = (0..n)
+        .map(|i| (format!("${}", base(i) + 5), format!("${}", base(i) + 25)))
+        .collect();
+    let mut sql = format!(
+        "{}, {}, c AS ( \
+             INSERT INTO contribution (id, ehr_id, commit_audit_id) \
+             SELECT $1, $2, ca.id FROM ca ON CONFLICT (id) DO NOTHING RETURNING id \
+         )",
+        guard_ctes("$2", &targets, "$6", ("$3", "$4")),
+        audit_cte("ca", 7, "$6", "g"),
     );
     for i in 0..n {
         let b = base(i);
         let _ = write!(
             sql,
-            ", t{i} AS (SELECT h.head_sys_version, h.restricted_at IS NOT NULL AS restricted, \
-             h.committed_at FROM vo_head h WHERE h.vo_id = ${})",
-            b + 5
-        );
-        let _ = write!(
-            tips,
-            " AND (SELECT t.head_sys_version FROM t{i} t) IS NOT DISTINCT FROM ${}::int",
-            b + 24
-        );
-        let _ = write!(
-            marks,
-            " OR COALESCE((SELECT t.restricted FROM t{i} t), false)"
-        );
-        let _ = write!(
-            orders,
-            " AND COALESCE((SELECT t.committed_at <= $6::timestamptz FROM t{i} t), true)"
+            ", {}{}",
+            audit_cte(&format!("a{i}"), b, "$6", "c"),
+            super::commit::version_ctes(
+                &i.to_string(),
+                ("$2", "c.id", &format!("a{i}.id"), &format!("a{i}, c")),
+                b + 5,
+                b + MEMBER_SCALARS,
+            )
         );
     }
-    let _ = write!(
-        sql,
-        ", k AS ( \
-             SELECT COALESCE((SELECT e.modifiable AND NOT e.restricted FROM e), false) AS ehr_held, \
-                    ({tips}) AS tip_held, NOT ({marks}) AS mark_held, \
-                    (SELECT p.policy FROM p) IS NOT DISTINCT FROM $3::bigint \
-                      AND (SELECT p.definitions FROM p) IS NOT DISTINCT FROM $4::bigint \
-                      AS policy_held, \
-                    ({orders}) AS order_held, \
-                    (SELECT p.policy FROM p) AS policy_now, \
-                    (SELECT p.definitions FROM p) AS definitions_now \
-         ), g AS ( \
-             SELECT 1 AS held FROM k \
-             WHERE k.ehr_held AND k.tip_held AND k.mark_held AND k.policy_held AND k.order_held \
-         ), ca AS ( \
-             INSERT INTO commit_audit (system_id, change_type, description, committer, \
-                                       attestation, time_committed) \
-             SELECT $7, $8, $9::jsonb, $10::jsonb, $11, $6::timestamptz FROM g \
-             RETURNING id, time_committed \
-         ), c AS ( \
-             INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-             SELECT $1, $2, ca.id FROM ca \
-             ON CONFLICT (id) DO NOTHING \
-             RETURNING id \
-         )"
-    );
-    for i in 0..n {
-        member_ctes(&mut sql, i, base(i));
-    }
-    sql.push_str(
-        ", o AS ( \
-             INSERT INTO event_outbox (contribution_id, ehr_id, envelope, committed_at) \
-             SELECT $1, $2, $5::jsonb, $6::timestamptz \
-             FROM (SELECT pg_advisory_xact_lock_shared( \
-                       hashtext(current_schema() || '.event_outbox'), 0) \
-                   FROM c WHERE $5::jsonb IS NOT NULL) l \
-             WHERE NOT EXISTS (SELECT 1 FROM ehr m WHERE m.id = $2 \
-                 AND (m.restricted_at IS NOT NULL \
-                      OR (m.research_objected_at IS NOT NULL \
-                          AND m.research_objection_ground IS NULL))) \
-         ), r AS ( \
-             INSERT INTO audit_reservation (id) \
-             SELECT $12 FROM c WHERE $12::uuid IS NOT NULL \
-         ) \
-         SELECT k.ehr_held, k.tip_held, k.mark_held, k.policy_held, k.order_held, \
-                k.policy_now, k.definitions_now, \
-                ca.id AS commit_audit_id, ca.time_committed, c.id AS contribution_id \
-         FROM k LEFT JOIN ca ON true LEFT JOIN c ON true",
-    );
+    sql.push_str(&outbox_cte("$1", "$2", ("$5", "$6"), "c"));
+    sql.push_str(&reservation_cte("$12"));
+    sql.push_str(&flags_row("ca"));
     sql
-}
-
-/// The CTEs of member `i`, whose parameters start at `b`: the single
-/// write's audit, version, head-upsert and node CTEs under names of its own.
-fn member_ctes(sql: &mut String, i: usize, b: usize) {
-    use std::fmt::Write as _;
-    let p = |offset: usize| format!("${}", b + offset);
-    let _ = write!(
-        sql,
-        ", a{i} AS ( \
-             INSERT INTO commit_audit (system_id, change_type, description, committer, \
-                                       attestation, time_committed) \
-             SELECT {}, {}, {}::jsonb, {}::jsonb, {}, $6::timestamptz FROM c \
-             RETURNING id \
-         ), v{i} AS ( \
-             INSERT INTO version \
-               (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, \
-                branch_version, lifecycle_state, creating_system_id, preceding_version_uid, \
-                contribution_id, commit_audit_id, template_id, signature, \
-                signature_client_supplied, stable_compatible, body, origins, committed_at, \
-                other_input_version_uids, content_digest, content_sys_version) \
-             SELECT {}, {}, $2, {}, {}, {}, {}, {}, {}, {}, c.id, a{i}.id, {}, {}, {}, {}, \
-                    {}, {}, $6::timestamptz, {}, {}, {} \
-             FROM a{i}, c \
-             RETURNING content_key \
-         ), h{i} AS ( {} \
-         ), n{i} AS ( {} )",
-        p(0),
-        p(1),
-        p(2),
-        p(3),
-        p(4),
-        p(5),
-        p(6),
-        p(7),
-        p(8),
-        p(9),
-        p(10),
-        p(11),
-        p(12),
-        p(13),
-        p(14),
-        p(15),
-        p(16),
-        p(17),
-        p(18),
-        p(19),
-        p(20),
-        p(21),
-        p(22),
-        super::commit::HeadUpsert {
-            vo: &p(5),
-            kind: &p(6),
-            ehr: "$2",
-            ordinal: &p(7),
-            branch: &p(9),
-            lifecycle: &p(11),
-            template: &p(14),
-            archetype: &p(23),
-            committed_at: "$6",
-            version: &format!("v{i}"),
-        }
-        .sql(),
-        crate::storage::node_write::node_insert_cte(
-            (&p(5), &p(7), "$2"),
-            &format!("v{i}"),
-            b + MEMBER_SCALARS,
-        )
-    );
 }
 
 /// Write a CONTRIBUTION and every one of its `members` in one guarded
 /// statement ([`set_statement`]).
 ///
-/// Nothing is written unless the EHR is still
-/// modifiable and unrestricted, every member's head and mark are unchanged,
-/// the revisions are those judged on and no head is later than the set's
-/// instant. The members' blob references follow in the caller's transaction.
+/// Nothing is written unless the EHR is still modifiable and unrestricted,
+/// every member's head and mark are unchanged, the revisions are those judged
+/// on and no head is later than the set's instant. The members' blob
+/// references follow in the caller's transaction.
 ///
 /// # Errors
 /// [`StorageError::GuardMoved`] when a requirement no longer held,
@@ -398,49 +361,21 @@ pub async fn commit_set(
         .bind(&head.audit.attestation)
         .bind(guard.reservation);
     for member in members {
-        let (a, v) = (&member.audit, &member.version);
+        let a = &member.audit;
         query = query
             .bind(a.system_id)
             .bind(a.change_type)
             .bind(&a.description)
             .bind(&a.committer)
-            .bind(&a.attestation)
-            .bind(v.vo_id)
-            .bind(v.kind)
-            .bind(v.sys_version)
-            .bind(v.trunk_version)
-            .bind(v.branch_number)
-            .bind(v.branch_version)
-            .bind(v.lifecycle_state)
-            .bind(v.creating_system_id)
-            .bind(v.preceding_version_uid)
-            .bind(v.template_id)
-            .bind(v.signature)
-            .bind(v.signature_client_supplied)
-            .bind(v.stable_compatible)
-            .bind(v.body)
-            .bind(serde_json::json!(v.origins))
-            .bind(super::optional_json_array(v.other_input_version_uids))
-            .bind(v.content_digest)
-            .bind(v.content_sys_version)
-            .bind(v.root_archetype)
-            .bind(member.expected_head);
-        query =
-            crate::storage::node_write::bind_node_arrays(query, &v.rows.iter().collect::<Vec<_>>());
+            .bind(&a.attestation);
+        query = super::commit::bind_version(query, &member.version).bind(member.expected_head);
+        query = crate::storage::node_write::bind_node_arrays(
+            query,
+            &member.version.rows.iter().collect::<Vec<_>>(),
+        );
     }
     let row = query.fetch_one(&mut *conn).await?;
-    let flags = GuardFlags {
-        ehr: row.try_get("ehr_held")?,
-        tip: row.try_get("tip_held")?,
-        mark: row.try_get("mark_held")?,
-        policy: row.try_get("policy_held")?,
-        order: row.try_get("order_held")?,
-        policy_now: row.try_get("policy_now")?,
-        definitions_now: row.try_get("definitions_now")?,
-    };
-    if !flags.held() {
-        return Err(StorageError::GuardMoved(flags));
-    }
+    GuardFlags::read(&row)?.require()?;
     if row
         .try_get::<Option<uuid::Uuid>, _>("contribution_id")?
         .is_none()
