@@ -363,6 +363,17 @@ struct Budget {
 /// (#6238): 4 round trips where it sent 5, 1,519 allocations where it made
 /// 1,580, a median peak 3 KiB lower and 298 wire bytes fewer, measured beside
 /// the merge base, and those ceilings fell by those figures.
+/// A directory create, update and delete are measured last, each on an EHR of
+/// its own with a composition its FOLDER references, and have since been
+/// judged on one gate read and written by one guarded statement after their
+/// access record, a new hierarchy's `ehr_folder` row with it (#6257): 4 round
+/// trips where they sent 14, 13 and 12, and 1,571, 1,545 and 1,415
+/// allocations where they made 1,716, 1,665 and 1,515, measured twice beside
+/// the merge base, with the same WAL. Their ceilings are the merge base's
+/// figures with the margins above, lowered by those drops; their median peaks
+/// rose from 136,915, 138,815 and 131,027 bytes to 145,604, 143,951 and
+/// 133,880, since the access record is rendered while the prepared version is
+/// held, inside the margin.
 const BUDGETS: [Budget; 25] = [
     Budget {
         path: Path::CommitJson,
@@ -564,30 +575,30 @@ const BUDGETS: [Budget; 25] = [
     },
     Budget {
         path: Path::DirectoryCreate,
-        conversions: 99,
-        allocations: 99_999,
-        peak_bytes: 9_999_999,
-        round_trips: 99,
-        nested: 99,
-        wal: 999_999,
+        conversions: 5,
+        allocations: 1605,
+        peak_bytes: 150_606,
+        round_trips: 4,
+        nested: 5,
+        wal: 6560,
     },
     Budget {
         path: Path::DirectoryUpdate,
-        conversions: 99,
-        allocations: 99_999,
-        peak_bytes: 9_999_999,
-        round_trips: 99,
-        nested: 99,
-        wal: 999_999,
+        conversions: 4,
+        allocations: 1578,
+        peak_bytes: 152_696,
+        round_trips: 4,
+        nested: 5,
+        wal: 5465,
     },
     Budget {
         path: Path::DirectoryDelete,
-        conversions: 99,
-        allocations: 99_999,
-        peak_bytes: 9_999_999,
-        round_trips: 99,
-        nested: 99,
-        wal: 999_999,
+        conversions: 2,
+        allocations: 1445,
+        peak_bytes: 144_129,
+        round_trips: 4,
+        nested: 5,
+        wal: 4879,
     },
 ];
 
@@ -619,9 +630,9 @@ const WIRE_BUDGETS: [(Path, u64); 25] = [
     (Path::ReadVersion, 3336),
     (Path::CommitUpdate, 222_106),
     (Path::CommitDelete, 10_885),
-    (Path::DirectoryCreate, 9_999_999),
-    (Path::DirectoryUpdate, 9_999_999),
-    (Path::DirectoryDelete, 9_999_999),
+    (Path::DirectoryCreate, 10_957),
+    (Path::DirectoryUpdate, 10_768),
+    (Path::DirectoryDelete, 10_072),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round

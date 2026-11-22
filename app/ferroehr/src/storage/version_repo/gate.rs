@@ -44,6 +44,9 @@ pub enum Shape {
     /// The tip alone of the EHR's `EHR_STATUS`, found by its kind in the EHR
     /// in place of [`Ask::targets`] (#6257).
     Status,
+    /// The tip of the EHR's directory, found by its slot in place of
+    /// [`Ask::targets`], and which of [`Ask::items`] exist in the EHR (#6257).
+    Directory,
 }
 
 impl Shape {
@@ -75,6 +78,9 @@ pub struct Ask<'a> {
     /// delete addresses, whose template its SMART scope is judged on
     /// ([`Shape::Delete`]); `None` reads none.
     pub addressed: Option<(i32, i32, i32)>,
+    /// The versioned objects a FOLDER's local `items` reference, which
+    /// [`Shape::Directory`] reads the existing ones of.
+    pub items: &'a [Uuid],
 }
 
 /// What names a live persistent sibling of a created COMPOSITION.
@@ -107,6 +113,9 @@ pub struct Gate {
     /// Whether a live persistent sibling [`Ask::persistent`] names exists in
     /// the EHR.
     pub persistent_exists: bool,
+    /// Which of [`Ask::items`] exist as versioned objects in the EHR, in any
+    /// tier and lifecycle state ([`Shape::Directory`]).
+    pub known_items: Vec<Uuid>,
     /// The targets, in the order asked.
     pub targets: Vec<Target>,
 }
@@ -141,8 +150,9 @@ pub struct Target {
 /// The statement text of `shape`.
 ///
 /// `$1` the EHR, `$2` the targets, `$3` the persistent template, `$4` the
-/// persistent category code, `$5` the deleted lifecycle state and `$6` to
-/// `$8` the tree id of the version a delete addresses.
+/// persistent category code, `$5` the deleted lifecycle state, `$6` to
+/// `$8` the tree id of the version a delete addresses and `$9` the items a
+/// FOLDER references.
 fn statement(shape: Shape) -> String {
     let update = if shape.updates() {
         concat!(
@@ -175,17 +185,6 @@ fn statement(shape: Shape) -> String {
     };
     let delete = if shape.deletes() {
         ", tip.has_body, tip.template_id AS content_template, dc.archetype AS content_archetype"
-    } else {
-        ""
-    };
-    // The template the SMART pre-check read on its own before (#6271), by the
-    // addressed version's tree id and in no EHR, as `meta::template_id_of`.
-    let addressed = if shape == Shape::Delete {
-        concat!(
-            ", (SELECT a.template_id FROM version a WHERE a.vo_id = t.vo_id ",
-            "   AND a.trunk_version = $6 AND a.branch_number = $7 AND a.branch_version = $8) ",
-            "  AS addressed_template"
-        )
     } else {
         ""
     };
@@ -227,7 +226,7 @@ fn statement(shape: Shape) -> String {
             "tip.ehr_id, tip.kind, tip.sys_version, tip.trunk_version, tip.branch_number, ",
             "tip.branch_version, tip.creating_system_id, tip.lifecycle_state, ",
             "tip.committed_at AS tip_committed_at, tip.content_digest, tip.content_key, ",
-            "true AS open{}{}{} ",
+            "true AS open{}{}{}{} ",
             "FROM (VALUES (1)) AS one (x) ",
             "LEFT JOIN ehr e ON e.id = $1 ",
             "LEFT JOIN LATERAL unnest({targets}) WITH ORDINALITY AS t (vo_id, ord) ON true ",
@@ -245,25 +244,61 @@ fn statement(shape: Shape) -> String {
         ),
         update,
         delete,
-        addressed,
+        addressed(shape),
+        known_items(shape),
         update_join,
         delete_join,
         targets = targets(shape),
     )
 }
 
-/// The targets of `shape`'s statement: `$2`, or the EHR's current
-/// `EHR_STATUS` found by its kind ([`Shape::Status`]), as
-/// `meta::current_vo` finds it.
-fn targets(shape: Shape) -> &'static str {
-    if shape == Shape::Status {
+/// The template of the version a delete addresses ([`Shape::Delete`]), which
+/// the SMART pre-check read on its own before (#6271): by its tree id and in
+/// no EHR, as `meta::template_id_of` reads it.
+fn addressed(shape: Shape) -> &'static str {
+    if shape == Shape::Delete {
         concat!(
+            ", (SELECT a.template_id FROM version a WHERE a.vo_id = t.vo_id ",
+            "   AND a.trunk_version = $6 AND a.branch_number = $7 AND a.branch_version = $8) ",
+            "  AS addressed_template"
+        )
+    } else {
+        ""
+    }
+}
+
+/// Which of `$9` exist as versioned objects in the EHR
+/// ([`Shape::Directory`]), as `ehr_repo::existing_vo_roots` reads them.
+fn known_items(shape: Shape) -> &'static str {
+    if shape == Shape::Directory {
+        concat!(
+            ", ARRAY(SELECT DISTINCT kv.vo_id FROM version kv ",
+            "  WHERE kv.ehr_id = $1 AND kv.vo_id = ANY($9::uuid[])) AS known_items"
+        )
+    } else {
+        ""
+    }
+}
+
+/// The targets of `shape`'s statement: `$2`, the EHR's current `EHR_STATUS`
+/// found by its kind ([`Shape::Status`]), as `meta::current_vo` finds it, or
+/// its directory found by its slot ([`Shape::Directory`]), the lowest-rank
+/// live hierarchy, else the lowest-rank one, as `ehr_repo::directory_vo`
+/// finds it.
+fn targets(shape: Shape) -> &'static str {
+    match shape {
+        Shape::Status => concat!(
             "ARRAY(SELECT sv.vo_id FROM version sv JOIN vo_head sh ON sh.vo_id = sv.vo_id ",
             "AND sh.trunk_head_sys_version = sv.sys_version ",
             "WHERE sv.ehr_id = $1 AND sv.kind = 'EHR_STATUS')"
-        )
-    } else {
-        "$2::uuid[]"
+        ),
+        Shape::Directory => concat!(
+            "ARRAY(SELECT df.vo_id FROM ehr_folder df ",
+            "JOIN version dv ON dv.vo_id = df.vo_id ",
+            "JOIN vo_head dh ON dh.vo_id = dv.vo_id AND dh.trunk_head_sys_version = dv.sys_version ",
+            "WHERE df.ehr_id = $1 ORDER BY (dv.lifecycle_state = '523'), df.rank LIMIT 1)"
+        ),
+        _ => "$2::uuid[]",
     }
 }
 
@@ -277,12 +312,14 @@ pub async fn read(conn: &mut PgConnection, ask: Ask<'_>) -> Result<Gate, Storage
     static DELETE: LazyLock<String> = LazyLock::new(|| statement(Shape::Delete));
     static MEMBERS: LazyLock<String> = LazyLock::new(|| statement(Shape::Members));
     static STATUS: LazyLock<String> = LazyLock::new(|| statement(Shape::Status));
+    static DIRECTORY: LazyLock<String> = LazyLock::new(|| statement(Shape::Directory));
     let sql = match ask.shape {
         Shape::Plain => &PLAIN,
         Shape::Update => &UPDATE,
         Shape::Delete => &DELETE,
         Shape::Members => &MEMBERS,
         Shape::Status => &STATUS,
+        Shape::Directory => &DIRECTORY,
     };
     let targets: Vec<Uuid> = ask.targets.iter().map(|vo_id| vo_id.0).collect();
     let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
@@ -294,6 +331,7 @@ pub async fn read(conn: &mut PgConnection, ask: Ask<'_>) -> Result<Gate, Storage
         .bind(ask.addressed.map(|(trunk, _, _)| trunk))
         .bind(ask.addressed.map(|(_, branch, _)| branch))
         .bind(ask.addressed.map(|(_, _, version)| version))
+        .bind(ask.items)
         .fetch_all(&mut *conn)
         .await?;
     let first = rows
@@ -322,6 +360,11 @@ pub async fn read(conn: &mut PgConnection, ask: Ask<'_>) -> Result<Gate, Storage
         policy: first.try_get("policy_revision")?,
         definitions: first.try_get("definition_revision")?,
         persistent_exists: first.try_get("persistent_exists")?,
+        known_items: if ask.shape == Shape::Directory {
+            first.try_get("known_items")?
+        } else {
+            Vec::new()
+        },
         targets: found,
     })
 }

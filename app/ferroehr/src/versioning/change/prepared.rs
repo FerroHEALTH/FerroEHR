@@ -150,6 +150,12 @@ impl Prepared {
         })
     }
 
+    /// Whether the version is a new FOLDER hierarchy of an EHR, which its
+    /// statement then writes the membership of in place of [`Self::finish`].
+    pub(super) fn take_first_folder(&mut self) -> bool {
+        std::mem::take(&mut self.r.is_first_folder) && self.r.ehr_id.is_some()
+    }
+
     /// Whether the version's statement leaves rows for [`Self::finish`] to
     /// write: a new FOLDER hierarchy's membership or accompanying
     /// attestations.
