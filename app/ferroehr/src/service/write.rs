@@ -220,7 +220,7 @@ impl FerroEhrService {
                     Err(error) => moved(error)?,
                 }
             }
-            Err(contended())
+            Err(ServiceError::overloaded(MOVED, Contended))
         })
     }
 
@@ -264,9 +264,7 @@ impl<T> Materials<T> {
     /// # Errors
     /// `service_overloaded` (`503`) when an earlier attempt consumed them.
     pub(in crate::service) fn take_first(&self) -> Result<T, ServiceError> {
-        first_attempt(&self.first).ok_or_else(|| {
-            ServiceError::overloaded("the record moved while the write was judged", Spent)
-        })
+        first_attempt(&self.first).ok_or_else(|| ServiceError::overloaded(MOVED, Spent))
     }
 }
 
@@ -303,10 +301,14 @@ impl<T: Clone> Materials<T> {
     }
 }
 
-/// Every attempt of a guarded write found what it was judged on moved.
+/// Every attempt of a guarded write found what it was judged on moved, which
+/// it answers `503` (`service_overloaded`).
 #[derive(Debug, thiserror::Error)]
 #[error("every attempt of this write found the record moved under it")]
-struct Contended;
+pub(in crate::service) struct Contended;
+
+/// The message of a guarded write's `503`.
+pub(in crate::service) const MOVED: &str = "the record moved while the write was judged";
 
 /// An earlier attempt of a guarded write consumed its content.
 #[derive(Debug, thiserror::Error)]
@@ -342,12 +344,6 @@ pub(in crate::service) fn moved(error: ServiceError) -> Result<(), ServiceError>
         }
         error => Err(error),
     }
-}
-
-/// The `503` of a guarded write whose every attempt found what it was judged
-/// on moved.
-pub(in crate::service) fn contended() -> ServiceError {
-    ServiceError::overloaded("the record moved while the write was judged", Contended)
 }
 
 /// What `slot` holds, taken: the first attempt of a guarded write takes it,
