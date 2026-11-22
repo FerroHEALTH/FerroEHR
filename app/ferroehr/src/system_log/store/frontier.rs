@@ -41,13 +41,19 @@ impl AuditStore {
             let mut conn = acquire(&self.pool).await?;
             frontier.round(&mut conn).await?
         };
-        let owed = if self.owed.fhir_feed || self.owed.syslog {
-            let owed: i64 = sqlx::query_scalar("SELECT audit.access_log_owe($1, $2, $3)")
-                .bind(reached)
-                .bind(self.owed.fhir_feed)
-                .bind(self.owed.syslog)
-                .fetch_one(&mut *acquire(&self.pool).await?)
-                .await?;
+        let owed = if (self.owed.fhir_feed || self.owed.syslog) && frontier.owe_due() {
+            let (owed, through): (i64, i64) = sqlx::query_as(
+                "SELECT owed_count, owed_through FROM audit.access_log_owe($1, $2, $3)",
+            )
+            .bind(reached)
+            .bind(self.owed.fhir_feed)
+            .bind(self.owed.syslog)
+            .fetch_one(&mut *acquire(&self.pool).await?)
+            .await?;
+            // NOTE: our own design (#6242), entries a write holds stay owed until released.
+            if through >= reached {
+                frontier.owed();
+            }
             u64::try_from(owed).unwrap_or(0)
         } else {
             0
@@ -55,15 +61,26 @@ impl AuditStore {
         let mut sealed = false;
         // NOTE: our own design (#6242), a window holds a bounded span of ids, so a round seals
         // window after window until the frontier is reached and no backlog outgrows the rate.
-        while seal
-            && let SealRound::Sealed { entries, .. } =
-                self.chaining_store().seal_to(reached).await?
-        {
-            sealed = true;
-            crate::telemetry::access_path::metrics().log_chained.add(
-                u64::try_from(entries).unwrap_or(u64::MAX),
-                &[opentelemetry::KeyValue::new("chain", "access_log")],
-            );
+        if seal && frontier.seal_due() {
+            loop {
+                match self.chaining_store().seal_to(reached).await? {
+                    SealRound::Sealed { entries, .. } => {
+                        sealed = true;
+                        crate::telemetry::access_path::metrics().log_chained.add(
+                            u64::try_from(entries).unwrap_or(u64::MAX),
+                            &[opentelemetry::KeyValue::new("chain", "access_log")],
+                        );
+                    }
+                    SealRound::Nothing { through } => {
+                        // NOTE: our own design (#6242), entries a write holds stay due until released.
+                        if through >= reached {
+                            frontier.sealed();
+                        }
+                        break;
+                    }
+                    SealRound::Busy => break,
+                }
+            }
         }
         Ok((owed, sealed))
     }

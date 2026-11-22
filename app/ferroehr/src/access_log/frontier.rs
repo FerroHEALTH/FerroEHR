@@ -44,6 +44,9 @@ pub struct Mark {
 pub struct Frontier {
     marks: VecDeque<Mark>,
     reached: i64,
+    marked: Option<i64>,
+    owed: i64,
+    sealed: i64,
 }
 
 impl Frontier {
@@ -71,37 +74,66 @@ impl Frontier {
         self.reached
     }
 
-    /// One round on `conn`, outside a transaction: the sequence's last value,
-    /// then an xid of the round's own in a statement that commits at once,
-    /// which marks the value, then a snapshot whose `xmin` moves the frontier;
-    /// returns the frontier.
+    /// Whether the frontier moved past the entries already owed to the
+    /// sinks.
+    #[must_use]
+    pub fn owe_due(&self) -> bool {
+        self.reached > self.owed
+    }
+
+    /// Notes that every entry up to the frontier is owed to the sinks.
+    pub fn owed(&mut self) {
+        self.owed = self.reached;
+    }
+
+    /// Whether the frontier moved past the entries already sealed.
+    #[must_use]
+    pub fn seal_due(&self) -> bool {
+        self.reached > self.sealed
+    }
+
+    /// Notes that every entry up to the frontier is sealed.
+    pub fn sealed(&mut self) {
+        self.sealed = self.reached;
+    }
+
+    /// One round on `conn`, outside a transaction, in one statement that
+    /// commits at once: the sequence's last value, then, when it moved since
+    /// the last mark, an xid of the round's own, which marks the value, and
+    /// the `xmin` of the statement's snapshot, which moves the frontier past
+    /// earlier marks; returns the frontier. An idle log takes no xid.
     ///
     /// # Errors
     /// The store errors when a statement fails, and a decode error when the
     /// server answers a snapshot bound that is not a number.
     pub async fn round(&mut self, conn: &mut PgConnection) -> Result<i64, sqlx::Error> {
-        let last_value: Option<i64> = sqlx::query_scalar(
-            "SELECT pg_sequence_last_value(pg_get_serial_sequence('audit.access_log_entry', 'id')::regclass)",
+        // NOTE: our own design (#6242), the xid is taken after the value is read: the CASE
+        // reads the CTE's row, so the scan that reads the value runs first.
+        let (last_value, taken, xmin): (Option<i64>, Option<String>, String) = sqlx::query_as(
+            "WITH x AS MATERIALIZED (SELECT pg_sequence_last_value( \
+                 pg_get_serial_sequence('audit.access_log_entry', 'id')::regclass) AS v) \
+             SELECT x.v, \
+                    CASE WHEN x.v IS DISTINCT FROM $1 THEN pg_current_xact_id()::text END, \
+                    pg_snapshot_xmin(pg_current_snapshot())::text \
+               FROM x",
         )
+        .bind(self.marked)
         .fetch_one(&mut *conn)
         .await?;
-        let taken: String = sqlx::query_scalar("SELECT pg_current_xact_id()::text")
-            .fetch_one(&mut *conn)
-            .await?;
-        let xmin: String =
-            sqlx::query_scalar("SELECT pg_snapshot_xmin(pg_current_snapshot())::text")
-                .fetch_one(&mut *conn)
-                .await?;
         let bound = |text: &str| {
             text.parse::<u64>()
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))
         };
-        let (taken, xmin) = (bound(&taken)?, bound(&xmin)?);
-        self.mark(Mark {
-            last_value: last_value.unwrap_or(0),
-            xmax: taken.saturating_add(1),
-        });
-        Ok(self.reach(xmin))
+        let xmin = bound(&xmin)?;
+        let reached = self.reach(xmin);
+        if let (Some(last_value), Some(taken)) = (last_value, taken) {
+            self.marked = Some(last_value);
+            self.mark(Mark {
+                last_value,
+                xmax: bound(&taken)?.saturating_add(1),
+            });
+        }
+        Ok(reached)
     }
 }
 

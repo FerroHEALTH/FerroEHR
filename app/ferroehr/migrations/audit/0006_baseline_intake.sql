@@ -110,9 +110,10 @@ INSERT INTO access_log_owed (singleton, through_id) VALUES (true, 0);
 
 -- Owes the indexed entries past through_id up to p_upto and below every
 -- entry a write holds to the sinks named, and moves through_id; returns how
--- many entries it owed, 0 while another replica's round holds the row.
+-- many entries it owed and the through_id it left, none and 0 while another
+-- replica's round holds the row.
 CREATE FUNCTION audit.access_log_owe(p_upto bigint, p_fhir_feed boolean, p_syslog boolean)
-    RETURNS bigint
+    RETURNS TABLE (owed_count bigint, owed_through bigint)
     LANGUAGE plpgsql VOLATILE SECURITY DEFINER
     SET search_path = audit, pg_catalog
     AS $$
@@ -124,11 +125,13 @@ BEGIN
     SELECT o.through_id INTO v_from FROM audit.access_log_owed o
      WHERE o.singleton FOR UPDATE SKIP LOCKED;
     IF NOT FOUND THEN
-        RETURN 0;
+        RETURN QUERY SELECT 0::bigint, 0::bigint;
+        RETURN;
     END IF;
     v_upto := least(p_upto, coalesce((SELECT min(h.entry_id) - 1 FROM audit.access_log_hold h), p_upto));
     IF v_upto <= v_from THEN
-        RETURN 0;
+        RETURN QUERY SELECT 0::bigint, v_from;
+        RETURN;
     END IF;
     WITH owed AS (
         SELECT e.id FROM audit.access_log_entry e
@@ -148,7 +151,7 @@ BEGIN
     )
     SELECT count(*) INTO v_owed FROM owed, (SELECT count(*) FROM fed) f, (SELECT count(*) FROM logged) l;
     UPDATE audit.access_log_owed SET through_id = v_upto WHERE singleton;
-    RETURN v_owed;
+    RETURN QUERY SELECT v_owed, v_upto;
 END;
 $$;
 COMMENT ON FUNCTION access_log_owe(bigint, boolean, boolean) IS

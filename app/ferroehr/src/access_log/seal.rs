@@ -101,7 +101,10 @@ pub enum SealRound {
     /// Another replica's sealer holds the seal state.
     Busy,
     /// Nothing past the last window is below the frontier and every hold.
-    Nothing,
+    Nothing {
+        /// The last entry id the windows cover.
+        through: i64,
+    },
     /// One window sealed.
     Sealed {
         /// Its number.
@@ -140,7 +143,7 @@ impl AccessLogStore {
             .min(last_id.saturating_add(WINDOW_ENTRIES));
         if upto <= last_id {
             tx.rollback().await?;
-            return Ok(SealRound::Nothing);
+            return Ok(SealRound::Nothing { through: last_id });
         }
         let entries: Vec<Sealed> = sqlx::query_as::<_, (i64, String)>(
             "SELECT id, encode(content_digest, 'hex') FROM audit.access_log_entry \
@@ -238,7 +241,7 @@ impl AccessLogStore {
         loop {
             match self.seal_to(reached).await? {
                 SealRound::Busy => tokio::time::sleep(std::time::Duration::from_millis(2)).await,
-                SealRound::Nothing => return Ok(()),
+                SealRound::Nothing { .. } => return Ok(()),
                 SealRound::Sealed { .. } => {}
             }
         }
