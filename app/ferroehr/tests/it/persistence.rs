@@ -128,6 +128,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "item_tag",
             "node",
             "policy_register",
+            "policy_revision",
             "restriction",
             "retention_anchor",
             "retention_policy",
