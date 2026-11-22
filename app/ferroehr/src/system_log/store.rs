@@ -725,22 +725,6 @@ impl AuditStore {
         Ok(compiled)
     }
 
-    /// The typed FHIR R4 `AuditEvent` of a stored row, an access-log entry's
-    /// with `shared` as its shared part, rendered under the policy it names.
-    ///
-    /// # Errors
-    /// [`AuditError::Unreadable`] and [`AuditError::UnreadableJson`] when the
-    /// row or its policy does not read.
-    #[cfg(feature = "fhir")]
-    pub(super) async fn resource(
-        &self,
-        row: &PgRow,
-        shared: Option<&str>,
-    ) -> Result<ihe_atna::balp::AuditEventResource, AuditError> {
-        let (policy, stored) = self.record_of_with(row, shared).await?;
-        crate::system_log::render::render(stored, &policy)
-    }
-
     /// The FHIR R4 `AuditEvent` of the record at position `chain_seq` of
     /// `chain`, rendered as the ITI-81 search serves it; `None` when no
     /// record holds that position.
@@ -839,30 +823,7 @@ impl AuditStore {
         // page exists without counting the matches.
         let more = rows.len() > search_page::page_size(filter);
         rows.truncate(search_page::page_size(filter));
-        // NOTE: our own design (#6244), the page carries each shared part on the first record
-        // naming it, by `shared_digest`, and the records after it reuse that text.
-        let mut parts: BTreeMap<Vec<u8>, String> = BTreeMap::new();
-        let mut documents = Vec::with_capacity(rows.len());
-        for row in &rows {
-            let digest: Option<Vec<u8>> = row.try_get("shared_digest")?;
-            let carried: Option<String> = row.try_get("shared_part")?;
-            let part = match digest {
-                None => carried.as_deref(),
-                Some(digest) => {
-                    if let Some(text) = carried {
-                        parts.insert(digest.clone(), text);
-                    }
-                    let Some(text) = parts.get(&digest) else {
-                        return Err(AuditError::Unreadable {
-                            chain_seq: row.try_get("chain_seq")?,
-                            reason: "its shared part is on no earlier record of the page",
-                        });
-                    };
-                    Some(text.as_str())
-                }
-            };
-            documents.push(self.resource(row, part).await?.into_resource());
-        }
+        let documents = self.page_documents(&rows).await?;
         Ok(AuditPage {
             total,
             documents,

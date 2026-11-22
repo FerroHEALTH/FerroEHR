@@ -311,6 +311,60 @@ impl AuditStore {
         let stored = crate::access_log::recorded::stored(&entry, chain_seq)?;
         Ok((policy, stored))
     }
+
+    /// The typed FHIR R4 `AuditEvent` of a stored row, an access-log entry's
+    /// with `shared` as its shared part, rendered under the policy it names.
+    ///
+    /// # Errors
+    /// [`AuditError::Unreadable`] and [`AuditError::UnreadableJson`] when the
+    /// row or its policy does not read.
+    #[cfg(feature = "fhir")]
+    pub(super) async fn resource(
+        &self,
+        row: &PgRow,
+        shared: Option<&str>,
+    ) -> Result<ihe_atna::balp::AuditEventResource, AuditError> {
+        let (policy, stored) = self.record_of_with(row, shared).await?;
+        crate::system_log::render::render(stored, &policy)
+    }
+
+    /// The FHIR R4 `AuditEvent` of each of `rows`, an ITI-81 page in its
+    /// order, which carries each shared part on the first record naming it
+    /// (`shared_digest`), so the records after it reuse that text (#6244).
+    ///
+    /// # Errors
+    /// [`AuditError::Unreadable`] for a record whose shared part is on no
+    /// earlier record of the page, and the errors of [`Self::resource`].
+    #[cfg(feature = "fhir")]
+    pub(super) async fn page_documents(
+        &self,
+        rows: &[PgRow],
+    ) -> Result<Vec<fhir_types::r4::audit_event::AuditEvent>, AuditError> {
+        let mut parts: std::collections::BTreeMap<Vec<u8>, String> =
+            std::collections::BTreeMap::new();
+        let mut documents = Vec::with_capacity(rows.len());
+        for row in rows {
+            let digest: Option<Vec<u8>> = row.try_get("shared_digest")?;
+            let carried: Option<String> = row.try_get("shared_part")?;
+            let part = match digest {
+                None => carried.as_deref(),
+                Some(digest) => {
+                    if let Some(text) = carried {
+                        parts.insert(digest.clone(), text);
+                    }
+                    let Some(text) = parts.get(&digest) else {
+                        return Err(AuditError::Unreadable {
+                            chain_seq: row.try_get("chain_seq")?,
+                            reason: "its shared part is on no earlier record of the page",
+                        });
+                    };
+                    Some(text.as_str())
+                }
+            };
+            documents.push(self.resource(row, part).await?.into_resource());
+        }
+        Ok(documents)
+    }
 }
 
 /// The ITI-81 search tokens of `resource`, the rendering of `event`; none,
