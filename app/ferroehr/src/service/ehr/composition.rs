@@ -731,6 +731,7 @@ pub(super) fn guard_of(gate: &Gate, head: Option<i32>) -> Guard {
         reservation: None,
         status: None,
         folder: false,
+        party: None,
     }
 }
 

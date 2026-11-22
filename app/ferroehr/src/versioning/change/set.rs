@@ -206,6 +206,7 @@ impl ReadySet<'_> {
                 &ready.committed,
                 None,
                 access,
+                crate::party_binding::store::Held::default(),
             ))
             .await?;
             versions.push(ready.committed);

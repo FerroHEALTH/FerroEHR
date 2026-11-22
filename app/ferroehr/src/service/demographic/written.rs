@@ -12,12 +12,10 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
-use crate::service::demographic::party::CurrentParty;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::relationship::CurrentRelationship;
 use crate::service::demographic::support;
 use crate::service::demographic::template::demographic_rules;
-use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::validate::Container;
 use crate::service::response::{RawServiceResponse, ReadBody, ServiceResponse};
 use crate::service::version_update::WriteRequest;
@@ -53,28 +51,11 @@ impl FerroEhrService {
         Ok(resolved)
     }
 
-    /// The current version of the party `vo_id` of `kind` a write addresses.
+    /// The current version of the relationship `vo_id` a write addresses.
     ///
     /// # Errors
     /// [`ServiceError::NotFound`] when there is none; the storage error of the
     /// read.
-    pub(super) async fn existing_party(
-        &self,
-        kind: PartyKind,
-        vo_id: VoId,
-    ) -> Result<CurrentParty, ServiceError> {
-        self.party_current(kind, vo_id).await?.ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("{} {vo_id}", kind.rm_type()),
-            )
-        })
-    }
-
-    /// The current version of the relationship `vo_id` a write addresses.
-    ///
-    /// # Errors
-    /// As [`Self::existing_party`].
     pub(super) async fn existing_relationship(
         &self,
         vo_id: VoId,

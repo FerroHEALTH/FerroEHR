@@ -98,6 +98,38 @@ impl Head {
     }
 }
 
+/// What a party commit's guarded statement and gate read already did and
+/// read of [`reindex_committed`]'s work (#6257).
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Held {
+    /// The statement took the commit side of the key-space fill gate.
+    key_space: bool,
+    /// The statement brought the reverse-relationship index to the version.
+    reverse: bool,
+    /// The lifecycle state of the version when it became its object's trunk
+    /// head; `None` reads the head.
+    trunk_lifecycle: Option<String>,
+    /// What the gate read found of the versions before the commit; `None`
+    /// reads them.
+    pub(crate) prior: Option<crate::storage::version_repo::gate::Prior>,
+}
+
+impl Held {
+    /// What the statement of a write carrying `party` held, its version
+    /// becoming the trunk head in `trunk_lifecycle` when it holds one.
+    pub(crate) fn of(
+        party: Option<&crate::storage::version_repo::guarded::PartySync>,
+        trunk_lifecycle: Option<&str>,
+    ) -> Self {
+        party.map_or_else(Self::default, |party| Self {
+            key_space: party.key_space,
+            reverse: party.reverse.is_some(),
+            trunk_lifecycle: trunk_lifecycle.map(str::to_owned),
+            prior: Some(party.prior.clone()),
+        })
+    }
+}
+
 /// Judges the party commit `committed` against the protection rules
 /// ([`crate::party_binding::protect`]), then brings its reverse-relationship
 /// index and side-table rows to its new head, on its commit transaction `tx`.
@@ -105,7 +137,8 @@ impl Head {
 /// when it carries the representation code ([`standalone::reindex`]).
 ///
 /// `facts` is what the committed body holds, `None` for a logical delete: the
-/// hooks read it and never the stored body (#5220).
+/// hooks read it and never the stored body (#5220). `done` names what the
+/// commit's guarded statement already did.
 ///
 /// # Errors
 /// The protection refusals, the `409` of [`selector_in_use`], and a storage
@@ -115,10 +148,11 @@ pub(crate) async fn reindex_committed(
     ctx: &SigningCtx<'_>,
     committed: &Committed,
     facts: Option<&Facts>,
+    done: Held,
 ) -> Result<(), ServiceError> {
     grants::caller::check_content(facts)?;
     grants::caller::subject::check(facts, &ctx.grants.namespace(), ctx.privacy)?;
-    if !ctx.binding.is_empty() {
+    if !ctx.binding.is_empty() && !done.key_space {
         key_space::gate_shared(tx).await?;
     }
     if committed.kind == Kind::PartyRelationship {
@@ -132,13 +166,17 @@ pub(crate) async fn reindex_committed(
              version has no record subject for PARTY_SELF to name",
         ));
     }
-    crate::party_binding::protect::check(tx, ctx.binding, committed, facts).await?;
+    let prior = done.prior.as_ref();
+    crate::party_binding::protect::check(tx, ctx.binding, committed, facts, prior).await?;
     if committed.kind == Kind::Role
         && let Some(facts) = facts
     {
         grants::check_role(tx, committed.vo_id.0, facts, ctx.grants).await?;
     }
-    let (lifecycle_state, trunk_head) = head_of(tx, committed.vo_id).await?;
+    let (lifecycle_state, trunk_head) = match done.trunk_lifecycle.clone() {
+        Some(lifecycle_state) => (lifecycle_state, Some(committed.sys_version)),
+        None => head_of(tx, committed.vo_id).await?,
+    };
     let head = if trunk_head == Some(committed.sys_version) {
         Head {
             vo_id: committed.vo_id.0,
@@ -160,13 +198,19 @@ pub(crate) async fn reindex_committed(
             None => return Ok(()),
         }
     };
-    let head = with_last(tx, ctx.binding, committed.kind, head).await?;
+    let head = match prior {
+        Some(prior) => with_prior(ctx.binding, committed.kind, head, prior)?,
+        None => with_last(tx, ctx.binding, committed.kind, head).await?,
+    };
     let targets = head
         .facts
         .as_ref()
         .map_or(&[][..], |f| f.targets.as_slice());
-    party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
-    let _changed = grants::caller::writer::check_care(tx, ctx.binding, committed, facts).await?;
+    if !done.reverse {
+        party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
+    }
+    let _changed =
+        grants::caller::writer::check_care(tx, ctx.binding, committed, facts, prior).await?;
     reindex_heads(tx, ctx.binding, committed.kind, vec![head])
         .await
         .map_err(selector_in_use)
@@ -679,6 +723,24 @@ async fn with_last(
             row.try_get("lifecycle_state")?,
             parsed(kind, &body, mapping)?,
         ));
+    }
+    Ok(head)
+}
+
+/// [`with_last`] off what the gate read found of the versions before the
+/// commit, `prior`, in place of a read: a delete writes no body, so the last
+/// body before it is the last one.
+fn with_prior(
+    mapping: &BindingMapping,
+    kind: Kind,
+    mut head: Head,
+    prior: &crate::storage::version_repo::gate::Prior,
+) -> Result<Head, StorageError> {
+    if kind != Kind::Person || head.lifecycle_state != DELETED {
+        return Ok(head);
+    }
+    if let Some((_, lifecycle_state, body)) = &prior.last_body {
+        head.last = Some((lifecycle_state.clone(), parsed(kind, body, mapping)?));
     }
     Ok(head)
 }

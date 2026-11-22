@@ -150,6 +150,18 @@ impl Prepared {
         })
     }
 
+    /// Whether the version continues its object's trunk, and so becomes its
+    /// trunk head.
+    pub(super) fn on_trunk(&self) -> bool {
+        self.r.tree.branch.is_none()
+    }
+
+    /// The version's lifecycle state, which its object's head takes when it
+    /// is on the trunk ([`Self::on_trunk`]); `None` otherwise.
+    pub(super) fn trunk_lifecycle(&self) -> Option<&str> {
+        self.on_trunk().then_some(self.r.lifecycle.as_str())
+    }
+
     /// Whether the version is a new FOLDER hierarchy of an EHR, which its
     /// statement then writes the membership of in place of [`Self::finish`].
     pub(super) fn take_first_folder(&mut self) -> bool {

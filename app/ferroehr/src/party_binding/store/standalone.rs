@@ -39,9 +39,9 @@ pub(super) async fn committed(
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     let mapping = ctx.binding;
-    crate::party_binding::protect::check(tx, mapping, committed, facts).await?;
+    crate::party_binding::protect::check(tx, mapping, committed, facts, None).await?;
     crate::party_binding::protect::representation(tx, mapping, committed.vo_id, facts).await?;
-    let changed = grants::caller::writer::check_care(tx, mapping, committed, facts).await?;
+    let changed = grants::caller::writer::check_care(tx, mapping, committed, facts, None).await?;
     let targets = facts.map_or(&[][..], |f| f.targets.as_slice());
     party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
     let (lifecycle_state, trunk_head) = head_of(tx, committed.vo_id).await?;
