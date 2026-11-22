@@ -394,10 +394,7 @@ const INSERT_STANDALONE: &str = concat!(
 /// The step that retires the live row of the representation container
 /// `container` unless it is `row`, returning the representative it named
 /// ([`Tag::Representatives`]).
-pub(crate) fn retire_standalone<'q>(
-    container: Uuid,
-    row: Option<&'q RepresentationRow>,
-) -> Step<'q> {
+pub(crate) fn retire_standalone(container: Uuid, row: Option<&RepresentationRow>) -> Step<'_> {
     let columns = Columns::of(&row.into_iter().collect::<Vec<_>>());
     Step::new(
         "sr",
@@ -410,10 +407,7 @@ pub(crate) fn retire_standalone<'q>(
 /// The step that inserts `row` as the live row of the representation
 /// container `container` when it has none, naming the writer of its head;
 /// it runs a statement after [`retire_standalone`].
-pub(crate) fn insert_standalone<'q>(
-    container: Uuid,
-    row: Option<&'q RepresentationRow>,
-) -> Step<'q> {
+pub(crate) fn insert_standalone(container: Uuid, row: Option<&RepresentationRow>) -> Step<'_> {
     let columns = Columns::of(&row.into_iter().collect::<Vec<_>>());
     let insert = INSERT_STANDALONE.replace(
         "{WRITER}",

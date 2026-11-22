@@ -38,13 +38,9 @@ use crate::service::demographic::support;
 use crate::service::demographic::written::demographic_answer;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
-use crate::service::write::{Materials, Resolved, first_attempt};
-use crate::storage::version_repo::gate::{self, Target};
 use crate::versioning::Kind;
-use crate::versioning::audit::change_type;
 use crate::versioning::body::Body;
-use crate::versioning::change::{Change, Write};
-use crate::versioning::lifecycle::state::DELETED;
+use crate::versioning::change::Change;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::read::{VersionRead, demographic_current, object_kind};
 
@@ -173,41 +169,13 @@ impl FerroEhrService {
         &self,
         request: WriteRequest<Body>,
     ) -> Result<ServiceResponse, ServiceError> {
-        // Both halves of the committal merge, the `UPDATE_AUDIT` attributes and
-        // the VERSION `lifecycle_state` (ITS-REST overview
-        // `Requests_and_responses.md` §"openehr-version and
-        // openehr-audit-details": "whatever is provided it MUST be merged with
-        // the default VERSION and `VERSION.audit_details` attributes on commit
-        // runtime").
-        let Resolved {
-            audit, envelope, ..
-        } = self
-            .demographic_write_checks(
-                Kind::PartyRelationship,
-                &request,
-                None,
-                (change_type::CREATION, "PARTY_RELATIONSHIP creation"),
+        let (committed, served) = self
+            .commit_direct_create(
+                (Kind::PartyRelationship, None),
+                request,
+                "PARTY_RELATIONSHIP",
+                |body, envelope| Change::create(Kind::PartyRelationship, body, None, envelope),
             )
-            .await?;
-        // The large media go to the blob store before a connection is held.
-        let (body, served) = self.demographic_stored(request.data, true).await?;
-        let create = Change::create(Kind::PartyRelationship, body, None, envelope);
-        // A create judged again can only follow a moved requirement of its own new
-        // object, which nothing else writes, so it keeps no copy.
-        let materials = Materials::once((create, audit));
-        let materials = &materials;
-        let committed = self
-            .commit_gated(&self.demographic_pool, move || {
-                async move |conn| {
-                    let gate = gate::party(conn, None).await?;
-                    let now = gate.now;
-                    let (_, prior) = gate.split();
-                    let (create, audit) = materials.take_first()?;
-                    Ok(Write::new(None, create, audit)
-                        .at(now)
-                        .guarded(self.party_guard(None, prior)))
-                }
-            })
             .await?;
         let read_back = self.read_relationship(committed.vo_id, Some(committed.tree), None);
         demographic_answer(served, &committed, read_back).await
@@ -244,133 +212,14 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest<Body>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let checked = self
-            .demographic_write_checks(
-                Kind::PartyRelationship,
-                &request,
-                None,
-                (change_type::MODIFICATION, "PARTY_RELATIONSHIP update"),
-            )
-            .await;
-        // A valid body's large media go to the blob store before a connection is held.
-        let (body, served) = self
-            .demographic_stored(request.data, checked.is_ok())
-            .await?;
-        let (resolved, unchecked) = checked.map_or_else(
-            |error| (None, Some(error)),
-            |resolved| (Some(resolved), None),
-        );
-        // An update a later attempt judges again commits on the new tip only when it
-        // names no preceding version, so only such a one keeps a copy.
-        let materials = Materials::new((body, resolved), precondition.names_none());
-        let unchecked = std::sync::Mutex::new(unchecked);
-        let (materials, unchecked, precondition) = (&materials, &unchecked, &precondition);
-        let committed = self
-            .commit_gated(&self.demographic_pool, move || {
-                async move |conn| {
-                    let (target, prior) = gate::party(conn, Some(vo_id)).await?.split();
-                    let target = addressed(target, vo_id)?;
-                    let tip = target
-                        .placement
-                        .tip
-                        .as_ref()
-                        .ok_or_else(|| missing(vo_id))?;
-                    precondition.check_full(vo_id, tip)?;
-                    precondition.check_tree(tip)?;
-                    if tip.lifecycle_state == DELETED {
-                        return Err(ServiceError::not_found(
-                            Missing::VersionedObject,
-                            format!("PARTY_RELATIONSHIP {vo_id} is deleted"),
-                        ));
-                    }
-                    if let Some(error) = first_attempt(unchecked) {
-                        return Err(error);
-                    }
-                    let (
-                        body,
-                        Some(Resolved {
-                            audit, envelope, ..
-                        }),
-                    ) = materials.take()?
-                    else {
-                        return Err(ServiceError::exception(
-                            "an unchecked PARTY_RELATIONSHIP update reached its write",
-                        ));
-                    };
-                    Ok(Write::new(
-                        None,
-                        Change::modify(vo_id, Kind::PartyRelationship, body, None, None, envelope),
-                        audit,
-                    )
-                    .guarded(self.party_guard(target.head, prior))
-                    .object_marked(target.restricted)
-                    .placed(target.placement))
-                }
-            })
+        let addressed = ((Kind::PartyRelationship, vo_id), None);
+        let (committed, served) = self
+            .commit_direct_update(addressed, precondition, request, "PARTY_RELATIONSHIP")
             .await?;
         // Metadata + in-hand body, unless the commit rewrote it: then the
         // stored form is read back.
         let read_back = self.read_relationship(committed.vo_id, Some(committed.tree), None);
         demographic_answer(served, &committed, read_back).await
-    }
-
-    /// Commit the logical delete of the relationship `vo_id` as a new
-    /// `523|deleted|` version (RM common master06 §Logical Deletion), judged
-    /// on one gate read and committed in one guarded statement after its
-    /// access record (#6257). `precondition` is the `If-Match`, else the path
-    /// `OBJECT_VERSION_ID`, judged against the tip: a stale version is `409`,
-    /// an already-deleted target `400`.
-    ///
-    /// # Errors
-    /// `404` for a missing relationship, the precondition's refusal, the
-    /// refusal of a tip already deleted, and the commit's.
-    pub(super) async fn commit_relationship_delete(
-        &self,
-        vo_id: VoId,
-        precondition: Precondition,
-        request: WriteRequest,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let (request, precondition) = (&request, &precondition);
-        let committed = self
-            .commit_gated(&self.demographic_pool, move || {
-                async move |conn| {
-                    let (target, prior) = gate::party(conn, Some(vo_id)).await?.split();
-                    let target = addressed(target, vo_id)?;
-                    let tip = target
-                        .placement
-                        .tip
-                        .as_ref()
-                        .ok_or_else(|| missing(vo_id))?;
-                    precondition.check_full(vo_id, tip)?;
-                    if tip.lifecycle_state == DELETED {
-                        return Err(ServiceError::precondition(format!(
-                            "PARTY_RELATIONSHIP {vo_id} is already deleted"
-                        )));
-                    }
-                    // A stale preceding version is a VERSION MISMATCH: the wire
-                    // arm answers `409` and echoes the latest `version_uid` in
-                    // `ETag`, mirroring the party delete.
-                    precondition.check_tree(tip)?;
-                    let audit = self.commit_audit(
-                        request.audit.as_ref(),
-                        change_type::DELETED,
-                        "PARTY_RELATIONSHIP delete",
-                    )?;
-                    Ok(Write::new(
-                        None,
-                        Change::delete(vo_id, Kind::PartyRelationship, None),
-                        audit,
-                    )
-                    .guarded(self.party_guard(target.head, prior))
-                    .object_marked(target.restricted)
-                    .placed(target.placement))
-                }
-            })
-            .await?;
-        Ok(ServiceResponse::deleted(ResourceMeta::new(
-            String::new(),
-            object_version_id(vo_id, &committed.creating_system_id, committed.tree),
-        )))
     }
 
     // ── VERSIONED_PARTY_RELATIONSHIP (extension read surface) ─────────────────
@@ -427,28 +276,4 @@ impl FerroEhrService {
         self.demographic_version_envelope_at(vo_id, at, "party relationship")
             .await
     }
-}
-
-/// The target of a relationship write its gate read found, when it is a
-/// `PARTY_RELATIONSHIP` of no EHR.
-///
-/// # Errors
-/// [`ServiceError::NotFound`] when the object holds no version, is of
-/// another kind or belongs to an EHR.
-fn addressed(target: Option<Target>, vo_id: VoId) -> Result<Target, ServiceError> {
-    target
-        .filter(|target| {
-            target.placement.tip.as_ref().is_some_and(|tip| {
-                tip.ehr_id.is_none() && tip.kind == Kind::PartyRelationship.as_str()
-            })
-        })
-        .ok_or_else(|| missing(vo_id))
-}
-
-/// The `404` of a relationship write whose target is no relationship.
-fn missing(vo_id: VoId) -> ServiceError {
-    ServiceError::not_found(
-        Missing::VersionedObject,
-        format!("PARTY_RELATIONSHIP {vo_id}"),
-    )
 }

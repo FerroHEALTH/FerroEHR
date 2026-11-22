@@ -28,6 +28,7 @@ use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
 use crate::service::demographic::precondition::Precondition;
+use crate::service::demographic::support;
 use crate::service::demographic::types::PartyKind;
 use crate::service::ehr::tags::tag_target_tail;
 use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
@@ -178,9 +179,14 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.commit_party_delete((kind, vo_id), precondition, request)
-            .await
-            .map_err(ServiceError::flattened)
+        self.commit_direct_delete(
+            (support::kind_of(kind), vo_id),
+            precondition,
+            request,
+            "PARTY",
+        )
+        .await
+        .map_err(ServiceError::flattened)
     }
 
     // ── VERSIONED_PARTY ──────────────────────────────────────────────────────
@@ -462,9 +468,14 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.commit_relationship_delete(vo_id, precondition, request)
-            .await
-            .map_err(ServiceError::flattened)
+        self.commit_direct_delete(
+            (Kind::PartyRelationship, vo_id),
+            precondition,
+            request,
+            "PARTY_RELATIONSHIP",
+        )
+        .await
+        .map_err(ServiceError::flattened)
     }
 
     /// The `VERSIONED_OBJECT` wrapper for a relationship.
