@@ -1564,7 +1564,7 @@ bridge:
     tag: ""
     # -- Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an
     # install runs the exact image this chart was validated against.
-    digest: sha256:55cd3c398a58e9ebb5817fe5a694980c36f23b06258ee808574050b5249d521c
+    digest: sha256:7bae02e93c9be9e5752b492799908e758b9c0593c75b045ba8b36554891807ee
   service:
     # -- Service port. The Service is always ClusterIP and the container always
     # listens on 8080.
@@ -1630,8 +1630,8 @@ bridge:
   # secret-shaped key (a password, a token, `cdm.url`), whose `_file` sibling
   # takes a file you mount with `extraVolumes`. A mapping set turns the
   # FHIRconnect operations on, and FerroBRIDGE then refuses to start until
-  # `auth.issuer` and `auth.audience` name the issuer of its callers' tokens,
-  # or `auth.enabled` is false.
+  # an `auth.issuer.<name>` table names the issuer of its callers' tokens, or
+  # `auth.enabled` is false.
   config: {}
   networkPolicy:
     # -- The peers admitted to FerroBRIDGE's port. REQUIRED: the render is
