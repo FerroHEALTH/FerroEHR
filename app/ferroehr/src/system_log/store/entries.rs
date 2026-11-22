@@ -99,6 +99,29 @@ impl AuditStore {
         Ok((uids, LearnedSets::default()))
     }
 
+    /// Write the entries `records` carry on `conn`, which holds no
+    /// transaction, held under `reservation`, in one statement that commits
+    /// on its own and sends only what the gathered writers do not know the
+    /// store holds ([`crate::access_log::intake::GroupWriter::write_on`]).
+    ///
+    /// # Errors
+    /// As [`Self::intake_entries`].
+    #[cfg(feature = "fhir")]
+    pub(super) async fn held_entries_on(
+        &self,
+        conn: &mut PgConnection,
+        writing: &Pinned,
+        records: Vec<AuditRecord>,
+        reservation: uuid::Uuid,
+    ) -> Result<(), AuditError> {
+        let entered = self.with_entries(writing, records).await?;
+        let (_, intake, tokens) = self.entry_rows(writing, entered).await?;
+        self.group()
+            .write_on(conn, &intake, &tokens, Some(reservation))
+            .await?;
+        Ok(())
+    }
+
     /// The intake rows of the entries `records` carry, with each one's uid
     /// and search tokens, in their order.
     ///
