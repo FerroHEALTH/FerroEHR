@@ -228,7 +228,7 @@ async fn store_and_entry(
     db: &testkit::TestDb,
 ) -> (
     ferroehr::system_log::store::AuditStore,
-    sqlx::PgPool,
+    PgPool,
     ferroehr::system_log::store::AuditRecord,
 ) {
     let config = ferroehr::db::DbConfig::new(db.url());
