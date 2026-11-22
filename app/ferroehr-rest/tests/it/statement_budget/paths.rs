@@ -352,8 +352,8 @@ struct Budget {
 /// An `EHR_STATUS` commit has since dropped the EHR's access copy only when it
 /// moved the subject, the one part of the status the copy is revised by
 /// (#6238): 4 round trips where it sent 5, 1,519 allocations where it made
-/// 1,580 and a median peak 3 KiB lower, measured twice beside the merge base,
-/// and those ceilings fell by those figures.
+/// 1,580, a median peak 3 KiB lower and 298 wire bytes fewer, measured beside
+/// the merge base, and those ceilings fell by those figures.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
@@ -574,7 +574,7 @@ const WIRE_BUDGETS: [(Path, u64); 22] = [
     (Path::PartyRead, 5524),
     (Path::CommitContribution, 222_644),
     (Path::ReadAtTime, 131_699),
-    (Path::CommitStatus, 11_869),
+    (Path::CommitStatus, 11_571),
     (Path::ReadStatus, 3142),
     (Path::CommitParty, 10_513),
     (Path::AqlMatches, 17_539),
