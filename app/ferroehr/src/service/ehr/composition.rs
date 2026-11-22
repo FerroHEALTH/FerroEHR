@@ -31,8 +31,8 @@ use crate::service::datetime::parse_at_time;
 use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Materials, Resolved, first_attempt};
-use crate::storage::version_repo::commit::Guard;
-use crate::storage::version_repo::gate::{self, Ask, Gate, Shape};
+use crate::storage::version_repo::gate::{self, Ask, Gate, Shape, Target};
+use crate::storage::version_repo::guarded::Guard;
 use crate::storage::version_repo::read::VersionAt;
 use crate::system_log::categories::ContentIds;
 use crate::versioning::Kind;
@@ -410,10 +410,10 @@ impl FerroEhrService {
         let template_id = composition.template_id().map(str::to_owned);
         // An update a later attempt judges again commits on the new tip only
         // when it names no preceding version, so only such a one keeps a copy.
-        let (resolved, unresolved) = match resolved {
-            Ok(resolved) => (Some(resolved), None),
-            Err(error) => (None, Some(error)),
-        };
+        let (resolved, unresolved) = resolved.map_or_else(
+            |error| (None, Some(error)),
+            |resolved| (Some(resolved), None),
+        );
         let materials = Materials::new((composition, resolved), preceding.is_none());
         let unresolved = std::sync::Mutex::new(unresolved);
         let validated = std::sync::Mutex::new(validated);
@@ -463,23 +463,7 @@ impl FerroEhrService {
                         "an unresolved update reached its write",
                     ));
                 };
-                // The lifecycle (deleted → 404, RM common master06 §Logical
-                // Deletion) and the content-write guard are checked from the same
-                // merged read.
-                if tip.lifecycle_state == crate::versioning::lifecycle::state::DELETED {
-                    return Err(ServiceError::not_found(
-                        Missing::Composition,
-                        format!("COMPOSITION {vo_id} is deleted"),
-                    ));
-                }
-                // is_modifiable = False forbids content writes (RM ehr master04 §EHR
-                // Active Status), after the deleted 404 and before the template 422.
-                if gate.is_modifiable == Some(false) {
-                    return Err(
-                        crate::versioning::change::precondition::not_modifiable_error(ehr_id),
-                    );
-                }
-                ensure_same_template(pre.stored_template.as_deref(), template_id.as_deref())?;
+                ensure_updatable(&gate, (tip, &pre), template_id.as_deref(), (ehr_id, vo_id))?;
                 if let Some(validation) = first_attempt(validated) {
                     validation?;
                 }
@@ -751,4 +735,30 @@ fn ensure_same_template(stored: Option<&str>, incoming: Option<&str>) -> Result<
         )),
         _ => Ok(()),
     }
+}
+
+/// The pre-checks an update is judged on after its `If-Match`, off its gate
+/// read: a deleted tip answers `404` (RM common master06 §Logical Deletion),
+/// an EHR that is not modifiable `409` (RM ehr master04 §EHR Active Status),
+/// and a template other than the stored one `422`, in that order.
+///
+/// # Errors
+/// [`ServiceError::NotFound`], [`ServiceError::Conflict`] and
+/// [`ServiceError::Unprocessable`] as above.
+fn ensure_updatable(
+    gate: &Gate,
+    (tip, target): (&crate::storage::version_repo::placement::TipRow, &Target),
+    template_id: Option<&str>,
+    (ehr_id, vo_id): (EhrId, VoId),
+) -> Result<(), ServiceError> {
+    if tip.lifecycle_state == crate::versioning::lifecycle::state::DELETED {
+        return Err(ServiceError::not_found(
+            Missing::Composition,
+            format!("COMPOSITION {vo_id} is deleted"),
+        ));
+    }
+    if gate.is_modifiable == Some(false) {
+        return Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id));
+    }
+    ensure_same_template(target.stored_template.as_deref(), template_id)
 }

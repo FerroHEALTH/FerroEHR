@@ -18,7 +18,7 @@ use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::version_update::WriteRequest;
 use crate::storage::error::StorageError;
-use crate::storage::version_repo::commit::GuardFlags;
+use crate::storage::version_repo::guarded::GuardFlags;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
@@ -217,29 +217,10 @@ impl FerroEhrService {
                 drop(conn);
                 match outcome {
                     Ok(committed) => return self.counted(ehr_id, committed).await,
-                    Err(ServiceError::Storage(StorageError::GuardMoved(flags))) => {
-                        crate::policy_register::observed::not_written();
-                        crate::telemetry::access_path::count_commit_retry(moved_reason(&flags));
-                        if !flags.policy {
-                            if let (Some(policy), Some(definitions)) =
-                                (flags.policy_now, flags.definitions_now)
-                            {
-                                crate::policy_register::observed::observe(policy, definitions);
-                            }
-                            return Err(ServiceError::access_refreshing());
-                        }
-                    }
-                    Err(error) if place_taken(&error) => {
-                        crate::policy_register::observed::not_written();
-                        crate::telemetry::access_path::count_commit_retry("key");
-                    }
-                    Err(error) => return Err(error),
+                    Err(error) => moved(error)?,
                 }
             }
-            Err(ServiceError::overloaded(
-                "the record moved while the write was judged",
-                Contended,
-            ))
+            Err(contended())
         })
     }
 
@@ -267,6 +248,26 @@ impl FerroEhrService {
 pub(in crate::service) struct Materials<T> {
     first: std::sync::Mutex<Option<T>>,
     spare: Option<T>,
+}
+
+impl<T> Materials<T> {
+    /// `first` for the first attempt alone: a later attempt can only refuse.
+    pub(in crate::service) fn once(first: T) -> Self {
+        Self {
+            first: std::sync::Mutex::new(Some(first)),
+            spare: None,
+        }
+    }
+
+    /// The materials of the first attempt.
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when an earlier attempt consumed them.
+    pub(in crate::service) fn take_first(&self) -> Result<T, ServiceError> {
+        first_attempt(&self.first).ok_or_else(|| {
+            ServiceError::overloaded("the record moved while the write was judged", Spent)
+        })
+    }
 }
 
 impl<T: Clone> Materials<T> {
@@ -312,6 +313,43 @@ struct Contended;
 #[error("an earlier attempt of this write consumed its content")]
 struct Spent;
 
+/// Whether a guarded write that wrote nothing is judged again: `Ok` when
+/// what its gate read judged moved or a concurrent commit took its version's
+/// place, after counting the retry; otherwise the write's answer, which for a
+/// moved policy is `access-refreshing` with the new revisions noted, so the
+/// request runs once more behind the up-front confirm.
+///
+/// # Errors
+/// `error` itself when the write is not judged again, and
+/// `access-refreshing` for a moved policy.
+pub(in crate::service) fn moved(error: ServiceError) -> Result<(), ServiceError> {
+    match error {
+        ServiceError::Storage(StorageError::GuardMoved(flags)) => {
+            crate::policy_register::observed::not_written();
+            crate::telemetry::access_path::count_commit_retry(moved_reason(&flags));
+            if flags.policy {
+                return Ok(());
+            }
+            if let (Some(policy), Some(definitions)) = (flags.policy_now, flags.definitions_now) {
+                crate::policy_register::observed::observe(policy, definitions);
+            }
+            Err(ServiceError::access_refreshing())
+        }
+        error if place_taken(&error) => {
+            crate::policy_register::observed::not_written();
+            crate::telemetry::access_path::count_commit_retry("key");
+            Ok(())
+        }
+        error => Err(error),
+    }
+}
+
+/// The `503` of a guarded write whose every attempt found what it was judged
+/// on moved.
+pub(in crate::service) fn contended() -> ServiceError {
+    ServiceError::overloaded("the record moved while the write was judged", Contended)
+}
+
 /// What `slot` holds, taken: the first attempt of a guarded write takes it,
 /// and a later one finds it gone.
 pub(in crate::service) fn first_attempt<T>(slot: &std::sync::Mutex<Option<T>>) -> Option<T> {
@@ -323,7 +361,7 @@ pub(in crate::service) fn first_attempt<T>(slot: &std::sync::Mutex<Option<T>>) -
 /// The attempts a guarded commit makes before it answers `503` (#6256): each
 /// one after the first follows a commit that landed in between, so the bound
 /// is the contention one write survives, which is our own design.
-const ATTEMPTS: usize = 8;
+pub(in crate::service) const ATTEMPTS: usize = 8;
 
 /// Whether `error` is a version key refusing a second version at the place a
 /// concurrent commit of the same object took first (`23505`, PostgreSQL docs

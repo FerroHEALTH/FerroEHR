@@ -30,9 +30,8 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
 use crate::storage::render::index::Rendered;
-use crate::storage::version_repo::commit::{
-    Folded, FoldedRows, Guard, commit_folded, outbox_envelope,
-};
+use crate::storage::version_repo::commit::{Folded, FoldedRows, commit_folded, outbox_envelope};
+use crate::storage::version_repo::guarded::Guard;
 use crate::versioning::attestation::{self, PendingAttest};
 use crate::versioning::audit::AuditInput;
 use crate::versioning::body::Body;
@@ -44,14 +43,15 @@ use crate::versioning::{Kind, SigningCtx, restriction};
 
 mod construct;
 pub(crate) mod precondition;
+mod prepared;
 mod project;
 pub(crate) mod resolve;
+pub(crate) mod set;
 mod sign;
 mod written;
 
 use resolve::{Content, Placing, resolve_create, resolve_delete, resolve_modify};
-use sign::body_and_signature;
-use written::{admit_written, nodes, root_archetype};
+use written::{admit_written, root_archetype};
 
 /// The outcome of a versioned-object write: the object id, the new version's
 /// tree id, and the provenance carried into the event-outbox envelope.
@@ -673,29 +673,37 @@ struct CommitScope<'a> {
     preplaced: Option<crate::storage::version_repo::placement::Placement>,
 }
 
-async fn apply_change(
+/// Resolve `change` to the version it writes, before anything is written:
+/// the restriction gates on what the caller `known`, the placement (the one
+/// `preplaced`, or one read here), the lifecycle, the content and its
+/// signature inputs, and the access evaluator's verdict of the content.
+///
+/// # Errors
+/// The restriction refusals, the placement errors (`NotFound` /
+/// `VersionConflict`), the lifecycle and content refusals, and the access
+/// evaluator's refusal of the content.
+async fn resolve_change(
     tx: &mut PgConnection,
-    scope: CommitScope<'_>,
+    (ehr_id, ctx): (Option<EhrId>, &SigningCtx<'_>),
+    known: &restriction::Known,
+    preplaced: Option<crate::storage::version_repo::placement::Placement>,
     change: Change,
-    skip_identical: bool,
-) -> Result<(Committed, Uuid, Vec<super::party_refs::Reference>), ServiceError> {
-    let CommitScope {
-        ehr_id,
-        contribution,
-        audit,
-        ctx,
-        known,
-        preplaced,
-    } = scope;
+) -> Result<
+    (
+        ResolvedWrite,
+        Option<crate::service::ehr::access_projection::AccessCommit>,
+    ),
+    ServiceError,
+> {
     let target = change.target_vo_id();
-    let gate = restriction::ensure_not_restricted_tx(tx, ehr_id, target, &known).await?;
+    let gate = restriction::ensure_not_restricted_tx(tx, ehr_id, target, known).await?;
     let at = Placing {
         ehr_id,
         known_now: known.now,
         preplaced,
     };
     let access = crate::service::ehr::access_projection::AccessCommit::of(&change);
-    let mut resolved = match change {
+    let resolved = match change {
         Change::Create {
             allocated,
             kind,
@@ -762,6 +770,25 @@ async fn apply_change(
         }
     };
     admit_written(gate.as_ref(), &resolved)?;
+    Ok((resolved, access))
+}
+
+async fn apply_change(
+    tx: &mut PgConnection,
+    scope: CommitScope<'_>,
+    change: Change,
+    skip_identical: bool,
+) -> Result<(Committed, Uuid, Vec<super::party_refs::Reference>), ServiceError> {
+    let CommitScope {
+        ehr_id,
+        contribution,
+        audit,
+        ctx,
+        known,
+        preplaced,
+    } = scope;
+    let (mut resolved, access) =
+        Box::pin(resolve_change(tx, (ehr_id, ctx), &known, preplaced, change)).await?;
     let references = std::mem::take(&mut resolved.party_refs);
     if skip_identical && let Some(existing) = skipped_resend(&resolved, audit) {
         return Ok((existing, Uuid::nil(), references));
@@ -803,116 +830,30 @@ async fn commit_resolved(
     ctx: &SigningCtx<'_>,
     audit: &AuditInput,
     contribution: ContributionCtx,
-    mut r: ResolvedWrite,
+    r: ResolvedWrite,
 ) -> Result<(Committed, Uuid), ServiceError> {
-    let audit_row = audit.row();
-    let (trunk_version, branch_number, branch_version) = r.tree.columns();
-
     // The enclosing CONTRIBUTION id: pre-existing for a multi-change commit,
     // generated here for a standalone write — known before the signature.
     let contribution_id = match contribution {
         ContributionCtx::New(_) => ctx.stamp.mint(),
         ContributionCtx::Existing(cid) => cid,
     };
-
-    // The accompanying attestations are completed ONCE before the signature —
-    // master06 §Digital Signature signs "the entire Version object" — and
-    // reused verbatim for the insert, so signed bytes and stored bytes are the
-    // same bytes.
-    let at_committal_attestations: Vec<Value> =
-        attestation::complete_accompanying(&r.attestations, &audit.system_id, r.time_committed)
-            .iter()
-            .map(openehr_its::json::to_canonical_value)
-            .collect();
-
-    let (signature, signature_client_supplied) =
-        body_and_signature(ctx, audit, contribution_id, &r, &at_committal_attestations)?;
-    let archetype = root_archetype(r.body.as_ref());
-    // The body is signed: what is left to store is read off its rendering.
-    drop(r.body.take());
-    // A version that shares its predecessor's rows writes none of its own.
-    let version_uid = object_version_id(r.vo_id, &ctx.system_id, r.tree);
-    let stored = nodes(
-        r.rendered.as_ref(),
-        &crate::storage::compact::RootIdentity {
-            version_uid: &version_uid,
-            template_id: r.template_id.as_deref(),
-        },
-        r.shared_from.is_some(),
-    )?;
-    let body_text = r
-        .rendered
-        .as_ref()
-        .map(|rendered| std::str::from_utf8(rendered.text()))
-        .transpose()
-        .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
-
-    let folded = crate::storage::version_repo::commit::FoldedVersion {
-        vo_id: r.vo_id,
-        kind: r.kind.as_str(),
-        ehr_id: r.ehr_id,
-        sys_version: r.ordinal,
-        trunk_version,
-        branch_number,
-        branch_version,
-        lifecycle_state: &r.lifecycle,
-        creating_system_id: &ctx.system_id,
-        preceding_version_uid: r.preceding_uid.as_deref(),
-        other_input_version_uids: &r.other_input_version_uids,
-        template_id: r.template_id.as_deref(),
-        signature: signature.as_deref(),
-        signature_client_supplied,
-        stable_compatible: r.stable_compatible,
-        origins: &r.origins,
-        body: body_text,
-        time_committed: r.time_committed,
-        rows: &stored.rows,
-        blob_uris: stored.blob_uris,
-        content_digest: r.content_digest.as_ref().map(<[u8; 32]>::as_slice),
-        content_sys_version: r.shared_from,
-        root_archetype: archetype.as_deref(),
-        // Nothing is superseded in place: the head row advancing past the
-        // previous version inside the SAME statement is what makes this one
-        // current (master06 §The 'Virtual Version Tree').
-    };
-    // The folded statements BIND `r.time_committed` (the instant the signature
-    // was computed over) as the audit time and the version row's own
-    // `committed_at`, so stored == signed holds by construction.
-    let mut committed = Committed {
-        vo_id: r.vo_id,
-        sys_version: r.ordinal,
-        tree: r.tree,
-        creating_system_id: ctx.system_id.clone(),
-        kind: r.kind,
-        change_type: audit.change_type.clone(),
-        template_id: r.template_id.clone(),
-        root_archetype: archetype.clone(),
-        time_committed: r.time_committed,
-        skipped: false,
-        content_digest: r.content_digest,
-        deleted: None,
-    };
-    let statement = folded_shape(contribution, contribution_id, folded, ctx, &committed);
-    committed.time_committed = commit_folded(tx, &audit_row, statement)
+    let prepared = prepared::prepare(ctx, audit, contribution_id, r)?;
+    let mut committed = prepared.committed.clone();
+    // The folded statements BIND the instant the signature was computed over
+    // as the audit time and the version row's own `committed_at`, so stored ==
+    // signed holds by construction.
+    let statement = folded_shape(
+        contribution,
+        contribution_id,
+        prepared.folded()?,
+        ctx,
+        &committed,
+    );
+    committed.time_committed = commit_folded(tx, &audit.row(), statement)
         .await?
         .time_committed;
-
-    // A newly created FOLDER hierarchy joins `EHR.folders` as a new member (RM
-    // ehr master04 §Folders). Recorded only on CREATION.
-    if r.is_first_folder
-        && let Some(ehr_id) = r.ehr_id
-    {
-        crate::storage::version_repo::commit::insert_ehr_folder_rank(tx, ehr_id, r.vo_id).await?;
-    }
-    attestation::insert_at_committal_attestations(
-        tx,
-        r.vo_id,
-        r.ordinal,
-        contribution_id,
-        &at_committal_attestations,
-    )
-    .await?;
-
+    prepared.finish(tx).await?;
     Ok((committed, contribution_id))
 }
 

@@ -6,7 +6,7 @@
 
 use super::{Change, Write, WriteEnvelope};
 use crate::ids::{AllocatedVoId, EhrId, VoId};
-use crate::storage::version_repo::commit::Guard;
+use crate::storage::version_repo::guarded::Guard;
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::body::Body;
