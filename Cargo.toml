@@ -307,8 +307,9 @@ ferrohealth-server = { version = "=0.12.0", default-features = false }
 # The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
 # the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
 # request log with its `http.server.request.duration` histogram, and the panic
-# line. Verified on crates.io 2026-10-27 (0.2.2).
-ferrohealth-telemetry = { version = "=0.5.0", features = ["axum", "otlp", "prometheus"] }
+# line; 0.5.1 renders no span fields in the JSON console, which no line writes
+# (FerroHEALTH/FerroSYS#416). Verified on crates.io 2026-11-22 (0.5.1).
+ferrohealth-telemetry = { version = "=0.5.1", features = ["axum", "otlp", "prometheus"] }
 # The family's installation report to FerroPULSE (FerroSYS): envelope v2, the
 # latency window the request log fills (`telemetry`, its `Recorder`), and the
 # start and daily reporter over FerroEHR's PostgreSQL state store. Verified on
@@ -337,14 +338,17 @@ ferrobridge-term = { version = "0.17.0", default-features = false, features = ["
 # record, the Art 14(1) categories and their classification map, the Art 9(2)
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
-# crates.io 2026-11-22 (0.24.3); 0.23 sends the FHIR Feed through the
+# crates.io 2026-11-22; 0.23 sends the FHIR Feed through the
 # product's own `FeedClient` and depends on no ferrohealth-smart (#5895), and
 # 0.24 sends the records waiting as one batch Bundle, its client answering a
 # `FeedAnswer` (#6245); 0.24.3 appends a disk spool's batches to one segment
 # from one writer thread, which FerroEHR's own audit store does not use, and
-# 0.24.2 is skipped (FerroHEALTH/FerroAUDIT#264, #267; #6272).
-ihe-atna = { version = "=0.24.3", default-features = false }
-ehds-logging = { version = "=0.24.3", default-features = false }
+# 0.24.2 is skipped (FerroHEALTH/FerroAUDIT#264, #267; #6272); 0.25 writes a
+# record's bytes straight from the typed `AuditEvent`, byte for byte those of
+# 0.24 (FerroHEALTH/FerroAUDIT#270, #272; #6297). Verified on crates.io
+# 2026-11-22 (0.25.0).
+ihe-atna = { version = "=0.25.0", default-features = false }
+ehds-logging = { version = "=0.25.0", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the CDR's ITI-81 page holds each typed BALP `AuditEvent`, and the viewer reads
 # the searchset, each `AuditEvent` and a refusal's `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;
@@ -365,9 +369,9 @@ fhir-search = { version = "0.1.131", default-features = false }
 # ferrohealth-smart's outbound client; `pmir` is the PMIR Patient Identity
 # Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, which reads every
 # Patient's `active` and links and rebuilds a subscription from its stored
-# Location. Verified on crates.io 2026-11-22 (0.19.0, on ihe-atna 0.24), on
+# Location. Verified on crates.io 2026-11-22 (0.20.0, on ihe-atna 0.25), on
 # ferrohealth-smart 0.33.
-ihe-iti = { version = "=0.19.0", default-features = false }
+ihe-iti = { version = "=0.20.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
