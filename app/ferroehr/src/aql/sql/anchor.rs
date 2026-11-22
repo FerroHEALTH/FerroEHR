@@ -50,19 +50,19 @@
 //! the Planner with Explicit JOIN Clauses"). No openEHR spec governs access
 //! paths: our own design.
 
-use sea_query::{Alias, Expr, ExprTrait, Query, SelectStatement};
+use sea_query::{Alias, Expr, ExprTrait, JoinType, Query, SelectStatement};
 
 use openehr_query::lexer::CompOp;
 
 use crate::aql::error::AqlError;
 use crate::aql::ir::{
-    self, Bind, Coercion, FragmentStep, LeafPath, Operand, ParamValue, PathTarget, QueryDomain,
-    TypedLit,
+    self, Bind, Coercion, FragmentStep, LeafPath, ParamValue, QueryDomain, TypedLit,
 };
 use crate::db::iden::{Node, RelationshipTarget, VersionRow, VoHead};
 
 use super::Builder;
-use super::expr::{binoper, call, col, hot};
+use super::anchorable::Anchorable;
+use super::expr::{binoper, call, col, derived_col, hot};
 
 /// The RM type of the one structure node that carries a `value`, as a SQL
 /// LITERAL: the value indexes are partial on it, and a partial index serves a
@@ -102,7 +102,7 @@ pub(super) enum RangeEntry {
 
 /// What a range comparison reads of a node row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Ranged {
+pub(super) enum Ranged {
     /// `event_time` of an event row.
     EventTime,
     /// `event_time` of a history row, its origin.
@@ -123,7 +123,7 @@ impl Ranged {
 
     /// Whether a step that binds `types` binds only rows that carry the
     /// value, or, for a magnitude, can bind an `ELEMENT`.
-    fn binds(self, types: &ir::TypeSet) -> bool {
+    pub(super) fn binds(self, types: &ir::TypeSet) -> bool {
         let only = |timed: &[&str]| {
             !types.is_empty() && types.names().iter().all(|t| timed.contains(&t.as_str()))
         };
@@ -176,83 +176,32 @@ impl Builder<'_> {
     /// [`AqlError`] from the leaf steps' predicate lowering and from a bound
     /// the comparison itself refuses.
     pub(super) fn value_anchors(&mut self) -> Result<Vec<ValueAnchor>, AqlError> {
-        let Some(filter) = self.ir.filter.clone() else {
+        let ir = self.ir;
+        let Some(filter) = ir.filter.as_ref() else {
             return Ok(Vec::new());
         };
         let mut anchors = Vec::new();
         let mut ranges: Vec<Range<'_>> = Vec::new();
-        let mut conjuncts = vec![&filter];
-        while let Some(expr) = conjuncts.pop() {
-            match expr {
-                ir::Expr::And(a, b) => {
-                    conjuncts.push(b);
-                    conjuncts.push(a);
+        for conjunct in self.anchorable(filter) {
+            match conjunct {
+                Anchorable::Equality { leaf, texts } => {
+                    anchors.extend(self.equality_anchor(leaf, &texts)?);
                 }
-                // NOTE: a `Raw` (mixed-type) equality with a string compares as text,
-                // the numeric branch being taken on a numeric literal alone
-                // (`Builder::value_test`), which no string operand is.
-                ir::Expr::Compare {
-                    lhs,
-                    op: CompOp::Eq,
-                    rhs,
-                    coercion: Coercion::Text | Coercion::Raw,
+                Anchorable::Range {
+                    leaf,
+                    ranged,
+                    bounds,
                 } => {
-                    let ((Operand::Path(PathTarget::Data(leaf)), bound)
-                    | (bound, Operand::Path(PathTarget::Data(leaf)))) = (lhs, rhs)
-                    else {
-                        continue;
-                    };
-                    let bind = match bound {
-                        Operand::Literal(literal) => Bind::Literal(literal.clone()),
-                        Operand::Param(name) => Bind::Param(name.clone()),
-                        Operand::Path(_) | Operand::Function { .. } => continue,
-                    };
-                    let Some(text) = self.anchor_text(&bind) else {
-                        continue;
-                    };
-                    anchors.extend(self.equality_anchor(leaf, &[text])?);
+                    let bounds = bounds
+                        .into_iter()
+                        .map(|(op, bound)| Ok((op, self.operand_value(bound, ranged.coercion())?)))
+                        .collect::<Result<Vec<_>, AqlError>>()?;
+                    ranges.push(Range {
+                        leaf,
+                        ranged,
+                        bounds,
+                    });
                 }
-                // NOTE: AQL QUERY master03 §matches: a value list holds when the leaf
-                // matches one of its items, so it reads as the equalities above.
-                ir::Expr::Matches {
-                    path: PathTarget::Data(leaf),
-                    values,
-                    coercion: Coercion::Text | Coercion::Raw,
-                } => {
-                    let Some(texts) = values
-                        .iter()
-                        .map(|bind| self.anchor_text(bind))
-                        .collect::<Option<Vec<_>>>()
-                    else {
-                        continue;
-                    };
-                    if !texts.is_empty() {
-                        anchors.extend(self.equality_anchor(leaf, &texts)?);
-                    }
-                }
-                // NOTE: AQL QUERY master03 §WHERE (`identifiedExpr`): the grammar puts the
-                // path on the left of a comparison and the terminal on its right.
-                ir::Expr::Compare {
-                    lhs: Operand::Path(PathTarget::Data(leaf)),
-                    op,
-                    rhs: bound @ (Operand::Literal(_) | Operand::Param(_)),
-                    coercion,
-                } if self.range_entry != RangeEntry::Off => {
-                    let Some(reads) = ranged(leaf, *op, *coercion) else {
-                        continue;
-                    };
-                    let bound = self.operand_value(bound, reads.coercion())?;
-                    let leaf: &LeafPath = leaf;
-                    match ranges.iter_mut().find(|range| range.leaf == leaf) {
-                        Some(range) => range.bounds.push((*op, bound)),
-                        None => ranges.push(Range {
-                            leaf,
-                            ranged: reads,
-                            bounds: vec![(*op, bound)],
-                        }),
-                    }
-                }
-                _ => {}
             }
         }
         // A leading anchor is the one entry of a streaming statement, which an
@@ -275,7 +224,7 @@ impl Builder<'_> {
     /// The string a bound value compares as, a string literal or a string
     /// parameter, or `None` for any other value: a `Raw` leaf compares with a
     /// number by its number (`Builder::value_test`), which no index holds.
-    fn anchor_text(&self, bind: &Bind) -> Option<String> {
+    pub(super) fn anchor_text(&self, bind: &Bind) -> Option<String> {
         match bind {
             Bind::Literal(TypedLit::String(text)) => Some(text.clone()),
             Bind::Param(name) => match self.params.get(name) {
@@ -546,7 +495,31 @@ impl Builder<'_> {
                     before.and_where(col(source, Node::VoId).eq(col(row, Node::VoId)));
                 }
                 select.column((Alias::new(node.as_str()), Node::Num));
-                tie = Some(Expr::exists(before).not());
+                let mut once = Expr::exists(before).not();
+                // The item carries its trunk head's version, read by the head's
+                // key, so the version row is probed by its whole key and never
+                // by its object alone, every version a shared tree spans (#4944).
+                if self.reads_trunk_head(&version) {
+                    let head = format!("{alias}_h");
+                    select
+                        .join_as(
+                            JoinType::InnerJoin,
+                            VoHead::Table,
+                            Alias::new(head.as_str()),
+                            col(&head, VoHead::VoId).eq(col(&node, Node::VoId)).and(
+                                col(&head, VoHead::TrunkHeadContentKey)
+                                    .eq(col(&node, Node::SysVersion)),
+                            ),
+                        )
+                        .expr_as(
+                            col(&head, VoHead::TrunkHeadSysVersion),
+                            Alias::new(HEAD_VERSION),
+                        );
+                    once = once.and(
+                        derived_col(&alias, HEAD_VERSION).eq(col(&version, VersionRow::SysVersion)),
+                    );
+                }
+                tie = Some(once);
             } else {
                 select.and_where(Expr::exists(before).not());
             }
@@ -602,7 +575,7 @@ impl Builder<'_> {
 
 /// The RM types and the predicate of the node step `leaf`'s fragment is read
 /// from: its last structure step, or its source.
-fn leaf_step<'a>(
+pub(super) fn leaf_step<'a>(
     ir: &'a ir::QueryIr,
     leaf: &'a LeafPath,
 ) -> Option<(&'a ir::TypeSet, Option<&'a ir::NodeConstraint>)> {
@@ -617,7 +590,7 @@ fn leaf_step<'a>(
 
 /// What a comparison of `leaf` under `op` and `coercion` reads of a node row
 /// an index holds, or `None` for any other comparison.
-fn ranged(leaf: &LeafPath, op: CompOp, coercion: Coercion) -> Option<Ranged> {
+pub(super) fn ranged(leaf: &LeafPath, op: CompOp, coercion: Coercion) -> Option<Ranged> {
     if op == CompOp::Ne || leaf.fragment.iter().any(|step| step.predicate.is_some()) {
         return None;
     }
@@ -631,6 +604,10 @@ fn ranged(leaf: &LeafPath, op: CompOp, coercion: Coercion) -> Option<Ranged> {
         _ => None,
     }
 }
+
+/// The column of a flat anchor on a leaf only the WHERE reads, under
+/// `LATEST_VERSION`, that holds its row's trunk head version.
+const HEAD_VERSION: &str = "head_version";
 
 /// One anchor ([`Builder::value_anchors`]): the versions some node row of
 /// which carries a value, as a FROM item linked to the version row of the
@@ -667,7 +644,7 @@ impl ValueAnchor {
 
 /// Which value index an equality of a fragment path compares against.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TextLeaf {
+pub(super) enum TextLeaf {
     /// The code `ext.node_code` yields: the `defining_code` of a coded text,
     /// or of the symbol of an ordinal or a scale.
     Code,
@@ -683,7 +660,7 @@ enum TextLeaf {
 /// The value index an equality of the fragment path `steps` compares
 /// against, for every `ELEMENT` row that can satisfy it; `None` for a path
 /// no value index holds.
-fn text_leaf(steps: &[FragmentStep]) -> Option<TextLeaf> {
+pub(super) fn text_leaf(steps: &[FragmentStep]) -> Option<TextLeaf> {
     if steps.iter().any(|step| step.predicate.is_some()) {
         return None;
     }
