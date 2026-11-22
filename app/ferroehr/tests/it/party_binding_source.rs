@@ -1249,6 +1249,12 @@ async fn side_rows(pool: &sqlx::PgPool) -> Vec<(&'static str, Vec<String>)> {
     out
 }
 
+/// `body` under another name.
+fn renamed(mut body: Value) -> Value {
+    body["name"] = text("renamed");
+    body
+}
+
 /// A create, an update and a delete of each party kind leave the side table
 /// and the grant rows exactly as a refill from the versions writes them
 /// (#6257).
@@ -1287,10 +1293,10 @@ async fn every_kinds_commits_leave_the_rows_a_refill_writes() {
         PartyKind::Person,
         other,
         &other_uid,
-        &person(
+        &renamed(person(
             PERSON_TEMPLATE,
-            &[key("3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f")],
-        ),
+            &[key("2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e")],
+        )),
         "532",
     )
     .await;

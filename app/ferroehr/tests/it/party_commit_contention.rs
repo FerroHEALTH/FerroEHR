@@ -38,6 +38,9 @@ use crate::party_binding_source::{LOGIN, PERSON_TEMPLATE, create, key, mapping, 
 /// (`ferroehr::party_binding::key_space`).
 const GATE: i64 = 0x5013_b1d1;
 
+/// The binding key of the contended PERSON, which no update may change.
+const KEY: &str = "4d5e6f7a-8b9c-4d0e-9f1a-3b4c5d6e7f8a";
+
 /// A service over a fresh database with the binding mapping installed, so
 /// each party commit takes the key-space gate, and its writes recorded when
 /// `audited`.
@@ -123,7 +126,7 @@ async fn write(
         .await
         .map(|_| ());
     }
-    let mut body = person(PERSON_TEMPLATE, &[key(&Uuid::now_v7().to_string())]);
+    let mut body = person(PERSON_TEMPLATE, &[key(KEY)]);
     body["name"]["value"] = format!("writer {n}").into();
     Box::pin(svc.party_update(
         PartyKind::Person,
@@ -143,7 +146,7 @@ async fn contend(
     writers: usize,
     delete: bool,
 ) -> Vec<(Result<(), ServiceError>, WriteRecorder)> {
-    let (vo, uid) = a_person(svc, &Uuid::now_v7().to_string()).await;
+    let (vo, uid) = a_person(svc, KEY).await;
     let held = hold(&db.pool()).await;
     let tasks: Vec<_> = (0..writers)
         .map(|n| {
