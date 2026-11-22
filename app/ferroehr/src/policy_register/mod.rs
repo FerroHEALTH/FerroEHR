@@ -259,6 +259,13 @@ impl LiveRegisters {
         revision <= self.confirmed.load(Ordering::Acquire)
     }
 
+    /// Whether the registers in force hold every version committed up to the
+    /// policy revision `revision` the request read (#6251).
+    #[must_use]
+    pub(crate) fn holds(&self, revision: i64) -> bool {
+        revision <= self.confirmed.load(Ordering::Acquire)
+    }
+
     /// Bring the registers in force to `heads`, the newest stored version of
     /// each register read with the policy revision at one snapshot
     /// ([`store::policy_heads`]), and mark them confirmed at that revision,

@@ -62,7 +62,7 @@ use crate::aql::ir::{
 use crate::db::iden::{Node, RelationshipTarget, VersionRow, VoHead};
 
 use super::Builder;
-use super::expr::{binoper, call, col, derived_col, hot};
+use super::expr::{binoper, call, col, hot};
 
 /// The RM type of the one structure node that carries a `value`, as a SQL
 /// LITERAL: the value indexes are partial on it, and a partial index serves a
@@ -84,6 +84,10 @@ pub(super) enum RangeEntry {
     /// The distinct versions it replaced were an item no join could probe:
     /// on statistics older than the rows they missed, the planner rescanned
     /// it per outer row, 7 M head probes for 1,470 OBSERVATIONs (#6243).
+    /// An anchor whose leaf the SELECT already binds is tied to that row
+    /// instead; otherwise the check for an earlier row joins the statement,
+    /// correlated to the leaf's source row, so it runs for the rows the
+    /// containment keeps and not for every row the range keeps (#6249).
     #[default]
     Free,
     /// A population statement that streams toward its LIMIT: one anchor
@@ -360,7 +364,7 @@ impl Builder<'_> {
             alias,
             version,
             key,
-            head: None,
+            tie: None,
             select,
         })
     }
@@ -503,42 +507,57 @@ impl Builder<'_> {
         select
             .column((Alias::new(node.as_str()), Node::VoId))
             .column((Alias::new(node.as_str()), Node::SysVersion));
-        if first {
+        let flat = first && !self.streaming;
+        // A leaf the SELECT already binds is read off that one row, so the
+        // flat item is tied to it: one item row a statement row, no probe.
+        let bound = if flat {
+            let (start, rest) = self.walk_start(leaf)?;
+            rest.is_empty().then_some(start)
+        } else {
+            None
+        };
+        let mut tie = None;
+        if let Some(start) = &bound {
+            select.column((Alias::new(node.as_str()), Node::Num));
+            tie = Some(
+                [Node::VoId, Node::SysVersion, Node::Num]
+                    .into_iter()
+                    .map(|column| col(&alias, column).eq(col(start, column)))
+                    .reduce(ExprTrait::and)
+                    .unwrap_or_else(|| Expr::val(true)),
+            );
+        } else if first {
+            // In the flat shape the probe joins the statement beside the
+            // item, correlated to the leaf's source row too, so it runs only
+            // for the rows the containment keeps.
+            let row = if flat { alias.as_str() } else { node.as_str() };
             let earlier = format!("{alias}_e");
             let mut before = self.anchor_rows(&earlier, predicate, &of, true)?;
             before
                 .expr(Expr::val(1))
-                .and_where(col(&earlier, Node::VoId).eq(col(&node, Node::VoId)))
-                .and_where(col(&earlier, Node::SysVersion).eq(col(&node, Node::SysVersion)))
-                .and_where(col(&earlier, Node::Num).lt(col(&node, Node::Num)))
+                .and_where(col(&earlier, Node::VoId).eq(col(row, Node::VoId)))
+                .and_where(col(&earlier, Node::SysVersion).eq(col(row, Node::SysVersion)))
+                .and_where(col(&earlier, Node::Num).lt(col(row, Node::Num)))
                 // The fence keeps the probe correlated: without it the planner
                 // makes it an anti-join over every row the range keeps.
                 .offset(0);
-            select.and_where(Expr::exists(before).not());
+            if flat {
+                if let Some(source) = self.node_alias.get(&leaf.source.0) {
+                    before.and_where(col(source, Node::VoId).eq(col(row, Node::VoId)));
+                }
+                select.column((Alias::new(node.as_str()), Node::Num));
+                tie = Some(Expr::exists(before).not());
+            } else {
+                select.and_where(Expr::exists(before).not());
+            }
         } else {
             select.distinct();
         }
-        // The trunk head's own version, read per anchor row by the head's
-        // key, so the version row is probed by its whole key and never by
-        // its object alone, every version a shared tree spans (#4944).
-        let head = (first && !self.streaming && self.reads_trunk_head(&version)).then(|| {
-            let h = format!("{alias}_h");
-            let mut head = Query::select();
-            head.column((Alias::new(h.as_str()), VoHead::TrunkHeadSysVersion))
-                .from_as(VoHead::Table, Alias::new(h.as_str()))
-                .and_where(col(&h, VoHead::VoId).eq(col(&node, Node::VoId)))
-                .and_where(col(&h, VoHead::TrunkHeadContentKey).eq(col(&node, Node::SysVersion)));
-            select.expr_as(
-                Expr::SubQuery(None, Box::new(head.into())),
-                Alias::new(HEAD_VERSION),
-            );
-            derived_col(&alias, HEAD_VERSION).eq(col(&version, VersionRow::SysVersion))
-        });
         Ok(Some(ValueAnchor {
             alias,
             version,
             key,
-            head,
+            tie,
             select,
         }))
     }
@@ -624,18 +643,14 @@ pub(super) struct ValueAnchor {
     /// The column the item's `sys_version` joins: the node key of the version
     /// row under its scope (`head::node_key`, #4944).
     key: Expr,
-    /// The version row is the trunk head the item's row names, its
-    /// [`HEAD_VERSION`]: a condition the key already implies, which gives
-    /// the planner the version row's whole key.
-    head: Option<Expr>,
+    /// What makes a flat item one row a statement row: its row is the row
+    /// the SELECT binds the leaf to, or no earlier row of its version is one
+    /// the item would also keep, the first row of each version.
+    tie: Option<Expr>,
     /// The item: `SELECT DISTINCT vo_id, sys_version FROM node …`, or the
     /// first row of each version for a range.
     pub(super) select: SelectStatement,
 }
-
-/// The column of a flat range anchor under `LATEST_VERSION` that holds the
-/// trunk head's version of its row's object.
-const HEAD_VERSION: &str = "head_version";
 
 impl ValueAnchor {
     /// The join condition between the item and its version row.
@@ -643,8 +658,8 @@ impl ValueAnchor {
         let link = col(&self.alias, Node::VoId)
             .eq(col(&self.version, VersionRow::VoId))
             .and(col(&self.alias, Node::SysVersion).eq(self.key.clone()));
-        match &self.head {
-            Some(head) => link.and(head.clone()),
+        match &self.tie {
+            Some(tie) => link.and(tie.clone()),
             None => link,
         }
     }

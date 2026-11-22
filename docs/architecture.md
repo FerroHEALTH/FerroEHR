@@ -710,7 +710,11 @@ a node row it can enter from the index or probe per version through
 on statistics that predate the rows it missed the planner rescanned it once
 per outer row. The probe for an earlier row states its conditions as
 `(…) IS TRUE`, which no index matches, so it reads the one version through
-`node_hot_pkey` whatever the statistics say (#6243).
+`node_hot_pkey` whatever the statistics say (#6243). In the flat shape an
+anchor whose leaf the SELECT already binds is tied to that bound row and
+needs no probe; otherwise the probe joins the statement beside the anchor,
+correlated to the leaf's source row, so it runs for the rows the containment
+keeps (#6249).
 `event_time` is a stored copy of a `STABLE` function's value: it equals the
 comparison's reading because every session runs under `TimeZone = UTC`,
 which the driver sets at connection start. The feature envelope is
