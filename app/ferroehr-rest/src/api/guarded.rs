@@ -6,13 +6,17 @@
 //!
 //! Every operation's decision rests on policy copies a read of the request
 //! confirmed (#6048, the exact-reads rule of #5891). An operation outside
-//! [`admission::overlaps`] reads the policy revision before it is decided
+//! [`confirms_after`] reads the policy revision before it is decided
 //! ([`confirmed`]). An overlapped read confirms after it ran ([`after`]): its
 //! own statements read the policy and definition revisions beside the rows
 //! they judge, at one snapshot, and its answer leaves only once the copies it
 //! was decided and rendered on held them; otherwise that run is dropped
 //! whole, with nothing recorded or counted, and the request runs once more
-//! behind the up-front confirm (#6251). No openEHR spec governs this: our own
+//! behind the up-front confirm (#6251). A COMPOSITION or CONTRIBUTION commit
+//! confirms after it was decided the same way: its gate read returns the
+//! revisions, and a copy found behind them refuses the write before anything
+//! is written, so the dropped run leaves nothing; a run that reached its
+//! write is never run again (#6256). No openEHR spec governs this: our own
 //! design.
 
 use std::future::Future;
@@ -52,9 +56,25 @@ where
     resp
 }
 
-/// The overlapped read `op` run on the policy copies as they stand, served
-/// only once they held the revisions its statements read; otherwise dropped
-/// unrecorded and run once more by [`confirmed`], which never runs it again.
+/// The commits that confirm their policy copies after they were decided:
+/// each one's gate read returns the revisions before anything is written
+/// (#6256).
+const COMMITS_AFTER: [&str; 4] = [
+    "composition_create",
+    "composition_update",
+    "composition_delete",
+    "contribution_create",
+];
+
+/// Whether `op` confirms its policy copies after it was decided ([`after`]).
+pub(super) fn confirms_after(op: &str) -> bool {
+    admission::overlaps(op) || COMMITS_AFTER.contains(&op)
+}
+
+/// The overlapped read or commit `op` run on the policy copies as they stand,
+/// served only once they held the revisions its statements read or once it
+/// reached its write; otherwise dropped unrecorded and run once more by
+/// [`confirmed`], which never runs it again.
 pub(super) async fn after<H, F>(
     state: &AppState,
     op: &'static str,
@@ -65,9 +85,15 @@ where
     H: Fn(AppState, RequestParts) -> F + Send + Sync,
     F: Future<Output = Result<Response, RestError>> + Send,
 {
-    let ((resp, access), observed) =
+    let ((resp, access), seen) =
         ferroehr::policy_register::observed::scope(run(state, op, parts.clone(), handler)).await;
-    match state.backend().policy_held(observed).await {
+    // NOTE: our own design (#6256), a run that reached its write is the request's answer.
+    let held = if seen.wrote {
+        Ok(true)
+    } else {
+        state.backend().policy_held(seen.observed).await
+    };
+    match held {
         Ok(true) => {
             if let Some(access) = access {
                 access.count_decisions();

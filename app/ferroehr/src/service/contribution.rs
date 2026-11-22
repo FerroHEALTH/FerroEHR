@@ -96,6 +96,7 @@ pub(crate) async fn commit_version_set(
             let read =
                 crate::storage::ehr_repo::ehr_writability(&mut *acquire(&cx.pool).await?, ehr_id)
                     .await?;
+            cx.ensure_gate_policy_held().await?;
             let Some(modifiable) = read.is_modifiable else {
                 return Err(ServiceError::not_found(
                     crate::error::refusal::Missing::Ehr,
@@ -294,6 +295,9 @@ async fn write_contribution(
             .map_err(body_target_not_found_is_bad_request)?;
         }
     }
+    // NOTE: our own design (#6256), from here the set may land, so the request is
+    // never run again, whatever its copies held.
+    crate::policy_register::observed::wrote();
     let outcome = change::commit_contribution(
         &mut tx,
         ehr_id,
