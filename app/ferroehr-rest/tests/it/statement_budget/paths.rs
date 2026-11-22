@@ -293,13 +293,18 @@ struct Budget {
 /// ceilings are the figures of two runs (17,495 and 1,623 allocations, median
 /// peaks of 1,386,366 and 134,395 bytes, 186,380 and 5,765 WAL bytes) with
 /// the margins above.
+/// A COMPOSITION commit and a CONTRIBUTION commit have since been decided on
+/// the policy revision their gate read returns, in place of a read of it
+/// before (#6256): one round trip fewer on the three composition commits, the
+/// update, the delete and the CONTRIBUTION commit, measured beside the merge
+/// base, and each of those round-trip ceilings fell by one.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
         allocations: 18_101,
         peak_bytes: 1_530_778,
-        round_trips: 9,
+        round_trips: 8,
         nested: 13,
         wal: 188_764,
     },
@@ -308,7 +313,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 5,
         allocations: 39_529,
         peak_bytes: 1_533_031,
-        round_trips: 9,
+        round_trips: 8,
         nested: 14,
         wal: 189_063,
     },
@@ -317,7 +322,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 5,
         allocations: 32_689,
         peak_bytes: 1_528_525,
-        round_trips: 9,
+        round_trips: 8,
         nested: 13,
         wal: 189_405,
     },
@@ -398,7 +403,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 6,
         allocations: 18_290,
         peak_bytes: 1_649_934,
-        round_trips: 12,
+        round_trips: 11,
         nested: 14,
         wal: 190_142,
     },
@@ -479,7 +484,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 5,
         allocations: 17_848,
         peak_bytes: 1_525_458,
-        round_trips: 10,
+        round_trips: 9,
         nested: 4,
         wal: 188_244,
     },
@@ -488,7 +493,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 2,
         allocations: 1657,
         peak_bytes: 150_537,
-        round_trips: 11,
+        round_trips: 10,
         nested: 4,
         wal: 5823,
     },
