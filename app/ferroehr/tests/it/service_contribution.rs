@@ -18,6 +18,7 @@ use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::ehr::object::EhrObject;
+use ferroehr::service::ehr::scope::Unscoped;
 use ferroehr::service::version_update::WriteRequest;
 
 use serde_json::{Value, json};
@@ -1791,7 +1792,7 @@ async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
     // The same deletion through the DELETE route: the same refusal.
     let deleted_uid: openehr_base::prelude::ObjectVersionId = v2.parse().expect("ovid");
     let direct = svc
-        .delete_composition(ehr_id, &deleted_uid, WriteRequest::new(()))
+        .delete_composition(ehr_id, &deleted_uid, WriteRequest::new(()), &Unscoped)
         .await
         .expect_err("the DELETE route refuses it too");
     assert!(

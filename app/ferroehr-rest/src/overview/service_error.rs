@@ -90,9 +90,12 @@ pub(crate) fn api_error(e: ServiceError) -> ApiError {
         // trail's availability); RFC 9110 §15.6.4 is the HTTP authority for
         // the 503.
         ServiceError::Unrecorded(err) => ApiError::ServiceUnavailable(err.message),
-        // Our own refusal (no openEHR spec governs restriction of processing);
-        // RFC 9110 §15.5.4 is the HTTP authority for the 403.
-        ServiceError::Restricted(err) => ApiError::Forbidden(err.message),
+        // Our own refusal (no openEHR spec governs restriction of processing),
+        // and the SMART scope's (master08 §Resource Scopes); RFC 9110 §15.5.4
+        // is the HTTP authority for the 403.
+        ServiceError::Restricted(err) | ServiceError::ScopeRefused(err) => {
+            ApiError::Forbidden(err.message)
+        }
         ServiceError::Forbidden(err) => ApiError::Forbidden(err.message),
         ServiceError::Timeout(err) => ApiError::Internal(err.message),
     }

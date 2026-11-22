@@ -33,6 +33,7 @@
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{ArchiveDefect, Malformed};
 use ferroehr::service::ehr::object::EhrObject;
+use ferroehr::service::ehr::scope::Unscoped;
 use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -506,7 +507,12 @@ async fn seed_mixed_kind_ehr(svc: &FerroEhrService) -> (EhrId, Vec<String>) {
         .expect("create_composition")
         .version_uid();
     let deleted = svc
-        .delete_composition(ehr, &doomed.parse().expect("ovid"), WriteRequest::new(()))
+        .delete_composition(
+            ehr,
+            &doomed.parse().expect("ovid"),
+            WriteRequest::new(()),
+            &Unscoped,
+        )
         .await
         .expect("delete_composition")
         .version_uid();
