@@ -37,7 +37,7 @@ pub enum StorageError {
     /// longer held when it ran (#6256): the write is judged again from a new
     /// gate read, or refused as the policy copies' refresh.
     #[error("what the write was judged on moved before it ran: {0:?}")]
-    GuardMoved(crate::storage::version_repo::commit::GuardFlags),
+    GuardMoved(crate::storage::version_repo::guarded::GuardFlags),
 
     /// A client-supplied CONTRIBUTION uid is already in use (the insert hit
     /// `ON CONFLICT (id) DO NOTHING`). ITS-REST `contribution_create`: "if the

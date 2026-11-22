@@ -25,6 +25,10 @@
 //! count; the peak is the most the request held at once. Both are judged on
 //! the median request of the measured ones ([`Measure::median`]).
 //!
+//! The bytes a request moves over the database wire are counted on their own
+//! run, through a relay that splits the protocol messages by statement
+//! ([`super::wire`], #6244), and held to [`WIRE_BUDGETS`].
+//!
 //! Each figure is held to the ceiling [`BUDGETS`] names: the measured end
 //! state of the core rewrite (#6001) plus a small margin. A ceiling only ever
 //! comes down, on an owner decision. No openEHR spec governs the cost of a
@@ -317,6 +321,11 @@ struct Budget {
 /// statements fewer on the party read, the demographic query and both party
 /// commits, and 541, 537, 532 and 532 WAL bytes fewer, measured beside the
 /// merge base, and each of those ceilings fell by its path's figure.
+/// A CONTRIBUTION of COMPOSITION members has since read its EHR and targets
+/// in one gate read after planning and committed in one guarded statement
+/// (#6256): 7 round trips where it sent 11, measured beside the merge base,
+/// and its round-trip ceiling fell by four; its allocations moved from 17,591
+/// to 17,626, under their ceiling, which stays.
 /// The binding side table's trigger has since moved the binding revision and
 /// notified only for a statement that changed a row (#6284): 2 nested
 /// statements and 87 WAL bytes fewer on both party commits, measured beside
@@ -426,7 +435,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 6,
         allocations: 18_290,
         peak_bytes: 1_649_934,
-        round_trips: 11,
+        round_trips: 7,
         nested: 14,
         wal: 189_586,
     },
@@ -520,6 +529,36 @@ const BUDGETS: [Budget; 22] = [
         nested: 4,
         wal: 5267,
     },
+];
+
+/// The bytes each path may move over the database wire per request, both
+/// directions together, as [`every_hot_path_stays_within_its_wire_budget`]
+/// counts them (#6244): the largest median of three runs on main 4411906444
+/// plus 64 bytes, since a request's figure moves only by the width of the
+/// instants it sends, a few bytes between runs.
+const WIRE_BUDGETS: [(Path, u64); 22] = [
+    (Path::CommitJson, 221_825),
+    (Path::CommitXml, 221_825),
+    (Path::CommitFlat, 221_821),
+    (Path::ReadJson, 131_668),
+    (Path::ReadXml, 131_668),
+    (Path::ReadFlat, 131_668),
+    (Path::EhrRead, 1831),
+    (Path::AqlSingle, 5131),
+    (Path::AqlPopulation, 6566),
+    (Path::Iti81, 100_255),
+    (Path::PartyRead, 5524),
+    (Path::CommitContribution, 222_644),
+    (Path::ReadAtTime, 131_699),
+    (Path::CommitStatus, 11_869),
+    (Path::ReadStatus, 3142),
+    (Path::CommitParty, 10_513),
+    (Path::AqlMatches, 17_539),
+    (Path::AqlParty, 11_509),
+    (Path::CommitPartyScored, 13_090),
+    (Path::ReadVersion, 3336),
+    (Path::CommitUpdate, 222_106),
+    (Path::CommitDelete, 10_885),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
@@ -1141,6 +1180,10 @@ struct Measure {
     /// The statements `PostgreSQL` ran nested, and the chainer's rounds the
     /// count leaves out.
     statements: String,
+    /// The bytes each request moved over the database wire.
+    wire_each: Vec<u64>,
+    /// The bytes the window moved over the database wire, by statement.
+    wire: super::wire::Ledger,
 }
 
 impl Measure {
@@ -1291,6 +1334,7 @@ async fn updates_in_place(pool: &PgPool, from: &str, to: &str) -> u64 {
 async fn measure(
     app: &Router,
     pool: &PgPool,
+    wire: Option<&super::wire::Wire>,
     world: &World,
     counter: &Counter,
     path: Path,
@@ -1308,6 +1352,9 @@ async fn measure(
     *counter.0.lock().unwrap() = Counts::default();
     let mut marks = vec![super::wal::insert_lsn(pool).await];
     let mut out = Measure::default();
+    if let Some(wire) = wire {
+        drop(wire.take());
+    }
     for n in 0..REQUESTS {
         let n = usize::try_from(WARM + n).unwrap();
         let call = world.call(path, n);
@@ -1329,6 +1376,11 @@ async fn measure(
         out.each.push(allocated);
         drained(pool).await;
         marks.push(super::wal::insert_lsn(pool).await);
+        if let Some(wire) = wire {
+            let moved = wire.take();
+            out.wire_each.push(moved.total().bytes());
+            out.wire.merge(&moved);
+        }
     }
     let statements = counted(pool).await;
     let nested: u64 = statements
@@ -1373,9 +1425,80 @@ fn nested_ledger(statements: &[super::Counted], nested: u64, chainer: u64) -> St
     out
 }
 
+/// The median of `figures`.
+fn median(figures: &[u64]) -> u64 {
+    let mut figures = figures.to_vec();
+    figures.sort_unstable();
+    figures
+        .get(figures.len().div_euclid(2))
+        .copied()
+        .unwrap_or(0)
+}
+
+/// The database wire of a window by statement, per request: calls, bytes
+/// sent and bytes received.
+fn wire_ledger(m: &Measure) -> String {
+    let total = m.wire.total();
+    let mut out = format!(
+        "database wire per request (each request {:?}): {} sent, {} received; \
+         by statement, the calls over {REQUESTS} requests and the bytes per request:\n",
+        m.wire_each,
+        total.sent.div_euclid(REQUESTS),
+        total.received.div_euclid(REQUESTS),
+    );
+    let mut lines: Vec<_> = m.wire.0.iter().collect();
+    lines.sort_by_key(|(_, tally)| std::cmp::Reverse(tally.bytes()));
+    for (statement, tally) in lines {
+        let text: String = statement.chars().take(160).collect();
+        writeln!(
+            out,
+            "  {:>5} calls {:>8} B sent {:>8} B received  {text}",
+            tally.calls,
+            tally.sent.div_euclid(REQUESTS),
+            tally.received.div_euclid(REQUESTS),
+        )
+        .unwrap();
+    }
+    out
+}
+
 /// Whether `measured` passes `ceiling`, and the cell that reports it.
 fn judged(measured: u64, ceiling: u64) -> (bool, String) {
     (measured <= ceiling, format!("{measured} (<= {ceiling})"))
+}
+
+/// Measures every path of [`Path::ALL`] in the order of [`BUDGETS`] over the
+/// router `app`, counting the database wire through `wire` when one is given.
+async fn measure_all(
+    app: &Router,
+    pool: &PgPool,
+    svc: &ferroehr::service::FerroEhrService,
+    wire: Option<&super::wire::Wire>,
+    counter: &Counter,
+) -> Vec<(&'static Budget, Measure)> {
+    sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
+        .execute(pool)
+        .await
+        .expect("pg_stat_statements: the server loads it (shared_preload_libraries)");
+    sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_walinspect")
+        .execute(pool)
+        .await
+        .expect("pg_walinspect: a contrib module the server ships");
+    super::wal::kept(pool).await;
+    let world = World::build(app).await;
+    let mut measured = Vec::with_capacity(BUDGETS.len());
+    for budget in &BUDGETS {
+        let path = budget.path;
+        if path == Path::ReadVersion {
+            world.judge_on_objects(app, svc).await;
+        }
+        if path == Path::CommitDelete {
+            world.deletable(app).await;
+        }
+        let m = Box::pin(measure(app, pool, wire, &world, counter, path)).await;
+        measured.push((budget, m));
+    }
+    measured
 }
 
 /// Every hot path stays within its budget, and the report names what each
@@ -1388,31 +1511,15 @@ async fn every_hot_path_stays_within_its_budget() {
     // The budgets count what a release build does, without the debug reference cells.
     ferroehr::aql::sql::without_reference_cells();
     let (_db, pool, svc, app) = Box::pin(super::served()).await;
-    sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
-        .execute(&pool)
-        .await
-        .expect("pg_stat_statements: the server loads it (shared_preload_libraries)");
-    sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_walinspect")
-        .execute(&pool)
-        .await
-        .expect("pg_walinspect: a contrib module the server ships");
-    super::wal::kept(&pool).await;
-    let world = World::build(&app).await;
+    let measured = Box::pin(measure_all(&app, &pool, &svc, None, &counter)).await;
     let mut report = String::from(
         "path | conversions | audit renders | allocations | alloc KiB | peak KiB | round trips | nested | WAL B\n",
     );
     let mut ledger = String::new();
     let mut statements = String::new();
     let mut over = Vec::new();
-    for budget in &BUDGETS {
+    for (budget, m) in &measured {
         let path = budget.path;
-        if path == Path::ReadVersion {
-            world.judge_on_objects(&app, &svc).await;
-        }
-        if path == Path::CommitDelete {
-            world.deletable(&app).await;
-        }
-        let m = Box::pin(measure(&app, &pool, &world, &counter, path)).await;
         let allocations = m.median(|a| a.count);
         let kib = m.median(|a| a.bytes).div_euclid(1024);
         let peak = m.median(|a| u64::try_from(a.peak.max(0)).unwrap());
@@ -1467,4 +1574,57 @@ async fn every_hot_path_stays_within_its_budget() {
         "a hot path exceeds its budget: {over:?}\n{report}\n{ledger}\n{statements}"
     );
     assert_eq!(BUDGETS.len(), Path::ALL.len(), "every path has its budget");
+}
+
+/// Every hot path stays within the bytes its budget allows it over the
+/// database wire, both directions together (#6244), and the report names
+/// what each statement moved.
+///
+/// The server reaches the database through a [`super::wire::Wire`] relay,
+/// which delays every exchange a little and so moves how a request's buffers
+/// grow: its other figures are judged by
+/// [`every_hot_path_stays_within_its_budget`], over a direct connection.
+#[tokio::test]
+async fn every_hot_path_stays_within_its_wire_budget() {
+    let counter = Counter::default();
+    let _guard =
+        tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
+    ferroehr::aql::sql::without_reference_cells();
+    let (_db, pool, svc, app, wire) = Box::pin(super::wired()).await;
+    let measured = Box::pin(measure_all(&app, &pool, &svc, Some(&wire), &counter)).await;
+    let mut report = String::from("path | wire B | sent B | received B\n");
+    let mut ledgers = String::new();
+    let mut over = Vec::new();
+    for (budget, m) in &measured {
+        let path = budget.path;
+        let ceiling = WIRE_BUDGETS
+            .iter()
+            .find(|(of, _)| *of == path)
+            .map(|(_, ceiling)| *ceiling)
+            .expect("every path has its wire budget");
+        let (ok, cell) = judged(median(&m.wire_each), ceiling);
+        if !ok {
+            over.push(format!("{}: wire bytes {cell}", path.name()));
+        }
+        let total = m.wire.total();
+        writeln!(
+            report,
+            "{} | {cell} | {} | {}",
+            path.name(),
+            total.sent.div_euclid(REQUESTS),
+            total.received.div_euclid(REQUESTS),
+        )
+        .unwrap();
+        writeln!(ledgers, "{}: {}", path.name(), wire_ledger(m)).unwrap();
+    }
+    eprintln!("{report}\n{ledgers}");
+    assert!(
+        over.is_empty(),
+        "a hot path exceeds its wire budget: {over:?}\n{report}\n{ledgers}"
+    );
+    assert_eq!(
+        WIRE_BUDGETS.len(),
+        Path::ALL.len(),
+        "every path has its wire budget"
+    );
 }

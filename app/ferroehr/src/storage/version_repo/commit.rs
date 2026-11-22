@@ -152,7 +152,7 @@ pub struct FoldedVersion<'a> {
     pub rows: &'a [crate::storage::render::nodes::StoredNode],
     /// The external blob URIs the body references
     /// ([`crate::storage::render::blob_uris`]).
-    pub blob_uris: Vec<String>,
+    pub blob_uris: &'a [String],
     /// SHA-256 over the canonical body with the root `uid` removed
     /// (`version.content_digest`); `None` on a logical delete.
     pub content_digest: Option<&'a [u8]>,
@@ -177,7 +177,8 @@ pub struct FoldedVersion<'a> {
 /// template (#5782).
 ///
 /// `{branch}`, `{ordinal}`, `{lifecycle}`, `{template}` and `{archetype}` are the caller's
-/// parameter placeholders; `FROM v` orders this CTE after the version insert.
+/// parameter placeholders; `FROM {version}` orders this CTE after the version
+/// insert.
 ///
 /// The update is MONOTONIC: it applies only when the committing version's
 /// ordinal is greater than the one the head already records, and a trunk commit
@@ -186,30 +187,32 @@ pub struct FoldedVersion<'a> {
 /// under that lock it always is; the guard is what keeps a replayed or
 /// out-of-order statement from walking the head backwards, which would make an
 /// older version read as current.
-struct HeadUpsert<'a> {
+pub(super) struct HeadUpsert<'a> {
     /// The versioned object's id.
-    vo: &'a str,
+    pub(super) vo: &'a str,
     /// The versioned object's RM type.
-    kind: &'a str,
+    pub(super) kind: &'a str,
     /// The owning EHR, `NULL` for a party.
-    ehr: &'a str,
+    pub(super) ehr: &'a str,
     /// The new version's `sys_version`.
-    ordinal: &'a str,
+    pub(super) ordinal: &'a str,
     /// The new version's `branch_number`; `0` is a trunk commit.
-    branch: &'a str,
+    pub(super) branch: &'a str,
     /// The new version's `lifecycle_state`.
-    lifecycle: &'a str,
+    pub(super) lifecycle: &'a str,
     /// The template the new version was validated against.
-    template: &'a str,
+    pub(super) template: &'a str,
     /// The root archetype of the new version's content.
-    archetype: &'a str,
+    pub(super) archetype: &'a str,
     /// The commit instant.
-    committed_at: &'a str,
+    pub(super) committed_at: &'a str,
+    /// The CTE that inserted the version row, which orders this one after it.
+    pub(super) version: &'a str,
 }
 
 impl HeadUpsert<'_> {
     /// Render the CTE body with this statement's placeholders substituted.
-    fn sql(&self) -> String {
+    pub(super) fn sql(&self) -> String {
         let Self {
             vo,
             kind,
@@ -220,6 +223,7 @@ impl HeadUpsert<'_> {
             template,
             archetype,
             committed_at,
+            version,
         } = *self;
         format!(
             "INSERT INTO vo_head (vo_id, kind, ehr_id, head_sys_version, \
@@ -227,9 +231,9 @@ impl HeadUpsert<'_> {
              root_archetype, committed_at) \
          SELECT {vo}, {kind}, {ehr}, {ordinal}, \
                 CASE WHEN {branch} = 0 THEN {ordinal} ELSE NULL END, \
-                CASE WHEN {branch} = 0 THEN v.content_key ELSE NULL END, \
+                CASE WHEN {branch} = 0 THEN {version}.content_key ELSE NULL END, \
                 {lifecycle}, {template}, {archetype}, {committed_at}::timestamptz \
-         FROM v \
+         FROM {version} \
          ON CONFLICT (vo_id) DO UPDATE SET \
              head_sys_version = EXCLUDED.head_sys_version, \
              committed_at = EXCLUDED.committed_at, \
@@ -287,7 +291,7 @@ pub enum Folded<'a> {
         version: FoldedVersion<'a>,
     },
     /// A [`Folded::Standalone`] COMPOSITION write that writes nothing unless
-    /// what its gate read judged still holds ([`Guard`]), with its event
+    /// what its gate read judged still holds ([`super::guarded::Guard`]), with its event
     /// outbox row in the same statement (#6256).
     Guarded {
         /// The CONTRIBUTION uid.
@@ -295,55 +299,8 @@ pub enum Folded<'a> {
         /// The version, its head upsert and its node rows.
         version: FoldedVersion<'a>,
         /// What the gate read judged.
-        guard: Guard,
+        guard: super::guarded::Guard,
     },
-}
-
-/// What a guarded commit ([`Folded::Guarded`]) still requires when it runs:
-/// the facts its gate read judged the write on.
-#[derive(Debug, Clone)]
-pub struct Guard {
-    /// The object's head ordinal the write was placed after (`None` for a
-    /// create, whose object has no head yet).
-    pub expected_head: Option<i32>,
-    /// The policy revision the gate read returned.
-    pub policy: Option<i64>,
-    /// The definition revision the gate read returned.
-    pub definitions: Option<i64>,
-    /// The event outbox envelope, when eventing is enabled.
-    pub outbox: Option<Value>,
-}
-
-/// Which of a guarded commit's requirements held when it ran, and the
-/// policy and definition revisions it read; written nothing unless all held.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "each flag is one requirement of the guarded statement, read off its result row"
-)]
-pub struct GuardFlags {
-    /// The EHR still exists, is modifiable and is not restricted.
-    pub ehr: bool,
-    /// The object's head is still the one the write was placed after.
-    pub tip: bool,
-    /// The object still carries no restriction mark of its own.
-    pub mark: bool,
-    /// The policy and definition revisions are still those judged on.
-    pub policy: bool,
-    /// The write's commit instant is not earlier than the head's.
-    pub order: bool,
-    /// The policy revision the statement read.
-    pub policy_now: Option<i64>,
-    /// The definition revision the statement read.
-    pub definitions_now: Option<i64>,
-}
-
-impl GuardFlags {
-    /// Whether every requirement held.
-    #[must_use]
-    pub fn held(&self) -> bool {
-        self.ehr && self.tip && self.mark && self.policy && self.order
-    }
 }
 
 /// The rows one folded commit wrote.
@@ -378,7 +335,7 @@ enum Shape {
 /// so one binder serves all three.
 fn folded_statement(shape: Shape) -> String {
     if matches!(shape, Shape::Guarded) {
-        return guarded_statement();
+        return super::guarded::statement();
     }
     let contribution = matches!(shape, Shape::Contribution | Shape::Standalone);
     let version = matches!(shape, Shape::Standalone | Shape::Into);
@@ -400,35 +357,7 @@ fn folded_statement(shape: Shape) -> String {
         } else {
             ("$6", "a")
         };
-        format!(
-            ", v AS ( \
-                 INSERT INTO version \
-                   (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
-                    lifecycle_state, creating_system_id, preceding_version_uid, \
-                    contribution_id, commit_audit_id, template_id, signature, \
-                    signature_client_supplied, stable_compatible, body, origins, committed_at, \
-                    other_input_version_uids, content_digest, content_sys_version) \
-                 SELECT $8, $9, $7, $10, $11, $12, $13, \
-                        $14, $15, $16, {contribution_id}, a.id, $17, $18, $19, $20, $21, $23, \
-                        $22::timestamptz, $24, $25, $26 \
-                 FROM {from} \
-                 RETURNING content_key \
-             ), h AS ( {} \
-             ), n AS ( {} )",
-            HeadUpsert {
-                vo: "$8",
-                kind: "$9",
-                ehr: "$7",
-                ordinal: "$10",
-                branch: "$12",
-                lifecycle: "$14",
-                template: "$17",
-                archetype: "$27",
-                committed_at: "$22",
-            }
-            .sql(),
-            crate::storage::node_write::node_insert_cte("$8", "$10", "$7", 28)
-        )
+        version_ctes("", ("$7", contribution_id, "a.id", from), 8, 28)
     } else {
         String::new()
     };
@@ -447,94 +376,88 @@ fn folded_statement(shape: Shape) -> String {
     )
 }
 
-/// The statement text of [`Folded::Guarded`].
-///
-/// The parameters of [`Folded::Standalone`] up to `$27`, then `$28` the
-/// expected head ordinal, `$29` the policy revision, `$30` the definition
-/// revision and `$31` the outbox envelope, and the node arrays from `$32`.
-/// The leading CTEs read what the gate read judged: the EHR row under `FOR
-/// SHARE` (the lock a concurrent `EHR_STATUS` flip waits on), the object's
-/// head row and the policy and definition revisions. The audit insert reads
-/// from `g`, which holds a row only when every requirement still holds, and
-/// every later insert reads from the audit's, so nothing is written
-/// otherwise. The last row names each requirement's flag.
-fn guarded_statement() -> String {
+/// The columns a version insert names, in the order every folded statement
+/// binds them.
+const VERSION_COLUMNS: &str = "vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, \
+     branch_version, lifecycle_state, creating_system_id, preceding_version_uid, contribution_id, \
+     commit_audit_id, template_id, signature, signature_client_supplied, stable_compatible, body, \
+     origins, committed_at, other_input_version_uids, content_digest, content_sys_version";
+
+/// The version-row, head-upsert and node CTEs of one version, named `v`, `h`
+/// and `n` with `suffix`: the version's twenty parameters start at `first`
+/// in the order [`bind_version`] binds them, its node arrays at `nodes`, and
+/// `(ehr, contribution, audit, from)` name the owning EHR, the CONTRIBUTION
+/// and audit ids and the CTEs the version row is selected from.
+pub(super) fn version_ctes(
+    suffix: &str,
+    (ehr, contribution, audit, from): (&str, &str, &str, &str),
+    first: usize,
+    nodes: usize,
+) -> String {
+    let p = |offset: usize| format!("${}", first + offset);
+    let list = |offsets: &[usize]| {
+        offsets
+            .iter()
+            .map(|offset| p(*offset))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let version = format!("v{suffix}");
     format!(
-        "WITH e AS ( \
-             SELECT COALESCE(x.is_modifiable, true) AS modifiable, \
-                    x.restricted_at IS NOT NULL AS restricted \
-             FROM ehr x WHERE x.id = $7 FOR SHARE \
-         ), t AS ( \
-             SELECT h.head_sys_version, h.restricted_at IS NOT NULL AS restricted, h.committed_at \
-             FROM vo_head h WHERE h.vo_id = $8 \
-         ), p AS ( \
-             SELECT rr.policy, rr.definitions FROM request_revisions rr \
-         ), k AS ( \
-             SELECT COALESCE((SELECT e.modifiable AND NOT e.restricted FROM e), false) AS ehr_held, \
-                    (SELECT t.head_sys_version FROM t) IS NOT DISTINCT FROM $28::int AS tip_held, \
-                    NOT COALESCE((SELECT t.restricted FROM t), false) AS mark_held, \
-                    (SELECT p.policy FROM p) IS NOT DISTINCT FROM $29::bigint \
-                      AND (SELECT p.definitions FROM p) IS NOT DISTINCT FROM $30::bigint \
-                      AS policy_held, \
-                    COALESCE((SELECT t.committed_at <= $22::timestamptz FROM t), true) AS order_held, \
-                    (SELECT p.policy FROM p) AS policy_now, \
-                    (SELECT p.definitions FROM p) AS definitions_now \
-         ), g AS ( \
-             SELECT 1 AS held FROM k \
-             WHERE k.ehr_held AND k.tip_held AND k.mark_held AND k.policy_held AND k.order_held \
-         ), a AS ( \
-             INSERT INTO commit_audit (system_id, change_type, description, committer, \
-                                       attestation, time_committed) \
-             SELECT $1, $2, $3::jsonb, $4::jsonb, $5, $22::timestamptz FROM g \
-             RETURNING id, time_committed \
-         ), c AS ( \
-             INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-             SELECT $6, $7, a.id FROM a \
-             ON CONFLICT (id) DO NOTHING \
-             RETURNING id \
-         ), v AS ( \
-             INSERT INTO version \
-               (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
-                lifecycle_state, creating_system_id, preceding_version_uid, \
-                contribution_id, commit_audit_id, template_id, signature, \
-                signature_client_supplied, stable_compatible, body, origins, committed_at, \
-                other_input_version_uids, content_digest, content_sys_version) \
-             SELECT $8, $9, $7, $10, $11, $12, $13, \
-                    $14, $15, $16, c.id, a.id, $17, $18, $19, $20, $21, $23, \
-                    $22::timestamptz, $24, $25, $26 \
-             FROM a, c \
-             RETURNING content_key \
-         ), h AS ( {} \
-         ), n AS ( {} \
-         ), o AS ( \
-             INSERT INTO event_outbox (contribution_id, ehr_id, envelope, committed_at) \
-             SELECT $6, $7, $31::jsonb, $22::timestamptz \
-             FROM (SELECT pg_advisory_xact_lock_shared( \
-                       hashtext(current_schema() || '.event_outbox'), 0) \
-                   FROM v WHERE $31::jsonb IS NOT NULL) l \
-             WHERE NOT EXISTS (SELECT 1 FROM ehr m WHERE m.id = $7 \
-                 AND (m.restricted_at IS NOT NULL \
-                      OR (m.research_objected_at IS NOT NULL \
-                          AND m.research_objection_ground IS NULL))) \
-         ) \
-         SELECT k.ehr_held, k.tip_held, k.mark_held, k.policy_held, k.order_held, \
-                k.policy_now, k.definitions_now, \
-                a.id AS commit_audit_id, a.time_committed, c.id AS contribution_id \
-         FROM k LEFT JOIN a ON true LEFT JOIN c ON true",
+        ", {version} AS ( \
+             INSERT INTO version ({VERSION_COLUMNS}) \
+             SELECT {}, {ehr}, {}, {contribution}, {audit}, {}, {}::timestamptz, {} \
+             FROM {from} RETURNING content_key \
+         ), h{suffix} AS ( {} \
+         ), n{suffix} AS ( {} )",
+        list(&[0, 1]),
+        list(&[2, 3, 4, 5, 6, 7, 8]),
+        list(&[9, 10, 11, 12, 13, 15]),
+        p(14),
+        list(&[16, 17, 18]),
         HeadUpsert {
-            vo: "$8",
-            kind: "$9",
-            ehr: "$7",
-            ordinal: "$10",
-            branch: "$12",
-            lifecycle: "$14",
-            template: "$17",
-            archetype: "$27",
-            committed_at: "$22",
+            vo: &p(0),
+            kind: &p(1),
+            ehr,
+            ordinal: &p(2),
+            branch: &p(4),
+            lifecycle: &p(6),
+            template: &p(9),
+            archetype: &p(19),
+            committed_at: &p(14),
+            version: &version,
         }
         .sql(),
-        crate::storage::node_write::node_insert_cte("$8", "$10", "$7", 32)
+        crate::storage::node_write::node_insert_cte((&p(0), &p(2), ehr), &version, nodes)
     )
+}
+
+/// Bind the twenty parameters of `v` that [`version_ctes`] reads.
+pub(super) fn bind_version<'q>(
+    query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    v: &FoldedVersion<'q>,
+) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    query
+        .bind(v.vo_id)
+        .bind(v.kind)
+        .bind(v.sys_version)
+        .bind(v.trunk_version)
+        .bind(v.branch_number)
+        .bind(v.branch_version)
+        .bind(v.lifecycle_state)
+        .bind(v.creating_system_id)
+        .bind(v.preceding_version_uid)
+        .bind(v.template_id)
+        .bind(v.signature)
+        .bind(v.signature_client_supplied)
+        .bind(v.stable_compatible)
+        .bind(v.body)
+        .bind(v.time_committed.to_string())
+        .bind(serde_json::json!(v.origins))
+        .bind(super::optional_json_array(v.other_input_version_uids))
+        .bind(v.content_digest)
+        .bind(v.content_sys_version)
+        .bind(v.root_archetype)
 }
 
 /// Run one folded commit statement ([`Folded`]), returning the rows it wrote.
@@ -586,27 +509,7 @@ pub async fn commit_folded(
     let (row, blobs) = match version {
         None => (query.fetch_one(&mut *tx).await?, None),
         Some(v) => {
-            let query = query
-                .bind(v.vo_id)
-                .bind(v.kind)
-                .bind(v.sys_version)
-                .bind(v.trunk_version)
-                .bind(v.branch_number)
-                .bind(v.branch_version)
-                .bind(v.lifecycle_state)
-                .bind(v.creating_system_id)
-                .bind(v.preceding_version_uid)
-                .bind(v.template_id)
-                .bind(v.signature)
-                .bind(v.signature_client_supplied)
-                .bind(v.stable_compatible)
-                .bind(v.body)
-                .bind(v.time_committed.to_string())
-                .bind(serde_json::json!(v.origins))
-                .bind(super::optional_json_array(v.other_input_version_uids))
-                .bind(v.content_digest)
-                .bind(v.content_sys_version)
-                .bind(v.root_archetype);
+            let query = bind_version(query, &v);
             let query = match &guard {
                 Some(guard) => query
                     .bind(guard.expected_head)
@@ -625,18 +528,7 @@ pub async fn commit_folded(
         }
     };
     if guard.is_some() {
-        let flags = GuardFlags {
-            ehr: row.try_get("ehr_held")?,
-            tip: row.try_get("tip_held")?,
-            mark: row.try_get("mark_held")?,
-            policy: row.try_get("policy_held")?,
-            order: row.try_get("order_held")?,
-            policy_now: row.try_get("policy_now")?,
-            definitions_now: row.try_get("definitions_now")?,
-        };
-        if !flags.held() {
-            return Err(StorageError::GuardMoved(flags));
-        }
+        super::guarded::GuardFlags::read(&row)?.require()?;
     }
     let contribution_id: Option<Uuid> = row.try_get("contribution_id")?;
     let rows = FoldedRows {
@@ -647,7 +539,7 @@ pub async fn commit_folded(
             .to_jiff(),
     };
     if let Some((vo_id, sys_version, uris)) = blobs {
-        crate::storage::blob_ref::record_uris(tx, vo_id, sys_version, &uris).await?;
+        crate::storage::blob_ref::record_uris(tx, vo_id, sys_version, uris).await?;
     }
     Ok(rows)
 }

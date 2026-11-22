@@ -44,6 +44,7 @@ pub mod query;
 pub mod terminology;
 
 pub(crate) mod contribution;
+mod contribution_set;
 pub(crate) mod datetime;
 pub mod list;
 pub mod observed;

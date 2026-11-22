@@ -260,9 +260,10 @@ impl FerroEhrService {
         tx: Option<&mut sqlx::PgConnection>,
         versions: &[crate::versioning::change::Committed],
     ) -> Vec<crate::system_log::categories::ContentIds> {
-        let (deleted, written): (Vec<_>, Vec<_>) = versions
-            .iter()
-            .partition(|v| v.change_type == crate::versioning::audit::change_type::DELETED);
+        // A delete whose gate read found what it deleted is classified by that.
+        let (deleted, written): (Vec<_>, Vec<_>) = versions.iter().partition(|v| {
+            v.change_type == crate::versioning::audit::change_type::DELETED && v.deleted.is_none()
+        });
         let mut ids: Vec<_> = written
             .into_iter()
             .filter_map(crate::versioning::change::Committed::content_ids)
