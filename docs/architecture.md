@@ -253,8 +253,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   policy and definition revisions, the database `now()` the commit stamps, and
   per target object its trunk tip, next ordinal and restriction mark, with the
   stored template and first root of an update, the content identity of the
-  version a delete deletes, which its access record is classified by, and
-  whether a persistent create has a live sibling of its template.
+  version a delete deletes, which its access record is classified by, the
+  template of the version a delete addresses, in whichever EHR it lives,
+  which its SMART `composition-` scope is judged on before any other
+  pre-check (#6271), and whether a persistent create has a live sibling of
+  its template. The party store's revisions stay a read of their own on the
+  party pool (#6048): the party domain may live in another database or
+  cluster, and the clinical role reads no party schema, so no clinical
+  statement can carry them (#6271).
   The commit is then one guarded statement (`Folded::Guarded`): leading CTEs
   read the EHR row `FOR SHARE`, the object's head row and the policy and
   definition revisions, and the audit insert, which every later insert reads

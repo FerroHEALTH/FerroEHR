@@ -24,6 +24,7 @@ use std::time::Duration;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::ehr::scope::Unscoped;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::versioning::change::Committed;
 use openehr_base::prelude::ObjectVersionId;
@@ -185,7 +186,7 @@ async fn a_delete_of_a_version_an_update_superseded_is_409() {
     let deleting = {
         let svc = Arc::clone(&svc);
         tokio::spawn(async move {
-            Box::pin(svc.delete_composition(ehr, &latest, WriteRequest::new(()))).await
+            Box::pin(svc.delete_composition(ehr, &latest, WriteRequest::new(()), &Unscoped)).await
         })
     };
     settle().await;
@@ -216,7 +217,8 @@ async fn two_deletes_of_one_version_one_wins_the_other_finds_it_deleted() {
             let svc = Arc::clone(&svc);
             let latest = latest.clone();
             tokio::spawn(async move {
-                Box::pin(svc.delete_composition(ehr, &latest, WriteRequest::new(()))).await
+                Box::pin(svc.delete_composition(ehr, &latest, WriteRequest::new(()), &Unscoped))
+                    .await
             })
         })
         .collect();

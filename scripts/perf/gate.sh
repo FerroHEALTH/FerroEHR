@@ -228,7 +228,6 @@ up() {
     -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml
     -e "FERROEHR__DATABASE__URL=postgres://ferroehr:${PG_SECRET}@${pg}:5432/ferroehr"
     -e FERROEHR__USAGE_REPORT__ENABLED=false
-    -e FERROEHR__TELEMETRY__FILTER=warn
     -v "$tree/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
     -v "$tree/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
     -v "$tree/deploy/definitions/professional:/etc/ferroehr/definitions:ro"

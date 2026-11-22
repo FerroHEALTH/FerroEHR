@@ -68,6 +68,10 @@ pub struct Ask<'a> {
     /// The persistent COMPOSITION a create commits, whose live sibling of
     /// the same template the create is refused by; `None` reads no sibling.
     pub persistent: Option<Persistent<'a>>,
+    /// The `(trunk_version, branch_number, branch_version)` of the version a
+    /// delete addresses, whose template its SMART scope is judged on
+    /// ([`Shape::Delete`]); `None` reads none.
+    pub addressed: Option<(i32, i32, i32)>,
 }
 
 /// What names a live persistent sibling of a created COMPOSITION.
@@ -125,12 +129,17 @@ pub struct Target {
     /// The tip's content identity ([`Shape::Delete`]); `None` for a tip that
     /// holds no content.
     pub content: Option<ServedContent>,
+    /// The template of the version [`Ask::addressed`] names, in whichever
+    /// EHR it lives ([`Shape::Delete`]); `None` when no such version exists
+    /// or it names no template.
+    pub addressed_template: Option<String>,
 }
 
 /// The statement text of `shape`.
 ///
 /// `$1` the EHR, `$2` the targets, `$3` the persistent template, `$4` the
-/// persistent category code and `$5` the deleted lifecycle state.
+/// persistent category code, `$5` the deleted lifecycle state and `$6` to
+/// `$8` the tree id of the version a delete addresses.
 fn statement(shape: Shape) -> String {
     let update = if shape.updates() {
         concat!(
@@ -163,6 +172,17 @@ fn statement(shape: Shape) -> String {
     };
     let delete = if shape.deletes() {
         ", tip.has_body, tip.template_id AS content_template, dc.archetype AS content_archetype"
+    } else {
+        ""
+    };
+    // The template the SMART pre-check read on its own before (#6271), by the
+    // addressed version's tree id and in no EHR, as `meta::template_id_of`.
+    let addressed = if shape == Shape::Delete {
+        concat!(
+            ", (SELECT a.template_id FROM version a WHERE a.vo_id = t.vo_id ",
+            "   AND a.trunk_version = $6 AND a.branch_number = $7 AND a.branch_version = $8) ",
+            "  AS addressed_template"
+        )
     } else {
         ""
     };
@@ -204,7 +224,7 @@ fn statement(shape: Shape) -> String {
             "tip.ehr_id, tip.kind, tip.sys_version, tip.trunk_version, tip.branch_number, ",
             "tip.branch_version, tip.creating_system_id, tip.lifecycle_state, ",
             "tip.committed_at AS tip_committed_at, tip.content_digest, tip.content_key, ",
-            "true AS open{}{} ",
+            "true AS open{}{}{} ",
             "FROM (VALUES (1)) AS one (x) ",
             "LEFT JOIN ehr e ON e.id = $1 ",
             "LEFT JOIN LATERAL unnest($2::uuid[]) WITH ORDINALITY AS t (vo_id, ord) ON true ",
@@ -220,7 +240,7 @@ fn statement(shape: Shape) -> String {
             ") tip ON true{}{} ",
             "ORDER BY t.ord"
         ),
-        update, delete, update_join, delete_join
+        update, delete, addressed, update_join, delete_join
     )
 }
 
@@ -246,6 +266,9 @@ pub async fn read(conn: &mut PgConnection, ask: Ask<'_>) -> Result<Gate, Storage
         .bind(ask.persistent.map(|p| p.template_id))
         .bind(ask.persistent.map(|p| p.category_code))
         .bind(ask.persistent.map(|p| p.deleted_state))
+        .bind(ask.addressed.map(|(trunk, _, _)| trunk))
+        .bind(ask.addressed.map(|(_, branch, _)| branch))
+        .bind(ask.addressed.map(|(_, _, version)| version))
         .fetch_all(&mut *conn)
         .await?;
     let first = rows
@@ -303,6 +326,11 @@ fn target(
         }
         _ => None,
     };
+    let addressed_template = if shape == Shape::Delete {
+        row.try_get("addressed_template")?
+    } else {
+        None
+    };
     Ok(Target {
         vo_id,
         placement: Placement {
@@ -315,6 +343,7 @@ fn target(
         stored_template,
         first_root,
         content,
+        addressed_template,
     })
 }
 

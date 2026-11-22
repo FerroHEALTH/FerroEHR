@@ -9,6 +9,7 @@
 //! metadata (`.meta`, from which the HTTP edge derives `ETag`/`Location`).
 
 use ferroehr::service::ehr::object::EhrObject;
+use ferroehr::service::ehr::scope::Unscoped;
 use serde_json::{Value, json};
 
 use openehr_base::prelude::ObjectVersionId;
@@ -248,7 +249,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     // A stale preceding_version_uid (v1, but latest is v2) → 409 Conflict.
     let comp_ovid_v1_id: ObjectVersionId = comp_ovid_v1.parse().expect("ovid");
     let stale_delete = svc
-        .delete_composition(ehr_uuid, &comp_ovid_v1_id, WriteRequest::new(()))
+        .delete_composition(ehr_uuid, &comp_ovid_v1_id, WriteRequest::new(()), &Unscoped)
         .await;
     assert!(
         matches!(stale_delete, Err(ServiceError::Conflict(_))),
@@ -269,6 +270,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
             ehr_uuid,
             &comp_ovid_v2_path,
             crate::fixtures::deleting(Some(&comp_ovid_v1_id).cloned()),
+            &Unscoped,
         )
         .await;
     assert!(
@@ -297,7 +299,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     let fabricated_id: ObjectVersionId = fabricated.parse().expect("ovid");
     assert!(
         matches!(
-            svc.delete_composition(ehr_uuid, &fabricated_id, WriteRequest::new(()))
+            svc.delete_composition(ehr_uuid, &fabricated_id, WriteRequest::new(()), &Unscoped)
                 .await,
             Err(ServiceError::Conflict(_))
         ),
@@ -322,7 +324,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     };
     let comp_ovid_v2_id: ObjectVersionId = case_variant.parse().expect("ovid");
     let deleted = svc
-        .delete_composition(ehr_uuid, &comp_ovid_v2_id, WriteRequest::new(()))
+        .delete_composition(ehr_uuid, &comp_ovid_v2_id, WriteRequest::new(()), &Unscoped)
         .await
         .expect("composition_delete (case-variant creating_system_id)")
         .version_uid();
@@ -343,7 +345,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     // Re-deleting an already-deleted composition → 400 (400_already_deleted).
     assert!(
         matches!(
-            svc.delete_composition(ehr_uuid, &comp_ovid_v2_id, WriteRequest::new(()))
+            svc.delete_composition(ehr_uuid, &comp_ovid_v2_id, WriteRequest::new(()), &Unscoped)
                 .await,
             Err(ServiceError::BadRequest(_))
         ),
@@ -488,7 +490,7 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
 
     let comp_ovid_id: ObjectVersionId = comp_ovid.parse().expect("ovid");
     let delete = svc
-        .delete_composition(ehr_uuid, &comp_ovid_id, WriteRequest::new(()))
+        .delete_composition(ehr_uuid, &comp_ovid_id, WriteRequest::new(()), &Unscoped)
         .await;
     assert!(
         comp_blocked(&delete),

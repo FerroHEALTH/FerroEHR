@@ -22,6 +22,7 @@
 // `float_cmp`: the magnitudes are exact whole numbers seeded by the test and
 // round-tripped losslessly, so exact comparison is intended.
 
+use ferroehr::service::ehr::scope::Unscoped;
 use ferroehr::service::version_update::WriteRequest;
 use std::collections::BTreeMap;
 
@@ -3305,6 +3306,7 @@ async fn deleted_compositions_stay_out_of_unscoped_streaming_queries() {
         ferroehr::ids::EhrId(ehr_id.parse().expect("ehr_id uuid")),
         &doomed.parse().expect("ovid"),
         WriteRequest::new(()),
+        &Unscoped,
     )
     .await
     .expect("delete_composition");
@@ -4057,6 +4059,7 @@ async fn or_branch_compositions_are_projected() {
         ehr_uuid,
         &referral.parse().expect("ovid"),
         WriteRequest::new(()),
+        &Unscoped,
     )
     .await
     .expect("delete_composition");

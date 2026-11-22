@@ -13,6 +13,7 @@ use crate::committer_binding::service;
 use crate::fixtures::{attestation_by, ckm_example, deleting};
 use ferroehr::error::ServiceError;
 use ferroehr::service::demographic::types::PartyKind;
+use ferroehr::service::ehr::scope::Unscoped;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::versioning::committer::external::ExternalProfessional;
 use ferroehr::versioning::committer::{CommitterIdentity, ExternalCaller, with_committer};
@@ -164,7 +165,7 @@ async fn an_external_person_commits_only_a_listed_template_and_an_organisation_n
     forbidden(
         with_committer(
             Some(person.clone()),
-            Box::pin(svc.delete_composition(ehr, &uid, deleting(Some(uid.clone())))),
+            Box::pin(svc.delete_composition(ehr, &uid, deleting(Some(uid.clone())), &Unscoped)),
         )
         .await,
     );

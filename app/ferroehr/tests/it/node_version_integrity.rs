@@ -17,6 +17,7 @@ use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::integrity::{StorageDomain, StorageParityDefect};
 use ferroehr::service::demographic::types::PartyKind;
+use ferroehr::service::ehr::scope::Unscoped;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::storage::integrity::StorageParityScope;
 use ferrohealth_secret::secret_url::SecretUrl;
@@ -143,6 +144,7 @@ async fn seeded(svc: &FerroEhrService) -> (EhrId, EhrId, EhrId, ferroehr::ids::V
             target,
             &doomed.version_uid().parse().expect("a version uid"),
             WriteRequest::new(()),
+            &Unscoped,
         )
         .await
         .expect("logical delete");

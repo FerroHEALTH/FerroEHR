@@ -333,6 +333,10 @@ struct Budget {
 /// where it sent 8, and 39, 45, 38, 45 and 44 fewer allocations on the JSON,
 /// XML and FLAT commits, the update and the delete, measured beside the merge
 /// base; each of those ceilings fell by its path's figure.
+/// A COMPOSITION delete has since judged its SMART scope on the template its
+/// gate read returns (#6271): 4 round trips where it sent 5, and 1,514
+/// allocations where it made 1,533, measured twice beside the merge base, and
+/// both ceilings fell by those figures.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
@@ -526,9 +530,9 @@ const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitDelete,
         conversions: 2,
-        allocations: 1571,
+        allocations: 1552,
         peak_bytes: 150_537,
-        round_trips: 5,
+        round_trips: 4,
         nested: 4,
         wal: 5267,
     },
