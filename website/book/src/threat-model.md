@@ -312,9 +312,11 @@ and FHIR R4 `AuditEvent`/BALP) into a local Audit Record Repository, on by
 default, with optional syslog and ATX:FHIR-Feed forwarding. Refusals (`401`,
 `403`, and the `400` a malformed credential header earns) are always recorded,
 and an unattributable denial is recorded as unattributed rather than under a
-fabricated subject. Records are **hash-chained**, so
-`SELECT * FROM audit.verify_audit_chain()` names any record that was altered
-or removed, and the server runs that verification itself on a schedule
+fabricated subject. System records are **hash-chained** and access-log
+entries are **sealed** in signed windows, so `SELECT * FROM
+audit.verify_audit_chain()` and `ferroehr access-log verify` name any record
+that was altered or removed, and the server runs that verification itself on a
+schedule
 ([tamper evidence](audit.md#tamper-evidence)). ITI-81 is the retrieval side; ITI-19 mutual TLS is available for
 node authentication.
 

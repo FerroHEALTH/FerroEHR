@@ -56,8 +56,6 @@ enum Typed {
     Number,
     /// The text of a boolean in the canonical form, cast to compare.
     Boolean,
-    /// A `bigint` search column.
-    Integer,
     /// A `timestamptz` search column.
     Instant,
 }
@@ -98,11 +96,6 @@ const COLUMNS: &[(&[&str], &str, Typed)] = &[
         "party_id",
         Typed::Text,
     ),
-    (&["link", "sequence"], "chain_seq", Typed::Integer),
-    (&["link", "algorithm"], "algorithm", Typed::Text),
-    (&["link", "previous_digest"], "previous_digest", Typed::Text),
-    (&["link", "content_digest"], "content_digest", Typed::Text),
-    (&["link", "digest"], "digest", Typed::Text),
 ];
 
 /// Where a path's values are read.
@@ -136,11 +129,9 @@ pub fn statement(
     };
     let mut select = Query::select();
     select
-        .columns(["chain_seq", "algorithm"].map(|name| (Alias::new(RECORD), Alias::new(name))))
+        .column((Alias::new(RECORD), Alias::new("chain_seq")))
         .expr(Expr::cust(crate::access_log::store::entry_parts!()))
-        .expr_as(column("previous_digest"), Alias::new("previous_digest"))
         .expr_as(column("content_digest"), Alias::new("content_digest"))
-        .expr_as(column("digest"), Alias::new("digest"))
         .from_as(
             (Alias::new("audit"), Alias::new("access_log_record")),
             Alias::new(RECORD),
@@ -197,9 +188,7 @@ pub fn statement(
 /// them as bytes and a uuid (#5714).
 fn column(name: &str) -> Expr {
     match name {
-        "previous_digest" | "content_digest" | "digest" => {
-            Expr::cust(format!("encode({RECORD}.{name}, 'hex')"))
-        }
+        "content_digest" => Expr::cust(format!("encode({RECORD}.{name}, 'hex')")),
         "uid" => Expr::cust(format!("{RECORD}.uid::text")),
         // NOTE: our own design (#5784), the uuid column keeps a canonical EHR id and the entry
         // keeps any other, so the id reads from the one that holds it.
@@ -272,8 +261,6 @@ impl Builder<'_> {
     fn exists(&self, path: &LogPath) -> Expr {
         match self.reach(path) {
             Reach::Withheld => truth(false),
-            // NOTE: our own design, the link is kept in columns, never in the canonical form.
-            _ if path.steps == ["link"] => truth(true),
             Reach::Column(name, _) => column(name).is_not_null(),
             Reach::Single(part, steps) => {
                 Expr::cust_with_values(format!("({part} #> $1::text[]) IS NOT NULL"), [steps])
@@ -352,11 +339,9 @@ impl Builder<'_> {
                 )
             }
             (Typed::Instant, _) => return Err(mismatch("an ISO 8601 date-time with an offset")),
-            (Typed::Integer, ParamValue::Int(number)) => (operand, Expr::val(*number)),
-            (Typed::Integer, ParamValue::Real(number)) => (operand, Expr::val(*number)),
             (Typed::Number, ParamValue::Int(number)) => (cast(operand, typed), Expr::val(*number)),
             (Typed::Number, ParamValue::Real(number)) => (cast(operand, typed), Expr::val(*number)),
-            (Typed::Integer | Typed::Number, _) => return Err(mismatch("a number")),
+            (Typed::Number, _) => return Err(mismatch("a number")),
             (Typed::Boolean, ParamValue::Bool(flag)) => (cast(operand, typed), Expr::val(*flag)),
             (Typed::Boolean, _) => return Err(mismatch("true or false")),
             (Typed::Text, ParamValue::Str(text)) => (operand, Expr::val(text.clone())),
@@ -464,7 +449,7 @@ fn cast(operand: Expr, typed: Typed) -> Expr {
     match typed {
         Typed::Number => Expr::cust_with_exprs("($1)::numeric", [operand]),
         Typed::Boolean => Expr::cust_with_exprs("($1)::boolean", [operand]),
-        Typed::Text | Typed::Integer | Typed::Instant => operand,
+        Typed::Text | Typed::Instant => operand,
     }
 }
 

@@ -67,10 +67,7 @@ fn entry() -> Value {
         "is_emergency": false,
         "retention": { "_type": "ACCESS_RETENTION",
             "retain_until": { "_type": "DV_DATE", "value": "2031-11-07" },
-            "grounds": [coded("http://data.europa.eu/eli/reg/2025/327/oj", "art_9.par_2")] },
-        "link": { "_type": "ACCESS_LOG_LINK", "sequence": 1, "algorithm": "SHA-256",
-            "previous_digest": "0".repeat(64), "content_digest": "0".repeat(64),
-            "digest": "0".repeat(64) }
+            "grounds": [coded("http://data.europa.eu/eli/reg/2025/327/oj", "art_9.par_2")] }
     })
 }
 
@@ -320,23 +317,26 @@ fn done_erasure_event(event: &Value) -> bool {
     event.to_string().contains("admin_access_log_erase") && event["outcome"] == json!("0")
 }
 
-/// The syslog frames up to and including the record of the refused second
-/// erasure, which one drain ships after every record of the first.
+/// The syslog frames until the records of the done and the refused erasure
+/// have both arrived, in either order, since the records a write holds until
+/// its commit is confirmed are delivered after the ones it does not (#6242),
+/// and then every frame that arrives within two seconds more.
 async fn frames_until_refused(syslog: &mut SyslogTlsListener) -> Vec<String> {
     let deadline = std::time::Instant::now() + Duration::from_secs(60);
-    let mut frames = Vec::new();
-    loop {
+    let mut frames: Vec<String> = Vec::new();
+    while !(frames.iter().any(|f| refused_erasure_frame(f))
+        && frames.iter().any(|f| done_erasure_frame(f)))
+    {
         let left = deadline.saturating_duration_since(std::time::Instant::now());
         let Some(frame) = syslog.recv(left).await else {
-            panic!("no syslog record of the refused erasure; frames seen: {frames:#?}");
+            panic!("no syslog record of both erasures; frames seen: {frames:#?}");
         };
-        let frame = String::from_utf8_lossy(&frame).into_owned();
-        let last = refused_erasure_frame(&frame);
-        frames.push(frame);
-        if last {
-            return frames;
-        }
+        frames.push(String::from_utf8_lossy(&frame).into_owned());
     }
+    while let Some(frame) = syslog.recv(Duration::from_secs(2)).await {
+        frames.push(String::from_utf8_lossy(&frame).into_owned());
+    }
+    frames
 }
 
 /// The `AuditEvent` documents the FHIR Feed delivered, once its outbox is

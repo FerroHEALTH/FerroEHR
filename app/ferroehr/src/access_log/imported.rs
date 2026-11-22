@@ -2,69 +2,63 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The retention and verification of the access logs imported from other
-//! systems (#5664).
+//! systems (#5664, #6242).
 //!
-//! An imported entry keeps the `retain_until` it states
-//! (`docs/plans/access-log.md` §Retention), and the retention run replaces it
-//! by its tombstone once that day has passed, as a local one is. Its
-//! tombstone is kept as long again. Within each span between two imported
-//! checkpoints of a system, the positions before the first record still kept
-//! then fold into one `access_log_imported_gap` per run that holds a
-//! tombstone, the links of other EHRs' records with them, so every kept
-//! imported record stays hash-chained to the checkpoint after it whether or
-//! not the exporter signed its links.
-//!
-//! The stored imported log verifies per imported checkpoint through
-//! [`chain::verify`], the verifier an import runs before it stores anything.
-//! No openEHR spec governs audit retention: our own design.
-
-use std::collections::BTreeMap;
+//! An imported entry keeps the `retain_until` it states, and the retention
+//! run replaces it by its tombstone once that day has passed, as a local one
+//! is; its tombstone is kept as long again and then folds, leaving its uid,
+//! bundle and content digest in `access_log_imported_folded`. Each stored
+//! bundle verifies by its records digest over its records and folded
+//! tombstones, by each entry's content digest, and by the import's own entry,
+//! which a seal of this system covers and which names the bundle's digest and
+//! records digest. No openEHR spec governs audit retention: our own design.
 
 use sqlx::{Connection, Row};
 
-use crate::access_log::chain::{self, ChainFinding, Span};
-use crate::access_log::checkpoint::{self, Checkpoints};
-use crate::access_log::gap::{ChainGap, gap};
-use crate::access_log::store::{
-    AccessLogError, AccessLogStore, canonical_form, signed_link, stored_signed, tombstone_of,
-};
+use crate::access_log::chain::{ChainFinding, records_digest};
+use crate::access_log::checkpoint::Checkpoints;
+use crate::access_log::store::{AccessLogError, AccessLogStore, canonical_form, tombstone_of};
 use crate::db::acquire::acquire;
-use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
+use crate::digest::sha256_hex;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
-use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
-use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 use openehr_rm::draft::access_log::invariants::check_tombstone;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 
-/// The imported records joined with their links, in the columns
-/// [`stored_signed`] reads.
-macro_rules! imported_records {
-    () => {
-        "SELECT r.system_id, l.sequence AS chain_seq, r.content AS document, \
-         l.algorithm, \
-         l.previous_digest, l.content_digest, l.digest, l.signature \
-         FROM audit.access_log_imported_record r JOIN audit.access_log_imported_link l \
-         ON l.system_id = r.system_id AND l.sequence = r.sequence"
-    };
-}
-
-/// One thing an imported log fails against one of its checkpoints.
+/// One thing a stored imported bundle fails.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportedFinding {
     /// The system the imported log belongs to.
     pub system_id: String,
-    /// The sequence of the imported checkpoint the finding is against.
-    pub checkpoint: i64,
+    /// The bundle's digest.
+    pub bundle: String,
     /// What fails.
-    pub finding: ChainFinding,
+    pub finding: ImportedFailure,
+}
+
+/// What a stored imported bundle fails.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ImportedFailure {
+    /// Its records and folded tombstones no longer give its records digest.
+    Records,
+    /// No entry of this system's log names the bundle and its records digest.
+    Unrecorded,
+    /// What a record fails.
+    Record(ChainFinding),
 }
 
 impl std::fmt::Display for ImportedFinding {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let what = match &self.finding {
+            ImportedFailure::Records => {
+                "a record was changed, removed or inserted since the import".to_owned()
+            }
+            ImportedFailure::Unrecorded => "no entry of this log records its import".to_owned(),
+            ImportedFailure::Record(finding) => finding.to_string(),
+        };
         write!(
             f,
-            "the log imported from {:?}, against its checkpoint at {}: {}",
-            self.system_id, self.checkpoint, self.finding
+            "the log imported from {:?} in the bundle {}: {what}",
+            self.system_id, self.bundle
         )
     }
 }
@@ -74,11 +68,9 @@ impl AccessLogStore {
     /// `today` by their tombstones, removed at `time_removed`, in one
     /// transaction, and return how many were replaced.
     ///
-    /// Each tombstone keeps the entry's uid, `system_id`, `time_recorded` and
-    /// its link in the exporting system's chain, and names the grounds of
-    /// the period that ended. Rows another run holds are skipped, so two
-    /// replicas never replace the same entry; a caller repeats the call until
-    /// fewer than `limit` come back.
+    /// Each tombstone keeps the entry's uid, `system_id` and `time_recorded`,
+    /// and the row keeps its content digest. Rows another run holds are
+    /// skipped; a caller repeats the call until fewer than `limit` come back.
     ///
     /// # Errors
     /// [`AccessLogError::Invalid`] for a tombstone that breaks an invariant,
@@ -92,219 +84,109 @@ impl AccessLogStore {
     ) -> Result<u64, AccessLogError> {
         let mut conn = acquire(self.pool()).await?;
         let mut tx = conn.begin().await?;
-        let rows = sqlx::query(concat!(
-            imported_records!(),
-            " WHERE r.record_type = 'ACCESS_LOG_ENTRY' AND r.retain_until < $1::text::date \
-             ORDER BY r.retain_until, r.system_id, r.sequence LIMIT $2 \
-             FOR UPDATE OF r SKIP LOCKED",
-        ))
+        let rows = sqlx::query(
+            "SELECT r.system_id, r.uid, r.content FROM audit.access_log_imported_record r \
+             WHERE r.record_type = 'ACCESS_LOG_ENTRY' AND r.retain_until < $1::text::date \
+             ORDER BY r.retain_until, r.system_id, r.uid LIMIT $2 FOR UPDATE SKIP LOCKED",
+        )
         .bind(today.to_string())
         .bind(i64::from(limit))
         .fetch_all(&mut *tx)
         .await?;
         let mut systems = Vec::with_capacity(rows.len());
-        let mut sequences = Vec::with_capacity(rows.len());
+        let mut uids = Vec::with_capacity(rows.len());
         let mut contents = Vec::with_capacity(rows.len());
         for row in &rows {
-            let entry: AccessLogEntry = stored_signed(row)?;
+            let content: String = row.try_get("content")?;
+            let entry: AccessLogEntry =
+                serde_json::from_str(&content).map_err(|source| AccessLogError::Unreadable {
+                    chain_seq: 0,
+                    source,
+                })?;
             let grounds = entry.retention.grounds.clone();
             let tombstone = tombstone_of(entry, time_removed.clone(), grounds);
             check_tombstone(&tombstone)?;
             systems.push(row.try_get::<String, _>("system_id")?);
-            sequences.push(row.try_get::<i64, _>("chain_seq")?);
+            uids.push(row.try_get::<String, _>("uid")?);
             contents.push(canonical_form(&tombstone)?);
         }
         if !rows.is_empty() {
             sqlx::query(
                 "UPDATE audit.access_log_imported_record r SET content = t.content \
-                 FROM unnest($1::text[], $2::bigint[], $3::text[]) \
-                   AS t(system_id, sequence, content) \
-                 WHERE r.system_id = t.system_id AND r.sequence = t.sequence",
+                 FROM unnest($1::text[], $2::text[], $3::text[]) AS t(system_id, uid, content) \
+                 WHERE r.system_id = t.system_id AND r.uid = t.uid",
             )
             .bind(&systems)
-            .bind(&sequences)
+            .bind(&uids)
             .bind(&contents)
             .execute(&mut *tx)
             .await?;
         }
-        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
-        // rows.
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this
+        // transaction's rows.
         tx.commit().await?;
         Ok(u64::try_from(rows.len()).unwrap_or(u64::MAX))
     }
 }
 
-/// One exporting system's imported log as stored.
-struct Stored {
-    checkpoints: Vec<AccessLogCheckpoint>,
-    links: BTreeMap<i64, AccessLogLink>,
-    gaps: Vec<ChainGap>,
-    records: Vec<AccessLogRecord>,
-}
-
 impl Checkpoints {
-    /// Verify every imported log against each of its checkpoints.
-    ///
-    /// For each imported checkpoint, the span from the checkpoint before it
-    /// (of the same system) to it is read back from the stored links, gaps
-    /// and records and verified by [`chain::verify`]: each link recomputes
-    /// and links to the one before it, the last link or gap is the one the
-    /// checkpoint seals, the checkpoint and every signed link and gap verify
-    /// under the keyring and the trusted certificates, and every record in
-    /// the span carries the span's link over its own content. Where an
-    /// import stored a link and a gap for the same positions, the link is
-    /// read, so a kept record keeps its link in the span.
+    /// Verify every stored imported bundle: its records digest over its
+    /// records and folded tombstones, each entry's content digest, and the
+    /// entry of this system's log that names it.
     ///
     /// # Errors
-    /// The store errors, and [`AccessLogError::Unreadable`] when a stored
-    /// record, gap or checkpoint does not read.
+    /// The store errors when a statement fails; a finding is never an error.
     pub async fn verify_imported(&self) -> Result<Vec<ImportedFinding>, AccessLogError> {
-        let systems: Vec<String> = sqlx::query_scalar(
-            "SELECT DISTINCT system_id FROM audit.access_log_imported_checkpoint \
-             ORDER BY system_id",
+        let mut conn = acquire(self.pool()).await?;
+        let bundles: Vec<(String, String, String, uuid::Uuid)> = sqlx::query_as(
+            "SELECT digest, system_id, records_digest, entry_uid \
+             FROM audit.access_log_imported_bundle ORDER BY imported_at, digest",
         )
-        .fetch_all(&mut *acquire(self.pool()).await?)
+        .fetch_all(&mut *conn)
         .await?;
         let mut findings = Vec::new();
-        for system_id in systems {
-            let log = self.stored_import(&system_id).await?;
-            let mut after = 0_i64;
-            for checkpoint in &log.checkpoints {
-                let (links, gaps) = cover(&log, after, checkpoint.sequence);
-                let records: Vec<AccessLogRecord> = log
-                    .records
-                    .iter()
-                    .filter(|record| {
-                        let sequence = record_sequence(record);
-                        sequence > after && sequence <= checkpoint.sequence
-                    })
-                    .cloned()
-                    .collect();
-                let span = Span {
-                    records: &records,
-                    links: &links,
-                    gaps: &gaps,
-                    checkpoint,
-                };
-                let found = chain::verify(span, &|data, signature| self.signed(data, signature))?;
-                findings.extend(found.into_iter().map(|finding| ImportedFinding {
-                    system_id: system_id.clone(),
-                    checkpoint: checkpoint.sequence,
-                    finding,
-                }));
-                after = checkpoint.sequence;
+        for (bundle, system_id, records, entry_uid) in bundles {
+            let finding = |finding| ImportedFinding {
+                system_id: system_id.clone(),
+                bundle: bundle.clone(),
+                finding,
+            };
+            let rows: Vec<(String, String, String, String)> = sqlx::query_as(
+                "SELECT uid, content_digest, record_type, content \
+                 FROM audit.access_log_imported_record WHERE bundle = $1 \
+                 UNION ALL \
+                 SELECT uid, content_digest, 'FOLDED', '' \
+                 FROM audit.access_log_imported_folded WHERE bundle = $1",
+            )
+            .bind(&bundle)
+            .fetch_all(&mut *conn)
+            .await?;
+            let mut pairs = Vec::with_capacity(rows.len());
+            for (uid, digest, record_type, content) in rows {
+                if record_type == "ACCESS_LOG_ENTRY" && sha256_hex(&content) != digest {
+                    findings.push(finding(ImportedFailure::Record(
+                        ChainFinding::ContentDigest { uid: uid.clone() },
+                    )));
+                }
+                pairs.push((uid, digest));
+            }
+            if records_digest(&pairs) != records {
+                findings.push(finding(ImportedFailure::Records));
+            }
+            let marker = format!("access-log-bundle:{bundle}:{records}");
+            let recorded: bool = sqlx::query_scalar(
+                "SELECT EXISTS (SELECT 1 FROM audit.access_log_entry e \
+                 WHERE e.uid = $1 AND e.record_type = 'ACCESS_LOG_ENTRY' \
+                   AND strpos(e.content, $2) > 0)",
+            )
+            .bind(entry_uid)
+            .bind(&marker)
+            .fetch_one(&mut *conn)
+            .await?;
+            if !recorded {
+                findings.push(finding(ImportedFailure::Unrecorded));
             }
         }
         Ok(findings)
     }
-
-    /// The imported log of `system_id` as stored.
-    async fn stored_import(&self, system_id: &str) -> Result<Stored, AccessLogError> {
-        let mut conn = acquire(self.pool()).await?;
-        let checkpoints = sqlx::query(
-            "SELECT sequence, content FROM audit.access_log_imported_checkpoint \
-             WHERE system_id = $1 ORDER BY sequence",
-        )
-        .bind(system_id)
-        .fetch_all(&mut *conn)
-        .await?
-        .iter()
-        .map(|row| {
-            checkpoint::read(
-                row.try_get("sequence")?,
-                &row.try_get::<String, _>("content")?,
-            )
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-        let links = sqlx::query(
-            "SELECT sequence AS chain_seq, algorithm, previous_digest, content_digest, digest, \
-             signature FROM audit.access_log_imported_link WHERE system_id = $1 \
-             ORDER BY sequence",
-        )
-        .bind(system_id)
-        .fetch_all(&mut *conn)
-        .await?
-        .iter()
-        .map(|row| signed_link(row).map(|link| (link.sequence, link)))
-        .collect::<Result<BTreeMap<_, _>, _>>()?;
-        let gaps = sqlx::query(
-            "SELECT first_seq, last_seq, link, signature, grounds::text AS grounds, time_folded \
-             FROM audit.access_log_imported_gap WHERE system_id = $1 \
-             ORDER BY last_seq, first_seq",
-        )
-        .bind(system_id)
-        .fetch_all(&mut *conn)
-        .await?
-        .iter()
-        .map(gap)
-        .collect::<Result<Vec<_>, _>>()?;
-        let records = sqlx::query(concat!(
-            imported_records!(),
-            " WHERE r.system_id = $1 ORDER BY r.sequence"
-        ))
-        .bind(system_id)
-        .fetch_all(&mut *conn)
-        .await?
-        .iter()
-        .map(stored_signed)
-        .collect::<Result<Vec<_>, _>>()?;
-        Ok(Stored {
-            checkpoints,
-            links,
-            gaps,
-            records,
-        })
-    }
-}
-
-/// The sequence of a record's link.
-fn record_sequence(record: &AccessLogRecord) -> i64 {
-    match record {
-        AccessLogRecord::AccessLogEntry(entry) => entry.link.sequence,
-        AccessLogRecord::AccessLogTombstone(tombstone) => tombstone.link.sequence,
-    }
-}
-
-/// The links and gaps that hold the positions after `after` up to `last`,
-/// walked back from `last`: the link at a position where there is one, else
-/// the shortest gap that ends there. A position neither holds while
-/// something is still stored before it in the span is a hole: everything
-/// stored there is added, so the verifier reports it.
-fn cover(log: &Stored, after: i64, last: i64) -> (Vec<AccessLogLink>, Vec<ChainGap>) {
-    let mut links = Vec::new();
-    let mut gaps = Vec::new();
-    let mut position = last;
-    while position > after {
-        if let Some(link) = log.links.get(&position) {
-            links.push(link.clone());
-            position = position.saturating_sub(1);
-            continue;
-        }
-        let shortest = log
-            .gaps
-            .iter()
-            .filter(|gap| gap.last_sequence == position)
-            .max_by_key(|gap| gap.first_sequence);
-        let Some(gap) = shortest else {
-            break;
-        };
-        gaps.push(gap.clone());
-        position = gap.first_sequence.saturating_sub(1);
-    }
-    if position > after {
-        links.extend(
-            log.links
-                .range(after.saturating_add(1)..=position)
-                .map(|(_, link)| link.clone()),
-        );
-        gaps.extend(
-            log.gaps
-                .iter()
-                .filter(|gap| gap.last_sequence > after && gap.last_sequence <= position)
-                .cloned(),
-        );
-    }
-    links.sort_by_key(|link| link.sequence);
-    gaps.sort_by_key(|gap| (gap.last_sequence, gap.first_sequence));
-    (links, gaps)
 }

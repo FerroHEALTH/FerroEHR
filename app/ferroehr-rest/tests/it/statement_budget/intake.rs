@@ -95,7 +95,7 @@ async fn call(
     sqlx::query(
         "SELECT audit.access_log_intake_take($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, \
          $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, \
-         $30, $31, $32)",
+         $30, $31, $32, $33)",
     )
     .bind(vec!["ACCESS_LOG_ENTRY"; entries])
     .bind(&uids)
@@ -129,6 +129,7 @@ async fn call(
     .bind(&t.shares)
     .bind(None::<uuid::Uuid>)
     .bind(&digests)
+    .bind(None::<i64>)
     .execute(pool)
     .await?;
     Ok(started.elapsed())
@@ -232,7 +233,7 @@ async fn an_unknown_render_policy_or_shared_part_is_refused() {
         .await
         .expect_err("a shared part neither stored nor in the batch");
     assert_eq!(code(&error).as_deref(), Some("23503"), "{error}");
-    let written: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_intake")
+    let written: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_entry")
         .fetch_one(&pool)
         .await
         .expect("the intake reads");

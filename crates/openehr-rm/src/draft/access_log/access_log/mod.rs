@@ -12,7 +12,6 @@ pub mod access_channel;
 pub mod access_credential;
 pub mod access_log_checkpoint;
 pub mod access_log_entry;
-pub mod access_log_link;
 pub mod access_log_record;
 pub mod access_log_tombstone;
 pub mod access_origin;

@@ -143,7 +143,7 @@ macro_rules! operations {
 static OPERATIONS: &[Operation] = operations! {
     "access_purposes" => Read, None, ApplicationActivity, None;
     "admin_access_delay_register" => Read, None, ApplicationActivity, None;
-    "admin_access_log_chain" => Read, None, ApplicationActivity, None;
+    "admin_access_log_seals" => Read, None, ApplicationActivity, None;
     "admin_access_log_erase" => Delete, None, ApplicationActivity, None;
     "admin_archive_ehrs" => Update, None, ApplicationActivity, None;
     "admin_archive_parties" => Update, None, ApplicationActivity, None;

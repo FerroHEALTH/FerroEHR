@@ -144,11 +144,13 @@ module.**
   shipped file a schema change is a NEW file.
   Rules: `.claude/rules/sqlx-conventions.md`.
 - **System log** (`src/system_log/`): every record of a request is written
-  into the audit intake in one transaction before the response
-  (`AuditSender::record`, a failure is a `503`), with memoized subject
-  resolution; the chainer (`sender/chainer.rs`, any replica under the head's
-  `SKIP LOCKED` lock) links the intake into the chains, and syslog and the
-  FHIR Feed deliver from the store's outboxes (#5747, #5745).
+  in one transaction before the response (`AuditSender::record`, a failure
+  is a `503`), with memoized subject resolution: an access-log entry once,
+  into `audit.access_log_entry`, and a system record into the intake; the
+  chainer (`sender/chainer.rs`) moves the access log's frontier, releases
+  held records, links the system intake into the system chain (any replica
+  under the head's `SKIP LOCKED` lock) and seals, and syslog and the FHIR
+  Feed deliver from the store's outboxes (#5747, #5745, #6242).
   The EHDS access record, the categories, the classification, the retention
   floor and the emergency mark come from `ehds-logging`; the BALP and DICOM
   renderings and the delivery come from `ihe-atna` (FerroAUDIT, pinned
@@ -157,24 +159,23 @@ module.**
   missing field or shape is a FerroAUDIT issue, not local code.
 - **Access log** (`src/access_log/`, #5121): `store` keeps each draft
   `ACCESS_LOG_ENTRY` once, in `audit.access_log_entry`, as its RFC 8785
-  canonical form without its link; the chainer gives it its `ACCESS_LOG_LINK`
-  as one `audit.access_log_link` row, checked by that table's trigger, in the
-  access log's own chain, apart from the `audit_event` records (#5573,
-  #5968); `audit.access_log_record` is the view of the linked entries, which
-  every reader reads; and
+  canonical form with its content digest, apart from the `audit_event`
+  records (#5573, #5968); `audit.access_log_record` is the view of the
+  entries no write still holds, which every reader reads; `frontier` and
+  `seal` seal windows of entries up to the frontier, each seal following
+  the one before (#6242); and
   an entry changes only by its replacement with its own tombstone, which
   empties the ITI-81 index columns on the same row (one row per entry,
   `access_log_search` is their view, #5784); every reader of an entry goes
   through `audit.access_log_document` (`store::document!`), never a join of
   its parts of its own. Never
-  compute a link outside the trigger, and never write a search column: both
-  are read from the content. `checkpoint` seals the head with the
-  version-signing keyring and verifies through
-  `audit.verify_access_log_chain()`; `system_log::seal` seals the system
-  chain the same way;
-  `chain` is the one verifier of a span held apart from the database (an
-  export or an import), and both accept a tombstone by its recorded content
-  digest; `transfer` exports and imports one EHR's log (#5129).
+  write a search column: it is read from the content. `checkpoint` signs
+  each seal with the version-signing keyring and verifies the windows
+  (`seal::verify_windows`); `system_log::seal` seals the system chain the
+  same way; `transfer` exports one EHR's log as a bundle signed whole and
+  imports one, and `chain` holds what a checkpoint or a bundle fails and
+  the records digest a bundle is verified by; a tombstone verifies by its
+  recorded content digest (#5129, #6242).
   `view` is the one owner of what the subject view withholds: the JSON
   reduction and `subject_withholds` for a path both read its lists, and AQL
   over `ACCESS_LOG_ENTRY` (`aql::access_log`, #5131) reads its columns out of

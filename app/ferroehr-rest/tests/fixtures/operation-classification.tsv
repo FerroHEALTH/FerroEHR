@@ -1,7 +1,7 @@
 # op	generated	class	is_write	audit	smart_permission	smart_read	smart_write
 admin_access_delay_register	false	-	-	Some((Read, ApplicationActivity))	-	false	false
-admin_access_log_chain	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_access_log_erase	false	-	-	Some((Delete, ApplicationActivity))	-	false	false
+admin_access_log_seals	false	-	-	Some((Read, ApplicationActivity))	-	false	false
 admin_archive_ehrs	false	-	-	Some((Update, ApplicationActivity))	-	false	false
 admin_archive_parties	false	-	-	Some((Update, ApplicationActivity))	-	false	false
 admin_config	false	-	-	Some((Read, ApplicationActivity))	-	false	false

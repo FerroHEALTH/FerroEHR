@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The signed checkpoints of the access log, one per append (#5704), the
-//! verification of the chain against them, and the export and import of one
-//! EHR's log between two FerroEHR databases (#5129), against real
-//! `PostgreSQL` 18 databases.
+//! The signed checkpoints of the access log, one per sealed window (#5704,
+//! #6242), the verification of the windows against them, and the export and
+//! import of one EHR's log as a signed bundle between two FerroEHR databases
+//! (#5129), against real `PostgreSQL` 19 databases.
 //!
 //! No openEHR spec governs log signing or the transfer: our own design.
 
@@ -21,7 +21,7 @@ use rand::rngs::OsRng;
 use serde_json::{Value, json};
 use sqlx::{AssertSqlSafe, Connection, PgPool};
 
-use ferroehr::access_log::chain::{self, ChainFinding};
+use ferroehr::access_log::chain::ChainFinding;
 use ferroehr::access_log::checkpoint::Checkpoints;
 use ferroehr::access_log::publish::{Publication, PublicationState, PublishError, file_name};
 use ferroehr::access_log::store::AccessLogError;
@@ -184,9 +184,28 @@ pub(crate) fn import_record() -> ImportRecord {
     }
 }
 
-/// A checkpoint seals the head of the chain, signed with the keyring's key,
-/// and the log verifies against it; sealing an unchanged head writes nothing
-/// new.
+/// The id of the entry whose uid is that of `entry`.
+async fn id_of(pool: &PgPool, entry: &AccessLogEntry) -> i64 {
+    sqlx::query_scalar("SELECT id FROM audit.access_log_entry WHERE uid = $1::uuid")
+        .bind(entry.uid.value())
+        .fetch_one(pool)
+        .await
+        .expect("the entry")
+}
+
+/// The last entry ids of the signed seals, in order.
+async fn sealed_positions(pool: &PgPool) -> Vec<i64> {
+    sqlx::query_scalar(
+        "SELECT last_id FROM audit.access_log_seal WHERE proof IS NOT NULL ORDER BY window_no",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("the seals are read")
+}
+
+/// A checkpoint signs the seal of the window up to the newest entry with the
+/// keyring's key, and the log verifies against it; sealing again with
+/// nothing new returns the same checkpoint.
 #[tokio::test]
 async fn a_signed_checkpoint_verifies() {
     let testdb = testkit::db().await.expect("testkit database");
@@ -195,15 +214,22 @@ async fn a_signed_checkpoint_verifies() {
     let entries = append(&log, SYSTEM_A).await;
 
     let checkpoint = log.seal().await.expect("seal").expect("a checkpoint");
-    let head = entries.last().expect("an entry");
-    assert_eq!(checkpoint.sequence, head.link.sequence);
-    assert_eq!(checkpoint.digest, head.link.digest);
+    let head = id_of(pool, entries.last().expect("an entry")).await;
+    assert_eq!(checkpoint.sequence, head);
+    let digest: String = sqlx::query_scalar(
+        "SELECT encode(digest, 'hex') FROM audit.access_log_seal WHERE last_id = $1",
+    )
+    .bind(head)
+    .fetch_one(pool)
+    .await
+    .expect("the seal");
+    assert_eq!(checkpoint.digest, digest);
     assert_eq!(checkpoint.system_id, SYSTEM_A);
     assert!(checkpoint.proof.contains("BEGIN PGP SIGNATURE"));
     assert_eq!(
         log.seal().await.expect("seal again"),
         Some(checkpoint.clone()),
-        "an unchanged head keeps its checkpoint"
+        "nothing new keeps the checkpoint"
     );
 
     let verification = log.verify(None).await.expect("verify");
@@ -211,8 +237,8 @@ async fn a_signed_checkpoint_verifies() {
     assert_eq!(verification.checkpoint, Some(checkpoint));
 }
 
-/// An entry whose content changed after it was written fails the chain, a
-/// checkpoint whose proof was replaced fails its signature, and a checkpoint
+/// An entry whose content changed after it was written fails its window, a
+/// checkpoint whose digest was replaced fails its signature, and a checkpoint
 /// another key signed is not trusted.
 #[tokio::test]
 async fn a_tampered_entry_fails_verification() {
@@ -221,15 +247,14 @@ async fn a_tampered_entry_fails_verification() {
     let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
     let entries = append(&log, SYSTEM_A).await;
     let checkpoint = log.seal().await.expect("seal").expect("a checkpoint");
-    let target = entries.get(1).expect("a second entry").link.sequence;
+    let target = id_of(pool, entries.get(1).expect("a second entry")).await;
 
     tamper(
         pool,
         "audit.access_log_entry",
         &[&format!(
             "UPDATE audit.access_log_entry SET content = replace(content, \
-             '\"was_delivered\":true', '\"was_delivered\":false') \
-             WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = {target})"
+             '\"was_delivered\":true', '\"was_delivered\":false') WHERE id = {target}"
         )],
     )
     .await;
@@ -270,8 +295,8 @@ async fn a_tampered_entry_fails_verification() {
     );
 }
 
-/// An exported entry whose content changed fails the span's verification at
-/// its position, and a tombstone in the span verifies as recorded.
+/// A bundle holding a tombstone verifies, its content digest taken as
+/// recorded, and an exported entry whose content changed fails at its uid.
 #[tokio::test]
 async fn an_export_verifies_with_a_tombstone_and_fails_with_a_tampered_entry() {
     let testdb = testkit::db().await.expect("testkit database");
@@ -284,6 +309,13 @@ async fn an_export_verifies_with_a_tombstone_and_fails_with_a_tampered_entry() {
         "defining_code": { "terminology_id": { "value": "local" }, "code_string": "expired" }
     }))
     .expect("the ground reads");
+    let tombstone_digest: String = sqlx::query_scalar(
+        "SELECT encode(content_digest, 'hex') FROM audit.access_log_entry WHERE uid = $1::uuid",
+    )
+    .bind(first.uid.value())
+    .fetch_one(pool)
+    .await
+    .expect("the digest");
     log.store()
         .tombstone(
             first.uid.value(),
@@ -294,48 +326,62 @@ async fn an_export_verifies_with_a_tombstone_and_fails_with_a_tampered_entry() {
         .expect("tombstone")
         .expect("the entry is replaced");
 
-    // NOTE: the tombstone no longer names its EHR, so the moved EHR's export starts at its second entry.
-    let export = log.export(MOVED).await.expect("the export verifies");
+    // NOTE: the tombstone no longer names its EHR, so the moved EHR's export holds its second entry.
+    let export = log.export(MOVED).await.expect("the export");
     assert_eq!(export.records.len(), 1, "{export:?}");
-    let trusted = |data: &[u8], signature: &str| log.signed(data, signature);
-    let whole = LogExport {
-        records: vec![
-            log.store()
-                .read(first.uid.value())
-                .await
-                .expect("read")
-                .expect("the tombstone"),
-        ],
-        links: log
-            .store()
-            .links(first.link.sequence, export.checkpoint.sequence)
+    assert_eq!(log.verify_bundle(&export).expect("verify"), Vec::new());
+
+    let mut whole = export.clone();
+    whole.records.insert(
+        0,
+        log.store()
+            .read(first.uid.value())
             .await
-            .expect("links"),
-        ..export.clone()
-    };
+            .expect("read")
+            .expect("the tombstone"),
+    );
+    whole.content_digests.insert(0, tombstone_digest);
+    whole.proof = String::new();
+    whole.proof = log
+        .sign(
+            ferroehr::access_log::store::canonical_form(&whole)
+                .expect("a canonical form")
+                .as_bytes(),
+        )
+        .expect("signed");
     assert!(matches!(
         whole.records.first(),
         Some(AccessLogRecord::AccessLogTombstone(_))
     ));
-    assert_eq!(
-        chain::verify(whole.span(), &trusted).expect("verify"),
-        Vec::new()
-    );
+    assert_eq!(log.verify_bundle(&whole).expect("verify"), Vec::new());
 
     let mut tampered: Value = serde_json::to_value(&export).expect("the export writes");
     tampered["records"][0]["is_emergency"] = json!(true);
     let tampered: LogExport = serde_json::from_value(tampered).expect("the export reads");
-    let sequence = entries.get(2).expect("a third entry").link.sequence;
-    assert_eq!(
-        chain::verify(tampered.span(), &trusted).expect("verify"),
-        vec![ChainFinding::ContentDigest { sequence }]
+    let uid = entries
+        .get(2)
+        .expect("a third entry")
+        .uid
+        .value()
+        .to_owned();
+    let findings = log.verify_bundle(&tampered).expect("verify");
+    assert!(
+        findings.contains(&ChainFinding::ContentDigest { uid }),
+        "{findings:?}"
+    );
+    assert!(
+        findings.contains(&ChainFinding::BundleProof),
+        "{findings:?}"
     );
 }
 
+/// An imported record's system, uid, EHR, `retain_until` and content digest.
+type ImportedRow = (String, String, Option<String>, Option<String>, String);
+
 /// One EHR's log leaves one database as JSON and enters another: the records
-/// keep their system, links and `retain_until`, the import verifies against
-/// the trusted certificate and is itself an entry of the importing log, and
-/// an import from a system the deployment does not trust is refused.
+/// keep their system, `retain_until` and content digest, the import verifies
+/// against the trusted certificate and is itself an entry of the importing
+/// log, and an import from a system the deployment does not trust is refused.
 #[tokio::test]
 async fn an_ehrs_log_round_trips_through_export_and_import() {
     let source_db = testkit::db().await.expect("source database");
@@ -355,12 +401,10 @@ async fn an_ehrs_log_round_trips_through_export_and_import() {
     let refused = untrusting
         .import(&received, import_record())
         .await
-        .expect_err("a checkpoint no trusted key signed is refused");
+        .expect_err("a bundle no trusted key signed is refused");
     assert!(
         matches!(&refused, TransferError::Unverified(findings)
-        if findings.contains(&ChainFinding::CheckpointProof {
-            sequence: export.checkpoint.sequence
-        })),
+        if findings.contains(&ChainFinding::BundleProof)),
         "{refused:?}"
     );
 
@@ -405,26 +449,29 @@ async fn an_ehrs_log_round_trips_through_export_and_import() {
         Some(IMPORT_REQUEST)
     );
 
-    let stored: Vec<(String, i64, Option<String>, Option<String>)> = sqlx::query_as(
-        "SELECT system_id, sequence, ehr_id, retain_until::text \
-         FROM audit.access_log_imported_record ORDER BY sequence",
+    let stored: Vec<ImportedRow> = sqlx::query_as(
+        "SELECT system_id, uid, ehr_id, retain_until::text, content_digest \
+         FROM audit.access_log_imported_record ORDER BY uid",
     )
     .fetch_all(&target_db.pool())
     .await
     .expect("read the imported records");
-    let expected: Vec<_> = export
+    let mut expected: Vec<_> = export
         .records
         .iter()
-        .map(|record| match record {
+        .zip(&export.content_digests)
+        .map(|(record, digest)| match record {
             AccessLogRecord::AccessLogEntry(entry) => (
                 SYSTEM_A.to_owned(),
-                entry.link.sequence,
+                entry.uid.value().to_owned(),
                 Some(MOVED.to_owned()),
                 Some("2031-11-07".to_owned()),
+                digest.clone(),
             ),
             AccessLogRecord::AccessLogTombstone(_) => panic!("no tombstone was exported"),
         })
         .collect();
+    expected.sort();
     assert_eq!(stored, expected);
 
     let again = target
@@ -440,116 +487,90 @@ async fn an_ehrs_log_round_trips_through_export_and_import() {
 
     let own = target.verify(None).await.expect("verify the importing log");
     assert!(own.chain.is_empty(), "{own:?}");
+    assert!(own.imported.is_empty(), "{own:?}");
+
+    tamper(
+        &target_db.pool(),
+        "audit.access_log_imported_record",
+        &[
+            "UPDATE audit.access_log_imported_record SET content = replace(content, \
+           '\"was_delivered\":true', '\"was_delivered\":false')",
+        ],
+    )
+    .await;
+    let changed = target.verify(None).await.expect("verify the importing log");
+    assert!(
+        !changed.imported.is_empty(),
+        "a changed imported record is found: {changed:?}"
+    );
 }
 
-/// The sequences of the stored checkpoints, in order.
-async fn sealed_positions(pool: &PgPool) -> Vec<i64> {
-    sqlx::query_scalar("SELECT sequence FROM audit.access_log_checkpoint ORDER BY sequence")
-        .fetch_all(pool)
-        .await
-        .expect("the checkpoints are read")
-}
-
-/// Under an `OpenPGP` key every append ends, in its own transaction, with one
-/// signed checkpoint of its last link; the links themselves carry no
-/// signature, and the log verifies against the checkpoint the append wrote
-/// (#5704).
+/// Under an `OpenPGP` key every sealed window is signed as the checkpoint of
+/// the log up to its last entry, and each later window follows the one
+/// before it.
 #[tokio::test]
-async fn every_append_seals_its_last_link_in_one_checkpoint() {
+async fn every_sealed_window_is_signed_and_follows_the_one_before() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = &testdb.pool();
     let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
     assert!(log.seals());
     let entries = append(&log, SYSTEM_A).await;
-    assert!(entries.iter().all(|entry| entry.link.signature.is_none()));
-    let head = entries.last().expect("an entry");
-    assert_eq!(sealed_positions(pool).await, [head.link.sequence]);
+    log.seal().await.expect("seal");
+    let head = id_of(pool, entries.last().expect("an entry")).await;
+    assert_eq!(sealed_positions(pool).await, [head]);
     let checkpoint = log
-        .at(head.link.sequence)
+        .at(head)
         .await
         .expect("read")
-        .expect("the append's checkpoint");
-    assert_eq!(checkpoint.digest, head.link.digest);
+        .expect("the window's checkpoint");
     let verification = log.verify(Some(checkpoint)).await.expect("verify");
     assert!(verification.intact(), "{verification:?}");
 
     let more = append_from(&log, SYSTEM_A, 5).await;
-    let next = more.last().expect("an entry");
-    assert_eq!(
-        sealed_positions(pool).await,
-        [head.link.sequence, next.link.sequence],
-        "one checkpoint per append, whatever it holds"
-    );
+    log.seal().await.expect("seal");
+    let next = id_of(pool, more.last().expect("an entry")).await;
+    assert_eq!(sealed_positions(pool).await, [head, next]);
+    let follows: bool = sqlx::query_scalar(
+        "SELECT b.previous_digest = a.digest FROM audit.access_log_seal a \
+         JOIN audit.access_log_seal b ON b.window_no = a.window_no + 1 LIMIT 1",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("the seals");
+    assert!(follows, "the second window follows the first");
 }
 
-/// A checkpoint is stored once: the table refuses to change one, and refuses
-/// one that names a digest the log does not hold at its position.
+/// A seal is stored once: the table refuses to change or remove one.
 #[tokio::test]
-async fn a_stored_checkpoint_is_never_changed_and_names_a_held_link() {
+async fn a_stored_seal_is_never_changed_or_removed() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = &testdb.pool();
     let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
     let entries = append(&log, SYSTEM_A).await;
-    let head = entries.last().expect("an entry").link.sequence;
-    let refused = sqlx::query("UPDATE audit.access_log_checkpoint SET proof = 'x'")
-        .execute(pool)
-        .await
-        .expect_err("a checkpoint does not change");
-    assert!(refused.to_string().contains("append-only"), "{refused}");
-    let first = entries.first().expect("an entry").link.sequence;
-    let refused = sqlx::query(
-        "INSERT INTO audit.access_log_checkpoint (sequence, system_id, digest, time_sealed, \
-         proof) VALUES ($1, $2, $3, now(), 'proof')",
-    )
-    .bind(first)
-    .bind(SYSTEM_A)
-    .bind("0".repeat(64))
-    .execute(pool)
-    .await
-    .expect_err("a checkpoint names the link the log holds");
-    assert!(
-        refused.to_string().contains("seals the link the log holds"),
-        "{refused}"
-    );
+    log.seal().await.expect("seal");
+    let head = id_of(pool, entries.last().expect("an entry")).await;
+    for statement in [
+        "UPDATE audit.access_log_seal SET proof = 'x'",
+        "DELETE FROM audit.access_log_seal",
+        "TRUNCATE audit.access_log_seal",
+    ] {
+        let refused = sqlx::query(statement)
+            .execute(pool)
+            .await
+            .expect_err(statement);
+        assert!(refused.to_string().contains("append-only"), "{refused}");
+    }
     assert_eq!(sealed_positions(pool).await, [head]);
 }
 
-/// Two appends each seal their own last link, the second linked from the
-/// head the first one moved.
-#[tokio::test]
-async fn appends_each_seal_their_last_link() {
-    let testdb = testkit::db().await.expect("testkit database");
-    let pool = &testdb.pool();
-    let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
-    let first = log
-        .store()
-        .append(vec![entry(1, SYSTEM_A, MOVED), entry(2, SYSTEM_A, STAYS)])
-        .await
-        .expect("the first append");
-    let second = log
-        .store()
-        .append(vec![entry(3, SYSTEM_A, MOVED)])
-        .await
-        .expect("the second append");
-    let last = first.last().expect("an entry");
-    let next = second.first().expect("an entry");
-    assert_eq!(next.link.previous_digest, last.link.digest);
-    assert_eq!(
-        sealed_positions(pool).await,
-        [last.link.sequence, next.link.sequence]
-    );
-    let verification = log.verify(None).await.expect("verify");
-    assert!(verification.intact(), "{verification:?}");
-}
-
-/// An intake write whose transaction rolls back leaves nothing to chain: no
-/// entry and no checkpoint, so no entry is ever stored unsealed under a key.
+/// An intake write whose transaction rolls back leaves nothing to seal: no
+/// entry and no window that holds one.
 #[tokio::test]
 #[expect(
     clippy::disallowed_methods,
     reason = "a test reads the database on a raw pool connection, outside any request"
 )]
-async fn a_rolled_back_intake_leaves_no_entry_and_no_checkpoint() {
+async fn a_rolled_back_intake_leaves_no_entry_and_no_seal() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = &testdb.pool();
     let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
@@ -564,15 +585,18 @@ async fn a_rolled_back_intake_leaves_no_entry_and_no_checkpoint() {
         &[],
         None,
         &std::collections::BTreeSet::new(),
+        &ferroehr::access_log::intake::Named::default(),
     )
     .await
     .expect("the intake write");
     tx.rollback().await.expect("rollback");
-    log.store()
-        .settle(ferroehr::access_log::chainer::Owed::default())
-        .await
-        .expect("the chainer runs");
-    assert_eq!(sealed_positions(pool).await, Vec::<i64>::new());
+    log.store().seal_committed().await.expect("the sealer runs");
+    let sealed: i64 =
+        sqlx::query_scalar("SELECT coalesce(sum(entries), 0)::bigint FROM audit.access_log_seal")
+            .fetch_one(pool)
+            .await
+            .expect("the seals");
+    assert_eq!(sealed, 0);
     let entries: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_record")
         .fetch_one(pool)
         .await
@@ -580,75 +604,74 @@ async fn a_rolled_back_intake_leaves_no_entry_and_no_checkpoint() {
     assert_eq!(entries, 0);
 }
 
-/// A record removed from the middle of the log is a finding of the chain,
-/// and the newest records removed together with the checkpoints that seal
-/// them fail a checkpoint kept outside the database.
+/// A record removed from a sealed window is a finding, and the newest
+/// windows removed together with their seals fail a checkpoint kept outside
+/// the database.
 #[tokio::test]
 async fn a_deleted_record_fails_verification() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = &testdb.pool();
     let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
     let entries = append(&log, SYSTEM_A).await;
-    let target = entries.get(1).expect("a second entry").link.sequence;
+    log.seal().await.expect("seal");
+    let target = id_of(pool, entries.get(1).expect("a second entry")).await;
     tamper(
         pool,
-        "audit.access_log_link",
+        "audit.access_log_entry",
         &[&format!(
-            "DELETE FROM audit.access_log_link WHERE chain_seq = {target}"
+            "DELETE FROM audit.access_log_entry WHERE id = {target}"
         )],
     )
     .await;
     let verification = log.verify(None).await.expect("verify");
-    assert!(!verification.intact());
-    assert!(
-        verification
-            .chain
-            .iter()
-            .any(|finding| finding.chain_seq == Some(target.saturating_add(1))),
-        "the record after the hole no longer links: {verification:?}"
-    );
+    assert!(!verification.intact(), "{verification:?}");
 
     let other_db = testkit::db().await.expect("a second database");
     let other = &other_db.pool();
     let log = checkpoints(other, SYSTEM_A, keyring(&generate_key()));
-    let kept = append(&log, SYSTEM_A).await;
+    append(&log, SYSTEM_A).await;
+    let kept = log
+        .seal()
+        .await
+        .expect("seal")
+        .expect("the first checkpoint");
     let newest = append_from(&log, SYSTEM_A, 5).await;
     let published = log
-        .latest(None)
+        .seal()
         .await
-        .expect("read")
+        .expect("seal")
         .expect("the newest checkpoint");
-    let from = newest.first().expect("an entry").link.sequence;
-    let to = newest.last().expect("an entry").link.sequence;
-    let head = kept.last().expect("an entry").link.clone();
+    let from = id_of(other, newest.first().expect("an entry")).await;
+    let to = id_of(other, newest.last().expect("an entry")).await;
     tamper(
         other,
-        "audit.access_log_link",
+        "audit.access_log_entry",
         &[&format!(
-            "DELETE FROM audit.access_log_link WHERE chain_seq BETWEEN {from} AND {to}"
+            "DELETE FROM audit.access_log_entry WHERE id BETWEEN {from} AND {to}"
         )],
     )
     .await;
     tamper(
         other,
-        "audit.access_log_checkpoint",
+        "audit.access_log_seal",
         &[&format!(
-            "DELETE FROM audit.access_log_checkpoint WHERE sequence = {to}"
+            "DELETE FROM audit.access_log_seal WHERE last_id = {to}"
         )],
     )
     .await;
     tamper(
         other,
-        "audit.access_log_chain_state",
+        "audit.access_log_seal_state",
         &[&format!(
-            "UPDATE audit.access_log_chain_state SET head_seq = {}, head_digest = '{}'",
-            head.sequence, head.digest
+            "UPDATE audit.access_log_seal_state SET last_id = {}, window_no = window_no - 1, \
+             digest = decode('{}', 'hex')",
+            kept.sequence, kept.digest
         )],
     )
     .await;
     let inside = log.verify(None).await.expect("verify");
     assert!(
-        inside.intact(),
+        inside.chain.is_empty(),
         "nothing left in the database shows the removal: {inside:?}"
     );
     let outside = log.verify(Some(published)).await.expect("verify");
@@ -656,67 +679,27 @@ async fn a_deleted_record_fails_verification() {
         outside
             .findings
             .contains(&ChainFinding::CheckpointDigest { sequence: to }),
-        "the published checkpoint names a link the log no longer holds: {outside:?}"
+        "the published checkpoint names a seal the log no longer holds: {outside:?}"
     );
 }
 
-/// Without an `OpenPGP` key no append is sealed.
+/// Without an `OpenPGP` key the windows are sealed unsigned.
 #[tokio::test]
-async fn a_keyring_without_a_key_seals_no_append() {
+async fn a_keyring_without_a_key_signs_no_seal() {
     let testdb = testkit::db().await.expect("testkit database");
     let log = checkpoints(&testdb.pool(), SYSTEM_A, Arc::new(Signer::digest_default()));
     assert!(!log.seals());
-    let entries = append(&log, SYSTEM_A).await;
-    assert!(entries.iter().all(|entry| entry.link.signature.is_none()));
+    append(&log, SYSTEM_A).await;
+    log.store().seal_committed().await.expect("sealed unsigned");
     assert_eq!(sealed_positions(&testdb.pool()).await, Vec::<i64>::new());
+    let unsigned: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_seal")
+        .fetch_one(&testdb.pool())
+        .await
+        .expect("the seals");
+    assert!(unsigned >= 1);
 }
 
-/// The links of another system's export that its exporter signed, as the
-/// draft allows, verify under a trusted key, and a signature over another
-/// link is a finding at its position.
-#[tokio::test]
-async fn a_foreign_signed_link_verifies_and_a_replaced_signature_does_not() {
-    let testdb = testkit::db().await.expect("testkit database");
-    let signer = keyring(&generate_key());
-    let source = checkpoints(&testdb.pool(), SYSTEM_A, Arc::clone(&signer));
-    append(&source, SYSTEM_A).await;
-    let mut export = source.export(MOVED).await.expect("export");
-    for link in &mut export.links {
-        link.signature = Some(signer.attest(link.digest.as_bytes()).expect("signed"));
-    }
-    let attested: Vec<_> = export.links.clone();
-    for record in &mut export.records {
-        if let AccessLogRecord::AccessLogEntry(entry) = record
-            && let Some(link) = attested
-                .iter()
-                .find(|link| link.sequence == entry.link.sequence)
-        {
-            entry.link = link.clone();
-        }
-    }
-    let trusted = |data: &[u8], signature: &str| signer.attests(data, signature);
-    assert_eq!(
-        chain::verify(export.span(), &trusted).expect("verify"),
-        Vec::new()
-    );
-
-    let first = export.links.first().expect("a link").sequence;
-    let foreign = export.links.get(1).and_then(|link| link.signature.clone());
-    export.links.first_mut().expect("a link").signature = foreign.clone();
-    for record in &mut export.records {
-        if let AccessLogRecord::AccessLogEntry(entry) = record
-            && entry.link.sequence == first
-        {
-            entry.link.signature = foreign.clone();
-        }
-    }
-    assert_eq!(
-        chain::verify(export.span(), &trusted).expect("verify"),
-        vec![ChainFinding::LinkSignature { sequence: first }]
-    );
-}
-
-/// A keyring with no `OpenPGP` key seals nothing.
+/// A keyring with no `OpenPGP` key gives no checkpoint.
 #[tokio::test]
 async fn a_keyring_without_a_key_seals_no_checkpoint() {
     let testdb = testkit::db().await.expect("testkit database");
@@ -740,7 +723,7 @@ fn publish_directory() -> std::path::PathBuf {
 }
 
 /// The newest checkpoint is published once as its own file, which verifies
-/// the log; a later append publishes the next one beside it, and a file of
+/// the log; a later window publishes the next one beside it, and a file of
 /// the same name holding another checkpoint is a conflict, never rewritten
 /// (#5704).
 #[tokio::test]
@@ -754,7 +737,8 @@ async fn the_newest_checkpoint_is_published_once_outside_the_database() {
     assert_eq!(publication.publish(&log).await.expect("an empty log"), None);
 
     let first = append(&log, SYSTEM_A).await;
-    let head = first.last().expect("an entry").link.sequence;
+    log.seal().await.expect("seal");
+    let head = id_of(pool, first.last().expect("an entry")).await;
     publication.run(&log).await;
     assert!(
         matches!(publication.state(), PublicationState::Published { sequence: Some(s), .. } if s == head),
@@ -770,7 +754,8 @@ async fn the_newest_checkpoint_is_published_once_outside_the_database() {
     assert!(log.verify(Some(published)).await.expect("verify").intact());
 
     let more = append_from(&log, SYSTEM_A, 5).await;
-    let next = more.last().expect("an entry").link.sequence;
+    log.seal().await.expect("seal");
+    let next = id_of(pool, more.last().expect("an entry")).await;
     assert_eq!(
         publication.publish(&log).await.expect("publish"),
         Some(next)
@@ -799,4 +784,37 @@ async fn the_newest_checkpoint_is_published_once_outside_the_database() {
     );
     std::fs::remove_dir_all(directory).expect("clean up");
     std::fs::remove_dir_all(other).expect("clean up");
+}
+
+/// A bundle verifies under the exporter's key, is refused by a system that
+/// trusts another key, and is refused when its proof is replaced by the
+/// proof of another bundle the same key signed (#6242).
+#[tokio::test]
+async fn a_bundle_under_a_foreign_key_or_a_replaced_proof_is_refused() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = &testdb.pool();
+    let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
+    append(&log, SYSTEM_A).await;
+    let export = log.export(MOVED).await.expect("the export");
+    assert_eq!(log.verify_bundle(&export).expect("verify"), Vec::new());
+
+    let stranger = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
+    assert_eq!(
+        stranger.verify_bundle(&export).expect("verify"),
+        vec![ChainFinding::BundleProof],
+        "a key the receiving system does not trust"
+    );
+
+    let other = log.export(MOVED).await.expect("a second export");
+    assert_ne!(
+        other.time_signed, export.time_signed,
+        "each export is signed anew"
+    );
+    let mut replaced = export.clone();
+    replaced.proof = other.proof;
+    assert_eq!(
+        log.verify_bundle(&replaced).expect("verify"),
+        vec![ChainFinding::BundleProof],
+        "a proof over another bundle"
+    );
 }

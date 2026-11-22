@@ -2,26 +2,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The chainer task: rounds of [`AuditStore::chain_round`], woken by the
-//! requests that wrote intake rows and by a slow poll for the rows other
-//! replicas left (#5745).
+//! requests that wrote system intake rows or confirmed held writes, and by a
+//! slow poll for the rows other replicas left (#5745), and the access log's
+//! frontier, seals and owed deliveries (#6242).
 //!
 //! It runs on the audit runtime, never on a worker that serves requests
 //! (#5770). A wake of an idle chainer starts a round [`GATHER`] later, and
 //! while requests keep writing, rounds start one [`ROUND`] apart, so one round
-//! takes what every request of that window wrote, up to [`BATCH`] per chain:
-//! the batch grows with the rate, the head and its signed checkpoint are taken
-//! once per round, and an idle server runs no round but the poll's. A round
-//! that found the head held by another replica's chainer, or filled its batch,
-//! runs again at once. A round seals its last link in a signed checkpoint
-//! when it is the first after a rest or the last checkpoint is
-//! [`SEAL_EVERY`] old, and a chainer that comes to rest unsealed seals the
-//! head, waiting out another replica's chainer that holds it, so a checkpoint
-//! covers every entry within [`SEAL_EVERY`] under load and at once at rest. A
-//! sealing round that chains nothing seals a head no checkpoint covers, which
-//! is how a chainer's poll and its stop seal what a stopped replica left
-//! (#6050). The bounds are our own design, set from the capacity
-//! runs of #5745 and #5770 and the performance gate; no specification governs
-//! them.
+//! takes what every request of that window wrote, up to [`BATCH`] system rows.
+//! A round that filled its batch runs again at once. Every
+//! [`FRONTIER_EVERY`] the task moves the access log's frontier
+//! ([`crate::access_log::frontier`]), owes the entries below it to the sinks
+//! that deliver from the store, and every [`SEAL_EVERY`] seals them in one
+//! window ([`crate::access_log::seal`]); until a round seals one, as at start
+//! or at rest, every round tries. The bounds are our own design; no
+//! specification governs them.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -32,7 +27,7 @@ use tokio::sync::Notify;
 use tokio::task::JoinHandle;
 
 use super::background::Background;
-use crate::access_log::chainer::{Round, Seal};
+use crate::access_log::frontier::Frontier;
 use crate::system_log::store::AuditStore;
 use crate::system_log::store::intake::Chains;
 
@@ -54,15 +49,15 @@ const ROUND: Duration = Duration::from_millis(50);
 /// for the rows a stopped replica left.
 const POLL: Duration = Duration::from_secs(2);
 
-/// The longest a chained entry waits for the checkpoint that covers it while
-/// rounds keep running: one signature a second where every round signed one
-/// (#5770). No text sets how often a log must be sealed: EHDS Art. 9 and
-/// Annex II 3.2 ask for a complete log, GDPR Art. 5(1)(f) and 32(1)(b) for
-/// integrity appropriate to the risk; our own design.
-const SEAL_EVERY: Duration = Duration::from_secs(1);
+/// How often the access log's frontier moves and the entries below it are
+/// owed to the sinks.
+const FRONTIER_EVERY: Duration = Duration::from_secs(1);
 
-/// How long a round that found the head held waits before the next.
-const BUSY: Duration = Duration::from_millis(2);
+/// How often the entries below the frontier are sealed in a window. No text
+/// sets how often a log must be sealed: EHDS Art. 9 and Annex II 3.2 ask for a
+/// complete log, CRA Annex I Part I (2)(f) for integrity and reporting of
+/// corruption on the risk assessment's terms; our own design.
+const SEAL_EVERY: Duration = Duration::from_secs(60);
 
 /// How long a failed round waits before the next.
 const FAILED: Duration = Duration::from_millis(500);
@@ -119,56 +114,49 @@ async fn run(
 ) {
     let metrics = crate::telemetry::access_path::metrics();
     let mut look = Chains::BOTH;
-    let mut sealed_at = tokio::time::Instant::now();
-    let mut unsealed = false;
-    let mut rested = true;
+    let mut frontier = Frontier::default();
+    let mut moved_at = tokio::time::Instant::now();
+    // NOTE: our own design (#6242), a starting chainer seals at once what a stopped one left.
+    let mut sealed_at = tokio::time::Instant::now()
+        .checked_sub(SEAL_EVERY)
+        .unwrap_or_else(tokio::time::Instant::now);
+    let mut polled_at = tokio::time::Instant::now();
     while !stopping.load(Ordering::Acquire) {
         let began = tokio::time::Instant::now();
-        let seal = if rested || began.duration_since(sealed_at) >= SEAL_EVERY {
-            Seal::Now
-        } else {
-            Seal::Later
-        };
-        let round = store.chain_round(BATCH, look, seal).await;
-        rested = false;
+        if began.duration_since(moved_at) >= FRONTIER_EVERY {
+            moved_at = began;
+            let seal = began.duration_since(sealed_at) >= SEAL_EVERY;
+            match store.frontier_round(&mut frontier, seal).await {
+                Ok((owed, sealed)) => {
+                    if sealed {
+                        sealed_at = began;
+                    }
+                    if owed > 0 {
+                        for notify in &delivered {
+                            notify.notify_one();
+                        }
+                    }
+                }
+                Err(error) => tracing::error!(
+                    error = %crate::error::ErrorChain::new(&error),
+                    "the access log's frontier did not move; the next round moves it"
+                ),
+            }
+        }
+        let round = store.chain_round(BATCH, look).await;
         look = Chains::default();
         match round {
             Ok(round) => {
-                let chained = round.chained();
-                if let Round::Chained { entries, held } = round.access_log
-                    && entries > 0
-                {
-                    if seal == Seal::Now {
-                        sealed_at = began;
-                        unsealed = false;
-                    } else {
-                        unsealed = true;
-                    }
-                    metrics
-                        .log_chain_hold
-                        .record(held.as_secs_f64(), &[KeyValue::new("outcome", "ok")]);
-                    metrics.log_chained.add(
-                        u64::try_from(entries).unwrap_or(u64::MAX),
-                        &[KeyValue::new("chain", "access_log")],
-                    );
-                }
                 if round.system > 0 {
                     metrics
                         .log_chained
                         .add(round.system, &[KeyValue::new("chain", "system")]);
-                }
-                if chained > 0 {
-                    crate::telemetry::metrics::metrics().atna_audit_sent.add(
-                        u64::try_from(chained).unwrap_or(u64::MAX),
-                        &[KeyValue::new("sink", "store")],
-                    );
+                    crate::telemetry::metrics::metrics()
+                        .atna_audit_sent
+                        .add(round.system, &[KeyValue::new("sink", "store")]);
                     for notify in &delivered {
                         notify.notify_one();
                     }
-                }
-                if round.access_log == Round::Busy {
-                    tokio::time::sleep(BUSY).await;
-                    continue;
                 }
                 if round.filled(BATCH) {
                     continue;
@@ -179,9 +167,6 @@ async fn run(
                 }
             }
             Err(error) => {
-                metrics
-                    .log_chain_hold
-                    .record(0.0, &[KeyValue::new("outcome", "failed")]);
                 tracing::error!(
                     error = %crate::error::ErrorChain::new(&error),
                     "an audit chainer round failed; the intake keeps its records"
@@ -190,41 +175,27 @@ async fn run(
                 continue;
             }
         }
-        if unsealed {
-            match store.chaining_store().seal_head().await {
-                Ok(true) => {
-                    sealed_at = tokio::time::Instant::now();
-                    unsealed = false;
-                }
-                Ok(false) => {
-                    // NOTE: our own design (#6050), the chainer that holds the head may chain
-                    // nothing and so seal nothing, so this one asks again and rests sealed.
-                    tokio::time::sleep(BUSY).await;
-                    continue;
-                }
-                Err(error) => tracing::error!(
-                    error = %crate::error::ErrorChain::new(&error),
-                    "the access log's head could not be sealed; the next round seals it"
-                ),
-            }
-        }
-        rested = true;
         tokio::select! {
             () = wake.notified() => tokio::time::sleep(GATHER).await,
-            () = tokio::time::sleep(POLL) => look = Chains::BOTH,
+            () = tokio::time::sleep(FRONTIER_EVERY) => {
+                if polled_at.elapsed() >= POLL {
+                    polled_at = tokio::time::Instant::now();
+                    look = Chains::BOTH;
+                }
+            }
         }
     }
     drain(&store).await;
 }
 
-/// Chain what the intake holds before the chainer stops, so a graceful stop
-/// leaves no row for the next replica's poll; the stop's timeout bounds it.
+/// Chain what the system intake holds and seal what the access log holds
+/// before the chainer stops, so a graceful stop leaves nothing for the next
+/// replica's poll; the stop's timeout bounds it.
 async fn drain(store: &AuditStore) {
     loop {
-        match store.chain_round(BATCH, Chains::BOTH, Seal::Now).await {
-            Ok(round) if round.access_log == Round::Busy => tokio::time::sleep(BUSY).await,
+        match store.chain_round(BATCH, Chains::BOTH).await {
             Ok(round) if round.chained() > 0 => {}
-            Ok(_) => return,
+            Ok(_) => break,
             Err(error) => {
                 tracing::warn!(
                     error = %crate::error::ErrorChain::new(&error),
@@ -233,5 +204,17 @@ async fn drain(store: &AuditStore) {
                 return;
             }
         }
+    }
+    if let Err(error) = store
+        .settle(Chains {
+            access_log: true,
+            system: false,
+        })
+        .await
+    {
+        tracing::warn!(
+            error = %crate::error::ErrorChain::new(&error),
+            "the audit chainer stopped before it sealed every entry; the next sealer seals them"
+        );
     }
 }

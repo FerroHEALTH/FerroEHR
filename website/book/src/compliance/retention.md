@@ -280,7 +280,7 @@ three calendar years span 1095 or 1096 days, so a floor in days has to be
 1096 and a ceiling 1095.
 An openEHR access-log entry carries its own end: it states `retain_until`
 and the grounds of its period when it is written, and once that day has passed
-the server replaces it by a tombstone that keeps the hash chain whole. The
+the server replaces it by a tombstone that keeps its window's seal whole. The
 registers on this page never shorten or lengthen that period, and none of them
 removes an entry. An erasure a law orders before the end takes the same
 tombstone path through an administrator operation that is itself recorded.

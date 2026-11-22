@@ -11,7 +11,7 @@ include::partial$module_vars.adoc[]
 
 = {spec_title} [.spec-status.spec-status-development]#{spec_status}#
 
-Model of the record an EHR system keeps of every access to EHR data: who accessed, on whose behalf, what, when, why, under which authorisation, with which outcome and through which channel. The log is kept beside the EHR, keyed by `ehr_id`, append-only and hash-chained, and readable by the subject of care.
+Model of the record an EHR system keeps of every access to EHR data: who accessed, on whose behalf, what, when, why, under which authorisation, with which outcome and through which channel. The log is kept beside the EHR, keyed by `ehr_id`, append-only and sealed in windows, and readable by the subject of care.
 
 NOTE: This is a draft change proposal prepared in the FerroEHR repository. It has not been submitted to openEHR and is not part of any RM release.
 

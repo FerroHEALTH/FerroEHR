@@ -136,9 +136,9 @@ async fn the_sweep_collects_a_shared_part_once_no_entry_names_it() {
         .await
         .expect("the entries append");
     store
-        .settle(ferroehr::access_log::chainer::Owed::default())
+        .seal_committed()
         .await
-        .expect("the intake chains");
+        .expect("the entries are sealed");
     age_parts(&pool, "2025-01-02").await;
     for _ in 0..3 {
         assert_eq!(
@@ -186,11 +186,10 @@ async fn the_sweep_collects_a_shared_part_once_no_entry_names_it() {
     }
     assert_eq!(passes, 3, "two parts a pass, five parts");
     assert_eq!(parts(&pool).await, 0, "every orphan is collected");
-    let findings: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.verify_access_log_chain()")
-        .fetch_one(&pool)
+    let findings = crate::fixtures::verify_chain(&pool)
         .await
         .expect("the verifier");
-    assert_eq!(findings, 0, "the chain verifies");
+    assert!(findings.is_empty(), "the log verifies: {findings:?}");
 }
 
 /// A part an intake write in flight names is skipped by the sweep, and once
@@ -210,9 +209,9 @@ async fn the_sweep_skips_a_shared_part_an_intake_write_names() {
         .await
         .expect("the entry appends");
     store
-        .settle(ferroehr::access_log::chainer::Owed::default())
+        .seal_committed()
         .await
-        .expect("the intake chains");
+        .expect("the entries are sealed");
     store
         .tombstone(written[0].uid.value(), at("2026-01-01T00:00:00Z"), expiry())
         .await
@@ -231,6 +230,7 @@ async fn the_sweep_skips_a_shared_part_an_intake_write_names() {
         &[Vec::new()],
         None,
         &std::collections::BTreeSet::new(),
+        &ferroehr::access_log::intake::Named::default(),
     )
     .await
     .expect("the intake write");
@@ -246,9 +246,9 @@ async fn the_sweep_skips_a_shared_part_an_intake_write_names() {
         "the part is kept through today"
     );
     store
-        .settle(ferroehr::access_log::chainer::Owed::default())
+        .seal_committed()
         .await
-        .expect("the intake chains");
+        .expect("the entries are sealed");
     assert!(
         matches!(
             store.read(second.uid.value()).await.expect("read"),
@@ -287,9 +287,16 @@ async fn a_write_waiting_on_another_raise_of_a_part_writes_its_entry() {
 
     let mut conn = pool.acquire().await.expect("connection");
     let mut raising = conn.begin().await.expect("begin");
-    ferroehr::access_log::intake::take_in(&mut raising, &[first], &[Vec::new()], None, &known)
-        .await
-        .expect("the first write raises the part");
+    ferroehr::access_log::intake::take_in(
+        &mut raising,
+        &[first],
+        &[Vec::new()],
+        None,
+        &known,
+        &ferroehr::access_log::intake::Named::default(),
+    )
+    .await
+    .expect("the first write raises the part");
     let waiting = {
         let pool = pool.clone();
         let digest = digest.clone();
@@ -304,6 +311,7 @@ async fn a_write_waiting_on_another_raise_of_a_part_writes_its_entry() {
                 &[Vec::new()],
                 None,
                 &std::collections::BTreeSet::from([digest.as_str()]),
+                &ferroehr::access_log::intake::Named::default(),
             )
             .await
         })
@@ -354,9 +362,9 @@ async fn known_orphan(
         .await
         .expect("the first entry is written");
     store
-        .settle(ferroehr::access_log::chainer::Owed::default())
+        .seal_committed()
         .await
-        .expect("the intake chains");
+        .expect("the entries are sealed");
     store
         .tombstone(first.uid.value(), at("2026-01-01T00:00:00Z"), expiry())
         .await
@@ -390,9 +398,9 @@ async fn a_known_part_the_sweep_removed_is_written_again() {
     assert_eq!(parts(&pool).await, 1, "the part is stored again");
     assert_eq!(dangling(&pool).await, 0);
     store
-        .settle(ferroehr::access_log::chainer::Owed::default())
+        .seal_committed()
         .await
-        .expect("the intake chains");
+        .expect("the entries are sealed");
     assert!(
         crate::fixtures::verify_chain(&pool)
             .await
@@ -437,9 +445,9 @@ async fn the_sweep_racing_writes_of_a_known_part_leaves_no_entry_without_its_par
     );
     assert_eq!(parts(&pool).await, 1);
     store
-        .settle(ferroehr::access_log::chainer::Owed::default())
+        .seal_committed()
         .await
-        .expect("the intake chains");
+        .expect("the entries are sealed");
     assert!(
         crate::fixtures::verify_chain(&pool)
             .await
@@ -501,9 +509,9 @@ async fn a_raise_that_meets_the_sweeps_removal_is_refused() {
         .await
         .expect("the first entry appends");
     store
-        .settle(ferroehr::access_log::chainer::Owed::default())
+        .seal_committed()
         .await
-        .expect("the intake chains");
+        .expect("the entries are sealed");
     store
         .tombstone(written[0].uid.value(), at("2026-01-01T00:00:00Z"), expiry())
         .await
@@ -537,6 +545,7 @@ async fn a_raise_that_meets_the_sweeps_removal_is_refused() {
                 &[Vec::new()],
                 None,
                 &std::collections::BTreeSet::from([digest.as_str()]),
+                &ferroehr::access_log::intake::Named::default(),
             )
             .await
         })

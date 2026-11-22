@@ -9,7 +9,7 @@
 
 use std::collections::BTreeSet;
 
-use ferroehr::access_log::intake::{GroupWriter, IntakeEntry, IntakeToken, take_in};
+use ferroehr::access_log::intake::{GroupWriter, IntakeEntry, IntakeToken, Named, take_in};
 use sqlx::PgPool;
 
 use crate::access_log_checkpoint::entry;
@@ -75,10 +75,7 @@ fn batch(round: u32, writer: u32) -> (Vec<IntakeEntry>, Vec<Vec<IntakeToken>>) {
 /// Asserts the intake holds every entry the writers wrote, once, and each
 /// token once.
 async fn every_entry_once(pool: &PgPool) {
-    let uids: Vec<String> = sqlx::query_scalar(
-        "SELECT e.uid::text FROM audit.access_log_intake i \
-         CROSS JOIN LATERAL unnest(i.entries) AS n(id) JOIN audit.access_log_entry e ON e.id = n.id",
-    )
+    let uids: Vec<String> = sqlx::query_scalar("SELECT e.uid::text FROM audit.access_log_entry e")
         .fetch_all(pool)
         .await
         .expect("the intake");
@@ -113,7 +110,15 @@ async fn concurrent_statements_with_overlapping_tokens_all_commit() {
             writers.spawn(async move {
                 let (entries, tokens) = batch(round, writer);
                 let mut conn = pool.acquire().await.expect("a connection");
-                take_in(&mut conn, &entries, &tokens, None, &BTreeSet::new()).await
+                take_in(
+                    &mut conn,
+                    &entries,
+                    &tokens,
+                    None,
+                    &BTreeSet::new(),
+                    &Named::default(),
+                )
+                .await
             });
         }
         while let Some(written) = writers.join_next().await {
