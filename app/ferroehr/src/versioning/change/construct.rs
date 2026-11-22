@@ -2,11 +2,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The constructors of a [`Change`] a service write builds, and of the
-//! [`Write`] that carries it.
+//! [`Write`] that carries it, and the folded statement a write commits in.
 
-use super::{Change, Write, WriteEnvelope};
+use uuid::Uuid;
+
+use super::{Change, Committed, ContributionCtx, Write, WriteEnvelope};
 use crate::ids::{AllocatedVoId, EhrId, VoId};
+use crate::storage::version_repo::commit::{Folded, FoldedVersion, Guard, outbox_envelope};
 use crate::versioning::Kind;
+use crate::versioning::SigningCtx;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::body::Body;
 use crate::versioning::object_version_id::TreeId;
@@ -101,6 +105,7 @@ impl Write {
             known: restriction::Known::default(),
             placement: None,
             deleted: None,
+            guard: None,
         }
     }
 
@@ -115,8 +120,8 @@ impl Write {
         }
     }
 
-    /// The same write off the placement the caller already read under the
-    /// per-object lock it holds.
+    /// The same write off the placement the caller already read, under the
+    /// per-object lock it holds or in the gate read a guard requires unchanged.
     pub(crate) fn placed(
         self,
         placement: crate::storage::version_repo::placement::Placement,
@@ -127,11 +132,55 @@ impl Write {
         }
     }
 
+    /// The same write, committed only while what its gate read judged still
+    /// holds ([`Guard`]).
+    pub(crate) fn guarded(self, guard: Guard) -> Self {
+        Self {
+            guard: Some(guard),
+            ..self
+        }
+    }
+
     /// The same write, a logical delete of a version that held `deleted`.
     pub(crate) fn deleting(
         self,
         deleted: Option<crate::system_log::categories::ContentIds>,
     ) -> Self {
         Self { deleted, ..self }
+    }
+}
+
+/// The folded statement of `version` under `contribution`: a guarded one
+/// carrying `committed`'s outbox row when eventing is enabled, a standalone
+/// one, or one into an existing CONTRIBUTION.
+pub(super) fn folded_shape<'a>(
+    contribution: ContributionCtx,
+    contribution_id: Uuid,
+    version: FoldedVersion<'a>,
+    ctx: &SigningCtx<'_>,
+    committed: &Committed,
+) -> Folded<'a> {
+    match contribution {
+        ContributionCtx::New(Some(guard)) => Folded::Guarded {
+            id: contribution_id,
+            guard: Guard {
+                outbox: ctx.outbox_enabled.then(|| {
+                    let entry = [committed.envelope_entry()];
+                    outbox_envelope(
+                        contribution_id,
+                        version.ehr_id,
+                        committed.time_committed,
+                        &entry,
+                    )
+                }),
+                ..guard
+            },
+            version,
+        },
+        ContributionCtx::New(None) => Folded::Standalone {
+            id: contribution_id,
+            version,
+        },
+        ContributionCtx::Existing(id) => Folded::Into { id, version },
     }
 }

@@ -255,6 +255,20 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   stored template and first root of an update, the content identity of the
   version a delete deletes, which its access record is classified by, and
   whether a persistent create has a live sibling of its template.
+  The commit is then one guarded statement (`Folded::Guarded`): leading CTEs
+  read the EHR row `FOR SHARE`, the object's head row and the policy and
+  definition revisions, and the audit insert, which every later insert reads
+  from, writes only when the EHR is still modifiable and unrestricted, the
+  head and the object's mark are unchanged, the revisions are those judged
+  on and the commit instant is not earlier than the head's. The event outbox
+  row rides in the same statement. A write that finds anything moved is
+  judged again from a new gate read, at most eight times before `503`, so it
+  answers as a lock wait would have; a moved policy revision instead refuses
+  it for the copies' refresh. No lock serializes two writers of one object:
+  the version keys (`version_hot_pkey`, `uq_version_hot_trunk_position`,
+  `uq_version_hot_tree`) refuse a second version at a taken place, and that
+  write is judged again too. `commit_retries_total{reason}` counts both
+  (#6256).
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers

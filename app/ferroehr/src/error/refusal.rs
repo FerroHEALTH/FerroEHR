@@ -266,6 +266,7 @@ fn storage_message(e: &crate::storage::error::StorageError) -> String {
         | S::BodyDecode(_)
         | S::BodyEncode(_) => CODEC_MESSAGE.to_owned(),
         S::Database(_) | S::Acquire(_) => INTERNAL_MESSAGE.to_owned(),
+        S::GuardMoved(_) => "the record moved while the write was judged".to_owned(),
     }
 }
 

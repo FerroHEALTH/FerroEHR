@@ -17,6 +17,8 @@ use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::version_update::WriteRequest;
+use crate::storage::error::StorageError;
+use crate::storage::version_repo::commit::GuardFlags;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
@@ -31,10 +33,6 @@ use crate::versioning::lifecycle;
 pub(in crate::service) enum Mode {
     /// BEGIN, the prepare step, the change, COMMIT.
     Transaction,
-    /// The prepare step and the change on the bare connection, without BEGIN:
-    /// a create with no attestations while the event outbox is off commits as
-    /// one folded, self-atomic statement.
-    Statement,
     /// [`Mode::Transaction`], with the EHR's promoted subject columns synced
     /// from this `EHR_STATUS` body after the change, inside the same
     /// transaction ([`FerroEhrService::sync_ehr_subject`]).
@@ -42,6 +40,7 @@ pub(in crate::service) enum Mode {
 }
 
 /// A [`WriteRequest`]'s commit metadata, resolved against the server rules.
+#[derive(Clone)]
 pub(in crate::service) struct Resolved {
     /// The commit audit ([`FerroEhrService::commit_audit`]).
     pub(in crate::service) audit: AuditInput,
@@ -135,38 +134,21 @@ impl FerroEhrService {
             let signing_ctx = self.signing_ctx();
             let mut conn = self.recorded_conn(pool).await?;
             let mut invalidate = None;
-            // NOTE: our own design (#5762), a request's write reserves its audit records in its
-            // own transaction, so the folded statement runs inside one when they are recorded.
-            let mode = match mode {
-                Mode::Statement if self.records_writes() => Mode::Transaction,
-                mode => mode,
-            };
-            let (ehr_id, committed) = match mode {
-                Mode::Statement => {
-                    let write = prepare(&mut conn).await?;
-                    crate::policy_register::observed::wrote();
-                    let ehr_id = write.ehr_id;
-                    (ehr_id, commit(&mut conn, write, &signing_ctx).await?)
-                }
-                Mode::Transaction | Mode::SyncSubject(..) => {
-                    let mut tx = conn.begin().await?;
-                    let write = prepare(&mut tx).await?;
-                    // NOTE: our own design (#6256), from here the write may land, so
-                    // the request is never run again, whatever its copies held.
-                    crate::policy_register::observed::wrote();
-                    let ehr_id = write.ehr_id;
-                    let committed = commit(&mut tx, write, &signing_ctx).await?;
-                    let facts = Self::written_facts(ehr_id, &committed);
-                    if let Mode::SyncSubject(ehr_id, status) = mode {
-                        self.sync_ehr_subject(&mut tx, ehr_id, &status).await?;
-                        self.commit_recorded(tx, &facts, Vec::new()).await?;
-                        invalidate = Some(ehr_id);
-                    } else {
-                        self.commit_recorded(tx, &facts, Vec::new()).await?;
-                    }
-                    (ehr_id, committed)
-                }
-            };
+            let mut tx = conn.begin().await?;
+            let write = prepare(&mut tx).await?;
+            // NOTE: our own design (#6256), from here the write may land, so the request is
+            // never run again, whatever its copies held.
+            crate::policy_register::observed::wrote();
+            let ehr_id = write.ehr_id;
+            let committed = commit(&mut tx, write, &signing_ctx).await?;
+            let facts = Self::written_facts(ehr_id, &committed);
+            if let Mode::SyncSubject(ehr_id, status) = mode {
+                self.sync_ehr_subject(&mut tx, ehr_id, &status).await?;
+                self.commit_recorded(tx, &facts, Vec::new()).await?;
+                invalidate = Some(ehr_id);
+            } else {
+                self.commit_recorded(tx, &facts, Vec::new()).await?;
+            }
             drop(conn);
             // NOTE: our own design (#5589, #5879), the status names the subject whose care
             // relationships decide access, so the copy and the request see the commit; read with
@@ -174,13 +156,204 @@ impl FerroEhrService {
             if let Some(ehr_id) = invalidate {
                 self.invalidate_ehr_access(ehr_id).await;
             }
-            if committed.skipped {
-                self.record_resend(ehr_id, &committed).await?;
-            } else {
-                record_commit(&committed);
-            }
-            Ok(committed)
+            self.counted(ehr_id, committed).await
         })
+    }
+
+    /// Commit one COMPOSITION write on `pool` as its gate read judged it
+    /// (#6256): acquire the connections, run the attempt `judge` makes on the
+    /// bare connection (the gate read in its own statement and the pre-checks,
+    /// ending in the guarded [`Write`]), then the one guarded commit statement, in a
+    /// transaction when `transaction` holds or the write's records are
+    /// reserved. No lock serializes two writers of one object: the statement
+    /// requires the head its gate read found, and the version's keys refuse a
+    /// second version at the same place.
+    ///
+    /// The statement writes nothing when what the gate read judged moved
+    /// before it ran, and a version's key refuses it when a concurrent commit
+    /// took its place first. A moved policy revision refuses the write for the
+    /// copies' refresh, so the request runs once more behind the up-front
+    /// confirm; anything else is judged again from a new gate read, which
+    /// answers as a lock wait would have, at most [`ATTEMPTS`] times.
+    ///
+    /// # Errors
+    /// The `judge` refusals, the [`commit`] ones, `access-refreshing` for a
+    /// moved policy, `service_overloaded` once the attempts are spent, and a
+    /// failed acquire, begin or commit.
+    pub(in crate::service) fn commit_gated<'s, M, J>(
+        &'s self,
+        pool: &'s PgPool,
+        transaction: bool,
+        judge: M,
+    ) -> Pin<Box<impl Future<Output = Result<Committed, ServiceError>> + 's>>
+    where
+        M: Fn() -> J + 's,
+        J: AsyncFnOnce(&mut PgConnection) -> Result<Write, ServiceError> + 's,
+    {
+        // Boxed, as `commit_one`.
+        Box::pin(async move {
+            let signing_ctx = self.signing_ctx();
+            // NOTE: our own design (#5762), a request's write reserves its audit records in its
+            // own transaction, so the guarded statement runs inside one when they are recorded.
+            let transaction = transaction || self.records_writes();
+            for _ in 0..ATTEMPTS {
+                let mut conn = self.recorded_conn(pool).await?;
+                let write = judge()(&mut conn).await?;
+                crate::policy_register::observed::wrote();
+                let ehr_id = write.ehr_id;
+                let outcome = if transaction {
+                    let mut tx = conn.begin().await?;
+                    match commit(&mut tx, write, &signing_ctx).await {
+                        Ok(committed) => {
+                            let facts = Self::written_facts(ehr_id, &committed);
+                            self.commit_recorded(tx, &facts, Vec::new()).await?;
+                            Ok(committed)
+                        }
+                        Err(error) => Err(error),
+                    }
+                } else {
+                    commit(&mut conn, write, &signing_ctx).await
+                };
+                drop(conn);
+                match outcome {
+                    Ok(committed) => return self.counted(ehr_id, committed).await,
+                    Err(ServiceError::Storage(StorageError::GuardMoved(flags))) => {
+                        crate::policy_register::observed::not_written();
+                        crate::telemetry::access_path::count_commit_retry(moved_reason(&flags));
+                        if !flags.policy {
+                            if let (Some(policy), Some(definitions)) =
+                                (flags.policy_now, flags.definitions_now)
+                            {
+                                crate::policy_register::observed::observe(policy, definitions);
+                            }
+                            return Err(ServiceError::access_refreshing());
+                        }
+                    }
+                    Err(error) if place_taken(&error) => {
+                        crate::policy_register::observed::not_written();
+                        crate::telemetry::access_path::count_commit_retry("key");
+                    }
+                    Err(error) => return Err(error),
+                }
+            }
+            Err(ServiceError::overloaded(
+                "the record moved while the write was judged",
+                Contended,
+            ))
+        })
+    }
+
+    /// Count a committed write, or record a skipped identical re-send.
+    ///
+    /// # Errors
+    /// The [`Self::record_resend`] refusal.
+    async fn counted(
+        &self,
+        ehr_id: Option<EhrId>,
+        committed: Committed,
+    ) -> Result<Committed, ServiceError> {
+        if committed.skipped {
+            self.record_resend(ehr_id, &committed).await?;
+        } else {
+            record_commit(&committed);
+        }
+        Ok(committed)
+    }
+}
+
+/// What a guarded write consumes ([`FerroEhrService::commit_gated`]): handed
+/// to its first attempt, and for a write a later attempt may commit, a copy
+/// kept for each one.
+pub(in crate::service) struct Materials<T> {
+    first: std::sync::Mutex<Option<T>>,
+    spare: Option<T>,
+}
+
+impl<T: Clone> Materials<T> {
+    /// `first` for the first attempt, with a copy for the later ones when
+    /// `spare` holds.
+    pub(in crate::service) fn new(first: T, spare: bool) -> Self {
+        Self {
+            spare: spare.then(|| first.clone()),
+            first: std::sync::Mutex::new(Some(first)),
+        }
+    }
+
+    /// The materials of one attempt.
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when an earlier attempt consumed them and
+    /// no copy was kept: a write that a later attempt could only refuse keeps
+    /// none, and one that judges otherwise is asked again.
+    pub(in crate::service) fn take(&self) -> Result<T, ServiceError> {
+        let taken = self
+            .first
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take();
+        match (taken, &self.spare) {
+            (Some(first), _) => Ok(first),
+            (None, Some(spare)) => Ok(spare.clone()),
+            (None, None) => Err(ServiceError::overloaded(
+                "the record moved while the write was judged",
+                Spent,
+            )),
+        }
+    }
+}
+
+/// Every attempt of a guarded write found what it was judged on moved.
+#[derive(Debug, thiserror::Error)]
+#[error("every attempt of this write found the record moved under it")]
+struct Contended;
+
+/// An earlier attempt of a guarded write consumed its content.
+#[derive(Debug, thiserror::Error)]
+#[error("an earlier attempt of this write consumed its content")]
+struct Spent;
+
+/// What `slot` holds, taken: the first attempt of a guarded write takes it,
+/// and a later one finds it gone.
+pub(in crate::service) fn first_attempt<T>(slot: &std::sync::Mutex<Option<T>>) -> Option<T> {
+    slot.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .take()
+}
+
+/// The attempts a guarded commit makes before it answers `503` (#6256): each
+/// one after the first follows a commit that landed in between, so the bound
+/// is the contention one write survives, which is our own design.
+const ATTEMPTS: usize = 8;
+
+/// Whether `error` is a version key refusing a second version at the place a
+/// concurrent commit of the same object took first (`23505`, PostgreSQL docs
+/// Appendix A), which a guarded write judges again.
+fn place_taken(error: &ServiceError) -> bool {
+    let ServiceError::Storage(StorageError::Database(sqlx::Error::Database(db))) = error else {
+        return false;
+    };
+    db.code().as_deref() == Some("23505")
+        && db.constraint().is_some_and(|name| {
+            matches!(
+                name,
+                "version_hot_pkey" | "uq_version_hot_trunk_position" | "uq_version_hot_tree"
+            )
+        })
+}
+
+/// The `reason` label of a guarded commit that wrote nothing: the first of
+/// its requirements that no longer held.
+fn moved_reason(flags: &GuardFlags) -> &'static str {
+    if !flags.policy {
+        "policy"
+    } else if !flags.ehr {
+        "ehr"
+    } else if !flags.tip {
+        "tip"
+    } else if !flags.mark {
+        "mark"
+    } else {
+        "order"
     }
 }
 

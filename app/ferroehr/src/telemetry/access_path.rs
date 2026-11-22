@@ -61,6 +61,9 @@ const CARE_STALE_HELP: &str = "Care decisions that found the caller facts copy o
 /// Overlapped reads run again because the policy copies they were decided on
 /// were behind the revisions their statements read (`op`, #6251).
 pub const ACCESS_POLICY_RERUNS: &str = "access_policy_reruns";
+/// COMPOSITION commits judged again because what their gate read judged
+/// moved before their statement ran (`reason`, #6256).
+pub const COMMIT_RETRIES: &str = "commit_retries";
 /// Access decisions, one per EHR a request reached (`outcome`, `code`).
 pub const ACCESS_DECISIONS: &str = "access_decisions";
 /// Directives and steps an emergency lifted (`lifted`).
@@ -189,6 +192,8 @@ pub struct AccessPathMetrics {
     pub care_stale: Counter<u64>,
     /// Overlapped reads run again on confirmed policy copies, by operation.
     pub policy_reruns: Counter<u64>,
+    /// COMPOSITION commits judged again, by what moved.
+    pub commit_retries: Counter<u64>,
     /// Access decisions by outcome and refusal code.
     pub decisions: Counter<u64>,
     /// Directives and steps an emergency lifted.
@@ -267,6 +272,11 @@ impl AccessPathMetrics {
                 ACCESS_POLICY_RERUNS,
                 "Overlapped reads run again because their policy copies were behind the \
                  revisions their statements read (op = the operation id)",
+            ),
+            commit_retries: make.counter(
+                COMMIT_RETRIES,
+                "COMPOSITION commits judged again because what their gate read judged moved \
+                 before their statement ran (reason = ehr | tip | mark | order | policy | key)",
             ),
             decisions: make.counter(
                 ACCESS_DECISIONS,
@@ -412,6 +422,15 @@ static METRICS: OnceLock<AccessPathMetrics> = OnceLock::new();
 /// again behind the up-front confirm (#6251).
 pub fn count_policy_rerun(op: &'static str) {
     metrics().policy_reruns.add(1, &[KeyValue::new("op", op)]);
+}
+
+/// Increment `commit_retries_total{reason}`: a COMPOSITION commit is judged
+/// again, or refused for the policy copies' refresh, because `reason` moved
+/// between its gate read and its statement (#6256).
+pub fn count_commit_retry(reason: &'static str) {
+    metrics()
+        .commit_retries
+        .add(1, &[KeyValue::new("reason", reason)]);
 }
 
 /// The instruments; on the global no-op meter until [`init`] runs, as

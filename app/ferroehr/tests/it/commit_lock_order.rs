@@ -5,11 +5,14 @@
 //!
 //! Two writers that take the same locks in different orders can deadlock, so
 //! every multi-object writer takes the EHR row lock first and then the
-//! per-object advisory locks in ascending `vo_id` order. Each test parks a
-//! writer on the first lock it should take, while a blocker holds that lock,
-//! and asserts the writer holds none of the locks it should take after it. No
-//! openEHR spec governs the locking — our own storage design; the advisory-lock
-//! semantics are PostgreSQL docs §13.3.5 Advisory Locks.
+//! per-object advisory locks in ascending `vo_id` order. A COMPOSITION create,
+//! update or delete takes the EHR row lock alone, `FOR SHARE` in its guarded
+//! commit statement, and no object lock: the version's keys arbitrate between
+//! two writers of one object (#6256). Each test parks a writer on the first
+//! lock it should take, while a blocker holds that lock, and asserts the
+//! writer holds none of the locks it should not hold. No openEHR spec governs
+//! the locking — our own storage design; the advisory-lock semantics are
+//! PostgreSQL docs §13.3.5 Advisory Locks.
 
 use std::time::Duration;
 
@@ -215,4 +218,48 @@ async fn an_import_takes_the_ehr_row_lock_before_its_object_locks() {
         .await
         .expect("the import task")
         .expect("the folder lands once the EHR row is free");
+}
+
+/// A COMPOSITION update waits on the EHR row at its commit statement and
+/// holds no per-object lock while it waits, so it can be in no cycle with a
+/// writer that holds the EHR row and waits for an object lock (#6256).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+async fn a_composition_update_takes_the_ehr_row_lock_and_no_object_lock() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&DomainPools::from_shared(&pool));
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let created = svc
+        .create_composition(ehr, uv(&composition("first"), "249", None))
+        .await
+        .expect("the first version");
+
+    let mut blocker = pool.begin().await.expect("blocker transaction");
+    sqlx::query("SELECT 1 FROM ehr WHERE id = $1 FOR UPDATE")
+        .bind(ehr)
+        .execute(&mut *blocker)
+        .await
+        .expect("hold the EHR row");
+
+    let writer = {
+        let svc = svc.clone();
+        let request = uv(&composition("second"), "251", Some(&created.version_uid()));
+        let vo = created.vo_id;
+        tokio::spawn(async move { svc.update_composition(ehr, vo, request).await })
+    };
+    wait_for_a_lock_waiter(&pool).await;
+    assert!(
+        advisory_lock_is_free(&pool, created.vo_id.0).await,
+        "the update holds no object lock while it waits for the EHR row"
+    );
+
+    blocker.rollback().await.expect("release the blocker");
+    writer
+        .await
+        .expect("the writer task")
+        .expect("the update lands once the EHR row is free");
 }
