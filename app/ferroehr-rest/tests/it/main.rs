@@ -89,6 +89,7 @@ mod binding_refusals_http;
 mod caller_kinds_http;
 mod care_writer_review_http;
 mod cohort_http;
+mod commit_contention_http;
 mod composition_not_modified;
 mod composition_validation_http;
 mod compressed_request_http;

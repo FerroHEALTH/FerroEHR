@@ -33,6 +33,12 @@ pub enum StorageError {
     #[error("invalid node rows: {0}")]
     InvalidRows(String),
 
+    /// A guarded commit wrote nothing, because what its gate read judged no
+    /// longer held when it ran (#6256): the write is judged again from a new
+    /// gate read, or refused as the policy copies' refresh.
+    #[error("what the write was judged on moved before it ran: {0:?}")]
+    GuardMoved(crate::storage::version_repo::commit::GuardFlags),
+
     /// A client-supplied CONTRIBUTION uid is already in use (the insert hit
     /// `ON CONFLICT (id) DO NOTHING`). ITS-REST `contribution_create`: "if the
     /// `uid` is supplied it must not already be in use" — a duplicate is a
@@ -131,6 +137,11 @@ pub(crate) fn classify_storage(e: StorageError) -> ServiceError {
         // (normally intercepted at the versioning call site; this is the
         // correct fallback should it propagate), and an archive record
         // claiming an occupied trunk position of a version container.
+        // NOTE: our own design (#6256), a commit whose ground moved more often than its
+        // bound allows is a temporary unavailability, which the caller may ask again.
+        StorageError::GuardMoved(_) => {
+            ServiceError::overloaded("the record moved while the write was judged", e)
+        }
         StorageError::ContributionUidInUse(_) | StorageError::TrunkPositionInUse { .. } => {
             ServiceError::Conflict(Refusal::new(Clash::State, e.to_string()).with_source(e))
         }

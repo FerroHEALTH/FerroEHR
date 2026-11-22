@@ -30,7 +30,7 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
 use crate::storage::render::index::Rendered;
-use crate::storage::version_repo::commit::{Folded, FoldedRows, commit_folded};
+use crate::storage::version_repo::commit::{Folded, FoldedRows, Guard, commit_folded};
 use crate::versioning::attestation::{self, PendingAttest};
 use crate::versioning::audit::AuditInput;
 use crate::versioning::body::Body;
@@ -47,6 +47,7 @@ pub(crate) mod resolve;
 mod sign;
 mod written;
 
+use construct::folded_shape;
 use resolve::{Content, Placing, resolve_create, resolve_delete, resolve_modify};
 use sign::body_and_signature;
 use written::{admit_written, nodes, root_archetype};
@@ -266,7 +267,7 @@ impl Change {
 /// merged … on commit runtime"): the lifecycle state, a verbatim client
 /// signature, and accompanying attestations. `Default` = the plain server
 /// commit (532|complete|, server-signed, none).
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub(crate) struct WriteEnvelope {
     /// `UPDATE_VERSION.lifecycle_state` (None → 532|complete|).
     pub(crate) lifecycle_state: Option<String>,
@@ -489,8 +490,8 @@ enum ContributionCtx {
     /// A standalone single-object write (create/update/delete): the CONTRIBUTION
     /// is created in the same commit, sharing the version's `commit_audit` (a
     /// direct write is one CONTRIBUTION of one change — master06 §Committal and
-    /// Audits).
-    New,
+    /// Audits), guarded by what its gate read judged when it carries a guard.
+    New(Option<Guard>),
     /// A change within a multi-change CONTRIBUTION already opened by
     /// [`commit_contribution`]; the version's own `commit_audit` is written here,
     /// referencing this existing `contribution_id`.
@@ -809,7 +810,7 @@ async fn commit_resolved(
     // The enclosing CONTRIBUTION id: pre-existing for a multi-change commit,
     // generated here for a standalone write — known before the signature.
     let contribution_id = match contribution {
-        ContributionCtx::New => ctx.stamp.mint(),
+        ContributionCtx::New(_) => ctx.stamp.mint(),
         ContributionCtx::Existing(cid) => cid,
     };
 
@@ -876,17 +877,22 @@ async fn commit_resolved(
     // The folded statements BIND `r.time_committed` (the instant the signature
     // was computed over) as the audit time and the version row's own
     // `committed_at`, so stored == signed holds by construction.
-    let statement = match contribution {
-        ContributionCtx::New => Folded::Standalone {
-            id: contribution_id,
-            version: folded,
-        },
-        ContributionCtx::Existing(id) => Folded::Into {
-            id,
-            version: folded,
-        },
+    let mut committed = Committed {
+        vo_id: r.vo_id,
+        sys_version: r.ordinal,
+        tree: r.tree,
+        creating_system_id: ctx.system_id.clone(),
+        kind: r.kind,
+        change_type: audit.change_type.clone(),
+        template_id: r.template_id.clone(),
+        root_archetype: archetype.clone(),
+        time_committed: r.time_committed,
+        skipped: false,
+        content_digest: r.content_digest,
+        deleted: None,
     };
-    let time_committed = commit_folded(tx, &audit_row, statement)
+    let statement = folded_shape(contribution, contribution_id, folded, ctx, &committed);
+    committed.time_committed = commit_folded(tx, &audit_row, statement)
         .await?
         .time_committed;
 
@@ -906,23 +912,7 @@ async fn commit_resolved(
     )
     .await?;
 
-    Ok((
-        Committed {
-            vo_id: r.vo_id,
-            sys_version: r.ordinal,
-            tree: r.tree,
-            creating_system_id: ctx.system_id.clone(),
-            kind: r.kind,
-            change_type: audit.change_type.clone(),
-            template_id: r.template_id,
-            root_archetype: archetype,
-            time_committed,
-            skipped: false,
-            content_digest: r.content_digest,
-            deleted: None,
-        },
-        contribution_id,
-    ))
+    Ok((committed, contribution_id))
 }
 
 /// The opt-in answer to an identical re-send (#4415): the existing version
@@ -985,11 +975,14 @@ pub(crate) struct Write {
     /// What the caller already read of the commit instant and the EHR.
     pub(crate) known: restriction::Known,
     /// A placement the caller already read under the per-object lock it holds
-    /// ([`precondition::lock_current`], or a composition write's gate read); `None` makes
+    /// ([`precondition::lock_current`]) or in a guarded write's gate read; `None` makes
     /// the write take the lock and read its own.
     pub(crate) placement: Option<crate::storage::version_repo::placement::Placement>,
     /// What the version a logical delete deletes holds ([`Committed::deleted`]).
     pub(crate) deleted: Option<crate::system_log::categories::ContentIds>,
+    /// What the write's gate read judged, which its one statement requires
+    /// still holds (#6256); `None` commits unguarded.
+    pub(crate) guard: Option<Guard>,
 }
 
 /// Commit one change under its own contribution, with its event-outbox row.
@@ -1012,12 +1005,15 @@ pub(crate) async fn commit(
         known,
         placement,
         deleted,
+        guard,
     } = write;
+    // The guarded statement writes the outbox row itself.
+    let outbox = guard.is_none();
     let (mut committed, contribution_id, references) = apply_change(
         tx,
         CommitScope {
             ehr_id,
-            contribution: ContributionCtx::New,
+            contribution: ContributionCtx::New(guard),
             audit: &audit,
             ctx,
             known,
@@ -1031,7 +1027,7 @@ pub(crate) async fn commit(
     let references: Vec<_> = references.into_iter().map(|r| (None, r)).collect();
     crate::versioning::party_refs::check(tx, &references).await?;
     crate::party_binding::grants::caller::subject::settle(tx, [committed.kind]).await?;
-    if !committed.skipped {
+    if !committed.skipped && outbox {
         write_single_outbox(tx, ctx, contribution_id, ehr_id, &committed).await?;
     }
     Ok(committed)
