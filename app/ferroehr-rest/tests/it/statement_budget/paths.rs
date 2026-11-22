@@ -304,6 +304,11 @@ struct Budget {
 /// delete 8, and 25, 25, 31, 37 and 42 fewer allocations on the JSON, XML and
 /// FLAT commits, the update and the delete, measured beside the merge base;
 /// each of those ceilings fell by its path's figure.
+/// A CONTRIBUTION of COMPOSITION members has since read its EHR and targets
+/// in one gate read after planning and committed in one guarded statement
+/// (#6256): 7 round trips where it sent 11, measured beside the merge base,
+/// and its round-trip ceiling fell by four; its allocations moved from 17,591
+/// to 17,626, under their ceiling, which stays.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
@@ -409,7 +414,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 6,
         allocations: 18_290,
         peak_bytes: 1_649_934,
-        round_trips: 11,
+        round_trips: 7,
         nested: 14,
         wal: 190_142,
     },
