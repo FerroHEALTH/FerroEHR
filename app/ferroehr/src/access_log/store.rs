@@ -1,27 +1,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The access-log store: each record kept as its canonical form, chained by
-//! its `ACCESS_LOG_LINK`, and an entry replaced in place by its tombstone
-//! (#5125).
+//! The access-log store: each record kept as its canonical form, written
+//! once and read from that row, and an entry replaced in place by its
+//! tombstone (#5125, #6242).
 //!
-//! The draft's integrity rules (`docs/plans/access-log.md` §Integrity) fix
-//! the chain: the canonical form of a record is its ITS-JSON serialisation
-//! without its link, canonicalised by RFC 8785; `content_digest` is the
-//! SHA-256 of that form and `digest` the SHA-256 of `previous_digest`, the
-//! sequence and `content_digest`, one per line. An entry is written to the
-//! intake first ([`crate::access_log::intake`]) and the chainer
-//! ([`crate::access_log::chainer`]) gives it its link in this system's own
-//! access log, one chain from 1 with no gaps, under the head's lock, which
-//! the insert trigger of `audit.access_log_link`
-//! (`migrations/audit/0004_baseline_access_log.sql`) checks. The retention rules (§Retention) let an entry be replaced by
-//! a tombstone that keeps its uid, `system_id`, `time_recorded` and link, the
-//! one change the table's triggers admit.
-//!
-//! Verification is the access log's own: `audit.verify_access_log_chain()`
-//! and [`crate::system_log::store::AuditStore::verify_chain_advancing`].
+//! The canonical form of a record is its ITS-JSON serialisation canonicalised
+//! by RFC 8785, and `content_digest` the SHA-256 of that form. An entry is
+//! written by its request ([`crate::access_log::intake`]) and sealed in a
+//! window ([`crate::access_log::seal`]). The retention rules let an entry be
+//! replaced by a tombstone that keeps its uid, `system_id`, `time_recorded`
+//! and content digest, the one change the table's triggers admit
+//! (`migrations/audit/0004_baseline_access_log.sql`).
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use openehr_base::containers::NonEmptyVec;
@@ -31,21 +22,16 @@ use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use sqlx::postgres::PgRow;
 use sqlx::{Connection, PgConnection, PgPool, Row};
 
-use crate::access_log::chainer::Owed;
-use crate::access_log::checkpoint::{PendingSeal, Sealer};
+use crate::access_log::checkpoint::Sealer;
 use crate::access_log::intake::{IntakeEntry, take_in};
 use crate::access_log::stored_form;
 use crate::db::acquire::{AcquireError, acquire};
 use crate::versioning::signature::signer::{AttestError, Signer};
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
-use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 use openehr_rm::draft::access_log::access_log::access_log_tombstone::AccessLogTombstone;
-use openehr_rm::draft::access_log::invariants::{check_entry, check_tombstone};
+use openehr_rm::draft::access_log::invariants::check_tombstone;
 use openehr_rm::draft::invariants::Violations;
-
-/// The member of a record's ITS-JSON form its canonical form leaves out.
-const LINK: &str = "link";
 
 /// The member of a checkpoint's ITS-JSON form its canonical form leaves out:
 /// the proof is Void while the signature is computed (RM common
@@ -103,29 +89,22 @@ pub enum AccessLogError {
     /// The clock gave a time a checkpoint cannot name to the microsecond.
     #[error("the time of the access-log checkpoint is out of range")]
     Clock(#[source] jiff::Error),
-    /// The chain reached the last position a link can name.
-    #[error("the access-log chain has no position left")]
+    /// A window holds more entries than a seal can count.
+    #[error("the access-log window holds more entries than a seal counts")]
     Exhausted,
-    /// The store wrote an entry and returned no link for its uid.
-    #[error("the access-log store returned no link for the entry {uid}")]
-    Unlinked {
-        /// The entry's uid.
-        uid: String,
-    },
 }
 
 /// The canonical form of an access-log record or checkpoint: its ITS-JSON
-/// serialisation without its link or its proof, canonicalised by RFC 8785.
+/// serialisation without its proof, canonicalised by RFC 8785.
 ///
-/// The link is left out whatever it holds, since the chain computes it over
-/// this form, and a checkpoint's proof since it signs this form. No record
-/// has a proof and no checkpoint a link.
+/// A checkpoint's proof is left out since it signs this form; no record has
+/// a proof.
 ///
 /// # Errors
 /// [`AccessLogError::Canonical`] when the record does not serialise or holds
 /// a number with no finite double form.
 pub fn canonical_form(record: &impl serde::Serialize) -> Result<String, AccessLogError> {
-    canonical_object_without(record, &[LINK, PROOF]).map_err(AccessLogError::Canonical)
+    canonical_object_without(record, &[PROOF]).map_err(AccessLogError::Canonical)
 }
 
 /// The columns a stored access-log record is read back from, over the record
@@ -149,9 +128,7 @@ macro_rules! records {
         concat!(
             "SELECT r.uid, r.chain_seq, ",
             crate::access_log::store::entry_parts!(),
-            ", r.algorithm, \
-             encode(r.previous_digest, 'hex') AS previous_digest, \
-             encode(r.content_digest, 'hex') AS content_digest, encode(r.digest, 'hex') AS digest \
+            ", encode(r.content_digest, 'hex') AS content_digest \
              FROM audit.access_log_record r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared"
         )
@@ -163,8 +140,8 @@ pub(crate) use records;
 #[derive(Debug, Clone)]
 pub struct AccessLogStore {
     pool: PgPool,
-    /// The keyring and system that seal the chain in signed checkpoints,
-    /// whenever the keyring holds an `OpenPGP` key (#5704).
+    /// The keyring and system that sign the seals, whenever the keyring
+    /// holds an `OpenPGP` key (#5704, #6242).
     sealer: Option<Sealer>,
 }
 
@@ -189,28 +166,27 @@ impl AccessLogStore {
         &self.pool
     }
 
-    /// The store that seals the chain in `ACCESS_LOG_CHECKPOINT`s of
-    /// `system_id` over the last link a round wrote, signed with `signer`'s
-    /// key in the round's own transaction (#5704, #5770).
+    /// The keyring and system that sign the seals, when the keyring holds a key.
+    pub(super) fn sealer(&self) -> Option<&Sealer> {
+        self.sealer.as_ref()
+    }
+
+    /// The store that signs each window's seal as the `ACCESS_LOG_CHECKPOINT`
+    /// of `system_id` up to the window's last entry, with `signer`'s key
+    /// (#5704, #6242).
     #[must_use]
     pub fn with_sealer(mut self, signer: Arc<Signer>, system_id: String) -> Self {
         self.sealer = Some(Sealer::new(signer, system_id));
         self
     }
 
-    /// Append `entries` to the chain in their order and return them with the
-    /// links the chain gave them: written to the intake in one transaction,
-    /// then chained, with every row written before them, before this returns.
-    ///
-    /// The link an entry arrives with is replaced: its position and digests
-    /// are the chain's to decide. Each entry is checked against the draft's
-    /// invariants with its link.
+    /// Append `entries` in their order, written in one transaction before
+    /// this returns; each is checked against the draft's invariants.
     ///
     /// # Errors
     /// [`AccessLogError::Canonical`] for an entry with no canonical form,
-    /// [`AccessLogError::Invalid`] for one that breaks an invariant, the
-    /// errors of [`Self::settle`], and the store errors when a statement
-    /// fails (a repeated uid among them).
+    /// [`AccessLogError::Invalid`] for one that breaks an invariant, and the
+    /// store errors when a statement fails (a repeated uid among them).
     pub async fn append(
         &self,
         entries: Vec<AccessLogEntry>,
@@ -231,73 +207,37 @@ impl AccessLogStore {
             &[],
             None,
             &std::collections::BTreeSet::new(),
+            &crate::access_log::intake::Named::default(),
         )
         .await?;
         // NOTE: our own design (#5762), the audit domain's own store, whose records are this
         // transaction's rows.
         tx.commit().await?;
-        drop(conn);
-        self.settle(Owed::default()).await?;
-        self.linked(entries).await
+        Ok(entries)
     }
 
-    /// `entries`, chained, each with the link the chain gave it.
-    ///
-    /// # Errors
-    /// [`AccessLogError::Unlinked`] for an entry the log does not hold,
-    /// [`AccessLogError::Invalid`] for one that breaks an invariant with its
-    /// link, and the store errors.
-    pub(super) async fn linked(
-        &self,
-        entries: Vec<AccessLogEntry>,
-    ) -> Result<Vec<AccessLogEntry>, AccessLogError> {
-        let uids = entries
-            .iter()
-            .map(|entry| uuid::Uuid::parse_str(entry.uid.value()).ok())
-            .collect::<Vec<_>>();
-        let rows = sqlx::query(concat!(records!(), " WHERE r.uid = ANY($1)"))
-            .bind(&uids)
-            .fetch_all(&mut *acquire(&self.pool).await?)
-            .await?;
-        let mut links = rows
-            .iter()
-            .map(|row| Ok((row.try_get::<uuid::Uuid, _>("uid")?, own_link(row)?)))
-            .collect::<Result<BTreeMap<_, _>, sqlx::Error>>()?;
-        let mut linked = entries;
-        for (entry, uid) in linked.iter_mut().zip(uids) {
-            entry.link =
-                uid.and_then(|uid| links.remove(&uid))
-                    .ok_or_else(|| AccessLogError::Unlinked {
-                        uid: entry.uid.value().to_owned(),
-                    })?;
-            check_entry(entry)?;
-        }
-        Ok(linked)
-    }
-
-    /// The checkpoint a round that ends at the link `digest` at `sequence`
-    /// owes, its signature begun; `None` without a sealer.
-    ///
-    /// # Errors
-    /// The errors of starting the signature.
-    pub(super) fn begin_seal(
-        &self,
-        sequence: i64,
-        digest: &str,
-    ) -> Result<Option<PendingSeal>, AccessLogError> {
-        self.sealer
-            .as_ref()
-            .map(|sealer| sealer.begin(sequence, digest))
-            .transpose()
-    }
-
-    /// The records whose `ehr_id` is `ehr_id`, in chain order, each with its
-    /// link.
+    /// The records whose `ehr_id` is `ehr_id`, in id order.
     ///
     /// # Errors
     /// The store errors when the statement fails, and
     /// [`AccessLogError::Unreadable`] when a stored record does not read.
     pub async fn of_ehr(&self, ehr_id: &str) -> Result<Vec<AccessLogRecord>, AccessLogError> {
+        let records = self.of_ehr_digested(ehr_id).await?;
+        Ok(records
+            .into_iter()
+            .map(|(record, _digest)| record)
+            .collect())
+    }
+
+    /// The records whose `ehr_id` is `ehr_id`, in id order, each with its
+    /// stored content digest, which a tombstone keeps from its entry.
+    ///
+    /// # Errors
+    /// As [`Self::of_ehr`].
+    pub async fn of_ehr_digested(
+        &self,
+        ehr_id: &str,
+    ) -> Result<Vec<(AccessLogRecord, String)>, AccessLogError> {
         let mut conn = acquire(&self.pool).await?;
         let rows = match stored_form::column_uuid(ehr_id) {
             Some(column) => {
@@ -320,20 +260,12 @@ impl AccessLogStore {
                 .await?
             }
         };
-        rows.iter().map(stored).collect()
+        rows.iter()
+            .map(|row| Ok((stored(row)?, row.try_get::<String, _>("content_digest")?)))
+            .collect()
     }
 
-    /// The links from `from` to `to`, both included, without the records'
-    /// content: what a verifier of the records between needs.
-    ///
-    /// # Errors
-    /// The store errors when the statement fails.
-    pub async fn links(&self, from: i64, to: i64) -> Result<Vec<AccessLogLink>, AccessLogError> {
-        let span = self.chain(from, to).await?;
-        Ok(span.into_iter().map(|(_uid, link)| link).collect())
-    }
-
-    /// The record whose uid is `uid`, entry or tombstone, with its link.
+    /// The record whose uid is `uid`, entry or tombstone.
     ///
     /// # Errors
     /// The store errors when the statement fails, and
@@ -353,8 +285,9 @@ impl AccessLogStore {
     /// Replace the entry whose uid is `uid` by its tombstone, removed at
     /// `time_removed` on `grounds`, and return the tombstone.
     ///
-    /// The tombstone keeps the entry's uid, `system_id`, `time_recorded` and
-    /// link, so the chain verifies after the entry's content is gone. `None`
+    /// The tombstone keeps the entry's uid, `system_id` and `time_recorded`,
+    /// and the row keeps its content digest, so its window verifies after the
+    /// entry's content is gone. `None`
     /// when no entry has the uid, which is also the answer for one already
     /// replaced: a tombstone is never replaced again.
     ///
@@ -412,7 +345,7 @@ impl AccessLogStore {
     /// tombstones, removed at `time_removed`, and return the tombstones.
     ///
     /// An entry has expired once `today` is past its `retain_until`, the last
-    /// day it is kept (`docs/plans/access-log.md` §Retention); an entry that
+    /// day it is kept (`docs/specifications/access-log`, semantics §Retention); an entry that
     /// states none is kept without end. Entries expire in any order, in the
     /// middle of the log as at its start, and each tombstone names the grounds
     /// of the period that ended. The entries come oldest end first and one
@@ -487,7 +420,7 @@ impl AccessLogStore {
 }
 
 /// The tombstone of `entry`, removed at `time_removed` on `grounds`: its uid,
-/// `system_id`, `time_recorded` and link, and nothing else of it.
+/// `system_id` and `time_recorded`, and nothing else of it.
 pub(crate) fn tombstone_of(
     entry: AccessLogEntry,
     time_removed: DvDateTime,
@@ -497,13 +430,12 @@ pub(crate) fn tombstone_of(
         uid: entry.uid,
         system_id: entry.system_id,
         time_recorded: entry.time_recorded,
-        link: entry.link,
         time_removed,
         grounds,
     }
 }
 
-/// Write each tombstone over the entry at its chain position on `tx`, in one
+/// Write each tombstone over the entry of its id on `tx`, in one
 /// statement, after checking every one against the draft's invariants;
 /// whether any was written.
 ///
@@ -526,9 +458,8 @@ async fn replace(
     }
     sqlx::query(
         "UPDATE audit.access_log_entry e SET content = t.content, shared = NULL \
-         FROM unnest($1::bigint[], $2::text[]) AS t(chain_seq, content) \
-         JOIN audit.access_log_link l ON l.chain_seq = t.chain_seq \
-         WHERE e.id = l.entry_id",
+         FROM unnest($1::bigint[], $2::text[]) AS t(id, content) \
+         WHERE e.id = t.id",
     )
     .bind(&positions)
     .bind(&contents)
@@ -537,54 +468,18 @@ async fn replace(
     Ok(true)
 }
 
-/// The link the columns of `row` hold, this system's: its links carry no
-/// signature, since checkpoints sign the chain (#5704).
-pub(super) fn own_link(row: &PgRow) -> Result<AccessLogLink, sqlx::Error> {
-    Ok(AccessLogLink {
-        sequence: row.try_get("chain_seq")?,
-        algorithm: row.try_get("algorithm")?,
-        previous_digest: row.try_get("previous_digest")?,
-        content_digest: row.try_get("content_digest")?,
-        digest: row.try_get("digest")?,
-        signature: None,
-    })
-}
-
-/// The link the columns of `row` hold with its `signature` column, an
-/// imported log's, whose exporter may have signed its links.
-pub(super) fn signed_link(row: &PgRow) -> Result<AccessLogLink, sqlx::Error> {
-    Ok(AccessLogLink {
-        signature: row.try_get("signature")?,
-        ..own_link(row)?
-    })
-}
-
 /// The record `row` of this system's log holds, read as a `T`: its canonical
-/// form, joined from its stored parts ([`document_of`]), with its link. The
-/// row holds `chain_seq`, the columns of [`entry_parts`] and the link's
-/// columns.
+/// form, joined from its stored parts ([`document_of`]). The row holds
+/// `chain_seq` (the entry id) and the columns of [`entry_parts`].
 ///
 /// # Errors
 /// [`AccessLogError::Unreadable`] when the record does not read.
 pub(crate) fn stored<T: serde::de::DeserializeOwned>(row: &PgRow) -> Result<T, AccessLogError> {
     let document = document_of(row)?;
-    with_link(row, &document, &own_link(row)?)
+    read_document(row, &document)
 }
 
-/// The record `row` of an imported log holds, read as a `T`, as [`stored`]
-/// from its whole canonical form in `document`, with the link's `signature`
-/// column.
-///
-/// # Errors
-/// As [`stored`].
-pub(super) fn stored_signed<T: serde::de::DeserializeOwned>(
-    row: &PgRow,
-) -> Result<T, AccessLogError> {
-    let document: String = row.try_get("document")?;
-    with_link(row, &document, &signed_link(row)?)
-}
-
-/// The canonical form of the record `row` holds, without its link, joined
+/// The canonical form of the record `row` holds, joined
 /// from the columns of [`entry_parts`]: the exact text its content digest
 /// covers.
 ///
@@ -614,26 +509,13 @@ pub(crate) fn document_of(row: &PgRow) -> Result<String, AccessLogError> {
     .map_err(|source| AccessLogError::Unreadable { chain_seq, source })
 }
 
-/// The record whose canonical form is `document`, with `link` joined, read
-/// as a `T` with no JSON value of it built.
-fn with_link<T: serde::de::DeserializeOwned>(
+/// The record whose canonical form is `document`, read as a `T` with no
+/// JSON value of it built.
+fn read_document<T: serde::de::DeserializeOwned>(
     row: &PgRow,
     document: &str,
-    link: &AccessLogLink,
 ) -> Result<T, AccessLogError> {
     let chain_seq: i64 = row.try_get("chain_seq")?;
-    let unreadable = |source| AccessLogError::Unreadable { chain_seq, source };
-    let link = serde_json::to_string(link).map_err(unreadable)?;
-    let open = document
-        .strip_suffix('}')
-        .ok_or_else(|| unreadable(serde::de::Error::custom("a record is no object")))?;
-    let mut joined = String::with_capacity(document.len() + link.len() + 9);
-    joined.push_str(open);
-    if open != "{" {
-        joined.push(',');
-    }
-    joined.push_str("\"link\":");
-    joined.push_str(&link);
-    joined.push('}');
-    serde_json::from_str(&joined).map_err(unreadable)
+    serde_json::from_str(document)
+        .map_err(|source| AccessLogError::Unreadable { chain_seq, source })
 }

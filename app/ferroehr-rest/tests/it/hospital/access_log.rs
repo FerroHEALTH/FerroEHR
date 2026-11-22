@@ -85,9 +85,7 @@ async fn eva_reads_her_own_log_minus_what_article_9_3_withholds() {
             "{withheld}: {entry}"
         );
     }
-    for withheld in ["link", "channel"] {
-        assert!(entry.get(withheld).is_none(), "{withheld}: {entry}");
-    }
+    assert!(entry.get("channel").is_none(), "channel: {entry}");
     assert!(entry.get("time_recorded").is_some(), "{entry}");
     assert_eq!(entry["action"]["value"], "read", "{entry}");
     let other = call(
@@ -138,7 +136,7 @@ async fn hans_reads_everything_and_the_chains_verify() {
         "{entry}"
     );
     assert!(entry["accessor"].get("provider").is_some(), "{entry}");
-    assert!(entry.get("link").is_some(), "{entry}");
+    assert!(entry.get("channel").is_some(), "{entry}");
     let review = call(
         &world.app,
         "hans",

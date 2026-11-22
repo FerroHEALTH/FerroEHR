@@ -18,7 +18,7 @@
 //! same publication.
 //!
 //! No openEHR spec governs log publication: our own design
-//! (`docs/plans/access-log.md` §Integrity).
+//! (`docs/specifications/access-log`, semantics §Integrity).
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};

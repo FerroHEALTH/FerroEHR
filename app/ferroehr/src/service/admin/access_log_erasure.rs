@@ -4,10 +4,10 @@
 //! The erasure of an access-log entry a law orders before its retention ends
 //! (#5128).
 //!
-//! The draft's retention rules (`docs/plans/access-log.md` §Retention) send
+//! The draft's retention rules (`docs/specifications/access-log`, semantics §Retention) send
 //! such an erasure down the path the end of a retention period takes: the
 //! entry is replaced by its tombstone, which keeps its uid, `system_id`,
-//! `time_recorded` and link, so the chain still verifies, and names the
+//! `time_recorded` and content digest, so its window still verifies, and names the
 //! erasure's own grounds. What changes the log is recorded (§Recording rules,
 //! rule 7), so the act writes an access record naming the entry. No openEHR
 //! spec governs the access log: our own design.

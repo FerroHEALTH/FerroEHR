@@ -47,6 +47,7 @@ pub mod chain_walk;
 pub mod chains;
 #[cfg(feature = "fhir")]
 mod entries;
+pub mod frontier;
 pub mod intake;
 pub(crate) mod lax;
 #[cfg(feature = "fhir")]
@@ -57,12 +58,12 @@ mod review;
 mod search_page;
 mod writers;
 
-use crate::access_log::chainer::Owed;
 use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 use crate::system_log::event::{AuditEvent, EventOutcome, EventType, ObjectClass};
 use crate::system_log::render::RenderPolicy;
+use crate::system_log::store::frontier::Owed;
 #[cfg(feature = "fhir")]
 use crate::system_log::{
     categories::{ClassifiedContent, MapDigest},
@@ -233,7 +234,7 @@ pub struct AuditStore {
     releases: Arc<intake::Releases>,
     /// The gathered intake write of the entries, started on first use.
     #[cfg(feature = "fhir")]
-    group: Arc<std::sync::OnceLock<crate::access_log::intake::GroupWriter>>,
+    group: Arc<crate::access_log::intake::Gathered>,
 }
 
 impl AuditStore {
@@ -588,8 +589,7 @@ impl AuditStore {
     /// running runtime on first use.
     #[cfg(feature = "fhir")]
     fn group(&self) -> &crate::access_log::intake::GroupWriter {
-        self.group
-            .get_or_init(|| crate::access_log::intake::GroupWriter::spawn(&self.pool))
+        self.group.writer(&self.pool)
     }
 
     /// Whether every one of `records` is written as its access-log entry, so

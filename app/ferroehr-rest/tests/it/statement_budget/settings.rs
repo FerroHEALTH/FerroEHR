@@ -20,10 +20,7 @@ use sqlx::PgPool;
 use tracing::Instrument as _;
 use tracing_subscriber::layer::SubscriberExt as _;
 
-use super::{
-    CHAINER_RELEASE, CHAINER_ROUND, CHAINER_TAKE, REQUEST_SPAN, RoundTrips, SYSTEM_ROUND, calls,
-    counted, drained,
-};
+use super::{CHAINER_RELEASE, REQUEST_SPAN, RoundTrips, SYSTEM_ROUND, calls, counted, drained};
 use crate::access_evaluator_http::ehr_with_composition;
 use crate::common;
 
@@ -45,21 +42,24 @@ struct Budget {
 /// statement; the WAL bytes did not move (12,073 to 12,075 and 9,791 to 9,797
 /// per write before and after). The access-log write taking no row lock on a
 /// shared part (#6241) wrote 108 and 111 bytes fewer per write, measured
-/// beside the merge base, and each WAL ceiling fell by as much.
+/// beside the merge base, and each WAL ceiling fell by as much. The entry
+/// written once by a plain insert (#6242) wrote 1,121 and 1,118 bytes fewer
+/// and ran 4 and 5 nested statements fewer per write, measured beside the
+/// merge base, and each ceiling fell by as much.
 const BUDGETS: [Budget; 2] = [
     Budget {
         name: "a new class",
         round_trips: 15,
-        nested: 9,
+        nested: 5,
         class_statements: 1,
-        wal: 12_329,
+        wal: 11_208,
     },
     Budget {
         name: "a stored class",
         round_trips: 15,
-        nested: 6,
+        nested: 1,
         class_statements: 1,
-        wal: 9_979,
+        wal: 8_861,
     },
 ];
 
@@ -122,12 +122,7 @@ async fn measure(
         .filter(|s| !s.toplevel)
         .map(|s| s.calls)
         .sum();
-    let chainer = calls(
-        &statements,
-        "SELECT head_seq, head_digest FROM audit.access_log_chain_take",
-    ) * CHAINER_TAKE
-        + calls(&statements, "SELECT audit.access_log_chain_move") * CHAINER_ROUND
-        + calls(&statements, "SELECT audit.audit_event_chain_move") * SYSTEM_ROUND
+    let chainer = calls(&statements, "SELECT audit.audit_event_chain_move") * SYSTEM_ROUND
         + calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
     let mut out = Measured {
         round_trips: sent.div_euclid(WRITES),

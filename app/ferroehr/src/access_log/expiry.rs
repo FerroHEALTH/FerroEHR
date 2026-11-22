@@ -5,10 +5,10 @@
 //! tombstone's (#5619).
 //!
 //! Every entry whose `retain_until` has passed is replaced by its tombstone,
-//! in place, so the chain still verifies (`docs/plans/access-log.md`
-//! §Retention). A tombstone is kept as long again, and then each run of
-//! tombstones past their end folds into one gap of the chain
-//! ([`crate::access_log::gap`]). The shared parts past their own
+//! in place, keeping its content digest, so its window still verifies (the
+//! draft's semantics page, `docs/specifications/access-log`, §Retention). A tombstone is kept as long
+//! again, and then a sealed window whose records are all tombstones past
+//! their end folds ([`crate::access_log::gap`]). The shared parts past their own
 //! `retain_until` that no entry names any more are collected after the fold
 //! (#5968).
 //!

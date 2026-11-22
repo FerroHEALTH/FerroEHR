@@ -32,30 +32,19 @@ REVOKE ALL ON FUNCTION
     verify_audit_chain_window(p_after_seq bigint, p_after_hash bytea, p_upto bigint, p_check_head boolean),
     verify_audit_chain_after(p_after_seq bigint, p_after_hash bytea),
     audit_event_link_reject_deletion(),
-    access_log_entry_unindex(),
-    access_log_link_append(),
     access_log_shared_unchanged(),
-    access_log_checkpoint_names_a_link(),
-    access_log_checkpoint_reject_removal(),
-    access_log_link_at(p_sequence bigint),
-    access_log_sealed_link(p_sequence bigint, p_proof text),
-    access_log_chain_move(p_batches bigint[], p_entries bigint[], p_seqs bigint[], p_previous text[], p_digests text[], p_fhir_feed boolean, p_syslog boolean),
-    access_log_chain_take(),
+    access_log_seal_reject_change(),
     access_log_shared_collect(p_today date, p_limit integer),
     access_log_tombstone_end(p_content text),
     fold_access_log_tombstones(p_now timestamp with time zone, p_limit integer),
-    access_log_verification_link(p_sequence bigint),
-    access_log_verification_start(p_full boolean),
-    access_log_verification_step_end(p_after bigint, p_records integer, p_head bigint),
-    verify_access_log_chain_step(p_after bigint, p_after_digest text, p_upto bigint, p_modified bigint[], p_advance boolean, p_last boolean, p_full boolean),
-    verify_access_log_chain_window(p_after_seq bigint, p_after_digest text, p_upto bigint, p_check_head boolean),
-    verify_access_log_chain_after(p_after_seq bigint, p_after_digest text),
     chain_verification_lag(p_chain text),
     fold_access_log_imported(p_now timestamp with time zone, p_limit integer),
     audit_intake_reject_change(),
     access_log_intake_unknown(p_what text, p_digest text, p_removed boolean),
     access_log_intake_part_gone(p_digest text),
-    access_log_intake_take(p_record_types text[], p_uids text[], p_times text[], p_contents text[], p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[], p_retain_until text[], p_action_terminologies text[], p_action_codes text[], p_result_terminologies text[], p_result_codes text[], p_actions text[], p_outcomes smallint[], p_principals text[], p_patient_ids text[], p_resource_ids text[], p_request_ids text[], p_client_ips text[], p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[], p_shared_digests text[], p_shared_contents text[], p_token_entries integer[], p_token_parameters text[], p_token_systems text[], p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid, p_token_digests bytea[]),
+    access_log_token_generation_holds(p_generation bigint),
+    access_log_owe(p_upto bigint, p_fhir_feed boolean, p_syslog boolean),
+    access_log_intake_take(p_record_types text[], p_uids text[], p_times text[], p_contents text[], p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[], p_retain_until text[], p_action_terminologies text[], p_action_codes text[], p_result_terminologies text[], p_result_codes text[], p_actions text[], p_outcomes smallint[], p_principals text[], p_patient_ids text[], p_resource_ids text[], p_request_ids text[], p_client_ips text[], p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[], p_shared_digests text[], p_shared_contents text[], p_token_entries integer[], p_token_parameters text[], p_token_systems text[], p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid, p_token_digests bytea[], p_token_generation bigint),
     audit_intake_release(p_ids uuid[]),
     audit_intake_discard(p_ids uuid[])
     FROM PUBLIC;
@@ -70,10 +59,7 @@ BEGIN
             audit_event_link,
             audit_chain_state,
             audit_chain_gap,
-            audit_chain_checkpoint,
-            access_log_chain_state,
-            access_log_chain_verified,
-            access_log_chain_gap
+            audit_chain_checkpoint
             TO ferroehr_clinical;
         GRANT SELECT ON TABLE
             audit_render_policy,
@@ -87,18 +73,11 @@ BEGIN
             audit_chain_seal,
             access_log_shared,
             access_log_entry,
-            access_log_link,
-            access_log_checkpoint,
-            access_log_chain_state,
-            access_log_chain_verified,
-            access_log_chain_gap,
             access_log_record,
-            access_log_imported_link,
             access_log_imported_record,
-            access_log_imported_checkpoint,
-            access_log_imported_gap,
+            access_log_imported_bundle,
+            access_log_imported_folded,
             audit_event_intake,
-            access_log_intake,
             syslog_outbox,
             access_log_search,
             system_search,
@@ -112,15 +91,11 @@ BEGIN
             audit_event,
             access_log_shared,
             access_log_entry,
-            access_log_link,
-            access_log_checkpoint,
             access_log_record,
-            access_log_imported_link,
             access_log_imported_record,
-            access_log_imported_checkpoint,
-            access_log_imported_gap,
+            access_log_imported_bundle,
+            access_log_imported_folded,
             audit_event_intake,
-            access_log_intake,
             access_log_search,
             system_search,
             audit_record,
@@ -139,24 +114,15 @@ BEGIN
             verify_audit_chain_window(p_after_seq bigint, p_after_hash bytea, p_upto bigint, p_check_head boolean),
             verify_audit_chain_after(p_after_seq bigint, p_after_hash bytea),
             verify_audit_chain(),
-            access_log_link_at(p_sequence bigint),
-            access_log_sealed_link(p_sequence bigint, p_proof text),
-            access_log_chain_move(p_batches bigint[], p_entries bigint[], p_seqs bigint[], p_previous text[], p_digests text[], p_fhir_feed boolean, p_syslog boolean),
-            access_log_chain_take(),
             access_log_shared_collect(p_today date, p_limit integer),
             fold_access_log_tombstones(p_now timestamp with time zone, p_limit integer),
-            access_log_verification_link(p_sequence bigint),
-            access_log_verification_start(p_full boolean),
-            access_log_verification_step_end(p_after bigint, p_records integer, p_head bigint),
-            verify_access_log_chain_step(p_after bigint, p_after_digest text, p_upto bigint, p_modified bigint[], p_advance boolean, p_last boolean, p_full boolean),
-            verify_access_log_chain_window(p_after_seq bigint, p_after_digest text, p_upto bigint, p_check_head boolean),
-            verify_access_log_chain_after(p_after_seq bigint, p_after_digest text),
-            verify_access_log_chain(),
             chain_verification_lag(p_chain text),
             fold_access_log_imported(p_now timestamp with time zone, p_limit integer),
             access_log_intake_unknown(p_what text, p_digest text, p_removed boolean),
             access_log_intake_part_gone(p_digest text),
-            access_log_intake_take(p_record_types text[], p_uids text[], p_times text[], p_contents text[], p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[], p_retain_until text[], p_action_terminologies text[], p_action_codes text[], p_result_terminologies text[], p_result_codes text[], p_actions text[], p_outcomes smallint[], p_principals text[], p_patient_ids text[], p_resource_ids text[], p_request_ids text[], p_client_ips text[], p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[], p_shared_digests text[], p_shared_contents text[], p_token_entries integer[], p_token_parameters text[], p_token_systems text[], p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid, p_token_digests bytea[]),
+            access_log_token_generation_holds(p_generation bigint),
+            access_log_owe(p_upto bigint, p_fhir_feed boolean, p_syslog boolean),
+            access_log_intake_take(p_record_types text[], p_uids text[], p_times text[], p_contents text[], p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[], p_retain_until text[], p_action_terminologies text[], p_action_codes text[], p_result_terminologies text[], p_result_codes text[], p_actions text[], p_outcomes smallint[], p_principals text[], p_patient_ids text[], p_resource_ids text[], p_request_ids text[], p_client_ips text[], p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[], p_shared_digests text[], p_shared_contents text[], p_token_entries integer[], p_token_parameters text[], p_token_systems text[], p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid, p_token_digests bytea[], p_token_generation bigint),
             audit_intake_release(p_ids uuid[]),
             audit_intake_discard(p_ids uuid[])
             TO ferroehr_clinical;
@@ -164,12 +130,7 @@ BEGIN
             audit_chain_link_at(p_sequence bigint),
             verify_audit_chain_window(p_after_seq bigint, p_after_hash bytea, p_upto bigint, p_check_head boolean),
             verify_audit_chain_after(p_after_seq bigint, p_after_hash bytea),
-            verify_audit_chain(),
-            access_log_link_at(p_sequence bigint),
-            access_log_sealed_link(p_sequence bigint, p_proof text),
-            verify_access_log_chain_window(p_after_seq bigint, p_after_digest text, p_upto bigint, p_check_head boolean),
-            verify_access_log_chain_after(p_after_seq bigint, p_after_digest text),
-            verify_access_log_chain()
+            verify_audit_chain()
             TO ferroehr_clinical_reader;
         GRANT SELECT, DELETE ON TABLE fhir_feed_outbox TO ferroehr_clinical;
         GRANT SELECT, INSERT, DELETE ON TABLE syslog_outbox TO ferroehr_clinical;
@@ -179,7 +140,23 @@ BEGIN
             access_log_record
             TO ferroehr_clinical;
         GRANT UPDATE(shared) ON TABLE access_log_entry TO ferroehr_clinical;
-        GRANT UPDATE(published_at) ON TABLE access_log_checkpoint TO ferroehr_clinical;
+        GRANT UPDATE(published_at) ON TABLE access_log_seal TO ferroehr_clinical;
+        GRANT SELECT, INSERT ON TABLE access_log_hold TO ferroehr_clinical;
+        GRANT SELECT ON TABLE access_log_hold TO ferroehr_clinical_reader;
+        GRANT SELECT, INSERT ON TABLE access_log_seal TO ferroehr_clinical;
+        GRANT SELECT, UPDATE ON TABLE access_log_seal_state, access_log_seal_verified TO ferroehr_clinical;
+        GRANT INSERT ON TABLE access_log_seal_verified TO ferroehr_clinical;
+        GRANT SELECT ON TABLE access_log_seal_fold TO ferroehr_clinical;
+        GRANT SELECT ON TABLE audit_search_token_generation TO ferroehr_clinical, ferroehr_clinical_reader;
+        -- The frontier reads the entry id sequence's last value (access_log::frontier).
+        GRANT SELECT ON SEQUENCE access_log_entry_id_seq TO ferroehr_clinical;
+        GRANT SELECT ON TABLE
+            access_log_seal,
+            access_log_seal_state,
+            access_log_seal_fold,
+            access_log_seal_verified,
+            access_log_owed
+            TO ferroehr_clinical_reader;
         GRANT UPDATE(digest) ON TABLE access_log_shared TO ferroehr_clinical;
         GRANT UPDATE(retain_until) ON TABLE access_log_shared TO ferroehr_clinical;
         ALTER DEFAULT PRIVILEGES IN SCHEMA audit GRANT SELECT,INSERT ON TABLES TO ferroehr_clinical;

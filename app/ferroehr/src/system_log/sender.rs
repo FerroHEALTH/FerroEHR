@@ -622,6 +622,7 @@ pub async fn start(
     let store = AuditStore::new(pool)
         .with_fhir_feed(config.fhir_feed.is_some())
         .with_syslog(config.syslog.is_some())
+        .with_gather_window(config.store.gather_window.get())
         .with_render_policy(policy.clone());
     // NOTE: our own design (#5770), the background work runs on the audit runtime over its own pool.
     let behind = store.with_pool(behind);

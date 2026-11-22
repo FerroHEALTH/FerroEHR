@@ -33,6 +33,7 @@ fn store_only_config() -> AuditConfig {
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     }

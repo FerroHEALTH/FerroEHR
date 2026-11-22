@@ -43,6 +43,7 @@ async fn rejecting_sender() -> (ferroehr::system_log::sender::AuditSender, Audit
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     };
@@ -158,6 +159,7 @@ async fn an_erasure_writes_its_tombstone_and_its_entry_together() {
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     };

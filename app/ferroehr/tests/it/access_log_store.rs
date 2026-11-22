@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The access-log store (#5125) against a real `PostgreSQL` 18: an entry is
-//! kept as its canonical form and chained by the link the draft defines
-//! (`docs/plans/access-log.md` §Integrity), the verifier finds a removed, an inserted and a reordered
-//! record, a tombstone replaces an entry and leaves the chain intact, and the
-//! access log is a chain of its own, apart from the records of `audit_event`
+//! The access-log store (#5125) against a real `PostgreSQL` 19: an entry is
+//! kept as its canonical form with its content digest and sealed in windows
+//! (#6242), the verifier finds a removed, an inserted and a reordered record
+//! inside a sealed window, a tombstone replaces an entry and leaves its window
+//! intact, and the access log is kept apart from the records of `audit_event`
 //! (#5573).
 //!
 //! No openEHR spec governs audit storage: our own design.
@@ -57,12 +57,6 @@ pub(crate) fn sha256_hex(text: &str) -> String {
     hex(&Sha256::digest(text.as_bytes()))
 }
 
-/// The digest the first record of the access log links back to
-/// (`audit.access_log_genesis()`).
-fn genesis() -> String {
-    sha256_hex("ferroehr.access_log.v1")
-}
-
 /// Append entries `numbers` through the store, in their order.
 async fn append(
     store: &AccessLogStore,
@@ -84,16 +78,20 @@ async fn findings(pool: &PgPool) -> Vec<(Option<i64>, String)> {
         .collect()
 }
 
-/// Run `statements` with the table's triggers off, as only its owner can: the
-/// attacker the chain detects.
+/// Seal every committed entry, then run `statements` with the table's
+/// triggers off, as only its owner can: the attacker the seals detect.
 #[expect(
     clippy::disallowed_methods,
     reason = "a test reads the database on a raw pool connection, outside any request"
 )]
 async fn tamper(pool: &PgPool, statements: &[&str]) {
+    AccessLogStore::new(pool.clone())
+        .seal_committed()
+        .await
+        .expect("sealed before the change");
     let mut conn = pool.acquire().await.expect("connection");
     let mut tx = conn.begin().await.expect("begin");
-    for table in ["access_log_entry", "access_log_link"] {
+    for table in ["access_log_entry"] {
         sqlx::query(AssertSqlSafe(format!(
             "ALTER TABLE audit.{table} DISABLE TRIGGER USER"
         )))
@@ -107,7 +105,7 @@ async fn tamper(pool: &PgPool, statements: &[&str]) {
             .await
             .expect("the tampering statement itself must succeed");
     }
-    for table in ["access_log_entry", "access_log_link"] {
+    for table in ["access_log_entry"] {
         sqlx::query(AssertSqlSafe(format!(
             "ALTER TABLE audit.{table} ENABLE TRIGGER USER"
         )))
@@ -136,9 +134,8 @@ fn at(value: &str) -> DvDateTime {
 
 /// An entry is stored as its row part and the shared part its caller's
 /// entries name once, which join back into its canonical form; it is read
-/// back with its link, and the link is the draft's: the content digest over
-/// the whole canonical form and the digest over the previous digest, the
-/// sequence and the content digest (#5703).
+/// back as it was written, and its content digest is the SHA-256 of its
+/// whole canonical form (#5703).
 #[tokio::test]
 async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
     let testdb = testkit::db().await.expect("testkit database");
@@ -146,26 +143,16 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
     let store = AccessLogStore::new(pool.clone());
     let written = append(&store, 1..=3).await;
 
-    let mut previous = genesis();
     for (expected, entry) in (1_i64..).zip(&written) {
-        let link = &entry.link;
-        assert_eq!(link.sequence, expected);
-        assert_eq!(link.algorithm, "SHA-256");
-        assert_eq!(link.previous_digest, previous);
         let canonical = canonical_form(entry).expect("canonical form");
-        assert!(
-            !canonical.contains("\"link\""),
-            "the canonical form leaves the link out"
-        );
-        assert_eq!(link.content_digest, sha256_hex(&canonical));
-        assert_eq!(
-            link.digest,
-            sha256_hex(&format!(
-                "{}\n{}\n{}",
-                link.previous_digest, link.sequence, link.content_digest
-            ))
-        );
-        previous.clone_from(&link.digest);
+        let content_digest: String = sqlx::query_scalar(
+            "SELECT encode(content_digest, 'hex') FROM audit.access_log_entry WHERE id = $1",
+        )
+        .bind(expected)
+        .fetch_one(&pool)
+        .await
+        .expect("the content digest");
+        assert_eq!(content_digest, sha256_hex(&canonical));
 
         let read = store.read(entry.uid.value()).await.expect("read");
         assert_eq!(read, Some(AccessLogRecord::AccessLogEntry(entry.clone())));
@@ -243,44 +230,31 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
     );
 }
 
-/// The links of the same entries are the same bytes whatever form the log
-/// stores them in (#5784): the log that keeps each entry's index on the
-/// entry's row writes the digests below and reads them back from its rows.
-/// They are the links of the example entries with their action coded under
-/// `HL7_AuditEventAction` (#6070); under the former `audit-event-action` the
-/// same entries give the links the log with a second index table wrote.
+/// The content digests of the same entries are the same bytes whatever form
+/// the log stores them in (#5784): the log that keeps each entry's index on
+/// the entry's row writes the digests below and reads them back from its
+/// rows. They are the digests of the example entries with their action coded
+/// under `HL7_AuditEventAction` (#6070).
 #[tokio::test]
-async fn the_links_of_the_same_entries_are_unchanged_by_the_stored_form() {
-    const LINKS: [(&str, &str); 3] = [
-        (
-            "803a53ebc5048817e288f537c1249449b121d7590673ce95c3e444a435ad4e22",
-            "6852637299d6c5fa1bd4162bf0b157e118da9562e6f92350fcd17b1b96a6faa6",
-        ),
-        (
-            "7afcfd46fe334088b483a8c9306b3021f63c1be3ecedffcb91a178c27068243a",
-            "7c8a3582357fd3f9268526bd2fdf66aac8ebd07e480fae1a7fd8db997815c7bc",
-        ),
-        (
-            "f4db7ed8df765d04c53a4adeb4a44a996c301079e4b29b92951c55f0675b9af5",
-            "f8e96987118be11e1951931e0db48a998bc81e461ab18fa0564ea567a086b61a",
-        ),
+async fn the_content_digests_of_the_same_entries_are_unchanged_by_the_stored_form() {
+    const DIGESTS: [&str; 3] = [
+        "803a53ebc5048817e288f537c1249449b121d7590673ce95c3e444a435ad4e22",
+        "7afcfd46fe334088b483a8c9306b3021f63c1be3ecedffcb91a178c27068243a",
+        "f4db7ed8df765d04c53a4adeb4a44a996c301079e4b29b92951c55f0675b9af5",
     ];
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AccessLogStore::new(pool.clone());
-    let written = append(&store, 1..=3).await;
-    for ((entry, (content_digest, digest)), sequence) in written.iter().zip(LINKS).zip(1_i64..) {
-        assert_eq!(entry.link.content_digest, content_digest);
-        assert_eq!(entry.link.digest, digest);
-        let stored: (String, String) = sqlx::query_as(
-            "SELECT encode(content_digest, 'hex'), encode(digest, 'hex') \
-               FROM audit.access_log_record WHERE chain_seq = $1",
+    append(&store, 1..=3).await;
+    for (content_digest, id) in DIGESTS.iter().zip(1_i64..) {
+        let stored: String = sqlx::query_scalar(
+            "SELECT encode(content_digest, 'hex') FROM audit.access_log_record WHERE chain_seq = $1",
         )
-        .bind(sequence)
+        .bind(id)
         .fetch_one(&pool)
         .await
-        .expect("the stored link");
-        assert_eq!(stored, (content_digest.to_owned(), digest.to_owned()));
+        .expect("the stored digest");
+        assert_eq!(stored, *content_digest);
     }
     assert_eq!(findings(&pool).await, Vec::new(), "the log verifies clean");
 }
@@ -371,15 +345,17 @@ async fn an_entry_keeps_its_decision_grounds_and_a_refusal_needs_no_ehr() {
     assert_eq!(findings(&pool).await, Vec::new(), "both verify");
 }
 
-/// The statements that insert a forged record at position 2 and move every
-/// later record one on, its link correct for the record before it.
+/// The statements that insert a forged record at id 2 of a sealed window and
+/// move every later entry one on, as the table's owner can once the id
+/// column takes a value given.
 const INSERTED: &[&str] = &[
-    "UPDATE audit.access_log_link SET chain_seq = -chain_seq WHERE chain_seq >= 2",
-    "UPDATE audit.access_log_link SET chain_seq = -chain_seq + 1 WHERE chain_seq < 0",
+    "ALTER TABLE audit.access_log_entry ALTER COLUMN id SET GENERATED BY DEFAULT",
+    "UPDATE audit.access_log_entry SET id = id + 100 WHERE id >= 2",
+    "UPDATE audit.access_log_entry SET id = id - 99 WHERE id >= 102",
     "INSERT INTO audit.access_log_entry OVERRIDING SYSTEM VALUE \
      SELECT (audit.access_log_entry_derive(forged)).* FROM ( \
        SELECT jsonb_populate_record(NULL::audit.access_log_entry, jsonb_build_object( \
-         'id', 1000, 'content', c.content, \
+         'id', 2, 'content', c.content, \
          'record_type', c.record_type, 'uid', c.uid, 'time_recorded', c.time_recorded, \
          'ehr_id', c.ehr_id, \
          'content_digest', '\\x' || audit.access_log_content_digest(c.content), \
@@ -388,31 +364,26 @@ const INSERTED: &[&str] = &[
                       record_type, replace(uid::text, '000000000003', '0000000000ff') AS uid, \
                       time_recorded, replace(ehr_id::text, '000000000003', '0000000000ff') AS ehr_id \
                  FROM audit.access_log_record WHERE chain_seq = 4) c) AS f",
-    "INSERT INTO audit.access_log_link (chain_seq, entry_id, algorithm, previous_digest, digest) \
-     SELECT 2, 1000, 'SHA-256', p.digest, decode(audit.access_log_link_digest( \
-              encode(p.digest, 'hex'), 2, audit.access_log_content_digest(e.content)), 'hex') \
-       FROM audit.access_log_record p, audit.access_log_entry e \
-      WHERE p.chain_seq = 1 AND e.id = 1000",
+    "ALTER TABLE audit.access_log_entry ALTER COLUMN id SET GENERATED ALWAYS",
 ];
 
-/// A record removed, inserted or reordered breaks the chain where it happened,
-/// and the verifier names the position.
+/// A record removed, inserted or reordered inside a sealed window breaks the
+/// window's seal, and the verifier names the window's first entry id.
 #[tokio::test]
 async fn the_verifier_finds_a_removed_an_inserted_and_a_reordered_record() {
     let cases: [(&str, &[&str], i64); 3] = [
         (
             "removed",
-            &["DELETE FROM audit.access_log_link WHERE chain_seq = 2"],
-            3,
+            &["DELETE FROM audit.access_log_entry WHERE id = 2"],
+            1,
         ),
-        ("inserted", INSERTED, 3),
+        ("inserted", INSERTED, 1),
         (
             "reordered",
-            &[
-                "UPDATE audit.access_log_link SET chain_seq = -chain_seq WHERE chain_seq IN (2, 3)",
-                "UPDATE audit.access_log_link SET chain_seq = 5 + chain_seq WHERE chain_seq < 0",
-            ],
-            2,
+            &["UPDATE audit.access_log_entry e \
+               SET content = o.content, content_digest = o.content_digest \
+               FROM audit.access_log_entry o WHERE (e.id, o.id) IN ((2, 3), (3, 2))"],
+            1,
         ),
     ];
     for (case, statements, position) in cases {
@@ -434,9 +405,9 @@ async fn the_verifier_finds_a_modified_entry_and_a_modified_search_column() {
     for statement in [
         "UPDATE audit.access_log_entry \
          SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
-         WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 2)",
+         WHERE id = 2",
         "UPDATE audit.access_log_entry SET ehr_id = '00000000-0000-4000-8000-000000000000' \
-         WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 2)",
+         WHERE id = 2",
     ] {
         let testdb = testkit::db().await.expect("testkit database");
         let pool = testdb.pool();
@@ -493,9 +464,9 @@ async fn a_changed_shared_part_is_found_at_every_entry_naming_it() {
 }
 
 /// A tombstone replaces an entry in the middle of the log in place: it keeps
-/// the uid, the system, the time and the link, and the chain verifies.
+/// the uid, the system and the time, and its window verifies.
 #[tokio::test]
-async fn a_tombstone_replaces_an_entry_and_the_chain_stays_intact() {
+async fn a_tombstone_replaces_an_entry_and_its_window_stays_intact() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AccessLogStore::new(pool.clone());
@@ -510,7 +481,6 @@ async fn a_tombstone_replaces_an_entry_and_the_chain_stays_intact() {
     assert_eq!(tombstone.uid, middle.uid);
     assert_eq!(tombstone.system_id, middle.system_id);
     assert_eq!(tombstone.time_recorded, middle.time_recorded);
-    assert_eq!(tombstone.link, middle.link);
     assert_eq!(
         store.read(middle.uid.value()).await.expect("read"),
         Some(AccessLogRecord::AccessLogTombstone(tombstone))
@@ -534,7 +504,7 @@ async fn a_tombstone_replaces_an_entry_and_the_chain_stays_intact() {
     assert_eq!(
         findings(&pool).await,
         Vec::new(),
-        "the chain verifies over the tombstone"
+        "the window verifies over the tombstone"
     );
     assert_eq!(
         store
@@ -564,6 +534,7 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
     let pool = testdb.pool();
     let store = AccessLogStore::new(pool.clone());
     let written = append(&store, 1..=2).await;
+    store.seal_committed().await.expect("sealed");
     let first = written.first().expect("the first entry");
 
     let mut changed = first.clone();
@@ -573,40 +544,38 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
         "uid": { "_type": "HIER_OBJECT_ID", "value": "0193f1a2-7c1e-7b4a-9f00-0000000000aa" },
         "system_id": first.system_id,
         "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-07T09:14:03.120Z" },
-        "link": example()["link"],
         "time_removed": { "_type": "DV_DATE_TIME", "value": "2031-11-08T00:00:00Z" },
         "grounds": [{ "_type": "DV_CODED_TEXT", "value": "retention period ended",
             "defining_code": { "terminology_id": { "value": "local" }, "code_string": "expired" } }]
     });
     let foreign: AccessLogRecord = serde_json::from_value(foreign).expect("the tombstone reads");
-    let with_link = serde_json::to_string(&AccessLogRecord::AccessLogEntry(entry(9)))
+    let whole = serde_json::to_string(&AccessLogRecord::AccessLogEntry(entry(9)))
         .expect("the entry writes");
 
     for statement in [
         format!(
             "UPDATE audit.access_log_entry SET content = {} WHERE id = \
-             (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 1)",
+             1",
             literal(&changed)
         ),
         format!(
             "UPDATE audit.access_log_entry SET content = {} WHERE id = \
-             (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 1)",
+             1",
             literal(&foreign)
         ),
-        "UPDATE audit.access_log_link SET digest = decode(repeat('0', 64), 'hex') WHERE chain_seq = 1"
-            .to_owned(),
+        "UPDATE audit.access_log_seal SET digest = decode(repeat('0', 64), 'hex')".to_owned(),
         "UPDATE audit.access_log_entry SET ehr_id = '00000000-0000-4000-8000-000000000000' \
-         WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 1)"
+         WHERE id = 1"
             .to_owned(),
-        "DELETE FROM audit.access_log_link WHERE chain_seq = 2".to_owned(),
+        "DELETE FROM audit.access_log_seal".to_owned(),
         "DELETE FROM audit.access_log_entry \
-         WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 2)"
+         WHERE id = 2"
             .to_owned(),
-        "TRUNCATE audit.access_log_link".to_owned(),
+        "TRUNCATE audit.access_log_seal".to_owned(),
         "TRUNCATE audit.access_log_entry".to_owned(),
         format!(
             "INSERT INTO audit.access_log_entry (content) VALUES ('{}')",
-            with_link.replace('\'', "''")
+            whole.replace('\'', "''")
         ),
         format!(
             "INSERT INTO audit.access_log_entry (content) VALUES ({})",
@@ -626,7 +595,7 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
         .expect("the entry is there");
     let again = sqlx::query(AssertSqlSafe(format!(
         "UPDATE audit.access_log_entry SET content = {} WHERE id = \
-             (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 1)",
+             1",
         literal(first)
     )))
     .execute(&pool)
@@ -648,14 +617,13 @@ fn legacy_event(at: Timestamp) -> AuditEvent {
     event
 }
 
-/// The access log and the `audit_event` records are two chains: an entry
-/// written between two `audit_event` records takes the next position of the
-/// access log and links to the entry before it, the `audit_event` records
-/// stay adjacent and link to each other, and each chain verifies from its own
-/// cursor, the access log's incremental run finding a change to an entry
-/// written after its cursor.
+/// The access log and the `audit_event` records are kept apart: an entry
+/// written between two `audit_event` records holds no position of the system
+/// chain, the `audit_event` records stay adjacent and link to each other, and
+/// each verifies from its own cursor, the access log's incremental run finding
+/// a change to an entry sealed after its cursor.
 #[tokio::test]
-async fn each_chain_verifies_apart_from_its_own_cursor_on() {
+async fn each_log_verifies_apart_from_its_own_cursor_on() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let audit = AuditStore::new(pool.clone());
@@ -665,18 +633,12 @@ async fn each_chain_verifies_apart_from_its_own_cursor_on() {
         .insert(&legacy_event(Timestamp::now()), Some("patient-42"))
         .await
         .expect("an audit_event record");
-    let first = append(&log, 1..=2).await;
+    append(&log, 1..=2).await;
     audit
         .insert(&legacy_event(Timestamp::now()), Some("patient-42"))
         .await
         .expect("an audit_event record after the entries");
 
-    let opening = first.first().expect("the first entry");
-    assert_eq!(
-        opening.link.sequence, 1,
-        "the access log starts its own chain"
-    );
-    assert_eq!(opening.link.previous_digest, genesis());
     let system: Vec<(i64, Vec<u8>, Vec<u8>)> = sqlx::query_as(
         "SELECT chain_seq, prev_hash, row_hash FROM audit.audit_event_link ORDER BY chain_seq",
     )
@@ -687,20 +649,13 @@ async fn each_chain_verifies_apart_from_its_own_cursor_on() {
     assert_eq!(
         positions,
         [1, 2],
-        "the system chain holds no access-log position"
+        "the system chain holds no access-log entry"
     );
     let (_, second_previous, _) = system.get(1).expect("the second record");
     let (_, _, first_link) = system.first().expect("the first record");
     assert_eq!(
         second_previous, first_link,
         "an audit_event record links to the audit_event record before it"
-    );
-    let system_links: Vec<String> = system.iter().map(|(_, _, link)| hex(link)).collect();
-    assert!(
-        first
-            .iter()
-            .all(|entry| !system_links.contains(&entry.link.previous_digest)),
-        "no entry links to an audit_event record"
     );
 
     assert_eq!(findings(&pool).await, Vec::new());
@@ -722,16 +677,16 @@ async fn each_chain_verifies_apart_from_its_own_cursor_on() {
                 .expect("the cursor")
         }
     };
+    let windows = "SELECT s.last_id FROM audit.access_log_seal_verified v \
+                   JOIN audit.access_log_seal s ON s.window_no = v.through_window";
     assert_eq!(
         cursor("SELECT through_seq FROM audit.audit_chain_checkpoint").await,
         2
     );
-    assert_eq!(
-        cursor("SELECT through_seq FROM audit.access_log_chain_verified").await,
-        2
-    );
+    assert_eq!(cursor(windows).await, 2);
 
     append(&log, 3..=4).await;
+    log.seal_committed().await.expect("sealed");
     assert!(
         audit
             .verify_chain_advancing(AuditChain::AccessLog, VerifyScope::SinceCheckpoint)
@@ -740,9 +695,9 @@ async fn each_chain_verifies_apart_from_its_own_cursor_on() {
             .is_empty()
     );
     assert_eq!(
-        cursor("SELECT through_seq FROM audit.access_log_chain_verified").await,
+        cursor(windows).await,
         4,
-        "the access log's cursor moves to its newest record"
+        "the access log's cursor moves to its newest window"
     );
     assert_eq!(
         cursor("SELECT through_seq FROM audit.audit_chain_checkpoint").await,
@@ -755,7 +710,7 @@ async fn each_chain_verifies_apart_from_its_own_cursor_on() {
         &pool,
         &["UPDATE audit.access_log_entry \
            SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
-           WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 5)"],
+           WHERE id = 5"],
     )
     .await;
     let found = audit
@@ -799,18 +754,17 @@ async fn the_application_role_appends_and_replaces_by_a_tombstone_only() {
         .expect("the app role replaces an entry by its tombstone")
         .expect("the entry is there");
 
+    store.seal_committed().await.expect("the app role seals");
     let mut conn = PgConnection::connect(&url).await.expect("connect");
     for statement in [
-        "UPDATE audit.access_log_link SET digest = decode(repeat('0', 64), 'hex')",
+        "UPDATE audit.access_log_seal SET digest = decode(repeat('0', 64), 'hex')",
         "UPDATE audit.access_log_entry SET ehr_id = '00000000-0000-4000-8000-000000000000'",
-        "INSERT INTO audit.access_log_link (chain_seq, entry_id, algorithm, previous_digest, digest) \
-         SELECT 99, id, 'SHA-256', content_digest, content_digest FROM audit.access_log_entry LIMIT 1",
-        "DELETE FROM audit.access_log_link",
+        "DELETE FROM audit.access_log_seal",
         "DELETE FROM audit.access_log_entry",
-        "TRUNCATE audit.access_log_link",
+        "TRUNCATE audit.access_log_seal",
         "TRUNCATE audit.access_log_entry",
         "ALTER TABLE audit.access_log_entry DISABLE TRIGGER USER",
-        "ALTER TABLE audit.access_log_link DISABLE TRIGGER USER",
+        "ALTER TABLE audit.access_log_seal DISABLE TRIGGER USER",
     ] {
         let outcome = sqlx::query(AssertSqlSafe(statement.to_owned()))
             .execute(&mut conn)
@@ -820,9 +774,9 @@ async fn the_application_role_appends_and_replaces_by_a_tombstone_only() {
             "the application role must not run `{statement}`"
         );
     }
-    let clean: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.verify_access_log_chain()")
-        .fetch_one(&mut conn)
+    let clean = AccessLogStore::new(app.clone())
+        .verify_windows(false)
         .await
         .expect("the application role verifies the access log");
-    assert_eq!(clean, 0);
+    assert!(clean.is_empty(), "{clean:?}");
 }

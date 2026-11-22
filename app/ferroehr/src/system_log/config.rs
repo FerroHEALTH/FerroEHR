@@ -34,7 +34,7 @@ pub struct StoreConfig {
     ///
     /// A run verifies the records written since the newest link an earlier run
     /// found intact, in steps that each move that link
-    /// (`audit.verify_audit_chain_step()`, `audit.verify_access_log_chain_step()`),
+    /// (`audit.verify_audit_chain_step()`, and the access log's sealed windows),
     /// so its cost follows the records written since; a finding is logged at `ERROR`,
     /// counted and reported by the `audit_chain` health indicator
     /// (`docs/law/eu/cra/text.html Annex I Part I(2)(f)`: "report on
@@ -57,6 +57,14 @@ pub struct StoreConfig {
     /// the next run.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub max_verify_lag: Duration,
+    /// How long the gathered access-log writer waits for more requests'
+    /// entries after the first before it writes them in one statement
+    /// (`FERROEHR__AUDIT__STORE__GATHER_WINDOW`), at most `"1ms"`; `"0s"`
+    /// writes what waits at once. A longer window puts more entries in each
+    /// statement, which costs the store less per entry, and adds up to the
+    /// window to each request that writes an entry. Default `"0s"`.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
+    pub gather_window: Duration,
 }
 
 impl Default for StoreConfig {
@@ -70,6 +78,9 @@ impl Default for StoreConfig {
             // Four hours: a record waits up to one interval for the next run,
             // so this allows three runs that did not reach the head.
             max_verify_lag: Duration::from_hours(4),
+            // No wait: a window is set from measurement on the deployment's
+            // own load (#6242).
+            gather_window: Duration::ZERO,
         }
     }
 }

@@ -1,13 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The write-ahead log the access log writes per entry (#5968, #6010): the
-//! row records of its relations, read with `pg_walinspect` for the test's
-//! own database, so the other tests on the shared server do not count. An
-//! entry's records and a chainer pass's records are held to separate
-//! ceilings, so the count does not depend on how many passes the chainer
-//! ran. The server runs without full-page writes, as the testkit container
-//! and CI's server do. No openEHR spec governs audit storage: our own design.
+//! The write-ahead log the access log writes per entry (#5968, #6010, #6242):
+//! the row records of its relations, read with `pg_walinspect` for the
+//! test's own database, so the other tests on the shared server do not count.
+//! The sealer's and the frontier's records, written about once a minute and
+//! once a second whatever the entries, are left out, so the count does not
+//! depend on how the rounds fall among the requests. The server runs without
+//! full-page writes, as the testkit container and CI's server do. No openEHR
+//! spec governs audit storage: our own design.
 
 use std::fmt::Write as _;
 
@@ -21,24 +22,21 @@ use crate::access_evaluator_http::{ehr_with_composition, send};
 /// The requests of each kind measured.
 const REQUESTS: u64 = 20;
 
-/// The most write-ahead log the access log may write, by kind of request:
-/// per entry, over the row records of the entry, its link, the intake queue
-/// row that names it, the shared parts and their indexes, and per chainer
-/// pass, over the access log's chain head. Each is the value measured with
-/// `pg_walinspect`, 2% above: per entry 2746, 2196, 1876 and 2639 once the
-/// row part leaves the request and the version to their columns and the
-/// shared part keeps what the classification read (#6005), and 207 per pass
-/// that links (#6010). The token index taking the request and resource ids
-/// as keys in place of their two hash B-trees (#6202) measured 2634, 2087,
-/// 1777 and 2543 per entry, and each entry ceiling fell by its drop. The
-/// access-log write taking no row lock on a shared part (#6241) measured
-/// 2580, 2033, 1759 and 2543 beside the merge base, and each entry ceiling
-/// fell by its drop.
-const CEILINGS: [(Kind, (u64, u64)); 4] = [
-    (Kind::Read, (2651, 211)),
-    (Kind::Single, (2081, 211)),
-    (Kind::Population, (1797, 211)),
-    (Kind::Write, (2596, 211)),
+/// The most write-ahead log the access log may write per entry, by kind of
+/// request, over the row records of the entry, its hold, the shared parts
+/// and their indexes. Each was the value measured with `pg_walinspect`, 2%
+/// above: 2746, 2196, 1876 and 2639 once the row part left the request and
+/// the version to their columns (#6005); the token index taking the request
+/// and resource ids as keys (#6202) measured 2634, 2087, 1777 and 2543, and
+/// the write taking no row lock on a shared part (#6241) 2580, 2033, 1759
+/// and 2543, each ceiling falling by its drop. The entry written once with no
+/// intake row or link (#6242) measured 2021, 1606, 1420 and 1987, and each
+/// ceiling fell by its drop.
+const CEILINGS: [(Kind, u64); 4] = [
+    (Kind::Read, 2092),
+    (Kind::Single, 1654),
+    (Kind::Population, 1458),
+    (Kind::Write, 2040),
 ];
 
 /// A kind of request, and how to send one.
@@ -221,9 +219,8 @@ pub(super) async fn by_relation(pool: &PgPool, from: &str, to: &str) -> Vec<(Str
         .collect()
 }
 
-/// Whether `relation` holds what an entry costs once: the entry, its link,
-/// the intake queue row that names it, the shared parts, their indexes and
-/// sequences.
+/// Whether `relation` holds what an entry costs once: the entry, its hold,
+/// the shared parts, their indexes and sequences.
 fn entry_relation(relation: &str) -> bool {
     !pass_relation(relation)
         && [
@@ -236,42 +233,18 @@ fn entry_relation(relation: &str) -> bool {
         .any(|prefix| relation.starts_with(prefix))
 }
 
-/// Whether `relation` is the access log's chain head, which a chainer pass
-/// that links entries updates once whatever their number.
+/// Whether `relation` is the sealer's or the frontier's, written about once a
+/// minute and once a second whatever the entries.
 pub(super) fn pass_relation(relation: &str) -> bool {
-    relation == "access_log_chain_state"
-}
-
-/// The chainer passes between `from` and `to`: the transactions that wrote a
-/// row record of the access log's chain head in the test's database, each
-/// pass one transaction that locks the head and, when it links entries,
-/// moves it (#6010).
-///
-/// They are read from the window's own WAL, as the bytes are: a count of
-/// `pg_stat_statements` calls is evicted with the other entries of a
-/// statement called few times once a full parallel run fills the shared
-/// server's statement table (`pg_stat_statements.max`), and counts passes
-/// that ran after the window too.
-async fn passes(pool: &PgPool, from: &str, to: &str) -> u64 {
-    let passes: i64 = sqlx::query_scalar(
-        "SELECT /* statement_budget_own */ count(DISTINCT xid::text) \
-           FROM pg_get_wal_block_info($1::pg_lsn, $2::pg_lsn) \
-          WHERE reldatabase = (SELECT oid FROM pg_database WHERE datname = current_database()) \
-            AND relfilenode = pg_relation_filenode('audit.access_log_chain_state') \
-            AND resource_manager = 'Heap' \
-            AND split_part(record_type, '+', 1) \
-                IN ('INSERT', 'UPDATE', 'HOT_UPDATE', 'DELETE', 'LOCK')",
-    )
-    .bind(from)
-    .bind(to)
-    .fetch_one(pool)
-    .await
-    .expect("pg_walinspect reads");
-    u64::try_from(passes).expect("a count")
+    relation.starts_with("access_log_seal")
+        || relation.starts_with("pk_access_log_seal")
+        || relation.starts_with("uq_access_log_seal")
+        || relation.starts_with("access_log_owed")
+        || relation.starts_with("pk_access_log_owed")
 }
 
 /// Each kind of request's entries cost the access log at most their per-entry
-/// ceiling in [`CEILINGS`], and each chainer pass at most its per-pass one.
+/// ceiling in [`CEILINGS`].
 #[tokio::test]
 async fn an_access_log_entry_stays_within_its_wal_ceiling() {
     // The budgets count what a release build does, without the debug reference cells.
@@ -296,7 +269,7 @@ async fn an_access_log_entry_stays_within_its_wal_ceiling() {
     }
     let mut report = String::new();
     let mut over = false;
-    for (kind, (entry_ceiling, pass_ceiling)) in CEILINGS {
+    for (kind, entry_ceiling) in CEILINGS {
         for (ehr, vo) in &made {
             kind.send(&app, ehr, vo).await;
         }
@@ -323,8 +296,6 @@ async fn an_access_log_entry_stays_within_its_wal_ceiling() {
         flushed(&pool, &to).await;
         let written = entries(&pool).await - before;
         assert!(written > 0, "{}: the requests write entries", kind.name());
-        let passes = passes(&pool, &from, &to).await;
-        assert!(passes > 0, "{}: the chainer ran", kind.name());
         let relations = by_relation(&pool, &from, &to).await;
         sqlx::query(
             "SELECT /* statement_budget_own */ pg_drop_replication_slot( \
@@ -342,13 +313,12 @@ async fn an_access_log_entry_stays_within_its_wal_ceiling() {
                 .sum()
         };
         let per_entry = bytes_of(entry_relation).div_euclid(written);
-        let per_pass = bytes_of(pass_relation).div_euclid(passes);
         writeln!(
             report,
-            "{}: {written} entries over {REQUESTS} requests and {passes} chainer passes: \
-             {per_entry} B per entry (ceiling {entry_ceiling}), {per_pass} B per pass \
-             (ceiling {pass_ceiling})",
+            "{}: {written} entries over {REQUESTS} requests: {per_entry} B per entry \
+             (ceiling {entry_ceiling}), {} B of the sealer's and the frontier's rows",
             kind.name(),
+            bytes_of(pass_relation),
         )
         .expect("a String takes the report");
         for (name, bytes, records) in relations
@@ -358,7 +328,7 @@ async fn an_access_log_entry_stays_within_its_wal_ceiling() {
             writeln!(report, "  {bytes:>9} B {records:>5} records  {name}")
                 .expect("a String takes the line");
         }
-        over |= per_entry > entry_ceiling || per_pass > pass_ceiling;
+        over |= per_entry > entry_ceiling;
     }
     eprintln!("{report}");
     assert!(

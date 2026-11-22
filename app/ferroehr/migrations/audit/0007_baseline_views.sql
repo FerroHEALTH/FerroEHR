@@ -48,23 +48,19 @@ CREATE FUNCTION audit.access_event_code(p_class text, p_action text) RETURNS tex
     END
 $$;
 
--- The entry id joins the index of the entries (#6000). A page reads linked
--- entries only, and the total counts what the pages return: every entry is
--- either linked or named by an intake row, never both (the chain move links
--- an intake row's entries and removes the row in one statement), so the
--- total is the count of the time index less the entries the intake still
--- names, both read in one snapshot, and neither reads a link.
+-- The entry id joins the index of the entries (#6000). A page and the total
+-- read the entries no write holds, each named by its id (#6242).
 CREATE VIEW access_log_search AS
-    SELECT l.chain_seq, e.time_recorded AS recorded_at, e.event_action AS action,
+    SELECT e.id AS chain_seq, e.time_recorded AS recorded_at, e.event_action AS action,
            e.event_outcome AS outcome, e.principal, e.patient_id, e.resource_id,
            e.request_id, e.client_ip, e.classified_ehr_id AS ehr_id, e.search_tokens,
            audit.search_keys(e.search_tokens, e.request_id, e.resource_id) AS search_keys,
            e.id AS entry_id
       FROM access_log_entry e
-      LEFT JOIN access_log_link l ON l.entry_id = e.id
-     WHERE e.render_policy_id IS NOT NULL;
+     WHERE e.render_policy_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id);
 COMMENT ON VIEW access_log_search IS
-    'The ITI-81 index of the access-log entries: what the search filters on, read from the entry''s row (search_keys through its index), the position of a linked entry (NULL for one the chainer has not linked yet) and the entry''s id. A tombstone is not in it.';
+    'The ITI-81 index of the access-log entries no write holds: what the search filters on, read from the entry''s row (search_keys through its index), and the entry''s id, which names it. A tombstone is not in it.';
 
 -- The ITI-81 index of the system chain (#6203): what the search filters on,
 -- read from the records, and the position of a linked record (NULL for one the
@@ -100,7 +96,7 @@ CREATE VIEW audit_record AS
       FROM audit_event e
       JOIN audit_event_link l ON l.event_id = e.id
     UNION ALL
-    SELECT r.chain_seq, r.time_recorded, r.stored_at, r.event_action, r.event_outcome, NULL::text,
+    SELECT r.chain_seq, r.time_recorded, r.time_recorded, r.event_action, r.event_outcome, NULL::text,
            r.principal, r.patient_id, NULL::text, r.resource_id,
            r.client_ip, NULL::text, NULL::text, NULL::text, NULL::text, NULL::bigint,
            r.request_id, NULL::jsonb, NULL::jsonb, NULL::bigint, NULL::text,
@@ -110,8 +106,7 @@ CREATE VIEW audit_record AS
            p.digest, NULL::jsonb, r.search_tokens,
            audit.search_keys(r.search_tokens, r.request_id, r.resource_id),
            r.content, sh.content, r.record_type, r.uid, r.ehr_id,
-           r.algorithm, encode(r.previous_digest, 'hex'),
-           encode(r.content_digest, 'hex'), encode(r.digest, 'hex'),
+           NULL::text, NULL::text, encode(r.content_digest, 'hex'), NULL::text,
            'access_log'::text
       FROM access_log_record r
       JOIN audit_render_policy p ON p.id = r.render_policy_id
@@ -137,7 +132,7 @@ CREATE VIEW access_trail AS
       FROM audit_event e
       JOIN audit_event_link l ON l.event_id = e.id
     UNION ALL
-    SELECT t.chain_seq, NULL::uuid, t.time_recorded, t.stored_at,
+    SELECT t.chain_seq, NULL::uuid, t.time_recorded, t.time_recorded,
            t.event_action,
            coalesce((audit.access_detail(t.doc, 'id13') ->> 'magnitude')::smallint,
                     CASE WHEN t.doc #>> '{outcome,result,defining_code,code_string}' = 'granted'
@@ -228,7 +223,7 @@ CREATE VIEW access_trail AS
                               WHERE n <= jsonb_array_length(coalesce(d.doc #> '{accessor,roles}', '[]'::jsonb))
                                          - jsonb_array_length(coalesce(d.token -> 'roles', '[]'::jsonb))))
                        AS roles
-              FROM (SELECT r.chain_seq, r.uid, r.time_recorded, r.stored_at, x.doc,
+              FROM (SELECT r.chain_seq, r.uid, r.time_recorded, x.doc,
                            (audit.access_detail(x.doc, 'id37') ->> 'value')::jsonb AS binding,
                            (audit.access_detail(x.doc, 'id36') ->> 'value')::jsonb AS token
                       FROM access_log_record r

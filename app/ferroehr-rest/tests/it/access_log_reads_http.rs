@@ -223,8 +223,7 @@ async fn a_reviewer_reads_the_full_view() {
     assert_eq!(status, StatusCode::OK, "{page}");
     assert_eq!(page["offset"], json!(0), "{page}");
     let first = entries(&page).first().cloned().expect("an entry");
-    assert!(first.get("link").is_some(), "the full view: {first}");
-    assert!(first.get("channel").is_some(), "{first}");
+    assert!(first.get("channel").is_some(), "the full view: {first}");
     assert!(first["accessor"].get("binding").is_some(), "{first}");
 
     let uid = first["uid"]["value"].as_str().expect("a uid");
@@ -244,13 +243,10 @@ async fn a_reviewer_reads_the_full_view() {
         "{page}"
     );
 
-    let sequence = first["link"]["sequence"].as_i64().expect("a sequence");
-    let chain =
-        format!("{EXT}/admin/access-log/chain?from_sequence={sequence}&to_sequence={sequence}");
-    let (status, links) = get(&fx.app, &chain, &root()).await;
-    assert_eq!(status, StatusCode::OK, "{links}");
-    assert_eq!(links["links"][0]["uid"], first["uid"]["value"], "{links}");
-    assert_eq!(links["links"][0]["link"], first["link"], "{links}");
+    let seals = format!("{EXT}/admin/access-log/seals?from_id=1&to_id=100");
+    let (status, answer) = get(&fx.app, &seals, &root()).await;
+    assert_eq!(status, StatusCode::OK, "{answer}");
+    assert!(answer["seals"].is_array(), "{answer}");
 
     let (status, _) = get(
         &fx.app,
@@ -289,7 +285,7 @@ async fn the_subject_reads_only_their_own_log() {
         .find(|entry| entry["accessor"]["kind"]["value"] == json!("person"))
         .cloned()
         .expect("the professional's read is shown");
-    for withheld in ["link", "channel", "security_labels", "other_details"] {
+    for withheld in ["channel", "security_labels", "other_details"] {
         assert!(
             professional.get(withheld).is_none(),
             "{withheld}: {professional}"
@@ -537,7 +533,7 @@ async fn an_art_9_3_restriction_applies_to_the_subject_view_alone() {
     assert!(
         reviewed
             .iter()
-            .all(|entry| entry["accessor"].get("party").is_some() && entry.get("link").is_some()),
+            .all(|entry| entry["accessor"].get("party").is_some() && entry.get("channel").is_some()),
         "the full view is unchanged: {page}"
     );
 

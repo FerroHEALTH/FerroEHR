@@ -7,7 +7,7 @@
 use std::path::PathBuf;
 
 use super::assemble;
-use super::tests::{assemble_ok, env, file_refusal, toml_file};
+use super::tests::{assemble_ok, env, file_refusal, standalone, toml_file};
 
 /// The access log's retention is the controller's policy, held in its
 /// `ACCESS_POLICY` (`log_retention`), so the horizon and the declared German
@@ -107,4 +107,20 @@ fn the_publish_directory_is_a_key_unset_by_default() {
         c.audit.access_log.publish_directory,
         Some(PathBuf::from("/var/lib/ferroehr/checkpoints"))
     );
+}
+
+/// `[audit.store] gather_window` is accepted up to one millisecond and
+/// refused above it by name, since every request that writes an access-log
+/// entry waits up to it (#6242).
+#[test]
+fn a_gather_window_above_one_millisecond_is_refused() {
+    let mut config = standalone();
+    config.audit.store.gather_window = ferrohealth_config::units::Duration::from_millis(1);
+    assert!(config.validate().is_ok());
+    config.audit.store.gather_window = ferrohealth_config::units::Duration::from_millis(2);
+    let refused = config
+        .validate()
+        .expect_err("a window past 1 ms")
+        .to_string();
+    assert!(refused.contains("audit.store.gather_window"), "{refused}");
 }

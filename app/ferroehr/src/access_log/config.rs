@@ -6,10 +6,10 @@
 //! (#5129, #5704).
 //!
 //! Signing the log needs no key of its own here: whenever the keyring
-//! (`[record.signing]` in `pgp` mode) holds an `OpenPGP` key every append
-//! ends with a signed checkpoint, and without one nothing is sealed (#5562).
-//! No openEHR spec governs log signing or its configuration: our own design
-//! (`docs/plans/access-log.md` §Integrity).
+//! (`[record.signing]` in `pgp` mode) holds an `OpenPGP` key each seal is
+//! signed as a checkpoint, and without one the seals are unsigned (#5562,
+//! #6242). No openEHR spec governs log signing or its configuration: our own
+//! design (the draft's semantics page, `docs/specifications/access-log`, §Integrity).
 
 #![cfg_attr(
     feature = "schema",
