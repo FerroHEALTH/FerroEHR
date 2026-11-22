@@ -21,6 +21,7 @@ use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
+use crate::party_binding::step::{self, Query, Step, Tag};
 use crate::storage::error::StorageError;
 
 /// One identifier row a party should hold.
@@ -39,9 +40,6 @@ pub(crate) struct IdentifierRow {
     pub(crate) value: String,
     /// The head's `version_lifecycle_state` code.
     pub(crate) lifecycle_state: String,
-    /// Whether the `PERSON` is the source of a representation; read on a key
-    /// row only.
-    pub(crate) representative: bool,
 }
 
 /// The validity a professional `ROLE` gives the `PERSON` that performs it.
@@ -64,18 +62,21 @@ pub(crate) struct RepresentationRow {
 
 /// The identifier rows the parties should hold, with the professional date
 /// ranges and the stored compared form beside each: the `wanted` relation the
-/// two identifier statements of [`write_identifiers`] share, over the
-/// parameters `$3` to `$11`.
+/// two identifier steps share, over the parameters `$3` to `$10`.
 ///
 /// Every key row is held, whatever the `PERSON` does: its professional date
 /// ranges and its representative flag say what it is bound for, and a
-/// `PERSON` that is neither binds as the person themself (#6106). A display
-/// name is held once per folded value, the first in document order.
+/// `PERSON` that is neither binds as the person themself (#6106). A key row
+/// is a representative's when its `PERSON` is, or ever was, the source of a
+/// representation (a live standalone container, or any relationship whose
+/// row was retired), so a former representative's login is never taken for
+/// the patient's (#5532). A display name is held once per folded value, the
+/// first in document order.
 macro_rules! wanted_identifiers {
     () => {
         "WITH professional AS ( \
          SELECT t.party, range_agg(party.binding_validity(t.validity)) AS dates \
-         FROM unnest($10::uuid[], $11::jsonb[]) AS t(party, validity) GROUP BY t.party \
+         FROM unnest($9::uuid[], $10::jsonb[]) AS t(party, validity) GROUP BY t.party \
      ), held AS ( \
          SELECT w.party, w.selector, w.issuer, w.identifier_type, w.value, \
                 CASE WHEN w.selector IN ('user_name', 'group_display_name') \
@@ -83,11 +84,13 @@ macro_rules! wanted_identifiers {
                 w.lifecycle_state, \
                 CASE WHEN w.selector = 'key' THEN coalesce(pr.dates, '{}') \
                      ELSE '{}'::datemultirange END AS professional, \
-                w.selector = 'key' AND w.representative AS representative, w.ord \
-         FROM unnest($3::uuid[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], \
-                     $9::boolean[]) WITH ORDINALITY \
-              AS w(party, selector, issuer, identifier_type, value, lifecycle_state, \
-                   representative, ord) \
+                w.selector = 'key' AND EXISTS ( \
+                    SELECT 1 FROM binding_representation r \
+                    WHERE r.representative_id = w.party) AS representative, \
+                w.ord \
+         FROM unnest($3::uuid[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[]) \
+              WITH ORDINALITY \
+              AS w(party, selector, issuer, identifier_type, value, lifecycle_state, ord) \
          LEFT JOIN professional pr ON pr.party = w.party \
      ), wanted AS ( \
          SELECT DISTINCT ON (h.party, h.selector, h.issuer, \
@@ -119,7 +122,7 @@ const RETIRE_IDENTIFIERS: &str = concat!(
     wanted_identifiers!(),
     "UPDATE binding_identifier b SET retired_at = now() \
      WHERE b.party_id = ANY($1) AND b.selector = ANY($2) AND b.retired_at IS NULL \
-       AND ($12::text IS NULL OR b.issuer = $12) \
+       AND ($11::text IS NULL OR b.issuer = $11) \
        AND NOT EXISTS (SELECT 1 FROM wanted w WHERE ",
     same_identifier!(),
     ")"
@@ -138,6 +141,11 @@ const INSERT_IDENTIFIERS: &str = concat!(
     same_identifier!(),
     ")"
 );
+
+/// The identifier rows a write holds: the selectors, and the one issuer it
+/// is limited to when it is given.
+pub(crate) type Selectors<'q> = (&'q [&'q str], Option<&'q str>);
+
 /// Writes the identifier rows of `selectors`, under `issuer` alone when it is
 /// given, the parties `parties` should hold: `rows`, with the key rows' date
 /// ranges from `professional`.
@@ -151,7 +159,7 @@ const INSERT_IDENTIFIERS: &str = concat!(
 pub(crate) async fn write_identifiers(
     tx: &mut PgConnection,
     parties: &[Uuid],
-    (selectors, issuer): (&[&str], Option<&str>),
+    selectors: Selectors<'_>,
     rows: &[IdentifierRow],
     professional: &[Professional],
 ) -> Result<(), StorageError> {
@@ -159,25 +167,41 @@ pub(crate) async fn write_identifiers(
     if parties.is_empty() {
         return Ok(());
     }
-    let columns = IdentifierColumns::of(rows, professional);
-    columns
-        .bind(
-            sqlx::query(RETIRE_IDENTIFIERS)
-                .bind(parties)
-                .bind(selectors),
-        )
-        .bind(issuer)
-        .execute(&mut *tx)
+    retire_identifiers(parties, selectors, rows, professional)
+        .run(tx)
         .await?;
-    columns
-        .bind(
-            sqlx::query(INSERT_IDENTIFIERS)
-                .bind(parties)
-                .bind(selectors),
-        )
-        .execute(&mut *tx)
+    insert_identifiers(parties, selectors.0, rows, professional)
+        .run(tx)
         .await?;
     Ok(())
+}
+
+/// The step that retires the live identifier rows of `selectors` of
+/// `parties` that `rows` no longer hold, as [`write_identifiers`] does first.
+pub(crate) fn retire_identifiers<'q>(
+    parties: &'q [Uuid],
+    (selectors, issuer): Selectors<'q>,
+    rows: &'q [IdentifierRow],
+    professional: &'q [Professional],
+) -> Step<'q> {
+    Step::new("ir", RETIRE_IDENTIFIERS, None, move |query| {
+        IdentifierColumns::of(rows, professional)
+            .bind(query.bind(parties).bind(selectors))
+            .bind(issuer)
+    })
+}
+
+/// The step that inserts each of `rows` with no live twin, as
+/// [`write_identifiers`] does once the retirement ran.
+pub(crate) fn insert_identifiers<'q>(
+    parties: &'q [Uuid],
+    selectors: &'q [&'q str],
+    rows: &'q [IdentifierRow],
+    professional: &'q [Professional],
+) -> Step<'q> {
+    Step::new("ii", INSERT_IDENTIFIERS, None, move |query| {
+        IdentifierColumns::of(rows, professional).bind(query.bind(parties).bind(selectors))
+    })
 }
 
 /// The identifier rows and professional validities as the arrays the
@@ -189,7 +213,6 @@ struct IdentifierColumns<'a> {
     identifier_type: Vec<&'a str>,
     value: Vec<&'a str>,
     lifecycle_state: Vec<&'a str>,
-    representative: Vec<bool>,
     professional_party: Vec<Uuid>,
     professional_validity: Vec<Option<&'a Value>>,
 }
@@ -203,26 +226,21 @@ impl<'a> IdentifierColumns<'a> {
             identifier_type: rows.iter().map(|r| r.identifier_type.as_str()).collect(),
             value: rows.iter().map(|r| r.value.as_str()).collect(),
             lifecycle_state: rows.iter().map(|r| r.lifecycle_state.as_str()).collect(),
-            representative: rows.iter().map(|r| r.representative).collect(),
             professional_party: professional.iter().map(|p| p.party).collect(),
             professional_validity: professional.iter().map(|p| p.validity.as_ref()).collect(),
         }
     }
 
-    fn bind<'q>(
-        &'q self,
-        query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
-    ) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    fn bind(self, query: Query<'a>) -> Query<'a> {
         query
-            .bind(&self.party)
-            .bind(&self.selector)
-            .bind(&self.issuer)
-            .bind(&self.identifier_type)
-            .bind(&self.value)
-            .bind(&self.lifecycle_state)
-            .bind(&self.representative)
-            .bind(&self.professional_party)
-            .bind(&self.professional_validity)
+            .bind(self.party)
+            .bind(self.selector)
+            .bind(self.issuer)
+            .bind(self.identifier_type)
+            .bind(self.value)
+            .bind(self.lifecycle_state)
+            .bind(self.professional_party)
+            .bind(self.professional_validity)
     }
 }
 
@@ -240,7 +258,14 @@ pub(crate) async fn insert_tombstones(
     if rows.is_empty() {
         return Ok(());
     }
-    sqlx::query(
+    tombstones(rows).run(tx).await?;
+    Ok(())
+}
+
+/// The step [`insert_tombstones`] runs.
+pub(crate) fn tombstones(rows: &[IdentifierRow]) -> Step<'_> {
+    Step::new(
+        "tb",
         "INSERT INTO binding_identifier \
              (party_id, selector, issuer, identifier_type, value, folded, lifecycle_state, \
               retired_at, deprovisioned_at) \
@@ -251,23 +276,24 @@ pub(crate) async fn insert_tombstones(
          WHERE NOT EXISTS (SELECT 1 FROM binding_identifier t \
                            WHERE t.party_id = w.party AND t.issuer = w.issuer \
                              AND t.deprovisioned_at IS NOT NULL)",
+        None,
+        move |query| {
+            query
+                .bind(rows.iter().map(|r| r.party).collect::<Vec<_>>())
+                .bind(rows.iter().map(|r| r.issuer.as_str()).collect::<Vec<_>>())
+                .bind(
+                    rows.iter()
+                        .map(|r| r.identifier_type.as_str())
+                        .collect::<Vec<_>>(),
+                )
+                .bind(rows.iter().map(|r| r.value.as_str()).collect::<Vec<_>>())
+                .bind(
+                    rows.iter()
+                        .map(|r| r.lifecycle_state.as_str())
+                        .collect::<Vec<_>>(),
+                )
+        },
     )
-    .bind(rows.iter().map(|r| r.party).collect::<Vec<_>>())
-    .bind(rows.iter().map(|r| r.issuer.as_str()).collect::<Vec<_>>())
-    .bind(
-        rows.iter()
-            .map(|r| r.identifier_type.as_str())
-            .collect::<Vec<_>>(),
-    )
-    .bind(rows.iter().map(|r| r.value.as_str()).collect::<Vec<_>>())
-    .bind(
-        rows.iter()
-            .map(|r| r.lifecycle_state.as_str())
-            .collect::<Vec<_>>(),
-    )
-    .execute(&mut *tx)
-    .await?;
-    Ok(())
 }
 
 /// Clears the tombstone of every key a live row of `parties` binds again.
@@ -295,6 +321,32 @@ pub(crate) async fn revive_keys(
     .execute(&mut *tx)
     .await?;
     Ok(())
+}
+
+/// The step that clears the tombstone of every key among `rows`, the rows a
+/// settle holds live once it ran: [`revive_keys`] off the rows the parties
+/// hold, in the statement that inserts them, which cannot read them back.
+pub(crate) fn revive_held(rows: &[IdentifierRow]) -> Step<'_> {
+    Step::new(
+        "rk",
+        "UPDATE binding_identifier t SET deprovisioned_at = NULL \
+         FROM unnest($1::text[], $2::text[], $3::text[]) AS l(issuer, identifier_type, value) \
+         WHERE t.selector = 'key' AND t.deprovisioned_at IS NOT NULL \
+           AND t.issuer = l.issuer AND t.identifier_type = l.identifier_type \
+           AND t.value = l.value",
+        None,
+        move |query| {
+            let keys = || rows.iter().filter(|r| r.selector == "key");
+            query
+                .bind(keys().map(|r| r.issuer.as_str()).collect::<Vec<_>>())
+                .bind(
+                    keys()
+                        .map(|r| r.identifier_type.as_str())
+                        .collect::<Vec<_>>(),
+                )
+                .bind(keys().map(|r| r.value.as_str()).collect::<Vec<_>>())
+        },
+    )
 }
 
 /// The columns of a representation row, over `$2` to `$9`: the
@@ -399,10 +451,7 @@ impl<'r> Columns<'r> {
     }
 
     /// `query` with the columns bound as `$2` to `$9`.
-    fn bind<'q>(
-        &'q self,
-        query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
-    ) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    fn bind<'q>(&'q self, query: Query<'q>) -> Query<'q> {
         query
             .bind(&self.representative)
             .bind(&self.subject)
@@ -413,29 +462,6 @@ impl<'r> Columns<'r> {
             .bind(&self.validity)
             .bind(&self.relationship)
     }
-}
-
-/// The representatives among `parties` that are, or ever were, the source of
-/// a representation: a live standalone container, or any relationship whose
-/// row was retired. A former representative keeps a representative's key
-/// row, so their login is never taken for the patient's (#5532).
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub(crate) async fn representatives(
-    tx: &mut PgConnection,
-    parties: &[Uuid],
-) -> Result<Vec<Uuid>, StorageError> {
-    if parties.is_empty() {
-        return Ok(Vec::new());
-    }
-    Ok(sqlx::query_scalar(
-        "SELECT DISTINCT representative_id FROM binding_representation \
-         WHERE representative_id = ANY($1)",
-    )
-    .bind(parties)
-    .fetch_all(&mut *tx)
-    .await?)
 }
 
 /// Inserts each of `held`, a representation with its container, as a
@@ -492,6 +518,14 @@ pub(crate) async fn standalone_representative(
     .await?)
 }
 
+/// The memberships the member `PERSON`s should hold, over `$2` (each group)
+/// and `$3` (each member), as the `wanted` relation the membership steps
+/// share.
+const WANTED_MEMBERSHIPS: &str = "WITH wanted AS ( \
+         SELECT DISTINCT w.group_id, w.member_id \
+         FROM unnest($2::uuid[], $3::uuid[]) AS w(group_id, member_id) \
+     ) ";
+
 /// Writes the memberships the member `PERSON`s `members` should hold:
 /// `rows`, each a `(group, member)` pair.
 ///
@@ -511,33 +545,81 @@ pub(crate) async fn write_memberships(
     if members.is_empty() {
         return Ok(());
     }
-    sqlx::query(
-        "WITH wanted AS ( \
-             SELECT DISTINCT w.group_id, w.member_id \
-             FROM unnest($2::uuid[], $3::uuid[]) AS w(group_id, member_id) \
-         ), gone AS ( \
-             UPDATE binding_membership m SET retired_at = now() \
-             WHERE m.retired_at IS NULL AND m.member_id = ANY($1) \
-               AND NOT EXISTS (SELECT 1 FROM wanted w \
-                               WHERE w.group_id = m.group_id AND w.member_id = m.member_id) \
-             RETURNING m.group_id \
-         ), added AS ( \
-             INSERT INTO binding_membership (group_id, member_id) \
-             SELECT w.group_id, w.member_id FROM wanted w \
-             WHERE NOT EXISTS (SELECT 1 FROM binding_membership m \
-                               WHERE m.group_id = w.group_id AND m.member_id = w.member_id \
-                                 AND m.retired_at IS NULL) \
-             RETURNING group_id \
-         ) \
-         INSERT INTO binding_group_revision (group_id, revision) \
-         SELECT group_id, 1 FROM (SELECT group_id FROM gone UNION SELECT group_id FROM added) c \
-         ON CONFLICT (group_id) DO UPDATE \
-             SET revision = binding_group_revision.revision + 1, revised_at = now()",
-    )
-    .bind(members)
-    .bind(rows.iter().map(|(group, _)| *group).collect::<Vec<_>>())
-    .bind(rows.iter().map(|(_, member)| *member).collect::<Vec<_>>())
-    .execute(&mut *tx)
-    .await?;
+    let steps = vec![
+        retire_memberships(members, rows),
+        add_memberships(members, rows),
+        revise_groups(Retired::Beside),
+    ];
+    step::batch(tx, steps).await?;
     Ok(())
+}
+
+/// The step that retires each live membership of `members` that `rows` no
+/// longer hold, returning each `GROUP` it retired a row of.
+pub(crate) fn retire_memberships<'q>(members: &'q [Uuid], rows: &'q [(Uuid, Uuid)]) -> Step<'q> {
+    let sql = format!(
+        "{WANTED_MEMBERSHIPS}UPDATE binding_membership m SET retired_at = now() \
+         WHERE m.retired_at IS NULL AND m.member_id = ANY($1) \
+           AND NOT EXISTS (SELECT 1 FROM wanted w \
+                           WHERE w.group_id = m.group_id AND w.member_id = m.member_id) \
+         RETURNING m.group_id AS p, NULL::text AS t"
+    );
+    Step::new("mr", sql, Some(Tag::Groups), move |query| {
+        bind_memberships(query, members, rows)
+    })
+}
+
+/// The step that inserts each of `rows` with no live row, returning each
+/// `GROUP` it added a row to.
+pub(crate) fn add_memberships<'q>(members: &'q [Uuid], rows: &'q [(Uuid, Uuid)]) -> Step<'q> {
+    let sql = format!(
+        "{WANTED_MEMBERSHIPS}INSERT INTO binding_membership (group_id, member_id) \
+         SELECT w.group_id, w.member_id FROM wanted w \
+         WHERE NOT EXISTS (SELECT 1 FROM binding_membership m \
+                           WHERE m.group_id = w.group_id AND m.member_id = w.member_id \
+                             AND m.retired_at IS NULL) \
+         RETURNING group_id AS p, NULL::text AS t"
+    );
+    Step::new("ma", sql, None, move |query| {
+        bind_memberships(query, members, rows)
+    })
+}
+
+/// `query` with `members` and the groups and members of `rows` bound as `$1`
+/// to `$3`.
+fn bind_memberships<'q>(query: Query<'q>, members: &'q [Uuid], rows: &[(Uuid, Uuid)]) -> Query<'q> {
+    query
+        .bind(members)
+        .bind(rows.iter().map(|(group, _)| *group).collect::<Vec<_>>())
+        .bind(rows.iter().map(|(_, member)| *member).collect::<Vec<_>>())
+}
+
+/// The `GROUP`s whose membership rows [`retire_memberships`] retired, beside
+/// those [`add_memberships`] added to.
+#[derive(Debug)]
+pub(crate) enum Retired {
+    /// The retirement is a step of the same statement.
+    Beside,
+    /// The retirement ran in an earlier statement and retired rows of these.
+    Before(Vec<Uuid>),
+}
+
+/// The step that moves the membership revision of every `GROUP` whose live
+/// rows changed: those `retired` names and those the `ma` step of the same
+/// statement added to.
+pub(crate) fn revise_groups<'q>(retired: Retired) -> Step<'q> {
+    let (gone, groups) = match retired {
+        Retired::Beside => ("SELECT p FROM mr", None),
+        Retired::Before(groups) => ("SELECT unnest($1::uuid[])", Some(groups)),
+    };
+    let sql = format!(
+        "INSERT INTO binding_group_revision (group_id, revision) \
+         SELECT group_id, 1 FROM (SELECT p AS group_id FROM ma UNION {gone}) c \
+         ON CONFLICT (group_id) DO UPDATE \
+             SET revision = binding_group_revision.revision + 1, revised_at = now()"
+    );
+    Step::new("mv", sql, None, move |query| match groups {
+        Some(groups) => query.bind(groups),
+        None => query,
+    })
 }

@@ -34,6 +34,7 @@ use crate::party_binding::derive::Facts;
 use crate::party_binding::grants::derive::{GrantFacts, walk};
 use crate::party_binding::grants::store::GrantHead;
 use crate::party_binding::policy_mark::coded;
+use crate::party_binding::step::{Step, Tag, differ};
 use crate::privacy::PrivacyPolicy;
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
@@ -158,44 +159,58 @@ pub(crate) async fn replace(
     tx: &mut PgConnection,
     head: GrantHead<'_>,
 ) -> Result<bool, StorageError> {
-    let mut gone: Vec<String> = sqlx::query_scalar(
+    let (gone, came) = steps(head);
+    let mut rows = gone.run(tx).await?;
+    if head
+        .live()
+        .is_some_and(|facts| !facts.grants.subjects.is_empty())
+    {
+        rows.extend(came.run(tx).await?);
+    }
+    Ok(differ(&rows, Tag::SubjectsGone, Tag::SubjectsCame))
+}
+
+/// The two steps that replace the record subjects of `head`: the delete of
+/// those it declared and the insert of those its live body declares, each
+/// returning the text of every row it wrote ([`Tag::SubjectsGone`],
+/// [`Tag::SubjectsCame`]).
+pub(crate) fn steps(head: GrantHead<'_>) -> (Step<'_>, Step<'_>) {
+    let holder = head.vo_id;
+    let gone = Step::new(
+        "sd",
         "DELETE FROM binding_record_subject WHERE holder_id = $1 \
-         RETURNING ROW(namespace, subject_id, lifecycle_state)::text",
-    )
-    .bind(head.vo_id)
-    .fetch_all(&mut *tx)
-    .await?;
+         RETURNING holder_id AS p, ROW(namespace, subject_id, lifecycle_state)::text AS t",
+        Some(Tag::SubjectsGone),
+        move |query| query.bind(holder),
+    );
     let declared = head
         .live()
         .map_or(&[][..], |facts| facts.grants.subjects.as_slice());
-    let mut came: Vec<String> = if declared.is_empty() {
-        Vec::new()
-    } else {
-        let ordinal: Vec<i32> = declared.iter().map(|d| d.ordinal).collect();
-        let namespace: Vec<&str> = declared
-            .iter()
-            .map(|d| d.subject.namespace.as_str())
-            .collect();
-        let id: Vec<&str> = declared.iter().map(|d| d.subject.id.as_str()).collect();
-        sqlx::query_scalar(
-            "INSERT INTO binding_record_subject \
-                 (holder_id, ordinal, namespace, subject_id, lifecycle_state) \
-             SELECT $1, t.ordinal, t.namespace, t.subject_id, $2 \
-             FROM unnest($3::integer[], $4::text[], $5::text[]) \
-                  AS t(ordinal, namespace, subject_id) \
-             RETURNING ROW(namespace, subject_id, lifecycle_state)::text",
-        )
-        .bind(head.vo_id)
-        .bind(head.lifecycle_state)
-        .bind(&ordinal)
-        .bind(&namespace)
-        .bind(&id)
-        .fetch_all(&mut *tx)
-        .await?
-    };
-    gone.sort_unstable();
-    came.sort_unstable();
-    Ok(gone != came)
+    let ordinal: Vec<i32> = declared.iter().map(|d| d.ordinal).collect();
+    let namespace: Vec<&str> = declared
+        .iter()
+        .map(|d| d.subject.namespace.as_str())
+        .collect();
+    let id: Vec<&str> = declared.iter().map(|d| d.subject.id.as_str()).collect();
+    let came = Step::new(
+        "si",
+        "INSERT INTO binding_record_subject \
+             (holder_id, ordinal, namespace, subject_id, lifecycle_state) \
+         SELECT $1, t.ordinal, t.namespace, t.subject_id, $2 \
+         FROM unnest($3::integer[], $4::text[], $5::text[]) \
+              AS t(ordinal, namespace, subject_id) \
+         RETURNING holder_id AS p, ROW(namespace, subject_id, lifecycle_state)::text AS t",
+        Some(Tag::SubjectsCame),
+        move |query| {
+            query
+                .bind(holder)
+                .bind(head.lifecycle_state)
+                .bind(ordinal)
+                .bind(namespace)
+                .bind(id)
+        },
+    );
+    (gone, came)
 }
 
 /// Checks the deferred uniqueness of the record subjects at the end of a
