@@ -30,9 +30,7 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
 use crate::storage::render::index::Rendered;
-use crate::storage::version_repo::commit::{
-    Folded, FoldedRows, Guard, commit_folded, outbox_envelope,
-};
+use crate::storage::version_repo::commit::{Folded, FoldedRows, Guard, commit_folded};
 use crate::versioning::attestation::{self, PendingAttest};
 use crate::versioning::audit::AuditInput;
 use crate::versioning::body::Body;
@@ -49,6 +47,7 @@ pub(crate) mod resolve;
 mod sign;
 mod written;
 
+use construct::folded_shape;
 use resolve::{Content, Placing, resolve_create, resolve_delete, resolve_modify};
 use sign::body_and_signature;
 use written::{admit_written, nodes, root_archetype};
@@ -914,41 +913,6 @@ async fn commit_resolved(
     .await?;
 
     Ok((committed, contribution_id))
-}
-
-/// The folded statement of `version` under `contribution`: a guarded one
-/// carrying `committed`'s outbox row when eventing is enabled, a standalone
-/// one, or one into an existing CONTRIBUTION.
-fn folded_shape<'a>(
-    contribution: ContributionCtx,
-    contribution_id: Uuid,
-    version: crate::storage::version_repo::commit::FoldedVersion<'a>,
-    ctx: &SigningCtx<'_>,
-    committed: &Committed,
-) -> Folded<'a> {
-    match contribution {
-        ContributionCtx::New(Some(guard)) => Folded::Guarded {
-            id: contribution_id,
-            guard: Guard {
-                outbox: ctx.outbox_enabled.then(|| {
-                    let entry = [committed.envelope_entry()];
-                    outbox_envelope(
-                        contribution_id,
-                        version.ehr_id,
-                        committed.time_committed,
-                        &entry,
-                    )
-                }),
-                ..guard
-            },
-            version,
-        },
-        ContributionCtx::New(None) => Folded::Standalone {
-            id: contribution_id,
-            version,
-        },
-        ContributionCtx::Existing(id) => Folded::Into { id, version },
-    }
 }
 
 /// The opt-in answer to an identical re-send (#4415): the existing version
