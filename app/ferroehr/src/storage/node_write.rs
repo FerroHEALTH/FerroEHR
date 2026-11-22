@@ -79,11 +79,13 @@ const DENSE: [(&str, &str); 10] = [
     ("path", "text"),
 ];
 
-/// The node columns most rows leave `NULL`, bound sparse in groups: each
-/// group is the 1-based positions of the rows that set any of its columns,
-/// then one array per column over those rows only, so a row that sets none
-/// sends no element of the group (#6244). Each group is its alias, then its
-/// columns with their SQL types.
+/// The node columns most rows leave `NULL`, bound in groups: each group is
+/// the 1-based positions of the rows that set any of its columns, then one
+/// array per column over those rows only, so a row that sets none sends no
+/// element of the group (#6244). A group that more rows set than leave it
+/// empty goes dense, `NULL` positions and one element per row, whichever
+/// costs the fewer bytes ([`Group::sparse`]). Each group is its alias, then
+/// its columns with their SQL types.
 const SPARSE: [(&str, &[(&str, &str)]); 4] = [
     (
         "node_names",
@@ -148,7 +150,15 @@ fn node_insert(context: (&str, Option<(&str, &str)>), first_param: usize, tail: 
     dense_names.truncate(dense_names.len().saturating_sub(2));
     let mut joins = String::new();
     for (alias, columns) in SPARSE {
-        let _ = write!(joins, " LEFT JOIN unnest(${param}::int[]");
+        // NOTE: our own design (#6244), `NULL` positions say the group is dense: every row in
+        // order, as many as its first column holds.
+        let first_ty = columns.first().map_or("text", |(_, ty)| *ty);
+        let _ = write!(
+            joins,
+            " LEFT JOIN unnest(coalesce(${param}::int[], \
+             array(SELECT generate_series(1, cardinality(${}::{first_ty}[]))))",
+            param + 1
+        );
         param += 1;
         for (_, ty) in columns {
             let _ = write!(joins, ", ${param}::{ty}[]");
@@ -341,19 +351,21 @@ pub async fn write_nodes_batch(
     Ok(())
 }
 
-/// The positions (1-based) and the columns of one sparse group over the rows
-/// that set any of its columns ([`SPARSE`]).
+/// One group of [`SPARSE`]: the 1-based positions of the rows that set any
+/// of its columns, each column over those rows, and the count of all rows.
 struct Group<T> {
     positions: Vec<i32>,
     columns: Vec<Vec<Option<T>>>,
+    rows: usize,
 }
 
 impl<T: Copy> Group<T> {
-    /// A group of `width` columns over at most `rows` rows.
+    /// A group of `width` columns over `rows` rows.
     fn new(width: usize, rows: usize) -> Self {
         Self {
             positions: Vec::with_capacity(rows),
             columns: (0..width).map(|_| Vec::with_capacity(rows)).collect(),
+            rows,
         }
     }
 
@@ -368,7 +380,18 @@ impl<T: Copy> Group<T> {
         }
     }
 
-    /// `query` with the positions and then each column bound.
+    /// Whether the group costs fewer bytes on the wire sparse than dense:
+    /// sparse, each of its rows costs a position (eight bytes) and a length
+    /// word per column, and the positions array a 20-byte header; dense,
+    /// every row costs a length word per column and the positions a `NULL`
+    /// (four bytes).
+    fn sparse(&self) -> bool {
+        let width = self.columns.len();
+        (8 + 4 * width) * self.positions.len() + 16 < 4 * width * self.rows
+    }
+
+    /// `query` with the positions and then each column bound, sparse or
+    /// dense, whichever is smaller.
     fn bound<'q>(
         self,
         query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
@@ -377,9 +400,25 @@ impl<T: Copy> Group<T> {
         T: 'q + sqlx::Encode<'q, sqlx::Postgres> + sqlx::Type<sqlx::Postgres>,
         Vec<Option<T>>: sqlx::Encode<'q, sqlx::Postgres> + sqlx::Type<sqlx::Postgres>,
     {
-        let mut query = query.bind(self.positions);
+        if self.sparse() {
+            let mut query = query.bind(self.positions);
+            for column in self.columns {
+                query = query.bind(column);
+            }
+            return query;
+        }
+        let mut query = query.bind(None::<Vec<i32>>);
         for column in self.columns {
-            query = query.bind(column);
+            let mut dense = vec![None; self.rows];
+            for (position, value) in self.positions.iter().zip(column) {
+                if let Some(slot) = usize::try_from(position - 1)
+                    .ok()
+                    .and_then(|at| dense.get_mut(at))
+                {
+                    *slot = value;
+                }
+            }
+            query = query.bind(dense);
         }
         query
     }
@@ -485,4 +524,29 @@ pub(crate) fn bind_node_arrays<'q>(
     }
     let shared: Vec<Option<&str>> = rows.iter().map(|row| row.shared.as_deref()).collect();
     query.bind(shared)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Group;
+
+    /// A group with `set` of `rows` rows setting its one of two columns.
+    fn group(rows: i32, set: i32) -> Group<bool> {
+        let mut group = Group::new(2, usize::try_from(rows).expect("a count"));
+        for position in 1..=rows {
+            let value = (position <= set).then_some(true);
+            group.push(position, &[value, None]);
+        }
+        group
+    }
+
+    /// A group most rows leave empty goes sparse, one most rows set or a
+    /// group of a few rows goes dense (#6244).
+    #[test]
+    fn a_group_takes_the_smaller_form() {
+        assert!(group(402, 20).sparse(), "20 of 402 rows: sparse");
+        assert!(!group(402, 300).sparse(), "300 of 402 rows: dense");
+        assert!(!group(3, 1).sparse(), "1 of 3 rows: dense");
+        assert!(!group(0, 0).sparse(), "no rows: dense");
+    }
 }

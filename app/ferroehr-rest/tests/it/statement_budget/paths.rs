@@ -539,14 +539,14 @@ const BUDGETS: [Budget; 22] = [
 /// counts them (#6244): the largest median of three runs on main 4411906444
 /// plus 64 bytes, since a request's figure moves only by the width of the
 /// instants it sends, a few bytes between runs.
-/// The node columns most rows leave `NULL` have since travelled as sparse
-/// groups, each the positions of the rows that set one of its columns, in
-/// place of one element per row (#6244): 13,525 bytes fewer on the three IPS
+/// The node columns most rows leave `NULL` have since travelled in groups,
+/// each sparse (the positions of the rows that set one of its columns) or
+/// dense, whichever is smaller (#6244): 13,525 bytes fewer on the three IPS
 /// composition commits, the CONTRIBUTION commit and the update, and 52 and
 /// 282 on the two party commits, measured beside the merge base, and each
 /// ceiling fell by its path's figure; the `EHR_STATUS` commit and the delete,
-/// whose few rows leave the groups' position arrays as their cost, moved 94
-/// and 96 bytes up, under their ceilings.
+/// whose few rows go dense with a `NULL` for each group's positions, moved
+/// 15 and 16 bytes up, under their ceilings.
 const WIRE_BUDGETS: [(Path, u64); 22] = [
     (Path::CommitJson, 208_300),
     (Path::CommitXml, 208_300),
