@@ -320,14 +320,18 @@ fn set_statement(n: usize) -> String {
             )
         );
     }
-    sql.push_str(&outbox_cte("$1", "$2", ("$5", "$6"), "c"));
-    sql.push_str(&reservation_cte("$12"));
-    sql.push_str(&flags_row("ca"));
+    let _ = write!(
+        sql,
+        "{}{}{}",
+        outbox_cte("$1", "$2", ("$5", "$6"), "c"),
+        reservation_cte("$12"),
+        flags_row("ca")
+    );
     sql
 }
 
 /// Write a CONTRIBUTION and every one of its `members` in one guarded
-/// statement ([`set_statement`]).
+/// statement (`set_statement`).
 ///
 /// Nothing is written unless the EHR is still modifiable and unrestricted,
 /// every member's head and mark are unchanged, the revisions are those judged
