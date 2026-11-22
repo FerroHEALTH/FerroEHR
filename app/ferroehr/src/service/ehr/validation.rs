@@ -38,6 +38,7 @@ use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::validation::category::code;
+use crate::storage::version_repo::gate::Persistent;
 use crate::versioning::body::Body;
 use crate::versioning::{Kind, lifecycle};
 use openehr_rm::prelude::Composition;
@@ -131,69 +132,40 @@ fn exceeds_node_count(value: &Value, limit: usize) -> bool {
     false
 }
 
-impl FerroEhrService {
-    /// Enforce the CNF persistent-COMPOSITION uniqueness convention: an EHR may
-    /// hold only one *live* persistent COMPOSITION per template.
-    ///
-    /// NOTE: the openEHR RM does **not** define this cardinality — the CNF
-    /// schedule records it as "under debate in the openEHR SEC … due to the
-    /// lack of information in the openEHR specifications"
-    /// (`CNF/docs/platform_test_schedule/master07-func_tc_ehr_composition.adoc`).
-    /// We adopt the CNF criterion (`create_composition-same_opt_twice`). Only
-    /// persistent COMPOSITIONs with a declared template are constrained.
-    ///
-    /// Runs on the CALLER'S executor so the create path spends one pooled
-    /// connection on its gates and its commit: with multi-tenancy on, every
-    /// checkout costs a `set_config` round trip (`crate::db`), so the acquire
-    /// count is the cost (measured on #3097).
-    ///
-    /// # Errors
-    /// [`ServiceError::Conflict`] when a live persistent COMPOSITION for the
-    /// same template already exists in the EHR; [`ServiceError::Database`] on
-    /// a storage failure.
-    pub(super) async fn reject_duplicate_persistent<'e>(
-        &self,
-        executor: impl sqlx::PgExecutor<'e>,
-        ehr_id: EhrId,
-        body: &Body,
-    ) -> Result<(), ServiceError> {
-        if body.category_code() != Some(code::PERSISTENT) {
-            return Ok(());
-        }
-        let Some(template_id) = body.template_id() else {
-            return Ok(());
-        };
-        // ONE statement over the promoted `template_id` column and a body
-        // scalar — never one body read per live COMPOSITION. Paid ONLY on a
-        // create whose body is persistent (`431|persistent|`) AND declares a
-        // template — every event-composition create returns at the two guards
-        // above without touching storage.
-        // NOTE: openEHR defines no such cardinality — the criterion is the CNF
-        // schedule's, still "under debate in the openEHR SEC"
-        // (`CNF/docs/platform_test_schedule/master07-func_tc_ehr_composition.adoc`).
-        let exists = crate::storage::version_repo::meta::persistent_template_exists(
-            executor,
-            ehr_id,
-            template_id,
-            code::PERSISTENT,
-            lifecycle::state::DELETED,
-        )
-        .await?;
-        if exists {
-            // NOTE: no specification names this refusal's status token: our own
-            // design for a COMPOSITION-exists conflict.
-            return Err(ServiceError::Conflict(Refusal::new(
-                Clash::CompositionExists,
-                format!(
-                    "EHR {ehr_id} already has a persistent COMPOSITION for template \
-                     {template_id}; only one create is allowed (subsequent commits \
-                     must be modifications)"
-                ),
-            )));
-        }
-        Ok(())
+/// The live persistent sibling a create of `body` is refused by, under the
+/// CNF persistent-COMPOSITION uniqueness convention: an EHR may hold only one
+/// *live* persistent COMPOSITION per template; `None` for a body that is not
+/// persistent or declares no template, which no sibling refuses.
+///
+/// NOTE: the openEHR RM does not define this cardinality; the CNF schedule
+/// records it as "under debate in the openEHR SEC"
+/// (`CNF/docs/platform_test_schedule/master07-func_tc_ehr_composition.adoc`).
+pub(super) fn persistent_sibling(body: &Body) -> Option<Persistent<'_>> {
+    if body.category_code() != Some(code::PERSISTENT) {
+        return None;
     }
+    Some(Persistent {
+        template_id: body.template_id()?,
+        category_code: code::PERSISTENT,
+        deleted_state: lifecycle::state::DELETED,
+    })
+}
 
+/// The `409` of a create whose live persistent sibling of the same template
+/// already exists in `ehr_id` ([`persistent_sibling`]).
+pub(super) fn duplicate_persistent(ehr_id: EhrId, template_id: &str) -> ServiceError {
+    // NOTE: no specification names this refusal's status token: our own
+    // design for a COMPOSITION-exists conflict.
+    ServiceError::Conflict(Refusal::new(
+        Clash::CompositionExists,
+        format!(
+            "EHR {ehr_id} already has a persistent COMPOSITION for template {template_id}; \
+             only one create is allowed (subsequent commits must be modifications)"
+        ),
+    ))
+}
+
+impl FerroEhrService {
     /// Validates an incoming COMPOSITION against its operational template before
     /// it is persisted, the single choke point for the JSON and FLAT dispatch
     /// paths.

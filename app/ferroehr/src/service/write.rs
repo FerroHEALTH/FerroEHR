@@ -152,7 +152,7 @@ impl FerroEhrService {
                     let write = prepare(&mut tx).await?;
                     let ehr_id = write.ehr_id;
                     let committed = commit(&mut tx, write, &signing_ctx).await?;
-                    let facts = self.written_facts(&mut tx, ehr_id, &committed).await;
+                    let facts = Self::written_facts(ehr_id, &committed);
                     if let Mode::SyncSubject(ehr_id, status) = mode {
                         self.sync_ehr_subject(&mut tx, ehr_id, &status).await?;
                         self.commit_recorded(tx, &facts, Vec::new()).await?;
@@ -234,50 +234,18 @@ impl FerroEhrService {
     /// What a single-object write decided of its operation's record: the
     /// EHR, the version it wrote and what that version holds, as its write
     /// response names them; a logical delete holds what the version it
-    /// deleted held, read on `tx` (EHDS Annex II 3.2(c)).
-    async fn written_facts(
-        &self,
-        tx: &mut PgConnection,
-        ehr_id: Option<EhrId>,
-        committed: &Committed,
-    ) -> WriteFacts {
+    /// deleted held, as its gate read found it (EHDS Annex II 3.2(c)).
+    fn written_facts(ehr_id: Option<EhrId>, committed: &Committed) -> WriteFacts {
         let party = pool_is_party(committed);
-        let content = match committed.content_ids() {
-            Some(ids) => Some(AccessedContent::Objects(vec![ids])),
-            None if committed.kind == Kind::Composition
-                && committed.change_type == crate::versioning::audit::change_type::DELETED =>
-            {
-                let deleted = self.deleted_content(tx, committed.vo_id).await;
-                (!deleted.is_empty()).then_some(AccessedContent::Objects(deleted))
-            }
-            None => None,
-        };
+        let content = committed
+            .content_ids()
+            .map(|ids| AccessedContent::Objects(vec![ids]));
         WriteFacts {
             ehr_id: ehr_id.filter(|_| !party).map(|id| id.to_string()),
             object_id: Some(committed.version_uid()),
             origins: Vec::new(),
             content,
             domain: party.then_some(AccessDomain::Demographic),
-        }
-    }
-
-    /// What the version a logical delete deleted held; a failed read leaves
-    /// the record unclassified, as the delete's response does.
-    async fn deleted_content(
-        &self,
-        tx: &mut PgConnection,
-        vo_id: crate::ids::VoId,
-    ) -> Vec<crate::system_log::categories::ContentIds> {
-        match self.audit_content_of_objects_on(tx, &[vo_id]).await {
-            Ok(deleted) => deleted,
-            Err(e) => {
-                tracing::warn!(
-                    error = %crate::error::ErrorChain::new(&e),
-                    "reading the categories of a deleted object failed; the access record is \
-                     written unclassified"
-                );
-                Vec::new()
-            }
         }
     }
 }

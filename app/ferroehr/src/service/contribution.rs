@@ -88,10 +88,24 @@ pub(crate) async fn commit_version_set(
     audit: &UpdateAudit,
     party_only: bool,
 ) -> Result<CommittedContribution, ServiceError> {
-    // the EHR-existence check — the CONTRIBUTION's target EHR must exist.
-    if let Some(ehr_id) = ehr_id {
-        crate::storage::ehr_repo::require_ehr(&mut *acquire(&cx.pool).await?, ehr_id).await?;
-    }
+    // The EHR-existence check (the CONTRIBUTION's target EHR must exist) and
+    // its writability, which the inactive-EHR refusal below is judged on, in
+    // one read (#6256).
+    let modifiable = match ehr_id {
+        Some(ehr_id) => {
+            let read =
+                crate::storage::ehr_repo::ehr_writability(&mut *acquire(&cx.pool).await?, ehr_id)
+                    .await?;
+            let Some(modifiable) = read.is_modifiable else {
+                return Err(ServiceError::not_found(
+                    crate::error::refusal::Missing::Ehr,
+                    format!("EHR {ehr_id}"),
+                ));
+            };
+            Some((ehr_id, modifiable))
+        }
+        None => None,
+    };
 
     // NOTE: `schemas/ehr/NewContribution.yaml` gives `versions` no `minItems`, so
     // an empty list is schema-valid and refused as a semantic error (422).
@@ -114,7 +128,7 @@ pub(crate) async fn commit_version_set(
 
     let target_kinds = read_target_kinds(cx, &plan, party_only).await?;
 
-    refuse_content_into_inactive_ehr(cx, ehr_id, &plan).await?;
+    refuse_content_into_inactive_ehr(modifiable, &plan)?;
 
     let mut changes: Vec<(AuditInput, Change)> = Vec::with_capacity(plan.len());
     // 666 attestations of existing versions (committing no new version).
@@ -569,26 +583,21 @@ async fn modify_change(
 /// thing. Advisory here: the locked, authoritative check still runs inside
 /// the commit transaction.
 ///
+/// `modifiable` is the EHR and its `is_modifiable` flag as the set's first
+/// read found them; `None` for a demographic set.
+///
 /// # Errors
-/// [`ServiceError::Conflict`] when the EHR exists and is not modifiable; the
-/// storage error of the writability read.
-async fn refuse_content_into_inactive_ehr(
-    cx: &FerroEhrService,
-    ehr_id: Option<EhrId>,
+/// [`ServiceError::Conflict`] when the EHR is not modifiable.
+fn refuse_content_into_inactive_ehr(
+    modifiable: Option<(EhrId, bool)>,
     plan: &[PlannedVersion],
 ) -> Result<(), ServiceError> {
-    let Some(ehr_id) = ehr_id else {
-        return Ok(());
-    };
-    if !plan_writes_content_without_reactivating(plan) {
-        return Ok(());
+    match modifiable {
+        Some((ehr_id, false)) if plan_writes_content_without_reactivating(plan) => {
+            Err(change::precondition::not_modifiable_error(ehr_id))
+        }
+        _ => Ok(()),
     }
-    let read =
-        crate::storage::ehr_repo::ehr_writability(&mut *acquire(&cx.pool).await?, ehr_id).await?;
-    if read.is_modifiable == Some(false) {
-        return Err(change::precondition::not_modifiable_error(ehr_id));
-    }
-    Ok(())
 }
 
 /// Reject the *creation* of a duplicate EHR structure. An EHR holds exactly

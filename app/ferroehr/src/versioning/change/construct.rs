@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The constructors of a [`Change`] a service write builds.
+//! The constructors of a [`Change`] a service write builds, and of the
+//! [`Write`] that carries it.
 
-use super::{Change, WriteEnvelope};
-use crate::ids::{AllocatedVoId, VoId};
+use super::{Change, Write, WriteEnvelope};
+use crate::ids::{AllocatedVoId, EhrId, VoId};
+use crate::versioning::audit::AuditInput;
+use crate::versioning::restriction;
 use crate::versioning::Kind;
 use crate::versioning::body::Body;
 use crate::versioning::object_version_id::TreeId;
@@ -84,5 +87,48 @@ impl Change {
             signature: None,
             other_input_version_uids: Vec::new(),
         }
+    }
+}
+
+impl Write {
+    /// A write of `change` to the object in `ehr_id` (or an ehr-less one),
+    /// reading its own commit instant and placement.
+    pub(crate) fn new(ehr_id: Option<EhrId>, change: Change, audit: AuditInput) -> Self {
+        Self {
+            ehr_id,
+            change,
+            audit,
+            known: restriction::Known::default(),
+            placement: None,
+            deleted: None,
+        }
+    }
+
+    /// The same write at the commit instant `now` the caller already read.
+    pub(crate) fn at(self, now: jiff::Timestamp) -> Self {
+        Self {
+            known: restriction::Known {
+                now: Some(now),
+                ..self.known
+            },
+            ..self
+        }
+    }
+
+    /// The same write off the placement the caller already read under the
+    /// per-object lock it holds.
+    pub(crate) fn placed(
+        self,
+        placement: crate::storage::version_repo::placement::Placement,
+    ) -> Self {
+        Self {
+            placement: Some(placement),
+            ..self
+        }
+    }
+
+    /// The same write, a logical delete of a version that held `deleted`.
+    pub(crate) fn deleting(self, deleted: Option<crate::system_log::categories::ContentIds>) -> Self {
+        Self { deleted, ..self }
     }
 }

@@ -468,27 +468,9 @@ pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Respo
             // (RM common master06 §Logical Deletion).
             let uid = committed.version_uid();
             // The deleted version carries no content, so the access record is
-            // classified by the version it deleted (EHDS Annex II 3.2(c)). The
-            // delete has committed, so a failed read leaves the record
-            // unclassified rather than failing the response.
-            let deleted = match state
-                .backend()
-                .audit_content_of_objects(&[VoId(vo_id)])
-                .await
-            {
-                Ok(deleted) => deleted,
-                Err(e) => {
-                    tracing::warn!(
-                        error = %ferroehr::error::ErrorChain::new(&e),
-                        "reading the categories of a deleted COMPOSITION failed; the access \
-                         record is written unclassified"
-                    );
-                    Vec::new()
-                }
-            };
-            let resp = ServiceResponse::deleted(
-                commit_meta(ehr_id, uid, &committed).with_content(deleted),
-            );
+            // classified by the version it deleted (EHDS Annex II 3.2(c)), which
+            // the delete's gate read found (`Committed::deleted`).
+            let resp = ServiceResponse::deleted(commit_meta(ehr_id, uid, &committed));
             Ok(negotiate::resource::deleted_with_headers(&resp))
         }
         // The 409 and the volunteered-If-Match 412 both carry the latest
