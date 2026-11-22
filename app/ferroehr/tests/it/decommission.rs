@@ -48,14 +48,15 @@ async fn seed_every_domain(pool: &PgPool) {
         .expect("create a party");
     sqlx::query(
         "INSERT INTO audit.audit_event \
-         (recorded_at, action, outcome, event_code, resource_class, render_policy, \
-          search_tokens) \
-         VALUES (now(), 'R', 0, '110110', 'composition', \
-                 audit.register_render_policy('{}'::jsonb), '{}')",
+         (id, recorded_at, stored_at, action, outcome, event_code, resource_class, \
+          render_policy, search_tokens, content_digest) \
+         VALUES (uuidv7(), now(), now(), 'R', 0, '110110', 'composition', \
+                 audit.register_render_policy('{}'::jsonb), '{}', sha256('unset'))",
     )
     .execute(pool)
     .await
     .expect("write an audit record");
+    crate::fixtures::redigest(pool).await;
 }
 
 /// The rows each domain holds, summed over one relation per domain.

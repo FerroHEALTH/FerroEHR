@@ -505,42 +505,76 @@ pub(crate) async fn subject_ehr_ids(
     }
 }
 
-/// Every finding of the full tamper checks of both chains,
-/// `audit.verify_audit_chain()` (the system chain), the system chain's first,
-/// and the access log's sealed windows after every committed entry is sealed
-/// (#6242), run on `pool` without moving the system chain's cursor.
+/// Every finding of the full tamper checks of both logs, the system
+/// records' first, after every committed record is sealed (#6242), run on
+/// `pool` without moving either verification cursor.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test verifies on a raw pool connection, outside any request"
+)]
 pub(crate) async fn verify_chain(
     pool: &sqlx::PgPool,
 ) -> Result<
     Vec<ferroehr::system_log::store::chains::AuditChainFinding>,
     ferroehr::system_log::AuditError,
 > {
-    use ferroehr::system_log::store::chains::{AuditChain, AuditChainFinding};
-    use sqlx::Row;
-    let rows = sqlx::query(
-        "SELECT chain_seq, record_id, recorded_at, finding FROM audit.verify_audit_chain() \
-         ORDER BY chain_seq NULLS FIRST",
-    )
-    .fetch_all(pool)
-    .await?;
-    let mut findings = rows
-        .iter()
-        .map(|row| {
-            Ok(AuditChainFinding {
-                chain: AuditChain::System,
-                chain_seq: row.try_get("chain_seq")?,
-                record_id: row.try_get("record_id")?,
-                recorded_at: row
-                    .try_get::<Option<jiff_sqlx::Timestamp>, _>("recorded_at")?
-                    .map(jiff_sqlx::Timestamp::to_jiff),
-                finding: row.try_get("finding")?,
-            })
-        })
-        .collect::<Result<Vec<_>, sqlx::Error>>()?;
+    use ferroehr::access_log::seal::{ACCESS_LOG, SYSTEM, verify_on};
     let log = ferroehr::access_log::store::AccessLogStore::new(pool.clone());
-    log.seal_committed().await?;
-    findings.extend(log.verify_windows(false).await?);
+    let mut findings = Vec::new();
+    for sealed in [&SYSTEM, &ACCESS_LOG] {
+        log.seal_committed(sealed).await?;
+        let mut conn = pool
+            .acquire()
+            .await
+            .map_err(ferroehr::system_log::AuditError::from)?;
+        let mut after = 0;
+        loop {
+            let step = verify_on(&mut conn, sealed, after, i64::MAX).await?;
+            findings.extend(step.findings);
+            after = step.through;
+            if step.done {
+                break;
+            }
+        }
+    }
     Ok(findings)
+}
+
+/// Give every system record a test wrote by hand the content digest its
+/// columns call for ([`ferroehr::system_log::content_digest`]), as the server's
+/// writer would have, with the record table's triggers off as only its owner
+/// can.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test rewrites hand-written records on a raw pool connection, outside any request"
+)]
+pub(crate) async fn redigest(pool: &sqlx::PgPool) {
+    let rows: Vec<(i64, Value)> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "SELECT e.seq, {} FROM audit.audit_event e",
+        ferroehr::system_log::content_digest::STORED
+    )))
+    .fetch_all(pool)
+    .await
+    .expect("the records");
+    let mut tx = pool.begin().await.expect("begin");
+    sqlx::query("ALTER TABLE audit.audit_event DISABLE TRIGGER USER")
+        .execute(&mut *tx)
+        .await
+        .expect("the triggers off");
+    for (seq, document) in rows {
+        let digest = ferroehr::system_log::content_digest::of_stored(document).expect("a digest");
+        sqlx::query("UPDATE audit.audit_event SET content_digest = $1 WHERE seq = $2")
+            .bind(digest.to_vec())
+            .bind(seq)
+            .execute(&mut *tx)
+            .await
+            .expect("the digest");
+    }
+    sqlx::query("ALTER TABLE audit.audit_event ENABLE TRIGGER USER")
+        .execute(&mut *tx)
+        .await
+        .expect("the triggers on");
+    tx.commit().await.expect("commit");
 }
 
 /// Whether an ADL 1.4 archetype with `id` is stored, read off the store; identity

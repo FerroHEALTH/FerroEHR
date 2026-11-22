@@ -61,7 +61,7 @@ pub(crate) async fn seed(store: &AuditStore, count: u32) {
 /// Run `sql` with the append-only triggers off, which only the table's OWNER
 /// can do — the attacker this mechanism is designed to catch rather than stop.
 pub(crate) async fn with_triggers_disabled(pool: &PgPool, sql: &str) {
-    for table in ["audit_event", "audit_event_link"] {
+    for table in ["audit_event", "audit_event_reaped"] {
         sqlx::query(AssertSqlSafe(format!(
             "ALTER TABLE audit.{table} DISABLE TRIGGER USER"
         )))
@@ -73,7 +73,7 @@ pub(crate) async fn with_triggers_disabled(pool: &PgPool, sql: &str) {
         .execute(pool)
         .await
         .expect("the tampering statement itself must succeed");
-    for table in ["audit_event", "audit_event_link"] {
+    for table in ["audit_event", "audit_event_reaped"] {
         sqlx::query(AssertSqlSafe(format!(
             "ALTER TABLE audit.{table} ENABLE TRIGGER USER"
         )))
@@ -83,13 +83,10 @@ pub(crate) async fn with_triggers_disabled(pool: &PgPool, sql: &str) {
     }
 }
 
-/// The statement that deletes the record at `chain_seq` with its link, as an
-/// owner with the triggers off would (#6203).
+/// The statement that deletes the record at `chain_seq`, as an owner with
+/// the triggers off would (#6203, #6242).
 pub(crate) fn delete_record_at(chain_seq: i64) -> String {
-    format!(
-        "WITH gone AS (DELETE FROM audit.audit_event_link WHERE chain_seq = {chain_seq} \
-         RETURNING event_id) DELETE FROM audit.audit_event e USING gone g WHERE e.id = g.event_id"
-    )
+    format!("DELETE FROM audit.audit_event WHERE seq = {chain_seq}")
 }
 
 /// A modified record is detected and named, not silently accepted.
@@ -108,17 +105,16 @@ async fn a_modified_audit_record_is_detected_and_named() {
         "a freshly written trail must verify clean"
     );
 
-    let target: Uuid =
-        sqlx::query_scalar("SELECT event_id FROM audit.audit_event_link WHERE chain_seq = 2")
-            .fetch_one(&pool)
-            .await
-            .expect("the second record");
+    let target: Uuid = sqlx::query_scalar("SELECT id FROM audit.audit_event WHERE seq = 2")
+        .fetch_one(&pool)
+        .await
+        .expect("the second record");
 
     // Rewrite who accessed the patient — the exact silent edit the issue is
     // about.
     with_triggers_disabled(
         &pool,
-        "UPDATE audit.audit_event SET principal = 'nobody' WHERE id = (SELECT event_id FROM audit.audit_event_link WHERE chain_seq = 2)",
+        "UPDATE audit.audit_event SET principal = 'nobody' WHERE seq = 2",
     )
     .await;
 
@@ -149,69 +145,31 @@ async fn a_deleted_audit_record_is_detected_in_the_middle_and_at_the_end() {
 
     with_triggers_disabled(&pool, &delete_record_at(3)).await;
     let findings = crate::fixtures::verify_chain(&pool).await.expect("verify");
-    assert_eq!(findings.len(), 1, "one gap must be reported: {findings:?}");
+    assert_eq!(
+        findings.len(),
+        1,
+        "one removal must be reported: {findings:?}"
+    );
     let finding = findings.first().expect("one finding");
     assert_eq!(
         finding.chain_seq,
-        Some(4),
-        "the gap is reported at the record that should have followed the deleted one"
+        Some(3),
+        "the removal is reported at the window that held the deleted record"
     );
     assert!(
-        finding.finding.contains("deleted"),
+        finding.finding.contains("removed"),
         "the finding must say a record went missing: {}",
         finding.finding
     );
 
-    // The newest record has no successor to notice its removal; the recorded
-    // chain head does.
+    // The newest record has no successor; the seal of its window notices.
     with_triggers_disabled(&pool, &delete_record_at(5)).await;
     let findings = crate::fixtures::verify_chain(&pool).await.expect("verify");
     assert!(
         findings
             .iter()
-            .any(|f| f.finding.contains("end of the chain")),
+            .any(|f| f.chain_seq == Some(5) && f.finding.contains("removed")),
         "removing the newest record must be reported: {findings:?}"
-    );
-}
-
-/// A link deleted from under its record is a deletion, and a record deleted
-/// from under its link is a changed record (#6203): either half of a linked
-/// record removed by an owner with the triggers off is named.
-#[tokio::test]
-async fn a_deleted_link_or_a_deleted_record_behind_a_link_is_detected() {
-    let testdb = testkit::db().await.expect("testkit database");
-    let pool = testdb.pool();
-    let store = AuditStore::new(pool.clone());
-    seed(&store, 4).await;
-
-    with_triggers_disabled(
-        &pool,
-        "DELETE FROM audit.audit_event_link WHERE chain_seq = 2",
-    )
-    .await;
-    let findings = crate::fixtures::verify_chain(&pool).await.expect("verify");
-    assert_eq!(findings.len(), 1, "one gap must be reported: {findings:?}");
-    let finding = findings.first().expect("one finding");
-    assert_eq!(finding.chain_seq, Some(3));
-    assert!(finding.finding.contains("deleted"), "{}", finding.finding);
-
-    let target: Uuid =
-        sqlx::query_scalar("SELECT event_id FROM audit.audit_event_link WHERE chain_seq = 4")
-            .fetch_one(&pool)
-            .await
-            .expect("the newest link");
-    with_triggers_disabled(
-        &pool,
-        "DELETE FROM audit.audit_event \
-         WHERE id = (SELECT event_id FROM audit.audit_event_link WHERE chain_seq = 4)",
-    )
-    .await;
-    let findings = crate::fixtures::verify_chain(&pool).await.expect("verify");
-    assert!(
-        findings.iter().any(|f| f.chain_seq == Some(4)
-            && f.record_id == Some(target)
-            && f.finding.contains("modified")),
-        "a link whose record is gone must be reported: {findings:?}"
     );
 }
 
@@ -269,8 +227,8 @@ async fn retention_reaping_leaves_a_verifiable_trail() {
     );
 }
 
-/// The triggers refuse the ordinary rewrite paths outright: a record and its
-/// link are never changed, linked or not (#6203).
+/// The triggers refuse the ordinary rewrite paths outright: a record, its
+/// seal and a reaped position are never changed, held or not (#6203, #6242).
 #[tokio::test]
 async fn the_audit_table_refuses_mutation_deletion_and_truncation() {
     let testdb = testkit::db().await.expect("testkit database");
@@ -284,12 +242,13 @@ async fn the_audit_table_refuses_mutation_deletion_and_truncation() {
         "UPDATE audit.audit_render_policy SET policy = '{}'::jsonb",
         "DELETE FROM audit.audit_render_policy",
         "UPDATE audit.audit_event SET stored_at = now()",
-        "UPDATE audit.audit_event_link SET row_hash = '\\x00'::bytea",
-        "UPDATE audit.audit_event_link SET linked_at = now()",
+        "UPDATE audit.audit_event SET content_digest = sha256('x')",
+        "UPDATE audit.audit_event_seal SET digest = sha256('x')",
         "DELETE FROM audit.audit_event",
-        "DELETE FROM audit.audit_event_link",
+        "DELETE FROM audit.audit_event_seal",
         "TRUNCATE audit.audit_event",
-        "TRUNCATE audit.audit_event_link",
+        "TRUNCATE audit.audit_event_seal",
+        "TRUNCATE audit.audit_event_reaped",
     ] {
         let outcome = sqlx::query(AssertSqlSafe(statement.to_owned()))
             .execute(&pool)
@@ -300,49 +259,63 @@ async fn the_audit_table_refuses_mutation_deletion_and_truncation() {
         );
     }
 
-    // A record the intake still names, which no link chains yet, is refused
-    // an UPDATE as a linked one is, and no reader sees it.
-    let unlinked: Uuid = sqlx::query_scalar(
-        "WITH written AS (INSERT INTO audit.audit_event \
-         (recorded_at, action, outcome, event_code, resource_class, render_policy, search_tokens) \
-         VALUES (now(), 'R', 0, '110110', 'demographic', \
-                 audit.register_render_policy('{}'::jsonb), '{}') RETURNING id) \
-         INSERT INTO audit.audit_event_intake (events, reserved_by) \
-         SELECT ARRAY[id], uuidv7() FROM written RETURNING events[1]",
+    // A record a write still holds, which no window covers yet, is refused an
+    // UPDATE as a sealed one is, and no reader sees it.
+    let held: i64 = sqlx::query_scalar(
+        "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken), \
+         written AS (INSERT INTO audit.audit_event \
+         (id, recorded_at, stored_at, action, outcome, event_code, resource_class, \
+          render_policy, search_tokens, content_digest) \
+         SELECT uuidv7(), now(), now(), 'R', 0, '110110', 'demographic', \
+                audit.register_render_policy('{}'::jsonb), '{}', sha256('held') \
+         FROM own_xid RETURNING seq) \
+         INSERT INTO audit.audit_event_hold (seq, reserved_by) \
+         SELECT seq, uuidv7() FROM written RETURNING seq",
     )
     .fetch_one(&pool)
     .await
     .expect("a held record");
-    let outcome = sqlx::query("UPDATE audit.audit_event SET principal = 'nobody' WHERE id = $1")
-        .bind(unlinked)
+    let outcome = sqlx::query("UPDATE audit.audit_event SET principal = 'nobody' WHERE seq = $1")
+        .bind(held)
         .execute(&pool)
         .await;
-    assert!(outcome.is_err(), "an unlinked record must refuse an UPDATE");
-    let outcome = sqlx::query("DELETE FROM audit.audit_event WHERE id = $1")
-        .bind(unlinked)
+    assert!(outcome.is_err(), "a held record must refuse an UPDATE");
+    let outcome = sqlx::query("DELETE FROM audit.audit_event WHERE seq = $1")
+        .bind(held)
         .execute(&pool)
         .await;
     assert!(
         outcome.is_err(),
-        "an unlinked record leaves only by the discard of its reservation"
+        "a held record leaves only by the discard of its reservation"
     );
+    let seen: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM audit.audit_record WHERE chain_seq = $1")
+            .bind(held)
+            .fetch_one(&pool)
+            .await
+            .expect("the reader");
+    assert_eq!(seen, 0, "no reader sees a held record");
     assert!(
         crate::fixtures::verify_chain(&pool)
             .await
             .expect("verify")
             .is_empty(),
-        "a record the intake holds is outside the chain"
+        "a record a write holds is outside every window"
     );
 }
 
 /// The privilege posture of the role the running server connects as, over the
-/// audit trail specifically: it can record an event and chain it, and it can
+/// audit trail specifically: it can record an event and seal it, and it can
 /// do nothing else — no DDL, no rewrite, no deletion, and no disabling
 /// of the triggers that enforce that.
 ///
 /// Roles are cluster-global on the shared harness server, so the login role is
 /// named off the clone database for the testkit sweep to reap.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test releases a hold on a raw connection of the app role's pool, outside any request"
+)]
 async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
@@ -366,10 +339,10 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
         "DROP TABLE audit.audit_event",
         "ALTER TABLE audit.audit_event ADD COLUMN zq_probe int",
         "ALTER TABLE audit.audit_event DISABLE TRIGGER USER",
-        "DROP TRIGGER audit_event_chain_link ON audit.audit_event_link",
-        "CREATE INDEX zq_probe ON audit.audit_event_link (chain_seq)",
+        "DROP TRIGGER audit_event_reject_mutation ON audit.audit_event",
+        "CREATE INDEX zq_probe ON audit.audit_event (stored_at)",
         "CREATE SCHEMA zq_probe",
-        "DROP FUNCTION audit.verify_audit_chain()",
+        "DROP FUNCTION audit.reap_audit_events_due(date, timestamptz)",
     ] {
         let outcome = sqlx::query(AssertSqlSafe(statement.to_owned()))
             .execute(&mut conn)
@@ -380,24 +353,32 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
         );
     }
 
-    // Recording an event once, with the intake row naming it, is exactly what
-    // it may do; the chainer links it.
-    sqlx::query(
-        "WITH written AS (INSERT INTO audit.audit_event \
-         (recorded_at, action, outcome, event_code, resource_class, render_policy, \
-          search_tokens) \
-         VALUES (now(), 'R', 0, '110110', 'composition', \
-                 audit.register_render_policy('{}'::jsonb), '{}') RETURNING id) \
-         INSERT INTO audit.audit_event_intake (events) SELECT ARRAY[id] FROM written",
-    )
-    .execute(&mut conn)
-    .await
-    .expect("the application role must be able to record an audit event");
-    let moved: i64 = sqlx::query_scalar("SELECT audit.audit_event_chain_move(16, false, false)")
-        .fetch_one(&mut conn)
+    // Recording an event once, held under a reservation, is exactly what it
+    // may do; the sealer seals it once the hold is released.
+    let role_pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .connect(&format!("{scheme}://{role}:testpw@{tail}"))
         .await
-        .expect("the application role must be able to chain the intake");
-    assert_eq!(moved, 1, "the chainer's move links the record");
+        .expect("a pool of the app role");
+    let mut recorded = AuditEvent::new(
+        EventActionCode::Read,
+        ObjectClass::Template,
+        EventOutcome::Success,
+    );
+    recorded.event_type = Some(EventType::rest("template_get"));
+    let reservation = Uuid::now_v7();
+    AuditStore::new(role_pool.clone())
+        .write_held(
+            vec![AuditRecord {
+                event: recorded,
+                subject: None,
+                entry: None,
+            }],
+            &[],
+            reservation,
+        )
+        .await
+        .expect("the application role must be able to record an audit event");
     sqlx::query(
         "INSERT INTO audit.audit_search_token (parameter, system, code, digest) \
          VALUES ('type', NULL, 'rest', audit.search_token_digest('type', NULL, 'rest'))",
@@ -406,21 +387,15 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
     .await
     .expect("the application role must be able to store a search token");
 
-    // Writing the chain past the chainer, or rewriting or removing a record,
-    // is not.
+    // Releasing a hold past the release, recording a reaped position, or
+    // rewriting or removing a record, is not.
     for statement in [
-        "INSERT INTO audit.audit_event_link (event_id) \
-         SELECT id FROM audit.audit_event LIMIT 1",
-        "UPDATE audit.audit_event_intake SET events = '{}'",
-        "DELETE FROM audit.audit_event_intake",
+        "DELETE FROM audit.audit_event_hold",
+        "UPDATE audit.audit_event_hold SET reserved_by = uuidv7()",
+        "INSERT INTO audit.audit_event_reaped (seq, content_digest) VALUES (99, sha256('x'))",
         "UPDATE audit.audit_event SET principal = 'nobody'",
-        "UPDATE audit.audit_event_link SET row_hash = '\\x00'::bytea",
         "DELETE FROM audit.audit_event",
-        "DELETE FROM audit.audit_event_link",
         "TRUNCATE audit.audit_event",
-        "UPDATE audit.audit_chain_state SET head_hash = '\\x00'::bytea",
-        "INSERT INTO audit.audit_chain_gap (from_seq, to_seq, link_hash) \
-         VALUES (1, 99, '\\x00'::bytea)",
         "INSERT INTO audit.audit_render_policy (digest, policy) \
          VALUES (sha256(convert_to('{}', 'UTF8')), '{}'::jsonb)",
         "UPDATE audit.audit_render_policy SET policy = '{\"source_id\": \"x\"}'::jsonb",
@@ -447,13 +422,26 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
         .expect("the application role must be able to read the audit trail");
     assert_eq!(recorded, 1);
 
-    // And it can run the verification itself, which is how an operator asks the
-    // question without a privileged credential.
-    let findings: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.verify_audit_chain()")
-        .fetch_one(&mut conn)
+    // And it can release, seal and verify the records itself, which is how an
+    // operator asks the question without a privileged credential.
+    drop(conn);
+    let held = vec![reservation];
+    let mut release = role_pool.acquire().await.expect("a connection");
+    AuditStore::release(&mut release, &held)
         .await
-        .expect("the application role must be able to verify the chain");
-    assert_eq!(findings, 0);
+        .expect("the application role must be able to release a confirmed write");
+    drop(release);
+    let as_role = AuditStore::new(role_pool.clone());
+    as_role
+        .settle(ferroehr::system_log::store::intake::Chains::BOTH)
+        .await
+        .expect("the application role must be able to seal the records");
+    let findings = as_role
+        .verify_chains_advancing(VerifyScope::Full)
+        .await
+        .expect("the application role must be able to verify the records");
+    assert!(findings.is_empty(), "{findings:?}");
+    role_pool.close().await;
 }
 
 /// `[database] migrations = "verify"` issues no DDL: it accepts a database migrated to
@@ -540,10 +528,10 @@ async fn verify_mode_refuses_a_database_whose_migration_text_diverged() {
     );
 }
 
-/// The batched drain path writes through the same trigger, so a batch is
-/// chained record by record rather than left unprotected.
+/// The batched write path seals its records like the single one: a batch
+/// is sealed record by record in one window rather than left unprotected.
 #[tokio::test]
-async fn the_batched_write_path_is_chained_too() {
+async fn the_batched_write_path_is_sealed_too() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AuditStore::new(pool.clone());
@@ -559,15 +547,20 @@ async fn the_batched_write_path_is_chained_too() {
     }
     store.insert_batch(&batch, &[]).await.expect("batch insert");
 
-    let positions: Vec<i64> =
-        sqlx::query("SELECT chain_seq FROM audit.audit_event_link ORDER BY chain_seq")
+    let positions: Vec<i64> = sqlx::query("SELECT seq FROM audit.audit_event ORDER BY seq")
+        .fetch_all(&pool)
+        .await
+        .expect("positions")
+        .into_iter()
+        .map(|row| row.get::<i64, _>("seq"))
+        .collect();
+    assert_eq!(positions, vec![1, 2, 3, 4, 5]);
+    let windows: Vec<(i64, i64, i32)> =
+        sqlx::query_as("SELECT first_id, last_id, entries FROM audit.audit_event_seal")
             .fetch_all(&pool)
             .await
-            .expect("positions")
-            .into_iter()
-            .map(|row| row.get::<i64, _>("chain_seq"))
-            .collect();
-    assert_eq!(positions, vec![1, 2, 3, 4, 5]);
+            .expect("the windows");
+    assert_eq!(windows, vec![(1, 5, 5)], "one window seals the batch");
     assert!(
         crate::fixtures::verify_chain(&pool)
             .await
@@ -600,7 +593,7 @@ async fn the_chain_check_reports_a_tampered_record_on_the_health_surface() {
 
     with_triggers_disabled(
         &pool,
-        "UPDATE audit.audit_event SET principal = 'nobody' WHERE id = (SELECT event_id FROM audit.audit_event_link WHERE chain_seq = 2)",
+        "UPDATE audit.audit_event SET principal = 'nobody' WHERE seq = 2",
     )
     .await;
 
@@ -681,10 +674,6 @@ async fn the_audit_subsystem_schedules_the_chain_check() {
     off_handle.shutdown(std::time::Duration::from_secs(5)).await;
 }
 
-/// The columns of a record's link the chain digest hashes beside the record's
-/// own: its position and its predecessor's digest (#6203).
-const LINK_COLUMNS: [&str; 2] = ["chain_seq", "prev_hash"];
-
 /// Every column of `audit.audit_event` with its `information_schema` data type,
 /// in table order.
 async fn audit_event_columns(pool: &PgPool) -> Vec<(String, String)> {
@@ -698,15 +687,20 @@ async fn audit_event_columns(pool: &PgPool) -> Vec<(String, String)> {
     .expect("read the audit_event columns")
 }
 
-/// Run `statements` with the user triggers off inside a transaction, read the
-/// verifier's findings as `(chain_seq, finding)`, and roll everything back.
+/// The columns of a record its content digest leaves out: its position,
+/// which the seal names beside the digest, and the digest itself.
+const UNDIGESTED: [&str; 2] = ["seq", "content_digest"];
+
+/// Run `statements` with the user triggers off inside a transaction, read
+/// the verifier's findings over both logs' windows in it as
+/// `(chain_seq, finding)`, and roll everything back.
 #[expect(
     clippy::disallowed_methods,
     reason = "a test reads the database on a raw pool connection, outside any request"
 )]
 async fn findings_after(pool: &PgPool, statements: &[String]) -> Vec<(Option<i64>, String)> {
     let mut tx = pool.begin().await.expect("begin");
-    for table in ["audit_event", "audit_event_link"] {
+    for table in ["audit_event", "audit_event_reaped"] {
         sqlx::query(AssertSqlSafe(format!(
             "ALTER TABLE audit.{table} DISABLE TRIGGER USER"
         )))
@@ -720,11 +714,23 @@ async fn findings_after(pool: &PgPool, statements: &[String]) -> Vec<(Option<i64
             .await
             .expect("the tampering statement itself must succeed");
     }
-    let findings: Vec<(Option<i64>, String)> =
-        sqlx::query_as("SELECT chain_seq, finding FROM audit.verify_audit_chain()")
-            .fetch_all(&mut *tx)
-            .await
-            .expect("verify");
+    let mut findings = Vec::new();
+    let mut after = 0;
+    loop {
+        let step = ferroehr::access_log::seal::verify_on(
+            &mut tx,
+            &ferroehr::access_log::seal::SYSTEM,
+            after,
+            i64::MAX,
+        )
+        .await
+        .expect("verify");
+        findings.extend(step.findings.into_iter().map(|f| (f.chain_seq, f.finding)));
+        after = step.through;
+        if step.done {
+            break;
+        }
+    }
     tx.rollback().await.expect("rollback");
     findings
 }
@@ -749,219 +755,81 @@ fn changed_value(column: &str, data_type: &str) -> Option<String> {
     Some(value)
 }
 
-/// The columns version 2 adds to version 1's list (the v5 binding-outcome
-/// change).
-const VERSION_2_COLUMNS: [&str; 13] = [
-    "binding",
-    "party",
-    "party_groups",
-    "provider",
-    "guest",
-    "representation",
-    "external_fields",
-    "agreement",
-    "actor_chain",
-    "facilities",
-    "binding_detail",
-    "summary",
-    "digest_version",
-];
-
-/// The column version 3 adds to version 2's list (the v5 token-attributes
-/// change).
-const VERSION_3_COLUMNS: [&str; 1] = ["token_attributes"];
-
-/// The column version 4 drops from version 3's list (the v5 change that
-/// dropped the access organisation).
-const VERSION_4_DROPPED: [&str; 1] = ["organisation"];
-
-/// The column version 5 adds to version 4's list (the v6 review level of a
-/// care relationship written to a marked record, #6141).
-const VERSION_5_COLUMNS: [&str; 1] = ["review"];
-
-/// The digest of version 5 lists every column of the record and its link's
-/// position and predecessor digest, so a migration that adds a column fails here until a version lists
-/// it; versions 1 to 4 keep the lists the rows written before them are hashed
-/// over.
+/// The content digest names every column of the record but its position and
+/// the digest itself, so a migration that adds a column fails here until the
+/// digest's form lists it; a stored record recomputes to its digest.
 #[tokio::test]
 async fn the_digest_covers_every_column() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
-    let listed = |version: i16| {
-        let pool = pool.clone();
-        async move {
-            let mut covered: Vec<String> =
-                sqlx::query_scalar("SELECT unnest(audit.audit_event_digest_columns($1))")
-                    .bind(version)
-                    .fetch_all(&pool)
-                    .await
-                    .expect("the digest's columns");
-            covered.sort();
-            covered
-        }
-    };
-
+    seed(&AuditStore::new(pool.clone()), 1).await;
+    let (stored, document): (Vec<u8>, serde_json::Value) = sqlx::query_as(AssertSqlSafe(format!(
+        "SELECT e.content_digest, {} FROM audit.audit_event e WHERE e.seq = 1",
+        ferroehr::system_log::content_digest::STORED
+    )))
+    .fetch_one(&pool)
+    .await
+    .expect("the stored form");
+    let mut covered: Vec<String> = document
+        .as_object()
+        .expect("an object")
+        .keys()
+        .cloned()
+        .collect();
+    covered.sort();
     let mut expected: Vec<String> = audit_event_columns(&pool)
         .await
         .into_iter()
         .map(|(name, _)| name)
-        .chain(LINK_COLUMNS.map(str::to_owned))
+        .filter(|name| !UNDIGESTED.contains(&name.as_str()))
         .collect();
     expected.sort();
     assert_eq!(
-        listed(5).await,
-        expected,
-        "every column of audit.audit_event and the link's {LINK_COLUMNS:?} must be in the \
-         chain digest: list a new column in a new version of audit.audit_event_digest_columns"
+        covered, expected,
+        "every column of audit.audit_event but {UNDIGESTED:?} must be in the content digest: \
+         list a new column in system_log::content_digest under a new version"
     );
-    let version_4: Vec<String> = expected
-        .into_iter()
-        .filter(|name| !VERSION_5_COLUMNS.contains(&name.as_str()))
-        .collect();
-    assert_eq!(listed(4).await, version_4, "version 4 is the 5.x list");
-    let mut version_3 = version_4;
-    version_3.extend(VERSION_4_DROPPED.map(str::to_owned));
-    version_3.sort();
-    assert_eq!(listed(3).await, version_3, "version 3 is the 0026 list");
-    let version_2: Vec<String> = version_3
-        .into_iter()
-        .filter(|name| !VERSION_3_COLUMNS.contains(&name.as_str()))
-        .collect();
-    assert_eq!(listed(2).await, version_2, "version 2 is the 0023 list");
-    let version_1: Vec<String> = version_2
-        .into_iter()
-        .filter(|name| !VERSION_2_COLUMNS.contains(&name.as_str()))
-        .collect();
-    assert_eq!(listed(1).await, version_1, "version 1 is the 0017 list");
+    let recomputed = ferroehr::system_log::content_digest::of_stored(document).expect("a digest");
+    assert_eq!(
+        recomputed.as_slice(),
+        stored.as_slice(),
+        "the writer's digest recomputes"
+    );
 }
 
-/// A store holding version-1 records verifies after the migration, new
-/// records are version 5, and a version-1 insert after a version-5 record is
-/// refused.
+/// A record of any other digest form than the one the verifier recomputes is
+/// refused at write: no form of a record written before is kept.
 #[tokio::test]
-#[expect(
-    clippy::disallowed_methods,
-    reason = "a test reads the database on a raw pool connection, outside any request"
-)]
-async fn a_store_holding_both_digest_versions_verifies_and_refuses_a_downgrade() {
+async fn a_record_of_another_digest_version_is_refused() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
-    let store = AuditStore::new(pool.clone());
-    seed(&store, 2).await;
-    // Rows written before the migration are version 1: rewrite the first
-    // as one, with its digest over the version-1 list, and relink the second.
-    let mut tx = pool.begin().await.expect("tx");
-    for table in ["audit_event", "audit_event_link"] {
-        sqlx::query(AssertSqlSafe(format!(
-            "ALTER TABLE audit.{table} DISABLE TRIGGER USER"
-        )))
-        .execute(&mut *tx)
-        .await
-        .expect("disable the append-only triggers");
-    }
-    sqlx::query(
-        "UPDATE audit.audit_event SET digest_version = 1 \
-         WHERE id = (SELECT event_id FROM audit.audit_event_link ORDER BY chain_seq LIMIT 1)",
-    )
-    .execute(&mut *tx)
-    .await
-    .expect("a version-1 row");
-    sqlx::query(
-        "UPDATE audit.audit_event_link l \
-         SET row_hash = audit.audit_event_row_digest(e, l.chain_seq, l.prev_hash) \
-         FROM audit.audit_event e \
-         WHERE e.id = l.event_id \
-           AND l.chain_seq = (SELECT min(chain_seq) FROM audit.audit_event_link)",
-    )
-    .execute(&mut *tx)
-    .await
-    .expect("its version-1 digest");
-    sqlx::query(
-        "UPDATE audit.audit_event_link l SET prev_hash = p.row_hash \
-         FROM audit.audit_event_link p WHERE p.chain_seq = l.chain_seq - 1",
-    )
-    .execute(&mut *tx)
-    .await
-    .expect("relink");
-    sqlx::query(
-        "UPDATE audit.audit_event_link l \
-         SET row_hash = audit.audit_event_row_digest(e, l.chain_seq, l.prev_hash) \
-         FROM audit.audit_event e \
-         WHERE e.id = l.event_id \
-           AND l.chain_seq = (SELECT max(chain_seq) FROM audit.audit_event_link)",
-    )
-    .execute(&mut *tx)
-    .await
-    .expect("the second digest");
-    sqlx::query(
-        "UPDATE audit.audit_chain_state SET head_hash = \
-         (SELECT row_hash FROM audit.audit_event_link ORDER BY chain_seq DESC LIMIT 1) \
-         WHERE singleton",
-    )
-    .execute(&mut *tx)
-    .await
-    .expect("the chain head");
-    for table in ["audit_event", "audit_event_link"] {
-        sqlx::query(AssertSqlSafe(format!(
-            "ALTER TABLE audit.{table} ENABLE TRIGGER USER"
-        )))
-        .execute(&mut *tx)
-        .await
-        .expect("enable the triggers");
-    }
-    tx.commit().await.expect("commit");
-    let versions: Vec<i16> = sqlx::query_scalar(
-        "SELECT e.digest_version FROM audit.audit_event e \
-             JOIN audit.audit_event_link l ON l.event_id = e.id ORDER BY l.chain_seq",
+    seed(&AuditStore::new(pool.clone()), 1).await;
+    let columns: Vec<String> = sqlx::query_scalar(
+        "SELECT quote_ident(column_name) FROM information_schema.columns \
+         WHERE table_schema = 'audit' AND table_name = 'audit_event' \
+           AND column_name NOT IN ('seq', 'id', 'digest_version') ORDER BY ordinal_position",
     )
     .fetch_all(&pool)
     .await
-    .expect("versions");
-    assert_eq!(versions, vec![1, 5]);
-    // The checkpoint the seed left is stale after the rewrite; verify from genesis.
-    sqlx::query("DELETE FROM audit.audit_chain_checkpoint")
+    .expect("the columns");
+    let columns = columns.join(", ");
+    for version in [1, 5, 7] {
+        let refused = sqlx::query(AssertSqlSafe(format!(
+            "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken) \
+             INSERT INTO audit.audit_event (id, digest_version, {columns}) \
+             SELECT uuidv7(), {version}, {columns} FROM own_xid CROSS JOIN audit.audit_event \
+             WHERE seq = 1"
+        )))
         .execute(&pool)
         .await
-        .expect("no checkpoint");
-    assert!(
-        crate::fixtures::verify_chain(&pool)
-            .await
-            .expect("verify")
-            .is_empty(),
-        "a store holding both versions verifies"
-    );
-    seed(&store, 1).await;
-    let newest: i16 = sqlx::query_scalar(
-        "SELECT e.digest_version FROM audit.audit_event e \
-         JOIN audit.audit_event_link l ON l.event_id = e.id ORDER BY l.chain_seq DESC LIMIT 1",
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("the newest version");
-    assert_eq!(newest, 5, "a new record is version 5");
-    // A copy of the newest record stated as version 1 is refused by the chain writer.
-    let mut tx = pool.begin().await.expect("tx");
-    let downgrade = sqlx::query(
-        "DO $$ DECLARE cols text; copy uuid; BEGIN \
-         SELECT string_agg(quote_ident(column_name), ', ') INTO cols \
-           FROM information_schema.columns \
-          WHERE table_schema = 'audit' AND table_name = 'audit_event' \
-            AND column_name NOT IN ('id', 'stored_at', 'digest_version'); \
-         EXECUTE format('INSERT INTO audit.audit_event (%s, digest_version) \
-             SELECT %s, 1 FROM audit.audit_event WHERE id = \
-             (SELECT event_id FROM audit.audit_event_link ORDER BY chain_seq DESC LIMIT 1) \
-             RETURNING id', cols, cols) INTO copy; \
-         INSERT INTO audit.audit_event_link (event_id) VALUES (copy); \
-         END $$",
-    )
-    .execute(&mut *tx)
-    .await;
-    tx.rollback().await.expect("rollback");
-    let refusal = downgrade.expect_err("a version-1 insert after version 5 is refused");
-    assert!(
-        refusal.to_string().contains("refusing a downgrade"),
-        "{refusal}"
-    );
+        .expect_err("another digest version is refused");
+        assert!(
+            refused
+                .to_string()
+                .contains("ck_audit_event_digest_version"),
+            "{refused}"
+        );
+    }
 }
 
 /// Changing any hashed column of a stored record, with the append-only triggers
@@ -983,7 +851,7 @@ async fn every_hashed_column_is_tamper_evident() {
 
     // The owner can drop a CHECK or the render policy's foreign key as easily
     // as disable a trigger, and a value the constraints refuse is still a
-    // change the chain must see.
+    // change the seals must see.
     let checks: Vec<String> = sqlx::query_scalar(
         "SELECT conname::text FROM pg_constraint \
          WHERE conrelid = 'audit.audit_event'::regclass AND contype IN ('c', 'f')",
@@ -997,6 +865,10 @@ async fn every_hashed_column_is_tamper_evident() {
             .iter()
             .map(|name| format!("ALTER TABLE audit.audit_event DROP CONSTRAINT \"{name}\""))
             .collect();
+        // NOTE: our own design (#6242), a position is drawn GENERATED ALWAYS, which an owner lifts.
+        statements.push(
+            "ALTER TABLE audit.audit_event ALTER COLUMN seq SET GENERATED BY DEFAULT".to_owned(),
+        );
         let value = changed_value(&column, &data_type);
         assert!(
             value.is_some(),
@@ -1005,32 +877,12 @@ async fn every_hashed_column_is_tamper_evident() {
         );
         let value = value.expect("checked above");
         statements.push(format!(
-            "UPDATE audit.audit_event SET \"{column}\" = {value} \
-             WHERE id = (SELECT event_id FROM audit.audit_event_link WHERE chain_seq = 2)"
+            "UPDATE audit.audit_event SET \"{column}\" = {value} WHERE seq = 2"
         ));
         let findings = findings_after(&pool, &statements).await;
         assert!(
             !findings.is_empty(),
-            "changing `{column}` of a stored record must be reported by verify_audit_chain()"
-        );
-    }
-    for column in LINK_COLUMNS {
-        let data_type = if column == "chain_seq" {
-            "bigint"
-        } else {
-            "bytea"
-        };
-        let value = changed_value(column, data_type).expect("a known type");
-        let findings = findings_after(
-            &pool,
-            &[format!(
-                "UPDATE audit.audit_event_link SET \"{column}\" = {value} WHERE chain_seq = 2"
-            )],
-        )
-        .await;
-        assert!(
-            !findings.is_empty(),
-            "changing the link's `{column}` must be reported by verify_audit_chain()"
+            "changing `{column}` of a stored record must be reported by the verifier"
         );
     }
 }
@@ -1144,10 +996,11 @@ async fn policy_findings_after(pool: &PgPool, statements: &[String]) -> Vec<(Opt
     findings_after(pool, &all).await
 }
 
-/// The position the verification checkpoint has reached, `None` before any
-/// intact run.
+/// The window the verification cursor has reached, `None` before any intact
+/// run; each record [`seed`] writes is sealed in a window of its own, so the
+/// window is the record's position.
 async fn checkpoint(pool: &PgPool) -> Option<i64> {
-    sqlx::query_scalar("SELECT through_seq FROM audit.audit_chain_checkpoint")
+    sqlx::query_scalar("SELECT through_window FROM audit.audit_event_seal_verified")
         .fetch_optional(pool)
         .await
         .expect("the checkpoint")
@@ -1174,7 +1027,7 @@ async fn an_incremental_run_verifies_from_the_checkpoint() {
 
     with_triggers_disabled(
         &pool,
-        "UPDATE audit.audit_event SET principal = 'nobody' WHERE id = (SELECT event_id FROM audit.audit_event_link WHERE chain_seq = 2)",
+        "UPDATE audit.audit_event SET principal = 'nobody' WHERE seq = 2",
     )
     .await;
     assert!(
@@ -1205,7 +1058,7 @@ async fn an_incremental_run_verifies_from_the_checkpoint() {
     seed(&store, 2).await;
     with_triggers_disabled(
         &pool,
-        "UPDATE audit.audit_event SET principal = 'nobody' WHERE id = (SELECT event_id FROM audit.audit_event_link WHERE chain_seq = 5)",
+        "UPDATE audit.audit_event SET principal = 'nobody' WHERE seq = 5",
     )
     .await;
     let found = store
@@ -1225,8 +1078,8 @@ async fn an_incremental_run_verifies_from_the_checkpoint() {
     );
 }
 
-/// An incremental run checks the link from the checkpoint and the chain
-/// head: a record deleted right after the checkpoint, and one deleted from
+/// An incremental run checks the windows after the checkpoint and the seal
+/// state: a record deleted right after the checkpoint, and one deleted from
 /// the end, are both reported.
 #[tokio::test]
 async fn an_incremental_run_detects_deletions_after_the_checkpoint() {
@@ -1251,7 +1104,7 @@ async fn an_incremental_run_detects_deletions_after_the_checkpoint() {
     assert!(
         middle
             .iter()
-            .any(|f| f.chain_seq == Some(4) && f.finding.contains("deleted between")),
+            .any(|f| f.chain_seq == Some(3) && f.finding.contains("removed")),
         "{middle:?}"
     );
 
@@ -1262,15 +1115,15 @@ async fn an_incremental_run_detects_deletions_after_the_checkpoint() {
         .expect("verify");
     assert!(
         end.iter()
-            .any(|f| f.finding.contains("deleted from the end of the chain")),
+            .any(|f| f.chain_seq == Some(5) && f.finding.contains("removed")),
         "{end:?}"
     );
     assert_eq!(checkpoint(&pool).await, Some(2));
 }
 
 /// Retention reaping past the checkpoint record leaves a trail an
-/// incremental run still verifies: the tombstone reaping merged across the
-/// checkpoint accounts for the gap.
+/// incremental run still verifies: the reaped positions and the folded
+/// windows account for the removed records.
 #[tokio::test]
 async fn an_incremental_run_verifies_across_a_reaped_checkpoint() {
     let testdb = testkit::db().await.expect("testkit database");

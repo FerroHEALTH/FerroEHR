@@ -701,7 +701,6 @@ async fn a_response_leaves_after_its_record_is_stored() {
     assert_eq!(resp.status(), StatusCode::CREATED);
     let stored: i64 = sqlx::query_scalar(
         "SELECT (SELECT count(*) FROM audit.access_log_entry) \
-              + (SELECT count(*) FROM audit.audit_event_intake) \
               + (SELECT count(*) FROM audit.audit_event)",
     )
     .fetch_one(&audit.pool())

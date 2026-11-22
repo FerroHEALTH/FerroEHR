@@ -1,7 +1,7 @@
 -- SPDX-FileCopyrightText: Cadasto B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
--- audit: the audit records of the system chain, their render policies and
+-- audit: the system audit records, their render policies and
 -- their search tokens.
 --
 -- This is the v6.0.0 baseline of the audit set: every object of the schema is
@@ -22,14 +22,14 @@
 
 COMMENT ON SCHEMA audit IS 'The local IHE ATNA Audit Record Repository (IHE ITI TF-1 §9): the node''s security-surveillance record, strictly outside the EHR content (BASE architecture_overview/master07-security.adoc §Access logging).';
 
--- A record is never updated, from its insert on, before its link and after
--- it (#6203): the outbox row of a sink is its delivery state.
+-- A record is never updated, from its insert on (#6203, #6242): the outbox
+-- row of a sink is its delivery state.
 CREATE FUNCTION audit.audit_event_reject_mutation() RETURNS trigger
     LANGUAGE plpgsql
     SET search_path = audit, pg_catalog
     AS $$
 BEGIN
-    RAISE EXCEPTION 'audit.% is append-only: a record and its link are never changed',
+    RAISE EXCEPTION 'audit.% is append-only: a record is never changed',
         TG_TABLE_NAME
         USING ERRCODE = 'restrict_violation';
 END;
@@ -44,29 +44,13 @@ BEGIN
         RETURN OLD;
     END IF;
     IF coalesce(current_setting('ferroehr.audit_discarding', true), 'off') = 'on'
-       AND NOT EXISTS (SELECT 1 FROM audit.audit_event_link l WHERE l.event_id = OLD.id)
+       AND EXISTS (SELECT 1 FROM audit.audit_event_hold h WHERE h.seq = OLD.seq)
     THEN
         RETURN OLD;
     END IF;
     RAISE EXCEPTION
-        'audit.audit_event records are deleted only by audit.reap_audit_events_due(), or unlinked by the discard of a reservation that never committed (record %)',
-        OLD.id
-        USING ERRCODE = 'restrict_violation';
-END;
-$$;
-
--- A link leaves only with its record, by retention reaping.
-CREATE FUNCTION audit.audit_event_link_reject_deletion() RETURNS trigger
-    LANGUAGE plpgsql
-    SET search_path = audit, pg_catalog
-    AS $$
-BEGIN
-    IF coalesce(current_setting('ferroehr.audit_reaping', true), 'off') = 'on' THEN
-        RETURN OLD;
-    END IF;
-    RAISE EXCEPTION
-        'audit.audit_event_link rows are deleted only by audit.reap_audit_events_due() (position %)',
-        OLD.chain_seq
+        'audit.audit_event is append-only: a record is deleted only by audit.reap_audit_events_due(), or while held by the discard of a reservation that never committed (record %)',
+        OLD.seq
         USING ERRCODE = 'restrict_violation';
 END;
 $$;
@@ -79,112 +63,8 @@ CREATE FUNCTION audit.audit_event_reject_truncate() RETURNS trigger
     SET search_path = audit, pg_catalog
     AS $$
 BEGIN
-    RAISE EXCEPTION 'audit.% cannot be truncated: it is the tamper-evident audit trail', TG_TABLE_NAME
+    RAISE EXCEPTION 'audit.% is append-only and cannot be truncated: it is the tamper-evident audit trail', TG_TABLE_NAME
         USING ERRCODE = 'restrict_violation';
-END;
-$$;
-
--- The chain is written by three triggers, and the split is a throughput
--- decision rather than a stylistic one. Advancing the head by UPDATEing the
--- single state row PER RECORD costs quadratic time inside one transaction: each
--- update leaves another tuple version on the same page, and every subsequent
--- read walks the whole chain of them. Measured on PostgreSQL 18 over a 2000
--- record batch, that one statement was ~60% of the total insert time. So the
--- head is carried per STATEMENT in a transaction-local setting, and the state
--- row is read once at the start of a statement and written once at its end.
---
--- The setting is a cache, never an input: the BEFORE STATEMENT trigger
--- OVERWRITES it from the state row every time, so a caller who sets it by hand
--- has no effect on the chain a subsequent insert builds.
---
--- The FOR UPDATE on the state row is what makes the chain a total order:
--- concurrent inserting transactions serialize on it, and a rolled-back
--- transaction rolls its head advance back too, so chain_seq is gapless by
--- construction and a missing number means a deleted record.
---
--- SECURITY DEFINER on the two statement triggers so the runtime role can insert
--- records without holding any write privilege on the chain state (PostgreSQL 18
--- docs, CREATE FUNCTION §"Writing SECURITY DEFINER Functions Safely":
--- https://www.postgresql.org/docs/18/sql-createfunction.html).
-CREATE FUNCTION audit.audit_event_chain_begin() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path = audit, pg_catalog
-    AS $$
-DECLARE
-    head_position bigint;
-    head_digest   bytea;
-BEGIN
-    SELECT head_seq, head_hash INTO head_position, head_digest
-      FROM audit.audit_chain_state
-     WHERE singleton
-       FOR UPDATE;
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'audit chain state is missing: refusing to append an unchained record'
-            USING ERRCODE = 'restrict_violation';
-    END IF;
-    PERFORM set_config('ferroehr.audit_chain_head',
-                       head_position || ':' || encode(head_digest, 'hex'), true);
-    RETURN NULL;
-END;
-$$;
-
--- ── the chain writer ─────────────────────────────────────────────────────────
-CREATE FUNCTION audit.audit_event_chain_link() RETURNS trigger
-    LANGUAGE plpgsql
-    SET search_path = audit, pg_catalog
-    AS $$
-DECLARE
-    cursor_value text := current_setting('ferroehr.audit_chain_head', true);
-    preceding    smallint;
-    own_version  smallint;
-    own_digest   bytea;
-BEGIN
-    IF cursor_value IS NULL OR cursor_value = '' THEN
-        RAISE EXCEPTION 'the audit chain cursor is unset: refusing to append an unchained record'
-            USING ERRCODE = 'restrict_violation';
-    END IF;
-    NEW.chain_seq := split_part(cursor_value, ':', 1)::bigint + 1;
-    NEW.prev_hash := decode(split_part(cursor_value, ':', 2), 'hex');
-    SELECT e.digest_version, audit.audit_event_row_digest(e, NEW.chain_seq, NEW.prev_hash)
-      INTO own_version, own_digest
-      FROM audit_event e
-     WHERE e.id = NEW.event_id;
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'audit record % does not exist: refusing to link it', NEW.event_id
-            USING ERRCODE = 'foreign_key_violation';
-    END IF;
-    SELECT e.digest_version INTO preceding
-      FROM audit_event_link l
-      JOIN audit_event e ON e.id = l.event_id
-     WHERE l.chain_seq = NEW.chain_seq - 1;
-    IF preceding IS NOT NULL AND own_version < preceding THEN
-        RAISE EXCEPTION 'audit record digest version % follows version %: refusing a downgrade',
-            own_version, preceding
-            USING ERRCODE = 'restrict_violation';
-    END IF;
-    NEW.row_hash := own_digest;
-    PERFORM set_config('ferroehr.audit_chain_head',
-                       NEW.chain_seq || ':' || encode(NEW.row_hash, 'hex'), true);
-    RETURN NEW;
-END;
-$$;
-
-CREATE FUNCTION audit.audit_event_chain_commit() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path = audit, pg_catalog
-    AS $$
-DECLARE
-    cursor_value text := current_setting('ferroehr.audit_chain_head', true);
-BEGIN
-    IF cursor_value IS NULL OR cursor_value = '' THEN
-        RETURN NULL;
-    END IF;
-    UPDATE audit.audit_chain_state
-       SET head_seq = split_part(cursor_value, ':', 1)::bigint,
-           head_hash = decode(split_part(cursor_value, ':', 2), 'hex'),
-           updated_at = now()
-     WHERE singleton;
-    RETURN NULL;
 END;
 $$;
 
@@ -194,20 +74,18 @@ CREATE FUNCTION audit.audit_event_leave_outbox() RETURNS trigger
     AS $$
 BEGIN
     DELETE FROM audit.fhir_feed_outbox o
-     WHERE o.chain = 'system' AND o.chain_seq = OLD.chain_seq;
+     WHERE o.chain = 'system' AND o.chain_seq = OLD.seq;
     DELETE FROM audit.syslog_outbox o
-     WHERE o.chain = 'system' AND o.chain_seq = OLD.chain_seq;
+     WHERE o.chain = 'system' AND o.chain_seq = OLD.seq;
     RETURN OLD;
 END;
 $$;
 COMMENT ON FUNCTION audit_event_leave_outbox() IS
-    'Removes the outbox rows of a reaped record''s link, as the foreign key that cascaded did.';
+    'Removes the outbox rows of a reaped or discarded record.';
 
 -- The statements the database runs inside the access-log writes, per
--- search token and per chained record, are taken out of the path (#5885).
--- The digest functions are inlined into the statements that call them, the
--- foreign keys the chain already holds are dropped, and the link check moves
--- the head cursor without a statement of its own.
+-- search token, are taken out of the path (#5885): the digest functions are
+-- inlined into the statements that call them.
 --
 -- PostgreSQL inlines a scalar SQL function into its caller only when the
 -- function carries no SET clause and declares no stricter volatility than
@@ -220,9 +98,6 @@ COMMENT ON FUNCTION audit_event_leave_outbox() IS
 -- SET clause and with the volatility of its body, STABLE. The digests
 -- themselves are unchanged: the same bytes over the same input, which the
 -- CHECK constraints and the verifiers still compare.
---
--- audit.audit_event_row_digest keeps its SET clauses: TimeZone and
--- bytea_output decide the text it hashes, so it cannot be inlined.
 --
 -- No openEHR spec governs audit storage mechanics: our own design.
 CREATE FUNCTION audit.search_token_digest(p_parameter text, p_system text, p_code text)
@@ -426,16 +301,19 @@ COMMENT ON TABLE audit_search_set IS
 -- from these columns under the record's render policy; nothing stores it.
 --
 -- Written once, by the request whose access it records, before its
--- response (#5747, #6203); never updated. Its link in the hash chain is its
--- audit_event_link row, which the chainer adds under the chain-state row
--- lock. A record leaves only by retention reaping, or unlinked by the discard
--- of a reservation that never committed.
+-- response (#5747, #6203), with the content digest its writer computed over
+-- its columns (system_log::content_digest, #6242); never updated. Its
+-- position, seq, is drawn after its transaction took its xid, and names it
+-- in the seals, the holds, the deliveries and every read. A record leaves
+-- only by retention reaping, which keeps its position and content digest in
+-- audit_event_reaped, or while held by the discard of a reservation that
+-- never committed.
 CREATE TABLE audit_event (
-    id                     uuid        NOT NULL DEFAULT uuidv7(),
+    id                     uuid        NOT NULL,
     -- The event time (FHIR AuditEvent.recorded / DICOM EventDateTime).
     recorded_at            timestamptz NOT NULL,
-    -- When the row was persisted (drain-side; ordering tiebreaker).
-    stored_at              timestamptz NOT NULL DEFAULT now(),
+    -- When the writer wrote the row, by its own clock to the microsecond.
+    stored_at              timestamptz NOT NULL,
     -- The DICOM EventActionCode (PS3.15 §A.5.1).
     action                 text        NOT NULL,
     -- The DICOM EventOutcomeIndicator (PS3.15 §A.5.1).
@@ -524,12 +402,16 @@ CREATE TABLE audit_event (
     facilities             jsonb,
     binding_detail         jsonb,
     summary                jsonb,
-    -- The column list the row's chain digest hashes
-    -- (audit.audit_event_digest_columns).
-    digest_version         smallint    NOT NULL DEFAULT 5,
+    -- The form of the record's content digest (system_log::content_digest).
+    digest_version         smallint    NOT NULL DEFAULT 6,
     -- The purposes of use and professional roles the access token states.
     token_attributes       jsonb,
-    CONSTRAINT pk_audit_event PRIMARY KEY (id),
+    -- The SHA-256 of the record's columns, computed by the writer.
+    content_digest         bytea       NOT NULL,
+    -- The record's position: the number the seals, the holds, the
+    -- deliveries and every read name it by.
+    seq                    bigint      NOT NULL GENERATED ALWAYS AS IDENTITY,
+    CONSTRAINT pk_audit_event PRIMARY KEY (seq),
     CONSTRAINT fk_audit_event_render_policy
         FOREIGN KEY (render_policy) REFERENCES audit_render_policy (digest),
     CONSTRAINT ck_audit_event_action CHECK (action IN ('C', 'R', 'U', 'D', 'E')),
@@ -571,7 +453,8 @@ CREATE TABLE audit_event (
             'refused-trc-patient-mismatch', 'refused-trc-missing',
             'refused-system-personal-scope', 'refused-no-agreement',
             'refused-scope-beyond-agreement', 'refused-correlation-missing')),
-    CONSTRAINT ck_audit_event_digest_version CHECK (digest_version IN (1, 2, 3, 4, 5))
+    CONSTRAINT ck_audit_event_digest_version CHECK (digest_version = 6),
+    CONSTRAINT ck_audit_event_content_digest CHECK (octet_length(content_digest) = 32)
 );
 CREATE INDEX ix_audit_event_retention_ends ON audit_event (retention_ends)
     WHERE retention_ends IS NOT NULL;
@@ -620,8 +503,11 @@ CREATE TRIGGER audit_event_reject_deletion
 CREATE TRIGGER audit_event_reject_truncate
     BEFORE TRUNCATE ON audit_event
     FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_reject_truncate();
+CREATE TRIGGER audit_event_leave_outbox
+    AFTER DELETE ON audit_event
+    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_leave_outbox();
 COMMENT ON COLUMN audit_event.recorded_at IS 'The event time (FHIR AuditEvent.recorded / DICOM EventDateTime).';
-COMMENT ON COLUMN audit_event.stored_at IS 'When the request wrote the record.';
+COMMENT ON COLUMN audit_event.stored_at IS 'When the writer wrote the record, by its own clock to the microsecond, so its content digest covers it.';
 COMMENT ON COLUMN audit_event.action IS 'DICOM EventActionCode (PS3.15 §A.5.1): C/R/U/D/E.';
 COMMENT ON COLUMN audit_event.outcome IS 'DICOM EventOutcomeIndicator (PS3.15 §A.5.1): 0/4/8/12.';
 COMMENT ON COLUMN audit_event.event_code IS 'DICOM EventID csd-code (PS3.15 §A.5.1).';
@@ -671,7 +557,7 @@ COMMENT ON COLUMN audit_event.retention_stated IS
 COMMENT ON COLUMN audit_event.permit IS
     'The identifier of the data permit the caller declared it acts under (EHDS Art. 68), from [audit] permit_header; NULL when none was declared or the value was not an identifier.';
 COMMENT ON TABLE audit_event IS
-    'The local IHE ATNA Audit Record Repository: one row per audit record, whose FHIR R4 AuditEvent (IHE BALP shape) is rendered from the columns under the record''s render policy. Strictly outside the EHR content (BASE architecture_overview/master07-security.adoc §Access logging); written once by the request and never changed; its link in the hash chain is its audit_event_link row, and only retention reaping or the discard of an unlinked record removes it.';
+    'The local IHE ATNA Audit Record Repository: one row per audit record, whose FHIR R4 AuditEvent (IHE BALP shape) is rendered from the columns under the record''s render policy. Strictly outside the EHR content (BASE architecture_overview/master07-security.adoc §Access logging); written once by the request with its content digest and never changed; named by its position seq; only retention reaping, which keeps its position and digest in audit_event_reaped, or the discard of a held record removes it.';
 COMMENT ON COLUMN audit_event.issuer IS
     'The issuer (iss) of the bearer token that authenticated the caller; NULL for a Basic-authenticated or anonymous caller.';
 COMMENT ON COLUMN audit_event.client_id IS
@@ -717,121 +603,13 @@ COMMENT ON COLUMN audit_event.binding_detail IS
 COMMENT ON COLUMN audit_event.summary IS
     'For a summary record: the count of the refusals it stands for and the EHR ids they named.';
 COMMENT ON COLUMN audit_event.digest_version IS
-    'The column list the chain digest of this row hashes (audit.audit_event_digest_columns).';
+    'The form of the record''s content digest: 6, the RFC 8785 form system_log::content_digest documents.';
+COMMENT ON COLUMN audit_event.content_digest IS
+    'The SHA-256 of the record''s columns in the form system_log::content_digest documents, computed by the writer; its window''s seal covers it, and audit_event_reaped keeps it once retention removed the record.';
+COMMENT ON COLUMN audit_event.seq IS
+    'The record''s position: the number the seals, the holds, the deliveries and every read name it by, drawn after its transaction took its xid.';
 COMMENT ON COLUMN audit_event.token_attributes IS
     'The purposes of use and the professional roles the access token states under its issuer''s [[auth.attributes]] table, {"purposes": [{system, code}], "roles": [{system, code}]}; NULL when it states none.';
-
--- ── audit_event_link ─────────────────────────────────────────────────────────
--- The hash chain of the system records (#6203): the chainer adds one row per
--- released record, in intake order, under the chain-state row lock, and the
--- insert trigger fills the record's position, its predecessor's digest and
--- its own (audit.audit_event_row_digest over the record and these two). A
--- record without a link is in the intake and in no read. Append-only; a link
--- leaves only with its record, by retention reaping.
-CREATE TABLE audit_event_link (
-    chain_seq bigint      NOT NULL,
-    event_id  uuid        NOT NULL,
-    prev_hash bytea       NOT NULL,
-    row_hash  bytea       NOT NULL,
-    linked_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT pk_audit_event_link PRIMARY KEY (chain_seq),
-    CONSTRAINT uq_audit_event_link_event UNIQUE (event_id)
-);
-CREATE TRIGGER audit_event_chain_begin
-    BEFORE INSERT ON audit_event_link
-    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_chain_begin();
-CREATE TRIGGER audit_event_chain_link
-    BEFORE INSERT ON audit_event_link
-    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_chain_link();
-CREATE TRIGGER audit_event_chain_commit
-    AFTER INSERT ON audit_event_link
-    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_chain_commit();
-CREATE TRIGGER audit_event_link_reject_mutation
-    BEFORE UPDATE ON audit_event_link
-    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_reject_mutation();
-CREATE TRIGGER audit_event_link_reject_deletion
-    BEFORE DELETE ON audit_event_link
-    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_link_reject_deletion();
-CREATE TRIGGER audit_event_link_reject_truncate
-    BEFORE TRUNCATE ON audit_event_link
-    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_reject_truncate();
-CREATE TRIGGER audit_event_leave_outbox
-    AFTER DELETE ON audit_event_link
-    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_leave_outbox();
-COMMENT ON TABLE audit_event_link IS
-    'The tamper-evidence hash chain of the system records: one row per linked audit_event record, added by the chainer under the chain-state row lock. Append-only; a link leaves only with its record, by retention reaping.';
-COMMENT ON COLUMN audit_event_link.chain_seq IS
-    'The record''s position in the chain, assigned by the insert trigger under the chain-state row lock: gapless, so a missing number is a deleted record.';
-COMMENT ON COLUMN audit_event_link.event_id IS
-    'The audit_event record this link chains.';
-COMMENT ON COLUMN audit_event_link.prev_hash IS
-    'The row_hash of the preceding link (the genesis digest for the first).';
-COMMENT ON COLUMN audit_event_link.row_hash IS
-    'SHA-256 over every column of the record and its chain_seq and prev_hash (audit.audit_event_row_digest); recomputed by audit.verify_audit_chain().';
-COMMENT ON COLUMN audit_event_link.linked_at IS
-    'When the chainer linked the record.';
-
-CREATE FUNCTION audit.audit_event_digest_columns(p_version smallint) RETURNS text[]
-    LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    SET search_path = pg_catalog
-    AS $$
-    SELECT CASE p_version
-        WHEN 1 THEN v1.columns
-        WHEN 2 THEN v1.columns || v2.columns
-        WHEN 3 THEN v1.columns || v2.columns || ARRAY['token_attributes']
-        WHEN 4 THEN array_remove(v1.columns || v2.columns || ARRAY['token_attributes'],
-                                 'organisation')
-        WHEN 5 THEN array_remove(v1.columns || v2.columns || ARRAY['token_attributes', 'review'],
-                                 'organisation')
-    END
-      FROM (SELECT ARRAY[
-            'id', 'recorded_at', 'stored_at', 'action', 'outcome', 'event_code',
-            'operation', 'principal', 'patient_id', 'resource_class',
-            'resource_id', 'client_ip', 'token_id',
-            'chain_seq', 'prev_hash',
-            'domain', 'purpose', 'legal_basis', 'result_count', 'request_id',
-            'organisation', 'roles', 'origins', 'origin_count',
-            'categories', 'category_basis', 'category_evidence',
-            'category_map_digest',
-            'acting_mode', 'assurance_level', 'assurance_value',
-            'professional_id',
-            'emergency_access',
-            'retention_ends', 'retention_stated',
-            'permit',
-            'issuer', 'client_id', 'ehr_id', 'subject_namespace',
-            'subject_lookup_failed', 'category_content', 'render_policy',
-            'search_tokens'
-        ]) AS v1(columns),
-           (SELECT ARRAY[
-            'binding', 'party', 'party_groups', 'provider', 'guest', 'representation',
-            'external_fields', 'agreement', 'actor_chain', 'facilities', 'binding_detail',
-            'summary', 'digest_version'
-        ]) AS v2(columns)
-$$;
-COMMENT ON FUNCTION audit_event_digest_columns(smallint) IS
-    'The columns the chain digest of a version-p_version row hashes: every column of the record that version knows, and the chain_seq and prev_hash of its link.';
-
--- The record's position and its predecessor's digest come from its link,
--- and enter the document under the names the column list gives them, so the
--- digest is the bytes it was when they were columns of the record (#6203).
-CREATE FUNCTION audit.audit_event_row_digest(
-    p_row audit.audit_event, p_chain_seq bigint, p_prev_hash bytea) RETURNS bytea
-    LANGUAGE sql STABLE PARALLEL SAFE
-    SET search_path = pg_catalog
-    SET TimeZone = 'UTC'
-    SET bytea_output = 'hex'
-    AS $$
-    SELECT sha256(convert_to(jsonb_build_array(
-               'ferroehr.audit_chain'::text,
-               jsonb_object_agg(listed.name, whole.doc -> listed.name)
-           )::text, 'UTF8'))
-      FROM (SELECT to_jsonb(p_row)
-                   || jsonb_build_object('chain_seq', p_chain_seq, 'prev_hash', p_prev_hash))
-           AS whole(doc),
-           unnest(audit.audit_event_digest_columns(p_row.digest_version)) AS listed(name)
-$$;
-COMMENT ON FUNCTION audit_event_row_digest(audit.audit_event, bigint, bytea) IS
-    'The chain digest of one stored record and its link''s position and predecessor digest, over the column list of its own digest_version: the single definition the link trigger and the verifier both call.';
 
 -- The runtime role registers the policy it writes under through this function
 -- and holds no INSERT on the table, so it can add a policy and never alter one.
@@ -909,74 +687,42 @@ CREATE FUNCTION audit.reap_audit_events_due(p_today date, p_unstated_cutoff time
     SET search_path = audit, pg_catalog
     AS $$
 DECLARE
-    removed    bigint;
-    released   integer[];
-    left_from  bigint;
-    right_from bigint;
+    removed  bigint;
+    released integer[];
 BEGIN
     IF p_today IS NULL THEN
         RETURN 0;
     END IF;
     PERFORM audit.lock_search_tokens();
-    PERFORM 1 FROM audit.audit_chain_state WHERE singleton FOR UPDATE;
     PERFORM set_config('ferroehr.audit_reaping', 'on', true);
     WITH due AS MATERIALIZED (
-        SELECT e.id, l.chain_seq
+        SELECT e.seq
           FROM audit.audit_event e
-          JOIN audit.audit_event_link l ON l.event_id = e.id
-         WHERE (e.retention_stated AND e.retention_ends IS NOT NULL
-                AND e.retention_ends <= p_today)
-            OR (NOT e.retention_stated AND p_unstated_cutoff IS NOT NULL
-                AND e.recorded_at < p_unstated_cutoff)
-    ),
-    unlinked AS (
-        DELETE FROM audit.audit_event_link l
-         USING due d WHERE l.chain_seq = d.chain_seq
-        RETURNING l.chain_seq, l.row_hash
+         WHERE ((e.retention_stated AND e.retention_ends IS NOT NULL
+                 AND e.retention_ends <= p_today)
+             OR (NOT e.retention_stated AND p_unstated_cutoff IS NOT NULL
+                 AND e.recorded_at < p_unstated_cutoff))
+           AND NOT EXISTS (SELECT 1 FROM audit.audit_event_hold h WHERE h.seq = e.seq)
     ),
     removed_events AS (
         DELETE FROM audit.audit_event e
-         USING due d WHERE e.id = d.id
-        RETURNING e.search_tokens
+         USING due d WHERE e.seq = d.seq
+        RETURNING e.seq, e.content_digest, e.search_tokens
     ),
-    gone AS (
-        SELECT u.chain_seq, u.row_hash FROM unlinked u
-    ),
-    islanded AS (
-        SELECT chain_seq, row_hash,
-               chain_seq - row_number() OVER (ORDER BY chain_seq) AS island
-          FROM gone
-    ),
-    spans AS (
-        SELECT min(chain_seq) AS from_seq, max(chain_seq) AS to_seq,
-               (array_agg(row_hash ORDER BY chain_seq DESC))[1] AS link_hash
-          FROM islanded GROUP BY island
-    ),
-    recorded AS (
-        INSERT INTO audit.audit_chain_gap (from_seq, to_seq, link_hash)
-        SELECT from_seq, to_seq, link_hash FROM spans
+    kept AS (
+        INSERT INTO audit.audit_event_reaped (seq, content_digest)
+        SELECT r.seq, r.content_digest FROM removed_events r ORDER BY r.seq
         RETURNING 1
     )
-    SELECT (SELECT count(*) FROM gone),
+    SELECT (SELECT count(*) FROM kept),
            (SELECT array_agg(DISTINCT t.id) FROM removed_events r, unnest(r.search_tokens) AS t(id)
              WHERE t.id > 0)
       INTO removed, released;
     PERFORM audit.release_search_tokens(released);
     PERFORM set_config('ferroehr.audit_reaping', 'off', true);
-    LOOP
-        SELECT g1.from_seq, g2.from_seq INTO left_from, right_from
-          FROM audit.audit_chain_gap g1
-          JOIN audit.audit_chain_gap g2 ON g2.from_seq = g1.to_seq + 1
-         LIMIT 1;
-        EXIT WHEN left_from IS NULL;
-        UPDATE audit.audit_chain_gap merged
-           SET to_seq = absorbed.to_seq, link_hash = absorbed.link_hash
-          FROM audit.audit_chain_gap absorbed
-         WHERE merged.from_seq = left_from AND absorbed.from_seq = right_from;
-        DELETE FROM audit.audit_chain_gap WHERE from_seq = right_from;
-    END LOOP;
+    PERFORM audit.fold_audit_event_reaped(now(), 1000);
     RETURN coalesce(removed, 0);
 END;
 $$;
 COMMENT ON FUNCTION reap_audit_events_due(date, timestamptz) IS
-    'Retention reaping by each record''s own end: removes every record whose end is on or before p_today, and every record that states no end and is older than p_unstated_cutoff (NULL keeps those), tombstoning the chain positions they occupied.';
+    'Retention reaping by each record''s own end: removes every record whose end is on or before p_today, and every record that states no end and is older than p_unstated_cutoff (NULL keeps those), keeping each one''s position and content digest in audit_event_reaped, then folds the sealed windows every record of which is reaped.';

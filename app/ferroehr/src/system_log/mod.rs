@@ -79,6 +79,7 @@ pub mod categories;
 pub mod chain_check;
 pub mod codes;
 pub mod config;
+pub mod content_digest;
 pub mod event;
 #[cfg(feature = "fhir")]
 mod feed;
@@ -188,6 +189,9 @@ pub enum AuditError {
     /// The audit subsystem's own runtime could not start.
     #[error("the audit runtime could not start")]
     Runtime(#[source] std::io::Error),
+    /// A system record's content digest could not be computed.
+    #[error("an audit record's content digest could not be computed")]
+    Digest(#[source] content_digest::Unwritable),
     /// An access-log entry's uid is no UUID, so the log cannot key it.
     #[error("an access-log entry's uid is no UUID")]
     EntryUid(#[source] uuid::Error),

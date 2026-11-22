@@ -355,57 +355,73 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   delivered, the action and outcome the core codes) is not written
   (`access_log::recorded::Core`). A tombstone keeps no shared part, and a
   shared part leaves with the last row that named it.
-  The access log and the system chain are kept apart (#5573, our own
-  design). `audit_event`, the system chain, keeps its head
-  (`audit_chain_state`), its links (`audit_event_link`), its retention gaps
-  and `audit.verify_audit_chain()`. The access log holds only the accesses
-  to EHR data and carries no chain (#6242): a request writes each entry
-  once, before its response, and every reader, the sealer and the delivery
-  read that row. The frontier is the highest entry id at or below which
-  every entry is committed or never will be. Every insert into
-  `access_log_entry` takes its transaction's xid first: the two statements
-  that insert entries (`access_log::intake`, the plain insert and
-  `audit.access_log_intake_take()`) read `pg_current_xact_id()` in a
-  materialized CTE every row is joined to, so it runs before any row's
-  identity value is drawn, with no trigger and no nested statement. A frontier
-  round on the audit runtime reads the id sequence's last value `X` and then,
+  The access log and the system records (`audit_event`, named the system
+  chain) are kept apart (#5573, our own design): each has its own id
+  sequence, holds, seals and verification cursor, and neither carries a
+  chain (#6242). A request writes each entry, or system record, once,
+  before its response, and every reader, the sealer and the delivery read
+  that row. A system record's position is its `seq`, and its content digest
+  is computed by the writer in Rust over every column but `seq` and the
+  digest (`system_log::content_digest`, form 6: RFC 8785 over the tagged
+  column object, integers as decimal strings, instants in UTC to the
+  microsecond, `stored_at` bound by the writer), which a golden test pins.
+  The frontier of a log is the highest id at or below which every record of
+  it is committed or never will be. Every insert into `access_log_entry` or
+  `audit_event` takes its transaction's xid first: each statement that
+  inserts records (`access_log::intake`, the plain insert and
+  `audit.access_log_intake_take()`, and `system_log::store`'s batched
+  write) reads `pg_current_xact_id()` in a materialized CTE every row is
+  joined to, so it runs before any row's identity value is drawn, with no
+  trigger and no nested statement; a static test fails on an insert that
+  leaves it out. A frontier
+  round on the audit runtime reads each id sequence's last value `X` and then,
   in a statement of its own that commits at once, takes an xid `R` of its
   own. A transaction that drew an id at or below `X` drew it before `X` was
   read, so it held its xid before `R` was assigned, and xids are assigned in
   increasing order: its xid is below `R`. Once a later snapshot's `xmin` is
-  above `R`, every such transaction has ended: each entry at or below `X` is
+  above `R`, every such transaction has ended: each record at or below `X` is
   visible or never will be. A snapshot's `xmax` taken after `X` would not do,
   since it is one past the newest xid that has ended and a transaction still
   running can hold an xid at or above it (PostgreSQL 19, "Transaction ID and
   Snapshot Information Functions"); the stress of
   `sealers_on_several_replicas_keep_one_run_of_windows` sealed a window over
   such a transaction's entry before `R` replaced it. Each round spends one
-  xid. The identity sequence keeps
-  `CACHE 1`, so a value is drawn when a row takes it, which a test asserts.
+  xid. The identity sequences keep `CACHE 1`, so a value is drawn when a row
+  takes it, which a test asserts for each sequence.
   A long writing transaction holds `xmin` back and only delays the frontier;
   an entry is in the log from its own commit, so none is lost
-  (`access_log::frontier`, test
-  `a_window_never_covers_an_entry_a_transaction_still_writes`). Entries a
-  write holds under its reservation (`access_log_hold`, #5762) are in no
-  read, and the frontier the sealer and the delivery use stops below the
-  lowest of them. Each round owes the indexed entries below the frontier to
-  the sinks that deliver from the store (`audit.access_log_owe`, while a
-  sink is configured), and about once a minute the sealer closes windows of
-  every id past the last window up to that bound, each spanning at most
-  100,000 ids (`access_log_seal`, one
-  sealer at a time on the row lock of `access_log_seal_state`). A seal is
-  the SHA-256 of a length-prefixed text that starts with the version tag
-  `ferroehr.access_log.seal.v1` and names the window, the previous seal and
-  each entry's id and content digest in id order; `access_log::seal`
-  documents it for an auditor. Signed as the `ACCESS_LOG_CHECKPOINT` of the
-  log up to the window's last id, it is the checkpoint the publication
-  writes outside the database. The verifier recomputes each window from its
-  rows and every column the log derives from an entry's content, and reports
-  a changed, removed or inserted entry inside a sealed window
+  (`access_log::frontier`, tests
+  `a_window_never_covers_an_entry_a_transaction_still_writes` and
+  `a_window_never_covers_a_record_a_transaction_still_writes_or_holds`).
+  Records a write holds under its reservation (`access_log_hold`,
+  `audit_event_hold`, #5762) are in no read, and the frontier the sealer and
+  the delivery use stops below the lowest of them. Each round owes the
+  records below the frontier to the sinks that deliver from the store
+  (`audit.access_log_owe`, `audit.audit_event_owe`, while a sink is
+  configured), and about once a minute the sealer closes windows of every id
+  past the last window up to that bound, each spanning at most 100,000 ids
+  (`access_log_seal` and `audit_event_seal`, one sealer per log at a time on
+  the row lock of its seal state). A seal is the SHA-256 of a length-prefixed
+  text that starts with the version tag (`ferroehr.access_log.seal.v1`,
+  `ferroehr.system_log.seal.v1`) and names the window, the previous seal and
+  each record's id and content digest in id order; `access_log::seal`
+  documents it for an auditor. An access-log window is signed as the
+  `ACCESS_LOG_CHECKPOINT` of the log up to the window's last id, the
+  checkpoint the publication writes outside the database; a system window is
+  signed as a `system_log::seal::ChainSeal` naming its last position and
+  digest, which `ferroehr audit-chain seal` prints and `verify` checks. The
+  verifier recomputes each window from its rows, every column the access log
+  derives from an entry's content and every system record's content digest,
+  and reports a changed, removed or inserted record inside a sealed window
   (`AccessLogStore::verify_windows`); an incremental run starts after the
-  last window it found intact (`access_log_seal_verified`). An entry newer
-  than the last seal is protected by the grants and the append-only
-  triggers alone: at most a minute and the frontier's lag. A record of the
+  last window it found intact (`access_log_seal_verified`,
+  `audit_event_seal_verified`). A record newer than the last seal is
+  protected by the grants and the append-only triggers alone: at most a
+  minute and the frontier's lag. Retention removes a system record past its
+  own end and keeps its position and content digest in `audit_event_reaped`,
+  so its window verifies; once every record of a sealed window is reaped,
+  `audit.fold_audit_event_reaped()` removes the window's reaped positions and
+  records it in `audit_event_seal_fold`. A record of the
   ITI-81 search, the person's trail and the FHIR Feed's outbox is named by
   its chain and position, an access-log entry's position being its id
   (`audit_record.chain`, `fhir_feed_outbox`). An entry changes only by its
@@ -448,10 +464,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `[audit.access_log] publish_directory`, the copy outside the database that
   shows a removal of the newest windows with their seals; the
   `access_log_checkpoints` indicator reads `DEGRADED` without a key, without
-  the directory, or while publication fails. The system chain is sealed
-  every five minutes with the same key (`access_log::schedule`,
-  `system_log::seal`, `audit_chain_seal`, `ferroehr audit-chain seal` and
-  `verify`). `access_log::transfer` exports one EHR's records as a bundle
+  the directory, or while publication fails. The system records' windows
+  are signed with the same key by the same sealer (`system_log::seal`,
+  `ferroehr audit-chain seal` and `verify`). `access_log::transfer` exports one EHR's records as a bundle
   signed whole by this system's keyring, each record with its content
   digest and nothing of another person, and imports another system's
   bundle into `access_log_imported_*` after verifying its signature and
@@ -469,8 +484,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   request, with each entry's index row (projection, search tokens, render
   policy) and every column the log derives from its content, in one short
   transaction of the audit pool: each entry once, into `access_log_entry`,
-  and each other record once, into `audit_event`, with one
-  `audit_event_intake` row naming the records of the statement
+  and each other record once, into `audit_event`, with its content digest
   (`audit/0006_baseline_intake.sql`, `audit/0004_baseline_access_log.sql`,
   #5968, #6203, #6242). The intake statement finds each entry's search
   tokens by the digests the server computes (`system_log::token_digest`, the
@@ -497,20 +511,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (`audit.access_log_shared_collect`, #5968). The ferroehr-rest test
   `statement_budget` holds an AQL request to its round trips and nested
   statements, read from `pg_stat_statements`.
-  `audit.audit_event_chain_move()` links the system intake: it inserts one
-  narrow `audit_event_link` row per record of the oldest released intake
-  rows, in their order, whose insert trigger fills the position, the
-  predecessor's digest and the record's digest under the chain-state row
-  lock (`audit.audit_event_row_digest` over the record and those two),
-  writes the outbox rows and deletes the intake rows (#6203). A record is
-  never updated, linked or not; a record without a link is in no read and
-  no verification, and leaves only by the discard of its reservation; a
-  linked one leaves only with its link, by retention reaping. A sink's
+  A system record is never updated, held or not; a held record is in no
+  read and no window, and leaves only by the discard of its reservation; any
+  other leaves only by retention reaping. A sink's
   outbox row is the record's delivery state, and no record carries a
   delivery stamp. A request-scoped write commits through one choke point,
   `FerroEhrService::commit_recorded` (`system_log::reservation`, #5762): its
   records are written held under a reservation id (an `access_log_hold`
-  row per entry, `reserved_by` on a system intake row), the id into the
+  row per entry, an `audit_event_hold` row per system record), the id into the
   write's own domain (`clinical/0050`, `party/0052` `audit_reservation`) in
   the write's transaction, and the chainer's next round releases them once
   the response is built; `system_log::sender::reconciler` releases or
@@ -524,8 +532,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   IHE BALP `AuditEvent`, the DICOM audit message and the EHDS access record
   are projections of the stored entry (`access_log::projection`): the ITI-81
   search, the person's own trail and the FHIR Feed read it through
-  `audit.audit_record`, the view of the linked `audit_event` records and the
-  indexed entries. An entry is one row of `access_log_entry`, and
+  `audit.audit_record`, the view of the `audit_event` records and the
+  indexed entries no write holds. An entry is one row of `access_log_entry`, and
   `access_log_record` is the view of the entries with their link: its index
   columns (the search columns, the search tokens of the projection and the
   render policy) sit on the entry's own row and are emptied with its content

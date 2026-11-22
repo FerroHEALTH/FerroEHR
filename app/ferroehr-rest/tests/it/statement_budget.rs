@@ -96,12 +96,10 @@ const REQUEST_SPAN: &str = "statement_budget_request";
 /// of them carries as a comment.
 const OWN: &str = "statement_budget_own";
 
-/// The nested statements of a chainer round of the system chain.
-const SYSTEM_ROUND: u64 = 6;
 /// The nested statements of a chainer round's release of the records the
-/// committed writes held (#5762): the switch on and off, the removal of the
-/// access log's holds and the update of the system intake.
-const CHAINER_RELEASE: u64 = 4;
+/// committed writes held (#5762, #6242): the removal of the access log's
+/// holds and of the system records' holds.
+const CHAINER_RELEASE: u64 = 2;
 /// The budget of one kind of request: its round trips, and the statements
 /// nested in them.
 struct Budget {
@@ -222,13 +220,12 @@ fn ledger(statements: &[Counted]) -> String {
     out
 }
 
-/// Waits until the chainer released every held entry and moved every system
-/// intake row into the chain.
+/// Waits until the chainer released every held record of either log.
 async fn drained(pool: &PgPool) {
     for _ in 0..400 {
         let waiting: i64 = sqlx::query_scalar(
             "SELECT /* statement_budget_own */ (SELECT count(*) FROM audit.access_log_hold) \
-             + (SELECT count(*) FROM audit.audit_event_intake)",
+             + (SELECT count(*) FROM audit.audit_event_hold)",
         )
         .fetch_one(pool)
         .await
@@ -238,7 +235,7 @@ async fn drained(pool: &PgPool) {
         }
         tokio::time::sleep(std::time::Duration::from_millis(25)).await;
     }
-    panic!("the chainer did not move the intake into the log");
+    panic!("the chainer did not release the held records");
 }
 
 /// The access-log entries in the log.
@@ -327,8 +324,6 @@ async fn an_aql_request_stays_within_its_statement_budget() {
             .filter(|s| !s.toplevel)
             .map(|s| s.calls)
             .sum();
-        let system = calls(&statements, "SELECT audit.audit_event_chain_move");
-        let chainer = system * SYSTEM_ROUND;
         assert!(sent > 0, "{}: the round trips are counted", budget.name);
         assert_eq!(
             written,
@@ -339,15 +334,14 @@ async fn an_aql_request_stays_within_its_statement_budget() {
         writeln!(
             report,
             "{}: {sent} round trips over {REQUESTS} requests (budget {} each); {nested} nested \
-             statements against a budget of {chainer} for the chainer ({system} system rounds) \
-             and {} per request, {written} entries written\n{}",
+             statements (budget {} per request), {written} entries written\n{}",
             budget.name,
             budget.round_trips,
             budget.nested,
             ledger(&statements),
         )
         .expect("a String takes the report");
-        over |= sent > REQUESTS * budget.round_trips || nested > chainer + REQUESTS * budget.nested;
+        over |= sent > REQUESTS * budget.round_trips || nested > REQUESTS * budget.nested;
     }
     assert!(!over, "a request exceeds its statement budget:\n{report}");
     eprintln!("{report}");

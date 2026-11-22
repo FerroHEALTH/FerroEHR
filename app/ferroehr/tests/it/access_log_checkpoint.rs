@@ -590,7 +590,10 @@ async fn a_rolled_back_intake_leaves_no_entry_and_no_seal() {
     .await
     .expect("the intake write");
     tx.rollback().await.expect("rollback");
-    log.store().seal_committed().await.expect("the sealer runs");
+    log.store()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+        .await
+        .expect("the sealer runs");
     let sealed: i64 =
         sqlx::query_scalar("SELECT coalesce(sum(entries), 0)::bigint FROM audit.access_log_seal")
             .fetch_one(pool)
@@ -690,7 +693,10 @@ async fn a_keyring_without_a_key_signs_no_seal() {
     let log = checkpoints(&testdb.pool(), SYSTEM_A, Arc::new(Signer::digest_default()));
     assert!(!log.seals());
     append(&log, SYSTEM_A).await;
-    log.store().seal_committed().await.expect("sealed unsigned");
+    log.store()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+        .await
+        .expect("sealed unsigned");
     assert_eq!(sealed_positions(&testdb.pool()).await, Vec::<i64>::new());
     let unsigned: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_seal")
         .fetch_one(&testdb.pool())

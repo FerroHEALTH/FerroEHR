@@ -117,30 +117,18 @@ pub(super) fn page_size(filter: &AuditSearchFilter) -> usize {
     usize::try_from(filter.count.clamp(1, 1000)).unwrap_or(50)
 }
 
-/// The number of records `condition` selects: the linked records of the
-/// system chain and the linked indexed entries of the access log, those a
-/// page can return (#6000, #6203).
-///
-/// Each chain's are counted from its index columns alone, less those of the
-/// records an intake row still names, which no link chains yet: a record is
-/// linked or named by an intake row, never both, so neither count reads a
-/// link.
+/// The number of records `condition` selects: the system records and the
+/// indexed entries of the access log no write holds, those a page can return
+/// (#6000, #6203, #6242), each counted from its index columns alone.
 fn total(condition: &Cond) -> SelectStatement {
-    let records = || {
+    // NOTE: our own design (#6242), system_search holds no record a write still holds.
+    let system = count_of(
         Query::select()
             .expr(Expr::col(Asterisk).count())
             .from((Alias::new(AUDIT), Alias::new(SYSTEM_SEARCH)))
             .cond_where(condition.clone())
-            .to_owned()
-    };
-    // NOTE: our own design (#6203), the intake names the records no link chains yet.
-    let system = count_of(records()).sub(count_of(
-        records()
-            .and_where(Expr::cust(
-                "event_id = ANY (ARRAY(SELECT unnest(i.events) FROM audit.audit_event_intake i))",
-            ))
             .to_owned(),
-    ));
+    );
     let indexed = || {
         Query::select()
             .expr(Expr::col(Asterisk).count())
@@ -178,8 +166,7 @@ fn page(condition: &Cond, count: u64, offset: u64, served: u64) -> SelectStateme
     system
         .columns(KEYS.map(Alias::new))
         .from((Alias::new(AUDIT), Alias::new(SYSTEM_SEARCH)))
-        .cond_where(condition.clone())
-        .and_where(Expr::col(Alias::new("chain_seq")).is_not_null());
+        .cond_where(condition.clone());
     within_chain(&mut system, None).limit(first);
     let mut chains = Query::select();
     chains

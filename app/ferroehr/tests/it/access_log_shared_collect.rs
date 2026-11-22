@@ -136,7 +136,7 @@ async fn the_sweep_collects_a_shared_part_once_no_entry_names_it() {
         .await
         .expect("the entries append");
     store
-        .seal_committed()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
         .await
         .expect("the entries are sealed");
     age_parts(&pool, "2025-01-02").await;
@@ -209,7 +209,7 @@ async fn the_sweep_skips_a_shared_part_an_intake_write_names() {
         .await
         .expect("the entry appends");
     store
-        .seal_committed()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
         .await
         .expect("the entries are sealed");
     store
@@ -246,7 +246,7 @@ async fn the_sweep_skips_a_shared_part_an_intake_write_names() {
         "the part is kept through today"
     );
     store
-        .seal_committed()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
         .await
         .expect("the entries are sealed");
     assert!(
@@ -362,7 +362,7 @@ async fn known_orphan(
         .await
         .expect("the first entry is written");
     store
-        .seal_committed()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
         .await
         .expect("the entries are sealed");
     store
@@ -398,7 +398,7 @@ async fn a_known_part_the_sweep_removed_is_written_again() {
     assert_eq!(parts(&pool).await, 1, "the part is stored again");
     assert_eq!(dangling(&pool).await, 0);
     store
-        .seal_committed()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
         .await
         .expect("the entries are sealed");
     assert!(
@@ -445,7 +445,7 @@ async fn the_sweep_racing_writes_of_a_known_part_leaves_no_entry_without_its_par
     );
     assert_eq!(parts(&pool).await, 1);
     store
-        .seal_committed()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
         .await
         .expect("the entries are sealed");
     assert!(
@@ -509,7 +509,7 @@ async fn a_raise_that_meets_the_sweeps_removal_is_refused() {
         .await
         .expect("the first entry appends");
     store
-        .seal_committed()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
         .await
         .expect("the entries are sealed");
     store
