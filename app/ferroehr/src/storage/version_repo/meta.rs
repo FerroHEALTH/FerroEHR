@@ -562,4 +562,3 @@ pub async fn current_demographic_meta(
             .to_jiff(),
     }))
 }
-

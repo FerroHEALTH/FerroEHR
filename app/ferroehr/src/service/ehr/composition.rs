@@ -22,6 +22,7 @@ use openehr_base::prelude::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 use serde_json::Value;
 
+use super::validation::{duplicate_persistent, persistent_sibling};
 use crate::error::refusal::Missing;
 use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
@@ -30,7 +31,6 @@ use crate::service::datetime::parse_at_time;
 use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
-use super::validation::{duplicate_persistent, persistent_sibling};
 use crate::storage::version_repo::gate::{self, Ask, Gate, Shape};
 use crate::storage::version_repo::read::VersionAt;
 use crate::system_log::categories::ContentIds;
@@ -625,7 +625,11 @@ impl FerroEhrService {
             if tip.kind != Kind::Composition.as_str() {
                 return Err(ServiceError::not_found(
                     Missing::VersionedObject,
-                    format!("{} {vo_id} in EHR {:?}", Kind::Composition.as_str(), Some(ehr_id)),
+                    format!(
+                        "{} {vo_id} in EHR {:?}",
+                        Kind::Composition.as_str(),
+                        Some(ehr_id)
+                    ),
                 ));
             }
             let latest_uid = tip_uid(vo_id, tip);
