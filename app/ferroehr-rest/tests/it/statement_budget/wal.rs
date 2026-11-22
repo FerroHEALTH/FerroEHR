@@ -409,7 +409,7 @@ const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
 
 /// Whether `relation` is written by a commit rather than by the access log or
 /// the audit intake beside it.
-fn commit_relation(relation: &str) -> bool {
+pub(super) fn commit_relation(relation: &str) -> bool {
     !entry_relation(relation) && !pass_relation(relation) && !relation.contains("audit_")
 }
 
@@ -517,7 +517,7 @@ async fn commit_fixture(app: &Router, pool: &PgPool) -> Vec<(String, String)> {
 /// The write-ahead log by relation that `commits` writes, with the
 /// statement counts reset before it and a temporary slot keeping the
 /// window's WAL, and the statement table's evictions when the count began.
-async fn commit_window(
+pub(super) async fn commit_window(
     pool: &PgPool,
     commits: impl Future<Output = ()>,
 ) -> (Vec<(String, u64, u64)>, i64) {
