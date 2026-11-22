@@ -23,7 +23,7 @@
 //! (`ferroehr::telemetry::conversion`). The allocations are counted on the
 //! thread that polls the request, so the audit runtime's threads do not
 //! count; the peak is the most the request held at once. Both are judged on
-//! the median request of the measured ones ([`Measure::median`]).
+//! the lower-quartile request of the measured ones ([`Measure::low`]).
 //!
 //! The bytes a request moves over the database wire are counted on their own
 //! run, through a relay that splits the protocol messages by statement
@@ -333,6 +333,10 @@ struct Budget {
 /// where it sent 8, and 39, 45, 38, 45 and 44 fewer allocations on the JSON,
 /// XML and FLAT commits, the update and the delete, measured beside the merge
 /// base; each of those ceilings fell by its path's figure.
+/// The binding side table's trigger has since moved the binding revision and
+/// notified only for a statement that changed a row (#6284): 2 nested
+/// statements and 87 WAL bytes fewer on both party commits, measured beside
+/// the merge base, and each of those ceilings fell by as much.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
@@ -475,8 +479,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 1998,
         peak_bytes: 117_146,
         round_trips: 31,
-        nested: 15,
-        wal: 6709,
+        nested: 13,
+        wal: 6622,
     },
     Budget {
         path: Path::AqlMatches,
@@ -502,8 +506,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 2487,
         peak_bytes: 132_147,
         round_trips: 31,
-        nested: 16,
-        wal: 9278,
+        nested: 14,
+        wal: 9191,
     },
     Budget {
         path: Path::ReadVersion,
@@ -539,6 +543,10 @@ const BUDGETS: [Budget; 22] = [
 /// counts them (#6244): the largest median of three runs on main 4411906444
 /// plus 64 bytes, since a request's figure moves only by the width of the
 /// instants it sends, a few bytes between runs.
+/// The ITI-81 page has since carried each shared part on the first record
+/// naming it, where it carried it on every record (#6244): 29,476 bytes
+/// against 100,191, measured beside the merge base, and its ceiling fell by
+/// the 70,715 bytes it no longer moves.
 /// The node columns most rows leave `NULL` have since travelled in groups,
 /// each sparse (the positions of the rows that set one of its columns) or
 /// dense, whichever is smaller (#6244): 13,525 bytes fewer on the three IPS
@@ -557,7 +565,7 @@ const WIRE_BUDGETS: [(Path, u64); 22] = [
     (Path::EhrRead, 1831),
     (Path::AqlSingle, 5131),
     (Path::AqlPopulation, 6566),
-    (Path::Iti81, 100_255),
+    (Path::Iti81, 29_540),
     (Path::PartyRead, 5524),
     (Path::CommitContribution, 209_119),
     (Path::ReadAtTime, 131_699),
@@ -1198,20 +1206,30 @@ struct Measure {
 }
 
 impl Measure {
-    /// The median request's `figure`.
+    /// The lower-quartile request's `figure`, the third smallest of ten.
     ///
-    /// One request in a window sometimes opens a pool connection, or is
-    /// handed one whose buffers have not grown yet, when the chainer holds
-    /// the pool's other connection, so the mean and the largest moved with
-    /// the host. A change in what a request itself allocates moves every
-    /// request, and so the median.
-    fn median(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
+    /// A request handed a pool connection whose buffers have not grown to
+    /// the path's messages yet, or that opens one, grows them inside its
+    /// window, 8 KiB a step, with the allocations around it: on CI the party
+    /// read made 974 allocations with a peak of 72,870 bytes on four requests
+    /// of ten and up to 1,234 and 101,773 on the others, and the demographic
+    /// query 2,543 against up to 2,682, so the median crossed a ceiling
+    /// whenever half a window met such connections. Which requests do depends
+    /// on what the pool hands out; what a request itself allocates more,
+    /// every request allocates more, so the lower quartile still moves with
+    /// it (#6238).
+    fn low(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
         // NOTE: our own design (#6007), a connection the pool opens inside a request is the
         // pool's work, as its session setup is for the round trips (#5899).
+        self.ranked(figure, 4)
+    }
+
+    /// The `figure` of the request at `1 / of` of the window, smallest first.
+    fn ranked(&self, figure: impl Fn(&Allocated) -> u64, of: usize) -> u64 {
         let mut figures: Vec<u64> = self.each.iter().map(figure).collect();
         figures.sort_unstable();
         figures
-            .get(figures.len().div_euclid(2))
+            .get(figures.len().div_euclid(of))
             .copied()
             .unwrap_or(0)
     }
@@ -1537,9 +1555,9 @@ async fn every_hot_path_stays_within_its_budget() {
     let mut over = Vec::new();
     for (budget, m) in &measured {
         let path = budget.path;
-        let allocations = m.median(|a| a.count);
-        let kib = m.median(|a| a.bytes).div_euclid(1024);
-        let peak = m.median(|a| u64::try_from(a.peak.max(0)).unwrap());
+        let allocations = m.low(|a| a.count);
+        let kib = m.low(|a| a.bytes).div_euclid(1024);
+        let peak = m.low(|a| u64::try_from(a.peak.max(0)).unwrap());
         let cells = [
             ("conversions", judged(m.conversions(), budget.conversions)),
             ("allocations", judged(allocations, budget.allocations)),
