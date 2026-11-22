@@ -357,36 +357,7 @@ fn folded_statement(shape: Shape) -> String {
         } else {
             ("$6", "a")
         };
-        format!(
-            ", v AS ( \
-                 INSERT INTO version \
-                   (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
-                    lifecycle_state, creating_system_id, preceding_version_uid, \
-                    contribution_id, commit_audit_id, template_id, signature, \
-                    signature_client_supplied, stable_compatible, body, origins, committed_at, \
-                    other_input_version_uids, content_digest, content_sys_version) \
-                 SELECT $8, $9, $7, $10, $11, $12, $13, \
-                        $14, $15, $16, {contribution_id}, a.id, $17, $18, $19, $20, $21, $23, \
-                        $22::timestamptz, $24, $25, $26 \
-                 FROM {from} \
-                 RETURNING content_key \
-             ), h AS ( {} \
-             ), n AS ( {} )",
-            HeadUpsert {
-                vo: "$8",
-                kind: "$9",
-                ehr: "$7",
-                ordinal: "$10",
-                branch: "$12",
-                lifecycle: "$14",
-                template: "$17",
-                archetype: "$27",
-                committed_at: "$22",
-                version: "v",
-            }
-            .sql(),
-            crate::storage::node_write::node_insert_cte(("$8", "$10", "$7"), "v", 28)
-        )
+        version_ctes("", ("$7", contribution_id, "a.id", from), 8, 28)
     } else {
         String::new()
     };
@@ -403,6 +374,90 @@ fn folded_statement(shape: Shape) -> String {
              VALUES ($1, $2, $3::jsonb, $4::jsonb, $5{audit_time_value}) RETURNING id, time_committed \
          ){contribution_cte}{version_cte}{select}"
     )
+}
+
+/// The columns a version insert names, in the order every folded statement
+/// binds them.
+const VERSION_COLUMNS: &str = "vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, \
+     branch_version, lifecycle_state, creating_system_id, preceding_version_uid, contribution_id, \
+     commit_audit_id, template_id, signature, signature_client_supplied, stable_compatible, body, \
+     origins, committed_at, other_input_version_uids, content_digest, content_sys_version";
+
+/// The version-row, head-upsert and node CTEs of one version, named `v`, `h`
+/// and `n` with `suffix`: the version's twenty parameters start at `first`
+/// in the order [`bind_version`] binds them, its node arrays at `nodes`, and
+/// `(ehr, contribution, audit, from)` name the owning EHR, the CONTRIBUTION
+/// and audit ids and the CTEs the version row is selected from.
+pub(super) fn version_ctes(
+    suffix: &str,
+    (ehr, contribution, audit, from): (&str, &str, &str, &str),
+    first: usize,
+    nodes: usize,
+) -> String {
+    let p = |offset: usize| format!("${}", first + offset);
+    let list = |offsets: &[usize]| {
+        offsets
+            .iter()
+            .map(|offset| p(*offset))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let version = format!("v{suffix}");
+    format!(
+        ", {version} AS ( \
+             INSERT INTO version ({VERSION_COLUMNS}) \
+             SELECT {}, {ehr}, {}, {contribution}, {audit}, {}, {}::timestamptz, {} \
+             FROM {from} RETURNING content_key \
+         ), h{suffix} AS ( {} \
+         ), n{suffix} AS ( {} )",
+        list(&[0, 1]),
+        list(&[2, 3, 4, 5, 6, 7, 8]),
+        list(&[9, 10, 11, 12, 13, 15]),
+        p(14),
+        list(&[16, 17, 18]),
+        HeadUpsert {
+            vo: &p(0),
+            kind: &p(1),
+            ehr,
+            ordinal: &p(2),
+            branch: &p(4),
+            lifecycle: &p(6),
+            template: &p(9),
+            archetype: &p(19),
+            committed_at: &p(14),
+            version: &version,
+        }
+        .sql(),
+        crate::storage::node_write::node_insert_cte((&p(0), &p(2), ehr), &version, nodes)
+    )
+}
+
+/// Bind the twenty parameters of `v` that [`version_ctes`] reads.
+pub(super) fn bind_version<'q>(
+    query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    v: &FoldedVersion<'q>,
+) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    query
+        .bind(v.vo_id)
+        .bind(v.kind)
+        .bind(v.sys_version)
+        .bind(v.trunk_version)
+        .bind(v.branch_number)
+        .bind(v.branch_version)
+        .bind(v.lifecycle_state)
+        .bind(v.creating_system_id)
+        .bind(v.preceding_version_uid)
+        .bind(v.template_id)
+        .bind(v.signature)
+        .bind(v.signature_client_supplied)
+        .bind(v.stable_compatible)
+        .bind(v.body)
+        .bind(v.time_committed.to_string())
+        .bind(serde_json::json!(v.origins))
+        .bind(super::optional_json_array(v.other_input_version_uids))
+        .bind(v.content_digest)
+        .bind(v.content_sys_version)
+        .bind(v.root_archetype)
 }
 
 /// Run one folded commit statement ([`Folded`]), returning the rows it wrote.
@@ -454,27 +509,7 @@ pub async fn commit_folded(
     let (row, blobs) = match version {
         None => (query.fetch_one(&mut *tx).await?, None),
         Some(v) => {
-            let query = query
-                .bind(v.vo_id)
-                .bind(v.kind)
-                .bind(v.sys_version)
-                .bind(v.trunk_version)
-                .bind(v.branch_number)
-                .bind(v.branch_version)
-                .bind(v.lifecycle_state)
-                .bind(v.creating_system_id)
-                .bind(v.preceding_version_uid)
-                .bind(v.template_id)
-                .bind(v.signature)
-                .bind(v.signature_client_supplied)
-                .bind(v.stable_compatible)
-                .bind(v.body)
-                .bind(v.time_committed.to_string())
-                .bind(serde_json::json!(v.origins))
-                .bind(super::optional_json_array(v.other_input_version_uids))
-                .bind(v.content_digest)
-                .bind(v.content_sys_version)
-                .bind(v.root_archetype);
+            let query = bind_version(query, &v);
             let query = match &guard {
                 Some(guard) => query
                     .bind(guard.expected_head)
@@ -493,18 +528,7 @@ pub async fn commit_folded(
         }
     };
     if guard.is_some() {
-        let flags = super::guarded::GuardFlags {
-            ehr: row.try_get("ehr_held")?,
-            tip: row.try_get("tip_held")?,
-            mark: row.try_get("mark_held")?,
-            policy: row.try_get("policy_held")?,
-            order: row.try_get("order_held")?,
-            policy_now: row.try_get("policy_now")?,
-            definitions_now: row.try_get("definitions_now")?,
-        };
-        if !flags.held() {
-            return Err(StorageError::GuardMoved(flags));
-        }
+        super::guarded::GuardFlags::read(&row)?.require()?;
     }
     let contribution_id: Option<Uuid> = row.try_get("contribution_id")?;
     let rows = FoldedRows {
