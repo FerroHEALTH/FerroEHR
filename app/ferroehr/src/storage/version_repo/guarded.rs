@@ -246,14 +246,16 @@ fn flags_row(audit: &str, extra: &str) -> String {
 /// The `ehr` column CTEs of an `EHR_STATUS` commit in EHR `ehr`, from `$first`
 /// (the five columns, then the notification channel), written once the
 /// CONTRIBUTION is, as `ehr_repo::update_promoted_columns` writes them; a
-/// moved subject notifies every replica's access copy (#5513).
+/// moved subject, its namespace or its id, notifies every replica's access
+/// copy (#5513, #6238).
 fn status_ctes(ehr: &str, first: usize) -> String {
     format!(
         ", es AS ( \
              UPDATE ehr SET subject_id = ${}, subject_namespace = ${}, is_queryable = ${}, \
                             is_modifiable = ${}, subject_digest = ${} \
              FROM c WHERE ehr.id = {ehr} \
-             RETURNING OLD.subject_id IS DISTINCT FROM NEW.subject_id AS moved \
+             RETURNING (OLD.subject_namespace, OLD.subject_id) \
+                       IS DISTINCT FROM (NEW.subject_namespace, NEW.subject_id) AS moved \
          ), en AS (SELECT pg_notify(${}, {ehr}::text) FROM es WHERE es.moved)",
         first,
         first + 1,

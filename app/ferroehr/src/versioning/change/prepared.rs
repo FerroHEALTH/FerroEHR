@@ -97,6 +97,7 @@ pub(super) fn prepare(
         skipped: false,
         content_digest: r.content_digest,
         deleted: None,
+        subject_moved: false,
     };
     Ok(Prepared {
         r,

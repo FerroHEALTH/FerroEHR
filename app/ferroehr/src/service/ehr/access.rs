@@ -52,7 +52,8 @@ use crate::versioning::change::{Change, commit_contribution};
 
 impl FerroEhrService {
     /// Drop the copy of the `EHR_ACCESS` settings and subject for `ehr_id`,
-    /// called after any `EHR_ACCESS` or `EHR_STATUS` commit so this replica's
+    /// called after any `EHR_ACCESS` commit and an `EHR_STATUS` commit that
+    /// moved the subject, the two things the copy is revised by, so this replica's
     /// next access decision reflects the new version before the commit's
     /// notification arrives (the settings are change-controlled — RM ehr
     /// master04 §EHR Access).

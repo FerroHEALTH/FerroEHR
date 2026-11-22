@@ -312,6 +312,9 @@ pub struct FoldedRows {
     pub commit_audit_id: Uuid,
     /// The audit's `time_committed` as stored (master06 §Committal and Audits).
     pub time_committed: jiff::Timestamp,
+    /// Whether an `EHR_STATUS` commit moved the EHR's subject (namespace or
+    /// id), which the EHR's access copy is revised by.
+    pub subject_moved: bool,
 }
 
 /// The three statement texts, one per [`Folded`] variant.
@@ -489,6 +492,7 @@ pub async fn commit_folded(
     static INTO: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Into));
     static GUARDED: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Guarded));
     static STATUS: LazyLock<String> = LazyLock::new(|| super::guarded::statement(true));
+    let status = matches!(&folded, Folded::Guarded { guard, .. } if guard.status.is_some());
     let (sql, id, ehr_id, version, guard) = match folded {
         Folded::Contribution { id, ehr_id } => (&CONTRIBUTION, id, ehr_id, None, None),
         Folded::Standalone { id, version } => {
@@ -553,6 +557,7 @@ pub async fn commit_folded(
         time_committed: row
             .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
             .to_jiff(),
+        subject_moved: status && row.try_get::<i64, _>("notified")? > 0,
     };
     if let Some((vo_id, sys_version, uris)) = blobs {
         crate::storage::blob_ref::record_uris(tx, vo_id, sys_version, uris).await?;

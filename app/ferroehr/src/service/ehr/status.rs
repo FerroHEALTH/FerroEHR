@@ -392,10 +392,11 @@ impl FerroEhrService {
             })
             .await
             .map_err(ServiceError::flattened)?;
-        // NOTE: our own design (#5589, #5879), the status names the subject whose care
-        // relationships decide access, so the copy and the request see the commit; read with
-        // the write's connection given back, never a second one beside it.
-        self.invalidate_ehr_access(an_ehr_id).await;
+        // NOTE: our own design (#5589, #5879, #6238), the copy is revised by the subject alone
+        // (`access_revision_of`), so only a moved subject drops it, with no connection held.
+        if committed.subject_moved {
+            self.invalidate_ehr_access(an_ehr_id).await;
+        }
         Ok(self.version_meta(
             an_ehr_id,
             committed.vo_id,

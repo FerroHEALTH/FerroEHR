@@ -98,6 +98,9 @@ pub struct Committed {
     /// What the version a logical delete deleted held, as the delete's gate
     /// read found it (EHDS Annex II 3.2(c)); `None` for every other write.
     pub deleted: Option<crate::system_log::categories::ContentIds>,
+    /// Whether an `EHR_STATUS` commit moved the EHR's subject, which the EHR's
+    /// access copy is revised by; `false` for every other write.
+    pub subject_moved: bool,
 }
 
 /// The outcome of one CONTRIBUTION commit.
@@ -916,6 +919,7 @@ fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
         skipped: true,
         content_digest: r.content_digest,
         deleted: None,
+        subject_moved: false,
     })
 }
 

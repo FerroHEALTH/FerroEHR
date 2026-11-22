@@ -153,6 +153,7 @@ pub(crate) async fn attest(
         skipped: false,
         content_digest: None,
         deleted: None,
+        subject_moved: false,
     })
 }
 

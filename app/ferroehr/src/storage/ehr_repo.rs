@@ -730,12 +730,13 @@ pub async fn update_promoted_columns(
     ehr_id: EhrId,
     columns: PromotedColumns<'_>,
 ) -> Result<(), StorageError> {
-    // NOTE: our own design (#5513), a changed subject notifies every replica's copy of
-    // the EHR's access facts, whose care relationships are its subject's.
+    // NOTE: our own design (#5513, #6238), a changed subject, namespace or id, notifies
+    // every replica's copy of the EHR's access facts, whose care relationships are its subject's.
     sqlx::query(
         "WITH changed AS (UPDATE ehr SET subject_id = $2, subject_namespace = $3, \
          is_queryable = $4, is_modifiable = $5, subject_digest = $7 WHERE id = $1 \
-         RETURNING OLD.subject_id IS DISTINCT FROM NEW.subject_id AS moved) \
+         RETURNING (OLD.subject_namespace, OLD.subject_id) \
+                   IS DISTINCT FROM (NEW.subject_namespace, NEW.subject_id) AS moved) \
          SELECT pg_notify($6, $1::text) FROM changed WHERE moved",
     )
     .bind(ehr_id)

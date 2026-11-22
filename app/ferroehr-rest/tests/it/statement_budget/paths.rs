@@ -349,6 +349,11 @@ struct Budget {
 /// 142,500 to 149,903 bytes, since the access record is rendered while the
 /// prepared version is held; its ceiling is that figure plus 1%, the one rise
 /// the orchestrator approved as the price of the records-first order.
+/// An `EHR_STATUS` commit has since dropped the EHR's access copy only when it
+/// moved the subject, the one part of the status the copy is revised by
+/// (#6238): 4 round trips where it sent 5, 1,519 allocations where it made
+/// 1,580 and a median peak 3 KiB lower, measured twice beside the merge base,
+/// and those ceilings fell by those figures.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
@@ -470,9 +475,9 @@ const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitStatus,
         conversions: 4,
-        allocations: 1620,
-        peak_bytes: 151_402,
-        round_trips: 6,
+        allocations: 1559,
+        peak_bytes: 148_330,
+        round_trips: 5,
         nested: 11,
         wal: 5403,
     },

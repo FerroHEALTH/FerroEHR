@@ -177,9 +177,9 @@ impl Ready {
             ctx,
             &committed,
         );
-        committed.time_committed = commit_folded(conn, &self.audit.row(), statement)
-            .await?
-            .time_committed;
+        let rows = commit_folded(conn, &self.audit.row(), statement).await?;
+        committed.time_committed = rows.time_committed;
+        committed.subject_moved = rows.subject_moved;
         if prepared.has_more() {
             prepared.finish(conn).await?;
         }

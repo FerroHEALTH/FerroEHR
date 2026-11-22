@@ -604,3 +604,179 @@ async fn two_replicas_storing_one_new_class_at_once_share_its_row() {
         "both EHRs reference it"
     );
 }
+
+/// Commits the EHR's `EHR_STATUS` with `change` applied, as the administrator
+/// through `app`, over the version it reads first.
+async fn change_status(app: &Router, change: impl FnOnce(&mut Value)) {
+    let path = format!("/ehr/{EHR_ID}/ehr_status");
+    let (code, headers, body) = common::send(
+        app,
+        request(&path, "root")
+            .body(Body::empty())
+            .expect("a request"),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "the EHR_STATUS: {body}");
+    let tag = headers
+        .get("etag")
+        .and_then(|v| v.to_str().ok())
+        .expect("an ETag")
+        .to_owned();
+    let mut status: Value = serde_json::from_str(&body).expect("the EHR_STATUS");
+    status
+        .as_object_mut()
+        .expect("an object")
+        .shift_remove("uid");
+    change(&mut status);
+    let (code, _, body) = common::send(
+        app,
+        request(&path, "root")
+            .method("PUT")
+            .header("if-match", tag)
+            .header("prefer", "return=minimal")
+            .body(Body::from(status.to_string()))
+            .expect("a request"),
+    )
+    .await;
+    assert!(code.is_success(), "the EHR_STATUS commit: {code} {body}");
+}
+
+/// A change of the status the access copy is not revised by, by name.
+type Unrelated = (&'static str, fn(&mut Value));
+
+/// Sets the status subject to `id` under `namespace`.
+fn subject(namespace: &'static str, id: String) -> impl FnOnce(&mut Value) {
+    move |status| {
+        status["subject"] = json!({ "_type": "PARTY_SELF",
+            "external_ref": { "_type": "PARTY_REF", "namespace": namespace, "type": "PERSON",
+                "id": { "_type": "GENERIC_ID", "value": id, "scheme": "local" } } });
+    }
+}
+
+/// Asserts that `svc` received no notification after `seen` but the control
+/// one this sends for another EHR: notifications reach a listener in commit
+/// order, so any earlier one would have been counted first.
+async fn notified_only_by_control(pool: &PgPool, svc: &FerroEhrService, seen: u64) {
+    sqlx::query("SELECT pg_notify($1, $2)")
+        .bind(ferroehr::storage::access_projection::CHANNEL)
+        .bind(uuid::Uuid::now_v7().to_string())
+        .execute(pool)
+        .await
+        .expect("the control notification");
+    wait_until(
+        || svc.ehr_access_listened().notifications() > seen,
+        "the control notification arrives",
+    )
+    .await;
+    assert_eq!(
+        svc.ehr_access_listened().notifications(),
+        seen + 1,
+        "the status commit notified no replica"
+    );
+}
+
+/// An `EHR_STATUS` commit drops the committing replica's copy of the EHR's
+/// access facts exactly when it moves the subject, its id or its namespace,
+/// the only part of the status the copy is revised by (#6238): a changed
+/// name, `other_details` or `is_queryable` keeps the copy and notifies no
+/// replica, and a moved subject is in the copy the next decision reads.
+#[tokio::test]
+async fn a_status_commit_drops_the_access_copy_only_when_it_moves_the_subject() {
+    let (_db, pool) = common::migrated_pool().await;
+    let (a, app) = replica(&pool, true).await;
+    restricted_to_bob(&a, &app, &pool).await;
+    let ehr_id: EhrId = EHR_ID.parse().expect("an EHR id");
+    assert_eq!(bob_reads(&app).await, StatusCode::OK, "bob reads before");
+    let kept = a.ehr_access_entry(ehr_id).await.expect("the copy");
+    let unrelated: [Unrelated; 3] = [
+        ("name", |s: &mut Value| {
+            s["name"]["value"] = json!("renamed");
+        }),
+        ("other_details", |s: &mut Value| {
+            s["other_details"] = json!({ "_type": "ITEM_TREE", "archetype_node_id": "at0001",
+                    "name": { "_type": "DV_TEXT", "value": "details" }, "items": [] });
+        }),
+        ("is_queryable", |s: &mut Value| {
+            s["is_queryable"] = json!(false);
+        }),
+    ];
+    for (what, change) in unrelated {
+        let seen = a.ehr_access_listened().notifications();
+        change_status(&app, change).await;
+        notified_only_by_control(&pool, &a, seen).await;
+        let entry = a.ehr_access_entry(ehr_id).await.expect("the copy");
+        assert!(
+            Arc::ptr_eq(&entry.settings, &kept.settings) && entry.revision == kept.revision,
+            "a changed {what} keeps the copy"
+        );
+        assert_eq!(bob_reads(&app).await, StatusCode::OK, "after {what}");
+    }
+    let person = uuid::Uuid::now_v7().to_string();
+    let moves = [
+        (
+            "a new subject",
+            "demographic",
+            uuid::Uuid::now_v7().to_string(),
+        ),
+        ("a new id", "demographic", person.clone()),
+        ("a new namespace", "hospital", person),
+    ];
+    for (what, namespace, id) in moves {
+        change_status(&app, subject(namespace, id.clone())).await;
+        let entry = a.ehr_access_entry(ehr_id).await.expect("the copy");
+        assert_eq!(
+            entry.subject,
+            Some(ferroehr::storage::access_projection::EhrSubject::new(
+                namespace, &id
+            )),
+            "{what} is in the copy right after the commit"
+        );
+        assert_eq!(
+            bob_reads(&app).await,
+            StatusCode::OK,
+            "the next decision after {what} is judged on the subject in force"
+        );
+    }
+}
+
+/// A status commit that moves only the subject's namespace notifies the
+/// other replica (#6238), whose next decision is judged on the new subject
+/// on its first attempt.
+#[tokio::test]
+async fn a_moved_subject_namespace_notifies_another_replica() {
+    let (_db, pool) = common::migrated_pool().await;
+    let (a, writer) = replica(&pool, true).await;
+    let (b, reader) = replica(&pool, true).await;
+    restricted_to_bob(&a, &writer, &pool).await;
+    let ehr_id: EhrId = EHR_ID.parse().expect("an EHR id");
+    let person = uuid::Uuid::now_v7().to_string();
+    let seen = b.ehr_access_listened().notifications();
+    change_status(&writer, subject("demographic", person.clone())).await;
+    assert!(
+        b.ehr_access_listened()
+            .notified_after(seen, Duration::from_secs(10))
+            .await,
+        "the subject reaches the other replica"
+    );
+    assert_eq!(bob_reads(&reader).await, StatusCode::OK, "bob reads before");
+    let seen = b.ehr_access_listened().notifications();
+    change_status(&writer, subject("hospital", person.clone())).await;
+    assert!(
+        b.ehr_access_listened()
+            .notified_after(seen, Duration::from_secs(10))
+            .await,
+        "a moved namespace notifies the other replica"
+    );
+    assert_eq!(
+        bob_reads(&reader).await,
+        StatusCode::OK,
+        "the other replica's next decision is judged on the new subject at once"
+    );
+    assert_eq!(
+        b.ehr_access_entry(ehr_id).await.expect("the copy").subject,
+        Some(ferroehr::storage::access_projection::EhrSubject::new(
+            "hospital", &person
+        )),
+        "the other replica's copy holds the new namespace"
+    );
+}
