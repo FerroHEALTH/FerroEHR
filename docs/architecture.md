@@ -1832,7 +1832,10 @@ one indexed read then finds. Otherwise that run is dropped whole: its answer,
 its evaluator and its uncounted decisions go unused, so it leaves no access
 record, audit record or decision metric, and the read runs once more behind the
 up-front confirm, which never runs it again. `access_policy_reruns_total{op}`
-counts those runs (#6251). **Our own design:** the revision and the
+counts those runs (#6251). A policy write reads the heads inside its own
+transaction after its write moved the revision, so it sees every earlier
+writer's change and its own, and the writing replica confirms both copies at
+the revision its committed transaction produced (#6265). **Our own design:** the revision and the
 confirmation.
 
 **The patient's EHRs** (#5648, #5649). `FerroEhrService::subject_ehrs`, the
