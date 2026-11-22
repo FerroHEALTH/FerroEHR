@@ -259,8 +259,9 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # patient context per issuer, carries a reason code on every refusal, reads
 # an issuer in the background (`Rejection::Unread`) and adds the federation
 # field `trc.care_role` (#6140), and 0.33 builds on ferrohealth-server 0.12
-# (#6213). Verified on crates.io 2026-11-21.
-ferrohealth-smart = { version = "=0.33.0", default-features = false, features = ["fetch", "idp-entra"] }
+# (#6213), and 0.33.1 answers a Basic verdict from its cache without
+# spawn_blocking. Verified on crates.io 2026-11-22.
+ferrohealth-smart = { version = "=0.33.1", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
