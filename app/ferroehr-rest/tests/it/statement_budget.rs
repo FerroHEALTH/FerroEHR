@@ -42,6 +42,7 @@ mod intake;
 mod paths;
 mod settings;
 mod wal;
+mod wire;
 
 /// The assembled router of [`app`] as a server runs it: with the `LISTEN`
 /// session of every copy this replica holds connected
@@ -58,21 +59,51 @@ async fn served() -> (
     (db, pool, svc, app)
 }
 
+/// [`served`] with every connection of the server, its `LISTEN` sessions
+/// included, through a [`wire::Wire`] relay that counts the bytes each
+/// statement moves; the pool it returns reaches the database directly, so
+/// the test's own reads are not counted.
+async fn wired() -> (
+    testkit::TestDb,
+    PgPool,
+    Arc<ferroehr::service::FerroEhrService>,
+    Router,
+    wire::Wire,
+) {
+    let (db, direct) = crate::common::migrated_pool().await;
+    let options = direct.connect_options();
+    let wire = wire::Wire::start(&options).await;
+    let relayed = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(10)
+        .min_connections(0)
+        .connect_lazy_with(wire.options(&options));
+    let (db, _, svc, app) = Box::pin(crate::access_evaluator_http::app_over(
+        crate::party_binding_http::mapping(),
+        db,
+        relayed,
+    ))
+    .await;
+    listening_at(&wire.url(db.url()), &svc).await;
+    (db, direct, svc, app, wire)
+}
+
 /// Connects the `LISTEN` session of every copy `svc` holds over the database
 /// of `db`, as `ferroehr-server` `policy::listen` does, and waits until each
 /// one listens.
 async fn listening(db: &testkit::TestDb, svc: &ferroehr::service::FerroEhrService) {
+    listening_at(db.url(), svc).await;
+}
+
+/// [`listening`] over the database URL `url`.
+async fn listening_at(url: &str, svc: &ferroehr::service::FerroEhrService) {
     let listened: Vec<_> = svc
         .policy_listeners()
         .into_iter()
         .map(|(_, listened)| listened)
         .collect();
-    ferroehr::policy_register::listen::Listeners::new(
-        &ferroehr::db::DbConfig::new(db.url()),
-        &listened,
-    )
-    .expect("the test DSN parses")
-    .spawn();
+    ferroehr::policy_register::listen::Listeners::new(&ferroehr::db::DbConfig::new(url), &listened)
+        .expect("the test DSN parses")
+        .spawn();
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
     while !listened.iter().all(|listened| listened.is_listening()) {
         assert!(
