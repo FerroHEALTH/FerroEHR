@@ -299,10 +299,10 @@ async fn replace(
 ) -> Result<Vec<Uuid>, StorageError> {
     let (gone, came) = steps(head, party, role_validity);
     let mut rows = gone.run(tx).await?;
-    let held = head
+    let derived = head
         .live()
         .map_or(&[][..], |facts| facts.grants.facts.as_slice());
-    if held.iter().any(|fact| fact.about.or(party).is_some()) {
+    if derived.iter().any(|fact| fact.about.or(party).is_some()) {
         rows.extend(came.run(tx).await?);
     }
     Ok(changed(&rows))

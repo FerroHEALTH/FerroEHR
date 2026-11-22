@@ -74,7 +74,7 @@ impl<'a> GrantHead<'a> {
 /// unless a fact names its own (the performer of a `ROLE`, the source of a
 /// care relationship, else the party itself) and the `ROLE`'s
 /// `time_validity`; `None` for a kind whose heads hold none.
-fn facts_about<'a>(kind: Kind, head: GrantHead<'a>) -> Option<(Option<Uuid>, Option<&'a Value>)> {
+fn facts_about(kind: Kind, head: GrantHead<'_>) -> Option<(Option<Uuid>, Option<&Value>)> {
     match kind {
         Kind::Organisation | Kind::Person | Kind::Group => Some((Some(head.vo_id), None)),
         Kind::PartyRelationship => Some((head.live().and_then(|f| f.grants.care_source), None)),
@@ -122,7 +122,7 @@ pub(crate) async fn write(
     Ok(())
 }
 
-/// The steps of [`write`] for `head`, a party of `kind`, as a settle folds
+/// The steps of [`write()`] for `head`, a party of `kind`, as a settle folds
 /// them: the deletes, then the inserts. A row they return tagged
 /// [`Tag::Grants`] says a grant row changed; the caller facts' and the record
 /// subjects' rows say whether those changed.
