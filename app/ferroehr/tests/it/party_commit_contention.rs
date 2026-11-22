@@ -5,8 +5,8 @@
 //! its pre-checks on one gate read, holds its access record first and commits
 //! behind one guarded version statement, which takes the key-space gate
 //! shared; so of several updates or deletes naming one preceding version one
-//! commits and every other answers `412`, and a write refused after its
-//! records were held discards them at once. No openEHR spec governs how a
+//! commits and every other answers as a stale write does today, and a write
+//! refused after its records were held discards them at once. No openEHR spec governs how a
 //! commit is run against the database: our own design.
 
 #![expect(
@@ -19,6 +19,7 @@ use std::time::Duration;
 
 use ferroehr::db::domain::DomainPools;
 use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Malformed, Refusal};
 use ferroehr::ids::VoId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
@@ -167,15 +168,21 @@ async fn contend(
 }
 
 /// `writers` updates, or deletes when `delete`, of one PERSON naming the same
-/// preceding version: one commits and every other answers `412`.
+/// preceding version: one commits; every other update answers `412` for the
+/// moved tip, and every other delete answers `400` for the party it finds
+/// already deleted, the check a delete makes before its precondition.
 async fn one_party_write_wins(writers: usize, delete: bool) {
     let (db, svc) = service(false).await;
     let mut committed = 0;
     for (outcome, _) in contend(&db, &svc, writers, delete).await {
         match outcome {
             Ok(()) => committed += 1,
-            Err(ServiceError::VersionConflict(_)) => {}
-            Err(error) => panic!("a losing party write answers 412: {error:?}"),
+            Err(ServiceError::VersionConflict(_)) if !delete => {}
+            Err(ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
+                ..
+            })) if delete => {}
+            Err(error) => panic!("a losing party write answers as a stale one: {error:?}"),
         }
     }
     assert_eq!(committed, 1, "exactly one party write wins");
