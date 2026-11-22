@@ -186,6 +186,7 @@ pub(crate) fn steps(head: GrantHead<'_>) -> (Step<'_>, Step<'_>) {
     let declared = head
         .live()
         .map_or(&[][..], |facts| facts.grants.subjects.as_slice());
+    let writes = !declared.is_empty();
     let ordinal: Vec<i32> = declared.iter().map(|d| d.ordinal).collect();
     let namespace: Vec<&str> = declared
         .iter()
@@ -209,7 +210,8 @@ pub(crate) fn steps(head: GrantHead<'_>) -> (Step<'_>, Step<'_>) {
                 .bind(namespace)
                 .bind(id)
         },
-    );
+    )
+    .writing(writes);
     (gone, came)
 }
 

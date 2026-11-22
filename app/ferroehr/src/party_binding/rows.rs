@@ -202,6 +202,7 @@ pub(crate) fn insert_identifiers<'q>(
     Step::new("ii", INSERT_IDENTIFIERS, None, move |query| {
         IdentifierColumns::of(rows, professional).bind(query.bind(parties).bind(selectors))
     })
+    .writing(!rows.is_empty())
 }
 
 /// The identifier rows and professional validities as the arrays the
@@ -294,6 +295,7 @@ pub(crate) fn tombstones(rows: &[IdentifierRow]) -> Step<'_> {
                 )
         },
     )
+    .writing(!rows.is_empty())
 }
 
 /// Clears the tombstone of every key a live row of `parties` binds again.
@@ -347,6 +349,7 @@ pub(crate) fn revive_held(rows: &[IdentifierRow]) -> Step<'_> {
                 .bind(keys().map(|r| r.value.as_str()).collect::<Vec<_>>())
         },
     )
+    .writing(rows.iter().any(|r| r.selector == "key"))
 }
 
 /// The columns of a representation row, over `$2` to `$9`: the
@@ -583,6 +586,7 @@ pub(crate) fn add_memberships<'q>(members: &'q [Uuid], rows: &'q [(Uuid, Uuid)])
     Step::new("ma", sql, None, move |query| {
         bind_memberships(query, members, rows)
     })
+    .writing(!rows.is_empty())
 }
 
 /// `query` with `members` and the groups and members of `rows` bound as `$1`
@@ -612,6 +616,7 @@ pub(crate) fn revise_groups<'q>(retired: Retired) -> Step<'q> {
         Retired::Beside => ("SELECT p FROM mr", None),
         Retired::Before(groups) => ("SELECT unnest($1::uuid[])", Some(groups)),
     };
+    let writes = groups.as_ref().is_none_or(|groups| !groups.is_empty());
     let sql = format!(
         "INSERT INTO binding_group_revision (group_id, revision) \
          SELECT group_id, 1 FROM (SELECT p AS group_id FROM ma UNION {gone}) c \
@@ -622,4 +627,5 @@ pub(crate) fn revise_groups<'q>(retired: Retired) -> Step<'q> {
         Some(groups) => query.bind(groups),
         None => query,
     })
+    .writing(writes)
 }

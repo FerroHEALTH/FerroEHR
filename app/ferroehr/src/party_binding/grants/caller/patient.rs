@@ -95,6 +95,7 @@ pub(crate) fn steps(head: GrantHead<'_>) -> (Step<'_>, Step<'_>) {
     let carried = head
         .live()
         .map_or(&[][..], |facts| facts.patient_identifiers.as_slice());
+    let writes = !carried.is_empty();
     let ordinal: Vec<i32> = (0..carried.len())
         .map(|at| i32::try_from(at).unwrap_or(i32::MAX))
         .collect();
@@ -118,7 +119,8 @@ pub(crate) fn steps(head: GrantHead<'_>) -> (Step<'_>, Step<'_>) {
                 .bind(id_type)
                 .bind(value)
         },
-    );
+    )
+    .writing(writes);
     (gone, came)
 }
 

@@ -152,6 +152,7 @@ pub(super) fn insert<'q>(
          ON CONFLICT DO NOTHING \
          RETURNING party_id AS p, {FACT_TEXT} AS t"
     );
+    let writes = !facts.is_empty();
     Step::new("fi", statement, Some(Tag::FactsCame), move |query| {
         query
             .bind(head.vo_id)
@@ -175,4 +176,5 @@ pub(super) fn insert<'q>(
             .bind(covers_id)
             .bind(covers_kind)
     })
+    .writing(writes)
 }
