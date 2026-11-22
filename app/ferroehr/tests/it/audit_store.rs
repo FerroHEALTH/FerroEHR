@@ -685,17 +685,24 @@ async fn the_access_trail_refuses_rewriting_deletion_and_truncation() {
         "the access trail was truncated: TRUNCATE bypasses row triggers and needs its own refusal"
     );
 
-    // Removing the record from a sink's outbox, its delivery, changes no
-    // record (#6203).
+    // Noting the record delivered moves a sink's cursor and changes no
+    // record (#6203, #6242).
     let seq: i64 = sqlx::query_scalar("SELECT seq FROM audit.audit_event WHERE id = $1")
         .bind(id)
         .fetch_one(&pool)
         .await
         .expect("the record's position");
     store
-        .mark_delivered(ferroehr::system_log::store::outbox::Sink::FhirFeed, seq)
+        .mark_delivered(
+            ferroehr::system_log::store::delivery::Sink::FhirFeed,
+            ferroehr::system_log::store::delivery::Due {
+                chain: ferroehr::system_log::store::chains::AuditChain::System,
+                id: seq,
+                retry: false,
+            },
+        )
         .await
-        .expect("a delivery removes the outbox row and changes no record");
+        .expect("a delivery moves the cursor and changes no record");
 
     let survives: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_event")
         .fetch_one(&pool)
@@ -1641,16 +1648,24 @@ async fn a_held_record_is_in_no_read() {
     );
     let page = total(&store).await;
     assert_eq!((page.total, page.documents.len()), (Some(1), 1));
-    let owed = "SELECT owed_count FROM audit.audit_event_owe(1000, true, true)";
-    count(owed).await;
+    let feeding = store.clone().with_fhir_feed(true).with_syslog(true);
+    let mut frontier = ferroehr::access_log::frontier::Frontier::default();
+    let delivery = "SELECT through_id FROM audit.delivery_frontier WHERE chain = 'system'";
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    while frontier.reached().system < 2 && std::time::Instant::now() < deadline {
+        feeding
+            .frontier_round(&mut frontier, false)
+            .await
+            .expect("a frontier round");
+    }
+    assert!(
+        frontier.reached().system >= 2,
+        "the frontier passed both records"
+    );
     assert_eq!(
-        count(
-            "SELECT (SELECT count(*) FROM audit.fhir_feed_outbox) \
-             + (SELECT count(*) FROM audit.syslog_outbox)"
-        )
-        .await,
-        2,
-        "the first record is owed to both sinks, the held one to none"
+        count(delivery).await,
+        1,
+        "the sinks may deliver the first record, and the held one not yet"
     );
     assert!(
         crate::fixtures::verify_chain(&pool)
@@ -1664,7 +1679,11 @@ async fn a_held_record_is_in_no_read() {
         .execute(&pool)
         .await
         .expect("release");
-    assert_eq!(count(owed).await, 1, "the released record is owed");
+    feeding
+        .frontier_round(&mut frontier, false)
+        .await
+        .expect("a frontier round");
+    assert_eq!(count(delivery).await, 2, "the released record is owed");
     assert_eq!(
         count("SELECT count(*) FROM audit.audit_record WHERE chain = 'system'").await,
         2
@@ -1675,14 +1694,6 @@ async fn a_held_record_is_in_no_read() {
     );
     let page = total(&store).await;
     assert_eq!((page.total, page.documents.len()), (Some(2), 2));
-    assert_eq!(
-        count(
-            "SELECT (SELECT count(*) FROM audit.fhir_feed_outbox) \
-             + (SELECT count(*) FROM audit.syslog_outbox)"
-        )
-        .await,
-        4
-    );
     assert!(
         crate::fixtures::verify_chain(&pool)
             .await

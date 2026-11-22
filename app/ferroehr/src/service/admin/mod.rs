@@ -24,6 +24,8 @@
 //!   settings on the person's instruction, its read of their versions, and
 //!   the repair of an EHR held closed by settings that do not parse; our own
 //!   extension.
+//! - [`audit_delivery`]: the delivery of the audit records to the sinks,
+//!   their cursors and parked records; our own extension.
 //! - [`policy_register`] — the operational-policy admin registers (the audit
 //!   category map and the access delay); our own
 //!   extension.
@@ -57,6 +59,7 @@ pub mod access_log_read;
 pub mod access_policy;
 mod access_policy_content;
 pub mod access_repair;
+pub mod audit_delivery;
 pub mod integrity;
 pub mod marks;
 pub mod policy_register;

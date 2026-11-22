@@ -597,20 +597,36 @@ pub const SUBJECTS: u64 = 100_000;
 /// purposes, so one lookup serves every later record).
 type SubjectCache = moka::future::Cache<String, Option<ResolvedSubject>>;
 
+/// Logs at `WARN` each sink the store still holds a cursor of that the
+/// configuration no longer names, with how many records it has not
+/// received: the cursor and its parked records stay until an operator
+/// forgets the sink (`POST /admin/audit-delivery/sinks/{sink}/forget`).
+async fn warn_unconfigured_sinks(store: &AuditStore) {
+    match store.unconfigured_sinks().await {
+        Ok(sinks) => {
+            for (sink, behind) in sinks {
+                tracing::warn!(
+                    sink = sink.as_str(),
+                    behind,
+                    "an audit sink the configuration no longer names keeps its delivery cursor \
+                     and parked records; configure it again or forget it through the admin API"
+                );
+            }
+        }
+        Err(error) => tracing::warn!(
+            error = %crate::error::ErrorChain::new(&error),
+            "the audit delivery cursors could not be read at start"
+        ),
+    }
+}
+
 /// Start the audit subsystem over the local store on `pool`: the sender, the
 /// chainer, the forwarders of the configured sinks and the store's upkeep.
 ///
 /// # Errors
 /// [`AuditError`] if a sink's transport cannot be established (a TLS
-/// config or CA problem, a refused feed endpoint), or the render policy does
-/// not compile.
-#[cfg_attr(
-    not(feature = "fhir"),
-    expect(
-        clippy::unused_async,
-        reason = "a slim build starts no forwarder, which is what the full build awaits"
-    )
-)]
+/// config or CA problem, a refused feed endpoint), the render policy does
+/// not compile, or a configured sink's cursor cannot be started.
 pub async fn start(
     config: AuditConfig,
     resolver: Option<SubjectResolver>,
@@ -626,6 +642,9 @@ pub async fn start(
         .with_render_policy(policy.clone());
     // NOTE: our own design (#5770), the background work runs on the audit runtime over its own pool.
     let behind = store.with_pool(behind);
+    // NOTE: our own design (#6242), a sink's cursor starts before the first record it is owed.
+    store.start_cursors().await?;
+    warn_unconfigured_sinks(&store).await;
     #[cfg_attr(
         not(feature = "fhir"),
         expect(unused_mut, reason = "a slim build has no sink")
@@ -653,7 +672,7 @@ pub async fn start(
     #[cfg(feature = "fhir")]
     if let Some(fhir_feed) = &config.fhir_feed {
         use crate::system_log::feed::{StoreOutbox, repository};
-        use crate::system_log::store::outbox::Sink;
+        use crate::system_log::store::delivery::Sink;
         let arr = repository(fhir_feed)?;
         let notify = Arc::new(Notify::new());
         let idle = Duration::max(fhir_feed.poll_interval.get(), Duration::from_millis(100));

@@ -1328,8 +1328,8 @@ async fn updates_in_place(pool: &PgPool, from: &str, to: &str) -> u64 {
             AND b.resource_manager = 'Heap' \
             AND split_part(b.record_type, '+', 1) IN ('UPDATE', 'HOT_UPDATE') \
             AND c.relkind = 'r' \
-            AND c.relname NOT IN ('access_log_seal_state', 'access_log_owed', \
-                                  'audit_event_seal_state', 'audit_event_owed') \
+            AND c.relname NOT IN ('access_log_seal_state', 'audit_event_seal_state', \
+                                  'delivery_frontier') \
             AND c.relnamespace NOT IN \
                 ('pg_catalog'::regnamespace, 'information_schema'::regnamespace)",
     )

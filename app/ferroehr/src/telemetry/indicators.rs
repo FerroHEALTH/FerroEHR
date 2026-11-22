@@ -217,12 +217,15 @@ impl HealthIndicator for AuditHealth {
 
 /// `audit_delivery` — reports each forwarder delivering to an external ARR.
 ///
-/// Each `ihe-atna` forwarder names the records waiting, those the repository
-/// refused, and whether the last attempt reached it.
+/// Each `ihe-atna` forwarder names the records waiting, those parked
+/// because the repository refused them or they could not be rendered or
+/// retention removed them first (#6242), and whether the last attempt reached
+/// it.
 ///
-/// A repository that cannot be reached, or a refused record, reads
+/// A repository that cannot be reached, or a parked record, reads
 /// `DEGRADED`: the records wait in their store and nothing is lost yet, so
-/// readiness never flips. Registered only when a repository is configured.
+/// readiness never flips; a parked record keeps it degraded until an
+/// operator retries or dismisses it. Registered only when a repository is configured.
 #[derive(Debug)]
 pub struct AuditDeliveryHealth {
     delivery: DeliveryStatus,
@@ -253,7 +256,7 @@ impl HealthIndicator for AuditDeliveryHealth {
                         degraded = true;
                     }
                     format!(
-                        "{sink}: {} waiting, {} refused, {} delivered, {}{}",
+                        "{sink}: {} waiting, {} parked, {} delivered, {}{}",
                         status.depth.waiting(),
                         status.depth.quarantined,
                         status.delivered,

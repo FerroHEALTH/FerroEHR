@@ -196,15 +196,14 @@ audit message names a patient (ITI TF-2 §3.20.4.1.2.1.1).
 takes, as `[pixm.endpoint.tls]` is. Concatenate the certificate chain and the private
 key into the one PEM `client_identity_file` names.
 
-`ihe-atna`'s forwarder delivers from the local store, oldest record first:
-the chainer enters each stored record in `audit.syslog_outbox`, and the
-forwarder renders its DICOM message from the stored record when it reads
-it. It holds one connection open, retries a failed send with an exponential
+`ihe-atna`'s forwarder delivers from the local store by the syslog
+route's cursor ([How a record is delivered](../audit.md#how-a-record-is-delivered)),
+and renders each DICOM message from the stored record when it reads it. It holds one connection open, retries a failed send with an exponential
 backoff and jitter, and closes the connection with a TLS `close_notify` on
 shutdown, so nothing is lost to a reset (ITI TF-2 §3.20.4.1.1, RFC 5425
-§4.4). A record leaves `audit.syslog_outbox` once the repository takes it;
-the forwarder's depth, the records the outbox still holds, is reported on
-`GET /management/health` as `audit_delivery`. `spool_dir`, `spool_max_events` and `spool_max_size` are
+§4.4). The cursor moves past a record once the repository takes it; the
+forwarder's depth, the records past the cursor and those parked, is
+reported on `GET /management/health` as `audit_delivery`. `spool_dir`, `spool_max_events` and `spool_max_size` are
 unknown keys, refused at load.
 
 ### `[audit.fhir_feed]`: the RESTful-ATNA feed (ITI-20 ATX:FHIR Feed)
@@ -214,14 +213,14 @@ unknown keys, refused at load.
 | `endpoint` | [endpoint table](config-integrations.md#the-endpoint-table) | required | The repository: `url`, its FHIR base (records go to `{url}/AuditEvent`; credentials embedded in it are masked in every rendering), `timeout` for one `POST`, the `retry` of a delivery (`retry.max_backoff` defaults to `"1min"` here), the TLS and the credential. The table's presence turns the feed on. |
 | `poll_interval` | duration | `"2s"` | How long the forwarder waits for a new record before it reads the store again. |
 
-`ihe-atna`'s forwarder delivers the feed from the local store, oldest record
-first: a record not yet delivered keeps its row in `audit.fhir_feed_outbox`,
-so a repository outage loses nothing, and the row goes once the repository
-accepts the record. The records the outbox still holds are the forwarder's
-depth on `GET /management/health` (`audit_delivery`). A record the repository
-refuses (a `4xx` other than `401`, `408` or `429`) is set aside until the next
-start. It is reported on `GET /management/health` as `audit_delivery`, and
-the records behind it keep flowing. The forwarder retries until the
+`ihe-atna`'s forwarder delivers the feed from the local store by the feed's
+cursor ([How a record is delivered](../audit.md#how-a-record-is-delivered)),
+so a repository outage loses nothing, and the cursor moves once the
+repository accepts the record. The records past the cursor and those parked
+are the forwarder's depth on `GET /management/health` (`audit_delivery`). A
+record the repository refuses (a `4xx` other than `401`, `408` or `429`) is
+parked until an operator retries or dismisses it, and the records behind it
+keep flowing. The forwarder retries until the
 repository answers.
 
 #### Authenticating the feed
