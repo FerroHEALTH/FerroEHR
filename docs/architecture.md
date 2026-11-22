@@ -1810,7 +1810,18 @@ and definition revisions in one statement of two one-row primary-key reads. A
 copy confirmed at or past the policy revision read holds every change up to
 it and decides the request; otherwise the request reads the newest versions
 with the revision in one statement (one snapshot), installs them and marks the
-copy confirmed at that revision. **Our own design:** the revision and the
+copy confirmed at that revision. A read of a COMPOSITION or an EHR (the
+overlapped reads of #5959) makes no such read first: each statement that
+selects an EHR's settings revision selects the policy and definition revisions
+beside it from the view `request_revisions`, at the snapshot of the rows it
+reads (`policy_register::observed`). The read is decided and rendered on the
+copies as they stand, and its answer leaves only once they held the revisions
+its statements read, or, when no statement read them (a `400`), the revisions
+one indexed read then finds. Otherwise that run is dropped whole: its answer,
+its evaluator and its uncounted decisions go unused, so it leaves no access
+record, audit record or decision metric, and the read runs once more behind the
+up-front confirm, which never runs it again. `access_policy_reruns_total{op}`
+counts those runs (#6251). **Our own design:** the revision and the
 confirmation.
 
 **The patient's EHRs** (#5648, #5649). `FerroEhrService::subject_ehrs`, the

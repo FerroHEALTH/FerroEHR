@@ -19,6 +19,7 @@
 
 pub mod access_delay;
 pub mod listen;
+pub mod observed;
 
 use crate::db::domain::Domain;
 use std::fmt;
@@ -245,8 +246,10 @@ impl LiveRegisters {
     /// [`RegisterError::Store`] when the store does not answer; the registers
     /// in force stay.
     pub async fn refresh(&self) -> Result<(), RegisterError> {
-        let heads = store::heads(&self.pool).await?;
-        self.install(&heads).await
+        let heads = store::policy_heads(&self.pool).await?;
+        self.install(&heads.registers).await?;
+        self.confirmed.fetch_max(heads.revision, Ordering::AcqRel);
+        Ok(())
     }
 
     /// Whether the registers in force hold every version committed up to the

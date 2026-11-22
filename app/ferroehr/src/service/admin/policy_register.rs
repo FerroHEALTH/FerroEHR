@@ -139,6 +139,32 @@ impl FerroEhrService {
         Ok(())
     }
 
+    /// Whether the policy and definition copies a request decided and
+    /// answered on held the revisions its own statements read (`observed`,
+    /// at the snapshot of the rows it read), or, when none read them, the
+    /// revisions one indexed read finds now (#6251). A copy found behind is
+    /// dropped or confirmed no further here: the caller runs the request
+    /// again behind [`Self::confirm_policy`].
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when the store does not answer.
+    pub async fn policy_held(
+        &self,
+        observed: Option<crate::policy_register::observed::Observed>,
+    ) -> Result<bool, ServiceError> {
+        let (policy, definitions) = if let Some(observed) = observed {
+            (observed.policy, observed.definitions)
+        } else {
+            let read = store::revisions(self.registers.pool())
+                .await
+                .map_err(|error| ServiceError::overloaded("the policy could not be read", error))?;
+            (read.policy, read.definitions)
+        };
+        Ok(self.definitions.holds(definitions)
+            && self.registers.holds(policy)
+            && self.access_policy.holds(policy))
+    }
+
     /// Read the newest version of every register and install each one this
     /// replica does not hold, whatever the listener says.
     ///

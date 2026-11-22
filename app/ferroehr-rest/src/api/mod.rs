@@ -62,6 +62,7 @@ pub mod admin;
 pub mod definition;
 pub mod demographic;
 pub mod ehr;
+mod guarded;
 pub(crate) mod item_tags;
 pub mod message;
 pub(crate) mod operation;
@@ -78,14 +79,13 @@ use std::sync::Arc;
 use axum::Router;
 use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
-use ferroehr::system_log::access_context::{self, AccessDelay};
 use http::{HeaderMap, Method};
 use indexmap::IndexMap;
 use openehr_its::rest::routes::{Param, ParamLocation, PathParam, RouteMatch};
 use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::extensions::access::{admission, caller, delay, ehr_access, pep};
+use crate::extensions::access::admission;
 #[cfg(feature = "fhir")]
 use crate::extensions::fhir;
 use crate::extensions::terminology;
@@ -377,7 +377,8 @@ pub(crate) fn api_doc(namespaces: &Namespaces) -> utoipa::openapi::OpenApi {
 }
 
 /// Run one operation through the uniform per-request stack the extension
-/// handlers and `mount` share: the spec-grounded `EHR_ACCESS` gate first (RM
+/// handlers and `mount` share: the policy it reads confirmed
+/// ([`guarded`]), the spec-grounded `EHR_ACCESS` gate (RM
 /// `org.openehr.rm.ehr.ehr_access.adoc` — "All access decisions to data in the
 /// EHR must be made in accordance with the policies and rules in this object"),
 /// then the PEP pre-check of the SMART gate (short-circuits before the backend
@@ -391,7 +392,7 @@ pub(crate) async fn guarded_dispatch<H, F>(
     handler: H,
 ) -> Response
 where
-    H: FnOnce(AppState, RequestParts) -> F + Send,
+    H: Fn(AppState, RequestParts) -> F + Send + Sync,
     F: Future<Output = Result<Response, RestError>> + Send,
 {
     crate::system_log::written::learn_op(op);
@@ -406,131 +407,14 @@ where
             .insert(crate::system_log::middleware::AuditOpId(op));
         return resp;
     }
-    // NOTE: no specification governs operational policy: our own design; the request reads
-    // the policy revision first in one indexed read, and the newest versions when it moved,
-    // so a change decides this request whatever its notification's delay (#6251).
-    if let Err(error) = refresh_policy(&state, op).await {
-        let mut resp = RestError::from(error).into_response();
-        resp.extensions_mut()
-            .insert(crate::system_log::middleware::AuditOpId(op));
-        return resp;
-    }
-    // NOTE: EHDS Art. 3(3) (`docs/law/eu/ehds/text.html`), data a professional has not
-    // released reads as absent to a patient-context request on a deployment that delays.
-    let delay = delay::of(&state, op);
-    // NOTE: our own design (#5513), every operation but the controller's own is judged by
-    // the access evaluator, which holds the EHDS Art. 8 restriction and Art. 10 opt-out.
-    let access = caller::request_access(&state, op);
-    let guarded = Box::pin(async move {
-        // NOTE: our own design (#5959), the handler of an overlapped read starts its store read
-        // while the decision is made, and the decision's refusal is the answer whenever it refuses.
-        if admission::overlaps(op) {
-            let decided_on = parts.clone();
-            // Boxed: the handler and the decision are each large, and a debug build's stack
-            // overflows on the copies made while the overlap is built.
-            let overlapped = admission::overlap(
-                Box::pin(admit(&state, op, &decided_on, delay)),
-                Box::pin(handler(state.clone(), parts)),
-            );
-            return match overlapped.await {
-                Ok(resp) => {
-                    let resp = resp.unwrap_or_else(IntoResponse::into_response);
-                    pep::post_check(&state, op, resp).await
-                }
-                Err(deny) => *deny,
-            };
-        }
-        if let Err(deny) = admit(&state, op, &parts, delay).await {
-            return *deny;
-        }
-        let resp = handler(state.clone(), parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response);
-        pep::post_check(&state, op, resp).await
-    });
-    let delayed_guard = access_context::with_access_delay(delay, guarded);
-    let mut resp = match access {
-        Some(access) => {
-            let judged = Arc::clone(&access);
-            let mut resp =
-                ferroehr::access_eval::condition::with_request_access(access, delayed_guard).await;
-            // NOTE: EHDS Annex II 3.2 (`docs/law/eu/ehds/text.html`), the access record names
-            // the grounds of the decision, which the audit layer reads off the response.
-            resp.extensions_mut().insert(judged);
-            resp
-        }
-        None => delayed_guard.await,
+    let mut resp = if admission::overlaps(op) {
+        guarded::after(&state, op, parts, &handler).await
+    } else {
+        guarded::confirmed(&state, op, parts, &handler).await
     };
     resp.extensions_mut()
         .insert(crate::system_log::middleware::AuditOpId(op));
     resp
-}
-
-/// The decision on `op` before its handler answers: the access evaluator,
-/// the EHDS Art. 3(3) delay where `delay` holds, and the PEP pre-check, each
-/// answering its refusal.
-async fn admit(
-    state: &AppState,
-    op: &'static str,
-    parts: &RequestParts,
-    delay: AccessDelay,
-) -> Result<(), Box<Response>> {
-    ehr_access::enforce(state, op, parts).await?;
-    // NOTE: EHDS Art. 3(3), a caller reading its own record by the party binding has the
-    // delay held on that record, which the decision above found (#6108).
-    let withheld = match delay {
-        AccessDelay::Off => false,
-        AccessDelay::Person => true,
-        AccessDelay::Records => {
-            access_context::access_delay_enforced()
-                || parts
-                    .path
-                    .get("ehr_id")
-                    .and_then(|raw| uuid::Uuid::parse_str(raw).ok())
-                    .is_some_and(|ehr| {
-                        access_context::access_delay_enforced_on(ferroehr::ids::EhrId(ehr))
-                    })
-        }
-    };
-    if withheld {
-        match delay::refuse_withheld(state, op, parts).await {
-            Ok(Some(absent)) => return Err(Box::new(absent)),
-            Ok(None) => {}
-            Err(fault) => return Err(fault),
-        }
-    }
-    pep::pre_check(state, op, parts).await.map_err(Box::new)
-}
-
-/// The operations of the admin group that consult a policy register: the hold
-/// of the access delay, the retention period keyed on a category, and the dump
-/// and load, which classify and commit content. The register routes read and
-/// write the register store themselves.
-const ADMIN_REGISTER_READERS: [&str; 4] = [
-    "admin_delay_access",
-    "admin_dump",
-    "admin_load",
-    "admin_put_retention_policy",
-];
-
-/// Bring the policy `op` reads up to date before it runs: the policy
-/// registers ([`reads_registers`]) and, for every operation outside the admin
-/// group, the controller's access policy.
-async fn refresh_policy(state: &AppState, op: &str) -> Result<(), ferroehr::error::ServiceError> {
-    state
-        .backend()
-        .confirm_policy(reads_registers(state, op), !op.starts_with("admin_"))
-        .await
-}
-
-/// Whether `op` reads the policy registers before it runs: every operation but
-/// those of the admin group that consult none, and none while the admin group
-/// is off, which answers `405` before it touches the backend.
-fn reads_registers(state: &AppState, op: &str) -> bool {
-    if !op.starts_with("admin_") {
-        return true;
-    }
-    state.config().api.admin && ADMIN_REGISTER_READERS.contains(&op)
 }
 
 /// Declares one guarded REST handler: the `#[utoipa::path]` function that

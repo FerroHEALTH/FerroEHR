@@ -68,18 +68,6 @@ macro_rules! select {
     };
 }
 
-/// The newest trunk version, `0` when the policy has none; one indexed read,
-/// the one the request path makes.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn head(pool: &PgPool) -> Result<i32, StorageError> {
-    let newest: Option<i32> = sqlx::query_scalar("SELECT max(version) FROM access_policy_version")
-        .fetch_one(&mut *acquire(pool).await?)
-        .await?;
-    Ok(newest.unwrap_or(0))
-}
-
 /// Trunk version `version`, or `None` when the policy has no such version.
 ///
 /// # Errors

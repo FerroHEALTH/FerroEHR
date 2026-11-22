@@ -27,22 +27,6 @@ pub struct RegisterRow {
     pub committed_at: jiff::Timestamp,
 }
 
-/// The newest version of every register that has one, as `(register,
-/// version)`; one indexed read, the one the request path makes.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn heads(pool: &PgPool) -> Result<Vec<(String, i64)>, StorageError> {
-    let rows = sqlx::query(
-        "SELECT register, max(version) AS version FROM policy_register GROUP BY register",
-    )
-    .fetch_all(&mut *acquire(pool).await?)
-    .await?;
-    rows.iter()
-        .map(|row| Ok((row.try_get("register")?, row.try_get("version")?)))
-        .collect()
-}
-
 /// The revisions a request confirms its policy and definition copies with,
 /// read in one statement of two one-row primary-key reads (#6251, #5948).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

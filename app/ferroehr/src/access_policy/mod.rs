@@ -284,8 +284,10 @@ impl LivePolicy {
     /// [`PolicyError::Store`] when the store does not answer; the policy in
     /// force stays.
     pub async fn refresh(&self) -> Result<(), PolicyError> {
-        let head = store::head(&self.pool).await?;
-        self.install(head).await
+        let heads = crate::storage::policy_register::policy_heads(&self.pool).await?;
+        self.install(heads.access_policy).await?;
+        self.confirmed.fetch_max(heads.revision, Ordering::AcqRel);
+        Ok(())
     }
 
     /// Whether the policy in force holds every version committed up to the

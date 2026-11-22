@@ -82,6 +82,12 @@ impl DefinitionCopies {
         (current.revision == revision).then_some(current)
     }
 
+    /// Whether the copies were built at or after `revision`, a
+    /// `definition_revision` the request read (#6251).
+    pub(crate) fn holds(&self, revision: i64) -> bool {
+        revision <= self.current().revision
+    }
+
     /// Bring the copies to `revision`, the newest `definition_revision` read
     /// from the store: a generation older than it is replaced by an empty
     /// one. The revision only grows, so a read made before another caller's
