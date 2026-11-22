@@ -13,7 +13,10 @@
 //! `NotificationResponse` is charged to the notifications, whenever it
 //! arrives. The startup exchange of a new connection is charged to its own
 //! line (PostgreSQL Frontend/Backend Protocol, §Message Flow and §Message
-//! Formats). No openEHR spec governs the bytes a request moves: our own
+//! Formats). The exchanges of a connection are settled when a
+//! `ReadyForQuery` reports it idle, one transaction at a time, and a
+//! transaction that runs a statement no request sends (the session setup,
+//! the sealer) is kept apart from the requests' bytes. No openEHR spec governs the bytes a request moves: our own
 //! design.
 
 use std::collections::{BTreeMap, VecDeque};
@@ -55,15 +58,44 @@ impl Tally {
     }
 }
 
-/// What the relay moved, by the statement's text, its whitespace collapsed.
+/// The openings of the statements a request does not send: a new
+/// connection's startup and session setup, and the store's sealer, which
+/// seals windows of the audit logs on its own schedule. A transaction (or a
+/// statement outside one) that runs any of them falls into a request's window
+/// by timing, so its bytes are kept apart from the requests' own
+/// ([`Ledger::background`]).
+const BACKGROUND: [&str; 13] = [
+    STARTUP,
+    "SET search_path ",
+    "SET statement_timeout ",
+    "SET client_connection_check_interval ",
+    "SELECT last_id, window_no, encode(digest, 'hex') FROM audit.",
+    "INSERT INTO audit.audit_event_seal ",
+    "INSERT INTO audit.access_log_seal ",
+    "UPDATE audit.audit_event_seal_state ",
+    "UPDATE audit.access_log_seal_state ",
+    "SELECT min(",
+    "WITH x AS MATERIALIZED (SELECT pg_sequence_last_value(",
+    "SELECT id, encode(content_digest, 'hex') FROM audit.access_log_entry WHERE id > ",
+    "SELECT seq, encode(content_digest, 'hex') FROM audit.audit_event WHERE seq > ",
+];
+
+/// What the relay moved, by the statement's text, its whitespace collapsed:
+/// the requests' own bytes, and apart from them those of the transactions
+/// that ran a [`BACKGROUND`] statement.
 #[derive(Debug, Default)]
-pub(super) struct Ledger(pub(super) BTreeMap<String, Tally>);
+pub(super) struct Ledger {
+    /// The requests' own bytes, by statement.
+    pub(super) own: BTreeMap<String, Tally>,
+    /// The bytes of the transactions that ran a background statement.
+    pub(super) background: BTreeMap<String, Tally>,
+}
 
 impl Ledger {
-    /// Every statement together.
+    /// The requests' own statements together.
     pub(super) fn total(&self) -> Tally {
         let mut total = Tally::default();
-        for tally in self.0.values() {
+        for tally in self.own.values() {
             total.add(*tally);
         }
         total
@@ -71,13 +103,33 @@ impl Ledger {
 
     /// Adds `other` into this ledger.
     pub(super) fn merge(&mut self, other: &Self) {
-        for (statement, tally) in &other.0 {
-            self.0.entry(statement.clone()).or_default().add(*tally);
+        for (into, from) in [
+            (&mut self.own, &other.own),
+            (&mut self.background, &other.background),
+        ] {
+            for (statement, tally) in from {
+                into.entry(statement.clone()).or_default().add(*tally);
+            }
         }
     }
 
-    fn charge(&mut self, statement: &str, tally: Tally) {
-        self.0.entry(statement.to_owned()).or_default().add(tally);
+    /// Charges `unit`, the exchanges of one transaction or of one statement
+    /// outside a transaction, to the requests' own bytes or, when it ran a
+    /// [`BACKGROUND`] statement, apart from them.
+    fn settle(&mut self, unit: Vec<(String, Tally)>) {
+        let apart = unit.iter().any(|(statement, _)| {
+            BACKGROUND
+                .iter()
+                .any(|opening| statement.starts_with(opening))
+        });
+        let into = if apart {
+            &mut self.background
+        } else {
+            &mut self.own
+        };
+        for (statement, tally) in unit {
+            into.entry(statement).or_default().add(tally);
+        }
     }
 }
 
@@ -109,12 +161,7 @@ impl Wire {
                 let (client_read, client_write) = client.into_split();
                 let (server_read, server_write) = server.into_split();
                 let conn = Arc::new(Mutex::new(Conn::default()));
-                tokio::spawn(frontend(
-                    client_read,
-                    server_write,
-                    Arc::clone(&conn),
-                    Arc::clone(&shared),
-                ));
+                tokio::spawn(frontend(client_read, server_write, Arc::clone(&conn)));
                 tokio::spawn(backend(
                     server_read,
                     client_write,
@@ -165,6 +212,9 @@ struct Conn {
     sent: Tally,
     /// The groups sent and not yet answered by `ReadyForQuery`, oldest first.
     waiting: VecDeque<String>,
+    /// The exchanges since the connection was last idle, settled into the
+    /// ledger when a `ReadyForQuery` reports it idle again.
+    unit: Vec<(String, Tally)>,
 }
 
 /// A NUL-terminated string at the start of `bytes`, and what follows it.
@@ -189,13 +239,9 @@ fn declared(buf: &[u8], at: usize) -> Option<usize> {
     usize::try_from(u32::from_be_bytes(bytes)).ok()
 }
 
-/// Relays the client's bytes to the database, charging each message.
-async fn frontend(
-    mut from: OwnedReadHalf,
-    mut to: OwnedWriteHalf,
-    conn: Arc<Mutex<Conn>>,
-    ledger: Arc<Mutex<Ledger>>,
-) {
+/// Relays the client's bytes to the database, adding each message to the
+/// connection's exchanges.
+async fn frontend(mut from: OwnedReadHalf, mut to: OwnedWriteHalf, conn: Arc<Mutex<Conn>>) {
     let mut buf = Vec::new();
     let mut started = false;
     let mut chunk = vec![0u8; 64 * 1024];
@@ -218,13 +264,13 @@ async fn frontend(
                 started = true;
                 let mut conn = conn.lock().unwrap();
                 conn.waiting.push_back(STARTUP.to_owned());
-                ledger.lock().unwrap().charge(
-                    STARTUP,
+                conn.unit.push((
+                    STARTUP.to_owned(),
                     Tally {
                         sent: u64::try_from(len).expect("a message length"),
                         ..Tally::default()
                     },
-                );
+                ));
                 continue;
             }
             let Some(len) = declared(&buf, 1) else { break };
@@ -232,11 +278,7 @@ async fn frontend(
                 break;
             }
             let message: Vec<u8> = buf.drain(..=len).collect();
-            sent(
-                &message,
-                &mut conn.lock().unwrap(),
-                &mut ledger.lock().unwrap(),
-            );
+            sent(&message, &mut conn.lock().unwrap());
         }
         if to
             .write_all(chunk.get(..n).unwrap_or_default())
@@ -248,37 +290,38 @@ async fn frontend(
     }
 }
 
-/// Charges the frontend message `message` (its type byte first).
-fn sent(message: &[u8], conn: &mut Conn, ledger: &mut Ledger) {
+/// Adds the frontend message `message` (its type byte first) to the
+/// connection's exchanges.
+fn sent(message: &[u8], conn: &mut Conn) {
     let bytes = u64::try_from(message.len()).expect("a message length");
     let kind = message.first().copied().unwrap_or_default();
     let body = message.get(5..).unwrap_or_default();
     match kind {
-        b'p' => ledger.charge(
-            STARTUP,
+        b'p' => conn.unit.push((
+            STARTUP.to_owned(),
             Tally {
                 sent: bytes,
                 ..Tally::default()
             },
-        ),
+        )),
         b'Q' => {
             let (query, _) = cstr(body);
             let query = collapsed(&query);
             conn.waiting.push_back(query.clone());
-            ledger.charge(
-                &query,
+            conn.unit.push((
+                query,
                 Tally {
                     calls: 1,
                     sent: bytes,
                     received: 0,
                 },
-            );
+            ));
         }
         b'S' => {
             conn.sent.sent += bytes;
             let group = conn.group.take().unwrap_or_else(|| "(sync)".to_owned());
             let tally = std::mem::take(&mut conn.sent);
-            ledger.charge(&group, tally);
+            conn.unit.push((group.clone(), tally));
             conn.waiting.push_back(group);
         }
         _ => {
@@ -336,6 +379,9 @@ async fn backend(
                 break;
             }
             let kind = buf.first().copied().unwrap_or_default();
+            // NOTE: PostgreSQL Frontend/Backend Protocol §ReadyForQuery, its one byte `I` says
+            // the connection is idle, in no transaction.
+            let idle = kind == b'Z' && buf.get(5) == Some(&b'I');
             buf.drain(..=len);
             let tally = Tally {
                 received: u64::try_from(len).expect("a message length") + 1,
@@ -343,7 +389,11 @@ async fn backend(
             };
             let mut ledger = ledger.lock().unwrap();
             if kind == b'A' {
-                ledger.charge(NOTIFICATIONS, Tally { calls: 1, ..tally });
+                ledger
+                    .own
+                    .entry(NOTIFICATIONS.to_owned())
+                    .or_default()
+                    .add(Tally { calls: 1, ..tally });
                 continue;
             }
             let mut conn = conn.lock().unwrap();
@@ -352,9 +402,12 @@ async fn backend(
                 .front()
                 .cloned()
                 .unwrap_or_else(|| "(unsolicited)".to_owned());
-            ledger.charge(&group, tally);
+            conn.unit.push((group, tally));
             if kind == b'Z' {
                 conn.waiting.pop_front();
+            }
+            if idle {
+                ledger.settle(std::mem::take(&mut conn.unit));
             }
         }
         if to

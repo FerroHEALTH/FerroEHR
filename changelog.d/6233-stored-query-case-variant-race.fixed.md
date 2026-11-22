@@ -1,0 +1,1 @@
+- Two concurrent stores of case variants of one qualified query name at one version (`PUT /definition/query/{name}/{version}`) no longer both store: a unique index on the case-folded name and version decides the store, so one stores and the other answers `409`. A store now sends one statement where it sent two.
