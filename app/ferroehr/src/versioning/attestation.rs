@@ -152,6 +152,7 @@ pub(crate) async fn attest(
         time_committed,
         skipped: false,
         content_digest: None,
+        deleted: None,
     })
 }
 

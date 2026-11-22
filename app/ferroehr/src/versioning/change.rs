@@ -92,6 +92,9 @@ pub struct Committed {
     /// attestation. On a skipped re-send it is the digest the content and the
     /// existing version share.
     pub content_digest: Option<[u8; 32]>,
+    /// What the version a logical delete deleted held, as the delete's gate
+    /// read found it (EHDS Annex II 3.2(c)); `None` for every other write.
+    pub deleted: Option<crate::system_log::categories::ContentIds>,
 }
 
 /// The outcome of one CONTRIBUTION commit.
@@ -117,10 +120,14 @@ pub struct CommittedContribution {
 
 impl Committed {
     /// The identifiers the access record classifies this write by (EHDS Annex
-    /// II 3.2(c), #3621); `None` for a version that carries no content (a
-    /// logical delete), which wrote no priority-category data.
+    /// II 3.2(c), #3621): a logical delete's are those of the version it
+    /// deleted, when its gate read found them; `None` for a version that
+    /// carries no content otherwise.
     #[must_use]
     pub fn content_ids(&self) -> Option<crate::system_log::categories::ContentIds> {
+        if let Some(deleted) = &self.deleted {
+            return Some(deleted.clone());
+        }
         let ids = crate::system_log::categories::ContentIds::of_kind(
             self.kind.as_str(),
             self.template_id.clone(),
@@ -679,7 +686,7 @@ async fn apply_change(
         preplaced,
     } = scope;
     let target = change.target_vo_id();
-    let gate = restriction::ensure_not_restricted_tx(tx, ehr_id, target, known.restriction).await?;
+    let gate = restriction::ensure_not_restricted_tx(tx, ehr_id, target, &known).await?;
     let at = Placing {
         ehr_id,
         known_now: known.now,
@@ -912,6 +919,7 @@ async fn commit_resolved(
             time_committed,
             skipped: false,
             content_digest: r.content_digest,
+            deleted: None,
         },
         contribution_id,
     ))
@@ -939,6 +947,7 @@ fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
         time_committed: preceding.committed_at,
         skipped: true,
         content_digest: r.content_digest,
+        deleted: None,
     })
 }
 
@@ -976,46 +985,11 @@ pub(crate) struct Write {
     /// What the caller already read of the commit instant and the EHR.
     pub(crate) known: restriction::Known,
     /// A placement the caller already read under the per-object lock it holds
-    /// ([`precondition::lock_current`], or the composition-update mega-read); `None` makes
+    /// ([`precondition::lock_current`], or a composition write's gate read); `None` makes
     /// the write take the lock and read its own.
     pub(crate) placement: Option<crate::storage::version_repo::placement::Placement>,
-}
-
-impl Write {
-    /// A write of `change` to the object in `ehr_id` (or an ehr-less one),
-    /// reading its own commit instant and placement.
-    pub(crate) fn new(ehr_id: Option<EhrId>, change: Change, audit: AuditInput) -> Self {
-        Self {
-            ehr_id,
-            change,
-            audit,
-            known: restriction::Known::default(),
-            placement: None,
-        }
-    }
-
-    /// The same write at the commit instant `now` the caller already read.
-    pub(crate) fn at(self, now: jiff::Timestamp) -> Self {
-        Self {
-            known: restriction::Known {
-                now: Some(now),
-                ..self.known
-            },
-            ..self
-        }
-    }
-
-    /// The same write off the placement the caller already read under the
-    /// per-object lock it holds.
-    pub(crate) fn placed(
-        self,
-        placement: crate::storage::version_repo::placement::Placement,
-    ) -> Self {
-        Self {
-            placement: Some(placement),
-            ..self
-        }
-    }
+    /// What the version a logical delete deletes holds ([`Committed::deleted`]).
+    pub(crate) deleted: Option<crate::system_log::categories::ContentIds>,
 }
 
 /// Commit one change under its own contribution, with its event-outbox row.
@@ -1037,8 +1011,9 @@ pub(crate) async fn commit(
         audit,
         known,
         placement,
+        deleted,
     } = write;
-    let (committed, contribution_id, references) = apply_change(
+    let (mut committed, contribution_id, references) = apply_change(
         tx,
         CommitScope {
             ehr_id,
@@ -1052,6 +1027,7 @@ pub(crate) async fn commit(
         ctx.skip_identical_resend,
     )
     .await?;
+    committed.deleted = deleted;
     let references: Vec<_> = references.into_iter().map(|r| (None, r)).collect();
     crate::versioning::party_refs::check(tx, &references).await?;
     crate::party_binding::grants::caller::subject::settle(tx, [committed.kind]).await?;
@@ -1152,7 +1128,13 @@ pub(crate) async fn commit_contribution(
     crate::party_binding::grants::caller::subject::settle(tx, kinds).await?;
     // Standalone 666 attestations of existing versions, at the commit-act time.
     for item in attests {
-        restriction::ensure_not_restricted_tx(tx, ehr_id, Some(item.vo_id), None).await?;
+        restriction::ensure_not_restricted_tx(
+            tx,
+            ehr_id,
+            Some(item.vo_id),
+            &restriction::Known::default(),
+        )
+        .await?;
         let full =
             attestation::complete_attestation(&item.partial, &item.system_id, contribution_time);
         committed.push(

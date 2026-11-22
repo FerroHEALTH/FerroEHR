@@ -80,6 +80,18 @@ pub struct PolicyHeads {
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn policy_heads(pool: &PgPool) -> Result<PolicyHeads, StorageError> {
+    policy_heads_on(&mut *acquire(pool).await?).await
+}
+
+/// [`policy_heads`] on `conn`.
+///
+/// Inside a policy write's transaction, after its write moved
+/// `policy_revision`, it reads the versions and the revision that transaction
+/// produced, every earlier writer's change among them (#6265).
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn policy_heads_on(conn: &mut PgConnection) -> Result<PolicyHeads, StorageError> {
     let rows = sqlx::query(
         "SELECT register, max(version) AS version, NULL::integer AS policy, \
                 NULL::bigint AS revision \
@@ -89,7 +101,7 @@ pub async fn policy_heads(pool: &PgPool) -> Result<PolicyHeads, StorageError> {
          UNION ALL \
          SELECT NULL, NULL, NULL, revision FROM policy_revision WHERE singleton",
     )
-    .fetch_all(&mut *acquire(pool).await?)
+    .fetch_all(conn)
     .await?;
     let mut heads = PolicyHeads {
         registers: Vec::with_capacity(rows.len()),

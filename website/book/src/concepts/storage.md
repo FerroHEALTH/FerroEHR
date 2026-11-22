@@ -342,6 +342,7 @@ sequenceDiagram
     S->>S: validate (RM invariants, WebTemplate, terminology)
     S->>PG: BEGIN
     S->>PG: advisory lock on vo_id (serializes the lineage)
+    S->>PG: gate read (EHR state, tip, restriction marks, revisions, now())
     S->>PG: INSERT commit_audit (change_type, committer, time_committed = now())
     S->>PG: INSERT contribution (commit_audit_id, ehr_id)
     S->>PG: INSERT version (new tip, committed_at = now(), body bytes)
@@ -353,6 +354,11 @@ sequenceDiagram
 
 Details that matter:
 
+- The gate read is one statement that returns everything the write's
+  pre-checks are judged on: whether the EHR exists, is modifiable and is
+  restricted, the object's current tip and next ordinal with its own
+  restriction mark, the policy and definition revisions, and the database
+  `now()` the commit stamps.
 - `time_committed` is always server-computed, never client-supplied; the RM
   requires the committal time to reflect the EHR server's own clock.
 - There is no close-out statement: the head row advancing past the previous

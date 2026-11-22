@@ -329,6 +329,9 @@ impl FerroEhrService {
             .execute(&mut *tx)
             .await
             .map_err(ServiceError::Database)?;
+        let heads = crate::storage::policy_register::policy_heads_on(&mut tx)
+            .await
+            .map_err(ServiceError::Storage)?;
         let mut records = Vec::new();
         if log_meaning_changed {
             let version_uid = object_version_id(VoId(vo_id), &system_id, TreeId::trunk(version));
@@ -340,7 +343,7 @@ impl FerroEhrService {
         // NOTE: our own design (#5879), the connection goes back before the next read, which
         // would otherwise wait for a second one while every connection is held so.
         drop(conn);
-        self.read_access_policy().await?;
+        self.confirm_written_policy(&heads).await?;
         let written = self.access_policy_current().await?.ok_or_else(|| {
             ServiceError::exception("the access policy version just committed does not read")
         })?;

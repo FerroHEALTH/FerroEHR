@@ -247,8 +247,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   COMPOSITION commit asks the store only of an address the copy does not hold
   (#5775, our own design); the `version.template_id` foreign key and the
   template delete guard still refuse a template released at the same moment.
-  A COMPOSITION commit reads its EHR's existence, `is_modifiable`, restriction
-  mark and settings revision in one statement (`ehr_repo::ehr_writability`).
+  A COMPOSITION create, update or delete reads everything its pre-checks are
+  judged on in one gate read (`version_repo::gate`, #6256): the EHR's
+  existence, `is_modifiable`, restriction mark and settings revision with the
+  policy and definition revisions, the database `now()` the commit stamps, and
+  per target object its trunk tip, next ordinal and restriction mark, with the
+  stored template and first root of an update, the content identity of the
+  version a delete deletes, which its access record is classified by, and
+  whether a persistent create has a live sibling of its template.
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers
@@ -695,7 +701,13 @@ per outer row. The probe for an earlier row states its conditions as
 anchor whose leaf the SELECT already binds is tied to that bound row and
 needs no probe; otherwise the probe joins the statement beside the anchor,
 correlated to the leaf's source row, so it runs for the rows the containment
-keeps (#6249).
+keeps (#6249). A flat statement that anchors a leaf no SELECT column binds
+reads each node a CONTAINS step finds inside its object, behind an `OFFSET 0`
+fence, as a query scoped to named EHRs does (#4487): the anchor or the version
+spine is the entry, and no contained node can be rescanned with the WHERE
+clause's `EXISTS` per outer row on statistics a growing store has outgrown.
+A rare archetype under a broad range then costs one probe per anchored
+version, which is linear where the rescan was quadratic (#6263).
 `event_time` is a stored copy of a `STABLE` function's value: it equals the
 comparison's reading because every session runs under `TimeZone = UTC`,
 which the driver sets at connection start. The feature envelope is
@@ -1813,7 +1825,10 @@ one indexed read then finds. Otherwise that run is dropped whole: its answer,
 its evaluator and its uncounted decisions go unused, so it leaves no access
 record, audit record or decision metric, and the read runs once more behind the
 up-front confirm, which never runs it again. `access_policy_reruns_total{op}`
-counts those runs (#6251). **Our own design:** the revision and the
+counts those runs (#6251). A policy write reads the heads inside its own
+transaction after its write moved the revision, so it sees every earlier
+writer's change and its own, and the writing replica confirms both copies at
+the revision its committed transaction produced (#6265). **Our own design:** the revision and the
 confirmation.
 
 **The patient's EHRs** (#5648, #5649). `FerroEhrService::subject_ehrs`, the
