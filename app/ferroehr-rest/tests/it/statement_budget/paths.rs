@@ -763,12 +763,12 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::DirectoryCreate, 4985),
     (Path::DirectoryUpdate, 4795),
     (Path::DirectoryDelete, 4152),
-    (Path::PartyUpdate, 999_999),
-    (Path::PartyDelete, 999_999),
-    (Path::CommitOrganisation, 999_999),
-    (Path::CommitGroup, 999_999),
-    (Path::CommitRole, 999_999),
-    (Path::CommitAgent, 999_999),
+    (Path::PartyUpdate, 0),
+    (Path::PartyDelete, 0),
+    (Path::CommitOrganisation, 0),
+    (Path::CommitGroup, 0),
+    (Path::CommitRole, 0),
+    (Path::CommitAgent, 0),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
