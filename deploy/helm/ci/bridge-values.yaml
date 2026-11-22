@@ -86,7 +86,8 @@ bridge:
   config:
     auth:
       issuer:
-        - issuer: https://idp.example.org
+        callers:
+          issuer: https://idp.example.org
           kind: machines
           audience: [https://bridge.example.org/fhir]
     operations:
