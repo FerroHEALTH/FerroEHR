@@ -20,6 +20,8 @@
 //! reads next and renders is `super::outbox`. No specification governs where
 //! a record waits for its delivery: our own design.
 
+use std::sync::LazyLock;
+
 use super::AuditStore;
 use super::chains::AuditChain;
 use crate::db::acquire::acquire;
@@ -81,6 +83,15 @@ impl Parked {
     }
 }
 
+/// What an operator does with a parked record.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParkedAct {
+    /// Deliver it again, before the next record past the sink's cursor.
+    Retry,
+    /// Remove it: the sink will not deliver it.
+    Dismiss,
+}
+
 /// One record a sink owes: its log, its id, and whether an operator asked
 /// to retry it after it was parked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -125,6 +136,29 @@ impl Due {
         })
     }
 }
+
+/// The statement that starts the cursor of each sink `$1` names that has
+/// none at the last id each log has drawn.
+static START_CURSORS: LazyLock<String> = LazyLock::new(|| {
+    format!(
+        "WITH drawn(access_log, system) AS ({}) \
+             INSERT INTO audit.delivery_cursor (sink, chain, through_id) \
+             SELECT s.sink, l.chain, coalesce(l.last, 0) FROM drawn \
+              CROSS JOIN LATERAL (VALUES ('access_log', drawn.access_log), \
+                                         ('system', drawn.system)) AS l(chain, last) \
+              CROSS JOIN unnest($1::text[]) AS s(sink) \
+             ON CONFLICT (sink, chain) DO NOTHING",
+        crate::access_log::frontier::LAST_VALUES
+    )
+});
+
+/// The statement that reads every cursor with how far it is behind.
+static CURSORS: LazyLock<String> = LazyLock::new(|| {
+    format!(
+        "SELECT c.sink, c.chain, c.through_id, {BEHIND} FROM audit.delivery_cursor c \
+         ORDER BY c.sink, c.chain"
+    )
+});
 
 impl AuditStore {
     /// Notes that `sink`'s repository accepted `owed`: a retried parked
@@ -246,19 +280,10 @@ impl AuditStore {
         if sinks.is_empty() {
             return Ok(());
         }
-        sqlx::query(sqlx::AssertSqlSafe(format!(
-            "WITH drawn(access_log, system) AS ({}) \
-             INSERT INTO audit.delivery_cursor (sink, chain, through_id) \
-             SELECT s.sink, l.chain, coalesce(l.last, 0) FROM drawn \
-              CROSS JOIN LATERAL (VALUES ('access_log', drawn.access_log), \
-                                         ('system', drawn.system)) AS l(chain, last) \
-              CROSS JOIN unnest($1::text[]) AS s(sink) \
-             ON CONFLICT (sink, chain) DO NOTHING",
-            crate::access_log::frontier::LAST_VALUES
-        )))
-        .bind(&sinks)
-        .execute(&mut *acquire(&self.pool).await?)
-        .await?;
+        sqlx::query(sqlx::AssertSqlSafe(START_CURSORS.as_str()))
+            .bind(&sinks)
+            .execute(&mut *acquire(&self.pool).await?)
+            .await?;
         Ok(())
     }
 }
@@ -282,12 +307,9 @@ impl AuditStore {
     pub async fn delivery_view(&self) -> Result<DeliveryView, AuditError> {
         let mut conn = acquire(&self.pool).await?;
         let cursors: Vec<(String, String, i64, i64)> =
-            sqlx::query_as(sqlx::AssertSqlSafe(format!(
-                "SELECT c.sink, c.chain, c.through_id, {BEHIND} FROM audit.delivery_cursor c \
-                 ORDER BY c.sink, c.chain"
-            )))
-            .fetch_all(&mut *conn)
-            .await?;
+            sqlx::query_as(sqlx::AssertSqlSafe(CURSORS.as_str()))
+                .fetch_all(&mut *conn)
+                .await?;
         let parked: Vec<(String, String, i64, String, jiff_sqlx::Timestamp, bool)> =
             sqlx::query_as(
                 "SELECT sink, chain, record_id, reason, parked_at, retry \
@@ -337,55 +359,41 @@ impl AuditStore {
         Ok(behind.into_iter().collect())
     }
 
-    /// Asks that `sink` deliver its parked record `id` of `chain` again,
-    /// before the next record past its cursor; returns whether it was
-    /// parked.
+    /// Does `act` to `sink`'s parked record `id` of `chain`; returns whether
+    /// it was parked.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the statement fails.
-    pub async fn retry_parked(
+    pub async fn act_on_parked(
         &self,
+        act: ParkedAct,
         sink: Sink,
         chain: AuditChain,
         id: i64,
     ) -> Result<bool, AuditError> {
-        let changed = sqlx::query(
-            "UPDATE audit.delivery_parked SET retry = true \
-             WHERE sink = $1 AND chain = $2 AND record_id = $3",
-        )
-        .bind(sink.as_str())
-        .bind(chain.as_str())
-        .bind(id)
-        .execute(&mut *acquire(&self.pool).await?)
-        .await?;
-        Ok(changed.rows_affected() > 0)
-    }
-
-    /// Removes `sink`'s parked record `id` of `chain`, which an operator
-    /// decided it will not deliver; returns whether it was parked.
-    ///
-    /// # Errors
-    /// [`AuditError::Store`] when the statement fails.
-    pub async fn dismiss_parked(
-        &self,
-        sink: Sink,
-        chain: AuditChain,
-        id: i64,
-    ) -> Result<bool, AuditError> {
-        let changed = sqlx::query(
-            "DELETE FROM audit.delivery_parked WHERE sink = $1 AND chain = $2 AND record_id = $3",
-        )
-        .bind(sink.as_str())
-        .bind(chain.as_str())
-        .bind(id)
-        .execute(&mut *acquire(&self.pool).await?)
-        .await?;
+        let statement = match act {
+            ParkedAct::Retry => {
+                "UPDATE audit.delivery_parked SET retry = true \
+                 WHERE sink = $1 AND chain = $2 AND record_id = $3"
+            }
+            ParkedAct::Dismiss => {
+                "DELETE FROM audit.delivery_parked \
+                 WHERE sink = $1 AND chain = $2 AND record_id = $3"
+            }
+        };
+        let changed = sqlx::query(statement)
+            .bind(sink.as_str())
+            .bind(chain.as_str())
+            .bind(id)
+            .execute(&mut *acquire(&self.pool).await?)
+            .await?;
         Ok(changed.rows_affected() > 0)
     }
 
     /// Removes `sink`'s cursors and parked records, which an operator decided
     /// it will not deliver; returns how many cursors and parked records went.
-    /// A sink configured again starts at the delivery frontier then.
+    /// A sink configured again starts at the last id each log has drawn when
+    /// the server next starts.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the statement fails.

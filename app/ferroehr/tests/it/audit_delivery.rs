@@ -22,7 +22,7 @@ use ferroehr::system_log::event::{
     AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
 use ferroehr::system_log::store::chains::AuditChain;
-use ferroehr::system_log::store::delivery::{Due, Parked, Sink};
+use ferroehr::system_log::store::delivery::{Due, Parked, ParkedAct, Sink};
 use ferroehr::system_log::store::{AuditRecord, AuditStore, RecordEnd};
 
 /// A template read of subject `n`, a system record.
@@ -178,7 +178,12 @@ async fn a_refused_record_is_parked_and_delivered_after_a_retry() {
 
     assert!(
         store
-            .retry_parked(Sink::FhirFeed, AuditChain::System, first.id)
+            .act_on_parked(
+                ParkedAct::Retry,
+                Sink::FhirFeed,
+                AuditChain::System,
+                first.id
+            )
             .await
             .expect("a retry")
     );
@@ -223,13 +228,18 @@ async fn a_dismissed_record_is_never_offered() {
         .expect("parked");
     assert!(
         store
-            .dismiss_parked(Sink::FhirFeed, AuditChain::System, due.id)
+            .act_on_parked(
+                ParkedAct::Dismiss,
+                Sink::FhirFeed,
+                AuditChain::System,
+                due.id
+            )
             .await
             .expect("a dismissal")
     );
     assert!(
         !store
-            .retry_parked(Sink::FhirFeed, AuditChain::System, due.id)
+            .act_on_parked(ParkedAct::Retry, Sink::FhirFeed, AuditChain::System, due.id)
             .await
             .expect("a retry of nothing"),
         "a dismissed record is parked no more"

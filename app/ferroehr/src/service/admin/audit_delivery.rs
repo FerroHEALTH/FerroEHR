@@ -15,7 +15,7 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::service::FerroEhrService;
 use crate::system_log::store::chains::AuditChain;
-use crate::system_log::store::delivery::{DeliveryView, Sink};
+use crate::system_log::store::delivery::{DeliveryView, ParkedAct, Sink};
 
 /// What a failed delivery read or act names as the failing store.
 const DELIVERY_STORE: &str = "the audit delivery state";
@@ -77,7 +77,7 @@ impl FerroEhrService {
         let (sink, chain) = (sink(sink_name)?, chain(chain_name)?);
         let found = self
             .delivering_store()?
-            .retry_parked(sink, chain, id)
+            .act_on_parked(ParkedAct::Retry, sink, chain, id)
             .await
             .map_err(|error| ServiceError::internal(DELIVERY_STORE, error))?;
         parked_or_missing(found, sink_name, chain_name, id)
@@ -97,7 +97,7 @@ impl FerroEhrService {
         let (sink, chain) = (sink(sink_name)?, chain(chain_name)?);
         let found = self
             .delivering_store()?
-            .dismiss_parked(sink, chain, id)
+            .act_on_parked(ParkedAct::Dismiss, sink, chain, id)
             .await
             .map_err(|error| ServiceError::internal(DELIVERY_STORE, error))?;
         tracing::warn!(
