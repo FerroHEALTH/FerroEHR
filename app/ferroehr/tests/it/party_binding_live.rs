@@ -272,48 +272,95 @@ async fn a_change_whose_notification_is_withheld_decides_the_next_lookup() {
     assert_eq!(parties(&lookup(&second, other).await), [person_ref(bound)]);
 }
 
-/// The binding revision moves once in each transaction that changes a key
-/// row, a membership, a representation or a key space's state, and with no
-/// other statement (#6048).
+/// The binding revision moves, and `ferroehr_party_binding` hears of it,
+/// once in each transaction that changes at least one key row, membership,
+/// representation or key space state, however many statements change rows
+/// (#6048); a statement that changes no row, a key space's fill, an unchanged
+/// state and a rolled-back change move and notify nothing (#6284).
 #[tokio::test]
 #[expect(
     clippy::disallowed_methods,
     reason = "a test reads the database on a raw pool connection, outside any request"
 )]
-async fn every_change_of_the_side_table_moves_the_binding_revision_once() {
+async fn only_a_change_of_the_side_table_moves_the_binding_revision_once() {
     let (db, _svc) = crate::fixtures::service().await;
     let pool = db.pool();
+    let mut heard = sqlx::postgres::PgListener::connect_with(&pool)
+        .await
+        .expect("a listener connects");
+    heard
+        .listen(ferroehr::party_binding::live::CHANNEL)
+        .await
+        .expect("the listener listens");
     let revision = || async {
         sqlx::query_scalar::<_, i64>("SELECT binding_revision FROM party.binding_grant_revision")
             .fetch_one(&pool)
             .await
             .expect("the revision reads")
     };
-    let changes = [
-        "UPDATE party.binding_identifier SET value = value WHERE false",
-        "UPDATE party.binding_membership SET member_id = member_id WHERE false",
-        "UPDATE party.binding_representation SET subject_id = subject_id WHERE false",
-        "UPDATE party.binding_key_space SET state = state WHERE false",
+    let changed = [
+        [
+            "INSERT INTO party.binding_identifier \
+             (party_id, selector, issuer, identifier_type, value, lifecycle_state, folded) \
+             VALUES (gen_random_uuid(), 'key', 'urn:probe', 'guid', 'probe-1', '532', 'probe-1')",
+            "UPDATE party.binding_identifier SET retired_at = now() WHERE issuer = 'urn:probe'",
+        ],
+        [
+            "INSERT INTO party.binding_membership (group_id, member_id) \
+             VALUES (gen_random_uuid(), gen_random_uuid())",
+            "UPDATE party.binding_membership SET retired_at = now()",
+        ],
+        [
+            "INSERT INTO party.binding_representation (representative_id, subject_id, \
+             validity, relationship_id, basis_terminology, basis_code, provider_issuer, \
+             provider_id) VALUES (gen_random_uuid(), gen_random_uuid(), '{}', \
+             gen_random_uuid(), 'local', 'probe', 'urn:probe', 'probe')",
+            "DELETE FROM party.binding_representation WHERE basis_code = 'probe'",
+        ],
+        [
+            "INSERT INTO party.binding_key_space (issuer, portal, state) \
+             VALUES ('urn:probe', false, 'pending')",
+            "UPDATE party.binding_key_space SET state = 'active' WHERE issuer = 'urn:probe'",
+        ],
     ];
-    for change in changes {
+    for statements in changed {
         let before = revision().await;
         let mut tx = pool.begin().await.expect("begin");
-        for _ in 0..2 {
-            sqlx::query(change)
+        for statement in statements {
+            let rows = sqlx::query(statement)
                 .execute(&mut *tx)
                 .await
-                .expect("the change applies");
+                .expect("the change applies")
+                .rows_affected();
+            assert!(rows > 0, "{statement} changes a row");
         }
         tx.commit().await.expect("commit");
-        assert_eq!(revision().await, before + 1, "{change}");
+        assert_eq!(revision().await, before + 1, "{statements:?}");
+        assert_eq!(
+            heard_now(&mut heard).await,
+            [String::new()],
+            "{statements:?}"
+        );
     }
     let before = revision().await;
-    sqlx::query("UPDATE party.binding_key_space SET fill_after = fill_after WHERE false")
-        .execute(&pool)
-        .await
-        .expect("a change of a key space's fill");
+    for unchanged in [
+        "UPDATE party.binding_identifier SET value = value WHERE false",
+        "DELETE FROM party.binding_identifier WHERE false",
+        "INSERT INTO party.binding_identifier SELECT * FROM party.binding_identifier WHERE false",
+        "UPDATE party.binding_membership SET member_id = member_id WHERE false",
+        "UPDATE party.binding_representation SET subject_id = subject_id WHERE false",
+        "DELETE FROM party.binding_representation WHERE false",
+        "UPDATE party.binding_key_space SET state = state WHERE false",
+        "UPDATE party.binding_key_space SET state = state",
+        "UPDATE party.binding_key_space SET fill_after = fill_after",
+    ] {
+        sqlx::query(unchanged)
+            .execute(&pool)
+            .await
+            .expect("the statement applies");
+    }
     let mut tx = pool.begin().await.expect("begin");
-    sqlx::query(changes[0])
+    sqlx::query(changed[1][0])
         .execute(&mut *tx)
         .await
         .expect("the change applies");
@@ -321,6 +368,28 @@ async fn every_change_of_the_side_table_moves_the_binding_revision_once() {
     assert_eq!(
         revision().await,
         before,
-        "a fill and a rolled-back change move nothing"
+        "a statement that changes no row, an unchanged state, a fill and a rolled-back change \
+         move nothing"
     );
+    assert_eq!(
+        heard_now(&mut heard).await,
+        Vec::<String>::new(),
+        "and notify nothing"
+    );
+}
+
+/// The payloads `heard` receives until none arrives for half a second.
+async fn heard_now(heard: &mut sqlx::postgres::PgListener) -> Vec<String> {
+    let mut payloads = Vec::new();
+    while let Ok(notification) =
+        tokio::time::timeout(Duration::from_millis(500), heard.recv()).await
+    {
+        payloads.push(
+            notification
+                .expect("the listener receives")
+                .payload()
+                .to_owned(),
+        );
+    }
+    payloads
 }
