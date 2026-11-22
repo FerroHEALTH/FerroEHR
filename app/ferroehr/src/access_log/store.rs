@@ -475,18 +475,32 @@ async fn replace(
 /// # Errors
 /// [`AccessLogError::Unreadable`] when the record does not read.
 pub(crate) fn stored<T: serde::de::DeserializeOwned>(row: &PgRow) -> Result<T, AccessLogError> {
-    let document = document_of(row)?;
+    let shared = row.try_get("shared_part")?;
+    stored_with(row, shared)
+}
+
+/// [`stored`] with `shared` as the record's shared part, which a page of
+/// records carries once for every record naming it (#6244).
+///
+/// # Errors
+/// [`AccessLogError::Unreadable`] when the record does not read.
+pub(crate) fn stored_with<T: serde::de::DeserializeOwned>(
+    row: &PgRow,
+    shared: Option<&str>,
+) -> Result<T, AccessLogError> {
+    let document = document_of(row, shared)?;
     read_document(row, &document)
 }
 
-/// The canonical form of the record `row` holds, joined
-/// from the columns of [`entry_parts`]: the exact text its content digest
-/// covers.
+/// The canonical form of the record `row` holds, joined from the columns of
+/// [`entry_parts`] and `shared`, the record's shared part, which a page of
+/// records reads once for every record naming it (#6244): the exact text its
+/// content digest covers.
 ///
 /// # Errors
 /// [`AccessLogError::Unreadable`] when the parts do not join, and the store
 /// errors when a column does not read.
-pub(crate) fn document_of(row: &PgRow) -> Result<String, AccessLogError> {
+pub(crate) fn document_of(row: &PgRow, shared: Option<&str>) -> Result<String, AccessLogError> {
     let chain_seq: i64 = row.try_get("chain_seq")?;
     let record_type: &str = row.try_get("entry_type")?;
     let columns = stored_form::parts::RowColumns {
@@ -501,12 +515,8 @@ pub(crate) fn document_of(row: &PgRow) -> Result<String, AccessLogError> {
             resource_id: row.try_get("resource_id")?,
         },
     };
-    stored_form::parts::whole(
-        row.try_get("row_part")?,
-        row.try_get("shared_part")?,
-        &columns,
-    )
-    .map_err(|source| AccessLogError::Unreadable { chain_seq, source })
+    stored_form::parts::whole(row.try_get("row_part")?, shared, &columns)
+        .map_err(|source| AccessLogError::Unreadable { chain_seq, source })
 }
 
 /// The record whose canonical form is `document`, read as a `T` with no

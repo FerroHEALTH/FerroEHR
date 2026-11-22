@@ -155,6 +155,7 @@ fn every_identifier_comes_from_the_closed_set() {
         "position",
         "page_key",
         "page_record",
+        "shared_digest",
     ]);
     expected.sort_unstable();
     expected.dedup();

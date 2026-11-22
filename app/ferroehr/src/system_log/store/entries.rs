@@ -277,12 +277,27 @@ impl AuditStore {
     /// its columns.
     ///
     /// # Errors
-    /// [`AuditError::Unreadable`] and [`AuditError::UnreadableJson`] when the
-    /// row or its policy does not read, [`AuditError::Recorded`] when an
-    /// entry does not read as an audit record.
+    /// As [`Self::record_of_with`].
     pub(crate) async fn record_of(
         &self,
         row: &PgRow,
+    ) -> Result<(Arc<CompiledPolicy>, StoredRecord), AuditError> {
+        let shared = row.try_get("shared_part")?;
+        self.record_of_with(row, shared).await
+    }
+
+    /// The record `row` of `audit.audit_record` holds, and the policy it is
+    /// rendered under: an entry read from its content and `shared`, its
+    /// shared part, any other record from its columns.
+    ///
+    /// # Errors
+    /// [`AuditError::Unreadable`] and [`AuditError::UnreadableJson`] when the
+    /// row or its policy does not read, [`AuditError::Recorded`] when an
+    /// entry does not read as an audit record.
+    pub(crate) async fn record_of_with(
+        &self,
+        row: &PgRow,
+        shared: Option<&str>,
     ) -> Result<(Arc<CompiledPolicy>, StoredRecord), AuditError> {
         if row.try_get::<Option<&str>, _>("entry_type")?.is_none() {
             let (digest, stored) = stored_record(row)?;
@@ -290,7 +305,7 @@ impl AuditStore {
             return Ok((policy, stored));
         }
         let chain_seq: i64 = row.try_get("chain_seq")?;
-        let entry: AccessLogEntry = crate::access_log::store::stored(row)?;
+        let entry: AccessLogEntry = crate::access_log::store::stored_with(row, shared)?;
         let digest: Vec<u8> = row.try_get("render_policy")?;
         let policy = self.policy(chain_seq, &digest).await?;
         let stored = crate::access_log::recorded::stored(&entry, chain_seq)?;
