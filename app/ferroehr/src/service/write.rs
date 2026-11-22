@@ -144,12 +144,16 @@ impl FerroEhrService {
             let (ehr_id, committed) = match mode {
                 Mode::Statement => {
                     let write = prepare(&mut conn).await?;
+                    crate::policy_register::observed::wrote();
                     let ehr_id = write.ehr_id;
                     (ehr_id, commit(&mut conn, write, &signing_ctx).await?)
                 }
                 Mode::Transaction | Mode::SyncSubject(..) => {
                     let mut tx = conn.begin().await?;
                     let write = prepare(&mut tx).await?;
+                    // NOTE: our own design (#6256), from here the write may land, so
+                    // the request is never run again, whatever its copies held.
+                    crate::policy_register::observed::wrote();
                     let ehr_id = write.ehr_id;
                     let committed = commit(&mut tx, write, &signing_ctx).await?;
                     let facts = Self::written_facts(ehr_id, &committed);

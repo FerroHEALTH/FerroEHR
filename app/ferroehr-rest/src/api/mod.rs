@@ -85,7 +85,6 @@ use openehr_its::rest::routes::{Param, ParamLocation, PathParam, RouteMatch};
 use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::extensions::access::admission;
 #[cfg(feature = "fhir")]
 use crate::extensions::fhir;
 use crate::extensions::terminology;
@@ -407,7 +406,7 @@ where
             .insert(crate::system_log::middleware::AuditOpId(op));
         return resp;
     }
-    let mut resp = if admission::overlaps(op) {
+    let mut resp = if guarded::confirms_after(op) {
         guarded::after(&state, op, parts, &handler).await
     } else {
         guarded::confirmed(&state, op, parts, &handler).await

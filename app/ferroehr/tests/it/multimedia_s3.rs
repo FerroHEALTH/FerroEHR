@@ -938,3 +938,111 @@ async fn unreachable_store_refuses_expansion_instead_of_answering_silently() {
         "expected a server fault, got {err:?}"
     );
 }
+
+/// A COMPOSITION without a template, carrying `media` as an ELEMENT value of
+/// its context.
+fn composition_with_media(media: &Value) -> Value {
+    json!({
+        "_type": "COMPOSITION",
+        "archetype_node_id": "openEHR-EHR-COMPOSITION.encounter.v1",
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-COMPOSITION.encounter.v1" },
+            "rm_version": "1.2.0" },
+        "name": { "_type": "DV_TEXT", "value": "Encounter with a scan" },
+        "language": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ISO_639-1" },
+            "code_string": "nl" },
+        "territory": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ISO_3166-1" },
+            "code_string": "NL" },
+        "category": { "_type": "DV_CODED_TEXT", "value": "event",
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": "433" } },
+        "composer": { "_type": "PARTY_IDENTIFIED", "name": "Dr. Anna Jansen" },
+        "context": {
+            "_type": "EVENT_CONTEXT",
+            "start_time": { "_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z" },
+            "setting": { "_type": "DV_CODED_TEXT", "value": "other care",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                    "code_string": "238" } },
+            "other_context": {
+                "_type": "ITEM_TREE",
+                "name": { "_type": "DV_TEXT", "value": "tree" },
+                "archetype_node_id": "at0001",
+                "items": [ {
+                    "_type": "ELEMENT",
+                    "name": { "_type": "DV_TEXT", "value": "scan" },
+                    "archetype_node_id": "at0002",
+                    "value": media
+                } ]
+            }
+        }
+    })
+}
+
+/// #6256: a COMPOSITION commit refused after its media went to the blob store
+/// leaves the blob that the same body, committed again, references. The
+/// offload is content-addressed, so a commit run once more on a confirmed
+/// policy copy, or retried by its client, writes the same key, and the refused
+/// run orphans nothing; a blob no commit ever references is the sweep's
+/// (`the_sweep_deletes_an_orphan_past_the_grace_and_nothing_a_version_references`).
+#[tokio::test]
+async fn a_commit_refused_after_its_offload_leaves_the_blob_its_retry_references() {
+    let db = testkit::db().await.expect("testkit database");
+    let sw = Seaweed::start().await;
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_multimedia(sw.engine());
+    let ehr = Box::pin(svc.create_ehr_meta(WriteRequest::new(None)))
+        .await
+        .map(|(id, _)| id)
+        .expect("create ehr");
+    let body = composition_with_media(&multimedia(1000));
+    let request = || {
+        WriteRequest::new(
+            openehr_its::json::from_canonical_value(&body).expect("the COMPOSITION decodes"),
+        )
+    };
+    let key = BlobKey::of(&[0x42u8; 1000]);
+
+    sqlx::query("UPDATE ehr SET is_modifiable = false WHERE id = $1")
+        .bind(ehr)
+        .execute(&pool)
+        .await
+        .expect("deactivate the EHR");
+    let refused = Box::pin(svc.create_composition(ehr, request()))
+        .await
+        .expect_err("a commit into an inactive EHR is refused");
+    assert!(
+        refused.message().contains("not modifiable"),
+        "the refusal comes after the offload: {refused:?}"
+    );
+    assert!(
+        sw.engine().store().exists(&key).await.unwrap(),
+        "the refused run offloaded its media before its gate"
+    );
+
+    sqlx::query("UPDATE ehr SET is_modifiable = true WHERE id = $1")
+        .bind(ehr)
+        .execute(&pool)
+        .await
+        .expect("reactivate the EHR");
+    let committed = Box::pin(svc.create_composition(ehr, request()))
+        .await
+        .expect("the same body commits");
+    let referenced: Vec<String> =
+        sqlx::query_scalar("SELECT uri FROM blob_ref WHERE vo_id = $1 AND sys_version = $2")
+            .bind(committed.vo_id)
+            .bind(committed.sys_version)
+            .fetch_all(&pool)
+            .await
+            .expect("the references");
+    assert_eq!(
+        referenced,
+        vec![sw.engine().store().uri_for(&key)],
+        "the committed version references the blob the refused run wrote"
+    );
+}
