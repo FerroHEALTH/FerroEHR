@@ -101,8 +101,11 @@ pub async fn replace(
 /// case-variant of the name is stored at that version; `false`, with nothing
 /// written, when one is.
 ///
-/// The exact-case insert is race-safe through `ON CONFLICT DO NOTHING` on the
-/// `(reverse_domain_name, semantic_id, semver)` key.
+/// One statement, race-safe: `ON CONFLICT DO NOTHING` names no target, so
+/// every unique index arbitrates, the case-insensitive
+/// `ux_stored_query_name_version_ci` and the exact-case key it implies, and a
+/// concurrent store of a case variant waits for the first and inserts
+/// nothing (#6233).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -113,29 +116,15 @@ pub async fn insert(
     query_text: &str,
 ) -> Result<bool, StorageError> {
     let (reverse_domain_name, semantic_id) = key(name);
-    let version = version.to_string();
-    let exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM stored_query \
-         WHERE lower(reverse_domain_name) = lower($1) \
-         AND lower(semantic_id) = lower($2) AND semver = $3)",
-    )
-    .bind(reverse_domain_name)
-    .bind(semantic_id)
-    .bind(&version)
-    .fetch_one(&mut *tx)
-    .await?;
-    if exists {
-        return Ok(false);
-    }
     let inserted = sqlx::query(
         "INSERT INTO stored_query \
          (reverse_domain_name, semantic_id, semver, query_type, query_text) \
          VALUES ($1, $2, $3, 'AQL', $4) \
-         ON CONFLICT (reverse_domain_name, semantic_id, semver) DO NOTHING",
+         ON CONFLICT DO NOTHING",
     )
     .bind(reverse_domain_name)
     .bind(semantic_id)
-    .bind(&version)
+    .bind(version.to_string())
     .bind(query_text)
     .execute(&mut *tx)
     .await?

@@ -157,4 +157,11 @@ CREATE TABLE stored_query (
     created_at          timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_stored_query PRIMARY KEY (reverse_domain_name, semantic_id, semver)
 );
+-- Case-insensitive uniqueness of a qualified name at a version (BASE
+-- base_types master05 §Composite Identifiers and Case), the store's arbiter:
+-- a case variant of a stored name at the same version is the same query, so
+-- the insert's `ON CONFLICT DO NOTHING` refuses it race-free in one statement.
+-- It also serves the reads, which match the name case-insensitively.
+CREATE UNIQUE INDEX ux_stored_query_name_version_ci
+    ON stored_query (lower(reverse_domain_name), lower(semantic_id), semver);
 COMMENT ON TABLE stored_query IS 'Stored AQL queries, addressed by qualified name + SEMVER version (ITS-REST specifications/docs/query/Qualified_query_name.md).';
