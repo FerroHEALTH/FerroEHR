@@ -845,7 +845,7 @@ async fn the_source_reports_the_live_groups_a_person_belongs_to() {
     let (_db, svc) = service().await;
     let value = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
     let (vo, _) = professional(&svc, value).await;
-    let ward = team(&svc, GROUP_TEMPLATE, "ward", &[vo], "532").await;
+    team(&svc, GROUP_TEMPLATE, "ward", &[vo], "532").await;
     let theatre = team(&svc, GROUP_TEMPLATE, "theatre", &[vo], "532").await;
     let clinic = team(&svc, GROUP_TEMPLATE, "clinic", &[vo], "553").await;
     // An inactive GROUP lists no member, nor does a GROUP of another template.
@@ -1215,6 +1215,133 @@ async fn a_refill_rebuilds_every_row_from_the_versions() {
         parties(&lookup(&svc, &UPPER_KEY.to_ascii_lowercase()).await),
         [person_ref(vo)]
     );
+}
+
+/// The tables a party commit's settle writes and [`ferroehr::party_binding::store::refill`]
+/// rebuilds.
+const SIDE_TABLES: [&str; 9] = [
+    "binding_identifier",
+    "binding_membership",
+    "binding_representation",
+    "binding_caller_fact",
+    "binding_record_subject",
+    "binding_patient_identifier",
+    "binding_client",
+    "binding_provider",
+    "binding_capability",
+];
+
+/// The live rows of every table of [`SIDE_TABLES`], each as JSON without its
+/// instants and surrogate ids, in a stable order.
+async fn side_rows(pool: &sqlx::PgPool) -> Vec<(&'static str, Vec<String>)> {
+    let mut out = Vec::new();
+    for table in SIDE_TABLES {
+        let rows: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+            "SELECT (SELECT jsonb_object_agg(e.key, e.value) FROM jsonb_each(to_jsonb(t)) AS e \
+                     WHERE e.key NOT LIKE '%\\_at' AND e.key NOT IN ('id', 'revision'))::text \
+             FROM party.{table} t WHERE to_jsonb(t)->>'retired_at' IS NULL ORDER BY 1"
+        )))
+        .fetch_all(pool)
+        .await
+        .expect("the side rows read");
+        out.push((table, rows));
+    }
+    out
+}
+
+/// A create, an update and a delete of each party kind leave the side table
+/// and the grant rows exactly as a refill from the versions writes them
+/// (#6257).
+#[tokio::test]
+async fn every_kinds_commits_leave_the_rows_a_refill_writes() {
+    let (db, svc) = service().await;
+    let (vo, _, role_vo, role_uid) = performer(
+        &svc,
+        PERSON_TEMPLATE,
+        &[key("1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d")],
+        ROLE_TEMPLATE,
+        Some(interval(Some("2020-01-01"), None)),
+        "532",
+    )
+    .await;
+    let role_uid = update(
+        &svc,
+        PartyKind::Role,
+        role_vo,
+        &role_uid,
+        &role(ROLE_TEMPLATE, vo, Some(interval(Some("2021-01-01"), None))),
+        "532",
+    )
+    .await;
+    let (other, other_uid) = create(
+        &svc,
+        PartyKind::Person,
+        &person(
+            PERSON_TEMPLATE,
+            &[key("2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e")],
+        ),
+    )
+    .await;
+    let other_uid = update(
+        &svc,
+        PartyKind::Person,
+        other,
+        &other_uid,
+        &person(
+            PERSON_TEMPLATE,
+            &[key("3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f")],
+        ),
+        "532",
+    )
+    .await;
+    delete(&svc, PartyKind::Person, &other_uid).await;
+    team(&svc, GROUP_TEMPLATE, "ward", &[vo], "532").await;
+    let (_, gone_uid) = create(&svc, PartyKind::Group, &group(GROUP_TEMPLATE, "gone")).await;
+    delete(&svc, PartyKind::Group, &gone_uid).await;
+    let organisation = |name: &str| {
+        json!({
+            "_type": "ORGANISATION",
+            "archetype_node_id": "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1",
+            "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.1.0",
+                "archetype_id": { "_type": "ARCHETYPE_ID",
+                    "value": "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1" } },
+            "name": text(name),
+            "identities": identities(name)
+        })
+    };
+    let (hospital, hospital_uid) =
+        create(&svc, PartyKind::Organisation, &organisation("hospital")).await;
+    let hospital_uid = update(
+        &svc,
+        PartyKind::Organisation,
+        hospital,
+        &hospital_uid,
+        &organisation("clinic"),
+        "532",
+    )
+    .await;
+    delete(&svc, PartyKind::Organisation, &hospital_uid).await;
+    let agent = json!({
+        "_type": "AGENT",
+        "archetype_node_id": "openEHR-DEMOGRAPHIC-AGENT.agent.v1",
+        "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.1.0",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-AGENT.agent.v1" } },
+        "name": text("device"),
+        "identities": identities("device")
+    });
+    let (device, device_uid) = create(&svc, PartyKind::Agent, &agent).await;
+    let device_uid = update(&svc, PartyKind::Agent, device, &device_uid, &agent, "532").await;
+    delete(&svc, PartyKind::Agent, &device_uid).await;
+    delete(&svc, PartyKind::Role, &role_uid).await;
+
+    let pool = db.pool();
+    let before = side_rows(&pool).await;
+    assert!(
+        before.iter().any(|(_, rows)| !rows.is_empty()),
+        "the commits wrote rows: {before:#?}"
+    );
+    svc.refill_binding_table().await.expect("the refill runs");
+    assert_eq!(side_rows(&pool).await, before);
 }
 
 #[tokio::test]

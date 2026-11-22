@@ -987,6 +987,74 @@ async fn a_record_subject_is_refused_unless_it_is_a_persons_own_and_its_writer_m
     assert!(matches!(refused, ServiceError::Conflict(_)), "{refused:?}");
 }
 
+/// Two creates of a `PERSON` declaring one record subject at once, each
+/// with its records held first: one commits and the other answers `409` from
+/// the deferred key at its `COMMIT`, its records discarded at once, so only
+/// the winner's are held (#6257).
+#[tokio::test]
+async fn of_two_creates_declaring_one_record_subject_one_commits() {
+    let db = testkit::db().await.expect("testkit database");
+    let policy =
+        ferroehr::privacy::PrivacyPolicy::from(&ferroehr::privacy::config::PrivacyConfig {
+            subject_namespaces: vec![PIXM.to_owned()],
+            ..Default::default()
+        });
+    let config = ferroehr::system_log::config::AuditConfig {
+        enabled: true,
+        ..Default::default()
+    };
+    let (sender, handle) = ferroehr::system_log::sender::start(config, None, db.pool())
+        .await
+        .expect("the audit sender");
+    drop(handle);
+    let svc = replica(&db.pool())
+        .await
+        .with_privacy(std::sync::Arc::new(policy))
+        .with_audit(sender);
+    let before = crate::party_commit_contention::held(&db.pool()).await;
+    let id = uuid::Uuid::now_v7().to_string();
+    let declaring =
+        |name: &str| detailed(person(name, &[]), &[record_subject(&pseudonym(PIXM, &id))]);
+    let attempt = |body: Value| {
+        let recorder = crate::party_commit_contention::primed();
+        let kept = recorder.clone();
+        let svc = &svc;
+        async move {
+            let outcome = ferroehr::db::acquire::request_scope(
+                ferroehr::system_log::recorder::with_recorder(recorder, async move {
+                    create(svc, PartyKind::Person, &body).await
+                }),
+            )
+            .await;
+            (outcome, kept)
+        }
+    };
+    let (one, two) = tokio::join!(attempt(declaring("Mr E")), attempt(declaring("Mr F")));
+    let mut kept = Vec::new();
+    let mut refused = 0;
+    for (outcome, recorder) in [one, two] {
+        match outcome {
+            Ok(_) => kept.extend(recorder.reserved().into_iter().map(|r| r.id)),
+            Err(error) => {
+                assert!(matches!(error, ServiceError::Conflict(_)), "{error:?}");
+                assert!(
+                    recorder.reserved().is_empty(),
+                    "the loser keeps no reservation"
+                );
+                refused += 1;
+            }
+        }
+    }
+    assert_eq!(refused, 1, "one pseudonym stands for one PERSON");
+    assert_eq!(kept.len(), 1, "the winner holds its records");
+    let now: Vec<uuid::Uuid> = crate::party_commit_contention::held(&db.pool())
+        .await
+        .into_iter()
+        .filter(|r| !before.contains(r))
+        .collect();
+    assert_eq!(now, kept, "only the winner's records are held");
+}
+
 /// Whether the projection of `pool` says the subject of `ehr` is under the
 /// care of `team` in the care of [`provider`] on `day`, read as a query's
 /// probe reads it.

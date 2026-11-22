@@ -974,3 +974,80 @@ async fn directory_versions_are_signed_over_their_stored_commit_instant() {
         .expect("the delete answers its version");
     assert_directory_signed(&svc, ehr, &deleted).await;
 }
+
+/// Asserts the party version `meta` answered is served signed, its digest
+/// recomputing over the `time_committed` the write answered.
+async fn assert_party_signed(
+    svc: &FerroEhrService,
+    meta: &ferroehr::service::response::ResourceMeta,
+) {
+    let vo = meta.uid.split("::").next().expect("an object id");
+    let ov = svc
+        .versioned_party_version_get_by_id(
+            crate::fixtures::object(vo),
+            crate::fixtures::tree(&meta.uid),
+        )
+        .await
+        .expect("the party version reads")
+        .body;
+    assert_eq!(ov["uid"]["value"], json!(meta.uid), "{ov}");
+    assert_digest_recomputes(&ov);
+    let stored: jiff::Timestamp = ov["commit_audit"]["time_committed"]["value"]
+        .as_str()
+        .expect("time_committed")
+        .parse()
+        .expect("an instant");
+    assert_eq!(
+        Some(stored),
+        meta.last_modified,
+        "the signed instant is the one stored and answered"
+    );
+}
+
+/// A PERSON create, update and delete each commit behind one guarded version
+/// statement (#6257), and each version's digest recomputes from the served
+/// `ORIGINAL_VERSION` whose `time_committed` is the instant the write
+/// answered: the signature covers the stored commit instant (RM common
+/// master06 §Digital Signature).
+#[tokio::test]
+async fn party_versions_are_signed_over_their_stored_commit_instant() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let body = crate::party_binding_source::person("FerroEHR patient", &[]);
+    let created = Box::pin(svc.party_create(
+        ferroehr::service::demographic::types::PartyKind::Person,
+        crate::party_binding_source::version(&body, "532", None),
+    ))
+    .await
+    .expect("party_create")
+    .meta
+    .expect("the create answers its version");
+    assert_party_signed(&svc, &created).await;
+    let vo = created
+        .uid
+        .split("::")
+        .next()
+        .expect("an object id")
+        .to_owned();
+    let updated = Box::pin(svc.party_update(
+        ferroehr::service::demographic::types::PartyKind::Person,
+        crate::fixtures::object(&vo),
+        crate::fixtures::if_match(&created.uid),
+        crate::party_binding_source::version(&body, "532", Some(&created.uid)),
+    ))
+    .await
+    .expect("party_update")
+    .meta
+    .expect("the update answers its version");
+    assert_party_signed(&svc, &updated).await;
+    let deleted = Box::pin(svc.party_delete(
+        ferroehr::service::demographic::types::PartyKind::Person,
+        crate::fixtures::object(&updated.uid),
+        crate::fixtures::delete_precondition(&updated.uid, None),
+        WriteRequest::new(()),
+    ))
+    .await
+    .expect("party_delete")
+    .meta
+    .expect("the delete answers its version");
+    assert_party_signed(&svc, &deleted).await;
+}
