@@ -327,8 +327,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CACHE_INPUTS: ${{ steps.filter.outputs.cache }}
           # The jobs that save a rust-cache entry on main. rust-cache names it
-          # `v0-rust-<job id>-<os>-<arch>-…` (github.com/Swatinem/rust-cache).
-          CACHE_JOBS: deny clippy feature-combos its-wasm its-rest-features doc msrv codegen-drift test build instructions test-viewer
+          # `v0-rust-<job id>-<os>-<arch>-…`, or after its `shared-key` when a
+          # job sets one, as each msrv shard does (github.com/Swatinem/rust-cache).
+          CACHE_JOBS: deny clippy feature-combos its-wasm its-rest-features doc msrv-core msrv-server msrv-others codegen-drift test build instructions test-viewer
         run: |
           set -euo pipefail
           verified=false
@@ -1634,24 +1635,54 @@ jobs:
   # toolchain plus clippy::incompatible_msrv is not verification
   # (https://doc.rust-lang.org/cargo/guide/continuous-integration.html#verifying-rust-version).
   msrv:
-    name: msrv (cargo-hack)
+    name: msrv (cargo-hack) ${{ matrix.shard }}
     needs: changes
-    if: needs.changes.outputs.msrv == 'true' && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'msrv'))
+    if: needs.changes.outputs.msrv == 'true' && (needs.changes.outputs.queue_verified != 'true' || contains(join(fromJSON(needs.changes.outputs.cache_refresh), ' '), 'msrv-'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
+    # Each member is checked alone, with its own feature resolution, so the
+    # members share few dependency builds and one job ran 15 to 19 minutes,
+    # cold whenever the quota had evicted its cache (#6306). The shards split
+    # the members by measured cost; `others` excludes what the two lists
+    # name, so a new member lands in a shard without an edit here.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [core, server, others]
+    env:
+      MSRV_CORE: openehr-adl openehr-am openehr-base openehr-its openehr-lang openehr-rm openehr-term
+      MSRV_SERVER: ferroehr ferroehr-rest openehr-query
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
+          cache-shared-key: msrv-${{ matrix.shard }}
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-hack
-      - run: cargo hack check --rust-version --workspace --locked --all-targets
+      - name: Check the shard's members on the declared rust-version
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          read -r -a core <<<"$MSRV_CORE"
+          read -r -a server <<<"$MSRV_SERVER"
+          args=()
+          case "$SHARD" in
+            core) for p in "${core[@]}"; do args+=(--package "$p"); done ;;
+            server) for p in "${server[@]}"; do args+=(--package "$p"); done ;;
+            others)
+              args+=(--workspace)
+              for p in "${core[@]}" "${server[@]}"; do args+=(--exclude "$p"); done
+              ;;
+            *) echo "::error::unknown msrv shard '$SHARD'"; exit 1 ;;
+          esac
+          cargo hack check --rust-version --locked --all-targets "${args[@]}"
 
   # ── Generated code must stay in sync with the vendored specs ──
   codegen-drift:
