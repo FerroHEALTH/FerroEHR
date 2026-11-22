@@ -13,7 +13,7 @@ use crate::draft::access_log::access_log::access_log_tombstone::AccessLogTombsto
 ///
 /// Abstract parent of the records of an access log.
 ///
-/// Each record holds one link of the log's hash chain, so the order and the completeness of the log can be verified by anyone who reads it. A record is never modified; when its retention period ends, the system replaces an `ACCESS_LOG_ENTRY` by an `ACCESS_LOG_TOMBSTONE` that keeps the uid, the time and the link.
+/// A record is never modified; when its retention period ends, the system replaces an `ACCESS_LOG_ENTRY` by an `ACCESS_LOG_TOMBSTONE` that keeps the uid and the time. The system seals windows of records in `ACCESS_LOG_CHECKPOINT`s, so a changed, removed or inserted record is found.
 #[doc(alias = "ACCESS_LOG_RECORD")]
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccessLogRecord {

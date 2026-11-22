@@ -93,7 +93,7 @@ impl AuditStore {
     /// with; a change
     /// to a record before that link needs [`VerifyScope::Full`], the pass
     /// `SELECT * FROM audit.verify_audit_chain()` (the system chain) or
-    /// `audit.verify_access_log_chain()` (the access log) makes from `psql`.
+    /// the access log's sealed windows verify through `POST /admin/access-log/verify`.
     /// Both check the chain head.
     ///
     /// An empty result means the chain is intact. The chain is unkeyed, so

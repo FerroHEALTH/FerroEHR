@@ -14,7 +14,6 @@ use crate::system_log::event::{
 };
 use crate::system_log::retention::LogRetention;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
-use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_retention::AccessRetention;
 use openehr_rm::draft::access_log::invariants::check_entry;
 
@@ -29,17 +28,8 @@ fn retention() -> AccessRetention {
     )
 }
 
-/// `entry` with the link a chain would give it, checked against every
-/// invariant of the draft.
-fn linked(mut entry: AccessLogEntry) -> AccessLogEntry {
-    entry.link = AccessLogLink {
-        sequence: 1,
-        algorithm: "SHA-256".to_owned(),
-        previous_digest: "0".repeat(64),
-        content_digest: "1".repeat(64),
-        digest: "2".repeat(64),
-        signature: None,
-    };
+/// `entry`, checked against every invariant of the draft.
+fn linked(entry: AccessLogEntry) -> AccessLogEntry {
     assert_eq!(check_entry(&entry), Ok(()), "{entry:?}");
     entry
 }

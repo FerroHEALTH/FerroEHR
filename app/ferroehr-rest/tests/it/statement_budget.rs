@@ -96,17 +96,11 @@ const REQUEST_SPAN: &str = "statement_budget_request";
 /// of them carries as a comment.
 const OWN: &str = "statement_budget_own";
 
-/// The nested statements of a chainer round of the access log that takes
-/// the head: the lock.
-const CHAINER_TAKE: u64 = 1;
-/// The nested statements of a chainer round that moves entries into the
-/// access log: the move's own statements and the head's triggers.
-const CHAINER_ROUND: u64 = 8;
 /// The nested statements of a chainer round of the system chain.
 const SYSTEM_ROUND: u64 = 6;
 /// The nested statements of a chainer round's release of the records the
-/// committed writes held (#5762): the switch on and off, and the update of
-/// each intake.
+/// committed writes held (#5762): the switch on and off, the removal of the
+/// access log's holds and the update of the system intake.
 const CHAINER_RELEASE: u64 = 4;
 /// The budget of one kind of request: its round trips, and the statements
 /// nested in them.
@@ -228,11 +222,12 @@ fn ledger(statements: &[Counted]) -> String {
     out
 }
 
-/// Waits until the chainer moved every intake row into the log.
+/// Waits until the chainer released every held entry and moved every system
+/// intake row into the chain.
 async fn drained(pool: &PgPool) {
     for _ in 0..400 {
         let waiting: i64 = sqlx::query_scalar(
-            "SELECT /* statement_budget_own */ (SELECT count(*) FROM audit.access_log_intake) \
+            "SELECT /* statement_budget_own */ (SELECT count(*) FROM audit.access_log_hold) \
              + (SELECT count(*) FROM audit.audit_event_intake)",
         )
         .fetch_one(pool)
@@ -332,13 +327,8 @@ async fn an_aql_request_stays_within_its_statement_budget() {
             .filter(|s| !s.toplevel)
             .map(|s| s.calls)
             .sum();
-        let takes = calls(
-            &statements,
-            "SELECT head_seq, head_digest FROM audit.access_log_chain_take",
-        );
-        let rounds = calls(&statements, "SELECT audit.access_log_chain_move");
         let system = calls(&statements, "SELECT audit.audit_event_chain_move");
-        let chainer = takes * CHAINER_TAKE + rounds * CHAINER_ROUND + system * SYSTEM_ROUND;
+        let chainer = system * SYSTEM_ROUND;
         assert!(sent > 0, "{}: the round trips are counted", budget.name);
         assert_eq!(
             written,
@@ -349,8 +339,8 @@ async fn an_aql_request_stays_within_its_statement_budget() {
         writeln!(
             report,
             "{}: {sent} round trips over {REQUESTS} requests (budget {} each); {nested} nested \
-             statements against a budget of {chainer} for the chainer ({takes} takes, {rounds} \
-             rounds, {system} system rounds) and {} per request, {written} entries written\n{}",
+             statements against a budget of {chainer} for the chainer ({system} system rounds) \
+             and {} per request, {written} entries written\n{}",
             budget.name,
             budget.round_trips,
             budget.nested,

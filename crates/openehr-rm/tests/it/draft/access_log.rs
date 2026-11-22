@@ -65,7 +65,6 @@ fn a_tombstone_reads_and_writes_back() {
         "uid": { "_type": "HIER_OBJECT_ID", "value": "0193f1a2-7c1e-7b4a-9f00-2c6d1e8b5a01" },
         "system_id": "cdr.example.org",
         "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-07T09:14:03.120Z" },
-        "link": example()["link"].clone(),
         "time_removed": { "_type": "DV_DATE_TIME", "value": "2031-11-08T00:00:00Z" },
         "grounds": [coded("local", "national retention period", "nl-logging-5y")]
     });
@@ -100,18 +99,9 @@ type Breaking = (&'static str, fn(&mut Value));
 
 #[test]
 fn each_entry_invariant_refuses_an_entry_that_breaks_it() {
-    let cases: [Breaking; 17] = [
+    let cases: [Breaking; 14] = [
         ("ACCESS_LOG_RECORD.System_id_valid", |e| {
             e["system_id"] = json!("");
-        }),
-        ("ACCESS_LOG_LINK.Sequence_valid", |e| {
-            e["link"]["sequence"] = json!(0);
-        }),
-        ("ACCESS_LOG_LINK.Algorithm_valid", |e| {
-            e["link"]["algorithm"] = json!("");
-        }),
-        ("ACCESS_LOG_LINK.Digests_valid", |e| {
-            e["link"]["digest"] = json!("");
         }),
         ("ACCESS_LOG_ENTRY.Action_valid", |e| {
             e["action"] = coded("openehr_access", "browse", "browse");

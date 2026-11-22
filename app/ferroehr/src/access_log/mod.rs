@@ -15,7 +15,6 @@
 //! module: our own design.
 
 pub mod chain;
-pub mod chainer;
 pub mod checkpoint;
 pub mod config;
 pub mod definition;
@@ -23,6 +22,7 @@ pub mod definition;
 pub mod details;
 pub mod entry;
 pub mod expiry;
+pub mod frontier;
 pub mod gap;
 pub mod imported;
 pub mod intake;
@@ -33,6 +33,7 @@ pub mod publish;
 pub mod recorded;
 pub mod retention;
 pub mod schedule;
+pub mod seal;
 pub mod search;
 pub mod store;
 pub mod stored_form;

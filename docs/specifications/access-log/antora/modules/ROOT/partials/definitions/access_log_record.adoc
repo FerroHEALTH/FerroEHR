@@ -4,7 +4,7 @@ h|*Class*
 2+^h|*ACCESS_LOG_RECORD (abstract)*
 
 h|*Description*
-2+a|Abstract parent of the records of an access log. Each record holds one link of the log's hash chain, so the order and the completeness of the log can be verified by anyone who reads it. A record is never modified; when its retention period ends, the system replaces an `ACCESS_LOG_ENTRY` by an `ACCESS_LOG_TOMBSTONE` that keeps the uid, the time and the link.
+2+a|Abstract parent of the records of an access log. A record is never modified; when its retention period ends, the system replaces an `ACCESS_LOG_ENTRY` by an `ACCESS_LOG_TOMBSTONE` that keeps the uid and the time. The system seals windows of records in `ACCESS_LOG_CHECKPOINT`s, so a changed, removed or inserted record is found.
 
 h|*Attributes*
 ^h|*Signature*
@@ -21,10 +21,6 @@ a|Identifier of the logical EHR system that recorded the access, with the meanin
 h|*1..1*
 |*time_recorded*: `xref:data_types:date_time_package.adoc#_dv_date_time_class[DV_DATE_TIME]`
 a|Time at which the record was written to the log.
-
-h|*1..1*
-|*link*: `xref:access_log:access_log_package.adoc#_access_log_link_class[ACCESS_LOG_LINK]`
-a|This record's link in the log's hash chain.
 
 h|*Invariants*
 2+a|__System_id_valid__: `not system_id.is_empty`

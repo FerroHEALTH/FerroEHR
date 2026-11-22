@@ -125,10 +125,8 @@ memory_json() {
 # entries it holds, and the bytes the access log's tables hold.
 storage_json() {
   local entries="0" versions="0"
-  [[ "$(cap_sql "SELECT to_regclass('audit.access_log_record') IS NOT NULL")" == t ]] \
-    && entries="(SELECT count(*) FROM audit.access_log_record)"
-  [[ "$(cap_sql "SELECT to_regclass('audit.access_log_intake') IS NOT NULL")" == t ]] \
-    && entries+=" + (SELECT count(*) FROM audit.access_log_intake)"
+  [[ "$(cap_sql "SELECT to_regclass('audit.access_log_entry') IS NOT NULL")" == t ]] \
+    && entries="(SELECT count(*) FROM audit.access_log_entry)"
   [[ "$(cap_sql "SELECT to_regclass('clinical.version_hot') IS NOT NULL")" == t ]] \
     && versions="(SELECT count(*) FROM clinical.version_hot WHERE kind = 'COMPOSITION')"
   cap_sql "SELECT json_build_object(

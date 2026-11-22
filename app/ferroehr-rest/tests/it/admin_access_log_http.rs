@@ -54,9 +54,7 @@ fn entry(system_id: &str) -> AccessLogEntry {
         "is_emergency": false,
         "retention": { "_type": "ACCESS_RETENTION",
             "retain_until": { "_type": "DV_DATE", "value": "2031-11-07" },
-            "grounds": [coded("read")] },
-        "link": { "_type": "ACCESS_LOG_LINK", "sequence": 1, "algorithm": "SHA-256",
-            "previous_digest": "", "content_digest": "", "digest": "" }
+            "grounds": [coded("read")] }
     }))
     .expect("the entry reads")
 }

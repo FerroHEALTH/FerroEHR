@@ -208,6 +208,25 @@ impl AuditStore {
         scope: VerifyScope,
     ) -> Result<ChainWalk, AuditError> {
         let full = scope == VerifyScope::Full;
+        // NOTE: our own design (#6242), the access log's walk steps over its sealed windows,
+        // its position a window number.
+        if chain == AuditChain::AccessLog {
+            let store = self.chaining_store();
+            let after = if full {
+                0
+            } else {
+                store.verified_window().await.map_err(AuditError::from)?
+            };
+            return Ok(ChainWalk {
+                chain,
+                full,
+                head: Some(after),
+                after,
+                link: None,
+                intact: true,
+                done: false,
+            });
+        }
         let row = sqlx::query(statements(chain).start)
             .bind(full)
             .fetch_one(&mut *acquire(&self.pool).await?)
@@ -241,6 +260,18 @@ impl AuditStore {
         if walk.done {
             return Ok(Vec::new());
         }
+        if walk.chain == AuditChain::AccessLog {
+            let step = self
+                .chaining_store()
+                .verify_window_step(walk.after, i64::from(records), walk.full, walk.intact)
+                .await
+                .map_err(AuditError::from)?;
+            walk.intact &= step.findings.is_empty();
+            walk.after = step.through;
+            walk.head = Some(step.through);
+            walk.done = step.done;
+            return Ok(step.findings);
+        }
         let sql = statements(walk.chain);
         let mut conn = acquire(&self.pool).await?;
         let upto = match walk.head {
@@ -255,13 +286,7 @@ impl AuditStore {
             None => walk.after,
         };
         let last = walk.head.is_none_or(|head| upto >= head);
-        let step = match walk.chain {
-            AuditChain::System => sqlx::query(sql.step),
-            AuditChain::AccessLog => {
-                sqlx::query(sql.step).bind(modified_between(&mut conn, walk.after, upto).await?)
-            }
-        };
-        let rows = step
+        let rows = sqlx::query(sql.step)
             .bind(walk.after)
             .bind(walk.link.as_deref())
             .bind(upto)
@@ -324,42 +349,6 @@ impl AuditStore {
                 .map(Timestamp::to_jiff),
         })
     }
-
-    /// The content check of the access log the database cannot run, since
-    /// only the server writes an entry's canonical form (#5703): each entry
-    /// after the verification cursor, or every entry when `full`, joined from
-    /// its row and shared parts and digested again. Returns the newest
-    /// position the check covered, `None` for an empty log, and the positions
-    /// whose digest differs from their link's `content_digest`. It writes
-    /// nothing, so it also serves a check that moves no cursor.
-    ///
-    /// # Errors
-    /// [`AuditError::Store`] when a statement fails.
-    pub async fn access_log_contents(
-        &self,
-        full: bool,
-    ) -> Result<(Option<i64>, Vec<i64>), AuditError> {
-        let mut conn = acquire(&self.pool).await?;
-        let through: Option<i64> =
-            sqlx::query_scalar("SELECT max(chain_seq) FROM audit.access_log_record")
-                .fetch_one(&mut *conn)
-                .await?;
-        let Some(through) = through else {
-            return Ok((None, Vec::new()));
-        };
-        let after: i64 = if full {
-            0
-        } else {
-            sqlx::query_scalar(
-                "SELECT coalesce((SELECT through_seq FROM audit.access_log_chain_verified \
-                 WHERE singleton), 0)",
-            )
-            .fetch_one(&mut *conn)
-            .await?
-        };
-        let modified = modified_between(&mut conn, after, through).await?;
-        Ok((Some(through), modified))
-    }
 }
 
 /// The statements of a walk over one chain.
@@ -387,12 +376,10 @@ const fn statements(chain: AuditChain) -> Statements {
             link: "SELECT audit.audit_chain_verification_link($1)",
         },
         AuditChain::AccessLog => Statements {
-            start: "SELECT head_seq, after_seq, after_digest \
-                    FROM audit.access_log_verification_start($1)",
-            step_end: "SELECT audit.access_log_verification_step_end($1, $2, $3)",
-            step: "SELECT chain_seq, record_id, recorded_at, finding \
-                   FROM audit.verify_access_log_chain_step($2, $3, $4, $1, $5, $6, $7)",
-            link: "SELECT audit.access_log_verification_link($1)",
+            start: "",
+            step_end: "",
+            step: "",
+            link: "",
         },
     }
 }
@@ -401,7 +388,7 @@ const fn statements(chain: AuditChain) -> Statements {
 /// written, read a page at a time: an entry that no longer digests to its
 /// link's `content_digest`, and an entry or tombstone whose derived columns
 /// are not those its content decides (#6005).
-async fn modified_between(
+pub(crate) async fn modified_between(
     conn: &mut PgConnection,
     mut after: i64,
     upto: i64,

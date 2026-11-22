@@ -19,7 +19,6 @@
         "ACCESS_LOG_RECORD",
         "ACCESS_LOG_ENTRY",
         "ACCESS_LOG_TOMBSTONE",
-        "ACCESS_LOG_LINK",
         "ACCESS_LOG_CHECKPOINT",
         "ACCESSOR",
         "ACCESS_CREDENTIAL",
@@ -39,7 +38,7 @@
   "class_definitions": {
     "ACCESS_LOG_RECORD": {
       "name": "ACCESS_LOG_RECORD",
-      "documentation": "Abstract parent of the records of an access log. Each record holds one link of the log's hash chain, so the order and the completeness of the log can be verified by anyone who reads it. A record is never modified; when its retention period ends, the system replaces an `ACCESS_LOG_ENTRY` by an `ACCESS_LOG_TOMBSTONE` that keeps the uid, the time and the link.",
+      "documentation": "Abstract parent of the records of an access log. A record is never modified; when its retention period ends, the system replaces an `ACCESS_LOG_ENTRY` by an `ACCESS_LOG_TOMBSTONE` that keeps the uid and the time. The system seals windows of records in `ACCESS_LOG_CHECKPOINT`s, so a changed, removed or inserted record is found.",
       "is_abstract": true,
       "properties": {
         "uid": {
@@ -62,13 +61,6 @@
           "documentation": "Time at which the record was written to the log.",
           "is_mandatory": true,
           "type": "DV_DATE_TIME"
-        },
-        "link": {
-          "_type": "P_BMM_SINGLE_PROPERTY",
-          "name": "link",
-          "documentation": "This record's link in the log's hash chain.",
-          "is_mandatory": true,
-          "type": "ACCESS_LOG_LINK"
         }
       },
       "invariants": {
@@ -218,7 +210,7 @@
     },
     "ACCESS_LOG_TOMBSTONE": {
       "name": "ACCESS_LOG_TOMBSTONE",
-      "documentation": "What remains of an `ACCESS_LOG_ENTRY` after its retention period: the uid, the recording time and the chain link, so the chain still verifies, and nothing that identifies a person or the data.",
+      "documentation": "What remains of an `ACCESS_LOG_ENTRY` after its retention period: the uid and the recording time, while the system keeps the digest of the entry it replaced, so its window's seal still verifies, and nothing that identifies a person or the data.",
       "ancestors": [
         "ACCESS_LOG_RECORD"
       ],
@@ -246,61 +238,9 @@
         }
       }
     },
-    "ACCESS_LOG_LINK": {
-      "name": "ACCESS_LOG_LINK",
-      "documentation": "One link of the hash chain of an access log. `_content_digest_` is the digest of the record's canonical serialisation without its link; `_digest_` is the digest over `_previous_digest_`, `_sequence_` and `_content_digest_`, so a removed or reordered record breaks every later link while a tombstone, which keeps the content digest, does not.",
-      "properties": {
-        "sequence": {
-          "_type": "P_BMM_SINGLE_PROPERTY",
-          "name": "sequence",
-          "documentation": "Position of the record in the log of its `_system_id_`, starting at 1, with no gaps.",
-          "is_mandatory": true,
-          "type": "Integer64"
-        },
-        "algorithm": {
-          "_type": "P_BMM_SINGLE_PROPERTY",
-          "name": "algorithm",
-          "documentation": "Name of the digest algorithm, such as `SHA-256`.",
-          "is_mandatory": true,
-          "type": "String"
-        },
-        "previous_digest": {
-          "_type": "P_BMM_SINGLE_PROPERTY",
-          "name": "previous_digest",
-          "documentation": "The `_digest_` of the preceding record, in lower-case hexadecimal; for the first record, the digest the log was started with.",
-          "is_mandatory": true,
-          "type": "String"
-        },
-        "content_digest": {
-          "_type": "P_BMM_SINGLE_PROPERTY",
-          "name": "content_digest",
-          "documentation": "Digest of the record's canonical serialisation with `_link_` removed, in lower-case hexadecimal.",
-          "is_mandatory": true,
-          "type": "String"
-        },
-        "digest": {
-          "_type": "P_BMM_SINGLE_PROPERTY",
-          "name": "digest",
-          "documentation": "Digest over `_previous_digest_`, `_sequence_` and `_content_digest_`, in lower-case hexadecimal.",
-          "is_mandatory": true,
-          "type": "String"
-        },
-        "signature": {
-          "_type": "P_BMM_SINGLE_PROPERTY",
-          "name": "signature",
-          "documentation": "Optional signature of the recording system over `_digest_`, for a jurisdiction that asks for each record to be signed.",
-          "type": "String"
-        }
-      },
-      "invariants": {
-        "Sequence_valid": "sequence >= 1",
-        "Algorithm_valid": "not algorithm.is_empty",
-        "Digests_valid": "not previous_digest.is_empty and not content_digest.is_empty and not digest.is_empty"
-      }
-    },
     "ACCESS_LOG_CHECKPOINT": {
       "name": "ACCESS_LOG_CHECKPOINT",
-      "documentation": "A signed statement by the recording system of the head of its log at a point in time. A checkpoint commits to every record up to `_sequence_`, so a verifier that holds it can detect a later rewrite of the log, and an export carries the checkpoint its records verify against.",
+      "documentation": "A signed statement by the recording system of the seal of its log up to a record. A checkpoint commits to every record up to `_sequence_` through the seal digest of the window that ends there, so a verifier that holds it can detect a later rewrite of the log.",
       "properties": {
         "system_id": {
           "_type": "P_BMM_SINGLE_PROPERTY",
@@ -312,21 +252,21 @@
         "sequence": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "sequence",
-          "documentation": "The `_link.sequence_` of the last record the checkpoint covers.",
+          "documentation": "The number of the last record the checkpoint covers: the last of the window its seal closes.",
           "is_mandatory": true,
           "type": "Integer64"
         },
         "digest": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "digest",
-          "documentation": "The `_link.digest_` of that record.",
+          "documentation": "The seal digest of that window, which follows the seal of the window before it.",
           "is_mandatory": true,
           "type": "String"
         },
         "algorithm": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "algorithm",
-          "documentation": "Name of the digest algorithm of the chain.",
+          "documentation": "Name of the digest algorithm of the seals.",
           "is_mandatory": true,
           "type": "String"
         },

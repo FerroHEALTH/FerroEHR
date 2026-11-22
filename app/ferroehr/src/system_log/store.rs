@@ -47,6 +47,7 @@ pub mod chain_walk;
 pub mod chains;
 #[cfg(feature = "fhir")]
 mod entries;
+pub mod frontier;
 pub mod intake;
 pub(crate) mod lax;
 #[cfg(feature = "fhir")]
@@ -57,12 +58,12 @@ mod review;
 mod search_page;
 mod writers;
 
-use crate::access_log::chainer::Owed;
 use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 use crate::system_log::event::{AuditEvent, EventOutcome, EventType, ObjectClass};
 use crate::system_log::render::RenderPolicy;
+use crate::system_log::store::frontier::Owed;
 #[cfg(feature = "fhir")]
 use crate::system_log::{
     categories::{ClassifiedContent, MapDigest},
@@ -234,6 +235,9 @@ pub struct AuditStore {
     /// The gathered intake write of the entries, started on first use.
     #[cfg(feature = "fhir")]
     group: Arc<std::sync::OnceLock<crate::access_log::intake::GroupWriter>>,
+    /// How long the gathered write waits for more entries after the first.
+    #[cfg(feature = "fhir")]
+    gather_window: std::time::Duration,
 }
 
 impl AuditStore {
@@ -256,7 +260,29 @@ impl AuditStore {
             releases: Arc::default(),
             #[cfg(feature = "fhir")]
             group: Arc::default(),
+            #[cfg(feature = "fhir")]
+            gather_window: std::time::Duration::ZERO,
         }
+    }
+
+    /// This store's gathered write waiting up to `window` after the first
+    /// entry for more (`[audit.store] gather_window`); set before the first
+    /// write.
+    #[must_use]
+    #[cfg_attr(
+        not(feature = "fhir"),
+        expect(
+            unused_mut,
+            unused_variables,
+            reason = "a slim build writes no entry through the gathered writer"
+        )
+    )]
+    pub fn with_gather_window(mut self, window: std::time::Duration) -> Self {
+        #[cfg(feature = "fhir")]
+        {
+            self.gather_window = window;
+        }
+        self
     }
 
     /// This store over `pool`, its policies, tokens and access-log store
@@ -588,8 +614,9 @@ impl AuditStore {
     /// running runtime on first use.
     #[cfg(feature = "fhir")]
     fn group(&self) -> &crate::access_log::intake::GroupWriter {
-        self.group
-            .get_or_init(|| crate::access_log::intake::GroupWriter::spawn(&self.pool))
+        self.group.get_or_init(|| {
+            crate::access_log::intake::GroupWriter::spawn_gathering(&self.pool, self.gather_window)
+        })
     }
 
     /// Whether every one of `records` is written as its access-log entry, so

@@ -1,17 +1,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The store's intake and its chainer (#5747, #5745).
+//! The store's intake and its chainer (#5747, #5745, #6242).
 //!
-//! A request writes each of its records into the intake in its own
-//! transaction before it answers: an access the access log covers as its
-//! entry with its index row (`audit.access_log_intake`), any other record by
-//! its columns, written once into `audit.audit_event` with an
-//! `audit.audit_event_intake` row naming it. A record is durable once that
-//! transaction commits, and no request waits on the head of a chain. The
-//! chainer moves the intake into the chains: the access log through
-//! [`AccessLogStore::chain_round`], the system chain through
-//! `audit.audit_event_chain_move`, each owing the record to the sinks that
+//! A request writes each of its records in its own transaction before it
+//! answers: an access the access log covers as its entry with its index row,
+//! once, into `audit.access_log_entry`, which every reader, the sealer and
+//! the delivery read from that row (held in `audit.access_log_hold` while its
+//! write is unconfirmed), and any other record by its columns, written once
+//! into `audit.audit_event` with an `audit.audit_event_intake` row naming
+//! it. A record is durable once that transaction commits, and no request
+//! waits on a head. The chainer releases the holds of confirmed writes and
+//! moves the system intake into the system chain through
+//! `audit.audit_event_chain_move`, owing each record to the sinks that
 //! deliver from the store (`migrations/audit/0006_baseline_intake.sql`). No
 //! openEHR spec governs audit storage: our own design.
 
@@ -20,7 +21,6 @@ use uuid::Uuid;
 
 use super::writers::Pinned;
 use super::{AuditRecord, AuditStore, LearnedSets, RecordEnd};
-use crate::access_log::chainer::{Round, Seal};
 use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
@@ -106,35 +106,27 @@ impl Releases {
     }
 }
 
-/// What one round of the chainer did on each chain.
+/// What one round of the chainer did.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ChainRound {
-    /// The access log's round.
-    pub access_log: Round,
+    /// The records of confirmed writes the round released.
+    pub released: u64,
     /// The records the round moved into the system chain.
     pub system: u64,
 }
 
 impl ChainRound {
-    /// Whether the round chained anything on either chain.
+    /// How many records the round released or chained.
     #[must_use]
     pub fn chained(self) -> usize {
-        let entries = match self.access_log {
-            Round::Chained { entries, .. } => entries,
-            Round::Busy => 0,
-        };
-        entries.saturating_add(usize::try_from(self.system).unwrap_or(usize::MAX))
+        usize::try_from(self.released.saturating_add(self.system)).unwrap_or(usize::MAX)
     }
 
-    /// Whether the round took a whole batch of `limit` on either chain, so
-    /// rows may be waiting behind it.
+    /// Whether the round took a whole batch of `limit` on the system chain,
+    /// so rows may be waiting behind it.
     #[must_use]
     pub fn filled(self, limit: u32) -> bool {
-        let entries = match self.access_log {
-            Round::Chained { entries, .. } => u64::try_from(entries).unwrap_or(u64::MAX),
-            Round::Busy => 0,
-        };
-        entries >= u64::from(limit) || self.system >= u64::from(limit)
+        self.system >= u64::from(limit)
     }
 }
 
@@ -204,8 +196,8 @@ impl AuditStore {
         Ok((ids, merged(learned_all), wrote))
     }
 
-    /// The access-log store the chainer links entries through: the one the
-    /// server installed, which seals, or an unsealing one.
+    /// The access-log store the sealer seals through: the one the server
+    /// installed, which signs, or an unsigning one.
     pub(crate) fn chaining_store(&self) -> AccessLogStore {
         self.access_log().map_or_else(
             || AccessLogStore::new(self.pool.clone()),
@@ -213,48 +205,31 @@ impl AuditStore {
         )
     }
 
-    /// One round of the chainer: up to `limit` intake rows linked into each
-    /// chain of `look`, and of each chain this process wrote since the last
-    /// round; a chain neither names costs no transaction.
+    /// One round of the chainer: the holds of the writes confirmed since the
+    /// last round released, and up to `limit` system intake rows linked into
+    /// the system chain when `look` names it or this process wrote one.
     ///
     /// # Errors
-    /// [`AuditError::AccessLog`] when the access log's round fails, and
-    /// [`AuditError::Store`] when the system chain's move fails; the chains
-    /// the round did not finish are looked at again in the next.
-    pub async fn chain_round(
-        &self,
-        limit: u32,
-        look: Chains,
-        seal: Seal,
-    ) -> Result<ChainRound, AuditError> {
+    /// [`AuditError::Store`] when the release or the system chain's move
+    /// fails; what the round did not finish is looked at again in the next.
+    pub async fn chain_round(&self, limit: u32, look: Chains) -> Result<ChainRound, AuditError> {
         let written = self.pending.take();
         let released = self.releases.take();
-        let releasing = !released.is_empty();
-        let look = Chains {
-            access_log: look.access_log || written.access_log || releasing,
-            system: look.system || written.system || releasing,
-        };
-        let round = self.round(limit, look, seal, &released).await;
-        // NOTE: our own design (#5762), a round that did not take the head released nothing.
-        if releasing && !matches!(&round, Ok(round) if round.access_log != Round::Busy) {
+        let look_system = look.system || written.system || !released.is_empty();
+        let round = self.round(limit, look_system, &released).await;
+        // NOTE: our own design (#5762), a release that failed is tried again by the next round.
+        if round.is_err() && !released.is_empty() {
             self.releases.restore(released);
-            self.pending.mark(Chains::BOTH);
         }
         // NOTE: our own design (#5770), a chain the round did not empty is looked at again.
         let unfinished = match &round {
-            Ok(round) => Chains {
-                access_log: look.access_log
-                    && match round.access_log {
-                        Round::Busy => true,
-                        Round::Chained { entries, .. } => {
-                            u32::try_from(entries).unwrap_or(u32::MAX) >= limit
-                        }
-                    },
-                system: look.system && round.system >= u64::from(limit),
-            },
-            Err(_) => look,
+            Ok(round) => look_system && round.system >= u64::from(limit),
+            Err(_) => look_system,
         };
-        self.pending.mark(unfinished);
+        self.pending.mark(Chains {
+            access_log: false,
+            system: unfinished,
+        });
         round
     }
 
@@ -268,21 +243,16 @@ impl AuditStore {
     async fn round(
         &self,
         limit: u32,
-        look: Chains,
-        seal: Seal,
+        look_system: bool,
         release: &[Uuid],
     ) -> Result<ChainRound, AuditError> {
-        let access_log = if look.access_log {
-            self.chaining_store()
-                .chain_round(limit, self.owed, seal, release)
-                .await?
+        let released = if release.is_empty() {
+            0
         } else {
-            Round::Chained {
-                entries: 0,
-                held: std::time::Duration::ZERO,
-            }
+            let mut conn = acquire(&self.pool).await?;
+            Self::release(&mut conn, release).await?
         };
-        let moved: i64 = if look.system {
+        let moved: i64 = if look_system {
             sqlx::query_scalar("SELECT audit.audit_event_chain_move($1, $2, $3)")
                 .bind(i32::try_from(limit).unwrap_or(i32::MAX))
                 .bind(self.owed.fhir_feed)
@@ -293,21 +263,21 @@ impl AuditStore {
             0
         };
         Ok(ChainRound {
-            access_log,
+            released,
             system: u64::try_from(moved).unwrap_or(0),
         })
     }
 
-    /// Chain every intake row of the chains `look` names written before the
-    /// call, waiting out another chainer that holds the access log's head;
-    /// a write settles the chains it wrote and leaves the other to its
-    /// chainer.
+    /// Chain every system intake row written before the call when `look`
+    /// names the system chain, and seal every access-log entry committed
+    /// before it when `look` names the access log.
     ///
     /// # Errors
-    /// As [`Self::chain_round`].
+    /// As [`Self::chain_round`], and [`AuditError::AccessLog`] when sealing
+    /// fails.
     pub async fn settle(&self, look: Chains) -> Result<(), AuditError> {
         if look.access_log {
-            self.chaining_store().settle(self.owed).await?;
+            self.chaining_store().seal_committed().await?;
         }
         if !look.system {
             return Ok(());
@@ -350,7 +320,6 @@ impl AuditStore {
     pub async fn intake_age(&self) -> Result<Option<std::time::Duration>, AuditError> {
         let seconds: Option<f64> = sqlx::query_scalar(
             "SELECT extract(epoch FROM now() - least( \
-             (SELECT min(taken_at) FROM audit.access_log_intake WHERE reserved_by IS NULL), \
              (SELECT min(taken_at) FROM audit.audit_event_intake WHERE reserved_by IS NULL)))::float8",
         )
         .fetch_one(&mut *acquire(&self.pool).await?)
@@ -414,8 +383,7 @@ impl AuditStore {
     ) -> Result<Vec<(Uuid, std::time::Duration)>, AuditError> {
         let rows: Vec<(Uuid, f64)> = sqlx::query_as(
             "SELECT h.reserved_by, extract(epoch FROM now() - min(h.taken_at))::float8 \
-             FROM (SELECT reserved_by, taken_at FROM audit.access_log_intake \
-                   WHERE reserved_by IS NOT NULL \
+             FROM (SELECT reserved_by, taken_at FROM audit.access_log_hold \
                    UNION ALL SELECT reserved_by, taken_at FROM audit.audit_event_intake \
                    WHERE reserved_by IS NOT NULL) AS h \
              GROUP BY h.reserved_by \
@@ -443,7 +411,7 @@ impl AuditStore {
     ) -> Result<Vec<Uuid>, AuditError> {
         let held: Vec<Uuid> = sqlx::query_scalar(
             "SELECT DISTINCT h.reserved_by FROM ( \
-             SELECT reserved_by FROM audit.access_log_intake WHERE reserved_by = ANY($1) \
+             SELECT reserved_by FROM audit.access_log_hold WHERE reserved_by = ANY($1) \
              UNION ALL SELECT reserved_by FROM audit.audit_event_intake WHERE reserved_by = ANY($1) \
              ) AS h",
         )
@@ -457,27 +425,15 @@ impl AuditStore {
 #[cfg(test)]
 mod tests {
     use super::ChainRound;
-    use crate::access_log::chainer::Round;
 
-    /// A round that took its whole batch on either chain may have left rows
-    /// behind, so the chainer runs again at once; one that took less waits
-    /// for the next round's start (#5770).
+    /// A round that took its whole batch of the system chain may have left
+    /// rows behind, so the chainer runs again at once; one that took less
+    /// waits for the next round's start (#5770).
     #[test]
-    fn a_round_is_filled_when_either_chain_took_its_batch() {
-        let round = |entries, system| ChainRound {
-            access_log: Round::Chained {
-                entries,
-                held: std::time::Duration::ZERO,
-            },
-            system,
-        };
-        assert!(round(512, 0).filled(512));
-        assert!(round(3, 512).filled(512));
+    fn a_round_is_filled_when_it_took_a_whole_system_batch() {
+        let round = |released, system| ChainRound { released, system };
+        assert!(round(0, 512).filled(512));
+        assert!(!round(512, 3).filled(512));
         assert!(!round(511, 511).filled(512));
-        let busy = ChainRound {
-            access_log: Round::Busy,
-            system: 0,
-        };
-        assert!(!busy.filled(512));
     }
 }

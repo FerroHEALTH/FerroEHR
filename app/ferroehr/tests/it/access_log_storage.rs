@@ -45,7 +45,10 @@ const PER_REQUEST: u32 = 8;
 /// The ceiling on the bytes an entry takes in every relation of the access
 /// log, heap and indexes: this seed measured 1 844 to 1 893 with the index
 /// in a table of its own, and 1 781 to 1 806 with one row per entry (#5784).
-const CEILING: i64 = 1_840;
+/// Written once with no intake row or link (#6242) it measured 1 154 to
+/// 1 193 against 1 327 to 1 391 beside the merge base, and the ceiling fell
+/// by the drop of the median, 187.
+const CEILING: i64 = 1_653;
 
 /// The EHR id of EHR `n`.
 fn ehr(n: u32) -> String {
@@ -77,15 +80,14 @@ fn read(n: u32) -> AuditEvent {
     event
 }
 
-/// The relations an entry takes room in: its row, its link, its shared part,
-/// its search tokens and their sets, and the checkpoints that seal it.
-const RELATIONS: [&str; 6] = [
+/// The relations an entry takes room in: its row, its shared part, its
+/// search tokens and their sets, and the seals of its windows.
+const RELATIONS: [&str; 5] = [
     "access_log_entry",
-    "access_log_link",
     "access_log_shared",
     "audit_search_token",
     "audit_search_set",
-    "access_log_checkpoint",
+    "access_log_seal",
 ];
 
 /// Each relation of [`RELATIONS`] with the bytes its heap and its indexes
@@ -194,7 +196,8 @@ async fn plan(pool: &sqlx::PgPool, count: &str) -> String {
 
 /// The ITI-81 total of the access log, the whole log and a date window, is
 /// counted from the time index alone, which carries whether an entry is
-/// indexed, so it reads no entry's row and no link (#5784, #5968).
+/// indexed, so it reads no entry's row; the entries a write holds are left
+/// out by their key (#5784, #5968, #6242).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_iti81_total_is_counted_from_the_time_index() {
     let seeded = seed(ENTRIES).await;
@@ -206,11 +209,15 @@ async fn the_iti81_total_is_counted_from_the_time_index() {
          WHERE recorded_at >= now() - interval '1 hour' AND recorded_at < now()",
     ] {
         let plan = plan(&pool, count).await;
+        let nodes = plan_nodes(&serde_json::from_str(&plan).expect("a plan"));
         assert!(
-            plan.contains("\"Index Only Scan\"")
-                && plan.contains("\"ix_access_log_entry_time\"")
-                && !plan.contains("\"access_log_link\"")
-                && !plan.contains("\"Seq Scan\""),
+            nodes
+                .iter()
+                .any(|(kind, _, index)| kind == "Index Only Scan"
+                    && index == "ix_access_log_entry_time")
+                && nodes
+                    .iter()
+                    .all(|(kind, read, _)| read != "access_log_entry" || kind == "Index Only Scan"),
             "`{count}` is counted from the time index alone: {plan}"
         );
     }
@@ -241,39 +248,6 @@ fn plan_nodes(plan: &serde_json::Value) -> Vec<(String, String, String)> {
         }
     }
     nodes
-}
-
-/// The entries of the ITI-81 total an intake row still names, which no page
-/// returns, are found by the entries' key and never by a read of the whole
-/// log or of the links (#6000).
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn the_iti81_total_finds_the_unchained_entries_by_their_key() {
-    let seeded = seed(ENTRIES).await;
-    let pool = seeded.db.pool();
-    vacuum(&pool).await;
-    for unchained in [
-        "SELECT count(*) FROM audit.access_log_search \
-         WHERE entry_id = ANY (ARRAY(SELECT unnest(i.entries) FROM audit.access_log_intake i))",
-        "SELECT count(*) FROM audit.access_log_search \
-         WHERE recorded_at >= now() - interval '1 hour' AND recorded_at < now() \
-         AND entry_id = ANY (ARRAY(SELECT unnest(i.entries) FROM audit.access_log_intake i))",
-    ] {
-        let plan = plan(&pool, unchained).await;
-        let nodes = plan_nodes(&serde_json::from_str(&plan).expect("a plan"));
-        let reads = |relation: &str, node: &str| {
-            nodes
-                .iter()
-                .any(|(kind, read, _)| kind == node && read == relation)
-        };
-        assert!(
-            nodes
-                .iter()
-                .any(|(_, _, index)| index == "pk_access_log_entry")
-                && !reads("access_log_entry", "Seq Scan")
-                && !nodes.iter().any(|(_, read, _)| read == "access_log_link"),
-            "`{unchained}` finds the entries by their key: {plan}"
-        );
-    }
 }
 
 /// The seeded log takes no more than [`CEILING`] bytes per entry, every
