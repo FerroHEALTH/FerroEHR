@@ -95,6 +95,7 @@ mod cohort_bench;
 mod cohort_query;
 mod cohort_subjects;
 mod commit_contention;
+mod commit_directory_contention;
 mod commit_held_records;
 mod commit_lock_order;
 mod commit_status_contention;

@@ -123,6 +123,7 @@ impl FerroEhrService {
                     shape: Shape::Members,
                     persistent: None,
                     addressed: None,
+                    items: &[],
                 };
                 let gate = gate::read(&mut conn, ask).await?;
                 self.ensure_gate_policy_held().await?;
@@ -154,6 +155,7 @@ impl FerroEhrService {
                     outbox: None,
                     reservation: None,
                     status: None,
+                    folder: false,
                 },
             };
             let ready =

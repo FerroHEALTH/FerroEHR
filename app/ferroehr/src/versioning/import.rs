@@ -660,6 +660,7 @@ async fn commit_import_scoped(
         contribution_id,
         commit_audit_id: contribution_commit_audit_id,
         time_committed: import_time,
+        ..
     } = crate::storage::version_repo::commit::commit_folded(
         tx,
         &import_audit.row(),

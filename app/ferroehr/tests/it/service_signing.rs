@@ -907,3 +907,70 @@ async fn a_body_stored_in_an_older_member_order_keeps_its_bytes_and_verifies() {
             .expect("the stored version");
     assert_eq!((after_body, after_digest), (older, digest));
 }
+
+/// Asserts the newest directory version of `ehr` an export serves is the one
+/// `meta` answered, and that its digest recomputes over the `time_committed`
+/// the write answered.
+async fn assert_directory_signed(
+    svc: &FerroEhrService,
+    ehr: ferroehr::ids::EhrId,
+    meta: &ferroehr::service::response::ResourceMeta,
+) {
+    let extract = svc.extract_ehrs(ehr).await.expect("export").remove(0);
+    let entry =
+        crate::fixtures::find_by_xtype(&extract, "X_VERSIONED_FOLDER").expect("the directory");
+    let ov = entry["item"]["versions"]
+        .as_array()
+        .and_then(|versions| versions.last())
+        .expect("the directory's version");
+    assert_eq!(ov["uid"]["value"], json!(meta.uid), "{entry}");
+    assert_digest_recomputes(ov);
+    let stored: jiff::Timestamp = ov["commit_audit"]["time_committed"]["value"]
+        .as_str()
+        .expect("time_committed")
+        .parse()
+        .expect("an instant");
+    assert_eq!(
+        Some(stored),
+        meta.last_modified,
+        "the signed instant is the one stored and answered"
+    );
+}
+
+/// A directory create, update and delete each commit in one guarded statement
+/// (#6257), and each version's digest recomputes from the served
+/// `ORIGINAL_VERSION` whose `time_committed` is the instant the write
+/// answered: the signature covers the stored commit instant (RM common
+/// master06 §Digital Signature).
+#[tokio::test]
+async fn directory_versions_are_signed_over_their_stored_commit_instant() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let created = svc
+        .create_directory(ehr, uv(&crate::fixtures::folder("root"), "249", None))
+        .await
+        .expect("create_directory");
+    assert_directory_signed(&svc, ehr, &created).await;
+    let updated = svc
+        .update_directory(
+            ehr,
+            uv(
+                &crate::fixtures::folder("renamed"),
+                "251",
+                Some(&created.uid),
+            ),
+        )
+        .await
+        .expect("update_directory");
+    assert_directory_signed(&svc, ehr, &updated).await;
+    let deleted = svc
+        .delete_directory(
+            ehr,
+            crate::fixtures::deleting(Some(updated.uid.parse().expect("ovid"))),
+        )
+        .await
+        .expect("delete_directory")
+        .meta
+        .expect("the delete answers its version");
+    assert_directory_signed(&svc, ehr, &deleted).await;
+}

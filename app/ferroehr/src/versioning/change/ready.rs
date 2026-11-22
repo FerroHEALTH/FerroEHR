@@ -103,6 +103,11 @@ pub(crate) async fn prepare_write(
     let party_facts = resolved.party_facts.take();
     let mut prepared = prepare(ctx, &audit, ctx.stamp.mint(), resolved)?;
     prepared.committed.deleted = deleted;
+    // A new FOLDER hierarchy joins `EHR.folders` in the guarded statement itself.
+    let guard = Guard {
+        folder: prepared.take_first_folder(),
+        ..guard
+    };
     Ok(Ready {
         ehr_id,
         audit,
@@ -177,9 +182,9 @@ impl Ready {
             ctx,
             &committed,
         );
-        committed.time_committed = commit_folded(conn, &self.audit.row(), statement)
-            .await?
-            .time_committed;
+        let rows = commit_folded(conn, &self.audit.row(), statement).await?;
+        committed.time_committed = rows.time_committed;
+        committed.subject_moved = rows.subject_moved;
         if prepared.has_more() {
             prepared.finish(conn).await?;
         }

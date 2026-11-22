@@ -334,6 +334,61 @@ async fn a_held_write_of_more_than_entries_leaves_nothing_when_a_later_statement
     );
 }
 
+/// Recorded creates of one EHR's directory, held at their statement: the one
+/// that commits holds its record; every other takes the slot's rank second,
+/// is judged again, answers `409` and keeps no record (#6257).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_directory_create_refused_after_its_intake_leaves_no_held_record() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = audited(&pool).await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let mut hold = pool.begin().await.expect("begin the hold");
+    sqlx::query("SELECT 1 FROM ehr WHERE id = $1 FOR UPDATE")
+        .bind(ehr)
+        .execute(&mut *hold)
+        .await
+        .expect("hold the EHR row");
+    let tasks: Vec<_> = (0..4)
+        .map(|n| {
+            let svc = Arc::clone(&svc);
+            let recorder = primed();
+            let request = uv(&crate::fixtures::folder(&format!("root {n}")), "249", None);
+            let kept = recorder.clone();
+            let task = tokio::spawn(ferroehr::db::acquire::request_scope(with_recorder(
+                recorder,
+                async move { Box::pin(svc.create_directory(ehr, request)).await },
+            )));
+            (task, kept)
+        })
+        .collect();
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    hold.commit().await.expect("release the hold");
+    let mut kept = Vec::new();
+    for (task, recorder) in tasks {
+        match task.await.expect("the writer completes") {
+            Ok(_) => kept.extend(recorder.reserved().into_iter().map(|r| r.id)),
+            Err(refused) => {
+                assert!(
+                    matches!(refused, ServiceError::Conflict(_)),
+                    "a losing create answers 409: {refused:?}"
+                );
+                assert!(recorder.reserved().is_empty(), "it keeps no reservation");
+                assert!(
+                    !recorder.holds_operation_record(),
+                    "its operation record goes back to the adapter"
+                );
+            }
+        }
+    }
+    assert_eq!(kept.len(), 1, "one create commits");
+    assert_eq!(
+        held(&pool).await,
+        kept,
+        "only the committed create's record is held"
+    );
+}
+
 /// One recorded update of `created` with content `n`, as a protocol adapter
 /// sends it; the committed version and the write's recorder.
 async fn recorded_update(

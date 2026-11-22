@@ -295,10 +295,20 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   the EHR's status by its kind (`gate::Shape::Status`), its access record is
   held first, and one guarded statement takes the EHR row `FOR UPDATE`,
   requires no modifiable EHR (the status is what sets `is_modifiable`) and
-  writes the promoted `ehr` columns beside the version, notifying the access
-  copies when the subject moved; a subject another EHR holds refuses the
+  writes the promoted `ehr` columns beside the version. The statement
+  returns whether the subject (namespace or id) moved, and only then does it
+  notify the access copies and the committing replica drop its own, since
+  the copy is revised by the settings and the subject alone
+  (`access_revision_of`, #6238); a subject another EHR holds refuses the
   statement through `uq_ehr_subject` and answers `409`. A COMPOSITION commit
   queued behind it reads the flipped row and is judged again.
+  A directory create, update or delete takes the same shape (#6257): its gate
+  read finds the directory by its slot (`gate::Shape::Directory`, the
+  lowest-rank live hierarchy, else the lowest-rank one) and which of the
+  FOLDER's local `items` exist, and a new hierarchy's `ehr_folder` row rides
+  in the guarded statement. Two creates that take one rank at once are
+  refused by `pk_ehr_folder`, and the second is judged again and answers
+  `409` for the live directory (#6296).
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers
@@ -1897,8 +1907,9 @@ one indexed read then finds. Otherwise that run is dropped whole: its answer,
 its evaluator and its uncounted decisions go unused, so it leaves no access
 record, audit record or decision metric, and the read runs once more behind the
 up-front confirm, which never runs it again. `access_policy_reruns_total{op}`
-counts those runs (#6251). A COMPOSITION create, update or delete and a
-CONTRIBUTION commit make no read first either: the gate read of the write
+counts those runs (#6251). A COMPOSITION create, update or delete, a
+CONTRIBUTION commit, an `EHR_STATUS` commit and a directory create, update or
+delete make no read first either: the gate read of the write
 returns the revisions, the write is decided on the copies as they stand, and a
 copy found behind those revisions refuses the write with `access-refreshing`
 before anything is written, so the run is dropped and runs once more behind

@@ -97,6 +97,7 @@ pub(super) fn prepare(
         skipped: false,
         content_digest: r.content_digest,
         deleted: None,
+        subject_moved: false,
     };
     Ok(Prepared {
         r,
@@ -147,6 +148,12 @@ impl Prepared {
             content_sys_version: r.shared_from,
             root_archetype: self.committed.root_archetype.as_deref(),
         })
+    }
+
+    /// Whether the version is a new FOLDER hierarchy of an EHR, which its
+    /// statement then writes the membership of in place of [`Self::finish`].
+    pub(super) fn take_first_folder(&mut self) -> bool {
+        std::mem::take(&mut self.r.is_first_folder) && self.r.ehr_id.is_some()
     }
 
     /// Whether the version's statement leaves rows for [`Self::finish`] to

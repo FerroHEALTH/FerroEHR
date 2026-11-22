@@ -108,6 +108,7 @@ pub(crate) async fn commit_version_set(
                 shape: Shape::Members,
                 persistent: None,
                 addressed: None,
+                items: &[],
             };
             let gate = gate::read(&mut *acquire(&cx.pool).await?, ask).await?;
             cx.ensure_gate_policy_held().await?;

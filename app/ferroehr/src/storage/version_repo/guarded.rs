@@ -40,6 +40,20 @@ pub struct Guard {
     /// The promoted `ehr` columns an `EHR_STATUS` commit writes beside its
     /// version (#6257); `None` for any other write.
     pub status: Option<Box<StatusSync>>,
+    /// Whether the version is a new FOLDER hierarchy, which joins
+    /// `EHR.folders` in the same statement (RM ehr master04 §Folders, #6257).
+    pub folder: bool,
+}
+
+/// What a guarded statement ([`statement`]) writes beside its version.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Beside {
+    /// Nothing.
+    Nothing,
+    /// The promoted `ehr` columns of an `EHR_STATUS` commit ([`status_ctes`]).
+    Status,
+    /// The `ehr_folder` membership of a new FOLDER hierarchy ([`folder_cte`]).
+    Folder,
 }
 
 /// The promoted `ehr` columns of an `EHR_STATUS` commit, written by its
@@ -246,14 +260,16 @@ fn flags_row(audit: &str, extra: &str) -> String {
 /// The `ehr` column CTEs of an `EHR_STATUS` commit in EHR `ehr`, from `$first`
 /// (the five columns, then the notification channel), written once the
 /// CONTRIBUTION is, as `ehr_repo::update_promoted_columns` writes them; a
-/// moved subject notifies every replica's access copy (#5513).
+/// moved subject, its namespace or its id, notifies every replica's access
+/// copy (#5513, #6238).
 fn status_ctes(ehr: &str, first: usize) -> String {
     format!(
         ", es AS ( \
              UPDATE ehr SET subject_id = ${}, subject_namespace = ${}, is_queryable = ${}, \
                             is_modifiable = ${}, subject_digest = ${} \
              FROM c WHERE ehr.id = {ehr} \
-             RETURNING OLD.subject_id IS DISTINCT FROM NEW.subject_id AS moved \
+             RETURNING (OLD.subject_namespace, OLD.subject_id) \
+                       IS DISTINCT FROM (NEW.subject_namespace, NEW.subject_id) AS moved \
          ), en AS (SELECT pg_notify(${}, {ehr}::text) FROM es WHERE es.moved)",
         first,
         first + 1,
@@ -261,6 +277,20 @@ fn status_ctes(ehr: &str, first: usize) -> String {
         first + 3,
         first + 4,
         first + 5
+    )
+}
+
+/// The `ehr_folder` row of a new FOLDER hierarchy `vo` in EHR `ehr`, written
+/// once its version is, at the next rank as
+/// `commit::insert_ehr_folder_rank` writes it: two hierarchies that take one
+/// rank at once are refused by `pk_ehr_folder`.
+fn folder_cte(ehr: &str, vo: &str) -> String {
+    format!(
+        ", fm AS ( \
+             INSERT INTO ehr_folder (ehr_id, rank, vo_id) \
+             SELECT {ehr}, (SELECT COALESCE(MAX(f.rank), 0) + 1 FROM ehr_folder f \
+                            WHERE f.ehr_id = {ehr}), {vo} FROM v \
+         )"
     )
 }
 
@@ -288,17 +318,19 @@ fn audit_cte(name: &str, first: usize, time: &str, from: &str) -> String {
 /// `$28` the expected head ordinal, `$29` the policy revision, `$30` the
 /// definition revision, `$31` the outbox envelope and `$32` the audit
 /// reservation, and the node arrays from `$33`, then for a `status` commit
-/// the columns of [`status_ctes`]. The audit insert reads from `g`, and every
-/// later insert from the audit's, so nothing is written unless every
-/// requirement holds; the last row names a flag per requirement.
-pub(super) fn statement(status: bool) -> String {
-    let (sync, notified) = if status {
-        (
+/// the columns of [`status_ctes`]; `beside` names what else it writes. The
+/// audit insert reads from `g`, and every later insert from the audit's, so
+/// nothing is written unless every requirement holds; the last row names a
+/// flag per requirement.
+pub(super) fn statement(beside: Beside) -> String {
+    let status = beside == Beside::Status;
+    let (sync, notified) = match beside {
+        Beside::Status => (
             status_ctes("$7", 33 + crate::storage::node_write::node_array_count()),
             ", (SELECT count(*) FROM en) AS notified",
-        )
-    } else {
-        (String::new(), "")
+        ),
+        Beside::Folder => (folder_cte("$7", "$8"), ""),
+        Beside::Nothing => (String::new(), ""),
     };
     format!(
         "{}, {}, c AS ( \

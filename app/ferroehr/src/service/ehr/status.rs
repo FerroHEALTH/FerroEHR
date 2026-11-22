@@ -39,52 +39,6 @@ use crate::versioning::change::precondition::{ensure_preceding, tip_uid};
 use crate::versioning::change::{Change, Write};
 
 impl FerroEhrService {
-    /// Whether the EHR is modifiable (RM ehr `EHR_STATUS.is_modifiable`, 1..1
-    /// Boolean, RM ehr master04 §EHR Active Status). Read from the promoted
-    /// `ehr.is_modifiable` column, kept in lockstep with the current
-    /// `EHR_STATUS` by [`Self::sync_ehr_subject`] and the import/archive-load
-    /// [`Self::resync_promoted_columns`]; a missing EHR (`None`) is treated as
-    /// modifiable so the guard never spuriously blocks.
-    ///
-    /// The column read is a storage seam
-    /// ([`ehr_repo::ehr_is_modifiable`]; no openEHR spec
-    /// governs the promoted column — our own storage design).
-    async fn ehr_is_modifiable(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        Ok(ehr_repo::ehr_is_modifiable(&self.pool, ehr_id)
-            .await?
-            .unwrap_or(true))
-    }
-
-    /// Refuses a write to EHR contents when the EHR is deactivated
-    /// (`EHR_STATUS.is_modifiable = False`).
-    ///
-    /// RM ehr master04 §EHR Active Status scopes the flag to "everything other
-    /// than the `EHR_STATUS` object", which "is always modifiable", so this
-    /// guard applies to COMPOSITION, DIRECTORY and content writes only. The
-    /// pooled read is the direct write paths' fast-fail convenience; the
-    /// CONTRIBUTION engine evaluates the flag inside its commit transaction
-    /// under a row lock
-    /// ([`crate::versioning::change::precondition::ensure_content_writable_tx`]).
-    ///
-    /// NOTE: ITS-REST 1.1.0 enumerates no status code for a write to a
-    /// non-modifiable EHR, so `409 Conflict` is used as the closest HTTP
-    /// semantics (RFC 9110 §15.5.10, a conflict with the current state of the
-    /// target resource).
-    ///
-    /// # Errors
-    /// [`ServiceError::Conflict`] when the EHR is not modifiable;
-    /// [`ServiceError::Database`] if the flag read fails.
-    pub(in crate::service) async fn ensure_content_writable(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<(), ServiceError> {
-        if self.ehr_is_modifiable(ehr_id).await? {
-            Ok(())
-        } else {
-            Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id))
-        }
-    }
-
     /// Keep the EHR's promoted subject columns (`ehr.subject_id` /
     /// `subject_namespace`) in sync with the `EHR_STATUS` being committed
     /// (`subject.external_ref.id.value` + `.namespace`). The partial unique
@@ -352,6 +306,7 @@ impl FerroEhrService {
                             shape: Shape::Status,
                             persistent: None,
                             addressed: None,
+                            items: &[],
                         },
                     )
                     .await?;
@@ -392,10 +347,11 @@ impl FerroEhrService {
             })
             .await
             .map_err(ServiceError::flattened)?;
-        // NOTE: our own design (#5589, #5879), the status names the subject whose care
-        // relationships decide access, so the copy and the request see the commit; read with
-        // the write's connection given back, never a second one beside it.
-        self.invalidate_ehr_access(an_ehr_id).await;
+        // NOTE: our own design (#5589, #5879, #6238), the copy is revised by the subject alone
+        // (`access_revision_of`), so only a moved subject drops it, with no connection held.
+        if committed.subject_moved {
+            self.invalidate_ehr_access(an_ehr_id).await;
+        }
         Ok(self.version_meta(
             an_ehr_id,
             committed.vo_id,

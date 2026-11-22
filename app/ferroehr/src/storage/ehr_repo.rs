@@ -375,37 +375,28 @@ pub async fn directory_vo(pool: &PgPool, ehr_id: EhrId) -> Result<Option<VoId>, 
     .await?)
 }
 
-/// Resolves the EHR's directory slot, current version metadata, and write flag.
+/// Resolves the EHR's directory slot and its current version metadata.
 ///
-/// One statement covers the directory slot **and** its current version metadata
-/// **and** the EHR's `is_modifiable` content-write flag: the
-/// `ehr_folder`⋈`version`⋈`audit`⋈`ehr` join, ordered live-first by `rank`
-/// (the same slot resolution [`directory_vo`] applies), projecting the current
-/// trunk version's `VERSION_TREE_ID` column ints + stored `creating_system_id` +
-/// audit `time_committed`, plus the promoted `ehr.is_modifiable`. Folds the
-/// [`directory_vo`] slot lookup, the metadata-only current-version read, and
-/// the `is_modifiable` read into one round trip for the directory
-/// `If-Match`/`412` write paths (`update`/`delete`). The
-/// full-`OBJECT_VERSION_ID` compare the caller builds from these columns is
-/// unchanged (ITS-REST overview §Concurrency control); the `is_modifiable` gate
-/// is RM ehr master04 §EHR Active Status. Returns `(meta, is_modifiable)`; `None`
-/// when the EHR indexes no folder hierarchy. No openEHR spec governs the
-/// `ehr_folder` schema — our own design.
+/// One `ehr_folder`⋈`version`⋈`audit` statement, ordered live-first by `rank`
+/// (the slot resolution [`directory_vo`] applies), projecting the current
+/// trunk version's `VERSION_TREE_ID` column ints, stored
+/// `creating_system_id` and audit `time_committed`; `None` when the EHR
+/// indexes no folder hierarchy. No openEHR spec governs the `ehr_folder`
+/// schema: our own design.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
 pub async fn directory_current_meta(
     pool: &PgPool,
     ehr_id: EhrId,
-) -> Result<Option<(CurrentMeta, bool)>, StorageError> {
+) -> Result<Option<CurrentMeta>, StorageError> {
     let Some(row) = sqlx::query(
         "SELECT v.vo_id, v.trunk_version, v.branch_number, v.branch_version, \
-         v.creating_system_id, a.time_committed, e.is_modifiable \
+         v.creating_system_id, a.time_committed \
          FROM ehr_folder f \
          JOIN version v ON v.vo_id = f.vo_id \
          JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
          JOIN commit_audit a ON a.id = v.commit_audit_id \
-         JOIN ehr e ON e.id = f.ehr_id \
          WHERE f.ehr_id = $1 \
          ORDER BY (v.lifecycle_state = '523'), f.rank \
          LIMIT 1",
@@ -426,27 +417,7 @@ pub async fn directory_current_meta(
             .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
             .to_jiff(),
     };
-    Ok(Some((meta, row.try_get("is_modifiable")?)))
-}
-
-/// Whether the EHR is modifiable.
-///
-/// Read from the promoted `ehr.is_modifiable` column (kept in lockstep with the
-/// current `EHR_STATUS.is_modifiable` by the service's `sync_ehr_subject` hook
-/// and its import/archive-load re-promotion over [`current_status_root`]; RM
-/// ehr master04 §EHR Active Status). `None` when the EHR does not exist (the
-/// caller treats that as modifiable so the guard never spuriously blocks). No
-/// openEHR spec governs the promoted column — our own storage design.
-///
-/// # Errors
-/// Returns [`StorageError::Database`] on a driver failure.
-pub async fn ehr_is_modifiable(pool: &PgPool, ehr_id: EhrId) -> Result<Option<bool>, StorageError> {
-    Ok(
-        sqlx::query_scalar("SELECT is_modifiable FROM ehr WHERE id = $1")
-            .bind(ehr_id)
-            .fetch_optional(&mut *acquire(pool).await?)
-            .await?,
-    )
+    Ok(Some(meta))
 }
 
 /// The in-transaction, row-locked read of the promoted `ehr.is_modifiable`
@@ -541,31 +512,6 @@ pub struct Writability {
 /// Whether an EHR is restricted and the revision of its access settings row;
 /// `None` when the EHR does not exist.
 pub type Restriction = Option<(bool, crate::storage::access_projection::Revision)>;
-
-/// Whether ANY live (non-deleted) folder hierarchy is indexed for the EHR —
-/// the `POST /directory` conflict probe.
-///
-/// Deliberately ignores logically deleted hierarchies: after a `523|deleted|`
-/// version the container remains (RM common master06 §Logical Deletion) but
-/// the directory slot is vacant, so a new hierarchy may be created (RM ehr
-/// master04 §Folders — "an entirely new Folder hierarchy may be added"); only
-/// a LIVE occupant conflicts (CNF master09 E.2 requires the error only for an
-/// EHR *with* a directory).
-///
-/// # Errors
-/// Returns [`StorageError::Database`] on a driver failure.
-pub async fn live_directory_exists(pool: &PgPool, ehr_id: EhrId) -> Result<bool, StorageError> {
-    Ok(sqlx::query_scalar(
-        "SELECT EXISTS( \
-           SELECT 1 FROM ehr_folder f \
-           JOIN version v ON v.vo_id = f.vo_id \
-           JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
-           WHERE f.ehr_id = $1 AND v.lifecycle_state <> '523')",
-    )
-    .bind(ehr_id)
-    .fetch_one(&mut *acquire(pool).await?)
-    .await?)
-}
 
 /// Which of `roots` exist as versioned objects in `ehr_id`.
 ///
@@ -730,12 +676,13 @@ pub async fn update_promoted_columns(
     ehr_id: EhrId,
     columns: PromotedColumns<'_>,
 ) -> Result<(), StorageError> {
-    // NOTE: our own design (#5513), a changed subject notifies every replica's copy of
-    // the EHR's access facts, whose care relationships are its subject's.
+    // NOTE: our own design (#5513, #6238), a changed subject, namespace or id, notifies
+    // every replica's copy of the EHR's access facts, whose care relationships are its subject's.
     sqlx::query(
         "WITH changed AS (UPDATE ehr SET subject_id = $2, subject_namespace = $3, \
          is_queryable = $4, is_modifiable = $5, subject_digest = $7 WHERE id = $1 \
-         RETURNING OLD.subject_id IS DISTINCT FROM NEW.subject_id AS moved) \
+         RETURNING (OLD.subject_namespace, OLD.subject_id) \
+                   IS DISTINCT FROM (NEW.subject_namespace, NEW.subject_id) AS moved) \
          SELECT pg_notify($6, $1::text) FROM changed WHERE moved",
     )
     .bind(ehr_id)
