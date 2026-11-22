@@ -55,6 +55,7 @@ pub(in crate::service) mod kind_rules;
 pub(in crate::service) mod meta;
 pub mod object;
 pub mod read_ahead;
+pub mod scope;
 pub(crate) mod service;
 pub(in crate::service) mod status;
 pub(in crate::service) mod tags;

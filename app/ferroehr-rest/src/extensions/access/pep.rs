@@ -30,6 +30,7 @@ use crate::api::operation::{CompositionGate, Operation, Verb, operation};
 use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::error::ServiceError;
+use ferroehr::service::ehr::scope::ScopeJudge;
 use ferroehr::system_log::categories::{AccessedContent, ContentIds};
 use openehr_rm::prelude::Composition;
 
@@ -119,34 +120,92 @@ fn lookup_error(
     resp
 }
 
-/// The SMART gate of a COMPOSITION write, on the template its body names or,
-/// for a delete, the template of the version it deletes (master08 §Resource
-/// Scopes, `composition-<templateId>`), checked before the backend call:
-/// `Err(response)` short-circuits the dispatch with a ready 403/500. Inert
-/// without an authenticated principal, which only an unauthenticated surface
-/// lacks.
-pub(crate) async fn pre_check(
-    state: &AppState,
-    op: &'static str,
-    parts: &RequestParts,
-) -> Result<(), Response> {
+/// The SMART gate of a COMPOSITION write, on the template its body names
+/// (master08 §Resource Scopes, `composition-<templateId>`), checked before
+/// the backend call: `Err(response)` short-circuits the dispatch with a ready
+/// 403/500. A delete's uid is checked here, and its template, the template of
+/// the version it deletes, on its gate read ([`CompositionScope`], #6271).
+/// Inert without an authenticated principal, which only an unauthenticated
+/// surface lacks.
+pub(crate) fn pre_check(op: &'static str, parts: &RequestParts) -> Result<(), Response> {
     let Some(row) = operation(op).filter(|row| row.composition == CompositionGate::Write) else {
         return Ok(());
     };
     let Some(principal) = current_principal() else {
         return Ok(());
     };
-    let template = if row.verb == Verb::Delete {
-        composition_template_of(
-            state,
-            &principal,
-            parts.path.get("uid_based_id").map(String::as_str),
-        )
-        .await?
-    } else {
-        composition_template(parts)
-    };
-    smart_composition(&principal, op, template.as_deref())
+    if row.verb == Verb::Delete {
+        return match parts.path.get("uid_based_id") {
+            Some(uid) => parse_uid_based_id(uid)
+                .map(drop)
+                .map_err(|e| forbidden(&principal, &format!("unaddressable resource id: {e}"))),
+            None => smart_composition(&principal, op, None),
+        };
+    }
+    smart_composition(&principal, op, composition_template(parts).as_deref())
+}
+
+/// The SMART `composition-` scope of the running request's principal for
+/// `op`, which a delete's gate read is judged on (#6271); every template is
+/// covered without a principal, as [`pre_check`] is inert.
+pub(crate) struct CompositionScope {
+    principal: Option<std::sync::Arc<Principal>>,
+    op: &'static str,
+}
+
+impl CompositionScope {
+    /// The scope of the running request's principal for `op`.
+    pub(crate) fn current(op: &'static str) -> Self {
+        Self {
+            principal: current_principal(),
+            op,
+        }
+    }
+
+    /// The `403` a template the scope does not cover answers, as
+    /// [`pre_check`] answers it.
+    pub(crate) fn refusal(&self) -> Response {
+        match &self.principal {
+            Some(principal) => scope_refusal(principal),
+            None => RestError::from(ApiError::Forbidden(
+                "access denied: the credential does not permit this request".to_owned(),
+            ))
+            .into_response(),
+        }
+    }
+
+    /// The refusal [`pre_check`] answered a delete before its gate read
+    /// judged the scope, for a delete refused before it reaches that read:
+    /// the scope judged on the template the store holds for its uid, so a
+    /// malformed request answers as before (#6271).
+    pub(crate) async fn refused_unread(
+        &self,
+        state: &AppState,
+        parts: &RequestParts,
+    ) -> Option<Response> {
+        let principal = self.principal.as_ref()?;
+        let uid = parts.path.get("uid_based_id").map(String::as_str);
+        match composition_template_of(state, principal, uid).await {
+            Ok(template) => smart_composition(principal, self.op, template.as_deref()).err(),
+            Err(deny) => Some(deny),
+        }
+    }
+}
+
+impl std::fmt::Debug for CompositionScope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CompositionScope")
+            .field("op", &self.op)
+            .finish_non_exhaustive()
+    }
+}
+
+impl ScopeJudge for CompositionScope {
+    fn covers(&self, template: Option<&str>) -> bool {
+        self.principal
+            .as_ref()
+            .is_none_or(|principal| smart_composition(principal, self.op, template).is_ok())
+    }
 }
 
 /// The SMART gate of a COMPOSITION read, on the template of the version the
@@ -198,10 +257,15 @@ fn smart_composition(
     };
     routes::check(&requirement, principal).map_err(|reason| {
         tracing::debug!(reason, "a SMART on openEHR requirement was not met");
-        let mut resp = forbidden(principal, "the credential does not permit this request");
-        resp.extensions_mut().insert(ScopeRefused);
-        resp
+        scope_refusal(principal)
     })
+}
+
+/// The `403` of a `composition-` requirement `principal` does not meet.
+fn scope_refusal(principal: &Principal) -> Response {
+    let mut resp = forbidden(principal, "the credential does not permit this request");
+    resp.extensions_mut().insert(ScopeRefused);
+    resp
 }
 
 /// Returns the template of the COMPOSITION version `uid` names, read from the

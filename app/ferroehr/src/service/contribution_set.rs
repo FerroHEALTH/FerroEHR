@@ -122,6 +122,7 @@ impl FerroEhrService {
                     targets: &targets,
                     shape: Shape::Members,
                     persistent: None,
+                    addressed: None,
                 };
                 let gate = gate::read(&mut conn, ask).await?;
                 self.ensure_gate_policy_held().await?;

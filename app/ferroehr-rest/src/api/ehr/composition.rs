@@ -36,12 +36,14 @@ use ferroehr::access_eval::alongside::Use;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::ehr::composition_read::{JudgedRead, VersionAhead};
 use ferroehr::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
+use ferroehr::service::version_update::WriteRequest;
 use ferroehr::versioning::change::Committed;
 
 use ferroehr::versioning::object_version_id::{UidAddress, parse_uid_based_id};
 
 use crate::api::RequestParts;
 use crate::api::item_tags;
+use crate::extensions::access::pep::CompositionScope;
 use crate::extensions::access::{admission, delay, ehr_access};
 use crate::negotiate::WireFormat;
 use crate::negotiate::prefer::AppliedPreference;
@@ -407,17 +409,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
             Ok(resp)
         }
         Err(e @ ferroehr::error::ServiceError::VersionConflict(_)) => {
-            let meta = state
-                .backend()
-                .composition_latest_meta(ehr_id, uid.vo_id)
-                .await
-                .ok()
-                .flatten();
-            Ok(negotiate::resource::error_with_meta(
-                crate::overview::service_error::api_error(e),
-                meta.as_ref(),
-                Tree::Ehr,
-            ))
+            Ok(with_latest(&state, (ehr_id, uid.vo_id), e).await)
         }
         Err(e) => Err(RestError::from(e)),
     }
@@ -428,6 +420,71 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
 /// # Errors
 /// The parameter, precondition and commit rejections the operation declares.
 pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    let scope = CompositionScope::current("composition_delete");
+    let (ehr_id, ovid, vo_id, request) = match delete_request(&state, &parts) {
+        Ok(asked) => asked,
+        // NOTE: SMART on openEHR master08 §Resource Scopes, a delete refused before its gate
+        // read answers the scope's 403 first, as when the pre-check read the template (#6271).
+        Err(error) => return scope.refused_unread(&state, &parts).await.ok_or(error),
+    };
+    match state
+        .backend()
+        .delete_composition(ehr_id, &ovid, request, &scope)
+        .await
+    {
+        Ok(committed) => {
+            // A logical delete commits a `523|deleted|` VERSION, so its
+            // commit instant is the resource's last modification
+            // (RM common master06 §Logical Deletion).
+            let uid = committed.version_uid();
+            // The deleted version carries no content, so the access record is
+            // classified by the version it deleted (EHDS Annex II 3.2(c)), which
+            // the delete's gate read found (`Committed::deleted`).
+            let resp = ServiceResponse::deleted(commit_meta(ehr_id, uid, &committed));
+            Ok(negotiate::resource::deleted_with_headers(&resp))
+        }
+        // The 409 and the volunteered-If-Match 412 both carry the latest
+        // `version_uid` in `ETag` (overview §"If-Match and accidental
+        // overwrites").
+        Err(
+            e @ (ferroehr::error::ServiceError::Conflict(_)
+            | ferroehr::error::ServiceError::VersionConflict(_)),
+        ) => Ok(with_latest(&state, (ehr_id, vo_id), e).await),
+        Err(ferroehr::error::ServiceError::ScopeRefused(_)) => Ok(scope.refusal()),
+        Err(e) => Err(RestError::from(e)),
+    }
+}
+
+/// The refusal `error` of a write to the COMPOSITION `vo_id` of `ehr_id`,
+/// carrying its latest `version_uid` in `ETag` when it is known (overview
+/// §"If-Match and accidental overwrites").
+async fn with_latest(
+    state: &AppState,
+    (ehr_id, vo_id): (EhrId, VoId),
+    error: ferroehr::error::ServiceError,
+) -> Response {
+    let meta = state
+        .backend()
+        .composition_latest_meta(ehr_id, vo_id)
+        .await
+        .ok()
+        .flatten();
+    negotiate::resource::error_with_meta(
+        crate::overview::service_error::api_error(error),
+        meta.as_ref(),
+        Tree::Ehr,
+    )
+}
+
+/// What a `composition_delete` asks, read off its parameters and committal
+/// headers: the EHR, the version it deletes, its object and the write.
+///
+/// # Errors
+/// The parameter and header rejections the operation declares.
+fn delete_request(
+    state: &AppState,
+    parts: &RequestParts,
+) -> Result<(EhrId, ObjectVersionId, VoId, WriteRequest), RestError> {
     let h = &parts.headers;
     let p = parts.decode(
         CompositionDeleteParams::from_request,
@@ -457,43 +514,7 @@ pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Respo
         ferroehr::versioning::committer::request_committer(state.config().api.system_id()),
         volunteered_if_match,
     )?;
-    match state
-        .backend()
-        .delete_composition(ehr_id, &ovid, request)
-        .await
-    {
-        Ok(committed) => {
-            // A logical delete commits a `523|deleted|` VERSION, so its
-            // commit instant is the resource's last modification
-            // (RM common master06 §Logical Deletion).
-            let uid = committed.version_uid();
-            // The deleted version carries no content, so the access record is
-            // classified by the version it deleted (EHDS Annex II 3.2(c)), which
-            // the delete's gate read found (`Committed::deleted`).
-            let resp = ServiceResponse::deleted(commit_meta(ehr_id, uid, &committed));
-            Ok(negotiate::resource::deleted_with_headers(&resp))
-        }
-        // The 409 and the volunteered-If-Match 412 both carry the latest
-        // `version_uid` in `ETag` (overview §"If-Match and accidental
-        // overwrites").
-        Err(
-            e @ (ferroehr::error::ServiceError::Conflict(_)
-            | ferroehr::error::ServiceError::VersionConflict(_)),
-        ) => {
-            let meta = state
-                .backend()
-                .composition_latest_meta(ehr_id, VoId(vo_id))
-                .await
-                .ok()
-                .flatten();
-            Ok(negotiate::resource::error_with_meta(
-                crate::overview::service_error::api_error(e),
-                meta.as_ref(),
-                Tree::Ehr,
-            ))
-        }
-        Err(e) => Err(RestError::from(e)),
-    }
+    Ok((ehr_id, ovid, VoId(vo_id), request))
 }
 
 /// `composition_tags_get`: serve the item tags of a COMPOSITION.

@@ -21,6 +21,7 @@ use sqlx::PgPool;
 use ferroehr::config::versioning::RESEND_OPERATION;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::ehr::scope::Unscoped;
 use ferroehr::storage::integrity::StorageParityScope;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender;
@@ -333,6 +334,7 @@ async fn a_delete_an_archive_and_a_restore_keep_the_shared_tree() {
             chain.ehr_id,
             &chain.uids[3].parse().expect("OBJECT_VERSION_ID"),
             crate::fixtures::deleting(Some(chain.uids[3].parse().expect("OBJECT_VERSION_ID"))),
+            &Unscoped,
         )
         .await
         .expect("the delete commits");

@@ -60,7 +60,7 @@ pub(crate) async fn issuer() -> MockServer {
 
 /// The configuration trusting `issuer`, its discovery document served when
 /// `smart_enabled`, its `patient/` grants bound when `patient_bound`.
-fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
+pub(crate) fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
     let mut cfg = AppConfig {
         auth: common::trusting(vec![common::entry(issuer, AUDIENCE)]),
         ..common::api_config(false)
@@ -95,7 +95,7 @@ fn get(uri: &str, credential: Option<&str>) -> Request<Body> {
 }
 
 /// A bearer token of `issuer` granting `scope`, with `extra` claims.
-fn token(issuer: &str, scope: &str, extra: &Value) -> String {
+pub(crate) fn token(issuer: &str, scope: &str, extra: &Value) -> String {
     let mut claims = json!({
         "sub": "alice",
         "iss": issuer,
