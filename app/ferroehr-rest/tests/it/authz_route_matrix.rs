@@ -465,6 +465,9 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/ehr-access"),
     // The EHDS Art. 3(3) access-delay register (#4351).
     ("GET", "/admin/access-delay"),
+    // The delivery of the audit records to the sinks: cursors and parked
+    // records, by ids and counts (#6242).
+    ("GET", "/admin/audit-delivery"),
     // The outbox feed read (#4786); a read moves no cursor.
     ("GET", "/admin/outbox/{reader}"),
     // The refused PMIR feed messages, by ids and counts (#5725).
@@ -518,6 +521,11 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // health professional (#4351).
     ("POST", "/admin/access-delay"),
     ("POST", "/admin/access-delay/release"),
+    // The acts on the audit delivery: a retry or dismissal of a parked record
+    // and the forgetting of a sink (#6242).
+    ("POST", "/admin/audit-delivery/retry"),
+    ("POST", "/admin/audit-delivery/dismiss"),
+    ("POST", "/admin/audit-delivery/forget"),
     // The administrator re-key of a PERSON's binding key (#5013).
     ("POST", "/admin/party/binding-key"),
     // The repair of an EHR held closed by access settings that do not parse

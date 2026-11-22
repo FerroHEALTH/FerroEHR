@@ -3,8 +3,8 @@
 
 //! One frontier round of both audit logs (#6242).
 //!
-//! The round moves the frontier ([`crate::access_log::frontier`]), owes the
-//! records below it to the sinks that deliver from the store, and, when due,
+//! The round moves the frontier ([`crate::access_log::frontier`]), moves the
+//! delivery frontier the sinks deliver up to, and, when due,
 //! seals each log in windows ([`crate::access_log::seal`]). No specification
 //! governs it: our own design.
 
@@ -16,6 +16,22 @@ use crate::system_log::store::chains::AuditChain;
 
 use super::AuditStore;
 
+/// The statement that moves each log's delivery frontier to `$1` (the access
+/// log) and `$2` (the system records), below every record a write holds;
+/// returns how many logs' frontiers moved, and where each frontier stands.
+const ADVANCE: &str = "WITH v(chain, upto) AS (VALUES \
+       ('access_log', least($1::bigint, coalesce( \
+            (SELECT min(h.entry_id) - 1 FROM audit.access_log_hold h), $1::bigint))), \
+       ('system', least($2::bigint, coalesce( \
+            (SELECT min(h.seq) - 1 FROM audit.audit_event_hold h), $2::bigint)))), \
+     moved AS (UPDATE audit.delivery_frontier f SET through_id = v.upto FROM v \
+                WHERE f.chain = v.chain AND f.through_id < v.upto RETURNING f.chain), \
+     now_at AS (SELECT f.chain, greatest(f.through_id, v.upto) AS through_id \
+                  FROM audit.delivery_frontier f JOIN v ON v.chain = f.chain) \
+     SELECT (SELECT count(*) FROM moved), \
+            (SELECT through_id FROM now_at WHERE chain = 'access_log'), \
+            (SELECT through_id FROM now_at WHERE chain = 'system')";
+
 /// The sinks that deliver from the store, owed each record.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Owed {
@@ -26,10 +42,10 @@ pub struct Owed {
 }
 
 impl AuditStore {
-    /// Move `frontier`, owe the records of both logs below it to the
-    /// configured sinks, and seal them when `seal`, in as many windows as
-    /// they fill; returns how many records were owed and whether a window was
-    /// sealed.
+    /// Move `frontier`, move the delivery frontier of both logs to it while
+    /// a sink is configured, and seal them when `seal`, in as many windows as
+    /// they fill; returns how many logs' delivery frontiers moved and whether
+    /// a window was sealed.
     ///
     /// # Errors
     /// [`AuditError::Store`] when a statement fails, and
@@ -44,34 +60,23 @@ impl AuditStore {
             frontier.round(&mut conn).await?
         };
         let mut owed = 0;
-        if self.owed.fhir_feed || self.owed.syslog {
-            for (chain, owe, upto) in [
-                (
-                    AuditChain::AccessLog,
-                    "SELECT owed_count, owed_through FROM audit.access_log_owe($1, $2, $3)",
-                    reached.access_log,
-                ),
-                (
-                    AuditChain::System,
-                    "SELECT owed_count, owed_through FROM audit.audit_event_owe($1, $2, $3)",
-                    reached.system,
-                ),
-            ] {
-                if !frontier.owe_due(chain) {
-                    continue;
-                }
-                let (count, through): (i64, i64) = sqlx::query_as(owe)
-                    .bind(upto)
-                    .bind(self.owed.fhir_feed)
-                    .bind(self.owed.syslog)
-                    .fetch_one(&mut *acquire(&self.pool).await?)
-                    .await?;
-                // NOTE: our own design (#6242), records a write holds stay owed until released.
-                if through >= upto {
-                    frontier.owed(chain);
-                }
-                owed += u64::try_from(count).unwrap_or(0);
+        // NOTE: our own design (#6242), the delivery frontier moves only while a sink is configured.
+        if (self.owed.fhir_feed || self.owed.syslog)
+            && (frontier.owe_due(AuditChain::AccessLog) || frontier.owe_due(AuditChain::System))
+        {
+            let (moved, access_log, system): (i64, i64, i64) = sqlx::query_as(ADVANCE)
+                .bind(reached.access_log)
+                .bind(reached.system)
+                .fetch_one(&mut *acquire(&self.pool).await?)
+                .await?;
+            // NOTE: our own design (#6242), records a write holds stay owed until released.
+            if access_log >= reached.access_log {
+                frontier.owed(AuditChain::AccessLog);
             }
+            if system >= reached.system {
+                frontier.owed(AuditChain::System);
+            }
+            owed = u64::try_from(moved).unwrap_or(0);
         }
         let mut sealed = false;
         if seal {

@@ -8,20 +8,16 @@
 //! `401` (RFC 6750 §3.1), and the [`StoreOutbox`] `ihe-atna`'s forwarders
 //! deliver the feed and the syslog route from.
 //!
-//! The store is each sink's outbox: a record not yet delivered has a row in
-//! the sink's outbox table, naming its chain and position under an id of the
-//! outbox's own, which the chainer writes with the record while the sink is
-//! configured, read oldest first by that id, and removed once the repository
-//! accepted it, when a system-chain record's delivery stamp is set. The
-//! document or message is rendered from the stored record when it is read.
-//! A record the repository refused, or one that cannot be rendered, is held
-//! aside in memory until the next start, because the tables are append-only
-//! beside their delivery stamps (no specification governs where a refused
-//! record waits: our own design).
+//! The store is each sink's outbox: the sink delivers each log in id order
+//! from its cursor up to the delivery frontier, and the cursor moves once the
+//! repository accepted a record ([`crate::system_log::store::outbox`]). A
+//! record the repository refused, or one that cannot be rendered, is parked
+//! in the store, counted in the sink's quarantined depth, which the
+//! `audit_delivery` indicator reads, and logged at `ERROR` by its id; it
+//! stays until an operator retries or dismisses it (no specification governs
+//! where a refused record waits: our own design).
 
-use std::collections::BTreeSet;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
@@ -38,7 +34,8 @@ use tokio::sync::Notify;
 use crate::system_log::AuditError;
 use crate::system_log::config::FhirFeedConfig;
 use crate::system_log::store::AuditStore;
-use crate::system_log::store::outbox::{Delivered, Sink};
+use crate::system_log::store::delivery::{Due, Parked, Sink};
+use crate::system_log::store::outbox::Delivered;
 
 /// The repository `config` names, over `ferrohealth-smart`'s outbound client
 /// of `[audit.fhir_feed.endpoint]`.
@@ -115,10 +112,10 @@ pub(super) struct StoreOutbox {
     notify: Arc<Notify>,
     /// How long to wait for a wake before reading the store again.
     idle: Duration,
-    /// The outbox ids of the records the repository refused, held aside.
-    refused: Mutex<BTreeSet<i64>>,
-    /// The rows awaiting delivery at the last read.
+    /// The records awaiting delivery at the last read.
     waiting: AtomicUsize,
+    /// The records parked at the last read.
+    parked: AtomicUsize,
 }
 
 impl StoreOutbox {
@@ -131,8 +128,8 @@ impl StoreOutbox {
             framer: None,
             notify,
             idle,
-            refused: Mutex::new(BTreeSet::new()),
             waiting: AtomicUsize::new(0),
+            parked: AtomicUsize::new(0),
         }
     }
 
@@ -161,16 +158,12 @@ impl StoreOutbox {
             )),
         }
     }
+}
 
-    /// The outbox ids held aside.
-    fn refused(&self) -> Vec<i64> {
-        self.refused
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .iter()
-            .copied()
-            .collect()
-    }
+/// The record the forwarder's `sequence` names.
+fn owed_of(sequence: u64) -> Result<Due, OutboxError> {
+    Due::of_sequence(sequence)
+        .ok_or_else(|| OutboxError("a delivery sequence names no record".into()))
 }
 
 /// The forwarder's error for a store failure.
@@ -178,38 +171,61 @@ fn outbox_error(error: AuditError) -> OutboxError {
     OutboxError(Box::new(error))
 }
 
+impl StoreOutbox {
+    /// Parks `owed` with `reason`, counted and logged at `ERROR` by its id.
+    async fn park(&self, owed: Due, reason: Parked) -> Result<(), OutboxError> {
+        self.store
+            .park(self.sink, owed, reason)
+            .await
+            .map_err(outbox_error)?;
+        self.parked.fetch_add(1, Ordering::Relaxed);
+        crate::telemetry::metrics::metrics().atna_audit_parked.add(
+            1,
+            &[
+                opentelemetry::KeyValue::new("sink", self.sink.as_str()),
+                opentelemetry::KeyValue::new("reason", reason.as_str()),
+            ],
+        );
+        Ok(())
+    }
+}
+
 #[async_trait::async_trait]
 impl Outbox for StoreOutbox {
     async fn oldest(&self) -> Result<Option<Stored>, OutboxError> {
-        let (sequence, delivered) = loop {
-            let (oldest, waiting) = self
+        let (owed, delivered) = loop {
+            let (next, waiting) = self
                 .store
-                .oldest_owed(self.sink, &self.refused())
+                .next_owed(self.sink)
                 .await
                 .map_err(outbox_error)?;
-            self.waiting
-                .store(usize::try_from(waiting).unwrap_or(0), Ordering::Relaxed);
-            let Some((sequence, rendered)) = oldest else {
+            self.waiting.store(
+                usize::try_from(waiting.owed).unwrap_or(usize::MAX),
+                Ordering::Relaxed,
+            );
+            self.parked.store(
+                usize::try_from(waiting.parked).unwrap_or(usize::MAX),
+                Ordering::Relaxed,
+            );
+            let Some((owed, rendered)) = next else {
                 return Ok(None);
             };
             match rendered {
-                Ok(delivered) => break (sequence, delivered),
+                Ok(delivered) => break (owed, delivered),
                 Err(e) => {
                     tracing::error!(
-                        sink = ?self.sink,
-                        owed = sequence,
+                        sink = self.sink.as_str(),
+                        chain = owed.chain.as_str(),
+                        record = owed.id,
                         error = %crate::error::ErrorChain::new(&e),
-                        "ATNA audit delivery: the record cannot be rendered; it is held aside \
-                         until the next start"
+                        "ATNA audit delivery: the record cannot be rendered; it is parked until \
+                         an operator retries or dismisses it"
                     );
-                    self.refused
-                        .lock()
-                        .unwrap_or_else(std::sync::PoisonError::into_inner)
-                        .insert(sequence);
+                    self.park(owed, Parked::Unrenderable).await?;
                 }
             }
         };
-        let sequence = u64::try_from(sequence).map_err(|e| OutboxError(Box::new(e)))?;
+        let sequence = owed.sequence().map_err(outbox_error)?;
         let message = self.message(delivered)?;
         Ok(Some(Stored { sequence, message }))
     }
@@ -222,34 +238,27 @@ impl Outbox for StoreOutbox {
     }
 
     async fn remove(&self, sequence: u64) -> Result<(), OutboxError> {
-        let sequence = i64::try_from(sequence).map_err(|e| OutboxError(Box::new(e)))?;
+        let owed = owed_of(sequence)?;
         self.store
-            .mark_delivered(self.sink, sequence)
+            .mark_delivered(self.sink, owed)
             .await
             .map_err(outbox_error)
     }
 
     async fn quarantine(&self, sequence: u64) -> Result<(), OutboxError> {
-        let sequence = i64::try_from(sequence).map_err(|e| OutboxError(Box::new(e)))?;
+        let owed = owed_of(sequence)?;
         tracing::error!(
-            sink = ?self.sink,
-            owed = sequence,
-            "ATNA audit delivery: the repository refused the record; it is held aside until \
-             the next start"
+            sink = self.sink.as_str(),
+            chain = owed.chain.as_str(),
+            record = owed.id,
+            "ATNA audit delivery: the repository refused the record; it is parked until an \
+             operator retries or dismisses it"
         );
-        self.refused
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .insert(sequence);
-        Ok(())
+        self.park(owed, Parked::Refused).await
     }
 
     fn depth(&self) -> Depth {
-        let quarantined = self
-            .refused
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .len();
+        let quarantined = self.parked.load(Ordering::Relaxed);
         Depth {
             messages: self.waiting.load(Ordering::Relaxed) + quarantined,
             bytes: 0,

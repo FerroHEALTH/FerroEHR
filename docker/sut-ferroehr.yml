@@ -138,8 +138,10 @@ services:
       # it for throughput parity — upstream has no signing.)
       FERROEHR__RECORD__SIGNING__ENABLED: ${FERROEHR__RECORD__SIGNING__ENABLED:-true}
       FERROEHR__TELEMETRY__FORMAT: ${FERROEHR__TELEMETRY__FORMAT:-pretty}
-      # Measurement parity (logging equal and minimal on both SUTs):
-      # measured comparison runs set warn on BOTH SUTs; default stays info.
+      # Measurement parity (logging equal and minimal on both SUTs): the
+      # measured lane (scripts/conformance.sh perf) exports warn, and a
+      # comparison run sets warn on BOTH SUTs; a conformance run keeps info,
+      # whose request lines a red row's triage reads.
       FERROEHR__TELEMETRY__FILTER: ${FERROEHR__TELEMETRY__FILTER:-info}
       # The conformance SUT reports nothing to FerroPULSE by default: a test
       # harness is not an installation, and outbound traffic would sit inside
