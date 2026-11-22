@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The access log's verification walks its chain in bounded steps (#5779)
-//! against a real `PostgreSQL` 18: each step verifies at most its budget of
-//! records and moves the cursor, a walk reaches the head it started with
-//! however long the backlog, damage inside the backlog is reported with its
-//! position and stops the cursor before it, and a lag past
-//! `max_verify_lag` reads `DEGRADED` on the health surface.
+//! The access log's verification walks its sealed windows in bounded steps
+//! (#5779, #6242) against a real `PostgreSQL` 19: each step verifies the
+//! windows that fit its budget of records, at least one, and moves the
+//! cursor, a walk reaches the last sealed window however long the backlog,
+//! damage inside the backlog is reported with its position and stops the
+//! cursor before its window, and a lag past `max_verify_lag` reads
+//! `DEGRADED` on the health surface.
 //!
 //! No openEHR spec governs audit tamper detection: our own design.
 
@@ -41,10 +42,26 @@ async fn append(store: &AccessLogStore, numbers: std::ops::RangeInclusive<u32>) 
         .expect("the entries append");
 }
 
-/// The access log's verification cursor, 0 before the first.
+/// Append entries `numbers` through the store, sealing a window of at most
+/// `size` entries after each run of them.
+async fn append_sealed(store: &AccessLogStore, numbers: std::ops::RangeInclusive<u32>, size: u32) {
+    let (first, last) = (*numbers.start(), *numbers.end());
+    let mut from = first;
+    while from <= last {
+        let to = from.saturating_add(size - 1).min(last);
+        append(store, from..=to).await;
+        store.seal_committed().await.expect("the window seals");
+        from = to + 1;
+    }
+}
+
+/// The last entry id of the window the verification cursor names, 0 before
+/// the first.
 async fn cursor(pool: &PgPool) -> i64 {
     sqlx::query_scalar(
-        "SELECT coalesce((SELECT through_seq FROM audit.access_log_chain_verified), 0)",
+        "SELECT coalesce((SELECT s.last_id FROM audit.access_log_seal s \
+           JOIN audit.access_log_seal_verified v \
+             ON v.singleton AND s.window_no = v.through_window), 0)",
     )
     .fetch_one(pool)
     .await
@@ -74,22 +91,23 @@ async fn tamper(pool: &PgPool, statement: &str) {
     tx.commit().await.expect("commit");
 }
 
-/// A backlog of 25 entries walked four records a step reaches the head in
-/// seven steps, each moving the cursor by at most four; entries appended
-/// during the walk wait for the next one and read as its lag.
+/// A backlog of 25 entries sealed in windows of four, walked four records a
+/// step, reaches the last window in seven steps, each moving the cursor by
+/// one window; entries appended and not yet sealed during the walk wait for
+/// the next one and read as its lag.
 #[tokio::test]
 async fn a_walk_reaches_the_head_in_bounded_steps_that_each_move_the_cursor() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let audit = AuditStore::new(pool.clone());
     let log = AccessLogStore::new(pool.clone());
-    append(&log, 1..=25).await;
+    append_sealed(&log, 1..=25, 4).await;
 
     let mut walk = audit
         .chain_walk(AuditChain::AccessLog, VerifyScope::SinceCheckpoint)
         .await
         .expect("the walk starts");
-    assert_eq!(walk.head(), Some(25));
+    assert_eq!(walk.position(), 0);
     let mut reached = vec![cursor(&pool).await];
     while !walk.done() {
         let findings = audit.chain_step(&mut walk, 4).await.expect("the step runs");
@@ -102,7 +120,7 @@ async fn a_walk_reaches_the_head_in_bounded_steps_that_each_move_the_cursor() {
     assert_eq!(
         reached,
         [0, 4, 8, 12, 16, 20, 24, 25],
-        "each step moves the cursor by at most its budget, to the head the walk started with"
+        "each step moves the cursor by one window of four, to the last sealed window"
     );
 
     let lag = audit
@@ -112,11 +130,16 @@ async fn a_walk_reaches_the_head_in_bounded_steps_that_each_move_the_cursor() {
     assert_eq!(lag.entries, 3, "the entries appended during the walk");
     assert!(lag.oldest.is_some());
 
+    log.seal_committed().await.expect("the window seals");
     let mut next = audit
         .chain_walk(AuditChain::AccessLog, VerifyScope::SinceCheckpoint)
         .await
         .expect("the next walk starts");
-    assert_eq!(next.position(), 25, "the next walk starts at the cursor");
+    assert_eq!(
+        next.position(),
+        7,
+        "the next walk starts after the verified window"
+    );
     while !next.done() {
         assert!(
             audit
@@ -143,7 +166,7 @@ async fn damage_inside_the_backlog_is_reported_and_holds_the_cursor() {
     let pool = testdb.pool();
     let audit = AuditStore::new(pool.clone());
     let log = AccessLogStore::new(pool.clone());
-    append(&log, 1..=8).await;
+    append_sealed(&log, 1..=8, 4).await;
     assert!(
         audit
             .verify_chain_advancing(AuditChain::AccessLog, VerifyScope::SinceCheckpoint)
@@ -153,14 +176,14 @@ async fn damage_inside_the_backlog_is_reported_and_holds_the_cursor() {
     );
     assert_eq!(cursor(&pool).await, 8);
 
-    append(&log, 9..=30).await;
-    for seq in [15, 27] {
+    append_sealed(&log, 9..=30, 4).await;
+    for id in [15, 27] {
         tamper(
             &pool,
             &format!(
                 "UPDATE audit.access_log_entry \
                  SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
-                 WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = {seq})"
+                 WHERE id = {id}"
             ),
         )
         .await;
@@ -188,7 +211,7 @@ async fn damage_inside_the_backlog_is_reported_and_holds_the_cursor() {
     assert_eq!(
         cursor(&pool).await,
         12,
-        "the cursor stops at the end of the last intact step before the damage"
+        "the cursor stops at the end of the last intact window before the damage"
     );
 }
 
@@ -227,6 +250,7 @@ async fn a_lag_past_its_bound_reads_degraded_until_a_run_catches_up() {
         health.detail()
     );
 
+    log.seal_committed().await.expect("the window seals");
     assert!(matches!(
         check.run_scope(&audit, VerifyScope::SinceCheckpoint).await,
         ChainCheckState::Intact { .. }
@@ -308,7 +332,7 @@ async fn the_scheduled_check_paces_its_steps_to_the_head() {
     let pool = testdb.pool();
     let audit = AuditStore::new(pool.clone());
     let log = AccessLogStore::new(pool.clone());
-    append(&log, 1..=40).await;
+    append_sealed(&log, 1..=40, 4).await;
 
     let check = ChainCheck::new(None).with_first_step(StepPace::starting_at(3));
     assert!(matches!(
@@ -322,13 +346,13 @@ async fn the_scheduled_check_paces_its_steps_to_the_head() {
     );
 }
 
-/// Modify the access-log entry at chain position `seq` with the table's
-/// triggers off, as only its owner can.
+/// Modify the access-log entry `id` with the table's triggers off, as only
+/// its owner can.
 #[expect(
     clippy::disallowed_methods,
     reason = "a test reads the database on a raw pool connection, outside any request"
 )]
-async fn tamper_at(pool: &PgPool, seq: i64) {
+async fn tamper_at(pool: &PgPool, id: i64) {
     let mut conn = pool.acquire().await.expect("connection");
     let mut tx = conn.begin().await.expect("begin");
     sqlx::query("ALTER TABLE audit.access_log_entry DISABLE TRIGGER USER")
@@ -338,13 +362,13 @@ async fn tamper_at(pool: &PgPool, seq: i64) {
     let changed = sqlx::query(
         "UPDATE audit.access_log_entry \
          SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
-         WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = $1)",
+         WHERE id = $1",
     )
-    .bind(seq)
+    .bind(id)
     .execute(&mut *tx)
     .await
     .expect("the tampering statement itself must succeed");
-    assert_eq!(changed.rows_affected(), 1, "the entry at {seq} was changed");
+    assert_eq!(changed.rows_affected(), 1, "the entry {id} was changed");
     sqlx::query("ALTER TABLE audit.access_log_entry ENABLE TRIGGER USER")
         .execute(&mut *tx)
         .await
@@ -364,7 +388,7 @@ async fn a_large_catch_up_walks_paced_steps_and_reports_damage_exactly() {
     let audit = AuditStore::new(pool.clone());
     let log = AccessLogStore::new(pool.clone());
     for first in (1..=BACKLOG).step_by(2_000) {
-        append(&log, first..=first + 1_999).await;
+        append_sealed(&log, first..=first + 1_999, 2_000).await;
     }
 
     let first = StepPace::starting_at(STEP_FLOOR);
@@ -387,11 +411,11 @@ async fn a_large_catch_up_walks_paced_steps_and_reports_damage_exactly() {
     assert!(kept.pause() > Duration::ZERO);
 
     for first in (BACKLOG + 1..=2 * BACKLOG).step_by(2_000) {
-        append(&log, first..=first + 1_999).await;
+        append_sealed(&log, first..=first + 1_999, 2_000).await;
     }
     let damaged = [i64::from(BACKLOG) + 1_501, i64::from(BACKLOG) + 4_750];
-    for seq in damaged {
-        tamper_at(&pool, seq).await;
+    for id in damaged {
+        tamper_at(&pool, id).await;
     }
     let mut window = audit
         .chain_walk(AuditChain::AccessLog, VerifyScope::SinceCheckpoint)

@@ -139,6 +139,7 @@ async fn audit_capture(suppress_login: bool) -> (testkit::TestDb, SyslogTlsListe
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         syslog: Some(SyslogConfig {
             url: ferrohealth_secret::secret_url::SecretUrl::new(format!("tls://127.0.0.1:{port}")),
@@ -168,6 +169,7 @@ async fn audit_capture_unwritable() -> AuditSender {
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         suppress_login_events: true,
         ..AuditConfig::default()
@@ -689,8 +691,8 @@ async fn login_event_emitted_when_not_suppressed() {
 }
 
 /// A response leaves only once its records are durable: right after the
-/// answer, the record is in the store, in the intake or already chained,
-/// with no wait for a background task (`docs/plans/access-log.md` rule 3).
+/// answer, the record is in the store, with no wait for a background task
+/// (the draft's semantics page, `docs/specifications/access-log`, §Recording rule 3).
 #[tokio::test]
 async fn a_response_leaves_after_its_record_is_stored() {
     let (audit, _socket, sender) = audit_capture(true).await;
@@ -698,8 +700,7 @@ async fn a_response_leaves_after_its_record_is_stored() {
     let resp = app.oneshot(req("POST", "/ehr", true)).await.expect("resp");
     assert_eq!(resp.status(), StatusCode::CREATED);
     let stored: i64 = sqlx::query_scalar(
-        "SELECT (SELECT count(*) FROM audit.access_log_intake) \
-              + (SELECT count(*) FROM audit.access_log_record) \
+        "SELECT (SELECT count(*) FROM audit.access_log_entry) \
               + (SELECT count(*) FROM audit.audit_event_intake) \
               + (SELECT count(*) FROM audit.audit_event)",
     )
@@ -908,12 +909,24 @@ async fn composition_get_records_the_origins_of_the_served_data() {
         "the FHIR rendering names the origin: {}",
         row.2
     );
-    let create: Option<Value> = sqlx::query_scalar(
-        "SELECT origins FROM audit.access_trail WHERE operation = 'composition_create'",
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("the create record");
+    // NOTE: our own design (#6242), a commit's record is held until the commit is confirmed.
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    let create: Option<Value> = loop {
+        let found: Option<Option<Value>> = sqlx::query_scalar(
+            "SELECT origins FROM audit.access_trail WHERE operation = 'composition_create'",
+        )
+        .fetch_optional(&pool)
+        .await
+        .expect("read the trail");
+        if let Some(origins) = found {
+            break origins;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "no composition_create record landed"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    };
     assert_eq!(
         create, None,
         "a commit serves no version body, so it records no origin"

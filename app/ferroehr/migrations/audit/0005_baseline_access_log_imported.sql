@@ -1,8 +1,17 @@
 -- SPDX-FileCopyrightText: Cadasto B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
--- audit: the access logs imported from other systems, kept as they were
--- signed there.
+-- audit: the access logs imported from other systems (#5129, #6242).
+--
+-- An export is one EHR's records, signed whole by the exporting system's
+-- keyring. The importer verifies that signature, keeps the bundle's digest
+-- and proof here, and keeps each record as it was exported with the content
+-- digest it had there. The import's own access-log entry, which a seal
+-- window of this system covers, names the bundle digest and a digest over
+-- the imported records' uids and content digests, so the verifier reports a
+-- later change to an imported record.
+--
+-- No openEHR spec governs the transfer: our own design.
 --
 -- Runs with search_path = audit, ext, public.
 
@@ -17,21 +26,18 @@ BEGIN
 END;
 $$;
 
--- An imported tombstone and a link leave only inside the fold.
+-- An imported tombstone leaves only by the fold of tombstones past their end.
 CREATE FUNCTION audit.access_log_imported_reject_removal() RETURNS trigger
     LANGUAGE plpgsql
     SET search_path = audit, pg_catalog
     AS $$
 BEGIN
-    IF coalesce(current_setting('ferroehr.access_log_imported_folding', true), 'off') = 'on' THEN
-        IF TG_TABLE_NAME = 'access_log_imported_link' THEN
-            RETURN OLD;
-        END IF;
-        IF to_jsonb(OLD) ->> 'record_type' = 'ACCESS_LOG_TOMBSTONE' THEN
-            RETURN OLD;
-        END IF;
+    IF coalesce(current_setting('ferroehr.access_log_imported_folding', true), 'off') = 'on'
+       AND OLD.record_type = 'ACCESS_LOG_TOMBSTONE'
+    THEN
+        RETURN OLD;
     END IF;
-    RAISE EXCEPTION '% is append-only: an imported tombstone and its link leave only by the fold into a gap', TG_TABLE_NAME
+    RAISE EXCEPTION '% is append-only: an imported tombstone leaves only by the fold', TG_TABLE_NAME
         USING ERRCODE = 'restrict_violation';
 END;
 $$;
@@ -47,12 +53,13 @@ BEGIN
        OR doc ->> '_type' IS DISTINCT FROM 'ACCESS_LOG_TOMBSTONE'
        OR doc #>> '{uid,value}' IS DISTINCT FROM OLD.uid
        OR doc ->> 'system_id' IS DISTINCT FROM OLD.system_id
-       OR (NEW.system_id, NEW.sequence, NEW.uid, NEW.imported_at)
-          IS DISTINCT FROM (OLD.system_id, OLD.sequence, OLD.uid, OLD.imported_at)
+       OR (NEW.system_id, NEW.uid, NEW.bundle, NEW.content_digest, NEW.imported_at)
+          IS DISTINCT FROM (OLD.system_id, OLD.uid, OLD.bundle, OLD.content_digest,
+                            OLD.imported_at)
     THEN
         RAISE EXCEPTION
             'audit.access_log_imported_record is append-only: an entry is only replaced by its own tombstone (record %:%)',
-            OLD.system_id, OLD.sequence
+            OLD.system_id, OLD.uid
             USING ERRCODE = 'restrict_violation';
     END IF;
     NEW.record_type := 'ACCESS_LOG_TOMBSTONE';
@@ -63,56 +70,56 @@ BEGIN
 END;
 $$;
 
--- One row per link of another system's chain an import brought: the links of
--- the imported records and every link between them and the checkpoint.
-CREATE TABLE access_log_imported_link (
-    system_id       text   NOT NULL,
-    sequence        bigint NOT NULL,
-    algorithm       text   NOT NULL,
-    previous_digest text   NOT NULL,
-    content_digest  text   NOT NULL,
-    digest          text   NOT NULL,
-    signature       text,
-    CONSTRAINT pk_access_log_imported_link PRIMARY KEY (system_id, sequence),
-    CONSTRAINT ck_access_log_imported_link_digests
-        CHECK (previous_digest ~ '^[0-9a-f]{64}$'
-               AND content_digest ~ '^[0-9a-f]{64}$'
-               AND digest ~ '^[0-9a-f]{64}$')
+-- One row per export imported: its digest, the exporting system's signature
+-- over it, and the digest over its records' uids and content digests.
+CREATE TABLE access_log_imported_bundle (
+    digest         text        NOT NULL,
+    system_id      text        NOT NULL,
+    ehr_id         text        NOT NULL,
+    records_digest text        NOT NULL,
+    time_signed    text        NOT NULL,
+    proof          text        NOT NULL,
+    -- The import's own access-log entry, which names this bundle.
+    entry_uid      uuid        NOT NULL,
+    imported_at    timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_access_log_imported_bundle PRIMARY KEY (digest),
+    CONSTRAINT ck_access_log_imported_bundle_digests
+        CHECK (digest ~ '^[0-9a-f]{64}$' AND records_digest ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_access_log_imported_bundle_proof CHECK (proof <> '')
 );
-CREATE TRIGGER access_log_imported_link_append_only
-    BEFORE UPDATE ON access_log_imported_link
+CREATE TRIGGER access_log_imported_bundle_append_only
+    BEFORE UPDATE OR DELETE ON access_log_imported_bundle
     FOR EACH ROW EXECUTE FUNCTION audit.access_log_imported_append_only();
-CREATE TRIGGER access_log_imported_link_no_delete
-    BEFORE DELETE ON access_log_imported_link
-    FOR EACH ROW EXECUTE FUNCTION audit.access_log_imported_reject_removal();
-COMMENT ON TABLE access_log_imported_link IS
-    'The ACCESS_LOG_LINKs of another system''s chain that imported logs brought, so the imported records stay verifiable against their checkpoint.';
+COMMENT ON TABLE access_log_imported_bundle IS
+    'The signed exports of other systems that EHR transfers brought: each bundle''s digest, signature and the digest over its records'' uids and content digests.';
 
--- One row per imported record: its canonical form without its link, as
--- access_log_record keeps a local one, beside the link its chain gave it.
+-- One row per imported record: its canonical form as it was exported, and
+-- the content digest it had there, which a tombstone keeps.
 CREATE TABLE access_log_imported_record (
-    system_id     text        NOT NULL,
-    sequence      bigint      NOT NULL,
-    uid           text        NOT NULL,
-    record_type   text        NOT NULL,
-    ehr_id        text,
-    retain_until  date,
-    content       text        NOT NULL,
-    imported_at   timestamptz NOT NULL DEFAULT now(),
+    system_id      text        NOT NULL,
+    uid            text        NOT NULL,
+    bundle         text        NOT NULL,
+    record_type    text        NOT NULL,
+    ehr_id         text,
+    retain_until   date,
+    content        text        NOT NULL,
+    content_digest text        NOT NULL,
+    imported_at    timestamptz NOT NULL DEFAULT now(),
     -- An imported tombstone's end, derived from its content; NULL on an
     -- entry.
-    fold_after    timestamptz,
-    CONSTRAINT pk_access_log_imported_record PRIMARY KEY (system_id, sequence),
-    CONSTRAINT uq_access_log_imported_record_uid UNIQUE (system_id, uid),
-    CONSTRAINT fk_access_log_imported_record_link FOREIGN KEY (system_id, sequence)
-        REFERENCES access_log_imported_link (system_id, sequence),
+    fold_after     timestamptz,
+    CONSTRAINT pk_access_log_imported_record PRIMARY KEY (system_id, uid),
     CONSTRAINT ck_access_log_imported_record_type
-        CHECK (record_type IN ('ACCESS_LOG_ENTRY', 'ACCESS_LOG_TOMBSTONE'))
+        CHECK (record_type IN ('ACCESS_LOG_ENTRY', 'ACCESS_LOG_TOMBSTONE')),
+    CONSTRAINT ck_access_log_imported_record_digest CHECK (content_digest ~ '^[0-9a-f]{64}$')
 );
 CREATE INDEX ix_access_log_imported_record_ehr ON access_log_imported_record (ehr_id)
     WHERE ehr_id IS NOT NULL;
 CREATE INDEX ix_access_log_imported_record_retain_until
     ON access_log_imported_record (retain_until) WHERE retain_until IS NOT NULL;
+CREATE INDEX ix_access_log_imported_record_fold_after
+    ON access_log_imported_record (fold_after) WHERE fold_after IS NOT NULL;
+CREATE INDEX ix_access_log_imported_record_bundle ON access_log_imported_record (bundle);
 CREATE TRIGGER access_log_imported_record_tombstone_only
     BEFORE UPDATE ON access_log_imported_record
     FOR EACH ROW EXECUTE FUNCTION audit.access_log_imported_tombstone_only();
@@ -123,154 +130,64 @@ CREATE TRIGGER access_log_imported_record_no_delete
     BEFORE DELETE ON access_log_imported_record
     FOR EACH ROW EXECUTE FUNCTION audit.access_log_imported_reject_removal();
 COMMENT ON TABLE access_log_imported_record IS
-    'The access-log records of another system an EHR transfer brought, with their system_id, links and retain_until kept; outside this system''s chain.';
+    'The access-log records of another system an EHR transfer brought, as exported, with their system_id, retain_until and content digest kept.';
 COMMENT ON COLUMN access_log_imported_record.fold_after IS
     'An imported tombstone''s end: time_removed plus the time its entry was kept (time_removed minus time_recorded), derived from content; NULL on an entry.';
 
--- One row per ACCESS_LOG_CHECKPOINT of another system an import brought.
-CREATE TABLE access_log_imported_checkpoint (
-    system_id   text        NOT NULL,
-    sequence    bigint      NOT NULL,
-    digest      text        NOT NULL,
-    content     text        NOT NULL,
-    imported_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT pk_access_log_imported_checkpoint PRIMARY KEY (system_id, sequence)
+-- What a fold kept of each imported tombstone it removed: its uid, its
+-- bundle and its content digest, which the bundle's records digest covers.
+CREATE TABLE access_log_imported_folded (
+    system_id      text        NOT NULL,
+    uid            text        NOT NULL,
+    bundle         text        NOT NULL,
+    content_digest text        NOT NULL,
+    time_folded    timestamptz NOT NULL,
+    CONSTRAINT pk_access_log_imported_folded PRIMARY KEY (system_id, uid)
 );
-CREATE TRIGGER access_log_imported_checkpoint_append_only
-    BEFORE UPDATE OR DELETE ON access_log_imported_checkpoint
+CREATE INDEX ix_access_log_imported_folded_bundle ON access_log_imported_folded (bundle);
+CREATE TRIGGER access_log_imported_folded_append_only
+    BEFORE UPDATE OR DELETE ON access_log_imported_folded
     FOR EACH ROW EXECUTE FUNCTION audit.access_log_imported_append_only();
-COMMENT ON TABLE access_log_imported_checkpoint IS
-    'The ACCESS_LOG_CHECKPOINTs of other systems that imported logs verify against, as their ITS-JSON form.';
+COMMENT ON TABLE access_log_imported_folded IS
+    'The imported tombstones the fold removed, by uid, bundle and content digest, so each bundle''s records digest still verifies.';
 
--- ── the gaps an import brought ───────────────────────────────────────────────
-CREATE TABLE access_log_imported_gap (
-    system_id   text        NOT NULL,
-    first_seq   bigint      NOT NULL,
-    last_seq    bigint      NOT NULL,
-    link        text        NOT NULL,
-    signature   text,
-    grounds     jsonb       NOT NULL,
-    time_folded timestamptz NOT NULL,
-    imported_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT pk_access_log_imported_gap PRIMARY KEY (system_id, first_seq, last_seq),
-    CONSTRAINT ck_access_log_imported_gap_span CHECK (last_seq >= first_seq AND first_seq >= 1),
-    CONSTRAINT ck_access_log_imported_gap_link CHECK (link ~ '^[0-9a-f]{64}$'),
-    CONSTRAINT ck_access_log_imported_gap_grounds CHECK (jsonb_typeof(grounds) = 'array')
-);
-CREATE INDEX ix_access_log_imported_gap_last ON access_log_imported_gap (system_id, last_seq);
-CREATE TRIGGER access_log_imported_gap_append_only
-    BEFORE UPDATE OR DELETE ON access_log_imported_gap
-    FOR EACH ROW EXECUTE FUNCTION audit.access_log_imported_append_only();
-COMMENT ON TABLE access_log_imported_gap IS
-    'The gaps of another system''s chain: those its exports brought and those this system''s retention folded, so the imported records stay verifiable against their checkpoint across a fold.';
-
--- Fold at p_now, per system, the positions before the first record still
--- kept in each span between two imported checkpoints: tombstones past their
--- end and bare links, one gap per run of consecutive links that holds a
--- tombstone. Whole runs fold, oldest first, until p_limit positions are
--- reached; the first run always folds. Replicas serialise on a
--- transaction-scoped advisory lock. Returns the tombstones and positions
--- removed and the gaps written; a caller repeats the call until no gap is
--- written.
+-- Removes up to p_limit imported tombstones past their end, oldest end
+-- first, keeping each one's uid, bundle and content digest.
 CREATE FUNCTION audit.fold_access_log_imported(p_now timestamptz, p_limit integer)
-    RETURNS TABLE (tombstones bigint, positions bigint, gaps bigint)
-    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    RETURNS TABLE (tombstones bigint, gaps bigint)
+    LANGUAGE plpgsql SECURITY DEFINER
     SET search_path = audit, pg_catalog
     AS $$
 BEGIN
     IF p_now IS NULL OR coalesce(p_limit, 0) < 1 THEN
-        RETURN QUERY SELECT 0::bigint, 0::bigint, 0::bigint;
+        RETURN QUERY SELECT 0::bigint, 0::bigint;
         RETURN;
     END IF;
-    PERFORM pg_advisory_xact_lock(hashtext('audit.access_log_imported_gap'), 0);
     PERFORM set_config('ferroehr.access_log_imported_folding', 'on', true);
     RETURN QUERY
-    WITH segment AS (
-        SELECT c.system_id, c.sequence AS last_seq,
-               coalesce(lag(c.sequence) OVER (PARTITION BY c.system_id ORDER BY c.sequence), 0)
-                   AS after_seq
-          FROM audit.access_log_imported_checkpoint c
+    WITH due AS (
+        SELECT r.system_id, r.uid
+          FROM audit.access_log_imported_record r
+         WHERE r.fold_after <= p_now
+         ORDER BY r.fold_after, r.system_id, r.uid
+         LIMIT p_limit
+           FOR UPDATE SKIP LOCKED
     ),
-    bounded AS (
-        SELECT s.system_id, s.after_seq, s.last_seq,
-               coalesce((SELECT min(r.sequence) FROM audit.access_log_imported_record r
-                          WHERE r.system_id = s.system_id
-                            AND r.sequence > s.after_seq AND r.sequence <= s.last_seq
-                            AND (r.fold_after IS NULL OR r.fold_after > p_now)),
-                        s.last_seq + 1) AS first_kept
-          FROM segment s
-    ),
-    due AS (
-        SELECT l.system_id, l.sequence, l.digest, l.signature, b.last_seq AS segment,
-               r.content AS tombstone
-          FROM bounded b
-          JOIN audit.access_log_imported_link l
-            ON l.system_id = b.system_id
-           AND l.sequence > b.after_seq AND l.sequence < b.first_kept
-          LEFT JOIN audit.access_log_imported_record r
-            ON r.system_id = l.system_id AND r.sequence = l.sequence
-    ),
-    islanded AS (
-        SELECT d.*,
-               d.sequence - row_number() OVER (
-                   PARTITION BY d.system_id, d.segment ORDER BY d.sequence) AS island
-          FROM due d
-    ),
-    runs AS (
-        SELECT i.system_id, i.segment, i.island,
-               min(i.sequence) AS first_seq, max(i.sequence) AS last_seq,
-               (array_agg(i.digest ORDER BY i.sequence DESC))[1] AS link,
-               (array_agg(i.signature ORDER BY i.sequence DESC))[1] AS signature,
-               count(i.tombstone) AS held
-          FROM islanded i
-         GROUP BY i.system_id, i.segment, i.island
-        HAVING count(i.tombstone) > 0
-    ),
-    chosen AS (
-        SELECT r.*
-          FROM (SELECT r.*,
-                       sum(r.last_seq - r.first_seq + 1) OVER (
-                           ORDER BY r.system_id, r.first_seq
-                           ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS before
-                  FROM runs r) AS r
-         WHERE coalesce(r.before, 0) < p_limit
-    ),
-    grounded AS (
-        SELECT c.system_id, c.first_seq,
-               jsonb_agg(DISTINCT g.ground ORDER BY g.ground) AS grounds
-          FROM chosen c
-          JOIN islanded i
-            ON i.system_id = c.system_id AND i.sequence BETWEEN c.first_seq AND c.last_seq
-          CROSS JOIN LATERAL jsonb_array_elements(i.tombstone::jsonb -> 'grounds') AS g(ground)
-         GROUP BY c.system_id, c.first_seq
-    ),
-    written AS (
-        INSERT INTO audit.access_log_imported_gap
-               (system_id, first_seq, last_seq, link, signature, grounds, time_folded)
-        SELECT c.system_id, c.first_seq, c.last_seq, c.link, c.signature, g.grounds, p_now
-          FROM chosen c
-          JOIN grounded g ON g.system_id = c.system_id AND g.first_seq = c.first_seq
-         ORDER BY c.system_id, c.first_seq
-        ON CONFLICT (system_id, first_seq, last_seq) DO NOTHING
-        RETURNING 1
-    ),
-    removed_records AS (
+    removed AS (
         DELETE FROM audit.access_log_imported_record r
-         USING chosen c
-         WHERE r.system_id = c.system_id AND r.sequence BETWEEN c.first_seq AND c.last_seq
-        RETURNING 1
+         USING due d
+         WHERE r.system_id = d.system_id AND r.uid = d.uid
+        RETURNING r.system_id, r.uid, r.bundle, r.content_digest
     ),
-    removed_links AS (
-        DELETE FROM audit.access_log_imported_link l
-         USING chosen c
-         WHERE l.system_id = c.system_id AND l.sequence BETWEEN c.first_seq AND c.last_seq
+    kept AS (
+        INSERT INTO audit.access_log_imported_folded
+               (system_id, uid, bundle, content_digest, time_folded)
+        SELECT x.system_id, x.uid, x.bundle, x.content_digest, p_now FROM removed x
         RETURNING 1
     )
-    SELECT (SELECT count(*) FROM removed_records),
-           (SELECT count(*) FROM removed_links),
-           (SELECT count(*) FROM chosen);
+    SELECT count(*), (SELECT count(*) FROM kept) FROM removed;
     PERFORM set_config('ferroehr.access_log_imported_folding', 'off', true);
 END;
 $$;
 COMMENT ON FUNCTION fold_access_log_imported(timestamptz, integer) IS
-    'The one path an imported tombstone and link leave by: per system, the positions before the first record still kept between two imported checkpoints fold into one access_log_imported_gap per run that holds a tombstone.';
+    'Removes up to p_limit imported tombstones past their end, keeping in access_log_imported_folded what each bundle''s records digest covers.';

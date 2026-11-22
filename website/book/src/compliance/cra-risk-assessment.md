@@ -68,7 +68,7 @@ asks for. In one paragraph: FerroEHR stores, versions and queries the
 structured health records of one healthcare provider, serves them to that
 provider's clinical applications through the openEHR REST API and AQL, and
 records every access. It runs one instance per organisation, self-hosted by
-the organisation or hosted by Cadasto B.V. as a service, on a PostgreSQL 18
+the organisation or hosted by Cadasto B.V. as a service, on a PostgreSQL 19
 cluster provisioned for that instance, behind TLS, with users in the
 organisation's identity provider. Its foreseeable misuse (the `sandbox`
 profile holding real data, authentication off, a plaintext listener, several
@@ -104,8 +104,8 @@ on three levels (high, medium, low).
 | C1 | An unauthenticated caller reads or writes clinical data | high | low under the intended purpose; high when `auth.enabled = false` is misused under `sandbox` or accepted by name under `production` | authentication on by default with a boot refusal when no mechanism is configured; `production` refuses `auth.enabled = false` unless `auth_off` is accepted by name; per-request authorisation | (b), (d) |
 | C2 | An authenticated caller reaches EHRs outside their remit | high | medium: the shipped `EHR_ACCESS` default is `open`, which `production` refuses unless accepted by name | RBAC, the access evaluator over per-EHR `EHR_ACCESS` and the access policy, which confines a patient to their own EHR; `production` refuses the role gate off (`rbac_off`) and an `open` `EHR_ACCESS` default (`open_ehr_access_default`) unless each is accepted by name; every access recorded | (d), (l) |
 | C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address and a separate plain-HTTP management listener unless `plaintext_listener` is accepted by name; the syslog audit feed sends over TLS only (`ihe-atna`); a boot warning on a plaintext routable bind | (e) |
-| C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the hash-chained access log | (e), (f) |
-| C5 | An access happens and the log does not show it, or the log is altered | high | low with an off-box sink; a write's record waits on #5762 between its clinical commit and the audit intake | every record written before its response and an access refused when it cannot be; refusals always recorded; `production` refuses audit off unless accepted; the hash chain | (f), (l) |
+| C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the access log sealed in signed windows, its newest entries protected by the refused `UPDATE` and `DELETE` until sealed | (e), (f) |
+| C5 | An access happens and the log does not show it, or the log is altered | high | low with an off-box sink; a write's record waits on #5762 between its clinical commit and the audit intake | every record written before its response and an access refused when it cannot be; refusals always recorded; `production` refuses audit off unless accepted; the signed seal windows, which report a change inside a sealed window, the newest minute protected by the refused `UPDATE` and `DELETE` | (f), (l) |
 | C6 | A national identifier or identifying content leaks into the clinical record, telemetry or a report | high | low | the data-minimisation pass over the subject reference and identified parties; log sanitising; reports with no identifiers | (e), (g) |
 | C7 | A malformed or hostile payload crashes or corrupts the server | medium | low | memory-safe Rust with `unsafe` forbidden; overflow checks in release; fuzzed parsers; caught panics | (j), (k) |
 | C8 | The service is made unavailable | high (clinical availability) | medium: an authorised caller holding resources is not defended against | admission limit with `503` shedding; rate limits; body, header and statement limits; replicas and a disruption budget | (h) |
@@ -382,10 +382,16 @@ corruptions"
   limb is split with the deploying organisation, with
   [the justification](#configuration-integrity-annex-i-part-i2f).
 - **How:** data: immutable versions, each signed (digest or OpenPGP) and
-  verified on read in `strict` mode by default; the access log is
-  hash-chained in the database over every column of a record, the render
-  policy its FHIR document is rendered under is checked against its digest,
-  and `UPDATE`, `DELETE` and `TRUNCATE` on it are refused. The
+  verified on read in `strict` mode by default; the access log is sealed
+  in windows (#6242): about once a minute every committed entry past the
+  last window is sealed with the SHA-256 of its entries' ids and content
+  digests, each seal following the one before it and signed with the
+  keyring's key, and the verifier recomputes every window and every column
+  the log derives from an entry's content. The render policy a record's
+  FHIR document is rendered under is checked against its digest, and
+  `UPDATE`, `DELETE` and `TRUNCATE` on the log are refused by the triggers
+  and the runtime role's grants. An entry newer than the last seal (at most
+  a minute and the frontier's lag) is protected by those refusals alone. The
   runtime roles read the migration bookkeeping of their schema and cannot
   write it, and the server refuses to start while one can. Programs: SLSA Build L3 provenance and SBOM attestations, cosign on
   the chart, signed tags, immutable releases, a read-only root filesystem.
@@ -394,6 +400,13 @@ corruptions"
 - **Evidence:** `app/ferroehr/src/versioning/integrity.rs`;
   `app/ferroehr/migrations/audit/0001_baseline_audit_event.sql`;
   `app/ferroehr/migrations/audit/0002_baseline_audit_chain.sql`;
+  `app/ferroehr/migrations/audit/0004_baseline_access_log.sql`;
+  `app/ferroehr/src/access_log/seal.rs`;
+  `app/ferroehr/tests/it/access_log_seal.rs`
+  (`a_window_never_covers_an_entry_a_transaction_still_writes`,
+  `a_changed_record_in_a_sealed_window_is_reported`,
+  `a_removed_record_in_a_sealed_window_is_reported`,
+  `an_inserted_record_in_a_sealed_window_is_reported`);
   `app/ferroehr/src/system_log/chain_check.rs`;
   `app/ferroehr/tests/it/audit_chain.rs`
   (`the_chain_check_reports_a_tampered_record_on_the_health_surface`,
@@ -405,7 +418,8 @@ corruptions"
   [tamper evidence](../audit.md#tamper-evidence);
   [verifying releases](../verifying-releases.md).
 - **Status:** met. A signature failure on read is refused and logged. The
-  server verifies the access-log chain one minute after boot and then every
+  server verifies the system chain and the access log's sealed windows one
+  minute after boot and then every
   `[audit.store] verify_interval` (default `86400`; `0` turns it off).
   A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` with
   `kind` `damage` or `unverifiable`, and shown by the `audit_chain` indicator

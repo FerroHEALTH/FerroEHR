@@ -13,7 +13,6 @@
 
 use jiff::Timestamp;
 
-use crate::access_log::gap::ChainGap;
 use crate::access_log::search::LogQuery;
 use crate::access_log::store::AccessLogStore;
 use crate::access_log::view::{LogReader, withheld};
@@ -24,7 +23,6 @@ use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
-use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
 /// What a failed access-log read names as the failing store.
@@ -130,23 +128,21 @@ impl FerroEhrService {
             .map_err(|error| ServiceError::internal(LOG_STORE, error))
     }
 
-    /// The uid and link of every access-log record from `from` to `to`, both
-    /// included, and every gap that holds a position between (#5619), for a
-    /// verifier.
+    /// The seals of the windows that cover an access-log entry id from
+    /// `from` to `to`, for a verifier (#6242).
     ///
     /// # Errors
     /// - `conflict` (`409`): the local audit store is off.
     /// - `exception`: the store failed.
-    pub async fn access_log_chain(
+    pub async fn access_log_seals(
         &self,
         from: i64,
         to: i64,
-    ) -> Result<(Vec<(String, AccessLogLink)>, Vec<ChainGap>), ServiceError> {
+    ) -> Result<Vec<crate::access_log::seal::SealView>, ServiceError> {
         let log = self.access_log_store()?;
-        let failed = |error| ServiceError::internal(LOG_STORE, error);
-        let links = log.chain(from, to).await.map_err(failed)?;
-        let gaps = log.gaps(from, to).await.map_err(failed)?;
-        Ok((links, gaps))
+        log.seals(from, to)
+            .await
+            .map_err(|error| ServiceError::internal(LOG_STORE, error))
     }
 
     /// `Ok` when an EHR has the id `ehr`.

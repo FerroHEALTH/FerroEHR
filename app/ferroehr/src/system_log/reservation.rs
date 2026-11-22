@@ -17,7 +17,7 @@
 //! (`sender::reconciler`): the write committed, so its records are released,
 //! exactly as written, once; a reservation that never committed discards
 //! them; a spent one is removed. This is the durable reservation of
-//! `docs/plans/access-log.md` rule 3; no openEHR spec governs it: our own
+//! the draft's recording rule 3 (`docs/specifications/access-log`, semantics §Recording); no openEHR spec governs it: our own
 //! design.
 //!
 //! A COMPOSITION write and a CONTRIBUTION of COMPOSITION members, which

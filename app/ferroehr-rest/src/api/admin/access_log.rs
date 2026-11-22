@@ -5,14 +5,15 @@
 //! integrity (#5129).
 //!
 //! They list the log's records across EHRs for review (EHDS Annex II 3.3),
-//! answer the links of a span of its chain and a stored checkpoint, seal a
-//! checkpoint on demand, verify the log against a checkpoint, and export one
-//! EHR's log for its transfer to another system. Each read of the records or
-//! the chain writes its own access-log entry. **Our own extension.**
+//! answer the seals of the windows over a span of its entry ids and a stored
+//! checkpoint, seal the committed entries on demand, verify the log, and
+//! export one EHR's log as a signed bundle for its transfer to another
+//! system (#6242). Each read of the records or the seals writes its own
+//! access-log entry. **Our own extension.**
 //!
 //! No openEHR ITS-REST operation governs these routes: the access log is a
 //! draft openEHR package FerroEHR proposes, and its ITS-REST resources are
-//! part of that proposal (`docs/plans/access-log.md` §ITS-REST resources).
+//! part of that proposal (`docs/specifications/access-log`, the ITS-REST page).
 //! The import of an exported log is the `ferroehr access-log import`
 //! command, run by the operator of the receiving system.
 //!
@@ -51,7 +52,7 @@ use crate::state::AppState;
 pub(crate) fn access_log_routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(admin_list_access_log))
-        .routes(routes!(admin_access_log_chain))
+        .routes(routes!(admin_access_log_seals))
         .routes(routes!(
             admin_get_access_log_checkpoint,
             admin_seal_access_log_checkpoint
@@ -109,34 +110,32 @@ guarded_handler! {
 }
 
 guarded_handler! {
-    /// The uid and link of each record of a span of the access log's chain,
-    /// without their content, and the gaps of folded tombstones between
-    /// (`GET /admin/access-log/chain`). **Our own extension.**
+    /// The seals of the windows that cover a span of the access log's entry
+    /// ids (`GET /admin/access-log/seals`). **Our own extension.**
     #[utoipa::path(
-        get, path = "/admin/access-log/chain", tag = "admin-access-log",
+        get, path = "/admin/access-log/seals", tag = "admin-access-log",
         params(
-            ("from_sequence" = i64, Query, description = "The first position of the span."),
-            ("to_sequence" = i64, Query,
-             description = "The last position of the span, at most 10000 after the first."),
+            ("from_id" = i64, Query, description = "The first entry id of the span."),
+            ("to_id" = i64, Query,
+             description = "The last entry id of the span, less than 10000 after the first."),
         ),
         responses(
-            (status = 200, description = "`links`: the `uid` and `link` of each record from \
-                                          `from_sequence` to `to_sequence`, in chain order. \
-                                          `gaps`: each run of folded tombstones that holds a \
-                                          position of the span, with the positions it held, \
-                                          the `link` of its last record and the `grounds` of \
-                                          its tombstones.",
+            (status = 200, description = "`seals`: each window that covers an entry id of the \
+                                          span, in window order, with its `window_no`, \
+                                          `first_id`, `last_id`, `entries`, \
+                                          `previous_digest`, `digest` and whether it was \
+                                          `folded`.",
              body = serde_json::Value),
             (status = 400, description = "A bound is missing or outside its form, or the \
-                                          span is longer than 10000.",
+                                          span is 10000 or longer.",
              body = serde_json::Value),
             (status = 409, description = "The local audit store, which holds the access \
                                           log, is off.", body = serde_json::Value),
             AdminRefusal
         )
     )]
-    admin_access_log_chain
-        => |state, parts| super::body::gated(state, parts, chain)
+    admin_access_log_seals
+        => |state, parts| super::body::gated(state, parts, seals)
 }
 
 guarded_handler! {
@@ -256,7 +255,7 @@ fn wired(state: &AppState) -> Result<Checkpoints, RestError> {
     })
 }
 
-/// The longest span of the chain one read answers: our own design.
+/// The longest span of entry ids one read answers: our own design.
 const MAX_SPAN: i64 = 10_000;
 
 /// The `admin_list_access_log` operation.
@@ -279,23 +278,19 @@ async fn review(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     Ok(recorded(&parts.headers, answered, None, None, query))
 }
 
-/// The `admin_access_log_chain` operation.
-async fn chain(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+/// The `admin_access_log_seals` operation.
+async fn seals(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let answered = async {
-        let from = sequence(&required_query(&parts, "from_sequence")?, "from_sequence")?;
-        let to = sequence(&required_query(&parts, "to_sequence")?, "to_sequence")?;
+        let from = sequence(&required_query(&parts, "from_id")?, "from_id")?;
+        let to = sequence(&required_query(&parts, "to_id")?, "to_id")?;
         if to < from || to.checked_sub(from).is_none_or(|span| span >= MAX_SPAN) {
             return Err(RestError::from(ApiError::BadRequest(format!(
-                "`to_sequence` is at least `from_sequence` and less than {MAX_SPAN} after it"
+                "`to_id` is at least `from_id` and less than {MAX_SPAN} after it"
             ))));
         }
-        let (links, gaps) = state.backend().access_log_chain(from, to).await?;
-        let served = links.len().saturating_add(gaps.len());
-        let links = links
-            .into_iter()
-            .map(|(uid, link)| json!({ "uid": uid, "link": link }))
-            .collect::<Vec<_>>();
-        Ok((json!({ "links": links, "gaps": gaps }), Some(served)))
+        let seals = state.backend().access_log_seals(from, to).await?;
+        let served = seals.len();
+        Ok((json!({ "seals": seals }), Some(served)))
     }
     .await;
     let query = parts.query.as_deref();
@@ -322,14 +317,14 @@ async fn checkpoint(state: AppState, parts: RequestParts) -> Result<Response, Re
     ))
 }
 
-/// `raw`, the chain position `name` names.
+/// `raw`, the entry id `name` names.
 fn sequence(raw: &str, name: &str) -> Result<i64, RestError> {
     raw.parse::<i64>()
         .ok()
         .filter(|seq| *seq >= 1)
         .ok_or_else(|| {
             RestError::from(ApiError::BadRequest(format!(
-                "`{name}` is a chain position, a positive integer"
+                "`{name}` is an entry id, a positive integer"
             )))
         })
 }
@@ -426,8 +421,8 @@ fn verification_report(verification: &Verification) -> Value {
             .iter()
             .map(|finding| json!({
                 "system_id": finding.system_id,
-                "checkpoint": finding.checkpoint,
-                "finding": finding.finding.to_string(),
+                "bundle": finding.bundle,
+                "finding": finding.to_string(),
             }))
             .collect::<Vec<_>>(),
     })

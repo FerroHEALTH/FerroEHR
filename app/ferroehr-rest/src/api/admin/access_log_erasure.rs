@@ -6,8 +6,8 @@
 //! its retention ends, **our own extension** (#5128).
 //!
 //! The erasure takes the path the end of a retention period takes
-//! (`docs/plans/access-log.md` §Retention): the tombstone keeps the entry's
-//! uid, `system_id`, `time_recorded` and chain link and names the grounds
+//! (`docs/specifications/access-log`, semantics §Retention): the tombstone keeps the entry's
+//! uid, `system_id`, `time_recorded` and content digest and names the grounds
 //! the body gives. No openEHR ITS-REST operation governs this route, and no
 //! openEHR specification defines an access log.
 //!

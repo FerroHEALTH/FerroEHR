@@ -1,17 +1,20 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The audit intake and the chainer (#5747, #5745): writers put entries into
-//! the append-only intake without left on the head, chainers on several
-//! replicas link them into one chain, and the chain they leave verifies,
-//! every derived column equal to its derivation and every append sealed.
+//! The audit intake and the sealer (#5747, #5745, #6242): writers put
+//! entries into the append-only log without waiting on any head, sealers on
+//! several replicas seal them into one run of windows, and the windows they
+//! leave verify, every derived column equal to its derivation and every
+//! window signed.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use ferroehr::access_log::chainer::{Owed, Round, Seal};
-use ferroehr::access_log::intake::{IntakeEntry, take_in};
+use ferroehr::access_log::frontier::Frontier;
+use ferroehr::access_log::intake::{
+    GroupWriter, IndexRow, IntakeEntry, IntakeToken, Named, take_in,
+};
 use sqlx::{Connection, PgPool};
 
 use crate::access_log_checkpoint::{checkpoints, entry, generate_key, keyring};
@@ -32,40 +35,69 @@ pub(crate) async fn write(pool: &PgPool, numbers: impl Iterator<Item = u32>) {
         let mut conn = pool.acquire().await.expect("a connection");
         let mut tx = conn.begin().await.expect("begin");
         let intake = IntakeEntry::of(&mut entry(n, SYSTEM, EHR), None).expect("a stored form");
-        take_in(&mut tx, &[intake], &[], None, &BTreeSet::new())
-            .await
-            .expect("the intake write");
+        take_in(
+            &mut tx,
+            &[intake],
+            &[],
+            None,
+            &BTreeSet::new(),
+            &Named::default(),
+        )
+        .await
+        .expect("the intake write");
         tx.commit().await.expect("commit");
     }
 }
 
-/// Four writers and three chainers, each chainer as another replica would
-/// run it, leave one chain: every entry once, at positions 1 to n with no
-/// gap, every link and derived column checked by the verifier, and each
-/// round sealed by a checkpoint that verifies under the key.
+/// Four writers and three sealers, each sealer as another replica would run
+/// it, leave one run of windows: every entry in exactly one window, the
+/// windows following one another from the first id with no id between, every
+/// window and derived column checked by the verifier, and each window's seal
+/// a checkpoint that verifies under the key.
 #[tokio::test]
-async fn chainers_on_several_replicas_keep_one_chain() {
+async fn sealers_on_several_replicas_keep_one_run_of_windows() {
     let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
+    sealers_keep_one_run(&db.pool()).await;
+}
+
+/// The run of [`sealers_on_several_replicas_keep_one_run_of_windows`] forty
+/// times over, each on a fresh store, so a frontier that lets a window pass
+/// a write still in flight is caught: such a frontier failed about one run in
+/// eleven (#6242).
+#[tokio::test]
+async fn sealers_keep_one_run_of_windows_forty_times_over() {
+    // NOTE: (#6242), a snapshot's xmax is one past the newest ended xid, so a write still
+    // running can hold an xid at or above it; the frontier marks by an xid it takes itself.
+    for _ in 0..40 {
+        let db = testkit::db().await.expect("testkit database");
+        sealers_keep_one_run(&db.pool()).await;
+    }
+}
+
+/// Four writers and three sealers on `pool` leave one run of windows that
+/// seals every entry once and verifies.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test moves the frontier on a raw pool connection, outside any request"
+)]
+async fn sealers_keep_one_run(pool: &PgPool) {
+    let pool = pool.clone();
     let log = Arc::new(checkpoints(&pool, SYSTEM, keyring(&generate_key())));
     let writing = Arc::new(AtomicBool::new(true));
 
-    let mut chainers = tokio::task::JoinSet::new();
+    let mut sealers = tokio::task::JoinSet::new();
     for _ in 0..3 {
         let log = Arc::clone(&log);
         let writing = Arc::clone(&writing);
-        chainers.spawn(async move {
-            loop {
-                let still_writing = writing.load(Ordering::Acquire);
-                match log
-                    .store()
-                    .chain_round(16, Owed::default(), Seal::Now, &[])
-                    .await
-                    .expect("a chainer round")
-                {
-                    Round::Chained { entries: 0, .. } if !still_writing => return,
-                    Round::Busy | Round::Chained { .. } => {}
-                }
+        let pool = pool.clone();
+        sealers.spawn(async move {
+            let mut frontier = Frontier::default();
+            while writing.load(Ordering::Acquire) {
+                let reached = {
+                    let mut conn = pool.acquire().await.expect("a connection");
+                    frontier.round(&mut conn).await.expect("a frontier round")
+                };
+                log.store().seal_to(reached).await.expect("a sealing round");
                 tokio::task::yield_now().await;
             }
         });
@@ -79,24 +111,30 @@ async fn chainers_on_several_replicas_keep_one_chain() {
         written.expect("a writer");
     }
     writing.store(false, Ordering::Release);
-    while let Some(round) = chainers.join_next().await {
-        round.expect("a chainer");
+    while let Some(round) = sealers.join_next().await {
+        round.expect("a sealer");
     }
     log.store()
-        .settle(Owed::default())
+        .seal_committed()
         .await
-        .expect("the intake is chained");
+        .expect("every committed entry is sealed");
 
-    let positions: Vec<i64> =
-        sqlx::query_scalar("SELECT chain_seq FROM audit.access_log_record ORDER BY chain_seq")
-            .fetch_all(&pool)
-            .await
-            .expect("the positions");
-    assert_eq!(
-        positions,
-        (1..=200).collect::<Vec<i64>>(),
-        "one chain with no gap"
-    );
+    let windows: Vec<(i64, i64, i32)> = sqlx::query_as(
+        "SELECT first_id, last_id, entries FROM audit.access_log_seal ORDER BY window_no",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the windows");
+    let mut next = 1;
+    for (first, last, _) in &windows {
+        assert_eq!(*first, next, "the windows follow one another: {windows:?}");
+        next = last + 1;
+    }
+    let sealed: i64 = windows
+        .iter()
+        .map(|(_, _, entries)| i64::from(*entries))
+        .sum();
+    assert_eq!(sealed, 200, "every entry sealed once");
     let uids: BTreeSet<String> =
         sqlx::query_scalar("SELECT uid::text FROM audit.access_log_record")
             .fetch_all(&pool)
@@ -104,30 +142,31 @@ async fn chainers_on_several_replicas_keep_one_chain() {
             .expect("the uids")
             .into_iter()
             .collect();
-    assert_eq!(uids.len(), 200, "every entry chained once");
-    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_intake")
-        .fetch_one(&pool)
-        .await
-        .expect("the intake");
-    assert_eq!(left, 0, "the intake is empty");
-    let findings: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.verify_access_log_chain()")
-        .fetch_one(&pool)
+    assert_eq!(uids.len(), 200, "every entry written once");
+    let findings = log
+        .store()
+        .verify_windows(false)
         .await
         .expect("the verifier");
-    assert_eq!(findings, 0, "the verifier finds the chain intact");
+    assert!(findings.is_empty(), "the windows verify: {findings:?}");
     let verification = log.verify(None).await.expect("verify the checkpoints");
     assert!(verification.intact(), "{verification:?}");
-    let checkpoints: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_checkpoint")
-        .fetch_one(&pool)
-        .await
-        .expect("the checkpoints");
-    assert!(checkpoints >= 1, "each round seals its last link");
+    let signed: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM audit.access_log_seal WHERE proof IS NOT NULL")
+            .fetch_one(&pool)
+            .await
+            .expect("the seals");
+    assert_eq!(
+        usize::try_from(signed).expect("a count"),
+        windows.len(),
+        "every window is signed"
+    );
 }
 
-/// The intake is append-only: the runtime refuses an update, a delete and a
-/// truncate of an entry left to be chained.
+/// The log is append-only: the runtime refuses an update, a delete and a
+/// truncate of an entry, and of a system record waiting in its intake.
 #[tokio::test]
-async fn the_intake_refuses_every_change_but_the_chainers_move() {
+async fn the_log_refuses_every_change_but_the_tombstone() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     write(&pool, std::iter::once(1)).await;
@@ -145,9 +184,6 @@ async fn the_intake_refuses_every_change_but_the_chainers_move() {
         .await
         .expect("a record of the system chain waits in its intake");
     for statement in [
-        "UPDATE audit.access_log_intake SET entries = '{1}'",
-        "DELETE FROM audit.access_log_intake",
-        "TRUNCATE audit.access_log_intake",
         "UPDATE audit.access_log_entry SET content = '{}'",
         "DELETE FROM audit.access_log_entry",
         "TRUNCATE audit.access_log_entry",
@@ -164,117 +200,42 @@ async fn the_intake_refuses_every_change_but_the_chainers_move() {
             "{statement}: {refused}"
         );
     }
-    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_intake")
+    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_entry")
         .fetch_one(&pool)
         .await
-        .expect("the intake");
-    assert_eq!(left, 1, "the entry still waits");
+        .expect("the log");
+    assert_eq!(left, 1, "the entry is kept");
 }
 
-/// A link the chainer did not compute from the head is refused by the
-/// insert trigger, so a writer that skips the head cannot extend the chain.
+/// A seal that does not follow the seal state is refused by nothing but
+/// found by the verifier: a seal row written past the sealer reads as a
+/// removed or changed seal.
 #[tokio::test]
-async fn a_record_inserted_past_the_head_is_refused() {
+async fn a_seal_written_past_the_sealer_is_found() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    write(&pool, std::iter::once(1)).await;
-    let refused = sqlx::query(
-        "SELECT audit.access_log_chain_move( \
-         ARRAY(SELECT id FROM audit.access_log_intake), \
-         ARRAY(SELECT unnest(entries) FROM audit.access_log_intake), ARRAY[7]::bigint[], \
-         ARRAY[repeat('0', 64)], ARRAY[repeat('0', 64)], false, false)",
+    let log = checkpoints(&pool, SYSTEM, keyring(&generate_key()));
+    write(&pool, 0..3).await;
+    log.store().seal_committed().await.expect("sealed");
+    sqlx::query(
+        "INSERT INTO audit.access_log_seal (window_no, first_id, last_id, entries, \
+         previous_digest, digest, sealed_at) \
+         SELECT window_no + 1, last_id + 1, last_id + 5, 0, digest, digest, now() \
+         FROM audit.access_log_seal ORDER BY window_no DESC LIMIT 1",
     )
     .execute(&pool)
     .await
-    .expect_err("a link that does not follow the head");
-    assert!(
-        refused.to_string().contains("follows position"),
-        "{refused}"
-    );
-}
-
-/// Rounds that leave their links to a later checkpoint store none; sealing
-/// the head then stores one checkpoint of the last link, which covers every
-/// entry below it, and sealing it again stores no second (#5770).
-#[tokio::test]
-async fn unsealed_rounds_are_covered_by_one_checkpoint_of_the_head() {
-    let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
-    let log = checkpoints(&pool, SYSTEM, keyring(&generate_key()));
-    let count = || async {
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM audit.access_log_checkpoint")
-            .fetch_one(&pool)
-            .await
-            .expect("the checkpoints")
-    };
-    for round in 0..3_u32 {
-        write(&pool, (0..5).map(|i| round * 100 + i)).await;
-        let chained = log
-            .store()
-            .chain_round(64, Owed::default(), Seal::Later, &[])
-            .await
-            .expect("a round");
-        assert!(
-            matches!(chained, Round::Chained { entries: 5, .. }),
-            "{chained:?}"
-        );
-    }
-    assert_eq!(count().await, 0, "no round sealed its links");
-    assert!(log.store().seal_head().await.expect("the head is sealed"));
-    assert!(log.store().seal_head().await.expect("sealed again"));
-    assert_eq!(count().await, 1, "one checkpoint of the head");
-    let head: i64 = sqlx::query_scalar("SELECT max(sequence) FROM audit.access_log_checkpoint")
-        .fetch_one(&pool)
+    .expect("a seal past the sealer");
+    let findings = log
+        .store()
+        .verify_windows(false)
         .await
-        .expect("the checkpoint");
-    assert_eq!(head, 15, "the checkpoint seals the last link");
-    let verification = log.verify(None).await.expect("verify the checkpoint");
-    assert!(verification.intact(), "{verification:?}");
+        .expect("the verifier");
+    assert!(!findings.is_empty(), "the stray seal is found");
 }
 
-/// A round that seals and finds nothing to chain seals a head no checkpoint
-/// covers, as a chainer that stopped after a round that left its links to a
-/// later checkpoint leaves it, and a second such round stores no second
-/// checkpoint; an empty log has no head to seal (#6050).
-#[tokio::test]
-async fn a_sealing_round_with_nothing_to_chain_seals_an_unsealed_head() {
-    let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
-    let log = checkpoints(&pool, SYSTEM, keyring(&generate_key()));
-    let sealed = || async {
-        sqlx::query_scalar::<_, i64>("SELECT sequence FROM audit.access_log_checkpoint")
-            .fetch_all(&pool)
-            .await
-            .expect("the checkpoints")
-    };
-    let idle = || async {
-        let round = log
-            .store()
-            .chain_round(64, Owed::default(), Seal::Now, &[])
-            .await
-            .expect("a round");
-        assert!(
-            matches!(round, Round::Chained { entries: 0, .. }),
-            "{round:?}"
-        );
-    };
-    idle().await;
-    assert_eq!(sealed().await, [0_i64; 0], "an empty log has no head");
-    write(&pool, 0..5).await;
-    log.store()
-        .chain_round(64, Owed::default(), Seal::Later, &[])
-        .await
-        .expect("a round that leaves its links unsealed");
-    assert_eq!(sealed().await, [0_i64; 0], "the round sealed nothing");
-    idle().await;
-    idle().await;
-    assert_eq!(sealed().await, [5], "one checkpoint of the head");
-    let verification = log.verify(None).await.expect("verify the checkpoint");
-    assert!(verification.intact(), "{verification:?}");
-}
-
-/// Autovacuum never truncates an intake (#5970): the truncate's `ACCESS
-/// EXCLUSIVE` lock would hold every request's intake write.
+/// Autovacuum never truncates the system intake (#5970): the truncate's
+/// `ACCESS EXCLUSIVE` lock would hold every request's intake write.
 #[tokio::test]
 async fn autovacuum_never_truncates_an_intake() {
     let db = testkit::db().await.expect("testkit database");
@@ -282,13 +243,13 @@ async fn autovacuum_never_truncates_an_intake() {
     let options: Vec<(String, Option<Vec<String>>)> = sqlx::query_as(
         "SELECT c.relname::text, c.reloptions::text[] FROM pg_class c \
          JOIN pg_namespace n ON n.oid = c.relnamespace \
-         WHERE n.nspname = 'audit' AND c.relname IN ('access_log_intake', 'audit_event_intake') \
+         WHERE n.nspname = 'audit' AND c.relname IN ('audit_event_intake') \
          ORDER BY c.relname",
     )
     .fetch_all(&pool)
     .await
     .expect("the intakes' storage parameters");
-    assert_eq!(options.len(), 2, "both intakes: {options:?}");
+    assert_eq!(options.len(), 1, "the system intake: {options:?}");
     for (table, reloptions) in options {
         assert!(
             reloptions
@@ -297,4 +258,120 @@ async fn autovacuum_never_truncates_an_intake() {
             "{table} sets vacuum_truncate = off"
         );
     }
+}
+
+/// An entry `n` with an index row under the render policy `policy`, and its
+/// one search token.
+fn indexed(n: u32, policy: &[u8]) -> (IntakeEntry, Vec<IntakeToken>) {
+    let index = IndexRow {
+        action: "R",
+        outcome: 0,
+        principal: None,
+        patient_id: None,
+        resource_id: None,
+        request_id: None,
+        client_ip: None,
+        ehr_id: None,
+        search_tokens: String::new(),
+        render_policy: policy.to_vec(),
+    };
+    let intake = IntakeEntry::of(&mut entry(n, SYSTEM, EHR), Some(index)).expect("a stored form");
+    let token = IntakeToken {
+        parameter: "purpose",
+        system: Some("urn:example:generation".to_owned()),
+        code: Some("TREAT".to_owned()),
+        shares: false,
+    };
+    (intake, vec![token])
+}
+
+/// The search token ids the entry `n` names.
+async fn named_tokens(pool: &PgPool, n: u32) -> Vec<i32> {
+    sqlx::query_scalar(
+        "SELECT search_tokens FROM audit.access_log_entry \
+         WHERE uid = $1::uuid",
+    )
+    .bind(entry(n, SYSTEM, EHR).uid.value().to_owned())
+    .fetch_one(pool)
+    .await
+    .expect("the entry")
+}
+
+/// The gathered writer names a known token by id with no lookup, and when
+/// retention has moved the store's generation the plain write is refused
+/// (`FE001`), the writer forgets every id, and the entry is written once with
+/// the token the store holds (#6242).
+#[tokio::test]
+async fn a_write_naming_ids_of_an_old_generation_is_written_again() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let policy: Vec<u8> = sqlx::query_scalar("SELECT audit.register_render_policy('{}'::jsonb)")
+        .fetch_one(&pool)
+        .await
+        .expect("a render policy");
+    let writer = GroupWriter::spawn(&pool);
+    for n in [1, 2] {
+        let (intake, tokens) = indexed(n, &policy);
+        writer
+            .write(vec![intake], vec![tokens])
+            .await
+            .expect("the entry is written");
+    }
+    let first = named_tokens(&pool, 1).await;
+    assert_eq!(first.len(), 1, "the entry names its one token");
+    assert_eq!(
+        named_tokens(&pool, 2).await,
+        first,
+        "the second names it by id"
+    );
+
+    let refused = sqlx::query("SELECT audit.access_log_token_generation_holds(-1)")
+        .execute(&pool)
+        .await
+        .expect_err("an old generation is refused");
+    assert_eq!(
+        refused
+            .as_database_error()
+            .and_then(|error| error.code().map(std::borrow::Cow::into_owned)),
+        Some("FE001".to_owned())
+    );
+
+    owner_moves_the_generation(&pool).await;
+    let (intake, tokens) = indexed(3, &policy);
+    writer
+        .write(vec![intake], vec![tokens])
+        .await
+        .expect("the entry is written after the generation moved");
+    assert_eq!(
+        named_tokens(&pool, 3).await,
+        first,
+        "the token the store holds"
+    );
+    let entries: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_entry")
+        .fetch_one(&pool)
+        .await
+        .expect("the count");
+    assert_eq!(entries, 3, "each entry once");
+}
+
+/// Moves the store's token generation, as retention does when it deletes a
+/// token.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test moves the generation on a raw pool connection, as only the owner can"
+)]
+async fn owner_moves_the_generation(pool: &PgPool) {
+    let mut conn = pool.acquire().await.expect("connection");
+    let mut tx = conn.begin().await.expect("begin");
+    for statement in [
+        "ALTER TABLE audit.audit_search_token_generation DISABLE TRIGGER USER",
+        "UPDATE audit.audit_search_token_generation SET generation = generation + 1",
+        "ALTER TABLE audit.audit_search_token_generation ENABLE TRIGGER USER",
+    ] {
+        sqlx::query(statement)
+            .execute(&mut *tx)
+            .await
+            .expect("the generation moves");
+    }
+    tx.commit().await.expect("commit");
 }

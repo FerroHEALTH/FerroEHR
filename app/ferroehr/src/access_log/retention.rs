@@ -4,8 +4,8 @@
 //! The retention an access-log entry states when it is written (#5128,
 //! #5660).
 //!
-//! Each entry carries its own period (`docs/plans/access-log.md`
-//! §Retention), so any store applies it without the recording system's
+//! Each entry carries its own period (`docs/specifications/access-log`,
+//! semantics §Retention), so any store applies it without the recording system's
 //! configuration: `retain_until` is the last day the entry is kept, `grounds`
 //! names the provisions that set it, and `policy` the version of the
 //! controller's access policy the period was taken from. The period is the

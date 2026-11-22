@@ -111,6 +111,14 @@ impl FerroEhrConfig {
 
     /// Every emergency purpose code must also be an agreed purpose code.
     fn validate_audit(&self, errors: &mut Vec<ConfigError>) {
+        if self.audit.store.gather_window.get() > crate::access_log::intake::GATHER_WINDOW_MAX {
+            errors.push(ConfigError::semantic(format!(
+                "audit.store.gather_window is {:?}; it may be at most {:?}, since each request \
+                 that writes an access-log entry waits up to the window",
+                self.audit.store.gather_window,
+                crate::access_log::intake::GATHER_WINDOW_MAX
+            )));
+        }
         for code in &self.audit.emergency_purpose_codes {
             if !self.audit.purpose_codes.contains(code) {
                 errors.push(ConfigError::semantic(format!(

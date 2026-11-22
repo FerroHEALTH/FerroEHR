@@ -9,19 +9,19 @@
 use crate::v1_2::common::generic::party_proxy::PartyProxy;
 use crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 
-/// A signed statement by the recording system of the head of its log at a point in time.
+/// A signed statement by the recording system of the seal of its log up to a record.
 ///
-/// A checkpoint commits to every record up to `_sequence_`, so a verifier that holds it can detect a later rewrite of the log, and an export carries the checkpoint its records verify against.
+/// A checkpoint commits to every record up to `_sequence_` through the seal digest of the window that ends there, so a verifier that holds it can detect a later rewrite of the log.
 #[doc(alias = "ACCESS_LOG_CHECKPOINT")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessLogCheckpoint {
     /// The system whose log the checkpoint seals.
     pub system_id: String,
-    /// The `_link.sequence_` of the last record the checkpoint covers.
+    /// The number of the last record the checkpoint covers: the last of the window its seal closes.
     pub sequence: i64,
-    /// The `_link.digest_` of that record.
+    /// The seal digest of that window, which follows the seal of the window before it.
     pub digest: String,
-    /// Name of the digest algorithm of the chain.
+    /// Name of the digest algorithm of the seals.
     pub algorithm: String,
     /// Time at which the checkpoint was signed.
     pub time_sealed: DvDateTime,

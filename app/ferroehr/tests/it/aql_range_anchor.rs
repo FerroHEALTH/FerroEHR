@@ -1161,6 +1161,15 @@ fn late_composition(name: &str, magnitude: f64) -> Value {
     body
 }
 
+/// `body` with the units of its first ELEMENT, `at0004`, in kilopascal, a
+/// value the statistics of the first seed never saw.
+fn in_kilopascal(mut body: Value) -> Value {
+    *body
+        .pointer_mut("/content/0/data/events/0/data/items/0/value/units")
+        .expect("the wide composition's first ELEMENT is a quantity") = json!("kPa");
+    body
+}
+
 /// `EXPLAIN` a lowered AQL statement under the server's planner settings,
 /// sequential scans included.
 async fn explain_as_served(pool: &PgPool, prepared: ferroehr::aql::sql::PreparedQuery) -> Value {
@@ -1222,8 +1231,9 @@ fn assert_linear(name: &str, plan: &Value, expected: u32, population: u32) {
     }
 }
 
-/// A population filter on a magnitude keeps a plan linear in the store when
-/// the store grew past its statistics, ordered and streamed (#6243).
+/// A population filter on a value keeps a plan linear in the store when
+/// the store grew past its statistics, ordered, streamed and only in WHERE
+/// (#6243, #6263).
 ///
 /// cdr-benchmark's `bp_data_filtered` ran for 23 s on a store filling from
 /// empty: the statistics held no blood-pressure OBSERVATION, the planner
@@ -1235,12 +1245,20 @@ fn assert_linear(name: &str, plan: &Value, expected: u32, population: u32) {
 /// first row of each version, which a join probes per version, and the
 /// earlier-row probe reads its version through `node_hot_pkey`.
 ///
-/// The store is analysed holding only low readings, then grows by the late
-/// archetype's compositions and by high readings with autovacuum held off.
+/// An equality whose leaf is only in WHERE went the same way through the
+/// containment: the OBSERVATION node, estimated at one row, was rescanned
+/// with the clause's `EXISTS` per anchor version, 32.7 M buffers, because the
+/// probe per version was costed from the object count of the first seed. An
+/// anchor on a leaf no SELECT column binds now reads each contained node
+/// inside its object, behind a fence (#6263).
+///
+/// The store is analysed holding only low readings in mm[Hg], then grows by
+/// the late archetype's compositions and by high readings in kPa with
+/// autovacuum held off.
 /// Each statement's scans stay linear in the store, before and after an
 /// `ANALYZE`, and it answers the rows its unanchored form answers.
 #[tokio::test]
-async fn a_magnitude_filter_stays_linear_on_a_store_grown_past_its_statistics() {
+async fn a_value_filter_stays_linear_on_a_store_grown_past_its_statistics() {
     const SEEDED: u32 = 2000;
     const LATE: u32 = 1200;
     const FETCH: u32 = 500;
@@ -1280,11 +1298,14 @@ async fn a_magnitude_filter_stays_linear_on_a_store_grown_past_its_statistics() 
         let magnitude = 60.0 + f64::from(index * 7 % 200);
         kept += u32::from(magnitude >= 140.0);
         let ehr = ehrs[usize::try_from(index).expect("an index fits") % ehrs.len()];
-        let late = late_composition(&format!("late {index}"), magnitude);
+        let late = in_kilopascal(late_composition(&format!("late {index}"), magnitude));
         svc.create_composition(ehr, uv(&late, "249", None))
             .await
             .expect("commit a late reading");
-        let high = wide_observation_composition(&format!("high {index}"), 140.0 + f64::from(index));
+        let high = in_kilopascal(wide_observation_composition(
+            &format!("high {index}"),
+            140.0 + f64::from(index),
+        ));
         svc.create_composition(ehr, uv(&high, "249", None))
             .await
             .expect("commit a high reading");
@@ -1298,12 +1319,26 @@ async fn a_magnitude_filter_stays_linear_on_a_store_grown_past_its_statistics() 
          CONTAINS OBSERVATION o[{LATE_ARCHETYPE}] WHERE {leaf} >= 140"
     );
     let ordered = format!("{streamed} ORDER BY {leaf} DESC");
+    let units = wide_leaf("at0004").replace("/magnitude", "/units");
+    let from =
+        format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{LATE_ARCHETYPE}]");
+    let range_in_where =
+        format!("SELECT c/uid/value {from} WHERE {leaf} >= 140 ORDER BY c/uid/value");
+    let equality_in_where =
+        format!("SELECT c/uid/value {from} WHERE {units} = 'kPa' ORDER BY c/uid/value");
+    let reads = [
+        ("the ordered filter", &ordered, expected),
+        ("the streamed filter", &streamed, expected),
+        ("the range only in WHERE", &range_in_where, expected),
+        (
+            "the equality only in WHERE",
+            &equality_in_where,
+            LATE.min(FETCH),
+        ),
+    ];
     let fetched =
         |aql: &str| aql_sql_with(aql, &Params::default(), Vec::new(), Some(i64::from(FETCH)));
-    for (name, aql) in [
-        ("the ordered filter", &ordered),
-        ("the streamed filter", &streamed),
-    ] {
+    for (name, aql, expected) in reads {
         let plan = explain_as_served(&pool, fetched(aql)).await;
         assert_linear(
             &format!("{name} on stale statistics"),
@@ -1332,10 +1367,7 @@ async fn a_magnitude_filter_stays_linear_on_a_store_grown_past_its_statistics() 
     ferroehr::db::parent_statistics::refresh_pools(&pools)
         .await
         .expect("refresh the partitioned parents' statistics");
-    for (name, aql) in [
-        ("the ordered filter", &ordered),
-        ("the streamed filter", &streamed),
-    ] {
+    for (name, aql, expected) in reads {
         let plan = explain_as_served(&pool, fetched(aql)).await;
         assert_linear(
             &format!("{name} on fresh statistics"),

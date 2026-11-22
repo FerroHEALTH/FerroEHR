@@ -1,17 +1,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Two replicas of one deployment writing the audit chains at once, against
-//! a real `PostgreSQL` 18 (shared testkit harness).
+//! Two replicas of one deployment writing the audit trail at once, against a
+//! real `PostgreSQL` 19 (shared testkit harness).
 //!
 //! Each replica has its own pools, its own audit drain and the same signing
 //! key, as two instances behind a load balancer do. Both commit EHRs, record
 //! accesses to them in the access log, write records of the system chain and
-//! seal both chains concurrently; every writer of a chain serialises on its
-//! head row in PostgreSQL, and a chainer seals its round or, once it rests,
-//! the head (#5770), so afterwards the access log, the system chain, every
-//! checkpoint and every seal verify, whichever replica made them. No openEHR
-//! spec governs the process model or audit storage: our own design (#5589).
+//! seal both concurrently; the system chain's writers serialise on its head
+//! row, and the access log's sealers on the seal state (#6242), so afterwards
+//! the access log, the system chain, every checkpoint and every seal verify,
+//! whichever replica made them. No openEHR spec governs the process model or
+//! audit storage: our own design (#5589).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -56,6 +56,7 @@ async fn replica(pool: &sqlx::PgPool, signer: &Arc<Signer>) -> Replica {
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
+            ..ferroehr::system_log::config::StoreConfig::default()
         },
         ..ferroehr::system_log::config::AuditConfig::default()
     };
@@ -86,7 +87,7 @@ async fn replica(pool: &sqlx::PgPool, signer: &Arc<Signer>) -> Replica {
 }
 
 /// `ROUNDS` rounds of the work of one replica: commit an EHR, record a read
-/// of it in the access log, which a chainer links and seals, write a record of the
+/// of it in the access log, which a sealer seals, write a record of the
 /// system chain, and every third round seal the system chain.
 async fn work(replica: &Replica) {
     for round in 0..ROUNDS {
@@ -125,22 +126,17 @@ async fn work(replica: &Replica) {
     }
 }
 
-/// Waits until the access log holds `expected` records and a checkpoint
-/// seals each of them: a round under load leaves its links to the checkpoint
-/// of the chainer's rest, which follows the records (#6050).
-async fn sealed(pool: &sqlx::PgPool, expected: usize) {
+/// Waits until the access log holds `expected` records, then seals them
+/// through `replica`'s checkpoints.
+async fn sealed(pool: &sqlx::PgPool, expected: usize, replica: &Replica) {
     let expected = i64::try_from(expected).expect("a count");
     let deadline = std::time::Instant::now() + Duration::from_secs(30);
     loop {
-        let (entries, unsealed): (i64, i64) = sqlx::query_as(
-            "SELECT count(*), count(*) FILTER (WHERE NOT EXISTS \
-             (SELECT 1 FROM audit.access_log_checkpoint c WHERE c.sequence >= r.chain_seq)) \
-             FROM audit.access_log_record r",
-        )
-        .fetch_one(pool)
-        .await
-        .expect("the access log is counted");
-        if entries == expected && unsealed == 0 {
+        let entries: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_record")
+            .fetch_one(pool)
+            .await
+            .expect("the access log is counted");
+        if entries == expected {
             break;
         }
         assert!(
@@ -149,10 +145,15 @@ async fn sealed(pool: &sqlx::PgPool, expected: usize) {
         );
         assert!(
             std::time::Instant::now() < deadline,
-            "every record is chained and sealed: {entries} of {expected}, {unsealed} unsealed"
+            "every record is written: {entries} of {expected}"
         );
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
+    replica
+        .checkpoints
+        .seal()
+        .await
+        .expect("the entries are sealed");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -165,16 +166,22 @@ async fn two_replicas_writing_at_once_leave_every_chain_verifying() {
     let b = replica(&pool, &signer).await;
     for phase in 1..=PHASES {
         tokio::join!(work(&a), work(&b));
-        sealed(&pool, 2 * ROUNDS * phase).await;
+        sealed(
+            &pool,
+            2 * ROUNDS * phase,
+            if phase % 2 == 0 { &a } else { &b },
+        )
+        .await;
     }
-    let written: Vec<i64> =
-        sqlx::query_scalar("SELECT sequence FROM audit.access_log_checkpoint ORDER BY sequence")
-            .fetch_all(&pool)
-            .await
-            .expect("the checkpoints are read");
+    let written: Vec<i64> = sqlx::query_scalar(
+        "SELECT last_id FROM audit.access_log_seal WHERE proof IS NOT NULL ORDER BY window_no",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the checkpoints are read");
     assert!(
         written.len() >= PHASES,
-        "each phase is sealed by an append of its own: {written:?}"
+        "each phase is sealed in a window of its own: {written:?}"
     );
     for sequence in written {
         let checkpoint = a
@@ -222,35 +229,41 @@ async fn two_replicas_writing_at_once_leave_every_chain_verifying() {
     }
 }
 
-/// A replica that stops between a round that left its links to a later
-/// checkpoint and that checkpoint leaves the head unsealed; the chainer of
-/// the next replica to start seals it with nothing to chain, so no record
-/// waits for a later access to be sealed (#6050).
+/// Entries a stopped replica left unsealed are sealed by the chainer of the
+/// next replica to start, so no record waits for a later access to be sealed
+/// (#6050, #6242).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn a_starting_replica_seals_the_head_a_stopped_one_left() {
+async fn a_starting_replica_seals_what_a_stopped_one_left() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let signer =
         crate::access_log_checkpoint::keyring(&crate::access_log_checkpoint::generate_key());
     crate::audit_intake::write(&pool, 0..3).await;
-    crate::access_log_checkpoint::checkpoints(&pool, SYSTEM, Arc::clone(&signer))
-        .store()
-        .chain_round(
-            64,
-            ferroehr::access_log::chainer::Owed::default(),
-            ferroehr::access_log::chainer::Seal::Later,
-            &[],
+    let windows = || async {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT count(*) FROM audit.access_log_seal WHERE proof IS NOT NULL",
         )
+        .fetch_one(&pool)
         .await
-        .expect("the stopped replica's last round");
-    let checkpoints = || async {
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM audit.access_log_checkpoint")
+        .expect("the seals are counted")
+    };
+    assert_eq!(windows().await, 0, "the stopped replica sealed nothing");
+    let _started = replica(&pool, &signer).await;
+    let deadline = std::time::Instant::now() + Duration::from_secs(30);
+    while windows().await == 0 {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the starting replica seals what the stopped one left"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    let sealed: i64 =
+        sqlx::query_scalar("SELECT coalesce(sum(entries), 0)::bigint FROM audit.access_log_seal")
             .fetch_one(&pool)
             .await
-            .expect("the checkpoints are counted")
-    };
-    assert_eq!(checkpoints().await, 0, "the stopped replica sealed nothing");
-    let _started = replica(&pool, &signer).await;
-    sealed(&pool, 3).await;
-    assert_eq!(checkpoints().await, 1, "one checkpoint of the head");
+            .expect("the seals");
+    assert_eq!(
+        sealed, 3,
+        "one window seals every entry the stopped replica left"
+    );
 }

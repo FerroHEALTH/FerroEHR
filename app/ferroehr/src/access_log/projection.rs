@@ -4,8 +4,8 @@
 //! The projections of a stored access-log entry: the EHDS access record, the
 //! IHE BALP `AuditEvent` and the DICOM audit message (#5127).
 //!
-//! The entry is the record (`docs/plans/access-log.md` §Mappings and their
-//! losses). Each projection reads it through
+//! The entry is the record (`docs/specifications/access-log`, appendix §Relation to
+//! Other Audit Formats). Each projection reads it through
 //! `crate::access_log::recorded::stored`, computes its categories again
 //! through the category map that classified it, and hands the result to the
 //! FerroAUDIT crates: `ehds-logging` writes the EHDS access record

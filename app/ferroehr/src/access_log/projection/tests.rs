@@ -290,9 +290,7 @@ pub(super) fn stored_entry(event: &AuditEvent, subject: Option<&str>) -> AccessL
     )
     .expect("an entry");
     let stored = canonical_form(&entry).expect("a canonical form");
-    let mut stored: serde_json::Value = serde_json::from_str(&stored).expect("a JSON object");
-    stored["link"] = serde_json::to_value(&entry.link).expect("a link");
-    serde_json::from_value(stored).expect("the entry reads back")
+    serde_json::from_str(&stored).expect("the entry reads back")
 }
 
 /// Each projection of a stored entry is the document the access it records

@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Retention per access-log entry (#5128) against a real `PostgreSQL` 18: an
+//! Retention per access-log entry (#5128) against a real `PostgreSQL` 19: an
 //! entry whose `retain_until` has passed is replaced by its tombstone in
-//! place, in any order of expiry, the chain verifies after it, and a
-//! tombstone never becomes an entry again (`docs/plans/access-log.md`
-//! §Retention, §Integrity).
+//! place, in any order of expiry, the seals verify after it, and a
+//! tombstone never becomes an entry again (`docs/specifications/access-log`, semantics §Retention,
+//! §Integrity).
 //!
 //! No openEHR spec governs audit retention: our own design.
 
@@ -95,7 +95,6 @@ async fn an_expired_entry_becomes_a_tombstone() {
     assert_eq!(tombstone.uid, expired.uid);
     assert_eq!(tombstone.system_id, expired.system_id);
     assert_eq!(tombstone.time_recorded, expired.time_recorded);
-    assert_eq!(tombstone.link, expired.link, "the link is kept whole");
     assert_eq!(tombstone.time_removed.value, "2030-06-01T12:00:00Z");
     assert_eq!(
         tombstone.grounds, expired.retention.grounds,

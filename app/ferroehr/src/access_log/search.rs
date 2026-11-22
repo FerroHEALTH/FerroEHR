@@ -13,15 +13,13 @@
 //! governs the access log.
 
 use jiff::Timestamp;
-use sqlx::Row;
 
 use crate::db::acquire::acquire;
 use openehr_rm::draft::access_control::terminology::Term;
 use openehr_rm::draft::access_control::terminology::log::{AccessorKind, Action, Outcome};
-use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
-use super::store::{AccessLogError, AccessLogStore, own_link, records, stored};
+use super::store::{AccessLogError, AccessLogStore, records, stored};
 
 /// The `ACCESSED_ITEM.rm_type` of an entry that records a read of the access
 /// log itself (rule 4 of the draft's recording rules).
@@ -190,36 +188,5 @@ impl AccessLogStore {
             .fetch_all(&mut *acquire(self.pool()).await?)
             .await?;
         rows.iter().map(stored).collect()
-    }
-
-    /// The uid and link of every access-log record from `from` to `to`, both
-    /// included, in chain order, without their content.
-    ///
-    /// A position a gap holds has no record (#5619): [`Self::gaps`] answers
-    /// those, and a position neither holds is a deletion the verifier
-    /// reports.
-    ///
-    /// # Errors
-    /// The store errors when the statement fails.
-    pub async fn chain(
-        &self,
-        from: i64,
-        to: i64,
-    ) -> Result<Vec<(String, AccessLogLink)>, AccessLogError> {
-        let rows = sqlx::query(
-            "SELECT uid::text AS uid, chain_seq, algorithm, \
-             encode(previous_digest, 'hex') AS previous_digest, \
-             encode(content_digest, 'hex') AS content_digest, encode(digest, 'hex') AS digest \
-             FROM audit.access_log_record WHERE chain_seq BETWEEN $1 AND $2 ORDER BY chain_seq",
-        )
-        .bind(from)
-        .bind(to)
-        .fetch_all(&mut *acquire(self.pool()).await?)
-        .await?;
-        let links = rows
-            .iter()
-            .map(|row| Ok((row.try_get::<String, _>("uid")?, own_link(row)?)))
-            .collect::<Result<Vec<_>, sqlx::Error>>()?;
-        Ok(links)
     }
 }

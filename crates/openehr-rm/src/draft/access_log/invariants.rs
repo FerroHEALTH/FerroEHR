@@ -27,7 +27,6 @@ use crate::draft::access_log::access_log::access_care_ground::AccessCareGround;
 use crate::draft::access_log::access_log::access_credential::AccessCredential;
 use crate::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
 use crate::draft::access_log::access_log::access_log_entry::AccessLogEntry;
-use crate::draft::access_log::access_log::access_log_link::AccessLogLink;
 use crate::draft::access_log::access_log::access_log_record::AccessLogRecord;
 use crate::draft::access_log::access_log::access_log_tombstone::AccessLogTombstone;
 use crate::draft::access_log::access_log::access_origin::AccessOrigin;
@@ -60,7 +59,7 @@ pub fn check_entry(entry: &AccessLogEntry) -> Result<(), Violations> {
     check.finish()
 }
 
-/// Checks every invariant of an `ACCESS_LOG_TOMBSTONE` and of its link.
+/// Checks every invariant of an `ACCESS_LOG_TOMBSTONE`.
 ///
 /// # Errors
 /// [`Violations`] naming each invariant the tombstone breaks.
@@ -71,7 +70,6 @@ pub fn check_tombstone(tombstone: &AccessLogTombstone) -> Result<(), Violations>
         "ACCESS_LOG_RECORD",
         "System_id_valid",
     );
-    link_rules(&mut check, &tombstone.link);
     check.finish()
 }
 
@@ -100,7 +98,6 @@ fn entry_rules(check: &mut Check, entry: &AccessLogEntry) {
         "ACCESS_LOG_RECORD",
         "System_id_valid",
     );
-    link_rules(check, &entry.link);
     check.hold(
         Action::read_coded(&entry.action).is_ok(),
         "ACCESS_LOG_ENTRY",
@@ -123,22 +120,6 @@ fn entry_rules(check: &mut Check, entry: &AccessLogEntry) {
     for authorisation in entry.authorisations.as_deref().unwrap_or_default() {
         authorisation_rules(check, authorisation);
     }
-}
-
-fn link_rules(check: &mut Check, link: &AccessLogLink) {
-    check.hold(link.sequence >= 1, "ACCESS_LOG_LINK", "Sequence_valid");
-    check.hold(
-        !link.algorithm.is_empty(),
-        "ACCESS_LOG_LINK",
-        "Algorithm_valid",
-    );
-    check.hold(
-        !link.previous_digest.is_empty()
-            && !link.content_digest.is_empty()
-            && !link.digest.is_empty(),
-        "ACCESS_LOG_LINK",
-        "Digests_valid",
-    );
 }
 
 fn outcome_rules(check: &mut Check, outcome: &AccessOutcome) {

@@ -340,7 +340,7 @@ impl HealthIndicator for AuditChainHealth {
                     });
                     Outcome::degraded(format!(
                         "hash chain DAMAGED at {at}: {total} finding(s){first}; see \
-                         audit.verify_audit_chain() and audit.verify_access_log_chain()"
+                         audit.verify_audit_chain() and POST /admin/access-log/verify"
                     ))
                 }
                 ChainCheckState::Unverifiable { at, reason } => Outcome::degraded(format!(

@@ -1597,7 +1597,7 @@ impl ::serde::Serialize for crate::draft::access_log::access_log::access_log_ent
         &self,
         __serializer: __S,
     ) -> ::core::result::Result<__S::Ok, __S::Error> {
-        let mut __n = 10usize;
+        let mut __n = 9usize;
         if self.occurred.is_some() {
             __n += 1;
         }
@@ -1646,7 +1646,6 @@ impl ::serde::Serialize for crate::draft::access_log::access_log::access_log_ent
             "time_recorded",
             &self.time_recorded,
         )?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "link", &self.link)?;
         if let Some(__v) = &self.occurred {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "occurred", __v)?;
         }
@@ -1712,7 +1711,6 @@ impl<'de> ::serde::Deserialize<'de>
             "ehr_id",
             "is_emergency",
             "items",
-            "link",
             "occurred",
             "operation",
             "other_details",
@@ -1745,7 +1743,6 @@ impl<'de> ::serde::Deserialize<'de>
             __F15,
             __F16,
             __F17,
-            __F18,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -1769,22 +1766,21 @@ impl<'de> ::serde::Deserialize<'de>
                             "uid" => ::core::result::Result::Ok(__Field::__F0),
                             "system_id" => ::core::result::Result::Ok(__Field::__F1),
                             "time_recorded" => ::core::result::Result::Ok(__Field::__F2),
-                            "link" => ::core::result::Result::Ok(__Field::__F3),
-                            "occurred" => ::core::result::Result::Ok(__Field::__F4),
-                            "action" => ::core::result::Result::Ok(__Field::__F5),
-                            "operation" => ::core::result::Result::Ok(__Field::__F6),
-                            "outcome" => ::core::result::Result::Ok(__Field::__F7),
-                            "accessor" => ::core::result::Result::Ok(__Field::__F8),
-                            "ehr_id" => ::core::result::Result::Ok(__Field::__F9),
-                            "items" => ::core::result::Result::Ok(__Field::__F10),
-                            "query" => ::core::result::Result::Ok(__Field::__F11),
-                            "purposes" => ::core::result::Result::Ok(__Field::__F12),
-                            "authorisations" => ::core::result::Result::Ok(__Field::__F13),
-                            "is_emergency" => ::core::result::Result::Ok(__Field::__F14),
-                            "channel" => ::core::result::Result::Ok(__Field::__F15),
-                            "security_labels" => ::core::result::Result::Ok(__Field::__F16),
-                            "retention" => ::core::result::Result::Ok(__Field::__F17),
-                            "other_details" => ::core::result::Result::Ok(__Field::__F18),
+                            "occurred" => ::core::result::Result::Ok(__Field::__F3),
+                            "action" => ::core::result::Result::Ok(__Field::__F4),
+                            "operation" => ::core::result::Result::Ok(__Field::__F5),
+                            "outcome" => ::core::result::Result::Ok(__Field::__F6),
+                            "accessor" => ::core::result::Result::Ok(__Field::__F7),
+                            "ehr_id" => ::core::result::Result::Ok(__Field::__F8),
+                            "items" => ::core::result::Result::Ok(__Field::__F9),
+                            "query" => ::core::result::Result::Ok(__Field::__F10),
+                            "purposes" => ::core::result::Result::Ok(__Field::__F11),
+                            "authorisations" => ::core::result::Result::Ok(__Field::__F12),
+                            "is_emergency" => ::core::result::Result::Ok(__Field::__F13),
+                            "channel" => ::core::result::Result::Ok(__Field::__F14),
+                            "security_labels" => ::core::result::Result::Ok(__Field::__F15),
+                            "retention" => ::core::result::Result::Ok(__Field::__F16),
+                            "other_details" => ::core::result::Result::Ok(__Field::__F17),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -1819,16 +1815,15 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s6: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s7: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s8: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s9: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s10: ::core::option::Option<_> = None;
-                let mut __s11: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s9: ::core::option::Option<_> = None;
+                let mut __s10: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s11: ::core::option::Option<_> = None;
                 let mut __s12: ::core::option::Option<_> = None;
-                let mut __s13: ::core::option::Option<_> = None;
+                let mut __s13: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s14: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s15: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s16: ::core::option::Option<_> = None;
+                let mut __s15: ::core::option::Option<_> = None;
+                let mut __s16: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s17: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s18: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -1870,7 +1865,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F3 => {
                             if __s3.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("link"),
+                                    ::serde::de::Error::duplicate_field("occurred"),
                                 );
                             }
                             __s3 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1878,7 +1873,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F4 => {
                             if __s4.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("occurred"),
+                                    ::serde::de::Error::duplicate_field("action"),
                                 );
                             }
                             __s4 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1886,7 +1881,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F5 => {
                             if __s5.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("action"),
+                                    ::serde::de::Error::duplicate_field("operation"),
                                 );
                             }
                             __s5 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1894,7 +1889,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F6 => {
                             if __s6.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("operation"),
+                                    ::serde::de::Error::duplicate_field("outcome"),
                                 );
                             }
                             __s6 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1902,7 +1897,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F7 => {
                             if __s7.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("outcome"),
+                                    ::serde::de::Error::duplicate_field("accessor"),
                                 );
                             }
                             __s7 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1910,7 +1905,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F8 => {
                             if __s8.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("accessor"),
+                                    ::serde::de::Error::duplicate_field("ehr_id"),
                                 );
                             }
                             __s8 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1918,7 +1913,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F9 => {
                             if __s9.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("ehr_id"),
+                                    ::serde::de::Error::duplicate_field("items"),
                                 );
                             }
                             __s9 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1926,7 +1921,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F10 => {
                             if __s10.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("items"),
+                                    ::serde::de::Error::duplicate_field("query"),
                                 );
                             }
                             __s10 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1934,7 +1929,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F11 => {
                             if __s11.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("query"),
+                                    ::serde::de::Error::duplicate_field("purposes"),
                                 );
                             }
                             __s11 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1942,7 +1937,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F12 => {
                             if __s12.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("purposes"),
+                                    ::serde::de::Error::duplicate_field("authorisations"),
                                 );
                             }
                             __s12 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1950,7 +1945,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F13 => {
                             if __s13.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("authorisations"),
+                                    ::serde::de::Error::duplicate_field("is_emergency"),
                                 );
                             }
                             __s13 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1958,7 +1953,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F14 => {
                             if __s14.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("is_emergency"),
+                                    ::serde::de::Error::duplicate_field("channel"),
                                 );
                             }
                             __s14 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1966,7 +1961,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F15 => {
                             if __s15.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("channel"),
+                                    ::serde::de::Error::duplicate_field("security_labels"),
                                 );
                             }
                             __s15 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1974,7 +1969,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F16 => {
                             if __s16.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("security_labels"),
+                                    ::serde::de::Error::duplicate_field("retention"),
                                 );
                             }
                             __s16 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -1982,18 +1977,10 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F17 => {
                             if __s17.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("retention"),
-                                );
-                            }
-                            __s17 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F18 => {
-                            if __s18.is_some() {
-                                return ::core::result::Result::Err(
                                     ::serde::de::Error::duplicate_field("other_details"),
                                 );
                             }
-                            __s18 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                            __s17 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
                     }
                 }
@@ -2008,34 +1995,31 @@ impl<'de> ::serde::Deserialize<'de>
                         time_recorded: __s2
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("time_recorded"))?,
-                        link: __s3
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("link"))?,
-                        occurred: __s4.flatten(),
-                        action: __s5
+                        occurred: __s3.flatten(),
+                        action: __s4
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("action"))?,
-                        operation: __s6.flatten(),
-                        outcome: __s7
+                        operation: __s5.flatten(),
+                        outcome: __s6
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("outcome"))?,
-                        accessor: __s8
+                        accessor: __s7
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("accessor"))?,
-                        ehr_id: __s9.flatten(),
-                        items: __s10,
-                        query: __s11.flatten(),
-                        purposes: __s12,
-                        authorisations: __s13,
-                        is_emergency: __s14
+                        ehr_id: __s8.flatten(),
+                        items: __s9,
+                        query: __s10.flatten(),
+                        purposes: __s11,
+                        authorisations: __s12,
+                        is_emergency: __s13
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("is_emergency"))?,
-                        channel: __s15.flatten(),
-                        security_labels: __s16,
-                        retention: __s17
+                        channel: __s14.flatten(),
+                        security_labels: __s15,
+                        retention: __s16
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("retention"))?,
-                        other_details: __s18.flatten(),
+                        other_details: __s17.flatten(),
                     },
                 )
             }
@@ -2043,211 +2027,6 @@ impl<'de> ::serde::Deserialize<'de>
         ::serde::Deserializer::deserialize_struct(
             __deserializer,
             "ACCESS_LOG_ENTRY",
-            __FIELDS,
-            __Visitor,
-        )
-    }
-}
-
-impl ::serde::Serialize for crate::draft::access_log::access_log::access_log_link::AccessLogLink {
-    fn serialize<__S: ::serde::Serializer>(
-        &self,
-        __serializer: __S,
-    ) -> ::core::result::Result<__S::Ok, __S::Error> {
-        let mut __n = 6usize;
-        if self.signature.is_some() {
-            __n += 1;
-        }
-        let mut __st = ::serde::Serializer::serialize_struct(__serializer, "ACCESS_LOG_LINK", __n)?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "ACCESS_LOG_LINK")?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "sequence", &self.sequence)?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "algorithm", &self.algorithm)?;
-        ::serde::ser::SerializeStruct::serialize_field(
-            &mut __st,
-            "previous_digest",
-            &self.previous_digest,
-        )?;
-        ::serde::ser::SerializeStruct::serialize_field(
-            &mut __st,
-            "content_digest",
-            &self.content_digest,
-        )?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "digest", &self.digest)?;
-        if let Some(__v) = &self.signature {
-            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "signature", __v)?;
-        }
-        ::serde::ser::SerializeStruct::end(__st)
-    }
-}
-
-impl<'de> ::serde::Deserialize<'de>
-    for crate::draft::access_log::access_log::access_log_link::AccessLogLink
-{
-    fn deserialize<__D: ::serde::Deserializer<'de>>(
-        __deserializer: __D,
-    ) -> ::core::result::Result<Self, __D::Error> {
-        const __FIELDS: &[&str] = &[
-            "algorithm",
-            "content_digest",
-            "digest",
-            "previous_digest",
-            "sequence",
-            "signature",
-        ];
-        enum __Field {
-            __Type,
-            __F0,
-            __F1,
-            __F2,
-            __F3,
-            __F4,
-            __F5,
-        }
-        impl<'de> ::serde::Deserialize<'de> for __Field {
-            fn deserialize<__D: ::serde::Deserializer<'de>>(
-                __deserializer: __D,
-            ) -> ::core::result::Result<Self, __D::Error> {
-                struct __KeyVisitor;
-                impl<'de> ::serde::de::Visitor<'de> for __KeyVisitor {
-                    type Value = __Field;
-                    fn expecting(
-                        &self,
-                        __f: &mut ::core::fmt::Formatter<'_>,
-                    ) -> ::core::fmt::Result {
-                        __f.write_str("an object member name")
-                    }
-                    fn visit_str<__E: ::serde::de::Error>(
-                        self,
-                        __v: &str,
-                    ) -> ::core::result::Result<__Field, __E> {
-                        match __v {
-                            "_type" => ::core::result::Result::Ok(__Field::__Type),
-                            "sequence" => ::core::result::Result::Ok(__Field::__F0),
-                            "algorithm" => ::core::result::Result::Ok(__Field::__F1),
-                            "previous_digest" => ::core::result::Result::Ok(__Field::__F2),
-                            "content_digest" => ::core::result::Result::Ok(__Field::__F3),
-                            "digest" => ::core::result::Result::Ok(__Field::__F4),
-                            "signature" => ::core::result::Result::Ok(__Field::__F5),
-                            _ => ::core::result::Result::Err(
-                                ::openehr_base::serde_support::unknown_field(
-                                    __v,
-                                    "ACCESS_LOG_LINK",
-                                    __FIELDS,
-                                ),
-                            ),
-                        }
-                    }
-                }
-                ::serde::Deserializer::deserialize_identifier(__deserializer, __KeyVisitor)
-            }
-        }
-        struct __Visitor;
-        impl<'de> ::serde::de::Visitor<'de> for __Visitor {
-            type Value = crate::draft::access_log::access_log::access_log_link::AccessLogLink;
-            fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                __f.write_str("an openEHR `ACCESS_LOG_LINK` object")
-            }
-            #[inline(never)]
-            fn visit_map<__A: ::serde::de::MapAccess<'de>>(
-                self,
-                mut __map: __A,
-            ) -> ::core::result::Result<Self::Value, __A::Error> {
-                let mut __seen_type = false;
-                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s3: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s4: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s5: ::core::option::Option<::core::option::Option<_>> = None;
-                while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
-                    match __key {
-                        __Field::__Type => {
-                            if __seen_type {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("_type"),
-                                );
-                            }
-                            __seen_type = true;
-                            ::serde::de::MapAccess::next_value_seed(
-                                &mut __map,
-                                ::openehr_base::serde_support::ExpectedType("ACCESS_LOG_LINK"),
-                            )?;
-                        }
-                        __Field::__F0 => {
-                            if __s0.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("sequence"),
-                                );
-                            }
-                            __s0 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F1 => {
-                            if __s1.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("algorithm"),
-                                );
-                            }
-                            __s1 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F2 => {
-                            if __s2.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("previous_digest"),
-                                );
-                            }
-                            __s2 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F3 => {
-                            if __s3.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("content_digest"),
-                                );
-                            }
-                            __s3 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F4 => {
-                            if __s4.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("digest"),
-                                );
-                            }
-                            __s4 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F5 => {
-                            if __s5.is_some() {
-                                return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("signature"),
-                                );
-                            }
-                            __s5 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                    }
-                }
-                ::core::result::Result::Ok(
-                    crate::draft::access_log::access_log::access_log_link::AccessLogLink {
-                        sequence: __s0
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("sequence"))?,
-                        algorithm: __s1
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("algorithm"))?,
-                        previous_digest: __s2
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("previous_digest"))?,
-                        content_digest: __s3
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("content_digest"))?,
-                        digest: __s4
-                            .flatten()
-                            .ok_or_else(|| ::serde::de::Error::missing_field("digest"))?,
-                        signature: __s5.flatten(),
-                    },
-                )
-            }
-        }
-        ::serde::Deserializer::deserialize_struct(
-            __deserializer,
-            "ACCESS_LOG_LINK",
             __FIELDS,
             __Visitor,
         )
@@ -2327,7 +2106,7 @@ impl ::serde::Serialize
         &self,
         __serializer: __S,
     ) -> ::core::result::Result<__S::Ok, __S::Error> {
-        let mut __n = 7usize;
+        let mut __n = 6usize;
         let mut __st =
             ::serde::Serializer::serialize_struct(__serializer, "ACCESS_LOG_TOMBSTONE", __n)?;
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "ACCESS_LOG_TOMBSTONE")?;
@@ -2338,7 +2117,6 @@ impl ::serde::Serialize
             "time_recorded",
             &self.time_recorded,
         )?;
-        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "link", &self.link)?;
         ::serde::ser::SerializeStruct::serialize_field(
             &mut __st,
             "time_removed",
@@ -2357,7 +2135,6 @@ impl<'de> ::serde::Deserialize<'de>
     ) -> ::core::result::Result<Self, __D::Error> {
         const __FIELDS: &[&str] = &[
             "grounds",
-            "link",
             "system_id",
             "time_recorded",
             "time_removed",
@@ -2370,7 +2147,6 @@ impl<'de> ::serde::Deserialize<'de>
             __F2,
             __F3,
             __F4,
-            __F5,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -2394,9 +2170,8 @@ impl<'de> ::serde::Deserialize<'de>
                             "uid" => ::core::result::Result::Ok(__Field::__F0),
                             "system_id" => ::core::result::Result::Ok(__Field::__F1),
                             "time_recorded" => ::core::result::Result::Ok(__Field::__F2),
-                            "link" => ::core::result::Result::Ok(__Field::__F3),
-                            "time_removed" => ::core::result::Result::Ok(__Field::__F4),
-                            "grounds" => ::core::result::Result::Ok(__Field::__F5),
+                            "time_removed" => ::core::result::Result::Ok(__Field::__F3),
+                            "grounds" => ::core::result::Result::Ok(__Field::__F4),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -2428,7 +2203,6 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s3: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s4: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s5: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -2470,7 +2244,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F3 => {
                             if __s3.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("link"),
+                                    ::serde::de::Error::duplicate_field("time_removed"),
                                 );
                             }
                             __s3 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2478,18 +2252,10 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F4 => {
                             if __s4.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("time_removed"),
-                                );
-                            }
-                            __s4 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
-                        }
-                        __Field::__F5 => {
-                            if __s5.is_some() {
-                                return ::core::result::Result::Err(
                                     ::serde::de::Error::duplicate_field("grounds"),
                                 );
                             }
-                            __s5 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                            __s4 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
                     }
                 }
@@ -2497,9 +2263,8 @@ impl<'de> ::serde::Deserialize<'de>
 uid: __s0.flatten().ok_or_else(|| ::serde::de::Error::missing_field("uid"))?,
 system_id: __s1.flatten().ok_or_else(|| ::serde::de::Error::missing_field("system_id"))?,
 time_recorded: __s2.flatten().ok_or_else(|| ::serde::de::Error::missing_field("time_recorded"))?,
-link: __s3.flatten().ok_or_else(|| ::serde::de::Error::missing_field("link"))?,
-time_removed: __s4.flatten().ok_or_else(|| ::serde::de::Error::missing_field("time_removed"))?,
-grounds: __s5.flatten().ok_or_else(|| ::serde::de::Error::missing_field("grounds"))?,
+time_removed: __s3.flatten().ok_or_else(|| ::serde::de::Error::missing_field("time_removed"))?,
+grounds: __s4.flatten().ok_or_else(|| ::serde::de::Error::missing_field("grounds"))?,
 })
             }
         }
