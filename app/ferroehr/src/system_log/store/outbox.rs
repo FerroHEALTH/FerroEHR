@@ -154,7 +154,7 @@ impl AuditStore {
         };
         let delivered = match sink {
             Sink::FhirFeed => self
-                .resource(row)
+                .resource(row, row.try_get("shared_part")?)
                 .await
                 .and_then(|resource| value_of(&resource))
                 .map(Delivered::Document),
