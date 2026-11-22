@@ -603,7 +603,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `db::acquire::request_scope`: the connection a request takes from a pool is
   kept between its statements and returns to the pool when the request
   answers, so the access checks and the read or commit of one request queue
-  for the pool once, and the pool's release round trip is paid once. A background task outside a scope checks out per statement.
+  for the pool once, and the pool's release round trip is paid once. A composition read gives its connections back once its last statement has answered, before it renders the response, so the parse and serialisation of FLAT, STRUCTURED or canonical XML hold no connection (#6255). A background task outside a scope checks out per statement.
   Every checkout goes through `db::acquire::acquire`, which answers a
   failure to open a connection `503` whatever the driver reports (a refused
   connect, a resolver failure, a timeout); the `clippy.toml` ban on

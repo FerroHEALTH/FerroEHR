@@ -244,6 +244,11 @@ fn note_checkout(key: usize, name: Option<PoolName>, out: bool) {
     });
 }
 
+/// The `tracing` target of the event [`release_held`] records when it gives
+/// back at least one connection, which tests read to order the release
+/// against the work that follows it.
+pub const RELEASED: &str = "ferroehr::db::released";
+
 /// Returns every connection the current [`request_scope`] keeps to its pool,
 /// recording how long the request held each; a later [`acquire`] in the
 /// scope checks out again. Outside a scope it does nothing.
@@ -255,9 +260,14 @@ pub fn release_held() {
         })
         .ok()
         .and_then(Result::ok);
+    let mut given_back = 0_usize;
     for held in released.into_iter().flatten() {
         held_for(held.since, held.name);
         drop(held.conn);
+        given_back = given_back.saturating_add(1);
+    }
+    if given_back > 0 {
+        tracing::trace!(target: RELEASED, connections = given_back, "connections given back");
     }
 }
 
