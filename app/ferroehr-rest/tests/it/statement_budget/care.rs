@@ -66,14 +66,15 @@ const CASELOAD: Ceiling = Ceiling {
 
 /// A care relationship's commit, measured over three runs (#6074), with 2%
 /// on the WAL bytes (7,842 to 7,846) and none on the counts: three
-/// transactions, and three `pg_notify` calls, the facts revision's and two
-/// of the representation trigger, which fires on a statement that changes
-/// no row (#6238).
+/// transactions and three `pg_notify` calls. Once the representation
+/// trigger moved and notified only for a statement that changed a row
+/// (#6284), it ran 2 nested statements, 1 `pg_notify` call and 79 bytes
+/// fewer (7,763 to 7,767), and each ceiling fell by its drop.
 const COMMIT: Ceiling = Ceiling {
     round_trips: 41,
-    nested: 4,
-    notifies: 3,
-    wal: 8003,
+    nested: 2,
+    notifies: 1,
+    wal: 7924,
 };
 
 /// A kind of request this module measures.
