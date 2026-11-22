@@ -27,6 +27,7 @@ pub mod retention;
 
 use crate::db::domain::Domain;
 use std::fmt;
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, PoisonError, RwLock};
 
 use sqlx::PgPool;
@@ -103,6 +104,9 @@ pub struct LivePolicy {
     /// The access log retention of the newest version that read, and the
     /// version whose retention did not.
     retention: RwLock<RetentionInForce>,
+    /// The `policy_revision` the policy in force was confirmed at: it holds
+    /// every version committed up to it (#6251).
+    confirmed: AtomicI64,
 }
 
 /// The access log retention a replica holds: the one of the newest policy
@@ -176,6 +180,7 @@ impl LivePolicy {
             audit: RwLock::new(None),
             grants: RwLock::new(None),
             retention: RwLock::default(),
+            confirmed: AtomicI64::new(0),
         }
     }
 
@@ -283,18 +288,30 @@ impl LivePolicy {
         self.install(head).await
     }
 
-    /// Bring the policy in force to `head`, the newest stored version as the
-    /// request read it in its one read of the policy heads
-    /// ([`crate::storage::policy_register::policy_heads`]), so what the
-    /// request decides rests on that read and on no notification's delay
-    /// (#6048): nothing is read when this replica holds that version.
+    /// Whether the policy in force holds every version committed up to the
+    /// policy revision `revision` the request read (#6251).
+    #[must_use]
+    pub(crate) fn holds(&self, revision: i64) -> bool {
+        revision <= self.confirmed.load(Ordering::Acquire)
+    }
+
+    /// Bring the policy in force to `heads.access_policy`, the newest stored
+    /// version read with the policy revision at one snapshot
+    /// ([`crate::storage::policy_register::policy_heads`]), and mark it
+    /// confirmed at that revision, so what a request decides rests on its own
+    /// read of the revision and on no notification's delay (#6048, #6251).
     ///
     /// # Errors
     /// As [`Self::refresh`].
-    pub(crate) async fn confirm(&self, head: i32) -> Result<(), PolicyError> {
-        // NOTE: our own design (#6048), the pending notification is taken: `head` is newer.
+    pub(crate) async fn confirm(
+        &self,
+        heads: &crate::storage::policy_register::PolicyHeads,
+    ) -> Result<(), PolicyError> {
+        // NOTE: our own design (#6048), the pending notification is taken: `heads` is newer.
         let _notified = self.listened.must_read();
-        self.install(head).await
+        self.install(heads.access_policy).await?;
+        self.confirmed.fetch_max(heads.revision, Ordering::AcqRel);
+        Ok(())
     }
 
     /// Install the newest stored version when `head` is past the one this

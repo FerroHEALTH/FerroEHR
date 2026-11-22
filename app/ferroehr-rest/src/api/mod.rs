@@ -407,8 +407,8 @@ where
         return resp;
     }
     // NOTE: no specification governs operational policy: our own design; the request reads
-    // the newest version of every policy register and of the access policy first, in one
-    // indexed read, so a change decides this request whatever its notification's delay.
+    // the policy revision first in one indexed read, and the newest versions when it moved,
+    // so a change decides this request whatever its notification's delay (#6251).
     if let Err(error) = refresh_policy(&state, op).await {
         let mut resp = RestError::from(error).into_response();
         resp.extensions_mut()

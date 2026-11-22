@@ -43,8 +43,39 @@ pub async fn heads(pool: &PgPool) -> Result<Vec<(String, i64)>, StorageError> {
         .collect()
 }
 
-/// The newest stored versions a request confirms its copies with, in one
-/// indexed read (#6048, #5948).
+/// The revisions a request confirms its policy and definition copies with,
+/// read in one statement of two one-row primary-key reads (#6251, #5948).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Revisions {
+    /// The revision of the policy registers and the access policy,
+    /// `policy_revision`.
+    pub policy: i64,
+    /// The revision of the definition stores, `definition_revision`.
+    pub definitions: i64,
+}
+
+/// The policy and definition revisions in force in the store.
+///
+/// The one read a request confirms its copies with: a copy confirmed at the
+/// policy revision read holds every change committed up to it (#6251).
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn revisions(pool: &PgPool) -> Result<Revisions, StorageError> {
+    let (policy, definitions): (i64, i64) = sqlx::query_as(
+        "SELECT p.revision, d.revision FROM policy_revision p CROSS JOIN definition_revision d \
+         WHERE p.singleton AND d.singleton",
+    )
+    .fetch_one(&mut *acquire(pool).await?)
+    .await?;
+    Ok(Revisions {
+        policy,
+        definitions,
+    })
+}
+
+/// The newest stored policy versions and the policy revision they are at,
+/// read at one snapshot (#6251).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PolicyHeads {
     /// The newest version of every register that has one, as `(register,
@@ -52,26 +83,27 @@ pub struct PolicyHeads {
     pub registers: Vec<(String, i64)>,
     /// The newest trunk version of the access policy, `0` when it has none.
     pub access_policy: i32,
-    /// The revision of the definition stores, `definition_revision`.
-    pub definitions: i64,
+    /// The `policy_revision` the versions are at.
+    pub revision: i64,
 }
 
-/// The newest policy versions and the definition revision, in one read.
+/// The newest policy versions and the policy revision, in one statement.
 ///
-/// The one indexed read a request confirms its policy and definition copies
-/// with (#6048, #5948).
+/// Read only when a request found the policy revision past the one its copies
+/// were confirmed at ([`revisions`]): one snapshot holds both, so copies
+/// brought to these versions hold every change up to `revision`.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn policy_heads(pool: &PgPool) -> Result<PolicyHeads, StorageError> {
     let rows = sqlx::query(
         "SELECT register, max(version) AS version, NULL::integer AS policy, \
-                NULL::bigint AS definitions \
+                NULL::bigint AS revision \
            FROM policy_register GROUP BY register \
          UNION ALL \
          SELECT NULL, NULL, max(version), NULL FROM access_policy_version \
          UNION ALL \
-         SELECT NULL, NULL, NULL, revision FROM definition_revision WHERE singleton",
+         SELECT NULL, NULL, NULL, revision FROM policy_revision WHERE singleton",
     )
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
@@ -82,8 +114,8 @@ pub async fn policy_heads(pool: &PgPool) -> Result<PolicyHeads, StorageError> {
     for row in &rows {
         if let Some(register) = row.try_get::<Option<String>, _>("register")? {
             heads.registers.push((register, row.try_get("version")?));
-        } else if let Some(definitions) = row.try_get::<Option<i64>, _>("definitions")? {
-            heads.definitions = definitions;
+        } else if let Some(revision) = row.try_get::<Option<i64>, _>("revision")? {
+            heads.revision = revision;
         } else {
             heads.access_policy = row.try_get::<Option<i32>, _>("policy")?.unwrap_or(0);
         }

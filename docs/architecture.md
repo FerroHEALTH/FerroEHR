@@ -1800,11 +1800,25 @@ A replica keeps the Web Template of each stored template and the archetype
 lineage index in one generation, tagged with the `definition_revision`
 (`clinical/0002`) a request read. A statement trigger on `template_store` and
 `adl2_artefact` moves the revision once per transaction, and the request reads
-it in its read of the policy heads, so a generation older than the revision is
-replaced by an empty one before the request answers, with no added statement.
-A build that read the store before a newer generation was installed lands in
-the replaced one. A lineage that cannot be read refuses the query with `503`.
-**Our own design:** the revision, the generation and the refusal.
+it in its read of the policy revision, so a generation older than the revision
+is replaced by an empty one before the request answers, with no added
+statement. A build that read the store before a newer generation was installed
+lands in the replaced one. A lineage that cannot be read refuses the query with
+`503`. **Our own design:** the revision, the generation and the refusal.
+
+**The policy copies on a replica that did not make the change** (#6048,
+#6251). The register copy and the access-policy copy each record the
+`policy_revision` (`clinical/0009`) they were confirmed at. A statement
+trigger on `policy_register` and `access_policy_version` moves that row once
+per transaction, on a row of its own so a policy writer never waits on a
+template writer, and the writers serialize on its lock, so a snapshot that
+sees revision r sees every policy change up to r. A request reads the policy
+and definition revisions in one statement of two one-row primary-key reads. A
+copy confirmed at or past the policy revision read holds every change up to
+it and decides the request; otherwise the request reads the newest versions
+with the revision in one statement (one snapshot), installs them and marks the
+copy confirmed at that revision. **Our own design:** the revision and the
+confirmation.
 
 **The patient's EHRs** (#5648, #5649). `FerroEhrService::subject_ehrs`, the
 index lookup a subject cohort makes, answers the EHR the clinical subject

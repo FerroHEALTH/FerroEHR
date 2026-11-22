@@ -71,10 +71,12 @@ indexed statement on its own connection:
   representation or a key space's state. A held lookup is taken only when it
   was read at the revision the request read, and the grants and the caller
   facts are read again when the store's revisions are past the copy's;
-- in the clinical store, the newest version of each policy register and of
-  the access policy, and the definition revision (`definition_revision`). A
-  copy behind one of the policy versions is read before the request is
-  judged. The definition revision moves in the transaction of every template
+- in the clinical store, the policy revision (`policy_revision`) and the
+  definition revision (`definition_revision`), one row each. The policy
+  revision moves in the transaction of every policy register write and access
+  policy version. An instance whose register or access policy copy was
+  confirmed at an older revision reads the newest versions, with the revision
+  in the same statement, before the request is judged. The definition revision moves in the transaction of every template
   or ADL2 artefact upload and delete, and an instance whose Web Templates and
   archetype lineage were built before it drops them before the request
   answers.
