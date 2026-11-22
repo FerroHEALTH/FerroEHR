@@ -271,22 +271,12 @@ async fn standing(
     facts: Option<&Facts>,
     prior: Option<&Prior>,
 ) -> Result<(Option<i32>, Option<i32>, bool), ServiceError> {
-    if let Some(prior) = prior {
-        return Ok((
-            facts.map(|_| committed.sys_version),
-            committed
-                .sys_version
-                .checked_sub(1)
-                .filter(|_| prior.previous_held),
-            prior.marked,
-        ));
-    }
-    let (current, previous) = versions(tx, committed.vo_id).await?;
-    Ok((
-        current,
-        previous,
-        policy_mark::marked(tx, committed.vo_id).await?,
-    ))
+    let (current, previous) = versions(tx, committed, facts, prior).await?;
+    let marked = match prior {
+        Some(prior) => prior.marked,
+        None => policy_mark::marked(tx, committed.vo_id).await?,
+    };
+    Ok((current, previous, marked))
 }
 
 /// What the version `previous` of the party `vo_id` of `kind` held that is
@@ -360,9 +350,10 @@ async fn care_writer_roster(
     Ok(only_care_differs(&before, &after)?)
 }
 
-/// Judges the write of the standalone `PARTY_RELATIONSHIP` `vo_id`, whose
+/// Judges the commit `committed` of a standalone `PARTY_RELATIONSHIP`, whose
 /// new head the commit transaction `tx` has just written holding `facts`
-/// (`None` for a logical delete), beside [`check`].
+/// (`None` for a logical delete), beside [`check`]; the version before it is
+/// read off `prior`, what the commit's gate read found, when there is one.
 ///
 /// A representation, before or after the write, is written by an
 /// administrator, or by a caller holding a [`Operation::WriteRepresentation`]
@@ -380,10 +371,12 @@ async fn care_writer_roster(
 pub(crate) async fn representation(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
-    vo_id: VoId,
+    committed: &Committed,
     facts: Option<&Facts>,
+    prior: Option<&Prior>,
 ) -> Result<(), ServiceError> {
-    let (current, previous) = versions(tx, vo_id).await?;
+    let vo_id = committed.vo_id;
+    let (current, previous) = versions(tx, committed, facts, prior).await?;
     let mut held: Vec<Representation> = Vec::new();
     match (current, facts) {
         (Some(_), Some(facts)) => held.extend(facts.representations.iter().cloned()),
@@ -393,7 +386,13 @@ pub(crate) async fn representation(
         (None, _) => {}
     }
     if let Some(sys_version) = previous {
-        held.extend(standalone(tx, mapping, vo_id, sys_version).await?);
+        // The gate read's last body is that version's when it holds the newest body.
+        match prior.and_then(|prior| prior.last_body.as_ref()) {
+            Some((last, _, body)) if *last == sys_version => {
+                held.extend(parsed(Kind::PartyRelationship, body, mapping)?.representations);
+            }
+            _ => held.extend(standalone(tx, mapping, vo_id, sys_version).await?),
+        }
     }
     if held.is_empty() || administrator(mapping) {
         return Ok(());
@@ -635,18 +634,26 @@ pub(crate) fn administrator(mapping: &BindingMapping) -> bool {
         .any(|held| held.eq_ignore_ascii_case(role))
 }
 
-/// The `sys_version` of the head the commit wrote (`None` for a deletion)
-/// and of the version before it (`None` for a creation or a deleted
-/// predecessor).
+/// The `sys_version` of the head the commit `committed` wrote (`None` for a
+/// deletion) and of the version before it (`None` for a creation or a
+/// deleted predecessor): off `prior`, what its gate read found, when there is
+/// one.
 async fn versions(
     tx: &mut PgConnection,
-    vo_id: VoId,
+    committed: &Committed,
+    facts: Option<&Facts>,
+    prior: Option<&Prior>,
 ) -> Result<(Option<i32>, Option<i32>), ServiceError> {
+    if let Some(prior) = prior {
+        let previous = committed.sys_version.checked_sub(1);
+        let previous = previous.filter(|_| prior.previous_held);
+        return Ok((facts.map(|_| committed.sys_version), previous));
+    }
     let rows = sqlx::query(
         "SELECT v.sys_version, v.body IS NOT NULL AS held FROM version v WHERE v.vo_id = $1 \
          ORDER BY v.sys_version DESC LIMIT 2",
     )
-    .bind(vo_id)
+    .bind(committed.vo_id)
     .fetch_all(&mut *tx)
     .await?;
     let mut held = Vec::with_capacity(2);

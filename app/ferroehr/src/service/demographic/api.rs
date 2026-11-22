@@ -424,9 +424,8 @@ impl FerroEhrService {
     }
 
     /// Update a relationship under a mandatory `If-Match` precondition
-    /// (ITS-REST overview §"If-Match and accidental overwrites"). The current
-    /// version is resolved ONCE (lean): the same handle serves the `If-Match`
-    /// compare and the service write gate.
+    /// (ITS-REST overview §"If-Match and accidental overwrites"), judged on
+    /// the write's one gate read.
     ///
     /// # Errors
     /// - [`ServiceError`] `version_mismatch` (`412`) — a full-OVID `If-Match` names
@@ -441,8 +440,7 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest<PartyRelationship>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.existing_relationship(vo_id).await?;
-        self.commit_relationship_update(current, precondition, request.map(Body::from))
+        self.commit_relationship_update(vo_id, precondition, request.map(Body::from))
             .await
             .map_err(ServiceError::flattened)
     }
@@ -464,8 +462,7 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.existing_relationship(vo_id).await?;
-        self.commit_relationship_delete(current, precondition, request)
+        self.commit_relationship_delete(vo_id, precondition, request)
             .await
             .map_err(ServiceError::flattened)
     }

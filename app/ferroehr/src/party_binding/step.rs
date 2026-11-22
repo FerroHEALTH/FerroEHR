@@ -41,17 +41,20 @@ pub(crate) enum Tag {
     Grants,
     /// A `GROUP` one of whose membership rows was retired.
     Groups,
+    /// The representative a retired representation row named.
+    Representatives,
 }
 
 impl Tag {
     /// Every tag, at its code.
-    const ALL: [Self; 6] = [
+    const ALL: [Self; 7] = [
         Self::FactsGone,
         Self::FactsCame,
         Self::SubjectsGone,
         Self::SubjectsCame,
         Self::Grants,
         Self::Groups,
+        Self::Representatives,
     ];
 
     /// The code the folded statement selects for it.
@@ -63,6 +66,7 @@ impl Tag {
             Self::SubjectsCame => 3,
             Self::Grants => 4,
             Self::Groups => 5,
+            Self::Representatives => 6,
         }
     }
 

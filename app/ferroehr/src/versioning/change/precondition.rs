@@ -1,20 +1,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The preconditions of a single-object write, judged inside its
-//! transaction: the EHR's `is_modifiable` gate (RM ehr master04 §EHR Active
-//! Status), the per-object lock with the tip it holds, and the `If-Match`
-//! precondition against that tip (ITS-REST overview `Requests_and_responses.md`
-//! §"If-Match and accidental overwrites").
+//! The preconditions of a single-object write: the EHR's `is_modifiable`
+//! gate (RM ehr master04 §EHR Active Status), judged inside its transaction,
+//! and the `If-Match` precondition against the tip the write holds (ITS-REST
+//! overview `Requests_and_responses.md` §"If-Match and accidental
+//! overwrites").
 
 use openehr_base::prelude::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 use sqlx::PgConnection;
 
 use crate::error::ServiceError;
-use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
-use crate::versioning::Kind;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 
 /// The `409 Conflict` for a content write to a deactivated EHR
@@ -61,38 +59,7 @@ pub(crate) async fn ensure_content_writable_tx(
     }
 }
 
-/// Take the per-object lock of `vo_id` and read its current trunk tip, the
-/// placement a single-object modify or delete then continues
-/// ([`super::Write::placed`]), so its preconditions are judged against the tip the
-/// write holds.
-///
-/// # Errors
-/// [`ServiceError::NotFound`] when the object has no current version or is
-/// not a `kind` in `ehr_id`; [`ServiceError::Database`] if the read fails.
-pub(crate) async fn lock_current(
-    tx: &mut PgConnection,
-    ehr_id: Option<EhrId>,
-    vo_id: VoId,
-    kind: Kind,
-) -> Result<crate::storage::version_repo::placement::Placement, ServiceError> {
-    crate::storage::version_repo::commit::advisory_lock(tx, vo_id).await?;
-    let placement =
-        crate::storage::version_repo::placement::next_placement(tx, vo_id, None).await?;
-    if placement
-        .tip
-        .as_ref()
-        .is_some_and(|tip| tip.ehr_id == ehr_id && tip.kind == kind.as_str())
-    {
-        Ok(placement)
-    } else {
-        Err(ServiceError::not_found(
-            Missing::VersionedObject,
-            format!("{} {vo_id} in EHR {ehr_id:?}", kind.as_str()),
-        ))
-    }
-}
-
-/// The full `OBJECT_VERSION_ID` of the tip a [`lock_current`] placement holds.
+/// The full `OBJECT_VERSION_ID` of the tip a placement holds.
 pub(crate) fn tip_uid(
     vo_id: VoId,
     tip: &crate::storage::version_repo::placement::TipRow,

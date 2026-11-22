@@ -377,7 +377,7 @@ impl FerroEhrService {
     /// `head` its gate read found (`None` for a create), and the key-space
     /// gate when a binding mapping is configured; `prior` is what the gate read
     /// found of the versions before it.
-    fn party_guard(&self, head: Option<i32>, prior: Prior) -> Guard {
+    pub(super) fn party_guard(&self, head: Option<i32>, prior: Prior) -> Guard {
         Guard {
             expected_head: head,
             policy: None,

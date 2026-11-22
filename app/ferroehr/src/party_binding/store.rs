@@ -162,7 +162,7 @@ pub(crate) async fn reindex_committed(
         key_space::gate_shared(tx).await?;
     }
     if committed.kind == Kind::PartyRelationship {
-        return standalone::committed(tx, ctx, committed, facts).await;
+        return standalone::committed(tx, ctx, committed, facts, done).await;
     }
     if crate::versioning::committer::person_commits() {
         // NOTE: RM common master04 §Audit Details, PARTY_SELF names the record

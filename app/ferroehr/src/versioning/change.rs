@@ -391,8 +391,8 @@ async fn next_version(
     local_system_id: &str,
     preplaced: Option<crate::storage::version_repo::placement::Placement>,
 ) -> Result<NextVersion, ServiceError> {
-    // The caller may already hold the advisory lock and the placement read
-    // ([`precondition::lock_current`]); otherwise both run here.
+    // The caller may already have read the placement in a guarded write's gate
+    // read; otherwise the lock and the read both run here.
     let placement = if let Some(placement) = preplaced {
         placement
     } else {
@@ -962,9 +962,8 @@ pub(crate) struct Write {
     pub(crate) audit: AuditInput,
     /// What the caller already read of the commit instant and the EHR.
     pub(crate) known: restriction::Known,
-    /// A placement the caller already read under the per-object lock it holds
-    /// ([`precondition::lock_current`]) or in a guarded write's gate read; `None` makes
-    /// the write take the lock and read its own.
+    /// A placement the caller already read in a guarded write's gate read;
+    /// `None` makes the write take the lock and read its own.
     pub(crate) placement: Option<crate::storage::version_repo::placement::Placement>,
     /// What the version a logical delete deletes holds ([`Committed::deleted`]).
     pub(crate) deleted: Option<crate::system_log::categories::ContentIds>,

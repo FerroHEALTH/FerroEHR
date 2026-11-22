@@ -17,7 +17,7 @@ use crate::versioning::object_version_id::{
 };
 
 /// A demographic write's version precondition, judged once against the tip
-/// the write locks (`versioning::change::precondition::lock_current`).
+/// the write's gate read found.
 ///
 /// The `If-Match` value arrives as a token: a full `OBJECT_VERSION_ID`, a
 /// bare `VERSION_TREE_ID` trunk number, or the RFC 9110 `*` wildcard. A
