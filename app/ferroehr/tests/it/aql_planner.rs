@@ -1064,16 +1064,7 @@ fn earlier_row_probes(sql: &str) -> usize {
 /// `LATEST_VERSION` version alias carries (`vo_head.trunk_head_sys_version` IS
 /// the trunk head — RM common master06 §The 'Virtual Version Tree').
 fn currency_probes(sql: &str) -> usize {
-    sql.matches(r#"FROM "vo_head" AS "#)
-        .count()
-        .saturating_sub(anchor_head_reads(sql))
-}
-
-/// The head reads of the range anchors in `sql`: a flat anchor under
-/// `LATEST_VERSION` reads its row's trunk head version by the head's key
-/// (#6243), a scalar subquery and no `EXISTS`.
-fn anchor_head_reads(sql: &str) -> usize {
-    sql.matches(r#"FROM "vo_head" AS "va"#).count()
+    sql.matches(r#"FROM "vo_head" AS "#).count()
 }
 
 /// A predicate whose leaf crosses a MULTI-VALUED FRAGMENT attribute
