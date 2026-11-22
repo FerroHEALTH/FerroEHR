@@ -50,7 +50,7 @@
 //! the Planner with Explicit JOIN Clauses"). No openEHR spec governs access
 //! paths: our own design.
 
-use sea_query::{Alias, Expr, ExprTrait, Query, SelectStatement};
+use sea_query::{Alias, Expr, ExprTrait, JoinType, Query, SelectStatement};
 
 use openehr_query::lexer::CompOp;
 
@@ -62,7 +62,7 @@ use crate::db::iden::{Node, RelationshipTarget, VersionRow, VoHead};
 
 use super::Builder;
 use super::anchorable::Anchorable;
-use super::expr::{binoper, call, col, hot};
+use super::expr::{binoper, call, col, derived_col, hot};
 
 /// The RM type of the one structure node that carries a `value`, as a SQL
 /// LITERAL: the value indexes are partial on it, and a partial index serves a
@@ -495,7 +495,31 @@ impl Builder<'_> {
                     before.and_where(col(source, Node::VoId).eq(col(row, Node::VoId)));
                 }
                 select.column((Alias::new(node.as_str()), Node::Num));
-                tie = Some(Expr::exists(before).not());
+                let mut once = Expr::exists(before).not();
+                // The item carries its trunk head's version, read by the head's
+                // key, so the version row is probed by its whole key and never
+                // by its object alone, every version a shared tree spans (#4944).
+                if self.reads_trunk_head(&version) {
+                    let head = format!("{alias}_h");
+                    select
+                        .join_as(
+                            JoinType::InnerJoin,
+                            VoHead::Table,
+                            Alias::new(head.as_str()),
+                            col(&head, VoHead::VoId).eq(col(&node, Node::VoId)).and(
+                                col(&head, VoHead::TrunkHeadContentKey)
+                                    .eq(col(&node, Node::SysVersion)),
+                            ),
+                        )
+                        .expr_as(
+                            col(&head, VoHead::TrunkHeadSysVersion),
+                            Alias::new(HEAD_VERSION),
+                        );
+                    once = once.and(
+                        derived_col(&alias, HEAD_VERSION).eq(col(&version, VersionRow::SysVersion)),
+                    );
+                }
+                tie = Some(once);
             } else {
                 select.and_where(Expr::exists(before).not());
             }
@@ -580,6 +604,10 @@ pub(super) fn ranged(leaf: &LeafPath, op: CompOp, coercion: Coercion) -> Option<
         _ => None,
     }
 }
+
+/// The column of a flat anchor on a leaf only the WHERE reads, under
+/// `LATEST_VERSION`, that holds its row's trunk head version.
+const HEAD_VERSION: &str = "head_version";
 
 /// One anchor ([`Builder::value_anchors`]): the versions some node row of
 /// which carries a value, as a FROM item linked to the version row of the
