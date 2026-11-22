@@ -1457,3 +1457,45 @@ async fn a_commit_naming_an_adl2_archetype_as_its_template_is_unprocessable() {
         "a 422, not a storage error: {refused:?}"
     );
 }
+
+/// Concurrent stores of case variants of one qualified name at one version
+/// (BASE master05 §Composite Identifiers and Case): exactly one stores, every
+/// other answers the conflict, and one row holds the version (#6233).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_case_variant_stores_conflict() {
+    let (db, svc) = crate::fixtures::service().await;
+    let svc = std::sync::Arc::new(svc);
+    let good = "SELECT c FROM COMPOSITION c";
+    for n in 0..8 {
+        let version = format!("1.0.{n}");
+        let tasks: Vec<_> = ["race::Name", "RACE::name", "race::NAME", "race::Name"]
+            .into_iter()
+            .map(|name| {
+                let svc = std::sync::Arc::clone(&svc);
+                let version = version_pattern(&version);
+                tokio::spawn(async move {
+                    svc.query_store(&qn(name), Some(version), "AQL", good.to_owned())
+                        .await
+                })
+            })
+            .collect();
+        let mut stored = 0;
+        for task in tasks {
+            match task.await.expect("the store task") {
+                Ok(_) => stored += 1,
+                Err(ServiceError::Conflict(_)) => {}
+                Err(other) => panic!("a case variant answers the conflict, got {other:?}"),
+            }
+        }
+        assert_eq!(stored, 1, "one of the case variants at {version} stores");
+        let rows: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM stored_query \
+             WHERE lower(semantic_id) = 'name' AND semver = $1",
+        )
+        .bind(&version)
+        .fetch_one(&db.pool())
+        .await
+        .expect("the stored queries read");
+        assert_eq!(rows, 1, "one row holds {version}");
+    }
+}
