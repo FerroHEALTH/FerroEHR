@@ -248,6 +248,9 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     {
         return Ok(resp);
     }
+    // NOTE: our own design (#6255), the last statement has answered, so the render holds no
+    // connection; a render that needs the store again checks out through the request scope.
+    ferroehr::db::acquire::release_held();
     render_read(&state, &parts, body, meta).await
 }
 

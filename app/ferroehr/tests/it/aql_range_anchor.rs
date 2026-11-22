@@ -28,8 +28,8 @@ use sqlx::PgPool;
 
 use crate::fixtures::{ckm_example, composition, create_ehr, uv};
 use crate::storage_plans::{
-    WIDE_ARCHETYPE, analyze_as_autovacuum, aql_sql, aql_sql_with, explain_aql, on, render, scans,
-    wide_leaf, wide_observation_composition,
+    EXPLAIN, WIDE_ARCHETYPE, analyze_as_autovacuum, aql_sql, aql_sql_with, explain_aql, on, render,
+    scans, wide_leaf, wide_observation_composition,
 };
 
 /// The archetype of the OBSERVATION the equality store commits.
@@ -50,9 +50,18 @@ const MAGNITUDE_LEAF: &str =
     "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
 
 /// How many magnitude anchors `sql` carries: the comparison reads the leaf
-/// through the typed columns, so only an anchor calls the function.
+/// through the typed columns, so only an anchor calls the function on its
+/// own row, `va<n>_n`, beside the call its earlier-row probe makes on
+/// `va<n>_e`.
 fn magnitude_anchors(sql: &str) -> usize {
-    sql.matches("node_magnitude(").count()
+    sql.match_indices(r#"node_magnitude(""#)
+        .filter(|(at, call)| {
+            sql[at + call.len()..]
+                .split('"')
+                .next()
+                .is_some_and(|alias| alias.ends_with("_n"))
+        })
+        .count()
 }
 
 /// How many time anchors `sql` carries: each reads the column once.
@@ -258,7 +267,12 @@ fn the_bounds_of_one_leaf_share_one_anchor() {
         ),
         &Params::default(),
     );
-    assert_eq!(sql.matches("SELECT DISTINCT").count(), 2, "{sql}");
+    assert_eq!(
+        sql.matches(r#"_e"."num" < "#).count(),
+        2,
+        "two anchors, each the first row of a version\n{sql}"
+    );
+    assert!(!sql.contains("SELECT DISTINCT"), "{sql}");
     assert!(
         sql.contains(r#"_n"."event_time" >= "#) && sql.contains(r#"_n"."event_time" < "#),
         "the window is one anchor's two bounds\n{sql}"
@@ -1119,5 +1133,220 @@ async fn a_population_filter_on_a_magnitude_starts_from_the_magnitude_index() {
     assert!(
         buffers > f64::from(COMPOSITIONS),
         "the same filter without its anchor reads the store: {buffers} buffers"
+    );
+}
+
+// ── a store grown past its statistics ────────────────────────────────────────
+
+/// The OBSERVATION archetype the stale-statistics store commits only after
+/// its last `ANALYZE`, so the statistics hold none of its rows.
+const LATE_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.late_readings.v1";
+
+/// The relations autovacuum is held off while the store grows, so their
+/// statistics stay those of the first seed.
+const GROWN_RELATIONS: &str = "SELECT format('%I.%I', n.nspname, c.relname) \
+     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace \
+     WHERE c.relkind = 'r' AND c.relname IN ('version_hot', 'node_hot', 'vo_head') \
+     ORDER BY 1";
+
+/// A composition of [`wide_observation_composition`]'s shape under
+/// [`LATE_ARCHETYPE`].
+fn late_composition(name: &str, magnitude: f64) -> Value {
+    let mut body = wide_observation_composition(name, magnitude);
+    let observation = body
+        .pointer_mut("/content/0")
+        .expect("the wide composition holds one OBSERVATION");
+    observation["archetype_node_id"] = json!(LATE_ARCHETYPE);
+    observation["archetype_details"]["archetype_id"]["value"] = json!(LATE_ARCHETYPE);
+    body
+}
+
+/// `EXPLAIN` a lowered AQL statement under the server's planner settings,
+/// sequential scans included.
+async fn explain_as_served(pool: &PgPool, prepared: ferroehr::aql::sql::PreparedQuery) -> Value {
+    sqlx::query_scalar_with(
+        sqlx::AssertSqlSafe(format!("{EXPLAIN}{}", prepared.sql)),
+        prepared.values,
+    )
+    .fetch_one(pool)
+    .await
+    .expect("explain the AQL statement")
+}
+
+/// The node rows a composition of the stale-statistics store holds at most:
+/// the composition, the OBSERVATION, its history, event and tree, and the
+/// eight ELEMENTs, with room for the EHR's own.
+const NODES_PER_VERSION: f64 = 16.0;
+
+/// Asserts that `plan` answered `expected` rows, read fewer buffers than the
+/// store holds node rows, and that no scan of a node, head or version
+/// partition ran more loops than twice the `population` of versions or read
+/// more rows over its loops than the store holds node rows: a plan linear in
+/// the store, where a probe rescanned per outer row is quadratic.
+fn assert_linear(name: &str, plan: &Value, expected: u32, population: u32) {
+    let returned = plan
+        .pointer("/0/Plan/Actual Rows")
+        .and_then(Value::as_f64)
+        .expect("the root plan node reports its rows");
+    assert!(
+        (returned - f64::from(expected)).abs() < f64::EPSILON,
+        "{name} answers {expected} rows: {returned}"
+    );
+    let population = f64::from(population);
+    let buffers = plan
+        .pointer("/0/Plan/Shared Hit Blocks")
+        .and_then(Value::as_f64)
+        .expect("the root plan node reports its buffers");
+    let scans = scans(plan);
+    assert!(
+        buffers <= NODES_PER_VERSION * population,
+        "{name} reads {buffers} buffers, more than the store holds node rows:\n{}",
+        render(&scans)
+    );
+    for scan in scans
+        .iter()
+        .filter(|scan| ["node_hot", "vo_head", "version_hot"].contains(&scan.relation.as_str()))
+    {
+        assert!(
+            scan.loops <= 2.0 * population
+                && scan.rows * scan.loops <= NODES_PER_VERSION * population,
+            "{name}: {} on {} via {} ran {} loops for {} rows each, past a plan linear in \
+             the {population} versions of the store:\n{}",
+            scan.node_type,
+            scan.relation,
+            scan.index.as_deref().unwrap_or("(no index)"),
+            scan.loops,
+            scan.rows,
+            render(&scans)
+        );
+    }
+}
+
+/// A population filter on a magnitude keeps a plan linear in the store when
+/// the store grew past its statistics, ordered and streamed (#6243).
+///
+/// cdr-benchmark's `bp_data_filtered` ran for 23 s on a store filling from
+/// empty: the statistics held no blood-pressure OBSERVATION, the planner
+/// estimated them at one row, and it rescanned the anchor, a set of distinct
+/// versions no join could probe, with its head and version probes, once per
+/// OBSERVATION. The streamed form's earlier-row probe went the same way here:
+/// estimated at one row, it entered through the magnitude index once per
+/// candidate row, 2.3 M buffers for 500 rows. The flat anchor is now the
+/// first row of each version, which a join probes per version, and the
+/// earlier-row probe reads its version through `node_hot_pkey`.
+///
+/// The store is analysed holding only low readings, then grows by the late
+/// archetype's compositions and by high readings with autovacuum held off.
+/// Each statement's scans stay linear in the store, before and after an
+/// `ANALYZE`, and it answers the rows its unanchored form answers.
+#[tokio::test]
+async fn a_magnitude_filter_stays_linear_on_a_store_grown_past_its_statistics() {
+    const SEEDED: u32 = 2000;
+    const LATE: u32 = 1200;
+    const FETCH: u32 = 500;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let pools = ferroehr::db::domain::DomainPools::from_shared(&pool);
+    let svc = FerroEhrService::new(&pools);
+    let mut ehrs = Vec::new();
+    for _ in 0..30 {
+        ehrs.push(create_ehr(&svc).await);
+    }
+    let relations: Vec<String> = sqlx::query_scalar(GROWN_RELATIONS)
+        .fetch_all(&pool)
+        .await
+        .expect("name the relations the store grows");
+    for relation in relations {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "ALTER TABLE {relation} SET (autovacuum_enabled = off)"
+        )))
+        .execute(&pool)
+        .await
+        .expect("hold autovacuum off the relations the store grows");
+    }
+    ferroehr::db::parent_statistics::refresh_pools(&pools)
+        .await
+        .expect("analyze the partitioned parents of the empty store, as the server's start does");
+    for index in 0..SEEDED {
+        let body = wide_observation_composition(&format!("seed {index}"), f64::from(index % 100));
+        let ehr = ehrs[usize::try_from(index).expect("an index fits") % ehrs.len()];
+        svc.create_composition(ehr, uv(&body, "249", None))
+            .await
+            .expect("seed a low reading");
+    }
+    analyze_as_autovacuum(&pool).await;
+    let mut kept = 0_u32;
+    for index in 0..LATE {
+        let magnitude = 60.0 + f64::from(index * 7 % 200);
+        kept += u32::from(magnitude >= 140.0);
+        let ehr = ehrs[usize::try_from(index).expect("an index fits") % ehrs.len()];
+        let late = late_composition(&format!("late {index}"), magnitude);
+        svc.create_composition(ehr, uv(&late, "249", None))
+            .await
+            .expect("commit a late reading");
+        let high = wide_observation_composition(&format!("high {index}"), 140.0 + f64::from(index));
+        svc.create_composition(ehr, uv(&high, "249", None))
+            .await
+            .expect("commit a high reading");
+    }
+    let population = SEEDED + 2 * LATE + 30;
+    let expected = kept.min(FETCH);
+
+    let leaf = wide_leaf("at0004");
+    let streamed = format!(
+        "SELECT c/uid/value, {leaf} FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[{LATE_ARCHETYPE}] WHERE {leaf} >= 140"
+    );
+    let ordered = format!("{streamed} ORDER BY {leaf} DESC");
+    let fetched =
+        |aql: &str| aql_sql_with(aql, &Params::default(), Vec::new(), Some(i64::from(FETCH)));
+    for (name, aql) in [
+        ("the ordered filter", &ordered),
+        ("the streamed filter", &streamed),
+    ] {
+        let plan = explain_as_served(&pool, fetched(aql)).await;
+        assert_linear(
+            &format!("{name} on stale statistics"),
+            &plan,
+            expected,
+            population,
+        );
+    }
+    let answered = rows(&svc, &ordered, BTreeMap::new()).await;
+    let unanchored = ordered.replace(
+        &format!("WHERE {leaf} >= 140"),
+        &format!("WHERE {leaf} >= 140 OR {leaf} >= 140"),
+    );
+    assert_eq!(
+        answered,
+        rows(&svc, &unanchored, BTreeMap::new()).await,
+        "the anchor changes no row"
+    );
+    assert_eq!(
+        usize::try_from(kept).expect("a small count"),
+        answered.len(),
+        "the filter keeps the late readings at or above 140"
+    );
+
+    analyze_as_autovacuum(&pool).await;
+    ferroehr::db::parent_statistics::refresh_pools(&pools)
+        .await
+        .expect("refresh the partitioned parents' statistics");
+    for (name, aql) in [
+        ("the ordered filter", &ordered),
+        ("the streamed filter", &streamed),
+    ] {
+        let plan = explain_as_served(&pool, fetched(aql)).await;
+        assert_linear(
+            &format!("{name} on fresh statistics"),
+            &plan,
+            expected,
+            population,
+        );
+    }
+    assert_eq!(
+        rows(&svc, &ordered, BTreeMap::new()).await,
+        answered,
+        "fresh statistics change no row"
     );
 }

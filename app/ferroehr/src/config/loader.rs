@@ -747,6 +747,8 @@ mod tests {
             "no pseudonym namespace is declared on the local index"
         );
         for config in [&mut ihe, &mut local] {
+            // The issuer of the Basic placeholder committer (#6240).
+            assert_eq!(config.api.basic_issuer(), crate::service::DEFAULT_SYSTEM_ID);
             config.record.subject_index = None;
             config.pixm = None;
             config.privacy.subject_namespaces.clear();

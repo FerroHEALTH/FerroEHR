@@ -402,13 +402,14 @@ These things about the payload are worth calling out:
   every commit, attestation and CONTRIBUTION records a `PARTY_IDENTIFIED` with
   the `PERSON`'s name, your login identifier (`DV_IDENTIFIER{issuer = token
   iss, id = <the issuer profile's person_key value>, type = "oauth2"}`, or
-  `{issuer = "ferroehr", id = <user>, type = "basic"}` for a Basic user), the
+  `{issuer = <[api] basic_issuer>, id = <user>, type = "basic"}` for a Basic
+  user, the issuer defaulting to `[api] system_id`), the
   provider (`type = "healthcare-provider"`) and an `external_ref` to the
   `PERSON`. A patient writing in their own EHR is recorded as `PARTY_SELF`
   with no `external_ref`, and a representative as a `PARTY_RELATED` naming
   their own `PERSON` and the coded relationship. Send no committer, or the
   placeholder `{"_type": "PARTY_IDENTIFIED", "identifiers": [{"_type":
-  "DV_IDENTIFIER", "issuer": "<token iss or ferroehr>", "id": "<sub or user
+  "DV_IDENTIFIER", "issuer": "<token iss or the Basic issuer>", "id": "<sub or user
   name>"}]}` where ITS-REST requires one; the server replaces it. A
   placeholder naming anyone else, and a stated committer with another name,
   another identifier or another `external_ref`, is a **403**, as is a stated
