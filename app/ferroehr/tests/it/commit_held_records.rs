@@ -333,3 +333,128 @@ async fn a_held_write_of_more_than_entries_leaves_nothing_when_a_later_statement
         "the system record went back with the refused entry"
     );
 }
+
+/// One recorded update of `created` with content `n`, as a protocol adapter
+/// sends it; the committed version and the write's recorder.
+async fn recorded_update(
+    svc: &Arc<FerroEhrService>,
+    (ehr, created): (EhrId, &Committed),
+    n: usize,
+) -> (Committed, WriteRecorder) {
+    let recorder = primed();
+    let request = uv(&composition(&format!("recorded {n}")), "251", None);
+    let vo = created.vo_id;
+    let svc = Arc::clone(svc);
+    let committed = Box::pin(ferroehr::db::acquire::request_scope(with_recorder(
+        recorder.clone(),
+        async move { Box::pin(svc.update_composition(ehr, vo, request)).await },
+    )))
+    .await
+    .expect("the recorded update commits");
+    (committed, recorder)
+}
+
+/// The access-log entries written, held or not.
+async fn entries(pool: &PgPool) -> i64 {
+    sqlx::query_scalar("SELECT count(*) FROM audit.access_log_entry")
+        .fetch_one(pool)
+        .await
+        .expect("the entries")
+}
+
+/// Asserts that the write `recorder` recorded holds exactly one entry, under
+/// the reservation its statement committed beside the version, and that
+/// every entry's shared part is held.
+async fn holds_one_entry(pool: &PgPool, recorder: &WriteRecorder) {
+    let reservations = recorder.reserved();
+    assert_eq!(reservations.len(), 1, "the write took one reservation");
+    assert!(
+        reserved(pool, reservations[0].id).await,
+        "the statement committed the reservation beside the version"
+    );
+    let under: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM audit.access_log_hold WHERE reserved_by = $1")
+            .bind(reservations[0].id)
+            .fetch_one(pool)
+            .await
+            .expect("the held entries");
+    assert_eq!(under, 1, "exactly one entry is held under it");
+    let dangling: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit.access_log_entry e WHERE e.shared IS NOT NULL \
+         AND NOT EXISTS (SELECT 1 FROM audit.access_log_shared s WHERE s.digest = e.shared)",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("the dangling entries");
+    assert_eq!(dangling, 0, "every entry's shared part is held");
+}
+
+/// A held write skips the shared part an earlier write stored (#6244); when
+/// the store no longer holds it, the intake refuses the entry (`23503`), and
+/// the write sends it again: exactly one entry is recorded, durable before
+/// the statement that commits the version, which still commits.
+#[tokio::test]
+async fn a_held_write_sends_again_a_shared_part_the_store_lost() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = audited(&pool).await;
+    let (ehr, created) = object(&svc).await;
+    let (first, recorder) = Box::pin(recorded_update(&svc, (ehr, &created), 1)).await;
+    holds_one_entry(&pool, &recorder).await;
+    let removed = sqlx::query("DELETE FROM audit.access_log_shared")
+        .execute(&pool)
+        .await
+        .expect("the shared parts go")
+        .rows_affected();
+    assert!(removed > 0, "the first write stored a shared part");
+    let before = entries(&pool).await;
+    let (second, recorder) = Box::pin(recorded_update(&svc, (ehr, &first), 2)).await;
+    assert_eq!(entries(&pool).await, before + 1, "one entry is recorded");
+    holds_one_entry(&pool, &recorder).await;
+    assert!(
+        second.version_uid() != first.version_uid(),
+        "the version committed after its record"
+    );
+}
+
+/// A held write names the search tokens an earlier write resolved by id
+/// under their generation (#6244); when the store's generation moved on, the
+/// intake refuses the ids (`FE001`), and the write resolves its tokens again:
+/// exactly one entry is recorded, and the version still commits after it.
+#[tokio::test]
+async fn a_held_write_resolves_again_search_tokens_of_a_stale_generation() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = audited(&pool).await;
+    let (ehr, created) = object(&svc).await;
+    let (first, recorder) = Box::pin(recorded_update(&svc, (ehr, &created), 1)).await;
+    holds_one_entry(&pool, &recorder).await;
+    let mut tx = pool.begin().await.expect("begin");
+    for statement in [
+        "ALTER TABLE audit.audit_search_token_generation DISABLE TRIGGER USER",
+        "UPDATE audit.audit_search_token_generation SET generation = generation + 1",
+        "ALTER TABLE audit.audit_search_token_generation ENABLE TRIGGER USER",
+    ] {
+        sqlx::query(statement)
+            .execute(&mut *tx)
+            .await
+            .expect("the generation moves on");
+    }
+    tx.commit().await.expect("commit");
+    let before = entries(&pool).await;
+    let (second, recorder) = Box::pin(recorded_update(&svc, (ehr, &first), 2)).await;
+    assert_eq!(entries(&pool).await, before + 1, "one entry is recorded");
+    holds_one_entry(&pool, &recorder).await;
+    let tokens: i32 = sqlx::query_scalar(
+        "SELECT cardinality(e.search_tokens) FROM audit.access_log_entry e \
+         ORDER BY e.id DESC LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the newest entry's tokens");
+    assert!(tokens > 0, "the newest entry names its search tokens");
+    assert!(
+        second.version_uid() != first.version_uid(),
+        "the version committed after its record"
+    );
+}
