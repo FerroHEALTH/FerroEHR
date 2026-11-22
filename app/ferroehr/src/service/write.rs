@@ -30,16 +30,6 @@ use crate::versioning::change::ready::prepare_write;
 use crate::versioning::change::{Committed, Write, WriteEnvelope, commit, record_commit};
 use crate::versioning::lifecycle;
 
-/// How [`FerroEhrService::commit_one`] runs a write against the database.
-pub(in crate::service) enum Mode {
-    /// BEGIN, the prepare step, the change, COMMIT.
-    Transaction,
-    /// [`Mode::Transaction`], with the EHR's promoted subject columns synced
-    /// from this `EHR_STATUS` body after the change, inside the same
-    /// transaction ([`FerroEhrService::sync_ehr_subject`]).
-    SyncSubject(EhrId, crate::service::ehr::status::SubjectColumns),
-}
-
 /// A [`WriteRequest`]'s commit metadata, resolved against the server rules.
 #[derive(Clone)]
 pub(in crate::service) struct Resolved {
@@ -108,7 +98,7 @@ impl FerroEhrService {
     }
 
     /// Commit one single-object write on `pool`: acquire a connection, open
-    /// the transaction the [`Mode`] asks for, run `prepare` on it (the gates
+    /// a transaction, run `prepare` on it (the gates
     /// and reads that must share the write's connection, ending in the
     /// [`Write`]), apply the change, commit, and record the commit metric.
     ///
@@ -116,13 +106,11 @@ impl FerroEhrService {
     /// never counted.
     ///
     /// # Errors
-    /// The `prepare` refusals, the [`commit`] ones, the
-    /// [`Self::sync_ehr_subject`] conflict, and a failed acquire, begin or
-    /// commit.
+    /// The `prepare` refusals, the [`commit`] ones, and a failed acquire,
+    /// begin or commit.
     pub(in crate::service) fn commit_one<'s, P>(
         &'s self,
         pool: &'s PgPool,
-        mode: Mode,
         prepare: P,
     ) -> Pin<Box<impl Future<Output = Result<Committed, ServiceError>> + 's>>
     where
@@ -134,7 +122,6 @@ impl FerroEhrService {
         Box::pin(async move {
             let signing_ctx = self.signing_ctx();
             let mut conn = self.recorded_conn(pool).await?;
-            let mut invalidate = None;
             let mut tx = conn.begin().await?;
             let write = prepare(&mut tx).await?;
             // NOTE: our own design (#6256), from here the write may land, so the request is
@@ -143,20 +130,8 @@ impl FerroEhrService {
             let ehr_id = write.ehr_id;
             let committed = commit(&mut tx, write, &signing_ctx).await?;
             let facts = Self::written_facts(ehr_id, &committed);
-            if let Mode::SyncSubject(ehr_id, status) = mode {
-                self.sync_ehr_subject(&mut tx, ehr_id, &status).await?;
-                self.commit_recorded(tx, &facts, Vec::new()).await?;
-                invalidate = Some(ehr_id);
-            } else {
-                self.commit_recorded(tx, &facts, Vec::new()).await?;
-            }
+            self.commit_recorded(tx, &facts, Vec::new()).await?;
             drop(conn);
-            // NOTE: our own design (#5589, #5879), the status names the subject whose care
-            // relationships decide access, so the copy and the request see the commit; read with
-            // the write's connection given back, never a second one beside it.
-            if let Some(ehr_id) = invalidate {
-                self.invalidate_ehr_access(ehr_id).await;
-            }
             self.counted(ehr_id, committed).await
         })
     }

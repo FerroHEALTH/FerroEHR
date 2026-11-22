@@ -153,6 +153,7 @@ impl FerroEhrService {
                     definitions: gate.definitions,
                     outbox: None,
                     reservation: None,
+                    status: None,
                 },
             };
             let ready =

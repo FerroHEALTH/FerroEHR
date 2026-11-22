@@ -21,7 +21,7 @@ use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::validate::Container;
 use crate::service::response::{RawServiceResponse, ReadBody, ServiceResponse};
 use crate::service::version_update::WriteRequest;
-use crate::service::write::{Mode, Resolved};
+use crate::service::write::Resolved;
 use crate::storage::version_repo::placement::Placement;
 use crate::system_log::event::AuditEvent;
 use crate::versioning::Kind;
@@ -166,7 +166,7 @@ impl FerroEhrService {
         checked: Result<Resolved, ServiceError>,
         body: Body,
     ) -> Result<Committed, ServiceError> {
-        self.commit_one(&self.demographic_pool, Mode::Transaction, async move |tx| {
+        self.commit_one(&self.demographic_pool, async move |tx| {
             let placement = locked_tip(tx, kind, vo_id, &precondition).await?;
             if let Some(tip) = placement.tip.as_ref() {
                 precondition.check_tree(tip)?;

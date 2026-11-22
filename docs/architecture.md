@@ -291,6 +291,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   head and node CTEs once per member (`guarded::commit_set`); any other set
   keeps the per-member path, its EHR row and object locks taken in that
   order.
+  An `EHR_STATUS` commit takes the same shape (#6257): its gate read finds
+  the EHR's status by its kind (`gate::Shape::Status`), its access record is
+  held first, and one guarded statement takes the EHR row `FOR UPDATE`,
+  requires no modifiable EHR (the status is what sets `is_modifiable`) and
+  writes the promoted `ehr` columns beside the version, notifying the access
+  copies when the subject moved; a subject another EHR holds refuses the
+  statement through `uq_ehr_subject` and answers `409`. A COMPOSITION commit
+  queued behind it reads the flipped row and is judged again.
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers

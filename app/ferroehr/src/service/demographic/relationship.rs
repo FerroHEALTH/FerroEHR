@@ -38,7 +38,7 @@ use crate::service::demographic::support;
 use crate::service::demographic::written::{demographic_answer, locked_tip};
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
-use crate::service::write::{Mode, Resolved};
+use crate::service::write::Resolved;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::body::Body;
@@ -194,7 +194,7 @@ impl FerroEhrService {
         // The large media go to the blob store before a connection is held.
         let (body, served) = self.demographic_stored(request.data, true).await?;
         let committed = self
-            .commit_one(&self.demographic_pool, Mode::Transaction, async move |_| {
+            .commit_one(&self.demographic_pool, async move |_| {
                 Ok(Write::new(
                     None,
                     Change::create(Kind::PartyRelationship, body, None, envelope),
@@ -280,7 +280,7 @@ impl FerroEhrService {
     ) -> Result<ServiceResponse, ServiceError> {
         let vo_id = current.vo_id;
         let committed = self
-            .commit_one(&self.demographic_pool, Mode::Transaction, async move |tx| {
+            .commit_one(&self.demographic_pool, async move |tx| {
                 let placement =
                     locked_tip(tx, Kind::PartyRelationship, vo_id, &precondition).await?;
                 if let Some(tip) = placement.tip.as_ref() {

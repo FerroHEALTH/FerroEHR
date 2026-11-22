@@ -27,13 +27,15 @@ use sqlx::PgConnection;
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
 use crate::service::version_update::WriteRequest;
-use crate::service::write::{Mode, Resolved};
+use crate::service::write::{Materials, Resolved, first_attempt};
 use crate::storage::ehr_repo::{self, PromotedColumns};
 use crate::storage::error::StorageError;
+use crate::storage::version_repo::gate::{self, Ask, Shape};
+use crate::storage::version_repo::guarded::{Guard, StatusSync};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::body::Body;
-use crate::versioning::change::precondition::{ensure_preceding, lock_current, tip_uid};
+use crate::versioning::change::precondition::{ensure_preceding, tip_uid};
 use crate::versioning::change::{Change, Write};
 
 impl FerroEhrService {
@@ -244,6 +246,19 @@ impl SubjectColumns {
         crate::storage::access_projection::EhrSubject::stored(namespace, id)
     }
 
+    /// The columns as an `EHR_STATUS` commit's guarded statement writes them,
+    /// with the subject digest `digest` (#6257).
+    pub(crate) fn sync(&self, digest: Option<Vec<u8>>) -> StatusSync {
+        let (subject_id, subject_namespace) = self.subject.clone().unzip();
+        StatusSync {
+            subject_id,
+            subject_namespace,
+            is_queryable: self.is_queryable,
+            is_modifiable: self.is_modifiable,
+            subject_digest: digest,
+        }
+    }
+
     /// The columns, with the subject digest `digest`.
     pub(crate) fn columns<'a>(&'a self, digest: Option<&'a [u8]>) -> PromotedColumns<'a> {
         PromotedColumns {
@@ -254,6 +269,29 @@ impl SubjectColumns {
             subject_digest: digest,
         }
     }
+}
+
+/// The EHR's `EHR_STATUS` as its gate read found it, with the uid of its
+/// tip.
+///
+/// # Errors
+/// [`ServiceError::NotFound`] when the EHR or its `EHR_STATUS` does not exist.
+fn status_target(
+    gate: &mut gate::Gate,
+    ehr_id: EhrId,
+) -> Result<(gate::Target, String), ServiceError> {
+    let found = gate.targets.pop().and_then(|target| {
+        let latest = target
+            .placement
+            .tip
+            .as_ref()
+            .filter(|tip| tip.ehr_id == Some(ehr_id))
+            .map(|tip| tip_uid(target.vo_id, tip))?;
+        Some((target, latest))
+    });
+    found.ok_or_else(|| {
+        ServiceError::not_found(Missing::Ehr, format!("EHR_STATUS for EHR {ehr_id}"))
+    })
 }
 
 impl FerroEhrService {
@@ -273,17 +311,13 @@ impl FerroEhrService {
     ) -> Result<ResourceMeta, ServiceError> {
         // NOTE: the ITS-REST wire replaces the whole EHR_STATUS in one PUT; a
         // mismatch → 412.
-        let Some((vo_id, _)) = self.current_vo(an_ehr_id, Kind::EhrStatus).await? else {
-            return Err(ServiceError::not_found(
-                Missing::Ehr,
-                format!("EHR_STATUS for EHR {an_ehr_id}"),
-            ));
-        };
-        // Request resolution and validation run before the transaction, and
+
+        // Request resolution and validation run before any connection is held, and
         // their refusals surface after the `If-Match` check, in pre-check order.
         let resolved = self.resolve_write(&request, change_type::MODIFICATION, "EHR_STATUS update");
         let preceding = request.preceding;
         let promoted = SubjectColumns::of_typed(&request.data);
+        let digest = self.care_subject_digest(promoted.subject().as_ref());
         let mut content = Body::from(request.data);
         // A valid body's large media go to the blob store before a connection is held.
         let validated = match &resolved {
@@ -293,22 +327,53 @@ impl FerroEhrService {
             ),
             Err(_) => None,
         };
-        // Keep the promoted subject columns in sync (the subject may have
-        // changed); the is_queryable promotion rides this same UPDATE.
+        // A status a later attempt judges again commits on the new tip only when it
+        // names no preceding version, so only such a one keeps a copy.
+        let (resolved, unresolved) = resolved.map_or_else(
+            |error| (None, Some(error)),
+            |resolved| (Some(resolved), None),
+        );
+        let materials = Materials::new((content, resolved), preceding.is_none());
+        let unresolved = std::sync::Mutex::new(unresolved);
+        let validated = std::sync::Mutex::new(validated);
+        let sync = promoted.sync(digest);
+        let (materials, unresolved, validated) = (&materials, &unresolved, &validated);
+        let (preceding, sync) = (&preceding, &sync);
         let committed = self
-            .commit_one(
-                &self.pool,
-                Mode::SyncSubject(an_ehr_id, promoted),
-                async move |tx| {
-                    let placement =
-                        lock_current(tx, Some(an_ehr_id), vo_id, Kind::EhrStatus).await?;
-                    if let Some(tip) = placement.tip.as_ref() {
-                        ensure_preceding(&tip_uid(vo_id, tip), preceding.as_ref())?;
+            .commit_gated(&self.pool, move || {
+                async move |conn| {
+                    // The EHR, its EHR_STATUS found by kind and its tip in ONE statement
+                    // (#6257); the guarded commit requires them unchanged.
+                    let mut gate = gate::read(
+                        conn,
+                        Ask {
+                            ehr_id: an_ehr_id,
+                            targets: &[],
+                            shape: Shape::Status,
+                            persistent: None,
+                            addressed: None,
+                        },
+                    )
+                    .await?;
+                    self.ensure_gate_policy_held().await?;
+                    let (target, latest) = status_target(&mut gate, an_ehr_id)?;
+                    let vo_id = target.vo_id;
+                    ensure_preceding(&latest, preceding.as_ref())?;
+                    if let Some(error) = first_attempt(unresolved) {
+                        return Err(error);
                     }
-                    let Resolved {
-                        audit, envelope, ..
-                    } = resolved?;
-                    if let Some(validation) = validated {
+                    let (
+                        content,
+                        Some(Resolved {
+                            audit, envelope, ..
+                        }),
+                    ) = materials.take()?
+                    else {
+                        return Err(ServiceError::exception(
+                            "an unresolved EHR_STATUS update reached its write",
+                        ));
+                    };
+                    if let Some(validation) = first_attempt(validated) {
                         validation?;
                     }
                     Ok(Write::new(
@@ -316,11 +381,21 @@ impl FerroEhrService {
                         Change::modify(vo_id, Kind::EhrStatus, content, None, None, envelope),
                         audit,
                     )
-                    .placed(placement))
-                },
-            )
+                    .guarded(Guard {
+                        status: Some(Box::new(sync.clone())),
+                        ..super::composition::guard_of(&gate, target.head)
+                    })
+                    .placed(target.placement)
+                    .gated(gate.restriction.clone())
+                    .object_marked(target.restricted))
+                }
+            })
             .await
             .map_err(ServiceError::flattened)?;
+        // NOTE: our own design (#5589, #5879), the status names the subject whose care
+        // relationships decide access, so the copy and the request see the commit; read with
+        // the write's connection given back, never a second one beside it.
+        self.invalidate_ehr_access(an_ehr_id).await;
         Ok(self.version_meta(
             an_ehr_id,
             committed.vo_id,

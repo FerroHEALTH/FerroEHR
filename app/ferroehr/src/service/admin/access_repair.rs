@@ -37,7 +37,6 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::ehr::access_settings::{EhrAccessSettings, check_written_settings};
 use crate::service::response::ResourceMeta;
-use crate::service::write::Mode;
 use crate::storage::version_repo::read::VersionAt;
 use crate::system_log::event::EventActionCode;
 use crate::versioning::Kind;
@@ -262,7 +261,7 @@ impl FerroEhrService {
         let access = crate::versioning::body::decoded(Kind::EhrAccess, access, false)?;
         let audit = self.audit(change_type::MODIFICATION, description);
         let committed = self
-            .commit_one(&self.pool, Mode::Transaction, async move |_tx| {
+            .commit_one(&self.pool, async move |_tx| {
                 Ok(Write::new(
                     Some(ehr_id),
                     Change::modify(
