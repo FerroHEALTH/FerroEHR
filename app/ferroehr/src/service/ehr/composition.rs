@@ -107,6 +107,7 @@ impl FerroEhrService {
                 },
             )
             .await?;
+            self.ensure_gate_policy_held().await?;
             ensure_ehr_writable(&gate, ehr_id)?;
             validated?;
             if let (true, Some(sibling)) = (gate.persistent_exists, sibling) {
@@ -418,6 +419,7 @@ impl FerroEhrService {
                 },
             )
             .await?;
+            self.ensure_gate_policy_held().await?;
             let pre = gate.targets.pop().ok_or_else(|| {
                 ServiceError::exception(format!("the gate read returned no row for {vo_id}"))
             })?;
@@ -594,6 +596,7 @@ impl FerroEhrService {
                 },
             )
             .await?;
+            self.ensure_gate_policy_held().await?;
             let target = gate.targets.pop().ok_or_else(|| {
                 ServiceError::exception(format!("the gate read returned no row for {vo_id}"))
             })?;

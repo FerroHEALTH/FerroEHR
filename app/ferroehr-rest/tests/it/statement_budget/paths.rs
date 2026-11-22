@@ -300,13 +300,18 @@ struct Budget {
 /// reads and the queries run no nested statement any more, and their nested
 /// ceilings fell to 0. A commit runs 4 nested statements where it ran 3, under
 /// its ceiling, which does not move.
+/// A COMPOSITION commit and a CONTRIBUTION commit have since been decided on
+/// the policy revision their gate read returns, in place of a read of it
+/// before (#6256): one round trip fewer on the three composition commits, the
+/// update, the delete and the CONTRIBUTION commit, measured beside the merge
+/// base, and each of those round-trip ceilings fell by one.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
         allocations: 18_101,
         peak_bytes: 1_530_778,
-        round_trips: 9,
+        round_trips: 8,
         nested: 13,
         wal: 188_205,
     },
@@ -315,7 +320,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 5,
         allocations: 39_529,
         peak_bytes: 1_533_031,
-        round_trips: 9,
+        round_trips: 8,
         nested: 14,
         wal: 188_507,
     },
@@ -324,7 +329,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 5,
         allocations: 32_689,
         peak_bytes: 1_528_525,
-        round_trips: 9,
+        round_trips: 8,
         nested: 13,
         wal: 188_849,
     },
@@ -405,7 +410,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 6,
         allocations: 18_290,
         peak_bytes: 1_649_934,
-        round_trips: 12,
+        round_trips: 11,
         nested: 14,
         wal: 189_586,
     },
@@ -486,7 +491,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 5,
         allocations: 17_848,
         peak_bytes: 1_525_458,
-        round_trips: 10,
+        round_trips: 9,
         nested: 4,
         wal: 187_688,
     },
@@ -495,7 +500,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 2,
         allocations: 1657,
         peak_bytes: 150_537,
-        round_trips: 11,
+        round_trips: 10,
         nested: 4,
         wal: 5267,
     },
