@@ -77,12 +77,14 @@ async fn replica(pool: &sqlx::PgPool, signer: &Arc<Signer>) -> Replica {
         .with_system_id(SYSTEM)
         .with_audit(sender.clone())
         .with_access_log(checkpoints.clone());
+    // NOTE: our own design (#6242), the drain's store, which seals each window it settles signed.
+    let store = sender.store().clone();
     Replica {
         svc,
         sender,
         _drain: drain,
         checkpoints,
-        store: AuditStore::new(pools.audit),
+        store,
     }
 }
 

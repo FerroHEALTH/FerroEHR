@@ -95,9 +95,16 @@ async fn sealers_keep_one_run(pool: &PgPool) {
             while writing.load(Ordering::Acquire) {
                 let reached = {
                     let mut conn = pool.acquire().await.expect("a connection");
-                    frontier.round(&mut conn).await.expect("a frontier round")
+                    frontier
+                        .round(&mut conn)
+                        .await
+                        .expect("a frontier round")
+                        .access_log
                 };
-                log.store().seal_to(reached).await.expect("a sealing round");
+                log.store()
+                    .seal_to(&ferroehr::access_log::seal::ACCESS_LOG, reached)
+                    .await
+                    .expect("a sealing round");
                 tokio::task::yield_now().await;
             }
         });
@@ -115,7 +122,7 @@ async fn sealers_keep_one_run(pool: &PgPool) {
         round.expect("a sealer");
     }
     log.store()
-        .seal_committed()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
         .await
         .expect("every committed entry is sealed");
 
@@ -145,7 +152,7 @@ async fn sealers_keep_one_run(pool: &PgPool) {
     assert_eq!(uids.len(), 200, "every entry written once");
     let findings = log
         .store()
-        .verify_windows(false)
+        .verify_windows(&ferroehr::access_log::seal::ACCESS_LOG, false)
         .await
         .expect("the verifier");
     assert!(findings.is_empty(), "the windows verify: {findings:?}");
@@ -164,7 +171,7 @@ async fn sealers_keep_one_run(pool: &PgPool) {
 }
 
 /// The log is append-only: the runtime refuses an update, a delete and a
-/// truncate of an entry, and of a system record waiting in its intake.
+/// truncate of an entry, and of a system record.
 #[tokio::test]
 async fn the_log_refuses_every_change_but_the_tombstone() {
     let db = testkit::db().await.expect("testkit database");
@@ -182,14 +189,14 @@ async fn the_log_refuses_every_change_but_the_tombstone() {
     ferroehr::system_log::store::AuditStore::new(pool.clone())
         .write(vec![outside], &[])
         .await
-        .expect("a record of the system chain waits in its intake");
+        .expect("a system record");
     for statement in [
         "UPDATE audit.access_log_entry SET content = '{}'",
         "DELETE FROM audit.access_log_entry",
         "TRUNCATE audit.access_log_entry",
-        "UPDATE audit.audit_event_intake SET events = events",
-        "DELETE FROM audit.audit_event_intake",
-        "TRUNCATE audit.audit_event_intake",
+        "UPDATE audit.audit_event SET principal = 'nobody'",
+        "DELETE FROM audit.audit_event",
+        "TRUNCATE audit.audit_event",
     ] {
         let refused = sqlx::query(statement)
             .execute(&pool)
@@ -216,7 +223,10 @@ async fn a_seal_written_past_the_sealer_is_found() {
     let pool = db.pool();
     let log = checkpoints(&pool, SYSTEM, keyring(&generate_key()));
     write(&pool, 0..3).await;
-    log.store().seal_committed().await.expect("sealed");
+    log.store()
+        .seal_committed(&ferroehr::access_log::seal::ACCESS_LOG)
+        .await
+        .expect("sealed");
     sqlx::query(
         "INSERT INTO audit.access_log_seal (window_no, first_id, last_id, entries, \
          previous_digest, digest, sealed_at) \
@@ -228,36 +238,10 @@ async fn a_seal_written_past_the_sealer_is_found() {
     .expect("a seal past the sealer");
     let findings = log
         .store()
-        .verify_windows(false)
+        .verify_windows(&ferroehr::access_log::seal::ACCESS_LOG, false)
         .await
         .expect("the verifier");
     assert!(!findings.is_empty(), "the stray seal is found");
-}
-
-/// Autovacuum never truncates the system intake (#5970): the truncate's
-/// `ACCESS EXCLUSIVE` lock would hold every request's intake write.
-#[tokio::test]
-async fn autovacuum_never_truncates_an_intake() {
-    let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
-    let options: Vec<(String, Option<Vec<String>>)> = sqlx::query_as(
-        "SELECT c.relname::text, c.reloptions::text[] FROM pg_class c \
-         JOIN pg_namespace n ON n.oid = c.relnamespace \
-         WHERE n.nspname = 'audit' AND c.relname IN ('audit_event_intake') \
-         ORDER BY c.relname",
-    )
-    .fetch_all(&pool)
-    .await
-    .expect("the intakes' storage parameters");
-    assert_eq!(options.len(), 1, "the system intake: {options:?}");
-    for (table, reloptions) in options {
-        assert!(
-            reloptions
-                .unwrap_or_default()
-                .contains(&"vacuum_truncate=off".to_owned()),
-            "{table} sets vacuum_truncate = off"
-        );
-    }
 }
 
 /// An entry `n` with an index row under the render policy `policy`, and its

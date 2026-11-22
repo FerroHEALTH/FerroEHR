@@ -32,10 +32,9 @@ pub struct StoreConfig {
     /// (`FERROEHR__AUDIT__STORE__VERIFY_INTERVAL`); `"0s"` turns the schedule
     /// off. Default one hour.
     ///
-    /// A run verifies the records written since the newest link an earlier run
-    /// found intact, in steps that each move that link
-    /// (`audit.verify_audit_chain_step()`, and the access log's sealed windows),
-    /// so its cost follows the records written since; a finding is logged at `ERROR`,
+    /// A run verifies the windows sealed since the newest window an earlier
+    /// run found intact, in steps that each move that cursor, so its cost
+    /// follows the records sealed since; a finding is logged at `ERROR`,
     /// counted and reported by the `audit_chain` health indicator
     /// (`docs/law/eu/cra/text.html Annex I Part I(2)(f)`: "report on
     /// corruptions").
@@ -43,8 +42,8 @@ pub struct StoreConfig {
     pub verify_interval: Duration,
     /// The time between two scheduled full passes over the hash chain
     /// (`FERROEHR__AUDIT__STORE__FULL_VERIFY_INTERVAL`), which also recompute
-    /// the records before the checkpoint; `"0s"` leaves the full pass to
-    /// `SELECT * FROM audit.verify_audit_chain()` on demand. Default one week.
+    /// the windows before the cursor; `"0s"` leaves the full pass to
+    /// `ferroehr audit-chain verify` on demand. Default one week.
     /// A run that found damage is always followed by a full pass.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub full_verify_interval: Duration,

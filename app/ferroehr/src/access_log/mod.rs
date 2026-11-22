@@ -33,7 +33,6 @@ pub mod publish;
 #[cfg(feature = "fhir")]
 pub mod recorded;
 pub mod retention;
-pub mod schedule;
 pub mod seal;
 pub mod search;
 pub mod store;

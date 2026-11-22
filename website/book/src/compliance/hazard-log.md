@@ -352,18 +352,19 @@ application role or by someone with direct access.
 **Effect:** an access disappears, or appears to have been made by someone
 else, and the record a patient or a court relies on is false.
 
-**Control:** the system chain's records are hash-chained in the database,
-and a record's digest covers every column but the digest, its search tokens
-included. The access log is sealed in windows (#6242): about once a minute
-every committed entry past the last window is sealed with the SHA-256 of its
-entries' ids and content digests, each seal following the one before it and
-signed with the keyring's key, and the verifier recomputes every window and
-every column the log derives from an entry's content. Each render policy a
-record names is checked against its own digest, and each search token and
-token set against its content. `UPDATE`, `DELETE` and `TRUNCATE` on the log
-are refused by its triggers and the runtime role's grants; an access-log
-entry newer than the last seal (at most a minute and the frontier's lag) is
-protected by those refusals alone. The application role cannot run DDL or
+**Control:** both logs are sealed in windows (#6242): the system records
+and the access log's entries. A system record's content digest, computed by
+the writer, covers every column but its position and the digest, its search
+tokens included. About once a minute every committed record of each log past
+its last window is sealed with the SHA-256 of its records' ids and content
+digests, each seal following the one before it and signed with the
+keyring's key, and the verifier recomputes every window, every system
+record's content digest and every column the access log derives from an
+entry's content. Each render policy a record names is checked against its
+own digest, and each search token and token set against its content.
+`UPDATE`, `DELETE` and `TRUNCATE` on either log are refused by its triggers
+and the runtime role's grants; a record newer than the last seal (at most a
+minute and the frontier's lag) is protected by those refusals alone. The application role cannot run DDL or
 rewrite the log. The server verifies one minute after boot and then every
 `[audit.store] verify_interval` (default one hour), logs a finding at
 `ERROR`, counts it in `atna_audit_chain_findings` and shows it on the
@@ -376,13 +377,19 @@ rewrite the log. The server verifies one minute after boot and then every
   `a_deleted_audit_record_is_detected_in_the_middle_and_at_the_end`,
   `the_audit_table_refuses_mutation_deletion_and_truncation`,
   `the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail`,
-  `the_batched_write_path_is_chained_too`,
+  `the_batched_write_path_is_sealed_too`,
   `the_chain_check_reports_a_tampered_record_on_the_health_surface`,
   `the_audit_subsystem_schedules_the_chain_check`,
   `the_digest_covers_every_column`,
   `every_hashed_column_is_tamper_evident`,
   `a_changed_or_missing_render_policy_is_reported`,
   `a_changed_search_token_or_set_is_reported`;
+- `app/ferroehr/tests/it/system_log_seal.rs`:
+  `a_window_never_covers_a_record_a_transaction_still_writes_or_holds`,
+  `a_changed_record_in_a_sealed_window_is_reported`,
+  `a_removed_record_in_a_sealed_window_is_reported`,
+  `an_inserted_record_in_a_sealed_window_is_reported`,
+  `a_window_folds_only_once_every_record_of_it_is_reaped`;
 - `app/ferroehr/tests/it/audit_store.rs`:
   `the_access_trail_refuses_rewriting_deletion_and_truncation`;
 - `app/ferroehr/tests/it/access_log_seal.rs`:
@@ -392,10 +399,10 @@ rewrite the log. The server verifies one minute after boot and then every
   `an_inserted_record_in_a_sealed_window_is_reported`,
   `the_fold_removes_whole_sealed_windows_only`.
 
-**Remains:** the chain and the seals give evidence of tampering and do not
-prevent it, and an access-log entry newer than the last seal is protected by
-the refused changes alone.
-A deployment that sets `verify_interval = 0` finds a broken chain only
+**Remains:** the seals give evidence of tampering and do not prevent it,
+and a record of either log newer than the last seal is protected by the
+refused changes alone.
+A deployment that sets `verify_interval = 0` finds a broken seal only
 when an operator runs the check. The indicator never flips readiness, so a
 finding reaches someone only through an alert on the counter or the
 indicator, which the deploying organisation sets up.

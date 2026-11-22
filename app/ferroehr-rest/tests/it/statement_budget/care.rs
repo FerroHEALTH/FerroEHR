@@ -16,9 +16,7 @@ use http::StatusCode;
 use tracing::Instrument as _;
 use tracing_subscriber::layer::SubscriberExt as _;
 
-use super::{
-    CHAINER_RELEASE, REQUEST_SPAN, RoundTrips, SYSTEM_ROUND, calls, counted, drained, ledger,
-};
+use super::{CHAINER_RELEASE, REQUEST_SPAN, RoundTrips, calls, counted, drained, ledger};
 use crate::common::{self, BASE};
 use crate::hospital::world::{PURPOSE, World, credential};
 
@@ -103,8 +101,7 @@ async fn a_care_gated_read_stays_within_its_statement_budget() {
         .filter(|s| !s.toplevel)
         .map(|s| s.calls)
         .sum();
-    let chainer = calls(&statements, "SELECT audit.audit_event_chain_move") * SYSTEM_ROUND
-        + calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
+    let chainer = calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
     let per_request = (
         sent.div_euclid(REQUESTS),
         nested.saturating_sub(chainer).div_euclid(REQUESTS),

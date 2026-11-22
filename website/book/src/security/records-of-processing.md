@@ -106,7 +106,7 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 | Recipients | *yours*: the local repository, plus any syslog or FHIR-feed Audit Record Repository configured |
 | Third-country transfers | *yours* |
 | Retention | the access policy's `log_retention`, absent meaning forever, reaped hourly otherwise. A period that breaks a floor or ceiling the controller declares, or the three years of EHDS Art. 9(2) in the Union, is refused when the policy is written |
-| Security measures | System records are hash-chained and verifiable with `audit.verify_audit_chain()`, access-log entries sealed in signed windows and verifiable with `ferroehr access-log verify`; the runtime role may insert and stamp delivery and nothing else; the `audit` schema sits outside both pseudonymisation domains; the syslog feed can run over RFC 5425 TLS with a client certificate |
+| Security measures | System records and access-log entries sealed in signed windows and verifiable with `ferroehr audit-chain verify` and `ferroehr access-log verify`; the runtime role may insert and stamp delivery and nothing else; the `audit` schema sits outside both pseudonymisation domains; the syslog feed can run over RFC 5425 TLS with a client certificate |
 
 ## 6. Change-event feed (off by default)
 

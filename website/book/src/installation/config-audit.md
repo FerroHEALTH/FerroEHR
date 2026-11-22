@@ -66,8 +66,8 @@ and `Retry-After`. There is no fail mode and no queue: `fail_mode` and
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `verify_interval` | duration | `"1h"` | The time between two scheduled verifications of the system chain and the access log's sealed windows; `"0s"` turns the schedule off. Each run verifies the records written since the newest link or window an earlier run found intact. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit.md#tamper-evidence). |
-| `full_verify_interval` | duration | `"7d"` | The time between two scheduled full passes over the system chain and every sealed window; `"0s"` leaves the full pass to `SELECT * FROM audit.verify_audit_chain()` on demand. A run that found damage is always followed by a full pass. |
+| `verify_interval` | duration | `"1h"` | The time between two scheduled verifications of the sealed windows of the system records and the access log; `"0s"` turns the schedule off. Each run verifies the windows sealed since the newest window an earlier run found intact. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit.md#tamper-evidence). |
+| `full_verify_interval` | duration | `"7d"` | The time between two scheduled full passes over every sealed window of both logs; `"0s"` leaves the full pass to `ferroehr audit-chain verify` on demand. A run that found damage is always followed by a full pass. |
 | `max_verify_lag` | duration | `"4h"` | How long a record may wait past its chain's verification cursor before the `audit_chain` indicator reads `DEGRADED`; `"0s"` reports the lag only as the `audit_chain_verification_lag` and `audit_chain_unverified_age_seconds` metrics. Set it above `verify_interval`. |
 
 The local store is always on while auditing is: every record is written to

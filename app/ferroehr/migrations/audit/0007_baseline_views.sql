@@ -62,24 +62,23 @@ CREATE VIEW access_log_search AS
 COMMENT ON VIEW access_log_search IS
     'The ITI-81 index of the access-log entries no write holds: what the search filters on, read from the entry''s row (search_keys through its index), and the entry''s id, which names it. A tombstone is not in it.';
 
--- The ITI-81 index of the system chain (#6203): what the search filters on,
--- read from the records, and the position of a linked record (NULL for one the
--- chainer has not linked yet). A plain join, so a page reads it in the search's
--- order through ix_audit_event_recorded_at, where the system member of
--- audit_record's union is planned without that order; a total counts the
--- records without reading a link, less those the intake still names.
+-- The ITI-81 index of the system records no write holds (#6203, #6242): what
+-- the search filters on, read from the records, and each record's position.
+-- A plain scan, so a page reads it in the search's order through
+-- ix_audit_event_recorded_at, where the system member of audit_record's union
+-- is planned without that order.
 CREATE VIEW system_search AS
-    SELECT l.chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.principal,
+    SELECT e.seq AS chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.principal,
            e.patient_id, e.resource_id, e.request_id, e.client_ip, e.ehr_id, e.search_tokens,
            audit.search_keys(e.search_tokens, e.request_id, e.resource_id) AS search_keys,
            'system'::text AS chain, e.id AS event_id
       FROM audit_event e
-      LEFT JOIN audit_event_link l ON l.event_id = e.id;
+     WHERE NOT EXISTS (SELECT 1 FROM audit_event_hold h WHERE h.seq = e.seq);
 COMMENT ON VIEW system_search IS
-    'The ITI-81 index of the system chain: what the search filters on, read from each audit_event record, the position of a linked record (NULL for one the chainer has not linked yet) and the record''s id.';
+    'The ITI-81 index of the system records no write holds: what the search filters on, read from each audit_event record, its position and its id.';
 
 CREATE VIEW audit_record AS
-    SELECT l.chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.operation,
+    SELECT e.seq AS chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.operation,
            e.principal, e.patient_id, e.resource_class, e.resource_id,
            e.client_ip, e.token_id, e.domain, e.purpose, e.legal_basis, e.result_count,
            e.request_id, e.roles, e.origins, e.origin_count, e.category_map_digest,
@@ -94,7 +93,7 @@ CREATE VIEW audit_record AS
            NULL::text AS content_digest, NULL::text AS digest,
            'system'::text AS chain
       FROM audit_event e
-      JOIN audit_event_link l ON l.event_id = e.id
+     WHERE NOT EXISTS (SELECT 1 FROM audit_event_hold h WHERE h.seq = e.seq)
     UNION ALL
     SELECT r.chain_seq, r.time_recorded, r.time_recorded, r.event_action, r.event_outcome, NULL::text,
            r.principal, r.patient_id, NULL::text, r.resource_id,
@@ -112,12 +111,12 @@ CREATE VIEW audit_record AS
       JOIN audit_render_policy p ON p.id = r.render_policy_id
       LEFT JOIN access_log_shared sh ON sh.digest = r.shared;
 COMMENT ON VIEW audit_record IS
-    'Every record the ITI-81 search, the person''s own trail and the FHIR Feed read: a linked audit_event record of the system chain by its columns and its link''s position, an access-log entry by its stored parts, the columns its row part leaves out (recorded_at is its time_recorded) and its link, from which the server renders it. A record is named by its chain and position.';
+    'Every record the ITI-81 search, the person''s own trail and the FHIR Feed read: an audit_event record no write holds by its columns and its position, an access-log entry by its stored parts, the columns its row part leaves out (recorded_at is its time_recorded) and its content digest, from which the server renders it. A record is named by its chain and position.';
 
 -- The person's access trail, with the index columns the row part leaves
 -- members to.
 CREATE VIEW access_trail AS
-    SELECT l.chain_seq, e.id, e.recorded_at, e.stored_at, e.action, e.outcome,
+    SELECT e.seq AS chain_seq, e.id, e.recorded_at, e.stored_at, e.action, e.outcome,
            e.event_code, e.operation, e.principal, e.patient_id,
            e.resource_class, e.resource_id, e.client_ip, e.token_id, e.domain, e.purpose,
            e.legal_basis, e.result_count, e.request_id, e.roles, e.origins, e.origin_count,
@@ -130,7 +129,7 @@ CREATE VIEW access_trail AS
            e.summary, e.token_attributes,
            NULL::text AS entry_uid, 'system'::text AS chain
       FROM audit_event e
-      JOIN audit_event_link l ON l.event_id = e.id
+     WHERE NOT EXISTS (SELECT 1 FROM audit_event_hold h WHERE h.seq = e.seq)
     UNION ALL
     SELECT t.chain_seq, NULL::uuid, t.time_recorded, t.time_recorded,
            t.event_action,
@@ -234,4 +233,4 @@ CREATE VIEW access_trail AS
                                                      r.request_id, r.resource_id) AS doc) AS x
                      WHERE r.record_type = 'ACCESS_LOG_ENTRY') AS d) AS t;
 COMMENT ON VIEW access_trail IS
-    'Every access the audit trail holds, one row each: a linked audit_event record of the system chain, and each access-log entry read from its row and shared parts, each column from the entry''s access detail and else from its core.';
+    'Every access the audit trail holds, one row each: each audit_event record no write holds, and each access-log entry read from its row and shared parts, each column from the entry''s access detail and else from its core.';

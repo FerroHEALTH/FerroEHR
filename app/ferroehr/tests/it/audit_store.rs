@@ -328,13 +328,10 @@ async fn reap_years_deletes_only_rows_past_the_calendar_horizon() {
         .await
         .expect("count");
     assert_eq!(remaining, 1, "the record inside three years survives");
-    let findings: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.verify_audit_chain()")
-        .fetch_one(&pool)
-        .await
-        .expect("verify");
-    assert_eq!(
-        findings, 0,
-        "the reaped span is tombstoned, so the chain verifies"
+    let findings = crate::fixtures::verify_chain(&pool).await.expect("verify");
+    assert!(
+        findings.is_empty(),
+        "the reaped records keep their positions and digests, so the windows verify: {findings:?}"
     );
 }
 
@@ -381,8 +378,8 @@ async fn reap_due_deletes_each_record_at_its_own_end() {
         1
     );
     let ends_left: Vec<Option<String>> = sqlx::query_scalar(
-        "SELECT e.retention_ends::text FROM audit.audit_event e JOIN audit.audit_event_link l ON l.event_id = e.id \
-         WHERE e.retention_stated ORDER BY l.chain_seq",
+        "SELECT e.retention_ends::text FROM audit.audit_event e \
+         WHERE e.retention_stated ORDER BY e.seq",
     )
     .fetch_all(&pool)
     .await
@@ -690,12 +687,11 @@ async fn the_access_trail_refuses_rewriting_deletion_and_truncation() {
 
     // Removing the record from a sink's outbox, its delivery, changes no
     // record (#6203).
-    let seq: i64 =
-        sqlx::query_scalar("SELECT chain_seq FROM audit.audit_event_link WHERE event_id = $1")
-            .bind(id)
-            .fetch_one(&pool)
-            .await
-            .expect("the record's chain position");
+    let seq: i64 = sqlx::query_scalar("SELECT seq FROM audit.audit_event WHERE id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .expect("the record's position");
     store
         .mark_delivered(ferroehr::system_log::store::outbox::Sink::FhirFeed, seq)
         .await
@@ -748,7 +744,7 @@ async fn both_inserts_persist_the_authentication_columns() {
 
     let rows = sqlx::query(
         "SELECT acting_mode, assurance_level, assurance_value, professional_id \
-         FROM audit.audit_event e JOIN audit.audit_event_link l ON l.event_id = e.id ORDER BY l.chain_seq",
+         FROM audit.audit_event e ORDER BY e.seq",
     )
     .fetch_all(&pool)
     .await
@@ -783,11 +779,7 @@ async fn both_inserts_persist_the_authentication_columns() {
         ]
     );
 
-    let findings: Vec<String> =
-        sqlx::query_scalar("SELECT finding FROM audit.verify_audit_chain()")
-            .fetch_all(&pool)
-            .await
-            .expect("verify");
+    let findings = crate::fixtures::verify_chain(&pool).await.expect("verify");
     assert!(findings.is_empty(), "{findings:?}");
 }
 
@@ -818,7 +810,7 @@ async fn both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten() {
         .expect("batch insert");
 
     let marks: Vec<bool> =
-        sqlx::query_scalar("SELECT e.emergency_access FROM audit.audit_event e JOIN audit.audit_event_link l ON l.event_id = e.id ORDER BY l.chain_seq")
+        sqlx::query_scalar("SELECT e.emergency_access FROM audit.audit_event e ORDER BY e.seq")
             .fetch_all(&pool)
             .await
             .expect("rows");
@@ -832,11 +824,7 @@ async fn both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten() {
     .await;
     assert!(rewrite.is_err(), "the mark is append-only: {rewrite:?}");
 
-    let findings: Vec<String> =
-        sqlx::query_scalar("SELECT finding FROM audit.verify_audit_chain()")
-            .fetch_all(&pool)
-            .await
-            .expect("verify");
+    let findings = crate::fixtures::verify_chain(&pool).await.expect("verify");
     assert!(findings.is_empty(), "{findings:?}");
 }
 
@@ -1440,19 +1428,19 @@ async fn retention_removes_the_tokens_only_its_records_named() {
     .await
     .expect("the old token");
     sqlx::query(
-        "WITH written AS (INSERT INTO audit.audit_event \
-         (recorded_at, action, outcome, event_code, resource_class, request_id, \
-          render_policy, search_tokens) \
-         SELECT now() - interval '40 days', 'R', 0, '110110', 'composition', 'req-before', \
-                render_policy, ARRAY[$1, $2] \
-           FROM audit.audit_event LIMIT 1 RETURNING id) \
-         INSERT INTO audit.audit_event_link (event_id) SELECT id FROM written",
+        "INSERT INTO audit.audit_event \
+         (id, recorded_at, stored_at, action, outcome, event_code, resource_class, request_id, \
+          render_policy, search_tokens, content_digest) \
+         SELECT uuidv7(), now() - interval '40 days', now(), 'R', 0, '110110', 'composition', \
+                'req-before', render_policy, ARRAY[$1, $2], sha256('unset') \
+           FROM audit.audit_event LIMIT 1",
     )
     .bind(own)
     .bind(live)
     .execute(&pool)
     .await
     .expect("the old record");
+    crate::fixtures::redigest(&pool).await;
     assert!(
         crate::fixtures::verify_chain(&pool)
             .await
@@ -1546,16 +1534,18 @@ async fn retention_keeps_a_token_an_access_log_entry_names() {
     assert_eq!(audit_events, 0, "the access is kept as its entry alone");
 
     sqlx::query(
-        "WITH written AS (INSERT INTO audit.audit_event \
-         (recorded_at, action, outcome, event_code, resource_class, render_policy, search_tokens) \
-         SELECT now() - interval '40 days', 'R', 0, '110110', 'demographic', p.digest, ARRAY[$1] \
-           FROM audit.audit_render_policy p LIMIT 1 RETURNING id) \
-         INSERT INTO audit.audit_event_link (event_id) SELECT id FROM written",
+        "INSERT INTO audit.audit_event \
+         (id, recorded_at, stored_at, action, outcome, event_code, resource_class, \
+          render_policy, search_tokens, content_digest) \
+         SELECT uuidv7(), now() - interval '40 days', now(), 'R', 0, '110110', 'demographic', \
+                p.digest, ARRAY[$1], sha256('unset') \
+           FROM audit.audit_render_policy p LIMIT 1",
     )
     .bind(shared)
     .execute(&pool)
     .await
     .expect("an old party read naming the token");
+    crate::fixtures::redigest(&pool).await;
 
     let mut tx = pool.begin().await.expect("tx");
     sqlx::query("SELECT set_config('ferroehr.audit_reaping', 'on', true)")
@@ -1588,12 +1578,12 @@ async fn retention_keeps_a_token_an_access_log_entry_names() {
     );
 }
 
-/// A record the intake still names, which no link chains yet, is in no read
-/// (#6203): not in `audit.audit_record` or `audit.access_trail`, not in an
-/// ITI-81 page or its total, owed to no sink and outside the verification;
-/// once released and linked it is in every one of them.
+/// A record a write still holds is in no read (#6203, #6242): not in
+/// `audit.audit_record` or `audit.access_trail`, not in an ITI-81 page or its
+/// total, owed to no sink and outside every window; once released it is in
+/// every one of them.
 #[tokio::test]
-async fn an_unlinked_record_is_in_no_read() {
+async fn a_held_record_is_in_no_read() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let store = store_over(&pool);
@@ -1603,20 +1593,21 @@ async fn an_unlinked_record_is_in_no_read() {
         .expect("insert");
     let reservation = uuid::Uuid::now_v7();
     sqlx::query(AssertSqlSafe(format!(
-        "DO $$ DECLARE cols text; copy uuid; BEGIN \
+        "DO $$ DECLARE cols text; copy bigint; BEGIN \
          SELECT string_agg(quote_ident(column_name), ', ') INTO cols \
            FROM information_schema.columns \
           WHERE table_schema = 'audit' AND table_name = 'audit_event' \
-            AND column_name NOT IN ('id', 'stored_at'); \
-         EXECUTE format('INSERT INTO audit.audit_event (%s) \
-             SELECT %s FROM audit.audit_event LIMIT 1 RETURNING id', cols, cols) INTO copy; \
-         INSERT INTO audit.audit_event_intake (events, reserved_by) \
-         VALUES (ARRAY[copy], '{reservation}'); \
+            AND column_name NOT IN ('id', 'seq'); \
+         EXECUTE format('INSERT INTO audit.audit_event (id, %s) \
+             SELECT uuidv7(), %s FROM audit.audit_event LIMIT 1 RETURNING seq', cols, cols) \
+             INTO copy; \
+         INSERT INTO audit.audit_event_hold (seq, reserved_by) VALUES (copy, '{reservation}'); \
          END $$"
     )))
     .execute(&pool)
     .await
     .expect("a held record");
+    crate::fixtures::redigest(&pool).await;
     let count = |sql: &'static str| {
         let pool = pool.clone();
         async move {
@@ -1650,13 +1641,16 @@ async fn an_unlinked_record_is_in_no_read() {
     );
     let page = total(&store).await;
     assert_eq!((page.total, page.documents.len()), (Some(1), 1));
+    let owed = "SELECT owed_count FROM audit.audit_event_owe(1000, true, true)";
+    count(owed).await;
     assert_eq!(
         count(
             "SELECT (SELECT count(*) FROM audit.fhir_feed_outbox) \
              + (SELECT count(*) FROM audit.syslog_outbox)"
         )
         .await,
-        0
+        2,
+        "the first record is owed to both sinks, the held one to none"
     );
     assert!(
         crate::fixtures::verify_chain(&pool)
@@ -1670,11 +1664,7 @@ async fn an_unlinked_record_is_in_no_read() {
         .execute(&pool)
         .await
         .expect("release");
-    let moved: i64 = sqlx::query_scalar("SELECT audit.audit_event_chain_move(16, true, true)")
-        .fetch_one(&pool)
-        .await
-        .expect("link");
-    assert_eq!(moved, 1);
+    assert_eq!(count(owed).await, 1, "the released record is owed");
     assert_eq!(
         count("SELECT count(*) FROM audit.audit_record WHERE chain = 'system'").await,
         2
@@ -1691,7 +1681,7 @@ async fn an_unlinked_record_is_in_no_read() {
              + (SELECT count(*) FROM audit.syslog_outbox)"
         )
         .await,
-        2
+        4
     );
     assert!(
         crate::fixtures::verify_chain(&pool)
