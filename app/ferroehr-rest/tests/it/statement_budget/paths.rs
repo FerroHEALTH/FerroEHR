@@ -316,31 +316,38 @@ struct Budget {
 /// (#6256): 7 round trips where it sent 11, measured beside the merge base,
 /// and its round-trip ceiling fell by four; its allocations moved from 17,591
 /// to 17,626, under their ceiling, which stays.
+/// A COMPOSITION commit and a CONTRIBUTION of COMPOSITION members have since
+/// written their access record before their one statement, which reserves it
+/// beside their rows, with no transaction of their own (#6256): 4 round trips
+/// where the commits, the update and the CONTRIBUTION sent 7 and the delete 5
+/// where it sent 8, and 39, 45, 38, 45 and 44 fewer allocations on the JSON,
+/// XML and FLAT commits, the update and the delete, measured beside the merge
+/// base; each of those ceilings fell by its path's figure.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
-        allocations: 18_076,
+        allocations: 18_037,
         peak_bytes: 1_530_778,
-        round_trips: 7,
+        round_trips: 4,
         nested: 13,
         wal: 188_205,
     },
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        allocations: 39_504,
+        allocations: 39_459,
         peak_bytes: 1_533_031,
-        round_trips: 7,
+        round_trips: 4,
         nested: 14,
         wal: 188_507,
     },
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        allocations: 32_658,
+        allocations: 32_620,
         peak_bytes: 1_528_525,
-        round_trips: 7,
+        round_trips: 4,
         nested: 13,
         wal: 188_849,
     },
@@ -421,7 +428,7 @@ const BUDGETS: [Budget; 22] = [
         conversions: 6,
         allocations: 18_290,
         peak_bytes: 1_649_934,
-        round_trips: 7,
+        round_trips: 4,
         nested: 14,
         wal: 189_586,
     },
@@ -500,18 +507,18 @@ const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitUpdate,
         conversions: 5,
-        allocations: 17_811,
+        allocations: 17_766,
         peak_bytes: 1_525_458,
-        round_trips: 7,
+        round_trips: 4,
         nested: 4,
         wal: 187_688,
     },
     Budget {
         path: Path::CommitDelete,
         conversions: 2,
-        allocations: 1615,
+        allocations: 1571,
         peak_bytes: 150_537,
-        round_trips: 8,
+        round_trips: 5,
         nested: 4,
         wal: 5267,
     },
