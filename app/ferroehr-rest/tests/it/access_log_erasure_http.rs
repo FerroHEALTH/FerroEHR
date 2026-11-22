@@ -339,22 +339,36 @@ async fn frames_until_refused(syslog: &mut SyslogTlsListener) -> Vec<String> {
     frames
 }
 
-/// The `AuditEvent` documents the FHIR Feed delivered, once its outbox is
-/// empty after the record of the refused second erasure has been stored.
+/// The `AuditEvent` documents the FHIR Feed delivered, once its cursors passed
+/// every record after the record of the refused second erasure was stored.
 async fn delivered_when_drained(pool: &PgPool, arr: &MockServer) -> Vec<Value> {
     failed_erasure(pool).await;
     let deadline = std::time::Instant::now() + Duration::from_secs(60);
     loop {
-        let (pending,): (i64,) = sqlx::query_as("SELECT count(*) FROM audit.fhir_feed_outbox")
-            .fetch_one(pool)
-            .await
-            .expect("read the feed outbox");
+        let (pending,): (i64,) = sqlx::query_as(
+            "SELECT (SELECT count(*) FROM audit.audit_event e \
+                      WHERE e.seq > coalesce((SELECT c.through_id FROM audit.delivery_cursor c \
+                                               WHERE c.sink = 'fhir_feed' \
+                                                 AND c.chain = 'system'), 0) \
+                        AND NOT EXISTS (SELECT 1 FROM audit.audit_event_hold h \
+                                         WHERE h.seq = e.seq)) \
+                  + (SELECT count(*) FROM audit.access_log_entry e \
+                      WHERE e.render_policy_id IS NOT NULL \
+                        AND e.id > coalesce((SELECT c.through_id FROM audit.delivery_cursor c \
+                                              WHERE c.sink = 'fhir_feed' \
+                                                AND c.chain = 'access_log'), 0) \
+                        AND NOT EXISTS (SELECT 1 FROM audit.access_log_hold h \
+                                         WHERE h.entry_id = e.id))",
+        )
+        .fetch_one(pool)
+        .await
+        .expect("read what the feed has still to deliver");
         if pending == 0 {
             break;
         }
         assert!(
             std::time::Instant::now() < deadline,
-            "the FHIR Feed never drained its outbox"
+            "the FHIR Feed never delivered every record"
         );
         tokio::time::sleep(Duration::from_millis(50)).await;
     }

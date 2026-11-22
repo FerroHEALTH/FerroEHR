@@ -49,6 +49,9 @@ use crate::overview::status;
 use crate::state::AppState;
 use ferroehr::telemetry::provenance;
 use ferrohealth_smart::config::AuthSection;
+use problems::declare_problems;
+
+mod problems;
 
 /// The logical name of the single advertised security scheme. One name, one
 /// scheme kind chosen by config, so the Swagger "Authorize" dialog shows exactly
@@ -156,6 +159,7 @@ const SECURITY_SCHEME: &str = "openehr_auth";
         (name = "admin-integrity", description = "The storage-parity sweep: every stored version is re-derived from its decomposed node rows and compared with its materialized body, so tampering or corruption of either copy is reported. OUR OWN EXTENSION: no ITS-REST operation governs this route, and no openEHR spec governs storage mechanics (same admin gate + RBAC Admin class)."),
         (name = "EHR_ACCESS", description = "The EHR_ACCESS reads and their VERSIONED_EHR_ACCESS reads, shaped on the EHR_STATUS reads: the access directives a CONTRIBUTION wrote, for the administrator, the record's person and the gate-keepers. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no EHR_ACCESS operation."),
         (name = "ACCESS_LOG", description = "One EHR's access log, newest first, and one entry of it: the subject view for the subject of care and their representative (EHDS Art. 9(2)), the full ITS-JSON records for a reviewer the admin class admits; any other EHR answers 404 to the person. Every read writes its own access-log entry. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes."),
+        (name = "admin-audit-delivery", description = "The delivery of the audit records to the ITI-20 sinks that deliver from the local store: each sink's cursors and how far each is behind, the records a sink parked, and the retry or dismissal of a parked record and the forgetting of a sink. OUR OWN EXTENSION: no ITS-REST operation or IHE profile governs these routes (same admin gate + RBAC Admin class)."),
         (name = "admin-access-log", description = "The review and the integrity of the access log: list its records across EHRs, read the links of a span of its chain and a stored checkpoint, seal its head in a checkpoint signed with the keyring's OpenPGP key when no append sealed it, verify the chain against a checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."),
         (name = "admin-identifiers", description = "The identifiers that bind a party: a PERSON's binding key, and the refused PMIR identity-feed messages with their retry and settle. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "admin-marks", description = "The legal marks storage carries beside the clinical content: the GDPR Art. 18 restriction register, the Art. 21(6) research objection, and the Art. 5(1)(e) / Art. 30(1)(f) retention register with its due list. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and nothing here deletes anything (same admin gate + RBAC Admin class)."),
@@ -238,66 +242,6 @@ pub fn extensions_document(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
     )]));
 
     doc
-}
-
-/// The media type of a problem details document (RFC 9457 §3).
-const PROBLEM_JSON: &str = "application/problem+json";
-
-/// Declares the problem details schema as the body of every `4xx` and `5xx`
-/// answer in `doc`, except under the FHIR base, whose errors are
-/// `OperationOutcome` (FHIR R4 `http.html`), and on the health routes, whose
-/// `503` is the health document.
-pub(crate) fn declare_problems(
-    doc: &mut utoipa::openapi::OpenApi,
-    fhir_base: &str,
-    health: &[String],
-) {
-    use utoipa::openapi::{Content, Ref, RefOr};
-    doc.components
-        .get_or_insert_with(Default::default)
-        .schemas
-        .extend(
-            utoipa::openapi::ComponentsBuilder::new()
-                .schema_from::<crate::overview::problem::ProblemDocument>()
-                .schema_from::<crate::overview::problem::Violation>()
-                .schema_from::<crate::overview::problem::Position>()
-                .build()
-                .schemas,
-        );
-    for (path, item) in &mut doc.paths.paths {
-        let fhir = path
-            .strip_prefix(fhir_base)
-            .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'));
-        if fhir || health.iter().any(|route| route == path) {
-            continue;
-        }
-        for op in [
-            item.get.as_mut(),
-            item.put.as_mut(),
-            item.post.as_mut(),
-            item.delete.as_mut(),
-            item.options.as_mut(),
-            item.head.as_mut(),
-            item.patch.as_mut(),
-            item.trace.as_mut(),
-        ]
-        .into_iter()
-        .flatten()
-        {
-            for (status, response) in &mut op.responses.responses {
-                if !(status.starts_with('4') || status.starts_with('5')) {
-                    continue;
-                }
-                if let RefOr::T(response) = response {
-                    response.content.clear();
-                    response.content.insert(
-                        PROBLEM_JSON.to_owned(),
-                        RefOr::T(Content::new(Some(Ref::from_schema_name("Problem")))),
-                    );
-                }
-            }
-        }
-    }
 }
 
 /// The document-level extension key carrying the implemented openEHR ITS-REST
@@ -974,7 +918,7 @@ mod tests {
                         panic!("{path} {status}: a response reference");
                     };
                     let keys: Vec<&String> = response.content.keys().collect();
-                    assert_eq!(keys, vec![PROBLEM_JSON], "{path} {status}");
+                    assert_eq!(keys, vec![problems::PROBLEM_JSON], "{path} {status}");
                     checked += 1;
                 }
             }

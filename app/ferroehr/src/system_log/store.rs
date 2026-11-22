@@ -45,6 +45,7 @@ mod access_log;
 mod batch;
 pub mod chain_walk;
 pub mod chains;
+pub mod delivery;
 #[cfg(feature = "fhir")]
 mod entries;
 pub mod frontier;
@@ -270,9 +271,10 @@ impl AuditStore {
         }
     }
 
-    /// This store as the FHIR Feed's outbox when `owed`: every record it
-    /// chains from now on is owed to the feed until
-    /// [`Self::mark_delivered`]. Without it a record is owed to no sink.
+    /// This store as the FHIR Feed's source when `owed`: its frontier round
+    /// moves the delivery frontier and starts the feed's cursor there, and
+    /// the feed delivers every record past it (`outbox`). Without it no
+    /// record is owed to the feed.
     #[must_use]
     pub fn with_fhir_feed(mut self, owed: bool) -> Self {
         self.owed.fhir_feed = owed;
@@ -533,6 +535,16 @@ impl AuditStore {
         }
         let writing = self.writing.pin();
         Self::register_policies_on(conn, &writing, &records).await?;
+        // NOTE: our own design (#6256), access-log entries alone go in by one statement, atomic
+        // and durable on its own with synchronous_commit on, so they need no transaction.
+        #[cfg(feature = "fhir")]
+        if Self::only_entries(&records) {
+            let (_, learned, _) = self
+                .take_in(conn, &writing, records, ends, Some(reservation))
+                .await?;
+            self.remember(learned);
+            return Ok(());
+        }
         let mut tx = conn.begin().await?;
         let (_, learned, _) = self
             .take_in(&mut tx, &writing, records, ends, Some(reservation))

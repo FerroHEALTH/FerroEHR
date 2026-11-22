@@ -341,13 +341,13 @@ sequenceDiagram
     R->>S: commit (COMPOSITION, EHR_STATUS, ...)
     S->>S: validate (RM invariants, WebTemplate, terminology)
     S->>PG: gate read (EHR state, tip, restriction marks, revisions, now())
-    S->>PG: BEGIN
+    S->>PG: audit intake (the access record, under a reservation)
     S->>PG: INSERT commit_audit (change_type, committer, time_committed = the gate read's now())
     S->>PG: INSERT contribution (commit_audit_id, ehr_id)
     S->>PG: INSERT version (new tip, committed_at = now(), body bytes)
     S->>PG: UPSERT vo_head (the object's new heads) — heap-only
     S->>PG: INSERT node rows (decomposed fragments, nested-set numbers)
-    S->>PG: COMMIT
+    S->>PG: INSERT audit_reservation (the access record's reservation)
     S-->>R: OBJECT_VERSION_ID of the new version
 ```
 

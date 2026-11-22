@@ -269,6 +269,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `uq_version_hot_tree`) refuse a second version at a taken place, and that
   write is judged again too. `commit_retries_total{reason}` counts both
   (#6256).
+  Before that statement runs, the write's audit records are written into the
+  audit intake under a fresh reservation, durable when the intake returns,
+  and the statement inserts the reservation into `audit_reservation` beside
+  the version, so the access record is durable before the write is visible
+  and the reservation commits with the write or not at all (#5747, #5762).
+  A statement that writes nothing discards those records at once, and a
+  connection lost while it ran leaves them to the reconciler, which releases
+  them when the reservation committed.
   A CONTRIBUTION of at most eight COMPOSITION members (`SET_LIMIT`, set by
   measured planning and execution time), every modify and delete naming the
   trunk tip this server created, is planned before any read, judged on one
@@ -417,10 +425,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `a_window_never_covers_a_record_a_transaction_still_writes_or_holds`).
   Records a write holds under its reservation (`access_log_hold`,
   `audit_event_hold`, #5762) are in no read, and the frontier the sealer and
-  the delivery use stops below the lowest of them. Each round owes the
-  records below the frontier to the sinks that deliver from the store
-  (`audit.access_log_owe`, `audit.audit_event_owe`, while a sink is
-  configured), and about once a minute the sealer closes windows of every id
+  the delivery use stops below the lowest of them. Each round moves the
+  delivery frontier the sinks deliver up to (`delivery_frontier`, while a
+  sink is configured), and about once a minute the sealer closes windows of every id
   past the last window up to that bound, each spanning at most 100,000 ids
   (`access_log_seal` and `audit_event_seal`, one sealer per log at a time on
   the row lock of its seal state). A seal is the SHA-256 of a length-prefixed
@@ -444,9 +451,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   so its window verifies; once every record of a sealed window is reaped,
   `audit.fold_audit_event_reaped()` removes the window's reaped positions and
   records it in `audit_event_seal_fold`. A record of the
-  ITI-81 search, the person's trail and the FHIR Feed's outbox is named by
-  its chain and position, an access-log entry's position being its id
-  (`audit_record.chain`, `fhir_feed_outbox`). An entry changes only by its
+  ITI-81 search, the person's trail and the deliveries is named by its
+  chain and position, an access-log entry's position being its id
+  (`audit_record.chain`, `delivery_cursor`). An entry changes only by its
   replacement with its own tombstone, which keeps its uid and time while the
   row keeps its content digest, so its window verifies after its content is
   gone (`audit/0004_baseline_access_log.sql`, `access_log::store`). Each
@@ -536,8 +543,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   A system record is never updated, held or not; a held record is in no
   read and no window, and leaves only by the discard of its reservation; any
   other leaves only by retention reaping. A sink's
-  outbox row is the record's delivery state, and no record carries a
-  delivery stamp. A request-scoped write commits through one choke point,
+  cursor is the record's delivery state, and no record carries a delivery
+  stamp. A request-scoped write commits through one choke point,
   `FerroEhrService::commit_recorded` (`system_log::reservation`, #5762): its
   records are written held under a reservation id (an `access_log_hold`
   row per entry, an `audit_event_hold` row per system record), the id into the
@@ -579,9 +586,30 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   content is stored raw: PostgreSQL compresses a value only in a row above
   about 2 kB, whatever `toast_tuple_target` says. syslog and the FHIR Feed are
   projections of the stored records, delivered by `ihe-atna`'s forwarders
-  from `syslog_outbox` and `fhir_feed_outbox` (`system_log::store::outbox`,
-  `system_log::feed`), so a record waits for its repository in the store,
-  never in memory.
+  from the store (`system_log::store::outbox`, `system_log::feed`,
+  `audit/0003_baseline_delivery.sql`), so a record waits for its repository
+  in the store, never in memory. The delivery guarantee (#6242): no loss and
+  no skip, and after a crash a repeat of at most the record in flight. One
+  cursor per sink and log (`delivery_cursor`) names the id at or below which
+  every record was accepted by the repository or parked; the sink reads the
+  next record past it up to the delivery frontier (`delivery_frontier`,
+  which each frontier round moves while a sink is configured, below every
+  held record), sends it, and moves the cursor only once the repository
+  accepted it. A sink's cursor starts at the last id drawn when the server
+  starting with it configured first runs, so a sink delivers every record
+  written from then on; a sink taken out of the configuration keeps its
+  cursor and parked records, is named at `WARN` at start with how many
+  records it has not received, and is removed only by `POST
+  {ext}/admin/audit-delivery/forget`. A record a sink cannot render or its
+  repository refuses is parked (`delivery_parked`: counted in
+  `atna_audit_parked_total`, the `audit_delivery` indicator `DEGRADED` while
+  any is parked, logged at `ERROR` by its id) and the cursor moves past it
+  only because it is parked; it stays until an operator retries it (offered
+  before the cursor's next record) or dismisses it (`{ext}/admin/audit-delivery`,
+  each act a system record naming the operator). Retention removes or
+  replaces a record a configured sink has not delivered only a day after its
+  end (`DELIVERY_GRACE_DAYS`), and parks it then ('reaped', 'tombstoned');
+  a tombstone has no projection to deliver. Our own design.
   The log is read over ITS-REST (#5130): `GET {ext}/ehr/{ehr_id}/access_log`
   and its `/{uid}` serve the subject view (`access_log::view`) to the
   patient token's launch-context EHR and a bound representative's

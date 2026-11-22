@@ -22,8 +22,8 @@
 
 COMMENT ON SCHEMA audit IS 'The local IHE ATNA Audit Record Repository (IHE ITI TF-1 §9): the node''s security-surveillance record, strictly outside the EHR content (BASE architecture_overview/master07-security.adoc §Access logging).';
 
--- A record is never updated, from its insert on (#6203, #6242): the outbox
--- row of a sink is its delivery state.
+-- A record is never updated, from its insert on (#6203, #6242): a sink's
+-- cursor is its delivery state.
 CREATE FUNCTION audit.audit_event_reject_mutation() RETURNS trigger
     LANGUAGE plpgsql
     SET search_path = audit, pg_catalog
@@ -67,21 +67,6 @@ BEGIN
         USING ERRCODE = 'restrict_violation';
 END;
 $$;
-
-CREATE FUNCTION audit.audit_event_leave_outbox() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path = audit, pg_catalog
-    AS $$
-BEGIN
-    DELETE FROM audit.fhir_feed_outbox o
-     WHERE o.chain = 'system' AND o.chain_seq = OLD.seq;
-    DELETE FROM audit.syslog_outbox o
-     WHERE o.chain = 'system' AND o.chain_seq = OLD.seq;
-    RETURN OLD;
-END;
-$$;
-COMMENT ON FUNCTION audit_event_leave_outbox() IS
-    'Removes the outbox rows of a reaped or discarded record.';
 
 -- The statements the database runs inside the access-log writes, per
 -- search token, are taken out of the path (#5885): the digest functions are
@@ -503,9 +488,6 @@ CREATE TRIGGER audit_event_reject_deletion
 CREATE TRIGGER audit_event_reject_truncate
     BEFORE TRUNCATE ON audit_event
     FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_event_reject_truncate();
-CREATE TRIGGER audit_event_leave_outbox
-    AFTER DELETE ON audit_event
-    FOR EACH ROW EXECUTE FUNCTION audit.audit_event_leave_outbox();
 COMMENT ON COLUMN audit_event.recorded_at IS 'The event time (FHIR AuditEvent.recorded / DICOM EventDateTime).';
 COMMENT ON COLUMN audit_event.stored_at IS 'When the writer wrote the record, by its own clock to the microsecond, so its content digest covers it.';
 COMMENT ON COLUMN audit_event.action IS 'DICOM EventActionCode (PS3.15 §A.5.1): C/R/U/D/E.';
@@ -687,8 +669,9 @@ CREATE FUNCTION audit.reap_audit_events_due(p_today date, p_unstated_cutoff time
     SET search_path = audit, pg_catalog
     AS $$
 DECLARE
-    removed  bigint;
-    released integer[];
+    removed    bigint;
+    released   integer[];
+    reaped_ids bigint[];
 BEGIN
     IF p_today IS NULL THEN
         RETURN 0;
@@ -703,6 +686,10 @@ BEGIN
              OR (NOT e.retention_stated AND p_unstated_cutoff IS NOT NULL
                  AND e.recorded_at < p_unstated_cutoff))
            AND NOT EXISTS (SELECT 1 FROM audit.audit_event_hold h WHERE h.seq = e.seq)
+           AND ((e.retention_stated AND e.retention_ends <= p_today - 1)
+             OR (NOT e.retention_stated AND e.recorded_at < p_unstated_cutoff - interval '1 day')
+             OR NOT EXISTS (SELECT 1 FROM audit.delivery_cursor c
+                             WHERE c.chain = 'system' AND c.through_id < e.seq))
     ),
     removed_events AS (
         DELETE FROM audit.audit_event e
@@ -716,13 +703,15 @@ BEGIN
     )
     SELECT (SELECT count(*) FROM kept),
            (SELECT array_agg(DISTINCT t.id) FROM removed_events r, unnest(r.search_tokens) AS t(id)
-             WHERE t.id > 0)
-      INTO removed, released;
+             WHERE t.id > 0),
+           (SELECT array_agg(r.seq) FROM removed_events r)
+      INTO removed, released, reaped_ids;
     PERFORM audit.release_search_tokens(released);
     PERFORM set_config('ferroehr.audit_reaping', 'off', true);
+    PERFORM audit.delivery_park_undelivered('system', reaped_ids, 'reaped');
     PERFORM audit.fold_audit_event_reaped(now(), 1000);
     RETURN coalesce(removed, 0);
 END;
 $$;
 COMMENT ON FUNCTION reap_audit_events_due(date, timestamptz) IS
-    'Retention reaping by each record''s own end: removes every record whose end is on or before p_today, and every record that states no end and is older than p_unstated_cutoff (NULL keeps those), keeping each one''s position and content digest in audit_event_reaped, then folds the sealed windows every record of which is reaped.';
+    'Retention reaping by each record''s own end: removes every record whose end is on or before p_today, and every record that states no end and is older than p_unstated_cutoff (NULL keeps those), once every sink delivered it or a day past that end (DELIVERY_GRACE_DAYS, system_log::store::delivery), keeping each one''s position and content digest in audit_event_reaped and parking it for every sink that has not delivered it, then folds the sealed windows every record of which is reaped.';

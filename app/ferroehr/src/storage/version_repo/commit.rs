@@ -515,7 +515,8 @@ pub async fn commit_folded(
                     .bind(guard.expected_head)
                     .bind(guard.policy)
                     .bind(guard.definitions)
-                    .bind(&guard.outbox),
+                    .bind(&guard.outbox)
+                    .bind(guard.reservation),
                 None => query,
             };
             let row = crate::storage::node_write::bind_node_arrays(

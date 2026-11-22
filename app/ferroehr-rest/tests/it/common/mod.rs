@@ -51,6 +51,7 @@ pub(crate) const FHIR: &str = "/ferroehr/rest/fhir/r4";
 const EXTENSION_ROOTS: &[&str] = &[
     "/admin/access-delay",
     "/admin/access-log",
+    "/admin/audit-delivery",
     "/admin/access_policy",
     "/admin/archive",
     "/admin/config",

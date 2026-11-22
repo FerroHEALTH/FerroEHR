@@ -80,15 +80,12 @@ impl FerroEhrService {
             .accept_body(Kind::Composition, &mut composition, incomplete)
             .await?;
         let persistent = persistent_template(&composition);
-        // With no attestations the commit is ONE guarded, self-atomic statement,
-        // its outbox row included, so no BEGIN/COMMIT is needed.
-        let transaction = !envelope.attestations.is_empty();
         // A create a later attempt judges again could only commit after a
         // double flip of the EHR, so it keeps no copy of its content.
         let materials = Materials::new((composition, audit, envelope), false);
         let validated = std::sync::Mutex::new(Some(validated));
         let (persistent, materials, validated) = (&persistent, &materials, &validated);
-        self.commit_gated(&self.pool, transaction, move || {
+        self.commit_gated(&self.pool, move || {
             async move |conn| {
                 // The EHR-existence (404), content-writability (409), restriction and
                 // persistent-sibling gates in one round trip: a COMPOSITION is EHR
@@ -419,7 +416,7 @@ impl FerroEhrService {
         let validated = std::sync::Mutex::new(validated);
         let (materials, unresolved, validated) = (&materials, &unresolved, &validated);
         let (preceding, template_id) = (&preceding, &template_id);
-        self.commit_gated(&self.pool, true, move || {
+        self.commit_gated(&self.pool, move || {
             async move |conn| {
                 // The EHR, the placement and every pre-check column in ONE statement
                 // (thaw riding); the guarded commit requires them unchanged.
@@ -579,7 +576,7 @@ impl FerroEhrService {
     ) -> Result<Committed, ServiceError> {
         let (vo_id, _) = components(a_version_uid)?;
         let request = &request;
-        self.commit_gated(&self.pool, true, move || {
+        self.commit_gated(&self.pool, move || {
             async move |conn| {
                 // The EHR, the tip and the content it deletes in ONE statement, which
                 // the guarded commit requires unchanged. The delete pre-checks need no
@@ -712,6 +709,7 @@ fn guard_of(gate: &Gate, head: Option<i32>) -> Guard {
         policy: gate.policy,
         definitions: gate.definitions,
         outbox: None,
+        reservation: None,
     }
 }
 

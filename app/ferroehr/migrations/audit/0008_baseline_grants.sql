@@ -17,7 +17,7 @@
 -- No openEHR spec governs database roles: our own design/extension.
 
 REVOKE ALL ON FUNCTION
-    audit_event_leave_outbox(),
+    delivery_park_undelivered(p_chain text, p_records bigint[], p_reason text),
     register_render_policy(p_policy jsonb),
     lock_search_tokens(),
     hold_search_tokens(),
@@ -35,8 +35,6 @@ REVOKE ALL ON FUNCTION
     access_log_intake_unknown(p_what text, p_digest text, p_removed boolean),
     access_log_intake_part_gone(p_digest text),
     access_log_token_generation_holds(p_generation bigint),
-    access_log_owe(p_upto bigint, p_fhir_feed boolean, p_syslog boolean),
-    audit_event_owe(p_upto bigint, p_fhir_feed boolean, p_syslog boolean),
     access_log_intake_take(p_record_types text[], p_uids text[], p_times text[], p_contents text[], p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[], p_retain_until text[], p_action_terminologies text[], p_action_codes text[], p_result_terminologies text[], p_result_codes text[], p_actions text[], p_outcomes smallint[], p_principals text[], p_patient_ids text[], p_resource_ids text[], p_request_ids text[], p_client_ips text[], p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[], p_shared_digests text[], p_shared_contents text[], p_token_entries integer[], p_token_parameters text[], p_token_systems text[], p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid, p_token_digests bytea[], p_token_generation bigint),
     audit_intake_release(p_ids uuid[]),
     audit_intake_discard(p_ids uuid[])
@@ -65,7 +63,9 @@ BEGIN
             access_log_imported_record,
             access_log_imported_bundle,
             access_log_imported_folded,
-            syslog_outbox,
+            delivery_frontier,
+            delivery_cursor,
+            delivery_parked,
             access_log_search,
             system_search,
             audit_record,
@@ -98,14 +98,14 @@ BEGIN
             access_log_intake_unknown(p_what text, p_digest text, p_removed boolean),
             access_log_intake_part_gone(p_digest text),
             access_log_token_generation_holds(p_generation bigint),
-            access_log_owe(p_upto bigint, p_fhir_feed boolean, p_syslog boolean),
-            audit_event_owe(p_upto bigint, p_fhir_feed boolean, p_syslog boolean),
+            delivery_park_undelivered(p_chain text, p_records bigint[], p_reason text),
             access_log_intake_take(p_record_types text[], p_uids text[], p_times text[], p_contents text[], p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[], p_retain_until text[], p_action_terminologies text[], p_action_codes text[], p_result_terminologies text[], p_result_codes text[], p_actions text[], p_outcomes smallint[], p_principals text[], p_patient_ids text[], p_resource_ids text[], p_request_ids text[], p_client_ips text[], p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[], p_shared_digests text[], p_shared_contents text[], p_token_entries integer[], p_token_parameters text[], p_token_systems text[], p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid, p_token_digests bytea[], p_token_generation bigint),
             audit_intake_release(p_ids uuid[]),
             audit_intake_discard(p_ids uuid[])
             TO ferroehr_clinical;
-        GRANT SELECT, DELETE ON TABLE fhir_feed_outbox TO ferroehr_clinical;
-        GRANT SELECT, INSERT, DELETE ON TABLE syslog_outbox TO ferroehr_clinical;
+        GRANT SELECT, UPDATE ON TABLE delivery_frontier TO ferroehr_clinical;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE delivery_cursor, delivery_parked
+            TO ferroehr_clinical;
         GRANT UPDATE(content) ON TABLE
             access_log_entry,
             access_log_imported_record,
@@ -131,9 +131,7 @@ BEGIN
             access_log_seal,
             access_log_seal_state,
             access_log_seal_fold,
-            access_log_seal_verified,
-            access_log_owed,
-            audit_event_owed
+            access_log_seal_verified
             TO ferroehr_clinical_reader;
         GRANT UPDATE(digest) ON TABLE access_log_shared TO ferroehr_clinical;
         GRANT UPDATE(retain_until) ON TABLE access_log_shared TO ferroehr_clinical;

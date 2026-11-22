@@ -2,20 +2,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! End-to-end test of the RESTful-ATNA feed (IHE ITI-20 **ATX: FHIR Feed**):
-//! events emitted through the sender land in the local store, and the outbox
-//! worker POSTs each stored FHIR R4 `AuditEvent` to the ARR
-//! (`{url}/AuditEvent`, `application/fhir+json`), removes it from
-//! `audit.fhir_feed_outbox`, whose row is the record's delivery state — a real `PostgreSQL` 18
+//! events emitted through the sender land in the local store, and the
+//! forwarder POSTs each stored FHIR R4 `AuditEvent` to the ARR
+//! (`{url}/AuditEvent`, `application/fhir+json`) and moves the feed's cursor
+//! past it, which is the record's delivery state — a real `PostgreSQL` 18
 //! (shared testkit harness) plus a `wiremock` ARR.
 
 use std::time::Duration;
 
-/// The system records owed to the sinks that the FHIR Feed owes none of
-/// any more: every owed record once the outbox is empty, since a record
-/// leaves the outbox only when the repository accepted it (#6203, #6242).
-const DELIVERED: &str = "SELECT CASE WHEN EXISTS (SELECT 1 FROM audit.fhir_feed_outbox) THEN 0 \
-     ELSE (SELECT count(*) FROM audit.audit_event e \
-            WHERE e.seq <= (SELECT o.through_id FROM audit.audit_event_owed o)) END";
+/// The system records the FHIR Feed delivered: those at or below its cursor
+/// of the system records and parked by none, since the cursor moves only
+/// when the repository accepted a record (#6203, #6242).
+const DELIVERED: &str = "SELECT count(*) FROM audit.audit_event e \
+     WHERE e.seq <= coalesce((SELECT c.through_id FROM audit.delivery_cursor c \
+                               WHERE c.sink = 'fhir_feed' AND c.chain = 'system'), 0) \
+       AND NOT EXISTS (SELECT 1 FROM audit.delivery_parked p WHERE p.record_id = e.seq)";
 
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -118,7 +119,7 @@ async fn stored_records_are_fed_to_the_fhir_arr_and_stamped() {
             .expect("the record is written");
     }
 
-    // Both rows are stored and, via the outbox worker, delivered.
+    // Both rows are stored and, via the forwarder, delivered.
     let delivered = eventually(
         || async {
             sqlx::query_scalar::<_, i64>(DELIVERED)
@@ -162,7 +163,15 @@ async fn an_entry_is_fed_as_its_projection() {
     let delivered = eventually(
         || async {
             count(&pool, "SELECT count(*) FROM audit.access_log_record").await == 1
-                && count(&pool, "SELECT count(*) FROM audit.fhir_feed_outbox").await == 0
+                && count(
+                    &pool,
+                    "SELECT count(*) FROM audit.access_log_entry e \
+                     WHERE e.id > coalesce((SELECT c.through_id FROM audit.delivery_cursor c \
+                                             WHERE c.sink = 'fhir_feed' \
+                                               AND c.chain = 'access_log'), 0)",
+                )
+                .await
+                    == 0
                 && !arr.received_requests().await.unwrap_or_default().is_empty()
         },
         Duration::from_secs(10),
@@ -364,8 +373,8 @@ async fn settle_and_stop(sender: AuditSender, handle: AuditHandle) {
     handle.shutdown(Duration::from_secs(2)).await;
 }
 
-/// With no feed configured no sink is owed a record, so the outbox stays
-/// empty however many records the store holds, and no index covers the
+/// With no feed configured no sink is owed a record, so no cursor starts and
+/// the delivery frontier stays put however many records the store holds, and no index covers the
 /// records by their delivery.
 #[tokio::test]
 async fn with_no_feed_configured_no_record_is_owed() {
@@ -387,8 +396,18 @@ async fn with_no_feed_configured_no_record_is_owed() {
         3
     );
     assert_eq!(
-        count(&pool, "SELECT count(*) FROM audit.fhir_feed_outbox").await,
-        0
+        count(&pool, "SELECT count(*) FROM audit.delivery_cursor").await,
+        0,
+        "no sink is configured, so no cursor is started"
+    );
+    assert_eq!(
+        count(
+            &pool,
+            "SELECT count(*) FROM audit.delivery_frontier WHERE through_id > 0"
+        )
+        .await,
+        0,
+        "and the delivery frontier stays where it was"
     );
     assert_eq!(
         count(

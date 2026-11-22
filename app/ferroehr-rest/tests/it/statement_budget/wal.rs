@@ -239,13 +239,11 @@ pub(super) fn pass_relation(relation: &str) -> bool {
     relation.starts_with("access_log_seal")
         || relation.starts_with("pk_access_log_seal")
         || relation.starts_with("uq_access_log_seal")
-        || relation.starts_with("access_log_owed")
-        || relation.starts_with("pk_access_log_owed")
+        || relation.starts_with("delivery_frontier")
+        || relation.starts_with("pk_delivery_frontier")
         || relation.starts_with("audit_event_seal")
         || relation.starts_with("pk_audit_event_seal")
         || relation.starts_with("uq_audit_event_seal")
-        || relation.starts_with("audit_event_owed")
-        || relation.starts_with("pk_audit_event_owed")
 }
 
 /// Each kind of request's entries cost the access log at most their per-entry

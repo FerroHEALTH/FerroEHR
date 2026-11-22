@@ -79,6 +79,8 @@ pub const ATNA_AUDIT_SEND_FAILED: &str = "atna_audit_send_failed";
 pub const ATNA_AUDIT_REAPED: &str = "atna_audit_reaped";
 /// Findings of the scheduled audit hash-chain verification (`kind`).
 pub const ATNA_AUDIT_CHAIN_FINDINGS: &str = "atna_audit_chain_findings";
+/// ATNA audit records a sink parked (`sink`, `reason`).
+pub const ATNA_AUDIT_PARKED: &str = "atna_audit_parked";
 /// Refusal records the system log could not take (`kind`).
 pub const ATNA_AUDIT_REFUSALS_UNWRITTEN: &str = "atna_audit_refusals_unwritten";
 /// Refused ITI-93 messages still to retry or settle, sampled as a gauge.
@@ -193,6 +195,8 @@ pub struct Metrics {
     pub atna_audit_reaped: Counter<u64>,
     /// Findings of the scheduled audit hash-chain verification.
     pub atna_audit_chain_findings: Counter<u64>,
+    /// ATNA audit records a sink parked.
+    pub atna_audit_parked: Counter<u64>,
     /// Refusal records the system log could not take.
     pub atna_audit_refusals_unwritten: Counter<u64>,
     /// Refused ITI-93 messages still to retry or settle.
@@ -312,6 +316,13 @@ impl Metrics {
                 .with_description(
                     "Findings of the scheduled audit hash-chain verification \
                      (kind = damage | unverifiable)",
+                )
+                .build(),
+            atna_audit_parked: meter
+                .u64_counter(ATNA_AUDIT_PARKED)
+                .with_description(
+                    "ATNA audit records a sink parked, by sink and reason \
+                     (unrenderable | refused)",
                 )
                 .build(),
             atna_audit_refusals_unwritten: meter
