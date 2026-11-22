@@ -175,6 +175,8 @@ impl FerroEhrService {
             let reservation = held.as_ref().map(|held| held.reservation);
             let outcome = if ready.needs_transaction(&signing_ctx) {
                 let mut tx = sqlx::Connection::begin(&mut *conn).await?;
+                // NOTE: our own design (#5762), the records are held (#6256) before this commit,
+                // and its statement inserts their reservation, so they commit with it.
                 match Box::pin(ready.commit(&mut tx, &signing_ctx, reservation)).await {
                     Ok(outcome) => tx.commit().await.map(|()| outcome).map_err(Into::into),
                     Err(error) => Err(error),

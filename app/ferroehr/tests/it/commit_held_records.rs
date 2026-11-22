@@ -321,7 +321,7 @@ async fn a_held_write_of_more_than_entries_leaves_nothing_when_a_later_statement
         .await
         .expect_err("the entry's hold is refused");
     let left: i64 = sqlx::query_scalar(
-        "SELECT (SELECT count(*) FROM audit.audit_event_intake WHERE reserved_by = $1) \
+        "SELECT (SELECT count(*) FROM audit.audit_event_hold WHERE reserved_by = $1) \
               + (SELECT count(*) FROM audit.access_log_hold WHERE reserved_by = $1)",
     )
     .bind(reservation)
