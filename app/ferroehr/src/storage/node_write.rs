@@ -58,34 +58,109 @@ fn promoted_insert_parts(first_param: usize) -> (String, String, String, String)
 /// (#6022).
 const EVENT_TIME: &str = "CASE \
      WHEN t.rm_type IN ('POINT_EVENT', 'INTERVAL_EVENT') THEN ext.openehr_timestamp(\
-     CASE WHEN t.time_compact THEN t.data::jsonb ->> 'time' \
+     CASE WHEN node_marks.time_compact THEN t.data::jsonb ->> 'time' \
      ELSE t.data::jsonb #>> '{time,value}' END) \
      WHEN t.rm_type = 'HISTORY' THEN ext.openehr_timestamp(\
-     CASE WHEN t.origin_compact THEN t.data::jsonb ->> 'origin' \
+     CASE WHEN node_marks.origin_compact THEN t.data::jsonb ->> 'origin' \
      ELSE t.data::jsonb #>> '{origin,value}' END) END";
 
-/// Build the FIXED-text node insert: one array bind per column over `unnest`,
-/// so the statement carries the same parameter count at ANY row count — no
-/// per-row placeholders (PostgreSQL caps a statement at 65,535 parameters,
-/// which a per-row shape hits at ~4,095 nodes), one prepared statement
-/// forever. Built from the shared promoted-leaf registry
-/// (`crate::storage::promoted`), each leaf bound through its kind's
-/// conversion (non-castable text becomes NULL, the ext baseline). With
-/// `per_row_context` the storage context (`vo_id`/`sys_version`/`ehr_id`)
-/// unnests per row (the archive-load batch across versions); without, it
-/// binds as three constant scalars (the single-version commit write).
-fn write_nodes_sql(per_row_context: bool) -> String {
-    let (columns, selects, arrays, names) = promoted_insert_parts(29);
-    let (context_select, context_arrays, context_names) = if per_row_context {
-        (
-            "t.vo_id, t.sys_version, t.ehr_id",
-            "$1::uuid[], $2::int[], $3::uuid[]",
-            "vo_id, sys_version, ehr_id, ",
-        )
-    } else {
-        ("$1, $2, $3", "", "")
-    };
-    let separator = if per_row_context { ", " } else { "" };
+/// The node columns every row carries, bound dense, one element per row,
+/// with the SQL type of each array.
+const DENSE: [(&str, &str); 10] = [
+    ("num", "int"),
+    ("num_cap", "int"),
+    ("parent_num", "int"),
+    ("rm_type", "text"),
+    ("archetype", "text"),
+    ("arch_entity", "text"),
+    ("arch_concept", "text"),
+    ("arch_major", "int"),
+    ("name", "text"),
+    ("path", "text"),
+];
+
+/// The node columns most rows leave `NULL`, bound sparse in groups: each
+/// group is the 1-based positions of the rows that set any of its columns,
+/// then one array per column over those rows only, so a row that sets none
+/// sends no element of the group (#6244). Each group is its alias, then its
+/// columns with their SQL types.
+const SPARSE: [(&str, &[(&str, &str)]); 4] = [
+    (
+        "node_names",
+        &[("name_code", "text"), ("name_terminology", "text")],
+    ),
+    (
+        "node_values",
+        &[
+            ("value_type", "text"),
+            ("value_num", "text"),
+            ("value_text", "text"),
+            ("value_code", "text"),
+            ("value_terminology", "text"),
+        ],
+    ),
+    (
+        "node_headers",
+        &[
+            ("rm_version", "text"),
+            ("language", "text"),
+            ("encoding", "text"),
+        ],
+    ),
+    (
+        "node_marks",
+        &[
+            ("origin_compact", "boolean"),
+            ("time_compact", "boolean"),
+            ("party_self", "boolean"),
+            ("uid_derived", "boolean"),
+        ],
+    ),
+];
+
+/// The arrays [`bind_node_arrays`] binds before the promoted leaves: the
+/// dense columns, `data`, and each sparse group's positions and columns.
+const FIXED_ARRAYS: usize = 25 + SPARSE.len();
+
+/// The FIXED-text node insert: the dense columns and `data` unnested with
+/// their ordinality, each sparse group unnested and joined to its rows by
+/// position, so the statement carries the same parameter count at ANY row
+/// count, with no per-row placeholders (PostgreSQL caps a statement at 65,535
+/// parameters), one prepared statement forever. The arrays start at
+/// `first_param`. `context` is the storage context's select and, when it
+/// unnests per row, its arrays and names; `tail` follows the joins.
+fn node_insert(context: (&str, Option<(&str, &str)>), first_param: usize, tail: &str) -> String {
+    use std::fmt::Write as _;
+    let (context_select, per_row) = context;
+    let mut param = first_param;
+    let mut dense_arrays = String::new();
+    let mut dense_names = String::new();
+    if let Some((arrays, names)) = per_row {
+        let _ = write!(dense_arrays, "{arrays}, ");
+        let _ = write!(dense_names, "{names}, ");
+    }
+    for (column, ty) in DENSE.iter().chain(&[("data", "text")]) {
+        let _ = write!(dense_arrays, "${param}::{ty}[], ");
+        let _ = write!(dense_names, "{column}, ");
+        param += 1;
+    }
+    dense_arrays.truncate(dense_arrays.len().saturating_sub(2));
+    dense_names.truncate(dense_names.len().saturating_sub(2));
+    let mut joins = String::new();
+    for (alias, columns) in SPARSE {
+        let _ = write!(joins, " LEFT JOIN unnest(${param}::int[]");
+        param += 1;
+        for (_, ty) in columns {
+            let _ = write!(joins, ", ${param}::{ty}[]");
+            param += 1;
+        }
+        let _ = write!(joins, ") AS {alias}(pos");
+        for (column, _) in columns {
+            let _ = write!(joins, ", {column}");
+        }
+        let _ = write!(joins, ") ON {alias}.pos = t.ord");
+    }
+    let (columns, selects, arrays, names) = promoted_insert_parts(param);
     format!(
         "INSERT INTO node (vo_id, sys_version, ehr_id, num, num_cap, parent_num, \
          rm_type, archetype, arch_entity, arch_concept, arch_major, name, name_code, \
@@ -93,27 +168,46 @@ fn write_nodes_sql(per_row_context: bool) -> String {
          value_terminology, rm_version, language, encoding, origin_compact, time_compact, \
          party_self, uid_derived, event_time{columns}) \
          SELECT {context_select}, t.num, t.num_cap, t.parent_num, t.rm_type, \
-         t.archetype, t.arch_entity, t.arch_concept, t.arch_major, t.name, t.name_code, \
-         t.name_terminology, t.path, t.data::jsonb, t.value_type, t.value_num::numeric, t.value_text, \
-         t.value_code, t.value_terminology, t.rm_version, t.language, t.encoding, \
-         t.origin_compact, t.time_compact, t.party_self, t.uid_derived, {EVENT_TIME}{selects} \
-         FROM unnest({context_arrays}{separator}$4::int[], $5::int[], $6::int[], $7::text[], $8::text[], \
-         $9::text[], $10::text[], $11::int[], $12::text[], $13::text[], $14::text[], \
-         $15::text[], $16::text[], $17::text[], $18::text[], $19::text[], $20::text[], \
-         $21::text[], $22::text[], $23::text[], $24::text[], $25::boolean[], $26::boolean[], \
-         $27::boolean[], $28::boolean[]{arrays}) \
-         AS t({context_names}num, num_cap, parent_num, rm_type, archetype, arch_entity, \
-         arch_concept, arch_major, name, name_code, name_terminology, path, data, value_type, \
-         value_num, value_text, value_code, value_terminology, rm_version, language, \
-         encoding, origin_compact, time_compact, party_self, uid_derived{names})"
+         t.archetype, t.arch_entity, t.arch_concept, t.arch_major, t.name, \
+         node_names.name_code, node_names.name_terminology, t.path, t.data::jsonb, \
+         node_values.value_type, node_values.value_num::numeric, node_values.value_text, \
+         node_values.value_code, node_values.value_terminology, node_headers.rm_version, \
+         node_headers.language, node_headers.encoding, node_marks.origin_compact, \
+         node_marks.time_compact, node_marks.party_self, node_marks.uid_derived, \
+         {EVENT_TIME}{selects} \
+         FROM unnest({dense_arrays}{arrays}) WITH ORDINALITY \
+         AS t({dense_names}{names}, ord){joins}{tail}"
     )
 }
 
+/// Build the single-version node insert, or with `per_row_context` the
+/// cross-version batch, whose storage context (`vo_id`/`sys_version`/`ehr_id`)
+/// unnests per row (the archive load) where the single version binds it as
+/// three constant scalars (the commit write).
+fn write_nodes_sql(per_row_context: bool) -> String {
+    if per_row_context {
+        node_insert(
+            (
+                "t.vo_id, t.sys_version, t.ehr_id",
+                Some((
+                    "$1::uuid[], $2::int[], $3::uuid[]",
+                    "vo_id, sys_version, ehr_id",
+                )),
+            ),
+            4,
+            "",
+        )
+    } else {
+        node_insert(("$1, $2, $3", None), 4, "")
+    }
+}
+
 /// The parameters [`node_insert_cte`] reads from its first array on, which
-/// [`bind_node_arrays`] binds: the 25 fixed columns, one per promoted leaf and
-/// the shared members.
+/// [`bind_node_arrays`] binds: the dense columns and `data`, each sparse
+/// group's positions and columns, one per promoted leaf and the shared
+/// members.
 pub(crate) fn node_array_count() -> usize {
-    25 + crate::storage::promoted::PROMOTED_LEAVES.len() + 1
+    FIXED_ARRAYS + crate::storage::promoted::PROMOTED_LEAVES.len() + 1
 }
 
 /// The single-version node insert (constant-scalar storage context).
@@ -121,66 +215,22 @@ static WRITE_NODES_SQL: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| write_nodes_sql(false));
 
 /// The node-insert body as a CTE fragment for the FOLDED commit statements:
-/// the same fixed-text `unnest` shape as [`write_nodes_sql`], with the
-/// storage context spelled as the CALLER's parameter placeholders
-/// (`vo`/`sys`/`ehr`, e.g. `"$8"`) and the array binds starting at
-/// `first_array_param`. `CROSS JOIN` the caller's version-row CTE `version`
-/// orders this CTE after it, which is also what makes the node rows' FK to the
-/// version row satisfiable inside the one statement. Empty arrays insert
-/// nothing — a logical delete folds through unchanged.
+/// the shape of [`node_insert`], with the storage context spelled as the
+/// CALLER's parameter placeholders (`vo`/`sys`/`ehr`, e.g. `"$8"`) and the
+/// array binds starting at `first_array_param`. `CROSS JOIN` the caller's
+/// version-row CTE `version` orders this CTE after it, which is also what
+/// makes the node rows' FK to the version row satisfiable inside the one
+/// statement. Empty arrays insert nothing: a logical delete folds through
+/// unchanged.
 pub(crate) fn node_insert_cte(
     (vo, sys, ehr): (&str, &str, &str),
     version: &str,
     first_array_param: usize,
 ) -> String {
-    let (columns, selects, arrays, names) = promoted_insert_parts(first_array_param + 25);
-    let p = |offset: usize| first_array_param + offset;
-    format!(
-        "INSERT INTO node (vo_id, sys_version, ehr_id, num, num_cap, parent_num, \
-         rm_type, archetype, arch_entity, arch_concept, arch_major, name, name_code, \
-         name_terminology, path, data, value_type, value_num, value_text, value_code, \
-         value_terminology, rm_version, language, encoding, origin_compact, time_compact, \
-         party_self, uid_derived, event_time{columns}) \
-         SELECT {vo}, {sys}, {ehr}, t.num, t.num_cap, t.parent_num, t.rm_type, \
-         t.archetype, t.arch_entity, t.arch_concept, t.arch_major, t.name, t.name_code, \
-         t.name_terminology, t.path, t.data::jsonb, t.value_type, t.value_num::numeric, t.value_text, \
-         t.value_code, t.value_terminology, t.rm_version, t.language, t.encoding, \
-         t.origin_compact, t.time_compact, t.party_self, t.uid_derived, {EVENT_TIME}{selects} \
-         FROM unnest(${}::int[], ${}::int[], ${}::int[], ${}::text[], ${}::text[], \
-         ${}::text[], ${}::text[], ${}::int[], ${}::text[], ${}::text[], ${}::text[], \
-         ${}::text[], ${}::text[], ${}::text[], ${}::text[], ${}::text[], ${}::text[], \
-         ${}::text[], ${}::text[], ${}::text[], ${}::text[], ${}::boolean[], ${}::boolean[], \
-         ${}::boolean[], ${}::boolean[]{arrays}) \
-         AS t(num, num_cap, parent_num, rm_type, archetype, arch_entity, \
-         arch_concept, arch_major, name, name_code, name_terminology, path, data, value_type, \
-         value_num, value_text, value_code, value_terminology, rm_version, language, \
-         encoding, origin_compact, time_compact, party_self, uid_derived{names}) \
-         CROSS JOIN {version}",
-        p(0),
-        p(1),
-        p(2),
-        p(3),
-        p(4),
-        p(5),
-        p(6),
-        p(7),
-        p(8),
-        p(9),
-        p(10),
-        p(11),
-        p(12),
-        p(13),
-        p(14),
-        p(15),
-        p(16),
-        p(17),
-        p(18),
-        p(19),
-        p(20),
-        p(21),
-        p(22),
-        p(23),
-        p(24),
+    node_insert(
+        (&format!("{vo}, {sys}, {ehr}"), None),
+        first_array_param,
+        &format!(" CROSS JOIN {version}"),
     )
 }
 
@@ -291,9 +341,54 @@ pub async fn write_nodes_batch(
     Ok(())
 }
 
-/// Bind the twenty-five per-node column arrays, the promoted-leaf arrays and
-/// the shared members onto a node-insert statement whose storage-context parameters (`$1..$3`)
-/// are already bound.
+/// The positions (1-based) and the columns of one sparse group over the rows
+/// that set any of its columns ([`SPARSE`]).
+struct Group<T> {
+    positions: Vec<i32>,
+    columns: Vec<Vec<Option<T>>>,
+}
+
+impl<T: Copy> Group<T> {
+    /// A group of `width` columns over at most `rows` rows.
+    fn new(width: usize, rows: usize) -> Self {
+        Self {
+            positions: Vec::with_capacity(rows),
+            columns: (0..width).map(|_| Vec::with_capacity(rows)).collect(),
+        }
+    }
+
+    /// Adds the row at `position` when it sets any of `values`.
+    fn push(&mut self, position: i32, values: &[Option<T>]) {
+        if values.iter().all(Option::is_none) {
+            return;
+        }
+        self.positions.push(position);
+        for (column, value) in self.columns.iter_mut().zip(values) {
+            column.push(*value);
+        }
+    }
+
+    /// `query` with the positions and then each column bound.
+    fn bound<'q>(
+        self,
+        query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    ) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>
+    where
+        T: 'q + sqlx::Encode<'q, sqlx::Postgres> + sqlx::Type<sqlx::Postgres>,
+        Vec<Option<T>>: sqlx::Encode<'q, sqlx::Postgres> + sqlx::Type<sqlx::Postgres>,
+    {
+        let mut query = query.bind(self.positions);
+        for column in self.columns {
+            query = query.bind(column);
+        }
+        query
+    }
+}
+
+/// Bind the dense node columns and `data`, each sparse group's positions and
+/// columns ([`SPARSE`]), the promoted-leaf arrays and the shared members onto
+/// a node-insert statement whose storage-context parameters (`$1..$3`) are
+/// already bound.
 ///
 /// Each row arrives slimmed ([`crate::storage::render::nodes`]): its fragment
 /// text leaves out the keys its columns hold, a typed `ELEMENT` value fills
@@ -314,23 +409,13 @@ pub(crate) fn bind_node_arrays<'q>(
     let mut arch_concepts: Vec<Option<&str>> = Vec::with_capacity(n);
     let mut arch_majors: Vec<Option<i32>> = Vec::with_capacity(n);
     let mut names: Vec<Option<&str>> = Vec::with_capacity(n);
-    let mut name_codes: Vec<Option<&str>> = Vec::with_capacity(n);
-    let mut name_terminologies: Vec<Option<&str>> = Vec::with_capacity(n);
     let mut paths: Vec<&str> = Vec::with_capacity(n);
     let mut datas: Vec<Option<&str>> = Vec::with_capacity(n);
-    let mut value_types: Vec<Option<&str>> = Vec::with_capacity(n);
-    let mut value_nums: Vec<Option<&str>> = Vec::with_capacity(n);
-    let mut value_texts: Vec<Option<&str>> = Vec::with_capacity(n);
-    let mut value_codes: Vec<Option<&str>> = Vec::with_capacity(n);
-    let mut value_terminologies: Vec<Option<&str>> = Vec::with_capacity(n);
-    let mut rm_versions: Vec<Option<&str>> = Vec::with_capacity(n);
-    let mut languages: Vec<Option<&str>> = Vec::with_capacity(n);
-    let mut encodings: Vec<Option<&str>> = Vec::with_capacity(n);
-    let mut origin_compacts: Vec<Option<bool>> = Vec::with_capacity(n);
-    let mut time_compacts: Vec<Option<bool>> = Vec::with_capacity(n);
-    let mut party_selfs: Vec<Option<bool>> = Vec::with_capacity(n);
-    let mut uid_deriveds: Vec<Option<bool>> = Vec::with_capacity(n);
-    for row in rows {
+    let mut name_codes = Group::new(2, n);
+    let mut values = Group::new(5, n);
+    let mut headers = Group::new(3, n);
+    let mut marks = Group::new(4, n);
+    for (row, position) in rows.iter().zip(1_i32..) {
         nums.push(row.num);
         num_caps.push(row.num_cap);
         parent_nums.push(row.parent_num);
@@ -340,23 +425,40 @@ pub(crate) fn bind_node_arrays<'q>(
         arch_concepts.push(row.arch_concept.as_deref());
         arch_majors.push(row.arch_major);
         names.push(row.name.as_deref());
-        name_codes.push(row.name_code.as_deref());
-        name_terminologies.push(row.name_terminology.as_deref());
         paths.push(row.path.as_str());
         datas.push(row.data.as_deref());
-        rm_versions.push(row.header.rm_version.as_deref());
-        languages.push(row.header.language.as_deref());
-        encodings.push(row.header.encoding.as_deref());
-        origin_compacts.push(row.compact.origin.then_some(true));
-        time_compacts.push(row.compact.time.then_some(true));
-        party_selfs.push(row.compact.party_self.then_some(true));
-        uid_deriveds.push(row.compact.uid_derived.then_some(true));
+        name_codes.push(
+            position,
+            &[row.name_code.as_deref(), row.name_terminology.as_deref()],
+        );
         let value = row.value.as_ref();
-        value_types.push(value.map(|v| v.value_type.as_str()));
-        value_nums.push(value.and_then(|v| v.num.as_deref()));
-        value_texts.push(value.and_then(|v| v.text.as_deref()));
-        value_codes.push(value.and_then(|v| v.code.as_deref()));
-        value_terminologies.push(value.and_then(|v| v.terminology.as_deref()));
+        values.push(
+            position,
+            &[
+                value.map(|v| v.value_type.as_str()),
+                value.and_then(|v| v.num.as_deref()),
+                value.and_then(|v| v.text.as_deref()),
+                value.and_then(|v| v.code.as_deref()),
+                value.and_then(|v| v.terminology.as_deref()),
+            ],
+        );
+        headers.push(
+            position,
+            &[
+                row.header.rm_version.as_deref(),
+                row.header.language.as_deref(),
+                row.header.encoding.as_deref(),
+            ],
+        );
+        marks.push(
+            position,
+            &[
+                row.compact.origin.then_some(true),
+                row.compact.time.then_some(true),
+                row.compact.party_self.then_some(true),
+                row.compact.uid_derived.then_some(true),
+            ],
+        );
     }
     query = query
         .bind(nums)
@@ -368,22 +470,12 @@ pub(crate) fn bind_node_arrays<'q>(
         .bind(arch_concepts)
         .bind(arch_majors)
         .bind(names)
-        .bind(name_codes)
-        .bind(name_terminologies)
         .bind(paths)
-        .bind(datas)
-        .bind(value_types)
-        .bind(value_nums)
-        .bind(value_texts)
-        .bind(value_codes)
-        .bind(value_terminologies)
-        .bind(rm_versions)
-        .bind(languages)
-        .bind(encodings)
-        .bind(origin_compacts)
-        .bind(time_compacts)
-        .bind(party_selfs)
-        .bind(uid_deriveds);
+        .bind(datas);
+    query = name_codes.bound(query);
+    query = values.bound(query);
+    query = headers.bound(query);
+    query = marks.bound(query);
     for (i, _leaf) in crate::storage::promoted::PROMOTED_LEAVES.iter().enumerate() {
         let leaf_values: Vec<Option<&str>> = rows
             .iter()

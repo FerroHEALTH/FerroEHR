@@ -539,10 +539,18 @@ const BUDGETS: [Budget; 22] = [
 /// counts them (#6244): the largest median of three runs on main 4411906444
 /// plus 64 bytes, since a request's figure moves only by the width of the
 /// instants it sends, a few bytes between runs.
+/// The node columns most rows leave `NULL` have since travelled as sparse
+/// groups, each the positions of the rows that set one of its columns, in
+/// place of one element per row (#6244): 13,525 bytes fewer on the three IPS
+/// composition commits, the CONTRIBUTION commit and the update, and 52 and
+/// 282 on the two party commits, measured beside the merge base, and each
+/// ceiling fell by its path's figure; the `EHR_STATUS` commit and the delete,
+/// whose few rows leave the groups' position arrays as their cost, moved 94
+/// and 96 bytes up, under their ceilings.
 const WIRE_BUDGETS: [(Path, u64); 22] = [
-    (Path::CommitJson, 221_825),
-    (Path::CommitXml, 221_825),
-    (Path::CommitFlat, 221_821),
+    (Path::CommitJson, 208_300),
+    (Path::CommitXml, 208_300),
+    (Path::CommitFlat, 208_296),
     (Path::ReadJson, 131_668),
     (Path::ReadXml, 131_668),
     (Path::ReadFlat, 131_668),
@@ -551,16 +559,16 @@ const WIRE_BUDGETS: [(Path, u64); 22] = [
     (Path::AqlPopulation, 6566),
     (Path::Iti81, 100_255),
     (Path::PartyRead, 5524),
-    (Path::CommitContribution, 222_644),
+    (Path::CommitContribution, 209_119),
     (Path::ReadAtTime, 131_699),
     (Path::CommitStatus, 11_869),
     (Path::ReadStatus, 3142),
-    (Path::CommitParty, 10_513),
+    (Path::CommitParty, 10_461),
     (Path::AqlMatches, 17_539),
     (Path::AqlParty, 11_509),
-    (Path::CommitPartyScored, 13_090),
+    (Path::CommitPartyScored, 12_808),
     (Path::ReadVersion, 3336),
-    (Path::CommitUpdate, 222_106),
+    (Path::CommitUpdate, 208_582),
     (Path::CommitDelete, 10_885),
 ];
 
