@@ -56,12 +56,12 @@ use openehr_query::lexer::CompOp;
 
 use crate::aql::error::AqlError;
 use crate::aql::ir::{
-    self, Bind, Coercion, FragmentStep, LeafPath, Operand, ParamValue, PathTarget, QueryDomain,
-    TypedLit,
+    self, Bind, Coercion, FragmentStep, LeafPath, ParamValue, QueryDomain, TypedLit,
 };
 use crate::db::iden::{Node, RelationshipTarget, VersionRow, VoHead};
 
 use super::Builder;
+use super::anchorable::Anchorable;
 use super::expr::{binoper, call, col, hot};
 
 /// The RM type of the one structure node that carries a `value`, as a SQL
@@ -102,7 +102,7 @@ pub(super) enum RangeEntry {
 
 /// What a range comparison reads of a node row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Ranged {
+pub(super) enum Ranged {
     /// `event_time` of an event row.
     EventTime,
     /// `event_time` of a history row, its origin.
@@ -123,7 +123,7 @@ impl Ranged {
 
     /// Whether a step that binds `types` binds only rows that carry the
     /// value, or, for a magnitude, can bind an `ELEMENT`.
-    fn binds(self, types: &ir::TypeSet) -> bool {
+    pub(super) fn binds(self, types: &ir::TypeSet) -> bool {
         let only = |timed: &[&str]| {
             !types.is_empty() && types.names().iter().all(|t| timed.contains(&t.as_str()))
         };
@@ -158,22 +158,6 @@ impl Ranged {
             Self::Magnitude => Coercion::Magnitude,
         }
     }
-}
-
-/// A top-level conjunct of the WHERE clause an index serves
-/// ([`Builder::anchorable`]).
-enum Anchorable<'q> {
-    /// An equality or a `matches` of a text leaf with one of `texts`.
-    Equality {
-        leaf: &'q LeafPath,
-        texts: Vec<String>,
-    },
-    /// The range comparisons of one leaf, each operator with its bound.
-    Range {
-        leaf: &'q LeafPath,
-        ranged: Ranged,
-        bounds: Vec<(CompOp, &'q Operand)>,
-    },
 }
 
 /// The range comparisons of one leaf: what they read and each operator with
@@ -237,177 +221,10 @@ impl Builder<'_> {
         Ok(anchors)
     }
 
-    /// Whether the WHERE clause has a conjunct a value index serves, which
-    /// [`Builder::value_anchors`] makes an anchor of.
-    #[cfg(test)]
-    fn takes_anchor(&self) -> bool {
-        self.ir
-            .filter
-            .as_ref()
-            .is_some_and(|filter| !self.anchorable(filter).is_empty())
-    }
-
-    /// Whether the WHERE clause anchors a leaf no SELECT column binds: the
-    /// flat FROM then reads each contained node inside its object
-    /// (`from::Builder::emit_rm`), so a node estimated at one row is never
-    /// rescanned with the clause's `EXISTS` per anchor version (#6263). An
-    /// anchor on a bound leaf is tied to the bound row (#6249), and the
-    /// contained node keeps its archetype-index entry.
-    pub(super) fn anchors_an_unbound_leaf(&self) -> bool {
-        self.ir.filter.as_ref().is_some_and(|filter| {
-            self.anchorable(filter).iter().any(|conjunct| {
-                let (Anchorable::Equality { leaf, .. } | Anchorable::Range { leaf, .. }) = conjunct;
-                !self.select_binds(leaf)
-            })
-        })
-    }
-
-    /// Whether a SELECT column binds the node `leaf` reads, as
-    /// `select::Builder::bind_select_paths` binds every step prefix of a
-    /// projected path: the leaf's source itself, or a projected path of the
-    /// same source through the leaf's steps.
-    fn select_binds(&self, leaf: &LeafPath) -> bool {
-        if leaf.anchor.is_empty() {
-            return true;
-        }
-        let mut binds = false;
-        for column in &self.ir.select {
-            if matches!(column.value, ir::SelectValue::Aggregate { .. }) {
-                continue;
-            }
-            column.value.for_each_path(&mut |target| {
-                if let PathTarget::Data(other) = target {
-                    binds |= other.source == leaf.source && other.anchor.starts_with(&leaf.anchor);
-                }
-            });
-        }
-        binds
-    }
-
-    /// The top-level conjuncts of `filter` an index serves, in the order the
-    /// statement takes them, with the comparisons of one leaf's ranges
-    /// together: the one walk [`Builder::value_anchors`] builds its anchors
-    /// from and [`Builder::takes_anchor`] decides by.
-    fn anchorable<'q>(&self, filter: &'q ir::Expr) -> Vec<Anchorable<'q>> {
-        let mut found = Vec::new();
-        let mut conjuncts = vec![filter];
-        while let Some(expr) = conjuncts.pop() {
-            match expr {
-                ir::Expr::And(a, b) => {
-                    conjuncts.push(b);
-                    conjuncts.push(a);
-                }
-                // NOTE: a `Raw` (mixed-type) equality with a string compares as text,
-                // the numeric branch being taken on a numeric literal alone
-                // (`Builder::value_test`), which no string operand is.
-                ir::Expr::Compare {
-                    lhs,
-                    op: CompOp::Eq,
-                    rhs,
-                    coercion: Coercion::Text | Coercion::Raw,
-                } => {
-                    let ((Operand::Path(PathTarget::Data(leaf)), bound)
-                    | (bound, Operand::Path(PathTarget::Data(leaf)))) = (lhs, rhs)
-                    else {
-                        continue;
-                    };
-                    let bind = match bound {
-                        Operand::Literal(literal) => Bind::Literal(literal.clone()),
-                        Operand::Param(name) => Bind::Param(name.clone()),
-                        Operand::Path(_) | Operand::Function { .. } => continue,
-                    };
-                    let Some(text) = self.anchor_text(&bind) else {
-                        continue;
-                    };
-                    let texts = vec![text];
-                    if self.equality_anchorable(leaf, &texts) {
-                        found.push(Anchorable::Equality { leaf, texts });
-                    }
-                }
-                // NOTE: AQL QUERY master03 §matches: a value list holds when the leaf
-                // matches one of its items, so it reads as the equalities above.
-                ir::Expr::Matches {
-                    path: PathTarget::Data(leaf),
-                    values,
-                    coercion: Coercion::Text | Coercion::Raw,
-                } => {
-                    let Some(texts) = values
-                        .iter()
-                        .map(|bind| self.anchor_text(bind))
-                        .collect::<Option<Vec<_>>>()
-                    else {
-                        continue;
-                    };
-                    if !texts.is_empty() && self.equality_anchorable(leaf, &texts) {
-                        found.push(Anchorable::Equality { leaf, texts });
-                    }
-                }
-                // NOTE: AQL QUERY master03 §WHERE (`identifiedExpr`): the grammar puts the
-                // path on the left of a comparison and the terminal on its right.
-                ir::Expr::Compare {
-                    lhs: Operand::Path(PathTarget::Data(leaf)),
-                    op,
-                    rhs: bound @ (Operand::Literal(_) | Operand::Param(_)),
-                    coercion,
-                } if self.range_entry != RangeEntry::Off => {
-                    let Some(reads) = ranged(leaf, *op, *coercion) else {
-                        continue;
-                    };
-                    let leaf: &LeafPath = leaf;
-                    if !leaf_step(self.ir, leaf).is_some_and(|(types, _)| reads.binds(types)) {
-                        continue;
-                    }
-                    let same = found.iter_mut().find_map(|conjunct| match conjunct {
-                        Anchorable::Range {
-                            leaf: other,
-                            bounds,
-                            ..
-                        } if *other == leaf => Some(bounds),
-                        _ => None,
-                    });
-                    match same {
-                        Some(bounds) => bounds.push((*op, bound)),
-                        None => found.push(Anchorable::Range {
-                            leaf,
-                            ranged: reads,
-                            bounds: vec![(*op, bound)],
-                        }),
-                    }
-                }
-                _ => {}
-            }
-        }
-        found
-    }
-
-    /// Whether an equality of `leaf` with one of `texts` has an anchor: the
-    /// relationship target's ([`Self::target_anchor`]) or the value's
-    /// ([`Self::value_anchor`]).
-    fn equality_anchorable(&self, leaf: &LeafPath, texts: &[String]) -> bool {
-        let target = self.ir.domain == QueryDomain::Demographic
-            && leaf.anchor.is_empty()
-            && leaf.fragment.iter().map(|s| s.name.as_str()).eq([
-                "relationships",
-                "target",
-                "id",
-                "value",
-            ])
-            && texts
-                .iter()
-                .all(|text| crate::party_binding::derive::container(text).is_some())
-            && matches!(
-                self.ir.sources.get(leaf.source.0),
-                Some(ir::Source::Rm(source)) if matches!(source.scope, ir::VersionScope::Latest)
-            );
-        let value = text_leaf(&leaf.fragment).is_some()
-            && leaf_step(self.ir, leaf).is_some_and(|(types, _)| types.contains("ELEMENT"));
-        target || value
-    }
-
     /// The string a bound value compares as, a string literal or a string
     /// parameter, or `None` for any other value: a `Raw` leaf compares with a
     /// number by its number (`Builder::value_test`), which no index holds.
-    fn anchor_text(&self, bind: &Bind) -> Option<String> {
+    pub(super) fn anchor_text(&self, bind: &Bind) -> Option<String> {
         match bind {
             Bind::Literal(TypedLit::String(text)) => Some(text.clone()),
             Bind::Param(name) => match self.params.get(name) {
@@ -734,7 +551,7 @@ impl Builder<'_> {
 
 /// The RM types and the predicate of the node step `leaf`'s fragment is read
 /// from: its last structure step, or its source.
-fn leaf_step<'a>(
+pub(super) fn leaf_step<'a>(
     ir: &'a ir::QueryIr,
     leaf: &'a LeafPath,
 ) -> Option<(&'a ir::TypeSet, Option<&'a ir::NodeConstraint>)> {
@@ -749,7 +566,7 @@ fn leaf_step<'a>(
 
 /// What a comparison of `leaf` under `op` and `coercion` reads of a node row
 /// an index holds, or `None` for any other comparison.
-fn ranged(leaf: &LeafPath, op: CompOp, coercion: Coercion) -> Option<Ranged> {
+pub(super) fn ranged(leaf: &LeafPath, op: CompOp, coercion: Coercion) -> Option<Ranged> {
     if op == CompOp::Ne || leaf.fragment.iter().any(|step| step.predicate.is_some()) {
         return None;
     }
@@ -799,7 +616,7 @@ impl ValueAnchor {
 
 /// Which value index an equality of a fragment path compares against.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TextLeaf {
+pub(super) enum TextLeaf {
     /// The code `ext.node_code` yields: the `defining_code` of a coded text,
     /// or of the symbol of an ordinal or a scale.
     Code,
@@ -815,7 +632,7 @@ enum TextLeaf {
 /// The value index an equality of the fragment path `steps` compares
 /// against, for every `ELEMENT` row that can satisfy it; `None` for a path
 /// no value index holds.
-fn text_leaf(steps: &[FragmentStep]) -> Option<TextLeaf> {
+pub(super) fn text_leaf(steps: &[FragmentStep]) -> Option<TextLeaf> {
     if steps.iter().any(|step| step.predicate.is_some()) {
         return None;
     }
@@ -841,181 +658,4 @@ fn plain_decimal(text: &str) -> bool {
         });
     let digits = |part: &str| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit());
     digits(whole) && fraction.is_none_or(digits)
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-
-    use crate::aql::ir::Params;
-    use crate::aql::lineage::ArchetypeLineage;
-    use crate::aql::sql::{Builder, SqlCtx};
-
-    /// A population context with no access condition.
-    fn population() -> SqlCtx {
-        SqlCtx {
-            system_id: "anchor.test".to_owned(),
-            ehr_ids: Vec::new(),
-            ehr_scope_kind: crate::aql::sql::EhrScopeKind::Named,
-            ehr_access: crate::access_eval::condition::AccessCondition::default(),
-            limit: None,
-            offset: None,
-            archetype_lineage: Arc::new(ArchetypeLineage::default()),
-            policy_parties: crate::aql::sql::readers::PolicyParties::Served,
-            access_settings: crate::aql::sql::readers::EhrAccessReaders::Every,
-            own_records: None,
-            caseload: None,
-        }
-    }
-
-    /// The conjuncts the shared walk finds in `aql` and the anchors the
-    /// flat statement builds from them.
-    fn walked_and_built(aql: &str) -> (usize, bool, usize) {
-        let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
-        let params = Params::default();
-        let ir = crate::aql::plan(
-            &ast,
-            &params,
-            crate::config::profile::SpecProfile::default(),
-        )
-        .expect("the AQL plans");
-        let ctx = population();
-        let mut builder = Builder::new(&ir, &params, &ctx);
-        builder.build_from(&ir.contains).expect("the FROM builds");
-        let walked = ir
-            .filter
-            .as_ref()
-            .map_or(0, |filter| builder.anchorable(filter).len());
-        let takes = builder.takes_anchor();
-        let built = builder.value_anchors().expect("the anchors build").len();
-        (walked, takes, built)
-    }
-
-    /// Whether the flat FROM of `aql` reads its contained nodes inside their
-    /// objects.
-    fn fences(aql: &str) -> bool {
-        let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
-        let params = Params::default();
-        let ir = crate::aql::plan(
-            &ast,
-            &params,
-            crate::config::profile::SpecProfile::default(),
-        )
-        .expect("the AQL plans");
-        let ctx = population();
-        let builder = Builder::new(&ir, &params, &ctx);
-        builder.anchors_an_unbound_leaf()
-    }
-
-    /// An anchor on a leaf only the WHERE clause reads fences the contained
-    /// nodes; one on a leaf a SELECT column binds, its source's own value, or
-    /// no anchor at all leaves them their archetype-index entry (#6263).
-    #[test]
-    fn only_an_anchor_on_a_where_only_leaf_fences_the_contained_nodes() {
-        let from = "FROM EHR e CONTAINS COMPOSITION c \
-                    CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.timed.v1]";
-        let leaf = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
-        let events = "o/data[at0001]/events[at0002]";
-        for (aql, fenced) in [
-            (
-                format!("SELECT c/uid/value {from} WHERE {leaf} >= 140"),
-                true,
-            ),
-            (
-                format!("SELECT c/uid/value, {leaf} {from} WHERE {leaf} >= 140"),
-                false,
-            ),
-            (
-                format!(
-                    "SELECT c/uid/value, {events}/data[at0003]/items[at0004]/value/units {from} WHERE {leaf} >= 140"
-                ),
-                false,
-            ),
-            (
-                format!("SELECT {events}/time/value {from} WHERE {leaf} >= 140"),
-                true,
-            ),
-            (
-                format!("SELECT count({leaf}) {from} WHERE {leaf} >= 140"),
-                true,
-            ),
-            (format!("SELECT c/uid/value {from} WHERE {leaf} = 7"), false),
-            (format!("SELECT c/uid/value {from}"), false),
-            (
-                "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c CONTAINS ELEMENT s[at0004] \
-                 WHERE s/value/magnitude > 7"
-                    .to_owned(),
-                false,
-            ),
-        ] {
-            assert_eq!(fences(&aql), fenced, "{aql}");
-        }
-    }
-
-    /// The walk that decides whether the flat FROM reads its contained nodes
-    /// inside their objects finds exactly the conjuncts the anchor builder
-    /// makes anchors of (#6263).
-    #[test]
-    fn the_walk_and_the_anchor_builder_agree() {
-        let observation = "FROM EHR e CONTAINS COMPOSITION c \
-                           CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.timed.v1]";
-        let items = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]";
-        let time = "o/data[at0001]/events[at0002]/time/value";
-        for (filter, anchors) in [
-            (format!("{items}/value/magnitude >= 140"), 1),
-            (
-                format!("{items}/value/magnitude > 1 AND {items}/value/magnitude < 9"),
-                1,
-            ),
-            (
-                format!("{time} >= '2026-01-01' AND {items}/value/magnitude < 9"),
-                2,
-            ),
-            (format!("{items}/value/units = 'kPa'"), 1),
-            (
-                format!("{items}/value/defining_code/code_string = 'at0008'"),
-                1,
-            ),
-            (format!("{items}/value/value matches {{'a', 'b'}}"), 1),
-            (format!("{items}/value/magnitude = 7"), 0),
-            (format!("{items}/value/magnitude != 7"), 0),
-            (
-                format!("{items}/value/magnitude > 1 OR {items}/value/magnitude > 1"),
-                0,
-            ),
-            (format!("NOT {items}/value/magnitude > 1"), 0),
-            ("c/context/start_time/value >= '2026'".to_owned(), 0),
-            (
-                format!("{items}/value/magnitude > {items}/value/precision"),
-                0,
-            ),
-        ] {
-            let aql = format!("SELECT c/uid/value {observation} WHERE {filter}");
-            let (walked, takes, built) = walked_and_built(&aql);
-            assert_eq!((walked, built), (anchors, anchors), "{filter}");
-            assert_eq!(takes, anchors > 0, "{filter}");
-        }
-        for (aql, anchors) in [
-            (
-                "SELECT p/uid/value FROM PERSON p WHERE p/relationships/target/id/value \
-                 = '0190d5a8-2f4e-7c52-9a1e-4f6b2c3d4e5f::ferroehr::1'",
-                1,
-            ),
-            (
-                "SELECT p/uid/value FROM PERSON p WHERE p/relationships/target/id/value \
-                 = 'not a party'",
-                0,
-            ),
-            (
-                "SELECT p/uid/value FROM VERSION v[ALL_VERSIONS] CONTAINS PERSON p \
-                 WHERE p/relationships/target/id/value \
-                 = '0190d5a8-2f4e-7c52-9a1e-4f6b2c3d4e5f::ferroehr::1'",
-                0,
-            ),
-        ] {
-            let (walked, takes, built) = walked_and_built(aql);
-            assert_eq!((walked, built), (anchors, anchors), "{aql}");
-            assert_eq!(takes, anchors > 0, "{aql}");
-        }
-    }
 }
