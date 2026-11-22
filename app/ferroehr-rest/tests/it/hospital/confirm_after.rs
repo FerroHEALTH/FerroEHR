@@ -8,7 +8,8 @@
 //! a policy change made through another replica therefore decides the very
 //! next read, the access log holds exactly one entry for it, with the outcome
 //! the client got, and the run again is counted once. No openEHR spec governs
-//! the copies: our own design.
+//! the copies: our own design. A commit confirms after it was decided the
+//! same way, before it writes (#6256).
 
 use http::StatusCode;
 use opentelemetry::metrics::MeterProvider as _;
@@ -18,7 +19,7 @@ use serde_json::{Value, json};
 
 use crate::common::{BASE, EXT};
 use crate::hospital::abac::answered;
-use crate::hospital::build::world;
+use crate::hospital::build::{composition, world};
 use crate::hospital::ledger::{Expect, Ledger};
 use crate::hospital::replicas::deaf;
 use crate::hospital::world::{
@@ -205,5 +206,77 @@ async fn the_replica_that_writes_a_policy_change_reads_without_running_again() {
         reruns(&provider, &exporter),
         before,
         "the writer's copy holds its own change"
+    );
+}
+
+/// The compositions of the world's EHR, as the controller's query reads them
+/// on the world's own replica.
+async fn compositions(world: &World) -> usize {
+    let body = json!({
+        "q": format!(
+            "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = '{}'",
+            world.ehr
+        )
+    });
+    let answer = call(
+        &world.app,
+        ROOT,
+        "POST",
+        &format!("{BASE}/query/aql"),
+        None,
+        Some(&body),
+    )
+    .await;
+    assert_eq!(answer.status, StatusCode::OK, "the query: {}", answer.body);
+    answer.json()["rows"].as_array().expect("rows").len()
+}
+
+/// A commit decided on a policy copy behind the store is refused before it
+/// writes, by the revision its own gate read returns, and runs once more
+/// behind the up-front confirm (#6256): the encounter the change classified
+/// very restricted is refused, nothing of the first run is stored, and the
+/// run again is counted once.
+#[tokio::test]
+async fn a_commit_decided_on_a_policy_copy_behind_the_store_runs_once_more() {
+    let (provider, exporter) = instruments();
+    let mut world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let uri = format!("{BASE}/ehr/{}/composition", world.ehr);
+    let body = composition(ENCOUNTER, "Follow-up encounter", "Dr. Anna Jansen");
+    let commit = || call(&other, "jansen", "POST", &uri, Some("TREAT"), Some(&body));
+    let landed = commit().await;
+    assert_eq!(landed.status, StatusCode::CREATED, "{}", landed.body);
+    let before = reruns(&provider, &exporter);
+    let landed = commit().await;
+    assert_eq!(landed.status, StatusCode::CREATED, "{}", landed.body);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before,
+        "a copy in force commits once"
+    );
+    let stored = compositions(&world).await;
+
+    world.policy = classify_the_encounter(&world).await;
+    let refused = commit().await;
+    answered(&refused, StatusCode::FORBIDDEN, Some("refused-sensitivity"));
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the commit ran once more, and only once"
+    );
+    assert_eq!(
+        compositions(&world).await,
+        stored,
+        "neither run stored the refused encounter"
+    );
+    answered(
+        &commit().await,
+        StatusCode::FORBIDDEN,
+        Some("refused-sensitivity"),
+    );
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the confirmed copy decides the next commit at once"
     );
 }

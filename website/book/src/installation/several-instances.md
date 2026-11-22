@@ -90,8 +90,11 @@ the clinical read inside its own statement: that statement returns the policy
 and definition revisions beside the rows it reads, and the answer leaves only
 once the instance's copies held them. When they did not, the instance reads the
 newest versions and runs the request once more, and only that second answer is
-served and recorded. Such a read request sends its own read, its access record
-and the party store's revisions; other requests send the clinical read as well.
+served and recorded. A COMPOSITION commit and a CONTRIBUTION commit do the
+same with the first statement of the write, before anything is written, so the
+first run leaves no record. Such a request sends its own statements, its access
+record and the party store's revisions; other requests send the clinical read
+as well.
 
 ## The listeners share one connection per database
 

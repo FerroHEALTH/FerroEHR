@@ -165,6 +165,25 @@ impl FerroEhrService {
             && self.access_policy.holds(policy))
     }
 
+    /// Refuse a write whose decision rested on policy or definition copies
+    /// behind the revisions its own gate read found (#6256), before anything
+    /// is written: the request runs once more behind [`Self::confirm_policy`].
+    /// Outside a request that confirms after it ran, the copies were
+    /// confirmed up front and nothing is judged here.
+    ///
+    /// # Errors
+    /// `access-refreshing` (`503`) when a copy is behind.
+    pub(crate) async fn ensure_gate_policy_held(&self) -> Result<(), ServiceError> {
+        let Some(observed) = crate::policy_register::observed::current() else {
+            return Ok(());
+        };
+        if self.policy_held(Some(observed)).await? {
+            Ok(())
+        } else {
+            Err(ServiceError::access_refreshing())
+        }
+    }
+
     /// Bring the register and access-policy copies to `heads`, read inside
     /// the policy write this replica just committed, after its write moved
     /// `policy_revision` (#6265). That read saw every earlier writer's change
