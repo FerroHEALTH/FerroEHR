@@ -5,7 +5,8 @@
 //! entry the database refuses refuses only the request that brought it, and
 //! the others of its statement are written once each.
 
-use super::{Derived, IntakeEntry, Job, write_jobs};
+use super::gather::{Job, write_jobs};
+use super::{Derived, IntakeEntry};
 use crate::access_log::entry::entry_of;
 use crate::access_log::retention::stated;
 use crate::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
@@ -66,7 +67,7 @@ async fn a_refused_entry_refuses_only_its_own_request() {
     ]);
     write_jobs(
         &pool,
-        &super::StoredParts::default(),
+        &super::gather::Known::default(),
         vec![first, bad, last],
         4,
     )
@@ -83,14 +84,11 @@ async fn a_refused_entry_refuses_only_its_own_request() {
         last_answer.await.expect("an answer").is_ok(),
         "the last request is written"
     );
-    let ehrs: Vec<String> = sqlx::query_scalar(
-        "SELECT e.ehr_id::text FROM audit.access_log_intake i \
-             CROSS JOIN LATERAL unnest(i.entries) AS n(id) \
-             JOIN audit.access_log_entry e ON e.id = n.id ORDER BY 1",
-    )
-    .fetch_all(&pool)
-    .await
-    .expect("the intake");
+    let ehrs: Vec<String> =
+        sqlx::query_scalar("SELECT e.ehr_id::text FROM audit.access_log_entry e ORDER BY 1")
+            .fetch_all(&pool)
+            .await
+            .expect("the intake");
     assert_eq!(
         ehrs,
         [
@@ -114,7 +112,7 @@ async fn a_failure_with_no_answer_refuses_every_request() {
     let (second, second_answer) = job(vec![intake("7d44b88c-4199-4bad-97dc-0000000000f6")]);
     write_jobs(
         &pool,
-        &super::StoredParts::default(),
+        &super::gather::Known::default(),
         vec![first, second],
         2,
     )

@@ -16,7 +16,6 @@ use openehr_rm::draft::access_control::access_control::access_policy::AccessPoli
 use openehr_rm::draft::access_control::terminology::{AccessDefault, CallerKind, Refusal, Term};
 use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
-use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::v1_2::data_types::text::dv_text::DvText;
 use serde_json::json;
 
@@ -430,16 +429,8 @@ fn the_emergency_grounds_name_only_the_rules_covering_the_data_read() {
     );
 }
 
-/// `entry` with the link the store gives it, so its invariants hold.
-fn linked(mut entry: AccessLogEntry) -> AccessLogEntry {
-    entry.link = AccessLogLink {
-        sequence: 1,
-        algorithm: "SHA-256".to_owned(),
-        previous_digest: "0".repeat(64),
-        content_digest: "1".repeat(64),
-        digest: "2".repeat(64),
-        signature: None,
-    };
+/// `entry` as the store keeps it.
+fn linked(entry: AccessLogEntry) -> AccessLogEntry {
     entry
 }
 

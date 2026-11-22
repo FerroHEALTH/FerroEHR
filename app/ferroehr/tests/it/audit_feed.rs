@@ -33,6 +33,7 @@ fn config(arr_url: &str) -> AuditConfig {
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         fhir_feed: Some(FhirFeedConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
@@ -161,6 +162,7 @@ async fn an_entry_is_fed_as_its_projection() {
         || async {
             count(&pool, "SELECT count(*) FROM audit.access_log_record").await == 1
                 && count(&pool, "SELECT count(*) FROM audit.fhir_feed_outbox").await == 0
+                && !arr.received_requests().await.unwrap_or_default().is_empty()
         },
         Duration::from_secs(10),
     )

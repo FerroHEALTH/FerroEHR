@@ -10,7 +10,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use ferroehr::access_log::chainer::Seal;
 use ferroehr::db::domain::DomainPools;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
@@ -31,6 +30,7 @@ async fn audited(pool: &PgPool) -> (AuditSender, FerroEhrService) {
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     };
@@ -78,9 +78,9 @@ fn system_record() -> AuditEvent {
 /// their ids and their content digests.
 async fn held(pool: &PgPool, reservation: Uuid) -> (Vec<(Uuid, Vec<u8>)>, Vec<Uuid>) {
     let entries = sqlx::query_as(
-        "SELECT e.uid, e.content_digest FROM audit.access_log_intake i \
-         CROSS JOIN LATERAL unnest(i.entries) AS n(id) JOIN audit.access_log_entry e ON e.id = n.id \
-         WHERE i.reserved_by = $1 ORDER BY e.uid",
+        "SELECT e.uid, e.content_digest FROM audit.access_log_hold h \
+         JOIN audit.access_log_entry e ON e.id = h.entry_id \
+         WHERE h.reserved_by = $1 ORDER BY e.uid",
     )
     .bind(reservation)
     .fetch_all(pool)
@@ -232,7 +232,7 @@ async fn a_confirmed_write_is_released_by_the_chainer_round() {
         }
         sender
             .store()
-            .chain_round(512, Chains::default(), Seal::Now)
+            .chain_round(512, Chains::default())
             .await
             .expect("a chainer round");
         tokio::time::sleep(Duration::from_millis(10)).await;
@@ -395,9 +395,13 @@ async fn a_held_write_under_a_cold_policy_needs_one_audit_connection() {
     });
 
     // NOTE: (#5906) a second acquire is refused in a debug build, or times the write out.
-    ferroehr::db::acquire::request_scope(store.write_held(records.into(), &[], reservation))
-        .await
-        .expect("the held write");
+    Box::pin(ferroehr::db::acquire::request_scope(store.write_held(
+        records.into(),
+        &[],
+        reservation,
+    )))
+    .await
+    .expect("the held write");
     let (entries, records) = held(&db.pool(), reservation).await;
     assert_eq!((entries.len(), records.len()), (1, 1));
 }
@@ -434,17 +438,16 @@ async fn a_cold_entry_gives_back_its_audit_connection_before_the_gathered_write(
         entry: None,
     }];
 
-    ferroehr::db::acquire::request_scope(store.write(records, &[]))
-        .await
-        .expect("the entry lands while the request waits for the gathered writer");
-    let landed: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM audit.access_log_intake i \
-         CROSS JOIN LATERAL unnest(i.entries) AS n(id)",
-    )
-    .fetch_one(&db.pool())
+    Box::pin(ferroehr::db::acquire::request_scope(
+        store.write(records, &[]),
+    ))
     .await
-    .expect("the intake");
-    assert_eq!(landed, 1, "the one entry is in the intake");
+    .expect("the entry lands while the request waits for the gathered writer");
+    let landed: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_entry")
+        .fetch_one(&db.pool())
+        .await
+        .expect("the intake");
+    assert_eq!(landed, 1, "the one entry is in the log");
 }
 
 /// An audited write with the subject lookup on: the subject its records name
@@ -508,9 +511,8 @@ async fn a_write_reads_the_subject_of_its_records_on_its_own_transaction() {
     let reservations = recorder.reserved();
     assert_eq!(reservations.len(), 1, "the write took one reservation");
     let named: Vec<Option<String>> = sqlx::query_scalar(
-        "SELECT e.patient_id FROM audit.access_log_intake i \
-             CROSS JOIN LATERAL unnest(i.entries) AS n(id) \
-             JOIN audit.access_log_entry e ON e.id = n.id WHERE i.reserved_by = $1",
+        "SELECT e.patient_id FROM audit.access_log_hold h \
+             JOIN audit.access_log_entry e ON e.id = h.entry_id WHERE h.reserved_by = $1",
     )
     .bind(reservations[0].id)
     .fetch_all(&pool)

@@ -17,8 +17,7 @@ use tracing::Instrument as _;
 use tracing_subscriber::layer::SubscriberExt as _;
 
 use super::{
-    CHAINER_RELEASE, CHAINER_ROUND, CHAINER_TAKE, REQUEST_SPAN, RoundTrips, SYSTEM_ROUND, calls,
-    counted, drained, ledger,
+    CHAINER_RELEASE, REQUEST_SPAN, RoundTrips, SYSTEM_ROUND, calls, counted, drained, ledger,
 };
 use crate::common::{self, BASE};
 use crate::hospital::world::{PURPOSE, World, credential};
@@ -34,8 +33,10 @@ const REQUESTS: u64 = 10;
 const ROUND_TRIPS: u64 = 2;
 
 /// The statements nested in one care-gated read's round trips, the chainer's
-/// rounds left out, measured over three runs (#6251).
-const NESTED: u64 = 3;
+/// rounds left out, measured over three runs (#6251): 3, and none once the
+/// access-log entry was written by one plain insert (#6242), so the ceiling
+/// fell by 3; at 0 the check reads as equality.
+const NESTED: u64 = 0;
 
 /// Dr Jansen's read of the encounter, declaring the treatment purpose; its
 /// status and body.
@@ -102,12 +103,7 @@ async fn a_care_gated_read_stays_within_its_statement_budget() {
         .filter(|s| !s.toplevel)
         .map(|s| s.calls)
         .sum();
-    let chainer = calls(
-        &statements,
-        "SELECT head_seq, head_digest FROM audit.access_log_chain_take",
-    ) * CHAINER_TAKE
-        + calls(&statements, "SELECT audit.access_log_chain_move") * CHAINER_ROUND
-        + calls(&statements, "SELECT audit.audit_event_chain_move") * SYSTEM_ROUND
+    let chainer = calls(&statements, "SELECT audit.audit_event_chain_move") * SYSTEM_ROUND
         + calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
     let per_request = (
         sent.div_euclid(REQUESTS),
@@ -123,7 +119,7 @@ async fn a_care_gated_read_stays_within_its_statement_budget() {
     eprintln!("{report}");
     assert!(sent > 0, "the round trips are counted");
     assert!(
-        per_request.0 <= ROUND_TRIPS && per_request.1 <= NESTED,
+        per_request.0 <= ROUND_TRIPS && per_request.1 == NESTED,
         "a care-gated read exceeds its statement budget:\n{report}"
     );
 }

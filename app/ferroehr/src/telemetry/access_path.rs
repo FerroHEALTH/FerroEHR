@@ -89,9 +89,6 @@ pub const AUDIT_CHAIN_VERIFICATION_DURATION: &str = "audit_chain_verification_du
 pub const AUDIT_CHAIN_LAST_VERIFICATION: &str = "audit_chain_last_verification";
 /// Whether the newest chain verification found the chains intact, `1` or `0`.
 pub const AUDIT_CHAIN_INTACT: &str = "audit_chain_intact";
-/// How long one round of the audit chainer held the head of the access log
-/// (`outcome`).
-pub const ACCESS_LOG_CHAIN_HOLD: &str = "access_log_chain_hold_duration";
 /// Records the audit chainer linked into a chain (`chain`).
 pub const AUDIT_CHAINED: &str = "audit_chained";
 /// Reservations whose audit records have been held past the reconciler's
@@ -112,7 +109,7 @@ pub const AUDIT_CHAIN_UNVERIFIED_AGE: &str = "audit_chain_unverified_age";
 pub const INSTANCE_MISMATCHES: &str = "instance_mismatches";
 
 /// Every instrument name of this module, for the naming tests.
-pub const NAMES: [&str; 36] = [
+pub const NAMES: [&str; 35] = [
     ACCESS_COPY_LOOKUPS,
     ACCESS_COPY_REFILLS,
     ACCESS_COPY_DROPS,
@@ -141,7 +138,6 @@ pub const NAMES: [&str; 36] = [
     AUDIT_CHAIN_VERIFICATION_DURATION,
     AUDIT_CHAIN_LAST_VERIFICATION,
     AUDIT_CHAIN_INTACT,
-    ACCESS_LOG_CHAIN_HOLD,
     AUDIT_CHAINED,
     AUDIT_RESERVATIONS_HELD,
     AUDIT_RESERVATION_AGE,
@@ -171,7 +167,6 @@ pub fn histogram_views() -> Vec<(&'static str, &'static [f64])> {
         (GRANTS_REFRESH_DURATION, PATH_BUCKETS),
         (ACCESS_LOG_APPEND_DURATION, PATH_BUCKETS),
         (ACCESS_LOG_SIGN_DURATION, PATH_BUCKETS),
-        (ACCESS_LOG_CHAIN_HOLD, PATH_BUCKETS),
         (AUDIT_SEAL_DURATION, SCHEDULED_BUCKETS),
         (ACCESS_LOG_RETENTION_DURATION, SCHEDULED_BUCKETS),
         (AUDIT_CHAIN_VERIFICATION_DURATION, SCHEDULED_BUCKETS),
@@ -204,8 +199,6 @@ pub struct AccessPathMetrics {
     pub log_append_duration: Histogram<f64>,
     /// Access-log checkpoint signing latency, seconds.
     pub log_sign_duration: Histogram<f64>,
-    /// How long each chainer round held the head of the access log, seconds.
-    pub log_chain_hold: Histogram<f64>,
     /// Records the chainer linked into a chain.
     pub log_chained: Counter<u64>,
     /// Reservations held past the reconciler's grace.
@@ -292,11 +285,6 @@ impl AccessPathMetrics {
             log_append_duration: make.histogram(
                 ACCESS_LOG_APPEND_DURATION,
                 "A request's intake write (outcome = ok | failed)",
-                PATH_BUCKETS,
-            ),
-            log_chain_hold: make.histogram(
-                ACCESS_LOG_CHAIN_HOLD,
-                "A chainer round's hold of the head (outcome = ok | failed)",
                 PATH_BUCKETS,
             ),
             log_chained: make.counter(

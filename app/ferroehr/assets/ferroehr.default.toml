@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 876 keys. A deployment that holds real data sets the 8 below,
+# This file lists 877 keys. A deployment that holds real data sets the 8 below,
 # the only live lines; every other key is optional and runs on the built-in
 # default its `#?` line shows, or stays unset where its note says so.
 #
@@ -1397,6 +1397,13 @@ profile = "sandbox"
 # Default four hours. Set it above `verify_interval`, since the cursor stays
 # where a run left it until the next run. Optional.
 #? max_verify_lag = "4h"
+# How long the gathered access-log writer waits for more requests' entries
+# after the first before it writes them in one statement
+# (`FERROEHR__AUDIT__STORE__GATHER_WINDOW`), at most `"1ms"`; `"0s"` writes
+# what waits at once. A longer window puts more entries in each statement,
+# which costs the store less per entry, and adds up to the window to each
+# request that writes an entry. Default `"0s"`. Optional.
+#? gather_window = "0s"
 
 # The classic DICOM-over-syslog feed; absent, off.
 #? [audit.syslog]

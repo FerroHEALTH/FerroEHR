@@ -352,18 +352,22 @@ application role or by someone with direct access.
 **Effect:** an access disappears, or appears to have been made by someone
 else, and the record a patient or a court relies on is false.
 
-**Control:** records are hash-chained in the database, and a record's digest
-covers every column but the digest and the two forwarding stamps, its search
-tokens included (audit migration 0017); each render policy a record names is
-checked against its own digest, and each search token and token set against
-its content; `UPDATE`, `DELETE`
-and `TRUNCATE` on the log are refused; the application role cannot run DDL
-or rewrite the log; `audit.verify_audit_chain()` names any record that
-changed or went missing; the server runs that verification one minute after
-boot and then every `[audit.store] verify_interval` (default one hour),
-logs a finding at `ERROR`, counts it in `atna_audit_chain_findings` and shows
-it on the `audit_chain` readiness indicator; forwarding puts copies off the
-box.
+**Control:** the system chain's records are hash-chained in the database,
+and a record's digest covers every column but the digest, its search tokens
+included. The access log is sealed in windows (#6242): about once a minute
+every committed entry past the last window is sealed with the SHA-256 of its
+entries' ids and content digests, each seal following the one before it and
+signed with the keyring's key, and the verifier recomputes every window and
+every column the log derives from an entry's content. Each render policy a
+record names is checked against its own digest, and each search token and
+token set against its content. `UPDATE`, `DELETE` and `TRUNCATE` on the log
+are refused by its triggers and the runtime role's grants; an access-log
+entry newer than the last seal (at most a minute and the frontier's lag) is
+protected by those refusals alone. The application role cannot run DDL or
+rewrite the log. The server verifies one minute after boot and then every
+`[audit.store] verify_interval` (default one hour), logs a finding at
+`ERROR`, counts it in `atna_audit_chain_findings` and shows it on the
+`audit_chain` readiness indicator; forwarding puts copies off the box.
 
 **Shown by:**
 
@@ -380,9 +384,17 @@ box.
   `a_changed_or_missing_render_policy_is_reported`,
   `a_changed_search_token_or_set_is_reported`;
 - `app/ferroehr/tests/it/audit_store.rs`:
-  `the_access_trail_refuses_rewriting_deletion_and_truncation`.
+  `the_access_trail_refuses_rewriting_deletion_and_truncation`;
+- `app/ferroehr/tests/it/access_log_seal.rs`:
+  `a_window_never_covers_an_entry_a_transaction_still_writes`,
+  `a_changed_record_in_a_sealed_window_is_reported`,
+  `a_removed_record_in_a_sealed_window_is_reported`,
+  `an_inserted_record_in_a_sealed_window_is_reported`,
+  `the_fold_removes_whole_sealed_windows_only`.
 
-**Remains:** the chain gives evidence of tampering and does not prevent it.
+**Remains:** the chain and the seals give evidence of tampering and do not
+prevent it, and an access-log entry newer than the last seal is protected by
+the refused changes alone.
 A deployment that sets `verify_interval = 0` finds a broken chain only
 when an operator runs the check. The indicator never flips readiness, so a
 finding reaches someone only through an alert on the counter or the

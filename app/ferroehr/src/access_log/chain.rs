@@ -1,94 +1,32 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The verification of a span of an access log against the checkpoint that
-//! seals it: the one verifier of a log held apart from the database that
-//! wrote it, such as an export or an imported log (#5129).
+//! What a checkpoint or an exported bundle of the access log fails, and the
+//! digests a bundle is verified by (#5129, #6242).
 //!
-//! The digests are the draft's (`docs/plans/access-log.md` §Integrity), the
-//! same the insert trigger of `audit.access_log_link` computes: the
-//! content digest is the SHA-256 of a record's canonical form, the link
-//! digest the SHA-256 of the previous digest, the sequence and the content
-//! digest, one per line, each in lower-case hexadecimal. A tombstone keeps
-//! the content digest of the entry it replaced, so its content digest is
-//! taken as recorded and only its link is recomputed, which is how a log
-//! verifies after retention removed content in its middle. A gap, a run of
-//! tombstones folded after their own retention (#5619), stands for the run
-//! as one link whose digest is its link: the link after it links to that.
-//!
-//! The chain of the local database is verified where it is stored as well,
-//! by `audit.verify_access_log_chain()`, which also matches the newest
-//! record to the head. No openEHR spec governs log integrity: our own
-//! design.
+//! A bundle is one EHR's records signed whole by the exporting system: its
+//! digest is the SHA-256 of its RFC 8785 canonical form without its proof,
+//! and its records digest the SHA-256 of each record's uid and content
+//! digest, in uid order, each field as its length in bytes, a colon, the
+//! field and a line feed, after the version tag
+//! `ferroehr.access_log.bundle.v1`. A tombstone keeps the content digest of
+//! the entry it replaced, so a bundle verifies after retention removed
+//! content inside it. No openEHR spec governs the transfer: our own design.
 
-use crate::access_log::gap::ChainGap;
-use crate::access_log::store::{AccessLogError, canonical_form};
 use crate::digest::sha256_hex;
-use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
-use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
-use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
-/// The one digest algorithm of the chain, as a link names it.
+/// The one digest algorithm of the seals and bundles, as a checkpoint names
+/// it.
 pub const ALGORITHM: &str = "SHA-256";
 
-/// `ACCESS_LOG_LINK.digest` of a link at `sequence` over `content_digest`,
-/// following the link whose digest is `previous`.
-#[must_use]
-pub fn link_digest(previous: &str, sequence: i64, content_digest: &str) -> String {
-    let line = format!("{previous}\n{sequence}\n{content_digest}");
-    sha256_hex(&line)
-}
+/// The version tag, the first field of a records digest's text.
+pub const BUNDLE_TAG: &str = "ferroehr.access_log.bundle.v1";
 
-/// One thing a span of the log fails, at the position it is about.
+/// One thing a checkpoint or a bundle fails.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ChainFinding {
-    /// The span holds no link.
-    #[error("the span holds no link")]
-    NoLinks,
-    /// A link or gap does not follow the one before it in sequence.
-    #[error("the link at {sequence} does not follow the link at {previous}")]
-    NotAdjacent {
-        /// The link's sequence.
-        sequence: i64,
-        /// The last sequence the link or gap before it in the span holds.
-        previous: i64,
-    },
-    /// A link names an algorithm the chain does not use.
-    #[error("the link at {sequence} names the algorithm {algorithm:?}")]
-    Algorithm {
-        /// The link's sequence.
-        sequence: i64,
-        /// The algorithm it names.
-        algorithm: String,
-    },
-    /// A link's digest is not the digest of its own attributes.
-    #[error("the digest of the link at {sequence} does not recompute")]
-    LinkDigest {
-        /// The link's sequence.
-        sequence: i64,
-    },
-    /// A link's previous digest is not the digest of the link before it.
-    #[error("the link at {sequence} does not link to the link before it")]
-    PreviousDigest {
-        /// The link's sequence.
-        sequence: i64,
-    },
-    /// A link's signature does not verify.
-    #[error("the signature of the link at {sequence} does not verify")]
-    LinkSignature {
-        /// The link's sequence.
-        sequence: i64,
-    },
-    /// The span does not end at the checkpoint's sequence.
-    #[error("the span ends at {sequence}, not at the checkpoint's {checkpoint}")]
-    CheckpointPosition {
-        /// The sequence of the last link of the span.
-        sequence: i64,
-        /// The checkpoint's sequence.
-        checkpoint: i64,
-    },
-    /// The last link's digest is not the digest the checkpoint seals.
-    #[error("the link at {sequence} is not the link the checkpoint seals")]
+    /// The seal at the checkpoint's sequence is not the one it signs.
+    #[error("the seal at {sequence} is not the seal the checkpoint signs")]
     CheckpointDigest {
         /// The checkpoint's sequence.
         sequence: i64,
@@ -99,237 +37,65 @@ pub enum ChainFinding {
         /// The checkpoint's sequence.
         sequence: i64,
     },
-    /// A record belongs to another system than the checkpoint.
-    #[error("the record at {sequence} belongs to the system {system_id:?}")]
+    /// The bundle's proof does not verify against a trusted key.
+    #[error("the bundle is not signed by a trusted key")]
+    BundleProof,
+    /// A record of the bundle belongs to another system than the bundle.
+    #[error("the record {uid} belongs to the system {system_id:?}")]
     OtherSystem {
-        /// The record's sequence.
-        sequence: i64,
+        /// The record's uid.
+        uid: String,
         /// The system it names.
         system_id: String,
     },
-    /// A record's link is not the span's link at its sequence.
-    #[error("the record at {sequence} carries a link the span does not hold")]
-    RecordLink {
-        /// The record's sequence.
-        sequence: i64,
+    /// A bundle names a different number of content digests than records.
+    #[error("the bundle names {digests} content digests for {records} records")]
+    Digests {
+        /// The records it holds.
+        records: usize,
+        /// The digests it names.
+        digests: usize,
     },
-    /// An entry's content is not the content its link digested.
-    #[error("the content of the entry at {sequence} was modified after it was written")]
+    /// An entry's content is not the content its digest names.
+    #[error("the content of the entry {uid} was modified after it was written")]
     ContentDigest {
-        /// The entry's sequence.
-        sequence: i64,
+        /// The entry's uid.
+        uid: String,
     },
 }
 
-/// A span of one system's log: its records, every link and gap from the
-/// first record's link to the checkpoint's sequence, and the checkpoint.
-#[derive(Debug, Clone, Copy)]
-pub struct Span<'a> {
-    /// The records, entries and tombstones, each with its link.
-    pub records: &'a [AccessLogRecord],
-    /// The links, in sequence; with the gaps they hold every position of the
-    /// span.
-    pub links: &'a [AccessLogLink],
-    /// The gaps between the links, in sequence.
-    pub gaps: &'a [ChainGap],
-    /// The checkpoint the span verifies against.
-    pub checkpoint: &'a AccessLogCheckpoint,
+fn field(text: &mut String, value: &str) {
+    use std::fmt::Write as _;
+    // NOTE: `impl fmt::Write for String` never fails
+    // (<https://doc.rust-lang.org/std/fmt/trait.Write.html#impl-Write-for-String>).
+    let _written = writeln!(text, "{}:{value}", value.len());
 }
 
-/// Verify `span` against its checkpoint.
-///
-/// Each link recomputes and links to the link or gap before it, each gap
-/// starts after the link or gap before it, the last of them is the one the
-/// checkpoint seals, the checkpoint and each signed link or gap carry a
-/// signature `signed` accepts, and each record carries the span's link at
-/// its sequence over its own content.
-///
-/// A checkpoint's proof signs its canonical form, the proof left out (RM
-/// common `master04-generic_package.adoc` §Attestation); a link's signature
-/// signs its digest.
-///
-/// `signed(data, signature)` says whether `signature` is a trusted key's
-/// signature over `data`. An empty result means the span verifies.
-///
-/// # Errors
-/// [`AccessLogError::Canonical`] when a record or the checkpoint has no
-/// canonical form.
-pub fn verify(
-    span: Span<'_>,
-    signed: &dyn Fn(&[u8], &str) -> bool,
-) -> Result<Vec<ChainFinding>, AccessLogError> {
-    let mut findings = Vec::new();
-    verify_links(&held(span), signed, &mut findings);
-    verify_checkpoint(span, signed, &mut findings)?;
-    for record in span.records {
-        verify_record(span, record, &mut findings)?;
+/// The records digest of `records`, pairs of uid and content digest.
+#[must_use]
+pub fn records_digest(records: &[(String, String)]) -> String {
+    let mut sorted: Vec<&(String, String)> = records.iter().collect();
+    sorted.sort();
+    let mut text = String::with_capacity(sorted.len().saturating_mul(110).saturating_add(32));
+    field(&mut text, BUNDLE_TAG);
+    for (uid, digest) in sorted {
+        field(&mut text, uid);
+        field(&mut text, digest);
     }
-    Ok(findings)
+    sha256_hex(&text)
 }
 
-/// One position or run of positions a span holds: a link, or a gap that
-/// stands for the run as one link whose digest is its link.
-#[derive(Debug, Clone, Copy)]
-enum Held<'a> {
-    /// A link of a record.
-    Link(&'a AccessLogLink),
-    /// A run of folded tombstones.
-    Gap(&'a ChainGap),
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-impl Held<'_> {
-    /// The first position held.
-    fn first(self) -> i64 {
-        match self {
-            Held::Link(link) => link.sequence,
-            Held::Gap(gap) => gap.first_sequence,
-        }
+    #[test]
+    fn the_records_digest_does_not_follow_the_order_given() {
+        let a = ("b".to_owned(), "1".repeat(64));
+        let b = ("a".to_owned(), "2".repeat(64));
+        assert_eq!(
+            records_digest(&[a.clone(), b.clone()]),
+            records_digest(&[b, a])
+        );
     }
-
-    /// The last position held.
-    fn last(self) -> i64 {
-        match self {
-            Held::Link(link) => link.sequence,
-            Held::Gap(gap) => gap.last_sequence,
-        }
-    }
-
-    /// The link digest the next link follows.
-    fn digest(&self) -> &str {
-        match self {
-            Held::Link(link) => &link.digest,
-            Held::Gap(gap) => &gap.link,
-        }
-    }
-
-    /// The signature of that digest, when it was signed.
-    fn signature(&self) -> Option<&str> {
-        match self {
-            Held::Link(link) => link.signature.as_deref(),
-            Held::Gap(gap) => gap.signature.as_deref(),
-        }
-    }
-}
-
-/// The links and gaps of `span` in sequence.
-fn held(span: Span<'_>) -> Vec<Held<'_>> {
-    let mut held: Vec<Held<'_>> = span
-        .links
-        .iter()
-        .map(Held::Link)
-        .chain(span.gaps.iter().map(Held::Gap))
-        .collect();
-    held.sort_by_key(|item| (item.last(), item.first()));
-    held
-}
-
-/// The findings of the links and gaps alone.
-fn verify_links(
-    held: &[Held<'_>],
-    signed: &dyn Fn(&[u8], &str) -> bool,
-    findings: &mut Vec<ChainFinding>,
-) {
-    let mut before: Option<Held<'_>> = None;
-    for item in held {
-        let sequence = item.first();
-        if let Held::Link(link) = item {
-            if link.algorithm != ALGORITHM {
-                findings.push(ChainFinding::Algorithm {
-                    sequence,
-                    algorithm: link.algorithm.clone(),
-                });
-            }
-            if link.digest != link_digest(&link.previous_digest, sequence, &link.content_digest) {
-                findings.push(ChainFinding::LinkDigest { sequence });
-            }
-        }
-        if let Some(previous) = before {
-            if previous.last().checked_add(1) != Some(sequence) {
-                findings.push(ChainFinding::NotAdjacent {
-                    sequence,
-                    previous: previous.last(),
-                });
-            } else if let Held::Link(link) = item
-                && link.previous_digest != previous.digest()
-            {
-                findings.push(ChainFinding::PreviousDigest { sequence });
-            }
-        }
-        if let Some(signature) = item.signature()
-            && !signed(item.digest().as_bytes(), signature)
-        {
-            findings.push(ChainFinding::LinkSignature {
-                sequence: item.last(),
-            });
-        }
-        before = Some(*item);
-    }
-}
-
-/// The findings of the checkpoint against the last link or gap.
-fn verify_checkpoint(
-    span: Span<'_>,
-    signed: &dyn Fn(&[u8], &str) -> bool,
-    findings: &mut Vec<ChainFinding>,
-) -> Result<(), AccessLogError> {
-    let checkpoint = span.checkpoint;
-    let sequence = checkpoint.sequence;
-    let held = held(span);
-    match held.last() {
-        None => findings.push(ChainFinding::NoLinks),
-        Some(last) if last.last() != sequence => {
-            findings.push(ChainFinding::CheckpointPosition {
-                sequence: last.last(),
-                checkpoint: sequence,
-            });
-        }
-        Some(last) if last.digest() != checkpoint.digest => {
-            findings.push(ChainFinding::CheckpointDigest { sequence });
-        }
-        Some(_) => {}
-    }
-    if checkpoint.algorithm != ALGORITHM {
-        findings.push(ChainFinding::Algorithm {
-            sequence,
-            algorithm: checkpoint.algorithm.clone(),
-        });
-    }
-    let form = canonical_form(checkpoint)?;
-    if !signed(form.as_bytes(), &checkpoint.proof) {
-        findings.push(ChainFinding::CheckpointProof { sequence });
-    }
-    Ok(())
-}
-
-/// The findings of one record against the span.
-fn verify_record(
-    span: Span<'_>,
-    record: &AccessLogRecord,
-    findings: &mut Vec<ChainFinding>,
-) -> Result<(), AccessLogError> {
-    let (system_id, link, entry) = match record {
-        AccessLogRecord::AccessLogEntry(entry) => (&entry.system_id, &entry.link, true),
-        AccessLogRecord::AccessLogTombstone(tombstone) => {
-            (&tombstone.system_id, &tombstone.link, false)
-        }
-    };
-    let sequence = link.sequence;
-    if *system_id != span.checkpoint.system_id {
-        findings.push(ChainFinding::OtherSystem {
-            sequence,
-            system_id: system_id.clone(),
-        });
-    }
-    let held = span
-        .links
-        .binary_search_by_key(&sequence, |held| held.sequence)
-        .ok()
-        .and_then(|index| span.links.get(index));
-    if held != Some(link) {
-        findings.push(ChainFinding::RecordLink { sequence });
-    }
-    if entry && link.content_digest != sha256_hex(&canonical_form(record)?) {
-        findings.push(ChainFinding::ContentDigest { sequence });
-    }
-    Ok(())
 }

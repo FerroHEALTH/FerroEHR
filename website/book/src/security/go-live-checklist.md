@@ -205,9 +205,9 @@ sets out the rules a policy write is refused under.
 
 Verify the chain works before you need it:
 
-```sql
-SELECT * FROM audit.verify_audit_chain();
-SELECT * FROM audit.verify_access_log_chain();
+```sh
+psql -c 'SELECT * FROM audit.verify_audit_chain();'
+ferroehr access-log verify
 ```
 
 - [ ] `[audit] enabled = true`.
@@ -215,8 +215,8 @@ SELECT * FROM audit.verify_access_log_chain();
       cannot rewrite.
 - [ ] `retention` (or `retention`) is `0` or at or above the floor
       that applies to you.
-- [ ] `audit.verify_audit_chain()` and `audit.verify_access_log_chain()`
-      return no rows on a healthy trail.
+- [ ] `audit.verify_audit_chain()` returns no rows and
+      `ferroehr access-log verify` reports the log intact on a healthy trail.
 
 ## 6. Schema preparation runs on its own credential
 

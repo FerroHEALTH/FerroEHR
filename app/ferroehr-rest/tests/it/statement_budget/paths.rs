@@ -49,7 +49,7 @@ use tracing::field::{Field, Visit};
 use tracing_subscriber::layer::{Context, SubscriberExt as _};
 use tracing_subscriber::registry::LookupSpan;
 
-use super::{CHAINER_RELEASE, CHAINER_ROUND, CHAINER_TAKE, SYSTEM_ROUND, calls, counted, drained};
+use super::{CHAINER_RELEASE, SYSTEM_ROUND, calls, counted, drained};
 use crate::access_evaluator_http::{credential, ehr_with_composition};
 use crate::common::{self, BASE, FHIR};
 
@@ -293,6 +293,13 @@ struct Budget {
 /// ceilings are the figures of two runs (17,495 and 1,623 allocations, median
 /// peaks of 1,386,366 and 134,395 bytes, 186,380 and 5,765 WAL bytes) with
 /// the margins above.
+/// The access-log entry has since been written once by a plain insert, with
+/// no intake row, link, chain head or function around it (#6242): 559 bytes
+/// fewer for each entry a read writes and 556 on each commit, measured
+/// beside the merge base, and each WAL ceiling fell by its path's figure; the
+/// reads and the queries run no nested statement any more, and their nested
+/// ceilings fell to 0. A commit runs 4 nested statements where it ran 3, under
+/// its ceiling, which does not move.
 const BUDGETS: [Budget; 22] = [
     Budget {
         path: Path::CommitJson,
@@ -301,7 +308,7 @@ const BUDGETS: [Budget; 22] = [
         peak_bytes: 1_530_778,
         round_trips: 9,
         nested: 13,
-        wal: 188_764,
+        wal: 188_205,
     },
     Budget {
         path: Path::CommitXml,
@@ -310,7 +317,7 @@ const BUDGETS: [Budget; 22] = [
         peak_bytes: 1_533_031,
         round_trips: 9,
         nested: 14,
-        wal: 189_063,
+        wal: 188_507,
     },
     Budget {
         path: Path::CommitFlat,
@@ -319,7 +326,7 @@ const BUDGETS: [Budget; 22] = [
         peak_bytes: 1_528_525,
         round_trips: 9,
         nested: 13,
-        wal: 189_405,
+        wal: 188_849,
     },
     Budget {
         path: Path::ReadJson,
@@ -327,8 +334,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 1327,
         peak_bytes: 617_268,
         round_trips: 2,
-        nested: 2,
-        wal: 2623,
+        nested: 0,
+        wal: 2064,
     },
     Budget {
         path: Path::ReadXml,
@@ -336,8 +343,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 10_804,
         peak_bytes: 1_017_140,
         round_trips: 2,
-        nested: 2,
-        wal: 2623,
+        nested: 0,
+        wal: 2064,
     },
     Budget {
         path: Path::ReadFlat,
@@ -345,8 +352,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 15_521,
         peak_bytes: 1_634_407,
         round_trips: 2,
-        nested: 2,
-        wal: 2623,
+        nested: 0,
+        wal: 2064,
     },
     Budget {
         path: Path::EhrRead,
@@ -354,8 +361,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 1113,
         peak_bytes: 100_250,
         round_trips: 2,
-        nested: 2,
-        wal: 1823,
+        nested: 0,
+        wal: 1264,
     },
     Budget {
         path: Path::AqlSingle,
@@ -363,8 +370,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 2443,
         peak_bytes: 118_273,
         round_trips: 4,
-        nested: 2,
-        wal: 4123,
+        nested: 0,
+        wal: 3269,
     },
     Budget {
         path: Path::AqlPopulation,
@@ -372,8 +379,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 3295,
         peak_bytes: 158_823,
         round_trips: 3,
-        nested: 2,
-        wal: 10_656,
+        nested: 0,
+        wal: 8622,
     },
     Budget {
         path: Path::Iti81,
@@ -381,8 +388,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 8977,
         peak_bytes: 624_026,
         round_trips: 3,
-        nested: 2,
-        wal: 1686,
+        nested: 0,
+        wal: 1127,
     },
     Budget {
         path: Path::PartyRead,
@@ -400,7 +407,7 @@ const BUDGETS: [Budget; 22] = [
         peak_bytes: 1_649_934,
         round_trips: 12,
         nested: 14,
-        wal: 190_142,
+        wal: 189_586,
     },
     Budget {
         path: Path::ReadAtTime,
@@ -408,8 +415,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 1338,
         peak_bytes: 701_748,
         round_trips: 2,
-        nested: 2,
-        wal: 2623,
+        nested: 0,
+        wal: 2064,
     },
     Budget {
         path: Path::CommitStatus,
@@ -418,7 +425,7 @@ const BUDGETS: [Budget; 22] = [
         peak_bytes: 144_180,
         round_trips: 15,
         nested: 11,
-        wal: 6021,
+        wal: 5457,
     },
     Budget {
         path: Path::ReadStatus,
@@ -426,8 +433,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 1182,
         peak_bytes: 102_503,
         round_trips: 3,
-        nested: 2,
-        wal: 1952,
+        nested: 0,
+        wal: 1393,
     },
     Budget {
         path: Path::CommitParty,
@@ -444,8 +451,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 5703,
         peak_bytes: 192_267,
         round_trips: 4,
-        nested: 2,
-        wal: 12_612,
+        nested: 0,
+        wal: 10_578,
     },
     Budget {
         path: Path::AqlParty,
@@ -471,8 +478,8 @@ const BUDGETS: [Budget; 22] = [
         allocations: 1333,
         peak_bytes: 162_800,
         round_trips: 2,
-        nested: 2,
-        wal: 2607,
+        nested: 0,
+        wal: 2048,
     },
     Budget {
         path: Path::CommitUpdate,
@@ -481,7 +488,7 @@ const BUDGETS: [Budget; 22] = [
         peak_bytes: 1_525_458,
         round_trips: 10,
         nested: 4,
-        wal: 188_244,
+        wal: 187_688,
     },
     Budget {
         path: Path::CommitDelete,
@@ -490,7 +497,7 @@ const BUDGETS: [Budget; 22] = [
         peak_bytes: 150_537,
         round_trips: 11,
         nested: 4,
-        wal: 5823,
+        wal: 5267,
     },
 ];
 
@@ -1246,7 +1253,7 @@ async fn updates_in_place(pool: &PgPool, from: &str, to: &str) -> u64 {
             AND b.resource_manager = 'Heap' \
             AND split_part(b.record_type, '+', 1) IN ('UPDATE', 'HOT_UPDATE') \
             AND c.relkind = 'r' \
-            AND c.relname NOT IN ('access_log_chain_state', 'audit_chain_state') \
+            AND c.relname NOT IN ('access_log_seal_state', 'access_log_owed', 'audit_chain_state') \
             AND c.relnamespace NOT IN \
                 ('pg_catalog'::regnamespace, 'information_schema'::regnamespace)",
     )
@@ -1307,12 +1314,7 @@ async fn measure(
         .filter(|s| !s.toplevel)
         .map(|s| s.calls)
         .sum();
-    let chainer = calls(
-        &statements,
-        "SELECT head_seq, head_digest FROM audit.access_log_chain_take",
-    ) * CHAINER_TAKE
-        + calls(&statements, "SELECT audit.access_log_chain_move") * CHAINER_ROUND
-        + calls(&statements, "SELECT audit.audit_event_chain_move") * SYSTEM_ROUND
+    let chainer = calls(&statements, "SELECT audit.audit_event_chain_move") * SYSTEM_ROUND
         + calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
     let counts = std::mem::take(&mut *counter.0.lock().unwrap());
     out.conversions = counts.conversions;

@@ -16,20 +16,17 @@ include::partial$module_vars.adoc[]
 
 == Integrity
 
-. The canonical form of a record is its ITS-JSON serialisation with the `_link_` attribute removed, canonicalised by the JSON Canonicalization Scheme of RFC 8785.
-. `_content_digest_` is the digest of the UTF-8 octets of the canonical form.
-. `_digest_` is the digest of the UTF-8 octets of `_previous_digest_`, a line feed, the decimal `_sequence_`, a line feed, and `_content_digest_`.
-. The first record of a log has `_sequence_` 1 and a `_previous_digest_` the system publishes with its first checkpoint.
-. Every record of one `_system_id_` MUST carry the next `_sequence_`, without gaps.
-. A system SHOULD write an `ACCESS_LOG_CHECKPOINT` at intervals its policy sets and on request, and SHOULD deposit checkpoints where the recording system cannot alter them.
-. A verifier recomputes `_digest_` for each record from `_previous_digest_`, `_sequence_` and `_content_digest_`, recomputes `_content_digest_` for each `ACCESS_LOG_ENTRY`, and checks the last digest against a checkpoint. A tombstone's `_content_digest_` cannot be recomputed and is taken as recorded.
-. A system MAY sign each link (`ACCESS_LOG_LINK._signature_`).
-. A change of algorithm takes effect at a stated sequence; each link names its algorithm.
+. The canonical form of a record is its ITS-JSON serialisation canonicalised by the JSON Canonicalization Scheme of RFC 8785, and its content digest the digest of the UTF-8 octets of that form. A tombstone keeps the content digest of the entry it replaced, which the system stores beside it.
+. A system seals its records in windows of consecutive record numbers, each window following the one before it with no number between. A window's seal is the digest of a text that starts with a version tag and names the window, the previous seal and each record's number and content digest in number order, each field as its length in octets, a colon, the field and a line feed.
+. A system MUST NOT seal a window while a record whose number falls in it may still be written.
+. A system SHOULD sign each seal as an `ACCESS_LOG_CHECKPOINT` of the log up to the window's last record, and SHOULD deposit checkpoints where the recording system cannot alter them.
+. A verifier recomputes each window's seal from its records' content digests, recomputes the content digest of each `ACCESS_LOG_ENTRY`, follows the seals from one to the next, and checks a checkpoint's signature and seal.
+. A change of algorithm or version tag takes effect at a stated window.
 
 == Retention
 
 . An entry MUST state its retention when written: `_retain_until_` and the grounds that set it, from the controller's access policy and the law that binds the controller, and SHOULD name the version of that policy in `_policy_`.
-. At the end of the period, the system MUST replace the entry by an `ACCESS_LOG_TOMBSTONE` with the same `_uid_`, `_system_id_`, `_time_recorded_` and `_link_`. An erasure ordered by law before then takes the same path.
+. At the end of the period, the system MUST replace the entry by an `ACCESS_LOG_TOMBSTONE` with the same `_uid_`, `_system_id_` and `_time_recorded_`, keeping the entry's content digest beside it. An erasure ordered by law before then takes the same path.
 . A store that receives entries from another system MUST keep their `_retain_until_` and MAY extend it.
 
 == Access to the Log
@@ -38,17 +35,17 @@ The log is personal data about the subject of care and about the people who acce
 
 . Reading the log MUST require a permission granted for the log alone, never one granted with clinical access rights.
 . Every read of the log MUST be recorded (<<_recording>>).
-. A system SHOULD keep the log in a store whose writers cannot alter or remove its records, and MUST detect such an alteration by the chain (<<_integrity>>).
+. A system SHOULD keep the log in a store whose writers cannot alter or remove its records, and MUST detect such an alteration by the seals (<<_integrity>>).
 
 == Views
 
 A system serves two views of an entry:
 
 * *The full view*, to a party authorised to review the log.
-* *The subject view*, to the subject of care of the EHR and to their representative. It MUST include `_time_recorded_`, `_occurred_`, `_action_`, `_outcome.result_`, `_accessor.kind_`, `_accessor.party_`, `_accessor.provider_`, `_items_` (without `_origins.endpoint_`), `_purposes_` and `_is_emergency_`. It MUST omit `_accessor.credential_`, `_accessor.delegation_`, `_accessor.binding_`, `_channel_`, `_query.text_`, `_query.text_digest_`, `_security_labels_`, `_other_details_` and `_link_`. A system MAY withhold further attributes where the law of the jurisdiction restricts the subject's right to them.
+* *The subject view*, to the subject of care of the EHR and to their representative. It MUST include `_time_recorded_`, `_occurred_`, `_action_`, `_outcome.result_`, `_accessor.kind_`, `_accessor.party_`, `_accessor.provider_`, `_items_` (without `_origins.endpoint_`), `_purposes_` and `_is_emergency_`. It MUST omit `_accessor.credential_`, `_accessor.delegation_`, `_accessor.binding_`, `_channel_`, `_query.text_`, `_query.text_digest_`, `_security_labels_` and `_other_details_`. A system MAY withhold further attributes where the law of the jurisdiction restricts the subject's right to them.
 
 The caller's authorisation selects the view. A request parameter MUST NOT widen it.
 
 == Exchange
 
-A system that transfers an EHR to another system exports the EHR's records with the checkpoint they verify against. The receiving system keeps their `_system_id_`, `_link_` and `_retain_until_`, verifies them against the checkpoint, and records the import as an entry of its own log.
+A system that transfers an EHR to another system exports the EHR's records, each with its content digest, signed whole by the exporting system, and carries no record or digest about another person. The receiving system verifies the signature and every entry's digest, keeps the records' `_system_id_`, `_retain_until_` and content digests, and records the import as an entry of its own log that names the export's digest and a digest over its records.

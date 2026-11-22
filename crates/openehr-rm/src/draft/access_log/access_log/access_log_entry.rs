@@ -8,7 +8,6 @@
 
 use crate::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use crate::draft::access_log::access_log::access_channel::AccessChannel;
-use crate::draft::access_log::access_log::access_log_link::AccessLogLink;
 use crate::draft::access_log::access_log::access_outcome::AccessOutcome;
 use crate::draft::access_log::access_log::access_query::AccessQuery;
 use crate::draft::access_log::access_log::access_retention::AccessRetention;
@@ -33,8 +32,6 @@ pub struct AccessLogEntry {
     pub system_id: String,
     /// Time at which the record was written to the log.
     pub time_recorded: DvDateTime,
-    /// This record's link in the log's hash chain.
-    pub link: AccessLogLink,
     /// Time interval over which the access took place, when it is known and differs from `_time_recorded_`.
     pub occurred: Option<DvInterval<DvDateTime>>,
     /// What the access did to the data, coded in the draft `openehr_access` terminology's `access action` group.

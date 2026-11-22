@@ -245,11 +245,9 @@ mod tests {
             path("SELECT l/items/version_id/value FROM ACCESS_LOG_ENTRY l").expect("resolves");
         assert!(version.multiple, "items is a list");
         assert_eq!(version.leaf, Leaf::Text);
-        assert_eq!(
-            path("SELECT l/link/sequence FROM ACCESS_LOG_ENTRY l")
-                .expect("resolves")
-                .leaf,
-            Leaf::Number
+        assert!(
+            path("SELECT l/link/sequence FROM ACCESS_LOG_ENTRY l").is_err(),
+            "a record carries no link (#6242)"
         );
         assert_eq!(
             path("SELECT l/is_emergency FROM ACCESS_LOG_ENTRY l")

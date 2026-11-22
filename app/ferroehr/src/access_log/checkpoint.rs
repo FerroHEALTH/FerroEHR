@@ -2,25 +2,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The signed checkpoints of the access log and the verification of the log
-//! against them (#5129, #5704).
+//! against them (#5129, #5704, #6242).
 //!
-//! A checkpoint seals a position of the system's chain: its sequence and link
-//! digest, signed with the keyring's `OpenPGP` key in the form
+//! A checkpoint is the signed seal of a window: the `ACCESS_LOG_CHECKPOINT`
+//! of the log up to the window's last entry id, whose digest is the window's
+//! seal digest, signed with the keyring's `OpenPGP` key in the form
 //! `ATTESTATION._proof_` takes (RM common `master04-generic_package.adoc`
-//! §Attestation). Every append ends, in its own transaction, with the
-//! checkpoint of the last link it wrote ([`Sealer`]), so every committed
-//! entry is covered by a signature from the moment it commits, and the chain
-//! of links carries that signature down to every record below it. A
-//! verifier that holds one detects any later rewrite of the records it
-//! covers. The access log is a chain of its own, apart from the records
-//! outside it (#5573), verified where it is stored by
-//! `audit.verify_access_log_chain()` through
-//! [`AuditStore::verify_chain_advancing`], which accepts a tombstone in place
-//! of its entry and a gap in place of a folded run (#5619); this module adds
-//! what a checkpoint adds: its proof and the link it seals.
+//! §Attestation). Each seal follows the one before it, so a verifier that
+//! holds a checkpoint detects any later rewrite of the entries it covers
+//! ([`crate::access_log::seal`]). The verification recomputes every window,
+//! checks the checkpoint's proof and seal, and verifies every imported bundle
+//! ([`crate::access_log::imported`]).
 //!
-//! No openEHR spec governs log signing: our own design
-//! (`docs/plans/access-log.md` §Integrity).
+//! No openEHR spec governs log signing: our own design.
 
 use std::sync::Arc;
 
@@ -34,8 +28,7 @@ use crate::access_log::store::{AccessLogError, AccessLogStore, canonical_form};
 use crate::access_log::transfer::named_party;
 use crate::db::acquire::acquire;
 use crate::system_log::seal::Seals;
-use crate::system_log::store::AuditStore;
-use crate::system_log::store::chains::{AuditChain, AuditChainFinding, VerifyScope};
+use crate::system_log::store::chains::AuditChainFinding;
 use crate::telemetry::access_path;
 use crate::versioning::audit::dv_date_time;
 use crate::versioning::signature::signer::{AttestError, Signer};
@@ -44,7 +37,8 @@ use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogC
 use openehr_rm::draft::access_log::invariants::check_checkpoint;
 
 /// The columns a stored checkpoint is rebuilt from.
-const CHECKPOINT_COLUMNS: &str = "sequence, system_id, digest, time_sealed, proof";
+const CHECKPOINT_COLUMNS: &str = "last_id AS sequence, system_id, encode(digest, 'hex') AS digest, \
+     sealed_at AS time_sealed, proof";
 
 /// The keyring and the system that seal the appends of this system's log.
 #[derive(Debug, Clone)]
@@ -84,53 +78,61 @@ impl Sealer {
     }
 }
 
-/// A checkpoint whose signature is being made, owed by the transaction of the
-/// append it seals.
+/// A window's seal as signed: the `ACCESS_LOG_CHECKPOINT` of the log up to
+/// its last entry id over its seal digest, its proof, the system it names and
+/// the time it names.
+#[derive(Debug, Clone)]
+pub struct SignedSeal {
+    /// The armored signature.
+    pub proof: String,
+    /// The system the checkpoint names.
+    pub system_id: String,
+    /// The time the checkpoint names, to the microsecond.
+    pub sealed: Timestamp,
+}
+
+impl Sealer {
+    /// Sign the seal of the log up to entry `last_id` whose digest is
+    /// `digest`, as the `ACCESS_LOG_CHECKPOINT` at that position over that
+    /// digest (#6242), on the blocking pool.
+    ///
+    /// # Errors
+    /// [`AccessLogError::Clock`], [`AccessLogError::Canonical`],
+    /// [`AccessLogError::Sign`] and [`AccessLogError::Signing`] when the
+    /// checkpoint cannot be built or signed, and [`AccessLogError::Sign`] or
+    /// [`AccessLogError::Signing`] when the signature fails.
+    pub async fn sign_seal(
+        &self,
+        last_id: i64,
+        digest: &str,
+    ) -> Result<SignedSeal, AccessLogError> {
+        let pending = self.begin(last_id, digest)?;
+        let signed = match pending.signing.await {
+            Ok(signed) => signed.map_err(AccessLogError::Sign),
+            Err(unfinished) => Err(AccessLogError::Signing(unfinished)),
+        };
+        access_path::metrics().log_sign_duration.record(
+            access_path::seconds_since(pending.started),
+            &[access_path::outcome(&signed)],
+        );
+        let mut checkpoint = pending.checkpoint;
+        checkpoint.proof = signed?;
+        check_checkpoint(&checkpoint)?;
+        Ok(SignedSeal {
+            proof: checkpoint.proof,
+            system_id: self.system_id.clone(),
+            sealed: pending.sealed,
+        })
+    }
+}
+
+/// A checkpoint whose signature is being made.
 #[derive(Debug)]
 pub struct PendingSeal {
     checkpoint: AccessLogCheckpoint,
     sealed: Timestamp,
     signing: tokio::task::JoinHandle<Result<String, AttestError>>,
     started: std::time::Instant,
-}
-
-impl PendingSeal {
-    /// Wait for the signature and store the checkpoint on `conn`; the stored
-    /// checkpoint is returned.
-    ///
-    /// # Errors
-    /// [`AccessLogError::Sign`] when the keyring cannot sign,
-    /// [`AccessLogError::Signing`] when the task signing it ends without an
-    /// answer, [`AccessLogError::Invalid`] for a checkpoint that breaks an
-    /// invariant, and the store errors when the insert fails.
-    pub(super) async fn write(
-        self,
-        conn: &mut PgConnection,
-    ) -> Result<AccessLogCheckpoint, AccessLogError> {
-        let signed = match self.signing.await {
-            Ok(signed) => signed.map_err(AccessLogError::Sign),
-            Err(unfinished) => Err(AccessLogError::Signing(unfinished)),
-        };
-        access_path::metrics().log_sign_duration.record(
-            access_path::seconds_since(self.started),
-            &[access_path::outcome(&signed)],
-        );
-        let mut checkpoint = self.checkpoint;
-        checkpoint.proof = signed?;
-        check_checkpoint(&checkpoint)?;
-        sqlx::query(
-            "INSERT INTO audit.access_log_checkpoint (sequence, system_id, digest, time_sealed, \
-             proof) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (sequence) DO NOTHING",
-        )
-        .bind(checkpoint.sequence)
-        .bind(&checkpoint.system_id)
-        .bind(&checkpoint.digest)
-        .bind(jiff_sqlx::Timestamp::from(self.sealed))
-        .bind(&checkpoint.proof)
-        .execute(&mut *conn)
-        .await?;
-        Ok(checkpoint)
-    }
 }
 
 /// The checkpoint of `system_id` at `sequence` over `digest`, sealed at
@@ -153,7 +155,7 @@ fn unsigned(
     }
 }
 
-/// The checkpoint `row` of `audit.access_log_checkpoint` holds, rebuilt from
+/// The checkpoint `row` of `audit.access_log_seal` holds, rebuilt from
 /// the columns [`CHECKPOINT_COLUMNS`] names.
 fn stored_checkpoint(row: &PgRow) -> Result<AccessLogCheckpoint, AccessLogError> {
     let system_id: String = row.try_get("system_id")?;
@@ -272,6 +274,15 @@ impl Checkpoints {
         &self.store
     }
 
+    /// The keyring's signature over `data`.
+    ///
+    /// # Errors
+    /// [`AccessLogError::Sign`] when the keyring holds no `OpenPGP` key or
+    /// cannot sign.
+    pub fn sign(&self, data: &[u8]) -> Result<String, AccessLogError> {
+        self.signer.attest(data).map_err(AccessLogError::Sign)
+    }
+
     /// Whether `signature` is a signature over `data` by the keyring's key, a
     /// certificate retired from it, or a trusted certificate.
     #[must_use]
@@ -279,50 +290,41 @@ impl Checkpoints {
         self.signer.attests(data, signature) || self.trusted.verifies(data, signature)
     }
 
-    /// The checkpoint of the head of the access log, stored and returned;
-    /// `None` while the log is empty.
-    ///
-    /// A head already sealed, as the chainer seals the head it rests on while
-    /// the keyring holds a key, returns its stored checkpoint, so this writes
-    /// only for a head the chainer has not sealed yet.
+    /// The checkpoint of the access log up to its last committed entry:
+    /// every committed entry sealed in its window, and the newest signed
+    /// seal returned; `None` while nothing is sealed.
     ///
     /// # Errors
-    /// [`AccessLogError::Sign`] when the keyring holds no `OpenPGP` key or
-    /// cannot sign, [`AccessLogError::Invalid`] for a checkpoint that breaks
-    /// an invariant, and the store errors when a statement fails.
+    /// [`AccessLogError::Sign`] when an entry waits to be sealed and the
+    /// keyring holds no `OpenPGP` key or cannot sign, and the store errors
+    /// when a statement fails.
     pub async fn seal(&self) -> Result<Option<AccessLogCheckpoint>, AccessLogError> {
-        let mut conn = acquire(&self.pool).await?;
-        let head = sqlx::query(
-            "SELECT head_seq, head_digest FROM audit.access_log_chain_state \
-             WHERE singleton AND head_seq > 0",
-        )
-        .fetch_optional(&mut *conn)
-        .await?;
-        let Some(head) = head else {
-            return Ok(None);
-        };
-        let sequence: i64 = head.try_get("head_seq")?;
-        if let Some(sealed) = stored_at(&mut conn, sequence).await? {
-            return Ok(Some(sealed));
-        }
-        let digest: String = head.try_get("head_digest")?;
-        Sealer::new(Arc::clone(&self.signer), self.system_id.clone())
-            .begin(sequence, &digest)?
-            .write(&mut conn)
+        if !self.signer.holds_key() {
+            let unsealed: bool = sqlx::query_scalar(
+                "SELECT EXISTS (SELECT 1 FROM audit.access_log_entry e \
+                 WHERE e.id > (SELECT s.last_id FROM audit.access_log_seal_state s \
+                                WHERE s.singleton))",
+            )
+            .fetch_one(&mut *acquire(&self.pool).await?)
             .await?;
-        stored_at(&mut conn, sequence).await
+            if unsealed {
+                return Err(AccessLogError::Sign(AttestError::NoKey));
+            }
+            return self.latest(None).await;
+        }
+        self.store.seal_committed().await?;
+        self.latest(None).await
     }
 
-    /// Mark the checkpoint at `sequence` published outside the database, so
-    /// the fold keeps it and the gap that folds its position records the link
-    /// it seals (#5727); a checkpoint already marked stays as it is.
+    /// Mark the checkpoint at `sequence` published outside the database; a
+    /// checkpoint already marked stays as it is.
     ///
     /// # Errors
     /// The store errors when the statement fails.
     pub async fn mark_published(&self, sequence: i64) -> Result<(), AccessLogError> {
         sqlx::query(
-            "UPDATE audit.access_log_checkpoint SET published_at = now() \
-             WHERE sequence = $1 AND published_at IS NULL",
+            "UPDATE audit.access_log_seal SET published_at = now() \
+             WHERE last_id = $1 AND published_at IS NULL",
         )
         .bind(sequence)
         .execute(&mut *acquire(&self.pool).await?)
@@ -350,12 +352,12 @@ impl Checkpoints {
     ) -> Result<Option<AccessLogCheckpoint>, AccessLogError> {
         let row = match covering {
             None => sqlx::query(sqlx::AssertSqlSafe(format!(
-                "SELECT {CHECKPOINT_COLUMNS} FROM audit.access_log_checkpoint \
-                 ORDER BY sequence DESC LIMIT 1"
+                "SELECT {CHECKPOINT_COLUMNS} FROM audit.access_log_seal \
+                 WHERE proof IS NOT NULL ORDER BY window_no DESC LIMIT 1"
             ))),
             Some(sequence) => sqlx::query(sqlx::AssertSqlSafe(format!(
-                "SELECT {CHECKPOINT_COLUMNS} FROM audit.access_log_checkpoint \
-                 WHERE sequence >= $1 ORDER BY sequence LIMIT 1"
+                "SELECT {CHECKPOINT_COLUMNS} FROM audit.access_log_seal \
+                 WHERE proof IS NOT NULL AND last_id >= $1 ORDER BY window_no LIMIT 1"
             )))
             .bind(sequence),
         }
@@ -383,10 +385,7 @@ impl Checkpoints {
             Some(checkpoint) => Some(checkpoint),
             None => self.latest(None).await?,
         };
-        let chain = AuditStore::new(self.pool.clone())
-            .verify_chain_advancing(AuditChain::AccessLog, VerifyScope::Full)
-            .await
-            .map_err(|error| AccessLogError::Chain(Box::new(error)))?;
+        let chain = self.store.verify_windows(false).await?;
         let mut findings = Vec::new();
         if let Some(checkpoint) = &checkpoint {
             self.verify_checkpoint(checkpoint, &mut findings).await?;
@@ -410,26 +409,17 @@ impl Checkpoints {
         if !self.signed(canonical_form(checkpoint)?.as_bytes(), &checkpoint.proof) {
             findings.push(ChainFinding::CheckpointProof { sequence });
         }
-        let sealed: Option<String> =
-            sqlx::query_scalar("SELECT audit.access_log_sealed_link($1, $2)")
-                .bind(sequence)
-                .bind(&checkpoint.proof)
-                .fetch_one(&mut *acquire(&self.pool).await?)
-                .await?;
+        let sealed: Option<String> = sqlx::query_scalar(
+            "SELECT encode(digest, 'hex') FROM audit.access_log_seal WHERE last_id = $1",
+        )
+        .bind(sequence)
+        .fetch_optional(&mut *acquire(&self.pool).await?)
+        .await?;
         if sealed.as_deref() != Some(checkpoint.digest.as_str()) {
             findings.push(ChainFinding::CheckpointDigest { sequence });
         }
         Ok(())
     }
-}
-
-/// The checkpoint an exporting system signed, stored at `sequence` as its
-/// ITS-JSON `text`.
-pub(super) fn read(sequence: i64, text: &str) -> Result<AccessLogCheckpoint, AccessLogError> {
-    serde_json::from_str(text).map_err(|source| AccessLogError::Unreadable {
-        chain_seq: sequence,
-        source,
-    })
 }
 
 /// The stored checkpoint at `sequence`, read on `conn`.
@@ -441,7 +431,8 @@ async fn stored_at(
     sequence: i64,
 ) -> Result<Option<AccessLogCheckpoint>, AccessLogError> {
     let row = sqlx::query(sqlx::AssertSqlSafe(format!(
-        "SELECT {CHECKPOINT_COLUMNS} FROM audit.access_log_checkpoint WHERE sequence = $1"
+        "SELECT {CHECKPOINT_COLUMNS} FROM audit.access_log_seal \
+         WHERE last_id = $1 AND proof IS NOT NULL"
     )))
     .bind(sequence)
     .fetch_optional(conn)

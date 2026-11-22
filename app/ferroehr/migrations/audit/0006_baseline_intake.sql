@@ -1,16 +1,17 @@
 -- SPDX-FileCopyrightText: Cadasto B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
--- audit: the intakes and the syslog outbox.
+-- audit: the access log's write, the system intake and the syslog outbox.
 --
 -- Every audit record is written durably before the response that reports the
 -- access: a request writes its access-log entries and every other audit
--- record in its own transaction, before it answers, into tables that are not
--- chained, so concurrent requests never wait on a head. The chainer links
--- them with a critical section that holds only what needs the head of the
--- log. A write's records are held under a reservation id until the write's
--- own transaction commits it; the reconciler releases or discards what a
--- process that died left held.
+-- record in its own transaction, before it answers, so concurrent requests
+-- never wait on a head. An access-log entry is written once into
+-- access_log_entry and sealed later by window (#6242); a system record goes
+-- into the system intake, which the chainer links into the system chain. A
+-- write's records are held under a reservation id until the write's own
+-- transaction commits it; the reconciler releases or discards what a process
+-- that died left held.
 --
 -- No openEHR spec governs audit storage mechanics: our own design.
 --
@@ -84,31 +85,6 @@ COMMENT ON COLUMN audit_event_intake.events IS
 COMMENT ON COLUMN audit_event_intake.reserved_by IS
     'The reservation a write''s records are held under until its commit is confirmed (#5762); the chainer takes no held row. NULL for records that are not held.';
 
-CREATE TABLE access_log_intake (
-    id          bigint      NOT NULL GENERATED ALWAYS AS IDENTITY,
-    taken_at    timestamptz NOT NULL DEFAULT now(),
-    entries     bigint[]    NOT NULL,
-    reserved_by uuid,
-    CONSTRAINT pk_access_log_intake_batch PRIMARY KEY (id),
-    CONSTRAINT ck_access_log_intake_entries CHECK (cardinality(entries) > 0)
-) WITH (vacuum_truncate = off);
-CREATE INDEX ix_access_log_intake_held ON access_log_intake (reserved_by)
-    WHERE reserved_by IS NOT NULL;
-CREATE TRIGGER access_log_intake_append_only
-    BEFORE UPDATE OR DELETE ON access_log_intake
-    FOR EACH ROW EXECUTE FUNCTION audit.audit_intake_reject_change();
-CREATE TRIGGER access_log_intake_no_truncate
-    BEFORE TRUNCATE ON access_log_intake
-    FOR EACH STATEMENT EXECUTE FUNCTION audit.audit_intake_reject_change();
-COMMENT ON TABLE access_log_intake IS
-    'One row per intake statement: the access_log_entry ids it wrote, which no link chains yet. Append-only; left only by audit.access_log_chain_move(), which links its entries in the same statement, or by the discard of a reservation that never committed.';
-COMMENT ON COLUMN access_log_intake.taken_at IS
-    'When the request wrote the entries, for the age of the oldest not chained yet.';
-COMMENT ON COLUMN access_log_intake.entries IS
-    'The access_log_entry ids, in the order the chainer links them.';
-COMMENT ON COLUMN access_log_intake.reserved_by IS
-    'The reservation a write''s records are held under until its commit is confirmed (#5762); the chainer takes no held row. NULL for records that are not held.';
-
 -- ── the syslog outbox ───────────────────────────────────────────────────────
 CREATE TABLE syslog_outbox (
     id        bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
@@ -119,9 +95,69 @@ CREATE TABLE syslog_outbox (
     CONSTRAINT ck_syslog_outbox_chain CHECK (chain IN ('system', 'access_log'))
 );
 COMMENT ON TABLE syslog_outbox IS
-    'The records the ITI-20 syslog route still owes, each by its chain and position: written when the chainer stores the record while syslog is configured, removed when the repository accepted it. The frame is rendered from the stored record when it is read.';
+    'The records the ITI-20 syslog route still owes, each by its chain and position: written when the chainer stores a system record or a frontier round owes an access-log entry while syslog is configured, removed when the repository accepted it. The frame is rendered from the stored record when it is read.';
 
--- Refuses an intake row naming a shared part or a render policy the store
+-- The access-log entries owed to the sinks that deliver from the store
+-- (#6242): every entry up to through_id that its writer indexed is owed by
+-- its outbox rows; the frontier round moves it.
+CREATE TABLE access_log_owed (
+    singleton  boolean NOT NULL DEFAULT true,
+    through_id bigint  NOT NULL DEFAULT 0,
+    CONSTRAINT pk_access_log_owed PRIMARY KEY (singleton),
+    CONSTRAINT ck_access_log_owed_singleton CHECK (singleton)
+) WITH (fillfactor = 10);
+INSERT INTO access_log_owed (singleton, through_id) VALUES (true, 0);
+
+-- Owes the indexed entries past through_id up to p_upto and below every
+-- entry a write holds to the sinks named, and moves through_id; returns how
+-- many entries it owed and the through_id it left, none and 0 while another
+-- replica's round holds the row.
+CREATE FUNCTION audit.access_log_owe(p_upto bigint, p_fhir_feed boolean, p_syslog boolean)
+    RETURNS TABLE (owed_count bigint, owed_through bigint)
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    SET search_path = audit, pg_catalog
+    AS $$
+DECLARE
+    v_from  bigint;
+    v_upto  bigint;
+    v_owed  bigint;
+BEGIN
+    SELECT o.through_id INTO v_from FROM audit.access_log_owed o
+     WHERE o.singleton FOR UPDATE SKIP LOCKED;
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT 0::bigint, 0::bigint;
+        RETURN;
+    END IF;
+    v_upto := least(p_upto, coalesce((SELECT min(h.entry_id) - 1 FROM audit.access_log_hold h), p_upto));
+    IF v_upto <= v_from THEN
+        RETURN QUERY SELECT 0::bigint, v_from;
+        RETURN;
+    END IF;
+    WITH owed AS (
+        SELECT e.id FROM audit.access_log_entry e
+         WHERE e.id > v_from AND e.id <= v_upto AND e.render_policy_id IS NOT NULL
+    ),
+    fed AS (
+        INSERT INTO audit.fhir_feed_outbox (chain, chain_seq)
+        SELECT 'access_log', o.id FROM owed o WHERE p_fhir_feed ORDER BY o.id
+        ON CONFLICT (chain, chain_seq) DO NOTHING
+        RETURNING 1
+    ),
+    logged AS (
+        INSERT INTO audit.syslog_outbox (chain, chain_seq)
+        SELECT 'access_log', o.id FROM owed o WHERE p_syslog ORDER BY o.id
+        ON CONFLICT (chain, chain_seq) DO NOTHING
+        RETURNING 1
+    )
+    SELECT count(*) INTO v_owed FROM owed, (SELECT count(*) FROM fed) f, (SELECT count(*) FROM logged) l;
+    UPDATE audit.access_log_owed SET through_id = v_upto WHERE singleton;
+    RETURN QUERY SELECT v_owed, v_upto;
+END;
+$$;
+COMMENT ON FUNCTION access_log_owe(bigint, boolean, boolean) IS
+    'Owes the indexed access-log entries past the last owed one, up to the frontier and below every held entry, to the configured sinks (#6242).';
+
+-- Refuses an access-log entry naming a shared part or a render policy the store
 -- does not hold, as the foreign keys did; called only for such a row. A part
 -- the batch itself carried was removed by a tombstone between the statement
 -- that stored it and the one that locks it: that is a serialization failure,
@@ -133,15 +169,15 @@ CREATE FUNCTION audit.access_log_intake_unknown(p_what text, p_digest text, p_re
     AS $$
 BEGIN
     IF p_removed THEN
-        RAISE EXCEPTION 'the % % of an access-log intake row was removed while it was written', p_what, p_digest
+        RAISE EXCEPTION 'the % % of an access-log entry was removed while it was written', p_what, p_digest
             USING ERRCODE = 'serialization_failure';
     END IF;
-    RAISE EXCEPTION 'an access-log intake row names the % %, which the store does not hold', p_what, p_digest
+    RAISE EXCEPTION 'an access-log entry names the % %, which the store does not hold', p_what, p_digest
         USING ERRCODE = 'foreign_key_violation';
 END;
 $$;
 COMMENT ON FUNCTION access_log_intake_unknown(text, text, boolean) IS
-    'Raises foreign_key_violation for an intake row naming a shared part or a render policy the store does not hold, and serialization_failure for a part of the batch removed while it was written (#5887).';
+    'Raises foreign_key_violation for an access-log entry naming a shared part or a render policy the store does not hold, and serialization_failure for a part of the batch removed while it was written (#5887).';
 
 -- Whether the shared part p_digest is gone, read with a snapshot of its own:
 -- VOLATILE, so it sees a removal committed while the intake statement waited
@@ -159,8 +195,34 @@ $$;
 COMMENT ON FUNCTION access_log_intake_part_gone(text) IS
     'Whether a shared part is gone, read with a snapshot of its own; the intake asks it of a part it had to raise and did not (#6241).';
 
--- Writes each entry once into access_log_entry and one intake row naming
--- them; a shared part's retain_until follows its entries'.
+-- Holds the search tokens until the transaction ends and checks that the ids
+-- a writer names from memory are of the store's generation: the guard of the
+-- plain write (#6242), which runs it once per statement. NULL holds nothing.
+CREATE FUNCTION audit.access_log_token_generation_holds(p_generation bigint)
+    RETURNS boolean
+    LANGUAGE plpgsql VOLATILE
+    SET search_path = pg_catalog
+    AS $$
+BEGIN
+    IF p_generation IS NULL THEN
+        RETURN true;
+    END IF;
+    PERFORM audit.hold_search_tokens();
+    IF p_generation IS DISTINCT FROM
+       (SELECT g.generation FROM audit.audit_search_token_generation g WHERE g.singleton)
+    THEN
+        RAISE EXCEPTION 'the search token ids the writer named are of another generation'
+            USING ERRCODE = 'FE001';
+    END IF;
+    RETURN true;
+END;
+$$;
+COMMENT ON FUNCTION access_log_token_generation_holds(bigint) IS
+    'Holds the search tokens and raises FE001 when the generation the writer named its token ids under is not the store''s; true otherwise (#6242).';
+
+-- Writes each entry once into access_log_entry, stores or finds its search
+-- tokens, shared set and shared part, and holds the entries of a
+-- reservation; a shared part's retain_until follows its entries'.
 CREATE FUNCTION audit.access_log_intake_take(
     p_record_types text[], p_uids text[], p_times text[], p_contents text[],
     p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[],
@@ -172,7 +234,7 @@ CREATE FUNCTION audit.access_log_intake_take(
     p_shared_digests text[], p_shared_contents text[],
     p_token_entries integer[], p_token_parameters text[], p_token_systems text[],
     p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid,
-    p_token_digests bytea[])
+    p_token_digests bytea[], p_token_generation bigint)
     RETURNS void
     LANGUAGE plpgsql
     SET search_path = pg_catalog
@@ -184,6 +246,11 @@ DECLARE
     v_shared text[];
     v_own text[];
 BEGIN
+    -- Ids the writer names from memory hold while their generation is the
+    -- store's: retention, which moves it, waits on the hold (#6242).
+    IF p_token_generation IS NOT NULL THEN
+        PERFORM audit.access_log_token_generation_holds(p_token_generation);
+    END IF;
     IF cardinality(p_token_entries) > 0 THEN
         PERFORM audit.hold_search_tokens();
         FOR v_attempt IN 1..4 LOOP
@@ -251,7 +318,10 @@ BEGIN
     -- commits. A part the batch leaves out and the statement must raise is
     -- raised under its row lock below, and refused when the collector removed
     -- it while the raise waited.
-    WITH held AS (
+    -- The transaction takes its xid before any row draws an id: the frontier
+    -- rests on it (access_log::frontier, #6242).
+    WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_current_xact_id() AS taken),
+    held AS (
         SELECT s.digest, s.retain_until
           FROM audit.access_log_shared s
          WHERE s.digest IN (SELECT DISTINCT decode(t.c, 'hex')
@@ -308,7 +378,7 @@ BEGIN
                             'render policy', encode(u.c24, 'hex'), false))
                    ELSE policy.id
                END
-          FROM unnest(p_record_types, p_uids, p_times, p_contents, p_shared, p_digests, p_ehr_ids,
+          FROM own_xid CROSS JOIN unnest(p_record_types, p_uids, p_times, p_contents, p_shared, p_digests, p_ehr_ids,
                       p_party_ids, p_retain_until, p_action_terminologies, p_action_codes,
                       p_result_terminologies, p_result_codes, p_actions, p_outcomes,
                       p_principals, p_patient_ids, p_resource_ids, p_request_ids, p_client_ips,
@@ -325,14 +395,15 @@ BEGIN
          ORDER BY u.n
         RETURNING id
     )
-    INSERT INTO audit.access_log_intake (entries, reserved_by)
-    SELECT array_agg(w.id ORDER BY w.id), p_reserved_by
+    INSERT INTO audit.access_log_hold (entry_id, reserved_by)
+    SELECT w.id, p_reserved_by
       FROM written w
-    HAVING count(*) > 0;
+     WHERE p_reserved_by IS NOT NULL
+     ORDER BY w.id;
 END
 $$;
-COMMENT ON FUNCTION access_log_intake_take(text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], smallint[], text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[], text[], text[], text[], boolean[], uuid, bytea[]) IS
-    'One batch''s access-log entries, each written once: their search tokens, found by the digests the server computed, grouped by entry in one pass, their shared sets and shared parts stored or found, checked and kept as long as the entries, their rows in access_log_entry, and one intake row naming them for the chainer (#5770, #5887, #5889, #5968).';
+COMMENT ON FUNCTION access_log_intake_take(text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], text[], smallint[], text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[], text[], text[], text[], boolean[], uuid, bytea[], bigint) IS
+    'One batch''s access-log entries, each written once: their search tokens, found by the digests the server computed, grouped by entry in one pass, their shared sets and shared parts stored or found, checked and kept as long as the entries, their rows in access_log_entry, and a hold per entry of a reservation until its write commits; the ids a writer names from memory are checked against their generation (#5770, #5887, #5889, #5968, #6242).';
 
 -- Releases the held intake rows of committed reservations, counting the
 -- entries they name.
@@ -346,11 +417,10 @@ DECLARE
 BEGIN
     PERFORM set_config('ferroehr.audit_releasing', 'on', true);
     WITH released AS (
-        UPDATE audit.access_log_intake SET reserved_by = NULL
-         WHERE reserved_by = ANY (p_ids)
-        RETURNING cardinality(entries) AS n
+        DELETE FROM audit.access_log_hold WHERE reserved_by = ANY (p_ids)
+        RETURNING 1
     )
-    SELECT coalesce(sum(r.n), 0) INTO v_entries FROM released r;
+    SELECT count(*) INTO v_entries FROM released r;
     WITH released AS (
         UPDATE audit.audit_event_intake SET reserved_by = NULL
          WHERE reserved_by = ANY (p_ids)
@@ -375,17 +445,17 @@ DECLARE
     v_others  bigint;
 BEGIN
     PERFORM set_config('ferroehr.audit_discarding', 'on', true);
-    WITH dropped AS (
-        DELETE FROM audit.access_log_intake WHERE reserved_by = ANY (p_ids)
-        RETURNING entries
-    ),
-    removed AS (
+    WITH removed AS (
         DELETE FROM audit.access_log_entry e
-         USING dropped d
-         WHERE e.id = ANY (d.entries)
+         USING audit.access_log_hold h
+         WHERE h.entry_id = e.id AND h.reserved_by = ANY (p_ids)
+        RETURNING 1
+    ),
+    dropped AS (
+        DELETE FROM audit.access_log_hold WHERE reserved_by = ANY (p_ids)
         RETURNING 1
     )
-    SELECT count(*) INTO v_entries FROM removed;
+    SELECT count(*) INTO v_entries FROM removed, (SELECT count(*) FROM dropped) AS d;
     WITH dropped AS (
         DELETE FROM audit.audit_event_intake WHERE reserved_by = ANY (p_ids)
         RETURNING events
