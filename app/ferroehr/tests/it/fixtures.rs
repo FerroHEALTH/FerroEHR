@@ -518,7 +518,8 @@ pub(crate) async fn verify_chain(
     Vec<ferroehr::system_log::store::chains::AuditChainFinding>,
     ferroehr::system_log::AuditError,
 > {
-    use ferroehr::access_log::seal::{ACCESS_LOG, SYSTEM, verify_on};
+    use ferroehr::access_log::seal::verify::verify_on;
+    use ferroehr::access_log::seal::{ACCESS_LOG, SYSTEM};
     let log = ferroehr::access_log::store::AccessLogStore::new(pool.clone());
     let mut findings = Vec::new();
     for sealed in [&SYSTEM, &ACCESS_LOG] {

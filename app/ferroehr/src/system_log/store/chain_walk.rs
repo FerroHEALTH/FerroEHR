@@ -304,6 +304,17 @@ const SYSTEM_PAGE: i64 = 1000;
 /// position, id and event time.
 pub type Modified = (i64, uuid::Uuid, jiff::Timestamp);
 
+/// One page of the system records from `$1` (exclusive) to `$2`, at most
+/// `$3`, each with its position, uuid, time, stored digest and the object
+/// its content digest is computed over.
+static MODIFIED_PAGE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+    format!(
+        "SELECT e.seq, e.id, e.recorded_at, e.content_digest, {} FROM audit.audit_event e \
+         WHERE e.seq > $1 AND e.seq <= $2 ORDER BY e.seq LIMIT $3",
+        crate::system_log::content_digest::STORED
+    )
+});
+
 /// The system records in `(after, upto]` that no longer digest to their
 /// `content_digest` ([`crate::system_log::content_digest`]), read a page at a
 /// time.
@@ -319,16 +330,12 @@ pub async fn system_modified_between(
     let mut modified = Vec::new();
     loop {
         let rows: Vec<(i64, uuid::Uuid, Timestamp, Vec<u8>, serde_json::Value)> =
-            sqlx::query_as(sqlx::AssertSqlSafe(format!(
-                "SELECT e.seq, e.id, e.recorded_at, e.content_digest, {} FROM audit.audit_event e \
-                 WHERE e.seq > $1 AND e.seq <= $2 ORDER BY e.seq LIMIT $3",
-                crate::system_log::content_digest::STORED
-            )))
-            .bind(after)
-            .bind(upto)
-            .bind(SYSTEM_PAGE)
-            .fetch_all(&mut *conn)
-            .await?;
+            sqlx::query_as(sqlx::AssertSqlSafe(MODIFIED_PAGE.as_str()))
+                .bind(after)
+                .bind(upto)
+                .bind(SYSTEM_PAGE)
+                .fetch_all(&mut *conn)
+                .await?;
         let Some((last, ..)) = rows.last() else {
             return Ok(modified);
         };

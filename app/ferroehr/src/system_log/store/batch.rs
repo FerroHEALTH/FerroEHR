@@ -205,18 +205,8 @@ impl BatchColumns<'_> {
         policy: &[u8],
         tokens: &[String],
     ) -> Result<Vec<Vec<u8>>, AuditError> {
-        let policy = crate::digest::hex(policy);
         let digests = (0..self.ids.len()).map(|i| {
-            let stored_at = self
-                .stored_at
-                .get(i)
-                .map(|at| content_digest::instant(at.to_jiff()));
-            let record = self.record(
-                i,
-                &policy,
-                tokens.get(i).map_or("{}", String::as_str),
-                stored_at.as_deref().unwrap_or_default(),
-            );
+            let record = self.record(i, policy, tokens.get(i).map_or("{}", String::as_str));
             content_digest::of(&record)
                 .map(|digest| digest.to_vec())
                 .map_err(AuditError::Digest)
@@ -229,19 +219,13 @@ impl BatchColumns<'_> {
         clippy::indexing_slicing,
         reason = "i is below self.ids.len(), and push appends one entry to every column together"
     )]
-    fn record<'b>(
-        &'b self,
-        i: usize,
-        policy: &'b str,
-        tokens: &'b str,
-        stored_at: &'b str,
-    ) -> Record<'b> {
+    fn record<'b>(&'b self, i: usize, policy: &'b [u8], tokens: &'b str) -> Record<'b> {
         Record {
-            id: self.ids[i].to_string(),
-            recorded_at: content_digest::instant(self.recorded_at[i].to_jiff()),
-            stored_at,
+            id: self.ids[i],
+            recorded_at: self.recorded_at[i].to_jiff(),
+            stored_at: self.stored_at[i].to_jiff(),
             action: &self.actions[i],
-            outcome: self.outcomes[i].to_string(),
+            outcome: self.outcomes[i],
             event_code: self.event_codes[i],
             operation: self.operations[i],
             principal: self.principals[i],
@@ -253,11 +237,11 @@ impl BatchColumns<'_> {
             domain: self.domains[i],
             purpose: self.purposes[i],
             legal_basis: self.legal_bases[i],
-            result_count: self.result_counts[i].map(|n| n.to_string()),
+            result_count: self.result_counts[i],
             request_id: self.request_ids[i],
             roles: self.roles[i].as_ref(),
             origins: self.origins[i].as_ref(),
-            origin_count: self.origin_counts[i].map(|n| n.to_string()),
+            origin_count: self.origin_counts[i],
             categories: self.categories[i].as_ref(),
             category_basis: self.bases[i],
             category_evidence: self.evidence[i].as_ref(),
@@ -278,7 +262,7 @@ impl BatchColumns<'_> {
             review: self.reviews[i],
             category_content: self.contents[i].as_ref(),
             render_policy: policy,
-            search_tokens: content_digest::token_ids(tokens),
+            search_tokens: tokens,
             binding: self.bindings[i],
             guest: self.guests[i],
             party: self.parties[i].as_ref(),
@@ -291,7 +275,7 @@ impl BatchColumns<'_> {
             facilities: self.facilities[i].as_ref(),
             binding_detail: self.details[i].as_ref(),
             summary: self.summaries[i].as_ref(),
-            digest_version: content_digest::VERSION.to_string(),
+            digest_version: content_digest::VERSION,
             token_attributes: self.token_attributes[i].as_ref(),
         }
     }
