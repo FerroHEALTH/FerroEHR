@@ -41,6 +41,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::middleware::from_fn_with_state;
 use axum::response::Response;
+use ferroehr::telemetry::stage::{self, Stage};
 use ferrohealth_server::caller_rate::{self, CallerKey, CallerLimit};
 use ferrohealth_server::health::Health;
 use ferrohealth_server::panic::PanicBody;
@@ -112,7 +113,7 @@ pub(crate) async fn release_after_handler(
     request: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> Response {
-    let response = next.run(request).await;
+    let response = stage::instrument(Stage::Handler, next.run(request)).await;
     ferroehr::db::acquire::release_held();
     response
 }
@@ -182,13 +183,27 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
             served: Arc::new(crate::api::served::ServedMethods::new(&namespaces)),
             service: state.backend_handle(),
         },
-        authn::run::middleware,
+        |layer: axum::extract::State<authn::AuthLayer>,
+         req: axum::extract::Request,
+         next: axum::middleware::Next| {
+            stage::instrument(
+                Stage::Authentication,
+                authn::run::middleware(layer, req, next),
+            )
+        },
     ));
     // Always installed: the layer early-returns when the `SystemLog` reports
     // auditing off, so the no-audit case costs one check per request.
     let api = api.layer(from_fn_with_state(
         state.clone(),
-        crate::system_log::middleware::middleware,
+        |state: axum::extract::State<AppState>,
+         req: axum::extract::Request,
+         next: axum::middleware::Next| {
+            stage::instrument(
+                Stage::Entry,
+                crate::system_log::middleware::middleware(state, req, next),
+            )
+        },
     ));
     // Above the audit layer so an over-large body is refused before it is read,
     // buffered or audited; the stack's body limit is the ceiling of every route.

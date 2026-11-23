@@ -27,6 +27,7 @@ use ferroehr::system_log::event::ActorAuthentication;
 use super::assurance::{PatientDataGate, PatientDataRefusal};
 use super::refusal::count_auth_failure;
 use super::{AuthError, AuthLayer, AuthMethod, Authenticator, FreshAuthentication, Principal};
+use ferroehr::telemetry::stage::{self, Stage};
 
 /// Runs the RBAC gate over an authenticated caller: the matched operation's
 /// class against the caller's roles, then the read-only restriction.
@@ -51,6 +52,7 @@ pub(super) fn rbac_refusal(
     req: &Request,
     principal: &Principal,
 ) -> Option<Response> {
+    let _stage = stage::enter(Stage::Access);
     let rbac = layer.authz.as_deref().and_then(AuthzHandle::rbac)?;
     let matched = req
         .extensions()
@@ -105,6 +107,7 @@ pub(super) fn smart_refusal(
     principal: &Principal,
     granted: &Capabilities,
 ) -> Option<Response> {
+    let _stage = stage::enter(Stage::Access);
     let (matched, uri) = route(req);
     let requirement = match layer.smart.need(req.method(), matched, uri.path()) {
         Need::Now(requirement) => requirement,

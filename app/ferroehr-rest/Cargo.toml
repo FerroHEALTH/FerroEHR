@@ -104,6 +104,10 @@ fhir-search = { workspace = true }
 # The hot-path budget counts each request's allocations (#6007); the crate
 # installs its counting allocator as this test binary's global allocator.
 allocation-counter.workspace = true
+# The hot-path budget times each stage of a request with the thread's CPU
+# clock (#6321): the stage marks, and `clock_gettime(CLOCK_THREAD_CPUTIME_ID)`.
+ferroehr = { path = "../ferroehr", default-features = false, features = ["stage-cpu"] }
+nix = { workspace = true, features = ["time"] }
 openehr-lang = { path = "../../crates/openehr-lang" }
 testkit = { path = "../../tools/testkit" }
 # The policy confirm tests read the run-again counter from an in-memory

@@ -45,6 +45,7 @@ use crate::system_log::chain_check::ChainCheck;
 use crate::system_log::config::{AuditConfig, StoreConfig};
 use crate::system_log::render::{CompiledPolicy, RenderPolicy};
 use crate::system_log::store::AuditStore;
+use crate::telemetry::stage::{self, Stage};
 
 mod background;
 mod categories;
@@ -311,17 +312,19 @@ impl AuditSender {
         events: Vec<AuditEvent>,
         reservation: Option<uuid::Uuid>,
     ) -> Result<(), AuditError> {
-        let Some((records, ends, count)) = self.rendered(events).await else {
+        let rendered = stage::instrument(Stage::Entry, self.rendered(events));
+        let Some((records, ends, count)) = rendered.await else {
             return Ok(());
         };
         let store = &self.inner.store;
-        match reservation {
-            Some(reservation) => {
-                self.wrote(count, store.write_held(records, &ends, reservation))
-                    .await
+        let write = async {
+            match reservation {
+                Some(reservation) => store.write_held(records, &ends, reservation).await,
+                None => store.write(records, &ends).await,
             }
-            None => self.wrote(count, store.write(records, &ends)).await,
-        }
+        };
+        self.wrote(count, stage::instrument(Stage::Entry, write))
+            .await
     }
 
     /// [`Self::record`] held under `reservation`, written on `conn`, a
@@ -335,14 +338,16 @@ impl AuditSender {
         events: Vec<AuditEvent>,
         reservation: uuid::Uuid,
     ) -> Result<(), AuditError> {
-        let Some((records, ends, count)) = self.rendered(events).await else {
+        let rendered = stage::instrument(Stage::Entry, self.rendered(events));
+        let Some((records, ends, count)) = rendered.await else {
             return Ok(());
         };
         let write = self
             .inner
             .store
             .write_held_on(conn, records, &ends, reservation);
-        self.wrote(count, write).await
+        self.wrote(count, stage::instrument(Stage::Entry, write))
+            .await
     }
 
     /// `events` stamped and rendered as the store writes them, with their
