@@ -796,55 +796,7 @@ pub(super) fn order() -> impl Iterator<Item = Path> {
 
 /// The bytes each path may move over the database wire per request, both
 /// directions together, as [`every_hot_path_stays_within_its_wire_budget`]
-/// counts them (#6244): the largest median of three runs on main 4411906444
-/// plus 64 bytes, since a request's figure moves only by the width of the
-/// instants it sends, a few bytes between runs.
-/// The ITI-81 page has since carried each shared part on the first record
-/// naming it, where it carried it on every record (#6244): 29,476 bytes
-/// against 100,191, measured beside the merge base, and its ceiling fell by
-/// the 70,715 bytes it no longer moves.
-/// A held write's access-log entries have since gone in without the shared
-/// part the store holds and with their search tokens named by id (#6244):
-/// 5,974 to 6,157 bytes fewer on the three composition commits, the
-/// CONTRIBUTION commit, the `EHR_STATUS` commit, the update and the delete,
-/// measured beside the merge base, and each ceiling fell by its path's
-/// figure.
-/// The node columns most rows leave `NULL` have since travelled in groups,
-/// each sparse (the positions of the rows that set one of its columns) or
-/// dense, whichever is smaller (#6244): 13,525 bytes fewer on the three IPS
-/// composition commits, the CONTRIBUTION commit and the update, and 52 and
-/// 282 on the two party commits, measured beside the merge base, and each
-/// ceiling fell by its path's figure; the `EHR_STATUS` commit and the delete,
-/// whose few rows go dense with a `NULL` for each group's positions, moved
-/// 15 and 16 bytes up, under their ceilings.
-/// A party create, update and delete have since been judged on one gate read
-/// and committed behind one guarded version statement (#6257): 890 and 888
-/// bytes fewer on the two PERSON commits, measured in CI beside the merge
-/// base, and both ceilings fell by those figures. The PERSON update and
-/// delete and the ORGANISATION, GROUP, ROLE and AGENT creates move 10,400,
-/// 8,951, 7,866, 7,620, 11,576 and 7,522 bytes where they moved 12,615,
-/// 11,166, 8,597, 8,352, 12,202 and 8,149, and their ceilings are the merge
-/// base's figures plus 64 bytes, lowered by those drops.
-/// A party commit has since settled its access rows in two statements
-/// (#6257): 1,058 or 1,059 bytes fewer on the two PERSON creates, the update
-/// and the delete, and 152, 76 and 159 on the ORGANISATION, GROUP and ROLE
-/// creates, measured beside the merge base, and each of those ceilings fell
-/// by its path's figure.
-/// The access-log entry stored as its facts (#6322) moves fewer bytes on
-/// every path that writes or reads one: 2,102 on the ITI-81 page, 1,547 on the
-/// matches query and 587 on a read, measured beside the merge base, and each
-/// of those ceilings fell by its path's figure.
-/// A request's one read of the party store's revisions has since bound the
-/// snapshot its caller facts copy holds, which `party.facts_behind` judges
-/// the stamps against, in place of reading `facts_revision`, so a care
-/// relationship commit moves no shared row and sends no `pg_notify` (#6074):
-/// 9 to 27 bytes more on every path, by the width of the snapshot's text,
-/// measured beside the merge base. Only the three directory ceilings, whose
-/// margin was 18 bytes, rose, by the 27 bytes of the widest run, approved by
-/// the orchestrator on #6074. The version copy read's ceiling rose too, by
-/// 49 bytes, approved by the owner: its ten requests are bimodal (#6365), its
-/// median lands on the 3.3 KB form in some runs, main's ceiling sat exactly
-/// on that form, and the snapshot adds 29 to 49 bytes there.
+/// counts them (#6244).
 const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitJson, 201_836),
     (Path::CommitXml, 201_979),
@@ -865,9 +817,11 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::AqlMatches, 15_992),
     (Path::AqlParty, 11_509),
     (Path::CommitPartyScored, 10_861),
+    // NOTE: our own design (#6074, #6365), the 3.3 KB form of a bimodal median, with the held snapshot.
     (Path::ReadVersion, 2797),
     (Path::CommitUpdate, 202_260),
     (Path::CommitDelete, 4563),
+    // NOTE: our own design (#6074), these three carry the held snapshot party.facts_behind reads.
     (Path::DirectoryCreate, 4982),
     (Path::DirectoryUpdate, 4792),
     (Path::DirectoryDelete, 4149),
