@@ -28,6 +28,7 @@ use ferrohealth_smart::kind::CallerKind;
 use http::HeaderValue;
 
 use super::Principal;
+use ferroehr::telemetry::stage::{self, Stage};
 
 /// The API families that carry no patient data, as paths relative to the API
 /// base path; every other matched route is a patient-data route.
@@ -141,6 +142,7 @@ impl PatientDataGate {
         principal: &Principal,
         matched: Option<&str>,
     ) -> Result<ActorAuthentication, (PatientDataRefusal, ActorAuthentication)> {
+        let _stage = stage::enter(Stage::Access);
         let actor = self.actor(principal);
         if !self.serves_patient_data(matched) {
             return Ok(actor);

@@ -11,6 +11,7 @@ use super::ids::TokenIds;
 use super::{IntakeEntry, IntakeToken, take_in};
 use crate::access_log::store::AccessLogError;
 use crate::db::acquire::acquire;
+use crate::telemetry::stage::{self, Stage};
 
 /// One request's entries waiting for the gathered intake write.
 pub(super) struct Job {
@@ -309,7 +310,8 @@ pub(super) async fn write_known(
         let unnamed = named.search_tokens.len() < entries.len()
             || named.search_tokens.iter().any(Option::is_none);
         let written = async {
-            take_in(&mut *conn, entries, tokens, reserved_by, &stored, &named).await?;
+            let statement = take_in(&mut *conn, entries, tokens, reserved_by, &stored, &named);
+            stage::instrument(Stage::Gather, statement).await?;
             // NOTE: our own design (#6242), the ids the committed statement resolved are learned,
             // and a failure to learn them never fails the write.
             if unnamed && let Err(failed) = known.ids.learn(&mut *conn, tokens).await {

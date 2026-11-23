@@ -1739,6 +1739,51 @@ jobs:
       - name: Read a document at the nesting limit on the smallest stack, release
         run: cargo nextest run --locked --release -p openehr-its --all-features -E 'test(nesting_limit)'
 
+  # The thread-CPU budget of the hot paths (#6321), judged on optimised code:
+  # the `budget` profile is the release profile without LTO. The `test` lane
+  # runs the same test in a debug build, where it reports and judges nothing.
+  cpu-budget:
+    name: hot-path CPU budget (optimised)
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.queue_verified != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] the digest-pinned FROM of docker/postgres, checked name@sha256 where it is read
+        env:
+          POSTGRES_USER: openehr
+          POSTGRES_PASSWORD: openehr
+          POSTGRES_DB: openehr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U openehr"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://openehr:openehr@localhost:5432/openehr_test
+      FERROEHR_TEST_PG_URL: postgres://openehr:openehr@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Non-durable test tuning
+        env:
+          PG_SERVICE: ${{ job.services.postgres.id }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          PGPASSWORD=openehr bash scripts/lib/test-postgres.sh "$PG_SERVICE"
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
+        with:
+          tool: cargo-nextest
+      - name: Every hot path within its CPU budget, optimised
+        run: cargo nextest run --locked --cargo-profile budget -p ferroehr-rest --all-features --no-capture -E 'test(every_hot_path_stays_within_its_cpu_budget)'
+
   # ── Build + tests against PostgreSQL 19.0 ──────────────────────────────────
   # The catalogue's own artifact validation is no longer here: the instrument is
   # the separate Veredictum project (pinned in scripts/lib/veredictum.sh), and
@@ -3444,6 +3489,7 @@ jobs:
       - msrv
       - codegen-drift
       - nesting-release
+      - cpu-budget
       - build
       - instructions
       - test

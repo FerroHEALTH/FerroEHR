@@ -636,3 +636,12 @@ lto = "off"
 
 [profile.e2e.package."*"]
 opt-level = 3
+
+# The thread-CPU budget of the hot paths (#6321) is judged on optimised code,
+# since a debug build distorts the share serde and the encoders take. It is
+# the release profile without LTO, so the test binary links in minutes; the
+# `cpu-budget` job builds it, and nothing ships from it.
+[profile.budget]
+inherits = "release"
+lto = "off"
+debug = false
