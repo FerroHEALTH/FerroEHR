@@ -147,6 +147,7 @@ impl Prepared {
             content_digest: r.content_digest.as_ref().map(<[u8; 32]>::as_slice),
             content_sys_version: r.shared_from,
             root_archetype: self.committed.root_archetype.as_deref(),
+            episodes: &r.episodes,
         })
     }
 

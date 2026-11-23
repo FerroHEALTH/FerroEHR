@@ -1447,10 +1447,13 @@ async fn load_versions(
     versions: Vec<VersionRecord>,
 ) -> Result<(), ServiceError> {
     for v in &versions {
-        let clinical =
-            crate::versioning::Kind::from_type(&v.kind).is_some_and(|kind| !kind.is_demographic());
+        let kind = crate::versioning::Kind::from_type(&v.kind);
+        let clinical = kind.is_some_and(|kind| !kind.is_demographic());
         if clinical && !v.body.is_null() {
             privacy.enforce(&v.kind, &v.body)?;
+        }
+        if kind == Some(crate::versioning::Kind::Composition) && !v.body.is_null() {
+            crate::versioning::episode::placed(&v.body)?;
         }
     }
     let rows: Vec<version_repo::import::VerbatimVersionRow<'_>> = versions

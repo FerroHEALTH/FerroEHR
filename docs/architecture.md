@@ -131,7 +131,18 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   bench, #4944). No specification governs planner statistics: our own design.
   None of the columns a commit changes appears in an index, which is the
   condition PostgreSQL 18 §"Heap-Only Tuples (HOT)" states for a heap-only
-  update; `fillfactor = 90` reserves the same-page room.
+  update; `fillfactor = 90` reserves the same-page room. `episodes` holds the
+  episodes of care a COMPOSITION trunk head is placed in (#6413): the
+  `DV_IDENTIFIER` of each `openehr_access::episode` `ELEMENT` in
+  `context.other_context`, kept as SHA-256 of its issuer, `0x00` and id,
+  sorted, `NULL` when unplaced. The commit's one parse reads it beside the
+  origins and the head upsert writes it in one of three statement variants:
+  a placed version binds the array, a later COMPOSITION version placed in
+  none clears it, and every other version runs a statement that names no
+  episodes. The import and archive load recompute it from the trunk
+  head's body. A placed persistent
+  composition and a malformed episode are refused `422` on every write path
+  (draft access control, Episodes of Care: our own design).
 - **`node`** — one unified table for all versioned-object content
   (COMPOSITION / EHR_STATUS / FOLDER). One row per RM structure node with a
   **nested-set index** (`num`, `num_cap`, `parent_num`): AQL CONTAINS is an

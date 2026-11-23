@@ -110,6 +110,7 @@ mod definition_load;
 mod directory_item_refs;
 mod directory_slot_lock;
 mod ehr_index_ihe;
+mod episode_placement;
 mod ext_functions;
 mod external_callers;
 mod federation_agreements;
