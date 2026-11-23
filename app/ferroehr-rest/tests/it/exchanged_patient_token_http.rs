@@ -289,11 +289,10 @@ async fn the_exchanged_token_reads_its_own_ehr_and_no_other() {
     assert_eq!(status, StatusCode::OK, "their own EHR: {body}");
     let (status, body) = read(&w.app, &w.own, &w.summary, &token).await;
     assert_eq!(status, StatusCode::OK, "their own summary: {body}");
-    let uids = queried(&w.app, &w.own, &token).await;
+    let rows = queried(&w.app, &w.own, &token).await;
     assert!(
-        uids.iter().any(|uid| uid.starts_with(&w.summary)),
-        "the query returns the summary among {} rows",
-        uids.len()
+        rows.iter().any(|row| row.starts_with(&w.summary)),
+        "the query returns the summary"
     );
 
     let (status, body) = send(
@@ -348,11 +347,10 @@ async fn the_access_delay_withholds_from_the_exchanged_token() {
 
     let (status, body) = read(&w.app, &w.own, &w.summary, &token).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "held: {body}");
-    let uids = queried(&w.app, &w.own, &token).await;
+    let rows = queried(&w.app, &w.own, &token).await;
     assert!(
-        !uids.iter().any(|uid| uid.starts_with(&w.summary)),
-        "the query withholds the summary from {} rows",
-        uids.len()
+        !rows.iter().any(|row| row.starts_with(&w.summary)),
+        "the query withholds the summary"
     );
     let (status, body) = read(&w.app, &w.own, &w.summary, &professional()).await;
     assert_eq!(status, StatusCode::OK, "the professional reads it: {body}");
