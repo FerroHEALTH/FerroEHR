@@ -8,21 +8,6 @@
 //! governing section. This hub is the wiring layer that turns the generated
 //! contract into one axum router.
 //!
-//! ## The generated contract
-//!
-//! `emit-rest` produces, per API group, a `ROUTES` table of
-//! `(method, path, operation_id)` and one `*Params` struct per operation
-//! (`openehr_its::rest::generated::{ehr,query,definition,admin,demographic}`).
-//! The System API is not part of that contract (no `system` group is emitted),
-//! so its single `OPTIONS /` operation is hand-written in [`system`] and mounted
-//! by [`crate::router::router`], not here.
-//!
-//! ## The per-group modules
-//!
-//! Each operation has one handler that rebuilds the exact `*Params` from the
-//! raw request parts, calls the service method on [`AppState`], and renders a
-//! negotiated response; its route calls it through `guarded_dispatch`:
-//!
 //! - [`ehr`] — the EHR API (EHR, `EHR_STATUS`, `VERSIONED_EHR_STATUS`, COMPOSITION,
 //!   `VERSIONED_COMPOSITION`, DIRECTORY, CONTRIBUTION), one resource module each.
 //! - [`query`] — the Query API (adhoc + stored), every operation in the frame of
@@ -41,11 +26,6 @@
 //!   extension under its own `/message/` resource root.
 //! - [`system`] — the System API manifest ([`system::options::SystemManifest`],
 //!   `ferroehr::config::rest::SystemOptionsConfig`), assembled and mounted by [`crate::router::router`].
-//!
-//! `item_tags` is not a group: it is the one `ITEM_TAG` write-wrapper
-//! implementation (`item_tags::pending` / `item_tags::persist` /
-//! `item_tags::echo`) the EHR and demographic
-//! handlers share, so the two cannot drift.
 //!
 //! Every group — the standardised ITS-REST groups above and the own-design
 //! extension surfaces ([`crate::extensions`]: terminology, event subscription,
@@ -146,13 +126,6 @@ impl<T> Decoded<T> {
 }
 
 impl RequestParts {
-    /// The route match a generated `*Params::from_request` decodes against.
-    ///
-    /// For an ITS-REST operation it is the match `routes::lookup` found. An
-    /// extension route the tables do not name (the `PARTY_RELATIONSHIP` and admin
-    /// extensions) reuses a generated struct, so its match is built from that
-    /// struct's declared path parameters (`params`) and the request's captures,
-    /// which is all `from_request` reads from it.
     /// Decodes a generated `*Params` struct from this request with its
     /// `from_request` and its declared `params`, over [`Self::route_for`].
     ///
@@ -448,10 +421,6 @@ pub(crate) use guarded_handler;
 /// Strip RFC 6570 query/expansion suffixes (e.g. `all{?ehr_id*}` → `all`) that
 /// the `OpenAPI` paths carry but axum path templates do not use; `{name}` capture
 /// segments are already axum-0.8 syntax and pass through unchanged.
-///
-/// Shared with the access-control classifier
-/// ([`crate::extensions::access::authz`]), which keys its route→class map by the
-/// same normalized templates so an axum `MatchedPath` resolves exactly.
 pub(crate) fn normalize_path(path: &str) -> String {
     let mut out = String::with_capacity(path.len());
     let mut chars = path.chars().peekable();
@@ -496,14 +465,9 @@ mod tests {
 
     /// The served router covers every route of the generated ITS-REST tables.
     ///
-    /// `RbacGate` (`extensions::access::authz`) builds its `(Method, path) →
-    /// OperationClass` map from the five generated `ROUTES` tables and looks a
-    /// request up by axum's `MatchedPath`. That indirection is only sound while
-    /// the served templates and the generated ones are the SAME strings: a
-    /// hand-written `#[utoipa::path]` that spells a parameter differently
-    /// silently falls through to the gate's default class instead of failing a
-    /// build. This test makes the generated tables a proven oracle for the
-    /// served surface.
+    /// The RBAC gate keys its route map by the generated templates, so a served
+    /// template spelled differently would fall through to the gate's default
+    /// class.
     ///
     /// Scope: the five API groups `emit-rest` generates. The SYSTEM group's one
     /// released operation (`OPTIONS` at the API base-path root,

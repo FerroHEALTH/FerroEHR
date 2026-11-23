@@ -21,9 +21,6 @@ use crate::overview::error::RestError;
 use crate::state::AppState;
 
 /// A required string member of the request body.
-///
-/// A missing or non-string member is a `400`: guessing a shape here would
-/// record a legal mark against something the caller did not name.
 pub(super) fn required_str<'a>(
     body: &'a serde_json::Value,
     field: &str,

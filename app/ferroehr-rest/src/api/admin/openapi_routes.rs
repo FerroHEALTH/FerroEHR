@@ -4,9 +4,6 @@
 //! Native `utoipa-axum` routing for the **Admin API group** — the two released
 //! ITS-REST admin operations plus four of our own extension routes.
 //!
-//! Each `#[utoipa::path]` handler single-sources its route and its `OpenAPI`
-//! path, then calls its operation's handler through [`guarded_dispatch`](crate::api::guarded_dispatch).
-//!
 //! The Admin API is `DEVELOPMENT`-state within ITS-REST Release-1.1.0
 //! (`docs/admin/Description.md` §Status). That is a reporting qualifier only:
 //! the BCP-14 requirement force of the released text is not state-qualified, so
@@ -16,8 +13,6 @@
 //! /admin/ehr/{ehr_id}` and `DELETE /admin/ehr/all{?ehr_id*}`. The other four
 //! routes below are our own extension, governed by no ITS-REST operation and
 //! excluded from any conformance-profile claim.
-//!
-//! What the released responses declare shapes three properties here:
 //!
 //! - No released admin response carries a `headers:` block at all, so none is
 //!   declared. The one response header this group emits is the `Allow` on the
@@ -42,17 +37,9 @@
 //! `Allow` (RFC 9110 §15.5.6) is set explicitly, with the empty field value
 //! §10.2.1 defines for a resource "temporarily disabled by configuration".
 //!
-//! Every released admin operation carries `security: []` and declares no
-//! `401`/`403`, so the branches declared on all six routes are our own design:
-//! everything under `/admin/` is `OperationClass::Admin` to the RBAC gate
-//! ([`crate::extensions::access::authz`]), which runs before the config gate, so
-//! an unauthenticated caller sees `401` and a non-admin principal `403` whether
-//! or not the group is enabled.
-//!
 //! `parameters/query/ehr_id_Admin.yaml` is `explode: true` and optional, so an
-//! absent or empty list means "delete ALL EHRs"; both the repeated form and a
-//! comma-separated single value are accepted, read from the raw query string for
-//! the reason `admin/dispatch.rs` gives.
+//! absent or empty list deletes every EHR; the repeated and the comma-separated
+//! forms are both read from the raw query string.
 //!
 //! NOTE: the generated `admin_ehr_delete_all` route carries an RFC 6570
 //! query-expansion suffix that is not part of the resource path, so the mounted

@@ -4,12 +4,6 @@
 //! Content negotiation core (ITS-REST `Resources.md §Data representation` +
 //! §Simplified Formats).
 //!
-//! One `WireFormat` enum names every representation the server negotiates —
-//! canonical JSON/XML plus the Simplified Formats (FLAT, STRUCTURED, and the
-//! Web Template document). Two resolvers, both parameterized by the set of
-//! formats an endpoint allows, are the single negotiation seam every endpoint
-//! dispatches through:
-//!
 //! - `content_type_format` classifies a request `Content-Type` (unknown →
 //!   `None` → the caller answers `415`, Resources.md §Simplified Formats MUST).
 //! - `resolve_accept` parses `Accept` with RFC 9110 §12.5.1 quality values
@@ -23,20 +17,6 @@
 //! the legacy `application/openehr.nc.flat+json` / `…tds2+xml` types are NOT
 //! recognized (Resources.md §Simplified Formats NOTE + §Alternative data
 //! formats) — they fall out as `406`/`415` like any other unsupported type.
-//!
-//! Canonical bodies and responses are (de)serialized via `openehr-its`. The
-//! generated server traits exchange `serde_json::Value` at the boundary, so an
-//! XML body is decoded into its concrete `openehr-rm` type and re-emitted as
-//! canonical JSON (`rm_value`), and an XML response re-types the canonical JSON
-//! so the generated `ToXml` runs (`respond_rm`). The Simplified-Formats payload
-//! conversion is the sibling `crate::formats` adapter.
-//!
-//! The submodules hold the rest, one concern each: `decode` reads request
-//! bodies, `body` renders response bodies, `prefer` reads `Prefer` and
-//! declares `Preference-Applied`, and `resource` sets the versioning headers
-//! of a read, write or delete.
-//!
-//! ## The `version` media-type parameter (ITS-XML lineage selection)
 //!
 //! openEHR publishes canonical XML in two wire lineages that differ only by
 //! the document's root namespace — `http://schemas.openehr.org/v1`
@@ -194,10 +174,6 @@ pub(crate) fn resolve_accept(
 
 /// The best `(quality, specificity)` each allowed format reaches across the
 /// `Accept` ranges, positionally aligned to `allowed`.
-///
-/// ONE pass over the ranges: each is tokenized and q-parsed once, and every
-/// allowed format aggregates its best pair from that same pass — highest q,
-/// then specificity.
 fn rank_allowed_formats(accept: &str, allowed: &[WireFormat]) -> Vec<Option<(f64, u8)>> {
     let mut per_format: Vec<Option<(f64, u8)>> = vec![None; allowed.len()];
     for range in accept.split(',') {
@@ -407,12 +383,6 @@ pub(crate) fn accepts_ndjson(headers: &HeaderMap) -> bool {
 
 /// Refuse a request whose `Content-Type` declares canonical XML in a lineage
 /// this server cannot read.
-///
-/// A declared lineage is otherwise inert: the `openehr-its` reader dispatches
-/// on local element names and `xsi:type` and never inspects the root `xmlns`,
-/// so a v1 and a v2 payload parse identically. This guard exists so an
-/// unrecognized `version` is refused loudly instead of being parsed as
-/// whatever the body happens to contain.
 ///
 /// # Errors
 /// [`ApiError::UnsupportedMediaType`] for an unrecognized `version` value

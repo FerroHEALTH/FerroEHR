@@ -16,12 +16,8 @@
 //! audit. A change applies on the next request on every replica, with no
 //! restart. ITS-REST defines no resource for the policy.
 //!
-//! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
-//! Admin class (`admin_role`, `401`/`403`) and the `AppConfig::api.admin`
-//! config gate (`405` with an empty `Allow` when off), and the audit trail
-//! records every read and write. A write also needs a policy grant of
-//! `write_access_policy` in the CDR, so the admin role alone changes no
-//! policy.
+//! A write also needs a `write_access_policy` grant in the CDR, so the admin
+//! role alone changes no policy.
 
 #![expect(
     clippy::disallowed_types,

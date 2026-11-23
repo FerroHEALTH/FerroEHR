@@ -7,9 +7,6 @@
 //! `specifications/operations/{composition_create,composition_get,
 //! composition_update,composition_delete,composition_tags_get,
 //! composition_tags_update,composition_tags_delete}.yaml`.
-//!
-//! The FLAT/STRUCTURED converters live in `crate::formats::dispatch` (the
-//! Simplified-Formats wire adapter) and are called by their full path.
 
 #![expect(
     clippy::disallowed_types,
@@ -522,9 +519,6 @@ fn delete_request(
 }
 
 /// `composition_tags_get`: serve the item tags of a COMPOSITION.
-///
-/// The response records the tagged COMPOSITION's ids, from which the access
-/// record reads its EHR as it does for the COMPOSITION read itself.
 ///
 /// # Errors
 /// The parameter and read rejections the operation declares.

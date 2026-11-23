@@ -110,11 +110,10 @@ pub(crate) fn object_id_uuid(ovid: &ObjectVersionId) -> Option<Uuid> {
 /// to `400 Bad Request` (the general "malformed request syntax" rule), never to
 /// a silent bypass of the optimistic-concurrency guard.
 ///
-/// Both the weak (`W/"…"`) and the bare quoted (`"…"`) forms are accepted:
-/// the overview §"`ETag` and Last-Modified" now emits the weak form, but a client
-/// that echoes the deprecated bare form "MAY still" be supported
-/// (§"Deprecated headers") — [`entity_tag_value`] reads either as the inner
-/// `OBJECT_VERSION_ID`.
+/// Both the weak (`W/"…"`) and the bare quoted (`"…"`) forms are accepted: the
+/// server emits the weak form, and a client echoing the deprecated bare form
+/// "MAY still" be supported (§"Deprecated headers"); [`entity_tag_value`] reads
+/// either as the inner `OBJECT_VERSION_ID`.
 pub(crate) fn require_if_match(if_match: &str) -> Result<ObjectVersionId, ApiError> {
     let value = entity_tag_value(if_match);
     let token = value.as_ref();
@@ -215,8 +214,8 @@ mod tests {
 
     #[test]
     fn require_if_match_accepts_weak_and_bare() {
-        // The server now emits the weak form; a client echoing either shape
-        // must parse to the same OBJECT_VERSION_ID.
+        // The server emits the weak form; a client echoing either shape must
+        // parse to the same `OBJECT_VERSION_ID`.
         let weak = require_if_match(&format!("W/\"{UID}\"")).expect("weak");
         let bare = require_if_match(&format!("\"{UID}\"")).expect("bare");
         assert_eq!(weak.value(), UID);

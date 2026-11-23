@@ -154,9 +154,6 @@ pub(super) fn admin_group_gate(state: &AppState) -> Option<Response> {
 
 /// Reads a required path segment for the admin extension routes, which no
 /// generated params type models.
-///
-/// A missing segment is impossible for a matched route, but is mapped to a `400`
-/// rather than panicking.
 fn path_segment(parts: &RequestParts, key: &str) -> Result<String, RestError> {
     parts.path.get(key).cloned().ok_or_else(|| {
         RestError::from(ApiError::BadRequest(format!(

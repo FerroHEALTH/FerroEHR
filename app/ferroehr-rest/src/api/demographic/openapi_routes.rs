@@ -6,10 +6,6 @@
 //! `versioned_party` reads, `contribution` create/get, and the `ITEM_TAG`
 //! sub-resources (`demographic_tags_get` + the per-party `*_tags_*`).
 //!
-//! Each `#[utoipa::path]` handler single-sources its route and its `OpenAPI`
-//! path, then calls its operation's handler through [`guarded_dispatch`](crate::api::guarded_dispatch), so the
-//! `EHR_ACCESS` gate, the PEP and the ATNA audit tagging apply uniformly.
-//!
 //! The Demographic API is `DEVELOPMENT`-state within ITS-REST Release-1.1.0
 //! (`docs/demographic/Description.md` §Status). That is a reporting qualifier
 //! only: the BCP-14 requirement force of the released text is not
@@ -61,8 +57,6 @@ use crate::state::AppState;
 use ferroehr::service::demographic::types::PartyKind;
 
 /// The standard Demographic API group as a native `utoipa-axum` router.
-///
-/// Paths are group-relative, nested under the configured `base_path`.
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(agent_create))
@@ -102,15 +96,6 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
 
 /// Declares one PARTY kind's CRUD handlers (`{kind}_{create,get,update,delete}`)
 /// and its `ITEM_TAG` handlers (`{kind}_tags_{get,update,delete}`).
-///
-/// The released operations of the five kinds differ only in the RM type, so
-/// the declarations are written once and each kind supplies its names: the
-/// path segment, the RM type, the schema file stem, the article before the RM
-/// type, the two example `PARTY` names, and the handler identifiers. Two sorts
-/// of text are passed whole: the lead paragraph of each tag operation, which
-/// quotes that kind's own operation file and keeps its published line breaks,
-/// and the response-header descriptions and example summaries, where
-/// `#[utoipa::path]` takes only a string literal and no `concat!`.
 macro_rules! party_kind_handlers {
     (
         kind: $lower:literal, $upper:literal, $schema:literal, $article:literal, party: $party:ident,

@@ -11,12 +11,6 @@
 //! those EHRs —
 //! [`ferroehr::service::linkage::cohort`] carries the design and the
 //! separations that make it safe.
-//!
-//! The body is JSON only, decoded through the group's own
-//! [`response::query_body`], and the paging/parameter members are spelled the
-//! way the released `AdhocQueryExecute` spells them (`q`, `offset`, `fetch`,
-//! `query_parameters`) so a client that already speaks the query API needs no
-//! second vocabulary. There is no `ehr_id`: the cohort IS the scope.
 
 #![expect(
     clippy::disallowed_types,
