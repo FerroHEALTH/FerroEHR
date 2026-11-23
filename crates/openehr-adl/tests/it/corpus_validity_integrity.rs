@@ -1,22 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Phase-1 validation corpus harness.
+//! Phase-1 validation over the vendored ADL2 conformance corpus against each
+//! file's `regression` tag (`tests/corpus/INVENTORY.md`), never the filename.
 //!
-//! Walks the vendored ADL2 conformance corpus (`tests/corpus/adl2-reference/`)
-//! and asserts the phase-1 validator's behaviour against each file's
-//! authoritative `regression` tag (the oracle per
-//! `tests/corpus/INVENTORY.md`, never the filename):
-//!
-//! - a tag naming a **phase-1** code ⇒ the validator raises exactly that code;
-//! - a `PASS`/untagged-features file ⇒ zero phase-1 errors (warnings allowed);
-//! - a tag naming a **phase-2/3/RM or not-yet-run phase-1** code ⇒ no phase-1
-//!   error false-positive (recorded as not-yet-checked);
-//! - `FAIL` / `S*` (syntax) tags stay claimed by the parse gates — asserted
-//!   only to reject (parse error or any typed error).
-//!
+//! A phase-1 code is raised exactly; a PASS file has no phase-1 error; a later
+//! phase's code raises no false positive; `FAIL`/`S*` tags must reject.
 //! Tag normalisations (INVENTORY §3/§10): `VDIFP1`→VDIFP, `VSONCOm`→VSONCO.
-//! The spec oracle for the codes is `docs/specs/openehr/AM/docs/AOM2/`.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -48,12 +38,8 @@ const INTEGRITY_FIRING: &[&str] = &[
 /// genuinely not checked in phase 1.
 fn adjudicated_skip(name: &str) -> Option<&'static str> {
     if name.ends_with("VATID_id_code_in_node_not_in_terminology.v1.0.0.adls") {
-        // The per-node id-code definedness half of VATID depends on the RM
-        // multiplicity of the owning attribute (master07 §Overview: a term
-        // definition is optional for children of single-valued attributes),
-        // which needs the reference model; phase 1 checks only the root concept
-        // code. This interior-node case is asserted in the reference-model
-        // corpus harness (`corpus_validity_rm.rs`).
+        // VATID's interior-node half needs the RM (master07 §Overview), asserted in
+        // `corpus_validity_rm.rs`.
         Some("VATID interior-node definedness is a reference-model check (corpus_validity_rm.rs)")
     } else if name.ends_with("ENTRY_WRONG.rm_type_wrong.v1.0.0.adls") {
         // Definition root type `ENTRY` != identifier RM class `ENTRY_WRONG`, so
@@ -64,14 +50,9 @@ fn adjudicated_skip(name: &str) -> Option<&'static str> {
     } else if name.ends_with("VOKU_ac_code_duplicated_in_terminology.v1.0.0.adls")
         || name.ends_with("VOKU_at_code_duplicated_in_terminology.v1.0.0.adls")
     {
-        // Duplicate sibling container keys are invalid ODIN — rule VDOBU
-        // (`LANG/docs/odin/master05-content` §Container Objects), enforced at
-        // the ODIN parse since #1376 — so the terminology section is refused
-        // (SDINV) before the AOM-level VOKU check these tags name can run.
-        // Through ADL2 TEXT a terminology key duplicate is therefore
-        // structurally unreachable past the parser; the VOKU source-level
-        // check stays for programmatically-built sources and its own unit
-        // coverage.
+        // Duplicate sibling container keys are invalid ODIN (VDOBU,
+        // `LANG/docs/odin/master05-content` §Container Objects), so the parse refuses
+        // them (SDINV) before VOKU can run.
         Some(
             "duplicate ODIN container keys refused at parse (VDOBU, master05) before VOKU is reachable",
         )
@@ -82,13 +63,8 @@ fn adjudicated_skip(name: &str) -> Option<&'static str> {
         // lenient-parse gap is a parser concern, not phase-1 validation.
         Some("spurious ODIN delimiter rejected at parse (SDINV) before VOTM is reachable")
     } else if name.ends_with("SOME_TYPE.code_phrase.v1.0.0.adls") {
-        // A legacy ADL 1.4 source (validity/legacy_adl_1.4) that reuses id-code
-        // `id2` for the CODE_PHRASE node under several non-sibling
-        // `defining_code` attributes. In AOM 1.4 node ids are only
-        // *sibling*-unique (AOM1.4 master04 §Node_id and Paths), so the reuse is
-        // 1.4-legal; parsed as ADL2 the stricter archetype-wide VCOSU
-        // (master04.5 §C_OBJECT) flags it. The ADL2 rule is NOT weakened — this
-        // is a spec-cited tolerance for a 1.4-origin fixture.
+        // A legacy 1.4 fixture reuses `id2` across non-sibling nodes, legal under AOM
+        // 1.4 (§Node_id and Paths) and VCOSU under ADL2 (master04.5 §C_OBJECT).
         Some(
             "legacy 1.4 sibling-unique node-id reuse (AOM1.4 master04); ADL2 archetype-wide VCOSU not weakened to pass it",
         )
