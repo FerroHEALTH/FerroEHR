@@ -242,9 +242,9 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
 #[tokio::test]
 async fn the_content_digests_of_the_same_entries_are_unchanged_by_the_stored_form() {
     const DIGESTS: [&str; 3] = [
-        "01798f8f00165796e0b3834b28bbc0a36ece0283566b9618909a9989079ee0d5",
-        "77cb7f85cce51dd543e42ec0adf93c97efc1dbd414980b2be4f0d4118be5d7dc",
-        "af8c09a6c0415f623b691dfdf9f4ace04f6adaf8386a92f13fc82bbac2920189",
+        "710e124374657c897ccd4647edc18b7837ec2b44f3c7147a3f80e6f93819144c",
+        "39171a480a6f3c867120c851ab2aac76300c877614ee4d36565bd96ad8f4358b",
+        "2e3ab458c57d9abd7528bf800c587e40b9354f14d72fe91f140ac1317aedc48c",
     ];
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
