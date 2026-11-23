@@ -46,6 +46,9 @@ use crate::system_log::store::chains::AuditChain;
 
 pub mod verify;
 
+#[cfg(test)]
+mod plans;
+
 /// The version tag of the access log's seals, the first field of their text.
 pub const TAG: &str = "ferroehr.access_log.seal.v1";
 
@@ -113,7 +116,7 @@ macro_rules! queries {
                   FROM next n WHERE n.before < greatest($2, 1) ORDER BY n.window_no"),
             seal_at: concat!("SELECT encode(digest, 'hex'), last_id FROM audit.", $seal,
                 " WHERE window_no = $1"),
-            more: concat!("SELECT EXISTS (SELECT 1 FROM audit.", $seal, " WHERE window_no > $1)"),
+            more: concat!("SELECT coalesce(max(window_no) > $1, false) FROM audit.", $seal),
             state: concat!("SELECT window_no, encode(digest, 'hex') FROM audit.", $state,
                 " WHERE singleton"),
             verified: concat!("SELECT through_window FROM audit.", $verified, " WHERE singleton"),

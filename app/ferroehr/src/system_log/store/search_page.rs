@@ -18,6 +18,9 @@ use sea_query::{
     UnionType, WindowStatement,
 };
 use sea_query_sqlx::{SqlxBinder as _, SqlxValues};
+use sqlx::Row as _;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicI64, Ordering};
 
 use super::{AuditCriterion, AuditElement, AuditSearchFilter, RECORD_COLUMNS};
 use crate::system_log::search::TokenMatch;
@@ -26,9 +29,69 @@ use crate::system_log::search::TokenMatch;
 const AUDIT: &str = "audit";
 /// The relation every record is read from.
 const RECORD: &str = "audit_record";
-/// The ITI-81 index of the access log, the view of the entries' index
-/// columns, which holds every column a search criterion names (#5784).
-const ACCESS_LOG_SEARCH: &str = "access_log_search";
+
+/// The select item of the index cursor a page's first record carries.
+const CURSOR_SQL_ITEM: &str =
+    "(SELECT x.last_id FROM audit.access_log_index_state x WHERE x.singleton)";
+
+/// The column a page's first record carries the index cursor in.
+const CURSOR: &str = "index_cursor";
+
+/// The newest index cursor an ITI-81 page carried, which the next page is
+/// read as of; unknown until the first page reads it.
+#[derive(Debug, Clone)]
+pub(crate) struct IndexCursor(Arc<AtomicI64>);
+
+impl Default for IndexCursor {
+    fn default() -> Self {
+        Self(Arc::new(AtomicI64::new(-1)))
+    }
+}
+
+impl IndexCursor {
+    /// The cursor a page binds: the newest one a page carried, or, before
+    /// any did, the one read on `conn`.
+    ///
+    /// # Errors
+    /// [`sqlx::Error`] when that read fails.
+    pub(super) async fn bound(&self, conn: &mut sqlx::PgConnection) -> Result<i64, sqlx::Error> {
+        // NOTE: our own design (#6373), the cursor only moves forward, so a bound at or below it
+        // is exact; a cursor another replica moved only widens the open window this one reads.
+        let held = self.0.load(Ordering::Relaxed);
+        if held >= 0 {
+            return Ok(held);
+        }
+        let read: i64 = sqlx::query_scalar(crate::access_log::index::CURSOR)
+            .fetch_one(conn)
+            .await?;
+        self.0.fetch_max(read, Ordering::Relaxed);
+        Ok(read)
+    }
+
+    /// Keeps the cursor the first record of `rows` carried.
+    ///
+    /// # Errors
+    /// [`sqlx::Error`] when the carried cursor does not decode.
+    pub(super) fn saw(&self, rows: &[sqlx::postgres::PgRow]) -> Result<(), sqlx::Error> {
+        if let Some(row) = rows.first()
+            && let Some(cursor) = row.try_get::<Option<i64>, _>(CURSOR)?
+        {
+            self.0.fetch_max(cursor, Ordering::Relaxed);
+        }
+        Ok(())
+    }
+}
+
+/// The alias of the access log's ITI-81 index in a statement.
+const ACCESS_LOG_CANDIDATES: &str = "access_log_search";
+
+/// The ITI-81 index of the access log as of the index cursor `cursor`, which
+/// holds every column a search criterion names (#5784, #6373).
+fn access_log_search(cursor: i64) -> sea_query::FunctionCall {
+    sea_query::Func::cust(Alias::new("audit.access_log_search")).arg(Expr::val(cursor))
+}
+/// One access-log entry as `audit_record` holds it, read by its key (#6320).
+const ACCESS_LOG_BY_KEY: &str = "access_log_by_key";
 /// The ITI-81 index of the system chain, the view of the linked records'
 /// search columns: a plain join the planner reads in the search's order
 /// through the time index, where a member of `audit_record`'s union is
@@ -53,6 +116,7 @@ const SYSTEM_SEARCH: &str = "system_search";
 pub(super) fn build_search_statements(
     filter: &AuditSearchFilter,
     resolved: &[Option<TokenMatch>],
+    cursor: i64,
 ) -> (String, SqlxValues, String, SqlxValues) {
     let condition = crate::system_log::search::condition::search_condition(filter, resolved);
     // One record past the page, which tells the caller whether a next page exists.
@@ -60,10 +124,48 @@ pub(super) fn build_search_statements(
         .unwrap_or(50)
         .saturating_add(1);
     let offset = u64::try_from(Ord::max(filter.offset, 0)).unwrap_or(0);
-    let (count_sql, count_values) = total(&condition).build_sqlx(PostgresQueryBuilder);
+    let (count_sql, count_values) = total(&condition, cursor).build_sqlx(PostgresQueryBuilder);
     let served = u64::try_from(page_size(filter)).unwrap_or(50);
-    let (sql, values) = page(&condition, count, offset, served).build_sqlx(PostgresQueryBuilder);
+    let mut page = page(&condition, count, offset, served, cursor);
+    // NOTE: our own design (#6320), the revisions ride on the page's first record alone, which
+    // the confirmation reads, so the other records carry a NULL over the wire.
+    let first = |carried: &'static str| -> Expr {
+        sea_query::CaseStatement::new()
+            .case(
+                Expr::col((Alias::new("page_key"), Alias::new("position"))).eq(1),
+                Expr::cust(carried),
+            )
+            .into()
+    };
+    page.expr_as(first(CURSOR_SQL_ITEM), Alias::new(CURSOR));
+    if filter.carried.policy {
+        let carried = if filter.carried.reads_party() {
+            super::carried::PARTY
+        } else {
+            super::carried::POLICY
+        };
+        page.expr_as(first(carried), Alias::new(super::carried::CARRIED));
+    }
+    let (sql, values) = page.build_sqlx(PostgresQueryBuilder);
     (count_sql, count_values, sql, values)
+}
+
+/// The page statement [`super::AuditStore::search`] runs for `filter` bound to
+/// the index cursor `cursor`, with its values, its token criteria resolved on
+/// `pool`; `None` when a token criterion names no stored token.
+///
+/// # Errors
+/// [`crate::system_log::AuditError`] when the token resolution fails.
+pub async fn page_statement(
+    pool: &sqlx::PgPool,
+    filter: &AuditSearchFilter,
+    cursor: i64,
+) -> Result<Option<(String, SqlxValues)>, crate::system_log::AuditError> {
+    let Some(resolved) = crate::system_log::search::resolve_criteria(pool, filter).await? else {
+        return Ok(None);
+    };
+    let (_, _, sql, values) = build_search_statements(filter, &resolved, cursor);
+    Ok(Some((sql, values)))
 }
 
 /// Whether the statements of `filter` are of a bounded shape set, which runs
@@ -120,7 +222,7 @@ pub(super) fn page_size(filter: &AuditSearchFilter) -> usize {
 /// The number of records `condition` selects: the system records and the
 /// indexed entries of the access log no write holds, those a page can return
 /// (#6000, #6203, #6242), each counted from its index columns alone.
-fn total(condition: &Cond) -> SelectStatement {
+fn total(condition: &Cond, cursor: i64) -> SelectStatement {
     // NOTE: our own design (#6242), system_search holds no record a write still holds.
     let system = count_of(
         Query::select()
@@ -132,7 +234,7 @@ fn total(condition: &Cond) -> SelectStatement {
     let indexed = || {
         Query::select()
             .expr(Expr::col(Asterisk).count())
-            .from((Alias::new(AUDIT), Alias::new(ACCESS_LOG_SEARCH)))
+            .from_function(access_log_search(cursor), Alias::new(ACCESS_LOG_CANDIDATES))
             .cond_where(condition.clone())
             .to_owned()
     };
@@ -173,7 +275,7 @@ const FIRST_NAMING: &str = "CASE WHEN row_number() OVER (PARTITION BY \"page_rec
 /// only then is each record it serves read through `audit_record`, where an
 /// access-log entry's document is rendered (#5965). A record past `served`,
 /// the one that says another page follows, keeps its keys and no record.
-fn page(condition: &Cond, count: u64, offset: u64, served: u64) -> SelectStatement {
+fn page(condition: &Cond, count: u64, offset: u64, served: u64, cursor: i64) -> SelectStatement {
     let first = offset.saturating_add(count);
     let mut system = Query::select();
     system
@@ -185,7 +287,7 @@ fn page(condition: &Cond, count: u64, offset: u64, served: u64) -> SelectStateme
     chains
         .column(Asterisk)
         .from_subquery(system, Alias::new("system_page"))
-        .union(UnionType::All, access_log_page(condition, first));
+        .union(UnionType::All, access_log_page(condition, first, cursor));
     let page_keys = newest_first_of(
         Query::select()
             .columns(KEYS.map(Alias::new))
@@ -205,20 +307,27 @@ fn page(condition: &Cond, count: u64, offset: u64, served: u64) -> SelectStateme
         .to_owned();
     let key = Alias::new("page_key");
     let record = Alias::new("page_record");
-    // NOTE: our own design (#5965), `OFFSET 0` keeps the read lateral, so each served record
-    // is found by its chain and position rather than by a read of the whole store.
-    let by_key = Query::select()
-        .columns(record_columns().map(Alias::new))
-        .column(Alias::new(SHARED_DIGEST))
-        .from((Alias::new(AUDIT), Alias::new(RECORD)))
-        .and_where(Expr::col(Alias::new("chain")).eq(Expr::col((key.clone(), Alias::new("chain")))))
-        .and_where(
-            Expr::col(Alias::new("chain_seq"))
-                .eq(Expr::col((key.clone(), Alias::new("chain_seq")))),
-        )
-        .and_where(Expr::col((key.clone(), Alias::new("position"))).lte(served))
-        .offset(0)
+    // NOTE: our own design (#5965, #6320), `OFFSET 0` keeps the read lateral, one key read per
+    // served record in its own chain's relation.
+    let in_chain = |relation: &str, chain: &str| {
+        Query::select()
+            .columns(record_columns().map(Alias::new))
+            .column(Alias::new(SHARED_DIGEST))
+            .from((Alias::new(AUDIT), Alias::new(relation)))
+            .and_where(Expr::col((key.clone(), Alias::new("chain"))).eq(chain))
+            .and_where(
+                Expr::col(Alias::new("chain_seq"))
+                    .eq(Expr::col((key.clone(), Alias::new("chain_seq")))),
+            )
+            .and_where(Expr::col((key.clone(), Alias::new("position"))).lte(served))
+            .to_owned()
+    };
+    let mut by_key = in_chain(RECORD, "system")
+        .and_where(Expr::col(Alias::new("chain")).eq("system"))
         .to_owned();
+    by_key
+        .union(UnionType::All, in_chain(ACCESS_LOG_BY_KEY, "access_log"))
+        .offset(0);
     let mut page = Query::select();
     page.columns(KEYS.map(|column| (key.clone(), Alias::new(column))))
         .columns(
@@ -249,65 +358,34 @@ fn record_columns() -> impl Iterator<Item = &'static str> {
 }
 
 /// The keys of the first `first` access-log records `condition` selects,
-/// newest first.
-///
-/// The candidates are read from `access_log_search` through the entries'
-/// time index: its first `first` rows by `recorded_at`, and every row tied
-/// with the last of them, since the order's next key, `stored_at`, is not in
-/// the view. Each candidate's keys are read from the view by its position,
-/// which renders no document.
-fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
-    let search = || (Alias::new(AUDIT), Alias::new(ACCESS_LOG_SEARCH));
+/// newest first, read from `access_log_search` through the entries' time
+/// index: an entry is stored at the instant it records, so the search's
+/// order is its instant and then its position.
+fn access_log_page(condition: &Cond, first: u64, cursor: i64) -> SelectStatement {
     // NOTE: our own design (#5968), a page reads only the entries the chainer linked.
-    let linked = || Expr::col(Alias::new("chain_seq")).is_not_null();
-    let newest = |limit: u64, offset: u64| {
-        Query::select()
-            .from(search())
-            .cond_where(condition.clone())
-            .and_where(linked())
-            .order_by(Alias::new("recorded_at"), Order::Desc)
-            .limit(limit)
-            .offset(offset)
-            .to_owned()
-    };
-    let last_instant = newest(1, first.saturating_sub(1))
-        .column(Alias::new("recorded_at"))
-        .to_owned();
-    let mut candidates = Query::select();
-    candidates
+    let linked = Expr::col(Alias::new("chain_seq")).is_not_null();
+    let candidates = Query::select()
         .column(Alias::new("chain_seq"))
-        .from(search())
+        .column(Alias::new("recorded_at"))
+        .from_function(access_log_search(cursor), Alias::new(ACCESS_LOG_CANDIDATES))
         .cond_where(condition.clone())
-        .and_where(linked())
-        .and_where(Expr::col(Alias::new("recorded_at")).eq(count_of(last_instant)))
-        .union(
-            UnionType::Distinct,
-            newest(first, 0).column(Alias::new("chain_seq")).to_owned(),
-        );
-    let candidate = Alias::new("access_log_candidate");
-    let record = Alias::new("access_log_page");
-    // NOTE: our own design (#5646), `OFFSET 0` keeps the read lateral, so each candidate's
-    // keys are found by its position rather than by a read of the whole log.
-    let by_position = Query::select()
-        .columns(KEYS.map(Alias::new))
-        .from((Alias::new(AUDIT), Alias::new(RECORD)))
-        .and_where(Expr::col(Alias::new("chain")).eq("access_log"))
-        .and_where(
-            Expr::col(Alias::new("chain_seq"))
-                .eq(Expr::col((candidate.clone(), Alias::new("chain_seq")))),
-        )
-        .offset(0)
+        .and_where(linked)
+        .order_by(Alias::new("recorded_at"), Order::Desc)
+        .order_by(Alias::new("chain_seq"), Order::Desc)
+        .limit(first)
         .to_owned();
+    let candidate = Alias::new("access_log_candidate");
+    // NOTE: our own design (#6320), an entry is stored at the instant it records.
     let mut page = Query::select();
-    page.columns(KEYS.map(|column| (record.clone(), Alias::new(column))))
-        .from_subquery(candidates, candidate)
-        .join_lateral(
-            sea_query::JoinType::InnerJoin,
-            by_position,
-            record.clone(),
-            Expr::val(true),
-        );
-    within_chain(&mut page, Some(&record)).limit(first);
+    page.expr_as(Expr::cust("'access_log'::text"), Alias::new("chain"))
+        .column((candidate.clone(), Alias::new("chain_seq")))
+        .column((candidate.clone(), Alias::new("recorded_at")))
+        .expr_as(
+            Expr::col((candidate.clone(), Alias::new("recorded_at"))),
+            Alias::new("stored_at"),
+        )
+        .from_subquery(candidates, candidate.clone());
+    within_chain(&mut page, None).limit(first);
     page
 }
 

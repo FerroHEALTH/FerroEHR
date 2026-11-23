@@ -55,9 +55,12 @@ COMMENT ON FUNCTION access_log_intake_part_gone(text) IS
     'Whether a shared part is gone, read with a snapshot of its own; the intake asks it of a part it had to raise and did not (#6241).';
 
 -- Releases the records held under committed reservations, counting them.
+-- Its statements run on the generic plan, which probes the reservation index
+-- for any number of ids (#6392).
 CREATE FUNCTION audit.audit_intake_release(p_ids uuid[]) RETURNS bigint
     LANGUAGE plpgsql VOLATILE SECURITY DEFINER
     SET search_path = audit, pg_catalog
+    SET plan_cache_mode = force_generic_plan
     AS $$
 DECLARE
     v_entries bigint;

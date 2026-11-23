@@ -11,10 +11,10 @@
 //! (`crate::system_log::store::AuditStore::index_access_log`).
 //!
 //! A reader reads the indexed entries through the index and the entries past
-//! its cursor by key, in one statement (`audit.access_log_record`,
-//! `audit.access_log_search`). The cursor commits with the rows it covers and
-//! only passes ids below the frontier, so every committed entry is in one of
-//! the two. An entry past the cursor carries no search tokens, so a search on
+//! its cursor by key, in one statement (`audit.access_log_record`) or bound to
+//! a cursor it saw (`audit.access_log_search`). The cursor commits with the
+//! rows it covers, only moves forward and only passes ids below the frontier,
+//! so every committed entry is in one of the two. An entry past the cursor carries no search tokens, so a search on
 //! a token parameter moves the frontier and the index past every entry
 //! committed before it first. A batch commits durably with its cursor. No
 //! specification governs audit storage: our own design.

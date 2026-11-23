@@ -391,7 +391,10 @@ pub async fn has_version_tree(
 ///
 /// The import and archive-load paths write many versions of a container at
 /// once, so they recompute the head once per object; the head is a pure
-/// function of the stored versions.
+/// function of the stored versions. A COMPOSITION's episodes are read off its
+/// trunk head's body: the SQL form of the commit's placement rule
+/// over a body that rule admitted, SHA-256 of each `episode` element's
+/// `issuer`, `0x00` and `id`, distinct and sorted.
 ///
 /// Each object is taken under the same per-object advisory lock the commit path
 /// uses, so a concurrent commit of one of these containers cannot interleave
@@ -432,18 +435,27 @@ pub async fn sync_heads(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), St
     sqlx::query(
         "INSERT INTO vo_head (vo_id, kind, ehr_id, tier, head_sys_version, \
              trunk_head_sys_version, trunk_head_content_key, lifecycle_state, template_id, \
-             root_archetype, committed_at) \
+             root_archetype, episodes, committed_at) \
          SELECT a.vo_id, t.kind, t.ehr_id, t.tier, a.head_sys_version, t.sys_version, \
                 t.content_key, t.lifecycle_state, t.template_id, \
                 (SELECT COALESCE(n.data ->> 'archetype_node_id', \
                                  ext.node_archetype_node_id(n.archetype, n.rm_version)) \
                  FROM node n WHERE n.tier = t.tier AND n.vo_id = a.vo_id \
                    AND n.sys_version = t.content_key AND n.num = 0), \
+                CASE WHEN t.kind = 'COMPOSITION' THEN ( \
+                    SELECT array_agg(k ORDER BY k) FROM (SELECT DISTINCT \
+                        sha256(convert_to(e ->> 'issuer', 'UTF8') || '\\x00'::bytea \
+                               || convert_to(e ->> 'id', 'UTF8')) AS k \
+                        FROM jsonb_path_query(t.body::jsonb, \
+                            'lax $.context.other_context.** ? (@._type == \"ELEMENT\" \
+                             && @.name.defining_code.terminology_id.value == \"openehr_access\" \
+                             && @.name.defining_code.code_string == \"episode\").value') e) d \
+                ) END, \
                 t.committed_at \
          FROM (SELECT vo_id, max(sys_version) AS head_sys_version \
                FROM version WHERE vo_id = ANY($1) GROUP BY vo_id) a \
          JOIN LATERAL (SELECT kind, ehr_id, tier, sys_version, content_key, lifecycle_state, \
-                              template_id, committed_at \
+                              template_id, committed_at, body \
                        FROM version \
                        WHERE vo_id = a.vo_id AND branch_number = 0 \
                        ORDER BY sys_version DESC LIMIT 1) t ON true \
@@ -457,6 +469,7 @@ pub async fn sync_heads(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), St
              lifecycle_state = EXCLUDED.lifecycle_state, \
              template_id = EXCLUDED.template_id, \
              root_archetype = EXCLUDED.root_archetype, \
+             episodes = EXCLUDED.episodes, \
              committed_at = EXCLUDED.committed_at",
     )
     .bind(vo_ids)

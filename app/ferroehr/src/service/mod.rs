@@ -276,6 +276,11 @@ pub struct FerroEhrService {
     /// Whether a clinical statement may read the party store's revisions
     /// through `party_door`, decided on first use ([`Self::party_door_open`]).
     pub(in crate::service) party_door: Arc<tokio::sync::OnceCell<bool>>,
+    /// What an ITI-81 page carries beside its records, read once
+    /// (`system_log::store::carried`, #6320).
+    #[cfg(feature = "fhir")]
+    pub(crate) audit_carried:
+        Arc<tokio::sync::OnceCell<crate::system_log::store::carried::Carried>>,
 }
 
 impl FerroEhrService {
@@ -358,6 +363,8 @@ impl FerroEhrService {
             import_policy: Arc::default(),
             authn_caches: Arc::default(),
             party_door: Arc::default(),
+            #[cfg(feature = "fhir")]
+            audit_carried: Arc::default(),
         }
     }
 

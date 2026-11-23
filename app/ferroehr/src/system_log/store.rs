@@ -44,6 +44,8 @@ use uuid::Uuid;
 pub mod access_index;
 mod access_log;
 mod batch;
+#[cfg(feature = "fhir")]
+pub mod carried;
 pub mod chain_walk;
 pub mod chains;
 pub mod delivery;
@@ -57,7 +59,7 @@ pub mod outbox;
 #[cfg(feature = "fhir")]
 mod review;
 #[cfg(feature = "fhir")]
-mod search_page;
+pub mod search_page;
 mod writers;
 
 use crate::access_log::store::AccessLogStore;
@@ -235,6 +237,8 @@ pub struct AuditStore {
     /// The gathered intake write of the entries, started on first use.
     #[cfg(feature = "fhir")]
     group: Arc<crate::access_log::intake::Gathered>,
+    #[cfg(feature = "fhir")]
+    cursor: search_page::IndexCursor,
     /// The catch-up of the access log's search index the token searches run.
     catch_up: Arc<access_index::CatchUp>,
 }
@@ -258,6 +262,8 @@ impl AuditStore {
             releases: Arc::default(),
             #[cfg(feature = "fhir")]
             group: Arc::default(),
+            #[cfg(feature = "fhir")]
+            cursor: search_page::IndexCursor::default(),
             catch_up: Arc::default(),
         }
     }
@@ -798,11 +804,8 @@ impl AuditStore {
     ///
     /// A criterion on a column is applied to that column. A criterion on an
     /// element of the document (`address` and the token parameters) first
-    /// moves the access log's search index past every entry committed before
-    /// the search ([`Self::catch_up`]), then is resolved to the ids of the
-    /// stored search tokens it names, and the
-    /// statement keeps the records whose `search_tokens` carry one of them,
-    /// through its index. Only the page is rendered.
+    /// catches the access log's search index up ([`Self::catch_up`]), then keeps
+    /// the records whose `search_keys` hold a stored token it names. Only the page is rendered.
     ///
     /// # Errors
     /// [`AuditError::Store`] when a query fails, the rendering errors of a
@@ -820,15 +823,17 @@ impl AuditStore {
         else {
             return Ok(AuditPage::empty(filter));
         };
+        let mut conn = acquire(&self.pool).await?;
+        let cursor = self.cursor.bound(&mut conn).await?;
         let (count_sql, count_values, sql, values) =
-            search_page::build_search_statements(filter, &resolved);
+            search_page::build_search_statements(filter, &resolved, cursor);
         // NOTE: our own design (#6005), a shape's text is a named statement that PostgreSQL may
         // plan once per connection (plan_cache_mode auto); any other text goes unnamed.
         let shaped = search_page::shaped(filter);
         let total = if filter.total {
             let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
                 .persistent(shaped)
-                .fetch_one(&mut *acquire(&self.pool).await?)
+                .fetch_one(&mut *conn)
                 .await?;
             Some(total)
         } else {
@@ -836,10 +841,11 @@ impl AuditStore {
         };
         let mut rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
             .persistent(shaped)
-            .fetch_all(&mut *acquire(&self.pool).await?)
+            .fetch_all(&mut *conn)
             .await?;
-        // The page statement reads one record past the page, which says whether a next
-        // page exists without counting the matches.
+        drop(conn);
+        self.cursor.saw(&rows)?;
+        filter.carried.observe(&rows)?;
         let more = rows.len() > search_page::page_size(filter);
         rows.truncate(search_page::page_size(filter));
         let documents = self.page_documents(&rows).await?;
@@ -907,6 +913,9 @@ pub struct AuditSearchFilter {
     pub until_inclusive: bool,
     /// The criteria, each of which a record must match.
     pub criteria: Vec<AuditCriterion>,
+    /// What the page statement carries beside its records (#6320).
+    #[cfg(feature = "fhir")]
+    pub carried: carried::Carried,
     /// `_count` — page size (default 50, capped at 1000).
     pub count: i64,
     /// `_offset` — page offset.

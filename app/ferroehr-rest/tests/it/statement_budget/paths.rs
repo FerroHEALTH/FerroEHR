@@ -71,6 +71,10 @@ pub(super) const REQUESTS: u64 = 10;
 /// The requests of each path sent before the measured ones.
 pub(super) const WARM: u64 = 3;
 
+/// The requests of each path that write a fixture of their own, the warm
+/// ones with the measured ones of either window ([`super::planning`]).
+const FIXTURES: u64 = WARM + super::planning::REQUESTS;
+
 /// The EHRs the paths spread over, each with one IPS composition.
 const EHRS: usize = 5;
 
@@ -132,6 +136,11 @@ pub(super) enum Path {
     CommitGroup,
     CommitRole,
     CommitAgent,
+    /// The IPS commit with an `episode` element of another terminology in its
+    /// `other_context`, the unplaced twin of [`Path::CommitPlaced`].
+    CommitTwin,
+    /// The IPS commit placed in one episode of care (#6413).
+    CommitPlaced,
 }
 
 impl Path {
@@ -202,6 +211,8 @@ impl Path {
             Self::CommitGroup => "GROUP commit",
             Self::CommitRole => "ROLE commit",
             Self::CommitAgent => "AGENT commit",
+            Self::CommitTwin => "commit JSON, unplaced twin",
+            Self::CommitPlaced => "commit JSON, placed",
         }
     }
 }
@@ -589,8 +600,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         allocations: 8856,
         peak_bytes: 624_026,
-        round_trips: 3,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 567,
     },
@@ -647,7 +658,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        allocations: 1713,
+        allocations: 1710,
         peak_bytes: 125_972,
         round_trips: 12,
         nested: 3,
@@ -677,7 +688,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        allocations: 2200,
+        allocations: 2196,
         peak_bytes: 140_901,
         round_trips: 12,
         nested: 3,
@@ -826,7 +837,7 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::EhrRead, 1567),
     (Path::AqlSingle, 4538),
     (Path::AqlPopulation, 6150),
-    (Path::Iti81, 26_826),
+    (Path::Iti81, 26_771),
     (Path::PartyRead, 5303),
     (Path::CommitContribution, 202_074),
     (Path::ReadAtTime, 130_877),
@@ -842,8 +853,10 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::DirectoryCreate, 4796),
     (Path::DirectoryUpdate, 4607),
     (Path::DirectoryDelete, 3964),
-    (Path::PartyUpdate, 9192),
-    (Path::PartyDelete, 7743),
+    // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
+    (Path::PartyUpdate, 9197),
+    // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
+    (Path::PartyDelete, 7748),
     (Path::CommitOrganisation, 7582),
     (Path::CommitGroup, 7411),
     (Path::CommitRole, 11_206),
@@ -1184,7 +1197,7 @@ impl World {
     /// [`Path::PartyDelete`] then deletes, one per request.
     async fn parties(&self, app: &Router) {
         let mut parties = Vec::new();
-        for _ in 0..WARM + REQUESTS {
+        for _ in 0..FIXTURES {
             let (status, headers, body) =
                 plain(app, &Self::party_commit(self.person.clone())).await;
             assert_eq!(status, StatusCode::CREATED, "a person to update: {body}");
@@ -1305,7 +1318,7 @@ impl World {
     /// composition its FOLDER references.
     async fn directories(&self, app: &Router) {
         let mut directories = Vec::new();
-        for _ in 0..WARM + REQUESTS {
+        for _ in 0..FIXTURES {
             let (ehr, vo) = ehr_with_composition(app).await;
             directories.push((ehr, vo, String::new()));
         }
@@ -1381,7 +1394,7 @@ impl World {
     /// request, spread over the EHRs.
     async fn deletable(&self, app: &Router) {
         let mut deletable = Vec::new();
-        for n in 0..usize::try_from(WARM + REQUESTS).unwrap() {
+        for n in 0..usize::try_from(FIXTURES).unwrap() {
             let (ehr, _) = &self.ehrs[n % self.ehrs.len()];
             let (status, headers, body) = plain(
                 app,
@@ -1514,6 +1527,10 @@ impl World {
                 Vec::new(),
             ),
             Path::CommitXml => commit(XML, self.xml.clone(), Vec::new()),
+            Path::CommitTwin => commit(JSON, episode_ips("openehr_accesx").to_string(), Vec::new()),
+            Path::CommitPlaced => {
+                commit(JSON, episode_ips("openehr_access").to_string(), Vec::new())
+            }
             Path::CommitFlat => commit(
                 FLAT,
                 self.flat.clone(),
@@ -1669,6 +1686,27 @@ fn contribution() -> Value {
         } ],
         "audit": { "change_type": coded("249", "creation"), "committer": committer },
     })
+}
+
+/// The IPS composition with an `ELEMENT` named `episode` of `terminology`,
+/// valued `H|C-17`, in a CLUSTER of the template's `other_context` slot.
+fn episode_ips(terminology: &str) -> Value {
+    let archetype = "openEHR-EHR-CLUSTER.case_identification.v0";
+    let mut body = common::ips_canonical_composition();
+    body["context"]["other_context"] = serde_json::json!({ "_type": "ITEM_TREE",
+        "archetype_node_id": "at0001", "name": { "_type": "DV_TEXT", "value": "Tree" },
+        "items": [{ "_type": "CLUSTER", "archetype_node_id": archetype,
+            "archetype_details": { "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+                "rm_version": "1.0.4" },
+            "name": { "_type": "DV_TEXT", "value": "Case identification" },
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0001",
+                "name": { "_type": "DV_CODED_TEXT", "value": "episode",
+                    "defining_code": { "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+                        "code_string": "episode" } },
+                "value": { "_type": "DV_IDENTIFIER", "issuer": "H", "id": "C-17" } }] }] });
+    body
 }
 
 /// What one path measured over [`REQUESTS`] requests.
@@ -2208,4 +2246,94 @@ async fn every_hot_path_stays_within_its_wire_budget() {
         Path::ALL.len(),
         "every path has its wire budget"
     );
+}
+
+/// The bytes and records `relation` wrote over a window, from its line in
+/// [`Measure::wal_ledger`].
+fn relation_wal(m: &Measure, relation: &str) -> (u64, u64) {
+    m.wal_ledger
+        .lines()
+        .find_map(|line| {
+            let mut words = line.split_whitespace();
+            let bytes = words.next()?.parse().ok()?;
+            let _unit = words.next()?;
+            let records = words.next()?.parse().ok()?;
+            (words.next()? == relation).then_some((bytes, records))
+        })
+        .unwrap_or_default()
+}
+
+/// A commit placed in an episode costs no round trip, no nested statement
+/// and no row more than its unplaced twin, at most 64 WAL bytes in its head
+/// row and at most four allocations (#6413). The node indexes split their
+/// pages as they fill, so the head row is judged on its own, and the pair is
+/// judged on its second window, after each path's first.
+#[tokio::test]
+async fn a_placed_commit_costs_its_projection_alone() {
+    let counter = Counter::default();
+    let _guard =
+        tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
+    ferroehr::aql::sql::without_reference_cells();
+    let (_db, pool, _svc, app, pools) = Box::pin(super::steady()).await;
+    for extension in ["pg_stat_statements", "pg_walinspect"] {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE EXTENSION IF NOT EXISTS {extension}"
+        )))
+        .execute(&pool)
+        .await
+        .expect("the extension");
+    }
+    super::wal::kept(&pool).await;
+    let world = World::build(&app).await;
+    let mut twin = Measure::default();
+    let mut placed = Measure::default();
+    for _ in 0..2 {
+        twin = Box::pin(measure(
+            &app,
+            &pool,
+            &pools,
+            None,
+            &world,
+            &counter,
+            Path::CommitTwin,
+        ))
+        .await;
+        placed = Box::pin(measure(
+            &app,
+            &pool,
+            &pools,
+            None,
+            &world,
+            &counter,
+            Path::CommitPlaced,
+        ))
+        .await;
+    }
+    let (twin_allocations, placed_allocations) = (twin.low(|a| a.count), placed.low(|a| a.count));
+    let report = format!(
+        "twin: {} round trips, {} nested, {} WAL B, {twin_allocations} allocations\n\
+         placed: {} round trips, {} nested, {} WAL B, {placed_allocations} allocations\n\
+         twin rows:\n{}\nplaced rows:\n{}",
+        twin.round_trips,
+        twin.nested,
+        twin.wal,
+        placed.round_trips,
+        placed.nested,
+        placed.wal,
+        twin.wal_ledger,
+        placed.wal_ledger
+    );
+    eprintln!("{report}");
+    assert_eq!(placed.round_trips, twin.round_trips, "{report}");
+    assert_eq!(placed.nested, twin.nested, "{report}");
+    for relation in ["version_hot", "node_hot", "vo_head"] {
+        assert_eq!(
+            relation_wal(&placed, relation).1,
+            relation_wal(&twin, relation).1,
+            "{relation} records\n{report}"
+        );
+    }
+    let head = |m: &Measure| relation_wal(m, "vo_head").0.div_euclid(REQUESTS);
+    assert!(head(&placed) <= head(&twin) + 64, "{report}");
+    assert!(placed_allocations <= twin_allocations + 4, "{report}");
 }
