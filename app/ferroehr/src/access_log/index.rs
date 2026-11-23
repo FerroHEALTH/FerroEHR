@@ -1,91 +1,82 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The search index of the access log (#6319).
+//! The search index of the access log (#6319, #6322).
 //!
 //! The columns its readers filter and order on are copied from each entry
-//! into `audit.access_log_index` in one batch per frontier round, so the
-//! request that writes an entry maintains no index but its key and uid.
+//! into `audit.access_log_index` in one batch per frontier round, with the
+//! entry's ITI-81 search tokens, which the round renders from the stored
+//! entry by its stored form's renderer, so the request that writes an entry
+//! renders no projection and maintains no index but its key and uid
+//! (`crate::system_log::store::AuditStore::index_access_log`).
 //!
 //! A reader reads the indexed entries through the index and the entries past
 //! its cursor by key, in one statement (`audit.access_log_record`,
 //! `audit.access_log_search`). The cursor commits with the rows it covers and
 //! only passes ids below the frontier, so every committed entry is in one of
-//! the two. A batch holds nothing the entries' rows do not, so it commits
-//! without waiting for its flush: a batch a crash loses leaves its cursor
-//! where it was, and the next round copies the entries again. No
-//! specification governs audit storage: our own design.
+//! the two. An entry past the cursor carries no search tokens, so a search on
+//! a token parameter moves the frontier and the index past every entry
+//! committed before it first. A batch holds nothing the entries' rows and
+//! the render policies do not, so it commits without waiting for its flush: a
+//! batch a crash loses leaves its cursor where it was, and the next round
+//! renders and copies the entries again. No specification governs audit
+//! storage: our own design.
 
-use sqlx::Connection;
-
-use crate::access_log::store::{AccessLogError, AccessLogStore};
-use crate::db::acquire::acquire;
-
-/// The most entry ids one batch copies.
-const BATCH: i64 = 50_000;
+/// The most entry ids one batch copies: each is rendered in the batch.
+pub(crate) const BATCH: i64 = 2_000;
 
 /// The lock that orders a batch with the replacement of an indexed entry by
 /// its tombstone (`audit.access_log_entry_indexed`, which takes it shared).
-/// It is its own statement, so the copy after it reads a snapshot taken once
-/// the lock is granted and sees every replacement committed before.
-const LOCK: &str = "SELECT pg_advisory_xact_lock(hashtext('audit.access_log_index'), 0)";
+/// It is its own statement, so the reads after it take a snapshot once the
+/// lock is granted and see every replacement committed before.
+pub(crate) const LOCK: &str = "SELECT pg_advisory_xact_lock(hashtext('audit.access_log_index'), 0)";
 
-/// One batch: the entries past the cursor up to `$1`, below every entry a
-/// write holds and at most `$2` ids, copied into the index, and the cursor
-/// moved with them; returns the cursor. `$1` is the frontier, below which no
-/// entry commits any more, so no entry lands under the cursor after it moved.
-const COPY: &str = "WITH s AS (SELECT x.last_id FROM audit.access_log_index_state x \
-                  WHERE x.singleton FOR UPDATE), \
-     b AS (SELECT s.last_id AS after, \
-                  least($1::bigint, \
-                        coalesce((SELECT min(h.entry_id) - 1 FROM audit.access_log_hold h), \
-                                 $1::bigint), \
-                        s.last_id + $2::bigint) AS upto \
-             FROM s), \
+/// The cursor, locked, and the last id of the batch after it: up to `$1`,
+/// the frontier, below every entry a write holds and at most `$2` ids on.
+pub(crate) const BOUNDS: &str = "SELECT s.last_id, \
+       least($1::bigint, \
+             coalesce((SELECT min(h.entry_id) - 1 FROM audit.access_log_hold h), $1::bigint), \
+             s.last_id + $2::bigint) \
+  FROM audit.access_log_index_state s WHERE s.singleton FOR UPDATE";
+
+/// The cursor, read without a lock.
+pub(crate) const CURSOR: &str =
+    "SELECT s.last_id FROM audit.access_log_index_state s WHERE s.singleton";
+
+/// The entries of the batch `($1, $2]`, as the renderer reads them, with the
+/// digest of the render policy an indexed entry is written under.
+pub(crate) const ROWS: &str = "SELECT e.id AS chain_seq, e.content AS row_part, \
+       sh.content AS shared_part, e.record_type AS entry_type, e.uid AS entry_uid, \
+       e.time_recorded AS recorded_at, e.ehr_id AS entry_ehr, e.request_id, e.resource_id, \
+       e.form AS stored_form, p.digest AS render_policy \
+  FROM audit.access_log_entry e \
+  LEFT JOIN audit.access_log_shared sh ON sh.digest = e.shared \
+  LEFT JOIN audit.audit_render_policy p ON p.id = e.render_policy_id \
+ WHERE e.id > $1 AND e.id <= $2 ORDER BY e.id";
+
+/// The digests of the render policies the entries of `($1, $2]` name.
+pub(crate) const POLICIES: &str = "SELECT DISTINCT p.digest \
+  FROM audit.access_log_entry e JOIN audit.audit_render_policy p ON p.id = e.render_policy_id \
+ WHERE e.id > $1 AND e.id <= $2";
+
+/// The index rows of the batch `($1, $2]`, each indexed entry with the search
+/// tokens `$4` holds for it by the position of its id in `$3`, and the cursor
+/// moved to `$2`.
+pub(crate) const COPY: &str = "WITH t AS (SELECT * FROM unnest($3::bigint[], $4::text[]) AS t(id, tokens)), \
      copied AS ( \
        INSERT INTO audit.access_log_index (entry_id, time_recorded, ehr_id, party_id, \
                                            retain_until, render_policy_id, patient_id, principal, \
-                                           search_keys) \
+                                           search_tokens, search_keys) \
        SELECT e.id, e.time_recorded, e.ehr_id, e.party_id, e.retain_until, \
               e.render_policy_id, e.patient_id, e.principal, \
-              audit.search_keys(e.search_tokens, e.request_id, e.resource_id) \
-         FROM b JOIN audit.access_log_entry e ON e.id > b.after AND e.id <= b.upto \
+              CASE WHEN e.render_policy_id IS NOT NULL THEN coalesce(t.tokens, '{}')::integer[] END, \
+              audit.search_keys(CASE WHEN e.render_policy_id IS NOT NULL \
+                                     THEN coalesce(t.tokens, '{}')::integer[] END, \
+                                e.request_id, e.resource_id) \
+         FROM audit.access_log_entry e LEFT JOIN t ON t.id = e.id \
+        WHERE e.id > $1 AND e.id <= $2 \
         ORDER BY e.id \
-       RETURNING 1), \
-     moved AS (UPDATE audit.access_log_index_state x SET last_id = b.upto FROM b \
-                WHERE x.singleton AND b.upto > b.after RETURNING x.last_id) \
-     SELECT coalesce((SELECT last_id FROM moved), (SELECT after FROM b))";
-
-impl AccessLogStore {
-    /// Copy the entries past the index's cursor up to `upto`, the access
-    /// log's frontier, and below every entry a write holds into the index,
-    /// batch after batch; returns the cursor.
-    ///
-    /// # Errors
-    /// The store errors when a statement fails; the cursor then stays where
-    /// the last committed batch left it.
-    pub async fn index_to(&self, upto: i64) -> Result<i64, AccessLogError> {
-        let mut conn = acquire(self.pool()).await?;
-        let mut cursor = i64::MIN;
-        loop {
-            let mut tx = conn.begin().await?;
-            // NOTE: our own design (#6319), the index is copied again from the cursor after a
-            // crash, so its batch does not wait for the flush.
-            sqlx::query("SET LOCAL synchronous_commit = off")
-                .execute(&mut *tx)
-                .await?;
-            sqlx::query(LOCK).execute(&mut *tx).await?;
-            let reached: i64 = sqlx::query_scalar(COPY)
-                .bind(upto)
-                .bind(BATCH)
-                .fetch_one(&mut *tx)
-                .await?;
-            // NOTE: our own design (#5762), the chainer's own round, which no request makes.
-            tx.commit().await?;
-            if reached >= upto || reached <= cursor {
-                return Ok(reached);
-            }
-            cursor = reached;
-        }
-    }
-}
+       RETURNING 1) \
+     UPDATE audit.access_log_index_state x SET last_id = $2 \
+      WHERE x.singleton AND $2 > x.last_id \
+        AND (SELECT count(*) FROM copied) >= 0";

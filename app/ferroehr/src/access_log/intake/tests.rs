@@ -40,15 +40,7 @@ fn job(
     tokio::sync::oneshot::Receiver<Result<(), std::sync::Arc<super::AccessLogError>>>,
 ) {
     let (done, answer) = tokio::sync::oneshot::channel();
-    let tokens = vec![Vec::new(); entries.len()];
-    (
-        Job {
-            entries,
-            tokens,
-            done,
-        },
-        answer,
-    )
+    (Job { entries, done }, answer)
 }
 
 /// Of three requests gathered into one statement, the one whose entry the

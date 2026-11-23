@@ -199,9 +199,7 @@ impl FerroEhrService {
         let Some(audit_store) = &self.audit_store else {
             return self.audit_event_search(filter).await;
         };
-        let fault = |e: crate::system_log::AuditError| {
-            ServiceError::internal("search the audit record repository", e)
-        };
+        let fault = crate::system_log::search_refusal;
         let ehrs = audit_store.ehrs_of(filter).await.map_err(fault)?;
         let now = jiff::Timestamp::now();
         match self.person_holds(&ehrs, now).await? {

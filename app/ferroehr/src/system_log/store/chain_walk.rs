@@ -371,11 +371,12 @@ pub(crate) async fn modified_between(
              (r.chain_seq > (SELECT x.last_id FROM audit.access_log_index_state x WHERE x.singleton) \
               OR EXISTS (SELECT 1 FROM audit.access_log_index i WHERE i.entry_id = r.chain_seq)) \
              AND NOT EXISTS (SELECT 1 FROM audit.access_log_index i WHERE i.entry_id = r.chain_seq \
-                AND (i.time_recorded, i.ehr_id, i.party_id, i.retain_until, \
-                     i.render_policy_id, i.patient_id, i.principal, i.search_keys) \
-                    IS DISTINCT FROM (r.time_recorded, r.ehr_id, r.party_id, r.retain_until, \
-                     r.render_policy_id, r.patient_id, r.principal, \
-                     audit.search_keys(r.search_tokens, r.request_id, r.resource_id))) AS index_holds \
+                AND ((i.time_recorded, i.ehr_id, i.party_id, i.retain_until, \
+                      i.render_policy_id, i.patient_id, i.principal, i.search_keys) \
+                     IS DISTINCT FROM (r.time_recorded, r.ehr_id, r.party_id, r.retain_until, \
+                      r.render_policy_id, r.patient_id, r.principal, \
+                      audit.search_keys(i.search_tokens, r.request_id, r.resource_id)) \
+                     OR (i.search_tokens IS NULL) <> (r.render_policy_id IS NULL))) AS index_holds \
              FROM (SELECT e.id AS chain_seq, e.* FROM audit.access_log_entry e \
                     WHERE NOT EXISTS (SELECT 1 FROM audit.access_log_hold h WHERE h.entry_id = e.id)) r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
