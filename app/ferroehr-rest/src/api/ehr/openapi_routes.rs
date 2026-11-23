@@ -404,8 +404,6 @@ guarded_handler! {
     ///
     /// `ehr_id` is a UUID: ITS-REST identifies an EHR by `EHR.ehr_id.value` in
     /// UUID form (`Resources.md` §"Identifier types").
-    /// Every UUID is a valid `HIER_OBJECT_ID` root, so no released sentence is
-    /// narrowed by accepting only UUIDs.
     /// The committal headers `openehr-version` / `openehr-audit-details` are
     /// accepted and merged into the creating CONTRIBUTION and its `EHR_STATUS`
     /// version (`Requests_and_responses.md` §openehr-version-and-audit-details).
@@ -4462,14 +4460,9 @@ guarded_handler! {
     /// 'native' way" (`Requests_and_responses.md` §"openehr-version and
     /// openehr-audit-details").
     ///
-    /// Which is why this route declares NO `openehr-version` /
-    /// `openehr-audit-details` parameters: those headers exist to carry committal
-    /// metadata for the convenience methods, and here that metadata is IN the body
-    /// — `versions[i].lifecycle_state`, `versions[i].commit_audit` and the
-    /// envelope `audit`. The section's merge MUST is scoped to the convenience
-    /// methods, and the released text states no precedence for those headers
-    /// arriving on the native route, so answering from the body alone is OUR OWN
-    /// reading, adjudicated.
+    /// This route takes no `openehr-version` or `openehr-audit-details` header:
+    /// its committal metadata is in the body (`versions[i].lifecycle_state`,
+    /// `versions[i].commit_audit` and the envelope `audit`).
     #[utoipa::path(
         post, path = "/ehr/{ehr_id}/contribution", tag = "CONTRIBUTION",
         params(
@@ -5000,11 +4993,8 @@ guarded_handler! {
     /// List an EHR's CONTRIBUTIONs, newest-first, paged
     /// (`GET /ehr/{ehr_id}/contribution`).
     ///
-    /// **OUR OWN EXTENSION — no openEHR spec governs this route.** ITS-REST 1.1.0
-    /// defines exactly one CONTRIBUTION read, the by-uid GET
-    /// (`specifications/operations/contribution_get.yaml`); there is no collection
-    /// GET on `/ehr/{ehr_id}/contribution`, so nothing about the shape below is
-    /// spec-derived. It answers a SUMMARY row per CONTRIBUTION.
+    /// Our own extension: ITS-REST 1.1.0 defines only the by-uid CONTRIBUTION
+    /// GET. It answers a summary row per CONTRIBUTION.
     ///
     /// Rows `{ uid, time_committed, committer, inserted_by_person, change_type,
     /// change_type_rubric }` and the `total` of ALL the EHR's CONTRIBUTIONs: the
@@ -5290,19 +5280,14 @@ guarded_handler! {
     /// The EHR-wide aggregate read: "Retrieves the list of `ITEM_TAG` resources
     /// associated with any target VERSION or `VERSIONED_OBJECT` within the EHR
     /// identified by `ehr_id`" (ITS-REST
-    /// `specifications/operations/ehr_tags_get.yaml`). One list therefore spans
-    /// BOTH target forms (a `VERSIONED_OBJECT` container and a specific VERSION) and
-    /// every taggable kind (COMPOSITION, `EHR_STATUS`, FOLDER). Each row names its
-    /// own `target` by identifier, but NOT by RM class: the RM types `target` as a
-    /// bare `UID_BASED_ID` (`item_tag.adoc`), which carries no `type` member, so a
-    /// client that needs the target's kind resolves the uid. (The released OAS
-    /// models `target` as an `OBJECT_REF`, which would carry it — a real
-    /// conflict; the released RM wins.)
+    /// `specifications/operations/ehr_tags_get.yaml`). One list spans both
+    /// target forms and every taggable kind (COMPOSITION, `EHR_STATUS`,
+    /// FOLDER). Each row names its `target` by identifier, not by RM class (RM
+    /// `item_tag.adoc` types it a bare `UID_BASED_ID`), so a client that needs
+    /// the target's kind resolves the uid.
     ///
-    /// The list is unbounded: the released operation declares no `offset`/`fetch`,
-    /// ordering or limit parameter, so every matching tag is returned. The
-    /// (`key`, `target_path`) ordering the server applies is OURS — no openEHR spec
-    /// governs tag ordering.
+    /// The list is unbounded: the released operation declares no paging,
+    /// ordering or limit. The (`key`, `target_path`) ordering is our own.
     #[utoipa::path(
         get, path = "/ehr/{ehr_id}/tags", tag = "ITEM_TAG",
         params(
@@ -5552,8 +5537,8 @@ guarded_handler! {
     /// with the given target".
     ///
     /// Tags are not change-controlled, so this write commits no CONTRIBUTION,
-    /// mints no version, takes no `If-Match` and no committal headers, and serves
-    /// neither `ETag` nor `Last-Modified` (see the section note above).
+    /// mints no version, takes no `If-Match` and no committal headers, and
+    /// serves neither `ETag` nor `Last-Modified`.
     #[utoipa::path(
         put, path = "/ehr/{ehr_id}/composition/{uid_based_id}/tags", tag = "ITEM_TAG",
         params(
@@ -6013,8 +5998,8 @@ guarded_handler! {
     /// with the given target".
     ///
     /// Tags are not change-controlled, so this write commits no CONTRIBUTION,
-    /// mints no `EHR_STATUS` version, takes no `If-Match` and no committal headers,
-    /// and serves neither `ETag` nor `Last-Modified` (see the section note above).
+    /// mints no `EHR_STATUS` version, takes no `If-Match` and no committal
+    /// headers, and serves neither `ETag` nor `Last-Modified`.
     #[utoipa::path(
         put, path = "/ehr/{ehr_id}/ehr_status/{uid_based_id}/tags", tag = "ITEM_TAG",
         params(
