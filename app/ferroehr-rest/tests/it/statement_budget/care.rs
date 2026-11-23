@@ -63,11 +63,10 @@ const COMMIT: Ceiling = Ceiling {
     wal: 7845,
 };
 
-/// A care relationship's commit, then the caseload query that reads the copy
-/// it kept, whose door read is one nested statement (#6074, #6320).
+/// A care relationship's commit, then the caseload query that reads the copy it kept (#6074).
 const RECARE: Ceiling = Ceiling {
     round_trips: 34,
-    nested: COMMIT.nested + CASELOAD.nested + 1,
+    nested: COMMIT.nested + CASELOAD.nested,
     notifies: COMMIT.notifies + CASELOAD.notifies,
     wal: COMMIT.wal + CASELOAD.wal,
 };
