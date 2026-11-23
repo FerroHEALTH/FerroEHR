@@ -22,10 +22,7 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::party_binding::grants::operation::Operation;
-use ferroehr::policy_register::Register;
-use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
 use ferroehr::system_log::store::chains::AuditChain;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
@@ -92,26 +89,7 @@ struct World {
 /// a patient summary committed into the patient's EHR.
 async fn world(delayed: bool) -> World {
     let (db, pool) = common::migrated_pool().await;
-    let (sender, _handle): (_, AuditHandle) = start(common::local_audit(), None, pool.clone())
-        .await
-        .expect("the audit sender");
-    let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-            .with_audit(sender)
-            .with_audit_store(AuditStore::new(pool.clone())),
-    );
-    if delayed {
-        svc.put_policy_register(
-            Register::AccessDelay,
-            0,
-            r#"{"enabled": true, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#,
-        )
-        .await
-        .expect("turn the access delay on");
-    }
-    svc.mirror_category_map()
-        .await
-        .expect("mirror the category map");
+    let svc = crate::access_delay_http::audited_service(&pool, delayed).await;
     let mut config = common::api_config(true);
     config.auth = common::trusting(vec![IssuerEntry {
         preset: Preset::Ferrosmart,
@@ -314,7 +292,8 @@ async fn the_exchanged_token_reads_its_own_ehr_and_no_other() {
     let uids = queried(&w.app, &w.own, &token).await;
     assert!(
         uids.iter().any(|uid| uid.starts_with(&w.summary)),
-        "{uids:?}"
+        "the query returns the summary among {} rows",
+        uids.len()
     );
 
     let (status, body) = send(
@@ -372,7 +351,8 @@ async fn the_access_delay_withholds_from_the_exchanged_token() {
     let uids = queried(&w.app, &w.own, &token).await;
     assert!(
         !uids.iter().any(|uid| uid.starts_with(&w.summary)),
-        "{uids:?}"
+        "the query withholds the summary from {} rows",
+        uids.len()
     );
     let (status, body) = read(&w.app, &w.own, &w.summary, &professional()).await;
     assert_eq!(status, StatusCode::OK, "the professional reads it: {body}");
