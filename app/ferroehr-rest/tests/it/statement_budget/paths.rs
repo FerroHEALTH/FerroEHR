@@ -2300,7 +2300,7 @@ async fn a_placed_commit_costs_its_projection_alone() {
     let _guard =
         tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
     ferroehr::aql::sql::without_reference_cells();
-    let (_db, pool, _svc, app) = Box::pin(super::served()).await;
+    let (_db, pool, _svc, app, pools) = Box::pin(super::steady()).await;
     for extension in ["pg_stat_statements", "pg_walinspect"] {
         sqlx::query(sqlx::AssertSqlSafe(format!(
             "CREATE EXTENSION IF NOT EXISTS {extension}"
@@ -2317,6 +2317,7 @@ async fn a_placed_commit_costs_its_projection_alone() {
         twin = Box::pin(measure(
             &app,
             &pool,
+            &pools,
             None,
             &world,
             &counter,
@@ -2326,6 +2327,7 @@ async fn a_placed_commit_costs_its_projection_alone() {
         placed = Box::pin(measure(
             &app,
             &pool,
+            &pools,
             None,
             &world,
             &counter,
