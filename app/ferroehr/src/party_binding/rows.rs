@@ -364,7 +364,8 @@ macro_rules! representation_rows {
     };
 }
 /// Retires the live row of the container `$1` unless the wanted row, of the
-/// same representative, subject, basis, provider and validity, matches it.
+/// same representative, subject, basis, provider and validity, matches it,
+/// returning the representative it named.
 const RETIRE_STANDALONE: &str = concat!(
     "UPDATE binding_representation b SET retired_at = now() \
      WHERE b.relationship_id = $1 AND b.retired_at IS NULL \
@@ -374,7 +375,8 @@ const RETIRE_STANDALONE: &str = concat!(
          AND r.basis_terminology = b.basis_terminology AND r.basis_code = b.basis_code \
          AND r.provider_issuer = b.provider_issuer AND r.provider_id = b.provider_id \
          AND r.relationship IS NOT DISTINCT FROM b.relationship \
-         AND datemultirange(party.binding_validity(r.validity)) = b.validity)"
+         AND datemultirange(party.binding_validity(r.validity)) = b.validity) \
+     RETURNING b.representative_id AS p, NULL::text AS t"
 );
 /// Inserts the wanted row of the container `$1` when it has no live row,
 /// naming the writer of its head, `{WRITER}`
@@ -392,31 +394,32 @@ const INSERT_STANDALONE: &str = concat!(
                         WHERE b.relationship_id = $1 AND b.retired_at IS NULL)"
 );
 
-/// Writes the row the representation container `container` should hold:
-/// `row`, `None` for a container that is deleted or represents no one, with
-/// the writer of its head.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub(crate) async fn write_standalone(
-    tx: &mut PgConnection,
-    container: Uuid,
-    row: Option<&RepresentationRow>,
-) -> Result<(), StorageError> {
-    crate::party_binding::live::note_change();
-    let rows: Vec<&RepresentationRow> = row.into_iter().collect();
-    let columns = Columns::of(&rows);
+/// The step that retires the live row of the representation container
+/// `container` unless it is `row`, returning the representative it named
+/// ([`Tag::Representatives`]).
+pub(crate) fn retire_standalone(container: Uuid, row: Option<&RepresentationRow>) -> Step<'_> {
+    let columns = Columns::of(&row.into_iter().collect::<Vec<_>>());
+    Step::new(
+        "sr",
+        RETIRE_STANDALONE,
+        Some(Tag::Representatives),
+        move |query| columns.bind_owned(query.bind(container)),
+    )
+}
+
+/// The step that inserts `row` as the live row of the representation
+/// container `container` when it has none, naming the writer of its head;
+/// it runs a statement after [`retire_standalone`].
+pub(crate) fn insert_standalone(container: Uuid, row: Option<&RepresentationRow>) -> Step<'_> {
+    let columns = Columns::of(&row.into_iter().collect::<Vec<_>>());
     let insert = INSERT_STANDALONE.replace(
         "{WRITER}",
         crate::party_binding::grants::caller::store::WRITER,
     );
-    for statement in [RETIRE_STANDALONE, insert.as_str()] {
-        columns
-            .bind(sqlx::query(sqlx::AssertSqlSafe(statement)).bind(container))
-            .execute(&mut *tx)
-            .await?;
-    }
-    Ok(())
+    Step::new("sn", insert, None, move |query| {
+        columns.bind_owned(query.bind(container))
+    })
+    .writing(row.is_some())
 }
 
 /// The column arrays of some representation rows.
@@ -451,6 +454,19 @@ impl<'r> Columns<'r> {
             validity: rows.iter().map(|r| held(r).validity.as_ref()).collect(),
             relationship: rows.iter().map(|r| held(r).code.as_deref()).collect(),
         }
+    }
+
+    /// `query` with the columns, which it takes, bound as `$2` to `$9`.
+    fn bind_owned(self, query: Query<'r>) -> Query<'r> {
+        query
+            .bind(self.representative)
+            .bind(self.subject)
+            .bind(self.basis_terminology)
+            .bind(self.basis_code)
+            .bind(self.provider_issuer)
+            .bind(self.provider_id)
+            .bind(self.validity)
+            .bind(self.relationship)
     }
 
     /// `query` with the columns bound as `$2` to `$9`.
@@ -501,24 +517,6 @@ pub(crate) async fn write_history(
         .execute(&mut *tx)
         .await?;
     Ok(())
-}
-
-/// The representative the live row of the standalone container `container`
-/// names, `None` when it has none.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub(crate) async fn standalone_representative(
-    tx: &mut PgConnection,
-    container: Uuid,
-) -> Result<Option<Uuid>, StorageError> {
-    Ok(sqlx::query_scalar(
-        "SELECT representative_id FROM binding_representation \
-         WHERE relationship_id = $1 AND retired_at IS NULL",
-    )
-    .bind(container)
-    .fetch_optional(&mut *tx)
-    .await?)
 }
 
 /// The memberships the member `PERSON`s should hold, over `$2` (each group)

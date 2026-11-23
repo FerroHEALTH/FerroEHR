@@ -41,17 +41,20 @@ pub(crate) enum Tag {
     Grants,
     /// A `GROUP` one of whose membership rows was retired.
     Groups,
+    /// The representative a retired representation row named.
+    Representatives,
 }
 
 impl Tag {
     /// Every tag, at its code.
-    const ALL: [Self; 6] = [
+    const ALL: [Self; 7] = [
         Self::FactsGone,
         Self::FactsCame,
         Self::SubjectsGone,
         Self::SubjectsCame,
         Self::Grants,
         Self::Groups,
+        Self::Representatives,
     ];
 
     /// The code the folded statement selects for it.
@@ -63,6 +66,7 @@ impl Tag {
             Self::SubjectsCame => 3,
             Self::Grants => 4,
             Self::Groups => 5,
+            Self::Representatives => 6,
         }
     }
 
@@ -163,16 +167,22 @@ impl<'q> Step<'q> {
 }
 
 /// Runs `steps` as the CTEs of one statement on `tx`, returning the rows of
-/// the tagged ones; nothing is sent when no step may write a row.
+/// the tagged ones; nothing is sent when no step may write a row, and a lone
+/// step is sent as it is written.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub(crate) async fn batch(
     tx: &mut PgConnection,
-    steps: Vec<Step<'_>>,
+    mut steps: Vec<Step<'_>>,
 ) -> Result<Vec<Returned>, StorageError> {
     if !steps.iter().any(|step| step.writes) {
         return Ok(Vec::new());
+    }
+    if steps.len() == 1
+        && let Some(step) = steps.pop()
+    {
+        return step.run(tx).await;
     }
     let mut sql = String::with_capacity(
         steps

@@ -1233,7 +1233,7 @@ const SIDE_TABLES: [&str; 9] = [
 
 /// The live rows of every table of [`SIDE_TABLES`], each as JSON without its
 /// instants and surrogate ids, in a stable order.
-async fn side_rows(pool: &sqlx::PgPool) -> Vec<(&'static str, Vec<String>)> {
+pub(crate) async fn side_rows(pool: &sqlx::PgPool) -> Vec<(&'static str, Vec<String>)> {
     let mut out = Vec::new();
     for table in SIDE_TABLES {
         let rows: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(

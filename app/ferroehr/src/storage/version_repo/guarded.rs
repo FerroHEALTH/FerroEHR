@@ -321,16 +321,24 @@ fn guard_ctes(
     sql
 }
 
+/// The class of the advisory lock the writes of the `/directory` endpoint
+/// take on their EHR, distinct from every other advisory lock class.
+pub const DIRECTORY_SLOT_LOCK: i32 = 0x0D1E_C7A1;
+
 /// The directory slot requirement of a [`Lead::Directory`] statement in EHR
 /// `ehr`, which joins its tip requirement: the highest rank and the slot's
-/// head as its gate read found them ([`DirectorySlot`]); `true` otherwise.
+/// head as its gate read found them ([`DirectorySlot`]), read by
+/// `directory_slot_held` once its argument took the EHR's
+/// [`DIRECTORY_SLOT_LOCK`]; `true` otherwise.
 fn slot_held(ehr: &str, lead: Lead) -> String {
     match lead {
+        // NOTE: RM ehr master04 §Folders allows many live hierarchies, so overlapping
+        // directory writes serialise on a lock and read the slot afresh (#6354).
         Lead::Directory { first } => format!(
-            "(SELECT COALESCE(MAX(f.rank), 0) FROM ehr_folder f WHERE f.ehr_id = {ehr}) \
-               = ${first}::int \
-             AND (SELECT s.head_sys_version FROM vo_head s WHERE s.vo_id = ${}::uuid) \
-               IS NOT DISTINCT FROM ${}::int",
+            "directory_slot_held( \
+                 (SELECT true FROM (SELECT pg_advisory_xact_lock( \
+                     {DIRECTORY_SLOT_LOCK}, hashtext({ehr}::text))) l), \
+                 {ehr}::uuid, ${first}::int, ${}::uuid, ${}::int)",
             first + 1,
             first + 2
         ),
