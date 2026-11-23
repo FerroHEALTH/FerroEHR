@@ -245,14 +245,18 @@ impl FerroEhrService {
                         change_type::DELETED,
                         "DIRECTORY delete",
                     )?;
-                    // NOTE: our own design (#6337), a delete needs no slot guard: one that follows
-                    // a new hierarchy leaves it live beside its own deleted target, as if run first.
+                    // NOTE: our own design (#6354), a delete takes the slot lock as every
+                    // directory write does; its own target is the slot, so it binds no slot head.
+                    let slot = slot_of(&gate, None, false);
                     Ok(Write::new(
                         Some(ehr_id),
                         Change::delete(target.vo_id, Kind::Folder, None),
                         audit,
                     )
-                    .guarded(guard_of(&gate, target.head))
+                    .guarded(Guard {
+                        directory: Some(slot),
+                        ..guard_of(&gate, target.head)
+                    })
                     .placed(target.placement)
                     .gated(gate.restriction.clone())
                     .object_marked(target.restricted))

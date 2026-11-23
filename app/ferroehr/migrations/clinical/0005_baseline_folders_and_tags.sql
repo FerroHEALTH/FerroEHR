@@ -28,6 +28,34 @@ COMMENT ON TABLE ehr_folder IS 'One row per folder hierarchy of an EHR (RM ehr m
 COMMENT ON COLUMN ehr_folder.rank IS 'EHR.folders position (1-based, append-only). The lowest-rank LIVE hierarchy is EHR.directory (folders.item(1)).';
 COMMENT ON COLUMN ehr_folder.vo_id IS 'The VERSIONED_FOLDER versioned-object id (a member of EHR.folders). FK-less (vo_version is keyed per version); UNIQUE service-wide instead.';
 
+-- Whether a directory write still finds the EHR's directory slot as its gate
+-- read did: the highest rank in EHR.folders and the head of the slot's
+-- object. RM ehr master04 §Folders lets any number of hierarchies be live,
+-- so no key can hold the slot; the writes of the /directory endpoint
+-- serialise on a transaction-scoped advisory lock on the EHR instead, held
+-- through their commit, which the calling statement takes in the argument
+-- `locked` (#6354). A VOLATILE function takes a new snapshot for each query
+-- it runs (PostgreSQL 19, "Function Volatility Categories"), so a write that
+-- waited reads the rows the one before it committed; that holds only at
+-- READ COMMITTED, which it requires. Our own design.
+CREATE FUNCTION directory_slot_held(locked boolean, ehr uuid, highest integer,
+                                    slot uuid, head integer)
+    RETURNS boolean
+    LANGUAGE plpgsql VOLATILE
+    AS $$
+BEGIN
+    IF current_setting('transaction_isolation') <> 'read committed' THEN
+        RAISE EXCEPTION 'a directory write runs at READ COMMITTED, not %',
+            current_setting('transaction_isolation');
+    END IF;
+    RETURN locked
+        AND (SELECT COALESCE(MAX(f.rank), 0) FROM ehr_folder f WHERE f.ehr_id = ehr) = highest
+        AND (SELECT s.head_sys_version FROM vo_head s WHERE s.vo_id = slot)
+            IS NOT DISTINCT FROM head;
+END
+$$;
+COMMENT ON FUNCTION directory_slot_held(boolean, uuid, integer, uuid, integer) IS 'Whether the highest folder rank of the EHR and the directory slot head are still those given, read on a new snapshot once the caller holds the directory slot lock (#6354). Only /directory writes call it. Our own design.';
+
 -- ── item_tag ─────────────────────────────────────────────────────────────────
 -- Item tags (RM common master07-tags.adoc ITEM_TAG; the ITS-REST tags routes).
 -- Mutable, EHR-scoped, outside the version chain, requiring no contribution.
