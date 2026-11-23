@@ -1,0 +1,1 @@
+- A burst of requests from one caller that miss the binding copy, as after a restart, now shares one store read, so the burst holds one party connection where it held one per request.
