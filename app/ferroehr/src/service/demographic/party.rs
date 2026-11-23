@@ -28,13 +28,8 @@ use crate::service::demographic::validate::Container;
 use crate::service::demographic::written::demographic_answer;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
-use crate::service::write::{Materials, Resolved, first_attempt};
-use crate::storage::version_repo::gate::{self, Prior, Target};
-use crate::storage::version_repo::guarded::{Guard, PartySync};
-use crate::versioning::audit::change_type;
 use crate::versioning::body::Body;
-use crate::versioning::change::{Change, Write};
-use crate::versioning::lifecycle::state::DELETED;
+use crate::versioning::change::Change;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::read::{VersionRead, demographic_current, object_kind};
 
@@ -135,41 +130,16 @@ impl FerroEhrService {
         // The id is allocated before the checks, so the relationships are
         // judged against the container the commit gives the party.
         let allocated = self.allocate_party_id();
-        // The caller's request merges with the server rules, BOTH halves the
-        // committal headers carry: the `UPDATE_AUDIT` attributes and the
-        // VERSION `lifecycle_state` ("whatever is provided it MUST be merged
-        // with the default VERSION and `VERSION.audit_details` attributes on
-        // commit runtime", ITS-REST overview `Requests_and_responses.md`
-        // §"openehr-version and openehr-audit-details").
-        let Resolved {
-            audit, envelope, ..
-        } = self
-            .demographic_write_checks(
-                support::kind_of(kind),
-                &request,
-                Some(Container::New(allocated.id())),
-                (change_type::CREATION, "PARTY creation"),
+        let container = Some(Container::New(allocated.id()));
+        let (committed, served) = self
+            .commit_direct_create(
+                (support::kind_of(kind), container),
+                request,
+                "PARTY",
+                |body, envelope| {
+                    Change::create_allocated(allocated, support::kind_of(kind), body, envelope)
+                },
             )
-            .await?;
-        // The large media go to the blob store before a connection is held.
-        let (body, served) = self.demographic_stored(request.data, true).await?;
-        let create = Change::create_allocated(allocated, support::kind_of(kind), body, envelope);
-        // A create judged again can only follow a moved requirement of its own new
-        // object, which nothing else writes, so it keeps no copy.
-        let materials = Materials::once((create, audit));
-        let materials = &materials;
-        let committed = self
-            .commit_gated(&self.demographic_pool, move || {
-                async move |conn| {
-                    let gate = gate::party(conn, None).await?;
-                    let now = gate.now;
-                    let (_, prior) = gate.split();
-                    let (create, audit) = materials.take_first()?;
-                    Ok(Write::new(None, create, audit)
-                        .at(now)
-                        .guarded(self.party_guard(None, prior)))
-                }
-            })
             .await?;
         let read_back = self.read_party(kind, committed.vo_id, Some(committed.tree), None);
         demographic_answer(served, &committed, read_back).await
@@ -246,152 +216,15 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest<Body>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let checked = self
-            .demographic_write_checks(
-                support::kind_of(kind),
-                &request,
-                Some(Container::Existing(vo_id)),
-                (change_type::MODIFICATION, "PARTY update"),
-            )
-            .await;
-        // A valid body's large media go to the blob store before a connection is held.
-        let (body, served) = self
-            .demographic_stored(request.data, checked.is_ok())
-            .await?;
-        let (resolved, unchecked) = checked.map_or_else(
-            |error| (None, Some(error)),
-            |resolved| (Some(resolved), None),
+        let addressed = (
+            (support::kind_of(kind), vo_id),
+            Some(Container::Existing(vo_id)),
         );
-        // An update a later attempt judges again commits on the new tip only when it
-        // names no preceding version, so only such a one keeps a copy.
-        let materials = Materials::new((body, resolved), precondition.names_none());
-        let unchecked = std::sync::Mutex::new(unchecked);
-        let (materials, unchecked, precondition) = (&materials, &unchecked, &precondition);
-        let committed = self
-            .commit_gated(&self.demographic_pool, move || {
-                async move |conn| {
-                    let (target, prior) = gate::party(conn, Some(vo_id)).await?.split();
-                    let target = addressed(target, kind, vo_id)?;
-                    let tip = target
-                        .placement
-                        .tip
-                        .as_ref()
-                        .ok_or_else(|| missing(kind, vo_id))?;
-                    precondition.check_full(vo_id, tip)?;
-                    precondition.check_tree(tip)?;
-                    if tip.lifecycle_state == DELETED {
-                        return Err(ServiceError::not_found(
-                            Missing::VersionedObject,
-                            format!("{} {vo_id} is deleted", kind.rm_type()),
-                        ));
-                    }
-                    if let Some(error) = first_attempt(unchecked) {
-                        return Err(error);
-                    }
-                    let (
-                        body,
-                        Some(Resolved {
-                            audit, envelope, ..
-                        }),
-                    ) = materials.take()?
-                    else {
-                        return Err(ServiceError::exception(
-                            "an unchecked PARTY update reached its write",
-                        ));
-                    };
-                    Ok(Write::new(
-                        None,
-                        Change::modify(vo_id, support::kind_of(kind), body, None, None, envelope),
-                        audit,
-                    )
-                    .guarded(self.party_guard(target.head, prior))
-                    .object_marked(target.restricted)
-                    .placed(target.placement))
-                }
-            })
+        let (committed, served) = self
+            .commit_direct_update(addressed, precondition, request, "PARTY")
             .await?;
         let read_back = self.read_party(kind, committed.vo_id, Some(committed.tree), None);
         demographic_answer(served, &committed, read_back).await
-    }
-
-    /// Commit the logical delete of the party `vo_id` of `kind`, judged on one
-    /// gate read and committed in one guarded statement after its access
-    /// record (#6257); `precondition` (the `If-Match`, else the path version)
-    /// is judged against the tip. Returns the deleted version's
-    /// `ETag`/`Location` metadata.
-    ///
-    /// # Errors
-    /// `404` for a missing or wrong-kind party, the precondition's refusal,
-    /// the refusal of a tip already deleted, and the commit's.
-    pub(super) async fn commit_party_delete(
-        &self,
-        (kind, vo_id): (PartyKind, VoId),
-        precondition: Precondition,
-        request: WriteRequest,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let (request, precondition) = (&request, &precondition);
-        let committed = self
-            .commit_gated(&self.demographic_pool, move || {
-                async move |conn| {
-                    let (target, prior) = gate::party(conn, Some(vo_id)).await?.split();
-                    let target = addressed(target, kind, vo_id)?;
-                    let tip = target
-                        .placement
-                        .tip
-                        .as_ref()
-                        .ok_or_else(|| missing(kind, vo_id))?;
-                    precondition.check_full(vo_id, tip)?;
-                    if tip.lifecycle_state == DELETED {
-                        return Err(ServiceError::precondition(format!(
-                            "{} {vo_id} is already deleted",
-                            kind.rm_type()
-                        )));
-                    }
-                    // A stale preceding version is a VERSION MISMATCH: the wire
-                    // arm answers `409` and echoes the latest `version_uid` in
-                    // `ETag` (`responses/409_PERSON_with_uid_based_id.yaml`).
-                    precondition.check_tree(tip)?;
-                    let audit = self.commit_audit(
-                        request.audit.as_ref(),
-                        change_type::DELETED,
-                        "PARTY delete",
-                    )?;
-                    Ok(Write::new(
-                        None,
-                        Change::delete(vo_id, support::kind_of(kind), None),
-                        audit,
-                    )
-                    .guarded(self.party_guard(target.head, prior))
-                    .object_marked(target.restricted)
-                    .placed(target.placement))
-                }
-            })
-            .await?;
-        Ok(ServiceResponse::deleted(ResourceMeta::new(
-            String::new(),
-            object_version_id(vo_id, &committed.creating_system_id, committed.tree),
-        )))
-    }
-
-    /// What a party write's guarded statement requires and takes: the head
-    /// `head` its gate read found (`None` for a create), and the key-space
-    /// gate when a binding mapping is configured; `prior` is what the gate read
-    /// found of the versions before it.
-    fn party_guard(&self, head: Option<i32>, prior: Prior) -> Guard {
-        Guard {
-            expected_head: head,
-            policy: None,
-            definitions: None,
-            outbox: None,
-            reservation: None,
-            status: None,
-            folder: false,
-            party: Some(Box::new(PartySync {
-                key_space: !self.binding.is_empty(),
-                reverse: None,
-                prior,
-            })),
-        }
     }
 
     /// The current party version metadata (the latest `version_uid` a `412`
@@ -410,28 +243,4 @@ impl FerroEhrService {
             .await?
             .map(|c| c.resource_meta()))
     }
-}
-
-/// The target of a party write of `kind` its gate read found, when it is a
-/// party of that kind.
-///
-/// # Errors
-/// [`ServiceError::NotFound`] when the object holds no version, is of
-/// another kind or belongs to an EHR.
-fn addressed(target: Option<Target>, kind: PartyKind, vo_id: VoId) -> Result<Target, ServiceError> {
-    target
-        .filter(|target| {
-            target.placement.tip.as_ref().is_some_and(|tip| {
-                tip.ehr_id.is_none() && tip.kind == support::kind_of(kind).as_str()
-            })
-        })
-        .ok_or_else(|| missing(kind, vo_id))
-}
-
-/// The `404` of a party write whose target is no party of `kind`.
-fn missing(kind: PartyKind, vo_id: VoId) -> ServiceError {
-    ServiceError::not_found(
-        Missing::VersionedObject,
-        format!("{} {vo_id}", kind.rm_type()),
-    )
 }

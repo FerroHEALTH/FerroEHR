@@ -12,13 +12,14 @@
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use super::{DELETED, Scope, head_of, stored_heads, write_persons};
+use super::{DELETED, Held, Scope, head_of, stored_heads, write_persons};
 use crate::error::ServiceError;
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::Facts;
 use crate::party_binding::grants;
 use crate::party_binding::grants::store::GrantHead;
 use crate::party_binding::rows::{self, RepresentationRow};
+use crate::party_binding::step::{self, Tag};
 use crate::storage::error::StorageError;
 use crate::storage::party_reverse;
 use crate::versioning::change::Committed;
@@ -28,36 +29,72 @@ use crate::versioning::{Kind, SigningCtx};
 /// `facts` (`None` for a logical delete) against the protection rules under
 /// `mapping` and, for a care relationship, its writer's grant, then brings
 /// its reverse-relationship index and, at its trunk head, its representation
-/// row and its care fact to it, on its commit transaction `tx`.
+/// row and its care fact to it, on its commit transaction `tx`. `done` names
+/// what the commit's guarded statement and gate read already did and read.
+///
+/// The rows go in ordered statements (#6257): the care relationship's end,
+/// the retirement of its caller facts and of its representation row first,
+/// as the caller fact it inserts reads that end, then the inserts; the facts
+/// stamp follows when the facts changed.
 ///
 /// # Errors
-/// The protection refusals, the care writer's `403`, and a storage failure.
+/// The protection refusals, the care writer's `403`, the care relationship
+/// bounds' refusals, and a storage failure.
 pub(super) async fn committed(
     tx: &mut PgConnection,
     ctx: &SigningCtx<'_>,
     committed: &Committed,
     facts: Option<&Facts>,
+    done: Held,
 ) -> Result<(), ServiceError> {
     let mapping = ctx.binding;
-    crate::party_binding::protect::check(tx, mapping, committed, facts, None).await?;
-    crate::party_binding::protect::representation(tx, mapping, committed.vo_id, facts).await?;
-    let changed = grants::caller::writer::check_care(tx, mapping, committed, facts, None).await?;
-    let targets = facts.map_or(&[][..], |f| f.targets.as_slice());
-    party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
-    let (lifecycle_state, trunk_head) = head_of(tx, committed.vo_id).await?;
-    if trunk_head == Some(committed.sys_version) {
-        reindex(tx, mapping, committed.vo_id.0, facts).await?;
-        let live = facts.filter(|_| lifecycle_state != DELETED);
-        let judged = grants::caller::bounds::Head::from(committed);
-        grants::caller::bounds::judge(tx, &ctx.access_policy, &judged, live, changed).await?;
-        let head = GrantHead {
-            vo_id: committed.vo_id.0,
-            lifecycle_state: &lifecycle_state,
-            facts,
-        };
-        grants::store::write(tx, Kind::PartyRelationship, head).await?;
+    let prior = done.prior.as_ref();
+    crate::party_binding::protect::check(tx, mapping, committed, facts, prior).await?;
+    crate::party_binding::protect::representation(tx, mapping, committed, facts, prior).await?;
+    let changed = grants::caller::writer::check_care(tx, mapping, committed, facts, prior).await?;
+    if !done.reverse {
+        let targets = facts.map_or(&[][..], |f| f.targets.as_slice());
+        party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
     }
-    Ok(())
+    let (lifecycle_state, trunk_head) = match done.trunk_lifecycle {
+        Some(lifecycle_state) => (lifecycle_state, Some(committed.sys_version)),
+        None => head_of(tx, committed.vo_id).await?,
+    };
+    if trunk_head != Some(committed.sys_version) {
+        return Ok(());
+    }
+    let container = committed.vo_id.0;
+    let live = facts.filter(|_| lifecycle_state != DELETED);
+    let judged = grants::caller::bounds::Head::from(committed);
+    let end =
+        grants::caller::bounds::verdict(tx, &ctx.access_policy, &judged, live, changed).await?;
+    let head = GrantHead {
+        vo_id: container,
+        lifecycle_state: &lifecycle_state,
+        facts,
+    };
+    let row = representation_row(facts);
+    let (mut clear, mut fill) = grants::store::steps(Kind::PartyRelationship, head);
+    clear.extend(end.step(container));
+    clear.push(rows::retire_standalone(container, row.as_ref()));
+    fill.push(rows::insert_standalone(container, row.as_ref()));
+    crate::party_binding::live::note_change();
+    let mut written = step::batch(tx, clear).await?;
+    written.extend(step::batch(tx, fill).await?);
+    grants::caller::store::finish(tx, grants::caller::store::changed(&written)).await?;
+    let retired = step::parties(&written, Tag::Representatives);
+    Ok(represented(tx, mapping, retired, row.as_ref()).await?)
+}
+
+/// The representation row the standalone `PARTY_RELATIONSHIP` holding `facts`
+/// (`None` for a deleted one) states; `None` when it represents no one.
+fn representation_row(facts: Option<&Facts>) -> Option<RepresentationRow> {
+    facts.and_then(|facts| {
+        Some(RepresentationRow {
+            representative: facts.representative?,
+            representation: facts.representations.first()?.clone(),
+        })
+    })
 }
 
 /// Writes the representation row the standalone `PARTY_RELATIONSHIP`
@@ -70,18 +107,32 @@ pub(super) async fn reindex(
     container: Uuid,
     facts: Option<&Facts>,
 ) -> Result<(), StorageError> {
-    let before = rows::standalone_representative(tx, container).await?;
-    let row = facts.and_then(|facts| {
-        Some(RepresentationRow {
-            representative: facts.representative?,
-            representation: facts.representations.first()?.clone(),
-        })
-    });
-    rows::write_standalone(tx, container, row.as_ref()).await?;
+    let row = representation_row(facts);
+    crate::party_binding::live::note_change();
+    let retired = rows::retire_standalone(container, row.as_ref())
+        .run(tx)
+        .await?;
+    rows::insert_standalone(container, row.as_ref())
+        .run(tx)
+        .await?;
+    let retired = step::parties(&retired, Tag::Representatives);
+    represented(tx, mapping, retired, row.as_ref()).await
+}
+
+/// Brings the rows of the `PERSON`s a representation names as its source to
+/// their heads, so a representative's key row counts it, on `tx`: those of
+/// the rows `retired` and of the row `row` it holds now. A live row it keeps
+/// is `row`'s.
+async fn represented(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    retired: Vec<Uuid>,
+    row: Option<&RepresentationRow>,
+) -> Result<(), StorageError> {
     if mapping.is_empty() {
         return Ok(());
     }
-    let mut sources: Vec<Uuid> = before
+    let mut sources: Vec<Uuid> = retired
         .into_iter()
         .chain(row.map(|row| row.representative))
         .collect();

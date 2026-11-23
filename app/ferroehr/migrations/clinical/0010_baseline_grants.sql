@@ -23,6 +23,7 @@ REVOKE ALL ON FUNCTION
     access_settings_notify(),
     access_class_unknown(ehr uuid),
     access_stale_copy(),
+    directory_slot_held(locked boolean, ehr uuid, highest integer, slot uuid, head integer),
     definition_changed(),
     policy_changed()
     FROM PUBLIC;
@@ -85,7 +86,8 @@ BEGIN
         GRANT EXECUTE ON FUNCTION
             subject_pseudonym_guard(),
             access_class_unknown(ehr uuid),
-            access_stale_copy()
+            access_stale_copy(),
+            directory_slot_held(locked boolean, ehr uuid, highest integer, slot uuid, head integer)
             TO ferroehr_clinical;
         GRANT SELECT, INSERT, DELETE, MAINTAIN, UPDATE ON TABLE
             ehr,

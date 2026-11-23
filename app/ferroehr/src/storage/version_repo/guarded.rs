@@ -40,12 +40,32 @@ pub struct Guard {
     /// The promoted `ehr` columns an `EHR_STATUS` commit writes beside its
     /// version (#6257); `None` for any other write.
     pub status: Option<Box<StatusSync>>,
-    /// Whether the version is a new FOLDER hierarchy, which joins
-    /// `EHR.folders` in the same statement (RM ehr master04 §Folders, #6257).
-    pub folder: bool,
+    /// What a directory write requires of the EHR's directory slot (#6337);
+    /// `None` for any other write.
+    pub directory: Option<DirectorySlot>,
     /// What a party commit's statement takes and writes beside its version
     /// (#6257); `None` for a write in the clinical domain.
     pub party: Option<Box<PartySync>>,
+}
+
+/// What a directory write's guarded statement requires of the EHR's
+/// directory slot, and whether the write adds a hierarchy.
+///
+/// The slot is `EHR.directory`, `folders[1]` (RM ehr master04 §Folders,
+/// invariant `Directory_in_folders`), as the write's gate read found it.
+#[derive(Debug, Clone, Copy)]
+pub struct DirectorySlot {
+    /// The highest rank in `EHR.folders`, `0` when the EHR has none, required
+    /// unchanged: a hierarchy another write added since raises it (#6337).
+    pub highest: i32,
+    /// The slot's object and its head ordinal, required unchanged: a write
+    /// that brought a deleted directory back moved it (#6337); `None` when
+    /// the EHR has no hierarchy, or when the write's own target is the slot,
+    /// whose head [`Guard::expected_head`] already requires.
+    pub tip: Option<(uuid::Uuid, Option<i32>)>,
+    /// Whether the version is a new hierarchy, which joins `EHR.folders` in
+    /// the same statement at the rank after `highest` (#6257, #6318).
+    pub new: bool,
 }
 
 /// What a party commit's guarded statement takes and writes beside its
@@ -72,7 +92,8 @@ pub(super) enum Beside {
     Nothing,
     /// The promoted `ehr` columns of an `EHR_STATUS` commit ([`status_ctes`]).
     Status,
-    /// The `ehr_folder` membership of a new FOLDER hierarchy ([`folder_cte`]).
+    /// The directory slot's requirements and the `ehr_folder` membership of
+    /// a new FOLDER hierarchy ([`folder_cte`]).
     Folder,
     /// A party version, in the party domain ([`party_ctes`]).
     Party,
@@ -170,6 +191,13 @@ impl GuardFlags {
 enum Lead {
     /// The EHR row, read `FOR SHARE`, and the policy and definition revisions.
     Content,
+    /// As [`Lead::Content`], and the directory slot as its gate read found it
+    /// ([`DirectorySlot`]): the highest rank at `$first`, the slot's object
+    /// at `$first + 1` and its head at `$first + 2`.
+    Directory {
+        /// The parameter of the highest rank.
+        first: usize,
+    },
     /// The EHR row, read `FOR UPDATE` by the `EHR_STATUS` commit that flips it,
     /// and the revisions.
     Status,
@@ -209,7 +237,7 @@ fn guard_ctes(
             false,
             " LEFT JOIN ks ON true",
         ),
-        Lead::Content | Lead::Status => {
+        Lead::Content | Lead::Directory { .. } | Lead::Status => {
             let (lock, writable) = if lead == Lead::Status {
                 (
                     "UPDATE",
@@ -236,7 +264,7 @@ fn guard_ctes(
         }
     };
     let (mut tips, mut marks, mut orders) = (
-        String::from("true"),
+        slot_held(ehr, lead),
         String::from("false"),
         String::from("true"),
     );
@@ -291,6 +319,31 @@ fn guard_ctes(
          )"
     );
     sql
+}
+
+/// The class of the advisory lock the writes of the `/directory` endpoint
+/// take on their EHR, distinct from every other advisory lock class.
+pub const DIRECTORY_SLOT_LOCK: i32 = 0x0D1E_C7A1;
+
+/// The directory slot requirement of a [`Lead::Directory`] statement in EHR
+/// `ehr`, which joins its tip requirement: the highest rank and the slot's
+/// head as its gate read found them ([`DirectorySlot`]), read by
+/// `directory_slot_held` once its argument took the EHR's
+/// [`DIRECTORY_SLOT_LOCK`]; `true` otherwise.
+fn slot_held(ehr: &str, lead: Lead) -> String {
+    match lead {
+        // NOTE: RM ehr master04 §Folders allows many live hierarchies, so overlapping
+        // directory writes serialise on a lock and read the slot afresh (#6354).
+        Lead::Directory { first } => format!(
+            "directory_slot_held( \
+                 (SELECT true FROM (SELECT pg_advisory_xact_lock( \
+                     {DIRECTORY_SLOT_LOCK}, hashtext({ehr}::text))) l), \
+                 {ehr}::uuid, ${first}::int, ${}::uuid, ${}::int)",
+            first + 1,
+            first + 2
+        ),
+        Lead::Content | Lead::Status | Lead::Party { .. } => String::from("true"),
+    }
 }
 
 /// The outbox CTE of a guarded statement: the event of CONTRIBUTION `id` in
@@ -400,16 +453,17 @@ fn status_ctes(ehr: &str, first: usize) -> String {
 }
 
 /// The `ehr_folder` row of a new FOLDER hierarchy `vo` in EHR `ehr`, written
-/// once its version is, at the next rank as
-/// `commit::insert_ehr_folder_rank` writes it: two hierarchies that take one
-/// rank at once are refused by `pk_ehr_folder`.
-fn folder_cte(ehr: &str, vo: &str) -> String {
+/// once its version is when `$first + 3` holds, at the rank after `$first`,
+/// the highest its gate read found: a hierarchy committed since took that
+/// rank, so `pk_ehr_folder` refuses this one and the write is judged again
+/// (#6318).
+fn folder_cte(ehr: &str, vo: &str, first: usize) -> String {
     format!(
         ", fm AS ( \
              INSERT INTO ehr_folder (ehr_id, rank, vo_id) \
-             SELECT {ehr}, (SELECT COALESCE(MAX(f.rank), 0) + 1 FROM ehr_folder f \
-                            WHERE f.ehr_id = {ehr}), {vo} FROM v \
-         )"
+             SELECT {ehr}, ${first}::int + 1, {vo} FROM v WHERE ${}::bool \
+         )",
+        first + 3
     )
 }
 
@@ -437,9 +491,11 @@ fn audit_cte(name: &str, first: usize, time: &str, from: &str) -> String {
 /// `$28` the expected head ordinal, `$29` the policy revision, `$30` the
 /// definition revision, `$31` the outbox envelope and `$32` the audit
 /// reservation, and the node arrays from `$33`, then for a `status` commit
-/// the columns of [`status_ctes`], and for a party commit the key-space gate
-/// flag and the reverse targets of [`party_ctes`]; `beside` names what else
-/// it writes. The
+/// the columns of [`status_ctes`], for a directory write its
+/// [`DirectorySlot`] (the highest rank, the slot's object and head, and
+/// whether it adds a hierarchy), and
+/// for a party commit the key-space gate flag and the reverse targets of
+/// [`party_ctes`]; `beside` names what else it writes. The
 /// audit insert reads from `g`, and every later insert from the audit's, so
 /// nothing is written unless every requirement holds; the last row names a
 /// flag per requirement.
@@ -450,14 +506,15 @@ pub(super) fn statement(beside: Beside) -> String {
             status_ctes("$7", after_nodes),
             ", (SELECT count(*) FROM en) AS notified",
         ),
-        Beside::Folder => (folder_cte("$7", "$8"), ""),
+        Beside::Folder => (folder_cte("$7", "$8", after_nodes), ""),
         Beside::Party => (party_ctes("$8", "$22", after_nodes + 1, "v"), ""),
         Beside::Nothing => (String::new(), ""),
     };
     let lead = match beside {
         Beside::Status => Lead::Status,
         Beside::Party => Lead::Party { gate: after_nodes },
-        Beside::Folder | Beside::Nothing => Lead::Content,
+        Beside::Folder => Lead::Directory { first: after_nodes },
+        Beside::Nothing => Lead::Content,
     };
     format!(
         "{}, {}, c AS ( \

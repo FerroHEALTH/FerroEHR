@@ -239,10 +239,11 @@ fn party_source(config: &AppConfig, backend: &Arc<FerroEhrService>) -> Arc<dyn B
 /// Builds and serves the application with full observability until the
 /// process receives `SIGTERM` or `SIGINT`, then drains.
 ///
-/// Binds `server.listen` and, when `management.listen` is set, the management
-/// surface on its own internal listener (otherwise merged into the main app),
-/// and hands both to [`serve_on`]. ATNA auditing lives in the backend's
-/// `SystemLog` component.
+/// Builds the authenticator and the routers first, then binds `server.listen`
+/// and, when `management.listen` is set, the management surface on its own
+/// internal listener (otherwise merged into the main app), so no port accepts
+/// a connection before the application can serve it (#6344). ATNA auditing
+/// lives in the backend's `SystemLog` component.
 ///
 /// # Errors
 /// [`ServeError::Auth`] on bad auth config; [`ServeError::Io`] when a listener
@@ -254,21 +255,30 @@ pub async fn serve_full(
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<Drained, ServeError> {
-    let listener = TcpListener::bind(config.server.listen).await?;
-    let management = match observability.management.listen {
-        Some(listen) if observability.management.enabled => Some(TcpListener::bind(listen).await?),
-        _ => None,
-    };
-    serve_on(
-        listener,
-        management,
+    let management_listen = observability
+        .management
+        .listen
+        .filter(|_| observability.management.enabled);
+    let routes = Routes::build(
         config,
         backend,
         authz,
         observability,
-        ferrohealth_server::serve::shutdown_signal(),
+        management_listen.is_some(),
     )
-    .await
+    .await?;
+    let listener = TcpListener::bind(routes.section.listen).await?;
+    let management = match management_listen {
+        Some(listen) => Some(TcpListener::bind(listen).await?),
+        None => None,
+    };
+    routes
+        .serve(
+            listener,
+            management,
+            ferrohealth_server::serve::shutdown_signal(),
+        )
+        .await
 }
 
 /// Serves the application on `listener` and, when one is given, the management
@@ -297,32 +307,81 @@ pub async fn serve_on<F>(
 where
     F: Future<Output = ()> + Send + 'static,
 {
-    let authenticator = authenticator_over(&config, &backend).await?;
-    let observability = with_issuers(observability, &authenticator);
-    let section = config.server.clone();
-    let state = AppState::with_parts(config, backend, authz, observability);
-    let lifecycle = state.observability().lifecycle.clone();
-    let main = Listener::new(listener, router(state.clone(), Arc::clone(&authenticator)));
-    let main = match &section.tls {
-        Some(tls) => main.with_tls(tls.clone()),
-        None => main,
-    };
-    tracing::info!(
-        listen = %section.listen,
-        tls = section.tls.is_some(),
-        "ferroehr-rest listening"
-    );
-    let mut listeners = vec![main];
-    if let Some(management) = management {
-        if let Ok(address) = management.local_addr() {
-            tracing::info!(listen = %address, "ferroehr-rest management listening (separate port)");
-        }
-        listeners.push(Listener::new(
+    let separate = management.is_some();
+    Routes::build(config, backend, authz, observability, separate)
+        .await?
+        .serve(listener, management, signal)
+        .await
+}
+
+/// The application built before any port is bound: its server section, its
+/// lifecycle, the main router and, when the management surface has a
+/// listener of its own, the management router.
+struct Routes {
+    section: ferrohealth_server::section::ServerSection,
+    lifecycle: ferrohealth_health::lifecycle::Lifecycle,
+    main: axum::Router,
+    management: Option<axum::Router>,
+}
+
+impl Routes {
+    /// The authenticator, the state and the routers of `config` over
+    /// `backend`, with a management router when `separate`.
+    async fn build(
+        config: AppConfig,
+        backend: Arc<FerroEhrService>,
+        authz: Option<Arc<AuthzHandle>>,
+        observability: Observability,
+        separate: bool,
+    ) -> Result<Self, ServeError> {
+        let authenticator = authenticator_over(&config, &backend).await?;
+        let observability = with_issuers(observability, &authenticator);
+        let section = config.server.clone();
+        let state = AppState::with_parts(config, backend, authz, observability);
+        let lifecycle = state.observability().lifecycle.clone();
+        let main = router(state.clone(), Arc::clone(&authenticator));
+        let management = separate.then(|| management_router(&state, authenticator));
+        Ok(Self {
+            section,
+            lifecycle,
+            main,
             management,
-            management_router(&state, authenticator),
-        ));
+        })
     }
-    Ok(ferrohealth_server::serve::run_all(listeners, &section, lifecycle, signal).await?)
+
+    /// Serves the main router on `listener` and the management router on
+    /// `management` until `signal` completes, then drains both.
+    async fn serve<F>(
+        self,
+        listener: TcpListener,
+        management: Option<TcpListener>,
+        signal: F,
+    ) -> Result<Drained, ServeError>
+    where
+        F: Future<Output = ()> + Send + 'static,
+    {
+        let main = Listener::new(listener, self.main);
+        let main = match &self.section.tls {
+            Some(tls) => main.with_tls(tls.clone()),
+            None => main,
+        };
+        tracing::info!(
+            listen = %self.section.listen,
+            tls = self.section.tls.is_some(),
+            "ferroehr-rest listening"
+        );
+        let mut listeners = vec![main];
+        if let (Some(management), Some(routes)) = (management, self.management) {
+            if let Ok(address) = management.local_addr() {
+                tracing::info!(listen = %address, "ferroehr-rest management listening (separate port)");
+            }
+            listeners.push(Listener::new(management, routes));
+        }
+        Ok(
+            ferrohealth_server::serve::run_all(listeners, &self.section, self.lifecycle, signal)
+                .await?,
+        )
+    }
 }
 
 #[cfg(test)]

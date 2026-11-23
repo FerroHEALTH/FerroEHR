@@ -396,6 +396,7 @@ where
     F: Future<Output = Result<Response, RestError>> + Send,
 {
     crate::system_log::written::learn_op(op);
+    ferroehr::party_binding::request::serving(op);
     // NOTE: our own design (#5602), an operation without a row has no audit class, so it never
     // runs; the audit middleware refuses its response.
     if operation::operation(op).is_none() {

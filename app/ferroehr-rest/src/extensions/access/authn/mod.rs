@@ -50,15 +50,14 @@ pub(crate) mod portal;
 pub(crate) mod purpose;
 pub(crate) mod record;
 pub(crate) mod refusal;
+pub(crate) mod run;
 mod scope;
 pub(crate) mod trc;
 pub(crate) mod verdicts;
 
 use std::sync::Arc;
 
-use axum::extract::{FromRequestParts, MatchedPath, Request, State};
-use axum::middleware::Next;
-use axum::response::Response;
+use axum::extract::FromRequestParts;
 use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::refusal::{Denied, Reason, Refusal};
@@ -74,11 +73,8 @@ use crate::overview::error::RestError;
 use crate::smart::routes::SmartRoutes;
 use assurance::PatientDataGate;
 use build::Primary;
-use ferroehr::party_binding::grants::operation::Operation;
-use ferroehr::system_log::event::ActorAuthentication;
-use gates::patient_data_refusal;
 
-/// The state the [`middleware`] runs on: the authenticator, the optional
+/// The state the [`run::middleware`] runs on: the authenticator, the optional
 /// authorization handle (`None` is authentication-only), the optional
 /// patient-data gate and the SMART on openEHR route table.
 #[derive(Clone)]
@@ -196,7 +192,7 @@ pub(crate) struct Authenticated {
     pub(crate) fresh: bool,
 }
 
-/// Response-extension marker set by [`middleware`] when a request carried a
+/// Response-extension marker set by [`run::middleware`] when a request carried a
 /// genuine authentication event (see [`Authenticated::fresh`]), which the
 /// outermost ATNA audit layer reads to emit the login record.
 #[derive(Debug, Clone, Copy)]
@@ -480,11 +476,29 @@ impl Authenticator {
     /// verified credential for `[auth.basic] cache_ttl`; it logs which
     /// check refused a credential.
     pub(crate) async fn authenticate(&self, parts: &Parts) -> Result<Authenticated, AuthError> {
-        let access = self
-            .gate
+        let access = self.verify(parts).await?;
+        self.bind(access).await
+    }
+
+    /// The credential of `parts` verified by the gate, before anything of the
+    /// party store is consulted: what a request runs once, its `DPoP` proof
+    /// spent and its verified credential kept (#6320).
+    ///
+    /// # Errors
+    /// The gate's refusal.
+    async fn verify(&self, parts: &Parts) -> Result<Access, AuthError> {
+        self.gate
             .authenticate_request(parts)
             .await
-            .map_err(|denied| AuthError::from_denied(&denied))?;
+            .map_err(|denied| AuthError::from_denied(&denied))
+    }
+
+    /// The caller of the verified `access` bound and admitted on the party
+    /// copies: what a ride runs again when the store overtook it (#6320).
+    ///
+    /// # Errors
+    /// The binding's or the caller kind's refusal, naming the caller.
+    async fn bind(&self, access: Access) -> Result<Authenticated, AuthError> {
         self.admitted(access.clone())
             .await
             .map_err(|refusal| self.naming_caller(refusal, &access))
@@ -579,120 +593,6 @@ pub fn current_principal() -> Option<Arc<Principal>> {
     REQUEST_PRINCIPAL.try_with(Clone::clone).ok().flatten()
 }
 
-/// The authentication and RBAC middleware, attached to the API router; the
-/// public endpoints are mounted outside it.
-pub(crate) async fn middleware(
-    State(layer): State<AuthLayer>,
-    req: Request,
-    next: Next,
-) -> Response {
-    let (auth, live) = (&layer.authenticator, layer.service.grants());
-    if !auth.enabled() {
-        return REQUEST_PRINCIPAL.scope(None, next.run(req)).await;
-    }
-    let (parts, body) = req.into_parts();
-    let outcome = auth.authenticate(&parts).await;
-    let mut req = Request::from_parts(parts, body);
-    match outcome {
-        Ok(Authenticated { principal, fresh }) => {
-            let granted = match grants::resolve(live, &principal, Some(&auth.deployment)).await {
-                Ok(granted) => granted,
-                Err(e) => return refusal::response(auth, req.headers(), &e),
-            };
-            let mut principal = match grants::bound(&layer, principal, &granted, req.headers()) {
-                Ok(principal) => principal,
-                Err(refusal) => return *refusal,
-            };
-            if let Some(refusal) = purpose::mismatch(&layer, &principal, &req) {
-                return refusal;
-            }
-            if let Some(refusal) = trc::patient_context(&layer, &mut principal, &req).await {
-                return refusal;
-            }
-            // NOTE: RFC 9110 §15.5.6; whether a method is served is the
-            // resource's property, so no grant changes the `405`.
-            if let Some(mut refusal) = layer.served.refusal(
-                req.method(),
-                req.extensions()
-                    .get::<MatchedPath>()
-                    .map(MatchedPath::as_str),
-            ) {
-                refusal.extensions_mut().insert(Arc::new(principal));
-                return refusal;
-            }
-            // NOTE: our own design (#5754), the gates above add grants and extensions to
-            // the caller and never change its issuer, client or party, so `granted` holds.
-            // NOTE: master08 §Resource Scopes, a `system/aql-*` grant reaches every
-            // query, so it counts only for a client the CDR grants `query_system_wide`.
-            principal.honoured.backend = grants::client_holds(&granted, Operation::QuerySystemWide);
-            // How the person authenticated is judged before what they may do:
-            // a step-up refusal is an authentication outcome (RFC 9470 §3).
-            let actor = match layer.patient_data.as_deref() {
-                None => ActorAuthentication::default(),
-                Some(gate) => {
-                    let matched = req
-                        .extensions()
-                        .get::<MatchedPath>()
-                        .map(MatchedPath::as_str);
-                    match gate.judge(&principal, matched) {
-                        Ok(actor) => actor,
-                        Err((refusal, actor)) => {
-                            return patient_data_refusal(gate, &principal, refusal, actor);
-                        }
-                    }
-                }
-            };
-            if let Some(mut refusal) = gates::rbac_refusal(&layer, &req, &principal) {
-                refusal.extensions_mut().insert(actor);
-                return refusal;
-            }
-            if let Some(mut refusal) = gates::smart_refusal(&layer, &req, &principal, &granted) {
-                refusal.extensions_mut().insert(actor);
-                return refusal;
-            }
-            crate::system_log::written::learn_actor(&actor);
-            let patient = gates::patient_person(&layer, &req, &principal).await;
-            let principal = Arc::new(principal);
-            req.extensions_mut().insert(Arc::clone(&principal));
-            let (committer, patient) =
-                match portal::committer(auth, &principal, &granted, patient).await {
-                    Ok(committer) => committer,
-                    Err(e) => return refusal::response(auth, req.headers(), &e),
-                };
-            // The roles ride beside the committer identity for the request
-            // scope, so a record the service layer emits by itself carries
-            // them too (#3239).
-            let roles = principal.roles.clone();
-            let binding = record::of_request(&principal, &committer, &granted, Some(auth));
-            let mut resp = REQUEST_PRINCIPAL
-                .scope(
-                    Some(Arc::clone(&principal)),
-                    ferroehr::system_log::access_context::with_roles(
-                        roles,
-                        record::recorded(
-                            binding,
-                            ferroehr::versioning::committer::with_committer(
-                                Some(committer),
-                                Box::pin(portal::as_patient(
-                                    patient,
-                                    grants::scoped(live, granted, next.run(req)),
-                                )),
-                            ),
-                        ),
-                    ),
-                )
-                .await;
-            // The outer ATNA audit layer cannot observe request-extension
-            // mutations, so the principal is republished onto the response.
-            resp.extensions_mut().insert(principal);
-            resp.extensions_mut().insert(actor);
-            gates::finish(auth, &mut resp, fresh);
-            resp
-        }
-        Err(e) => refusal::refusal_of(auth, req.headers(), &e),
-    }
-}
-
 /// The client a request came through: the Basic user, or the token's client.
 ///
 /// The Basic user, or the client the token's issuer profile reads from
@@ -756,8 +656,10 @@ mod tests {
     use serde_json::{Value, json};
 
     use super::described::Described;
+    use super::run::middleware;
     use super::*;
     use crate::test_support::{self, AUDIENCE, ISSUER};
+    use axum::extract::Request;
     use ferrohealth_smart::resource::configuration::SmartOptions;
 
     fn hash(pw: &str) -> String {

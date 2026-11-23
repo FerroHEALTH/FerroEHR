@@ -29,6 +29,7 @@ REVOKE ALL ON FUNCTION
     access_log_shared_unchanged(),
     access_log_shared_collect(p_today date, p_limit integer),
     access_log_tombstone_end(p_content text),
+    access_log_entry_indexed(),
     fold_access_log_tombstones(p_now timestamp with time zone, p_limit integer),
     chain_verification_lag(p_chain text),
     fold_access_log_imported(p_now timestamp with time zone, p_limit integer),
@@ -59,6 +60,8 @@ BEGIN
             audit_event_seal_verified,
             access_log_shared,
             access_log_entry,
+            access_log_index,
+            access_log_index_state,
             access_log_record,
             access_log_imported_record,
             access_log_imported_bundle,
@@ -93,7 +96,7 @@ BEGIN
             fold_audit_event_reaped(p_now timestamp with time zone, p_limit integer),
             access_log_shared_collect(p_today date, p_limit integer),
             fold_access_log_tombstones(p_now timestamp with time zone, p_limit integer),
-            chain_verification_lag(p_chain text),
+                    chain_verification_lag(p_chain text),
             fold_access_log_imported(p_now timestamp with time zone, p_limit integer),
             access_log_intake_unknown(p_what text, p_digest text, p_removed boolean),
             access_log_intake_part_gone(p_digest text),
@@ -124,6 +127,9 @@ BEGIN
         GRANT SELECT, UPDATE ON TABLE access_log_seal_state, access_log_seal_verified TO ferroehr_clinical;
         GRANT INSERT ON TABLE access_log_seal_verified TO ferroehr_clinical;
         GRANT SELECT ON TABLE access_log_seal_fold TO ferroehr_clinical;
+        -- The frontier round copies the search index (access_log::index).
+        GRANT SELECT, INSERT ON TABLE access_log_index TO ferroehr_clinical;
+        GRANT SELECT, UPDATE ON TABLE access_log_index_state TO ferroehr_clinical;
         GRANT SELECT ON TABLE audit_search_token_generation TO ferroehr_clinical, ferroehr_clinical_reader;
         -- The frontier reads the id sequences' last values (access_log::frontier).
         GRANT SELECT ON SEQUENCE access_log_entry_id_seq, audit_event_seq_seq TO ferroehr_clinical;

@@ -21,7 +21,7 @@ use super::{
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::ehr::access_projection::AccessCommit;
-use crate::storage::version_repo::guarded::{Guard, PartySync};
+use crate::storage::version_repo::guarded::{DirectorySlot, Guard, PartySync};
 use crate::versioning::SigningCtx;
 use crate::versioning::audit::AuditInput;
 
@@ -50,6 +50,8 @@ enum Form {
         access: Option<AccessCommit>,
         /// What a party body holds that the binding hooks read.
         party_facts: Option<Box<crate::party_binding::derive::Facts>>,
+        /// The party references a party write checks after its binding hooks.
+        references: Vec<(Option<usize>, crate::versioning::party_refs::Reference)>,
     },
 }
 
@@ -87,12 +89,23 @@ pub(crate) async fn prepare_write(
         .into_iter()
         .map(|r| (None, r))
         .collect();
-    // NOTE: our own design (#6256), a version references parties outside its own write, so
-    // they are checked before the statement writes it.
-    crate::versioning::party_refs::check(conn, &references).await?;
-    if ctx.skip_identical_resend
-        && let Some(existing) = skipped_resend(&resolved, &audit)
-    {
+    let existing = if ctx.skip_identical_resend {
+        skipped_resend(&resolved, &audit)
+    } else {
+        None
+    };
+    // NOTE: our own design (#6256), a version references parties outside its own write, so they
+    // are checked before the statement writes it, or after a party write's binding hooks in its
+    // transaction, in the order a per-version commit answers them (#6257).
+    if existing.is_some() || guard.party.is_none() {
+        crate::versioning::party_refs::check(conn, &references).await?;
+    }
+    let references = if guard.party.is_some() {
+        references
+    } else {
+        Vec::new()
+    };
+    if let Some(existing) = existing {
         return Ok(Ready {
             ehr_id,
             audit,
@@ -103,8 +116,13 @@ pub(crate) async fn prepare_write(
     let party_facts = resolved.party_facts.take();
     let mut prepared = prepare(ctx, &audit, ctx.stamp.mint(), resolved)?;
     prepared.committed.deleted = deleted;
-    // A new FOLDER hierarchy joins `EHR.folders` in the guarded statement itself, and a
-    // party version on its trunk brings its reverse-relationship index there too.
+    // A new FOLDER hierarchy joins `EHR.folders` in the guarded statement itself, at the
+    // rank after the highest its gate read found, and a party version on its trunk brings
+    // its reverse-relationship index there too.
+    let directory = guard.directory.map(|slot| DirectorySlot {
+        new: slot.new && prepared.take_first_folder(),
+        ..slot
+    });
     let party = guard.party.map(|sync| {
         let reverse = prepared.on_trunk().then(|| {
             party_facts
@@ -114,7 +132,7 @@ pub(crate) async fn prepare_write(
         Box::new(PartySync { reverse, ..*sync })
     });
     let guard = Guard {
-        folder: prepared.take_first_folder(),
+        directory,
         party,
         ..guard
     };
@@ -126,6 +144,7 @@ pub(crate) async fn prepare_write(
             prepared: Box::new(prepared),
             access,
             party_facts,
+            references,
         },
     })
 }
@@ -165,14 +184,16 @@ impl Ready {
     /// # Errors
     /// The guarded statement's errors: a moved requirement
     /// ([`crate::storage::error::StorageError::GuardMoved`]), a version key a
-    /// concurrent commit took first, and the storage errors of what follows.
+    /// concurrent commit took first, the refusals of a party write's binding
+    /// hooks and of its party references, and the storage errors of what
+    /// follows.
     pub(crate) async fn commit(
         self,
         conn: &mut PgConnection,
         ctx: &SigningCtx<'_>,
         reservation: Option<Uuid>,
     ) -> Result<Committed, ServiceError> {
-        let (prepared, access, party_facts) = match self.form {
+        let (prepared, access, party_facts, references) = match self.form {
             Form::Skipped(existing) => {
                 if let Some(reservation) = reservation {
                     crate::system_log::reservation::reserve(conn, reservation).await?;
@@ -183,7 +204,8 @@ impl Ready {
                 prepared,
                 access,
                 party_facts,
-            } => (prepared, access, party_facts),
+                references,
+            } => (prepared, access, party_facts, references),
         };
         let mut committed = prepared.committed.clone();
         let held = crate::party_binding::store::Held::of(
@@ -217,6 +239,7 @@ impl Ready {
             held,
         ))
         .await?;
+        crate::versioning::party_refs::check(conn, &references).await?;
         Ok(committed)
     }
 }

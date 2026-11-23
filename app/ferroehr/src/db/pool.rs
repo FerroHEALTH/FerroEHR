@@ -11,9 +11,11 @@
 //! pool needs about the arrival rate times that hold, and room for a burst.
 //! No openEHR spec governs connection handling: our own design.
 
-use crate::db::acquire::acquire;
+use crate::db::acquire::{Checkout, acquire};
 use crate::db::domain::{Domain, DomainPools};
 use sqlx::postgres::PgPoolOptions;
+use std::sync::{Arc, Mutex, PoisonError};
+use std::time::{Duration, Instant};
 use tracing::Instrument as _;
 
 use crate::db::{DbConfig, DbError};
@@ -44,10 +46,6 @@ pub const AUDIT_RUNTIME_POOL: u32 = 4;
 /// The domains whose writes notify a listened channel, so each may need a
 /// listener session of its own; no channel is notified in the audit domain.
 pub const LISTENING: [Domain; 2] = [Domain::Clinical, Domain::Party];
-
-/// The fewest connections an unset [`DbConfig::min_connections`] keeps open
-/// in a server's pool.
-pub const POOL_KEPT_FLOOR: u32 = 2;
 
 /// The named statements one connection keeps prepared.
 ///
@@ -162,8 +160,8 @@ impl DbConfig {
     /// These settings as the server runs them, for one that admits at most
     /// `max_concurrent_requests` at once: an unset pool size is bounded by
     /// that, since a request holds at most one connection of a pool, and an
-    /// unset [`Self::min_connections`] keeps one connection per core, at
-    /// least [`POOL_KEPT_FLOOR`] and at most the pool size.
+    /// unset [`Self::min_connections`] keeps every connection of the pool, so
+    /// a server that answers ready opens no connection under its first burst.
     #[must_use]
     pub fn for_serving(&self, max_concurrent_requests: u32) -> Self {
         let mut serving = self.clone();
@@ -171,10 +169,7 @@ impl DbConfig {
             .max_connections
             .unwrap_or_else(|| self.pool_size().min(max_concurrent_requests.max(1)));
         serving.max_connections = Some(size);
-        serving.min_connections = Some(
-            self.min_connections
-                .unwrap_or_else(|| cores().max(POOL_KEPT_FLOOR).min(size)),
-        );
+        serving.min_connections = Some(self.min_connections.unwrap_or(size));
         serving
     }
 }
@@ -186,18 +181,75 @@ impl DbConfig {
 /// it, so a loaded server sends no ping; a quiet one pays one round trip per
 /// checkout of a connection idle that long. No openEHR spec governs
 /// connection handling: our own design.
-pub const IDLE_PROBE: std::time::Duration = std::time::Duration::from_secs(1);
+pub const IDLE_PROBE: Duration = Duration::from_secs(1);
 
 /// The span a new connection's session setup runs in, so its statements read
 /// as the pool's and not as the statements of the request that happened to
 /// open the connection (#5899).
 pub const SESSION_SETUP_SPAN: &str = "db_session_setup";
 
+/// How long a connection serves before the pool may retire it on a release:
+/// the `max_lifetime` sqlx 0.9 sets by default
+/// (<https://docs.rs/sqlx/0.9.0/sqlx/pool/struct.PoolOptions.html#method.max_lifetime>).
+pub const LIFETIME: Duration = Duration::from_mins(30);
+
+/// The window over which the connections of a pool past [`LIFETIME`] retire,
+/// one at a time (#6341).
+pub const RETIRE_SPREAD: Duration = Duration::from_mins(10);
+
+/// The age past which a connection retires on its next release whatever the
+/// pacing, so no connection lives unbounded.
+pub const LIFETIME_CAP: Duration = LIFETIME.saturating_add(RETIRE_SPREAD.saturating_mul(2));
+
+/// The retirements of one pool, paced so its connections past [`LIFETIME`]
+/// retire one per [`RETIRE_SPREAD`] divided by the pool size.
+///
+/// The server opens every connection of a pool before it answers ready
+/// (#5774), so their ages coincide: retired by sqlx's own `max_lifetime`,
+/// all of them would close in the same second and the requests that follow
+/// would each wait for a new connection to open (#6341). A replacement is
+/// opened at the moment its predecessor retired, so the next generation
+/// stays spread. No openEHR spec governs connection handling: our own design.
+#[derive(Debug)]
+pub(crate) struct Retirement {
+    /// The least time between two retirements of the pool.
+    spacing: Duration,
+    /// When the pool may next retire a connection; `None` before the first.
+    next: Mutex<Option<Instant>>,
+}
+
+impl Retirement {
+    /// The pacing of a pool of `size` connections.
+    pub(crate) fn new(size: u32) -> Self {
+        Self {
+            spacing: RETIRE_SPREAD
+                .checked_div(size.max(1))
+                .unwrap_or(RETIRE_SPREAD),
+            next: Mutex::new(None),
+        }
+    }
+
+    /// Whether a connection of `age`, released at `now`, retires: once past
+    /// [`LIFETIME`] when no other connection of the pool retired within the
+    /// spacing, and always once past [`LIFETIME_CAP`].
+    pub(crate) fn retires(&self, age: Duration, now: Instant) -> bool {
+        if age < LIFETIME {
+            return false;
+        }
+        let mut next = self.next.lock().unwrap_or_else(PoisonError::into_inner);
+        if age < LIFETIME_CAP && next.is_some_and(|next| now < next) {
+            return false;
+        }
+        *next = now.checked_add(self.spacing);
+        true
+    }
+}
+
 /// The pool options for one domain: sizing + acquire timeout from settings,
-/// the domain's session setup on every physical connection, and a liveness
-/// ping only for a connection idle for [`IDLE_PROBE`]. Connection retirement stays on the `sqlx` defaults (an idle
-/// reap plus a bounded lifetime — infinite-lived connections are discouraged by
-/// the driver, so we do not disable them).
+/// the domain's session setup on every physical connection, a liveness ping
+/// only for a connection idle for [`IDLE_PROBE`], and each connection retired
+/// on a release past [`LIFETIME`] at the pace of [`Retirement`]. The idle reap
+/// stays on the sqlx default.
 pub(crate) fn options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
     // Rendered once here rather than per connection. The value is an integer
     // from our own configuration, never client input, and it is bound as a
@@ -209,6 +261,7 @@ pub(crate) fn options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
         )
     });
     let search_path = domain.search_path();
+    let retirement = Arc::new(Retirement::new(settings.pool_size()));
     PgPoolOptions::new()
         .max_connections(settings.pool_size())
         .min_connections(settings.pool_kept())
@@ -229,6 +282,13 @@ pub(crate) fn options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
                 // `false` closes the connection and the pool opens another in its place.
                 Ok(sqlx::Connection::ping(conn).await.is_ok())
             })
+        })
+        // NOTE: sqlx 0.9 `PoolOptions::after_release`, `false` closes the connection; the
+        // driver's own `max_lifetime` is off so the pacing alone retires (#6341).
+        .max_lifetime(None)
+        .after_release(move |_conn, meta| {
+            let keep = !retirement.retires(meta.age, Instant::now());
+            Box::pin(std::future::ready(Ok(keep)))
         })
         .after_connect(move |conn, _meta| {
             // Cloned per call: `after_connect` takes an `Fn`, so the captured
@@ -252,23 +312,33 @@ pub(crate) fn options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
 /// of `settings`) and returns them to their pools, so they are open before
 /// the server answers ready; the pools keep them while idle.
 ///
-/// The pools open their kept connections in the background after they
-/// connect; the server waits for them here, holding each until all are open
-/// so none is handed out twice. No openEHR spec governs this: our own design
-/// (#5774).
+/// An instance restarted under 3,000 requests a second refused 122 to 252
+/// of them while its pools grew from the connections kept to their size:
+/// each connection opened under load kept its request waiting up to 100 ms
+/// (#5774). The three pools open side by side, and the server holds every
+/// connection until all are open, so none is handed out twice. No openEHR
+/// spec governs this: our own design.
 ///
 /// # Errors
 /// [`DbError::Acquire`] for the first connection that cannot be opened.
 pub async fn open_kept(settings: &DbConfig, pools: &DomainPools) -> Result<(), DbError> {
     let kept = settings.pool_kept();
-    let mut opened = Vec::new();
-    for domain in Domain::ALL {
-        for _ in 0..kept {
-            opened.push(acquire(pools.get(domain)).await?);
-        }
-    }
+    let opened = tokio::try_join!(
+        open_all(&pools.clinical, kept),
+        open_all(&pools.party, kept),
+        open_all(&pools.audit, kept),
+    )?;
     drop(opened);
     Ok(())
+}
+
+/// `kept` connections of `pool`, each held, so none is handed out twice.
+async fn open_all(pool: &sqlx::PgPool, kept: u32) -> Result<Vec<Checkout>, DbError> {
+    let mut opened = Vec::new();
+    for _ in 0..kept {
+        opened.push(acquire(pool).await?);
+    }
+    Ok(opened)
 }
 
 /// One `PostgreSQL` this instance's planned connections exceed.

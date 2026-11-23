@@ -20,6 +20,7 @@ use crate::service::response::ServiceResponse;
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Materials, Resolved, first_attempt};
 use crate::storage::version_repo::gate::{self, Ask, Gate, Shape, Target};
+use crate::storage::version_repo::guarded::{DirectorySlot, Guard};
 use crate::validation::versioned::{item_ref_roots, judge_folder_item_refs, local_item_refs};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
@@ -92,6 +93,15 @@ impl FerroEhrService {
                             "EHR {ehr_id} already has a directory"
                         )));
                     }
+                    // NOTE: our own design (#6318, #6337), the hierarchy takes the rank after the
+                    // gate read's highest and requires the slot unchanged, so one committed since
+                    // or a directory brought back refuses it.
+                    if gate.folder_rank == i32::MAX {
+                        return Err(ServiceError::exception(
+                            "the EHR's folder ranks are exhausted",
+                        ));
+                    }
+                    let slot = slot_of(&gate, gate.targets.first(), true);
                     let (folder, audit, envelope) = materials.take()?;
                     Ok(Write::new(
                         Some(ehr_id),
@@ -100,7 +110,10 @@ impl FerroEhrService {
                     )
                     .at(gate.now)
                     .gated(gate.restriction.clone())
-                    .guarded(guard_of(&gate, None)))
+                    .guarded(Guard {
+                        directory: Some(slot),
+                        ..guard_of(&gate, None)
+                    }))
                 }
             })
             .await?;
@@ -182,7 +195,11 @@ impl FerroEhrService {
                         Change::modify(target.vo_id, Kind::Folder, folder, None, None, envelope),
                         audit,
                     )
-                    .guarded(guard_of(&gate, target.head))
+                    .guarded(Guard {
+                        // The target is the slot, whose head the tip requirement holds.
+                        directory: Some(slot_of(&gate, None, false)),
+                        ..guard_of(&gate, target.head)
+                    })
                     .placed(target.placement)
                     .gated(gate.restriction.clone())
                     .object_marked(target.restricted))
@@ -228,12 +245,18 @@ impl FerroEhrService {
                         change_type::DELETED,
                         "DIRECTORY delete",
                     )?;
+                    // NOTE: our own design (#6354), a delete takes the slot lock as every
+                    // directory write does; its own target is the slot, so it binds no slot head.
+                    let slot = slot_of(&gate, None, false);
                     Ok(Write::new(
                         Some(ehr_id),
                         Change::delete(target.vo_id, Kind::Folder, None),
                         audit,
                     )
-                    .guarded(guard_of(&gate, target.head))
+                    .guarded(Guard {
+                        directory: Some(slot),
+                        ..guard_of(&gate, target.head)
+                    })
                     .placed(target.placement)
                     .gated(gate.restriction.clone())
                     .object_marked(target.restricted))
@@ -281,6 +304,21 @@ fn directory_target(gate: &mut Gate, ehr_id: EhrId) -> Result<(Target, String), 
             format!("directory for EHR {ehr_id}"),
         )
     })
+}
+
+/// What a directory write's statement requires of the slot its gate read
+/// found at `slot` (`None` when the EHR has none, or when the write's own
+/// target is the slot), and whether it adds a hierarchy (`new`): the slot is
+/// whichever hierarchy is the lowest-rank live one, so a hierarchy added
+/// since or a deleted one brought back moves it, and the write is judged
+/// again (#6337). No openEHR spec governs how a commit runs against the
+/// database: our own design.
+fn slot_of(gate: &Gate, slot: Option<&Target>, new: bool) -> DirectorySlot {
+    DirectorySlot {
+        highest: gate.folder_rank,
+        tip: slot.map(|target| (target.vo_id.0, target.head)),
+        new,
+    }
 }
 
 /// Whether `target`'s tip is a live hierarchy, which occupies the directory

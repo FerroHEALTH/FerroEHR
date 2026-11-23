@@ -1,0 +1,1 @@
+- FerroEHR moves to `ferrohealth-server` 0.12.1, which tries the overload bound before the request id and the request log: a request past the bound is still a `503` problem with `Retry-After` and is still counted in `ferrohealth.server.admission.refusals`, but it leaves no request line, and the refusal `WARN` is at most one line a second with the count by reason.

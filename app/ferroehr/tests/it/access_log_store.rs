@@ -425,6 +425,32 @@ async fn the_verifier_finds_a_modified_entry_and_a_modified_search_column() {
     }
 }
 
+/// A search index row changed or removed under the index's cursor is found
+/// at its entry, since it would hide the entry from a search (#6319).
+#[tokio::test]
+async fn the_verifier_finds_a_changed_and_a_missing_index_row() {
+    for statement in [
+        "UPDATE audit.access_log_index SET ehr_id = '00000000-0000-4000-8000-000000000000' \
+         WHERE entry_id = 2",
+        "UPDATE audit.access_log_index SET search_keys = search_keys || 4242::bigint WHERE entry_id = 2",
+        "DELETE FROM audit.access_log_index WHERE entry_id = 2",
+    ] {
+        let testdb = testkit::db().await.expect("testkit database");
+        let pool = testdb.pool();
+        append(&AccessLogStore::new(pool.clone()), 1..=3).await;
+        tamper(&pool, &[statement]).await;
+        let found = findings(&pool).await;
+        assert_eq!(
+            found,
+            vec![(
+                Some(2),
+                "record content was modified after it was written".to_owned()
+            )],
+            "`{statement}` must be found"
+        );
+    }
+}
+
 /// A changed shared part is found at every entry that names it, by the
 /// server's content check, even when its key check is dropped (#5703).
 #[tokio::test]

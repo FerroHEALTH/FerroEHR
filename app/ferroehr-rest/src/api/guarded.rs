@@ -12,12 +12,13 @@
 //! they judge, at one snapshot, and its answer leaves only once the copies it
 //! was decided and rendered on held them; otherwise that run is dropped
 //! whole, with nothing recorded or counted, and the request runs once more
-//! behind the up-front confirm (#6251). A COMPOSITION or CONTRIBUTION commit
-//! confirms after it was decided the same way: its gate read returns the
-//! revisions, and a copy found behind them refuses the write before anything
-//! is written, so the dropped run leaves nothing; a run that reached its
-//! write is never run again (#6256). No openEHR spec governs this: our own
-//! design.
+//! behind the up-front confirm (#6251). An `EHR_STATUS` or directory read and
+//! an AQL query confirm after they ran the same way (#6320). A COMPOSITION or
+//! CONTRIBUTION commit confirms after it was decided the same way: its gate
+//! read returns the revisions, and a copy found behind them refuses the write
+//! before anything is written, so the dropped run leaves nothing; a run that
+//! reached its write is never run again (#6256). No openEHR spec governs
+//! this: our own design.
 
 use std::future::Future;
 use std::sync::Arc;
@@ -51,7 +52,7 @@ where
     }
     let (resp, access) = run(state, op, parts, handler).await;
     if let Some(access) = access {
-        access.count_decisions();
+        ferroehr::party_binding::request::defer(move || access.count_decisions());
     }
     resp
 }
@@ -70,9 +71,26 @@ const COMMITS_AFTER: [&str; 8] = [
     "directory_delete",
 ];
 
+/// The reads that confirm their policy copies after they ran: each one's
+/// clinical statement selects the policy and definition revisions beside its
+/// rows, the version read of an EHR object and the AQL statement of a query
+/// a request judges (#6320).
+const READS_AFTER: [&str; 10] = [
+    "ehr_status_get_at_time",
+    "ehr_status_get_by_version_id",
+    "directory_get_at_time",
+    "directory_get_by_version_id",
+    "query_execute_adhoc_query",
+    "query_execute_adhoc_query_body",
+    "query_execute_stored_query",
+    "query_execute_stored_query_body",
+    "query_execute_stored_query_version",
+    "query_execute_stored_query_version_body",
+];
+
 /// Whether `op` confirms its policy copies after it was decided ([`after`]).
 pub(super) fn confirms_after(op: &str) -> bool {
-    admission::overlaps(op) || COMMITS_AFTER.contains(&op)
+    admission::overlaps(op) || COMMITS_AFTER.contains(&op) || READS_AFTER.contains(&op)
 }
 
 /// The overlapped read or commit `op` run on the policy copies as they stand,
@@ -100,7 +118,7 @@ where
     match held {
         Ok(true) => {
             if let Some(access) = access {
-                access.count_decisions();
+                ferroehr::party_binding::request::defer(move || access.count_decisions());
             }
             resp
         }
@@ -108,7 +126,9 @@ where
             // NOTE: our own design (#6251), the run decided on a copy behind the store leaves
             // nothing: its answer, its evaluator and its uncounted decisions go unused.
             drop((resp, access));
-            ferroehr::telemetry::access_path::count_policy_rerun(op);
+            ferroehr::party_binding::request::defer(move || {
+                ferroehr::telemetry::access_path::count_policy_rerun(op);
+            });
             confirmed(state, op, parts, handler).await
         }
         Err(error) => RestError::from(error).into_response(),

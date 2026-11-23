@@ -507,7 +507,7 @@ pub async fn commit_folded(
         Folded::Guarded { id, version, guard } if guard.status.is_some() => {
             (&STATUS, id, version.ehr_id, Some(version), Some(guard))
         }
-        Folded::Guarded { id, version, guard } if guard.folder => {
+        Folded::Guarded { id, version, guard } if guard.directory.is_some() => {
             (&FOLDER, id, version.ehr_id, Some(version), Some(guard))
         }
         Folded::Guarded { id, version, guard } if guard.party.is_some() => {
@@ -542,28 +542,7 @@ pub async fn commit_folded(
                 query,
                 &v.rows.iter().collect::<Vec<_>>(),
             );
-            let party = guard.as_ref().and_then(|guard| guard.party.as_deref());
-            let status = guard.as_ref().and_then(|guard| guard.status.as_deref());
-            let row = match (status, party) {
-                (None, Some(party)) => {
-                    query
-                        .bind(party.key_space)
-                        .bind(party.reverse.as_deref())
-                        .fetch_one(&mut *tx)
-                        .await?
-                }
-                (Some(status), _) => query
-                    .bind(status.subject_id.as_deref())
-                    .bind(status.subject_namespace.as_deref())
-                    .bind(status.is_queryable)
-                    .bind(status.is_modifiable)
-                    .bind(status.subject_digest.as_deref())
-                    .bind(crate::storage::access_projection::CHANNEL)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .map_err(|e| subject_in_use(e, status))?,
-                (None, None) => query.fetch_one(&mut *tx).await?,
-            };
+            let row = fetch_beside(tx, query, guard.as_ref()).await?;
             (row, Some((v.vo_id, v.sys_version, v.blob_uris)))
         }
     };
@@ -583,6 +562,54 @@ pub async fn commit_folded(
         crate::storage::blob_ref::record_uris(tx, vo_id, sys_version, uris).await?;
     }
     Ok(rows)
+}
+
+/// Run a folded statement `query`, binding first what a guarded one takes
+/// after its node arrays: an `EHR_STATUS` commit's columns, a party commit's
+/// key-space gate and reverse targets, or a directory write's slot
+/// ([`super::guarded::DirectorySlot`]).
+///
+/// # Errors
+/// [`StorageError::SubjectInUse`] when a status commit's subject is in use,
+/// else [`StorageError::Database`] on a driver failure.
+async fn fetch_beside(
+    tx: &mut PgConnection,
+    query: sqlx::query::Query<'_, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    guard: Option<&super::guarded::Guard>,
+) -> Result<sqlx::postgres::PgRow, StorageError> {
+    let party = guard.and_then(|guard| guard.party.as_deref());
+    let status = guard.and_then(|guard| guard.status.as_deref());
+    Ok(match (status, party) {
+        (None, Some(party)) => {
+            query
+                .bind(party.key_space)
+                .bind(party.reverse.as_deref())
+                .fetch_one(&mut *tx)
+                .await?
+        }
+        (Some(status), _) => query
+            .bind(status.subject_id.as_deref())
+            .bind(status.subject_namespace.as_deref())
+            .bind(status.is_queryable)
+            .bind(status.is_modifiable)
+            .bind(status.subject_digest.as_deref())
+            .bind(crate::storage::access_projection::CHANNEL)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| subject_in_use(e, status))?,
+        (None, None) => match guard.and_then(|guard| guard.directory) {
+            Some(slot) => {
+                query
+                    .bind(slot.highest)
+                    .bind(slot.tip.map(|(vo, _)| vo))
+                    .bind(slot.tip.and_then(|(_, head)| head))
+                    .bind(slot.new)
+                    .fetch_one(&mut *tx)
+                    .await?
+            }
+            None => query.fetch_one(&mut *tx).await?,
+        },
+    })
 }
 
 /// `error` as [`StorageError::SubjectInUse`] when `uq_ehr_subject` refused

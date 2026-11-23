@@ -29,6 +29,7 @@ use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::derive::{Bound, GrantFacts};
 use crate::party_binding::grants::live::revisions::Revisions;
 use crate::party_binding::grants::operation::Operation;
+use crate::party_binding::step::{Step, Tag};
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
 
@@ -60,12 +61,30 @@ pub(crate) struct GrantHead<'a> {
     pub(crate) facts: Option<&'a Facts>,
 }
 
-impl GrantHead<'_> {
+impl<'a> GrantHead<'a> {
     /// What a live head holds; `None` for a deleted one.
-    pub(crate) fn live(&self) -> Option<&Facts> {
+    pub(crate) fn live(&self) -> Option<&'a Facts> {
         (self.lifecycle_state != DELETED)
             .then_some(self.facts)
             .flatten()
+    }
+}
+
+/// What a head of `kind` holds of the caller facts: the party they are about
+/// unless a fact names its own (the performer of a `ROLE`, the source of a
+/// care relationship, else the party itself) and the `ROLE`'s
+/// `time_validity`; `None` for a kind whose heads hold none.
+fn facts_about(kind: Kind, head: GrantHead<'_>) -> Option<(Option<Uuid>, Option<&Value>)> {
+    match kind {
+        Kind::Organisation | Kind::Person | Kind::Group => Some((Some(head.vo_id), None)),
+        Kind::PartyRelationship => Some((head.live().and_then(|f| f.grants.care_source), None)),
+        Kind::Role => Some((
+            head.live()
+                .and_then(|facts| facts.performer.as_deref())
+                .and_then(container),
+            head.live().and_then(|facts| facts.validity.as_ref()),
+        )),
+        _ => None,
     }
 }
 
@@ -85,34 +104,15 @@ pub(crate) async fn write(
     kind: Kind,
     head: GrantHead<'_>,
 ) -> Result<(), StorageError> {
+    match facts_about(kind, head) {
+        Some(_) if kind == Kind::Person => super::caller::store::write_person(tx, head).await?,
+        Some((party, validity)) => super::caller::store::write(tx, head, party, validity).await?,
+        None => {}
+    }
     let changed = match kind {
-        Kind::Organisation => {
-            super::caller::store::write(tx, head, Some(head.vo_id), None).await?;
-            write_clients(tx, head).await? | write_provider(tx, head).await?
-        }
-        Kind::Person => {
-            super::caller::store::write_person(tx, head).await?;
-            write_clients(tx, head).await?
-        }
-        Kind::Group => {
-            super::caller::store::write(tx, head, Some(head.vo_id), None).await?;
-            write_clients(tx, head).await?
-        }
-        Kind::Agent => write_clients(tx, head).await?,
-        Kind::PartyRelationship => {
-            let source = head.live().and_then(|facts| facts.grants.care_source);
-            super::caller::store::write(tx, head, source, None).await?;
-            false
-        }
-        Kind::Role => {
-            let performer = head
-                .live()
-                .and_then(|facts| facts.performer.as_deref())
-                .and_then(container);
-            let validity = head.live().and_then(|facts| facts.validity.as_ref());
-            super::caller::store::write(tx, head, performer, validity).await?;
-            write_role(tx, head).await?
-        }
+        Kind::Organisation => write_clients(tx, head).await? | write_provider(tx, head).await?,
+        Kind::Person | Kind::Group | Kind::Agent => write_clients(tx, head).await?,
+        Kind::Role => write_role(tx, head).await?,
         _ => false,
     };
     if changed {
@@ -122,88 +122,182 @@ pub(crate) async fn write(
     Ok(())
 }
 
+/// The steps of [`write()`] for `head`, a party of `kind`, as a settle folds
+/// them: the deletes, then the inserts. A row they return tagged
+/// [`Tag::Grants`] says a grant row changed; the caller facts' and the record
+/// subjects' rows say whether those changed.
+pub(crate) fn steps(kind: Kind, head: GrantHead<'_>) -> (Vec<Step<'_>>, Vec<Step<'_>>) {
+    let mut clear = Vec::new();
+    let mut fill = Vec::new();
+    if let Some((party, validity)) = facts_about(kind, head) {
+        let (gone, came) = super::caller::store::steps(head, party, validity);
+        clear.push(gone);
+        fill.push(came);
+        if kind == Kind::Person {
+            let (gone, came) = super::caller::subject::steps(head);
+            clear.push(gone);
+            fill.push(came);
+            let (gone, came) = super::caller::patient::steps(head);
+            clear.push(gone);
+            fill.push(came);
+        }
+    }
+    match kind {
+        Kind::Organisation => {
+            clear.extend([clients_gone(head), provider_gone(head)]);
+            fill.extend(clients_came(head).into_iter().chain(provider_came(head)));
+        }
+        Kind::Person | Kind::Group | Kind::Agent => {
+            clear.push(clients_gone(head));
+            fill.extend(clients_came(head));
+        }
+        Kind::Role => {
+            clear.push(capabilities_gone(head));
+            fill.extend(capabilities_came(head));
+        }
+        _ => {}
+    }
+    (clear, fill)
+}
+
 /// Replaces the client rows of the `ACTOR` `head`; whether any row went or
 /// came.
 async fn write_clients(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, StorageError> {
-    let gone = sqlx::query("DELETE FROM binding_client WHERE party_id = $1")
-        .bind(head.vo_id)
-        .execute(&mut *tx)
-        .await?
-        .rows_affected();
-    let Some(facts) = head.live().filter(|facts| !facts.grants.clients.is_empty()) else {
-        return Ok(gone > 0);
+    let gone = clients_gone(head).run(tx).await?;
+    let Some(came) = clients_came(head) else {
+        return Ok(!gone.is_empty());
     };
+    let came = came.run(tx).await?;
+    Ok(!gone.is_empty() || !came.is_empty())
+}
+
+/// The step that deletes the client rows of `head`.
+fn clients_gone<'q>(head: GrantHead<'_>) -> Step<'q> {
+    let party = head.vo_id;
+    Step::new(
+        "cd",
+        "DELETE FROM binding_client WHERE party_id = $1 RETURNING party_id AS p, NULL::text AS t",
+        Some(Tag::Grants),
+        move |query| query.bind(party),
+    )
+}
+
+/// The step that inserts the client rows the live `head` holds; `None` when
+/// it holds none.
+fn clients_came(head: GrantHead<'_>) -> Option<Step<'_>> {
+    let facts = head
+        .live()
+        .filter(|facts| !facts.grants.clients.is_empty())?;
     let (issuers, clients): (Vec<&str>, Vec<&str>) = facts
         .grants
         .clients
         .iter()
         .map(|(issuer, client)| (issuer.as_str(), client.as_str()))
         .unzip();
-    let came = sqlx::query(
+    let provider = facts.grants.provider;
+    Some(Step::new(
+        "ci",
         "INSERT INTO binding_client (party_id, issuer, client_id, lifecycle_state, provider_id) \
          SELECT $1, t.issuer, t.client_id, $4, $5 \
-         FROM unnest($2::text[], $3::text[]) AS t(issuer, client_id)",
-    )
-    .bind(head.vo_id)
-    .bind(&issuers)
-    .bind(&clients)
-    .bind(head.lifecycle_state)
-    .bind(facts.grants.provider)
-    .execute(&mut *tx)
-    .await?
-    .rows_affected();
-    Ok(gone > 0 || came > 0)
+         FROM unnest($2::text[], $3::text[]) AS t(issuer, client_id) \
+         RETURNING party_id AS p, NULL::text AS t",
+        Some(Tag::Grants),
+        move |query| {
+            query
+                .bind(head.vo_id)
+                .bind(issuers)
+                .bind(clients)
+                .bind(head.lifecycle_state)
+                .bind(provider)
+        },
+    ))
 }
 
 /// Replaces the provider row of the `ORGANISATION` `head`; whether the row
 /// changed.
 async fn write_provider(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, StorageError> {
-    let identifier = head
-        .live()
-        .and_then(|facts| facts.grants.identifier.as_ref());
-    let Some((issuer, id)) = identifier else {
-        let gone = sqlx::query("DELETE FROM binding_provider WHERE party_id = $1")
-            .bind(head.vo_id)
-            .execute(&mut *tx)
-            .await?
-            .rows_affected();
-        return Ok(gone > 0);
-    };
-    let written = sqlx::query(
-        "INSERT INTO binding_provider (party_id, issuer, id) VALUES ($1, $2, $3) \
+    let step = provider_came(head).unwrap_or_else(|| provider_gone(head));
+    Ok(!step.run(tx).await?.is_empty())
+}
+
+/// The provider identifier the live `head` carries, `(issuer, id)`.
+fn provider_of(head: GrantHead<'_>) -> Option<(&str, &str)> {
+    head.live()
+        .and_then(|facts| facts.grants.identifier.as_ref())
+        .map(|(issuer, id)| (issuer.as_str(), id.as_str()))
+}
+
+/// The step that deletes the provider row of `head` when it carries no
+/// identifier.
+fn provider_gone(head: GrantHead<'_>) -> Step<'_> {
+    let issuer = provider_of(head).map(|(issuer, _)| issuer);
+    Step::new(
+        "vd",
+        "DELETE FROM binding_provider WHERE party_id = $1 AND $2::text IS NULL \
+         RETURNING party_id AS p, NULL::text AS t",
+        Some(Tag::Grants),
+        move |query| query.bind(head.vo_id).bind(issuer),
+    )
+}
+
+/// The step that writes the provider row of `head`, leaving a row that holds
+/// its identifier as it is; `None` when it carries none.
+fn provider_came(head: GrantHead<'_>) -> Option<Step<'_>> {
+    let (issuer, id) = provider_of(head)?;
+    Some(Step::new(
+        "vi",
+        "INSERT INTO binding_provider (party_id, issuer, id) \
+         SELECT $1, $2, $3 \
          ON CONFLICT (party_id) DO UPDATE SET issuer = EXCLUDED.issuer, id = EXCLUDED.id, \
              written_at = now() \
          WHERE (binding_provider.issuer, binding_provider.id) \
-               IS DISTINCT FROM (EXCLUDED.issuer, EXCLUDED.id)",
-    )
-    .bind(head.vo_id)
-    .bind(issuer)
-    .bind(id)
-    .execute(&mut *tx)
-    .await?
-    .rows_affected();
-    Ok(written > 0)
+               IS DISTINCT FROM (EXCLUDED.issuer, EXCLUDED.id) \
+         RETURNING party_id AS p, NULL::text AS t",
+        Some(Tag::Grants),
+        move |query| query.bind(head.vo_id).bind(issuer).bind(id),
+    ))
 }
 
 /// Replaces the capability rows of the `ROLE` `head`; whether any row went or
 /// came.
 async fn write_role(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, StorageError> {
-    let gone = sqlx::query("DELETE FROM binding_capability WHERE role_id = $1")
-        .bind(head.vo_id)
-        .execute(&mut *tx)
-        .await?
-        .rows_affected();
-    let Some(facts) = head
+    let gone = capabilities_gone(head).run(tx).await?;
+    let Some(came) = capabilities_came(head) else {
+        return Ok(!gone.is_empty());
+    };
+    let came = came.run(tx).await?;
+    Ok(!gone.is_empty() || !came.is_empty())
+}
+
+/// What the live `ROLE` `head` grants and the container its `performer`
+/// names, when it grants any capability to one.
+fn capability_holder(head: GrantHead<'_>) -> Option<(&Facts, Uuid)> {
+    let facts = head
         .live()
-        .filter(|facts| !facts.grants.capabilities.is_empty())
-    else {
-        return Ok(gone > 0);
-    };
-    let Some(performer) = facts.performer.as_deref().and_then(container) else {
-        return Ok(gone > 0);
-    };
+        .filter(|facts| !facts.grants.capabilities.is_empty())?;
+    Some((facts, facts.performer.as_deref().and_then(container)?))
+}
+
+/// The step that deletes the capability rows of `head`.
+fn capabilities_gone<'q>(head: GrantHead<'_>) -> Step<'q> {
+    let role = head.vo_id;
+    Step::new(
+        "kd",
+        "DELETE FROM binding_capability WHERE role_id = $1 \
+         RETURNING role_id AS p, NULL::text AS t",
+        Some(Tag::Grants),
+        move |query| query.bind(role),
+    )
+}
+
+/// The step that inserts the capability rows the live `head` grants its
+/// performer; `None` when it grants none to one.
+fn capabilities_came(head: GrantHead<'_>) -> Option<Step<'_>> {
+    let (facts, performer) = capability_holder(head)?;
     let columns = CapabilityColumns::of(&facts.grants);
-    let came = sqlx::query(
+    let validity = facts.validity.as_ref();
+    Some(Step::new(
+        "ki",
         "INSERT INTO binding_capability \
              (role_id, ordinal, operation, performer_id, lifecycle_state, role_validity, \
               validity, not_before, not_after, credentials) \
@@ -214,23 +308,24 @@ async fn write_role(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, 
          FROM unnest($5::integer[], $6::text[], $7::jsonb[], $8::boolean[], \
                      $9::timestamptz[], $10::timestamptz[], $11::jsonb[]) \
               AS t(ordinal, operation, validity, unreadable, not_before, not_after, \
-                   credentials)",
-    )
-    .bind(head.vo_id)
-    .bind(performer)
-    .bind(head.lifecycle_state)
-    .bind(facts.validity.as_ref())
-    .bind(&columns.ordinal)
-    .bind(&columns.operation)
-    .bind(&columns.validity)
-    .bind(&columns.unreadable)
-    .bind(&columns.not_before)
-    .bind(&columns.not_after)
-    .bind(&columns.credentials)
-    .execute(&mut *tx)
-    .await?
-    .rows_affected();
-    Ok(gone > 0 || came > 0)
+                   credentials) \
+         RETURNING role_id AS p, NULL::text AS t",
+        Some(Tag::Grants),
+        move |query| {
+            query
+                .bind(head.vo_id)
+                .bind(performer)
+                .bind(head.lifecycle_state)
+                .bind(validity)
+                .bind(columns.ordinal)
+                .bind(columns.operation)
+                .bind(columns.validity)
+                .bind(columns.unreadable)
+                .bind(columns.not_before)
+                .bind(columns.not_after)
+                .bind(columns.credentials)
+        },
+    ))
 }
 
 /// The capabilities of a `ROLE` as the arrays the insert binds.

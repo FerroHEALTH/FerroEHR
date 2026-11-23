@@ -23,6 +23,7 @@ use ferroehr::db::domain::DomainPools;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::response::ResourceMeta;
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::event::{
     AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
@@ -387,6 +388,186 @@ async fn a_directory_create_refused_after_its_intake_leaves_no_held_record() {
         kept,
         "only the committed create's record is held"
     );
+}
+
+/// A recorded directory create whose gate read found no directory, and whose
+/// statement runs only after another create committed one, takes the rank
+/// that create took: it is judged again and answers `409`, and the EHR keeps
+/// one hierarchy (#6318).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_directory_create_whose_statement_follows_another_commit_answers_409() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = audited(&pool).await;
+    let unrecorded = FerroEhrService::new(&DomainPools::from_shared(&pool));
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let late = {
+        let svc = Arc::clone(&svc);
+        let request = uv(&crate::fixtures::folder("late"), "249", None);
+        async move { Box::pin(svc.create_directory(ehr, request)).await }
+    };
+    let (outcome, kept) = after_another_commit(&pool, late, async {
+        Box::pin(
+            unrecorded.create_directory(ehr, uv(&crate::fixtures::folder("first"), "249", None)),
+        )
+        .await
+        .expect("the first create commits");
+    })
+    .await;
+    let refused = outcome.expect_err("the late create is refused");
+    assert!(
+        matches!(refused, ServiceError::Conflict(_)),
+        "the late create answers 409: {refused:?}"
+    );
+    assert!(kept.reserved().is_empty(), "it keeps no reservation");
+    let hierarchies: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM clinical.ehr_folder WHERE ehr_id = $1")
+            .bind(ehr)
+            .fetch_one(&pool)
+            .await
+            .expect("the hierarchies");
+    assert_eq!(hierarchies, 1, "the EHR keeps one directory");
+}
+
+/// A recorded update of a logically deleted directory, whose statement runs
+/// only after a create committed a new live hierarchy, is judged again on
+/// the slot that hierarchy now holds: its `If-Match` names another version,
+/// so it answers `412`, and the EHR keeps one live hierarchy (#6337).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_deleted_directory_update_whose_statement_follows_a_create_answers_412() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = audited(&pool).await;
+    let unrecorded = FerroEhrService::new(&DomainPools::from_shared(&pool));
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let deleted = deleted_directory(&unrecorded, ehr).await;
+    let late = {
+        let svc = Arc::clone(&svc);
+        let request = uv(&crate::fixtures::folder("late"), "251", Some(&deleted));
+        async move { Box::pin(svc.update_directory(ehr, request)).await }
+    };
+    let (outcome, kept) = after_another_commit(&pool, late, async {
+        Box::pin(
+            unrecorded.create_directory(ehr, uv(&crate::fixtures::folder("new"), "249", None)),
+        )
+        .await
+        .expect("the create commits");
+    })
+    .await;
+    let refused = outcome.expect_err("the late update is refused");
+    assert!(
+        matches!(refused, ServiceError::VersionConflict(_)),
+        "the late update answers 412: {refused:?}"
+    );
+    assert!(kept.reserved().is_empty(), "it keeps no reservation");
+    assert_eq!(live_hierarchies(&pool, ehr).await, 1, "one live directory");
+}
+
+/// A recorded directory create whose gate read found the directory deleted,
+/// and whose statement runs only after an update made it live again, is
+/// judged again: the slot is live, so it answers `409`, and the EHR keeps one
+/// live hierarchy (#6337).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_directory_create_whose_statement_follows_a_revival_answers_409() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = audited(&pool).await;
+    let unrecorded = FerroEhrService::new(&DomainPools::from_shared(&pool));
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let deleted = deleted_directory(&unrecorded, ehr).await;
+    let late = {
+        let svc = Arc::clone(&svc);
+        let request = uv(&crate::fixtures::folder("late"), "249", None);
+        async move { Box::pin(svc.create_directory(ehr, request)).await }
+    };
+    let (outcome, kept) = after_another_commit(&pool, late, async {
+        let request = uv(&crate::fixtures::folder("revived"), "251", Some(&deleted));
+        Box::pin(unrecorded.update_directory(ehr, request))
+            .await
+            .expect("the update commits");
+    })
+    .await;
+    let refused = outcome.expect_err("the late create is refused");
+    assert!(
+        matches!(refused, ServiceError::Conflict(_)),
+        "the late create answers 409: {refused:?}"
+    );
+    assert!(kept.reserved().is_empty(), "it keeps no reservation");
+    assert_eq!(live_hierarchies(&pool, ehr).await, 1, "one live directory");
+}
+
+/// Runs the directory write `late` recorded, held on its records after its
+/// gate read while `first` commits, and returns its outcome and recorder.
+async fn after_another_commit<L>(
+    pool: &PgPool,
+    late: L,
+    first: impl Future<Output = ()>,
+) -> (Result<ResourceMeta, ServiceError>, WriteRecorder)
+where
+    L: Future<Output = Result<ResourceMeta, ServiceError>> + Send + 'static,
+{
+    let mut lock = pool.begin().await.expect("begin the lock");
+    sqlx::query("LOCK TABLE audit.access_log_entry IN EXCLUSIVE MODE")
+        .execute(&mut *lock)
+        .await
+        .expect("lock the access-log entries");
+    let recorder = primed();
+    let kept = recorder.clone();
+    let late = tokio::spawn(ferroehr::db::acquire::request_scope(with_recorder(
+        recorder, late,
+    )));
+    tokio::time::timeout(Duration::from_secs(30), async {
+        loop {
+            let waiting: bool = sqlx::query_scalar(
+                "SELECT EXISTS (SELECT 1 FROM pg_locks l JOIN pg_class c ON c.oid = l.relation \
+                 WHERE NOT l.granted AND c.relname = 'access_log_entry')",
+            )
+            .fetch_one(pool)
+            .await
+            .expect("the lock waits");
+            if waiting {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("the late write made its gate read and waits on its records");
+    first.await;
+    lock.commit().await.expect("release the lock");
+    (late.await.expect("the late write completes"), kept)
+}
+
+/// Creates the EHR's directory and logically deletes it; the uid of the
+/// deleted version.
+async fn deleted_directory(svc: &FerroEhrService, ehr: EhrId) -> String {
+    let created =
+        Box::pin(svc.create_directory(ehr, uv(&crate::fixtures::folder("old"), "249", None)))
+            .await
+            .expect("the directory is created");
+    Box::pin(svc.delete_directory(
+        ehr,
+        crate::fixtures::deleting(Some(created.uid.parse().expect("ovid"))),
+    ))
+    .await
+    .expect("the directory is deleted")
+    .meta
+    .expect("the delete answers its version")
+    .uid
+}
+
+/// How many of the EHR's hierarchies have a live tip.
+async fn live_hierarchies(pool: &PgPool, ehr: EhrId) -> i64 {
+    sqlx::query_scalar(
+        "SELECT count(*) FROM clinical.ehr_folder f \
+         JOIN clinical.vo_head h ON h.vo_id = f.vo_id \
+         JOIN clinical.version v ON v.vo_id = h.vo_id AND v.sys_version = h.trunk_head_sys_version \
+         WHERE f.ehr_id = $1 AND v.lifecycle_state <> '523'",
+    )
+    .bind(ehr)
+    .fetch_one(pool)
+    .await
+    .expect("the live hierarchies")
 }
 
 /// One recorded update of `created` with content `n`, as a protocol adapter

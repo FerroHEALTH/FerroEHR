@@ -127,7 +127,12 @@ impl LiveGrants {
                 };
                 let tie = Tie { grant: None, ..tie };
                 let own = EhrSubject::new(&*namespace, person.to_string());
-                let declared = census.declared.get(person).into_iter().flatten().cloned();
+                let declared = census
+                    .declared
+                    .get(person)
+                    .into_iter()
+                    .flat_map(|subjects| subjects.iter())
+                    .cloned();
                 for subject in std::iter::once(own).chain(declared) {
                     subjects.entry(subject).or_default().insert(tie.clone());
                 }

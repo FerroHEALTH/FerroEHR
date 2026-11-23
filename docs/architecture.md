@@ -260,7 +260,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   its template. The party store's revisions stay a read of their own on the
   party pool (#6048): the party domain may live in another database or
   cluster, and the clinical role reads no party schema, so no clinical
-  statement can carry them (#6271).
+  statement can carry them (#6271); a read in a shared database takes them
+  through `party_door` (#6320).
   The commit is then one guarded statement (`Folded::Guarded`): leading CTEs
   read the EHR row `FOR SHARE`, the object's head row and the policy and
   definition revisions, and the audit insert, which every later insert reads
@@ -318,11 +319,24 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   tip the gate read found and writes the version, its outbox row, the
   reservation and the reverse-relationship index. There is no EHR or policy
   guard: the version keys and the tip arbitrate, and a moved tip is judged
-  again. The side-table settle follows in the same transaction. A record
-  subject another PERSON declares is refused by the deferred
+  again. The side-table settle follows in the same transaction as ordered
+  statements (`party_binding::store::settle`): one statement deletes and
+  retires every grant, caller fact, record subject, patient identifier,
+  identifier and membership row the new head no longer holds, the next
+  inserts the rows it holds and clears the tombstones of the keys it binds,
+  and the facts stamp and the grant revision follow only when the rows the
+  two returned differ. A retirement runs a statement before its insert, so a
+  value that moves between rows never meets its old row in a unique index.
+  A record subject another PERSON declares is refused by the deferred
   `uq_binding_record_subject` at `COMMIT`, and the write answers `409` with
-  its records discarded. PARTY_RELATIONSHIP writes and demographic
-  CONTRIBUTIONs keep the per-version path.
+  its records discarded. A standalone PARTY_RELATIONSHIP create, update or
+  delete takes the same gate read and guarded statement; its settle
+  (`party_binding::store::standalone`) judges a care relationship's end on
+  one read of its provider and its validity, then writes the end, retires its
+  caller facts and its representation row in one statement, as the caller
+  fact it inserts reads that end, inserts them in the next, and stamps the
+  facts when they changed. Demographic CONTRIBUTIONs keep the per-version
+  path.
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers
@@ -605,7 +619,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   columns (the search columns, the search tokens of the projection and the
   render policy) sit on the entry's own row and are emptied with its content
   when a tombstone replaces it, and `access_log_search` is the view of them
-  the ITI-81 search reads (#5784). An ITI-81 page reads each chain's first
+  the ITI-81 search reads (#5784). The request's commit maintains only the
+  entry's key: the chainer's frontier round copies the columns the readers
+  filter and order on into `access_log_index` in one batch each second, with
+  a cursor that commits with the rows, and both views read the indexed
+  entries through it and the entries past the cursor by a key range, in one
+  statement and so one snapshot (#6319). An ITI-81 page reads each chain's first
   `offset + count` records through its time index, the access log's
   candidates from `access_log_search` with the records tied on the last
   instant, and takes the page from their union by the records' keys alone;
@@ -797,13 +816,17 @@ per outer row. The probe for an earlier row states its conditions as
 anchor whose leaf the SELECT already binds is tied to that bound row and
 needs no probe; otherwise the probe joins the statement beside the anchor,
 correlated to the leaf's source row, so it runs for the rows the containment
-keeps (#6249). A flat statement that anchors a leaf no SELECT column binds
-reads each node a CONTAINS step finds inside its object, behind an `OFFSET 0`
-fence, as a query scoped to named EHRs does (#4487): the anchor or the version
-spine is the entry, and no contained node can be rescanned with the WHERE
-clause's `EXISTS` per outer row on statistics a growing store has outgrown.
-A rare archetype under a broad range then costs one probe per anchored
-version, which is linear where the rescan was quadratic (#6263).
+keeps (#6249). A flat statement with an anchor reads each node a CONTAINS
+step finds inside its object, behind an `OFFSET 0` fence, as a query scoped
+to named EHRs does (#4487): the anchor or the version spine is the entry, and
+no contained node can be rescanned with the WHERE clause's `EXISTS` per outer
+row on statistics a growing store has outgrown (#6263). This holds whether a
+SELECT column binds the anchored leaf or not: on a store filling from empty
+the archetype's OBSERVATIONs and the anchor's rows were both estimated at one
+row, and the planner nested the archetype-index entry, unparameterised,
+inside the anchor's rows (#6243). A rare archetype under a broad range then
+costs one probe per anchored version, which is linear where the rescan was
+quadratic.
 `event_time` is a stored copy of a `STABLE` function's value: it equals the
 comparison's reading because every session runs under `TimeZone = UTC`,
 which the driver sets at connection start. The feature envelope is
@@ -1788,10 +1811,13 @@ subject's relationships (`LiveGrants::under_care_of`, at most
 (`LiveGrants::cared_for_by`, teams whose censuses take at most
 `care::CENSUS_BYTES` together, each weighed by its patients and the record
 subjects they declare, #5760, read by `ix_binding_caller_fact_care_team` of migration
-`party/0041`). Each is read on a miss, one indexed statement, and dropped
-when the facts read of a notification stamps a party it holds or a team the
-party is now under the care of; a grant reload and a listener that connects
-or loses its connection drop both. The relationships carry their dates, so
+`party/0041`). Each is read on a miss, one indexed statement. The facts read
+of a notification drops each subject it stamps, and reads the stamped
+subjects' care relationships and record subjects beside their facts
+(`caller::store::CARED`), which it applies to every held census a stamped
+subject is in or is now under the care of, so a relationship commit never
+sends a team's census back to the store (#6074); a grant reload and a
+listener that connects or loses its connection drop both. The relationships carry their dates, so
 the evaluator applies the grace after a discharge. A `PERSON` version that changes its care relationships commits
 only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
@@ -1921,7 +1947,41 @@ one indexed read then finds. Otherwise that run is dropped whole: its answer,
 its evaluator and its uncounted decisions go unused, so it leaves no access
 record, audit record or decision metric, and the read runs once more behind the
 up-front confirm, which never runs it again. `access_policy_reruns_total{op}`
-counts those runs (#6251). A COMPOSITION create, update or delete, a
+counts those runs (#6251). An `EHR_STATUS` or directory read and an AQL query
+confirm after they ran the same way (#6320): the version read of the EHR
+object selects the revisions, and a clinical query a request judges reads
+them on the one-row read of the versions it served, or, when it serves none,
+as two hidden columns of its own statement (`aql::sql::Layout::revisions`); a
+query that served no row reads them once after it ran.
+
+**The party copies on a read, where the party domain shares the clinical
+database** (#6320). Every decision rests on the party copies too (the binding
+lookups, the grants and the caller facts, #6048), confirmed by a read of
+`binding_grant_revision` on the party pool. Where the two domains share one
+database (the quickstart, the chart default), a `GET` without a body instead
+rides: authentication verifies the credential once, and the binding, the
+grants and the decision run on the copies as they stand, each copy noting the
+revision it held (`party_binding::request::ride`). The read's own clinical
+statement selects the party store's revisions through
+`party_door.party_revisions()`, a `SECURITY DEFINER` function owned by the
+party schema's owner in a schema that holds nothing else, which returns the
+three revision counters and which the clinical roles may run; they still read
+no party table, and the boot gate (`db::verify_domain_isolation`) refuses
+anything else in that schema and the function once it runs on the caller's
+`search_path` or as the caller. The answer leaves only once the copies held
+the revisions that statement read, or, when no statement read them, the
+revisions one indexed read then finds; otherwise that run is dropped with
+everything it would have counted (its decisions, a lookup hit, an
+authentication failure) and the request runs once more from the binding on,
+on the path that reads the revisions first, which answers whatever they are.
+`access_policy_reruns_total{op}` counts it. The topology is read once per
+service; where the party domain lives in a database of its own, no clinical
+statement can reach it and the confirm stays a statement of its own. **Our
+own design:** the door, the ride and the run again, chosen because a read
+with its confirm in its one statement costs one round trip and one
+transaction where it cost two, and three counters carry no personal data.
+
+A COMPOSITION create, update or delete, a
 CONTRIBUTION commit, an `EHR_STATUS` commit and a directory create, update or
 delete make no read first either: the gate read of the write
 returns the revisions, the write is decided on the copies as they stand, and a
