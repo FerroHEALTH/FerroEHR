@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! What the access evaluator reads of a versioned object where it leaves the
-//! store: its EHR, the template and root archetype of its trunk head, the
-//! systems that head came from and when it was committed.
+//! store.
+//!
+//! It reads the object's EHR, the template and root archetype of its trunk
+//! head, the systems that head came from, when it was committed and, once a
+//! scope names one, the episodes it is placed in.
 //!
 //! A read selects `head_facts!` beside its own columns, on the head row it
 //! already joins as `h`, so judging an object adds no statement
@@ -26,6 +29,7 @@ use crate::access_eval::scope::{Item, Object};
 use crate::ids::{EhrId, VoId};
 use crate::storage::access_projection::Revision;
 use crate::storage::error::StorageError;
+use crate::versioning::episode::EpisodeKey;
 
 /// What the evaluator reads of one versioned object.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,6 +46,9 @@ pub struct HeadFacts {
     pub origins: Option<Vec<String>>,
     /// The trunk head's commit instant.
     pub recorded: Option<jiff::Timestamp>,
+    /// The episodes the trunk head is placed in, empty when none; `None` when
+    /// the read did not select them.
+    pub episodes: Option<Vec<EpisodeKey>>,
     /// The revision of the owning EHR's settings row the read found.
     pub revision: Revision,
 }
@@ -62,6 +69,7 @@ impl HeadFacts {
             recorded: row
                 .try_get::<Option<jiff_sqlx::Timestamp>, _>("access_recorded")?
                 .map(jiff_sqlx::Timestamp::to_jiff),
+            episodes: episodes(row)?,
             revision: Revision::read(row)?,
         })
     }
@@ -75,6 +83,7 @@ impl HeadFacts {
             archetype: self.archetype.as_deref(),
             origins: self.origins.as_deref(),
             recorded: self.recorded,
+            episodes: self.episodes.as_deref(),
         })
     }
 
@@ -96,6 +105,7 @@ pub fn admits_stored(stored: &crate::storage::version_repo::read::StoredVersion)
         archetype: stored.root_archetype.as_deref(),
         origins: origins.as_deref(),
         recorded: stored.head_committed_at,
+        episodes: stored.head_episodes.as_deref(),
     });
     crate::access_eval::condition::admits(stored.ehr_id, &stored.access_revision, &item)
 }
@@ -111,6 +121,75 @@ pub fn visible(stored: &crate::storage::version_repo::read::StoredVersion) -> bo
     use crate::system_log::access_context::{access_delay_enforced, access_delay_enforced_on};
     let delayed = access_delay_enforced() || stored.ehr_id.is_some_and(access_delay_enforced_on);
     admits_stored(stored) && (!stored.person_withheld || !delayed)
+}
+
+/// The episodes `head_episodes!` selected into `row`, empty for a head placed
+/// in none; `None` when the statement did not select them.
+///
+/// # Errors
+/// [`StorageError::Database`] when the column does not decode, and
+/// [`StorageError::InvalidRows`] for a key that is no 32 octets.
+pub fn episodes(row: &PgRow) -> Result<Option<Vec<EpisodeKey>>, StorageError> {
+    // NOTE: our own design (#6416), a read selects the episodes only once a scope names one.
+    let keys = match row.try_get::<Option<Vec<Vec<u8>>>, _>("access_episodes") {
+        Ok(keys) => keys.unwrap_or_default(),
+        Err(sqlx::Error::ColumnNotFound(_)) => return Ok(None),
+        Err(error) => return Err(error.into()),
+    };
+    keys.iter()
+        .map(|octets| {
+            EpisodeKey::from_octets(octets).ok_or_else(|| {
+                StorageError::InvalidRows(
+                    "vo_head.episodes holds a key of other than 32 octets".into(),
+                )
+            })
+        })
+        .collect::<Result<_, _>>()
+        .map(Some)
+}
+
+/// The statement `plain`, or `episodes`, its twin that selects the head's
+/// episodes, when reads select them ([`crate::access_eval::episodes`]).
+#[must_use]
+pub fn with_episodes(plain: &'static str, episodes: &'static str) -> &'static str {
+    if crate::access_eval::episodes::selected() {
+        episodes
+    } else {
+        plain
+    }
+}
+
+/// One read's statement in each form a request may run it in.
+///
+/// A ride adds the party store's revisions
+/// (`party_binding::request::reads_door`, #6320), and a read that selects
+/// episodes adds the head's ([`crate::access_eval::episodes`]).
+#[derive(Debug, Clone, Copy)]
+pub struct Statements {
+    /// Neither.
+    pub plain: &'static str,
+    /// With the party store's revisions.
+    pub ride: &'static str,
+    /// With the head's episodes.
+    pub episodes: &'static str,
+    /// With both.
+    pub ride_episodes: &'static str,
+}
+
+impl Statements {
+    /// The form the running request runs.
+    #[must_use]
+    pub fn chosen(&self) -> &'static str {
+        match (
+            crate::party_binding::request::reads_door(),
+            crate::access_eval::episodes::selected(),
+        ) {
+            (false, false) => self.plain,
+            (true, false) => self.ride,
+            (false, true) => self.episodes,
+            (true, true) => self.ride_episodes,
+        }
+    }
 }
 
 /// The system ids a `version.origins` stamp names.
@@ -132,15 +211,20 @@ pub async fn of_objects(
     conn: &mut sqlx::PgConnection,
     vo_ids: &[VoId],
 ) -> Result<Vec<HeadFacts>, StorageError> {
+    macro_rules! objects_sql {
+        ($($facts:ident)?) => {
+            concat!(
+                "SELECT h.vo_id, ",
+                head_facts!($($facts)?),
+                " FROM vo_head h WHERE h.vo_id = ANY($1) ORDER BY h.vo_id"
+            )
+        };
+    }
     let ids: Vec<Uuid> = vo_ids.iter().map(|id| id.0).collect();
-    let rows = sqlx::query(concat!(
-        "SELECT h.vo_id, ",
-        head_facts!(),
-        " FROM vo_head h WHERE h.vo_id = ANY($1) ORDER BY h.vo_id"
-    ))
-    .bind(ids)
-    .fetch_all(&mut *conn)
-    .await?;
+    let rows = sqlx::query(with_episodes(objects_sql!(), objects_sql!(episodes)))
+        .bind(ids)
+        .fetch_all(&mut *conn)
+        .await?;
     rows.iter()
         .map(|row| HeadFacts::read(row, VoId(row.try_get("vo_id")?)))
         .collect()
@@ -155,13 +239,21 @@ pub async fn of_contributions(
     conn: &mut sqlx::PgConnection,
     contributions: &[Uuid],
 ) -> Result<Vec<(Uuid, HeadFacts)>, StorageError> {
-    let rows = sqlx::query(concat!(
-        "SELECT c.contribution_id, h.vo_id, ",
-        head_facts!(),
-        " FROM (SELECT DISTINCT v.contribution_id, v.vo_id FROM version v \
-           WHERE v.contribution_id = ANY($1)) c \
-         JOIN vo_head h ON h.vo_id = c.vo_id \
-         ORDER BY c.contribution_id, h.vo_id"
+    macro_rules! contributions_sql {
+        ($($facts:ident)?) => {
+            concat!(
+                "SELECT c.contribution_id, h.vo_id, ",
+                head_facts!($($facts)?),
+                " FROM (SELECT DISTINCT v.contribution_id, v.vo_id FROM version v \
+                   WHERE v.contribution_id = ANY($1)) c \
+                 JOIN vo_head h ON h.vo_id = c.vo_id \
+                 ORDER BY c.contribution_id, h.vo_id"
+            )
+        };
+    }
+    let rows = sqlx::query(with_episodes(
+        contributions_sql!(),
+        contributions_sql!(episodes),
     ))
     .bind(contributions)
     .fetch_all(&mut *conn)

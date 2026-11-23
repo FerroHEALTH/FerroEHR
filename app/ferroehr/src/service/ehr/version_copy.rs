@@ -87,6 +87,7 @@ impl Weigh for HeadFacts {
             .heap()
             .saturating_add(self.archetype.heap())
             .saturating_add(self.origins.heap())
+            .saturating_add(self.episodes.heap())
             .saturating_add(self.revision.heap())
     }
 }
@@ -118,6 +119,7 @@ impl Weigh for StoredVersion {
             self.attestations_at_committal.heap(),
             self.attestations_after_committal.heap(),
             self.access_revision.heap(),
+            self.head_episodes.heap(),
         ];
         text.into_iter()
             .chain(values)

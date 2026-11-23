@@ -142,7 +142,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   episodes. The import and archive load recompute it from the trunk
   head's body. A placed persistent
   composition and a malformed episode are refused `422` on every write path
-  (draft access control, Episodes of Care: our own design).
+  (draft access control, Episodes of Care: our own design). A data scope
+  naming episodes (`ACCESS_DATA_SCOPE.episodes`, #6416) compares the key of
+  each `DV_IDENTIFIER` it names with this column: a query's condition reads
+  it as `h.episodes && $keys`, and a settings class holds the keys as one
+  fact. A named read selects the column only once this replica has read
+  settings or a policy naming an episode (`access_eval::episodes`), so a
+  deployment that names none runs its statements unchanged; an object read
+  without it is judged by the fact's polarity.
 - **`node`** — one unified table for all versioned-object content
   (COMPOSITION / EHR_STATUS / FOLDER). One row per RM structure node with a
   **nested-set index** (`num`, `num_cap`, `parent_num`): AQL CONTAINS is an
@@ -1000,8 +1007,8 @@ which is what makes an optional stage safe to disable:
    class is the settings with what the decision does not read left out and
    every value particular to the EHR replaced by a fixed one: the instants of
    a validity or a `recorded` interval, the party of an actor scope or a
-   gate-keeper, the objects and origins of a data scope, and the objects each
-   sensitivity labels. The facts are those values, in the order of a
+   gate-keeper, the objects, origins and episodes of a data scope, and the
+   objects each sensitivity labels. The facts are those values, in the order of a
    depth-first walk. A value the decision cannot read stays in the class. One
    `access_class` row holds each distinct class, so every opt-out from a date
    shares one. A trigger on `access_settings` notifies `ferroehr_ehr_access`
@@ -1230,8 +1237,9 @@ which is what makes an optional stage safe to disable:
    be read (a validity bound with no offset, an undeclared purpose, an
    unstamped origin) is in force for a deny and not for a permit. A verdict
    is an ordered list of rules over the EHR's data (objects, templates, root
-   archetypes, categories through the category map, origins, commit time,
-   sensitivities), so one verdict answers a named object, the EHR itself,
+   archetypes, categories through the category map, origins, episodes of
+   care, commit time, sensitivities), so one verdict answers a named object,
+   the EHR itself,
    and every row of a query: the version reads, contributions, exports, the
    subject lookup and the write guard judge each object by its head row
    (`storage::access_facts`), and a query renders the verdict of every
@@ -1375,7 +1383,7 @@ attributes and conditions". FerroEHR places each term in openEHR content:
 | NIST SP 800-162 | FerroEHR | Where it lives |
 |---|---|---|
 | Subject attributes | the caller facts: the coded `name` of each `ROLE` in force it performs, its care-team memberships, the `ORGANISATION` its client acts for with that organisation's coded type and `GROUP` memberships, its caller kind, its recorded representation | the demographic service (RM Demographic IM), held per replica by `party_binding::grants::live` |
-| Object attributes | the data facts: the object, its template, root archetype, category through the category map, origins, commit time, and the sensitivities its labels and the controller's classifications give it | the record, read by its head row (`storage::access_facts`) |
+| Object attributes | the data facts: the object, its template, root archetype, category through the category map, origins, the episodes of care it is placed in, commit time, and the sensitivities its labels and the controller's classifications give it | the record, read by its head row (`storage::access_facts`) |
 | Environment conditions | the request instant, the declared purpose of use, an emergency purpose | the request |
 | Policy | the subject's directives and labels; the controller's rules, classifications and requirements | `EHR_ACCESS.settings` per EHR, `ACCESS_POLICY` per controller |
 | PDP | the fixed evaluator | `access_eval` |

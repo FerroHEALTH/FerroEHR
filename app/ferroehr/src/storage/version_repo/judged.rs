@@ -15,7 +15,7 @@ use sqlx::{PgPool, Row};
 
 use crate::db::acquire::acquire;
 use crate::ids::VoId;
-use crate::storage::access_facts::HeadFacts;
+use crate::storage::access_facts::{HeadFacts, Statements};
 use crate::storage::error::StorageError;
 use crate::storage::version_repo::read::{StoredVersion, stored_version_raw};
 use crate::versioning::object_version_id::TreeId;
@@ -64,6 +64,28 @@ pub const JUDGED_TREE_RIDE_SQL: &str = judged_select!(party_revisions!();
      AND v.branch_number = $3 AND v.branch_version = $4"
 );
 
+/// [`JUDGED_CURRENT_SQL`] in each of its forms.
+pub const JUDGED_CURRENT: Statements = Statements {
+    plain: JUDGED_CURRENT_SQL,
+    ride: JUDGED_CURRENT_RIDE_SQL,
+    episodes: judged_select!(head_episodes!();
+        "WHERE v.vo_id = $1 AND h.trunk_head_sys_version = v.sys_version"),
+    ride_episodes: judged_select!(concat!(party_revisions!(), head_episodes!());
+        "WHERE v.vo_id = $1 AND h.trunk_head_sys_version = v.sys_version"),
+};
+
+/// [`JUDGED_TREE_SQL`] in each of its forms.
+pub const JUDGED_TREE: Statements = Statements {
+    plain: JUDGED_TREE_SQL,
+    ride: JUDGED_TREE_RIDE_SQL,
+    episodes: judged_select!(head_episodes!();
+        "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
+         AND v.branch_number = $3 AND v.branch_version = $4"),
+    ride_episodes: judged_select!(concat!(party_revisions!(), head_episodes!());
+        "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
+         AND v.branch_number = $3 AND v.branch_version = $4"),
+};
+
 /// The version of an object a judged read addresses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JudgedAt {
@@ -98,24 +120,11 @@ pub struct Judged {
 /// # Errors
 /// [`StorageError`] on a driver failure or a column that does not decode.
 pub async fn read_judged(pool: &PgPool, at: JudgedAt) -> Result<Option<Judged>, StorageError> {
-    let ride = crate::party_binding::request::reads_door();
     let (vo_id, query) = match at {
-        JudgedAt::Current(vo_id) => {
-            let sql = if ride {
-                JUDGED_CURRENT_RIDE_SQL
-            } else {
-                JUDGED_CURRENT_SQL
-            };
-            (vo_id, sqlx::query(sql).bind(vo_id))
-        }
+        JudgedAt::Current(vo_id) => (vo_id, sqlx::query(JUDGED_CURRENT.chosen()).bind(vo_id)),
         JudgedAt::Tree(vo_id, tree) => {
             let (trunk, branch, branch_version) = tree.columns();
-            let sql = if ride {
-                JUDGED_TREE_RIDE_SQL
-            } else {
-                JUDGED_TREE_SQL
-            };
-            let query = sqlx::query(sql)
+            let query = sqlx::query(JUDGED_TREE.chosen())
                 .bind(vo_id)
                 .bind(trunk)
                 .bind(branch)

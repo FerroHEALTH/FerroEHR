@@ -8,8 +8,9 @@
 )]
 
 //! Settings classes (#5588): settings that differ only in their facts share
-//! one class, a class classifies as itself, and a gate-keeper is a fact. No
-//! openEHR spec governs the classes: our own design.
+//! one class, the episodes a data scope names among them (#6416), a class
+//! classifies as itself, and a gate-keeper is a fact. No openEHR spec
+//! governs the classes: our own design.
 
 use ferroehr::access_eval::class::{Class, DataLayout, KeeperLayout, classify, resolve};
 use ferroehr::access_eval::condition::CallerKeys;
@@ -17,6 +18,7 @@ use ferroehr::access_eval::scope::Pred;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::ehr::access_settings::EhrAccessSettings;
+use ferroehr::versioning::episode::EpisodeKey;
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
 use serde_json::{Value, json};
 
@@ -68,6 +70,8 @@ fn settings(who: &str, from: &str) -> AccessDirectiveSettings {
                     "type": "VERSIONED_COMPOSITION",
                     "id": { "_type": "HIER_OBJECT_ID", "value": OBJECT } }],
                 "origins": [format!("system-of-{who}")],
+                "episodes": [{ "_type": "DV_IDENTIFIER", "issuer": "urn:example:hospital",
+                    "id": format!("episode-of-{who}") }],
                 "recorded": { "_type": "DV_INTERVAL",
                     "lower": { "_type": "DV_DATE_TIME", "value": from },
                     "lower_unbounded": false, "upper_unbounded": true,
@@ -96,9 +100,47 @@ fn settings_of_one_shape_share_a_class() {
             json!(DOCTOR),
             json!([OBJECT]),
             json!([format!("system-of-{DOCTOR}")]),
+            json!([EpisodeKey::of("urn:example:hospital", &format!("episode-of-{DOCTOR}")).hex()]),
             json!("2026-11-01T00:00:00Z"),
             json!(DOCTOR),
         ]
+    );
+}
+
+/// Settings that differ only in the episode a restriction names share one
+/// class, and the episode keys are the one fact they differ in (#6416).
+#[test]
+fn settings_naming_different_episodes_share_a_class() {
+    let restricting = |episode: &str| -> AccessDirectiveSettings {
+        serde_json::from_value(json!({
+            "_type": "ACCESS_DIRECTIVE_SETTINGS",
+            "default_access": term("open"),
+            "directives": [{
+                "_type": "ACCESS_DIRECTIVE",
+                "name": { "_type": "DV_TEXT", "value": "the dermatology episode" },
+                "archetype_node_id": "at0001",
+                "kind": term("restriction"),
+                "effect": provision("deny"),
+                "emergency_override": false,
+                "data": [{ "_type": "ACCESS_DATA_SCOPE",
+                    "episodes": [{ "_type": "DV_IDENTIFIER",
+                        "issuer": "urn:example:hospital", "id": episode }] }]
+            }]
+        }))
+        .expect("the test settings decode")
+    };
+    let first = classify(&restricting("D-4")).expect("classifies");
+    let second = classify(&restricting("C-17")).expect("classifies");
+    assert_eq!(first.digest, second.digest);
+    assert_eq!(
+        first.facts,
+        vec![json!([EpisodeKey::of("urn:example:hospital", "D-4").hex()])]
+    );
+    assert_eq!(
+        second.facts,
+        vec![json!(
+            [EpisodeKey::of("urn:example:hospital", "C-17").hex()]
+        )]
     );
 }
 
@@ -116,7 +158,7 @@ fn a_class_classifies_as_itself() {
     assert_eq!(class.layout.facts, first.facts.len());
     assert_eq!(
         class.layout.keepers,
-        vec![KeeperLayout::Subject, KeeperLayout::Party(5)]
+        vec![KeeperLayout::Subject, KeeperLayout::Party(6)]
     );
     let directive = class.layout.directives.first().expect("one directive");
     assert_eq!((directive.from, directive.until), (Some(0), None));
@@ -126,7 +168,8 @@ fn a_class_classifies_as_itself() {
         vec![DataLayout {
             objects: Some(2),
             origins: Some(3),
-            from: Some(4),
+            episodes: Some(4),
+            from: Some(5),
             until: None
         }]
     );
