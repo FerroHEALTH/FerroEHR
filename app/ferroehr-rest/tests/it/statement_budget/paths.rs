@@ -2054,19 +2054,21 @@ fn judged(measured: u64, ceiling: u64) -> (bool, String) {
 }
 
 /// Whether the allocation and peak ceilings gate this build: they are the
-/// figures Linux CI measures, and another allocator counts and holds more.
-// NOTE: #6338 chose Linux-only allocation gates; other platforms print the figures.
-const ALLOCATIONS_GATED: bool = cfg!(target_os = "linux");
+/// figures an uninstrumented Linux build measures, and another allocator or
+/// the coverage instrumentation (`--cfg coverage`) counts and holds more.
+// NOTE: #6338 and #6387 gate allocations on uninstrumented Linux; other builds print them.
+const ALLOCATIONS_GATED: bool = cfg!(all(target_os = "linux", not(coverage)));
 
-/// [`judged`] for an allocation count or a peak, which passes off Linux and reports
-/// the measured figure beside its ceiling there.
+/// [`judged`] for an allocation count or a peak, which passes where
+/// [`ALLOCATIONS_GATED`] is false and reports the measured figure beside its
+/// ceiling there.
 fn judged_allocations(measured: u64, ceiling: u64) -> (bool, String) {
     if ALLOCATIONS_GATED {
         judged(measured, ceiling)
     } else {
         (
             true,
-            format!("{measured} (ceiling {ceiling}, gated on Linux)"),
+            format!("{measured} (ceiling {ceiling}, gated on uninstrumented Linux)"),
         )
     }
 }
