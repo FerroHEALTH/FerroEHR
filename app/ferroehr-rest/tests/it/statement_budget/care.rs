@@ -1,19 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The budgets of the requests a care relationship decides or writes, in the
-//! hospital scenario with the `LISTEN` sessions of a running server
-//! connected: Dr Jansen's composition read under the controller's policy
-//! that requires a care relationship (#6251), her query narrowed to her
-//! caseload, and the ADT system's commit of a care relationship, the write
-//! an ADT feed sends once per encounter (#6074), and that commit followed by
-//! her caseload query, which finds the team's caseload copy brought up to
-//! date by the commit's delta rather than dropped (#6074). The read paths of
-//! [`super::paths`] reach none of them: the care check confirms the party
-//! store's revisions in the request (#5806, #6048), the caseload bound sits
-//! in the query's one statement, and a relationship commit moves the facts
-//! revision and notifies every replica. No openEHR spec governs the
-//! statements of a request: our own design.
+//! The budgets of the requests a care relationship decides or writes, in
+//! the hospital scenario with a running server's `LISTEN` sessions connected
+//! (#6074). No openEHR spec governs the statements of a request: our own
+//! design.
 
 use std::fmt::Write as _;
 use std::sync::atomic::Ordering;
@@ -66,33 +57,17 @@ const CASELOAD: Ceiling = Ceiling {
     wal: 0,
 };
 
-/// A care relationship's commit, measured over three runs (#6074), with 2%
-/// on the WAL bytes (7,842 to 7,846) and none on the counts: three
-/// transactions and three `pg_notify` calls. Once the representation
-/// trigger moved and notified only for a statement that changed a row
-/// (#6284), it ran 2 nested statements, 1 `pg_notify` call and 79 bytes
-/// fewer (7,763 to 7,767), and each ceiling fell by its drop. Judged on one
-/// gate read and committed behind one guarded statement, its settle in two
-/// statements (#6257), it sent 27 round trips where it sent 41, the other
-/// counts and the WAL bytes unchanged.
+/// A care relationship's commit (#6074).
 const COMMIT: Ceiling = Ceiling {
-    round_trips: 27,
+    round_trips: 26,
     nested: 2,
-    notifies: 1,
-    wal: 7924,
+    notifies: 0,
+    wal: 7845,
 };
 
-/// A care relationship's commit to Dr Jansen's team followed by her
-/// caseload query, measured as one pair (#6074). While the commit dropped
-/// the team's caseload copy the pair took 52 round trips, the query reading
-/// the team's census and its patients' record subjects again; the commit
-/// now applies the stamped parties' facts it reads anyway to the copy, with
-/// the care relationships read in place of the stamped teams, so the pair
-/// takes 50. The other counts are the commit's. With the commit judged on
-/// one gate read and committed behind one guarded statement (#6257), the
-/// pair takes 35, measured twice.
+/// A care relationship's commit, then the caseload query that reads the copy it kept (#6074).
 const RECARE: Ceiling = Ceiling {
-    round_trips: 35,
+    round_trips: 34,
     nested: COMMIT.nested + CASELOAD.nested,
     notifies: COMMIT.notifies + CASELOAD.notifies,
     wal: COMMIT.wal + CASELOAD.wal,

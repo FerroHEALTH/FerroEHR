@@ -170,20 +170,21 @@ fn served(rows: Vec<PgRow>) -> Result<Vec<StoredVersion>, StorageError> {
 // drift away from it.
 
 /// Defines a point read's statement, its twin for a ride, which also
-/// selects the party store's revisions (`party_revisions!`, #6320), and the
-/// four forms a request chooses from ([`Statements`]).
+/// selects the party store's revisions (`party_revisions!`, #6320) with the
+/// facts copy's snapshot bound at the placeholder after the read's own, and
+/// the four forms a request chooses from ([`Statements`]).
 macro_rules! point_reads {
-    ($(#[$doc:meta])* $vis:vis $plain:ident, $ride:ident, $all:ident = $tail:literal) => {
+    ($(#[$doc:meta])* $vis:vis $plain:ident, $ride:ident, $all:ident ($held:literal) = $tail:literal) => {
         $(#[$doc])*
         $vis const $plain: &str = version_select!($tail);
         #[doc = concat!("[`", stringify!($plain), "`] with the party store's revisions.")]
-        $vis const $ride: &str = version_select!(party_revisions!(); $tail);
+        $vis const $ride: &str = version_select!(party_revisions!($held); $tail);
         #[doc = concat!("[`", stringify!($plain), "`] in each of its forms.")]
         $vis const $all: Statements = Statements {
             plain: $plain,
             ride: $ride,
             episodes: version_select!(head_episodes!(); $tail),
-            ride_episodes: version_select!(concat!(party_revisions!(), head_episodes!()); $tail),
+            ride_episodes: version_select!(concat!(party_revisions!($held), head_episodes!()); $tail),
         };
     };
 }
@@ -191,14 +192,14 @@ macro_rules! point_reads {
 point_reads! {
     /// The statement [`read_one`] runs for [`VersionAt::Current`]: the current trunk version of an object
     /// by id, resolved through the head row's `trunk_head_sys_version`.
-    pub READ_CURRENT_SQL, READ_CURRENT_RIDE_SQL, READ_CURRENT =
+    pub READ_CURRENT_SQL, READ_CURRENT_RIDE_SQL, READ_CURRENT ("$2") =
         "WHERE v.vo_id = $1 AND h.trunk_head_sys_version = v.sys_version"
 }
 
 point_reads! {
     /// The statement [`read_one`] runs for [`VersionAt::Instant`]: the trunk version of an object in force
     /// at an instant.
-    pub VERSION_AT_SQL, VERSION_AT_RIDE_SQL, VERSION_AT = "WHERE v.vo_id = $1 AND v.branch_number = 0 \
+    pub VERSION_AT_SQL, VERSION_AT_RIDE_SQL, VERSION_AT ("$3") = "WHERE v.vo_id = $1 AND v.branch_number = 0 \
      AND v.committed_at <= $2::timestamptz \
      AND NOT EXISTS (SELECT 1 FROM version s \
                      WHERE s.vo_id = v.vo_id AND s.branch_number = 0 \
@@ -209,14 +210,14 @@ point_reads! {
 point_reads! {
     /// The statement [`read_one`] runs for [`VersionAt::Ordinal`]: one version of an object by
     /// its storage ordinal, addressed on the partitioned parent.
-    pub READ_VERSION_BY_ORDINAL_SQL, READ_VERSION_BY_ORDINAL_RIDE_SQL, READ_VERSION_BY_ORDINAL =
+    pub READ_VERSION_BY_ORDINAL_SQL, READ_VERSION_BY_ORDINAL_RIDE_SQL, READ_VERSION_BY_ORDINAL ("$3") =
         "WHERE v.vo_id = $1 AND v.sys_version = $2"
 }
 
 point_reads! {
     /// The statement [`read_one`] runs for [`VersionAt::Tree`]: one version of an object by its
     /// `VERSION_TREE_ID` columns, addressed on the partitioned parent.
-    pub READ_VERSION_SQL, READ_VERSION_RIDE_SQL, READ_VERSION = "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
+    pub READ_VERSION_SQL, READ_VERSION_RIDE_SQL, READ_VERSION ("$5") = "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
      AND v.branch_number = $3 AND v.branch_version = $4"
 }
 
@@ -485,14 +486,14 @@ pub async fn read_versions_by_tree(
 point_reads! {
     /// The statement [`read_one`] runs for [`VersionAt::CurrentOfKind`]: the
     /// current trunk version of the EHR's one container of a kind.
-    READ_CURRENT_OF_KIND_SQL, READ_CURRENT_OF_KIND_RIDE_SQL, READ_CURRENT_OF_KIND =
+    READ_CURRENT_OF_KIND_SQL, READ_CURRENT_OF_KIND_RIDE_SQL, READ_CURRENT_OF_KIND ("$3") =
         "WHERE v.ehr_id = $1 AND v.kind = $2 AND h.trunk_head_sys_version = v.sys_version"
 }
 
 point_reads! {
     /// The statement [`read_one`] runs for [`VersionAt::InstantOfKind`]: the trunk
     /// version of the EHR's one container of a kind in force at an instant.
-    VERSION_AT_OF_KIND_SQL, VERSION_AT_OF_KIND_RIDE_SQL, VERSION_AT_OF_KIND =
+    VERSION_AT_OF_KIND_SQL, VERSION_AT_OF_KIND_RIDE_SQL, VERSION_AT_OF_KIND ("$4") =
         "WHERE v.ehr_id = $1 AND v.kind = $2 AND v.branch_number = 0 \
      AND v.committed_at <= $3::timestamptz \
      AND NOT EXISTS (SELECT 1 FROM version s \
@@ -507,7 +508,7 @@ point_reads! {
     /// `crate::storage::ehr_repo::directory_vo` makes (prefer a live slot over a
     /// logically deleted one, then the lowest `rank`, so a read after a logical
     /// delete resolves to the deleted version → 204, never 404).
-    READ_CURRENT_DIRECTORY_SQL, READ_CURRENT_DIRECTORY_RIDE_SQL, READ_CURRENT_DIRECTORY =
+    READ_CURRENT_DIRECTORY_SQL, READ_CURRENT_DIRECTORY_RIDE_SQL, READ_CURRENT_DIRECTORY ("$2") =
         "JOIN ehr_folder f ON f.vo_id = v.vo_id \
      WHERE f.ehr_id = $1 AND h.trunk_head_sys_version = v.sys_version \
      ORDER BY (v.lifecycle_state = '523'), f.rank LIMIT 1"
@@ -570,6 +571,8 @@ pub async fn read_one(
     at: VersionAt,
     body: Body,
 ) -> Result<Option<StoredVersion>, StorageError> {
+    let ride = crate::party_binding::request::reads_door();
+    let door = crate::party_binding::request::door();
     let query = match at {
         VersionAt::Current(vo_id) => sqlx::query(READ_CURRENT.chosen()).bind(vo_id),
         VersionAt::Tree(vo_id, tree) => {
@@ -594,6 +597,11 @@ pub async fn read_one(
             .bind(kind)
             .bind(at.to_string()),
         VersionAt::Directory(ehr_id) => sqlx::query(READ_CURRENT_DIRECTORY.chosen()).bind(ehr_id),
+    };
+    let query = if ride {
+        query.bind(door.as_deref().map(crate::db::snapshot::Snapshot::text))
+    } else {
+        query
     };
     let Some(row) = query.fetch_optional(&mut *acquire(pool).await?).await? else {
         return Ok(None);
