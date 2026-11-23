@@ -277,7 +277,7 @@ macro_rules! ehr_summary_select {
 const EHR_SUMMARY_SQL: &str = ehr_summary_select!("");
 
 /// [`EHR_SUMMARY_SQL`] with the party store's revisions, for a ride (#6320).
-const EHR_SUMMARY_RIDE_SQL: &str = ehr_summary_select!(party_revisions!());
+const EHR_SUMMARY_RIDE_SQL: &str = ehr_summary_select!(party_revisions!("$2"));
 
 /// Reads the whole `GET /ehr/{ehr_id}` representation in ONE statement.
 ///
@@ -292,16 +292,15 @@ pub async fn ehr_summary_read(
     pool: &PgPool,
     ehr_id: EhrId,
 ) -> Result<Option<EhrSummaryRead>, StorageError> {
-    let sql = if crate::party_binding::request::reads_door() {
-        EHR_SUMMARY_RIDE_SQL
+    let door = crate::party_binding::request::door();
+    let query = if crate::party_binding::request::reads_door() {
+        sqlx::query(EHR_SUMMARY_RIDE_SQL)
+            .bind(ehr_id)
+            .bind(door.as_deref().map(crate::db::snapshot::Snapshot::text))
     } else {
-        EHR_SUMMARY_SQL
+        sqlx::query(EHR_SUMMARY_SQL).bind(ehr_id)
     };
-    let Some(row) = sqlx::query(sql)
-        .bind(ehr_id)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-    else {
+    let Some(row) = query.fetch_optional(&mut *acquire(pool).await?).await? else {
         return Ok(None);
     };
     let status = match row.try_get::<Option<VoId>, _>("status_vo")? {

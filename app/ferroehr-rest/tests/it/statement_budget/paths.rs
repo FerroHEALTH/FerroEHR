@@ -483,7 +483,7 @@ struct Budget {
 /// A COMPOSITION read, by version id, at an instant or from the version
 /// copy, an EHR read and an `EHR_STATUS` read have since read the party
 /// store's revisions in their one clinical statement through
-/// `party_door.party_revisions()`,
+/// `party_door.party_revisions(held)`,
 /// where the two domains share a database, in place of a read of
 /// `binding_grant_revision` on the party pool (#6320): 1 round trip where
 /// they sent 2, measured beside the merge base, and each of those round-trip
@@ -507,7 +507,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
-        allocations: 17_012,
+        // NOTE: our own design (#6074), binding the held facts snapshot adds an allocation.
+        allocations: 17_013,
         peak_bytes: 1_530_778,
         round_trips: 4,
         nested: 0,
@@ -824,78 +825,42 @@ pub(super) fn order() -> impl Iterator<Item = Path> {
 
 /// The bytes each path may move over the database wire per request, both
 /// directions together, as [`every_hot_path_stays_within_its_wire_budget`]
-/// counts them (#6244): the largest median of three runs on main 4411906444
-/// plus 64 bytes, since a request's figure moves only by the width of the
-/// instants it sends, a few bytes between runs.
-/// The ITI-81 page has since carried each shared part on the first record
-/// naming it, where it carried it on every record (#6244): 29,476 bytes
-/// against 100,191, measured beside the merge base, and its ceiling fell by
-/// the 70,715 bytes it no longer moves.
-/// A held write's access-log entries have since gone in without the shared
-/// part the store holds and with their search tokens named by id (#6244):
-/// 5,974 to 6,157 bytes fewer on the three composition commits, the
-/// CONTRIBUTION commit, the `EHR_STATUS` commit, the update and the delete,
-/// measured beside the merge base, and each ceiling fell by its path's
-/// figure.
-/// The node columns most rows leave `NULL` have since travelled in groups,
-/// each sparse (the positions of the rows that set one of its columns) or
-/// dense, whichever is smaller (#6244): 13,525 bytes fewer on the three IPS
-/// composition commits, the CONTRIBUTION commit and the update, and 52 and
-/// 282 on the two party commits, measured beside the merge base, and each
-/// ceiling fell by its path's figure; the `EHR_STATUS` commit and the delete,
-/// whose few rows go dense with a `NULL` for each group's positions, moved
-/// 15 and 16 bytes up, under their ceilings.
-/// A party create, update and delete have since been judged on one gate read
-/// and committed behind one guarded version statement (#6257): 890 and 888
-/// bytes fewer on the two PERSON commits, measured in CI beside the merge
-/// base, and both ceilings fell by those figures. The PERSON update and
-/// delete and the ORGANISATION, GROUP, ROLE and AGENT creates move 10,400,
-/// 8,951, 7,866, 7,620, 11,576 and 7,522 bytes where they moved 12,615,
-/// 11,166, 8,597, 8,352, 12,202 and 8,149, and their ceilings are the merge
-/// base's figures plus 64 bytes, lowered by those drops.
-/// A party commit has since settled its access rows in two statements
-/// (#6257): 1,058 or 1,059 bytes fewer on the two PERSON creates, the update
-/// and the delete, and 152, 76 and 159 on the ORGANISATION, GROUP and ROLE
-/// creates, measured beside the merge base, and each of those ceilings fell
-/// by its path's figure.
-/// The access-log entry stored as its facts (#6322) moves fewer bytes on
-/// every path that writes or reads one: 2,102 on the ITI-81 page, 1,547 on the
-/// matches query and 587 on a read, measured beside the merge base, and each
-/// of those ceilings fell by its path's figure.
+/// counts them (#6244).
+// NOTE: our own design (#6074), each path binds the held facts snapshot, 13 bytes.
 const WIRE_BUDGETS: [(Path, u64); 31] = [
-    (Path::CommitJson, 201_273),
-    (Path::CommitXml, 201_273),
-    (Path::CommitFlat, 201_269),
-    (Path::ReadJson, 130_833),
-    (Path::ReadXml, 130_833),
-    (Path::ReadFlat, 130_833),
-    (Path::EhrRead, 1554),
-    (Path::AqlSingle, 4525),
-    (Path::AqlPopulation, 6137),
-    (Path::Iti81, 26_758),
-    (Path::PartyRead, 5290),
-    (Path::CommitContribution, 201_499),
-    (Path::ReadAtTime, 130_864),
-    (Path::CommitStatus, 4170),
-    (Path::ReadStatus, 2759),
-    (Path::CommitParty, 7926),
-    (Path::AqlMatches, 15_636),
-    (Path::AqlParty, 11_338),
-    (Path::CommitPartyScored, 10_278),
-    (Path::ReadVersion, 1683),
-    (Path::CommitUpdate, 201_556),
-    (Path::CommitDelete, 3747),
-    (Path::DirectoryCreate, 4454),
-    (Path::DirectoryUpdate, 4267),
-    (Path::DirectoryDelete, 3624),
+    (Path::CommitJson, 201_286),
+    (Path::CommitXml, 201_286),
+    (Path::CommitFlat, 201_282),
+    (Path::ReadJson, 130_846),
+    (Path::ReadXml, 130_846),
+    (Path::ReadFlat, 130_846),
+    (Path::EhrRead, 1567),
+    (Path::AqlSingle, 4538),
+    (Path::AqlPopulation, 6150),
+    (Path::Iti81, 26_771),
+    (Path::PartyRead, 5303),
+    (Path::CommitContribution, 201_512),
+    (Path::ReadAtTime, 130_877),
+    (Path::CommitStatus, 4183),
+    (Path::ReadStatus, 2772),
+    (Path::CommitParty, 7939),
+    (Path::AqlMatches, 15_649),
+    (Path::AqlParty, 11_351),
+    (Path::CommitPartyScored, 10_291),
+    (Path::ReadVersion, 1696),
+    (Path::CommitUpdate, 201_569),
+    (Path::CommitDelete, 3760),
+    (Path::DirectoryCreate, 4467),
+    (Path::DirectoryUpdate, 4280),
+    (Path::DirectoryDelete, 3637),
     // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
-    (Path::PartyUpdate, 8861),
+    (Path::PartyUpdate, 8874),
     // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
-    (Path::PartyDelete, 7412),
-    (Path::CommitOrganisation, 7244),
-    (Path::CommitGroup, 7073),
-    (Path::CommitRole, 10_868),
-    (Path::CommitAgent, 7053),
+    (Path::PartyDelete, 7425),
+    (Path::CommitOrganisation, 7257),
+    (Path::CommitGroup, 7086),
+    (Path::CommitRole, 10_881),
+    (Path::CommitAgent, 7066),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round

@@ -26,10 +26,12 @@ COMMENT ON VIEW request_revisions IS 'No rows: the party schema holds no policy 
 
 -- The one door from the clinical domain into this one (#6320). Where the two
 -- domains share a database, a clinical read confirms the party copies its
--- decision rests on in its own statement, by reading the grant, facts and
--- binding revisions here. The schema holds this one function and nothing
--- else; it runs as its owner, the owner of this schema, with a fixed
--- search_path, and returns three counters that carry no personal data. The
+-- decision rests on in its own statement, by reading the grant and binding
+-- revisions here and whether a caller facts stamp exists that the snapshot
+-- its facts copy holds did not see (party.facts_behind, #6074). The schema
+-- holds this one function and nothing else; it runs as its owner, the owner
+-- of this schema, with a fixed search_path, and returns two counters and a
+-- flag that carry no personal data. The
 -- clinical roles may run it and read no table of this schema
 -- (db::verify_domain_isolation holds both).
 --
@@ -38,12 +40,13 @@ CREATE SCHEMA party_door;
 COMMENT ON SCHEMA party_door IS 'The one function of the party domain the clinical roles may run: the party store''s revisions. Our own design (#6320).';
 REVOKE ALL ON SCHEMA party_door FROM PUBLIC;
 
-CREATE FUNCTION party_door.party_revisions()
-RETURNS TABLE (grants bigint, facts bigint, bindings bigint)
+CREATE FUNCTION party_door.party_revisions(held pg_snapshot)
+RETURNS TABLE (grants bigint, facts_behind boolean, bindings bigint)
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = party, pg_catalog
 AS $$
-    SELECT r.revision, r.facts_revision, r.binding_revision FROM party.binding_grant_revision r
+    SELECT r.revision, party.facts_behind(held), r.binding_revision
+    FROM party.binding_grant_revision r
 $$;
-COMMENT ON FUNCTION party_door.party_revisions() IS 'The party store''s grant, facts and binding revisions, the only party facts a clinical statement reads. Our own design (#6320).';
-REVOKE ALL ON FUNCTION party_door.party_revisions() FROM PUBLIC;
+COMMENT ON FUNCTION party_door.party_revisions(pg_snapshot) IS 'The party store''s grant and binding revisions and whether a caller facts stamp exists that the snapshot held did not see, the only party facts a clinical statement reads. Our own design (#6320, #6074).';
+REVOKE ALL ON FUNCTION party_door.party_revisions(pg_snapshot) FROM PUBLIC;

@@ -204,7 +204,7 @@ impl FerroEhrService {
         &self,
         vo_id: VoId,
         read: VersionRead,
-        raw_json: Option<std::sync::Arc<str>>,
+        raw_json: Option<crate::storage::stored_text::StoredText>,
     ) -> Result<ReadBody, ServiceError> {
         // NOTE: draft access control decision procedure, Reading and Writing the Settings, only
         // the controller reads the exclusions of an EHR_ACCESS (#6077).
@@ -221,14 +221,19 @@ impl FerroEhrService {
                 read.tree,
             )?));
         };
-        if withhold && let Some(withheld) = super::access_exclusions::withheld(&text)? {
-            text = std::sync::Arc::from(withheld);
+        if withhold {
+            let body = text
+                .text()
+                .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
+            if let Some(withheld) = super::access_exclusions::withheld(body)? {
+                text = withheld.into();
+            }
         }
         let uid = object_version_id(vo_id, &read.creating_system_id, read.tree);
-        if carries_version_uid(&text, &uid) {
+        if carries_version_uid(text.bytes(), &uid) {
             return Ok(ReadBody::RawJson(text));
         }
-        let value: Value = serde_json::from_str(&text).map_err(|e| {
+        let value: Value = serde_json::from_slice(text.bytes()).map_err(|e| {
             ServiceError::exception(format!(
                 "the stored body of {} {vo_id} is not decodable JSON: {e}",
                 read.kind.as_str()
@@ -394,9 +399,8 @@ pub(in crate::service) fn container_meta(
 /// It reads only the root members the codec writes before the uid (`_type`,
 /// `name`, `archetype_node_id`; #6198). A root uid elsewhere answers `false`
 /// and takes the parse path, which serves the same document.
-fn carries_version_uid(text: &str, uid: &str) -> bool {
+fn carries_version_uid(bytes: &[u8], uid: &str) -> bool {
     const LEADING: [&[u8]; 3] = [b"_type", b"name", b"archetype_node_id"];
-    let bytes = text.as_bytes();
     let Some(mut at) = expect(bytes, 0, b'{') else {
         return false;
     };

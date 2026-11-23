@@ -885,7 +885,9 @@ async fn a_body_stored_in_an_older_member_order_keeps_its_bytes_and_verifies() {
         .await
         .expect("the composition reads");
     match read.body {
-        ReadBody::RawJson(served) => assert_eq!(&*served, older, "the stored bytes are served"),
+        ReadBody::RawJson(served) => {
+            assert_eq!(served.text().unwrap(), older, "the stored bytes are served");
+        }
         ReadBody::Value(_) => panic!("a JSON read serves the stored text"),
     }
     let (after_body, after_digest): (String, Vec<u8>) =

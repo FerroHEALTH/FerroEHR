@@ -653,7 +653,7 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
 }
 
 /// The one door the clinical roles may pass into the party domain (#6320):
-/// the clinical role may run `party_door.party_revisions()` and reads no
+/// the clinical role may run `party_door.party_revisions(held)` and reads no
 /// party table, and the boot gate refuses anything else in the door's schema,
 /// and the function itself once it stops running as its owner with a fixed
 /// `search_path`.
@@ -673,7 +673,7 @@ async fn the_party_door_holds_its_one_function_and_nothing_else() {
         .await
         .expect("a correctly migrated database passes the boot gate");
     let (door, tables): (bool, bool) = sqlx::query_as(
-        "SELECT has_function_privilege('ferroehr_clinical', 'party_door.party_revisions()', \
+        "SELECT has_function_privilege('ferroehr_clinical', 'party_door.party_revisions(pg_snapshot)', \
          'EXECUTE'), has_table_privilege('ferroehr_clinical', 'party.binding_grant_revision', \
          'SELECT')",
     )
@@ -700,13 +700,19 @@ async fn the_party_door_holds_its_one_function_and_nothing_else() {
             "is not the door's function",
         ),
         (
-            "ALTER FUNCTION party_door.party_revisions() SECURITY INVOKER",
-            "ALTER FUNCTION party_door.party_revisions() SECURITY DEFINER",
+            "CREATE FUNCTION party_door.party_revisions() RETURNS int LANGUAGE sql \
+             SECURITY DEFINER SET search_path = party, pg_catalog AS 'SELECT 1'",
+            "DROP FUNCTION party_door.party_revisions()",
+            "is not the door's function",
+        ),
+        (
+            "ALTER FUNCTION party_door.party_revisions(pg_snapshot) SECURITY INVOKER",
+            "ALTER FUNCTION party_door.party_revisions(pg_snapshot) SECURITY DEFINER",
             "does not run as its owner",
         ),
         (
-            "ALTER FUNCTION party_door.party_revisions() RESET search_path",
-            "ALTER FUNCTION party_door.party_revisions() SET search_path = party, pg_catalog",
+            "ALTER FUNCTION party_door.party_revisions(pg_snapshot) RESET search_path",
+            "ALTER FUNCTION party_door.party_revisions(pg_snapshot) SET search_path = party, pg_catalog",
             "runs on the caller's search_path",
         ),
     ] {

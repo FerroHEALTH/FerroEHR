@@ -142,7 +142,7 @@ impl FerroEhrService {
         let Some(message) = self.claim(replica).await? else {
             return Ok(None);
         };
-        if let Err(error) = self.grants.refresh_if_stale().await {
+        if let Err(error) = self.grants.confirm().await {
             self.release(&message.message_id).await?;
             return Err(ServiceError::exception(format!(
                 "the policy grants could not be read: {error}"
