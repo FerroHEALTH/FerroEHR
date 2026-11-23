@@ -45,44 +45,47 @@ use super::drained;
 use super::paths::{Path, REQUESTS, World, exchange, order};
 
 /// The most CPU each path's lower-quartile request may take, in thousandths
-/// of the [`reference`] round trip timed on the same thread.
+/// of the [`reference`] round trip timed on the same thread: the highest
+/// share of three CI runs on main 7db1355587 plus the 50% they spread by at
+/// most (the `EHR_STATUS` commit, the delete and the directory writes; every
+/// other path within 30%).
 const CPU_BUDGETS: [(Path, u64); 31] = [
-    (Path::CommitJson, u64::MAX),
-    (Path::CommitXml, u64::MAX),
-    (Path::CommitFlat, u64::MAX),
-    (Path::ReadJson, u64::MAX),
-    (Path::ReadXml, u64::MAX),
-    (Path::ReadFlat, u64::MAX),
-    (Path::EhrRead, u64::MAX),
-    (Path::AqlSingle, u64::MAX),
-    (Path::AqlPopulation, u64::MAX),
-    (Path::Iti81, u64::MAX),
-    (Path::PartyRead, u64::MAX),
-    (Path::CommitContribution, u64::MAX),
-    (Path::ReadAtTime, u64::MAX),
-    (Path::CommitStatus, u64::MAX),
-    (Path::ReadStatus, u64::MAX),
-    (Path::CommitParty, u64::MAX),
-    (Path::AqlMatches, u64::MAX),
-    (Path::AqlParty, u64::MAX),
-    (Path::CommitPartyScored, u64::MAX),
-    (Path::ReadVersion, u64::MAX),
-    (Path::CommitUpdate, u64::MAX),
-    (Path::CommitDelete, u64::MAX),
-    (Path::DirectoryCreate, u64::MAX),
-    (Path::DirectoryUpdate, u64::MAX),
-    (Path::DirectoryDelete, u64::MAX),
-    (Path::PartyUpdate, u64::MAX),
-    (Path::PartyDelete, u64::MAX),
-    (Path::CommitOrganisation, u64::MAX),
-    (Path::CommitGroup, u64::MAX),
-    (Path::CommitRole, u64::MAX),
-    (Path::CommitAgent, u64::MAX),
+    (Path::CommitJson, 8070),
+    (Path::CommitXml, 9850),
+    (Path::CommitFlat, 11_930),
+    (Path::ReadJson, 990),
+    (Path::ReadXml, 2140),
+    (Path::ReadFlat, 2880),
+    (Path::EhrRead, 760),
+    (Path::AqlSingle, 1080),
+    (Path::AqlPopulation, 1100),
+    (Path::Iti81, 2400),
+    (Path::PartyRead, 920),
+    (Path::CommitContribution, 9090),
+    (Path::ReadAtTime, 850),
+    (Path::CommitStatus, 2220),
+    (Path::ReadStatus, 690),
+    (Path::CommitParty, 2640),
+    (Path::AqlMatches, 1930),
+    (Path::AqlParty, 1180),
+    (Path::CommitPartyScored, 2880),
+    (Path::ReadVersion, 840),
+    (Path::CommitUpdate, 8170),
+    (Path::CommitDelete, 2130),
+    (Path::DirectoryCreate, 2250),
+    (Path::DirectoryUpdate, 2270),
+    (Path::DirectoryDelete, 2010),
+    (Path::PartyUpdate, 2740),
+    (Path::PartyDelete, 2380),
+    (Path::CommitOrganisation, 2410),
+    (Path::CommitGroup, 2430),
+    (Path::CommitRole, 2950),
+    (Path::CommitAgent, 2360),
 ];
 
 /// How far apart, in thousandths, the [`reference`] may read at the start and
 /// at the end of the run before the runner counts as too noisy to judge.
-const REFERENCE_BAND: u64 = 1250;
+const REFERENCE_BAND: u64 = 1100;
 
 /// Whether the ceilings are judged: in an optimised build only.
 const JUDGED: bool = !cfg!(debug_assertions);
