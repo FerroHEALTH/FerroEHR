@@ -124,3 +124,5 @@
 - [Memory lives in the repo](memory-lives-in-repo.md): every learning is a tracked file here, never a per-user note; owner 2026-09-04
 - [Signed commits and the merge queue](merge-queue-signed.md): main takes only signed commits through the merge queue; no commit-message line starts with "-" or a git header word; 2026-11-09
 - [PR auto-merge](pr-auto-merge.md): arm gh pr merge <n> --auto as its own command the moment a PR opens; no --squash, --delete-branch or --admin; owner 2026-09-04
+- [Lean comments, no history](lean-comments-no-history.md): comments rare and short, describing only the current code; a changed comment is rewritten whole, never extended with the old way; owner hard rule 2026-11-23
+- [Family memories in every repo](family-memories-every-repo.md): a family-wide owner rule goes into every FerroHEALTH repo's `.claude/memory` through a merged PR; owner 2026-11-23
