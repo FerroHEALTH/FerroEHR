@@ -146,8 +146,10 @@ non_ascii_idents = "forbid"         # ASCII-only identifiers — no homoglyphs i
 # free guards — zero findings expected; defence in depth
 non_local_definitions = "deny"      # RFC 3373: an `impl` inside a fn body is visible OUTSIDE it,
                                     # so it reads as scoped and is not (warn-by-default since 1.83)
-unexpected_cfgs = "deny"            # RFC 3013: a typo'd `cfg(feature = "…")` compiles the block
-                                    # out silently — the ferroehr-ext feature gates live on this
+# RFC 3013: a typo'd `cfg(feature = "…")` compiles the block out silently,
+# and the ferroehr-ext feature gates live on this. `coverage` is the cfg
+# cargo-llvm-cov sets on the coverage lane's build.
+unexpected_cfgs = { level = "deny", check-cfg = ["cfg(coverage)"] }
 unsafe_op_in_unsafe_fn = "deny"     # moot under forbid(unsafe_code); costs nothing
 ffi_unwind_calls = "deny"           # no FFI in the workspace; keeps it that way
 deprecated_safe_2024 = "deny"
