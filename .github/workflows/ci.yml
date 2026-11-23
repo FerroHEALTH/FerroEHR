@@ -110,8 +110,9 @@ env:
   # such a push every lane is skipped except these, each kept for a cache
   # pull requests read and only a main push can write:
   #   * the rust-cache lanes (deny, clippy, feature-combos, its-wasm,
-  #     its-rest-features, doc, msrv, codegen-drift, test on one shard, build,
-  #     instructions, test-viewer), each only when `cache_refresh` names it: the key's
+  #     its-rest-features, doc, msrv, codegen-drift, nesting-release,
+  #     cpu-budget, test on one shard, build, instructions, test-viewer),
+  #     each only when `cache_refresh` names it: the key's
   #     inputs moved, or main holds no entry for it;
   #   * ui-e2e-binary and ui-e2e-viewer, on their own triggers: they write
   #     the exact-key binary caches and main's sccache entries.
@@ -329,7 +330,7 @@ jobs:
           # The jobs that save a rust-cache entry on main. rust-cache names it
           # `v0-rust-<job id>-<os>-<arch>-…`, or after its `shared-key` when a
           # job sets one, as each msrv shard does (github.com/Swatinem/rust-cache).
-          CACHE_JOBS: deny clippy feature-combos its-wasm its-rest-features doc msrv-core msrv-server msrv-others codegen-drift test build instructions test-viewer
+          CACHE_JOBS: deny clippy feature-combos its-wasm its-rest-features doc msrv-core msrv-server msrv-others codegen-drift nesting-release cpu-budget test build instructions test-viewer
         run: |
           set -euo pipefail
           verified=false
@@ -1721,7 +1722,7 @@ jobs:
   nesting-release:
     name: nesting limit (release)
     needs: changes
-    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'nesting-release'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1745,7 +1746,7 @@ jobs:
   cpu-budget:
     name: hot-path CPU budget (optimised)
     needs: changes
-    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'cpu-budget'))
     runs-on: ubuntu-latest
     # The optimised test binary took 23 minutes on a cold cache and passed 45
     # on a busy runner (#6321).
