@@ -118,8 +118,9 @@ impl Builder<'_> {
     /// that confirms its policy copies after it ran checks them against the
     /// revisions in force beside the rows it was served (#6320). Each is an
     /// uncorrelated scalar subquery, the same on every row, so it changes
-    /// neither a `DISTINCT` nor a grouping.
-    pub(super) fn build_revision_columns(&mut self) {
+    /// neither a `DISTINCT` nor a grouping. In a ride (`ride`), the party
+    /// store's revisions beside them, through `party_door.party_revisions()`.
+    pub(super) fn build_revision_columns(&mut self, ride: bool) {
         self.q.expr_as(
             Expr::cust("(SELECT rr.policy FROM request_revisions rr)"),
             Alias::new(super::POLICY_REVISION_COL),
@@ -128,6 +129,15 @@ impl Builder<'_> {
             Expr::cust("(SELECT rr.definitions FROM request_revisions rr)"),
             Alias::new(super::DEFINITION_REVISION_COL),
         );
+        if ride {
+            self.q.expr_as(
+                Expr::cust(
+                    "(SELECT ROW(pr.grants, pr.facts, pr.bindings) \
+                     FROM party_door.party_revisions() pr)",
+                ),
+                Alias::new(super::PARTY_REVISIONS_COL),
+            );
+        }
     }
 
     fn emit_select_column(&mut self, i: usize, col: &SelectColumn) -> Result<ColumnSpec, AqlError> {

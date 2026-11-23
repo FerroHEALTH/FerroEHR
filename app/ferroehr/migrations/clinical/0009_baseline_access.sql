@@ -405,3 +405,27 @@ SELECT p.revision AS policy, d.revision AS definitions
   CROSS JOIN clinical.definition_revision d
  WHERE p.singleton AND d.singleton;
 COMMENT ON VIEW request_revisions IS 'The policy_revision and the definition_revision, one row; read in scalar subqueries beside access_revision_of by the statement that selects it. Our own design.';
+
+-- The one door from the party domain into this one (#6320). Where the two
+-- domains share a database, a party read confirms the policy copies its
+-- decision rests on in its own statement, by reading the policy and
+-- definition revisions here. The schema holds this one function and nothing
+-- else; it runs as its owner, the owner of this schema, with a fixed
+-- search_path, and returns two counters that carry no personal data. The
+-- party roles may run it and read no table of this schema
+-- (db::verify_domain_isolation holds both).
+--
+-- No openEHR spec governs the confirmation: our own design.
+CREATE SCHEMA clinical_door;
+COMMENT ON SCHEMA clinical_door IS 'The one function of the clinical domain the party roles may run: the policy and definition revisions. Our own design (#6320).';
+REVOKE ALL ON SCHEMA clinical_door FROM PUBLIC;
+
+CREATE FUNCTION clinical_door.policy_revisions()
+RETURNS TABLE (policy bigint, definitions bigint)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = clinical, pg_catalog
+AS $$
+    SELECT r.policy, r.definitions FROM clinical.request_revisions r
+$$;
+COMMENT ON FUNCTION clinical_door.policy_revisions() IS 'The policy and definition revisions, the only clinical facts a party statement reads. Our own design (#6320).';
+REVOKE ALL ON FUNCTION clinical_door.policy_revisions() FROM PUBLIC;

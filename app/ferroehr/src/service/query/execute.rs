@@ -182,6 +182,15 @@ impl FerroEhrService {
         let (own_records, caseload) = Box::pin(self.own_and_caseload(ir.domain, request))
             .await
             .map_err(Failure::analysis)?;
+        // NOTE: our own design (#6320), a demographic query's served-versions read confirms the
+        // policy copies through the clinical door where the two domains share a database.
+        let door = match ir.domain {
+            QueryDomain::Clinical => false,
+            QueryDomain::Demographic => self
+                .clinical_door_open()
+                .await
+                .map_err(|error| Failure::analysis(error.into()))?,
+        };
         let exec_start = Instant::now();
         let mut stale_since = None;
         let result = loop {
@@ -209,13 +218,16 @@ impl FerroEhrService {
                 QueryDomain::Clinical => &self.pool,
                 QueryDomain::Demographic => &self.demographic_pool,
             };
-            let run = aql::exec::execute(
-                pool,
-                ir,
-                plan.shapes.as_ref(),
-                params,
-                &ctx,
-                self.spec_profile,
+            let run = crate::policy_register::observed::through_clinical_door(
+                door,
+                aql::exec::execute(
+                    pool,
+                    ir,
+                    plan.shapes.as_ref(),
+                    params,
+                    &ctx,
+                    self.spec_profile,
+                ),
             );
             match self.within_budget(run).await? {
                 Ok(result) => break result,

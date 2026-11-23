@@ -43,7 +43,7 @@ use super::{Layout, PreparedQuery, SqlCtx};
 use crate::aql::error::AqlError;
 use crate::aql::ir::{Params, QueryIr};
 
-use key::Key;
+use key::{Ambient, Key};
 use live::Live;
 use sentinel::Sentinels;
 
@@ -155,8 +155,8 @@ impl Shapes {
         params: &Params,
         ctx: &SqlCtx,
     ) -> Result<PreparedQuery, AqlError> {
-        let person_withheld = crate::system_log::access_context::access_delay_enforced();
-        let found = self.find(ir, params, ctx, person_withheld);
+        let ambient = Ambient::now();
+        let found = self.find(ir, params, ctx, ambient);
         if let Some(Entry {
             state: State::Shaped(shape),
             ..
@@ -177,7 +177,7 @@ impl Shapes {
                 self.settle(&entry, state);
             }
             Some(_) => {}
-            None => self.remember(Key::of(ir, &self.live_params, params, ctx, person_withheld)),
+            None => self.remember(Key::of(ir, &self.live_params, params, ctx, ambient)),
         }
         Ok(prepared)
     }
@@ -188,7 +188,7 @@ impl Shapes {
         ir: &QueryIr,
         params: &Params,
         ctx: &SqlCtx,
-        person_withheld: bool,
+        ambient: Ambient,
     ) -> Option<Arc<Entry>> {
         let ring = self.entries.read().unwrap_or_else(PoisonError::into_inner);
         ring.entries
@@ -196,7 +196,7 @@ impl Shapes {
             .find(|entry| {
                 entry
                     .key
-                    .admits(ir, &self.live_params, params, ctx, person_withheld)
+                    .admits(ir, &self.live_params, params, ctx, ambient)
             })
             .map(Arc::clone)
     }

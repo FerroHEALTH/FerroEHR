@@ -12,13 +12,13 @@
 //! they judge, at one snapshot, and its answer leaves only once the copies it
 //! was decided and rendered on held them; otherwise that run is dropped
 //! whole, with nothing recorded or counted, and the request runs once more
-//! behind the up-front confirm (#6251). An `EHR_STATUS` or directory read and
-//! an AQL query confirm after they ran the same way (#6320). A COMPOSITION or
-//! CONTRIBUTION commit confirms after it was decided the same way: its gate
-//! read returns the revisions, and a copy found behind them refuses the write
-//! before anything is written, so the dropped run leaves nothing; a run that
-//! reached its write is never run again (#6256). No openEHR spec governs
-//! this: our own design.
+//! behind the up-front confirm (#6251). An `EHR_STATUS` or directory read, a
+//! party read and an AQL query confirm after they ran the same way (#6320). A
+//! COMPOSITION or CONTRIBUTION commit confirms after it was decided the same
+//! way: its gate read returns the revisions, and a copy found behind them
+//! refuses the write before anything is written, so the dropped run leaves
+//! nothing; a run that reached its write is never run again (#6256). No
+//! openEHR spec governs this: our own design.
 
 use std::future::Future;
 use std::sync::Arc;
@@ -74,8 +74,14 @@ const COMMITS_AFTER: [&str; 8] = [
 /// The reads that confirm their policy copies after they ran: each one's
 /// clinical statement selects the policy and definition revisions beside its
 /// rows, the version read of an EHR object and the AQL statement of a query
-/// a request judges (#6320).
-const READS_AFTER: [&str; 10] = [
+/// a request judges, and a party read's party statement selects them through
+/// the clinical door where the two domains share a database (#6320).
+const READS_AFTER: [&str; 15] = [
+    "person_get",
+    "agent_get",
+    "group_get",
+    "organisation_get",
+    "role_get",
     "ehr_status_get_at_time",
     "ehr_status_get_by_version_id",
     "directory_get_at_time",

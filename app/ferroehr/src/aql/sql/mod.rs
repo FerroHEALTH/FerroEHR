@@ -331,6 +331,10 @@ pub const POLICY_REVISION_COL: &str = "policy_revision";
 /// [`POLICY_REVISION_COL`].
 pub const DEFINITION_REVISION_COL: &str = "definition_revision";
 
+/// The alias of the hidden column holding, in a ride, the party store's
+/// grant, facts and binding revisions beside [`POLICY_REVISION_COL`] (#6320).
+pub const PARTY_REVISIONS_COL: &str = "party_revisions";
+
 /// The alias prefix of the hidden column of whether an EHR carries settings.
 ///
 /// It sits beside each access-EHR column and says whether that EHR carries
@@ -714,7 +718,7 @@ impl Builder<'_> {
         let revisions =
             clinical && ctx.ehr_access.groups().is_some() && access_version_cols.is_empty();
         if revisions {
-            b.build_revision_columns();
+            b.build_revision_columns(crate::party_binding::request::reads_door());
         }
         b.build_where()?;
         b.build_order_by()?;

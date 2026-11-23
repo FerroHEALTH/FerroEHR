@@ -132,6 +132,7 @@ macro_rules! version_select {
 
 pub mod attestation;
 pub mod commit;
+pub mod content;
 pub mod contribution;
 pub mod ehr_access;
 pub mod gate;

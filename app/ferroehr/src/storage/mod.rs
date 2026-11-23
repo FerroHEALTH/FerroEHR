@@ -106,6 +106,20 @@ macro_rules! party_revisions {
     };
 }
 
+/// The select-list item that reads, as `policy_revisions`, the policy and
+/// definition revisions through `clinical_door.policy_revisions()`, the one
+/// function of the clinical domain the party roles may run, where the two
+/// domains share a database (`clinical/0009`). One record, so a column of
+/// another type joins it as one more field. Only a party statement of a
+/// request that confirms its policy copies after it ran selects it
+/// (`policy_register::observed::reads_clinical_door`, #6320).
+macro_rules! policy_revisions {
+    () => {
+        "(SELECT ROW(cr.policy, cr.definitions) FROM clinical_door.policy_revisions() cr) \
+         AS policy_revisions, "
+    };
+}
+
 /// The columns of [`access_facts::HeadFacts`], read off the `vo_head` row
 /// aliased `h`: what the access evaluator judges an object by.
 macro_rules! head_facts {
