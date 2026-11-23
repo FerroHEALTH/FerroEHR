@@ -5,10 +5,6 @@
 //! party domain prepared and verified in a second database, on that
 //! database's `[database.party] migrate_url` credential.
 //!
-//! The second database comes from `testkit::empty_db()`, because preparing an
-//! empty database IS the behaviour under test; the first is an ordinary
-//! migrated clone.
-//!
 //! NOTE: no openEHR spec governs migration mechanics or database roles — our
 //! own design/extension.
 
@@ -20,10 +16,6 @@ use ferrohealth_secret::secret_url::SecretUrl;
 
 /// A fresh login role that is a member of `domain_role` and nothing else,
 /// returned as `(login, password)`.
-///
-/// Roles are cluster-global on the shared testkit server, so one login reaches
-/// both databases; it is named off the first clone's database name so the
-/// testkit sweep reaps it.
 async fn login(db: &testkit::TestDb, suffix: &str, domain_role: &str) -> (String, String) {
     let login = format!("{}_{suffix}", db.name());
     let password = throwaway_password();
@@ -77,10 +69,6 @@ async fn schemas_of_this_build(pool: &sqlx::PgPool) -> Vec<String> {
 
 /// The party domain alone in a second database is prepared under `apply`,
 /// verified under `verify`, and boots under both.
-///
-/// The party grant file revokes its roles from the clinical schema by name, so
-/// the second database holds an empty clinical schema while the set applies,
-/// and loses it again afterwards.
 #[tokio::test]
 async fn a_party_domain_in_its_own_database_is_prepared_and_verified() {
     let db = testkit::db().await.expect("testkit database");
@@ -296,10 +284,6 @@ async fn the_grant_sweep_reaches_a_relocated_database() {
 
 /// An erasure of the relocated layout leaves no schema of this build in the
 /// party database, and drops every set the first database is prepared with.
-///
-/// The first database is a migrated clone, so it also carries a populated
-/// `party` schema this layout places elsewhere; an erasure never drops a
-/// schema that holds objects outside its plan, so that one stays.
 #[tokio::test]
 async fn an_erasure_empties_the_relocated_database() {
     let db = testkit::db().await.expect("testkit database");

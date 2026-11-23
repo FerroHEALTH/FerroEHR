@@ -5,12 +5,6 @@
 //! `PostgreSQL` 18 database, with per-bench CPU flamegraphs and a JSON record
 //! carrying the database-side facts beside the wall-clock.
 //!
-//! The operations are driven through [`FerroEhrService`] and the
-//! `ferroehr::extensions` public surface only, and the database-side facts are
-//! read for whatever relations the catalogue reports in the pool's
-//! `search_path`. Nothing here names a table, a column or an index, so the same
-//! harness measures a rewritten schema unchanged.
-//!
 //! **A benchmark, never a conformance record** — conformance is the CNF suite
 //! Veredictum runs — and no openEHR spec governs storage mechanics or
 //! benchmarking: our own design/extension.
@@ -19,17 +13,6 @@
 //! STORAGE_BENCH_CLASS=poc cargo bench -p ferroehr --bench storage
 //! cargo bench -p ferroehr --bench storage -- --profile-time 10
 //! ```
-//!
-//! The record lands in `docs/benchmarks/storage/<generation>/<class>/record.json`; its
-//! shape is documented in that directory's README. Under `--profile-time`
-//! criterion measures nothing, so no record is written and an existing one is
-//! left intact; a run that measured only some of its operations says so in the
-//! record's `timings_measured` flag.
-//!
-//! NOTE: the profiler glue below implements criterion's `Profiler` trait over
-//! the `pprof` sampler directly, because pprof's own `criterion` feature is
-//! pinned to criterion ^0.5 (verified on crates.io 2026-08-04) and this
-//! workspace is on criterion 0.8.
 
 #![expect(
     clippy::expect_used,
@@ -281,9 +264,6 @@ fn entry_rm_type(payload: &Value) -> String {
 /// Seed one corpus: the vendored template, `class.ehrs` EHRs, and
 /// `class.compositions` commits of the template's own example composition
 /// spread over them, one per EHR kept and superseded for the read benches.
-///
-/// The single seam the synthgen corpus replaces — everything below reads only
-/// the [`Corpus`] this returns.
 async fn seed(svc: &Arc<FerroEhrService>, pool: &PgPool, class: BenchClass) -> Corpus {
     let start = Instant::now();
     let (template_id, payload) = seed_template(svc, SEED_TEMPLATE).await;
@@ -533,10 +513,6 @@ struct StorageSizes {
 }
 
 /// Read [`StorageSizes`] now.
-///
-/// The relations are found through the catalogue from the schema `version`
-/// resolves to on the pool's `search_path`, so a schema generation that adds,
-/// drops or renames a relation is measured unchanged.
 async fn storage_sizes(pool: &PgPool) -> StorageSizes {
     let rows = sqlx::query(
         "SELECT n.nspname || '.' || c.relname AS relation, pg_total_relation_size(c.oid) AS bytes \
@@ -690,9 +666,6 @@ struct Snapshot {
 
 /// Read `pg_stat_user_tables`, `pg_stat_database` and the WAL position for
 /// every relation in the pool's own `search_path`.
-///
-/// The relations are discovered through the catalogue rather than named, which
-/// is what lets one harness measure two schema generations.
 async fn snapshot(pool: &PgPool) -> Snapshot {
     tokio::time::sleep(STATS_SETTLE).await;
     // A session reuses the statistics snapshot it first read, so the cache is
@@ -820,9 +793,6 @@ async fn relations(pool: &PgPool) -> Value {
 /// The exact dead-tuple percentage per plain relation from `pgstattuple`
 /// (`PostgreSQL` docs, Additional Supplied Modules §pgstattuple), keyed by
 /// `schema.relation`; empty when the extension cannot be created.
-///
-/// NOTE: `pgstattuple` scans the heap and refuses partitioned parents, so only
-/// `relkind = 'r'` relations are read; the estimates beside it stay for the rest.
 async fn dead_tuple_percent(pool: &PgPool) -> BTreeMap<String, Value> {
     let mut out = BTreeMap::new();
     if sqlx::query("CREATE EXTENSION IF NOT EXISTS pgstattuple")
@@ -869,10 +839,6 @@ async fn wal_delta(pool: &PgPool, before: Option<&str>, after: Option<&str>) -> 
 
 /// What one representative commit costs the database: the WAL it writes and
 /// the buffers it touches, around a single first-version commit.
-///
-/// NOTE: the commit runs inside the service's own transaction, so its cost is
-/// attributed by the WAL position and the buffer counters rather than by
-/// `EXPLAIN (ANALYZE, WAL)` of a statement the public API never hands out.
 async fn commit_probe(svc: &FerroEhrService, pool: &PgPool, corpus: &Corpus) -> Value {
     let ehr = *corpus.ehrs.first().expect("the corpus holds an EHR");
     let before = snapshot(pool).await;
@@ -1975,10 +1941,6 @@ fn has_timings(operation: &Value) -> bool {
 }
 
 /// The schema generation the record is filed under.
-///
-/// `ext.storage_generation()` is the authority when a schema declares one;
-/// `STORAGE_BENCH_GENERATION` overrides for a schema that does not, and the
-/// first generation is the default.
 async fn generation(pool: &PgPool) -> String {
     if let Ok(name) = sqlx::query_scalar::<_, String>("SELECT ext.storage_generation()")
         .fetch_one(pool)

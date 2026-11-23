@@ -4,10 +4,6 @@
 //! The configured openEHR **system identifier** reaches every wire value that
 //! carries it, against a real `PostgreSQL` 18 (shared testkit harness).
 //!
-//! `[server] system_id` (`FERROEHR__SERVER__SYSTEM_ID`) is wired into the
-//! service by the binary via `with_system_id`; these tests pin the three
-//! places the value surfaces:
-//!
 //! - `EHR.system_id` at creation — RM ehr `master04-ehr_package.adoc` §EHR
 //!   Identifier Allocation: "the `EHR._system_id_` value should be set to the
 //!   value that would normally be used for locally created EHRs";
@@ -18,10 +14,6 @@
 //!   system identifier";
 //! - `OBJECT_VERSION_ID.creating_system_id` on every minted version — RM common
 //!   `master06-change_control_package.adoc` §Distributed Versioning.
-//!
-//! The default (no `with_system_id` call) is pinned too: it must stay
-//! `DEFAULT_SYSTEM_ID`, so an unset config key is byte-identical to previous
-//! behaviour.
 
 use ferroehr::ids::EhrId;
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};

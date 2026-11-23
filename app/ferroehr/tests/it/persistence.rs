@@ -5,9 +5,6 @@
 //! cleanly on a real `PostgreSQL` 18, the `ext` magnitude functions follow
 //! the spec formulas, the temporal versioning model behaves, and the node
 //! codec round-trips through the database.
-//!
-//! Each test takes a fresh, fully-migrated database from the shared `testkit`
-//! harness (`tools/testkit`); the returned guard releases the clone on drop.
 
 use std::path::Path;
 
@@ -367,9 +364,6 @@ async fn only_the_guarded_ehr_columns_name_a_subject_in_the_clinical_domain() {
 
 /// The linkage domain is gone: the baseline creates no `linkage` schema, never
 /// names the `ferroehr_linkage` role, and needs no `btree_gist`.
-///
-/// Roles are per cluster, so the role may still exist where another database
-/// of the cluster grants it something; nothing in this one names it.
 #[tokio::test]
 async fn the_linkage_domain_does_not_exist() {
     let db = testkit::db().await.expect("testkit database");
@@ -419,17 +413,12 @@ async fn the_linkage_domain_does_not_exist() {
 /// A database created by a release older than the storage rewrite is refused at
 /// boot, with the remedy, rather than served as an empty repository beside the
 /// operator's unreachable content.
-///
-/// The rewrite is greenfield: the migration sets replace the first
-/// generation's outright, so there is nothing to upgrade in place. The
-/// signature is a first-generation schema that carries its own migration
-/// bookkeeping — a bare schema of that name is not evidence of anything.
 #[tokio::test]
 async fn a_database_from_before_the_storage_rewrite_is_refused_with_the_remedy() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
 
-    // The shape a pre-rewrite database has: the old schema, carrying the
+    // The shape a first-generation database has: its schema, carrying the
     // bookkeeping table only a migrator that ran there would have written.
     sqlx::query("CREATE SCHEMA ehr")
         .execute(&pool)
@@ -469,13 +458,6 @@ async fn a_database_from_before_the_storage_rewrite_is_refused_with_the_remedy()
 
 /// A first-generation `ext`, `linkage` or `audit` set is refused by the SAME
 /// typed error, on the description of its version 1.
-///
-/// Those schema NAMES survive, so their bookkeeping exists in more than one
-/// generation and its mere presence proves nothing; which migration ran first
-/// does. The `linkage` bookkeeping is seeded, because this build creates no
-/// such schema. Without this the old set would reach its own migrator and fail
-/// on a checksum mismatch, an error about a hash where the operator needs the
-/// remedy.
 #[tokio::test]
 async fn a_first_generation_set_in_a_surviving_schema_is_refused_by_its_first_migration() {
     // (schema, the first generation's version-1 description).
@@ -507,12 +489,6 @@ async fn a_first_generation_set_in_a_surviving_schema_is_refused_by_its_first_mi
 /// names its schema and the way forward (#6139): v6.0.0 replaced the v5
 /// migration history with one baseline per schema, and upgrades nothing in
 /// place.
-///
-/// sqlx recorded v5's version 1 as `schema and roles` in `ext` and `audit`
-/// and as `schema and grants baseline` in `clinical` and `party`; any
-/// bookkeeping in `linkage` is v5's too, since v6 creates no such schema. The
-/// same bookkeeping carrying this build's own version-1 description passes,
-/// which proves the discrimination is real.
 #[tokio::test]
 async fn a_v5_database_is_refused_with_the_way_forward() {
     // (schema, v5's version-1 description, this build's).
@@ -579,11 +555,6 @@ async fn seed_linkage_bookkeeping(pool: &PgPool, schema: &str) {
 }
 
 /// Rewrite the version-1 description of `schema`'s existing bookkeeping.
-///
-/// The harness hands out a MIGRATED database, so the three surviving schemas
-/// already carry this build's own bookkeeping: re-describing its first row is
-/// exactly the state a first-generation database is in, and nothing else about
-/// the database is disturbed.
 async fn set_first_description(pool: &PgPool, schema: &'static str, description: &str) {
     // `schema` is one of the literals at the call sites, never input.
     let updated = sqlx::query(sqlx::AssertSqlSafe(format!(
@@ -732,18 +703,6 @@ async fn the_append_only_versioning_model_behaves() {
 /// `uid.version_tree_id()`"), and §Moving Version Containers has the trunk
 /// CONTINUE its increment under the new system's id. Either way the trunk is
 /// one global sequence.
-///
-/// BRANCH ids, by contrast, legitimately collide across systems — each system
-/// allocates its branch numbers locally, which is precisely what the 3-part
-/// identifier exists to disambiguate ("Two places are indicated on the diagram
-/// where identification clashes could have occurred, but are prevented due to
-/// the use of the 3-part unique Version identifier scheme"). So the tuple
-/// constraint keeps `creating_system_id` and the trunk-position index does not.
-///
-/// The two live write paths derive the tree position from the container's own
-/// tip and cannot produce a duplicate; the archive load replays arbitrary file
-/// input, so it is guarded — and this pins both the typed refusal and the
-/// database backstop behind it.
 #[tokio::test]
 #[expect(
     clippy::disallowed_methods,
@@ -1177,10 +1136,6 @@ async fn seed_version(pool: &PgPool) -> (Uuid, Uuid) {
 }
 
 /// Write the head row a seeded version needs, from the version rows themselves.
-///
-/// The commit path writes it in the same statement as the version; a fixture
-/// that inserts version rows directly has to write it too, or every read that
-/// asks "what is current" finds no answer.
 async fn seed_head(pool: &PgPool, vo: Uuid) {
     sqlx::query(
         "INSERT INTO vo_head (vo_id, kind, ehr_id, head_sys_version, trunk_head_sys_version, \
@@ -1288,9 +1243,8 @@ async fn materialized_body_matches_node_reassembly_on_a_real_commit() {
 }
 
 /// The fixed-text `unnest` node insert has no per-row parameter cost, so a
-/// composition decomposing to more than 4,095 node rows — past the 65,535
-/// extended-protocol parameter cap the old per-row shape hit — commits in one
-/// statement (#2668).
+/// composition decomposing to more than 4,095 node rows, past the 65,535
+/// extended-protocol parameter cap, commits in one statement (#2668).
 #[tokio::test]
 #[expect(
     clippy::disallowed_methods,

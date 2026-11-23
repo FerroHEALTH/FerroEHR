@@ -5,15 +5,6 @@
 //! credential [`ferroehr::db::prepare`] runs each half on, and what an
 //! operator is told when it is the wrong one.
 //!
-//! These tests run the REAL boot sequence — the pools the binary opens, then
-//! `db::prepare` over them — rather than assembling a router over a database
-//! something else already migrated. That distinction is the whole point of
-//! the module: preparation spans every schema (the DDL of all five migration
-//! sets under `apply`, all five `_sqlx_migrations` bookkeeping tables under
-//! `verify`), while each runtime credential of the documented posture holds
-//! exactly one pseudonymisation domain, so a test that never boots cannot see
-//! the failure at all.
-//!
 //! NOTE: no openEHR spec governs migration mechanics or database roles — our
 //! own design/extension (GDPR Art. 4(5) and Art. 32(1)(a); the migrations
 //! carry the derivation).
@@ -31,11 +22,6 @@ const SQLSTATE_INSUFFICIENT_PRIVILEGE: &str = "42501";
 
 /// A fresh non-superuser login role that is a member of `roles` (a
 /// comma-separated `IN ROLE` list), returned as `(role name, DSN)`.
-///
-/// How a production deployment runs, and never as superuser, which would
-/// bypass every privilege check these tests are about. Roles are
-/// cluster-global on the shared testkit server, so the login role is named off
-/// the clone's database name and the testkit sweep reaps it.
 async fn login_role(db: &testkit::TestDb, suffix: &str, roles: &str) -> (String, String) {
     let login = format!("{}_{suffix}", db.name());
     let password = throwaway_password();
@@ -67,11 +53,6 @@ async fn migrator_dsn(db: &testkit::TestDb) -> String {
 
 /// The real boot sequence on three credentials: one per pseudonymisation
 /// domain plus the one that prepares the schema.
-///
-/// This is what the book recommends and the chart configures, and until
-/// `[database] migrate_url` existed it could not get past boot at all: `verify`
-/// failed on the FIRST migration set, because a role that is a member of
-/// `ferroehr_clinical` and nothing else cannot read `ext._sqlx_migrations`.
 #[tokio::test]
 async fn the_boot_sequence_prepares_the_schema_on_separated_credentials() {
     let db = testkit::db().await.expect("testkit database");
@@ -177,10 +158,6 @@ async fn a_single_dsn_deployment_prepares_the_schema_as_before() {
 
 /// A credential that cannot read a migration set is told which schema and
 /// which role, not handed a bare 42501 about a table it has never heard of.
-///
-/// The refusal here is on the bookkeeping TABLE: a member of `ferroehr_clinical`
-/// may enter `ext` (its helper functions are on the clinical search path) and
-/// is refused the `SELECT`.
 #[tokio::test]
 async fn a_refused_bookkeeping_table_names_the_schema_and_the_role() {
     let db = testkit::db().await.expect("testkit database");
@@ -227,10 +204,6 @@ async fn a_refused_bookkeeping_table_names_the_schema_and_the_role() {
 /// The same for a refusal on the SCHEMA rather than on the table — a distinct
 /// statement in the check, and the shape a separated deployment hits on every
 /// domain it does not own.
-///
-/// The fixture grants the clinical credential the two bookkeeping tables it
-/// would otherwise stop at, so the check reaches `party`, which it cannot enter
-/// at all.
 #[tokio::test]
 async fn a_refused_schema_names_the_schema_and_the_role() {
     let db = testkit::db().await.expect("testkit database");

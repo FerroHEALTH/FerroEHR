@@ -31,10 +31,6 @@ const RESOURCE_CODES: &[&str] = &[
 ];
 
 /// Every parseable vendored OPT passes the resource-meta pass.
-///
-/// A fixture the AOM2 catalogue already refuses on another rule is out of
-/// scope here (first-violation ordering); a fixture refused on a RESOURCE
-/// code is a sweep failure to adjudicate, never to silence.
 #[test]
 fn vendored_opt_corpora_pass_the_resource_meta_checks() {
     let corpora = [
@@ -77,10 +73,6 @@ fn vendored_opt_corpora_pass_the_resource_meta_checks() {
 }
 
 /// Each ch.8 refusal fixture refuses with its invariant-named code.
-///
-/// The corpus manifest's `defect`/`spec_ref` rows are the adjudication; this
-/// gate pins that the refusal actually happens and names the right invariant
-/// (a lenient server, or one refusing under a different rule, fails here).
 #[test]
 fn ch8_refusal_fixtures_refuse_with_their_invariant() {
     let dir = "../../corpus/fixtures/opt/invalid";

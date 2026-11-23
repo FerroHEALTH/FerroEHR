@@ -11,12 +11,6 @@
 //! `target/criterion/<bench>/profile/` (criterion runs the registered
 //! profiler only under `--profile-time` —
 //! <https://docs.rs/criterion/latest/criterion/profiler/trait.Profiler.html>).
-//!
-//! NOTE: the profiler glue below implements criterion's `Profiler` trait over
-//! the `pprof` sampler directly, because pprof's own `criterion` feature is
-//! pinned to criterion ^0.5 (verified on crates.io 2026-08-04) and this
-//! workspace is on criterion 0.8. The sampling and the flamegraph rendering
-//! are entirely pprof + inferno; only this trait impl is ours.
 
 #![expect(
     clippy::expect_used,
