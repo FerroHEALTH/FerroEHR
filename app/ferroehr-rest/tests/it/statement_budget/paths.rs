@@ -2053,12 +2053,12 @@ fn judged(measured: u64, ceiling: u64) -> (bool, String) {
     (measured <= ceiling, format!("{measured} (<= {ceiling})"))
 }
 
-/// Whether the allocation ceilings gate this build: they are the figures
-/// Linux CI measures, and the same paths allocate a few more times elsewhere.
+/// Whether the allocation and peak ceilings gate this build: they are the
+/// figures Linux CI measures, and another allocator counts and holds more.
 // NOTE: #6338 chose Linux-only allocation gates; other platforms print the figures.
 const ALLOCATIONS_GATED: bool = cfg!(target_os = "linux");
 
-/// [`judged`] for an allocation count, which passes off Linux and reports
+/// [`judged`] for an allocation count or a peak, which passes off Linux and reports
 /// the measured figure beside its ceiling there.
 fn judged_allocations(measured: u64, ceiling: u64) -> (bool, String) {
     if ALLOCATIONS_GATED {
@@ -2129,7 +2129,7 @@ async fn every_hot_path_stays_within_its_budget() {
                 "allocations",
                 judged_allocations(allocations, budget.allocations),
             ),
-            ("peak bytes", judged(peak, budget.peak_bytes)),
+            ("peak bytes", judged_allocations(peak, budget.peak_bytes)),
             ("round trips", judged(m.round_trips, budget.round_trips)),
             ("nested statements", judged(m.nested, budget.nested)),
             ("notifies", judged(m.notifies, budget.notifies)),
