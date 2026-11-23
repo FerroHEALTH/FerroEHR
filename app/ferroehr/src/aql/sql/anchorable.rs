@@ -31,8 +31,14 @@ pub(super) enum Anchorable<'q> {
 
 impl Builder<'_> {
     /// Whether the WHERE clause has a conjunct a value index serves, which
-    /// [`Builder::value_anchors`] makes an anchor of.
-    #[cfg(test)]
+    /// [`Builder::value_anchors`] makes an anchor of: the flat FROM then reads
+    /// each contained node inside its object (`from::Builder::emit_rm`).
+    ///
+    /// On statistics older than the rows they missed, the anchor and the
+    /// contained node were both estimated at one row, and the planner nested
+    /// the whole of one entry, unparameterised, inside the rows of the other:
+    /// with the contained node read inside its object the anchor is the one
+    /// entry from the population (#6243, #6263).
     pub(super) fn takes_anchor(&self) -> bool {
         self.ir
             .filter
@@ -40,47 +46,10 @@ impl Builder<'_> {
             .is_some_and(|filter| !self.anchorable(filter).is_empty())
     }
 
-    /// Whether the WHERE clause anchors a leaf no SELECT column binds: the
-    /// flat FROM then reads each contained node inside its object
-    /// (`from::Builder::emit_rm`), so a node estimated at one row is never
-    /// rescanned with the clause's `EXISTS` per anchor version (#6263). An
-    /// anchor on a bound leaf is tied to the bound row (#6249), and the
-    /// contained node keeps its archetype-index entry.
-    pub(super) fn anchors_an_unbound_leaf(&self) -> bool {
-        self.ir.filter.as_ref().is_some_and(|filter| {
-            self.anchorable(filter).iter().any(|conjunct| {
-                let (Anchorable::Equality { leaf, .. } | Anchorable::Range { leaf, .. }) = conjunct;
-                !self.select_binds(leaf)
-            })
-        })
-    }
-
-    /// Whether a SELECT column binds the node `leaf` reads, as
-    /// `select::Builder::bind_select_paths` binds every step prefix of a
-    /// projected path: the leaf's source itself, or a projected path of the
-    /// same source through the leaf's steps.
-    fn select_binds(&self, leaf: &LeafPath) -> bool {
-        if leaf.anchor.is_empty() {
-            return true;
-        }
-        let mut binds = false;
-        for column in &self.ir.select {
-            if matches!(column.value, ir::SelectValue::Aggregate { .. }) {
-                continue;
-            }
-            column.value.for_each_path(&mut |target| {
-                if let PathTarget::Data(other) = target {
-                    binds |= other.source == leaf.source && other.anchor.starts_with(&leaf.anchor);
-                }
-            });
-        }
-        binds
-    }
-
     /// The top-level conjuncts of `filter` an index serves, in the order the
     /// statement takes them, with the comparisons of one leaf's ranges
     /// together: the one walk [`Builder::value_anchors`] builds its anchors
-    /// from and [`Builder::anchors_an_unbound_leaf`] decides by.
+    /// from and [`Builder::takes_anchor`] decides by.
     pub(super) fn anchorable<'q>(&self, filter: &'q ir::Expr) -> Vec<Anchorable<'q>> {
         let mut found = Vec::new();
         let mut conjuncts = vec![filter];
@@ -259,26 +228,29 @@ mod tests {
         .expect("the AQL plans");
         let ctx = population();
         let builder = Builder::new(&ir, &params, &ctx);
-        builder.anchors_an_unbound_leaf()
+        builder.takes_anchor()
     }
 
-    /// An anchor on a leaf only the WHERE clause reads fences the contained
-    /// nodes; one on a leaf a SELECT column binds, its source's own value, or
-    /// no anchor at all leaves them their archetype-index entry (#6263).
+    /// Every anchor fences the contained nodes, on a leaf only the WHERE
+    /// clause reads, on one a SELECT column binds and on the source's own
+    /// value; a statement with no anchor leaves them their archetype-index
+    /// entry (#6243, #6263).
     #[test]
-    fn only_an_anchor_on_a_where_only_leaf_fences_the_contained_nodes() {
+    fn every_anchor_fences_the_contained_nodes() {
         let leaf = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
         let units = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/units";
         let time = "o/data[at0001]/events[at0002]/time/value";
         let over = [leaf, " >= 140"].concat();
+        let kpa = [units, " = 'kPa'"].concat();
         let count = ["count(", leaf, ")"].concat();
         let projected = ["c/uid/value, ", leaf].concat();
         let sibling = ["c/uid/value, ", units].concat();
         let equal = [leaf, " = 7"].concat();
         for (select, filter, fenced) in [
             ("c/uid/value", Some(over.as_str()), true),
-            (projected.as_str(), Some(over.as_str()), false),
-            (sibling.as_str(), Some(over.as_str()), false),
+            (projected.as_str(), Some(over.as_str()), true),
+            (sibling.as_str(), Some(over.as_str()), true),
+            (sibling.as_str(), Some(kpa.as_str()), true),
             (time, Some(over.as_str()), true),
             (count.as_str(), Some(over.as_str()), true),
             ("c/uid/value", Some(equal.as_str()), false),
@@ -289,7 +261,7 @@ mod tests {
         }
         let element = "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
                        CONTAINS ELEMENT s[at0004] WHERE s/value/magnitude > 7";
-        assert!(!fences(element), "{element}");
+        assert!(fences(element), "{element}");
     }
 
     /// `SELECT select FROM` the timed OBSERVATION, `WHERE filter` when given.
