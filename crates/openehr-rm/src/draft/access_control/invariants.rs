@@ -222,8 +222,11 @@ pub fn check_policy(policy: &AccessPolicy) -> Result<(), Violations> {
 
 /// The invariants of the attributes that say how care relationships are
 /// read: `Self_declared_valid`, `Concealed_valid`, and those of each
-/// `ACCESS_CONFLICT_RULE` and `ACCESS_VALUE_SET`.
+/// `ACCESS_CONFLICT_RULE`, `ACCESS_VALUE_SET` and `episode_shared` scope.
 fn care_rules(check: &mut Check, policy: &AccessPolicy) {
+    for scope in policy.episode_shared.as_deref().unwrap_or_default() {
+        data_scope_rules(check, scope);
+    }
     if let Some(period) = &policy.self_declared_care {
         duration(check, period);
     }
@@ -565,6 +568,7 @@ fn data_scope_rules(check: &mut Check, scope: &AccessDataScope) {
             || scope.sensitivities.is_some()
             || scope.confidentialities.is_some()
             || scope.origins.is_some()
+            || scope.episodes.is_some()
             || scope.recorded.is_some(),
         "ACCESS_DATA_SCOPE",
         "Not_empty",

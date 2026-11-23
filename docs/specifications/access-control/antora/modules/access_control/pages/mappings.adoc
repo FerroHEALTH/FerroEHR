@@ -67,12 +67,16 @@ FHIR R4 and R5 both describe a `Consent` as "a base policy ... followed by a lis
 |`provision.dataPeriod`, `provision.data` (`instance`)
 |the same
 
+|`_data.episodes_`
+|`provision.data` (`dependents`) referencing an `EpisodeOfCare`, by its `identifier`
+|the same
+
 |`_emergency_override_`, `_applies_to.relationship_`, `_applies_to.caller_kind_`, `_data.origins_`
 |no core element
 |no core element
 |===
 
-Losses from FHIR, each refused with the element named on import: a deeper nesting, `provision.data.meaning` `related`, `dependents` or `authoredby`, R5 `provision.expression`, a `policyRule` or `policyBasis` the controller's catalogue does not hold, and an actor with no party in the demographic service.
+Losses from FHIR, each refused with the element named on import: a deeper nesting, `provision.data.meaning` `related` or `authoredby`, `dependents` on a resource other than an `EpisodeOfCare`, R5 `provision.expression`, a `policyRule` or `policyBasis` the controller's catalogue does not hold, and an actor with no party in the demographic service.
 
 == IHE BPPC
 
@@ -138,7 +142,13 @@ HL7 models the relationship between a patient and a professional as a care provi
 |role `RESP`, target the practitioner or the organisation
 
 |FHIR `EpisodeOfCare.careManager`, `.team` (R4), `.careTeam` (R5)
-|`RESP` for the care manager, the team as a `team` target for the rest; period and `context` from the episode
+|`RESP` for the care manager, the team as a `team` target for the rest; period from the episode, and `episode` its `identifier`
+
+|FHIR `Encounter.episodeOfCare` (R4, R5)
+|no relationship: a composition the encounter documents is placed in each episode's `identifier`
+
+|HL7 v2 `PV1-19` visit number, `PV1-50` alternate visit id
+|the `episode` of the relationships the visit's doctors give, and the placement of the compositions of the visit
 
 |FHIR `Encounter.participant`
 |role from `type` (R4 binds the same participation types), period from `period` or from the encounter
