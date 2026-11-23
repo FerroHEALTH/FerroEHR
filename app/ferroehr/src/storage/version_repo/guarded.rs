@@ -499,7 +499,7 @@ fn audit_cte(name: &str, first: usize, time: &str, from: &str) -> String {
 /// writes them; `beside` names what else it writes. The audit insert reads from `g`, and every later insert from the audit's, so
 /// nothing is written unless every requirement holds; the last row names a
 /// flag per requirement.
-pub(super) fn statement(beside: Beside, placement: super::commit::Placement) -> String {
+pub(super) fn statement(beside: Beside, placement: super::head_upsert::Placement) -> String {
     let after_nodes = 33 + crate::storage::node_write::node_array_count();
     let beside_params = match beside {
         Beside::Status => 6,
@@ -607,9 +607,9 @@ fn set_statement(members: &[SetMember<'_>]) -> String {
     );
     for (i, member) in members.iter().enumerate() {
         let b = base(i);
-        let placement = super::commit::Placement::of(&member.version);
+        let placement = super::head_upsert::Placement::of(&member.version);
         let episodes = next_episodes;
-        if placement == super::commit::Placement::Placed {
+        if placement == super::head_upsert::Placement::Placed {
             next_episodes += 1;
         }
         let _ = write!(
