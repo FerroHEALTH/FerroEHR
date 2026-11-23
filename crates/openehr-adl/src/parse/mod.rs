@@ -4,12 +4,6 @@
 //! The cADL definition-section parser: recursive descent over the shared token
 //! stream, transcribed from `vendor/grammar/v2_4/{cadl2.g4, cadl2_primitives.g4}`
 //! into the generated AOM2 constraint model.
-//!
-//! Recursive descent suits the context-sensitive primitive sub-grammar. Slot
-//! assertions are BEL trees from [`crate::rules::parse_slot_assertions`];
-//! V-code validation is `crate::validate`. The productions live in [`parser`],
-//! [`refs`], [`default_value`], [`primitives`], [`values`] and [`patterns`], the
-//! ADL 1.4-only ones in [`crate::adl14::lower`].
 
 pub mod default_value;
 pub mod parser;
@@ -55,9 +49,6 @@ pub enum Dialect {
 
 /// Parse a raw cADL `definition`-section body into a [`CComplexObject`] using
 /// the grammar of `dialect`; error spans are relative to `body`.
-///
-/// Under [`Dialect::Adl14`] the 1.4-only forms are kept in a converter-internal
-/// encoding that `crate::adl14::convert` rewrites (our own design).
 ///
 /// # Errors
 /// Returns every [`SyntaxError`] found (the `S*` catalogue codes of
@@ -231,10 +222,6 @@ impl Parser<'_> {
 
     /// Refuse an ADL 2-only cADL construct in the [`Dialect::Adl14`] dialect, since
     /// the cADL 1.4 keyword set is closed (`ADL1.4/master05-cadl.adoc` §Keywords).
-    ///
-    /// NOTE: `ADL2/master04.6` has no "wrong ADL generation" code, so each gate uses
-    /// the code of its parse position (`SCOAT`, `SCCOG`, `STCCP`) and names the
-    /// construct.
     pub(crate) fn adl2_only<T>(&mut self, code: SyntaxErrorCode, construct: &str) -> PResult<T> {
         self.err(
             code,

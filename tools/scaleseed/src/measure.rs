@@ -3,14 +3,6 @@
 
 //! The measurement: the queries of the scale test against one seeded EHR,
 //! the sizes of the store, and what `ANALYZE` costs at that size.
-//!
-//! Each AQL query is lowered by the engine the server runs
-//! (`ferroehr::aql::plan` and `ferroehr::aql::sql::build`) and run on the
-//! pool. The first run is the first execution on a fresh connection, which
-//! pays the planning a new connection pays; the warm figure is the median of
-//! ten runs after it on that connection. Planning and execution come from
-//! `EXPLAIN (ANALYZE, BUFFERS)` on a fresh connection and again after the warm
-//! runs; the plans are written beside the report.
 
 use std::fmt::Write as _;
 use std::path::Path;

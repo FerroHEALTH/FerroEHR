@@ -3,13 +3,6 @@
 
 //! The prototypes: compositions committed through the service, each one the
 //! source of every clone that reuses its content.
-//!
-//! Two of the repository's own CKM templates carry the content: the generic
-//! lab test result, which the measured lab-results query reads, and vital
-//! signs, so a population query meets more than one archetype. Each variant
-//! has its own start and event time and, for a lab result, its own number of
-//! analytes and their values. A share of the variants is updated one to three
-//! times, so a cloned store holds about two versions per composition.
 
 use anyhow::{Context as _, anyhow};
 use serde_json::json;

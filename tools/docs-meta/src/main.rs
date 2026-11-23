@@ -3,25 +3,6 @@
 
 //! Injects per-page search metadata into an assembled documentation site.
 //!
-//! mdBook emits ONE `<meta name="description">` for a whole book and no
-//! canonical link at all, so without this pass `/docs/dev/`, `/docs/latest/`
-//! and every frozen `/docs/vX.Y.Z/` are indexable copies of the same page
-//! sharing one snippet: search engines split ranking signals across the copies
-//! and write the snippet themselves.
-//!
-//! This runs over the BUILT HTML rather than the mdBook theme on purpose. The
-//! Handlebars context carries only a chapter's SOURCE path, so a template
-//! cannot form the absolute canonical URL, and a canonical injected by
-//! JavaScript is not reliably honoured by crawlers.
-//!
-//! Per page it writes a canonical URL pointing at the canonical version, a
-//! description taken from that page's own opening prose, Open Graph and Twitter
-//! card tags, `noindex,follow` on every non-canonical version, and a
-//! `BreadcrumbList` mirroring the URL hierarchy with real labels.
-//!
-//! Idempotent: a page already carrying [`MARKER`] is skipped, so re-running
-//! over an assembled site changes nothing.
-//!
 //! # Examples
 //!
 //! ```text
@@ -199,9 +180,6 @@ fn page_title(page: &str) -> Option<String> {
 }
 
 /// The page's opening prose, used as its meta description.
-///
-/// Skips anything shorter than [`DESCRIPTION_MINIMUM`] (a caption or a badge
-/// row rather than a summary) and truncates on a word boundary.
 fn first_paragraph(page: &str) -> Option<String> {
     let body = strip_non_prose(page);
     let mut rest = body.as_str();

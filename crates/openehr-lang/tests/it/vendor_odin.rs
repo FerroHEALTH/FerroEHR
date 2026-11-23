@@ -12,13 +12,6 @@
 //! (`crates/openehr-lang/vendor/grammar/v1_1/{odin.g4,odin_values.g4,base_lexer.g4}`)
 //! and the normative spec text (`docs/specs/openehr/LANG/docs/odin/`) are the
 //! syntax authority.
-//!
-//! Four fixtures are adjudicated as expected-error (see the individual tests
-//! for the citation): `log4j2.xml` is a log4j configuration, not ODIN; the two
-//! illustrative `master`-style example documents use bareword / meta-id
-//! placeholders and a top-level keyed-object list that the `odin_text` start
-//! rule does not accept; and `odin_test.txt` declares one attribute name
-//! twice, which rule *VDATU* forbids.
 
 #![allow(
     clippy::unwrap_used,
@@ -569,10 +562,8 @@ fn cimi_rm_clinical() {
 
 #[test]
 fn cimi_rm_core_open_multi_list() {
-    // Regression guard for the open multi-element list fix (`master07`
-    // §"Lists of Built-in Types"): archie loads this file as a builtin
-    // reference model, but the pre-fix parser rejected the trailing `, ...`
-    // after a multi-element string list.
+    // An open multi-element list ends in `, ...` (`master07` §"Lists of
+    // Built-in Types").
     let v = parse_ok("odin/odin/CIMI_RM_CORE.v.0.0.1.bmm");
     assert_schema_header(&v, "2.1", "RM_CORE", "0.0.1");
     let closure = list(field(&v, "archetype_rm_closure_packages"));
@@ -608,14 +599,10 @@ fn log4j2_xml_is_not_odin() {
 
 #[test]
 fn anonymous_document_placeholder_leaf_is_refused() {
-    // Adjudication: the Anonymous Object Document FORM — an outer `<>` around a
-    // fragment — is normative and "should be supported by parsers"
-    // (`LANG/docs/odin/master04-odin_artefacts` §Anonymous Object Document);
-    // its materialized twin parses in `odin_spec_examples.rs`. What keeps THIS
-    // fixture refused is only its illustrative bareword meta-placeholder
-    // `leaf_value`: a bareword is neither a `primitive_object`, an `attr_vals`,
-    // a `keyed_object`, nor an `object_reference_block` path (`base_lexer.g4`
-    // ADL_PATH requires a `/`).
+    // The Anonymous Object Document form is normative
+    // (`LANG/docs/odin/master04-odin_artefacts`); this fixture is refused only
+    // for its bareword placeholder `leaf_value`, which no ODIN production
+    // admits.
     let err = parse(&read("odin/odin/anonymous_odin.txt")).expect_err("bareword leaf is invalid");
     assert!(err.line >= 1 && err.column >= 1);
 }

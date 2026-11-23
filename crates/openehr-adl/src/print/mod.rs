@@ -4,31 +4,10 @@
 //! The ADL2 serializer: render an assembled `openehr_am::v2_4::aom2`
 //! [`Archetype`] back to ADL2 source text.
 //!
-//! The printer is the inverse of [`crate::assemble::parse_artefact`] at the
-//! model level: `parse_artefact(print(a))` reconstructs a structurally-equal
-//! [`Archetype`]. It emits the differential source form with text keyword
-//! operators (`matches`), the canonical section order (identification →
-//! specialise → language → description → definition → rules → terminology →
-//! annotations → `rm_overlay` / `component_terminologies`), ODIN for the ODIN
-//! sections, cADL for the definition (every construct [`crate::parse`] parses),
-//! and the `rules` via the stored expression tree.
-//!
 //! Section order is example-derived (`ADL2/master07.04`; the vendored grammar
 //! has no top-level ordering production). NOTE: no openEHR spec governs the
 //! exact whitespace layout — our own design/extension, chosen so the output
 //! re-lexes 1:1.
-//!
-//! The implementation is one private module per artefact section — `header`
-//! (identification / language / description / annotations / `rm_overlay` /
-//! `component_terminologies`), `terminology` (the terminology section body),
-//! `definition` (the cADL definition section and every primitive-value
-//! rendering), `rules` (the `rules` section and the BEL expression printers),
-//! and `odin` (the generic ODIN leaf/keyed-list rendering the other sections
-//! share). This module keeps only the printer state, the artefact-kind
-//! projection, and the top-level section driver; the [`print`](fn@print)
-//! function is the crate's serializer seam for a whole artefact, and
-//! [`assertion_text`] the one for a single assertion (the string form
-//! `ASSERTION.string_expression` carries).
 
 mod definition;
 mod header;
@@ -50,10 +29,6 @@ use openehr_am::v2_4::resource::resource_description::ResourceDescription;
 use openehr_base::prelude::{ResourceAnnotations, TerminologyCode, TranslationDetails, Uuid};
 
 /// A refusal from the ADL2 serializer.
-///
-/// The printer renders only what a released grammar spells; a modelled node
-/// with no surface syntax is refused rather than rendered into invented (or
-/// empty) text.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum PrintError {
@@ -108,9 +83,6 @@ pub enum PrintError {
 }
 
 /// Serializes an assembled [`Archetype`] to ADL2 source text.
-///
-/// `parse_artefact(&print(a)?)` reconstructs an [`Archetype`] structurally
-/// equal to `a` (the round-trip gate).
 ///
 /// # Errors
 ///

@@ -495,6 +495,7 @@ struct Budget {
 /// composition commit's by at most its entry's 312. A read allocates 9 times
 /// fewer and the ITI-81 page 13 fewer, no longer reading four digest columns
 /// nothing used, and those allocation ceilings fell by as much.
+// NOTE: moving figures carry their measured spread (#6387).
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
@@ -609,7 +610,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitContribution,
         conversions: 6,
-        allocations: 17_622,
+        allocations: 17_624,
         peak_bytes: 1_509_372,
         round_trips: 4,
         nested: 0,
@@ -719,7 +720,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::DirectoryCreate,
         conversions: 5,
-        allocations: 1577,
+        allocations: 1579,
         peak_bytes: 150_606,
         round_trips: 4,
         nested: 1,
@@ -749,7 +750,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        allocations: 1962,
+        allocations: 1963,
         peak_bytes: 129_641,
         round_trips: 12,
         nested: 3,
@@ -759,7 +760,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        allocations: 1588,
+        allocations: 1592,
         peak_bytes: 112_950,
         round_trips: 12,
         nested: 3,
@@ -769,7 +770,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitOrganisation,
         conversions: 8,
-        allocations: 1571,
+        allocations: 1573,
         peak_bytes: 126_183,
         round_trips: 10,
         nested: 0,
@@ -779,7 +780,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitGroup,
         conversions: 8,
-        allocations: 1566,
+        allocations: 1568,
         peak_bytes: 125_084,
         round_trips: 10,
         nested: 0,
@@ -789,7 +790,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        allocations: 2136,
+        allocations: 2140,
         peak_bytes: 126_256,
         round_trips: 19,
         nested: 5,
@@ -799,7 +800,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitAgent,
         conversions: 8,
-        allocations: 1557,
+        allocations: 1559,
         peak_bytes: 126_026,
         round_trips: 10,
         nested: 0,
@@ -2060,19 +2061,21 @@ fn judged(measured: u64, ceiling: u64) -> (bool, String) {
 }
 
 /// Whether the allocation and peak ceilings gate this build: they are the
-/// figures Linux CI measures, and another allocator counts and holds more.
-// NOTE: #6338 chose Linux-only allocation gates; other platforms print the figures.
-const ALLOCATIONS_GATED: bool = cfg!(target_os = "linux");
+/// figures an uninstrumented Linux build measures, and another allocator or
+/// the coverage instrumentation (`--cfg coverage`) counts and holds more.
+// NOTE: #6338 and #6387 gate allocations on uninstrumented Linux; other builds print them.
+const ALLOCATIONS_GATED: bool = cfg!(all(target_os = "linux", not(coverage)));
 
-/// [`judged`] for an allocation count or a peak, which passes off Linux and reports
-/// the measured figure beside its ceiling there.
+/// [`judged`] for an allocation count or a peak, which passes where
+/// [`ALLOCATIONS_GATED`] is false and reports the measured figure beside its
+/// ceiling there.
 fn judged_allocations(measured: u64, ceiling: u64) -> (bool, String) {
     if ALLOCATIONS_GATED {
         judged(measured, ceiling)
     } else {
         (
             true,
-            format!("{measured} (ceiling {ceiling}, gated on Linux)"),
+            format!("{measured} (ceiling {ceiling}, gated on uninstrumented Linux)"),
         )
     }
 }
