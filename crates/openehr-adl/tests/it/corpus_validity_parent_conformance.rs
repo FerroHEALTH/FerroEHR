@@ -145,8 +145,6 @@ fn corpus_tuple_narrowing_raises_no_tuple_code() {
 }
 
 /// The phase-2 verdict for one specialisation fixture.
-///
-/// A `Violation` carries the message tail; the caller prefixes the file name.
 enum ParentOutcome {
     /// The fixture's tagged code was raised exactly.
     ExactCode,

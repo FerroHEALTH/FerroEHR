@@ -11,14 +11,6 @@
 //! and by the VUNP `C_COMPLEX_OBJECT_PROXY`-target check, which resolves and
 //! compares proxy targets through [`locate`], [`resolve`] and
 //! [`is_ancestor_path`] rather than any grammar of its own.
-//!
-//! Model-level only: this walks attribute + node-id predicates over the
-//! archetype's own constraint tree and knows **nothing** about the reference
-//! model. A path segment carrying only an RM attribute name (no `[id…]`
-//! predicate) that leaves the archetype tree is an RM-path extension whose
-//! validity is a reference-model question — resolution stops and reports
-//! "left the archetype" rather than guessing (RM path validity is a
-//! reference-model concern, `crate::validate::rm`). See [`resolve`].
 
 use std::borrow::Cow;
 
@@ -30,10 +22,6 @@ use crate::codes::code_prefix;
 
 /// One segment of an archetype path: an RM attribute name plus an optional
 /// node-id predicate (`items[id15]` → attribute `items`, node id `id15`).
-///
-/// Non-code predicates (a meaning name, a position integer, a `[at0003|label|]`
-/// display form) contribute their code part to `node_id` where one is present
-/// (`at0003`) and otherwise leave `node_id` `None`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PathSegment {
     /// The RM attribute name (the un-predicated part of the segment).
@@ -43,10 +31,6 @@ pub struct PathSegment {
 }
 
 /// Parses an archetype path string into its ordered [`PathSegment`]s.
-///
-/// Grammar (master05): `'/'? segment ('/' segment)+` with
-/// `segment = attr ('[' id ']')?`. A leading `/` is ignored; the empty /
-/// root path yields an empty segment list.
 #[must_use]
 pub fn parse_path(path: &str) -> Vec<PathSegment> {
     let trimmed = path.trim();
@@ -141,13 +125,6 @@ pub enum Resolution {
 /// Resolve `path` (`AM/docs/ADL2/master05-paths.adoc` §Overview) against the
 /// `root` object tree as authored, where a `use_node` proxy is a leaf with
 /// nothing below it.
-///
-/// - [`Resolution::Found`] — every segment matched an attribute + object node.
-/// - [`Resolution::NotFound`] — a segment with a node-id predicate found no
-///   matching node (the path is archetype-invalid).
-/// - [`Resolution::LeftArchetype`] — a pure-RM (un-predicated) segment could
-///   not continue within the archetype tree; whether it is a legal RM
-///   extension is a reference-model question (`crate::validate::rm`).
 #[must_use]
 pub fn resolve(root: &CComplexObject, path: &str) -> Resolution {
     walk(root, path, Proxies::Opaque)
@@ -290,9 +267,6 @@ pub fn path_exists(root: &CComplexObject, path: &str) -> bool {
 /// Locate the object node `path` addresses inside `root`, returning it when
 /// the path resolves to a node within the archetype ([`Resolution::Found`]),
 /// else `None`.
-///
-/// Mirrors [`resolve`] but yields the target [`CObject`] (used to resolve an
-/// `EXPR_ARCHETYPE_REF` proxy to its target node — `AOM2` master05).
 #[must_use]
 pub fn locate<'a>(root: &'a CComplexObject, path: &str) -> Option<&'a CObject> {
     let segments = parse_path(path);
@@ -333,14 +307,6 @@ pub fn locate<'a>(root: &'a CComplexObject, path: &str) -> Option<&'a CObject> {
 /// `AM/docs/ADL2/master04.3-cadl_complex_types.adoc` §Internal References
 /// requires that "the path must not be in the parent path of the proxy object
 /// itself, but may be a sibling".
-///
-/// Both sides go through [`parse_path`], so the ancestor relation is decided
-/// segment-wise on attribute name + node-id predicate rather than on the raw
-/// string — a string prefix would false-positive on `/items[id2]` against
-/// `/items[id22]`. A target segment carrying no node-id predicate names the
-/// attribute only and so cannot exclude the proxy's own branch; a root target
-/// (zero segments) is the ultimate ancestor. Sibling and cross-branch targets
-/// differ in some segment and stay legal.
 #[must_use]
 pub fn is_ancestor_path(target: &str, proxy: &str) -> bool {
     let target_segments = parse_path(target);

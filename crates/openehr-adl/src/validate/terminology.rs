@@ -108,8 +108,6 @@ fn check_constituents<'o>(
 
 /// The standalone terminology rules on each `component_terminologies` entry of
 /// an operational template (`OPT2/master03-opt_raw.adoc`), naming the component.
-///
-/// The entry is flat, so VTSD's flat half and VTVSMD apply; VOTM and WOUC do not.
 fn check_component_terminologies(
     v: &ArchetypeView<'_>,
     first_roots: &FirstRoots<'_>,
@@ -287,8 +285,6 @@ fn check_code_levels(
 
 /// VATCV (defined-code form): every defined code must be a valid code form
 /// (master08 §Code Validation).
-///
-/// Value-code form on definition-referenced codes is covered in the walk.
 fn check_defined_code_forms(defined: &BTreeSet<&str>, issues: &mut Vec<ValidationIssue>) {
     for code in defined {
         if !AdlCodeDefinitionsData::is_valid_code(code) {

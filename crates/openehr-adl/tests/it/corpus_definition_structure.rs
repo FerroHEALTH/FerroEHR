@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Structural spot-checks of the cADL parser against vendored corpus files.
-//!
-//! They read `tests/corpus/**` through [`include_str!`], which the published
-//! package does not carry, so they live here.
 
 #![allow(
     clippy::expect_used,

@@ -12,9 +12,6 @@
 //! itself. [`ArchetypeRepository`] is the minimal in-memory parent/supplier seam
 //! that specialisation-aware work resolves against, and [`resolve_flat_parent`]
 //! classifies a child's declared parent for it.
-//!
-//! This module sits BELOW validation, flattening, and OPT generation: all three
-//! read through it, and it depends on none of them.
 
 use std::collections::BTreeMap;
 
@@ -78,11 +75,6 @@ fn major_key(major: &str) -> String {
 impl ArchetypeRepository {
     /// Register a parsed archetype under its namespace, family and major
     /// version, replacing an artefact of the same full version.
-    ///
-    /// An ADL 1.4 source may enter as parsed in
-    /// [`crate::parse::Dialect::Adl14`]: [`crate::opt::create_opt`] keeps its
-    /// node codes and rewrites its term constraints, such as `[openehr::433]`,
-    /// to the ADL2 form.
     pub fn insert(&mut self, archetype: Archetype) {
         let hrid = view(&archetype).archetype_id;
         let held = self.by_key.entry(ArtefactKey::of(hrid)).or_default();
@@ -124,9 +116,6 @@ impl ArchetypeRepository {
 /// The identifier among `held` that `reference`, made from an artefact in
 /// `referrer_namespace`, resolves to, by the rule of
 /// [`ArchetypeRepository::resolve`].
-///
-/// This is that rule over bare identifiers, for a caller that holds the
-/// identifiers of stored artefacts without their parsed content.
 #[must_use]
 pub fn resolve_hrid<'a>(
     reference: &str,
@@ -345,12 +334,6 @@ pub enum FlatParent<'a> {
 
 /// Resolve `child`'s flat parent from `repo` for the phase-2 specialisation
 /// checks.
-///
-/// Returns [`FlatParent::NotSpecialised`] for a non-specialised archetype,
-/// [`FlatParent::NotFound`] when the declared parent is absent from `repo`,
-/// [`FlatParent::NeedsFlattener`] when the parent is itself specialised (its
-/// deep flat form is not yet computable), and
-/// [`FlatParent::Available`] for a level-0 parent (its own flat form).
 #[must_use]
 pub fn resolve_flat_parent<'a>(child: &Archetype, repo: &'a ArchetypeRepository) -> FlatParent<'a> {
     let Some(parent_id) = view(child).parent_archetype_id else {

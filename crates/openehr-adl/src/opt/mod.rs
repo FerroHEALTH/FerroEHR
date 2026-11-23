@@ -12,9 +12,6 @@
 //! terminologies under `component_terminologies`, and each overlay's parent
 //! under [`OVERLAY_PARENTS_KEY`] (our own design).
 //!
-//! [`profile_opt`] removes annotations and filters languages and bindings
-//! (master04); node-level substitution is TBD there and refused.
-//!
 //! NOTE: master02 and master03 §Artefact Structure print no `specialize` section
 //! for an OPT, and the normative checklist wins over master10's listing.
 

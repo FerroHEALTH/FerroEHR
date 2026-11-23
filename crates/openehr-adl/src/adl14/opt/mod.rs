@@ -3,10 +3,6 @@
 
 //! OPT 1.4 → ADL 2 conversion.
 //!
-//! A parsed `openehr_its::opt14` OPT decomposes into one 1.4-shaped source
-//! archetype per embedded root for [`convert`], children replaced by slots and
-//! the fill edges in [`OptConversion::structure`].
-//!
 //! NOTE: no openEHR spec governs 1.4 → 2 conversion: our own design.
 
 mod decompose;

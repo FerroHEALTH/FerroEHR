@@ -152,15 +152,6 @@ impl Printer {
 /// The ODIN interval literal a canonical-JSON `Interval<T>` object denotes, or
 /// `None` when the object is not one.
 ///
-/// The inverse of the interval arm of the cADL parser's `_default` handling
-/// (`crate::odin::odin_to_json`): the accepted shape is exactly the one that
-/// encoder produces — `_type` `Point_interval`/`Proper_interval`, the two
-/// bounds present iff their `*_unbounded` flag is false, the four boundary
-/// flags, and nothing else — and the point/proper tag must agree with the
-/// bounds. Any other object (a hand-written `(Proper_interval) <…>` block, an
-/// interval-shaped RM value) falls through to the generic block rendering, so
-/// print → parse stays exact in both directions.
-///
 /// Syntax: `LANG/docs/odin/master07-leaf_data.adoc` §Intervals of Ordered
 /// Primitive Types — the relational operators precede the bound they qualify
 /// (`|>N..<M|`, `|>=N|`), an omitted side is the `*` unbounded marker, and a

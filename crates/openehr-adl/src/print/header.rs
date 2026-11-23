@@ -233,9 +233,6 @@ impl Printer {
 /// The `(…)` meta-data clause of the artefact declaration: the ADL and RM
 /// versions, the identifiers, and the standardised flags, `;`-separated in
 /// declaration order (`ADL2/master07.04` §Artefact declaration).
-///
-/// A nil `uid`/`build_uid` is the absent-value spelling the assembler stores
-/// and never prints.
 fn meta_clause(parts: &Parts<'_>) -> String {
     let mut meta = String::new();
     if let Some(adl) = parts.adl_version {
