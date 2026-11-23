@@ -23,9 +23,10 @@
 //! named `ferroehr_tk_<secs>_<rand>` and swept by [`sweep_stale`], which every
 //! test process runs once before it hands out a database. A clone is leased
 //! to the process that made it by a session-level advisory lock held on its
-//! own connection for the clone's life, so the sweep drops a clone whose
-//! lease is free (its process ended, however it ended) and never one whose
-//! lease is held (`PostgreSQL` docs § Advisory Locks).
+//! own connection until the guard drops or the process ends, so the sweep
+//! drops a clone whose lease is free and never one whose lease is held
+//! (`PostgreSQL` docs § Advisory Locks). Dropping the guard only frees the
+//! lease: the next sweep drops the clone.
 
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
@@ -47,8 +48,6 @@ use testcontainers_modules::postgres::Postgres;
 use tokio::sync::OnceCell;
 
 use ferroehr::db::{self, DbConfig, domain::Domain};
-
-use crate::statements::Force;
 
 /// Prefix for every database the harness creates (templates + clones), so a
 /// sweep can never touch anything else.
@@ -155,15 +154,14 @@ pub enum TestkitError {
 /// One fresh, fully migrated database for one test: a clone of the migrated
 /// template.
 ///
-/// Dropping the guard drops the database before the drop returns, so a test
-/// that passes and one that panics both leave nothing behind; the startup
-/// sweep reclaims what a killed process left, by its free lease.
+/// Dropping the guard frees the clone's lease and returns at once; the next
+/// startup sweep drops the clone, as it does the clone of a process that
+/// ended without dropping its guard.
 #[derive(Debug)]
 pub struct TestDb {
     pool: PgPool,
     url: String,
     name: String,
-    admin_url: String,
     /// The connection holding the clone's lease; closing it frees the lease.
     lease: Option<PgConnection>,
 }
@@ -190,31 +188,8 @@ impl TestDb {
 
 impl Drop for TestDb {
     fn drop(&mut self) {
-        // `Drop` cannot await, so the drop runs on a thread of its own, and is
-        // joined: a detached thread dies with the test process, which nextest
-        // ends as soon as the test returns, and its clone leaked (#3924).
-        //
-        // NOTE: `WITH (FORCE)` is correct here and wrong in the sweep — it
-        // terminates our own clone's connections, never another process's.
-        let admin_url = self.admin_url.clone();
-        let name = self.name.clone();
-        let dropper = std::thread::Builder::new().spawn(move || {
-            if let Ok(rt) = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-            {
-                rt.block_on(async {
-                    if let Ok(mut conn) = PgConnection::connect(&admin_url).await {
-                        let dropped = statements::drop_database(&mut conn, &name, Force::Yes);
-                        drop(dropped.await);
-                        drop(conn.close().await);
-                    }
-                });
-            }
-        });
-        if let Ok(dropper) = dropper {
-            drop(dropper.join());
-        }
+        // NOTE: our own design (#6367); a drop would block this runtime while its half-open
+        // connections hold the drop's barrier, so the startup sweep drops the clone instead.
         drop(self.lease.take());
     }
 }
@@ -300,7 +275,6 @@ async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, Testk
         pool,
         url,
         name,
-        admin_url: server.to_owned(),
         lease: Some(lease),
     };
     if template.is_some() {
@@ -931,7 +905,7 @@ async fn sweep(admin: &mut PgConnection) -> SweepReport {
         report.candidates += 1;
         // No `WITH (FORCE)`: a clone with live sessions belongs to a running
         // test process.
-        match statements::drop_database(admin, &name, Force::No).await {
+        match statements::drop_database(admin, &name).await {
             Ok(()) => report.dropped += 1,
             Err(error) => {
                 if refusal_is_benign(sqlstate(&error).as_deref()) {

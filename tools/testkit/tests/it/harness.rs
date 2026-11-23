@@ -237,10 +237,35 @@ async fn exists(pool: &sqlx::PgPool, name: &str) -> bool {
         .expect("catalog probe")
 }
 
-/// A clone is gone the moment its guard drops, as when a passing test
-/// returns (#3924).
+/// Sweeps until database `name` is gone, read through `pool`, and says
+/// whether it went within [`RECLAIM_DEADLINE`]. A clone's lease and
+/// sessions end a moment after their sockets close, so one sweep may still
+/// find the clone leased or in use.
+#[expect(
+    clippy::expect_used,
+    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
+              reaches `#[test]`-annotated functions, so it misses this helper; a \
+              panicking sweep is how the calling test fails (the Rust Book ch11)"
+)]
+async fn reclaimed(pool: &sqlx::PgPool, name: &str) -> bool {
+    let start = std::time::Instant::now();
+    while start.elapsed() < RECLAIM_DEADLINE {
+        testkit::sweep_stale().await.expect("sweep");
+        if !exists(pool, name).await {
+            return true;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    false
+}
+
+/// How long the sweeps that follow a clone's end may take to drop it.
+const RECLAIM_DEADLINE: std::time::Duration = std::time::Duration::from_secs(15);
+
+/// A dropped guard's clone is dropped by the next sweep, as when a passing
+/// test returns.
 #[tokio::test]
-async fn a_passing_tests_clone_is_dropped_with_its_guard() {
+async fn a_dropped_guards_clone_is_reclaimed_by_the_next_sweep() {
     let probe = testkit::db().await.expect("probe clone");
     let db = testkit::db().await.expect("clone");
     let name = db.name().to_owned();
@@ -250,15 +275,15 @@ async fn a_passing_tests_clone_is_dropped_with_its_guard() {
     );
     drop(db);
     assert!(
-        !exists(&probe.pool(), &name).await,
-        "dropping the guard left {name} behind"
+        reclaimed(&probe.pool(), &name).await,
+        "the sweeps left the dropped guard's clone {name} behind"
     );
 }
 
-/// A clone is gone once a test that holds it panics, since the unwind drops
-/// the guard (#3924).
+/// A failing test's clone is dropped by the next sweep, since the unwind
+/// drops the guard.
 #[tokio::test]
-async fn a_failing_tests_clone_is_dropped_by_the_unwind() {
+async fn a_failing_tests_clone_is_reclaimed_by_the_next_sweep() {
     let probe = testkit::db().await.expect("probe clone");
     let (named, name) = std::sync::mpsc::channel();
     // A test of its own, on its own runtime, as nextest runs one.
@@ -278,8 +303,137 @@ async fn a_failing_tests_clone_is_dropped_by_the_unwind() {
     assert!(failing.join().is_err(), "the stand-in test must fail");
     let name = name.recv().expect("the clone's name");
     assert!(
-        !exists(&probe.pool(), &name).await,
-        "the failing test left {name} behind"
+        reclaimed(&probe.pool(), &name).await,
+        "the sweeps left the failing test's clone {name} behind"
+    );
+}
+
+/// Names the child half of
+/// [`a_process_that_ends_without_its_drop_has_its_clone_reclaimed`] and asks
+/// it to run.
+const ENDED_CHILD: &str = "FERROEHR_TESTKIT_ENDED_CHILD";
+
+/// The line on which the child half names its clone.
+const CLONE_LINE: &str = "testkit-clone=";
+
+/// The child half: a process that takes a clone, names it, and ends without
+/// dropping its guard, as a killed test process does.
+#[test]
+#[ignore = "the child half of a_process_that_ends_without_its_drop_has_its_clone_reclaimed, run in its own process"]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the parent asks the child to run in the environment of the process it spawns"
+)]
+#[expect(
+    clippy::mem_forget,
+    reason = "the child ends with its guard never dropped, as a killed process does"
+)]
+fn ended_child() {
+    if std::env::var(ENDED_CHILD).is_err() {
+        return;
+    }
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("runtime");
+    let db = runtime.block_on(testkit::db()).expect("clone");
+    println!("{CLONE_LINE}{}", db.name());
+    std::mem::forget(db);
+}
+
+/// A process that ends without dropping its guard has its clone dropped by
+/// the next sweep, by its lease, which the end of the process frees.
+#[tokio::test]
+async fn a_process_that_ends_without_its_drop_has_its_clone_reclaimed() {
+    let probe = testkit::db().await.expect("probe clone");
+    let exe = std::env::current_exe().expect("the test binary");
+    let output = tokio::task::spawn_blocking(move || {
+        std::process::Command::new(exe)
+            .args([
+                "harness::ended_child",
+                "--exact",
+                "--ignored",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env(ENDED_CHILD, "1")
+            .output()
+    })
+    .await
+    .expect("the child's waiter")
+    .expect("the child runs");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success(),
+        "the child failed: {stdout}\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let name = stdout
+        .lines()
+        .find_map(|line| line.strip_prefix(CLONE_LINE))
+        .expect("the child names its clone")
+        .to_owned();
+    assert!(
+        reclaimed(&probe.pool(), &name).await,
+        "the sweeps left the ended process's clone {name} behind"
+    );
+}
+
+/// Opens a session on the server and database of `url` and stops when the
+/// server asks for the password, so its backend waits in client
+/// authentication until the returned stream closes (`PostgreSQL` docs
+/// § Frontend/Backend Protocol, "Start-up").
+#[expect(
+    clippy::expect_used,
+    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
+              reaches `#[test]`-annotated functions, so it misses this helper; a \
+              panicking probe is how the calling test fails (the Rust Book ch11)"
+)]
+async fn waiting_in_authentication(url: &str) -> tokio::net::TcpStream {
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+
+    const PROTOCOL_3_0: i32 = 196_608;
+    const AUTHENTICATION: u8 = b'R';
+    let options: sqlx::postgres::PgConnectOptions = url.parse().expect("the clone's DSN");
+    let database = options.get_database().expect("the DSN names a database");
+    let mut body = PROTOCOL_3_0.to_be_bytes().to_vec();
+    for field in ["user", options.get_username(), "database", database] {
+        body.extend_from_slice(field.as_bytes());
+        body.push(0);
+    }
+    body.push(0);
+    let length = i32::try_from(body.len() + 4).expect("a short start-up message");
+    let mut stream = tokio::net::TcpStream::connect((options.get_host(), options.get_port()))
+        .await
+        .expect("a connection to the server");
+    stream
+        .write_all(&length.to_be_bytes())
+        .await
+        .expect("the start-up length");
+    stream.write_all(&body).await.expect("the start-up message");
+    let tag = stream.read_u8().await.expect("the server's answer");
+    let _length = stream.read_i32().await.expect("the answer's length");
+    let request = stream.read_i32().await.expect("the authentication request");
+    assert_eq!(tag, AUTHENTICATION, "the server answers with an authentication request");
+    assert_ne!(request, 0, "the server asks for a password");
+    stream
+}
+
+/// Dropping a guard returns at once while a session of the same server waits
+/// in client authentication, as a connection of a test's runtime does when
+/// the test returns mid-handshake: a drop that ran `DROP DATABASE` would wait
+/// for that backend until the server's `authentication_timeout` (#6367).
+#[tokio::test]
+async fn a_guard_drops_at_once_while_a_session_waits_in_authentication() {
+    let db = testkit::db().await.expect("clone");
+    let waiting = waiting_in_authentication(db.url()).await;
+    let start = std::time::Instant::now();
+    drop(db);
+    let took = start.elapsed();
+    drop(waiting);
+    assert!(
+        took < std::time::Duration::from_secs(15),
+        "dropping the guard took {took:?} while a session waited in authentication"
     );
 }
 
