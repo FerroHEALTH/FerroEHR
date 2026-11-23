@@ -71,7 +71,8 @@ fn read(n: u64) -> AuditRecord {
 }
 
 /// One access-log entry costs the request that writes it at most
-/// [`CEILING`] allocations.
+/// [`CEILING`] allocations, gated on Linux, where the ceiling is measured
+/// (`super::paths::ALLOCATIONS_GATED`); elsewhere the figure is reported.
 #[tokio::test]
 async fn an_access_log_entry_stays_within_its_allocation_budget() {
     let db = testkit::db().await.expect("testkit database");
@@ -94,7 +95,7 @@ async fn an_access_log_entry_stays_within_its_allocation_budget() {
     let per_entry = count.div_euclid(ENTRIES);
     eprintln!("an access-log entry: {per_entry} allocations (ceiling {CEILING})");
     assert!(
-        per_entry <= CEILING,
+        !super::paths::ALLOCATIONS_GATED || per_entry <= CEILING,
         "an access-log entry costs {per_entry} allocations, above its ceiling of {CEILING}"
     );
 }

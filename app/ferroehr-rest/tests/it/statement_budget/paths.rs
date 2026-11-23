@@ -1955,7 +1955,7 @@ fn judged(measured: u64, ceiling: u64) -> (bool, String) {
 /// Whether the allocation ceilings gate this build: they are the figures
 /// Linux CI measures, and the same paths allocate a few more times elsewhere.
 // NOTE: #6338 chose Linux-only allocation gates; other platforms print the figures.
-const ALLOCATIONS_GATED: bool = cfg!(target_os = "linux");
+pub(super) const ALLOCATIONS_GATED: bool = cfg!(target_os = "linux");
 
 /// [`judged`] for an allocation count, which passes off Linux and reports
 /// the measured figure beside its ceiling there.
