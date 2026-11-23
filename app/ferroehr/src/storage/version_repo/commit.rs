@@ -551,6 +551,36 @@ pub(super) fn bind_episodes<'q>(
     )
 }
 
+/// The statement text `folded` runs: its shape, what it writes beside the
+/// version, and what the version does with its object's episodes.
+fn folded_text(folded: &Folded<'_>) -> &'static str {
+    use super::guarded::Beside;
+    static CONTRIBUTION: LazyLock<String> =
+        LazyLock::new(|| folded_statement(Shape::Contribution, Placement::Untouched));
+    static STANDALONE: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Standalone, p)));
+    static INTO: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Into, p)));
+    static GUARDED: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Guarded, p)));
+    static STATUS: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Status, p)));
+    static FOLDER: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Folder, p)));
+    static PARTY: LazyLock<[String; 3]> =
+        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Party, p)));
+    let (texts, version): (&'static LazyLock<[String; 3]>, _) = match folded {
+        Folded::Contribution { .. } => return CONTRIBUTION.as_str(),
+        Folded::Standalone { version, .. } => (&STANDALONE, version),
+        Folded::Into { version, .. } => (&INTO, version),
+        Folded::Guarded { version, guard, .. } if guard.status.is_some() => (&STATUS, version),
+        Folded::Guarded { version, guard, .. } if guard.directory.is_some() => (&FOLDER, version),
+        Folded::Guarded { version, guard, .. } if guard.party.is_some() => (&PARTY, version),
+        Folded::Guarded { version, .. } => (&GUARDED, version),
+    };
+    Placement::of(version).pick(texts)
+}
+
 /// Run one folded commit statement ([`Folded`]), returning the rows it wrote.
 ///
 /// On a CONTRIBUTION uid already in use the `contribution` CTE inserts nothing
@@ -567,59 +597,14 @@ pub async fn commit_folded(
     audit: &AuditRow<'_>,
     folded: Folded<'_>,
 ) -> Result<FoldedRows, StorageError> {
-    use super::guarded::Beside;
-    static CONTRIBUTION: LazyLock<String> =
-        LazyLock::new(|| folded_statement(Shape::Contribution, Placement::Untouched));
-    static STANDALONE: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Standalone, p)));
-    static INTO: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Into, p)));
-    static GUARDED: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| folded_statement(Shape::Guarded, p)));
-    static STATUS: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Status, p)));
-    static FOLDER: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Folder, p)));
-    static PARTY: LazyLock<[String; 3]> =
-        LazyLock::new(|| Placement::ALL.map(|p| super::guarded::statement(Beside::Party, p)));
     let status = matches!(&folded, Folded::Guarded { guard, .. } if guard.status.is_some());
-    let placement = match &folded {
-        Folded::Contribution { .. } => Placement::Untouched,
-        Folded::Standalone { version, .. }
-        | Folded::Into { version, .. }
-        | Folded::Guarded { version, .. } => Placement::of(version),
-    };
-    let pick = |texts: &'static LazyLock<[String; 3]>| -> &'static str { placement.pick(texts) };
-    let (sql, id, ehr_id, version, guard) = match folded {
-        Folded::Contribution { id, ehr_id } => (CONTRIBUTION.as_str(), id, ehr_id, None, None),
-        Folded::Standalone { id, version } => {
-            (pick(&STANDALONE), id, version.ehr_id, Some(version), None)
+    let sql = folded_text(&folded);
+    let (id, ehr_id, version, guard) = match folded {
+        Folded::Contribution { id, ehr_id } => (id, ehr_id, None, None),
+        Folded::Standalone { id, version } | Folded::Into { id, version } => {
+            (id, version.ehr_id, Some(version), None)
         }
-        Folded::Into { id, version } => (pick(&INTO), id, version.ehr_id, Some(version), None),
-        Folded::Guarded { id, version, guard } if guard.status.is_some() => (
-            pick(&STATUS),
-            id,
-            version.ehr_id,
-            Some(version),
-            Some(guard),
-        ),
-        Folded::Guarded { id, version, guard } if guard.directory.is_some() => (
-            pick(&FOLDER),
-            id,
-            version.ehr_id,
-            Some(version),
-            Some(guard),
-        ),
-        Folded::Guarded { id, version, guard } if guard.party.is_some() => {
-            (pick(&PARTY), id, version.ehr_id, Some(version), Some(guard))
-        }
-        Folded::Guarded { id, version, guard } => (
-            pick(&GUARDED),
-            id,
-            version.ehr_id,
-            Some(version),
-            Some(guard),
-        ),
+        Folded::Guarded { id, version, guard } => (id, version.ehr_id, Some(version), Some(guard)),
     };
     let query = sqlx::query(sqlx::AssertSqlSafe(sql))
         .bind(audit.system_id)
