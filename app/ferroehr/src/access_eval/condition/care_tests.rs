@@ -105,9 +105,9 @@ async fn a_copy_that_never_catches_up_refuses_the_care_decision() {
         "INSERT INTO party.binding_caller_fact_party (party_id, stamped_xid) \
          VALUES (uuidv7(), pg_current_xact_id())",
     )
-        .execute(&db.pool())
-        .await
-        .expect("another replica commits a change");
+    .execute(&db.pool())
+    .await
+    .expect("another replica commits a change");
     grants.hold_back();
     let started = std::time::Instant::now();
     let refused = request(grants)

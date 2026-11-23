@@ -462,15 +462,15 @@ pub(crate) async fn load(
     since: Option<&Snapshot>,
 ) -> Result<Changed, StorageError> {
     let snapshot = Arc::new(crate::db::snapshot::current(conn).await?);
-    let (rows, cared, declared) = match since.map(Snapshot::to_string) {
+    let (rows, cared, declared) = match since.map(Snapshot::text) {
         Some(since) => {
             let declared: Vec<(Uuid, String, String, bool)> = sqlx::query_as(DECLARED)
-                .bind(&since)
+                .bind(since)
                 .fetch_all(&mut *conn)
                 .await?;
             (
-                sqlx::query(FACTS).bind(&since).fetch_all(&mut *conn).await?,
-                sqlx::query(CARED).bind(&since).fetch_all(&mut *conn).await?,
+                sqlx::query(FACTS).bind(since).fetch_all(&mut *conn).await?,
+                sqlx::query(CARED).bind(since).fetch_all(&mut *conn).await?,
                 declared
                     .into_iter()
                     .map(|(person, namespace, id, live)| Declared {
@@ -556,7 +556,7 @@ pub(crate) async fn stamped_since(
         unseen!(),
         " ORDER BY p.party_id"
     ))
-    .bind(since.to_string())
+    .bind(since.text())
     .fetch_all(&mut *conn)
     .await?)
 }

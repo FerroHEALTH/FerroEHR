@@ -27,6 +27,8 @@ pub struct Snapshot {
     xmax: u64,
     /// The xids at or above `xmin` and below `xmax` still running, sorted.
     xip: Vec<u64>,
+    /// The text it was read from, which a statement binds back.
+    text: Box<str>,
 }
 
 /// A snapshot text that is not `xmin:xmax:xip_list`.
@@ -59,6 +61,7 @@ impl std::str::FromStr for Snapshot {
             xmin: xid(&xmin)?,
             xmax: xid(&xmax)?,
             xip,
+            text: text.trim().into(),
         })
     }
 }
@@ -66,18 +69,17 @@ impl std::str::FromStr for Snapshot {
 impl fmt::Display for Snapshot {
     /// The text `pg_snapshot` reads back.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}:", self.xmin, self.xmax)?;
-        for (n, xid) in self.xip.iter().enumerate() {
-            if n > 0 {
-                f.write_str(",")?;
-            }
-            write!(f, "{xid}")?;
-        }
-        Ok(())
+        f.write_str(&self.text)
     }
 }
 
 impl Snapshot {
+    /// The text `pg_snapshot` reads back, bound as `$n::pg_snapshot`.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
     /// Whether the writes of the transaction `xid` are visible to it, as
     /// `pg_visible_in_snapshot` answers for a transaction that committed.
     #[must_use]

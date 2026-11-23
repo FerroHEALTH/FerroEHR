@@ -423,7 +423,7 @@ pub(crate) async fn revisions(
                 pg_current_snapshot()::text \
          FROM binding_grant_revision",
     )
-    .bind(held.map(|held| held.snapshot.to_string()))
+    .bind(held.map(|held| held.snapshot.text()))
     .fetch_one(&mut *conn)
     .await?;
     let facts = match held {
@@ -431,7 +431,7 @@ pub(crate) async fn revisions(
             generation: held.generation,
         },
         _ => FactsRead::Behind {
-            store: std::sync::Arc::new(crate::db::snapshot::read(&store)?),
+            store: Some(std::sync::Arc::new(crate::db::snapshot::read(&store)?)),
         },
     };
     Ok(Revisions {

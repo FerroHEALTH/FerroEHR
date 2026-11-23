@@ -230,21 +230,11 @@ pub async fn ehr_subject_columns(
     .await?)
 }
 
-/// Reads the whole `GET /ehr/{ehr_id}` representation in ONE statement.
-///
-/// Returns the EHR header, the current `EHR_STATUS` version identity, the
-/// `EHR_ACCESS` versioned-object id, the LIVE folder-hierarchy ids in `rank`
-/// order and the latest commit that changed them, in one round trip (no openEHR spec governs read batching —
-/// our own design).
-///
-/// # Errors
-/// Returns [`StorageError::Database`] on a driver failure.
-pub async fn ehr_summary_read(
-    pool: &PgPool,
-    ehr_id: EhrId,
-) -> Result<Option<EhrSummaryRead>, StorageError> {
-    let Some(row) = sqlx::query(concat!(
-        "SELECT e.system_id, e.time_created, ",
+/// The statement [`ehr_summary_read`] runs, `$head` leading its select list.
+macro_rules! ehr_summary_select {
+    ($head:expr) => {
+        concat!(
+        "SELECT ", $head, "e.system_id, e.time_created, ",
         access_revision!("e.id"),
         ", s.vo_id AS status_vo, s.trunk_version, s.branch_number, \
                 s.branch_version, s.creating_system_id, \
@@ -279,11 +269,38 @@ pub async fn ehr_summary_read(
              WHERE f.ehr_id = e.id \
          ) f ON true \
          WHERE e.id = $1"
-    ))
-    .bind(ehr_id)
-    .fetch_optional(&mut *acquire(pool).await?)
-    .await?
-    else {
+        )
+    };
+}
+
+/// The statement [`ehr_summary_read`] runs.
+const EHR_SUMMARY_SQL: &str = ehr_summary_select!("");
+
+/// [`EHR_SUMMARY_SQL`] with the party store's revisions, for a ride (#6320).
+const EHR_SUMMARY_RIDE_SQL: &str = ehr_summary_select!(party_revisions!("$2"));
+
+/// Reads the whole `GET /ehr/{ehr_id}` representation in ONE statement.
+///
+/// Returns the EHR header, the current `EHR_STATUS` version identity, the
+/// `EHR_ACCESS` versioned-object id, the LIVE folder-hierarchy ids in `rank`
+/// order and the latest commit that changed them, in one round trip (no openEHR spec governs read batching —
+/// our own design).
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn ehr_summary_read(
+    pool: &PgPool,
+    ehr_id: EhrId,
+) -> Result<Option<EhrSummaryRead>, StorageError> {
+    let door = crate::party_binding::request::door();
+    let query = if crate::party_binding::request::reads_door() {
+        sqlx::query(EHR_SUMMARY_RIDE_SQL)
+            .bind(ehr_id)
+            .bind(door.as_deref().map(crate::db::snapshot::Snapshot::text))
+    } else {
+        sqlx::query(EHR_SUMMARY_SQL).bind(ehr_id)
+    };
+    let Some(row) = query.fetch_optional(&mut *acquire(pool).await?).await? else {
         return Ok(None);
     };
     let status = match row.try_get::<Option<VoId>, _>("status_vo")? {

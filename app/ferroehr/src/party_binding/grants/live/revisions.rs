@@ -35,10 +35,11 @@ pub enum FactsRead {
         generation: u64,
     },
     /// It holds one, or the copy held no snapshot: a copy holds the facts once
-    /// its snapshot covers `store`, the read's own.
+    /// its snapshot covers `store`, the read's own, and never when the read
+    /// names none.
     Behind {
         /// The snapshot the read ran under.
-        store: Arc<Snapshot>,
+        store: Option<Arc<Snapshot>>,
     },
 }
 
@@ -48,6 +49,20 @@ pub enum FactsRead {
 pub struct HeldSnapshot {
     pub(crate) generation: u64,
     pub(crate) snapshot: Arc<Snapshot>,
+}
+
+impl HeldSnapshot {
+    /// Whether a copy at this install holds every stamp `read` found: the
+    /// install asked or a later one when the read found none unseen, and a
+    /// snapshot that covers the read's own when it found one.
+    pub(crate) fn holds(&self, read: &FactsRead) -> bool {
+        match read {
+            FactsRead::Seen { generation } => self.generation >= *generation,
+            FactsRead::Behind { store } => store
+                .as_ref()
+                .is_some_and(|store| self.snapshot.covers(store)),
+        }
+    }
 }
 
 impl LiveGrants {
@@ -78,14 +93,23 @@ impl LiveGrants {
     /// The revisions in force in the store when this replica's copy is older
     /// than them, from the indexed read the request makes
     /// ([`crate::party_binding::request`]); `None` when the copy
-    /// holds them.
+    /// holds them, or when the request rides and the copy is noted as held
+    /// for the ride to be judged by.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the party store does not answer.
     pub async fn behind(&self) -> Result<Option<Revisions>, GrantsUnavailable> {
-        let store =
-            crate::party_binding::request::revisions(&self.pool, self.held_snapshot().as_ref())
-                .await?;
+        let held = self.held_snapshot();
+        // NOTE: our own design (#6320), a ride decides on the copy as it stands and is answered
+        // only once the revisions its clinical statement read are the copy's or older.
+        if crate::party_binding::request::riding()
+            && !self.listened.must_read()
+            && let (Some(grants), Some(facts)) = (self.revision(), held.as_ref())
+        {
+            crate::party_binding::request::held(grants, facts);
+            return Ok(None);
+        }
+        let store = crate::party_binding::request::revisions(&self.pool, held.as_ref()).await?;
         Ok((!self.holds(&store)).then_some(store))
     }
 
@@ -111,20 +135,10 @@ impl LiveGrants {
         self.revision().is_some_and(|held| held >= store.grants) && self.facts_hold(&store.facts)
     }
 
-    /// Whether the facts copy holds every stamp `read` found: the copy asked
-    /// or a later install of it when the read found none unseen, and a
-    /// snapshot that covers the read's own when it found one.
+    /// Whether the facts copy holds every stamp `read` found
+    /// ([`HeldSnapshot::holds`]); never before its first read.
     pub(crate) fn facts_hold(&self, read: &FactsRead) -> bool {
-        let held = self.held_facts();
-        match read {
-            FactsRead::Seen { generation } => {
-                held.snapshot.is_some() && held.generation >= *generation
-            }
-            FactsRead::Behind { store } => held
-                .snapshot
-                .as_ref()
-                .is_some_and(|snapshot| snapshot.covers(store)),
-        }
+        self.held_snapshot().is_some_and(|held| held.holds(read))
     }
 }
 

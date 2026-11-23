@@ -172,13 +172,13 @@ async fn an_older_snapshot_is_behind_until_the_copy_reads_again() {
     }
     assert!(!live.held_facts().by_party.contains_key(&party));
     live.refresh().await.expect("the read again");
-    assert!(!behind(&pool, &live).await, "the copy read again is current");
+    assert!(
+        !behind(&pool, &live).await,
+        "the copy read again is current"
+    );
     assert!(live.held_facts().by_party.contains_key(&party));
-    let notified = tokio::time::timeout(
-        std::time::Duration::from_millis(300),
-        listener.try_recv(),
-    )
-    .await;
+    let notified =
+        tokio::time::timeout(std::time::Duration::from_millis(300), listener.try_recv()).await;
     assert!(
         notified.is_err(),
         "a facts stamp notifies no replica: {notified:?}"

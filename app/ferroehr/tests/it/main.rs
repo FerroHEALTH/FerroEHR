@@ -113,6 +113,7 @@ mod decommission;
 mod definition_copies;
 mod definition_load;
 mod directory_item_refs;
+mod directory_slot_lock;
 mod ehr_index_ihe;
 mod ext_functions;
 mod external_callers;

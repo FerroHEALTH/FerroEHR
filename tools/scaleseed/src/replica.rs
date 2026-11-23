@@ -120,12 +120,10 @@ pub(crate) async fn seed(pool: &PgPool, target: Target) -> anyhow::Result<()> {
     .execute(&mut *tx)
     .await
     .context("stamp the parties")?;
-    sqlx::query(
-        "UPDATE party.binding_grant_revision SET revision = revision + 1",
-    )
-    .execute(&mut *tx)
-    .await
-    .context("move the revisions")?;
+    sqlx::query("UPDATE party.binding_grant_revision SET revision = revision + 1")
+        .execute(&mut *tx)
+        .await
+        .context("move the revisions")?;
     tx.commit().await.context("commit the seed")?;
     for table in [
         "party.binding_caller_fact",

@@ -51,7 +51,7 @@
 //!
 //! The authn↔authz seam is the [`authn::Principal`]: authn resolves it, the `EHR_ACCESS`
 //! gate + the RBAC gate + the SMART PEP all consume it, and the single 401/403
-//! decision lives in `authn::middleware`.
+//! decision lives in `authn::run::middleware`.
 
 pub(crate) mod admission;
 pub mod authn;

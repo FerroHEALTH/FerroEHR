@@ -93,6 +93,26 @@ macro_rules! access_revision {
     };
 }
 
+/// The select-list item that reads, as `party_revisions`, the party store's
+/// grant and binding revisions and whether a caller facts stamp exists that
+/// the snapshot bound at the placeholder `$held` did not see, through
+/// `party_door.party_revisions(held)`, the one function of the party domain
+/// the clinical roles may run, where the two domains share a database
+/// (`party/0009`). One record, so a column of another type joins it as one
+/// more field. Only a ride that has not read them yet selects it
+/// (`party_binding::request::reads_door`, #6320), binding
+/// `party_binding::request::door` (#6074).
+macro_rules! party_revisions {
+    ($held:literal) => {
+        concat!(
+            "(SELECT ROW(pr.grants, pr.facts_behind, pr.bindings) ",
+            "FROM party_door.party_revisions(",
+            $held,
+            "::pg_snapshot) pr) AS party_revisions, "
+        )
+    };
+}
+
 /// The columns of [`access_facts::HeadFacts`], read off the `vo_head` row
 /// aliased `h`: what the access evaluator judges an object by.
 macro_rules! head_facts {
