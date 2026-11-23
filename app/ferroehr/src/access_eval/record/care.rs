@@ -55,6 +55,8 @@ pub(super) fn care_ground(tie: &Tie, namespace: &str) -> Option<AccessStoredCare
             .as_ref()
             .map(|cover| identifier(&cover.key, Some(cover.kind.rm_type()))),
         provider: identifier(&grant.provider, Some("ORGANISATION")),
+        // TODO(#6412): the relationship's episode, once the tie carries it.
+        episode: None,
     })
 }
 

@@ -8,6 +8,7 @@
 
 use crate::draft::access_control::access_control::access_classification::AccessClassification;
 use crate::draft::access_control::access_control::access_conflict_rule::AccessConflictRule;
+use crate::draft::access_control::access_control::access_data_scope::AccessDataScope;
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
 use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use crate::draft::access_control::access_control::access_log_retention::AccessLogRetention;
@@ -78,6 +79,10 @@ pub struct AccessPolicy {
     pub attested_care: Option<openehr_base::containers::NonEmptyVec<DvIdentifier>>,
     /// Whether a query may be narrowed to the caller's caseload and the caseload resource answers. Void means true.
     pub caseload: Option<bool>,
+    /// The data every live care relationship of the controller covers whatever episode the relationship or the data name: the categories a professional reads across episodes, such as the patient summary.
+    ///
+    /// Void means none: placed data are covered only by a relationship of their episode or of none.
+    pub episode_shared: Option<openehr_base::containers::NonEmptyVec<AccessDataScope>>,
     /// The conflicts of interest the controller allows through the professional path. Void allows none: a professional who is the subject, or is related to the subject, is refused.
     pub conflict_rules: Option<openehr_base::containers::NonEmptyVec<AccessConflictRule>>,
     /// The confidentiality levels whose refused records are answered as absent. Void answers every refused named record as forbidden.
