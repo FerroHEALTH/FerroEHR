@@ -4,16 +4,12 @@
 //! The declared deployment posture: what this deployment is allowed to hold,
 //! and which separations it has actually made (#3226).
 //!
-//! FerroEHR has a set of properties a deployment either has or does not have:
-//! separated database credentials, separated database clusters, a declared
-//! subject pseudonym namespace, an audit trail with a durable sink, schema
-//! preparation on its own credential. Every one is a configuration key an
-//! operator can leave unset, and a deployment that quietly has none of them
-//! looks, from its own logs and its own API, exactly like one that has all of
-//! them. The top-level `deployment.profile` key gives the server a declared
-//! posture: `production` refuses to start when a property is missing and not
-//! explicitly accepted, `sandbox` says which are missing, loudly and on every
-//! surface, so it cannot be mistaken for the other.
+//! Each separation (database credentials, clusters, a subject pseudonym
+//! namespace, a durable audit sink, schema preparation on its own credential)
+//! is a key an operator can leave unset, and a deployment without them looks
+//! like one with them. `deployment.profile` declares the posture: `production`
+//! refuses to start while a separation is missing and not accepted, and
+//! `sandbox` names each missing one on every surface.
 //!
 //! **This is FerroEHR's own posture, not a legal requirement.** GDPR Art. 4(5)
 //! asks that the additional information be "kept separately and … subject to
@@ -329,12 +325,6 @@ impl ClusterIdentities {
 }
 
 /// What the database layer measured about this deployment's databases.
-///
-/// Both members are facts a connection produced, not configuration: the
-/// clusters the pools reached, and the domains whose database schema
-/// preparation will touch on a credential that also serves requests. Both are
-/// empty in the banner's pre-pool evaluation, which is what makes that reading
-/// the configuration's own posture and this one the measured posture.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DatabaseFacts {
     /// The cluster each domain pool reached.

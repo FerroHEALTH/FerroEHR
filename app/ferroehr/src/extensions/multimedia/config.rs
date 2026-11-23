@@ -6,16 +6,9 @@
 //! **No openEHR spec governs this: our own design/extension.** A field of the
 //! one config tree ([`crate::config::FerroEhrConfig`]); no loader of its own.
 //!
-//! **Off by default** (`enabled = false`): with externalization disabled and
-//! no endpoint the commit/read paths are byte-identical to today's inline
-//! behaviour and no blob store is ever contacted. The section keeps
-//! `enabled` where other optional features use the table's presence, because
-//! the backend applies while it is off: the blobs already offloaded are read
-//! back. `backend` picks the storage service and its own table carries that
-//! service's settings (`[record.multimedia.s3]`), so a further service is a
-//! further variant and table. The secret access key is a shared
-//! [`ferrohealth_secret::secret::Secret`] (never rendered) with a `*_file`
-//! sibling.
+//! Off by default (`enabled = false`). The section keeps `enabled`, where other
+//! features use the table's presence, because the backend applies while it is
+//! off: blobs already offloaded are read back.
 #![expect(
     clippy::doc_markdown,
     reason = "product identifiers (SeaweedFS, MinIO, …) read as prose in \

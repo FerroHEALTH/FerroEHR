@@ -3,11 +3,6 @@
 
 //! The conformance profile `OPTIONS /` sends, derived from the released-profile
 //! summary of a Veredictum run (`docs/conformance/ferroehr/summary.md`).
-//!
-//! The build script compiles this file through `#[path]` and the library
-//! compiles it for its tests, so the derivation the server ships is the one
-//! the tests pin. It reads the summary's `BASE` and `OPTIONS` rows, the two
-//! parts `scripts/render/conformance-stats.sh` checks against the record.
 
 /// The counts of one part of the summary table: `Passed`, `Failed`, `Warning`,
 /// `Errored`, `Skipped` and `Total`, in the table's column order.
