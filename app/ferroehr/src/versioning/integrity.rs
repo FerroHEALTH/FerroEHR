@@ -122,11 +122,13 @@ pub(crate) fn signed_form<C: VersionMember, A: VersionMember>(
         return Ok(Err(error));
     }
     if let Signed::Rendered(rendered) = data {
-        let mut canonical = String::with_capacity(rendered.text().len());
-        if let Err(error) = rendered.write_canonical(rendered.root(), &mut canonical) {
+        let written = envelope.member_written("data", |out| {
+            out.reserve(rendered.text().len());
+            rendered.write_canonical(rendered.root(), out)
+        });
+        if let Err(error) = written {
             return Ok(Err(error));
         }
-        envelope.member_canonical("data", &canonical);
     }
     Ok(envelope.finish())
 }
