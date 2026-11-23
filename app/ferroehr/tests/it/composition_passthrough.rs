@@ -28,7 +28,7 @@ async fn stored_body(db: &testkit::TestDb, vo_id: &str, tree: i32) -> String {
 /// body instead.
 fn passthrough(read: RawServiceResponse) -> String {
     match read.body {
-        ReadBody::RawJson(text) => text.to_string(),
+        ReadBody::RawJson(text) => text.text().expect("the stored text is UTF-8").to_owned(),
         ReadBody::Value(value) => panic!("the read parsed the stored body: {value}"),
     }
 }
@@ -123,7 +123,7 @@ async fn a_json_composition_read_serves_the_stored_body_verbatim() {
 fn parsed(read: RawServiceResponse) -> Value {
     match read.body {
         ReadBody::Value(value) => value,
-        ReadBody::RawJson(text) => panic!("the read served the stored text verbatim: {text}"),
+        ReadBody::RawJson(text) => panic!("the read served the stored text verbatim: {text:?}"),
     }
 }
 
