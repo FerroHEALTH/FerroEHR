@@ -821,10 +821,10 @@ const BUDGETS: [Budget; 31] = [
 /// snapshot its caller facts copy holds, which `party.facts_behind` judges
 /// the stamps against, in place of reading `facts_revision`, so a care
 /// relationship commit moves no shared row and sends no `pg_notify` (#6074):
-/// 35 bytes more sent and 8 fewer received on every path, measured beside
-/// the merge base. Only the three directory ceilings, whose margin was 18
-/// bytes, rose, by the 27 bytes measured, approved by the orchestrator on
-/// #6074.
+/// 9 to 27 bytes more on every path, by the width of the snapshot's text,
+/// measured beside the merge base. Only the three directory ceilings, whose
+/// margin was 18 bytes, rose, by the 27 bytes of the widest run, approved by
+/// the orchestrator on #6074.
 const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitJson, 202_143),
     (Path::CommitXml, 202_289),
