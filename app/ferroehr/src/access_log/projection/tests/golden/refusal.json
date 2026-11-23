@@ -1,0 +1,140 @@
+{
+  "balp": {
+    "action": "R",
+    "agent": [
+      {
+        "network": {
+          "address": "UNKNOWN",
+          "type": "1"
+        },
+        "requestor": false,
+        "type": {
+          "coding": [
+            {
+              "code": "110152",
+              "display": "Destination Role ID",
+              "system": "http://dicom.nema.org/resources/ontology/DCM"
+            }
+          ]
+        },
+        "who": {
+          "display": "UNKNOWN"
+        }
+      },
+      {
+        "network": {
+          "address": "10.42.23.77",
+          "type": "2"
+        },
+        "requestor": false,
+        "type": {
+          "coding": [
+            {
+              "code": "110153",
+              "display": "Source Role ID",
+              "system": "http://dicom.nema.org/resources/ontology/DCM"
+            }
+          ]
+        },
+        "who": {
+          "display": "cdr.example.org"
+        }
+      }
+    ],
+    "entity": [
+      {
+        "name": "Patient Record",
+        "role": {
+          "code": "4",
+          "display": "Domain Resource",
+          "system": "http://terminology.hl7.org/CodeSystem/object-role"
+        },
+        "type": {
+          "code": "2",
+          "display": "System Object",
+          "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type"
+        },
+        "what": {
+          "identifier": {
+            "value": "Patient Record"
+          }
+        }
+      }
+    ],
+    "outcome": "4",
+    "outcomeDesc": "Operation failed",
+    "recorded": "2026-11-13T10:15:30.123456Z",
+    "resourceType": "AuditEvent",
+    "source": {
+      "observer": {
+        "display": "cdr.example.org",
+        "identifier": {
+          "value": "cdr.example.org"
+        }
+      },
+      "site": "site-1",
+      "type": [
+        {
+          "code": "4",
+          "display": "Application Server",
+          "system": "http://terminology.hl7.org/CodeSystem/security-source-type"
+        }
+      ]
+    },
+    "subtype": [
+      {
+        "code": "read",
+        "display": "read",
+        "system": "http://hl7.org/fhir/restful-interaction"
+      }
+    ],
+    "type": {
+      "code": "rest",
+      "display": "Restful Operation",
+      "system": "http://terminology.hl7.org/CodeSystem/audit-event-type"
+    }
+  },
+  "dicom": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><AuditMessage><EventIdentification EventActionCode=\"R\" EventDateTime=\"2026-11-13T10:15:30.123456Z\" EventOutcomeIndicator=\"4\"><EventID csd-code=\"110110\" codeSystemName=\"DCM\" originalText=\"Patient Record\"/><EventOutcomeDescription>Operation failed</EventOutcomeDescription></EventIdentification><ActiveParticipant UserID=\"UNKNOWN\" UserIsRequestor=\"true\" NetworkAccessPointID=\"UNKNOWN\" NetworkAccessPointTypeCode=\"2\"><RoleIDCode csd-code=\"110152\" codeSystemName=\"DCM\" originalText=\"Destination Role ID\"/></ActiveParticipant><ActiveParticipant UserID=\"cdr.example.org\" UserIsRequestor=\"false\" NetworkAccessPointID=\"10.42.23.77\" NetworkAccessPointTypeCode=\"2\"><RoleIDCode csd-code=\"110153\" codeSystemName=\"DCM\" originalText=\"Source Role ID\"/></ActiveParticipant><AuditSourceIdentification AuditEnterpriseSiteID=\"site-1\" AuditSourceID=\"cdr.example.org\"><AuditSourceTypeCode csd-code=\"4\" originalText=\"Application Server process or thread\"/></AuditSourceIdentification><ParticipantObjectIdentification ParticipantObjectID=\"UNKNOWN\" ParticipantObjectTypeCode=\"1\" ParticipantObjectTypeCodeRole=\"1\" ParticipantObjectDataLifeCycle=\"6\"><ParticipantObjectIDTypeCode csd-code=\"2\" codeSystemName=\"RFC-3881\" originalText=\"Patient Number\"/></ParticipantObjectIdentification><ParticipantObjectIdentification ParticipantObjectID=\"ehds-accessor\" ParticipantObjectTypeCode=\"4\"><ParticipantObjectIDTypeCode csd-code=\"4\" codeSystemName=\"http://terminology.hl7.org/CodeSystem/audit-entity-type\" originalText=\"Other\"/><ParticipantObjectName>ehds-accessor</ParticipantObjectName><ParticipantObjectDetail type=\"binding\" value=\"cmVmdXNlZC11bmJvdW5k\"/></ParticipantObjectIdentification></AuditMessage>",
+  "tokens": [
+    [
+      "address",
+      null,
+      "10.42.23.77"
+    ],
+    [
+      "address",
+      null,
+      "UNKNOWN"
+    ],
+    [
+      "entity-role",
+      "http://terminology.hl7.org/CodeSystem/object-role",
+      "4"
+    ],
+    [
+      "entity-type",
+      "http://terminology.hl7.org/CodeSystem/audit-entity-type",
+      "2"
+    ],
+    [
+      "entity.identifier",
+      null,
+      "Patient Record"
+    ],
+    [
+      "source.identifier",
+      null,
+      "cdr.example.org"
+    ],
+    [
+      "subtype",
+      "http://hl7.org/fhir/restful-interaction",
+      "read"
+    ],
+    [
+      "type",
+      "http://terminology.hl7.org/CodeSystem/audit-event-type",
+      "rest"
+    ]
+  ]
+}

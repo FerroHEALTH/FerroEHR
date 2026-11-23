@@ -136,8 +136,7 @@ pub fn details(
     if core.result_count() != event.result_count {
         tree.count(Detail::ResultCount, event.result_count);
     }
-    tree.texts(Detail::Origin, event.origins.iter().map(String::as_str));
-    tree.count(Detail::OriginCount, event.origin_count);
+    origin_details(&mut tree, event, core);
     let digest = event.category_map_digest.map(|digest| digest.to_string());
     tree.text(Detail::CategoryMapDigest, digest.as_deref());
     tree.json(
@@ -184,6 +183,21 @@ pub fn details(
             .and_then(|summary| serde_json::to_string(summary).ok()),
     );
     tree.finish()
+}
+
+/// Writes into `tree` the origins of the data `event` served and their count,
+/// where `core`'s item does not hold them as they are.
+fn origin_details(tree: &mut DetailsWriter, event: &AuditEvent, core: Core<'_>) {
+    // NOTE: the access_log_details archetype, id28 is written where no accessed item holds the
+    // origins; the count is written when it is not the number the item holds (#6322).
+    if core.holds_origins(&event.origins, event.origin_count) {
+        if event.origin_count != core.origin_count() {
+            tree.count(Detail::OriginCount, event.origin_count);
+        }
+    } else {
+        tree.texts(Detail::Origin, event.origins.iter().map(String::as_str));
+        tree.count(Detail::OriginCount, event.origin_count);
+    }
 }
 
 /// Writes into `tree` the facts of the caller's credential and roles that
@@ -366,6 +380,10 @@ fn accessor_and_access(
         .or_else(|| core.result_count());
     event.origins = details.texts(Detail::Origin)?;
     event.origin_count = details.count(Detail::OriginCount)?;
+    if event.origins.is_empty() {
+        event.origins = core.origins();
+        event.origin_count = event.origin_count.or_else(|| core.origin_count());
+    }
     event.actor.mode = text(Detail::ActingMode)?
         .map(|mode| acting_mode(&mode).ok_or(RecordedError::Value(Detail::ActingMode)))
         .transpose()?;
@@ -541,6 +559,37 @@ impl<'a> Core<'a> {
     /// The EHR the entry names.
     fn ehr_id(self) -> Option<&'a str> {
         self.0.ehr_id.as_ref().map(HierObjectId::value)
+    }
+
+    /// The origins the entry's item holds, by system id.
+    fn origins(self) -> Vec<String> {
+        self.0
+            .items
+            .as_deref()
+            .and_then(<[_]>::first)
+            .and_then(|item| item.origins.as_deref())
+            .unwrap_or_default()
+            .iter()
+            .map(|origin| origin.system_id.clone())
+            .collect()
+    }
+
+    /// How many origins the entry's item holds; `None` when it holds none.
+    fn origin_count(self) -> Option<u64> {
+        let held = self
+            .0
+            .items
+            .as_deref()
+            .and_then(<[_]>::first)
+            .and_then(|item| item.origins.as_deref())
+            .map_or(0, <[_]>::len);
+        (held > 0).then(|| u64::try_from(held).unwrap_or(u64::MAX))
+    }
+
+    /// Whether the entry's item holds exactly `origins`, a set with a
+    /// recorded `count`, so the details need not repeat them.
+    fn holds_origins(self, origins: &[String], count: Option<u64>) -> bool {
+        !origins.is_empty() && count.is_some() && self.origins() == origins
     }
 
     /// The count the outcome delivered, or else the rows the query returned.

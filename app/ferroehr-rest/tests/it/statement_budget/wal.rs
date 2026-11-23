@@ -34,12 +34,16 @@ const REQUESTS: u64 = 20;
 /// ceiling fell by its drop. The search columns copied off the request's
 /// commit into the search index (#6319) measured 1407, 1071, 857 and 1340
 /// against 2021, 1606, 1420 and 1933 beside the merge base, and each ceiling
+/// fell by its drop. The entry stored as its facts (#6322: no origins its
+/// only item holds repeated, its categories in the shared part, no empty
+/// details tree, its stored form's version) measured 815, 915, 833 and 1028
+/// against 1407, 1071, 857 and 1340 beside the merge base, and each ceiling
 /// fell by its drop.
 const CEILINGS: [(Kind, u64); 4] = [
-    (Kind::Read, 1478),
-    (Kind::Single, 1119),
-    (Kind::Population, 895),
-    (Kind::Write, 1447),
+    (Kind::Read, 886),
+    (Kind::Single, 963),
+    (Kind::Population, 871),
+    (Kind::Write, 1135),
 ];
 
 /// A kind of request, and how to send one.

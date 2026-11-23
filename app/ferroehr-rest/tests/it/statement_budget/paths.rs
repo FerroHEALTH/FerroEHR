@@ -468,6 +468,13 @@ struct Budget {
 /// trips where it sent 8, and its ceiling fell by one. Each step of such a
 /// ride runs in an allocation of its own, so no peak or allocation ceiling
 /// rose, and a path that does not ride holds 136 bytes less at its peak.
+/// The access-log entry has since been stored as its facts and sealed over
+/// them (#6322): each path wrote as many WAL bytes fewer as its entries' rows
+/// shrank, 592 on a read, 312 on the single-EHR query and on a delete, 1,536
+/// on the matches query, and each WAL ceiling fell by its measured drop, a
+/// composition commit's by at most its entry's 312. A read allocates 9 times
+/// fewer and the ITI-81 page 13 fewer, no longer reading four digest columns
+/// nothing used, and those allocation ceilings fell by as much.
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
@@ -477,7 +484,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 9,
         notifies: 0,
-        wal: 187_612,
+        wal: 187_300,
     },
     Budget {
         path: Path::CommitXml,
@@ -487,7 +494,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 10,
         notifies: 0,
-        wal: 187_941,
+        wal: 187_629,
     },
     Budget {
         path: Path::CommitFlat,
@@ -497,37 +504,37 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 9,
         notifies: 0,
-        wal: 188_411,
+        wal: 188_099,
     },
     Budget {
         path: Path::ReadJson,
         conversions: 0,
-        allocations: 1327,
+        allocations: 1318,
         peak_bytes: 617_268,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 1450,
+        wal: 858,
     },
     Budget {
         path: Path::ReadXml,
         conversions: 2,
-        allocations: 10_804,
+        allocations: 10_795,
         peak_bytes: 1_017_140,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 1450,
+        wal: 858,
     },
     Budget {
         path: Path::ReadFlat,
         conversions: 2,
-        allocations: 15_521,
+        allocations: 15_512,
         peak_bytes: 1_634_407,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 1450,
+        wal: 858,
     },
     Budget {
         path: Path::EhrRead,
@@ -537,7 +544,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 666,
+        wal: 642,
     },
     Budget {
         path: Path::AqlSingle,
@@ -547,7 +554,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 3,
         nested: 0,
         notifies: 0,
-        wal: 2193,
+        wal: 1881,
     },
     Budget {
         path: Path::AqlPopulation,
@@ -557,17 +564,17 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 2,
         nested: 0,
         notifies: 0,
-        wal: 5322,
+        wal: 5178,
     },
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        allocations: 8977,
+        allocations: 8962,
         peak_bytes: 624_026,
         round_trips: 3,
         nested: 0,
         notifies: 0,
-        wal: 649,
+        wal: 617,
     },
     Budget {
         path: Path::PartyRead,
@@ -587,17 +594,17 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 10,
         notifies: 0,
-        wal: 189_042,
+        wal: 188_738,
     },
     Budget {
         path: Path::ReadAtTime,
         conversions: 0,
-        allocations: 1338,
+        allocations: 1329,
         peak_bytes: 701_748,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 1450,
+        wal: 858,
     },
     Budget {
         path: Path::CommitStatus,
@@ -607,7 +614,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 5,
         nested: 7,
         notifies: 1,
-        wal: 4805,
+        wal: 4773,
     },
     Budget {
         path: Path::ReadStatus,
@@ -617,7 +624,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 795,
+        wal: 763,
     },
     Budget {
         path: Path::CommitParty,
@@ -637,7 +644,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 3,
         nested: 0,
         notifies: 0,
-        wal: 7174,
+        wal: 5638,
     },
     Budget {
         path: Path::AqlParty,
@@ -662,12 +669,12 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadVersion,
         conversions: 0,
-        allocations: 1333,
+        allocations: 1324,
         peak_bytes: 162_800,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 1434,
+        wal: 842,
     },
     Budget {
         path: Path::CommitUpdate,
@@ -677,7 +684,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 187_106,
+        wal: 186_794,
     },
     Budget {
         path: Path::CommitDelete,
@@ -687,7 +694,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 4669,
+        wal: 4357,
     },
     Budget {
         path: Path::DirectoryCreate,
@@ -697,7 +704,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 5906,
+        wal: 5882,
     },
     Budget {
         path: Path::DirectoryUpdate,
@@ -707,7 +714,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 4812,
+        wal: 4788,
     },
     Budget {
         path: Path::DirectoryDelete,
@@ -717,7 +724,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 4225,
+        wal: 4201,
     },
     Budget {
         path: Path::PartyUpdate,
@@ -823,6 +830,10 @@ pub(super) fn order() -> impl Iterator<Item = Path> {
 /// and the delete, and 152, 76 and 159 on the ORGANISATION, GROUP and ROLE
 /// creates, measured beside the merge base, and each of those ceilings fell
 /// by its path's figure.
+/// The access-log entry stored as its facts (#6322) moves fewer bytes on
+/// every path that writes or reads one: 2,102 on the ITI-81 page, 1,547 on the
+/// matches query and 587 on a read, measured beside the merge base, and each
+/// of those ceilings fell by its path's figure.
 /// A request's one read of the party store's revisions has since bound the
 /// snapshot its caller facts copy holds, which `party.facts_behind` judges
 /// the stamps against, in place of reading `facts_revision`, so a care
@@ -830,36 +841,36 @@ pub(super) fn order() -> impl Iterator<Item = Path> {
 /// 9 to 27 bytes more on every path, by the width of the snapshot's text,
 /// measured beside the merge base. Only the three directory ceilings, whose
 /// margin was 18 bytes, rose, by the 27 bytes of the widest run, approved by
-/// the orchestrator on #6074. The version copy read's ceiling rose too, from
-/// 3,336 to 3,385 bytes, approved by the owner: its ten requests are bimodal
-/// (#6365), its median lands on the 3.3 KB form in some runs, main's ceiling
-/// sat exactly on that form, and the snapshot adds 29 to 49 bytes there.
+/// the orchestrator on #6074. The version copy read's ceiling rose too, by
+/// 49 bytes, approved by the owner: its ten requests are bimodal (#6365), its
+/// median lands on the 3.3 KB form in some runs, main's ceiling sat exactly
+/// on that form, and the snapshot adds 29 to 49 bytes there.
 const WIRE_BUDGETS: [(Path, u64); 31] = [
-    (Path::CommitJson, 202_143),
-    (Path::CommitXml, 202_289),
-    (Path::CommitFlat, 202_283),
-    (Path::ReadJson, 131_668),
-    (Path::ReadXml, 131_668),
-    (Path::ReadFlat, 131_668),
-    (Path::EhrRead, 1831),
-    (Path::AqlSingle, 5131),
-    (Path::AqlPopulation, 6566),
-    (Path::Iti81, 29_540),
+    (Path::CommitJson, 201_836),
+    (Path::CommitXml, 201_979),
+    (Path::CommitFlat, 201_974),
+    (Path::ReadJson, 131_081),
+    (Path::ReadXml, 131_081),
+    (Path::ReadFlat, 131_081),
+    (Path::EhrRead, 1802),
+    (Path::AqlSingle, 4821),
+    (Path::AqlPopulation, 6391),
+    (Path::Iti81, 27_438),
     (Path::PartyRead, 5524),
-    (Path::CommitContribution, 203_105),
-    (Path::ReadAtTime, 131_699),
-    (Path::CommitStatus, 5572),
-    (Path::ReadStatus, 3142),
+    (Path::CommitContribution, 202_796),
+    (Path::ReadAtTime, 131_111),
+    (Path::CommitStatus, 5543),
+    (Path::ReadStatus, 3113),
     (Path::CommitParty, 8513),
-    (Path::AqlMatches, 17_539),
+    (Path::AqlMatches, 15_992),
     (Path::AqlParty, 11_509),
     (Path::CommitPartyScored, 10_861),
-    (Path::ReadVersion, 3385),
-    (Path::CommitUpdate, 202_571),
-    (Path::CommitDelete, 4875),
-    (Path::DirectoryCreate, 5012),
-    (Path::DirectoryUpdate, 4822),
-    (Path::DirectoryDelete, 4179),
+    (Path::ReadVersion, 2797),
+    (Path::CommitUpdate, 202_260),
+    (Path::CommitDelete, 4563),
+    (Path::DirectoryCreate, 4982),
+    (Path::DirectoryUpdate, 4792),
+    (Path::DirectoryDelete, 4149),
     (Path::PartyUpdate, 9406),
     (Path::PartyDelete, 7957),
     (Path::CommitOrganisation, 7778),
