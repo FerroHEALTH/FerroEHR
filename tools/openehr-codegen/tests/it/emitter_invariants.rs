@@ -1,26 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Emitter invariants, tested as properties over the **real** pipeline on the
-//! **real** vendored BMM inputs (design doc §1). Each test drives
-//! `openehr_codegen::testsupport`, which runs the same LOAD → ANALYZE → PLAN →
-//! RENDER stages `cli.rs` drives. These are the machine-checked replacements for
-//! the emitter's guarantees that no other check enforces:
-//! completeness, constructibility, byte-determinism, source-package mirroring,
-//! downstream-closure correctness, and decision-map integrity.
+//! Emitter invariants over the real pipeline on the real vendored BMM inputs:
+//! completeness, constructibility, determinism, source-package mirroring,
+//! downstream closures and decision-map integrity.
 
 use openehr_codegen::testsupport;
 
 // ── completeness ────────────────────────────────────────────────────────────
 
-/// Every class of **every BMM generation** is accounted for in the emission
-/// plan: nothing is silently dropped, and the only skips are the two sanctioned
-/// reasons (mapped-to-Rust, or abstract-with-no-descendants-and-unused). The
-/// counts add up to the generation's full class list.
-///
-/// Counting per generation rather than over a merged class map is the point: a
-/// merge keeps every NAME, so a name-level count over it passes while one
-/// generation's classes have been replaced wholesale by the other's.
+/// Every class of every BMM generation is emitted or skipped for one of the
+/// two sanctioned reasons, counted per generation.
 #[test]
 fn completeness_every_class_is_planned_or_sanctioned_skip() {
     for key in testsupport::crate_keys() {
@@ -49,14 +39,7 @@ fn completeness_every_class_is_planned_or_sanctioned_skip() {
 }
 
 /// Every attribute every loaded BMM generation declares reaches an emitted Rust
-/// field — the attribute-level half of completeness, which the class-NAME count
-/// above cannot see.
-///
-/// This is the gate the LANG two-schema merge defeated: merging the stable v2.x
-/// BMM and the v3 development line into one class map left every class NAME
-/// present while discarding one generation's attribute set for each of the 18
-/// names both declare (`LANG/docs/bmm3/master00-amendment_record.adoc`
-/// SPECLANG-14 formalises the v2/v3 split).
+/// field.
 #[test]
 fn completeness_every_declared_attribute_reaches_an_emitted_field() {
     for key in testsupport::crate_keys() {
@@ -69,10 +52,7 @@ fn completeness_every_declared_attribute_reaches_an_emitted_field() {
                 .map(|g| format!("[{}] {}.{} — {}", g.file, g.class, g.attribute, g.detail))
                 .collect::<Vec<_>>(),
         );
-        // Non-vacuity: a broken traversal that checked nothing would also report
-        // zero gaps, so pin that real work happened. LANG is the composition this
-        // gate exists for (two generations, 205 declared classes between them), so
-        // it carries the substantial bar.
+        // Non-vacuity: LANG, with two generations, carries the substantial bar.
         assert!(
             checked > 0,
             "{key}: no (class, attribute) pair checked — the traversal is vacuous",
@@ -87,13 +67,8 @@ fn completeness_every_declared_attribute_reaches_an_emitted_field() {
     }
 }
 
-/// No two BMM generations of one crate claim the same emitted file path or the
-/// same crate-prelude identifier.
-///
-/// A shared path means one generation's output overwrites the other's — a
-/// silently picked shape, which is exactly the defect the per-generation
-/// emission exists to prevent. A shared prelude identifier means the crate's
-/// one-type-per-Rust-name contract is broken.
+/// No two BMM generations of one crate claim the same emitted file path or
+/// crate-prelude identifier.
 #[test]
 fn generations_never_silently_pick_a_shape() {
     let conflicts = testsupport::generation_conflicts().unwrap();
@@ -107,12 +82,9 @@ fn generations_never_silently_pick_a_shape() {
     );
 }
 
-/// LANG emits BOTH extant BMM generations completely, each at its own
-/// source-package path: the stable v2.x model under `bmm/`, `bmm_persistence/`
-/// and `beom/` (`LANG/docs/bmm/master01-preface.adoc` §History — "the normative,
-/// tool-implemented version"), and the v3 development line under `bmm3/`
-/// (`LANG/docs/bmm3/master01-preface.adoc` §Previous Versions). A name declared
-/// by both — `BMM_CLASS`, `BMM_TYPE`, … — yields two Rust types.
+/// LANG emits both BMM generations completely at their own source-package
+/// paths: v2.x under `bmm/`, `bmm_persistence/` and `beom/`
+/// (`LANG/docs/bmm/master01-preface.adoc` §History), v3 under `bmm3/`.
 #[test]
 fn lang_emits_both_bmm_generations_at_their_own_paths() {
     let files = testsupport::rendered_files("lang").unwrap();
@@ -170,9 +142,7 @@ fn lang_emits_both_bmm_generations_at_their_own_paths() {
 
 // ── constructibility ────────────────────────────────────────────────────────
 
-/// No emitted concrete class is a non-constructible infinite value (an unbroken
-/// mandatory single-valued construction cycle). Formerly a `panic!` mid-emit;
-/// now a test that FAILS the suite listing every offender.
+/// No emitted concrete class is a non-constructible infinite value.
 #[test]
 fn constructibility_no_non_constructible_type_is_emitted() {
     for key in testsupport::crate_keys() {
@@ -247,10 +217,8 @@ fn mirroring_reemitted_classes_land_at_source_package_path() {
     }
 }
 
-/// The AM ⊃ LANG downstream closure contains the expected cross-`includes`
-/// re-emission set — the beom expression/statement subtree, the BMM-3 + EL
-/// object model, and the BASE resource metatype — and every member is grafted
-/// into the AM 2.4 output.
+/// The AM ⊃ LANG downstream closure is the expected re-emission set, and every
+/// member is grafted into the AM 2.4 output.
 #[test]
 fn downstream_closure_contains_the_beom_bmm3_resource_set() {
     let closure = testsupport::reemit_closure("am", "v2_4").unwrap();
@@ -280,9 +248,8 @@ fn downstream_closure_contains_the_beom_bmm3_resource_set() {
     }
 }
 
-/// Upstream (LANG) output is untouched by AM analysis: LANG emits its own
-/// expression classes independently, the AM-only rules leaves never leak into
-/// LANG, and those leaves ARE emitted into the AM crate.
+/// AM analysis leaves LANG output untouched, and the AM-only rules leaves are
+/// emitted into the AM crate only.
 #[test]
 fn downstream_closure_leaves_upstream_output_untouched() {
     let lang_files = testsupport::rendered_files("lang").unwrap();
@@ -321,11 +288,8 @@ fn downstream_closure_leaves_upstream_output_untouched() {
 
 // ── decision-map integrity ──────────────────────────────────────────────────
 
-/// Every declarative decision entry carries a non-empty citation/flag, and —
-/// for the binding maps — refers to a class/field that EXISTS in the loaded
-/// schemas (no stale entries). The mapped-class denylist and primitive type map
-/// are exempt from existence (extra entries there are inert), but still must be
-/// cited.
+/// Every decision entry carries a citation, and every binding-map entry names
+/// a class or field that exists.
 #[test]
 fn decision_map_integrity_entries_are_cited_and_reference_real_classes() {
     for map in testsupport::decision_maps() {
@@ -371,8 +335,7 @@ fn decision_map_integrity_entries_are_cited_and_reference_real_classes() {
 }
 
 /// Every existence-contradiction entry still names a mandatory `Hash` its owner
-/// declares, so an upstream fix to the class table (`0..1`) fails here instead
-/// of leaving a citation that describes a contradiction no longer there.
+/// declares.
 #[test]
 fn existence_contradictions_name_a_still_mandatory_hash() {
     let stale = testsupport::decision_checks::stale_existence_contradictions().unwrap();
@@ -407,13 +370,8 @@ fn ordered_hashes_name_a_declared_hash() {
     );
 }
 
-/// Every adjudicated free-form field is a REAL degrade whose adjudication is
-/// written at the site: some generated file renders the field as
-/// `serde_json::Value` and carries the `// NOTE:` with the entry's citation.
-///
-/// This is the non-vacuity half of the decision-map integrity test — an entry
-/// for a field that turned out to be typeable would otherwise sit unnoticed,
-/// which is exactly the "silence over an untyped slot" this map exists to end.
+/// Every adjudicated free-form field renders as `serde_json::Value` in some
+/// generated file, under a NOTE carrying the entry's citation.
 #[test]
 fn untyped_field_adjudications_land_on_a_real_free_form_field() {
     let files = testsupport::emit_to_memory().unwrap();
@@ -437,10 +395,8 @@ fn untyped_field_adjudications_land_on_a_real_free_form_field() {
     }
 }
 
-/// Every declared additional subtype member actually widens its parent's
-/// polymorphic slot: in every composition whose model defines both classes, the
-/// parent's variant set contains the subtype (and at least one composition does
-/// define both, so no entry is inert).
+/// Every declared additional subtype member widens its parent's polymorphic
+/// slot in every composition defining both, and some composition does.
 #[test]
 fn subtype_extensions_widen_their_parents_variant_set() {
     for (parent, subtype) in testsupport::subtype_extensions() {
@@ -467,10 +423,8 @@ fn subtype_extensions_widen_their_parents_variant_set() {
     }
 }
 
-/// The crate → schema-merge table is itself declarative decision data: every
-/// composition entry carries a non-empty citation, lists at least one own BMM
-/// file, resolves (its member/dependency BMM files load), and references only
-/// known dependency keys.
+/// Every composition entry carries a citation, lists an own BMM file, loads,
+/// and names only known dependency keys.
 #[test]
 fn composition_table_integrity() {
     let keys: Vec<String> = testsupport::composition_infos()
@@ -550,11 +504,8 @@ fn composition_table_integrity() {
     }
 }
 
-/// Every `includes` a vendored unit declares is honoured by its generation's
-/// `model_deps` (the paired dependency generation with that spec version) and
-/// named by the composition's citation, so a re-vendor that adds, drops or
-/// re-pins an include cannot leave the table or its citation describing a
-/// different file.
+/// Every `includes` a vendored unit declares is in its generation's
+/// `model_deps` and named by the composition's citation.
 #[test]
 fn composition_follows_the_bmm_includes() {
     let infos = testsupport::composition_infos();
@@ -596,21 +547,13 @@ fn composition_follows_the_bmm_includes() {
 
 // ── invariant classification (assertion-dialect analyzer) ────────────────────
 
-/// The assertion-dialect analyzer accounts for **every** RM 1.2.0 class
-/// invariant in exactly one bucket — nothing is silently dropped. `emitted +
-/// runtime-hook-missing + complex == total`, and the per-bucket counts are
-/// pinned as the current classifier's verdict (a deliberate classifier or
-/// BMM-pin change updates them under review), so an accidental
-/// mis-classification or a dropped invariant fails the suite.
+/// The assertion-dialect analyzer puts every RM class invariant in exactly one
+/// bucket, with the per-bucket counts pinned.
 #[test]
 fn invariant_classification_is_a_total_tripartition() {
     let rows = testsupport::classify_invariants("rm").unwrap();
-    // Pinned per-generation tripartitions (design doc §4 R5): a change here is
-    // deliberate. ITEM_TAG.Inv_key_valid is COMPLEX, not EMITTED:
-    // `key.is_justified` is a boolean-returning BMM function (a method call),
-    // which the assertion-dialect emitter cannot project from a field — so
-    // 90 emitted / 31 complex for RM 1.2.0 (R5b). RM 1.1.0 (the released
-    // generation, #1942) carries its own pinned split.
+    // `ITEM_TAG.Inv_key_valid` is complex: `key.is_justified` is a BMM function
+    // call.
     for (generation, p_total, p_emitted, p_hook, p_complex) in
         [("v1_1", 155, 90, 34, 31), ("v1_2", 155, 90, 34, 31)]
     {
@@ -659,10 +602,7 @@ fn invariant_classification_is_a_total_tripartition() {
     }
 }
 
-/// Spot-checks pinning the classifier's verdict on representative invariants so
-/// the buckets cannot silently swap: a terminology/code-set predicate needs a
-/// runtime hook, a quantifier is complex, and a plain emptiness/`Void` check is
-/// emittable.
+/// Pins the classifier's bucket for representative invariants.
 #[test]
 fn invariant_classification_spot_checks() {
     let rows = testsupport::classify_invariants("rm").unwrap();
@@ -688,17 +628,9 @@ fn invariant_classification_spot_checks() {
 
 // ── invariant-core emission (emit-validate) ──────────────────────────────────
 
-/// The generated invariant-core file (`emit-validate`) honestly accounts for
-/// every RM class invariant the classifier bucketed, in both directions:
-/// every **emittable** invariant resolves to a realization venue and is named
-/// in the realization register, and every **inert** (runtime-hook-missing)
-/// invariant is named in the pending-adjudication register — so nothing the
-/// classifier flagged is silently dropped.
-///
-/// The accounted set is DERIVED from the classifier (no hardcoded invariant
-/// list): an invariant added by a spec bump, or one that changes bucket, enters
-/// this accounting automatically and fails the test until it is adjudicated
-/// into the register.
+/// The generated invariant-core file accounts for every classified RM
+/// invariant: each emittable one in the realization register, each inert one
+/// in the pending-adjudication register.
 #[test]
 fn invariant_core_file_accounts_for_emitted_and_inert_invariants() {
     let files = testsupport::emit_to_memory().unwrap();
@@ -753,12 +685,9 @@ fn invariant_core_file_accounts_for_emitted_and_inert_invariants() {
     }
 }
 
-/// Each realization-register venue claim is checked against reality: a `Core`
-/// row's invariant name is a violation-message literal in the generated core
-/// file and its core function exists there; an `Impl` / `Wire` / `App` row's
-/// cited realizing file exists and names the invariant. A venue claim that stops
-/// being true therefore fails here rather than reading as enforcement that
-/// silently is not.
+/// Each realization-register venue claim holds: a `Core` row's name is a
+/// violation literal in the core file, and an `Impl`/`Wire`/`App` file exists
+/// and names the invariant.
 #[test]
 fn realization_register_venues_are_real() {
     let files = testsupport::emit_to_memory().unwrap();
@@ -785,10 +714,7 @@ fn realization_register_venues_are_real() {
                 assert!(
                     gen_file.contains(&format!("Invariant {} failed", a.name))
                         || gen_file.contains(&format!("invariant_failed(\"{}\"", a.name))
-                        // A parameterised core drives its message from an
-                        // inline (value, invariant-name) row table — the name
-                        // appears as that quoted row, same file, same
-                        // violation producer.
+                        // A parameterised core names the invariant in its `(value, name)` row table.
                         || gen_file.contains(&format!("\"{}\"),", a.name)),
                     "{where_}: no violation message for it in validate/generated.rs",
                 );
@@ -819,22 +745,15 @@ fn realization_register_venues_are_real() {
     }
 }
 
-/// Whether `name` occurs on a NON-COMMENT line of `text` — the venue-claim
-/// predicate.
-///
-/// A realizing site names the invariant in its violation literal (spec
-/// spellings never occur as code identifiers), and a literal may wrap across
-/// continuation lines whose own line carries no quote — so the honest,
-/// wrap-robust rule is "named outside a comment". A doc-comment or prose
-/// mention — narration, the #2443 defect — never satisfies it.
+/// Whether `name` occurs on a non-comment line of `text`, so a literal wrapped
+/// across lines counts and a prose mention does not.
 fn names_in_a_string_literal(text: &str, name: &str) -> bool {
     text.lines()
         .any(|line| !line.trim_start().starts_with("//") && line.contains(name))
 }
 
-/// The venue-claim predicate itself, mutation-proven in both directions: a
-/// prose/comment mention never satisfies it, a violation literal does — the
-/// name on a quote-less continuation line included.
+/// A comment mention never satisfies the venue-claim predicate; a violation
+/// literal does, on a quote-less continuation line included.
 #[test]
 fn a_prose_mention_does_not_satisfy_a_venue_claim() {
     let prose = "// The Details_valid rule is realized elsewhere.\nfn f() {}";
@@ -847,11 +766,7 @@ fn a_prose_mention_does_not_satisfy_a_venue_claim() {
     assert!(names_in_a_string_literal(wrapped, "Details_valid"));
 }
 
-/// The negative case of the accounting invariant: an invariant the classifier
-/// buckets **emitted** with no realization-register row accounts as
-/// `UNACCOUNTED` — the failure mode this accounting exists to catch (an
-/// emittable invariant that no venue realizes used to be indistinguishable
-/// from one a core enforces).
+/// An emitted-bucket invariant with no register row accounts as `UNACCOUNTED`.
 #[test]
 fn a_seeded_unrealized_emit_is_unaccounted() {
     let seeded = testsupport::account_invariants(&[
@@ -884,11 +799,8 @@ fn a_seeded_unrealized_emit_is_unaccounted() {
     );
 }
 
-/// The assertion-dialect predicate → runtime-function table
-/// (`plan::overrides::DIALECT_PREDICATES`) covers **exactly** the classifier's
-/// recognised runtime-backed leaf predicates (`RUNTIME_PREDICATES`) — no
-/// recognised predicate lacks a runtime hook, and no stale table entry names a
-/// predicate the classifier no longer recognises.
+/// `plan::overrides::DIALECT_PREDICATES` covers exactly the classifier's
+/// `RUNTIME_PREDICATES`.
 #[test]
 fn dialect_predicates_match_the_classifier() {
     use std::collections::BTreeSet;
@@ -913,10 +825,8 @@ fn dialect_predicates_match_the_classifier() {
 
 // ── constants emission (BMM `BMM_CLASS.constants`) ───────────────────────────
 
-/// Every constant the BMM declares on an **emitted** class is rendered as a
-/// `pub const` in that crate's output — the R5 constants-emission completeness
-/// guard. Checked over the two RM terminology identifier classes (22 constants)
-/// whose hand-written `*_impl.rs` was deleted in favour of emission.
+/// Every constant the BMM declares on an emitted class is a `pub const` in its
+/// crate, checked over the two RM terminology identifier classes.
 #[test]
 fn emitted_classes_render_their_bmm_constants() {
     let files = testsupport::emit_to_memory().unwrap();
@@ -956,19 +866,14 @@ fn emitted_classes_render_their_bmm_constants() {
     }
 }
 
-/// The register records the runtime-hook adjudication state: the terminology /
-/// code-set family is enforced in `validate::terminology` and only the four
-/// `VERSIONED_OBJECT` aggregate invariants stay `runtime-hook-missing`. Pins the
-/// split so a regression (an invariant silently sliding back to "pending", or the
-/// enforced count drifting) fails the suite.
+/// The terminology and code-set invariants are enforced in
+/// `validate::terminology`; only the four `VERSIONED_OBJECT` aggregates stay
+/// `runtime-hook-missing`.
 #[test]
 fn register_records_terminology_invariants_as_enforced() {
     let files = testsupport::emit_to_memory().unwrap();
     let rows = testsupport::classify_invariants("rm").unwrap();
-    // Every RM generation carries its own cores file with the same adjudicated
-    // register split: 30 terminology/code-set invariants wired to the binding
-    // table, the 4 `VERSIONED_OBJECT` aggregate invariants pending — per
-    // generation (#1942: a selectable generation is a complete peer).
+    // Every RM generation carries its own cores file with the same split.
     for generation in ["v1_1", "v1_2"] {
         let gen_path = format!("openehr-rm/src/{generation}/validate/generated.rs");
         let gen_file = files
@@ -981,9 +886,8 @@ fn register_records_terminology_invariants_as_enforced() {
             "{generation}: the terminology-enforcement register heading is missing",
         );
 
-        // Every runtime-hook-missing invariant is adjudicated as either
-        // enforced in `validate::terminology` (terminology/code-set) or a
-        // versioned-object aggregate.
+        // Each runtime-hook-missing invariant is terminology or a versioned-object
+        // aggregate.
         let hook: Vec<_> = rows
             .iter()
             .filter(|r| r.generation == generation && r.bucket == "runtime-hook-missing")
@@ -1031,10 +935,8 @@ fn register_records_terminology_invariants_as_enforced() {
 
 // ── ITS-REST OAS monomorphizations ──────────────────────────────────────────
 
-/// Every `OAS_MONOMORPHIZATIONS` entry is grounded in the vendored bundles: the
-/// schema key exists, and the `title` the entry cites is the `title` the bundles
-/// really declare for it. The mapping is only legitimate because the OAS names
-/// its own spec class there — an entry that no longer matches is a guess.
+/// Every `OAS_MONOMORPHIZATIONS` key exists in the vendored bundles with the
+/// `title` the entry cites.
 #[test]
 fn oas_monomorphizations_match_the_vendored_titles() {
     let checks = testsupport::oas_monomorphizations().unwrap();
@@ -1061,12 +963,8 @@ fn oas_monomorphizations_match_the_vendored_titles() {
     }
 }
 
-/// The generated ITS-REST contract carries NO DTO struct for a monomorphized
-/// schema, and the sites that referenced one now name the spec type.
-///
-/// The DTO form was doubly wrong: it lost the spec type's strict canonical-JSON
-/// reader, and it was `allOf`-truncated (only the schema's OWN properties), so
-/// `ObjectRefOfHierObjectId` shipped without the mandatory `namespace`/`type`.
+/// The generated ITS-REST contract carries no DTO struct for a monomorphized
+/// schema; its references name the spec type.
 #[test]
 fn oas_monomorphizations_emit_as_spec_types_not_dtos() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -1092,14 +990,9 @@ fn oas_monomorphizations_emit_as_spec_types_not_dtos() {
     );
 }
 
-/// Every generated transport DTO is either closed or open, never silently lossy.
-///
-/// OpenAPI 3.0.3 §Schema Object: "Consistent with JSON Schema,
-/// `additionalProperties` defaults to `true`". So a schema refuses undeclared
-/// members only when it says `additionalProperties: false`, which the DTO
-/// realizes as `deny_unknown_fields`; every other schema keeps them in the
-/// flattened `additional_properties` map. A DTO with neither would drop
-/// members the schema admits (#3526).
+/// Every generated transport DTO is closed (`deny_unknown_fields`) or keeps
+/// undeclared members in `additional_properties` (OpenAPI 3.0.3 §Schema
+/// Object).
 #[test]
 fn transport_dtos_are_closed_or_carry_the_extension_map() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -1140,14 +1033,8 @@ fn transport_dtos_are_closed_or_carry_the_extension_map() {
     );
 }
 
-/// The shared-module fallback document carries the `allOf` BASE closure of the
-/// hoisted schemas, not the hoisted names alone.
-///
-/// `emit_common` flattens an `allOf` composition by resolving the base `$ref`
-/// through the very document it is emitting from. A document holding only the
-/// hoisted names leaves that ref dangling, and the struct silently ships with
-/// just its own `properties` — the truncation that shipped `Clstr` without a
-/// single `ITEM`/`LOCATABLE` member.
+/// The shared-module fallback document carries the `allOf` base closure of the
+/// hoisted schemas, so `emit_common` can resolve each base.
 #[test]
 fn merged_schema_fallback_carries_the_allof_base_closure() {
     let (names, bases) = testsupport::merged_fallback_schema_names().unwrap();
@@ -1166,14 +1053,7 @@ fn merged_schema_fallback_carries_the_allof_base_closure() {
 
 // ── vendored `default` facet ↔ the hand-written residue ─────────────────────
 
-/// Every `default` facet the vendored schemas carry is accounted for: either
-/// the emitter renders it into a literal Rust default, or it is a NAMED
-/// un-renderable adjudication. Nothing is silently dropped.
-///
-/// The facet is an undeclared extension to the released persistence model (LANG
-/// `docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_property.adoc`
-/// declares no `default` attribute), which is exactly why every occurrence needs
-/// a disposition rather than an assumption.
+/// Every vendored `default` facet is rendered or a named un-renderable entry.
 #[test]
 fn vendored_default_facets_are_totally_partitioned() {
     let facets = testsupport::vendored_defaults().unwrap();
@@ -1192,9 +1072,7 @@ fn vendored_default_facets_are_totally_partitioned() {
             f.facet,
         );
     }
-    // and the reverse: no adjudicated exclusion is stale. Each entry must still
-    // name un-rendered vendored facets, and exactly the facet values its
-    // citation describes, so a re-vendor that changes a value fails here.
+    // No exclusion is stale: each names exactly the vendored values it cites.
     for (owner, field, recorded) in testsupport::unrenderable_defaults() {
         let mut vendored: Vec<&str> = facets
             .iter()
@@ -1215,11 +1093,9 @@ fn vendored_default_facets_are_totally_partitioned() {
     }
 }
 
-/// TERM 3.1.0 gives the four `status` properties the enumeration-constant
-/// default `active` (`docs/specs/openehr/TERM/docs/UML/classes/
-/// org.openehr.term.terminology.code.adoc` and its three siblings show
-/// `{default = active}`): the emitter renders each as the
-/// `TERMINOLOGY_STATUS` constant, never as an adjudicated exclusion.
+/// TERM 3.1.0's four `status` defaults (`{default = active}`,
+/// `org.openehr.term.terminology.code.adoc`) render as the
+/// `TERMINOLOGY_STATUS` constant.
 #[test]
 fn term_status_defaults_render_as_the_enumeration_constant() {
     let facets = testsupport::vendored_defaults().unwrap();
@@ -1260,14 +1136,8 @@ fn term_status_defaults_render_as_the_enumeration_constant() {
     );
 }
 
-/// The hand-written `field_default` table is the RESIDUE of the vendored facet,
-/// never a duplicate of it: no entry may name a property that already carries a
-/// renderable vendored `default`.
-///
-/// Without this, the loaded input and the hand table can silently disagree —
-/// which is precisely what happened while the loader dropped the facet
-/// (`Point_interval` declared all four flags WITH defaults and got none, because
-/// the table keyed only the inherited `Interval` sites).
+/// No `field_default` entry names a property with a renderable vendored
+/// `default`.
 #[test]
 fn hand_written_field_defaults_never_duplicate_a_vendored_facet() {
     let facets = testsupport::vendored_defaults().unwrap();
@@ -1282,9 +1152,8 @@ fn hand_written_field_defaults_never_duplicate_a_vendored_facet() {
     }
 }
 
-/// The vendored facet reaches the emitted canonical-JSON reader: the four
-/// `Point_interval` flags — the ONLY place the BASE schema states the interval
-/// default — now carry it, exactly as the inherited `Proper_interval` sites do.
+/// The four `Point_interval` flags carry the vendored default in the emitted
+/// reader, as the `Proper_interval` sites do.
 #[test]
 fn point_interval_flags_carry_their_vendored_defaults() {
     let facets = testsupport::vendored_defaults().unwrap();
@@ -1308,17 +1177,11 @@ fn point_interval_flags_carry_their_vendored_defaults() {
 
 // ── RM/BASE twin classes (two spec generations, both emitted) ───────────────
 
-/// Five class names are declared by BOTH the RM 1.2.0 and the BASE 1.3.0 BMM.
-/// That is spec-mandated, not accidental duplication (RM
-/// `docs/common/master08-resource_package.adoc` keeps the ADL-1.4 resource
-/// package "retained only while needed by AOM 1.4 based archetypes and tools",
-/// and BASE `docs/foundation_types/master00-amendment_record.adoc` adds
-/// `CODE_PHRASE` to Foundation Types as a LEGACY class for AOM 1.4) — so both
-/// generations are emitted, each into its owning component's crate.
+/// Pins the five class names both RM 1.2.0 and BASE 1.3.0 declare, and their
+/// member divergences.
 ///
-/// This pins the twin set and the member divergences that motivate it, so a
-/// re-vendored input that silently unifies or further diverges them fails here
-/// with the adjudication in view (`plan::composition`'s module note).
+/// RM `docs/common/master08-resource_package.adoc` retains the ADL 1.4
+/// resource package "only while needed by AOM 1.4 based archetypes and tools".
 #[test]
 fn rm_base_twin_classes_keep_both_generations() {
     let twins = [
@@ -1339,11 +1202,9 @@ fn rm_base_twin_classes_keep_both_generations() {
         }
     }
 
-    // The ADL-1.4 generation's member placements: the RM twin now carries the
-    // SPECPUB-6 spelling as BASE does (RM
-    // `docs/UML/classes/org.openehr.rm.common.translation_details.adoc`), and
-    // still puts `copyright` on the ITEM (which the vendored ADL-1.4
-    // `Resource.xsd` also does), while the BASE twin carries the relocated form.
+    // The RM twin spells `accreditation` as BASE does
+    // (`org.openehr.rm.common.translation_details.adoc`) and keeps `copyright` on
+    // the item.
     let rm_translation = testsupport::declared_attributes("rm", "TRANSLATION_DETAILS")
         .unwrap()
         .unwrap();
@@ -1379,50 +1240,18 @@ fn rm_base_twin_classes_keep_both_generations() {
     );
 }
 
-/// The acceptance-boundary ledger (#1943; the REMOVED direction #1961; the
-/// RETYPED direction #2382): the EXACT model delta between the stable
-/// profile's released generations and the development pins — every class and
-/// attribute ADDED, REMOVED, or RETYPED, an attribute's signature covering its
-/// type, its existence and its container cardinality — pinned so a re-vendor
-/// that changes any direction FAILS here until the application's profile
-/// boundary is extended to cover the new surface.
+/// Pins the exact RM and BASE model delta between the stable profile's
+/// released generations and the development pins: every attribute added,
+/// removed or retyped, so a re-vendor fails until the profile boundary covers
+/// it.
 ///
-/// Verified first-hand 2026-08-05 over the vendored BMMs; the retype direction
-/// 2026-08-14. The wire consequences the pins protect: no ADDED delta is
-/// client-postable (`EHR.tags` is server-managed — the item-tag API stores
-/// rows, the EHR wire never carries the attribute; `CODE_PHRASE`/
-/// `RESOURCE_DESCRIPTION` are BASE resource-metadata surface outside the REST
-/// ingress). In the REMOVED direction, `PARTY.reverse_relationships` IS
-/// client-postable released surface, and the stable demographic ingress
-/// boundary accepts it (`ferroehr-rest` `api::demographic::party::rm_party`);
-/// the nine 1.1.0-BMM-only classes carry no enforceable wire surface
-/// (documented nowhere — the #1927 defect family) and no served root reaches
-/// them. In the RETYPED direction, `GENERIC_ENTRY.data` IS client-postable
-/// released surface whose two types are disjoint, and the profile gate refuses
-/// the development-only form on the stable profile; `RESOURCE_DESCRIPTION`
-/// stays outside the REST ingress. A new delta entry invalidates the matching
-/// adjudication — extend the boundary in `ferroehr` first, then re-pin here.
-///
-/// SCOPE (#2390): the pin covers RM and BASE — the two profile-coupled
-/// components whose types can reach a stored version body or the REST
-/// ingress, which is the surface the acceptance boundary gates. LANG is
-/// DELIBERATELY outside it, for two adjudicated reasons: LANG types are
-/// code-generation input only (the application binds nothing but the
-/// `openehr_lang::Generation` token — `ferroehr::config::profile`), so no
-/// LANG delta entry can change what the profile boundary accepts or serves;
-/// and the `v1_1` generation emits the v2.x and BMM3 SPECIFICATION UNITS side
-/// by side with 18 class names declared in BOTH with materially different
-/// shapes, so a name-keyed cross-generation attribute diff over that
-/// generation is ill-defined by construction. `docs/VERSIONS.md` §Spec
-/// version policy states the same scope, so the policy's citation and this
-/// guard agree about what is covered.
+/// LANG is outside the pin: the application binds only its `Generation`
+/// token, and `v1_1` declares 18 class names twice (`docs/VERSIONS.md` §Spec
+/// version policy).
 #[test]
 fn profile_generation_delta_is_pinned() {
-    // RM: 1.2.0 adds exactly `EHR.tags` over 1.1.0 (and no classes), plus the
-    // corrected spelling `TRANSLATION_DETAILS.accreditation` of the retained
-    // ADL 1.4 resource package, whose released 1.1.0 BMM keeps `accreditaton`.
-    // That class reaches no version body: OPT 1.4 documents carry it as XML,
-    // and every published `Resource.xsd` spells `accreditation`.
+    // RM 1.2.0 adds `EHR.tags` and the spelling
+    // `TRANSLATION_DETAILS.accreditation`; 1.1.0 keeps `accreditaton`.
     let rm =
         testsupport::generation_attribute_delta("rm", "v1_1", "v1_2").expect("rm generations load");
     assert_eq!(rm.classes_added, Vec::<String>::new());
@@ -1434,13 +1263,9 @@ fn profile_generation_delta_is_pinned() {
         ]
     );
 
-    // RM REMOVED direction (#1961): the development generation drops the
-    // nine 1.1.0-BMM-only classes (undocumented machine-readable classes of
-    // a released artifact — the #1927 defect family; no docs text anywhere
-    // defines them, so they carry no enforceable wire surface) and
-    // `PARTY.reverse_relationships` (upstream SPECRM-124, RM
-    // `demographic/master00-amendment_record.adoc` — real released surface,
-    // the stable ingress boundary accepts it).
+    // RM removes the nine 1.1.0-BMM-only classes and
+    // `PARTY.reverse_relationships` (SPECRM-124,
+    // `demographic/master00-amendment_record.adoc`).
     assert_eq!(
         rm.classes_removed,
         vec![
@@ -1463,22 +1288,15 @@ fn profile_generation_delta_is_pinned() {
         ]
     );
 
-    // RM RETYPED direction (#2382): the development generation widens
-    // `GENERIC_ENTRY.data` from `ITEM_TREE` to the abstract `ITEM` — SPECRM-18,
-    // "Change `GENERIC_ENTRY` data attribute type from `ITEM_TREE` to the
-    // abstract `ITEM` class" (RM `integration/master00-amendment_record.adoc`).
-    // The two types are disjoint, so this IS the construct class the profile
-    // acceptance boundary exists for.
+    // RM retypes `GENERIC_ENTRY.data` from `ITEM_TREE` to `ITEM` (SPECRM-18,
+    // `integration/master00-amendment_record.adoc`).
     assert_eq!(
         rm.attributes_changed,
         vec!["GENERIC_ENTRY.data: ITEM_TREE -> ITEM".to_owned()]
     );
 
-    // BASE: 1.3.0 adds exactly the legacy CODE_PHRASE class (SPECAM-82), the
-    // `Hrid` primitive (SPECBASE-49) with ARCHETYPE_ID's own `value: Hrid`
-    // redefinition (SPECBASE-35), and RESOURCE_DESCRIPTION.title over 1.2.0,
-    // and removes nothing. `Hrid` lowers to `String`, so the redefinition
-    // changes no wire type; its grammar is ARCHETYPE_ID's `Value_valid`.
+    // BASE 1.3.0 adds CODE_PHRASE (SPECAM-82), `Hrid` (SPECBASE-49) with
+    // ARCHETYPE_ID's `value: Hrid` (SPECBASE-35), and RESOURCE_DESCRIPTION.title.
     let base = testsupport::generation_attribute_delta("base", "v1_2", "v1_3")
         .expect("base generations load");
     assert_eq!(
@@ -1495,25 +1313,16 @@ fn profile_generation_delta_is_pinned() {
     assert_eq!(base.classes_removed, Vec::<String>::new());
     assert_eq!(base.attributes_removed, Vec::<String>::new());
 
-    // BASE RETYPED direction: `RESOURCE_DESCRIPTION.lifecycle_state` becomes a
-    // plain `String` — SPECBASE-39, "Change `RESOURCE_DESCRIPTION`
-    // _lifecycle_state_ type to `String`" (BASE
-    // `resource/master00-amendment_record.adoc`). Resource metadata, outside
-    // the REST ingress, and the development form is the wider one.
+    // BASE retypes `RESOURCE_DESCRIPTION.lifecycle_state` to `String`
+    // (SPECBASE-39, `resource/master00-amendment_record.adoc`).
     assert_eq!(
         base.attributes_changed,
         vec!["RESOURCE_DESCRIPTION.lifecycle_state: Terminology_code -> String".to_owned()]
     );
 }
 
-/// The delta comparison SEES a retype: injecting one into a scratch copy of a
-/// loaded generation model makes it surface, and the existence sets stay
-/// silent about it.
-///
-/// The mutation proof for the pin above (#2382). Before the signature
-/// comparison landed, the name-set difference reported nothing for a changed
-/// type — which is exactly how the `GENERIC_ENTRY.data` retype stayed
-/// invisible to a guard whose contract is the EXACT model delta.
+/// The delta comparison sees a retype injected into a scratch copy of a
+/// generation model, where the existence sets stay silent.
 #[test]
 fn a_retype_in_a_scratch_generation_fails_the_delta_pin() {
     let older = testsupport::generation_attribute_map("rm", "v1_1").expect("rm v1_1 loads");
@@ -1558,12 +1367,7 @@ fn a_retype_in_a_scratch_generation_fails_the_delta_pin() {
     );
 }
 
-/// The generations of one crate realize the SAME BMM-declared functions.
-///
-/// Templates give every generation one hand-written source, so a class both
-/// generations declare must expose the same accessors in both. A divergence is a
-/// per-generation override that drifted, or a re-vendored rename only one
-/// generation followed.
+/// The generations of one crate realize the same BMM-declared functions.
 #[test]
 fn generation_function_realization_agrees() {
     for key in ["base", "rm", "am", "term", "lang"] {
@@ -1578,24 +1382,14 @@ fn generation_function_realization_agrees() {
     }
 }
 
-/// The unrealized-function projection is TOTAL over emitted classes: a class
-/// that declares functions and has no behaviour sibling still gets measured.
-///
-/// The projection used to skip those classes outright, so it was silent about
-/// exactly the ones with the most missing — 576 declared functions unreported
-/// against 75 shown (#2247). This asserts the PROPERTY rather than naming a
-/// witness: it finds a class that has no behaviour sibling in the tree as it
-/// stands and still declares an unrealized function, and requires the
-/// projection to report it. Naming one made the test fail the moment that
-/// function was implemented, which is a burn-down succeeding, not a regression.
+/// The unrealized-function projection reports a class that has no behaviour
+/// sibling but declares an unrealized function.
 #[test]
 fn the_unrealized_projection_measures_classes_without_a_behaviour_sibling() {
     let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../crates/openehr-rm/src");
     let reported = testsupport::unrealized_bmm_functions("rm").expect("crate tree readable");
 
-    // A reported entry whose class owns no `*_impl.rs` anywhere under its
-    // generation: that class is measured despite having no sibling, which is
-    // the property the sibling gate used to break.
+    // A reported entry whose class owns no `*_impl.rs` in its generation.
     let sibling_less = reported.iter().find(|entry| {
         let Some((generation, rest)) = entry.split_once('/') else {
             return false;
@@ -1634,14 +1428,8 @@ fn walk_contains(dir: &std::path::Path, name: &str) -> bool {
     false
 }
 
-/// Every BMM-declared function on an emitted class is realized, ratcheted
-/// against the committed list of gaps.
-///
-/// The BMM declares functions by name and result type only, so their bodies are
-/// hand-written. This asserts the unrealized set equals
-/// `unrealized_bmm_functions.txt` EXACTLY: a new gap fails, and implementing a
-/// listed one fails until the line is deleted. The list only shrinks; the
-/// burn-down is issue #2030.
+/// The unrealized BMM functions equal `unrealized_bmm_functions.txt` exactly;
+/// the list only shrinks (#2030).
 #[test]
 fn unrealized_bmm_functions_match_the_ratchet() {
     let recorded: Vec<String> = include_str!("unrealized_bmm_functions.txt")
@@ -1664,24 +1452,11 @@ fn unrealized_bmm_functions_match_the_ratchet() {
     );
 }
 
-/// Generation-twin discipline (#1964): a hand-written file that is
-/// byte-identical across a crate's generations modulo generation tokens MUST
-/// be a template (`tools/openehr-codegen/templates/<crate>/…`) — one source,
-/// per-generation copies stamped by `emit` — so twins can never silently
-/// diverge. A non-empty list here names the families to convert.
+/// A hand-written file identical across a crate's generations modulo
+/// generation tokens must be a template.
 ///
-/// The `openehr-lang` `v1_0`/`v1_1` sibling pairs (`lexer/mod.rs`,
-/// `lexer/token.rs`, `lexer/reclassify.rs`, `odin/parser.rs`) are NOT covered,
-/// and that is the adjudicated outcome (#2984), not a gap: measured on
-/// 2026-09-01 they diverge by 117–892 diff lines per pair, because `v1_0` is
-/// the faithful Release-1.0.0 generation — an ODIN-only lexer over the
-/// release's own grammar set, no EL/BEL (`docs/VERSIONS.md` §LANG; the #1946
-/// faithful-emission decision) — while `v1_1` carries the development
-/// generation's larger token and reclassification surface. Whole-file-verbatim
-/// overrides cannot express an eighty-percent-shared file, so conversion would
-/// re-house the divergence without removing the duplication. The identity
-/// check below stays the machine half: if a pair ever converges to
-/// identical-modulo-tokens, it appears in this list and MUST convert then.
+/// The `openehr-lang` `v1_0`/`v1_1` lexer and parser pairs differ because
+/// `v1_0` is the ODIN-only Release 1.0.0 generation (#2984).
 #[test]
 fn hand_written_twins_are_templates() {
     for key in ["base", "rm", "am", "term", "lang"] {
@@ -1697,29 +1472,8 @@ fn hand_written_twins_are_templates() {
     }
 }
 
-/// Reading `xsi:type` variants as CONCRETE descendants only discards no
-/// document shape.
-///
-/// A type declared `abstract` is not a legal `xsi:type` value, so it is
-/// correctly absent from a slot's dispatch enum. What has to hold alongside
-/// that is the other half: every CONCRETE type below such an abstract type is
-/// legal at the slot and must be a variant.
-///
-/// The closures are full of slots typed above an abstract type — `EXPR_ITEM`
-/// over `EXPR_OPERATOR`, `C_OBJECT` over `C_DOMAIN_TYPE`, `OBJECT_ID` over
-/// `UID_BASED_ID` — so this is a live property, not a vacuous one, and a
-/// re-vendoring that broke either half would otherwise surface as a document
-/// that silently fails to parse (#2271).
 /// An `xs:enumeration` facet set reaches the generated model as a typed enum,
-/// never as free text.
-///
-/// The facet declares a CLOSED value space, so a slot typed to it must refuse
-/// anything outside the set — carrying it as `String` makes an out-of-range
-/// value indistinguishable from a declared one. Both halves are checked: every
-/// faceted simple type of every XSD-driven closure emits its enum, and every
-/// element slot declared with one is typed to that enum, so a re-vendoring that
-/// adds a faceted type (or retypes a slot) cannot fall back to `String`
-/// unnoticed.
+/// and every slot declared with one is typed to it.
 #[test]
 fn every_enumeration_facet_set_emits_a_typed_enum() {
     let untyped = testsupport::untyped_enumeration_facets().expect("closures readable");
@@ -1731,6 +1485,8 @@ fn every_enumeration_facet_set_emits_a_typed_enum() {
     );
 }
 
+/// Reading `xsi:type` variants as concrete descendants only keeps every concrete
+/// type below an abstract slot type as a variant.
 #[test]
 fn the_concrete_only_variant_reading_loses_no_document_shape() {
     let lost = testsupport::lost_dispatch_variants().expect("closures readable");
@@ -1742,19 +1498,13 @@ fn the_concrete_only_variant_reading_loses_no_document_shape() {
     );
 }
 
-/// The complex-invariant register's venue claims are real, exactly like the
-/// emitted register's: a citation names a vendored file, a realizing venue
-/// names an existing file that names the invariant, a non-realizing venue
-/// names no site — and the five RM resource-package adjudications the ch.8
-/// audit produced are pinned by name and venue.
+/// The complex-invariant register's venue claims hold, and the five RM
+/// resource-package adjudications are pinned by name and venue.
 #[test]
 fn complex_register_venues_are_real() {
     let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let rows = testsupport::accounted_complex_invariants("rm").unwrap();
-    // The bucket is fully drained (#2454): every complex invariant carries a
-    // register row, and the accounted set spans the whole merged closure
-    // (BASE foundation classes included) — a shrink means rows fell out of
-    // the accounting, not out of the model.
+    // Every complex invariant carries a register row, across the merged closure.
     assert!(
         rows.len() >= 43,
         "the complex bucket accounts only {} rows — closure drift?",
@@ -1821,11 +1571,8 @@ fn complex_register_venues_are_real() {
     );
 }
 
-/// `REST_PATH_IDENTIFIERS` is held to the vendored OAS components: every path
-/// parameter of the codegen bundles has exactly one entry, no entry names a
-/// component the bundles no longer declare, and the description each entry
-/// quotes is the bundles' own text, so a re-vendored ITS-REST release that
-/// changes a parameter's meaning fails here instead of drifting.
+/// `REST_PATH_IDENTIFIERS` has exactly one entry per path parameter of the
+/// codegen bundles, each quoting the bundles' description.
 #[test]
 fn rest_path_identifiers_match_the_oas_components() {
     let checks = testsupport::rest_path_identifiers().unwrap();
@@ -1872,9 +1619,8 @@ fn rest_path_identifiers_match_the_oas_components() {
     }
 }
 
-/// Every OAS operation that declares a request body has its media types, the
-/// `requestBody.content` keys the route table's `ROUTE_REQUEST_MEDIA` carries,
-/// and none is claimed for an operation without a body.
+/// Every OAS operation with a request body has its media types in
+/// `ROUTE_REQUEST_MEDIA`, and none without one does.
 #[test]
 fn every_request_body_has_its_media_types() {
     let ops = testsupport::request_media().unwrap();
@@ -1894,12 +1640,8 @@ fn every_request_body_has_its_media_types() {
     }
 }
 
-/// Every generated response body that is still an untyped
-/// `serde_json::Value`, with the reason it is not typed. A `oneOf` of a
-/// resource and `Identifier` is typed as `Representation`, and a `oneOf` of
-/// `_type`-tagged RM classes as a `_type`-dispatched enum (the template-example
-/// body); a new untyped body fails here until it is typed or pinned with its
-/// reason.
+/// Pins every generated response body still typed `serde_json::Value`, with
+/// its reason.
 #[test]
 fn untyped_response_bodies_are_pinned_with_their_reason() {
     const PINNED: &[&str] = &[];
@@ -1931,11 +1673,9 @@ fn untyped_response_bodies_are_pinned_with_their_reason() {
     assert_eq!(untyped, pinned, "untyped response bodies changed");
 }
 
-/// The typed RM-instance passes (`openehr-rm` `validate::tree`) do not run the
-/// mandatory-container presence check, because the canonical-JSON reader
-/// reads an absent mandatory `0..*` container as empty: this holds only while
-/// no such container is reachable from a resource a client commits. (Every
-/// mandatory `1..*` container is a `NonEmptyVec` the reader refuses absent.)
+/// No mandatory `0..*` container is reachable from a client-committed
+/// resource, since the reader reads its absence as empty and the typed passes
+/// do not check presence.
 #[test]
 fn no_mandatory_plain_container_is_reachable_from_a_committed_resource() {
     let roots = [

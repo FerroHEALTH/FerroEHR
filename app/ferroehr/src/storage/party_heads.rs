@@ -13,9 +13,8 @@ use crate::storage::error::StorageError;
 /// The stored kind of each of `vo_ids` this store holds, read on `conn` (a
 /// commit's transaction sees the objects it has written itself).
 ///
-/// One probe of `vo_head` by its key per object. The ids are read by their
-/// subscripts, which give a custom plan no array length to be cheaper by, so
-/// the plan cache settles on the generic plan (#6392).
+/// The ids are read by their subscripts, so the plan cache settles on a
+/// generic plan (#6392).
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.

@@ -312,10 +312,8 @@ impl From<ResultSetError> for ServiceError {
 
 /// An empty `RESULT_SET` for `aql`: the envelope, no columns, no rows.
 ///
-/// What a cohort query answers when the cohort resolves to no EHR at all. The
-/// query is never planned in that case — an unscoped execution would be a
-/// population query, the opposite of what was asked — so no column metadata
-/// exists to report, and the honest document is the empty one.
+/// What a cohort query answers when its cohort resolves to no EHR; the query is
+/// never planned then, so no column metadata exists.
 #[must_use]
 pub(crate) fn empty_result_set(aql: &str) -> ResultSetDoc {
     result_set_json(aql, aql, None, QueryResult::of_rows(Vec::new(), Vec::new()))

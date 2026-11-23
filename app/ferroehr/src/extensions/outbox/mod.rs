@@ -389,8 +389,6 @@ pub async fn prune(pool: &PgPool, retention: Duration) -> Result<u64, OutboxErro
 
 /// Reconcile the reader registry with the change-feed grants of `service`
 /// and prune both outboxes every `interval`, for as long as the task runs.
-///
-/// A failed pass is logged and the next one runs on schedule.
 #[expect(
     clippy::infinite_loop,
     reason = "a detached background task with no shutdown channel: the binary aborts it \

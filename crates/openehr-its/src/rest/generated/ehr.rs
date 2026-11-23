@@ -2,9 +2,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! ITS-REST contract for the `ehr` API group: DTOs, per-operation
-//! param structs, per-response headers structs, the `server` and
-//! `client` halves, and the route table.
+//! ITS-REST contract for the `ehr` API group.
 
 #![allow(
     clippy::all,
@@ -4978,10 +4976,7 @@ impl crate::rest::runtime::ResponseHeaders for EhrStatusTagsUpdateOkHeaders {
     }
 }
 
-/// The server half of the `ehr` API group (ITS-REST): the `EhrApi`
-/// trait an implementation provides, one success-answer enum per operation,
-/// and `router`, which binds every operation of the route table to its
-/// trait method over axum.
+/// The server half of the `ehr` API group (ITS-REST).
 #[cfg(feature = "rest-server")]
 pub mod server {
     use super::*;
@@ -5465,12 +5460,8 @@ pub mod server {
 
     /// Server contract for the `ehr` API group (ITS-REST).
     ///
-    /// Every method defaults to refusing with `ApiError::NotImplemented` (`501`),
-    /// so an implementor overrides only the operations it supports; `router`
-    /// serves an implementation over axum. A method refuses with a
-    /// [`crate::rest::runtime::Refusal`]: `?` turns an `ApiError` into one,
-    /// and `Refusal::with_headers` adds the headers the OAS declares for the
-    /// answer (the `ETag` of a `412`, for one).
+    /// Every method defaults to `ApiError::NotImplemented` (`501`), and refuses
+    /// with a [`crate::rest::runtime::Refusal`].
     #[async_trait::async_trait]
     pub trait EhrApi {
         /// `GET /ehr`
@@ -5752,24 +5743,10 @@ pub mod server {
 
     /// The axum router serving every operation of the `ehr` group over `api`.
     ///
-    /// Each route is bound at its OAS path relative to the API base (an RFC 6570
-    /// query expansion dropped, path captures named by segment position). A
-    /// handler decodes the request into the operation's params struct and body
-    /// — a missing or unparseable parameter answers `400` naming it, a
-    /// canonical-JSON body sent as another `Content-Type` answers `415` — and
-    /// encodes the trait method's answer, or its `Refusal` as the ITS-REST
-    /// `Error` body with the refusal's headers. Mount it under the base path
-    /// with `axum::Router::nest`.
-    ///
-    /// The router carries no fallback, so group routers merge freely (axum
-    /// refuses to merge two routers that both carry one); finish the merged
-    /// router with `crate::rest::server::with_fallbacks` for the `404` and `405`
-    /// answers, or take `crate::rest::server::router`, which does both.
-    ///
-    /// The typed bodies are canonical JSON only: a server that also serves
-    /// canonical XML or a Simplified Format routes those requests itself, and
-    /// the `accept` parameter reaches the trait method, which answers
-    /// `ApiError::NotAcceptable` for a representation it does not serve.
+    /// Routes are relative to the API base; mount it with `axum::Router::nest`.
+    /// It carries no fallback, so group routers merge (axum refuses two
+    /// fallbacks); `crate::rest::server::with_fallbacks` adds the `404` and `405`.
+    /// The typed bodies are canonical JSON only.
     pub fn router<S>(api: std::sync::Arc<S>) -> axum::Router
     where
         S: EhrApi + Send + Sync + 'static,
@@ -7133,9 +7110,7 @@ pub mod server {
     }
 }
 
-/// The client half of the `ehr` API group (ITS-REST): one method per
-/// operation over a [`crate::rest::client::Client`], answering an outcome
-/// enum with one variant per status the OAS documents for it.
+/// The client half of the `ehr` API group (ITS-REST).
 #[cfg(feature = "rest-client")]
 pub mod client {
     use super::*;
@@ -7935,9 +7910,8 @@ pub mod client {
         /// `GET /ehr`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn ehr_get_by_subject(
             &self,
             params: &EhrGetBySubjectParams,
@@ -7974,9 +7948,8 @@ pub mod client {
         /// `POST /ehr`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn ehr_create(
             &self,
             params: &EhrCreateParams,
@@ -8033,9 +8006,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn ehr_get_by_id(
             &self,
             params: &EhrGetByIdParams,
@@ -8066,9 +8038,8 @@ pub mod client {
         /// `PUT /ehr/{ehr_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn ehr_create_with_id(
             &self,
             params: &EhrCreateWithIdParams,
@@ -8127,9 +8098,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/ehr_status/{version_uid}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn ehr_status_get_by_version_id(
             &self,
             params: &EhrStatusGetByVersionIdParams,
@@ -8168,9 +8138,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/ehr_status`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn ehr_status_get_at_time(
             &self,
             params: &EhrStatusGetAtTimeParams,
@@ -8214,9 +8183,8 @@ pub mod client {
         /// `PUT /ehr/{ehr_id}/ehr_status`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn ehr_status_update(
             &self,
             params: &EhrStatusUpdateParams,
@@ -8304,9 +8272,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/versioned_ehr_status`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_ehr_status_get(
             &self,
             params: &VersionedEhrStatusGetParams,
@@ -8343,9 +8310,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/versioned_ehr_status/revision_history`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_ehr_status_revision_history(
             &self,
             params: &VersionedEhrStatusRevisionHistoryParams,
@@ -8385,9 +8351,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/versioned_ehr_status/version`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_ehr_status_version_get_at_time(
             &self,
             params: &VersionedEhrStatusVersionGetAtTimeParams,
@@ -8437,9 +8402,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_ehr_status_version_get_by_id(
             &self,
             params: &VersionedEhrStatusVersionGetByIdParams,
@@ -8480,9 +8444,8 @@ pub mod client {
         /// `POST /ehr/{ehr_id}/composition`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn composition_create(
             &self,
             params: &CompositionCreateParams,
@@ -8566,9 +8529,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/composition/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn composition_get(
             &self,
             params: &CompositionGetParams,
@@ -8611,9 +8573,8 @@ pub mod client {
         /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn composition_update(
             &self,
             params: &CompositionUpdateParams,
@@ -8710,9 +8671,8 @@ pub mod client {
         /// `DELETE /ehr/{ehr_id}/composition/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn composition_delete(
             &self,
             params: &CompositionDeleteParams,
@@ -8762,9 +8722,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_composition_get(
             &self,
             params: &VersionedCompositionGetParams,
@@ -8802,9 +8761,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/revision_history`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_composition_revision_history(
             &self,
             params: &VersionedCompositionRevisionHistoryParams,
@@ -8845,9 +8803,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_composition_version_get_at_time(
             &self,
             params: &VersionedCompositionVersionGetAtTimeParams,
@@ -8893,9 +8850,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version/{version_uid}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_composition_version_get_by_id(
             &self,
             params: &VersionedCompositionVersionGetByIdParams,
@@ -8937,9 +8893,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/directory`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn directory_get_at_time(
             &self,
             params: &DirectoryGetAtTimeParams,
@@ -8980,9 +8935,8 @@ pub mod client {
         /// `PUT /ehr/{ehr_id}/directory`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn directory_update(
             &self,
             params: &DirectoryUpdateParams,
@@ -9058,9 +9012,8 @@ pub mod client {
         /// `POST /ehr/{ehr_id}/directory`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn directory_create(
             &self,
             params: &DirectoryCreateParams,
@@ -9122,9 +9075,8 @@ pub mod client {
         /// `DELETE /ehr/{ehr_id}/directory`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn directory_delete(
             &self,
             params: &DirectoryDeleteParams,
@@ -9174,9 +9126,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/directory/{version_uid}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn directory_get_by_version_id(
             &self,
             params: &DirectoryGetByVersionIdParams,
@@ -9214,9 +9165,8 @@ pub mod client {
         /// `POST /ehr/{ehr_id}/contribution`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn contribution_create(
             &self,
             params: &ContributionCreateParams,
@@ -9276,9 +9226,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/contribution/{contribution_uid}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn contribution_get(
             &self,
             params: &ContributionGetParams,
@@ -9313,9 +9262,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn ehr_tags_get(
             &self,
             params: &EhrTagsGetParams,
@@ -9361,9 +9309,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/composition/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn composition_tags_get(
             &self,
             params: &CompositionTagsGetParams,
@@ -9398,9 +9345,8 @@ pub mod client {
         /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn composition_tags_update(
             &self,
             params: &CompositionTagsUpdateParams,
@@ -9447,9 +9393,8 @@ pub mod client {
         /// `DELETE /ehr/{ehr_id}/composition/{uid_based_id}/tags/{key}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn composition_tags_delete(
             &self,
             params: &CompositionTagsDeleteParams,
@@ -9477,9 +9422,8 @@ pub mod client {
         /// `GET /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn ehr_status_tags_get(
             &self,
             params: &EhrStatusTagsGetParams,
@@ -9514,9 +9458,8 @@ pub mod client {
         /// `PUT /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn ehr_status_tags_update(
             &self,
             params: &EhrStatusTagsUpdateParams,
@@ -9563,9 +9506,8 @@ pub mod client {
         /// `DELETE /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags/{key}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn ehr_status_tags_delete(
             &self,
             params: &EhrStatusTagsDeleteParams,
@@ -9592,8 +9534,7 @@ pub mod client {
     }
 }
 /// The operations of this group as `(method, path, operation_id)`, in OAS
-/// document order: `server::router` binds each to its trait method, and
-/// `crate::rest::routes::lookup` matches a request path against them.
+/// document order.
 pub const ROUTES: &[(&str, &str, &str)] = &[
     ("GET", "/ehr", "ehr_get_by_subject"),
     ("POST", "/ehr", "ehr_create"),

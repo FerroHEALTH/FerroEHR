@@ -1,16 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `_default` forms of `cadl2.g4` at adl-antlr `d64ffeb6f` (SPECPR-146):
-//! `default_value: SYM_DEFAULT SYM_EQ ( object_value_block |
-//! INCLUDED_LANGUAGE_FRAGMENT )`, and a `c_complex_object` body that holds
-//! only a `_default`.
-//!
-//! Oracle: the id-coded examples of `ADL2/master06-default_values.adoc`, read
-//! from the vendored specification, which state each default as a typed ODIN
-//! block and as a `(json) <# … #>` block, each the only content of its object.
-//! The ODIN listings carry a term code rubric the ODIN grammar refuses (#5814),
-//! so they are restated here without it.
+//! The `_default` forms of `cadl2.g4` (SPECPR-146), against the id-coded
+//! examples of `ADL2/master06-default_values.adoc` restated without the term
+//! rubric the ODIN grammar refuses.
 
 #![allow(
     clippy::expect_used,

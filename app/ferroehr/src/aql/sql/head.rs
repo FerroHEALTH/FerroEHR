@@ -12,14 +12,12 @@
 //! copy of the key (`vo_head.trunk_head_content_key`, #4944): one head row
 //! per object, and the version row is reached through the head's primary key.
 //!
-//! The node's, the head's and the version's `vo_id` are still one
-//! equivalence class, so the planner may probe the version by `vo_id` alone
-//! and reach a shared row through every version of its chain before the head
-//! keeps one. On statistics taken before a chain grew it priced that probe at
-//! one row and took it; the migration that adds the key declares the
-//! partitions' `vo_id` distinct count, so the probe is priced at two rows and
-//! the exact path through the head always costs less. No openEHR spec governs
-//! storage access paths: our own design.
+//! The node's, the head's and the version's `vo_id` are one equivalence class,
+//! so the planner could probe the version by `vo_id` alone and reach a shared
+//! row through every version of its chain; the migration that adds the key
+//! declares the partitions' `vo_id` distinct count, so the exact path through
+//! the head always costs less. No openEHR spec governs storage access paths:
+//! our own design.
 
 use sea_query::{Alias, Expr, ExprTrait as _, JoinType, Query, SelectStatement};
 
@@ -52,8 +50,8 @@ pub(super) fn head_alias(version_alias: &str) -> String {
 /// Bind the head row of the object `version_alias` belongs to into `q`, and
 /// return its alias.
 ///
-/// One join serves two predicates that used to be two correlated `EXISTS`
-/// subqueries. The restriction gate: GDPR Art. 18(2) leaves storage as the
+/// One join serves two predicates. The restriction gate: GDPR Art. 18(2) leaves
+/// storage as the
 /// only processing a restricted object admits (`docs/law/eu/gdpr/text.html`),
 /// and answering a query from its content is processing, so the mark is a
 /// predicate on the head join rather than a post-filter — a restricted object
@@ -65,12 +63,10 @@ pub(super) fn head_alias(version_alias: &str) -> String {
 /// `latest_trunk_version` (RM common master06 §The 'Virtual Version Tree').
 ///
 /// Written as a join on the head's primary key, the version row is reached
-/// through `pk_version` with all three columns bound; the `EXISTS` form let the
-/// planner reach it by `vo_id` alone through the at-time index and walk every
-/// trunk version of the object per node row (#3453). The `branch_number = 0`
-/// predicate is implied by the head and deliberately not written: it is what
-/// made that partial index applicable. No openEHR spec governs restriction of
-/// processing or storage access paths — our own design/extension.
+/// through `pk_version` with all three columns bound, never by `vo_id` alone
+/// through the at-time index (#3453). The `branch_number = 0` predicate is
+/// implied by the head and deliberately not written. No openEHR spec governs
+/// restriction of processing or storage access paths: our own design/extension.
 pub(super) fn bind_head(
     q: &mut SelectStatement,
     version_alias: &str,

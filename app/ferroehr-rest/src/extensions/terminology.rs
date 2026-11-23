@@ -4,10 +4,6 @@
 //! HTTP dispatch for the terminology extension API group over the
 //! `ferroehr::service::TerminologyService` seam.
 //!
-//! The routes list the known terminologies, read a terminology, a term and a
-//! value set, and answer subsumption and value-set membership; an unknown
-//! terminology, term or value set is a `404`.
-//!
 //! No openEHR spec governs the wire shape — our own design/extension. No
 //! released OAS set defines a terminology REST contract, so this surface is
 //! ours: exposed under the extension namespace `/terminology` and excluded from

@@ -7,8 +7,6 @@
 /// A statistics time filter: an optional `(lower, upper)` pair of ISO 8601
 /// date-time bounds, each independently optional (open bounds allowed).
 ///
-/// The four activity-report calls take it as their optional time filter.
-///
 /// NOTE: the range is treated as **closed** `[lower, upper]` — the
 /// default openEHR `Interval` bound inclusivity — matched against each
 /// CONTRIBUTION/version audit `time_committed`. An invalid ISO bound is a `400`

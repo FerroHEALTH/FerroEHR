@@ -4,10 +4,8 @@
 # Migration-citation guard: a Rust source under app/ may only cite a migration
 # file that exists in the tree.
 #
-# A comment naming `0001_baseline.sql` used to point at the relation it
-# described. The storage rewrite deleted that file, and eight comments went on
-# citing it (#3418), which sends the next reader to a path that is not there and
-# tells them nothing about where the relation is now defined.
+# A comment citing a deleted migration file sends the next reader to a path
+# that is not there (#3418).
 #
 # The check: every `NNNN_<name>.sql` token in a scanned file must match some
 # file under app/ferroehr/migrations/ by path suffix, so `0006_definitions.sql`,

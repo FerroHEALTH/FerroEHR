@@ -1,52 +1,27 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The **construction-door** decision map: which generated spec classes hide
+//! The construction-door decision map: which generated spec classes hide
 //! their fields behind a validating constructor, and which stay plain records.
 //!
-//! A spec class emits as a plain data record by default: every field `pub`,
-//! construction by struct literal. A class gets [`Door::Validated`] instead
-//! when the released spec states a constraint over its field values that is
-//! DECIDABLE FROM THOSE FIELDS ALONE — a lexical form (BASE
-//! `base_types/master05-identification_package.adoc` §Syntaxes gives an EBNF
-//! grammar per identifier class) or a class invariant over its own fields (RM
-//! `UML/classes/org.openehr.rm.common.item_tag.adoc` §Invariants states
-//! `Inv_key_valid`/`Inv_value_valid` over `ITEM_TAG`). An invariant needing
-//! anything the instance does not carry stays at the `Validate` tier.
-//!
-//! A validated class emits its fields `pub(crate)` plus read accessors, so
-//! outside the defining crate the only construction path is the hand-written
-//! `*_impl.rs` constructor, which every generated codec also routes through.
-//! `pub(crate)` and not private because the grammar itself is hand-written
-//! spec behaviour in a sibling module of the same crate.
-//!
-//! The map is exhaustive over the classes it names: a [`Door::PlainRecord`] or
-//! [`Door::TierEnforced`] entry is a recorded decision, not an omission, and
-//! extending the validated set is a per-class spec adjudication.
+//! A class is [`Door::Validated`] when the released spec states a constraint
+//! decidable from its own fields: a lexical form (BASE
+//! `base_types/master05-identification_package.adoc` §Syntaxes) or an own-field
+//! invariant (RM `org.openehr.rm.common.item_tag.adoc` §Invariants). Its
+//! fields are `pub(crate)`, and every codec constructs through the
+//! hand-written `*_impl.rs` constructor.
 
 /// How a generated spec class is constructed.
 pub(crate) enum Door {
-    /// Fields are emitted `pub(crate)`; the sibling `*_impl.rs` owns a
-    /// validating `new(..) -> Result<Self, _>` (plus `FromStr`/`TryFrom`), and
-    /// the generated codecs construct through it.
+    /// Fields are `pub(crate)`; the sibling `*_impl.rs` owns a validating `new`,
+    /// through which the codecs construct.
     Validated {
-        /// The hand-written constructor's parameters as `(field, type)` pairs,
-        /// keyed by FIELD NAME so the contract is independent of a
-        /// generation's BMM declaration order (RM 1.1.0 and 1.2.0 order
-        /// `ITEM_TAG`'s fields differently). `new` is called in THIS order, so
-        /// a BMM change that adds or renames a field fails as a name/arity
-        /// mismatch rather than emitting a call the constructor cannot answer.
-        ///
-        /// A parameter that is itself a spec type is written as the marker
-        /// `@<SPEC_CLASS>` (`@UID_BASED_ID`), which the emitter resolves per
-        /// generation, so one row serves every generation.
+        /// The constructor's parameters as `(field, type)` pairs in call order,
+        /// keyed by field name; a spec-typed parameter is the marker `@SPEC_CLASS`,
+        /// resolved per generation.
         params: &'static [(&'static str, &'static str)],
-        /// `true` when `new` returns `Result` (the normal case: the constructor
-        /// runs a grammar or an invariant over the incoming values). `false`
-        /// when the field types already make an invalid value unrepresentable,
-        /// so the door exists to be the ONLY door, not to reject anything — a
-        /// `Result` there would be a lie the `unnecessary_wraps` lint is right
-        /// to flag.
+        /// Whether `new` returns `Result`; `false` when the field types already
+        /// make an invalid value unrepresentable.
         fallible: bool,
         /// The released grammar or invariant the constructor runs.
         citation: &'static str,
@@ -57,13 +32,9 @@ pub(crate) enum Door {
         /// The released text that says so.
         citation: &'static str,
     },
-    /// The class HAS a released lexical form, but it is enforced at the
-    /// `openehr_base::validate::Validate` tier rather than at construction.
-    ///
-    /// Moving such a grammar to the construction door converts a *validation*
-    /// verdict into a *parse* refusal — an accept/reject boundary change that
-    /// needs its own spec adjudication, not a side effect of the privacy
-    /// scheme. It is deliberately not taken here.
+    /// The class has a released lexical form, enforced at the
+    /// `openehr_base::validate::Validate` tier rather than at construction, since
+    /// a parse refusal moves the accept/reject boundary.
     TierEnforced {
         /// The released text that both defines the grammar and motivates the
         /// tier split.
@@ -79,13 +50,8 @@ pub(crate) struct Construction {
     pub door: Door,
 }
 
-/// Every adjudicated construction decision.
-///
-/// The identification family is the lexical-form half; `ITEM_TAG` is the
-/// invariant half. Mechanical evaluability alone does not qualify a class: the
-/// invariant must be decidable from its own fields AND construction must be the
-/// right accept/reject boundary (see [`Door::TierEnforced`] for a case where it
-/// is not).
+/// Every adjudicated construction decision: the identification family for
+/// lexical forms, `ITEM_TAG` for its invariants.
 pub(crate) static CONSTRUCTION: &[Construction] = &[
     // ── the UID hierarchy (uid = iso_oid | uuid | internet_id) ──────────────
     Construction {
@@ -278,12 +244,7 @@ pub(crate) fn validated_citation(class: &str) -> Option<&'static str> {
     }
 }
 
-/// The adjudication the emitter writes into a class that stays a PLAIN RECORD
-/// although a reader might expect a construction door — so the decision is
-/// readable at the public field rather than only in this map.
-///
-/// `None` for a validated class (its citation is [`validated_citation`]) and for
-/// a class the map says nothing about (the unremarkable default).
+/// The adjudication emitted into a class that stays a plain record, or `None`.
 #[must_use]
 pub(crate) fn plain_record_note(class: &str) -> Option<String> {
     match door(class)? {

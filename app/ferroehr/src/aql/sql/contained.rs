@@ -19,16 +19,10 @@ use super::from::strict_descendant;
 /// The fence holds the join order whatever the statistics: the planner reads
 /// the named EHRs' objects first and each object's own nodes after them
 /// (PostgreSQL 18 §7.2.1.5 LATERAL Subqueries). As a plain FROM item the
-/// contained node could lead the join instead, through the archetype index
-/// over the whole population, whenever the archetype's rows fell out of the
-/// most-common-value list of the archetype statistics and were estimated at
-/// one row; the storage bench's wide projection over one EHR then read ten
-/// times its pages in the rounds that sampled so (#4487). With such an anchor
-/// the anchor is the entry, and a contained node estimated at one row was
-/// rescanned with the WHERE clause's `EXISTS` once per anchor version, 32.7 M
-/// buffers for 500 rows (#6263), or walked from the archetype index once per
-/// anchor row, 30 M buffers (#6243). No openEHR spec governs the join
-/// mechanics: our own design.
+/// contained node could lead the join through the archetype index over the
+/// whole population whenever the archetype's rows were estimated at one row
+/// (#4487, #6243, #6263). No openEHR spec governs the join mechanics: our own
+/// design.
 ///
 /// `conds`, over the alias `<alias>_s`, keep only the rows the source admits.
 /// Each is stated as `(…) IS TRUE`, which holds exactly when it does and

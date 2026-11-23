@@ -13,13 +13,8 @@ use crate::flat::rmpath;
 use crate::flat::typed::{Build, o, view};
 use crate::flat::webtemplate::model::WebTemplateNode;
 
-/// Fills an RM-mandatory structural attribute of `node` or of a descendant the
-/// compactor folded into it (an EVENT's `data`, an ACTIVITY's `description`)
-/// with the node its template constrains, where the build left it out.
-///
-/// AOM 1.4 `master04-constraint_model_package.adoc` §`Valid_value`: a filler
-/// must carry the constrained `archetype_node_id`, so the RM-default `at0001`
-/// placeholder `complete_tree` writes is left for an unconstrained attribute.
+/// Fills an RM-mandatory structural attribute of `node` or a folded descendant
+/// with the node its template constrains (AOM 1.4 §`Valid_value`).
 pub(crate) fn fill_stubbed_descendants(
     obj: &mut dyn RmObject,
     node: &WebTemplateNode,

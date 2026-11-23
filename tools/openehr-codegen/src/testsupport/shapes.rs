@@ -13,13 +13,8 @@ use crate::plan::composition::compose;
 use crate::plan::{Emission, decide};
 use crate::render::naming;
 
-/// The stage-3 plan for a crate, as comparable data.
-///
-/// The decided Rust shape (`Struct` / `Enum` / `PolyEnum` / `EnumLiterals` /
-/// `Newtype` / `Skip`) of every class of every BMM generation composing the
-/// crate, keyed `"<bmm file>::<CLASS>"`.
-/// The key carries the generation because a class name may be declared by more
-/// than one, with a different decided shape in each.
+/// The decided shape of every class of every generation of a crate, keyed
+/// `"<bmm file>::<CLASS>"`.
 ///
 /// # Errors
 /// Returns an error if the crate's BMM files cannot be loaded.
@@ -51,9 +46,8 @@ fn shape_name(e: &Emission) -> &'static str {
     }
 }
 
-/// The estimated size in bytes of every type the CURRENT generation of crate
-/// `key` emits, keyed by Rust type name (the estimate behind the by-size
-/// boxing decision of `plan::layout`).
+/// The estimated size of every type the current generation of `key` emits
+/// (`plan::layout`).
 ///
 /// # Errors
 /// Returns an error if the composition's BMM files cannot be loaded.
@@ -97,11 +91,8 @@ pub fn estimated_sizes(key: &str) -> Result<BTreeMap<String, usize>, Error> {
     Ok(out)
 }
 
-/// Every mandatory `0..*` container reachable from `roots`, as `CLASS.attribute`.
-///
-/// A mandatory `0..*` container is a plain `Vec` or map the canonical-JSON
-/// reader reads as empty when absent; reachable means through attributes and
-/// subtypes, in the CURRENT RM generation.
+/// Every mandatory `0..*` container reachable from `roots` in the current RM
+/// generation, as `CLASS.attribute`.
 ///
 /// # Errors
 /// Returns an error if the RM composition's BMM files cannot be loaded.

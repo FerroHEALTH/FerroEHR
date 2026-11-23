@@ -237,12 +237,8 @@ impl Decomposer<'_> {
                 let attributes = self.map_attributes(&c.attributes, archetype_id, path, cx);
                 complex(&c.rm_type_name, &c.node_id, &c.occurrences, attributes)
             }
-            // A `T_COMPLEX_OBJECT` is a template-node complex object; its
-            // `default_value` (a DATA_VALUE) is carried into the converted
-            // source as `C_DEFINED_OBJECT.default_value` — legal in any
-            // archetype and serialized by the printer as the `_default`
-            // pseudo-attribute (`master06-default_values.adoc` §Syntax; the
-            // intermediate is the canonical-JSON encoding).
+            // A `T_COMPLEX_OBJECT`'s `default_value` becomes `C_DEFINED_OBJECT.default_value`,
+            // printed as `_default` (`master06-default_values.adoc` §Syntax).
             opt14::types::CObject::TComplexObject(c) => {
                 let attributes = self.map_attributes(&c.attributes, archetype_id, path, cx);
                 let mut obj = complex(&c.rm_type_name, &c.node_id, &c.occurrences, attributes);
@@ -306,11 +302,7 @@ impl Decomposer<'_> {
     }
 
     /// Assemble the 1.4-shaped terminology for one archetype root: the inline
-    /// `C_ARCHETYPE_ROOT.term_definitions`/`term_bindings` (keyed under the OPT's
-    /// language) merged with the matching flattened ontology
-    /// (`ontology` for the top root, `component_ontologies[archetype_id]` for an
-    /// embedded root). Extra (unused) codes are harmless — they raise at most a
-    /// `WOUC` warning, never a phase-1 error.
+    /// `C_ARCHETYPE_ROOT` terms merged with its flattened ontology.
     fn build_terminology(
         &self,
         archetype_id: &str,
@@ -400,15 +392,9 @@ impl Decomposer<'_> {
         terms
     }
 
-    /// Defines each slot that replaced an embedded root in every language of
-    /// the root's terminology, with the embedded root's concept term.
-    ///
-    /// The slot sits under a container attribute, and the identifiers of
-    /// nodes there must be defined in the terminology (AM
-    /// `ADL2/master04.3-cadl_complex_types.adoc` §Node Identifiers). A language
-    /// the embedded root has no term in takes the OPT language's term, recorded
-    /// in `conversion_details`. No openEHR spec governs 1.4 to 2 conversion:
-    /// our own design.
+    /// Defines each slot that replaced an embedded root in every language with the
+    /// root's concept term (`ADL2/master04.3` §Node Identifiers); a missing language
+    /// takes the OPT language's term. Our own design.
     fn define_slot_terms(
         &self,
         term_definitions: &mut BTreeMap<String, BTreeMap<String, ArchetypeTerm>>,
@@ -453,14 +439,8 @@ impl Decomposer<'_> {
         }
     }
 
-    /// Records each language the root's terminology carries beside the OPT's
-    /// own as a `conversion_details` entry naming the source OPT.
-    ///
-    /// ADL 2 asks for a `translations` entry per further language
-    /// (`ADL2/master07.07-adl_language.adoc`), but an OPT 1.4 carries no
-    /// translation record, and a `TRANSLATION_DETAILS` would have to make up
-    /// its author and accreditation, so none is written. No openEHR spec
-    /// governs 1.4 to 2 conversion: our own design.
+    /// Records each language beside the OPT's own in `conversion_details`; an OPT 1.4
+    /// carries no translation record to build `translations` from. Our own design.
     fn note_extra_languages(
         &self,
         term_definitions: &BTreeMap<String, BTreeMap<String, ArchetypeTerm>>,
@@ -483,13 +463,8 @@ impl Decomposer<'_> {
     }
 }
 
-/// Drops every term definition whose code is no local code, recording each in
-/// `conversion_details`.
-///
-/// ADL 1.4 local codes are prefixed `at` (node and value codes) or `ac`
-/// (constraint codes) (AM `ADL1.4/master08-adl.adoc` §Local Constraint Codes),
-/// so a term keyed otherwise, such as a tool's `°C` unit label, names nothing
-/// the definition can reference and has no ADL 2 code to convert to.
+/// Drops every term whose code is no local `at`/`ac` code (`ADL1.4/master08-adl.adoc`
+/// §Local Constraint Codes), recording each in `conversion_details`.
 pub(super) fn drop_unreadable_codes(
     term_definitions: &mut BTreeMap<String, BTreeMap<String, ArchetypeTerm>>,
     cx: &mut RootCx,
@@ -511,17 +486,9 @@ pub(super) fn drop_unreadable_codes(
     }
 }
 
-/// Merges one flattened 1.4 ontology into the terminology being assembled.
-///
-/// The 1.4 `constraint_definitions`/`constraint_bindings` sections merge into
-/// `term_definitions`/`term_bindings` — the ADL2 folding
-/// (`ADL2/master07.13-adl_terminology.adoc` §Terminology section). AOM2
-/// binding targets are URIs (`term_bindings: Hash<String, Hash<String,
-/// Uri>>`), so a 1.4 target that is a bare code (`20081-6`) is wrapped in the
-/// converter core's fabricated URN form and stays parseable as ODIN; a
-/// constraint binding carries its target as a plain string (a URI or a
-/// terminology query) and merges under the same terminology key, ac-code →
-/// target (VTCBK keys).
+/// Merges one flattened 1.4 ontology into the terminology, constraint sections
+/// folded into terms and bindings (`ADL2/master07.13` §Terminology section); a
+/// bare-code binding target is wrapped in the converter's URN form.
 pub(super) fn merge_ontology(
     ont: &opt14::types::FlatArchetypeOntology,
     term_definitions: &mut BTreeMap<String, BTreeMap<String, ArchetypeTerm>>,
@@ -557,14 +524,8 @@ pub(super) fn merge_ontology(
     }
 }
 
-/// Drops every binding whose key is not a code DEFINED in this root's slice,
-/// recording each drop in `conversion_details`.
-///
-/// Such a binding is unexpressible after decomposition (1.4 OPTs may bind path
-/// keys or codes scoped to another embedded root) and would raise VTTBK
-/// (`master03` §Validity Rules — binding keys must be defined codes). The
-/// binding's home is the root that defines the code, which carries it in its
-/// own slice.
+/// Drops every binding whose key is no code defined in this root's slice
+/// (VTTBK, `master03` §Validity Rules), recording each in `conversion_details`.
 pub(super) fn drop_out_of_scope_bindings(
     term_definitions: &BTreeMap<String, BTreeMap<String, ArchetypeTerm>>,
     term_bindings: &mut BTreeMap<String, BTreeMap<String, String>>,
@@ -633,14 +594,8 @@ pub(super) fn max_at_num_obj(obj: &opt14::types::CObject) -> i64 {
     }
 }
 
-/// The numeric value of an `atNNNN` node id's first segment (0 for a non-at
-/// code, e.g. an empty id or an already-id code).
-///
-/// The code grammar is not restated here: the string goes through the AOM2 code
-/// parser ([`crate::codes::parse_code`], the
-/// `org.openehr.am.aom2.adl_code_definitions` leader + `.`-separated numeric
-/// segments), so an at-code is recognised exactly as the rest of the ADL layer
-/// recognises one.
+/// The numeric first segment of an `atNNNN` node id through
+/// [`crate::codes::parse_code`], 0 for any other code.
 pub(super) fn at_num(node_id: &str) -> i64 {
     match crate::codes::parse_code(node_id) {
         Some(code) if code.prefix == crate::codes::CodePrefix::At => code

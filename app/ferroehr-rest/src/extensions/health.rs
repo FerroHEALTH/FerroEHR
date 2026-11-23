@@ -10,14 +10,9 @@
 //! `docs/specs/openehr/ITS-REST/specifications/docs/system/`) and no health
 //! resource at all, so this whole family is our own extension.
 //!
-//! The routes themselves are the family stack's
-//! (`ferrohealth_server::health::routes`, mounted by `stack::app` under
-//! `server.base_path`, outside authentication, the ATNA audit layer and the
-//! overload bound), so an orchestrator can always probe the server. The stubs
-//! below are their documentation twins, the same pattern as the System
-//! `OPTIONS` manifest's: registered only to build the document, never served.
-//! The detail behind readiness is `GET /management/health`
-//! ([`crate::extensions::management`]), behind the management access gate.
+//! The routes are the family stack's, mounted outside authentication and the
+//! overload bound so an orchestrator can always probe; the stubs here only
+//! document them.
 
 use ferrohealth_server::section::BasePath;
 use utoipa_axum::router::OpenApiRouter;

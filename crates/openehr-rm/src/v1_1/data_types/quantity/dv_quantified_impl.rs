@@ -2,21 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for `DV_QUANTIFIED`.
-//!
-//! `DV_QUANTIFIED` is abstract, so the generated `DvQuantified` is the closed
-//! subtype enum over the seven quantified data types, and the five functions
-//! the class declares are realized here as the dispatch across it. The
-//! per-type magnitudes, comparability rules and accuracy readings are NOT
-//! re-derived: they live once in the `DV_ORDERED` / `DV_AMOUNT` /
-//! `DV_ABSOLUTE_QUANTITY` modules and are reached from here, so a quantified
-//! value cannot order or compare differently from the ordered value it is.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_quantified.adoc`
-//! §Functions + §Invariants, with the accuracy readings from
-//! `docs/specs/openehr/RM/docs/data_types/master06-quantity_package.adoc`
-//! §Accuracy and Uncertainty.
+//! The `DV_QUANTIFIED` functions
+//! (`org.openehr.rm.data_types.dv_quantified.adoc`), dispatched to the
+//! `DV_ORDERED`, `DV_AMOUNT` and `DV_ABSOLUTE_QUANTITY` definitions.
 
 use crate::v1_1::data_types::quantity::dv_amount::DvAmount;
 use crate::v1_1::data_types::quantity::dv_ordered::DvOrdered;
@@ -25,50 +13,23 @@ use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
 
 impl DvQuantified {
-    /// Returns `true` when `s` is one of the values `magnitude_status` may
-    /// take.
-    ///
-    /// Spec: `org.openehr.rm.data_types.dv_quantified.adoc` §Functions
-    /// `valid_magnitude_status`, whose post-condition is the closed set
-    /// `Result = s in {"=", "<", ">", "<=", ">=", "~"}` — the same set
-    /// §Invariants `Magnitude_status_valid` tests `magnitude_status` against.
-    ///
-    /// The class declares the function with NO parameter while its own
-    /// post-condition reads a free `s` and the invariant calls it with one
-    /// argument, so the string it tests is taken as that parameter.
+    /// Whether `s` is in `{"=", "<", ">", "<=", ">=", "~"}`
+    /// (`valid_magnitude_status`, whose free `s` is read as its parameter).
     #[must_use]
     pub fn valid_magnitude_status(s: &str) -> bool {
         matches!(s, "=" | "<" | ">" | "<=" | ">=" | "~")
     }
 
-    /// Returns the precise magnitude of this value, or `None` when the value
-    /// carries none that can be read.
-    ///
-    /// Spec: `org.openehr.rm.data_types.dv_quantified.adoc` §Functions
-    /// `magnitude`, which the class declares abstract and each subtype
-    /// effects. The dispatch is the `DV_ORDERED` one
-    /// (`org.openehr.rm.data_types.dv_ordered.adoc`), so the magnitude that
-    /// orders a value is the magnitude it reports: a count's stored integer, a
-    /// quantity's `magnitude`, a proportion's ratio, a date's day count, a
-    /// time's or date-time's seconds, a duration's nominal seconds. `None` is
-    /// a temporal `value` that is not a readable ISO-8601 string, which has no
-    /// magnitude to state.
+    /// The magnitude of this value (`magnitude`), as `DV_ORDERED` orders it, or
+    /// `None` for an unreadable temporal value.
     #[must_use]
     pub fn magnitude(&self) -> Option<f64> {
         self.as_ordered().magnitude()
     }
 
-    /// Returns `true` when this value's accuracy was not recorded.
-    ///
-    /// Spec: `org.openehr.rm.data_types.dv_quantified.adoc` §Functions
-    /// `accuracy_unknown` — "True if accuracy is not known, e.g. due to not
-    /// being recorded or discernable" — effected differently by the two
-    /// branches of the hierarchy, per
-    /// `master06-quantity_package.adoc` §Accuracy and Uncertainty: "in
-    /// `DV_AMOUNT`, a value of -1 for the accuracy attribute is used for this
-    /// purpose", while "in the `DV_ABSOLUTE_QUANTITY` class, `accuracy_unknown`
-    /// is represented by a Void (i.e. null) value for the accuracy attribute".
-    /// An absent accuracy is unknown under both readings.
+    /// Whether accuracy is unknown (`accuracy_unknown`): `-1` or absent for a
+    /// `DV_AMOUNT`, absent for a `DV_ABSOLUTE_QUANTITY` (`master06-quantity_package.adoc`
+    /// §Accuracy and Uncertainty).
     #[must_use]
     pub fn accuracy_unknown(&self) -> bool {
         match self {
@@ -82,22 +43,8 @@ impl DvQuantified {
         }
     }
 
-    /// Returns `true` when this value is considered equal to `other`.
-    ///
-    /// Spec: `org.openehr.rm.data_types.dv_quantified.adoc` §Functions
-    /// `is_equal`, which the class declares abstract; BASE
-    /// `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.foundation_types.any.adoc`
-    /// §Functions defines what it means — "True if `this` and `other` are
-    /// attached to objects considered to be equal in VALUE".
-    ///
-    /// Two values of different concrete types are never equal: `DV_ORDERED`
-    /// compares only like with like. Each like pair is answered by that
-    /// subtype's own equality — the `DV_AMOUNT` one for the four differential
-    /// types, `DV_DATE`'s for a date — so this function cannot disagree with
-    /// the equality the subtype already defines. The two remaining temporal
-    /// types have no effecting definition of their own and take `DV_DATE`'s
-    /// rule: equality of the instant, with an unreadable value equal only to
-    /// the identical string.
+    /// Whether this value equals `other` in value (`is_equal`; BASE `any.adoc`),
+    /// by each subtype's own equality; different types are never equal.
     #[must_use]
     pub fn is_equal(&self, other: &Self) -> bool {
         if let (Some(left), Some(right)) = (self.as_amount(), other.as_amount()) {
@@ -121,15 +68,8 @@ impl DvQuantified {
         }
     }
 
-    /// Returns `true` when this value is less than `other`, or `None` when the
-    /// two are not strictly comparable or a magnitude is unavailable.
-    ///
-    /// Spec: `org.openehr.rm.data_types.dv_quantified.adoc` §Functions
-    /// `less_than`, whose `Pre_comparable` is
-    /// `is_strictly_comparable_to (other)` and whose `Post_result` is
-    /// `Result = magnitude < other.magnitude`. Both are the `DV_ORDERED`
-    /// ordering this forwards to, so an unmet precondition is `None` rather
-    /// than a fabricated `false`.
+    /// Whether this value is less than `other` (`less_than`), or `None` when not
+    /// strictly comparable or a magnitude is unavailable.
     #[must_use]
     pub fn less_than(&self, other: &Self) -> Option<bool> {
         self.as_ordered().less_than(&other.as_ordered())
@@ -148,9 +88,7 @@ impl DvQuantified {
         }
     }
 
-    /// This value as the `DV_AMOUNT` it is, for the four differential
-    /// subtypes; `None` for the three `DV_ABSOLUTE_QUANTITY` ones, which are
-    /// points on a scale rather than amounts of it.
+    /// This value as a `DV_AMOUNT`, `None` for the absolute quantities.
     fn as_amount(&self) -> Option<DvAmount> {
         match self {
             Self::DvCount(value) => Some(DvAmount::DvCount(value.clone())),
@@ -162,15 +100,8 @@ impl DvQuantified {
     }
 }
 
-/// Whether two temporal values name the same instant.
-///
-/// The magnitudes are compared exactly, as decimals: the question is which
-/// instants the two values denote, not how the seconds happen to be carried.
-/// A value with no readable magnitude is not an instant this can compare, so
-/// only an identical written form still counts as the same one — the rule
-/// `DV_DATE.is_equal` states
-/// (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_date.adoc`
-/// §Functions).
+/// Whether two temporal values name the same instant, exactly; an unreadable
+/// value matches only its identical string (`dv_date.adoc` §Functions).
 fn same_instant(
     left: Option<f64>,
     right: Option<f64>,
@@ -269,9 +200,7 @@ mod tests {
         }
     }
 
-    /// `Result = s in {"=", "<", ">", "<=", ">=", "~"}` — the whole set, and
-    /// nothing beside it (including the empty string and a two-character
-    /// near-miss).
+    /// Exactly the six-member set.
     #[test]
     fn the_magnitude_status_set_is_closed() {
         for status in ["=", "<", ">", "<=", ">=", "~"] {
@@ -307,9 +236,8 @@ mod tests {
         assert_eq!(exact(date("the fifth of never").magnitude()), None);
     }
 
-    /// The two accuracy readings: `-1` (or absent) for a `DV_AMOUNT`
-    /// descendant, absent for a `DV_ABSOLUTE_QUANTITY` one — where `0.0` is a
-    /// recorded accuracy of zero, not an unknown one.
+    /// `-1` or absent for an amount, absent for an absolute quantity, where `0.0`
+    /// is a recorded accuracy.
     #[test]
     fn accuracy_unknown_follows_each_branchs_own_sentinel() {
         assert!(count(1, None).accuracy_unknown());
@@ -334,18 +262,14 @@ mod tests {
         assert!(!date("2024-01-01").is_equal(&date("2024-01-02")));
     }
 
-    /// A value with no readable magnitude is equal only to the identical
-    /// written form, so it is never simultaneously not-less, not-greater and
-    /// not-equal to itself.
+    /// An unreadable value equals only its identical string.
     #[test]
     fn an_unreadable_temporal_value_equals_only_its_own_form() {
         assert!(time("not a time").is_equal(&time("not a time")));
         assert!(!time("not a time").is_equal(&time("also not a time")));
     }
 
-    /// `Pre_comparable: is_strictly_comparable_to (other)` — two quantities in
-    /// different units are not comparable, so `less_than` states nothing
-    /// rather than answering `false`.
+    /// Quantities in different units give no `less_than`.
     #[test]
     fn less_than_states_nothing_when_the_precondition_fails() {
         assert_eq!(

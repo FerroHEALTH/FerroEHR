@@ -13,13 +13,6 @@
 //! `LANG/docs/UML/classes/org.openehr.lang.bmm.bmm_classifier.adoc` §Functions
 //! (`type_name`, `type_category`, `type_signature`, `base_class`,
 //! `flattened_type_list`).
-//!
-//! Every function here is a pure dispatcher: the per-class behaviour lives with
-//! the class the class definitions declare it on
-//! ([`crate::v1_1::bmm::core::bmm_class_impl`],
-//! [`crate::v1_1::bmm::core::bmm_type_impl`],
-//! [`crate::v1_1::bmm::core::bmm_generic_parameter_impl`],
-//! [`crate::v1_1::bmm::core::bmm_open_type_impl`]).
 
 use crate::v1_1::bmm::core::bmm_class::BmmClass;
 use crate::v1_1::bmm::core::bmm_classifier::BmmClassifier;
@@ -122,12 +115,6 @@ impl BmmClassifier {
     /// [`BmmEntityMetatype`](crate::v1_1::bmm3::core::entity::bmm_entity_metatype::BmmEntityMetatype)
     /// — with the literal/vocabulary agreement pinned by a unit test in this
     /// module.
-    ///
-    /// The mapping: a generic class or generic type is `…_generic`; a generic
-    /// parameter, open type or parameter type is `…_generic_parameter`; an
-    /// enumeration class is `…_enumeration`; a container type is
-    /// `…_container`; a simple class, simple type and the built-in
-    /// signature/status/tuple meta-types are `…_simple`.
     #[must_use]
     pub fn type_category(&self) -> &'static str {
         match self {

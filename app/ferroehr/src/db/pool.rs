@@ -23,9 +23,9 @@ use crate::db::{DbConfig, DbError};
 /// The pool connections per core an unset [`DbConfig::max_connections`]
 /// gives.
 ///
-/// A request holds a connection about as long as it runs on a core (1 to 3
-/// ms at the measured rates), so this is about what every core busy at once
-/// keeps in use, and the burst above it waits in the pool.
+/// A request holds a connection about as long as it runs on a core, so this is
+/// about what every core busy at once keeps in use; the burst above it waits in
+/// the pool.
 pub const POOL_PER_CORE: u32 = 4;
 
 /// The smallest pool an unset [`DbConfig::max_connections`] gives, when the

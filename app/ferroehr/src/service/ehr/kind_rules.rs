@@ -25,11 +25,6 @@ use crate::error::{ServiceError, Violation};
 /// `is_archetype_root xor archetype_details = Void` (RM common
 /// `locatable.adoc` §Invariants) means such a root MUST carry the `ARCHETYPED`
 /// block, with its mandatory `archetype_id`.
-///
-/// A per-node pass cannot express that direction, only this chapter knowing that
-/// an `EHR_STATUS` or `EHR_ACCESS` is a root. The other direction, the
-/// root-identity rule and `LOCATABLE.Links_valid` belong to the whole-instance
-/// pass (`openehr_rm::v1_2::validate::check_archetyped_valid`).
 pub(in crate::service) fn validate_root_locatable<'a, T: crate::versioning::tree::Tree<'a>>(
     obj: T,
     kind: &str,
@@ -145,10 +140,6 @@ pub(in crate::service) fn validate_ehr_status(
 ///   — the RM defines no concrete scheme, so a present `settings` must carry a
 ///   non-empty concrete `_type`, which `scheme()` names (`Scheme_valid`).
 ///
-/// Followed by the whole-instance RM class-invariant + terminology pass
-/// ([`validate_rm_invariants_for_commit`]), which reaches every node below the
-/// root.
-///
 /// # Errors
 /// [`ServiceError::Unprocessable`] naming the first violated rule, or
 /// [`ServiceError::ValidationFailed`] carrying the RM-invariant violations
@@ -194,7 +185,7 @@ pub(in crate::service) fn validate_ehr_access(
 /// Validate a client-supplied FOLDER tree before it is committed (directory
 /// create/update and the CONTRIBUTION FOLDER path): the whole-instance RM
 /// class-invariant + terminology pass ([`validate_rm_invariants_for_commit`]),
-/// which now carries EVERY rule this function once restated by hand:
+/// which covers:
 ///
 /// - the declared-slot-type conformance rule (root and every member) from the
 ///   generated RM model: `FOLDER.items` takes `OBJECT_REF` and `FOLDER.folders`

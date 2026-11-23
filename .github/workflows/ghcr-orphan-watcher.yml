@@ -19,12 +19,10 @@
 # attestation manifests to that same index, and — because GHCR serves no
 # referrers API — every cosign signature and SLSA provenance reaches the
 # registry through the OCI fallback TAG `sha256-<hex>`, whose children are
-# untagged again. Measured over the three packages: 1801 untagged manifests, of
-# which 1706 are reachable. An automated prune that got one media type wrong
-# would destroy the published attestations of releases this project publishes as
-# IMMUTABLE, and the damage would stay invisible until a consumer's
-# `gh attestation verify` returned a 404. A human reviewing 95 digests is the
-# cheaper side of that trade.
+# untagged again. An automated prune that got one media type wrong would
+# destroy published attestations of releases this project publishes as
+# IMMUTABLE, unseen until a consumer's `gh attestation verify` returned a
+# 404; a human review is the cheaper side of that trade.
 #
 # RUN COLOUR (the watcher family's uniform rule, #2778): finding orphans files
 # or updates ONE tracking issue and the run stays GREEN. The run goes RED only

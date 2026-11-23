@@ -4,20 +4,10 @@
 //! The two-DSN posture: the server assembled on one login role per
 //! pseudonymisation domain, serving both domains and reaching neither across.
 //!
-//! Every other suite here runs the schema separation through ONE credential —
-//! `FerroEhrService::new` derives the demographic pool from the clinical pool's
-//! own connect options and swaps only the `search_path`. That proves the
-//! routing, and nothing about the posture the book recommends and the chart
-//! configures: `[database.party] url` pointing at a role that is a member of
-//! `ferroehr_party` while `[database] url` authenticates as `ferroehr_clinical`.
-//!
-//! So these tests take the path the binary takes — two [`DbConfig`] DSNs,
-//! [`ferroehr::db::connect_domains`], whose four
-//! pools handed to the service — and then assert three things: both domains
-//! serve through the assembled router, each of the server's OWN pools is
-//! refused the other domain's relations for want of privilege, and a
-//! single-DSN deployment still serves both domains, so the split stays a
-//! choice rather than a requirement.
+//! Every other suite runs the domains through one credential. These tests take
+//! the binary's path, two DSNs through [`ferroehr::db::connect_domains`], and
+//! assert that both domains serve and that neither of the server's own pools
+//! reaches the other domain's relations.
 //!
 //! NOTE: no openEHR spec governs database roles or the pseudonymisation
 //! boundary — our own design/extension (GDPR Art. 4(5) and Art. 32(1)(a); the
@@ -99,11 +89,6 @@ async fn dsn_as(db: &testkit::TestDb, suffix: &str, domain_roles: &str) -> Strin
 }
 
 /// The two pools and the router the binary would assemble from `settings`.
-///
-/// This is `ferroehr-server`'s own sequence (`connect_domains` →
-/// `FerroEhrService::new` → `with_demographic_pool`), so the credential each
-/// domain uses is the one the configuration names rather than one derived from
-/// the other.
 struct Deployment {
     /// The pool serving the `ehr` schema.
     clinical: PgPool,
@@ -187,11 +172,6 @@ async fn refused_every_relation(pool: &PgPool, whose: &str, relations: &[&str]) 
 
 /// Two DSNs, two login roles: both domains serve, and neither of the server's
 /// own pools can reach the other domain.
-///
-/// The refusal half is measured through the pools the router is dispatching
-/// on — `PgPool` is a handle, so the clones held here and the ones inside the
-/// service are one pool — because the claim is about the RUNNING server's
-/// credentials, not about what a fresh connection would be allowed.
 #[tokio::test]
 async fn two_credentials_serve_both_domains_and_reach_neither_across() {
     let db = common::test_db().await;
@@ -229,11 +209,6 @@ async fn two_credentials_serve_both_domains_and_reach_neither_across() {
 
 /// One DSN: the fallback posture still serves both domains, so the credential
 /// split stays a deployment choice rather than a requirement.
-///
-/// The credential here is a member of both domain roles, which is what a stock
-/// deployment (and the compose stack) runs, so the schema separation is the
-/// only boundary in force — exactly the half the two-credential test above
-/// adds to.
 #[tokio::test]
 async fn one_credential_still_serves_both_domains() {
     let db = common::test_db().await;

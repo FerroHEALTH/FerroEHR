@@ -19,13 +19,6 @@
 // harness module is per-test-binary (the corpus.rs test-file precedent)
 //! End-to-end keyboard journeys (#2793): the viewer driven with a keyboard
 //! alone.
-//!
-//! What a component does with the keyboard (focus rings, roles, roving focus
-//! in a tree or a menu) is FerroUI's and is tested there; these journeys cover
-//! what the viewer composes from the components: where the focus lands after a
-//! route change, the query builder traversed and run by keyboard with Save
-//! beside Run, and the user menu's keyboard pattern as the shell mounts it,
-//! Your access among its items.
 
 use crate::common;
 
@@ -41,10 +34,6 @@ const TAB_BUDGET: usize = 80;
 /// link (FerroUI `docs/migration-0.6.md`: the browser moves the focus on a
 /// document load; WCAG 2.2 SC 2.4.1 and SC 2.4.3), and following it puts the
 /// focus in the main area, past the top bar and the sidebar.
-///
-/// Each focus check after a key waits on the condition it asserts (#4315):
-/// the key's command returns once the key is dispatched, and the browser's
-/// fragment navigation and the page's focus handling follow it.
 #[tokio::test]
 async fn a_route_change_starts_the_focus_at_the_skip_link() {
     let Some(h) = Harness::start("keyboard-route-change").await else {

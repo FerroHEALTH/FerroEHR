@@ -3,14 +3,6 @@
 
 //! Row I/O for the binding side table.
 //!
-//! `binding_identifier`, `binding_membership` and `binding_representation`
-//! hold the rows each party head contributes. A commit derives them from the
-//! body it holds (`party_binding::derive`) and writes only the rows that changed
-//! (`party_binding::rows`), in its own transaction, every delete in one
-//! statement and every insert in the next (`settle`); [`refill`], an archive
-//! load and an import derive them with the same function from the stored
-//! heads; the lookup reads them.
-//!
 //! A `PERSON` of a mapped template has a key row for each identifier at its
 //! key selector, whose professional dates and representative flag say what
 //! the `PERSON` is bound for; a `PERSON` that is neither binds as the person

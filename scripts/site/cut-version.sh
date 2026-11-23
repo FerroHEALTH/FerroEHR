@@ -11,10 +11,8 @@
 # re-points the `latest` alias, then commits + pushes docs-dist.
 #
 # IDEMPOTENT (#2776): a version that is ALREADY frozen is reported and the
-# script exits 0 without touching it — frozen trees are never rebuilt, and that
-# is a no-op, not an error. It used to exit 1, which meant a release pipeline
-# re-run after any later failure could never go green again; the recovery for
-# every other leg is "re-run the pipeline", and this leg has to survive that.
+# script exits 0 without touching it, so a release pipeline re-run passes
+# this leg.
 #
 # In a workflow the outcome is reported on $GITHUB_OUTPUT as `cut=true|false`
 # (docs.github.com/actions/reference/workflows-and-actions/workflow-commands),

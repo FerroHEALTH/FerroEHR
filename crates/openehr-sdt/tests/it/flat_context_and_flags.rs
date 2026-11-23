@@ -1,12 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Flat documents of the Simplified Formats mapping tables (ITS-REST
-//! `docs/simplified_formats/master05-rm_mapping.adoc`) and context defaults
-//! (`master06-context_information.adoc`), on the CNF Robot `test_all_types`
-//! and `minimal_action` templates: `ACTIVITY/action_archetype_id`,
-//! `ctx/action_ism_transition_current_state`, `ctx/instruction_narrative` and
-//! the `DV_INTERVAL` `|lower_unbounded` and `|upper_unbounded` flags.
+//! Flat documents of the master05 mapping tables and master06 context defaults
+//! on the CNF Robot `test_all_types` and `minimal_action` templates.
 #![expect(clippy::panic, reason = "test fixture plumbing")]
 
 use openehr_its::opt14;

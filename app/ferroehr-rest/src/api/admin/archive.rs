@@ -13,25 +13,10 @@
 //! These routes are **excluded from ITS-REST wire conformance**: they gate the `EhrArchive` /
 //! `DemographicArchive` CAPABILITY verdicts only.
 //!
-//! Every route is all-or-nothing: each id in the list is existence-checked
-//! before anything is written, so an unknown id leaves the repository untouched
-//! (the not-found error belongs to the operation, not to an element).
-//! Archiving marks the objects archived AND physically moves their rows to the
-//! server's cold storage tier; archival stays read-neutral — the archived
-//! objects remain retrievable, served from that tier — so no resource
-//! representation changes and the success is a bodyless `204`.
-//!
-//! The two `…/restore` routes are the reverse movement, our own design end to
-//! end — an archival tier is only trustworthy if the move it
-//! performs can be undone deliberately rather than only as the side effect of a
-//! write (which thaws the object it touches). Restoring is idempotent in the
-//! same way archiving is: an object with nothing archived restores nothing and
-//! succeeds.
-//!
-//! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
-//! Admin class (`401`/`403`, our own authorization design) and the
-//! `AppConfig::api.admin` config gate (`405` with an empty `Allow` when
-//! off) unchanged.
+//! Every route is all-or-nothing: an unknown id leaves the repository
+//! untouched. Archived objects stay readable from the cold tier, so success is
+//! a bodyless `204`; the `…/restore` routes move them back and, like archiving,
+//! are idempotent.
 
 #![expect(
     clippy::disallowed_types,

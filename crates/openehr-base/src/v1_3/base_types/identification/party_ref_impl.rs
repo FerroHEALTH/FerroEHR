@@ -2,36 +2,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written BASE class checks for `PARTY_REF`.
-//!
-//! - `Type_validity` — a RELEASED invariant, declared by BASE base_types
-//!   `UML/classes/org.openehr.base.base_types.party_ref.adoc` §Invariants:
-//!   `type` is one of the demographic/party types the assertion enumerates.
-//! - `Namespace_valid` — the `OBJECT_REF` namespace rule, inherited. BASE
-//!   declares the rule but no invariant name for it, so that label is this
-//!   workspace's own convention (see `object_ref_impl`).
+//! `PARTY_REF` checks: the released `Type_validity` invariant (BASE
+//! `org.openehr.base.base_types.party_ref.adoc` §Invariants) and the inherited
+//! `Namespace_valid` rule.
 
 use super::object_ref_impl::namespace_valid;
 use super::party_ref::PartyRef;
 use crate::validate::{InvariantViolation, Validate};
 
-/// The party/demographic `type` values a `PARTY_REF` may point at.
-///
-/// The named subtypes + the abstract supertypes `PARTY`/`ACTOR` are the closed
-/// set of the BASE `Type_validity` invariant
-/// (`docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.party_ref.adoc`,
-/// §Invariants). The class's own Description sanctions **abstract supertypes**
-/// "if the referenced object is of a type not known by the current
-/// implementation".
-///
-/// `ANY` is admitted on the strength of the attribute it constrains:
-/// `object_ref.adoc` §Attributes `type` — "The type name `ANY` can be used to
-/// indicate that any type is accepted (e.g. if the type is unknown)" — which
-/// `PARTY_REF` inherits. An *unknown* type string (e.g. a typo) is still
-/// rejected.
-// NOTE: `party_ref.adoc` §Invariants enumerates a closed set that omits the
-// `ANY` its own inherited `type` attribute sanctions — a released-text tension,
-// resolved toward the attribute because the invariant constrains that attribute.
+/// The `type` values a `PARTY_REF` may point at: the `Type_validity` set
+/// (`party_ref.adoc` §Invariants) plus `ANY`.
+// NOTE: `object_ref.adoc` §Attributes sanctions `ANY` on the inherited `type`,
+// which the invariant's closed set omits; the attribute governs.
 const VALID_PARTY_TYPES: &[&str] = &[
     "PERSON",
     "ORGANISATION",

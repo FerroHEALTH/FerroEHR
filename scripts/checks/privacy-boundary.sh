@@ -20,8 +20,8 @@
 # of this - our own design.
 #
 # THE PATH LIST IS A SET OF PATTERNS MATCHED AGAINST THE DIFF, NEVER AN
-# ASSERTION THAT THE PATHS EXIST. Paths move as the code is reorganised (the
-# demographic migrations became the party ones), so the guard passes cleanly
+# ASSERTION THAT THE PATHS EXIST. Paths move as the code is reorganised, so
+# the guard passes cleanly
 # on a tree where a pattern matches nothing and fires the moment a matching
 # path appears; it matches names rather than checking a directory listing.
 #

@@ -1,15 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! An operational template built over a CKM archetype names that archetype as
-//! its `parent_archetype_id` (#5148).
-//!
-//! AOM2 §3.6.6 gives `OPERATIONAL_TEMPLATE` the invariant `is_specialised`,
-//! and OPT2 `master02` resolves every archetype reference to its full id, so
-//! the OPT carries the archetype its root template specialises without a
-//! consumer filling it in. Both CKM forms are covered: the ADL 1.4 pack, read
-//! unconverted as a consumer reads it, and the ADL 2 pack. In each, the
-//! template names its parent by the interface id and the OPT by the full one.
+//! An OPT over a CKM archetype names it as its full `parent_archetype_id` (AOM2
+//! §3.6.6 `is_specialised`; OPT2 `master02`), for the ADL 1.4 and ADL 2 packs.
 
 #![allow(
     clippy::expect_used,

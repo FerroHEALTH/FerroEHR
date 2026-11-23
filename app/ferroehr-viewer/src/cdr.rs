@@ -26,11 +26,6 @@ use openehr_its::rest::etag::EntityTag;
 
 /// How many CDR requests one screen's fan-out has in flight at once.
 ///
-/// Every BFF fan-out shares this bound, so no single page load can open an
-/// unbounded burst against a shared CDR; it is small on purpose, because the
-/// fan-outs are summaries and history windows rather than latency-critical
-/// paths.
-///
 /// NOTE: no openEHR spec governs the viewer's request pacing — our own
 /// design/extension.
 pub const FANOUT_CONCURRENCY: usize = 8;
@@ -101,10 +96,6 @@ impl CdrResponse {
     }
 
     /// Whether the response carries exactly this status.
-    ///
-    /// The status is typed all the way from `reqwest` to the branch that reads
-    /// it, so callers name an [`http::StatusCode`] constant and a transposed
-    /// code is a compile error rather than a silent wrong branch.
     #[must_use]
     pub fn is(&self, code: http::StatusCode) -> bool {
         self.status == code
@@ -307,9 +298,6 @@ impl CdrClient {
 
     /// One request to `url` as `credential`, asking for `application/json`
     /// until [`CdrCall::accept`] says otherwise.
-    ///
-    /// A `url` outside the configured roots is refused when the call is sent,
-    /// before any request leaves.
     pub fn call(&self, method: http::Method, url: &str, credential: &Credential) -> CdrCall {
         let mut call = CdrCall::new(
             self.http.clone(),

@@ -12,27 +12,6 @@
 //! the bridge: the [`crate::v1_1::el`] parser over the vendored EL grammar,
 //! driving a builder that materialises the v3 `EL_*` classes.
 //!
-//! An assertion that does not parse, or whose names do not resolve, is NOT a
-//! refusal of the schema: it is collected as a
-//! [`PBmmValidityFinding::AssertionNotMaterialised`] and omitted from the class,
-//! staying readable in the P_BMM graph.
-//!
-//! # Resolution rules
-//!
-//! `ElParser.g4` states its own ambiguity at `elValueGenerator` — "Can't
-//! syntactically distinguish between a local variable and a property or
-//! constant reference" — so a bare name's meta-type is decided by resolution,
-//! against the DECLARED features of the owning class:
-//!
-//! * a lower-case name matching a declared property → `EL_PROPERTY_REF`;
-//! * a lower-case name matching a declared function → `EL_FUNCTION_CALL` with
-//!   its `EL_FUNCTION_AGENT.definition` set;
-//! * any other lower-case name → `EL_FUNCTION_CALL` with no definition, the
-//!   reading `elBareRef`'s `elFunctionCall` alternative gives on its own
-//!   (`EL_FUNCTION_AGENT.definition` is `0..1`);
-//! * an upper-case name matching a declared static → `EL_STATIC_REF`, else a
-//!   class of the model → `EL_TYPE_REF`, else unresolved.
-//!
 //! Inherited features are not in scope here: `BMM_CLASS.properties` carries
 //! only what the class declares ("Properties defined in this class",
 //! `…bmm3.bmm_class.adoc` §Attributes), and the flattened view is the
@@ -101,9 +80,6 @@ pub(super) struct AssertionScope<'a, 'b> {
 
 /// Materialises every persisted assertion of `source`, collecting a finding for
 /// each one that does not parse or does not resolve.
-///
-/// `routine` names the owning function/procedure for a pre-/post-condition, and
-/// is `None` for a class invariant.
 pub(super) fn build_assertions(
     scope: &AssertionScope<'_, '_>,
     kind: AssertionKind,

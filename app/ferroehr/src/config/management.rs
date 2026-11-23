@@ -3,20 +3,10 @@
 
 //! Management-surface configuration.
 //!
-//! The `[management]` section of the one server configuration tree; it carries **no loader of its own** — the
-//! whole tree is assembled once by `ferroehr::config` and this struct is
-//! deserialized as a field of it. **Everything is off by default**:
-//! `management.enabled = false`, and every individual endpoint defaults to
-//! [`AccessLevel::Off`] (→ `404`). The surface only exists once a deployment
-//! opts each piece in explicitly.
-//!
-//! The surface is **ops introspection** — build info, Prometheus, the metric
-//! views, the redacted effective config, the live log-filter control, the
-//! per-indicator health detail and the full status document. The orchestrator
-//! probes are NOT configured here: `/health`, `/health/liveness` and
-//! `/health/readiness` are always-on and public, so an orchestrator can probe a
-//! server that has this whole section switched off; they say only whether the
-//! server is ready, and the detail behind that answer is `endpoints.health`.
+//! Everything is off by default: `management.enabled = false`, and every
+//! endpoint defaults to [`AccessLevel::Off`] (`404`). The orchestrator probes
+//! `/health`, `/health/liveness` and `/health/readiness` are always on and
+//! public, outside this section.
 //!
 //! No openEHR spec governs configuration or the management surface — our own
 //! design.
@@ -50,9 +40,6 @@ impl AccessLevel {
     }
 
     /// The level's configuration spelling, as it appears in `ferroehr.toml`.
-    ///
-    /// Used by the boot log, so what an operator reads back matches what they
-    /// wrote.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {

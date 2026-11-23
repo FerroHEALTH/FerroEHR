@@ -9,10 +9,9 @@
 //! is the operator's list, retry and settlement of the refused messages
 //! (#5725).
 //!
-//! Every replica runs both: the subscription check takes an advisory lock, so
-//! one replica at a time checks it, and the applier takes a lease on each
-//! message, so one replica applies it. No specification governs the
-//! schedule: our own design.
+//! An advisory lock keeps the subscription check, and a lease each message, to
+//! one replica at a time. No specification governs the schedule: our own
+//! design.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -180,12 +179,6 @@ pub async fn act(service: &FerroEhrService, cmd: &PmirCmd) -> anyhow::Result<Str
 }
 
 /// The committer an operator's act runs as.
-///
-/// Its subject is the operator's name from the command line of a process that
-/// holds the database credentials; its client is the operating-system
-/// `account` that ran it, which every access record of the act names beside
-/// the operator; this deployment's own issuer, `local_issuer`, names the
-/// operator's login.
 #[must_use]
 pub fn committer(operator: &str, account: &str, local_issuer: &str) -> CommitterIdentity {
     CommitterIdentity {

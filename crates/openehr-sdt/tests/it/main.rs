@@ -1,12 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Integration tests for `openehr-sdt`: the Simplified Formats (Web Template /
-//! FLAT / STRUCTURED) against the spec example vectors, the `master05`
-//! mapping tables and the OPT corpus, and the RM-instance / template
-//! validation passes.
-//!
-//! One binary per crate, split into topic modules.
+//! Integration tests for `openehr-sdt`, one binary split into topic modules.
 #![expect(
     clippy::disallowed_types,
     reason = "test fixtures and wire assertions are raw JSON by the testing rule \

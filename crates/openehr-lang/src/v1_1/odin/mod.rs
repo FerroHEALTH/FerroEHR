@@ -14,10 +14,6 @@
 //! `base_lexer.g4`). This module is **deliberately off the codegen path** — it
 //! parses ODIN *instances*, it does not load the BMM meta-model (the codegen
 //! input is the JSON BMM serialization under `openehr-codegen/vendor/bmm/`).
-//!
-//! The lexical layer is NOT here: ODIN shares the one workspace token stream,
-//! [`crate::v1_1::lexer`], and this module reads it through
-//! [`crate::v1_1::lexer::lex`].
 
 mod parser;
 
@@ -27,10 +23,6 @@ use crate::v1_1::lexer::Token;
 use crate::v1_1::position::line_col;
 
 /// A parsed ODIN value.
-///
-/// The tree mirrors `odin.g4`: an object (`attr = <…>` pairs), an
-/// insertion-ordered keyed list (`["k"] = <…>`), a primitive value or list, an
-/// interval, an embedded URI, an object-reference path list, or an empty block.
 #[derive(Debug, Clone, PartialEq)]
 pub enum OdinValue {
     /// `attr_vals` — an object with attribute → value members (insertion
@@ -275,13 +267,6 @@ pub struct OdinSchemaId {
 }
 
 /// Parse ODIN source text into an [`OdinValue`] tree.
-///
-/// Accepts every `master04-odin_artefacts` main-text form — a set of
-/// top-level `attr = <…>` pairs (an [`OdinValue::Object`], the usual
-/// ADL-section shape), a top-level keyed-object list (an Identified Object
-/// Document), or a bare object-value block — and tolerates a leading
-/// `@<name> = <uri>` schema identifier, which it discards; use
-/// [`parse_document`] to read it.
 ///
 /// # Errors
 /// Returns an [`OdinError`] (with line/column) on the first lexical or

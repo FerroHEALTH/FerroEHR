@@ -2,36 +2,19 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM/BASE class invariants for `Proper_interval`.
+//! `Proper_interval` invariants: the inherited `Lower_included_valid`,
+//! `Upper_included_valid` and `Limits_consistent`, under `INTERVAL`
+//! (`org.openehr.base.foundation_types.interval.adoc` §Invariants).
 //!
-//! The three enforced checks are the inherited `Interval` invariants
-//! `Lower_included_valid`, `Upper_included_valid` and `Limits_consistent` of
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.foundation_types.interval.adoc`
-//! §Invariants, reported under `INTERVAL` — the class that declares them.
-//! `DV_INTERVAL` carries its own redefinition (see `openehr-rm`
-//! `dv_interval_impl`).
-//!
-//! Two declared invariants are deliberately not enforced here:
-//! - `Proper_interval.Inv_not_point` (`lower /= upper`,
-//!   `…foundation_types.proper_interval.adoc`) is adjudicated AGAINST, because
-//!   BASE itself relies on bounds-equal proper intervals:
-//!   `Multiplicity_interval` inherits `Proper_interval` yet defines
-//!   `is_mandatory()` as `{1..1}` and `is_prohibited()` as `{0..0}`
-//!   (`…foundation_types.multiplicity_interval.adoc`), so the invariant cannot
-//!   be read as forbidding them.
-//! - `Interval.Limits_comparable` (`lower.strictly_comparable_to (upper)`) names
-//!   a function the released BASE text declares on no class — neither `Ordered`
-//!   nor `Any` carries `strictly_comparable_to` — so this layer has no
-//!   definition to check. Its RM counterpart is decidable and IS checked, where
-//!   `DV_INTERVAL.Limits_consistent` folds
-//!   `DV_ORDERED.is_strictly_comparable_to` into itself.
+//! `Inv_not_point` is not enforced: `Multiplicity_interval` inherits this class
+//! and defines `is_mandatory()` as `{1..1}`. `Limits_comparable` is not
+//! enforced: no BASE class declares `strictly_comparable_to`.
 
 use super::proper_interval::ProperIntervalData;
 use crate::validate::{InvariantViolation, Validate};
 
-// NOTE: `interval.adoc` §Invariants states `Limits_consistent` as `lower <=
-// upper`, which needs an ordering on `T`; BASE interval bounds are ordered
-// foundation types, so the bound is `PartialOrd`.
+// NOTE: `interval.adoc` §Invariants `Limits_consistent` (`lower <= upper`)
+// needs an ordering on `T`.
 impl<T: PartialOrd> Validate for ProperIntervalData<T> {
     fn validate_invariants(&self, out: &mut Vec<InvariantViolation>) {
         // Lower_included_valid: an unbounded lower boundary is not included.

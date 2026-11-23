@@ -4,23 +4,10 @@
 //! Template-aware navigation of a composition: the instances of a Web Template
 //! node, and the relative path between two template paths.
 //!
-//! A Web Template node's `aqlPath` names the node, and a composition may hold
-//! it any number of times, under names and identifiers the template's path
-//! does not spell. Two such differences are resolved here, each from what the
-//! template itself records, so a template path reaches every instance it
-//! describes:
-//!
-//! - a renamed instance: a template's `[atNNNN,'Name']` conjunct spells the
-//!   name the archetype constrains, while an instance may carry another
-//!   `LOCATABLE.name` (RM common `master03-archetyped_package.adoc` §"The
-//!   `LOCATABLE` class"). The name is dropped exactly where it is redundant,
-//!   when every template path under the same parent spells the same name for
-//!   that attribute and node id.
-//! - an archetype root an OPT2 inlined: data records the complete identifier
-//!   (BASE `artefact_identification` `master07-referencing.adoc`
-//!   §Reconstitutability) where the `aqlPath` carries the interface form, and
-//!   [`WebTemplate::archetype_refs`] records which identifier each interface
-//!   form stands for.
+//! A renamed instance is reached by dropping a redundant name conjunct (RM common
+//! `master03-archetyped_package.adoc` §"The `LOCATABLE` class"), and an inlined
+//! OPT2 archetype root through [`WebTemplate::archetype_refs`] (BASE
+//! `master07-referencing.adoc` §Reconstitutability).
 
 #![expect(
     clippy::disallowed_types,
@@ -35,13 +22,9 @@ use serde_json::Value;
 use crate::flat::rmpath::{NameFallback, fallback_allowed, name_fallback_from_segments};
 use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 
-/// Returns the path from `parent` down to `child`, `None` when `child` is not
-/// under `parent`.
-///
-/// The paths compare step by step, so `/data` is no parent of `/data_x` and
-/// a step's predicate must match whole. The result is relative (BASE
-/// `architecture_overview/master11-paths.adoc` §Basic Syntax: only an absolute
-/// path starts with `/`), and appending it to `parent` gives `child`.
+/// Returns the relative path from `parent` down to `child`, `None` when `child`
+/// is not under `parent` (BASE `master11-paths.adoc` §Basic Syntax). Steps
+/// compare whole, so `/data` is no parent of `/data_x`.
 #[must_use]
 pub fn relative(parent: &RmPath, child: &RmPath) -> Option<RmPath> {
     let tail = child.segments.strip_prefix(parent.segments.as_slice())?;
@@ -51,13 +34,8 @@ pub fn relative(parent: &RmPath, child: &RmPath) -> Option<RmPath> {
     })
 }
 
-/// Navigates compositions of one Web Template.
-///
-/// Built once per template, it holds the name-fallback decision of every
-/// parent the template's paths pass through and the OPT2 archetype
-/// references, so each step decides in constant time. It owns both and keeps
-/// no borrow of the template, so it can live beside the template it was built
-/// from in one owned value.
+/// Navigates compositions of one Web Template, holding the name-fallback
+/// decisions and the OPT2 archetype references.
 #[derive(Debug, Clone)]
 pub struct Navigator {
     /// The name-fallback table of each parent, keyed by the parent's template
@@ -155,11 +133,8 @@ impl<'a> Instance<'a> {
         }
     }
 
-    /// The path that names exactly this instance: each step into a container
-    /// carries the 1-based position of the node in it, alone, and a step into
-    /// a single-valued attribute carries no predicate (BASE
-    /// `architecture_overview/master11-paths.adoc` §"Using Positional
-    /// Parameters"), so the path navigates back to this node and no other.
+    /// The path that names exactly this instance, with a 1-based position on each
+    /// container step (BASE `master11-paths.adoc` §"Using Positional Parameters").
     #[must_use]
     pub fn path(&self) -> RmPath {
         let segments = self
@@ -220,15 +195,11 @@ impl Navigator {
         }
     }
 
-    /// Every instance of the template path `path` in `composition`, in
-    /// document order.
+    /// Every instance of the template path `path` in `composition`, in document
+    /// order; a positioned segment selects that occurrence alone.
     ///
-    /// A segment that carries a position selects that occurrence alone, as
-    /// [`InstanceStep::occurrence`] counts it, and a segment without one
-    /// selects every occurrence. NOTE: BASE `master11-paths.adoc` §"Using
-    /// Positional Parameters" counts a container's elements, and no
-    /// specification counts the instances of one template node, so that
-    /// count is our own design.
+    /// NOTE: no specification counts the instances of one template node: our own
+    /// design ([`InstanceStep::occurrence`]).
     #[must_use]
     pub fn instances<'a>(&self, composition: &'a Value, path: &RmPath) -> Vec<Instance<'a>> {
         self.descend(&Instance::root(composition), &path.segments)

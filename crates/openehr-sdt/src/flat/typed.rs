@@ -1,19 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Typed RM construction and the canonical-JSON seams of the Simplified
-//! Formats (#6003).
+//! Typed RM construction and the canonical-JSON seams of the Simplified Formats.
 //!
-//! The FLAT and STRUCTURED build fills RM objects by attribute name through
-//! the reflective accessor of `openehr_rm::v1_2::access`: `access::construct`
-//! starts an object with every attribute unset, [`Build`] writes into it, and
-//! `access::finish` turns the tree into the real struct. A datum the client
-//! wrote as JSON enters through [`Build::put_datum`], which reads it as the
-//! attribute's primitive; a `|raw` fragment through [`raw_object`], the strict
-//! canonical reader of its class. [`RawJson`] writes a typed object back as
-//! canonical JSON text, the one form `|raw` output takes, and
-//! [`canonical_of`] as its value. No openEHR specification governs this
-//! construction: our own design.
+//! The build fills RM objects by attribute name through
+//! `openehr_rm::v1_2::access`; [`RawJson`] and [`canonical_of`] write `|raw`
+//! output. No openEHR specification governs this construction: our own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -135,11 +127,7 @@ impl Build for dyn RmObject {
 }
 
 /// The primitive a client's JSON `value` writes into `attr` of `object`;
-/// `None` for a JSON `null`.
-///
-/// A number keeps its JSON kind: the finish reads an integer into a `Real`
-/// attribute the way the canonical reader does, and refuses a real number in
-/// an `Integer` one.
+/// `None` for a JSON `null`. A number keeps its JSON kind.
 ///
 /// # Errors
 /// [`FlatError::Rm`] for an undeclared attribute, or a JSON array or object.
@@ -498,13 +486,10 @@ pub(crate) fn canonical_of(object: &dyn RmObject) -> Result<Value, FlatError> {
 }
 
 /// The canonical-JSON rendering of a tree that may still be partial: `_type`
-/// first, then every attribute that holds a value in declaration order, the
-/// shape the canonical-JSON build entry points return unchecked.
+/// first, then every attribute holding a value in declaration order.
 ///
-/// The structure classes whose member list the canonical-JSON build always
-/// wrote (`ITEM_TREE`, `ITEM_LIST` and `CLUSTER` `items`, `ITEM_TABLE`
-/// `rows`) carry it as an empty array when it holds no member, as that build
-/// wrote it.
+/// `ITEM_TREE`, `ITEM_LIST` and `CLUSTER` `items` and `ITEM_TABLE` `rows` render
+/// as an empty array when empty.
 pub(crate) fn render(object: &dyn RmObject) -> Value {
     let rm_type = object.rm_type();
     let mut out = serde_json::Map::new();

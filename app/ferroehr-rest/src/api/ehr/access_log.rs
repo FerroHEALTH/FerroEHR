@@ -12,20 +12,11 @@
 //! draft's recording rule 8), so the SMART requirement of the routes is an
 //! authenticated caller and this module decides the view:
 //!
-//! - the subject of care, and a representative of theirs bound through the
-//!   party binding, read the subject view of the EHR they are confined to:
-//!   the EHR of the patient token's launch context, or of the subject the
-//!   representation names (#5446, #5532); any other EHR answers `404`, as
-//!   an unknown one does, so its existence is not disclosed;
-//! - any other caller the admin class admits, the class of
-//!   `GET /admin/access-log`, reads the full view;
-//! - any other caller is refused with `403`.
-//!
-//! The subject view withholds what the controller's access policy restricts
-//! under EHDS Art. 9(3) (`ACCESS_POLICY.log_restrictions`, #5570), read from
-//! the policy in force, which a policy write brings up to date on the next
-//! request with no restart. Every read, refused and failed ones included,
-//! writes its own access-log entry naming the log it read.
+//! The subject of care, or a representative bound to them, reads the subject
+//! view of the EHR they are confined to, and any other EHR answers `404`; a
+//! caller the admin class admits reads the full view; anyone else gets `403`.
+//! The subject view withholds what `ACCESS_POLICY.log_restrictions` restricts
+//! (EHDS Art. 9(3)). Every read writes its own access-log entry.
 
 use axum::response::Response;
 use openehr_its::rest::runtime::ApiError;

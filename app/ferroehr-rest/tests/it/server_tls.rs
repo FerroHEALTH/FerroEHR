@@ -10,12 +10,6 @@
 //! *valid* client certificate is rustls' `WebPkiClientVerifier` (upstream-
 //! tested); the test leaf is serverAuth-only, so it cannot double as a client
 //! identity here.
-//!
-//! Every certificate and key is minted at run time with `rcgen` (`Pki`): an
-//! RSA CA and leaf (CN=localhost, SAN localhost/127.0.0.1), plus an EC P-256
-//! CA and leaf for the key-format cases and the certificate reload: a pair
-//! replaced on disk is presented once `reload_interval` passes, and a broken
-//! replacement leaves the pair in service untouched.
 
 use std::future::Future;
 use std::io::Write;
@@ -591,10 +585,7 @@ async fn the_default_floor_serves_tls_1_3_only() {
 }
 
 /// `min_version = "1.2"` is the deliberate compatibility widening: a TLS
-/// 1.2-max client is now served, and TLS 1.3 still is.
-///
-/// Pinned so the escape hatch is known to work — a 1.2-only client is fixed by
-/// naming the floor in configuration, never by turning TLS off.
+/// 1.2-max client is served, and TLS 1.3 still is.
 #[tokio::test]
 async fn the_compatibility_floor_also_serves_tls_1_2() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
@@ -617,12 +608,6 @@ async fn the_compatibility_floor_also_serves_tls_1_2() {
 /// ephemeral key agreement — no CBC, no RC4/3DES, no static-RSA or anonymous
 /// key exchange (BCP 195 / RFC 9325 §4.2, which recommends exactly the
 /// AES-GCM and ChaCha20-Poly1305 suites over ECDHE).
-///
-/// This is the suite half of the claim, asserted at the only seam rustls
-/// exposes: the provider's suite list on the built `ServerConfig` (which the
-/// enabled protocol versions then narrow — the 1.2 suites are unreachable at
-/// the default 1.3-only floor). A new suite in an upstream default has to be
-/// re-adjudicated here rather than arriving silently.
 #[test]
 fn the_configured_suites_are_aead_only_over_ephemeral_key_agreement() {
     use rustls::CipherSuite;

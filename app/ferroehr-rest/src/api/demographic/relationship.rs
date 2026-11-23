@@ -49,9 +49,6 @@ use ferroehr::versioning::object_version_id::parse_uid_based_id;
 /// The `PARTY_RELATIONSHIP` extension routes as a native `utoipa-axum` router,
 /// on our own wire with no ITS-REST contract
 /// (see the module docs).
-///
-/// Paths are group-relative, and every operation runs through
-/// [`guarded_dispatch`](crate::api::guarded_dispatch) onto its operation's handler in this module.
 pub(crate) fn relationship_routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (the macro composes one method-router — handlers
     // in a single call must share the path; mixing paths panics at build with

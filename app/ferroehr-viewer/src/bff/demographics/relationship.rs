@@ -118,8 +118,7 @@ pub struct InlineRelationship {
 /// Read one relationship
 /// (`GET /demographic/party_relationship/{uid_based_id}` — extension).
 ///
-/// `Ok(None)` is the `204` a deleted current version answers with, mirroring
-/// the party read.
+/// `Ok(None)` when the current version is logically deleted (the CDR's `204`).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -216,13 +215,6 @@ pub async fn create_relationship(
 /// Commit a new version of a relationship
 /// (`PUT /demographic/party_relationship/{uid_based_id}` — extension).
 ///
-/// `If-Match` carries the loaded version, exactly as a party update does, so a
-/// concurrent change is refused with a `412` rather than overwritten. The body
-/// sent is `base_body` with `name` and `details` replaced; `source`, `target`,
-/// `time_validity`, `uid` and everything else travel back verbatim — changing
-/// which parties a relationship joins would make it a different relationship,
-/// so the viewer does not offer it.
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] on a missing version uid, a blank name, or a
@@ -269,9 +261,6 @@ pub async fn update_relationship(
 /// Logically delete a relationship
 /// (`DELETE /demographic/party_relationship/{uid_based_id}` — extension).
 ///
-/// The path is the version to supersede, exactly as the party delete's is, and
-/// the CDR answers `409` when it is not the latest.
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] when the id is not a full `OBJECT_VERSION_ID`.
@@ -292,12 +281,6 @@ pub async fn delete_relationship(
 }
 
 /// Assemble a `PARTY_RELATIONSHIP` create body from the form's fields.
-///
-/// Pure and unit-tested. Refuses what the RM refuses before any round trip: a
-/// blank mandatory attribute, an endpoint kind outside the five concrete party
-/// families, an endpoint id that is an `OBJECT_VERSION_ID` (a ref denotes the
-/// version CONTAINER — RM demographic master02), or a `details` draft that is
-/// not a JSON object (`details` is an `ITEM_STRUCTURE`).
 ///
 /// # Errors
 /// The operator-facing complaint naming the offending field.
@@ -331,10 +314,6 @@ fn relationship_body(draft: &RelationshipDraft) -> Result<String, String> {
 }
 
 /// The create form's seven fields, as the operator left them.
-///
-/// A named struct rather than a positional argument list: the form dispatches
-/// the same value the inline check judged, so a field can never reach the CDR
-/// in another field's place.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RelationshipDraft {
     /// The relationship's `archetype_node_id`.
@@ -433,10 +412,6 @@ fn parse_details_draft(draft: &str) -> Result<Option<Value>, String> {
 
 /// Apply the edit form's two changes to the loaded relationship document.
 ///
-/// `base` is re-sent verbatim apart from `name` and `details`, so `source`,
-/// `target`, `time_validity`, `uid` and anything a newer release adds survive
-/// unchanged.
-///
 /// # Errors
 /// [`ViewerError::Invalid`] when `base` is not a JSON object, the name is
 /// blank, the `details` draft is not an object, or the merged document cannot be
@@ -467,10 +442,9 @@ fn apply_relationship_edits(base: &str, name: &str, details: &str) -> Result<Str
 /// Flatten a canonical `PARTY_RELATIONSHIP` body into a [`RelationshipState`],
 /// keeping the body verbatim.
 ///
-/// `served_etag` is the identifier the CDR's own `ETag` named
-/// ([`CdrResponse::etag_version_uid`](crate::cdr::CdrResponse::etag_version_uid));
-/// it wins over the document's `uid.value`, because the header is what the
-/// server offers for the conditional round-trip. `None` falls back to the body.
+/// `served_etag`, the CDR's own `ETag`
+/// ([`CdrResponse::etag_version_uid`](crate::cdr::CdrResponse::etag_version_uid)),
+/// wins over the document's `uid.value`.
 ///
 /// # Errors
 /// [`ViewerError::Failed`] when the body is not valid JSON.
@@ -510,9 +484,6 @@ fn parse_relationship_state(
 /// Flatten a party document's inline `relationships` list — "relationships in
 /// which this Party takes part as source"
 /// (`org.openehr.rm.demographic.party.adoc`).
-///
-/// Called from the party flattening, not from a request of its own: the list is
-/// part of the party document, and the screen reads that document once.
 pub(super) fn inline_relationships_of(doc: &Value) -> Vec<InlineRelationship> {
     let items = doc
         .get("relationships")

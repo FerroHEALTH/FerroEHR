@@ -2,24 +2,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `ELEMENT`.
+//! `ELEMENT` invariants.
 //!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.element.adoc`
-//! §Functions + §Invariants. Enforced here:
-//! - `Inv_null_flavour_indicated` (`is_null() xor null_flavour = Void`):
-//!   exactly one of `value` / `null_flavour` is present.
-//! - `Inv_null_reason_valid` (`null_reason /= Void implies is_null()`): a
-//!   `null_reason` implies `value` is absent.
-//! - the inherited LOCATABLE `Archetype_node_id_valid`
-//!   (`…org.openehr.rm.common.locatable.adoc` §Invariants).
-//!
-//! `Inv_is_null_valid` (`is_null() = (value = Void)`) is unfalsifiable here:
-//! that clause IS the definition of [`Element::is_null`], which this crate
-//! computes from `value` rather than storing. `Inv_null_flavour_valid` is
-//! group-bound and is enforced in the terminology-aware path
-//! (`validate::terminology`, the `ELEMENT` slot) against the `openehr-term`
-//! bundle, which this crate does not depend on.
+//! `org.openehr.rm.data_structures.element.adoc`: `Inv_null_flavour_indicated`,
+//! `Inv_null_reason_valid` and the inherited `Archetype_node_id_valid`.
+//! `Inv_is_null_valid` is the definition of [`Element::is_null`];
+//! `Inv_null_flavour_valid` is in `validate::terminology`.
 
 use crate::v1_1::data_structures::representation::element::Element;
 use openehr_base::validate::{InvariantViolation, Validate};
@@ -50,11 +38,8 @@ pub(crate) fn push_element_invariants(
 }
 
 impl Element {
-    /// Returns `true` when this element's value is logically not known.
-    ///
-    /// RM `ELEMENT.is_null()` (`element.adoc` §Functions), computed from
-    /// `value` as its `Inv_is_null_valid` invariant requires
-    /// (`is_null() = (value = Void)`).
+    /// Whether this element's value is logically unknown: `value = Void`
+    /// (`ELEMENT.is_null`).
     #[must_use]
     pub fn is_null(&self) -> bool {
         self.value.is_none()

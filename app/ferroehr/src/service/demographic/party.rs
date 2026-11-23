@@ -115,13 +115,9 @@ impl FerroEhrService {
     /// `CONTRIBUTION`). Returns it with its `uid` set and the create-response
     /// `ETag`/`Location` metadata.
     ///
-    /// The representation is built **from the commit result** (never a
-    /// post-commit re-read): the served body is the just-written canonical with
-    /// the `uid` injected, byte-identical to a fresh [`Self::read_party`] (the
-    /// node codec round-trips losslessly; pinned by a test). When the commit
-    /// rewrites the body ([`support::commit_rewrites_body`]: the `DV_MULTIMEDIA`
-    /// offload), the in-memory input is not the stored form, so the stored
-    /// version is read back instead.
+    /// The representation is built from the commit result, byte-identical to a
+    /// fresh [`Self::read_party`]; a body the commit rewrites
+    /// ([`support::commit_rewrites_body`]) is read back instead.
     pub(super) async fn commit_new_party(
         &self,
         kind: PartyKind,

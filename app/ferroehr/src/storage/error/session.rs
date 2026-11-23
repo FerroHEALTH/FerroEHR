@@ -7,11 +7,9 @@
 /// Returns whether `e` is a failure that only establishing a new connection
 /// produces, so no statement of the request reached the database.
 ///
-/// Every failure of [`crate::db::acquire::acquire`] is classified by its phase
-/// in [`super::classify_acquire`]; this identity test serves the errors that carry no
-/// phase, from a statement executed on a pool rather than on an acquired
-/// connection, by identity: only the identities an established session cannot
-/// produce qualify.
+/// It serves the errors that carry no acquire phase
+/// ([`super::classify_acquire`] classifies the others), so only identities an
+/// established session cannot produce qualify.
 ///
 /// - [`sqlx::Error::Tls`]: raised only while configuring and negotiating TLS at
 ///   connect time (sqlx 0.9, <https://docs.rs/sqlx/0.9.0/sqlx/enum.Error.html>).

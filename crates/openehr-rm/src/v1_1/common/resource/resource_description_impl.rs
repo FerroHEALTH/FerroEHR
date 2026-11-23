@@ -2,20 +2,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `RESOURCE_DESCRIPTION`.
+//! `RESOURCE_DESCRIPTION` invariants.
 //!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.resource_description.adoc`
-//! §Invariants — `Original_author_valid`, `Lifecycle_state_valid`,
-//! `Details_valid` (the own non-empty rules, evaluated by the generated
-//! core). `Language_valid` and `Parent_resource_valid` read the OWNING
-//! `parent_resource` back-reference, which the generated data model
-//! deliberately does not carry (back-references are broken at emission):
-//! `Language_valid` is realized at the whole-resource ingest seams, where
-//! the owner is in hand (`app/ferroehr/src/validation/opt/resource.rs`;
-//! `openehr-adl` `validate/resource_meta.rs`), and `Parent_resource_valid`
-//! is excluded — both rows live in the generated complex-invariant
-//! register.
+//! RM 1.2.0 `org.openehr.rm.common.resource_description.adoc`: the non-empty
+//! rules in the generated core. `Language_valid` and `Parent_resource_valid`
+//! read the owning back-reference, so they live in the complex-invariant register.
 
 use crate::v1_1::common::resource::resource_description::ResourceDescription;
 use openehr_base::validate::{InvariantViolation, Validate};

@@ -2,22 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written realization of the BASE `definitions` constant-holder classes
-//! — `BASIC_DEFINITIONS` and `OPENEHR_DEFINITIONS` (which inherits it, adding
-//! `Local_terminology_id`).
-//!
-//! Both are adjudicated out of type emission (constant holders, no data — the
-//! codegen decision map), so their spec constants live here as plain module
-//! constants.
-//!
-//! Spec sources (vendored):
-//! - `BASE/docs/UML/classes/org.openehr.base.base_types.basic_definitions.adoc`
-//!   (§Constants: `CR`, `LF`, `Any_type_name`, `Regex_any_pattern`,
-//!   `Default_encoding`, `None_type_name`).
-//! - `BASE/docs/UML/classes/org.openehr.base.base_types.openehr_definitions.adoc`
-//!   (§Constants: `Local_terminology_id` = "local" — "Predefined terminology
-//!   identifier to indicate it is local to the knowledge resource in which it
-//!   occurs, e.g. an archetype").
+//! The BASE `BASIC_DEFINITIONS` and `OPENEHR_DEFINITIONS` constants, as module
+//! constants (`org.openehr.base.base_types.basic_definitions.adoc`,
+//! `org.openehr.base.base_types.openehr_definitions.adoc` §Constants).
 
 /// `BASIC_DEFINITIONS.CR` — carriage return character (`'\015'`).
 pub const CR: char = '\u{000D}';
@@ -38,9 +25,8 @@ pub const DEFAULT_ENCODING: &str = "UTF-8";
 /// `BASIC_DEFINITIONS.None_type_name` — the name of the `None` type.
 pub const NONE_TYPE_NAME: &str = "None";
 
-/// `OPENEHR_DEFINITIONS.Local_terminology_id` — the predefined terminology
-/// identifier meaning "local to the knowledge resource in which it occurs,
-/// e.g. an archetype".
+/// `OPENEHR_DEFINITIONS.Local_terminology_id`: "local to the knowledge resource
+/// in which it occurs, e.g. an archetype".
 pub const LOCAL_TERMINOLOGY_ID: &str = "local";
 
 #[cfg(test)]

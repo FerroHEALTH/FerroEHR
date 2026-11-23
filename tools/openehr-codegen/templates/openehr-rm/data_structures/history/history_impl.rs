@@ -2,25 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariants + functions for `HISTORY`.
+//! `HISTORY` invariants and functions.
 //!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.history.adoc`
-//! §Invariants:
-//! - `Events_valid` (`(events /= Void and then not events.is_empty) or summary
-//!   /= Void`): at least one event, or a summary, must be present.
-//! - `Period_consistency`: `is_periodic implies events.for_all (e |
-//!   e.offset.to_seconds mod period.to_seconds = 0)` — checked over the
-//!   available temporal magnitudes (an event whose `time` or a `period` whose
-//!   value is malformed runs no check; well-formedness is the value's own
-//!   `Value_valid` concern).
-//! - `is_periodic()`: `period` is set (`Periodic_validity` makes the two
-//!   equivalent).
-//! - Inherited LOCATABLE `Archetype_node_id_valid`.
-//!
-//! `Periodic_validity` (`is_periodic xor period = Void`, same §Invariants
-//! section) is unfalsifiable here: `is_periodic()` is computed from `period`
-//! rather than stored, so the two sides of the xor can never disagree.
+//! RM 1.2.0 `org.openehr.rm.data_structures.history.adoc`: `Events_valid`,
+//! `Period_consistency` (over well-formed times only), `is_periodic`, and the
+//! inherited `Archetype_node_id_valid`. `Periodic_validity` holds by construction.
 
 use crate::v1_2::data_structures::history::event_impl::offset_seconds;
 use crate::v1_2::data_structures::history::history::History;
@@ -41,9 +27,7 @@ impl<T> History<T> {
 
 impl<T> Validate for History<T> {
     fn validate_invariants(&self, out: &mut Vec<InvariantViolation>) {
-        // Events_valid + inherited Archetype_node_id_valid via the generated
-        // core; Period_consistency stays typed-only (needs the event-offset
-        // arithmetic below, which the fast path declines to reproduce).
+        // `Period_consistency` is typed-only.
         crate::v1_2::validate::generated::history_basic_core(
             self.events.as_ref().is_none_or(Vec::is_empty),
             self.summary.is_some(),

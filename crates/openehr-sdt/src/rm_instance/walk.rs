@@ -18,11 +18,7 @@ use serde_json::Value;
 
 use super::{LowerBounds, ValidationKind, ValidationMessage, norm_path, push, rm_invariant_pass};
 
-/// The node fields every per-node check reads, collected in ONE projection
-/// pass so none of them pays a hashed map lookup.
-///
-/// This runs for every node of every commit; the only remaining per-node gets
-/// are gated behind a matching `_type`.
+/// The node fields every per-node check reads, collected in one pass.
 pub(super) struct NodeFields<'a> {
     pub(super) ty: Option<&'a str>,
     pub(super) node_id: Option<&'a str>,
@@ -78,10 +74,7 @@ pub(super) fn descend_attribute(
                 } else if let Some(iv) = ty.and_then(|parent| {
                     openehr_rm::v1_2::validate::check_slot_member_is_object(parent, k)
                 }) {
-                    // A scalar member of a class-typed list slot is the same
-                    // positive contradiction a foreign `_type` is — its
-                    // declared type is an RM class, which no JSON scalar can
-                    // be.
+                    // A scalar in a class-typed list slot is a wrong type.
                     push(out, norm_path(path), iv.message, ValidationKind::Invariant);
                 }
                 path.truncate(base);
@@ -98,13 +91,8 @@ pub(super) fn descend_attribute(
     }
 }
 
-/// The declared-slot-type conformance rule (the WRONGNESS half of slot typing,
-/// never relaxed — RM common master06 §Incomplete Content): a TAGGED child
-/// must claim the slot's declared type or a subtype.
-///
-/// One model-driven rule for single slots and list members alike; the
-/// shallow-pruned typed dispatch cannot see it (each pruned member
-/// re-dispatches on its own `_type`), so the walk owns it.
+/// The declared-slot-type rule, never relaxed (RM common master06 §Incomplete
+/// Content): a tagged child must claim the slot's declared type or a subtype.
 pub(super) fn check_slot_type(
     out: &mut Vec<ValidationMessage>,
     parent_ty: Option<&str>,

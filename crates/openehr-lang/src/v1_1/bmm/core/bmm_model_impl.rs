@@ -120,8 +120,6 @@ impl BmmModel {
     /// publisher, model name, model release"
     /// (`org.openehr.lang.bmm.bmm_schema_core.adoc` §Functions).
     ///
-    /// Rendered `<rm_publisher>_<schema_name>_<rm_release>`, lower-cased.
-    ///
     /// NOTE: the v2 function states the inputs but not the join; the v3
     /// counterpart's explicit template and all five examples agree on `'_'`
     /// (`org.openehr.lang.bmm3.bmm_model.adoc` §Functions `model_id`:
@@ -203,12 +201,6 @@ impl BmmModel {
     /// `a_class_name` up to root class (usually 'ANY', 'Object' or something
     /// similar). Does not include current class. Returns empty list if none."
     /// (class doc §Functions).
-    ///
-    /// The walk unions two sources so it is total on both persisted shapes: the
-    /// embedded ancestor copies a class carries
-    /// ([`BmmClass::all_ancestors`]) and, for every name reached, that name's
-    /// own definition in this model — a class whose embedded copies are shallow
-    /// still resolves all the way up. Cycle-safe; deduped.
     ///
     /// The `Any` top is implicit: "The `Any` type defined by the model's
     /// `Any` class, or else the default one … will be used as the inheritance
@@ -456,11 +448,6 @@ impl BmmModel {
     /// parameter's ultimate conformance constraint, else `Any`
     /// (`org.openehr.lang.bmm3.bmm_generic_class.adoc` §Functions;
     /// `bmm_generic_parameter.adoc` `effective_conforms_to_type`).
-    ///
-    /// NOTE: the generated `generic_parameters` map is name-keyed and
-    /// declaration order is lost (the sorted-map deviation recorded at
-    /// [`BmmClass::type_name`]); single-letter upper-case parameter names make
-    /// the sorted order the declaration order in practice.
     fn generic_parameter_conformance_type(&self, a_class_name: &str, position: usize) -> String {
         self.class_definition(a_class_name)
             .and_then(BmmClass::generic_parameters)
@@ -519,10 +506,6 @@ impl BmmModel {
 
     /// `BMM_PACKAGE_CONTAINER.package_at_path`: "Package at the path `a_path`"
     /// (`org.openehr.lang.bmm.bmm_package_container.adoc` §Functions).
-    ///
-    /// Keys are matched case-insensitively and the longest matching key prefix
-    /// wins at each level, per
-    /// [`crate::v1_1::bmm::core::bmm_package_impl`].
     #[must_use]
     pub fn package_at_path(&self, a_path: &str) -> Option<&BmmPackage> {
         package_at_path_in(self.packages.as_ref(), a_path)
@@ -550,8 +533,6 @@ impl BmmSchemaCore {
     /// publisher, model name, model release"
     /// (`org.openehr.lang.bmm.bmm_schema_core.adoc` §Functions), answered by
     /// whichever descendant this slot carries.
-    ///
-    /// The join is the one adjudicated on [`BmmModel::schema_id`].
     #[must_use]
     pub fn schema_id(&self) -> String {
         match self {

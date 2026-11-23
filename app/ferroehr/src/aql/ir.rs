@@ -3,14 +3,6 @@
 
 //! The typed AQL query IR (our own engine).
 //!
-//! This is a relational-algebra-flavoured, fully typed intermediate
-//! representation of an AQL `SELECT` query over the greenfield node store. It is
-//! produced by [`crate::aql::plan`] (path analysis in `super::analyze` plus
-//! lowering in `super::lower`) and consumed by the IR-to-SQL package. No SQL
-//! strings appear anywhere in this module: the IR records typed intent
-//! (structure hops, fragment jsonpaths, coercions, version scope, wildcard
-//! semantics) and leaves every SQL-shaped decision to the SQL package.
-//!
 //! A version standard predicate (QUERY master03 §Standard predicate) lowers
 //! to [`VersionScope::Predicate`] with its operator, a bound on
 //! `commit_audit/time_committed` included. `Coercion::Magnitude` covers both `DV_ORDERED`
@@ -267,10 +259,6 @@ pub enum VersionField {
 
 /// The FROM containment tree: a boolean tree whose leaves are source
 /// operands, each optionally constraining a nested containment.
-///
-/// Lowered to nested-set interval self-joins (`d.num BETWEEN a.num AND
-/// a.num_cap` within a version) or `ehr_id` joins (EHR→VO) by the SQL
-/// package; `NotContains` is an anti-join.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ContainsTree {
     /// A source operand with an optional nested `[NOT] CONTAINS <sub>`.

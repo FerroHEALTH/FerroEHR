@@ -1,20 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The two AOM 1.4 model changes of schema revision `1.4.0.3`, as the ADL 1.4
+//! The two AOM 1.4 model changes of schema revision `1.4.0.3` as the ADL 1.4
 //! reader meets them.
 //!
-//! - SPECAM-109: `C_QUANTITY_ITEM` gains the optional `units_system` and
-//!   `units_display_name` (`AM/docs/AOM1.4/master00-amendment_record.adoc`
-//!   1.4.7, `AM/docs/UML/classes/org.openehr.am.aom14.c_quantity_item.adoc`).
-//!   A 1.4 `C_DV_QUANTITY` list row carrying them lowers to `DV_QUANTITY`
-//!   tuple members of the same names, the RM attributes they mirror.
-//! - SPECPR-515: `ARCHETYPE.uid` is the `UUID` inherited from BASE
-//!   `AUTHORED_RESOURCE`, and "ISO OIDs, internet identifiers and extended
-//!   (`root::extension`) forms of `HIER_OBJECT_ID` are not used"
-//!   (`AM/docs/AOM1.4/master03-archetype_package.adoc` §Machine Identifier).
-//!   A UUID fills `uid`; any other form never does, and is kept verbatim in
-//!   `other_meta_data["uid"]` so the reader loses nothing it was given.
+//! SPECAM-109: `C_QUANTITY_ITEM.units_system` and `units_display_name`
+//! (`AOM1.4/master00-amendment_record.adoc` 1.4.7) lower to `DV_QUANTITY` tuple
+//! members. SPECPR-515: `ARCHETYPE.uid` is a `UUID`
+//! (`AOM1.4/master03-archetype_package.adoc` §Machine Identifier); any other
+//! form stays in `other_meta_data["uid"]`.
 
 #![allow(
     clippy::expect_used,

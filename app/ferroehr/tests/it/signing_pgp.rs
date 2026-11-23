@@ -7,8 +7,6 @@
 //! boot advisory an RSA signing key raises, the refusal of ECDSA and
 //! Ed448 signing keys (RUSTSEC-2026-0387), and the choice of the signing
 //! component, subkey or primary key.
-//!
-//! Keys are generated in-test via rPGP so there is no vendored key fixture.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -358,9 +356,6 @@ fn a_certificate_with_a_signing_subkey_signs_and_verifies_through_it() {
 /// The point of subkey signing: a signature made before a rotation verifies
 /// afterwards with **no** retired-keyring entry, because the certificate itself
 /// carries both subkeys.
-///
-/// The retired keyring stays for the case a whole certificate is replaced; this
-/// is the ordinary path, and it needs no operator ceremony at all.
 #[test]
 fn a_subkey_signature_verifies_against_the_certificate_that_retains_it() {
     let (secret, public) = generate_key_pair_with_signing_subkey();

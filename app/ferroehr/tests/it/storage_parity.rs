@@ -7,12 +7,6 @@
 //! NOTE: no openEHR spec governs storage mechanics — our own design/extension;
 //! the sweep re-derives every stored version from its `node` rows and compares
 //! the result with the materialized `version.body`.
-//!
-//! Every tamper case reaches PAST the service into the stored rows with raw
-//! SQL, which is the point: an attacker or a corrupt page does not go through
-//! the write path, so neither does the fixture. A case that tampers must prove
-//! the `UPDATE`/`DELETE` matched something, or it would pass while testing
-//! nothing.
 
 use ferroehr::service::version_update::WriteRequest;
 use serde_json::Value;
@@ -399,9 +393,6 @@ async fn node_rows_under_a_bodiless_version_are_reported_as_unexpected_nodes() {
 
 /// A scoped sweep reads only what its bounds cover, which is how an operator
 /// verifies one record without reading the whole repository (#3110).
-///
-/// The tamper lives in one EHR; a sweep scoped to the other reports clean and
-/// never even counts the damaged version, while the unscoped sweep finds it.
 #[tokio::test]
 async fn a_scoped_sweep_covers_only_its_own_ehr() {
     let db = testkit::db().await.expect("testkit database");
@@ -1151,14 +1142,6 @@ async fn a_damaged_party_is_rebuilt_and_reads_correctly_afterwards() {
 /// A PERSON whose contact address carries the leaf a row-level predicate binds
 /// to, plus a top-level `details` `ITEM_TREE` that was a row under the older
 /// decomposition too.
-///
-/// The contact subtree is what distinguishes the two shapes: `CONTACT`,
-/// `ADDRESS` and `PARTY_IDENTITY` earn their own rows now
-/// (`ferroehr::storage::structure`) and were inline on the party root before.
-///
-/// RM shapes: `PERSON` (`identities` 1..*, `contacts`, `details`), `CONTACT`
-/// (`addresses` 1..*), `ADDRESS` (`details`), `ITEM_TREE` (`items`), `ELEMENT`
-/// (`value`) — `openehr_rm::v1_2`.
 fn a_person_with_a_contact_address() -> Value {
     serde_json::json!({
         "_type": "PERSON",
@@ -1313,10 +1296,6 @@ fn full_paths(rows: &[ReadRow]) -> Vec<String> {
 /// before the demographic containers earned rows of their own: the
 /// `identities` and `contacts` subtrees inline on the party root, and only the
 /// top-level `details` `ITEM_STRUCTURE` split out.
-///
-/// The rewrite reaches past the service into the stored rows on purpose — an
-/// installation that upgrades has exactly these rows and no way to have
-/// written them through this build's commit path.
 async fn write_the_old_party_shape(pool: &PgPool, vo_id: VoId, sys_version: i32) {
     let removed = sqlx::query(
         "DELETE FROM party.node n USING party.node c \

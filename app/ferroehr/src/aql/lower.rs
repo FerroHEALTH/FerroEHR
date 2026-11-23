@@ -4,11 +4,6 @@
 //! AST → typed IR lowering (our own engine). Covers the full accepted feature
 //! envelope; every rejected
 //! construct maps to a precise [`AqlFeatureError`].
-//!
-//! The FROM clause is lowered first (building the [`Source`] list, the
-//! [`ContainsTree`], and the variable [`Bindings`]); SELECT / WHERE / ORDER BY
-//! are then analysed against those bindings. Parameter presence is validated by
-//! [`super::plan`] after the whole IR is built.
 
 use openehr_query::ast::{
     AggregateCall, BuiltinFunction, ClassExprOperand, ColumnExpr, CompareOperand, ContainsExpr,
@@ -110,10 +105,6 @@ pub(crate) fn lower(
 }
 
 /// Refuse a SELECT that mixes an aggregate with a plain projection.
-///
-/// Literals may sit beside aggregates (they are constant per row set); an
-/// identified path or a scalar function beside an aggregate has no defined
-/// value without grouping, which AQL 1.1 does not define.
 fn refuse_mixed_aggregates(select: &[SelectColumn]) -> Result<(), AqlError> {
     let has_aggregate = select
         .iter()
@@ -334,12 +325,6 @@ impl Planner {
 
     /// Registers an RM structure/VO-class operand as an RM source and binds
     /// its variable.
-    ///
-    /// The class must be addressable in the node store: at least one concrete
-    /// descendant is a structure type (the node codec's set, demographic
-    /// containers included). A class whose concrete descendants are all
-    /// demographic versioned objects is a demographic root
-    /// ([`demographic_kinds`]).
     ///
     /// # Errors
     /// [`AnalysisError::UnknownClass`] for a class the RM model does not

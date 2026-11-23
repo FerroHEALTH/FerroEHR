@@ -16,14 +16,10 @@
 //! no identifier domain and merges nothing. That work belongs to an IHE
 //! patient identity source, which the default provider asks over PIXm.
 //!
-//! ## Every crossing is recorded
-//!
 //! Each crossing emits one `linkage`-domain access event
-//! ([`crate::system_log::event::AccessDomain::Linkage`]), naming the actor,
-//! the declared purpose of use and how many EHRs it resolved. A boundary
-//! crossing nobody can reconstruct afterwards is exactly what the access log
-//! exists to prevent, and a MISS is recorded for the same reason a hit is: it
-//! says someone asked.
+//! ([`crate::system_log::event::AccessDomain::Linkage`]) naming the actor, the
+//! declared purpose and how many EHRs it resolved; a miss is recorded as a hit
+//! is.
 
 pub mod cohort;
 
@@ -83,11 +79,6 @@ impl FerroEhrService {
 
 /// Put the request's actor, declared purpose and data permit on a
 /// service-emitted record.
-///
-/// The protocol adapter's own records get these from the request it still
-/// holds; a record built down here gets them from the task-locals the adapter
-/// published for the request's scope
-/// ([`crate::versioning::committer`], [`crate::system_log::access_context`]).
 pub(crate) fn stamp_requester(event: &mut AuditEvent) {
     if let Some(committer) = crate::versioning::committer::current_committer() {
         event.user_id = committer.subject;

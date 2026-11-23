@@ -1,22 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Regression guard for the CNF-runner corpus vitals template
-//! (`corpus/templates/vitals.opt`, corpus alias
-//! `cnf.opt.vitals`, `template_id` `cnf.vitals`).
-//!
-//! The Simplified-Formats (SF-*) CNF schedule cases commit FLAT/STRUCTURED
-//! instances against `cnf.opt.vitals` using
-//! `vitals/body_temperature:i/any_event:i/...` field identifiers, so the built
-//! `WebTemplate` MUST expose exactly those node ids. This test lives in
-//! `openehr_sdt::flat` — not the conformance instrument, which stays a
-//! dependency-light deterministic crate of its own — because the web-template
-//! builder + OPT 1.4 parser it exercises live here. Node ids follow ITS-REST `simplified_formats`
-//! `master04-basic_concepts.adoc` §"Node ID Generation Rules"; leaf suffixes
-//! follow `master05-rm_mapping.adoc` §`DV_QUANTITY` / §`DV_CODED_TEXT`; the open vs
-//! closed coded value-set distinction follows master04 §"Open Value-Sets and the
-//! `|other` Suffix" (open = an `ELEMENT.value` `DV_CODED_TEXT | DV_TEXT` choice,
-//! AOM 1.4 `masterAppA`; closed = a `DV_CODED_TEXT` with a local `code_list`).
+//! The CNF vitals template (`corpus/templates/vitals.opt`) builds the node ids
+//! and leaf suffixes the SF-* cases address (master04 §"Node ID Generation
+//! Rules", §"Open Value-Sets and the `|other` Suffix"; master05).
 
 use std::path::PathBuf;
 
@@ -88,10 +75,7 @@ fn vitals_template_exposes_the_sf_flat_paths() {
     assert_eq!(wt.tree.rm_type, "COMPOSITION");
     assert_eq!(wt.tree.full_id, "vitals", "WT root id");
 
-    // OBSERVATION `body_temperature`, unbounded (body_temperature:i expand to
-    // distinct OBSERVATIONs — SF-INDEX-semantics, master04 §Instance
-    // Indexing; the SF-FLAT-reject_cardinality ground is the `temperature`
-    // ELEMENT's 0..1 bound below, master04 §Validation).
+    // `body_temperature` is unbounded (master04 §Instance Indexing).
     let obs = by_id("vitals/body_temperature");
     assert_eq!(obs.rm_type, "OBSERVATION");
     assert_eq!(obs.max, -1, "body_temperature is unbounded (0..*)");

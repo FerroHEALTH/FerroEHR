@@ -4,15 +4,12 @@
 //! The CPU flamegraph of `/management/flamegraph` sampled while the server
 //! signs (#5723).
 //!
-//! A sample that interrupted SHA-512 inside an Ed25519 signature ended the
-//! process: the profiler unwound from its `SIGPROF` handler through the
-//! platform unwinder, which trusts unwind tables that are exact only at call
-//! sites. The profiler now walks the frame-pointer chain and checks each read,
-//! so a sample anywhere truncates a stack and never ends the process. This
-//! test samples at the highest frequency the endpoint admits while threads
-//! sign with an Ed25519 and an RSA-3072 key, and asserts the window completes
-//! and its stacks reach the signer. No openEHR spec governs the management
-//! surface: our own design.
+//! The profiler walks the frame-pointer chain and checks each read, so a sample
+//! that interrupts SHA-512 inside an Ed25519 signature truncates a stack and
+//! never ends the process. This test samples at the highest frequency the
+//! endpoint admits while threads sign with an Ed25519 and an RSA-3072 key, and
+//! asserts the window completes and its stacks reach the signer. No openEHR
+//! spec governs the management surface: our own design.
 
 use std::path::PathBuf;
 use std::sync::Arc;

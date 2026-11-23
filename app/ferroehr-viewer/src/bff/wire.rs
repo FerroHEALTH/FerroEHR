@@ -2,14 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The wire shapes the shared component kit renders.
-//!
-//! A screen's own flattened types live with that screen. These two carry what
-//! SEVERAL screens read from the CDR's versioned surfaces, and what the shared
-//! kit (`version_history`) renders: a
-//! `components` module reaching into `pages` for a type would invert the crate's
-//! one dependency arrow.
-//!
-//! Both are flattened here, so a page never re-models the RM.
 
 #![expect(
     clippy::disallowed_types,
@@ -127,10 +119,6 @@ pub fn committer_label(attribute: impl Fn(&str) -> Option<String>) -> String {
 /// A versioned object's container facts plus one of its VERSIONs' envelope
 /// facts — the shape every History tab's versioned-object card is built from.
 ///
-/// One type for every family: the `VERSIONED_EHR_STATUS` container and the
-/// demographic ones carry the same eight facts, differing only in which of them
-/// a given family populates and in how each screen lays them out.
-///
 /// The attributes are the RM classes' own (files under
 /// `docs/specs/openehr/RM/docs/UML/classes/`): `VERSIONED_OBJECT._uid_`,
 /// `_owner_id_` and `_time_created_`
@@ -196,9 +184,6 @@ pub async fn read_versioned_facts(
 
 /// Flattens a container body plus a VERSION body into
 /// [`VersionedObjectFacts`].
-///
-/// Defensive throughout: an absent attribute reads as empty rather than
-/// failing the card.
 ///
 /// # Errors
 /// [`ViewerError::Failed`] when either body is not valid JSON.

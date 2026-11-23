@@ -2,15 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for the abstract `EVENT<T>` enum.
-//!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.event.adoc`.
-//! `EVENT.offset() = time.diff(parent.origin)` — the parent back-reference is
-//! not stored (repo convention: no owning back-refs), so the offset is
-//! computed from an explicitly supplied `HISTORY.origin`
-//! ([`Event::offset_from`]); the `HISTORY` invariant checks call it with their
-//! own origin.
+//! `EVENT.offset` (RM 1.2.0 `org.openehr.rm.data_structures.event.adoc`),
+//! from a supplied `HISTORY.origin` since no back-reference is stored
+//! ([`Event::offset_from`]).
 
 use crate::v1_2::data_structures::history::event::Event;
 use crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
@@ -41,14 +35,8 @@ impl<T> Event<T> {
         }
     }
 
-    /// RM `EVENT.offset()`: offset of this event from the history origin,
-    /// `time.diff(origin)`, or `None` when either value is not a valid
-    /// ISO-8601 date-time. The `parent` back-reference of the spec signature is
-    /// supplied explicitly (no owning back-refs; see module doc).
-    ///
-    /// `DV_DATE_TIME.diff` is that operation, so this is that call — the
-    /// duration is rendered by the BASE ISO-8601 type that owns durations
-    /// rather than hand-formatted from a seconds count here.
+    /// RM `EVENT.offset()`: `time.diff(origin)`, or `None` when either value is
+    /// not a valid ISO 8601 date-time.
     #[must_use]
     pub fn offset_from(&self, origin: &DvDateTime) -> Option<DvDuration> {
         self.time().diff(origin)
@@ -103,11 +91,7 @@ mod tests {
         let origin = date_time("2021-01-01T00:00:00");
         let e = event("2021-01-01T01:00:00");
 
-        // The offset is asserted by MAGNITUDE, not by the exact string. The
-        // class requires a `DV_DURATION`, and `PT1H` and `PT3600S` are the same
-        // duration — no openEHR spec picks a rendering for a computed `diff`,
-        // so pinning one pins whichever formatter produced it rather than
-        // anything the spec requires.
+        // By magnitude: `PT1H` and `PT3600S` are the same duration.
         let offset = e.offset_from(&origin).expect("both values are well formed");
         assert_eq!(offset.magnitude(), Some(3600.0));
         assert!(

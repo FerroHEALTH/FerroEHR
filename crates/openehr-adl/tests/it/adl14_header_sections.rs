@@ -1,33 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 **header sections** — `AM/docs/ADL1.4/master08-adl.adoc`
-//! §Header Sections, §Syntax Specification (the grammar + §Symbols lexical
-//! rules) and §Validity Rules.
+//! The ADL 1.4 header sections (`ADL1.4/master08-adl.adoc`), each with both
+//! twins.
 //!
-//! Three behaviours of the 1.4 outer structure that ADL2 does not share, each
-//! pinned here with both twins (`.claude/rules/testing.md`):
-//!
-//! 1. **Section keywords are case-insensitive.** §Symbols spells every one of
-//!    them in the bracketed-alternative form
-//!    (`^[Aa][Rr][Cc][Hh][Ee][Tt][Yy][Pp][Ee][ \t\r]*\n -> SYM_ARCHETYPE`, and
-//!    likewise `SYM_SPECIALIZE`/`SYM_CONCEPT`/`SYM_DEFINITION`/`SYM_LANGUAGE`/
-//!    `SYM_DESCRIPTION`/`SYM_INVARIANT`/`SYM_ONTOLOGY`). The ADL2 grammar
-//!    (`adl_keywords.g4`) spells them as exact lowercase literals, so the
-//!    tolerance is `Dialect::Adl14`-only — the refusing twin is an ADL2 source.
-//! 2. **The old form without a `language` section is accepted and upgraded.**
-//!    §Syntax Specification has `arch_language: // empty OK`, and both
-//!    §Language Section and Language Translation and §Ontology Header
-//!    Statements instruct tool builders to accept archetypes carrying
-//!    `primary_language`/`languages_available` in the ontology and upgrade them
-//!    on parse to `original_language`/`translations`. With no
-//!    `primary_language` to upgrade from, `SALAN` stands.
-//! 3. **The `concept` section is mandatory and its term must be defined.**
-//!    §Syntax Specification gives `arch_concept: SYM_CONCEPT
-//!    V_LOCAL_TERM_CODE_REF | SYM_CONCEPT error` — the only header production
-//!    with no empty alternative — and §Validity Rules VARCN: "The archetype
-//!    must have an archetype term value in the concept section. The term must
-//!    exist in the archetype ontology."
+//! Section keywords are case-insensitive (§Symbols), in the 1.4 dialect only;
+//! the old form without a `language` section is upgraded from
+//! `primary_language` (§Language Section, §Ontology Header Statements); and
+//! `concept` is mandatory with a defined term (§Syntax Specification; VARCN).
 
 #![allow(
     clippy::expect_used,
@@ -210,12 +190,8 @@ fn adl14_specialise_keyword_is_case_insensitive() -> Result<(), Vec<SyntaxError>
     Ok(())
 }
 
-/// The refusing twin of the two tests above: the ADL2 grammar spells its
-/// keywords as exact lowercase literals (`adl_keywords.g4`), so an upper-case
-/// word is not a keyword there. `ARCHETYPE` is no artefact keyword (`SUNK`),
-/// and `TERMINOLOGY` is no section header — the word is swallowed by the
-/// preceding section's body, leaving the artefact without a terminology
-/// section (`SAON`).
+/// ADL2 keywords are exact lowercase literals (`adl_keywords.g4`): `ARCHETYPE`
+/// is `SUNK`, and `TERMINOLOGY` is swallowed, leaving `SAON`.
 #[expect(
     clippy::panic_in_result_fn,
     reason = "the Book ch11 test shape: `?` propagates the parse plumbing while the \
@@ -245,12 +221,8 @@ fn adl2_rejects_upper_case_section_keywords() -> Result<(), Vec<SyntaxError>> {
     Ok(())
 }
 
-/// An old-form 1.4 archetype: no `language` section, `primary_language` +
-/// `languages_available` in the ontology instead. §Language Section and
-/// Language Translation + §Ontology Header Statements: "tool builders should
-/// consider accepting archetypes of the old form and upgrading them when
-/// parsing to the correct form, which should then be used for
-/// serialising/saving."
+/// An old-form 1.4 archetype: `primary_language` and `languages_available` in
+/// the ontology, no `language` section (§Ontology Header Statements).
 const OLD_FORM_14: &str = "\
 archetype (adl_version=1.4)
 \topenEHR-EHR-CLUSTER.old_form_language.v1

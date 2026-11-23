@@ -1,35 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! ADL 1.4 → ADL 2 conversion — the paired `upgrade_from_14` corpus is the
-//! oracle. Each 1.4 `.adl` source is converted and compared, structurally,
-//! against its expected ADL2 `.adls`.
+//! ADL 1.4 → ADL 2 conversion against the paired `upgrade_from_14` corpus.
 //!
-//! NOTE: no openEHR spec governs 1.4→2 conversion — the whole `adl14` pipeline
-//! is our own design (archie is prior art only). The assertions here are pinned
-//! by the fixtures, not by a spec clause.
+//! NOTE: no openEHR spec governs 1.4→2 conversion: our own design, pinned by
+//! the fixtures.
 //!
-//! Comparison scope (documented tolerances — every one justified):
-//! - **Definition tree**: compared by full structural (`PartialEq`) equality of
-//!   the `C_COMPLEX_OBJECT` — the load-bearing conversion output.
-//! - **Terminology**: compared by the SET of term-definition codes per language,
-//!   the value sets (id + members), and the term bindings (code → URI). Term
-//!   RUBRIC TEXT is deliberately NOT compared: a synthesised at-code minted for
-//!   an external code (e.g. `openehr::524`) carries the code as a placeholder
-//!   rubric, whereas the fixture carries the human name ("initial") resolved
-//!   against the external openEHR terminology — a rendering nicety that needs
-//!   `openehr-term` resolution (a TODO in `convert.rs`), not a structural
-//!   property.
-//! - **Description / meta prose** (copyright hoist, `other_details`
-//!   hoisting/splitting, per-language synthesised rubrics) is NOT compared:
-//!   `openehr-adl`'s assembler drops unknown 1.4 `details` keys (e.g. inline
-//!   `copyright`) before the converter sees them, so this is not recoverable
-//!   in the current front end (TODO in `convert.rs`). It does not affect the
-//!   constraint model or validity.
-//!
-//! Three pairs are ADJUDICATED (converted + idempotent, but not a full
-//! structural match) — the remaining work is specialisation-aware conversion,
-//! called out per case below and reported to the orchestrator.
+//! The definition tree compares by full equality; the terminology by code sets,
+//! value sets and bindings, not rubric text; description prose is not compared.
+//! Three pairs are adjudicated: they convert, validate and are idempotent.
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,
@@ -234,15 +213,8 @@ fn inherit_unchanged_node_differentiates_exactly() {
 // ── the three adjudicated pairs (converted + idempotent; full structural match
 //    deferred — reported to the orchestrator) ──────────────────────────────────
 
-/// `adl14_meta_data`: the source's `events cardinality matches {1..*; unordered}`
-/// is byte-identical to `upgrade_parent`'s, yet the reference converter ELIDES
-/// it here and KEEPS it there — the two fixtures contradict, so no deterministic
-/// converter matches both. We keep any non-`{0..*}` cardinality (only the
-/// RM-universal `{0..*}` default is elided; a precise RM-default-aware elision
-/// needs the RM attribute model, which the converter does not consult), which
-/// matches `upgrade_parent` exactly. This pair's definition is therefore
-/// adjudicated: we assert it
-/// converts, validates clean, and is idempotent.
+/// `adl14_meta_data` and `upgrade_parent` treat one cardinality two ways, so
+/// this pair is adjudicated: it converts, validates clean and is idempotent.
 #[test]
 fn adl14_meta_data_converts_and_validates() {
     let got = convert_pair("openEHR-EHR-OBSERVATION.adl14_meta_data.adl", None);
@@ -256,13 +228,8 @@ fn adl14_meta_data_converts_and_validates() {
     assert_idempotent("openEHR-EHR-OBSERVATION.adl14_meta_data.adl", None);
 }
 
-/// `exclusion-adverse_reaction`: a specialised child whose expected output uses
-/// ADL2 DIFFERENTIAL PATHS (`/data[id2]/items[id4.1]/value …`) and
-/// parent-aligned value-node ids (`id5.1`/`id5`). Our differ strips
-/// inherited-unchanged nodes but does not yet (a) collapse a
-/// single-differential-child chain into a differential path, nor (b) align
-/// synthesised value-node ids to the flat parent. Adjudicated: converts +
-/// idempotent. TODO: differential-path emission + parent-aligned numbering.
+/// `exclusion-adverse_reaction` expects differential paths and parent-aligned
+/// value-node ids; adjudicated: it converts and is idempotent.
 #[test]
 fn exclusion_adverse_reaction_converts() {
     let got = convert_pair(
@@ -276,13 +243,8 @@ fn exclusion_adverse_reaction_converts() {
     );
 }
 
-/// `upgrade_add_use_nodes`: the richest specialised source — `0.`-namespace
-/// synthesis (new-at-level id-/at-/ac-codes), parent-aligned numbering,
-/// `use_node` id synthesis, and `C_DV_QUANTITY`→tuple with external-property
-/// binding. Our base conversion handles the tuple + binding shape but not the
-/// `0.`-space specialisation synthesis, so codes land at the wrong
-/// specialisation level. Adjudicated: converts + idempotent. TODO: `0.`-space
-/// specialisation-aware synthesis + parent-aligned numbering.
+/// `upgrade_add_use_nodes` expects `0.`-space specialisation synthesis;
+/// adjudicated: it converts and is idempotent.
 #[test]
 fn upgrade_add_use_nodes_converts() {
     let got = convert_pair(
@@ -296,11 +258,8 @@ fn upgrade_add_use_nodes_converts() {
     );
 }
 
-/// A 1.4 source that reuses one at-code across two sibling subtrees (legal in
-/// 1.4 — node ids are only sibling-unique) converts with archetype-wide
-/// unique node ids (`AOM2/master04.5` §Validity Rules: `C_OBJECT`, VCOSU): the
-/// second occurrence is re-minted and its terminology cloned from the shared
-/// 1.4 term.
+/// An at-code reused across sibling subtrees converts to archetype-wide unique
+/// node ids (`AOM2/master04.5` VCOSU), the second re-minted.
 #[test]
 fn reused_node_codes_re_mint_archetype_wide_unique_ids() {
     let src = r#"archetype (adl_version=1.4)
@@ -383,11 +342,8 @@ ontology
     assert!(!log.notes.is_empty(), "the re-mint is logged as provenance");
 }
 
-/// A specialised source emitted STANDALONE (no resolvable parent — the
-/// flattened-OPT decomposition case) collapses to depth 0 under
-/// `collapse_specialised_codes`: no dotted code survives anywhere, the root
-/// is `id1` (VARCN), and phase 1 is clean — no VACSD/VASID (the archetype is
-/// unspecialised) and no VATCD (all codes at level 0).
+/// A specialised source converted standalone collapses to depth 0: no dotted
+/// code, an `id1` root, and a clean phase 1.
 #[test]
 fn standalone_specialised_source_collapses_to_depth_zero() {
     let src = r#"archetype (adl_version=1.4)
@@ -477,14 +433,9 @@ ontology
         .unwrap_or_else(|e| panic!("printed ADL2 does not re-parse: {e:?}\n{printed}"));
 }
 
-/// The ADL 1.4 default `occurrences` is WRITTEN OUT on container children by the
-/// conversion, because the two formalisms read an absent `occurrences`
-/// differently: ADL 1.4 means `{1..1}` (`ADL1.4/master05-cadl.adoc` §Occurrences
-/// L316) while ADL 2 infers `0..cardinality.upper`
-/// (`AOM2/master04.5-constraint_model-class_definitions.adoc` §Occurrences
-/// inferencing rules). Leaving it implicit would widen "exactly once" to "none to
-/// many". A `use_node` proxy stays unstated — master05 L515 gives it the
-/// referenced node's occurrences.
+/// The 1.4 default `occurrences` is written out on container children, since
+/// ADL 2 would infer `0..cardinality.upper` (`ADL1.4/master05-cadl.adoc`
+/// §Occurrences; `AOM2/master04.5`); a `use_node` stays unstated.
 #[test]
 fn conversion_writes_out_the_14_default_occurrences_on_container_children() {
     let src = "\
@@ -675,12 +626,9 @@ fn app_b_standardised_items_convert_to_their_aom2_homes() {
     assert_eq!(archetype.archetype_id.release_version, "0.0.1");
 }
 
-/// `references` and `ip_acknowledgements` are "string with one LF (`\n`)
-/// terminated line for each reference … Intervening LFs and leading and
-/// trailing whitespace may be added for clarity, to be stripped on conversion
-/// to ADL2" (`ADL1.4/masterAppB-extended_metadata.adoc` §Standardised Items):
-/// one keyed entry per non-blank line, trimmed. Every converted key is
-/// consumed from `other_details`, and the result prints + re-parses as ADL2.
+/// `references` and `ip_acknowledgements` become one trimmed entry per
+/// non-blank line (`ADL1.4/masterAppB-extended_metadata.adoc` §Standardised
+/// Items), consumed from `other_details`.
 #[test]
 fn app_b_reference_lists_split_on_lf_into_keyed_entries() {
     let converted = convert_source(&app_b_standardised_items_source());

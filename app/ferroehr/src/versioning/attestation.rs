@@ -165,9 +165,6 @@ pub(crate) async fn attest(
 /// what gets signed and what gets stored ([`insert_at_committal_attestations`])
 /// — one completion, so the signed bytes and the served bytes cannot drift
 /// (master06 §Digital Signature).
-///
-/// Infallible: each partial was decoded into its RM types when its
-/// [`AttestationInput`] was built.
 pub(crate) fn complete_accompanying(
     partials: &[AttestationInput],
     default_system_id: &str,
@@ -367,11 +364,6 @@ impl AttestationParts {
 /// `UpdateAudit.yaml`), `description` (0..1) and `system_id` (optional on the
 /// wire: "when omitted the server sets its own value", `UpdateAudit.yaml`).
 /// `time_committed` and `change_type` are the server's.
-///
-/// Both arrival routes, `UPDATE_VERSION.attestations` on a direct write and on
-/// a CONTRIBUTION member, build it with [`Self::from_update`] from the
-/// generated `UpdateAttestation`, so completion ([`complete_attestation`]) is a
-/// pure build with nothing left to fail.
 #[derive(Debug, Clone)]
 pub(crate) struct AttestationInput {
     /// The `ATTESTATION`-declared attributes.
@@ -446,11 +438,6 @@ impl AttestationInput {
 /// exactly as `UPDATE_AUDIT` → `AUDIT_DETAILS` (ITS-REST `UpdateAudit.yaml`),
 /// then adds the `ATTESTATION`-specific attributes. `committer` is the one the
 /// partial stated.
-///
-/// Infallible: every client-supplied attribute was decoded into its RM type
-/// when the [`AttestationInput`] was built, so completion has nothing left to
-/// reject. The result is the generated `openehr-rm` [`Attestation`], which
-/// serializes with `_type` first and in the BMM's own attribute order.
 pub(crate) fn complete_attestation(
     partial: &AttestationInput,
     default_system_id: &str,

@@ -1,12 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! A `use_archetype` reference with a constraint body (SPECPR-217, SPECAM-87).
-//!
-//! Oracle: `cadl2.g4` `c_archetype_root` at adl-antlr `d64ffeb6f` (`use_archetype
-//! TYPE[id, ref] c_occurrences? ( matches { c_attribute_def+ default_value? } )?`)
-//! and the id-coded OPT2 example of `ADL2/master10-templates.adoc`, read from the
-//! vendored specification.
+//! A `use_archetype` reference with a constraint body (SPECPR-217, SPECAM-87;
+//! `cadl2.g4` `c_archetype_root`; `ADL2/master10-templates.adoc`).
 
 #![allow(
     clippy::expect_used,

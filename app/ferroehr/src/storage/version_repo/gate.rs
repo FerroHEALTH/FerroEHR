@@ -232,10 +232,10 @@ impl Form {
 
 /// The statement text of `form`.
 ///
-/// `$1` the EHR, `$2` the target (an array of targets in a form that binds
-/// several, unread in a form that reads none), `$3` the persistent template, `$4` the persistent category code,
-/// `$5` the deleted lifecycle state, `$6` to `$8` the tree id of the version a
-/// delete addresses and `$9` the items a FOLDER references.
+/// `$1` the EHR, `$2` the target (an array in a form of several, unread in a
+/// form of none), `$3` the persistent template, `$4` the persistent category
+/// code, `$5` the deleted lifecycle state, `$6` to `$8` the tree id of the
+/// version a delete addresses and `$9` the items a FOLDER references.
 fn statement(form: Form) -> String {
     let shape = form.shape;
     let update = if shape.updates() {
@@ -330,10 +330,8 @@ fn statement(form: Form) -> String {
     )
 }
 
-/// Brings the archived `targets` a gate read found back to the hot tier,
-/// before a write lands on them: the attestation rows follow their version
-/// rows through the foreign key's `ON UPDATE CASCADE`, and the node rows are
-/// moved by name.
+/// Brings the archived `targets` a gate read found back to the hot tier; the
+/// attestation rows follow their versions by `ON UPDATE CASCADE`.
 async fn promote(conn: &mut PgConnection, targets: &[Uuid]) -> Result<(), StorageError> {
     sqlx::query(
         "WITH tv AS (UPDATE version SET tier = 'hot' WHERE vo_id = ANY($1) AND tier = 'cold'), \
@@ -420,10 +418,8 @@ fn known_items(shape: Shape) -> &'static str {
 /// `ehr_repo::directory_vo` finds it, the array `$2` of several, or the one
 /// target `$2`, none when it is `NULL`.
 ///
-/// A custom plan knows the length of a bound array and an `unnest` of it,
-/// which makes it cheaper than the generic plan and keeps the plan cache
-/// planning every call; a scalar and `generate_subscripts` give both plans
-/// one estimate.
+/// A scalar and `generate_subscripts` give the custom and generic plans one
+/// row estimate, where an `unnest` of a bound array does not (#6392).
 fn targets(form: Form) -> String {
     let found = match form.shape {
         Shape::Status => concat!(

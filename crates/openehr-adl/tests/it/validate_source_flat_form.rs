@@ -1,21 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Phase-3 reachability through the source-level entry point.
-//!
-//! `openehr_adl::validate::validate_source` runs the SAME phase schedule as
-//! `validate`. This module pins the half that a source-level entry used to skip:
-//! the flat-form checks of
-//! `docs/specs/openehr/AM/docs/AOM2/master08-validation.adoc` §Phase 3 -
-//! Validation of Flat Form — "ensure `C_COMPLEX_OBJECT_PROXY` paths actually
-//! exist in current flat form (VUNP)" and "ensure object node `occurrences`
-//! valid with respect to enclosing `cardinality` (VACMCO)".
-//!
-//! Both are exercised on TOP-LEVEL archetypes, which is exactly the case a
-//! phase-3-omitting entry could not reach: `ADL2/master09.02-spec_concepts.adoc`
-//! §Differential and Flat Forms — "For a top-level archetype, the flat-form is
-//! the same as its differential form" — so the flat form always exists and the
-//! phase is always evaluable.
+//! `validate_source` reaches the flat-form checks VUNP and VACMCO
+//! (`AOM2/master08-validation.adoc` §Phase 3) on top-level archetypes, whose
+//! flat form is their differential (`ADL2/master09.02`).
 
 #![allow(
     clippy::expect_used,
@@ -36,17 +24,8 @@ fn codes(src: &str) -> Vec<ValidationCode> {
         .collect()
 }
 
-/// A `use_node` whose target path does not resolve raises VUNP through
-/// `validate_source` (`master04.5-constraint_model-class_definitions.adoc`
-/// §Validity Rules: `C_COMPLEX_OBJECT_PROXY`; scheduled by `master08`
-/// §Phase 3).
-///
-/// The three vendored VUNP fixtures
-/// (`validity/{paths,structure}/…VUNP_…adls`) exercise the same rule but are
-/// built on `TEST_PKG` classes the production reference model does not carry,
-/// so the phase-2 RM pass raises VCORM and the `master08` §Overview phase gate
-/// stops the pipeline before phase 3. This case restates their shape over real
-/// RM classes so the phase-3 reachability is what is being measured.
+/// An unresolvable `use_node` raises VUNP through `validate_source`, over real RM
+/// classes so phase 2 lets the pipeline reach phase 3.
 #[test]
 fn an_unresolvable_use_node_path_raises_vunp() {
     let src = "\

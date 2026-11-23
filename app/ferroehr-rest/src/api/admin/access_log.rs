@@ -16,10 +16,6 @@
 //! part of that proposal (`docs/specifications/access-log`, the ITS-REST page).
 //! The import of an exported log is the `ferroehr access-log import`
 //! command, run by the operator of the receiving system.
-//!
-//! Gating: mounted under `/admin/`, so the coarse RBAC `OperationClass::Admin`
-//! classifier and the `AppConfig::api.admin` gate apply, as for every admin
-//! extension ([`super::integrity`]).
 
 #![expect(
     clippy::disallowed_types,
@@ -392,9 +388,6 @@ fn log_error(error: AccessLogError) -> RestError {
 }
 
 /// The verification report as the response body.
-///
-/// Written out explicitly: the wire contract is this function, not a serde
-/// attribute on a library type.
 fn verification_report(verification: &Verification) -> Value {
     json!({
         "intact": verification.intact(),

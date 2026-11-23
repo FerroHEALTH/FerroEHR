@@ -2,18 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `INSTRUCTION`.
-//!
-//! Inherited `Entry` + LOCATABLE invariants (`Is_archetype_root`,
-//! `Archetype_node_id_valid`); `observation_impl` carries the account of the
-//! ENTRY invariants this crate does not check.
-//!
-//! `INSTRUCTION`'s own `Activities_valid` (`activities /= Void implies not
-//! activities.is_empty`,
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.instruction.adoc`
-//! §Invariants) needs no runtime check: `activities` is an
-//! `Option<NonEmptyVec<ACTIVITY>>`, so present-but-empty is unrepresentable
-//! (`openehr_base::containers`).
+//! `INSTRUCTION` invariants: the inherited `Is_archetype_root` and
+//! `Archetype_node_id_valid`; `Activities_valid` holds by the `NonEmptyVec`
+//! type.
 
 use crate::v1_2::composition::content::entry::instruction::Instruction;
 use openehr_base::validate::{InvariantViolation, Validate};

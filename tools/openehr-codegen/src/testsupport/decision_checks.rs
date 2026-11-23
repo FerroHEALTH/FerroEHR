@@ -95,10 +95,7 @@ fn props(owner: &str, field: &str) -> Result<Vec<(String, BmmProperty)>, Error> 
     Ok(out)
 }
 
-/// Every ordered-hash entry whose vendored ground is gone.
-///
-/// Some loaded schema must declare the attribute on the entry's owner as a
-/// `Hash<K, V>`; a release that types it a `List` keeps its `Vec`.
+/// Every ordered-hash entry whose owner no longer declares a `Hash<K, V>`.
 ///
 /// # Errors
 /// Returns an error if any composition's BMM files cannot be loaded.
@@ -116,13 +113,8 @@ pub fn stale_ordered_hashes() -> Result<Vec<String>, Error> {
     Ok(stale)
 }
 
-/// Every existence-contradiction entry whose vendored ground is gone, as one
-/// message per defect.
-///
-/// An entry stays live only while some loaded schema declares the attribute on
-/// the entry's owner AND every such declaration is still a mandatory
-/// `Hash<K, V>`: an upstream fix to `0..1` (or a retyped attribute) leaves the
-/// entry stale, and so does an owner that declares no such attribute.
+/// Every existence-contradiction entry whose attribute is no longer a
+/// mandatory `Hash<K, V>` on its owner, one message each.
 ///
 /// # Errors
 /// Returns an error if any composition's BMM files cannot be loaded.
@@ -151,13 +143,7 @@ pub fn stale_existence_contradictions() -> Result<Vec<String>, Error> {
     Ok(stale)
 }
 
-/// Every ITS-JSON `minItems` entry whose vendored ground is gone, as one
-/// message per defect.
-///
-/// An entry stays live while the compiled-in ITS-JSON RM schema
-/// (`crates/openehr-its/schemas/json/openehr_rm_1.1.0_all.json`) gives the
-/// attribute `minItems: 1` on every class the entry names AND some loaded
-/// schema declares it an optional container on the owner.
+/// Every ITS-JSON `minItems` entry whose ground is gone, one message each.
 ///
 /// # Errors
 /// Returns an error if the ITS-JSON schema or any composition's BMM files

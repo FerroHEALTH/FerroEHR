@@ -410,8 +410,8 @@ fn place_taken(error: &ServiceError) -> bool {
         })
 }
 
-/// The `reason` label of a guarded commit that wrote nothing: the first of
-/// its requirements that no longer held.
+/// The `reason` label of a guarded commit that wrote nothing: the first of its
+/// requirements that did not hold.
 fn moved_reason(flags: &GuardFlags) -> &'static str {
     if !flags.policy {
         "policy"

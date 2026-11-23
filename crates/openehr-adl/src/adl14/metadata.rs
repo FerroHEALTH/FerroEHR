@@ -1,22 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The description / meta-data / version half of the 1.4→2 conversion.
+//! The description, meta-data and version half of the 1.4→2 conversion.
 //!
-//! [`crate::adl14::convert`] owns the code spaces and the definition rewrite;
-//! this module owns everything that lands in `RESOURCE_DESCRIPTION` and the
-//! archetype HRID's version fields.
-//!
-//! The meta-data half is spec-governed in two places, the rest of the `adl14`
-//! module being our own design (see the [`crate::adl14`] flag):
-//!
-//! - the standardised `description/other_details` items, which
-//!   `ADL1.4/masterAppB-extended_metadata.adoc` §Standardised Items says "are
-//!   intended to be implemented by any ADL 1.4 => ADL 2 conversion tool";
-//! - the translator, copyright and conversion-record rules of
-//!   `AOM2/master01-preface.adoc` §Release 2.3 changes (SPECAM-107), applied by
-//!   [`transform_translations`], [`transform_description`] and
-//!   [`record_conversion`].
+//! Spec-governed: the standardised `description/other_details` items
+//! (`ADL1.4/masterAppB-extended_metadata.adoc` §Standardised Items) and the
+//! translator, copyright and conversion-record rules of
+//! `AOM2/master01-preface.adoc` §Release 2.3 changes (SPECAM-107).
 
 use std::collections::BTreeMap;
 
@@ -33,12 +23,8 @@ const OTHER_CONTRIBUTORS: &str = "other_contributors";
 /// The `other_details` key a description item's copyright sits under.
 const COPYRIGHT: &str = "copyright";
 
-/// Apply the 1.4→2 meta-data transform to the translations and the
-/// description in place, then record the conversion.
-///
-/// `notes` are the conversion's non-mechanical decisions (collapse remaps,
-/// VCOSU re-mints), kept as conversion provenance in
-/// `RESOURCE_DESCRIPTION.conversion_details` under `code_remap_NNN`.
+/// Apply the 1.4→2 meta-data transform to translations and description, and
+/// record the conversion with `notes` under `code_remap_NNN`.
 pub(super) fn convert_meta_data(
     data: &mut AuthoredArchetypeData,
     record: &ConversionRecord<'_>,
@@ -79,15 +65,9 @@ fn transform_description(desc: &mut ResourceDescription, original_language: &str
     }
 }
 
-/// Move the ADL 1.4 per-language copyright to the one ADL 2
-/// `RESOURCE_DESCRIPTION.copyright`.
-///
-/// `AOM2/master01-preface.adoc` §Release 2.3 changes: the original language's
-/// copyright goes to `RESOURCE_DESCRIPTION.copyright`; a translation's
-/// copyright that differs from it stays in that translation's
-/// `other_details["copyright"]`, and one identical to it is dropped; with no
-/// original-language copyright the field stays empty. A description whose
-/// `copyright` is already populated is left as it is, nothing consumed.
+/// Move the 1.4 per-language copyright to `RESOURCE_DESCRIPTION.copyright`
+/// (`AOM2/master01-preface.adoc` §Release 2.3 changes): a differing translation
+/// copyright stays in its `other_details`. A populated field is left alone.
 fn convert_copyright(desc: &mut ResourceDescription, original_language: &str) {
     if desc.copyright.is_some() {
         return;
@@ -113,14 +93,9 @@ fn convert_copyright(desc: &mut ResourceDescription, original_language: &str) {
     desc.copyright = original;
 }
 
-/// Split each translation's ADL 1.4 `other_details["other_contributors"]` into
-/// `TRANSLATION_DETAILS.other_contributors`, one entry per non-blank line.
-///
-/// `AOM2/master01-preface.adoc` §Release 2.3 changes: converters "should map
-/// each line to one entry of `TRANSLATION_DETAILS._other_contributors_`". Each
-/// line is trimmed and blank lines are dropped; the key is consumed. A
-/// translation whose `other_contributors` is already populated, or whose value
-/// holds no non-blank line, keeps the key as it is.
+/// Split each translation's `other_details["other_contributors"]` into
+/// `TRANSLATION_DETAILS.other_contributors`, one entry per non-blank line
+/// (`AOM2/master01-preface.adoc` §Release 2.3 changes).
 fn transform_translations(translations: &mut BTreeMap<String, TranslationDetails>) {
     for translation in translations.values_mut() {
         if translation
@@ -188,35 +163,13 @@ fn take_detail(other: &mut Option<BTreeMap<String, String>>, key: &str) -> Optio
     value
 }
 
-/// Convert the ADL 1.4 standardised `description/other_details` meta-data items
-/// to their AOM2 `RESOURCE_DESCRIPTION` homes, consuming each converted key.
+/// Convert the ADL 1.4 standardised `description/other_details` items to their
+/// AOM2 `RESOURCE_DESCRIPTION` homes, consuming each converted key
+/// (`ADL1.4/masterAppB-extended_metadata.adoc` §Standardised Items).
 ///
-/// `ADL1.4/masterAppB-extended_metadata.adoc` §Standardised Items is the one
-/// part of 1.4→2 conversion the spec text governs directly: the items' "naming
-/// and rules should be followed, and … are intended to be implemented by any
-/// ADL 1.4 => ADL 2 conversion tool". The mapping applied here is the table's:
-///
-/// - `original_namespace`, `original_publisher`, `custodian_namespace`,
-///   `custodian_organisation`, `licence` transfer verbatim to the same-named
-///   `RESOURCE_DESCRIPTION` attributes. The table's `"name <URN>"` shapes are
-///   DISPLAY conventions ("the use of the typical string for a person or
-///   organisation of the form \"name \<URN\>\", which enables email addresses,
-///   website URLs etc to be easily extracted", §Extended Meta-data Guide
-///   preamble) — the AOM2 attributes are single strings, so the value is not
-///   decomposed.
-/// - `references` and `ip_acknowledgements` are "string with one LF (`\n`)
-///   terminated line for each reference. Intervening LFs and leading and
-///   trailing whitespace may be added for clarity, to be stripped on
-///   conversion to ADL2" — so the value splits on LF, each line is trimmed,
-///   and blank lines are dropped.
-///
-/// §Other Items (`MD5-CAM-1.0.1`, `current_contact`, `review_date`,
-/// `responsible_organisation`) are reserved/display-only names with no
-/// conversion mandated; they stay in `other_details` untouched, as does any
-/// value that violates its item's stated syntax.
-///
-/// An AOM2 attribute already populated from elsewhere is never overwritten, and
-/// its `other_details` key is then left in place (nothing was consumed).
+/// Namespace, publisher, custodian and licence transfer verbatim; `references`
+/// and `ip_acknowledgements` split on LF, trimmed. §Other Items, malformed
+/// values and keys whose target is already populated stay in `other_details`.
 fn convert_standardised_meta_data(desc: &mut ResourceDescription) {
     let Some(other) = desc.other_details.as_mut() else {
         return;
@@ -263,12 +216,8 @@ fn take_keyed_lines(
     let Some(lines) = nonblank_lines(raw) else {
         return;
     };
-    // (Ordinals are unpadded, so ten or more entries sort lexicographically in
-    // the `BTreeMap` — a display order, not a semantic one; the ordinal itself
-    // still names the source line.)
-    // NOTE: the appendix prescribes the LF-per-entry source syntax and the AOM2
-    // target but no key scheme — no openEHR spec governs it, so this is our own
-    // design: stable 1-based ordinals in source line order.
+    // NOTE: the appendix prescribes no key scheme: our own design uses 1-based
+    // ordinals in source line order.
     *target = Some(
         lines
             .into_iter()

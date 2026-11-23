@@ -169,7 +169,7 @@ impl VersionCopy {
         self.inner.insert(key, Arc::new(held)).await;
     }
 
-    /// Drop the held version `key`, which the store no longer confirms.
+    /// Drop the held version `key`, which the store did not confirm.
     pub(crate) async fn forget(&self, key: Key) {
         dropped(COPY);
         self.inner.invalidate(&key).await;

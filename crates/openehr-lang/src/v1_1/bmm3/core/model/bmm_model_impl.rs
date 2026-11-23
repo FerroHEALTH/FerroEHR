@@ -5,12 +5,6 @@
 //! Hand-written **v3** `BMM_MODEL` navigation
 //! (`org.openehr.lang.bmm3.bmm_model.adoc` §Functions).
 //!
-//! The model-level counterpart of the type and class surfaces
-//! ([`crate::v1_1::bmm3::core::entity::bmm_type_impl`],
-//! [`crate::v1_1::bmm3::core::entity::bmm_class_impl`]): the queries that need the
-//! whole `class_definitions` map rather than one class — class lookup,
-//! transitive ancestors, flattened property lookup, and type conformance.
-//!
 //! The stable v2.x generation carries its own, structurally different model
 //! surface at [`crate::v1_1::bmm::core::bmm_model_impl`]; the two never share an
 //! impl, because `BMM_MODEL`, `BMM_CLASS` and `BMM_PROPERTY` are different
@@ -229,16 +223,6 @@ impl BmmModel {
     /// * descendant generic, ancestor not, passing the base-class test —
     ///   "Conforms - case where anc type is not provided in generic form, but
     ///   desc is, e.g. `Interval<Integer>` conforms to `Interval`".
-    ///
-    /// Each generic branch is gated on BOTH halves the section states —
-    /// "`valid_generic_type_name (a_type)` and `bmm_def_class instanceOf
-    /// (BMM_GENERIC_CLASS)`" — so a generic-SHAPED name whose root class the
-    /// model does not define as a `BMM_GENERIC_CLASS` takes the non-generic
-    /// path.
-    ///
-    /// A non-generic descendant against a GENERIC ancestor is therefore not
-    /// conformant: the section's final `else` returns "not
-    /// valid_generic_type_name (anc_type)".
     ///
     /// An open ancestor parameter is replaced by its conformance type before
     /// the recursive test, per the section's

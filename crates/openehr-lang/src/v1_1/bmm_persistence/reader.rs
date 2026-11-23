@@ -25,11 +25,6 @@
 //! ([`crate::v1_1::bmm_persistence::include_resolution::resolve_includes`]) →
 //! instantiate ([`crate::v1_1::bmm_persistence::create_model::create_bmm_model`]).
 //!
-//! **Strict read.** An attribute the P_BMM class docs do not declare is a typed
-//! [`PBmmReadError::UnknownAttribute`], never silently dropped — with the two
-//! adjudicated tolerances [`TOLERATED_SCHEMA_ATTRIBUTES`] and
-//! [`TOLERATED_PROPERTY_ATTRIBUTES`], each carrying its reason.
-//!
 //! **In-memory-only attributes are not read.** `master03-model.adoc` §Overview:
 //! "attributes named `_bmm_xxx_` and of type `BMM_XXX` … are in-memory only
 //! references to reconstructed instances", so they are left `None` here and
@@ -124,15 +119,6 @@ pub const TOLERATED_SCHEMA_ATTRIBUTES: &[&str] = &["model_name"];
 pub const TOLERATED_PROPERTY_ATTRIBUTES: &[&str] = &["default"];
 
 /// Reads a P_BMM schema from its ODIN serialisation.
-///
-/// The returned `P_BMM_SCHEMA` is the *unresolved* persisted form: its
-/// `includes` are recorded but not merged (that is
-/// [`crate::v1_1::bmm_persistence::include_resolution::resolve_includes`]) and its
-/// `bmm_*` in-memory caches are `None` (that is
-/// [`crate::v1_1::bmm_persistence::create_model::create_bmm_model`]). The JSON
-/// serialisation reads through
-/// [`crate::v1_1::bmm_persistence::json_reader::read_schema_json`] into the same
-/// value.
 ///
 /// # Errors
 /// Returns [`PBmmReadError::Odin`] when the text is not well-formed ODIN, and
@@ -598,13 +584,6 @@ fn keyed_map<V>(
 }
 
 /// An ODIN range as an `Interval<Integer>`.
-///
-/// A `None` endpoint is unbounded on that side (the representation
-/// [`crate::v1_1::odin::OdinInterval`] already uses), so `|>=1|` reads as
-/// `lower = 1, upper unbounded` and `|0..*|` as `lower = 0, upper unbounded`.
-/// Always the `Proper_interval` form: `Multiplicity_interval` is "any two-sided
-/// or one-sided interval" (`BASE/docs/foundation_types` `Proper_interval`), and
-/// a point cardinality `|1|` is the two-sided `1..1`.
 fn integer_interval(path: &str, interval: &OdinInterval) -> Result<Interval<i32>, PBmmReadError> {
     let OdinInterval::Range {
         lower,

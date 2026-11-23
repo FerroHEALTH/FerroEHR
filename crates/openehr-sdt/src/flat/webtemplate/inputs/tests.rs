@@ -7,10 +7,7 @@ use super::openehr_group;
 
 #[test]
 fn openehr_group_maps_coded_rm_slots_to_their_group() {
-    // The RM `has_code_for_group_id` slots (RM invariant tables under
-    // docs/specs/openehr/RM/docs/UML/classes/): each maps to exactly one
-    // openEHR terminology group so rubrics resolve unambiguously despite
-    // SPECPR-51 cross-group code collisions.
+    // Each RM `has_code_for_group_id` slot maps to exactly one terminology group.
     assert_eq!(
         openehr_group("ISM_TRANSITION", "current_state"),
         Some("instruction_states")

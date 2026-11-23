@@ -5,10 +5,6 @@
 //!
 //! Our own design behind the ITS-REST Admin API and our admin extensions.
 //!
-//! One file per admin concern; each file carries both the public
-//! `FerroEhrService` methods (parse ids/time bounds at the boundary) and the
-//! machinery behind them:
-//!
 //! - `delete` — `physical_ehr_delete` / `physical_party_delete`
 //!   (+ the `admin_ehr_delete_all` extension): cascade + orphan-audit sweep.
 //! - `statistics` — `list_contributions` / `contribution_count`
@@ -36,8 +32,6 @@
 //!   spec governs storage mechanics.
 //! - [`types`] — the information classes of the ADMIN group
 //!   (`EXPORT_SPEC`, `DUMP_LOAD_FAIL_REPORT`, the format enumerations).
-//!
-//! # Cross-module wiring
 //!
 //! `dump_load` reassembles and decomposes version bodies through the storage
 //! codec, and `integrity` reassembles every stored version through

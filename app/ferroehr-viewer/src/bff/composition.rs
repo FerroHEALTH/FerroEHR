@@ -3,20 +3,6 @@
 
 //! The `/ehrs/{ehr_id}/compositions/{uid}` screen — the composition viewer.
 //!
-//! A view of one COMPOSITION: a format toggle (canonical JSON/XML and the
-//! Simplified FLAT/STRUCTURED renderings — the CDR converts, the BFF forwards
-//! and pretty-prints), a version selector fed by the versioned object's
-//! revision history, a per-version audit card, the `VERSIONED_COMPOSITION`
-//! container + selected-VERSION envelope card, and the two write paths (commit
-//! a new version, logically delete the latest one). The document resource is
-//! keyed on `(version, format)` so either switch refetches, under a
-//! `<Transition>`.
-//!
-//! One reader per claim: the document CONTENT comes from the COMPOSITION
-//! resource (the only one that negotiates the simplified formats), the commit
-//! history from the revision history, and the VERSION's own envelope facts from
-//! the `VERSIONED_COMPOSITION` version read.
-//!
 //! No openEHR spec governs the viewer — our own design; the wire it reads is
 //! spec-bound (`Accept` negotiation per
 //! `docs/specs/openehr/ITS-REST/docs/simplified_formats/`). Every read takes
@@ -97,10 +83,6 @@ pub async fn fetch_composition(
 /// "if `version_at_time` is supplied, retrieves the VERSION extant at specified
 /// time").
 ///
-/// The 200 body is a VERSION envelope whose `uid.value` is the
-/// `OBJECT_VERSION_ID` (RM common — a VERSION's `uid` is an
-/// `OBJECT_VERSION_ID`); that string is returned so the caller can select it.
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] when `at_time` is empty; a non-2xx CDR answer (a
@@ -140,10 +122,8 @@ pub async fn fetch_version_at_time(
 /// double quotes). Canonical JSON body; `Prefer: return=representation` yields
 /// the new `uid.value`.
 ///
-/// This is the one update whose precondition is NOT a served `ETag`: the
-/// document pane may be showing an older version, so the value comes from the
-/// revision history's newest entry instead — the `ETag` of the read that filled
-/// the editor would name the wrong version.
+/// The precondition comes from the revision history's newest entry, not a
+/// served `ETag`, because the pane may show an older version.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));

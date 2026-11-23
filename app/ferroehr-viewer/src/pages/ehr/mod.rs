@@ -3,11 +3,6 @@
 
 //! One EHR, its tabs and its editors.
 //!
-//! The pages of FerroUI `design/consoles/ferroehr/` 12 and 13: its header
-//! with the subject line (E1) and its tabs, Compositions, Directory, Status,
-//! Contributions and Tags, each its own route; the editors of its status and
-//! directory; the contribution builder and the contribution page.
-//!
 //! The header reads the EHR itself (`GET /ehr/{ehr_id}`, so an unknown id
 //! fails once at the top), its current `EHR_STATUS` (the subject and the
 //! capability flags of RM `docs/specs/openehr/RM/docs/ehr/master04-ehr_package.adoc`
@@ -86,10 +81,8 @@ pub fn ehr_id_param() -> String {
 /// path segment is percent-encoded with `urlencoding`: an id carrying `/`,
 /// `#`, `?` or `%` would otherwise address a different route.
 ///
-/// Encoding is also what keeps a redirect to it safe: the path becomes a
-/// `Location` header value, and `urlencoding::encode` emits only unreserved
-/// ASCII plus `%XX`, so an id carrying a control character or a non-ASCII
-/// byte never reaches the header builder.
+/// The encoding also keeps a redirect to it safe: only unreserved ASCII and
+/// `%XX` reach the `Location` header.
 #[must_use]
 pub fn ehr_href(ehr_id: &str) -> String {
     format!("/ehrs/{}", urlencoding::encode(ehr_id))

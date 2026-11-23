@@ -4,20 +4,11 @@
 //! The sign-in page (R19): Basic and OIDC, the deployment's notice and links,
 //! and every state the page can be in.
 //!
-//! The Basic form is a plain `POST` to this page, with plain uncontrolled
-//! `username` and `current-password` inputs, so it works with no script
-//! (FerroUI `console-ui.md` §5): accepted credentials send the reader on with
-//! a redirect, and refused ones draw the page again with the refusal under
-//! the password and the username kept. The OIDC action is a plain link to
-//! `ferrohealth-session`'s `/login` route. The page shows the session
-//! ended (`?expired=1`), signed out (`?signed-out=1`) or refused
-//! (`?refused=1`, the OIDC callback's) from its address. Which methods it
-//! offers comes from [`crate::auth::fetch_login_screen`].
-//!
-//! The page's handler signs in, reads the screen and redirects; the view
-//! draws the model it leaves. The model carries the username as typed and
-//! never the password or a session. No openEHR spec governs the viewer: our
-//! own design.
+//! The Basic form is a plain `POST` to this page, so it works with no script
+//! (FerroUI `console-ui.md` §5); the OIDC action links to
+//! `ferrohealth-session`'s `/login` route. The model carries the username as
+//! typed, never the password or a session. No openEHR spec governs the viewer:
+//! our own design.
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
@@ -34,10 +25,6 @@ use crate::routes::Drawn;
 
 /// The OpenID Connect sign-in URL of `ferrohealth-session`, carrying the
 /// post-login destination as its `return`.
-///
-/// The shell root is the route's own fallback, so it is left off. What the
-/// route then accepts is decided on the server by
-/// `ferrohealth_session::return_path::ReturnPath::parse`.
 fn oidc_login_href(next: &str) -> String {
     use ferrohealth_session::paths::{LOGIN, RETURN};
     if next == "/" {

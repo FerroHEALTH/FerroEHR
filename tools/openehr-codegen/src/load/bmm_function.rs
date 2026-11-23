@@ -1,15 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The function signatures of a BMM class (`BMM_CLASS.functions`), read from
-//! their persisted form (LANG `org.openehr.lang.bmm_persistence.p_bmm_function`:
-//! `parameters`, `result`, `is_nullable`).
-//!
-//! The BMM carries a function's signature and no body. Its name is what a
-//! hand-written behaviour sibling must realize, per generation; a function with
-//! no parameters is also a computed attribute of its class (AOM2 `master04.2`
-//! §Attribute Nodes: "computed attributes (represented by functions with no
-//! arguments in most programming languages)").
+//! The function signatures of a BMM class (`BMM_CLASS.functions`, LANG
+//! `p_bmm_function`); a function with no parameters is also a computed
+//! attribute (AOM2 `master04.2` §Attribute Nodes).
 
 #![expect(
     clippy::disallowed_types,
@@ -34,9 +28,8 @@ pub(crate) struct BmmFunction {
     pub is_nullable: bool,
 }
 
-/// Parse a class node's `functions` object into declaration-ordered
-/// [`BmmFunction`]s (`serde_json`'s `preserve_order` keeps file order). Absent →
-/// empty.
+/// Parses a class node's `functions` into declaration-ordered
+/// [`BmmFunction`]s.
 pub(super) fn parse_functions(node: &Value) -> Vec<BmmFunction> {
     node.get("functions")
         .and_then(Value::as_object)

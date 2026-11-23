@@ -14,10 +14,9 @@ use crate::flat::error::FlatError;
 use crate::flat::typed::{self, Build, Obj, o, s};
 use crate::flat::webtemplate::model::{CodedName, WebTemplateNode};
 
-/// The `name` value for a locatable node: a DV_CODED_TEXT carrying the
-/// template's constrained `defining_code` when the name is coded (RM common
-/// `master03-archetyped_package.adoc` §"The LOCATABLE class"), else a plain
-/// DV_TEXT.
+/// The `name` of a locatable node: a DV_CODED_TEXT when the template codes it
+/// (RM common `master03-archetyped_package.adoc` §"The LOCATABLE class"), else
+/// a DV_TEXT.
 pub(crate) fn name_value(display: &str, coded: Option<&CodedName>) -> Result<Obj, FlatError> {
     match coded {
         Some(CodedName {
@@ -51,18 +50,15 @@ pub(crate) fn stamp_locatable_identity(
 }
 
 /// The `archetype_node_id` data records for `node`: the complete identifier an
-/// OPT2 inlined an archetype root by (BASE `artefact_identification`
-/// `master07-referencing.adoc` §Reconstitutability), else its Web Template
-/// `nodeId`.
+/// OPT2 inlined a root by (BASE `master07-referencing.adoc`
+/// §Reconstitutability), else its `nodeId`.
 pub(crate) fn recorded_archetype_id(node: &WebTemplateNode) -> Option<&str> {
     node.archetype_ref.as_deref().or(node.node_id.as_deref())
 }
 
-/// The name of a `LOCATABLE` whose template node has no term text, which ADL2
-/// allows for a single node under a single-valued attribute
-/// (`master04.3-cadl_complex_types.adoc` §Node Identifiers): `History`,
-/// `Tree`, `List`, `Single` or `Table` for the structures, else the RM type in
-/// sentence case, never the bare node code (RM `LOCATABLE.name`).
+/// The name of a `LOCATABLE` whose template node has no term text (ADL2
+/// `master04.3-cadl_complex_types.adoc` §Node Identifiers): `History`, `Tree`,
+/// `List`, `Single` or `Table`, else the RM type in sentence case.
 ///
 /// NOTE: no openEHR spec names such a node; the RM type is our own design.
 pub(crate) fn default_name(rm_type: &str) -> String {

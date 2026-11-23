@@ -117,15 +117,11 @@ pub(super) fn archetype_predicate(node: &str, value: &str, lineage: &ArchetypeLi
 /// The ADL 1.4 specialisations of `concept`: every `arch_concept` beginning
 /// with `concept-`.
 ///
-/// The byte range `[concept-, concept.)` in the pattern operators, which
-/// compare bytes whatever the collation, admits exactly what `LIKE
-/// 'concept-%'` admits ('.' follows '-') and is an index range on the
-/// `text_pattern_ops` column of `idx_node_arch_subsume`. It also keeps the
-/// predicate inside the `st_node_*_archetype` extended statistics, which the
-/// `LIKE` form left: on `PostgreSQL` 18.6 the storage bench's blood-pressure
-/// observations were estimated at 188 of 1 467 rows with `LIKE` and 1 313
-/// with the range, and the low estimate cost the flat read its `LIMIT` early
-/// stop (#4944).
+/// The byte range `[concept-, concept.)` in the pattern operators admits
+/// exactly what `LIKE 'concept-%'` admits and is an index range on the
+/// `text_pattern_ops` column of `idx_node_arch_subsume`; it also stays inside
+/// the `st_node_*_archetype` extended statistics, which the `LIKE` form leaves
+/// (#4944).
 pub(super) fn legacy_children(node: &str, concept: &str) -> Expr {
     let column = || col(node, Node::ArchConcept);
     column()
