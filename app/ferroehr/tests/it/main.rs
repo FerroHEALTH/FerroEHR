@@ -143,6 +143,7 @@ mod party_binding_check;
 mod party_binding_config;
 mod party_binding_live;
 mod party_binding_source;
+mod party_commit_contention;
 mod party_key_spaces;
 mod party_mapping;
 mod party_mapping_templates;

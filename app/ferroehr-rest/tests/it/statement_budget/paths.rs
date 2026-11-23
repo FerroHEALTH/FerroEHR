@@ -14,8 +14,10 @@
 //! party read, all over the
 //! IPS composition (128 KB, 402 node rows), and the commit of that composition
 //! as a CONTRIBUTION, its read at an instant, the `EHR_STATUS` commit and read,
-//! the commit of a PERSON, plain and with ordinal and scale values, and the
-//! update and the delete of a COMPOSITION.
+//! the commit of a PERSON, plain and with ordinal and scale values, the
+//! update and the delete of a COMPOSITION, the directory writes, and the
+//! update and the delete of a PERSON and the create of an ORGANISATION,
+//! GROUP, ROLE and AGENT (#6257).
 //!
 //! The conversions are the `trace` events under
 //! [`openehr_its::conversion::TARGET`]: the codec entry points record each
@@ -108,10 +110,16 @@ enum Path {
     DirectoryCreate,
     DirectoryUpdate,
     DirectoryDelete,
+    PartyUpdate,
+    PartyDelete,
+    CommitOrganisation,
+    CommitGroup,
+    CommitRole,
+    CommitAgent,
 }
 
 impl Path {
-    const ALL: [Self; 25] = [
+    const ALL: [Self; 31] = [
         Self::CommitJson,
         Self::CommitXml,
         Self::CommitFlat,
@@ -137,6 +145,12 @@ impl Path {
         Self::DirectoryCreate,
         Self::DirectoryUpdate,
         Self::DirectoryDelete,
+        Self::PartyUpdate,
+        Self::PartyDelete,
+        Self::CommitOrganisation,
+        Self::CommitGroup,
+        Self::CommitRole,
+        Self::CommitAgent,
     ];
 
     fn name(self) -> &'static str {
@@ -166,6 +180,12 @@ impl Path {
             Self::DirectoryCreate => "directory create",
             Self::DirectoryUpdate => "directory update",
             Self::DirectoryDelete => "directory delete",
+            Self::PartyUpdate => "party update",
+            Self::PartyDelete => "party delete",
+            Self::CommitOrganisation => "ORGANISATION commit",
+            Self::CommitGroup => "GROUP commit",
+            Self::CommitRole => "ROLE commit",
+            Self::CommitAgent => "AGENT commit",
         }
     }
 }
@@ -178,6 +198,8 @@ struct Budget {
     peak_bytes: u64,
     round_trips: u64,
     nested: u64,
+    /// The `pg_notify` calls, top-level or nested.
+    notifies: u64,
     wal: u64,
 }
 
@@ -381,6 +403,24 @@ struct Budget {
 /// rose from 136,915, 138,815 and 131,027 bytes to 145,604, 143,951 and
 /// 133,880, since the access record is rendered while the prepared version is
 /// held, inside the margin.
+/// Every path has since counted its `pg_notify` calls, top-level or nested,
+/// pinned at the counts measured on main 3bf5adead7: 1 on the `EHR_STATUS`
+/// commit and on each PERSON commit, update and delete, 0 elsewhere. A PERSON
+/// update and delete, each on a PERSON of its own, and an ORGANISATION,
+/// GROUP, ROLE and AGENT create are measured last. A party create, update
+/// and delete have since been judged on one gate read and committed behind
+/// one guarded version statement after their access record (#6257): a PERSON
+/// create sends 20 round trips where it sent 29, an update and a delete 20
+/// where they sent 33, an ORGANISATION, GROUP, ROLE and AGENT create 12, 11,
+/// 21 and 10 where they sent 20, 19, 28 and 17, with 111 to 216 fewer
+/// allocations and the same WAL, measured in CI beside the merge base. The
+/// new paths' ceilings are the merge base's figures with the margins above,
+/// lowered by those drops, with their WAL over the largest of three runs.
+/// Their median peaks rose by 6 to 10 KiB, since the access record is
+/// rendered while the prepared version is held: the PERSON commits from
+/// 115,228 and 130,009 bytes to 124,725 and 139,506, and each peak ceiling of
+/// those paths is the figure measured plus 1%, the rise the orchestrator
+/// approved as the price of the records-first order.
 /// An `EHR_STATUS` read and an AQL query have since confirmed their policy
 /// copies on their own statement, the version read or the query's statement,
 /// which reads the policy and definition revisions beside its rows, in place
@@ -388,7 +428,7 @@ struct Budget {
 /// `EHR_STATUS` read and the population query sent 3, and 3 where the
 /// single-EHR query and the `matches` sent 4, measured beside the merge base,
 /// and each of those round-trip ceilings fell by one.
-const BUDGETS: [Budget; 25] = [
+const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
@@ -396,6 +436,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 1_530_778,
         round_trips: 4,
         nested: 9,
+        notifies: 0,
         wal: 188_205,
     },
     Budget {
@@ -405,6 +446,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 1_533_031,
         round_trips: 4,
         nested: 10,
+        notifies: 0,
         wal: 188_507,
     },
     Budget {
@@ -414,6 +456,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 1_528_525,
         round_trips: 4,
         nested: 9,
+        notifies: 0,
         wal: 188_849,
     },
     Budget {
@@ -423,6 +466,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 617_268,
         round_trips: 2,
         nested: 0,
+        notifies: 0,
         wal: 2064,
     },
     Budget {
@@ -432,6 +476,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 1_017_140,
         round_trips: 2,
         nested: 0,
+        notifies: 0,
         wal: 2064,
     },
     Budget {
@@ -441,6 +486,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 1_634_407,
         round_trips: 2,
         nested: 0,
+        notifies: 0,
         wal: 2064,
     },
     Budget {
@@ -450,6 +496,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 100_250,
         round_trips: 2,
         nested: 0,
+        notifies: 0,
         wal: 1264,
     },
     Budget {
@@ -459,6 +506,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 118_273,
         round_trips: 3,
         nested: 0,
+        notifies: 0,
         wal: 3269,
     },
     Budget {
@@ -468,6 +516,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 158_823,
         round_trips: 2,
         nested: 0,
+        notifies: 0,
         wal: 8622,
     },
     Budget {
@@ -477,6 +526,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 624_026,
         round_trips: 3,
         nested: 0,
+        notifies: 0,
         wal: 1127,
     },
     Budget {
@@ -486,6 +536,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 78_848,
         round_trips: 8,
         nested: 1,
+        notifies: 0,
         wal: 1055,
     },
     Budget {
@@ -495,6 +546,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 1_649_934,
         round_trips: 4,
         nested: 10,
+        notifies: 0,
         wal: 189_586,
     },
     Budget {
@@ -504,6 +556,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 701_748,
         round_trips: 2,
         nested: 0,
+        notifies: 0,
         wal: 2064,
     },
     Budget {
@@ -513,6 +566,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 147_242,
         round_trips: 5,
         nested: 7,
+        notifies: 1,
         wal: 5403,
     },
     Budget {
@@ -522,15 +576,17 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 102_503,
         round_trips: 2,
         nested: 0,
+        notifies: 0,
         wal: 1393,
     },
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        allocations: 1998,
-        peak_bytes: 117_146,
-        round_trips: 31,
+        allocations: 1856,
+        peak_bytes: 125_972,
+        round_trips: 22,
         nested: 13,
+        notifies: 1,
         wal: 6622,
     },
     Budget {
@@ -540,6 +596,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 192_267,
         round_trips: 3,
         nested: 0,
+        notifies: 0,
         wal: 10_578,
     },
     Budget {
@@ -549,15 +606,17 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 107_199,
         round_trips: 8,
         nested: 1,
+        notifies: 0,
         wal: 1064,
     },
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        allocations: 2487,
-        peak_bytes: 132_147,
-        round_trips: 31,
+        allocations: 2344,
+        peak_bytes: 140_901,
+        round_trips: 22,
         nested: 14,
+        notifies: 1,
         wal: 9191,
     },
     Budget {
@@ -567,6 +626,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 162_800,
         round_trips: 2,
         nested: 0,
+        notifies: 0,
         wal: 2048,
     },
     Budget {
@@ -576,6 +636,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 1_525_458,
         round_trips: 4,
         nested: 0,
+        notifies: 0,
         wal: 187_688,
     },
     Budget {
@@ -585,6 +646,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 150_537,
         round_trips: 4,
         nested: 0,
+        notifies: 0,
         wal: 5267,
     },
     Budget {
@@ -594,6 +656,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 150_606,
         round_trips: 4,
         nested: 1,
+        notifies: 0,
         wal: 6504,
     },
     Budget {
@@ -603,6 +666,7 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 152_696,
         round_trips: 4,
         nested: 1,
+        notifies: 0,
         wal: 5410,
     },
     Budget {
@@ -612,7 +676,68 @@ const BUDGETS: [Budget; 25] = [
         peak_bytes: 144_129,
         round_trips: 4,
         nested: 1,
+        notifies: 0,
         wal: 4823,
+    },
+    Budget {
+        path: Path::PartyUpdate,
+        conversions: 8,
+        allocations: 2097,
+        peak_bytes: 129_641,
+        round_trips: 20,
+        nested: 7,
+        notifies: 1,
+        wal: 6599,
+    },
+    Budget {
+        path: Path::PartyDelete,
+        conversions: 2,
+        allocations: 1714,
+        peak_bytes: 112_950,
+        round_trips: 20,
+        nested: 7,
+        notifies: 1,
+        wal: 4316,
+    },
+    Budget {
+        path: Path::CommitOrganisation,
+        conversions: 8,
+        allocations: 1594,
+        peak_bytes: 126_183,
+        round_trips: 12,
+        nested: 1,
+        notifies: 0,
+        wal: 6710,
+    },
+    Budget {
+        path: Path::CommitGroup,
+        conversions: 8,
+        allocations: 1576,
+        peak_bytes: 126_027,
+        round_trips: 11,
+        nested: 1,
+        notifies: 0,
+        wal: 6689,
+    },
+    Budget {
+        path: Path::CommitRole,
+        conversions: 9,
+        allocations: 2159,
+        peak_bytes: 126_256,
+        round_trips: 21,
+        nested: 6,
+        notifies: 0,
+        wal: 7012,
+    },
+    Budget {
+        path: Path::CommitAgent,
+        conversions: 8,
+        allocations: 1554,
+        peak_bytes: 126_026,
+        round_trips: 10,
+        nested: 1,
+        notifies: 0,
+        wal: 6582,
     },
 ];
 
@@ -639,7 +764,15 @@ const BUDGETS: [Budget; 25] = [
 /// ceiling fell by its path's figure; the `EHR_STATUS` commit and the delete,
 /// whose few rows go dense with a `NULL` for each group's positions, moved
 /// 15 and 16 bytes up, under their ceilings.
-const WIRE_BUDGETS: [(Path, u64); 25] = [
+/// A party create, update and delete have since been judged on one gate read
+/// and committed behind one guarded version statement (#6257): 890 and 888
+/// bytes fewer on the two PERSON commits, measured in CI beside the merge
+/// base, and both ceilings fell by those figures. The PERSON update and
+/// delete and the ORGANISATION, GROUP, ROLE and AGENT creates move 10,400,
+/// 8,951, 7,866, 7,620, 11,576 and 7,522 bytes where they moved 12,615,
+/// 11,166, 8,597, 8,352, 12,202 and 8,149, and their ceilings are the merge
+/// base's figures plus 64 bytes, lowered by those drops.
+const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitJson, 202_143),
     (Path::CommitXml, 202_289),
     (Path::CommitFlat, 202_283),
@@ -655,16 +788,22 @@ const WIRE_BUDGETS: [(Path, u64); 25] = [
     (Path::ReadAtTime, 131_699),
     (Path::CommitStatus, 5572),
     (Path::ReadStatus, 3142),
-    (Path::CommitParty, 10_461),
+    (Path::CommitParty, 9571),
     (Path::AqlMatches, 17_539),
     (Path::AqlParty, 11_509),
-    (Path::CommitPartyScored, 12_808),
+    (Path::CommitPartyScored, 11_920),
     (Path::ReadVersion, 3336),
     (Path::CommitUpdate, 202_571),
     (Path::CommitDelete, 4875),
     (Path::DirectoryCreate, 4985),
     (Path::DirectoryUpdate, 4795),
     (Path::DirectoryDelete, 4152),
+    (Path::PartyUpdate, 10_464),
+    (Path::PartyDelete, 9015),
+    (Path::CommitOrganisation, 7930),
+    (Path::CommitGroup, 7684),
+    (Path::CommitRole, 11_640),
+    (Path::CommitAgent, 7586),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
@@ -869,6 +1008,9 @@ struct World {
     /// object id of its composition, which its FOLDER references, and its
     /// directory's current version uid; built right before their paths.
     directories: Mutex<Vec<(String, String, String)>>,
+    /// The PERSONs the party updates and deletes write, one per request, each
+    /// with its current version uid; built right before their paths.
+    parties: Mutex<Vec<String>>,
 }
 
 /// The `ETag` value of a response, unquoted.
@@ -920,11 +1062,7 @@ impl World {
                 .as_str()
                 .expect("the IPS template id")
                 .to_owned();
-        let person = std::fs::read_to_string(
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../corpus/fixtures/demographic/person.v1.json"),
-        )
-        .expect("the person fixture");
+        let person = demographic_fixture("person");
         let (status, headers, body) = plain(
             app,
             &Call {
@@ -981,6 +1119,75 @@ impl World {
             judged: Mutex::new(Vec::new()),
             deletable: Mutex::new(Vec::new()),
             directories: Mutex::new(Vec::new()),
+            parties: Mutex::new(Vec::new()),
+        }
+    }
+
+    /// Commits the PERSONs [`Path::PartyUpdate`] updates and
+    /// [`Path::PartyDelete`] then deletes, one per request.
+    async fn parties(&self, app: &Router) {
+        let mut parties = Vec::new();
+        for _ in 0..WARM + REQUESTS {
+            let (status, headers, body) =
+                plain(app, &Self::party_commit(self.person.clone())).await;
+            assert_eq!(status, StatusCode::CREATED, "a person to update: {body}");
+            parties.push(etag(&headers));
+        }
+        *self.parties.lock().unwrap() = parties;
+    }
+
+    /// The `n`th party update or delete, of the `n`th PERSON
+    /// [`Self::parties`] committed, an update naming its `n` in the name so
+    /// each one stores new content.
+    fn party_write(&self, path: Path, n: usize) -> Call {
+        let tip = self.parties.lock().unwrap()[n].clone();
+        if path == Path::PartyDelete {
+            return Call {
+                method: "DELETE",
+                uri: format!("{BASE}/demographic/person/{tip}"),
+                user: "root",
+                accept: JSON,
+                headers: Vec::new(),
+                body: None,
+            };
+        }
+        let vo = tip.split("::").next().expect("an object id");
+        let mut body: Value = serde_json::from_str(&self.person).expect("the person fixture");
+        body["name"]["value"] = Value::from(format!("person {n}"));
+        Call {
+            method: "PUT",
+            uri: format!("{BASE}/demographic/person/{vo}"),
+            user: "root",
+            accept: JSON,
+            headers: vec![
+                ("Prefer", "return=minimal".to_owned()),
+                ("If-Match", format!("\"{tip}\"")),
+            ],
+            body: Some((JSON, body.to_string())),
+        }
+    }
+
+    /// The commit of `path`'s party kind from its fixture: an ORGANISATION,
+    /// GROUP or AGENT as the corpus holds it, a ROLE performed by the world's
+    /// PERSON.
+    fn kind_commit(&self, path: Path) -> Call {
+        let kind = match path {
+            Path::CommitOrganisation => "organisation",
+            Path::CommitGroup => "group",
+            Path::CommitRole => "role",
+            _ => "agent",
+        };
+        let mut body: Value = serde_json::from_str(&demographic_fixture(kind)).expect("a fixture");
+        if kind == "role" {
+            body["performer"]["id"]["value"] = Value::from(self.party.clone());
+        }
+        Call {
+            method: "POST",
+            uri: format!("{BASE}/demographic/{kind}"),
+            user: "root",
+            accept: JSON,
+            headers: vec![("Prefer", "return=minimal".to_owned())],
+            body: Some((JSON, body.to_string())),
         }
     }
 
@@ -1095,6 +1302,9 @@ impl World {
             }
             Path::DirectoryCreate | Path::DirectoryUpdate => {
                 self.directories.lock().unwrap()[n].2 = etag(headers);
+            }
+            Path::PartyUpdate => {
+                self.parties.lock().unwrap()[n] = etag(headers);
             }
             _ => {}
         }
@@ -1240,14 +1450,23 @@ impl World {
             ),
             Path::CommitStatus => self.status_commit(ehr, n),
             Path::ReadStatus => get(format!("{BASE}/ehr/{ehr}/ehr_status"), "nurse", JSON),
-            Path::CommitParty => Self::party_commit(self.person.clone()),
-            Path::CommitPartyScored => Self::party_commit(self.scored.clone()),
             Path::CommitUpdate => self.update(ehr, n),
             Path::CommitDelete => self.delete(n),
             Path::DirectoryCreate | Path::DirectoryUpdate | Path::DirectoryDelete => {
                 self.directory(path, n)
             }
             Path::ReadVersion => self.read_version(n),
+            _ => self.party_call(path, n),
+        }
+    }
+
+    /// The `n`th request of a party path.
+    fn party_call(&self, path: Path, n: usize) -> Call {
+        match path {
+            Path::CommitParty => Self::party_commit(self.person.clone()),
+            Path::CommitPartyScored => Self::party_commit(self.scored.clone()),
+            Path::PartyUpdate | Path::PartyDelete => self.party_write(path, n),
+            _ => self.kind_commit(path),
         }
     }
 
@@ -1276,6 +1495,15 @@ impl World {
             body: Some((JSON, body)),
         }
     }
+}
+
+/// The `v1` demographic fixture of the party `kind` in the corpus.
+fn demographic_fixture(kind: &str) -> String {
+    std::fs::read_to_string(
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join(format!("../../corpus/fixtures/demographic/{kind}.v1.json")),
+    )
+    .expect("the demographic fixture")
 }
 
 /// The system id in the version uids `uids`.
@@ -1341,6 +1569,7 @@ struct Measure {
     each: Vec<Allocated>,
     round_trips: u64,
     nested: u64,
+    notifies: u64,
     /// The row records of the lower-quartile request.
     wal: u64,
     /// The row records of each request and of the window by relation, with
@@ -1567,11 +1796,17 @@ async fn measure(
         .filter(|s| !s.toplevel)
         .map(|s| s.calls)
         .sum();
+    let notifies: u64 = statements
+        .iter()
+        .filter(|s| s.query.contains("pg_notify"))
+        .map(|s| s.calls)
+        .sum();
     let chainer = calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
     let counts = std::mem::take(&mut *counter.0.lock().unwrap());
     out.conversions = counts.conversions;
     out.round_trips = counts.round_trips.div_euclid(REQUESTS);
     out.nested = nested.saturating_sub(chainer).div_euclid(REQUESTS);
+    out.notifies = notifies.div_euclid(REQUESTS);
     out.statements = sent_ledger(&counts.sent) + &nested_ledger(&statements, nested, chainer);
     (out.wal, out.wal_ledger) = row_records(pool, &marks).await;
     testkit::statements::assert_statements_kept(pool, evicted)
@@ -1683,6 +1918,9 @@ async fn measure_all(
         if path == Path::DirectoryCreate {
             world.directories(app).await;
         }
+        if path == Path::PartyUpdate {
+            world.parties(app).await;
+        }
         let m = Box::pin(measure(app, pool, wire, &world, counter, path)).await;
         measured.push((budget, m));
     }
@@ -1701,7 +1939,7 @@ async fn every_hot_path_stays_within_its_budget() {
     let (_db, pool, svc, app) = Box::pin(super::served()).await;
     let measured = Box::pin(measure_all(&app, &pool, &svc, None, &counter)).await;
     let mut report = String::from(
-        "path | conversions | audit renders | allocations | alloc KiB | peak KiB | round trips | nested | WAL B\n",
+        "path | conversions | audit renders | allocations | alloc KiB | peak KiB | round trips | nested | notifies | WAL B\n",
     );
     let mut ledger = String::new();
     let mut statements = String::new();
@@ -1717,6 +1955,7 @@ async fn every_hot_path_stays_within_its_budget() {
             ("peak bytes", judged(peak, budget.peak_bytes)),
             ("round trips", judged(m.round_trips, budget.round_trips)),
             ("nested statements", judged(m.nested, budget.nested)),
+            ("notifies", judged(m.notifies, budget.notifies)),
             ("WAL bytes", judged(m.wal, budget.wal)),
         ];
         for (what, (ok, cell)) in &cells {
@@ -1726,7 +1965,7 @@ async fn every_hot_path_stays_within_its_budget() {
         }
         writeln!(
             report,
-            "{} | {} | {} | {} | {kib} | {} | {} | {} | {}",
+            "{} | {} | {} | {} | {kib} | {} | {} | {} | {} | {}",
             path.name(),
             cells[0].1.1,
             m.audit(),
@@ -1735,6 +1974,7 @@ async fn every_hot_path_stays_within_its_budget() {
             cells[3].1.1,
             cells[4].1.1,
             cells[5].1.1,
+            cells[6].1.1,
         )
         .unwrap();
         let ops: Vec<String> = m

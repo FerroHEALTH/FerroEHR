@@ -50,6 +50,7 @@ use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::grants::operation::PROVIDER;
 use crate::party_binding::policy_mark::{self, PolicyContent};
 use crate::party_binding::store::parsed;
+use crate::storage::version_repo::gate::Prior;
 use crate::versioning::Kind;
 use crate::versioning::change::Committed;
 
@@ -165,21 +166,19 @@ pub(crate) async fn check(
     mapping: &BindingMapping,
     committed: &Committed,
     facts: Option<&Facts>,
+    prior: Option<&Prior>,
 ) -> Result<(), ServiceError> {
     let (kind, vo_id) = (committed.kind, committed.vo_id);
     if !kind.is_demographic() {
         return Ok(());
     }
     let binding = !mapping.is_empty() && matches!(kind, Kind::Person | Kind::Role | Kind::Group);
-    let (current, previous) = versions(tx, vo_id).await?;
-    let (marked, committed_policy) = mark_committed(tx, (kind, vo_id), current, facts).await?;
+    let (current, previous, marked) = standing(tx, committed, facts, prior).await?;
+    let committed_policy = mark_committed(tx, (kind, vo_id), (marked, current), facts).await?;
     if !(binding || mapping.names_policy()) {
         return Ok(());
     }
-    let mut before = match previous {
-        Some(sys_version) => read(tx, mapping, kind, vo_id, sys_version).await?,
-        None => Protected::default(),
-    };
+    let mut before = before(tx, mapping, (kind, vo_id, previous), prior).await?;
     let mut after = match (current, facts) {
         (Some(_), Some(facts)) => protected(mapping, kind, facts),
         (Some(sys_version), None) => read(tx, mapping, kind, vo_id, sys_version).await?,
@@ -261,6 +260,53 @@ pub(crate) async fn check(
         ));
     }
     Ok(())
+}
+
+/// The versions [`check`] judges, `(current, previous)` as [`versions`] reads
+/// them, and whether the party was marked a policy party before the commit:
+/// off `prior`, what the commit's gate read found, or read when there is none.
+async fn standing(
+    tx: &mut PgConnection,
+    committed: &Committed,
+    facts: Option<&Facts>,
+    prior: Option<&Prior>,
+) -> Result<(Option<i32>, Option<i32>, bool), ServiceError> {
+    if let Some(prior) = prior {
+        return Ok((
+            facts.map(|_| committed.sys_version),
+            committed
+                .sys_version
+                .checked_sub(1)
+                .filter(|_| prior.previous_held),
+            prior.marked,
+        ));
+    }
+    let (current, previous) = versions(tx, committed.vo_id).await?;
+    Ok((
+        current,
+        previous,
+        policy_mark::marked(tx, committed.vo_id).await?,
+    ))
+}
+
+/// What the version `previous` of the party `vo_id` of `kind` held that is
+/// protected: a `PERSON`'s off the last body `prior` carries when it is that
+/// version, else read ([`read`]).
+async fn before(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    (kind, vo_id, previous): (Kind, VoId, Option<i32>),
+    prior: Option<&Prior>,
+) -> Result<Protected, ServiceError> {
+    let Some(sys_version) = previous else {
+        return Ok(Protected::default());
+    };
+    match prior.and_then(|prior| prior.last_body.as_ref()) {
+        Some((last, _, body)) if kind == Kind::Person && *last == sys_version => {
+            Ok(protected(mapping, kind, &parsed(kind, body, mapping)?))
+        }
+        _ => read(tx, mapping, kind, vo_id, sys_version).await,
+    }
 }
 
 /// The refusal of a write of the protected party `vo_id` of `kind` by a
@@ -670,17 +716,17 @@ fn refuse_policy(
     }
 }
 
-/// Whether the party `vo_id` of `kind` was marked before the commit `tx`
-/// wrote its version `current` holding `facts`, and what makes that version
-/// a policy party ([`policy_mark::policy_content`]); a policy version marks
-/// the party whatever the mapping, so the mark is a fact of the versions.
+/// What makes the version `current` the commit `tx` wrote of the party
+/// `vo_id` of `kind`, holding `facts`, a policy party
+/// ([`policy_mark::policy_content`]), marking the party when it was not
+/// `marked` before; a policy version marks the party whatever the mapping, so
+/// the mark is a fact of the versions.
 async fn mark_committed(
     tx: &mut PgConnection,
     (kind, vo_id): (Kind, VoId),
-    current: Option<i32>,
+    (marked, current): (bool, Option<i32>),
     facts: Option<&Facts>,
-) -> Result<(bool, Option<PolicyContent>), ServiceError> {
-    let marked = policy_mark::marked(tx, vo_id).await?;
+) -> Result<Option<PolicyContent>, ServiceError> {
     let committed = match (current, facts) {
         (Some(_), Some(facts)) => facts.policy.clone(),
         (Some(sys_version), None) => stored_policy(tx, kind, vo_id, sys_version).await?,
@@ -689,7 +735,7 @@ async fn mark_committed(
     if committed.is_some() && !marked {
         policy_mark::mark(tx, vo_id).await?;
     }
-    Ok((marked, committed))
+    Ok(committed)
 }
 
 /// What makes the stored version `sys_version` of `vo_id` of `kind` a policy

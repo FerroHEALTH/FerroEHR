@@ -55,15 +55,15 @@ impl FerroEhrService {
     /// - The refusals of a party update, and a storage failure.
     pub async fn rekey_party(&self, party: VoId, to: BindingKey) -> Result<(), ServiceError> {
         check_key(&to)?;
-        let current = self
+        let tree = self
             .party_current(PartyKind::Person, party)
             .await?
             .filter(|current| !current.deleted)
             .ok_or_else(|| {
                 ServiceError::not_found(Missing::VersionedObject, format!("PERSON {party}"))
-            })?;
-        let read =
-            Box::pin(self.read_party(PartyKind::Person, party, Some(current.tree), None)).await?;
+            })?
+            .tree;
+        let read = Box::pin(self.read_party(PartyKind::Person, party, Some(tree), None)).await?;
         let mut body = read.body;
         let template = body
             .pointer("/archetype_details/template_id/value")
@@ -91,7 +91,7 @@ impl FerroEhrService {
             from: Some((from.issuer.clone(), from.value.clone())),
             to: (to.issuer.clone(), to.value.clone()),
         };
-        let precondition = Precondition::parse(None, Some(current.tree))?;
+        let precondition = Precondition::parse(None, Some(tree))?;
         let object_id = format!(
             "party:{}#binding-key:{}|{}>{}|{}",
             party.0, from.issuer, from.value, to.issuer, to.value
@@ -107,7 +107,7 @@ impl FerroEhrService {
         let committed = Box::pin(rekey(
             change,
             self.commit_party_update(
-                current,
+                (PartyKind::Person, party),
                 precondition,
                 WriteRequest::new(decoded(Kind::Person, body, false)?),
             ),
