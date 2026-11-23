@@ -328,8 +328,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   value that moves between rows never meets its old row in a unique index.
   A record subject another PERSON declares is refused by the deferred
   `uq_binding_record_subject` at `COMMIT`, and the write answers `409` with
-  its records discarded. PARTY_RELATIONSHIP writes and demographic
-  CONTRIBUTIONs keep the per-version path.
+  its records discarded. A standalone PARTY_RELATIONSHIP create, update or
+  delete takes the same gate read and guarded statement; its settle
+  (`party_binding::store::standalone`) judges a care relationship's end on
+  one read of its provider and its validity, then writes the end, retires its
+  caller facts and its representation row in one statement, as the caller
+  fact it inserts reads that end, inserts them in the next, and stamps the
+  facts when they changed. Demographic CONTRIBUTIONs keep the per-version
+  path.
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers
