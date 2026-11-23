@@ -27,7 +27,12 @@ const KEYS: usize = 64;
 /// A copy of [`CAP`] lookups and names whose listener is connected, so it
 /// holds what it reads.
 async fn listening() -> LiveBindings {
-    let copy = Arc::new(BindingCopy::new(CAP));
+    listening_on(BindingCopy::new(CAP)).await
+}
+
+/// `copy` with its listener connected.
+async fn listening_on(copy: BindingCopy) -> LiveBindings {
+    let copy = Arc::new(copy);
     let dropping: Arc<dyn Subscriber> = Arc::<BindingCopy>::clone(&copy);
     let listened = Arc::new(Listened::with_subscriber(
         super::CHANNEL,
@@ -215,4 +220,26 @@ async fn concurrent_lookups_behind_the_store_make_one_store_read() {
         assert_eq!(answer.expect("the read succeeds"), found(2));
     }
     assert_eq!(reads, 1, "one read past the held revision");
+}
+
+/// Two logins whose reads share one stripe are each answered their own
+/// lookup, from one read each.
+#[tokio::test]
+async fn two_logins_on_one_stripe_are_each_answered_their_own_lookup() {
+    let bindings = listening_on(BindingCopy::striped(CAP, 1)).await;
+    let reads = AtomicUsize::new(0);
+    let reads = &reads;
+    let lookups = [1, 2, 1, 2].map(|n| {
+        let read = async move {
+            reads.fetch_add(1, Ordering::Relaxed);
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            Ok::<_, Infallible>((found(n), 0))
+        };
+        let bindings = &bindings;
+        async move { (n, bindings.lookup(key(n), Some(0), read).await) }
+    });
+    for (n, answer) in futures::future::join_all(lookups).await {
+        assert_eq!(answer.expect("the read succeeds"), found(n), "login {n}");
+    }
+    assert_eq!(reads.load(Ordering::Relaxed), 2, "one read per login");
 }

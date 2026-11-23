@@ -21,13 +21,13 @@
 
 use crate::db::domain::Domain;
 use std::future::Future;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use ferrohealth_smart::party::source::{Lookup, PartyRecord};
 use ferrohealth_smart::party::{Membership, PartyRef, Represented};
 use moka::future::Cache;
-use moka::ops::compute::{CompResult, Op};
 use opentelemetry::KeyValue;
 use uuid::Uuid;
 
@@ -40,6 +40,9 @@ pub const CHANNEL: &str = "ferroehr_party_binding";
 
 /// How many logins' lookups, and how many names, a replica holds.
 pub const CAPACITY: u64 = 65_536;
+
+/// How many stripes the lookups' store reads are spread over.
+const STRIPES: usize = 64;
 
 /// The `copy` label of the lookups.
 const LOOKUPS: &str = "binding";
@@ -152,15 +155,36 @@ struct BindingCopy {
     names: Cache<Uuid, Option<String>>,
     /// Moved by every drop, so a read that started before one keeps nothing.
     drops: AtomicU64,
+    /// A lookup's store read runs under the stripe its key hashes to.
+    reading: Box<[tokio::sync::Mutex<()>]>,
 }
 
 impl BindingCopy {
     fn new(capacity: u64) -> Self {
+        Self::striped(capacity, STRIPES)
+    }
+
+    fn striped(capacity: u64, stripes: usize) -> Self {
         Self {
             lookups: Cache::builder().max_capacity(capacity).build(),
             names: Cache::builder().max_capacity(capacity).build(),
             drops: AtomicU64::new(0),
+            reading: (0..stripes.max(1))
+                .map(|_| tokio::sync::Mutex::new(()))
+                .collect(),
         }
+    }
+
+    /// The stripe `key`'s store read runs under.
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "the index is reduced modulo the stripe count, at least 1, so it lies in bounds"
+    )]
+    fn stripe(&self, key: &LookupKey) -> &tokio::sync::Mutex<()> {
+        let mut hasher = DefaultHasher::new();
+        key.hash(&mut hasher);
+        let [low, ..] = hasher.finish().to_le_bytes();
+        &self.reading[usize::from(low) % self.reading.len()]
     }
 
     /// Drop every lookup.
@@ -267,8 +291,8 @@ impl LiveBindings {
     /// change of the side table whose notification has not arrived, and is
     /// read again (#6048). With no `revision`, a ride's, any held lookup is
     /// taken and the revision it was read at noted for the ride (#6320).
-    /// Concurrent misses of one key wait for one read, and each reads on its
-    /// own only when that read failed (#6374).
+    /// Concurrent misses of one key wait for one read under the key's stripe,
+    /// and each reads on its own only when that read failed (#6374).
     ///
     /// # Errors
     /// The error of `read`, which is never held.
@@ -288,46 +312,25 @@ impl LiveBindings {
             Some(_) => looked_up(LOOKUPS, "behind"),
             None => looked_up(LOOKUPS, "miss"),
         }
-        let seen = self.copy.drops.load(Ordering::Acquire);
-        let mut outcome = None;
-        let mut reads = false;
-        let (outcome_at, reads_at) = (&mut outcome, &mut reads);
-        // NOTE: moka 0.12 `Entry::and_compute_with`, calls on one key run one at a time, so a
-        // miss queued behind another's read finds its lookup. Boxed: moka's future is large.
-        let computed = Box::pin(self.copy.lookups.entry(key.clone()).and_compute_with(
-            move |entry| async move {
-                if let Some(entry) = entry.filter(|entry| current(entry.value().1)) {
-                    *outcome_at = Some(Ok(entry.into_value()));
-                    return Op::Nop;
-                }
-                *reads_at = true;
-                let read = read.await;
-                let op = match &read {
-                    Ok(held) => Op::Put(held.clone()),
-                    Err(_) => Op::Nop,
-                };
-                *outcome_at = Some(read);
-                op
-            },
-        ))
-        .await;
-        if reads {
-            refilled(LOOKUPS, matches!(outcome, Some(Ok(_))));
-            if matches!(
-                computed,
-                CompResult::Inserted(_) | CompResult::ReplacedWith(_)
-            ) && self.copy.drops.load(Ordering::Acquire) != seen
-            {
-                self.copy.lookups.invalidate(&key).await;
-            }
+        let _reading = self.copy.stripe(&key).lock().await;
+        if let Some((held, at)) = self.copy.lookups.get(&key).await
+            && current(at)
+        {
+            crate::party_binding::request::held_binding(at);
+            return Ok(held);
         }
-        #[expect(
-            clippy::expect_used,
-            reason = "moka's compute_with_hash_and_fun calls the closure once on every path, and \
-                      the closure sets the outcome on each of its returns"
-        )]
-        let (lookup, at) = outcome.expect("the compute closure should have run")?;
+        let seen = self.copy.drops.load(Ordering::Acquire);
+        let read = read.await;
+        refilled(LOOKUPS, read.is_ok());
+        let (lookup, at) = read?;
         crate::party_binding::request::held_binding(at);
+        self.copy
+            .lookups
+            .insert(key.clone(), (lookup.clone(), at))
+            .await;
+        if self.copy.drops.load(Ordering::Acquire) != seen {
+            self.copy.lookups.invalidate(&key).await;
+        }
         Ok(lookup)
     }
 
