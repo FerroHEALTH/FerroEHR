@@ -32,9 +32,6 @@ impl Builder<'_> {
     /// that satisfies its predicate, with the value `leaf` reads off one of
     /// them, and the alias of the attestation row.
     ///
-    /// A residual path that crosses a list (`items`) yields one item per
-    /// element through the set-returning `jsonb_path_query`.
-    ///
     /// # Errors
     /// [`AqlError`] when the VERSION variable is bound to no version row, a
     /// parameter is unbound, or a compared value is no scalar.

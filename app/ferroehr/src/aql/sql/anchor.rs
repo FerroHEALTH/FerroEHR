@@ -4,12 +4,11 @@
 //! The anchors of a WHERE clause: the entry an index gives a filter on a
 //! value.
 //!
-//! A path binding is a correlated subquery the planner evaluates per outer
-//! row, so a filter on a value read every node of the archetype and tested
-//! the value last (#4437, #6022). An anchor is the condition a top-level
-//! conjunct implies, stated as a FROM item the planner can start from: the
-//! versions some node row of which, under the leaf step's own predicate,
-//! carries a value the conjunct keeps. Five leaves have one:
+//! A path binding is a correlated subquery evaluated per outer row (#4437,
+//! #6022). An anchor is the condition a top-level conjunct implies, stated as a
+//! FROM item the planner can start from: the versions some node row of which,
+//! under the leaf step's own predicate, carries a value the conjunct keeps.
+//! Five leaves have one:
 //!
 //! - a text leaf of an `ELEMENT` value under `=` or `matches` over a list of
 //!   strings, by its search text (`ext.node_search_text`,
@@ -79,15 +78,11 @@ pub(super) enum RangeEntry {
     /// each version the range keeps, which the planner places by its
     /// estimate of the range.
     ///
-    /// The first-row form has no `DISTINCT`, so the planner pulls it up
-    /// into a node row it can probe per version through `node_hot_pkey`.
-    /// The distinct versions it replaced were an item no join could probe:
-    /// on statistics older than the rows they missed, the planner rescanned
-    /// it per outer row, 7 M head probes for 1,470 OBSERVATIONs (#6243).
-    /// An anchor whose leaf the SELECT already binds is tied to that row
-    /// instead; otherwise the check for an earlier row joins the statement,
-    /// correlated to the leaf's source row, so it runs for the rows the
-    /// containment keeps and not for every row the range keeps (#6249).
+    /// The first-row form has no `DISTINCT`, so the planner pulls it up into a
+    /// node row it can probe per version through `node_hot_pkey` (#6243). An
+    /// anchor whose leaf the SELECT already binds is tied to that row;
+    /// otherwise the check for an earlier row is correlated to the leaf's
+    /// source row, so it runs only for the rows the containment keeps (#6249).
     #[default]
     Free,
     /// A population statement that streams toward its LIMIT: one anchor
@@ -390,10 +385,6 @@ impl Builder<'_> {
     /// The anchor of the range comparisons of one leaf, or `None` when the
     /// leaf's step can bind a row that does not carry the value.
     ///
-    /// `first` asks for the first row of each version the range keeps
-    /// instead of the distinct versions ([`RangeEntry::Leading`]); the flat
-    /// shape always takes it ([`RangeEntry::Free`]).
-    ///
     /// # Errors
     /// [`AqlError`] from the leaf step's predicate lowering.
     fn range_anchor(
@@ -430,12 +421,6 @@ impl Builder<'_> {
     /// two conditions `of` states of a row, its RM type and the test of its
     /// value, as an anchor of `leaf`'s versioned object; `None` when the
     /// leaf's source has no version row.
-    ///
-    /// With `first` the item is the first such row of each version, found
-    /// by the absence of an earlier one: a scan toward a LIMIT reads it row
-    /// by row, and the planner pulls it up into a node row it can enter from
-    /// the value index or probe per version ([`RangeEntry::Free`]).
-    /// Without it, the distinct versions.
     ///
     /// # Errors
     /// [`AqlError`] from the predicate lowering.
@@ -538,12 +523,9 @@ impl Builder<'_> {
     /// The hot node rows `node` that satisfy `of` under `predicate`, with no
     /// column selected yet.
     ///
-    /// `probe` states each condition but the tier as `(…) IS TRUE`, which
-    /// holds exactly when the condition does and which no index matches, so
-    /// the earlier-row probe of a version reads that version's rows by
-    /// `node_hot_pkey` whatever the statistics say. On statistics that held
-    /// none of the rows, the probe entered through the value index instead,
-    /// once per candidate row (#6243).
+    /// `probe` states each condition but the tier as `(…) IS TRUE`, which no
+    /// index matches, so the earlier-row probe reads a version's rows by
+    /// `node_hot_pkey` whatever the statistics say (#6243).
     fn anchor_rows(
         &self,
         node: &str,
