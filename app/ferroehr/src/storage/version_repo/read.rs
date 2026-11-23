@@ -707,7 +707,9 @@ fn served_content_row(row: &PgRow) -> Result<ServedContent, StorageError> {
 /// contributing its creating system, and capped at `cap` with the true
 /// distinct count beside them. The template id and the root node's archetype
 /// id are aggregated distinct per EHR, so a population page of many versions
-/// carries one tuple per template rather than one per row.
+/// carries one tuple per template rather than one per row. The same row
+/// reads the policy and definition revisions, which a query that confirms
+/// its policy copies after it ran checks them against (#6320).
 ///
 /// # Errors
 /// [`StorageError::Database`] when the aggregate fails; [`StorageError::InvalidRows`]
@@ -739,6 +741,8 @@ pub async fn read_served(
                   AND n.sys_version = s.content_key AND n.num = 0 \
          ) \
          SELECT (SELECT count(*) FROM o) AS total, \
+                (SELECT rr.policy FROM request_revisions rr) AS policy_revision, \
+                (SELECT rr.definitions FROM request_revisions rr) AS definition_revision, \
                 (SELECT coalesce(jsonb_agg(x.origin ORDER BY x.origin), '[]'::jsonb) \
                  FROM (SELECT origin FROM o ORDER BY origin LIMIT $3) x) AS origins, \
                 (SELECT coalesce(jsonb_agg(jsonb_build_array(c.ehr_id, c.kind, c.template_id, \
@@ -750,6 +754,7 @@ pub async fn read_served(
     .bind(i64::try_from(cap).unwrap_or(i64::MAX))
     .fetch_one(&mut *acquire(pool).await?)
     .await?;
+    crate::storage::access_projection::observe_revisions(&row)?;
     let total: i64 = row.try_get("total")?;
     let set: Value = row.try_get("origins")?;
     let origins = set

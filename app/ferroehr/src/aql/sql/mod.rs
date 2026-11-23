@@ -295,6 +295,11 @@ pub struct Layout {
     /// access-EHR columns so the origins of the served data can be aggregated
     /// over the version rows (#3212). Empty in the same shapes.
     pub access_version_cols: Vec<(String, String)>,
+    /// Whether the statement selects the policy and definition revisions as
+    /// [`POLICY_REVISION_COL`] and [`DEFINITION_REVISION_COL`] (#6320): a
+    /// clinical query a request judges whose served versions are not read
+    /// after it, a read that selects them itself.
+    pub revisions: bool,
 }
 
 /// The alias prefix of the hidden per-row EHR columns the access log reads.
@@ -316,6 +321,15 @@ pub struct Layout {
 ///
 /// **No openEHR spec governs this — our own design/extension.**
 pub const ACCESS_EHR_PREFIX: &str = "access_ehr_";
+
+/// The alias of the hidden column holding the policy revision a judged
+/// clinical statement read (`Layout::revisions`), the name every statement
+/// that selects `access_revision!` gives it.
+pub const POLICY_REVISION_COL: &str = "policy_revision";
+
+/// The alias of the hidden column holding the definition revision beside
+/// [`POLICY_REVISION_COL`].
+pub const DEFINITION_REVISION_COL: &str = "definition_revision";
 
 /// The alias prefix of the hidden column of whether an EHR carries settings.
 ///
@@ -695,6 +709,13 @@ impl Builder<'_> {
             (Vec::new(), Vec::new())
         };
         let access_version_cols = b.build_access_version_columns(ir);
+        // NOTE: our own design (#6320), a statement whose served versions are read after it
+        // leaves the revisions to that one-row read, so no row of its own carries them.
+        let revisions =
+            clinical && ctx.ehr_access.groups().is_some() && access_version_cols.is_empty();
+        if revisions {
+            b.build_revision_columns();
+        }
         b.build_where()?;
         b.build_order_by()?;
         b.build_paging();
@@ -719,6 +740,7 @@ impl Builder<'_> {
                 access_ehr_cols,
                 access_settled_cols,
                 access_version_cols,
+                revisions,
             }),
         })
     }

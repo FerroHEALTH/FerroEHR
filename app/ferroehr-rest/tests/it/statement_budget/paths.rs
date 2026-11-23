@@ -432,6 +432,13 @@ struct Budget {
 /// ceilings fell by its path's figure. The AGENT create, which settles no
 /// row, sends 10 as before and made 5 to 12 allocations more, and its
 /// ceilings stay. No path's WAL, median peak or notifies moved.
+/// An `EHR_STATUS` read and an AQL query have since confirmed their policy
+/// copies on their own statement, the version read or the query's statement,
+/// which reads the policy and definition revisions beside its rows, in place
+/// of a read of the policy revision before it (#6320): 2 round trips where the
+/// `EHR_STATUS` read and the population query sent 3, and 3 where the
+/// single-EHR query and the `matches` sent 4, measured beside the merge base,
+/// and each of those round-trip ceilings fell by one.
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
@@ -508,7 +515,7 @@ const BUDGETS: [Budget; 31] = [
         conversions: 2,
         allocations: 2443,
         peak_bytes: 118_273,
-        round_trips: 4,
+        round_trips: 3,
         nested: 0,
         notifies: 0,
         wal: 3269,
@@ -518,7 +525,7 @@ const BUDGETS: [Budget; 31] = [
         conversions: 2,
         allocations: 3295,
         peak_bytes: 158_823,
-        round_trips: 3,
+        round_trips: 2,
         nested: 0,
         notifies: 0,
         wal: 8622,
@@ -578,7 +585,7 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         allocations: 1182,
         peak_bytes: 102_503,
-        round_trips: 3,
+        round_trips: 2,
         nested: 0,
         notifies: 0,
         wal: 1393,
@@ -598,7 +605,7 @@ const BUDGETS: [Budget; 31] = [
         conversions: 2,
         allocations: 5703,
         peak_bytes: 192_267,
-        round_trips: 4,
+        round_trips: 3,
         nested: 0,
         notifies: 0,
         wal: 10_578,
