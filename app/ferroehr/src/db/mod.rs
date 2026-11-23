@@ -1700,18 +1700,25 @@ impl EraseReport {
 
 /// Returns the schemas this build creates in a database where the sets of
 /// `domains` are applied, in the order an erasure drops them: the sets' own,
-/// then `ext`.
+/// the party set's `party_door` before `party` (#6320), then `ext`.
 ///
-/// The names are the [`domain_migrator`] literals and `ext`, never input.
+/// The names are the [`domain_migrator`] literals, `party_door` and `ext`,
+/// never input.
 fn owned_schemas(domains: &[Domain]) -> Vec<&'static str> {
-    let mut schemas: Vec<&'static str> = domains
-        .iter()
-        .rev()
-        .map(|domain| domain_migrator(*domain).0)
-        .collect();
+    let mut schemas: Vec<&'static str> = Vec::new();
+    for domain in domains.iter().rev() {
+        if *domain == Domain::Party {
+            schemas.push(PARTY_DOOR);
+        }
+        schemas.push(domain_migrator(*domain).0);
+    }
     schemas.push("ext");
     schemas
 }
+
+/// The schema the party set creates beside its own: the one function the
+/// clinical roles may run (`party/0009`, #6320).
+const PARTY_DOOR: &str = "party_door";
 
 /// Returns the schemas an erasure drops in the connected database, where the
 /// sets of `domains` are applied: those of [`owned_schemas`] that exist, and
