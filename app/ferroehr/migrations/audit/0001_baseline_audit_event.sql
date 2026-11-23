@@ -184,11 +184,6 @@ BEGIN
                               @> ARRAY[OLD.id::bigint])
        AND NOT EXISTS (SELECT 1 FROM audit.access_log_index i
                         WHERE i.search_keys @> ARRAY[OLD.id::bigint])
-       AND NOT EXISTS (SELECT 1 FROM audit.access_log_entry e
-                        WHERE e.id > (SELECT x.last_id FROM audit.access_log_index_state x
-                                       WHERE x.singleton)
-                          AND audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
-                              @> ARRAY[OLD.id::bigint])
        AND NOT EXISTS (SELECT 1 FROM audit.audit_search_set s
                         WHERE s.tokens @> ARRAY[OLD.id]) THEN
         RETURN OLD;
@@ -651,11 +646,6 @@ BEGIN
                                   @> ARRAY[t.id::bigint])
            AND NOT EXISTS (SELECT 1 FROM audit.access_log_index i
                             WHERE i.search_keys @> ARRAY[t.id::bigint])
-           AND NOT EXISTS (SELECT 1 FROM audit.access_log_entry e
-                            WHERE e.id > (SELECT x.last_id FROM audit.access_log_index_state x
-                                           WHERE x.singleton)
-                              AND audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
-                                  @> ARRAY[t.id::bigint])
            AND NOT EXISTS (SELECT 1 FROM audit.audit_search_set s
                             WHERE s.tokens @> ARRAY[t.id])
         RETURNING 1

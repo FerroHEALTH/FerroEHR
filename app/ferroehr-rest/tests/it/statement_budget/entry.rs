@@ -20,10 +20,8 @@ use ferroehr::system_log::store::{AuditRecord, AuditStore};
 /// The entries measured, after as many written first.
 const ENTRIES: u64 = 50;
 
-/// The most allocations one entry may cost, measured when the search tokens
-/// came from the typed BALP resource and the parts were cut without a JSON
-/// value (#6005), 2% above. Before, an entry cost 685.
-const CEILING: u64 = 286;
+/// The most allocations one access-log entry costs its request on Linux (#6322).
+const CEILING: u64 = 152;
 
 /// A future whose every poll is counted into `count`.
 struct Counted<'a, F> {
@@ -68,7 +66,8 @@ fn read(n: u64) -> AuditRecord {
 }
 
 /// One access-log entry costs the request that writes it at most
-/// [`CEILING`] allocations.
+/// [`CEILING`] allocations, gated on Linux, where the ceiling is measured
+/// (`super::paths::ALLOCATIONS_GATED`); elsewhere the figure is reported.
 #[tokio::test]
 async fn an_access_log_entry_stays_within_its_allocation_budget() {
     let db = testkit::db().await.expect("testkit database");
@@ -91,7 +90,7 @@ async fn an_access_log_entry_stays_within_its_allocation_budget() {
     let per_entry = count.div_euclid(ENTRIES);
     eprintln!("an access-log entry: {per_entry} allocations (ceiling {CEILING})");
     assert!(
-        per_entry <= CEILING,
+        !super::paths::ALLOCATIONS_GATED || per_entry <= CEILING,
         "an access-log entry costs {per_entry} allocations, above its ceiling of {CEILING}"
     );
 }

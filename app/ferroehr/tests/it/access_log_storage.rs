@@ -11,6 +11,8 @@
 //! own design.
 
 use std::sync::Arc;
+
+use sqlx::Connection as _;
 use std::time::Duration;
 
 use ferroehr::access_log::checkpoint::Checkpoints;
@@ -111,7 +113,7 @@ async fn sizes(pool: &sqlx::PgPool) -> Vec<(String, i64, i64)> {
 /// pool, every entry chained.
 struct Seeded {
     db: testkit::TestDb,
-    _drain: AuditHandle,
+    drain: Option<AuditHandle>,
     sender: AuditSender,
     checkpoints: Checkpoints,
 }
@@ -166,7 +168,7 @@ async fn seed(entries: u32) -> Seeded {
     }
     Seeded {
         db,
-        _drain: drain,
+        drain: Some(drain),
         sender,
         checkpoints,
     }
@@ -212,9 +214,9 @@ async fn the_iti81_total_is_counted_from_the_time_index() {
         .await
         .expect("the last entry id reads");
     seeded
-        .checkpoints
+        .sender
         .store()
-        .index_to(last)
+        .index_access_log(last)
         .await
         .expect("the index moves");
     vacuum(&pool).await;
@@ -258,9 +260,9 @@ async fn a_newest_page_reads_the_index_in_its_order() {
         .await
         .expect("the last entry id reads");
     seeded
-        .checkpoints
+        .sender
         .store()
-        .index_to(last)
+        .index_access_log(last)
         .await
         .expect("the index moves");
     vacuum(&pool).await;
@@ -504,7 +506,6 @@ async fn answers(seeded: &Seeded) -> String {
             "patient-000000000007".to_owned(),
         ])],
         vec![AuditCriterion::Agent(vec!["user-3".to_owned()])],
-        vec![AuditCriterion::Address(vec!["10.0.2.9".to_owned()])],
         Vec::new(),
     ] {
         answers.push(found(seeded, criteria).await.to_string());
@@ -537,6 +538,16 @@ async fn answers(seeded: &Seeded) -> String {
     };
     let read = log.read(first.uid.value()).await.expect("the entry reads");
     answers.push(format!("{read:?}"));
+    // NOTE: our own design (#6322), the token reader runs last: it moves the index past every
+    // entry first, which the readers above must not see.
+    answers.push(
+        found(
+            seeded,
+            vec![AuditCriterion::Address(vec!["10.0.2.9".to_owned()])],
+        )
+        .await
+        .to_string(),
+    );
     answers.join("\n")
 }
 
@@ -553,24 +564,26 @@ async fn index_rows(pool: &sqlx::PgPool) -> String {
 
 /// The search index lags the entries by up to a frontier round, and a round a
 /// crash loses leaves its cursor behind (#6319): with the cursor anywhere,
-/// every reader answers as with every entry indexed, and the next round
-/// copies the same rows again.
+/// every reader answers as with every entry indexed, a token reader moving
+/// the index past every entry first (#6322), and the next round renders and
+/// copies the same rows again, search tokens included, even after the
+/// store's token generation moved on.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[expect(
     clippy::disallowed_methods,
-    reason = "a test holds the indexing lock on a raw pool connection, outside any request"
+    reason = "a test moves the token generation on a raw pool connection, as only the owner can"
 )]
 async fn every_entry_is_found_wherever_the_index_cursor_stands() {
     const SEEDED: u32 = 400;
-    let seeded = seed(SEEDED).await;
+    let mut seeded = seed(SEEDED).await;
     let pool = seeded.db.pool();
-    let log = seeded.checkpoints.store();
+    let store = seeded.sender.store().clone();
     let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
         .fetch_one(&pool)
         .await
         .expect("the last entry id reads");
     assert_eq!(
-        log.index_to(last).await.expect("the index moves"),
+        store.index_access_log(last).await.expect("the index moves"),
         last,
         "every entry is indexed"
     );
@@ -581,40 +594,210 @@ async fn every_entry_is_found_wherever_the_index_cursor_stands() {
         i64::from(SEEDED),
         "one index row per entry"
     );
+    let tokenless: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit.access_log_index \
+          WHERE render_policy_id IS NOT NULL AND coalesce(cardinality(search_tokens), 0) = 0",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the index is read");
+    assert_eq!(
+        tokenless, 0,
+        "every indexed entry carries its search tokens"
+    );
 
-    // The indexing round is held off, as by a crash, while the cursor stands behind.
-    let mut held = pool.acquire().await.expect("a connection");
-    sqlx::query("SELECT pg_advisory_lock(hashtext('audit.access_log_index'), 0)")
-        .execute(&mut *held)
-        .await
-        .expect("the indexing lock is held");
+    // The frontier round stops, as by a crash, while the cursor stands behind.
+    seeded
+        .drain
+        .take()
+        .expect("the drain runs")
+        .shutdown(Duration::from_secs(10))
+        .await;
     for cursor in [last.div_euclid(2), 0] {
-        sqlx::query("DELETE FROM audit.access_log_index WHERE entry_id > $1")
-            .bind(cursor)
-            .execute(&pool)
-            .await
-            .expect("the lost round's rows are gone");
-        sqlx::query("UPDATE audit.access_log_index_state SET last_id = $1")
-            .bind(cursor)
-            .execute(&pool)
-            .await
-            .expect("the cursor stands behind");
+        cursor_at(&pool, cursor).await;
         assert_eq!(
             answers(&seeded).await,
             indexed,
             "the readers answer the same with the cursor at {cursor}"
         );
     }
-    sqlx::query("SELECT pg_advisory_unlock(hashtext('audit.access_log_index'), 0)")
-        .execute(&mut *held)
-        .await
-        .expect("the indexing lock is released");
-    drop(held);
-    assert_eq!(log.index_to(last).await.expect("the index moves"), last);
+    cursor_at(&pool, 0).await;
+    let mut tx = pool.begin().await.expect("begin");
+    for statement in [
+        "ALTER TABLE audit.audit_search_token_generation DISABLE TRIGGER USER",
+        "UPDATE audit.audit_search_token_generation SET generation = generation + 1",
+        "ALTER TABLE audit.audit_search_token_generation ENABLE TRIGGER USER",
+    ] {
+        sqlx::query(statement)
+            .execute(&mut *tx)
+            .await
+            .expect("the generation moves on");
+    }
+    tx.commit().await.expect("commit");
+    assert_eq!(
+        store.index_access_log(last).await.expect("the index moves"),
+        last
+    );
     assert_eq!(
         index_rows(&pool).await,
         rows,
-        "the next round copies the same rows"
+        "the next round renders and copies the same rows"
     );
     assert_eq!(answers(&seeded).await, indexed);
+}
+
+/// Stands the search index's cursor at `cursor`, its rows past it gone, as a
+/// round a crash lost leaves them.
+async fn cursor_at(pool: &sqlx::PgPool, cursor: i64) {
+    sqlx::query("DELETE FROM audit.access_log_index WHERE entry_id > $1")
+        .bind(cursor)
+        .execute(pool)
+        .await
+        .expect("the lost round's rows are gone");
+    sqlx::query("UPDATE audit.access_log_index_state SET last_id = $1")
+        .bind(cursor)
+        .execute(pool)
+        .await
+        .expect("the cursor stands behind");
+}
+
+/// The ITI-81 address search of `address`, counted.
+async fn by_address(store: &ferroehr::system_log::store::AuditStore, address: &str) -> i64 {
+    store
+        .search(&AuditSearchFilter {
+            criteria: vec![AuditCriterion::Address(vec![address.to_owned()])],
+            count: 1,
+            total: true,
+            ..AuditSearchFilter::default()
+        })
+        .await
+        .expect("the ITI-81 search answers")
+        .total
+        .expect("the search counts")
+}
+
+/// A read from `address`, recorded through the sender as a request records
+/// it.
+async fn recorded_from(seeded: &Seeded, n: u32, address: &str) {
+    let mut event = read(n);
+    event.client_ip = Some(address.to_owned());
+    seeded
+        .sender
+        .record(vec![event], None)
+        .await
+        .expect("the read is recorded");
+}
+
+/// A search on a token parameter finds an entry written a moment before it,
+/// though no frontier round indexed it: the search moves the frontier and
+/// the index past it first (#6322).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_token_search_finds_an_entry_written_a_moment_before() {
+    let mut seeded = seed(16).await;
+    let pool = seeded.db.pool();
+    let store = seeded.sender.store().clone();
+    seeded
+        .drain
+        .take()
+        .expect("the drain runs")
+        .shutdown(Duration::from_secs(10))
+        .await;
+    recorded_from(&seeded, 7, "10.77.0.1").await;
+    let written: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
+        .fetch_one(&pool)
+        .await
+        .expect("the newest entry");
+    let cursor: i64 =
+        sqlx::query_scalar("SELECT last_id FROM audit.access_log_index_state WHERE singleton")
+            .fetch_one(&pool)
+            .await
+            .expect("the cursor");
+    assert!(
+        cursor < written,
+        "no round indexed the new entry: {cursor} against {written}"
+    );
+    assert_eq!(
+        by_address(&store, "10.77.0.1").await,
+        1,
+        "the new entry is found"
+    );
+}
+
+/// A token search whose entries an open transaction keeps behind the
+/// frontier is refused within its wait, never left hanging, and answers
+/// exactly once the transaction ends (#6322).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test holds a transaction open on a raw pool connection, outside any request"
+)]
+async fn a_token_search_held_back_by_an_open_transaction_is_refused_in_time() {
+    let seeded = seed(16).await;
+    let pool = seeded.db.pool();
+    let store = seeded.sender.store().clone();
+    let mut conn = pool.acquire().await.expect("a connection");
+    let mut open = conn.begin().await.expect("begin");
+    sqlx::query("SELECT pg_current_xact_id()")
+        .execute(&mut *open)
+        .await
+        .expect("the open transaction takes an xid");
+    recorded_from(&seeded, 9, "10.77.0.2").await;
+    let started = std::time::Instant::now();
+    let refused = store
+        .search(&AuditSearchFilter {
+            criteria: vec![AuditCriterion::Address(vec!["10.77.0.2".to_owned()])],
+            count: 1,
+            total: true,
+            ..AuditSearchFilter::default()
+        })
+        .await;
+    let waited = started.elapsed();
+    assert!(
+        matches!(
+            refused,
+            Err(ferroehr::system_log::AuditError::IndexBehind(_))
+        ),
+        "the search is refused while the index cannot catch up: {refused:?}"
+    );
+    assert!(
+        waited < ferroehr::system_log::store::access_index::CATCH_UP_WAIT + Duration::from_secs(1),
+        "the refusal comes within the wait: {waited:?}"
+    );
+    open.rollback().await.expect("the open transaction ends");
+    assert_eq!(
+        by_address(&store, "10.77.0.2").await,
+        1,
+        "the search then answers exactly"
+    );
+}
+
+/// Token searches that start together run at most one catch-up round
+/// between them: one moves the index past every entry, and each other finds
+/// it there and only reads (#6322).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_token_searches_run_one_catch_up_round() {
+    const SEARCHES: usize = 8;
+    let mut seeded = seed(16).await;
+    let store = seeded.sender.store().clone();
+    seeded
+        .drain
+        .take()
+        .expect("the drain runs")
+        .shutdown(Duration::from_secs(10))
+        .await;
+    recorded_from(&seeded, 11, "10.77.0.3").await;
+    let before = store.catch_up_rounds();
+    let mut searches = tokio::task::JoinSet::new();
+    for _ in 0..SEARCHES {
+        let store = store.clone();
+        searches.spawn(async move { by_address(&store, "10.77.0.3").await });
+    }
+    while let Some(found) = searches.join_next().await {
+        assert_eq!(found.expect("a search"), 1, "each search finds the entry");
+    }
+    assert!(
+        store.catch_up_rounds() - before <= 1,
+        "{} rounds for {SEARCHES} searches",
+        store.catch_up_rounds() - before
+    );
 }

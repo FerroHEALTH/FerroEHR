@@ -1526,8 +1526,12 @@ async fn retention_keeps_a_token_an_access_log_entry_names() {
         .insert(&access, None)
         .await
         .expect("insert the access");
+    store
+        .catch_up()
+        .await
+        .expect("the frontier round renders the entry's tokens into the index (#6322)");
     let shared: i32 = sqlx::query_scalar(
-        "SELECT t.id FROM audit.access_log_entry e, unnest(e.search_tokens) AS u(id) \
+        "SELECT t.id FROM audit.access_log_index e, unnest(e.search_tokens) AS u(id) \
            JOIN audit.audit_search_token t ON t.id = u.id \
           WHERE t.parameter = 'agent.identifier' AND t.code = 'alice'",
     )
