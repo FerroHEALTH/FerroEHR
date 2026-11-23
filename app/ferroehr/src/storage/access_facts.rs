@@ -21,8 +21,8 @@
 )]
 
 use serde_json::Value;
-use sqlx::Row;
 use sqlx::postgres::PgRow;
+use sqlx::{Column as _, Row};
 use uuid::Uuid;
 
 use crate::access_eval::scope::{Item, Object};
@@ -123,6 +123,9 @@ pub fn visible(stored: &crate::storage::version_repo::read::StoredVersion) -> bo
     admits_stored(stored) && (!stored.person_withheld || !delayed)
 }
 
+/// The column `head_episodes!` selects.
+const EPISODES: &str = "access_episodes";
+
 /// The episodes `head_episodes!` selected into `row`, empty for a head placed
 /// in none; `None` when the statement did not select them.
 ///
@@ -131,12 +134,12 @@ pub fn visible(stored: &crate::storage::version_repo::read::StoredVersion) -> bo
 /// [`StorageError::InvalidRows`] for a key that is no 32 octets.
 pub fn episodes(row: &PgRow) -> Result<Option<Vec<EpisodeKey>>, StorageError> {
     // NOTE: our own design (#6416), a read selects the episodes only once a scope names one.
-    let keys = match row.try_get::<Option<Vec<Vec<u8>>>, _>("access_episodes") {
-        Ok(keys) => keys.unwrap_or_default(),
-        Err(sqlx::Error::ColumnNotFound(_)) => return Ok(None),
-        Err(error) => return Err(error.into()),
-    };
-    keys.iter()
+    if !row.columns().iter().any(|c| c.name() == EPISODES) {
+        return Ok(None);
+    }
+    let keys: Option<Vec<Vec<u8>>> = row.try_get(EPISODES)?;
+    keys.unwrap_or_default()
+        .iter()
         .map(|octets| {
             EpisodeKey::from_octets(octets).ok_or_else(|| {
                 StorageError::InvalidRows(
