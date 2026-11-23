@@ -97,13 +97,69 @@ impl IntakeEntry {
         let row = stored_form::parts::index::without_columns(&row, &columns)
             .map_err(AccessLogError::Canonical)?;
         let derived = Derived::of(&cut).map_err(AccessLogError::Canonical)?;
+        let shared = shared.map(|text| (sha256_hex(&text), text));
+        let columns = row_columns(&derived, index.as_ref())?;
+        let digest = stored_form::parts::facts::facts_digest(
+            stored_form::parts::facts::FORM,
+            &row,
+            shared.as_ref().map(|(digest, _)| digest.as_str()),
+            &columns,
+        )
+        .map_err(AccessLogError::Canonical)?;
         Ok(Self {
-            content_digest: sha256_hex(&whole),
+            content_digest: crate::digest::hex(&digest),
             row,
-            shared: shared.map(|text| (sha256_hex(&text), text)),
+            shared,
             derived,
             index,
         })
+    }
+}
+
+/// The columns a reader joins the stored parts of an entry with, as the
+/// database keeps them from `derived` and `index`.
+fn row_columns<'d>(
+    derived: &'d Derived,
+    index: Option<&'d IndexRow>,
+) -> Result<stored_form::parts::assemble::RowColumns<'d>, AccessLogError> {
+    let unreadable =
+        |what: &'static str| AccessLogError::Canonical(serde::ser::Error::custom(what));
+    Ok(stored_form::parts::assemble::RowColumns {
+        record_type: derived
+            .record_type
+            .as_deref()
+            .ok_or_else(|| unreadable("an entry names its class"))?,
+        uid: derived
+            .uid
+            .as_deref()
+            .and_then(|uid| uuid::Uuid::parse_str(uid).ok())
+            .ok_or_else(|| unreadable("an entry's uid is a UUID"))?,
+        time_recorded: derived
+            .time_recorded
+            .as_deref()
+            .and_then(|at| at.parse().ok())
+            .ok_or_else(|| unreadable("an entry's time_recorded is an instant"))?,
+        ehr_id: derived.ehr_id.as_deref().and_then(stored_form::column_uuid),
+        index: stored_form::parts::index::IndexColumns {
+            request_id: index.and_then(|index| index.request_id.as_deref()),
+            resource_id: index.and_then(|index| index.resource_id.as_deref()),
+        },
+    })
+}
+
+#[cfg(test)]
+impl IntakeEntry {
+    /// The canonical form a reader joins back from `entry`'s stored parts
+    /// and columns, stored with `index`.
+    pub(crate) fn read_back(
+        entry: &AccessLogEntry,
+        index: IndexRow,
+    ) -> Result<String, AccessLogError> {
+        let stored = Self::stored(entry, Some(index))?;
+        let columns = row_columns(&stored.derived, stored.index.as_ref())?;
+        let shared = stored.shared.as_ref().map(|(_, text)| text.as_str());
+        stored_form::parts::assemble::whole(&stored.row, shared, &columns)
+            .map_err(AccessLogError::Canonical)
     }
 }
 

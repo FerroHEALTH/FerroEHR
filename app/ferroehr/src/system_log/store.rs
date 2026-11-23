@@ -128,7 +128,7 @@ const INSERT_BATCH: &str = "WITH own_xid AS MATERIALIZED (SELECT pg_catalog.pg_c
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
 #[cfg(feature = "fhir")]
-const RECORD_COLUMNS: [&str; 46] = [
+const RECORD_COLUMNS: [&str; 43] = [
     "chain",
     "chain_seq",
     "recorded_at",
@@ -171,10 +171,7 @@ const RECORD_COLUMNS: [&str; 46] = [
     "entry_type",
     "entry_uid",
     "entry_ehr",
-    "algorithm",
-    "previous_digest",
-    "content_digest",
-    "digest",
+    "stored_form",
 ];
 
 /// The first date a stored record may be deleted on.

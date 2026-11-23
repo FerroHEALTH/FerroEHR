@@ -1,0 +1,295 @@
+{
+  "balp": {
+    "action": "R",
+    "agent": [
+      {
+        "network": {
+          "address": "10.216.24.150",
+          "type": "2"
+        },
+        "requestor": false,
+        "type": {
+          "coding": [
+            {
+              "code": "110152",
+              "display": "Destination Role ID",
+              "system": "http://dicom.nema.org/resources/ontology/DCM"
+            }
+          ]
+        },
+        "who": {
+          "display": "ward-app"
+        }
+      },
+      {
+        "network": {
+          "address": "10.42.23.77",
+          "type": "2"
+        },
+        "requestor": false,
+        "type": {
+          "coding": [
+            {
+              "code": "110153",
+              "display": "Source Role ID",
+              "system": "http://dicom.nema.org/resources/ontology/DCM"
+            }
+          ]
+        },
+        "who": {
+          "display": "cdr.example.org"
+        }
+      },
+      {
+        "extension": [
+          {
+            "url": "https://profiles.ihe.net/ITI/BALP/StructureDefinition/ihe-assuranceLevel",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "code": "high"
+                }
+              ]
+            }
+          },
+          {
+            "url": "https://profiles.ihe.net/ITI/BALP/StructureDefinition/ihe-otherId",
+            "valueIdentifier": {
+              "type": {
+                "coding": [
+                  {
+                    "code": "NPI",
+                    "system": "http://terminology.hl7.org/CodeSystem/v2-0203"
+                  }
+                ]
+              },
+              "value": "NPI-1"
+            }
+          }
+        ],
+        "policy": [
+          "jti-7f3e",
+          "permit-42"
+        ],
+        "purposeOfUse": [
+          {
+            "coding": [
+              {
+                "code": "ETREAT",
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+              }
+            ]
+          },
+          {
+            "coding": [
+              {
+                "code": "TREAT"
+              }
+            ]
+          }
+        ],
+        "requestor": true,
+        "role": [
+          {
+            "coding": [
+              {
+                "code": "clinician"
+              }
+            ]
+          },
+          {
+            "coding": [
+              {
+                "code": "01.015",
+                "system": "urn:oid:2.16.840.1.113883.2.4.15.111"
+              }
+            ]
+          }
+        ],
+        "type": {
+          "coding": [
+            {
+              "code": "IRCP",
+              "display": "information recipient",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType"
+            }
+          ]
+        },
+        "who": {
+          "identifier": {
+            "system": "https://login.example.org",
+            "value": "alice"
+          }
+        }
+      },
+      {
+        "requestor": false,
+        "type": {
+          "coding": [
+            {
+              "code": "110150",
+              "display": "Application",
+              "system": "http://dicom.nema.org/resources/ontology/DCM"
+            }
+          ]
+        },
+        "who": {
+          "identifier": {
+            "value": "ward-app"
+          }
+        }
+      },
+      {
+        "requestor": false,
+        "who": {
+          "identifier": {
+            "value": "Example Hospital"
+          },
+          "type": "Organization"
+        }
+      }
+    ],
+    "entity": [
+      {
+        "name": "composition_get",
+        "role": {
+          "code": "4",
+          "display": "Domain Resource",
+          "system": "http://terminology.hl7.org/CodeSystem/object-role"
+        },
+        "type": {
+          "code": "2",
+          "display": "System Object",
+          "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type"
+        },
+        "what": {
+          "identifier": {
+            "value": "8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::1"
+          }
+        }
+      }
+    ],
+    "meta": {
+      "profile": [
+        "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Read"
+      ]
+    },
+    "outcome": "0",
+    "outcomeDesc": "Operation performed successfully",
+    "purposeOfEvent": [
+      {
+        "coding": [
+          {
+            "code": "ETREAT",
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+          }
+        ]
+      },
+      {
+        "coding": [
+          {
+            "code": "TREAT"
+          }
+        ]
+      }
+    ],
+    "recorded": "2026-11-13T10:15:30.123456Z",
+    "resourceType": "AuditEvent",
+    "source": {
+      "observer": {
+        "display": "cdr.example.org",
+        "identifier": {
+          "value": "cdr.example.org"
+        }
+      },
+      "site": "site-1",
+      "type": [
+        {
+          "code": "4",
+          "display": "Application Server",
+          "system": "http://terminology.hl7.org/CodeSystem/security-source-type"
+        }
+      ]
+    },
+    "subtype": [
+      {
+        "code": "read",
+        "display": "read",
+        "system": "http://hl7.org/fhir/restful-interaction"
+      },
+      {
+        "code": "composition_get",
+        "display": "composition_get",
+        "system": "urn:openehr:its-rest:operation"
+      }
+    ],
+    "type": {
+      "code": "rest",
+      "display": "Restful Operation",
+      "system": "http://terminology.hl7.org/CodeSystem/audit-event-type"
+    }
+  },
+  "dicom": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><AuditMessage><EventIdentification EventActionCode=\"R\" EventDateTime=\"2026-11-13T10:15:30.123456Z\" EventOutcomeIndicator=\"0\"><EventID csd-code=\"110110\" codeSystemName=\"DCM\" originalText=\"composition\"/><EventTypeCode csd-code=\"composition_get\" codeSystemName=\"openEHR-ITS-REST\" originalText=\"composition_get\"/><EventOutcomeDescription>Operation performed successfully</EventOutcomeDescription></EventIdentification><ActiveParticipant UserID=\"NPI-1\" UserIsRequestor=\"true\"><RoleIDCode csd-code=\"clinician\" codeSystemName=\"cdr.example.org\" originalText=\"clinician\"/></ActiveParticipant><ActiveParticipant UserID=\"alice\" UserIsRequestor=\"false\" NetworkAccessPointID=\"10.216.24.150\" NetworkAccessPointTypeCode=\"2\"><RoleIDCode csd-code=\"110152\" codeSystemName=\"DCM\" originalText=\"Destination Role ID\"/></ActiveParticipant><ActiveParticipant UserID=\"cdr.example.org\" UserIsRequestor=\"false\" NetworkAccessPointID=\"10.42.23.77\" NetworkAccessPointTypeCode=\"2\"><RoleIDCode csd-code=\"110153\" codeSystemName=\"DCM\" originalText=\"Source Role ID\"/></ActiveParticipant><AuditSourceIdentification AuditEnterpriseSiteID=\"site-1\" AuditSourceID=\"cdr.example.org\"><AuditSourceTypeCode csd-code=\"4\" originalText=\"Application Server process or thread\"/></AuditSourceIdentification><ParticipantObjectIdentification ParticipantObjectID=\"UNKNOWN\" ParticipantObjectTypeCode=\"1\" ParticipantObjectTypeCodeRole=\"1\" ParticipantObjectDataLifeCycle=\"6\"><ParticipantObjectIDTypeCode csd-code=\"2\" codeSystemName=\"RFC-3881\" originalText=\"Patient Number\"/></ParticipantObjectIdentification><ParticipantObjectIdentification ParticipantObjectID=\"8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::1\" ParticipantObjectTypeCode=\"2\" ParticipantObjectDataLifeCycle=\"6\"><ParticipantObjectIDTypeCode csd-code=\"12\" codeSystemName=\"RFC-3881\" originalText=\"URI\"/></ParticipantObjectIdentification><ParticipantObjectIdentification ParticipantObjectID=\"ehds-accessor\" ParticipantObjectTypeCode=\"4\"><ParticipantObjectIDTypeCode csd-code=\"4\" codeSystemName=\"http://terminology.hl7.org/CodeSystem/audit-entity-type\" originalText=\"Other\"/><ParticipantObjectName>ehds-accessor</ParticipantObjectName><ParticipantObjectDetail type=\"binding\" value=\"Ym91bmQ=\"/><ParticipantObjectDetail type=\"guest\" value=\"dHJ1ZQ==\"/><ParticipantObjectDetail type=\"party\" value=\"ZGVtb2dyYXBoaWN8UEVSU09OfDZmMWMyZDNlLTRiNWEtNGM2ZC04ZTdmLTkwYTFiMmMzZDRlNQ==\"/><ParticipantObjectDetail type=\"group\" value=\"ZGVtb2dyYXBoaWN8R1JPVVB8YzFhOWUwZTQtMGQ4Zi00ZDljLTliNTEtM2Y2YTJmMWI3YzEx\"/><ParticipantObjectDetail type=\"acts-for\" value=\"dXJuOm9pZDoyLjE2LjUyOC4xLjEwMDcuMy4zfEV4YW1wbGUgSG9zcGl0YWw=\"/></ParticipantObjectIdentification></AuditMessage>",
+  "tokens": [
+    [
+      "address",
+      null,
+      "10.216.24.150"
+    ],
+    [
+      "address",
+      null,
+      "10.42.23.77"
+    ],
+    [
+      "agent.identifier",
+      null,
+      "Example Hospital"
+    ],
+    [
+      "agent.identifier",
+      null,
+      "ward-app"
+    ],
+    [
+      "agent.identifier",
+      "https://login.example.org",
+      "alice"
+    ],
+    [
+      "entity-role",
+      "http://terminology.hl7.org/CodeSystem/object-role",
+      "4"
+    ],
+    [
+      "entity-type",
+      "http://terminology.hl7.org/CodeSystem/audit-entity-type",
+      "2"
+    ],
+    [
+      "entity.identifier=resource_id",
+      null,
+      null
+    ],
+    [
+      "source.identifier",
+      null,
+      "cdr.example.org"
+    ],
+    [
+      "subtype",
+      "http://hl7.org/fhir/restful-interaction",
+      "read"
+    ],
+    [
+      "subtype",
+      "urn:openehr:its-rest:operation",
+      "composition_get"
+    ],
+    [
+      "type",
+      "http://terminology.hl7.org/CodeSystem/audit-event-type",
+      "rest"
+    ]
+  ]
+}

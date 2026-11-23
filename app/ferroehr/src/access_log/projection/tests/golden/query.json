@@ -1,0 +1,340 @@
+{
+  "balp": {
+    "action": "E",
+    "agent": [
+      {
+        "network": {
+          "address": "unknown",
+          "type": "1"
+        },
+        "requestor": false,
+        "type": {
+          "coding": [
+            {
+              "code": "110153",
+              "display": "Source Role ID",
+              "system": "http://dicom.nema.org/resources/ontology/DCM"
+            }
+          ]
+        },
+        "who": {
+          "display": "bob"
+        }
+      },
+      {
+        "network": {
+          "address": "10.42.23.77",
+          "type": "2"
+        },
+        "requestor": false,
+        "type": {
+          "coding": [
+            {
+              "code": "110152",
+              "display": "Destination Role ID",
+              "system": "http://dicom.nema.org/resources/ontology/DCM"
+            }
+          ]
+        },
+        "who": {
+          "display": "cdr.example.org"
+        }
+      },
+      {
+        "requestor": true,
+        "type": {
+          "coding": [
+            {
+              "code": "IRCP",
+              "display": "information recipient",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType"
+            }
+          ]
+        },
+        "who": {
+          "identifier": {
+            "system": "https://login.example.org",
+            "value": "bob"
+          }
+        }
+      },
+      {
+        "requestor": false,
+        "who": {
+          "identifier": {
+            "value": "provider-1"
+          },
+          "type": "Organization"
+        }
+      }
+    ],
+    "entity": [
+      {
+        "query": "U0VMRUNUIGMgRlJPTSBFSFIgZSBDT05UQUlOUyBDT01QT1NJVElPTiBj",
+        "role": {
+          "code": "24",
+          "display": "Query",
+          "system": "http://terminology.hl7.org/CodeSystem/object-role"
+        },
+        "type": {
+          "code": "2",
+          "display": "System Object",
+          "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type"
+        }
+      },
+      {
+        "role": {
+          "code": "1",
+          "display": "Patient",
+          "system": "http://terminology.hl7.org/CodeSystem/object-role"
+        },
+        "type": {
+          "code": "1",
+          "display": "Person",
+          "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type"
+        },
+        "what": {
+          "identifier": {
+            "value": "subject-1"
+          }
+        }
+      },
+      {
+        "detail": [
+          {
+            "type": "endpoint",
+            "valueString": "cdr.example.org"
+          },
+          {
+            "type": "patient-lookup",
+            "valueString": "found"
+          }
+        ],
+        "name": "ehr",
+        "type": {
+          "code": "4",
+          "display": "Other",
+          "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type"
+        },
+        "what": {
+          "identifier": {
+            "value": "7d44b88c-4199-4bad-97dc-d78268e01398"
+          }
+        }
+      },
+      {
+        "detail": [
+          {
+            "type": "ehds-unclassified",
+            "valueString": "named-nothing"
+          },
+          {
+            "type": "category-map-digest",
+            "valueString": "sha256:601fc307cd62600ad1e71d13e19c390d7ed763f994ec510374ba3ee74756c409"
+          },
+          {
+            "type": "delivered",
+            "valueString": "4"
+          },
+          {
+            "type": "ehds-retention-period",
+            "valueString": "indefinite"
+          },
+          {
+            "type": "ehds-retention-ground",
+            "valueString": "unclassified"
+          },
+          {
+            "type": "ehds-retention-floor",
+            "valueString": "eu-2025-327-art-9-2"
+          }
+        ],
+        "name": "ehds-categories",
+        "securityLabel": [
+          {
+            "code": "Patient-Summaries",
+            "system": "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs",
+            "version": "1.0.0-ballot"
+          },
+          {
+            "code": "Electronic-Prescriptions",
+            "system": "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs",
+            "version": "1.0.0-ballot"
+          },
+          {
+            "code": "Electronic-Dispensations",
+            "system": "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs",
+            "version": "1.0.0-ballot"
+          },
+          {
+            "code": "Medical-Imaging",
+            "system": "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs",
+            "version": "1.0.0-ballot"
+          },
+          {
+            "code": "Laboratory-Reports",
+            "system": "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs",
+            "version": "1.0.0-ballot"
+          },
+          {
+            "code": "Discharge-Reports",
+            "system": "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs",
+            "version": "1.0.0-ballot"
+          }
+        ],
+        "type": {
+          "code": "4",
+          "display": "Other",
+          "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type"
+        }
+      },
+      {
+        "detail": [
+          {
+            "type": "binding",
+            "valueString": "system"
+          },
+          {
+            "type": "acts-for",
+            "valueString": "urn:oid:2.999.7|provider-1"
+          },
+          {
+            "type": "facility",
+            "valueString": "urn:oid:2.999.8|ward-7"
+          }
+        ],
+        "name": "ehds-accessor",
+        "type": {
+          "code": "4",
+          "display": "Other",
+          "system": "http://terminology.hl7.org/CodeSystem/audit-entity-type"
+        }
+      }
+    ],
+    "meta": {
+      "profile": [
+        "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientQuery"
+      ]
+    },
+    "outcome": "0",
+    "outcomeDesc": "Operation performed successfully",
+    "recorded": "2026-11-13T10:15:30.123456Z",
+    "resourceType": "AuditEvent",
+    "source": {
+      "observer": {
+        "display": "cdr.example.org",
+        "identifier": {
+          "value": "cdr.example.org"
+        }
+      },
+      "site": "site-1",
+      "type": [
+        {
+          "code": "4",
+          "display": "Application Server",
+          "system": "http://terminology.hl7.org/CodeSystem/security-source-type"
+        }
+      ]
+    },
+    "subtype": [
+      {
+        "code": "search",
+        "display": "search",
+        "system": "http://hl7.org/fhir/restful-interaction"
+      },
+      {
+        "code": "query_execute_ad_hoc",
+        "display": "query_execute_ad_hoc",
+        "system": "urn:openehr:its-rest:operation"
+      }
+    ],
+    "type": {
+      "code": "rest",
+      "display": "Restful Operation",
+      "system": "http://terminology.hl7.org/CodeSystem/audit-event-type"
+    }
+  },
+  "dicom": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><AuditMessage><EventIdentification EventActionCode=\"E\" EventDateTime=\"2026-11-13T10:15:30.123456Z\" EventOutcomeIndicator=\"0\"><EventID csd-code=\"110112\" codeSystemName=\"DCM\" originalText=\"Query\"/><EventTypeCode csd-code=\"query_execute_ad_hoc\" codeSystemName=\"openEHR-ITS-REST\" originalText=\"query_execute_ad_hoc\"/><EventOutcomeDescription>Operation performed successfully</EventOutcomeDescription></EventIdentification><ActiveParticipant UserID=\"bob\" UserIsRequestor=\"true\" NetworkAccessPointID=\"UNKNOWN\" NetworkAccessPointTypeCode=\"2\"><RoleIDCode csd-code=\"110153\" codeSystemName=\"DCM\" originalText=\"Source Role ID\"/></ActiveParticipant><ActiveParticipant UserID=\"cdr.example.org\" UserIsRequestor=\"false\" NetworkAccessPointID=\"10.42.23.77\" NetworkAccessPointTypeCode=\"2\"><RoleIDCode csd-code=\"110152\" codeSystemName=\"DCM\" originalText=\"Destination Role ID\"/></ActiveParticipant><AuditSourceIdentification AuditEnterpriseSiteID=\"site-1\" AuditSourceID=\"cdr.example.org\"><AuditSourceTypeCode csd-code=\"4\" originalText=\"Application Server process or thread\"/></AuditSourceIdentification><ParticipantObjectIdentification ParticipantObjectID=\"SELECT c FROM EHR e CONTAINS COMPOSITION c\" ParticipantObjectTypeCode=\"2\" ParticipantObjectTypeCodeRole=\"24\" ParticipantObjectDataLifeCycle=\"6\"><ParticipantObjectIDTypeCode csd-code=\"10\" codeSystemName=\"RFC-3881\" originalText=\"Search Criteria\"/></ParticipantObjectIdentification><ParticipantObjectIdentification ParticipantObjectID=\"ehds-accessor\" ParticipantObjectTypeCode=\"4\"><ParticipantObjectIDTypeCode csd-code=\"4\" codeSystemName=\"http://terminology.hl7.org/CodeSystem/audit-entity-type\" originalText=\"Other\"/><ParticipantObjectName>ehds-accessor</ParticipantObjectName><ParticipantObjectDetail type=\"binding\" value=\"c3lzdGVt\"/><ParticipantObjectDetail type=\"acts-for\" value=\"dXJuOm9pZDoyLjk5OS43fHByb3ZpZGVyLTE=\"/><ParticipantObjectDetail type=\"facility\" value=\"dXJuOm9pZDoyLjk5OS44fHdhcmQtNw==\"/></ParticipantObjectIdentification></AuditMessage>",
+  "tokens": [
+    [
+      "address",
+      null,
+      "10.42.23.77"
+    ],
+    [
+      "address",
+      null,
+      "unknown"
+    ],
+    [
+      "agent.identifier",
+      null,
+      "provider-1"
+    ],
+    [
+      "agent.identifier",
+      "https://login.example.org",
+      "bob"
+    ],
+    [
+      "entity-role",
+      "http://terminology.hl7.org/CodeSystem/object-role",
+      "1"
+    ],
+    [
+      "entity-role",
+      "http://terminology.hl7.org/CodeSystem/object-role",
+      "24"
+    ],
+    [
+      "entity-type",
+      "http://terminology.hl7.org/CodeSystem/audit-entity-type",
+      "1"
+    ],
+    [
+      "entity-type",
+      "http://terminology.hl7.org/CodeSystem/audit-entity-type",
+      "2"
+    ],
+    [
+      "entity-type",
+      "http://terminology.hl7.org/CodeSystem/audit-entity-type",
+      "4"
+    ],
+    [
+      "entity.identifier",
+      null,
+      "7d44b88c-4199-4bad-97dc-d78268e01398"
+    ],
+    [
+      "entity.identifier",
+      null,
+      "subject-1"
+    ],
+    [
+      "patient.identifier",
+      null,
+      "subject-1"
+    ],
+    [
+      "source.identifier",
+      null,
+      "cdr.example.org"
+    ],
+    [
+      "subtype",
+      "http://hl7.org/fhir/restful-interaction",
+      "search"
+    ],
+    [
+      "subtype",
+      "urn:openehr:its-rest:operation",
+      "query_execute_ad_hoc"
+    ],
+    [
+      "type",
+      "http://terminology.hl7.org/CodeSystem/audit-event-type",
+      "rest"
+    ]
+  ]
+}
