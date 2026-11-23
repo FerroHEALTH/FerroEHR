@@ -18,8 +18,11 @@
 //! OpenTelemetry layers a server runs with are in the figures, and the
 //! counting allocator of the allocation budget is installed in the test
 //! binary. Each figure is the lower-quartile request of [`REQUESTS`], as the
-//! allocation budget judges its figures (#6291). Each path's total is held to
-//! the ceiling [`CPU_BUDGETS`] names in an optimised build only, the `budget`
+//! allocation budget judges its figures (#6291). Runners differ in their CPU,
+//! so each path's total is judged as a share of a [`reference`] work timed on
+//! the same thread, against the ceiling [`CPU_BUDGETS`] names; a reference
+//! that moved past [`REFERENCE_BAND`] between the start and the end fails the
+//! run as too noisy to judge. Only an optimised build is judged, the `budget`
 //! profile CI's `cpu-budget` job runs: a debug build distorts the share serde
 //! and the encoders take, so there the test reports its figures and judges
 //! none.
@@ -41,40 +44,45 @@ use tracing_subscriber::registry::LookupSpan;
 use super::drained;
 use super::paths::{Path, REQUESTS, World, exchange, order};
 
-/// The most CPU microseconds each path's lower-quartile request may take.
+/// The most CPU each path's lower-quartile request may take, in thousandths
+/// of the [`reference`] round trip timed on the same thread.
 const CPU_BUDGETS: [(Path, u64); 31] = [
-    (Path::CommitJson, 100_000),
-    (Path::CommitXml, 100_000),
-    (Path::CommitFlat, 100_000),
-    (Path::ReadJson, 100_000),
-    (Path::ReadXml, 100_000),
-    (Path::ReadFlat, 100_000),
-    (Path::EhrRead, 100_000),
-    (Path::AqlSingle, 100_000),
-    (Path::AqlPopulation, 100_000),
-    (Path::Iti81, 100_000),
-    (Path::PartyRead, 100_000),
-    (Path::CommitContribution, 100_000),
-    (Path::ReadAtTime, 100_000),
-    (Path::CommitStatus, 100_000),
-    (Path::ReadStatus, 100_000),
-    (Path::CommitParty, 100_000),
-    (Path::AqlMatches, 100_000),
-    (Path::AqlParty, 100_000),
-    (Path::CommitPartyScored, 100_000),
-    (Path::ReadVersion, 100_000),
-    (Path::CommitUpdate, 100_000),
-    (Path::CommitDelete, 100_000),
-    (Path::DirectoryCreate, 100_000),
-    (Path::DirectoryUpdate, 100_000),
-    (Path::DirectoryDelete, 100_000),
-    (Path::PartyUpdate, 100_000),
-    (Path::PartyDelete, 100_000),
-    (Path::CommitOrganisation, 100_000),
-    (Path::CommitGroup, 100_000),
-    (Path::CommitRole, 100_000),
-    (Path::CommitAgent, 100_000),
+    (Path::CommitJson, u64::MAX),
+    (Path::CommitXml, u64::MAX),
+    (Path::CommitFlat, u64::MAX),
+    (Path::ReadJson, u64::MAX),
+    (Path::ReadXml, u64::MAX),
+    (Path::ReadFlat, u64::MAX),
+    (Path::EhrRead, u64::MAX),
+    (Path::AqlSingle, u64::MAX),
+    (Path::AqlPopulation, u64::MAX),
+    (Path::Iti81, u64::MAX),
+    (Path::PartyRead, u64::MAX),
+    (Path::CommitContribution, u64::MAX),
+    (Path::ReadAtTime, u64::MAX),
+    (Path::CommitStatus, u64::MAX),
+    (Path::ReadStatus, u64::MAX),
+    (Path::CommitParty, u64::MAX),
+    (Path::AqlMatches, u64::MAX),
+    (Path::AqlParty, u64::MAX),
+    (Path::CommitPartyScored, u64::MAX),
+    (Path::ReadVersion, u64::MAX),
+    (Path::CommitUpdate, u64::MAX),
+    (Path::CommitDelete, u64::MAX),
+    (Path::DirectoryCreate, u64::MAX),
+    (Path::DirectoryUpdate, u64::MAX),
+    (Path::DirectoryDelete, u64::MAX),
+    (Path::PartyUpdate, u64::MAX),
+    (Path::PartyDelete, u64::MAX),
+    (Path::CommitOrganisation, u64::MAX),
+    (Path::CommitGroup, u64::MAX),
+    (Path::CommitRole, u64::MAX),
+    (Path::CommitAgent, u64::MAX),
 ];
+
+/// How far apart, in thousandths, the [`reference`] may read at the start and
+/// at the end of the run before the runner counts as too noisy to judge.
+const REFERENCE_BAND: u64 = 1250;
 
 /// Whether the ceilings are judged: in an optimised build only.
 const JUDGED: bool = !cfg!(debug_assertions);
@@ -305,6 +313,30 @@ fn clock_read() -> u64 {
     runs[runs.len().div_euclid(2)]
 }
 
+/// The CPU nanoseconds of the reference work: one serde round trip of the IPS
+/// composition's canonical JSON (128 KB), the fastest of thirty.
+///
+/// Runners differ in their CPU, so a path is judged by its CPU as a share of
+/// this work on the same thread, which is CPU-bound and allocates as the
+/// paths do.
+fn reference() -> u64 {
+    let text = crate::common::ips_canonical_composition().to_string();
+    (0..30)
+        .map(|_| {
+            let started = thread_cpu();
+            let value: serde_json::Value = serde_json::from_str(&text).unwrap();
+            std::hint::black_box(value.to_string());
+            thread_cpu().saturating_sub(started)
+        })
+        .min()
+        .unwrap()
+}
+
+/// `nanos` in thousandths of `reference`.
+fn share(nanos: u64, reference: u64) -> u64 {
+    (nanos * 1000).div_euclid(reference.max(1))
+}
+
 /// Sends the [`REQUESTS`] measured requests of `path`, after its warm ones.
 async fn measure(
     app: &axum::Router,
@@ -351,25 +383,41 @@ async fn every_hot_path_stays_within_its_cpu_budget() {
     let (_db, pool, svc, app) = Box::pin(super::served()).await;
     let world = World::build(&app).await;
     let read = clock_read();
-    let mut report = String::from("path | total µs | ");
+    let before = reference();
+    let mut measured = Vec::new();
+    for path in order() {
+        world.prepare(&app, &svc, path).await;
+        let each = Box::pin(measure(&app, &pool, &world, path)).await;
+        measured.push((path, each));
+    }
+    let after = reference();
+    let reference = before.midpoint(after);
+    let drift = share(before.max(after), before.min(after));
+    let mut report = String::from("path | share ‰ | total µs | ");
     for stage in Stage::ALL {
         write!(report, "{} | ", stage.name()).unwrap();
     }
     report.push_str("rest | clock reads\n");
     let mut over = Vec::new();
-    for path in order() {
-        world.prepare(&app, &svc, path).await;
-        let each = Box::pin(measure(&app, &pool, &world, path)).await;
-        let total = micros(each.iter().map(Charged::total));
+    for (path, each) in &measured {
+        let path = *path;
+        let total = low(each.iter().map(Charged::total));
+        let ratio = share(total, reference);
         let ceiling = CPU_BUDGETS
             .iter()
             .find(|(of, _)| *of == path)
             .map(|(_, ceiling)| *ceiling)
             .expect("every path has its CPU budget");
-        if JUDGED && total > ceiling {
-            over.push(format!("{}: {total} µs (<= {ceiling})", path.name()));
+        if JUDGED && ratio > ceiling {
+            over.push(format!("{}: {ratio} ‰ (<= {ceiling})", path.name()));
         }
-        write!(report, "{} | {total} (<= {ceiling}) | ", path.name()).unwrap();
+        write!(
+            report,
+            "{} | {ratio} (<= {ceiling}) | {} | ",
+            path.name(),
+            total.div_euclid(1000)
+        )
+        .unwrap();
         for at in 0..Stage::ALL.len() {
             write!(report, "{} | ", micros(each.iter().map(|c| c.stage(at)))).unwrap();
         }
@@ -388,7 +436,15 @@ async fn every_hot_path_stays_within_its_cpu_budget() {
     };
     eprintln!(
         "thread CPU per request by stage, the lower-quartile request of {REQUESTS} ({judged}); \
-         one clock read costs {read} ns\n{report}"
+         one clock read costs {read} ns; the reference took {} µs before and {} µs after \
+         ({drift} ‰)\n{report}",
+        before.div_euclid(1000),
+        after.div_euclid(1000),
+    );
+    assert!(
+        !JUDGED || drift <= REFERENCE_BAND,
+        "the runner was too noisy to judge: the reference took {before} ns before the paths and \
+         {after} ns after, {drift} ‰ apart against a band of {REFERENCE_BAND} ‰\n{report}"
     );
     assert!(
         over.is_empty(),
