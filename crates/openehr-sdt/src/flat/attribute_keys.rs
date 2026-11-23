@@ -2,13 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The FLAT key an RM attribute of a structural class is written under when
-//! the Web Template carries no node for it.
-//!
-//! The rows come from the per-class tables of ITS-REST
-//! `simplified_formats/master05-rm_mapping.adoc` (Flat Path against RM Path),
-//! plus the two keys the codecs write that no table lists, each marked with
-//! its [`KeySource`]. A consumer that writes or reads one of these attributes
-//! asks [`attribute_key`] instead of keeping its own copy of the table.
+//! the Web Template has no node for it, from the ITS-REST
+//! `simplified_formats/master05-rm_mapping.adoc` tables plus two codec keys
+//! ([`KeySource`]).
 
 use KeyForm::{IndexedStep, Step, Suffix};
 use KeySource::{Example, OwnDesign, Table};
@@ -67,12 +63,8 @@ const fn row(
     }
 }
 
-/// Every RM attribute of a structural class the codecs write under a key of
-/// its own.
-///
-/// `master05-rm_mapping.adoc` writes `history.origin` for `OBSERVATION.data`'s
-/// `origin` and `uid.value` for `LOCATABLE.uid`'s value; the rows spell the RM
-/// attribute names. `ENTRY.provider` as `_provider` is the codecs' own key.
+/// Every RM attribute of a structural class written under a key of its own;
+/// `ENTRY.provider` as `_provider` is the codecs' own key.
 pub const ATTRIBUTE_KEYS: &[AttributeKey] = &[
     row("LOCATABLE", "links", "_link", IndexedStep, Table),
     row("LOCATABLE", "feeder_audit", "_feeder_audit", Step, Table),
@@ -197,11 +189,8 @@ pub const ATTRIBUTE_KEYS: &[AttributeKey] = &[
     ),
 ];
 
-/// Returns the FLAT key the attribute at `rm_path` of an `rm_class` instance
-/// is written under, `None` when no row names it.
-///
-/// A row of an ancestor class applies to its subtypes (RM class conformance,
-/// through the generated model), so `OBSERVATION` reads the `ENTRY` rows.
+/// The FLAT key of the attribute at `rm_path` of an `rm_class` instance, an
+/// ancestor's row applying; `None` when no row names it.
 #[must_use]
 pub fn attribute_key(rm_class: &str, rm_path: &str) -> Option<&'static AttributeKey> {
     ATTRIBUTE_KEYS

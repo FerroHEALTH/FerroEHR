@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The `ctx/` defaults a COMPOSITION build applies (ITS-REST
-//! `simplified_formats/master06-context_information.adoc`): the composition
-//! language, territory, composer and EVENT_CONTEXT, the root links, and the
-//! per-entry defaults the build's completion walk applies node by node.
+//! `simplified_formats/master06-context_information.adoc`).
 
 use openehr_rm::v1_2::access;
 use openehr_rm::v1_2::access::{RmObject, RmRef};
@@ -34,13 +32,8 @@ pub(crate) fn apply_composition_ctx(
     if let Some(composer) = &defaults.composer {
         comp.or_put("composer", || Ok(o(composer.clone_box())))?;
     }
-    // An EVENT_CONTEXT is built only when the client expressed event-context
-    // content (explicit ctx/ keys per master06, or archetyped other_context
-    // tree data) — never fabricated from the category alone. NOTE: no openEHR
-    // spec mandates synthesizing a context; the master06 time/setting
-    // defaults apply when a context is being expressed, and round-trip
-    // stability requires not inventing one (RM ehr master05 §"Persistent
-    // Compositions may optionally have an Event context").
+    // An EVENT_CONTEXT is built only from expressed context content (RM ehr
+    // master05 §"Persistent Compositions may optionally have an Event context").
     if !explicit_event_context && !comp.is_set("context") {
         return Ok(());
     }
@@ -112,9 +105,8 @@ pub(crate) fn apply_node_defaults(
 /// The defaults every ENTRY subtype takes: language, encoding, provider and
 /// workflow id.
 ///
-/// NOTE: master06 §Participation also names `ENTRY.other_participations`, but
-/// master05's explicit `_other_participation:i` path form wins, so ctx lands
-/// here only.
+/// NOTE: master05's `_other_participation:i` path form governs
+/// `ENTRY.other_participations`.
 fn apply_common_entry_defaults(
     obj: &mut dyn RmObject,
     rm_type: &str,
@@ -140,13 +132,9 @@ fn apply_common_entry_defaults(
     Ok(())
 }
 
-/// The OBSERVATION defaults: the HISTORY origin, and each EVENT's time, which
-/// defaults to that origin (master06 §time).
-///
-/// An origin the input does not set is the `ctx/history_origin` default, else
-/// the time of the earliest event that states one ("will be set to the time of
-/// the earliest event if not explicitly set", master05 §OBSERVATION
-/// `/history_origin`), else the composition's context time.
+/// The OBSERVATION defaults: the HISTORY origin (`ctx/history_origin`, else
+/// the earliest event time, master05 §OBSERVATION, else the context time),
+/// and each EVENT's time, the origin (master06 §time).
 fn apply_observation_defaults(
     obj: &mut dyn RmObject,
     defaults: &ctx::CtxDefaults,
@@ -179,11 +167,8 @@ fn apply_observation_defaults(
     Ok(())
 }
 
-/// The earliest time an EVENT of `history` states, as written; `None` when no
-/// event states a time this reader can order.
-///
-/// Times are compared as instants: each is read as an ISO 8601 extended date
-/// time with its offset, and one that does not read leaves the comparison.
+/// The earliest event time of `history` as written, compared as instants;
+/// `None` when none reads.
 fn earliest_event_time(history: &dyn RmObject) -> Option<String> {
     history
         .items("events")?
@@ -249,9 +234,7 @@ mod tests {
         typed::str_at(ev, &["time", "value"]).map(str::to_owned)
     }
 
-    /// master05 §OBSERVATION `/history_origin`: an origin the input does not
-    /// set is "the time of the earliest event", compared as instants, not as
-    /// text.
+    /// The default origin is the earliest event, compared as instants.
     #[test]
     fn an_unset_history_origin_is_the_earliest_event_time() {
         let mut obs = observation(vec![
