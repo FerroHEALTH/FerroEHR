@@ -9,13 +9,6 @@
 //! (`tools/openehr-codegen/draft/bmm/openehr_access_log_0.1.0.bmm.json`). The
 //! draft is FerroEHR's change proposal and no openEHR release, so these checks
 //! are our own design over our own model (#5124).
-//!
-//! The six terminology invariants (`Action_valid`, `Kind_valid` of `ACCESSOR`
-//! and of `ACCESS_AUTHORISATION`, `Binding_valid`, `Result_valid`, and
-//! `Path_valid` of `ACCESS_CARE_GROUND`) ask for a term of a group of
-//! the draft `openehr_access` terminology (`Terminology_id_access`): a coded
-//! value holds when [`crate::draft::access_control::terminology`] reads its
-//! `defining_code` as a term of the invariant's group.
 
 use crate::draft::access_control::terminology::Term;
 use crate::draft::access_control::terminology::care::CarePath;

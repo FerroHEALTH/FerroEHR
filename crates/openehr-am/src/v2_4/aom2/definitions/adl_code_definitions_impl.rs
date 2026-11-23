@@ -116,11 +116,6 @@ impl AdlCodeDefinitionsData {
     /// `codes_conformant` body (`master02-model_overview.adoc` §Utility
     /// Algorithms); the value space is `Code_regex_pattern` — dot-separated
     /// numeric segments — behind one of the declared leaders.
-    ///
-    /// NOTE: `Code_regex_pattern` spells each segment `(0|[1-9][0-9]*)`, which
-    /// rejects the zero-padded at-codes the same class page's
-    /// `Root_code_regex_pattern` (`^(id1|at0000)(\.1)*$`) requires, so segments
-    /// are read as `[0-9]+` here.
     #[must_use]
     pub fn is_valid_code(a_code: &str) -> bool {
         let Some(numeric) = Self::numeric_part(a_code) else {

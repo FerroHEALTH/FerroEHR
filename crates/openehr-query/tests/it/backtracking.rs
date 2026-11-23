@@ -7,13 +7,6 @@
     reason = "integration-test assertions outside #[test] fns, which the clippy.toml allow-*-in-tests scoping does not reach"
 )]
 //! Parse time stays near-linear on invalid input.
-//!
-//! The parser reads attacker-typed query text, so a refusal must cost about
-//! what the input length costs. The two `objectPath`-leading `nodePredicate`
-//! alternatives (`AqlParser.g4` `nodePredicate`) share that prefix, and an
-//! `objectPath`'s `pathPart` may carry another `pathPredicate` — so retrying
-//! the alternatives instead of factoring the prefix doubles the work at every
-//! bracket nesting level.
 
 use openehr_query::parser::parse_str;
 

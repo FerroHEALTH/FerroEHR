@@ -4,14 +4,6 @@
 
 //! Reflective access to typed RM by attribute name (#6002).
 //!
-//! The Simplified Formats place and read values generically, by RM attribute
-//! name, over every class a template reaches. [`RmObject`] is that view of an
-//! RM value, implemented by every RM and BASE struct of the release model
-//! (`access/generated.rs`, emitted by `openehr-codegen -- emit-validate`) and
-//! by [`Partial`], the object a build fills before its mandatory attributes are
-//! all written. [`construct`] starts one, [`finish`] turns a tree of them into
-//! the real struct and refuses the first mandatory attribute still unset.
-//!
 //! The real structs are the RM model unchanged: a [`Partial`] holds one slot
 //! per attribute in BMM declaration order, and its generated conversion moves
 //! each slot into the struct's field. No openEHR specification governs this

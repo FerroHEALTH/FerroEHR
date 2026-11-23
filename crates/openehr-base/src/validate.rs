@@ -4,11 +4,6 @@
 
 //! RM/BASE class-invariant contract (hand-written spec behaviour).
 //!
-//! Hand-written; preserved across `openehr-codegen` regeneration (it is not a
-//! `// @generated` file, so `write_crate` keeps it and `lib.rs` auto-declares
-//! `pub mod validate;`). Concrete invariant bodies live in sibling `*_impl.rs`
-//! files next to each generated type and `impl Validate for <Type>`.
-//!
 //! The invariant SET is the specification's own: every check corresponds to a
 //! named invariant in an RM/BASE class page's §Invariants section
 //! (`docs/specs/openehr/{RM,BASE}/docs/UML/classes/`), and each impl cites the
@@ -20,9 +15,6 @@
 
 /// An RM class-invariant violation: a human-readable message plus the RM
 /// sub-path (relative to the value being checked) it applies to.
-///
-/// An empty path means the value itself; the composition validator prefixes
-/// the absolute RM path.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InvariantViolation {
     /// The RM sub-path the violation applies to, relative to the value being

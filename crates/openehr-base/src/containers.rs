@@ -5,10 +5,6 @@
 //! The optional-container convention shared by every crate that builds openEHR
 //! model objects.
 //!
-//! Hand-written; preserved across `openehr-codegen` regeneration (it carries no
-//! generated-file marker, so `write_crate` keeps it and `lib.rs` auto-declares
-//! `pub mod containers;`).
-//!
 //! A model attribute whose declared existence is `0..1` and whose type is a
 //! container emits as `Option<Vec<T>>`, because absence and present-but-
 //! emptiness are two distinct states the models rely on: the
@@ -16,12 +12,6 @@
 //! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.locatable.adoc`
 //! §Invariants, `Links_valid`) has nothing to judge unless both are
 //! representable.
-//!
-//! That leaves exactly one decision for every builder that produces such an
-//! attribute by COLLECTING parsed or converted members: which of the two states
-//! an empty collection means. This module is the single owner of that decision
-//! ([`present`]) so it is made once, with its reasoning, rather than re-decided
-//! per crate.
 
 /// Wrap a collected member list in the optional-container shape, mapping an
 /// empty list to `None`.
@@ -41,13 +31,6 @@
 ///   that is written only when it carries content
 ///   (`docs/specs/openehr/AM/docs/ADL2/master04-syntax.adoc` §Structure,
 ///   `docs/specs/openehr/LANG/docs/ODIN/master04-syntax.adoc` §Objects).
-///
-/// So `Some(vec![])` would assert a state no source syntax produces. The one
-/// place present-but-empty legitimately arises is a JSON reader that saw a
-/// literal `[]`, and that reader constructs the `Option` directly
-/// (`openehr_its::json_codec::runtime::optional_container_field`) rather than
-/// going through this function — which is exactly why the two paths are
-/// separate.
 #[must_use]
 pub fn present<T>(members: Vec<T>) -> Option<Vec<T>> {
     (!members.is_empty()).then_some(members)
@@ -80,22 +63,6 @@ mod tests {
 /// lower bound of 1 (`CLUSTER.items: List<ITEM> {1..*}`,
 /// `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.cluster.adoc`
 /// §Attributes).
-///
-/// A `1..*` bound is a *structural* statement about the model, so it is carried
-/// by the type rather than re-checked at every boundary: an empty list is
-/// unrepresentable, which is what makes the corresponding validation rule
-/// unnecessary rather than merely reliable. The wire is unaffected — a
-/// conformant instance always carries at least one member — but a
-/// NON-conformant one now fails at the single door into the type
-/// ([`NonEmptyVec::new`]), which the canonical-JSON and canonical-XML readers
-/// both go through.
-///
-/// Reads behave exactly like a slice ([`core::ops::Deref`]/[`core::ops::DerefMut`]
-/// to `[T]`, plus
-/// [`IntoIterator`] in all three forms), so `iter()`, `len()`, `first()`,
-/// indexing and `for` loops need no adaptation. Only CONSTRUCTION is
-/// restricted, and only length-preserving or length-GROWING mutation is
-/// offered ([`NonEmptyVec::push`]) — nothing in the API can empty it.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NonEmptyVec<T>(Vec<T>);
 

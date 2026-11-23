@@ -12,10 +12,6 @@
 //! AST, never on the text: every `$name` becomes a typed literal the printer
 //! escapes, so no value is ever spliced into AQL source.
 //!
-//! A parameter that cannot be bound is reported by NAME and by the position it
-//! stands in, never by its value: a value may be a patient identifier, and the
-//! error travels into logs and HTTP responses.
-//!
 //! # Examples
 //!
 //! ```
@@ -66,9 +62,6 @@ enum Supplied {
 
 impl Parameters {
     /// Adds `value` under `name`, with or without its leading `$`.
-    ///
-    /// A name supplied twice is kept as a [`FaultKind::Duplicate`], so the
-    /// conflict is reported at [`bind`] rather than one value silently winning.
     pub fn insert(&mut self, name: &str, value: Primitive) {
         self.supply(name, Supplied::Value(value));
     }
@@ -164,8 +157,6 @@ pub enum FaultKind {
 }
 
 /// One parameter that was not bound: its name, without the `$`, and why.
-///
-/// It carries no value by construction.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Fault {
     /// The parameter name, without the `$`.
@@ -204,14 +195,6 @@ pub struct BindError {
 }
 
 /// Replaces every `$name` in `query` with the literal `parameters` supplies.
-///
-/// Every parameter position the grammar admits is bound: comparison operands,
-/// function arguments, `MATCHES` lists, `LIKE` patterns, and the standard,
-/// archetype and node predicates of paths and the `FROM` clause. An archetype
-/// or node predicate takes the value only when it is exactly one archetype
-/// HRID or node code token, so the printer emits it verbatim and it re-parses
-/// as itself. The binding is all or nothing: on any fault `query` is left as
-/// it was.
 ///
 /// # Errors
 /// [`BindError`] naming every parameter that is used without a value
