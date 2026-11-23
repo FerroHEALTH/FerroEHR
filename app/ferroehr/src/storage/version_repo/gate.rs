@@ -25,8 +25,8 @@ use uuid::Uuid;
 use crate::ids::{EhrId, VoId};
 use crate::storage::ehr_repo::Restriction;
 use crate::storage::error::StorageError;
-use crate::storage::version_repo::placement::{Placement, TipRow};
 use crate::storage::version_repo::content::ServedContent;
+use crate::storage::version_repo::placement::{Placement, TipRow};
 
 /// What a write reads beside each target's tip.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

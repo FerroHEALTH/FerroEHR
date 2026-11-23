@@ -143,6 +143,29 @@ impl FerroEhrService {
             .map_err(|failure| *failure.error)
     }
 
+    /// Whether a query of `domain` reads the policy revisions through the
+    /// clinical door.
+    async fn query_door(&self, domain: QueryDomain) -> Result<bool, Failure> {
+        // NOTE: our own design (#6320), a demographic query confirms the policy copies through
+        // the clinical door where the two domains share a database.
+        match domain {
+            QueryDomain::Clinical => Ok(false),
+            QueryDomain::Demographic => self
+                .clinical_door_open()
+                .await
+                .map_err(|error| Failure::analysis(error.into())),
+        }
+    }
+
+    /// The pool a query of `domain` runs on: a demographic query runs the
+    /// same SQL on the party pool, whose `search_path` names the `party` schema.
+    fn query_pool(&self, domain: QueryDomain) -> &sqlx::PgPool {
+        match domain {
+            QueryDomain::Clinical => &self.pool,
+            QueryDomain::Demographic => &self.demographic_pool,
+        }
+    }
+
     /// Execute a planned single-domain query and assemble its `RESULT_SET`,
     /// every failure carrying its `aql_queries_total{outcome}` label.
     async fn execute_single(
@@ -182,15 +205,7 @@ impl FerroEhrService {
         let (own_records, caseload) = Box::pin(self.own_and_caseload(ir.domain, request))
             .await
             .map_err(Failure::analysis)?;
-        // NOTE: our own design (#6320), a demographic query's served-versions read confirms the
-        // policy copies through the clinical door where the two domains share a database.
-        let door = match ir.domain {
-            QueryDomain::Clinical => false,
-            QueryDomain::Demographic => self
-                .clinical_door_open()
-                .await
-                .map_err(|error| Failure::analysis(error.into()))?,
-        };
+        let door = self.query_door(ir.domain).await?;
         let exec_start = Instant::now();
         let mut stale_since = None;
         let result = loop {
@@ -212,16 +227,10 @@ impl FerroEhrService {
             };
             // `[record.query] timeout` bounds the DB execution so an over-long query is
             // `408` rather than hanging to the global request timeout.
-            // The demographic domain runs the same SQL on the party pool, whose
-            // `search_path` names the `party` schema.
-            let pool = match ir.domain {
-                QueryDomain::Clinical => &self.pool,
-                QueryDomain::Demographic => &self.demographic_pool,
-            };
             let run = crate::policy_register::observed::through_clinical_door(
                 door,
                 aql::exec::execute(
-                    pool,
+                    self.query_pool(ir.domain),
                     ir,
                     plan.shapes.as_ref(),
                     params,

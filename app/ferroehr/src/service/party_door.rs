@@ -70,10 +70,9 @@ impl FerroEhrService {
         // NOTE: our own design (#6027), a request waiting on another's first read keeps no
         // connection meanwhile.
         crate::db::acquire::awaiting(self.clinical_door.get_or_try_init(|| async {
-            let (party, party_db, door): (String, String, bool) =
-                sqlx::query_as(CLINICAL_DOOR_SQL)
-                    .fetch_one(&mut *acquire(&self.demographic_pool).await?)
-                    .await?;
+            let (party, party_db, door): (String, String, bool) = sqlx::query_as(CLINICAL_DOOR_SQL)
+                .fetch_one(&mut *acquire(&self.demographic_pool).await?)
+                .await?;
             let (clinical, clinical_db, _): (String, String, bool) =
                 sqlx::query_as(CLINICAL_DOOR_SQL)
                     .fetch_one(&mut *acquire(&self.pool).await?)

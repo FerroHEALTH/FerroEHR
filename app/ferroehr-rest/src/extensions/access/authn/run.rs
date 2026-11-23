@@ -75,11 +75,7 @@ impl PostRides {
             .iter()
             .filter(|(method, _, op)| *method == "POST" && POST_RIDES.contains(op))
             .map(|(_, path, _)| {
-                format!(
-                    "{}{}",
-                    namespaces.openehr,
-                    crate::api::normalize_path(path)
-                )
+                format!("{}{}", namespaces.openehr, crate::api::normalize_path(path))
             })
             .collect();
         Self { templates }
@@ -131,7 +127,7 @@ async fn riding_post(layer: AuthLayer, req: Request, next: Next) -> Response {
 /// `body` as the bytes `crate::limits::middleware` buffered it into, one
 /// chunk taken back by its reference count, so nothing is copied.
 async fn buffered(body: Body) -> Result<Bytes, Box<Response>> {
-    axum::body::to_bytes(body, usize::MAX).await.map_err(|_| {
+    axum::body::to_bytes(body, usize::MAX).await.map_err(|_unreadable| {
         // NOTE: RFC 9110 §15.5.1, as the body limit answers a body it cannot read.
         Box::new(crate::overview::error::status_error_response(
             http::StatusCode::BAD_REQUEST,
@@ -314,8 +310,7 @@ mod tests {
     /// ride, so a `POST` route added later does not (#6320).
     #[test]
     fn only_the_aql_executions_ride_on_post() {
-        let namespaces =
-            crate::api::Namespaces::of(&ferroehr::config::rest::ApiConfig::default());
+        let namespaces = crate::api::Namespaces::of(&ferroehr::config::rest::ApiConfig::default());
         let rides = PostRides::new(&namespaces);
         let doc = crate::api::api_doc(&namespaces);
         let mut riding: Vec<&str> = Vec::new();
@@ -339,7 +334,10 @@ mod tests {
         let mut expected = POST_RIDES.to_vec();
         expected.sort_unstable();
         assert_eq!(riding, expected, "each AQL execution rides, and only those");
-        assert!(posts > POST_RIDES.len(), "the walk saw the other POST routes");
+        assert!(
+            posts > POST_RIDES.len(),
+            "the walk saw the other POST routes"
+        );
         assert!(!rides.admits(None), "an unmatched request never rides");
     }
 
@@ -352,10 +350,18 @@ mod tests {
             .await
             .expect("an in-memory body reads");
         assert_eq!(taken, sent);
-        assert_eq!(taken.as_ptr(), sent.as_ptr(), "the bytes are shared, not copied");
+        assert_eq!(
+            taken.as_ptr(),
+            sent.as_ptr(),
+            "the bytes are shared, not copied"
+        );
         let rerun = axum::body::to_bytes(Body::from(taken.clone()), usize::MAX)
             .await
             .expect("the rerun's body reads");
-        assert_eq!(rerun.as_ptr(), sent.as_ptr(), "the rerun reads the same bytes");
+        assert_eq!(
+            rerun.as_ptr(),
+            sent.as_ptr(),
+            "the rerun reads the same bytes"
+        );
     }
 }

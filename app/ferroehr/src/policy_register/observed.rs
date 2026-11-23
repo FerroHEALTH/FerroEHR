@@ -54,10 +54,12 @@ pub async fn scope<F: Future>(fut: F) -> (F::Output, Seen) {
     .await
 }
 
-/// Runs `fut`, statements on the party pool, with each of them that confirms
-/// a request's policy copies reading the policy and definition revisions
-/// through `clinical_door.policy_revisions()` when `open`: the two domains
-/// share a database and the party roles may run it (#6320).
+/// Runs `fut`, statements on the party pool, through the clinical door when
+/// `open`.
+///
+/// Each statement that confirms a request's policy copies then reads the
+/// policy and definition revisions through `clinical_door.policy_revisions()`:
+/// the two domains share a database and the party roles may run it (#6320).
 pub async fn through_clinical_door<F: Future>(open: bool, fut: F) -> F::Output {
     if open {
         DOOR.scope((), fut).await
@@ -66,13 +68,14 @@ pub async fn through_clinical_door<F: Future>(open: bool, fut: F) -> F::Output {
     }
 }
 
-/// Whether a statement of the running request reads the policy and
-/// definition revisions through the clinical door: it runs on the party pool
-/// behind an open door ([`through_clinical_door`]), inside a [`scope`] that
-/// confirms the copies after it ran.
+/// Whether a statement of the running request reads the revisions through
+/// the clinical door.
+///
+/// It does on the party pool behind an open door ([`through_clinical_door`]),
+/// inside a [`scope`] that confirms the copies after it ran.
 #[must_use]
 pub fn reads_clinical_door() -> bool {
-    DOOR.try_with(|_| ()).is_ok() && SEEN.try_with(|_| ()).is_ok()
+    DOOR.try_with(|()| ()).is_ok() && SEEN.try_with(|_| ()).is_ok()
 }
 
 /// The newest revisions the running request's statements read so far;

@@ -102,7 +102,9 @@ impl FerroEhrService {
                 kind,
             ))
             .await??
-            .ok_or_else(|| support::missing(kind.as_str(), vo_id, version.is_some() || at.is_some()))?;
+            .ok_or_else(|| {
+                support::missing(kind.as_str(), vo_id, version.is_some() || at.is_some())
+            })?;
         if raw.read.deleted() {
             return Ok(RawServiceResponse {
                 body: ReadBody::Value(serde_json::Value::Null),
