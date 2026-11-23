@@ -8,13 +8,11 @@
 //! request that writes an entry maintains no index but its key and uid.
 //!
 //! A reader reads the indexed entries through the index and the entries past
-//! its cursor by key, in one statement (`audit.access_log_record`,
-//! `audit.access_log_search`). The cursor commits with the rows it covers and
-//! only passes ids below the frontier, so every committed entry is in one of
-//! the two. A batch holds nothing the entries' rows do not, so it commits
-//! without waiting for its flush: a batch a crash loses leaves its cursor
-//! where it was, and the next round copies the entries again. No
-//! specification governs audit storage: our own design.
+//! its cursor by key, in one statement (`audit.access_log_record`) or bound to
+//! a cursor it saw (`audit.access_log_search`). The cursor commits with the
+//! rows it covers, durably, only moves forward and only passes ids below the
+//! frontier, so every committed entry is in one of the two. No specification
+//! governs audit storage: our own design.
 
 use sqlx::Connection;
 
@@ -69,11 +67,7 @@ impl AccessLogStore {
         let mut cursor = i64::MIN;
         loop {
             let mut tx = conn.begin().await?;
-            // NOTE: our own design (#6319), the index is copied again from the cursor after a
-            // crash, so its batch does not wait for the flush.
-            sqlx::query("SET LOCAL synchronous_commit = off")
-                .execute(&mut *tx)
-                .await?;
+            // NOTE: our own design (#6373), a durable batch keeps a cursor a reader saw in force.
             sqlx::query(LOCK).execute(&mut *tx).await?;
             let reached: i64 = sqlx::query_scalar(COPY)
                 .bind(upto)

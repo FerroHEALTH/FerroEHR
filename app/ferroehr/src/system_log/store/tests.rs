@@ -67,14 +67,14 @@ fn filter_with(value: &str) -> AuditSearchFilter {
 #[test]
 fn hostile_filter_values_never_change_the_generated_sql() {
     let (baseline_count, _, baseline_page, _) =
-        build_search_statements(&filter_with("benign"), &RESOLVED);
+        build_search_statements(&filter_with("benign"), &RESOLVED, 0);
 
     for payload in HOSTILE {
         // The page statement's own values are not inspected: both statements
         // bind from the same condition, so asserting the count's bindings
         // covers both, and the page text is compared byte for byte below.
         let (count_sql, count_values, sql, _page_values) =
-            build_search_statements(&filter_with(payload), &RESOLVED);
+            build_search_statements(&filter_with(payload), &RESOLVED, 0);
         assert_eq!(
             count_sql, baseline_count,
             "the count statement changed for {payload:?}"
@@ -129,7 +129,7 @@ fn every_identifier_comes_from_the_closed_set() {
             ],
             ..AuditSearchFilter::default()
         },
-        &[],
+        &[], 0,
     );
 
     let mut seen: Vec<String> = format!("{count_sql} {sql}")
@@ -156,6 +156,7 @@ fn every_identifier_comes_from_the_closed_set() {
         "page_key",
         "page_record",
         "shared_digest",
+        "index_cursor",
     ]);
     expected.sort_unstable();
     expected.dedup();
@@ -178,7 +179,7 @@ fn paging_is_clamped_and_never_textual() {
             offset: i64::MIN,
             ..AuditSearchFilter::default()
         },
-        &[],
+        &[], 0,
     );
     // Paging binds as parameters rather than being written into the
     // statement, which is stronger than the clamp alone — so the clamped
@@ -368,12 +369,12 @@ fn a_resolved_token_criterion_reads_the_token_index() {
         &[
             None,
             Some(crate::system_log::search::TokenMatch::from(vec![3, 17])),
-        ],
+        ], 0,
     );
     assert!(sql.contains("search_keys && CAST($"), "{sql}");
     assert!(count_sql.contains("search_keys && CAST($"), "{count_sql}");
     assert!(format!("{values:?}").contains("{3,17}"), "{values:?}");
-    let (_, _, unresolved, _) = build_search_statements(&filter, &[]);
+    let (_, _, unresolved, _) = build_search_statements(&filter, &[], 0);
     assert!(unresolved.contains("false"), "{unresolved}");
 }
 
@@ -385,8 +386,8 @@ fn a_resolved_token_criterion_reads_the_token_index() {
 fn a_filter_of_single_valued_distinct_criteria_is_shaped() {
     let shaped = filter_with("a");
     assert!(super::search_page::shaped(&shaped));
-    let (count_a, _, page_a, _) = build_search_statements(&shaped, &RESOLVED);
-    let (count_b, _, page_b, _) = build_search_statements(&filter_with("other"), &RESOLVED);
+    let (count_a, _, page_a, _) = build_search_statements(&shaped, &RESOLVED, 0);
+    let (count_b, _, page_b, _) = build_search_statements(&filter_with("other"), &RESOLVED, 0);
     assert_eq!((count_a, page_a), (count_b, page_b));
     let mut several = filter_with("a");
     several.criteria.push(AuditCriterion::Outcome(vec![0, 4]));
@@ -410,13 +411,13 @@ fn a_carried_page_selects_the_policy_revisions() {
         },
         ..filter_with("benign")
     };
-    let (count_sql, _, sql, _) = build_search_statements(&carried, &RESOLVED);
+    let (count_sql, _, sql, _) = build_search_statements(&carried, &RESOLVED, 0);
     assert!(sql.contains("clinical.request_revisions"), "{sql}");
     assert!(sql.contains("\"carried_revisions\""), "{sql}");
     assert!(
         !count_sql.contains("request_revisions"),
         "the total carries nothing"
     );
-    let (_, _, plain, _) = build_search_statements(&filter_with("benign"), &RESOLVED);
+    let (_, _, plain, _) = build_search_statements(&filter_with("benign"), &RESOLVED, 0);
     assert!(!plain.contains("request_revisions"), "{plain}");
 }

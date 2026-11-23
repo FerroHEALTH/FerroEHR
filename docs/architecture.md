@@ -625,13 +625,18 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `access_log_record` is the view of the entries with their link: its index
   columns (the search columns, the search tokens of the projection and the
   render policy) sit on the entry's own row and are emptied with its content
-  when a tombstone replaces it, and `access_log_search` is the view of them
-  the ITI-81 search reads (#5784). The request's commit maintains only the
+  when a tombstone replaces it, and `access_log_search` is the function of
+  them the ITI-81 search reads (#5784). The request's commit maintains only the
   entry's key: the chainer's frontier round copies the columns the readers
   filter and order on into `access_log_index` in one batch each second, with
-  a cursor that commits with the rows, and both views read the indexed
+  a cursor that commits with the rows. `access_log_record` reads the indexed
   entries through it and the entries past the cursor by a key range, in one
-  statement and so one snapshot (#6319). An ITI-81 page reads each chain's first
+  statement and so one snapshot (#6319). The ITI-81 search passes the
+  newest cursor it saw to `access_log_search`, which reads the open window
+  past the cursor in force and past that one too: a cursor only moves
+  forward, so the bound changes no row, and the planner sees how far the
+  open window reaches, so a page starts no parallel worker (#6373). An
+  ITI-81 page reads each chain's first
   `offset + count` records through its time index, the access log's
   candidates from `access_log_search` with the records tied on the last
   instant, and takes the page from their union by the records' keys alone;

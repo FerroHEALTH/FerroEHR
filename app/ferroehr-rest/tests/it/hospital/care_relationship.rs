@@ -75,7 +75,8 @@ async fn entries_of(world: &World, request_id: &str) -> Vec<String> {
     loop {
         let rows: Vec<(Option<String>, Option<String>)> = sqlx::query_as(
             "SELECT s.request_id, r.ehr_id::text FROM audit.access_log_record r \
-             JOIN audit.access_log_search s ON s.chain_seq = r.chain_seq \
+             JOIN audit.access_log_search((SELECT x.last_id FROM audit.access_log_index_state x \
+             WHERE x.singleton)) s ON s.chain_seq = r.chain_seq \
              WHERE r.record_type = 'ACCESS_LOG_ENTRY' ORDER BY r.chain_seq",
         )
         .fetch_all(&world.pool)

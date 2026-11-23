@@ -58,7 +58,7 @@ pub mod outbox;
 #[cfg(feature = "fhir")]
 mod review;
 #[cfg(feature = "fhir")]
-mod search_page;
+pub mod search_page;
 mod writers;
 
 use crate::access_log::store::AccessLogStore;
@@ -236,6 +236,9 @@ pub struct AuditStore {
     /// The gathered intake write of the entries, started on first use.
     #[cfg(feature = "fhir")]
     group: Arc<crate::access_log::intake::Gathered>,
+    /// The newest index cursor an ITI-81 page saw (#6373).
+    #[cfg(feature = "fhir")]
+    cursor: search_page::IndexCursor,
 }
 
 impl AuditStore {
@@ -257,6 +260,8 @@ impl AuditStore {
             releases: Arc::default(),
             #[cfg(feature = "fhir")]
             group: Arc::default(),
+            #[cfg(feature = "fhir")]
+            cursor: search_page::IndexCursor::default(),
         }
     }
 
@@ -810,15 +815,17 @@ impl AuditStore {
         else {
             return Ok(AuditPage::empty(filter));
         };
+        let mut conn = acquire(&self.pool).await?;
+        let cursor = self.cursor.bound(&mut conn).await?;
         let (count_sql, count_values, sql, values) =
-            search_page::build_search_statements(filter, &resolved);
+            search_page::build_search_statements(filter, &resolved, cursor);
         // NOTE: our own design (#6005), a shape's text is a named statement that PostgreSQL may
         // plan once per connection (plan_cache_mode auto); any other text goes unnamed.
         let shaped = search_page::shaped(filter);
         let total = if filter.total {
             let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
                 .persistent(shaped)
-                .fetch_one(&mut *acquire(&self.pool).await?)
+                .fetch_one(&mut *conn)
                 .await?;
             Some(total)
         } else {
@@ -826,8 +833,10 @@ impl AuditStore {
         };
         let mut rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
             .persistent(shaped)
-            .fetch_all(&mut *acquire(&self.pool).await?)
+            .fetch_all(&mut *conn)
             .await?;
+        drop(conn);
+        self.cursor.saw(&rows)?;
         filter.carried.observe(&rows)?;
         // The page statement reads one record past the page, which says whether a next
         // page exists without counting the matches.
@@ -840,18 +849,6 @@ impl AuditStore {
             more,
         })
     }
-}
-
-/// The page statement of the ITI-81 retrieval of `filter`, with its values.
-///
-/// It is the statement [`AuditStore::search`] runs when no criterion names a
-/// stored token, so a plan test explains what the search emits and not a
-/// copy that can drift from it.
-#[cfg(feature = "fhir")]
-#[must_use]
-pub fn page_statement(filter: &AuditSearchFilter) -> (String, sea_query_sqlx::SqlxValues) {
-    let (_, _, sql, values) = search_page::build_search_statements(filter, &[]);
-    (sql, values)
 }
 
 /// The record columns of the records `condition` selects, newest first.

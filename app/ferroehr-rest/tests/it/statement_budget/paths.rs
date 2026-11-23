@@ -750,8 +750,7 @@ pub(super) struct World {
     person: String,
     /// The PERSON with two ordinals and two scales in its details.
     scored: String,
-    /// An instant after every fixture commit, before which the ITI-81 page
-    /// reads a fixed set of records.
+    /// An instant after every fixture commit.
     at: String,
     /// The `EHR_STATUS` a status commit writes, without its `uid`.
     status: String,
@@ -1216,13 +1215,8 @@ impl World {
             Path::AqlParty => aql(serde_json::json!({
                 "q": "SELECT p/uid/value, p/name/value FROM PERSON p LIMIT 20",
             })),
-            // The records the fixtures left, which every request and every run reads the same
-            // (#6366): the page's own records and the paths before it land after `at`.
             Path::Iti81 => get(
-                format!(
-                    "{FHIR}/AuditEvent?date=ge2026-01-01&date=le{}&_count=20",
-                    self.at
-                ),
+                format!("{FHIR}/AuditEvent?date=ge2026-01-01&_count=20"),
                 "root",
                 "application/fhir+json",
             ),

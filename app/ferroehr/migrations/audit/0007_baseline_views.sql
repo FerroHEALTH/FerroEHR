@@ -48,31 +48,42 @@ CREATE FUNCTION audit.access_event_code(p_class text, p_action text) RETURNS tex
     END
 $$;
 
--- The entry id joins the index of the entries (#6000). A page and the total
--- read the entries no write holds, each named by its id (#6242): the search
--- columns of the indexed entries from access_log_index and those of the
--- entries past its cursor from their rows by key (#6319), as
--- access_log_record reads them, so a page reads the index in the search's
+-- The ITI-81 index of the access-log entries no write holds (#6373): the
+-- search columns of the indexed entries from access_log_index, and those of
+-- the entries past its cursor from their rows by key. p_cursor is a cursor
+-- the caller saw, at or below the one in force since the cursor only moves
+-- forward, so it changes no row and gives the planner the open window's
+-- bound. The function is inlined, so a page reads the index in the search's
 -- order. The row is joined on its key by a left join, so a total that names
 -- the search columns alone reads no row.
-CREATE VIEW access_log_search AS
-    SELECT k.entry_id AS chain_seq, k.time_recorded AS recorded_at, e.event_action AS action,
-           e.event_outcome AS outcome, k.principal, k.patient_id, e.resource_id,
-           e.request_id, e.client_ip, e.classified_ehr_id AS ehr_id, e.search_tokens,
-           k.search_keys, k.entry_id
+--
+-- No openEHR spec governs audit storage: our own design.
+CREATE FUNCTION access_log_search(p_cursor bigint)
+    RETURNS TABLE (chain_seq bigint, recorded_at timestamptz, action text, outcome smallint,
+                   principal text, patient_id text, resource_id text, request_id text,
+                   client_ip text, ehr_id text, search_tokens integer[], search_keys bigint[],
+                   entry_id bigint)
+    LANGUAGE sql STABLE PARALLEL SAFE
+    AS $$
+    SELECT k.entry_id, k.time_recorded, e.event_action, e.event_outcome, k.principal,
+           k.patient_id, e.resource_id, e.request_id, e.client_ip, e.classified_ehr_id,
+           e.search_tokens, k.search_keys, k.entry_id
       FROM (SELECT i.entry_id, i.time_recorded, i.render_policy_id, i.principal, i.patient_id,
                    i.search_keys
-              FROM access_log_index i
+              FROM audit.access_log_index i
             UNION ALL
             SELECT e.id, e.time_recorded, e.render_policy_id, e.principal, e.patient_id,
                    audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
-              FROM access_log_entry e
-             WHERE e.id > (SELECT x.last_id FROM access_log_index_state x WHERE x.singleton)
-               AND NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id)) AS k
-      LEFT JOIN access_log_entry e ON e.id = k.entry_id
-     WHERE k.render_policy_id IS NOT NULL;
-COMMENT ON VIEW access_log_search IS
-    'The ITI-81 index of the access-log entries no write holds: what the search filters on, read through access_log_index for the indexed entries and from the entry''s row past its cursor, and the entry''s id, which names it. A tombstone is not in it.';
+              FROM audit.access_log_entry e
+             WHERE e.id > p_cursor
+               AND e.id > (SELECT x.last_id FROM audit.access_log_index_state x WHERE x.singleton)
+               AND NOT EXISTS (SELECT 1 FROM audit.access_log_hold h WHERE h.entry_id = e.id))
+           AS k
+      LEFT JOIN audit.access_log_entry e ON e.id = k.entry_id
+     WHERE k.render_policy_id IS NOT NULL
+$$;
+COMMENT ON FUNCTION access_log_search(bigint) IS
+    'The ITI-81 index of the access-log entries no write holds: what the search filters on, read through access_log_index for the indexed entries and from the entry''s row past its cursor, which p_cursor, a cursor the caller saw, bounds for the planner, and the entry''s id, which names it. A tombstone is not in it.';
 
 -- The ITI-81 index of the system records no write holds (#6203, #6242): what
 -- the search filters on, read from the records, and each record's position.

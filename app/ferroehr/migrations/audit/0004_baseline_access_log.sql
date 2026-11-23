@@ -302,11 +302,9 @@ COMMENT ON TABLE access_log_hold IS
 -- (access_log::index, #6319), so the request that writes an entry
 -- maintains no index but the entry's key. A reader reads the indexed entries
 -- through this table and the entries past its cursor by a key range of
--- access_log_entry, both in one statement and so in one snapshot: the cursor
--- commits with the rows it covers, so every committed entry is in one of the
--- two (access_log_record, access_log_search). The table holds nothing an
--- entry's row does not, so a round lost to a crash is copied again from the
--- cursor; the round commits without waiting for its flush.
+-- access_log_entry, in one statement (access_log_record) or as of a cursor it
+-- saw (access_log_search): the cursor commits durably with the rows it covers
+-- and only moves forward, so every committed entry is in one of the two.
 --
 -- No openEHR spec governs audit storage: our own design.
 CREATE TABLE access_log_index (
