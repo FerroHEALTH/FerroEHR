@@ -1,29 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! **RM-instance validation** — the template-independent passes over a
-//! canonical-JSON RM tree, plus the report shape every validation surface of
-//! this crate speaks.
+//! RM-instance validation: the template-independent passes over a canonical-JSON
+//! RM tree, and the report shape every validation surface of this crate speaks.
 //!
-//! These checks are properties of the instance value alone, so they hold for
-//! every COMPOSITION, EHR_STATUS, FOLDER or demographic PARTY tree whether or
-//! not an operational template is referenced. Two collecting passes recurse the
-//! whole instance, keying violations by RM instance path (`/content[0]/…`):
-//!
-//! 1. the RM-invariant pass runs each node's core class invariants plus the
-//!    JSON-level per-node checks of [`openehr_rm::v1_2::validate`]. Being
-//!    template-independent, it still checks nodes a template would fold away
-//!    (ELEMENT / `ITEM_TREE` / HISTORY / EVENT);
-//! 2. the [`terminology`] pass validates the RM-mandated openEHR
-//!    terminology-group and code-set codes against
-//!    [`openehr_rm::v1_2::validate::terminology`], backed by
-//!    [`openehr_term::bundle`].
-//!
-//! The decisions live in `openehr-rm`; this module owns the WALK — recursing,
-//! carrying the effective declared type down, and prefixing the absolute RM
-//! path onto each node-relative violation. The third, template-driven pass
-//! lives in [`crate::flat::validation`], and [`validate_composition`] composes
-//! all three.
+//! The RM-invariant pass and the [`terminology`] pass key violations by RM
+//! instance path; the decisions live in [`openehr_rm::v1_2::validate`], and this
+//! module owns the walk. [`validate_composition`] adds the template pass of
+//! [`crate::flat::validation`].
 
 #![expect(
     clippy::disallowed_types,
@@ -60,13 +44,8 @@ pub struct ValidationMessage {
     pub kind: ValidationKind,
 }
 
-/// The category of a [`ValidationMessage`].
-///
-/// The vocabulary spans both validation layers: [`ValidationKind::Invariant`]
-/// and [`ValidationKind::Terminology`] are what the RM-instance passes in this
-/// module report; the remaining variants are the archetype-conformance
-/// judgements of the template pass in [`crate::flat::validation`], which shares
-/// this report shape.
+/// The category of a [`ValidationMessage`]; `Invariant` and `Terminology` come
+/// from this module, the rest from [`crate::flat::validation`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValidationKind {
     /// An instance node's RM type does not conform to the constraint's type.
@@ -119,21 +98,12 @@ pub(crate) fn norm_path(p: &str) -> String {
 }
 
 /// Validate a canonical-JSON COMPOSITION against its `WebTemplate`, RM
-/// invariants, and the RM-mandated openEHR terminology.
-///
-/// Returns every violation found (the validator does not stop at the first
-/// error); an empty result means the composition is valid to the extent this
-/// validator checks.
-///
-/// The composed entry point: the two instance passes of this module followed by
-/// the template-driven archetype-conformance pass
-/// ([`crate::flat::validation::validate_archetype_conformance`]).
+/// invariants, and the RM-mandated openEHR terminology, returning every
+/// violation.
 #[must_use]
 pub fn validate_composition(composition: &Value, wt: &WebTemplate) -> Vec<ValidationMessage> {
-    // Passes 1 + 2: the template-independent instance checks. The root's
-    // declared type is COMPOSITION — an untagged root is legal canonical JSON
-    // (the ITS-JSON schema requires `_type` only on polymorphic slots, and the
-    // resource root is concretely COMPOSITION).
+    // The root's declared type is COMPOSITION: an untagged root is legal canonical
+    // JSON.
     let mut out = validate_rm_and_terminology(composition, "COMPOSITION");
     // Pass 3: archetype conformance guided by the WebTemplate tree.
     out.extend(crate::flat::validation::validate_archetype_conformance(
@@ -158,17 +128,9 @@ pub fn validate_composition_typed(
 /// Validate a canonical-JSON party against its `WebTemplate`, RM invariants,
 /// and the RM-mandated openEHR terminology.
 ///
-/// The party counterpart of [`validate_composition`]: the template root must
-/// be a concrete party class (`PERSON`, `ORGANISATION`, `GROUP`, `AGENT` or
-/// `ROLE`, RM demographic `master02-demographic_package.adoc` §Class
-/// Descriptions), the instance passes of this module run with that class as
-/// the root's declared type, and the archetype-conformance pass walks the
-/// template from the root as it does for a COMPOSITION, a party being "a
-/// completely archetypable structure" (same document, §Archetyping).
-///
-/// A template whose root is not a party class answers one
-/// [`ValidationKind::WrongType`] message at `/` and runs no pass, since the
-/// template cannot describe a party.
+/// The template root must be a concrete party class (RM demographic
+/// `master02-demographic_package.adoc` §Class Descriptions); otherwise one
+/// [`ValidationKind::WrongType`] message at `/` is returned and no pass runs.
 #[must_use]
 pub fn validate_party(party: &Value, wt: &WebTemplate) -> Vec<ValidationMessage> {
     let root = wt
@@ -197,41 +159,20 @@ pub fn validate_party(party: &Value, wt: &WebTemplate) -> Vec<ValidationMessage>
     out
 }
 
-/// Validate only the **template-independent** passes: RM class invariants +
-/// the RM-mandated openEHR terminology.
+/// Validate only the template-independent passes: RM class invariants and the
+/// RM-mandated openEHR terminology, for every commit kind.
 ///
-/// These hold for every RM instance whether or not an operational template is
-/// referenced, so a COMPOSITION committed without a `template_id` still passes
-/// them.
-///
-/// One entry point for every commit kind: `COMPOSITION`, `EHR_STATUS`,
-/// `EHR_ACCESS`, `FOLDER`, the demographic PARTY types, …
-///
-/// The invariants these passes run — `ARCHETYPED.Rm_version_valid`,
-/// `LOCATABLE.Links_valid` / `Archetype_node_id_valid`, the `LINK` 1..1
-/// attributes, `FEEDER_AUDIT_DETAILS.System_id_valid`
-/// (`RM/docs/UML/classes/org.openehr.rm.common.*.adoc` §Invariants) — constrain
-/// every node carrying the shape, so one walk serves every resource kind.
-///
-/// `declared` is the ROOT's effective RM type, for a root whose wire `_type` is
-/// legitimately absent (canonical JSON requires `_type` only on polymorphic
-/// slots). Every descendant dispatches from its own `_type` or its parent
-/// attribute's concretely-declared type, and a tagged root overrides
-/// `declared`.
+/// `declared` is the root's RM type when its `_type` is absent; a tagged root
+/// overrides it.
 #[must_use]
 pub fn validate_rm_and_terminology(root: &Value, declared: &str) -> Vec<ValidationMessage> {
     validate_with(root, declared, LowerBounds::Enforced)
 }
 
-/// [`validate_rm_and_terminology`] over a typed RM resource: the same two
-/// passes, the same messages and paths, with no canonical-JSON value and no
-/// per-node decode (#6002).
+/// [`validate_rm_and_terminology`] over a typed RM resource, with the same
+/// messages and paths in canonical attribute order.
 ///
-/// The reader has already refused what a typed tree cannot hold (an
-/// undeclared member, a foreign `_type`, an absent or empty `1..*` container),
-/// so this runs the class invariants, the per-node checks and the terminology
-/// bindings. The messages come in canonical attribute order. A
-/// `553|incomplete|` commit cannot be read into strict typed RM and keeps
+/// A `553|incomplete|` commit cannot be read into strict typed RM and keeps
 /// [`validate_rm_and_terminology_incomplete_as`].
 #[must_use]
 pub fn validate_rm_and_terminology_typed<T: openehr_rm::v1_2::validate::tree::Walk + ?Sized>(
@@ -251,28 +192,13 @@ pub fn validate_rm_and_terminology_typed<T: openehr_rm::v1_2::validate::tree::Wa
         .collect()
 }
 
-/// [`validate_rm_and_terminology`] for a `553|incomplete|` commit: the
-/// mandatory-presence and cardinality-lower-bound layers are relaxed to zero,
-/// every other layer runs at full strength.
+/// [`validate_rm_and_terminology`] for a `553|incomplete|` commit, with the
+/// mandatory-presence and cardinality lower bounds relaxed to zero.
 ///
-/// RM common `master06-change_control_package.adoc` §Incomplete Content
-/// (NOTE): "mandatory attributes may be absent. Concretely, single-valued
-/// attributes may have null values and container attributes may be empty, even
-/// though they may have minimum existence and cardinality respectively of one.
-/// All other validity requirements must be satisfied. In other words, in an
-/// `incomplete` commit, data may be missing, but it may not be wrong." — and
-/// §Incomplete Content again, on the implementation form: incomplete data
-/// "respects the same template and archetype(s), but with all existence and
-/// cardinality lower limits set to zero".
-///
-/// Exactly three things change against the strict entry point:
-/// [`openehr_rm::v1_2::validate::check_mandatory_containers`] and
-/// [`openehr_rm::v1_2::validate::check_cluster_items_present`] do not run, and
-/// the class-invariant tier goes through
-/// [`openehr_its::wire_validate::validate_rm_invariants_relaxed_as`], which does not
-/// drive typed construction of a node missing mandatory data. Everything else —
-/// terminology, `LOCATABLE.Archetyped_valid`, the HISTORY shape duty, the
-/// undeclared-member refusal, every value-level invariant — is untouched.
+/// RM common `master06-change_control_package.adoc` §Incomplete Content:
+/// "data may be missing, but it may not be wrong". The mandatory-container and
+/// `CLUSTER.items` checks do not run, and the invariant tier goes through
+/// [`openehr_its::wire_validate::validate_rm_invariants_relaxed_as`].
 #[must_use]
 pub fn validate_rm_and_terminology_incomplete_as(
     root: &Value,
@@ -320,17 +246,11 @@ fn validate_with(root: &Value, declared: &str, bounds: LowerBounds) -> Vec<Valid
     out
 }
 
-/// Pass 1: recurse the whole instance, running each node's core RM class
-/// invariants plus the JSON-level per-node checks of [`openehr_rm::v1_2::validate`],
-/// keyed by the running RM instance path.
+/// Pass 1: recurse the instance, running each node's core RM class invariants
+/// and the per-node checks of [`openehr_rm::v1_2::validate`].
 ///
-/// `path` is one reusable buffer pushed and truncated per recursion step, so
-/// the full path string is materialized only when a violation is recorded
-/// rather than allocated at every one of the ~1.5k nodes a commit visits.
-///
-/// `declared` is the parent attribute's declared RM type when concrete — the
-/// effective type of a node whose wire `_type` is legitimately absent — so
-/// untagged nodes like `COMPOSITION.context` still run their class invariants
+/// `path` is one reused buffer. `declared` is the parent attribute's concrete
+/// declared type, so an untagged node still runs its invariants
 /// ([`openehr_rm::v1_2::model::declared_concrete_type`]).
 pub(crate) fn rm_invariant_pass(
     out: &mut Vec<ValidationMessage>,
@@ -351,10 +271,7 @@ pub(crate) fn rm_invariant_pass(
     let ty = fields.ty.or(declared);
     let mut inv = Vec::new();
     if let Some(effective) = ty {
-        // The core (fast/typed) RM invariants only — the terminology-backed
-        // invariants are enforced by the dedicated terminology pass (its own
-        // `ValidationKind::Terminology` rendering), so calling the core-only
-        // entry here avoids double-reporting them.
+        // Core invariants only; the terminology pass reports the terminology-backed ones.
         match bounds {
             LowerBounds::Enforced => validate_rm_invariants_as(effective, v, &mut inv),
             LowerBounds::Relaxed => {
@@ -364,27 +281,18 @@ pub(crate) fn rm_invariant_pass(
             }
         }
         if bounds == LowerBounds::Enforced {
-            // The orthogonal model-driven layer: mandatory-container lower
-            // bounds (kept outside the core pair so the fast-vs-typed
-            // equivalence property stays exact). Relaxed to zero on a
-            // `553|incomplete|` commit (master06 §Incomplete Content).
+            // Mandatory-container lower bounds, relaxed for `553|incomplete|` (master06
+            // §Incomplete Content).
             check_mandatory_containers(effective, v, &mut inv);
         }
     }
-    // The JSON-level per-node checks (`openehr-rm`'s own value semantics):
-    // they read the raw node, so an absent list and a present-but-empty one
-    // are still distinguishable here. This walk only adapts their
-    // node-relative violations onto the absolute RM instance path.
     inv.extend(check_archetyped_valid(
         node_id,
         has_archetype_details,
         details_archetype_id,
     ));
     if bounds == LowerBounds::Enforced {
-        // `CLUSTER.items` presence is a mandatory-presence duty, so it relaxes
-        // with the other lower bounds on a `553|incomplete|` commit; every
-        // other data-structure shape duty (the HISTORY generic-parameter rule)
-        // stays enforced below.
+        // `CLUSTER.items` presence relaxes with the other lower bounds.
         inv.extend(check_cluster_items_present(obj, ty));
     }
     inv.extend(check_data_structure_shapes(obj, ty));
@@ -526,11 +434,8 @@ mod tests {
         })
     }
 
-    /// `RM/docs/UML/classes/org.openehr.rm.common.locatable.adoc` §Attributes
-    /// (`archetype_node_id`): "At an archetype root point, the value of this
-    /// attribute is always the stringified form of the `archetype_id` found in
-    /// the `archetype_details` object" — a root whose two archetype identities
-    /// disagree is refused.
+    /// A root whose two archetype identities disagree is refused (RM
+    /// `org.openehr.rm.common.locatable.adoc` §Attributes).
     #[test]
     fn archetype_root_node_id_mismatch_rejected() {
         let inst = root_node(
@@ -636,13 +541,7 @@ mod tests {
         start.elapsed().as_secs_f64() * 1e6 / f64::from(iters)
     }
 
-    /// MEASUREMENT (not a correctness gate): quantify the pre-tx template-
-    /// independent validation walk over the populated IPS example (~1.5k `_type`
-    /// nodes). The RM-invariant and terminology passes each traverse the whole
-    /// instance independently; this splits and times them. Ignored by default
-    /// (timing, not correctness); run:
-    /// `cargo nextest run -p openehr-its --run-ignored all \
-    ///   -E 'test(measure_ips_validation_walk_cost)' --no-capture`.
+    /// Times the RM-invariant and terminology passes over the populated IPS example.
     #[test]
     #[ignore = "measurement, not a correctness gate — run with --run-ignored all"]
     fn measure_ips_validation_walk_cost() {
@@ -687,12 +586,8 @@ mod tests {
         eprintln!("  combined (1+2)           : {t_both:>8.1} us/op");
     }
 
-    /// MEASUREMENT (not a correctness gate): quantify the archetype-conformance
-    /// **walk** (pass 3) over the populated IPS example against its OPT-built
-    /// `WebTemplate`, plus the full [`validate_composition`]. Ignored by default
-    /// (timing, not correctness); run:
-    /// `cargo nextest run -p openehr-its --run-ignored all \
-    ///   -E 'test(measure_ips_validation_full_cost)' --no-capture`.
+    /// Times the archetype-conformance walk and [`validate_composition`] over the
+    /// populated IPS example.
     #[test]
     #[ignore = "measurement, not a correctness gate — run with --run-ignored all"]
     fn measure_ips_validation_full_cost() {
