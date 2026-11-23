@@ -190,11 +190,6 @@ impl QueryPairs {
     /// whose name is not one of the operation's `declared` query parameters,
     /// or `None` when there is none.
     ///
-    /// A value is read as JSON text where it is JSON: a number, a boolean, an
-    /// object or an array is that value, and a JSON string (a value wrapped in
-    /// double quotes) is the string it denotes, its quotes removed and its
-    /// escapes decoded. Anything else is the text itself.
-    ///
     /// # Errors
     /// Returns [`ApiError::BadRequest`] naming the parameter when a member is
     /// given more than once.

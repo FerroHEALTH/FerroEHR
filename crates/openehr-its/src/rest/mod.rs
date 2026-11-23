@@ -21,10 +21,8 @@
 //! forwards it through `client`. Regenerate with
 //! `cargo run -p openehr-codegen -- emit-rest`.
 
-// The contract (DTOs, params, routes, `ApiError`, the operation matcher) rides
-// `rest`; the server traits, the routers and their runtime ride `rest-server`;
-// the generated clients and the client runtime ride `rest-client` — see the
-// crate docs.
+// The contract rides `rest`, the server side `rest-server`, the clients
+// `rest-client` (crate docs).
 #[cfg(feature = "rest-client")]
 pub mod client;
 #[cfg(feature = "rest")]

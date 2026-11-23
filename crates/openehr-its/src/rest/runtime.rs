@@ -8,9 +8,6 @@
 //! answer carries, is what the generated server traits return;
 //! [`ResponseHeaders`] is the seam the generated headers structs implement;
 //! and under `rest-server` both errors render as the ITS-REST `Error` body.
-//!
-//! The DTOs, per-group server traits, routers and route tables are generated
-//! (`emit-rest`) into [`super::generated`].
 
 use std::fmt;
 
@@ -147,9 +144,6 @@ pub enum ApiError {
     #[error("service unavailable: {0}")]
     ServiceUnavailable(String),
     /// `500 Internal Server Error` — an unexpected server-side failure.
-    ///
-    /// The text is sent to the client as the `Error` body's `message`, so it
-    /// names the failure without internal detail (no SQL, paths or payloads).
     #[error("internal error: {0}")]
     Internal(String),
 }
@@ -214,11 +208,6 @@ fn header_field(name: &str, value: &str) -> Result<(HeaderName, HeaderValue), He
 }
 
 /// The response headers of one documented answer, as header fields.
-///
-/// Every headers struct the OAS declares for an answer (`EhrCreateCreatedHeaders`,
-/// `PersonUpdatePreconditionFailedHeaders`, …) implements it: a `Some` value
-/// is one field, every item of a list header one field line, and `None` (or an
-/// empty list) nothing.
 pub trait ResponseHeaders {
     /// The header fields these values set.
     ///
@@ -409,12 +398,6 @@ pub(crate) fn error_response(
 }
 
 /// Renders the error as its status with the ITS-REST `Error` body.
-///
-/// `message` is the error's display text; `validationErrors` lists one
-/// `<path>: <message>` item per violation of a
-/// [`ApiError::ValidationFailed`] and is empty for every other error. The
-/// schema types each item as a string without structure, so the item form is
-/// our own design.
 #[cfg(feature = "rest-server")]
 impl axum::response::IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {

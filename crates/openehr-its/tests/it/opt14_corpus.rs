@@ -99,11 +99,8 @@ fn every_official_cnf_robot_template_parses() {
         "expected the full valid robot template corpus (~32 files), found {}",
         files.len()
     );
-    // Adjudicated corpus defects: fixtures in valid_templates that are
-    // XSD-INVALID first-hand, so their rejection is the parser being right
-    // (the robot suite is reference material, never an oracle). Each entry
-    // cites the violated schema requirement; anything else failing is a
-    // genuine parser defect and fails the gate.
+    // Fixtures in valid_templates that are XSD-invalid first-hand, each citing
+    // the violated requirement; any other failure is a parser defect.
     let adjudicated_invalid = [
         (
             // Omits the OPERATIONAL_TEMPLATE's mandatory <language>
@@ -373,10 +370,8 @@ fn opt_revision_history_item_without_audits_is_refused_at_parse() {
             "<revision_history><items><version_id><value>test::sys::1</value></version_id>{audits}</items></revision_history>"
         )
     };
-    // The optional element slots in after <uid> per the XSD sequence; the
-    // corpus minimal OPT starts `<template xmlns…><language>`, so insert the
-    // element right after the opening tag's first child boundary — the reader
-    // is order-tolerant on member elements.
+    // The optional element follows <uid> in the XSD sequence; the reader is
+    // order-tolerant, so it goes after the first child boundary.
     let inject = |fragment: &str| {
         let (head, tail) = base
             .split_once("<language>")

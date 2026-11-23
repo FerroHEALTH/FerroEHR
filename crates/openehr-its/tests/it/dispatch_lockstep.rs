@@ -8,29 +8,6 @@
     reason = "test assertions/diagnostics/fixtures"
 )]
 //! The fast-path ↔ typed-dispatch **lockstep** gate.
-//!
-//! Two dispatch tables decide which tier judges an RM node: the allocation-free
-//! fast path (`openehr_rm::v1_2::validate::fast::try_validate`) and the authoritative
-//! typed dispatch (`openehr_rm::v1_2::validate::typed_dispatch::dispatch_typed`). A
-//! class present in one and absent from the other silently changes which tier
-//! judges it, and a class whose DEPTH disagrees (`run` vs `run_shallow`) changes
-//! which of its children are decoded — both are wire-visible. Until now the only
-//! thing holding them together was a comment saying they "must stay in
-//! lockstep".
-//!
-//! This gate derives BOTH tables from the source of the two `match ty` blocks —
-//! no hand-maintained mirror list lives here, so the check cannot itself drift —
-//! and pins the relationship:
-//!
-//! 1. every fast-path class is also owned by the typed dispatch (the typed table
-//!    is the authority; a fast entry with no typed counterpart would vouch for a
-//!    node the oracle never adjudicates);
-//! 2. the two agree on decode depth for every shared class;
-//! 3. the typed-only delta is snapshotted, so a class LEAVING the fast table is
-//!    visible in the diff rather than silent.
-//!
-//! `seeded_drift_is_detected` proves the extractor actually catches an added
-//! class and a flipped depth, so the gate is not decorative.
 
 use std::collections::BTreeMap;
 
@@ -88,10 +65,6 @@ fn depth_of(text: &str) -> Option<Depth> {
 }
 
 /// Extract the typed dispatch table from `dispatch_typed`.
-///
-/// Each arm is `<literals> => <body>`; the body names `run::<T>` (full) or
-/// `run_shallow::<T>` (shallow). The one block-bodied arm (`DV_INTERVAL`)
-/// spans several lines and is attributed by the first runner call inside it.
 fn typed_table(src: &str) -> BTreeMap<String, Depth> {
     let src = without_comments(src);
     let start = src.find("fn dispatch_typed").expect("typed dispatch fn");
@@ -131,10 +104,6 @@ fn typed_table(src: &str) -> BTreeMap<String, Depth> {
 }
 
 /// Extract the fast-path table from `try_validate`'s `let shallow = match ty`.
-///
-/// Exactly two arms: the multi-line `… => true` (shallow) pattern and the
-/// multi-line `… => false` (full) pattern, then the `_ => return false`
-/// fallthrough.
 fn fast_table(src: &str) -> BTreeMap<String, Depth> {
     let src = without_comments(src);
     let start = src

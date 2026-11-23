@@ -3,13 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! A `StringDictionaryItem` element must carry its `id` attribute.
-//!
-//! The ITS-XML schemas type every `Hash<String, String>` entry as
-//! `StringDictionaryItem`, whose `id` is `use="required"`
-//! (`schemas/xml/its-xml-2.0.0-nsv2/AM/Release-1.4/Resource.xsd`,
-//! `schemas/xml/its-xml-2.0.0-nsv2/BASE/Release-1.2.0/BaseTypes.xsd`). An element
-//! without it is refused naming the attribute; an empty `id=""` is a present
-//! `xs:string` and is accepted (the valid twin).
 
 #![expect(
     clippy::expect_used,
