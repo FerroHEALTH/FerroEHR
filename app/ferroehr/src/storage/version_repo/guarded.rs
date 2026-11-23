@@ -588,9 +588,9 @@ const MEMBER_SCALARS: usize = 26;
 /// single write's audit, version, head-upsert and node CTEs under its own
 /// names. The members whose placement writes their episodes bind them last,
 /// in member order.
-fn set_statement(placements: &[super::commit::Placement]) -> String {
+fn set_statement(members: &[SetMember<'_>]) -> String {
     use std::fmt::Write as _;
-    let n = placements.len();
+    let n = members.len();
     let stride = MEMBER_SCALARS + crate::storage::node_write::node_array_count();
     let base = |i: usize| 13 + i * stride;
     let mut next_episodes = base(n);
@@ -605,12 +605,9 @@ fn set_statement(placements: &[super::commit::Placement]) -> String {
         guard_ctes("$2", &targets, "$6", (("$3", "$4"), Lead::Content)),
         audit_cte("ca", 7, "$6", "g"),
     );
-    for i in 0..n {
+    for (i, member) in members.iter().enumerate() {
         let b = base(i);
-        let placement = placements
-            .get(i)
-            .copied()
-            .unwrap_or(super::commit::Placement::Untouched);
+        let placement = super::commit::Placement::of(&member.version);
         let episodes = next_episodes;
         if placement == super::commit::Placement::Placed {
             next_episodes += 1;
@@ -657,11 +654,7 @@ pub async fn commit_set(
     guard: &Guard,
 ) -> Result<jiff::Timestamp, StorageError> {
     use sqlx::Row as _;
-    let placements: Vec<super::commit::Placement> = members
-        .iter()
-        .map(|member| super::commit::Placement::of(&member.version))
-        .collect();
-    let sql = set_statement(&placements);
+    let sql = set_statement(members);
     let mut query = sqlx::query(sqlx::AssertSqlSafe(sql))
         .bind(head.id)
         .bind(head.ehr_id)

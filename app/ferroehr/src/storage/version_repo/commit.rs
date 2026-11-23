@@ -13,6 +13,7 @@
               round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
 )]
 
+use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use serde_json::Value;
@@ -158,15 +159,15 @@ pub struct FoldedVersion<'a> {
 
 /// What a version's head upsert does with the head row's `episodes`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum HeadEpisodes<'a> {
+pub(super) enum HeadEpisodes {
     /// Leaves them as they are: a first version placed in none, or a version
     /// of a kind no episode places.
     Untouched,
     /// Clears them on a trunk commit: a later COMPOSITION version placed in
     /// none, which moves the object out of its episodes.
     Cleared,
-    /// Writes the parameter it names on a trunk commit.
-    Placed(&'a str),
+    /// Writes the parameter of this number on a trunk commit.
+    Placed(usize),
 }
 
 /// What a version does with its object's episodes, the three statement
@@ -246,7 +247,7 @@ pub(super) struct HeadUpsert<'a> {
     /// The root archetype of the new version's content.
     pub(super) archetype: &'a str,
     /// What the upsert does with the head row's episodes.
-    pub(super) episodes: HeadEpisodes<'a>,
+    pub(super) episodes: HeadEpisodes,
     /// The commit instant.
     pub(super) committed_at: &'a str,
     /// The CTE that inserted the version row, which orders this one after it.
@@ -270,17 +271,17 @@ impl HeadUpsert<'_> {
             version,
         } = *self;
         let (episodes_column, episodes_value) = match episodes {
-            HeadEpisodes::Placed(episodes) => (", episodes", format!(", {episodes}::bytea[]")),
-            HeadEpisodes::Untouched | HeadEpisodes::Cleared => ("", String::new()),
+            HeadEpisodes::Placed(at) => (", episodes", Cow::Owned(format!(", ${at}::bytea[]"))),
+            HeadEpisodes::Untouched | HeadEpisodes::Cleared => ("", Cow::Borrowed("")),
         };
-        let episodes_update = match episodes {
-            HeadEpisodes::Untouched => "",
-            HeadEpisodes::Cleared | HeadEpisodes::Placed(_) => {
-                ", episodes = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.episodes ELSE vo_head.episodes END"
-            }
-        }
-        .replace("{branch}", branch);
+        let (set_open, set_branch, set_close) = match episodes {
+            HeadEpisodes::Untouched => ("", "", ""),
+            HeadEpisodes::Cleared | HeadEpisodes::Placed(_) => (
+                ", episodes = CASE WHEN ",
+                branch,
+                " = 0 THEN EXCLUDED.episodes ELSE vo_head.episodes END",
+            ),
+        };
         format!(
             "INSERT INTO vo_head (vo_id, kind, ehr_id, head_sys_version, \
              trunk_head_sys_version, trunk_head_content_key, lifecycle_state, template_id, \
@@ -302,7 +303,7 @@ impl HeadUpsert<'_> {
              template_id = CASE WHEN {branch} = 0 \
                  THEN EXCLUDED.template_id ELSE vo_head.template_id END, \
              root_archetype = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.root_archetype ELSE vo_head.root_archetype END{episodes_update} \
+                 THEN EXCLUDED.root_archetype ELSE vo_head.root_archetype END{set_open}{set_branch}{set_close} \
          WHERE EXCLUDED.head_sys_version > vo_head.head_sys_version \
            AND ({branch} <> 0 \
                 OR vo_head.trunk_head_sys_version IS NULL \
@@ -471,7 +472,6 @@ pub(super) fn version_ctes(
             .join(", ")
     };
     let version = format!("v{suffix}");
-    let episodes_param = format!("${episodes}");
     format!(
         ", {version} AS ( \
              INSERT INTO version ({VERSION_COLUMNS}) \
@@ -496,7 +496,7 @@ pub(super) fn version_ctes(
             episodes: match placement {
                 Placement::Untouched => HeadEpisodes::Untouched,
                 Placement::Cleared => HeadEpisodes::Cleared,
-                Placement::Placed => HeadEpisodes::Placed(&episodes_param),
+                Placement::Placed => HeadEpisodes::Placed(episodes),
             },
             committed_at: &p(14),
             version: &version,
