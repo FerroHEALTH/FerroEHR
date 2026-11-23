@@ -22,7 +22,7 @@ use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, Obj
 use ferroehr::system_log::sender::{
     AuditHandle, AuditSender, ResolvedSubject, SubjectLookup, SubjectResolver, start,
 };
-use ferroehr::system_log::store::{AuditCriterion, AuditSearchFilter};
+use ferroehr::system_log::store::{AuditCriterion, AuditSearchFilter, AuditStore};
 use ferroehr::versioning::signature::trust::TrustedCertificates;
 use openehr_base::containers::NonEmptyVec;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
@@ -151,7 +151,8 @@ async fn seed(entries: u32) -> Seeded {
             .expect("the reads are recorded");
     }
     let expected = i64::from(entries);
-    let deadline = std::time::Instant::now() + Duration::from_secs(120);
+    let deadline =
+        std::time::Instant::now() + Duration::from_secs(120 * u64::from(entries.div_ceil(ENTRIES)));
     loop {
         let chained: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_record")
             .fetch_one(&pool)
@@ -213,7 +214,7 @@ async fn the_iti81_total_is_counted_from_the_time_index() {
         .fetch_one(&pool)
         .await
         .expect("the last entry id reads");
-    seeded
+    let cursor = seeded
         .sender
         .store()
         .index_access_log(last)
@@ -223,11 +224,13 @@ async fn the_iti81_total_is_counted_from_the_time_index() {
     // NOTE: our own design (#6319), where the count takes most of the index the planner may read
     // its narrow rows in place of its time index; neither reads an entry's row.
     for count in [
-        "SELECT count(*) FROM audit.access_log_search",
-        "SELECT count(*) FROM audit.access_log_search \
-         WHERE recorded_at >= now() - interval '1 hour' AND recorded_at < now()",
+        format!("SELECT count(*) FROM audit.access_log_search({cursor})"),
+        format!(
+            "SELECT count(*) FROM audit.access_log_search({cursor}) \
+             WHERE recorded_at >= now() - interval '1 hour' AND recorded_at < now()"
+        ),
     ] {
-        let plan = plan(&pool, count).await;
+        let plan = plan(&pool, &count).await;
         let nodes = plan_nodes(&serde_json::from_str(&plan).expect("a plan"));
         let indexed = |kind: &str, index: &str| {
             (kind == "Index Only Scan" && index == "ix_access_log_index_time") || kind == "Seq Scan"
@@ -249,8 +252,8 @@ async fn the_iti81_total_is_counted_from_the_time_index() {
 }
 
 /// The newest entries of the ITI-81 search, the person's trail and a page of
-/// the log are read through the search index in its order, merged with the
-/// few past its cursor, never by a sort of the whole index (#6319).
+/// the log are read through the search index, merged with the few past its
+/// cursor, never by a sort of the whole index (#6319).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_newest_page_reads_the_index_in_its_order() {
     let seeded = seed(ENTRIES).await;
@@ -259,7 +262,7 @@ async fn a_newest_page_reads_the_index_in_its_order() {
         .fetch_one(&pool)
         .await
         .expect("the last entry id reads");
-    seeded
+    let cursor = seeded
         .sender
         .store()
         .index_access_log(last)
@@ -268,33 +271,132 @@ async fn a_newest_page_reads_the_index_in_its_order() {
     vacuum(&pool).await;
     for (page, index) in [
         (
-            "SELECT chain_seq FROM audit.access_log_search ORDER BY recorded_at DESC LIMIT 21",
+            format!(
+                "SELECT chain_seq FROM audit.access_log_search({cursor}) \
+                 ORDER BY recorded_at DESC LIMIT 21"
+            ),
             "ix_access_log_index_time",
         ),
         (
             "SELECT chain_seq, content FROM audit.access_log_record \
-             ORDER BY time_recorded DESC LIMIT 21",
+             ORDER BY time_recorded DESC LIMIT 21"
+                .to_owned(),
             "ix_access_log_index_time",
         ),
         (
-            "SELECT chain_seq FROM audit.access_log_search \
-             WHERE patient_id = 'patient-000000000007' ORDER BY recorded_at DESC LIMIT 21",
+            format!(
+                "SELECT chain_seq FROM audit.access_log_search({cursor}) \
+                 WHERE patient_id = 'patient-000000000007' ORDER BY recorded_at DESC LIMIT 21"
+            ),
             "ix_access_log_index_patient",
         ),
     ] {
-        let plan = plan(&pool, page).await;
+        let plan = plan(&pool, &page).await;
         let nodes = plan_nodes(&serde_json::from_str(&plan).expect("a plan"));
+        // NOTE: our own design (#6373), a filter the planner knows to match a few rows may read
+        // them through its index as a bitmap and sort those few.
         assert!(
-            nodes
-                .iter()
-                .any(|(kind, read, used)| read == "access_log_index"
-                    && kind.starts_with("Index")
-                    && used == index)
+            nodes.iter().any(|(kind, read, used)| used == index
+                && (kind == "Bitmap Index Scan"
+                    || (read == "access_log_index" && kind.starts_with("Index"))))
                 && nodes
                     .iter()
-                    .all(|(kind, read, _)| read != "access_log_index" || kind.starts_with("Index")),
-            "`{page}` reads {index} in its order: {plan}"
+                    .all(|(kind, read, _)| read != "access_log_index" || kind != "Seq Scan"),
+            "`{page}` reads {index}, never the whole index: {plan}"
         );
+    }
+}
+
+/// An ITI-81 page reads each access-log record it serves by one primary-key
+/// read of its row, with entries past the search index's cursor (#6320).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_iti81_page_reads_each_record_it_serves_by_its_key() {
+    let seeded = seed(ENTRIES).await;
+    let pool = seeded.db.pool();
+    let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
+        .fetch_one(&pool)
+        .await
+        .expect("the last entry id reads");
+    // The newest entries stay past the cursor, as between two frontier rounds.
+    let cursor = seeded
+        .sender
+        .store()
+        .index_access_log(last - i64::from(PER_REQUEST) * 4)
+        .await
+        .expect("the index moves");
+    vacuum(&pool).await;
+    let filter = AuditSearchFilter {
+        count: 20,
+        ..AuditSearchFilter::default()
+    };
+    let (sql, values) =
+        ferroehr::system_log::store::search_page::page_statement(&pool, &filter, cursor)
+            .await
+            .expect("the criteria resolve")
+            .expect("a page");
+    let plan: serde_json::Value = sqlx::query_scalar_with(
+        sqlx::AssertSqlSafe(format!("EXPLAIN (ANALYZE, FORMAT JSON) {sql}")),
+        values,
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the page is planned and run");
+    let mut loops = Vec::new();
+    executed(&plan, &mut loops);
+    assert!(
+        loops
+            .iter()
+            .filter(|(_, read, ..)| {
+                ["access_log_index", "access_log_index_state"].contains(&read.as_str())
+            })
+            .all(|(.., n)| *n <= 1),
+        "the search index and its cursor are read for the page's keys, never once a record: \
+         {plan}"
+    );
+    assert!(
+        loops
+            .iter()
+            .filter(|(_, read, ..)| read == "access_log_entry")
+            .all(|(kind, _, index, _)| kind.starts_with("Index") && index == "pk_access_log_entry"),
+        "an entry's row is read by its key: {plan}"
+    );
+    assert!(
+        loops
+            .iter()
+            .any(|(_, read, index, n)| read == "access_log_entry"
+                && index == "pk_access_log_entry"
+                && *n == 20),
+        "each of the 20 records served is read by its key once: {plan}"
+    );
+}
+
+/// Every executed node of `plan` as (type, relation, index, loops).
+fn executed(plan: &serde_json::Value, nodes: &mut Vec<(String, String, String, u64)>) {
+    match plan {
+        serde_json::Value::Array(items) => items.iter().for_each(|item| executed(item, nodes)),
+        serde_json::Value::Object(members) => {
+            if let Some(kind) = members.get("Node Type").and_then(serde_json::Value::as_str) {
+                let text = |name: &str| {
+                    members
+                        .get(name)
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or_default()
+                        .to_owned()
+                };
+                let loops = members
+                    .get("Actual Loops")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or_default();
+                nodes.push((
+                    kind.to_owned(),
+                    text("Relation Name"),
+                    text("Index Name"),
+                    loops,
+                ));
+            }
+            members.values().for_each(|value| executed(value, nodes));
+        }
+        _ => {}
     }
 }
 
@@ -357,9 +459,12 @@ async fn an_entry_takes_no_more_than_its_ceiling_on_disk() {
 
 /// The ITI-81 search of `filter`, counted.
 async fn found(seeded: &Seeded, criteria: Vec<AuditCriterion>) -> i64 {
-    seeded
-        .sender
-        .store()
+    found_in(seeded.sender.store(), criteria).await
+}
+
+/// The ITI-81 total of the records `criteria` match in `store`.
+async fn found_in(store: &AuditStore, criteria: Vec<AuditCriterion>) -> i64 {
+    store
         .search(&AuditSearchFilter {
             criteria,
             count: 1,
@@ -496,10 +601,20 @@ async fn the_seeded_log_verifies_searches_reads_and_erases() {
     );
 }
 
-/// What the readers of the seeded log answer: the ITI-81 totals of a
-/// patient, an agent, an address and the whole log, its newest page, one
-/// EHR's log and one entry read by its uid.
+/// What the readers of the seeded log answer: [`column_answers`] and
+/// [`token_answer`] of its store.
 async fn answers(seeded: &Seeded) -> String {
+    let store = seeded.sender.store();
+    format!(
+        "{}\n{}",
+        column_answers(seeded, store).await,
+        token_answer(store).await
+    )
+}
+
+/// The ITI-81 totals of a patient, an agent and the whole log and its newest
+/// page from `store`, one EHR's log and one entry read by its uid.
+async fn column_answers(seeded: &Seeded, store: &AuditStore) -> String {
     let mut answers = Vec::new();
     for criteria in [
         vec![AuditCriterion::Patient(vec![
@@ -508,11 +623,9 @@ async fn answers(seeded: &Seeded) -> String {
         vec![AuditCriterion::Agent(vec!["user-3".to_owned()])],
         Vec::new(),
     ] {
-        answers.push(found(seeded, criteria).await.to_string());
+        answers.push(found_in(store, criteria).await.to_string());
     }
-    let page = seeded
-        .sender
-        .store()
+    let page = store
         .search(&AuditSearchFilter {
             count: 50,
             total: true,
@@ -538,17 +651,18 @@ async fn answers(seeded: &Seeded) -> String {
     };
     let read = log.read(first.uid.value()).await.expect("the entry reads");
     answers.push(format!("{read:?}"));
-    // NOTE: our own design (#6322), the token reader runs last: it moves the index past every
-    // entry first, which the readers above must not see.
-    answers.push(
-        found(
-            seeded,
-            vec![AuditCriterion::Address(vec!["10.0.2.9".to_owned()])],
-        )
-        .await
-        .to_string(),
-    );
     answers.join("\n")
+}
+
+/// The ITI-81 total of an address from `store`, which moves the index past
+/// every entry first (#6322).
+async fn token_answer(store: &AuditStore) -> String {
+    found_in(
+        store,
+        vec![AuditCriterion::Address(vec!["10.0.2.9".to_owned()])],
+    )
+    .await
+    .to_string()
 }
 
 /// The rows of the search index, as text, in entry order.
@@ -562,11 +676,12 @@ async fn index_rows(pool: &sqlx::PgPool) -> String {
     .expect("the index is read")
 }
 
-/// The search index lags the entries by up to a frontier round, and a round a
-/// crash loses leaves its cursor behind (#6319): with the cursor anywhere,
-/// every reader answers as with every entry indexed, a token reader moving
-/// the index past every entry first (#6322), and the next round renders and
-/// copies the same rows again, search tokens included, even after the
+/// The search index lags the entries by up to a frontier round (#6319): with
+/// rounds held while entries stand past the cursor, with the cursor an ITI-81
+/// page binds behind the stored one (#6373), and with the cursor behind after
+/// a crash, every reader answers as with every entry indexed. A token reader
+/// moves the index past every entry first (#6322), and the next round renders
+/// and copies the same rows again, search tokens included, even after the
 /// store's token generation moved on.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[expect(
@@ -575,25 +690,82 @@ async fn index_rows(pool: &sqlx::PgPool) -> String {
 )]
 async fn every_entry_is_found_wherever_the_index_cursor_stands() {
     const SEEDED: u32 = 400;
+    const PAST: u32 = PER_REQUEST * 2;
     let mut seeded = seed(SEEDED).await;
     let pool = seeded.db.pool();
     let store = seeded.sender.store().clone();
+
+    // No round commits while the lock is held, as when each one fails before its commit.
+    let mut held = pool.acquire().await.expect("a connection");
+    sqlx::query("SELECT pg_advisory_lock(hashtext('audit.access_log_index'), 0)")
+        .execute(&mut *held)
+        .await
+        .expect("the indexing lock is held");
+    for first in (SEEDED..SEEDED + PAST).step_by(usize::try_from(PER_REQUEST).expect("a step")) {
+        let events = (first..first + PER_REQUEST).map(read).collect();
+        seeded
+            .sender
+            .record(events, None)
+            .await
+            .expect("the reads are recorded");
+    }
+    let deadline = std::time::Instant::now() + Duration::from_secs(120);
+    while sqlx::query_scalar::<_, i64>("SELECT count(*) FROM audit.access_log_record")
+        .fetch_one(&pool)
+        .await
+        .expect("the access log is counted")
+        < i64::from(SEEDED + PAST)
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the reads are chained"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
     let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
         .fetch_one(&pool)
         .await
         .expect("the last entry id reads");
+    let stored: i64 =
+        sqlx::query_scalar("SELECT last_id FROM audit.access_log_index_state WHERE singleton")
+            .fetch_one(&pool)
+            .await
+            .expect("the cursor reads");
+    assert!(
+        stored < last,
+        "entries stand past the cursor: {stored} of {last}"
+    );
+    // The token reader would wait on the held rounds, so it is left out here.
+    let behind = column_answers(&seeded, &store).await;
+    sqlx::query("SELECT pg_advisory_unlock(hashtext('audit.access_log_index'), 0)")
+        .execute(&mut *held)
+        .await
+        .expect("the indexing lock is released");
+    drop(held);
+
     assert_eq!(
         store.index_access_log(last).await.expect("the index moves"),
         last,
         "every entry is indexed"
     );
-    let indexed = answers(&seeded).await;
     let rows = index_rows(&pool).await;
     assert_eq!(
         i64::try_from(rows.lines().count()).expect("a count"),
-        i64::from(SEEDED),
+        i64::from(SEEDED + PAST),
         "one index row per entry"
     );
+    // The store's first page after the round binds the cursor it saw before the round.
+    assert_eq!(
+        column_answers(&seeded, &store).await,
+        behind,
+        "the readers answer the same with the page's cursor behind the stored one"
+    );
+    assert_eq!(
+        column_answers(&seeded, &store).await,
+        behind,
+        "and with every entry indexed"
+    );
+    let indexed = answers(&seeded).await;
     let tokenless: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM audit.access_log_index \
           WHERE render_policy_id IS NOT NULL AND coalesce(cardinality(search_tokens), 0) = 0",
@@ -606,7 +778,8 @@ async fn every_entry_is_found_wherever_the_index_cursor_stands() {
         "every indexed entry carries its search tokens"
     );
 
-    // The frontier round stops, as by a crash, while the cursor stands behind.
+    // The frontier round stops, as by a crash, while the cursor stands behind; the
+    // readers are those of a restarted store, which has seen no cursor.
     seeded
         .drain
         .take()
@@ -615,8 +788,13 @@ async fn every_entry_is_found_wherever_the_index_cursor_stands() {
         .await;
     for cursor in [last.div_euclid(2), 0] {
         cursor_at(&pool, cursor).await;
+        let restarted = AuditStore::new(pool.clone());
         assert_eq!(
-            answers(&seeded).await,
+            format!(
+                "{}\n{}",
+                column_answers(&seeded, &restarted).await,
+                token_answer(&restarted).await
+            ),
             indexed,
             "the readers answer the same with the cursor at {cursor}"
         );
@@ -646,6 +824,152 @@ async fn every_entry_is_found_wherever_the_index_cursor_stands() {
     assert_eq!(answers(&seeded).await, indexed);
 }
 
+/// The entries the ITI-81 page's scale test seeds (#6373).
+const AT_SCALE: u32 = 200_000;
+
+/// On a log of [`AT_SCALE`] entries an ITI-81 page, unfiltered and by a
+/// patient, a date window and an address, starts no parallel worker and reads
+/// fewer than 1,000 buffers, with the index cursor caught up and with entries
+/// past it (#6373).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_iti81_page_at_scale_starts_no_worker_and_reads_few_buffers() {
+    let seeded = seed(AT_SCALE).await;
+    let pool = seeded.db.pool();
+    let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
+        .fetch_one(&pool)
+        .await
+        .expect("the last entry id reads");
+    let now = jiff::Timestamp::now();
+    let filters = [
+        ("unfiltered", Vec::new(), None),
+        (
+            "patient",
+            vec![AuditCriterion::Patient(vec![
+                "patient-000000000007".to_owned(),
+            ])],
+            None,
+        ),
+        (
+            "date",
+            Vec::new(),
+            Some(now - jiff::SignedDuration::from_secs(3600)),
+        ),
+        (
+            "address",
+            vec![AuditCriterion::Address(vec!["10.0.2.9".to_owned()])],
+            None,
+        ),
+    ];
+    for behind in [2_000, i64::from(PER_REQUEST) * 4, 0] {
+        let cursor = seeded
+            .sender
+            .store()
+            .index_access_log(last - behind)
+            .await
+            .expect("the index moves");
+        vacuum(&pool).await;
+        for (name, criteria, from) in &filters {
+            let filter = AuditSearchFilter {
+                count: 20,
+                criteria: criteria.clone(),
+                from: *from,
+                ..AuditSearchFilter::default()
+            };
+            let (sql, values) =
+                ferroehr::system_log::store::search_page::page_statement(&pool, &filter, cursor)
+                    .await
+                    .expect("the criteria resolve")
+                    .expect("a page");
+            let mut conn = ferroehr::db::acquire::acquire(&pool)
+                .await
+                .expect("a connection");
+            sqlx::query("SET max_parallel_workers_per_gather = 2")
+                .execute(&mut *conn)
+                .await
+                .expect("parallel plans are allowed");
+            let mut plan = serde_json::Value::Null;
+            for _ in 0..3 {
+                plan = sqlx::query_scalar_with(
+                    sqlx::AssertSqlSafe(format!("EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {sql}")),
+                    values.clone(),
+                )
+                .fetch_one(&mut *conn)
+                .await
+                .expect("the page is planned and run");
+            }
+            let mut nodes = Vec::new();
+            executed(&plan, &mut nodes);
+            let buffers = ["Shared Hit Blocks", "Shared Read Blocks"]
+                .iter()
+                .map(|field| plan[0]["Plan"][field].as_u64().unwrap_or_default())
+                .sum::<u64>();
+            eprintln!(
+                "ITI-81 page at {AT_SCALE}, {behind} behind, {name}: {buffers} buffers, {} ms",
+                plan[0]["Execution Time"]
+            );
+            assert!(
+                nodes.iter().all(|(kind, ..)| !kind.starts_with("Gather")),
+                "{behind} behind, {name}: the page starts no worker: {plan}"
+            );
+            assert!(
+                buffers < 1_000,
+                "{behind} behind, {name}: the page reads {buffers} buffers: {plan}"
+            );
+        }
+    }
+}
+
+/// An ITI-81 page bound to a cursor behind the stored one serves the same
+/// records as one bound to the stored cursor: the entries the index holds
+/// past the bound are read from the index alone (#6373).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_page_bound_behind_the_cursor_serves_the_same_records() {
+    let seeded = seed(ENTRIES).await;
+    let pool = seeded.db.pool();
+    let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
+        .fetch_one(&pool)
+        .await
+        .expect("the last entry id reads");
+    let stored = seeded
+        .sender
+        .store()
+        .index_access_log(last - i64::from(PER_REQUEST) * 4)
+        .await
+        .expect("the index moves");
+    let filter = AuditSearchFilter {
+        count: 20,
+        ..AuditSearchFilter::default()
+    };
+    let page = |cursor: i64| {
+        let pool = pool.clone();
+        let filter = filter.clone();
+        async move {
+            let (sql, values) =
+                ferroehr::system_log::store::search_page::page_statement(&pool, &filter, cursor)
+                    .await
+                    .expect("the criteria resolve")
+                    .expect("a page");
+            let rows: Vec<(String, i64)> = sqlx::query_as_with(
+                sqlx::AssertSqlSafe(format!("SELECT p.chain, p.chain_seq FROM ({sql}) p")),
+                values,
+            )
+            .fetch_all(&pool)
+            .await
+            .expect("the page reads");
+            rows
+        }
+    };
+    let exact = page(stored).await;
+    assert_eq!(exact.len(), 21, "a page and the record past it: {exact:?}");
+    for behind in [1, 500, stored] {
+        assert_eq!(
+            page(stored - behind).await,
+            exact,
+            "a cursor {behind} behind the stored one"
+        );
+    }
+}
+
 /// Stands the search index's cursor at `cursor`, its rows past it gone, as a
 /// round a crash lost leaves them.
 async fn cursor_at(pool: &sqlx::PgPool, cursor: i64) {
@@ -662,7 +986,7 @@ async fn cursor_at(pool: &sqlx::PgPool, cursor: i64) {
 }
 
 /// The ITI-81 address search of `address`, counted.
-async fn by_address(store: &ferroehr::system_log::store::AuditStore, address: &str) -> i64 {
+async fn by_address(store: &AuditStore, address: &str) -> i64 {
     store
         .search(&AuditSearchFilter {
             criteria: vec![AuditCriterion::Address(vec![address.to_owned()])],

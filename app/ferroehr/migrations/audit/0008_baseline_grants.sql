@@ -36,7 +36,8 @@ REVOKE ALL ON FUNCTION
     access_log_intake_unknown(p_what text, p_digest text, p_removed boolean),
     access_log_intake_part_gone(p_digest text),
     audit_intake_release(p_ids uuid[]),
-    audit_intake_discard(p_ids uuid[])
+    audit_intake_discard(p_ids uuid[]),
+    access_log_search(p_cursor bigint)
     FROM PUBLIC;
 
 DO $$
@@ -67,9 +68,9 @@ BEGIN
             delivery_frontier,
             delivery_cursor,
             delivery_parked,
-            access_log_search,
             system_search,
             audit_record,
+            access_log_by_key,
             access_trail
             TO ferroehr_clinical_reader;
         GRANT SELECT, INSERT ON TABLE
@@ -82,9 +83,9 @@ BEGIN
             access_log_imported_record,
             access_log_imported_bundle,
             access_log_imported_folded,
-            access_log_search,
             system_search,
             audit_record,
+            access_log_by_key,
             access_trail
             TO ferroehr_clinical;
         GRANT EXECUTE ON FUNCTION
@@ -102,6 +103,8 @@ BEGIN
             audit_intake_release(p_ids uuid[]),
             audit_intake_discard(p_ids uuid[])
             TO ferroehr_clinical;
+        GRANT EXECUTE ON FUNCTION access_log_search(p_cursor bigint)
+            TO ferroehr_clinical, ferroehr_clinical_reader;
         GRANT SELECT, UPDATE ON TABLE delivery_frontier TO ferroehr_clinical;
         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE delivery_cursor, delivery_parked
             TO ferroehr_clinical;

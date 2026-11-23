@@ -73,9 +73,11 @@ const COMMITS_AFTER: [&str; 8] = [
 
 /// The reads that confirm their policy copies after they ran: each one's
 /// clinical statement selects the policy and definition revisions beside its
-/// rows, the version read of an EHR object and the AQL statement of a query
-/// a request judges (#6320).
-const READS_AFTER: [&str; 10] = [
+/// rows, the version read of an EHR object, the AQL statement of a query a
+/// request judges and the page of an ITI-81 search where the audit store
+/// shares the clinical database (#6320).
+const READS_AFTER: [&str; 11] = [
+    "audit_event_search",
     "ehr_status_get_at_time",
     "ehr_status_get_by_version_id",
     "directory_get_at_time",
