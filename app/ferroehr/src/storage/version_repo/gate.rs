@@ -45,7 +45,8 @@ pub enum Shape {
     /// in place of [`Ask::targets`] (#6257).
     Status,
     /// The tip of the EHR's directory, found by its slot in place of
-    /// [`Ask::targets`], and which of [`Ask::items`] exist in the EHR (#6257).
+    /// [`Ask::targets`], which of [`Ask::items`] exist in the EHR (#6257),
+    /// and the highest rank in `EHR.folders` (#6318).
     Directory,
 }
 
@@ -116,6 +117,10 @@ pub struct Gate {
     /// Which of [`Ask::items`] exist as versioned objects in the EHR, in any
     /// tier and lifecycle state ([`Shape::Directory`]).
     pub known_items: Vec<Uuid>,
+    /// The highest rank of the EHR's hierarchies in `EHR.folders`, `0` when
+    /// it has none ([`Shape::Directory`]); a new hierarchy takes the next,
+    /// so one another write took first is refused by its key.
+    pub folder_rank: i32,
     /// The targets, in the order asked.
     pub targets: Vec<Target>,
 }
@@ -293,13 +298,16 @@ fn addressed(shape: Shape) -> &'static str {
     }
 }
 
-/// Which of `$9` exist as versioned objects in the EHR
-/// ([`Shape::Directory`]), as `ehr_repo::existing_vo_roots` reads them.
+/// Which of `$9` exist as versioned objects in the EHR, as
+/// `ehr_repo::existing_vo_roots` reads them, and the EHR's highest folder
+/// rank ([`Shape::Directory`]).
 fn known_items(shape: Shape) -> &'static str {
     if shape == Shape::Directory {
         concat!(
             ", ARRAY(SELECT DISTINCT kv.vo_id FROM version kv ",
-            "  WHERE kv.ehr_id = $1 AND kv.vo_id = ANY($9::uuid[])) AS known_items"
+            "  WHERE kv.ehr_id = $1 AND kv.vo_id = ANY($9::uuid[])) AS known_items, ",
+            "(SELECT COALESCE(MAX(fr.rank), 0) FROM ehr_folder fr WHERE fr.ehr_id = $1) ",
+            "  AS folder_rank"
         )
     } else {
         ""
@@ -390,6 +398,11 @@ pub async fn read(conn: &mut PgConnection, ask: Ask<'_>) -> Result<Gate, Storage
             first.try_get("known_items")?
         } else {
             Vec::new()
+        },
+        folder_rank: if ask.shape == Shape::Directory {
+            first.try_get("folder_rank")?
+        } else {
+            0
         },
         targets: found,
     })

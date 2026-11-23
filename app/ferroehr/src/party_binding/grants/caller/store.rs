@@ -28,6 +28,7 @@ use super::care_of::{CareFact, CarerKind, Cover, ProviderKey};
 use super::kin::KinFact;
 use super::{CallerFact, FactKind, FactValue};
 use crate::party_binding::grants::store::{CHANNEL, GrantHead, Term};
+use crate::party_binding::step::{Returned, Step, Tag, differ, parties};
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
@@ -296,14 +297,36 @@ async fn replace(
     party: Option<Uuid>,
     role_validity: Option<&Value>,
 ) -> Result<Vec<Uuid>, StorageError> {
-    let statement = format!(
-        "DELETE FROM binding_caller_fact WHERE holder_id = $1 \
-         RETURNING party_id, {FACT_TEXT} AS fact"
+    let (gone, came) = steps(head, party, role_validity);
+    let mut rows = gone.run(tx).await?;
+    let derived = head
+        .live()
+        .map_or(&[][..], |facts| facts.grants.facts.as_slice());
+    if derived.iter().any(|fact| fact.about.or(party).is_some()) {
+        rows.extend(came.run(tx).await?);
+    }
+    Ok(changed(&rows))
+}
+
+/// The two steps that replace the facts of `head` about `party`: the delete
+/// of the facts it held and the insert of those its live body holds, each
+/// returning the party and the text of every fact it wrote
+/// ([`Tag::FactsGone`], [`Tag::FactsCame`]).
+pub(crate) fn steps<'q>(
+    head: GrantHead<'q>,
+    party: Option<Uuid>,
+    role_validity: Option<&'q Value>,
+) -> (Step<'q>, Step<'q>) {
+    let holder = head.vo_id;
+    let gone = Step::new(
+        "fd",
+        format!(
+            "DELETE FROM binding_caller_fact WHERE holder_id = $1 \
+             RETURNING party_id AS p, {FACT_TEXT} AS t"
+        ),
+        Some(Tag::FactsGone),
+        move |query| query.bind(holder),
     );
-    let gone: Vec<(Uuid, String)> = sqlx::query_as(sqlx::AssertSqlSafe(statement))
-        .bind(head.vo_id)
-        .fetch_all(&mut *tx)
-        .await?;
     let facts = head
         .live()
         .map_or(&[][..], |facts| facts.grants.facts.as_slice());
@@ -311,22 +334,18 @@ async fn replace(
         .iter()
         .filter_map(|fact| fact.about.or(party).map(|about| (fact, about)))
         .unzip();
-    let came = if facts.is_empty() {
-        Vec::new()
-    } else {
-        insert(tx, head, &about, role_validity, &facts).await?
-    };
-    if sorted(&gone) == sorted(&came) {
-        return Ok(Vec::new());
-    }
-    Ok(gone.iter().chain(&came).map(|(party, _)| *party).collect())
+    (gone, insert(head, about, role_validity, &facts))
 }
 
-/// The texts of `rows`, sorted.
-fn sorted(rows: &[(Uuid, String)]) -> Vec<&str> {
-    let mut texts: Vec<&str> = rows.iter().map(|(_, text)| text.as_str()).collect();
-    texts.sort_unstable();
-    texts
+/// Every party whose facts changed, from the rows the steps of [`steps`]
+/// returned: none when the facts that came are the facts that went.
+pub(crate) fn changed(rows: &[Returned]) -> Vec<Uuid> {
+    if !differ(rows, Tag::FactsGone, Tag::FactsCame) {
+        return Vec::new();
+    }
+    let mut moved = parties(rows, Tag::FactsGone);
+    moved.extend(parties(rows, Tag::FactsCame));
+    moved
 }
 
 /// Moves the facts revision, stamps `parties` with it and notifies

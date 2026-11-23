@@ -6,9 +6,10 @@
 //! `binding_identifier`, `binding_membership` and `binding_representation`
 //! hold the rows each party head contributes. A commit derives them from the
 //! body it holds (`party_binding::derive`) and writes only the rows that changed
-//! (`party_binding::rows`), in its own transaction; [`refill`], an archive load and
-//! an import derive them with the same function from the stored heads; the
-//! lookup reads them.
+//! (`party_binding::rows`), in its own transaction, every delete in one
+//! statement and every insert in the next (`settle`); [`refill`], an archive
+//! load and an import derive them with the same function from the stored
+//! heads; the lookup reads them.
 //!
 //! A `PERSON` of a mapped template has a key row for each identifier at its
 //! key selector, whose professional dates and representative flag say what
@@ -45,7 +46,7 @@ use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants;
 use crate::party_binding::key_space;
-use crate::party_binding::rows::{self, IdentifierRow, Professional, write_identifiers};
+use crate::party_binding::rows::{self, Professional, write_identifiers};
 use crate::storage::error::StorageError;
 use crate::storage::party_reverse;
 use crate::versioning::change::Committed;
@@ -54,10 +55,13 @@ use crate::versioning::{Kind, SigningCtx};
 mod conflict;
 pub mod held;
 mod last;
+mod settle;
 mod standalone;
+mod wanted;
 
 use conflict::selector_in_use;
 use last::{with_last, with_prior};
+use wanted::{GROUP_SELECTORS, PersonRows, group_rows, person_selectors, tombstones_of};
 
 /// The `version_lifecycle_state` code of a logically deleted head.
 const DELETED: &str = "523";
@@ -213,7 +217,7 @@ pub(crate) async fn reindex_committed(
     }
     let _changed =
         grants::caller::writer::check_care(tx, ctx.binding, committed, facts, prior).await?;
-    reindex_heads(tx, ctx.binding, committed.kind, vec![head])
+    settle::commit(tx, ctx.binding, committed.kind, &head)
         .await
         .map_err(selector_in_use)
 }
@@ -320,22 +324,31 @@ async fn reindex_heads(
     }
     match kind {
         Kind::Person => write_persons(tx, mapping, &heads, Scope::Heads { tombstones: true }).await,
-        Kind::Role => {
-            let mut performers = Vec::new();
-            for head in &heads {
-                performers.extend(performers_of(tx, head.vo_id).await?);
-            }
-            performers.sort_unstable();
-            performers.dedup();
-            if performers.is_empty() {
-                return Ok(());
-            }
-            let persons = stored_heads(tx, mapping, Kind::Person, Some(&performers), None).await?;
-            write_persons(tx, mapping, &persons, Scope::Heads { tombstones: false }).await
-        }
+        Kind::Role => write_performers(tx, mapping, &heads).await,
         Kind::Group => write_groups(tx, mapping, &heads).await,
         _ => Ok(()),
     }
+}
+
+/// Writes the rows of every `PERSON` a version of one of the `ROLE` heads
+/// `heads` names as its performer, so a `ROLE` whose performer changed
+/// rebuilds both.
+async fn write_performers(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    heads: &[Head],
+) -> Result<(), StorageError> {
+    let mut performers = Vec::new();
+    for head in heads {
+        performers.extend(performers_of(tx, head.vo_id).await?);
+    }
+    performers.sort_unstable();
+    performers.dedup();
+    if performers.is_empty() {
+        return Ok(());
+    }
+    let persons = stored_heads(tx, mapping, Kind::Person, Some(&performers), None).await?;
+    write_persons(tx, mapping, &persons, Scope::Heads { tombstones: false }).await
 }
 
 /// Rebuilds every row of the side table from the party versions alone, on
@@ -447,59 +460,12 @@ async fn write_persons(
     scope: Scope<'_>,
 ) -> Result<(), StorageError> {
     let parties: Vec<Uuid> = heads.iter().map(|h| h.vo_id).collect();
-    let mut identifiers = Vec::new();
-    let mut memberships = Vec::new();
-    let mut listed = Vec::new();
-    let standalone = rows::representatives(tx, &parties).await?;
-    for head in heads {
-        if mapping.membership.is_some()
-            && head.lifecycle_state != DELETED
-            && let Some(facts) = &head.facts
-        {
-            memberships.extend(facts.groups.iter().map(|group| (*group, head.vo_id)));
-        }
-        let Some(facts) = mapping
-            .persons
-            .keys()
-            .find_map(|template| head.live_of(template))
-        else {
-            continue;
-        };
-        for (selector, identifier) in &facts.identifiers {
-            if !scope.holds(selector, &identifier.issuer) {
-                continue;
-            }
-            identifiers.push(IdentifierRow {
-                party: head.vo_id,
-                selector,
-                issuer: identifier.issuer.clone(),
-                identifier_type: identifier.id_type.clone(),
-                value: if *selector == "key" {
-                    identifier.canonical()
-                } else {
-                    identifier.id.clone()
-                },
-                lifecycle_state: head.lifecycle_state.clone(),
-                representative: standalone.contains(&head.vo_id),
-            });
-        }
-        listed.extend(facts.roles.iter().map(|role| (*role, head.vo_id)));
-    }
-    let professional = professional(tx, mapping, &listed).await?;
-    let (selectors, issuer, tombstones): (&[&str], _, _) = match scope {
-        Scope::Heads { tombstones } => (&["key", "user_name", "external_id"], None, tombstones),
-        Scope::KeySpace(issuer) => (&["key"], Some(issuer), true),
-    };
-    write_identifiers(
-        tx,
-        &parties,
-        (selectors, issuer),
-        &identifiers,
-        &professional,
-    )
-    .await?;
-    if issuer.is_none() {
-        rows::write_memberships(tx, &parties, &memberships).await?;
+    let rows = PersonRows::of(mapping, heads, scope);
+    let professional = professional(tx, mapping, &rows.listed).await?;
+    let (selectors, tombstones) = person_selectors(scope);
+    write_identifiers(tx, &parties, selectors, &rows.identifiers, &professional).await?;
+    if selectors.1.is_none() {
+        rows::write_memberships(tx, &parties, &rows.memberships).await?;
     }
     if tombstones {
         let mut rows = tombstones_of(mapping, heads);
@@ -533,36 +499,6 @@ pub(crate) async fn fill_key_space(
     }
     write_persons(tx, mapping, &heads, Scope::KeySpace(issuer)).await?;
     Ok(Some(last))
-}
-
-/// The tombstone rows of the deleted heads among `heads`: the binding keys
-/// each carried in its last version with a body, of a mapped template.
-fn tombstones_of(mapping: &BindingMapping, heads: &[Head]) -> Vec<IdentifierRow> {
-    let mut out = Vec::new();
-    for head in heads.iter().filter(|h| h.lifecycle_state == DELETED) {
-        let Some((lifecycle_state, facts)) = &head.last else {
-            continue;
-        };
-        if !facts
-            .template
-            .as_ref()
-            .is_some_and(|t| mapping.persons.contains_key(t))
-        {
-            continue;
-        }
-        for (_, identifier) in facts.identifiers.iter().filter(|(s, _)| *s == "key") {
-            out.push(IdentifierRow {
-                party: head.vo_id,
-                selector: "key",
-                issuer: identifier.issuer.clone(),
-                identifier_type: identifier.id_type.clone(),
-                value: identifier.canonical(),
-                lifecycle_state: lifecycle_state.clone(),
-                representative: false,
-            });
-        }
-    }
-    out
 }
 
 /// The validities of the professional `ROLE`s among `listed`, each a `ROLE`
@@ -610,39 +546,11 @@ async fn write_groups(
     mapping: &BindingMapping,
     heads: &[Head],
 ) -> Result<(), StorageError> {
-    let Some(group) = &mapping.group else {
+    let Some(identifiers) = group_rows(mapping, heads) else {
         return Ok(());
     };
     let groups: Vec<Uuid> = heads.iter().map(|h| h.vo_id).collect();
-    let mut identifiers = Vec::new();
-    for head in heads {
-        let Some(facts) = head.live_of(&group.template) else {
-            continue;
-        };
-        let row = |selector, issuer: &str, identifier_type: &str, value: &str| IdentifierRow {
-            party: head.vo_id,
-            selector,
-            issuer: issuer.to_owned(),
-            identifier_type: identifier_type.to_owned(),
-            value: value.to_owned(),
-            lifecycle_state: head.lifecycle_state.clone(),
-            representative: false,
-        };
-        for id in &facts.group_external_ids {
-            identifiers.push(row("group_external_id", &id.issuer, &id.id_type, &id.id));
-        }
-        for name in &facts.display_names {
-            identifiers.push(row("group_display_name", "", "", name));
-        }
-    }
-    write_identifiers(
-        tx,
-        &groups,
-        (&["group_external_id", "group_display_name"], None),
-        &identifiers,
-        &[],
-    )
-    .await
+    write_identifiers(tx, &groups, (&GROUP_SELECTORS, None), &identifiers, &[]).await
 }
 
 /// The head's lifecycle state and trunk head of the party `vo_id`.
