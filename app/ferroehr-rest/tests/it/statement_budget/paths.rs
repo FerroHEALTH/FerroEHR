@@ -496,7 +496,8 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
-        allocations: 17_367,
+        // NOTE: our own design (#6074), binding the held facts snapshot adds an allocation.
+        allocations: 17_368,
         peak_bytes: 1_530_778,
         round_trips: 4,
         nested: 0,
