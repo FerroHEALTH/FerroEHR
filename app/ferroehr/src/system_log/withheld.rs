@@ -69,6 +69,9 @@ impl AuditStore {
         holds: &Holds,
         now: Timestamp,
     ) -> Result<AuditPage, AuditError> {
+        if filter.names_tokens() {
+            self.catch_up().await?;
+        }
         let Some(resolved) = resolve_criteria(&self.pool, filter).await? else {
             return Ok(AuditPage::empty(filter));
         };

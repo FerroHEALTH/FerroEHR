@@ -227,10 +227,8 @@ async fn the_sweep_skips_a_shared_part_an_intake_write_names() {
     ferroehr::access_log::intake::take_in(
         &mut tx,
         &[intake],
-        &[Vec::new()],
         None,
         &std::collections::BTreeSet::new(),
-        &ferroehr::access_log::intake::Named::default(),
     )
     .await
     .expect("the intake write");
@@ -287,16 +285,9 @@ async fn a_write_waiting_on_another_raise_of_a_part_writes_its_entry() {
 
     let mut conn = pool.acquire().await.expect("connection");
     let mut raising = conn.begin().await.expect("begin");
-    ferroehr::access_log::intake::take_in(
-        &mut raising,
-        &[first],
-        &[Vec::new()],
-        None,
-        &known,
-        &ferroehr::access_log::intake::Named::default(),
-    )
-    .await
-    .expect("the first write raises the part");
+    ferroehr::access_log::intake::take_in(&mut raising, &[first], None, &known)
+        .await
+        .expect("the first write raises the part");
     let waiting = {
         let pool = pool.clone();
         let digest = digest.clone();
@@ -308,10 +299,8 @@ async fn a_write_waiting_on_another_raise_of_a_part_writes_its_entry() {
             ferroehr::access_log::intake::take_in(
                 &mut conn,
                 &[second],
-                &[Vec::new()],
                 None,
                 &std::collections::BTreeSet::from([digest.as_str()]),
-                &ferroehr::access_log::intake::Named::default(),
             )
             .await
         })
@@ -358,7 +347,7 @@ async fn known_orphan(
     let mut first = entry(1, "2099-01-01");
     let intake = ferroehr::access_log::intake::IntakeEntry::of(&mut first, None).expect("intake");
     writer
-        .write(vec![intake], vec![Vec::new()])
+        .write(vec![intake])
         .await
         .expect("the first entry is written");
     store
@@ -379,7 +368,7 @@ async fn write_known(writer: &ferroehr::access_log::intake::GroupWriter, n: u32)
     let mut next = entry(n, "2099-01-01");
     let intake = ferroehr::access_log::intake::IntakeEntry::of(&mut next, None).expect("intake");
     writer
-        .write(vec![intake], vec![Vec::new()])
+        .write(vec![intake])
         .await
         .expect("an entry naming a part the writer knows is written");
 }
@@ -542,10 +531,8 @@ async fn a_raise_that_meets_the_sweeps_removal_is_refused() {
             ferroehr::access_log::intake::take_in(
                 &mut conn,
                 &[second],
-                &[Vec::new()],
                 None,
                 &std::collections::BTreeSet::from([digest.as_str()]),
-                &ferroehr::access_log::intake::Named::default(),
             )
             .await
         })

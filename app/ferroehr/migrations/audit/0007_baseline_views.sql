@@ -58,14 +58,14 @@ $$;
 CREATE VIEW access_log_search AS
     SELECT k.entry_id AS chain_seq, k.time_recorded AS recorded_at, e.event_action AS action,
            e.event_outcome AS outcome, k.principal, k.patient_id, e.resource_id,
-           e.request_id, e.client_ip, e.classified_ehr_id AS ehr_id, e.search_tokens,
+           e.request_id, e.client_ip, e.classified_ehr_id AS ehr_id, k.search_tokens,
            k.search_keys, k.entry_id
       FROM (SELECT i.entry_id, i.time_recorded, i.render_policy_id, i.principal, i.patient_id,
-                   i.search_keys
+                   i.search_tokens, i.search_keys
               FROM access_log_index i
             UNION ALL
             SELECT e.id, e.time_recorded, e.render_policy_id, e.principal, e.patient_id,
-                   audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
+                   NULL::integer[], audit.search_keys(NULL::integer[], e.request_id, e.resource_id)
               FROM access_log_entry e
              WHERE e.id > (SELECT x.last_id FROM access_log_index_state x WHERE x.singleton)
                AND NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id)) AS k

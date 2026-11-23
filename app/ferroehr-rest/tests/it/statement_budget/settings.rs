@@ -93,6 +93,26 @@ fn head_relation(relation: &str) -> bool {
     super::wal::pass_relation(relation)
 }
 
+/// Waits until the frontier round indexed every access-log entry with its
+/// search tokens, which it stores apart from the writes (#6322).
+async fn indexed(pool: &PgPool) {
+    for _ in 0..800 {
+        let behind: bool = sqlx::query_scalar(
+            "SELECT /* statement_budget_own */ EXISTS (SELECT 1 FROM audit.access_log_entry e \
+              WHERE e.id > (SELECT x.last_id FROM audit.access_log_index_state x \
+                             WHERE x.singleton))",
+        )
+        .fetch_one(pool)
+        .await
+        .expect("the index cursor reads");
+        if !behind {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+    }
+    panic!("the frontier round did not index the entries");
+}
+
 /// Commits the settings of class `k + 1` on the `k`th EHR of `ehrs` and
 /// measures the writes.
 async fn measure(
@@ -102,6 +122,7 @@ async fn measure(
     ehrs: &[ferroehr::ids::EhrId],
 ) -> Measured {
     drained(pool).await;
+    indexed(pool).await;
     let evicted = testkit::statements::statement_window(pool)
         .await
         .expect("the statement counts reset");
@@ -114,6 +135,7 @@ async fn measure(
     }
     let sent = round_trips.0.load(Ordering::Relaxed) - sent_before;
     drained(pool).await;
+    indexed(pool).await;
     let to = super::wal::insert_lsn(pool).await;
     super::wal::flushed(pool, &to).await;
     let statements = counted(pool).await;
