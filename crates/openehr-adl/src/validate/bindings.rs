@@ -1,33 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Terminology-binding topic: the local binding KEYS (VTTBK / VTCBK) and the
-//! external terminology-service seam that answers VETDF.
+//! Terminology bindings: the local binding keys (VTTBK, VTCBK; `AOM2/master07`
+//! §Validity Rules) and the [`TerminologyResolver`] seam that answers VETDF
+//! (`master03` §Validity Rules: "subject to tool accessibility").
 //!
-//! Key validity is
-//! `docs/specs/openehr/AM/docs/AOM2/master07-terminology_package.adoc`
-//! §Validity Rules (a binding key is a defined at/ac-code, or a path that
-//! is valid in the flat archetype). External term validity is
-//! `master03-archetype_package.adoc` §Validity Rules, VETDF: "external term
-//! validity. Each external term used within the archetype definition must exist
-//! in the relevant terminology (subject to tool accessibility; codes for
-//! inaccessible terminologies should be flagged with a warning indicating that
-//! no verification was possible)."
-//!
-//! `openehr-adl` is a network-free spec engine, so it holds no live
-//! terminology-service client. VETDF is threaded through the
-//! [`TerminologyResolver`] seam, like the [`RmModel`](super::rm::RmModel)
-//! reference-model seam: the application injects a resolver backed by its
-//! terminology service, and the full-validation entry points
-//! ([`super::validate`] / [`super::validate_source`]) consult it. Every entry
-//! point that takes no resolver behaves as if a [`NoTerminologyResolver`]
-//! were supplied (VETDF is silently not raised — no verification was possible),
-//! matching the spec's "subject to tool accessibility" carve-out.
-//!
-//! The `_type` of a binding target and the terminology-id → resolver mapping are
-//! deliberately kept out of this crate: the resolver receives the binding
-//! target reference exactly as authored and owns all terminology-specific
-//! interpretation.
+//! Without a resolver VETDF is not raised; the resolver receives each binding
+//! target as authored.
 
 use std::collections::BTreeSet;
 
@@ -73,15 +52,9 @@ pub(super) fn check_term_bindings(
     }
 }
 
-/// The VTTBK/VTCBK violation one binding key raises, or `None` when it is
-/// valid.
-///
-/// A constraint (ac) key must be a defined ac-code (VTCBK); a term key must be
-/// a defined at-code (VTTBK); a non-code key that is not even a path (a bare
-/// word) is never a valid binding target; and a node-id-predicated path must
-/// resolve within the flat archetype, through any `use_node` on its way
-/// ([`resolve_in_flat`]). A pure-RM path (no predicate) is a
-/// reference-model concern ([`super::rm`]).
+/// The VTTBK/VTCBK violation one binding key raises, or `None`: an ac key must
+/// be a defined ac-code, a term key a defined at-code, and a node-id path must
+/// resolve in the flat archetype ([`resolve_in_flat`]).
 fn binding_key_issue(
     definition: Option<&CComplexObject>,
     defined: &BTreeSet<&str>,
@@ -124,18 +97,10 @@ fn binding_key_issue(
 // ── the external terminology-service seam (VETDF) ──────────────────────────
 
 /// The seam by which the application answers "does this code exist in this
-/// terminology?" for the ADL2 VETDF check, without `openehr-adl` holding a
-/// network client.
+/// terminology?" for VETDF.
 ///
-/// `code_exists` returns:
-/// - `Some(true)` — the term is known to exist in the terminology (no VETDF);
-/// - `Some(false)` — the term is definitely absent from the terminology
-///   (**VETDF is raised**);
-/// - `None` — the resolver cannot answer (the terminology is unknown or the
-///   service is unavailable). No VETDF is raised: a validator must not reject an
-///   archetype on an infrastructure gap, per the VETDF "subject to tool
-///   accessibility; … no verification was possible" carve-out
-///   (`master03-archetype_package.adoc` §Validity Rules).
+/// `Some(false)` raises VETDF; `None` (unknown or unavailable) raises nothing
+/// (`master03-archetype_package.adoc` §Validity Rules).
 pub trait TerminologyResolver {
     /// Whether `code` (the external term reference exactly as authored in the
     /// binding — typically a URI for an external terminology) exists in the
@@ -144,11 +109,7 @@ pub trait TerminologyResolver {
     fn code_exists(&self, terminology_id: &str, code: &str) -> Option<bool>;
 }
 
-/// The default resolver: it can never answer, so VETDF is never raised.
-///
-/// Supplied implicitly by every validation entry point that takes no resolver,
-/// so those paths are byte-for-byte unchanged (the VETDF "no verification was
-/// possible" carve-out — `master03-archetype_package.adoc` §Validity Rules).
+/// The default resolver: it never answers, so VETDF is never raised.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct NoTerminologyResolver;
 
@@ -158,16 +119,9 @@ impl TerminologyResolver for NoTerminologyResolver {
     }
 }
 
-/// One external term binding extracted from an archetype's `term_bindings`.
-///
-/// Carries the external `terminology_id` (the outer binding key), the local
-/// `key` bound (an at/ac-code or a path), and the `target` external term
-/// reference (a URI).
-///
-/// Yielded by [`external_term_bindings`] so the application can pre-resolve the
-/// same set the validator will consult (the resolver seam is synchronous; a
-/// terminology lookup is async, so the app resolves ahead of time and hands the
-/// validator a memoised resolver).
+/// One external term binding of an archetype's `term_bindings`: the
+/// terminology, the local `key`, and the `target` URI. The application
+/// pre-resolves these for a synchronous resolver.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExternalTermBinding {
     /// The external terminology id (the outer `term_bindings` key), e.g.
@@ -180,22 +134,10 @@ pub struct ExternalTermBinding {
     pub target: String,
 }
 
-/// Whether `terminology_id` names a *genuinely external* terminology — one whose
-/// term references VETDF must verify against a terminology service.
+/// Whether `terminology_id` names an external terminology VETDF verifies.
 ///
-/// Excluded (returns `false`):
-/// - `"local"` — the archetype's own term definitions
-///   (`docs/specs/openehr/AM/docs/ADL2/master07.13-adl_terminology.adoc`
-///   §Terminology: archetype-local terms), never an external terminology;
-/// - `"openehr"` — the openEHR Terminology, treated here as archetype-internal:
-///   its binding *keys* are validated by VTTBK/VTCBK (`master07` §Validity
-///   Rules) and VETDF is scoped to third-party terminologies.
-///
-/// NOTE: openEHR publishes no enumeration of "external" terminology ids, so the
-/// `local`/`openehr` exclusion set is our own scoping decision (the two
-/// archetype-/openEHR-internal ids), not a spec-pinned list. The comparison is
-/// ASCII-case-insensitive, matching openEHR's case-insensitive identifier rules
-/// (`master03` §Lexical Conventions).
+/// NOTE: openEHR publishes no list of external terminologies; excluding `local`
+/// and `openehr` is our own design, compared ASCII-case-insensitively.
 fn is_external_terminology(terminology_id: &str) -> bool {
     let id = terminology_id.to_ascii_lowercase();
     id != "local" && id != "openehr"
@@ -219,12 +161,8 @@ fn walk_external_bindings(v: &ArchetypeView<'_>, mut f: impl FnMut(&str, &str, &
     }
 }
 
-/// The external term bindings of `archetype` (`term_bindings` entries under a
-/// genuinely-external terminology id — see `is_external_terminology`).
-///
-/// The application iterates these to pre-resolve each `(terminology_id, target)`
-/// against its terminology service and build the [`TerminologyResolver`] the
-/// validator then consults for VETDF.
+/// The external term bindings of `archetype`, for the application to
+/// pre-resolve into the [`TerminologyResolver`].
 #[must_use]
 pub fn external_term_bindings(archetype: &Archetype) -> Vec<ExternalTermBinding> {
     let v = view(archetype);
@@ -239,12 +177,8 @@ pub fn external_term_bindings(archetype: &Archetype) -> Vec<ExternalTermBinding>
     out
 }
 
-/// VETDF: raise an issue for every external term binding whose target the
-/// `resolver` reports as definitely absent (`Some(false)`).
-///
-/// `Some(true)` (exists) and `None` (could not verify) raise nothing —
-/// `master03-archetype_package.adoc` §Validity Rules, VETDF: an inaccessible
-/// terminology is flagged as unverifiable, not as invalid.
+/// VETDF: an issue for every external binding the `resolver` reports absent
+/// (`master03-archetype_package.adoc` §Validity Rules).
 pub(super) fn check_external_term_bindings(
     v: &ArchetypeView<'_>,
     resolver: &dyn TerminologyResolver,

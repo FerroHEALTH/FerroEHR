@@ -1,26 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL2 `rules` section + structured slot-assertion parser.
-//!
-//! The core BEL grammar is `openehr_lang::v1_1::bel` (a LANG spec — statements,
-//! assertions, assignments, operators, literals → the generated `beom` model).
-//! This module supplies the **AOM composition**: a [`BelBuilder`] that produces
-//! the AM-level expression model (`openehr_am::v2_4::beom` — the extender enums
-//! composing the beom variants + the AOM leaves), with the two AOM-specific leaf
-//! productions the spec adds (`AOM2` master05-rules_package):
-//!
-//! * an archetype/data **path** leaf becomes an `EXPR_ARCHETYPE_REF`
-//!   (`master05`; the path is a runtime-value proxy);
-//! * a `matches { c_primitive_object }` right-hand side becomes an
-//!   `EXPR_CONSTRAINT` wrapping the cADL primitive (reusing the cADL primitive
-//!   parser, `crate::parse::parse_inline_primitive_text`);
-//! * inside a **slot** assertion (`master04.3` §Archetype Slots), a
-//!   `matches { /regex/ }` right-hand side becomes an
-//!   `EXPR_ARCHETYPE_ID_CONSTRAINT` (an archetype-id regex matcher).
-//!
-//! No expression grammar is duplicated: this drives
-//! [`openehr_lang::v1_1::bel::parse_statements_with`] with the AOM builder.
+//! The ADL2 `rules` section and the structured slot-assertion parser: a
+//! [`BelBuilder`] over [`openehr_lang::v1_1::bel::parse_statements_with`] that
+//! adds the AOM leaves (`AOM2` master05): a path becomes `EXPR_ARCHETYPE_REF`,
+//! `matches { primitive }` an `EXPR_CONSTRAINT`, and in a slot `matches { /regex/ }`
+//! an `EXPR_ARCHETYPE_ID_CONSTRAINT` (`master04.3` §Archetype Slots).
 
 use openehr_am::v2_4::aom2::constraint_model::archetype_constraint::ArchetypeConstraint;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
@@ -106,16 +91,10 @@ impl AmBuilder {
     }
 }
 
-/// A parse-time placeholder for `EXPR_ARCHETYPE_REF.item` (the referenced node).
+/// A parse-time placeholder for `EXPR_ARCHETYPE_REF.item`, replaced by
+/// [`resolve_archetype_refs`] once the archetype is assembled.
 ///
-/// NOTE: `EXPR_ARCHETYPE_REF.item : ARCHETYPE_CONSTRAINT` is mandatory in the
-/// generated AOM model but is the *resolved* target of the path, unknown at
-/// parse time (`AOM2` master05 — the path is the runtime-value proxy). We emit
-/// an empty `C_COMPLEX_OBJECT` as the target during the standalone rules parse;
-/// [`resolve_archetype_refs`] replaces it with the resolved definition node once
-/// the whole archetype is assembled (an unresolvable path keeps this placeholder
-/// and surfaces as a VRRLP validation finding). No openEHR spec governs this
-/// parse-time placeholder shape — our own design/extension.
+/// NOTE: no openEHR spec governs the placeholder shape: our own design.
 fn unresolved_ref_target() -> ArchetypeConstraint {
     let node = ObjectNode {
         rm_type_name: String::new(),
@@ -287,11 +266,8 @@ impl BelBuilder for AmBuilder {
         type_id: &str,
         value: Option<Expression>,
     ) -> Statement {
-        // Same beom-normative bound as `variable_declaration`: no constant
-        // class exists (`LANG/docs/BEL/master04-expression_object_model.adoc`
-        // §Core Package), so the model's one declaration shape carries it and
-        // the value is discarded like a variable initialiser. Archetype rules
-        // sections do not use constants in practice.
+        // No constant class exists (`LANG/docs/BEL/master04-expression_object_model.adoc`
+        // §Core Package), so the value is discarded.
         drop(value);
         Statement::VariableDeclaration(VariableDeclaration {
             name: name.to_owned(),
@@ -369,11 +345,8 @@ fn bel_to_syntax(err: &BelError, offset: usize, src: &str) -> SyntaxError {
     SyntaxError::at(code, message, (at + offset)..(at + offset), src)
 }
 
-/// Parse a raw `rules`-section body into the AM-level statement set.
-///
-/// Every primitive constraint in it carries the primitive node id of `coding`,
-/// the archetype's own (`org.openehr.am.aom2.adl_code_definitions`
-/// §Constants). Byte offsets in returned errors are relative to `body`.
+/// Parse a raw `rules`-section body into the AM-level statement set, primitives
+/// carrying the node id of `coding`; error offsets are relative to `body`.
 ///
 /// # Errors
 /// Returns the `S*` catalogue errors (`SINVS`/`SEXPT`/`SAIV` and the cADL codes
@@ -397,10 +370,6 @@ pub fn parse_rules_body(body: &str, coding: NodeCoding) -> Result<StatementSet, 
 }
 
 /// Parse the `rules` span of an already-parsed [`SourceArtefact`].
-///
-/// This is the rules counterpart of driving
-/// [`crate::parse::parse_definition_body`] over the definition span, in the
-/// node coding its definition's root names.
 ///
 /// # Errors
 /// Returns the rule errors offset to the whole file.
@@ -434,23 +403,11 @@ pub fn parse_artefact_rules(
     }
 }
 
-/// Parses a slot include/exclude assertion block into AM-level assertions.
+/// Parses a slot include/exclude assertion block into AM-level assertions
+/// (`master04.3` §Archetype Slots), in source order.
 ///
-/// The block (`master04.3` §Archetype Slots; the cADL grammar
-/// `c_includes : SYM_INCLUDE assertion+`) becomes one or more real
-/// [`Assertion`]s — each `archetype_id_path matches { /regex/ }` →
-/// `EXPR_ARCHETYPE_REF matches EXPR_ARCHETYPE_ID_CONSTRAINT` (`master05`).
-///
-/// Each assertion's `string_expression` is ITS OWN string form, rendered from
-/// its tree by [`crate::print::assertion_text`] — the model's own reading of
-/// the attribute ("String form of expression",
-/// `LANG/docs/BEL/master04-expression_object_model.adoc` §Core Package) and
-/// what makes `parse → print → parse` a fixed point.
-///
-/// The grammar admits more than one assertion after a single `include`/`exclude`
-/// keyword, so every parsed [`Statement::Assertion`] in the block is returned in
-/// source order. Each regex matcher carries the primitive node id of `coding`,
-/// the archetype's own.
+/// Each assertion's `string_expression` is rendered from its own tree by
+/// [`crate::print::assertion_text`] (`master04-expression_object_model.adoc`).
 ///
 /// # Errors
 /// Returns the `S*` errors on a malformed slot assertion (regex compile `SCSRE`,
@@ -498,11 +455,8 @@ pub fn parse_slot_assertions(
     Ok(assertions)
 }
 
-/// Returns the two operands of a slot assertion's top-level `matches`.
-///
-/// A slot constraint's core expression is `<reference> matches { … }`
-/// (`ADL2/master04.3` §Slots based on Lexical Archetype Identifiers); an
-/// assertion of any other shape yields `None`.
+/// The two operands of a slot assertion's top-level `matches` (`ADL2/master04.3`
+/// §Slots based on Lexical Archetype Identifiers), or `None`.
 fn matches_operands(assertion: &Assertion) -> Option<(&Expression, &Expression)> {
     match assertion.expression.as_ref() {
         Expression::ExprBinaryOperator(b) if b.operator == OperatorKind::Matches => {
@@ -525,12 +479,8 @@ pub(crate) fn recode_slot_matcher(assertion: &mut Assertion, coding: NodeCoding)
     }
 }
 
-/// Returns the reference path a slot assertion constrains.
-///
-/// This is the left operand of the assertion's `matches` — `archetype_id/value`
-/// for an identifier slot (`ADL2/master04.3` §Slots based on Lexical Archetype
-/// Identifiers), some other property or path for the constraint-based form
-/// (§Slots based on other Constraints).
+/// The reference path a slot assertion constrains, the left operand of its
+/// `matches`.
 #[must_use]
 pub fn slot_assertion_path(assertion: &Assertion) -> Option<&str> {
     match matches_operands(assertion)?.0 {
@@ -539,14 +489,8 @@ pub fn slot_assertion_path(assertion: &Assertion) -> Option<&str> {
     }
 }
 
-/// Returns the regular expression a slot assertion constrains its reference
-/// with, without the `/…/` delimiters.
-///
-/// The right operand is an `EXPR_ARCHETYPE_ID_CONSTRAINT` (or, for an assertion
-/// built outside the slot parser, a plain `C_STRING` constraint), whose
-/// `C_STRING` carries one delimited regex (`AOM2/master04.5` §`C_STRING`). An
-/// assertion constraining a literal value list rather than a regex yields
-/// `None`.
+/// The regex a slot assertion constrains its reference with, without
+/// delimiters; `None` for a literal value list (`AOM2/master04.5` §`C_STRING`).
 #[must_use]
 pub fn slot_assertion_regex(assertion: &Assertion) -> Option<&str> {
     let cstring = match matches_operands(assertion)?.1 {
@@ -561,14 +505,8 @@ pub fn slot_assertion_regex(assertion: &Assertion) -> Option<&str> {
         .map(crate::odin::regex_inner)
 }
 
-/// Resolves every `EXPR_ARCHETYPE_REF` proxy against the archetype definition.
-///
-/// Each proxy in a parsed `rules` [`StatementSet`] has its parse-time
-/// placeholder `item` (see `unresolved_ref_target`) replaced with the target
-/// node the reference path addresses (`AOM2` master05 — the path is the
-/// runtime-value proxy, `item` its resolved `ARCHETYPE_CONSTRAINT` target). A
-/// path that does not resolve within the archetype keeps the placeholder (the
-/// unresolved path is a VRRLP finding in validation, not an assembly error).
+/// Resolves every `EXPR_ARCHETYPE_REF` proxy's `item` against the definition
+/// (`AOM2` master05); an unresolvable path keeps the placeholder for VRRLP.
 pub fn resolve_archetype_refs(rules: &mut StatementSet, definition: &CComplexObject) {
     for stmt in rules.statement.iter_mut().flatten() {
         match stmt {

@@ -1,30 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Assembles a parsed ADL artefact into the generated AOM2 object model.
-//!
-//! The ODIN sections, the cADL `definition`, and the `rules` of a
-//! [`crate::source::SourceArtefact`] fold into the **generated**
-//! `openehr_am::v2_4::aom2` object model, producing a complete [`Archetype`].
-//!
-//! The lower-level entry points ([`crate::source::parse_source`],
-//! [`crate::parse::parse_definition_body`], [`crate::rules::parse_rules_body`])
-//! stay available; this module composes them and maps each ODIN section
-//! (`language`/`description`/`terminology`/`annotations`/`rm_overlay`/
-//! `component_terminologies`) into its typed model class.
-//!
-//! Spec oracle: `docs/specs/openehr/AM/docs/ADL2/{master07.07,master07.08,
-//! master07.12,master07.13,master07.14}` (the section formats), `AOM2/master03`
-//! (archetype package), and `docs/specs/openehr/BASE/docs/resource/` (the
-//! resource-description model). Type errors in a section raise
-//! [`SyntaxErrorCode::Sdinv`] (or the section-specific `SA**` code) with the
-//! section's position where recoverable.
-//!
-//! NOTE: the owner/parent back-references (`ARCHETYPE_TERMINOLOGY.owner_archetype`,
-//! `RESOURCE_DESCRIPTION.parent_resource`) are omitted from the generated model
-//! by the emitter (they are non-data navigational associations that make the
-//! type non-constructible if owned — see the codegen `back_reference` rule), so
-//! assembly needs no back-pointer wiring.
+//! Assembles a parsed ADL artefact into the generated AOM2 object model: the
+//! ODIN sections, the cADL `definition` and the `rules` fold into an
+//! [`Archetype`] (`ADL2/master07.07` to `master07.14`; `AOM2/master03`; BASE
+//! `resource/`). A type error in a section raises [`SyntaxErrorCode::Sdinv`] or
+//! its `SA**` code.
 
 use std::collections::BTreeMap;
 
@@ -61,24 +42,10 @@ use self::description::assemble_description;
 use crate::rules::parse_artefact_rules;
 use crate::source::{ArtefactKind, ArtefactMeta, SourceArtefact, parse_source};
 
-/// Parse an ADL source into a fully-assembled [`Archetype`], reading it in
-/// `dialect`.
+/// Parse an ADL source into a fully assembled [`Archetype`] in `dialect`.
 ///
-/// This is the high-level entry point of the front end: it outer-parses
-/// (`crate::source`), cADL-parses the `definition` (`crate::parse`), parses the
-/// `rules` (`crate::rules`), and maps every ODIN section into the generated
-/// `openehr_am::v2_4::aom2` model, returning the artefact-kind-appropriate
-/// `Archetype` enum variant.
-///
-/// Under [`Dialect::Adl14`] the outer structure is read with the 1.4 rules
-/// (case-insensitive section keywords, the old-form language tolerance, the
-/// mandatory `concept` section) and the cADL `definition` tolerates the 1.4-only
-/// object forms, so the result is a *1.4-shaped* `Archetype` (at-code node ids,
-/// qualified/listed terminology constraints in the
-/// `C_TERMINOLOGY_CODE.constraint` string, domain blocks lowered to
-/// `DV_QUANTITY`/`DV_ORDINAL`) that [`crate::adl14::convert`] rewrites into a
-/// spec-valid ADL2 archetype. No openEHR spec governs 1.4→2 — see
-/// `crate::adl14`.
+/// Under [`Dialect::Adl14`] the result is 1.4-shaped, for
+/// [`crate::adl14::convert`] to rewrite into ADL2 (no openEHR spec governs 1.4→2).
 ///
 /// # Errors
 /// Returns every [`SyntaxError`] found across the outer parse, the cADL
@@ -88,13 +55,8 @@ pub fn parse_artefact(src: &str, dialect: Dialect) -> Result<Archetype, Vec<Synt
     assemble(&art, src, dialect)
 }
 
-/// Assemble an already-outer-parsed [`SourceArtefact`] into an [`Archetype`] of
-/// `dialect`, given the whole source text (needed to re-lex the
-/// `definition`/`rules` spans).
-///
-/// Kept separate from [`parse_artefact`] so a caller that also needs the
-/// [`SourceArtefact`] — e.g. the validator's source-level checks — can assemble
-/// without re-parsing.
+/// Assemble an outer-parsed [`SourceArtefact`] into an [`Archetype`] of
+/// `dialect`, given the whole source text to re-lex its spans.
 ///
 /// # Errors
 /// Returns every [`SyntaxError`] from the cADL/rules parse and the section
@@ -115,13 +77,8 @@ pub(crate) fn assemble(
         }
     };
 
-    // ADL 1.4 mandates the `concept` section: `master08` §Syntax Specification
-    // gives `arch_concept: SYM_CONCEPT V_LOCAL_TERM_CODE_REF | SYM_CONCEPT
-    // error` — no empty alternative, unlike `arch_specialisation`/
-    // `arch_language`/`arch_description`/`arch_invariant` — and §Validity Rules
-    // VARCN requires "an archetype term value in the concept section". ADL2
-    // derives the concept from the HRID (`ADL2/master07.09`), so the section is
-    // obsolete there and its absence is not an error.
+    // ADL 1.4 mandates `concept` (`master08` §Syntax Specification `arch_concept`;
+    // VARCN); ADL2 derives it from the HRID (`ADL2/master07.09`).
     if dialect == Dialect::Adl14
         && art.kind != ArtefactKind::TemplateOverlay
         && art.concept.is_none()
@@ -238,11 +195,8 @@ fn root_node_id(def: &CComplexObject) -> String {
 // ── language (master07.07) ────────────────────────────────────────────────
 
 /// `original_language = <[ISO_639-1::en]>` → a [`TerminologyCode`]. A missing
-/// `language` section is tolerated (`master07.07` legacy upgrade): in the ADL
-/// 1.4 dialect the old form's ontology `primary_language` is lifted into it
-/// (see [`old_form_primary_language`]), otherwise the language falls back to
-/// `ISO_639-1::en` so the model stays constructible; the absence is not itself
-/// a hard error here (the outer parser already raised `SALAN` where required).
+/// section takes the 1.4 `primary_language` ([`old_form_primary_language`]),
+/// else `ISO_639-1::en`; the outer parser already raised `SALAN` where required.
 fn assemble_original_language(
     art: &SourceArtefact,
     dialect: Dialect,
@@ -286,15 +240,9 @@ fn assemble_translations_of(
     }
 }
 
-/// The old-form ontology `primary_language` lifted into `original_language`
-/// (`AM/docs/ADL1.4/master08-adl` §Ontology Header Statements).
-///
-/// NOTE: the upgrade is the spec's own instruction (ADL1.4 `master08-adl.adoc`
-/// §Language Section + §Ontology Header Statements: tools "should consider
-/// accepting archetypes of the old form and upgrading them when parsing" —
-/// `primary_language`/`languages_available` in the ontology standing in for
-/// the missing `language` section); it runs on the 1.4 path only, ADL2 has no
-/// old form.
+/// The old-form ontology `primary_language` lifted into `original_language` on
+/// the 1.4 path (`ADL1.4/master08-adl.adoc` §Language Section, §Ontology Header
+/// Statements: tools "should consider accepting archetypes of the old form").
 fn old_form_primary_language(art: &SourceArtefact) -> Option<TerminologyCode> {
     let map = art.terminology.as_ref().and_then(as_object)?;
     let value = map.get("primary_language")?;
@@ -304,11 +252,8 @@ fn old_form_primary_language(art: &SourceArtefact) -> Option<TerminologyCode> {
     }
 }
 
-/// The old form's `languages_available` lifted into `translations`: one minimal
-/// [`TranslationDetails`] per listed language other than the primary one (the
-/// old form carries no translator metadata to fill the other fields with) —
-/// `master08` §Ontology Header Statements NOTE, quoted on
-/// [`old_form_primary_language`].
+/// The old form's `languages_available` lifted into `translations`, one minimal
+/// [`TranslationDetails`] per non-primary language.
 fn old_form_translations(art: &SourceArtefact) -> Option<BTreeMap<String, TranslationDetails>> {
     let map = art.terminology.as_ref().and_then(as_object)?;
     let primary = old_form_primary_language(art).map(|c| c.code_string);
@@ -366,11 +311,9 @@ fn assemble_translations(language: &OdinValue) -> Option<BTreeMap<String, Transl
 
 // ── terminology (master07.13) ─────────────────────────────────────────────
 
-/// The `terminology` ODIN block → [`ArchetypeTerminology`] (`master07.13`).
-/// Handles the deprecated 1.4 forms per §Deprecated Terminology Section
-/// Features: `constraint_definitions`/`constraint_bindings` are merged into
-/// `term_definitions`/`term_bindings`, the `items=<>` wrapper is unwrapped, and
-/// `terminologies_available` is ignored.
+/// The `terminology` ODIN block → [`ArchetypeTerminology`] (`master07.13`), the
+/// deprecated 1.4 forms merged or unwrapped per §Deprecated Terminology Section
+/// Features.
 fn assemble_terminology(
     art: &SourceArtefact,
     concept_code: &str,

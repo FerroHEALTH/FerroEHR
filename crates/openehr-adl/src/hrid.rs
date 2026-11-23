@@ -1,40 +1,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The archetype human-readable-identifier (HRID) grammar — the single home for
-//! reading, writing, and keying an `ARCHETYPE_HRID`.
+//! The archetype human-readable-identifier grammar (`AOM2/master07.05`
+//! §Physical Archetype Identifier).
 //!
-//! Spec oracle: `docs/specs/openehr/AM/docs/AOM2/master07.05` §Physical
-//! Archetype Identifier — the physical form
-//! `[ns::]publisher-package-class.concept.vMAJOR[.MINOR[.PATCH]][-status[.build]]`.
-//! [`parse_hrid`] reads that form into the generated
-//! `openehr_am::v2_4::aom2` [`ArchetypeHrid`] and its `Display` writes it
-//! back; the two are inverses over a normalised (3-part-version) id.
-//!
-//! Two further, deliberately *looser* readings of the same grammar live here so
-//! all three sit side by side and their differences are visible:
-//! [`hrid_lookup_key`]/[`raw_id_lookup_key`] (the case-folded family the
-//! repository keys on beside the namespace and the major version) and
-//! [`is_archetype_id`] (the `master04.3` slot/root meta-pattern predicate,
-//! which judges shape only and parses nothing).
-//!
-//! Everything that has to locate the `.v` version boundary in a raw id string —
-//! [`parse_hrid`], [`raw_id_lookup_key`], [`raw_id_concept`],
-//! [`raw_id_version`] — goes through the one primitive [`version_marker`], so
-//! the grammar has exactly one reading. See that function for why the reading
-//! is the LAST `.v<digit>`.
+//! [`parse_hrid`] and `Display` are inverses over a normalised id;
+//! [`hrid_lookup_key`] and [`is_archetype_id`] are looser readings. Every reader
+//! of the `.v` boundary goes through [`version_marker`].
 
 use openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
 use openehr_am::v2_4::aom2::archetype::archetype_hrid_impl::HridError;
 
-/// Parse an archetype HRID (or a version-partial specialise reference) into an
-/// [`ArchetypeHrid`], normalising a partial version per `master07.05`.
-///
-/// Form: `[ns::]publisher-package-class.concept.vMAJOR[.MINOR[.PATCH]]
-/// [-rc|-alpha|-beta[.build]]`. The grammar is `openehr-am`'s [`FromStr`]
-/// reading of [`ArchetypeHrid`].
-///
-/// [`FromStr`]: std::str::FromStr
+/// Parse an archetype HRID, or a version-partial specialise reference, into an
+/// [`ArchetypeHrid`], normalising a partial version (`master07.05`).
 ///
 /// # Errors
 /// Returns a message describing the first structural problem.
@@ -42,14 +20,9 @@ pub fn parse_hrid(s: &str) -> Result<ArchetypeHrid, String> {
     s.parse().map_err(|e: HridError| e.to_string())
 }
 
-/// The `publisher-package-class.concept` lookup key of an [`ArchetypeHrid`].
-///
-/// Case-folded to ASCII lowercase: openEHR archetype-id matching is
-/// case-insensitive on the RM publisher/package/class (`ADL2/master07.05`
-/// §Physical Archetype Identifier — the RM entity names follow the
-/// case-insensitive type-name matching of `master03` §Lexical Conventions), so
-/// a reference `openehr-task_planning-DECISION_GROUP.x` resolves the archetype
-/// `openehr-TASK_PLANNING-DECISION_GROUP.x`.
+/// The `publisher-package-class.concept` lookup key of an [`ArchetypeHrid`],
+/// ASCII-lowercased, since archetype-id matching is case-insensitive on the RM
+/// entity names (`ADL2/master07.05`; `master03` §Lexical Conventions).
 #[must_use]
 pub fn hrid_lookup_key(h: &ArchetypeHrid) -> String {
     format!(
@@ -59,26 +32,15 @@ pub fn hrid_lookup_key(h: &ArchetypeHrid) -> String {
     .to_ascii_lowercase()
 }
 
-/// The `publisher-package-class.concept` lookup key of a RAW archetype-id
-/// string: the optional `ns::` prefix and the trailing `.vN…` version
-/// stripped, case-folded to match [`hrid_lookup_key`].
-///
-/// This is the family identity that groups every stored version of one
-/// archetype/template.
+/// The `publisher-package-class.concept` lookup key of a raw archetype-id string,
+/// namespace and version stripped, as [`hrid_lookup_key`].
 #[must_use]
 pub fn raw_id_lookup_key(raw: &str) -> String {
     strip_namespace_and_version(raw).to_ascii_lowercase()
 }
 
-/// The `concept` segment of a raw archetype id — the token between the model
-/// part (`publisher-package-class`) and the `.vN…` version.
-///
-/// Falls back to the whole (namespace-stripped) id when the shape carries no
-/// `.concept` segment, so the accessor is total on stored input.
-///
-/// Grammar: `archetype_id = qualified_rm_entity, '.', domain_concept, '.v',
-/// version_id` (BASE `base_types` `master05-identification_package.adoc`
-/// §Syntaxes).
+/// The `concept` segment of a raw archetype id, or the whole namespace-stripped
+/// id when it has none (BASE `master05-identification_package.adoc` §Syntaxes).
 #[must_use]
 pub fn raw_id_concept(raw: &str) -> &str {
     let core = raw.rsplit("::").next().unwrap_or(raw);
@@ -96,13 +58,8 @@ pub fn raw_id_specialisation_depth(raw: &str) -> usize {
     raw_id_concept(raw).matches('-').count()
 }
 
-/// The numeric release-version segment of a raw archetype id
-/// (`…concept.v1.2.3-rc.4` → `1.2.3`); empty when the id carries no `.v<digit>`
-/// marker.
-///
-/// The pre-release qualifier (`-alpha.N` / `-rc.N`, ADL2
-/// `master07.05-adl_identification.adoc` §Version Identifiers) is dropped —
-/// this is the `major[.minor[.patch]]` release number only.
+/// The `major[.minor[.patch]]` release segment of a raw archetype id, empty
+/// without a `.v<digit>` marker (ADL2 `master07.05` §Version Identifiers).
 #[must_use]
 pub fn raw_id_version(raw: &str) -> &str {
     let core = raw.rsplit("::").next().unwrap_or(raw);
@@ -123,12 +80,8 @@ fn strip_namespace_and_version(raw: &str) -> &str {
     split_at_version(no_ns).0
 }
 
-/// Splits a (namespace-stripped) archetype id at its [`version_marker`].
-///
-/// Returns everything before the marker, and the marker onwards (`None` when
-/// the id carries no version marker, in which case the whole input is the
-/// "before" part). The marker's `.` and `v` are ASCII, so the split is always
-/// on a char boundary.
+/// Splits a namespace-stripped archetype id at its [`version_marker`]; `None`
+/// for the tail when there is none.
 #[must_use]
 pub fn split_at_version(core: &str) -> (&str, Option<&str>) {
     let Some(idx) = version_marker(core) else {
@@ -140,45 +93,20 @@ pub fn split_at_version(core: &str) -> (&str, Option<&str>) {
     }
 }
 
-/// The byte index of the version marker in a (namespace-stripped) archetype id:
-/// the **last** `.v` immediately followed by an ASCII digit.
+/// The byte index of the version marker in a namespace-stripped archetype id:
+/// the last `.v` followed by an ASCII digit.
 ///
-/// Why the LAST and not the first — derived from the grammar in BASE `base_types`
-/// `master05-identification_package.adoc` §Syntaxes:
-///
-/// ```text
-/// archetype_id        = qualified_rm_entity, '.', domain_concept, '.v', version_id ;
-/// qualified_rm_entity = rm_originator, '-', rm_name, '-', rm_entity ;
-/// domain_concept      = concept_name, { '-', specialisation } ;
-/// concept_name        = alphanum-str ;   alphanum-str = letter, { letter | digit | '_' } ;
-/// version_id          = '0' | non-zero-digit, [ number ] ;
-/// ```
-///
-/// `concept_name`/`specialisation` are `alphanum-str`, whose second and later
-/// characters may be digits — so a legal concept may begin with `v` followed by
-/// a digit (`openEHR-EHR-OBSERVATION.v1_score.v1`), and a FIRST-marker scan
-/// binds to the concept boundary and misreads (or rejects) a valid id. The
-/// version tail, by contrast, can never contain a `v`: `version_id` is numeric
-/// in BASE, and ADL2 `master07.05-adl_identification.adoc` §Version Identifiers
-/// widens it only to `N.M.P` with an optional `-alpha.N` / `-rc.N` qualifier.
-/// The last `.v<digit>` is therefore always the version marker, and the reading
-/// is unambiguous.
-///
-/// The digit requirement is what keeps a concept id merely *starting* with `v`
-/// (`…ENTRY.valc_parent`) from being mistaken for a version.
+/// A `concept_name` may itself start with `v` and a digit, while `version_id`
+/// never contains a `v` (BASE `master05-identification_package.adoc` §Syntaxes;
+/// ADL2 `master07.05` §Version Identifiers), so only the last marker is
+/// unambiguous.
 #[must_use]
 pub fn version_marker(s: &str) -> Option<usize> {
     openehr_am::v2_4::aom2::archetype::archetype_hrid_impl::version_marker(s)
 }
 
-/// True if `id` conforms to the archetype-id form
-/// `[ns::]publisher-package-class.concept.vN…` (the slot/root meta-pattern
-/// `^.+-.+-.+\..*\..+$`, master04.3).
-///
-/// This is the SHAPE predicate, deliberately looser than [`parse_hrid`]: it
-/// admits four or more hyphen-separated model segments and any `concept.version`
-/// tail, because the meta-pattern it mirrors is a regex over the raw text, not
-/// a parse.
+/// Whether `id` has the archetype-id shape of the slot and root meta-pattern
+/// `^.+-.+-.+\..*\..+$` (master04.3); a shape test, looser than [`parse_hrid`].
 #[must_use]
 pub fn is_archetype_id(id: &str) -> bool {
     let body = id.rsplit("::").next().unwrap_or(id);
@@ -269,12 +197,8 @@ mod tests {
         );
     }
 
-    /// The one reading of the `.v` boundary: the LAST `.v<digit>`.
-    ///
-    /// `concept_name = alphanum-str = letter, { letter | digit | '_' }` (BASE
-    /// `base_types` `master05-identification_package.adoc` §Syntaxes), so a legal
-    /// concept may begin `v` + digit; the version tail can never contain a `v`.
-    /// Every reader of the grammar must therefore agree on the last marker.
+    /// The `.v` boundary is the last `.v<digit>` (BASE
+    /// `master05-identification_package.adoc` §Syntaxes).
     #[test]
     fn the_version_marker_is_the_last_v_digit_on_a_concept_that_looks_like_one() {
         let pathological = "openEHR-EHR-OBSERVATION.v1_score.v1.2.3";
