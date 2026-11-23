@@ -53,10 +53,10 @@ A care relationship is a `PARTY_RELATIONSHIP` (RM Demographic IM, Party Relation
 |`DV_IDENTIFIER`
 |The carer the target replaces for the period of this relationship, in the same form; never the target itself.
 
-|`context`
+|`episode`
 |0..1
 |`DV_IDENTIFIER`
-|The episode, referral or case the relationship belongs to, as the care delivery environment identifies it.
+|The episode of care the relationship is scoped to, by the `_issuer_` and `_id_` the care delivery environment gives it (<<Episodes of Care>>). A relationship without it is not scoped to an episode.
 
 |`basis`
 |0..1
@@ -73,6 +73,18 @@ A *representation* is a `PARTY_RELATIONSHIP` named `represents` whose `_source_`
 A *kinship* completes the core: a `related_to` relationship records a kinship between two persons: `kinship` (1..1, `DV_CODED_TEXT` of the value set bound for `kinship`, by default the openEHR Terminology group `subject relationship`). Kinship never grants access. It can refuse it, as a conflict of interest (step 5 of the procedure).
 
 An archetype may constrain any of these relationships; the procedure reads the codes of `_name_` and of each element's `_name_`, never an archetype identifier or a path.
+
+=== Episodes of Care
+
+The Security Policy limits access in time to "the current episode of care, and for some reasonable, limited time afterward" and records an episode's start and end as `ADMIN_ENTRY` instances (xref:BASE:architecture_overview:security.adoc[Security and Confidentiality], Security Policy). The EHR Information Model calls "an episode in a hospital" one healthcare event an `EVENT_CONTEXT` documents (RM EHR IM, Event Context), and keeps persistent compositions, such as the problem list and the medication list, as "a single source-of-truth over an entire patient lifetime" (Persistent Compositions). Neither says which data belong to which episode, or that a professional's access may be limited to one episode. Regulation (EU) 2025/327 Art 11(1) limits a professional's access to "the relevant and necessary" data of persons under their treatment. This section fills that silence.
+
+* *Identity.* An episode of care is identified by the `DV_IDENTIFIER` the care delivery environment gives it, compared by `_issuer_` and `_id_`; `_type_` is not compared. FHIR `EpisodeOfCare.identifier` and an HL7 v2 visit number are such identifiers. An episode is matched only within one subject. Its status and period belong to the care delivery environment, which states them through the relationships it writes: an episode is open for a carer while the carer's relationship to it is live.
+* *Placement.* A composition is placed in an episode by an `ELEMENT` named by the code `episode` of the `record placement element` group anywhere in its `EVENT_CONTEXT._other_context_`, whose value is the episode's `DV_IDENTIFIER`. A composition may name several episodes, such as a consultation note that serves two. A composition with no such element is placed in no episode, and so are an `EHR_STATUS`, a `FOLDER` and an `EHR_ACCESS`. A later version that names other episodes moves the composition, and every version follows the placement of the current one.
+* *Persistent compositions.* A composition whose `_category_` is `persistent` (`openehr::431`) is placed in no episode; one that names an episode is refused at commit.
+* *Declared episodes.* Every episode a composition names is the `episode` of some care relationship of the subject, live or ended; a composition that names another is refused at commit.
+* *Episode relationship.* A care relationship with an `episode` element is scoped to that episode. Its dates, grace, role, path, provider and cover are read as for any care relationship. A relationship *covers* a datum as xref:decision_procedure.adoc#_holding_a_care_relationship[Holding a Care Relationship] defines, so an episode relationship only narrows what the same relationship without an episode admits.
+
+The placement element, the rule for persistent compositions, the declared-episode rule and coverage are this proposal's own. A folder per episode (RM EHR IM, Folders: the directory "might thus be used to represent episodes") stays a classification of references and decides nothing.
 
 === The Relationship Store
 
@@ -96,7 +108,7 @@ An `ACCESS_DIRECTIVE` is one instruction about access to the data of the EHR. `_
 
 * `_applies_to_`: the callers, as `ACCESS_ACTOR_SCOPE` instances, any one of which is enough. A scope names a demographic party (a `PERSON` or `AGENT` matches itself; an `ORGANISATION` or `GROUP` matches whoever acts for it or is a member), a role, an organisation type, a relationship to the subject (`care`, `representative`, `proxy`) or a kind of caller. A role is matched against the coded `_name_` of each `ROLE` in force the caller performs, the type of the role (RM Demographic IM, `PARTY.type()`, invariant `type = name`), so the demographic service is the one source of who holds which role. An organisation type is matched the same way against the coded `_name_` of the `ORGANISATION` the caller acts for. A caller from outside the system, admitted under an agreement, is described by no party of the demographic service, so the professional role and the type of its healthcare facility its verified credential attests match `_role_` and `_organisation_type_` as the coded names would. A national rule, such as one that keeps insurers or occupational physicians out of an exchange, is a controller rule over these attributes with the provision in its `_legal_grounds_`; the decision procedure holds no rule of any jurisdiction.
 * `_operations_` and `_purposes_`: the operations and the purposes of use, coded in the terminologies the system documents and accepts.
-* `_data_`: the data, as `ACCESS_DATA_SCOPE` instances: single versioned objects, templates, archetypes (with their specialisations), categories, sensitivities, origins, and the interval in which the data were committed.
+* `_data_`: the data, as `ACCESS_DATA_SCOPE` instances: single versioned objects, templates, archetypes (with their specialisations), categories, sensitivities, origins, the episodes of care the data are placed in, and the interval in which the data were committed. A restriction of one episode's data is a restriction of "parts" of the record (EHDS Art 8).
 * `_time_validity_`: when the directive is in force, to the second.
 
 An empty list applies to everything of its kind, so a directive with no `_data_` covers the whole EHR, including data recorded after it. A directive outside its `_time_validity_` is kept as history and decides nothing.
@@ -150,8 +162,8 @@ The policy states how the controller's care relationships are read and written:
 |`HL7_ActReason` `TREAT`, `ETREAT`, `CAREMGT`
 
 |`_relationship_validity_`
-|The default and maximum periods, by role and provider type. The Security Policy asks for "the interval of the episode of care in an institution plus some further time to cover follow-up"; a missed discharge must not leave a relationship open for ever.
-|every relationship is written with an end
+|The default and maximum periods, by role and provider type, and whether those relationships must name an episode (`_episode_required_`). The Security Policy asks for "the interval of the episode of care in an institution plus some further time to cover follow-up"; a missed discharge must not leave a relationship open for ever.
+|every relationship is written with an end, and none needs an episode
 
 |`_relationship_writers_`
 |The writers that may state a relationship to a subject whose record is marked `R` or `V`.
@@ -172,6 +184,10 @@ The policy states how the controller's care relationships are read and written:
 |`_caseload_`
 |Whether a query may be narrowed to the caller's caseload.
 |true
+
+|`_episode_shared_`
+|The data every live relationship covers whatever episode it or the data name, such as the patient summary: the categories Art 11(3) lets a Member State make accessible across healthcare tasks.
+|none
 
 |`_conflict_rules_`
 |The conflicts of interest allowed through the professional path, and for whom.

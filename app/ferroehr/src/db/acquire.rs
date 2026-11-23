@@ -49,6 +49,7 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::time::Instant;
 
+use futures::FutureExt as _;
 use opentelemetry::KeyValue;
 use sqlx::PgPool;
 use sqlx::Postgres;
@@ -143,13 +144,15 @@ tokio::task_local! {
 /// Runs `body` as one request: the connection each pool hands it is kept
 /// between its checkouts and returns to the pool at [`release_held`], when
 /// `body` ends, or when the request waits for another pool ([`acquire`]).
-pub async fn request_scope<F: Future>(body: F) -> F::Output {
-    let kept = HELD.scope(RefCell::new(Vec::new()), async {
-        let output = body.await;
-        release_held();
-        output
-    });
-    tracked(WAITS.scope(Cell::new(0), kept)).await
+pub fn request_scope<F: Future>(body: F) -> impl Future<Output = F::Output> {
+    let kept = HELD.scope(
+        RefCell::new(Vec::new()),
+        body.map(|output| {
+            release_held();
+            output
+        }),
+    );
+    tracked(WAITS.scope(Cell::new(0), kept))
 }
 
 /// Runs `body`, a background task, with its checkouts counted.
@@ -157,8 +160,8 @@ pub async fn request_scope<F: Future>(body: F) -> F::Output {
 /// As in a [`request_scope`], a second acquire of a pool it has a connection
 /// of checked out is refused in a debug build ([`acquire`]); nothing is kept
 /// between checkouts (#5929).
-pub async fn tracked<F: Future>(body: F) -> F::Output {
-    OUT.scope(RefCell::new(Vec::new()), body).await
+pub fn tracked<F: Future>(body: F) -> impl Future<Output = F::Output> {
+    OUT.scope(RefCell::new(Vec::new()), body)
 }
 
 /// `body`, carrying the pools this task holds a connection of into a task

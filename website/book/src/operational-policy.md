@@ -352,7 +352,7 @@ design.
 | `representation element` | `basis`, `provider`, `evidence` | The `name` of an `ELEMENT` in the `details` of a `represents` relationship |
 | `kinship`, `kinship element` | `related_to`; `kinship` | The `name` or `details` of a `PARTY_RELATIONSHIP` of its own: its source and target, two `PERSON`s, are kin, and its `kinship` element codes how ([Exclusions and conflicts of interest](#exclusions-and-conflicts-of-interest)) |
 | `group kind` | `care_team` | The `name` of a `GROUP`: the `GROUP` is a care team ([Care teams provisioned over SCIM](#care-teams-provisioned-over-scim)) |
-| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-confidentiality`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing`, `refused-excluded`, `refused-conflict` | The access record of a refusal |
+| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-confidentiality`, `refused-no-care-relationship`, `refused-outside-episode`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing`, `refused-excluded`, `refused-conflict` | The access record of a refusal |
 | `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
 
 Three grants of the operation table belong to access control:
@@ -1727,7 +1727,7 @@ named by codes of `openehr_access`:
 | `care_role` | 1..1 | A `DV_CODED_TEXT`: the part the carer plays in the patient's care, of the value set the access policy binds for `care_role`, or of `HL7_ParticipationType` when it binds none, such as `RESP`, `ATND` or `PART` when the role is not stated |
 | `provider` | 1..1 | A `DV_IDENTIFIER` of type `ORGANISATION`: the healthcare provider in whose care the relationship is, by the namespace of its reference and its id, or by the issuer and id of its identifier |
 | `covers_for` | 0..1 | A `DV_IDENTIFIER` in the provider's form: the carer the target replaces, its `issuer` the namespace of the carer's reference, its `id` the carer's container and its `type` the carer's kind (`PERSON`, `ROLE`, `GROUP` or `ORGANISATION`), never the target itself |
-| `context` | 0..1 | A `DV_IDENTIFIER`: the episode, referral or case the relationship belongs to |
+| `episode` | 0..1 | A `DV_IDENTIFIER`: the episode of care the relationship is scoped to, by the `issuer` and `id` the care delivery environment gives it |
 | `basis` | 0..1 | `assigned` (the default); `self_declared` where the policy sets `self_declared_care` ([Writing a care relationship](#writing-a-care-relationship)) |
 
 A caller holds a live care relationship when the relationship's `target`

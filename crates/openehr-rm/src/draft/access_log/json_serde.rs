@@ -2940,6 +2940,9 @@ impl ::serde::Serialize
         if self.covers_for.is_some() {
             __n += 1;
         }
+        if self.episode.is_some() {
+            __n += 1;
+        }
         let mut __st =
             ::serde::Serializer::serialize_struct(__serializer, "ACCESS_STORED_CARE_GROUND", __n)?;
         ::serde::ser::SerializeStruct::serialize_field(
@@ -2958,6 +2961,9 @@ impl ::serde::Serialize
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "covers_for", __v)?;
         }
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "provider", &self.provider)?;
+        if let Some(__v) = &self.episode {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "episode", __v)?;
+        }
         ::serde::ser::SerializeStruct::end(__st)
     }
 }
@@ -2971,6 +2977,7 @@ impl<'de> ::serde::Deserialize<'de>
         const __FIELDS: &[&str] = &[
             "carer",
             "covers_for",
+            "episode",
             "in_grace",
             "path",
             "provider",
@@ -2986,6 +2993,7 @@ impl<'de> ::serde::Deserialize<'de>
             __F4,
             __F5,
             __F6,
+            __F7,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -3013,6 +3021,7 @@ impl<'de> ::serde::Deserialize<'de>
                             "in_grace" => ::core::result::Result::Ok(__Field::__F4),
                             "covers_for" => ::core::result::Result::Ok(__Field::__F5),
                             "provider" => ::core::result::Result::Ok(__Field::__F6),
+                            "episode" => ::core::result::Result::Ok(__Field::__F7),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -3045,6 +3054,7 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s4: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s5: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s6: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s7: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -3117,6 +3127,14 @@ impl<'de> ::serde::Deserialize<'de>
                             }
                             __s6 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
+                        __Field::__F7 => {
+                            if __s7.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("episode"),
+                                );
+                            }
+                            __s7 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
                     }
                 }
                 ::core::result::Result::Ok(crate::draft::access_log::access_log::access_stored_care_ground::AccessStoredCareGround {
@@ -3127,6 +3145,7 @@ relationship: __s3.flatten(),
 in_grace: __s4.flatten().ok_or_else(|| ::serde::de::Error::missing_field("in_grace"))?,
 covers_for: __s5.flatten(),
 provider: __s6.flatten().ok_or_else(|| ::serde::de::Error::missing_field("provider"))?,
+episode: __s7.flatten(),
 })
             }
         }

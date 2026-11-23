@@ -968,3 +968,26 @@ fn each_optional_list_is_absent_or_non_empty() {
         "every empty optional list is refused"
     );
 }
+
+/// A data scope naming only episodes holds `Not_empty`, an empty
+/// `episode_shared` scope breaks it, and the episode attributes round-trip
+/// (#6411).
+#[test]
+fn the_episode_attributes_round_trip_and_hold_their_invariants() {
+    let episode = json!({ "_type": "DV_IDENTIFIER", "issuer": "H", "id": "C-17" });
+    let mut p = policy();
+    p["episode_shared"] = json!([{ "_type": "ACCESS_DATA_SCOPE", "episodes": [episode] }]);
+    p["relationship_validity"] = json!([{ "_type": "ACCESS_RELATIONSHIP_VALIDITY",
+        "episode_required": true }]);
+    let read_back: AccessPolicy = round_trip(&p);
+    assert_eq!(named(check_policy(&read_back)), Vec::<String>::new());
+    let mut empty = policy();
+    empty["episode_shared"] = json!([{ "_type": "ACCESS_DATA_SCOPE" }]);
+    assert_eq!(
+        named(check_policy(&read(empty))),
+        vec!["ACCESS_DATA_SCOPE.Not_empty".to_owned()]
+    );
+    let mut none = policy();
+    none["episode_shared"] = json!([]);
+    assert!(serde_json::from_value::<AccessPolicy>(none).is_err());
+}

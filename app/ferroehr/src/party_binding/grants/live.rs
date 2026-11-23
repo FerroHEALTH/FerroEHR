@@ -24,6 +24,7 @@
 //! own design.
 
 use crate::db::domain::Domain;
+use futures::FutureExt as _;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::future::Future;
@@ -76,14 +77,14 @@ pub(crate) fn note_change() {
 
 /// Runs `fut`, returning its output and whether a commit inside it changed a
 /// grant row.
-pub async fn tracking<F: Future>(fut: F) -> (F::Output, bool) {
-    CHANGED
-        .scope(AtomicBool::new(false), async {
-            let output = fut.await;
+pub fn tracking<F: Future>(fut: F) -> impl Future<Output = (F::Output, bool)> {
+    CHANGED.scope(
+        AtomicBool::new(false),
+        fut.map(|output| {
             let changed = CHANGED.with(|changed| changed.load(Ordering::Acquire));
             (output, changed)
-        })
-        .await
+        }),
+    )
 }
 
 /// Why the grants could not be read.

@@ -697,7 +697,7 @@
     },
     "ACCESS_STORED_CARE_GROUND": {
       "name": "ACCESS_STORED_CARE_GROUND",
-      "documentation": "A stored care relationship an access rested on: its carer, the version that holds it, whether the grace after its end admitted the access, the carer it covers for and the provider in whose care it is.",
+      "documentation": "A stored care relationship an access rested on: its carer, the version that holds it, whether the grace after its end admitted the access, the carer it covers for, the provider in whose care it is and the episode it is scoped to.",
       "ancestors": [
         "ACCESS_CARE_GROUND"
       ],
@@ -733,6 +733,12 @@
           "name": "provider",
           "documentation": "The healthcare provider in whose care the relationship is, as its `provider` element names it.",
           "is_mandatory": true,
+          "type": "DV_IDENTIFIER"
+        },
+        "episode": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "episode",
+          "documentation": "The episode of care the relationship is scoped to, as its `episode` element names it. Void when it names none.",
           "type": "DV_IDENTIFIER"
         }
       },

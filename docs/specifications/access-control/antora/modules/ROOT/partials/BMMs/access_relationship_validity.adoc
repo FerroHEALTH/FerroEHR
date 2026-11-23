@@ -2,7 +2,7 @@
 --------
 {
   "name": "ACCESS_RELATIONSHIP_VALIDITY",
-  "documentation": "The default and maximum period of the care relationships one entry covers. A relationship written without an end takes the default period from its start; one longer than the maximum is refused. An entry with neither period lets the relationships it covers stay open.",
+  "documentation": "The default and maximum period of the care relationships one entry covers. A relationship written without an end takes the default period from its start; one longer than the maximum is refused. An entry with neither period lets the relationships it covers stay open. An entry may also require the relationships it covers to name an episode of care.",
   "properties": {
     "roles": {
       "_type": "P_BMM_CONTAINER_PROPERTY",
@@ -41,6 +41,12 @@
       "name": "max_period",
       "documentation": "The longest period a relationship may have.",
       "type": "DV_DURATION"
+    },
+    "episode_required": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "episode_required",
+      "documentation": "Whether a relationship the entry covers must name an `episode`; one written without it is refused. Void means false.",
+      "type": "Boolean"
     }
   },
   "invariants": {

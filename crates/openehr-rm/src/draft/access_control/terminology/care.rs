@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The groups of the draft access terminology a care relationship is coded
-//! in: the elements of its `details`, who wrote it, and how it reaches a
-//! caller.
+//! The groups of the draft access terminology for care.
+//!
+//! A care relationship is coded in the elements of its `details`, who wrote
+//! it and how it reaches a caller; a composition is placed in an episode of
+//! care by the element of its `context.other_context`.
 
 use std::fmt;
 
@@ -21,8 +23,8 @@ group! {
         Provider => "provider",
         /// The carer the target replaces for the period of the relationship.
         CoversFor => "covers_for",
-        /// The episode, referral or case the relationship belongs to.
-        Context => "context",
+        /// The episode of care the relationship is scoped to.
+        Episode => "episode",
         /// Who wrote the relationship, of the `care basis` group.
         Basis => "basis",
     }
@@ -54,5 +56,14 @@ group! {
         /// The relationship's target is the caller's `PERSON` and its basis
         /// is `self_declared`.
         SelfDeclared => "self_declared",
+    }
+}
+
+group! {
+    /// The element of a composition's `context.other_context` that places
+    /// it in an episode of care.
+    PlacementElement in RecordPlacementElement {
+        /// The episode the composition is placed in, a `DV_IDENTIFIER`.
+        Episode => "episode",
     }
 }
