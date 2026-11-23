@@ -13,14 +13,6 @@
 //! multimedia include/exclude, `DV_LINK` following). The generated RM types are
 //! in `crates/openehr-rm/src/ehr_extract/`.
 //!
-//! An exported `EXTRACT` is a canonical-JSON `Value` built directly over the
-//! stored versions: each versioned object becomes one `OPENEHR_CONTENT_ITEM`
-//! wrapping an `X_VERSIONED_<kind>` whose `versions` are the exact
-//! `ORIGINAL_VERSION`s the read path serves ([`crate::versioning::wire::original_version`]),
-//! so the extract content is byte-identical to what `GET .../versioned_*`
-//! returns — then its content references are rewritten to the extract-local
-//! namespace per the Creation-Semantics algorithm (see [`rewrite_content_refs`]).
-//!
 //! NOTE: the extract wrapper classes are `LOCATABLE`s whose
 //! `archetype_node_id` is 1..1 (master05 class tables) yet are synthesized here
 //! with no generating archetype, so the RM class token (`"EXTRACT"` and

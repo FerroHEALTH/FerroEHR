@@ -135,7 +135,7 @@ impl FerroEhrService {
     /// - No template with that `template_id` → `NotFound` (`404`).
     /// - A constituent archetype is not stored → `ValidationFailed` (`422`).
     /// - The stored template cannot be compiled/built → `Unprocessable` (`422`).
-    /// - The stored source no longer parses, the generated document does not
+    /// - The stored source does not parse, the generated document does not
     ///   build, or a database failure (`500`).
     pub async fn template_adl2_example(
         &self,
@@ -238,13 +238,9 @@ impl FerroEhrService {
     /// `PUT /definition/query/{qualified_query_name}[/{version}]`: stores a
     /// query under its qualified name.
     ///
-    /// `query_type` is the query's formalism (`QUERY_DESCRIPTOR.formalism`,
-    /// default `AQL`, case-insensitive); the build validates and stores AQL
-    /// only, so a non-AQL formalism is a distinct unsupported-formalism `400`
-    /// and AQL bodies fall through to the store-time syntactic check. Returns
-    /// the effective SEMVER the store wrote at, so the dispatcher's `Location`
-    /// names exactly the stored resource (`headers/Location_Query.yaml`). The
-    /// store response itself is bodyless.
+    /// Only AQL is stored, so another `query_type` is refused. Returns the
+    /// effective SEMVER stored, which the `Location` header names
+    /// (`headers/Location_Query.yaml`).
     ///
     /// # Errors
     ///

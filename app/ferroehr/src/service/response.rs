@@ -127,11 +127,10 @@ impl ResourceMeta {
 
 /// A service response: the RM payload plus optional resource metadata.
 ///
-/// The body is the typed RM value a read or write serves (`ServiceResponse<Ehr>`)
-/// or, for the operations that still answer with one, a canonical value, where
-/// a `null` means "no representation" (a logically deleted read, or a
+/// The body is the typed RM value a read or write serves, or a canonical value
+/// where `null` means no representation (a logically deleted read, or a
 /// resource whose value is not returned); `meta` is present whenever the
-/// operation produced/identified a versioned resource.
+/// operation produced or identified a versioned resource.
 #[derive(Debug, Clone)]
 pub struct ServiceResponse<B = Value> {
     /// The RM payload.
@@ -141,10 +140,6 @@ pub struct ServiceResponse<B = Value> {
 }
 
 /// A read body: the parsed canonical value, or the stored text verbatim.
-///
-/// The raw form carries the stored canonical text (already uid-stamped at
-/// commit) — the JSON-accept passthrough the protocol adapter writes to the
-/// wire without a parse → serialize round trip.
 #[derive(Debug, Clone)]
 pub enum ReadBody {
     /// The parsed canonical value.
@@ -222,9 +217,9 @@ impl RawServiceResponse {
 }
 
 impl ServiceResponse {
-    /// A bodyless response carrying resource metadata — the delete outcome
-    /// that still returns the (now deleted) `version_uid` in
-    /// `ETag`/`Location` (`204_COMPOSITION_deleted.yaml`).
+    /// A bodyless response carrying resource metadata: the delete outcome,
+    /// which returns the deleted `version_uid` in `ETag` and `Location`
+    /// (`204_COMPOSITION_deleted.yaml`).
     #[must_use]
     pub fn deleted(meta: ResourceMeta) -> Self {
         Self {

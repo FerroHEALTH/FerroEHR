@@ -62,10 +62,8 @@ impl Container {
 /// `Uid_mandatory` is met by the server injecting the `uid` on read (mirroring
 /// the COMPOSITION service), so an incoming body need not carry one.
 ///
-/// This is the raw-body lane's gate, the CONTRIBUTION route, whose payload has
-/// never been through a typed door. The direct routes call [`party_invariants`]
-/// instead, having decoded the body as the routed kind's concrete RM type before
-/// the commit.
+/// The CONTRIBUTION route's gate; the direct routes call [`party_invariants`]
+/// on the already decoded body.
 ///
 /// # Errors
 /// [`ServiceError::BadRequest`] when the strict reader refuses a body the
@@ -211,11 +209,9 @@ fn references<'a, T: Tree<'a>>(rm_type: &str, data: T) -> Result<(), ServiceErro
 /// The party invariants that are NOT facts of the typed decode — everything
 /// [`party_check`] does apart from constructing the RM value.
 ///
-/// The direct routes enter here: their body is already a constructed value of
-/// this very class, so the decode half has nothing left to judge, while these
-/// rules remain live because they are stated over the RAW JSON (a root's
-/// `ARCHETYPED` presence, and the "present implies non-empty" list bounds that
-/// an absent and a present-empty list both deserialize into the same `Vec`).
+/// These rules are stated over the raw JSON (a root's `ARCHETYPED`, and the
+/// list bounds an absent and an empty list both decode past), so the typed
+/// decode does not cover them.
 ///
 /// `container` is the version container the body becomes a version of: the
 /// id a create gives the new container, or the one an update addresses.
