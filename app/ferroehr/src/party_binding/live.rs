@@ -316,21 +316,28 @@ impl LiveBindings {
         self.read_through(key, current, read).await
     }
 
-    /// [`Self::lookup`] past a miss: under `key`'s stripe, the lookup another
-    /// miss just held, or `read` it and hold it unless a drop overtook the read.
+    /// [`Self::lookup`] past a miss: under `key`'s stripe, the lookup a miss
+    /// it waited for just held, or `read` it and hold it unless a drop
+    /// overtook the read.
     async fn read_through<E>(
         &self,
         key: LookupKey,
         current: impl Fn(i64) -> bool,
         read: impl Future<Output = Result<(Lookup, i64), E>>,
     ) -> Result<Lookup, E> {
-        let _reading = self.copy.stripe(&key).lock().await;
-        if let Some((held, at)) = self.copy.lookups.get(&key).await
-            && current(at)
-        {
-            crate::party_binding::request::held_binding(at);
-            return Ok(held);
-        }
+        let stripe = self.copy.stripe(&key);
+        let _reading = if let Ok(reading) = stripe.try_lock() {
+            reading
+        } else {
+            let reading = stripe.lock().await;
+            if let Some((held, at)) = self.copy.lookups.get(&key).await
+                && current(at)
+            {
+                crate::party_binding::request::held_binding(at);
+                return Ok(held);
+            }
+            reading
+        };
         let seen = self.copy.drops.load(Ordering::Acquire);
         let read = read.await;
         refilled(LOOKUPS, read.is_ok());
