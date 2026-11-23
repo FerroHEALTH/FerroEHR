@@ -196,9 +196,7 @@ pub(crate) fn canonical_text_and_digest(
 ) -> Result<(String, [u8; 32]), ServiceError> {
     let rendered = Body::render_canonical(canonical)?;
     let digest = crate::storage::render::content_digest(&rendered);
-    let text = String::from_utf8(rendered.into_text())
-        .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
-    Ok((text, digest))
+    Ok((rendered.into_text(), digest))
 }
 
 /// The lifecycle state a content write commits, with the deleted state refused,

@@ -848,7 +848,7 @@ async fn commit_resolved(
     let statement = folded_shape(
         contribution,
         contribution_id,
-        prepared.folded()?,
+        prepared.folded(),
         ctx,
         &committed,
     );
