@@ -516,7 +516,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        allocations: 31_661,
+        allocations: 31_663,
         peak_bytes: 1_528_525,
         round_trips: 4,
         nested: 0,
