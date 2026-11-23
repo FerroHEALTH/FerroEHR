@@ -98,12 +98,31 @@
 - [Console UI mode](reactive-console-ui.md): owner 2026-10-29 (FerroUI #510), server-rendered consoles with plain script modules and no WebAssembly; supersedes the reactive ruling of 2026-10-25
 - [No hand-written copies](no-hand-written-copies.md): owner 2026-10-25, the family rule; use the shared crate a family repo publishes, and add a missing piece there, never a local copy
 - [FerroEHR has no production installs](ferroehr-no-production-installs.md): as of 2026-11-01 nobody runs FerroEHR in production; skip data-preserving upgrade work for old data unless the owner says otherwise
-- [Preflight the merge commit before tagging](preflight-merge-commit-before-tag.md): run preflight.sh on the release merge commit before any tag; rc8 and rc9 burnt on 2026-11-02
-- [Ratchet PR without a token](ratchet-pr-no-token.md): close and reopen the daily ratchet PR so CI runs; no PAT secret (owner 2026-11-02)
-- [openehr-* crates publish approved](ehr-crates-publish-approved.md): run publish-crates.yml (publish=true) between releases and approve its crates-io gate when an openehr-* fix has a waiting consumer; owner 2026-11-08
+- [Preflight on the merge commit](preflight-merge-commit-before-tag.md): run scripts/release/preflight.sh on the release PR's merge commit before tagging
+- [Ratchet PR without a token](ratchet-pr-no-token.md): the ratchet-tighten PR starts no CI; close, reopen and arm auto-merge; no PAT
+- [Capacity targets](capacity-targets.md): own harness 4,000 to 5,000 rps within the p99 targets, cdr-benchmark v0.19.0 at 8,000 ops/s, low CPU, memory and data, access path and log on
+- [CDR mechanism, application policy](cdr-mechanism-app-policy.md): the CDR ships the generic mechanism; national rules and controller policy are content from the deployment; owner 2026-11-15
+- [Definitions change in place](definitions-change-in-place.md): until a production release, shipped definitions change in place at v1.0.0; owner 2026-11-14
+- [Draft classes in openehr-rm](draft-classes-apache.md): the generated draft classes ship in openehr-rm behind `draft`, Apache-2.0, on crates.io; owner 2026-11-14
+- [v6.0.0 is the clean major](ferroehr-v6-major.md): everything done the clean, proper, new way with no legacy; owner 2026-11-16
+- [FerroSMART in v6](ferrosmart-in-v6.md): FerroSMART is the family's SMART App Launch 2.x authorization server; v6.0.0 depends on it; owner 2026-11-16
+- [Quiet-host perf runs](quiet-host-perf-runs.md): load and capacity runs only in a quiet window with nothing else running
+- [Publish dispatch approved](publish-dispatch-approved.md): the orchestrator dispatches publish-crates and publish-chart and approves their gates itself, between releases too
+- [Hosted operations approved](hosted-ops-approved.md): the orchestrator may operate the hosted sandbox and its database over SSH, plan and rollback first; owner 2026-11-22
 
 ## Family rules (carried in every FerroHEALTH repository, 2026-11-09)
 
+- [FerroHEALTH not in production](ferrohealth-not-in-production.md): no product runs in production, so a wrong design is refactored or rewritten outright with no compatibility layer; owner 2026-11-19
+- [New design, no legacy](new-design-no-legacy.md): a breaking release builds the new design in full and keeps nothing of the old; never relay a worker's kept-for-compatibility choice as a question; owner 2026-11-14
+- [Findings drive redesign](findings-drive-redesign.md): a scenario or test the design cannot handle is a design finding, never worked around in a fixture or probe; owner 2026-11-14
+- [Verify old issues first](verify-before-implementing-old-issues.md): check an older issue against main and the current spec before building it; close what is done or obsolete with evidence; owner 2026-11-16
+- [Orchestrator files cross-repo gaps](orchestrator-files-cross-repo-gaps.md): the orchestrator files every gap a worker finds in another family repo, without asking the owner; owner 2026-11-10
+- [Backlog fix comments](backlog-fix-comments.md): when a fix for a Cadasto/FerroHEALTH-backlog issue merges, comment there and set it to In review; owner 2026-11-17
+- [Efficiency first](efficiency-first-rust.md): stable, fast, low on storage, CPU and RAM; no needless clones, allocations or forwarding layers; owner 2026-11-16
+- [Spec over test suites](spec-over-test-suites.md): external conformance suites are regression signals, never the oracle; owner 2026-11-16
+- [Quick start from the release download](quickstart-from-release-download.md): one self-contained compose.yaml per product as a release asset, fetched with curl; no clone, no bundle; owner 2026-11-10
+- [Remove worktrees after merge](remove-worktrees-after-merge.md): remove each worktree, its branches and its build folder as soon as its PR merges
+- [PostgreSQL 19](postgresql-19.md): every product with a database runs, tests against and documents PostgreSQL 19; 18 and older dropped; owner 2026-11-21
 - [No compatibility shims](no-compat-shims.md): refactors break APIs freely and leave no deprecated item, alias, re-export or stub; a removal refusal lives ONE release, then is deleted fully; no legacy support ever; owner 2026-11-01, 2026-11-09
 - [No half solutions](no-half-solutions.md): build what the issue asks the proper way and validate the need against its consumer first; a breaking change moves the minor version, never shape a design to dodge semver; owner 2026-11-08
 - [EHDS above openEHR](ehds-above-openehr.md): where Regulation (EU) 2025/327 conflicts with a standard's text the Regulation wins; never revert EHDS behaviour to pass a conformance row; owner 2026-11-09
@@ -124,3 +143,5 @@
 - [Memory lives in the repo](memory-lives-in-repo.md): every learning is a tracked file here, never a per-user note; owner 2026-09-04
 - [Signed commits and the merge queue](merge-queue-signed.md): main takes only signed commits through the merge queue; no commit-message line starts with "-" or a git header word; 2026-11-09
 - [PR auto-merge](pr-auto-merge.md): arm gh pr merge <n> --auto as its own command the moment a PR opens; no --squash, --delete-branch or --admin; owner 2026-09-04
+- [Lean comments, no history](lean-comments-no-history.md): comments rare and short, describing only the current code; a changed comment is rewritten whole, never extended with the old way; owner hard rule 2026-11-23
+- [Family memories in every repo](family-memories-every-repo.md): a family-wide owner rule goes into every FerroHEALTH repo's `.claude/memory` through a merged PR; owner 2026-11-23
