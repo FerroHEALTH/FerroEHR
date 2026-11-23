@@ -50,9 +50,9 @@ use super::paths::{Path, REQUESTS, World, exchange, order};
 /// most (the `EHR_STATUS` commit, the delete and the directory writes; every
 /// other path within 30%).
 const CPU_BUDGETS: [(Path, u64); 31] = [
-    (Path::CommitJson, 8070),
-    (Path::CommitXml, 9850),
-    (Path::CommitFlat, 11_930),
+    (Path::CommitJson, 7670),
+    (Path::CommitXml, 9450),
+    (Path::CommitFlat, 11_530),
     (Path::ReadJson, 990),
     (Path::ReadXml, 2140),
     (Path::ReadFlat, 2880),
@@ -61,7 +61,7 @@ const CPU_BUDGETS: [(Path, u64); 31] = [
     (Path::AqlPopulation, 1100),
     (Path::Iti81, 2400),
     (Path::PartyRead, 920),
-    (Path::CommitContribution, 9090),
+    (Path::CommitContribution, 8690),
     (Path::ReadAtTime, 850),
     (Path::CommitStatus, 2220),
     (Path::ReadStatus, 690),
@@ -70,7 +70,7 @@ const CPU_BUDGETS: [(Path, u64); 31] = [
     (Path::AqlParty, 1180),
     (Path::CommitPartyScored, 2880),
     (Path::ReadVersion, 840),
-    (Path::CommitUpdate, 8170),
+    (Path::CommitUpdate, 7770),
     (Path::CommitDelete, 2130),
     (Path::DirectoryCreate, 2250),
     (Path::DirectoryUpdate, 2270),

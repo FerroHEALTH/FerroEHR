@@ -714,4 +714,26 @@ mod tests {
             }
         }
     }
+
+    /// The RFC 8785 form read off a rendering is the one built from its value.
+    #[test]
+    fn the_canonical_form_read_off_a_rendering_is_the_values() {
+        for doc in [
+            json!({ "z": 1, "é": 2, "a": { "y": [3, { "b": 1, "a": 0 }], "x": null }, "\u{10000}": true, "\u{ff61}": false }),
+            json!({ "n": [1.0, -0.0, 0.1, 1e21, 1e-7, 5e-324, f64::MAX, -12, 9_007_199_254_740_993_u64, 123_456_789_012_i64] }),
+            json!({ "s": "\"q\"\\\n\u{1}\u{1f}\u{7f}/\u{2028}é", "k\"ey": "v", "t\nab": 1 }),
+            json!([{ "b": [], "a": {} }, "x", 2.5]),
+            json!("only"),
+        ] {
+            let r = render(&doc).unwrap();
+            let mut read = String::new();
+            r.write_canonical(r.root(), &mut read).unwrap();
+            assert_eq!(
+                read,
+                openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json(&doc)
+                    .unwrap(),
+                "{doc}"
+            );
+        }
+    }
 }
