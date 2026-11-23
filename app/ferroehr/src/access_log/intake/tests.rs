@@ -181,7 +181,7 @@ fn through_value(entry: &AccessLogEntry) -> (String, String, Option<(String, Str
         let text = canonical_json(&shared).expect("the shared part");
         (crate::digest::sha256_hex(&text), text)
     });
-    let columns = crate::access_log::stored_form::parts::RowColumns {
+    let columns = crate::access_log::stored_form::parts::assemble::RowColumns {
         record_type: derived.record_type.as_deref().expect("a class"),
         uid: uuid::Uuid::parse_str(derived.uid.as_deref().expect("a uid")).expect("a UUID"),
         time_recorded: derived
@@ -199,8 +199,8 @@ fn through_value(entry: &AccessLogEntry) -> (String, String, Option<(String, Str
             resource_id: None,
         },
     };
-    let digest = crate::access_log::stored_form::parts::facts_digest(
-        crate::access_log::stored_form::parts::FORM,
+    let digest = crate::access_log::stored_form::parts::facts::facts_digest(
+        crate::access_log::stored_form::parts::facts::FORM,
         &row,
         shared.as_ref().map(|(digest, _)| digest.as_str()),
         &columns,

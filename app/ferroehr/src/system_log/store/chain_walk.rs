@@ -426,7 +426,7 @@ fn record_intact(row: &PgRow) -> Result<bool, AuditError> {
     let record_type: &str = row.try_get("entry_type")?;
     if record_type == "ACCESS_LOG_ENTRY" {
         let recorded: Vec<u8> = row.try_get("content_digest")?;
-        let Ok(facts) = crate::access_log::stored_form::parts::facts_digest(
+        let Ok(facts) = crate::access_log::stored_form::parts::facts::facts_digest(
             row.try_get("stored_form")?,
             row.try_get("row_part")?,
             shared_hex.as_deref(),

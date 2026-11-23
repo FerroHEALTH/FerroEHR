@@ -8,7 +8,7 @@
 //! The canonical form of a record is its ITS-JSON serialisation canonicalised
 //! by RFC 8785, rendered from its stored parts by the renderer of its stored
 //! form, and `content_digest` the SHA-256 of those stored facts
-//! ([`stored_form::parts::facts_digest`], #6322). An entry is
+//! ([`stored_form::parts::facts::facts_digest`], #6322). An entry is
 //! written by its request ([`crate::access_log::intake`]) and sealed in a
 //! window ([`crate::access_log::seal`]). The retention rules let an entry be
 //! replaced by a tombstone that keeps its uid, `system_id`, `time_recorded`
@@ -539,13 +539,13 @@ pub(crate) fn document_of(row: &PgRow, shared: Option<&str>) -> Result<String, A
     let chain_seq: i64 = row.try_get("chain_seq")?;
     let columns = row_columns(row)?;
     let form: i16 = row.try_get("stored_form")?;
-    if form != stored_form::parts::FORM {
+    if form != stored_form::parts::facts::FORM {
         return Err(AccessLogError::Unreadable {
             chain_seq,
             source: serde::de::Error::custom(format!("no renderer reads stored form {form}")),
         });
     }
-    stored_form::parts::whole(row.try_get("row_part")?, shared, &columns)
+    stored_form::parts::assemble::whole(row.try_get("row_part")?, shared, &columns)
         .map_err(|source| AccessLogError::Unreadable { chain_seq, source })
 }
 
@@ -556,8 +556,8 @@ pub(crate) fn document_of(row: &PgRow, shared: Option<&str>) -> Result<String, A
 /// The store errors when a column does not read.
 pub(crate) fn row_columns(
     row: &PgRow,
-) -> Result<stored_form::parts::RowColumns<'_>, AccessLogError> {
-    Ok(stored_form::parts::RowColumns {
+) -> Result<stored_form::parts::assemble::RowColumns<'_>, AccessLogError> {
+    Ok(stored_form::parts::assemble::RowColumns {
         record_type: row.try_get("entry_type")?,
         uid: row.try_get("entry_uid")?,
         time_recorded: row

@@ -13,9 +13,10 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
 
+use super::assemble::{Member, object_text};
 use super::{
-    ITEMS, Member, Members, NO_OBJECT, Object, array, column_member, is_name, last_named, member,
-    members, name_order, object_text, value_end,
+    ITEMS, Members, NO_OBJECT, Object, array, column_member, is_name, last_named, member, members,
+    name_order, value_end,
 };
 
 /// The index columns of an entry that give back a member of its row part:

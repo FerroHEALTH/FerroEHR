@@ -17,7 +17,7 @@
 //! record: a reader joins the two parts and the row's columns back into its
 //! canonical form by the renderer of the row's stored form (`form`), and
 //! `content_digest` is the SHA-256 of those stored facts
-//! ([`parts::facts_digest`]), computed when the entry is written, so the
+//! ([`parts::facts::facts_digest`]), computed when the entry is written, so the
 //! chain covers every stored byte and no rendering. A tombstone replaces one
 //! row and keeps no shared part. The draft fixes the entry and its canonical
 //! form; how they are stored is our own design, and no openEHR spec governs
