@@ -22,7 +22,7 @@ type: application
 # A published OCI version is immutable by refusal rather than by the registry —
 # `helm push` over an existing tag replaces it silently — so a correction always
 # ships as a NEW version and the published one stands as it was.
-version: 41.0.0
+version: 42.0.0
 # The DEFAULT container image tag (overridable via image.tag). Equals the
 # workspace version in Cargo.toml, bumped in the release PR beside the
 # docker-compose.yml image tags — one version sweep, the compose treatment
@@ -224,7 +224,7 @@ annotations:
     # to `ferroehr.bridgePinnedVersion` in _helpers.tpl and
     # `bridge.image.digest` in values.yaml.
     - name: ferrobridge
-      image: ghcr.io/ferrohealth/ferrobridge:0.0.27@sha256:55cd3c398a58e9ebb5817fe5a694980c36f23b06258ee808574050b5249d521c  # party: third
+      image: ghcr.io/ferrohealth/ferrobridge:0.0.28@sha256:7bae02e93c9be9e5752b492799908e758b9c0593c75b045ba8b36554891807ee  # party: third
       platforms:
         - linux/amd64
         - linux/arm64
