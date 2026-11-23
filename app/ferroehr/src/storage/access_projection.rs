@@ -232,12 +232,13 @@ impl Revision {
 
 /// Notes the policy and definition revisions a row selecting
 /// `access_revision!` read beside the settings revision, for the running
-/// request (`policy_register::observed`, #6251). A row of the party schema,
-/// or of a statement that selects the view itself, holds none.
+/// request (`policy_register::observed`, #6251), or the hidden revision
+/// columns of a judged AQL statement (#6320). A row of the party schema, or
+/// of a statement that selects the view itself, holds none.
 ///
 /// # Errors
 /// [`sqlx::Error`] when a column does not decode.
-fn observe_revisions(row: &sqlx::postgres::PgRow) -> Result<(), sqlx::Error> {
+pub(crate) fn observe_revisions(row: &sqlx::postgres::PgRow) -> Result<(), sqlx::Error> {
     let read = |column: &str| match row.try_get::<Option<i64>, _>(column) {
         Ok(value) => Ok(value),
         // NOTE: sqlx Error::ColumnNotFound, a statement that selects the view itself reads none.
