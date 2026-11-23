@@ -1,20 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Interval and multiplicity arithmetic shared by the AOM2 validity rules, the
-//! flattener, and the cADL domain lowering.
+//! Interval and multiplicity arithmetic.
 //!
-//! Two interval families meet here: `MULTIPLICITY_INTERVAL` (existence,
-//! occurrences, cardinality —
-//! `docs/specs/openehr/BASE/docs/foundation_types/master05-interval.adoc`
-//! plus `docs/specs/openehr/AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
-//! §`C_ATTRIBUTE`), read through the [`Bounds`] view; and the generic
-//! `INTERVAL<T>` a primitive constraint carries.
-//!
-//! One family of near-duplicate readings is deliberately kept side by side
-//! rather than merged, because its callers depend on the difference: the bounds
-//! renderers (`display_bounds` vs `display_bounds_always_range`). Their doc
-//! comments state the divergence.
+//! For the AOM2 validity rules, the flattener and the cADL domain lowering:
+//! `MULTIPLICITY_INTERVAL` through [`Bounds`] (BASE `master05-interval.adoc`;
+//! `AOM2/master04.5` §`C_ATTRIBUTE`) and the generic `INTERVAL<T>`.
 
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
 use openehr_base::prelude::{Interval, MultiplicityInterval, ProperInterval};
@@ -94,12 +85,8 @@ pub(crate) fn finite_cardinality_upper(attr: &CAttribute) -> Option<i32> {
         .and_then(|c| finite_upper(&c.interval))
 }
 
-/// Render [`Bounds`] as cADL multiplicity text, collapsing a degenerate bound:
-/// `{1..1}` prints as `{1}`.
-///
-/// The sibling renderer [`display_bounds_always_range`] does NOT collapse. Both
-/// feed user-visible validation-issue messages, so neither may adopt the
-/// other's spelling.
+/// Render [`Bounds`] as cADL multiplicity text, `{1..1}` as `{1}`; issue
+/// messages depend on the spelling, unlike [`display_bounds_always_range`].
 pub(crate) fn display_bounds(b: Bounds) -> String {
     match b.upper {
         Some(u) if u == b.lower => format!("{{{}}}", b.lower),
@@ -108,12 +95,8 @@ pub(crate) fn display_bounds(b: Bounds) -> String {
     }
 }
 
-/// Render [`Bounds`] as cADL multiplicity text, always as a range: `{1..1}`
-/// prints as `{1..1}`.
-///
-/// The sibling renderer [`display_bounds`] collapses a degenerate bound to
-/// `{1}`. Both feed user-visible validation-issue messages, so neither may
-/// adopt the other's spelling.
+/// Render [`Bounds`] as cADL multiplicity text, always as a range; issue
+/// messages depend on the spelling, unlike [`display_bounds`].
 pub(crate) fn display_bounds_always_range(b: Bounds) -> String {
     match b.upper {
         Some(u) => format!("{{{}..{u}}}", b.lower),
@@ -143,13 +126,8 @@ struct IntervalFields<T> {
 }
 
 impl<T: Copy> IntervalFields<T> {
-    /// Read any `Interval<T>` variant's boundary fields.
-    ///
-    /// The `MULTIPLICITY_INTERVAL` variant (structurally possible on the
-    /// generic enum but never produced for a domain leaf constraint) carries
-    /// `Integer` bounds rather than `T`, so it answers fully open with both
-    /// bounds absent — every reading built on this view then declines to
-    /// decide.
+    /// Read any `Interval<T>` variant's boundary fields; the `MULTIPLICITY_INTERVAL`
+    /// variant, never a domain leaf constraint, reads as fully open.
     fn read(iv: &Interval<T>) -> Self {
         match iv {
             Interval::PointInterval(p) => Self {
@@ -179,48 +157,23 @@ impl<T: Copy> IntervalFields<T> {
         }
     }
 
-    /// True if both sides are bounded AND both bounds are included — the
-    /// precondition for "this interval denotes exactly one value".
+    /// Whether both sides are bounded and included, the precondition for a single
+    /// value.
     ///
-    /// The unbounded flags are load-bearing, not redundant with an absent
-    /// bound: `Interval<T>`'s invariant set
-    /// (`BASE/docs/UML/classes/org.openehr.base.foundation_types.interval.adoc`
-    /// §Interval Class, Invariants) never forbids a stored bound alongside an
-    /// unbounded flag, and `has()`'s postcondition short-circuits on the flag —
-    /// so an unbounded side dominates any stored bound. `Point_interval` only
-    /// *defaults* the flags (`{default = false}` / `{default = true}`,
-    /// `…foundation_types.point_interval.adoc` §`Point_interval` Class), it
-    /// does not fix them.
+    /// An unbounded flag dominates any stored bound (BASE `interval.adoc`
+    /// invariants and `has`; `point_interval.adoc` only defaults the flags).
     fn is_closed_bounded(self) -> bool {
         !self.lower_unbounded && !self.upper_unbounded && self.lower_included && self.upper_included
     }
 }
 
-/// The single integer value an interval denotes, or `None` if it denotes a
-/// range, an open side, or nothing decidable.
+/// The single integer value an interval denotes, or `None`: both sides bounded,
+/// included, present and equal, whatever the subtype tag (`AOM2/master04.2`
+/// §Primitive Types; `ADL2/master04.5` §Constraints on Ordered Types).
 ///
-/// The one spec-correct predicate, applied irrespective of the
-/// point-vs-proper tagging: both sides bounded, both bounds included, both
-/// bounds present and equal.
-///
-/// - A bounds-equal CLOSED interval IS a single value, whichever subtype
-///   carries it: `AOM2/master04.2-constraint_model-semantics.adoc` §Primitive
-///   Types (the `Ordered`/`C_ORDERED` row — "A single value (which is a point
-///   interval), a list of values (list of point intervals), a list of
-///   intervals, which may be mixed proper and point intervals"),
-///   `ADL2/master04.5-cadl_primitive_types.adoc` §Constraints on Ordered Types
-///   ("a degenerate interval of the form `{N..N}`, i.e. effectively a single
-///   value"), and `LANG/docs/expression_language/master03-basics.adoc`, which
-///   defines a point as a closed interval whose boundaries are the same.
-/// - An unbounded or bound-excluding interval is NOT a single value, even when
-///   tagged `POINT_INTERVAL` — see [`IntervalFields::is_closed_bounded`] for
-///   why the flags decide.
-///
-/// NOTE: `Proper_interval`'s `Inv_not_point` (`lower /= upper`, BASE
-/// `…foundation_types.proper_interval.adoc`) is adjudicated AGAINST here:
-/// BASE's own `Multiplicity_interval` inherits `Proper_interval` yet defines
-/// `is_mandatory()` as `{1..1}` (`…multiplicity_interval.adoc`), so the
-/// invariant cannot be read as forbidding bounds-equal proper intervals.
+/// NOTE: `Proper_interval`'s `Inv_not_point` is read as not forbidding equal
+/// bounds, since BASE's `Multiplicity_interval` inherits it yet defines
+/// `is_mandatory()` as `{1..1}`.
 pub(crate) fn point_value_i32(iv: &Interval<i32>) -> Option<i32> {
     let f = IntervalFields::read(iv);
     if !f.is_closed_bounded() {
