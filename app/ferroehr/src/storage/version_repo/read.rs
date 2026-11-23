@@ -186,10 +186,10 @@ macro_rules! point_reads {
         #[doc = concat!("[`", stringify!($plain), "`] with the policy and definition revisions \
             read through the clinical door.")]
         $vis const $door: &str = version_select!(policy_revisions!(); $tail);
-        #[doc = concat!("[`", stringify!($ride), "`] with the policy and definition revisions \
-            read through the clinical door.")]
+        #[doc = concat!("[`", stringify!($ride), "`] on the party pool, with the policy and \
+            definition revisions read through the clinical door.")]
         $vis const $both: &str =
-            version_select!(concat!(party_revisions!(), policy_revisions!()); $tail);
+            version_select!(concat!(party_revisions_here!(), policy_revisions!()); $tail);
     };
 }
 
@@ -726,10 +726,10 @@ const READ_SERVED_RIDE_SQL: &str = served_select!(party_revisions!());
 /// [`READ_SERVED_SQL`] with the policy and definition revisions read through
 /// the clinical door.
 const READ_SERVED_DOOR_SQL: &str = served_select!(policy_revisions!());
-/// [`READ_SERVED_RIDE_SQL`] with the policy and definition revisions read
-/// through the clinical door.
+/// [`READ_SERVED_RIDE_SQL`] on the party pool, with the policy and definition
+/// revisions read through the clinical door.
 const READ_SERVED_RIDE_DOOR_SQL: &str =
-    served_select!(concat!(party_revisions!(), policy_revisions!()));
+    served_select!(concat!(party_revisions_here!(), policy_revisions!()));
 
 /// The origins and the content identities of a set of versions, for the
 /// access record, in one statement.

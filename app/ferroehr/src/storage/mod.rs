@@ -106,6 +106,15 @@ macro_rules! party_revisions {
     };
 }
 
+/// [`party_revisions!`] for a statement the party pool runs, which reads the
+/// party store's revisions from their own table, with no door call (#6320).
+macro_rules! party_revisions_here {
+    () => {
+        "(SELECT ROW(r.revision, r.facts_revision, r.binding_revision) \
+         FROM party.binding_grant_revision r) AS party_revisions, "
+    };
+}
+
 /// The select-list item that reads, as `policy_revisions`, the policy and
 /// definition revisions through `clinical_door.policy_revisions()`, the one
 /// function of the clinical domain the party roles may run, where the two
