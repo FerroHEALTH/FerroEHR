@@ -117,6 +117,7 @@ mod external_callers;
 mod federation_agreements;
 mod federation_node;
 mod fixtures;
+mod gate_plans;
 mod import_concurrency;
 mod instances;
 mod item_tag_fixture;

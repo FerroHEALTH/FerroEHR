@@ -95,9 +95,11 @@ impl Background {
         )
         .max_connections(AUDIT_RUNTIME_POOL)
         .min_connections(0)
-        .connect_lazy_with(sqlx::postgres::PgConnectOptions::clone(
-            &pool.connect_options(),
-        ));
+        // NOTE: PostgreSQL `plan_cache_mode`, background statements are generic by design (#6392).
+        .connect_lazy_with(
+            sqlx::postgres::PgConnectOptions::clone(&pool.connect_options())
+                .options([("plan_cache_mode", "force_generic_plan")]),
+        );
         crate::db::pool_name::name(&runtime, crate::db::pool_name::PoolName::AuditRuntime);
         runtime
     }

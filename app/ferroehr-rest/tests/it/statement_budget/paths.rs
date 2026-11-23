@@ -71,6 +71,10 @@ pub(super) const REQUESTS: u64 = 10;
 /// The requests of each path sent before the measured ones.
 pub(super) const WARM: u64 = 3;
 
+/// The requests of each path that write a fixture of their own, the warm
+/// ones with the measured ones of either window ([`super::planning`]).
+const FIXTURES: u64 = WARM + super::planning::REQUESTS;
+
 /// The EHRs the paths spread over, each with one IPS composition.
 const EHRS: usize = 5;
 
@@ -653,7 +657,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        allocations: 1713,
+        allocations: 1710,
         peak_bytes: 125_972,
         round_trips: 12,
         nested: 3,
@@ -683,7 +687,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        allocations: 2200,
+        allocations: 2196,
         peak_bytes: 140_901,
         round_trips: 12,
         nested: 3,
@@ -884,8 +888,10 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::DirectoryCreate, 4783),
     (Path::DirectoryUpdate, 4594),
     (Path::DirectoryDelete, 3951),
-    (Path::PartyUpdate, 9179),
-    (Path::PartyDelete, 7730),
+    // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
+    (Path::PartyUpdate, 9184),
+    // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
+    (Path::PartyDelete, 7735),
     (Path::CommitOrganisation, 7569),
     (Path::CommitGroup, 7398),
     (Path::CommitRole, 11_193),
@@ -1226,7 +1232,7 @@ impl World {
     /// [`Path::PartyDelete`] then deletes, one per request.
     async fn parties(&self, app: &Router) {
         let mut parties = Vec::new();
-        for _ in 0..WARM + REQUESTS {
+        for _ in 0..FIXTURES {
             let (status, headers, body) =
                 plain(app, &Self::party_commit(self.person.clone())).await;
             assert_eq!(status, StatusCode::CREATED, "a person to update: {body}");
@@ -1347,7 +1353,7 @@ impl World {
     /// composition its FOLDER references.
     async fn directories(&self, app: &Router) {
         let mut directories = Vec::new();
-        for _ in 0..WARM + REQUESTS {
+        for _ in 0..FIXTURES {
             let (ehr, vo) = ehr_with_composition(app).await;
             directories.push((ehr, vo, String::new()));
         }
@@ -1423,7 +1429,7 @@ impl World {
     /// request, spread over the EHRs.
     async fn deletable(&self, app: &Router) {
         let mut deletable = Vec::new();
-        for n in 0..usize::try_from(WARM + REQUESTS).unwrap() {
+        for n in 0..usize::try_from(FIXTURES).unwrap() {
             let (ehr, _) = &self.ehrs[n % self.ehrs.len()];
             let (status, headers, body) = plain(
                 app,
