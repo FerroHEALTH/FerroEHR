@@ -376,7 +376,7 @@ statement_timeout = "1min"
 | `migrate` | enum{apply,verify} | `apply` | Whether the server applies its embedded migrations at boot. `apply` is what makes an empty configuration boot against an empty database. `verify` issues **no DDL at all**: it checks that the database already carries exactly this build's migrations and refuses to start otherwise, so the serving DSN can authenticate as a role with no DDL rights. That check still READS every `_sqlx_migrations` table of each database, which no least-privilege role can do, so pair it with `migrate_url` above and with `ferroehr db migrate` run out of band; see [Operations](../operations.md#which-credential-prepares-the-schema). |
 | `connection_budget` | int | `40` | The most connections the instance opens to PostgreSQL while it serves: its three pools, the audit runtime's four and its listener connections together. The pools are sized inside it, and a `max_connections` whose pools and listeners exceed it is refused at startup. The default lets two instances share PostgreSQL's default `max_connections` of 100. See [Sizing the pool](#sizing-the-pool). |
 | `max_connections` | int | unset | The size of each domain's pool (clinical, party and audit each have one). Unset, it is four per core the server may run on, at least 10, within the pool's share of `connection_budget`, and never more than `server.max_concurrent_requests`. See [Sizing the pool](#sizing-the-pool). |
-| `min_connections` | int | unset | Connections each pool keeps open while idle, which the server opens before it answers ready. Unset, the server keeps one per core it may run on, at least 2 and at most the pool size. A one-shot command (`ferroehr db migrate`, `party-binding refill`) opens only what it uses. |
+| `min_connections` | int | unset | Connections each pool keeps open while idle, which the server opens before it answers ready. Unset, the server keeps every connection of the pool. A one-shot command (`ferroehr db migrate`, `party-binding refill`) opens only what it uses. |
 | `acquire_timeout` | duration | `"30s"` | How long to wait for a free connection before failing. |
 | `statement_timeout` | duration | `"1min"` | `statement_timeout` applied to every pooled connection; `"0s"` leaves the server default. |
 
@@ -445,12 +445,13 @@ A one-shot command (`ferroehr db migrate`, `party-binding refill` and the
 other subcommands) opens only the connections it uses, so it runs beside the
 instances inside what your tools are left.
 
-Before it answers ready, the server opens the connections each pool keeps
-while idle, one per core unless `min_connections` says otherwise, so an
-instance restarted under load does not refuse its first requests while it
-opens them. The rest open when a burst asks for them. Keep the kept
-connections of every instance inside PostgreSQL's budget too: an instance
-that cannot open them does not start.
+Before it answers ready, the server opens every connection of each pool
+unless `min_connections` keeps fewer, so an instance restarted under load
+opens none while its first requests arrive. A connection opened under load
+keeps its request waiting for the connection and the session to be set up,
+and at 3,000 requests a second those waits filled the server's admission
+bound in the first second. Keep the connections of every instance inside
+PostgreSQL's budget too: an instance that cannot open them does not start.
 
 `statement_timeout` is the backstop for every statement. An AQL query
 (ad hoc or stored) and the composition-count statistics stop sooner when their

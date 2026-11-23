@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The care copy's bound weighs each census by its patients and the record
-//! subjects they declare (#5760), and each cap holds while an evicted entry
-//! is read again with the store's answer (#5926).
+//! subjects they declare (#5760), each cap holds while an evicted entry
+//! is read again with the store's answer (#5926), and a census a delta
+//! brought up to date is the census read at the delta's revision (#6074).
 
 use std::collections::BTreeMap;
 use std::convert::Infallible;
@@ -12,8 +13,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use uuid::Uuid;
 
-use super::{CENSUS_BYTES, CareCopy, Census, SUBJECTS};
+use super::{CENSUS_BYTES, CareCopy, Census, SUBJECTS, read_census};
+use crate::db::acquire::acquire;
 use crate::party_binding::grants::caller::care_of::{CareOf, ProviderKey};
+use crate::party_binding::grants::caller::store::{self, Changed};
 use crate::party_binding::grants::store::Dates;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
@@ -41,13 +44,13 @@ use crate::storage::access_projection::EhrSubject;
 /// subjects of an identity source's namespace.
 fn census(team: Uuid, patients: usize, each: usize) -> Census {
     let cared: Vec<_> = (0..patients)
-        .map(|_| (Uuid::now_v7(), care(team)))
+        .map(|_| (Uuid::now_v7(), Arc::new(care(team))))
         .collect();
-    let declared: BTreeMap<Uuid, Vec<EhrSubject>> = cared
+    let declared: BTreeMap<Uuid, Arc<[EhrSubject]>> = cared
         .iter()
         .filter(|_| each > 0)
         .map(|(patient, _)| {
-            let subjects = (0..each)
+            let subjects: Vec<EhrSubject> = (0..each)
                 .map(|n| {
                     EhrSubject::new(
                         "urn:oid:2.16.840.1.113883.2.4.6.3",
@@ -55,6 +58,7 @@ fn census(team: Uuid, patients: usize, each: usize) -> Census {
                     )
                 })
                 .collect();
+            let subjects: Arc<[EhrSubject]> = subjects.into();
             (*patient, subjects)
         })
         .collect();
@@ -69,7 +73,7 @@ fn a_census_weighs_the_subjects_its_patients_declare() {
     let subject_text = declaring
         .declared
         .values()
-        .flatten()
+        .flat_map(|subjects| subjects.iter())
         .map(|subject| subject.namespace.len() + subject.id.len())
         .sum::<usize>();
     let floor = u64::try_from(1000 * size_of::<EhrSubject>() + subject_text).expect("fits");
@@ -240,4 +244,314 @@ async fn a_census_past_the_bound_is_answered_and_never_held() {
     }
     copy.teams.run_pending_tasks().await;
     assert_eq!(copy.held().teams.entries, 0);
+}
+
+/// One statement of a commit, with the uuids and the texts it binds in turn.
+type Statement<'a> = (&'a str, Vec<Uuid>, Vec<&'a str>);
+
+/// One commit of the parity scenario: its name, its statements and the
+/// parties it stamps.
+type Step<'a> = (&'a str, Vec<Statement<'a>>, Vec<Uuid>);
+
+/// The care teams, patients and holders of the parity scenario.
+struct Ward {
+    pool: sqlx::PgPool,
+    teams: [Uuid; 3],
+    patients: Vec<Uuid>,
+    /// The `PARTY_RELATIONSHIP` holder of each patient's first relationship.
+    holders: Vec<Uuid>,
+}
+
+impl Ward {
+    fn patient(&self, n: usize) -> Uuid {
+        self.patients.get(n).copied().expect("a patient")
+    }
+
+    fn holder(&self, n: usize) -> Uuid {
+        self.holders.get(n).copied().expect("a holder")
+    }
+
+    /// Runs `statements`, each bound to its uuids and text, then stamps
+    /// `parties` as a commit does ([`store::finish`]), in one transaction.
+    async fn commit(&self, statements: &[Statement<'_>], parties: Vec<Uuid>) {
+        let mut conn = acquire(&self.pool).await.expect("a connection");
+        let mut tx = sqlx::Connection::begin(&mut *conn)
+            .await
+            .expect("a transaction");
+        for (statement, ids, texts) in statements {
+            let mut query = sqlx::query(sqlx::AssertSqlSafe(*statement));
+            for id in ids {
+                query = query.bind(*id);
+            }
+            for text in texts {
+                query = query.bind(*text);
+            }
+            query.execute(&mut *tx).await.expect("the statement runs");
+        }
+        store::finish(&mut tx, parties).await.expect("the stamp");
+        // NOTE: our own design (#5762), a test commit of party rows that no request makes.
+        tx.commit().await.expect("the commit");
+    }
+
+    /// The facts stamped after `since`, read in one snapshot as a replica
+    /// reads them.
+    async fn changed(&self, since: i64) -> Changed {
+        let mut conn = acquire(&self.pool).await.expect("a connection");
+        let mut tx = sqlx::Connection::begin(&mut *conn)
+            .await
+            .expect("a transaction");
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+            .execute(&mut *tx)
+            .await
+            .expect("the snapshot");
+        let changed = store::load(&mut tx, Some(since)).await.expect("the delta");
+        // NOTE: our own design (#5762), a read-only snapshot that writes nothing.
+        tx.commit().await.expect("the read ends");
+        changed
+    }
+}
+
+/// A care relationship of `$2` to the team `$3` held by `$1` in the role `$4`
+/// of `HL7_ParticipationType`, over `$5` in the holder state `$6`.
+const RELATE: &str = "INSERT INTO binding_caller_fact (holder_id, ordinal, kind, party_id, \
+     target_id, target_kind, terminology_id, code_string, provider_issuer, provider_id, \
+     lifecycle_state, role_validity, validity, holder_version) \
+     VALUES ($1, 0, 'under_care_of', $2, $3, 'GROUP', 'HL7_ParticipationType', $4, \
+     'urn:example:providers', 'hospital', $6, '(,)', $5::daterange, $1::text || '::v1')";
+
+/// The relationship the holder `$1` held, deleted as its next version does.
+const UNRELATE: &str = "DELETE FROM binding_caller_fact WHERE holder_id = $1";
+
+/// The record subject `$2` of the namespace `$3` the `PERSON` `$1` declares
+/// at position 0 in the state `$4`.
+const DECLARE: &str = "INSERT INTO binding_record_subject \
+     (holder_id, ordinal, namespace, subject_id, lifecycle_state) VALUES ($1, 0, $2, $3, $4)";
+
+/// A ward of twelve patients, each under the care of the first or the second
+/// team, every one of the first four declaring a record subject.
+async fn ward() -> (testkit::TestDb, Ward) {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = crate::db::domain_pool_from(&db.pool(), crate::db::domain::Domain::Party);
+    let teams = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
+    let patients: Vec<Uuid> = (0..12).map(|_| Uuid::now_v7()).collect();
+    let holders: Vec<Uuid> = (0..12).map(|_| Uuid::now_v7()).collect();
+    let ward = Ward {
+        pool,
+        teams,
+        patients,
+        holders,
+    };
+    for n in 0..12 {
+        let team = ward.teams.get(n % 2).copied().expect("a team");
+        let mut statements = vec![(
+            RELATE,
+            vec![ward.holder(n), ward.patient(n), team],
+            vec!["PART", "[2020-01-01,)", "532"],
+        )];
+        let id = format!("pseudonym-{n}");
+        if n < 4 {
+            statements.push((
+                DECLARE,
+                vec![ward.patient(n)],
+                vec!["urn:example:pseudonyms", id.as_str(), "532"],
+            ));
+        }
+        ward.commit(&statements, vec![ward.patient(n)]).await;
+    }
+    (db, ward)
+}
+
+/// Parity (#6074): after each relationship commit a delta brings every held
+/// census to the census read fresh at the delta's revision: an admission to
+/// a second team, a discharge, a role change, a move between teams, a
+/// relationship deleted, record subjects declared and withdrawn, a holder
+/// no longer live, a stamp that changed nothing and a party that is no
+/// patient.
+#[tokio::test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one scenario of commits, each checked against a fresh read"
+)]
+async fn a_census_after_each_delta_is_the_census_read_at_its_revision() {
+    let (_db, ward) = ward().await;
+    let copy = CareCopy::new();
+    for team in ward.teams {
+        copy.of_team(&ward.pool, team)
+            .await
+            .expect("the census reads");
+    }
+    let [first, second, third] = ward.teams;
+    let (admitted, again) = (Uuid::now_v7(), Uuid::now_v7());
+    let pseudonym = |n: usize| format!("pseudonym-{n}-b");
+    let (late, withdrawn) = (pseudonym(5), pseudonym(2));
+    let member = Uuid::now_v7();
+    let steps: Vec<Step<'_>> = vec![
+        (
+            "an admission to a second team",
+            vec![(
+                RELATE,
+                vec![admitted, ward.patient(0), third],
+                vec!["PART", "[2026-01-01,)", "532"],
+            )],
+            vec![ward.patient(0)],
+        ),
+        (
+            "a discharge",
+            vec![
+                (UNRELATE, vec![ward.holder(1)], vec![]),
+                (
+                    RELATE,
+                    vec![ward.holder(1), ward.patient(1), second],
+                    vec!["PART", "[2020-01-01,2024-01-01)", "532"],
+                ),
+            ],
+            vec![ward.patient(1)],
+        ),
+        (
+            "a role change",
+            vec![
+                (UNRELATE, vec![ward.holder(2)], vec![]),
+                (
+                    RELATE,
+                    vec![ward.holder(2), ward.patient(2), first],
+                    vec!["ATND", "[2020-01-01,)", "532"],
+                ),
+            ],
+            vec![ward.patient(2)],
+        ),
+        (
+            "a move between teams",
+            vec![
+                (UNRELATE, vec![ward.holder(3)], vec![]),
+                (
+                    RELATE,
+                    vec![ward.holder(3), ward.patient(3), first],
+                    vec!["PART", "[2020-01-01,)", "532"],
+                ),
+            ],
+            vec![ward.patient(3)],
+        ),
+        (
+            "a relationship deleted",
+            vec![(UNRELATE, vec![ward.holder(4)], vec![])],
+            vec![ward.patient(4)],
+        ),
+        (
+            "a record subject declared and another withdrawn",
+            vec![
+                (
+                    DECLARE,
+                    vec![ward.patient(5)],
+                    vec!["urn:example:pseudonyms", late.as_str(), "532"],
+                ),
+                (
+                    "UPDATE binding_record_subject SET lifecycle_state = '800', subject_id = $2 \
+                     WHERE holder_id = $1",
+                    vec![ward.patient(2)],
+                    vec![withdrawn.as_str()],
+                ),
+            ],
+            vec![ward.patient(5), ward.patient(2)],
+        ),
+        (
+            "a holder no longer live",
+            vec![(
+                "UPDATE binding_caller_fact SET lifecycle_state = '800' WHERE holder_id = $1",
+                vec![ward.holder(6)],
+                vec![],
+            )],
+            vec![ward.patient(6)],
+        ),
+        (
+            "a second relationship to the same team",
+            vec![(
+                RELATE,
+                vec![again, ward.patient(7), second],
+                vec!["ATND", "[2025-01-01,2027-01-01)", "532"],
+            )],
+            vec![ward.patient(7)],
+        ),
+        (
+            "a stamp that changed nothing and a party that is no patient",
+            vec![(
+                "INSERT INTO binding_caller_fact (holder_id, ordinal, kind, party_id, target_id, \
+                 lifecycle_state, role_validity, validity) \
+                 VALUES ($1, 0, 'MBR', $1, $2, '532', '(,)', '(,)')",
+                vec![member, first],
+                vec![],
+            )],
+            vec![ward.patient(8), member],
+        ),
+    ];
+    let mut since = store::load(&mut acquire(&ward.pool).await.expect("a connection"), None)
+        .await
+        .expect("the facts read")
+        .revision;
+    for (name, statements, parties) in steps {
+        ward.commit(&statements, parties).await;
+        let changed = ward.changed(since).await;
+        assert!(changed.revision > since, "{name}: the revision moves");
+        since = changed.revision;
+        copy.apply(&changed).await;
+        for (team, label) in [(first, "first"), (second, "second"), (third, "third")] {
+            let held = copy.teams.get(&team).await.expect("the census stays held");
+            let fresh = read_census(&ward.pool, team)
+                .await
+                .expect("the census reads");
+            assert_eq!(*held, *fresh, "{name}: the {label} team's census");
+        }
+    }
+    let first_census = copy.teams.get(&first).await.expect("held");
+    assert!(
+        first_census
+            .cared
+            .iter()
+            .any(|(subject, care)| *subject == ward.patient(3) && care.carer() == first),
+        "the moved patient is in the first team's census"
+    );
+}
+
+/// A census a delta leaves is read again by no request: a relationship
+/// commit to a held team keeps the team held, so the next use reads none.
+#[tokio::test]
+async fn a_relationship_commit_keeps_its_teams_census_held() {
+    let (_db, ward) = ward().await;
+    let copy = CareCopy::new();
+    let [first, ..] = ward.teams;
+    copy.of_team(&ward.pool, first)
+        .await
+        .expect("the census reads");
+    let since = store::load(&mut acquire(&ward.pool).await.expect("a connection"), None)
+        .await
+        .expect("the facts read")
+        .revision;
+    let newcomer = Uuid::now_v7();
+    ward.commit(
+        &[(
+            RELATE,
+            vec![Uuid::now_v7(), newcomer, first],
+            vec!["PART", "[2026-01-01,)", "532"],
+        )],
+        vec![newcomer],
+    )
+    .await;
+    copy.apply(&ward.changed(since).await).await;
+    let reads = AtomicUsize::new(0);
+    let held = copy
+        .hold(
+            &copy.teams,
+            first,
+            async {
+                reads.fetch_add(1, Ordering::Relaxed);
+                Ok::<_, Infallible>(Arc::new(Census::default()))
+            },
+            |_| true,
+        )
+        .await
+        .expect("the census answers");
+    assert_eq!(reads.load(Ordering::Relaxed), 0, "no read of the team");
+    assert!(
+        held.cared.iter().any(|(subject, _)| *subject == newcomer),
+        "the newcomer is in the census"
+    );
 }

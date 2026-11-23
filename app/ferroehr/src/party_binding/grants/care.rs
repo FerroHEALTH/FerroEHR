@@ -14,11 +14,14 @@
 //! [`SUBJECTS`] subjects, and teams whose censuses take at most
 //! [`CENSUS_BYTES`] together, each weighed by its patients and the record
 //! subjects they declare (`Census::bytes`). A team whose census alone is
-//! larger is read on every use and never held. The facts notification drops each subject it stamped and every
-//! team that holds one of them or that one of them is now under the care of;
-//! a grant reload, and a listener that connects or loses its connection, drop
-//! both; and a read that a drop overtook keeps nothing. No openEHR spec
-//! governs the copy: our own design.
+//! larger is read on every use and never held. The facts notification drops
+//! each subject it stamped, and brings every held team that holds one of them
+//! or that one of them is now under the care of to the stamped subjects'
+//! relationships and record subjects, read with the facts of the stamped
+//! parties, so a relationship commit never sends a team's census back to the
+//! store (#6074); a grant reload, and a listener that connects or loses its
+//! connection, drop both; and a read that a drop or a delta overtook keeps
+//! nothing. No openEHR spec governs the copy: our own design.
 
 use std::collections::BTreeMap;
 use std::hash::Hash;
@@ -32,7 +35,7 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::memory::{self, CACHE_ENTRY, Held, MAP_ENTRY, Weigh};
 use crate::party_binding::grants::caller::care_of::CareOf;
-use crate::party_binding::grants::caller::store::{self, FactRow};
+use crate::party_binding::grants::caller::store::{self, Changed, FactRow};
 use crate::party_binding::grants::caller::{FactKind, FactValue};
 use crate::policy_register::listen::{Dropping, Subscriber};
 use crate::storage::access_projection::EhrSubject;
@@ -43,21 +46,25 @@ use crate::storage::error::StorageError;
 pub const SUBJECTS: u64 = 4096;
 
 /// The most bytes the held care teams' censuses take together, by
-/// `Census::bytes`: about 270 000 patients that each declare one record
-/// subject (#5760).
+/// `Census::bytes`.
+///
+/// About 250 000 patients that each declare one record subject (#5760), each
+/// relationship and each patient's record subjects shared behind an `Arc` so
+/// a delta copies no relationship (#6074).
 pub const CENSUS_BYTES: u64 = 64 * 1024 * 1024;
 
-/// One patient under a carer's care, with the relationship.
-pub type Cared = (Uuid, CareOf);
+/// One patient under a carer's care, with the relationship, shared so a
+/// delta copies the census without copying its relationships.
+pub type Cared = (Uuid, Arc<CareOf>);
 
 /// The patients under one carer's care, sorted by subject, and the record
 /// subjects each declares.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) struct Census {
     /// Each patient with its relationship to the team.
     pub(crate) cared: Vec<Cared>,
     /// The live record subjects of each patient that declares any.
-    pub(crate) declared: BTreeMap<Uuid, Vec<EhrSubject>>,
+    pub(crate) declared: BTreeMap<Uuid, Arc<[EhrSubject]>>,
 }
 
 impl Census {
@@ -98,7 +105,87 @@ impl Census {
 
     /// How many record subjects the census's patients declare.
     fn declared_subjects(&self) -> usize {
-        self.declared.values().map(Vec::len).sum()
+        self.declared.values().map(|subjects| subjects.len()).sum()
+    }
+
+    /// The census of `team` once `delta` is applied: each stamped subject
+    /// holds the relationships to `team` it holds now and the live record
+    /// subjects it declares now, the census read at the delta's revision.
+    fn applied(&self, team: Uuid, delta: &Delta) -> Self {
+        let mut cared: Vec<Cared> = self
+            .cared
+            .iter()
+            .filter(|(subject, _)| !delta.cared.contains_key(subject))
+            .cloned()
+            .collect();
+        cared.extend(delta.cared.iter().flat_map(|(subject, relationships)| {
+            relationships
+                .iter()
+                .filter(|care| care.carer() == team)
+                .map(|care| (*subject, Arc::clone(care)))
+        }));
+        cared.sort();
+        let mut declared = self.declared.clone();
+        for subject in delta.cared.keys() {
+            declared.remove(subject);
+            let held = cared
+                .binary_search_by_key(subject, |(cared, _)| *cared)
+                .is_ok();
+            if let Some(subjects) = delta.declared.get(subject).filter(|_| held) {
+                declared.insert(*subject, Arc::clone(subjects));
+            }
+        }
+        Self { cared, declared }
+    }
+
+    /// Whether `delta` changes the census of `team`: it holds a stamped
+    /// subject, or a stamped subject is now under the care of `team`.
+    fn touched_by(&self, team: Uuid, delta: &Delta) -> bool {
+        delta.cared.iter().any(|(subject, relationships)| {
+            relationships.iter().any(|care| care.carer() == team)
+                || self
+                    .cared
+                    .binary_search_by_key(subject, |(cared, _)| *cared)
+                    .is_ok()
+        })
+    }
+}
+
+/// What the parties stamped since a facts revision hold now, as a census
+/// reads it: each stamped party's care relationships, none for a party with
+/// none, and the live record subjects of each stamped `PERSON` that
+/// declares any, in their order.
+#[derive(Debug)]
+struct Delta {
+    cared: BTreeMap<Uuid, Vec<Arc<CareOf>>>,
+    declared: BTreeMap<Uuid, Arc<[EhrSubject]>>,
+}
+
+impl Delta {
+    /// The delta `changed` holds.
+    fn of(changed: &Changed) -> Self {
+        let mut cared: BTreeMap<Uuid, Vec<Arc<CareOf>>> = changed
+            .parties
+            .iter()
+            .map(|(party, _)| (*party, Vec::new()))
+            .collect();
+        for (subject, rows) in &changed.cared {
+            cared.insert(*subject, care_of(rows).into_iter().map(Arc::new).collect());
+        }
+        let mut declared: BTreeMap<Uuid, Vec<EhrSubject>> = BTreeMap::new();
+        for row in changed.declared.iter().filter(|row| row.live) {
+            declared
+                .entry(row.person)
+                .or_default()
+                .push(row.subject.clone());
+        }
+        Self {
+            cared,
+            declared: declared
+                .into_iter()
+                .map(|(person, subjects)| (person, subjects.into()))
+                .collect(),
+        }
     }
 }
 
@@ -290,38 +377,36 @@ impl CareCopy {
         .await
     }
 
-    /// Drop each of `subjects` (sorted), every team that holds one of them,
-    /// each of `teams`, and every record subject that names one of
-    /// `subjects` or is among `declared`.
-    pub(crate) async fn drop_changed(
-        &self,
-        subjects: &[Uuid],
-        teams: &[Uuid],
-        declared: &[EhrSubject],
-    ) {
-        if subjects.is_empty() && teams.is_empty() && declared.is_empty() {
+    /// Bring the copy to `changed`, the facts of the parties stamped since
+    /// the facts revision it holds: drop each stamped subject's
+    /// relationships, apply the stamped subjects' relationships and record
+    /// subjects to every held census they change ([`Census::applied`]), and
+    /// drop every record subject that names a stamped party or that one of
+    /// them declares.
+    pub(crate) async fn apply(&self, changed: &Changed) {
+        if changed.parties.is_empty() {
             return;
         }
         self.drops.fetch_add(1, Ordering::AcqRel);
-        for subject in subjects {
+        let subjects: Vec<Uuid> = changed.parties.iter().map(|(party, _)| *party).collect();
+        for subject in &subjects {
             self.subjects.invalidate(subject).await;
         }
-        let holding: Vec<Uuid> = self
+        let delta = Delta::of(changed);
+        let touched: Vec<(Uuid, Census)> = self
             .teams
             .iter()
-            .filter(|(_, census)| {
-                subjects.iter().any(|subject| {
-                    census
-                        .cared
-                        .binary_search_by_key(subject, |(cared, _)| *cared)
-                        .is_ok()
-                })
-            })
-            .map(|(team, _)| *team)
+            .filter(|(team, census)| census.touched_by(**team, &delta))
+            .map(|(team, census)| (*team, census.applied(*team, &delta)))
             .collect();
-        for team in holding.iter().chain(teams) {
-            self.teams.invalidate(team).await;
+        for (team, census) in touched {
+            if census.bytes() <= self.census_bytes {
+                self.teams.insert(team, Arc::new(census)).await;
+            } else {
+                self.teams.invalidate(&team).await;
+            }
         }
+        let declared = changed.declared.iter().map(|row| &row.subject);
         let resolved: Vec<EhrSubject> = self
             .persons
             .iter()
@@ -366,7 +451,7 @@ async fn read_census(pool: &PgPool, team: Uuid) -> Result<Arc<Census>, StorageEr
             care_of(&rows)
                 .into_iter()
                 .filter(|care| care.carer() == team)
-                .map(move |care| (subject, care))
+                .map(move |care| (subject, Arc::new(care)))
         })
         .collect();
     census.sort();
@@ -377,7 +462,10 @@ async fn read_census(pool: &PgPool, team: Uuid) -> Result<Arc<Census>, StorageEr
     }
     Ok(Arc::new(Census {
         cared: census,
-        declared,
+        declared: declared
+            .into_iter()
+            .map(|(person, subjects)| (person, subjects.into()))
+            .collect(),
     }))
 }
 

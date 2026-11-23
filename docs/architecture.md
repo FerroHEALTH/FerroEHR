@@ -1800,10 +1800,13 @@ subject's relationships (`LiveGrants::under_care_of`, at most
 (`LiveGrants::cared_for_by`, teams whose censuses take at most
 `care::CENSUS_BYTES` together, each weighed by its patients and the record
 subjects they declare, #5760, read by `ix_binding_caller_fact_care_team` of migration
-`party/0041`). Each is read on a miss, one indexed statement, and dropped
-when the facts read of a notification stamps a party it holds or a team the
-party is now under the care of; a grant reload and a listener that connects
-or loses its connection drop both. The relationships carry their dates, so
+`party/0041`). Each is read on a miss, one indexed statement. The facts read
+of a notification drops each subject it stamps, and reads the stamped
+subjects' care relationships and record subjects beside their facts
+(`caller::store::CARED`), which it applies to every held census a stamped
+subject is in or is now under the care of, so a relationship commit never
+sends a team's census back to the store (#6074); a grant reload and a
+listener that connects or loses its connection drop both. The relationships carry their dates, so
 the evaluator applies the grace after a discharge. A `PERSON` version that changes its care relationships commits
 only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
@@ -1933,7 +1936,12 @@ one indexed read then finds. Otherwise that run is dropped whole: its answer,
 its evaluator and its uncounted decisions go unused, so it leaves no access
 record, audit record or decision metric, and the read runs once more behind the
 up-front confirm, which never runs it again. `access_policy_reruns_total{op}`
-counts those runs (#6251). A COMPOSITION create, update or delete, a
+counts those runs (#6251). An `EHR_STATUS` or directory read and an AQL query
+confirm after they ran the same way (#6320): the version read of the EHR
+object selects the revisions, and a clinical query a request judges reads
+them on the one-row read of the versions it served, or, when it serves none,
+as two hidden columns of its own statement (`aql::sql::Layout::revisions`); a
+query that served no row reads them once after it ran. A COMPOSITION create, update or delete, a
 CONTRIBUTION commit, an `EHR_STATUS` commit and a directory create, update or
 delete make no read first either: the gate read of the write
 returns the revisions, the write is decided on the copies as they stand, and a
