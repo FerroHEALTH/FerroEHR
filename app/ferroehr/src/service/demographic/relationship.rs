@@ -35,27 +35,22 @@ use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::support;
-use crate::service::demographic::written::{demographic_answer, locked_tip};
+use crate::service::demographic::written::demographic_answer;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
-use crate::service::write::Resolved;
 use crate::versioning::Kind;
-use crate::versioning::audit::change_type;
 use crate::versioning::body::Body;
-use crate::versioning::change::{Change, Write};
+use crate::versioning::change::Change;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::read::{VersionRead, demographic_current, object_kind};
 
 /// The current version of a `PARTY_RELATIONSHIP`, resolved in ONE lean
-/// `version`⋈`audit` read (no node reassembly) — the relationship analogue
-/// of the party's current handle: the write paths resolve the target **once**
-/// and thread it through the `If-Match` compare and the existence / not-deleted
-/// gates. RM common master06 §Version Identification / §Logical Deletion.
+/// `version`⋈`audit` read (no node reassembly): the identity a `412` echoes.
+/// RM common master06 §Version Identification.
 pub(super) struct CurrentRelationship {
     vo_id: VoId,
     tree: TreeId,
     creating_system_id: String,
-    deleted: bool,
 }
 
 impl CurrentRelationship {
@@ -143,7 +138,6 @@ impl FerroEhrService {
             vo_id,
             tree: current.tree,
             creating_system_id: current.creating_system_id,
-            deleted: current.deleted,
         }))
     }
 
@@ -175,32 +169,13 @@ impl FerroEhrService {
         &self,
         request: WriteRequest<Body>,
     ) -> Result<ServiceResponse, ServiceError> {
-        // Both halves of the committal merge, the `UPDATE_AUDIT` attributes and
-        // the VERSION `lifecycle_state` (ITS-REST overview
-        // `Requests_and_responses.md` §"openehr-version and
-        // openehr-audit-details": "whatever is provided it MUST be merged with
-        // the default VERSION and `VERSION.audit_details` attributes on commit
-        // runtime").
-        let Resolved {
-            audit, envelope, ..
-        } = self
-            .demographic_write_checks(
-                Kind::PartyRelationship,
-                &request,
-                None,
-                (change_type::CREATION, "PARTY_RELATIONSHIP creation"),
+        let (committed, served) = self
+            .commit_direct_create(
+                (Kind::PartyRelationship, None),
+                request,
+                "PARTY_RELATIONSHIP",
+                |body, envelope| Change::create(Kind::PartyRelationship, body, None, envelope),
             )
-            .await?;
-        // The large media go to the blob store before a connection is held.
-        let (body, served) = self.demographic_stored(request.data, true).await?;
-        let committed = self
-            .commit_one(&self.demographic_pool, async move |_| {
-                Ok(Write::new(
-                    None,
-                    Change::create(Kind::PartyRelationship, body, None, envelope),
-                    audit,
-                ))
-            })
             .await?;
         let read_back = self.read_relationship(committed.vo_id, Some(committed.tree), None);
         demographic_answer(served, &committed, read_back).await
@@ -222,95 +197,29 @@ impl FerroEhrService {
         Ok(support::version_response(vo_id, read)?)
     }
 
-    /// Commit a new version of an already-resolved relationship.
+    /// Commit a new version of the relationship `vo_id`, judged on one gate
+    /// read and committed in one guarded statement after its access record
+    /// (#6257): a missing relationship is `404`, then `precondition` is judged
+    /// against the tip, then a deleted tip is `404`, then the body checks. The
+    /// response is the stored form: the body in hand, or a read-back when the
+    /// commit rewrites it ([`support::commit_rewrites_body`]).
     ///
-    /// `precondition` is judged against the tip the write locks, before a
-    /// deleted current (`404`) and the body checks. The response is the stored
-    /// form: the body in hand, or a read-back when the commit rewrites it
-    /// ([`support::commit_rewrites_body`]).
+    /// # Errors
+    /// The refusals in that order, and the commit's.
     pub(super) async fn commit_relationship_update(
         &self,
-        current: CurrentRelationship,
+        vo_id: VoId,
         precondition: Precondition,
         request: WriteRequest<Body>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = current.vo_id;
-        let checked = if current.deleted {
-            Err(ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("PARTY_RELATIONSHIP {vo_id} is deleted"),
-            ))
-        } else {
-            self.demographic_write_checks(
-                Kind::PartyRelationship,
-                &request,
-                None,
-                (change_type::MODIFICATION, "PARTY_RELATIONSHIP update"),
-            )
-            .await
-        };
-        // A valid body's large media go to the blob store before a connection is held.
-        let (body, served) = self
-            .demographic_stored(request.data, checked.is_ok())
-            .await?;
-        let committed = self
-            .commit_demographic_update(
-                (Kind::PartyRelationship, vo_id),
-                precondition,
-                checked,
-                body,
-            )
+        let addressed = ((Kind::PartyRelationship, vo_id), None);
+        let (committed, served) = self
+            .commit_direct_update(addressed, precondition, request, "PARTY_RELATIONSHIP")
             .await?;
         // Metadata + in-hand body, unless the commit rewrote it: then the
         // stored form is read back.
         let read_back = self.read_relationship(committed.vo_id, Some(committed.tree), None);
         demographic_answer(served, &committed, read_back).await
-    }
-
-    /// Commit the logical delete of an already-resolved relationship as a new
-    /// `523|deleted|` version (RM common master06 §Logical Deletion).
-    /// `precondition` is the `If-Match`, else the path `OBJECT_VERSION_ID`,
-    /// judged against the tip the write locks: a stale version is `409`, an
-    /// already-deleted target `400`.
-    pub(super) async fn commit_relationship_delete(
-        &self,
-        current: CurrentRelationship,
-        precondition: Precondition,
-        request: WriteRequest,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = current.vo_id;
-        let committed = self
-            .commit_one(&self.demographic_pool, async move |tx| {
-                let placement =
-                    locked_tip(tx, Kind::PartyRelationship, vo_id, &precondition).await?;
-                if let Some(tip) = placement.tip.as_ref() {
-                    if tip.lifecycle_state == crate::versioning::lifecycle::state::DELETED {
-                        return Err(ServiceError::precondition(format!(
-                            "PARTY_RELATIONSHIP {vo_id} is already deleted"
-                        )));
-                    }
-                    // A stale preceding version is a VERSION MISMATCH: the wire
-                    // arm answers `409` and echoes the latest `version_uid` in
-                    // `ETag`, mirroring the party delete.
-                    precondition.check_tree(tip)?;
-                }
-                let audit = self.commit_audit(
-                    request.audit.as_ref(),
-                    change_type::DELETED,
-                    "PARTY_RELATIONSHIP delete",
-                )?;
-                Ok(Write::new(
-                    None,
-                    Change::delete(vo_id, Kind::PartyRelationship, None),
-                    audit,
-                )
-                .placed(placement))
-            })
-            .await?;
-        Ok(ServiceResponse::deleted(ResourceMeta::new(
-            String::new(),
-            object_version_id(vo_id, &committed.creating_system_id, committed.tree),
-        )))
     }
 
     // ── VERSIONED_PARTY_RELATIONSHIP (extension read surface) ─────────────────

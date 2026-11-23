@@ -40,6 +40,7 @@ pub mod ehr_index;
 pub mod linkage;
 pub mod message;
 mod multimedia;
+mod party_door;
 pub mod query;
 pub mod terminology;
 
@@ -272,6 +273,9 @@ pub struct FerroEhrService {
     /// once it has built them ([`Self::observe_authn`]); empty in
     /// [`Self::new`].
     pub(in crate::service) authn_caches: Arc<std::sync::OnceLock<Arc<dyn observed::HeldCaches>>>,
+    /// Whether a clinical statement may read the party store's revisions
+    /// through `party_door`, decided on first use ([`Self::party_door_open`]).
+    pub(in crate::service) party_door: Arc<tokio::sync::OnceCell<bool>>,
     /// What an ITI-81 page carries beside its records, read once
     /// (`system_log::store::carried`, #6320).
     #[cfg(feature = "fhir")]
@@ -358,6 +362,7 @@ impl FerroEhrService {
             bindings: Arc::default(),
             import_policy: Arc::default(),
             authn_caches: Arc::default(),
+            party_door: Arc::default(),
             #[cfg(feature = "fhir")]
             audit_carried: Arc::default(),
         }

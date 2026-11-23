@@ -52,7 +52,7 @@ where
     }
     let (resp, access) = run(state, op, parts, handler).await;
     if let Some(access) = access {
-        access.count_decisions();
+        ferroehr::party_binding::request::defer(move || access.count_decisions());
     }
     resp
 }
@@ -120,7 +120,7 @@ where
     match held {
         Ok(true) => {
             if let Some(access) = access {
-                access.count_decisions();
+                ferroehr::party_binding::request::defer(move || access.count_decisions());
             }
             resp
         }
@@ -128,7 +128,9 @@ where
             // NOTE: our own design (#6251), the run decided on a copy behind the store leaves
             // nothing: its answer, its evaluator and its uncounted decisions go unused.
             drop((resp, access));
-            ferroehr::telemetry::access_path::count_policy_rerun(op);
+            ferroehr::party_binding::request::defer(move || {
+                ferroehr::telemetry::access_path::count_policy_rerun(op);
+            });
             confirmed(state, op, parts, handler).await
         }
         Err(error) => RestError::from(error).into_response(),

@@ -432,6 +432,11 @@ struct Budget {
 /// ceilings fell by its path's figure. The AGENT create, which settles no
 /// row, sends 10 as before and made 5 to 12 allocations more, and its
 /// ceilings stay. No path's WAL, median peak or notifies moved.
+/// A settle has since built no insert step that writes no row, and sends a
+/// statement of one step as it is written (#6257): the AGENT create makes 4
+/// fewer allocations, the PERSON create, update and delete and the
+/// ORGANISATION create 2 fewer, the GROUP and ROLE creates 1, measured twice
+/// beside the merge base, and each allocation ceiling fell by that figure.
 /// An `EHR_STATUS` read and an AQL query have since confirmed their policy
 /// copies on their own statement, the version read or the query's statement,
 /// which reads the policy and definition revisions beside its rows, in place
@@ -448,6 +453,21 @@ struct Budget {
 /// WAL ceiling fell by as much. A composition commit's figure moves by a few
 /// hundred bytes between runs, so its ceiling fell by its entry's drop, 593,
 /// or by the measured drop where that was smaller.
+/// A COMPOSITION read, by version id, at an instant or from the version
+/// copy, an EHR read and an `EHR_STATUS` read have since read the party
+/// store's revisions in their one clinical statement through
+/// `party_door.party_revisions()`,
+/// where the two domains share a database, in place of a read of
+/// `binding_grant_revision` on the party pool (#6320): 1 round trip where
+/// they sent 2, measured beside the merge base, and each of those round-trip
+/// ceilings fell by one. The function runs as its owner, so `PostgreSQL`
+/// never inlines it, and its one-row primary-key read counts as a nested
+/// statement: those paths' nested ceilings rose from 0 to 1, the trade the
+/// orchestrator approved for a round trip and a transaction. A party read
+/// takes its revisions the same way on its first party statement: 7 round
+/// trips where it sent 8, and its ceiling fell by one. Each step of such a
+/// ride runs in an allocation of its own, so no peak or allocation ceiling
+/// rose, and a path that does not ride holds 136 bytes less at its peak.
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
@@ -484,8 +504,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         allocations: 1327,
         peak_bytes: 617_268,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 1450,
     },
@@ -494,8 +514,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 2,
         allocations: 10_804,
         peak_bytes: 1_017_140,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 1450,
     },
@@ -504,8 +524,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 2,
         allocations: 15_521,
         peak_bytes: 1_634_407,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 1450,
     },
@@ -514,8 +534,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 1,
         allocations: 1113,
         peak_bytes: 100_250,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 666,
     },
@@ -554,7 +574,7 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         allocations: 1058,
         peak_bytes: 78_848,
-        round_trips: 8,
+        round_trips: 7,
         nested: 1,
         notifies: 0,
         wal: 1055,
@@ -574,8 +594,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         allocations: 1338,
         peak_bytes: 701_748,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 1450,
     },
@@ -594,15 +614,15 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         allocations: 1182,
         peak_bytes: 102_503,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 795,
     },
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        allocations: 1715,
+        allocations: 1713,
         peak_bytes: 125_972,
         round_trips: 14,
         nested: 10,
@@ -632,7 +652,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        allocations: 2202,
+        allocations: 2200,
         peak_bytes: 140_901,
         round_trips: 14,
         nested: 11,
@@ -644,8 +664,8 @@ const BUDGETS: [Budget; 31] = [
         conversions: 0,
         allocations: 1333,
         peak_bytes: 162_800,
-        round_trips: 2,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
         wal: 1434,
     },
@@ -702,7 +722,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        allocations: 1956,
+        allocations: 1954,
         peak_bytes: 129_641,
         round_trips: 12,
         nested: 4,
@@ -712,7 +732,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        allocations: 1570,
+        allocations: 1568,
         peak_bytes: 112_950,
         round_trips: 12,
         nested: 4,
@@ -722,7 +742,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitOrganisation,
         conversions: 8,
-        allocations: 1568,
+        allocations: 1566,
         peak_bytes: 126_183,
         round_trips: 10,
         nested: 1,
@@ -732,7 +752,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitGroup,
         conversions: 8,
-        allocations: 1566,
+        allocations: 1565,
         peak_bytes: 126_027,
         round_trips: 10,
         nested: 1,
@@ -742,7 +762,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        allocations: 2140,
+        allocations: 2139,
         peak_bytes: 126_256,
         round_trips: 19,
         nested: 6,
@@ -752,7 +772,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitAgent,
         conversions: 8,
-        allocations: 1554,
+        allocations: 1550,
         peak_bytes: 126_026,
         round_trips: 10,
         nested: 1,

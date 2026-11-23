@@ -260,7 +260,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   its template. The party store's revisions stay a read of their own on the
   party pool (#6048): the party domain may live in another database or
   cluster, and the clinical role reads no party schema, so no clinical
-  statement can carry them (#6271).
+  statement can carry them (#6271); a read in a shared database takes them
+  through `party_door` (#6320).
   The commit is then one guarded statement (`Folded::Guarded`): leading CTEs
   read the EHR row `FOR SHARE`, the object's head row and the policy and
   definition revisions, and the audit insert, which every later insert reads
@@ -328,8 +329,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   value that moves between rows never meets its old row in a unique index.
   A record subject another PERSON declares is refused by the deferred
   `uq_binding_record_subject` at `COMMIT`, and the write answers `409` with
-  its records discarded. PARTY_RELATIONSHIP writes and demographic
-  CONTRIBUTIONs keep the per-version path.
+  its records discarded. A standalone PARTY_RELATIONSHIP create, update or
+  delete takes the same gate read and guarded statement; its settle
+  (`party_binding::store::standalone`) judges a care relationship's end on
+  one read of its provider and its validity, then writes the end, retires its
+  caller facts and its representation row in one statement, as the caller
+  fact it inserts reads that end, inserts them in the next, and stamps the
+  facts when they changed. Demographic CONTRIBUTIONs keep the per-version
+  path.
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers
@@ -1952,7 +1959,38 @@ as two hidden columns of its own statement (`aql::sql::Layout::revisions`); a
 query that served no row reads them once after it ran. An ITI-81 page does
 the same where the audit store shares the clinical database and its role may
 read `clinical.request_revisions`: the page statement selects them beside its
-records, and elsewhere the search reads them in a statement of their own. A COMPOSITION create, update or delete, a
+records, and elsewhere the search reads them in a statement of their own.
+
+**The party copies on a read, where the party domain shares the clinical
+database** (#6320). Every decision rests on the party copies too (the binding
+lookups, the grants and the caller facts, #6048), confirmed by a read of
+`binding_grant_revision` on the party pool. Where the two domains share one
+database (the quickstart, the chart default), a `GET` without a body instead
+rides: authentication verifies the credential once, and the binding, the
+grants and the decision run on the copies as they stand, each copy noting the
+revision it held (`party_binding::request::ride`). The read's own clinical
+statement selects the party store's revisions through
+`party_door.party_revisions()`, a `SECURITY DEFINER` function owned by the
+party schema's owner in a schema that holds nothing else, which returns the
+three revision counters and which the clinical roles may run; they still read
+no party table, and the boot gate (`db::verify_domain_isolation`) refuses
+anything else in that schema and the function once it runs on the caller's
+`search_path` or as the caller. The answer leaves only once the copies held
+the revisions that statement read, or, when no statement read them, the
+revisions one indexed read then finds; otherwise that run is dropped with
+everything it would have counted (its decisions, a lookup hit, an
+authentication failure) and the request runs once more from the binding on,
+on the path that reads the revisions first, which answers whatever they are.
+`access_policy_reruns_total{op}` counts it. The topology is read once per
+service; where the party domain lives in a database of its own, no clinical
+statement can reach it and the confirm stays a statement of its own. **Our
+own design:** the door, the ride and the run again, chosen because a read
+with its confirm in its one statement costs one round trip and one
+transaction where it cost two, and three counters carry no personal data. An
+ITI-81 page selects the party store's revisions the same way where its audit
+role may run the door (`system_log::store::carried`).
+
+A COMPOSITION create, update or delete, a
 CONTRIBUTION commit, an `EHR_STATUS` commit and a directory create, update or
 delete make no read first either: the gate read of the write
 returns the revisions, the write is decided on the copies as they stand, and a

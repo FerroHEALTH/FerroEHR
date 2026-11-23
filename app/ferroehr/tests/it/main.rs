@@ -166,6 +166,8 @@ mod privacy_rules;
 mod privacy_verbatim_replay;
 mod pseudonymisation_boundary;
 mod registered_templates;
+mod relationship_commit_contention;
+mod relationship_commit_parity;
 mod relocated_domain_preparation;
 mod replica_chains;
 mod report;

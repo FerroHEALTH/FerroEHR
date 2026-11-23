@@ -16,13 +16,16 @@ use crate::overview::error::RestError;
 /// Counts one refusal, tagged by the mechanism that produced it and the status
 /// the caller receives.
 pub(super) fn count_auth_failure(mechanism: &'static str, status: &'static str) {
-    ferroehr::telemetry::metrics::metrics().auth_failures.add(
-        1,
-        &[
-            opentelemetry::KeyValue::new("mechanism", mechanism),
-            opentelemetry::KeyValue::new("status", status),
-        ],
-    );
+    // NOTE: our own design (#6320), a ride's refusal counts only once its run is answered.
+    ferroehr::party_binding::request::defer(move || {
+        ferroehr::telemetry::metrics::metrics().auth_failures.add(
+            1,
+            &[
+                opentelemetry::KeyValue::new("mechanism", mechanism),
+                opentelemetry::KeyValue::new("status", status),
+            ],
+        );
+    });
 }
 
 /// The response refusing a request whose authentication failed with `e`,

@@ -9,24 +9,18 @@
 use std::future::Future;
 
 use crate::error::ServiceError;
-use crate::error::refusal::Missing;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
-use crate::service::demographic::precondition::Precondition;
-use crate::service::demographic::relationship::CurrentRelationship;
 use crate::service::demographic::support;
 use crate::service::demographic::template::demographic_rules;
 use crate::service::demographic::validate::Container;
 use crate::service::response::{RawServiceResponse, ReadBody, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::Resolved;
-use crate::storage::version_repo::placement::Placement;
 use crate::system_log::event::AuditEvent;
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::body::Body;
-use crate::versioning::change::Write;
-use crate::versioning::change::precondition::lock_current;
 use crate::versioning::change::{Change, Committed, CommittedContribution};
 
 impl FerroEhrService {
@@ -49,23 +43,6 @@ impl FerroEhrService {
         self.demographic_template_gate(kind, &request.data, rendered.as_ref(), resolved.incomplete)
             .await?;
         Ok(resolved)
-    }
-
-    /// The current version of the relationship `vo_id` a write addresses.
-    ///
-    /// # Errors
-    /// [`ServiceError::NotFound`] when there is none; the storage error of the
-    /// read.
-    pub(super) async fn existing_relationship(
-        &self,
-        vo_id: VoId,
-    ) -> Result<CurrentRelationship, ServiceError> {
-        self.relationship_current(vo_id).await?.ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("PARTY_RELATIONSHIP {vo_id}"),
-            )
-        })
     }
 
     /// Commits the party versions `changes` as one CONTRIBUTION under
@@ -134,37 +111,6 @@ impl FerroEhrService {
         Ok(support::raw_version_response(vo_id, raw)?)
     }
 
-    /// Commits the new version `body` of the demographic object `vo_id`, of
-    /// `kind`, once its tip meets `precondition` and `checked`, the checks
-    /// made before the transaction, passed.
-    ///
-    /// # Errors
-    /// The precondition's refusal, `checked`'s, and the commit's.
-    pub(super) async fn commit_demographic_update(
-        &self,
-        (kind, vo_id): (Kind, VoId),
-        precondition: Precondition,
-        checked: Result<Resolved, ServiceError>,
-        body: Body,
-    ) -> Result<Committed, ServiceError> {
-        self.commit_one(&self.demographic_pool, async move |tx| {
-            let placement = locked_tip(tx, kind, vo_id, &precondition).await?;
-            if let Some(tip) = placement.tip.as_ref() {
-                precondition.check_tree(tip)?;
-            }
-            let Resolved {
-                audit, envelope, ..
-            } = checked?;
-            Ok(Write::new(
-                None,
-                Change::modify(vo_id, kind, body, None, None, envelope),
-                audit,
-            )
-            .placed(placement))
-        })
-        .await
-    }
-
     /// The body a direct demographic write stores, its large media offloaded
     /// when `offload` holds, and the one it serves: the body in hand, unless
     /// the commit rewrites it ([`support::commit_rewrites_body`]), when the
@@ -183,25 +129,6 @@ impl FerroEhrService {
         }
         Ok((body, served))
     }
-}
-
-/// The placement of the next version of the demographic object `vo_id`, of
-/// `kind`, its tip locked on `tx` and held to the full version id
-/// `precondition` names.
-///
-/// # Errors
-/// The lock's storage error, and `precondition`'s refusal.
-pub(super) async fn locked_tip(
-    tx: &mut sqlx::PgConnection,
-    kind: Kind,
-    vo_id: VoId,
-    precondition: &Precondition,
-) -> Result<Placement, ServiceError> {
-    let placement = lock_current(tx, None, vo_id, kind).await?;
-    if let Some(tip) = placement.tip.as_ref() {
-        precondition.check_full(vo_id, tip)?;
-    }
-    Ok(placement)
 }
 
 /// The answer to a direct demographic write: `served` with the committed

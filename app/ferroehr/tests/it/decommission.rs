@@ -22,8 +22,9 @@ use crate::fixtures::{composition, uv};
 use crate::pseudonymisation_boundary::a_person;
 use crate::typed_body::typed;
 
-/// The four schemas the migrations create, as `erase_schema` drops them.
-const SCHEMAS: [&str; 4] = ["audit", "party", "clinical", "ext"];
+/// The schemas the migrations create, as `erase_schema` drops them: each
+/// domain's, the party set's `party_door` (#6320), and `ext`.
+const SCHEMAS: [&str; 5] = ["audit", "party_door", "party", "clinical", "ext"];
 
 /// A decommissioning over the testkit clone, every domain on its one DSN.
 fn decommission(db: &testkit::TestDb) -> Decommission {
@@ -178,6 +179,14 @@ async fn erase_removes_every_domain_behind_the_instance_id() {
         .await
         .expect("a second run succeeds");
     assert_eq!(again, Erasure::NothingToErase);
+
+    // The restarted server prepares the erased database from nothing (#6320).
+    ferroehr::db::apply_schema(&DbConfig {
+        url: SecretUrl::new(db.url().to_owned()),
+        ..DbConfig::default()
+    })
+    .await
+    .expect("the erased database is prepared again");
 }
 
 /// A database that stores no instance id is confirmed by its own name.
