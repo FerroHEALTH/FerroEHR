@@ -12,8 +12,6 @@
 //! These routes are **excluded from ITS-REST wire conformance**: they gate the `EhrExtract` /
 //! `MessageApi` CAPABILITY verdicts only.
 //!
-//! ## Why a group of their own, mounted beside the released groups
-//!
 //! Every route lives under `/message/`, a resource root the release does not
 //! define, so no released path shape is extended or shadowed. The RM
 //! EHR-Extract content the group moves is ordinary EHR content read and written
@@ -22,8 +20,6 @@
 //! does (no `/admin/` gate, no ADMIN role). NO openEHR SPEC GOVERNS THE
 //! PRIVILEGE LEVEL of these routes — our own design/extension, stated here
 //! because the choice is ours.
-//!
-//! [`extract`] holds the export and import routes.
 
 pub mod extract;
 

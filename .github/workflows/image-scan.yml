@@ -7,12 +7,10 @@
 # OWASP Kubernetes Security Cheat Sheet §4.3 "Implement continuous security
 # vulnerability scanning").
 #
-# WHY this is not the same as the scan in containers.yml. That one scans an image
-# the run just BUILT, which catches what was known at build time and nothing
-# after. A CVE published the week after a release applies to the image people are
-# actually running, and until this lane existed nothing in the repository looked
-# again. The three images are scanned where a user pulls them — at their released
-# tag on GHCR — not from a local build.
+# WHY this is not the scan in containers.yml: that one scans an image the
+# run just BUILT, which catches what was known at build time. A CVE published
+# after a release applies to the image people run, so the three images are
+# scanned where a user pulls them, at their released tag on GHCR.
 #
 # `ferroehr-postgres` is the image this will actually fire on: it is built on the
 # upstream `postgres` image, so its OS package set is not ours and its CVEs arrive
@@ -23,10 +21,10 @@
 # brings `.trivyignore.yaml`, `ignore-unfixed` and the HIGH/CRITICAL floor, and
 # `--vex` applies the OpenVEX documents under `security/vex/`.
 #
-# NOTE: the VEX documents bind here even though `.trivyignore.yaml` records that
-# they do not bind in the build-time lane — measured 2026-08-06: the `pkg:oci/…`
-# products match a PUBLISHED reference (by tag and by digest), and the build lane
-# scans `ferroehr-postgres` under a local tag, which is what fails to match.
+# NOTE: the VEX documents bind here though `.trivyignore.yaml` records that
+# they do not bind in the build-time lane: the `pkg:oci/…` products match a
+# PUBLISHED reference, and the build lane scans `ferroehr-postgres` under a
+# local tag.
 #
 # THE RECORD (#4795). Beside that gate the lane runs the release's
 # vulnerability record (scripts/security/vulnerability-record.sh) over the
@@ -35,13 +33,10 @@
 # or updates its own tracking issue within a day, so it is judged before the
 # next release candidate is tagged rather than after.
 #
-# RUN COLOUR (the watcher family's uniform rule, #2778). The run is RED only when
-# the PROBE fails — an image that cannot be resolved or pulled, a trivy crash,
-# output jq cannot read. A FINDING files or updates the tracking issue and the
-# run stays GREEN: THE ISSUE IS THE ALERT. Until #2778 this lane also exited
-# non-zero on a finding, which made the red Monday run the signal; a red
-# scheduled run is invisible to anyone not watching the Actions tab, and the
-# issue (created or commented, a `Bug`) reaches the tracker instead.
+# RUN COLOUR (the watcher family's uniform rule, #2778). The run is RED only
+# when the PROBE fails: an image that cannot be resolved or pulled, a trivy
+# crash, output jq cannot read. A FINDING files or updates the tracking issue
+# (a `Bug`) and the run stays GREEN: THE ISSUE IS THE ALERT.
 name: Published image scan
 
 on:

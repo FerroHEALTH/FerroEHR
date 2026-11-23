@@ -19,12 +19,6 @@
 use crate::error::ViewerError;
 
 /// The sign-in URL the signed-out transition lands on.
-///
-/// `expired=1` is what makes the login screen say the session ended instead of
-/// presenting a bare sign-in card, and `next` carries the screen the user was
-/// on so signing in again returns them to it. The destination is percent-encoded
-/// with the `urlencoding` crate (the owner's never-hand-roll-a-codec rule);
-/// `search` is the raw query string without its `?`.
 #[must_use]
 pub fn signed_out_url(path: &str, search: &str) -> String {
     let next = if search.is_empty() {

@@ -128,9 +128,9 @@ async fn body_json(resp: axum::response::Response) -> Value {
     serde_json::from_slice(&bytes).expect("json")
 }
 
-/// The ITI-81 retrieval is a FHIR interface, served at the FHIR root beside
-/// the openEHR base path, and nothing answers under the base path any more:
-/// ITS-REST defines no FHIR route (#4330).
+/// The ITI-81 retrieval is a FHIR interface, served at the FHIR root beside the
+/// openEHR base path and never under it: ITS-REST defines no FHIR route
+/// (#4330).
 #[tokio::test]
 async fn the_retrieval_is_served_at_the_fhir_root_only() {
     let (_pg, app, store) = app(true, false).await;
@@ -607,9 +607,9 @@ async fn every_shall_parameter_matches_what_it_names() {
     }
 }
 
-/// The subject-scoped grant stays held to one subject now that a parameter
-/// takes several values: two patients, in one parameter or two, are refused,
-/// and `patient.identifier` scopes the read as `patient` does.
+/// The subject-scoped grant stays held to one subject: two patients, in one
+/// parameter or two, are refused, and `patient.identifier` scopes the read as
+/// `patient` does.
 #[tokio::test]
 async fn a_subject_audit_grant_cannot_name_two_subjects() {
     let (_pg, app, store) = app(true, true).await;

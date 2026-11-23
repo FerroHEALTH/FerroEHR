@@ -5,8 +5,6 @@
 //! assembled router over a **real** `FerroEhrService` on a real `PostgreSQL` 18
 //! (auth disabled), via `tower::ServiceExt::oneshot` in-process requests.
 //!
-//! Three behaviours live here, each with its refusal AND its accepting twin:
-//!
 //! * **Write-schema strictness** — `schemas/common/UpdateItemTag.yaml` is
 //!   `additionalProperties: false` over exactly `key`/`value`/`target_path`
 //!   with `key` required. An undeclared member, a non-string `value` and a
@@ -141,8 +139,8 @@ async fn a_tag_put_with_an_undeclared_member_is_refused() {
     );
 }
 
-/// A NON-STRING `value` used to be read as ABSENT — a silent loss of clinical
-/// annotation. It is now the same refusal, with the accepting twin beside it.
+/// A non-string `value` is refused like the other members, with the accepting
+/// twin beside it.
 #[tokio::test]
 async fn a_tag_put_with_a_non_string_value_is_refused_and_the_string_twin_is_stored() {
     let (_pg, app) = common::test_router().await;
@@ -216,9 +214,8 @@ async fn a_tag_put_with_a_non_string_target_path_is_refused_and_the_string_twin_
     assert_eq!(tags[0]["target_path"], "/subject/external_ref/id/value");
 }
 
-/// The demographic family runs the SAME schema and must refuse identically —
-/// the drift this pins is a family-specific reader, which is exactly what the
-/// two seams used to have.
+/// The demographic family runs the same schema and refuses identically, so no
+/// family-specific reader can drift.
 #[tokio::test]
 async fn the_demographic_tag_put_is_strict_in_the_same_way() {
     let (_pg, app) = common::test_router().await;

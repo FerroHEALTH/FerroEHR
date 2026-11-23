@@ -2,50 +2,18 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written `Iso8601_duration` spec behaviour.
+//! `Iso8601_duration` accessors, arithmetic and a `PartialOrd` by total seconds.
 //!
-//! Covers the accessor functions (component counts, `to_seconds`, `is_partial`,
-//! `is_extended`, `is_decimal_sign_comma`, `as_string`), the arithmetic
-//! functions (`add`/`subtract`/`multiply`/`divide`/`negative`) and a
-//! `PartialOrd` ordering durations by their total-seconds reduction.
+//! `org.openehr.base.foundation_types.iso8601_duration.adoc`,
+//! `time_definitions.adoc`, `master06-time_types.adoc`.
 //!
-//! Spec sources (vendored):
-//! - `BASE/docs/UML/classes/org.openehr.base.foundation_types.iso8601_duration.adoc`
-//!   (§Functions: the component accessors, `to_seconds`, `is_partial`,
-//!   `is_extended`, `is_decimal_sign_comma`, `as_string`; the `add`/`subtract`
-//!   semantics that reduce via `to_seconds`, and `multiply`/`divide`/
-//!   `negative`).
-//! - `BASE/docs/UML/classes/org.openehr.base.foundation_types.time_definitions.adoc`
-//!   (§Constants `Average_days_in_year`/`Average_days_in_month` used by
-//!   `to_seconds`).
-//! - `BASE/docs/foundation_types/master06-time_types.adoc` (§Primitive Time
-//!   Types: the negative-duration and mixed-`W` deviations; §Computational
-//!   Functions).
+//! The eight component invariants hold by the reader;
+//! `Value_lexical_form_valid` is our own name for a value outside the
+//! production.
 //!
-//! Invariants — the EIGHT entries the class table declares under §Invariants
-//! (`Years_valid` … `Seconds_valid`, each `>= 0`, and `Fractional_second_valid`
-//! `>= 0.0 and < 1.0`) are ALL structurally satisfied by the reader: a
-//! component is a digit run scanned into an unsigned count, and a fraction is
-//! scanned as `0.<digits>`, so no parsed value can break one. What a value CAN
-//! be is not a duration at all, which the class table names no rule for, so it
-//! is reported under our own `Value_lexical_form_valid` (the same rule
-//! `iso8601_date_impl.rs` names).
-//!
-//! NOTE: the openEHR negative-duration deviation (`master06` §Primitive Time
-//! Types) is a leading sign on the VALUE, not on any component, so `-P1Y` still
-//! satisfies `Years_valid` — the class declares no sign accessor to read it
-//! from.
-//!
-//! NOTE: the class doc gives an algorithm for `add`/`subtract` (reduce both
-//! operands via `to_seconds`) but none for `multiply`/`divide` or comparison —
-//! our own design/extension on the spec's own reduction, since component-wise
-//! scaling is not expressible (`P1Y * 1.5` would need a fractional year).
-//!
-//! All four use `to_seconds`, results render in the canonical
-//! definite-designator form, and ordering by that scalar puts `P1M` (30.42
-//! days) above `P30D`. `partial_cmp` returns `Some(Equal)` only for equal raw
-//! strings, so `PT1H30M` and `PT90M` are incomparable, consistent with the
-//! derived `PartialEq`.
+//! NOTE: the class gives `add`/`subtract` via `to_seconds` and nothing for
+//! `multiply`, `divide` or ordering, our own design on the same reduction;
+//! `Some(Equal)` only for equal strings.
 
 use std::cmp::Ordering;
 
@@ -119,12 +87,8 @@ pub struct DurationPart<'a> {
 }
 
 impl Iso8601Duration {
-    /// The components as written, in order, with the sign left to
-    /// [`Self::is_negative`]; `None` when the value does not parse.
-    ///
-    /// The integer accessors ([`Self::hours`], …) and [`Self::fractional_seconds`]
-    /// give the same parts as numbers; the text keeps leading zeros, the
-    /// decimal sign and every digit of the seconds' fraction.
+    /// The components as written, leading zeros and fraction digits kept; `None`
+    /// when the value does not parse.
     #[must_use]
     pub fn parts(&self) -> Option<Vec<DurationPart<'_>>> {
         self.parsed()?;
@@ -162,9 +126,7 @@ impl Iso8601Duration {
         Some(digits).filter(|digits| !digits.is_empty())
     }
 
-    /// Parsed components, or `None` when `value` is not a valid ISO 8601
-    /// duration. Crate-visible because a duration is the argument of every
-    /// other time type's computational functions.
+    /// Parsed components, or `None` when `value` is not an ISO 8601 duration.
     pub(crate) fn parsed(&self) -> Option<ParsedDuration> {
         parse_duration(&self.value)
     }
@@ -219,9 +181,8 @@ impl Iso8601Duration {
         self.parsed().map(|p| p.fractional_seconds)
     }
 
-    /// True when the value carries a leading negative sign (an openEHR
-    /// deviation — `master06` §Primitive Time Types), or `None` when the value
-    /// does not parse.
+    /// Whether the value carries a leading `-` (`master06` §Primitive Time
+    /// Types), or `None` when unparseable.
     #[must_use]
     pub fn is_negative(&self) -> Option<bool> {
         self.parsed().map(|p| p.negative)
@@ -234,43 +195,32 @@ impl Iso8601Duration {
         self.parsed().map(|_| false)
     }
 
-    /// `Iso8601_duration.is_extended`: always `True` for a duration (effected in
-    /// the spec — a duration has no compact form), or `None` when the value does
-    /// not parse.
+    /// `Iso8601_duration.is_extended`: always `True`, or `None` when unparseable.
     #[must_use]
     pub fn is_extended(&self) -> Option<bool> {
         self.parsed().map(|_| true)
     }
 
-    /// `Iso8601_duration.is_decimal_sign_comma`: true when the fractional
-    /// seconds are written with `','` rather than `'.'`. False when the value
-    /// carries no fraction or does not parse.
+    /// `Iso8601_duration.is_decimal_sign_comma`: the fraction uses `','`.
     #[must_use]
     pub fn is_decimal_sign_comma(&self) -> bool {
         self.parsed().is_some_and(|p| p.decimal_sign_comma)
     }
 
-    /// `Iso8601_duration.to_seconds`: total seconds equivalent (sign applied),
-    /// with years/months reduced via `Time_definitions.Average_days_in_year`
-    /// / `Average_days_in_month`. `None` when the value does not parse.
+    /// `Iso8601_duration.to_seconds`: total seconds, signed, years and months by
+    /// the `Time_definitions` averages; `None` when unparseable.
     #[must_use]
     pub fn to_seconds(&self) -> Option<f64> {
         self.parsed().map(ParsedDuration::to_seconds)
     }
 
-    /// `Iso8601_duration.as_string`: "Return the duration string value" — the
-    /// stored value verbatim (unlike the date/time types, the duration doc asks
-    /// for the value itself, and a duration has no compact form to re-spell).
-    /// A value that does not parse is likewise returned verbatim.
+    /// `Iso8601_duration.as_string`: the stored value verbatim.
     #[must_use]
     pub fn as_string(&self) -> String {
         self.value.clone()
     }
 
-    /// `Iso8601_duration.add` (alias `'+'`): "Arithmetic addition of a duration
-    /// to a duration, via conversion to seconds, using
-    /// `Time_definitions.Average_days_in_year` and `Average_days_in_month`" —
-    /// the class doc's own algorithm.
+    /// `Iso8601_duration.add` (`'+'`): "via conversion to seconds".
     ///
     /// `None` when either value does not parse or the result overflows.
     #[must_use]
@@ -298,11 +248,10 @@ impl Iso8601Duration {
         )?)
     }
 
-    /// `Iso8601_duration.divide` (alias `'/'`): the duration divided by a `Real`
-    /// factor.
+    /// `Iso8601_duration.divide` (`'/'`): the duration divided by a `Real`.
     ///
-    /// `None` when the value does not parse or the result is not representable —
-    /// which includes division by zero (an infinite result).
+    /// `None` when the value does not parse or the result is not representable,
+    /// division by zero included.
     #[must_use]
     pub fn divide(&self, a_val: f64) -> Option<Self> {
         Self::rendered(ExactSeconds::from_f64(
@@ -310,19 +259,10 @@ impl Iso8601Duration {
         )?)
     }
 
-    /// `Iso8601_duration.negative` (alias `'-'`): "Generate negative of current
-    /// duration value" — the sign is flipped and the components are kept exactly
-    /// as written (the openEHR negative-duration deviation, `master06`
-    /// §Primitive Time Types).
+    /// `Iso8601_duration.negative` (`'-'`): the sign flipped, the components kept
+    /// as written.
     ///
     /// `None` when the value does not parse.
-    ///
-    /// NOTE: unlike `add`/`subtract`, this does NOT go through the seconds
-    /// reduction: the spec asks for the negative of *this* duration value, so
-    /// flipping the leading sign preserves the `Y`/`M`/`W` designators, the
-    /// fractional precision and the decimal sign — a reduction would destroy
-    /// all four. No openEHR spec prescribes the output spelling — our own
-    /// design/extension.
     #[must_use]
     pub fn negative(&self) -> Option<Self> {
         let value = if self.parsed()?.negative {
@@ -333,9 +273,8 @@ impl Iso8601Duration {
         Some(Self { value })
     }
 
-    /// The duration as an exact signed second quantity (the `to_seconds`
-    /// reduction, computed in whole seconds), or `None` when the value does not
-    /// parse or the reduction overflows.
+    /// The duration in exact whole seconds, or `None` when unparseable or on
+    /// overflow.
     fn exact_seconds(&self) -> Option<ExactSeconds> {
         self.parsed()?.to_exact_seconds()
     }
@@ -551,9 +490,7 @@ mod tests {
 
     #[test]
     fn as_string_returns_the_stored_value() {
-        // The duration doc asks for "the duration string value" (not, as for the
-        // date/time types, an extended re-spelling — a duration has no compact
-        // form), so every component spelling survives.
+        // "the duration string value": every spelling survives.
         assert_eq!(dur("P1W3D").as_string(), "P1W3D");
         assert_eq!(dur("-P3M").as_string(), "-P3M");
         assert_eq!(dur("PT0,50S").as_string(), "PT0,50S");

@@ -81,9 +81,6 @@ pub async fn contribution_ids(
 
 /// How many contributions of `scope` were committed within `lo..=hi`.
 ///
-/// Unbounded, the count is index-only over `idx_contribution_ehr_id`; bounded,
-/// it joins the audit behind `idx_commit_audit_time_committed`.
-///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn contribution_count(

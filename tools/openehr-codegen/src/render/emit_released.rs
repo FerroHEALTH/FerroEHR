@@ -1,19 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Whether a value of the current RM generation can be read by the released
-//! generation's strict canonical-JSON reader (`openehr-rm`
-//! `<current>/released/generated.rs`), decided over typed RM (#6002).
-//!
-//! The released reader refuses an attribute its class does not declare, a
-//! mandatory attribute left out, and an object whose class does not conform to
-//! the attribute's declared type in its own model. Every rule here is one of
-//! those three, derived per class from the two generations' BMMs: an attribute
-//! the released class lacks must be unset, an attribute the released class
-//! makes mandatory must be set, and each object must be of a class the
-//! released model has, conforming to the released declaration. A class the
-//! released model lacks is never expressible. No openEHR specification
-//! governs runtime generation selection: our own design.
+//! Whether a current-generation RM value is readable by the released
+//! generation's strict reader (`released/generated.rs`, #6002): no attribute
+//! the released class lacks, every attribute it makes mandatory, every object
+//! of a class it has. No openEHR specification governs runtime generation
+//! selection: our own design.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;

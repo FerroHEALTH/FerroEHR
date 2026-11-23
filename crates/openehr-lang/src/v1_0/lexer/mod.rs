@@ -5,34 +5,6 @@
 //! The LANG 1.0.0 lexical layer: the shared `logos` token superset read under
 //! this generation's ONE language, ODIN.
 //!
-//! LANG Release-1.0.0 publishes exactly one machine-readable syntax — ODIN
-//! (`vendor/grammar/v1_0/{odin.g4, odin_values.g4, base_patterns.g4,
-//! base_lexer.g4}`, the release's own syntax-appendix include set). Its
-//! Expression Language is DEVELOPMENT prose with no grammar and BEL first
-//! appears in 1.1.0, so this generation carries no other reading and no other
-//! entry point — [`lex_odin`] is the whole surface.
-//!
-//! # The two-stage contract
-//!
-//! 1. **One DFA, the workspace token superset** ([`Token`]). It is the same
-//!    union shape the v1_1 generation reads under four languages; it runs
-//!    once over the source and produces the longest match at every position.
-//! 2. **The ODIN RECLASSIFICATION pass**. For each token it asks what the
-//!    Release-1.0.0 ODIN lexer would have produced for the same source
-//!    slice, and:
-//!    - keeps the token when ODIN admits it;
-//!    - **re-tags** it when ODIN reads the same text differently — the
-//!      keyword variants stay UNIT variants and ODIN, which reserves
-//!      nothing, gets the identifier variant back, read off the source at
-//!      the token's span;
-//!    - **narrows** it when ODIN's longest match at that position is
-//!      shorter, by retrying successively shorter prefixes — the union can
-//!      only ever match at least as far as one member;
-//!    - **fails** when no prefix is an ODIN token at all, which is exactly
-//!      where a stand-alone 1.0.0 ODIN lexer reported a lexical error.
-//!
-//! # Adjudications this layer encodes
-//!
 //! - ODIN reserves nothing (`LANG/docs/odin/master03-basics.adoc` §Keywords:
 //!   "ODIN has no keywords of its own"), so the reclassification pass demotes
 //!   every foreign keyword of the shared superset to an identifier.
@@ -47,11 +19,6 @@ mod token;
 use logos::Logos;
 
 /// The source text a lexer span names.
-///
-/// Total by construction: every span reaching this function was produced by
-/// `logos` over the SAME `src`, so it always names a character boundary inside
-/// it. Returning an empty string instead would report a lexical defect with no
-/// text — a silent wrong diagnostic.
 #[expect(
     clippy::expect_used,
     reason = "the span comes from lexing this same `src`, so it always slices"
@@ -86,11 +53,6 @@ pub struct LexError {
 /// Lex `src` under the Release-1.0.0 ODIN reading (`LANG/docs/odin/`;
 /// `vendor/grammar/v1_0/{odin.g4, odin_values.g4}` over `base_patterns.g4` +
 /// `base_lexer.g4`).
-///
-/// ODIN is a standalone leaf-data notation — it backs BMM `.bmm`/`.idx` files
-/// and the ADL description/terminology/annotation sections alike — and
-/// reserves no keywords, so this reading covers only the ODIN value +
-/// structure subset.
 ///
 /// # Errors
 /// Returns a [`LexError`] at the byte span of the first input that is not an
@@ -163,12 +125,6 @@ fn retag_odin_value_words_in_key_position(src: &str, spanned: &mut [Spanned]) {
 
 /// Emit the longest prefix of `src[start..limit]` that IS a single ODIN
 /// token, and return where the caller resumes.
-///
-/// The union DFA matched `limit`, which the ODIN reading refused. A
-/// stand-alone ODIN DFA would have taken the longest prefix some production
-/// of ITS OWN admits — and every such production is in the union, so
-/// re-running the union over each shorter prefix and asking `reclassify`
-/// again finds exactly that prefix.
 ///
 /// # Errors
 /// Returns a [`LexError`] spanning the first character when no prefix at all

@@ -110,8 +110,9 @@ env:
   # such a push every lane is skipped except these, each kept for a cache
   # pull requests read and only a main push can write:
   #   * the rust-cache lanes (deny, clippy, feature-combos, its-wasm,
-  #     its-rest-features, doc, msrv, codegen-drift, test on one shard, build,
-  #     instructions, test-viewer), each only when `cache_refresh` names it: the key's
+  #     its-rest-features, doc, msrv, codegen-drift, nesting-release,
+  #     cpu-budget, test on one shard, build, instructions, test-viewer),
+  #     each only when `cache_refresh` names it: the key's
   #     inputs moved, or main holds no entry for it;
   #   * ui-e2e-binary and ui-e2e-viewer, on their own triggers: they write
   #     the exact-key binary caches and main's sccache entries.
@@ -291,12 +292,10 @@ jobs:
           # pull request and in the merge queue.
           bash scripts/lib/change-lanes.sh conformance <<<"$changed" | tee -a "$GITHUB_OUTPUT"
       # A push to main whose tree the merge queue already passed (#4546). The
-      # commit GitHub lands on main is a new one it writes and signs: it
-      # carries the tree the `merge_group` run checked and never that run's
-      # SHA, so the run is found by tree (scripts/lib/queue-runs.sh, #5834),
-      # and a lane run again gives no new verdict. A push the queue did not
-      # check (an administrator's bypass, or an answer this step cannot read)
-      # runs every lane, as before.
+      # commit GitHub lands on main carries the tree the `merge_group` run checked
+      # and never that run's SHA, so the run is found by tree
+      # (scripts/lib/queue-runs.sh, #5834). A push the queue did not check (an
+      # administrator's bypass, or an answer this step cannot read) runs every lane.
       #
       # The push stays the only writer of main's cargo caches, which pull
       # requests restore: a cache a queue run writes is scoped to its
@@ -329,7 +328,7 @@ jobs:
           # The jobs that save a rust-cache entry on main. rust-cache names it
           # `v0-rust-<job id>-<os>-<arch>-…`, or after its `shared-key` when a
           # job sets one, as each msrv shard does (github.com/Swatinem/rust-cache).
-          CACHE_JOBS: deny clippy feature-combos its-wasm its-rest-features doc msrv-core msrv-server msrv-others codegen-drift test build instructions test-viewer
+          CACHE_JOBS: deny clippy feature-combos its-wasm its-rest-features doc msrv-core msrv-server msrv-others codegen-drift nesting-release cpu-budget test build instructions test-viewer
         run: |
           set -euo pipefail
           verified=false
@@ -626,29 +625,16 @@ jobs:
         run: bash scripts/checks/test-modules.sh
 
       # ---- chart-appversion-guard --------------------------------------
-      # appVersion guard (issue #2108, narrowed by #2779). It used to hold
-      # `appVersion` and the `artifacthub.io/images` tags equal to the WORKSPACE
-      # version, which made both of them per-release facts a human had to hand-edit
-      # at every cut. They are injected now: `build-chart.yml` packages with
-      # `helm package --app-version <released version>` and rewrites the annotation's
-      # tags in the same step, so the published chart is right by construction and a
-      # cut edits neither.
+      # appVersion guard (#2108, #2779). `build-chart.yml` packages with `helm
+      # package --app-version <released version>` and rewrites the annotation's
+      # tags, so a cut edits neither. What is left in the tree is a DEFAULT, for a
+      # chart-only dispatch and for `helm template`/`helm install` against this
+      # directory; scripts/checks/chart-appversion.sh, which `plan` runs at the
+      # tagged commit too, holds its properties.
       #
-      # What is left in the tree is a DEFAULT — for a chart-only dispatch between
-      # releases, and for anyone running `helm template`/`helm install` against this
-      # directory — and the properties that default still has to have are in
-      # scripts/checks/chart-appversion.sh, which `plan` runs against the tagged
-      # commit too. One script rather than two copies of one check.
-      #
-      # What no version guard catches, stated because it was measured rather than
-      # imagined: an appVersion naming a real release does not mean that release's
-      # image ACCEPTS the chart's current `config` defaults. Values track development
-      # between releases, so the rendered default configuration carries
-      # `server.limits` and `db.statement_timeout_ms`, which 3.17.3 does not know — its
-      # own `config check` refuses the file, and a plain `helm install` crash-loops.
-      # Only an image can answer that: the `chart-boot` job below replays it against
-      # the tree-built image, and build-chart.yml refuses to publish a chart that
-      # cannot deploy the image it selects.
+      # No version guard catches an image that refuses the chart's current `config`
+      # defaults: the `chart-boot` job replays them against the tree-built image,
+      # and build-chart.yml refuses to publish a chart that cannot deploy its image.
       - name: chart-appversion-guard / The chart release-facts guard refuses its own mutations
         if: ${{ !cancelled() }}
         run: bash scripts/checks/chart-appversion.sh --self-test
@@ -781,12 +767,10 @@ jobs:
 
       # ---- shellcheck --------------------------------------------------
       # The other half of the pair above. actionlint shellchecks the `run:` blocks
-      # EMBEDDED in workflows; the scripts those blocks call — every CI guard, every
-      # vendor fetcher, every deploy probe, the release machinery, the git hooks —
-      # had no static check at all until #2785. `--severity=style` is ShellCheck's
-      # lowest floor, so everything gates: a finding is fixed, or carries a per-line
-      # `# shellcheck disable=SCnnnn` directive with its reason. There is no
-      # .shellcheckrc, deliberately — nothing may turn a code off tree-wide.
+      # embedded in workflows; this lane checks the scripts they call (#2785).
+      # `--severity=style` is ShellCheck's lowest floor, so everything gates: a
+      # finding is fixed, or carries a per-line `# shellcheck disable=SCnnnn` with
+      # its reason. There is no .shellcheckrc: nothing may turn a code off tree-wide.
       #
       # The lane is a committed script so local and CI run the identical check.
       - name: shellcheck
@@ -1445,12 +1429,9 @@ jobs:
       - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 
   # ── The slim server: the optional-integration features, subtracted ──────────
-  # The clippy job above compiles the workspace with --all-features, so nothing
-  # in CI ever built the server WITHOUT the optional integrations: every
-  # `require_disabled` refusal path, every `#[cfg(not(feature = …))]` block and
-  # the additive feature wiring of #1890 were compiled by no lane at all. That
-  # is how a wrong feature gate stayed latent until #2358, where
-  # `--features events` without `fhir` did not compile.
+  # The clippy job above compiles with --all-features, so this job builds the
+  # server without the optional integrations: every `require_disabled` refusal
+  # path and `#[cfg(not(feature = …))]` block (#1890, #2358).
   #
   # Three feature sets, each a real deployment shape: the slim CDR, and the
   # `fhir` and `multimedia` integrations each enabled on top of it.
@@ -1618,9 +1599,8 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      # --document-private-items on both runs: stale intra-doc links can hide behind
-      # non-pub items the public build never evaluates (#1838; measured
-      # cost ~10s incremental over the public-only run).
+      # --document-private-items on both runs: stale intra-doc links can hide
+      # behind non-pub items the public build never evaluates (#1838).
       - run: cargo doc --locked --workspace --all-features --no-deps --document-private-items
       # Doc tests live HERE, not in the pg19 test job: nextest cannot run
       # doctests, so `cargo test --doc` is its own compile (default features —
@@ -1643,11 +1623,10 @@ jobs:
     permissions:
       contents: read
     # Each member is checked alone, with its own feature resolution, so the
-    # members share few dependency builds and one job ran 15 to 19 minutes,
-    # cold whenever the quota had evicted its cache (#6306). The shards split
-    # the members by measured cost, each list beside the members whose
-    # builds it reuses; `others` excludes what the two lists name, so a new
-    # member lands in a shard without an edit here.
+    # members share few dependency builds (#6306). The shards split the members
+    # by cost, each list beside the members whose builds it reuses; `others`
+    # excludes what the two lists name, so a new member lands in a shard
+    # without an edit here.
     strategy:
       fail-fast: false
       matrix:
@@ -1721,7 +1700,7 @@ jobs:
   nesting-release:
     name: nesting limit (release)
     needs: changes
-    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'nesting-release'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1745,10 +1724,10 @@ jobs:
   cpu-budget:
     name: hot-path CPU budget (optimised)
     needs: changes
-    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'cpu-budget'))
     runs-on: ubuntu-latest
-    # The optimised test binary took 23 minutes on a cold cache and passed 45
-    # on a busy runner (#6321).
+    # Room for the optimised test binary built on a cold cache on a busy runner
+    # (#6321).
     timeout-minutes: 75
     permissions:
       contents: read
@@ -1787,17 +1766,9 @@ jobs:
         run: cargo nextest run --locked --cargo-profile budget -p ferroehr-rest --all-features --no-capture -E 'test(every_hot_path_stays_within_its_cpu_budget)'
 
   # ── Build + tests against PostgreSQL 19.0 ──────────────────────────────────
-  # The catalogue's own artifact validation is no longer here: the instrument is
-  # the separate Veredictum project (pinned in scripts/lib/veredictum.sh), and
-  # its catalogue is validated by its own CI. The e2e CNF run stays where it
-  # was: the Docker compose stack (scripts/conformance.sh) at phase gates.
-  # The critical-path job, split three ways because the single job it replaced
-  # ran 21.75 minutes and was the pipeline's whole wall clock (#3120). Measured
-  # there: 276 s linking every bin, 197 s + 164 s compiling the viewer under
-  # `ssr` to run 2.3 s of viewer tests, 186 s compiling the workspace's test
-  # targets and 427 s running 4614 of them. Splitting lets the four costs run
-  # beside each other instead of end to end; sharding the 427 s divides the one
-  # cost that no cache can remove.
+  # The critical-path job, split so linking, the viewer, compiling the test
+  # targets and running them proceed side by side, with the run sharded
+  # (#3120).
   test:
     name: build & test (pg19) ${{ matrix.shard }}/${{ needs.changes.outputs.test_shard_count }}
     needs: changes
@@ -1874,9 +1845,8 @@ jobs:
 
   # ── Every workspace BIN actually links here ────────────────────────────────
   # `cargo clippy` type-checks but never links, and `nextest` compiles test
-  # targets only, so without this step a broken bin reaches main. It was the
-  # first 276 s of the old test job and needs no database, so it runs beside
-  # the shards instead of in front of them.
+  # targets only, so without this step a broken bin reaches main. It needs no
+  # database, so it runs beside the shards.
   build:
     name: build (link every bin)
     needs: changes
@@ -1919,9 +1889,8 @@ jobs:
       - run: bash scripts/perf/instructions.sh
 
   # ── The viewer's own build + unit tests ────────────────────────────────────
-  # The viewer links none of the CDR's application crates, so it shares little
-  # build cache with them. In the old test job that cost 361 s of the critical
-  # path to run 551 tests in 2.3 s. It needs no database.
+  # The viewer links none of the CDR's application crates, so it shares
+  # little build cache with them. It needs no database.
   test-viewer:
     name: build & test (viewer)
     needs: changes
@@ -1985,11 +1954,9 @@ jobs:
         env:
           YQ_MIN_VERSION: 4.53.3
         run: bash scripts/checks/runner-yq.sh
-      # The README drift check needs helm-docs, and validate.sh's self-skip when
-      # it is absent is how the v4.0.5 README shipped a release stale through a
-      # green lane (#2806) — so the tool is installed here (pinned in
-      # deploy/helm/.tool-versions beside helm, checksum-verified like yq) and
-      # validate.sh now FAILS in CI instead of skipping when it is missing.
+      # The README drift check needs helm-docs (pinned in
+      # deploy/helm/.tool-versions, checksum-verified like yq), and validate.sh
+      # fails in CI when it is missing (#2806).
       - name: Install the pinned helm-docs
         env:
           VERSION_FILE: deploy/helm/.tool-versions
@@ -2223,9 +2190,8 @@ jobs:
           exit "$verdict"
 
   # ── The deployment harness, on a real composed stack (#2178) ─────────────────
-  # The instrument that found ten defects a green 4447-test suite did not: every
-  # one lived between "the code is correct" and "the thing an operator runs
-  # works". It is worth nothing if it only runs when someone remembers.
+  # The instrument for what lives between "the code is correct" and "the
+  # thing an operator runs works".
   #
   # It reuses the binary the ui-e2e lane already builds, packaged COPY-only in
   # seconds — building the image again here would double a long lane to prove
@@ -2239,10 +2205,8 @@ jobs:
   # and deploy-probe-scheduled.yml runs the same default run daily and against
   # each published image.
   #
-  # The timeout, measured on 2026-11-16: the job took 10 to 10.5 minutes
-  # before the hospital family joined it, and the family's probe step took
-  # 5.6 to 6.2 minutes in its own lane, so the job runs about 17 minutes.
-  # 45 leaves a slow runner more than twice that.
+  # The job runs about 17 minutes, so 45 leaves a slow runner more than
+  # twice that.
   deploy-probe:
     name: deploy-probe
     needs: [changes, ui-e2e-binary]
@@ -2394,59 +2358,6 @@ jobs:
       # the manifests and sources and needs no toolchain.
       - run: cargo-machete
 
-  # ── The CDR binary the ui-e2e battery runs against (issue #335) ─────────────
-  # It used to be compiled INSIDE the image: `docker/Dockerfile --target
-  # runtime-from-source` runs `cargo build --release` in the layer after
-  # `COPY . .`. No layer cache can serve that layer — every ui-e2e trigger path
-  # lives in the build context, so the COPY is invalidated by construction, and
-  # the then-used cargo-chef cook layer cached THIRD-PARTY dependencies only
-  # (since replaced by a persistent target cache mount, #2530 — which a fresh
-  # CI runner never has warm anyway). The ~190 kLoC
-  # first-party release build therefore ran cold on EVERY run (measured locally
-  # on an isolated buildx builder: 714 s cold; 6 s with nothing changed; 407 s
-  # after touching ONE viewer source file, with the cook layer reported
-  # CACHED and the whole first-party graph recompiling behind it).
-  #
-  # So the binary is compiled here the way containers.yml compiles the
-  # PUBLISHED one — natively, in the pinned rust:*-slim-trixie image, never
-  # inside a Dockerfile — except under the `e2e` profile, which is the release
-  # profile without LTO (#3490) — and ui-e2e then PACKAGES it with `runtime-prebuilt`,
-  # the very final target containers.yml ships. Both final targets inherit ONE
-  # shared runtime-base stage, so the battery drives the same distroless base,
-  # the same non-root user, EXPOSE, HEALTHCHECK and ENTRYPOINT as before.
-  #
-  # Two caches, strongest first:
-  #   1. the finished binary, keyed on the exact content of every input the
-  #      server build reads. A viewer-only PR touches none of them, so
-  #      the key hits and no compile runs at all.
-  #   2. sccache (per compilation unit) for the miss case — a lockfile bump or
-  #      a server-side change then recompiles only what actually changed
-  #      instead of collapsing back to a cold build.
-  #
-  # SOURCE_DATE_EPOCH is pinned and REVISION is deliberately NOT passed in this
-  # lane: app/ferroehr/build.rs bakes both into the `ferroehr` crate through
-  # `cargo:rustc-env`, and sccache tracks `env!` values in its cache key
-  # ("Values from `env!` require Rust >= 1.46 to be tracked in caching" —
-  # github.com/mozilla/sccache docs/Rust.md), so a per-run value makes the three
-  # largest first-party crates uncacheable by construction. Without REVISION,
-  # build.rs degrades to SHA=unknown BY DESIGN, and the battery asserts
-  # behaviour, never provenance. The PUBLISHED images are untouched:
-  # containers.yml still stamps github.sha into them.
-  #
-  # Two consumers now (#2159): the ui-e2e battery below, and the `chart-boot`
-  # job, which boots the chart's values overlays against an image packaged from
-  # this same binary. Hence the widened condition — the job id and name are
-  # unchanged on purpose, because they are branch-protection check names.
-  # The third (#4539) is the `conformance` job, on a pull request and in the
-  # merge queue: it judges this binary, so the server compiles once per change.
-  # A push to main judges the image containers.yml pushes instead.
-  # The fourth is `deploy-probe`, on its own lanes, so a change to the
-  # deployment harness alone builds the binary its probe runs (#5271);
-  # scripts/checks/binary-consumers.sh holds every consumer's lanes here.
-  # The steps are .github/actions/server-binary, which perf-base-binary and the
-  # scheduled deploy probe run too, so all three share one cache key (#5673).
-  # A push the merge queue verified keeps this job and skips its consumers:
-  # it is main's writer of the binary cache and the sccache entries (#4546).
   # The base arm of the performance gate (#5326): the server binary of the
   # change's base commit (the base branch's head unless CI proved its database
   # suite broken, `changes`' perf_base step, #5741, #5956), built exactly as ui-e2e-binary builds
@@ -2496,6 +2407,33 @@ jobs:
           write-cache: "false"
           artifact-name: perf-base-server-binary
 
+  # ── The CDR binary the ui-e2e battery runs against (#335) ─────────────────
+  # The server binary is compiled here natively, in the pinned
+  # rust:*-slim-trixie image and never inside a Dockerfile, under the `e2e`
+  # profile (the release profile without LTO, #3490), and ui-e2e PACKAGES it
+  # with `runtime-prebuilt`, the final target containers.yml ships. No layer
+  # cache can serve an in-image build: every ui-e2e trigger path is in the
+  # build context.
+  #
+  # Two caches, strongest first:
+  #   1. the finished binary, keyed on the exact content of every input the
+  #      server build reads, so a viewer-only PR compiles nothing;
+  #   2. sccache (per compilation unit) for the miss case.
+  #
+  # SOURCE_DATE_EPOCH is pinned and REVISION is not passed: app/ferroehr/build.rs
+  # bakes both through `cargo:rustc-env`, and sccache keys on `env!` values
+  # (github.com/mozilla/sccache docs/Rust.md), so a per-run value would make
+  # the largest first-party crates uncacheable. build.rs then reads
+  # SHA=unknown; the battery asserts behaviour, never provenance, and
+  # containers.yml stamps github.sha into the published images.
+  #
+  # Consumers: the ui-e2e battery, the `chart-boot` job, the `conformance` job
+  # (#4539) and `deploy-probe` (#5271); scripts/checks/binary-consumers.sh
+  # holds every consumer's lanes here. The job id and name are
+  # branch-protection check names. The steps are .github/actions/server-binary,
+  # shared with perf-base-binary and the scheduled deploy probe under one cache
+  # key (#5673). A push the merge queue verified keeps this job as main's
+  # writer of the binary cache and the sccache entries (#4546).
   ui-e2e-binary:
     name: ui-e2e server binary
     needs: changes
@@ -2507,8 +2445,7 @@ jobs:
       ((needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     # Generous: a binary-cache miss with a cold sccache is a full release
-    # build of the ~190 kLoC first-party graph (714 s measured cold, plus
-    # dependency compiles on a lockfile bump).
+    # build of the first-party graph.
     timeout-minutes: 60
     permissions:
       contents: read
@@ -2533,10 +2470,9 @@ jobs:
           artifact-name: ui-e2e-server-binary
 
   # ── Viewer + e2e test binaries, prebuilt in parallel (issue #335) ──────────
-  # The second half of the compile-nothing-in-the-battery split: the host
-  # viewer build and the nextest test-binary compile were 8m32s of the
-  # measured battery step, all of it parallelizable with ui-e2e-binary. This
-  # job builds both and ships them as one artifact; the battery job then only
+  # The second half of the compile-nothing-in-the-battery split (#335): this
+  # job builds the host viewer and the nextest test binaries beside
+  # ui-e2e-binary and ships them as one artifact; the battery job then only
   # composes, seeds, and drives the browser.
   #
   # Runs on the BARE runner (not a container) deliberately: the viewer binary
@@ -2654,16 +2590,14 @@ jobs:
       matrix:
         shard: ${{ fromJSON(needs.changes.outputs.ui_e2e_shards) }}
         viewport: [desktop, phone]
-    # `contents: read` (now also the workflow-level default) is all it needs:
-    # nothing here writes to a registry any more (the GHCR buildx layer cache
-    # was removed, and the image is now packaged locally from a job artifact).
+    # `contents: read` is all it needs: nothing here writes to a registry.
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # NOTHING compiles in this job any more (issue #335): the server binary,
+      # Nothing compiles in this job (#335): the server binary,
       # the viewer, and the e2e test binaries all arrive as artifacts from
       # the two parallel jobs above. The toolchain stays only because
       # `cargo nextest run --archive-file` is a cargo subcommand; rust-cache
@@ -2879,7 +2813,7 @@ jobs:
         run: bash docker/viewer/login-smoke.sh
 
   # ── The compose/local image target (docker/Dockerfile runtime-from-source) ──
-  # ui-e2e packages the shipped `runtime-prebuilt` target now (issue #335), so
+  # ui-e2e packages the shipped `runtime-prebuilt` target (#335), so
   # the in-image source build that docker-compose.dev.yml (the repo-dev
   # `up --build` posture) and docker/sut-ferroehr.yml (the conformance SUT
   # stack) rely on would otherwise have no CI exercise at all.
@@ -3182,24 +3116,20 @@ jobs:
   # Changelog guard (Keep a Changelog 1.1.0; the fragments are our own design,
   # no specification governs them): a PR that changes a user-visible surface
   # adds a fragment under changelog.d/ (changelog.d/README.md), and no PR
-  # writes under CHANGELOG.md's [Unreleased], the lines every open PR used to
-  # conflict on. Escape hatch: the `no-changelog` label for genuinely
-  # invisible changes (internal refactors, CI, docs); it waives the entry,
-  # never the [Unreleased] refusal or the checks before it.
+  # writes under CHANGELOG.md's [Unreleased]. Escape hatch: the `no-changelog`
+  # label for invisible changes (internal refactors, CI, docs); it waives the
+  # entry, never the [Unreleased] refusal or the checks before it.
   #
   # PULL-REQUEST ONLY, deliberately (#2777): the entry requirement is a
   # base..head diff plus a label, neither carried by a merge_group event, and
   # already gated on the pull request. The fragment and structure checks are
   # whole-tree checks, but they are not worth a second job for a queue that
   # cannot change the files between the pull request and the merge.
-  # A release PR is checked against the tree it merges into (#4361): the
-  # v5.6.0-rc1 PR passed its preflight at its own head, a fragment merged
-  # 23 seconds ahead of it in the queue, and the plan refused the tag. On a
+  # A release PR is checked against the tree it merges into (#4361): on a
   # change that moves the workspace version this job runs the plan's own
-  # fragment check at the merge ref or the merge group, whose first parent is
-  # main or the queue entry ahead. It runs on a push to main too (#4803): a
-  # release commit merged past the queue skips both runs, as v5.6.0-rc9's did,
-  # so main turns red and names the missing fragments before anyone tags.
+  # fragment check at the merge ref or the merge group. It runs on a push to
+  # main too (#4803), so a release commit merged past the queue turns main red
+  # and names the missing fragments before anyone tags.
   release-fragments:
     name: release-fragments
     runs-on: ubuntu-latest

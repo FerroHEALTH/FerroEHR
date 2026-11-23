@@ -213,10 +213,6 @@ pub async fn release_template_ref(
 /// case-preserved address, over both storage tiers (`version` is one relation
 /// partitioned by tier).
 ///
-/// A version names its template through the `template_ref` foreign key, so it
-/// carries the address exactly as the store registered it, and the exact
-/// comparison reads the `template_id` index.
-///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn template_use_count(

@@ -1,26 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `v2_4` (ADL2 / OPT2) → Web Template front end
-//! ([`openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4`]).
-//!
-//! Every case compiles a **real** ADL2 corpus source to its operational
-//! template (`openehr_adl::opt::create_opt`) and drives it through the same
-//! WebTemplate model + shared shaping the ADL 1.4 front end uses — the
-//! dialect-neutral seam of `ITS-REST simplified_formats master04 §"Web Template
-//! Metadata"`. The corpus lives in the sibling `openehr-adl` crate
-//! (`corpus/adl2-reference`); `openehr-adl` is a dev-only dependency here
-//! (the production `v2_4` front end takes an already-created OPT as input).
+//! The `v2_4` (ADL2 / OPT2) → Web Template front end, over real ADL2 corpus
+//! sources compiled to OPTs.
 
 #![expect(
     clippy::expect_used,
     clippy::unwrap_used,
     clippy::panic,
     reason = "integration-test assertions and fixture plumbing outside #[test] fns, which the clippy.toml allow-*-in-tests scoping does not reach"
-)]
-#![expect(
-    clippy::doc_markdown,
-    reason = "the module docs quote openEHR spec prose and Simplified-Formats key names as text, not as Rust code references"
 )]
 #![expect(
     clippy::items_after_statements,
@@ -397,11 +385,8 @@ fn pad_items(v: &mut serde_json::Value) {
 
 #[test]
 fn v2_4_populates_archetype_conformance_constraints() {
-    // The apgar OBSERVATION source carries `events cardinality {1..*}` and
-    // `items cardinality {1..6}` (AOM2 §C_ATTRIBUTE cardinality). The v2_4 front
-    // end now captures EVERY constraining cardinality into `card_all` for the
-    // validation walk, exactly as the OPT-1.4 front end does — so
-    // `validate_archetype_conformance` runs identically for both dialects.
+    // The v2_4 front end captures every constraining cardinality (AOM2
+    // §C_ATTRIBUTE).
     let wt = web_template(OBS_APGAR);
     let mut cards = Vec::new();
     collect_card_all(&wt.tree, &mut cards);
@@ -420,11 +405,8 @@ fn v2_4_populates_archetype_conformance_constraints() {
 #[test]
 fn v2_4_archetype_conformance_walk_enforces_cardinality() {
     let wt = web_template(OBS_APGAR);
-    // A self-consistent example carries no cardinality violation against its own
-    // ADL2 template (symmetric with the OPT-1.4 front end, whose generated
-    // examples validate clean — `crates/openehr-its/tests/validation.rs`).
-    // The template is rooted at an OBSERVATION, which has no example
-    // COMPOSITION (#3780), so the instance is the root class's own.
+    // A self-consistent example has no cardinality violation; an OBSERVATION root
+    // has no example COMPOSITION, so the instance is the root class's own.
     let comp = example_root_instance(&wt, DetailLevel::Complete).expect("the example builds");
     let baseline = validate_archetype_conformance(&comp, &wt);
     assert!(
@@ -448,13 +430,8 @@ fn v2_4_archetype_conformance_walk_enforces_cardinality() {
     );
 }
 
-/// The template-with-filler seam: an ADL2 `template` whose content is a
-/// `use_archetype` C_ARCHETYPE_ROOT fill of a separately-held archetype must
-/// project a WebTemplate that CONTAINS the filler's flattened subtree — the
-/// normal ADL2 composition case (AOM2 master06 §Templates: slot fills;
-/// OPT2 master03: the created OPT inlines every filler). Regression for the
-/// live defect where the projected WT carried no content nodes and every FLAT
-/// path under the fill was "unknown simplified path".
+/// A template filling a slot with a separate archetype projects the filler's
+/// subtree (OPT2 master03: the OPT inlines every filler).
 const FILLER_ARCHETYPE: &str = r#"archetype (adl_version=2.0.6; rm_release=1.0.2; generated)
     openEHR-EHR-OBSERVATION.cnf_count_a.v1.0.0
 
@@ -570,16 +547,9 @@ fn v2_4_template_filler_subtree_reaches_the_web_template() {
     );
 }
 
-/// The slot-pattern probe reads the assertion's EXPRESSION TREE, not its string
-/// form: `ASSERTION.expression` is the "Root of expression tree" and
-/// `string_expression` only its "String form of expression"
-/// (`LANG/docs/BEL/master04-expression_object_model.adoc` §Core Package).
-///
-/// The fixture's slot carries three includes — a `∈`-spelled delimited regex, a
-/// space-padded `matches` one, and a literal-value constraint carrying no regex
-/// at all (`ADL2/master04.3` §Slots based on Lexical Archetype Identifiers +
-/// `AOM2/master04.5` §`C_STRING`) — so a source-text scan for `"matches {/"`
-/// would see one of three.
+/// The slot-pattern probe reads the assertion's expression tree
+/// (`LANG/docs/BEL/master04-expression_object_model.adoc`); the fixture's three
+/// includes have one `matches {/` spelling between them.
 const SLOT_ARCHETYPE: &str = r#"archetype (adl_version=2.0.6; rm_release=1.0.2; generated)
     openEHR-EHR-COMPOSITION.wt_slot_probe.v1.0.0
 
@@ -823,11 +793,8 @@ terminology
     >
 ";
 
-/// A node under a template overlay carries its specialisation parent's
-/// archetype id, the published one, so data built under it is queryable by
-/// AQL written against that archetype; the overlay id stays template-internal
-/// (ADL2 and AOM2 §Templates make an overlay the slot filler and leave the data
-/// id open: our own design).
+/// A node under a template overlay carries its parent's published archetype id
+/// (no specification governs the data id: our own design).
 #[test]
 fn a_node_under_a_template_overlay_carries_the_parent_archetype_id() {
     let mut repo = ArchetypeRepository::default();
@@ -992,10 +959,8 @@ terminology
     >
 ";
 
-/// An archetype read in the ADL 1.4 dialect keeps a qualified term constraint
-/// verbatim, and the ADL 2 builder reads it as the 1.4 builder reads a
-/// `C_CODE_PHRASE`: an `openehr` code with its terminology and rubric, local
-/// codes with their archetype rubrics and the assumed code as the default.
+/// An ADL 1.4 qualified term constraint reads as the 1.4 builder reads a
+/// `C_CODE_PHRASE`.
 #[test]
 fn an_adl14_qualified_term_constraint_reads_as_its_codes() {
     let mut repo = ArchetypeRepository::default();

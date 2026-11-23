@@ -2,37 +2,14 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written spec function of `ORIGINAL_VERSION` (hand-written spec
-//! behaviour).
-//!
-//! Spec: RM
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.original_version.adoc`
-//! §Functions declares one — `is_merged (): Boolean`, "True if this Version was
-//! created from more than just the preceding (checked out) version" — and pins
-//! it against the merge-provenance attribute in §Invariants:
-//! `Is_merged_validity`: `other_input_version_ids = Void xor is_merged`
-//! (quoted verbatim, upstream's `_ids`/`_uids` spelling slip included; the
-//! attribute the same class table declares is `other_input_version_uids`).
-//!
-//! The semantics come from RM common `master06-change_control_package.adoc`
-//! §Version Merging: a merged version records "the ids of other versions merged
-//! into the current one", so a version is merged exactly when that list holds
-//! something.
+//! `ORIGINAL_VERSION.is_merged` (`org.openehr.rm.common.original_version.adoc`
+//! §Functions, §Invariants `Is_merged_validity`).
 
 use crate::v1_2::common::change_control::original_version::OriginalVersion;
 
 impl<T> OriginalVersion<T> {
-    /// `ORIGINAL_VERSION.is_merged`: whether this version was created from more
-    /// than just its preceding version — the derived boolean of
-    /// `other_input_version_uids`.
-    ///
-    /// `Is_merged_validity` (`other_input_version_ids = Void xor is_merged`,
-    /// `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.original_version.adoc`
-    /// §Invariants) is stated against `Void`, and the optional-container
-    /// emission shape (`Option<Vec<T>>`) carries `Void` directly — so this is
-    /// the invariant read verbatim: merged iff the attribute is present. The
-    /// companion `Other_input_version_uids_valid` (`/= Void implies not
-    /// is_empty`) is realized separately, on the same value.
+    /// `ORIGINAL_VERSION.is_merged`: `other_input_version_uids` is present
+    /// (`Is_merged_validity`).
     #[must_use]
     pub fn is_merged(&self) -> bool {
         self.other_input_version_uids.is_some()

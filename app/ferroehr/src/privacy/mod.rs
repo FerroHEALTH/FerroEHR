@@ -300,9 +300,6 @@ fn walk<'a, T: Tree<'a>>(at: &mut String, node: T, findings: &mut Vec<Finding>) 
 /// the rule refuses what it cannot prove harmless, and the RM validator names
 /// the missing 1..1 attribute on its own. `Basic_validity` is satisfied by
 /// `external_ref` alone, so every refused proxy stays expressible.
-///
-/// The caller has already decided the rule is in force, so this reads no
-/// policy state.
 fn check_party<'a, T: Tree<'a>>(at: &str, map: T, findings: &mut Vec<Finding>) {
     let related = match map.get_text("_type").as_deref() {
         Some("PARTY_RELATED") => true,

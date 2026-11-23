@@ -85,7 +85,7 @@ async fn the_api_moves_with_the_base_path() {
         StatusCode::OK
     );
 
-    // Nothing answers at the default base path any more.
+    // Nothing answers at the default base path.
     assert_eq!(
         common::send_status(&app, common::get(&format!("{}/ehr", common::BASE))).await,
         StatusCode::NOT_FOUND

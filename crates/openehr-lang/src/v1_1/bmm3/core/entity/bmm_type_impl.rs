@@ -27,17 +27,6 @@
 //! are different classes in the two generations
 //! (`LANG/docs/bmm3/master00-amendment_record.adoc` SPECLANG-14, "Formalise the
 //! BMM v2/v3 split").
-//!
-//! The naming/flattening surface and the meta-type LATTICE
-//! (`is_abstract`, `is_primitive`, `type_base_name`, `unitary_type`,
-//! `effective_type`, `effective_base_class`, `is_open`/`is_closed`/
-//! `is_partially_closed`) both live here; the class and feature surfaces are the
-//! siblings [`crate::v1_1::bmm3::core::entity::bmm_class_impl`] and
-//! [`crate::v1_1::bmm3::core::feature::bmm_feature_impl`].
-//!
-//! The MODEL-level navigation this lattice is the precondition for
-//! (`type_conforms_to` / `all_ancestor_classes` / `property_definition`) lives
-//! at [`crate::v1_1::bmm3::core::model::bmm_model_impl`].
 
 use crate::v1_1::bmm3::core::entity::bmm_class::BmmClass;
 use crate::v1_1::bmm3::core::entity::bmm_container_type::BmmContainerType;
@@ -689,14 +678,8 @@ impl BmmType {
     }
 }
 
-// ── the meta-type lattice (master06-core-types.adoc §Overview) ───────────────
-// `BMM_TYPE` splits into the abstract `BMM_UNITARY_TYPE` and the concrete
-// container meta-types; unitary splits into `BMM_PARAMETER_TYPE` and
-// `BMM_EFFECTIVE_TYPE`; effective splits into `BMM_MODEL_TYPE`,
-// `BMM_TUPLE_TYPE` and `BMM_SIGNATURE` (L39-45). Rust models each level as its
-// own closed enum, so moving UP a level is a total conversion — these `From`
-// impls are that lattice, and they are what makes `unitary_type()` /
-// `effective_type()` typeable.
+// ── the meta-type lattice (master06-core-types.adoc §Overview): each level is
+// a closed enum, and these `From` impls move up a level ──
 
 impl From<BmmUnitaryType> for BmmType {
     fn from(unitary: BmmUnitaryType) -> Self {
@@ -929,13 +912,6 @@ impl BmmParameterType {
     /// `BMM_PARAMETER_TYPE.is_primitive` (effected): "Result = `False` - generic
     /// parameters are understood by definition to be non-primitive"
     /// (`org.openehr.lang.bmm3.bmm_parameter_type.adoc` §Functions).
-    ///
-    /// NOTE (upstream contradiction, adjudicated to the stated result): the same
-    /// entry also carries `Post_validity: Result = base_class.is_primitive`, a
-    /// post-condition naming an attribute `BMM_PARAMETER_TYPE` does not have
-    /// (only `BMM_MODEL_TYPE` has `base_class`) — a copy-paste from that class.
-    /// The prose result ("`False`") is the only consistent reading and is the one
-    /// implemented.
     #[expect(
         clippy::unused_self,
         reason = "the class definition declares this as an instance function whose result is the constant False"
@@ -1090,13 +1066,6 @@ impl BmmContainerType {
     /// `BMM_CONTAINER_TYPE.is_primitive` (effected): "True if `_item_type_` is
     /// primitive", `Post_result: Result = item_type.is_primitive`
     /// (`org.openehr.lang.bmm3.bmm_container_type.adoc` §Functions).
-    ///
-    /// NOTE (upstream contradiction, adjudicated to `Post_result`): the same
-    /// entry also carries `Post_validity: Result = base_class.is_primitive`,
-    /// naming an attribute `BMM_CONTAINER_TYPE` does not have (it has
-    /// `_container_class_` and `_item_type_`; `base_class` belongs to
-    /// `BMM_MODEL_TYPE`). `Post_result` agrees with the prose description, so it
-    /// is the implemented reading.
     #[must_use]
     pub fn is_primitive(&self) -> bool {
         self.item_type().is_primitive()
@@ -1136,10 +1105,6 @@ impl BmmContainerType {
     /// `BMM_CONTAINER_TYPE.effective_type` (effected): "Return
     /// `_item_type.effective_type_()`"
     /// (`org.openehr.lang.bmm3.bmm_container_type.adoc` §Functions).
-    ///
-    /// `None` carries the `'Any'` case through from
-    /// [`BmmParameterType::effective_type`] — a container of an unconstrained
-    /// formal parameter has no effective type object.
     #[must_use]
     pub fn effective_type(&self) -> Option<BmmEffectiveType> {
         self.item_type().effective_type()
@@ -1314,9 +1279,6 @@ impl BmmType {
     /// `BMM_TYPE.effective_type` (abstract): "Type with any container abstracted
     /// away, and any formal parameter replaced by its effective constraint type"
     /// (`org.openehr.lang.bmm3.bmm_type.adoc` §Functions).
-    ///
-    /// `None` is the `'Any'` case of an unconstrained formal parameter — see
-    /// [`BmmParameterType::effective_type`].
     #[must_use]
     pub fn effective_type(&self) -> Option<BmmEffectiveType> {
         self.unitary_type().effective_type()

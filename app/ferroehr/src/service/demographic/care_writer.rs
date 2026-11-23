@@ -7,13 +7,10 @@
 //! above `N` is written only by a writer `ACCESS_POLICY.relationship_writers`
 //! names for that level, and such a write is recorded for review.
 //!
-//! The marking lives in the clinical domain and the relationship commits on
-//! the party connection, so the marking of every EHR the relationship's
-//! source `PERSON` names is read before the commit takes that connection:
-//! the subject references on the party pool, then the markings in one
-//! statement on the clinical pool, each connection given back before the
-//! next is taken. The administrator is no exception: the draft names none.
-//! Our own design over the draft procedure (#6141).
+//! The markings live in the clinical domain, so they are read before the commit
+//! takes its party connection, each connection given back before the next is
+//! taken. The administrator is no exception: the draft names none. Our own
+//! design over the draft procedure (#6141).
 
 use openehr_rm::draft::access_control::access_control::access_actor_scope::AccessActorScope;
 use openehr_rm::draft::access_control::access_control::confidentiality_marking::ConfidentialityMarking;

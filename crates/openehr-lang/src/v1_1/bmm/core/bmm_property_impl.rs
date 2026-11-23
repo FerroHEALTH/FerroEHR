@@ -33,11 +33,6 @@ impl<T> BmmProperty<T> {
 
     /// `BMM_PROPERTY.is_mandatory`: "True if this property is mandatory in its
     /// class" (class doc §Attributes).
-    ///
-    /// The attribute is optional (`0..1`) in the class definition, so an absent
-    /// value is reported as *not mandatory* — the only reading that keeps
-    /// [`Self::existence`] total, and the same reading the class doc's
-    /// `0..1`/`1..1` example pair implies (absent = the weaker `0..1` bound).
     #[must_use]
     pub fn is_mandatory(&self) -> bool {
         let flag = match self {

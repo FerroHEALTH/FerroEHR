@@ -12,11 +12,6 @@
 //! other record (an authentication, a template or party operation, a failed
 //! access, an extract) is an `ihe-atna` BALP [`Exchange`] FerroEHR fills
 //! directly. Both are written by `ihe-atna`.
-//!
-//! FerroEHR decides what the record says: the action, the participants as the
-//! authentication layer judged them, the patient its subject resolver found,
-//! the objects and the origins its storage read. The shared crates decide how
-//! it is written.
 
 use std::net::IpAddr;
 
@@ -118,9 +113,6 @@ fn horizon_end(
 }
 
 /// Renders a resolved [`AuditEvent`] as a FHIR R4 `AuditEvent` document.
-///
-/// The JSON value of [`to_resource`], for a caller that stores or sends the
-/// record as JSON.
 ///
 /// # Errors
 ///

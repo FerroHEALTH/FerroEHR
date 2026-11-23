@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end HTTP tests for the demographic `ITEM_TAG` wire (group-13 audit,
-//! #389): the released dual-form `uid_based_id` addresses DISTINCT tag
+//! End-to-end HTTP tests for the demographic `ITEM_TAG` wire (#389): the
+//! released dual-form `uid_based_id` addresses DISTINCT tag
 //! collections (the `VERSIONED_PARTY` container vs ONE of its VERSIONs — the
 //! disjointness law of RM `common.item_tag` `ITEM_TAG.target`), the tags
 //! GET/DELETE 404 on a nonexistent / wrong-kind target
@@ -309,9 +309,6 @@ async fn relationship_stale_delete_conflict_echoes_latest_etag() {
 /// the PUT round-trips both — ITS-REST overview `Requests_and_responses.md`
 /// §openehr-item-tag and openehr-version-item-tag ("uniquely identified by
 /// their `key` and `target_path` pair attributes"); RM common master07-tags.
-/// The run-2 triage regression (2026-07-28): the demographic PUT deduped by
-/// key alone and silently collapsed the pair (the EHR side had the identity
-/// fix since #369; this seam did not).
 #[tokio::test]
 async fn same_key_tags_on_different_target_paths_coexist() {
     let (_pg, app) = common::app(common::api_config(false)).await;

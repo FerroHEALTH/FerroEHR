@@ -19,16 +19,6 @@
 //! defines `POST` as "providing a block of data … to a data-handling process",
 //! while a `GET` would present an expensive whole-repository scan as a
 //! cacheable representation.
-//!
-//! Gating: mounted under `/admin/`, so it inherits the group's two gates
-//! unchanged — the coarse RBAC `OperationClass::Admin` classifier (`401`
-//! unauthenticated / `403` non-admin, our own authorization design; the
-//! released admin operations carry `security: []`) and the
-//! `AppConfig::api.admin` config gate, which answers `405` with an empty
-//! `Allow` while the group is off (`crate::api::admin::dispatch`, whose ground
-//! is the overview rule "If a method is recognized but not allowed for the
-//! target resource, the response SHOULD be `405 Method Not Allowed` status
-//! code" — `docs/overview/Requests_and_responses.md` §"HTTP Methods").
 
 #![expect(
     clippy::disallowed_types,
@@ -269,11 +259,6 @@ pub(crate) async fn rebuild_version_nodes(
 /// The optional bounds narrowing which stored versions a sweep, or the rebuild
 /// driven by one, covers.
 ///
-/// A sweep reads every byte of what it covers, so an operator verifying one
-/// record, one object, one version, or everything committed since an incident,
-/// should not have to read the whole repository. Every parameter is optional
-/// and they compose; the default covers everything.
-///
 /// Our own extension — no ITS-REST operation governs these routes at all.
 fn parity_scope(query: Option<&str>) -> Result<StorageParityScope, RestError> {
     let ehr_id = match params::query_param(query, "ehr_id") {
@@ -328,26 +313,15 @@ fn parity_scope(query: Option<&str>) -> Result<StorageParityScope, RestError> {
 
 /// How many rendered lines the streamed sweep may run ahead of the client.
 ///
-/// The channel IS the flow control: a client that reads slowly stops the sweep
-/// at its next batch, and a client that disconnects drops the receiver, which
-/// ends the sweep at its next send rather than letting it read the repository
-/// for nobody.
+/// The channel is the flow control: a slow client stops the sweep at its next
+/// batch, and a disconnect ends it at its next send.
 const STREAM_BUFFER: usize = 64;
 
 /// Answer the sweep as a line-delimited JSON stream.
 ///
-/// The aggregated form computes the whole report before the response exists, so
-/// it is bounded by the router's `REQUEST_TIMEOUT` and a large enough
-/// repository outruns it. `tower_http`'s `TimeoutLayer` races only the inner
-/// service's response FUTURE (its `ResponseFuture` polls the inner future
-/// against one `Sleep`); once the head is produced the layer is out of the way,
-/// and the separate body deadlines — `ResponseBodyTimeoutLayer` /
-/// `ResponseBodyDeadlineLayer`, `tower_http::timeout` §"Body timeouts" — are
-/// not applied by `crate::router`. So a response whose head returns at once and
-/// whose body is written as the sweep proceeds has no such ceiling.
-///
-/// The cost is that the status code is committed before the work is: a fault
-/// after the head can only be reported as the final line.
+/// The head returns at once and the body streams as the sweep proceeds, so the
+/// router's request timeout, which races only the response future, never cuts a
+/// long sweep. A fault after the head can only be reported as the final line.
 ///
 /// NOTE: no openEHR spec governs storage mechanics or this media type — our own
 /// design/extension.
@@ -405,10 +379,6 @@ fn parity_line(value: &Value) -> Bytes {
 }
 
 /// Render one sweep event as its wire object.
-///
-/// Written out explicitly, like [`parity_report`]: the wire contract is this
-/// function, not a serde attribute on a service type. Every object carries a
-/// `type` so a reader dispatches on one key.
 fn parity_event(event: &StorageParityEvent) -> Value {
     match event {
         StorageParityEvent::Mismatch(mismatch) => json!({
@@ -465,11 +435,6 @@ fn parity_report(report: &StorageParityReport) -> Value {
 }
 
 /// Render the node-rebuild report as the response body.
-///
-/// Written out explicitly, like [`parity_report`]: the wire contract is this
-/// function, not a serde attribute on a service type. A record carries the
-/// key its outcome earns — `node_rows` for a rebuild, `reason` for a
-/// refusal — so a reader never has to interpret a placeholder.
 fn rebuild_report(report: &NodeRebuildReport) -> Value {
     json!({
         "versions_checked": report.versions_checked,

@@ -16,10 +16,6 @@
 //!   policy-enforcement point once its template is known, with the `ehrId`
 //!   launch-context binding of a `patient/` grant (master07 §Context
 //!   Selection, master08 §Resource Scopes).
-//!
-//! Registration (master03), token issuance, grants and PKCE (master06), and
-//! the launch-sequence UI (master07) are the authorization server's and the
-//! launcher's; the CDR checks tokens and never issues them.
 
 use ferrohealth_smart::openehr::smart_scopes::{Compartment, SmartScope};
 

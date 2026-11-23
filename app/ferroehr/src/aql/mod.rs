@@ -4,16 +4,9 @@
 //! The AQL execution engine — our own typed IR over the
 //! greenfield node store.
 //!
-//! This module is the planning front half of the engine: it turns a parsed
-//! [`openehr_query::ast::SelectQuery`] into a typed [`ir::QueryIr`] through path
-//! analysis (`analyze`) and AST-to-IR lowering (`lower`). The back half lives in
-//! the SQL package, and the IR carries no SQL.
-//!
 //! Spec authority: the vendored QUERY 1.1 text at
 //! `docs/specs/openehr/QUERY/docs/AQL/`; the RM typing oracle is the generated
 //! `openehr_rm::v1_2::model`.
-//!
-//! Entry point: [`plan`].
 
 pub mod access_log;
 mod analyze;
@@ -46,9 +39,6 @@ use ir::{
 /// Plan an AQL query: analyse and lower it into a typed [`QueryIr`], validating
 /// that every referenced `$parameter` is supplied in `params`.
 ///
-/// This is the single entry point of the planning package. It never touches the
-/// database and never produces SQL.
-///
 /// # Errors
 ///
 /// * [`AqlError::Feature`] — a syntactically valid construct outside the
@@ -71,12 +61,9 @@ pub fn plan(
 /// referenced `$parameter` name in [`QueryIr::params`] — **without** checking
 /// that those parameters are supplied.
 ///
-/// This is the request-independent half of [`plan`]: the IR is a pure,
-/// deterministic function of the query AST (no parameter *value*, paging
-/// window, EHR scope, or system id is baked in — those bind at SQL-build time,
-/// [`sql::build`]). That purity is what lets the query service cache the lowered
-/// IR keyed on the query text ([`crate::service::query`] plan cache); the
-/// per-request [`check_params`] then runs against the caller's [`Params`].
+/// The IR is a pure function of the query AST, with no parameter value, paging
+/// window, EHR scope or system id baked in, which lets the query service cache
+/// it by query text.
 ///
 /// # Errors
 ///

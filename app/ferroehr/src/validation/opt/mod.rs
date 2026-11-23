@@ -12,20 +12,6 @@
 //! prose chapter, so AOM2/08 is the oracle here, applied to the flattened OPT 1.4
 //! tree (`openehr_its::opt14::types::OperationalTemplate`).
 //!
-//! This module owns the tree walk (T1: the `C_COMPLEX_OBJECT`/`C_ATTRIBUTE`
-//! alternation) and the shared context; the per-kind rules live in sibling
-//! modules along the AOM2/08 catalogue's own section axis:
-//!
-//! - `invariants` — AOM 1.4 constraint-model per-node-kind invariants
-//!   (`Existence_set`, `Target_path_valid`, VARID/VARDT, VACDF,
-//!   VDFAI, STCDC);
-//! - `rm_conformance` — VCORM/VCARM/VCAEX/VCACA/VCAM + VACMCO over
-//!   `openehr_rm::v1_2::model`;
-//! - `primitive` — `C_PRIMITIVE`, temporal and duration patterns, the
-//!   `C_DOMAIN_TYPE` assumed-value rules;
-//! - `terminology` — VATID/VTTBK/VTCBK/VTLC plus code collection;
-//! - `interval` — the BASE interval and multiplicity primitives.
-//!
 //! It does not run `valid_value`, which is instance-time (surface B in
 //! [`crate::validation`]). Every violation is reported through
 //! [`ServiceError::ValidationFailed`], the ITS-REST `422` carrying the AOM2 rule
@@ -35,11 +21,8 @@
 //! not-well-formed content.
 //!
 //! The check sequence is terminology sets first, then the walk, and per node
-//! VCORM, VATID, per-kind invariants, recurse. It reports EVERY violation it
-//! finds rather than the first, because the alternative made repairing a
-//! template one upload per defect (#3129) — and a 1.7 MB operational template
-//! is not something anyone re-uploads casually. The order above is the order
-//! they are reported in.
+//! VCORM, VATID, per-kind invariants, recurse; every violation is reported, in
+//! that order (#3129).
 //!
 //! Two failures stop a subtree instead of accumulating: an object whose RM type
 //! the model does not have, and an attribute its parent RM type does not
@@ -77,22 +60,11 @@ impl RuleViolation {
 
 /// How many violations one refusal carries before it stops collecting.
 ///
-/// Generous on purpose: a template a person is repairing has tens of defects at
-/// worst, and the whole point of reporting them together is that the list is
-/// the repair list. The cap exists for the artefact nobody is repairing — a
-/// corrupted or machine-mangled upload where every node is wrong — so a `422`
-/// body stays something a client can read. Reaching it is reported, never
-/// silent.
+/// The cap keeps a `422` body readable for a corrupted upload where every node
+/// is wrong; reaching it is reported, never silent.
 const MAX_REPORTED_VIOLATIONS: usize = 200;
 
 /// The violations found so far.
-///
-/// The AOM2 rules are properties of separate nodes, so one failure says nothing
-/// about the next and the walk keeps going. Two failures are different: an
-/// object whose RM type does not exist, and an attribute its parent RM type
-/// does not declare. Everything below those is being checked against a shape
-/// the model does not have, so their subtrees are pruned and the violation says
-/// so rather than burying the real defect under its own consequences.
 struct Findings {
     violations: Vec<RuleViolation>,
     truncated: bool,

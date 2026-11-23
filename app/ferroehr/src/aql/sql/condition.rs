@@ -66,9 +66,8 @@ impl Builder<'_> {
             return Ok(None);
         };
         if !self.streaming {
-            // The flat FROM is a list of comma items the planner orders
-            // freely, so an anchor joins it as one more item; the streaming
-            // shape placed its anchors ahead of the version spine.
+            // The flat FROM is a list of comma items the planner orders freely,
+            // so an anchor joins it as one more item.
             for anchor in self.value_anchors()? {
                 let link = anchor.link();
                 self.q
@@ -149,9 +148,6 @@ impl Builder<'_> {
     }
 
     /// Lowers `filter` under the RULE of the module documentation.
-    ///
-    /// `nested` is whether the result sits inside another subquery; a
-    /// top-level existential is hosted by [`Builder::correlated_exists`].
     ///
     /// # Errors
     /// [`AqlError`] from the path, parameter and function lowerings.

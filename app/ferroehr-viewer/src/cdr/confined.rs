@@ -59,10 +59,6 @@ impl Roots {
 
     /// `url` parsed, when it stays under one of the roots.
     ///
-    /// The URL must start with a root as written, hold no control character,
-    /// no `\` and no `.` or `..` segment in its path in any spelling, and
-    /// still lie under that root once parsed.
-    ///
     /// # Errors
     /// [`ViewerError::Invalid`] when `url` leaves every root.
     pub(super) fn admit(&self, url: &str) -> Result<url::Url, ViewerError> {

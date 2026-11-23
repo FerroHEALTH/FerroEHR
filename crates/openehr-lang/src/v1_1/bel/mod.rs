@@ -12,26 +12,6 @@
 //! `cadl2_primitives`, which is why the `matches { … }` constraint leaf is an
 //! extension point — see below). The `OPERATOR_KIND` vocabulary is
 //! `master04-expression_object_model.adoc`.
-//!
-//! # The composition seam
-//!
-//! The parser is generic over a [`BelBuilder`]: the grammar (tokens, operator
-//! precedence, statement shapes) lives here **once**, while the tree it
-//! constructs is supplied by the builder. Two builders exist:
-//!
-//! * [`BeomBuilder`] (this crate) builds the pure-BEL `beom` model —
-//!   [`parse_statements`] uses it. It rejects the `matches` constraint leaf
-//!   (`EXPR_CONSTRAINT` is an AOM extension, defined in `openehr-am`, not beom).
-//! * `openehr-adl` supplies its own builder that produces the AM-level
-//!   expression model (`openehr_am::v2_4::aom2` — the extender enums composing
-//!   the beom variants + the AOM leaves `EXPR_ARCHETYPE_REF`/`EXPR_CONSTRAINT`),
-//!   parsing archetype paths and `matches { c_primitive_object }` via its cADL
-//!   primitive parser. No expression grammar is duplicated: `openehr-adl` reuses
-//!   [`parse_statements_with`] with its builder.
-//!
-//! `EXPR_ARCHETYPE_REF`/`EXPR_CONSTRAINT` are AOM classes (`AOM2` master05) that
-//! `openehr-lang` cannot name (dependency arrows point `adl → lang`); the seam
-//! is exactly the boundary at which they enter, so beom stays free of them.
 
 #![expect(
     clippy::disallowed_types,
@@ -159,12 +139,6 @@ impl BelLiteral {
 }
 
 /// The seam between the BEL grammar and the tree it builds.
-///
-/// The parser drives the grammar and calls these constructors; an implementor
-/// decides the concrete node types (`beom` here, the AM-level model in
-/// `openehr-adl`). Leaf productions that the AOM extends —
-/// [`path_ref`](BelBuilder::path_ref) and [`constraint`](BelBuilder::constraint)
-/// — are the extension points.
 pub trait BelBuilder {
     /// The expression node type this builder produces.
     type Expr;
@@ -246,9 +220,6 @@ pub trait BelBuilder {
 
 /// Parse BEL `src` into a list of `beom` [`Statement`]s (the pure-BEL model).
 ///
-/// This is the standalone entry point; `openehr-adl` composes the AM-level model
-/// via [`parse_statements_with`] and its own builder.
-///
 /// # Errors
 /// Returns [`BelError`] on a lex or parse failure. Note that the pure-beom
 /// builder rejects the AOM `matches` constraint leaf ([`BelError::Unsupported`]);
@@ -277,10 +248,6 @@ pub fn parse_statements_with<B: BelBuilder>(
 }
 
 /// The default [`BelBuilder`] producing the pure-BEL `beom` object model.
-///
-/// It tracks declared-variable types so a later `$var` reference recovers the
-/// declared [`ExprTypeDef`]; an undeclared reference defaults to an
-/// object-reference type def carrying the bare name.
 #[derive(Debug, Default)]
 pub struct BeomBuilder {
     vars: std::collections::BTreeMap<String, ExprTypeDef>,

@@ -196,9 +196,8 @@ impl std::fmt::Display for ValidityKind {
     }
 }
 
-/// openEHR AOM2 model-form `ARCHETYPE` — declared `abstract` in the XSD with no
-/// concrete subtype in this schema closure, so it is emitted as the
-/// plain shape a conforming document must present at its slots.
+/// openEHR AOM2 model-form `ARCHETYPE`, abstract in the XSD with no concrete subtype here,
+/// so emitted as the shape a document presents at its slots.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Archetype {
     /// The `archetype_id` attribute/element of the AOM2 model-form `ARCHETYPE` XSD type.
@@ -430,9 +429,8 @@ pub struct CArchetypeRoot {
     pub archetype_ref: Option<String>,
 }
 
-/// openEHR AOM2 model-form `C_ATTRIBUTE` — declared `abstract` in the XSD with no
-/// concrete subtype in this schema closure, so it is emitted as the
-/// plain shape a conforming document must present at its slots.
+/// openEHR AOM2 model-form `C_ATTRIBUTE`, abstract in the XSD with no concrete subtype here,
+/// so emitted as the shape a document presents at its slots.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CAttribute {
     /// The `rm_attribute_name` attribute/element of the AOM2 model-form `C_ATTRIBUTE` XSD type.

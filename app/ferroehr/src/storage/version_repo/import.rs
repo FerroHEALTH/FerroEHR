@@ -194,10 +194,6 @@ pub struct VerbatimVersionRow<'a> {
 
 /// Insert verbatim `version` rows from an archive record in ONE statement.
 ///
-/// The load side of the admin dump/load round-trip: explicit `committed_at`
-/// and preserved `template_id`, a whole record's versions with no round trip
-/// per version. The node rows are re-decomposed and written by the caller.
-///
 /// This is the one version writer that does not derive the version tree position
 /// itself: the live write paths compute the next `VERSION_TREE_ID` from the
 /// container's own tip (RM common master06 §Copying §Subsequent Local
@@ -393,12 +389,9 @@ pub async fn has_version_tree(
 /// Bring the head row of every named versioned object back into agreement with
 /// its version rows.
 ///
-/// The commit path writes the head row in the same statement as the version it
-/// describes; the import and archive-load paths write many versions of a
-/// container at once, so they recompute the head once per object at the end
-/// instead. The head is a pure function of the stored versions — the greatest
-/// commit ordinal on any lineage, and the trunk's own tip — so recomputing it
-/// is always correct and never depends on the order the rows landed in.
+/// The import and archive-load paths write many versions of a container at
+/// once, so they recompute the head once per object; the head is a pure
+/// function of the stored versions.
 ///
 /// Each object is taken under the same per-object advisory lock the commit path
 /// uses, so a concurrent commit of one of these containers cannot interleave
@@ -475,9 +468,8 @@ pub async fn sync_heads(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), St
 /// The highest `branch_version` held on one BRANCH lineage of a container,
 /// `(creating_system_id, trunk_version, branch_number)`.
 ///
-/// `0` when the store holds no version of the lineage. There is no second
-/// "still open" answer any more: the store is append-only, so the highest
-/// version of a non-empty lineage IS its tip.
+/// `0` when the store holds no version of the lineage; the store is
+/// append-only, so the highest version of a lineage is its tip.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
@@ -503,8 +495,6 @@ pub async fn branch_lineage_head(
 /// The current state of a to-be-imported container in the target store —
 /// `kind: None` when the container is not present (first receipt — master06
 /// §Copying Case 2).
-///
-/// Mapping the kind text to a versioned-object kind is the caller's.
 #[derive(Debug, Clone, Default)]
 pub struct ContainerStateRow {
     /// The stored kind text, if the `vo_id` already exists.

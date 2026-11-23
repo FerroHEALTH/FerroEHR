@@ -82,11 +82,6 @@ pub fn held() -> Result<Held, ViewerError> {
 
 /// The guard: the live session the request holds, or `Unauthenticated`.
 ///
-/// Every read of the CDR or of the session state calls this first. No
-/// cookie, a cookie that names no live session and a session whose access
-/// token could not be renewed are the same answer:
-/// [`ViewerError::Unauthenticated`].
-///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a live session;
 /// [`ViewerError::Internal`] outside a request (a bug).

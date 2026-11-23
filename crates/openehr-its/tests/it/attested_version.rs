@@ -18,11 +18,6 @@
 //! pattern the vector encodes: an attestation committed with `_is_pending_`
 //! True, then a second one with `_is_pending_` False "and the appropriate
 //! proof supplied".
-//!
-//! The vector is the CNF catalogue's committed corpus pair
-//! (`cnf.version.attested` / `cnf.version.attested.xml`), so this gate also
-//! keeps the two committed representations from drifting apart: the XML twin
-//! must be exactly what the codec emits from the JSON twin.
 
 use std::path::{Path, PathBuf};
 

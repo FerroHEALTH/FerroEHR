@@ -298,9 +298,8 @@ fn a_clock_skew_above_the_cap_is_a_boot_error() {
     );
 }
 
-/// RFC 8414 §2 + §6.2: the issuer identifier is an `https` URL. Plain HTTP
-/// is accepted on a loopback host alone, the crate's rule, which replaces
-/// the former `allow_insecure_issuer` switch.
+/// RFC 8414 §2 + §6.2: the issuer identifier is an `https` URL; plain HTTP is
+/// accepted on a loopback host alone, the crate's rule.
 #[test]
 fn a_non_loopback_http_issuer_is_a_boot_error() {
     let cfg = section("http://keycloak:8081/auth/realms/ferroehr");

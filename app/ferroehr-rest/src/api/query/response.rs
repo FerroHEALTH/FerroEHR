@@ -4,12 +4,6 @@
 //! Shared request-decoding + response-rendering for the QUERY API
 //! (`docs/query/Request.md`, `docs/query/Response.md`).
 //!
-//! The ad-hoc ([`super::adhoc`]) and stored ([`super::stored`]) execution paths
-//! both normalize the request — the `ehr_id` scope, the `offset`/`fetch` paging
-//! window and the `query_parameters` binds — and render the same `RESULT_SET`
-//! document, so the decode helpers and the renderer live here and both paths
-//! stay identical.
-//!
 //! `ehr_id` may arrive as the `ehr_id` query parameter or the `openehr-ehr-id`
 //! request header (`Request.md` §About the `ehr_id` parameter), and the `200 OK`
 //! response carries an `ETag` identifying the `RESULT_SET`
@@ -186,9 +180,6 @@ pub(super) const H_EHR_ID: &str = "openehr-ehr-id";
 /// … as a query parameter `ehr_id` or alternatively as a request header"
 /// (`Request.md` §About the `ehr_id` parameter).
 ///
-/// [`ehr_scope`] parses the result into [`AqlQueryRequest::ehr_ids`], a single
-/// wire `ehr_id` being the one-element case of the `ehr_ids` list scope.
-///
 /// The released text never says what happens when a request carries both forms,
 /// so the handling is our own: one form, or both naming the same EHR, is the
 /// scope; both naming different EHRs is a `400`, since the request is
@@ -273,13 +264,10 @@ pub(super) fn path_segment(parts: &RequestParts, key: &str) -> Result<String, Re
 /// Renders the assembled `RESULT_SET` as the `200 OK` response with the
 /// spec-mandated `ETag`.
 ///
-/// `200_Query.yaml` declares a weak `ETag` "identifier of the `RESULT_SET`"
-/// (`headers/ETag_RESULT_SET.yaml`). The vendored `ResultSet` schema carries no
-/// `id` field, so the tag is a digest of the document's result-determining
-/// bytes as written ([`ResultSetDoc::write`]): identical result sets get
-/// identical tags. The body is JSON only, the QUERY operations declaring no
-/// canonical-XML representation, so an `Accept` that admits no JSON is a
-/// `406`, which carries no `ETag`.
+/// The weak `ETag` is a digest of the document's result-determining bytes,
+/// since the `ResultSet` schema carries no `id`
+/// (`headers/ETag_RESULT_SET.yaml`). An `Accept` that admits no JSON is a `406`
+/// with no `ETag`.
 pub(super) fn respond_result_set(headers: &HeaderMap, result_set: &ResultSetDoc) -> Response {
     if negotiate::resolve_accept(
         headers,

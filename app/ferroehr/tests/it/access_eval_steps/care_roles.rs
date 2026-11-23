@@ -4,13 +4,6 @@
 //! Care roles and the care path in a rule's actor scope, the care purposes,
 //! and the relationship the access log names, over the evaluator itself
 //! (#6075).
-//!
-//! The worked example is the draft package's Who Sees What table (draft
-//! access control package, Appendix, Who Sees What; #6060 B.4.3): one patient
-//! under the care of the hospital H, a policy with a 30-day grace and four
-//! rules, each caller acting for H. The policy classifies one template at
-//! the confidentiality `R` and one at `V`, so a datum of a level no applying
-//! permit clears is refused at step 6 as `refused-confidentiality` (#6057).
 
 use std::sync::Arc;
 

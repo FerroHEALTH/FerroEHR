@@ -370,11 +370,8 @@ impl BmmFormalElement {
             Self::BmmUnitaryProperty(property) => {
                 BmmSignature::BmmPropertyType(Box::new(property.signature()))
             }
-            // The four variable leaves (`BMM_LOCAL`, `BMM_PARAMETER`,
-            // `BMM_RESULT`, `BMM_SELF`) are `BMM_VARIABLE`s, i.e. formal
-            // elements with no arguments, so their signature is the same
-            // argument-less `BMM_PROPERTY_TYPE` — "Meta-type for property and
-            // variable signatures" (`…bmm3.bmm_property_type.adoc`
+            // A variable has no arguments, so its signature is the
+            // argument-less `BMM_PROPERTY_TYPE` (`…bmm3.bmm_property_type.adoc`
             // §Description).
             Self::BmmLocal(local) => BmmSignature::BmmPropertyType(Box::new(BmmPropertyType {
                 result_type: local.r#type.clone(),

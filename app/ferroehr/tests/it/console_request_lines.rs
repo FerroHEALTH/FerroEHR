@@ -3,15 +3,6 @@
 
 //! The console writes the line of every request, a query before it or not
 //! (#5696).
-//!
-//! FerroEHR installs one process subscriber whose console filter is a
-//! per-layer filter, and `tracing-subscriber` bridges the `log` crate into
-//! it. A query's `sqlx` logger asks `log::log_enabled!` at `debug`; under a
-//! filter that lets some target through at `debug` and the rest at `info`,
-//! that question reaches the console filter, which says no. The request line
-//! the same thread writes next must still be written. Only a process-wide
-//! subscriber caches the interest that lets the line skip its own `enabled`
-//! question, so the case runs in a child process of this test binary.
 
 use std::process::Command;
 

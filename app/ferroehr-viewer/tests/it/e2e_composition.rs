@@ -20,9 +20,6 @@
 //! End-to-end journeys over the seeded EHR and its composition: the EHR's
 //! page, the composition's Reading, Document and Versions tabs, and the
 //! sign-in and find paths with JavaScript disabled.
-//!
-//! The seeded composition has two versions (`scripts/ui-e2e.sh` commits it
-//! and updates it once).
 
 use crate::common;
 

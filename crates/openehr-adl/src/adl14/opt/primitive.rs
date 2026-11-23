@@ -75,14 +75,8 @@ macro_rules! range_facets {
     };
 }
 
-/// Maps a `C_PRIMITIVE_OBJECT` (its wrapped `C_PRIMITIVE`) to the matching
-/// `v2_4` primitive constraint node.
-///
-/// The converter passes primitive nodes through untouched. A node without
-/// `item` maps as the unconstrained constraint of the primitive type its
-/// `rm_type_name` names (`unconstrained_primitive`); a name that is no AOM 1.4
-/// primitive type maps to an unconstrained object of that type, reported in
-/// `conversion_details`.
+/// Maps a `C_PRIMITIVE_OBJECT` to its `v2_4` primitive constraint; one without
+/// `item` is [`unconstrained_primitive`], and an unknown type name is reported.
 pub(super) fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut RootCx) -> CObject {
     let rm = c.rm_type_name.as_str();
     let node_id = c.node_id.as_str();
@@ -168,15 +162,9 @@ pub(super) fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut 
     }
 }
 
-/// Returns the constraint that admits every value of the AOM 1.4 primitive
-/// type `rm_type_name` names, or `None` when it names none.
-///
-/// A `C_PRIMITIVE_OBJECT` without `item` constrains nothing beyond its type
-/// (`item` is `minOccurs="0"` in `its-xml-1.0.2-nsv1/ALL/Archetype.xsd`
-/// `C_PRIMITIVE_OBJECT`), so it converts to the
-/// unconstrained form of the `C_PRIMITIVE` subtype for that type
-/// (AM `AOM1.4/master06-primitive_package.adoc` §Class Descriptions). The
-/// type names are matched case-insensitively.
+/// The unconstrained `C_PRIMITIVE` of the AOM 1.4 primitive type `rm_type_name`
+/// names, case-insensitively (`Archetype.xsd` `C_PRIMITIVE_OBJECT`;
+/// `AOM1.4/master06-primitive_package.adoc`).
 pub(super) fn unconstrained_primitive(rm_type_name: &str) -> Option<opt14::types::CPrimitive> {
     use opt14::types::CPrimitive;
     let name = rm_type_name.to_ascii_uppercase();
@@ -229,12 +217,9 @@ pub(super) fn unconstrained_primitive(rm_type_name: &str) -> Option<opt14::types
     })
 }
 
-/// Date/time/date-time constraints carry a pattern XOR a range on the ADL2
-/// surface — the mixed `pattern/interval` form is defined for durations only
-/// (`ADL2/master04.5-cadl_primitive_types.adoc` §Mixed Pattern and Interval
-/// sits under Duration Constraints). When a 1.4 node carries both, the range
-/// (the value constraint) is kept — the safe, still-narrowing half — and the
-/// dropped format pattern reported in `conversion_details`.
+/// A date or time constraint keeps its range over its pattern, since ADL2 mixes
+/// the two only for durations (`ADL2/master04.5` §Mixed Pattern and Interval);
+/// the dropped pattern is reported.
 pub(super) fn date_time_pattern(
     pattern: Option<String>,
     has_range: bool,

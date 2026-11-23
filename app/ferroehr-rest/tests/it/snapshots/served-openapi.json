@@ -2039,7 +2039,7 @@
           "ADMIN"
         ],
         "summary": "The redacted effective configuration as a JSON tree (`GET /admin/config`).",
-        "description": "**Our own extension — no ITS-REST operation governs this.** The released\nAdmin API (`specifications/admin.openapi.yaml`) defines exactly two\noperations, both EHR deletes, and no openEHR specification models server\nconfiguration at all; this route is excluded from any conformance-profile\nclaim. Same admin gate as the sibling deletes (`AppConfig::api.admin` →\n`405` when off; RBAC Admin class by the `/admin/` path → `401`\nunauthenticated / `403` non-admin).\n\nEvery secret-bearing leaf is redacted STRUCTURALLY by its `Secret` /\n`SecretUrl` type before it ever reaches this handler — the binary builds the\nsnapshot once at boot with\n[`ferroehr::config::FerroEhrConfig::to_redacted_json`], so no secret substring\nis present here to leak.",
+        "description": "Our own extension: no ITS-REST operation governs this. It is served\nbehind the admin gate (`405` when off, `401` or `403` for a caller who\nis not an administrator).\n\nEvery secret-bearing leaf is redacted by its type before the snapshot is\nbuilt.",
         "operationId": "admin_config",
         "parameters": [
           {
@@ -3160,7 +3160,7 @@
           "ADMIN"
         ],
         "summary": "Physically delete one demographic `PARTY` and the `PARTY_RELATIONSHIP`s\nthat name it (`DELETE /admin/party/{party_id}`).",
-        "description": "**Our own extension — no ITS-REST operation governs this.** The released\nAdmin API (`specifications/admin.openapi.yaml`) defines exactly two\noperations, both EHR deletes; the released Demographic API's `DELETE`s are\nlogical (they add a deleted version). This route is excluded from any\nconformance-profile claim.\n\nIt physically deletes the party along with its relationships; an unknown\nparty is `party_id_does_not_exist`. Every version of the party and of each\nrelationship naming it as `source` or `target` is removed, with their\ncontributions and audits. The access records naming the party stay, as for\nthe EHR physical delete.\n\nThe access record is the one `admin_ehr_delete` writes for an EHR: a DICOM\n`D` on the deleted record, here the demographic resource class with the\nparty id as its object.",
+        "description": "Our own extension: no ITS-REST operation governs this; the released\nDemographic API's deletes are logical.\n\nIt physically deletes the party along with its relationships; an unknown\nparty is `party_id_does_not_exist`. Every version of the party and of each\nrelationship naming it as `source` or `target` is removed, with their\ncontributions and audits. The access records naming the party stay, as for\nthe EHR physical delete.\n\nThe access record is the one `admin_ehr_delete` writes for an EHR: a DICOM\n`D` on the deleted record, here the demographic resource class with the\nparty id as its object.",
         "operationId": "admin_party_delete",
         "parameters": [
           {
@@ -3511,7 +3511,7 @@
           "ADMIN"
         ],
         "summary": "Physically delete one stored-query version — a single `(name, version)` row\n(`DELETE /admin/query/{qualified_query_name}/{version}`).",
-        "description": "**Our own extension — no ITS-REST operation governs this.** The released\nAdmin API (`specifications/admin.openapi.yaml`) defines exactly two\noperations, both EHR deletes, and the released Definition API has no\n`DELETE` on `/definition/query/…` either. This route is excluded from any\nconformance-profile claim.\n\nThis route removes exactly one `(name, version)` row and leaves the query's\nother versions in place.",
+        "description": "Our own extension: no ITS-REST operation governs this.\n\nThis route removes exactly one `(name, version)` row and leaves the query's\nother versions in place.",
         "operationId": "admin_query_delete",
         "parameters": [
           {
@@ -4954,7 +4954,7 @@
           "ADMIN"
         ],
         "summary": "Physically delete one operational template by its `template_id`\n(`DELETE /admin/template/{template_id}`).",
-        "description": "**Our own extension — no ITS-REST operation governs this.** The released\nAdmin API (`specifications/admin.openapi.yaml`) defines exactly two\noperations, both EHR deletes; there is no `DELETE` on any\n`/definition/template/adl1.4*` path either. This route is excluded from any\nconformance-profile claim.\n\nThe route is addressed by the wire `template_id` (matched\ncase-insensitively, overview §\"Composite Identifiers and Case\").\n\nThe delete is guarded: it refuses with `409` while any committed version\nstill references the template, so a physical delete can never orphan\ncommitted clinical data (the `version.template_id` foreign key is the\nunderlying integrity guard). No openEHR spec governs that guard — our own\ndesign.",
+        "description": "Our own extension: no ITS-REST operation governs this.\n\nThe route is addressed by the wire `template_id` (matched\ncase-insensitively, overview §\"Composite Identifiers and Case\").\n\nIt refuses with `409` while any committed version references the\ntemplate, so a physical delete never orphans committed clinical data.",
         "operationId": "admin_template_delete",
         "parameters": [
           {
@@ -8159,7 +8159,7 @@
           "CONTRIBUTION"
         ],
         "summary": "List an EHR's CONTRIBUTIONs, newest-first, paged\n(`GET /ehr/{ehr_id}/contribution`).",
-        "description": "**OUR OWN EXTENSION — no openEHR spec governs this route.** ITS-REST 1.1.0\ndefines exactly one CONTRIBUTION read, the by-uid GET\n(`specifications/operations/contribution_get.yaml`); there is no collection\nGET on `/ehr/{ehr_id}/contribution`, so nothing about the shape below is\nspec-derived. It answers a SUMMARY row per CONTRIBUTION.\n\nRows `{ uid, time_committed, committer, inserted_by_person, change_type,\nchange_type_rubric }` and the `total` of ALL the EHR's CONTRIBUTIONs: the\ncommitter's name only (the by-uid GET returns the `PARTY_PROXY`), whether it\nis `PARTY_SELF` (the record's person, EHDS Art. 5), the stored\n`audit_change_type` code and its rubric from the by-uid GET's bundle.",
+        "description": "Our own extension: ITS-REST 1.1.0 defines only the by-uid CONTRIBUTION\nGET. It answers a summary row per CONTRIBUTION.\n\nRows `{ uid, time_committed, committer, inserted_by_person, change_type,\nchange_type_rubric }` and the `total` of ALL the EHR's CONTRIBUTIONs: the\ncommitter's name only (the by-uid GET returns the `PARTY_PROXY`), whether it\nis `PARTY_SELF` (the record's person, EHDS Art. 5), the stored\n`audit_change_type` code and its rubric from the by-uid GET's bundle.",
         "operationId": "contribution_list",
         "parameters": [
           {
@@ -9337,7 +9337,7 @@
           "Query"
         ],
         "summary": "Execute an AQL query over a cohort selected in the demographic domain\n(`POST /query/cohort`).",
-        "description": "OUR OWN EXTENSION — no openEHR spec governs this operation. ITS-REST 1.1.0\npublishes an ad-hoc and a stored query and nothing else, and AQL is defined\nover the clinical domain alone (QUERY `master03-syntax.adoc`), with no\ndemographic source. The operation runs in three steps: a predicate from the\ndeployment's `[privacy.cohort.predicates]` allow-list selects parties on the\ndemographic credential; the clinical domain resolves them to the EHRs whose\n`EHR_STATUS.subject` names one of them and runs the AQL over exactly those\nEHRs, both on the clinical credential. Only identifiers cross between the\nsteps — no name, address or national identifier leaves the demographic\ndomain, and the caller never receives a party id.\n\nThe result set carries a `meta.cohort` object with the cohort size, the\nnumber of EHRs served, whether small-cell suppression withheld the rows, and\na SHA-256 digest of the predicate list, which is also how the one access\nevent this execution records names the cohort.\n\nA request may instead, or as well, name its `subjects` by identifier in any\nidentifier domain, each resolved through the installed EHR index provider;\nunder an IHE patient identity source that is the only form served, since\nthe server holds no party-to-EHR map there.\n\nThe route answers `404` until the deployment binds at least one predicate\nor sets `[privacy.cohort] subjects = true`.",
+        "description": "Our own extension: no openEHR spec governs this operation. A predicate\nfrom the deployment's `[privacy.cohort.predicates]` allow-list selects\nparties in the demographic domain; the clinical domain resolves them to\nthe EHRs whose `EHR_STATUS.subject` names one of them and runs the AQL\nover exactly those EHRs. Only identifiers cross between the steps, and\nthe caller never receives a party id.\n\nThe result set carries a `meta.cohort` object with the cohort size, the\nnumber of EHRs served, whether small-cell suppression withheld the rows, and\na SHA-256 digest of the predicate list, which is also how the one access\nevent this execution records names the cohort.\n\nA request may instead, or as well, name its `subjects` by identifier in any\nidentifier domain, each resolved through the installed EHR index provider;\nunder an IHE patient identity source that is the only form served, since\nthe server holds no party-to-EHR map there.\n\nThe route answers `404` until the deployment binds at least one predicate\nor sets `[privacy.cohort] subjects = true`.",
         "operationId": "query_execute_cohort",
         "requestBody": {
           "description": "`q` REQUIRED (the AQL), `cohort` (the predicates, intersected) and `subjects` (identifiers as `id`, `namespace` and an optional `type`, each resolved through the EHR index provider), at least one of the two non-empty, plus the OPTIONAL `purpose`, `query_parameters`, `offset` and `fetch`. The last four are spelled as on the released `AdhocQueryExecute` body, so a client that already speaks the query API needs no second vocabulary. There is no `ehr_id`: the cohort IS the scope. Each `cohort` entry names a key the deployment bound in `[privacy.cohort.predicates]`; several entries INTERSECT. An undeclared member is refused `400`.",
@@ -10158,7 +10158,7 @@
           "EHR"
         ],
         "summary": "Delete multiple EHRs (`DELETE /admin/ehr/all`).",
-        "description": "The released operation text (`operations/admin_ehr_delete_all.yaml`,\nsummary \"Delete multiple EHRs\"): \"Deletes all or multiple EHRs, or a\nspecified subset of EHRs identified using the `ehr_id` query parameter.\"\n\n> NOTE: This functionality is intended primarily for **development** or\n> **testing** purposes and may be disabled in **production** environments,\n> in which case server may respond with `405 Method Not Allowed`.\n\n\"All resources associated with or owned by the targeted EHRs (such as\n`COMPOSITION`, `EHR_STATUS`, `ITEM_TAG`, `CONTRIBUTION`, and their historical\nversions) will also be **permanently** and physically deleted, in compliance\nwith applicable data protection regulations (e.g., the GDPR in the European\nUnion).\"\n\n\"The server may execute this operation asynchronously (e.g. in batches), in\nwhich case returns status `202 Accepted`. If the deletion is processed\nsynchronously and completes successfully, the server returns status `204 No\nContent`.\" — this server is SYNCHRONOUS, so `204` is the only success and\nthe `202` branch is never produced (hence not declared; see the module\ndocs).\n\nThe released generic `404` (`responses/404.yaml`: \"`404 Not Found` is\nreturned when, based on the request parameters, the server did not find a\ncurrent representation of a target resource, or is not willing to disclose\nthat one exists.\") is UNREACHABLE on this server, and is therefore NOT\ndeclared: the released text defines no trigger for it on a mixed list, and\nthe shipped semantics are delete-what-exists → `204` (an id that names no\nEHR deletes nothing and is not an error), with a malformed id rejected `400`\nbefore any deletion runs.",
+        "description": "The released operation text (`operations/admin_ehr_delete_all.yaml`,\nsummary \"Delete multiple EHRs\"): \"Deletes all or multiple EHRs, or a\nspecified subset of EHRs identified using the `ehr_id` query parameter.\"\n\n> NOTE: This functionality is intended primarily for **development** or\n> **testing** purposes and may be disabled in **production** environments,\n> in which case server may respond with `405 Method Not Allowed`.\n\n\"All resources associated with or owned by the targeted EHRs (such as\n`COMPOSITION`, `EHR_STATUS`, `ITEM_TAG`, `CONTRIBUTION`, and their historical\nversions) will also be **permanently** and physically deleted, in compliance\nwith applicable data protection regulations (e.g., the GDPR in the European\nUnion).\"\n\nThis server is SYNCHRONOUS: `204` is the only success, and the released\nasynchronous `202 Accepted` branch is never produced. The generic `404`\n(`responses/404.yaml`) is UNREACHABLE: an id that names no EHR deletes\nnothing, and a malformed id is a `400` before any deletion runs.",
         "operationId": "admin_ehr_delete_all",
         "parameters": [
           {
@@ -10239,7 +10239,7 @@
           "EHR"
         ],
         "summary": "Delete EHR by id (`DELETE /admin/ehr/{ehr_id}`).",
-        "description": "The released operation text (`operations/admin_ehr_delete.yaml`, summary\n\"Delete EHR by id\"): \"Deletes the EHR identified by `ehr_id`.\"\n\n\"All resources associated with or owned by the specified EHR (such as\n`COMPOSITION`, `EHR_STATUS`, `ITEM_TAG`, `CONTRIBUTION`, and their historical\nversions) will also be **permanently** and physically deleted, in compliance\nwith applicable data protection regulations (e.g., the GDPR in the European\nUnion).\"\n\n\"The server may execute this operation asynchronously (e.g. in batches), in\nwhich case returns status `202 Accepted`. If the deletion is processed\nsynchronously and completes successfully, the server returns status `204 No\nContent`.\" — this server is SYNCHRONOUS, so `204` is the only success and\nthe `202` branch is never produced (hence not declared; see the module\ndocs).\n\nAn unknown EHR is `ehr_id_does_not_exist`. Note that the\nreleased operation does NOT carry the bulk route's development/testing NOTE\nand does NOT enumerate `405`: this single-EHR delete is not declared\ndisable-in-production by the released text, so the group's config gate\ngrounds its `405` on the overview §\"HTTP Methods\" rule instead.",
+        "description": "The released operation text (`operations/admin_ehr_delete.yaml`, summary\n\"Delete EHR by id\"): \"Deletes the EHR identified by `ehr_id`.\"\n\n\"All resources associated with or owned by the specified EHR (such as\n`COMPOSITION`, `EHR_STATUS`, `ITEM_TAG`, `CONTRIBUTION`, and their historical\nversions) will also be **permanently** and physically deleted, in compliance\nwith applicable data protection regulations (e.g., the GDPR in the European\nUnion).\"\n\nThis server is SYNCHRONOUS: `204` is the only success, and the released\nasynchronous `202 Accepted` branch is never produced. An unknown EHR is\n`ehr_id_does_not_exist`.",
         "operationId": "admin_ehr_delete",
         "parameters": [
           {
@@ -10324,7 +10324,7 @@
           "Query"
         ],
         "summary": "List every stored query (`GET /definition/query`).",
-        "description": "OUR OWN EXTENSION — no openEHR spec governs this bare form. The release\ndefines exactly one stored-query list operation,\n`GET /definition/query/{qualified_query_name}`\n(`specifications/operations/definition_query_list.yaml`), whose path\nparameter is `required: true`\n(`specifications/parameters/path/qualified_query_name.yaml`) — so that\noperation's \"when is empty, it will be treated as 'wildcard' in the search\"\nclause has no addressable form on the released wire. This route serves the\nempty-prefix case as a convenience extension; it answers exactly what the\nreleased list answers for the empty prefix.",
+        "description": "Our own extension: the released list operation\n(`specifications/operations/definition_query_list.yaml`) requires its\npath parameter, so this route serves its empty-prefix case and answers\nwhat that list would.",
         "operationId": "definition_query_list_all",
         "parameters": [
           {
@@ -10385,7 +10385,7 @@
           "Query"
         ],
         "summary": "List the stored versions of a named stored query\n(`GET /definition/query/{qualified_query_name}`).",
-        "description": "The name is a pattern (`[{namespace}::]{query-name}`, an empty part a\nwildcard, a bare name a prefix), so an unmatched\nname yields an empty `200` list, never `404` (see the module doc).",
+        "description": "The name is a pattern (`[{namespace}::]{query-name}`, an empty part a\nwildcard, a bare name a prefix), so an unmatched name yields an empty\n`200` list, never `404`.",
         "operationId": "definition_query_list",
         "parameters": [
           {
@@ -11583,7 +11583,7 @@
           "ADL2"
         ],
         "summary": "Retrieve one ADL 2 template at a specific version\n(`GET /definition/template/adl2/{template_id}/{version}`).",
-        "description": "DEPRECATED in the released spec but served: the operation file carries\n`deprecated: true`\n(`specifications/operations/definition_template_adl2_version_get.yaml`) under\namendment SPECITS-87, \"Deprecate ADL2 'Get template at version' and the\nversion query parameter from upload template\"\n(`specifications/docs/overview/Amendment_record.md`) — the only operation in\nthis group so marked, and the only declaration here that carries\n`deprecated`. It is still released text, so it is still served; the release\ndefines no `Deprecation`/`Sunset` signalling for a deprecated operation, so\nnone is emitted (silence, registered as a conformance boundary).\n\nIt resolves `template_id` + the SEMVER `version` (exact or\n`{major}[.{minor}]` prefix → highest match) and returns the same\nrepresentations as `_get` (`text/plain` source / `application/json`\n`OperationalTemplateV2`).",
+        "description": "Deprecated in the released spec (SPECITS-87,\n`specifications/docs/overview/Amendment_record.md`) and served; the\nrelease defines no `Deprecation` or `Sunset` signalling, so none is\nemitted.\n\nIt resolves `template_id` + the SEMVER `version` (exact or\n`{major}[.{minor}]` prefix → highest match) and returns the same\nrepresentations as `_get` (`text/plain` source / `application/json`\n`OperationalTemplateV2`).",
         "operationId": "definition_template_adl2_version_get",
         "parameters": [
           {
@@ -13131,7 +13131,7 @@
           "CONTRIBUTION"
         ],
         "summary": "Create a demographic `CONTRIBUTION` (`POST /demographic/contribution`).",
-        "description": "The released operation defines the relaxed commit envelope verbatim: \"We\nwill use the relaxed CONTRIBUTION with the following optional attributes:\n`uid`: when provided, it will be accepted in case is not in-use, otherwise\nerror will be returned; `audit.time_committed`: server will always set it;\n`audit.system_id`: when provided, it will be validated\" (ITS-REST\n`specifications/operations/demographic_contribution_create.yaml`). \"The\n`audit` and each `versions[i].commit_audit` are `UPDATE_AUDIT` objects …\nClients SHOULD send `_type: \\\"UPDATE_AUDIT\\\"`; for interoperability servers\nSHOULD additionally accept `_type: \\\"AUDIT_DETAILS\\\"` or an omitted `_type`\nfor this attribute.\"\n\nThe commit envelope is canonical **JSON** only on this build: the released\noperation references `parameters/header/ContentType_canonical.yaml`\n(JSON + XML), and `Resources.md` §\"Data representation\" requires only that\n\"Services MUST support at least one of the openEHR **XML** or **JSON**\ncanonical formats\" — an honest boundary, not a spec allowance.",
+        "description": "The released operation defines the relaxed commit envelope verbatim: \"We\nwill use the relaxed CONTRIBUTION with the following optional attributes:\n`uid`: when provided, it will be accepted in case is not in-use, otherwise\nerror will be returned; `audit.time_committed`: server will always set it;\n`audit.system_id`: when provided, it will be validated\" (ITS-REST\n`specifications/operations/demographic_contribution_create.yaml`). \"The\n`audit` and each `versions[i].commit_audit` are `UPDATE_AUDIT` objects …\nClients SHOULD send `_type: \\\"UPDATE_AUDIT\\\"`; for interoperability servers\nSHOULD additionally accept `_type: \\\"AUDIT_DETAILS\\\"` or an omitted `_type`\nfor this attribute.\"\n\nThe commit envelope is canonical JSON only.",
         "operationId": "demographic_contribution_create",
         "parameters": [
           {
@@ -19360,7 +19360,7 @@
           "ITEM_TAG"
         ],
         "summary": "List `ITEM_TAG`s across the whole Demographic space\n(`GET /demographic/tags`).",
-        "description": "\"Retrieves the list of `ITEM_TAG` resources associated with any target `VERSION`\nor `VERSIONED_PARTY` within the Demographic space.\" (ITS-REST\n`specifications/operations/demographic_tags_get.yaml`).\n\nThe ONLY tag route on the whole surface with NO scoping parameter: its\nEHR-side twin is bounded by one EHR, this one is a whole-space scan. The\nreleased operation declares no scoping parameter, no `offset`/`fetch`, no\nordering and no limit, and no released sentence bounds who may read the\nspace — it is served whole under the deployment's authorization layer, a\nposition adjudicated (distinct from the\nfilter semantics, which are their own entry).",
+        "description": "\"Retrieves the list of `ITEM_TAG` resources associated with any target `VERSION`\nor `VERSIONED_PARTY` within the Demographic space.\" (ITS-REST\n`specifications/operations/demographic_tags_get.yaml`).\n\nThe only tag route with no scoping parameter: the released operation\ndeclares none, nor paging, ordering or a limit, so the whole space is\nserved under the deployment's authorization.",
         "operationId": "demographic_tags_get",
         "parameters": [
           {
@@ -19484,7 +19484,7 @@
           "VERSIONED_PARTY"
         ],
         "summary": "Retrieve the `VERSIONED_PARTY` container\n(`GET /demographic/versioned_party/{versioned_object_uid}`).",
-        "description": "\"Retrieves a `VERSIONED_PARTY` identified by `versioned_object_uid`.\"\n(ITS-REST `specifications/operations/versioned_party_get.yaml`). The four\n`versioned_party_*` reads are canonical-JSON-only on this server: the\nreleased operations reference `parameters/header/Accept_canonical.yaml`\n(JSON + XML), and `Resources.md` §\"Data representation\" requires only that\n\"Services MUST support at least one of the openEHR **XML** or **JSON**\ncanonical formats\" — JSON satisfies it, and an exclusively-XML `Accept` is\nthe `406` the same chapter mandates. That is an honest boundary of this\nbuild, not a spec allowance to serve less.",
+        "description": "\"Retrieves a `VERSIONED_PARTY` identified by `versioned_object_uid`.\"\n(ITS-REST `specifications/operations/versioned_party_get.yaml`). The\nfour `versioned_party_*` reads serve canonical JSON only; an XML-only\n`Accept` is `406`.",
         "operationId": "versioned_party_get",
         "parameters": [
           {
@@ -20324,7 +20324,7 @@
           "EHR"
         ],
         "summary": "Create an EHR with a client-supplied id (`PUT /ehr/{ehr_id}`).",
-        "description": "`ehr_id` is a UUID: ITS-REST identifies an EHR by `EHR.ehr_id.value` in\nUUID form (`Resources.md` §\"Identifier types\").\nEvery UUID is a valid `HIER_OBJECT_ID` root, so no released sentence is\nnarrowed by accepting only UUIDs.\nThe committal headers `openehr-version` / `openehr-audit-details` are\naccepted and merged into the creating CONTRIBUTION and its `EHR_STATUS`\nversion (`Requests_and_responses.md` §openehr-version-and-audit-details).",
+        "description": "`ehr_id` is a UUID: ITS-REST identifies an EHR by `EHR.ehr_id.value` in\nUUID form (`Resources.md` §\"Identifier types\").\nThe committal headers `openehr-version` / `openehr-audit-details` are\naccepted and merged into the creating CONTRIBUTION and its `EHR_STATUS`\nversion (`Requests_and_responses.md` §openehr-version-and-audit-details).",
         "operationId": "ehr_create_with_id",
         "parameters": [
           {
@@ -22140,7 +22140,7 @@
           "ITEM_TAG"
         ],
         "summary": "Replace a COMPOSITION's item tags\n(`PUT /ehr/{ehr_id}/composition/{uid_based_id}/tags`).",
-        "description": "\"Updates the list of all `ITEM_TAG` resources associated with a given target\nCOMPOSITION version or `VERSIONED_COMPOSITION` identified by `uid_based_id`\nand owned by EHR identified by `ehr_id`\"\n(`specifications/operations/composition_tags_update.yaml`). It is a FULL\nCOLLECTION REPLACE of the ADDRESSED collection — the container's or one\nversion's, never both: tags omitted from the body are removed, and\n\"providing an empty list will effectively remove all `ITEM_TAG` associated\nwith the given target\".\n\nTags are not change-controlled, so this write commits no CONTRIBUTION,\nmints no version, takes no `If-Match` and no committal headers, and serves\nneither `ETag` nor `Last-Modified` (see the section note above).",
+        "description": "\"Updates the list of all `ITEM_TAG` resources associated with a given target\nCOMPOSITION version or `VERSIONED_COMPOSITION` identified by `uid_based_id`\nand owned by EHR identified by `ehr_id`\"\n(`specifications/operations/composition_tags_update.yaml`). It is a FULL\nCOLLECTION REPLACE of the ADDRESSED collection — the container's or one\nversion's, never both: tags omitted from the body are removed, and\n\"providing an empty list will effectively remove all `ITEM_TAG` associated\nwith the given target\".\n\nTags are not change-controlled, so this write commits no CONTRIBUTION,\nmints no version, takes no `If-Match` and no committal headers, and\nserves neither `ETag` nor `Last-Modified`.",
         "operationId": "composition_tags_update",
         "parameters": [
           {
@@ -22390,7 +22390,7 @@
           "CONTRIBUTION"
         ],
         "summary": "Create a CONTRIBUTION — the NATIVE change-set commit\n(`POST /ehr/{ehr_id}/contribution`).",
-        "description": "One CONTRIBUTION is one atomic change-set: `versions[]` MAY mix creations,\nmodifications, logical deletions and attestations of COMPOSITION /\n`EHR_STATUS` / FOLDER, and either all of them commit or none (\"Contributions\nare similar to nested transactions. An attempt to commit a Contribution\nshould only succeed if each Version and/or Attestation in the Contribution\nis committed successfully\" — RM common master06 §\"Committal and Audits\";\nthe legal mixture is master06 §Contributions: \"there might be any\ncombination of the logical change types in a single commit\"). The\nper-resource `POST`/`PUT`/`DELETE` routes are convenience wrappers over\nexactly this operation — they \"MUST internally be executed using the\n'native' way\" (`Requests_and_responses.md` §\"openehr-version and\nopenehr-audit-details\").\n\nWhich is why this route declares NO `openehr-version` /\n`openehr-audit-details` parameters: those headers exist to carry committal\nmetadata for the convenience methods, and here that metadata is IN the body\n— `versions[i].lifecycle_state`, `versions[i].commit_audit` and the\nenvelope `audit`. The section's merge MUST is scoped to the convenience\nmethods, and the released text states no precedence for those headers\narriving on the native route, so answering from the body alone is OUR OWN\nreading, adjudicated.",
+        "description": "One CONTRIBUTION is one atomic change-set: `versions[]` MAY mix creations,\nmodifications, logical deletions and attestations of COMPOSITION /\n`EHR_STATUS` / FOLDER, and either all of them commit or none (\"Contributions\nare similar to nested transactions. An attempt to commit a Contribution\nshould only succeed if each Version and/or Attestation in the Contribution\nis committed successfully\" — RM common master06 §\"Committal and Audits\";\nthe legal mixture is master06 §Contributions: \"there might be any\ncombination of the logical change types in a single commit\"). The\nper-resource `POST`/`PUT`/`DELETE` routes are convenience wrappers over\nexactly this operation — they \"MUST internally be executed using the\n'native' way\" (`Requests_and_responses.md` §\"openehr-version and\nopenehr-audit-details\").\n\nThis route takes no `openehr-version` or `openehr-audit-details` header:\nits committal metadata is in the body (`versions[i].lifecycle_state`,\n`versions[i].commit_audit` and the envelope `audit`).",
         "operationId": "contribution_create",
         "parameters": [
           {
@@ -24867,7 +24867,7 @@
           "ITEM_TAG"
         ],
         "summary": "Replace an `EHR_STATUS`'s item tags\n(`PUT /ehr/{ehr_id}/ehr_status/{uid_based_id}/tags`).",
-        "description": "\"Updates the list of all `ITEM_TAG` resources associated with a given target\n`EHR_STATUS` version or `VERSIONED_EHR_STATUS` identified by `uid_based_id` and\nowned by EHR identified by `ehr_id`\"\n(`specifications/operations/ehr_status_tags_update.yaml`). It is a FULL\nCOLLECTION REPLACE of the ADDRESSED collection — the container's or one\nversion's, never both: tags omitted from the body are removed, and\n\"providing an empty list will effectively remove all `ITEM_TAG` associated\nwith the given target\".\n\nTags are not change-controlled, so this write commits no CONTRIBUTION,\nmints no `EHR_STATUS` version, takes no `If-Match` and no committal headers,\nand serves neither `ETag` nor `Last-Modified` (see the section note above).",
+        "description": "\"Updates the list of all `ITEM_TAG` resources associated with a given target\n`EHR_STATUS` version or `VERSIONED_EHR_STATUS` identified by `uid_based_id` and\nowned by EHR identified by `ehr_id`\"\n(`specifications/operations/ehr_status_tags_update.yaml`). It is a FULL\nCOLLECTION REPLACE of the ADDRESSED collection — the container's or one\nversion's, never both: tags omitted from the body are removed, and\n\"providing an empty list will effectively remove all `ITEM_TAG` associated\nwith the given target\".\n\nTags are not change-controlled, so this write commits no CONTRIBUTION,\nmints no `EHR_STATUS` version, takes no `If-Match` and no committal\nheaders, and serves neither `ETag` nor `Last-Modified`.",
         "operationId": "ehr_status_tags_update",
         "parameters": [
           {
@@ -25267,7 +25267,7 @@
           "ITEM_TAG"
         ],
         "summary": "Retrieve every `ITEM_TAG` in an EHR (`GET /ehr/{ehr_id}/tags`).",
-        "description": "The EHR-wide aggregate read: \"Retrieves the list of `ITEM_TAG` resources\nassociated with any target VERSION or `VERSIONED_OBJECT` within the EHR\nidentified by `ehr_id`\" (ITS-REST\n`specifications/operations/ehr_tags_get.yaml`). One list therefore spans\nBOTH target forms (a `VERSIONED_OBJECT` container and a specific VERSION) and\nevery taggable kind (COMPOSITION, `EHR_STATUS`, FOLDER). Each row names its\nown `target` by identifier, but NOT by RM class: the RM types `target` as a\nbare `UID_BASED_ID` (`item_tag.adoc`), which carries no `type` member, so a\nclient that needs the target's kind resolves the uid. (The released OAS\nmodels `target` as an `OBJECT_REF`, which would carry it — a real\nconflict; the released RM wins.)\n\nThe list is unbounded: the released operation declares no `offset`/`fetch`,\nordering or limit parameter, so every matching tag is returned. The\n(`key`, `target_path`) ordering the server applies is OURS — no openEHR spec\ngoverns tag ordering.",
+        "description": "The EHR-wide aggregate read: \"Retrieves the list of `ITEM_TAG` resources\nassociated with any target VERSION or `VERSIONED_OBJECT` within the EHR\nidentified by `ehr_id`\" (ITS-REST\n`specifications/operations/ehr_tags_get.yaml`). One list spans both\ntarget forms and every taggable kind (COMPOSITION, `EHR_STATUS`,\nFOLDER). Each row names its `target` by identifier, not by RM class (RM\n`item_tag.adoc` types it a bare `UID_BASED_ID`), so a client that needs\nthe target's kind resolves the uid.\n\nThe list is unbounded: the released operation declares no paging,\nordering or limit. The (`key`, `target_path`) ordering is our own.",
         "operationId": "ehr_tags_get",
         "parameters": [
           {
@@ -26947,7 +26947,7 @@
           "Query"
         ],
         "summary": "Execute an ad-hoc AQL query from the query string (`GET /query/aql`).",
-        "description": "An ad-hoc query carries its own definition: it has no stored identifier and\nis \"executed as-is, as part of the request body or as a query parameter\"\n(`docs/query/Query_types.md` §Ad-hoc queries). This is the query-string form;\nthe request-body form is the sibling `POST` on the same path, which\n`Request.md` §\"GET vs POST\" recommends for anything long: \"Requests based on\nthe `GET` method have URI length restriction, or some characters might not be\nallowed and have to be encoded. Long queries in the `q` parameter and having\na long list of `query_parameters` may add up to reach that limit, thus we\nrecommend clients using the `POST` method instead of `GET`.\" That is a\nCLIENT-side recommendation about URI limits — this server imposes no\npreference and both forms execute identically.",
+        "description": "An ad-hoc query carries its own definition and is \"executed as-is, as\npart of the request body or as a query parameter\"\n(`docs/query/Query_types.md` §Ad-hoc queries). This is the query-string\nform; the request-body form is the sibling `POST`, which `Request.md`\n§\"GET vs POST\" recommends for long queries. Both forms execute\nidentically.",
         "operationId": "query_execute_adhoc_query",
         "parameters": [
           {
@@ -27132,7 +27132,7 @@
           "Query"
         ],
         "summary": "Execute an ad-hoc AQL query from the request body (`POST /query/aql`).",
-        "description": "The body form of the same ad-hoc operation, and the one `Request.md`\n§\"GET vs POST\" recommends to clients: \"Requests based on the `GET` method\nhave URI length restriction, or some characters might not be allowed and\nhave to be encoded. Long queries in the `q` parameter and having a long list\nof `query_parameters` may add up to reach that limit, thus we recommend\nclients using the `POST` method instead of `GET`.\" That is a client-side\nrecommendation about URI limits only — the two forms execute identically\nhere.\n\n`Request.md`'s parameter list is headed \"All query execution requests SHOULD\nsupport at least the following parameters\" and draws no `GET`/`POST`\ndistinction, so this operation ALSO accepts `offset`, `fetch` and named\n`$parameter` binds from the query string. When a value arrives both in the\nURL and in the body, equal values are accepted and conflicting ones are a\n`400` — the released text assigns no precedence, so that is OUR OWN handling,\nthe same rule the two `ehr_id` carriers follow.",
+        "description": "The body form of the same ad-hoc operation, which `Request.md` §\"GET vs\nPOST\" recommends for long queries; both forms execute identically. It\nalso accepts `offset`, `fetch` and named `$parameter` binds from the\nquery string, since `Request.md` draws no `GET`/`POST` distinction:\nequal values in the URL and the body are accepted, and conflicting ones\nare a `400` (our own handling).",
         "operationId": "query_execute_adhoc_query_body",
         "parameters": [
           {
@@ -27511,7 +27511,7 @@
           "Query"
         ],
         "summary": "Execute a named stored query, latest version, from the request body\n(`POST /query/{qualified_query_name}`).",
-        "description": "The body form of the latest-version stored execution: the client sends no\nAQL (the definition is stored — `docs/query/Query_types.md` §Stored queries),\nonly the paging window and the `$parameter` binds. Every `Query` member is\nOPTIONAL on this wire: the released schema's\n`required: [offset, fetch, query_parameters]` cannot stand against the docs\ntext that gives `offset` a default of `0` and leaves `fetch`\nimplementation-defined (`Request.md` §Common Headers and Query Parameters) —\na required member cannot default — so `{}` is a valid body and executes a\nparameterless stored query. `Request.md`'s parameter list is likewise headed\n\"All query execution requests\" with no `GET`/`POST` distinction, so this\noperation also accepts `offset`/`fetch`/named binds from the query string;\na value supplied in both carriers must agree, else `400` (OUR OWN handling of\nthe unassigned precedence, the same rule `ehr_id` follows).",
+        "description": "The body form of the latest-version stored execution: the client sends\nonly the paging window and the `$parameter` binds. Every `Query` member\nis optional, since `Request.md` gives `offset` a default of `0` and\nleaves `fetch` implementation-defined, so `{}` executes a parameterless\nstored query. `offset`, `fetch` and named binds are also accepted from\nthe query string; a value supplied in both must agree, else `400` (our\nown handling).",
         "operationId": "query_execute_stored_query_body",
         "parameters": [
           {
@@ -27901,7 +27901,7 @@
           "Query"
         ],
         "summary": "Execute a named stored query at a specific version, from the request body\n(`POST /query/{qualified_query_name}/{version}`).",
-        "description": "The body form of the version-addressed stored execution. `{version}` matches\nexactly or as a prefix — \"when only a partial `version` pattern is supplied\n… the system must use the latest `version` with the supplied prefix - i.e.\nif only `major` or `major.minor` is used, then the latest query version\nmatching supplied prefix will be used\" (`docs/query/Qualified_query_name.md`).\nAs on the sibling `POST`, every `Query` body member is OPTIONAL (the docs\ntext's `offset` default of `0` and implementation-defined `fetch` cannot\ncoexist with the released schema's `required` list, and the docs text wins),\nso `{}` executes the addressed version with no binds; and `offset`, `fetch`\nand named `$parameter` binds are equally accepted from the query string,\nconflicting values across the two carriers being a `400` (OUR OWN handling of\nthe unassigned precedence).",
+        "description": "The body form of the version-addressed stored execution. `{version}` matches\nexactly or as a prefix — \"when only a partial `version` pattern is supplied\n… the system must use the latest `version` with the supplied prefix - i.e.\nif only `major` or `major.minor` is used, then the latest query version\nmatching supplied prefix will be used\" (`docs/query/Qualified_query_name.md`).\nAs on the sibling `POST`, every `Query` body member is optional, so `{}`\nexecutes the addressed version with no binds, and `offset`, `fetch` and\nnamed `$parameter` binds are also accepted from the query string;\nconflicting values across the two are a `400` (our own handling).",
         "operationId": "query_execute_stored_query_version_body",
         "parameters": [
           {

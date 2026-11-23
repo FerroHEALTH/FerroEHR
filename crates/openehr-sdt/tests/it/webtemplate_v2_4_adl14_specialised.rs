@@ -2,13 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The Web Template of a template over an ADL 1.4 specialised archetype holds
-//! one `/context` (#4979).
-//!
-//! The CKM `report-result.v1` COMPOSITION specialises `report.v1` in ADL 1.4,
-//! whose archetypes are authored in flat form
-//! (`docs/specs/openehr/AM/docs/ADL2/master07.02-adl_conventions.adoc`
-//! §File-naming Convention), so the operational template carries the child's
-//! `context` once and a consumer naming `/context` meets one node.
+//! one `/context` (ADL2 `master07.02-adl_conventions.adoc` §File-naming).
 
 #![expect(
     clippy::expect_used,

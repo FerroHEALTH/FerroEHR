@@ -23,14 +23,6 @@
 //! End-to-end journey over the viewer's **EHR-side `ITEM_TAG` surfaces** — the
 //! openEHR tag operations every client has:
 //!
-//! - the composition viewer's tag panel sets two tags and lists them as rows;
-//! - the EHR detail's **Tags** tab finds them grouped under the composition
-//!   they are on, and its **Open** action resolves the tagged id back to the
-//!   composition viewer (a tag names its target without naming that target's
-//!   kind, so the viewer has to ask the CDR);
-//! - deleting one tag by key leaves the other, which is the released
-//!   delete-by-key contract.
-//!
 //! Isolation: the journey creates its OWN EHR and composition over ITS-REST, so
 //! it never touches the fixtures the other journeys or the
 //! documentation-screenshot pass depend on.
@@ -276,10 +268,6 @@ async fn set_status_tag(http: &reqwest::Client, v1: &str, ehr_id: &str, key: &st
 
 /// A run-unique suffix for the fixtures a journey creates, so a shared stack
 /// can hold several runs' tags without collision.
-///
-/// The process id distinguishes runs and the counter distinguishes calls within
-/// one — the harness needs distinctness, not entropy, and no clock (the
-/// wall-clock reads a `disallowed-methods` ban anyway).
 fn jitter() -> String {
     static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
     let seq = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);

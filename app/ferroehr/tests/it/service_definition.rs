@@ -5,8 +5,6 @@
 //! `PostgreSQL` 18 (shared testkit harness): ADL 1.4 source archetypes, OPTs
 //! (delegated to `template_store`), and registered queries. Driven through the
 //! service methods exactly as a protocol adapter would call them.
-//!
-//! Requires Docker. Each test owns its container (`Drop` removes it).
 
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
@@ -1013,10 +1011,9 @@ async fn query_store_get_list_delete() {
 
     // ── ONE canonical key across every surface (bare name → the "misc"
     // namespace) ─────────────────────────────────────────────────────────────
-    // The WIRE store of a bare name must land on the SAME row the by-name wire
-    // GET, the list, and the admin delete address — the former asymmetry
-    // keyed the wire store under ('', name) and made the query
-    // undeletable/unfindable under the name it was created with.
+    // The wire store of a bare name lands on the same row the by-name wire GET,
+    // the list and the admin delete address, so the query is found and deleted
+    // under the name it was created with.
     svc.query_store(
         &qn("wire_bare"),
         Some(version_pattern("1.0.0")),
@@ -1261,8 +1258,8 @@ async fn adl2_template_resolves_on_the_commit_path_and_validates() {
         .await
         .expect("upload ADL2 OPT");
 
-    // Gap 2: the runtime resolver used by the FLAT/STRUCTURED commit path now
-    // resolves the ADL2 template (before #269: `ServiceError::Unprocessable`).
+    // The runtime resolver of the FLAT/STRUCTURED commit path resolves the ADL2
+    // template (#269).
     let wt = svc
         .web_template(HRID)
         .await

@@ -17,15 +17,10 @@
 //! and compares the result to the stored body, so a tampered or corrupt row in
 //! either copy becomes visible.
 //!
-//! Reassembly is only half of it. Rows written by an OLDER decomposition still
-//! reassemble into exactly their body: the same content, in a different shape.
-//! A version whose rows agree is therefore decomposed a second time from its
-//! body and the two row sets compared, which is what makes a release that
-//! changes the decomposition an upgrade step an operator can run and verify.
+//! A version whose rows agree is decomposed again from its body and the two row
+//! sets compared, so rows an older decomposition wrote are found too.
 //!
-//! It runs off the request path on an administrator's call and reads every
-//! stored version in both storage tiers. It never logs content; a mismatch is
-//! reported by identifier alone.
+//! It never logs content: a mismatch is reported by identifier alone.
 
 #![expect(
     clippy::disallowed_types,
@@ -50,18 +45,12 @@ use crate::storage::node_repo::read_version_rows_all;
 use crate::storage::row::ReadRow;
 
 /// How many version rows one page of the sweep's cursor query returns.
-///
-/// The page carries identifiers only (no content), so it stays small whatever
-/// the documents weigh; content is then read a [`CONTENT_CHUNK`] at a time.
 const PAGE_SIZE: i64 = 500;
 
 /// How many versions' contents are read per round trip.
 ///
-/// The sweep needs both copies of every version, so its cost is two statements
-/// per chunk rather than two per version: a 60 000-version store goes from
-/// about 120 000 round trips to under 4 000. The chunk is what bounds memory —
-/// the reassembled tree and the stored body of 32 documents at once, not of a
-/// whole 500-row page, and not one version at a time either.
+/// Bounds memory to 32 reassembled trees and stored bodies at a time, at two
+/// statements per chunk.
 const CONTENT_CHUNK: usize = 32;
 
 /// How many mismatches the returned report carries in full.
@@ -73,12 +62,8 @@ const MAX_REPORTED_MISMATCHES: usize = 1000;
 
 /// Which pseudonymisation domain a sweep is reading.
 ///
-/// The storage was one schema until the demographic domain split out (#3153),
-/// and the sweep quietly kept reading only the clinical one. A domain is
-/// therefore carried on every finding and every count rather than assumed:
-/// an operator asking whether their storage is intact means the whole store,
-/// and a report that covered half of it must never be able to look like a
-/// report that covered all of it.
+/// A domain is carried on every finding and every count, so a report over half
+/// the store never reads as one over all of it.
 ///
 /// NOTE: no openEHR spec governs storage layout — our own design/extension.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -179,11 +164,6 @@ pub struct StorageParityCounts {
 
 /// One event of a running storage-parity sweep.
 ///
-/// A sweep reads every byte of what it covers, so a whole-repository pass can
-/// run far longer than any one request may take to answer. Reporting it as a
-/// sequence of events is what lets a caller consume the findings while the
-/// sweep is still running.
-///
 /// NOTE: no openEHR spec governs storage mechanics — our own design/extension.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StorageParityEvent {
@@ -242,19 +222,7 @@ struct VersionKey {
 /// Whether one version's stored rows are the rows the current decomposition
 /// writes for its body.
 ///
-/// Only asked of a version whose rows already reassemble into exactly that
-/// body, which is what makes the comparison well founded: decomposition and
-/// reassembly are inverses, so rows in the current shape are byte for byte
-/// what `decompose` returns, and any difference is a shape the codec no longer
-/// produces. Compared over every field the read row carries — the nested-set
-/// index, the step under the parent, the fragment; the promoted query columns are
-/// derived from the fragment and the archetype chain, so rows agreeing on
-/// these agree on those.
-///
-/// A body that does not decompose at all is not current either: the codec
-/// would write no rows for it. The rebuild answers that case with a refusal
-/// naming the body, which is the honest outcome for a version whose two copies
-/// agree on content the codec can no longer index.
+/// A body that does not decompose is not current.
 fn rows_are_current(stored: &[ReadRow], body: &Value) -> bool {
     // NOTE: the root identity decides only how a row slims, never its whole
     // fragment or its place in the tree, which is all this compares.
@@ -293,11 +261,6 @@ impl FerroEhrService {
     /// Starts a sweep the caller advances itself, one batch of events at a
     /// time.
     ///
-    /// This is the sweep; [`Self::verify_storage_parity`] is one way of
-    /// consuming it. A caller that must report findings while the sweep is
-    /// still running — a response written as a stream of lines — drives this
-    /// instead, and gets exactly the same reads, counts and log lines.
-    ///
     /// NOTE: no openEHR spec governs storage mechanics — our own
     /// design/extension.
     #[must_use]
@@ -321,19 +284,9 @@ impl FerroEhrService {
     /// compares it to the materialized `version.body`, reporting every
     /// disagreement.
     ///
-    /// A version whose two copies agree is then decomposed once more from its
-    /// body, so rows carrying the right content in a shape an older
-    /// decomposition wrote are reported as
-    /// [`StorageParityDefect::StaleDecomposition`] rather than passed as
-    /// healthy.
-    ///
-    /// The sweep reads BOTH storage tiers: it names the partitioned parents
-    /// `version` and `node` and pins no tier, so archived content is checked
-    /// like everything else. It
-    /// takes no lock and holds no transaction: a version committed while the
-    /// sweep runs is simply checked or not, and a version read mid-commit
-    /// cannot be seen half-written because a commit writes both copies in one
-    /// transaction.
+    /// Reads both storage tiers. It takes no lock and holds no transaction; a
+    /// commit writes both copies in one transaction, so no version is seen
+    /// half-written.
     ///
     /// NOTE: no openEHR spec governs storage mechanics — our own
     /// design/extension (the module docs carry the full derivation).
@@ -383,10 +336,6 @@ impl FerroEhrService {
     }
 
     /// The pool that reaches one domain's storage.
-    ///
-    /// Both domains carry relations of the same names, distinguished only by
-    /// the pool's `search_path`, which is exactly what lets one sweep read
-    /// both with one set of statements.
     fn domain_pool(&self, domain: StorageDomain) -> &sqlx::PgPool {
         match domain {
             StorageDomain::Clinical => &self.pool,
@@ -492,11 +441,7 @@ impl FerroEhrService {
 
 /// A storage-parity sweep in progress, advanced one batch of events at a time.
 ///
-/// The sweep is a cursor rather than one call so both response shapes share ONE
-/// implementation: the aggregated report drains it, and a streamed response
-/// writes each event as a line as it arrives. Advancing only when the caller
-/// asks is also what gives a stream its backpressure and its cancellation —
-/// dropping the sweep stops the reads at the next batch boundary.
+/// Dropping the sweep stops the reads at the next batch boundary.
 ///
 /// NOTE: no openEHR spec governs storage mechanics — our own design/extension.
 pub struct StorageParitySweep<'a> {
@@ -535,9 +480,8 @@ impl StorageParitySweep<'_> {
     /// Advances the sweep, returning the next batch of events, or `None` once
     /// the summary has been handed over.
     ///
-    /// A batch is what one chunk of versions produced, so it is empty whenever
-    /// those versions agreed — which is the common case. The last batch before
-    /// `None` carries the [`StorageParityEvent::Summary`].
+    /// A batch is empty when its versions agreed; the last batch before `None`
+    /// carries the [`StorageParityEvent::Summary`].
     ///
     /// # Errors
     /// - `exception` — a database fault while enumerating or reading versions.

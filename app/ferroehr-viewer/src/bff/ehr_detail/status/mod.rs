@@ -4,22 +4,6 @@
 //! The EHR-detail Status tabs: the EHR's `EHR_STATUS` resource, read, edited,
 //! and walked version by version.
 //!
-//! Two tabs, one resource family:
-//!
-//! - **Status** — the CURRENT `EHR_STATUS` (`GET /ehr/{ehr_id}/ehr_status`):
-//!   the queryable/modifiable badges, the subject, the whole document in a
-//!   `DocumentPane`, and the [`edit`] form that commits a new version
-//!   (`PUT /ehr/{ehr_id}/ehr_status` with `If-Match`).
-//! - **Status history** — the `VERSIONED_EHR_STATUS` family (`history`): the
-//!   container + selected-VERSION envelope facts, the revision-history table, a
-//!   `version_at_time` lookup, and any version's document pinned by its
-//!   `OBJECT_VERSION_ID` (`GET /ehr/{ehr_id}/ehr_status/{version_uid}`).
-//!
-//! One reader per claim: the **Status** tab is the viewer's ONE reader of the
-//! current status document; the **Status history** tab never touches that
-//! endpoint — it reads the versioned family for the commit history and the
-//! VERSION envelope, and pins a document by an explicit `version_uid`.
-//!
 //! No openEHR spec governs the viewer — our own design / product extension. The
 //! wire it reads and writes IS spec-bound: the `EHR_STATUS` +
 //! `VERSIONED_EHR_STATUS` operations (the ITS-REST EHR API's `EHR_STATUS` +
@@ -43,10 +27,6 @@ use crate::locale::{Msg, tr, tr_served};
 pub mod edit;
 
 /// The viewer's view of an EHR's CURRENT `EHR_STATUS`.
-///
-/// The canonical document verbatim, the version that document IS, and the
-/// facts the edit form works on — flattened BFF-side so the browser never
-/// re-models the RM and so the type carries no `usize`.
 ///
 /// The attributes are the RM `EHR_STATUS` class's own
 /// (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr.ehr_status.adoc`):
@@ -85,9 +65,6 @@ pub struct EhrStatusState {
 /// The EHR's CURRENT `EHR_STATUS` (`GET /ehr/{ehr_id}/ehr_status`), flattened
 /// into an [`EhrStatusState`].
 ///
-/// This is the viewer's ONE reader of the current status document; the history
-/// tab reads versions.
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Failed`] when the body is not valid JSON.
@@ -107,9 +84,6 @@ pub async fn fetch_ehr_status(
 /// (`GET /ehr/{ehr_id}/ehr_status/{version_uid}` — "retrieves a particular
 /// version of the `EHR_STATUS` identified by `version_uid`",
 /// `GET ehr/{ehr_id}/ehr_status/{version_uid}` — the ITS-REST EHR API).
-///
-/// `version_uid` is a full `OBJECT_VERSION_ID`; the history tab only ever passes
-/// ids the CDR itself reported.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -143,31 +117,11 @@ pub async fn fetch_ehr_status_version(
 
 /// Commit a new `EHR_STATUS` version (`PUT /ehr/{ehr_id}/ehr_status`).
 ///
-/// The body sent is `base_body` — the document this screen loaded — with exactly
-/// three attributes replaced: `is_queryable`, `is_modifiable`, and
-/// `other_details` (removed when the text is blank, since the attribute is
-/// optional). Everything else, the `subject` included, travels back verbatim
-/// (the merge is `edit::apply_status_edits`), so an edit can never silently
-/// drop an attribute the viewer does not render.
-///
-/// `current_version_uid` is the identifier the seeding read's `ETag` named (its
-/// `uid.value` only when the CDR sent no `ETag`) and travels quoted in
-/// `If-Match`. The docs text mandates the header's EFFECT — a received
-/// condition that evaluates to false "MUST" be answered `412 Precondition Failed`
-/// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Requests_and_responses.md`
-/// §If-Match and accidental overwrites) — and is silent on its VALUE, which the
-/// released OAS artifacts ground: "the existing latest `version_uid` of the
-/// resource (i.e. the `preceding_version_uid`)", in a "format … always an
-/// `version_uid` identifier enclosed by double quotes"
-/// (`specifications/parameters/header/If-Match.yaml`), refused with the latest
-/// `version_uid` in the `ETag` (`specifications/responses/412_EHR_STATUS.yaml`).
-/// That `412` reaches the UI as [`ViewerError::Cdr`] and gets its own toast.
-///
-/// `Prefer: return=representation` asks for the updated resource, whose
-/// `uid.value` is the new version; the operation also allows a bare `204`
-/// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Requests_and_responses.md`
-/// §Representation-negotiation), so an empty answer is a success with no uid to
-/// name.
+/// `current_version_uid`, the seeding read's `ETag` (else its `uid.value`),
+/// travels quoted in `If-Match`
+/// (`specifications/parameters/header/If-Match.yaml`); a stale one is the CDR's
+/// `412`. An empty `204` answer is a success with no uid to name
+/// (`Requests_and_responses.md` §Representation-negotiation).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -234,14 +188,6 @@ pub async fn fetch_status_revision_history(
 
 /// Read the `VERSIONED_EHR_STATUS` container and one of its VERSIONS.
 ///
-/// Two reads, one resource: `GET /ehr/{ehr_id}/versioned_ehr_status` for the
-/// container (`GET ehr/{ehr_id}/versioned_ehr_status`) and the
-/// VERSION read for the envelope — `…/version/{version_uid}` for an explicitly
-/// selected version (`…/versioned_ehr_status/version/{version_uid}`) or
-/// `…/version` for the current one when nothing is selected: with no
-/// `version_at_time`, that operation "retrieves the _latest_ VERSION"
-/// (`…/versioned_ehr_status/version?version_at_time=` — latest when omitted).
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer (a
 /// `404` for an unknown `ehr_id`/version included) normalizes via
@@ -262,15 +208,6 @@ pub async fn fetch_versioned_status(
 }
 
 /// Resolve the `OBJECT_VERSION_ID` of the `EHR_STATUS` VERSION extant at `at_time`.
-///
-/// For a browser `datetime-local` value:
-/// `GET /ehr/{ehr_id}/versioned_ehr_status/version?version_at_time=…` — "if
-/// `version_at_time` is supplied, retrieves the VERSION extant _at specified
-/// time_" (the at-time read defaults to the latest version when the parameter is omitted).
-///
-/// The `200` body is a VERSION envelope whose `uid.value` is the
-/// `OBJECT_VERSION_ID` (RM common — a VERSION's `uid` IS an
-/// `OBJECT_VERSION_ID`); that string is returned so the caller can pin it.
 ///
 /// The `datetime-local` → RFC 3339 completion is the composition viewer's shared
 /// `crate::format::datetime_local_to_rfc3339`.
@@ -305,10 +242,9 @@ pub async fn fetch_status_version_at_time(
 /// body itself verbatim. Defensive throughout — an absent attribute reads as its
 /// `false`/empty default rather than failing the tab.
 ///
-/// `served_etag` is the identifier the CDR's own `ETag` named
-/// ([`CdrResponse::etag_version_uid`](crate::cdr::CdrResponse::etag_version_uid));
-/// it wins over the document's `uid.value`, because the header is what the
-/// server offers for the conditional round-trip. `None` falls back to the body.
+/// `served_etag`, the CDR's own `ETag`
+/// ([`CdrResponse::etag_version_uid`](crate::cdr::CdrResponse::etag_version_uid)),
+/// wins over the document's `uid.value`.
 ///
 /// # Errors
 /// [`ViewerError::Failed`] when the body is not valid JSON.

@@ -14,13 +14,8 @@ use crate::api::RequestParts;
 /// Decompose a whole axum [`Request`](axum::extract::Request) into the
 /// [`RequestParts`] snapshot an operation handler consumes.
 ///
-/// Every native `utoipa-axum` handler takes `State` + the whole `Request` and
-/// funnels through here: taking the entire request (rather than the individual
-/// `RawPathParams`/`RawQuery`/`HeaderMap`/`Bytes` extractors) is what keeps the
-/// `#[utoipa::path]` argument introspection happy — `bytes::Bytes` has no
-/// `ToSchema`, so a bare body extractor cannot appear in a documented handler
-/// signature. The upstream body-limit middleware has already buffered and
-/// bounded the body.
+/// It takes the whole request because `bytes::Bytes` has no `ToSchema`, so a
+/// bare body extractor cannot appear in a documented handler.
 ///
 /// # Errors
 ///

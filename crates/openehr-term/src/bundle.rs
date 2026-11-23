@@ -10,13 +10,6 @@
 //! [`LazyLock`]. It carries the RM-mandated terminology groups, the external
 //! code sets (ISO country / language, IANA character-set / media-type), and
 //! the property↔unit table.
-//!
-//! # Error model
-//!
-//! [`parse_terminology`] and [`parse_property_units`] are fallible, but the
-//! public bundle exposes only infallible lookups: the assets are vendored and
-//! embedded at compile time, so a parse failure is a corrupt build artifact and
-//! [`openehr`] panics once on first access instead.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Arc, LazyLock};
@@ -41,9 +34,6 @@ const EXTERNAL_XML: &str = include_str!("../assets/openehr_external_terminologie
 const PROPERTY_UNITS_XML: &str = include_str!("../assets/PropertyUnitData.xml");
 
 /// ISO 639-1 code of the canonical (authoritative) terminology language.
-///
-/// Codes and group membership are language-independent — only rubrics differ —
-/// so validity checks resolve against the English bundle.
 const CANONICAL_LANG: &str = "en";
 
 /// The languages whose `openehr_terminology.xml` is vendored, paired with the
@@ -113,9 +103,6 @@ struct LanguageBundle {
     /// code-set `openehr_id` → index into `terminology.code_sets`.
     code_set_by_id: HashMap<String, usize>,
     /// group `openehr_id` → (concept `id` → index into that group's `concepts`).
-    ///
-    /// A `BTreeMap` because [`OpenehrTerminology::concept_rubric`] scans every
-    /// group and hash order is implementation-defined.
     group_codes: BTreeMap<String, HashMap<String, usize>>,
 }
 
@@ -172,10 +159,6 @@ impl LanguageBundle {
 }
 
 /// The parsed, indexed openEHR terminology bundle (TERM 3.1.0).
-///
-/// Obtain the shared, cached instance with [`openehr`]. All lookups are
-/// infallible: an unknown group, code, or language yields `None`/`false`/an
-/// empty slice rather than an error.
 #[derive(Debug)]
 pub struct OpenehrTerminology {
     /// Parsed terminology per language (keyed by ISO 639-1 code); `en` is canonical.
@@ -432,9 +415,6 @@ static OPENEHR: LazyLock<OpenehrTerminology> = LazyLock::new(|| {
 });
 
 /// The shared openEHR terminology bundle (TERM 3.1.0).
-///
-/// Parsed and indexed once from the compile-time-embedded vendored assets on
-/// first call, then cached for the process lifetime.
 #[must_use]
 pub fn openehr() -> &'static OpenehrTerminology {
     &OPENEHR
@@ -523,10 +503,6 @@ fn parse_group(node: &roxmltree::Node) -> TerminologyGroup {
 
 /// Returns the optional `status` attribute the terminology XSDs declare on
 /// `codeset`/`code`/`group`/`concept`.
-///
-/// [`TerminologyStatus::from_wire`] is total, so an out-of-set token survives
-/// as [`TerminologyStatus::Other`]. The pinned 3.1.0 assets declare no `status`
-/// attributes, so this reads `None` there.
 fn status_attr(node: &roxmltree::Node) -> Option<TerminologyStatus> {
     attr(node, "status").map(TerminologyStatus::from_wire)
 }

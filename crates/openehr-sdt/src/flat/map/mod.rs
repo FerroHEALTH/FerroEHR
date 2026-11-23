@@ -1,48 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Per-RM-type datum codecs for the Simplified Formats.
+//! Per-RM-type datum codecs for the Simplified Formats, one module per grouping
+//! of the `simplified_formats/master05-rm_mapping.adoc` tables.
 //!
-//! One module per grouping of the mapping tables in ITS-REST
-//! `simplified_formats/master05-rm_mapping.adoc`:
-//!
-//! - [`data_values`] — the `DV_*` leaf types, `CODE_PHRASE`, `TERM_MAPPING`,
-//!   and the `DV_INTERVAL` / `REFERENCE_RANGE` reference-range families.
-//! - [`parties`] — `PARTY_SELF` / `PARTY_IDENTIFIED` / `PARTY_RELATED` /
-//!   `PARTY_PROXY`, `OBJECT_REF`, `PARTICIPATION`, `DV_IDENTIFIER`.
-//! - [`structures`] — `LINK`, `FEEDER_AUDIT`, `FEEDER_AUDIT_DETAILS`,
-//!   `ISM_TRANSITION`, `INSTRUCTION_DETAILS`, and the `_`-prefixed optional
-//!   RM-attribute families (master04 §"RM Attributes prefix").
-//!
-//! The builders write typed RM through the reflective accessor
-//! ([`crate::flat::typed`], #6003) and the emitters read any
-//! [`crate::flat::instance::Instance`] (typed RM, or the canonical-JSON value a
-//! `553|incomplete|` commit keeps) — this layer never re-models an RM type.
-//!
-//! ## The four entry points
-//!
-//! The RM⇄sim walkers call exactly [`emit::emit_leaf`] / [`build_leaf`] for a single
-//! `DATA_VALUE` leaf and [`emit::emit_rm_attrs`] / [`build_rm_attr`] for the
-//! `_`-prefixed optional RM-attribute families. The walker owns the tree
-//! structure and the template resolution; this layer owns the per-datum shape.
-//!
-//! A leaf's value-internal families (`_normal_range`, `_accuracy`, `_mapping:i`,
-//! … — the master05 per-type tables) belong to the value and go to
-//! [`build_leaf`]; the LOCATABLE / ENTRY / EVENT_CONTEXT families (`_uid`,
-//! `_link:i`, `_feeder_audit`, `_null_flavour`, …) go to [`build_rm_attr`], one
-//! call per `_`-segment. [`build_rm_attr`] can build the value-internal families
-//! too, so a walker may route them either way, but never the same `_`-segment to
-//! both.
-//!
-//! [`emit::emit_leaf`] writes a leaf's datum attrs only (the `|suffix`
-//! keys of master05, plus the bare `""` value where the type has one).
-//! `list_open` is the `DV_CODED_TEXT` open-value-set marker from the
-//! web-template input (`None` = not coded or unknown): a `DV_TEXT` value in an
-//! open slot is emitted via `|other` (master04 §"Open Value-Sets and the
-//! `|other` Suffix"). [`emit::emit_rm_attrs`] writes the `_`-prefixed
-//! families present on an RM value (master04 §"RM Attributes prefix" and the
-//! per-class `_`-rows of master05); field presence and `_type` decide which
-//! family applies, so one entry point serves every node kind.
+//! The walkers call [`emit::emit_leaf`] / [`build_leaf`] for a `DATA_VALUE` leaf
+//! and [`emit::emit_rm_attrs`] / [`build_rm_attr`] for the `_`-prefixed
+//! RM-attribute families (master04 §"RM Attributes prefix"). A leaf's
+//! value-internal families (`_normal_range`, `_mapping:i`, …) go to
+//! [`build_leaf`]; a walker never routes one `_`-segment to both. A `DV_TEXT`
+//! in an open coded slot is emitted via `|other` (master04 §"Open Value-Sets and
+//! the `|other` Suffix").
 
 #![expect(
     clippy::disallowed_types,
@@ -67,13 +35,9 @@ use crate::flat::sim::{SimChild, SimNode};
 use crate::flat::typed::{self, Build, Obj, o};
 use crate::flat::webtemplate::model::{WebTemplateCodedValue, WebTemplateNode};
 
-/// Datum parts of `node` (+ its value-internal `_`-prefixed structural children:
-/// `_normal_range`, `_other_reference_ranges:i`, `_accuracy`, `_language`,
-/// `_encoding`, `_mapping:i`, `_thumbnail`, `_charset`) → an RM leaf.
-///
-/// `wt_node` supplies the input metadata this layer defaults from: unit lists,
-/// `DV_ORDINAL` symbols, the local-terminology `code → rubric` lookup, and
-/// `listOpen`. `path` is the printed simplified path, used only for diagnostics.
+/// Datum parts of `node` and its value-internal `_`-prefixed children → an RM
+/// leaf. `wt_node` supplies the input metadata defaults; `path` is for
+/// diagnostics.
 ///
 /// # Errors
 /// - [`FlatError::RawWithoutType`] — a `|raw` payload without a `_type`
@@ -97,10 +61,8 @@ pub(crate) fn build_leaf(
 ) -> Result<Obj, FlatError> {
     let base = base_name(rm_type);
 
-    // `|raw` bypass (master04 §"Raw canonical JSON"): the value is embedded
-    // canonical RM JSON and MUST carry `_type`. RM→FLAT produces it only for
-    // a value no master05 table can express (a `DV_STATE`, a non-conforming
-    // stored value).
+    // `|raw` (master04 §"Raw canonical JSON") is embedded canonical RM JSON and
+    // must carry `_type`.
     if let Some(raw) = &node.raw {
         return typed::raw_object(raw, path);
     }
@@ -116,10 +78,8 @@ pub(crate) fn build_leaf(
 
     reject_unknown_suffixes(node, base, path)?;
 
-    // `|other` (master04 §"Open Value-Sets and the `|other` Suffix"): a free-text
-    // value where the constraint allows an open value-set. Mutually exclusive
-    // with the coded suffixes; rejected on a closed value-set; serialised as a
-    // `DV_TEXT`, not a `DV_CODED_TEXT` with an empty `defining_code`.
+    // `|other` (master04 §"Open Value-Sets and the `|other` Suffix") is a `DV_TEXT`,
+    // exclusive with the coded suffixes and refused on a closed value-set.
     if let Some(other) = node.attrs.get("other") {
         if ["code", "value", "terminology", "preferred_term"]
             .iter()
@@ -146,12 +106,8 @@ pub(crate) fn build_leaf(
 }
 
 /// Refuses a bare DV_PROPORTION value that disagrees with its numerator and
-/// denominator.
-///
-/// master05 §DV_PROPORTION maps the bare value to `magnitude`, "calculated on
-/// output", and RM `data_types` §DV_PROPORTION computes `magnitude` as
-/// `numerator / denominator`, so the value is not stored. One that disagrees
-/// would otherwise be dropped with no trace.
+/// denominator (master05 §DV_PROPORTION: "calculated on output"; RM
+/// `data_types` §DV_PROPORTION).
 // NOTE: no specification says how close an input magnitude must be; our own
 // design accepts one that equals the quotient to the decimals the client wrote.
 fn check_proportion_magnitude(
@@ -201,10 +157,9 @@ fn check_proportion_magnitude(
 /// DV_INTERVAL flags) to a container node under construction.
 ///
 /// # Errors
-/// [`FlatError::ValueWithoutInput`] for a bare value, which no container takes
-/// (master05 puts a value on a data value node), naming an ELEMENT's value
-/// alternatives; [`FlatError::UnknownSuffix`] for a suffix the per-type tables
-/// do not place on this container ([`container_datum_attr`]).
+/// [`FlatError::ValueWithoutInput`] for a bare value, which no container takes,
+/// naming an ELEMENT's value alternatives; [`FlatError::UnknownSuffix`] for a
+/// suffix the per-type tables do not place on this container.
 pub(crate) fn apply_container_datum_attrs(
     node: &WebTemplateNode,
     sim: &SimNode,
@@ -243,14 +198,8 @@ pub(crate) fn apply_container_datum_attrs(
     Ok(())
 }
 
-/// The RM attribute a datum suffix (`|suffix`) sets when the master05 per-type
-/// tables place it on a **container** node rather than on a `DATA_VALUE` leaf.
-///
-/// `master05 §INTERVAL_EVENT`: `|sample_count` (INTEGER → `sample_count`, the
-/// count of samples the interval summarises) is spelled directly on the event
-/// node — the section's second example block is
-/// `…/any_event:0|sample_count: 5`, not a sub-path. The mirror of
-/// [`crate::flat::flatten`]'s INTERVAL_EVENT emission.
+/// The RM attribute a datum suffix sets on a container node rather than a
+/// `DATA_VALUE` leaf (master05 §INTERVAL_EVENT `…/any_event:0|sample_count: 5`).
 fn container_datum_attr(host: &str, suffix: &str) -> Option<&'static str> {
     match (host, suffix) {
         ("INTERVAL_EVENT", "sample_count") => Some("sample_count"),
@@ -264,14 +213,9 @@ fn container_datum_attr(host: &str, suffix: &str) -> Option<&'static str> {
     }
 }
 
-/// One `_`-segment child of a sim node → `(rm_attribute_name, value)` for the
-/// RM object under construction, or `None` when the occurrences carry nothing
-/// usable.
-///
-/// `seg` is the segment name **with** its leading underscore (`"_link"`,
-/// `"_normal_range"`); `occurrences` is the [`SimChild`] occurrence list (one
-/// entry for a single-valued family, several for a `:i` family). `host_rm_type`
-/// types the reference-range endpoints (`T`); `path` is for diagnostics.
+/// One `_`-segment child of a sim node → `(rm_attribute_name, value)`, or
+/// `None` when the occurrences carry nothing usable. `seg` keeps its leading
+/// underscore.
 ///
 /// # Errors
 /// [`FlatError::UnknownSuffix`] — `seg` names no RM-attribute family known for
@@ -343,13 +287,9 @@ impl Attr {
 /// The canonical-JSON value `node` carries whole under `|raw` (master04 §Raw
 /// canonical JSON), `None` when it carries none.
 ///
-/// The value must be an object whose `_type` is one of `types`, the RM
-/// classes the attribute admits, and `|raw` must be the node's only content:
-/// a suffix or a sub-path beside it would be dropped.
-///
 /// # Errors
 /// [`FlatError::RawWithoutType`] for a value without `_type`;
-/// [`FlatError::InvalidRaw`] for one of another class, or a `|raw` beside
+/// [`FlatError::InvalidRaw`] for a `_type` outside `types`, or a `|raw` beside
 /// other content.
 pub(crate) fn raw_value(
     node: &SimNode,
@@ -412,15 +352,11 @@ pub(super) fn family<'a>(node: &'a SimNode, name: &str) -> Option<&'a SimChild> 
 }
 
 /// A `DV_CODED_TEXT` from an openEHR-terminology group, resolving a token that
-/// master06 accepts as **either a code or a display value** (`ctx/setting`,
-/// `ctx/action_ism_transition_current_state` — master06 §§setting,
-/// action_ism_transition_current_state: "either value or code is accepted"; the
-/// `PARTICIPATION.mode` group). The `defining_code` terminology is `openehr`.
+/// may be a code or a display value (master06 §§setting,
+/// action_ism_transition_current_state: "either value or code is accepted").
 ///
-/// Resolution order: a matching concept code → its rubric is the value; else a
-/// matching concept rubric → its id is the code; else the token stands as both
-/// (an unknown code the validation layer will flag, never a fabricated valid
-/// code).
+/// A matching code, else a matching rubric; an unknown token stands as both, for
+/// the validation layer to flag.
 pub(crate) fn coded_from_group(group_id: &str, token: &str) -> Result<Obj, FlatError> {
     let term = openehr_term::bundle::openehr();
     if term.is_valid_code(group_id, token) {
@@ -452,10 +388,9 @@ pub(super) fn wt_terminology(wt_node: Option<&WebTemplateNode>) -> Option<&str> 
         .find_map(|i| i.terminology.as_deref())
 }
 
-/// The web-template coded value whose `value` (the code) is `code`, searched
-/// across every input list — the source of the `code → rubric`/`ordinal`
-/// defaulting (master05 §§DV_CODED_TEXT, DV_ORDINAL: `|value`/`|ordinal` "may be
-/// left out if symbol is defined in template").
+/// The web-template coded value whose code is `code`, across every input list
+/// (master05 §§DV_CODED_TEXT, DV_ORDINAL: "may be left out if symbol is defined
+/// in template").
 pub(super) fn wt_coded_value<'a>(
     wt_node: Option<&'a WebTemplateNode>,
     code: &str,
@@ -519,12 +454,8 @@ fn is_known_suffix(base: &str, suffix: &str) -> bool {
         "DV_SCALE" => &["code", "value", "scale", "terminology"],
         "DV_DATE" | "DV_DATE_TIME" | "DV_TIME" => &["magnitude_status", "normal_status"],
         "DV_IDENTIFIER" => &["id", "issuer", "assigner", "type"],
-        // master05 §§PARTY_SELF, PARTY_IDENTIFIED, PARTY_RELATED — the three
-        // PARTY_PROXY subtype tables share `|id`/`|id_scheme`/`|id_namespace`
-        // and PARTY_IDENTIFIED/PARTY_RELATED add `|name`. `_type` is the
-        // PARTY_SELF discriminator (master05 §FEEDER_AUDIT_DETAILS `/subject`
-        // row Note: "add /subject|_type: PARTY_SELF"); the `/_identifier:i`
-        // and `/relationship` rows are sub-paths, not suffixes.
+        // master05 §§PARTY_SELF, PARTY_IDENTIFIED, PARTY_RELATED; `_type` marks
+        // PARTY_SELF (master05 §FEEDER_AUDIT_DETAILS `/subject` row).
         "PARTY_PROXY" | "PARTY_SELF" | "PARTY_IDENTIFIED" | "PARTY_RELATED" => {
             &["name", "id", "id_scheme", "id_namespace", "_type"]
         }
@@ -551,9 +482,7 @@ fn is_known_suffix(base: &str, suffix: &str) -> bool {
 }
 
 /// Reject any `|suffix` on `node` not defined for `base` (master05 per-type
-/// tables). The bare `""` datum and the master04 bypass suffix `other` are
-/// always tolerated here (its own rules run in [`build_leaf`]); a `|raw`
-/// datum sits apart from the suffixes ([`SimNode::raw`]).
+/// tables); the bare datum and `other` are always tolerated here.
 fn reject_unknown_suffixes(node: &SimNode, base: &str, path: &str) -> Result<(), FlatError> {
     for key in node.attrs.keys() {
         if key.is_empty() || key == "other" {

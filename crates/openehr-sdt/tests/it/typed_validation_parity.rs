@@ -1,13 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The RM-instance passes over typed RM report exactly what the
-//! canonical-JSON passes report, on every COMPOSITION in the repository and on
-//! defective variants of each (#6002).
-//!
-//! The typed passes give their messages in canonical attribute order, so the
-//! comparison is of the two reports as multisets; on a document whose members
-//! already come in canonical order the two orders also agree.
+//! The RM-instance passes over typed RM report the same multiset as the
+//! canonical-JSON passes, on every COMPOSITION and defective variants.
 
 use openehr_rm::prelude::Composition;
 use openehr_sdt::rm_instance::{

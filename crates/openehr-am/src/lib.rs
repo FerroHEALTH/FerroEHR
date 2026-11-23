@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! openEHR AM (Archetype Model): `v1_4` (AM 1.4.0, for ADL 1.4) and `v2_4` (AM 2.4.0, for ADL 2) — both generated from BMM. Both ADL versions are in use.
+//! openEHR AM (Archetype Model), generated from BMM: `v1_4` (AM 1.4.0, for ADL 1.4) and `v2_4` (AM 2.4.0, for ADL 2).
 //!
 //! The type files are generated; hand-written spec behaviour
 //! lives in sibling `*_impl.rs` files.
@@ -35,11 +35,9 @@ pub mod v2_4;
 /// The BMM generations this crate emits, one variant per version module,
 /// oldest first.
 ///
-/// Generated from the openehr-codegen composition table — the single
-/// authority for which generations exist. [`std::fmt::Display`] and
-/// [`std::str::FromStr`] round-trip the generation-module name (`"v1_4"`). `Generation::default()` is the crate's CURRENT generation — the
-/// one `crate::prelude` re-exports (the composition table's `current`
-/// marker, via the std `#[default]` variant attribute).
+/// [`std::fmt::Display`] and [`std::str::FromStr`] round-trip the
+/// generation-module name (`"v1_4"`). `Generation::default()` is the generation `crate::prelude`
+/// re-exports.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Generation {
     /// The `v1_4` generation — openEHR specification version 1.4.0.

@@ -6,12 +6,6 @@
 //! Operations (`docs/specs/openehr/ITS-REST/specifications/operations/`):
 //! `definition_template_adl1.4_list` / `_upload` / `_get` / `_example_get`.
 //! Governing spec text: `docs/specs/openehr/ITS-REST/specifications/docs/definition/`.
-//! Governing spec: `docs/specs/openehr/ITS-REST/specifications/docs/definition/`.
-//!
-//! The wire addresses OPTs by their `template_id` string, so retrieval runs
-//! through the wire-shaped service method `template_adl14_get`, and
-//! list/upload/example route through the wire-shaped methods too (rich summary
-//! objects and a generated example COMPOSITION).
 
 #![expect(
     clippy::disallowed_types,
@@ -65,12 +59,6 @@ const TEMPLATE_DEF_FORMATS: &[WireFormat] = &[
 ];
 
 /// `GET …/definition/template/adl1.4` — list the stored OPT 1.4 templates.
-///
-/// The wire decodes `template_id` (glob), `concept` (glob), `version`
-/// (version filter), `offset`, `fetch`
-/// (`operations/definition_template_adl1.4_list.yaml`); they are threaded to the
-/// adapter as a [`TemplateListFilter`](ferroehr::service::definition::types::TemplateListFilter)
-/// + [`Page`](ferroehr::service::list::Page).
 pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p = parts.decode(
@@ -176,14 +164,6 @@ fn not_acceptable() -> String {
 }
 
 /// `GET …/definition/template/adl1.4/{template_id}` — retrieve the stored OPT.
-///
-/// Negotiates the `200_Template_adl1_4_retrieved` representations
-/// (`application/xml` canonical OPT + the `application/openehr.wt+json` web
-/// template EHRbase-compatible extension + the `application/json` reading of
-/// [`TEMPLATE_DEF_FORMATS`]), answers in the NEGOTIATED media type, sets the
-/// mandated `ETag`, and returns `406` for an `Accept` outside
-/// `Accept_Template`. An unknown template → `404` (checked first, before
-/// negotiation).
 pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p = parts.decode(
@@ -264,13 +244,6 @@ pub(super) async fn example_get(
 /// empty body. `Location` + the weak `ETag` are set on every case, and the
 /// applied preference is declared through the shared
 /// [`negotiate::prefer::set_preference_applied`] seam.
-///
-/// A template is not `uid`-versioned, so the identifier body is the
-/// `template_id` object rather than the generic `{uid}` of
-/// [`negotiate::prefer::write_negotiated`]; the preference resolution and the
-/// never-`204` identifier status are the same rule (`Requests_and_responses.md`
-/// §"Prefer only identifier"), here trivially satisfied because every upload
-/// outcome is `201 Created`.
 fn upload_response(
     headers: &HeaderMap,
     location: &str,

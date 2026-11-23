@@ -7,12 +7,6 @@
 //! `validate_for_commit` dispatch shared by the direct and CONTRIBUTION write
 //! paths, and the `VERSIONED_COMPOSITION` cross-version invariants.
 //!
-//! Every kind's validator pairs its hand-written root rules with the
-//! whole-instance RM class-invariant and terminology pass
-//! ([`validate_rm_invariants_for_commit`]); the RM class invariants are
-//! properties of the instance, so they bind below the root of an `EHR_STATUS`
-//! or FOLDER exactly as they do inside a COMPOSITION.
-//!
 //! Spec: RM ehr `ehr_status.adoc` / `ehr_access.adoc` /
 //! `versioned_composition.adoc`; RM common `folder.adoc` + inherited
 //! `locatable.adoc` (`Links_valid`, `Archetype_node_id_valid`),
@@ -46,12 +40,9 @@ use openehr_rm::prelude::Composition;
 /// The instance size, in JSON nodes, above which the COMPOSITION validation
 /// passes hand their worker off before running.
 ///
-/// The two passes cost about 260 ns per JSON node, measured by
-/// `benches/validation.rs` over the vendored CKM corpus: 52 nodes in 11.2 µs,
-/// 4601 in 1.23 ms, 9678 in 2.55 ms. Tokio documents 10 to 100 µs as the
-/// budget for a task between await points
-/// (<https://docs.rs/tokio/latest/tokio/task/fn.block_in_place.html>), so 400
-/// nodes is where a pass first reaches the top of that budget.
+/// The two passes cost about 260 ns per JSON node (`benches/validation.rs`), so
+/// 400 nodes reaches the top of tokio's 10 to 100 µs budget between await
+/// points (<https://docs.rs/tokio/latest/tokio/task/fn.block_in_place.html>).
 const VALIDATION_HANDOFF_NODES: usize = 400;
 
 /// The RM object count past which the typed passes hand their worker off: the
@@ -90,12 +81,8 @@ fn exceeds_object_count(root: &Composition, limit: usize) -> bool {
 /// tasks first when `hand_off` says the instance is large enough to hold it
 /// past tokio's budget.
 ///
-/// The passes are pure functions of borrowed data, so the hand-off is
-/// [`tokio::task::block_in_place`] rather than a spawn: no owned copy of a
-/// multi-megabyte instance has to be made to cross a task boundary. That call
-/// panics outside a multi-thread runtime, so the flavor is checked and a
-/// current-thread runtime runs the pass inline, which is what it would do
-/// anyway — a single-threaded runtime has no other worker to relieve.
+/// [`tokio::task::block_in_place`] avoids copying the instance across a task
+/// boundary; it panics on a current-thread runtime, which runs the pass inline.
 ///
 /// No openEHR spec governs runtime scheduling — our own design.
 fn run_validation_pass<T>(hand_off: bool, pass: impl FnOnce() -> T) -> T {
@@ -186,12 +173,6 @@ impl FerroEhrService {
     /// Content) relaxes the existence and cardinality lower limits to zero on
     /// both the template-driven and RM-driven layers. Every other check stays at
     /// full strictness ("data may be missing, but it may not be wrong").
-    ///
-    /// The template lookup goes through `web_template`, the
-    /// template-independent passes through
-    /// `openehr_sdt::rm_instance::validate_rm_and_terminology` and the
-    /// archetype-conformance pass through
-    /// `openehr_sdt::flat::validation::validate_archetype_conformance*`.
     ///
     /// # Errors
     /// [`ServiceError::ValidationFailed`] carrying every RM/terminology/
@@ -583,16 +564,11 @@ mod tests {
     /// Every vendored `EHR_STATUS` data set the CNF corpus labels invalid
     /// (`master06 §Test Data Sets`, INVALID class 2) must be rejected.
     ///
-    /// Re-adjudicated with the `Archetyped_valid` enforcement: the former
-    /// exception `001_ehr_status_subject_empty.json` (its `subject: {}` IS
-    /// spec-valid — an empty `PARTY_SELF` is a completely anonymous subject,
-    /// RM ehr master04) is nonetheless rejected as a WHOLE, because like
-    /// every fixture in this corpus it carries a root `archetype_node_id`
-    /// with no `archetype_details` (RM common `locatable.adoc`
-    /// `Archetyped_valid`; RM ehr `ehr_status.adoc` `Is_archetype_root`) —
-    /// so its INVALID label holds, on different grounds than the corpus
-    /// intended. The subject-emptiness half of the old adjudication is
-    /// pinned by `anonymous_ehr_status_subject_is_accepted` above.
+    /// `001_ehr_status_subject_empty.json` is rejected too: its empty
+    /// `PARTY_SELF` subject is valid, but like every fixture here it carries a
+    /// root `archetype_node_id` with no `archetype_details` (RM common
+    /// `locatable.adoc` `Archetyped_valid`). The empty subject is pinned by
+    /// `anonymous_ehr_status_subject_is_accepted`.
     #[test]
     fn every_invalid_ehr_status_fixture_is_rejected() {
         let dir = concat!(

@@ -4,18 +4,13 @@
 //! The publication of the access log's checkpoints outside the database
 //! (#5704).
 //!
-//! The chainer seals what it appends in checkpoints stored beside the log. Someone
-//! who can write the database can still remove the newest entries together
-//! with the checkpoints that seal them, and nothing left in the database
-//! shows it. A copy of the checkpoints kept where that person cannot write
-//! does: the log no longer reaches the newest published checkpoint. One run
-//! per [`INTERVAL`] writes the newest checkpoint, when it is newer than the
-//! last one published, as its own file in the configured directory, created
-//! once and never rewritten, so the directory can sit on write-once storage.
-//! The newest checkpoint covers every record below it through the chain, so
-//! one file per run is enough. Replicas publish the same checkpoints under
-//! the same names, and a file already there with the same content is the
-//! same publication.
+//! A copy of the checkpoints kept where a database writer cannot write shows a
+//! removal of the newest entries with the checkpoints that seal them: the log
+//! does not reach the newest published checkpoint. One run per [`INTERVAL`]
+//! writes the newest checkpoint, when it is newer than the last one published,
+//! as its own file, created once and never rewritten, so the directory can sit
+//! on write-once storage. Replicas publish the same checkpoints under the same
+//! names.
 //!
 //! No openEHR spec governs log publication: our own design
 //! (`docs/specifications/access-log`, semantics §Integrity).

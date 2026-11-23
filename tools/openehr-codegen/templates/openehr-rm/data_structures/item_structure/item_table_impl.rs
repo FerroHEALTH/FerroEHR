@@ -2,25 +2,13 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariants for `ITEM_TABLE`.
+//! `ITEM_TABLE` invariants and functions
+//! (`org.openehr.rm.data_structures.item_table.adoc`): `Valid_structure` and
+//! the inherited `Archetype_node_id_valid`.
 //!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.item_table.adoc`.
-//! - `Valid_structure` (`rows.for_all (items.for_all (instance_of
-//!   ("ELEMENT")))`, §Invariants): every item in every row `CLUSTER` is an
-//!   `ELEMENT` — no nested clusters.
-//! - `Archetype_node_id_valid` — the inherited LOCATABLE invariant
-//!   (`…org.openehr.rm.common.locatable.adoc` §Invariants).
-//!
-//! Two further checks come from that page's §Description ("Each row Cluster must
-//! have an identical number of Elements, each of which in turn must have
-//! identical names and value types in the corresponding positions in each row"),
-//! which §Invariants does not restate. The rules are the page's; the two names
-//! are not.
-//!
-//! NOTE: no openEHR spec names these two checks — `Valid_number_of_rows`
-//! (equal item counts) and `Row_regularity` (matching names + value types per
-//! column) are our own labels for §Description rules.
+//! NOTE: `Valid_number_of_rows` and `Row_regularity` are our own names for the
+//! §Description rule "Each row Cluster must have an identical number of
+//! Elements … identical names and value types".
 
 use crate::v1_2::data_structures::item_structure::item_table::ItemTable;
 use crate::v1_2::data_structures::representation::cluster::Cluster;
@@ -31,21 +19,13 @@ use crate::v1_2::data_types::text::dv_text::DvText;
 use openehr_base::validate::{InvariantViolation, Validate};
 
 impl ItemTable {
-    /// Number of rows in the table.
-    ///
-    /// Spec: `item_table.adoc` §Functions `row_count`.
+    /// Number of rows (`row_count`).
     #[must_use]
     pub fn row_count(&self) -> usize {
         self.rows.as_deref().unwrap_or_default().len()
     }
 
-    /// Number of columns in the table.
-    ///
-    /// Spec: `item_table.adoc` §Functions `column_count`.
-    ///
-    /// Every row carries one `ELEMENT` per column and the `Valid_number_of_rows`
-    /// check above holds them to the same count, so the first row answers for
-    /// the table. An empty table has no columns.
+    /// Number of columns, read from the first row (`column_count`).
     #[must_use]
     pub fn column_count(&self) -> usize {
         self.rows
@@ -55,12 +35,8 @@ impl ItemTable {
             .map_or(0, |row| row.items.len())
     }
 
-    /// The row names.
-    ///
-    /// Spec: `item_table.adoc` §Functions `row_names`, over
-    /// `master04-item_structure_package.adoc` §ITEM_TABLE — "the names of the
-    /// containing `CLUSTER` of each row is the stringified number of the row in
-    /// the overall table."
+    /// The row names (`row_names`): each row `CLUSTER` is named "the stringified
+    /// number of the row" (`master04-item_structure_package.adoc` §ITEM_TABLE).
     #[must_use]
     pub fn row_names(&self) -> Vec<DvText> {
         self.rows
@@ -71,11 +47,7 @@ impl ItemTable {
             .collect()
     }
 
-    /// The column names.
-    ///
-    /// Spec: `item_table.adoc` §Functions `column_names`, over
-    /// `master04-item_structure_package.adoc` §ITEM_TABLE — "the names of the
-    /// `ELEMENT` in a row are the column names."
+    /// The column names (`column_names`), the row `ELEMENT` names.
     #[must_use]
     pub fn column_names(&self) -> Vec<DvText> {
         self.rows
@@ -91,37 +63,20 @@ impl ItemTable {
             .collect()
     }
 
-    /// The i-th row, or `None` when the table has no such row.
-    ///
-    /// Spec: `item_table.adoc` §Functions `ith_row` — "Return i-th row."
-    ///
-    /// `i` is ONE-based. No openEHR spec states the base — BASE's `List` class
-    /// declares no indexed accessor at all — but the encoding rules name each
-    /// row `CLUSTER` after "the stringified number of the row in the overall
-    /// table", so a base that disagreed with those names would make
-    /// `ith_row(i)` and `named_row(i)` return different rows. The two agree by
-    /// construction here, and a test pins it.
+    /// The `i`-th row, from 1, so it agrees with the row names (`ith_row`).
     #[must_use]
     pub fn ith_row(&self, i: usize) -> Option<&Cluster> {
         self.rows.as_deref()?.get(i.checked_sub(1)?)
     }
 
-    /// Returns `true` when a row has name `a_key`.
-    ///
-    /// Spec: `item_table.adoc` §Functions `has_row_with_name`. The published
-    /// description reads "Return `True` if there is a COLUMN with name =
-    /// `a_key`" — word for word what `has_column_with_name` says one row below
-    /// it in the same table. The function name, its position and its
-    /// `named_row` counterpart all say row; the description is a copy of the
-    /// neighbouring cell.
+    /// Whether a row has name `a_key` (`has_row_with_name`, whose description
+    /// says "COLUMN", a copy of the next cell).
     #[must_use]
     pub fn has_row_with_name(&self, a_key: &str) -> bool {
         self.named_row(a_key).is_some()
     }
 
-    /// Returns `true` when a column has name `a_key`.
-    ///
-    /// Spec: `item_table.adoc` §Functions `has_column_with_name`.
+    /// Whether a column has name `a_key` (`has_column_with_name`).
     #[must_use]
     pub fn has_column_with_name(&self, a_key: &str) -> bool {
         self.column_names()
@@ -129,10 +84,7 @@ impl ItemTable {
             .any(|name| text_of(name) == a_key)
     }
 
-    /// The row named `a_key`, or `None` when no row carries that name.
-    ///
-    /// Spec: `item_table.adoc` §Functions `named_row` — "Return row with name =
-    /// `a_key`."
+    /// The row named `a_key`, or `None` (`named_row`).
     #[must_use]
     pub fn named_row(&self, a_key: &str) -> Option<&Cluster> {
         self.rows
@@ -141,30 +93,16 @@ impl ItemTable {
             .find(|row| text_of(&row.name) == a_key)
     }
 
-    /// Returns `true` when a row has key `keys`.
-    ///
-    /// Spec: `item_table.adoc` §Functions `has_row_with_key`.
+    /// Whether a row has key `keys` (`has_row_with_key`).
     #[must_use]
     pub fn has_row_with_key(&self, keys: &[String]) -> bool {
         self.row_with_key(keys).is_some()
     }
 
-    /// The row with key `keys`, or `None` when no row carries it.
+    /// The row with key `keys`, or `None` (`row_with_key`).
     ///
-    /// Spec: `item_table.adoc` §Functions `row_with_key`, over §Description —
-    /// "some columns may be designated 'key' columns, containing key data for
-    /// each row, in the manner of relational tables."
-    ///
-    /// Two things the spec does not supply, so both are our own design and
-    /// stated as such. It defines no way to DESIGNATE a column as a key column,
-    /// so the key is read from the leading columns — the only ordering the
-    /// class does define is that columns are "named and ordered with respect to
-    /// each other", and relational key columns lead. And `DATA_VALUE` declares
-    /// no function at all, so there is no spec-defined way to render a cell as
-    /// a `String`; a key therefore matches a cell only where that cell IS text,
-    /// which is what "key data" for row-naming means. A quantity-valued cell
-    /// matches no key rather than being stringified by a rule this
-    /// implementation would have had to invent.
+    /// No openEHR spec designates key columns or renders a cell as text, our own
+    /// design: the keys match the leading columns, text cells only.
     #[must_use]
     pub fn row_with_key(&self, keys: &[String]) -> Option<&Cluster> {
         if keys.is_empty() {
@@ -179,11 +117,7 @@ impl ItemTable {
         })
     }
 
-    /// The cell at row `i`, column `j`, or `None` when the table has no such
-    /// cell.
-    ///
-    /// Spec: `item_table.adoc` §Functions `element_at_cell_ij` — "Return cell at
-    /// a particular location." Both indices are one-based, per [`Self::ith_row`].
+    /// The cell at row `i`, column `j`, both from 1 (`element_at_cell_ij`).
     #[must_use]
     pub fn element_at_cell_ij(&self, i: usize, j: usize) -> Option<&Element> {
         match self.ith_row(i)?.items.get(j.checked_sub(1)?)? {
@@ -192,25 +126,11 @@ impl ItemTable {
         }
     }
 
-    /// This table as a CEN EN13606-compatible hierarchy, or `None` for a table
-    /// with no cells.
+    /// This table as one `CLUSTER` per row named by its number (`master04` §ISO
+    /// 13606 Encoding Rules), or `None` for an empty table.
     ///
-    /// Spec: `master04-item_structure_package.adoc` §ISO 13606 Encoding Rules
-    /// — ITEM_TABLE: "Each row is encoded as a Cluster containing a number of
-    /// `ELEMENTs`, each corresponding to the value of a column in that row";
-    /// the `ELEMENT` names are the column names (already true of the physical
-    /// rows, which `Row_regularity` pins); "The names of the containing
-    /// `CLUSTER` of each row is the stringified number of the row in the
-    /// overall table" (one-based, matching [`Self::ith_row`]).
-    ///
-    /// NOTE: the class table's `as_hierarchy` Meaning sentence says "the
-    /// `CLUSTERs` representing the columns", contradicting §ISO 13606
-    /// Encoding Rules, §Description ("Cluster-per-row encoding") and the
-    /// normative instance figure — the row encoding those three define wins;
-    /// the void-cell rule is guaranteed by the physical row regularity.
-    ///
-    /// An empty table has no rows to encode, and `CLUSTER.items` is `1..*`,
-    /// so there is no hierarchy to return rather than an ill-formed one.
+    /// NOTE: the class table's `as_hierarchy` says column clusters, against
+    /// §ISO 13606 Encoding Rules and §Description; the row encoding governs.
     #[must_use]
     pub fn as_hierarchy(&self) -> Option<Cluster> {
         let rows = self.rows.as_deref()?;
@@ -294,10 +214,7 @@ impl Validate for ItemTable {
                 "Invariant Valid_number_of_rows failed on type ITEM_TABLE",
             ));
         }
-        // Row_regularity (item_table.adoc §Description): corresponding ELEMENTs
-        // across rows must have identical names and value types — "each of which
-        // in turn must have identical names and value types in the corresponding
-        // positions in each row".
+        // Row_regularity (item_table.adoc §Description).
         if let Some(first) = self.rows.iter().flatten().next() {
             use crate::v1_2::data_types::text::dv_text::DvText;
             let name_of = |name: &DvText| match name {
@@ -519,9 +436,7 @@ mod tests {
         );
     }
 
-    /// A table of two rows and two named columns, with the row `CLUSTER`s named
-    /// per `master04-item_structure_package.adoc` §ITEM_TABLE — "the stringified
-    /// number of the row in the overall table".
+    /// A table of two rows and two named columns.
     fn cell(column: &str, value: &str) -> Element {
         use crate::v1_2::data_types::text::dv_text::DvTextData;
         Element {
@@ -566,9 +481,7 @@ mod tests {
         ])
     }
 
-    /// The counts and the two name lists, over the encoding rules: the row
-    /// `CLUSTER` names are the row names, the `ELEMENT` names are the column
-    /// names.
+    /// The counts and the two name lists.
     #[test]
     fn counts_and_names_come_from_the_encoding_rules() {
         let acuity = acuity();
@@ -593,9 +506,7 @@ mod tests {
         assert!(empty.row_names().is_empty() && empty.column_names().is_empty());
     }
 
-    /// The index base is not stated by any openEHR spec, so it is pinned to the
-    /// one thing that is: rows are NAMED after their number in the table. If
-    /// `ith_row` disagreed with `named_row`, one of them would be wrong.
+    /// `ith_row` agrees with `named_row`.
     #[test]
     fn ith_row_agrees_with_the_row_numbering_that_names_the_rows() {
         let acuity = acuity();
@@ -610,9 +521,7 @@ mod tests {
         assert!(acuity.ith_row(3).is_none());
     }
 
-    /// Lookup by name, on both axes. `has_row_with_name`'s published
-    /// description says "column"; it is the neighbouring cell's text, and this
-    /// asserts the two functions actually differ.
+    /// Lookup by name on both axes, the two functions differing.
     #[test]
     fn name_lookup_distinguishes_rows_from_columns() {
         let acuity = acuity();
@@ -665,11 +574,7 @@ mod tests {
         assert!(acuity.element_at_cell_ij(3, 1).is_none());
     }
 
-    /// §ISO 13606 Encoding Rules — ITEM_TABLE: each row a `CLUSTER` of the
-    /// row's `ELEMENTs`, renamed to the stringified one-based row number;
-    /// the row-vs-column contradiction with the class table's Meaning
-    /// sentence is adjudicated to this encoding (the Description's
-    /// "Cluster-per-row" and the normative instance figure corroborate).
+    /// The hierarchy is one `CLUSTER` per row, named by row number.
     #[test]
     fn as_hierarchy_encodes_rows_with_stringified_names() {
         let hierarchy = acuity().as_hierarchy().expect("a table with cells");

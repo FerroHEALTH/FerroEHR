@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! openEHR identifier handling shared by the viewer's screens.
-//!
-//! The same reduction runs before a CDR path is built and when a link is
-//! drawn.
 
 use std::str::FromStr;
 
@@ -21,11 +18,6 @@ use crate::error::ViewerError;
 /// `docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc`
 /// §Syntaxes and §"Composite Identifiers and Case"). Any other value is read
 /// as the container id it already is and returned as written.
-///
-/// The two forms address the same versioned object but not the same routes —
-/// an update takes the container, a delete takes the version, an `ITEM_TAG`
-/// collection is a DIFFERENT collection per form — so every caller says which
-/// one it means rather than passing a `uid_based_id` through untouched.
 #[must_use]
 pub fn container_uid_of(uid: &str) -> String {
     let uid = uid.trim();
@@ -83,10 +75,6 @@ pub fn full_version_uid(raw: &str, refusal: impl FnOnce() -> String) -> Result<&
 /// container (RM
 /// `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.versioned_object.adoc`)
 /// — so one reader serves every body the viewer has to identify.
-///
-/// A BFF write reads the uid out of the answer it just received, and the
-/// Commit tab's amend seed reads it out of the document it already holds,
-/// rather than a second endpoint read for the same claim.
 #[must_use]
 pub fn uid_value_of(body: &str) -> String {
     #[expect(
@@ -100,9 +88,6 @@ pub fn uid_value_of(body: &str) -> String {
 
 /// [`uid_value_of`] over an already-parsed document: the `uid.value` leaf, or an
 /// empty string when the document carries none.
-///
-/// The reader for a caller that has parsed the body for other attributes too —
-/// the string form above parses and then calls this, so both answer identically.
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the CDR JSON wire over ITS-REST — not the CDR internal seams (#1694)"

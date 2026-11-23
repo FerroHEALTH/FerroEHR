@@ -1,16 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 phase-1 validation subset
-//! ([`openehr_adl::validate::validate_source_integrity`] in
-//! [`openehr_adl::parse::Dialect::Adl14`]).
-//!
-//! A 1.4 source is judged **as 1.4** (never post-conversion): the checks that
-//! correspond to an ADL 1.4 / AOM 1.4 standalone rule run; the AOM2-only rules
-//! that would false-reject a valid 1.4 archetype (VARAV/VARRV/VCOID-strict/
-//! VATCV-form/VCOSU-archetype-wide/WOUC) are suppressed. Oracle:
-//! `docs/specs/openehr/AM/docs/ADL1.4/master08-adl.adoc` §Validity Rules +
-//! `docs/specs/openehr/AM/docs/AOM1.4/` class invariants.
+//! The ADL 1.4 phase-1 validation subset: a 1.4 source is judged as 1.4, with
+//! the AOM2-only rules suppressed (`ADL1.4/master08-adl.adoc` §Validity Rules).
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,
@@ -232,12 +224,8 @@ fn use_node_naming_the_same_or_a_super_type_is_clean() {
 
 #[test]
 fn use_node_target_that_does_not_resolve_raises_vdfpt() {
-    // `ADL1.4/master08-adl.adoc` §Definition Section, VDFPT: any path mentioned
-    // in the definition section must be valid with respect to its hierarchical
-    // structure. The helper's resolving target is the accepting twin
-    // (`use_node_naming_the_same_or_a_super_type_is_clean` proves it stays
-    // clean); here the same archetype pointing at a node that does not exist
-    // must be reported.
+    // VDFPT (`ADL1.4/master08-adl.adoc` §Definition Section): a `use_node` to a
+    // missing node is reported.
     let bad = use_node_archetype("ELEMENT").replace(
         "/items[at0001]/items[at0002]",
         "/items[at0001]/items[at0099]",

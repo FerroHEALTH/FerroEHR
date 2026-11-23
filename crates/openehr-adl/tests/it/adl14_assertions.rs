@@ -1,15 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 assertion sub-language operator/symbol matrix
-//! (`ADL1.4/master06-assertions.adoc`): every operator the chapter defines —
-//! textual and symbolic renderings alike — parses in a 1.4 `invariant`
-//! section, and the reserved-but-undefined forms reject loudly.
-//!
-//! The chapter's own yacc omits `%` (prose §Arithmetic Operators defines it)
-//! and gives `for_all` no production at all (it is only a listed keyword) —
-//! both upstream defects recorded in the #768 audit; the prose-defined `%`
-//! parses, the production-less `for_all`-over-paths stays a typed reject.
+//! The ADL 1.4 assertion operator and symbol matrix (`ADL1.4/master06-assertions.adoc`):
+//! every defined operator parses in an `invariant` section, and the
+//! production-less `for_all` over paths is a typed refusal.
 
 use openehr_adl::assemble::parse_artefact;
 use openehr_adl::parse::Dialect;
@@ -81,13 +75,9 @@ fn for_all_over_paths_stays_a_typed_reject() {
     );
 }
 
-/// Every path form the paths chapter defines parses as an assertion operand
-/// (`ADL1.4/master07-paths.adoc`): absolute and relative paths (incl. the
-/// yacc's single-segment `relative_path: path_segment`), movable `//` path
-/// patterns (§Grammar `movable_path: SYM_MOVABLE_LEADER relative_path`), and
-/// the three §Relationship-with-Xpath predicate forms — position (`[1]`),
-/// meaning (`[systolic]`), node id (`[at0001]`, incl. dotted specialised
-/// codes).
+/// Every path form of `ADL1.4/master07-paths.adoc` parses as an assertion
+/// operand: absolute, relative, movable `//`, and the position, meaning and node
+/// id predicates.
 #[test]
 fn chapter7_path_forms_parse() {
     let accepted = [

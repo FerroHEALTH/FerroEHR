@@ -2,31 +2,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The `ext` openEHR value helpers, against the generation they replace.
-//!
-//! The helpers used to be PL/pgSQL bodies ending in
-//! `EXCEPTION WHEN others THEN RETURN NULL`, which opens a subtransaction on
-//! every call; five of the seven now reach every cast through a guard instead,
-//! and the two whose whole body is "parse a date or a time" keep the trap
-//! because it measured cheaper than any guard that would replace it. Three
-//! things are proven here against a real database, none of them from a recorded
-//! fixture: the first generation's own bodies are installed beside the current
-//! ones and both are read over the same corpus, so every agreement and every
-//! divergence is live; the divergence set is pinned value by value; and exactly
-//! the two measured parsers trap an error, while the ones written as a single
-//! SQL expression fold into the plan of a representative AQL predicate.
 
 use sqlx::Row as _;
 use sqlx::{Executor as _, PgPool, Postgres, Transaction};
 
 /// The first generation's function bodies, verbatim.
-///
-/// Byte-identical to the seven `CREATE FUNCTION` statements of
-/// `app/ferroehr/migrations/ext/0001_openehr_functions.sql` at the `v4.3.0`
-/// release tag, which is the last release that shipped them. They are created
-/// in a throwaway `gen1` schema that leads the transaction's `search_path`, so
-/// the unqualified calls they make to each other reach the first generation and
-/// not the current one, and nothing about them had to be rewritten to be
-/// compared.
 const GENERATION_1_BODIES: &str = r"
 CREATE FUNCTION openehr_date_days(v text) RETURNS numeric
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE AS $$
@@ -383,11 +363,6 @@ const ORDERED_CORPUS: &[&str] = &[
 /// and the `Iso8601_date` class table), and the length contract now says the
 /// characters it reads are digits.
 ///
-/// The compact-form seconds field came out of `text::numeric`, which accepts a
-/// sign, so a DATE handed to the time parser read as a number: `2021-01-02`
-/// stripped its `-02` as a zone offset and then read `-01` as its seconds. The
-/// field is now unsigned, and a date is not a time.
-///
 /// `openehr_timestamp` tried PostgreSQL's own date/time input first and used
 /// whatever came back, which accepted four things openEHR does not define: a
 /// date that is not zero-padded or is ordinal (`2021-1-2`, `2021-002`,
@@ -396,19 +371,6 @@ const ORDERED_CORPUS: &[&str] = &[
 /// time — and, after a full-precision date-time, a zone NAME or a ` BC` era,
 /// where BASE `foundation_types` master06-time_types.adoc `§Iso8601_date_time`
 /// ends the value at the offset.
-///
-/// In the other direction the completion arms now accept what that fast path
-/// used to reach by accident: the lowercase `t` and space separators on a
-/// reduced-precision date, which the cast read only when the whole value was
-/// full precision.
-///
-/// `openehr_date_days` read the leading four, six or eight characters and
-/// ignored whatever followed, so a complete date with text after it was that
-/// date (`20210102XYZ`, `2021-01-02 BC`, `2021-01-02 Europe/Amsterdam`) and a
-/// year with a letter after it was that year (`2021a`, `202101a`, `1030a`).
-/// The same section's `Iso8601_date` admits none of them, and the reading now
-/// holds the tail to the date-time alphabet, so `openehr_date_time_seconds`
-/// (which hands this helper the part before the `T`) refuses them too.
 const DIVERGENCES: &[(&str, &str, Option<&str>)] = &[
     ("openehr_date_days", "  12", None),
     ("openehr_date_days", "+2021-01-02", None),
@@ -579,13 +541,6 @@ fn create_function_statements(sql: &str) -> Vec<String> {
 }
 
 /// [`GENERATION_1_BODIES`] is byte-identical to the file it claims to copy.
-///
-/// Without this the comparison every other test here runs could be measuring a
-/// re-vendored or hand-edited constant against the current helpers and still
-/// pass, while proving nothing about the generation it names. The file is read
-/// from the `v4.3.0` tag, the last release that shipped it; where the tag is
-/// unreachable — a shallow clone fetches none — the test says so and stops
-/// rather than passing quietly on an unread file.
 #[test]
 fn generation_1_bodies_are_the_v4_3_0_file() {
     const TAG: &str = "v4.3.0";
@@ -710,11 +665,6 @@ async fn null_reads_as_null() {
 }
 
 /// The helpers whose measurement earned them an error trap, in `pg_proc` order.
-///
-/// A trap opens a subtransaction on every call, so it survives in `ext` only
-/// where the trapped cast measured cheaper than any guard that would let the
-/// same cast run untrapped — which is the case for exactly these two, whose
-/// whole body is "parse a date or a time".
 const TRAPPING_HELPERS: [&str; 2] = ["openehr_date_days", "openehr_timestamp"];
 
 #[tokio::test]

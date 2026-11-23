@@ -15,9 +15,6 @@
 //! The list is EMPTY by default, which leaves the surface off: a deployment
 //! that has not stated what may be selected on has not decided, and a default
 //! guess would be a selection criterion nobody chose.
-//!
-//! A field of the one config tree ([`crate::config::FerroEhrConfig`]); no
-//! loader of its own.
 
 use std::collections::BTreeMap;
 

@@ -3,8 +3,6 @@
 
 //! Which care relationships a read may reveal, decided per subject (#6076).
 //!
-//! The reads of one relationship and its versions are here too.
-//!
 //! Draft access control package, ITS-REST Resources, Care Relationships:
 //! "Every read of these resources is decided per subject it reveals: a
 //! relationship of a subject whose record the caller may not read is left

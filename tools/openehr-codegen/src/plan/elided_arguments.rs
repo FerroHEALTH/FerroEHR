@@ -1,18 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The attributes of a generic class whose declared type drops the argument
-//! the class's own parameter supplies, and the load-time step that restores it.
-//!
-//! The decision map in [`crate::testsupport`] checks every entry names an
-//! attribute of the loaded schemas.
+//! The generic attributes whose declared type drops the argument the class's
+//! own parameter supplies, restored at load.
 
 use crate::load::bmm::{BmmPropKind, BmmSchema, BmmType};
 
-/// One elided generic argument: `class.property` is declared as the bare
-/// generic class `root` and is read as `root<arguments…>`, each argument a
-/// generic parameter of `class` that the RM text gives no other attribute to
-/// act through.
+/// One elided argument: `class.property` is declared as the bare `root` and
+/// read as `root<arguments…>`.
 pub(crate) struct ElidedArgument {
     /// The class declaring the attribute.
     pub class: &'static str,
@@ -28,11 +23,8 @@ pub(crate) struct ElidedArgument {
     pub reason: &'static str,
 }
 
-/// Attributes whose declared type drops the argument its class's own generic
-/// parameter supplies. The loader restores each one in every schema declaring
-/// the attribute and refuses a schema whose declaration is no longer the bare
-/// `root` (an upstream fix, or a retyped attribute), so a stale entry fails
-/// emission instead of rewriting a type it no longer describes.
+/// The elided arguments, restored in every declaring schema; a declaration no
+/// longer the bare `root` fails emission.
 pub(crate) const ELIDED_ARGUMENTS: &[ElidedArgument] = &[
     ElidedArgument {
         class: "REFERENCE_RANGE",
@@ -63,7 +55,7 @@ pub(crate) const ELIDED_ARGUMENTS: &[ElidedArgument] = &[
     },
 ];
 
-/// Restore every [`ELIDED_ARGUMENTS`] entry in `schema`.
+/// Restores every [`ELIDED_ARGUMENTS`] entry in `schema`.
 ///
 /// # Errors
 /// Returns a message naming the entry when `schema` declares the attribute

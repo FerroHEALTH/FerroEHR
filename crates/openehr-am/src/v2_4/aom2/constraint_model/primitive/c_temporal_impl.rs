@@ -87,10 +87,6 @@ impl CTemporal {
     /// the `C_ORDERED` precursor over the interval constraint, and then either
     /// an empty `other.pattern_constraint` or a
     /// `valid_pattern_constraint_replacement` of it.
-    ///
-    /// NOTE: the class page's gloss spells the same rule as three `or else`
-    /// disjuncts, which no pattern could ever fail; the conjunctive Eiffel body
-    /// in `master04.5` is the reading implemented here.
     #[must_use]
     pub fn c_value_conforms_to(&self, other: &CTemporal) -> bool {
         match (self, other) {

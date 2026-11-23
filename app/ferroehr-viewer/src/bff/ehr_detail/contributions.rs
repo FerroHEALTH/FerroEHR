@@ -25,10 +25,6 @@ use crate::locale::tr;
 const ACTIVITY_FETCH: u32 = 200;
 
 /// One row of the EHR's contribution list.
-///
-/// Fixed-size-safe strings; the shape is the CDR's contribution-list contract
-/// (`{uid, time_committed, committer, inserted_by_person, change_type,
-/// change_type_rubric}`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContributionRow {
     /// The CONTRIBUTION uid.
@@ -135,11 +131,6 @@ fn contribution_field(value: &Value, key: &str) -> String {
 
 /// The EHR's contribution activity, one [`ActivityPoint`] per calendar day.
 ///
-/// Ascending (`GET /ehr/{ehr_id}/contribution?offset=0&fetch` over
-/// `ACTIVITY_FETCH`, bucketed BFF-side by
-/// [`bucket_by_day`](crate::activity::bucket_by_day) on each contribution's
-/// `AUDIT_DETAILS.time_committed`).
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Failed`] when the page is not valid JSON.
@@ -165,8 +156,6 @@ pub async fn contribution_activity(
 /// Look up a single CONTRIBUTION by uid (`GET
 /// /ehr/{ehr_id}/contribution/{contribution_uid}`) — the by-uid lookup box the
 /// Contributions tab keeps below its list (see `contributions_section`).
-///
-/// Returns the raw canonical JSON.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer (a

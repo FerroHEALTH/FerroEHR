@@ -11,14 +11,9 @@ use super::Validator;
 use crate::flat::webtemplate::model::WebTemplateNode;
 use crate::rm_instance::ValidationKind;
 
-/// Whether an RM attribute field is absent (missing or JSON `null`) on a node,
-/// which the existence check refuses on a mandatory attribute.
-///
-/// A present empty list is a container that is there: AOM 1.4
-/// `master04-constraint_model_package.adoc` (`C_MULTIPLE_ATTRIBUTE`) gives
-/// existence "whether the container object will be there (at all)" and leaves
-/// how many members it holds to cardinality ([`super::Validator`]'s
-/// cardinality check).
+/// Whether an RM attribute is absent (missing or JSON `null`); a present empty
+/// list is there (AOM 1.4 `C_MULTIPLE_ATTRIBUTE`: existence is "whether the
+/// container object will be there").
 pub(super) fn attr_absent<'i, I: Instance<'i>>(node: I, attr: &str) -> bool {
     !node.is_present(attr)
 }

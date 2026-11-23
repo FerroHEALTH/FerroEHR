@@ -48,12 +48,8 @@ pub const SCHEME: &str = "access_directives";
 /// The default definition of the scheme's settings, as its file name and ADL 2
 /// text.
 ///
-/// Every boot stores it when no definition of its id is stored
-/// ([`crate::service::FerroEhrService::seed_default_definitions`]). It
-/// constrains the settings to [`SETTINGS_TYPE`], which the definition path
-/// validates against the RM with the draft packages
-/// ([`crate::draft_model::RM_WITH_DRAFTS`]). FerroEHR reads the settings by
-/// their codes, never by this archetype's id.
+/// Seeded at boot when no definition of its id is stored. FerroEHR reads the
+/// settings by their codes, never by this archetype's id.
 pub const DEFINITIONS: [(&str, &str); 1] = [(
     "openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0.adls",
     include_str!(
@@ -375,7 +371,7 @@ fn foreign(path: &str, kind: ForeignKind, codes: &[DvCodedText]) -> Result<(), D
 /// group holds.
 ///
 /// Settings of any other scheme are refused, so a body of a scheme this
-/// server no longer keeps never governs an EHR. No openEHR spec governs the
+/// server does not keep never governs an EHR. No openEHR spec governs the
 /// scheme: our own design.
 ///
 /// # Errors

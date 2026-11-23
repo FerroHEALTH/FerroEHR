@@ -10,14 +10,10 @@
 //! `master07-*.adoc` §Context Selection, and the 401/403 discipline from
 //! `.../overview/Requests_and_responses.md` §Authentication and authorization.
 //!
-//! The gate runs after the access evaluator and RBAC. Pre-checks run before
-//! the backend call (op id, path params, query, body); post-checks run on a
-//! successful response, from the dispatch's
-//! [`AuditObject`](crate::system_log::middleware::AuditObject). A deny is a
-//! `403` and a lookup failure a `503` or `500`, each carrying the
-//! [`Principal`] for the ATNA layer. The gate, run whenever authentication is
-//! on, covers the COMPOSITION operations, whose template only the body or the
-//! stored version names (`crate::smart::routes`).
+//! The gate runs after the access evaluator and RBAC: pre-checks before the
+//! backend call, post-checks on a successful response. A deny is a `403` and a
+//! lookup failure a `503` or `500`, each carrying the [`Principal`] for the
+//! ATNA layer.
 #![expect(
     clippy::result_large_err,
     reason = "the Err variant of every decision point in this module is a \
@@ -94,9 +90,6 @@ fn forbidden(principal: &Principal, detail: &str) -> Response {
 /// A fail-closed refusal carrying the principal: `503` plus `Retry-After` when
 /// the failure is a call status of `service_overloaded` (no database
 /// connection could be obtained, so the request can be repeated), else `500`.
-///
-/// `step` names what could not be done and `error` the failure that broke it;
-/// both go to the trace record, and the body carries the curated opaque message.
 fn lookup_error(
     principal: &Principal,
     step: &'static str,

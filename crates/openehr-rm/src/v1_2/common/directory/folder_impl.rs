@@ -2,16 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `FOLDER`.
-//!
-//! `FOLDER` declares NO invariants of its own in RM 1.2.0: its class table
-//! (`RM/docs/UML/classes/org.openehr.rm.common.folder.adoc`) carries
-//! Description / Inherit / Attributes rows and no Invariants section, and the
-//! vendored BMM class definition likewise has no `invariants` member. So the
-//! `FOLDER` inherits three from `LOCATABLE` (`…common.locatable.adoc`
-//! §Invariants): `Archetype_node_id_valid`, which this impl runs; `Links_valid`,
-//! structural (`links` is `Option<NonEmptyVec<Link>>`); and `Archetyped_valid`,
-//! whose enforceable arm runs per node in the `openehr-its` instance pass.
+//! `FOLDER` declares no invariants; it inherits `LOCATABLE`'s
+//! `Archetype_node_id_valid`, run here.
 
 use crate::v1_2::common::directory::folder::Folder;
 use openehr_base::validate::{InvariantViolation, Validate};

@@ -2,19 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `POINT_EVENT`.
-//!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.point_event.adoc`.
-//! `POINT_EVENT` declares no own invariants; the inherited LOCATABLE
-//! `Archetype_node_id_valid` applies.
-//!
-//! NOTE: the inherited `EVENT.Offset_validity1`
-//! (`offset = time.diff(parent.origin)`) constrains the *computed* `offset()`
-//! function against the (unstored) parent origin — with `offset` realised as
-//! [`Event::offset_from`](crate::v1_1::data_structures::history::event::Event)
-//! computed from `time`, it holds by construction and is not a runnable check
-//! on this type.
+//! `POINT_EVENT` invariants: the inherited `Archetype_node_id_valid`;
+//! `Offset_validity1` holds by construction of [`Event::offset_from`](crate::v1_1::data_structures::history::event::Event).
 
 use crate::v1_1::data_structures::history::point_event::PointEvent;
 use openehr_base::validate::{InvariantViolation, Validate};

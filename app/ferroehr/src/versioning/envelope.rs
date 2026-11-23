@@ -5,10 +5,9 @@
 //! with each member's `data` kept as the text the typed reader takes (#6038).
 //!
 //! The envelope is the generated `NewContribution` of its API group, read
-//! straight from the request text. A body or a member the text readers
-//! refuse goes the way every body went before: parsed into a JSON value and
-//! read from it, so each refusal keeps its status, its text and its JSON
-//! path, and a body only the value reading admits is still committed.
+//! straight from the request text. A body or member the text readers refuse is
+//! parsed into a JSON value and read from it, so each refusal keeps its status,
+//! its text and its JSON path.
 //!
 //! No openEHR spec governs how a server reads a request: our own design. The
 //! refusals stay the ones ITS-REST `responses/400_CONTRIBUTION.yaml` and

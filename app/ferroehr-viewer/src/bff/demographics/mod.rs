@@ -3,18 +3,9 @@
 
 //! The `/demographics` section — the CDR's demographic space.
 //!
-//! Five screens over one API group: the per-kind party browser
-//! (`browse`), the party detail with its edit / history / relationships /
-//! tags tabs ([`party`], `history`, [`relationship`], [`PartyKind::tags_path`]), the
-//! `PARTY_RELATIONSHIP` resource ([`relationship`]), and the demographic
-//! CONTRIBUTION viewer ([`contribution`]).
-//!
 //! NOTE: the Demographic API is `DEVELOPMENT`-state within ITS-REST
 //! Release-1.1.0 (`specifications/docs/demographic/Description.md` §Status),
 //! so the wire these screens read can change in the next release.
-//!
-//! Three wire facts shape every screen here, all verified against the vendored
-//! release:
 //!
 //! 1. **A party is reached by id, never by listing.** The released Demographic
 //!    API publishes `POST /demographic/{kind}` plus
@@ -121,11 +112,6 @@ impl PartyKind {
 
     /// The path of the tag collection of party `uid`
     /// (`demographic/{kind}/{uid_based_id}/tags`, `operations/person_tags_*.yaml`).
-    ///
-    /// The path addresses the version CONTAINER: the container and a single
-    /// VERSION are two disjoint collections of the same object
-    /// (`operations/person_tags_get.yaml`), and a container tag survives the
-    /// party's next version, which is what an operator marking a party means.
     #[must_use]
     pub fn tags_path(self, uid: &str) -> String {
         format!(
@@ -155,10 +141,6 @@ impl PartyKind {
 
 /// A demographic versioned-object family, as the `versioned_*` read routes
 /// segment it.
-///
-/// `versioned_party` is released (`operations/versioned_party_get.yaml`);
-/// `versioned_party_relationship` is the CDR's own extension (module docs
-/// fact 3).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VersionedFamily {
     /// `VERSIONED_PARTY` — `/demographic/versioned_party/{versioned_object_uid}`.
@@ -190,10 +172,6 @@ impl VersionedFamily {
     }
 
     /// The family a route segment names, or `None` for anything else.
-    ///
-    /// A route segment is caller-supplied text, so the segment a page
-    /// interpolates into a CDR path is validated back into this closed set
-    /// rather than trusted.
     #[must_use]
     pub fn from_segment(segment: &str) -> Option<Self> {
         match segment {
@@ -254,10 +232,6 @@ fn unknown_segment(segment: &str, expected: &str) -> ViewerError {
 }
 
 /// The `/parties/{kind}/{uid}` page of a party.
-///
-/// The id is percent-encoded — an id carrying `/`, `#`, `?` or `%` would
-/// otherwise address a different route, and the encoded form is also what makes
-/// the value safe to hand a server-side redirect.
 #[must_use]
 pub fn party_href(kind: PartyKind, uid: &str) -> String {
     format!(
@@ -284,14 +258,6 @@ pub fn contribution_href(uid: &str) -> String {
 }
 
 /// Read a demographic versioned-object container and one of its VERSIONs.
-///
-/// Two reads, one resource: `GET /demographic/{family}/{versioned_object_uid}`
-/// for the container (`operations/versioned_party_get.yaml`) and the VERSION
-/// read for the envelope — `…/version/{version_uid}` for an explicitly
-/// selected version (`operations/versioned_party_version_get_by_id.yaml`) or
-/// `…/version` for the current one when nothing is selected, which "retrieves
-/// the _latest_ VERSION" when `version_at_time` is omitted
-/// (`operations/versioned_party_version_get_at_time.yaml`).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer
@@ -350,14 +316,6 @@ pub async fn fetch_demographic_revision_history(
 
 /// Resolve the `OBJECT_VERSION_ID` of the VERSION extant at `at_time`.
 ///
-/// For a browser `datetime-local` value:
-/// `GET /demographic/{family}/{versioned_object_uid}/version?version_at_time=…`
-/// — "If `version_at_time` is supplied, retrieves the VERSION extant _at
-/// specified time_" (`operations/versioned_party_version_get_at_time.yaml`).
-///
-/// The `200` body is a VERSION envelope whose `uid.value` is that
-/// `OBJECT_VERSION_ID`; the string is returned so the caller can pin it.
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] when `at_time` is empty; a non-2xx CDR answer (the
@@ -396,13 +354,6 @@ pub async fn resolve_demographic_version_at_time(
 /// Read one version of a demographic resource as its own document, pretty-
 /// printed for the pane.
 ///
-/// The document CONTENT reader is the RESOURCE route, not the VERSION route —
-/// the composition viewer's split: `GET /demographic/{segment}/{uid_based_id}`
-/// serves the party (or relationship) itself, and a `uid_based_id` "in the form
-/// of an `OBJECT_VERSION_ID` … is used to retrieve a specific known version"
-/// (`operations/person_get.yaml`). The VERSION envelope facts come from
-/// [`fetch_versioned_object`] instead.
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] when no version uid is given.
@@ -438,18 +389,6 @@ pub async fn fetch_demographic_version_document(
 }
 
 /// The party kind that holds `uid`, or `None` when no kind does.
-///
-/// The demographic space has no kind-agnostic party read, so the only honest
-/// answer is to ask each family's own read route in turn
-/// (`GET /demographic/{kind}/{uid_based_id}`) and take the first that answers:
-/// a `200` is the party, a `204` is a party whose current version is deleted
-/// ("`204` … deleted at time", `operations/person_get.yaml`) — both mean "this
-/// family holds it" — and a `404` means "not here, try the next".
-///
-/// It exists because the one enumerable demographic collection,
-/// `GET /demographic/tags`, reports each tag's target as a bare
-/// `UID_BASED_ID` with no kind attached, so a tag row cannot link anywhere
-/// without this.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));

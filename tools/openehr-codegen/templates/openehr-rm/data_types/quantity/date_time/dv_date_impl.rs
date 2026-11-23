@@ -2,16 +2,9 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariants for `DV_DATE`.
-//!
-//! `Value_valid` (`valid_iso8601_date(value)`) —
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_date.adoc`
-//! §Invariants — plus the inherited DV_QUANTIFIED `Magnitude_status_valid` and
-//! the DV_ORDERED `Normal_range_and_status_consistency`.
-//!
-//! `value` is carried as a `String`, so `valid_iso8601_date` is a runtime check
-//! here rather than a parse-time type guarantee (the ISO-8601 helpers live in
-//! `crate::v1_2::validate`).
+//! `DV_DATE` invariants: `Value_valid` (`org.openehr.rm.data_types.dv_date.adoc`),
+//! the inherited `Magnitude_status_valid` and
+//! `Normal_range_and_status_consistency`.
 
 use crate::v1_2::data_types::quantity::date_time::dv_date::DvDate;
 use crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration;
@@ -27,33 +20,21 @@ use openehr_base::v1_3::foundation_types::time::iso8601_duration::Iso8601Duratio
 use openehr_base::validate::{InvariantViolation, Validate};
 
 impl DvDate {
-    /// Addition of a duration to this date, or `None` when either value is not
-    /// a valid ISO-8601 string.
-    ///
-    /// Spec: `dv_date.adoc` §Functions `add` — "Addition of a Duration to this
-    /// Date" — effecting `dv_absolute_quantity.adoc`'s abstract `add`, whose
-    /// accuracy rule is realized by [`displaced_accuracy`].
-    ///
-    /// The calendar arithmetic is BASE's `Iso8601_date.add`, so leap years and
-    /// month lengths are answered once, in the type that owns the calendar.
+    /// This date plus a duration (`dv_date.adoc` `add`), the accuracy by
+    /// [`displaced_accuracy`]; `None` when either value is not valid ISO 8601.
     #[must_use]
     pub fn add(&self, a_diff: &DvDuration) -> Option<Self> {
         Some(self.displaced(self.iso().add(&duration_of(a_diff))?, a_diff))
     }
 
-    /// Subtraction of a duration from this date, under the same conditions as
+    /// This date minus a duration (`subtract`), under the conditions of
     /// [`Self::add`].
-    ///
-    /// Spec: `dv_date.adoc` §Functions `subtract`.
     #[must_use]
     pub fn subtract(&self, a_diff: &DvDuration) -> Option<Self> {
         Some(self.displaced(self.iso().subtract(&duration_of(a_diff))?, a_diff))
     }
 
-    /// Difference between this date and `other`, as a duration.
-    ///
-    /// Spec: `dv_date.adoc` §Functions `diff` — "Difference between this Date
-    /// and `other`."
+    /// The duration between this date and `other` (`diff`).
     #[must_use]
     pub fn diff(&self, other: &Self) -> Option<DvDuration> {
         let difference = self.iso().diff(&other.iso())?;
@@ -77,15 +58,8 @@ impl DvDate {
         })
     }
 
-    /// Returns `true` when this date is considered equal to `other`.
-    ///
-    /// Spec: `dv_date.adoc` §Functions `is_equal`, effecting
-    /// `dv_quantified.adoc`'s abstract `is_equal`.
-    ///
-    /// Equality is of the DATE, not of how it was written: `less_than` on this
-    /// class is defined over `magnitude()`, and `2024-01-01` and `20240101`
-    /// name the same day, so comparing the strings would make a value neither
-    /// less than, greater than, nor equal to its own extended form.
+    /// Whether this date names the same day as `other`, however written
+    /// (`is_equal`).
     #[must_use]
     pub fn is_equal(&self, other: &Self) -> bool {
         match (self.magnitude(), other.magnitude()) {
@@ -192,11 +166,7 @@ mod tests {
         }
     }
 
-    /// `DV_DATE` declares `add`, and BASE defines that as "arithmetic addition
-    /// of a duration to a date" — the NOMINAL calendar semantics belong to
-    /// `add_nominal`, which this class does not declare. So `P1M` is the
-    /// duration's own average month, not "the same day next month": adding it
-    /// to 31 January lands on 1 March, not on the end of February.
+    /// `add` is definite: 31 January plus `P1M` is 1 March.
     #[test]
     fn arithmetic_is_the_spec_s_arithmetic_addition_not_the_nominal_one() {
         assert_eq!(

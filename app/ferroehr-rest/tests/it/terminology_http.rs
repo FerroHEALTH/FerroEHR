@@ -1,18 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end HTTP tests for the terminology extension API group: the config gate
-//! (`[api] terminology`), the `200`/`404`/`400` wire outcomes
-//! for `get_terminology_ids` / `get_terminology_description` / `get_term` /
-//! `subsumes` / `get_value_set` / `value_set_validate`, and the JSON body shapes
-//! — driven through the assembled router over the **real** `FerroEhrService`
-//! (the scripted `Mock` is gone). The terminology service is the
-//! in-process openEHR bundle (TERM 3.1.0), so no DB seeding is needed and every
-//! assertion observes the real bundle.
-//!
-//! An unknown terminology, term or value set surfaces as
-//! `versioned_object_does_not_exist` (the
-//! bundle provider's convention), which the adapter maps to HTTP `404`.
+//! End-to-end HTTP tests for the terminology extension API group: the config
+//! gate (`[api] terminology`), the `200`/`404`/`400` wire outcomes of its six
+//! operations and the JSON body shapes, over the real `FerroEhrService` and its
+//! in-process openEHR bundle (TERM 3.1.0).
 use axum::Router;
 use base64::Engine;
 use http::StatusCode;
@@ -252,9 +244,7 @@ async fn value_set_validate_missing_candidate_is_400() {
 
 #[tokio::test]
 async fn enabled_terminology_group_serves_real_bundle() {
-    // Re-targeted from the old `unhooked → 501` Mock-scaffolding case: with the
-    // concrete service the terminology group is always implemented, so an enabled
-    // group serves the real bundle (200), never the trait-default 501.
+    // An enabled group serves the real bundle (`200`).
     let (_pg, app) = app(true).await;
     let (status, _) = send_body(&app, get(&format!("{EXT}/terminology"))).await;
     assert_eq!(status, StatusCode::OK);

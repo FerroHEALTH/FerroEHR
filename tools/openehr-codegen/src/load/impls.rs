@@ -1,16 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The hand-written `*_impl.rs` siblings a generated crate already carries.
-//!
-//! A generated type file may declare in its banner that hand-written spec
-//! behaviour lives beside it. That is a fact about the tree on disk, not about
-//! the BMM, so the crate's `src/` is scanned once and the render stage is handed
-//! the resulting set; otherwise the banner would point at files that do not
-//! exist.
-//!
-//! The scan uses the same rule `crate::cli` uses for module wiring: a `.rs` file
-//! whose first line does not mark it `@generated` is hand-written.
+//! The hand-written `*_impl.rs` siblings a generated crate carries: a `.rs`
+//! file whose first line is not `@generated`, so a type's banner names only a
+//! sibling that exists.
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -23,11 +16,8 @@ pub(crate) struct SiblingImpls {
 }
 
 impl SiblingImpls {
-    /// Scan `src` for hand-written `*_impl.rs` files, recursively.
-    ///
-    /// A missing directory (a crate emitted for the first time) yields an empty
-    /// set — no sibling exists yet, which is exactly what the banner should
-    /// then say.
+    /// Scans `src` recursively for hand-written `*_impl.rs` files; a missing
+    /// directory yields an empty set.
     pub(crate) fn scan(src: &Path) -> Self {
         let mut paths = BTreeSet::new();
         collect(src, "", &mut paths);
@@ -41,9 +31,8 @@ impl SiblingImpls {
     }
 }
 
-/// Recursively add every hand-written `*_impl.rs` under `dir` to `out`, keyed
-/// by its path relative to the scan root (`prefix` is that relative path of
-/// `dir` itself, `""` at the root).
+/// Adds every hand-written `*_impl.rs` under `dir` to `out`, keyed by its path
+/// relative to the scan root.
 fn collect(dir: &Path, prefix: &str, out: &mut BTreeSet<String>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;

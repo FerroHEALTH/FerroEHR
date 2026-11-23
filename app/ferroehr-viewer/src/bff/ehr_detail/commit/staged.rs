@@ -4,9 +4,6 @@
 //! The Commit tab's staged-change model and the CONTRIBUTION envelope it
 //! assembles.
 //!
-//! Component-free and unit-tested: the page stages and checks a change and
-//! assembles the body it posts from this one module.
-//!
 //! The envelope is the RELAXED `NewContribution` the released operation defines
 //! (ITS-REST `specifications/operations/contribution_create.yaml` +
 //! `specifications/schemas/ehr/NewContribution.yaml`): `versions[]` of
@@ -149,9 +146,6 @@ impl ChangeType {
 }
 
 /// One pending change in the staging area.
-///
-/// Viewer-session state only: the list rides the page's own form, so
-/// navigating away discards it (the viewer stores nothing of its own).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StagedChange {
     /// The row's stable identity — the staging sequence number, carried IN the
@@ -206,9 +200,6 @@ pub fn create_target_label(template_id: &str, body: &str) -> String {
 }
 
 /// Check one staged change before it enters the list or the envelope.
-///
-/// Everything beyond these three structural facts is the CDR's call — its
-/// diagnostic is rendered verbatim rather than second-guessed BFF-side.
 ///
 /// # Errors
 /// The operator-facing complaint when the body is blank, is not a JSON object

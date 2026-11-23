@@ -5,28 +5,12 @@
 //! with per-bench flamegraphs: the commit-validation passes, and the operational
 //! template ingestion a template upload runs before either of them can.
 //!
-//! `FerroEhrService::validate_composition_for_commit` runs two CPU-bound passes
-//! on the tokio worker before a composition reaches storage: the RM +
-//! terminology pass over the canonical instance, then the archetype-conformance
-//! pass against the template's WebTemplate. Both are pure functions of the
-//! composition and the template, so they bench without a database. The fixtures
-//! are the corpus spread: a short medicines list, the International Patient
-//! Summary the issue names (a ~200 kB instance against a ~1.9 MB operational
-//! template), and the congenital-syphilis case investigation, which is the
-//! largest form the CKM publishes and this repository vendors as its
-//! large-payload scale probe (a ~539 kB instance).
-//!
 //! Plain measurement: `cargo bench -p ferroehr --bench validation`.
 //! Flamegraphs: `cargo bench -p ferroehr --bench validation -- --profile-time 10`
 //! writes `flamegraph.svg` per bench under
 //! `target/criterion/<bench>/profile/` (criterion runs the registered
 //! profiler only under `--profile-time` —
 //! <https://docs.rs/criterion/latest/criterion/profiler/trait.Profiler.html>).
-//!
-//! NOTE: the profiler glue below implements criterion's `Profiler` trait over
-//! the `pprof` sampler directly, because pprof's own `criterion` feature is
-//! pinned to criterion ^0.5 (verified on crates.io 2026-08-04) and this
-//! workspace is on criterion 0.8.
 
 #![expect(
     clippy::expect_used,

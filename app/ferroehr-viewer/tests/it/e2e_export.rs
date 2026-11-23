@@ -23,17 +23,6 @@
 //! End-to-end journey over the `RESULT_SET` **export** — the one viewer
 //! surface whose outcome is a file rather than a screen.
 //!
-//! Each item of the Results heading's Export menu is a submit of the page's
-//! own form sent to the viewer's `/export/aql/<format>` route (`formaction`,
-//! `ferroehr_viewer::export`), so a browser click hands the bytes to the
-//! download manager and `WebDriver` never sees them. The journey therefore
-//! does what the item does: it runs the query on screen, opens Export and
-//! checks its two items, reads the two fields the export reads (`q`,
-//! `parameters_json`) and the item's own target out of the DOM, lifts the
-//! browser's own session cookie off the `WebDriver`, and re-posts exactly
-//! that request — so what it asserts is the item's own target answering the
-//! item's own request, under the item's own session.
-//!
 //! What it asserts: the CSV carries the column aliases as its header row and
 //! then the very rows the table shows; the JSON carries the same `RESULT_SET`;
 //! both arrive as downloads with their `Content-Disposition` filenames; and the
@@ -133,9 +122,6 @@ async fn posted_form(h: &Harness, format: &str) -> PostedForm {
 
 /// The browser's cookies for the viewer origin, as one `Cookie` header.
 ///
-/// This is what makes the re-post honest: the request travels on the SAME
-/// session the signed-in browser holds, not on a credential the test invented.
-///
 /// # Panics
 /// When the signed-in browser holds no cookie at all.
 async fn session_cookie_header(h: &Harness) -> String {
@@ -154,9 +140,7 @@ async fn session_cookie_header(h: &Harness) -> String {
 /// POST the form to the export item's target, optionally carrying a
 /// session cookie.
 ///
-/// Redirects are NOT followed: the route answers an unauthenticated caller with
-/// a redirect to `/sign-in`, and following it would turn a refusal into a `200`
-/// carrying a login page.
+/// Redirects are not followed, so a refusal stays a redirect to `/sign-in`.
 ///
 /// # Panics
 /// When the client cannot be built or the request cannot be sent.

@@ -3,13 +3,9 @@
 
 //! Surface A3 — OPT XML well-formedness (`upload_opt-invalid_opt`).
 //!
-//! FLAG: this is a **CNF-fixture / ingestion guard, not an AOM constraint
-//! kind** — it maps to CNF `I_DEFINITION_ADL14` `invalid_templates/*`
-//! (`alien_tags`, `multiple_elements`), not to a rule of the AOM 1.4/2.4
-//! constraint catalogue. It closes a leniency gap in the tolerant
-//! `openehr_its::opt14` codec before the artefact pass (the sibling `opt`
-//! module) runs on the parsed tree, so it lives beside the artefact
-//! validators rather than in the constraint-taxonomy modules.
+//! A CNF ingestion guard (`I_DEFINITION_ADL14` `invalid_templates/*`), not an
+//! AOM constraint: it closes a leniency gap in the tolerant
+//! `openehr_its::opt14` codec before the artefact pass runs.
 
 use std::collections::HashMap;
 

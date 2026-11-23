@@ -3,11 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! The nesting bounds hold at their limit and refuse one level beyond it.
-//!
-//! A `NOT`, `AND` or `OR` chain builds a tree as deep as it is long, and the
-//! passes that walk the tree recurse once per level, so an unbounded chain
-//! exhausted the stack and aborted the server (#4284). The bounds are checked
-//! over the tokens, before the grammar builds anything.
 
 #![allow(
     clippy::panic,

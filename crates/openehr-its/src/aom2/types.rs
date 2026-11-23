@@ -227,9 +227,8 @@ pub struct AssertionVariable {
     pub definition: String,
 }
 
-/// openEHR AOM2 persistent-form `AUTHORED_RESOURCE` — declared `abstract` in the XSD with no
-/// concrete subtype in this schema closure, so it is emitted as the
-/// plain shape a conforming document must present at its slots.
+/// openEHR AOM2 persistent-form `AUTHORED_RESOURCE`, abstract in the XSD with no concrete subtype here,
+/// so emitted as the shape a document presents at its slots.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AuthoredResource {
     /// The `original_language` attribute/element of the AOM2 persistent-form `AUTHORED_RESOURCE` XSD type.

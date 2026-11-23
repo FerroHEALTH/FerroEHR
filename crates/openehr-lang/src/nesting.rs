@@ -26,10 +26,6 @@ pub const MAX_NESTING_DEPTH: usize = 512;
 
 /// A nesting level in a recursive walk, refusing to descend past
 /// [`MAX_NESTING_DEPTH`].
-///
-/// Value semantics: [`Nesting::descend`] returns the deeper level for the
-/// recursive call and leaves the caller's own level untouched, so unwinding
-/// needs no bookkeeping.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Nesting(usize);
 
@@ -75,12 +71,6 @@ pub struct NestingExceeded {
 
 /// The deepest bracket nesting in a token stream, counted by `opens` and
 /// `closes`, refused when it passes [`MAX_NESTING_DEPTH`].
-///
-/// A combinator parser has no seam for a per-level counter, so its recursion
-/// is bounded up front by the bracket structure that drives it: every
-/// recursive production opens a bracket, so the bracket depth bounds the
-/// recursion depth. Returns the index of the first token that crosses the
-/// bound.
 ///
 /// # Errors
 /// [`NestingExceeded`] with the offending token's index attached by the

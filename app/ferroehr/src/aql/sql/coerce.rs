@@ -17,8 +17,8 @@
 //! string compares with a whole `DV_DATE` or `DV_DATE_TIME` and a time string
 //! with a whole `DV_TIME` as the instant each names (§Dates and Times, whose
 //! path metadata is the value's own `_type`); every other pair with a whole
-//! value is unknown, so it keeps no row under `=`, `!=` or `NOT`. A JSON string,
-//! number or Boolean compares as text, as before.
+//! value is unknown, so it keeps no row under `=`, `!=` or `NOT`. A JSON
+//! string, number or Boolean compares as text.
 
 use sea_query::{BinOper, Expr, ExprTrait as _};
 

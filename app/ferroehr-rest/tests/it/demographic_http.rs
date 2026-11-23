@@ -6,13 +6,6 @@
 //! `ETag`/`Location`/`Prefer` and the deleted-read→`204` and precondition→`412`
 //! behaviour mirroring the EHR group.
 //!
-//! The former `Mock` backend served fixed party bodies with a hard-coded
-//! `PARTY_OVID`; the real service assigns each version its own
-//! `OBJECT_VERSION_ID`, so the tests create real parties through the wire and
-//! read the server-assigned `version_uid` back from the `ETag` — the invariant
-//! assertions (weak-`ETag` present, `Location` = `{base}/demographic/{kind}/{uid}`
-//! consistent with that `ETag` **on writes only**, body `_type`, status codes).
-//!
 //! Header discipline (ITS-REST overview `Requests_and_responses.md`): `Location`
 //! rides create/update writes alone — §Location bars it as "an alternate
 //! representation of an existing resource" and §"Deprecated headers" deprecates
@@ -31,9 +24,6 @@ use crate::common::{etag_uid, send};
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 
 /// A spec-valid PERSON body (the shape `service_demographic.rs` commits).
-///
-/// Shared with the credential-separation suite, which commits a party to prove
-/// the demographic domain serves on its own credential.
 pub(crate) fn person_body() -> Value {
     json!({
         "_type": "PERSON",
@@ -466,12 +456,6 @@ async fn delete_accepts_the_weak_if_match_form() {
     );
 }
 
-/// The `VERSIONED_PARTY` reads are `VERSION`/`VERSIONED_OBJECT` responses, so
-/// each SHOULD carry `ETag` and `Last-Modified` (ITS-REST overview §"`ETag` and
-/// Last-Modified": both "SHOULD be included in responses for `VERSION`,
-/// `VERSIONED_OBJECT`, or other resources that have versioning or unique state
-/// identifiers"; the `ETag` is "usually taken from e.g.
-/// `VERSIONED_OBJECT.uid.value`, `VERSION.uid.value`") — and never `Location`.
 /// The demographic direct routes honour BOTH halves of the committal merge —
 /// the `UPDATE_AUDIT` attributes AND the VERSION `lifecycle_state`.
 ///
@@ -480,10 +464,9 @@ async fn delete_accepts_the_weak_if_match_form() {
 /// "services MUST accept `openehr-version` and `openehr-audit-details` custom
 /// request headers", and "whatever is provided it MUST be merged with the
 /// default VERSION and `VERSION.audit_details` attributes on commit runtime" —
-/// the VERSION attributes named FIRST. A demographic party's `UPDATE_VERSION`
+/// the VERSION attributes named first. A demographic party's `UPDATE_VERSION`
 /// envelope never travels in the body, so these headers are its only committal
-/// channel; before this, the direct routes threaded the audit half alone and a
-/// `553|incomplete|` party was reachable only through a CONTRIBUTION.
+/// channel.
 ///
 /// `553|incomplete|` is the openEHR `version_lifecycle_state` code for content
 /// still being authored (RM common `master06-change_control_package.adoc`
@@ -648,13 +631,10 @@ async fn version_at_time_without_offset_resolves_in_the_local_timezone() {
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "second version: {body}");
 
-    // The probe instant is v1's OWN commit instant, read back from the database
-    // rather than sampled from a clock (#3119). `committed_at` is stamped by
-    // PostgreSQL, whose container clock need not agree with this process's, and
-    // the margins this test used to sleep around were eaten under full-suite
-    // load. A version is in force AT its own commit instant, so the version
-    // extant at exactly that instant is v1 by construction, with no margin to
-    // lose.
+    // The probe instant is v1's own commit instant, read back from the database
+    // (#3119): PostgreSQL stamps `committed_at` on its own clock, and a version
+    // is in force at its own commit instant, so the version extant then is v1
+    // by construction.
     let between: jiff_sqlx::Timestamp = sqlx::query_scalar(
         "SELECT committed_at FROM party.version \
          WHERE vo_id = $1 AND sys_version = 1",
@@ -824,10 +804,8 @@ async fn party_relationship_delete_needs_the_version_uid() {
 
 #[tokio::test]
 async fn versioned_party_relationship_is_mounted() {
-    // RE-TARGET: the old Mock returned a blanket `501` (route mounted, unbuilt).
-    // The versioned-party-relationship read is a real implementation now, so a
-    // created relationship reads back its VERSIONED_PARTY_RELATIONSHIP → `200`
-    // (an unmounted path would 404), which still proves the route is mounted.
+    // A created relationship reads back its `VERSIONED_PARTY_RELATIONSHIP` as
+    // `200`; an unmounted path would `404`.
     let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create(&app, "party_relationship", &held_relationship(&app).await).await;
     let vo = vo_of(&ovid);

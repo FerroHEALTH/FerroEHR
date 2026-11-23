@@ -3,21 +3,12 @@
 
 //! ADL 1.4 inline dADL domain lowering (converter front end).
 //!
-//! NOTE: no openEHR spec governs the 1.4→2 conversion algorithm — the whole
-//! `adl14` pipeline (including this lowering) is our own design; see
-//! [`crate::adl14`] for the little the released text does fix.
+//! NOTE: no openEHR spec governs the 1.4→2 conversion: our own design (see
+//! [`crate::adl14`]).
 //!
-//! `C_DV_QUANTITY`/`C_DV_ORDINAL`/`C_CODE_PHRASE` are ADL 1.4-only inline
-//! dADL constrainers with no ADL2/AOM2 class; ADL2 expresses the first two as a
-//! `DV_QUANTITY`/`DV_ORDINAL` `C_COMPLEX_OBJECT` with an attribute tuple
-//! (`AOM2/master04.4` §Second-Order Constraints) and the third as a plain
-//! terminology-code constraint. We lower to those shapes and leave code
-//! renumbering + `property` binding synthesis to [`crate::adl14::convert`].
-//!
-//! The block itself is read by [`crate::adl14::lower`] (which spans the
-//! `<…>` token run and hands the parsed `openehr_lang::v1_1::odin` value here); the
-//! READ side of the encoding produced here is
-//! `crate::adl14::term_constraint`.
+//! `C_DV_QUANTITY` and `C_DV_ORDINAL` lower to a `C_COMPLEX_OBJECT` with an
+//! attribute tuple (`AOM2/master04.4` §Second-Order Constraints), `C_CODE_PHRASE`
+//! to a terminology-code constraint; [`crate::adl14::convert`] renumbers.
 
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
 use openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple;
@@ -52,17 +43,12 @@ pub(crate) struct CodePhraseParts {
     pub(crate) assumed: Option<String>,
 }
 
-/// Read an inline dADL `C_CODE_PHRASE` block into the parts a
-/// `C_TERMINOLOGY_CODE` constraint string is built from.
+/// Read an inline dADL `C_CODE_PHRASE` block into the parts of a
+/// `C_TERMINOLOGY_CODE` constraint string.
 ///
-/// `ADL1.4/master09-customising_adl.adoc` §Custom Syntax gives the block's shape
-/// verbatim (`terminology_id = <value = <"local">>` plus a keyed `code_list`)
-/// and states that the compact `[local:: at0039, at0040]` custom syntax and this
-/// dADL section "express exactly the same constraint" — so both spellings lower
-/// to the SAME constraint object. `AOM1.4/masterAppA-domain_extension.adoc`
-/// §`C_CODED_TEXT` is the class shape behind it (`terminology: String`,
-/// `code_list: List<String>`), which is why a bare `terminology_id = <"local">`
-/// is read as well as the chapter's nested `TERMINOLOGY_ID` form.
+/// `ADL1.4/master09-customising_adl.adoc` §Custom Syntax: the block and the
+/// `[local:: at0039, at0040]` syntax "express exactly the same constraint"
+/// (`AOM1.4/masterAppA-domain_extension.adoc` §`C_CODED_TEXT`).
 ///
 /// # Errors
 /// The human-readable defect when the block is not a `C_CODE_PHRASE` instance —
@@ -88,11 +74,8 @@ pub(crate) fn adl14_code_phrase_parts(odin: &OdinValue) -> Result<CodePhrasePart
     let terminology = terminology_id_value(terminology)
         .ok_or_else(|| "'terminology_id' is not a terminology identifier".to_owned())?;
     let Some(code_list) = map.get("code_list") else {
-        // A loud refusal is the honest boundary: silently emitting an empty
-        // code set would NARROW the constraint to nothing.
-        // NOTE: `AOM1.4/masterAppA-domain_extension.adoc` §C_CODED_TEXT makes
-        // `code_list` optional, but the 1.4 custom syntax this lowering targets
-        // carries a code set and nothing else, so it has no faithful carrier.
+        // NOTE: `masterAppA-domain_extension.adoc` §C_CODED_TEXT makes `code_list`
+        // optional, but an empty code set would narrow the constraint to nothing.
         return Err("missing 'code_list'".to_owned());
     };
     let codes = code_list_codes(code_list)?;
@@ -134,10 +117,8 @@ fn terminology_id_value(v: &OdinValue) -> Option<String> {
     }
 }
 
-/// A `code_list` dADL value → its code strings, accepting the keyed-container
-/// spelling of the chapter's example, an ODIN primitive list, and a lone string
-/// (`LANG/docs/odin/master05-content.adoc` §Container Objects gives both the
-/// keyed-member and the list-literal spellings of a container attribute).
+/// A `code_list` dADL value → its code strings, keyed, list or lone string
+/// (`LANG/docs/odin/master05-content.adoc` §Container Objects).
 ///
 /// # Errors
 /// The defect when a member is not a code string.
@@ -195,23 +176,13 @@ struct Partition {
     attribute_tuples: Vec<CAttributeTuple>,
 }
 
-/// Partition a domain block's `list` rows by the EXACT set of member names
-/// each row constrains.
+/// Partition a domain block's `list` rows by the exact set of member names each
+/// row constrains.
 ///
-/// ADL 2 documents tuple rows only with a constraint in EVERY member
-/// (`ADL2/master04.4-cadl_second_order.adoc` §Tuple Constraints — no
-/// unconstrained tuple item exists), and "unconstrained" is said in ADL 2 by
-/// NOT constraining the attribute. So rows constraining different member sets
-/// cannot share one tuple; each partition becomes its own sibling alternative
-/// of the target RM type (alternatives at a node are ordinary cADL —
-/// `ADL1.4/master05-cadl.adoc` §Mixed Structures), and the deliberate row
-/// pairings (`deg` ↔ its range) stay enforced within their partition. Within
-/// a partition: one distinct attribute → a plain constraint merging its rows'
-/// values; two or more → an attribute tuple with one `C_PRIMITIVE_TUPLE` per
-/// row and NO holes. Homogeneous inputs (every row the same member set — the
-/// overwhelmingly common case) yield exactly one partition, identical to the
-/// pre-partition output. Partition order is first appearance; a row's own
-/// member order fixes the display order.
+/// ADL 2 tuple rows constrain every member (`ADL2/master04.4` §Tuple
+/// Constraints), so each partition becomes its own alternative: one member
+/// merges into a plain constraint, several into a tuple. Order is first
+/// appearance.
 ///
 /// # Errors
 /// [`DomainLoweringError::Empty`] when a row value the primitive lowering
@@ -251,12 +222,8 @@ fn same_member_set(a: &[String], b: &[String]) -> bool {
     a.len() == b.len() && a.iter().all(|n| b.iter().any(|m| m == n))
 }
 
-/// The alternative one co-varying row group contributes.
-///
-/// Two or more member names co-vary and become a `C_ATTRIBUTE_TUPLE`; a single
-/// name merges the group's values into one constraint; an all-empty row set
-/// (no names) contributes an alternative carrying only the shared prefix —
-/// "any value of the type".
+/// The alternative one co-varying row group contributes: a tuple, a merged
+/// constraint, or the shared prefix alone for an empty row set.
 ///
 /// # Errors
 /// Propagates [`build_attribute_tuple`]'s refusal for a tuple group.
@@ -284,17 +251,12 @@ fn partition_of_group(
     })
 }
 
-/// The `C_ATTRIBUTE_TUPLE` of one co-varying partition: one
-/// `C_PRIMITIVE_TUPLE` row per source row, in member order.
+/// The `C_ATTRIBUTE_TUPLE` of one co-varying partition, one `C_PRIMITIVE_TUPLE`
+/// per row.
 ///
 /// # Errors
-/// [`DomainLoweringError::Empty`] when a row value the primitive lowering
-/// cannot model is met — every name is constrained by every row of the
-/// partition BY CONSTRUCTION, so the whole block refuses rather than dropping
-/// a constraint — or when a row matched no member name at all
-/// (`C_PRIMITIVE_TUPLE.members` is `1..*`,
-/// `docs/specs/openehr/AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
-/// §`C_PRIMITIVE_TUPLE`).
+/// [`DomainLoweringError::Empty`] for a row value the primitive lowering cannot
+/// model, or a row matching no member (`AOM2/master04.5` §`C_PRIMITIVE_TUPLE`).
 fn build_attribute_tuple(
     names: &[String],
     rows: &[&Vec<(String, OdinValue)>],
@@ -326,10 +288,8 @@ fn build_attribute_tuple(
     })
 }
 
-/// Lower a parsed 1.4 inline dADL domain block into one or more
-/// `DV_QUANTITY`/`DV_ORDINAL` complex-object ALTERNATIVES — one per
-/// constrained-member-set partition of its `list` rows; homogeneous
-/// blocks (the common case) lower to exactly one.
+/// Lower a parsed 1.4 inline dADL domain block into one
+/// `DV_QUANTITY`/`DV_ORDINAL` alternative per partition of its `list` rows.
 ///
 /// # Errors
 /// [`DomainLoweringError`] for an empty/unusable block or an `assumed_value` that
@@ -340,12 +300,8 @@ pub(crate) fn lower_adl14_domain(
 ) -> Result<Vec<CObject>, DomainLoweringError> {
     let map = match untyped(odin) {
         OdinValue::Object(map) if !map.is_empty() => map,
-        // An EMPTY domain block — `C_DV_QUANTITY <>` — constrains the TYPE and
-        // nothing else, lowering to `DV_QUANTITY matches {*}`.
-        //
-        // NOTE: the docs text admits the form — the domain block's content is
-        // dADL (`ADL1.4/master05-cadl.adoc` §Symbols `V_C_DOMAIN_TYPE`) and the
-        // dADL grammar makes the empty block its first alternative.
+        // An empty block constrains only the type (`ADL1.4/master05-cadl.adoc` §Symbols
+        // `V_C_DOMAIN_TYPE`).
         OdinValue::Empty | OdinValue::Object(_) => {
             let target_rm = match rm_type {
                 "C_DV_ORDINAL" => "DV_ORDINAL",
@@ -414,14 +370,9 @@ pub(crate) fn lower_adl14_domain(
         })
         .collect();
 
-    // `assumed_value = <units=<"C"> magnitude=<8.0> …>` — the 1.4 domain
-    // constrainer's assumed value is an INSTANCE of the constrained RM type
-    // (AOM 1.4 `C_DV_QUANTITY.assumed_value: DV_QUANTITY`). AOM2 puts
-    // `assumed_value` on `C_PRIMITIVE_OBJECT`/`C_TERMINOLOGY_CODE`, not on
-    // `C_COMPLEX_OBJECT`, and expressly separates it from `default_value`
-    // (`AOM2/master04.2` §Assumed_value). The instance is therefore decomposed
-    // into per-attribute leaves onto the ONE alternative whose rows admit the
-    // whole combination; none matching keeps the `AssumedValueUnmatched` refusal.
+    // The 1.4 `assumed_value` is an RM instance (AOM 1.4 `C_DV_QUANTITY`); AOM2 puts
+    // it on primitives (`AOM2/master04.2` §Assumed_value), so it decomposes onto
+    // the one alternative that admits it.
     if let Some(OdinValue::Object(assumed)) = map.get("assumed_value").map(untyped) {
         let mut placed = None;
         let mut first_err = None;
@@ -460,28 +411,16 @@ pub(crate) fn lower_adl14_domain(
         .collect())
 }
 
-/// Land the leaves of a domain block's `assumed_value` object on the constraints
-/// `attributes`/`attribute_tuples` already carry.
+/// Land the leaves of a domain block's `assumed_value` on the constraints, a
+/// tuple member on the one row the whole combination satisfies (`AOM2/master04.3`
+/// §Tuple Constraints).
 ///
-/// A leaf whose attribute is a plain constraint sets that constraint's
-/// `assumed_value` directly. A leaf whose attribute is a tuple member sets the
-/// member of the ONE tuple row the whole assumed combination satisfies — a tuple
-/// row is a co-constrained alternative (`AOM2/master04.3` §Tuple Constraints), so
-/// the assumed instance belongs to exactly one row, never to all of them.
-///
-/// NOTE: a leaf for an attribute the block does not constrain at all (e.g.
-/// `precision` in an `assumed_value` whose `list` rows carry only
-/// `units`/`magnitude`) has no AOM2 carrier — `assumed_value` is a field OF a
-/// `C_PRIMITIVE_OBJECT` (`AOM2/master04.2` §`Assumed_value`), and an unconstrained
-/// attribute has no constraint object to hold it. Such a leaf is dropped rather
-/// than carried on a fabricated "any" constraint, which has no ADL2 rendering.
-/// No openEHR spec governs 1.4→2 conversion — our own design.
+/// NOTE: a leaf for an unconstrained attribute has no AOM2 carrier
+/// (`AOM2/master04.2` §`Assumed_value`) and is dropped: our own design.
 ///
 /// # Errors
-/// [`DomainLoweringError::AssumedValueUnmatched`] when tuple members are present
-/// and no row admits the assumed combination — the 1.4 source states an assumed
-/// value outside its own `list`, which the parse refuses loudly rather than
-/// binding to an arbitrary row.
+/// [`DomainLoweringError::AssumedValueUnmatched`] when no tuple row admits the
+/// assumed combination.
 fn apply_domain_assumed_values(
     assumed: &indexmap::IndexMap<String, OdinValue>,
     attributes: &mut [CAttribute],
@@ -551,13 +490,8 @@ fn apply_domain_assumed_values(
     Ok(())
 }
 
-/// True if `constraint` admits the single value `value` carries.
-///
-/// Deliberately CONSERVATIVE: it answers `false` only where non-membership is
-/// positively decidable (a string not in a value list, a number outside every
-/// interval). A mismatched kind or an unconstrained (`{*}`) constraint answers
-/// `true`, so the refusal it feeds can never fire on a case this lowering does
-/// not fully understand.
+/// Whether `constraint` admits `value`; `false` only where non-membership is
+/// positively decidable.
 fn primitive_admits(constraint: &CPrimitiveObject, value: &CPrimitiveObject) -> bool {
     match (constraint, value) {
         (CPrimitiveObject::CString(c), CPrimitiveObject::CString(v)) => {
@@ -812,18 +746,10 @@ fn proper_or_point_real(
 }
 
 /// The `(lower, lower_included, upper, upper_included)` of an ODIN interval,
-/// each endpoint converted with `conv` (a `None` endpoint stays unbounded).
+/// each endpoint through `conv`.
 ///
-/// The `|N +/- M|` form lowers to the closed interval `[N-M, N+M]`, per
-/// `AM/docs/ADL1.4/master04-dadl` §Intervals of Ordered Primitive Types —
-/// "`|N +/-M|` -- interval of N ± M", whose worked example glosses
-/// `|5.0 +/-0.5|` as "4.5 - 5.5" — and identically
-/// `LANG/docs/odin/master07-leaf_data` §Intervals of Ordered Primitive Types.
-/// The arithmetic is done in `f64` and mapped back with `from_real`, since the
-/// AOM2 targets of this lowering (`C_REAL` / `C_INTEGER`) are numeric; a
-/// non-numeric centre or half-width (a date ± duration, which cannot be
-/// reduced without type context) yields an unbounded interval rather than a
-/// fabricated endpoint.
+/// `|N +/- M|` is the closed `[N-M, N+M]` (`ADL1.4/master04-dadl` §Intervals of
+/// Ordered Primitive Types); a non-numeric centre yields an unbounded interval.
 fn odin_range_bounds<T>(
     iv: &openehr_lang::v1_1::odin::OdinInterval,
     conv: impl Fn(&OdinValue) -> Option<T>,
@@ -882,11 +808,8 @@ mod tests {
     use crate::error::SyntaxErrorCode;
     use crate::parse::{Dialect, parse_definition_body};
 
-    /// `AM/docs/ADL1.4/master04-dadl` §Intervals of Ordered Primitive Types
-    /// defines `|N +/-M|` as "interval of N ± M" and glosses its own example
-    /// `|5.0 +/-0.5|` as "4.5 - 5.5" — so an inline 1.4 domain block's
-    /// `magnitude` lowers to the CLOSED interval `[N-M, N+M]`, not to the
-    /// centre alone.
+    /// An inline `|N +/-M|` magnitude lowers to the closed `[N-M, N+M]`
+    /// (`ADL1.4/master04-dadl` §Intervals of Ordered Primitive Types).
     #[test]
     fn adl14_plus_minus_domain_interval_lowers_to_both_bounds() {
         let cco = parse_definition_body(
@@ -935,12 +858,8 @@ mod tests {
         assert!(range.upper_included);
     }
 
-    /// A domain block's `assumed_value` decomposes onto the leaf constraints the
-    /// lowering produced: `AOM2/master04.2` §`Assumed_value` puts `assumed_value` on
-    /// `C_PRIMITIVE_OBJECT` (never on a `C_COMPLEX_OBJECT`, and never on
-    /// `default_value` — L175 separates the two notions), and
-    /// `AOM2/master04.3` §Tuple Constraints makes a tuple ROW one co-constrained
-    /// alternative, so the assumed instance binds to exactly the row it satisfies.
+    /// A domain block's `assumed_value` binds to the leaf constraints of the one
+    /// tuple row it satisfies (`AOM2/master04.2` §`Assumed_value`, `master04.3`).
     #[test]
     fn adl14_domain_assumed_value_lands_on_the_matching_tuple_row() {
         let cco = parse_definition_body(
