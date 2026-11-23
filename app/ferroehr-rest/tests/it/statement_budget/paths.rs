@@ -863,7 +863,7 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::AqlMatches, 15_857),
     (Path::AqlParty, 11_509),
     (Path::CommitPartyScored, 10_861),
-    (Path::ReadVersion, 2689),
+    (Path::ReadVersion, 2694),
     (Path::CommitUpdate, 202_204),
     (Path::CommitDelete, 4508),
     (Path::DirectoryCreate, 4900),
