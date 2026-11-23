@@ -1392,12 +1392,17 @@ and `entity.identifier=<uid>` find it, and a query that names another system
 for an identifier matches nothing. Every parameter answers through an index. A
 parameter on an element of the document (`address` and the `.identifier`,
 `entity-type`, `entity-role`, `type` and `subtype` parameters) matches the
-search tokens the store takes from the record's rendered document when it
-writes the record (`audit.audit_search_token`, `audit.audit_search_set` and
-the record's `search_tokens`, for an entry a column of its own row in
-`audit.access_log_entry`, copied into `audit.access_log_index`, which go
-with the entry's content when a tombstone replaces it), so the search finds what the served document
-says and renders only the page it serves. An `entity.identifier` that carries
+search tokens the store takes from the record's rendered document
+(`audit.audit_search_token`, `audit.audit_search_set` and the record's
+`search_tokens`): a system record's when the store writes it, an access-log
+entry's when the frontier round renders it from the stored entry into
+`audit.access_log_index`, about once a second, which go with the entry's
+content when a tombstone replaces it. A search on such a parameter first
+moves the index past every entry written before it, so it finds an entry
+written a moment ago; when an open database transaction keeps it from doing
+so within 2 seconds, the search answers `503` with `Retry-After`. So the
+search finds what the served document says and renders only the page it
+serves. An `entity.identifier` that carries
 the record's request id or the object it names (the version uid of a create)
 is read from the record's own column instead, so a request adds no row to
 `audit.audit_search_token`. One GIN index per record table holds the search

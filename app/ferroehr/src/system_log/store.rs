@@ -41,6 +41,7 @@ use sqlx::postgres::PgRow;
 use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
+pub mod access_index;
 mod access_log;
 mod batch;
 #[cfg(feature = "fhir")]
@@ -49,7 +50,7 @@ pub mod chain_walk;
 pub mod chains;
 pub mod delivery;
 #[cfg(feature = "fhir")]
-mod entries;
+pub(crate) mod entries;
 pub mod frontier;
 pub mod intake;
 pub(crate) mod lax;
@@ -236,9 +237,10 @@ pub struct AuditStore {
     /// The gathered intake write of the entries, started on first use.
     #[cfg(feature = "fhir")]
     group: Arc<crate::access_log::intake::Gathered>,
-    /// The newest index cursor an ITI-81 page saw (#6373).
     #[cfg(feature = "fhir")]
     cursor: search_page::IndexCursor,
+    /// The catch-up of the access log's search index the token searches run.
+    catch_up: Arc<access_index::CatchUp>,
 }
 
 impl AuditStore {
@@ -262,6 +264,7 @@ impl AuditStore {
             group: Arc::default(),
             #[cfg(feature = "fhir")]
             cursor: search_page::IndexCursor::default(),
+            catch_up: Arc::default(),
         }
     }
 
@@ -574,8 +577,8 @@ impl AuditStore {
         #[cfg(feature = "fhir")]
         if reserved_by.is_none() && Self::only_entries(&records) {
             let entered = self.with_entries(&writing, records).await?;
-            let (uids, intake, tokens) = self.entry_rows(&writing, entered).await?;
-            self.group().write(intake, tokens).await?;
+            let (uids, intake) = Self::entry_rows(&writing, entered)?;
+            self.group().write(intake).await?;
             let wrote = intake::Chains {
                 access_log: !uids.is_empty(),
                 system: false,
@@ -800,16 +803,21 @@ impl AuditStore {
     /// ITI-81 search-parameter subset ([`AuditSearchFilter`]).
     ///
     /// A criterion on a column is applied to that column. A criterion on an
-    /// element of the document (`address` and the token parameters) is first
-    /// resolved to the ids of the stored search tokens it names, and the
-    /// statement keeps the records whose `search_tokens` carry one of them,
-    /// through its index. Only the page is rendered.
+    /// element of the document (`address` and the token parameters) first
+    /// catches the access log's search index up ([`Self::catch_up`]), then keeps
+    /// the records whose `search_keys` hold a stored token it names. Only the page is rendered.
     ///
     /// # Errors
-    /// [`AuditError::Store`] when a query fails, and the rendering errors of a
-    /// record that cannot be read back.
+    /// [`AuditError::Store`] when a query fails, the rendering errors of a
+    /// record that cannot be read back, and [`AuditError::IndexBehind`] when
+    /// the index does not catch up within its wait.
     #[cfg(feature = "fhir")]
     pub async fn search(&self, filter: &AuditSearchFilter) -> Result<AuditPage, AuditError> {
+        // NOTE: our own design (#6322), an access-log entry's search tokens are rendered by the
+        // frontier round, so a token search first moves the index past every entry before it.
+        if filter.names_tokens() {
+            self.catch_up().await?;
+        }
         let Some(resolved) =
             crate::system_log::search::resolve_criteria(&self.pool, filter).await?
         else {
@@ -838,8 +846,6 @@ impl AuditStore {
         drop(conn);
         self.cursor.saw(&rows)?;
         filter.carried.observe(&rows)?;
-        // The page statement reads one record past the page, which says whether a next
-        // page exists without counting the matches.
         let more = rows.len() > search_page::page_size(filter);
         rows.truncate(search_page::page_size(filter));
         let documents = self.page_documents(&rows).await?;

@@ -98,7 +98,6 @@ pub mod seal;
 pub(crate) mod search;
 pub mod sender;
 pub mod store;
-pub(crate) mod token_digest;
 
 use crate::system_log::sender::AuditSender;
 #[cfg(feature = "fhir")]
@@ -192,6 +191,11 @@ pub enum AuditError {
     /// A system record's content digest could not be computed.
     #[error("an audit record's content digest could not be computed")]
     Digest(#[source] content_digest::Unwritable),
+    /// The access log's search index did not reach the entries committed
+    /// before a search on a token parameter within the wait it allows: an
+    /// open transaction held the frontier back (#6322).
+    #[error("the access log's search index did not catch up within {0:?}")]
+    IndexBehind(std::time::Duration),
     /// An access-log entry's uid is no UUID, so the log cannot key it.
     #[error("an access-log entry's uid is no UUID")]
     EntryUid(#[source] uuid::Error),
@@ -492,10 +496,21 @@ impl FerroEhrService {
             carried,
             ..filter.clone()
         };
-        audit_store
-            .search(&filter)
-            .await
-            .map_err(|e| ServiceError::internal("search the audit record repository", e))
+        audit_store.search(&filter).await.map_err(search_refusal)
+    }
+}
+
+/// The refusal of a failed ITI-81 search: unavailable, with `Retry-After`,
+/// while the access log's search index has not caught up (#6322), else a
+/// server fault.
+#[cfg(feature = "fhir")]
+pub(crate) fn search_refusal(error: AuditError) -> ServiceError {
+    match error {
+        AuditError::IndexBehind(_) => ServiceError::overloaded(
+            "the audit search index is catching up; retry the search",
+            error,
+        ),
+        error => ServiceError::internal("search the audit record repository", error),
     }
 }
 

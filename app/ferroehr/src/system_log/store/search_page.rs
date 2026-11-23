@@ -29,8 +29,6 @@ use crate::system_log::search::TokenMatch;
 const AUDIT: &str = "audit";
 /// The relation every record is read from.
 const RECORD: &str = "audit_record";
-/// The access log's index cursor, which an ITI-81 retrieval is read as of.
-const CURSOR_SQL: &str = "SELECT x.last_id FROM audit.access_log_index_state x WHERE x.singleton";
 
 /// The select item of the index cursor a page's first record carries.
 const CURSOR_SQL_ITEM: &str =
@@ -63,7 +61,9 @@ impl IndexCursor {
         if held >= 0 {
             return Ok(held);
         }
-        let read: i64 = sqlx::query_scalar(CURSOR_SQL).fetch_one(conn).await?;
+        let read: i64 = sqlx::query_scalar(crate::access_log::index::CURSOR)
+            .fetch_one(conn)
+            .await?;
         self.0.fetch_max(read, Ordering::Relaxed);
         Ok(read)
     }

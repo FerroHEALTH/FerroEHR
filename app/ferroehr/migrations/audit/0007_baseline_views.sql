@@ -49,13 +49,11 @@ CREATE FUNCTION audit.access_event_code(p_class text, p_action text) RETURNS tex
 $$;
 
 -- The ITI-81 index of the access-log entries no write holds (#6373): the
--- search columns of the indexed entries from access_log_index, and those of
--- the entries past its cursor from their rows by key. p_cursor is a cursor
--- the caller saw, at or below the one in force since the cursor only moves
+-- indexed entries from access_log_index and those past its cursor from their
+-- rows by key. p_cursor is a cursor the caller saw; the cursor only moves
 -- forward, so it changes no row and gives the planner the open window's
 -- bound. The function is inlined, so a page reads the index in the search's
--- order. The row is joined on its key by a left join, so a total that names
--- the search columns alone reads no row.
+-- order, and a total that names the search columns alone reads no row.
 --
 -- No openEHR spec governs audit storage: our own design.
 CREATE FUNCTION access_log_search(p_cursor bigint)
@@ -67,13 +65,13 @@ CREATE FUNCTION access_log_search(p_cursor bigint)
     AS $$
     SELECT k.entry_id, k.time_recorded, e.event_action, e.event_outcome, k.principal,
            k.patient_id, e.resource_id, e.request_id, e.client_ip, e.classified_ehr_id,
-           e.search_tokens, k.search_keys, k.entry_id
+           k.search_tokens, k.search_keys, k.entry_id
       FROM (SELECT i.entry_id, i.time_recorded, i.render_policy_id, i.principal, i.patient_id,
-                   i.search_keys
+                   i.search_tokens, i.search_keys
               FROM audit.access_log_index i
             UNION ALL
             SELECT e.id, e.time_recorded, e.render_policy_id, e.principal, e.patient_id,
-                   audit.search_keys(e.search_tokens, e.request_id, e.resource_id)
+                   NULL::integer[], audit.search_keys(NULL::integer[], e.request_id, e.resource_id)
               FROM audit.access_log_entry e
              WHERE e.id > p_cursor
                AND e.id > (SELECT x.last_id FROM audit.access_log_index_state x WHERE x.singleton)
@@ -83,7 +81,7 @@ CREATE FUNCTION access_log_search(p_cursor bigint)
      WHERE k.render_policy_id IS NOT NULL
 $$;
 COMMENT ON FUNCTION access_log_search(bigint) IS
-    'The ITI-81 index of the access-log entries no write holds: what the search filters on, read through access_log_index for the indexed entries and from the entry''s row past its cursor, which p_cursor, a cursor the caller saw, bounds for the planner, and the entry''s id, which names it. A tombstone is not in it.';
+    'The ITI-81 index of the access-log entries no write holds: what the search filters on, from access_log_index for the indexed entries and from the entry''s row past the cursor p_cursor bounds, and the entry''s id, which names it. A tombstone is not in it.';
 
 -- The ITI-81 index of the system records no write holds (#6203, #6242): what
 -- the search filters on, read from the records, and each record's position.
@@ -153,13 +151,14 @@ CREATE VIEW access_log_by_key AS
            NULL::text AS client_id, e.classified_ehr_id AS ehr_id,
            NULL::text AS subject_namespace, false AS subject_lookup_failed,
            NULL::text AS review, NULL::jsonb AS category_content,
-           p.digest AS render_policy, NULL::jsonb AS token_attributes, e.search_tokens,
-           audit.search_keys(e.search_tokens, e.request_id, e.resource_id) AS search_keys,
+           p.digest AS render_policy, NULL::jsonb AS token_attributes, i.search_tokens,
+           audit.search_keys(i.search_tokens, e.request_id, e.resource_id) AS search_keys,
            e.content AS row_part, sh.content AS shared_part, e.record_type AS entry_type,
            e.uid AS entry_uid, e.ehr_id AS entry_ehr, e.form AS stored_form,
            e.shared AS shared_digest, 'access_log'::text AS chain
       FROM access_log_entry e
       JOIN audit_render_policy p ON p.id = e.render_policy_id
+      LEFT JOIN access_log_index i ON i.entry_id = e.id
       LEFT JOIN access_log_shared sh ON sh.digest = e.shared;
 COMMENT ON VIEW access_log_by_key IS
     'One access-log entry as audit_record holds it, read by its key from its own row: what an ITI-81 page reads for each record it serves, after the search index named it.';
