@@ -319,8 +319,15 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   tip the gate read found and writes the version, its outbox row, the
   reservation and the reverse-relationship index. There is no EHR or policy
   guard: the version keys and the tip arbitrate, and a moved tip is judged
-  again. The side-table settle follows in the same transaction. A record
-  subject another PERSON declares is refused by the deferred
+  again. The side-table settle follows in the same transaction as ordered
+  statements (`party_binding::store::settle`): one statement deletes and
+  retires every grant, caller fact, record subject, patient identifier,
+  identifier and membership row the new head no longer holds, the next
+  inserts the rows it holds and clears the tombstones of the keys it binds,
+  and the facts stamp and the grant revision follow only when the rows the
+  two returned differ. A retirement runs a statement before its insert, so a
+  value that moves between rows never meets its old row in a unique index.
+  A record subject another PERSON declares is refused by the deferred
   `uq_binding_record_subject` at `COMMIT`, and the write answers `409` with
   its records discarded. PARTY_RELATIONSHIP writes and demographic
   CONTRIBUTIONs keep the per-version path.
@@ -1789,10 +1796,13 @@ subject's relationships (`LiveGrants::under_care_of`, at most
 (`LiveGrants::cared_for_by`, teams whose censuses take at most
 `care::CENSUS_BYTES` together, each weighed by its patients and the record
 subjects they declare, #5760, read by `ix_binding_caller_fact_care_team` of migration
-`party/0041`). Each is read on a miss, one indexed statement, and dropped
-when the facts read of a notification stamps a party it holds or a team the
-party is now under the care of; a grant reload and a listener that connects
-or loses its connection drop both. The relationships carry their dates, so
+`party/0041`). Each is read on a miss, one indexed statement. The facts read
+of a notification drops each subject it stamps, and reads the stamped
+subjects' care relationships and record subjects beside their facts
+(`caller::store::CARED`), which it applies to every held census a stamped
+subject is in or is now under the care of, so a relationship commit never
+sends a team's census back to the store (#6074); a grant reload and a
+listener that connects or loses its connection drop both. The relationships carry their dates, so
 the evaluator applies the grace after a discharge. A `PERSON` version that changes its care relationships commits
 only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:

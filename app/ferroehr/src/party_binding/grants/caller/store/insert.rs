@@ -12,7 +12,6 @@
 )]
 
 use serde_json::Value;
-use sqlx::PgConnection;
 use uuid::Uuid;
 
 use super::super::care_of::{CareFact, Cover};
@@ -20,7 +19,7 @@ use super::super::{CallerFact, FactValue};
 use super::{FACT_TEXT, HOLDER_VERSION, WRITER};
 use crate::party_binding::grants::derive::Bound;
 use crate::party_binding::grants::store::GrantHead;
-use crate::storage::error::StorageError;
+use crate::party_binding::step::{Step, Tag};
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
 /// The code a fact names: a role's, an organisation type's, a care
@@ -73,15 +72,16 @@ fn providers_of<'a>(facts: &[&'a CallerFact]) -> (Vec<Option<&'a str>>, Vec<Opti
         .unzip()
 }
 
-/// Inserts `facts` of `head`, each about the party at its position in `about`
-/// ([`CallerFact::about`], else the head's); the rows as party and text.
-pub(super) async fn insert(
-    tx: &mut PgConnection,
-    head: GrantHead<'_>,
-    about: &[Uuid],
-    role_validity: Option<&Value>,
-    facts: &[&CallerFact],
-) -> Result<Vec<(Uuid, String)>, StorageError> {
+/// The step that inserts `facts` of `head`, each about the party at its
+/// position in `about` ([`CallerFact::about`], else the head's), returning
+/// each row's party and text ([`Tag::FactsCame`]); it reads nothing when
+/// `facts` is empty.
+pub(super) fn insert<'q>(
+    head: GrantHead<'q>,
+    about: Vec<Uuid>,
+    role_validity: Option<&'q Value>,
+    facts: &[&'q CallerFact],
+) -> Step<'q> {
     let instant = |bound: Bound| match bound {
         Bound::At(at) => Some(jiff_sqlx::Timestamp::from(at)),
         Bound::Open | Bound::Unreadable => None,
@@ -148,30 +148,33 @@ pub(super) async fn insert(
          CROSS JOIN (SELECT {WRITER} AS id) writer \
          CROSS JOIN (SELECT {HOLDER_VERSION} AS version) holder \
          LEFT JOIN binding_care_validity c ON c.vo_id = $1 \
+         WHERE cardinality($5::integer[]) > 0 \
          ON CONFLICT DO NOTHING \
-         RETURNING party_id, {FACT_TEXT} AS fact"
+         RETURNING party_id AS p, {FACT_TEXT} AS t"
     );
-    Ok(sqlx::query_as(sqlx::AssertSqlSafe(statement))
-        .bind(head.vo_id)
-        .bind(about)
-        .bind(head.lifecycle_state)
-        .bind(role_validity)
-        .bind(&ordinal)
-        .bind(&kind)
-        .bind(&terminology)
-        .bind(&code_string)
-        .bind(&target)
-        .bind(&target_kind)
-        .bind(&provider_issuer)
-        .bind(&provider_id)
-        .bind(&validity)
-        .bind(&unreadable)
-        .bind(&not_before)
-        .bind(&not_after)
-        .bind(&self_declared)
-        .bind(&covers_issuer)
-        .bind(&covers_id)
-        .bind(&covers_kind)
-        .fetch_all(&mut *tx)
-        .await?)
+    let writes = !facts.is_empty();
+    Step::new("fi", statement, Some(Tag::FactsCame), move |query| {
+        query
+            .bind(head.vo_id)
+            .bind(about)
+            .bind(head.lifecycle_state)
+            .bind(role_validity)
+            .bind(ordinal)
+            .bind(kind)
+            .bind(terminology)
+            .bind(code_string)
+            .bind(target)
+            .bind(target_kind)
+            .bind(provider_issuer)
+            .bind(provider_id)
+            .bind(validity)
+            .bind(unreadable)
+            .bind(not_before)
+            .bind(not_after)
+            .bind(self_declared)
+            .bind(covers_issuer)
+            .bind(covers_id)
+            .bind(covers_kind)
+    })
+    .writing(writes)
 }
