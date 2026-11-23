@@ -667,7 +667,9 @@ async fn the_party_door_holds_its_one_function_and_nothing_else() {
         )
         .await
     };
-    gate().await.expect("a correctly migrated database passes the boot gate");
+    gate()
+        .await
+        .expect("a correctly migrated database passes the boot gate");
     let (door, tables): (bool, bool) = sqlx::query_as(
         "SELECT has_function_privilege('ferroehr_clinical', 'party_door.party_revisions()', \
          'EXECUTE'), has_table_privilege('ferroehr_clinical', 'party.binding_grant_revision', \
@@ -684,6 +686,11 @@ async fn the_party_door_holds_its_one_function_and_nothing_else() {
             "CREATE TABLE party_door.smuggled (id int)",
             "DROP TABLE party_door.smuggled",
             "is a relation",
+        ),
+        (
+            "CREATE TYPE party_door.smuggled AS ENUM ('kept')",
+            "DROP TYPE party_door.smuggled",
+            "is a type",
         ),
         (
             "CREATE FUNCTION party_door.other() RETURNS int LANGUAGE sql AS 'SELECT 1'",

@@ -143,12 +143,14 @@ pub async fn read_judged(pool: &PgPool, at: JudgedAt) -> Result<Option<Judged>, 
 macro_rules! marks_select {
     ($head:expr) => {
         concat!(
-    "SELECT ", $head, "h.head_sys_version AS held_head, h.restricted_at, ",
-    "(h.person_withheld_until > now()) IS TRUE AS person_withheld, ",
-    "(SELECT d.content_digest FROM version d WHERE d.tier = h.tier AND d.vo_id = h.vo_id ",
-    "AND d.sys_version = $2) AS held_digest, ",
-    access_revision!("h.ehr_id"),
-    " FROM vo_head h WHERE h.vo_id = $1"
+            "SELECT ",
+            $head,
+            "h.head_sys_version AS held_head, h.restricted_at, ",
+            "(h.person_withheld_until > now()) IS TRUE AS person_withheld, ",
+            "(SELECT d.content_digest FROM version d WHERE d.tier = h.tier AND d.vo_id = h.vo_id ",
+            "AND d.sys_version = $2) AS held_digest, ",
+            access_revision!("h.ehr_id"),
+            " FROM vo_head h WHERE h.vo_id = $1"
         )
     };
 }
@@ -158,7 +160,6 @@ pub const MARKS_SQL: &str = marks_select!("");
 
 /// [`MARKS_SQL`] with the party store's revisions, for a ride.
 pub const MARKS_RIDE_SQL: &str = marks_select!(party_revisions!());
-
 
 /// What may have changed about a version since it was read: everything a
 /// read decides by that a later commit can change while the version itself

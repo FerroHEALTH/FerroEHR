@@ -298,9 +298,9 @@ pub async fn ehr_summary_read(
         EHR_SUMMARY_SQL
     };
     let Some(row) = sqlx::query(sql)
-    .bind(ehr_id)
-    .fetch_optional(&mut *acquire(pool).await?)
-    .await?
+        .bind(ehr_id)
+        .fetch_optional(&mut *acquire(pool).await?)
+        .await?
     else {
         return Ok(None);
     };

@@ -648,7 +648,13 @@ async fn riding(layer: AuthLayer, req: Request, mut next: Next) -> Response {
         Err(e) => return refusal::refusal_of(auth, &parts.headers, &e),
     };
     if !matches!(Box::pin(layer.service.party_door_open()).await, Ok(true)) {
-        return Box::pin(decided(&layer, access, Request::from_parts(parts, body), &mut next)).await;
+        return Box::pin(decided(
+            &layer,
+            access,
+            Request::from_parts(parts, body),
+            &mut next,
+        ))
+        .await;
     }
     // NOTE: our own design (#6320), a ride decides on the party copies as they stand, and its
     // answer leaves only once they held the store's revisions its clinical statement read.
@@ -678,7 +684,6 @@ async fn riding(layer: AuthLayer, req: Request, mut next: Next) -> Response {
     ))
     .await
 }
-
 
 /// The request of the verified `access` bound, granted, gated and served:
 /// everything of it that rests on the party copies.

@@ -1392,7 +1392,8 @@ async fn verify_party_door(pool: &PgPool) -> Result<(), DbError> {
              UNION ALL
              SELECT 'party_door.' || t.typname, 'is a type'
              FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
-             WHERE n.nspname = 'party_door'
+             LEFT JOIN pg_type e ON e.oid = t.typelem
+             WHERE n.nspname = 'party_door' AND t.typrelid = 0 AND COALESCE(e.typrelid, 0) = 0
          ) breaches
          WHERE problem IS NOT NULL
          ORDER BY object

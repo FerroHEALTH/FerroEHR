@@ -199,7 +199,8 @@ pub const READ_VERSION_BY_ORDINAL_SQL: &str =
     version_select!("WHERE v.vo_id = $1 AND v.sys_version = $2");
 
 /// [`READ_VERSION_BY_ORDINAL_SQL`] with the party store's revisions, for a ride (#6320).
-pub const READ_VERSION_BY_ORDINAL_RIDE_SQL: &str = version_select!(party_revisions!(); "WHERE v.vo_id = $1 AND v.sys_version = $2");
+pub const READ_VERSION_BY_ORDINAL_RIDE_SQL: &str =
+    version_select!(party_revisions!(); "WHERE v.vo_id = $1 AND v.sys_version = $2");
 
 /// The statement [`read_one`] runs for [`VersionAt::Tree`]: one version of an object by its
 /// `VERSION_TREE_ID` columns, addressed on the partitioned parent.
@@ -565,29 +566,59 @@ pub async fn read_one(
 ) -> Result<Option<StoredVersion>, StorageError> {
     let ride = crate::party_binding::request::riding();
     let query = match at {
-        VersionAt::Current(vo_id) => sqlx::query(if ride { READ_CURRENT_RIDE_SQL } else { READ_CURRENT_SQL }).bind(vo_id),
+        VersionAt::Current(vo_id) => sqlx::query(if ride {
+            READ_CURRENT_RIDE_SQL
+        } else {
+            READ_CURRENT_SQL
+        })
+        .bind(vo_id),
         VersionAt::Tree(vo_id, tree) => {
             let (trunk, branch, branch_version) = tree.columns();
-            sqlx::query(if ride { READ_VERSION_RIDE_SQL } else { READ_VERSION_SQL })
-                .bind(vo_id)
-                .bind(trunk)
-                .bind(branch)
-                .bind(branch_version)
-        }
-        VersionAt::Ordinal(vo_id, ordinal) => sqlx::query(if ride { READ_VERSION_BY_ORDINAL_RIDE_SQL } else { READ_VERSION_BY_ORDINAL_SQL })
+            sqlx::query(if ride {
+                READ_VERSION_RIDE_SQL
+            } else {
+                READ_VERSION_SQL
+            })
             .bind(vo_id)
-            .bind(ordinal),
-        VersionAt::Instant(vo_id, at) => {
-            sqlx::query(if ride { VERSION_AT_RIDE_SQL } else { VERSION_AT_SQL }).bind(vo_id).bind(at.to_string())
+            .bind(trunk)
+            .bind(branch)
+            .bind(branch_version)
         }
-        VersionAt::CurrentOfKind(ehr_id, kind) => sqlx::query(if ride { READ_CURRENT_OF_KIND_RIDE_SQL } else { READ_CURRENT_OF_KIND_SQL })
-            .bind(ehr_id)
-            .bind(kind),
-        VersionAt::InstantOfKind(ehr_id, kind, at) => sqlx::query(if ride { VERSION_AT_OF_KIND_RIDE_SQL } else { VERSION_AT_OF_KIND_SQL })
-            .bind(ehr_id)
-            .bind(kind)
-            .bind(at.to_string()),
-        VersionAt::Directory(ehr_id) => sqlx::query(if ride { READ_CURRENT_DIRECTORY_RIDE_SQL } else { READ_CURRENT_DIRECTORY_SQL }).bind(ehr_id),
+        VersionAt::Ordinal(vo_id, ordinal) => sqlx::query(if ride {
+            READ_VERSION_BY_ORDINAL_RIDE_SQL
+        } else {
+            READ_VERSION_BY_ORDINAL_SQL
+        })
+        .bind(vo_id)
+        .bind(ordinal),
+        VersionAt::Instant(vo_id, at) => sqlx::query(if ride {
+            VERSION_AT_RIDE_SQL
+        } else {
+            VERSION_AT_SQL
+        })
+        .bind(vo_id)
+        .bind(at.to_string()),
+        VersionAt::CurrentOfKind(ehr_id, kind) => sqlx::query(if ride {
+            READ_CURRENT_OF_KIND_RIDE_SQL
+        } else {
+            READ_CURRENT_OF_KIND_SQL
+        })
+        .bind(ehr_id)
+        .bind(kind),
+        VersionAt::InstantOfKind(ehr_id, kind, at) => sqlx::query(if ride {
+            VERSION_AT_OF_KIND_RIDE_SQL
+        } else {
+            VERSION_AT_OF_KIND_SQL
+        })
+        .bind(ehr_id)
+        .bind(kind)
+        .bind(at.to_string()),
+        VersionAt::Directory(ehr_id) => sqlx::query(if ride {
+            READ_CURRENT_DIRECTORY_RIDE_SQL
+        } else {
+            READ_CURRENT_DIRECTORY_SQL
+        })
+        .bind(ehr_id),
     };
     let Some(row) = query.fetch_optional(&mut *acquire(pool).await?).await? else {
         return Ok(None);
