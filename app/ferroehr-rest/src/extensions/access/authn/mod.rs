@@ -480,11 +480,29 @@ impl Authenticator {
     /// verified credential for `[auth.basic] cache_ttl`; it logs which
     /// check refused a credential.
     pub(crate) async fn authenticate(&self, parts: &Parts) -> Result<Authenticated, AuthError> {
-        let access = self
-            .gate
+        let access = self.verify(parts).await?;
+        self.bind(access).await
+    }
+
+    /// The credential of `parts` verified by the gate, before anything of the
+    /// party store is consulted: what a request runs once, its `DPoP` proof
+    /// spent and its verified credential kept (#6320).
+    ///
+    /// # Errors
+    /// The gate's refusal.
+    async fn verify(&self, parts: &Parts) -> Result<Access, AuthError> {
+        self.gate
             .authenticate_request(parts)
             .await
-            .map_err(|denied| AuthError::from_denied(&denied))?;
+            .map_err(|denied| AuthError::from_denied(&denied))
+    }
+
+    /// The caller of the verified `access` bound and admitted on the party
+    /// copies: what a ride runs again when the store overtook it (#6320).
+    ///
+    /// # Errors
+    /// The binding's or the caller kind's refusal, naming the caller.
+    async fn bind(&self, access: Access) -> Result<Authenticated, AuthError> {
         self.admitted(access.clone())
             .await
             .map_err(|refusal| self.naming_caller(refusal, &access))
@@ -586,27 +604,75 @@ pub(crate) async fn middleware(
     req: Request,
     next: Next,
 ) -> Response {
-    let (auth, live) = (&layer.authenticator, layer.service.grants());
+    let auth = &layer.authenticator;
     if !auth.enabled() {
         return REQUEST_PRINCIPAL.scope(None, next.run(req)).await;
     }
     let (parts, body) = req.into_parts();
-    let outcome = auth.authenticate(&parts).await;
-    let mut req = Request::from_parts(parts, body);
-    match outcome {
+    let access = match auth.verify(&parts).await {
+        Ok(access) => access,
+        Err(e) => return refusal::refusal_of(auth, &parts.headers, &e),
+    };
+    let bodiless = axum::body::HttpBody::size_hint(&body).exact() == Some(0);
+    if !rides(&layer, &parts, bodiless).await {
+        return decided(&layer, access, Request::from_parts(parts, body), next).await;
+    }
+    // NOTE: our own design (#6320), a ride decides on the party copies as they stand, and its
+    // answer leaves only once they held the store's revisions its clinical statement read.
+    let again = parts.clone();
+    // Boxed: the run is large, and the ride keeps it beside what it noted.
+    let (resp, ridden) = Box::pin(ferroehr::party_binding::request::ride(decided(
+        &layer,
+        access.clone(),
+        Request::from_parts(parts, body),
+        next.clone(),
+    )))
+    .await;
+    let op = ridden.op().unwrap_or("unnamed");
+    if matches!(layer.service.ride_held(ridden).await, Ok(true)) {
+        return resp;
+    }
+    // NOTE: our own design (#6320), the run the store overtook leaves nothing: its answer and
+    // what it would have counted go unused, and the request runs on the path that reads the
+    // store's revisions first, which answers whatever they are.
+    drop(resp);
+    ferroehr::telemetry::access_path::count_policy_rerun(op);
+    decided(
+        &layer,
+        access,
+        Request::from_parts(again, axum::body::Body::empty()),
+        next,
+    )
+    .await
+}
+
+/// Whether the request of `parts` rides (#6320): a `GET` without a body, on a
+/// service whose clinical statements can read the party store's revisions,
+/// so it can run again whole.
+async fn rides(layer: &AuthLayer, parts: &Parts, bodiless: bool) -> bool {
+    parts.method == http::Method::GET
+        && bodiless
+        && matches!(layer.service.party_door_open().await, Ok(true))
+}
+
+/// The request of the verified `access` bound, granted, gated and served:
+/// everything of it that rests on the party copies.
+async fn decided(layer: &AuthLayer, access: Access, mut req: Request, next: Next) -> Response {
+    let (auth, live) = (&layer.authenticator, layer.service.grants());
+    match auth.bind(access).await {
         Ok(Authenticated { principal, fresh }) => {
             let granted = match grants::resolve(live, &principal, Some(&auth.deployment)).await {
                 Ok(granted) => granted,
                 Err(e) => return refusal::response(auth, req.headers(), &e),
             };
-            let mut principal = match grants::bound(&layer, principal, &granted, req.headers()) {
+            let mut principal = match grants::bound(layer, principal, &granted, req.headers()) {
                 Ok(principal) => principal,
                 Err(refusal) => return *refusal,
             };
-            if let Some(refusal) = purpose::mismatch(&layer, &principal, &req) {
+            if let Some(refusal) = purpose::mismatch(layer, &principal, &req) {
                 return refusal;
             }
-            if let Some(refusal) = trc::patient_context(&layer, &mut principal, &req).await {
+            if let Some(refusal) = trc::patient_context(layer, &mut principal, &req).await {
                 return refusal;
             }
             // NOTE: RFC 9110 §15.5.6; whether a method is served is the
@@ -642,16 +708,16 @@ pub(crate) async fn middleware(
                     }
                 }
             };
-            if let Some(mut refusal) = gates::rbac_refusal(&layer, &req, &principal) {
+            if let Some(mut refusal) = gates::rbac_refusal(layer, &req, &principal) {
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
-            if let Some(mut refusal) = gates::smart_refusal(&layer, &req, &principal, &granted) {
+            if let Some(mut refusal) = gates::smart_refusal(layer, &req, &principal, &granted) {
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
             crate::system_log::written::learn_actor(&actor);
-            let patient = gates::patient_person(&layer, &req, &principal).await;
+            let patient = gates::patient_person(layer, &req, &principal).await;
             let principal = Arc::new(principal);
             req.extensions_mut().insert(Arc::clone(&principal));
             let (committer, patient) =

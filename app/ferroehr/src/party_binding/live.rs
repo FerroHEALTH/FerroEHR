@@ -264,18 +264,20 @@ impl LiveBindings {
     /// `read` it with the revision it was read at and hold it unless a drop
     /// overtook the read. A lookup read before `revision` is older than a
     /// change of the side table whose notification has not arrived, and is
-    /// read again (#6048).
+    /// read again (#6048). With no `revision`, a ride's, any held lookup is
+    /// taken and the revision it was read at noted for the ride (#6320).
     ///
     /// # Errors
     /// The error of `read`, which is never held.
     pub(crate) async fn lookup<E>(
         &self,
         key: LookupKey,
-        revision: i64,
+        revision: Option<i64>,
         read: impl Future<Output = Result<(Lookup, i64), E>>,
     ) -> Result<Lookup, E> {
         match self.copy.lookups.get(&key).await {
-            Some((held, at)) if at >= revision => {
+            Some((held, at)) if revision.is_none_or(|revision| at >= revision) => {
+                crate::party_binding::request::held_binding(at);
                 looked_up(LOOKUPS, "hit");
                 return Ok(held);
             }
@@ -286,6 +288,7 @@ impl LiveBindings {
         let read = read.await;
         refilled(LOOKUPS, read.is_ok());
         let (lookup, at) = read?;
+        crate::party_binding::request::held_binding(at);
         self.copy
             .lookups
             .insert(key.clone(), (lookup.clone(), at))
@@ -329,21 +332,25 @@ impl LiveBindings {
 
 /// Count one lookup in `copy` as `result`.
 fn looked_up(copy: &'static str, result: &'static str) {
-    crate::telemetry::access_path::metrics().copy_lookups.add(
-        1,
-        &[KeyValue::new("copy", copy), KeyValue::new("result", result)],
-    );
+    crate::party_binding::request::defer(move || {
+        crate::telemetry::access_path::metrics().copy_lookups.add(
+            1,
+            &[KeyValue::new("copy", copy), KeyValue::new("result", result)],
+        );
+    });
 }
 
 /// Count one read that refills `copy`, by whether it succeeded.
 fn refilled(copy: &'static str, ok: bool) {
-    crate::telemetry::access_path::metrics().copy_refills.add(
-        1,
-        &[
-            KeyValue::new("copy", copy),
-            KeyValue::new("outcome", if ok { "ok" } else { "failed" }),
-        ],
-    );
+    crate::party_binding::request::defer(move || {
+        crate::telemetry::access_path::metrics().copy_refills.add(
+            1,
+            &[
+                KeyValue::new("copy", copy),
+                KeyValue::new("outcome", if ok { "ok" } else { "failed" }),
+            ],
+        );
+    });
 }
 
 /// Count one drop of `scope`.

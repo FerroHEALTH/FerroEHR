@@ -23,7 +23,8 @@ use crate::hospital::build::{composition, world};
 use crate::hospital::ledger::{Expect, Ledger};
 use crate::hospital::replicas::deaf;
 use crate::hospital::world::{
-    CONFIDENTIALITY, ENCOUNTER, ROOT, World, call, call_matching, coded_in, text,
+    CONFIDENTIALITY, ENCOUNTER, ROOT, SCIM, World, admit, call, call_matching, coded_in, day,
+    patch_op, scim, text,
 };
 
 /// A meter provider whose access-path instruments land in `exporter`.
@@ -33,7 +34,41 @@ fn instruments() -> (SdkMeterProvider, InMemoryMetricExporter) {
         .with_reader(PeriodicReader::builder(exporter.clone()).build())
         .build();
     ferroehr::telemetry::access_path::init(&provider.meter("ferroehr"));
+    ferroehr::telemetry::metrics::init(&provider.meter("ferroehr"));
     (provider, exporter)
+}
+
+/// The points of the counter `name` whose attributes hold `attribute`, or
+/// every point when it is `None`, summed.
+fn counted(
+    provider: &SdkMeterProvider,
+    exporter: &InMemoryMetricExporter,
+    name: &str,
+    attribute: Option<(&str, &str)>,
+) -> u64 {
+    provider.force_flush().expect("flush the instruments");
+    let finished = exporter.get_finished_metrics().expect("finished metrics");
+    let Some(last) = finished.last() else {
+        return 0;
+    };
+    last.scope_metrics()
+        .flat_map(ScopeMetrics::metrics)
+        .filter(|metric| metric.name() == name)
+        .map(|metric| match metric.data() {
+            AggregatedMetrics::U64(MetricData::Sum(sum)) => sum
+                .data_points()
+                .filter(|point| {
+                    attribute.is_none_or(|(key, value)| {
+                        point
+                            .attributes()
+                            .any(|kv| kv.key.as_str() == key && kv.value.as_str() == value)
+                    })
+                })
+                .map(SumDataPoint::value)
+                .sum::<u64>(),
+            _ => 0,
+        })
+        .sum()
 }
 
 /// The reads run again (`access_policy_reruns_total`), every operation summed.
@@ -279,4 +314,143 @@ async fn a_commit_decided_on_a_policy_copy_behind_the_store_runs_once_more() {
         before + 1,
         "the confirmed copy decides the next commit at once"
     );
+}
+
+/// A read decided on a party copy the store overtook runs once more (#6320):
+/// the discharge of Dr. Jansen from Cardiology, committed through the world's
+/// replica, refuses his very next read on a replica that hears nothing. The
+/// read's own clinical statement reads the party store's revisions, the run
+/// decided on the copy is dropped, the read runs again on the path that reads
+/// the revisions first, and the access log holds the one entry of the
+/// request, the refusal the client got.
+#[tokio::test]
+async fn a_read_decided_on_a_party_copy_behind_the_store_runs_once_more() {
+    let (provider, exporter) = instruments();
+    let mut world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let uri = encounter(&world);
+    let read_on_other = || call(&other, "jansen", "GET", &uri, Some("TREAT"), None);
+    answered(&read_on_other().await, StatusCode::OK, None);
+    let before = reruns(&provider, &exporter);
+    answered(&read_on_other().await, StatusCode::OK, None);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before,
+        "a copy in force runs once"
+    );
+
+    let (ward, old_from, old_until) = (day(-2), day(-40), day(-20));
+    admit(
+        &mut world,
+        &[
+            ("Cardiology", &old_from, Some(&old_until)),
+            ("Ward 3", &ward, None),
+            ("Psychiatry", &ward, None),
+        ],
+    )
+    .await;
+    let refused = read_on_other().await;
+    answered(
+        &refused,
+        StatusCode::FORBIDDEN,
+        Some("refused-no-care-relationship"),
+    );
+    assert!(
+        !refused.body.contains("Cardiology encounter"),
+        "the refusal carries nothing of the composition: {}",
+        refused.body
+    );
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the read ran once more, and only once"
+    );
+    answered(
+        &read_on_other().await,
+        StatusCode::FORBIDDEN,
+        Some("refused-no-care-relationship"),
+    );
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "the copy the run again read decides the next read at once"
+    );
+    let mut ledger = Ledger::default();
+    ledger.note(
+        &world,
+        "after the discharge",
+        &refused,
+        Expect::refused("refused-no-care-relationship", 7),
+    );
+    ledger.verify(&world).await;
+}
+
+/// Authentication run again leaves what one clean run leaves (#6320): SCIM's
+/// deactivation of the nurse, committed through the world's replica, refuses
+/// her next read on a replica that hears nothing. The run that took her held
+/// binding lookup is dropped with what it counted, so the refusal counts one
+/// authentication failure and no lookup hit, and the lookup the run again
+/// read decides her next request with no run again.
+#[tokio::test]
+async fn authentication_run_again_counts_and_holds_as_one_clean_run() {
+    let (provider, exporter) = instruments();
+    let world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let path = format!("{BASE}/ehr/{}/composition/{}", world.ehr, world.vitals.vo);
+    let read = || call(&other, "devries", "GET", &path, Some("TREAT"), None);
+    for _ in 0..2 {
+        answered(&read().await, StatusCode::OK, None);
+    }
+    let failures = |provider, exporter| {
+        counted(
+            provider,
+            exporter,
+            ferroehr::telemetry::metrics::AUTH_FAILURES,
+            None,
+        )
+    };
+    let hits = |provider, exporter| {
+        counted(
+            provider,
+            exporter,
+            ferroehr::telemetry::access_path::ACCESS_COPY_LOOKUPS,
+            Some(("result", "hit")),
+        )
+    };
+    let (reruns_before, failed_before, hits_before) = (
+        reruns(&provider, &exporter),
+        failures(&provider, &exporter),
+        hits(&provider, &exporter),
+    );
+
+    let user = format!("/Users/{}", world.people["devries"].person);
+    let body = patch_op(json!([{ "op": "replace", "path": "active", "value": false }]));
+    let (status, scimmed) = scim(&world.app, SCIM, "PATCH", &user, Some(&body)).await;
+    assert_eq!(status, StatusCode::OK, "the deactivation: {scimmed}");
+    let refused = read().await;
+    assert_eq!(refused.status, StatusCode::FORBIDDEN, "{}", refused.body);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        reruns_before + 1,
+        "the read ran once more"
+    );
+    assert_eq!(
+        failures(&provider, &exporter),
+        failed_before + 1,
+        "one authentication failure, the run again's"
+    );
+    assert_eq!(
+        hits(&provider, &exporter),
+        hits_before,
+        "the dropped run's lookup hit is not counted"
+    );
+
+    let again = read().await;
+    assert_eq!(again.status, StatusCode::FORBIDDEN, "{}", again.body);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        reruns_before + 1,
+        "the lookup the run again read decides the next request at once"
+    );
+    assert_eq!(failures(&provider, &exporter), failed_before + 2);
 }

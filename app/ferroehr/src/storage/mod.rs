@@ -93,6 +93,18 @@ macro_rules! access_revision {
     };
 }
 
+/// The select-list item that reads, as `party_revisions`, the party store's
+/// grant, facts and binding revisions through `party_door.party_revisions()`,
+/// the one function of the party domain the clinical roles may run, where
+/// the two domains share a database (`party/0011`). Only a request that
+/// rides selects it (`party_binding::request::ride`, #6320).
+macro_rules! party_revisions {
+    () => {
+        "(SELECT ARRAY[pr.grants, pr.facts, pr.bindings] FROM party_door.party_revisions() pr) \
+         AS party_revisions, "
+    };
+}
+
 /// The columns of [`access_facts::HeadFacts`], read off the `vo_head` row
 /// aliased `h`: what the access evaluator judges an object by.
 macro_rules! head_facts {

@@ -7,7 +7,7 @@
 -- reader role (ferroehr_party_reader) reads them; the migration bookkeeping
 -- is read-only to both. The default privileges extend the same grants to
 -- every table a later file creates here. The clinical roles are granted
--- nothing in this schema.
+-- nothing in this schema; they may run the one function of party_door.
 --
 -- The role grants run only when the runtime roles exist (see the role block
 -- of ext); without them the block is skipped with a NOTICE.
@@ -136,6 +136,13 @@ BEGIN
             TO ferroehr_party, ferroehr_party_reader;
         ALTER DEFAULT PRIVILEGES IN SCHEMA party GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO ferroehr_party;
         ALTER DEFAULT PRIVILEGES IN SCHEMA party GRANT SELECT ON TABLES TO ferroehr_party_reader;
+        -- The one door the clinical roles may pass (#6320): USAGE on the door's
+        -- schema and EXECUTE on its one function, nothing of the party schema.
+        IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_clinical') THEN
+            GRANT USAGE ON SCHEMA party_door TO ferroehr_clinical, ferroehr_clinical_reader;
+            GRANT EXECUTE ON FUNCTION party_door.party_revisions()
+                TO ferroehr_clinical, ferroehr_clinical_reader;
+        END IF;
     ELSE
         RAISE NOTICE 'skipping the party grants (roles absent: see the role block NOTICE of ext)';
     END IF;

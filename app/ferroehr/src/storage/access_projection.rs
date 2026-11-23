@@ -232,7 +232,8 @@ impl Revision {
 
 /// Notes the policy and definition revisions a row selecting
 /// `access_revision!` read beside the settings revision, for the running
-/// request (`policy_register::observed`, #6251). A row of the party schema,
+/// request (`policy_register::observed`, #6251), and in a ride the party
+/// store's revisions (`party_binding::request`, #6320). A row of the party schema,
 /// or of a statement that selects the view itself, holds none.
 ///
 /// # Errors
@@ -249,8 +250,33 @@ fn observe_revisions(row: &sqlx::postgres::PgRow) -> Result<(), sqlx::Error> {
     {
         crate::policy_register::observed::observe(policy, definitions);
     }
+    let party = match row.try_get::<Option<Vec<i64>>, _>(PARTY_REVISIONS) {
+        Ok(party) => party,
+        // NOTE: sqlx Error::ColumnNotFound, only a statement of a ride reads the party revisions.
+        Err(sqlx::Error::ColumnNotFound(_)) => None,
+        Err(error) => return Err(error),
+    };
+    if let Some(party) = party {
+        let [grants, facts, bindings] = party[..] else {
+            return Err(sqlx::Error::ColumnDecode {
+                index: PARTY_REVISIONS.to_owned(),
+                source: format!("{} revisions where three were read", party.len()).into(),
+            });
+        };
+        crate::party_binding::request::observe(
+            crate::party_binding::grants::live::revisions::Revisions {
+                grants,
+                facts,
+                bindings,
+            },
+        );
+    }
     Ok(())
 }
+
+/// The column a ride's statement reads the party store's grant, facts and
+/// binding revisions into ([`party_revisions!`], #6320).
+const PARTY_REVISIONS: &str = "party_revisions";
 
 /// One EHR's settings row and subject as stored.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

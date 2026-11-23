@@ -384,6 +384,23 @@ pub enum DbError {
         relation: String,
     },
 
+    /// The schema `party_door` holds something other than its one function,
+    /// or that function does not run as its owner with a fixed `search_path`
+    /// (#6320).
+    #[error(
+        "the party door is not the one function it must be: `{object}` {problem}. The schema \
+         `party_door` may hold only `party_revisions()`, SECURITY DEFINER with a fixed \
+         search_path, since the clinical roles may run what it holds (no openEHR spec governs \
+         database roles: our own design). Remedy: drop the object, or recreate the function \
+         from the party migrations"
+    )]
+    PartyDoorBreached {
+        /// The schema-qualified object.
+        object: String,
+        /// What is wrong with it.
+        problem: &'static str,
+    },
+
     /// Two domains a deployment placed on different DSNs authenticate as one
     /// database role, so the separation it configured does not exist.
     #[error(
@@ -1225,6 +1242,7 @@ pub async fn verify_domain_isolation(
         }
         swept.push(database);
         verify_role_barriers(pool, profile).await?;
+        verify_party_door(pool).await?;
     }
     verify_configured_separation(pools, layout).await
 }
@@ -1342,6 +1360,59 @@ async fn verify_role_barriers(pool: &PgPool, profile: DeploymentProfile) -> Resu
         }
     }
     Ok(())
+}
+
+/// The one exception to the grant sweep: the schema `party_door`, which the
+/// clinical roles may enter, holds exactly the function
+/// `party_revisions()`, running as its owner with a fixed `search_path`, and
+/// nothing else (#6320). A database without the schema passes.
+///
+/// # Errors
+/// [`DbError::PartyDoorBreached`] naming the object, or [`DbError::Sqlx`]
+/// when a catalog read fails.
+async fn verify_party_door(pool: &PgPool) -> Result<(), DbError> {
+    let breach: Option<(String, String)> = sqlx::query_as(
+        "SELECT object, problem FROM (
+             SELECT 'party_door.' || c.relname AS object, 'is a relation' AS problem
+             FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'party_door'
+             UNION ALL
+             SELECT 'party_door.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
+                    CASE
+                        WHEN p.proname <> 'party_revisions' OR p.pronargs <> 0
+                            THEN 'is not the door''s function'
+                        WHEN NOT p.prosecdef THEN 'does not run as its owner'
+                        WHEN NOT EXISTS (
+                            SELECT FROM unnest(p.proconfig) AS c(setting)
+                            WHERE c.setting LIKE 'search_path=%'
+                        ) THEN 'runs on the caller''s search_path'
+                    END
+             FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+             WHERE n.nspname = 'party_door'
+             UNION ALL
+             SELECT 'party_door.' || t.typname, 'is a type'
+             FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+             WHERE n.nspname = 'party_door'
+         ) breaches
+         WHERE problem IS NOT NULL
+         ORDER BY object
+         LIMIT 1",
+    )
+    .fetch_optional(&mut *acquire(pool).await?)
+    .await?;
+    match breach {
+        Some((object, problem)) => Err(DbError::PartyDoorBreached {
+            object,
+            problem: match problem.as_str() {
+                "is a relation" => "is a relation",
+                "is a type" => "is a type",
+                "does not run as its owner" => "does not run as its owner",
+                "runs on the caller's search_path" => "runs on the caller's search_path",
+                _ => "is not the door's function",
+            },
+        }),
+        None => Ok(()),
+    }
 }
 
 /// The credential check: two domains the operator placed on DIFFERENT DSNs must

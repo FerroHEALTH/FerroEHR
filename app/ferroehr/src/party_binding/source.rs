@@ -209,10 +209,16 @@ impl LocalPartySource {
             return Ok(store.await?.0);
         };
         // NOTE: our own design (#6048), a held lookup is taken only at the binding revision the
-        // request reads from the store, so no decision rests on a notification's delay.
-        let revision = crate::party_binding::request::revisions(&self.pool)
-            .await?
-            .bindings;
+        // request reads from the store, or, in a ride, judged against it after the run (#6320).
+        let revision = if crate::party_binding::request::riding() {
+            None
+        } else {
+            Some(
+                crate::party_binding::request::revisions(&self.pool)
+                    .await?
+                    .bindings,
+            )
+        };
         let key = LookupKey {
             issuer: issuer.to_owned(),
             identifier_type: identifier_type.to_owned(),
