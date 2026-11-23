@@ -3,14 +3,6 @@
 
 //! The check: a sample of seeded compositions against the prototypes the
 //! commit path wrote, in the stored form and as the service serves them.
-//!
-//! For each sampled clone it holds three things. The stored rows are the
-//! prototype's, column for column, but for the identifiers a clone replaces
-//! and the signature. The version body is the prototype's with the versioned
-//! object's id replaced. And the service reads every version of the clone as
-//! it reads the prototype's, its signature verified on read
-//! (`verify_on_read = strict`, the default), and serves the same envelope and
-//! the same composition with the identifiers replaced.
 
 use anyhow::{Context as _, anyhow};
 use sqlx::PgPool;
@@ -214,7 +206,7 @@ mod tests {
     use crate::seed::Target;
 
     /// The prototypes, a small seed and the check over every sampled clone;
-    /// then a clone whose node row or signature no longer matches is refused.
+    /// then a clone with a changed node row or signature is refused.
     #[tokio::test]
     async fn the_check_passes_the_seed_and_refuses_a_changed_clone() {
         let db = testkit::db().await.expect("testkit database");

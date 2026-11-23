@@ -5,10 +5,6 @@
 //!
 //! NOTE: no openEHR spec governs 1.4 tolerance: our own design, pinned by the
 //! corpus tags.
-//!
-//! `upgrade_from_14` converts; `legacy_adl_1.4` parses and validates clean in the
-//! 1.4 dialect, with three adjudicated overrides at their assertions;
-//! `features` parses; `adl14-dadl` and `adl14-cadl` belong to their own gates.
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,
@@ -88,14 +84,10 @@ fn every_adl_file_is_claimed_with_an_outcome() {
             claimed += 1;
         } else if r.contains("validity/legacy_adl_1.4/") {
             if r.contains("FAIL_c_dv_quantity_minimal") {
-                // Adjudicated against the spec text, over the fixture's own
-                // FAIL name and `SDINV` tag: the empty `(C_DV_QUANTITY) <>`
-                // block IS grammatical — the domain block's content is dADL
-                // (`ADL1.4/master05-cadl.adoc` §Symbols `V_C_DOMAIN_TYPE`) and
-                // the dADL grammar admits the empty block. It still REFUSES,
-                // because the file also carries no `concept` section, which
-                // ADL 1.4 mandates (`master08-adl.adoc` §Validity VARCN) — so
-                // the refusal stands on the spec-grounded defect.
+                // The empty `(C_DV_QUANTITY) <>` block is grammatical dADL
+                // (`ADL1.4/master05-cadl.adoc` §Symbols); the refusal stands on
+                // the missing `concept` section (`master08-adl.adoc` §Validity
+                // VARCN).
                 let err = parse_artefact(&src, Dialect::Adl14)
                     .expect_err("FAIL_c_dv_quantity_minimal still refuses: no concept section");
                 assert!(
@@ -105,14 +97,10 @@ fn every_adl_file_is_claimed_with_an_outcome() {
                     err.iter().map(|e| e.code).collect::<Vec<_>>()
                 );
             } else if CONCEPT_LESS.iter().any(|f| r.ends_with(f)) {
-                // Adjudicated against the spec text, over the file's own `PASS`
-                // tag: these two vendored fixtures carry NO `concept` section.
-                // `ADL1.4/master08-adl.adoc` §Syntax Specification gives
-                // `arch_concept: SYM_CONCEPT V_LOCAL_TERM_CODE_REF | SYM_CONCEPT
-                // error` — no empty alternative — and §Validity Rules VARCN:
-                // "The archetype must have an archetype term value in the
-                // concept section." Their concept-carrying twins live in
-                // `adl14-cadl/` (see `adl14_cadl_gates.rs`).
+                // These fixtures carry no `concept` section, which ADL 1.4
+                // requires (`ADL1.4/master08-adl.adoc` §Syntax Specification
+                // and §Validity Rules VARCN); their twins live in
+                // `adl14-cadl/`.
                 let err = parse_artefact(&src, Dialect::Adl14)
                     .err()
                     .unwrap_or_else(|| panic!("{r}: a concept-less 1.4 source must reject"));

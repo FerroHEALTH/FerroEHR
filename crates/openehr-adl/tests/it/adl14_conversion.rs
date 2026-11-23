@@ -5,10 +5,6 @@
 //!
 //! NOTE: no openEHR spec governs 1.4→2 conversion: our own design, pinned by
 //! the fixtures.
-//!
-//! The definition tree compares by full equality; the terminology by code sets,
-//! value sets and bindings, not rubric text; description prose is not compared.
-//! Three pairs are adjudicated: they convert, validate and are idempotent.
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

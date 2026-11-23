@@ -206,11 +206,6 @@ impl std::fmt::Display for SyntaxErrorCode {
 }
 
 /// A syntax error located in the source text.
-///
-/// Carries the catalogue [`code`](SyntaxError::code), a human-readable
-/// [`message`](SyntaxError::message), the byte [`span`](SyntaxError::span),
-/// and the 1-based [`line`](SyntaxError::line) / [`column`](SyntaxError::column)
-/// of the offending input.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("{code} at line {line}, column {column}: {message}")]
 pub struct SyntaxError {

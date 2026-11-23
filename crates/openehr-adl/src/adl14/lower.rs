@@ -104,9 +104,6 @@ impl Parser<'_> {
     /// The code list of a 1.4 qualified term constraint, with its optional
     /// `;assumed` value. An empty list (`[openEHR::]`) names only the terminology.
     ///
-    /// NOTE: the docs text is silent on the empty spelling; `cadl14_primitives.g4`
-    /// `c_qualified_term_code` makes the code list optional (`ADL1.4/master09`).
-    ///
     /// # Errors
     /// [`SyntaxErrorCode::Stccp`] for a non-code list member or an assumed
     /// value that is not an at-code.

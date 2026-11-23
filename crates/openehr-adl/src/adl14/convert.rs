@@ -650,9 +650,6 @@ fn rewrite_path(path: &str, cx: &Converter<'_>) -> String {
 }
 
 /// The converted spelling of one path-predicate code.
-///
-/// A planned node code takes its planned id; any other at-code is shifted into
-/// the `id` space; anything else passes through.
 fn converted_predicate_code(code: &str, cx: &Converter<'_>) -> String {
     if let Some(id) = cx.node_map.get(code) {
         return id.clone();
