@@ -207,11 +207,7 @@ fn statement(shape: Shape) -> String {
     };
     format!(
         concat!(
-            "WITH tv AS (UPDATE version SET tier = 'hot' ",
-            "            WHERE vo_id = ANY({targets}) AND tier = 'cold'), ",
-            "tn AS (UPDATE node SET tier = 'hot' WHERE tier = 'cold' AND vo_id = ANY({targets})), ",
-            "th AS (UPDATE vo_head SET tier = 'hot', archived_at = NULL, archive_reason = NULL ",
-            "       WHERE vo_id = ANY({targets}) AND tier = 'cold') ",
+            "{warm} ",
             "SELECT e.is_modifiable, e.restricted_at IS NOT NULL AS restricted, ",
             access_revision!("e.id"),
             ", now() AS ts, ",
@@ -222,19 +218,56 @@ fn statement(shape: Shape) -> String {
             "      AND pv.template_id = $3 ",
             "      AND (pv.body)::jsonb #>> '{{category,defining_code,code_string}}' = $4) ",
             "    AS persistent_exists, ",
-            "t.vo_id AS target, ",
-            "(SELECT (COALESCE(MAX(s.sys_version), 0) + 1)::int FROM version s ",
-            " WHERE s.vo_id = t.vo_id) AS next_ordinal, ",
-            "COALESCE((SELECT h.restricted_at IS NOT NULL FROM vo_head h WHERE h.vo_id = t.vo_id), ",
-            "         false) AS object_restricted, ",
-            "(SELECT h.head_sys_version FROM vo_head h WHERE h.vo_id = t.vo_id) AS head, ",
-            "tip.ehr_id, tip.kind, tip.sys_version, tip.trunk_version, tip.branch_number, ",
-            "tip.branch_version, tip.creating_system_id, tip.lifecycle_state, ",
-            "tip.committed_at AS tip_committed_at, tip.content_digest, tip.content_key, ",
-            "true AS open{}{}{}{} ",
+            "{tip_columns}{}{}{}{} ",
             "FROM (VALUES (1)) AS one (x) ",
             "LEFT JOIN ehr e ON e.id = $1 ",
-            "LEFT JOIN LATERAL unnest({targets}) WITH ORDINALITY AS t (vo_id, ord) ON true ",
+            "{tip_join}{}{} ",
+            "ORDER BY t.ord"
+        ),
+        update,
+        delete,
+        addressed(shape),
+        known_items(shape),
+        update_join,
+        delete_join,
+        warm = warm(targets(shape)),
+        tip_columns = TIP_COLUMNS,
+        tip_join = tip_join(targets(shape)),
+    )
+}
+
+/// The leading data-modifying CTEs of a gate read that bring an archived
+/// target of `targets` back to the hot tier first, as the placement read does.
+fn warm(targets: &str) -> String {
+    format!(
+        "WITH tv AS (UPDATE version SET tier = 'hot' \
+                     WHERE vo_id = ANY({targets}) AND tier = 'cold'), \
+         tn AS (UPDATE node SET tier = 'hot' WHERE tier = 'cold' AND vo_id = ANY({targets})), \
+         th AS (UPDATE vo_head SET tier = 'hot', archived_at = NULL, archive_reason = NULL \
+                WHERE vo_id = ANY({targets}) AND tier = 'cold')"
+    )
+}
+
+/// The columns of a gate read's target `t` and its trunk tip `tip`.
+const TIP_COLUMNS: &str = concat!(
+    "t.vo_id AS target, ",
+    "(SELECT (COALESCE(MAX(s.sys_version), 0) + 1)::int FROM version s ",
+    " WHERE s.vo_id = t.vo_id) AS next_ordinal, ",
+    "COALESCE((SELECT h.restricted_at IS NOT NULL FROM vo_head h WHERE h.vo_id = t.vo_id), ",
+    "         false) AS object_restricted, ",
+    "(SELECT h.head_sys_version FROM vo_head h WHERE h.vo_id = t.vo_id) AS head, ",
+    "tip.ehr_id, tip.kind, tip.sys_version, tip.trunk_version, tip.branch_number, ",
+    "tip.branch_version, tip.creating_system_id, tip.lifecycle_state, ",
+    "tip.committed_at AS tip_committed_at, tip.content_digest, tip.content_key, ",
+    "true AS open"
+);
+
+/// The joins of a gate read's targets `t` from `targets` and the trunk tip
+/// `tip` of each.
+fn tip_join(targets: &str) -> String {
+    format!(
+        concat!(
+            "LEFT JOIN LATERAL unnest({}) WITH ORDINALITY AS t (vo_id, ord) ON true ",
             // The trunk tip is the newest ordinal on branch 0, which no later
             // ordinal of its own branch supersedes, so it is open by definition.
             "LEFT JOIN LATERAL ( ",
@@ -244,16 +277,9 @@ fn statement(shape: Shape) -> String {
             "           v.body IS NOT NULL AS has_body ",
             "    FROM version v WHERE v.vo_id = t.vo_id AND v.branch_number = 0 ",
             "    ORDER BY v.sys_version DESC LIMIT 1 ",
-            ") tip ON true{}{} ",
-            "ORDER BY t.ord"
+            ") tip ON true"
         ),
-        update,
-        delete,
-        addressed(shape),
-        known_items(shape),
-        update_join,
-        delete_join,
-        targets = targets(shape),
+        targets
     )
 }
 
@@ -436,4 +462,130 @@ fn content_of(tip: &TipRow, row: &sqlx::postgres::PgRow) -> Result<ServedContent
         template_id: row.try_get("content_template")?,
         root_archetype: row.try_get("content_archetype")?,
     })
+}
+
+/// One party write's gate read, on the party pool (#6257): the database
+/// `now()` of the statement, the commit instant of the write, and the target
+/// party as a party commit judges it.
+#[derive(Debug)]
+pub struct PartyGate {
+    /// The database `now()` of the statement.
+    pub now: jiff::Timestamp,
+    /// The target, `None` for a create.
+    pub target: Option<PartyTarget>,
+}
+
+/// The target of a party write as its gate read found it.
+#[derive(Debug)]
+pub struct PartyTarget {
+    /// Its tip, next ordinal, head and mark, as a composition write's target.
+    pub target: Target,
+    /// Whether the newest version, on any branch, holds a body.
+    pub newest_held: bool,
+    /// Its head row's lifecycle state.
+    pub head_lifecycle: Option<String>,
+    /// Whether its head row carries the policy-party mark
+    /// (`party_binding::policy_mark`).
+    pub policy_marked: bool,
+    /// The newest version that holds a body: its ordinal, its lifecycle state
+    /// and the stored body; `None` when no version holds one.
+    pub last_body: Option<(i32, String, String)>,
+}
+
+/// What a party commit's binding hooks read of the versions before it, off its
+/// gate read (#6257), so they read none of them again.
+#[derive(Debug, Clone, Default)]
+pub struct Prior {
+    /// Whether the newest version before the commit holds a body.
+    pub previous_held: bool,
+    /// Whether the party carried the policy-party mark before the commit.
+    pub marked: bool,
+    /// The newest version holding a body before the commit: its ordinal, its
+    /// lifecycle state and the stored body.
+    pub last_body: Option<(i32, String, String)>,
+}
+
+impl PartyGate {
+    /// The target, and what the binding hooks read of the versions before
+    /// the commit: none for a create.
+    #[must_use]
+    pub fn split(self) -> (Option<Target>, Prior) {
+        match self.target {
+            None => (None, Prior::default()),
+            Some(found) => (
+                Some(found.target),
+                Prior {
+                    previous_held: found.newest_held,
+                    marked: found.policy_marked,
+                    last_body: found.last_body,
+                },
+            ),
+        }
+    }
+}
+
+/// The statement of [`party`]: `$1` the target, `NULL` for a create.
+static PARTY: LazyLock<String> = LazyLock::new(|| {
+    format!(
+        concat!(
+            "{warm} SELECT now() AS ts, {tip_columns}, ",
+            "(SELECT n.body IS NOT NULL FROM version n WHERE n.vo_id = t.vo_id ",
+            " ORDER BY n.sys_version DESC LIMIT 1) AS newest_held, ",
+            "(SELECT h.lifecycle_state FROM vo_head h WHERE h.vo_id = t.vo_id) AS head_lifecycle, ",
+            "COALESCE((SELECT h.policy_party_at IS NOT NULL FROM vo_head h ",
+            "          WHERE h.vo_id = t.vo_id), false) AS policy_marked, ",
+            "lb.sys_version AS last_body_version, lb.lifecycle_state AS last_body_lifecycle, ",
+            "lb.body AS last_body ",
+            "FROM (VALUES (1)) AS one (x) {tip_join} ",
+            "LEFT JOIN LATERAL ( ",
+            "    SELECT b.sys_version, b.lifecycle_state, b.body FROM version b ",
+            "    WHERE b.vo_id = t.vo_id AND b.body IS NOT NULL ",
+            "    ORDER BY b.sys_version DESC LIMIT 1 ",
+            ") lb ON true"
+        ),
+        warm = warm(PARTY_TARGETS),
+        tip_columns = TIP_COLUMNS,
+        tip_join = tip_join(PARTY_TARGETS),
+    )
+});
+
+/// The targets of [`PARTY`]: the one target, none for a create.
+const PARTY_TARGETS: &str = "ARRAY_REMOVE(ARRAY[$1::uuid], NULL)";
+
+/// Runs the gate read of a party write of `target` on `conn` ([`PartyGate`]).
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn party(
+    conn: &mut PgConnection,
+    target: Option<VoId>,
+) -> Result<PartyGate, StorageError> {
+    let row = sqlx::query(sqlx::AssertSqlSafe(PARTY.as_str()))
+        .bind(target)
+        .fetch_one(&mut *conn)
+        .await?;
+    let now = row.try_get::<jiff_sqlx::Timestamp, _>("ts")?.to_jiff();
+    let target = match row.try_get::<Option<Uuid>, _>("target")? {
+        None => None,
+        Some(vo_id) => {
+            let last_body = match row.try_get::<Option<i32>, _>("last_body_version")? {
+                Some(version) => Some((
+                    version,
+                    row.try_get("last_body_lifecycle")?,
+                    row.try_get("last_body")?,
+                )),
+                None => None,
+            };
+            Some(PartyTarget {
+                target: self::target(&row, VoId(vo_id), now, Shape::Plain)?,
+                newest_held: row
+                    .try_get::<Option<bool>, _>("newest_held")?
+                    .unwrap_or(false),
+                head_lifecycle: row.try_get("head_lifecycle")?,
+                policy_marked: row.try_get("policy_marked")?,
+                last_body,
+            })
+        }
+    };
+    Ok(PartyGate { now, target })
 }

@@ -21,7 +21,7 @@ use super::{
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::ehr::access_projection::AccessCommit;
-use crate::storage::version_repo::guarded::Guard;
+use crate::storage::version_repo::guarded::{Guard, PartySync};
 use crate::versioning::SigningCtx;
 use crate::versioning::audit::AuditInput;
 
@@ -104,12 +104,25 @@ pub(crate) async fn prepare_write(
     let mut prepared = prepare(ctx, &audit, ctx.stamp.mint(), resolved)?;
     prepared.committed.deleted = deleted;
     // A new FOLDER hierarchy joins `EHR.folders` in the guarded statement itself, at the
-    // rank its gate read judged next.
+    // rank its gate read judged next, and a party version on its trunk brings its
+    // reverse-relationship index there too.
     let folder = match guard.folder {
         Some(rank) if prepared.take_first_folder() => Some(rank),
         _ => None,
     };
-    let guard = Guard { folder, ..guard };
+    let party = guard.party.map(|sync| {
+        let reverse = prepared.on_trunk().then(|| {
+            party_facts
+                .as_deref()
+                .map_or_else(Vec::new, |facts| facts.targets.clone())
+        });
+        Box::new(PartySync { reverse, ..*sync })
+    });
+    let guard = Guard {
+        folder,
+        party,
+        ..guard
+    };
     Ok(Ready {
         ehr_id,
         audit,
@@ -134,14 +147,19 @@ impl Ready {
 
     /// Whether the write writes rows after its statement, which a
     /// transaction then holds with it: a FOLDER membership, accompanying
-    /// attestations, blob references, or the access-delay hold of a new
-    /// COMPOSITION.
+    /// attestations, blob references, the access-delay hold of a new
+    /// COMPOSITION, or a party's binding settle.
     pub(crate) fn needs_transaction(&self, ctx: &SigningCtx<'_>) -> bool {
         match &self.form {
             Form::Skipped(_) => false,
             Form::Version {
                 prepared, access, ..
-            } => prepared.writes_after() || access.is_some() || ctx.access_delay.is_some(),
+            } => {
+                prepared.writes_after()
+                    || access.is_some()
+                    || ctx.access_delay.is_some()
+                    || self.guard.party.is_some()
+            }
         }
     }
 
@@ -173,6 +191,10 @@ impl Ready {
             } => (prepared, access, party_facts),
         };
         let mut committed = prepared.committed.clone();
+        let held = crate::party_binding::store::Held::of(
+            self.guard.party.as_deref(),
+            prepared.trunk_lifecycle(),
+        );
         let guard = Guard {
             reservation,
             ..self.guard
@@ -197,6 +219,7 @@ impl Ready {
             &committed,
             party_facts.as_deref(),
             access,
+            held,
         ))
         .await?;
         Ok(committed)

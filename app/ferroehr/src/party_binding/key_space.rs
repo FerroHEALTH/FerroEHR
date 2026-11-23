@@ -29,7 +29,7 @@ use crate::storage::error::StorageError;
 /// The advisory lock a party commit holds shared and the online fill holds
 /// exclusive, so no commit derives rows while a page of a key space is
 /// written.
-const GATE: i64 = 0x5013_b1d1;
+pub(crate) const GATE: i64 = 0x5013_b1d1;
 
 /// Where a key space stands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
