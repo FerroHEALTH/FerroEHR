@@ -2,10 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The per-kind party CRUD operations (`{kind}_{create,get,update,delete}`).
-//!
-//! Spec: `operations/person_{create,get,update,delete}.yaml` and the
-//! field-identical `agent_*`/`group_*`/`organisation_*`/`role_*`. Party bodies
-//! use the LOCATABLE content negotiation: canonical JSON and XML.
 
 #![expect(
     clippy::disallowed_types,
@@ -289,8 +285,6 @@ pub(super) fn audit_served(out: &mut Response, served: Vec<String>) {
 /// create or update returns, as they stood at the commit it made, so the
 /// written document is the one a read of that version serves.
 ///
-/// Only a write that returns its representation reads the index.
-///
 /// # Errors
 /// The storage failure of the index read.
 async fn written_reverse_relationships(
@@ -313,16 +307,6 @@ async fn written_reverse_relationships(
 
 /// Stores the `ITEM_TAG` lists the wrapper headers asked for on the just-written
 /// party, and hands the stored lists to the response metadata seam.
-///
-/// The write itself is [`item_tags::persist`], the one wrapper
-/// implementation this group shares with the EHR group; what is party-specific
-/// is only the response plumbing — a demographic write echoes its tags off
-/// [`ServiceResponse::meta`], not off the stored lists directly. A party that
-/// minted no version metadata has no target to tag, so nothing is written.
-///
-/// Both wrapper headers are accepted on create and update alike, per the
-/// released update's own prose ("`openehr-item-tag` or
-/// `openehr-version-item-tag`").
 ///
 /// # Errors
 /// Whatever the shared write refuses: a server-fault version uid, or a storage
@@ -359,11 +343,6 @@ async fn persist_request_tags(
 
 /// Logically deletes a party: `204` plus the deleted version's `ETag`, and no
 /// `Location` (overview §"Deprecated headers" deprecates it on `DELETE`).
-///
-/// `person_delete.yaml` places the `preceding_version_uid` in the path, not in
-/// an `If-Match` header. Responses: `204_version_deleted`,
-/// `400_already_deleted`, `404`, and `409_PERSON_with_uid_based_id` when the
-/// supplied uid is not the latest version.
 pub(crate) async fn delete(
     state: AppState,
     kind: PartyKind,
@@ -466,9 +445,6 @@ fn decode_party_body(
 /// refuse it as an undeclared key. The validated value then enters the typed
 /// core with that attribute dropped: SPECRM-124 records it as the computed
 /// inverse of `relationships`, so the server re-derives it.
-///
-/// The XML branch needs no profile split: the XSD-grounded reader skips
-/// undeclared elements in every profile.
 fn rm_party<Stable, Current>(
     h: &HeaderMap,
     body: &bytes::Bytes,
@@ -562,12 +538,6 @@ fn respond_released_party(
 /// Builds a create/update response honouring `Prefer` and setting the
 /// demographic `ETag`/`Last-Modified` plus the `Location` of the committed
 /// version (overview §Location, §"Prefer minimal…").
-///
-/// The body and `Preference-Applied` go through the shared
-/// [`negotiate::prefer::write_negotiated`] seam, so a demographic write honours the full
-/// `Prefer` triad and declares the preference it applied. `statuses` are the
-/// minimal and the representation status; a representation is rendered in the
-/// RM generation the active profile serves, as a read of it is.
 fn write_party(
     state: &AppState,
     kind: PartyKind,

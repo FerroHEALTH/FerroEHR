@@ -3,18 +3,14 @@
 
 //! `POST /ehr` across two replicas over one database (#5109).
 //!
-//! The Kubernetes probe's local-index row once answered an EHR create with
-//! `500` on a two-replica release, right after a `helm upgrade` that changed
-//! no value. The tests run the probe's request on two replicas of one
-//! deployment, each with its own pools, copies and audit sender, as the
-//! Basic user bound to a party: creates naming subjects in one namespace on
-//! both replicas at once, the second replica starting cold while the first
-//! serves; one subject on both; creates while the upgrade's migration hook
-//! runs again; creates while the database refuses new connections; and
-//! creates while it cuts open sessions. A create is answered `201`, `409`
-//! for a subject another create took (ITS-REST EHR API `409_EHR`), or `503`
-//! while the database cannot serve it, and never `500`. No openEHR spec
-//! governs replicas: our own design.
+//! The tests run the Kubernetes probe's request on two replicas of one
+//! deployment, each with its own pools, copies and audit sender, as the Basic
+//! user bound to a party: concurrent creates in one namespace, one subject on
+//! both, a cold second replica, a migration hook run again, and a database that
+//! refuses or cuts connections. A create is answered `201`, `409` for a subject
+//! another create took (ITS-REST EHR API `409_EHR`), or `503` while the
+//! database cannot serve it, and never `500`. No openEHR spec governs replicas:
+//! our own design.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

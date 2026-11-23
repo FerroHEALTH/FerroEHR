@@ -4,22 +4,6 @@
 //! End-to-end HTTP tests for the FLAT (simSDT) COMPOSITION endpoints, driven
 //! through the assembled router over a **real** `FerroEhrService` on a real
 //! `PostgreSQL`.
-//!
-//! The IPS OPT + its canonical composition are the pair driven end-to-end
-//! through the real service in `app/ferroehr/tests/service_validation.rs`, so
-//! they upload + commit cleanly here (the Demo Vitals corpus composition the
-//! former Mock served fails the real template value-set validation; the
-//! generated `Medium` example fails a proportion constraint — neither is
-//! actually committable). The FLAT glue is exercised through the router:
-//!
-//! * GET with `Accept: application/openehr.wt.flat+json` → the stored canonical
-//!   composition is returned as a flat map;
-//! * POST with `Content-Type: application/openehr.wt.flat+json` + `?template_id`
-//!   → the flat body is rebuilt into a canonical composition before the service
-//!   commits it (verified by reading the stored composition back);
-//! * POST flat without a template id → 400, and a `|raw` without `_type` → 400;
-//! * a full flat → RM → flat round-trip through the two endpoints is stable
-//!   (modulo the server-assigned version `_uid`s the Mock never produced).
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -80,9 +64,8 @@ fn vo_of(ovid: &str) -> String {
     ovid.split("::").next().expect("vo uuid").to_owned()
 }
 
-/// Drop the `.../_uid` leaves (server-assigned version ids) so a flat→RM→flat
-/// comparison isolates the data — the real service assigns version `_uid`s the
-/// former in-memory Mock never produced.
+/// Drop the `.../_uid` leaves (server-assigned version ids), so a flat→RM→flat
+/// comparison isolates the data.
 fn without_uids(map: BTreeMap<String, Value>) -> BTreeMap<String, Value> {
     map.into_iter()
         .filter(|(k, _)| !k.ends_with("/_uid"))
@@ -368,7 +351,6 @@ async fn flat_round_trips_through_http() {
 /// requires `Location` on a `201` regardless of body form; the ITS-REST 201
 /// response declares both headers unconditionally,
 /// `docs/specs/openehr/ITS-REST/specifications/responses/201_COMPOSITION.yaml`).
-/// Previously the FLAT response path dropped both headers.
 #[tokio::test]
 async fn post_flat_representation_carries_etag_and_location() {
     let (_pg, app, ehr) = app_with_ehr().await;

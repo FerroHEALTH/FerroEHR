@@ -13,10 +13,6 @@
 //! recorded in the system log as an application activity naming the
 //! operator, as every admin request is. No openEHR ITS-REST operation or IHE
 //! profile governs any of it.
-//!
-//! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
-//! (`405` with an empty `Allow` when off) unchanged.
 
 #![expect(
     clippy::disallowed_types,

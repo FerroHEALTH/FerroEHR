@@ -7,13 +7,9 @@
 //! collection filter `demographic_tags_get.yaml`. Tags use the **canonical**
 //! content negotiation (`Accept_canonical`/`ContentType_canonical`).
 //!
-//! **Each kind decodes through its OWN generated params type.** The five
-//! families' parameter sets are field-identical in Release-1.1.0, so one type
-//! would decode all five today — but that is a property of the current release,
-//! not a contract. Routing every kind through `Agent*Params` would mean a
-//! future release that adds a parameter to (say) `person_tags_get` alone would
-//! be silently mis-decoded on four other families, with no compile error. The
-//! per-kind match below makes any such divergence a build failure instead.
+//! Each kind decodes through its own generated params type, so a release that
+//! changes one kind's parameters fails the build instead of mis-decoding the
+//! others.
 
 use axum::response::Response;
 

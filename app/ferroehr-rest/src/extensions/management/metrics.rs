@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! `GET /management/prometheus` and `GET /management/metrics[/{name}]`.
-//!
-//! `prometheus` renders the exposition text scraped by Prometheus.
-//! `metrics` gives an actuator-style JSON view (the registry's metric names)
-//! and `metrics/{name}` the per-metric samples — parsed from the same
-//! exposition text so the two views can never disagree.
 
 use std::collections::BTreeMap;
 

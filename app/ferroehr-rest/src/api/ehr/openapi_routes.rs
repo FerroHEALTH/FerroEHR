@@ -22,10 +22,6 @@ use crate::state::AppState;
 
 /// The EHR-group routes as a native `utoipa-axum` router, each
 /// `#[utoipa::path]` handler single-sourcing its route and its `OpenAPI` path.
-///
-/// Paths are group-relative, nested under the configured `base_path`, and every
-/// operation is served through [`guarded_dispatch`](crate::api::guarded_dispatch) by the handler of its
-/// resource module.
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(ehr_get_by_subject, ehr_create))

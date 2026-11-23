@@ -3,16 +3,10 @@
 
 //! The sandbox seed's archetype-library walk against the upload it drives.
 //!
-//! `scripts/sandbox/reseed.sh` offers the whole vendored 2013 CKM ADL 2 export
-//! to `POST /definition/template/adl2` and counts each answer as stored or
-//! refused against the pin in `scripts/sandbox/seed/manifest.json`. The status
-//! it counts as a refusal is that pin's `refused_status`, so this test holds
-//! the pin to the status the upload answers for a file the corpus gate
-//! adjudicates as refused (`crates/openehr-adl/tests/it/ckm_archetype_packs.rs`).
-//!
-//! The walk's later steps post the seed bodies under `scripts/sandbox/seed/`
-//! through the real router here too, each the way `reseed.sh` renders it, so a
-//! body the CDR refuses fails this suite before it stops a sandbox reseed.
+//! The seed walk counts an upload answer as refused by the `refused_status` of
+//! `scripts/sandbox/seed/manifest.json`, so this test holds that pin to the
+//! status the upload answers, and posts the seed bodies through the router the
+//! way `reseed.sh` renders them.
 use std::path::{Path, PathBuf};
 
 use axum::Router;

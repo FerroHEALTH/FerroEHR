@@ -3,26 +3,15 @@
 
 //! The ITS-REST **definition API** (Release-1.1.0, STABLE).
 //!
-//! The surface is generated into `openehr_its::rest` from the
-//! `definition-*.openapi.yaml` OAS group.
-//!
 //! Governing spec: `docs/specs/openehr/ITS-REST/specifications/docs/definition/`.
 //! The group is split along the three spec resources the OAS `tags` name —
 //! `ADL1.4`, `ADL2`, and `Query` — one module each, whose handlers the
 //! routes of `openapi_routes` call directly:
 //!
-//! - `template_adl14` — `definition_template_adl1.4_{list,upload,get,example_get}`.
-//! - `template_adl2` — `definition_template_adl2_{list,upload,get,example_get,version_get}`.
-//! - `stored_query` — `definition_query_{list,store,version_get,version_store}`.
-//!
 //! `archetype` sits beside them as **our own extension** — the ADL 1.4 /
 //! ADL 2 archetype + artefact routes the release never surfaced; it is
 //! governed by no ITS-REST operation and carries its
 //! own spec-silence flag.
-//!
-//! Each module implements the generated operation contract over the
-//! `FerroEhrService` methods of `ferroehr::service::definition`, the wire-shaped
-//! ones of `ferroehr::service::definition::wire` among them.
 
 pub(crate) mod archetype;
 pub(crate) mod conversion;

@@ -3,18 +3,6 @@
 
 //! The SCIM filter (RFC 7644 §3.4.2.2): the whole grammar of Figure 1, its
 //! evaluation over a resource, and the subset a provider supports.
-//!
-//! [`parse`] reads every operator of Table 3, the logical operators of Table
-//! 4, grouping and value paths of Table 5, with the precedence the section
-//! orders (grouping, then `not`, `and`, `or`). Attribute names and operators
-//! are case-insensitive. An unrecognised operator is refused with
-//! `invalidFilter` and the message the section suggests. A provider that
-//! supports less declares it with [`FilterSupport`], whose
-//! [`FilterSupport::check`] refuses the rest the same way.
-//!
-//! A chain of one logical operator is one flat [`Logic::And`] or
-//! [`Logic::Or`], so the depth of a filter is its nesting of groups and value
-//! paths, which the parser bounds.
 
 pub(crate) mod eval;
 mod lexer;

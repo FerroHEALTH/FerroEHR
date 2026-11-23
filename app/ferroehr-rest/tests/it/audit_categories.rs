@@ -130,9 +130,6 @@ fn config() -> AppConfig {
 
 /// An audited app over a fresh database with the local store on and `map` in
 /// force, the IPS template uploaded and one EHR created; returns the EHR id.
-///
-/// The template upload and the EHR create are themselves audited; every case
-/// selects the records it asserts on by operation.
 async fn app(
     map: Value,
     observability: Observability,
@@ -215,10 +212,6 @@ struct Classified {
 /// The classification of the newest record of `operation` on `resource_class`,
 /// polled until the drain has written it, as the record's projection computes
 /// it.
-///
-/// The wait settles the moment the record lands and fails only at a 60-second
-/// deadline, the bound the route-coverage test gives the same drain, so a drain
-/// slowed by a loaded host delays the test instead of failing it.
 async fn classified(pool: &PgPool, operation: &str, resource_class: &str) -> Classified {
     let deadline = std::time::Instant::now() + Duration::from_secs(60);
     loop {

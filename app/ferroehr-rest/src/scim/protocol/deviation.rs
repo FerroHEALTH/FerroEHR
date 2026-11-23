@@ -155,9 +155,6 @@ pub fn is_custom_extension_urn(id: &str) -> bool {
 
 /// Folds the sub-attribute comparison that follows a value path into its
 /// value filter: [`Deviation::ValuePathSubAttribute`].
-///
-/// "Any value of `emails` with `type eq "work"` whose `value` equals x" is
-/// the meaning of both forms, so the result is a standard value filter.
 #[must_use]
 pub fn value_path_comparison(filter: ValueFilter, comparison: AttrExp<AttrName>) -> ValueFilter {
     match filter {

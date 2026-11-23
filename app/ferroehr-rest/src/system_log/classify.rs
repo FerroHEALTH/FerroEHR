@@ -11,12 +11,9 @@
 //! audit-record shape, so the mapping is our own design over those external
 //! standards.
 //!
-//! Every row names its audit class, and every mounted route's operation has a
-//! row: the completeness tests here and the route-coverage test
-//! (`tests/it/audit_route_coverage.rs`) fail the build on an operation without
-//! one. There is no fallback class: the dispatcher refuses an operation without
-//! a row before its handler runs, and the audit middleware refuses the response
-//! of one that reaches it.
+//! Every mounted route's operation has a row, held by the completeness and
+//! route-coverage tests. There is no fallback class: an operation without a row
+//! is refused before its handler runs.
 
 use ferroehr::system_log::event::{EventActionCode, ObjectClass};
 

@@ -156,11 +156,8 @@ fn parse_position(error: &ParseError) -> Option<std::ops::Range<usize>> {
 /// The client-visible message of a server-side fault raised inside the protocol
 /// adapter.
 ///
-/// Deliberately opaque: a codec or serializer diagnostic names Rust types, RM
-/// element names and parser offsets, which the client can neither act on nor be
-/// trusted with, so the detail rides a structured `tracing` record instead
-/// ([`internal_fault`]). The overview fixes the body shape but not the wording;
-/// the opacity is our own design.
+/// Opaque on purpose: a codec diagnostic names Rust types and parser offsets,
+/// so the detail rides a structured `tracing` record ([`internal_fault`]).
 pub(crate) const INTERNAL_MESSAGE: &str = "the server encountered an internal error";
 
 /// Records an adapter-side fault on the trace record and returns the curated
@@ -175,10 +172,6 @@ pub(crate) fn internal_fault(context: &'static str, detail: &dyn std::fmt::Displ
 
 /// Records an adapter-side fault and its whole cause chain on the trace record,
 /// and returns the curated opaque `500` [`ApiError`] its body carries.
-///
-/// The sibling of [`internal_fault`] for a fault carrying a
-/// [`std::error::Error`] source: the `cause` field is the walked chain
-/// ([`ErrorChain`]), the only place the underlying diagnosis is readable.
 pub(crate) fn internal_fault_caused(
     context: &'static str,
     error: &(dyn std::error::Error + 'static),
@@ -264,9 +257,6 @@ impl From<ServiceError> for RestError {
 
 /// Renders an arbitrary status as an `about:blank` problem with `message` as
 /// its detail.
-///
-/// Used for the method-status responses no [`ApiError`] variant can represent,
-/// and for the transport-layer statuses the stack writes ([`crate::router()`]).
 pub(crate) fn status_error_response(status: StatusCode, message: &str) -> Response {
     Refused::blank(status, message).into_response()
 }
@@ -609,7 +599,7 @@ mod tests {
     }
 
     /// An AQL parse refusal raised as a `ServiceError` keeps its type and
-    /// position, as the query path now raises it.
+    /// position.
     #[test]
     fn an_aql_parse_service_refusal_is_aql_invalid_with_its_position() {
         let err = openehr_query::parser::parse_str("SELECT e FROM EHR e WHERE").unwrap_err();

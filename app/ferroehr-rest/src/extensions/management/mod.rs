@@ -15,17 +15,10 @@
 //! live log-filter control and the metric views, all sensitive and all off by
 //! default.
 //!
-//! Every endpoint is off by default, opt-in via [`ManagementConfig`], gated by
-//! its own access-level layer and optionally served from a separate internal
-//! port: observability must never widen the clinical API's attack surface.
-//!
-//! Every operation is documented unconditionally in the served `OpenAPI` (see
-//! [`openapi`]), but the live [`router`] mounts only the opted-in endpoints, so
-//! a disabled one is absent and answers `404`. The `AccessGuard` layer yields
-//! the documented `401`/`403`: `401` when the level is Private or `AdminOnly`
-//! and the caller is unauthenticated, `403` when the login binding refuses the
-//! caller or the level is `AdminOnly` and the caller lacks
-//! `authz.rbac.admin_role`.
+//! Every endpoint is off by default, opt-in via [`ManagementConfig`], behind
+//! its own access level, and optionally on a separate internal port. The served
+//! `OpenAPI` documents every operation, while the [`router`] mounts only the
+//! opted-in ones; a disabled one answers `404`.
 
 #![expect(
     clippy::disallowed_types,
@@ -117,10 +110,6 @@ impl std::fmt::Debug for ManagementState {
 impl ManagementState {
     /// Assembles the management state from the application state and the
     /// shared authenticator.
-    ///
-    /// The observability bundle the binary built supplies the configuration,
-    /// the telemetry handles and the health registry; the service supplies the
-    /// licence and the deployment posture, both fixed at boot.
     #[must_use]
     pub fn from_app_state(
         state: &AppState,
@@ -157,12 +146,6 @@ pub struct LogFilter {
 }
 
 /// The observability inputs the binary assembles for the application state.
-///
-/// Carried in [`AppState`]: the management
-/// configuration, the telemetry render/reload handles, the health registry,
-/// build provenance, and the redacted config snapshot. Everything defaults
-/// **off** (management disabled, no handles, empty registry) so a server
-/// without observability is the clean default, not a special case.
 #[derive(Clone)]
 pub struct Observability {
     /// The management surface configuration.
@@ -214,11 +197,6 @@ impl std::fmt::Debug for Observability {
 }
 
 /// Build the management router (a self-contained `Router` with its own state).
-///
-/// Only the opted-in endpoints are mounted; a disabled endpoint is simply
-/// absent → `404`. When [`ManagementConfig::enabled`] is `false`, the router is
-/// empty. This same router is either merged into the main app (when
-/// `management.listen` is unset) or served on its own listener by the binary.
 pub fn router(state: ManagementState) -> Router {
     if !state.config.enabled {
         return Router::new();

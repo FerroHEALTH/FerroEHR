@@ -13,8 +13,6 @@
 //! below follow that text wherever it conflicts with the released OAS, which
 //! grounds only what the docs text leaves silent.
 //!
-//! ## Prose-vs-OAS reconciliations (documented real wire)
-//!
 //! - **`ehr_id` scope** (`docs/query/Request.md` §About the `ehr_id`
 //!   parameter): every operation — `GET` and `POST` alike — accepts the EHR
 //!   scope as the `ehr_id` query parameter OR the `openehr-ehr-id` request
