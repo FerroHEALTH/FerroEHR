@@ -296,6 +296,99 @@ async fn a_newest_page_reads_the_index_in_its_order() {
     }
 }
 
+/// An ITI-81 page reads each access-log record it serves by the key of its
+/// row alone, with entries past the search index's cursor (#6320): a
+/// candidate's keys are its search index row's, and a served record is one
+/// primary-key read of its row, never a read through `audit_record`'s union
+/// of the indexed entries and the open window, which reads the index and the
+/// open window again once a record.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_iti81_page_reads_each_record_it_serves_by_its_key() {
+    let seeded = seed(ENTRIES).await;
+    let pool = seeded.db.pool();
+    let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
+        .fetch_one(&pool)
+        .await
+        .expect("the last entry id reads");
+    // The newest entries stay past the cursor, as between two frontier rounds.
+    seeded
+        .checkpoints
+        .store()
+        .index_to(last - i64::from(PER_REQUEST) * 4)
+        .await
+        .expect("the index moves");
+    vacuum(&pool).await;
+    let filter = ferroehr::system_log::store::AuditSearchFilter {
+        count: 20,
+        ..ferroehr::system_log::store::AuditSearchFilter::default()
+    };
+    let (sql, values) = ferroehr::system_log::store::page_statement(&filter);
+    let plan: serde_json::Value = sqlx::query_scalar_with(
+        sqlx::AssertSqlSafe(format!("EXPLAIN (ANALYZE, FORMAT JSON) {sql}")),
+        values,
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the page is planned and run");
+    let mut loops = Vec::new();
+    executed(&plan, &mut loops);
+    assert!(
+        loops
+            .iter()
+            .filter(|(_, read, ..)| {
+                ["access_log_index", "access_log_index_state"].contains(&read.as_str())
+            })
+            .all(|(.., n)| *n <= 1),
+        "the search index and its cursor are read for the page's keys, never once a record: \
+         {plan}"
+    );
+    assert!(
+        loops
+            .iter()
+            .filter(|(_, read, ..)| read == "access_log_entry")
+            .all(|(kind, _, index, _)| kind.starts_with("Index") && index == "pk_access_log_entry"),
+        "an entry's row is read by its key: {plan}"
+    );
+    assert!(
+        loops
+            .iter()
+            .any(|(_, read, index, n)| read == "access_log_entry"
+                && index == "pk_access_log_entry"
+                && *n == 20),
+        "each of the 20 records served is read by its key once: {plan}"
+    );
+}
+
+/// Every executed node of `plan` as (type, relation, index, loops).
+fn executed(plan: &serde_json::Value, nodes: &mut Vec<(String, String, String, u64)>) {
+    match plan {
+        serde_json::Value::Array(items) => items.iter().for_each(|item| executed(item, nodes)),
+        serde_json::Value::Object(members) => {
+            if let Some(kind) = members.get("Node Type").and_then(serde_json::Value::as_str) {
+                let text = |name: &str| {
+                    members
+                        .get(name)
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or_default()
+                        .to_owned()
+                };
+                let loops = members
+                    .get("Actual Loops")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or_default();
+                nodes.push((
+                    kind.to_owned(),
+                    text("Relation Name"),
+                    text("Index Name"),
+                    loops,
+                ));
+            }
+            members.values().for_each(|value| executed(value, nodes));
+        }
+        _ => {}
+    }
+}
+
 /// Every node of the plan `plan`: its type, the relation it reads and the
 /// index it reads it by, empty when it names none.
 fn plan_nodes(plan: &serde_json::Value) -> Vec<(String, String, String)> {

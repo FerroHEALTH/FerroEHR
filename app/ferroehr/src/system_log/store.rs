@@ -842,6 +842,17 @@ impl AuditStore {
     }
 }
 
+/// The page statement of the ITI-81 retrieval of `filter` and its bound
+/// values, as [`AuditStore::search`] runs it when no criterion names a stored
+/// token: what a plan test explains, so it explains the statement the search
+/// emits and not a copy that can drift from it.
+#[cfg(feature = "fhir")]
+#[must_use]
+pub fn page_statement(filter: &AuditSearchFilter) -> (String, sea_query_sqlx::SqlxValues) {
+    let (_, _, sql, values) = search_page::build_search_statements(filter, &[]);
+    (sql, values)
+}
+
 /// The record columns of the records `condition` selects, newest first.
 #[cfg(feature = "fhir")]
 pub(super) fn newest_first(condition: sea_query::Cond) -> sea_query::SelectStatement {

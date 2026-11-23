@@ -125,6 +125,41 @@ CREATE VIEW audit_record AS
 COMMENT ON VIEW audit_record IS
     'Every record the ITI-81 search, the person''s own trail and the FHIR Feed read: an audit_event record no write holds by its columns and its position, an access-log entry by its stored parts, the digest of its shared part (which a page reads once for every entry naming it), the columns its row part leaves out (recorded_at is its time_recorded) and its content digest, from which the server renders it. A record is named by its chain and position.';
 
+-- One access-log entry as audit_record holds it, read by its key from its
+-- own row (#6320). An ITI-81 page takes its keys from the search index and
+-- then reads each record it serves here, so the read is one primary-key
+-- lookup: through access_log_record the open window past the index's cursor
+-- is an arm no key reaches, and it would be scanned once a record. A key the
+-- page holds is no write's and names an entry, as the search index admits.
+--
+-- No openEHR spec governs audit storage: our own design.
+CREATE VIEW access_log_by_key AS
+    SELECT e.id AS chain_seq, e.time_recorded AS recorded_at, e.time_recorded AS stored_at,
+           e.event_action AS action, e.event_outcome AS outcome, NULL::text AS operation,
+           e.principal, e.patient_id, NULL::text AS resource_class, e.resource_id,
+           e.client_ip, NULL::text AS token_id, NULL::text AS domain, NULL::text AS purpose,
+           NULL::text AS legal_basis, NULL::bigint AS result_count,
+           e.request_id, NULL::jsonb AS roles, NULL::jsonb AS origins,
+           NULL::bigint AS origin_count, NULL::text AS category_map_digest,
+           NULL::text AS acting_mode, NULL::text AS assurance_level,
+           NULL::text AS assurance_value, NULL::text AS professional_id,
+           false AS emergency_access, NULL::text AS permit, NULL::text AS issuer,
+           NULL::text AS client_id, e.classified_ehr_id AS ehr_id,
+           NULL::text AS subject_namespace, false AS subject_lookup_failed,
+           NULL::text AS review, NULL::jsonb AS category_content,
+           p.digest AS render_policy, NULL::jsonb AS token_attributes, e.search_tokens,
+           audit.search_keys(e.search_tokens, e.request_id, e.resource_id) AS search_keys,
+           e.content AS row_part, sh.content AS shared_part, e.record_type AS entry_type,
+           e.uid AS entry_uid, e.ehr_id AS entry_ehr,
+           NULL::text AS algorithm, NULL::text AS previous_digest,
+           encode(e.content_digest, 'hex') AS content_digest, NULL::text AS digest,
+           e.shared AS shared_digest, 'access_log'::text AS chain
+      FROM access_log_entry e
+      JOIN audit_render_policy p ON p.id = e.render_policy_id
+      LEFT JOIN access_log_shared sh ON sh.digest = e.shared;
+COMMENT ON VIEW access_log_by_key IS
+    'One access-log entry as audit_record holds it, read by its key from its own row: what an ITI-81 page reads for each record it serves, after the search index named it.';
+
 -- The person's access trail, with the index columns the row part leaves
 -- members to.
 CREATE VIEW access_trail AS

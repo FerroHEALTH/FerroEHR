@@ -149,7 +149,7 @@ fn every_identifier_comes_from_the_closed_set() {
         "system_search",
         "system_page",
         "access_log_candidate",
-        "access_log_page",
+        "access_log_by_key",
         "chains",
         "page_keys",
         "position",

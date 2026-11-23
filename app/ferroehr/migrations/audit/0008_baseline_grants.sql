@@ -72,6 +72,7 @@ BEGIN
             access_log_search,
             system_search,
             audit_record,
+            access_log_by_key,
             access_trail
             TO ferroehr_clinical_reader;
         GRANT SELECT, INSERT ON TABLE
@@ -87,6 +88,7 @@ BEGIN
             access_log_search,
             system_search,
             audit_record,
+            access_log_by_key,
             access_trail
             TO ferroehr_clinical;
         GRANT EXECUTE ON FUNCTION

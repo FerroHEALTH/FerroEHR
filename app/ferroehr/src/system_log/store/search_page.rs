@@ -29,6 +29,8 @@ const RECORD: &str = "audit_record";
 /// The ITI-81 index of the access log, the view of the entries' index
 /// columns, which holds every column a search criterion names (#5784).
 const ACCESS_LOG_SEARCH: &str = "access_log_search";
+/// One access-log entry as `audit_record` holds it, read by its key (#6320).
+const ACCESS_LOG_BY_KEY: &str = "access_log_by_key";
 /// The ITI-81 index of the system chain, the view of the linked records'
 /// search columns: a plain join the planner reads in the search's order
 /// through the time index, where a member of `audit_record`'s union is
@@ -205,20 +207,28 @@ fn page(condition: &Cond, count: u64, offset: u64, served: u64) -> SelectStateme
         .to_owned();
     let key = Alias::new("page_key");
     let record = Alias::new("page_record");
-    // NOTE: our own design (#5965), `OFFSET 0` keeps the read lateral, so each served record
-    // is found by its chain and position rather than by a read of the whole store.
-    let by_key = Query::select()
-        .columns(record_columns().map(Alias::new))
-        .column(Alias::new(SHARED_DIGEST))
-        .from((Alias::new(AUDIT), Alias::new(RECORD)))
-        .and_where(Expr::col(Alias::new("chain")).eq(Expr::col((key.clone(), Alias::new("chain")))))
-        .and_where(
-            Expr::col(Alias::new("chain_seq"))
-                .eq(Expr::col((key.clone(), Alias::new("chain_seq")))),
-        )
-        .and_where(Expr::col((key.clone(), Alias::new("position"))).lte(served))
-        .offset(0)
+    // NOTE: our own design (#5965, #6320), `OFFSET 0` keeps the read lateral, so each served
+    // record is found by its position in its own chain's relation: an access-log entry by the
+    // key of its row, never through the open window of `audit_record`'s union.
+    let in_chain = |relation: &str, chain: &str| {
+        Query::select()
+            .columns(record_columns().map(Alias::new))
+            .column(Alias::new(SHARED_DIGEST))
+            .from((Alias::new(AUDIT), Alias::new(relation)))
+            .and_where(Expr::col((key.clone(), Alias::new("chain"))).eq(chain))
+            .and_where(
+                Expr::col(Alias::new("chain_seq"))
+                    .eq(Expr::col((key.clone(), Alias::new("chain_seq")))),
+            )
+            .and_where(Expr::col((key.clone(), Alias::new("position"))).lte(served))
+            .to_owned()
+    };
+    let mut by_key = in_chain(RECORD, "system")
+        .and_where(Expr::col(Alias::new("chain")).eq("system"))
         .to_owned();
+    by_key
+        .union(UnionType::All, in_chain(ACCESS_LOG_BY_KEY, "access_log"))
+        .offset(0);
     let mut page = Query::select();
     page.columns(KEYS.map(|column| (key.clone(), Alias::new(column))))
         .columns(
@@ -254,8 +264,8 @@ fn record_columns() -> impl Iterator<Item = &'static str> {
 /// The candidates are read from `access_log_search` through the entries'
 /// time index: its first `first` rows by `recorded_at`, and every row tied
 /// with the last of them, since the order's next key, `stored_at`, is not in
-/// the view. Each candidate's keys are read from the view by its position,
-/// which renders no document.
+/// the view. A candidate's keys are its index row's own (#6320), so no
+/// record is read before the page is taken.
 fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
     let search = || (Alias::new(AUDIT), Alias::new(ACCESS_LOG_SEARCH));
     // NOTE: our own design (#5968), a page reads only the entries the chainer linked.
@@ -273,41 +283,34 @@ fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
     let last_instant = newest(1, first.saturating_sub(1))
         .column(Alias::new("recorded_at"))
         .to_owned();
-    let mut candidates = Query::select();
-    candidates
-        .column(Alias::new("chain_seq"))
-        .from(search())
-        .cond_where(condition.clone())
-        .and_where(linked())
-        .and_where(Expr::col(Alias::new("recorded_at")).eq(count_of(last_instant)))
-        .union(
-            UnionType::Distinct,
-            newest(first, 0).column(Alias::new("chain_seq")).to_owned(),
-        );
+    let keys = |mut select: SelectStatement| {
+        select
+            .column(Alias::new("chain_seq"))
+            .column(Alias::new("recorded_at"))
+            .to_owned()
+    };
+    let mut candidates = keys(
+        Query::select()
+            .from(search())
+            .cond_where(condition.clone())
+            .and_where(linked())
+            .and_where(Expr::col(Alias::new("recorded_at")).eq(count_of(last_instant)))
+            .to_owned(),
+    );
+    candidates.union(UnionType::Distinct, keys(newest(first, 0)));
     let candidate = Alias::new("access_log_candidate");
-    let record = Alias::new("access_log_page");
-    // NOTE: our own design (#5646), `OFFSET 0` keeps the read lateral, so each candidate's
-    // keys are found by its position rather than by a read of the whole log.
-    let by_position = Query::select()
-        .columns(KEYS.map(Alias::new))
-        .from((Alias::new(AUDIT), Alias::new(RECORD)))
-        .and_where(Expr::col(Alias::new("chain")).eq("access_log"))
-        .and_where(
-            Expr::col(Alias::new("chain_seq"))
-                .eq(Expr::col((candidate.clone(), Alias::new("chain_seq")))),
-        )
-        .offset(0)
-        .to_owned();
+    // NOTE: our own design (#6320), an entry's keys are its search index row's: it is stored at
+    // the instant it records, and its chain is the access log's, so no record is read for them.
     let mut page = Query::select();
-    page.columns(KEYS.map(|column| (record.clone(), Alias::new(column))))
-        .from_subquery(candidates, candidate)
-        .join_lateral(
-            sea_query::JoinType::InnerJoin,
-            by_position,
-            record.clone(),
-            Expr::val(true),
-        );
-    within_chain(&mut page, Some(&record)).limit(first);
+    page.expr_as(Expr::cust("'access_log'::text"), Alias::new("chain"))
+        .column((candidate.clone(), Alias::new("chain_seq")))
+        .column((candidate.clone(), Alias::new("recorded_at")))
+        .expr_as(
+            Expr::col((candidate.clone(), Alias::new("recorded_at"))),
+            Alias::new("stored_at"),
+        )
+        .from_subquery(candidates, candidate.clone());
+    within_chain(&mut page, None).limit(first);
     page
 }
 
