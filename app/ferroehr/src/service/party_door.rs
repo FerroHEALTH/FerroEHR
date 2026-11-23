@@ -21,6 +21,11 @@ use crate::storage::error::StorageError;
 
 use super::FerroEhrService;
 
+/// The database a pool serves, read on the pool that runs no door: a role
+/// without `USAGE` on a door's schema cannot name its function.
+const DATABASE_SQL: &str =
+    "SELECT s.system_identifier::text, current_database()::text FROM pg_control_system() s";
+
 /// The database a pool serves, and on the clinical pool whether its role may
 /// run the door.
 const WHERE_SQL: &str = "SELECT s.system_identifier::text, current_database()::text, \
@@ -42,7 +47,7 @@ impl FerroEhrService {
             let (clinical, clinical_db, door): (String, String, bool) = sqlx::query_as(WHERE_SQL)
                 .fetch_one(&mut *acquire(&self.pool).await?)
                 .await?;
-            let (party, party_db, _): (String, String, bool) = sqlx::query_as(WHERE_SQL)
+            let (party, party_db): (String, String) = sqlx::query_as(DATABASE_SQL)
                 .fetch_one(&mut *acquire(&self.demographic_pool).await?)
                 .await?;
             Ok(door && clinical == party && clinical_db == party_db)
@@ -73,10 +78,9 @@ impl FerroEhrService {
             let (party, party_db, door): (String, String, bool) = sqlx::query_as(CLINICAL_DOOR_SQL)
                 .fetch_one(&mut *acquire(&self.demographic_pool).await?)
                 .await?;
-            let (clinical, clinical_db, _): (String, String, bool) =
-                sqlx::query_as(CLINICAL_DOOR_SQL)
-                    .fetch_one(&mut *acquire(&self.pool).await?)
-                    .await?;
+            let (clinical, clinical_db): (String, String) = sqlx::query_as(DATABASE_SQL)
+                .fetch_one(&mut *acquire(&self.pool).await?)
+                .await?;
             Ok(door && clinical == party && clinical_db == party_db)
         }))
         .await

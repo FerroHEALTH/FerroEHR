@@ -413,14 +413,15 @@ COMMENT ON VIEW request_revisions IS 'The policy_revision and the definition_rev
 -- else; it runs as its owner, the owner of this schema, with a fixed
 -- search_path, and returns two counters that carry no personal data. The
 -- party roles may run it and read no table of this schema
--- (db::verify_domain_isolation holds both).
+-- (db::verify_domain_isolation holds both). The door outlives a drop of the
+-- clinical schema alone, so this set opens it again over the one it finds.
 --
 -- No openEHR spec governs the confirmation: our own design.
-CREATE SCHEMA clinical_door;
+CREATE SCHEMA IF NOT EXISTS clinical_door;
 COMMENT ON SCHEMA clinical_door IS 'The one function of the clinical domain the party roles may run: the policy and definition revisions. Our own design (#6320).';
 REVOKE ALL ON SCHEMA clinical_door FROM PUBLIC;
 
-CREATE FUNCTION clinical_door.policy_revisions()
+CREATE OR REPLACE FUNCTION clinical_door.policy_revisions()
 RETURNS TABLE (policy bigint, definitions bigint)
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = clinical, pg_catalog
