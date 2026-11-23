@@ -830,7 +830,10 @@ pub(super) fn order() -> impl Iterator<Item = Path> {
 /// 9 to 27 bytes more on every path, by the width of the snapshot's text,
 /// measured beside the merge base. Only the three directory ceilings, whose
 /// margin was 18 bytes, rose, by the 27 bytes of the widest run, approved by
-/// the orchestrator on #6074.
+/// the orchestrator on #6074. The version copy read's ceiling rose too, from
+/// 3,336 to 3,385 bytes, approved by the owner: its ten requests are bimodal
+/// (#6365), its median lands on the 3.3 KB form in some runs, main's ceiling
+/// sat exactly on that form, and the snapshot adds 29 to 49 bytes there.
 const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitJson, 202_143),
     (Path::CommitXml, 202_289),
@@ -851,7 +854,7 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::AqlMatches, 17_539),
     (Path::AqlParty, 11_509),
     (Path::CommitPartyScored, 10_861),
-    (Path::ReadVersion, 3336),
+    (Path::ReadVersion, 3385),
     (Path::CommitUpdate, 202_571),
     (Path::CommitDelete, 4875),
     (Path::DirectoryCreate, 5012),
