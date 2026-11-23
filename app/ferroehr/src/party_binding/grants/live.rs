@@ -325,14 +325,9 @@ impl LiveGrants {
                 let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
                 let since = self.facts_revision();
                 let changed = read_facts(&mut conn, since).await?;
-                let mut stamped: Vec<Uuid> =
-                    changed.parties.iter().map(|(party, _)| *party).collect();
-                stamped.sort_unstable();
-                let teams = changed.cared_teams.clone();
-                let declared = changed.declared.clone();
-                // NOTE: our own design (#5806), the care copy drops what changed before the
+                // NOTE: our own design (#5806, #6074), the care copy applies what changed before the
                 // revision moves, so a request that finds the revision in force reads no older care.
-                self.care.drop_changed(&stamped, &teams, &declared).await;
+                self.care.apply(&changed).await;
                 let held = self.held_facts();
                 if held.revision.is_none_or(|held| held < changed.revision) {
                     *self.facts.write().unwrap_or_else(PoisonError::into_inner) =

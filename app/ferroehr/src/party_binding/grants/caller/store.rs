@@ -10,7 +10,9 @@
 //! transaction; when they changed, it moves the facts revision,
 //! stamps each party whose facts changed with it and notifies
 //! [`super::super::store::CHANNEL`], so each replica reads again only the
-//! facts of the parties stamped since its copy ([`FACTS`]). A refill and an
+//! facts of the parties stamped since its copy ([`FACTS`]), with their care
+//! relationships ([`CARED`]) and record subjects, which its care copy
+//! applies to the care teams it holds (#6074). A refill and an
 //! erasure move the grant revision instead, which reads every fact again. No
 //! openEHR spec governs the side table or its SQL: our own design.
 
@@ -74,11 +76,20 @@ const HELD_FACTS: &str = concat!(
      ORDER BY f.party_id, f.holder_id, f.ordinal, f.kind"
 );
 
-/// The care teams the subjects stamped after the facts revision `$1` are
-/// under the care of now, whose cached patients a replica drops.
-const CARED_TEAMS: &str = "SELECT DISTINCT f.target_id FROM binding_caller_fact_party p \
+/// The care relationships of the subjects stamped after the facts revision
+/// `$1`, by subject.
+///
+/// A replica applies them to the census of each care team it holds (#6074).
+/// Answered from `ix_binding_caller_fact_party_revision` and
+/// `ix_binding_caller_fact_party`.
+const CARED: &str = concat!(
+    "SELECT f.party_id AS stamped, ",
+    fact_columns!(),
+    " FROM binding_caller_fact_party p \
      JOIN binding_caller_fact f ON f.party_id = p.party_id AND f.kind = 'under_care_of' \
-     WHERE p.revision > $1";
+     WHERE p.revision > $1 \
+     ORDER BY f.party_id, f.holder_id, f.ordinal"
+);
 
 /// The care relationships of the subject `$1`. Answered from
 /// `ix_binding_caller_fact_party`.
@@ -125,12 +136,18 @@ const CARE_OF_HOLDER: &str = concat!(
 );
 
 /// The record subjects the parties stamped after the facts revision `$1`
-/// declare now, whose cached resolution a replica drops; answered from
+/// declare now, by `PERSON` and position, each with whether it is live as
+/// [`super::subject::declared_by`] reads it: whose cached resolution a
+/// replica drops, and which its care teams' censuses hold. Answered from
 /// `ix_binding_caller_fact_party_revision` and the primary key of
 /// `binding_record_subject`.
-const DECLARED: &str = "SELECT r.namespace, r.subject_id FROM binding_caller_fact_party p \
+const DECLARED: &str = "SELECT r.holder_id, r.namespace, r.subject_id, \
+     r.lifecycle_state IN ('532', '553') AND NOT EXISTS (SELECT 1 FROM pmir_suppression s \
+       WHERE s.kind = 'subject' AND s.holder_id = r.holder_id AND s.namespace = r.namespace \
+       AND lower(s.value) = lower(r.subject_id)) AS live \
+     FROM binding_caller_fact_party p \
      JOIN binding_record_subject r ON r.holder_id = p.party_id \
-     WHERE p.revision > $1";
+     WHERE p.revision > $1 ORDER BY r.holder_id, r.ordinal";
 
 /// The text of one stored fact, as a commit compares the facts of a head
 /// before and after.
@@ -215,19 +232,31 @@ impl crate::memory::Weigh for FactRow {
 }
 
 /// The facts read since a facts revision: the revision read, every party
-/// stamped since, the caller facts each holds, and the care teams the
-/// stamped subjects are under the care of now.
+/// stamped since, the caller facts each holds, and the care relationships
+/// and record subjects of the stamped parties now.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Changed {
     /// The facts revision the read saw.
     pub(crate) revision: i64,
-    /// Every party read, each with its caller facts; empty facts for a party
-    /// that holds none, such as a patient in care.
+    /// Every party read, sorted, each with its caller facts; empty facts for
+    /// a party that holds none, such as a patient in care.
     pub(crate) parties: Vec<(Uuid, Vec<FactRow>)>,
-    /// The care teams the stamped subjects are under the care of now.
-    pub(crate) cared_teams: Vec<Uuid>,
+    /// The care relationships of each stamped subject that holds any.
+    pub(crate) cared: Vec<(Uuid, Vec<FactRow>)>,
     /// The record subjects the stamped parties declare now.
-    pub(crate) declared: Vec<EhrSubject>,
+    pub(crate) declared: Vec<Declared>,
+}
+
+/// A record subject a stamped `PERSON` declares, as [`DECLARED`] reads it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Declared {
+    /// The `PERSON` that declares it.
+    pub(crate) person: Uuid,
+    /// The reference.
+    pub(crate) subject: EhrSubject,
+    /// Whether the `PERSON` declares it while it is `complete` or
+    /// `incomplete` and no received PMIR message split it off.
+    pub(crate) live: bool,
 }
 
 /// Replaces the facts of `head` on its commit transaction `tx`: the facts
@@ -400,21 +429,22 @@ pub(crate) async fn load(
     let revision = crate::party_binding::grants::store::revisions(conn)
         .await?
         .facts;
-    let (rows, cared_teams, declared) = match since {
+    let (rows, cared, declared) = match since {
         Some(since) => {
-            let declared: Vec<(String, String)> = sqlx::query_as(DECLARED)
+            let declared: Vec<(Uuid, String, String, bool)> = sqlx::query_as(DECLARED)
                 .bind(since)
                 .fetch_all(&mut *conn)
                 .await?;
             (
                 sqlx::query(FACTS).bind(since).fetch_all(&mut *conn).await?,
-                sqlx::query_scalar(CARED_TEAMS)
-                    .bind(since)
-                    .fetch_all(&mut *conn)
-                    .await?,
+                sqlx::query(CARED).bind(since).fetch_all(&mut *conn).await?,
                 declared
                     .into_iter()
-                    .map(|(namespace, id)| EhrSubject::new(namespace, id))
+                    .map(|(person, namespace, id, live)| Declared {
+                        person,
+                        subject: EhrSubject::new(namespace, id),
+                        live,
+                    })
                     .collect(),
             )
         }
@@ -427,7 +457,7 @@ pub(crate) async fn load(
     Ok(Changed {
         revision,
         parties: by_party(rows)?,
-        cared_teams,
+        cared: by_party(cared)?,
         declared,
     })
 }
@@ -664,6 +694,7 @@ mod tests {
                 CARE_OF_SUBJECT,
                 CARE_OF_SUBJECTS,
                 CARE_OF_TEAM,
+                CARED,
             ] {
                 assert!(read.contains(column), "{column} is not read");
             }
