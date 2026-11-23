@@ -3,11 +3,8 @@
 
 //! Name conversions from openEHR spec identifiers to idiomatic Rust names.
 
-/// Convert an openEHR class name to a Rust type name in `PascalCase`.
-///
-/// Each `_`-separated segment is title-cased (first char upper, rest lower), so
-/// `DV_QUANTITY` → `DvQuantity`, `ISO_OID` → `IsoOid`, `Iso8601_date` →
-/// `Iso8601Date`, `EHR_STATUS` → `EhrStatus`.
+/// Converts an openEHR class name to `PascalCase` (`DV_QUANTITY` →
+/// `DvQuantity`, `Iso8601_date` → `Iso8601Date`).
 #[must_use]
 pub(crate) fn type_name(spec: &str) -> String {
     spec.split('_')
@@ -24,9 +21,8 @@ pub(crate) fn type_name(spec: &str) -> String {
         .collect()
 }
 
-/// The Rust field identifier for an openEHR attribute name (already `snake_case`),
-/// escaping Rust keywords. Returns the identifier to emit; pair with
-/// [`serde_rename`] to keep the wire name correct.
+/// The Rust field identifier for an openEHR attribute name, keywords escaped;
+/// pair with [`serde_rename`].
 #[must_use]
 pub(crate) fn field_ident(spec: &str) -> String {
     match spec {
@@ -43,28 +39,20 @@ pub(crate) fn field_ident(spec: &str) -> String {
     }
 }
 
-/// The Rust module identifier for a BMM package segment.
-///
-/// Package names come verbatim from the vendored schemas and may carry
-/// characters Rust cannot express in a module path — LANG 1.0.0 publishes
-/// `org.openehr.lang.obsolete-elom` — so a hyphen maps to an underscore (the
-/// standard crate-name mangling) and keywords escape exactly like
-/// [`field_ident`].
+/// The Rust module identifier for a BMM package segment: a hyphen becomes an
+/// underscore (`obsolete-elom`), and keywords escape as in [`field_ident`].
 #[must_use]
 pub(crate) fn module_ident(segment: &str) -> String {
     field_ident(&segment.replace('-', "_"))
 }
 
-/// The `SCREAMING_SNAKE_CASE` associated-constant identifier for a BMM constant
-/// name (`Terminology_id_openehr` → `TERMINOLOGY_ID_OPENEHR`). BMM constant
-/// names are `[A-Za-z0-9_]`, so upper-casing yields a valid Rust identifier.
+/// The `SCREAMING_SNAKE_CASE` identifier for a BMM constant name.
 pub(crate) fn const_ident(spec: &str) -> String {
     spec.to_uppercase()
 }
 
-/// Whether `s` is a Rust keyword that must be written as a raw identifier
-/// (`r#{s}`) when used as a field name. Excludes `crate`/`self`/`super`/`Self`
-/// (which cannot be raw and are handled separately in [`field_ident`]).
+/// Whether `s` is a keyword written as `r#{s}`; `crate`, `self`, `super` and
+/// `Self` are handled in [`field_ident`].
 fn is_raw_escapable_keyword(s: &str) -> bool {
     matches!(
         s,
@@ -81,11 +69,8 @@ fn is_raw_escapable_keyword(s: &str) -> bool {
     )
 }
 
-/// The `#[serde(rename = "..")]` value needed for a field, if its emitted
-/// identifier does not already serialize to the spec name.
-///
-/// Raw identifiers (`r#type`) serialize as the bare keyword, so they need no
-/// rename; suffixed ones (`use_`) do.
+/// The `#[serde(rename = "..")]` value a field needs; a raw identifier needs
+/// none, a suffixed one (`use_`) does.
 #[must_use]
 pub(crate) fn serde_rename(spec: &str, ident: &str) -> Option<String> {
     let wire = ident.strip_prefix("r#").unwrap_or(ident);

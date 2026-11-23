@@ -27,15 +27,9 @@ pub(crate) fn doc_block_summarized(
     }
 }
 
-/// The line-by-line rewriter behind [`doc_block_summarized`].
-///
-/// Spec prose carries example blocks (ODIN snippets, `YYYY-MM-DDTHH:MM:SS` date
-/// formats) that rustdoc would compile as Rust doctests and choke on. Both forms
-/// it recognizes are neutralized so the docs render as text, never run: a bare
-/// triple-backtick fence has its opening tagged `text` (the closing stays bare),
-/// and a run of 4-space-indented lines is wrapped in a `text` fence. Prose
-/// OUTSIDE those blocks additionally goes through [`sanitize_doc_prose`] (bare
-/// URLs, stray brackets/angle brackets — the rustdoc deny-lints).
+/// The line-by-line rewriter behind [`doc_block_summarized`]: tags a bare
+/// fence and wraps an indented block as `text`, and passes other prose through
+/// [`sanitize_doc_prose`].
 #[derive(Default)]
 struct DocBlock<'a> {
     /// The rewritten lines, in order.
@@ -121,14 +115,9 @@ impl<'a> DocBlock<'a> {
     }
 }
 
-/// Reshapes an over-long first doc paragraph into the RFC 1574 summary form.
-///
-/// When the first paragraph exceeds `clippy::too_long_first_doc_paragraph`'s
-/// 200-character threshold, the first sentence stays as the summary and the
-/// remainder moves below a blank line. BMM prose the split cannot apply to
-/// (no sentence boundary inside the budget) is left verbatim — the lint then
-/// cannot split within the budget gains the caller's synthesized
-/// `summary_hint` as its summary paragraph instead (empty hint = verbatim).
+/// Splits a first paragraph longer than
+/// `clippy::too_long_first_doc_paragraph` allows after its first sentence, or
+/// prepends `summary_hint` when no sentence ends within the budget.
 fn split_long_first_paragraph(out: &mut Vec<String>, summary_hint: &str) {
     let para_end = out.iter().position(String::is_empty).unwrap_or(out.len());
     let text_len: usize = out
@@ -176,11 +165,8 @@ fn split_long_first_paragraph(out: &mut Vec<String>, summary_hint: &str) {
     }
 }
 
-/// Returns the byte index just past the first sentence terminator that ends a
-/// sentence within the first `budget` characters of `line`, if any.
-///
-/// A terminator is `.`/`!`/`?` followed by a space, excluding the common
-/// abbreviations spec prose uses (`e.g.`, `i.e.`, `etc.`, `vs.`, `cf.`).
+/// The byte index just past the first sentence end within `budget` characters
+/// of `line`, skipping `e.g.`, `i.e.`, `etc.`, `vs.` and `cf.`.
 fn sentence_end_within(line: &str, budget: usize) -> Option<usize> {
     let mut chars_seen: usize = 0;
     let mut prev_word_end: Option<usize> = None;
@@ -208,17 +194,13 @@ fn sentence_end_within(line: &str, budget: usize) -> Option<usize> {
     None
 }
 
-/// Make verbatim openEHR spec prose safe for the workspace's deny-level rustdoc
-/// lints, leaving code spans untouched (rustdoc never lints inside them):
+/// Makes openEHR spec prose safe for the deny-level rustdoc lints, code spans
+/// untouched:
 ///
-/// - a bare URL becomes an autolink `<url>`, and the asciidoc `url[label]` form
-///   becomes a Markdown link (`rustdoc::bare_urls`);
-/// - a literal `[…]` is escaped `\[…\]`, so prose is not read as a broken
-///   intra-doc link (`rustdoc::broken_intra_doc_links`);
-/// - a literal `<…>` is escaped `\<…\>`, so `"name <email>"` / `VERSION<T>` in
-///   prose is not read as an HTML tag (`rustdoc::invalid_html_tags`);
-/// - an unpaired backtick run is escaped, so it opens no dangling code span
-///   (`rustdoc::unescaped_backticks`).
+/// - a bare URL becomes `<url>`, and asciidoc `url[label]` a Markdown link;
+/// - a literal `[…]` becomes `\[…\]`;
+/// - a literal `<…>` becomes `\<…\>`;
+/// - an unpaired backtick run is escaped.
 pub(crate) fn sanitize_doc_prose(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
@@ -242,10 +224,8 @@ pub(crate) fn sanitize_doc_prose(text: &str) -> String {
     out
 }
 
-/// Copies a backtick run to `out`, returning the unconsumed remainder.
-///
-/// A matched pair delimits a code span: it is copied verbatim, closing run
-/// included. An unmatched run is escaped instead.
+/// Copies a backtick run to `out`, a matched pair verbatim and an unmatched run
+/// escaped, returning the remainder.
 fn copy_code_span<'a>(rest: &'a str, out: &mut String) -> &'a str {
     let open = backtick_run(rest);
     if let Some(offset) = find_backtick_run(after(rest, open), open) {
@@ -259,11 +239,8 @@ fn copy_code_span<'a>(rest: &'a str, out: &mut String) -> &'a str {
     after(rest, open)
 }
 
-/// Copies a URL to `out` as Markdown, returning the unconsumed remainder.
-///
-/// The asciidoc link form `https://host/path[label]` becomes a Markdown link. A
-/// parenthesis in the URL would end the Markdown destination early, so such a
-/// link stays an autolink with escaped brackets.
+/// Copies a URL to `out` as Markdown, returning the remainder; a URL with a
+/// parenthesis stays an autolink.
 fn copy_url<'a>(rest: &'a str, out: &mut String) -> &'a str {
     let url = read_url(rest);
     let tail = after(rest, url.len());
@@ -324,9 +301,8 @@ fn read_url(s: &str) -> &str {
     url
 }
 
-/// An asciidoc link label `[label]` at the start of `s`, if it is usable as
-/// Markdown link text (no nested bracket or code span). Returns
-/// `(bytes consumed incl. both brackets, label)`.
+/// An asciidoc link label `[label]` at the start of `s` usable as Markdown link
+/// text, as `(bytes consumed, label)`.
 fn read_link_label(s: &str) -> Option<(usize, &str)> {
     let body = s.strip_prefix('[')?;
     let close = body.find(']')?;

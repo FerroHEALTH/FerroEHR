@@ -1,17 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ITS-REST payload members whose value must carry its `_type`, and the
-//! field lines `emit-rest` writes for them.
-//!
-//! The codegen bundle `emit-rest` reads types such a member with the RM schema
-//! (`DvText`, whose `_type` has a `default`), so the RM reader takes an untagged
-//! object as a `DV_TEXT`. The validation bundle of the same release types it
-//! with a `U*` union whose every member lists `_type` under `required`, and
-//! ITS-REST `docs/overview/Specifications.md` names that bundle as the one
-//! "used by (mock-)servers or applications to validate openEHR request and
-//! response payloads". The generated field decodes through
-//! `openehr_its::rest::tagged`, which refuses an object without `_type`.
+//! The ITS-REST payload members whose value must carry its `_type`: the
+//! validation bundle types them with a union whose members all require
+//! `_type` (ITS-REST `docs/overview/Specifications.md`), so the field decodes
+//! through `openehr_its::rest::tagged`.
 
 /// One member that must carry its `_type`.
 pub(crate) struct RestTaggedMember {
@@ -115,9 +108,7 @@ mod tests {
             .collect()
     }
 
-    /// Every entry is grounded in the vendored validation bundles: the member
-    /// is typed with the cited union, and every member of that union lists
-    /// `_type` under `required`.
+    /// Every entry's union requires `_type` in every member.
     #[test]
     fn every_entry_matches_the_validation_bundles() {
         let bundles = validation_bundles();

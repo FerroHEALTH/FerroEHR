@@ -21,14 +21,9 @@
               `let _ = writeln!(String)` is the infallible in-memory emit idiom"
 )]
 
-//! `openehr-codegen` — generates the openEHR spec crates from the vendored BMM
-//! meta-model, structured as a four-stage pipeline:
-//! `load` → `analyze` → `plan` → `render`, driven by `cli` (private modules —
-//! `cargo doc --document-private-items` renders them).
-//!
-//! The stages are library modules, not a binary-only tree, so the emitter's
-//! invariants are tested as properties over the real pipeline on the real
-//! vendored inputs (`tests/emitter_invariants.rs`) through [`testsupport`].
+//! `openehr-codegen`: generates the openEHR spec crates from the vendored BMM
+//! in four stages, `load` → `analyze` → `plan` → `render`, driven by `cli`;
+//! [`testsupport`] exposes them to the invariant tests.
 //!
 //! Usage:
 //!   `openehr-codegen check`          — load + validate the vendored BMM schemas.
@@ -44,16 +39,12 @@ mod plan;
 mod render;
 pub mod testsupport;
 
-/// Run the codegen CLI (the binary entry point): parse `argv`, dispatch the
-/// subcommand, and report the outcome as a process exit code.
-///
-/// Returns `ExitCode::SUCCESS` on a completed emit/check, `ExitCode::FAILURE`
-/// when a stage returned an error, and `2` for an unrecognized subcommand.
+/// Runs the codegen CLI: parses `argv`, dispatches the subcommand, and returns
+/// `SUCCESS`, `FAILURE` when a stage fails, or `2` for an unknown subcommand.
 ///
 /// # Panics
-/// Panics (the loud tool-mode backstop) if a vendored input is malformed in a
-/// way the emitter's invariants forbid — e.g. a non-constructible type would be
-/// emitted (see `analyze::Model::assert_constructible`).
+/// Panics if a vendored input breaks an emitter invariant, such as a
+/// non-constructible type (`analyze::Model::assert_constructible`).
 #[must_use]
 pub fn run() -> std::process::ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();

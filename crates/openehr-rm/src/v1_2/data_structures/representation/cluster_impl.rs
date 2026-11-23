@@ -2,16 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariant for `CLUSTER`.
-//!
-//! Only the inherited LOCATABLE `Archetype_node_id_valid`:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.cluster.adoc`
-//! declares no §Invariants section of its own.
-//!
-//! That page's §Attributes states `items` as a mandatory `List<ITEM>` (BMM
-//! cardinality `1..*`), which the generated field carries as
-//! `NonEmptyVec<Item>` — an empty `items` is unrepresentable
-//! (`openehr_base::containers`) rather than merely unchecked.
+//! `CLUSTER` invariants: the inherited `Archetype_node_id_valid`; `items` is
+//! `1..*`, carried as `NonEmptyVec<Item>`.
 
 use crate::v1_2::data_structures::representation::cluster::Cluster;
 use openehr_base::validate::{InvariantViolation, Validate};
@@ -72,11 +64,7 @@ mod tests {
         }
     }
 
-    /// `CLUSTER.items` is `1..*`
-    /// (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.cluster.adoc`
-    /// §Attributes), and the emission shape carries that bound, so an empty item
-    /// list is refused at CONSTRUCTION rather than reported by the invariant
-    /// layer.
+    /// An empty `items` is refused at construction (`cluster.adoc` §Attributes).
     #[test]
     fn an_empty_item_list_is_unrepresentable() {
         assert!(openehr_base::containers::NonEmptyVec::<Item>::new(Vec::new()).is_err());

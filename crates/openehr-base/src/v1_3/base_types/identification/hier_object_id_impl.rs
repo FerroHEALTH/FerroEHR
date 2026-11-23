@@ -2,27 +2,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written validating construction for `HIER_OBJECT_ID`.
+//! Validating construction for `HIER_OBJECT_ID`.
 //!
-//! Spec: BASE 1.3.0
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.hier_object_id.adoc`
-//! and `docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc`
-//! §Syntaxes, which gives the lexical form as
-//! `hier_object_id = uid_based_id` and `uid_based_id = root, [ '::', extension ]`
-//! with `root = uid` and `extension = ? any string ?`.
-//!
-//! The accessors (`root`, `extension`, `has_extension`, `is_equal`) live in the
-//! shared [`uid_based_id_impl`](super::uid_based_id_impl) macro; this sibling
-//! adds the construction door: [`HierObjectId::new`] / `TryFrom<&str>` /
-//! `FromStr` run the §Syntaxes grammar, so an identifier built through them is
-//! well-formed by construction.
-//!
-//! Scope of the guarantee: the generated struct's `value` field is `pub(crate)`
-//! (the emitter's construction-door scheme), so outside `openehr-base` this
-//! constructor and the total [`From<Uid>`] conversion are the ONLY ways to
-//! obtain a `HIER_OBJECT_ID` — the type cannot hold a malformed value anywhere
-//! in the model, and the canonical-JSON/XML readers build through this door
-//! too.
+//! BASE 1.3.0 `master05-identification_package.adoc` §Syntaxes:
+//! `hier_object_id = uid_based_id`, `uid_based_id = root, [ '::', extension ]`,
+//! `root = uid`. The accessors live in
+//! [`uid_based_id_impl`](super::uid_based_id_impl).
 
 use std::str::FromStr;
 
@@ -32,20 +17,13 @@ use super::uid::Uid;
 use super::uid_based_id_impl::root_str;
 
 impl HierObjectId {
-    /// Build a `HIER_OBJECT_ID` from its string form, validating the BASE
-    /// `master05-identification_package.adoc` §Syntaxes grammar
-    /// (`root, [ '::', extension ]`, `root = uid`).
-    ///
-    /// The value is stored verbatim — the case-**preserving** half of master05
-    /// §"Composite Identifiers and Case" ("not change case due to persistence,
-    /// copying, transfer or other computation processes").
+    /// Builds a `HIER_OBJECT_ID` from its string form, stored verbatim (master05
+    /// §"Composite Identifiers and Case").
     ///
     /// # Errors
     /// [`IdError::Empty`] for an empty value, and [`IdError::Malformed`] when
-    /// the `root` part is not a legal `uid` (`iso_oid | uuid | internet_id`).
-    /// The `extension` is `? any string ?` in the grammar and is therefore not
-    /// constrained — including the empty string, which the grammar admits and
-    /// which `has_extension()` reports as absent.
+    /// the `root` part is not a legal `uid`. The `extension` is `? any string ?`,
+    /// so it is not constrained.
     pub fn new(value: impl Into<String>) -> Result<Self, IdError> {
         let value = value.into();
         if value.is_empty() {
@@ -64,24 +42,8 @@ impl HierObjectId {
 }
 
 impl From<Uid> for HierObjectId {
-    /// A bare `UID` **is** a `HIER_OBJECT_ID` — total by grammar, not by
-    /// convention: BASE `master05-identification_package.adoc` §Syntaxes gives
-    /// `hier_object_id = uid_based_id`, `uid_based_id = root, [ '::',
-    /// extension ]` and `root = uid`, so the extension-less form of the
-    /// production is exactly a `uid`, which the [`Uid`] type already carries a
-    /// grammar-checked value of.
-    ///
-    /// This is the conversion every derived-identifier accessor uses (e.g. RM
-    /// `VERSION.owner_id`, extracted from the version id's `object_id`), so a
-    /// derivation can never need a fallible constructor for a value the model
-    /// has already validated.
-    ///
-    /// The rendered value is [`Uid::value`], which normalises a `UUID` to the
-    /// RFC 4122 lower-case form. That is a *rendering*, not a re-identification:
-    /// master05 §"Composite Identifiers and Case" makes two identifiers
-    /// differing only in case the same identifier. The case-PRESERVING half of
-    /// the same section binds a *stored* value, which this conversion does not
-    /// touch.
+    /// A bare `UID` is a `HIER_OBJECT_ID` by grammar (`root = uid`), rendered as
+    /// [`Uid::value`].
     fn from(uid: Uid) -> Self {
         Self {
             value: uid.value().into_owned(),
@@ -90,13 +52,8 @@ impl From<Uid> for HierObjectId {
 }
 
 impl From<uuid::Uuid> for HierObjectId {
-    /// A UUID **is** a `HIER_OBJECT_ID` — total by grammar: §Syntaxes chains
-    /// `hier_object_id = uid_based_id`, `root = uid` and
-    /// `uid = iso_oid | uuid | internet_id`, so the extension-less form of a
-    /// parsed UUID is a legal `hier_object_id` with nothing left to check.
-    ///
-    /// The rendering is the RFC 4122 lower-case hyphenated form — exactly the
-    /// `uuid` production §Syntaxes gives.
+    /// A UUID is a `HIER_OBJECT_ID` by grammar, rendered in the RFC 4122 lower-case
+    /// hyphenated form.
     fn from(value: uuid::Uuid) -> Self {
         Self {
             value: value.to_string(),
@@ -196,9 +153,8 @@ mod tests {
         assert!(!plain.has_extension());
     }
 
-    /// Case is preserved through construction (master05 §"Composite
-    /// Identifiers and Case"), while the case-insensitive comparison still
-    /// identifies the two as the same thing.
+    /// Construction preserves case; the comparison folds it (master05
+    /// §"Composite Identifiers and Case").
     #[test]
     fn construction_is_case_preserving() {
         let upper = HierObjectId::new("UK.NHS.EHR1::A42").expect("a well-formed identifier");

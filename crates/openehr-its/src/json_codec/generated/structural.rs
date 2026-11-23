@@ -5,33 +5,12 @@
 //! Structural conformance dispatch: `_type` → the emitted `Deserialize`
 //! of that spec class.
 //!
-//! The canonical-JSON codec is the structural-conformance authority for a
-//! wire node (mandatory attributes present, JSON kinds right, nested slot
-//! `_type`s resolvable). This dispatch makes that authority reachable for
-//! EVERY emitted class from a `_type` string alone, so a per-node validation
-//! walk is not limited to the classes that happen to carry a class
-//! invariant. The decoded value is discarded — only the `Result` matters.
+//! One arm per class emitted as a struct; an untagged enum, a newtype and a
+//! BMM enumeration carry no `_type` of their own. Generic classes are checked
+//! with an opaque element type.
 //!
-//! Coverage: one arm per class the generator emits as a STRUCT (every
-//! concrete class, plus the few abstract classes emitted as structs because
-//! their concrete descendants live in another schema). Deterministic
-//! exclusions, by shape:
-//!
-//! - an untagged **enum** (abstract or polymorphic slot) carries no `_type`
-//!   of its own — the active variant's payload does, and every payload is an
-//!   emitted struct with its own arm;
-//! - a transparent **newtype** and a BMM **enumeration** serialize as their
-//!   bare primitive payload, so no `_type` member exists to dispatch on.
-//!
-//! Generic classes are monomorphized with an opaque element type, so the
-//! container's own shape is checked and its elements are accepted verbatim
-//! (each element is a `_type` node in its own right).
-//!
-//! NOTE: no openEHR spec governs a cross-component `_type` namespace (the
-//! canonical-JSON `_type` is a class name, and several components' BMMs
-//! declare the same name with different attributes) — our own design: the
-//! emitter resolves a collision by schema priority, in the order the CLI
-//! passes the schemas, and every shadowed twin is listed below.
+//! NOTE: no openEHR spec governs a cross-component `_type` namespace: our own
+//! design resolves a collision by schema order and lists each shadowed twin below.
 
 #![allow(
     clippy::all,
@@ -777,11 +756,8 @@
 /// class.
 ///
 /// # Errors
-/// The inner `Err` is the canonical reader's error for a node that does not
-/// deserialize as `ty` (a missing mandatory attribute, an undeclared or
-/// repeated key, a wrong JSON kind, an unresolvable nested slot `_type`),
-/// carrying the JSON path to the offending node — the same door, and the
-/// same message, as a direct `crate::json::from_canonical_value` read.
+/// The inner `Err` is the canonical reader's error, with the JSON path to
+/// the offending node.
 pub fn structural_check(
     ty: &str,
     node: &::serde_json::Value,
@@ -1163,11 +1139,8 @@ _ => ::core::option::Option::None,
 /// The wire keys the spec class `ty` declares, sorted, or `None` when
 /// `ty` names no emitted struct.
 ///
-/// Emitted from the SAME field view as the reader's undeclared-key refusal,
-/// so a caller that must answer "is this key declared?" WITHOUT decoding —
-/// the validation dispatcher's allocation-free fast path — can never
-/// disagree with the reader that would decode it. `_type` is the canonical
-/// discriminator, not a modelled attribute, and is never listed.
+/// Emitted from the reader's own field view, so the two agree. `_type` is
+/// never listed.
 #[must_use]
 pub fn declared_fields(ty: &str) -> ::core::option::Option<&'static [&'static str]> {
     match ty {

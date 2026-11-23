@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! openEHR TERM (Terminology) data model, generated from the BMM meta-model. The vendored terminology XML content lives in `assets/` (data, not generated); an XML→model loader is added when composition validation needs it.
+//! openEHR TERM (Terminology) data model, generated from the BMM meta-model. The vendored terminology XML content lives in `assets/`.
 //!
 //! The type files are generated; hand-written spec behaviour
 //! lives in sibling `*_impl.rs` files.
@@ -34,11 +34,9 @@ pub mod v3_1;
 /// The BMM generations this crate emits, one variant per version module,
 /// oldest first.
 ///
-/// Generated from the openehr-codegen composition table — the single
-/// authority for which generations exist. [`std::fmt::Display`] and
-/// [`std::str::FromStr`] round-trip the generation-module name (`"v3_1"`). `Generation::default()` is the crate's CURRENT generation — the
-/// one `crate::prelude` re-exports (the composition table's `current`
-/// marker, via the std `#[default]` variant attribute).
+/// [`std::fmt::Display`] and [`std::str::FromStr`] round-trip the
+/// generation-module name (`"v3_1"`). `Generation::default()` is the generation `crate::prelude`
+/// re-exports.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Generation {
     /// The `v3_1` generation — openEHR specification version 3.1.0.

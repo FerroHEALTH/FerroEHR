@@ -2,20 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `PARTY_RELATED`.
-//!
-//! Spec: RM `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.party_related.adoc`
-//! §Invariants declares one, and `PARTY_RELATED` inherits those of
-//! `…org.openehr.rm.common.party_identified.adoc` §Invariants:
-//!
-//! - inherited `Basic_validity` and `Name_valid` — realized here, through the
-//!   generated `party_identified_core`; the inherited `Identifiers_valid` is
-//!   structural, for the reason given in `party_identified_impl`.
-//! - `Relationship_valid`: `terminology (Terminology_id_openehr)
-//!   .has_code_for_group_id (Group_id_subject_relationship,
-//!   relationship.defining_code)` — terminology-bound, so it needs a bundle
-//!   lookup rather than a typed-node property; realized by the binding table in
-//!   [`crate::v1_1::validate::terminology`] against the `openehr-term` bundle.
+//! `PARTY_RELATED` invariants (`org.openehr.rm.common.party_related.adoc`):
+//! the inherited ones as `party_identified_impl`, and `Relationship_valid` in
+//! [`crate::v1_1::validate::terminology`].
 
 use crate::v1_1::common::generic::party_related::PartyRelated;
 use openehr_base::validate::{InvariantViolation, Validate};

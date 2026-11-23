@@ -2,59 +2,23 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written `Iso8601_time` spec behaviour.
+//! `Iso8601_time` behaviour: accessors, definite `add`/`subtract`/`diff`, and
+//! a range-semantics `PartialOrd`
+//! (`org.openehr.base.foundation_types.iso8601_time.adoc`,
+//! `time_definitions.adoc`, `master06-time_types.adoc`).
 //!
-//! Covers the accessor functions (`is_partial`, `is_extended`,
-//! `is_decimal_sign_comma`, `has_fractional_second`, `minute_unknown`,
-//! `second_unknown`, `hour`/`minute`/`second`/`fractional_second`/`timezone`,
-//! `as_string`), the computational functions (`add`/`subtract`/`diff`) and a
-//! `PartialOrd` implementing range semantics over partial times with timezone
-//! normalisation.
+//! `Hour_valid`, `Minute_valid`, `Second_valid` and `Fractional_second_valid`
+//! are checked; `Partial_validity` holds by the accepted forms.
 //!
-//! Spec sources (vendored):
-//! - `BASE/docs/UML/classes/org.openehr.base.foundation_types.iso8601_time.adoc`
-//!   (§Functions: the accessors, `as_string`, `add`/`subtract`/`diff`;
-//!   §Invariants).
-//! - `BASE/docs/UML/classes/org.openehr.base.foundation_types.time_definitions.adoc`
-//!   (§Functions `valid_second`, `valid_hour`).
-//! - `BASE/docs/foundation_types/master06-time_types.adoc` (§Primitive Time
-//!   Types: `24:00:00` disallowed anywhere; §Computational Functions: only the
-//!   definite forms exist for a time — 'year' and 'month' cannot land on a clock
-//!   face, so `Iso8601_time` declares no `add_nominal`).
+//! NOTE: `valid_hour` admits `24:00:00`, which `master06` forbids "anywhere";
+//! enforced as `hour < 24`.
 //!
-//! Invariants — the FIVE entries the class table declares under §Invariants,
-//! plus one rule of our own naming:
-//! - `Hour_valid`, `Minute_valid`, `Second_valid` and
-//!   `Fractional_second_valid` — checked, each under its own name (shared with
-//!   `Iso8601_date_time`, which re-declares all four verbatim).
-//! - `Partial_validity` (`minute_unknown implies second_unknown`) —
-//!   structurally satisfied: no accepted form writes a second without a minute.
-//! - `Value_lexical_form_valid` — OUR OWN name, because the class table
-//!   declares none: a value that is not the `valid_iso8601_time` production at
-//!   all has no components, so every declared invariant holds vacuously.
+//! NOTE: `valid_iso8601_time` allows a `60` second; `valid_second` requires
+//! `s < Seconds_in_minute`, which governs.
 //!
-//! NOTE: `Hour_valid` is `valid_hour (hour, minute, second)`, whose
-//! postcondition also admits `h = Hours_in_day and m = 0 and s = 0`; this class
-//! and `master06` §Primitive Time Types both forbid `24:00:00` "anywhere", so
-//! the invariant is enforced as `hour < 24`.
-//!
-//! NOTE: an `Iso8601_time` carries its timezone only as a lexeme, so an
-//! out-of-range offset is reported as a lexical-form failure rather than under
-//! one of `Iso8601_timezone`'s own invariants.
-//!
-//! NOTE: `Time_definitions.valid_iso8601_time` prose allows a `"60"` seconds
-//! field while the machine-checkable `valid_second` post-condition is
-//! `s < Seconds_in_minute` and `Second_valid` is stated in terms of it — an
-//! internal contradiction, resolved toward the invariant, so a `:60` second
-//! does not parse.
-//!
-//! NOTE: no openEHR spec governs arithmetic on a partial time, the 24-hour
-//! overflow, or ordering — our own design/extension. A partial or unparseable
-//! operand yields `None`; addition wraps modulo 24 h and a difference is the
-//! signed clock distance in `(-24 h, +24 h)`, the only reading available
-//! without inventing a date; a partial time denotes the interval of its
-//! completions, a zoned and an unzoned time are incomparable, and `partial_cmp`
-//! returns `Some(Equal)` only for equal raw strings.
+//! NOTE: no openEHR spec governs partial-time arithmetic or ordering, our own
+//! design: addition wraps modulo 24 h, and a zoned and an unzoned time are
+//! incomparable.
 
 use std::cmp::Ordering;
 
@@ -101,9 +65,8 @@ impl Iso8601Time {
         self.parsed().and_then(|p| p.fractional_second)
     }
 
-    /// The timezone offset in signed minutes (`Iso8601_time.timezone` reduced to
-    /// its offset; `Z` → `Some(0)`), or `None` when the value is unzoned or does
-    /// not parse.
+    /// The timezone offset in signed minutes (`Z` → `Some(0)`), or `None` when
+    /// unzoned or unparseable.
     #[must_use]
     pub fn timezone(&self) -> Option<i32> {
         self.parsed().and_then(|p| p.timezone)
@@ -130,61 +93,44 @@ impl Iso8601Time {
         self.parsed().is_none_or(|p| p.second.is_none())
     }
 
-    /// `Iso8601_time.is_extended`: true when the value uses `':'` separators
-    /// (and, for forms with no separator position — `hh`, and a `Z`/`±hh`
-    /// timezone — always; see the `is_extended` NOTE in `iso8601_parse.rs`). A
-    /// value that does not parse is not extended.
+    /// `Iso8601_time.is_extended`: every separator position written.
     #[must_use]
     pub fn is_extended(&self) -> bool {
         self.parsed().is_some_and(|p| p.extended)
     }
 
-    /// `Iso8601_time.is_decimal_sign_comma`: true when the fractional second is
-    /// written with `','` rather than `'.'`. False when the value has no
-    /// fractional part or does not parse.
+    /// `Iso8601_time.is_decimal_sign_comma`: the fraction uses `','`.
     #[must_use]
     pub fn is_decimal_sign_comma(&self) -> bool {
         self.parsed().is_some_and(|p| p.decimal_sign_comma)
     }
 
-    /// `Iso8601_time.has_fractional_second`: true when the fractional-second
-    /// part is significant, i.e. the value writes one — "even if = 0.0", so
-    /// `12:00:00.0` qualifies. False when the value does not parse.
+    /// `Iso8601_time.has_fractional_second`: the value writes one, "even if =
+    /// 0.0".
     #[must_use]
     pub fn has_fractional_second(&self) -> bool {
         self.parsed().is_some_and(|p| p.fractional_second.is_some())
     }
 
-    /// The digits of the fractional second as written (`050` of
-    /// `10:00:00.050`), `None` when the value writes none or does not parse.
-    ///
-    /// [`Self::fractional_second`] is the same part as a `Real`, which keeps
-    /// neither trailing zeros nor digits past its precision.
+    /// The fractional-second digits as written (`050`), `None` without one.
     #[must_use]
     pub fn fraction_digits(&self) -> Option<&str> {
         self.parsed()?.fractional_second?;
         fraction_digits(&self.value)
     }
 
-    /// `Iso8601_time.as_string`: "Return string value in extended format" — a
-    /// compact value is re-spelled with `':'` separators (its fractional
-    /// precision, decimal sign and partial precision all preserved), an
-    /// already-extended one is returned unchanged.
-    ///
-    /// NOTE: as for `Iso8601_date.as_string`, a value that is not a valid
-    /// ISO 8601 time is returned verbatim — our own design/extension.
+    /// `Iso8601_time.as_string`: the value in extended format; an unparseable
+    /// value is returned verbatim, our own design.
     #[must_use]
     pub fn as_string(&self) -> String {
         as_extended_time(&self.value).unwrap_or_else(|| self.value.clone())
     }
 
-    /// `Iso8601_time.add` (alias `'+'`): DEFINITE addition of a duration —
-    /// `a_diff` is reduced to an exact number of seconds
-    /// (`master06` §Computational Functions) and added to the clock reading,
-    /// wrapping modulo 24 h. The timezone offset is carried through unchanged.
+    /// `Iso8601_time.add` (`'+'`): definite addition wrapping modulo 24 h, the
+    /// offset carried through.
     ///
-    /// `None` when either value does not parse, when this time is partial, or on
-    /// arithmetic overflow.
+    /// `None` when either value does not parse, this time is partial, or on
+    /// overflow.
     #[must_use]
     pub fn add(&self, a_diff: &Iso8601Duration) -> Option<Self> {
         self.shifted(a_diff.parsed()?.to_definite_shift(false)?)
@@ -199,14 +145,11 @@ impl Iso8601Time {
         self.shifted(a_diff.parsed()?.to_definite_shift(true)?)
     }
 
-    /// `Iso8601_time.diff` (alias `'-'`): the difference `self - a_time` as an
-    /// `Iso8601_duration` — negative (the openEHR negative-duration deviation)
-    /// when `a_time` is the later clock reading. Two zoned times are compared on
-    /// the UTC axis; a zoned and an unzoned time are not comparable at all
-    /// (`None`), matching this module's ordering rule.
+    /// `Iso8601_time.diff` (`'-'`): `self - a_time`, negative when the other is
+    /// later; zoned times compare on UTC.
     ///
     /// `None` when either value does not parse or is partial, when exactly one
-    /// side is zoned, or on arithmetic overflow.
+    /// side is zoned, or on overflow.
     #[must_use]
     pub fn diff(&self, a_time: &Self) -> Option<Iso8601Duration> {
         let (a, b) = (self.parsed()?, a_time.parsed()?);
@@ -243,18 +186,15 @@ fn local_seconds_of_day(t: &ParsedTime) -> Option<ExactSeconds> {
     ExactSeconds::new(whole, t.fractional_second.unwrap_or(0.0))
 }
 
-/// A complete time's seconds since midnight on the UTC axis when zoned (the same
-/// uniform shift the ordering uses), or since local midnight when unzoned. May
-/// fall outside `[0, 86400)`, which is correct for a difference.
+/// A complete time's seconds since midnight, on UTC when zoned.
 fn utc_seconds_of_day(t: &ParsedTime) -> Option<ExactSeconds> {
     let local = local_seconds_of_day(t)?;
     let offset = i64::from(t.timezone.unwrap_or(0)).checked_mul(EXACT_SECONDS_IN_MINUTE)?;
     local.checked_sub(ExactSeconds::new(offset, 0.0)?)
 }
 
-/// Range-semantics comparison of two parsed times. `None` unless both are
-/// zoned or both unzoned (a local time cannot be ordered against an absolute
-/// one). Never returns `Some(Equal)` — equal strings are handled before parsing.
+/// Range-semantics comparison of two parsed times, `None` unless both or
+/// neither are zoned; never `Some(Equal)`.
 fn cmp_time(a: &ParsedTime, b: &ParsedTime) -> Option<Ordering> {
     match (a.timezone, b.timezone) {
         (Some(_), None) | (None, Some(_)) => return None,
@@ -286,12 +226,9 @@ fn failed(invariant: &str, type_name: &str) -> InvariantViolation {
     InvariantViolation::here(format!("Invariant {invariant} failed on type {type_name}"))
 }
 
-/// Appends the time-component invariant violations of a scanned value.
-///
-/// The rules are `Hour_valid`, `Minute_valid`, `Second_valid` and
-/// `Fractional_second_valid`, reported on `type_name`. `Iso8601_date_time`
-/// declares the same four under the same names with the same expressions, so
-/// both classes report through this one body.
+/// Appends the `Hour_valid`, `Minute_valid`, `Second_valid` and
+/// `Fractional_second_valid` violations on `type_name`, shared with
+/// `Iso8601_date_time`.
 pub(crate) fn push_time_component_violations(
     t: &ParsedTime,
     type_name: &str,
@@ -301,9 +238,7 @@ pub(crate) fn push_time_component_violations(
     if t.hour >= 24 {
         out.push(failed("Hour_valid", type_name));
     }
-    // Minute_valid / Second_valid: `valid_minute (m)` is `m < Minutes_in_hour`
-    // and `valid_second (s)` is `s < Seconds_in_minute`, each on a present
-    // component (the implication is vacuous on an absent one).
+    // Each on a present component only.
     if t.minute.is_some_and(|m| m >= 60) {
         out.push(failed("Minute_valid", type_name));
     }

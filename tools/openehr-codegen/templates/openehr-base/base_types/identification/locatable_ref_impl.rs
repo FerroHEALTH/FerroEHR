@@ -2,19 +2,14 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written accessor function for `LOCATABLE_REF`.
-//!
-//! Spec: BASE 1.3.0
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.locatable_ref.adoc`.
-//! `as_uri()`: the URI form of the reference — scheme derived from `namespace`
-//! (e.g. `ehr:`), then `id.value`, then `/` + `path` where `path` is non-empty.
+//! The `LOCATABLE_REF.as_uri` function (BASE 1.3.0
+//! `org.openehr.base.base_types.locatable_ref.adoc`).
 
 use super::locatable_ref::LocatableRef;
 
 impl LocatableRef {
-    /// A URI form of this reference (BASE `LOCATABLE_REF.as_uri`): the scheme
-    /// derived from `namespace` (e.g. `ehr:`), concatenated with `id.value`,
-    /// and `/` + `path` when a non-empty `path` is present.
+    /// The URI form of this reference (BASE `LOCATABLE_REF.as_uri`): the
+    /// `namespace` scheme, `id.value`, then `/` + `path` when non-empty.
     #[must_use]
     pub fn as_uri(&self) -> String {
         let mut uri = format!("{}:{}", self.namespace, self.id.value());

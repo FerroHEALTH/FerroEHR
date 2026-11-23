@@ -2,27 +2,19 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `EXTRACT_UPDATE_SPEC`.
+//! `EXTRACT_UPDATE_SPEC` invariants.
 //!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr_extract.extract_update_spec.adoc`
-//! §Invariants — `Overall_validity`
-//! (`repeat_period /= Void or trigger_events /= Void`), evaluated by the
-//! generated core; `Trigger_events_validity` holds by construction
-//! (`Option<NonEmptyVec>`). `Send_changes_only_validity` invokes
-//! `send_changes_only`, an attribute the class does NOT declare (the class
-//! carries `update_method: CODE_PHRASE`; only the intro prose speaks of "the
-//! `send_changes_only` flag") — an upstream defect, adjudicated `Excluded`
-//! in the generated register and reported.
+//! RM 1.2.0 `org.openehr.rm.ehr_extract.extract_update_spec.adoc`:
+//! `Overall_validity` in the generated core; `Trigger_events_validity` by the
+//! `NonEmptyVec` type. `Send_changes_only_validity` names an attribute the class
+//! does not declare and is excluded in the register.
 
 use crate::v1_1::ehr_extract::common::extract_update_spec::ExtractUpdateSpec;
 use openehr_base::validate::{InvariantViolation, Validate};
 
 impl Validate for ExtractUpdateSpec {
     fn validate_invariants(&self, out: &mut Vec<InvariantViolation>) {
-        // `Trigger_events_validity` holds by construction:
-        // `trigger_events` is `Option<NonEmptyVec<..>>`, so a present list is
-        // non-empty. Only `Overall_validity` needs a runnable check.
+        // `Trigger_events_validity` holds by the type.
         crate::v1_1::validate::generated::extract_update_spec_core(
             self.repeat_period.is_some(),
             self.trigger_events.is_some(),
