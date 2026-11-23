@@ -201,8 +201,8 @@ client credentials client (RFC 6749 §4.4) at a `machines` issuer the CDR's
 client's `client_secret`, and at least one peer in
 `bridge.networkPolicy.ingressFrom`. FerroBRIDGE checks the caller of its
 FHIRconnect operations, FHIR facade and operator API through `[auth]`
-(`bridge.config.auth`), and a mapping set needs `auth.issuer` and
-`auth.audience` or `auth.enabled = false` before it starts. A caller it admits
+(`bridge.config.auth`), and a mapping set needs an `auth.issuer.<name>`
+table or `auth.enabled = false` before it starts. A caller it admits
 acts on the CDR with its credential, so the chart keeps it cluster-internal: a
 ClusterIP Service, no Ingress, and a NetworkPolicy that admits only the peers
 you name. Its mapping files come from a ConfigMap of yours
