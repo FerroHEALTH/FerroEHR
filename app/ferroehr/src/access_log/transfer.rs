@@ -315,10 +315,8 @@ impl Checkpoints {
             &[crate::access_log::intake::IntakeEntry::of(
                 &mut entry, None,
             )?],
-            &[],
             None,
             &std::collections::BTreeSet::new(),
-            &crate::access_log::intake::Named::default(),
         )
         .await?;
         // NOTE: our own design (#5762), the audit domain's own store, whose records are this

@@ -340,8 +340,6 @@ const RECLAIMED: &[&str] = &[
 ];
 
 /// The reference-model verdict for one corpus fixture.
-///
-/// A `Violation` carries the message tail; the caller prefixes the file name.
 enum RmOutcome {
     /// The tagged RM code was raised.
     ExactCode,
@@ -391,9 +389,6 @@ fn judge_rm_fixture(
 }
 
 /// The verdict for a fixture whose RM codes have been collected.
-///
-/// `gated` is the full gated pass's error set (what a `PASS` tag is judged
-/// against); `codes` is the RM-pass set the firing assertions read.
 fn judge_rm_codes(tag: Option<&str>, gated: &[String], codes: &[String]) -> RmOutcome {
     match tag {
         None | Some("PASS") => {
@@ -643,9 +638,9 @@ fn vcormt_generic_argument_non_conformance() {
 // ── VCACA on the production model (real BMM cardinality) ────────────────────
 
 /// `CLUSTER.items` has RM cardinality `{1..*}` in the production openEHR RM;
-/// constraining it to `{0..*}` widens the lower bound → VCACA. This exercises
-/// the tight lower-bound half of VCACA now that the generated model carries real
-/// container cardinality (master04.5 §Validity Rules: `C_ATTRIBUTE`, VCACA).
+/// constraining it to `{0..*}` widens the lower bound → VCACA, against the
+/// generated model's container cardinality (master04.5 §Validity Rules:
+/// `C_ATTRIBUTE`, VCACA).
 #[test]
 fn vcaca_production_model_lower_bound() {
     let production = ProductionRmModel;

@@ -12,9 +12,6 @@
 //! 13-arm match. Those matches live ONCE, in [`access`]; the constructors that
 //! build the same model live in [`build`]; the multiplicity/interval arithmetic
 //! the validity rules share lives in [`interval`].
-//!
-//! Nothing here validates, flattens, or prints — it is the layer all three
-//! stand on.
 
 pub mod access;
 pub mod build;

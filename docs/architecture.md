@@ -131,7 +131,18 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   bench, #4944). No specification governs planner statistics: our own design.
   None of the columns a commit changes appears in an index, which is the
   condition PostgreSQL 18 §"Heap-Only Tuples (HOT)" states for a heap-only
-  update; `fillfactor = 90` reserves the same-page room.
+  update; `fillfactor = 90` reserves the same-page room. `episodes` holds the
+  episodes of care a COMPOSITION trunk head is placed in (#6413): the
+  `DV_IDENTIFIER` of each `openehr_access::episode` `ELEMENT` in
+  `context.other_context`, kept as SHA-256 of its issuer, `0x00` and id,
+  sorted, `NULL` when unplaced. The commit's one parse reads it beside the
+  origins and the head upsert writes it in one of three statement variants:
+  a placed version binds the array, a later COMPOSITION version placed in
+  none clears it, and every other version runs a statement that names no
+  episodes. The import and archive load recompute it from the trunk
+  head's body. A placed persistent
+  composition and a malformed episode are refused `422` on every write path
+  (draft access control, Episodes of Care: our own design).
 - **`node`** — one unified table for all versioned-object content
   (COMPOSITION / EHR_STATUS / FOLDER). One row per RM structure node with a
   **nested-set index** (`num`, `num_cap`, `parent_num`): AQL CONTAINS is an
@@ -569,20 +580,19 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   durable before the response that reports its access (#5747, #5745):
   `AuditSender::record` builds the entries from the request's `AuditEvent`s
   (`access_log::entry`) and `AuditStore::write` puts every record of the
-  request, with each entry's index row (projection, search tokens, render
-  policy) and every column the log derives from its content, in one short
+  request, with each entry's index row (the record's search columns and its
+  render policy) and every column the log derives from its content, in one short
   transaction of the audit pool: each entry once, into `access_log_entry`,
   and each other record once, into `audit_event`, with its content digest
   (`audit/0006_baseline_intake.sql`, `audit/0004_baseline_access_log.sql`,
-  #5968, #6203, #6242). The intake statement finds each entry's search
-  tokens by the digests the server computes (`system_log::token_digest`, the
-  bytes of `audit.search_token_digest`) and groups them by entry in one
-  pass, so its cost grows with the batch's tokens and not with its entries
-  times its tokens (#5889). When the writer names every token, shared set and
-  shared part of a batch from memory, the batch goes in by one plain insert
-  with no database function around it, under the token generation it read
-  the ids in; `[audit.store] gather_window`, at most 1 ms, lets more
-  requests share one statement (#6242). A write that fails refuses the request with
+  #5968, #6203, #6242). The request renders no projection of an entry: the
+  chainer's frontier round renders each entry's BALP `AuditEvent` from the
+  stored entry, by its stored form's renderer, and stores its ITI-81 search
+  tokens on its `access_log_index` row (`system_log::store::access_index`,
+  #6322). A batch goes in by one plain insert with no database function
+  around it, the shared parts the writer knows stored left out;
+  `[audit.store] gather_window`, at most 1 ms, lets more requests share one
+  statement (#6242). A write that fails refuses the request with
   `503`, so back-pressure replaces loss; there is no queue in memory and no
   fail mode. The records carry no foreign keys (#5887): the intake statement
   refuses a render policy or shared part the store does not hold in the
@@ -623,20 +633,34 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `audit.audit_record`, the view of the `audit_event` records and the
   indexed entries no write holds. An entry is one row of `access_log_entry`, and
   `access_log_record` is the view of the entries with their link: its index
-  columns (the search columns, the search tokens of the projection and the
-  render policy) sit on the entry's own row and are emptied with its content
-  when a tombstone replaces it, and `access_log_search` is the view of them
-  the ITI-81 search reads (#5784). The request's commit maintains only the
+  columns (the search columns and the render policy) sit on the entry's own
+  row, the search tokens on its index row only (#6322), and are emptied with its content
+  when a tombstone replaces it, and `access_log_search` is the function of
+  them the ITI-81 search reads (#5784). The request's commit maintains only the
   entry's key: the chainer's frontier round copies the columns the readers
   filter and order on into `access_log_index` in one batch each second, with
-  a cursor that commits with the rows, and both views read the indexed
+  a cursor that commits with the rows. `access_log_record` reads the indexed
   entries through it and the entries past the cursor by a key range, in one
-  statement and so one snapshot (#6319). An ITI-81 page reads each chain's first
+  statement and so one snapshot (#6319). The ITI-81 search passes the
+  newest cursor it saw to `access_log_search`, which reads the open window
+  past the cursor in force and past that one too: a cursor only moves
+  forward, so the bound changes no row, and the planner sees how far the
+  open window reaches, so a page starts no parallel worker (#6373). An entry
+  past the cursor carries no search token, so a search on a token parameter
+  first moves the frontier and the index past every entry committed before
+  it, one search at a time, within 2 s (`AuditStore::catch_up`); an open
+  transaction that holds the frontier back past that refuses the search with
+  `503` and `Retry-After` (#6322). An
+  ITI-81 page reads each chain's first
   `offset + count` records through its time index, the access log's
   candidates from `access_log_search` with the records tied on the last
   instant, and takes the page from their union by the records' keys alone;
   only the records the page serves are then read whole, so an access-log
-  entry's document is rendered once per served entry (#5965). The exact
+  entry's document is rendered once per served entry (#5965). A candidate's
+  keys are its search index row's, and a served entry is read by its key from
+  its own row through `access_log_by_key`, so neither reads
+  `access_log_record`'s union of the index and the open window once a record
+  (#6320). The exact
   total counts the
   access log from the time index alone, which carries `render_policy_id`
   and the entry id (`system_log::store::search_page`, #5646); it also counts
@@ -1959,7 +1983,10 @@ confirm after they ran the same way (#6320): the version read of the EHR
 object selects the revisions, and a clinical query a request judges reads
 them on the one-row read of the versions it served, or, when it serves none,
 as two hidden columns of its own statement (`aql::sql::Layout::revisions`); a
-query that served no row reads them once after it ran.
+query that served no row reads them once after it ran. An ITI-81 page does
+the same where the audit store shares the clinical database and its role may
+read `clinical.request_revisions`: the page statement selects them beside its
+records, and elsewhere the search reads them in a statement of their own.
 
 **The party copies on a read, where the party domain shares the clinical
 database** (#6320). Every decision rests on the party copies too (the binding
@@ -1986,7 +2013,9 @@ service; where the party domain lives in a database of its own, no clinical
 statement can reach it and the confirm stays a statement of its own. **Our
 own design:** the door, the ride and the run again, chosen because a read
 with its confirm in its one statement costs one round trip and one
-transaction where it cost two, and three counters carry no personal data.
+transaction where it cost two, and three counters carry no personal data. An
+ITI-81 page selects the party store's revisions the same way where its audit
+role may run the door (`system_log::store::carried`).
 
 A COMPOSITION create, update or delete, a
 CONTRIBUTION commit, an `EHR_STATUS` commit and a directory create, update or

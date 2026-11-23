@@ -298,9 +298,6 @@ pub fn object_node_id(obj: &CObject) -> &str {
 
 /// The reference-model type name of any [`CObject`] (empty string for a
 /// primitive object, whose RM type is implicit in its cADL leaf kind).
-///
-/// Used by the reference-model checks (VCORM/VCORMT), which apply only to the
-/// non-primitive object nodes that carry an explicit `rm_type_name`.
 #[must_use]
 pub fn object_rm_type(obj: &CObject) -> &str {
     match obj {

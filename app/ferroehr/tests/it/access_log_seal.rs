@@ -84,29 +84,24 @@ async fn findings(store: &AccessLogStore) -> Vec<String> {
 /// it commits: never lost and never sealed early.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_window_never_covers_an_entry_a_transaction_still_writes() {
-    open_write_stays_unsealed(Vec::new()).await;
+    open_write_stays_unsealed(false).await;
 }
 
-/// The same holds for an entry the intake statement writes, which resolves
-/// its search tokens (#6242).
+/// The same holds for the search index the frontier round fills, which
+/// renders the entries' search tokens (#6322).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_window_never_covers_an_entry_the_intake_statement_still_writes() {
-    open_write_stays_unsealed(vec![ferroehr::access_log::intake::IntakeToken {
-        parameter: "purpose",
-        system: Some("urn:example:frontier".to_owned()),
-        code: Some("TREAT".to_owned()),
-        shares: false,
-    }])
-    .await;
+async fn the_search_index_never_covers_an_entry_a_transaction_still_writes() {
+    open_write_stays_unsealed(true).await;
 }
 
-/// An entry written with `tokens` in a transaction held open stays out of
-/// every window until it commits, and then lands in one.
+/// An entry written in a transaction held open stays out of every window,
+/// and out of the search index when `indexed`, until it commits, and then
+/// lands in one.
 #[expect(
     clippy::disallowed_methods,
     reason = "a test holds a write open on a raw pool connection, outside any request"
 )]
-async fn open_write_stays_unsealed(tokens: Vec<ferroehr::access_log::intake::IntakeToken>) {
+async fn open_write_stays_unsealed(indexed: bool) {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AccessLogStore::new(pool.clone());
@@ -128,10 +123,8 @@ async fn open_write_stays_unsealed(tokens: Vec<ferroehr::access_log::intake::Int
     ferroehr::access_log::intake::take_in(
         &mut open,
         &[intake],
-        &[tokens],
         None,
         &std::collections::BTreeSet::from([part.as_str()]),
-        &ferroehr::access_log::intake::Named::default(),
     )
     .await
     .expect("the open write");
@@ -147,6 +140,17 @@ async fn open_write_stays_unsealed(tokens: Vec<ferroehr::access_log::intake::Int
         reached < later,
         "the frontier stops below the open write's id while it runs: {reached} against {later}"
     );
+    let audit = ferroehr::system_log::store::AuditStore::new(pool.clone());
+    if indexed {
+        let cursor = audit
+            .index_access_log(reached)
+            .await
+            .expect("the index moves");
+        assert!(
+            cursor < later,
+            "the index stops below the open write's id while it runs: {cursor} against {later}"
+        );
+    }
     let first = store
         .seal_to(&ferroehr::access_log::seal::ACCESS_LOG, reached)
         .await
@@ -162,6 +166,13 @@ async fn open_write_stays_unsealed(tokens: Vec<ferroehr::access_log::intake::Int
     let open_id = id_of(&pool, 1).await;
     let reached = frontier_reaching(&pool, &mut frontier, later).await;
     assert!(reached >= later, "the frontier passes both once both ended");
+    if indexed {
+        let cursor = audit
+            .index_access_log(reached)
+            .await
+            .expect("the index moves");
+        assert!(cursor >= later, "the index passes both once both ended");
+    }
     assert!(
         matches!(
             store
@@ -302,10 +313,8 @@ async fn an_inserted_record_in_a_sealed_window_is_reported() {
         ferroehr::access_log::intake::take_in(
             &mut rolled,
             &[intake],
-            &[Vec::new()],
             None,
             &std::collections::BTreeSet::new(),
-            &ferroehr::access_log::intake::Named::default(),
         )
         .await
         .expect("a write that rolls back");
@@ -439,19 +448,13 @@ async fn every_inserting_statement_takes_its_xid_before_its_first_id() {
     store
         .append(vec![entry(1)])
         .await
-        .expect("the part and a token are stored");
+        .expect("the part is stored");
     let part: String =
         sqlx::query_scalar("SELECT encode(digest, 'hex') FROM audit.access_log_shared")
             .fetch_one(&pool)
             .await
             .expect("the one shared part");
-    let token = || ferroehr::access_log::intake::IntakeToken {
-        parameter: "purpose",
-        system: Some("urn:example:xid".to_owned()),
-        code: Some("TREAT".to_owned()),
-        shares: false,
-    };
-    let write = |n: u32, tokens: Vec<ferroehr::access_log::intake::IntakeToken>, known: bool| {
+    let write = |n: u32, known: bool| {
         let pool = pool.clone();
         let part = part.clone();
         async move {
@@ -464,34 +467,18 @@ async fn every_inserting_statement_takes_its_xid_before_its_first_id() {
                 std::collections::BTreeSet::new()
             };
             let mut conn = pool.acquire().await.expect("connection");
-            ferroehr::access_log::intake::take_in(
-                &mut conn,
-                &[intake],
-                &[tokens],
-                None,
-                &stored,
-                &ferroehr::access_log::intake::Named::default(),
-            )
-            .await
+            ferroehr::access_log::intake::take_in(&mut conn, &[intake], None, &stored).await
         }
     };
-    write(2, vec![token()], true)
-        .await
-        .expect("the token is stored once");
+    write(2, true).await.expect("a first write");
 
     refuse_an_id_drawn_before_the_xid(&pool).await;
-    write(3, Vec::new(), true)
+    write(3, true)
         .await
-        .expect("the plain insert takes its xid first");
-    write(4, vec![token()], true)
+        .expect("the insert, storing nothing first, takes its xid first");
+    write(4, false)
         .await
-        .expect("the intake statement, storing nothing first, takes its xid first");
-    write(5, vec![token()], false)
-        .await
-        .expect("the intake statement, storing the part first, takes its xid first");
-    write(6, Vec::new(), false)
-        .await
-        .expect("the plain insert of a part it carries takes its xid first");
+        .expect("the insert of a part it carries takes its xid first");
 }
 
 /// Every statement in the server's code and migrations that inserts into
@@ -562,8 +549,8 @@ fn no_statement_inserts_an_entry_without_taking_its_xid_first() {
         }
     }
     assert!(
-        inserts.get("audit.access_log_entry").copied().unwrap_or(0) >= 2,
-        "the plain insert and the intake statement are found: {inserts:?}"
+        inserts.get("audit.access_log_entry").copied().unwrap_or(0) >= 1,
+        "the entries' write is found (#6322: the one statement that writes them): {inserts:?}"
     );
     assert!(
         inserts.get("audit.audit_event").copied().unwrap_or(0) >= 1,
@@ -601,10 +588,8 @@ async fn a_round_never_passes_a_write_holding_the_newest_xid() {
     ferroehr::access_log::intake::take_in(
         &mut open,
         &[intake],
-        &[Vec::new()],
         None,
         &std::collections::BTreeSet::from([part.as_str()]),
-        &ferroehr::access_log::intake::Named::default(),
     )
     .await
     .expect("the open write");

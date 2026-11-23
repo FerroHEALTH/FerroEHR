@@ -74,7 +74,6 @@ BEGIN
     NEW.request_id := NULL;
     NEW.client_ip := NULL;
     NEW.classified_ehr_id := NULL;
-    NEW.search_tokens := NULL;
     NEW.render_policy_id := NULL;
     RETURN NEW;
 END;
@@ -186,7 +185,6 @@ CREATE TABLE access_log_entry (
     request_id         text        STORAGE MAIN,
     client_ip          text        STORAGE MAIN,
     classified_ehr_id  text        STORAGE MAIN,
-    search_tokens      integer[]   STORAGE MAIN,
     render_policy_id   integer,
     -- The number the seals, holds and delivery cursors name the entry by.
     id                 bigint      NOT NULL GENERATED ALWAYS AS IDENTITY,
@@ -206,7 +204,6 @@ CREATE TABLE access_log_entry (
     CONSTRAINT ck_access_log_entry_index
         CHECK ((render_policy_id IS NULL) = (event_action IS NULL)
                AND (render_policy_id IS NULL) = (event_outcome IS NULL)
-               AND (render_policy_id IS NULL) = (search_tokens IS NULL)
                AND (render_policy_id IS NOT NULL
                     OR num_nonnulls(principal, patient_id, resource_id, request_id,
                                     client_ip, classified_ehr_id) = 0)
@@ -272,8 +269,6 @@ COMMENT ON COLUMN access_log_entry.client_ip IS
     'The caller''s network address, for the ITI-81 search.';
 COMMENT ON COLUMN access_log_entry.classified_ehr_id IS
     'The EHR of a classified access, which its EHDS access record names; NULL for every other entry.';
-COMMENT ON COLUMN access_log_entry.search_tokens IS
-    'The ids of the search tokens of the entry''s projection, or of their shared set; NULL when the entry is not indexed.';
 COMMENT ON COLUMN access_log_entry.render_policy_id IS
     'The id of the render policy the entry''s projection is written under; NULL on a tombstone and on an entry its writer indexes no projection of, which the ITI-81 search does not find.';
 COMMENT ON TABLE access_log_entry IS
@@ -302,11 +297,9 @@ COMMENT ON TABLE access_log_hold IS
 -- (access_log::index, #6319), so the request that writes an entry
 -- maintains no index but the entry's key. A reader reads the indexed entries
 -- through this table and the entries past its cursor by a key range of
--- access_log_entry, both in one statement and so in one snapshot: the cursor
--- commits with the rows it covers, so every committed entry is in one of the
--- two (access_log_record, access_log_search). The table holds nothing an
--- entry's row does not, so a round lost to a crash is copied again from the
--- cursor; the round commits without waiting for its flush.
+-- access_log_entry, in one statement (access_log_record) or as of a cursor it
+-- saw (access_log_search): the cursor commits durably with the rows it covers
+-- and only moves forward, so every committed entry is in one of the two.
 --
 -- No openEHR spec governs audit storage: our own design.
 CREATE TABLE access_log_index (
@@ -318,6 +311,10 @@ CREATE TABLE access_log_index (
     render_policy_id integer,
     patient_id       text,
     principal        text,
+    -- The ids of the search tokens of the entry's projection, or of their
+    -- shared set, which the round renders from the stored entry; NULL when
+    -- the entry is not indexed (#6322).
+    search_tokens    integer[],
     -- audit.search_keys of the entry's search tokens, request id and resource id.
     search_keys      bigint[]    NOT NULL,
     CONSTRAINT pk_access_log_index PRIMARY KEY (entry_id)
@@ -378,7 +375,8 @@ BEGIN
            party_id = NEW.party_id, retain_until = NEW.retain_until,
            render_policy_id = NEW.render_policy_id, patient_id = NEW.patient_id,
            principal = NEW.principal,
-           search_keys = audit.search_keys(NEW.search_tokens, NEW.request_id, NEW.resource_id)
+           search_tokens = NULL,
+           search_keys = audit.search_keys(NULL::integer[], NEW.request_id, NEW.resource_id)
      WHERE i.entry_id = NEW.id;
     RETURN NEW;
 END;
@@ -482,13 +480,13 @@ CREATE VIEW access_log_record AS
            k.retain_until, e.time_removed, e.fold_after, e.action_terminology, e.action_code,
            e.result_terminology, e.result_code, e.shared, e.event_action, e.event_outcome,
            k.principal, k.patient_id, e.resource_id, e.request_id, e.client_ip,
-           e.classified_ehr_id, e.search_tokens, k.render_policy_id, k.entry_id
+           e.classified_ehr_id, k.search_tokens, k.render_policy_id, k.entry_id
       FROM (SELECT i.entry_id, i.time_recorded, i.ehr_id, i.party_id, i.retain_until,
-                   i.render_policy_id, i.patient_id, i.principal
+                   i.render_policy_id, i.patient_id, i.principal, i.search_tokens
               FROM access_log_index i
             UNION ALL
             SELECT e.id, e.time_recorded, e.ehr_id, e.party_id, e.retain_until,
-                   e.render_policy_id, e.patient_id, e.principal
+                   e.render_policy_id, e.patient_id, e.principal, NULL::integer[]
               FROM access_log_entry e
              WHERE e.id > (SELECT x.last_id FROM access_log_index_state x WHERE x.singleton)
                AND NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id)) AS k

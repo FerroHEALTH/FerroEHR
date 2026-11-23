@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The hand-written source files of a tree, and the forwarders in each.
-//!
-//! The scan reads every `.rs` file under `app/*/src`, `crates/*/src` and
-//! `tools/*/src`, and leaves out a file that opens with `// @generated`, a
-//! file under a `tests` directory, and a file only a `#[cfg(test)] mod`
-//! declaration reaches.
 
 use std::ffi::OsStr;
 use std::fs;
@@ -37,9 +32,6 @@ impl Found {
 }
 
 /// Every forwarder of the tree at `root`, sorted by key and line.
-///
-/// With `lenient`, a file that does not parse is passed over: the per-edit
-/// check runs while another file of the tree may be half written.
 ///
 /// # Errors
 ///

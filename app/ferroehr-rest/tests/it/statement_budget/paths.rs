@@ -71,6 +71,10 @@ pub(super) const REQUESTS: u64 = 10;
 /// The requests of each path sent before the measured ones.
 pub(super) const WARM: u64 = 3;
 
+/// The requests of each path that write a fixture of their own, the warm
+/// ones with the measured ones of either window ([`super::planning`]).
+const FIXTURES: u64 = WARM + super::planning::REQUESTS;
+
 /// The EHRs the paths spread over, each with one IPS composition.
 const EHRS: usize = 5;
 
@@ -132,6 +136,11 @@ pub(super) enum Path {
     CommitGroup,
     CommitRole,
     CommitAgent,
+    /// The IPS commit with an `episode` element of another terminology in its
+    /// `other_context`, the unplaced twin of [`Path::CommitPlaced`].
+    CommitTwin,
+    /// The IPS commit placed in one episode of care (#6413).
+    CommitPlaced,
 }
 
 impl Path {
@@ -202,6 +211,8 @@ impl Path {
             Self::CommitGroup => "GROUP commit",
             Self::CommitRole => "ROLE commit",
             Self::CommitAgent => "AGENT commit",
+            Self::CommitTwin => "commit JSON, unplaced twin",
+            Self::CommitPlaced => "commit JSON, placed",
         }
     }
 }
@@ -491,106 +502,107 @@ struct Budget {
 /// composition commit's by at most its entry's 312. A read allocates 9 times
 /// fewer and the ITI-81 page 13 fewer, no longer reading four digest columns
 /// nothing used, and those allocation ceilings fell by as much.
+// NOTE: allocations carry a 3-allocation margin until #6434 makes them exact.
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
         conversions: 5,
-        allocations: 17_364,
+        allocations: 17_020,
         peak_bytes: 1_530_778,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 187_300,
+        wal: 187_262,
     },
     Budget {
         path: Path::CommitXml,
         conversions: 5,
-        allocations: 39_451,
+        allocations: 39_104,
         peak_bytes: 1_533_031,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 187_629,
+        wal: 187_591,
     },
     Budget {
         path: Path::CommitFlat,
         conversions: 5,
-        allocations: 31_661,
+        allocations: 31_318,
         peak_bytes: 1_528_525,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 188_099,
+        wal: 188_061,
     },
     Budget {
         path: Path::ReadJson,
         conversions: 0,
-        allocations: 1234,
+        allocations: 910,
         peak_bytes: 617_268,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 815,
+        wal: 775,
     },
     Budget {
         path: Path::ReadXml,
         conversions: 2,
-        allocations: 10_523,
+        allocations: 10_199,
         peak_bytes: 1_017_140,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 815,
+        wal: 775,
     },
     Budget {
         path: Path::ReadFlat,
         conversions: 2,
-        allocations: 15_162,
+        allocations: 14_838,
         peak_bytes: 1_634_407,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 815,
+        wal: 775,
     },
     Budget {
         path: Path::EhrRead,
         conversions: 1,
-        allocations: 1032,
+        allocations: 783,
         peak_bytes: 79_269,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 623,
+        wal: 575,
     },
     Budget {
         path: Path::AqlSingle,
         conversions: 2,
-        allocations: 2393,
+        allocations: 1789,
         peak_bytes: 118_273,
         round_trips: 3,
         nested: 0,
         notifies: 0,
-        wal: 1830,
+        wal: 1758,
     },
     Budget {
         path: Path::AqlPopulation,
         conversions: 2,
-        allocations: 3295,
+        allocations: 2436,
         peak_bytes: 158_823,
         round_trips: 2,
         nested: 0,
         notifies: 0,
-        wal: 5002,
+        wal: 4762,
     },
     Budget {
         path: Path::Iti81,
         conversions: 0,
-        allocations: 8962,
+        allocations: 8856,
         peak_bytes: 624_026,
-        round_trips: 3,
-        nested: 0,
+        round_trips: 1,
+        nested: 1,
         notifies: 0,
-        wal: 607,
+        wal: 567,
     },
     Budget {
         path: Path::PartyRead,
@@ -605,47 +617,47 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitContribution,
         conversions: 6,
-        allocations: 17_622,
+        allocations: 17_279,
         peak_bytes: 1_509_372,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 188_738,
+        wal: 188_700,
     },
     Budget {
         path: Path::ReadAtTime,
         conversions: 0,
-        allocations: 1329,
+        allocations: 1002,
         peak_bytes: 701_748,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 815,
+        wal: 775,
     },
     Budget {
         path: Path::CommitStatus,
         conversions: 4,
-        allocations: 1529,
+        allocations: 1217,
         peak_bytes: 147_242,
         round_trips: 4,
         nested: 0,
         notifies: 1,
-        wal: 4773,
+        wal: 4725,
     },
     Budget {
         path: Path::ReadStatus,
         conversions: 0,
-        allocations: 1108,
+        allocations: 841,
         peak_bytes: 80_973,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 743,
+        wal: 703,
     },
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        allocations: 1713,
+        allocations: 1710,
         peak_bytes: 125_972,
         round_trips: 12,
         nested: 3,
@@ -655,12 +667,12 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::AqlMatches,
         conversions: 2,
-        allocations: 5703,
+        allocations: 3867,
         peak_bytes: 192_267,
         round_trips: 3,
         nested: 0,
         notifies: 0,
-        wal: 5498,
+        wal: 5274,
     },
     Budget {
         path: Path::AqlParty,
@@ -675,7 +687,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        allocations: 2200,
+        allocations: 2196,
         peak_bytes: 140_901,
         round_trips: 12,
         nested: 3,
@@ -685,67 +697,67 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::ReadVersion,
         conversions: 0,
-        allocations: 1324,
+        allocations: 997,
         peak_bytes: 162_800,
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 815,
+        wal: 775,
     },
     Budget {
         path: Path::CommitUpdate,
         conversions: 5,
-        allocations: 17_405,
+        allocations: 17_061,
         peak_bytes: 1_525_458,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 186_794,
+        wal: 186_756,
     },
     Budget {
         path: Path::CommitDelete,
         conversions: 2,
-        allocations: 1510,
+        allocations: 1166,
         peak_bytes: 135_002,
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 4245,
+        wal: 4205,
     },
     Budget {
         path: Path::DirectoryCreate,
         conversions: 5,
-        allocations: 1577,
+        allocations: 1267,
         peak_bytes: 150_606,
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 5693,
+        wal: 5645,
     },
     Budget {
         path: Path::DirectoryUpdate,
         conversions: 4,
-        allocations: 1551,
+        allocations: 1238,
         peak_bytes: 152_696,
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 4788,
+        wal: 4740,
     },
     Budget {
         path: Path::DirectoryDelete,
         conversions: 2,
-        allocations: 1418,
+        allocations: 1116,
         peak_bytes: 144_129,
         round_trips: 4,
         nested: 1,
         notifies: 0,
-        wal: 4061,
+        wal: 4013,
     },
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        allocations: 1962,
+        allocations: 1965,
         peak_bytes: 129_641,
         round_trips: 12,
         nested: 3,
@@ -755,7 +767,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        allocations: 1588,
+        allocations: 1592,
         peak_bytes: 112_950,
         round_trips: 12,
         nested: 3,
@@ -765,7 +777,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitOrganisation,
         conversions: 8,
-        allocations: 1571,
+        allocations: 1574,
         peak_bytes: 126_183,
         round_trips: 10,
         nested: 0,
@@ -775,7 +787,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitGroup,
         conversions: 8,
-        allocations: 1566,
+        allocations: 1569,
         peak_bytes: 125_084,
         round_trips: 10,
         nested: 0,
@@ -785,7 +797,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        allocations: 2139,
+        allocations: 2141,
         peak_bytes: 126_256,
         round_trips: 19,
         nested: 5,
@@ -795,7 +807,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitAgent,
         conversions: 8,
-        allocations: 1557,
+        allocations: 1560,
         peak_bytes: 126_026,
         round_trips: 10,
         nested: 0,
@@ -851,33 +863,35 @@ pub(super) fn order() -> impl Iterator<Item = Path> {
 /// matches query and 587 on a read, measured beside the merge base, and each
 /// of those ceilings fell by its path's figure.
 const WIRE_BUDGETS: [(Path, u64); 31] = [
-    (Path::CommitJson, 201_659),
-    (Path::CommitXml, 201_659),
-    (Path::CommitFlat, 201_655),
-    (Path::ReadJson, 130_891),
-    (Path::ReadXml, 130_891),
-    (Path::ReadFlat, 130_891),
-    (Path::EhrRead, 1612),
-    (Path::AqlSingle, 4596),
-    (Path::AqlPopulation, 6269),
-    (Path::Iti81, 26_865),
+    (Path::CommitJson, 201_604),
+    (Path::CommitXml, 201_604),
+    (Path::CommitFlat, 201_600),
+    (Path::ReadJson, 130_833),
+    (Path::ReadXml, 130_833),
+    (Path::ReadFlat, 130_833),
+    (Path::EhrRead, 1554),
+    (Path::AqlSingle, 4525),
+    (Path::AqlPopulation, 6137),
+    (Path::Iti81, 26_758),
     (Path::PartyRead, 5290),
-    (Path::CommitContribution, 202_117),
-    (Path::ReadAtTime, 130_922),
-    (Path::CommitStatus, 4554),
-    (Path::ReadStatus, 2814),
+    (Path::CommitContribution, 202_061),
+    (Path::ReadAtTime, 130_864),
+    (Path::CommitStatus, 4498),
+    (Path::ReadStatus, 2759),
     (Path::CommitParty, 8251),
-    (Path::AqlMatches, 15_771),
+    (Path::AqlMatches, 15_636),
     (Path::AqlParty, 11_338),
     (Path::CommitPartyScored, 10_603),
-    (Path::ReadVersion, 1741),
-    (Path::CommitUpdate, 201_941),
-    (Path::CommitDelete, 4132),
-    (Path::DirectoryCreate, 4839),
-    (Path::DirectoryUpdate, 4650),
-    (Path::DirectoryDelete, 4007),
-    (Path::PartyUpdate, 9179),
-    (Path::PartyDelete, 7730),
+    (Path::ReadVersion, 1683),
+    (Path::CommitUpdate, 201_885),
+    (Path::CommitDelete, 4076),
+    (Path::DirectoryCreate, 4783),
+    (Path::DirectoryUpdate, 4594),
+    (Path::DirectoryDelete, 3951),
+    // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
+    (Path::PartyUpdate, 9184),
+    // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
+    (Path::PartyDelete, 7735),
     (Path::CommitOrganisation, 7569),
     (Path::CommitGroup, 7398),
     (Path::CommitRole, 11_193),
@@ -1218,7 +1232,7 @@ impl World {
     /// [`Path::PartyDelete`] then deletes, one per request.
     async fn parties(&self, app: &Router) {
         let mut parties = Vec::new();
-        for _ in 0..WARM + REQUESTS {
+        for _ in 0..FIXTURES {
             let (status, headers, body) =
                 plain(app, &Self::party_commit(self.person.clone())).await;
             assert_eq!(status, StatusCode::CREATED, "a person to update: {body}");
@@ -1339,7 +1353,7 @@ impl World {
     /// composition its FOLDER references.
     async fn directories(&self, app: &Router) {
         let mut directories = Vec::new();
-        for _ in 0..WARM + REQUESTS {
+        for _ in 0..FIXTURES {
             let (ehr, vo) = ehr_with_composition(app).await;
             directories.push((ehr, vo, String::new()));
         }
@@ -1415,7 +1429,7 @@ impl World {
     /// request, spread over the EHRs.
     async fn deletable(&self, app: &Router) {
         let mut deletable = Vec::new();
-        for n in 0..usize::try_from(WARM + REQUESTS).unwrap() {
+        for n in 0..usize::try_from(FIXTURES).unwrap() {
             let (ehr, _) = &self.ehrs[n % self.ehrs.len()];
             let (status, headers, body) = plain(
                 app,
@@ -1548,6 +1562,10 @@ impl World {
                 Vec::new(),
             ),
             Path::CommitXml => commit(XML, self.xml.clone(), Vec::new()),
+            Path::CommitTwin => commit(JSON, episode_ips("openehr_accesx").to_string(), Vec::new()),
+            Path::CommitPlaced => {
+                commit(JSON, episode_ips("openehr_access").to_string(), Vec::new())
+            }
             Path::CommitFlat => commit(
                 FLAT,
                 self.flat.clone(),
@@ -1703,6 +1721,27 @@ fn contribution() -> Value {
         } ],
         "audit": { "change_type": coded("249", "creation"), "committer": committer },
     })
+}
+
+/// The IPS composition with an `ELEMENT` named `episode` of `terminology`,
+/// valued `H|C-17`, in a CLUSTER of the template's `other_context` slot.
+fn episode_ips(terminology: &str) -> Value {
+    let archetype = "openEHR-EHR-CLUSTER.case_identification.v0";
+    let mut body = common::ips_canonical_composition();
+    body["context"]["other_context"] = serde_json::json!({ "_type": "ITEM_TREE",
+        "archetype_node_id": "at0001", "name": { "_type": "DV_TEXT", "value": "Tree" },
+        "items": [{ "_type": "CLUSTER", "archetype_node_id": archetype,
+            "archetype_details": { "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+                "rm_version": "1.0.4" },
+            "name": { "_type": "DV_TEXT", "value": "Case identification" },
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0001",
+                "name": { "_type": "DV_CODED_TEXT", "value": "episode",
+                    "defining_code": { "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+                        "code_string": "episode" } },
+                "value": { "_type": "DV_IDENTIFIER", "issuer": "H", "id": "C-17" } }] }] });
+    body
 }
 
 /// What one path measured over [`REQUESTS`] requests.
@@ -2054,19 +2093,21 @@ fn judged(measured: u64, ceiling: u64) -> (bool, String) {
 }
 
 /// Whether the allocation and peak ceilings gate this build: they are the
-/// figures Linux CI measures, and another allocator counts and holds more.
-// NOTE: #6338 chose Linux-only allocation gates; other platforms print the figures.
-const ALLOCATIONS_GATED: bool = cfg!(target_os = "linux");
+/// figures an uninstrumented Linux build measures, and another allocator or
+/// the coverage instrumentation (`--cfg coverage`) counts and holds more.
+// NOTE: #6338 and #6387 gate allocations on uninstrumented Linux; other builds print them.
+pub(super) const ALLOCATIONS_GATED: bool = cfg!(all(target_os = "linux", not(coverage)));
 
-/// [`judged`] for an allocation count or a peak, which passes off Linux and reports
-/// the measured figure beside its ceiling there.
+/// [`judged`] for an allocation count or a peak, which passes where
+/// [`ALLOCATIONS_GATED`] is false and reports the measured figure beside its
+/// ceiling there.
 fn judged_allocations(measured: u64, ceiling: u64) -> (bool, String) {
     if ALLOCATIONS_GATED {
         judged(measured, ceiling)
     } else {
         (
             true,
-            format!("{measured} (ceiling {ceiling}, gated on Linux)"),
+            format!("{measured} (ceiling {ceiling}, gated on uninstrumented Linux)"),
         )
     }
 }
@@ -2240,4 +2281,94 @@ async fn every_hot_path_stays_within_its_wire_budget() {
         Path::ALL.len(),
         "every path has its wire budget"
     );
+}
+
+/// The bytes and records `relation` wrote over a window, from its line in
+/// [`Measure::wal_ledger`].
+fn relation_wal(m: &Measure, relation: &str) -> (u64, u64) {
+    m.wal_ledger
+        .lines()
+        .find_map(|line| {
+            let mut words = line.split_whitespace();
+            let bytes = words.next()?.parse().ok()?;
+            let _unit = words.next()?;
+            let records = words.next()?.parse().ok()?;
+            (words.next()? == relation).then_some((bytes, records))
+        })
+        .unwrap_or_default()
+}
+
+/// A commit placed in an episode costs no round trip, no nested statement
+/// and no row more than its unplaced twin, at most 64 WAL bytes in its head
+/// row and at most four allocations (#6413). The node indexes split their
+/// pages as they fill, so the head row is judged on its own, and the pair is
+/// judged on its second window, after each path's first.
+#[tokio::test]
+async fn a_placed_commit_costs_its_projection_alone() {
+    let counter = Counter::default();
+    let _guard =
+        tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
+    ferroehr::aql::sql::without_reference_cells();
+    let (_db, pool, _svc, app, pools) = Box::pin(super::steady()).await;
+    for extension in ["pg_stat_statements", "pg_walinspect"] {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE EXTENSION IF NOT EXISTS {extension}"
+        )))
+        .execute(&pool)
+        .await
+        .expect("the extension");
+    }
+    super::wal::kept(&pool).await;
+    let world = World::build(&app).await;
+    let mut twin = Measure::default();
+    let mut placed = Measure::default();
+    for _ in 0..2 {
+        twin = Box::pin(measure(
+            &app,
+            &pool,
+            &pools,
+            None,
+            &world,
+            &counter,
+            Path::CommitTwin,
+        ))
+        .await;
+        placed = Box::pin(measure(
+            &app,
+            &pool,
+            &pools,
+            None,
+            &world,
+            &counter,
+            Path::CommitPlaced,
+        ))
+        .await;
+    }
+    let (twin_allocations, placed_allocations) = (twin.low(|a| a.count), placed.low(|a| a.count));
+    let report = format!(
+        "twin: {} round trips, {} nested, {} WAL B, {twin_allocations} allocations\n\
+         placed: {} round trips, {} nested, {} WAL B, {placed_allocations} allocations\n\
+         twin rows:\n{}\nplaced rows:\n{}",
+        twin.round_trips,
+        twin.nested,
+        twin.wal,
+        placed.round_trips,
+        placed.nested,
+        placed.wal,
+        twin.wal_ledger,
+        placed.wal_ledger
+    );
+    eprintln!("{report}");
+    assert_eq!(placed.round_trips, twin.round_trips, "{report}");
+    assert_eq!(placed.nested, twin.nested, "{report}");
+    for relation in ["version_hot", "node_hot", "vo_head"] {
+        assert_eq!(
+            relation_wal(&placed, relation).1,
+            relation_wal(&twin, relation).1,
+            "{relation} records\n{report}"
+        );
+    }
+    let head = |m: &Measure| relation_wal(m, "vo_head").0.div_euclid(REQUESTS);
+    assert!(head(&placed) <= head(&twin) + 64, "{report}");
+    assert!(placed_allocations <= twin_allocations + 4, "{report}");
 }

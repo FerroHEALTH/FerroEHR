@@ -146,8 +146,10 @@ non_ascii_idents = "forbid"         # ASCII-only identifiers — no homoglyphs i
 # free guards — zero findings expected; defence in depth
 non_local_definitions = "deny"      # RFC 3373: an `impl` inside a fn body is visible OUTSIDE it,
                                     # so it reads as scoped and is not (warn-by-default since 1.83)
-unexpected_cfgs = "deny"            # RFC 3013: a typo'd `cfg(feature = "…")` compiles the block
-                                    # out silently — the ferroehr-ext feature gates live on this
+# RFC 3013: a typo'd `cfg(feature = "…")` compiles the block out silently,
+# and the ferroehr-ext feature gates live on this. `coverage` is the cfg
+# cargo-llvm-cov sets on the coverage lane's build.
+unexpected_cfgs = { level = "deny", check-cfg = ["cfg(coverage)"] }
 unsafe_op_in_unsafe_fn = "deny"     # moot under forbid(unsafe_code); costs nothing
 ffi_unwind_calls = "deny"           # no FFI in the workspace; keeps it that way
 deprecated_safe_2024 = "deny"
@@ -273,7 +275,7 @@ ferrohealth-smart = { version = "=0.33.1", default-features = false, features = 
 # the release on ferrohealth-smart 0.31, 0.27 the release on 0.32, and 0.28
 # the release on 0.33, on ferrohealth-server 0.12 (#6213).
 # Verified on crates.io 2026-11-21.
-ferrohealth-session = { version = "=0.28.0", default-features = false }
+ferrohealth-session = { version = "=0.28.1", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -459,7 +461,7 @@ ryu-js = { version = "1.0.3", default-features = false }
 
 # ── Parsing (native ADL / cADL / ODIN / AQL) ─────────────────────────────────
 logos = "0.16.1"                      # DFA lexer
-chumsky = "0.13.0"                    # 0.10 usable stable (1.0 still alpha; repo now on Codeberg)
+chumsky = "0.14.1"                    # 0.10 usable stable (1.0 still alpha; repo now on Codeberg)
 regex = "1"
 fancy-regex = "0.20.0"               # backreferences for cADL where needed (verify)
 # parser diagnostics (great for ADL/AQL error reporting):
@@ -475,7 +477,7 @@ fancy-regex = "0.20.0"               # backreferences for cADL where needed (ver
 uuid = { version = "1", features = ["serde"] }
 jiff = { version = "0.2.31", features = ["serde"] }   # 1.0 not yet out as of 2026-07; 0.2.31 pinned for ISO 8601 temporal work
 url = "2"
-nix = { version = "0.31.3", default-features = false, features = ["user"] }   # the effective user the CLI records beside a stated operator (#5725)
+nix = { version = "0.32.0", default-features = false, features = ["user"] }   # the effective user the CLI records beside a stated operator (#5725)
 urlencoding = "2.1.3"
 # Unicode normalisation (NFC) of an external professional's issuing authority
 # before it names a committer's identifier issuer (#5097). Verified on

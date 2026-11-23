@@ -79,12 +79,9 @@ impl Parser<'_> {
             Some(Token::Character(_)) => self.parse_c_character(node_id),
             Some(Token::LBracket) => self.parse_c_terminology_code(node_id, None),
             Some(Token::AlphaLcId(s)) if is_strength_keyword(&s) => {
-                // ADL2-only: constraint strengths (`required`/`extensible`/
-                // `preferred`/`example`) are `C_TERMINOLOGY_CODE.constraint_status`,
-                // introduced by `AOM2/master04.2` §Constraint Strengths ("Uniquely
-                // in the AOM, a Terminology code constraint may not be required").
-                // The 1.4 cADL keyword set (master05 §Keywords L48-53) has no
-                // strength vocabulary and AOM 1.4 has no such attribute.
+                // ADL2-only: constraint strengths are
+                // `C_TERMINOLOGY_CODE.constraint_status` (`AOM2/master04.2`
+                // §Constraint Strengths); ADL 1.4 has none.
                 if self.dialect == Dialect::Adl14 {
                     return self.adl2_only(
                         SyntaxErrorCode::Stccp,
@@ -287,14 +284,9 @@ impl Parser<'_> {
             }
             _ => return self.err(SyntaxErrorCode::Stccp, "expecting an ac-code or at-code"),
         };
-        // Optional OPT operational binding `@terminology`.
-        //
-        // ADL2-only: the `[acN@terminology]` operational binding belongs to the
-        // ADL2 terminology-integration surface (`ADL2/master08-terminology_integration.adoc`
-        // §Terminology Bindings / OPT2 operational form). The 1.4 cADL keyword set
-        // (master05 §Keywords L48-53) has no `@` operator, and 1.4 expresses
-        // external terminology through the qualified `[terminology::code, …]` form
-        // of `ADL1.4/master09-customising_adl.adoc` §Custom Syntax.
+        // Optional OPT operational binding `@terminology`, ADL2-only
+        // (`ADL2/master08-terminology_integration.adoc` §Terminology Bindings);
+        // ADL 1.4 has no `@` operator.
         if matches!(self.peek(), Some(Token::SymAt)) && self.dialect == Dialect::Adl14 {
             return self.adl2_only(
                 SyntaxErrorCode::Stccp,

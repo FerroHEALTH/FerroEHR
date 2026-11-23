@@ -1,12 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The documents a reader gets from a stored entry, against the goldens
-//! written before the entry was stored as compact facts (#6322): the BALP
-//! `AuditEvent` the ITI-81 search and the feed serve, the DICOM message the
-//! syslog sender sends, and the search tokens of the rendering. Each entry is
-//! stored through the store's own parts and read back as every reader reads
-//! it. `FERROEHR_BLESS_GOLDEN=1` writes the goldens again.
+//! The BALP `AuditEvent`, DICOM message and search tokens a stored entry
+//! renders, held to committed goldens (#6322); `FERROEHR_BLESS_GOLDEN=1`
+//! writes them again.
 
 use secrecy::ExposeSecret as _;
 
@@ -71,7 +68,6 @@ fn stored(entry: &AccessLogEntry, event: &AuditEvent) -> AccessLogEntry {
         request_id: event.request_id.clone(),
         client_ip: None,
         ehr_id: None,
-        search_tokens: String::new(),
         render_policy: Vec::new(),
     };
     let document = crate::access_log::intake::IntakeEntry::read_back(entry, index)
@@ -83,23 +79,17 @@ fn stored(entry: &AccessLogEntry, event: &AuditEvent) -> AccessLogEntry {
 /// search tokens of its rendering.
 fn golden(
     projection: &Projection<'_>,
+    policy: &CompiledPolicy,
     event: &AuditEvent,
     subject: Option<&str>,
 ) -> serde_json::Value {
     let entry = written(event, subject);
-    let (recorded, recorded_subject) = projection.record(&entry, 0).expect("a record");
-    let resource = crate::system_log::fhir::to_resource(
-        &recorded,
-        projection.context,
-        recorded_subject.as_deref(),
-    )
-    .expect("a resource");
+    let read = stored(&entry, event);
     let tokens: Vec<serde_json::Value> =
-        crate::system_log::search::resource_tokens(resource.as_resource(), &recorded)
+        crate::system_log::store::access_index::entry_tokens(&read, 0, policy)
             .into_iter()
             .map(|token| serde_json::json!([token.parameter, token.system, token.code]))
             .collect();
-    let read = stored(&entry, event);
     let balp = projection.audit_event(&read, 7).expect("a BALP AuditEvent");
     let dicom = projection.audit_message(&read, 7).expect("a DICOM message");
     serde_json::json!({
@@ -127,8 +117,8 @@ fn a_stored_entry_renders_its_goldens() {
     let bless = std::env::var_os("FERROEHR_BLESS_GOLDEN").is_some();
     for (name, event, subject) in golden_events(&policy) {
         let path = dir.join(format!("{}.json", name.replace(' ', "-")));
-        let mut text =
-            serde_json::to_string_pretty(&golden(&projection, &event, subject)).expect("a golden");
+        let mut text = serde_json::to_string_pretty(&golden(&projection, &policy, &event, subject))
+            .expect("a golden");
         text.push('\n');
         if bless {
             std::fs::create_dir_all(&dir).expect("the golden directory");

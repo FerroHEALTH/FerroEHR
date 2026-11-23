@@ -6,7 +6,7 @@ Closes #<!-- tracker issue number — the merge into main auto-closes it -->
 
 ## Checks
 
-- [ ] `cargo fmt --all --check` · `cargo clippy --workspace --all-targets` · `cargo nextest run --workspace`
+- [ ] `cargo fmt --all --check`, and for each package the change touches and each workspace package that depends on it (`cargo tree -i <package> -e normal,dev`): `cargo clippy -p <package> --all-targets --all-features -- -D warnings` · `cargo nextest run -p <package>`. CI runs the workspace-wide lanes the changed paths select (`scripts/lib/change-lanes.sh`)
 - [ ] No test weakened, skipped, or edited to route around a bug
 - [ ] User-visible change → a fragment, `changelog.d/<issue>-<kebab-slug>.<section>.md` (`changelog.d/README.md`), never an edit of `CHANGELOG.md` (else the `no-changelog` label)
 - [ ] REST/config/CLI/deployment change → matching `website/book/src` page updated

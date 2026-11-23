@@ -195,25 +195,26 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(leftovers, 0, "no first-generation schema may be created");
 }
 
-/// None of the five columns a commit updates on `vo_head` is indexed, in either
+/// None of the six columns a commit updates on `vo_head` is indexed, in either
 /// domain.
 ///
 /// That is the STRUCTURAL half of the heap-only-update property: PostgreSQL 18
 /// §"Heap-Only Tuples (HOT)" makes an update heap-only when no indexed column
 /// changes, so the property is a fact about the index set rather than about a
 /// counter that happened to move during one run. Adding an index on any of
-/// these five columns would cost every commit an index insert and a new index
+/// these six columns would cost every commit an index insert and a new index
 /// entry per version, which is what this test exists to notice. No openEHR spec
 /// governs storage layout — our own design/extension.
 #[tokio::test]
 async fn no_commit_updated_column_of_vo_head_is_indexed() {
     // The columns `HeadUpsert`'s ON CONFLICT branch writes.
-    const UPDATED: [&str; 5] = [
+    const UPDATED: [&str; 6] = [
         "head_sys_version",
         "trunk_head_sys_version",
         "trunk_head_content_key",
         "lifecycle_state",
         "committed_at",
+        "episodes",
     ];
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();

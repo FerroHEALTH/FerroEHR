@@ -80,8 +80,8 @@ impl AuditStore {
             owed = u64::try_from(moved).unwrap_or(0);
         }
         // NOTE: our own design (#6319), a round that fails to index leaves the entries past the
-        // cursor to the readers' key range, which stays exact, and the next round copies them.
-        if let Err(error) = self.chaining_store().index_to(reached.access_log).await {
+        // cursor to the readers' key range and the token searches' catch-up, which stay exact.
+        if let Err(error) = self.index_access_log(reached.access_log).await {
             tracing::error!(
                 error = %crate::error::ErrorChain::new(&error),
                 "the access-log search index did not move; the next round copies its entries"
