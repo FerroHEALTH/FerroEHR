@@ -687,12 +687,12 @@ impl Builder<'_> {
         // leaves the revisions to that one-row read, so no row of its own carries them.
         let revisions =
             clinical && ctx.ehr_access.groups().is_some() && access_version_cols.is_empty();
-        if revisions {
-            b.build_revision_columns(crate::party_binding::request::reads_door());
-        }
         b.build_where()?;
-        b.build_order_by()?;
+        let order = b.build_order_by()?;
         b.build_paging();
+        if revisions {
+            b.build_revision_columns(crate::party_binding::request::reads_door(), &order);
+        }
         if ir.distinct {
             b.q.distinct();
         }

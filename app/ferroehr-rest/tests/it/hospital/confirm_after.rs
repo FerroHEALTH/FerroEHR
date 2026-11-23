@@ -520,6 +520,70 @@ async fn a_query_decided_on_a_policy_copy_behind_the_store_runs_once_more() {
     );
 }
 
+/// The rows Dr. Jansen's query of EHR rows alone serves on `app`, paged by
+/// `paging`.
+async fn ehrs_read_by_jansen(app: &axum::Router, paging: &str) -> usize {
+    let body = json!({ "q": format!("SELECT e/ehr_id/value FROM EHR e{paging}") });
+    let answer = call(
+        app,
+        "jansen",
+        "POST",
+        &format!("{BASE}/query/aql"),
+        Some("TREAT"),
+        Some(&body),
+    )
+    .await;
+    assert_eq!(answer.status, StatusCode::OK, "the query: {}", answer.body);
+    answer.json()["rows"].as_array().expect("rows").len()
+}
+
+/// A query of EHR rows alone confirms its policy copies by the revisions its
+/// `paging` statement read, or by a read of its own after it ran where it
+/// served no row (#6320): a copy in force runs once, and a policy change it
+/// never heard of runs the query once more, and only once.
+async fn a_query_of_ehr_rows_confirms_the_policy(paging: &str) {
+    let (provider, exporter) = instruments();
+    let mut world = Box::pin(world()).await;
+    let (other, _drain, _elsewhere) = deaf(&world).await;
+    let served = ehrs_read_by_jansen(&other, paging).await;
+    assert_eq!(served > 0, paging.is_empty(), "{paging:?} serves {served}");
+    let before = reruns(&provider, &exporter);
+    assert_eq!(ehrs_read_by_jansen(&other, paging).await, served);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before,
+        "{paging:?}: a copy in force runs once"
+    );
+
+    world.policy = classify_the_encounter(&world).await;
+    assert_eq!(ehrs_read_by_jansen(&other, paging).await, served);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "{paging:?}: the query ran once more, and only once"
+    );
+    assert_eq!(ehrs_read_by_jansen(&other, paging).await, served);
+    assert_eq!(
+        reruns(&provider, &exporter),
+        before + 1,
+        "{paging:?}: the confirmed copy decides the next query at once"
+    );
+}
+
+/// The first row a query of EHR rows serves carries the revisions it is
+/// confirmed by.
+#[tokio::test]
+async fn a_query_of_ehr_rows_confirms_the_policy_on_its_first_row() {
+    a_query_of_ehr_rows_confirms_the_policy("").await;
+}
+
+/// A query of EHR rows paged past its last row serves none, and confirms its
+/// copies by a read of its own after it ran.
+#[tokio::test]
+async fn a_query_of_ehr_rows_that_serves_no_row_confirms_the_policy_after_it_ran() {
+    a_query_of_ehr_rows_confirms_the_policy(" LIMIT 5 OFFSET 1000000").await;
+}
+
 /// An `EHR_STATUS` read confirms its policy copies by the revisions its own
 /// version read selects (#6320): a copy in force answers in one run, and a
 /// policy change it never heard of runs the read once more.
