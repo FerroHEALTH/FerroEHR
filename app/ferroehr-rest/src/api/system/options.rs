@@ -16,18 +16,6 @@
 //! the communication options for the target resource"). The vendored OAS
 //! bundle is `emit-rest` codegen-input provenance only, never a behavioural
 //! oracle.
-//!
-//! The response body is the GENERATED contract DTO
-//! (`openehr_its::rest::generated::system::Options`, #1822) — no hand wire
-//! shape survives; `OptionsDoc` below is the utoipa DOCUMENTATION
-//! projection only (never serialized on the wire), pinned field-lockstep to
-//! the generated DTO by `options_doc_matches_the_generated_dto`. The handler
-//! stays hand-written like every group's (the generated traits are the
-//! route-table/parity oracle, not the dispatch mechanism).
-//!
-//! This module owns the manifest's *shape and content*; the wiring layer
-//! (`crate::router::router`) constructs the [`SystemManifest`] from config plus the
-//! live mounted-group set and mounts [`route`] at the API base-path root.
 
 #![expect(
     clippy::disallowed_types,
@@ -63,18 +51,6 @@ pub const SPEC_ENDPOINTS: &[&str] = &["/ehr", "/demographic", "/definition", "/q
 /// Identity fields of the System-Options manifest, sourced from
 /// configuration so the public identity is not string literals baked into the
 /// handler.
-///
-/// The defaults are the single shared provenance source
-/// ([`ferroehr::telemetry::provenance`]): `restapi_specs_version` quotes the
-/// tested-contract identity [`ferroehr::telemetry::provenance::ITS_REST`].
-/// The manifest's `conformance_profile` is no identity field: it is
-/// [`ferroehr::telemetry::provenance::CONFORMANCE_PROFILE`], which the build
-/// derives from the committed conformance record, and configuration cannot
-/// set it.
-/// [`ferroehr::config::rest::ApiConfig`] carries a
-/// `SystemOptionsConfig` as its `options` field (the `[api.options]`
-/// section of the one config tree), so an operator MAY override any identity
-/// field while the defaults stay measured.
 use ferroehr::config::rest::SystemOptionsConfig;
 
 /// The System Options and Conformance manifest — the `OPTIONS /` response
@@ -189,23 +165,9 @@ impl SystemManifest {
 
 /// Build the `OPTIONS` [`MethodRouter`] serving the System-Options manifest.
 ///
-/// The handler is stateless (the manifest is captured), so the returned
-/// `MethodRouter<S>` composes with a router of any state type. It is generic
-/// so the wiring layer can mount it on the `AppState`-typed application router.
-///
-/// [`crate::router::router`] wires this:
-///   1. it builds a [`SystemManifest`] from the server config
-///      ([`SystemOptionsConfig`]) and the **live** mounted-group list — the
-///      groups `crate::api::api_router` actually merges (`/ehr`,
-///      `/demographic`, `/definition`, `/query`, and `/admin` when its group
-///      is enabled), not [`SPEC_ENDPOINTS`] hardcoded;
-///   2. it mounts this handler at the **API base-path root** (`cfg.base_path`,
-///      e.g. `OPTIONS /ferroehr/rest/openehr/v1`) — the ONE location the
-///      System API defines (`system.openapi.yaml` `servers` `{baseUrl}/v1`,
-///      path `/`);
-///   3. the mount sits **above** the `CorsLayer` (that layer treats every
-///      `OPTIONS` as a CORS preflight and short-circuits it), which is why the
-///      handler is added after the middleware stack in `crate::router::router`.
+/// [`crate::router::router`] mounts it at the API base-path root with the live
+/// mounted-group list, above the `CorsLayer`, which would otherwise answer
+/// every `OPTIONS` as a preflight.
 pub fn route<S>(manifest: Arc<SystemManifest>) -> MethodRouter<S>
 where
     S: Clone + Send + Sync + 'static,

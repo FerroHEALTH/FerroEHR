@@ -27,16 +27,10 @@ use crate::extensions::multimedia::config::MultimediaConfig;
 
 /// Builds the externalization engine from configuration.
 ///
-/// The engine is built whenever a store is REACHABLE — `record.multimedia.enabled`,
-/// or an explicit `[record.multimedia.s3] url` — and `enabled` then governs only whether NEW
-/// content is externalized. Switching the integration off therefore stops
-/// offloading without stranding the blobs already offloaded: a stored record
-/// referencing one is clinical content this server put there, and a read that
-/// asks for it back must not silently answer with the reference instead.
-///
-/// `None` means no store can be reached at all, which is the one case where an
-/// expansion request cannot be honoured; the read path refuses loudly there
-/// rather than quietly serving the compact form.
+/// The engine is built whenever a store is reachable, and `enabled` governs
+/// only whether new content is externalized, so switching it off strands no
+/// blob already offloaded. `None` means no store can be reached, and the read
+/// path then refuses an expansion request loudly.
 ///
 /// # Errors
 /// Returns `MultimediaError::Endpoint` when

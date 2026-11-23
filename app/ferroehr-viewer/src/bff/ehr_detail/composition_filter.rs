@@ -16,8 +16,6 @@
 //! matches one character, `*` any sequence, and a literal one "must be escaped
 //! by using the backslash `\` character"); the same section's own example is
 //! `c/archetype_details/template_id/value LIKE '*encounter*'`.
-//!
-//! Everything here is a pure function with unit tests.
 
 #![expect(
     clippy::disallowed_types,
@@ -32,9 +30,6 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{tr, tr_with};
 
 /// The projection, source and EHR binding every compositions listing shares.
-///
-/// The `ehr_id` is the one parameter that is always bound; the filter
-/// predicates below append to this same `WHERE`.
 const SELECT_FROM: &str = "SELECT c/uid/value, c/name/value, c/archetype_details/template_id/value, c/context/start_time/value, c/composer/name FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = $ehr_id";
 
 /// The template-id predicate (`ARCHETYPED._template_id_` on the composition's
@@ -66,10 +61,6 @@ const DAY_START: &str = "T00:00:00Z";
 const DAY_END: &str = "T23:59:59.999999Z";
 
 /// The compositions tab's row filters, exactly as the URL carries them.
-///
-/// Every field is already trimmed by [`CompositionFilter::new`]; an empty field
-/// means "no bound on this dimension", which is what makes the unfiltered tab
-/// issue the same query it always did.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CompositionFilter {
     /// Substring of the composition's template id (`?template=`).
@@ -99,10 +90,6 @@ impl CompositionFilter {
 
 /// One `POST /query/aql` request's two halves, built together so they cannot
 /// drift apart.
-///
-/// They must not: the CDR answers `400 unbound query parameter` when the text
-/// names a parameter the bindings omit (verified against the composed stack,
-/// 2026-08-23).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CompositionQuery {
     /// The AQL statement — compile-time fragments only.
@@ -112,9 +99,6 @@ pub struct CompositionQuery {
 }
 
 /// Lower `filter` onto the compositions listing query for `ehr_id`.
-///
-/// An empty filter yields the plain newest-first listing; each filled field
-/// appends its own predicate AND binds its own parameter.
 ///
 /// # Errors
 /// [`ViewerError::Invalid`] when a date bound is neither a date nor an
@@ -174,9 +158,8 @@ pub fn composition_query(
 
 /// Wrap an operator-typed value in an AQL `LIKE` "contains anywhere" pattern.
 ///
-/// `*` and `?` are AQL's wildcards, so the operator's own `*`, `?` and `\` are
-/// backslash-escaped and match literally — the filter box is a substring
-/// search, not a pattern language the operator has to know.
+/// The operator's own `*`, `?` and `\` are backslash-escaped, so they match
+/// literally.
 fn contains_pattern(value: &str) -> String {
     let mut pattern = String::with_capacity(value.len().saturating_add(2));
     pattern.push('*');
@@ -192,11 +175,8 @@ fn contains_pattern(value: &str) -> String {
 
 /// Complete a date bound to the instant it means, or pass an instant through.
 ///
-/// `<input type="date">` submits `YYYY-MM-DD`, which the CDR's temporal
-/// comparison reads as that day's midnight — so an upper bound left uncompleted
-/// would silently exclude everything recorded during the bounding day
-/// (reproduced against the composed stack, 2026-08-23). `day_suffix` is the end
-/// of the range the date names.
+/// A bare `YYYY-MM-DD` reads as that day's midnight, so `day_suffix` completes
+/// it to the end of the range the date names.
 ///
 /// # Errors
 /// [`ViewerError::Invalid`] naming `label` when the value is neither.
@@ -431,9 +411,8 @@ mod tests {
 
     #[test]
     fn an_unreadable_date_bound_is_refused_before_the_round_trip() {
-        // The CDR answers 500 for a bound its temporal comparison cannot cast
-        // (observed 2026-08-23, tracked upstream of this screen); the viewer
-        // never sends one.
+        // The CDR answers 500 for a bound its temporal comparison cannot cast;
+        // the viewer never sends one.
         for bad in ["not-a-date", "2026-13-40", "yesterday", "2026-07-14T99:99"] {
             let error = composition_query(EHR, &CompositionFilter::new("", bad, "", ""))
                 .expect_err("an unreadable bound is refused");

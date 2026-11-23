@@ -626,14 +626,9 @@ fn ips_nodes_ride_the_fast_path() {
     );
 }
 
-// ── terminology-backed invariants ────────────────────────────────────────────
-//
-// The terminology binding table
-// (`openehr_rm::v1_2::validate::terminology::validate_rm_terminology`, run by
-// `validate_rm_value` as a post-core check). Two properties: the corpus-audit
-// safety property (no valid corpus document is newly rejected) and the
-// per-vocabulary enforcement property (an out-of-vocabulary code IS rejected).
-// Spec: the RM class invariants resolved against the TERM 3.1.0 bundle.
+// ── terminology-backed invariants (RM class invariants against the TERM 3.1.0
+// bundle): no valid corpus document is rejected, and an out-of-vocabulary code
+// is ──
 
 /// A bare `CODE_PHRASE` for an external (ISO/IANA) code-set slot.
 fn code_phrase(terminology: &str, code: &str) -> Value {
@@ -900,12 +895,6 @@ fn half_open_interval_is_accepted_with_or_without_flags() {
 ///
 /// > `Inv_null_flavour_indicated`: `is_null() xor null_flavour = Void`
 /// > (`RM/docs/UML/classes/org.openehr.rm.data_structures.element.adoc`)
-///
-/// `is_null()` is "value is Void", so the invariant holds for exactly one of
-/// `value` / `null_flavour` being present. BOTH arms fail: an ELEMENT carrying
-/// both, and — the arm the vendored corpus actually contains — an ELEMENT
-/// carrying neither. Pinned on both dispatcher tiers, because the fast path
-/// may only skip the typed oracle when its result is identical.
 #[test]
 fn element_null_flavour_xor_fails_on_both_and_on_neither() {
     let element = |extra: Value| {
@@ -965,15 +954,6 @@ fn element_null_flavour_xor_fails_on_both_and_on_neither() {
 /// `all_types_systematic_tests_feeder_audit.json` hold one ELEMENT
 /// (`content[1]/data/items[0]`, `at0002`) with neither `value` nor
 /// `null_flavour` — RM-invalid per `Inv_null_flavour_indicated`.
-///
-/// Adjudication: the fixtures are NOT corrected. They exist to exercise the
-/// canonical-JSON codec, and the only gates that consume them (`fidelity.rs` —
-/// read, lossless re-serialize,
-/// ITS-JSON schema validation) are codec gates that do not run RM class
-/// invariants, so their verdicts are unaffected. The RM-invalid node is turned
-/// into a positive assertion instead: the dispatcher must reject it, naming
-/// the invariant. A fixture that stops carrying the violation fails here and
-/// must be re-adjudicated, never silently dropped.
 #[test]
 fn corpus_elements_without_value_or_null_flavour_are_rejected() {
     let dir = concat!(
@@ -1039,14 +1019,6 @@ fn value_less_elements(value: &Value) -> Vec<&Value> {
 /// `Archetype_node_id_valid` reaches EVERY concrete LOCATABLE descendant of
 /// the generated model — the totality half the fixture-listed test above
 /// cannot carry (#2442).
-///
-/// The membership is the generated closure itself
-/// (`openehr_rm::v1_2::model::descendants("LOCATABLE")`), so an emitter
-/// regression that drops a class from the closure — silently ending its
-/// enforcement — fails here instead of going dark. The dispatcher's closeout
-/// reads the node's own `_type` + `archetype_node_id` off the JSON value, so
-/// a minimal node per class suffices; the class's other invariants firing
-/// beside it are irrelevant to the assertion.
 #[test]
 fn node_id_totality_is_model_derived() {
     let concrete = openehr_rm::v1_2::model::descendants("LOCATABLE");

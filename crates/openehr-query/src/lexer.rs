@@ -5,8 +5,6 @@
 //! AQL lexer — a `logos` tokenizer transcribed from the authoritative
 //! `AqlLexer.g4` (vendored at `vendor/grammar/`).
 //!
-//! Two deliberate departures from a literal transcription:
-//!
 //! - The grammar's function-id groups (`STRING_FUNCTION_ID`,
 //!   `NUMERIC_FUNCTION_ID`, `DATE_TIME_FUNCTION_ID` — `length`, `abs`, `now`,
 //!   …) are not reserved: they lex as [`Token::Identifier`] and the parser
@@ -18,8 +16,6 @@
 //!   [`Token::String`]. QUERY §Dates and Times resolves the typing of a quoted
 //!   value from the identified-path context, not from the literal, so an
 //!   untyped string is the faithful carrier at this layer.
-//!
-//! AQL keywords are case-insensitive, so each keyword uses `ignore(case)`.
 
 use logos::Logos;
 
@@ -205,10 +201,6 @@ pub enum Token {
     #[token("-")]
     Minus,
     /// `--` — the grammar's `SYM_DOUBLE_DASH` optional statement terminator.
-    ///
-    /// `AqlLexer.g4 COMMENT` claims `--` followed by a space or an
-    /// end-of-line/EOF, which the callback skips; only a `--` glued to a
-    /// non-space character is emitted as this token.
     #[token("--", line_comment)]
     DoubleDash,
 
@@ -289,10 +281,6 @@ pub enum Token {
 }
 
 /// Callback for the `--` token implementing `AqlLexer.g4 COMMENT`.
-///
-/// A `--` followed by a space and text, or immediately by end-of-line/EOF, is a
-/// line comment: the rest of the line is consumed and the token skipped.
-/// Anything else is emitted as the `SYM_DOUBLE_DASH` terminator.
 fn line_comment(lex: &mut logos::Lexer<Token>) -> logos::Filter<()> {
     let rem = lex.remainder();
     let is_comment = rem.is_empty() || rem.starts_with([' ', '\t', '\r', '\n']);
@@ -306,11 +294,6 @@ fn line_comment(lex: &mut logos::Lexer<Token>) -> logos::Filter<()> {
 }
 
 /// A lexed token stream carrying each token's byte span in the source.
-///
-/// [`SpannedTokens::tokens`] and [`SpannedTokens::spans`] are index-aligned:
-/// `spans()[i]` is the byte range of `src` that `tokens()[i]` was lexed from.
-/// They stay parallel because a parser over this stream consumes a contiguous
-/// `&[Token]`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpannedTokens {
     tokens: Vec<Token>,
@@ -325,8 +308,6 @@ impl SpannedTokens {
     }
 
     /// Returns each token's byte range in the source.
-    ///
-    /// Index-aligned with [`SpannedTokens::tokens`].
     #[must_use]
     pub fn spans(&self) -> &[std::ops::Range<usize>] {
         &self.spans
@@ -355,10 +336,6 @@ impl SpannedTokens {
 
     /// Maps a half-open range of token indices onto the byte range of the
     /// source those tokens cover.
-    ///
-    /// An empty range, or one that starts past the last token, yields the
-    /// empty range just after the last token — the position an end-of-input
-    /// report names. An empty stream yields `0..0`.
     #[must_use]
     pub fn byte_span(&self, tokens: &std::ops::Range<usize>) -> std::ops::Range<usize> {
         let after_last = self.spans.last().map_or(0, |span| span.end);
@@ -389,8 +366,6 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
 }
 
 /// Lexes `src` into tokens paired with the byte span each was lexed from.
-///
-/// The spanned counterpart of [`lex`], which discards the positions.
 ///
 /// # Errors
 /// Returns [`LexError`] on the first unrecognized token.

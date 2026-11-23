@@ -2,25 +2,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for `ITEM_SINGLE`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_structures.item_single.adoc`
-//! §Functions.
+//! `ITEM_SINGLE.as_hierarchy` (`org.openehr.rm.data_structures.item_single.adoc`).
 
 use crate::v1_1::data_structures::item_structure::item_single::ItemSingle;
 use crate::v1_1::data_structures::representation::element::Element;
 
 impl ItemSingle {
-    /// A CEN EN13606-compatible hierarchy: the single `ELEMENT` this structure
-    /// carries.
-    ///
-    /// Spec: `item_single.adoc` §Functions `as_hierarchy` — "Generate a CEN
-    /// EN13606-compatible hierarchy consisting of a single `ELEMENT`."
-    ///
-    /// Total, unlike its `ITEM_LIST`/`ITEM_TREE` siblings: `item` is `1..1`, so
-    /// the hierarchy always exists and the return type does not need to say
-    /// otherwise.
+    /// The single `ELEMENT` this structure carries (`as_hierarchy`).
     #[must_use]
     pub fn as_hierarchy(&self) -> &Element {
         &self.item

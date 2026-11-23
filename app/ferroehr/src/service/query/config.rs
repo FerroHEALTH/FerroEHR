@@ -3,11 +3,9 @@
 
 //! The `[record.query]` section — AQL execution knobs.
 //!
-//! No openEHR spec governs these tuning knobs — our own operational extension. A field of the one config tree
-//! ([`crate::config::FerroEhrConfig`]); no loader of its own. These replace the
-//! two former raw-env reads whose parse failures were silently swallowed —
-//! they are now ordinary typed fields, so a bad value is a boot error like
-//! everywhere else.
+//! No openEHR spec governs these tuning knobs: our own operational extension. A
+//! field of the one config tree ([`crate::config::FerroEhrConfig`]), so a bad
+//! value is a boot error.
 
 use std::time::Duration;
 
@@ -59,11 +57,8 @@ impl Default for QueryConfig {
     fn default() -> Self {
         Self {
             plan_cache_capacity: 256,
-            // Three orders of magnitude above the measured ad-hoc query p99 on
-            // the reference SUT (tens of milliseconds — the committed step-load
-            // record), so no legitimate query is cut short, while an unbounded
-            // one is still bounded. A deployment with heavier queries raises it
-            // deliberately rather than discovering there was no limit.
+            // Far above any legitimate ad-hoc query, so an unbounded one is
+            // still bounded; a deployment with heavier queries raises it.
             timeout: units::Duration::from_secs(30),
             // The largest example composition set the conformance corpus holds
             // is thousands of rows, and a clinical UI pages; 10_000 is far above
@@ -140,11 +135,8 @@ mod tests {
     fn defaults_have_the_cache_and_the_budget_on() {
         let c = QueryConfig::default();
         assert_eq!(c.plan_cache_capacity, 256);
-        // The budget used to default to 0 (off) and this test pinned that. It is
-        // on now, deliberately: with it off, the HTTP request timeout was the
-        // only guard, and that answers the client without cancelling the
-        // statement — so overrunning queries kept holding pooled connections
-        // after their callers had been given up on.
+        // With no budget the HTTP timeout answers the client but leaves the
+        // statement holding its pooled connection.
         assert!(!c.timeout.is_zero());
         assert!(c.budget().is_some());
     }

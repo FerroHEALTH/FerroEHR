@@ -236,8 +236,7 @@ fi
 
 # The hosted sandbox's compose defaults deliberately carry NO version: the box
 # tracks the `:latest` release pointer the image lane moves (#2974), so this
-# guard only pins them to that pointer. A versioned default reappearing would
-# resurrect the release-cut bump this guard used to police.
+# guard only pins them to that pointer.
 for pair in "FERROEHR_IMAGE ghcr.io/ferrohealth/ferroehr:latest" "FERROEHR_VIEWER_IMAGE ghcr.io/ferrohealth/ferroehr-viewer:latest"; do
   var="${pair%% *}"
   want="${pair#* }"

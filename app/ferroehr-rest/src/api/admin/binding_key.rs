@@ -9,10 +9,6 @@
 //! key that is the administrator's own login or is already bound, retires
 //! the old key in the commit that binds the new one, and writes one access
 //! record carrying both. No openEHR ITS-REST operation governs it.
-//!
-//! Gating: mounted under `/admin/`, so the route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
-//! (`405` with an empty `Allow` when off) unchanged.
 
 #![expect(
     clippy::disallowed_types,

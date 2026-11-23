@@ -16,11 +16,6 @@
 //! admin-capability probe rather than fetching the manifest twice), and the
 //! SMART discovery document follows
 //! `docs/specs/openehr/ITS-REST/docs/smart_app_launch/master04-service_discovery.adoc`.
-//!
-//! One failing card never blanks the page: each card draws its own `Result`.
-//! Every read guards with
-//! [`require_session`](crate::session::require_session) first, and the CDR
-//! credential never reaches the page.
 
 #![expect(
     clippy::disallowed_types,
@@ -124,9 +119,6 @@ pub async fn fetch_openapi(
 /// The redacted effective CDR configuration (`GET /admin/config` — the CDR's own
 /// extension endpoint; secrets are redacted structurally server-side, this fn
 /// only relays).
-///
-/// A `404` means the admin API is disabled and `401`/`403` that the session
-/// lacks the ADMIN role — both first-class rendered states, not failures.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); non-2xx answers

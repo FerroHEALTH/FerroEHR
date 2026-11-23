@@ -15,12 +15,6 @@
 //! > demographic types / reminder to keep them in sync!
 //! > — `docs/specs/openehr/ITS-REST/specifications/schemas/demographic/UpdateVersion.yaml`
 //!
-//! A hand-maintained duplicate with a keep-in-sync reminder is a drift hazard
-//! this workspace inherits SILENTLY: `emit-rest` reads the bundled OAS, so if
-//! upstream lets the two diverge on the next pin bump, the generated `ehr` and
-//! `demographic` contracts diverge with them and nothing here notices. These
-//! gates make that loud, on both layers:
-//!
 //! 1. the SOURCE pair under the vendored spec text — identical modulo the one
 //!    difference the note itself declares, the `data` `$ref` (the only reason
 //!    the copy exists);
@@ -50,9 +44,6 @@ fn bundle(api: &str) -> (PathBuf, String) {
 }
 
 /// The `components.schemas.<name>` block of a bundled OAS document, verbatim.
-///
-/// Extracted by indentation: the block runs from its `    <name>:` key to the
-/// next line at that same indent, which is the next sibling schema.
 fn component_block(text: &str, name: &str) -> String {
     let key = format!("    {name}:");
     let lines: Vec<&str> = text.lines().collect();

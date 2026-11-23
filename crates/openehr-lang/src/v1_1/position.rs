@@ -2,23 +2,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Source-text position arithmetic — one home for this generation's parsers.
-//!
-//! Every reader in the LANG family reports defects at a byte offset in the
-//! source it was handed, and needs to present that offset to a human as a line
-//! and column. Which readers a generation carries differs — Release-1.0.0
-//! defines an ODIN-only grammar set, the 1.1.0 line adds BEL and the ADL/cADL
-//! front end — but the mapping is a property of the TEXT, not of any one
-//! grammar, so it lives here once rather than being re-derived per parser or
-//! per generation.
+//! Byte offset to line and column, shared by every reader of the generation.
 
-/// The 1-based line and column of a byte `offset` in `src`, counting COLUMNS
-/// IN CHARACTERS.
-///
-/// Columns count characters rather than bytes so a line of clinical text with
-/// non-ASCII content reports the column an author sees in an editor. An offset
-/// past the end of `src` clamps to the end, so a defect reported at
-/// end-of-input still names a real position.
+/// The 1-based line and column of byte `offset` in `src`, columns in
+/// characters; an offset past the end clamps to the end.
 #[must_use]
 pub fn line_col(src: &str, offset: usize) -> (usize, usize) {
     let clamped = offset.min(src.len());

@@ -1,27 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The AOM2 validity-code catalogue: [`Severity`] plus one [`ValidationCode`]
-//! variant per validity rule.
-//!
-//! The code set and its phase groupings come from
-//! `docs/specs/openehr/AM/docs/AOM2/master08-validation.adoc`; the full rule
-//! texts live in `master03-archetype_package.adoc`,
-//! `master04.5-constraint_model-class_definitions.adoc`,
-//! `master06-rm_overlay.adoc` and `master07-terminology_package.adoc`. Each
-//! variant's own doc comment names the spec file + section that defines it and,
-//! where the check is not raised by the phase-1 walk, the topic module that
-//! raises it.
+//! The AOM2 validity-code catalogue (`AOM2/master08-validation.adoc`):
+//! [`Severity`] and one [`ValidationCode`] per rule, each citing its definition.
 
-/// The severity of a [`ValidationIssue`](super::ValidationIssue).
+/// The severity of a [`ValidationIssue`](super::ValidationIssue): the
+/// `W`-prefixed codes are warnings.
 ///
-/// The `W`-prefixed codes (WACMCL, WOUC) are warnings; every other code is an
-/// error. `master08` assigns no explicit severity column, so this follows the
-/// `V`/`W` naming convention (the `W` prefix = advisory "should"; see
-/// `master04.5` WACMCL "should be" vs VACMCU "must").
-///
-/// NOTE: no openEHR spec states the `W`→Warning convention normatively; it is
-/// inferred from the code naming (`master08-validation` is silent on severity).
+/// NOTE: `master08` assigns no severity; the `W` convention is inferred from the
+/// naming (`master04.5` WACMCL "should be" vs VACMCU "must").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Severity {
     /// A validity error — the archetype is invalid.
@@ -30,15 +17,9 @@ pub enum Severity {
     Warning,
 }
 
-/// An AOM2 validation code (one typed variant per validity rule).
+/// An AOM2 validation code, one variant per validity rule.
 ///
-/// Each variant's doc comment names the spec file + section that defines it.
-/// The catalogue is the phase-1 set of `docs/specs/openehr/AM/docs/AOM2/`
-/// plus the two corpus-adjudicated additions (VRDLA, WOUC — no openEHR spec
-/// names either code, NOTE-flagged at their variants and check sites).
-/// Deferred variants (their check needs the
-/// RM model, the flat parent, or an external terminology service) are present
-/// as the vocabulary but not raised in phase 1 — see the phase-1 topic modules.
+/// NOTE: VRDLA and WOUC are corpus-adjudicated additions no openEHR spec names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum ValidationCode {
@@ -85,13 +66,9 @@ pub enum ValidationCode {
     /// VCAM — attribute single/multiple arity matches the RM (`master04.5`
     /// §`C_ATTRIBUTE`; checked in [`rm`](super::rm)).
     Vcam,
-    /// VCORMEN — enumeration type constraint kind validity: a primitive
-    /// constraint on an enumeration-typed RM slot must match the enumeration's
-    /// underlying primitive (an integer constraint on a string-based
-    /// enumeration, or vice versa, is invalid). `master08` §Phase 2 lists
-    /// (VCORMENV, VCORMENU, VCORMEN) with no full vendored text; the V/U/EN
-    /// partition below is our reading of that gloss against `master04.2`
-    /// §Constraints on Enumeration Types — NOTE-flagged in [`rm`](super::rm).
+    /// VCORMEN — a primitive constraint on an enumeration-typed RM slot must match
+    /// the enumeration's underlying primitive; the partition is NOTE-flagged in
+    /// [`rm`](super::rm).
     Vcormen,
     /// VCORMENV — enumeration integer-value validity: an integer constraint
     /// value on an integer-based enumeration slot must be a declared literal
@@ -114,15 +91,10 @@ pub enum ValidationCode {
     Vttbk,
     /// VTCBK — constraint binding key valid (`master07` §Validity Rules).
     Vtcbk,
-    /// VETDF — external term validity (`master03` §Validity Rules): a code bound
-    /// to an *external* terminology (SNOMED CT, LOINC, …) must exist in that
-    /// terminology. `openehr-adl` (a network-free spec engine) cannot hold a
-    /// live terminology-service client, so the check is threaded through the
-    /// [`bindings::TerminologyResolver`](super::bindings::TerminologyResolver) seam: the application injects a
-    /// resolver over its terminology service and [`validate`](super::validate) / [`validate_source`](super::validate_source)
-    /// consult it. Entry points that take no resolver do not raise VETDF
-    /// (`master03` "subject to tool accessibility; … no verification was
-    /// possible").
+    /// VETDF — external term validity (`master03` §Validity Rules): a bound external
+    /// code must exist, checked through
+    /// [`bindings::TerminologyResolver`](super::bindings::TerminologyResolver);
+    /// without a resolver it is not raised ("subject to tool accessibility").
     Vetdf,
     /// VTVSID — value-set id defined (`master07` §Validity Rules).
     Vtvsid,
@@ -196,11 +168,8 @@ pub enum ValidationCode {
     /// VDFAI — archetype id validity in slot definition (`master04.5`
     /// §`ARCHETYPE_SLOT`).
     Vdfai,
-    /// VDFPT — path validity in definition: any path mentioned in the
-    /// definition section must be valid syntactically and valid with respect
-    /// to the hierarchical structure of the definition section (ADL 1.4 only;
-    /// `ADL1.4/master08-adl.adoc` §Definition Section validity rules — the
-    /// AOM2 mirror is [`ValidationCode::Vunp`] on the flat form).
+    /// VDFPT — every definition path is valid in the definition's structure (ADL 1.4
+    /// only, `ADL1.4/master08-adl.adoc` §Definition Section).
     Vdfpt,
     /// VOBAV — object node assumed value validity (`master04.5`
     /// §`C_PRIMITIVE_OBJECT`).
@@ -215,11 +184,8 @@ pub enum ValidationCode {
     /// VACMCU — cardinality/occurrences upper bound validity (`master04.5`
     /// §`C_ATTRIBUTE`).
     Vacmcu,
-    /// VCOC — ADL 1.4 cardinality/occurrences validity: the interval formed by the
-    /// sums of the children's occurrences minima..maxima must be inside the
-    /// container's cardinality interval (`ADL1.4/master05-cadl.adoc` §Occurrences
-    /// L321-324). The ADL 1.4 formalism's own rule, raised only on the 1.4
-    /// dialect; the AOM2 successor is the VACMCU/WACMCL pair.
+    /// VCOC — ADL 1.4: the summed child occurrences lie inside the cardinality
+    /// (`ADL1.4/master05-cadl.adoc` §Occurrences).
     Vcoc,
     /// VACMCO — cardinality/occurrences orphans: every mandatory child and one
     /// optional child must fit within the container cardinality (`master04.5`
@@ -233,11 +199,9 @@ pub enum ValidationCode {
     /// VRDLA — resource-description language-code consistency (no openEHR spec
     /// governs this — our own design/extension, NOTE-flagged at its check site).
     Vrdla,
-    /// `C_STRING.constraint` — a string constraint is either a list of fixed
-    /// Strings or a single regular expression, never a mixture of both
-    /// (`ADL2/master04.5-cadl_primitive_types.adoc` §Constraints on String, the
-    /// `C_STRING` class table). The rule is the specification's; no openEHR
-    /// validity code names it, so the code is our own design.
+    /// `C_STRING.constraint` — fixed strings or one regex, never both
+    /// (`ADL2/master04.5-cadl_primitive_types.adoc` §Constraints on String); the code
+    /// is our own design.
     CStringConstraint,
     /// WACMCL — cardinality/occurrences lower bound warning (`master04.5`
     /// §`C_ATTRIBUTE`; WARNING).
@@ -245,20 +209,13 @@ pub enum ValidationCode {
     /// WOUC — defined terminology code unused in the definition (no openEHR spec
     /// governs this — our own design/extension; WARNING).
     Wouc,
-    /// W14DEP — a deprecated ADL 1.4 spelling was used
-    /// (`ADL1.4/master05-cadl.adoc` §Symbols `V_C_DOMAIN_TYPE` marks the
-    /// paren-less `Type <` domain-block spelling deprecated and the
-    /// parenthesised `(Type) <` form "correct ADL 1.4/ADL 1.5"; WARNING).
+    /// W14DEP — a deprecated ADL 1.4 spelling, the paren-less `Type <` domain block
+    /// (`ADL1.4/master05-cadl.adoc` §Symbols `V_C_DOMAIN_TYPE`; WARNING).
     ///
-    /// NOTE: no openEHR validity code covers deprecated-spelling use — our own
-    /// extension (owner ruling 2026-08-01, spec-adherence §NEVER LAX:
-    /// deprecations are enforced at exactly the deprecation's strength —
-    /// accepted, never silently absorbed).
+    /// NOTE: no openEHR validity code covers deprecated-spelling use: our own design.
     W14dep,
     // ── phase-2 specialisation-vs-flat-parent codes (`master04.5` §Validity
-    //    Rules: `C_ATTRIBUTE` / `C_OBJECT` / `ARCHETYPE_SLOT` / `C_ARCHETYPE_ROOT` /
-    //    `C_COMPLEX_OBJECT_PROXY`; `master08` §Phase 2 → Validate Specialised
-    //    Definition). Raised by `specialisation` against the flat parent.
+    //    Rules; `master08` §Phase 2 → Validate Specialised Definition).
     /// VSANCE — specialised attribute node existence conformance (`master04.5`
     /// §`C_ATTRIBUTE`).
     Vsance,
@@ -355,23 +312,16 @@ pub enum ValidationCode {
     /// one detail (RM `org.openehr.rm.common.resource_description.adoc`
     /// §Invariants, with `details` 1..1 in the RM class table).
     RmRdDetails,
-    /// `RESOURCE_DESCRIPTION_ITEM.Purpose_valid` — `not purpose.is_empty` (RM
-    /// `org.openehr.rm.common.resource_description_item.adoc` §Invariants).
-    /// Warning on a 1.4 SOURCE: `purpose = <"">` is endemic real-world 1.4
-    /// authoring (61 CKM archetypes), and 1.4 tolerance is our own design —
-    /// the finding is named, never refused (the `ckm_archetype_packs` sweep
-    /// pins both halves).
+    /// `RESOURCE_DESCRIPTION_ITEM.Purpose_valid` (RM `resource_description_item.adoc`
+    /// §Invariants); a warning on a 1.4 source (our own design).
     RmRdiPurpose,
     /// `RESOURCE_DESCRIPTION_ITEM.Use_valid` — a present `use` is non-empty
     /// (RM `org.openehr.rm.common.resource_description_item.adoc`
     /// §Invariants). Warning on a 1.4 SOURCE: `use = <"">` is the 1.4
     /// ecosystem's spelling of absence (162 CKM archetypes).
     RmRdiUse,
-    /// `RESOURCE_DESCRIPTION_ITEM.misuse_valid` — a present `misuse` is
-    /// non-empty (RM `org.openehr.rm.common.resource_description_item.adoc`
-    /// §Invariants; the spec's own lowercase name). Warning on a 1.4 SOURCE:
-    /// `misuse = <"">` is the 1.4 ecosystem's spelling of absence (873 CKM
-    /// archetypes).
+    /// `RESOURCE_DESCRIPTION_ITEM.misuse_valid` (RM `resource_description_item.adoc`
+    /// §Invariants); a warning on a 1.4 source.
     RmRdiMisuse,
     /// `AUTHORED_RESOURCE.Original_language_valid` — the original language is
     /// in the openEHR `languages` code set (RM

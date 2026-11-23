@@ -2,31 +2,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for `EHR_ACCESS`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr.ehr_access.adoc`
-//! §Functions + §Invariants.
+//! `EHR_ACCESS.scheme` (`org.openehr.rm.ehr.ehr_access.adoc`).
 
 use crate::v1_2::ehr::ehr_access::EhrAccess;
 
 impl EhrAccess {
-    /// Returns the name of the access control scheme in use.
-    ///
-    /// Spec: `org.openehr.rm.ehr.ehr_access.adoc` §Functions `scheme` — "The
-    /// name of the access control scheme in use; corresponds to the concrete
-    /// instance of the `settings` attribute." The scheme is therefore that
-    /// instance's own type name, which is exactly what the open-subtype
-    /// carrier keeps: `settings` is declared as a subtype of the abstract
-    /// `ACCESS_CONTROL_SETTINGS` ("allowing for the use of different access
-    /// control schemes", §Attributes), so the concrete type is carried on the
-    /// value rather than fixed by the model.
-    ///
-    /// `None` when no settings are recorded. The class declares `scheme`
-    /// `1..1` with §Invariants `Scheme_valid: not scheme.is_empty` while
-    /// declaring `settings` `0..1`, so an `EHR_ACCESS` with no settings has no
-    /// scheme to name — and the carrier refuses an empty type name, so
-    /// whenever settings ARE present `Scheme_valid` holds by construction.
+    /// The access control scheme: the type name of the `settings` instance
+    /// (`scheme`), or `None` when no settings are recorded.
     #[must_use]
     pub fn scheme(&self) -> Option<&str> {
         self.settings

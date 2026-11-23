@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The RBAC gate decision.
-//!
-//! Roles are plain upper-cased strings (`USER`, `ADMIN`, …) that
-//! `ferrohealth-smart` reads from a token's `[auth] role_claims` or a Basic
-//! user's `[[auth.basic.users]] roles`. [`authorize`] gates an
-//! [`OperationClass`] against a principal's roles and the [`RbacConfig`].
 
 use crate::extensions::access::authz::classify::OperationClass;
 use ferroehr::config::authz::RbacConfig;
@@ -55,11 +50,6 @@ pub fn authorize(class: OperationClass, roles: &[String], rbac: &RbacConfig) -> 
 /// The read-only restriction: refuse a principal carrying the read-only role
 /// on every write operation, even when it also holds granting roles (a
 /// restriction overrides a grant).
-///
-/// Reads, non-read-only principals, and the rbac-disabled case all pass
-/// through with [`RbacDecision::Allow`]. Role matching is
-/// ASCII-case-insensitive, the same idiom as [`authorize`].
-///
 // NOTE: no openEHR spec governs this — our own design/extension; ITS-REST
 // mandates no authorization scheme.
 #[must_use]

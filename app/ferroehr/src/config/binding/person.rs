@@ -4,10 +4,6 @@
 //! The one `PERSON` mapping SCIM provisioning, just-in-time creation and the
 //! login binding share.
 //!
-//! Its sections are `[authz.party_binding.person]`,
-//! `[authz.party_binding.professional_role]`, `[authz.party_binding.group]`,
-//! `[authz.party_binding.membership]` and `[authz.party_binding.patient]`.
-//!
 //! It names the templates a professional's `PERSON`, the professional `ROLE`,
 //! a group's `GROUP` and a patient's `PERSON` are valid against, the identifier selectors of the
 //! binding key, `userName` and `externalId`, which SCIM attribute and which

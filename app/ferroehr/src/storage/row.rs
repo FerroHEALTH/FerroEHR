@@ -18,10 +18,6 @@
 use serde_json::Value;
 
 /// One decomposed `node` row with its whole fragment.
-///
-/// The shape the unit tests state the decomposition in
-/// ([`crate::storage::codec::decompose`]); the write path stores
-/// [`crate::storage::render::nodes::StoredNode`].
 #[cfg(test)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct NodeRow {
@@ -76,10 +72,6 @@ pub struct NodeRow {
 /// The lean read row: only the columns [`crate::storage::codec::reassemble`]
 /// and the nested-set contract need.
 ///
-/// The read path fetches exactly these five columns — the promoted query
-/// columns (`rm_type`/`archetype`/`arch_*`/`name`) live inside `data` and are
-/// not needed to reconstruct the canonical tree.
-///
 /// `parent_num` places each row under its parent in reassembly; `num_cap` is
 /// the nested-set interval contract the AQL engine consumes when it reads the
 /// `node` table directly.
@@ -106,10 +98,6 @@ pub struct ReadRow {
 /// Read access to the four fields [`crate::storage::codec::reassemble`]
 /// needs from a node row: its pre-order number, its parent's, its own step
 /// and its JSON fragment.
-///
-/// Implemented by the lean [`ReadRow`] and by the `NodeRow` the unit tests
-/// state a decomposition in, so reassembly works from either shape without
-/// forcing the read path to fetch the promoted query columns.
 pub trait NodeContent {
     /// Pre-order number within the versioned object (root = 0).
     fn num(&self) -> i32;

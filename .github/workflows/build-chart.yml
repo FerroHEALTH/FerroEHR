@@ -87,10 +87,8 @@ jobs:
   build:
     name: package + publish
     runs-on: ubuntu-latest
-    # This lane's own work only: it no longer waits for another workflow to
-    # publish the image the acceptance step judges against (that ordering is a
-    # `needs` edge in the release pipeline now), so the 75 minutes sized for
-    # someone else's cold compile are gone.
+    # This lane's own work only: the image it judges against is ordered by a
+    # `needs` edge in the release pipeline.
     timeout-minutes: 30
     permissions:
       contents: read
@@ -133,8 +131,8 @@ jobs:
       #
       # `app` is what Chart.yaml COMMITS: the default image tag for a chart
       # packaged outside a release, which may legitimately lag the newest
-      # release now that a cut no longer hand-edits it (scripts/checks/
-      # chart-appversion.sh is what still holds it to a released version).
+      # release (scripts/checks/chart-appversion.sh holds it to a released
+      # version).
       #
       # `effective` is what this package will CARRY. On a release it is the tag
       # being released, injected below — `helm package --app-version` for the
@@ -171,10 +169,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "chart version $version; committed appVersion $app; packaging appVersion $effective — $why"
 
-      # The committed release facts still have to be internally coherent, and
-      # `plan` runs this same script at the tagged commit before anything is
-      # built. It no longer asserts equality with the workspace version: that
-      # assertion is what forced the hand edit this lane now performs.
+      # The committed release facts have to be internally coherent, and `plan`
+      # runs this same script at the tagged commit before anything is built.
       - name: The committed chart release facts are coherent
         run: bash scripts/checks/chart-appversion.sh
 
@@ -263,26 +259,13 @@ jobs:
           echo "why=$why" >> "$GITHUB_OUTPUT"
           echo "judging the chart against ${image} — ${why}"
 
-      # The check that catches the failure nobody could see from a rendered
-      # manifest: `helm install` with no `image.tag` pins `appVersion`, and the
-      # chart's `config` defaults track development between releases, so the
-      # image can REJECT a key the chart ships and every pod crash-loops with
-      # `unknown configuration key …`. Measured against ghcr.io/…/ferroehr:3.17.3:
-      # the rendered defaults carry `server.limits` and `db.statement_timeout_ms`,
-      # and that image's own `config check` refuses the file. A chart that cannot
-      # deploy the image it selects is not published.
-      # The last gate before a chart is published: the image it selects must
-      # actually boot on what the chart renders. `deploy/helm/ci/boot-check.sh`
-      # is the single implementation (the `chart-boot` CI lane runs the same
-      # script against the tree-built image). This step used to carry a second,
-      # hand-rolled copy of that replay, and the two drifted: the copy wrote a
-      # placeholder into every file-borne secret, so a value-shaped boot rule —
-      # the RFC 8725 32-byte HMAC floor, an Argon2id PHC password hash — was
-      # judged against `x` rather than the configured secret, it skipped
-      # `valueFrom.secretKeyRef` environment entirely, and it rendered only
-      # `default-values.yaml` while the chart publishes three overlays. The
-      # script mounts each secret at its REAL rendered value, resolves
-      # secretKeyRef, and enumerates every committed overlay.
+      # The image the chart selects must boot on what the chart renders: with no
+      # `image.tag`, `helm install` pins `appVersion`, and the chart's `config`
+      # defaults track development between releases, so an image can reject a key
+      # the chart ships. `deploy/helm/ci/boot-check.sh` is the single
+      # implementation (the `chart-boot` CI lane runs it against the tree-built
+      # image): it mounts each secret at its real rendered value, resolves
+      # `secretKeyRef`, and enumerates every committed overlay.
       - name: The selected image must accept every committed values overlay
         env:
           FERROEHR_IMAGE: ${{ steps.judge.outputs.image }}
@@ -299,12 +282,8 @@ jobs:
             exit 1
           fi
 
-      # THE prerelease rule, one definition (#2775/#2776): any `-` suffix. This
-      # lane used to spell it as `*-rc*|*-alpha*|*-beta*`, which is NARROWER —
-      # a `v4.1.0-pre.1` tag published a pre-release GitHub Release and moved no
-      # `:latest`, while its chart was annotated as a normal release. The
-      # owner's 2026-07-31 sign-off is the any-dash rule, so the narrow list was
-      # the defect; an exotic suffix now annotates as a pre-release too.
+      # THE prerelease rule, one definition (#2775/#2776): any `-` suffix (owner
+      # sign-off 2026-07-31).
       - id: kind
         if: inputs.release-tag != ''
         uses: ./.github/actions/release-kind # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
@@ -312,9 +291,7 @@ jobs:
           tag: ${{ inputs.release-tag }}
 
       # Everything about this package that is a fact about A RELEASE rather than
-      # about the chart, injected here rather than committed — the argument
-      # `artifacthub.io/changes` has carried since #2107, now applied to the two
-      # sites that were still hand-edited at every cut (#2779):
+      # about the chart, injected here rather than committed (#2107, #2779):
       #
       #   * `artifacthub.io/changes` (+ containsSecurityUpdates) from CHANGELOG.md,
       #     so there is one changelog rather than two;
@@ -518,13 +495,9 @@ jobs:
       # workflow" — and the signature is what a Helm consumer's tooling and
       # Artifact Hub's listing actually look for.
       #
-      # NO format flag, deliberately. cosign 3 signs in the protobuf bundle
-      # format and there is no supported way to opt out here: measured against
-      # cosign v3.1.3, `--new-bundle-format=false` is refused outright —
-      # "must provide --new-bundle-format or --bundle where applicable with
-      # --signing-config or --use-signing-config" — because `--use-signing-config`
-      # defaults to true, and the flag is deprecated besides ("this will be the
-      # only supported format in future versions").
+      # NO format flag: cosign 3 signs in the protobuf bundle format, and
+      # `--new-bundle-format=false` is refused while `--use-signing-config`
+      # defaults to true.
       #
       # That the hub can still SEE it was checked rather than assumed, and the
       # chain is: GHCR serves no referrers API (`GET /v2/…/referrers/<digest>`

@@ -253,9 +253,6 @@ impl PBmmSingleProperty {
     /// An already-computed `type_ref` is returned as it stands; otherwise the
     /// simple type is generated from `type`, "the type name" a simple property
     /// carries (class doc §Attributes). `None` when the schema states neither.
-    ///
-    /// NOTE: the "and save" half of the meaning is memoisation of the value this
-    /// function derives, so a by-value computation carries the whole semantics.
     #[must_use]
     pub fn type_def(&self) -> Option<PBmmSimpleType> {
         match (self.type_ref.as_ref(), self.r#type.as_ref()) {

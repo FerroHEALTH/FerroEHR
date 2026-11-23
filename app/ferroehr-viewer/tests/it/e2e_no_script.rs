@@ -19,10 +19,6 @@
 //! still draws its content, a `GET` form still answers, and a form post
 //! still answers with its page (FerroUI `docs/consoles.md`, "Before you write
 //! UI code", step 5: every important action is a link or a form).
-//!
-//! The browser is refused FerroUI's loader and every module, so no script
-//! runs; the stylesheets still load. A refused module is the one browser
-//! error a page may log here. Read-only towards the CDR.
 
 use crate::common;
 

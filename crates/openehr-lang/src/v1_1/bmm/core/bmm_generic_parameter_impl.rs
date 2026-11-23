@@ -30,9 +30,6 @@ impl BmmGenericParameter {
     /// (`org.openehr.lang.bmm3.bmm_parameter_type.adoc` §Functions states the
     /// rule explicitly: "Result is either `_conforms_to_type_` or
     /// `_inheritance_precursor.flattened_conforms_to_type_`").
-    ///
-    /// `None` means unconstrained; see
-    /// [`Self::effective_conforms_to_type_name`] for the `Any` projection.
     #[must_use]
     pub fn flattened_conforms_to_type(&self) -> Option<&str> {
         match &self.conforms_to_type {

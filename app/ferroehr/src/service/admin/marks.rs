@@ -362,10 +362,6 @@ impl FerroEhrService {
     }
 
     /// Existence-check the EHR a mark names, and the object when one is named.
-    ///
-    /// All-or-nothing like every other admin route: an unknown id is refused
-    /// before anything is written, so a typo cannot leave a register row
-    /// pointing at nothing.
     pub(super) async fn check_mark_target(
         &self,
         ehr_id: EhrId,

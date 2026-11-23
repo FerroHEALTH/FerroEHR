@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The command-line interface: argument dispatch, input loading, and the
-//! stage-orchestrating `cmd_*` handlers that wire LOAD → ANALYZE → PLAN →
-//! RENDER together and write each emit target's files.
+//! The command-line interface: argument dispatch and the `cmd_*` handlers that
+//! run each emit target and write its files.
 
 use crate::analyze::emittable_specs;
 use crate::analyze::reemit::{augment_with_reemit, cross_schema_reemit};
@@ -23,9 +22,7 @@ use std::path::{Path, PathBuf};
 
 mod walk;
 
-/// The `openehr-its` crate root (holds the vendored XSDs/OAS and receives the
-/// generated XML/REST code). `../../crates/openehr-its` from this tool's
-/// `tools/openehr-codegen` manifest dir.
+/// The `openehr-its` crate root.
 const ITS_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../crates/openehr-its");
 /// The crate name behind [`ITS_ROOT`], for the SPDX header its emitted files
 /// carry.
@@ -38,16 +35,13 @@ const XSD_V1_DIR: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../crates/openehr-its/schemas/xml/its-xml-1.0.2-nsv1/ALL"
 );
-/// The AOM2 archetype-schema dir of the v1 bundle — the input to `emit-aom2`.
-/// The bundle's own `examples/` documents live beside it and are the corpus the
-/// generated codec is gated against.
+/// The AOM2 archetype-schema dir of the v1 bundle, the input to `emit-aom2`.
 const XSD_AOM2_DIR: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../crates/openehr-its/schemas/xml/its-xml-1.0.2-nsv1/AOM2"
 );
-/// v2 (namespace `.../v2`) XSD root (per-component release folders). Supplies the
-/// RM-instance types the v1 `ALL/` bundle lacks (EHR + demographic) or carries
-/// stale (extract) to the emit-xml input.
+/// The v2 XSD root; supplies the RM types the v1 `ALL/` bundle lacks or
+/// carries stale.
 const XSD_V2_DIR: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../crates/openehr-its/schemas/xml/its-xml-2.0.0-nsv2"
@@ -66,11 +60,6 @@ const JSON_GEN_DIR: &str = "openehr-its/src/json_codec/generated";
 pub(crate) const EXIT_USAGE: u8 = 2;
 
 /// One file an emit target produces, before it reaches the filesystem.
-///
-/// Separating the rendered text from the write lets a target's whole
-/// orchestration run in memory (`testsupport`) and on disk (the `cmd_*`
-/// handlers) through ONE code path, so the tested text and the emitted text
-/// cannot drift.
 #[derive(Debug)]
 pub(crate) struct EmittedFile {
     /// Where the file lands, relative to the root it is written under: the
@@ -83,9 +72,8 @@ pub(crate) struct EmittedFile {
     pub(crate) body: String,
 }
 
-/// What an XSD-driven emit target produces: the rendered files, plus the
-/// XSD-declared elements that matched no field in the model behind them and are
-/// therefore reported rather than emitted.
+/// What an XSD-driven emit target produces: the files, plus the XSD elements
+/// that matched no model field.
 #[derive(Debug)]
 pub(crate) struct XsdEmission {
     /// The rendered files.
@@ -94,9 +82,7 @@ pub(crate) struct XsdEmission {
     pub(crate) unmatched: Vec<(String, String)>,
 }
 
-/// Write an emit target's rendered files under `root` (the workspace `crates/`
-/// tree, or the workspace for a draft module), creating each file's parent
-/// directories, and return the written paths for the caller's `rustfmt` pass.
+/// Writes an emit target's files under `root` and returns the written paths.
 ///
 /// # Errors
 /// Returns the underlying filesystem error.
@@ -114,12 +100,8 @@ pub(crate) fn write_emitted(root: &Path, files: &[EmittedFile]) -> std::io::Resu
 }
 
 pub(crate) fn cmd_check() -> Result<(), Box<dyn std::error::Error>> {
-    // Every generation of every composition entry: load + parse each vendored
-    // file, resolve its paired dependency generations, and prove the model
-    // constructible — the full input-validation pass, not a summary of three
-    // files. A candidate file for a NEW generation is checked by adding its
-    // table row first (the table is the single authority; there is no
-    // side-channel file list).
+    // Loads every generation of every composition entry, resolves its
+    // dependencies and proves the model constructible.
     for comp in composition::COMPOSITIONS {
         let c = compose(comp.key)?;
         for g in &c.generations {
@@ -148,20 +130,12 @@ pub(crate) fn cmd_check() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Report what the vendored BMM states about every class attribute of the
-/// loaded components, beside the Rust field shape the emitter currently emits
-/// for it — a read-only query over the same LOAD → ANALYZE → PLAN → RENDER
-/// decisions `emit` drives (see [`model_query`] for the BMM column definitions
-/// and their `LANG` citations).
+/// Reports what the vendored BMM states about every class attribute beside
+/// the Rust field shape the emitter writes ([`model_query`]).
 ///
 /// Usage: `model-query [--class NAME] [--attribute NAME] [--component KEY]
-/// [--flattened] [--format table|tsv|json]`; no filter reports the whole loaded
-/// model.
-///
-/// `--flattened` switches from one row per class × DECLARED attribute to one
-/// row per class × **carried** attribute (inherited ones included), adding the
-/// declaring class in the `declared_on` column — the inheritance dimension a
-/// declared-only view cannot express.
+/// [--flattened] [--format table|tsv|json]`. `--flattened` reports carried
+/// attributes, inherited ones included.
 pub(crate) fn cmd_model_query(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let (query, format) = model_query::parse_args(args)?;
     print!("{}", model_query::render(&query, format)?);
@@ -182,23 +156,14 @@ pub(crate) fn cmd_emit_rest() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Render the ITS-REST contract for every API group, plus the shared `common`
-/// module and the module declaration file, without touching the filesystem.
-///
-/// The text half of [`cmd_emit_rest`], shared with the emitter-invariant tests
-/// (`testsupport::emit_rest_to_memory`), so the CLI and the tests drive one
-/// orchestration.
+/// Renders the ITS-REST contract for every API group, the `common` module and
+/// the module declaration file, in memory.
 ///
 /// # Errors
 /// Returns an error if the RM/BASE compositions or a vendored OAS bundle cannot
 /// be loaded.
 pub(crate) fn render_rest_files() -> Result<Vec<EmittedFile>, Box<dyn std::error::Error>> {
-    // Every API group whose OAS declares operations. `overview` is excluded
-    // because it is the release's index document: it declares no `paths`.
-    // `system` DOES declare one — `system-codegen.openapi.yaml` `paths` `/`
-    // `options` (operationId `options`, the STABLE Options-and-Conformance
-    // operation) — so it is emitted like every other group. The completeness
-    // rule admits no "nothing consumes it yet" exclusion.
+    // `overview` is the release's index document and declares no `paths`.
     const GROUPS: &[&str] = &[
         "admin",
         "definition",
@@ -207,11 +172,8 @@ pub(crate) fn render_rest_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
         "query",
         "system",
     ];
-    // The REST contract is emitted against the CURRENT RM/BASE generations
-    // (the wire the server serves); OAS $ref names are PascalCase
-    // (`EhrStatus`) — the same as the emitted Rust type names — so map each
-    // current generation's emittable specs to full generation-module type
-    // paths.
+    // Against the current RM/BASE generations; OAS `$ref` names equal the Rust
+    // type names.
     let base = compose("base")?;
     let rm = compose("rm")?;
     let names = emit_rest::RmNames {
@@ -227,9 +189,7 @@ pub(crate) fn render_rest_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
 
     let oas_dir = Path::new(ITS_ROOT).join("vendor/rest-oas");
 
-    // Load every bundle up front: the cross-group hoist analysis needs the
-    // whole set (schemas identical in every declaring group hoist into the
-    // shared `common` module — `emit_rest::hoist_set`).
+    // The hoist analysis needs every bundle.
     let mut bundles: Vec<(&str, oas::Oas)> = Vec::new();
     for group in GROUPS {
         let oas = oas::Oas::parse_file(&oas_dir.join(format!("{group}-codegen.openapi.yaml")))?;
@@ -238,9 +198,7 @@ pub(crate) fn render_rest_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
     let hoisted = emit_rest::hoist_set(&bundles, &names);
 
     let mut files = Vec::new();
-    // `common` always emits from the merged per-name view (first declarer
-    // wins; the copies are identical by the hoist analysis) — ONE emission
-    // path, so no representative-vs-merged equivalence needs testing.
+    // `common` emits from the merged per-name view; the copies are identical.
     {
         let merged = oas::Oas::merged_schemas(&bundles, &hoisted);
         files.push(EmittedFile {
@@ -276,9 +234,8 @@ pub(crate) fn render_rest_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
     Ok(files)
 }
 
-/// Emit canonical-XML `ToXml`/`FromXml` impls for the RM/BASE spec types into
-/// `openehr-its/src/xml/generated/`. Generates both wire lineages: v1
-/// (`.../v1`, parity target) and v2 (`.../v2`, latest).
+/// Emits canonical-XML `ToXml`/`FromXml` impls for the RM/BASE spec types into
+/// `openehr-its/src/xml/generated/`, for both the v1 and v2 lineages.
 pub(crate) fn cmd_emit_xml() -> Result<(), Box<dyn std::error::Error>> {
     let emission = render_xml_files()?;
     let written = write_emitted(&crates_root(), &emission.files)?;
@@ -292,23 +249,15 @@ pub(crate) fn cmd_emit_xml() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Render the canonical-XML `ToXml`/`FromXml` impls and their module
-/// declaration file without touching the filesystem, reporting the XSD-only
-/// elements that matched no BMM field.
-///
-/// The text half of [`cmd_emit_xml`], shared with the emitter-invariant tests
-/// (`testsupport::emit_xml_to_memory`), so the CLI and the tests drive one
-/// orchestration.
+/// Renders the canonical-XML impls and their module declaration file in
+/// memory, with the XSD-only elements that matched no BMM field.
 ///
 /// # Errors
 /// Returns an error if the RM/BASE compositions or the vendored XSD bundles
 /// cannot be loaded, or if the XML emission itself fails.
 pub(crate) fn render_xml_files() -> Result<XsdEmission, Box<dyn std::error::Error>> {
-    // The XML codec covers EVERY RM/BASE generation, so a profile that serves
-    // the released RM 1.1.0 shape serves it in canonical XML too, and the
-    // crate's re-emitted closure twins (the BASE Interval/Iso8601 family
-    // re-emitted into openehr-rm): an impl exists for every type a field of
-    // the augmented schema names.
+    // Every RM/BASE generation, including the closure twins re-emitted into
+    // `openehr-rm`.
     let (base, rm) = (compose("base")?, compose("rm")?);
     let mut generations = Vec::new();
     for (krate, composed) in [("openehr_base", &base), ("openehr_rm", &rm)] {
@@ -319,12 +268,9 @@ pub(crate) fn render_xml_files() -> Result<XsdEmission, Box<dyn std::error::Erro
         }
     }
 
-    // The two ITS-XML lineages differ only by the root `xmlns`, so ONE `ToXml`
-    // impl set serves both. The v1 `ALL/` bundle is not a complete RM closure
-    // (no `Ehr.xsd`, no demographic schema, a stale `Extract.xsd`), so the input
-    // is the v1 served core — first-wins for shared types — followed by the v2
-    // RM-1.1.0 EHR/demographic/extract schemas that supply the LOCATABLE
-    // subtypes it lacks.
+    // The lineages differ only by the root `xmlns`. The v1 `ALL/` bundle lacks
+    // `Ehr.xsd` and the demographic schema, so the v2 schemas follow it,
+    // first wins.
     let v1 = xsd::XsdModel::parse_files(&xsd::xml_emit_files(
         Path::new(XSD_V1_DIR),
         Path::new(XSD_V2_DIR),
@@ -363,15 +309,9 @@ pub(crate) fn render_xml_files() -> Result<XsdEmission, Box<dyn std::error::Erro
     })
 }
 
-/// Emit the canonical-JSON `serde::Serialize`/`serde::Deserialize` impls for
-/// every generated spec type (BASE / RM / LANG / AM 1.4 + 2.4 / TERM).
-///
-/// The impls land in each spec crate's own `src/json_serde.rs` — both traits and
-/// the spec types are foreign to `openehr-its`, so an impl there would violate
-/// the orphan rule — and the `_type`-keyed structural dispatch stays in
-/// `openehr-its/src/json_codec/generated/`, where it can name every crate.
-/// Covers the same crate composition `emit` consumes, including AM 2.4's
-/// cross-schema re-emission closure.
+/// Emits the canonical-JSON serde impls for every generated spec type into
+/// each crate's `src/json_serde.rs` (the orphan rule), and the `_type`
+/// dispatch into `openehr-its/src/json_codec/generated/`.
 pub(crate) fn cmd_emit_json() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_json_files()?;
     let mut written = write_emitted(&crates_root(), &files)?;
@@ -390,24 +330,13 @@ pub(crate) fn cmd_emit_json() -> Result<(), Box<dyn std::error::Error>> {
 /// crate's directory.
 const JSON_SERDE_FILE: &str = "src/json_serde.rs";
 
-/// Render the canonical-JSON `serde` impls and the `_type` dispatch without
-/// touching the filesystem.
-///
-/// The text half of [`cmd_emit_json`], shared with the emitter-invariant tests
-/// (`testsupport::emit_json_to_memory`), so the CLI and the tests drive one
-/// orchestration. The module declaration [`cmd_emit_json`] appends to each spec
-/// crate's `lib.rs` is a read-modify-write of a file this target does not
-/// render, so it stays on the CLI path.
+/// Renders the canonical-JSON serde impls and the `_type` dispatch in memory.
 ///
 /// # Errors
 /// Returns an error if a composition's BMM files cannot be loaded, or if the
 /// structural-dispatch priority list names an unknown composition key.
 pub(crate) fn render_json_files() -> Result<Vec<EmittedFile>, Box<dyn std::error::Error>> {
-    // One JsonSchema per (crate, generation), each named from its generation
-    // root — every generation is codec-complete, colliding twins included
-    // (see `JsonSchema::root` for the adjudication).
-    // Every generation's emission schema is the augmented one (`emit` renders
-    // the re-emission closure, so the codec must cover it too).
+    // One JsonSchema per (crate, generation), over the augmented schema.
     struct PreparedUnit {
         root: String,
         aug: BmmSchema,
@@ -451,10 +380,7 @@ pub(crate) fn render_json_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
         })
         .collect();
 
-    // One emitted file per SPEC CRATE: the impls must live where the types are
-    // defined (orphan rule), and being in-crate is also what lets them read the
-    // `pub(crate)` fields of a validated class and construct through its
-    // hand-written door (`plan::construction`).
+    // One file per spec crate: the orphan rule, and access to `pub(crate)` fields.
     let mut files = Vec::new();
     for (c, schemas) in composed.iter().zip(&schemas_by_crate) {
         let krate = c.comp.crate_name.replace('-', "_");
@@ -465,12 +391,9 @@ pub(crate) fn render_json_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
         });
     }
 
-    // The structural dispatch is keyed by the bare `_type`, so a name several
-    // components declare resolves by SCHEMA PRIORITY: RM, then BASE, then the
-    // archetype/meta components. The caller is the RM wire-boundary validator
-    // and same-named twins differ materially, so decoding an RM node with
-    // another component's shape would be wrong. No openEHR spec governs a
-    // cross-component `_type` namespace — our own design.
+    // A `_type` several components declare resolves RM, then BASE, then the
+    // archetype components. No openEHR spec governs a cross-component `_type`
+    // namespace: our own design.
     let mut structural_schemas: Vec<emit_json::JsonSchema<'_>> = Vec::new();
     for key in ["rm", "base", "lang", "am", "term"] {
         let i = keys
@@ -480,9 +403,7 @@ pub(crate) fn render_json_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
         let schemas = schemas_by_crate
             .get(i)
             .ok_or("structural priority names an unknown composition key")?;
-        // Within a crate the CURRENT generation resolves first: the dispatch's
-        // caller is the wire validator for the SERVED wire, so an older
-        // generation's twin shape must never shadow the current one.
+        // The current generation resolves first.
         let comp = composed
             .get(i)
             .ok_or("structural priority names an unknown composition key")?;
@@ -522,13 +443,8 @@ pub(crate) fn render_json_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
     Ok(files)
 }
 
-/// Declare the emitted `json_serde` module in a spec crate's generated
+/// Declares the emitted `json_serde` module in a spec crate's generated
 /// `lib.rs`.
-///
-/// `emit` regenerates `lib.rs` (and deletes every `@generated` file, this one
-/// included), so the declaration is (re)appended by the target that owns the
-/// file. Both intermediate states are self-consistent: after `emit` neither the
-/// module nor its declaration exists, after `emit-json` both do.
 fn declare_json_serde_module(
     lib: &Path,
     written: &mut Vec<PathBuf>,
@@ -548,16 +464,9 @@ fn declare_json_serde_module(
     Ok(())
 }
 
-/// Render one XSD-driven constraint-model module (`types.rs` + `impls.rs` +
-/// `mod.rs`) destined for `crates/openehr-its/src/<dir>`.
-///
-/// Shared by every `emit_opt` target so the three modules (`opt14`, `aom2`,
-/// `aom2_model`) stay structurally identical: only the XSD closure, the emission
-/// target (module path + banners) and the module surface differ. The generate/
-/// resolve partition is the same in all three — the closures share
-/// `Resource.xsd`+`BaseTypes.xsd` with the RM-instance set, and those shared types
-/// resolve to the already-generated `openehr-base`/`openehr-rm` XML impls while the
-/// archetype constraint model is generated fresh.
+/// Renders one XSD-driven constraint-model module (`types.rs`, `impls.rs`,
+/// `mod.rs`) for `crates/openehr-its/src/<dir>`; shared types resolve to the
+/// generated `openehr-base`/`openehr-rm` impls.
 ///
 /// # Errors
 /// Returns an error if the XSD closure cannot be parsed.
@@ -589,19 +498,12 @@ fn render_xsd_model(
     })
 }
 
-/// Emit the OPT 1.4 model (`opt14`): typed Rust types + canonical-XML
-/// `ToXml`/`FromXml` for `OPERATIONAL_TEMPLATE`, generated from the AM/OPT
-/// constraint XSD closure (`Template.xsd` + includes). RM instance types
-/// resolve to the already-generated `openehr-base`/`openehr-rm` impls.
+/// Emits the OPT 1.4 model (`opt14`) from the AM/OPT XSD closure.
 pub(crate) fn cmd_emit_opt() -> Result<(), Box<dyn std::error::Error>> {
     write_xsd_emission("emit-opt", &render_opt_files()?)
 }
 
-/// Render the OPT 1.4 model without touching the filesystem.
-///
-/// The text half of [`cmd_emit_opt`], shared with the emit-target tests
-/// (`testsupport::emit_opt_to_memory`), so the CLI and the tests drive one
-/// orchestration.
+/// Renders the OPT 1.4 model in memory.
 ///
 /// # Errors
 /// Returns an error if the RM/BASE compositions or the AM/OPT XSD closure
@@ -616,29 +518,16 @@ pub(crate) fn render_opt_files() -> Result<XsdEmission, Box<dyn std::error::Erro
     )
 }
 
-/// Emit BOTH AOM2 archetype XML serializations the vendored bundle publishes,
-/// each from its own closure into its own module:
+/// Emits both AOM2 archetype XML serializations: `aom2`, the persistent form
+/// (`P_Archetype.xsd`), and `aom2_model`, the model form (`Archetype.xsd`).
 ///
-/// - `aom2` — the **persistent** form (`P_Archetype.xsd` → `P_AUTHORED_ARCHETYPE`),
-///   the shape the bundle's 8 example documents carry;
-/// - `aom2_model` — the AOM **model** form (`Archetype.xsd` → `AUTHORED_ARCHETYPE`).
-///
-/// They are two closures rather than one merged model because both schemas
-/// declare the same top-level element `archetype` with different root types and
-/// define same-named supporting types; see [`xsd::AOM2_FILES`] /
-/// [`xsd::AOM2_MODEL_FILES`] for the full adjudication, including why the model
-/// form's entry points are typed to `AUTHORED_ARCHETYPE` and not to the
-/// `abstract` `ARCHETYPE` the schema's global element names.
+/// Two closures, since both schemas declare a top-level `archetype` element
+/// with different types ([`xsd::AOM2_FILES`], [`xsd::AOM2_MODEL_FILES`]).
 pub(crate) fn cmd_emit_aom2() -> Result<(), Box<dyn std::error::Error>> {
     write_xsd_emission("emit-aom2", &render_aom2_files()?)
 }
 
-/// Render both AOM2 archetype serializations without touching the filesystem.
-///
-/// The text half of [`cmd_emit_aom2`], shared with the emit-target tests
-/// (`testsupport::emit_aom2_to_memory`), so the CLI and the tests drive one
-/// orchestration. Both closures' files (and both skipped-element reports) come
-/// back as one emission — the subcommand writes them in one pass.
+/// Renders both AOM2 archetype serializations in memory, as one emission.
 ///
 /// # Errors
 /// Returns an error if the RM/BASE compositions or either AOM2 XSD closure
@@ -665,7 +554,7 @@ pub(crate) fn render_aom2_files() -> Result<XsdEmission, Box<dyn std::error::Err
     Ok(persistent)
 }
 
-/// Write an XSD-driven target's rendered files and report what it skipped.
+/// Writes an XSD-driven target's files and reports what it skipped.
 ///
 /// # Errors
 /// Returns the underlying filesystem error, or a `rustfmt` failure.
@@ -685,21 +574,14 @@ fn write_xsd_emission(
     Ok(())
 }
 
-/// Emit the static RM attribute/type model (`openehr-rm/src/model/`) — the AQL
-/// planner's spec-pinned oracle. Generated from the same
-/// BASE + RM BMM `emit` consumes. Writes the `model/` subtree in place (does not
-/// touch the generated spec files) and declares `pub mod model;` in `lib.rs` if
-/// absent, so it is correct run standalone; `emit` produces the identical output.
+/// Emits the static RM attribute/type model (`openehr-rm/src/model/`), the AQL
+/// planner's oracle, and declares `pub mod model;` if absent.
 pub(crate) fn cmd_emit_rm_model() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_rm_model_files()?;
     let mut written = write_emitted(&crates_root(), &files)?;
     let src = crates_root().join(RM_CRATE).join("src");
     for g in &compose("rm")?.generations {
-        // `emit` is the usual authority for the generation `mod.rs`, where it
-        // declares the module in the RENDERED body (`inject_rm_model`). This
-        // target does not render that file, so the standalone run declares the
-        // module by read-modify-write — the same text, so both runs leave the
-        // tree byte-identical.
+        // The same declaration `inject_rm_model` writes under `emit`.
         let gen_mod = src.join(g.spec.module).join("mod.rs");
         if !gen_mod.exists() {
             continue;
@@ -717,16 +599,7 @@ pub(crate) fn cmd_emit_rm_model() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Render the static RM attribute/type model for every RM generation, without
-/// touching the filesystem.
-///
-/// The text half of [`cmd_emit_rm_model`], shared with `emit`
-/// ([`render_emit_files`]) and the emit-target tests
-/// (`testsupport::emit_rm_model_to_memory`), so all three drive one
-/// orchestration. The `pub mod model;` declaration [`cmd_emit_rm_model`] adds to
-/// each generation's `mod.rs` is a read-modify-write of a file this target does
-/// not render, so it stays on the CLI path — over the same [`RM_MODEL_DECL`]
-/// text [`inject_rm_model`] appends to `emit`'s rendered body.
+/// Renders the static RM model for every RM generation in memory.
 ///
 /// # Errors
 /// Returns an error if the RM composition's BMM files cannot be loaded.
@@ -764,12 +637,8 @@ fn rm_crate_files(files: Vec<GenFile>) -> Vec<EmittedFile> {
         .collect()
 }
 
-/// Emit the RM class-invariant cores (`openehr-rm/src/validate/generated.rs`) —
-/// the single source both the typed `Validate` impls and the fast path call.
-/// Writes the one generated file in place; the module declaration
-/// (`pub(crate) mod generated;`) is a permanent hand edit in the hand-written
-/// `validate.rs`, so this target never touches a hand-written file. `emit`
-/// produces the identical output (via `inject_validate`).
+/// Emits the RM class-invariant cores (`openehr-rm/src/validate/generated.rs`);
+/// the hand-written `validate.rs` declares the module.
 pub(crate) fn cmd_emit_validate() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_validate_files()?;
     let written = write_emitted(&crates_root(), &files)?;
@@ -782,13 +651,7 @@ pub(crate) fn cmd_emit_validate() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Render the RM class-invariant cores for every RM generation, without
-/// touching the filesystem.
-///
-/// The text half of [`cmd_emit_validate`], shared with `emit`
-/// ([`render_emit_files`]) and the emit-target tests
-/// (`testsupport::emit_validate_to_memory`), so all three drive one
-/// orchestration.
+/// Renders the RM class-invariant cores for every RM generation in memory.
 ///
 /// # Errors
 /// Returns an error if the RM composition's BMM files cannot be loaded.
@@ -810,9 +673,7 @@ pub(crate) fn render_validate_files() -> Result<Vec<EmittedFile>, Box<dyn std::e
     Ok(out)
 }
 
-/// Prefix every generated file path with the generation module directory
-/// (`model/data.rs` → `v1_2/model/data.rs`) — the RM model/validate subtrees
-/// are generation-scoped like the type files they describe.
+/// Prefixes every generated file path with the generation module directory.
 fn prefix_gen_files(files: Vec<GenFile>, module: &str) -> Vec<GenFile> {
     files
         .into_iter()
@@ -823,26 +684,17 @@ fn prefix_gen_files(files: Vec<GenFile>, module: &str) -> Vec<GenFile> {
         .collect()
 }
 
-/// Append the generated invariant-core file to `openehr-rm`'s file set. The
-/// module is declared by the permanent `pub(crate) mod generated;` hand edit in
-/// the hand-written `validate.rs` (inside the generation module), so nothing
-/// else is touched here.
+/// Appends the generated invariant-core file to `openehr-rm`'s file set.
 fn inject_validate(files: &mut Vec<GenFile>, mut validate_files: Vec<GenFile>) {
     files.append(&mut validate_files);
 }
 
-/// The declaration an RM generation's `mod.rs` carries for the emitted static
-/// RM model.
-///
-/// One text, two writers — [`inject_rm_model`] appends it to `emit`'s rendered
-/// body, [`cmd_emit_rm_model`] to the file on disk — so the standalone target
-/// and `emit` cannot disagree about the declaration.
+/// The declaration an RM generation's `mod.rs` carries for the static RM
+/// model.
 const RM_MODEL_DECL: &str = "pub mod model;";
 
-/// Append the generated RM-model files to `openehr-rm`'s file set and declare
-/// the module in its generation `mod.rs` (the authority for the generation's
-/// layout). `model_files` are already generation-prefixed
-/// ([`prefix_gen_files`]).
+/// Appends the generation-prefixed RM-model files to `openehr-rm`'s file set
+/// and declares the module in its generation `mod.rs`.
 fn inject_rm_model(files: &mut Vec<GenFile>, mut model_files: Vec<GenFile>, module: &str) {
     let gen_mod = format!("{module}/mod.rs");
     for f in files.iter_mut() {
@@ -895,15 +747,8 @@ pub(crate) fn cmd_check_xsd() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// A generation's own schema with its cross-schema re-emission closure
-/// grafted in (`cross_schema_reemit` → `augment_with_reemit`): every upstream
-/// class whose Rust form WIDENS in this generation (a closed-subtype-set enum
-/// the generation's own classes extend) is re-emitted crate-locally at its
-/// source package path, so downstream references resolve against the widened
-/// local twin — the completeness hard rule (owner 2026-07-19), applied
-/// uniformly to EVERY generation (rm re-emits BASE's `Interval`/`Iso8601_type`
-/// family; AM 1.4 re-emits `AUTHORED_RESOURCE` + `RESOURCE_DESCRIPTION`). A
-/// generation with an empty closure comes back unchanged, so applying this
-/// unconditionally is safe by construction.
+/// grafted in: each upstream class whose Rust form widens here is re-emitted
+/// locally at its source package path.
 fn augmented_schema(g: &ComposedGeneration, u: &ComposedUnit) -> BmmSchema {
     let reemit = cross_schema_reemit(&u.model, &u.schema);
     let dep_refs: Vec<&BmmSchema> = g.dep_schemas.iter().collect();
@@ -939,9 +784,7 @@ fn current_spec_paths() -> Result<SpecPaths, Box<dyn std::error::Error>> {
     })
 }
 
-/// Spec class name → the full generation-module path of its defining module
-/// (`openehr_rm::v1_2::…`), over one generation's emittable specs — the map
-/// shape the XSD/OAS emitters resolve shared types against.
+/// Spec class name → the full generation-module path of its defining module.
 fn generation_spec_paths(g: &ComposedGeneration, root: &str) -> BTreeMap<String, String> {
     let mut out = BTreeMap::new();
     for u in &g.units {
@@ -953,9 +796,7 @@ fn generation_spec_paths(g: &ComposedGeneration, root: &str) -> BTreeMap<String,
     out
 }
 
-/// `PascalCase` Rust type name → full generation-module TYPE path
-/// (`openehr_rm::v1_2::…::EhrStatus`), over one generation's emittable specs —
-/// the map shape `emit-rest` resolves OAS `$ref` names against.
+/// Rust type name → full generation-module type path, for `emit-rest`.
 fn generation_type_paths(g: &ComposedGeneration, root: &str) -> BTreeMap<String, String> {
     let mut out = BTreeMap::new();
     for u in &g.units {
@@ -968,9 +809,7 @@ fn generation_type_paths(g: &ComposedGeneration, root: &str) -> BTreeMap<String,
     out
 }
 
-/// The hand-written `*_impl.rs` siblings a generated crate already carries — an
-/// emitter INPUT (`crate::load::impls`), read before rendering so a type file's
-/// banner names a sibling only when one exists.
+/// The hand-written `*_impl.rs` siblings a generated crate carries.
 fn sibling_impls(crate_name: &str) -> SiblingImpls {
     SiblingImpls::scan(&crates_root().join(crate_name).join("src"))
 }
@@ -999,15 +838,8 @@ pub(crate) fn cmd_emit(_outdir: Option<PathBuf>) -> Result<(), Box<dyn std::erro
     Ok(())
 }
 
-/// Render every generated spec crate's `src/` tree without touching the
-/// filesystem.
-///
-/// The text half of [`cmd_emit`], shared with the emit-target tests
-/// (`testsupport::emit_to_memory`), so the CLI and the tests drive one
-/// orchestration — the whole file set included, generation-twin template stamps
-/// and all. The purge, the hand-written-module weave and the `rustfmt` pass are
-/// filesystem operations over files this target does not render, so they stay on
-/// the CLI path.
+/// Renders every generated spec crate's `src/` tree in memory, template stamps
+/// included.
 ///
 /// # Errors
 /// Returns an error if a composition's BMM files cannot be loaded, or if a
@@ -1026,16 +858,8 @@ pub(crate) fn render_emit_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
     Ok(out)
 }
 
-/// Render one composition entry's whole file set: the spec types, the RM
-/// crate's model + invariant cores, and the generation-twin template stamps.
-///
-/// ONE uniform path for every crate, driven by the declarative
-/// `plan::composition::COMPOSITIONS` table (see it for the `includes`
-/// citations). `cross_schema_reemit` grafts the COMPLETE set of upstream classes
-/// whose Rust form widens in a generation — a full, non-minimal re-emission
-/// (owner ruling 2026-07-19). `openehr-rm` additionally carries the
-/// static RM model and the invariant cores, emitted here so a plain `emit` keeps
-/// the crate self-consistent.
+/// Renders one composition entry's whole file set: the spec types, the RM
+/// model and invariant cores, and the template stamps.
 ///
 /// # Errors
 /// Returns an error if the composition's BMM files cannot be loaded, or if a
@@ -1073,9 +897,7 @@ fn render_crate_files(
         .collect();
     let mut files = emit_composed(comp, &gens, &impls);
     if comp.key == "rm" {
-        // EVERY RM generation carries its own attribute model + invariant cores
-        // (the same uniform rule as the per-generation codecs): a selectable
-        // generation is a complete peer, not a types-only shell.
+        // Every RM generation carries its own attribute model and invariant cores.
         for (g, augs) in c.generations.iter().zip(&augmented) {
             let module = g.spec.module;
             let unit = g.unit()?;
@@ -1103,9 +925,7 @@ fn render_crate_files(
             );
         }
     }
-    // Generation-twin templates: one hand-written source per family, stamped
-    // per generation (render::emit_templates). A path collision with a
-    // generated file is a defect, never a silent overwrite.
+    // A template stamp colliding with a generated file is an error.
     for stamped in emit_templates::stamp_templates(&templates_root(), comp)? {
         if files.iter().any(|f| f.path == stamped.path) {
             return Err(format!(
@@ -1119,14 +939,8 @@ fn render_crate_files(
     Ok(files)
 }
 
-/// Returns the exact bytes an emitted file carries before `rustfmt`: the
-/// value-carrier guard where it applies, then the SPDX header its destination
-/// crate's licensing requires, then the rendered body.
-///
-/// Every emitted file goes through here — [`write_generated`] on the CLI path,
-/// `testsupport` on the in-memory one — so a new emission site cannot ship a
-/// file whose licensing does not travel with it, and the tested bytes are the
-/// written bytes.
+/// Returns the bytes an emitted file carries before `rustfmt`: the
+/// value-carrier guard, the SPDX header its crate requires, and the body.
 pub(crate) fn generated_bytes(crate_name: &str, body: &str) -> String {
     // A template-stamped body is hand-written text that already carries its own
     // scoped suppressions — the generated-file guard would duplicate them.
@@ -1138,8 +952,7 @@ pub(crate) fn generated_bytes(crate_name: &str, body: &str) -> String {
     spdx::stamp(crate_name, &guarded)
 }
 
-/// Write one emitted file, with the guard + SPDX header [`generated_bytes`]
-/// applies.
+/// Writes one emitted file through [`generated_bytes`].
 ///
 /// # Errors
 /// Returns the underlying filesystem error.
@@ -1147,18 +960,11 @@ pub(crate) fn write_generated(path: &Path, crate_name: &str, body: &str) -> std:
     std::fs::write(path, generated_bytes(crate_name, body))
 }
 
-/// Write a generated crate's `src/` in place. Wipes the crate's previously
-/// generated files first, preserving the hand-written siblings beside them.
-///
-/// Each file's `path` is relative to the workspace `crates/` directory, exactly
-/// as [`render_emit_files`] addresses it.
+/// Writes a generated crate's `src/` in place, first deleting its previously
+/// generated files.
 fn write_crate(crate_name: &str, files: &[&EmittedFile]) -> Result<(), Box<dyn std::error::Error>> {
     let src = crates_root().join(crate_name).join("src");
-    // Preserve hand-written code: delete only previously-`@generated`
-    // files, never the hand-written `*_impl.rs` / spec-behaviour modules beside
-    // them. (A stale generated file no longer emitted this run is `@generated` →
-    // removed; a hand-written sibling is kept.)
-    // The `draft` subtree is `emit-drafts` output, never this target's.
+    // Delete only `@generated` files; the `draft` subtree belongs to `emit-drafts`.
     let drafts = src.join(crate::plan::drafts::MODULE);
     if src.exists() {
         remove_generated_files_except(&src, &drafts)?;
@@ -1173,33 +979,22 @@ fn write_crate(crate_name: &str, files: &[&EmittedFile]) -> Result<(), Box<dyn s
         write_generated(&full, crate_name, &f.body)?;
         written.push(full);
     }
-    // Weave hand-written modules into the generated tree: any hand-written `.rs`
-    // beside a generated `mod.rs` (or at the crate root beside `lib.rs`) is
-    // declared `pub mod <name>;` so the hand-written `*_impl.rs` files compile without the
-    // generator owning them. Deterministic (sorted scan) → drift-check-stable.
+    // Declares each hand-written `.rs` beside a generated `mod.rs` or `lib.rs`.
     declare_hand_written_modules(&src, "lib.rs", Some(&drafts), &mut written)?;
     rustfmt(&written)?;
     println!("emitted {} files into {}", files.len(), src.display());
     Ok(())
 }
 
-/// What `emit` alone leaves behind, printed at the end of every run.
-///
-/// `emit` purges each crate's `json_serde.rs` and its declaration, and only
-/// `emit-json` writes them back, so the workspace does not compile in between.
-/// The failure then surfaces far from its cause as unsatisfied
-/// `serde::Serialize` bounds in whichever crate builds first, and the recovery
-/// costs a full rebuild. Saying so at the end of the run is cheaper than
-/// discovering it.
+/// What `emit` alone leaves behind, printed at the end of every run: it purges
+/// `json_serde.rs`, which only `emit-json` writes back.
 const INCOMPLETE_AFTER_EMIT: &str = "\
 note: `emit` alone leaves the workspace UNBUILDABLE — it removes each crate's
       json_serde.rs, which only `emit-json` writes back. Run the full set:
         emit-json emit-xml emit-rest emit-opt emit-aom2 emit-rm-model emit-validate
       or use the /regen-codegen skill, which runs them all plus the drift check.";
 
-/// Run `rustfmt` over the generated files so the emitted output is exactly what
-/// `cargo fmt --all --check` expects (line wrapping, empty `{}`, import order,
-/// …), instead of the emitter having to reproduce every rustfmt rule by hand.
+/// Runs `rustfmt` over the generated files.
 pub(crate) fn rustfmt(files: &[PathBuf]) -> Result<(), Box<dyn std::error::Error>> {
     if files.is_empty() {
         return Ok(());
@@ -1218,9 +1013,8 @@ pub(crate) fn rustfmt(files: &[PathBuf]) -> Result<(), Box<dyn std::error::Error
 mod emit_warning_tests {
     use super::INCOMPLETE_AFTER_EMIT;
 
-    /// The note must name `emit-json` — the one target that restores what
-    /// `emit` removed. A note that only says "run the others" sends the reader
-    /// back to the documentation the foot-gun already survived.
+    /// The note names `emit-json`, the one target that restores what `emit`
+    /// removed.
     #[test]
     fn the_note_names_the_target_that_restores_the_tree() {
         assert!(INCOMPLETE_AFTER_EMIT.contains("emit-json"));

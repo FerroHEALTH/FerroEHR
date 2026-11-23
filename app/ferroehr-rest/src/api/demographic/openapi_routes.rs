@@ -6,10 +6,6 @@
 //! `versioned_party` reads, `contribution` create/get, and the `ITEM_TAG`
 //! sub-resources (`demographic_tags_get` + the per-party `*_tags_*`).
 //!
-//! Each `#[utoipa::path]` handler single-sources its route and its `OpenAPI`
-//! path, then calls its operation's handler through [`guarded_dispatch`](crate::api::guarded_dispatch), so the
-//! `EHR_ACCESS` gate, the PEP and the ATNA audit tagging apply uniformly.
-//!
 //! The Demographic API is `DEVELOPMENT`-state within ITS-REST Release-1.1.0
 //! (`docs/demographic/Description.md` §Status). That is a reporting qualifier
 //! only: the BCP-14 requirement force of the released text is not
@@ -61,8 +57,6 @@ use crate::state::AppState;
 use ferroehr::service::demographic::types::PartyKind;
 
 /// The standard Demographic API group as a native `utoipa-axum` router.
-///
-/// Paths are group-relative, nested under the configured `base_path`.
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(agent_create))
@@ -102,15 +96,6 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
 
 /// Declares one PARTY kind's CRUD handlers (`{kind}_{create,get,update,delete}`)
 /// and its `ITEM_TAG` handlers (`{kind}_tags_{get,update,delete}`).
-///
-/// The released operations of the five kinds differ only in the RM type, so
-/// the declarations are written once and each kind supplies its names: the
-/// path segment, the RM type, the schema file stem, the article before the RM
-/// type, the two example `PARTY` names, and the handler identifiers. Two sorts
-/// of text are passed whole: the lead paragraph of each tag operation, which
-/// quotes that kind's own operation file and keeps its published line breaks,
-/// and the response-header descriptions and example summaries, where
-/// `#[utoipa::path]` takes only a string literal and no `concat!`.
 macro_rules! party_kind_handlers {
     (
         kind: $lower:literal, $upper:literal, $schema:literal, $article:literal, party: $party:ident,
@@ -2140,14 +2125,9 @@ guarded_handler! {
     /// (`GET /demographic/versioned_party/{versioned_object_uid}`).
     ///
     /// "Retrieves a `VERSIONED_PARTY` identified by `versioned_object_uid`."
-    /// (ITS-REST `specifications/operations/versioned_party_get.yaml`). The four
-    /// `versioned_party_*` reads are canonical-JSON-only on this server: the
-    /// released operations reference `parameters/header/Accept_canonical.yaml`
-    /// (JSON + XML), and `Resources.md` §"Data representation" requires only that
-    /// "Services MUST support at least one of the openEHR **XML** or **JSON**
-    /// canonical formats" — JSON satisfies it, and an exclusively-XML `Accept` is
-    /// the `406` the same chapter mandates. That is an honest boundary of this
-    /// build, not a spec allowance to serve less.
+    /// (ITS-REST `specifications/operations/versioned_party_get.yaml`). The
+    /// four `versioned_party_*` reads serve canonical JSON only; an XML-only
+    /// `Accept` is `406`.
     #[utoipa::path(
         get, path = "/demographic/versioned_party/{versioned_object_uid}", tag = "VERSIONED_PARTY",
         params(
@@ -2542,11 +2522,7 @@ guarded_handler! {
     /// SHOULD additionally accept `_type: \"AUDIT_DETAILS\"` or an omitted `_type`
     /// for this attribute."
     ///
-    /// The commit envelope is canonical **JSON** only on this build: the released
-    /// operation references `parameters/header/ContentType_canonical.yaml`
-    /// (JSON + XML), and `Resources.md` §"Data representation" requires only that
-    /// "Services MUST support at least one of the openEHR **XML** or **JSON**
-    /// canonical formats" — an honest boundary, not a spec allowance.
+    /// The commit envelope is canonical JSON only.
     // NOTE: OpenAPI 3.1.0 §4.8.10.1 makes an operationId unique per document and the EHR
     // API serves the released `contribution_create`, so this id follows the released file
     // `operations/demographic_contribution_create.yaml`; the access record keeps the released id.
@@ -3005,13 +2981,9 @@ guarded_handler! {
     /// or `VERSIONED_PARTY` within the Demographic space." (ITS-REST
     /// `specifications/operations/demographic_tags_get.yaml`).
     ///
-    /// The ONLY tag route on the whole surface with NO scoping parameter: its
-    /// EHR-side twin is bounded by one EHR, this one is a whole-space scan. The
-    /// released operation declares no scoping parameter, no `offset`/`fetch`, no
-    /// ordering and no limit, and no released sentence bounds who may read the
-    /// space — it is served whole under the deployment's authorization layer, a
-    /// position adjudicated (distinct from the
-    /// filter semantics, which are their own entry).
+    /// The only tag route with no scoping parameter: the released operation
+    /// declares none, nor paging, ordering or a limit, so the whole space is
+    /// served under the deployment's authorization.
     #[utoipa::path(
         get, path = "/demographic/tags", tag = "ITEM_TAG",
         params(

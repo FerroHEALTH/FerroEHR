@@ -1,17 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! An OPT over an ADL 1.4 specialised archetype carries its structure once
-//! (#4979).
-//!
-//! The CKM `report-result.v1` COMPOSITION specialises `report.v1` in ADL 1.4,
-//! and an ADL 1.4 archetype is authored in flat form: "Up until ADL 1.4,
-//! archetypes were expressed in 'flat' form ADL"
-//! (`docs/specs/openehr/AM/docs/ADL2/master07.02-adl_conventions.adoc`
-//! §File-naming Convention; AOM2 `master03-archetype_package.adoc`
-//! §Structural Variants: "ADL 1.4 legacy archetypes (always in flat form)").
-//! The child restates the parent's whole `context`, so overlaying it on the
-//! parent as an ADL 2 differential appended a second `EVENT_CONTEXT`.
+//! An OPT over an ADL 1.4 specialised archetype carries its structure once,
+//! since a 1.4 archetype is authored flat (`ADL2/master07.02` §File-naming
+//! Convention; `AOM2/master03` §Structural Variants).
 
 #![allow(
     clippy::expect_used,

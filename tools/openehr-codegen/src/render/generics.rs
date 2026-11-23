@@ -18,13 +18,9 @@ pub(crate) fn generic_header(generics: &[String], bound: &str) -> (String, Strin
     }
 }
 
-/// The `impl<'de, …>` header + type-args suffix for a `Deserialize` impl.
-///
-/// Generic parameters are bound by `DeserializeOwned`, not `Deserialize<'de>`:
-/// every emitted spec type owns its data (no borrowed fields anywhere — see
-/// <https://serde.rs/lifetimes.html>), and the untagged structural fallback has
-/// to deserialize a parameter from a LOCAL buffered value whose lifetime is
-/// shorter than `'de`, which only the `for<'a>` bound permits.
+/// The `impl<'de, …>` header and type arguments of a `Deserialize` impl,
+/// parameters bound by `DeserializeOwned` so the untagged fallback can read
+/// from a local buffer (<https://serde.rs/lifetimes.html>).
 pub(crate) fn deserialize_header(generics: &[String]) -> (String, String) {
     if generics.is_empty() {
         ("<'de>".to_owned(), String::new())

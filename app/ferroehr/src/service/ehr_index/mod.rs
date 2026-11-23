@@ -24,9 +24,6 @@ pub mod types;
 use crate::error::ServiceError;
 
 /// The precise EHR-index failure kind.
-///
-/// [`From<IndexError> for ServiceError`] maps each variant; a generic
-/// [`ServiceError`] (a DB/codec fault) rides through unchanged.
 #[derive(Debug, thiserror::Error)]
 pub enum IndexError {
     /// A generic service/DB fault (mapped by the shared table).

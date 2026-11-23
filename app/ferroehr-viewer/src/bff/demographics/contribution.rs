@@ -3,15 +3,6 @@
 
 //! The demographic CONTRIBUTION the `/parties/contributions/{uid}` page reads.
 //!
-//! A read-only screen over `GET /demographic/contribution/{contribution_uid}`
-//! ("Retrieves a CONTRIBUTION identified by `contribution_uid`",
-//! `operations/demographic_contribution_get.yaml`), reached from the
-//! contribution a version's envelope names on any demographic History tab.
-//!
-//! Committing a contribution is deliberately NOT here: every party and
-//! relationship write on these screens already commits its own CONTRIBUTION,
-//! and a raw change-set authoring form is a different feature.
-//!
 //! The RM attributes shown are the CONTRIBUTION class's own
 //! (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.contribution.adoc`):
 //! `uid`, the `audit` `AUDIT_DETAILS`, and `versions` — "the set of references

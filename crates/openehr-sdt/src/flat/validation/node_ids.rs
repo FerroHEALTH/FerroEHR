@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The archetype roots an instance records by the complete identifier an OPT2
-//! inlined (BASE `artefact_identification` `master07-referencing.adoc`
-//! §Reconstitutability), read under the interface id their Web Template node
-//! carries ([`WebTemplate::archetype_refs`]). The archetype-conformance walk
-//! and the FLAT and STRUCTURED read ([`crate::flat::flatten`]) both match an
-//! instance to the template through [`Mapped`].
+//! inlined (BASE `master07-referencing.adoc` §Reconstitutability), read under
+//! their interface id ([`WebTemplate::archetype_refs`]) through [`Mapped`].
 
 #![expect(
     clippy::disallowed_types,
@@ -22,10 +19,6 @@ use crate::flat::instance::Instance;
 use crate::flat::webtemplate::model::WebTemplate;
 
 /// Walk `composition` against `wt` with the configured validator.
-///
-/// An archetype root the instance records by the full reference the template
-/// inlined is read under the interface id its template node carries
-/// ([`WebTemplate::archetype_refs`]), so the walk matches it to its node.
 pub(super) fn run<'i, I: Instance<'i>>(
     mut v: Validator,
     composition: I,

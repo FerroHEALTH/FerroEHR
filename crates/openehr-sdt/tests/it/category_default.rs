@@ -1,13 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `COMPOSITION.category` a FLAT build supplies when the input names
-//! none comes from the template's constraint on `/category`: its assumed
-//! value or single admitted code, `433` (event) when the template leaves it
-//! unconstrained, and a refusal naming the path when it admits several codes
-//! and fixes no default.
-//! `category` is mandatory (RM `UML/classes/org.openehr.rm.composition.composition.adoc`
-//! §Attributes, `1..1`), so the supplied value must satisfy the template.
+//! The `COMPOSITION.category` a FLAT build supplies when the input names none:
+//! the template's assumed value or single code, `433` when unconstrained, and a
+//! refusal when several codes admit no default (RM
+//! `org.openehr.rm.composition.composition.adoc` §Attributes).
 #![expect(
     clippy::expect_used,
     clippy::panic,

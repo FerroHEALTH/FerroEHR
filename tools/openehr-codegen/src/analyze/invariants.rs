@@ -1,48 +1,29 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Stage 2 — ANALYZE: the **assertion-dialect** analyzer for BMM class
-//! invariants.
+//! Stage 2, analyze: the assertion-dialect classifier for BMM class
+//! invariants, which records each one in openEHR's Eiffel/UML assertion form.
 //!
-//! `BMM_CLASS.invariants` records each invariant as an expression string in
-//! openEHR's Eiffel/UML assertion surface, not `base_expressions.g4`:
-//! `not links.is_empty`, `X /= Void implies not X.is_empty`, `A xor B`,
-//! `valid_iso8601_date (value)`, the terminology/repository predicates,
-//! quantifiers (`for_all …`) and cross-object navigation.
-//!
-//! This module tokenizes an expression and classifies it into one of the three
-//! [`Bucket`]s by a paren-aware, worst-bucket-wins recursion over the boolean
-//! structure; it produces no text. The render stage emits a check for a
-//! [`Bucket::Emitted`] verdict and reports the other two.
-//!
-//! An unrecognised leaf form classifies as [`Bucket::Complex`], never as
-//! `Emitted`: the classifier under-claims, so a false "emittable" can never
-//! slip a new rejection onto the wire.
+//! An expression is tokenized and classified into a [`Bucket`], the worst
+//! bucket of its boolean operands winning; an unrecognised leaf is
+//! [`Bucket::Complex`], so the classifier never over-claims.
 
 /// Which R5 emission bucket a BMM invariant expression falls into.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Bucket {
-    /// Mechanically emittable: the whole expression reduces to boolean
-    /// combinations of leaf forms the emitter can render over the class's own
-    /// fields plus the kept validator runtime (`Void`/empty checks, numeric
-    /// comparisons, `xor`/`and`/`or`/`implies`, `is_equal ("LITERAL")`, the
-    /// ISO-8601 validators, and the runtime-backed leaf predicates).
+    /// Emittable: boolean combinations of leaf forms over the class's own fields
+    /// and the validator runtime.
     Emitted,
-    /// Structurally within the dialect, but a leaf predicate needs a runtime
-    /// hook the emitter cannot yet call (the openEHR terminology service, a
-    /// code-set, the demographic repository, or the versioned-object aggregate
-    /// model). Not emitted; listed. The `&str` names the missing hook.
+    /// Within the dialect, but a leaf needs a runtime hook the emitter cannot call;
+    /// the `&str` names it.
     RuntimeHookMissing(&'static str),
-    /// Beyond the assertion-dialect scope: a quantifier (`for_all`/`exists`), a
-    /// lambda predicate, cross-object navigation, or arithmetic over related
-    /// objects. Stays hand-written; listed. The `&str` names the reason.
+    /// Beyond the dialect: a quantifier, lambda, navigation or arithmetic over
+    /// related objects; the `&str` names the reason.
     Complex(&'static str),
 }
 
 impl Bucket {
-    /// Combine two sub-expression verdicts: the most blocking wins
-    /// (`Complex` > `RuntimeHookMissing` > `Emitted`). A boolean expression is
-    /// only emittable if every operand is.
+    /// Combines two verdicts, the most blocking winning.
     fn worse(self, other: Bucket) -> Bucket {
         fn rank(b: &Bucket) -> u8 {
             match b {
@@ -64,9 +45,8 @@ pub(crate) fn classify(expr: &str) -> Bucket {
     classify_tokens(&tokenize(expr))
 }
 
-/// Split an expression into word/paren tokens. A token is a lone `(` or `)`, or
-/// a maximal run of non-whitespace, non-paren characters. Char-based (the
-/// dialect carries multi-byte curly quotes `“ ”`), so no byte slicing.
+/// Splits an expression into word and paren tokens, by `char` (the dialect
+/// carries curly quotes).
 fn tokenize(expr: &str) -> Vec<String> {
     let mut toks = Vec::new();
     let mut cur = String::new();
@@ -90,9 +70,8 @@ fn tokenize(expr: &str) -> Vec<String> {
     toks
 }
 
-/// The top-level boolean connectives, lowest-binding first. Splitting at any one
-/// and recursing both sides is sound because [`Bucket::worse`] is associative
-/// and commutative — the exact split point does not change the verdict.
+/// The top-level boolean connectives, lowest-binding first; [`Bucket::worse`]
+/// is associative and commutative, so any split point gives the same verdict.
 const CONNECTIVES: [&str; 4] = ["implies", "xor", "or", "and"];
 
 fn classify_tokens(toks: &[String]) -> Bucket {
@@ -173,10 +152,7 @@ fn top_level_index(toks: &[String], kw: &str) -> Option<usize> {
     None
 }
 
-/// Named leaf predicate functions the kept validator runtime already realises
-/// (`crates/openehr-rm/src/validate.rs` + the ISO-8601 validators + the
-/// `push_*` invariant cores): a leaf that is exactly one of these applied to a
-/// field is mechanically emittable as a call into that runtime.
+/// Leaf predicates the validator runtime realises.
 const RUNTIME_PREDICATES: [&str; 8] = [
     "valid_iso8601_date",
     "valid_iso8601_time",
@@ -188,18 +164,14 @@ const RUNTIME_PREDICATES: [&str; 8] = [
     "is_valid_match_code",
 ];
 
-/// The classifier's recognised runtime-backed leaf predicates — the ones a
-/// leaf `pred (field)` classifies as [`Bucket::Emitted`] because a named runtime
-/// function realizes them. The `plan::overrides::DIALECT_PREDICATES` table maps
-/// each to that function; the emitter-invariant suite pins the two in lockstep.
+/// The recognised runtime-backed leaf predicates;
+/// `plan::overrides::DIALECT_PREDICATES` maps each to its function.
 pub(crate) fn runtime_predicates() -> &'static [&'static str] {
     &RUNTIME_PREDICATES
 }
 
-/// Classify a leaf (no top-level connective). Order matters: the blocking
-/// signals (quantifier/navigation/arithmetic, then terminology/repository/
-/// aggregate hooks) are checked before the emittable forms, and an
-/// unrecognised leaf is conservatively `Complex`.
+/// Classifies a leaf: blocking signals first, then the emittable forms, else
+/// `Complex`.
 fn classify_leaf(toks: &[String]) -> Bucket {
     let joined = toks.join(" ");
     let has = |needle: &str| toks.iter().any(|t| t.contains(needle));
@@ -229,13 +201,8 @@ fn classify_leaf(toks: &[String]) -> Bucket {
     Bucket::Complex("unrecognised leaf form")
 }
 
-/// True structural depth: quantifiers, lambdas, boolean method calls and
-/// arithmetic over related objects.
-///
-/// A boolean-returning *method* call is a BMM function, not a stored property,
-/// so the emitter has no field to project it from and it is not mechanically
-/// evaluable. `is_empty`/`empty` are the recognised emptiness methods handled
-/// as emittable atoms; `is_justified` (`ITEM_TAG`) is a real function call.
+/// Quantifiers, lambdas, boolean method calls and arithmetic over related
+/// objects; `is_empty`/`empty` are emittable atoms.
 fn structural_depth(toks: &[String], has: &impl Fn(&str) -> bool) -> Option<Bucket> {
     if has("for_all") || has("forall") || has("exists") || toks.iter().any(|t| t == "for") {
         return Some(Bucket::Complex("quantifier over a collection"));
@@ -260,12 +227,8 @@ fn structural_depth(toks: &[String], has: &impl Fn(&str) -> bool) -> Option<Buck
     None
 }
 
-/// The runtime hooks the emitter has no access to: terminology, code sets, the
-/// demographic repository, and the versioned-object aggregate model.
-///
-/// Checked before the generic membership/navigation signals, because the
-/// terminology/code-set predicates read as `.has_code…` (a `.has` substring)
-/// and a code lookup is a missing *hook*, not irreducible structural depth.
+/// The runtime hooks the emitter has no access to, checked before navigation
+/// since `.has_code…` reads as membership.
 fn missing_runtime_hook(has: &impl Fn(&str) -> bool) -> Option<Bucket> {
     if has("terminology") || has("Terminology") || has("has_code_for_group_id") {
         return Some(Bucket::RuntimeHookMissing("openEHR terminology service"));
@@ -308,9 +271,7 @@ fn cross_object_navigation(toks: &[String], has: &impl Fn(&str) -> bool) -> Opti
     None
 }
 
-/// Whether a leaf is one of the simple emittable atoms: an emptiness/`Void`
-/// check, a numeric comparison, a boolean field, or a field/field equality —
-/// each over the class's own (dot-free) attribute path.
+/// Whether a leaf is an emittable atom over the class's own attribute path.
 fn is_emittable_atom(toks: &[String]) -> bool {
     // Drop any leading `not`.
     let toks = match toks.split_first() {
@@ -351,9 +312,7 @@ fn trim_suffix(a: &str) -> &str {
         .unwrap_or(a)
 }
 
-/// A simple attribute reference: an identifier possibly with dotted sub-fields,
-/// but no method calls or navigation the emitter cannot resolve on `self`.
-/// (A trailing `.is_empty`/`.empty` is stripped by the caller.)
+/// A simple attribute reference, dotted sub-fields allowed, no method calls.
 fn is_field_path(s: &str) -> bool {
     !s.is_empty()
         && s.chars()
@@ -426,9 +385,7 @@ mod tests {
         ));
     }
 
-    /// A boolean *method* call (`key.is_justified`, `ITEM_TAG` `Inv_key_valid`)
-    /// is Complex — the emitter has no field to project it from — so the whole
-    /// `and` is Complex even though `not key.is_empty` alone would emit.
+    /// A boolean method call (`key.is_justified`) makes the whole `and` complex.
     #[test]
     fn boolean_method_call_is_complex() {
         assert!(matches!(

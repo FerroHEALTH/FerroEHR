@@ -5,11 +5,8 @@
 //! Canonical-JSON `serde::Serialize`/`serde::Deserialize` impls for this
 //! crate's generated spec types.
 //!
-//! Manual (never derived) long-form impls per
-//! <https://serde.rs/deserialize-struct.html>: the canonical wire's
-//! `_type` discriminator, its context-dependent presence, deep-descendant
-//! dispatch and closed key set are not expressible with serde attributes.
-//! The shared runtime is `openehr_base::serde_support`.
+//! Hand-shaped impls, since serde attributes cannot express the `_type`
+//! discriminator, its context-dependent presence or the closed key set.
 
 #![allow(
     clippy::all,

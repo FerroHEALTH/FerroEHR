@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The SMART `composition-` scope of a COMPOSITION delete (master08 §Resource
-//! Scopes), judged on the template of the version the delete addresses, now
-//! read by the delete's gate read (#6271): every answer below is the one the
-//! pre-check gave when it read that template on its own, the scope's `403`
-//! before the `400`, `404`, `409` and `412` of the delete itself.
+//! Scopes), judged on the template of the version the delete addresses, read by
+//! the delete's gate read (#6271): the scope's `403` comes before the `400`,
+//! `404`, `409` and `412` of the delete itself.
 
 use axum::Router;
 use axum::body::Body;

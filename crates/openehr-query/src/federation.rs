@@ -5,26 +5,10 @@
 //! The federation-only `FROM ENDPOINT` / `ORGANISATION` directive, separated
 //! from a query before the strict AQL 1.1.0 parse.
 //!
-//! A federation gateway accepts `FROM ENDPOINT p ["node_1", "node_2"] CONTAINS
-//! EHR e …`, or the coarser `FROM ORGANISATION ["org-a"] CONTAINS …`, to pin
-//! a query to named nodes. A node never receives it, and the strict
-//! [`crate::parser`] rightly refuses it, so [`parse_federated`] lifts the
-//! directive out at the token level and parses the remainder as ordinary AQL:
-//! a directive spelled inside a string literal is a string, never a directive.
-//! [`crate::printer::to_aql`] renders the remainder alone, which is the form a
-//! node may receive; [`to_federated_aql`] renders the directive back in front
-//! of it.
-//!
-//! The directive's own grammar, as accepted here:
-//!
 //! ```text
 //! fromClause : FROM directive CONTAINS containsExpr | FROM containsExpr
 //! directive  : (ENDPOINT | ORGANISATION) IDENTIFIER? '[' STRING (',' STRING)* ']'
 //! ```
-//!
-//! with `ENDPOINT` and `ORGANISATION` case-insensitive like every AQL keyword.
-//! The directive's variable (`p`) is kept; paths through it, such as a
-//! `p/id` column, stay in the remaining query for the gateway to resolve.
 //!
 //! # Examples
 //!
@@ -87,10 +71,6 @@ pub struct Federated {
 
 /// Lexes `src`, lifts a leading `FROM` directive out, and parses the rest as
 /// strict AQL.
-///
-/// A query without a directive parses exactly as [`crate::parser::parse_str`]
-/// parses it. Every span, in the directive and in the remaining query, is a
-/// byte range of `src` itself.
 ///
 /// # Errors
 /// [`ParseError::Lex`] when `src` does not tokenize, and [`ParseError::Syntax`]
@@ -196,8 +176,6 @@ fn fault(stream: &SpannedTokens, at: usize) -> ParseError {
 
 /// Renders a federated query: the directive, when there is one, in front of
 /// the remaining query's containment expression.
-///
-/// The output re-parses through [`parse_federated`] to an equal [`Federated`].
 #[must_use]
 pub fn to_federated_aql(federated: &Federated) -> String {
     let Some(directive) = &federated.directive else {

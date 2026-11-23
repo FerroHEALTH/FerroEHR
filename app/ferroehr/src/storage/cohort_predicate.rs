@@ -140,10 +140,6 @@ macro_rules! element_value {
 }
 
 /// The statement `kind` runs, in full.
-///
-/// Exposed so a test can pin the four texts: the property that matters is that
-/// they are constants, so no caller-supplied byte can ever reach the SQL, and a
-/// constant is only checkable if it can be read.
 #[must_use]
 pub fn predicate_sql(kind: PredicateKind) -> &'static str {
     match kind {

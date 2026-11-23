@@ -17,10 +17,9 @@
 //! `architecture_overview/master07-security.adoc` §Anonymity).
 //!
 //! So each domain carries its own `[database.<domain>]` DSN, defaulting to the
-//! shared `[database] url`. The default is the co-located deployment, unchanged: one
-//! database, three schemas, the reciprocal grants and the boot gate
-//! ([`crate::db::verify_domain_isolation`]). A regulated deployment moves a
-//! domain to its own database or cluster by editing one URL.
+//! shared `[database] url`: one database, three schemas, the reciprocal grants
+//! and the boot gate ([`crate::db::verify_domain_isolation`]). A regulated
+//! deployment moves a domain to its own database or cluster by editing one URL.
 //!
 //! No openEHR spec governs schemas, pools or database roles — our own
 //! design/extension.
@@ -386,10 +385,6 @@ impl DomainLayout {
 
     /// One line per group, naming where its domains are placed and never its
     /// DSN.
-    ///
-    /// What `ferroehr config check` prints: an operator reading it can see at a
-    /// glance whether the deployment they believe they configured is the one
-    /// the server resolved.
     #[must_use]
     pub fn describe(&self) -> String {
         let mut out = String::from("storage domain layout:");
@@ -479,9 +474,6 @@ impl DomainPools {
     /// Three lazily-opened pools over the DSN one existing pool already holds —
     /// the co-located deployment's three domains, for a caller that has a
     /// [`PgPool`] and no configuration.
-    ///
-    /// [`crate::db::domain_pool_from`] per domain: pool defaults rather than a
-    /// deployment's tuning, and no connection opened until one is asked for.
     #[must_use]
     pub fn from_shared(pool: &PgPool) -> Self {
         Self {

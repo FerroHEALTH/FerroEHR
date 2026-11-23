@@ -27,13 +27,9 @@ pub struct ItemTag {
 
 /// Read access to the `pub(crate)` fields of [`ItemTag`].
 ///
-/// The fields are not `pub`: the release states a **constraint over this
-/// class's own field values** (a lexical form, or a class invariant), so
-/// construction checks it and is the only door — docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.item_tag.adoc §Invariants: `Inv_key_valid: not key.is_empty and key.is_justified` and `Inv_value_valid: value /= Void implies not value.is_empty`. Both are stated over ITEM_TAG's own fields and decidable from them alone, so an instance violating either is not an instance of the class — the same standing the §Syntaxes grammar has for an identifier. The remaining checks an ITEM_TAG needs (does `target` exist, does `target_path` resolve within it) read state the instance does NOT carry and stay in the service layer.
-///
-/// The validating constructor lives in the hand-written `*_impl.rs` sibling
-/// (the generator never writes into it); every generated codec builds this
-/// type through that constructor.
+/// The fields are not `pub` because the release constrains their values,
+/// so the validating constructor in the `*_impl.rs` sibling is the only
+/// way in: docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.item_tag.adoc §Invariants: `Inv_key_valid: not key.is_empty and key.is_justified` and `Inv_value_valid: value /= Void implies not value.is_empty`. Both are stated over ITEM_TAG's own fields and decidable from them alone, so an instance violating either is not an instance of the class — the same standing the §Syntaxes grammar has for an identifier. The remaining checks an ITEM_TAG needs (does `target` exist, does `target_path` resolve within it) read state the instance does NOT carry and stay in the service layer.
 impl ItemTag {
     /// The `key` this instance was constructed with, checked at the door.
     #[must_use]

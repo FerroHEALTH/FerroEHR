@@ -14,8 +14,7 @@
 # Hetzner private network with no public port, so no runner can open a SQL
 # connection to it, and CI holds no database credential at all. The verb
 # reads the DSN from the app box's own .env, which bounds what it can wipe
-# to the database the sandbox actually runs on — the structural replacement
-# for the old runner-side psql and its Neon-endpoint fence.
+# to the database the sandbox actually runs on.
 #
 # The bring-up is the box's `deploy` verb, the same one the release's
 # `sandbox` job runs after its own wipe (#5406). The wipe empties the
@@ -24,15 +23,12 @@
 # .env names and must serve the release the box served before the wipe.
 #
 # The release pipeline calls this seed-only (#3467): its `sandbox` job wipes
-# BEFORE the deploy, so the deploy's recreate is the fresh boot. The v4.3.1
-# image refused the box's first-generation database at boot; with the wipe
-# chained behind the deploy, nothing could ever clear it.
+# BEFORE the deploy, so the deploy's recreate is the fresh boot.
 #
 # The seed runs the scripts and data of the release the sandbox serves (#4370):
 # the box runs the latest stable image, while a scheduled run checks out
 # `main`, whose routes, corpus and manifest pins move ahead of that release
-# (#4333 moved the terminology route the seed probes, and the 5.5.0 sandbox
-# answered the probe 404). The identities job reads `solution_version` from
+# (#4333). The identities job reads `solution_version` from
 # the ITS-REST system OPTIONS and both jobs check out `v<version>`, so the
 # seed always addresses the deployed version. The version is read first, before
 # any wipe, and the bring-up must serve it again. The env contract between this
@@ -44,9 +40,7 @@
 #
 # Secrets: HOSTED_SSH_KEY / HOSTED_KNOWN_HOSTS — the deploy key, in the
 # hosted environment. An empty secret is a hard failure, never a skip
-# (#2755). Environment secrets demonstrably reach these jobs on the
-# workflow_call path in this repository (the v4.0.13 release's reseed
-# succeeded through two call hops).
+# (#2755). Environment secrets reach these jobs on the workflow_call path.
 
 name: Sandbox reseed
 
@@ -148,9 +142,8 @@ jobs:
       # The wipe runs ON the app box (the deploy script's `wipe` verb,
       # deploy/hosted/cloud-init.yaml): the database is a dedicated box on the
       # private network with no public port, and CI holds no database
-      # credential — the DSN is the box's own .env, so the verb can only ever
-      # wipe the database the sandbox actually runs on. That structural bound
-      # replaces the old runner-side psql and its Neon-endpoint fence.
+      # credential: the DSN is the box's own .env, so the verb can only ever
+      # wipe the database the sandbox actually runs on.
       - name: Wipe the sandbox schemas
         uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:

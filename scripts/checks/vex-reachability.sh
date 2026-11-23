@@ -7,13 +7,8 @@
 # The two gates beside this one both pass on a false statement. The generator
 # and `scripts/checks/vex-advisories.sh` check that the accepted id set and the
 # published justifications agree; `scripts/checks/advisory-exceptions.sh` checks
-# that each accepted advisory still fires. Neither reads the ARGUMENT. The `rsa`
-# statement asserted the crate was reached only through `openidconnect`, in a
-# path where RSA is used to verify with a public key — while `cargo tree -i rsa`
-# had shown a second path through `pgp`, where an RSA operation would be a
-# private-key one, the exact operation the advisory is about. Every gate was
-# green, because a wrong path claim is only wrong against the dependency graph
-# and nothing compared the two.
+# that each accepted advisory still fires. Neither reads the ARGUMENT: a wrong
+# path claim is only wrong against the dependency graph.
 #
 # WHAT IS COMPARED, AND WHY AT THIS LEVEL. Per statement, two exact sets, in
 # both directions (a named crate the graph lacks fails; a crate in the graph the

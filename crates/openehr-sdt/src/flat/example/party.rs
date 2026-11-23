@@ -28,12 +28,7 @@ pub(super) fn emitted_under(base: &str, out: &Map<String, Value>) -> bool {
 }
 
 /// Materialises one `identities` member of a party when the template walk left
-/// none, as RM demographic §PARTY `Identities_valid` (`not identities.is_empty`)
-/// requires one whatever occurrences the template states
-/// (`UML/classes/org.openehr.rm.demographic.party.adoc`).
-///
-/// The first `PARTY_IDENTITY` the template constrains is walked as a forced
-/// node, so it drills to a leaf the way a mandatory node does.
+/// none (RM demographic §PARTY `Identities_valid`).
 ///
 /// # Errors
 ///

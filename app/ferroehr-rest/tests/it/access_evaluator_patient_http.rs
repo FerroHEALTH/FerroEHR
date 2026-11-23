@@ -4,18 +4,12 @@
 //! A patient confined to their own EHR by the access evaluator, end to end
 //! over the assembled router (#5586).
 //!
-//! A SMART App Launch patient-context credential (a `patient/` grant and no
-//! `user/` or `system/` one) makes its caller the `subject` caller kind, and
-//! the evaluator admits that caller to the one EHR its launch context names
-//! (`ehrId`, ITS-REST `master07` §Context Selection; `master08` §Resource
-//! Scopes: "Access is restricted to data within that patient's EHR"). Every
-//! other EHR refuses it `403`, whether the operation names it in its path, its
-//! body or its result, and a professional is held to no patient context. The
-//! cases are those of the token-claim patient scope this replaces, with their
-//! assertions; the evaluator's own suites (`app/ferroehr/tests/it/
-//! access_eval_aql.rs`) hold the same rule with no SMART layer in front. Data
-//! is seeded through an auth-off app over the same service. Confining a
-//! subject caller to their own EHR is our own design.
+//! A SMART App Launch patient-context credential makes its caller the `subject`
+//! caller kind, which the evaluator admits to the one EHR its launch context
+//! names (`ehrId`, ITS-REST `master07` §Context Selection; `master08` §Resource
+//! Scopes). Every other EHR refuses it `403`, whether the operation names it in
+//! its path, its body or its result. Confining a subject caller to their own
+//! EHR is our own design.
 use std::sync::Arc;
 use std::time::Duration;
 

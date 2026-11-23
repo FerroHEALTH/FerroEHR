@@ -13,16 +13,6 @@
 //!
 //! These routes are **excluded from ITS-REST wire conformance**: they gate the
 //! `ActivityReport` CAPABILITY verdict only.
-//!
-//! Gating: mounted under `/admin/`, so they inherit the group's two gates
-//! unchanged — the coarse RBAC `OperationClass::Admin` classifier (`401`
-//! unauthenticated / `403` non-admin, our own authorization design; the
-//! released admin operations carry `security: []`) and the
-//! `AppConfig::api.admin` config gate, which answers `405` with an empty
-//! `Allow` while the group is off (`crate::api::admin::dispatch`, whose ground
-//! is the overview rule "If a method is recognized but not allowed for the
-//! target resource, the response SHOULD be `405 Method Not Allowed` status
-//! code" — `docs/overview/Requests_and_responses.md` §"HTTP Methods").
 
 use axum::response::Response;
 use http::StatusCode;
@@ -356,10 +346,6 @@ fn platform_service(query: Option<&str>) -> Result<PlatformService, RestError> {
 /// bound pair. The wire form is `<lower>/<upper>` with either side empty for
 /// an open bound; the bound VALUES are validated by the service (a `400` on a
 /// malformed ISO 8601 date-time), so this only splits the pair.
-///
-/// A `/`-less value is rejected here rather than silently read as a lower
-/// bound: an interval that names one instant with no separator is not an
-/// interval, and guessing which bound was meant would be a silent wrong answer.
 fn time_interval(query: Option<&str>) -> Result<StatTimeRange, RestError> {
     let Some(raw) = params::query_param(query, "time_interval") else {
         return Ok(None);

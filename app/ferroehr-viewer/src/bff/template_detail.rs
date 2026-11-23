@@ -12,12 +12,6 @@
 //! extension; the `WebTemplate` shape it renders
 //! is `openehr_sdt::flat`'s (built from the CDR's OPT), per the ITS-REST
 //! Simplified Formats spec (`master04`).
-//!
-//! The WT catalog, the OPT source pane and the identity card are three views
-//! of ONE document, so the screen reads the operational template exactly once
-//! per page: one [`fetch_template_detail`], shared by every pane. The
-//! Example tab reads its own on that tab alone: it is a different CDR
-//! resource whose fetch runs the CDR's example generator.
 
 use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
@@ -46,10 +40,6 @@ pub struct TemplateMeta {
 
 /// Everything the template-detail screen shows about one operational template,
 /// distilled from a SINGLE fetch of its OPT source.
-///
-/// The three panes of the screen are three views of the same document — the raw
-/// source, its identity metadata, and its Web Template path catalog — so they
-/// travel together and the screen reads the CDR once.
 #[derive(Debug, Clone)]
 pub struct TemplateDetail {
     /// The raw OPT 1.4 canonical XML the CDR served, verbatim.
@@ -63,12 +53,6 @@ pub struct TemplateDetail {
 
 /// Distil the fetched OPT source into the screen's three panes: one parse, one
 /// Web Template build, both views derived from them.
-///
-/// The XML is parsed with [`openehr_its::opt14::from_xml`] — the OPT 1.4
-/// canonical-XML parse entry (root `<template>` = `OPERATIONAL_TEMPLATE`) —
-/// then [`openehr_sdt::flat::webtemplate::builder::build_web_template`]
-/// produces the Web Template, and
-/// [`crate::builder::catalog::from_web_template`] the slim serializable tree.
 ///
 /// # Errors
 /// [`ViewerError::Failed`] when the OPT fails to parse or the Web Template
@@ -104,11 +88,6 @@ pub fn template_detail_from_opt(source: String) -> Result<TemplateDetail, Viewer
 /// Fetch the operational template ONCE and distil everything the detail screen
 /// shows from that one document.
 ///
-/// GET `definition/template/adl1.4/{template_id}` with
-/// `Accept: application/xml`; the `template_id` path segment is percent-encoded
-/// server-side. The OPT is parsed exactly once, by
-/// [`template_detail_from_opt`].
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); [`ViewerError::Cdr`]
 /// (e.g. `404` for an unknown template) / [`ViewerError::CdrUnauthorized`] /
@@ -132,10 +111,6 @@ pub async fn fetch_template_detail(
 /// reader, which navigates paths and has no use for the OPT source or the
 /// identity card.
 ///
-/// It rides [`fetch_template_detail`]'s single fetch + parse pipeline and
-/// returns only the catalog, so the builder's wire payload stays the tree
-/// rather than the whole operational template.
-///
 /// # Errors
 /// As [`fetch_template_detail`].
 pub async fn fetch_template_catalog(
@@ -147,11 +122,6 @@ pub async fn fetch_template_catalog(
 
 /// The ITS-REST path of the ADL 1.4 example resource for `template_id`, at
 /// `detail` and `kind`.
-///
-/// The two example options ride the query string
-/// ([`crate::example_options::example_query`]); the id is percent-encoded with
-/// the `urlencoding` crate, because an operational-template id is CDR-supplied
-/// text.
 #[must_use]
 pub fn example_path(template_id: &str, detail: ExampleDetail, kind: ExampleType) -> String {
     format!(

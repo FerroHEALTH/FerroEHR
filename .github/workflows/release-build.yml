@@ -191,9 +191,8 @@ jobs:
           mv app/ferroehr-server/ferroehr_bin.cdx.json "$sbom"
           echo "SBOM=$sbom" >> "$GITHUB_ENV"
 
-      # `actions/attest` is the one attestation action now — the former
-      # attest-build-provenance/attest-sbom are thin wrappers whose own READMEs
-      # say new implementations should use it directly. No sbom/predicate
+      # `actions/attest` is the attestation action (the attest-build-provenance
+      # and attest-sbom READMEs point new implementations at it). No sbom/predicate
       # input = provenance mode; `sbom-path` = SBOM mode.
       - name: Attest build provenance
         id: provenance
@@ -218,13 +217,9 @@ jobs:
       #
       # The `.intoto.jsonl` is a RE-CONTAINER, not a second document: the
       # bundle's `dsseEnvelope` is already a DSSE-wrapped in-toto Statement v1
-      # whose `predicateType` is `https://slsa.dev/provenance/v1`, and
-      # `.intoto.jsonl` means exactly one such envelope per line. Verified on a
-      # real bundle before this was written. Emitting it was deliberately
-      # REFUSED while this lane was Build L2, because the format is what a SLSA
-      # generator publishes and it would have implied a build-integrity claim we
-      # had declined to make; at L3 the claim is one we do make, so the format
-      # is now honest rather than cosmetic.
+      # whose `predicateType` is `https://slsa.dev/provenance/v1`, one envelope per
+      # line. At SLSA Build L3 the build-integrity claim the format implies is one
+      # this lane makes.
       - name: Publish the attestations as release assets
         env:
           ASSET_NAME: ${{ env.ASSET }}

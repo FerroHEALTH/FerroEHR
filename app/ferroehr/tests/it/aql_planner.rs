@@ -1042,11 +1042,10 @@ fn full_scalar_function_set_plans() {
 
 // ── SQL lowering: the G-row fixes (QUERY master03) ────────────────────────────
 
-/// Anchor-probe `EXISTS` count. The population gate is no longer an `EXISTS`
-/// subquery (a direct `ehr.is_queryable` column filter over a join),
-/// so every remaining `EXISTS` is a containment anchor (OR / NOT CONTAINS),
-/// once the currency probes and the earlier-row probes of a range anchor's
-/// first row (#6243) are set aside.
+/// Anchor-probe `EXISTS` count. The population gate is a direct
+/// `ehr.is_queryable` column filter over a join, so every `EXISTS` is a
+/// containment anchor (OR / NOT CONTAINS), once the currency probes and the
+/// earlier-row probes of a range anchor's first row (#6243) are set aside.
 fn anchor_exists(sql: &str) -> usize {
     sql.matches("EXISTS(SELECT")
         .count()
@@ -1235,10 +1234,8 @@ fn whole_object_root_predicate_guards_the_locator() {
     );
 }
 
-/// OR-containment under an EHR lowers to a disjunction of correlated
-/// `EXISTS` subqueries (QUERY master03 §Containment — "Logical operators AND and
-/// OR"). Previously `sql.rs` returned `SqlError::Unsupported` for any `OR` in the
-/// FROM tree; it must now build.
+/// OR-containment under an EHR lowers to a disjunction of correlated `EXISTS`
+/// subqueries (QUERY master03 §Containment, "Logical operators AND and OR").
 #[test]
 fn or_contains_under_ehr_lowers_to_disjunctive_exists() {
     let sql = build_sql(
@@ -1289,9 +1286,8 @@ fn nested_and_or_contains_tree_builds() {
     assert!(sql.contains(" OR ") && sql.contains(" AND "));
 }
 
-/// NOT CONTAINS generalises to a negated `EXISTS` over an arbitrary
-/// operand tree — a compound (OR) operand now builds (previously
-/// `SqlError::Unsupported`). QUERY master03 §Containment, §NOT.
+/// NOT CONTAINS generalises to a negated `EXISTS` over an arbitrary operand
+/// tree, a compound (OR) operand included (QUERY master03 §Containment, §NOT).
 #[test]
 fn not_contains_compound_operand_builds() {
     let sql = build_sql(
@@ -1379,7 +1375,7 @@ fn dashboard_order_by_uses_context_start_column() {
         sql.contains(r#""context_start" DESC"#),
         "ORDER BY reads the promoted column"
     );
-    // The ordering no longer casts an extracted EVENT_CONTEXT value to timestamptz.
+    // The ordering casts no extracted EVENT_CONTEXT value to timestamptz.
     assert!(
         !sql.contains("timestamptz"),
         "no per-row ::timestamptz cast for the ordering"
@@ -2764,11 +2760,9 @@ fn differently_predicated_steps_are_not_shared() {
 
 /// An aggregate's items are filtered by the WHERE clause with the steps they
 /// share fixed to the item's own nodes (QUERY master03 §Aggregate functions:
-/// inputs are data items "filtered by FROM and WHERE"). This replaces the
-/// earlier test of the same name, whose row-level WHERE was a per-step
-/// existential: the row-level clause is now the one assignment `EXISTS`, and
-/// the per-item filter needs no binding of its own because every step it
-/// reads is the walk's.
+/// inputs are data items "filtered by FROM and WHERE"). The row-level clause is
+/// the one assignment `EXISTS`, and the per-item filter needs no binding of its
+/// own because every step it reads is the walk's.
 #[test]
 fn aggregate_items_are_filtered_by_a_shared_where() {
     let sys = "o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude";

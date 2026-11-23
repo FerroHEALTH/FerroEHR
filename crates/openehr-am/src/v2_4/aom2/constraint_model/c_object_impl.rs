@@ -163,10 +163,6 @@ impl CObject {
     /// `owning_object_rm_type` (the Eiffel `parent.parent.rm_type_name`) are
     /// supplied by the caller, and `rm_prop_mult` is the spec's own
     /// `object_multiplicity` lambda over the reference model.
-    ///
-    /// NOTE: the Eiffel passes `parent.parent.rm_attribute_path`, but
-    /// `rm_attribute_path` is a `C_ATTRIBUTE` function and `parent.parent` is
-    /// the owning object, so the owning attribute's path is passed here.
     #[must_use]
     pub fn effective_occurrences(
         &self,
@@ -227,10 +223,6 @@ impl CObject {
     /// `sibling_order` unset or identical, and `node_reuse_congruent (other)`.
     /// `owning_attribute` carries the Eiffel `parent`, whose
     /// `child_reuse_count` the reuse test reads; `None` means `is_root`.
-    ///
-    /// NOTE: the BMM declares the parameter as `ARCHETYPE_CONSTRAINT` (the
-    /// inherited signature) while `master04.5` states the body over `C_OBJECT`,
-    /// and the docs text is the oracle.
     #[must_use]
     pub fn c_congruent_to(&self, other: &CObject, owning_attribute: Option<&CAttribute>) -> bool {
         congruent(&self.facts(), &other.facts(), owning_attribute)
@@ -273,10 +265,6 @@ pub(crate) fn node_id_conforms(child: &NodeFacts<'_>, other: &NodeFacts<'_>) -> 
 }
 
 /// `occurrences_conforms_to` (`master04.5` §Conformance Semantics: C_OBJECT).
-///
-/// NOTE: the Eiffel reads `other.occurrences.upper` with no Void guard while
-/// `occurrences` is `0..1`, so an unset `other.occurrences` is read here as the
-/// True branch rather than as a dereference.
 pub(crate) fn occurrences_conform(child: &NodeFacts<'_>, other: &NodeFacts<'_>) -> bool {
     let (Some(own), Some(theirs)) = (child.occurrences, other.occurrences) else {
         return true;

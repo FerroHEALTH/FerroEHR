@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The version copy's weight, its drop and its bound (#5778).
+//! The version copy's weight and bound (#5778).
 
 use serde_json::Value;
 use uuid::Uuid;

@@ -6,24 +6,9 @@
     clippy::print_stderr,
     reason = "test assertions/diagnostics/fixtures"
 )]
-//! FLAT (simSDT) `RM ⇄ FLAT` converter tests.
-//!
-//! Oracle strategy (see the report / NOTICE files): Better `web-template-tests`
-//! ships **no** static flat `.json` fixtures — its compositions are Better RAW
-//! (`@class`) and its `.xml` are templates, not canonical compositions. So the
-//! corpus here pairs the **canonical-JSON compositions** vendored in
-//! `openehr-its` with the **operational templates** (from the EHRbase SDK +
-//! Better `web-template-tests` + the service corpus) whose `templateId` matches
-//! — real `(composition, OPT)` pairs.
-//!
-//! * **FLAT → RM → FLAT round-trip stable** — for each paired composition:
-//!   `to_flat` (flat0) → `from_flat` (rm1) → `to_flat` (flat1); assert
-//!   `flat0 == flat1` (modulo key order). Also counts how many `rm1`
-//!   deserialise as an `openehr-rm` `Composition` (the reverse output is valid
-//!   canonical RM).
-//! * **insta goldens** — deterministic flat snapshots for representative pairs.
-//! * **targeted key assertions** — Better flat key shape (`|magnitude`,
-//!   `|unit` singular, `|code`).
+//! FLAT `RM ⇄ FLAT` converter tests over the vendored canonical compositions
+//! paired with their operational templates: round-trip stability, insta
+//! goldens and targeted key assertions.
 #![expect(
     clippy::doc_markdown,
     reason = "prose with many proper nouns (EHRbase, simSDT, …)"
@@ -46,10 +31,8 @@ fn sorted(m: &serde_json::Map<String, Value>) -> BTreeMap<String, Value> {
     m.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
 }
 
-/// One pair's FLAT round-trip: `to_flat` → `from_flat` → `to_flat` again.
-///
-/// Returns the rebuilt RM value plus the instability diagnostic (`None` when the
-/// two FLAT renderings agree), or the conversion failure to record.
+/// One pair's FLAT round-trip: the rebuilt RM value and the instability
+/// diagnostic (`None` when stable), or the conversion failure.
 fn flat_round_trip(
     name: &str,
     tid: &str,
@@ -312,10 +295,8 @@ fn instruction_activity_from_flat_is_valid_rm() {
 /// `context.participations` on input, round-trip stable.
 #[test]
 fn ctx_participation_shortcuts_round_trip() {
-    // Output uses the lossless master05 §EVENT_CONTEXT path rows
-    // (`context/_participation:i|…`); the master06 ctx/ shortcuts remain
-    // accepted on input (they are lossy — no scheme key — so they are not
-    // the emission form).
+    // Output uses the lossless master05 §EVENT_CONTEXT path rows; the master06
+    // `ctx/` shortcuts stay accepted on input.
     let wts = crate::common::web_templates();
     let wt = wts
         .get("minimal_observation.en.v1")
@@ -449,12 +430,8 @@ fn multimedia_and_parsable_leaves_are_valid_rm() {
 /// `|code`/`|terminology`/`|value` form stays the emitted shape).
 #[test]
 fn terse_coded_text_string_is_rejected() {
-    // The terse coded-string form ("terminology::code|value|") is the
-    // DEVELOPMENT-state SM serial-data-formats encoding, not the STABLE
-    // ITS-REST wire: master05 §DV_CODED_TEXT defines only the
-    // |code/|value/|terminology suffixes (+ |other, master04 §Open
-    // Value-Sets). A bare string on a closed coded leaf is rejected, never
-    // silently coerced.
+    // master05 §DV_CODED_TEXT defines only the suffix forms, so a bare string on a
+    // closed coded leaf is refused.
     let wts = crate::common::web_templates();
     let wt = wts
         .get("Corona_Anamnese")
@@ -501,13 +478,10 @@ fn terse_coded_text_string_is_rejected() {
     );
 }
 
-// ── persistent-Composition context (finding 3) ──────────────────────────────────
+// ── persistent-Composition context ───────────────────────────────────────────────
 //
-// `COMPOSITION.context` is optional (0..1) and a `431|persistent|` Composition
-// idiomatically carries none (RM ehr `master05-composition_package.adoc`
-// §"Persistent Compositions may optionally have an Event context"), so
-// `from_flat` must not fabricate one — while still preserving a context the
-// caller supplied and still building the mandatory one for an event Composition.
+// RM ehr `master05-composition_package.adoc` §"Persistent Compositions may
+// optionally have an Event context".
 
 const CNF_CORPUS: &str =
     "../../docs/specs/openehr/CNF/tests/platform/robot/_resources/test_data_sets";
@@ -557,11 +531,9 @@ fn persistent_composition_round_trip_synthesises_no_context() {
         .expect("rebuilt deserialises as an RM Composition without a context");
 }
 
-/// A single `0..1` EVENT is collapsed (master04 §"Conditionally Collapsed
-/// Wrapper Types"), but its RM-mandatory `time` (RM data_structures,
-/// `EVENT.time` 1..1) keeps a leaf on the OBSERVATION at the event's own path,
-/// so FLAT has a key for the event time that builds into the event and reads
-/// back out of it (#5421).
+/// A collapsed single EVENT keeps its `time` leaf at the event's own path, and
+/// it builds into the event and reads back (master04 §"Conditionally Collapsed
+/// Wrapper Types").
 #[test]
 fn a_collapsed_single_event_keeps_its_time_leaf() {
     let wt = persistent_wt();
@@ -641,10 +613,8 @@ fn persistent_composition_keeps_explicitly_supplied_context() {
         "ctx/participation_name:0".to_owned(),
         Value::String("Dr Explicit".into()),
     );
-    // PARTICIPATION.function is 1..1 (RM
-    // `UML/classes/org.openehr.rm.common.participation.adoc` §Attributes), and
-    // master06 §Participation carries `participation_function:<i>` in every
-    // example — so a participation-bearing ctx must supply it.
+    // `PARTICIPATION.function` is 1..1 (RM `participation.adoc`; master06
+    // §Participation).
     flat.insert(
         "ctx/participation_function:0".to_owned(),
         Value::String("requester".into()),
@@ -665,11 +635,8 @@ fn persistent_composition_keeps_explicitly_supplied_context() {
 
 #[test]
 fn event_composition_context_follows_explicit_ctx_input() {
-    // RM `COMPOSITION.context` is optional with no category-coupled
-    // invariant (RM UML composition class: Category_validity constrains only
-    // the category code), so no Event context is fabricated from the
-    // category alone — it is built exactly when the client expressed
-    // event-context content (master06: time/setting/... ctx keys).
+    // An Event context is built only from event-context content, never from the
+    // category alone.
     let wt = persistent_wt();
     let root = &wt.tree.id;
     let mut flat = serde_json::Map::new();
@@ -710,11 +677,7 @@ fn event_composition_context_follows_explicit_ctx_input() {
 
 // ── direct RM-attribute paths the OPT leaves unconstrained ───────────────────
 //
-// master05-rm_mapping.adoc lists RM-level attributes addressable directly on a
-// node whether or not the OPT constrains them. The compacted web-template
-// carries no child for an unconstrained one (e.g. `ACTION/time`), so the FLAT
-// builder must build it from its datum sub-tree rather than reject it as an
-// unknown path. Carrier: the CNF Robot `minimal_action.en.v1` template.
+// master05-rm_mapping.adoc; carrier: the CNF `minimal_action.en.v1` template.
 
 fn minimal_action_wt() -> WebTemplate {
     let opt_xml = std::fs::read_to_string(format!(
@@ -755,10 +718,8 @@ fn minimal_action_flat() -> serde_json::Map<String, Value> {
     flat
 }
 
-/// The ACTION content node's `ism_transition` (`current_state|code`/`|value`)
-/// builds a real DV_CODED_TEXT — not the synthesized `initial` (524) default
-/// (master05 §ACTION `/ism_transition`; §ISM_TRANSITION `/current_state` +
-/// the worked JSON example block).
+/// The ACTION's `ism_transition` builds a real DV_CODED_TEXT (master05 §ACTION,
+/// §ISM_TRANSITION).
 #[test]
 fn action_ism_transition_from_flat_builds_supplied_state() {
     let wt = minimal_action_wt();
@@ -828,13 +789,8 @@ fn wt_transition(
         .find(|c| c.rm_type == "ISM_TRANSITION")
 }
 
-/// Every ACTION node's first `careflow_step` option `(code, label)`, in
-/// web-template pre-order — the union the careflow-state alternatives
-/// contribute to the merged transition node's master05 §ISM_TRANSITION
-/// `/careflow_step` row. `None` for an ACTION whose template models no careflow
-/// step. Positional (not archetype-keyed) because a template may reuse one
-/// ACTION archetype in several slots (ips.v0 uses `medication.v1` for both
-/// medication and immunization) with per-slot careflow specialization.
+/// Every ACTION node's first `careflow_step` option, in web-template pre-order;
+/// `None` for an ACTION with no careflow step.
 fn wt_action_careflows(
     n: &openehr_sdt::flat::webtemplate::model::WebTemplateNode,
     out: &mut Vec<Option<(String, String)>>,
@@ -864,17 +820,9 @@ fn wt_action_careflows(
     }
 }
 
-/// Stamp the i-th composition ACTION's `ism_transition.careflow_step` (document
-/// pre-order, the same order as [`wt_action_careflows`]) with that ACTION's
-/// modelled careflow option as a `DV_CODED_TEXT` — the leaf that must survive
-/// the round trip.
-///
-/// It is `careflow_step` and NOT `name`/`archetype_node_id`: `ISM_TRANSITION`
-/// inherits `PATHABLE`, not `LOCATABLE` (RM
-/// `UML/classes/org.openehr.rm.composition.ism_transition.adoc` §Inherit), so it
-/// declares neither attribute and the strict canonical reader refuses a document
-/// carrying them. `careflow_step` is the class's own `0..1 DV_CODED_TEXT` (same
-/// file §Attributes) — exactly the datum a careflow specialization identifies.
+/// Stamp the i-th composition ACTION's `ism_transition.careflow_step` with that
+/// ACTION's careflow option; `ISM_TRANSITION` is no `LOCATABLE` (RM
+/// `ism_transition.adoc` §Inherit).
 fn stamp_careflow(v: &mut Value, careflows: &[Option<(String, String)>], idx: &mut usize) {
     match v {
         Value::Object(m) => {
@@ -925,13 +873,8 @@ fn dv_leaf_count(v: &Value) -> usize {
     }
 }
 
-/// Regression (benchmark IPS faithfulness): a careflow-stepped
-/// `ACTION.ism_transition` loses no DV leaf across canonical → FLAT → canonical
-/// on the CKM IPS template, whose ACTION archetypes constrain `ism_transition`
-/// once per careflow state. The merged transition node realizes the datum, and
-/// the master05 direct-RM-path fallback must NOT emit a second generic
-/// `.../ism_transition/*` spelling that then overwrites it on rebuild (4 leaves
-/// were lost that way). master05 §§ACTION `/ism_transition`, ISM_TRANSITION.
+/// A careflow-stepped `ACTION.ism_transition` loses no DV leaf across canonical
+/// → FLAT → canonical on the CKM IPS template (master05 §§ACTION, ISM_TRANSITION).
 #[test]
 fn action_careflow_ism_transition_wins_over_direct_path() {
     let wts = crate::common::web_templates();
@@ -961,14 +904,9 @@ fn action_careflow_ism_transition_wins_over_direct_path() {
     assert!(is_valid_rm(&rebuilt), "ips_canonical from_flat valid RM");
 }
 
-/// master05 §ISM_TRANSITION maps an ACTION's transition to ONE path family —
-/// `…/ism_transition/current_state|code`, `…/transition|code`,
-/// `…/careflow_step|code` — and its table types `/ism_transition` as a single
-/// `ISM_TRANSITION` (Required). So an ACTION whose archetype constrains
-/// `ism_transition` once per careflow state (`minimal_action.en.v1`: `at0003`
-/// planned, `at0004` completed) serves ONE node, id `ism_transition`, with no
-/// careflow at-code in its `aqlPath` or `nodeId`, whose coded children carry the
-/// union of the states' options.
+/// An ACTION constraining `ism_transition` per careflow state serves one
+/// `ism_transition` node holding the union of the states' options (master05
+/// §ISM_TRANSITION).
 #[test]
 fn ism_transition_is_one_merged_node_per_action() {
     let wt = minimal_action_wt();
@@ -1055,10 +993,7 @@ fn action_ism_transition_round_trip_stable() {
     );
 }
 
-/// A genuinely unknown segment on the ACTION node is still rejected — the fix
-/// admits only the master05-listed RM paths for the node's RM type, never a
-/// blanket accept (master04 §Validation: "Field identifiers match WT metadata
-/// structure").
+/// An unknown segment on the ACTION node is refused (master04 §Validation).
 #[test]
 fn bogus_action_segment_is_still_rejected() {
     let wt = minimal_action_wt();
@@ -1075,13 +1010,8 @@ fn bogus_action_segment_is_still_rejected() {
     );
 }
 
-/// The #1719 adjudication pinned on the wire: a careflow-stepped
-/// `ISM_TRANSITION` flattens to the GENERIC `…/ism_transition/…` spelling —
-/// the form master05 §ISM_TRANSITION's own worked example uses
-/// (`careflow_step|code: at0006`, terminology `local`) — never to a
-/// careflow-state WT-child id, because `ISM_TRANSITION` inherits PATHABLE and
-/// carries no `name`/`archetype_node_id` for such a child to match on
-/// (RM `ism_transition.adoc` §Inherit). Round-trip both directions.
+/// A careflow-stepped `ISM_TRANSITION` round-trips through the generic
+/// `…/ism_transition/…` spelling of master05 §ISM_TRANSITION's example.
 #[test]
 fn careflow_stepped_ism_transition_flattens_to_the_generic_master05_spelling() {
     let wt = minimal_action_wt();
@@ -1130,14 +1060,10 @@ fn careflow_stepped_ism_transition_flattens_to_the_generic_master05_spelling() {
     );
 }
 
-// ── a name-constrained wrapper the level removal collapses (#3142) ───────────
+// ── a name-constrained wrapper the level removal collapses ───────────────────
 //
-// An OPT may constrain `LOCATABLE.name` on a node the web template compacts
-// away: the single `EVENT` of `master04 §Conditionally Collapsed Wrapper
-// Types`. Its constrained name then survives only inside the leaf's `aqlPath`
-// (`events[at0002,'Point in time']`), so it is the one identity the RM ⇄ FLAT
-// walks cannot see in the tree and must still honour. Carrier: the
-// repo-authored `named_event.en.v1` fixture.
+// The collapsed EVENT's name survives only in the leaf's `aqlPath` (master04
+// §Conditionally Collapsed Wrapper Types). Carrier: `named_event.en.v1`.
 
 fn named_event_wt() -> WebTemplate {
     let opt_xml = std::fs::read_to_string(concat!(
@@ -1182,17 +1108,9 @@ fn the_named_event_fixture_collapses_a_name_constrained_event() {
     );
 }
 
-/// A composition whose collapsed `POINT_EVENT` carries a name OTHER than the one
-/// its template constrains still projects its content into FLAT.
-///
-/// The `[at0002,'Point in time']` conjunct is redundant for identification here —
-/// no sibling constraint claims `events[at0002]` under another name — so the step
-/// falls back to the `archetype_node_id` alone rather than locating nothing
-/// (RM common `master03-archetyped_package.adoc` §"The `LOCATABLE` class": a
-/// runtime `name` distinguishes siblings sharing an `archetype_node_id`; BASE
-/// `architecture_overview/master11-paths.adoc` §"Using a Name-based Predicate").
-/// Without the fallback the whole event subtree — every datum under it — is
-/// silently absent from the response, which is the defect reported in #3142.
+/// A collapsed `POINT_EVENT` renamed away from its template's name still
+/// projects into FLAT through the id-only fallback (BASE `master11-paths.adoc`
+/// §"Using a Name-based Predicate").
 #[test]
 fn a_renamed_collapsed_event_still_yields_its_content() {
     let wt = named_event_wt();
@@ -1225,13 +1143,7 @@ fn a_renamed_collapsed_event_still_yields_its_content() {
     );
 }
 
-/// Building a collapsed wrapper stamps the name its own template path
-/// constrains, not the `archetype_node_id` placeholder.
-///
-/// A wrapper named anything else does not satisfy the path it was created for,
-/// so every datum beneath it becomes unaddressable — the composition is written
-/// once and then reads back short, which is how #3142 was produced in the first
-/// place.
+/// Building a collapsed wrapper stamps the name its template path constrains.
 #[test]
 fn a_built_collapsed_event_takes_the_name_its_template_constrains() {
     let wt = named_event_wt();
@@ -1261,15 +1173,8 @@ fn a_built_collapsed_event_takes_the_name_its_template_constrains() {
     );
 }
 
-/// The id-only fallback must NOT fire where the name is the DISCRIMINATOR.
-///
-/// The vendored COVID-19 report template fills `content` with four
-/// `openEHR-EHR-SECTION.adhoc.v1` siblings distinguished only by their
-/// constrained names ('Reporting', 'Clinical status', 'Exposure', 'Outcome').
-/// Dropping the name there would let the sibling whose section was renamed claim
-/// every section, so one section's slot would report all four sections' content
-/// — the opposite failure to #3142 and the reason the fallback is conditional
-/// rather than unconditional.
+/// The id-only fallback does not fire where the name discriminates siblings,
+/// as in the COVID-19 report template's four `SECTION.adhoc` fills.
 #[test]
 fn a_name_discriminated_sibling_set_takes_no_id_only_fallback() {
     let opt_xml =
@@ -1324,14 +1229,10 @@ fn a_name_discriminated_sibling_set_takes_no_id_only_fallback() {
     );
 }
 
-// ── one archetype filling two slots under different names (#3920) ────────────
+// ── one archetype filling two slots under different names ────────────────────
 //
-// A template may fill the same archetype at two places, each fill an overlay
-// with its own root rubric (AOM 2 `master10-templates.adoc` §Overview); each
-// fill's node id comes from its own name (simplified_formats `master04`
-// §Node ID Generation Rules). Carrier: `slot_fill_twice.en.v1`, whose first
-// fill is renamed "Genome assembly" and whose nested second fill keeps
-// "Reference sequence".
+// Each fill takes its id from its own name (AOM 2 `master10-templates.adoc`;
+// master04 §Node ID Generation Rules). Carrier: `slot_fill_twice.en.v1`.
 
 const RENAMED_FILL: &str =
     "slot_fill_twice/slot_fill_twice_observation:0/genome_assembly/source_name";
@@ -1424,13 +1325,10 @@ fn a_flat_round_trip_through_both_slot_fills_is_stable() {
     );
 }
 
-// ── the event-context path spellings feed the ctx/ defaults (#3919) ──────────
+// ── the event-context path spellings feed the ctx/ defaults ──────────────────
 //
-// `<root>/context/start_time` (master05 §EVENT_CONTEXT) and `ctx/time`
-// (master06 §time) name one value, and master06 §time makes it the default of
-// `OBSERVATION.history.origin`, from which each `EVENT.time` follows. Carrier:
-// the `named_event.en.v1` fixture, whose single event the FLAT input never
-// times.
+// `<root>/context/start_time` (master05) and `ctx/time` (master06 §time) name
+// one value, the default of `history.origin`. Carrier: `named_event.en.v1`.
 
 const START_TIME: &str = "2022-02-03T04:05:06Z";
 
@@ -1544,14 +1442,10 @@ fn a_flat_round_trip_from_the_context_start_time_path_is_stable() {
     );
 }
 
-// ── an ELEMENT that leaves its value open keeps its node (#3933) ─────────────
+// ── an ELEMENT that leaves its value open keeps its node ─────────────────────
 //
-// An `ELEMENT` with no `value` constraint, or `value matches {*}`, admits any
-// value (AOM 1.4 `C_COMPLEX_OBJECT.any_allowed`, ADL 1.4 master05-cadl §"Any"
-// Constraints), so it keeps its node with one alternative per concrete
-// `DATA_VALUE` (simplified formats master05 §CLUSTER: `…/labresult/text_value`).
-// Carrier: `any_element_value.en.v1`, whose protocol holds "Test method" (no
-// attributes) and "Method detail" (an empty `value` attribute).
+// ADL 1.4 master05-cadl §"Any" Constraints; master05 §CLUSTER. Carrier:
+// `any_element_value.en.v1`.
 
 const TEST_METHOD: &str = "any_element_value/any_element_observation:0/test_method";
 const METHOD_DETAIL: &str = "any_element_value/any_element_observation:0/method_detail";
@@ -1746,12 +1640,9 @@ fn the_better_any_element_template_keeps_its_open_element() {
     );
 }
 
-// ── a DV_STATE has no simplified form (#3934) ────────────────────────────────
+// ── a DV_STATE has no simplified form ────────────────────────────────────────
 //
-// RM `data_types` §DV_STATE gives `value: DV_CODED_TEXT` and `is_terminal:
-// Boolean`, and simplified formats master05-rm_mapping has no §DV_STATE table
-// (#3936), so only master04 §Raw canonical JSON (`|raw`) carries one. Carrier:
-// "Process state" (`at0008`) of `any_element_value.en.v1`.
+// master05 has no §DV_STATE table, so only `|raw` carries one.
 
 const PROCESS_STATE: &str = "any_element_value/any_element_observation:0/process_state";
 

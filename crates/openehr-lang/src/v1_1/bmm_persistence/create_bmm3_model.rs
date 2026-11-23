@@ -4,14 +4,6 @@
 
 //! The `P_BMM_SCHEMA` → **v3** (`org.openehr.lang.bmm3`) `BMM_MODEL` transform.
 //!
-//! The sibling of [`crate::v1_1::bmm_persistence::create_model`] against the
-//! other BMM generation's shapes. It is a separate module because the two
-//! generations give the same Rust NAMES to structurally different types and this
-//! workspace forbids import renaming, so each transform imports one generation.
-//!
-//! Four things the v2.x materialisation must leave in the P_BMM graph have a
-//! declared destination in v3 and so reach a model here:
-//!
 //! * **A generic ancestor's parameter binding.** v3 states inheritance as a map
 //!   of TYPES (`org.openehr.lang.bmm3.bmm_class.adoc` §Description,
 //!   `Hash<String, BMM_MODEL_TYPE>`), so `P_BMM_CLASS.ancestor_defs`'
@@ -176,9 +168,6 @@ const VALUE_SET_SEPARATOR: &str = "::";
 /// Materialises the in-memory **v3** `BMM_MODEL` of an inclusion-resolved
 /// `P_BMM_SCHEMA`.
 ///
-/// See the module docs for what this generation carries that the v2.x one
-/// cannot, and for the two recorded boundaries.
-///
 /// # Errors
 /// The same failures as [`crate::v1_1::bmm_persistence::create_model::create_bmm_model`]:
 /// [`PBmmReadError::UnknownAncestor`], [`PBmmReadError::UnknownType`],
@@ -198,16 +187,6 @@ pub fn create_bmm3_model(schema: &PBmmSchema) -> Result<BmmModel, PBmmReadError>
 
 /// Materialises the v3 `BMM_MODEL` and returns the materialisation findings
 /// alongside it.
-///
-/// Same transform as [`create_bmm3_model`]; the second element is every
-/// persisted invariant / pre-condition / post-condition string that could not
-/// become a `BMM_ASSERTION`
-/// ([`crate::v1_1::bmm_persistence::validate::PBmmValidityFinding::AssertionNotMaterialised`])
-/// and every constant that states no value
-/// ([`crate::v1_1::bmm_persistence::validate::PBmmValidityFinding::ConstantNotMaterialised`]).
-/// The findings are COLLECTED rather than fatal, for the same reason
-/// [`crate::v1_1::bmm_persistence::validate::validate_schema`]'s are: a validity
-/// report is only useful whole.
 ///
 /// # Errors
 /// The same failures as [`create_bmm3_model`].
@@ -243,17 +222,12 @@ pub fn create_bmm3_model_reporting(
             rm_publisher: schema.rm_publisher.clone(),
             rm_release: schema.rm_release.clone(),
             class_definitions: (!class_definitions.is_empty()).then_some(class_definitions),
-            // `BMM_MODEL.used_models` is v3's model-import list
-            // (`org.openehr.lang.bmm3.bmm_model.adoc` §Attributes). P_BMM composes
-            // models by INCLUSION instead, and inclusion is already resolved into
-            // this schema before the transform runs
+            // P_BMM composes models by inclusion, resolved before the transform
             // (`LANG/docs/bmm_persistence/master02-overview.adoc` §Conceptual
-            // Approach), so a materialised schema uses no separate model.
+            // Approach), so `used_models` is empty.
             used_models: present(Vec::new()),
-            // `BMM_MODEL.modules` — "All classes in this model, keyed by type name"
-            // (same §Attributes): the same population as `class_definitions`, viewed
-            // under the module meta-type every v3 class is one of
-            // (`…bmm3.bmm_class.adoc` §Inherit — `BMM_CLASS : BMM_MODULE`).
+            // `BMM_MODEL.modules` is the class population viewed as modules
+            // (`…bmm3.bmm_class.adoc` §Inherit, `BMM_CLASS : BMM_MODULE`).
             modules: (!modules.is_empty()).then_some(modules),
         },
         findings,
@@ -552,19 +526,16 @@ fn build_ancestors(
     depth: Depth,
     visiting: &mut BTreeSet<String>,
 ) -> Result<Option<BTreeMap<String, BmmModelType>>, PBmmReadError> {
-    // The chain is only followed once per lineage: re-entering a class already on
-    // the stack would not terminate on a schema whose inheritance is cyclic,
-    // which the spec forbids ("results in an acyclic graph",
-    // `LANG/docs/bmm3/master13-model_semantics.adoc` §Simple Inheritance) but
-    // nothing in the persisted form enforces.
+    // A class already on the stack is not re-entered: the spec forbids cyclic
+    // inheritance (`LANG/docs/bmm3/master13-model_semantics.adoc` §Simple
+    // Inheritance) but the persisted form does not enforce it.
     if !visiting.insert(persisted.name().to_uppercase()) {
         return Ok(None);
     }
     let mut out: BTreeMap<String, BmmModelType> = BTreeMap::new();
-    // The structured generic ancestors first: each carries the substitution the
-    // plain name list cannot express.
-    // A simple (or open) `ancestor_defs` entry names its parent like an
-    // `ancestors` entry does (`…p_bmm_class.adoc` §Attributes).
+    // Structured generic ancestors first, since each carries a substitution; a
+    // simple `ancestor_defs` entry names its parent like `ancestors`
+    // (`…p_bmm_class.adoc` §Attributes).
     let mut named: Vec<&str> = Vec::new();
     for def in persisted
         .ancestor_defs()
@@ -621,22 +592,6 @@ fn build_ancestors(
 /// operation with a concrete binding: `TIMER_WAIT` inheriting `WAIT<TIMER_
 /// EVENT>` gets `event: TIMER_EVENT` "synthesised new … with the meta-attribute
 /// `_is_synthesised_generic_` set `True`".
-///
-/// Both examples are ONE rule — replace the ancestor's formal parameter with
-/// whatever the descendant bound it to — because a binding to another formal
-/// parameter carries that parameter's own (narrowed) constraint in its type
-/// object. Three decisions the section leaves to the implementation:
-///
-/// * A property the descendant DECLARES wins: the section synthesises the
-///   ancestor's properties "within" the descendant, which cannot mean
-///   overwriting one the descendant defines for itself.
-/// * Propagation down a partially-closed chain is automatic rather than
-///   special-cased: an embedded ancestor has already had its own synthesis
-///   applied (this runs per class, before the class is embedded), so a
-///   re-substituted property is just the next step of the same rule.
-/// * Only a property whose type IS the parameter is synthesised. A parameter
-///   nested inside a generic argument (`List<T>` where the container type is
-///   the property's type) is substituted in place by the same walk.
 fn synthesise_generic_properties(
     builder: &Builder<'_>,
     depth: Depth,
@@ -658,11 +613,9 @@ fn synthesise_generic_properties(
         if bindings.is_empty() {
             continue;
         }
-        // The embedded `base_class` is a STUB (no features — the
-        // embedding-depth adjudication in the module docs), so the ancestor's
-        // properties come from its own definition, rebuilt here. That build
-        // applies this same synthesis to the ancestor, which is what carries a
-        // substitution down a partially-closed chain.
+        // The embedded `base_class` is a stub, so the ancestor's properties
+        // come from its own rebuilt definition, which carries the substitution
+        // down the chain.
         let name = generic.base_class.name.clone();
         let key = name.to_uppercase();
         if visiting.contains(&key) {
@@ -813,13 +766,9 @@ fn build_generic_parameters(
     persisted: &PBmmClass,
     visiting: &mut BTreeSet<String>,
 ) -> Result<indexmap::IndexMap<String, BmmParameterType>, PBmmReadError> {
-    // Built at BOTH depths (no `Depth` parameter): a `BMM_GENERIC_CLASS`
-    // without its formal parameters is not a valid instance of the model (the
-    // parameters are what make it generic,
-    // `org.openehr.lang.bmm3.bmm_generic_class.adoc` §Attributes), and
-    // `class_as_type` must generate the fully open type of a stub. The
-    // parameter NAMES recurse nowhere; the constraint chain is what
-    // [`build_parameter_type`] cycle-cuts.
+    // Built at both depths: a `BMM_GENERIC_CLASS` needs its formal parameters
+    // (`org.openehr.lang.bmm3.bmm_generic_class.adoc` §Attributes);
+    // [`build_parameter_type`] cuts constraint cycles.
     let mut out = indexmap::IndexMap::new();
     for (key, parameter) in persisted.generic_parameter_defs().into_iter().flatten() {
         out.insert(
@@ -850,13 +799,10 @@ fn build_parameter_type(
     let type_constraint = match constraint {
         None => None,
         Some(constrainer) => {
-            // Constraint chains recurse: the constrainer builds as a stub whose
-            // own formal parameters may be constrained back onto a class already
-            // being built (`master13-model_semantics.adoc` §Simple Inheritance
-            // states acyclicity for INHERITANCE only — nothing forbids `A<T: B>`
-            // with `B<U: A>`), so the repeated edge is cut by omitting the
-            // OPTIONAL constraint ("Optional conformance constraint",
-            // `…bmm3.bmm_parameter_type.adoc` §Attributes) under a namespaced key.
+            // Constraint chains may cycle (`A<T: B>` with `B<U: A>`; master13
+            // §Simple Inheritance forbids cycles in inheritance only), so the
+            // repeated edge drops the optional constraint
+            // (`…bmm3.bmm_parameter_type.adoc` §Attributes).
             let edge = format!("parameter-constraint {owner}::{name}");
             if visiting.insert(edge.clone()) {
                 let context = format!("class `{owner}` generic parameter `{name}`");
@@ -1017,9 +963,7 @@ fn build_property(
                     is_im_infrastructure: container.is_im_infrastructure,
                     // P_BMM declares no composition flag
                     // (`…bmm_persistence.p_bmm_property.adoc` §Attributes), so
-                    // v3's `is_composition` ("True if this property instance is a
-                    // compositional sub-part of the owning class instance",
-                    // `…bmm3.bmm_property.adoc` §Attributes) has no source.
+                    // `is_composition` has no source.
                     is_composition: None,
                     cardinality: container.cardinality.as_ref().map(multiplicity_of),
                 }),
@@ -1564,12 +1508,6 @@ fn build_procedure(
 
 /// Materialises one routine's persisted pre- or post-conditions, recording a
 /// finding for each string that does not become a `BMM_ASSERTION`.
-///
-/// The owning class's feature maps are still under construction at this point
-/// (a routine is built BY `build_core`), so a bare lower-case name here takes
-/// `elBareRef`'s `elFunctionCall` reading rather than resolving to a declared
-/// property — the class-invariant pass is where the declared features are
-/// available.
 fn routine_conditions(
     builder: &Builder<'_>,
     owner: &PBmmClass,
@@ -1605,10 +1543,6 @@ fn routine_conditions(
 /// Builds a routine's ordered parameter list — "Formal parameters of the routine"
 /// (`org.openehr.lang.bmm3.bmm_routine.adoc` §Attributes) from the persisted map
 /// keyed by parameter name (`…bmm_persistence.p_bmm_function.adoc` §Attributes).
-///
-/// NOTE (recorded deviation, the same one the v2.x transform records for generic
-/// parameters): `BMM_ROUTINE.parameters` is an ORDERED list while P_BMM keys them
-/// by name, so declaration order is not preserved and sorted-key order is used.
 fn build_parameters(
     builder: &Builder<'_>,
     owner: &PBmmClass,
@@ -1700,12 +1634,6 @@ fn parameter_context(class: &str, routine: &str, parameter: &str) -> String {
 /// constants — "Static properties defined in this class"
 /// (`org.openehr.lang.bmm3.bmm_class.adoc` §Attributes), of which `BMM_CONSTANT`
 /// is the literal-valued form (`…bmm3.bmm_static.adoc`).
-///
-/// A constant stating no value carries no `value_literal`, so it is COLLECTED
-/// as a
-/// [`crate::v1_1::bmm_persistence::validate::PBmmValidityFinding::ConstantNotMaterialised`]
-/// and omitted — the same boundary the assertions take, and for the same
-/// reason: the persisted form is legal, so the schema is not refused.
 fn build_constants(
     builder: &Builder<'_>,
     persisted: &PBmmClass,
@@ -1750,9 +1678,6 @@ fn build_constants(
 /// native `value` is left unset, per the literal-evaluation boundary recorded in
 /// [`crate::v1_1::bmm3::core::literal_value::bmm_literal_value_impl`]. `Inv_not_nullable`
 /// makes a constant non-nullable (`…bmm3.bmm_constant.adoc` §Invariants).
-///
-/// `value_literal` is `1..1`, so the persisted value arrives as a parameter its
-/// caller has already resolved: a constant that states none never reaches here.
 fn build_constant(
     builder: &Builder<'_>,
     owner: &PBmmClass,
@@ -1895,10 +1820,6 @@ fn build_enumeration(
 /// (`BASE/docs/foundation_types/master03-primitive_types.adoc` §Overview) — so
 /// a persisted scalar of another kind, or outside that range, states no native
 /// value and is refused rather than substituted.
-///
-/// The item is named from `item_names` at the same position, which
-/// [`check_enumeration_validity`] has already proven 1:1 with the values
-/// whenever any value is stated.
 ///
 /// # Errors
 /// [`PBmmReadError::EnumerationItemValueNotAnInteger`].

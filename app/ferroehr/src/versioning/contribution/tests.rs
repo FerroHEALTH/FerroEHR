@@ -163,10 +163,9 @@ fn description_is_a_dv_text_object() {
     );
 }
 
-/// Ruling 2 of #3595: `UpdateAudit.yaml` `required: [change_type,
-/// committer]`, so a member `commit_audit` or a CONTRIBUTION `audit` without
-/// `change_type` is the 400; no change type is inferred from
-/// `preceding_version_uid` any more.
+/// Ruling 2 of #3595: `UpdateAudit.yaml` `required: [change_type, committer]`,
+/// so a member `commit_audit` or a CONTRIBUTION `audit` without `change_type`
+/// is the 400, never inferred from `preceding_version_uid`.
 #[test]
 fn a_missing_change_type_is_refused() {
     let without = json!({ "_type": "UPDATE_AUDIT", "committer": committer() });

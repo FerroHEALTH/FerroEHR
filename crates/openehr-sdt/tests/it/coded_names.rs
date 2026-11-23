@@ -2,25 +2,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
-//! Coded `LOCATABLE.name` + ISM `current_state` rubric fidelity.
+//! Coded `LOCATABLE.name` and ISM `current_state` rubric fidelity.
 //!
-//! Two spec-facing generator defects, verified against the vendored OPT corpus:
-//!
-//! * **(b) coded names.** A template may constrain a `LOCATABLE.name` as a
-//!   `DV_CODED_TEXT` (RM common `master03-archetyped_package.adoc` §"The
-//!   `LOCATABLE` class" — a name is `DV_TEXT` *or* `DV_CODED_TEXT`; AOM 1.4
-//!   `master04-constraint_model_package.adoc` — a `C_ATTRIBUTE` on `name`
-//!   constrains the whole coded name). The `WebTemplate` builder must record the
-//!   constrained `defining_code`, and the composition builder must stamp a
-//!   coded name (with `defining_code`), not a plain `DV_TEXT` — otherwise a
-//!   name-differentiated sibling cannot be routed by a strict RM validator.
-//!
-//! * **(c) ISM `current_state` rubric.** `ISM_TRANSITION.current_state` draws
-//!   its openEHR code from the `instruction_states` group (RM `ehr`
-//!   `ism_transition`). openEHR concept codes are not globally unique across
-//!   groups (TERM 3.1.0 SPECPR-51: code `532` is `complete` in
-//!   `version_lifecycle_state` but `completed` in `instruction_states`), so the
-//!   display value must be resolved from the *owning* group.
+//! A name constrained as a `DV_CODED_TEXT` is recorded and stamped as a coded
+//! name (RM common `master03-archetyped_package.adoc` §"The `LOCATABLE`
+//! class"), and `current_state` resolves its rubric from `instruction_states`
+//! (TERM 3.1.0 SPECPR-51).
 
 use std::path::{Path, PathBuf};
 
@@ -106,12 +93,8 @@ fn coded_value_label(node: &WebTemplateNode, code: &str) -> Option<String> {
         .find_map(|c| coded_value_label(c, code))
 }
 
-/// (b) A `LOCATABLE.name` constrained as a `DV_CODED_TEXT` with a fixed
-/// `C_CODE_PHRASE` `defining_code` is recorded on the `WebTemplate` node and
-/// stamped as a coded name (with `defining_code`) in the example composition —
-/// never a plain `DV_TEXT`. Scans the vendored corpus: at least one template
-/// exercises the constraint, and at least one such node round-trips to a
-/// matching coded instance name (value + `defining_code.code_string`).
+/// A `LOCATABLE.name` constrained as a `DV_CODED_TEXT` round-trips to a coded
+/// instance name with its `defining_code`.
 #[test]
 fn coded_name_recorded_and_stamped() {
     let mut opts = Vec::new();
@@ -177,10 +160,7 @@ fn coded_name_recorded_and_stamped() {
     );
 }
 
-/// (c) The `instruction_states` code `532` resolves to its group rubric
-/// `completed`, not the `version_lifecycle_state` rubric `complete` — the
-/// SPECPR-51 cross-group collision. `sdk/minimal_action3.opt` constrains an
-/// `ISM_TRANSITION.current_state` to `openehr::532`.
+/// The `instruction_states` code `532` resolves to `completed` (SPECPR-51).
 #[test]
 fn ism_current_state_532_uses_instruction_states_rubric() {
     let wt = web_template("../../../openehr-its/tests/fixtures/sdk/minimal_action3.opt");

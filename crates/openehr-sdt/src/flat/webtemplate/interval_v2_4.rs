@@ -1,15 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The AOM2 `C_INTEGER`/`C_REAL` interval readings the `v2_4` Web Template
-//! front end ([`super::builder_v2_4`]) turns into input ranges and value lists,
-//! and the `defaultValue` an assumed value gives when its intervals admit it,
-//! and the occurrences, existence and cardinality intervals it turns into a
-//! node's `min` and `max`.
-//!
-//! A primitive constraint is a list of intervals and admits a value inside any
-//! one of them (AOM2 `master04.5-constraint_model-class_definitions.adoc`
-//! §"Conformance semantics: C_ORDERED").
+//! The AOM2 `C_INTEGER`/`C_REAL` interval readings of the `v2_4` front end, and
+//! the occurrences, existence and cardinality intervals behind a node's `min`
+//! and `max` (AOM2 `master04.5` §"Conformance semantics: C_ORDERED").
 
 #![expect(
     clippy::disallowed_types,
@@ -28,10 +22,8 @@ fn json_f64(v: f64) -> serde_json::Value {
     serde_json::Number::from_f64(v).map_or(serde_json::Value::Null, serde_json::Value::Number)
 }
 
-/// The one interval of a `C_INTEGER`/`C_REAL` constraint, which an input
-/// range can carry; a list of several intervals admits a value in ANY of them
-/// (AOM2 `master04.5-constraint_model-class_definitions.adoc` §"Conformance
-/// semantics: C_ORDERED"), so it is never narrowed to its first.
+/// The one interval of a constraint, which an input range can carry; never the
+/// first of several.
 pub(super) fn sole_interval<T>(constraint: Option<&Vec<Interval<T>>>) -> Option<&Interval<T>> {
     match constraint.map(Vec::as_slice) {
         Some([iv]) => Some(iv),
@@ -52,11 +44,8 @@ pub(super) fn point_list<T: Clone>(constraint: Option<&Vec<Interval<T>>>) -> Opt
         .collect()
 }
 
-/// The ranges of a constraint made of two or more intervals that are not all
-/// points, a union of ranges admitting a value inside any one of them (AOM2
-/// `master04.5-constraint_model-class_definitions.adoc` §"Conformance
-/// semantics: C_ORDERED"); `None` for any other constraint, and when one of
-/// the intervals is unbounded at both ends, which admits every value.
+/// The ranges of a constraint of two or more non-point intervals, or `None`,
+/// including when one interval is unbounded at both ends.
 pub(super) fn range_union<T>(
     constraint: Option<&Vec<Interval<T>>>,
     range: fn(&Interval<T>) -> Option<WebTemplateRange>,

@@ -14,10 +14,9 @@ use crate::access_eval::scope::{DataMatch, Pred};
 /// conjunction (false) or the disjunction (true).
 ///
 /// The folds keep SQL's three values: only a predicate whose SQL is never
-/// unknown ([`two_valued`]) is folded against its negation. The planner
-/// plans every `EXISTS` the condition names, so each one folded away is
-/// planning a query no longer pays for. No openEHR spec governs this: our own
-/// design (#5667).
+/// unknown ([`two_valued`]) is folded against its negation. The planner plans
+/// every `EXISTS` the condition names, so each one folded away saves its
+/// planning. No openEHR spec governs this: our own design (#5667).
 pub(super) fn simplified(pred: &Pred) -> Pred {
     match pred {
         Pred::Not(inner) => Pred::negate(simplified(inner)),

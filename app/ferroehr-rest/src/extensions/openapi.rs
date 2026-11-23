@@ -17,14 +17,6 @@
 //! when an issuer is configured, else HTTP Basic; none when auth is disabled), so
 //! the Swagger "Authorize" dialog and the per-endpoint padlocks match the running
 //! server. The lock is applied to the authenticated surfaces only.
-//!
-//! The UI assets are served through [`utoipa_swagger_ui::serve`] rather than
-//! [`utoipa_swagger_ui::SwaggerUi`]'s router, and the mount path redirects to
-//! `index.html` under the mount. Both halves are load-bearing: the dist
-//! `index.html` references its assets relatively, so a body served at the
-//! slash-less mount path renders empty, and the trailing-slash target
-//! `SwaggerUi`'s own router answers with is an infinite loop under the
-//! serve-time `NormalizePathLayer`.
 
 use std::sync::Arc;
 
@@ -475,10 +467,6 @@ enum Members {
 
 /// Every API family offered as its own selector document, as
 /// `(selector name, url slug, membership criterion)`.
-///
-/// All are filtered from the one server-generated composed document, so each
-/// inherits the config-driven security scheme and can never drift from the
-/// router.
 const FAMILIES: &[(&str, &str, Members)] = &[
     // The standardised ITS-REST groups (our generated wire), by resource path.
     (
@@ -709,12 +697,6 @@ fn prune_tags(doc: &mut utoipa::openapi::OpenApi) {
 }
 
 /// Every served `OpenAPI` document, pre-serialized **once** at router assembly.
-///
-/// The composed document and every family document are pure functions of the
-/// static [`AppConfig`], so building them per request re-ran the full
-/// `utoipa` reflection (all API groups + the auth walk) and, for each family,
-/// an additional whole-document deep clone + filter. They are computed once here
-/// and served as ready [`Bytes`], so a request is a clone-free body write.
 struct PrebuiltDocs {
     /// The complete composed document as serialized JSON.
     full: Bytes,

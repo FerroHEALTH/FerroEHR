@@ -2,14 +2,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariants + functions for `DV_PARSABLE`.
-//!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_parsable.adoc`:
-//! - `size()`: size in bytes of `value`.
-//! - `Formalism_valid`: `not formalism.is_empty`.
-//! - `Size_valid`: `size >= 0` — holds by construction for a Rust byte length
-//!   (usize), so it is not a runnable check.
+//! `DV_PARSABLE` (RM 1.2.0 `org.openehr.rm.data_types.dv_parsable.adoc`):
+//! `size()` and `Formalism_valid`; `Size_valid` holds for a byte length.
 
 use crate::v1_2::data_types::encapsulated::dv_parsable::DvParsable;
 use openehr_base::validate::{InvariantViolation, Validate};

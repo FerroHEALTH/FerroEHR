@@ -13,24 +13,10 @@
 //! deeper than [`MAX_RM_NESTING`] RM objects. The canonical-JSON reader, the
 //! canonical-XML reader and the web-template formats, which build their RM
 //! through those readers, count the same objects against the same limit.
-//!
-//! [`MIN_RM_READ_STACK_BYTES`] is the stack a reader needs for a document at
-//! the limit, in a debug build, with room left for its caller. Every thread
-//! that reads RM runs on at least this much; the release and debug tests of
-//! `openehr-its` read a document at the limit on a thread of exactly this
-//! size.
 
 use std::cell::Cell;
 
 /// The deepest nesting of RM objects a document may carry.
-///
-/// The deepest real structure, `COMPOSITION` → `SECTION`s → `OBSERVATION` →
-/// `HISTORY` → `EVENT` → `ITEM_TREE` → nested `CLUSTER`s → `ELEMENT` →
-/// `DV_CODED_TEXT` → `CODE_PHRASE` → `TERMINOLOGY_ID`, is under 30 objects in
-/// the most elaborate published templates. The limit also sits under the
-/// 128-level recursion limit of `serde_json` (one RM object and one array per
-/// level at most), so the canonical-JSON reader refuses a deep document here
-/// and never on that limit.
 pub const MAX_RM_NESTING: u32 = 48;
 
 /// The smallest stack, in bytes, of any thread that reads RM: the platform's

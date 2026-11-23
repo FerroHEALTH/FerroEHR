@@ -1,27 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! RM → simplified tree — the template-driven flattener.
+//! RM → simplified tree, the template-driven flattener.
 //!
-//! Walks the [`WebTemplate`] tree in parallel with the composition, read
-//! through one `Instance` view: typed RM (a committed composition, read
-//! with no canonical-JSON hop, #6003) or the canonical-JSON value a
-//! `553|incomplete|` commit keeps. Level removal is inherent to the walk: a
-//! web-template child's RM value(s) are located by the relative RM path
-//! between the parent's and child's `aqlPath`, so the container attributes and
-//! collapsed wrappers of ITS-REST `simplified_formats/master04` §Level
-//! Removal never appear as segments. Each populated leaf emits its datum
-//! parts per the `master05-rm_mapping.adoc` tables (`crate::flat::map`); the
-//! composition context emits as `ctx/…` (`crate::flat::ctx`).
-//!
-//! Output scope: `in-context` metadata whose FLAT surface is the `ctx/`
-//! vocabulary (composition language/territory/composer, the EVENT_CONTEXT
-//! fields, per-entry language/encoding/subject when they carry the
-//! defaults) is emitted once as `ctx/…`, not duplicated as path keys —
-//! matching the `master04 §Flat format` example. `category` has no `ctx/`
-//! key (`master06` defines none), so it emits as a path key. A per-entry
-//! `subject` that is not the PARTY_SELF default emits as a path key
-//! (`master05 §OBSERVATION` `/subject` row).
+//! Walks the [`WebTemplate`] beside the composition, typed or canonical JSON.
+//! A child's RM values are located by the relative RM path between the two
+//! `aqlPath`s, so the containers and wrappers of `simplified_formats/master04`
+//! §Level Removal never appear as segments. Leaves emit per the
+//! `master05-rm_mapping.adoc` tables; in-context metadata with a `ctx/` key emits
+//! once as `ctx/…` (master06), and `category`, which has none, as a path key.
 
 #![expect(
     clippy::disallowed_types,
@@ -72,9 +59,6 @@ pub fn flatten_typed(composition: &Composition, wt: &WebTemplate) -> SimDocument
 }
 
 /// The walk both flatteners share.
-///
-/// An archetype root recorded by its full reference matches its template
-/// node the way the commit path matches it (`node_ids`).
 fn flatten_instance<'a, I: Instance<'a>>(composition: I, wt: &'a WebTemplate) -> SimDocument {
     let mut doc = SimNode::default();
     match &wt.archetype_refs {
@@ -110,16 +94,12 @@ fn type_matches<'a, I: Instance<'a>>(rm: I, rm_type: &str) -> bool {
 }
 
 /// A composition-level in-context child whose FLAT surface is the `ctx/`
-/// vocabulary (`master06-context_information.adoc`) rather than a path key.
-/// `category` is deliberately absent — `master06` defines no `ctx/category`,
-/// so it stays a path key (`master05 §COMPOSITION` `/category` row).
+/// vocabulary (`master06-context_information.adoc`); `category` has no
+/// `ctx/category`, so it stays a path key.
 fn covered_by_ctx(node: &WebTemplateNode, child: &WebTemplateNode) -> bool {
-    // Composition-level in-context shortcuts (master06). The `context`
-    // child is ALWAYS walked: its standard EVENT_CONTEXT leaf fields
-    // surface as ctx/ scalars (the inner EVENT_CONTEXT rule below keeps
-    // them out of the tree), while its archetyped `other_context` content
-    // and the lossless `_`-attribute families (`_health_care_facility`,
-    // `_participation:i` — master05 §EVENT_CONTEXT) emit as path keys.
+    // `context` is always walked: its EVENT_CONTEXT leaves surface as `ctx/`
+    // scalars, its `other_context` and `_`-attribute families as path keys
+    // (master05 §EVENT_CONTEXT).
     if node.rm_type == "COMPOSITION"
         && matches!(child.id.as_str(), "language" | "territory" | "composer")
     {
@@ -133,10 +113,8 @@ fn covered_by_ctx(node: &WebTemplateNode, child: &WebTemplateNode) -> bool {
     false
 }
 
-/// A per-entry in-context leaf that emits only when it differs from the
-/// value the `ctx/` defaults would rebuild (round-trip stability; the input
-/// side accepts the path form regardless, per the `master05` per-entry
-/// table rows).
+/// A per-entry in-context leaf that emits only when it differs from the `ctx/`
+/// default.
 fn is_default_entry_context<'a, I: Instance<'a>>(child: &WebTemplateNode, rm: I) -> bool {
     if child.in_context != Some(true) {
         return false;
@@ -146,11 +124,8 @@ fn is_default_entry_context<'a, I: Instance<'a>>(child: &WebTemplateNode, rm: I)
         // (`master05 §OBSERVATION` — "set to PARTY_SELF if not explicitly
         // set").
         "subject" => rm.rm_type() == Some("PARTY_SELF") && !rm.is_present("external_ref"),
-        // ENTRY.language / encoding default from ctx (`master06 §Language
-        // and Territory`); their non-default values still round-trip via
-        // the ctx emission of the composition language, so per-entry copies
-        // are only emitted when they diverge — handled by ctx_emit::emit
-        // comparing entries. Here the walk keeps them out of the tree data.
+        // ENTRY.language and encoding default from ctx (`master06 §Language and
+        // Territory`); `ctx_emit::emit` handles diverging entries.
         "language" | "encoding" => true,
         // EVENT time / history origin surface via ctx/history_origin +
         // ctx/time only when they equal the derived defaults; a distinct
@@ -161,11 +136,8 @@ fn is_default_entry_context<'a, I: Instance<'a>>(child: &WebTemplateNode, rm: I)
 
 fn walk<'a, I: Instance<'a>>(node: &WebTemplateNode, rm: I, out: &mut SimNode) {
     if node.has_input() {
-        // A stored value whose `_type` does not conform to the template's
-        // declared leaf type cannot be decomposed faithfully into that
-        // type's suffixes — embed it verbatim as `|raw` instead
-        // (master04 §Raw canonical JSON: pre-existing canonical data /
-        // shapes the simplified form cannot express). Lossless both ways.
+        // A value not conforming to the declared leaf type is embedded as `|raw`
+        // (master04 §Raw canonical JSON).
         if !leaf_type_conforms(rm, &node.rm_type) {
             out.raw = rm.to_raw();
             return;
@@ -193,13 +165,8 @@ fn walk<'a, I: Instance<'a>>(node: &WebTemplateNode, rm: I, out: &mut SimNode) {
     emit_direct_rm_paths(node, rm, out);
 }
 
-/// The per-step id-only name-fallback table for `node`'s children
-/// ([`rmpath::NameFallback`]).
-///
-/// Reuses the table the web-template builder cached on the node's walk plan so
-/// the projection and the archetype-conformance walk decide a renamed instance
-/// node by ONE rule; a hand-built node carrying no plan gets an equivalent
-/// table computed here.
+/// The per-step id-only name-fallback table for `node`'s children, shared with
+/// the archetype-conformance walk ([`rmpath::NameFallback`]).
 fn name_fallback(node: &WebTemplateNode) -> Cow<'_, rmpath::NameFallback> {
     match &node.walk {
         Some(plan) => Cow::Borrowed(&plan.name_fallback),
@@ -212,11 +179,8 @@ fn name_fallback(node: &WebTemplateNode) -> Cow<'_, rmpath::NameFallback> {
 
 /// Emits every occurrence of one template child under its simplified slot.
 ///
-/// Polymorphic choice alternatives share one `aqlPath`, so an occurrence is
-/// emitted only under the alternative whose RM type matches the value's
-/// `_type`. That filter must apply to EVERY member of a choice group — the
-/// first alternative carries no `alt_json_id`, so sharing an `aqlPath` with a
-/// sibling is the group marker.
+/// Choice alternatives share one `aqlPath`, so an occurrence emits only under
+/// the alternative whose RM type matches the value's `_type`.
 fn walk_child<'a, I: Instance<'a>>(
     node: &WebTemplateNode,
     index: usize,
@@ -254,10 +218,7 @@ fn walk_child<'a, I: Instance<'a>>(
         if let Some(value) = occurrence.value {
             walk(child, value, slot);
         }
-        // The leaf's wrapping ELEMENT carries its own `_` attribute family
-        // (`master05 §ELEMENT`: `_uid`, `_null_flavour`, `_null_reason`,
-        // `_link:i`, `_feeder_audit`); the leaf walk above saw only the DV
-        // value, so surface the wrapper's here.
+        // The wrapping ELEMENT's `_` attribute family (`master05 §ELEMENT`).
         if let Some(element) = occurrence.element {
             map::emit::emit_rm_attrs(element, "ELEMENT", slot);
         }
@@ -273,28 +234,19 @@ fn shadowed_by_earlier_alternative(node: &WebTemplateNode, child: &WebTemplateNo
         .any(|c| c.aql_path == child.aql_path && base_name(&c.rm_type) == base_name(&child.rm_type))
 }
 
-/// One emitted occurrence of a template child: the RM value its relative path
-/// reaches, plus the wrapping `ELEMENT` when the child is an ELEMENT-wrapped
-/// leaf (the wrapper owns the `master05 §ELEMENT` `_`-attribute rows, which
-/// belong on the same simplified node as the datum).
+/// One emitted occurrence of a template child: the RM value plus the wrapping
+/// `ELEMENT`, which owns the `master05 §ELEMENT` `_`-attribute rows.
 struct Occurrence<I> {
-    /// `None` for a **value-less** ELEMENT. RM data_structures §ELEMENT
-    /// (`Inv_null_flavour_indicated`: `is_null() xor null_flavour = Void`)
-    /// makes `value` and `null_flavour` mutually exclusive, so a
-    /// null-flavoured element carries no datum at all — only the
-    /// `/_null_flavour` and `/_null_reason` rows of master05 §ELEMENT.
+    /// `None` for a value-less ELEMENT (RM data_structures §ELEMENT
+    /// `Inv_null_flavour_indicated`).
     value: Option<I>,
     element: Option<I>,
 }
 
 /// The occurrences of template child `child` under RM value `rm`.
 ///
-/// An ELEMENT-wrapped leaf (its relative RM path ends in the `value` step) is
-/// resolved through its **wrappers**, not through the values: the wrapper list
-/// is the authoritative occurrence list, so (a) a value-less null-flavoured
-/// ELEMENT is still reached (master05 §ELEMENT `/_null_flavour`,
-/// `/_null_reason`), and (b) wrapper↔value alignment holds even when only some
-/// wrappers carry a value. Every other child resolves straight to its values.
+/// An ELEMENT-wrapped leaf resolves through its wrappers, so a value-less
+/// null-flavoured ELEMENT is still reached (master05 §ELEMENT).
 fn occurrences_of<'a, I: Instance<'a>>(
     child: &WebTemplateNode,
     rm: I,
@@ -340,10 +292,8 @@ fn occurrences_of<'a, I: Instance<'a>>(
         .collect()
 }
 
-/// The RM nodes that own the final `value` step of an ELEMENT-wrapped leaf —
-/// `Some` only when `child` is a datum leaf whose relative RM path ends in
-/// `value`. `None` selects the plain value-driven resolution (a leaf reached
-/// without a wrapper, e.g. `EVENT.time`, or a container child).
+/// The RM nodes owning the final `value` step of an ELEMENT-wrapped leaf, or
+/// `None` for a plain value-driven resolution.
 fn value_step_owners<'a, I: Instance<'a>>(
     child: &WebTemplateNode,
     rm: I,
@@ -357,19 +307,8 @@ fn value_step_owners<'a, I: Instance<'a>>(
     (last.attribute == "value").then(|| rmpath::resolve_matched(rm, parents, names))
 }
 
-/// Whether the template-child walk already emitted a child that realizes RM
-/// attribute `attr` on `node` — i.e. some template child whose relative RM path
-/// (master04 §Level Removal) begins with `attr` produced an entry in `out`.
-///
-/// This is the correct suppression signal for the direct-RM-path fallback: the
-/// web template may constrain an attribute under a node-id-specialized child
-/// whose id is NOT the attribute name, so an id-string check on the attribute
-/// name misses it. Conversely, when the template models the attribute but no
-/// such child matched this instance, the walk emits nothing — and the direct
-/// path MUST still emit the datum so it is not lost. Hence: suppress iff a
-/// realizing child was actually emitted; the WT-child realization then wins
-/// entirely (it carries the constrained node identity/name the direct path
-/// cannot reconstruct).
+/// Whether the template-child walk already emitted a child realizing RM
+/// attribute `attr` on `node`; that realization then wins over the direct path.
 fn attr_emitted(node: &WebTemplateNode, out: &SimNode, attr: &str) -> bool {
     node.children.iter().enumerate().any(|(index, c)| {
         out.children.contains_key(&c.id)
@@ -379,28 +318,16 @@ fn attr_emitted(node: &WebTemplateNode, out: &SimNode, attr: &str) -> bool {
     })
 }
 
-/// Emit the direct RM-attribute paths the master05 per-type mapping tables
-/// declare on this node but that the OPT left unconstrained (so the compacted
-/// web-template carries no child for them) — the mirror of
-/// [`crate::flat::build`]'s direct-path handling, keeping the RM⇄FLAT round-trip
-/// lossless. Each attribute is emitted ONLY when the template-child walk did
-/// not already realize that RM attribute ([`attr_emitted`]); whenever a
-/// WT-child realized it, that realization wins entirely.
+/// Emit the direct RM-attribute paths the master05 tables declare on this node
+/// but the OPT left unconstrained, the mirror of [`crate::flat::build`]'s
+/// direct-path handling, unless [`attr_emitted`].
 ///
-/// `master05-rm_mapping.adoc` §§ACTION (`/time`, `/ism_transition`),
-/// INSTRUCTION (`/narrative`), OBSERVATION (`/history_origin`), ACTIVITY
-/// (`/timing`, `/action_archetype_id`), POINT_EVENT/INTERVAL_EVENT (`/time`),
-/// INTERVAL_EVENT (`/width`, `/math_function`, `|sample_count`), DV_INTERVAL
-/// (the `|lower_unbounded` family). EVENT_CONTEXT `start_time`/
-/// `setting` are NOT emitted here — they surface through the `ctx/` vocabulary
-/// (master06; [`crate::flat::ctx`]) to avoid a duplicate encoding of the same datum.
+/// EVENT_CONTEXT `start_time` and `setting` surface through `ctx/` (master06;
+/// [`crate::flat::ctx`]) instead.
 fn emit_direct_rm_paths<'a, I: Instance<'a>>(node: &WebTemplateNode, rm: I, out: &mut SimNode) {
     match base_name(&node.rm_type) {
         "ACTION" => emit_action_paths(node, rm, out),
-        // master05 §ISM_TRANSITION: the three coded rows are addressable on the
-        // transition node itself, so one the template leaves unconstrained is
-        // emitted here rather than lost ([`emit_direct_leaf`] skips whatever the
-        // template-child walk already realized).
+        // master05 §ISM_TRANSITION: the coded rows live on the transition node.
         "ISM_TRANSITION" => {
             for attr in ["current_state", "transition", "careflow_step"] {
                 emit_direct_leaf(node, out, attr, "DV_CODED_TEXT", rm.attr(attr));
@@ -426,13 +353,8 @@ fn emit_direct_rm_paths<'a, I: Instance<'a>>(node: &WebTemplateNode, rm: I, out:
 }
 
 /// Emits the four DV_INTERVAL flags of an interval whose bounds are template
-/// nodes: an unbounded flag when true and an included flag when false
-/// (master05 §DV_INTERVAL: "only in output if true", "only in output if
-/// false").
-///
-/// The build derives an absent flag from whether its bound is present, so a
-/// flag that contradicts that derivation is written too, which keeps the round
-/// trip lossless.
+/// nodes (master05 §DV_INTERVAL: "only in output if true", "only in output if
+/// false"), plus any flag contradicting the build's derivation.
 fn emit_interval_flags<'a, I: Instance<'a>>(rm: I, out: &mut SimNode) {
     for side in ["lower", "upper"] {
         let has_bound = rm.is_present(side);
@@ -477,11 +399,8 @@ fn emit_action_paths<'a, I: Instance<'a>>(node: &WebTemplateNode, rm: I, out: &m
     }
 }
 
-/// Emits `history_origin`, which maps to the nested `data.origin` (master05
-/// §OBSERVATION).
-///
-/// The HISTORY is compacted away, so `origin` is never a template leaf child —
-/// it is emitted here unless the walk already produced it.
+/// Emits `history_origin`, the nested `data.origin` (master05 §OBSERVATION),
+/// unless the walk already produced it.
 fn emit_history_origin<'a, I: Instance<'a>>(rm: I, out: &mut SimNode) {
     if !out.children.contains_key("history_origin")
         && let Some(origin) = at(rm, &["data", "origin", "value"]).and_then(Instance::to_value)
@@ -495,10 +414,8 @@ fn emit_history_origin<'a, I: Instance<'a>>(rm: I, out: &mut SimNode) {
 /// Emits the ACTIVITY rows the template left unconstrained (master05 §ACTIVITY).
 fn emit_activity_paths<'a, I: Instance<'a>>(node: &WebTemplateNode, rm: I, out: &mut SimNode) {
     emit_direct_leaf(node, out, "timing", "DV_PARSABLE", rm.attr("timing"));
-    // `action_archetype_id` is the match-all `/.*/` when unset (master05
-    // §ACTIVITY: "Will be set to /.*/ if not set explicit."); that default is
-    // re-synthesised on build, so emitting it would desync the round-trip —
-    // emit only an explicit non-default value.
+    // The `/.*/` default (master05 §ACTIVITY) is re-synthesised on build, so only
+    // an explicit value is emitted.
     if !attr_emitted(node, out, "action_archetype_id")
         && let Some(aid) = rm.attr("action_archetype_id").and_then(Instance::as_str)
         && aid != "/.*/"
@@ -533,22 +450,12 @@ fn emit_interval_event_paths<'a, I: Instance<'a>>(
     }
 }
 
-/// Emit an ISM_TRANSITION as its master05 sub-paths — `/current_state`,
-/// `/transition`, `/careflow_step` (DV_CODED_TEXT) and the `/_reason:i`
-/// DV_TEXT list (master05 §ISM_TRANSITION). The mirror of
+/// Emit an ISM_TRANSITION as its master05 sub-paths, the mirror of
 /// [`crate::flat::build`]'s `build_ism_transition`.
 ///
-/// Reached only for an ACTION whose template constrains no `ism_transition` at
-/// all; a template that constrains one carries the merged transition node
-/// ([`crate::flat::webtemplate`]) and the walk emits the same paths through it.
-///
-/// The spelling is GENERIC in both routes: `ISM_TRANSITION` inherits `PATHABLE`,
-/// not `LOCATABLE` (RM
-/// `UML/classes/org.openehr.rm.composition.ism_transition.adoc` §Inherit), so an
-/// instance carries no `archetype_node_id` a careflow-state path predicate could
-/// match, and master05 §ISM_TRANSITION's own worked example puts a
-/// careflow-stepped transition (`careflow_step|code: at0006`) under
-/// `…/ism_transition/…`, never under a careflow-state child id.
+/// The spelling is generic: `ISM_TRANSITION` is not `LOCATABLE` (RM
+/// `org.openehr.rm.composition.ism_transition.adoc` §Inherit), as master05
+/// §ISM_TRANSITION's own example shows.
 fn emit_ism_transition<'a, I: Instance<'a>>(ism: I, out: &mut SimNode) {
     for attr in ["current_state", "transition", "careflow_step"] {
         if let Some(cs) = ism.attr(attr) {
@@ -558,12 +465,9 @@ fn emit_ism_transition<'a, I: Instance<'a>>(ism: I, out: &mut SimNode) {
     map::emit::emit_rm_attrs(ism, "ISM_TRANSITION", out);
 }
 
-/// Whether an RM leaf value's `_type` conforms to the template's declared
-/// leaf type, including the specialisations the simplified mappings handle
-/// natively: DV_TEXT ⇄ DV_CODED_TEXT (the `|other` open-value-set pair,
-/// master04 §Open Value-Sets) and the PARTY_PROXY family (master05
-/// §PARTY_PROXY dispatches on the concrete party type). Anything else is a
-/// non-conforming stored value and is embedded as `|raw`.
+/// Whether an RM leaf value's `_type` conforms to the declared leaf type,
+/// DV_TEXT/DV_CODED_TEXT (master04 §Open Value-Sets) and the PARTY_PROXY family
+/// included.
 fn leaf_type_conforms<'a, I: Instance<'a>>(rm: I, declared: &str) -> bool {
     let Some(actual) = rm.rm_type() else {
         return true;

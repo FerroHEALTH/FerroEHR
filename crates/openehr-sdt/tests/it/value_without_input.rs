@@ -2,16 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
-//! A FLAT or STRUCTURED value is never dropped on write (#5768).
+//! A FLAT or STRUCTURED value is never dropped on write: a value on a node with
+//! no value of its own is refused with the key (master04 §Validation).
 //!
-//! ITS-REST `simplified_formats` master05 puts a value on a data value node,
-//! the nodes its per-type tables map, and master04 §Validation checks that
-//! "field identifiers match WT metadata structure". A key that gives a value
-//! on a node with no value of its own (an ELEMENT whose `value` admits several
-//! types, or a structural node) is therefore refused with the key and, for an
-//! ELEMENT, the alternatives the value belongs on. The carrier is
-//! `Demonstration.v1`, whose "Choice" (`at0025`) allows `DV_QUANTITY` or
-//! `DV_CODED_TEXT`.
+//! Carrier: `Demonstration.v1`, "Choice" (`at0025`).
 
 use openehr_its::opt14;
 use openehr_sdt::flat::convert::{

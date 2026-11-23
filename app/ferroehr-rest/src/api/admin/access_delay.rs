@@ -12,10 +12,6 @@
 //! creation; these routes let a health professional hold a composition,
 //! release it early, and read the register. No openEHR ITS-REST operation
 //! governs any of it.
-//!
-//! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
-//! (`405` with an empty `Allow` when off) unchanged.
 
 #![expect(
     clippy::disallowed_types,

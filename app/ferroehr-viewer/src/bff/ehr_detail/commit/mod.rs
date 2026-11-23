@@ -17,11 +17,6 @@
 //! form, so navigating away discards it. The viewer stores nothing
 //! of its own (§No viewer-local domain state), and the screen says so.
 //!
-//! Reads are reused, never re-implemented: the template list, the composition
-//! list, an amend's seed and the status seed all come from the tabs that
-//! already own them. The one WRITE is [`commit_contribution`]; the body it
-//! posts is assembled by the component-free, unit-tested [`staged`] module.
-//!
 //! No openEHR spec governs the viewer — our own design / product extension.
 //! The wire it writes IS spec-bound. The commit guards with
 //! [`require_session`](crate::session::require_session) first, and the CDR
@@ -97,9 +92,8 @@ pub async fn commit_contribution(
 
 /// Flatten the committed CONTRIBUTION into a [`CommitOutcome`].
 ///
-/// Defensive throughout — a body the CDR served without the representation
-/// (an older server honouring `return=minimal`) reads as an empty outcome
-/// rather than failing a commit that actually succeeded.
+/// A body without the representation reads as an empty outcome, never as a
+/// failed commit.
 fn parse_commit_outcome(body: &str) -> CommitOutcome {
     let Ok(doc) = serde_json::from_str::<Value>(body) else {
         return CommitOutcome::default();

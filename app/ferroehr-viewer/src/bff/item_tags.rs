@@ -4,12 +4,6 @@
 //! The shared `ITEM_TAG` kit: ONE row type, ONE wire codec, ONE editor panel
 //! and ONE filter form for every tag surface in the viewer.
 //!
-//! The CDR serves tags on three families of route — the demographic party trio
-//! (`/demographic/{kind}/{uid_based_id}/tags`), the EHR-side COMPOSITION and
-//! `EHR_STATUS` trios (`/ehr/{ehr_id}/{kind}/{uid_based_id}/tags`), and the two
-//! aggregate lists (`/demographic/tags`, `/ehr/{ehr_id}/tags`) — all carrying
-//! the SAME resource, so they get one kit rather than one editor per screen.
-//!
 //! Three wire facts every caller is built around, all from the released
 //! operations (`docs/specs/openehr/ITS-REST/specifications/operations/`):
 //!
@@ -87,13 +81,6 @@ pub struct TagGroup {
 
 /// The three released tag filters as a query string, each sent only when
 /// non-empty.
-///
-/// That is exactly the released "omitted parameter constrains nothing"
-/// behaviour: "In case no such parameter is provided then all `ITEM_TAG`
-/// resources will be retrieved" (`operations/ehr_tags_get.yaml`, and the same
-/// sentence in `demographic_tags_get.yaml`). The parameter names are the
-/// released ones, which the viewer's own argument names deliberately do not
-/// repeat (`tag_key` on both sides would only stutter).
 #[must_use]
 pub fn tag_filter_query(key: &str, value: &str, target_path: &str) -> String {
     let mut query = String::new();
@@ -115,8 +102,6 @@ pub fn tag_filter_query(key: &str, value: &str, target_path: &str) -> String {
 
 /// The tags of the collection at `path` under the ITS-REST base.
 ///
-/// A target's own tags, or an aggregate list with its [`tag_filter_query`].
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)), the `404` of a target
 /// that does not exist included; [`ViewerError::Internal`] when the list is
@@ -128,9 +113,6 @@ pub async fn read_tags(path: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
 
 /// Sets one tag in the collection at `path`, keeping every other tag it
 /// carries.
-///
-/// A read-modify-write, because the update replaces the whole collection
-/// (module docs).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)), the `422` of a tag
@@ -166,10 +148,6 @@ pub async fn set_tag(
 
 /// Deletes every tag under `key` from the collection at `path`.
 ///
-/// The delete addresses a key, not a `(key, target_path)` pair
-/// (`operations/composition_tags_delete.yaml`), and an unknown key on an
-/// existing target is its `404`.
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] on a blank key.
@@ -187,11 +165,6 @@ pub async fn delete_tag(path: &str, key: &str) -> Result<(), ViewerError> {
 
 /// The whole-collection `UpdateItemTag` body that keeps `existing` and sets one
 /// `(key, target_path)` entry.
-///
-/// Pure and unit-tested: the merge keys on the tag identity the released update
-/// operation names (module docs), and it emits only the three declared members
-/// (`schemas/common/UpdateItemTag.yaml` is `additionalProperties: false`, so a
-/// re-sent `target`/`owner_id` would be a `400`).
 #[must_use]
 pub fn merged_tag_body(
     existing: &[ItemTagRow],
@@ -272,14 +245,6 @@ fn string_at(value: &Value, path: &[&str]) -> String {
 }
 
 /// Group an aggregate tag list by the target each tag names.
-///
-/// An aggregate list "spans BOTH target forms (a `VERSIONED_OBJECT` container
-/// and a specific VERSION) and every taggable kind"
-/// (`operations/ehr_tags_get.yaml` retrieves the tags "associated with any
-/// target VERSION or `VERSIONED_OBJECT` within the EHR"), so the target is what
-/// a reader groups by. Pure and deterministic: targets in `BTreeMap` order,
-/// each group's tags by identity: no clock, no hash iteration, so every draw
-/// renders the same table.
 #[must_use]
 pub fn group_by_target(tags: Vec<ItemTagRow>) -> Vec<TagGroup> {
     let mut by_target: BTreeMap<String, Vec<ItemTagRow>> = BTreeMap::new();

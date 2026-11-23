@@ -1,16 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! One read-only view of an RM instance for the template-driven walks
-//! (#6002): the archetype-conformance pass and the path navigation it shares
-//! with the Simplified Formats.
-//!
-//! A committed document is typed RM ([`RmRef`], through the reflective accessor
-//! of `openehr_rm::v1_2::access`); a `553|incomplete|` commit cannot be read
-//! into strict typed RM and stays a canonical-JSON value (`&Value`). Both
-//! implement [`Instance`], so each walk is written once. The path step
-//! ([`select_children`]) is BASE `master11-paths` over that view, the same
-//! rule `openehr_rm::v1_2::paths::select_children` applies to a JSON value.
+//! One read-only view of an RM instance for the template-driven walks: typed RM
+//! ([`RmRef`]) for a committed document, a canonical-JSON value for a
+//! `553|incomplete|` commit. [`select_children`] is BASE `master11-paths` over it.
 
 #![expect(
     clippy::disallowed_types,

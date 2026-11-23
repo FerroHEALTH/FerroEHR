@@ -1,24 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 dADL breadth regression corpus (`tests/corpus/adl14-dadl/`).
-//!
-//! Unlike every other tree under `tests/corpus/`, this one is **hand-written,
-//! not vendored** (`tests/corpus/PROVENANCE.md` §`adl14-dadl/`): the vendored
-//! `adl2-reference` library exercises only a fraction of the dADL leaf
-//! grammar, so the forms `AM/docs/ADL1.4/master04-dadl` defines but no
-//! vendored artefact uses would otherwise have no regression net.
-//!
-//! Every fixture states its expectation in its file name, the corpus
-//! convention (`tests/corpus/INVENTORY.md`), and the accepting ones repeat it
-//! in the `regression` tag. Expectations here are derived from the spec text
-//! first-hand — the citation for each construct is in the fixture beside it,
-//! and in the reader that implements it (`openehr_lang::v1_1::odin`).
-//!
-//! Both twins are kept for every refusal (`.claude/rules/testing.md`): a form
-//! the reader must ACCEPT lives in the breadth fixture, and a form it must
-//! REFUSE gets its own `SDINV_*` fixture, so a reader that turns lenient fails
-//! here rather than silently mis-reading an archetype.
+//! The hand-written ADL 1.4 dADL breadth corpus (`tests/corpus/adl14-dadl/`):
+//! the `ADL1.4/master04-dadl` forms no vendored artefact uses, each fixture
+//! naming its expectation, every refusal with its accepting twin.
 
 #![allow(
     clippy::expect_used,
@@ -223,14 +208,9 @@ fn breadth_fixture_unbounded_intervals() {
     assert_eq!(bounds("interval_int"), (true, true));
 }
 
-/// A `(TYPE)`-cast section value assembles exactly like the uncast form.
-///
-/// The cast of `AM/docs/ADL1.4/master04-dadl` §Adding Type Information (and
-/// `LANG/docs/odin/master05-content` §Adding Type Information) is a
-/// dynamic-binding hint for the parser, not part of the datum — every
-/// assemble accessor reads through it. The breadth fixture writes its
-/// `translations` block cast twice over (on the container and on the entry),
-/// so a reader that stops at the cast produces NO translations at all.
+/// A `(TYPE)`-cast section value assembles like the uncast form
+/// (`ADL1.4/master04-dadl`, `LANG/docs/odin/master05-content` §Adding Type
+/// Information).
 #[test]
 fn cast_section_values_assemble_transparently() {
     let src = read("openEHR-EHR-OBSERVATION.dadl_breadth.v1.adl");
@@ -255,13 +235,9 @@ fn cast_section_values_assemble_transparently() {
     assert_eq!(de.author.get("name").map(String::as_str), Some("Ein Autor"));
 }
 
-/// The ADL 1.4 `revision_history` section parses and is preserved on the
-/// source artefact (`AM/docs/ADL1.4/master08-adl` §Revision History Section).
-/// It has no AOM2 landing field by upstream decision —
-/// `AM/docs/ADL2/master01-preface` §Changes from ADL 1.4 removed the section
-/// "since the AOM2 uses the openEHR Base Types version of the Resource
-/// package" (SPECAM-61) — so the assertion is that the 1.4 read model keeps
-/// it, not that the assembled artefact grows a field.
+/// The ADL 1.4 `revision_history` section is preserved on the source artefact
+/// (`ADL1.4/master08-adl` §Revision History Section); ADL2 has no field for it
+/// (SPECAM-61).
 #[test]
 fn revision_history_section_is_read_and_preserved() {
     let src = read("openEHR-EHR-OBSERVATION.revision_history.v1.adl");

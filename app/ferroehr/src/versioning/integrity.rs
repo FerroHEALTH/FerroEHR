@@ -41,11 +41,9 @@ use crate::versioning::wire::{
 /// ([`crate::versioning::change`]) decides client-vs-server first: a
 /// client-supplied signature is stored verbatim and never reaches here.
 ///
-/// When signing is enabled the `ORIGINAL_VERSION` that will later be served
-/// is signed over its `canonical_form()` with the signature attribute Void.
-/// Its members are written by the shared [`write_original_version`], so the
-/// commit-time and the read-time bytes match, `other_input_version_uids`
-/// merge provenance included.
+/// The `ORIGINAL_VERSION` is signed over its `canonical_form()` with
+/// `signature` Void, written by the shared [`write_original_version`] so the
+/// commit-time and read-time bytes match.
 ///
 /// The `attestations` committed with this version
 /// (`UPDATE_VERSION.attestations`) are signed too: master06 §Digital Signature

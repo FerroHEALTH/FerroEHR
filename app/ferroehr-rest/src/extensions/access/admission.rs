@@ -174,9 +174,6 @@ impl<T> Ahead<T> {
 
 /// Waits until the access decision of this request admits it.
 ///
-/// Outside an overlapped request the decision was made before the handler
-/// ran, so this answers at once.
-///
 /// # Errors
 /// A `500` when the decision refused the request or ended without an
 /// answer. `guarded_dispatch` answers the decision's own refusal in its

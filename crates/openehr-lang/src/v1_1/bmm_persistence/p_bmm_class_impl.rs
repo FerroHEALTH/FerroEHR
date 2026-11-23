@@ -12,11 +12,6 @@
 //! `source_schema_id`, `uid`, `ancestor_defs`) and §Functions (`is_generic`,
 //! whose postcondition is `Result := generic_parameter_defs /= Void`).
 //!
-//! `P_BMM_CLASS` is emitted as a polymorphic slot over its own least-rich form,
-//! the `P_BMM_ENUMERATION` family, and `P_BMM_INTERFACE`, so every attribute
-//! read here reaches through all of them; the enumeration-specific attributes
-//! live in [`crate::v1_1::bmm_persistence::p_bmm_enumeration_impl`].
-//!
 //! NOTE: `P_BMM_INTERFACE` is a member of this slot
 //! (`LANG/docs/bmm_persistence/master02-overview.adoc` §Conceptual Approach;
 //! openEHR's own schemas serialise interfaces inside `class_definitions`)

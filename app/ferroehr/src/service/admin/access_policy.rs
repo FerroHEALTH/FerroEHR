@@ -3,10 +3,6 @@
 
 //! The controller's `ACCESS_POLICY` behind its extension resource.
 //!
-//! The service reads the version in force, every version and the
-//! `VERSIONED_ACCESS_POLICY`, writes a new version, and brings the copy in
-//! force up to date per request.
-//!
 //! The policy is one versioned object. Each write commits one
 //! `ORIGINAL_VERSION` on its trunk in its own `CONTRIBUTION`, with the
 //! `AUDIT_DETAILS` of the request's committer (RM Common IM master06

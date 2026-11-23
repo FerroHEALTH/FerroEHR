@@ -1,35 +1,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Generation-twin templates: ONE hand-written source, stamped per generation.
-//!
-//! A hand-written spec-behaviour file that is byte-identical across a crate's
-//! generations modulo generation-module paths keeps exactly one source —
-//! `tools/openehr-codegen/templates/<crate>/<relative-path>`, written against
-//! the crate's CURRENT generation — and `emit` stamps the per-generation
-//! copies with the generation tokens substituted (the crate's own module and
-//! every PAIRED dependency-generation path, from the composition table).
-//! Stamped copies carry the [`TEMPLATE_MARKER`] header, so the ordinary
-//! `@generated` machinery owns them: the emit purge removes stale copies,
-//! `codegen-drift` re-derives them, and a hand edit is overwritten on the
-//! next `emit`. Divergence between generations becomes impossible instead of
-//! policed.
-//!
-//! A genuinely generation-specific behaviour difference is promoted OUT of
-//! the template into a per-generation OVERRIDE —
-//! `templates/<crate>/overrides/<generation-module>/<relative-path>`, taken
-//! VERBATIM for that one generation (it is written for it) — an explicit,
-//! reviewed file carrying its own adjudication, mirroring the decision-map
-//! pattern.
+//! Generation-twin templates: one hand-written source per file under
+//! `tools/openehr-codegen/templates/<crate>/`, written against the current
+//! generation and stamped per generation with its module paths substituted.
+//! A generation-specific file lives under
+//! `templates/<crate>/overrides/<generation-module>/`, taken verbatim.
 
 use std::path::{Path, PathBuf};
 
 use crate::plan::composition::{COMPOSITIONS, CrateComposition, GenerationSpec};
 use crate::render::emit::GenFile;
 
-/// The first-line marker of a stamped copy. Contains `@generated`, so every
-/// generated-file scan (purge, drift, hand-edit protection) already covers
-/// stamped copies.
+/// The first-line marker of a stamped copy, which contains `@generated`.
 pub(crate) const TEMPLATE_MARKER: &str = "// @generated-from-template";
 
 /// Whether a written file is a template-stamped copy (first line carries the
@@ -42,7 +25,7 @@ pub(crate) fn is_template_stamped(path: &Path) -> bool {
     })
 }
 
-/// Stamp every template of `comp`'s crate into per-generation [`GenFile`]s.
+/// Stamps every template of `comp`'s crate into per-generation [`GenFile`]s.
 ///
 /// # Errors
 /// Returns an error when the templates tree cannot be read, or when a
@@ -83,9 +66,7 @@ pub(crate) fn stamp_templates(
                     format!("templates/{}/{rel_str}", comp.crate_name),
                 )
             };
-            // The source carries its own SPDX header (it is a tracked
-            // first-party file); the stamped copy gets one at write time from
-            // the crate it lands in, so exactly one authority states licensing.
+            // The stamped copy gets its SPDX header from the crate it lands in.
             let text = crate::render::spdx::strip_leading_header(&text);
             out.push(GenFile {
                 path: format!("{}/{rel_str}", generation.module),
@@ -99,14 +80,9 @@ pub(crate) fn stamp_templates(
     Ok(out)
 }
 
-/// Rewrite `body` from the CURRENT generation's spelling to `target`'s: the
-/// crate's own generation module (`crate::v1_2::` → `crate::v1_1::`) and
-/// every paired dependency-generation path (`openehr_base::v1_3::` →
-/// `openehr_base::v1_2::`, per the composition table's `model_deps`).
-///
-/// Substitution is deliberately restricted to the two path forms — a bare
-/// module token in prose stays untouched, and a wrong pairing surfaces as a
-/// compile error in the stamped copy, never as silent divergence.
+/// Rewrites `body` from the current generation's paths to `target`'s: the
+/// crate's own `crate::vX_Y::` and each paired dependency path; a bare token
+/// in prose is left alone.
 pub(crate) fn substitute(body: &str, current: &GenerationSpec, target: &GenerationSpec) -> String {
     let mut out = body.replace(
         &format!("crate::{}::", current.module),
@@ -144,9 +120,7 @@ fn dep_crate_ident(key: &str) -> String {
         .replace('-', "_")
 }
 
-/// Recursively collect `.rs` template sources under `dir`, skipping the
-/// `overrides/` subtree (overrides are consumed per generation, never
-/// stamped for every generation).
+/// Collects `.rs` template sources under `dir`, skipping `overrides/`.
 fn collect_templates(
     dir: &Path,
     overrides: &Path,

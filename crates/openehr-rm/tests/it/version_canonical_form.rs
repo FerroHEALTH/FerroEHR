@@ -16,12 +16,6 @@
 //! and `VERSION.canonical_form()`
 //! (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.version.adoc`)
 //! — "created by serialising all attributes except signature".
-//!
-//! These live here rather than beside `version_impl.rs` because the fixture is
-//! the `openehr-its` vendored corpus, which sits outside this crate's published
-//! package (`include = ["src/**", …]`): a packaged `src/` test reading it
-//! compiles for us and fails with "couldn't read file" for anyone running
-//! `cargo test` inside the published `.crate`.
 
 use serde_json::Value;
 
@@ -33,9 +27,6 @@ const COMPOSITION: &str = include_str!(
 );
 
 /// Returns the canonical form under both emitted generations of the function.
-///
-/// The two are generation twins, so they must agree byte for byte; every
-/// property below is therefore asserted on both at once.
 fn canonical_form(value: &Value) -> String {
     let stable =
         openehr_rm::v1_1::common::change_control::version_impl::canonical_form_of_json(value)
@@ -53,9 +44,6 @@ fn canonical_form(value: &Value) -> String {
 /// Builds the `ORIGINAL_VERSION` canonical-JSON `Value` around the corpus
 /// composition, with the given `signature` value (so tests can compare None
 /// vs Some).
-///
-/// The signed input is assembled as a `Value` — the shape the versioning
-/// service holds — and canonicalised via [`canonical_form`].
 fn original_version(signature: Option<&str>) -> Value {
     let data: Value = serde_json::from_str(COMPOSITION).unwrap();
     let mut ov = serde_json::json!({

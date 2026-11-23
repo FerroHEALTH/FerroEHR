@@ -2,39 +2,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for `PATHABLE`.
+//! The `PATHABLE` path functions (`org.openehr.rm.common.pathable.adoc`
+//! §Functions; BASE `master11-paths.adoc`), over the canonical-JSON encoding
+//! of the value through [`crate::v1_1::paths`].
 //!
-//! `PATHABLE` is abstract, so the generated `Pathable` is the closed subtype
-//! enum over every pathable RM class, and the four resolvable functions it
-//! declares are realized here. The pathing itself is NOT re-derived: it lives
-//! once in [`crate::v1_1::paths`], over the canonical-JSON value tree, and a
-//! typed value reaches it by encoding itself with this crate's own
-//! canonical-JSON impls — so a typed path answer and a wire path answer cannot
-//! differ.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.pathable.adoc`
-//! §Functions; the path grammar is BASE
-//! `docs/specs/openehr/BASE/docs/architecture_overview/master11-paths.adoc`.
-//!
-//! Two of the six functions are NOT realized here, and the reason is the same
-//! in both cases — a value alone is not the structure the function is defined
-//! over:
-//!
-//! - `parent ()` is "the parent of this node in a compositional hierarchy",
-//!   which §Description says "is defined as abstract in the model, and may be
-//!   implemented in any way convenient". No RM attribute carries it, and this
-//!   repository stores no owning back-references, so the parent is a
-//!   root-anchored lookup ([`crate::v1_1::paths::parent_of`]) — it needs the
-//!   enclosing structure, which a node does not hold.
-//! - `path_of_item (a_loc)` is "the path to an item relative to the root of
-//!   this archetyped structure", i.e. the path of a node that IS inside this
-//!   structure. The primitive answering it
-//!   ([`crate::v1_1::paths::path_of_item`]) locates that node by identity;
-//!   two independently held typed values have no identity relation, and
-//!   matching by equality instead would return the path of *an* equal node
-//!   rather than the one asked about, which is a different question wherever a
-//!   structure repeats a value.
+//! `parent` and `path_of_item` need the enclosing structure, so they are
+//! [`crate::v1_1::paths::parent_of`] and
+//! [`crate::v1_1::paths::path_of_item`].
 
 #![expect(
     clippy::disallowed_types,
@@ -46,18 +20,8 @@ use crate::v1_1::paths::{RmPath, TypedPathError, canonical_value};
 use serde_json::Value;
 
 impl Pathable {
-    /// Returns the item at `a_path`, relative to this node.
-    ///
-    /// Spec: `org.openehr.rm.common.pathable.adoc` §Functions `item_at_path` —
-    /// "The item at a path (relative to this item); only valid for unique
-    /// paths, i.e. paths that resolve to a single item"
-    /// (`Pre: path_unique (a_path)`). Where that precondition does not hold,
-    /// the first item in document order is returned; ask
-    /// [`Self::items_at_path`] to see them all.
-    ///
-    /// The item is a canonical-JSON value because the function's own return
-    /// type is `Any`: a path may land on an RM object, on a primitive leaf, or
-    /// on a container member, and no single generated type spans those.
+    /// Returns the item at `a_path`, relative to this node (`item_at_path`); for a
+    /// non-unique path, the first in document order.
     ///
     /// # Errors
     /// Returns [`TypedPathError::Path`] when `a_path` is not a well-formed
@@ -69,11 +33,8 @@ impl Pathable {
         Ok(crate::v1_1::paths::item_at_path(&root, &path).cloned())
     }
 
-    /// Returns every item `a_path` resolves to, in document order.
-    ///
-    /// Spec: `org.openehr.rm.common.pathable.adoc` §Functions `items_at_path`
-    /// — "List of items corresponding to a non-unique path". A path that
-    /// resolves to nothing yields an empty list.
+    /// Returns every item `a_path` resolves to, in document order
+    /// (`items_at_path`).
     ///
     /// # Errors
     /// The same two failures as [`Self::item_at_path`].
@@ -86,28 +47,15 @@ impl Pathable {
             .collect())
     }
 
-    /// Returns `true` when `a_path` resolves to at least one item under this
-    /// node.
-    ///
-    /// Spec: `org.openehr.rm.common.pathable.adoc` §Functions `path_exists` —
-    /// "True if the path exists in the data with respect to the current item"
-    /// (`Pre: not a_path.is_empty`). The function's return type is `Boolean`,
-    /// so a path this data cannot answer is `false`: an empty or malformed
-    /// path expression exists in no data, and neither does one that resolves
-    /// to nothing.
+    /// Whether `a_path` resolves to at least one item (`path_exists`); a
+    /// malformed path is `false`.
     #[must_use]
     pub fn path_exists(&self, a_path: &str) -> bool {
         self.items_at_path(a_path)
             .is_ok_and(|items| !items.is_empty())
     }
 
-    /// Returns `true` when `a_path` resolves to exactly one item under this
-    /// node.
-    ///
-    /// Spec: `org.openehr.rm.common.pathable.adoc` §Functions `path_unique` —
-    /// "True if the path corresponds to a single item in the data"
-    /// (`Pre: path_exists (a_path)`), which is why a path resolving to nothing
-    /// is not unique either.
+    /// Whether `a_path` resolves to exactly one item (`path_unique`).
     #[must_use]
     pub fn path_unique(&self, a_path: &str) -> bool {
         self.items_at_path(a_path)

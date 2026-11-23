@@ -2,14 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `DV_PROPORTION`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_proportion.adoc`
-//! §Invariants (the seven own invariants), over the kind constants of
-//! `…org.openehr.rm.data_types.proportion_kind.adoc` §Constants (`pk_ratio` 0,
-//! `pk_unitary` 1, `pk_percent` 2, `pk_fraction` 3, `pk_integer_fraction` 4),
-//! plus the inherited DV_AMOUNT / DV_QUANTIFIED / DV_ORDERED invariants.
+//! `DV_PROPORTION` invariants (`org.openehr.rm.data_types.dv_proportion.adoc`
+//! §Invariants, `proportion_kind.adoc` §Constants) and arithmetic.
 
 use crate::v1_2::data_types::quantity::dv_amount_impl::{
     AmountAccuracy, CombinedAccuracy, combine, scale,
@@ -22,43 +16,22 @@ use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 
 impl DvProportion {
-    /// Sum of this proportion and `other`, or `None` when they are not strictly
-    /// comparable or the result is one no valid proportion can carry.
-    ///
-    /// Spec: `dv_proportion.adoc` §Functions `add` — "Sum of two strictly
-    /// comparable proportions", over `is_strictly_comparable_to`: "True if the
-    /// `type` of this proportion is the same as the `type` of `other`."
-    ///
-    /// Proportions are added over a common denominator, which is what keeps
-    /// the result inside its own kind's invariants: `pk_percent` fixes the
-    /// denominator at 100 and `pk_unitary` at 1, so equal denominators are kept
-    /// rather than multiplied — cross-multiplying two percentages would yield a
-    /// denominator of 10000 and fail `Percent_validity`.
+    /// The sum of this proportion and `other` of the same `type` (`add`), over a
+    /// common denominator, or `None` when not comparable or invalid.
     #[must_use]
     pub fn add(&self, other: &Self) -> Option<Self> {
         self.combined(other, Decimal::checked_add)
     }
 
-    /// Difference of this proportion and `other`, under the same conditions as
-    /// [`Self::add`].
-    ///
-    /// Spec: `dv_proportion.adoc` §Functions `subtract` — "Difference between
-    /// two strictly comparable proportions."
+    /// The difference of this proportion and `other` (`subtract`), under the
+    /// conditions of [`Self::add`].
     #[must_use]
     pub fn subtract(&self, other: &Self) -> Option<Self> {
         self.combined(other, Decimal::checked_sub)
     }
 
-    /// Product of this proportion and `factor`, or `None` when the result is
-    /// one no valid proportion can carry.
-    ///
-    /// Spec: `dv_proportion.adoc` §Functions `multiply` — "Product of this
-    /// Proportion and `factor`."
-    ///
-    /// The factor scales the numerator and leaves the denominator alone, which
-    /// is what keeps `pk_percent`'s 100 and `pk_unitary`'s 1 in place. A kind
-    /// whose `Fraction_validity` demands integers refuses a numerator the
-    /// factor made fractional, rather than rounding it into a different ratio.
+    /// This proportion with its numerator times `factor` (`multiply`), or `None`
+    /// when the result is invalid.
     #[must_use]
     pub fn multiply(&self, factor: f64) -> Option<Self> {
         let (numerator, denominator) = self.ratio()?;
@@ -69,38 +42,16 @@ impl DvProportion {
         )
     }
 
-    /// Returns `true` when this proportion is considered equal to `other`.
-    ///
-    /// Spec: `dv_proportion.adoc` §Functions `is_equal`, effecting
-    /// `dv_amount.adoc`'s abstract `is_equal`.
-    ///
-    /// Equality is of the RATIO, not of how it was written: `1/2` and `2/4` are
-    /// the same proportion, so the test is cross-multiplication rather than
-    /// field equality. The `type` must still match, because a proportion is
-    /// only comparable to one of its own kind and `1/100` as a percentage means
-    /// something a `pk_ratio` does not.
-    ///
-    /// The cross-multiplication runs in [`Decimal`]: whether two ratios are the
-    /// same is an exact question, and asking it of binary floating point makes
-    /// `0.1/0.3` and `1.0/3.0` disagree for reasons that have nothing to do
-    /// with the proportions.
+    /// Whether this proportion is the same ratio as `other`, of the same `type`
+    /// (`is_equal`), by exact cross-multiplication.
     #[must_use]
     pub fn is_equal(&self, other: &Self) -> bool {
         self.r#type == other.r#type && self.compare_to(other) == Some(Ordering::Equal)
     }
 
-    /// This proportion's ratio against `other`'s, or `None` when either has no
-    /// exact decimal form or the comparison overflows.
-    ///
-    /// The ONE ordering primitive of this class: [`Self::is_equal`] and the
-    /// `DV_ORDERED` ordering both run through it, so `<`, `=` and `>` partition
-    /// the same pairs by construction. They did not always — the ordering used
-    /// to divide in binary floating point while equality cross-multiplied
-    /// exactly, and `1/3` versus `0.1/0.3` came out equal AND less-than.
-    ///
-    /// Cross-multiplication rather than division: `a/b < c/d` iff `a·d < c·b`
-    /// when `b·d` is positive, and the sign flips when it is not — exact, where
-    /// dividing first would round both sides before comparing them.
+    /// This ratio against `other`'s by exact cross-multiplication, the one
+    /// ordering [`Self::is_equal`] and `DV_ORDERED` share; `None` without an
+    /// exact decimal form or on overflow.
     #[must_use]
     pub fn compare_to(&self, other: &Self) -> Option<Ordering> {
         let ((left_numerator, left_denominator), (right_numerator, right_denominator)) =
@@ -116,10 +67,7 @@ impl DvProportion {
         })
     }
 
-    /// Returns `true` when this proportion's accuracy was not recorded.
-    ///
-    /// Spec: `dv_quantified.adoc` §Functions `accuracy_unknown`, effected for
-    /// `DV_AMOUNT` by the `unknown_accuracy_value` sentinel.
+    /// Whether this proportion's accuracy was not recorded (`accuracy_unknown`).
     #[must_use]
     pub fn accuracy_unknown(&self) -> bool {
         self.accuracy.is_none_or(|value| value < 0.0)
@@ -168,11 +116,8 @@ impl DvProportion {
         )
     }
 
-    /// This proportion at a new ratio and accuracy, or `None` when the result
-    /// would not satisfy its own class invariants.
-    ///
-    /// `precision` is dropped: it states the decimal places the operands were
-    /// expressed to, and the spec gives no rule for the precision of a sum.
+    /// This proportion at a new ratio and accuracy, `precision` dropped, or
+    /// `None` when it fails its invariants.
     fn carrying(
         &self,
         numerator: Decimal,
@@ -200,18 +145,14 @@ impl DvProportion {
             normal_status: None,
             other_reference_ranges: openehr_base::containers::present_nonempty(Vec::new()),
         };
-        // A proportion that fails its own invariants is not a proportion —
-        // `Fraction_validity` in particular rejects a fractional numerator on
-        // the two integral kinds, which is where a scaled fraction lands.
+        // `Fraction_validity` refuses a fractional numerator on the integral kinds.
         combined.invariants().is_empty().then_some(combined)
     }
 }
 
 impl Validate for DvProportion {
     fn validate_invariants(&self, out: &mut Vec<InvariantViolation>) {
-        // DV_PROPORTION own invariants (Type_validity, Valid_denominator,
-        // Precision_validity, Fraction_validity, Unitary_validity,
-        // Percent_validity) via the generated core.
+        // The own invariants, through the generated core.
         crate::v1_2::validate::generated::dv_proportion_core(
             self.numerator,
             self.denominator,
@@ -319,12 +260,8 @@ mod tests {
     }
 
     /// CNF `master17.3-content_tc_data_types-quantity.adoc`
-    /// (CONT-DV_PROPORTION-validate_open): `type 3, num 10, den 500, precision 1
-    /// | rejected | fraction_validity` (and the type-4 analogue). A
-    /// fraction / integer_fraction with a present, non-zero precision is not
-    /// integral (`is_integral()` is "True … if precision is 0", RM
-    /// dv_proportion.adoc §Functions), so `Fraction_validity` must reject it even
-    /// though the numerator/denominator are whole numbers.
+    /// (CONT-DV_PROPORTION-validate_open): a fraction with a non-zero precision
+    /// fails `Fraction_validity`.
     #[test]
     fn fraction_with_nonzero_precision_rejected() {
         let fraction_validity =
@@ -376,9 +313,7 @@ mod tests {
         );
     }
 
-    /// Only proportions of the same kind combine — `is_strictly_comparable_to`
-    /// is "True if the `type` of this proportion is the same as the `type` of
-    /// `other`", so a percentage and a ratio do not add.
+    /// A percentage and a ratio do not add.
     #[test]
     fn only_the_same_kind_combines() {
         let percent = proportion(20.0, 100.0, PK_PERCENT, None);
@@ -387,9 +322,7 @@ mod tests {
         assert!(percent.subtract(&ratio).is_none());
     }
 
-    /// Two percentages keep the denominator 100 that `Percent_validity`
-    /// demands: cross-multiplying them would give 10000 and produce a value
-    /// that fails its own class.
+    /// Two percentages keep the denominator 100.
     #[test]
     fn equal_denominators_are_kept_not_multiplied() {
         let a = proportion(20.0, 100.0, PK_PERCENT, None);
@@ -417,9 +350,7 @@ mod tests {
         assert_eq!(sum.invariants(), Vec::<InvariantViolation>::new());
     }
 
-    /// A scaled fraction whose numerator stops being whole is refused rather
-    /// than rounded: `Fraction_validity` demands integers of `pk_fraction`, and
-    /// rounding would silently record a different ratio.
+    /// A scaled fraction whose numerator stops being whole is refused.
     #[test]
     fn a_fractional_numerator_is_refused_on_an_integral_kind() {
         let fraction = proportion(1.0, 2.0, PK_INTEGER_FRACTION, None);
@@ -436,13 +367,7 @@ mod tests {
         assert!((scaled.denominator - 1.0).abs() < f64::EPSILON);
     }
 
-    /// `<`, `=` and `>` must partition the same pairs. They did not: equality
-    /// cross-multiplied in `Decimal` while the ordering divided in `f64`, so
-    /// `1/3` and `0.1/0.3` were simultaneously equal AND less-than. The
-    /// ordering now runs through the same primitive, so this holds by
-    /// construction — and it is asserted, because that key also backs
-    /// `DvInterval::has` and a boundary misjudgement there raises a spurious
-    /// `Normal_range_and_status_consistency` violation on a valid commit.
+    /// `<`, `=` and `>` partition the same pairs.
     #[test]
     fn equality_and_ordering_cannot_disagree() {
         let pairs = [
@@ -472,9 +397,7 @@ mod tests {
         }
     }
 
-    /// `is_equal` compares the RATIO: 1/2 and 2/4 are the same proportion, and
-    /// the decimal cross-multiplication makes 1/3 and 0.1/0.3 agree where
-    /// binary floating point would not.
+    /// 1/2 equals 2/4, and 1/3 equals 0.1/0.3.
     #[test]
     fn is_equal_compares_the_ratio_not_the_fields() {
         let half = proportion(1.0, 2.0, PK_FRACTION, None);

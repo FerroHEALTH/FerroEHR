@@ -14,11 +14,6 @@
 //! here — so there is no further upstream corpus to vendor. That ceiling is
 //! stated rather than implied.
 //!
-//! Every document declares `xsi:schemaLocation="… ../P_Archetype.xsd"` with root
-//! element `<archetype>` of type `P_AUTHORED_ARCHETYPE` — the PERSISTENT AOM2
-//! form (`P_C_COMPLEX_OBJECT`, `P_C_ATTRIBUTE`, …), which is what
-//! `openehr-codegen -- emit-aom2` generates a codec for.
-//!
 //! Corpus discipline: 100% exercised, adjudicated refusals only, asserted rather
 //! than tolerated (`.claude/rules/vendored-corpora.md`).
 
@@ -161,12 +156,6 @@ fn aom2_examples_round_trip() {
 
 /// Every example carries a NON-EMPTY archetype body — identifier, definition tree
 /// and terminology — not just the envelope.
-///
-/// `P_Archetype.xsd` declares the whole body behind
-/// `<xs:group ref="pArchetypeElements"/>` / `<xs:group ref="P_AUTHORED_RESOURCE"/>`,
-/// so a codec that ignored `xs:group` references would read and round-trip all 8
-/// documents VACUOUSLY, over a struct holding only `other_metadata`. Asserting the
-/// body pins that the group expansion is real.
 #[test]
 fn aom2_examples_carry_the_group_body() {
     let files = xml_files(&examples_dir());

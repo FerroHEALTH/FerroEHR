@@ -1,26 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The template constraints a Web Template node captures beside its document.
-//!
-//! The validation walk and the composition builder read them from a
-//! [`super::model::WebTemplateNode`]. None of them is part of the Web Template
-//! metadata document (`ITS-REST simplified_formats master04 §"Web Template
-//! Metadata"`), so none is serialized.
+//! The template constraints a Web Template node captures beside its document,
+//! read by the validation walk and the composition builder; none is serialized.
 
 use crate::flat::validation::subtype;
 
-/// An AOM 1.4 `C_ATTRIBUTE.existence` constraint on a single RM attribute.
+/// An AOM 1.4 `C_ATTRIBUTE.existence` constraint on a single RM attribute
+/// (`master04-constraint_model_package.adoc` §existence).
 ///
-/// Existence is whether the attribute *field* is present at all — distinct from
-/// `cardinality` = container membership and `occurrences` = per-object-block
-/// count; AOM 1.4 `master04-constraint_model_package.adoc` §existence. Captured
-/// for the validation walk only; not part of the Web Template metadata
-/// document.
-///
-/// `path` is the absolute archetype path of the constrained attribute
-/// (`{node aqlPath}/{rm_attribute_name}`); `min`/`max` are the existence bounds
-/// (`max == -1` unbounded). A mandatory attribute has `min >= 1`.
+/// `path` is `{node aqlPath}/{rm_attribute_name}`; `max == -1` is unbounded.
 #[derive(Debug, Clone)]
 pub struct WebTemplateExistence {
     /// The existence lower bound; `>= 1` means the attribute is mandatory.
@@ -31,11 +20,8 @@ pub struct WebTemplateExistence {
     pub path: String,
 }
 
-/// A hoisted-wrapper type narrowing (validation-only, never serialized).
-///
-/// The instance node(s) matched at the absolute archetype `path` must conform to
-/// `rm_type` (or to one of the types when several same-path alternatives were
-/// hoisted — the walk groups by path).
+/// A hoisted-wrapper type narrowing: instance nodes matched at `path` must
+/// conform to `rm_type`, or to one of the same-path alternatives.
 #[derive(Debug, Clone)]
 pub struct WebTemplateSlot {
     /// Absolute archetype path of the hoisted wrapper constraint.
@@ -43,18 +29,13 @@ pub struct WebTemplateSlot {
     /// The wrapper's constrained RM type (`ITEM_LIST`, `POINT_EVENT`, …; an
     /// abstract type such as `ITEM_STRUCTURE` admits every concrete subtype).
     pub rm_type: String,
-    /// The hoisted wrapper's name, the term definition of its node id, when
-    /// the template gives one; a builder names the re-materialised wrapper
-    /// with it (RM common `master03-archetyped_package.adoc` §"The LOCATABLE
-    /// class").
+    /// The hoisted wrapper's name, from the term definition of its node id (RM
+    /// common `master03-archetyped_package.adoc` §"The LOCATABLE class").
     pub name: Option<String>,
 }
 
-/// A `C_CODE_PHRASE` code-list constraint on a coded RM attribute of a leaf.
-///
-/// Validation-only, never serialized: `attr` is the RM attribute name (e.g.
-/// `media_type`), `terminology` the constrained terminology id (`None` =
-/// `local`), `codes` the allowed `code_string`s.
+/// A `C_CODE_PHRASE` code-list constraint on a coded RM attribute of a leaf;
+/// `terminology` `None` means `local`.
 #[derive(Debug, Clone)]
 pub struct WebTemplateCodeList {
     /// The constrained RM attribute name (e.g. `media_type`).
@@ -65,19 +46,12 @@ pub struct WebTemplateCodeList {
     pub codes: Vec<String>,
 }
 
-/// An archetype **constraint binding** in force on a coded leaf
-/// (validation-only, never serialized).
+/// An archetype constraint binding in force on a coded leaf.
 ///
-/// A `CONSTRAINT_REF` under a coded attribute is "a proxy for a set of
-/// constraints … expressed in the binding of the constraint reference (e.g.
-/// 'ac0004') to a query … into an external service (e.g. a terminology
-/// service)" (`AM/docs/AOM1.4/master04-constraint_model_package.adoc`
-/// §Reference Objects); the ac-code → query mapping is the archetype ontology's
-/// `constraint_bindings` (`AM/docs/ADL1.4/master08-adl.adoc`
-/// §Constraint_bindings). Resolving the query is a terminology-server duty
-/// (BASE `architecture_overview/master12-terminology.adoc` §"Binding
-/// Terminology Value-sets to Archetypes"), so the web template only records
-/// what must be asked.
+/// A `CONSTRAINT_REF` is resolved by a query into an external service (AOM 1.4
+/// `master04-constraint_model_package.adoc` §Reference Objects;
+/// `AM/docs/ADL1.4/master08-adl.adoc` §Constraint_bindings), so the web template
+/// records what must be asked.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WebTemplateConstraintBinding {
     /// The RM attribute of this leaf holding the coded value the binding
@@ -94,18 +68,11 @@ pub struct WebTemplateConstraintBinding {
     pub query_uri: String,
 }
 
-/// A structural stub for a structural attribute (`data`, `description`,
-/// `protocol`, `state`) of an ENTRY, EVENT or ACTIVITY node
-/// (validation/synthesis-only, never serialized).
+/// A structural stub for a constrained structural attribute.
 ///
-/// The template constrains the attribute `attr` (e.g. `description`) with a
-/// node-identified structural child of RM type `rm_type` (`ITEM_TREE`,
-/// `HISTORY`, …) and archetype node id `node_id` (`at0017`), whose rubric
-/// `name` comes from the archetype `term_definitions`. When the attribute
-/// carries no leaf content, the compacted web-template drops the wrapper, so
-/// this record lets the composition builder synthesise the empty attribute
-/// with the *constrained* identity — a value the closed-archetype walk admits
-/// (AOM 1.4 `AM/docs/AOM1.4/master04-constraint_model_package.adoc`
+/// The node-identified child the template constrains `data`, `description`,
+/// `protocol` or `state` with, kept so the builder can fill the dropped
+/// attribute with that identity (AOM 1.4 `master04-constraint_model_package.adoc`
 /// §`Valid_value`).
 #[derive(Debug, Clone)]
 pub struct WebTemplateStructuralStub {
@@ -125,15 +92,8 @@ pub struct WebTemplateStructuralStub {
     pub name: Option<String>,
 }
 
-/// A closed-archetype constraint on one attribute (validation-only, never
-/// serialized).
-///
-/// Under the constrained attribute at absolute archetype `path`, an instance
-/// child bearing an `archetype_node_id` is admissible iff it matches one of
-/// `allowed_ids` (a fixed at-code / archetype-id sibling alternative) whose
-/// RM type it conforms to **or**
-/// an open `ARCHETYPE_SLOT` in `slots`. Any other archetyped child is an
-/// "unexpected node" (closed-world rejection).
+/// A closed-archetype constraint on one attribute: an archetyped instance child
+/// at `path` must match one of `allowed_ids` or an open slot in `slots`.
 #[derive(Debug, Clone)]
 pub struct WebTemplateClosedAttribute {
     /// Absolute archetype path of the constrained attribute (`{node aqlPath}/{attr}`).
@@ -148,14 +108,8 @@ pub struct WebTemplateClosedAttribute {
     pub slots: Vec<WebTemplateArchetypeSlot>,
 }
 
-/// An open `ARCHETYPE_SLOT` constraint (AOM 1.4 `ARCHETYPE_SLOT`;
-/// validation-only, never serialized).
-///
-/// A slot-filling instance object must conform to `rm_type`, match at least
-/// one `includes` archetype-id regex, and match no `excludes` regex (a
-/// blanket `.*` exclude is ignored when `includes` is non-empty — the ADL 1.4
-/// closed-slot idiom; AOM 1.4 has no `is_closed`). `min`/`max` bound the
-/// permitted number of fillers (`max == -1` unbounded).
+/// An open `ARCHETYPE_SLOT` constraint (AOM 1.4 `ARCHETYPE_SLOT`); `max == -1` is
+/// unbounded.
 #[derive(Debug, Clone)]
 pub struct WebTemplateArchetypeSlot {
     /// The RM type a slot filler must conform to.
@@ -172,20 +126,11 @@ pub struct WebTemplateArchetypeSlot {
 
 impl WebTemplateArchetypeSlot {
     /// Returns whether the slot admits a filler of RM type `rm_type` whose
-    /// archetype id is `archetype_id` (AOM 1.4 `ARCHETYPE_SLOT`, `includes`
-    /// and `excludes`).
+    /// archetype id is `archetype_id` (AOM 1.4 `ARCHETYPE_SLOT`).
     ///
-    /// `rm_type` conforms to the slot's `rm_type` by the RM inheritance
-    /// graph, generic parameters ignored. The id matches at least one
-    /// `includes` pattern (an empty list admits every id) and no `excludes`
-    /// pattern. Each pattern constrains the whole id: it is anchored at both
-    /// ends, and the slashes ADL writes around it are dropped. A match-all
-    /// exclude (`.*` or `.+`) beside a non-empty `includes` is the ADL 1.4
-    /// closed-slot idiom and excludes nothing the includes admit.
-    ///
-    /// The decision fails closed on a slot [`Self::defect`] reports: a slot
-    /// type the RM does not define admits nothing, an include no engine can
-    /// evaluate matches nothing, and such an exclude refuses every id.
+    /// Patterns are anchored at both ends; an empty `includes` admits every id, and
+    /// a match-all exclude beside a non-empty `includes` is the ADL 1.4 closed-slot
+    /// idiom. A slot [`Self::defect`] reports fails closed.
     #[must_use]
     pub fn admits(&self, rm_type: &str, archetype_id: &str) -> bool {
         if !rm_type_is_known(&self.rm_type) || !subtype::conforms(rm_type, &self.rm_type) {
@@ -231,10 +176,9 @@ pub enum SlotDefect {
     UnreadablePattern(String),
 }
 
-/// Refuses a Web Template that holds a constraint no engine can evaluate: a slot
-/// [`WebTemplateArchetypeSlot::defect`] reports, naming the attribute the slot
-/// stands under, or a `C_STRING` value pattern no regex engine compiles, naming
-/// the node.
+/// Refuses a Web Template holding a constraint no engine can evaluate: a slot
+/// [`WebTemplateArchetypeSlot::defect`] reports, or an uncompilable `C_STRING`
+/// pattern.
 pub(crate) fn check_evaluable(
     tree: &super::model::WebTemplateNode,
 ) -> Result<(), crate::flat::error::FlatError> {

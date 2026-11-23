@@ -284,14 +284,12 @@ pub(super) fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
 }
 
 impl Builder<'_> {
-    /// Emit the STREAMING FROM shape for a LIMIT-bearing, unordered query:
-    /// the version spine (`version`) is the single FROM item and every
-    /// node source hangs off it as a `LATERAL` subquery (`OFFSET 0` as the
-    /// planner's documented pull-up fence), so `PostgreSQL` walks current
-    /// versions lazily, probes each through the nested-set indexes, and
-    /// stops at the LIMIT — instead of materializing an archetype-anchor
-    /// bitmap over the whole corpus first (the measured 1M-entry/1 s
-    /// failure on non-selective anchors).
+    /// Emit the STREAMING FROM shape for a LIMIT-bearing, unordered query: the
+    /// version spine (`version`) is the single FROM item and every node source
+    /// hangs off it as a `LATERAL` subquery (`OFFSET 0` as the planner's
+    /// pull-up fence), so PostgreSQL walks current versions lazily and stops at
+    /// the LIMIT instead of materializing an archetype-anchor bitmap over the
+    /// whole corpus.
     ///
     /// Semantics are identical to the flat shape: each `LATERAL` returns
     /// ALL matching nodes per outer row, so row-per-binding multiplicity
@@ -471,14 +469,10 @@ impl Builder<'_> {
     /// Emits the streaming root's node lateral, or elides it, and returns the
     /// alias the scope/gate machinery group-tracks.
     ///
-    /// The lateral is DEAD WEIGHT when (a) the root source carries no
-    /// node-level condition beyond its RM type — which the spine's `kind`
-    /// filter already pins: a versioned object's `num = 0` row has
-    /// `rm_type = kind` by construction — and (b) no identified path reads the
-    /// root's node row ([`root_node_referenced`]). It is then one wasted
-    /// `node_hot_pkey` probe per spine row, and the root's subtree interval spans the
-    /// whole versioned object, so first-level containment reduces to sharing
-    /// the version.
+    /// The lateral is elided when the root source carries no node-level
+    /// condition beyond its RM type, which the spine's `kind` filter already
+    /// pins, and no identified path reads the root's node row
+    /// ([`root_node_referenced`]).
     ///
     /// The probe's other effect is kept without it: a version with no root
     /// node contributes no row. Exactly the logically deleted versions have

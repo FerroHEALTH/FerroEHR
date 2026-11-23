@@ -19,13 +19,9 @@ pub struct Uuid {
 
 /// Read access to the `pub(crate)` fields of [`Uuid`].
 ///
-/// The fields are not `pub`: the release states a **constraint over this
-/// class's own field values** (a lexical form, or a class invariant), so
-/// construction checks it and is the only door — docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc §Syntaxes: `uuid = hex-number, '-', hex-number, '-', hex-number, '-', hex-number, '-', hex-number`. The field carries the pinned `uuid` crate's RFC-4122 type (the settled strong-typing override), so parsing IS validation and the constructor is total — but the door is still the only way in, so the value can never be replaced by an unparsed one after the fact.
-///
-/// The validating constructor lives in the hand-written `*_impl.rs` sibling
-/// (the generator never writes into it); every generated codec builds this
-/// type through that constructor.
+/// The fields are not `pub` because the release constrains their values,
+/// so the validating constructor in the `*_impl.rs` sibling is the only
+/// way in: docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc §Syntaxes: `uuid = hex-number, '-', hex-number, '-', hex-number, '-', hex-number, '-', hex-number`. The field carries the pinned `uuid` crate's RFC-4122 type (the settled strong-typing override), so parsing IS validation and the constructor is total — but the door is still the only way in, so the value can never be replaced by an unparsed one after the fact.
 impl Uuid {
     /// The `value` this instance was constructed with, checked at the door.
     #[must_use]

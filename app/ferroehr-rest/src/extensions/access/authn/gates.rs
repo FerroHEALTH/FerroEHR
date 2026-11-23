@@ -157,9 +157,6 @@ pub(super) fn writes_own_representation(principal: &Principal) -> bool {
 /// subject of the EHR of their launch context, read through `layer`'s
 /// service.
 ///
-/// What it reads of `req` is read before it awaits anything, so the future
-/// holds no borrow of the request.
-///
 /// # Errors
 /// [`AuthError::PartyUnavailable`] when the clinical store cannot answer.
 pub(super) fn patient_person<'a>(

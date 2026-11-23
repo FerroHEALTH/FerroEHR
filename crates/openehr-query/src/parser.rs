@@ -4,13 +4,6 @@
 
 //! AQL parser — a `chumsky` parser transcribed from `AqlParser.g4`, turning the
 //! [`crate::lexer`] token stream into an [`crate::ast::SelectQuery`].
-//!
-//! Precedence: within both `containsExpr` and `whereExpr`, `AND` binds tighter
-//! than `OR` (the grammar's left recursion is realized here as `or` over `and`
-//! over atoms), with parenthesized grouping.
-//!
-//! Overflowing integer literals and `TOP`/`LIMIT`/`OFFSET` counts are reported
-//! as parse errors, never silently coerced.
 
 use crate::ast::{
     AggregateCall, ArchetypePredicate, ClassExprOperand, ColumnExpr, CompareOperand,
@@ -34,18 +27,11 @@ use chumsky::prelude::*;
 type Err<'a> = chumsky::extra::Err<Simple<'a, Token>>;
 
 /// One position at which the token stream left the grammar.
-///
-/// The position is reported twice: [`SyntaxFault::tokens`] indexes the parser's
-/// input and [`SyntaxFault::bytes`] locates it in the source text.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SyntaxFault {
     /// The half-open range of token indices the parser was looking at.
     pub tokens: core::ops::Range<usize>,
     /// The half-open byte range of the source those tokens cover.
-    ///
-    /// `Some` whenever the parse ran over a spanned stream ([`parse_spanned`],
-    /// [`parse_str`]); `None` for [`parse`], whose bare `&[Token]` input
-    /// carries no source positions.
     pub bytes: Option<core::ops::Range<usize>>,
     /// The token found there, or `None` when the input ended early.
     pub found: Option<Token>,
@@ -61,18 +47,9 @@ impl std::fmt::Display for SyntaxFault {
 }
 
 /// Why an AQL source failed to become a [`SelectQuery`].
-///
-/// The two variants are the two passes, so a caller branches on the pass that
-/// refused rather than on the message. Semantic rejections belong to the
-/// engine that consumes the AST, not here.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum ParseError {
     /// The source did not tokenize.
-    ///
-    /// The message names the pass; the lexer's located diagnostic is the
-    /// [`std::error::Error::source`], so a caller that shows the failure to a
-    /// person renders the cause chain, and a chain printer reads the
-    /// diagnostic once.
     #[error("the query could not be tokenised")]
     Lex(#[from] crate::lexer::LexError),
     /// The tokens did not match the grammar.
@@ -82,10 +59,6 @@ pub enum ParseError {
         faults: Vec<SyntaxFault>,
     },
     /// The query nests deeper than this parser accepts.
-    ///
-    /// The bound is checked over the tokens before the grammar runs, so
-    /// neither the parser nor any recursive pass over the tree it builds
-    /// meets a tree deeper than [`MAX_NESTING`] or [`MAX_EXPRESSION_DEPTH`].
     #[error("the query's {measure} exceeds {limit} levels, the deepest this parser accepts")]
     TooDeep {
         /// What nested too deep.
@@ -147,10 +120,6 @@ struct Group {
 
 /// Refuses a token stream that nests beyond [`MAX_NESTING`] or builds a tree
 /// deeper than [`MAX_EXPRESSION_DEPTH`], in one pass with no recursion.
-///
-/// The expression depth is an upper bound: a group adds every operator it
-/// holds to every path through it, wherever the operator stands. An
-/// unbalanced closer is left to the grammar, which reports it.
 fn check_bounds(tokens: &[Token], spanned: Option<&SpannedTokens>) -> Result<(), ParseError> {
     let refuse = |measure: Nesting, limit: usize, at: usize| {
         let range = at..at.saturating_add(1);
@@ -225,11 +194,6 @@ pub fn parse_spanned(tokens: &SpannedTokens) -> Result<SelectQuery, ParseError> 
 }
 
 /// Parses a token slice into a [`SelectQuery`].
-///
-/// `spanned` is the stream `tokens` was read from, when there is one: its byte
-/// ranges then land on every [`Span`] in the tree and on any failure. With
-/// `None` every reported [`SyntaxFault`] has `bytes: None` and every [`Span`]
-/// is unknown; [`parse_spanned`] passes the stream for you.
 ///
 /// # Errors
 /// [`ParseError::TooDeep`] for a query nested beyond [`MAX_NESTING`] or
@@ -350,9 +314,6 @@ fn push_escaped(out: &mut String, chars: &mut std::iter::Peekable<std::str::Char
 }
 
 /// Decode a `UTF8CHAR` escape (`\uHHHH`), consuming its four hex digits.
-///
-/// An escape that is not four hex digits naming a scalar value is passed
-/// through verbatim (`\u` retained), keeping [`unescape`] total.
 fn push_utf8_escape(out: &mut String, chars: &mut std::iter::Peekable<std::str::Chars<'_>>) {
     chars.next(); // consume 'u'
     // Look ahead (without consuming) at the next four chars.
@@ -373,9 +334,6 @@ fn push_utf8_escape(out: &mut String, chars: &mut std::iter::Peekable<std::str::
 
 /// Decode an `OCTAL_ESC` escape (`\` plus one to three octal digits), whose
 /// `first` digit has already been peeked.
-///
-/// A sequence naming no scalar value is passed through verbatim, keeping
-/// [`unescape`] total.
 fn push_octal_escape(
     out: &mut String,
     chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
@@ -414,9 +372,6 @@ enum NumKind {
 
 /// Converts a lexed numeric to a [`Primitive`], returning `None` on overflow so
 /// the parser reports a hard error instead of coercing to `0`/`inf`.
-///
-/// `SCI_INTEGER` stays an integer when the magnitude is integral and fits
-/// `i64`, else degrades to `Real`.
 fn parse_number(kind: NumKind, s: &str) -> Option<Primitive> {
     match kind {
         NumKind::Int => s.parse::<i64>().ok().map(Primitive::Integer),
@@ -479,10 +434,6 @@ fn parameter<'a>() -> impl Parser<'a, &'a [Token], String, Err<'a>> + Clone {
 // ── paths & predicates (mutually recursive: predicate ← objectPath ← predicate) ──
 
 /// Returns the `(identified_path, path_predicate, standard_predicate)` parsers.
-///
-/// They are built together because a `pathPredicate` contains an `objectPath`
-/// whose `pathPart`s may carry another `pathPredicate`. The bare
-/// `standardPredicate` is handed back for `AqlParser.g4 versionPredicate`.
 #[expect(
     clippy::type_complexity,
     reason = "the tuple of three mutually-recursive chumsky parsers is the return type; naming it would need an unnameable opaque-type alias per element"
@@ -492,11 +443,8 @@ fn path_parsers<'a>() -> (
     impl Parser<'a, &'a [Token], PathPredicate, Err<'a>> + Clone,
     impl Parser<'a, &'a [Token], StandardPredicate, Err<'a>> + Clone,
 ) {
-    // The only genuine recursion is objectPath → pathPart → pathPredicate →
-    // objectPath, through `recursive`'s WEAK self-handle: an owned handle
-    // embedded in its own definition is an Rc cycle chumsky never breaks. The
-    // predicate family handed back is a second instance over the finished
-    // `object`, held outside its definition, so it drops with the query parser.
+    // objectPath → pathPart → pathPredicate → objectPath recurses through the
+    // weak handle, since an owned one is an Rc cycle chumsky never breaks.
     let object = recursive(|object| {
         let (predicate, _standard) = predicate_parsers(object);
         // pathPart : IDENTIFIER pathPredicate?
@@ -585,10 +533,8 @@ fn predicate_parsers<'a>(
     let node_archetype = select! { Token::ArchetypeHrid(s) => s }
         .then(just(Token::Comma).ignore_then(name_constraint).or_not())
         .map(|(hrid, name)| NodePredicate::Archetype { hrid, name });
-    // The two `objectPath`-leading `nodePredicate` alternatives differ only
-    // after the shared prefix, so the prefix is parsed once and the tail
-    // dispatches: retrying each alternative from the top would double the work
-    // per bracket nesting level.
+    // The two `objectPath`-leading `nodePredicate` alternatives share a prefix,
+    // parsed once so nesting does not double the work.
     let node_path_tail = just(Token::Matches)
         .ignore_then(select! { Token::ContainedRegex(s) => s })
         .map(NodePathTail::Regex)
@@ -621,11 +567,8 @@ fn predicate_parsers<'a>(
     // pathPredicate : '[' (standardPredicate | archetypePredicate |
     // nodePredicate) ']'
     //
-    // A lone comparison is both a standardPredicate and a nodePredicate, and
-    // the grammar lists `standardPredicate` first, so it is lifted back out of
-    // the node tree. A lone `ARCHETYPE_HRID`/`PARAMETER` is an
-    // archetypePredicate, yet can open a node boolean (`[$p and at0001]`), so
-    // `]` belongs to each alternative and a failed one backtracks.
+    // A lone comparison is a standardPredicate (listed first); `]` closes each
+    // alternative so a failed one backtracks.
     let close = just(Token::RightBracket);
     let predicate = just(Token::LeftBracket).ignore_then(
         archetype
@@ -667,11 +610,11 @@ fn terminology_fn<'a>() -> impl Parser<'a, &'a [Token], TerminologyFunction, Err
 fn function_parser<'a>(
     terminal: impl Parser<'a, &'a [Token], Terminal, Err<'a>> + Clone + 'a,
 ) -> impl Parser<'a, &'a [Token], FunctionCall, Err<'a>> + Clone {
-    // functionCall : terminologyFunction | name '(' (terminal (',' terminal)*)? ')'
-    // The STRING function `CONTAINS(expr, substring)` shares its name with the
-    // containment keyword (QUERY master03 §Functions/String functions) — in
-    // function position (followed by `(`) the keyword token is the function
-    // name, kept as spelled.
+    // functionCall : terminologyFunction | name '(' (terminal (',' terminal)*)?
+    // ')'
+    //
+    // In function position the `CONTAINS` keyword is the string function (QUERY
+    // master03 §Functions/String functions).
     let named = ident()
         .or(select! { Token::Contains(spelled) => spelled })
         .then(
@@ -729,16 +672,12 @@ fn aggregate_parser<'a>(
     reason = "one combinator builder for the whole AqlParser.g4 grammar; the sub-parsers are mutually referential, so splitting it would only move the wiring"
 )]
 fn query<'a>() -> impl Parser<'a, &'a [Token], SelectQuery, Err<'a>> {
-    // The whole path grammar (identified paths, the path predicate, and the
-    // bare standard predicate) is built once here and shared by both the
-    // SELECT/terminal side (`identified`) and the FROM side (`predicate` on a
-    // class operand, `standard` inside a VERSION predicate).
+    // The path grammar is built once and shared by the SELECT and FROM sides.
     let (identified, predicate, standard) = path_parsers();
 
     // terminal : primitive | PARAMETER | identifiedPath | functionCall
-    // functionCall needs terminal, so the self-reference goes through
-    // `recursive`'s WEAK handle; an owned handle embedded in its own `define`
-    // is an Rc cycle chumsky never breaks.
+    //
+    // The self-reference goes through the weak handle (see `path_parsers`).
     let terminal = recursive(|terminal| {
         let function = function_parser(terminal);
         primitive()
@@ -793,10 +732,11 @@ fn query<'a>() -> impl Parser<'a, &'a [Token], SelectQuery, Err<'a>> {
         });
 
     // ── FROM / containsExpr ──
-    // classExprOperand : IDENTIFIER variable? pathPredicate? | VERSION variable? [versionPredicate]?
+    //
+    // classExprOperand : IDENTIFIER variable? pathPredicate? | VERSION
+    // variable? [versionPredicate]?
+    //
     // versionPredicate : LATEST_VERSION | ALL_VERSIONS | standardPredicate
-    // The third (standardPredicate) alternative is wired here — so
-    // `VERSION v[commit_audit/time_committed > '2020-01-01']` parses.
     let version_predicate = select! {
         Token::LatestVersion => VersionPredicate::Latest,
         Token::AllVersions => VersionPredicate::All,
@@ -1069,11 +1009,9 @@ mod tests {
 
     #[test]
     fn timewindow_is_rejected() {
-        // AQL 1.1 removed the `TIMEWINDOW` clause from the grammar (QUERY
-        // `master00-amendment_record.adoc`, SPECQUERY-20) — a query using it is
-        // invalid AQL and must fail to parse. The CNF query corpus (A/109,
-        // B/103, C/103) predates the removal; the conformance runner encodes
-        // that as a documented corpus-override, never the parser.
+        // AQL 1.1 has no `TIMEWINDOW` clause (QUERY
+        // `master00-amendment_record.adoc`, SPECQUERY-20), so a query using it
+        // fails to parse.
         for q in [
             "SELECT e/ehr_id/value FROM EHR e TIMEWINDOW PT12H/2019-10-24",
             "SELECT c FROM COMPOSITION c TIMEWINDOW PT12H/2019-10-24",

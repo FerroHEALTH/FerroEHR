@@ -49,12 +49,6 @@ fn secret_and_file_both_set_is_rejected() {
 
 /// Every credential-bearing key reaches the same configuration through its
 /// `*_file` sibling as it does inline.
-///
-/// These had no file route at all, so the most valuable secret in the
-/// deployment — the database DSN — could only travel as an environment value,
-/// readable through `/proc/<pid>/environ` and inherited by every child
-/// process. The assertion is equivalence: the file route is an additional
-/// delivery mechanism, not a second configuration path that might differ.
 #[test]
 fn the_credential_keys_resolve_identically_from_a_file_and_inline() {
     const DSN: &str = "postgres://u:p@db.internal:5432/ferroehr";
@@ -147,9 +141,6 @@ fn a_credential_set_both_inline_and_as_a_file_is_refused() {
 
 /// The URL file routes are reachable through the environment grammar too,
 /// which is how a container passes a mount path without a config file.
-///
-/// Without this the documented env form could ship dead — the whole reason
-/// every section carries an env-mapping test.
 #[test]
 fn the_url_file_keys_are_reachable_through_the_env_grammar() {
     let dsn = assert_fs::NamedTempFile::new("dsn").expect("temp");
@@ -280,10 +271,8 @@ fn url_userinfo_reaches_no_rendering() {
     });
     c.auth.smart.platform_base_url = Some(leaky(17));
     c.server.public_base_url = Some(leaky(18));
-    // URL 11 was the usage report endpoint, whose type refuses userinfo, so it
-    // can hold no sentinel; URL 7 was the removed event broker; URL 12 was the
-    // removed remote PDP; URL 19 was `[auth.scim] public_base_url`, which URL
-    // 18 replaces.
+    // URL 11, the usage report endpoint, refuses userinfo and holds no
+    // sentinel; numbers 7, 12 and 19 name no URL.
     assert!(
         ferrohealth_usage_report::section::Endpoint::new(
             "https://u11:URL_PW_SENTINEL_11@h11:1/p11"
@@ -475,9 +464,9 @@ fn a_party_issuer_never_renders_its_userinfo() {
     );
 }
 
-/// The removed `[[auth.scopeless_subjects]]` table, whose subjects are now
-/// `access_without_scope` grants in the CDR, is refused as an unknown key,
-/// and the refusal never renders the password of the issuer it held (#5437).
+/// `[[auth.scopeless_subjects]]` is refused as an unknown key (scopeless
+/// subjects are `access_without_scope` grants in the CDR), and the refusal
+/// never renders the password of the issuer it held (#5437).
 #[test]
 fn a_removed_scopeless_subject_table_is_refused_without_rendering_its_userinfo() {
     let file = toml_file(&format!(
@@ -490,9 +479,9 @@ fn a_removed_scopeless_subject_table_is_refused_without_rendering_its_userinfo()
     assert!(!refused.contains("SCOPELESS_PW_SENTINEL"), "{refused}");
 }
 
-/// The removed `[[authz.federation.agreement]]` table, whose agreements are
-/// now CDR data, is refused as an unknown key, and the refusal never renders
-/// the password of the issuer it held (#5440).
+/// `[[authz.federation.agreement]]` is refused as an unknown key (agreements
+/// are CDR data), and the refusal never renders the password of the issuer it
+/// held (#5440).
 #[test]
 fn a_removed_agreement_table_is_refused_without_rendering_its_userinfo() {
     let file = toml_file(&format!(

@@ -10,8 +10,6 @@
 //! The OPT 1.4 writer (`opt14_writer`) over the CKM archetype pack and the
 //! CKM operational templates.
 //!
-//! Three gates:
-//!
 //! 1. Every AM 1.4 archetype the CKM publishes (`corpus/archetypes/ckm/xml/`)
 //!    becomes a one-archetype template whose OPT validates against ITS-XML
 //!    `Template.xsd`, reads back through the `opt14` reader to the model the
@@ -22,10 +20,6 @@
 //!    OPT's node tree: the same archetype roots, nodes, types, occurrences
 //!    and existences at the same paths.
 //! 3. The writer's refusals, one per typed error.
-//!
-//! The XSD is the ITS-XML 1.0.2 `ALL/Template.xsd`, which differs from
-//! ITS-XML 2.0.0 `AM/Release-1.4/Template.xsd` only in its target namespace;
-//! the 2.0.0 bundle does not compile (gate below), so it validates nothing.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -433,7 +427,7 @@ fn the_its_xml_2_0_0_release_1_4_bundle_does_not_compile() {
 /// Why a CKM template has no definition over today's archetypes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Drift {
-    /// It names an archetype version the CKM pack no longer publishes.
+    /// It names an archetype version the CKM pack does not publish.
     ArchetypeVersion,
     /// The archetype was revised: a node or attribute the template uses is
     /// gone, or a mandatory one was added.

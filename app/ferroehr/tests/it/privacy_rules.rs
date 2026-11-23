@@ -13,9 +13,6 @@ use ferroehr::privacy::{Finding, PrivacyPolicy};
 
 /// A pseudonym namespace and an opaque subject, the shape the boundary
 /// mandates.
-///
-/// Every identifier in this module is synthetic, constructed by running the
-/// published algorithm forward over a chosen prefix.
 const PSEUDONYM_NS: &str = "urn:ferroehr:pseudonym";
 const OPAQUE_SUBJECT: &str = "018f3c2a-7b41-7c2e-9a55-6d1e4f80b2c3";
 

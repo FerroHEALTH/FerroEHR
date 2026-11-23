@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The XSD-driven constraint-model emitter: generates a typed Rust model +
-//! canonical-XML `ToXml`/`FromXml` impls for each vendored ARCHETYPE-family XSD
-//! closure. Three targets, one pipeline (see [`ModelTarget`]):
+//! The XSD-driven constraint-model emitter: a typed Rust model and
+//! canonical-XML `ToXml`/`FromXml` impls for each vendored archetype-family
+//! XSD closure ([`ModelTarget`]):
 //!
 //! | target | subcommand | closure | root |
 //! |---|---|---|---|
@@ -11,30 +11,12 @@
 //! | `aom2` | `emit-aom2` | `P_Archetype.xsd` + includes | `<archetype>` = `P_AUTHORED_ARCHETYPE` |
 //! | `aom2_model` | `emit-aom2` | `Archetype.xsd` + includes | `<archetype>` = `AUTHORED_ARCHETYPE` |
 //!
-//! Unlike `emit-xml`, which drives off the BMM model, this emitter builds its
-//! [`XmlType`]s directly from the XSD closure. A complexType that
-//! `openehr-base`/`openehr-rm` already export resolves to that crate's prelude;
-//! every other complexType (the AOM/OPT constraint model, the OPT envelope, the
-//! `IntervalOf*` helpers) is generated.
+//! A complexType `openehr-base`/`openehr-rm` export resolves to that crate;
+//! every other is generated. An `xs:enumeration` simple type is a closed enum.
 //!
-//! A named `xs:simpleType` whose restriction declares `xs:enumeration` facets is
-//! a closed value space, so it emits a fieldless enum over the XSD's own
-//! vocabulary and refuses text outside the set at parse. Abstract types used as
-//! polymorphic slots become untagged enums dispatching on `xsi:type`, whose
-//! codecs come from [`crate::render::emit_xml::emit_to_xml`] /
-//! [`crate::render::emit_xml::emit_from_xml`].
-//!
-//! NOTE: `opt14` re-generates the AOM 1.4 `C_*` constraint tree that the
-//! BMM-generated `openehr-am::v1_4` also carries, because the OPT-XML wire shape
-//! (`Template.xsd` + `OpenehrProfile.xsd`) and the AOM 1.4 BMM are not
-//! structurally reconcilable: different domain-type sets (`C_DV_STATE` and
-//! `C_CODE_REFERENCE` have no `v1_4` counterpart), differently typed
-//! `assumed_value`, the XSD `IntervalOf*` shape against
-//! `openehr_base::Interval<T>`, and OPT-envelope-only types.
-//!
-//! The two models are generated independently, so
-//! `crates/openehr-its/tests/opt14_v1_4_divergence.rs` is a compile-time
-//! inventory sentinel that fails when either gains or loses a constraint type.
+//! NOTE: `opt14` regenerates the AOM 1.4 `C_*` tree beside `openehr-am::v1_4`,
+//! since the OPT-XML shape and the AOM 1.4 BMM are not structurally
+//! reconcilable; `crates/openehr-its/tests/opt14_v1_4_divergence.rs` tracks it.
 
 use crate::load::xsd::{XsdEnumFacet, XsdModel, XsdSimpleType};
 use crate::plan::{XmlField, XmlType, XmlVariant};
@@ -43,17 +25,8 @@ use crate::render::naming;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
-/// The Rust module path the OPT model's generated types live at.
-///
-/// The prelude is a MODEL PARAMETER, not a constant of this emitter: the same
-/// XSD-driven pipeline emits several `openehr-its` submodules (`opt14`, `aom2`,
-/// `aom2_model`), and every generated impl and defaulted literal must name the
-/// module it is being emitted INTO. A hardcoded path here silently emits `aom2`
-/// impls that reference `crate::opt14` types.
-///
-/// Each path ends at the defining `types` module rather than at the parent: the
-/// parent re-exported these names with a glob until the zero-re-exports rule
-/// removed it, and a generated impl must name where a type is DEFINED.
+/// The Rust module path the OPT model's generated types live at, the defining
+/// `types` module.
 pub(crate) const OPT_PRELUDE: &str = "crate::opt14::types";
 
 /// The Rust module path the AOM2 persistent-form model's generated types live at.
@@ -95,13 +68,9 @@ pub(crate) static AOM2_MODEL_TARGET: ModelTarget = ModelTarget {
     schema: "the ITS-XML AOM2 model-form schemas (Archetype.xsd)",
 };
 
-/// Resource-metadata types that must be generated from the **OPT XSD** shape
-/// rather than resolved to the `openehr-base`/`openehr-rm` impls: the BMM
-/// (RM 1.2.0 / BASE 1.3.0) and the OPT XSD (Release 1.0.2) have diverged on
-/// their optionality (e.g. `RESOURCE_DESCRIPTION.parent_resource` is mandatory
-/// in the BMM but `minOccurs="0"` in the XSD — and the corpus omits it), so the
-/// BMM-driven impls reject valid OPT `<description>` blocks. The OPT XSD is the
-/// authority for OPT documents, so these are emitted fresh into `opt14`.
+/// Resource-metadata types generated from the OPT XSD shape, whose optionality
+/// differs from the BMM (`RESOURCE_DESCRIPTION.parent_resource` is
+/// `minOccurs="0"` in the XSD); the OPT XSD governs OPT documents.
 const FORCE_GENERATE: &[&str] = &[
     "AUTHORED_RESOURCE",
     "RESOURCE_DESCRIPTION",
@@ -109,63 +78,31 @@ const FORCE_GENERATE: &[&str] = &[
     "TRANSLATION_DETAILS",
 ];
 
-/// `StringDictionaryItem` is an XSD `simpleContent` helper (`<x id="k">v</x>`);
-/// it is never generated as a struct — its repeated-element usage is emitted as
-/// an order-preserving `IndexMap<String, String>` field.
+/// The XSD `simpleContent` helper (`<x id="k">v</x>`) emitted as an
+/// `IndexMap<String, String>` field.
 ///
-/// NOTE: the XSD models this as an ordered `sequence`, so
-/// `IndexMap` (insertion order = document order, keyed `.get()` for the
-/// `WebTemplate` consumer) is used rather than the alphabetical `BTreeMap` the RM
-/// `emit-xml` path uses — a `ToXml` re-serialization then preserves element
-/// order. A genuinely duplicate `id` (not a conformant-OPT case) is still
-/// collapsed last-wins by the map. The `OrderedDict` field target
-/// (vs `emit-xml`'s `Hash`) selects this shape without affecting the RM codec.
+/// NOTE: the XSD models it as an ordered `sequence`, so document order is kept
+/// on re-serialization; a duplicate `id` collapses last-wins.
 const STRING_DICT_ITEM: &str = "StringDictionaryItem";
 
 /// OPT-envelope sections carried as the verbatim XML subtree
-/// (`crate::xml::runtime::XmlAny`) rather than a generated struct.
+/// (`crate::xml::runtime::XmlAny`).
 ///
-/// `T_VIEW` (the `<view>` presentation block) holds an **anonymous inline
-/// complexType** (`T_VIEW.constraints` → nested `items` with an `id` attribute
-/// and an `anySimpleType` value) that the XSD reader cannot flatten into a named
-/// type; it carries only presentation hints (`pass_through` markers), never the
-/// operational definition, so it is kept as read instead of modelled.
-///
-/// `T_CONSTRAINT` (the top-level `<constraints>` block) is not opaque: it is a
-/// named `T_ATTRIBUTE` → `T_COMPLEX_OBJECT` tree carrying node `default_value`
-/// overlays, generated like any other type. Its
-/// differential children may omit `rm_type_name`/`occurrences`/`node_id`
-/// (they carry only `default_value` + `differential_path`); [`lenient_default`]
-/// fills those, so the corpus parses cleanly and the `default_value`s are
-/// preserved on the model for FLAT default-value population to consume.
+/// `T_VIEW` holds an anonymous inline complexType of presentation hints only.
 const OPAQUE_TYPES: &[&str] = &["T_VIEW"];
 
-/// A default expression for an XSD-mandatory field that real-world OPT exports
-/// (Ocean/tooling) nevertheless omit — so `from_xml` fills it instead of
-/// erroring. `node_id`/`purpose` fall back to empty; `occurrences`/`existence`
-/// (both `IntervalOfInteger`) to the conservative `0..1` (present, optional
-/// single) so a missing multiplicity never over-constrains. The expression is
-/// emitted in the `opt14` impl context (prelude `crate::opt14`).
+/// A default for an XSD-mandatory field that real OPT exports omit:
+/// `node_id`/`purpose` empty, `occurrences`/`existence` `0..1`.
 ///
-/// NOTE: a defaulted `occurrences`/`existence` of `0..1` is a
-/// *fallback for non-conformant input only* — conformant OPTs always carry the
-/// element. It is a guess (a node that should be `1..1` is silently made
-/// optional-single), so any downstream multiplicity check (composition validation) must
-/// resolve multiplicity from the `definition`/archetype, never trust a defaulted
-/// `0..1` from this reader.
+/// NOTE: no openEHR spec governs non-conformant input: our own design; a
+/// defaulted `0..1` must never be trusted for a multiplicity check.
 ///
-/// The match is on the field name **and its declared XSD type**, never the name
-/// alone: `existence`/`occurrences` are `IntervalOfInteger` elements in the OPT
-/// closure but `MultiplicityInterval` elements in the AOM2 model closure, and a
-/// name-only match would emit an `Intervalofinteger` literal into a
-/// `Multiplicityinterval` field. Keeping the type exact also keeps the concession
-/// confined to the shapes it was adjudicated for.
+/// Matched on field name and XSD type, since `occurrences` is a
+/// `MultiplicityInterval` in the AOM2 closure.
 fn lenient_default(field_name: &str, type_name: &str, prelude: &str) -> Option<String> {
     match (field_name, type_name) {
-        // `rm_type_name` joins the lenient set for differential
-        // `T_COMPLEX_OBJECT` children in real exports: `<constraints>` overlay
-        // nodes may carry only `default_value` + `differential_path`
-        // (e.g. the corpus `non_unique_aql_paths.opt`).
+        // Differential `<constraints>` nodes may carry only `default_value` and
+        // `differential_path`.
         ("node_id" | "purpose" | "rm_type_name", "xs:string") => Some("String::new()".to_owned()),
         ("occurrences" | "existence", "IntervalOfInteger") => Some(format!(
             "{prelude}::Intervalofinteger {{ \
@@ -177,31 +114,18 @@ fn lenient_default(field_name: &str, type_name: &str, prelude: &str) -> Option<S
     }
 }
 
-/// The Rust name of the emitted error a refusing facet reader returns.
-///
-/// One per generated module: the module's types are self-contained (the
-/// zero-re-exports rule means nothing is shared across them), so each closure
-/// carries its own copy.
+/// The Rust name of the error a refusing facet reader returns, one per module.
 const FACET_ERROR: &str = "UnknownFacetValue";
 
-/// Whether a facet reader over this `xs:restriction` base compares the TRIMMED
-/// element text against the declared facet values.
-///
-/// XSD fixes `whiteSpace` to `collapse` on every built-in datatype except
-/// `xs:string`, which alone keeps `preserve`
-/// (<https://www.w3.org/TR/xmlschema11-2/#rf-whiteSpace>). The vendored
-/// archetype schemas restrict `xs:integer` throughout, so their facet values are
-/// compared after trimming — exactly as every other numeric leaf already reads.
+/// Whether a facet reader over this `xs:restriction` base trims the element
+/// text: every built-in but `xs:string` collapses whitespace
+/// (<https://www.w3.org/TR/xmlschema11-2/#rf-whiteSpace>).
 fn facet_base_collapses_whitespace(base: &str) -> bool {
     !matches!(base, "xs:string" | "xsd:string")
 }
 
-/// The Rust variant identifier for one `xs:enumeration` facet.
-///
-/// The openEHR schemas annotate every enumeration facet with an `id`
-/// (`<xs:enumeration value="2001" id="equal"/>`), which is the schema's own
-/// name for the value; a facet without one is named from its value, so a
-/// re-vendoring that drops the annotation still emits.
+/// The Rust variant identifier for one `xs:enumeration` facet: its `id`
+/// annotation, else its value.
 fn facet_variant_ident(facet: &XsdEnumFacet) -> String {
     let source = facet.id.clone().unwrap_or_else(|| {
         let sanitized: String = facet
@@ -228,13 +152,10 @@ fn rust_str_literal(s: &str) -> String {
 enum Resolved {
     /// A Rust primitive (`String`/`bool`/`i32`/`i64`/`f64`).
     Primitive(&'static str),
-    /// `xs:anyType`/`xs:anySimpleType`/anonymous-inline → the verbatim XML
-    /// subtree carrier `crate::xml::runtime::XmlAny` (attributes, text and children in
-    /// document order, re-emitted as read).
+    /// `xs:anyType`/`xs:anySimpleType`/anonymous-inline → the verbatim XML subtree
+    /// carrier `crate::xml::runtime::XmlAny`.
     ///
-    /// NOTE: `AM aom14 §EXPR_LEAF Class` types `item: Any`, so the payload
-    /// domain of the schema's open slots is open too and no closed set of
-    /// generated types can be dispatched to.
+    /// NOTE: `AM aom14 §EXPR_LEAF Class` types `item: Any`, so these slots are open.
     Any,
     /// A repeated `StringDictionaryItem` element group → order-preserving
     /// `IndexMap<String,String>` (target `OrderedDict`).
@@ -251,14 +172,8 @@ enum Resolved {
     Facet(String),
 }
 
-/// Everything about the emission TARGET that varies between the XSD-driven
-/// closures this emitter serves (`opt14`, `aom2`, `aom2_model`).
-///
-/// All of it is a model parameter rather than a constant for the same reason the
-/// prelude is: three modules come out of one emitter, and a hardcoded value
-/// silently stamps one module's identity onto another's files — an `aom2_model`
-/// impl referencing `crate::opt14` types, or an `emit-aom2` output whose banner
-/// tells the reader to re-run `emit-opt`.
+/// What varies between the XSD-driven closures (`opt14`, `aom2`,
+/// `aom2_model`).
 pub(crate) struct ModelTarget {
     /// The `openehr-codegen` subcommand that regenerates the target, named in
     /// every `// @generated` banner.
@@ -284,9 +199,7 @@ pub(crate) struct ModelTarget {
 /// The generate/resolve model for one XSD closure.
 pub(crate) struct OptModel<'a> {
     xsd: &'a XsdModel,
-    /// Spec class name → full generation-module path, per dependency crate
-    /// (the openehr-base / openehr-rm generation the shared XSD types resolve
-    /// to — full defining-module paths, never a prelude).
+    /// Spec class name → full generation-module path, per dependency crate.
     base_paths: &'a BTreeMap<String, String>,
     rm_paths: &'a BTreeMap<String, String>,
     /// Concrete + abstract complexTypes we generate (spec names).
@@ -374,9 +287,7 @@ impl<'a> OptModel<'a> {
                 return Resolved::Rm(format!("{path}::{rust}"));
             }
         }
-        // A named `xs:simpleType` restricting a base with `xs:enumeration`
-        // facets declares a CLOSED value space (`OPERATOR_KIND`,
-        // `VALIDITY_KIND`, `PROPORTION_KIND`), so the slot is that enum.
+        // An `xs:enumeration`-faceted simple type is a closed value space.
         if self
             .xsd
             .simple_types
@@ -385,9 +296,7 @@ impl<'a> OptModel<'a> {
         {
             return Resolved::Facet(naming::type_name(type_name));
         }
-        // Every other named `xs:simpleType` restricts a text space with lexical
-        // facets only (`Iso8601Date`, `DateConstraintPattern`, `matchString`):
-        // still text on the wire.
+        // Other simple types carry lexical facets only: text.
         Resolved::Primitive("String")
     }
 
@@ -457,13 +366,8 @@ impl<'a> OptModel<'a> {
         out
     }
 
-    /// One element's generated field: its declared Rust type and its XML view.
-    ///
-    /// A single-valued reference to a generated enum is boxed — those slots
-    /// (`EXPR_ITEM`, `C_PRIMITIVE`, `STATE`) are recursive. The container
-    /// wrapping is [`Self::declared_type`]'s and the wire fallback is
-    /// [`Self::scalar_default`]'s; an `xs:anyType` hash takes the separate
-    /// [`Self::hash_field`] shape.
+    /// One element's generated field: its declared Rust type and its XML view; a
+    /// single reference to a generated enum is boxed, since those slots recurse.
     fn element_field(&self, e: &crate::load::xsd::XsdElem) -> OptField {
         let res = self.resolve(&e.type_name);
         let rust_name = naming::field_ident(&e.name);
@@ -528,13 +432,8 @@ impl<'a> OptModel<'a> {
         }
     }
 
-    /// The wire default for a mandatory scalar element, if it has one.
-    ///
-    /// An absent mandatory bool falls back to `false` (openEHR `Interval`
-    /// boundedness flags), and some XSD-mandatory fields are omitted by
-    /// real-world OPT exports (Ocean/tool laxity), so those are defaulted
-    /// leniently — a wire adapter must ingest imperfect real OPTs. A
-    /// multi-valued or optional element never defaults.
+    /// The wire default for a mandatory scalar element, if it has one: `false` for
+    /// a bool, else [`lenient_default`].
     fn scalar_default(&self, e: &crate::load::xsd::XsdElem, res: &Resolved) -> Option<String> {
         if e.optional || e.multiple {
             return None;
@@ -546,9 +445,6 @@ impl<'a> OptModel<'a> {
     }
 
     /// The closure's `xs:enumeration`-faceted simple types, name-ordered.
-    ///
-    /// These are the named simple types whose restriction fixes a closed value
-    /// space; each emits a fieldless Rust enum over the XSD's own vocabulary.
     fn facet_types(&self) -> Vec<&'a XsdSimpleType> {
         self.xsd
             .simple_types
@@ -557,11 +453,8 @@ impl<'a> OptModel<'a> {
             .collect()
     }
 
-    /// Every generated struct's fields as `(wire name, declared Rust type)` —
-    /// the exact pairs [`OptModel::emit_types`] writes, keyed by spec name.
-    ///
-    /// Exposed so the emitter invariants can assert what a slot is TYPED as
-    /// rather than re-deriving it, or scraping the emitted text.
+    /// Every generated struct's fields as `(wire name, declared Rust type)`, keyed
+    /// by spec name.
     #[must_use]
     pub(crate) fn declared_field_types(&self) -> BTreeMap<String, Vec<(String, String)>> {
         self.generate
@@ -578,13 +471,8 @@ impl<'a> OptModel<'a> {
             .collect()
     }
 
-    /// Emit the fieldless enum for one `xs:enumeration`-faceted simple type,
-    /// plus its wire accessors.
-    ///
-    /// The wire form is the facet `value` VERBATIM, so a document round-trips
-    /// byte-identically; a value outside the declared set is refused, which is
-    /// what an `xs:enumeration` facet means
-    /// (<https://www.w3.org/TR/xmlschema11-2/#rf-enumeration>).
+    /// Emits the fieldless enum for one faceted simple type, refusing a value
+    /// outside the set (<https://www.w3.org/TR/xmlschema11-2/#rf-enumeration>).
     fn emit_facet_enum(&self, b: &mut String, st: &XsdSimpleType) {
         let rust = naming::type_name(&st.name);
         let variants: Vec<(String, &XsdEnumFacet)> = st
@@ -802,22 +690,13 @@ impl<'a> OptModel<'a> {
             };
             let rust = naming::type_name(spec);
             let mut doc = format!("/// openEHR {} `{spec}`.\n", self.target.type_label);
-            // An `abstract="true"` complexType that NOTHING in the closure derives
-            // from cannot be an `xsi:type` dispatch enum, and it is still a slot
-            // type real documents must fill (`Archetype.xsd` declares
-            // `C_ATTRIBUTE` abstract yet types `C_COMPLEX_OBJECT.attributes` with
-            // it). It is emitted as the plain shape a document has to present —
-            // never dropped, which would leave a dangling field type.
-            //
-            // NOTE: such a type is NOT a variant of the enums it descends from —
-            // the XSD `xsi:type` rule — while its concrete descendants all are,
-            // which `the_concrete_only_variant_reading_loses_no_document_shape` pins.
+            // An abstract complexType nothing derives from is a slot documents fill
+            // (`C_ATTRIBUTE` in `Archetype.xsd`), so it emits as a plain struct.
             if ty.is_abstract && !self.enum_specs.contains(spec) {
                 let _ = writeln!(
                     b,
-                    "/// openEHR {} `{spec}` — declared `abstract` in the XSD with no\n\
-                     /// concrete subtype in this schema closure, so it is emitted as the\n\
-                     /// plain shape a conforming document must present at its slots.",
+                    "/// openEHR {} `{spec}`, abstract in the XSD with no concrete subtype here,\n\
+                     /// so emitted as the shape a document presents at its slots.",
                     self.target.type_label
                 );
                 doc = String::new();
@@ -935,9 +814,7 @@ pub(crate) struct ModuleSpec {
     pub(crate) title: &'static str,
     /// The document roots to expose.
     pub(crate) entry_points: &'static [EntryPoint],
-    /// Extra `//!` paragraphs appended after the entry-point lines — the
-    /// module's adjudications (root-type choice, corpus ceiling). One entry per
-    /// paragraph; a blank line is emitted between them.
+    /// Extra `//!` paragraphs appended after the entry-point lines.
     pub(crate) notes: &'static [&'static str],
 }
 
@@ -1016,11 +893,8 @@ pub(crate) static AOM2_MODEL_MODULE: ModuleSpec = ModuleSpec {
     ],
 };
 
-/// Emit a generated XML module's `mod.rs` — wiring, re-export, and one
-/// `from_xml`/`to_xml` pair per document root.
-///
-/// Shared by every XSD-driven emitter so the module surface stays identical
-/// across them; the roots are the only thing that varies.
+/// Emits a generated XML module's `mod.rs` with one `from_xml`/`to_xml` pair
+/// per document root.
 #[must_use]
 pub(crate) fn emit_module(spec: &ModuleSpec) -> String {
     let mut b = String::new();
@@ -1044,9 +918,7 @@ pub(crate) fn emit_module(spec: &ModuleSpec) -> String {
             let _ = writeln!(b, "//! {line}");
         }
     }
-    // `pub mod types`, never a star re-export: the zero-re-exports rule means an
-    // import names its defining module, and a glob would also hide which of the
-    // three generated modules a name came from at the use site.
+    // `pub mod types`, never a glob re-export.
     let _ = writeln!(b, "\nmod impls;\npub mod types;");
     for e in spec.entry_points {
         let _ = writeln!(

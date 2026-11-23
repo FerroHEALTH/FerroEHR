@@ -122,10 +122,6 @@ impl FerroEhrService {
 impl FerroEhrService {
     /// Store a stored query, returning the effective SEMVER it is stored at.
     ///
-    /// The text must pass the analysis an execution runs before it touches the
-    /// database ([`Self::analyse_stored_aql`]), so a query the engine refuses
-    /// is refused here instead of on every later execution.
-    ///
     /// - With an explicit `version` the `(name, version)` pair is immutable: an
     ///   already-existing pair, compared case-insensitively, is a `Conflict`
     ///   rather than an overwrite (ITS-REST overview
@@ -199,12 +195,6 @@ impl FerroEhrService {
 
     /// Runs the analysis an execution of `query_text` runs before it reaches
     /// the database, refusing a text the AQL engine refuses.
-    ///
-    /// The stages are the execution path's own: parse, the `TERMINOLOGY()`
-    /// pre-pass, lowering to the IR, and SQL generation in both FROM shapes
-    /// (flat and LIMIT-streaming). Nothing is executed: the pre-pass answers
-    /// every `TERMINOLOGY()` call through [`StoreTimeTerminology`], and every
-    /// `$parameter` is bound to [`STORE_TIME_PARAMETER`].
     ///
     /// # Errors
     ///

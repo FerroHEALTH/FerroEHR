@@ -2,37 +2,21 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM spec functions for `ENTRY`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.entry.adoc`
-//! §Functions + §Invariants. `ENTRY` is abstract, so the generated `Entry` is
-//! the closed subtype enum and the function dispatches over the five concrete
-//! entry types.
+//! The `ENTRY` functions (`org.openehr.rm.composition.entry.adoc`),
+//! dispatched over the five concrete entry types.
 
 use crate::v1_2::common::generic::party_proxy::PartyProxy;
 use crate::v1_2::composition::content::entry::entry::Entry;
 
 impl Entry {
-    /// Returns `true` when this entry is about the subject of the EHR.
-    ///
-    /// Spec: `org.openehr.rm.composition.entry.adoc` §Functions
-    /// `subject_is_self` — "Returns True if this Entry is about the subject of
-    /// the EHR, in which case the subject attribute is of type `PARTY_SELF`"
-    /// (`Post_condition: Result implies subject.generating_type =
-    /// "PARTY_SELF"`, restated as the §Invariants `Subject_validity`). The
-    /// generating type of `subject` is therefore the whole test: `PARTY_SELF`
-    /// is the "party proxy representing the subject of the record"
-    /// (`org.openehr.rm.common.party_self.adoc` §Description), so a
-    /// `PARTY_IDENTIFIED` subject is by construction someone else.
+    /// Whether this entry is about the subject of the EHR: `subject` is a
+    /// `PARTY_SELF` (`subject_is_self`, `Subject_validity`).
     #[must_use]
     pub fn subject_is_self(&self) -> bool {
         matches!(self.subject(), PartyProxy::PartySelf(_))
     }
 
-    /// The subject of this entry, whichever concrete entry type carries it.
-    ///
-    /// Spec: `org.openehr.rm.composition.entry.adoc` §Attributes `subject`.
+    /// The subject of this entry (`ENTRY.subject`).
     #[must_use]
     pub fn subject(&self) -> &PartyProxy {
         match self {
@@ -104,9 +88,7 @@ mod tests {
         }))
     }
 
-    /// `Result implies subject.generating_type = "PARTY_SELF"`: true exactly
-    /// for a `PARTY_SELF` subject, both with and without an `external_ref`
-    /// (which `party_self.adoc` says "may or may not" be set).
+    /// True exactly for a `PARTY_SELF` subject, with or without `external_ref`.
     #[test]
     fn a_party_self_subject_is_the_record_subject() {
         assert!(entry(PartyProxy::PartySelf(PartySelf { external_ref: None })).subject_is_self());

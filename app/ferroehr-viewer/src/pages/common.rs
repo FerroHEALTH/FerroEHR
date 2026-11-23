@@ -137,9 +137,6 @@ pub fn shortened(id: &str) -> String {
 /// A relative time for a list (family rule 11), as FerroUI draws it: "13 s
 /// ago", "4 min ago", with the full timestamp in its tooltip and the moment
 /// in `datetime`.
-///
-/// It counts from the instant the server read for the page
-/// ([`crate::request::now`]), so every part of the page counts from one now.
 #[must_use]
 pub fn ago(raw: &str) -> Html {
     ferrohealth_ui::view::time::relative(&current(), raw, &clock(crate::request::now()))
@@ -399,9 +396,6 @@ pub struct EditorDock {
 
 /// Docks an editor's decision bar at the foot of the page: its line, Discard
 /// and the primary decision, both submits of the page's form (R4).
-///
-/// Discard leaves the form unchecked, so a required field left empty never
-/// holds the reader on the page.
 pub fn dock_editor(editor: EditorDock) {
     let EditorDock {
         form,

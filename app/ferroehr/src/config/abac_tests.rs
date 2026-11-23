@@ -1,17 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The keys of the removed `[authz.abac]` tree are unknown keys.
-//!
-//! The remote decision point, `[authz.abac.remote]` with its endpoint tree,
-//! and the `[authz.abac.policy.<name>]` bindings it read are gone (#5516), and
-//! so is the embedded Cedar engine with the whole `[authz.abac]` table: its
-//! switch, engine, organisation claim and directory switch, and the Cedar
-//! settings (#5515), and the token-claim patient scope with its `[auth]
-//! patient_claim` and `patient_namespace` (#5586). FerroEHR is greenfield, so
-//! each is refused as any unknown key is, from the file and from the
-//! environment. No openEHR spec
-//! governs authorization: our own design.
+//! The keys of `[authz.abac]`, with its remote decision point and policy
+//! bindings (#5516), the Cedar engine (#5515), and `[auth] patient_claim` and
+//! `patient_namespace` (#5586), are refused as any unknown key is, from the
+//! file and from the environment. No openEHR spec governs authorization: our
+//! own design.
 
 use super::tests::{env, file_refusal};
 use super::*;
@@ -217,8 +211,8 @@ const REMOVED: &[(&str, bool, &[&str])] = &[
     ("authz.abac.policy.ehr", false, &["name", "parameters"]),
 ];
 
-/// The removed table every key sits under, as the refusal names it: the
-/// `[authz]` table no longer has an `abac` field.
+/// The table every key sits under, as the refusal names it: `[authz]` has no
+/// `abac` field.
 fn removed_table(_table: &str) -> &'static str {
     "abac"
 }
@@ -283,8 +277,7 @@ fn the_removed_tables_are_unknown() {
     }
 }
 
-/// Neither engine of `[authz.abac] engine` is a value any more: the key
-/// itself is unknown.
+/// `[authz.abac] engine` is an unknown key, whatever its value.
 #[test]
 fn every_engine_is_unknown() {
     for engine in ["cedar", "remote"] {
