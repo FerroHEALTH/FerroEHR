@@ -1,34 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 `.adl` corpus coverage harness — every `.adl` source file under
-//! `tests/corpus` is exercised with an asserted outcome, closing the `.adl`
-//! walker gap the pre-existing `.adls`-only corpus harnesses left.
+//! Every `.adl` source under `tests/corpus` has an asserted outcome.
 //!
-//! NOTE: no openEHR spec governs 1.4 tolerance/conversion — our own design (see
-//! [`openehr_adl::adl14`]). Outcomes are pinned by the corpus (the in-file
-//! `regression` tag / directory convention), not a spec clause.
+//! NOTE: no openEHR spec governs 1.4 tolerance: our own design, pinned by the
+//! corpus tags.
 //!
-//! Per-category outcome:
-//! - `upgrade/upgrade_from_14/*.adl` — converts via [`adl14::convert`] without
-//!   error (the structural compare vs the paired `.adls` is in
-//!   `adl14_conversion.rs`).
-//! - `validity/legacy_adl_1.4/*.adl` — parse (1.4 dialect) clean AND validate
-//!   clean under the ADL 1.4 phase-1 subset
-//!   ([`openehr_adl::validate::validate_source_integrity`] in the 1.4 dialect;
-//!   every file here
-//!   is `regression`-tagged PASS), with THREE adjudicated overrides:
-//!   `FAIL_c_dv_quantity_minimal.v1.adl` PARSES over its own FAIL/`SDINV` tag
-//!   (an empty `(C_DV_QUANTITY) <>` block is grammatical dADL the docs text
-//!   admits — adjudication + citations at the assertion site, #1465), and the
-//!   two concept-less fixtures reject with `SACO` against the spec text over
-//!   their own `PASS` tag (adjudication + citation at the assertion site).
-//! - `features/**/*.adl` — parse (1.4 dialect) clean.
-//! - `adl14-dadl/*.adl` — the hand-written dADL breadth tree, claimed by
-//!   `adl14_dadl_breadth.rs` (accept/refuse per fixture, leaf values
-//!   asserted).
-//! - `adl14-cadl/*.adl` — the hand-written cADL tree (dialect gates, domain
-//!   lowering, VATDF/VACDF, VCOC), claimed by `adl14_cadl_gates.rs`.
+//! `upgrade_from_14` converts; `legacy_adl_1.4` parses and validates clean in the
+//! 1.4 dialect, with three adjudicated overrides at their assertions;
+//! `features` parses; `adl14-dadl` and `adl14-cadl` belong to their own gates.
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

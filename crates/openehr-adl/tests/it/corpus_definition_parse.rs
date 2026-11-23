@@ -1,17 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Corpus definition-parse gate: every `.adls` file that outer-parses must
-//! also have its `definition` section (and every template overlay's
-//! definition) cADL-parse into an AOM2 `CComplexObject` tree.
-//!
-//! Discipline (mirrors the outer-parse gate): a file whose *intended*
-//! failure is at the cADL syntax level (an `S*` rule-code name in the file,
-//! or a structural malformation the cADL parser correctly rejects) is excluded from
-//! the clean-parse assertion, each with a reason. Files whose intended failure
-//! is semantic (`V*`-code names) MUST still parse — semantic validation is a
-//! validation harness. Files that do not outer-parse are skipped here (they
-//! are the outer-parse gate's concern).
+//! Every `.adls` file that outer-parses also cADL-parses its definitions, except
+//! files whose intended failure is a cADL syntax code, each with a reason.
 
 // A corpus test reports its pass counts on stdout for the developer running it.
 #![allow(

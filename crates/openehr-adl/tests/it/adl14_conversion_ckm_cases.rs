@@ -1,14 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The 1.4 → 2 conversion cases the openEHR Discourse thread "ADL2 generation
-//! appears to be incorrect" raised against Archie, each run on a vendored
-//! archetype: an at-code used as node id and value (#4963), a terminology
-//! constraint with no codes (#4965), a specialisation introducing an undotted
-//! code (#4966) and specialised slots through the differ (#4967).
+//! The 1.4 → 2 conversion cases of the openEHR Discourse thread "ADL2
+//! generation appears to be incorrect", each on a vendored archetype.
 //!
-//! NOTE: no openEHR spec governs 1.4→2 conversion, our own design; the ADL 2
-//! output is judged by the AOM 2 validator and each case cites its rule.
+//! NOTE: no openEHR spec governs 1.4→2 conversion: our own design; the output
+//! is judged by the AOM 2 validator.
 #![allow(
     clippy::expect_used,
     clippy::panic,
@@ -161,12 +158,8 @@ fn unshifted(code_2: &str) -> String {
     format!("at{:04}", n - 1)
 }
 
-/// `waterlow_score`'s `at0116` is an ELEMENT node id and the ordinal value the
-/// node carries. ADL 2 keeps id-codes and at-codes apart
-/// (`ADL2/master07.04-adl_basics.adoc` §Node Identifier Codes), so it becomes
-/// the node `id117` and the value `at117`, each defined in every language
-/// (VATDF, `AOM2/master03-archetype_package.adoc` §Validity Rules), and no
-/// other term is lost or invented.
+/// `waterlow_score`'s `at0116`, a node id and a value, becomes `id117` and
+/// `at117`, both defined (`ADL2/master07.04` §Node Identifier Codes; VATDF).
 #[test]
 fn waterlow_score_keeps_a_code_used_as_node_id_and_value() {
     let src = ckm("openEHR-EHR-OBSERVATION.waterlow_score.v0.adl");
@@ -277,13 +270,8 @@ fn open_value_set_codes(out: &Archetype, log: &ConversionLog) -> Vec<String> {
     codes
 }
 
-/// A 1.4 constraint naming a terminology and no codes (`[openEHR::]`, the
-/// shape openEHR/archie#896 crashes on) becomes an ac-code with its term
-/// definition, no internal value set and no binding: no URI names a whole
-/// terminology as a value set (`ADL2/master07.13-adl_terminology.adoc`
-/// §`Value_sets` Sub-section), and a constraint with no codes constrains no
-/// value (`ADL2/master04.5-cadl_primitive_types.adoc` §Soft Terminology
-/// Constraint).
+/// `[openEHR::]` becomes an ac-code with its term and no value set or binding
+/// (`ADL2/master07.13` §`Value_sets`; `master04.5` §Soft Terminology Constraint).
 #[test]
 fn a_terminology_constraint_with_no_codes_converts_to_an_open_value_set() {
     let src = ckm("openEHR-EHR-CLUSTER.waveform.v0.adl");
@@ -372,12 +360,8 @@ fn only_undotted_new_term_codes_are_refused() {
     }
 }
 
-/// `exam-foot.v0` narrows `exam.v2`'s slot `at0004` to `at0004.1` (the shape
-/// openEHR/archie#772 loses). The redefining slot takes the parent slot's id
-/// `id5` (VDSSID, `AOM2/master04.5-constraint_model-class_definitions.adoc`)
-/// and keeps its include; differentiated against the converted parent, the
-/// slots inherited unchanged go (`ADL2/master09.02-spec_concepts.adoc`
-/// §Differential and Flat Forms), and the child validates against its parent.
+/// `exam-foot.v0`'s redefining slot takes the parent slot's id (VDSSID), and the
+/// differentiated child validates against its parent.
 #[test]
 fn a_specialised_slot_survives_and_inherited_slots_are_stripped() {
     let parent = converted(
