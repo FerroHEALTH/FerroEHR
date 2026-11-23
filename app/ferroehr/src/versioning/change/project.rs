@@ -15,7 +15,7 @@ use crate::versioning::change::Committed;
 /// The projections a committed version updates in its own transaction: the
 /// EHDS Art. 3(3) hold of a new object, the projection of the settings of an
 /// `EHR_ACCESS` (`access`, [`AccessCommit`]), and the binding side table of a
-/// demographic party.
+/// demographic party, past what its guarded statement `held`.
 ///
 /// # Errors
 /// The errors of each projection.
@@ -26,6 +26,7 @@ pub(super) async fn committed(
     committed: &Committed,
     party_facts: Option<&crate::party_binding::derive::Facts>,
     access: Option<AccessCommit>,
+    held: crate::party_binding::store::Held,
 ) -> Result<(), ServiceError> {
     crate::versioning::access_delay::hold_on_creation(tx, ctx, ehr_id, committed).await?;
     if let (Some(ehr_id), Some(access)) = (ehr_id, access) {
@@ -37,6 +38,7 @@ pub(super) async fn committed(
             ctx,
             committed,
             party_facts,
+            held,
         ))
         .await?;
     }

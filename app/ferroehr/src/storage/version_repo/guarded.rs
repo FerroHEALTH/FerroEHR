@@ -43,6 +43,26 @@ pub struct Guard {
     /// Whether the version is a new FOLDER hierarchy, which joins
     /// `EHR.folders` in the same statement (RM ehr master04 §Folders, #6257).
     pub folder: bool,
+    /// What a party commit's statement takes and writes beside its version
+    /// (#6257); `None` for a write in the clinical domain.
+    pub party: Option<Box<PartySync>>,
+}
+
+/// What a party commit's guarded statement takes and writes beside its
+/// version, in the party domain, which holds no `ehr` row and no policy
+/// revision (#6257).
+#[derive(Debug, Clone)]
+pub struct PartySync {
+    /// Whether the statement takes the commit side of the key-space fill
+    /// gate, held to the end of the commit's transaction, before it writes.
+    pub key_space: bool,
+    /// The parties the version names as relationship targets, whose reverse
+    /// index the statement brings to the version; `None` leaves the index to
+    /// the caller.
+    pub reverse: Option<Vec<uuid::Uuid>>,
+    /// What the gate read found of the versions before the commit, which the
+    /// binding hooks read in place of their own reads.
+    pub prior: super::gate::Prior,
 }
 
 /// What a guarded statement ([`statement`]) writes beside its version.
@@ -54,6 +74,8 @@ pub(super) enum Beside {
     Status,
     /// The `ehr_folder` membership of a new FOLDER hierarchy ([`folder_cte`]).
     Folder,
+    /// A party version, in the party domain ([`party_ctes`]).
+    Party,
 }
 
 /// The promoted `ehr` columns of an `EHR_STATUS` commit, written by its
@@ -143,10 +165,27 @@ impl GuardFlags {
     }
 }
 
-/// The leading CTEs of a guarded statement and its gate `g`: the EHR row
-/// `ehr` read `FOR SHARE` (the lock a concurrent `EHR_STATUS` flip waits on),
-/// or `FOR UPDATE` by the `status` commit that flips it, which alone requires
-/// no modifiable EHR,
+/// What a guarded statement's leading CTEs read before its targets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Lead {
+    /// The EHR row, read `FOR SHARE`, and the policy and definition revisions.
+    Content,
+    /// The EHR row, read `FOR UPDATE` by the `EHR_STATUS` commit that flips it,
+    /// and the revisions.
+    Status,
+    /// Nothing of an EHR or the policy, which the party domain does not hold;
+    /// the commit side of the key-space fill gate when `$gate` holds
+    /// (`party_binding::key_space`).
+    Party {
+        /// The parameter that says whether the gate is taken.
+        gate: usize,
+    },
+}
+
+/// The leading CTEs of a guarded statement and its gate `g`: per `lead`, the
+/// EHR row `ehr` read `FOR SHARE` (the lock a concurrent `EHR_STATUS` flip
+/// waits on), or `FOR UPDATE` by the `status` commit that flips it, which
+/// alone requires no modifiable EHR, or for a party the key-space gate;
 /// each target's head row (`targets`, each object with the head it must
 /// still have), the policy and definition revisions against `revisions`, and
 /// every head no later than the commit instant `time`. `g` holds a row only
@@ -155,21 +194,47 @@ fn guard_ctes(
     ehr: &str,
     targets: &[(String, String)],
     time: &str,
-    (revisions, status): ((&str, &str), bool),
+    (revisions, lead): ((&str, &str), Lead),
 ) -> String {
     use std::fmt::Write as _;
-    let (lock, writable) = if status {
-        ("UPDATE", "NOT e.restricted")
-    } else {
-        ("SHARE", "e.modifiable AND NOT e.restricted")
+    let (mut sql, writable, revised, gated) = match lead {
+        Lead::Party { gate } => (
+            format!(
+                "WITH ks AS MATERIALIZED ( \
+                     SELECT pg_advisory_xact_lock_shared({}::bigint) AS taken WHERE ${gate}::bool \
+                 )",
+                crate::party_binding::key_space::GATE
+            ),
+            "true",
+            false,
+            " LEFT JOIN ks ON true",
+        ),
+        Lead::Content | Lead::Status => {
+            let (lock, writable) = if lead == Lead::Status {
+                (
+                    "UPDATE",
+                    "COALESCE((SELECT NOT e.restricted FROM e), false)",
+                )
+            } else {
+                (
+                    "SHARE",
+                    "COALESCE((SELECT e.modifiable AND NOT e.restricted FROM e), false)",
+                )
+            };
+            (
+                format!(
+                    "WITH e AS ( \
+                         SELECT COALESCE(x.is_modifiable, true) AS modifiable, \
+                                x.restricted_at IS NOT NULL AS restricted \
+                         FROM ehr x WHERE x.id = {ehr} FOR {lock} \
+                     ), p AS (SELECT rr.policy, rr.definitions FROM request_revisions rr)"
+                ),
+                writable,
+                true,
+                "",
+            )
+        }
     };
-    let mut sql = format!(
-        "WITH e AS ( \
-             SELECT COALESCE(x.is_modifiable, true) AS modifiable, \
-                    x.restricted_at IS NOT NULL AS restricted \
-             FROM ehr x WHERE x.id = {ehr} FOR {lock} \
-         ), p AS (SELECT rr.policy, rr.definitions FROM request_revisions rr)"
-    );
     let (mut tips, mut marks, mut orders) = (
         String::from("true"),
         String::from("false"),
@@ -195,19 +260,33 @@ fn guard_ctes(
         );
     }
     let (policy, definitions) = revisions;
+    let (policy_held, policy_now, definitions_now) = if revised {
+        (
+            format!(
+                "(SELECT p.policy FROM p) IS NOT DISTINCT FROM {policy}::bigint \
+                 AND (SELECT p.definitions FROM p) IS NOT DISTINCT FROM {definitions}::bigint"
+            ),
+            "(SELECT p.policy FROM p)".to_owned(),
+            "(SELECT p.definitions FROM p)".to_owned(),
+        )
+    } else {
+        (
+            "true".to_owned(),
+            format!("{policy}::bigint"),
+            format!("{definitions}::bigint"),
+        )
+    };
     let _ = write!(
         sql,
         ", k AS ( \
-             SELECT COALESCE((SELECT {writable} FROM e), false) AS ehr_held, \
+             SELECT {writable} AS ehr_held, \
                     ({tips}) AS tip_held, NOT ({marks}) AS mark_held, \
-                    (SELECT p.policy FROM p) IS NOT DISTINCT FROM {policy}::bigint \
-                      AND (SELECT p.definitions FROM p) IS NOT DISTINCT FROM {definitions}::bigint \
-                      AS policy_held, \
+                    {policy_held} AS policy_held, \
                     ({orders}) AS order_held, \
-                    (SELECT p.policy FROM p) AS policy_now, \
-                    (SELECT p.definitions FROM p) AS definitions_now \
+                    {policy_now} AS policy_now, \
+                    {definitions_now} AS definitions_now \
          ), g AS ( \
-             SELECT 1 AS held FROM k \
+             SELECT 1 AS held FROM k{gated} \
              WHERE k.ehr_held AND k.tip_held AND k.mark_held AND k.policy_held AND k.order_held \
          )"
     );
@@ -216,20 +295,60 @@ fn guard_ctes(
 
 /// The outbox CTE of a guarded statement: the event of CONTRIBUTION `id` in
 /// EHR `ehr` with `envelope` at `time`, written once `from` wrote, under the
-/// shared outbox lock and unless the EHR carries a legal mark, as
-/// [`super::commit::write_outbox`] writes it.
-fn outbox_cte(id: &str, ehr: &str, (envelope, time): (&str, &str), from: &str) -> String {
+/// shared outbox lock and, when `marked` holds, unless the EHR carries a legal
+/// mark, as [`super::commit::write_outbox`] writes it; the party domain holds
+/// no `ehr` relation to read a mark from.
+fn outbox_cte(
+    id: &str,
+    ehr: &str,
+    (envelope, time): (&str, &str),
+    from: &str,
+    marked: bool,
+) -> String {
+    let unmarked = if marked {
+        format!(
+            " WHERE NOT EXISTS (SELECT 1 FROM ehr m WHERE m.id = {ehr} \
+                 AND (m.restricted_at IS NOT NULL \
+                      OR (m.research_objected_at IS NOT NULL \
+                          AND m.research_objection_ground IS NULL)))"
+        )
+    } else {
+        String::new()
+    };
     format!(
         ", o AS ( \
              INSERT INTO event_outbox (contribution_id, ehr_id, envelope, committed_at) \
              SELECT {id}, {ehr}, {envelope}::jsonb, {time}::timestamptz \
              FROM (SELECT pg_advisory_xact_lock_shared( \
                        hashtext(current_schema() || '.event_outbox'), 0) \
-                   FROM {from} WHERE {envelope}::jsonb IS NOT NULL) l \
-             WHERE NOT EXISTS (SELECT 1 FROM ehr m WHERE m.id = {ehr} \
-                 AND (m.restricted_at IS NOT NULL \
-                      OR (m.research_objected_at IS NOT NULL \
-                          AND m.research_objection_ground IS NULL))) \
+                   FROM {from} WHERE {envelope}::jsonb IS NOT NULL) l{unmarked} \
+         )"
+    )
+}
+
+/// The reverse-relationship CTEs of a party version `vo` at `time`, from
+/// `$targets`, as `party_reverse::replace` writes them, once `from` wrote: the
+/// open rows of the targets the version no longer names are closed at `time`
+/// (removed when they opened at it), and each named target without an open
+/// row gets one. The two touch disjoint targets, so their order within the
+/// statement does not matter; a `NULL` `$targets` writes nothing.
+fn party_ctes(vo: &str, time: &str, targets: usize, from: &str) -> String {
+    format!(
+        ", rc AS ( \
+             UPDATE party_relationship_target t SET valid_to = {time}::timestamptz FROM {from} \
+             WHERE t.source_vo_id = {vo} AND t.valid_to IS NULL \
+               AND t.valid_from < {time}::timestamptz \
+               AND t.target_party_id <> ALL(${targets}::uuid[]) \
+         ), re AS ( \
+             DELETE FROM party_relationship_target t USING {from} \
+             WHERE t.source_vo_id = {vo} AND t.valid_to IS NULL \
+               AND t.valid_from >= {time}::timestamptz \
+               AND t.target_party_id <> ALL(${targets}::uuid[]) \
+         ), ri AS ( \
+             INSERT INTO party_relationship_target (target_party_id, source_vo_id, valid_from) \
+             SELECT DISTINCT x.target, {vo}, {time}::timestamptz \
+             FROM {from}, unnest(${targets}::uuid[]) AS x(target) \
+             ON CONFLICT (target_party_id, source_vo_id) WHERE valid_to IS NULL DO NOTHING \
          )"
     )
 }
@@ -318,19 +437,27 @@ fn audit_cte(name: &str, first: usize, time: &str, from: &str) -> String {
 /// `$28` the expected head ordinal, `$29` the policy revision, `$30` the
 /// definition revision, `$31` the outbox envelope and `$32` the audit
 /// reservation, and the node arrays from `$33`, then for a `status` commit
-/// the columns of [`status_ctes`]; `beside` names what else it writes. The
+/// the columns of [`status_ctes`], and for a party commit the key-space gate
+/// flag and the reverse targets of [`party_ctes`]; `beside` names what else
+/// it writes. The
 /// audit insert reads from `g`, and every later insert from the audit's, so
 /// nothing is written unless every requirement holds; the last row names a
 /// flag per requirement.
 pub(super) fn statement(beside: Beside) -> String {
-    let status = beside == Beside::Status;
+    let after_nodes = 33 + crate::storage::node_write::node_array_count();
     let (sync, notified) = match beside {
         Beside::Status => (
-            status_ctes("$7", 33 + crate::storage::node_write::node_array_count()),
+            status_ctes("$7", after_nodes),
             ", (SELECT count(*) FROM en) AS notified",
         ),
         Beside::Folder => (folder_cte("$7", "$8"), ""),
+        Beside::Party => (party_ctes("$8", "$22", after_nodes + 1, "v"), ""),
         Beside::Nothing => (String::new(), ""),
+    };
+    let lead = match beside {
+        Beside::Status => Lead::Status,
+        Beside::Party => Lead::Party { gate: after_nodes },
+        Beside::Folder | Beside::Nothing => Lead::Content,
     };
     format!(
         "{}, {}, c AS ( \
@@ -341,12 +468,12 @@ pub(super) fn statement(beside: Beside) -> String {
             "$7",
             &[("$8".to_owned(), "$28".to_owned())],
             "$22",
-            (("$29", "$30"), status)
+            (("$29", "$30"), lead)
         ),
         audit_cte("a", 1, "$22", "g"),
         super::commit::version_ctes("", ("$7", "c.id", "a.id", "a, c"), 8, 33),
         sync,
-        outbox_cte("$6", "$7", ("$31", "$22"), "v"),
+        outbox_cte("$6", "$7", ("$31", "$22"), "v", beside != Beside::Party),
         reservation_cte("$32"),
         flags_row("a", notified)
     )
@@ -403,7 +530,7 @@ fn set_statement(n: usize) -> String {
              INSERT INTO contribution (id, ehr_id, commit_audit_id) \
              SELECT $1, $2, ca.id FROM ca ON CONFLICT (id) DO NOTHING RETURNING id \
          )",
-        guard_ctes("$2", &targets, "$6", (("$3", "$4"), false)),
+        guard_ctes("$2", &targets, "$6", (("$3", "$4"), Lead::Content)),
         audit_cte("ca", 7, "$6", "g"),
     );
     for i in 0..n {
@@ -423,7 +550,7 @@ fn set_statement(n: usize) -> String {
     let _ = write!(
         sql,
         "{}{}{}",
-        outbox_cte("$1", "$2", ("$5", "$6"), "c"),
+        outbox_cte("$1", "$2", ("$5", "$6"), "c", true),
         reservation_cte("$12"),
         flags_row("ca", "")
     );

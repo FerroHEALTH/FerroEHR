@@ -803,7 +803,13 @@ async fn apply_change(
     let (committed, id) = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
     let facts = party_facts.as_deref();
     Box::pin(project::committed(
-        tx, ctx, ehr_id, &committed, facts, access,
+        tx,
+        ctx,
+        ehr_id,
+        &committed,
+        facts,
+        access,
+        crate::party_binding::store::Held::default(),
     ))
     .await?;
     Ok((committed, id, references))

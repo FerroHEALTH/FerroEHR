@@ -218,16 +218,23 @@ pub(crate) async fn settle(
     )))
     .execute(&mut *tx)
     .await;
-    let Err(source) = checked else {
-        return Ok(());
-    };
+    match checked {
+        Ok(_) => Ok(()),
+        Err(source) => Err(collision(source)),
+    }
+}
+
+/// The answer to `source`, a failed check of the record subjects' deferred
+/// uniqueness or a failed `COMMIT` of a transaction that wrote them: the `409`
+/// of a reference another `PERSON` declares, else the storage error itself.
+pub(crate) fn collision(source: sqlx::Error) -> ServiceError {
     let collides = source
         .as_database_error()
         .is_some_and(|db| db.is_unique_violation() && db.constraint() == Some(UNIQUE));
     if !collides {
-        return Err(ServiceError::Storage(StorageError::Database(source)));
+        return ServiceError::Storage(StorageError::Database(source));
     }
-    Err(ServiceError::Conflict(
+    ServiceError::Conflict(
         Refusal::new(
             Clash::State,
             format!(
@@ -238,7 +245,7 @@ pub(crate) async fn settle(
             ),
         )
         .with_source(source),
-    ))
+    )
 }
 
 /// The `complete` or `incomplete` `PERSON` that declares `subject`, read on

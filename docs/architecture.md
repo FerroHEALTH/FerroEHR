@@ -309,6 +309,20 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   in the guarded statement. Two creates that take one rank at once are
   refused by `pk_ehr_folder`, and the second is judged again and answers
   `409` for the live directory (#6296).
+  A PERSON, ORGANISATION, GROUP, ROLE or AGENT create, update or delete is
+  judged on one gate read of the party pool (#6257, `gate::party`): the
+  target's tip, head and mark, `now()`, the head's policy mark and the
+  newest version with a body, which the binding hooks read in place of their
+  own reads. Its access record is held first, and its transaction opens with
+  one guarded statement that takes the key-space gate shared, requires the
+  tip the gate read found and writes the version, its outbox row, the
+  reservation and the reverse-relationship index. There is no EHR or policy
+  guard: the version keys and the tip arbitrate, and a moved tip is judged
+  again. The side-table settle follows in the same transaction. A record
+  subject another PERSON declares is refused by the deferred
+  `uq_binding_record_subject` at `COMMIT`, and the write answers `409` with
+  its records discarded. PARTY_RELATIONSHIP writes and demographic
+  CONTRIBUTIONs keep the per-version path.
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers
