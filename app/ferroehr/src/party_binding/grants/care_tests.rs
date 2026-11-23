@@ -289,6 +289,7 @@ impl Ward {
             query.execute(&mut *tx).await.expect("the statement runs");
         }
         store::finish(&mut tx, parties).await.expect("the stamp");
+        // NOTE: our own design (#5762), a test commit of party rows that no request makes.
         tx.commit().await.expect("the commit");
     }
 
@@ -304,6 +305,7 @@ impl Ward {
             .await
             .expect("the snapshot");
         let changed = store::load(&mut tx, Some(since)).await.expect("the delta");
+        // NOTE: our own design (#5762), a read-only snapshot that writes nothing.
         tx.commit().await.expect("the read ends");
         changed
     }
