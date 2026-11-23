@@ -1,14 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The documents a reader gets from a stored entry, against the goldens
-//! written before the entry was stored as compact facts (#6322): the BALP
-//! `AuditEvent` the ITI-81 search and the feed serve, the DICOM message the
-//! syslog sender sends, and the search tokens of the rendering, which the
-//! request path wrote when the goldens were written and the frontier round's
-//! batch renders from the stored entry since. Each entry is stored through
-//! the store's own parts and read back as every reader reads it.
-//! `FERROEHR_BLESS_GOLDEN=1` writes the goldens again.
+//! The BALP `AuditEvent`, DICOM message and search tokens a stored entry
+//! renders, held to committed goldens (#6322); `FERROEHR_BLESS_GOLDEN=1`
+//! writes them again.
 
 use secrecy::ExposeSecret as _;
 

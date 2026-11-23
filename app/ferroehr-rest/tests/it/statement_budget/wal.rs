@@ -22,25 +22,7 @@ use crate::access_evaluator_http::{ehr_with_composition, send};
 /// The requests of each kind measured.
 const REQUESTS: u64 = 20;
 
-/// The most write-ahead log the access log may write per entry, by kind of
-/// request, over the row records of the entry, its hold, the shared parts
-/// and their indexes. Each was the value measured with `pg_walinspect`, 2%
-/// above: 2746, 2196, 1876 and 2639 once the row part left the request and
-/// the version to their columns (#6005); the token index taking the request
-/// and resource ids as keys (#6202) measured 2634, 2087, 1777 and 2543, and
-/// the write taking no row lock on a shared part (#6241) 2580, 2033, 1759
-/// and 2543, each ceiling falling by its drop. The entry written once with no
-/// intake row or link (#6242) measured 2021, 1606, 1420 and 1987, and each
-/// ceiling fell by its drop. The search columns copied off the request's
-/// commit into the search index (#6319) measured 1407, 1071, 857 and 1340
-/// against 2021, 1606, 1420 and 1933 beside the merge base, and each ceiling
-/// fell by its drop. The entry stored as its facts (#6322: no origins its
-/// only item holds repeated, its categories in the shared part, no empty
-/// details tree, its stored form's version) measured 815, 915, 833 and 1028
-/// against 1407, 1071, 857 and 1340 beside the merge base, and each ceiling
-/// fell by its drop. The search tokens rendered by the frontier round into
-/// the search index (#6322) measured 775, 879, 793 and 990 against 815, 915,
-/// 833 and 1028, and each ceiling fell by its drop.
+/// The most WAL bytes one access-log entry writes, by kind of request (#6322).
 const CEILINGS: [(Kind, u64); 4] = [
     (Kind::Read, 846),
     (Kind::Single, 927),
