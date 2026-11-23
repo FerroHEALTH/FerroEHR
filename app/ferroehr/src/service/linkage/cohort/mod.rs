@@ -250,9 +250,7 @@ impl FerroEhrService {
     /// Select a cohort in the demographic domain, resolve it to the EHRs whose
     /// subject it is, and run `request.aql` over exactly those EHRs.
     ///
-    /// The three steps and what each one may carry are the module
-    /// documentation. An empty cohort runs no AQL at all — there is nothing to
-    /// scope a query to — and answers with an empty `RESULT_SET` for the
+    /// An empty cohort runs no AQL and answers an empty `RESULT_SET` for the
     /// submitted text.
     ///
     /// # Errors

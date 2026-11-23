@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The words of the server alone, in the catalogs under `locales/server/`.
-//!
-//! Only code the browser never runs looks them up, so their catalog is not
-//! compiled for the browser at all (`crate::locale`).
 
 crate::locale::messages! {
     /// A string the server alone draws, by its message in its catalog.

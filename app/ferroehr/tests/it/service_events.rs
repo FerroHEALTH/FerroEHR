@@ -3,13 +3,6 @@
 
 //! Contribution-outbox eventing tests against a real `PostgreSQL` 18
 //! (shared testkit harness) — the transactional-outbox half of the eventing extension (tasks 2/3).
-//!
-//! Proves: (1) every CONTRIBUTION commit path (a direct composition commit, a
-//! CONTRIBUTION commit, and an EHR-Extract import) writes exactly one
-//! `event_outbox` row whose envelope is PHI-free (identity + provenance only,
-//! no clinical content); (2) a rolled-back commit writes none (the outbox row
-//! shares the transaction's fate); (3) the outbox feed serves every row to a
-//! reader in `seq` order until the reader acknowledges it.
 
 use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;
@@ -26,10 +19,6 @@ use ferroehr::service::FerroEhrService;
 // ── fixtures ─────────────────────────────────────────────────────────────────
 
 /// A minimal valid bare-RM COMPOSITION whose `composer` is the PHI probe.
-///
-/// The name is load-bearing: [`assert_phi_free`] asserts that exact string
-/// never reaches an event envelope, so this suite cannot share the default
-/// composer.
 fn composition(name: &str) -> Value {
     composition_by(name, "secret clinician name")
 }

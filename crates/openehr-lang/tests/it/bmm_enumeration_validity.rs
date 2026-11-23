@@ -5,9 +5,6 @@
 //! The `BMM_ENUMERATION` validity rules, driven through the public `P_BMM`
 //! pipeline (`read_schema` → `create_bmm_model`).
 //!
-//! Two rules, each with BOTH twins — the accepted valid shape and the refused
-//! invalid one:
-//!
 //! * an enumeration "may have only one ancestor"
 //!   (`docs/specs/openehr/LANG/docs/bmm3/master07-core-classes.adoc`
 //!   §Range-Constrained Classes; `org.openehr.lang.bmm3.bmm_enumeration.adoc`

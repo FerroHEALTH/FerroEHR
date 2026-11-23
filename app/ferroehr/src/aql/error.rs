@@ -3,8 +3,6 @@
 
 //! AQL planner, SQL-build and execution errors.
 //!
-//! Four families; all but [`ExecError`] surface before the query runs:
-//!
 //! * [`AqlFeatureError`] — the feature-envelope rejections, raised by planning
 //!   and, for the ones that depend on the FROM tree's shape (a containment
 //!   edge, a read of a `NOT CONTAINS` or `OR`-branch variable), by
@@ -214,8 +212,8 @@ pub enum AqlFeatureError {
     /// versioned-object root under a parent that cannot contain it (e.g.
     /// `COMPOSITION CONTAINS COMPOSITION`, `FOLDER CONTAINS EHR_STATUS`).
     /// Folder containment of versioned objects is `FOLDER.items` reference
-    /// resolution (RM common master05); everything else this refuses used to
-    /// answer a silent cartesian product.
+    /// resolution (RM common master05); anything else is refused, never
+    /// answered as a cartesian product.
     #[error(
         "`{0} CONTAINS {1}` has no RM containment relationship (QUERY §FROM/Containment; RM common master05)"
     )]

@@ -61,11 +61,10 @@ impl FerroEhrService {
 /// The HRIDs, in the order of `rows`, of every stored artefact that compiles
 /// with `target` stored and does not compile without it.
 ///
-/// `rows` is every stored artefact. An artefact that does not
-/// compile even with `target` stored is not counted: the delete takes nothing
-/// from it. Each artefact compiles against every stored release
-/// ([`repository_of`]), so with another release of `target`'s major version
-/// stored, the delete leaves its users resolving to that one.
+/// `rows` is every stored artefact. An artefact that does not compile even with
+/// `target` stored is not counted. Each compiles against every stored release
+/// ([`repository_of`]), so another stored release of `target`'s major version
+/// keeps its users resolving.
 fn dependents_of(target: &str, rows: Vec<ArtefactRow>) -> Vec<String> {
     let is_target = |hrid: &str| hrid.eq_ignore_ascii_case(target);
     let mut users = Vec::new();

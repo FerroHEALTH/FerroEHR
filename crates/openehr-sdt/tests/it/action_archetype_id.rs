@@ -2,13 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
-//! A `C_STRING` on the RM String attribute `ACTIVITY.action_archetype_id` is
-//! checked, and the example meets it (#5913).
-//!
-//! ADL 1.4 `master05-cadl.adoc` §Constraints on String: a string attribute can
-//! be constrained by a regular expression; AOM 1.4 `C_STRING.valid_value`
-//! tests the value against it. `minimal_instruction.opt` constrains
-//! `action_archetype_id` to `openEHR-EHR-ACTION\.minimal\.v1`.
+//! A `C_STRING` on `ACTIVITY.action_archetype_id` is checked, and the example
+//! meets it (ADL 1.4 `master05-cadl.adoc` §Constraints on String).
 
 use std::path::Path;
 

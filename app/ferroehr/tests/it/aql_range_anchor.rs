@@ -646,11 +646,6 @@ async fn session_time_zone(pool: &PgPool) -> String {
 }
 
 /// Every comparison answers the same rows with its anchor and without it.
-///
-/// `X OR X` is the comparison `X` with no anchor: a conjunct under `OR`
-/// implies nothing on its own. Both run over events and histories whose
-/// times cover each stored form, so a time the column reads differently
-/// from the comparison would drop or add a row here.
 #[tokio::test]
 async fn an_anchored_comparison_answers_the_rows_the_unanchored_one_does() {
     let (db, svc) = crate::fixtures::service().await;
@@ -967,12 +962,6 @@ fn assert_starts_from(name: &str, plan: &Value, index: &str, expected: u32, popu
 }
 
 /// A population filter on an event's time reads the events the filter keeps.
-///
-/// Without an access path the statement read every OBSERVATION of the
-/// archetype, walked to its event row and compared the time last, 17 buffers
-/// a lab composition whatever the filter kept. It now starts from
-/// `idx_node_hot_event_time`: no node scan walks the store's compositions,
-/// and the statement reads fewer buffers than the store holds compositions.
 #[tokio::test]
 async fn a_population_filter_on_an_event_time_starts_from_the_time_index() {
     let db = testkit::db().await.expect("testkit database");
@@ -1070,10 +1059,6 @@ async fn a_population_filter_on_an_event_time_starts_from_the_time_index() {
 }
 
 /// A population filter on a magnitude reads the ELEMENTs the filter keeps.
-///
-/// Without an access path the statement read every OBSERVATION of the
-/// archetype, walked to its ELEMENT and compared the number last. It now
-/// starts from `idx_node_hot_value_magnitude`.
 #[tokio::test]
 async fn a_population_filter_on_a_magnitude_starts_from_the_magnitude_index() {
     const COMPOSITIONS: u32 = 600;
@@ -1395,29 +1380,6 @@ async fn assert_anchors_change_no_row(
 /// A population filter on a value keeps a plan linear in the store when
 /// the store grew past its statistics, ordered, streamed, projected and only
 /// in WHERE (#6243, #6263).
-///
-/// cdr-benchmark's `bp_data_filtered` ran for 23 s on a store filling from
-/// empty: the statistics held no blood-pressure OBSERVATION, the planner
-/// estimated them at one row, and it rescanned the anchor, a set of distinct
-/// versions no join could probe, with its head and version probes, once per
-/// OBSERVATION. The streamed form's earlier-row probe went the same way here:
-/// estimated at one row, it entered through the magnitude index once per
-/// candidate row, 2.3 M buffers for 500 rows. The flat anchor is now the
-/// first row of each version, which a join probes per version, and the
-/// earlier-row probe reads its version through `node_hot_pkey`.
-///
-/// An equality whose leaf is only in WHERE went the same way through the
-/// containment: the OBSERVATION node, estimated at one row, was rescanned
-/// with the clause's `EXISTS` per anchor version, 32.7 M buffers, because the
-/// probe per version was costed from the object count of the first seed. A
-/// statement with an anchor now reads each contained node inside its object,
-/// behind a fence (#6263).
-///
-/// The store is analysed holding only low readings in mm[Hg], then grows by
-/// the late archetype's compositions and by high readings in kPa with
-/// autovacuum held off.
-/// Each statement's scans stay linear in the store, before and after an
-/// `ANALYZE`, and it answers the rows its unanchored form answers.
 #[tokio::test]
 async fn a_value_filter_stays_linear_on_a_store_grown_past_its_statistics() {
     const SEEDED: u32 = 2000;
@@ -1463,14 +1425,6 @@ async fn a_value_filter_stays_linear_on_a_store_grown_past_its_statistics() {
 /// A population filter on a value keeps a plan linear in a store that fills
 /// from empty before autovacuum first analyses it (#6243): low readings in
 /// mm[Hg], then the late archetype's compositions and high readings in kPa.
-///
-/// With no statistics the planner estimated both the OBSERVATIONs of the
-/// archetype and the rows the anchor keeps at one row, and nested the
-/// containment's whole entry, the archetype index walked to each ELEMENT,
-/// unparameterised inside the anchor's rows: cdr-benchmark's
-/// `bp_data_filtered` ran into the 30 s request timeout on the first run of a
-/// fresh store. With an anchor the contained node is now read inside its
-/// object, so the anchor is the one entry from the population.
 #[tokio::test]
 async fn a_value_filter_stays_linear_on_a_store_filling_from_empty() {
     const SEEDED: u32 = 2000;

@@ -1,22 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The outer ADL artefact parser: sections, kind, meta, spans.
+//! The outer ADL artefact parser (`vendor/grammar/adl2.g4` plus the spec-text
+//! section extensions): kind, identification, ODIN sections, and the cADL
+//! `definition` and `rules` bodies as raw spans.
 //!
-//! Transcribed from the vendored `adl2.g4` (at
-//! `crates/openehr-adl/vendor/grammar/`) plus the spec-text section extensions
-//! the pinned grammar lacks. It produces a [`SourceArtefact`]: the artefact
-//! kind, identification meta + HRID, the specialise parent reference, each
-//! ODIN section parsed via `openehr_lang::v1_1::odin`, and the cADL `definition` /
-//! `rules` bodies captured as **raw spans** (cADL parsing is a separate pass,
-//! `crate::parse`).
-//!
-//! Section boundaries follow the grammar's `'\n'`-anchoring of the section
-//! keywords (`adl_keywords.g4`): a section header is a keyword at column 0
-//! (its preceding byte is a newline), so an identical word appearing indented
-//! inside an ODIN section or the definition is never mistaken for a header.
-//! Because a multi-line `STRING` is one lexer token, a section keyword inside a
-//! quoted value can never read as a header either.
+//! A section keyword is a header only at column 0 (`adl_keywords.g4`).
 
 use openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
 
@@ -86,17 +75,9 @@ pub struct SourceArtefact {
     /// The parent reference as the source writes it, "a string reference to an
     /// archetype" (`AOM2/master03-archetype_package.adoc` §Human-Readable Identifier).
     pub parent_reference: Option<String>,
-    /// The ADL **1.4** `concept` section's local term code, without its
-    /// brackets (`concept [at0000]` ⇒ `"at0000"`).
-    ///
-    /// `AM/docs/ADL1.4/master08-adl` §Concept Section: "All archetypes
-    /// represent some real world concept … The concept is always coded". The
-    /// section is mandatory in the 1.4 grammar (§Syntax Specification
-    /// `arch_concept`, which — unlike `arch_specialisation`/`arch_language`/
-    /// `arch_description`/`arch_invariant` — has no empty alternative) and its
-    /// term is the subject of §Validity Rules VARCN. It is captured for every
-    /// dialect; ADL2 derives the concept from the HRID instead and ignores it
-    /// (`ADL2/master07.09` lists `concept` among the obsolete clauses).
+    /// The ADL 1.4 `concept` section's term code, without brackets
+    /// (`ADL1.4/master08-adl` §Concept Section; VARCN). ADL2 derives the concept
+    /// from the HRID instead (`ADL2/master07.09`).
     pub concept: Option<String>,
     /// The `language` section (ODIN).
     pub language: Option<openehr_lang::v1_1::odin::OdinValue>,
@@ -110,17 +91,11 @@ pub struct SourceArtefact {
     pub rm_overlay: Option<openehr_lang::v1_1::odin::OdinValue>,
     /// The `component_terminologies` section (ODIN; OPT only).
     pub component_terminologies: Option<openehr_lang::v1_1::odin::OdinValue>,
-    /// The ADL **1.4** `revision_history` section (ODIN;
-    /// `AM/docs/ADL1.4/master08-adl` §Revision History Section: "The revision
-    /// history section of an archetype shows the audit history of changes to
-    /// the archetype, and is expressed in dADL syntax. It is optional, and is
-    /// included at the end of the archetype").
+    /// The ADL 1.4 `revision_history` section (`ADL1.4/master08-adl` §Revision
+    /// History Section).
     ///
-    /// NOTE: it has no landing site in the assembled AOM2 model — deliberate
-    /// upstream, not a generated-model gap (`AM/docs/ADL2/master01-preface`
-    /// §Changes from ADL 1.4: "the `revision_history` section is removed";
-    /// SPECAM-61) — so the section is read and preserved HERE at the 1.4
-    /// source level and never carried into the converted ADL2 artefact.
+    /// NOTE: ADL2 removed the section (`ADL2/master01-preface`; SPECAM-61), so it
+    /// stays at the 1.4 source level.
     pub revision_history: Option<openehr_lang::v1_1::odin::OdinValue>,
     /// The `definition` (cADL) body as a raw span.
     pub definition: Option<RawSpan>,
@@ -130,25 +105,12 @@ pub struct SourceArtefact {
     pub overlays: Vec<SourceArtefact>,
 }
 
-/// Parse an ADL source into a [`SourceArtefact`], reading the outer structure
-/// with the rules of `dialect`.
+/// Parse an ADL source into a [`SourceArtefact`] with the rules of `dialect`.
 ///
-/// ODIN sections are delegated to `openehr_lang::v1_1::odin::parse`; the `definition`
-/// and `rules` bodies are captured as [`RawSpan`]s. Recoverable errors are
-/// collected; the whole error list is returned on any failure.
-///
-/// Three outer-structure behaviours differ under [`Dialect::Adl14`], each
-/// 1.4-only so ADL2 parsing is byte-identical:
-/// - Section and artefact keywords are case-insensitive
-///   (`AM/docs/ADL1.4/master08-adl` §Syntax Specification/§Symbols). Column-0
-///   anchoring is unchanged, so a keyword used as an identifier inside a section
-///   is still never a header.
-/// - A missing `language` section is accepted when the ontology carries the
-///   old-form `primary_language` (§Language Section NOTE), which
-///   `crate::assemble::assemble` upgrades; with nothing to upgrade from,
-///   [`SyntaxErrorCode::Salan`] stands.
-/// - A malformed `concept` clause is refused with [`SyntaxErrorCode::Saco`]
-///   (§Syntax Specification `arch_concept`).
+/// Under [`Dialect::Adl14`] keywords are case-insensitive (`ADL1.4/master08-adl`
+/// §Symbols), an ontology `primary_language` stands in for a missing `language`
+/// section (§Language Section), and a malformed `concept` is
+/// [`SyntaxErrorCode::Saco`].
 ///
 /// # Errors
 /// Returns every [`SyntaxError`] found (lexical, identification, ODIN-section,
@@ -294,12 +256,8 @@ impl Outer<'_> {
         start == 0 || self.src.as_bytes().get(start - 1) == Some(&b'\n')
     }
 
-    /// The keyword spelling of the identifier token at `idx`, ready for
-    /// classification: the token text as written in ADL2, and case-folded in
-    /// the 1.4 dialect, where `master08` §Symbols spells every section keyword
-    /// case-insensitively (`^[Aa][Rr][Cc][Hh][Ee][Tt][Yy][Pp][Ee]`, …). An
-    /// upper-initial word lexes as [`Token::AlphaUcId`], so 1.4 reads both
-    /// identifier tokens and ADL2 only the lower-initial one.
+    /// The keyword spelling of the identifier at `idx`, case-folded in the 1.4
+    /// dialect (`master08` §Symbols).
     fn keyword_at(&self, idx: usize) -> Option<String> {
         match self.toks.get(idx).map(|s| &s.token) {
             Some(Token::AlphaLcId(s)) if self.dialect == Dialect::Adl2 => Some(s.clone()),
@@ -318,11 +276,8 @@ impl Outer<'_> {
         classify_section(&self.keyword_at(idx)?)
     }
 
-    /// The artefact-kind keyword and its span, accepting an optional leading
-    /// `flat` (`ADL2/master07.04` §Artefact declaration).
-    ///
-    /// The span is the KEYWORD's, taken after any `flat` prefix, because the
-    /// caller reports missing-section defects against it.
+    /// The artefact-kind keyword and its span, after an optional `flat`
+    /// (`ADL2/master07.04` §Artefact declaration).
     fn parse_artefact_kind(&mut self) -> Option<(ArtefactKind, std::ops::Range<usize>)> {
         if self.keyword_at(self.pos).as_deref() == Some("flat") {
             self.pos += 1;
@@ -513,17 +468,9 @@ impl Outer<'_> {
         }
     }
 
-    /// The `concept` clause's local term code (`master08` §Concept Section;
-    /// §Syntax Specification `arch_concept: SYM_CONCEPT V_LOCAL_TERM_CODE_REF`,
-    /// lexed `\[[a-zA-Z0-9][a-zA-Z0-9.-]*\]` by §Symbols).
-    ///
-    /// A body that is not a term-code reference is refused with
-    /// [`SyntaxErrorCode::Saco`] in BOTH dialects: the 1.4 grammar's
-    /// `SYM_CONCEPT error` alternative, and ADL2's deprecated-but-allowed
-    /// form's own rule — "if a concept section is present, it must consist of
-    /// the 'concept' keyword and a single local term"
-    /// (`ADL2/master07.09-adl_deprecated.adoc` §Concept Section). ADL2 still
-    /// derives the concept from the HRID and ignores the captured code.
+    /// The `concept` clause's term code (`master08` §Concept Section); a body that
+    /// is no term-code reference is [`SyntaxErrorCode::Saco`] in both dialects
+    /// (`ADL2/master07.09-adl_deprecated.adoc` §Concept Section).
     fn parse_concept(
         &mut self,
         body: &std::ops::Range<usize>,
@@ -552,12 +499,6 @@ impl Outer<'_> {
             _ => None,
         };
         if code.is_none() {
-            // Both dialects diagnose a malformed clause: ADL 1.4 requires the
-            // section (`ADL1.4/master08-adl.adoc` §Syntax Specification), and
-            // ADL2 keeps SACO for the deprecated-but-allowed form — "if a
-            // concept section is present, it must consist of the 'concept'
-            // keyword and a single local term"
-            // (`ADL2/master07.09-adl_deprecated.adoc` §Concept Section).
             self.push(
                 SyntaxErrorCode::Saco,
                 "expected a local term code reference in the concept section",
@@ -671,15 +612,8 @@ impl Outer<'_> {
                 kind_span.clone(),
             );
         }
-        // template_overlay inherits language/description from its root
-        // (`master07.07` / `master10`); every other kind requires a language
-        // section. A 1.4 source whose ontology carries `primary_language` is
-        // accepted here and upgraded in `crate::assemble`; with nothing to
-        // upgrade from, SALAN stands, and ADL2 keeps SALAN unconditionally.
-        //
-        // NOTE: ADL 1.4's `arch_language` carries an empty alternative
-        // (`master08` §Syntax Specification), and §Language Section directs
-        // tools to accept the old `ontology`-only form and upgrade it.
+        // A template_overlay inherits its language (`master07.07`); a 1.4 source may
+        // carry `primary_language` instead (`master08` §Language Section).
         let old_form_language = self.dialect == Dialect::Adl14
             && art.terminology.as_ref().is_some_and(has_primary_language);
         if !overlay

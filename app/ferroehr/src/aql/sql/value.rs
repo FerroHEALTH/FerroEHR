@@ -81,12 +81,6 @@ impl Builder<'_> {
     /// Lowers a data leaf to a value expression through the design's path
     /// split.
     ///
-    /// The fragment is read inline off the deepest node bound for the leaf's
-    /// anchor ([`Self::walk_start`]); anchor steps left below it are walked by
-    /// a correlated scalar subquery that takes the first match in document
-    /// order (`ORDER BY num`), so an unbound multi-valued step reads the same
-    /// node on every run.
-    ///
     /// # Errors
     /// [`AqlError`] from resolving the source node, a predicate or the
     /// fragment path.
@@ -581,10 +575,6 @@ impl Builder<'_> {
     /// The leaf's fragment path, or `None` when the leaf addresses the whole
     /// anchor node.
     ///
-    /// A multi-valued step names its elements (`[*]`), so a path that ends
-    /// on a list attribute matches each element, as a path that continues
-    /// below one does.
-    ///
     /// A step predicate becomes a filter on the step's member
     /// (`$.links[*] ? (@.archetype_node_id == $p0).target.value` — QUERY
     /// master03 §Node predicate / §Standard predicate); every compared value
@@ -791,9 +781,8 @@ fn typed_reads(path: &[&str]) -> Vec<(&'static [&'static str], TypedColumn)> {
 /// A path to one scalar of an `ELEMENT` value reads the typed column directly
 /// on a row that has typed columns, and the stored `data` on one that does
 /// not ([`typed_reads`]); every other path reads through
-/// [`fragment_source`]. Either way the result is the same jsonb, so every
-/// coercion downstream behaves as before. No openEHR spec governs storage:
-/// our own design.
+/// [`fragment_source`]. Either way the result is the same jsonb. No openEHR
+/// spec governs storage: our own design.
 /// With `presence`, a whole-object read (no fragment path) yields a jsonb
 /// that is non-`NULL` exactly when the node row is there, which is all a
 /// plain `COUNT` asks of it, instead of rebuilding the fragment.

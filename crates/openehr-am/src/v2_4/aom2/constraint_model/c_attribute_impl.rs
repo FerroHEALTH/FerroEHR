@@ -125,10 +125,6 @@ impl CAttribute {
     /// `c_conforms_to` (`master04.5` §Conformance Semantics: C_ATTRIBUTE):
     /// `existence_conforms_to (other) and ((is_single and other.is_single) or
     /// else (is_multiple and cardinality_conforms_to (other)))`.
-    ///
-    /// NOTE: the body consults neither the reference model nor the `rmcc`
-    /// lambda the inherited `ARCHETYPE_CONSTRAINT` signature carries, so no
-    /// conformance checker is taken here.
     #[must_use]
     pub fn c_conforms_to(&self, other: &CAttribute) -> bool {
         self.existence_conforms_to(other)

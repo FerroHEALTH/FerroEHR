@@ -3,17 +3,10 @@
 # SPDX-License-Identifier: BUSL-1.1
 # The deployment-conformance harness (#2178).
 #
-# The conformance instrument exists because "we believe the REST surface is
-# conformant" was not good enough — it had to be MEASURED, repeatably, by
-# something that outlives the person who ran it. This is the same instrument for the other
-# half: "we believe the deployment works".
-#
-# The gap it covers is real and was expensive. A 4447-test suite was green
-# while ten defects shipped, every one of them living between "the code is
-# correct" and "the thing we hand an operator works" — a gateway with no
-# bucket, an OIDC realm that could not mint an acceptable token, a Prometheus
-# that scraped nothing, host environment silently dropped on the floor. None of
-# them was reachable by rendering YAML or by a unit test with a mock.
+# The conformance instrument measures the REST surface; this is the same
+# instrument for the other half, "the deployment works": the defects that
+# live between "the code is correct" and "the thing we hand an operator
+# works", which no rendered YAML or mocked unit test reaches.
 #
 # Three rules it holds itself to, each one a lesson from those defects:
 #

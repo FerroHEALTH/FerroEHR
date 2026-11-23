@@ -19,11 +19,6 @@
 //! JSON only, since canonical XML maps only published classes and no
 //! published class defines the settings; the versioned object and its
 //! revision history are canonical JSON or XML by `Accept`.
-//!
-//! The access evaluator judges every route as it judges a clinical read of
-//! the EHR, and each read writes its access-log entry, both through
-//! `crate::api::guarded_dispatch`. The write path is the
-//! CONTRIBUTION, which commits an `EHR_ACCESS` version.
 
 use openehr_rm::prelude::EhrAccess;
 use utoipa_axum::{router::OpenApiRouter, routes};

@@ -2,23 +2,13 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM spec functions for `ADDRESS`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.address.adoc`
-//! §Functions + §Invariants.
+//! `ADDRESS.type` (`org.openehr.rm.demographic.address.adoc`).
 
 use crate::v1_2::data_types::text::dv_text::DvText;
 use crate::v1_2::demographic::address::Address;
 
 impl Address {
-    /// Returns the type of this address, e.g. electronic or locality.
-    ///
-    /// Spec: `org.openehr.rm.demographic.address.adoc` §Functions `type` —
-    /// "Type of address, e.g. electronic, locality. Taken from value of
-    /// inherited `name` attribute", with §Invariants `Type_valid: type = name`
-    /// making the identity exact rather than merely usual. The name is
-    /// borrowed, not copied: the invariant says the two ARE the same value.
+    /// The type of this address: its `name` (`Type_valid: type = name`).
     #[must_use]
     pub fn r#type(&self) -> &DvText {
         &self.name

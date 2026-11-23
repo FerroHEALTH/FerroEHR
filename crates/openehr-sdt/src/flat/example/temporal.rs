@@ -15,11 +15,8 @@ use serde_json::Value;
 use crate::flat::validation::leaf::temporal_in_range;
 use crate::flat::webtemplate::model::WebTemplateNode;
 
-/// A deterministic temporal example honouring the leaf's AOM 1.4 temporal
-/// pattern (`yyyy-??-XX` etc.: literal = mandatory, `??` = optional/kept,
-/// `XX` = prohibited/omitted — mirroring the validator's presence-only
-/// judgement) and the `timezone_validity` constraint (`1003` = the designator
-/// must be absent; the fixed example instants already carry `Z` for the rest).
+/// A deterministic temporal example honouring the leaf's AOM 1.4 pattern (`XX`
+/// parts omitted) and `timezone_validity` (`1003` drops the designator).
 pub(super) fn example_temporal(node: &WebTemplateNode, rm: &str) -> String {
     let pattern = node
         .inputs
@@ -80,11 +77,8 @@ const DATE_SEGMENTS: [&str; 3] = ["2022", "02", "03"];
 /// The example time's segments, coarsest first.
 const TIME_SEGMENTS: [&str; 3] = ["04", "05", "06"];
 
-/// Renders one temporal half, dropping every segment the pattern prohibits.
-///
-/// The leading segment is always present; the rest are kept until the pattern
-/// marks one `XX`, since ISO 8601 partial precision truncates right-to-left —
-/// an omitted month forces the day off with it.
+/// Renders one temporal half up to the first segment the pattern marks `XX`,
+/// since ISO 8601 partial precision truncates right to left.
 fn temporal_segments(pattern: &str, full: [&str; 3], separator: char) -> String {
     let segments: Vec<&str> = if pattern.is_empty() {
         Vec::new()

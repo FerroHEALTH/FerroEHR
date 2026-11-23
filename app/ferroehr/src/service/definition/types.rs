@@ -7,10 +7,6 @@
 /// The template-list filter carried by the ITS-REST
 /// `definition_template_*_list` operations.
 ///
-/// All three are optional query parameters the wire decodes, carried on the
-/// wire-shaped list methods alongside the cursor
-/// [`Page`](crate::service::list::Page).
-///
 /// - `template_id`: glob pattern matching `template_id`, `*` wildcard
 ///   (`parameters/query/filter_template_id.yaml`, "supports wildcards `*`").
 /// - `concept`: glob pattern matching `concept`, `*` wildcard
@@ -29,10 +25,6 @@ pub struct TemplateListFilter {
 }
 
 /// One served ADL2 operational template.
-///
-/// Pairs the artefact's **resolved** `ARCHETYPE_HRID` (the addressed
-/// `template_id` may be a partial that selects the latest matching version)
-/// with the rendered representation.
 ///
 /// The wire needs the resolved id as well as the payload, because the `ETag` of
 /// a template response identifies the served artefact — ITS-REST

@@ -11,31 +11,12 @@
 //! ATNA. The DICOM PS3.15
 //! §A.5 rendering and the syslog transport belong to `ferroehr::system_log`.
 //!
-//! It reads four response extensions the rest of the stack sets, so no handler
-//! carries audit code: [`AuditOpId`] (the matched operation id, from the generic
-//! dispatch), [`AuditObject`] (the resource ids, from the `ResourceMeta` the
-//! dispatch holds), [`Principal`] (the caller, republished by the auth
-//! middleware) and [`ActorAuthentication`] (how the caller authenticated and the
-//! natural person behind the credential, from the same middleware). Every
-//! mounted operation is classified in [`crate::system_log::classify`]; the
-//! response of an operation without a class is refused rather than recorded
-//! under a guessed one. Where no `ResourceMeta` exists the participant-object
-//! id comes from the request path. An operation whose act wrote its own
-//! record ([`EntryScope::Written`]) gets no second operation record, so the
-//! store holds one record of it.
-//!
-//! A genuine authentication additionally records a login (DICOM `EventID`
-//! 110114, `EventTypeCode` 110122) unless `suppress_login_events` is on. Genuine
-//! means a real authentication event: the auth layer marks it only on a Basic
-//! verified-credential cache miss, where the credentials were actually checked.
-//! Auth rejections always record a failure, with a refused credential's
-//! caller `UNKNOWN` (a patient-data step-up `401` carries its caller) —
-//! surveillance of failed access is the point of ATNA.
-//!
-//! Every record of the request is written durably, in one transaction of the
-//! local audit store, before the response leaves; a record that cannot be
-//! written turns the response into `503`, so no response reports an access
-//! the log does not hold (#5747).
+//! Every record of the request is written durably, in one transaction, before
+//! the response leaves; a record that cannot be written turns the response into
+//! `503` (#5747). An auth rejection always records a failure, a login record
+//! marks only a verified Basic credential's cache miss unless
+//! `suppress_login_events` is on, and an operation whose act wrote its own
+//! record ([`EntryScope::Written`]) gets no second one.
 
 #![expect(
     clippy::disallowed_types,
@@ -68,11 +49,6 @@ use crate::system_log::classify::audit_for;
 
 /// The matched ITS-REST operation id, inserted by the dispatch layer onto the
 /// response. Present only when a request reached the generic dispatcher.
-///
-/// The extension routers are mounted through the same `crate::api::mount` as the
-/// generated groups, which inserts this uniformly, so extension traffic arrives
-/// carrying its operation id, each classified in
-/// [`crate::system_log::classify`].
 #[derive(Debug, Clone, Copy)]
 pub struct AuditOpId(pub &'static str);
 
@@ -93,9 +69,7 @@ pub struct AuditObject {
     /// it better than the resource class does.
     ///
     /// The released OAS reuses one CONTRIBUTION `operationId` across the EHR
-    /// and DEMOGRAPHIC bundles, so the operation alone cannot say which domain
-    /// a contribution read touched; the demographic group sets this and the
-    /// class decides for everything else.
+    /// and DEMOGRAPHIC bundles, so the demographic group sets it.
     pub domain: Option<AccessDomain>,
     /// The distinct origins of the data this response served and their true
     /// count (EHDS Annex II 3.2(e), #3212), read from the version metadata the
@@ -172,9 +146,6 @@ impl<'a> Caller<'a> {
 }
 
 /// Stamp the shared access-logging fields onto one record.
-///
-/// The legal basis is a deployment fact rather than a request one, so it is
-/// read from configuration here rather than carried per request.
 pub(super) fn fill_access(event: &mut AuditEvent, access: &AccessContext, state: &AppState) {
     event.request_id.clone_from(&access.request_id);
     event.purpose.clone_from(&access.purpose);
@@ -217,11 +188,8 @@ fn fill_object(
 
 /// The purpose of use the caller declared, when the deployment records it.
 ///
-/// The header name and the accepted vocabulary are deployment configuration
-/// (`[audit] purpose_header` / `purpose_codes`). A declared code outside a
-/// configured vocabulary is recorded as absent rather than verbatim: an
-/// unagreed string in the trail reads at review time as though a purpose was
-/// established when none was.
+/// A code outside a configured vocabulary is recorded as absent, never
+/// verbatim.
 fn declared_purpose(req: &Request, backend: &ferroehr::service::FerroEhrService) -> Option<String> {
     let header = backend.audit_purpose_header()?;
     let declared = req.headers().get(header)?.to_str().ok()?.trim();
@@ -540,9 +508,6 @@ pub(super) fn outcome_from_status(status: StatusCode) -> EventOutcome {
 
 /// Fills the participant-common fields: the requesting user (the DICOM source
 /// `ActiveParticipant`), its network address, and the event time.
-///
-/// An absent principal leaves `user_id` empty, which the emitter renders as the
-/// configured value-if-missing.
 pub(super) fn fill_common(
     event: &mut AuditEvent,
     caller: Caller<'_>,
@@ -617,8 +582,6 @@ const EHR_PARAMETER: &str = "ehr_id";
 /// own match decides and a literal segment such as `/admin/ehr/all` is never
 /// taken for an id. `POST /ehr` has none; its EHR id comes from the response
 /// `AuditObject`.
-///
-/// The request is handed back whole, for the layers inside to serve.
 async fn route_ehr_id(req: Request) -> (Request, Option<String>) {
     let (mut parts, body) = req.into_parts();
     // NOTE: no specification governs this: our own design; a rejection means the

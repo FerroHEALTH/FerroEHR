@@ -8,18 +8,6 @@
 //! `adl2_vetdf` pins every answer shape with a mock; this module proves the
 //! contract on the server people actually run. Three bindings, three answers
 //! (AM ADL2 `master03-archetype_package.adoc` §Validity Rules, VETDF):
-//!
-//! - a SNOMED CT concept URI, on a server that serves no SNOMED CT: the code
-//!   system is not served, so "no verification was possible" and the archetype
-//!   is accepted with a warning, never refused;
-//! - a code of the served shaped system that exists: accepted;
-//! - a code of the served shaped system that does not exist: VETDF, `422`.
-//!
-//! The container is `ghcr.io/ferrohealth/ferroterm` at the release the compose
-//! overlay pins, started through `testcontainers` with `docker/terminology/seed`
-//! mounted as its `FERROTERM__TERMINOLOGY__CODE_SYSTEMS`; the harness's
-//! `PostgreSQL` 18 backs the service. Serialized with the other container suites
-//! by the nextest `containers` group.
 
 use crate::fixtures::provider;
 use std::path::PathBuf;
@@ -204,11 +192,10 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
     );
 }
 
-/// The archetype the sandbox seed lost first (#3311): a CKM archetype with
-/// real SNOMED CT bindings under the key `SNOMED-CT`, uploaded to a CDR whose
-/// `FerroTERM` serves no SNOMED CT. Before the fix every binding was asked as
-/// `system=SNOMED-CT&code=<uri>` and refused; now the bindings are unverifiable
-/// and the archetype is stored.
+/// The archetype the sandbox seed lost first (#3311): a CKM archetype with real
+/// SNOMED CT bindings under the key `SNOMED-CT`, uploaded to a CDR whose
+/// `FerroTERM` serves no SNOMED CT, has its bindings unverifiable and is
+/// stored.
 #[tokio::test]
 async fn a_ckm_archetype_with_snomed_bindings_uploads_when_snomed_is_not_served() {
     let ferroterm = FerroTerm::start().await;

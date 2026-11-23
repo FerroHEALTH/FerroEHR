@@ -12,12 +12,6 @@
 //! No settlement applies a message by an operator's choice of identity. PMIR
 //! leaves the Consumer's handling to its capabilities (PMIR 1.6.0
 //! §2:3.93.4.1.3), and no openEHR ITS-REST operation governs these routes.
-//!
-//! Gating: mounted under `/admin/`, so the routes inherit the group's RBAC
-//! Admin class and `[auth] product_scope` (`401`/`403`) and the
-//! `AppConfig::api.admin` config gate (`405` when off). Every list, retry and
-//! settlement writes an access record naming the operator and the message
-//! (`ferroehr::service::demographic::identity_feed::operator`).
 
 #![expect(
     clippy::disallowed_types,

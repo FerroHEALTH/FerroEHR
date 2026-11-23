@@ -32,14 +32,10 @@ pub(super) fn split_operational(constraint: &str) -> (&str, Option<&str>) {
     }
 }
 
-/// The admitted at-codes written as the terms they are bound to: the
-/// terminology and one bound code per at-code, in order.
-///
-/// The terminology an `@ttttt` operational binding names wins; otherwise the
-/// one terminology that binds every admitted code, and `openehr` among
-/// several. `None` keeps the local codes: no binding, or a binding that
-/// leaves an admitted code unbound (AOM2 `master04.2` §"Terminology Code
-/// Resolution": at-codes then occur in real data).
+/// The admitted at-codes written as their bound terms, or `None` to keep the
+/// local codes when a code is unbound (AOM2 `master04.2` §"Terminology Code
+/// Resolution"). An `@ttttt` binding's terminology wins, then the one that binds
+/// every code, then `openehr`.
 pub(super) fn bound_codes<'t>(
     term: &'t ArchetypeTerminology,
     operational: Option<&str>,
@@ -76,19 +72,15 @@ pub(super) fn bound_codes<'t>(
         .find(|(terminology, _)| terminology.eq_ignore_ascii_case("openehr"))
 }
 
-/// The code a term-binding URI names: the last segment after `/id/`, as in
-/// `http://snomed.info/id/406464007`.
-///
-/// `None` for a URI of another form, such as a value-set reference.
+/// The code a term-binding URI names, the segment after `/id/`; `None` for
+/// another form.
 fn bound_term_code(uri: &str) -> Option<String> {
     let (_, code) = uri.trim().rsplit_once("/id/")?;
     (!code.is_empty() && !code.contains('/')).then(|| code.to_owned())
 }
 
 /// The external term bindings for `code` in `term` (master04 §"Web Template
-/// Metadata": a `termBindings` map). `v2_4` `term_bindings` maps terminology →
-/// code → target URI (`ARCHETYPE_TERMINOLOGY.term_bindings`); the bound URI is
-/// surfaced as the coded value.
+/// Metadata": `termBindings`).
 pub(super) fn term_bindings_of(
     term: &ArchetypeTerminology,
     code: &str,

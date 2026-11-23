@@ -366,9 +366,6 @@ impl Route {
 }
 
 /// Names the operation `method` and `path` address.
-///
-/// `path` is relative to the API base — `/ehr/7d44…/composition/8849…::1`,
-/// not `/openehr/v1/ehr/…` — and any query string after a `?` is ignored.
 #[must_use]
 pub fn lookup(method: &Method, path: &str) -> Lookup {
     let path = path.split('?').next().unwrap_or(path);

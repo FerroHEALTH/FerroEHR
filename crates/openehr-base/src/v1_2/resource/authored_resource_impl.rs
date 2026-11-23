@@ -2,36 +2,20 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written spec functions + invariants of `AUTHORED_RESOURCE`.
+//! `AUTHORED_RESOURCE` functions and invariants
+//! (`org.openehr.base.resource.authored_resource.adoc`).
 //!
-//! Spec: `BASE/docs/UML/classes/org.openehr.base.resource.authored_resource.adoc`
-//! §Functions and §Invariants, and
-//! `BASE/docs/resource/master02-resource_package.adoc` §Natural Languages and
-//! Translation ("The languages_available function provides a complete list of
-//! languages in the resource").
+//! `Translations_valid` and `Description_valid` are checked;
+//! `Languages_available_valid` holds by construction.
 //!
-//! Invariants — the FOUR entries the class table declares:
-//! - `Translations_valid` and `Description_valid` — checked, each under its
-//!   own name.
-//! - `Languages_available_valid` (`languages_available.has
-//!   (original_language)`) — structurally satisfied: `languages_available`
-//!   opens with the original language.
-//! - `Original_language_valid` — a terminology boundary, see the NOTE below.
+//! NOTE: `Original_language_valid` needs the terminology service, which
+//! `openehr-base` does not depend on.
 //!
-//! NOTE: `Original_language_valid`
-//! (`code_set (Code_set_id_languages).has_code (original_language.as_string)`)
-//! is not enforced here: the languages code set lives in the terminology
-//! service, which `openehr-base` has no dependency on.
+//! NOTE: `master02-resource_package.adoc` §Meta-data keeps the original
+//! language's detail, so `Description_valid` admits the original language.
 //!
-//! NOTE: `Description_valid`'s literal form would reject the resource's own
-//! ORIGINAL-language detail, which `master02-resource_package.adoc` §Meta-data
-//! requires each translated resource to keep, so it is read as "every detail
-//! language is the original language or a declared translation".
-//!
-//! NOTE: `Translations_valid` spells its second clause `translations.has
-//! (original_language.code_string)` over a list "keyed by language code" whose
-//! §Attributes text says the original language "does not appear in this list",
-//! so it is read as the KEY test its sibling clause spells `has_key`.
+//! NOTE: `Translations_valid`'s `translations.has` is read as `has_key`, since
+//! the list is "keyed by language code".
 
 use crate::v1_2::resource::authored_resource::AuthoredResource;
 use crate::v1_2::resource::resource_description_item::ResourceDescriptionItem;
@@ -40,12 +24,8 @@ use crate::validate::{InvariantViolation, Validate};
 use std::collections::BTreeMap;
 
 impl AuthoredResource {
-    /// `AUTHORED_RESOURCE.languages_available`: the total list of languages
-    /// available in this resource, derived from `original_language` and
-    /// `translations` (class doc §Functions). The original language is always
-    /// a member (invariant `Languages_available_valid`:
-    /// `languages_available.has (original_language)`), followed by the
-    /// translation language codes in their stored (key) order.
+    /// `AUTHORED_RESOURCE.languages_available`: the original language, then the
+    /// translation codes in key order.
     #[must_use]
     pub fn languages_available(&self) -> Vec<&str> {
         let mut out = vec![self.original_language.code_string.as_str()];
@@ -229,9 +209,8 @@ mod tests {
     /// declares nowhere.
     #[test]
     fn description_valid_refuses_a_detail_in_an_undeclared_language() {
-        // NOTE: BASE 1.2.0's RESOURCE_DESCRIPTION declares a different field set
-        // from 1.3.0's, so a whole-value fixture is not writable in a generation
-        // twin — the rule is asserted on the core every generation shares.
+        // BASE 1.2.0 and 1.3.0 differ in RESOURCE_DESCRIPTION's fields, so the rule is
+        // asserted on the shared core.
         let mut violations = Vec::new();
         push_description_violation(
             &details_map(&["en", "fr"]),

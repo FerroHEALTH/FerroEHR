@@ -44,27 +44,16 @@ pub(crate) fn remove_generated_files_except(
     Ok(())
 }
 
-/// For each directory whose module anchor (`lib.rs` at the crate root, else
-/// `mod.rs`) is **generated**, append `pub mod <name>;` for every hand-written
-/// child module not already declared — both hand-written `.rs` files
-/// (`foo_impl.rs`) and hand-written module directories (a subdir whose own
-/// `mod.rs` is hand-written, e.g. `odin/`). A hand-written anchor is left
-/// untouched: it manages its own submodules (so we never duplicate an `odin/`
-/// mod.rs's private `mod lexer;`). Modified anchors are added to `written` for
-/// rustfmt.
-///
-/// `root_anchor` is the anchor of `src` itself (`lib.rs` for a crate, `mod.rs`
-/// for a module tree such as `draft`); the subtree at `skip`, if any, is left
-/// to its own target.
+/// Appends `pub mod <name>;` to each generated module anchor (`root_anchor`
+/// at `src`, else `mod.rs`) for every hand-written child module it lacks,
+/// skipping the `skip` subtree; modified anchors go to `written`.
 pub(crate) fn declare_hand_written_modules(
     src: &Path,
     root_anchor: &str,
     skip: Option<&Path>,
     written: &mut Vec<PathBuf>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // (dir, module-anchor file) pairs: the root anchors on `root_anchor`, each
-    // subdir on its mod.rs. Collect all dirs first (sorted) for deterministic
-    // output.
+    // Sorted directories, for deterministic output.
     let mut dirs = vec![src.to_path_buf()];
     collect_dirs(src, &mut dirs)?;
     dirs.retain(|d| skip.is_none_or(|s| !d.starts_with(s)));
@@ -75,9 +64,7 @@ pub(crate) fn declare_hand_written_modules(
         } else {
             dir.join("mod.rs")
         };
-        // Only extend a GENERATED anchor. A hand-written `mod.rs` (a hand-written
-        // module directory) owns its own `mod`/`pub mod` declarations, so
-        // appending here would duplicate them.
+        // A hand-written anchor declares its own modules.
         let anchor_generated = is_generated_file(&anchor);
         if !anchor.exists() || !anchor_generated {
             continue;
@@ -94,13 +81,7 @@ pub(crate) fn declare_hand_written_modules(
 }
 
 /// The module stems in `dir` the generated module tree does not declare,
-/// sorted.
-///
-/// A hand-written module DIRECTORY is one whose own `mod.rs` is not generated;
-/// a fully-generated subpackage's `mod.rs` is already declared by the parent's
-/// generated module tree and is skipped. Template-stamped copies ARE generated
-/// files, but the generated module tree does not know them — they are woven
-/// exactly like the hand-written siblings they replace.
+/// sorted: hand-written files and directories, and template-stamped copies.
 ///
 /// # Errors
 /// A directory that cannot be read.

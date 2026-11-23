@@ -3,11 +3,8 @@
 
 //! The recursive descent over the filter tokens (RFC 7644 §3.4.2.2).
 //!
-//! `logic` reads `or` over `and` over a unary term, the precedence the
-//! section orders; a unary term is `not (...)`, a group `(...)` or a leaf. A
-//! word in the position of a leaf is always an attribute, so an attribute
-//! named `and` or `not` stays readable. Groups, `not` and value paths count
-//! towards [`MAX_DEPTH`], which keeps the recursion bounded on any input.
+//! Groups, `not` and value paths count towards [`MAX_DEPTH`], which bounds the
+//! recursion on any input.
 
 use std::fmt;
 

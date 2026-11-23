@@ -3,14 +3,6 @@
 
 //! The EHR-detail Compositions tab: the AQL-driven composition list, its
 //! URL-borne row filters, and the "Commit composition" form.
-//!
-//! The filters (template, a context-start-time window, composer) live in the
-//! query string — `?template=`/`?from=`/`?to=`/`?composer=`, submitted by a GET
-//! form, so a filtered view is shareable, refresh-safe and reproducible. A
-//! submission drops `?offset=`, putting the reader on the first page of the
-//! new result set. The statement they produce is assembled by the pure,
-//! component-free [`composition_filter`](super::composition_filter): operator
-//! input is bound as AQL `query_parameters`, never concatenated into the query.
 
 use crate::uid::uid_value_of;
 
@@ -26,11 +18,6 @@ use crate::locale::tr_served;
 
 /// List an EHR's compositions newest-first, one page at `offset`, narrowed by
 /// whichever filters are filled.
-///
-/// Every argument is operator input and every one of them travels as an AQL
-/// `query_parameters` binding — see
-/// [`composition_query`], which
-/// builds the statement and the bindings together.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -63,13 +50,6 @@ pub async fn list_compositions(
 
 /// The EHR's compositions with NO filter applied.
 ///
-/// The viewer's composition PICKERS (the Commit tab's amend selector, the
-/// directory editor's item selector) offer every composition in the EHR, not
-/// the view the tab happens to be filtered to — this names that intent at the
-/// call site instead of four empty strings.
-///
-/// `ehr_id` names the EHR and `offset` the page's first row.
-///
 /// # Errors
 /// Whatever [`list_compositions`] returns.
 pub async fn all_compositions(ehr_id: String, offset: u32) -> Result<ResultPage, ViewerError> {
@@ -86,14 +66,6 @@ pub async fn all_compositions(ehr_id: String, offset: u32) -> Result<ResultPage,
 }
 
 /// Commit a new COMPOSITION to the EHR (`POST /ehr/{ehr_id}/composition`).
-///
-/// The `format` picks the `Content-Type` (canonical JSON `application/json`,
-/// canonical XML `application/xml`, FLAT `application/openehr.wt.flat+json`); a
-/// FLAT commit additionally requires the `openehr-template-id` header.
-///
-/// `Accept: application/json` + `Prefer: return=representation` yields a
-/// canonical composition body whose `uid.value` is returned as the new
-/// version uid.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));

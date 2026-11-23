@@ -99,10 +99,6 @@ impl Declared {
     /// keeps every rule under `trust`, holding no scope beyond its reads,
     /// returned carrying [`Admitted`]; any other caller unchanged.
     ///
-    /// A `chained` organisation request carries its correlation id in the
-    /// field its issuer's `[auth.issuer.<name>.federation]` table maps, which the token
-    /// attests; no request header stands in for it.
-    ///
     /// # Errors
     /// [`AuthError::KindRefused`] (`403`) for an external caller whose
     /// partner holds no agreement for its accessor kind, or one that does not

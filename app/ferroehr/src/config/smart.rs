@@ -15,9 +15,6 @@
 //! clients and which reach the DEMOGRAPHIC API is policy the CDR holds: the
 //! `query_system_wide` and `access_demographic` grants of a client's `ACTOR`
 //! (`crate::party_binding::grants`).
-//!
-//! This is the `[auth.smart]` table of the one server configuration tree; it
-//! carries no loader of its own, and `discovery` alone turns the document on.
 
 use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};

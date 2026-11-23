@@ -3,13 +3,6 @@
 
 //! Bounded AQL plan cache (the parse/plan overhead item).
 //!
-//! Parsing an AQL query and lowering it to the typed [`QueryIr`]
-//! ([`crate::aql::lower_query`]) is a deterministic function of the query text:
-//! no parameter value, paging window, EHR scope or system id is baked into the
-//! IR, all of them binding at SQL-build time ([`crate::aql::sql::build`]). This
-//! cache holds the lowered plan keyed on the exact query text, sparing every
-//! repeat the parse, path analysis and IR lowering.
-//!
 //! No openEHR spec governs this cache — our own performance design/extension.
 //! Two properties keep it semantically identical to the uncached path:
 //!
@@ -81,11 +74,6 @@ pub struct PlanCacheStats {
 
 /// A shared, cloneable bounded cache of lowered AQL query plans keyed on the
 /// query text.
-///
-/// `moka`'s [`Cache`] is `Arc`-backed, so every clone of the owning service
-/// shares one cache (mirroring [`openehr_sdt::flat::cache::WebTemplateCache`]
-/// and `crate::service::ehr::access::EhrAccessCache`); the hit/miss counters
-/// are shared the same way.
 #[derive(Clone)]
 pub struct PlanCache {
     /// `None` when the cache is disabled (capacity `0`).

@@ -1,26 +1,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The emitter's **declarative decision data**: every override / mapping the
-//! generator applies, as checked-in const tables rather than logic buried in
-//! `match` arms. Each entry carries (a) its key, (b) the decision, (c) a spec
-//! citation or the explicit "no openEHR spec governs this — our own design"
-//! flag, and (d) a one-line reason.
-//!
-//! `tests/emitter_invariants.rs` machine-checks the tables: every entry names a
-//! class or field that exists in the loaded schemas and carries a non-empty
-//! citation. The lookup functions ([`back_reference`], [`class_binding`],
-//! [`type_override`], [`field_default`], [`primitive`], [`is_mapped_class`]) are
-//! thin scans, so a decision change is a data edit, never a control-flow edit.
+//! The emitter's declarative decision data, as const tables. Each entry carries
+//! its key, the decision, a spec citation or the "no openEHR spec governs this:
+//! our own design" flag, and a reason; `tests/emitter_invariants.rs` checks
+//! every key exists and every citation is non-empty.
 
 use std::collections::BTreeMap;
 
 use crate::analyze::invariants::{Bucket, classify};
 use crate::load::bmm::{BmmClass, BmmPropKind, BmmProperty, BmmType};
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Primitive type map (spec foundation type → Rust type)
-// ─────────────────────────────────────────────────────────────────────────────
+// Primitive type map (spec foundation type → Rust type).
 
 /// One primitive spec type mapped to a Rust type.
 pub(crate) struct Primitive {
@@ -35,9 +26,6 @@ pub(crate) struct Primitive {
 }
 
 /// The codegen primitive type map: BASE foundation scalar types → Rust scalars.
-/// `Real`/`Double` both lower to `f64`; `String`/`Uri` both to `String`
-/// (openEHR URI semantics are broader than any crate URL type — it stays a
-/// plain string, the strong type living in hand-written behaviour if ever).
 pub(crate) const PRIMITIVES: &[Primitive] = &[
     Primitive {
         spec: "Boolean",
@@ -109,9 +97,7 @@ pub(crate) fn primitive(name: &str) -> Option<&'static str> {
     PRIMITIVES.iter().find(|p| p.spec == name).map(|p| p.rust)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mapped/skipped classes (mapped to Rust, never emitted)
-// ─────────────────────────────────────────────────────────────────────────────
+// Mapped classes (realized by Rust, never emitted).
 
 /// A foundation class mapped to Rust and never emitted as a spec type.
 pub(crate) struct MappedClass {
@@ -123,13 +109,9 @@ pub(crate) struct MappedClass {
     pub reason: &'static str,
 }
 
-/// Foundation classes handled by the Rust type system rather than emitted:
-/// container types (→ `Vec`/map/`BTreeSet` via container properties), abstract
-/// marker/algebraic traits (no data), functional types, service interfaces (no
-/// data), and constant-holder classes (their constants live in `*_impl.rs`).
-/// Scalar primitives are handled by [`PRIMITIVES`]. `Multiplicity_interval` and
-/// `Cardinality` are NOT here — they emit as real structs (their inherited
-/// `Interval<Integer>` binding comes from [`CLASS_BINDINGS`]).
+/// Foundation classes realized by the Rust type system and never emitted:
+/// containers, marker traits, functional types, service interfaces and
+/// constant holders.
 pub(crate) const MAPPED_CLASSES: &[MappedClass] = &[
     // ── containers → Vec / map / set, handled by container properties ──
     MappedClass {
@@ -271,10 +253,8 @@ pub(crate) const MAPPED_CLASSES: &[MappedClass] = &[
     },
 ];
 
-/// The Rust realization of a spec-declared OPEN extension point, when `name`
-/// is one: a class whose instances are scheme-defined subtypes outside the
-/// published model, carried verbatim by the validated
-/// `openehr_base::serde_support::OpenSubtype`.
+/// The Rust realization of a spec-declared open extension point, when `name`
+/// is one.
 pub(crate) fn open_extension_point(name: &str) -> Option<&'static str> {
     (name == "ACCESS_CONTROL_SETTINGS").then_some("openehr_base::serde_support::OpenSubtype")
 }
@@ -284,9 +264,7 @@ pub(crate) fn is_mapped_class(name: &str) -> bool {
     MAPPED_CLASSES.iter().any(|m| m.name == name)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Ancestor-generic class bindings
-// ─────────────────────────────────────────────────────────────────────────────
+// Ancestor-generic class bindings.
 
 /// One ancestor-generic binding: `class`'s generic parameter `param` is bound to
 /// the concrete spec type `concrete` (a binding the BMM drops).
@@ -298,10 +276,7 @@ pub(crate) struct ClassBinding {
     pub reason: &'static str,
 }
 
-/// Ancestor-generic bindings the BMM drops (it records `ancestors` and some
-/// generic-content property types as bare class names, losing the `<Integer>` /
-/// `<COMPOSITION>` argument). The emitter substitutes the concrete type instead
-/// of degrading the field to `serde_json::Value`.
+/// Ancestor-generic bindings the BMM drops (`<Integer>`, `<COMPOSITION>`).
 pub(crate) const CLASS_BINDINGS: &[ClassBinding] = &[
     ClassBinding {
         class: "Multiplicity_interval",
@@ -370,13 +345,10 @@ pub(crate) fn class_binding(class: &str) -> BTreeMap<String, String> {
         .collect()
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Additional polymorphic subtype members (subtype seams the BMM under-declares)
-// ─────────────────────────────────────────────────────────────────────────────
+// Polymorphic subtype members the BMM under-declares.
 
-/// One additional member of a polymorphic subtype set: `subtype` becomes a
-/// variant of `parent`'s untagged enum although the vendored BMM records no
-/// inheritance edge from `subtype` to `parent`.
+/// One added member of a polymorphic subtype set with no inheritance edge in
+/// the vendored BMM.
 pub(crate) struct SubtypeExtension {
     /// The polymorphic parent whose variant set widens.
     pub parent: &'static str,
@@ -388,16 +360,10 @@ pub(crate) struct SubtypeExtension {
     pub reason: &'static str,
 }
 
-/// Subtype sets the vendored BMM under-declares versus the normative spec text
-/// and openEHR's OWN published schema artifacts.
+/// Subtype sets the vendored BMM under-declares against the spec text.
 ///
-/// An entry adds one inheritance edge to the analysed model
-/// ([`crate::analyze::Model::inherits`]), so the class joins its parent's
-/// polymorphic enum exactly as a declared descendant would. Property
-/// flattening is deliberately NOT affected: it reads
-/// `crate::load::bmm::BmmClass::ancestors` verbatim, so an extension subtype
-/// gains none of the parent's attributes — it stays the class the BMM declares,
-/// reachable through the parent's slot.
+/// An entry adds an inheritance edge ([`crate::analyze::Model::inherits`])
+/// but no inherited attributes.
 pub(crate) const SUBTYPE_EXTENSIONS: &[SubtypeExtension] = &[SubtypeExtension {
     parent: "P_BMM_CLASS",
     subtype: "P_BMM_INTERFACE",
@@ -425,15 +391,10 @@ pub(crate) fn subtype_extension_parents(subtype: &str) -> impl Iterator<Item = &
         .map(|e| e.parent)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// REST DTO required-list overrides (docs-text-wins corrections)
-// ─────────────────────────────────────────────────────────────────────────────
+// REST DTO required-list overrides (the docs text wins).
 
-/// One REST-contract required-list correction: `(dto, field)` is emitted as
-/// OPTIONAL although the vendored OAS schema lists it under `required`. Used
-/// only where the ITS-REST **docs text** (which wins every conflict with the
-/// released OAS — owner rulings 2026-07-24 + 2026-07-28) contradicts the OAS
-/// shape.
+/// One `(dto, field)` emitted optional although the OAS lists it as
+/// `required`, where the ITS-REST docs text contradicts the OAS.
 pub(crate) struct RestOptionalOverride {
     pub dto: &'static str,
     pub field: &'static str,
@@ -490,9 +451,8 @@ pub(crate) fn rest_optional_override(
         .find(|o| o.dto == dto && o.field == field)
 }
 
-/// One REST-contract member that reads as its `Default` when the wire omits
-/// it, although the vendored OAS schema lists it under `required`: the
-/// generated field keeps its type and carries `#[serde(default)]`.
+/// One REST member the OAS lists as `required` that reads as its `Default`
+/// when the wire omits it.
 pub(crate) struct RestDefaultMember {
     pub dto: &'static str,
     pub field: &'static str,
@@ -520,14 +480,10 @@ pub(crate) fn rest_default_member(dto: &str, field: &str) -> Option<&'static Res
         .find(|o| o.dto == dto && o.field == field)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// REST request headers the docs text defines (no OAS parameter declares them)
-// ─────────────────────────────────────────────────────────────────────────────
+// REST request headers the docs text defines and no OAS parameter declares.
 
-/// One request header the ITS-REST docs text defines for a set of operations
-/// that the vendored OAS declares no parameter for. `emit-rest` appends it to
-/// each named operation's parameters as an optional header, so the param
-/// struct, the server trait and the generated client all carry it.
+/// One request header the ITS-REST docs text defines with no OAS parameter;
+/// `emit-rest` appends it to each named operation as an optional header.
 pub(crate) struct RestDocsTextHeader {
     /// The header name on the wire.
     pub name: &'static str,
@@ -540,13 +496,8 @@ pub(crate) struct RestDocsTextHeader {
     pub reason: &'static str,
 }
 
-/// The operations that commit a change-controlled resource directly, on which
-/// the docs text mandates the committal-metadata headers: the `PUT`, `POST`
-/// and `DELETE` operations on COMPOSITION, `EHR_STATUS`, the directory FOLDER,
-/// the EHR creation that commits the first `EHR_STATUS` version, and the
-/// demographic `PARTY` and `PARTY_RELATIONSHIP` resources. A `CONTRIBUTION` carries
-/// its own `AUDIT_DETAILS` and `VERSION` attributes in the body, and the `ITEM_TAG`
-/// operations stand outside change control.
+/// The operations that commit a change-controlled resource directly, which
+/// take the committal-metadata headers.
 const COMMIT_OPERATIONS: &[&str] = &[
     "ehr_create",
     "ehr_create_with_id",
@@ -636,9 +587,7 @@ pub(crate) fn rest_docs_text_header(
     rest_docs_text_headers(operation_id).find(|h| h.name == name)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Field-level type overrides
-// ─────────────────────────────────────────────────────────────────────────────
+// Field-level type overrides.
 
 /// One field-level type override: `(class, field)` uses `rust_type` instead of
 /// the BMM primitive.
@@ -650,11 +599,8 @@ pub(crate) struct TypeOverride {
     pub reason: &'static str,
 }
 
-/// Field type overrides mapping a `(class, field)` to a proven Rust crate type
-/// instead of the BMM primitive. Only unambiguous mappings belong here — where
-/// openEHR's semantics are broader than a crate (partial-precision ISO 8601,
-/// plain-text URIs) the field stays `String` and the crate is used in the
-/// hand-written `*_impl.rs` behaviour instead.
+/// Field type overrides mapping a `(class, field)` to a Rust crate type where
+/// the mapping is unambiguous.
 pub(crate) const TYPE_OVERRIDES: &[TypeOverride] = &[TypeOverride {
     class: "UUID",
     field: "value",
@@ -673,15 +619,10 @@ pub(crate) fn type_override(class: &str, field: &str) -> Option<&'static str> {
         .map(|o| o.rust_type)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Adjudicated free-form (`serde_json::Value`) fields
-// ─────────────────────────────────────────────────────────────────────────────
+// Adjudicated free-form (`serde_json::Value`) fields.
 
-/// One adjudicated free-form field: `(class, field)` renders as
-/// `serde_json::Value` and that degrade is a recorded decision, not an
-/// oversight. The emitter writes the citation + reason as a `// NOTE:` directly
-/// above the generated field, so the adjudication is readable where the untyped
-/// slot is.
+/// One `(class, field)` rendered as `serde_json::Value` by decision; the
+/// citation is emitted as a NOTE above the generated field.
 pub(crate) struct UntypedField {
     /// The BMM class owning (or inheriting) the field.
     pub class: &'static str,
@@ -693,14 +634,8 @@ pub(crate) struct UntypedField {
     pub reason: &'static str,
 }
 
-/// Fields whose free-form JSON rendering is adjudicated rather than accidental.
-///
-/// Two distinct causes, both real and both recorded at the site:
-/// * an inherited OPEN generic parameter no vendored declaration narrows
-///   (`BMM_LITERAL_VALUE<T>.type` on `BMM_INTERVAL_VALUE`) — genuine spec
-///   silence, so no [`CLASS_BINDINGS`] entry can be justified;
-/// * an upstream→downstream layering inversion (a LANG class referencing an AM
-///   class), where the typed field DOES appear in the downstream re-emission.
+/// Fields rendered as free-form JSON: an open generic parameter no declaration
+/// narrows, or a LANG class referencing an AM class.
 pub(crate) const UNTYPED_FIELDS: &[UntypedField] = &[
     UntypedField {
         class: "BMM_INTERVAL_VALUE",
@@ -732,9 +667,7 @@ pub(crate) fn untyped_field(class: &str, field: &str) -> Option<&'static Untyped
         .find(|u| u.class == class && u.field == field)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Serde field defaults (wire-omittable fields)
-// ─────────────────────────────────────────────────────────────────────────────
+// Serde field defaults.
 
 /// One serde default: the field `(owner, field)` defaults to the literal Rust
 /// expression `default` when the canonical wire omits it.
@@ -746,24 +679,12 @@ pub(crate) struct FieldDefault {
     pub reason: &'static str,
 }
 
-/// Serde defaults the vendored BMM does NOT state, for fields the canonical
-/// wire may omit.
+/// Serde defaults the vendored BMM does not state, for fields the canonical
+/// wire may omit; [`vendored_default`] covers the rest.
 ///
-/// **This table is the residue, not the source.** The vendored schemas carry a
-/// `default` facet on 44 properties ([`BmmProperty::default`]), and
-/// [`vendored_default`] renders it wherever it is renderable — that derivation
-/// is the primary path. Entries survive here only where the vendored input
-/// states nothing and a decision is still required.
-///
-/// The four that remain are `Interval`'s inclusivity/boundedness flags, which
-/// ITS-JSON `INTERVAL` lists as `required` and which archie omits at their
-/// defaults. BASE `interval.adoc` gives the bounds `0..1` and states no
-/// invariant tying a flag to its bound, so a reader that admits the omission
-/// must decide; the decision here is our own design. An omitted flag follows
-/// its bound: an absent bound reads as unbounded and not included, a present
-/// one as bounded and included, and a flag the wire states is kept as written
-/// (a fixed `false`/`true` read a bound-less side as bounded and included,
-/// #5203). The value is a Rust expression over the presence locals
+/// `Interval`'s flags: no openEHR spec governs an omitted flag, our own
+/// design. An omitted flag follows its bound (absent: unbounded, not
+/// included; present: bounded, included), over the locals
 /// [`crate::render::bound_presence`] binds.
 pub(crate) const FIELD_DEFAULTS: &[FieldDefault] = &[
     FieldDefault {
@@ -801,34 +722,18 @@ const INTERVAL_FLAG_CITATION: &str = "BASE docs/UML/classes/org.openehr.base.fou
 interval.adoc (bounds 0..1, flags 1..1, no invariant tying a flag to its bound) and ITS-JSON \
 INTERVAL (all four flags required). No openEHR spec governs the omission: our own design";
 
-/// Render a property's vendored `default` facet as a Rust expression of the
-/// field's own type, or `None` when the facet cannot be one.
+/// Renders a property's vendored `default` facet as a Rust expression of the
+/// field's type, or `None` when the facet cannot be one.
 ///
-/// The facet is an **undeclared extension**: LANG
-/// `docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_property.adoc`
-/// §Attributes declares `name`, `is_mandatory`, `is_computed`,
-/// `is_im_infrastructure`, `is_im_runtime`, `type_def` and `bmm_property` — no
-/// `default` — so the vendored schemas' occurrences carry no normative reading
-/// and the emitter derives from them only where the facet is unambiguous in
-/// the property's own declared type:
+/// The facet is an undeclared extension (LANG `p_bmm_property.adoc` declares no
+/// `default`), so it is rendered only where unambiguous:
 ///
-/// * `Boolean` ← the ODIN literals `False`/`True` (the JSON export stringifies
-///   them) or a real JSON boolean.
-/// * `String` ← an ODIN-QUOTED literal (`<"Boolean">` arrives as `"\"Boolean\""`).
-///   The quoting is what distinguishes a string value from a stray annotation:
-///   the one bare non-empty facet on a non-enumeration type in the vendored set
-///   is RM `RESOURCE_DESCRIPTION.parent_resource = "0..1"`, a cardinality that
-///   leaked into the default slot of an `AUTHORED_RESOURCE`-typed property.
-/// * an enumeration class (`class_of` resolves the declared type to a class
-///   carrying `BMM_ENUMERATION` constants) ← the bare name of one of its
-///   `item_names` (TERM 3.1.0 `CODE.status = active`). The result is the
-///   marker `@SPEC::Variant`, which each emitter resolves to the variant's
-///   generation-correct full path exactly as it resolves a `@SPEC`
-///   construction-door parameter (the plan stage does not know the crate a
-///   default is emitted into).
+/// * `Boolean` ← `False`/`True` or a JSON boolean.
+/// * `String` ← an ODIN-quoted literal.
+/// * an enumeration class ← one of its `item_names`, as the `@SPEC::Variant`
+///   marker [`resolve_default`] resolves.
 ///
-/// Everything else is un-renderable and is listed in [`UNRENDERABLE_DEFAULTS`],
-/// so the vendored set is partitioned totally: derived, or named with a reason.
+/// Everything else is listed in [`UNRENDERABLE_DEFAULTS`].
 pub(crate) fn vendored_default<'c>(
     prop: &BmmProperty,
     class_of: impl Fn(&str) -> Option<&'c BmmClass>,
@@ -858,10 +763,8 @@ pub(crate) fn vendored_default<'c>(
     }
 }
 
-/// Resolve a rendered default expression for the crate it is emitted into: an
-/// enumeration-constant marker `@SPEC::Variant` (see [`vendored_default`])
-/// becomes `{path}::Variant`, where `path` is `resolve("@SPEC")`, the emitter's
-/// own `@SPEC` type resolution; any other expression passes through.
+/// Resolves a `@SPEC::Variant` default to `{resolve("@SPEC")}::Variant`; any
+/// other expression passes through.
 pub(crate) fn resolve_default(default: &str, resolve: impl Fn(&str) -> String) -> String {
     match default
         .strip_prefix('@')
@@ -878,10 +781,8 @@ pub(crate) struct UnrenderableDefault {
     pub owner: &'static str,
     /// The property carrying the facet.
     pub field: &'static str,
-    /// Every distinct vendored facet value this entry adjudicates, across all
-    /// composed generations; the emitter's test suite fails when the vendored
-    /// set differs, so a re-vendor cannot leave the citation describing a
-    /// facet that is no longer there.
+    /// Every vendored facet value this entry adjudicates; the test suite fails when
+    /// the vendored set differs.
     pub facets: &'static [&'static str],
     /// The spec/schema evidence for leaving it unrealized.
     pub citation: &'static str,
@@ -889,13 +790,8 @@ pub(crate) struct UnrenderableDefault {
     pub reason: &'static str,
 }
 
-/// Every vendored `default` facet [`vendored_default`] declines to render, named
-/// and cited — the completeness half of the partition, so a facet is never just
-/// dropped.
-///
-/// A new un-renderable facet (a re-vendored schema, a pin bump) fails the
-/// emitter's own test suite until it is adjudicated here, and so does a changed
-/// facet value under an existing entry.
+/// Every vendored `default` facet [`vendored_default`] declines to render,
+/// named and cited; an unlisted one fails the emitter's test suite.
 pub(crate) const UNRENDERABLE_DEFAULTS: &[UnrenderableDefault] = &[UnrenderableDefault {
     owner: "RESOURCE_DESCRIPTION",
     field: "parent_resource",
@@ -922,22 +818,16 @@ pub(crate) enum ContradictionKind {
     /// A container's `1..*` lower bound: the field is emitted as a plain
     /// (possibly empty) container instead of `NonEmptyVec<T>`.
     LowerBound,
-    /// A mandatory `Hash<K, V>` attribute's `1..1` existence: the field stays
-    /// a `BTreeMap`, an absent key reads as the empty map, and the empty map is
-    /// omitted on write.
+    /// A mandatory `Hash<K, V>`'s `1..1` existence: an absent key reads as the
+    /// empty map, and the empty map is omitted on write.
     Existence,
 }
 
-/// An attribute whose vendored cardinality or existence is CONTRADICTED by the
-/// same release's normative syntax, with the citation that resolves it.
+/// An attribute whose vendored cardinality or existence the same release's
+/// syntax chapter contradicts, with the citation that resolves it.
 ///
-/// The emitter never softens a bound on its own — a `1..*` is emitted as
-/// `NonEmptyVec<T>` and a `1..1` as a required field precisely so the model
-/// carries them. An entry here exists only where the vendored release states
-/// the constraint BOTH ways and the syntax chapter (which defines the
-/// persistence form and shows conformant instances) governs over the UML class
-/// table. An entry is declared on the attribute's declaring class, so it
-/// reaches every descendant that inherits the attribute.
+/// Declared on the attribute's declaring class, so it reaches every
+/// descendant.
 pub(crate) struct SpecContradiction {
     /// The declaring BMM class.
     pub owner: &'static str,
@@ -972,11 +862,7 @@ pub(crate) const SPEC_CONTRADICTIONS: &[SpecContradiction] = &[SpecContradiction
     reason: "Reported upstream as a spec defect (tracker issue #3770); a leaf package or schema without `packages` reads as the empty map, which is omitted on write.",
 }];
 
-/// Whether `(owner, field)` carries an adjudicated contradiction of `kind`: a
-/// vendored cardinality lower bound the emitter must NOT realize as a non-empty
-/// container ([`ContradictionKind::LowerBound`]), or a vendored `1..1` existence
-/// whose mandatory `Hash` field reads an absent key as the empty map and omits
-/// the empty map on write ([`ContradictionKind::Existence`]).
+/// Whether `(owner, field)` carries an adjudicated contradiction of `kind`.
 #[must_use]
 pub(crate) fn contradicted(owner: &str, field: &str, kind: ContradictionKind) -> bool {
     SPEC_CONTRADICTIONS
@@ -984,15 +870,8 @@ pub(crate) fn contradicted(owner: &str, field: &str, kind: ContradictionKind) ->
         .any(|c| c.owner == owner && c.field == field && c.kind == kind)
 }
 
-/// The default expression for a resolved property, or `None`.
-///
-/// The vendored `default` facet on the DECLARING class wins (rendered by
-/// [`vendored_default`], with `class_of` resolving an enumeration-typed
-/// property's class); [`FIELD_DEFAULTS`] supplies only what the schemas leave
-/// unstated. The two can never disagree: an entry in the hand table for a
-/// property that carries a renderable facet fails the emitter's own test suite.
-/// An enumeration default is a `@SPEC::Variant` marker the emitter resolves
-/// with [`resolve_default`].
+/// The default expression for a resolved property, or `None`: the vendored
+/// facet on the declaring class, else [`FIELD_DEFAULTS`].
 pub(crate) fn field_default<'c>(
     owner: &str,
     prop: &BmmProperty,
@@ -1006,9 +885,7 @@ pub(crate) fn field_default<'c>(
     })
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ITS-REST OAS schema names that ARE spec types under a different spelling
-// ─────────────────────────────────────────────────────────────────────────────
+// ITS-REST OAS schema names that are spec types spelled differently.
 
 /// One ITS-REST OAS component schema whose *key* name does not match the spec
 /// class it renders, mapped to the generated spec type it must resolve to.
@@ -1026,23 +903,10 @@ pub(crate) struct OasMonomorphization {
     pub reason: &'static str,
 }
 
-/// OAS component schemas that ARE generated spec types spelled differently.
+/// OAS component schemas that are generated spec types spelled differently.
 ///
-/// `emit_rest` binds a `$ref` to a spec type by matching the schema KEY against
-/// the emittable class names, which works for the ~200 schemas the released
-/// bundles name after their class (`Ehr`, `DvText`, …) and fails for the five
-/// below: OAS keys must be unique and ASCII, so the released bundles rename a
-/// class whose Rust name collides (`Clstr`) and give each generic
-/// INSTANTIATION its own key (`DvIntervalOfDate`, `ObjectRefOfHierObjectId`).
-/// Every one of them declares its real spec name in `title`, so the mapping is
-/// read out of the vendored bundle, not invented — the emitter's test suite
-/// asserts each entry's `title` against the bundle.
-///
-/// Without the mapping they emit as DTO structs, which is doubly wrong: the
-/// payload loses the spec type's strict canonical-JSON reader, and the DTO is
-/// `allOf`-truncated (it carries only the schema's OWN `properties`, so
-/// `Clstr` loses every `ITEM`/`LOCATABLE` member and `ObjectRefOfHierObjectId`
-/// loses the mandatory `namespace` and `type`).
+/// Each declares its spec name in `title`, which the test suite checks against
+/// the vendored bundle.
 pub(crate) const OAS_MONOMORPHIZATIONS: &[OasMonomorphization] = &[
     OasMonomorphization {
         schema: "Clstr",
@@ -1111,42 +975,24 @@ pub(crate) fn oas_monomorphization(schema: &str) -> Option<&'static str> {
         .map(|m| m.rust_type)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Owner/parent back-references (cycle-breaking, non-emitted)
-// ─────────────────────────────────────────────────────────────────────────────
+// Owner/parent back-references (not emitted).
 
 /// One owner/parent back-reference: `(class, field)` is a navigational pointer
 /// from a part to the whole that owns it, omitted from the emitted struct.
 pub(crate) struct BackReference {
     pub class: &'static str,
     pub field: &'static str,
-    /// The spec citation naming the field a back-reference. **This string is
-    /// emitted verbatim** into a `// NOTE:` in the generated struct (see
-    /// `render::emit::render_struct_def`), so it is byte-load-bearing: changing
-    /// it changes generated output.
+    /// The spec citation, emitted verbatim as a NOTE in the generated struct.
     pub citation: &'static str,
     /// One-line reason (the cycle it breaks) — documentation only, not emitted.
     pub reason: &'static str,
 }
 
-/// Mandatory single-valued properties designated as **owner/parent
-/// back-references** — a navigational association pointing from a part to the
-/// whole that owns it, not forward-owned data.
+/// Mandatory single-valued properties pointing from a part to its owner.
 ///
-/// # Why the emitter special-cases these (owner ruling 2026-07-19)
-///
-/// The spec is written in reference-semantics languages where an owner pointer
-/// is a trivially-satisfiable back-pointer. Under Rust value semantics an
-/// OWNING mandatory back-reference makes the type a non-constructible infinite
-/// value (every `ARCHETYPE` owns a `terminology` whose `owner_archetype` is an
-/// `ARCHETYPE`), so each is emitted as a non-data back-reference: omitted from
-/// the struct fields and from serde, behavioural access left to the
-/// hand-written `*_impl.rs`. They appear on no canonical wire either.
-///
-/// Every genuine composition field stays mandatory: `Model::assert_constructible`
-/// proves every remaining cycle is broken only at an edge designated here. The
-/// BMM carries no `is_im_runtime`/`is_im_infrastructure` flag on these, so the
-/// designation is an explicit, spec-cited override.
+/// Under value semantics an owning back-reference is an infinite value, so
+/// each is omitted from the struct and from serde; `Model::assert_constructible`
+/// proves every other cycle is broken. They appear on no canonical wire.
 pub(crate) const BACK_REFERENCES: &[BackReference] = &[
     BackReference {
         class: "ARCHETYPE_TERMINOLOGY",
@@ -1180,10 +1026,7 @@ pub(crate) const BACK_REFERENCES: &[BackReference] = &[
                  (docs/specs/openehr/AM/docs/UML/classes/\
                  org.openehr.am.aom14.archetype_ontology.adoc)",
     },
-    // ── LANG 1.0.0 `scope`: the same declaring-context back-reference ─────────
-    // The released 1.0.0 model declares it on BMM_DECLARATION (the
-    // pre-SPECLANG-14 spelling of the v3 BMM_MODEL_ELEMENT edge below): an
-    // owning field would make every declaration an infinite value.
+    // LANG 1.0.0 `scope` on BMM_DECLARATION.
     BackReference {
         class: "BMM_DECLARATION",
         field: "scope",
@@ -1196,13 +1039,8 @@ pub(crate) const BACK_REFERENCES: &[BackReference] = &[
                  (tools/openehr-codegen/vendor/bmm/components/LANG/json/\
                  openehr_lang_1.0.0.bmm.json)",
     },
-    // ── LANG BMM v3 `scope`: the declaring-context back-reference ──────────────
-    // The v3 generation makes every model element name its declaring context,
-    // and the root's context is ITSELF (`is_root_scope(): Result = (scope =
-    // self)`), so an owning field would make every BMM_MODEL_ELEMENT an infinite
-    // value. Four subtypes redefine the attribute more narrowly; each
-    // redefinition is the same owner/parent edge and needs its own entry,
-    // because the flattened property is attributed to its declaring class.
+    // LANG BMM v3 `scope`: the root's scope is itself (`is_root_scope(): Result =
+    // (scope = self)`); each narrowing redefinition needs its own entry.
     BackReference {
         class: "BMM_MODEL_ELEMENT",
         field: "scope",
@@ -1250,11 +1088,7 @@ pub(crate) const BACK_REFERENCES: &[BackReference] = &[
     },
 ];
 
-/// The spec citation if `(class, field)` is a designated owner/parent
-/// back-reference, else `None`.
-///
-/// The returned string is emitted verbatim into generated output, so it is
-/// byte-stable.
+/// The spec citation if `(class, field)` is a back-reference, else `None`.
 pub(crate) fn back_reference(class: &str, field: &str) -> Option<&'static str> {
     BACK_REFERENCES
         .iter()
@@ -1262,15 +1096,10 @@ pub(crate) fn back_reference(class: &str, field: &str) -> Option<&'static str> {
         .map(|b| b.citation)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Assertion-dialect leaf-predicate → runtime-function table
-// ─────────────────────────────────────────────────────────────────────────────
+// Assertion-dialect leaf predicate → runtime function.
 
-/// One assertion-dialect leaf predicate the invariant classifier recognises
-/// (`crate::analyze::invariants::RUNTIME_PREDICATES`), mapped to the named
-/// runtime function the invariant-core layer calls to realize it. This is the
-/// declarative bridge between the BMM assertion spelling and the hand-written
-/// runtime in `openehr-rm`'s `validate.rs`.
+/// One assertion-dialect leaf predicate mapped to the `openehr-rm` runtime
+/// function that realizes it.
 pub(crate) struct DialectPredicate {
     /// The BMM assertion-dialect predicate spelling, as it appears in a
     /// `BMM_CLASS.invariants` expression (e.g. `valid_iso8601_date`).
@@ -1284,10 +1113,8 @@ pub(crate) struct DialectPredicate {
     pub reason: &'static str,
 }
 
-/// The assertion-dialect predicate → runtime-function map. Its predicate set is
-/// exactly `crate::analyze::invariants::RUNTIME_PREDICATES` (the classifier's
-/// recognised runtime-backed leaves) — the emitter-invariant suite pins the two
-/// in lockstep, so a new recognised predicate without a runtime hook fails CI.
+/// The assertion-dialect predicate → runtime-function map; its predicate set
+/// equals `crate::analyze::invariants::RUNTIME_PREDICATES`.
 pub(crate) const DIALECT_PREDICATES: &[DialectPredicate] = &[
     DialectPredicate {
         predicate: "valid_iso8601_date",
@@ -1339,17 +1166,14 @@ pub(crate) const DIALECT_PREDICATES: &[DialectPredicate] = &[
     },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Emittable-invariant realization register
-// ─────────────────────────────────────────────────────────────────────────────
+// Emittable-invariant realization register.
 
 /// The vendored RM class-documentation directory every [`InvariantRealization`]
 /// citation is relative to.
 pub(crate) const RM_CLASS_DOCS: &str = "docs/specs/openehr/RM/docs/UML/classes";
 
-/// The vendored class-doc directory for `spec_file`, by its component
-/// package: `org.openehr.base.*` classes are documented under the BASE
-/// component, everything else under the RM one.
+/// The vendored class-doc directory for `spec_file`: BASE for
+/// `org.openehr.base.*`, RM otherwise.
 #[must_use]
 pub(crate) fn class_doc_dir(spec_file: &str) -> &'static str {
     if spec_file.starts_with("org.openehr.base.") {
@@ -1359,40 +1183,23 @@ pub(crate) fn class_doc_dir(spec_file: &str) -> &'static str {
     }
 }
 
-/// Where an assertion-dialect **emittable** RM class invariant
-/// (`crate::analyze::invariants::Bucket::Emitted`) is realized.
-///
-/// The classifier's `Emitted` verdict says an expression *could* be evaluated
-/// mechanically — it does NOT say anything is evaluating it. Without this
-/// register an invariant classified emittable but realized nowhere is
-/// indistinguishable from one a core enforces, so it disappears silently; every
-/// emittable invariant therefore carries a venue here, and the emitter-invariant
-/// suite fails on any that carries none.
+/// Where an assertion-dialect emittable RM class invariant is realized; the
+/// test suite fails on an emittable invariant with no venue.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum InvariantVenue {
     /// A generated invariant core in `openehr-rm`'s `validate/generated.rs`
     /// (`site` = the core function name).
     Core,
-    /// A hand-written realization in `openehr-rm` (`site` = the file): either a
-    /// typed `Validate` impl in a `*_impl.rs` sibling, or one of the JSON-level
-    /// per-node checks in `validate.rs` that exist precisely because the typed
-    /// model cannot express the rule (a BMM `List` emits as a `Vec`, so absent
-    /// and present-but-empty collapse to one value once deserialized).
+    /// A hand-written realization in `openehr-rm` (`site` = the file): a typed
+    /// `Validate` impl or a JSON-level check in `validate.rs`.
     Impl,
     /// The wire boundary in `openehr-its` (`site` = the file) — a rule whose
     /// inputs the wire walker holds and a per-node RM core does not.
     Wire,
-    /// A write-boundary check in the application (`site` = the file under
-    /// `app/`) — a rule whose inputs only the inbound request body still
-    /// carries. The commonest case is a `X /= Void implies not X.is_empty`
-    /// list rule: the BMM `List` emits as a `Vec`, so absent and
-    /// present-but-empty collapse to one value in the typed model and neither
-    /// a core nor the wire walker can separate them, while the raw JSON body
-    /// still can.
+    /// A write-boundary check under `app/` (`site` = the file), for a rule only
+    /// the raw request body can judge, such as absent versus empty list.
     App,
-    /// Adjudicated out of the per-node invariant layer: an aggregate /
-    /// cross-object constraint owned by another layer, or an assertion that is
-    /// vacuous on stored data. `site` is empty.
+    /// Excluded from the per-node invariant layer; `site` is empty.
     Excluded,
     /// Classified emittable, realized nowhere yet — the honest pending list.
     /// `site` is empty.
@@ -1422,9 +1229,8 @@ pub(crate) struct InvariantRealization {
     pub name: &'static str,
     /// Where it is realized.
     pub venue: InvariantVenue,
-    /// The realizing site: a core function name ([`InvariantVenue::Core`]) or a
-    /// repo-relative file ([`InvariantVenue::Impl`] / [`InvariantVenue::Wire`] /
-    /// [`InvariantVenue::App`]); empty for the two non-realizing venues.
+    /// The realizing site: a core function name or a repo-relative file; empty for
+    /// the two non-realizing venues.
     pub site: &'static str,
     /// The class's vendored spec file under [`RM_CLASS_DOCS`] (§Invariants).
     pub spec_file: &'static str,
@@ -1432,12 +1238,8 @@ pub(crate) struct InvariantRealization {
     pub reason: &'static str,
 }
 
-/// Every assertion-dialect-emittable RM class invariant, with the venue that
-/// realizes it. Declarative decision data (the same shape as
-/// [`DIALECT_PREDICATES`]): the *set* is derived — it must equal the
-/// classifier's `Emitted` verdicts over the RM schema, which the
-/// emitter-invariant suite checks in both directions — while each row's venue,
-/// site and reason are adjudicated once, here, with the spec citation.
+/// Every assertion-dialect-emittable RM class invariant with its venue; the
+/// set must equal the classifier's `Emitted` verdicts.
 pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
     InvariantRealization {
         class: "ACTIVITY",
@@ -1741,7 +1543,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.composition.composition.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "EVENT_CONTEXT",
@@ -1749,7 +1551,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.composition.event_context.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "SECTION",
@@ -1757,7 +1559,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.composition.section.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "ENTRY",
@@ -1765,7 +1567,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.composition.entry.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "INSTRUCTION",
@@ -1773,7 +1575,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.composition.instruction.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "DV_TEXT",
@@ -1781,7 +1583,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.data_types.dv_text.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "DV_ORDERED",
@@ -1789,7 +1591,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.data_types.dv_ordered.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "LOCATABLE",
@@ -1797,7 +1599,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.common.locatable.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "LOCATABLE",
@@ -1877,7 +1679,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.demographic.actor.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "ADDRESS",
@@ -1901,7 +1703,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.demographic.party.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "PARTY",
@@ -1997,7 +1799,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.ehr_extract.extract_update_spec.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "EXTRACT_VERSION_SPEC",
@@ -2085,7 +1887,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.common.original_version.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "ORIGINAL_VERSION",
@@ -2101,7 +1903,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.common.original_version.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "ATTESTATION",
@@ -2109,7 +1911,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.common.attestation.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     InvariantRealization {
         class: "AUTHORED_RESOURCE",
@@ -2197,7 +1999,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.common.party_identified.adoc",
-        reason: "the `x /= Void implies not x.is_empty` family: holds BY CONSTRUCTION since #1730 — an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
+        reason: "the `x /= Void implies not x.is_empty` family: holds by construction: an optional container carrying the invariant emits `Option<NonEmptyVec<T>>` (`analyze::nonempty_optional_lists`), so a present-but-empty value is unrepresentable and the strict readers refuse `[]` at parse.",
     },
     // ── the complex-bucket adjudications: every classifier-Complex
     // invariant, venue-registered like the emitted bucket ──────────────────
@@ -2549,11 +2351,7 @@ pub(crate) fn invariant_realization(
         .find(|r| r.class == class && r.name == name)
 }
 
-/// One accounted emittable invariant: a classifier `Emitted` verdict paired
-/// with the register row that says where it is realized. A `None` realization
-/// is an **unaccounted** emit — an invariant the classifier calls mechanically
-/// evaluable that no venue claims — which the generated file reports and the
-/// emitter-invariant suite fails on.
+/// One emittable invariant with its register row; `None` is unaccounted.
 #[derive(Debug)]
 pub(crate) struct AccountedInvariant {
     /// The owning BMM class name.
@@ -2564,14 +2362,9 @@ pub(crate) struct AccountedInvariant {
     pub realization: Option<&'static InvariantRealization>,
 }
 
-/// Account every **emittable** invariant among `invariants` — `(class, name,
-/// assertion-expression)` triples, typically a BMM schema's own class
-/// invariants — against [`INVARIANT_REALIZATIONS`], sorted by `(class, name)`.
-///
-/// The accounted *set* is derived from the classifier
-/// ([`crate::analyze::invariants::classify`]), never from a list: an invariant
-/// that changes bucket, appears with a spec bump, or is added to the vendored
-/// BMM enters this accounting automatically.
+/// Accounts every emittable invariant among `invariants` against
+/// [`INVARIANT_REALIZATIONS`], sorted by `(class, name)`; the set comes from
+/// [`crate::analyze::invariants::classify`].
 pub(crate) fn account_emitted<'a>(
     invariants: impl Iterator<Item = (&'a str, &'a str, &'a str)>,
 ) -> Vec<AccountedInvariant> {
@@ -2587,14 +2380,8 @@ pub(crate) fn account_emitted<'a>(
     out
 }
 
-/// Account every **complex-bucket** invariant among `invariants` — the rules
-/// the classifier judges NOT mechanically evaluable — against
+/// Accounts every complex-bucket invariant among `invariants` against
 /// [`INVARIANT_REALIZATIONS`], sorted by `(class, name)`.
-///
-/// A complex invariant is still normative: it is realized at a hand-written
-/// or application venue, or carries an adjudicated exclusion — a complex rule
-/// with no register row is a silent enforcement gap, the same defect class
-/// the emitted-bucket accounting closes.
 pub(crate) fn account_complex<'a>(
     invariants: impl Iterator<Item = (&'a str, &'a str, &'a str)>,
 ) -> Vec<AccountedInvariant> {
@@ -2610,19 +2397,12 @@ pub(crate) fn account_complex<'a>(
     out
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reference targets (the class an OBJECT_REF attribute points to)
-// ─────────────────────────────────────────────────────────────────────────────
+// Reference targets (the class an OBJECT_REF attribute points to).
 
-/// The class one reference-typed RM attribute points to, as the RM text states
-/// it.
+/// The class one reference-typed RM attribute points to, quoted from the RM
+/// text; `None` where the text names no single class.
 ///
-/// The BMM types every such attribute by the reference class alone
-/// (`OBJECT_REF`, `PARTY_REF`, `LOCATABLE_REF`); the target is stated only in the
-/// attribute's definition in the class text, which this entry quotes. `target`
-/// is `None` where the text names no single class ("e.g.", "usually", an
-/// external system), so every reference-typed attribute has exactly one entry
-/// and `emit-rm-model` refuses one without.
+/// `emit-rm-model` refuses a reference-typed attribute without an entry.
 pub(crate) struct RefTarget {
     /// The class declaring the attribute.
     pub class: &'static str,
@@ -2840,17 +2620,12 @@ pub(crate) fn ref_target(class: &str, attr: &str) -> Option<&'static RefTarget> 
         .find(|r| r.class == class && r.attr == attr)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ITS-REST path identifiers (the openEHR identifier class a path parameter carries)
-// ─────────────────────────────────────────────────────────────────────────────
+// ITS-REST path identifiers.
 
-/// The openEHR identifier class one ITS-REST path-parameter component carries.
+/// The openEHR identifier class one ITS-REST path-parameter component carries,
+/// the BMM type of the RM attribute its description names.
 ///
-/// The OAS states it only in the component's description, which names the RM
-/// attribute the value is "taken from"; the class is that attribute's BMM
-/// type. Every path-parameter component has exactly one entry, `class: None`
-/// where the value is no openEHR identifier, and `emit-rest` emits a
-/// `compile_error!` for a path parameter without one.
+/// `emit-rest` emits a `compile_error!` for a path parameter without an entry.
 pub(crate) struct RestPathIdentifier {
     /// The `#/components/parameters/` name.
     pub component: &'static str,
@@ -2957,10 +2732,8 @@ pub(crate) fn rest_path_identifier(component: &str) -> Option<&'static RestPathI
         .find(|r| r.component == component)
 }
 
-/// One extra `_type` tag a discriminated ITS-REST schema reads as its own
-/// instantiable base, where the docs text tells servers to accept a tag the
-/// OAS `discriminator.mapping` does not list. The value keeps the tag it was
-/// sent with.
+/// One extra `_type` tag a discriminated ITS-REST schema reads as its own base,
+/// where the docs text accepts a tag the `discriminator.mapping` omits.
 pub(crate) struct RestDiscriminatorAlias {
     /// The discriminated OAS component schema.
     pub schema: &'static str,

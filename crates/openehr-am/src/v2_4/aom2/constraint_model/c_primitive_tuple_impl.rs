@@ -41,10 +41,6 @@ impl CPrimitiveTuple {
     /// `c_congruent_to` (`master04.5` §Conformance semantics: C_SECOND_ORDER):
     /// equal member counts and, position-wise, `same_type` plus the member's own
     /// `c_congruent_to`.
-    ///
-    /// NOTE: the BMM declares the parameter as `C_SECOND_ORDER` (the inherited
-    /// signature) while `master04.5` states the body over `C_PRIMITIVE_TUPLE`,
-    /// and the docs text is the oracle.
     #[must_use]
     pub fn c_congruent_to(&self, other: &CPrimitiveTuple) -> bool {
         self.members.len() == other.members.len()

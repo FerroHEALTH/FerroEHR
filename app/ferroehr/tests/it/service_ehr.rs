@@ -1162,8 +1162,8 @@ async fn stored_query_semver_prefix_resolves_to_latest_match() {
     // matching the prefix.
     let (_db, svc) = crate::fixtures::service().await;
 
-    // Store-time AQL validation is now enforced, so the per-version bodies must
-    // be well-formed AQL (the letters `a`/`b`/`c` keep them distinguishable).
+    // Store-time AQL validation is enforced, so the per-version bodies must be
+    // well-formed AQL (the letters `a`/`b`/`c` keep them distinguishable).
     for (version, q) in [
         ("1.0.0", "SELECT a FROM EHR a"),
         ("1.0.1", "SELECT b FROM EHR b"),
@@ -1387,9 +1387,9 @@ async fn item_tag_wire_shape_is_the_rm_item_tag() {
         )
         .await
         .expect("tag put");
-    // The service now carries the typed RM `ITEM_TAG`; the WIRE shape this test
-    // pins is its canonical-JSON encoding, produced here exactly as the
-    // protocol edge produces it.
+    // The service carries the typed RM `ITEM_TAG`; the wire shape this test
+    // pins is its canonical-JSON encoding, produced here as the protocol edge
+    // produces it.
     let tag = openehr_its::json::to_canonical_value(&put[0]);
     assert_eq!(tag["_type"], "ITEM_TAG");
     assert_eq!(tag["key"], "priority");
@@ -1871,9 +1871,8 @@ async fn version_get_at_time_returns_the_original_version() {
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // EHR_STATUS: no version_at_time → the latest VERSION.
-    // NOTE: the reads return the ORIGINAL_VERSION `Value`; the
-    // ETag/Location uid the old `.meta` carried is the ORIGINAL_VERSION's own
-    // `uid.value`.
+    // NOTE: the reads return the ORIGINAL_VERSION `Value`, whose own
+    // `uid.value` is the ETag/Location uid.
     let status_version = svc
         .ehr_object_version_at_time(ehr_uuid, EhrObject::Status, None)
         .await

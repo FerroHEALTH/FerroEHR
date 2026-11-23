@@ -428,7 +428,7 @@ fn a_party_claim_and_a_token_profile_are_refused() {
 }
 
 /// The system clients are policy parties in the CDR (#5436): the table that
-/// declared them is an unknown key, with each of its former keys.
+/// declared them is an unknown key, with each of its keys.
 #[test]
 fn a_system_client_table_is_refused_as_unknown() {
     for table in [
@@ -511,9 +511,9 @@ fn a_namespace_outside_the_object_ref_pattern_is_refused() {
     assert!(text.contains("OBJECT_REF.namespace pattern"), "{text}");
 }
 
-/// The keys #5439 moved into the CDR are unknown keys, refused like any
-/// other: trusted import systems, registered origins, change-feed readers and
-/// SCIM clients are grants of the policy parties now.
+/// The keys of trusted import systems, registered origins, change-feed readers
+/// and SCIM clients are unknown keys, refused like any other: they are grants
+/// of the policy parties (#5439).
 #[test]
 fn the_keys_the_cdr_now_holds_are_refused_as_unknown() {
     for (removed, key) in [
@@ -536,9 +536,9 @@ fn the_keys_the_cdr_now_holds_are_refused_as_unknown() {
     }
 }
 
-/// The privileged role names #5521 moved into the CDR are unknown keys: the
-/// subject audit, the access service, the import and the identifier read are
-/// grants of the policy parties now.
+/// The privileged role names of the subject audit, the access service, the
+/// import and the identifier read are unknown keys: they are grants of the
+/// policy parties (#5521).
 #[test]
 fn the_privileged_roles_the_cdr_now_grants_are_refused_as_unknown() {
     let issuers = "role_issuers = [\"staff\"]\n";

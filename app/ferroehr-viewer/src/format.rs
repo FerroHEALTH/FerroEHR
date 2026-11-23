@@ -67,14 +67,8 @@ impl ReprFormat {
 /// §Datetime format) — and a `datetime-local` control emits only the
 /// `YYYY-MM-DDThh:mm` prefix of that.
 ///
-/// Absent seconds therefore default to `:00` and the zone to `Z`; a value that
-/// already names its zone — a trailing `Z`, or a numeric offset — is returned
-/// unchanged. Empty input yields an empty string, which every caller rejects
-/// before the round-trip.
-///
-/// This is the viewer's ONE normalizer for the parameter: every time-travel
-/// picker goes through it, so one typed instant can never mean two things on the
-/// wire, and the CDR's own `400` is the arbiter for anything else.
+/// Absent seconds default to `:00` and the zone to `Z`; a value naming its zone
+/// is returned unchanged, and empty input yields an empty string.
 ///
 /// NOTE: the zone is stamped deliberately — a zone-less parameter means "the
 /// local timezone is assumed"

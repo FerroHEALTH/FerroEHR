@@ -4,10 +4,6 @@
 //! The access log's checkpoints, verification and transfer on the server
 //! (#5129).
 //!
-//! They are built at boot from `[audit.access_log]` and the keyring, with
-//! the system chain's scheduled seal, the publication of the checkpoints, and
-//! `ferroehr access-log …`.
-//!
 //! The keyring is the one `[record.signing]` configures: with an `OpenPGP`
 //! key in it every append of the access log ends with a signed checkpoint
 //! (#5704), and without one nothing is sealed (#5562). No openEHR spec
@@ -85,10 +81,6 @@ pub fn build(
 }
 
 /// Start the publication of the access log's checkpoints.
-///
-/// It runs when the keyring holds an `OpenPGP` key and returns the
-/// publication, which the `access_log_checkpoints` indicator reads. The
-/// chainer signs both logs' windows as it seals them.
 #[must_use]
 pub fn spawn_schedule(config: &FerroEhrConfig, checkpoints: &Checkpoints) -> Publication {
     let publication = Publication::new(config.audit.access_log.publish_directory.clone());

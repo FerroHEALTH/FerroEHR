@@ -147,13 +147,6 @@ impl Authenticator {
     /// the request path, and records each accepted proof in `replay`, which
     /// the server builds over the clinical pool every replica shares.
     ///
-    /// With a party `source` and an `[auth.issuer.<name>.party]` table, every
-    /// caller is looked up in the party binding the tables and
-    /// `[authz.party_binding]` describe, on every request. `standing` answers
-    /// which clients a person's token comes through, which actors are
-    /// delegates and which system subjects need no scope, as the token is
-    /// classified.
-    ///
     /// # Errors
     /// A message naming the refused setting, the `jwks_file` or introspected
     /// issuer that could not be read, the metadata file that could not be

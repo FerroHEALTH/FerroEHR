@@ -347,8 +347,6 @@ pub(crate) fn is_care<'a, T: Tree<'a>>(relationship: T) -> bool {
 
 /// One membership of a care team or unit: the team or unit it targets and
 /// the dates its `time_validity` holds.
-///
-/// The evaluator reads a caller's from [`facts::CallerFacts::care_teams`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CareTeam {
     team: Uuid,

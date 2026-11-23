@@ -100,15 +100,9 @@ impl QueryResult {
 
 /// Plan, execute, and assemble an AQL query.
 ///
-/// `profile` is the ACTIVE `spec_profile`: whole-object cells serve stored
-/// version bodies, so they pass the same generation gate every other served
-/// body passes (`crate::versioning::profile::gate_result_bodies`) before any
-/// subtree is reassembled. Scalar cells serve values, not bodies, and are not
-/// gated.
-///
-/// `shapes` are the statement shapes of a cached plan
-/// ([`super::sql::shape`]), which a repeated request binds instead of
-/// building its SQL; a plan that is not cached passes none.
+/// Whole-object cells pass the generation gate of `profile` before their
+/// subtree is reassembled; scalar cells are not gated. `shapes` are a cached
+/// plan's statement shapes, bound instead of building the SQL.
 ///
 /// # Errors
 ///
@@ -261,8 +255,7 @@ fn served_ehrs(
         return Ok(Vec::new());
     }
     // Insertion-ordered so the record set is deterministic, and keyed so a
-    // population page of a hundred thousand rows from as many EHRs stays linear
-    // (a probe per row made the 100 000-EHR cohort of #3159 take fifty seconds).
+    // population page from many EHRs stays linear (#3159).
     let mut served: indexmap::IndexMap<Uuid, u64> = indexmap::IndexMap::new();
     let mut in_row: Vec<Uuid> = Vec::with_capacity(access_cols.len());
     for row in rows {

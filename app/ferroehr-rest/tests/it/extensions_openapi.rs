@@ -204,13 +204,9 @@ async fn every_documented_path_routes() {
             let resp = app.clone().oneshot(req).await.expect("response");
             let status = resp.status();
             let body = resp.into_body().collect().await.expect("body").to_bytes();
-            // A documented op must be *mounted*. Under the real service a mounted
-            // handler may legitimately answer 404 for a missing resource (e.g. a
-            // stored query that does not exist) — that still means the route is
-            // mounted (the Mock backend previously masked this by answering 501
-            // everywhere). An *unmounted* path is axum's bare fallback 404 with an
-            // empty body; a mounted handler's 404 carries the openEHR
-            // `{error,message}` body. So "not mounted" = a 404 with an empty body.
+            // A documented op must be mounted. A mounted handler may answer
+            // `404` for a missing resource, with the openEHR error body; an
+            // unmounted path is axum's bare fallback `404` with an empty body.
             assert!(
                 status != StatusCode::NOT_FOUND || !body.is_empty(),
                 "documented op {} {template} (driven as {concrete}) is not mounted (bare 404)",
@@ -225,14 +221,9 @@ async fn every_documented_path_routes() {
 /// The Swagger UI mount path must land somewhere its RELATIVE asset URLs
 /// resolve, and must not loop doing it.
 ///
-/// The dist `index.html` references its bundle relatively (`./swagger-ui.css`,
-/// `./swagger-ui-bundle.js`). Served at the slash-less mount path, a browser
-/// resolves those against the PARENT directory — every one `404`s and the page
-/// renders empty with nothing a user can see. So the assertion is not "the mount
-/// path answers 200": it is that following the mount path reaches a document
-/// whose relative references resolve to routes that exist. The redirect target
-/// also may not be the trailing-slash form, which `NormalizePathLayer` strips
-/// straight back here.
+/// Served at the slash-less mount path, the relative asset URLs of the dist
+/// `index.html` resolve against the parent directory and the page renders
+/// empty.
 #[tokio::test]
 async fn the_swagger_mount_path_lands_where_its_relative_assets_resolve() {
     let app = full_app().await;

@@ -16,11 +16,6 @@
 //! says, and the boot line says which.
 //!
 //! No openEHR spec governs this: our own design. FerroEHR supplies two parts:
-//!
-//! - [`product`]: the status, the route groups, the identity and the preview.
-//! - [`store`]: the crate's state store over the clinical database, so every
-//!   replica of an installation shares one id, one start claim and one daily
-//!   report.
 
 pub mod product;
 pub mod store;

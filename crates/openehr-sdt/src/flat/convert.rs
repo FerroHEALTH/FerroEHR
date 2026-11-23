@@ -1,26 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The public conversion entry points: COMPOSITION ⇄ the FLAT and
-//! STRUCTURED wire forms, and the pure FLAT ⇄ STRUCTURED transforms.
+//! COMPOSITION ⇄ FLAT and STRUCTURED, and FLAT ⇄ STRUCTURED.
 //!
-//! The `rm_*` entry points build and read the typed `openehr-rm`
-//! COMPOSITION with no canonical-JSON value in between (#6003); the
-//! commit and read seams use them. The canonical-JSON entry points are the
-//! unchecked projections of the same conversions: the built tree rendered
-//! before the RM's mandatory attributes are checked, and a read of a value
-//! (the form a `553|incomplete|` commit keeps).
-//!
-//! Wire semantics: ITS-REST `simplified_formats/master04-basic_concepts.adoc`
-//! (§Format variants, §Conversion Between Formats); media types
-//! (`master02 §MIME Types`): `application/openehr.wt.flat+json`,
-//! `application/openehr.wt.structured+json`. Every conversion runs through
-//! the shared simplified tree ([`crate::flat::sim`]), so the two wire variants
-//! cannot drift from each other.
-//!
-//! `now` on the building directions supplies the `ctx/time` default
-//! (`master04 §Context`: "defaults to the current server time (now())") —
-//! injected by the caller so conversions stay deterministic under test.
+//! All go through the simplified tree ([`crate::flat::sim`]); the `rm_*` entry
+//! points work on the typed COMPOSITION, the canonical-JSON ones are unchecked
+//! projections. `now` is the `ctx/time` default (`master04 §Context`).
 
 #![expect(
     clippy::disallowed_types,
@@ -69,12 +54,8 @@ pub fn rm_from_flat(
     build::build_composition(&tree, wt, now)
 }
 
-/// FLAT document → canonical-JSON COMPOSITION for a SUBMITTED body: the
-/// plain conversion plus the master04 §Validation input-side checks
-/// (mandatory context fields, resolvable coded bindings).
-///
-/// The commit seams use this entry; [`composition_from_flat`] stays the
-/// unchecked projection (round-trips, fragments, response rendering).
+/// FLAT document → canonical-JSON COMPOSITION for a submitted body, with the
+/// master04 §Validation input checks.
 ///
 /// # Errors
 /// Everything [`composition_from_flat`] refuses, plus
@@ -88,8 +69,7 @@ pub fn submitted_composition_from_flat(
     Ok(typed::render(&*submitted_tree(&tree, wt, now)?))
 }
 
-/// FLAT document → typed COMPOSITION for a SUBMITTED body, the typed form of
-/// [`submitted_composition_from_flat`] the commit seam takes.
+/// FLAT document → typed COMPOSITION for a submitted body.
 ///
 /// # Errors
 /// As [`submitted_composition_from_flat`].
@@ -101,9 +81,8 @@ pub fn submitted_rm_from_flat(
     submitted_rm_from_tree(&flat::parse_flat(doc)?, wt, now)
 }
 
-/// A parsed FLAT or STRUCTURED document → typed COMPOSITION for a SUBMITTED
-/// body: the build of [`submitted_rm_from_flat`] over a tree the caller read
-/// straight from the wire text ([`flat::parse_flat_text`]).
+/// A parsed FLAT or STRUCTURED document → typed COMPOSITION for a submitted
+/// body, over a tree read from the wire text ([`flat::parse_flat_text`]).
 ///
 /// # Errors
 /// As [`submitted_composition_from_flat`].
@@ -115,12 +94,8 @@ pub fn submitted_rm_from_tree(
     Ok(access::finish(submitted_tree(tree, wt, now)?)?)
 }
 
-/// The tree a SUBMITTED body builds, with the master04 §Validation input
-/// checks run after the build's own syntax-class refusals and before any
-/// refusal of the RM itself (an attribute or value the class refuses, a
-/// `|raw` fragment the canonical reader refuses, a mandatory attribute left
-/// unset), which are the template-mediated refusals a strict read of the
-/// built instance raises last.
+/// The tree a submitted body builds, the master04 §Validation input checks
+/// run after the build's syntax refusals and before the RM's own.
 ///
 /// # Errors
 /// The build's refusals, [`FlatError::MissingContext`] and
@@ -143,12 +118,8 @@ fn submitted_tree(
     }
 }
 
-/// The master04 §Validation input-side checks a SUBMITTED simplified body
-/// runs: mandatory context fields and resolvable coded bindings — refusing
-/// here names the actual defect instead of letting an RM-invalid build fail
-/// downstream at the strict canonical reader. Runs AFTER the build so the
-/// build's own syntax-class refusals (`|other` conflicts, malformed datums)
-/// keep precedence over these semantic ones.
+/// The master04 §Validation input checks of a submitted body: mandatory
+/// context fields and resolvable coded bindings.
 fn require_input_valid(
     tree: &crate::flat::sim::SimDocument,
     wt: &WebTemplate,
@@ -182,9 +153,8 @@ pub fn composition_to_flat(
     Ok(flat::emit_flat(&tree))
 }
 
-/// Typed COMPOSITION → FLAT JSON text, read with no canonical-JSON value and
-/// written with no intermediate map: the bytes `serde_json::to_string` writes
-/// for [`rm_to_flat`].
+/// Typed COMPOSITION → FLAT JSON text, the bytes `serde_json::to_string`
+/// writes for [`rm_to_flat`].
 ///
 /// # Errors
 /// [`FlatError::Serialize`], which a FLAT datum never raises.
@@ -226,8 +196,7 @@ pub fn rm_from_structured(
     build::build_composition(&tree, wt, now)
 }
 
-/// STRUCTURED document → canonical-JSON COMPOSITION for a SUBMITTED body —
-/// the STRUCTURED twin of [`submitted_composition_from_flat`].
+/// STRUCTURED document → canonical-JSON COMPOSITION for a submitted body.
 ///
 /// # Errors
 /// Everything [`composition_from_structured`] refuses, plus
@@ -241,8 +210,7 @@ pub fn submitted_composition_from_structured(
     Ok(typed::render(&*submitted_tree(&tree, wt, now)?))
 }
 
-/// STRUCTURED document → typed COMPOSITION for a SUBMITTED body, the typed
-/// form of [`submitted_composition_from_structured`] the commit seam takes.
+/// STRUCTURED document → typed COMPOSITION for a submitted body.
 ///
 /// # Errors
 /// As [`submitted_composition_from_structured`].
@@ -273,9 +241,7 @@ pub fn rm_to_structured(composition: &Composition, wt: &WebTemplate) -> Value {
     structured::emit_structured(&flatten::flatten_typed(composition, wt))
 }
 
-/// FLAT document of a party template → canonical-JSON party (`PERSON`,
-/// `ORGANISATION`, `GROUP`, `AGENT` or `ROLE`), with the caller's
-/// [`build::BuildOptions`].
+/// FLAT document of a party template → canonical-JSON party.
 ///
 /// # Errors
 /// Path-syntax errors, plus everything [`build::build_party`] refuses.
@@ -288,8 +254,7 @@ pub fn party_from_flat(
     build::build_party(&tree, wt, options)
 }
 
-/// STRUCTURED document of a party template → canonical-JSON party, the
-/// STRUCTURED twin of [`party_from_flat`].
+/// STRUCTURED document of a party template → canonical-JSON party.
 ///
 /// # Errors
 /// Structure errors, plus everything [`build::build_party`] refuses.

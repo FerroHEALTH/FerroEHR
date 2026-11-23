@@ -49,23 +49,12 @@ pub const AQL: &str = openehr_query::SPEC_VERSION;
 /// together.
 pub const RM: &str = openehr_rm::Generation::V1_2.spec_version();
 /// The openEHR BASE version.
-///
-/// The default (current) BASE generation's pin (same const/`Default` pairing
-/// as [`RM`]).
 pub const BASE: &str = openehr_base::Generation::V1_3.spec_version();
 /// The ADL 1.4 generation of the Archetype Model.
-///
-/// The `openehr-am` crate ships both extant generations side by side; this
-/// is the `v1_4` module's own pin.
 pub const AM14: &str = openehr_am::Generation::V1_4.spec_version();
 /// The ADL 2 generation of the Archetype Model.
-///
-/// The `openehr-am` crate's current generation, the `v2_4` module.
 pub const AM24: &str = openehr_am::Generation::V2_4.spec_version();
 /// The openEHR Terminology version.
-///
-/// The default (current) TERM generation's pin (same const/`Default` pairing
-/// as [`RM`]).
 pub const TERM: &str = openehr_term::Generation::V3_1.spec_version();
 /// The `PostgreSQL` version this server targets. No openEHR spec governs the
 /// datastore — our own design; no crate carries this pin, so it stays

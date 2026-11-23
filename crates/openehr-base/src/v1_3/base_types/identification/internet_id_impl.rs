@@ -2,13 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM/BASE class invariant + validating construction for
-//! `INTERNET_ID`.
-//!
-//! Inherited `UID.Value_valid` (`not value.empty`) — BASE
-//! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.uid.adoc`
-//! §Invariants — surfaced under the concrete type name.
-//! Lexical form: `internet_id = subdomain` (BASE `base_types`
+//! The inherited `UID.Value_valid` invariant and validating construction for
+//! `INTERNET_ID` (`internet_id = subdomain`, BASE
 //! `master05-identification_package.adoc` §Syntaxes).
 
 use std::str::FromStr;
@@ -18,11 +13,7 @@ use super::lexical::{IdComponent, IdError, IdProduction, is_internet_id};
 use crate::validate::{InvariantViolation, Validate};
 
 impl InternetId {
-    /// Build an `INTERNET_ID` from its string form, validating the
-    /// `internet_id = subdomain` production of BASE
-    /// `master05-identification_package.adoc` §Syntaxes. The value is stored
-    /// verbatim (the case-preserving rule of §"Composite Identifiers and
-    /// Case").
+    /// Builds an `INTERNET_ID` from its string form, stored verbatim.
     ///
     /// # Errors
     /// [`IdError::Empty`] for an empty value; [`IdError::Malformed`] when the

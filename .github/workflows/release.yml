@@ -7,12 +7,7 @@
 # No job here polls another workflow's runs or jobs: `needs` is the only
 # primitive that carries a guarantee (a concurrency group has no queue-order
 # guarantee, and a `workflow_run` conclusion is run-level, so an advisory
-# scanner in the same run can suppress an unrelated consumer). Three
-# consecutive cuts failed on three different faces of that one defect —
-# v4.0.3 (an advisory scan suppressed the sandbox deploy), v4.0.4 (a single
-# TLS timeout inside a poll loop failed the chart lane), v4.0.5 (the poll
-# waited on a job that finishes BEFORE the tag it pulls exists — `manifest
-# unknown`, run 32951186365).
+# scanner in the same run can suppress an unrelated consumer).
 #
 # The graph:
 #
@@ -36,21 +31,16 @@
 # succeeded (scripts/release/milestone.sh).
 #
 # `crates` is the one leg that PAUSES: it runs in the `crates-io` environment,
-# which carries a required reviewer, so the pipeline waits for an explicit
-# human approval before anything reaches crates.io (#2836 — the publish used to
-# be a dispatch someone had to remember, and v4.0.6 shipped with the eight
-# spec crates stepped and unpublished). Nothing needs it, so the pause blocks
-# no other leg.
+# which carries a required reviewer, so the pipeline waits for a human
+# approval before anything reaches crates.io (#2836). Nothing needs it, so
+# the pause blocks no other leg.
 #
 # `plan` re-runs the ENTIRE release-fact guard tier against the tagged commit
-# before anything is built or published. That closes a structural hole rather
-# than a slip: those guards ran on pull requests and main pushes only, and
-# GitHub cancels a PENDING run in a concurrency group when a newer one queues
-# regardless of `cancel-in-progress` (workflow-syntax docs §concurrency), which
-# is exactly how the v4.0.5 release commit's main CI run — the whole guard
-# tier — was cancelled and never reported.
-# The list is scripts/release/plan.sh, which scripts/release/preflight.sh
-# runs before the tag is pushed.
+# before anything is built or published: GitHub cancels a PENDING run in a
+# concurrency group when a newer one queues (workflow-syntax docs
+# §concurrency), so main's own run of those guards may never report. The
+# list is scripts/release/plan.sh, which scripts/release/preflight.sh runs
+# before the tag is pushed.
 #
 # RE-RUNNING is the recovery for every partial failure, and each leg is
 # idempotent by construction: images push by digest and are re-tagged, the
@@ -59,10 +49,9 @@
 # recreate the box repeats harmlessly, and the crates leg treats an
 # already-published version as done.
 # The chart leg is idempotent too (#4331): a published chart version is never
-# pushed again, and when the version is published already with the same files
-# the leg skips the push and signs and attests the published digest, so a
-# failure after `helm push` is finished by a re-run. A tag cut before that
-# recovery existed is recovered with publish-chart.yml dispatched from main.
+# pushed again, and when the version is published with the same files the
+# leg skips the push and signs and attests the published digest, so a
+# failure after `helm push` is finished by a re-run.
 # A crates.io version is immutable, but it can be YANKED and superseded, so its
 # recovery is a version bump rather than a wedged pipeline.
 #
@@ -319,13 +308,10 @@ jobs:
 
       # Created as a DRAFT, and finalized only after every asset is attached.
       #
-      # Release immutability is enabled on this repository: once a release is
-      # PUBLISHED, its assets and tag can no longer be modified. The binaries,
-      # SBOMs and Sigstore bundles are produced by the build-binaries matrix
-      # that runs after this job, so publishing here would freeze the release
-      # before its most important assets exist — a release carrying the compose
-      # files and nothing to verify. A draft is still mutable, which is exactly
-      # the window those uploads need.
+      # Release immutability is enabled on this repository: a PUBLISHED release's
+      # assets and tag cannot change, and the binaries, SBOMs and Sigstore bundles
+      # come from the build-binaries matrix after this job, so the release stays a
+      # mutable draft for those uploads.
       # EHDS Art. 30(1)(d): the information sheet and the instructions for use
       # of this tag ride the release.
       - name: Cut the information sheet and the instructions for use
@@ -1302,10 +1288,10 @@ jobs:
 
   # ── The hosted sandbox (#2974: the Hetzner box) ─────────────────────────────
   # Keyed on apply-tags, never on a run conclusion: the box pulls
-  # `ghcr.io/ferrohealth/ferroehr:latest`, which scan-and-tag has just moved,
-  # and an advisory scanner elsewhere in this run can no longer suppress the
-  # deploy (v4.0.3). A prerelease moves no `:latest`, so there is nothing to
-  # deploy — hence the release-only condition.
+  # `ghcr.io/ferrohealth/ferroehr:latest`, which scan-and-tag has just moved, so
+  # an advisory scanner elsewhere in this run cannot suppress the deploy. A
+  # prerelease moves no `:latest`, so there is nothing to deploy; hence the
+  # release-only condition.
   #
   # An ordinary job rather than a workflow call, because the deploy key lives
   # in the `hosted` environment and the caller of a reusable workflow cannot
@@ -1351,14 +1337,13 @@ jobs:
   # After the deploy, the seed. The wipe and the fresh boot happened in the
   # `sandbox` job above, so the reseed workflow is called seed-only; the
   # nightly schedule keeps its own wipe and deploy (#5406). Environment secrets
-  # reach the called workflow's own environment-naming jobs here (measured:
-  # the v4.0.13 release's reseed succeeded through two call hops).
+  # reach the called workflow's own environment-naming jobs here.
   #
   # The permissions block is load-bearing: a called workflow's jobs can never
   # exceed the caller JOB's grant, and under the workflow-level
   # `permissions: {}` an ungranted call-job allows nothing — the reseed's own
   # jobs request `contents: read`, so omitting this fails the ENTIRE pipeline
-  # at startup, before any job runs (#2991, the v4.0.14 first cut).
+  # at startup (#2991).
   sandbox-reseed:
     name: sandbox reseed
     needs: sandbox
@@ -1370,13 +1355,11 @@ jobs:
       seed-only: true
 
   # ── Freeze /docs/vX.Y.Z/ ────────────────────────────────────────────────────
-  # Moved out of docs.yml (#2776), which had no prerelease guard: an `-rc1` tag
-  # re-pointed `/docs/latest/` while the image lane correctly refused to move
-  # `:latest`. It needs `plan` only — it publishes documentation, not images.
+  # It needs `plan` only and publishes documentation, not images; a prerelease
+  # tag never re-points `/docs/latest/` (#2776).
   #
-  # cut-version.sh is IDEMPOTENT: an already-cut version prints what it found
-  # and exits 0, so re-running the pipeline after a mid-run failure can never
-  # wedge here (it used to exit 1 and no re-run could ever succeed).
+  # cut-version.sh is idempotent: an already-cut version prints what it found
+  # and exits 0, so a re-run after a mid-run failure passes here.
   docs-freeze:
     name: docs freeze
     needs: plan

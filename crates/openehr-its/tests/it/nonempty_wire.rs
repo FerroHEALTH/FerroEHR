@@ -5,20 +5,6 @@
 #![expect(clippy::expect_used, reason = "test assertions/diagnostics/fixtures")]
 //! **Wire-level negatives for every `1..*` model container.**
 //!
-//! A container whose BMM cardinality has a lower bound of 1 emits as
-//! `openehr_base::containers::NonEmptyVec<T>`, so the bound is carried by the
-//! type: an empty list is unrepresentable in the model rather than merely
-//! rejected. That is a TYPE-level proof, and on its own it says nothing about
-//! the wire — it is the canonical-JSON and canonical-XML READERS that have to
-//! refuse the empty spelling, and a reader that stopped doing so would still
-//! compile.
-//!
-//! So each affected attribute gets an ASSERTED twin pair: a complete minimal
-//! VALID instance that must decode, and the same instance with the mandatory
-//! list emptied to `[]`, which must be REFUSED with the offending attribute
-//! named. A silently loosened reader is then a failing build, not a quiet
-//! drift.
-//!
 //! The nine attributes and the vendored class tables their `1..*` bound is read
 //! from (all under `docs/specs/openehr/RM/docs/UML/classes/`):
 //!
@@ -33,12 +19,6 @@
 //! | `ADDRESSED_MESSAGE.addressees` | `org.openehr.rm.ehr_extract.addressed_message.adoc` §Attributes |
 //! | `PARTY.identities` | `org.openehr.rm.demographic.party.adoc` §Attributes + §Invariants (`Identities_valid`: `not identities.is_empty`), driven through the concrete `PERSON` subtype (`org.openehr.rm.demographic.person.adoc`) because `PARTY` is abstract and has no wire form of its own |
 //! | `CONTACT.addresses` | `org.openehr.rm.demographic.contact.adoc` §Attributes |
-//!
-//! Both twins are authored as raw wire documents rather than built from the
-//! typed model: the refusal twin is unrepresentable in the typed model by
-//! construction (that is the whole point of the container type), so raw bytes
-//! are the only way to author what the reader must reject — and authoring the
-//! valid half the same way keeps the pair exactly one member apart.
 
 use openehr_its::json::{JsonParseError, from_canonical_json};
 use openehr_its::xml::from_canonical_xml;
@@ -309,10 +289,6 @@ fn wire_text(document: &Value) -> String {
 }
 
 /// The refusal twin: `valid` with `attribute` replaced by `[]`.
-///
-/// Also asserts the valid twin actually carried a NON-EMPTY array there, so a
-/// fixture whose member name drifted (or whose list was already empty) fails
-/// here instead of quietly making the refusal assertion vacuous.
 fn emptied(valid: &Value, attribute: &str, label: &str) -> Value {
     let mut document = valid.clone();
     let object = document
@@ -394,12 +370,6 @@ fn an_empty_mandatory_list_is_refused_with_its_path() {
 // ── the canonical-XML half: one representative attribute, both twins ─────────
 
 /// The canonical-XML valid twin of the `CLUSTER.items` pair.
-///
-/// Canonical XML has no `[]` spelling: a repeated element with zero occurrences
-/// IS absence, so the refusal twin ([`CLUSTER_XML_EMPTY`]) is this document with
-/// its `<items>` element removed. That is precisely why the check has to exist
-/// on this side too — the JSON reader's `[]` door does not exist here, and the
-/// bound is enforced only where the container is constructed.
 const CLUSTER_XML_VALID: &str = r#"<cluster xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" archetype_node_id="at0001">
   <name><value>blood pressure</value></name>
   <items xsi:type="ELEMENT" archetype_node_id="at0004">

@@ -11,15 +11,11 @@
 //! older version opens read-only and can be restored, written back as a new
 //! version. Delete the directory is a logical delete: the history stays.
 //!
-//! The editor keeps the working tree in the form, so every action is a plain
-//! post the server answers with the tree changed: add a folder, add a
-//! reference to one of the EHR's compositions, rename, remove. Save writes the
-//! tree as one new version with the version it was opened at as `If-Match`
-//! (ITS-REST `directory_update`), so a directory another client changed is
-//! refused (`412`), never overwritten unless the reader chooses Overwrite.
-//! The working tree carries a viewer-local `_key` on each node, stripped
-//! before anything reaches the CDR ([`crate::bff::ehr_detail::directory::edit`]).
-//! No openEHR spec governs the viewer's pages: our own design.
+//! The editor keeps the working tree in the form. Save writes it as one new
+//! version with the opened version as `If-Match` (ITS-REST `directory_update`),
+//! so a directory another client changed is refused (`412`) unless the reader
+//! chooses Overwrite. No openEHR spec governs the viewer's pages: our own
+//! design.
 
 #![expect(
     clippy::disallowed_types,

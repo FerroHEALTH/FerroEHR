@@ -1,16 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! What an operational template states about a node that the Web Template
-//! document has no member for, kept on the node the builder made from it.
+//! Operational-template facts the Web Template document has no member for.
 //!
-//! A consumer that needs one of these facts reads it from the node it already
-//! holds, so it never walks the operational template a second time and never
-//! re-spells the builder's `aqlPath` to join the two. The builder sets them
-//! where it builds the node, which settles the walk: an OPT 1.4
-//! `T_COMPLEX_OBJECT` extends `C_COMPLEX_OBJECT` (openEHR OPT 1.4
-//! `Template.xsd`), so it is walked as one, and every node under it carries
-//! its facts like any other.
+//! Kept on the node built from them. An OPT 1.4 `T_COMPLEX_OBJECT` is walked as
+//! the `C_COMPLEX_OBJECT` it extends (`Template.xsd`).
 
 use std::collections::BTreeMap;
 
@@ -26,24 +20,16 @@ const TEXT: &str = "text";
 /// The `items` key of an OPT 1.4 `ARCHETYPE_TERM` that holds its description.
 const DESCRIPTION: &str = "description";
 
-/// The operational-template facts of one Web Template node.
-///
-/// Every member is empty below an archetype root. No openEHR specification
-/// governs the Web Template model, so the set is our own design; each member
-/// cites the template construct it is read from.
+/// The operational-template facts of one Web Template node, empty below an
+/// archetype root (no openEHR specification governs the set: our own design).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct WebTemplateNodeFacts {
-    /// The template an OPT 1.4 `C_ARCHETYPE_ROOT` states it was included from,
-    /// its optional `template_id` (OPT 1.4 `Template.xsd`, `C_ARCHETYPE_ROOT`).
-    /// An OPT2 records no such member (AOM2 `master03-archetype_package.adoc`),
-    /// so it is `None` there.
+    /// The template an OPT 1.4 `C_ARCHETYPE_ROOT` was included from (`Template.xsd`);
+    /// `None` for an OPT2.
     pub embedded_template_id: Option<String>,
-    /// At an archetype root, every term the archetype it roots defines, by
-    /// code, in the template's default language: an OPT 1.4
-    /// `C_ARCHETYPE_ROOT.term_definitions`, or the `term_definitions` of the
-    /// component terminology an OPT2 carries for the root (AM OPT2
-    /// `master03-opt_raw.adoc` §Terminology). It holds the codes of the nodes
-    /// the template leaves out, which the Web Template carries nowhere.
+    /// At an archetype root, every term of the archetype by code in the default
+    /// language (OPT 1.4 `term_definitions`; AM OPT2 `master03-opt_raw.adoc`
+    /// §Terminology), including the codes of nodes the template leaves out.
     pub archetype_terms: BTreeMap<String, WebTemplateTerm>,
 }
 

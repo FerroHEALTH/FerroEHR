@@ -1,18 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! A template that prohibits `COMPOSITION.context` yields a Web Template with
-//! no `/context` node and none of its `start_time` or `setting` leaves (#5147).
-//! The RM makes `context` optional (RM `UML/classes/org.openehr.rm.composition.composition.adoc`
-//! §Attributes, `0..1`), so an OPT may close it with existence `0..0` (AOM 1.4
-//! `master04-constraint_model_package.adoc` §existence) or with an
-//! `EVENT_CONTEXT` of occurrences `0..0`. A template that leaves `context`
-//! open keeps the synthesized node of ITS-REST `simplified_formats`
-//! master04 §"Web Template Metadata". An OPT2 carries no such constraint: a
-//! raw OPT removes every attribute of existence `0..0` and every object of
-//! occurrences `0..0` (AM `OPT2/master03-opt_raw.adoc`), so `openehr-adl`
-//! names the removed attributes beside the OPT and the `v2_4` front end reads
-//! them (#5154).
+//! A template that prohibits `COMPOSITION.context` yields no `/context` node.
+//!
+//! RM `composition.adoc` makes `context` `0..1`, so an OPT 1.4 closes it by
+//! existence or occurrences `0..0` (AOM 1.4 §existence), and an OPT2 by removal
+//! (AM `OPT2/master03-opt_raw.adoc`), which `openehr-adl` reports beside the OPT.
 #![expect(
     clippy::expect_used,
     clippy::panic,
@@ -155,11 +148,8 @@ fn context_min(wt: &WebTemplate) -> Option<i32> {
         .min
 }
 
-/// The `/context` node's `min` follows the template's existence on `context`,
-/// and the RM's `0..1` where the template declares none (#5154; AM
-/// `ADL2/master04.3-cadl_complex_types.adoc` §Existence: an archetype's
-/// existence constrains "the existence defined by the underlying reference
-/// model").
+/// The `/context` node's `min` follows the template's existence, else the RM's
+/// `0..1` (ADL2 `master04.3-cadl_complex_types.adoc` §Existence).
 #[test]
 fn the_context_node_min_follows_the_existence_and_defaults_to_the_rm() {
     assert_eq!(context_min(&opt14_web_template(None)), Some(0), "open");

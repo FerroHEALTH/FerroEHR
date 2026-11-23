@@ -1,15 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Archetype scope in an operational template: the node ids and codes below a
-//! `C_ARCHETYPE_ROOT` belong to the constituent archetype it includes.
-//!
-//! Oracle: `AOM2/master04.5-constraint_model-class_definitions.adoc` §Validity
-//! Rules `C_OBJECT` (VCOSU: "every object node must be unique within the
-//! archetype") and `OPT2/master03-opt_raw.adoc` (the flat terminology of each
-//! constituent archetype is gathered under `component_terminologies`). The
-//! fixture is a synthetic operational template: a COMPOSITION whose `content`
-//! includes an OBSERVATION archetype that reuses the template's `id2` and `id3`.
+//! The node ids and codes below a `C_ARCHETYPE_ROOT` belong to the constituent
+//! it includes (`AOM2/master04.5` VCOSU; `OPT2/master03-opt_raw.adoc`), over a
+//! synthetic OPT whose OBSERVATION reuses the template's `id2` and `id3`.
 
 #![allow(
     clippy::expect_used,

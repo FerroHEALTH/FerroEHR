@@ -29,8 +29,6 @@ pub(crate) enum Origin {
 /// schema's spelling, or `None` when the value is unassigned (RFC 7643 §2.5:
 /// "Unassigned attributes, the null value, or an empty array ... SHALL be
 /// considered to be equivalent in "state"").
-///
-/// `label` names the attribute in a refusal.
 pub(crate) fn normalize(
     definition: &AttributeDefinition,
     value: &Value,

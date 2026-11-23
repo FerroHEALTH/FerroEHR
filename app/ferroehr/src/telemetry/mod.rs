@@ -4,13 +4,6 @@
 //! Telemetry: the family's `ferrohealth-telemetry` provider, with FerroEHR's
 //! own instruments and the span-timing capture beside it.
 //!
-//! [`init`] builds the one OpenTelemetry provider from `[telemetry]`, installs
-//! the console with the optional `[management] flame_file` capture, and
-//! registers FerroEHR's instruments ([`metrics`]) on the shared meter. It
-//! returns a [`TelemetryGuard`] holding the provider, the console filter
-//! handle `/management/loggers` drives, and the samplers; the guard flushes
-//! the exporters on [`TelemetryGuard::shutdown`].
-//!
 //! No openEHR specification governs this: our own design. Operational
 //! telemetry is separate from the ATNA audit trail (`crate::system_log`).
 
@@ -69,11 +62,6 @@ pub fn service(build: &BuildInfo) -> Service {
 }
 
 /// Installs the process subscriber with its `log` bridge and FerroEHR's instruments.
-///
-/// It builds the provider `section` asks for, installs the subscriber on
-/// stdout (with the span-timing capture when `flame_file` is set) through
-/// `ferrohealth-telemetry`'s `log` bridge (#5696), and registers FerroEHR's
-/// instruments on the shared meter.
 ///
 /// # Errors
 ///

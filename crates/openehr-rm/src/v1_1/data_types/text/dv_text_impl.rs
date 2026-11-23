@@ -2,18 +2,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `DV_TEXT` / `DV_CODED_TEXT`.
+//! `DV_TEXT` and `DV_CODED_TEXT` invariants.
 //!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_text.adoc`:
-//! `Valid_value: not value.is_empty` and
-//! `Formatting_valid: formatting /= void implies not formatting.is_empty`.
-//! `DV_CODED_TEXT` inherits both (`dv_coded_text.adoc`); its own
-//! `defining_code` presence/type is structural (non-optional field).
-//! `Mappings_valid` (present ⇒ non-empty list) is checked at the JSON level
-//! by the composition validator (post-deserialize an absent and a
-//! present-empty list are the same `Vec`); `Language_valid`/`Encoding_valid`
-//! (code sets) live in the validator's terminology pass.
+//! RM 1.2.0 `org.openehr.rm.data_types.dv_text.adoc`: `Valid_value` and
+//! `Formatting_valid`. `Mappings_valid` is checked on the JSON body;
+//! `Language_valid` and `Encoding_valid` are terminology-bound.
 
 use crate::v1_1::data_types::text::dv_text::DvText;
 use openehr_base::validate::{InvariantViolation, Validate};
@@ -52,9 +45,8 @@ fn text_invariants(
     out: &mut Vec<InvariantViolation>,
 ) {
     crate::v1_1::validate::generated::dv_text_core(ty, value, formatting, out);
-    // NOTE: RM data_types master05 §Text package — "plain_no_newlines":
-    // "newlines are not allowed"; every OTHER formatting value stays
-    // unvalidated, deliberately (the value space is open).
+    // NOTE: RM data_types master05 §Text package, "plain_no_newlines": "newlines
+    // are not allowed"; other values are open.
     if formatting == Some("plain_no_newlines") && value.contains(['\n', '\r']) {
         out.push(InvariantViolation::here(format!(
             "formatting \"plain_no_newlines\" forbids newlines in value on type {ty} \
@@ -114,10 +106,7 @@ mod tests {
         t
     }
 
-    /// `"plain_no_newlines"` — "newlines are not allowed" (RM data_types
-    /// master05 §Text package): both twins, plus the open value space — a
-    /// newline under any OTHER formatting (or none) stays legal, including
-    /// the deprecated CSS form and an unknown name.
+    /// `plain_no_newlines` refuses a newline; any other formatting allows one.
     #[test]
     fn plain_no_newlines_forbids_newlines_and_nothing_else() {
         let mut out = Vec::new();

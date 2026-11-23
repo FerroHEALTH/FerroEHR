@@ -1,16 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Two `use_archetype` overlays of one archetype that the template tells apart
-//! by a fixed name (#4927).
-//!
-//! In data both sections carry the archetype id as their `archetype_node_id`
-//! (RM common `master03-archetyped_package.adoc` §"The `LOCATABLE` class"), so
-//! only the runtime name tells them apart (BASE
-//! `architecture_overview/master11-paths.adoc` §"Using a Name-based
-//! Predicate"). The ADL 2.4 WebTemplate builder must give each sibling its own
-//! name-qualified path, as the OPT 1.4 builder does, so a composition holding
-//! both validates and a third instance of one of them is still refused.
+//! Two `use_archetype` overlays of one archetype told apart by a fixed name get
+//! their own name-qualified paths (BASE `master11-paths.adoc` §"Using a
+//! Name-based Predicate").
 
 #![expect(
     clippy::expect_used,

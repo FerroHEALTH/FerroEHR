@@ -82,8 +82,6 @@ group! {
 
 group! {
     /// A concept of the `version_lifecycle_state` group, the state of a `VERSION`.
-    ///
-    /// NOTE: SPECPR-51, the rubric of `532` is `complete` here and `completed` in `instruction_states`.
     VersionLifecycleState, "version_lifecycle_state", [
         Complete = "532", "complete";
         Incomplete = "553", "incomplete";

@@ -2,49 +2,18 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written `Iso8601_date` spec behaviour.
+//! `Iso8601_date` behaviour: accessors, definite and nominal arithmetic, and a
+//! range-semantics `PartialOrd`
+//! (`org.openehr.base.foundation_types.iso8601_date.adoc`,
+//! `master06-time_types.adoc`).
 //!
-//! Covers the accessor functions (`is_partial`, `is_extended`, `month_unknown`,
-//! `day_unknown`, `year`/`month`/`day`, `as_string`), the computational
-//! functions (definite `add`/`subtract`/`diff` and nominal
-//! `add_nominal`/`subtract_nominal`), and a `PartialOrd` implementing range
-//! semantics over partial dates.
+//! `Month_valid` and `Day_valid` are checked; `Year_valid` and
+//! `Partial_validity` hold by the accepted forms. `Value_lexical_form_valid`
+//! is our own name for a value outside the production.
 //!
-//! Spec sources (vendored):
-//! - `BASE/docs/UML/classes/org.openehr.base.foundation_types.iso8601_date.adoc`
-//!   (§Functions: the accessors, `as_string`, the definite `add`/`subtract`/
-//!   `diff` and the nominal `add_nominal`/`subtract_nominal` with their
-//!   day-clamping rules; §Invariants).
-//! - `BASE/docs/foundation_types/master06-time_types.adoc` (§Primitive Time
-//!   Types: the accepted date forms; week dates excluded; §Computational
-//!   Functions: the definite/nominal split and the average-length constants the
-//!   definite forms use).
-//!
-//! Invariants — the FOUR entries the class table declares under §Invariants,
-//! plus one rule of our own naming:
-//! - `Month_valid` (`not month_unknown implies valid_month (month)`) and
-//!   `Day_valid` (`not day_unknown implies valid_day (year, month, day)`) —
-//!   checked, each under its own name.
-//! - `Year_valid` (`valid_year (year)`, i.e. `year >= 0`) — structurally
-//!   satisfied: the accepted forms admit only four zero-filled digits.
-//! - `Partial_validity` (`month_unknown implies day_unknown`) — structurally
-//!   satisfied: no accepted form writes a day without a month.
-//! - `Value_lexical_form_valid` — OUR OWN name, because the class table
-//!   declares none: a value that is not the `valid_iso8601_date` production at
-//!   all has no components, so every declared invariant holds vacuously
-//!   (the same rule `version_tree_id_impl.rs` names for identifiers).
-//!
-//! NOTE: no openEHR spec governs arithmetic on a PARTIAL date, the rounding of
-//! a definite result, or date comparison (`Ordered` is abstract) — our own
-//! design/extension. A partial or unparseable operand yields `None` rather than
-//! an invented completion; a definite result returns the calendar date
-//! CONTAINING the resulting instant, the only reading that keeps `add` and
-//! `subtract` consistent; and `X < Y` holds only when every completion of `X`
-//! precedes every completion of `Y`, with `Some(Equal)` only for equal raw
-//! strings.
-//!
-//! A consumer needing a TOTAL order must choose its own completion policy; this
-//! comparison never invents an order the value does not carry.
+//! NOTE: no openEHR spec governs partial-date arithmetic or date ordering, our
+//! own design: a partial operand yields `None`, and `X < Y` only when every
+//! completion of `X` precedes every completion of `Y`.
 
 use std::cmp::Ordering;
 
@@ -70,9 +39,8 @@ impl Iso8601Date {
         self.parsed().map(|p| p.year)
     }
 
-    /// The month part (`Iso8601_date.month`), or `None` when month is unknown
-    /// or the value does not parse. (The spec's `month()` returns 0 when
-    /// `month_unknown`; we report honest absence as `None`.)
+    /// The month part (`Iso8601_date.month`), or `None` when unknown or
+    /// unparseable.
     #[must_use]
     pub fn month(&self) -> Option<u32> {
         self.parsed().and_then(|p| p.month)
@@ -106,34 +74,25 @@ impl Iso8601Date {
         self.parsed().is_none_or(|p| p.day.is_none())
     }
 
-    /// `Iso8601_date.is_extended`: true when the value uses `'-'` separators
-    /// (and, for the separator-less `YYYY` form, always — see the `is_extended`
-    /// NOTE in `iso8601_parse.rs`). A value that does not parse is not extended.
+    /// `Iso8601_date.is_extended`: the value uses `'-'` separators, or is `YYYY`.
     #[must_use]
     pub fn is_extended(&self) -> bool {
         self.parsed().is_some_and(|p| p.extended)
     }
 
-    /// `Iso8601_date.as_string`: "Return string value in extended format" — a
-    /// compact value is re-spelled with `'-'` separators, an already-extended
-    /// one is returned unchanged.
-    ///
-    /// NOTE: the spec does not say what a value that is not a valid ISO 8601
-    /// date returns. It is returned verbatim, since `Iso8601_type.value` is the
-    /// only representation there is — our own design/extension.
+    /// `Iso8601_date.as_string`: the value in extended format; an unparseable
+    /// value is returned verbatim, our own design.
     #[must_use]
     pub fn as_string(&self) -> String {
         as_extended_date(&self.value).unwrap_or_else(|| self.value.clone())
     }
 
-    /// `Iso8601_date.add` (alias `'+'`): DEFINITE addition of a duration —
-    /// `a_diff` is reduced to an exact number of seconds with the
-    /// `Time_definitions` average year/month lengths
-    /// (`master06` §Computational Functions) and the result is the calendar date
-    /// containing the shifted instant.
+    /// `Iso8601_date.add` (`'+'`): definite addition, the duration reduced to
+    /// seconds with the `Time_definitions` averages (`master06` §Computational
+    /// Functions).
     ///
-    /// `None` when either value does not parse, when this date is partial, or
-    /// when the result leaves the representable `0000`–`9999` year range.
+    /// `None` when either value does not parse, this date is partial, or the
+    /// year leaves `0000`–`9999`.
     #[must_use]
     pub fn add(&self, a_diff: &Iso8601Duration) -> Option<Self> {
         self.definite_shift(a_diff, false)
@@ -148,12 +107,8 @@ impl Iso8601Date {
         self.definite_shift(a_diff, true)
     }
 
-    /// `Iso8601_date.diff` (alias `'-'`): the difference `self - a_date` as an
-    /// `Iso8601_duration` of whole days — negative (the openEHR
-    /// negative-duration deviation, `master06` §Primitive Time Types) when
-    /// `a_date` is the later date.
-    ///
-    /// `None` when either value does not parse or is partial.
+    /// `Iso8601_date.diff` (`'-'`): `self - a_date` in whole days, negative when
+    /// `a_date` is later; `None` when either is unparseable or partial.
     #[must_use]
     pub fn diff(&self, a_date: &Self) -> Option<Iso8601Duration> {
         let days = self.day_index()?.checked_sub(a_date.day_index()?)?;
@@ -163,15 +118,12 @@ impl Iso8601Date {
         })
     }
 
-    /// `Iso8601_date.add_nominal` (alias `'++'`): NOMINAL addition — years and
-    /// months advance the calendar to the same day-of-month, clamped down when
-    /// the target month is shorter (29 Feb `++ P1Y` → 28 Feb next year; 31 Jan
-    /// `++ P1M` → 28 Feb, or 29 Feb in a leap year), and the remaining
-    /// components (weeks, days and any time part) apply as an exact calendar
-    /// shift.
+    /// `Iso8601_date.add_nominal` (`'++'`): years and months advance to the same
+    /// day of month, clamped to a shorter month (31 Jan `++ P1M` → 28 Feb); the
+    /// rest applies as an exact shift.
     ///
-    /// `None` when either value does not parse, when this date is partial, or
-    /// when the result leaves the representable `0000`–`9999` year range.
+    /// `None` when either value does not parse, this date is partial, or the
+    /// year leaves `0000`–`9999`.
     #[must_use]
     pub fn add_nominal(&self, a_diff: &Iso8601Duration) -> Option<Self> {
         self.nominal_shift(a_diff, false)
@@ -193,11 +145,7 @@ impl Iso8601Date {
         Some(days_from_civil(p.year, p.month?, p.day?))
     }
 
-    /// The date reached by shifting this one's midnight instant by `shift`
-    /// seconds, truncated to the containing calendar day. A fractional part is
-    /// irrelevant to that truncation: `shift.frac` is in `[0.0, 1.0)` and the
-    /// whole-second total is an integer, so adding it can never cross a day
-    /// boundary.
+    /// The date containing this one's midnight shifted by `shift` seconds.
     fn shifted(&self, shift: ExactSeconds) -> Option<Self> {
         let base = self.day_index()?.checked_mul(EXACT_SECONDS_IN_DAY)?;
         let total = base.checked_add(shift.whole)?;
@@ -212,9 +160,7 @@ impl Iso8601Date {
         self.shifted(a_diff.parsed()?.to_definite_shift(subtract)?)
     }
 
-    /// Shared body of the nominal `add_nominal`/`subtract_nominal`: the
-    /// year/month part shifts the calendar with day-clamping, then the
-    /// sub-month remainder applies as an exact shift.
+    /// The nominal shift: year and month with clamping, then the rest exactly.
     fn nominal_shift(&self, a_diff: &Iso8601Duration, subtract: bool) -> Option<Self> {
         let (months, remainder) = a_diff.parsed()?.to_nominal_parts(subtract)?;
         let p = self.parsed()?;
@@ -226,9 +172,7 @@ impl Iso8601Date {
     }
 }
 
-/// Range-semantics comparison of two parsed dates on their shared prefix. Never
-/// returns `Some(Equal)`: an equal string is handled before parsing, so equal
-/// components here (with differing strings) are incomparable (`None`).
+/// Range-semantics comparison of two parsed dates, never `Some(Equal)`.
 fn cmp_date(a: &ParsedDate, b: &ParsedDate) -> Option<Ordering> {
     match a.year.cmp(&b.year) {
         Ordering::Equal => {}
@@ -267,15 +211,9 @@ fn failed(invariant: &str, type_name: &str) -> InvariantViolation {
     InvariantViolation::here(format!("Invariant {invariant} failed on type {type_name}"))
 }
 
-/// Appends the date-component invariant violations of a scanned value.
-///
-/// The rules are `Month_valid` and `Day_valid`, reported on `type_name` —
-/// `Iso8601_date_time` re-declares both.
-///
-/// `Day_valid` is checked only under an in-range month: its rule is
-/// `valid_day (y, m, d) = d >= 1 and d <= days_in_month (m, y)`
-/// (`time_definitions.adoc` §Functions), which is undefined where `valid_month`
-/// already fails.
+/// Appends the `Month_valid` and `Day_valid` violations of a scanned value,
+/// on `type_name`; `Day_valid` only under a valid month
+/// (`time_definitions.adoc` §Functions).
 pub(crate) fn push_date_component_violations(
     d: &ParsedDate,
     type_name: &str,
@@ -662,9 +600,7 @@ mod tests {
 
     // ── invariants ───────────────────────────────────────────────────────────
 
-    /// Every invalid value names the `iso8601_date.adoc` §Invariants entry it
-    /// breaks — the point of the per-invariant realization: a report says WHICH
-    /// rule failed, not merely that the string was rejected.
+    /// Every invalid value names the invariant it breaks.
     #[test]
     fn invalid_dates_name_the_invariant_they_break() {
         for (bad, invariant) in [

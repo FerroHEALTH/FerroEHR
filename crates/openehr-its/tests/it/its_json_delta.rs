@@ -30,7 +30,7 @@ const MODEL_ONLY: &[&str] = &[
 ];
 
 /// Properties the 1.1.0 schema declares that the RM 1.2.0 model has dropped —
-/// the oracle ACCEPTS shapes that are no longer valid RM 1.2.0. Format:
+/// the oracle ACCEPTS shapes RM 1.2.0 does not admit. Format:
 /// `CLASS.attribute`.
 const SCHEMA_ONLY: &[&str] = &[
     // RM 1.2.0 removed PARTY.reverse_relationships (RM demographic
@@ -44,9 +44,8 @@ const SCHEMA_ONLY: &[&str] = &[
     // RM 1.2.0 removed DV_QUANTITY.property (RM data_types master04
     // §DV_QUANTITY — the 1.1.0-era attribute is gone from the class table).
     "DV_QUANTITY.property",
-    // The 1.1.0 schema derives SYNC_EXTRACT(_REQUEST) from LOCATABLE; the RM
-    // 1.2.0 sync package no longer does, so the LOCATABLE member set is
-    // schema-only there.
+    // The 1.1.0 schema derives SYNC_EXTRACT(_REQUEST) from LOCATABLE and RM
+    // 1.2.0 does not, so the LOCATABLE members are schema-only there.
     "SYNC_EXTRACT.archetype_details",
     "SYNC_EXTRACT.archetype_node_id",
     "SYNC_EXTRACT.feeder_audit",
@@ -63,11 +62,8 @@ const SCHEMA_ONLY: &[&str] = &[
 
 /// Schema class definitions with no generated RM 1.2.0 class of that name.
 const SCHEMA_ONLY_CLASSES: &[&str] = &[
-    // BASE foundation/base-types classes the schema embeds for reference —
-    // they live in `openehr-base`, not the RM attribute model, so a name
-    // lookup in `openehr_rm::v1_2::model` legitimately misses them. Their per-class
-    // property shape is exercised structurally through the RM classes that
-    // embed them.
+    // BASE classes the schema embeds live in `openehr-base`, so the RM model
+    // lookup misses them; the RM classes that embed them cover their shape.
     "ARCHETYPE_HRID",
     "ARRAY",
     "DATE",

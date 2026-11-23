@@ -14,14 +14,8 @@
 //! unknown one. No openEHR ITS-REST operation governs these routes, and no
 //! openEHR specification governs FerroEHR's access-control scheme.
 //!
-//! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
-//! (`405` with an empty `Allow` when off). Each commit writes its commit
-//! audit and an access record, and each read an access record
-//! (`ferroehr::service::admin::access_repair`). An `opt_out` directive is
-//! refused while `[authz.grants] allowed` does not allow `access_service`,
-//! since the CDR could then name no access service and the opt-out would hold
-//! for nobody.
+//! An `opt_out` directive is refused while `[authz.grants] allowed` does not
+//! allow `access_service`, since the opt-out would then hold for nobody.
 
 #![expect(
     clippy::disallowed_types,

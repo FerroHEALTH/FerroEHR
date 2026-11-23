@@ -13,9 +13,6 @@
 //! chips and copy — and, for a string the grammar REJECTED, the diagnosis that
 //! says which part of the form is wrong instead of dropping it silently.
 //!
-//! Everything here is a pure function of the input string (no clock, no request,
-//! no I/O), so the previewer draws the same reading on every request.
-//!
 //! **Capability is not authorization.** A scope NARROWS what a token may ask
 //! for; it grants nothing by itself. master08 §Scopes: the Platform validates
 //! requested scopes "against the _Application_ registration metadata, applicable

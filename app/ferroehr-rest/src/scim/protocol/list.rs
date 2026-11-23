@@ -39,11 +39,6 @@ pub struct ListResponse<T> {
 impl<T> ListResponse<T> {
     /// Creates the page of `resources` that starts at `start_index` of
     /// `total_results` results.
-    ///
-    /// The page always carries `itemsPerPage`, `startIndex` and `Resources`,
-    /// an empty array when nothing matched; a query that matches nothing
-    /// "SHALL return success (HTTP status code 200) with "totalResults" set to
-    /// a value of 0".
     #[must_use]
     pub fn new(resources: Vec<T>, total_results: u64, start_index: u64) -> Self {
         Self {

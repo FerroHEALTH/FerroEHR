@@ -2,9 +2,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! ITS-REST contract for the `demographic` API group: DTOs, per-operation
-//! param structs, per-response headers structs, the `server` and
-//! `client` halves, and the route table.
+//! ITS-REST contract for the `demographic` API group.
 
 #![allow(
     clippy::all,
@@ -6455,10 +6453,7 @@ impl crate::rest::runtime::ResponseHeaders for RoleTagsUpdateOkHeaders {
     }
 }
 
-/// The server half of the `demographic` API group (ITS-REST): the `DemographicApi`
-/// trait an implementation provides, one success-answer enum per operation,
-/// and `router`, which binds every operation of the route table to its
-/// trait method over axum.
+/// The server half of the `demographic` API group (ITS-REST).
 #[cfg(feature = "rest-server")]
 pub mod server {
     use super::*;
@@ -7070,12 +7065,8 @@ pub mod server {
 
     /// Server contract for the `demographic` API group (ITS-REST).
     ///
-    /// Every method defaults to refusing with `ApiError::NotImplemented` (`501`),
-    /// so an implementor overrides only the operations it supports; `router`
-    /// serves an implementation over axum. A method refuses with a
-    /// [`crate::rest::runtime::Refusal`]: `?` turns an `ApiError` into one,
-    /// and `Refusal::with_headers` adds the headers the OAS declares for the
-    /// answer (the `ETag` of a `412`, for one).
+    /// Every method defaults to `ApiError::NotImplemented` (`501`), and refuses
+    /// with a [`crate::rest::runtime::Refusal`].
     #[async_trait::async_trait]
     pub trait DemographicApi {
         /// `POST /demographic/agent`
@@ -7422,24 +7413,10 @@ pub mod server {
 
     /// The axum router serving every operation of the `demographic` group over `api`.
     ///
-    /// Each route is bound at its OAS path relative to the API base (an RFC 6570
-    /// query expansion dropped, path captures named by segment position). A
-    /// handler decodes the request into the operation's params struct and body
-    /// — a missing or unparseable parameter answers `400` naming it, a
-    /// canonical-JSON body sent as another `Content-Type` answers `415` — and
-    /// encodes the trait method's answer, or its `Refusal` as the ITS-REST
-    /// `Error` body with the refusal's headers. Mount it under the base path
-    /// with `axum::Router::nest`.
-    ///
-    /// The router carries no fallback, so group routers merge freely (axum
-    /// refuses to merge two routers that both carry one); finish the merged
-    /// router with `crate::rest::server::with_fallbacks` for the `404` and `405`
-    /// answers, or take `crate::rest::server::router`, which does both.
-    ///
-    /// The typed bodies are canonical JSON only: a server that also serves
-    /// canonical XML or a Simplified Format routes those requests itself, and
-    /// the `accept` parameter reaches the trait method, which answers
-    /// `ApiError::NotAcceptable` for a representation it does not serve.
+    /// Routes are relative to the API base; mount it with `axum::Router::nest`.
+    /// It carries no fallback, so group routers merge (axum refuses two
+    /// fallbacks); `crate::rest::server::with_fallbacks` adds the `404` and `405`.
+    /// The typed bodies are canonical JSON only.
     pub fn router<S>(api: std::sync::Arc<S>) -> axum::Router
     where
         S: DemographicApi + Send + Sync + 'static,
@@ -9029,9 +9006,7 @@ pub mod server {
     }
 }
 
-/// The client half of the `demographic` API group (ITS-REST): one method per
-/// operation over a [`crate::rest::client::Client`], answering an outcome
-/// enum with one variant per status the OAS documents for it.
+/// The client half of the `demographic` API group (ITS-REST).
 #[cfg(feature = "rest-client")]
 pub mod client {
     use super::*;
@@ -10104,9 +10079,8 @@ pub mod client {
         /// `POST /demographic/agent`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn agent_create(
             &self,
             params: &AgentCreateParams,
@@ -10184,9 +10158,8 @@ pub mod client {
         /// `GET /demographic/agent/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn agent_get(
             &self,
             params: &AgentGetParams,
@@ -10228,9 +10201,8 @@ pub mod client {
         /// `PUT /demographic/agent/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn agent_update(
             &self,
             params: &AgentUpdateParams,
@@ -10318,9 +10290,8 @@ pub mod client {
         /// `DELETE /demographic/agent/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn agent_delete(
             &self,
             params: &AgentDeleteParams,
@@ -10369,9 +10340,8 @@ pub mod client {
         /// `POST /demographic/group`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn group_create(
             &self,
             params: &GroupCreateParams,
@@ -10449,9 +10419,8 @@ pub mod client {
         /// `GET /demographic/group/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn group_get(
             &self,
             params: &GroupGetParams,
@@ -10493,9 +10462,8 @@ pub mod client {
         /// `PUT /demographic/group/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn group_update(
             &self,
             params: &GroupUpdateParams,
@@ -10583,9 +10551,8 @@ pub mod client {
         /// `DELETE /demographic/group/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn group_delete(
             &self,
             params: &GroupDeleteParams,
@@ -10634,9 +10601,8 @@ pub mod client {
         /// `POST /demographic/organisation`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn organisation_create(
             &self,
             params: &OrganisationCreateParams,
@@ -10714,9 +10680,8 @@ pub mod client {
         /// `GET /demographic/organisation/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn organisation_get(
             &self,
             params: &OrganisationGetParams,
@@ -10758,9 +10723,8 @@ pub mod client {
         /// `PUT /demographic/organisation/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn organisation_update(
             &self,
             params: &OrganisationUpdateParams,
@@ -10848,9 +10812,8 @@ pub mod client {
         /// `DELETE /demographic/organisation/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn organisation_delete(
             &self,
             params: &OrganisationDeleteParams,
@@ -10899,9 +10862,8 @@ pub mod client {
         /// `POST /demographic/person`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn person_create(
             &self,
             params: &PersonCreateParams,
@@ -10979,9 +10941,8 @@ pub mod client {
         /// `GET /demographic/person/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn person_get(
             &self,
             params: &PersonGetParams,
@@ -11023,9 +10984,8 @@ pub mod client {
         /// `PUT /demographic/person/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn person_update(
             &self,
             params: &PersonUpdateParams,
@@ -11113,9 +11073,8 @@ pub mod client {
         /// `DELETE /demographic/person/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn person_delete(
             &self,
             params: &PersonDeleteParams,
@@ -11164,9 +11123,8 @@ pub mod client {
         /// `POST /demographic/role`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn role_create(
             &self,
             params: &RoleCreateParams,
@@ -11244,9 +11202,8 @@ pub mod client {
         /// `GET /demographic/role/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn role_get(
             &self,
             params: &RoleGetParams,
@@ -11288,9 +11245,8 @@ pub mod client {
         /// `PUT /demographic/role/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn role_update(
             &self,
             params: &RoleUpdateParams,
@@ -11378,9 +11334,8 @@ pub mod client {
         /// `DELETE /demographic/role/{uid_based_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn role_delete(
             &self,
             params: &RoleDeleteParams,
@@ -11429,9 +11384,8 @@ pub mod client {
         /// `GET /demographic/versioned_party/{versioned_object_uid}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_party_get(
             &self,
             params: &VersionedPartyGetParams,
@@ -11468,9 +11422,8 @@ pub mod client {
         /// `GET /demographic/versioned_party/{versioned_object_uid}/revision_history`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_party_revision_history(
             &self,
             params: &VersionedPartyRevisionHistoryParams,
@@ -11508,9 +11461,8 @@ pub mod client {
         /// `GET /demographic/versioned_party/{versioned_object_uid}/version`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_party_version_get_at_time(
             &self,
             params: &VersionedPartyVersionGetAtTimeParams,
@@ -11555,9 +11507,8 @@ pub mod client {
         /// `GET /demographic/versioned_party/{versioned_object_uid}/version/{version_uid}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn versioned_party_version_get_by_id(
             &self,
             params: &VersionedPartyVersionGetByIdParams,
@@ -11595,9 +11546,8 @@ pub mod client {
         /// `POST /demographic/contribution`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn contribution_create(
             &self,
             params: &ContributionCreateParams,
@@ -11651,9 +11601,8 @@ pub mod client {
         /// `GET /demographic/contribution/{contribution_uid}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn contribution_get(
             &self,
             params: &ContributionGetParams,
@@ -11687,9 +11636,8 @@ pub mod client {
         /// `GET /demographic/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn demographic_tags_get(
             &self,
             params: &DemographicTagsGetParams,
@@ -11729,9 +11677,8 @@ pub mod client {
         /// `GET /demographic/agent/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn agent_tags_get(
             &self,
             params: &AgentTagsGetParams,
@@ -11765,9 +11712,8 @@ pub mod client {
         /// `PUT /demographic/agent/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn agent_tags_update(
             &self,
             params: &AgentTagsUpdateParams,
@@ -11813,9 +11759,8 @@ pub mod client {
         /// `DELETE /demographic/agent/{uid_based_id}/tags/{key}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn agent_tags_delete(
             &self,
             params: &AgentTagsDeleteParams,
@@ -11842,9 +11787,8 @@ pub mod client {
         /// `GET /demographic/group/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn group_tags_get(
             &self,
             params: &GroupTagsGetParams,
@@ -11878,9 +11822,8 @@ pub mod client {
         /// `PUT /demographic/group/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn group_tags_update(
             &self,
             params: &GroupTagsUpdateParams,
@@ -11926,9 +11869,8 @@ pub mod client {
         /// `DELETE /demographic/group/{uid_based_id}/tags/{key}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn group_tags_delete(
             &self,
             params: &GroupTagsDeleteParams,
@@ -11955,9 +11897,8 @@ pub mod client {
         /// `GET /demographic/organisation/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn organisation_tags_get(
             &self,
             params: &OrganisationTagsGetParams,
@@ -11991,9 +11932,8 @@ pub mod client {
         /// `PUT /demographic/organisation/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn organisation_tags_update(
             &self,
             params: &OrganisationTagsUpdateParams,
@@ -12039,9 +11979,8 @@ pub mod client {
         /// `DELETE /demographic/organisation/{uid_based_id}/tags/{key}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn organisation_tags_delete(
             &self,
             params: &OrganisationTagsDeleteParams,
@@ -12068,9 +12007,8 @@ pub mod client {
         /// `GET /demographic/person/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn person_tags_get(
             &self,
             params: &PersonTagsGetParams,
@@ -12104,9 +12042,8 @@ pub mod client {
         /// `PUT /demographic/person/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn person_tags_update(
             &self,
             params: &PersonTagsUpdateParams,
@@ -12152,9 +12089,8 @@ pub mod client {
         /// `DELETE /demographic/person/{uid_based_id}/tags/{key}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn person_tags_delete(
             &self,
             params: &PersonTagsDeleteParams,
@@ -12181,9 +12117,8 @@ pub mod client {
         /// `GET /demographic/role/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn role_tags_get(
             &self,
             params: &RoleTagsGetParams,
@@ -12217,9 +12152,8 @@ pub mod client {
         /// `PUT /demographic/role/{uid_based_id}/tags`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn role_tags_update(
             &self,
             params: &RoleTagsUpdateParams,
@@ -12265,9 +12199,8 @@ pub mod client {
         /// `DELETE /demographic/role/{uid_based_id}/tags/{key}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn role_tags_delete(
             &self,
             params: &RoleTagsDeleteParams,
@@ -12293,8 +12226,7 @@ pub mod client {
     }
 }
 /// The operations of this group as `(method, path, operation_id)`, in OAS
-/// document order: `server::router` binds each to its trait method, and
-/// `crate::rest::routes::lookup` matches a request path against them.
+/// document order.
 pub const ROUTES: &[(&str, &str, &str)] = &[
     ("POST", "/demographic/agent", "agent_create"),
     ("GET", "/demographic/agent/{uid_based_id}", "agent_get"),

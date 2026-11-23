@@ -5,38 +5,6 @@
 //! The ONE openEHR lexical layer: a single `logos` token superset read by one
 //! entry point, [`lex`], under the [`Language`] it is given.
 //!
-//! ADL2/cADL, ODIN, BEL and EL are four readings of one family of lexical
-//! rules — the vendored `.g4` grammars all build on the same base id/symbol
-//! layer (`vendor/grammar/v1_1/`), and each language's syntax appendix is an
-//! include of those files, which makes them normative-by-reference. This
-//! module is that shared layer, and it is the ONLY lexer in the workspace:
-//! `openehr-adl` and the `odin`/`bel`/`el` readers here all consume
-//! [`Token`]/[`Spanned`] from it.
-//!
-//! # The two-stage contract
-//!
-//! 1. **One DFA, the union of the four lexical layers** ([`Token`]). It runs
-//!    once over the source and produces the longest match at every position.
-//! 2. **A per-language RECLASSIFICATION pass**. For each
-//!    token it asks what that language's own lexer would have produced for the
-//!    same source slice, and:
-//!    - keeps the token when the language admits it;
-//!    - **re-tags** it when the language reads the same text differently — the
-//!      keyword variants stay UNIT variants and a language that reserves
-//!      nothing simply gets the identifier variant back, read off the source
-//!      at the token's span;
-//!    - **narrows** it when the language's longest match at that position is
-//!      shorter, by retrying successively shorter prefixes — the
-//!      union can only ever match at least as far as one member;
-//!    - **fails** when no prefix is a token of that language at all, which is
-//!      exactly where its stand-alone lexer reported a lexical error.
-//!
-//! The pass is therefore a total function from the union reading to each member
-//! reading, not a filter, and the `lexer_equivalence` battery in `tests/it/`
-//! pins each reading token-for-token and span-for-span.
-//!
-//! # Per-language adjudications
-//!
 //! - ODIN reserves nothing (`LANG/docs/odin/master03-basics.adoc` §Keywords:
 //!   "ODIN has no keywords of its own"), so the ODIN pass demotes every
 //!   cADL/BEL keyword to an attribute identifier.
@@ -60,11 +28,6 @@ pub(crate) mod token;
 use logos::Logos;
 
 /// The source text a lexer span names.
-///
-/// Total by construction: every span reaching this function was produced by
-/// `logos` over the SAME `src`, so it always names a character boundary inside
-/// it. Returning an empty string instead would report a lexical defect with no
-/// text — a silent wrong diagnostic.
 #[expect(
     clippy::expect_used,
     reason = "the span comes from lexing this same `src`, so it always slices"
@@ -87,12 +50,6 @@ pub enum Language {
     /// The BEL reading (`LANG/docs/BEL/`, `base_expressions.g4`).
     Bel,
     /// The Expression Language reading (`LANG/docs/EL/`, `ElLexer.g4`).
-    ///
-    /// `ElLexer.g4` is an `import Cadl2Lexer, SymbolsLexer, GeneralIdsLexer`
-    /// with its own rules layered on top, and ANTLR gives the importing
-    /// grammar's rule precedence — so this reading is the cADL one wherever
-    /// `ElLexer.g4` declares nothing, and `ElLexer.g4`'s own (case-SENSITIVE)
-    /// spelling wherever it does.
     El,
 }
 
@@ -155,13 +112,6 @@ fn retag_odin_value_words_in_key_position(src: &str, spanned: &mut [Spanned]) {
 /// Lex `src` under `language`'s reading: run the shared DFA over it and
 /// reclassify every token into that language's own lexer.
 ///
-/// [`Language::Adl`] lexes a whole ADL2 source file as one stream, so its
-/// reading is the union of the outer artefact grammar, cADL, the ODIN sections
-/// and the rules sub-syntax; the outer parser captures the cADL definition and
-/// rules bodies as raw spans, so their tokens only need to lex here, not
-/// classify perfectly. [`Language::Odin`] reserves no keywords, and a value
-/// word in attribute-name position is re-tagged to an identifier.
-///
 /// # Errors
 /// Returns a [`LexError`] at the byte span of the first input that is not a
 /// token of `language` (an unrecognised character or an illegal string
@@ -198,11 +148,6 @@ pub fn lex(language: Language, src: &str) -> Result<Vec<Spanned>, LexError> {
 
 /// Emit the longest prefix of `src[start..limit]` that IS a single token of
 /// `language`, and return where the caller resumes.
-///
-/// The union DFA matched `limit`, which `language` refused. Its own DFA would
-/// have taken the longest prefix some production of ITS OWN admits — and every
-/// such production is in the union, so re-running the union over each shorter
-/// prefix and asking `reclassify` again finds exactly that prefix.
 ///
 /// # Errors
 /// Returns a [`LexError`] spanning the first character when no prefix at all is

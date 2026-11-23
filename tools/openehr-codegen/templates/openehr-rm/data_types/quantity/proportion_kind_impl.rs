@@ -2,25 +2,13 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM spec functions for `PROPORTION_KIND`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.proportion_kind.adoc`
-//! §Constants + §Functions.
+//! `PROPORTION_KIND` functions (`org.openehr.rm.data_types.proportion_kind.adoc`).
 
 use crate::v1_2::data_types::quantity::proportion_kind::ProportionKind;
 
 impl ProportionKind {
-    /// Returns `true` when `nq` is one of the defined proportion kinds.
-    ///
-    /// Spec: `org.openehr.rm.data_types.proportion_kind.adoc` §Functions
-    /// `valid_proportion_kind` — "True if n is one of the defined types", over
-    /// the §Constants `pk_ratio` = 0 … `pk_integer_fraction` = 4.
-    ///
-    /// This forwards to the definition the `DV_PROPORTION` invariants already
-    /// evaluate (`crate::v1_2::validate::valid_proportion_kind`), so the class
-    /// function and the invariant cannot answer differently for the same
-    /// value.
+    /// Whether `nq` is one of the defined kinds, 0 to 4 (`valid_proportion_kind`),
+    /// as `crate::v1_2::validate::valid_proportion_kind` answers.
     #[must_use]
     pub fn valid_proportion_kind(nq: i32) -> bool {
         crate::v1_2::validate::valid_proportion_kind(nq)

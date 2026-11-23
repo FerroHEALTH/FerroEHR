@@ -1,22 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The reproducibility conversion log.
+//! The reproducibility conversion log: every synthesised code keyed by what it
+//! was minted for, so a re-conversion reuses it.
 //!
-//! NOTE: no openEHR spec governs 1.4→2 conversion — our own design (see the
-//! [`crate::adl14`] module flag). The log records every code the converter
-//! *synthesises* (external-code at-codes, value-set ac-codes) keyed by a stable
-//! signature of what they were minted for, so a re-conversion that consults the
-//! same log reuses the same codes — the conversion is idempotent.
+//! NOTE: no openEHR spec governs 1.4→2 conversion: our own design.
 
 use std::collections::BTreeMap;
 
-/// A record of the codes a conversion synthesised, so re-running is idempotent.
-///
-/// Codes are allocated *outside* the existing (shifted) code-number range and
-/// recorded here on first mint; a subsequent conversion given this log looks up
-/// the signature first and reuses the stored code instead of allocating a fresh
-/// one.
+/// A record of the codes a conversion synthesised, allocated outside the
+/// shifted code range, so re-running is idempotent.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConversionLog {
     /// External terminology code (`terminology::code`, e.g. `openehr::127`) →

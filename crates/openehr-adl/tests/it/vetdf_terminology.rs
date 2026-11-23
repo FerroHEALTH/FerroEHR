@@ -7,16 +7,9 @@
     clippy::panic,
     reason = "test assertions"
 )]
-//! VETDF external-terminology resolver-seam tests
-//! (AM ADL2 `master03-archetype_package.adoc` §Validity Rules).
-//!
-//! `openehr-adl` stays network-free: the VETDF check consults an injected
-//! [`TerminologyResolver`] rather than holding a live terminology client. These
-//! tests drive the public `validate_source` entry point with a stub resolver
-//! and assert the raise contract — `Some(false)` → VETDF; `Some(true)` / `None`
-//! / [`NoTerminologyResolver`] → no VETDF — and that the archetype-internal
-//! (`local`/`openehr`) bindings are never consulted (their keys are covered by
-//! VTTBK/VTCBK, `master07` §Validity Rules).
+//! VETDF through the [`TerminologyResolver`] seam (`master03-archetype_package.adoc`
+//! §Validity Rules): `Some(false)` raises, `Some(true)`, `None` and
+//! [`NoTerminologyResolver`] do not, and `local`/`openehr` are never consulted.
 
 use std::sync::Mutex;
 

@@ -4,10 +4,6 @@
 //! The binary's command-line seam: `--set` override parsing, the subcommand
 //! shapes, the one dispatch branch of `run` that touches nothing external, and
 //! the `[privacy]` policy the run path compiles out of the shipped defaults.
-//!
-//! `Cli`'s fields are private by design (visibility is deliberate — the type is
-//! a `clap` parse target, not a record), so a parse result is observed through
-//! its derived `Debug` rendering, the surface the type actually offers.
 
 #![expect(
     clippy::panic_in_result_fn,
@@ -117,8 +113,8 @@ fn config_path_is_global() -> Result<(), clap::Error> {
     Ok(())
 }
 
-/// `config check` is the one `config` utility; the template it used to print
-/// beside it is the shipped `app/ferroehr/assets/ferroehr.default.toml`.
+/// `config check` is the one `config` utility; the default template is the
+/// shipped `app/ferroehr/assets/ferroehr.default.toml`.
 #[test]
 fn config_subcommands_parse() -> Result<(), clap::Error> {
     assert!(
@@ -581,11 +577,6 @@ endpoint = "https://u8:URL_PW_SENTINEL_8@report.example/v1/report"
 
 /// The SHIPPED DEFAULT configuration, assembled through the loader the binary
 /// runs, with no file, environment or override of this test's own.
-///
-/// [`ferroehr::config::assemble`] is the pure seam
-/// [`load`](ferroehr::config::load) is a process-environment shim over, so the
-/// shipped template travels through the real loader while a test runner's own
-/// `FERROEHR_*` variables stay out of the subject.
 fn shipped_default_config() -> ferroehr::config::FerroEhrConfig {
     let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("a temp config path");
     assert_fs::prelude::FileWriteStr::write_str(&file, ferroehr::config::DEFAULT_TEMPLATE)
@@ -596,11 +587,6 @@ fn shipped_default_config() -> ferroehr::config::FerroEhrConfig {
 
 /// The [`WebTemplate`](openehr_sdt::flat::webtemplate::model::WebTemplate) of
 /// the operational template the browser journey battery seeds.
-///
-/// The real generator is driven off this rather than a literal body: a
-/// hand-written composition would drift away from what
-/// `GET /definition/template/adl1.4/{id}/example` actually hands out, which is
-/// the loop that has to hold.
 fn seed_web_template() -> openehr_sdt::flat::webtemplate::model::WebTemplate {
     let opt = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../ferroehr-viewer/tests/fixtures/minimal_evaluation.opt");
@@ -612,14 +598,6 @@ fn seed_web_template() -> openehr_sdt::flat::webtemplate::model::WebTemplate {
 
 /// A server booted on the shipped defaults accepts the composition its own
 /// example endpoint generates, at every detail level that endpoint offers.
-///
-/// The regression this pins is a wiring one, which is why it lives here: the
-/// platform suites build the service with `FerroEhrService::new()`, which
-/// carries the unenforced [`ferroehr::privacy::PrivacyPolicy`] default, and
-/// only the binary compiles `[privacy]` and installs it
-/// ([`ferroehr::privacy::PrivacyPolicy::from`] + `with_privacy`). A default
-/// posture that refuses `ctx/composer_name` therefore looks green everywhere
-/// except in a real deployment.
 #[test]
 fn the_shipped_privacy_default_accepts_this_servers_own_example_composition() {
     let config = shipped_default_config();

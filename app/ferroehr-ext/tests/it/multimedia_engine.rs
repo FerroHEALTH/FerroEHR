@@ -1,17 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The multimedia engine (`ferroehr_ext::multimedia`) end to end over a real
-//! blob store: a `DV_MULTIMEDIA` above the threshold is offloaded, its bytes
-//! land in the store once, the canonical value keeps the invariants RM data
-//! types demand of an externalised value, and expanding it restores the inline
-//! bytes. The in-memory blob store stands in for S3; the S3-backed
-//! journey is `app/ferroehr/tests/it/multimedia_s3.rs`. The planner's own
-//! arithmetic (thresholds, thumbnails, integrity) is unit-tested beside it in
-//! `src/multimedia/offload.rs`; this module drives the engine's public seam.
+//! The multimedia engine over an in-memory blob store: a `DV_MULTIMEDIA` above
+//! the threshold is offloaded once, keeps the RM invariants of an external
+//! value, and expands back to its inline bytes.
 //!
-//! No openEHR spec governs blob externalisation — our own design/extension;
-//! the value shape is RM data types `DV_MULTIMEDIA`
+//! No openEHR spec governs blob externalisation: our own design. The value
+//! shape is RM `DV_MULTIMEDIA`
 //! (`docs/specs/openehr/RM/docs/data_types/master09-encapsulated_package.adoc`).
 
 #![expect(

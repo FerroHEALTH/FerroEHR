@@ -1,35 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! JSON emitter: emits `impl serde::Serialize` + `impl serde::Deserialize` for
-//! the generated spec types (BASE / RM / AM / TERM / LANG), into each spec
-//! crate's own `src/json_serde.rs`, plus the `_type`-keyed structural dispatch
-//! in `openehr-its`.
+//! JSON emitter: `impl serde::Serialize` and `impl serde::Deserialize` for the
+//! generated spec types, into each spec crate's `src/json_serde.rs` (the
+//! orphan rule), plus the `_type`-keyed structural dispatch in `openehr-its`.
 //!
-//! Every fact comes from the BMM ([`Model::json_types`]); there is no XSD
-//! input. The canonical-JSON wire shape is `_type` first, then BMM declaration
-//! order, with absent rather than null or empty optional attributes
-//! (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Resources.md`
-//! §JSON Format).
-//!
-//! The impls are written out by hand rather than derived because the canonical
-//! wire is none of serde's four enum representations
-//! (<https://serde.rs/enum-representations.html>): the discriminator is a member
-//! of the object whose presence is context-dependent, it routes deep descendants
-//! onto an intermediate variant, and the closed key set must be enforced beside
-//! it (`deny_unknown_fields` is incompatible with `flatten`). Each class gets
-//! the long form from <https://serde.rs/deserialize-struct.html>.
-//!
-//! They land in the crate that DEFINES each type, because both serde and the
-//! spec types are foreign to `openehr-its` (orphan rule, E0117); that also lets
-//! them construct through `pub(crate)` fields and the validated constructors
-//! ([`construction`]).
-//!
-//! The read side is STRICT over the generated RM model at our pin: an undeclared
-//! key, a repeated key and an absent mandatory attribute are all refusals (see
-//! [`emit_struct_deserialize`] for the released grounding). Out-of-order
-//! members, a missing `_type` on a concrete slot, `Option`/`Vec` defaulting and
-//! the `Interval` literal defaults are all accepted.
+//! The wire is `_type` first, then BMM declaration order, with absent rather
+//! than null or empty optional attributes (`ITS-REST/specifications/docs/
+//! overview/Resources.md` §JSON Format). The impls are hand-written long form
+//! (<https://serde.rs/deserialize-struct.html>), since the `_type`
+//! discriminator is none of serde's enum representations. The reader refuses
+//! an undeclared key, a repeated key and an absent mandatory attribute.
 
 use crate::analyze::Model;
 use crate::load::bmm::BmmSchema;
@@ -45,19 +26,12 @@ use std::fmt::Write as _;
 pub(crate) struct JsonSchema<'a> {
     pub model: &'a Model,
     pub schema: &'a BmmSchema,
-    /// The generation root every type of this schema is named under — crate
-    /// ident plus generation module, e.g. `openehr_rm::v1_2`. Types are named
-    /// by full defining-module path (never a prelude), so every generation is
-    /// codec-complete, twins of a class name two generations declare included:
-    /// they are distinct Rust types, so their impls do not conflict.
+    /// The generation root every type of this schema is named under, e.g.
+    /// `openehr_rm::v1_2`.
     ///
-    /// NOTE (adjudicated): such twins share a canonical `_type` string (the
-    /// BMM class name is the same in both generations), and that is not an
-    /// ambiguity: `Deserialize` is always invoked at a statically known Rust
-    /// type, and `_type`-keyed dispatch only ever chooses among the variants of
-    /// ONE enum — never across generations. No openEHR spec governs a BMM-model
-    /// canonical-JSON wire at all (this codec is our own extension), so there is
-    /// no cross-generation wire contract to break.
+    /// NOTE: no openEHR spec governs a BMM-model canonical-JSON wire: our own
+    /// design; twins across generations share a `_type`, but dispatch is always
+    /// within one enum.
     pub root: &'a str,
     /// The generation's cross-crate index — resolves a `@SPEC` construction
     /// door parameter to the PAIRED dependency generation's defining module.
@@ -65,9 +39,8 @@ pub(crate) struct JsonSchema<'a> {
 }
 
 impl JsonSchema<'_> {
-    /// The full defining-module path a spec class's type is named by, as seen
-    /// from OUTSIDE the defining crate (the structural dispatch in
-    /// `openehr-its`).
+    /// The full defining-module path of a spec class's type, from outside the
+    /// defining crate.
     fn path_of(&self, spec: &str) -> String {
         format!(
             "{}::{}",
@@ -76,10 +49,7 @@ impl JsonSchema<'_> {
         )
     }
 
-    /// The same path as seen from INSIDE the defining crate: the leading crate
-    /// segment becomes `crate` (`openehr_am::v1_4::…` → `crate::v1_4::…`),
-    /// which is how the emitted impls — which live in the defining crate —
-    /// name their own types.
+    /// The same path from inside the defining crate (`crate::v1_4::…`).
     fn local_path_of(&self, spec: &str) -> String {
         let absolute = self.path_of(spec);
         absolute
@@ -87,14 +57,12 @@ impl JsonSchema<'_> {
             .map_or_else(|| "crate".to_owned(), |(_, rest)| format!("crate::{rest}"))
     }
 
-    /// Resolve one construction-door parameter type: a `@SPEC` marker becomes
-    /// the generation-correct full type path (this generation's own module
-    /// when it declares the class, else the paired dependency generation's);
-    /// any other string is a literal Rust type and passes through.
+    /// Resolves one construction-door parameter type: a `@SPEC` marker becomes the
+    /// generation-correct type path; any other string passes through.
     ///
     /// # Panics
     /// Panics when a marker names a class neither this generation nor its
-    /// paired dependencies emit — a construction-table bug.
+    /// paired dependencies emit.
     fn door_param(&self, ty: &str) -> String {
         let Some(spec) = ty.strip_prefix('@') else {
             return ty.to_owned();
@@ -113,9 +81,7 @@ impl JsonSchema<'_> {
     }
 }
 
-/// The environment one type's deserialize impl is emitted in: the type's own
-/// module path, the shared runtime path, and the generation whose model and
-/// pairings resolve construction-door parameters.
+/// The environment one type's deserialize impl is emitted in.
 struct DeserializeEnv<'a> {
     /// The emitted type's defining-module path, crate-local form.
     path: &'a str,
@@ -135,32 +101,19 @@ pub(super) fn support_path(krate: &str) -> &'static str {
     }
 }
 
-/// Emit one spec crate's whole `json_serde.rs`: an `impl Serialize` + an
-/// `impl Deserialize` per instantiable type, in schema then class order.
-///
-/// `krate` is the crate's Rust ident (`openehr_rm`), used only to decide how the
-/// shared runtime is named.
+/// Emits one spec crate's `json_serde.rs`, in schema then class order.
 pub(crate) fn emit_file(schemas: &[JsonSchema<'_>], krate: &str) -> String {
     let support = support_path(krate);
     let mut b = String::new();
-    // `unused_qualifications`: the emitted impls name every item by its full
-    // path so the emitter never has to reason about import scope — inherent to
-    // text generation, not a defect in the output.
-    // The whole set is ONE file-level `#![allow(…, reason = "…")]`: `reason` is
-    // mandatory (`clippy::allow_attributes_without_reason` is deny workspace-
-    // wide), an inner attribute is exempt from `clippy::allow_attributes`, and
-    // `expect` is wrong for a blanket list because no single emission triggers
-    // every listed lint.
+    // One file-level `#![allow(…)]`: no single emission triggers every lint, so
+    // `expect` would be unfulfilled.
     b.push_str(
         "// @generated by openehr-codegen (emit-json) — DO NOT EDIT.\n\
          //! Canonical-JSON `serde::Serialize`/`serde::Deserialize` impls for this\n\
          //! crate's generated spec types.\n\
          //!\n\
-         //! Manual (never derived) long-form impls per\n\
-         //! <https://serde.rs/deserialize-struct.html>: the canonical wire's\n\
-         //! `_type` discriminator, its context-dependent presence, deep-descendant\n\
-         //! dispatch and closed key set are not expressible with serde attributes.\n\
-         //! The shared runtime is `openehr_base::serde_support`.\n\n\
+         //! Hand-shaped impls, since serde attributes cannot express the `_type`\n\
+         //! discriminator, its context-dependent presence or the closed key set.\n\n\
          #![allow(\n    \
          clippy::all,\n    \
          clippy::pedantic,\n    \
@@ -194,27 +147,13 @@ pub(crate) fn emit_file(schemas: &[JsonSchema<'_>], krate: &str) -> String {
 
 // ── Structural dispatch (`structural_check`) ─────────────────────────────────
 
-/// The bound-fill type argument a generic class's structural decode is
-/// monomorphized with.
-///
-/// A generic spec class (`DV_INTERVAL<T>`, `HISTORY<T>`, `ORIGINAL_VERSION<T>`,
-/// `POINT_EVENT<T>`, …) has no single wire type argument: the canonical-JSON
-/// `_type` names only the container class, and the element type is whatever the
-/// declaring attribute said. The untyped fill decodes each element as an opaque
-/// value, so the container's OWN shape (its mandatory attributes and their JSON
-/// kinds) is checked while the elements are accepted verbatim — exactly the
-/// monomorphization the hand-written typed dispatch uses for the same classes.
+/// The type argument a generic class's structural decode uses: elements are
+/// accepted opaque, so the container's own shape is checked.
 const GENERIC_FILL: &str = "::serde_json::Value";
 
-/// Why a non-struct JSON type is unreachable as a `_type` dispatch key.
-///
-/// A newtype or literal-enum shape writes its BARE payload (no `_type` member
-/// — see `emit_serialize`), and an untagged enum carries no `_type` of its own
-/// either (the active variant's payload supplies it, and every such payload is
-/// itself an emitted struct with its own arm). Each is recorded in the emitted
-/// header, never silently dropped.
-///
-/// A struct yields `None`: it IS dispatchable, and the caller handles it.
+/// Why a non-struct JSON type cannot be a `_type` dispatch key: a newtype or
+/// literal enum writes a bare payload, and an untagged enum carries no `_type`.
+/// `None` for a struct.
 fn undispatchable(ty: &JsonType) -> Option<(String, &'static str)> {
     match ty {
         JsonType::Enum { rust, .. } => Some((
@@ -233,16 +172,11 @@ fn undispatchable(ty: &JsonType) -> Option<(String, &'static str)> {
     }
 }
 
-/// Emit the generated `structural_check` dispatch file: `_type` → deserialize
-/// the node into that class's generated Rust type and discard the value, so the
-/// codec is the single structural-conformance authority for EVERY emitted class
-/// rather than only the invariant-bearing ones.
+/// Emits the `structural_check` dispatch file: `_type` → that class's
+/// deserialize, value discarded.
 ///
-/// Precedence when several schemas declare the same spec class name (110 names
-/// in the current vendored set — `RESOURCE_DESCRIPTION`, `AUTHORED_RESOURCE`,
-/// the whole `BMM_*` family, …): the FIRST schema in `schemas` wins, so the
-/// caller passes them in dispatch priority. Every shadowed twin is listed in
-/// the emitted header, never dropped silently.
+/// A spec class name several schemas declare resolves to the first in
+/// `schemas`; each shadowed twin is listed in the emitted header.
 pub(crate) fn emit_structural_file(schemas: &[JsonSchema<'_>]) -> String {
     let StructuralInventory {
         arms,
@@ -257,33 +191,12 @@ pub(crate) fn emit_structural_file(schemas: &[JsonSchema<'_>]) -> String {
          //! Structural conformance dispatch: `_type` → the emitted `Deserialize`\n\
          //! of that spec class.\n\
          //!\n\
-         //! The canonical-JSON codec is the structural-conformance authority for a\n\
-         //! wire node (mandatory attributes present, JSON kinds right, nested slot\n\
-         //! `_type`s resolvable). This dispatch makes that authority reachable for\n\
-         //! EVERY emitted class from a `_type` string alone, so a per-node validation\n\
-         //! walk is not limited to the classes that happen to carry a class\n\
-         //! invariant. The decoded value is discarded — only the `Result` matters.\n\
+         //! One arm per class emitted as a struct; an untagged enum, a newtype and a\n\
+         //! BMM enumeration carry no `_type` of their own. Generic classes are checked\n\
+         //! with an opaque element type.\n\
          //!\n\
-         //! Coverage: one arm per class the generator emits as a STRUCT (every\n\
-         //! concrete class, plus the few abstract classes emitted as structs because\n\
-         //! their concrete descendants live in another schema). Deterministic\n\
-         //! exclusions, by shape:\n\
-         //!\n\
-         //! - an untagged **enum** (abstract or polymorphic slot) carries no `_type`\n\
-         //!   of its own — the active variant's payload does, and every payload is an\n\
-         //!   emitted struct with its own arm;\n\
-         //! - a transparent **newtype** and a BMM **enumeration** serialize as their\n\
-         //!   bare primitive payload, so no `_type` member exists to dispatch on.\n\
-         //!\n\
-         //! Generic classes are monomorphized with an opaque element type, so the\n\
-         //! container's own shape is checked and its elements are accepted verbatim\n\
-         //! (each element is a `_type` node in its own right).\n\
-         //!\n\
-         //! NOTE: no openEHR spec governs a cross-component `_type` namespace (the\n\
-         //! canonical-JSON `_type` is a class name, and several components' BMMs\n\
-         //! declare the same name with different attributes) — our own design: the\n\
-         //! emitter resolves a collision by schema priority, in the order the CLI\n\
-         //! passes the schemas, and every shadowed twin is listed below.\n\n\
+         //! NOTE: no openEHR spec governs a cross-component `_type` namespace: our own\n\
+         //! design resolves a collision by schema order and lists each shadowed twin below.\n\n\
          #![allow(\n    \
          clippy::all,\n    \
          clippy::pedantic,\n    \
@@ -310,11 +223,8 @@ pub(crate) fn emit_structural_file(schemas: &[JsonSchema<'_>]) -> String {
          /// class.\n\
          ///\n\
          /// # Errors\n\
-         /// The inner `Err` is the canonical reader's error for a node that does not\n\
-         /// deserialize as `ty` (a missing mandatory attribute, an undeclared or\n\
-         /// repeated key, a wrong JSON kind, an unresolvable nested slot `_type`),\n\
-         /// carrying the JSON path to the offending node — the same door, and the\n\
-         /// same message, as a direct `crate::json::from_canonical_value` read.\n\
+         /// The inner `Err` is the canonical reader's error, with the JSON path to\n\
+         /// the offending node.\n\
          pub fn structural_check(\n    \
          ty: &str,\n    \
          node: &::serde_json::Value,\n\
@@ -335,11 +245,8 @@ pub(crate) fn emit_structural_file(schemas: &[JsonSchema<'_>]) -> String {
         "\n/// The wire keys the spec class `ty` declares, sorted, or `None` when\n\
          /// `ty` names no emitted struct.\n\
          ///\n\
-         /// Emitted from the SAME field view as the reader's undeclared-key refusal,\n\
-         /// so a caller that must answer \"is this key declared?\" WITHOUT decoding —\n\
-         /// the validation dispatcher's allocation-free fast path — can never\n\
-         /// disagree with the reader that would decode it. `_type` is the canonical\n\
-         /// discriminator, not a modelled attribute, and is never listed.\n\
+         /// Emitted from the reader's own field view, so the two agree. `_type` is\n\
+         /// never listed.\n\
          #[must_use]\n\
          pub fn declared_fields(ty: &str) -> ::core::option::Option<&'static [&'static str]> {\n    \
          match ty {\n",
@@ -360,10 +267,8 @@ pub(crate) fn emit_structural_file(schemas: &[JsonSchema<'_>]) -> String {
 struct StructuralInventory {
     /// `spec class` → the expression that decodes a node as it.
     arms: std::collections::BTreeMap<String, String>,
-    /// `spec class` → its sorted declared wire keys, the SAME closure the
-    /// reader's undeclared-key refusal is emitted from — so the validation
-    /// dispatcher can answer "is this key declared?" without a decode, and can
-    /// never disagree with the reader.
+    /// `spec class` → its sorted declared wire keys, the closure the reader's
+    /// undeclared-key refusal uses.
     declared: std::collections::BTreeMap<String, Vec<String>>,
     /// `(spec class, the arm that won, the arm it shadowed)`.
     shadowed: Vec<(String, String, String)>,
@@ -371,10 +276,8 @@ struct StructuralInventory {
     skipped: Vec<(String, &'static str)>,
 }
 
-/// Collects the dispatch inventory across every schema, in dispatch priority.
-///
-/// The FIRST schema declaring a spec class name wins; the loser is recorded as
-/// a shadowed twin, never dropped silently.
+/// Collects the dispatch inventory in dispatch priority; the first schema
+/// declaring a name wins and the rest are recorded as shadowed.
 fn structural_inventory(schemas: &[JsonSchema<'_>]) -> StructuralInventory {
     let mut arms: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
     let mut declared: std::collections::BTreeMap<String, Vec<String>> =
@@ -383,12 +286,7 @@ fn structural_inventory(schemas: &[JsonSchema<'_>]) -> StructuralInventory {
     let mut skipped: Vec<(String, &'static str)> = Vec::new();
     for s in schemas {
         for ty in s.model.json_types(s.schema) {
-            // A newtype / literal-enum shape writes its BARE payload (no `_type`
-            // member — see `emit_serialize`), and an untagged enum carries no
-            // `_type` of its own either (the active variant's payload supplies
-            // it, and every such payload is itself an emitted struct with its
-            // own arm). Neither is reachable as a `_type` dispatch key, so
-            // neither can have one — each is recorded, never silently dropped.
+            // Not a `_type` dispatch key ([`undispatchable`]); recorded.
             let JsonType::Struct {
                 spec,
                 rust,
@@ -424,9 +322,6 @@ fn structural_inventory(schemas: &[JsonSchema<'_>]) -> StructuralInventory {
 
 /// The `<…>` bound-fill for a generic class's dispatch expression, empty for a
 /// non-generic one.
-///
-/// Generic classes are monomorphized with an opaque element type, so the
-/// container's own shape is checked and its elements are accepted verbatim.
 fn generic_fill(generics: &[String]) -> String {
     if generics.is_empty() {
         return String::new();
@@ -523,9 +418,7 @@ fn emit_serialize(b: &mut String, ty: &JsonType, path: &str) {
             string_backed,
             ..
         } => {
-            // Byte-identical to the bare primitive it replaces: `as_str` = the
-            // constant token (verbatim payload for `Other`), `value` = the
-            // constant integer.
+            // Writes the constant token (the payload for `Other`) or the integer.
             let body = if *string_backed {
                 "::serde::Serializer::serialize_str(__serializer, self.as_str())"
             } else {
@@ -541,11 +434,7 @@ fn emit_serialize(b: &mut String, ty: &JsonType, path: &str) {
     }
 }
 
-/// Emit the member-count contribution of one conditionally-written field.
-///
-/// `serialize_struct` takes the number of members that will actually be written,
-/// so a field the omission rules drop must not be counted. The unconditional
-/// fields are folded into the initial constant by the caller.
+/// Emits the member-count contribution of one conditionally written field.
 fn emit_count_field(b: &mut String, f: &JsonField) {
     let rust = &f.rust_name;
     match f.kind {
@@ -571,9 +460,7 @@ fn emit_write_field(b: &mut String, f: &JsonField) {
     let wire = &f.wire_name;
     let rust = &f.rust_name;
     match f.kind {
-        // `Plain` and `NonEmptyContainer` share a body deliberately: a `1..*`
-        // container is non-empty by construction, so like a mandatory scalar it
-        // is always written — there is no omit-when-empty branch to emit.
+        // A `1..*` container is never empty, so it is always written.
         JsonFieldKind::Plain | JsonFieldKind::NonEmptyContainer => {
             let _ = writeln!(
                 b,
@@ -592,11 +479,8 @@ fn emit_write_field(b: &mut String, f: &JsonField) {
                 "if !self.{rust}.is_empty() {{ ::serde::ser::SerializeStruct::serialize_field(&mut __st, \"{wire}\", &self.{rust})?; }}"
             );
         }
-        // An optional container omits BOTH states an empty array could carry, the
-        // released rule being about emptiness rather than optionality:
-        // `…/overview/Resources.md` §JSON Format — attributes "that are `Null` or
-        // an empty list (array) SHOULD be absent when serialized as JSON".
-        // Present-but-empty therefore lives in the typed model, never on the wire.
+        // Attributes "that are `Null` or an empty list (array) SHOULD be absent"
+        // (`overview/Resources.md` §JSON Format).
         JsonFieldKind::OptionalContainer => {
             let _ = writeln!(
                 b,
@@ -670,12 +554,10 @@ fn emit_deserialize(b: &mut String, ty: &JsonType, env: &DeserializeEnv<'_>) {
 }
 
 /// The `Option<…>` a field's map slot is read into, and the expression that
-/// turns the slot into the final field value.
+/// turns it into the field value.
 ///
-/// Every slot is an `Option`, so a REPEATED key is detected uniformly
-/// (`de::Error::duplicate_field`) — stricter than the retired reader, which let
-/// the last occurrence win. RFC 8259 §4 leaves a repeated name undefined and no
-/// canonical writer emits one, so refusing is the never-lax reading.
+/// A repeated key is refused (`de::Error::duplicate_field`); RFC 8259 §4
+/// leaves it undefined.
 struct FieldSlot {
     /// The Rust type the map slot holds.
     slot_ty: String,
@@ -684,15 +566,10 @@ struct FieldSlot {
     read: &'static str,
 }
 
-/// The slot type + finalizer for one field, per its omission kind.
+/// The slot type and finalizer for one field, per its omission kind.
 ///
-/// A `null` member is read as absence wherever the retired reader did so (a
-/// mandatory field's `null` is a missing field, an optional field's `null` is
-/// `None`, a defaulted flag's `null` is the default), by reading the slot as
-/// `Option<T>`; a container's `null` stays an error, because `null` is not an
-/// array and no conformant producer writes one
-/// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Resources.md`
-/// §JSON Format).
+/// A `null` member reads as absent, except for a container: `null` is not an
+/// array (`overview/Resources.md` §JSON Format).
 fn field_slot(f: &JsonField, elem: &str) -> FieldSlot {
     match f.kind {
         JsonFieldKind::Plain | JsonFieldKind::NonEmptyContainer | JsonFieldKind::Optional => {
@@ -708,20 +585,11 @@ fn field_slot(f: &JsonField, elem: &str) -> FieldSlot {
     }
 }
 
-/// Emits `impl serde::Deserialize` for a struct: the long form from
-/// <https://serde.rs/deserialize-struct.html> — a field-identifier enum whose
-/// default arm refuses the key, plus a `visit_map` visitor.
+/// Emits `impl serde::Deserialize` for a struct, the long form of
+/// <https://serde.rs/deserialize-struct.html>, refusing an undeclared key.
 ///
-/// The reader is STRICT — an undeclared key is a refusal — grounded on
-/// `docs/specs/openehr/ITS-REST/specifications/docs/overview/Resources.md` L75
-/// (the wildcard-free ITS-XML schemas cannot validate an undeclared element) and
-/// L87 ("SHOULD" for JSON), plus the published ITS-JSON schemas closing 128 of
-/// their 134 object definitions with `additionalProperties: false`.
-///
-/// The closure is over the generated RM model at our pin, never over the
-/// vendored ITS-JSON 1.1.0 schema, which is stale in both directions. NOTE:
-/// refusing at a SHOULD anchor is our decision — it is the only reading under
-/// which the JSON and XML encodings share one data model.
+/// NOTE: `overview/Resources.md` L87 makes the refusal a SHOULD for JSON; we
+/// refuse so JSON and XML share one data model.
 fn emit_struct_deserialize(
     b: &mut String,
     spec: &str,
@@ -786,10 +654,8 @@ fn emit_struct_deserialize(
          }}\n}}\n"
     );
 
-    // The visitor. `visit_map` is never inlined, so each class's field slots
-    // live in its own frame and a nested read keeps one node's slots per level
-    // on the stack, never the slots of every subtype a dispatch could reach
-    // (#5997).
+    // `visit_map` is never inlined, so a nested read keeps one node's slots per
+    // stack frame (#5997).
     let _ = write!(
         b,
         "struct __Visitor{vis_args}{vis_body};\n\
@@ -833,9 +699,8 @@ fn emit_struct_deserialize(
     }
     b.push_str("}\n}\n");
 
-    // Build the value — through the validating constructor when the class has
-    // one (`plan::construction`), so a malformed identifier refuses at PARSE,
-    // path-named, in every document position.
+    // A class with a validating constructor (`plan::construction`) refuses a
+    // malformed value at parse.
     let door = construction::validated_ctor(spec);
     let finals: Vec<String> = fields
         .iter()
@@ -852,9 +717,8 @@ fn emit_struct_deserialize(
             params.len(),
             finals.len(),
         );
-        // Bind BY FIELD NAME, call in the table's declared order: the door
-        // signature is one canonical contract across generations, while each
-        // generation's BMM may declare the fields in a different order.
+        // Bound by field name and called in the table's order, since generations
+        // declare fields in different orders.
         let mut locals = String::new();
         let mut names = Vec::new();
         for (i, (param, ty)) in params.iter().enumerate() {
@@ -919,9 +783,8 @@ fn field_final(f: &JsonField, i: usize, schema: &JsonSchema<'_>) -> String {
     }
 }
 
-/// Emit `impl serde::Deserialize` for a closed-subtype-set / polymorphic enum:
-/// `_type`-keyed dispatch with the two-path reader (see
-/// `openehr_base::serde_support`), or the structural untagged fallback.
+/// Emits `impl serde::Deserialize` for a polymorphic enum: `_type` dispatch,
+/// or the structural untagged fallback.
 fn emit_enum_deserialize(
     b: &mut String,
     rust: &str,
@@ -1002,11 +865,8 @@ fn emit_enum_deserialize(
             );
         }
         JsonEnumDispatch::Structural { variant_idents: sv } => {
-            // Structural untagged fallback: the targets carry no `_type`, so the
-            // value is buffered once and each variant is tried in declaration
-            // order, first success wins — serde's own untagged representation
-            // does exactly this (<https://serde.rs/enum-representations.html>),
-            // and it is the only shape that can backtrack.
+            // No `_type`: buffer once and try each variant in order, as serde's untagged
+            // representation does (<https://serde.rs/enum-representations.html>).
             let _ = variant_idents; // Serialize-order idents; `sv` is the same list
             b.push_str(
                 "let __value = <::serde_json::Value as ::serde::Deserialize>::deserialize(__deserializer)?;\n",

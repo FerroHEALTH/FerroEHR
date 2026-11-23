@@ -28,13 +28,6 @@
 //!   openEHR spec governs; so far its standards layer, [`scim::protocol`],
 //!   which no route mounts.
 //!
-//! [`router::router`] assembles these under the configured base path inside
-//! the family stack of `ferrohealth-server`, and [`serve_full`] serves them
-//! until the process is asked to stop, then drains. The adapter is generic over the platform
-//! concrete `FerroEhrService` (no trait seam, no stub backend) — the
-//! `ferroehr` crate monomorphizes it over its DB-backed `FerroEhrService` via
-//! [`AppState::with_backend`], and the tests over a mock.
-//!
 //! Authentication is HTTP Basic plus OAuth2/OIDC bearer, applied as one
 //! middleware over the API router, with the coarse RBAC gate and the PEP
 //! composing on top when wired ([`extensions::access`]). Auth is out of band per
@@ -104,8 +97,6 @@ pub enum ServeError {
 /// Build the application router backed by a concrete service (the `ferroehr`
 /// application injects its DB-backed service here).
 ///
-/// The router is ready to serve, so its lifecycle reads serving.
-///
 /// # Errors
 /// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
 pub async fn build_with(
@@ -120,10 +111,6 @@ pub async fn build_with(
 
 /// Builds the application router with a concrete backend and a full
 /// [`Observability`] bundle.
-///
-/// The management surface is merged into the returned router when it is enabled
-/// and not bound to a separate port. The router is ready to serve, so the
-/// bundle's lifecycle reads serving.
 ///
 /// # Errors
 /// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
@@ -239,11 +226,8 @@ fn party_source(config: &AppConfig, backend: &Arc<FerroEhrService>) -> Arc<dyn B
 /// Builds and serves the application with full observability until the
 /// process receives `SIGTERM` or `SIGINT`, then drains.
 ///
-/// Builds the authenticator and the routers first, then binds `server.listen`
-/// and, when `management.listen` is set, the management surface on its own
-/// internal listener (otherwise merged into the main app), so no port accepts
-/// a connection before the application can serve it (#6344). ATNA auditing
-/// lives in the backend's `SystemLog` component.
+/// Builds the authenticator and the routers before binding any listener, so no
+/// port accepts a connection the application cannot serve yet (#6344).
 ///
 /// # Errors
 /// [`ServeError::Auth`] on bad auth config; [`ServeError::Io`] when a listener
@@ -285,12 +269,9 @@ pub async fn serve_full(
 /// surface on `management`, until `signal` completes, then drains both.
 ///
 /// Readiness turns `503` at once, the listeners keep accepting for
-/// `server.drain_delay`, then close, and the requests in flight get
-/// `server.shutdown_timeout` to finish; a connection still open then is
-/// dropped and the result is [`Drained::Cut`]. The main listener speaks the TLS
-/// `[server.tls]` configures; the management listener stays plain HTTP, and
-/// keeping it off a routed network is the deployment's (`production` refuses it
-/// unless the `plaintext_listener` gap is accepted).
+/// `server.drain_delay`, and requests in flight get `server.shutdown_timeout`;
+/// a connection still open then is dropped ([`Drained::Cut`]). The management
+/// listener stays plain HTTP.
 ///
 /// # Errors
 /// [`ServeError::Auth`] on bad auth config; [`ServeError::Serve`] on unusable

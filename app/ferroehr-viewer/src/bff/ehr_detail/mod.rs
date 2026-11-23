@@ -4,23 +4,6 @@
 //! The `/ehrs/{ehr_id}` screen — EHR detail: status / status history /
 //! directory / compositions / contributions / commit / tags tabs.
 //!
-//! Seven URL-driven tabs (`?tab=`) over one EHR. Each tab's data is a
-//! read co-located with the tab in its own submodule: [`status`],
-//! which owns BOTH status tabs, then [`directory`], [`compositions`],
-//! [`contributions`], [`commit`] (the atomic multi-change CONTRIBUTION staging
-//! area), and the EHR-wide tag browser in [`crate::bff::ehr_tags`]. The
-//! resources are created once and their sources are gated on the active tab, so
-//! only the visible tab fetches. The tab bodies are always mounted and toggled
-//! with `class:hidden`, keeping the server and client view structure identical.
-//!
-//! This module owns the `EhrDetailPage` shell, the EHR summary header and the
-//! shared `tab_bar` strip. The header carries two reads, neither duplicated
-//! elsewhere on the screen: the EHR resource itself (`GET /ehr/{ehr_id}`, so an
-//! unknown id fails once at the top instead of once per tab) and — through
-//! `status_feed` — the current `EHR_STATUS`, which is the ONE read of the
-//! subject and the capability flags the Status tab also renders. That one is
-//! therefore NOT tab-gated: the header shows on every tab.
-//!
 //! No openEHR spec governs the viewer — our own design; the wire it reads is
 //! spec-bound (ITS-REST EHR + Query APIs). User input NEVER concatenates into
 //! AQL — the compositions listing's statement is assembled from compile-time
@@ -73,13 +56,6 @@ pub struct EhrSummary {
 }
 
 /// Read the EHR resource itself (`GET /ehr/{ehr_id}`) for the detail header.
-///
-/// This is the viewer's ONE reader of the EHR resource's own FACTS: an
-/// unknown or mistyped id surfaces here, once, at the top of the screen — the
-/// tabs read their own sub-resources. (The status tag panel reads the same
-/// endpoint server-side for the one identifier that addresses the status's tag
-/// collection — a second window of one endpoint, not a second reader of a
-/// claim.)
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer

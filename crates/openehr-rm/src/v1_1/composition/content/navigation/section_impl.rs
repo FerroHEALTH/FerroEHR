@@ -2,14 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariant for `SECTION`.
-//!
-//! Only the inherited LOCATABLE `Archetype_node_id_valid` is checked.
-//! `SECTION`'s own `Items_valid` (`items /= Void implies not items.is_empty`,
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.section.adoc`
-//! §Invariants) needs no runtime check: `items` is an
-//! `Option<NonEmptyVec<CONTENT_ITEM>>`, so present-but-empty is
-//! unrepresentable (`openehr_base::containers`).
+//! `SECTION` invariants: the inherited `Archetype_node_id_valid`;
+//! `Items_valid` holds by the `NonEmptyVec` type.
 
 use crate::v1_1::composition::content::navigation::section::Section;
 use openehr_base::validate::{InvariantViolation, Validate};

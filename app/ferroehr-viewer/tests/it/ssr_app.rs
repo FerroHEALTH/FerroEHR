@@ -5,19 +5,8 @@
 //! serves, a session made by signing in through the sign-in form, and every
 //! screen drawn whole on the server, as the binary draws it.
 //!
-//! The CDR is a replay of a recording (`tests/fixtures/cdr/recording.json`):
-//! every exchange the viewer made with the FerroEHR of this checkout while it
-//! drew these screens over the data `tests/fixtures/cdr/manifest.json` names. A
-//! request matches the first recorded exchange with its method, path and,
-//! for a post, its body, then the first with its method and path; the sign-in
-//! probe answers by the credential it carries. A screen whose requests change
-//! needs a new recording, which `scripts/viewer-record.sh` takes with these
-//! same tests forwarding to a live CDR (`cdr_record`).
-//!
-//! What these tests pin is the server half of every page: the heading, the
-//! fields and their names the forms post, the words a reader reads, and the
-//! posts that sign in, sign out, run a query and keep a preference. The
-//! browser journeys (`e2e_*`) drive the same pages with FerroUI's modules.
+//! The CDR is a replay of `tests/fixtures/cdr/recording.json`; a screen whose
+//! requests change needs a new recording (`scripts/viewer-record.sh`).
 
 #![expect(
     clippy::expect_used,
@@ -137,10 +126,6 @@ pub(crate) fn answer<'a>(
 
 /// Starts the replayed CDR with `stubs`, exchanges in the recording's shape
 /// that answer before it, and returns its base URL.
-///
-/// A stub stands in for a CDR answer the recording has no screen for (a
-/// demographic template, for example); it is written by the test that needs
-/// it, never added to the recording.
 async fn replayed_cdr_with(stubs: Vec<Value>) -> String {
     if let Some(recording) = crate::cdr_record::recording() {
         return crate::cdr_record::proxy(recording, stubs.into(), answer).await;

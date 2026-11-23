@@ -5,13 +5,10 @@
 //! EHDS Art. 3(3) access delay.
 //!
 //! Each register is versioned in the clinical database
-//! ([`crate::storage::policy_register`]): a write through the admin API
-//! appends one version with its committer, and the request path reads the
-//! newest version of every register ([`LiveRegisters::refresh`]) before it
-//! decides anything, so a change applies on the next request on every replica
-//! with no restart. A register with no version holds its default: the map
-//! FerroEHR ships and no delay. A document is checked when it is written and refused
-//! whole when it does not hold; a stored version that no longer compiles
+//! ([`crate::storage::policy_register`]): an admin write appends a version with
+//! its committer, and the request path reads the newest version of every
+//! register ([`LiveRegisters::refresh`]) before it decides anything. A register
+//! with no version holds its default; a stored version that no longer compiles
 //! leaves the version in force and is logged.
 //!
 //! No openEHR spec governs operational policy or its registers: our own

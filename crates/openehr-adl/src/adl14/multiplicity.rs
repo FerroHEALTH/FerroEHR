@@ -1,16 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Occurrences / cardinality reconciliation for the 1.4→2 conversion.
+//! Occurrences and cardinality reconciliation for the 1.4→2 conversion: the 1.4
+//! default `occurrences` is materialised, then RM-default multiplicity elided,
+//! in that order.
 //!
-//! Two rewrites, applied in this order by [`crate::adl14::convert`]: the 1.4
-//! default `occurrences` is MATERIALISED (ADL 2 would infer a different one),
-//! then RM-default multiplicity is ELIDED. Order matters — the materialisation
-//! reads the 1.4 cardinality, which the elision may drop.
-//!
-//! NOTE: no openEHR spec governs 1.4→2 conversion — the whole `adl14` module is
-//! our own design (see the [`crate::adl14`] flag); the two default rules
-//! reconciled here are the spec-cited ones named below.
+//! NOTE: no openEHR spec governs 1.4→2 conversion: our own design.
 
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
@@ -18,31 +13,12 @@ use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 
 use crate::adl14::walk::cco_data_mut;
 
-/// Materialise the ADL 1.4 default `occurrences` on container children before the
-/// definition is emitted as ADL 2.
+/// Materialise the ADL 1.4 default `occurrences` on container children.
 ///
-/// The two formalisms give an ABSENT `occurrences` different meanings, so the
-/// default cannot be carried across implicitly:
-///
-/// - ADL 1.4 — `ADL1.4/master05-cadl.adoc` §Occurrences L316: "The default
-///   occurrences, if none is mentioned, is `{1..1}`".
-/// - ADL 2 — `AOM2/master04.5-constraint_model-class_definitions.adoc`
-///   §Occurrences inferencing rules: an absent `occurrences` is inferred from the
-///   owning attribute's cardinality upper (lower forced to 0), i.e.
-///   `0..cardinality.upper`.
-///
-/// So an unstated 1.4 occurrences on a container child means "exactly once", and
-/// leaving it unstated in the ADL 2 output would silently widen it to "none to
-/// many". It is written out explicitly here.
-///
-/// Restricted to CONTAINER attributes because master05 L308 restricts the rule's
-/// significance to them ("It only has significance for objects which are children
-/// of a container attribute, since by definition, the occurrences of an object
-/// which is the value of a single valued attribute can only be `0..1` or `1..1`,
-/// and this is already defined by the attribute `existence`"). A `use_node`
-/// internal reference is exempt: master05 L515 gives it the REFERENCED node's
-/// occurrences, which is exactly what leaving it unstated means in ADL 2 once the
-/// proxy is expanded.
+/// ADL 1.4 reads an absent occurrences as `{1..1}` (`ADL1.4/master05-cadl.adoc`
+/// §Occurrences L316), ADL 2 as `0..cardinality.upper` (`AOM2/master04.5`
+/// §Occurrences inferencing rules). Only container children are affected
+/// (master05 L308), and a `use_node` takes its target's (master05 L515).
 pub(super) fn materialise_adl14_occurrences(def: &mut CComplexObject) {
     let Some(d) = cco_data_mut(def) else { return };
     for attr in d.attributes.iter_mut().flatten() {
@@ -128,12 +104,8 @@ fn is_zero_unbounded(mi: &openehr_base::prelude::MultiplicityInterval) -> bool {
     mi.lower == Some(0) && mi.upper_unbounded
 }
 
-/// The `occurrences` of a NON-PRIMITIVE `C_OBJECT`, if it carries one.
-///
-/// Deliberately narrower than [`crate::aom::access::child_occurrences`]: it
-/// answers only for the four subtypes whose `occurrences` its mutable partner
-/// [`clear_occurrences`] can clear, so the read/clear pair covers exactly the
-/// same arms.
+/// The `occurrences` of a non-primitive `C_OBJECT`, for exactly the subtypes
+/// [`clear_occurrences`] clears.
 fn complex_occurrences(obj: &CObject) -> Option<&openehr_base::prelude::MultiplicityInterval> {
     match obj {
         CObject::CComplexObject(CComplexObject::CComplexObject(d)) => d.occurrences.as_ref(),

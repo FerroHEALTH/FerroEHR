@@ -4,11 +4,6 @@
 //! Activity timelines: the pure day-bucketing every activity chart in the
 //! viewer derives its points from.
 //!
-//! Kept out of the components (and out of the BFF bodies) on purpose —
-//! business logic lives in plain, unit-tested Rust and the views stay thin. It
-//! is also a pure, deterministic function of its input: no clock, no locale,
-//! no network, so a chart derived from it renders identically on every draw.
-//!
 //! No openEHR spec governs the viewer — our own design / product extension.
 //! The timestamps it buckets ARE spec-bound: `AUDIT_DETAILS.time_committed`
 //! is a `DV_DATE_TIME` in extended ISO 8601
@@ -16,7 +11,6 @@
 //! whose first ten characters are the `YYYY-MM-DD` calendar day.
 
 /// One day of activity: the calendar day and how many events fell on it.
-///
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ActivityPoint {
     /// The `YYYY-MM-DD` calendar day.
@@ -27,11 +21,6 @@ pub struct ActivityPoint {
 
 /// Bucket ISO-8601 timestamps into one [`ActivityPoint`] per calendar day,
 /// ascending by day.
-///
-/// The day is the `YYYY-MM-DD` date prefix read with `s.get(..10)` (never
-/// `&s[..10]`, which can panic on a non-char boundary — the `string_slice`
-/// reliability lint); a value without a ten-character prefix is skipped rather
-/// than guessed at. Counts saturate.
 #[must_use]
 pub fn bucket_by_day(times: &[String]) -> Vec<ActivityPoint> {
     let mut counts: std::collections::BTreeMap<String, u32> = std::collections::BTreeMap::new();

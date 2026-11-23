@@ -2,18 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `PARTY_IDENTIFIED`.
-//!
-//! Spec: RM `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.party_identified.adoc`
-//! §Invariants declares three:
-//!
-//! - `Basic_validity`: `name /= Void or identifiers /= Void or external_ref
-//!   /= Void` — realized here, through the generated `party_identified_core`.
-//! - `Name_valid`: `name /= Void implies not name.is_empty` — same core.
-//! - `Identifiers_valid`: `identifiers /= Void implies not
-//!   identifiers.is_empty` — structural: `identifiers` is
-//!   `Option<NonEmptyVec<DvIdentifier>>`, whose `Deserialize` refuses an empty
-//!   list, so a violating value cannot be built or read.
+//! `PARTY_IDENTIFIED` invariants (`org.openehr.rm.common.party_identified.adoc`):
+//! `Basic_validity` and `Name_valid` through `party_identified_core`;
+//! `Identifiers_valid` by the `NonEmptyVec` type.
 
 use crate::v1_2::common::generic::party_identified::PartyIdentifiedData;
 use openehr_base::validate::{InvariantViolation, Validate};

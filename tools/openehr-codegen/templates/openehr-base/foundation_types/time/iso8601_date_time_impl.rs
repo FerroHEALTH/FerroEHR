@@ -2,59 +2,24 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written `Iso8601_date_time` spec behaviour.
+//! `Iso8601_date_time` behaviour: accessors, definite and nominal arithmetic,
+//! and a range-semantics `PartialOrd`
+//! (`org.openehr.base.foundation_types.iso8601_date_time.adoc`,
+//! `master06-time_types.adoc`).
 //!
-//! Covers the accessor functions, the computational functions (definite
-//! `add`/`subtract`/`diff` and nominal `add_nominal`/`subtract_nominal`) and a
-//! `PartialOrd` implementing range semantics over partial date/times with
-//! timezone normalisation (which may roll the calendar date).
+//! The date and time component invariants are checked in their guarded form;
+//! `Year_valid` and `Partial_validity_minute` hold by the accepted forms.
 //!
-//! Spec sources (vendored):
-//! - `BASE/docs/UML/classes/org.openehr.base.foundation_types.iso8601_date_time.adoc`
-//!   (§Functions: the accessors, `as_string`, `add`/`subtract`/`diff`,
-//!   `add_nominal`/`subtract_nominal`; §Invariants).
-//! - `BASE/docs/UML/classes/org.openehr.base.foundation_types.iso8601_date.adoc`
-//!   (§Functions `add_nominal`: the day-clamping rules this class refers to).
-//! - `BASE/docs/foundation_types/master06-time_types.adoc` (§Primitive Time
-//!   Types: partial date/times may omit any part down to the month;
-//!   `24:00:00` disallowed; §Computational Functions: the definite/nominal
-//!   split).
+//! NOTE: `master06` §Primitive Time Types: partials "can include missing
+//! hours, days and months", so `Partial_validity_year`, `_month`, `_day` and
+//! `_hour` are not enforced.
 //!
-//! Invariants — the TWELVE rows the class table declares under §Invariants:
-//! - `Month_valid`, `Day_valid` (shared with `iso8601_date_impl.rs`) and
-//!   `Hour_valid`, `Minute_valid`, `Second_valid`, `Fractional_second_valid`
-//!   (shared with `iso8601_time_impl.rs`) — checked, each under its own name.
-//!   The first two are read in the GUARDED form the sibling `Iso8601_date`
-//!   class spells them (`not month_unknown implies valid_month (month)`); the
-//!   unguarded literal form would reject every partial this class's own
-//!   Description permits.
-//! - `Year_valid` — structurally satisfied (four zero-filled digits).
-//! - `Partial_validity_minute` (`minute_unknown implies second_unknown`) —
-//!   structurally satisfied: no accepted form writes a second without a minute.
-//! - `Partial_validity_year`, `Partial_validity_month`, `Partial_validity_day`,
-//!   `Partial_validity_hour` — refused, see the NOTEs below.
-//! - `Value_lexical_form_valid` — OUR OWN name, because the class table
-//!   declares no rule for a value that is not the production at all (the same
-//!   rule `iso8601_date_impl.rs` names).
+//! NOTE: `add_nominal` is declared returning `Iso8601_date`; read as a
+//! defect, it returns `Iso8601_date_time` and keeps the time of day.
 //!
-//! NOTE: `Partial_validity_day`, `Partial_validity_hour` and
-//! `Partial_validity_year` are not enforced, because `master06` §Primitive Time
-//! Types states that partial variants of this type "can include missing hours,
-//! days and months".
-//!
-//! NOTE: `add_nominal`/`subtract_nominal` are declared returning `Iso8601_date`
-//! while `add`/`subtract` return `Iso8601_date_time`, which would discard the
-//! time of day §Computational Functions says a nominal addition preserves; read
-//! here as a copy-paste defect, so both return `Iso8601_date_time`.
-//!
-//! NOTE: no openEHR spec governs arithmetic on a PARTIAL date/time, timezone
-//! handling under a shift, or ordering — our own design/extension. A partial or
-//! unparseable operand yields `None`; the offset is carried through unchanged
-//! (canonicalised to the extended form, `Z` for UTC) because a uniform offset
-//! is invariant under a shift of the instant and openEHR has no zone-rule
-//! database; a partial value denotes the interval of its completions on an
-//! absolute-seconds axis, a zoned and an unzoned value are incomparable, and
-//! `partial_cmp` returns `Some(Equal)` only for equal raw strings.
+//! NOTE: no openEHR spec governs partial arithmetic, zones under a shift, or
+//! ordering, our own design: a partial operand yields `None`, the offset is
+//! carried through, and a zoned and an unzoned value are incomparable.
 
 use std::cmp::Ordering;
 
@@ -168,40 +133,29 @@ impl Iso8601DateTime {
             .is_none_or(|p| p.time.and_then(|t| t.second).is_none())
     }
 
-    /// `Iso8601_date_time.is_extended`: true when the value uses `'-'` and `':'`
-    /// separators throughout (see the `is_extended` NOTE in
-    /// `iso8601_parse.rs` for the forms that have no separator position). A value
-    /// that does not parse is not extended.
+    /// `Iso8601_date_time.is_extended`: every separator position written.
     #[must_use]
     pub fn is_extended(&self) -> bool {
         self.parsed()
             .is_some_and(|p| p.date.extended && p.time.is_none_or(|t| t.extended))
     }
 
-    /// `Iso8601_date_time.is_decimal_sign_comma`: true when the fractional second
-    /// is written with `','` rather than `'.'`. False when there is no
-    /// fractional part or the value does not parse.
+    /// `Iso8601_date_time.is_decimal_sign_comma`: the fraction uses `','`.
     #[must_use]
     pub fn is_decimal_sign_comma(&self) -> bool {
         self.parsed()
             .is_some_and(|p| p.time.is_some_and(|t| t.decimal_sign_comma))
     }
 
-    /// `Iso8601_date_time.has_fractional_second`: true when the
-    /// fractional-second part is significant, i.e. the value writes one — "even
-    /// if = 0.0". False when the value does not parse.
+    /// `Iso8601_date_time.has_fractional_second`: the value writes one, "even if
+    /// = 0.0".
     #[must_use]
     pub fn has_fractional_second(&self) -> bool {
         self.parsed()
             .is_some_and(|p| p.time.is_some_and(|t| t.fractional_second.is_some()))
     }
 
-    /// The digits of the fractional second as written (`123456` of
-    /// `2021-03-04T10:00:00.123456Z`), `None` when the value writes none or does
-    /// not parse.
-    ///
-    /// [`Self::fractional_second`] is the same part as a `Real`, which keeps
-    /// neither trailing zeros nor digits past its precision.
+    /// The fractional-second digits as written (`123456`), `None` without one.
     #[must_use]
     pub fn fraction_digits(&self) -> Option<&str> {
         self.parsed()?.time?.fractional_second?;
@@ -209,25 +163,18 @@ impl Iso8601DateTime {
         fraction_digits(time)
     }
 
-    /// `Iso8601_date_time.as_string`: "Return the string value in extended
-    /// format" — a compact value is re-spelled with `'-'`/`':'` separators (its
-    /// fractional precision, decimal sign and partial precision all preserved),
-    /// an already-extended one is returned unchanged.
-    ///
-    /// NOTE: as for `Iso8601_date.as_string`, a value that is not a valid
-    /// ISO 8601 date/time is returned verbatim — our own design/extension.
+    /// `Iso8601_date_time.as_string`: the value in extended format, precision
+    /// kept; an unparseable value is returned verbatim, our own design.
     #[must_use]
     pub fn as_string(&self) -> String {
         as_extended_date_time(&self.value).unwrap_or_else(|| self.value.clone())
     }
 
-    /// `Iso8601_date_time.add` (alias `'+'`): DEFINITE addition of a duration —
-    /// `a_diff` is reduced to an exact number of seconds with the
-    /// `Time_definitions` average year/month lengths
-    /// (`master06` §Computational Functions) and added to the local reading.
+    /// `Iso8601_date_time.add` (`'+'`): definite addition, the duration reduced
+    /// to seconds with the `Time_definitions` averages.
     ///
-    /// `None` when either value does not parse, when this date/time is partial,
-    /// or when the result leaves the representable `0000`–`9999` year range.
+    /// `None` when either value does not parse, this value is partial, or the
+    /// year leaves `0000`–`9999`.
     #[must_use]
     pub fn add(&self, a_diff: &Iso8601Duration) -> Option<Self> {
         self.shifted(a_diff.parsed()?.to_definite_shift(false)?)
@@ -242,14 +189,11 @@ impl Iso8601DateTime {
         self.shifted(a_diff.parsed()?.to_definite_shift(true)?)
     }
 
-    /// `Iso8601_date_time.diff` (alias `'-'`): the difference
-    /// `self - a_date_time` as an `Iso8601_duration` — negative (the openEHR
-    /// negative-duration deviation) when `a_date_time` is the later instant. Two
-    /// zoned values are compared on the UTC axis; a zoned and an unzoned value
-    /// are not comparable at all (`None`), matching this module's ordering rule.
+    /// `Iso8601_date_time.diff` (`'-'`): `self - a_date_time`, negative when the
+    /// other is later; zoned values compare on UTC.
     ///
     /// `None` when either value does not parse or is partial, when exactly one
-    /// side is zoned, or on arithmetic overflow.
+    /// side is zoned, or on overflow.
     #[must_use]
     pub fn diff(&self, a_date_time: &Self) -> Option<Iso8601Duration> {
         let (a, b) = (self.parsed()?, a_date_time.parsed()?);
@@ -262,14 +206,12 @@ impl Iso8601DateTime {
         })
     }
 
-    /// `Iso8601_date_time.add_nominal` (alias `'++'`): NOMINAL addition — years
-    /// and months advance the calendar to the same day-of-month at the same time
-    /// of day, clamped down when the target month is shorter (the rules of
-    /// `Iso8601_date.add_nominal`), and the remaining components (weeks, days,
-    /// hours, minutes, seconds) apply as an exact shift.
+    /// `Iso8601_date_time.add_nominal` (`'++'`): years and months advance to the
+    /// same day and time, clamped as `Iso8601_date.add_nominal`; the rest applies
+    /// exactly.
     ///
-    /// `None` when either value does not parse, when this date/time is partial,
-    /// or when the result leaves the representable `0000`–`9999` year range.
+    /// `None` when either value does not parse, this value is partial, or the
+    /// year leaves `0000`–`9999`.
     #[must_use]
     pub fn add_nominal(&self, a_diff: &Iso8601Duration) -> Option<Self> {
         self.nominal_shift(a_diff, false)
@@ -292,9 +234,7 @@ impl Iso8601DateTime {
         render_absolute(total, p.time.and_then(|t| t.timezone)).map(|value| Self { value })
     }
 
-    /// Shared body of the nominal `add_nominal`/`subtract_nominal`: the
-    /// year/month part shifts the calendar with day-clamping, then the
-    /// sub-month remainder applies as an exact shift of the local instant.
+    /// The nominal shift: year and month with clamping, then the rest exactly.
     fn nominal_shift(&self, a_diff: &Iso8601Duration, subtract: bool) -> Option<Self> {
         let (months, remainder) = a_diff.parsed()?.to_nominal_parts(subtract)?;
         let p = self.parsed()?;
@@ -305,9 +245,7 @@ impl Iso8601DateTime {
     }
 }
 
-/// A complete date/time's local instant on the absolute-seconds axis (days since
-/// 1970-01-01 × 86400 + time of day), or `None` when any component the
-/// arithmetic needs is missing.
+/// A complete value's local instant in seconds since 1970-01-01, or `None`.
 fn local_seconds(dt: &ParsedDateTime) -> Option<ExactSeconds> {
     let time = dt.time?;
     local_seconds_at(dt.date.year, dt.date.month?, dt.date.day?, &time)
@@ -332,9 +270,8 @@ fn utc_seconds(dt: &ParsedDateTime) -> Option<ExactSeconds> {
     local_seconds(dt)?.checked_sub(ExactSeconds::new(offset, 0.0)?)
 }
 
-/// Render an absolute-seconds instant as an extended-form date/time value with
-/// `timezone` carried through. `None` when the instant falls outside the
-/// representable year range.
+/// Renders an instant in extended form with `timezone`, or `None` outside the
+/// year range.
 fn render_absolute(instant: ExactSeconds, timezone: Option<i32>) -> Option<String> {
     let instant = instant.rounded_to_nanos()?;
     let (year, month, day) = civil_from_days(instant.whole.div_euclid(EXACT_SECONDS_IN_DAY))?;
@@ -352,9 +289,8 @@ fn is_zoned(dt: &ParsedDateTime) -> bool {
     dt.time.and_then(|t| t.timezone).is_some()
 }
 
-/// Range-semantics comparison of two parsed date/times. `None` unless both are
-/// zoned or both unzoned. Never returns `Some(Equal)` — equal strings are
-/// handled before parsing.
+/// Range-semantics comparison of two parsed date/times, `None` unless both
+/// or neither are zoned; never `Some(Equal)`.
 fn cmp_date_time(a: &ParsedDateTime, b: &ParsedDateTime) -> Option<Ordering> {
     if is_zoned(a) != is_zoned(b) {
         return None;
@@ -793,9 +729,7 @@ mod tests {
 
     // ── invariants ───────────────────────────────────────────────────────────
 
-    /// Every invalid value names the `iso8601_date_time.adoc` §Invariants entry
-    /// it breaks, on this class rather than on the date/time class the rule is
-    /// shared with.
+    /// Every invalid value names the invariant it breaks, on this class.
     #[test]
     fn invalid_date_times_name_the_invariant_they_break() {
         for (bad, invariant) in [
@@ -818,9 +752,7 @@ mod tests {
         }
     }
 
-    /// The partials `master06` §Primitive Time Types permits — "missing hours,
-    /// days and months" — validate clean, which is exactly what the refused
-    /// `Partial_validity_day`/`_hour` clauses would have rejected.
+    /// The partials `master06` permits validate clean.
     #[test]
     fn valid_date_times_including_every_partial_form_report_nothing() {
         for good in [

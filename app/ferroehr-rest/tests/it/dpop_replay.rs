@@ -5,11 +5,6 @@
 //! replica accepted is refused as a replay on another, every write is one
 //! atomic decision, a record past its window is replaced and swept, and a
 //! store that cannot answer admits nothing (RFC 9449 §11.1).
-//!
-//! Each "replica" is a service over a pool of its own to the one test
-//! database, as two FerroEHR processes reach one PostgreSQL. The proofs are
-//! real: an ES256 key signs each, and the `ferrohealth-smart` proof check reads
-//! it, so the store is asked exactly what the server asks it.
 
 #![allow(
     clippy::unwrap_used,

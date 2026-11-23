@@ -4,11 +4,6 @@
 //! The version-commit envelope (ITS-REST `UpdateVersion.yaml`,
 //! `UpdateAudit.yaml`).
 //!
-//! A call that creates or updates a versioned top-level object implicitly
-//! creates a `CONTRIBUTION`, one or more `ORIGINAL_VERSION`s and, on creation,
-//! a `VERSIONED_OBJECT`; `UPDATE_VERSION<T>` is the structure through which the
-//! caller supplies the meta-data the service does not generate.
-//!
 //! The envelope types are the generated ITS-REST contract,
 //! [`openehr_its::rest::generated::common`]'s `UpdateVersion<T>`,
 //! `UpdateAudit`, `UpdateAuditData` and `UpdateAttestation`, consumed directly.
@@ -73,9 +68,6 @@ fn openehr_coded(rubric: String, code: &str) -> DvCodedText {
 /// The `UPDATE_VERSION.lifecycle_state` value for a `version_lifecycle_state`
 /// group code, with the bundle's rubric (RM common master06 §Version
 /// Lifecycle).
-///
-/// The one place this server builds the member, so no write path spells a
-/// rubric as a literal.
 #[must_use]
 pub fn lifecycle_state_coded(code: &str) -> DvCodedText {
     openehr_coded(lifecycle::lifecycle_rubric(code), code)

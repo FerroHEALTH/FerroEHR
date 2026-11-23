@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Query execution requests and outcomes.
-//!
-//! The ad-hoc and stored execute requests plus the execute-call parameters.
 
 #![expect(
     clippy::disallowed_types,

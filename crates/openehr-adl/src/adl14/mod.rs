@@ -1,61 +1,20 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! ADL 1.4 → ADL 2 conversion (the `adl14` 1.4→2 upgrade pipeline).
+//! ADL 1.4 → ADL 2 conversion.
 //!
-//! NOTE: **no openEHR spec governs the 1.4 → 2 conversion ALGORITHM — the
-//! entire `adl14` module is our own design/extension.**
+//! NOTE: no openEHR spec governs the conversion algorithm: our own design,
+//! pinned by the `tests/corpus/adl2-reference/upgrade/upgrade_from_14/**`
+//! fixtures. The released text requires the conversion
+//! (`ADL2/master01-preface.adoc` §Backward Compatibility), at-code to id-code
+//! node ids (`master07.04` §Node Identifier Codes) and `v1.0.0` versions
+//! (`master07.05`); the meta-data half follows
+//! `ADL1.4/masterAppB-extended_metadata.adoc` and `AOM2/master01-preface.adoc`.
 //!
-//! The released text establishes only that the conversion must exist and names
-//! two of its outcomes: `ADL2/master01-preface.adoc` §ADL 2.0 → §Backward
-//! Compatibility ("require conversion of ADL 1.4 archetypes to ADL 2 form …
-//! the changes have been carefully designed to allow this conversion to be
-//! implementable"), `ADL2/master07.04-adl_basics.adoc` §Node Identifier Codes
-//! ("In ADL 1.4 at-codes were used as node identifiers. For id-coded ADL2
-//! archetypes, these are converted to id-codes by ADL 1.4 to ADL 2
-//! converters"), and `ADL2/master07.05-adl_identification.adoc` §Human Readable
-//! Archetype Identifier (convert a single-number 1.4 version part to `v1.0.0`
-//! or another Knowledge-Identification-conformant identifier). The meta-data
-//! half is governed too: the standardised items of
-//! `ADL1.4/masterAppB-extended_metadata.adoc` and the translator, copyright and
-//! conversion-record rules of `AOM2/master01-preface.adoc` §Release 2.3 changes
-//! (both in `metadata`). Every other rule below is ours, pinned by the paired
-//! `tests/corpus/adl2-reference/upgrade/upgrade_from_14/**` fixtures (each 1.4
-//! `.adl` source paired with its expected ADL2 `.adls`) — which are therefore
-//! the converter's only oracle.
-//!
-//! Pipeline:
-//! 0. **cADL front end** ([`lower`] + [`domain`]) — the ADL 1.4-only cADL
-//!    productions the `Dialect::Adl14` parse dispatches into: the
-//!    qualified/listed terminology constraints, the pipe-ordinal shorthand,
-//!    and the inline dADL `C_DV_QUANTITY`/`C_DV_ORDINAL`/`C_CODE_PHRASE`
-//!    domain blocks. They are the WRITE side of the converter-internal
-//!    encoding that step 2 reads back (`term_constraint`, which
-//!    [`crate::opt::create_opt`] also runs over an unconverted 1.4 constituent).
-//! 1. **Front end** — [`crate::assemble::parse_artefact`] in
-//!    [`crate::parse::Dialect::Adl14`] parses a 1.4 `.adl` into a 1.4-SHAPED
-//!    `openehr_am::v2_4` [`Archetype`](openehr_am::v2_4::aom2::archetype::archetype::Archetype):
-//!    at-code node ids, terminology constraints preserved verbatim in the
-//!    `C_TERMINOLOGY_CODE.constraint` string, inline dADL domain blocks lowered
-//!    to their `DV_*` types with an attribute tuple. The converter core takes
-//!    the assembled `Archetype`, not raw text, so a 1.4 operational template
-//!    converts through it too: [`opt`] decomposes the flattened OPT into one
-//!    source `Archetype` per embedded root.
-//! 2. **Converter core** ([`convert`]) — node-id renumbering (the `+1`
-//!    first-segment shift, separate id-/at-code spaces, `0.`-prefixed
-//!    new-at-level codes kept, missing ids synthesised in document order),
-//!    terminology-constraint conversion (local single → at-code, local list →
-//!    synthesised `ac` value set, external code(s) → synthesised at-code(s) +
-//!    term-binding URIs) and the terminology rebuild. Its three
-//!    converter-state-free stages are siblings: `walk` (the read-only
-//!    definition traversals the code planning consumes), `multiplicity` (the
-//!    1.4 default occurrences materialisation + RM-default elision) and
-//!    `metadata` (the description / meta-data / version transform).
-//! 3. **Differ** ([`differ`]) — for a specialised 1.4 source, re-differentialise
-//!    the converted child against its converted+flattened parent (strip
-//!    inherited-unchanged nodes).
-//! 4. **Conversion log** ([`log`]) — records every synthesised code/value set so
-//!    a re-conversion consulting the same log yields identical codes.
+//! Pipeline: the 1.4 cADL front end ([`lower`], [`domain`]); the 1.4-shaped
+//! parse ([`crate::assemble::parse_artefact`], with [`opt`] decomposing an OPT
+//! per root); the converter core ([`convert`]); the [`differ`] for a specialised
+//! source; and the conversion [`log`].
 
 pub(crate) mod authored_flat;
 mod code_shift;

@@ -3,13 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Run one codec micro-path once, for an instruction count under callgrind.
-//!
-//! Usage: `codec_instructions <path> <composition.json>`, where `<path>` is
-//! one of `json_to_rm`, `rm_to_json`, `xml_to_rm` and `rm_to_xml`. The input
-//! is read and every other representation the path needs is built before the
-//! path runs, inside [`measured`] alone, so `valgrind --tool=callgrind
-//! --toggle-collect='*measured*'` counts that path and nothing else
-//! (`scripts/perf/instructions.sh`, #6007).
 
 use std::error::Error;
 
