@@ -20,13 +20,6 @@
 //! End-to-end journeys over the stored-query lifecycle: the reverse lift of
 //! a stored definition back into Build, and the parameterised server-side run
 //! of a stored query through the three openEHR version-resolution forms.
-//!
-//! Both journeys save their own stored query on Query's AQL tab and delete it
-//! again at the end, so they touch nothing another journey (or the
-//! documentation-screenshot pass) depends on. Deleting a stored query needs
-//! the CDR's ADMIN role, so they sign in as the quickstart admin user
-//! (`UI_E2E_ADMIN_USER`/`UI_E2E_ADMIN_PASS`, defaulting to
-//! `ferroehr-admin`/`ferroehr` from `docker/ferroehr.dev.toml`).
 
 use crate::common;
 

@@ -21,10 +21,6 @@
 //! readiness probe, the build facts on Overview, the metric registry on
 //! Metrics, and the live log filter on Logging (apply, assert effective,
 //! reset).
-//!
-//! The tabs need the CDR's management surface, which the composed stack's
-//! `docker/ferroehr.dev.toml` enables. The page a CDR without it draws is
-//! covered in process (`ssr_app`).
 
 use crate::common;
 

@@ -26,13 +26,6 @@
 //! /ehr/{ehr_id}/ehr_status` with `If-Match`) and the `VERSIONED_EHR_STATUS`
 //! history it produces:
 //!
-//! - the edit round trip: unticking `is_queryable` on Edit status commits a new
-//!   version, the toast says so, the badge goes, and version 2 reads by its
-//!   number;
-//! - the mid-air collision: another client commits a version while the editor
-//!   still holds version 1 as its `If-Match`; the save is refused with the
-//!   CDR's `412`, nothing is overwritten, and version 1 still reads.
-//!
 //! Isolation: each journey creates its OWN EHR over ITS-REST, so neither touches
 //! the seeded fixtures the other journeys and the documentation-screenshot pass
 //! depend on.

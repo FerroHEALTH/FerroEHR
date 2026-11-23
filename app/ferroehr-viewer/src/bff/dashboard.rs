@@ -8,11 +8,6 @@
 //! The wire it reads IS spec-bound: every count and the trend run against
 //! `POST query/aql` (`docs/specs/openehr/ITS-REST/docs/query/`) with fixed,
 //! parse-validated AQL consts — user input never reaches the query text.
-//!
-//! Every read guards with
-//! [`require_session`](crate::session::require_session) first, and the CDR
-//! credential never reaches the page. Each tile draws its own `Result`, so
-//! one failing section never blanks the dashboard.
 
 #![expect(
     clippy::disallowed_types,
@@ -35,9 +30,8 @@ const TREND_FETCH: u32 = 500;
 
 /// Why the CDR's answer to a `SELECT COUNT(*)` query is no count.
 ///
-/// A count answers one row holding one cell, a whole number zero or above;
-/// any other result set is a defective answer, kept as this error and never
-/// read as 0.
+/// Any answer other than one row with one whole-number cell is defective and
+/// never read as 0.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum CountShape {
     /// The result set holds no row.
@@ -115,12 +109,6 @@ pub(crate) async fn run_count_aql(
 /// The dashboard's three headline counts: total EHRs, total compositions, and
 /// the number of stored operational templates.
 ///
-/// Runs the two fixed count AQLs against `POST query/aql` and reads the
-/// template count from
-/// [`list_templates`](crate::bff::templates::list_templates). A count whose
-/// answer has another shape is its [`CountShape`], so its tile draws as
-/// unavailable.
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Internal`] on a result set that is not JSON.
@@ -154,10 +142,6 @@ pub struct NamespaceTile {
 /// ([`group_by_namespace`](crate::query_namespace::group_by_namespace)), each
 /// group's members run through
 /// [`run_stored_count`](crate::queries_api::run_stored_count) and summed.
-///
-/// One round trip for the whole tile row (and no per-tile resource created
-/// inside a `Suspend`). A member query the CDR refuses degrades only its
-/// own tile.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); CDR errors from the
@@ -230,10 +214,6 @@ pub async fn namespace_tiles() -> Result<Vec<NamespaceTile>, ViewerError> {
 
 /// The recent commit-activity trend, one [`ActivityPoint`] per calendar day
 /// ascending.
-///
-/// Pulls the most recent composition commit times (fetch `TREND_FETCH`) and
-/// buckets them per day BFF-side with the shared
-/// [`bucket_by_day`](crate::activity::bucket_by_day).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));

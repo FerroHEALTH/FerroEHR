@@ -4,16 +4,6 @@
 //! Template-free rendering of a canonical openEHR JSON document into a
 //! human-readable tree.
 //!
-//! Section headings for the structural RM nodes, label/value rows for the
-//! `ELEMENT` leaves, and honest formatting for each `DV_*` data value.
-//!
-//! It is **template-free on purpose**: the viewer never needs the operational
-//! template to show a document, so any composition — including one whose
-//! template was since removed — reads the same way. It is also a pure,
-//! deterministic function of the document text (no clock, no locale, no
-//! network), so every draw of the pane is the same, and a READ-ONLY
-//! projection: nothing is stored, nothing is sent anywhere.
-//!
 //! Every hard-coded attribute name below is the RM attribute of the same name.
 //! The attribute tables are cited at their definitions; the vendored class
 //! tables are `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.*.adoc`,
@@ -75,8 +65,6 @@ pub struct RenderedRow {
 /// Render `body` as a clinical document, or `None` when it is not a JSON
 /// object carrying a `_type` (an XML body, a FLAT body, an AQL string, a
 /// non-RM JSON payload).
-///
-/// The pane hides the rendered mode in that case.
 ///
 /// The walk below recurses with the document; it cannot recurse unboundedly
 /// because `serde_json` refuses to parse beyond its own nesting limit (128
@@ -260,11 +248,6 @@ fn section(value: &Value, label: Option<&str>, key: String) -> RenderedSection {
 }
 
 /// Walks the attributes one RM object contributes to its section.
-///
-/// A type the display tables cover walks its declared header and container
-/// attributes, in that order. A type with no table (a CONTRIBUTION, a VERSION,
-/// a demographic PARTY, an extension payload) walks what the document actually
-/// carries, minus the folded meta.
 fn push_section_children(out: &mut Vec<RenderedNode>, value: &Value, rm_type: &str, key: &str) {
     let headers = header_attributes(rm_type);
     let containers = child_attributes(rm_type);

@@ -14,10 +14,6 @@
 //! (`docs/specs/openehr/RM/docs/data_types/master06-quantity_package.adoc`
 //! §Date/Time types), which is what [`iso_epoch_seconds`] reads to place a
 //! point on a real time axis.
-//!
-//! Everything here is a pure, deterministic function of the fetched rows — no
-//! clock, no locale, no randomness, no I/O, so every draw of the chart
-//! derives byte-identical series, axes, and tick labels.
 
 #![expect(
     clippy::disallowed_types,
@@ -50,9 +46,8 @@ pub struct SeriesSpec {
 /// One plotted row: the X position every series shares, plus one Y value per
 /// series in [`ChartModel::series`] order.
 ///
-/// `f64::NAN` marks a cell that was absent, null, or not a number —
-/// FerroUI's chart draws those as a gap in the line rather than a point at
-/// zero (see `crate::components::results_chart`).
+/// `f64::NAN` marks an absent, null or non-numeric cell, which the chart draws
+/// as a gap.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChartRow {
     /// The X position: a row ordinal, or seconds since the Unix epoch.
@@ -120,9 +115,7 @@ impl ChartModel {
 /// nothing in it is worth drawing (no column carries two or more numbers).
 ///
 /// A column becomes a series when at least half of its non-null cells are
-/// finite numbers and at least `MIN_POINTS` of them are — the rule the
-/// single-column predecessor used, now applied to EVERY column instead of
-/// stopping at the first match.
+/// finite numbers and at least `MIN_POINTS` of them are.
 #[must_use]
 pub fn derive(columns: &[String], rows: &[Vec<Value>]) -> Option<ChartModel> {
     let series = numeric_columns(columns, rows);
@@ -315,10 +308,6 @@ fn any_series_plottable(series_count: usize, points: &[ChartRow]) -> bool {
     })
 }
 
-// ---------------------------------------------------------------------------
-// ISO 8601 <-> epoch seconds (jiff — the workspace's ISO 8601 crate; only
-// pure parsing/formatting is used, so no clock and no tzdb)
-// ---------------------------------------------------------------------------
 
 /// Seconds since the Unix epoch for an ISO 8601 date or date/time, or `None`
 /// for anything else (a number, a partial date, junk).
@@ -362,12 +351,6 @@ pub fn iso_epoch_seconds(text: &str) -> Option<f64> {
 }
 
 /// Label one tick of a time axis whose visible span is `span_seconds` wide.
-///
-/// The span picks the granularity, so a single day of readings reads as clock
-/// times, a few months as `MM-DD hh:mm`, and a multi-year series as dates — a
-/// label never repeats what the axis already makes obvious. A tick that is not
-/// a finite instant (or is outside jiff's representable range, ±9999 years)
-/// renders as `-`.
 #[must_use]
 pub fn time_tick_label(seconds: f64, span_seconds: f64) -> String {
     if !seconds.is_finite() || seconds.abs() > 1e12 {
@@ -427,10 +410,8 @@ mod tests {
         AxisScale, ChartRow, derive, iso_epoch_seconds, time_point_label, time_tick_label,
     };
 
-    /// Every mostly-numeric column becomes its own series, named by the result
-    /// set's own header — the multi-series re-specification of the former
-    /// "chart the FIRST mostly-numeric column" rule, with that rule's cell
-    /// cases (numeric text, nulls, a text column) intact.
+    /// Every mostly-numeric column becomes its own series, named by its header,
+    /// with numeric text, nulls and a text column read as before.
     #[test]
     fn derives_one_series_per_mostly_numeric_column() {
         let columns = vec![

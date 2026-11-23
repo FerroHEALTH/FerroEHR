@@ -3,20 +3,6 @@
 
 //! The viewer's axum service: the router assembly, the page handler and the
 //! session guard.
-//!
-//! Every page is a handler that draws one complete document
-//! (`page`): it reads the request, the form a post carries and the CDR,
-//! and answers with the page or with a redirect. FerroUI's stylesheet, the
-//! FerroEHR theme and FerroUI's script modules are served by the library's
-//! own asset router at `ferrohealth_ui::serve::PREFIX`. The family's console
-//! headers and same-origin check (`ferrohealth_server::console`,
-//! `ferrohealth_server::same_origin`) wrap the routes, the policy is the
-//! server-rendered console's (`ConsoleHeaders::server_rendered`), and the
-//! family stack wraps them with its health routes.
-//!
-//! Lives in the lib rather than the binary so the integration tests drive the
-//! REAL request path (guard, session, page) with `tower::ServiceExt::oneshot`,
-//! the same way `app/ferroehr-server` keeps a testable lib run path.
 
 use std::sync::Arc;
 
@@ -35,23 +21,12 @@ use crate::state::AppState;
 
 /// The viewer as it serves: [`router`] and the health routes inside the
 /// family stack (`ferrohealth_server::stack::app`).
-///
-/// The stack applies the request timeout, the body limit and the overload
-/// bound of `[server]`, and writes the request log and the admission metrics
-/// of `policy` ([`crate::telemetry::stack_policy`]).
 pub fn app(app_state: AppState, health: Health, policy: StackPolicy) -> axum::Router {
     let section = app_state.config.server.clone();
     stack::app(router(app_state), health, &section, policy)
 }
 
 /// Assembles the viewer's own routes.
-///
-/// FerroUI's assets, `ferrohealth-session`'s sign-in, sign-out and
-/// session-watch routes, the export post, the preference, sidebar and paging
-/// posts, the downloads, the icons, the search panel's answer route, every
-/// page (`page`, for `GET` and its own form posts), and the layer stack
-/// (state → `ferrohealth-session`'s middleware, which hands the request its
-/// [`Held`] → session guard → same-origin check → console headers).
 pub fn router(app_state: AppState) -> axum::Router {
     let origin = same_origin_check(&app_state);
     let sign_in = app_state.sign_in.clone();
@@ -150,10 +125,6 @@ fn form_action(state: &AppState) -> String {
 /// The same-origin check of the viewer's unsafe requests: `Sec-Fetch-Site`
 /// decides, and without it `Origin` or `Referer` must name the public URL
 /// `auth.public_base_url` gives, when one is set.
-///
-/// A public URL that does not parse was refused when the configuration was
-/// read; one built by hand that does not is logged and left out, so only
-/// `Sec-Fetch-Site` passes.
 fn same_origin_check(state: &AppState) -> SameOrigin {
     let public = state.config.auth.public_base_url.as_str();
     if public.is_empty() {
@@ -198,10 +169,6 @@ async fn form_of(
 
 /// Draws the page the request names: a `GET` reads it, and a `POST` draws
 /// it with the form posted to it in reach ([`crate::posted::posted`]).
-///
-/// The page answers with a redirect when its work succeeded, or with itself,
-/// the fields as posted and the refusal beside them, when it did not.
-/// [`login_guard`] answers a post without a session before it gets here.
 async fn page(
     Extension(state): Extension<AppState>,
     request: axum::extract::Request,
@@ -383,17 +350,9 @@ fn icon(content_type: &'static str, bytes: &'static [u8]) -> axum::response::Res
 
 /// The session guard, ahead of every page.
 ///
-/// Every request for a guarded path without a live session goes to the
-/// sign-in page. A document request (`GET`/`HEAD`) is returned to the page it
-/// asked for after signing in, and is told the session ended when its cookie
-/// names no live session. Any other method is answered as a page whose
-/// session ended ([`crate::session_client::signed_out_url`]), returning to the
-/// page posted to or, for a post handler, to the dashboard, so no handler
-/// runs a post without a session. An authenticated request carries its
-/// `ferrohealth_session::record::Session` as an extension, which a route
-/// handler takes as `Extension<Session>`. The [`Held`] the request carries is
-/// put there by `ferrohealth_session::routes::keep_session`, which also moves
-/// the idle lifetime.
+/// A request without a live session goes to the sign-in page. A `GET` or `HEAD`
+/// returns to the page it asked for after signing in; any other method is
+/// answered as an ended session, so no handler runs a post without one.
 pub async fn login_guard(
     mut request: axum::extract::Request,
     next: axum::middleware::Next,

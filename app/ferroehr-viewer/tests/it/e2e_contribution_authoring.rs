@@ -23,13 +23,6 @@
 //! End-to-end journeys over New contribution (`POST
 //! /ehr/{ehr_id}/contribution`), the openEHR atomic change set:
 //!
-//! - the atomic commit: stage a COMPOSITION creation and an `EHR_STATUS`
-//!   modification, set the description, commit once, and find one new
-//!   CONTRIBUTION carrying two versions;
-//! - the refused change set: one change the CDR cannot accept refuses the
-//!   whole commit, with its diagnostic on screen, the staging intact and the
-//!   EHR's contribution count unchanged.
-//!
 //! Isolation: each journey creates its OWN EHR over ITS-REST, so neither
 //! touches the seeded fixtures the other journeys and the
 //! documentation-screenshot pass depend on.

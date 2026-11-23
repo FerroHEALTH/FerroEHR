@@ -3,14 +3,6 @@
 
 //! The query surfaces' shared server API: ad-hoc AQL execution, BFF-local
 //! validation, and stored-query CRUD over the ITS-REST Definition/Query APIs.
-//!
-//! One call is an extension rather than a released operation: the unfiltered
-//! stored-query listing ([`list_stored_queries`]), which flags itself.
-//!
-//! The viewer persists nothing of its own here (nor anywhere): a stored
-//! query's grouping is derived from the namespace in its qualified name
-//! (`crate::query_namespace`), so it lives in the CDR and reads identically
-//! for every API client.
 
 #![expect(
     clippy::disallowed_types,
@@ -172,15 +164,6 @@ pub async fn fetch_stored_query(
 /// - `version` absent → `PUT definition/query/{name}`: the server owns the
 ///   version, and a query already stored at it is REPLACED.
 ///
-/// `name` is the qualified query name — `[{namespace}::]{query-name}`, the
-/// namespace optional (same file). The save screens compose it from their
-/// namespace + name fields with [`qualify`](crate::query_namespace::qualify).
-/// Name and version are separate path segments, each percent-encoded via
-/// `urlencoding`. The AQL is validated BFF-locally first, and an explicit
-/// version must be a concrete `major.minor.patch`
-/// ([`is_full_semver`](crate::query_namespace::is_full_semver)) — a partial
-/// pattern is the READ form, not something to file a definition under.
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] for a bad name, a non-triple version, or
@@ -231,22 +214,11 @@ pub async fn store_query(
 /// Execute a STORED query with parameter bindings and return one page of its
 /// `RESULT_SET`.
 ///
-/// The two ITS-REST stored-query execution operations are addressed by whether a
-/// `version` is supplied — which is the spec's version-resolution contract, not a
-/// viewer convention. `version` is the path segment to send, EMPTY meaning "send
-/// none" (a plain `String`, as the posted form carries it):
-///
-/// - `version` empty → `POST query/{qualified_query_name}` — "when `version` is
-///   not supplied at all, the system must use the latest `version`".
-/// - `version` non-empty → `POST query/{qualified_query_name}/{version}`, where
-///   the segment is either a complete `major.minor.patch` or a partial
-///   `{major}` / `{major}.{minor}` pattern: "When only a partial `version`
-///   pattern is supplied … the latest query version matching supplied prefix
-///   will be used."
-///
-/// (Both quotes: ITS-REST `specifications/docs/query/Qualified_query_name.md`
-/// §Qualified query name. The viewer composes the segment with
-/// [`resolve_version`](crate::query_namespace::resolve_version).)
+/// An empty `version` sends `POST query/{qualified_query_name}`, which runs the
+/// latest version; a full or partial (`{major}`, `{major}.{minor}`) one is sent
+/// as the path segment (ITS-REST
+/// `specifications/docs/query/Qualified_query_name.md` §Qualified query name),
+/// composed with [`resolve_version`](crate::query_namespace::resolve_version).
 ///
 /// `parameters_json` is the `query_parameters` object — the request body carries
 /// the bindings rather than the URL: "we recommend clients using the `POST`
@@ -255,12 +227,8 @@ pub async fn store_query(
 /// per that document's §Common Headers and Query Parameters, and the viewer
 /// derives them with [`placeholders`](crate::aql_text::placeholders).
 ///
-/// `paged` says whether the REQUEST owns the row window: `true` sends
-/// `fetch`/`offset`, `false` sends neither because the stored definition carries
-/// its own AQL `LIMIT`/`TOP` and the two windows cannot be combined (`fetch`
-/// "cannot be combined with AQL-top", same section). The caller reads that from
-/// the definition it already loaded
-/// ([`carries_own_window`](crate::aql_text::carries_own_window)).
+/// `paged` false sends no `fetch`/`offset`, for a stored definition that
+/// carries its own AQL window.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -277,7 +245,7 @@ pub async fn run_stored_query(
     parameters_json: String,
     // First row of the page to return.
     offset: u32,
-    // Whether the request owns the row window (see above).
+    // Whether the request owns the row window.
     paged: bool,
 ) -> Result<ResultPage, ViewerError> {
     let cdr = crate::bff::cdr()?;
