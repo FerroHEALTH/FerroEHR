@@ -5,22 +5,6 @@
 //! The per-language lexical surface battery: the pinned oracle for
 //! [`openehr_lang::v1_1::lexer`].
 //!
-//! One shared `logos` DFA serves ADL2/cADL, ODIN and BEL, and each language's
-//! reading is produced by a reclassification pass over it. This battery pins
-//! all three readings token-for-token, span-for-span and payload-for-payload
-//! against `tests/fixtures/lexer_equivalence_{adl,odin,bel}.txt`, which were
-//! **captured from the three separate hand-written lexers** the shared layer
-//! replaced — so the fixtures are an external oracle, not a snapshot of the
-//! current implementation.
-//!
-//! The inputs (`tests/fixtures/lexer_battery.txt`) cover every token class of
-//! the union plus every point at which the three readings are known to
-//! diverge: keyword reservation and case folding, the ADL-only code / HRID /
-//! version / GUID / constraint-pattern classes, the ODIN-only local term code
-//! and space-separated date-time, the three `ADL_PATH` shapes, BEL's narrower
-//! `INTEGER`/`ISO8601_*` forms and its `in`/`<>` additions, the BOM, string
-//! and character escapes, and the lexical-error positions.
-//!
 //! Editing a fixture line therefore changes an accepted (or refused) lexical
 //! surface and needs an adjudicated, spec-cited reason — never a
 //! "the output moved" update.

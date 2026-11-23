@@ -4,28 +4,6 @@
 
 //! Public-API battery for the `openehr_lang::v1_1::odin` reader over the 38 vendored
 //! BMM schema fixtures under `tests/vendor/bmm/`.
-//!
-//! Every `.bmm` file is an ODIN document (the BMM persistence serialization),
-//! mirrored from archie (`e8d92f28`, `bmm/src/test/resources/`). archie's own
-//! tests establish the outcome oracle:
-//!
-//! - `BmmOdinParserTest` parses `testbmm/TestBmm1.bmm` via `BmmOdinParser` (the
-//!   ODIN parse + P_BMM object mapping).
-//! - `BasicSchemaValidationsTest` / `ClassesValidatorTest` / `IncludesValidatorTest`
-//!   / `PropertyValidatorTest` / `CreatedSchemaValidationTest` all first
-//!   `BmmOdinParser.convert(...)` the `org/openehr/bmm/v2/persistence/validation/*.bmm`
-//!   fixtures **successfully** and then assert BMM *semantic* validation errors
-//!   (duplicate class, missing ancestor, unresolved include, …). Those defects
-//!   are **above the ODIN layer**: the ODIN parse succeeds; only the BMM
-//!   semantic layer rejects them.
-//!
-//! Accordingly every fixture here must parse as ODIN and yield a schema object.
-//! Where a fixture's BMM-semantic verdict is worth pinning beside its ODIN
-//! reading, the test states it in this crate's own terms — a typed
-//! [`PBmmReadError`] refusal, or a collecting-pass
-//! [`openehr_lang::v1_1::bmm_persistence::validate::PBmmValidityFinding`]; archie's
-//! `EC_*` codes are named only as the fixtures' provenance, never as an
-//! expectation. `vendor_bmm_schema.rs` carries the full outcome tables.
 
 #![allow(
     clippy::unwrap_used,
@@ -201,11 +179,8 @@ fn cimi_top_level_rm_schema() {
 
 #[test]
 fn duplicate_class_parses_at_odin_layer_and_is_reported_by_the_validity_pass() {
-    // Fixture provenance: archie BasicSchemaValidationsTest.duplicateClass
-    // (its own code is EC_DUPLICATE_CLASS_IN_PACKAGES). Our expectation comes
-    // from the spec, not that code: master05-core-model.adoc §Packages — "A
-    // model validity checker ensures that every class is contained within
-    // exactly one package".
+    // The spec gives the expectation: every class sits in exactly one package
+    // (master05-core-model.adoc §Packages).
     let rel = "bmm/org/openehr/bmm/v2/persistence/validation/duplicate_class.bmm";
     let v = parse_ok(rel);
     assert_eq!(as_str(field(&v, "schema_name")), "duplicate_class");
@@ -228,12 +203,8 @@ fn duplicate_class_parses_at_odin_layer_and_is_reported_by_the_validity_pass() {
 
 #[test]
 fn include_not_found_parses_at_odin_layer_and_is_refused_by_inclusion_resolution() {
-    // Fixture provenance: archie IncludesValidatorTest.includeNotFound (its
-    // own code is EC_INCLUDE_NOT_FOUND). Our expectation is the existing typed
-    // refusal, not a validity finding: `P_BMM_SCHEMA.merge` has precondition
-    // `includes_to_process.has (included_schema.schema_id)`
-    // (…p_bmm_schema.adoc §Functions), so an unlocatable include leaves
-    // nothing to construct and inclusion resolution refuses fail-fast.
+    // An unlocatable include is a typed refusal: `P_BMM_SCHEMA.merge` requires
+    // the include to be present (…p_bmm_schema.adoc §Functions).
     let rel = "bmm/org/openehr/bmm/v2/persistence/validation/include_not_found.bmm";
     let v = parse_ok(rel);
     assert_ne!(keyed(field(&v, "includes")), []);

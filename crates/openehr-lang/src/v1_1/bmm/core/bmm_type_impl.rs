@@ -32,11 +32,6 @@
 //! one, because they are different classes
 //! (`LANG/docs/bmm3/master00-amendment_record.adoc` SPECLANG-14).
 //!
-//! The per-class functions are implemented on the individual generated structs,
-//! where the class definitions declare them, and
-//! [`BmmType`]/[`crate::v1_1::bmm::core::bmm_classifier::BmmClassifier`] are
-//! dispatchers over them.
-//!
 //! NOTE: v2's `flattened_type_list` flattens the WHOLE expression, container
 //! class included (`org.openehr.lang.bmm.bmm_classifier.adoc` §Functions,
 //! unredefined by any v2 subtype), where v3 narrows containers to the item
@@ -371,11 +366,6 @@ impl BmmType {
     /// ("`_a_desc_type_` has `_an_anc_type_` in its ancestors" is the
     /// conformance relation the substitution set realises,
     /// `org.openehr.lang.bmm.bmm_model.adoc` §Functions `type_conforms_to`).
-    ///
-    /// NOTE: the class doc's signature takes no argument because it assumes a
-    /// live model with back-references; the generated persistence-shaped types
-    /// record descendants as names only, so the model is passed in (see
-    /// [`BmmClass::all_descendants`]).
     #[must_use]
     pub fn type_substitutions(&self, model: &BmmModel) -> Vec<String> {
         match model.class_definition(&self.conformance_type_name()) {
