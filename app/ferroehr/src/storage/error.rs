@@ -672,8 +672,8 @@ pub(crate) mod tests {
             .connect_lazy_with(options)
     }
 
-    /// A resolver failure while connecting answers `503`: the acquire marks
-    /// the phase, so the driver identity no longer decides (#3749).
+    /// A resolver failure while connecting answers `503`: the acquire marks the
+    /// phase, so the driver identity does not decide (#3749).
     #[tokio::test]
     async fn a_dns_failure_at_connect_is_service_unavailable() {
         let failure = crate::db::acquire::acquire(&unresolvable_pool())
