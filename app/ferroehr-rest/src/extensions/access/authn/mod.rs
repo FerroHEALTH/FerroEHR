@@ -656,8 +656,10 @@ mod tests {
     use serde_json::{Value, json};
 
     use super::described::Described;
+    use super::run::middleware;
     use super::*;
     use crate::test_support::{self, AUDIENCE, ISSUER};
+    use axum::extract::Request;
     use ferrohealth_smart::resource::configuration::SmartOptions;
 
     fn hash(pw: &str) -> String {
