@@ -14,8 +14,8 @@
 //! [`SUBJECTS`] subjects, and teams whose censuses take at most
 //! [`CENSUS_BYTES`] together, each weighed by its patients and the record
 //! subjects they declare (`Census::bytes`). A team whose census alone is
-//! larger is read on every use and never held. The facts notification drops
-//! each subject it stamped, and brings every held team that holds one of them
+//! larger is read on every use and never held. The facts read drops each
+//! subject it finds stamped, and brings every held team that holds one of them
 //! or that one of them is now under the care of to the stamped subjects'
 //! relationships and record subjects, read with the facts of the stamped
 //! parties, so a relationship commit never sends a team's census back to the
@@ -151,7 +151,7 @@ impl Census {
     }
 }
 
-/// What the parties stamped since a facts revision hold now, as a census
+/// What the parties stamped since a snapshot hold now, as a census
 /// reads it: each stamped party's care relationships, none for a party with
 /// none, and the live record subjects of each stamped `PERSON` that
 /// declares any, in their order.
@@ -396,8 +396,8 @@ impl CareCopy {
         .await
     }
 
-    /// Bring the copy to `changed`, the facts of the parties stamped since
-    /// the facts revision it holds: drop each stamped subject's
+    /// Bring the copy to `changed`, the facts of the parties stamped by
+    /// transactions the snapshot it holds did not see: drop each stamped subject's
     /// relationships, apply the stamped subjects' relationships and record
     /// subjects to every held census they change ([`Census::applied`]), and
     /// drop every record subject that names a stamped party or that one of

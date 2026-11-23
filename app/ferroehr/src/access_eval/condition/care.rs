@@ -295,7 +295,7 @@ impl RequestAccess {
         let since = Instant::now();
         loop {
             grants.refresh().await?;
-            if grants.holds(store) {
+            if grants.holds(&store) {
                 break;
             }
             if since.elapsed() >= STALE_WAIT {

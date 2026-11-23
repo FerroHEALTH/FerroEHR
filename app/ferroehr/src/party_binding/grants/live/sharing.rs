@@ -57,37 +57,45 @@ fn live() -> LiveGrants {
     }));
     let credentials =
         json!({"items": [{"archetype_node_id": "at1", "name": name, "value": value}]});
-    live.install(Loaded {
-        revision: 1,
-        clients: vec![ClientRow {
-            party_id: party,
-            issuer: ISSUER.to_owned(),
-            client_id: CLIENT.to_owned(),
-            lifecycle_state: "532".to_owned(),
-            provider_id: None,
-            provider: None,
-        }],
-        capabilities: vec![CapabilityRow::new(
-            Uuid::from_u128(8),
-            party,
-            Operation::CommitComposition.code().to_owned(),
-            Term {
+    live.install(
+        Loaded {
+            revision: 1,
+            clients: vec![ClientRow {
+                party_id: party,
+                issuer: ISSUER.to_owned(),
+                client_id: CLIENT.to_owned(),
                 lifecycle_state: "532".to_owned(),
-                role_dates: Some(Dates {
-                    lower: None,
-                    upper: None,
-                }),
-                dates: Some(Dates {
-                    lower: None,
-                    upper: None,
-                }),
-                not_before: None,
-                not_after: None,
+                provider_id: None,
+                provider: None,
+            }],
+            capabilities: vec![CapabilityRow::new(
+                Uuid::from_u128(8),
+                party,
+                Operation::CommitComposition.code().to_owned(),
+                Term {
+                    lifecycle_state: "532".to_owned(),
+                    role_dates: Some(Dates {
+                        lower: None,
+                        upper: None,
+                    }),
+                    dates: Some(Dates {
+                        lower: None,
+                        upper: None,
+                    }),
+                    not_before: None,
+                    not_after: None,
+                },
+                Some(Arc::new(credentials)),
+            )],
+            facts: Changed {
+                snapshot: Arc::new("1:1:".parse().expect("a snapshot")),
+                parties: Vec::new(),
+                cared: Vec::new(),
+                declared: Vec::new(),
             },
-            Some(Arc::new(credentials)),
-        )],
-        facts: Changed::default(),
-    });
+        },
+        1,
+    );
     live
 }
 

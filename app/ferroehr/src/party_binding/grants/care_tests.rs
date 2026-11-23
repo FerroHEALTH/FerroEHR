@@ -15,6 +15,7 @@ use uuid::Uuid;
 
 use super::{CENSUS_BYTES, CareCopy, Census, SUBJECTS, read_census};
 use crate::db::acquire::acquire;
+use crate::db::snapshot::Snapshot;
 use crate::party_binding::grants::caller::care_of::{CareOf, ProviderKey};
 use crate::party_binding::grants::caller::store::{self, Changed};
 use crate::party_binding::grants::store::Dates;
@@ -348,7 +349,7 @@ impl Ward {
 
     /// The facts stamped after `since`, read in one snapshot as a replica
     /// reads them.
-    async fn changed(&self, since: i64) -> Changed {
+    async fn changed(&self, since: &Snapshot) -> Changed {
         let mut conn = acquire(&self.pool).await.expect("a connection");
         let mut tx = sqlx::Connection::begin(&mut *conn)
             .await
@@ -539,12 +540,15 @@ async fn a_census_after_each_delta_is_the_census_read_at_its_revision() {
     let mut since = store::load(&mut acquire(&ward.pool).await.expect("a connection"), None)
         .await
         .expect("the facts read")
-        .revision;
+        .snapshot;
     for (name, statements, parties) in steps {
         ward.commit(&statements, parties).await;
-        let changed = ward.changed(since).await;
-        assert!(changed.revision > since, "{name}: the revision moves");
-        since = changed.revision;
+        let changed = ward.changed(&since).await;
+        assert!(
+            changed.snapshot.covers(&since) && !since.covers(&changed.snapshot),
+            "{name}: the snapshot moves"
+        );
+        since = Arc::clone(&changed.snapshot);
         copy.apply(&changed).await;
         for (team, label) in [(first, "first"), (second, "second"), (third, "third")] {
             let held = copy.teams.get(&team).await.expect("the census stays held");
@@ -577,7 +581,7 @@ async fn a_relationship_commit_keeps_its_teams_census_held() {
     let since = store::load(&mut acquire(&ward.pool).await.expect("a connection"), None)
         .await
         .expect("the facts read")
-        .revision;
+        .snapshot;
     let newcomer = Uuid::now_v7();
     ward.commit(
         &[(
@@ -588,7 +592,7 @@ async fn a_relationship_commit_keeps_its_teams_census_held() {
         vec![newcomer],
     )
     .await;
-    copy.apply(&ward.changed(since).await).await;
+    copy.apply(&ward.changed(&since).await).await;
     let reads = AtomicUsize::new(0);
     let held = copy
         .hold(
