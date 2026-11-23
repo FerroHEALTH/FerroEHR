@@ -179,7 +179,7 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
             served: Arc::new(crate::api::served::ServedMethods::new(&namespaces)),
             service: state.backend_handle(),
         },
-        authn::middleware,
+        authn::run::middleware,
     ));
     // Always installed: the layer early-returns when the `SystemLog` reports
     // auditing off, so the no-audit case costs one check per request.
