@@ -2,23 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
-//! STRUCTURED (structSDT) `RM ⇄ STRUCTURED` converter tests.
-//!
-//! STRUCTURED composes the pure nesting transform
-//! ([`openehr_sdt::flat::convert::flat_to_structured`] /
-//! [`openehr_sdt::flat::convert::structured_to_flat`]) with the FLAT converter, so
-//! the same `(composition, OPT)` corpus pairs used
-//! by `flat.rs` drive these gates:
-//!
-//! * **STRUCTURED → RM → STRUCTURED stable** — `to_structured` (s0) →
-//!   `from_structured` (rm1) → `to_structured` (s1); assert `s0 == s1`, and
-//!   count how many `rm1` deserialise as an `openehr-rm` `Composition`.
-//! * **flat ⇄ structured exact inverses** — `flat_to_structured` and
-//!   `structured_to_flat` round-trip the vendored flat maps exactly at the
-//!   structured level.
-//! * **cross-format consistency** — `to_structured` and `to_flat` on the same
-//!   composition carry identical leaf values (index-normalised).
-//! * **insta goldens** — deterministic structured snapshots.
+//! STRUCTURED `RM ⇄ STRUCTURED` converter tests over the `flat.rs` corpus pairs:
+//! round-trip stability, exact FLAT ⇄ STRUCTURED inverses, cross-format leaf
+//! agreement and insta goldens.
 #![expect(
     clippy::doc_markdown,
     reason = "the module docs quote openEHR spec prose and Simplified-Formats key names as text, not as Rust code references"
@@ -69,11 +55,8 @@ fn index_normalised(map: &serde_json::Map<String, Value>) -> BTreeMap<String, Va
 
 // ── STRUCTURED round-trip + RM validation ─────────────────────────────────────
 
-/// One pair's STRUCTURED round-trip: `to_structured` → `from_structured` →
-/// `to_structured` again.
-///
-/// Returns the rebuilt RM value and whether the two STRUCTURED renderings agree,
-/// or the conversion failure to record.
+/// One pair's STRUCTURED round-trip: the rebuilt RM value and whether the two
+/// renderings agree, or the conversion failure.
 fn structured_round_trip(
     name: &str,
     comp: &Value,

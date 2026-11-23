@@ -2,21 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
-//! End-to-end composition-validation tests.
-//!
-//! Oracle: the already-vendored, **Apache-2.0** `openEHR_SDK` corpus — canonical
-//! JSON compositions in `openehr-its/tests/vendor/openehr_sdk/…` paired with the
-//! OPT 1.4 operational templates in `openehr-its/tests/fixtures/…` by
-//! `template_id`. Each valid composition is validated against the `WebTemplate`
-//! built from its template and must be clean; invalid variants (one real vendored
-//! `*_invalid` pair plus mutations of valid corpus compositions) must be rejected
-//! with a sensible path + kind.
-//!
-//! NOTE: the CNF `test_data_sets` are not vendored here — the
-//! `specifications-CNF` repository is CC BY-SA 3.0, incompatible with this
-//! fixture tree's Apache-2.0 vendoring — so the Apache-2.0 `openEHR_SDK`
-//! corpus (`openehr-its/tests/vendor/` + `tests/fixtures/sdk/`) serves as the
-//! same class of oracle, including a real valid/invalid pair.
+//! End-to-end composition validation over the vendored `openEHR_SDK` corpus
+//! paired with its OPTs: valid compositions validate clean, invalid variants
+//! are refused with path and kind.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -48,15 +36,8 @@ fn opt_files(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// `template_id` → `WebTemplate` for every parseable vendored OPT.
-///
-/// Several vendored fixtures share one template id (`Demo Vitals` has three
-/// variants), and `read_dir` order is OS-dependent — first-wins over an
-/// unspecified order made the winning variant differ between macOS and Linux
-/// (a CI-only corpus failure: Linux's order left a variant whose constraints
-/// flag the corpus node that the curation baseline accepts). Deterministic
-/// resolution: sorted paths, first wins — the ordering the `CLEAN_COMPOSITIONS`
-/// curation was verified against, identical on every OS.
+/// `template_id` → `WebTemplate` for every parseable vendored OPT, the first of
+/// the sorted paths winning for a shared id.
 fn web_templates() -> HashMap<String, WebTemplate> {
     let mut opts = Vec::new();
     opt_files(&manifest_dir().join("tests/fixtures"), &mut opts);
@@ -111,48 +92,18 @@ fn kinds(msgs: &[ValidationMessage]) -> Vec<ValidationKind> {
     msgs.iter().map(|m| m.kind).collect()
 }
 
-/// The curated set of vendored valid compositions whose WebTemplate-guided
-/// validation is expected to be completely clean. (Other corpus compositions
-/// deliberately omit `archetype_details` on nested archetype-root entries, which
-/// the RM `Is_archetype_root` invariant — surfaced from `openehr-rm` — correctly
-/// flags; those are excluded here, not silently tolerated.)
+/// The vendored valid compositions expected to validate clean.
 ///
-/// The vendored corpus mixes openEHR reference data with **EHRbase-SDK** data,
-/// and `EHRbase` is *lenient*: some SDK fixtures omit RM-mandatory attributes that
-/// a strict validator rightly rejects. Per the project's conformance stance (openEHR spec conformance,
-/// not `EHRbase` parity) we do **not** tolerate that leniency, so such fixtures are
-/// excluded here with the exact spec violation named — they are not a valid
-/// oracle for "validates clean". Excluded on those grounds:
-/// - `rawdb_composition.json` — its `composer.external_ref` is a `PARTY_REF`
-///   missing the mandatory `type` (`PARTY_REF.type [1]`, RM support) whose `id`
-///   is a `GENERIC_ID` missing the mandatory `value` (`OBJECT_ID.value [1]`, RM
-///   support). Strict typed validation surfaces both.
-/// - `all_types_no_multimedia.json` — carries schemeless `DV_URI` values
-///   (`www.iana.org`): rejected under the CNF-mandated absolute-reference
-///   rule (CNF `platform_test_schedule` master17.7 `xyz | rejected | value
-///   doesn't comply with RFC3986`; RM `data_types` `dv_uri` Description
-///   "structurally conforms to ... RFC-3986").
-/// - `minimal_action2_1.json` — carries a `DV_PROPORTION` `{type: 3
-///   (pk_fraction), precision: 1}`: invalid under RM `data_types`
-///   `dv_proportion` `Fraction_validity` ("(type = `pk_fraction` or type =
-///   `pk_integer_fraction`) implies `is_integral`", with `is_integral()` =
-///   "True ... if precision is 0"). It ALSO violates the archetype-root
-///   node-id identity rule: its `/content[0]` ACTION carries an `ARCHETYPED`
-///   block copied from the COMPOSITION root, so `archetype_node_id` differs
-///   from `archetype_details.archetype_id.value` (RM
-///   `org.openehr.rm.common.locatable.adoc` §Attributes,
-///   `archetype_node_id`).
-/// - `informe_amb_1_arquetip_OBS.json` — the same root-copied `ARCHETYPED`
-///   defect on its `/content[0]` OBSERVATION (an
-///   `openEHR-EHR-COMPOSITION.*` `archetype_id` claimed by a non-COMPOSITION
-///   node), violating the same identity rule.
-/// - `ehrb_adbm_op_consult_record.json` — carries the `TERMINOLOGY_ID` value
-///   `"SNOMED CT"`, whose interior space is outside the `terminology_id`
-///   production (BASE `base_types/master05-identification_package.adoc`
-///   §Syntaxes: `terminology_id = name-str, [ '(', name-str, ')' ]`,
-///   `name-str = letter, { letter | digit | '_' | '-' | '/' | '+' }`). The same
-///   chapter's §Terminology Identifiers spells the terminology `"SNOMED-CT"`,
-///   which the production admits. The refusal is pinned by
+/// Excluded, each for a named spec violation:
+/// - `rawdb_composition.json`: a `PARTY_REF` missing `type` whose `GENERIC_ID`
+///   lacks `value` (RM support).
+/// - `all_types_no_multimedia.json`: schemeless `DV_URI` values (CNF master17.7;
+///   RM `dv_uri` RFC-3986).
+/// - `minimal_action2_1.json`: a `pk_fraction` with precision 1 (RM
+///   `dv_proportion` `Fraction_validity`), and a root-copied `ARCHETYPED` on
+///   `/content[0]` (RM `locatable.adoc` §Attributes).
+/// - `informe_amb_1_arquetip_OBS.json`: the same root-copied `ARCHETYPED`.
+/// - `ehrb_adbm_op_consult_record.json`: `TERMINOLOGY_ID` `"SNOMED CT"`, see
 ///   [`snomed_ct_with_a_space_is_refused`].
 const CLEAN_COMPOSITIONS: &[&str] = &[
     "choice_validation_test.json",
@@ -193,11 +144,7 @@ fn valid_corpus_compositions_validate_clean() {
     );
 }
 
-/// Strict mandatory-attribute enforcement: removing the mandatory
-/// `COMPOSITION.composer [1]` must be rejected. The node codec stores raw
-/// canonical JSON with no schema enforcement at commit, so a typed-deserialize
-/// failure that was once silently swallowed (committing 201) must now surface
-/// the failure → 422.
+/// Removing the mandatory `COMPOSITION.composer` is refused.
 #[test]
 fn missing_mandatory_composer_is_rejected() {
     let wts = web_templates();
@@ -223,19 +170,9 @@ fn missing_mandatory_composer_is_rejected() {
     );
 }
 
-/// A vendored composition carrying `TERMINOLOGY_ID` `"SNOMED CT"` is ACCEPTED,
-/// because the class constrains no value.
-///
-/// This assertion was inverted deliberately (#2314). It previously required
-/// the interior space to be REFUSED, citing the `terminology_id` production in
-/// BASE `base_types/master05-identification_package.adoc` §Syntaxes. That
-/// production is prose in a chapter: `TERMINOLOGY_ID`'s own class table
-/// declares no `Invariants` row and the BMM no `invariants` key — unlike its
-/// sibling `VERSION_TREE_ID`, which declares seven — so enforcing it invented a
-/// prohibition the model does not contain. Released QUERY 1.1.0
-/// (`docs/specs/openehr/QUERY/docs/AQL/master03-syntax.adoc` §Node predicate)
-/// settles it from the other side by publishing
-/// `terminology_id/value='snomed_ct(3.1)'`, which that same production forbids.
+/// A vendored composition carrying `TERMINOLOGY_ID` `"SNOMED CT"` is accepted:
+/// the class declares no invariant, and QUERY 1.1.0
+/// `master03-syntax.adoc` §Node predicate publishes `'snomed_ct(3.1)'`.
 #[test]
 fn a_terminology_id_with_a_space_is_accepted() {
     let wts = web_templates();
@@ -366,14 +303,9 @@ fn inflate_rec(v: &mut Value, mutated: &mut bool) {
     }
 }
 
-// ── RM invariant routing through the updated dispatcher (EVENT/HISTORY/interval) ─
+// ── RM invariant routing (EVENT/HISTORY/interval) ──────────────────────────────
 //
-// These prove the composition validator's RM-invariant pass routes real
-// composition content through `openehr_rm::v1_2::validate::validate_rm_value`, so the
-// richer invariant layer (HISTORY Period_consistency, DV_INTERVAL
-// Limits_consistent) fires on actual instances — not just in openehr-rm's own
-// unit tests. They use `validate_rm_and_terminology` (the template-independent
-// entry point), so no OPT fixture is needed.
+// `validate_rm_and_terminology` reaches the richer invariants on real content.
 
 #[test]
 fn inconsistent_history_period_surfaces_period_consistency() {
@@ -443,12 +375,9 @@ fn inverted_dv_interval_surfaces_limits_consistent() {
 
 // ── name-differentiated same-archetype-id siblings (real OPT) ─────────────────
 //
-// The neurologist OPT fills `openEHR-EHR-OBSERVATION.sensorum_status.v2` twice
-// under one SECTION, differentiated by `name`: one unqualified sibling (inner
-// `items` closed to `at0004`) and one name-qualified (closed to
-// at0013/at0086/at0041). A composition carrying BOTH is valid; each instance
-// routes to its own overlay (RM common `master03-archetyped_package.adoc`
-// §"The `LOCATABLE` class"; AOM 1.4 `master04` §`node_id`).
+// The neurologist OPT fills `sensorum_status.v2` twice, told apart by name; each
+// instance routes to its own overlay (RM common `master03` §"The `LOCATABLE`
+// class"; AOM 1.4 `master04` §`node_id`).
 
 /// A `DV_CODED_TEXT` `ELEMENT` (a leaf under an `ITEM_TREE`).
 fn coded_element(node_id: &str, name: &str, code: &str) -> Value {
@@ -545,10 +474,6 @@ fn matched_violation_paths_are_archetype_paths() {
 }
 
 // ── per-rule public-seam tests (hand-shaped WebTemplate nodes / instances) ─────
-//
-// These exercise the public validation entry points ([`validate_composition`],
-// [`validate_rm_and_terminology`]) on minimal hand-built inputs so each rule is
-// checked in isolation without an OPT fixture.
 
 fn node(rm: &str, path: &str) -> WebTemplateNode {
     WebTemplateNode::new(rm.to_owned(), path.to_owned())
@@ -804,10 +729,8 @@ fn dv_ordered_bad_normal_status_reported() {
 
 // ── LOCATABLE.Archetyped_valid ───────────────────────────────────────────────
 
-/// A non-root node — `archetype_node_id` an `at`/`id` term code — must not
-/// carry `archetype_details` (`locatable.adoc` §`Archetyped_valid`); an
-/// archetype-HRID node carrying them, and a nested archetype root *without*
-/// them (the CNF-corpus-sanctioned shape), both stay valid.
+/// A term-code node must not carry `archetype_details` (`locatable.adoc`
+/// §`Archetyped_valid`); an archetype root with or without them is valid.
 #[test]
 fn non_root_node_with_archetype_details_rejected() {
     let details = json!({"_type": "ARCHETYPED",
@@ -854,10 +777,8 @@ fn non_root_node_with_archetype_details_rejected() {
 
 // ── "present implies non-empty" list invariants ──────────────────────────────
 
-/// `COMPOSITION.Content_valid` / `SECTION.Items_valid` /
-/// `INSTRUCTION.Activities_valid` etc.: a PRESENT empty list violates the
-/// invariant; an absent list does not (`composition.adoc` §Invariants and
-/// siblings).
+/// A present empty list violates `Content_valid` and its siblings; an absent
+/// one does not (`composition.adoc` §Invariants).
 #[test]
 fn present_empty_lists_are_rejected() {
     let base = json!({
@@ -971,14 +892,8 @@ fn problem_list_with_content(archetype_id: &str) -> Value {
     })
 }
 
-/// A slot admits exactly the archetypes its `include` assertions name: an
-/// archetype outside the regex is not a legal filler (ADL 1.4
-/// `master05-cadl.adoc` §Archetype Slots — "two lists of assertions statements
-/// defining which archetypes are allowed and/or which are excluded from filling
-/// that slot").
-///
-/// The commit seam is [`validate_composition`], which every write path (canonical
-/// JSON, FLAT, STRUCTURED) converges on after conversion to RM.
+/// A slot admits exactly the archetypes its `include` assertions name (ADL 1.4
+/// `master05-cadl.adoc` §Archetype Slots).
 #[test]
 fn slot_filler_outside_the_includes_regex_is_refused() {
     let wt = match idcr_problem_list() {

@@ -1,22 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Shared corpus plumbing for the Simplified Formats and validation gates:
-//! the corpus walker over the canonical-JSON compositions `openehr-its`
-//! vendors (reached by relative path, the twins adjudication honoured) and
-//! the OPT pairing helpers.
+//! Shared corpus plumbing for the Simplified Formats and validation gates.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Every `.json` under `tests/vendor/` **and** `tests/fixtures/twins/`, sorted
-/// for determinism.
-///
-/// The twins directory carries the repo-authored VALID half of each adjudicated
-/// defective vendored fixture (`fixture_twins.rs`). It joins the corpus walk on
-/// purpose: excluding a defective vendored document without admitting its
-/// corrected twin would silently narrow what these gates cover, and the twins
-/// rule exists precisely so a spec-correct refusal costs no coverage.
+/// Every `.json` under `tests/vendor/` and `tests/fixtures/twins/`, sorted; the
+/// twins keep a refused vendored document's coverage.
 pub(crate) fn corpus_files() -> Vec<PathBuf> {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut out = Vec::new();
@@ -40,11 +31,8 @@ pub(crate) fn corpus_files() -> Vec<PathBuf> {
     out
 }
 
-/// The corpus-relative key of `path`: the path with its corpus root
-/// (`tests/vendor/` or `tests/fixtures/`) stripped and separators normalized.
-///
-/// One derivation for every gate, so an absolute, machine-dependent path can
-/// never reach a snapshot manifest or an exclusion lookup.
+/// The corpus-relative key of `path`, its corpus root stripped and separators
+/// normalized.
 pub(crate) fn corpus_rel(path: &Path) -> String {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
     let rel = [
@@ -57,13 +45,8 @@ pub(crate) fn corpus_rel(path: &Path) -> String {
     rel.display().to_string().replace('\\', "/")
 }
 
-/// The file a gate should actually read for the vendored fixture at `path`:
-/// its repo-authored VALID TWIN when one exists, else `path` itself.
-///
-/// A gate that walks a vendored directory DIRECTLY (rather than through
-/// [`corpus_files`]) still has to honour the twins adjudication,
-/// or it re-reads a document the corpus gates already refused. Routing through
-/// here keeps one substitution rule for every gate.
+/// The file a gate reads for the vendored fixture at `path`: its valid twin
+/// when one exists, else `path`.
 pub(crate) fn twinned(path: &Path) -> PathBuf {
     let Some(stem) = path.file_stem().and_then(std::ffi::OsStr::to_str) else {
         return path.to_path_buf();

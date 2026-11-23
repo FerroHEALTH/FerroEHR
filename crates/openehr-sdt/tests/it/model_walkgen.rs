@@ -1,27 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Model-derived instance generation drives the validation walk over EVERY
-//! concrete RM class.
+//! Model-derived instances drive the validation walk over every concrete RM
+//! class ([`openehr_rm::v1_2::model`]).
 //!
-//! The generators are derived from the BMM-generated static RM model
-//! (`openehr_rm::v1_2::model`) — never hand-written shapes — and the enumeration is
-//! deterministic and EXHAUSTIVE over the finite class set (strictly more
-//! systematic than random sampling for the same domain; there is nothing for
-//! a fuzzer to discover that full enumeration does not visit):
-//!
-//! 1. **Structural acceptance** — for every concrete class, a minimal
-//!    (mandatory-only) and a rich (optionals populated) generated instance
-//!    must produce NO structural `does not conform to RM type` violation:
-//!    what the model declares structurally valid, the codec-backed walk must
-//!    decode. Semantic violations (invariants, terminology) are legitimate on
-//!    synthetic values and are not the property.
-//! 2. **Mutation refusal** — for every concrete class and every mandatory
-//!    attribute, dropping that attribute from the minimal instance must
-//!    surface a structural violation naming the missing field. The dispatcher
-//!    reaches every emitted class (the generated structural dispatch), so an
-//!    uncaught drop is now only ever a deliberate codec tolerance; the honest
-//!    register of those pins each one with its reason, and can only shrink.
+//! A minimal and a rich instance of each class raise no structural violation,
+//! and dropping any mandatory attribute raises one, apart from the register of
+//! deliberate codec tolerances.
 
 use std::collections::BTreeSet;
 
@@ -55,26 +40,15 @@ fn primitive(name: &str) -> Option<Value> {
     })
 }
 
-/// A deterministic value for an attribute whose *class* constrains the value
-/// space more tightly than the BMM primitive type it is declared with.
-///
-/// Every openEHR **identifier** class is such a case: BASE
-/// `docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc`
-/// §Syntaxes gives each one an EBNF lexical form over its `value` string, so an
-/// arbitrary string is NOT an instance of the class. Construction runs that
-/// grammar (the construction-door scheme), and the codec rightly refuses
-/// anything else — the generator must therefore emit a grammar-conformant
-/// example, exactly as it already does for `UUID` (whose generated field is a
-/// real `uuid::Uuid`).
+/// A deterministic value for an attribute whose class constrains it more than
+/// its BMM primitive type: each identifier class's EBNF (BASE
+/// `master05-identification_package.adoc` §Syntaxes).
 fn constrained_attribute(class: &str, attr: &str) -> Option<Value> {
     // A UUID in the canonical 8-4-4-4-12 hyphenated form the `uuid` production
     // names, reused wherever a `uid` is required.
     const UID: &str = "0191a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b";
     match (class, attr) {
-        // `uuid = hex-number, '-', … (five groups)`; and
-        // `hier_object_id = uid_based_id`, `uid_based_id = root, [ '::',
-        // extension ]`, `root = uid` — whose extension-less form is a bare
-        // `uid`, so the same value serves both productions.
+        // `HIER_OBJECT_ID` without an extension is a bare `uid`.
         ("UUID" | "HIER_OBJECT_ID", "value") => Some(json!(UID)),
         // `iso_oid = number, { '.', number }`.
         ("ISO_OID", "value") => Some(json!("1.2.840.113554")),
@@ -90,14 +64,9 @@ fn constrained_attribute(class: &str, attr: &str) -> Option<Value> {
     }
 }
 
-/// A generated instance of concrete class `class`, derived from the model:
-/// `_type`-tagged, every mandatory attribute present; optionals included when
-/// `rich`. Abstract attribute types instantiate their first concrete
-/// descendant (deterministic); when the class is generic and the caller
-/// supplied type arguments, an attribute written as the formal parameter
-/// substitutes the argument (`DV_INTERVAL<DV_QUANTITY>.lower` generates a
-/// `DV_QUANTITY`, never an arbitrary `Ordered` descendant). `unknown` collects type names neither the
-/// model nor the primitive table covers.
+/// A generated instance of concrete class `class`: every mandatory attribute,
+/// optionals when `rich`, the first concrete descendant for an abstract type,
+/// and type arguments substituted. `unknown` collects unmodelled type names.
 fn generate(
     class: &str,
     args: &[&openehr_rm::v1_2::model::RmTypeRef],
@@ -118,11 +87,8 @@ fn generate(
     Value::Object(obj)
 }
 
-/// The generated value for one attribute, or `None` when it is skipped.
-///
-/// Skipped: an optional attribute outside rich mode, and (in rich mode too)
-/// optional RECURSIVE containment below depth 2 — folders in folders, links,
-/// feeder audit — which keeps instances finite and small.
+/// The generated value for one attribute, or `None` when skipped: an optional
+/// outside rich mode, or optional recursion below depth 2.
 fn attribute_value(
     class: &str,
     attr: &'static openehr_rm::v1_2::model::RmAttribute,
@@ -157,13 +123,8 @@ fn attribute_value(
     })
 }
 
-/// The effective type (and type arguments) of one attribute in `class`'s scope.
-///
-/// The model keeps the formal parameter an attribute or a type argument is
-/// written as (`DV_INTERVAL.lower: T`, `REFERENCE_RANGE.range: DV_INTERVAL<T>`,
-/// `IMPORTED_VERSION.item: ORIGINAL_VERSION<T>`); the caller's argument for
-/// that parameter replaces it, so the element is an instance of the type the
-/// codec enforces.
+/// The effective type and type arguments of one attribute in `class`'s scope,
+/// formal parameters replaced by the caller's arguments.
 fn attribute_type<'a>(
     class: &str,
     attr: &'static openehr_rm::v1_2::model::RmAttribute,
@@ -216,11 +177,8 @@ fn value_for(
     p
 }
 
-/// The concrete descendant to instantiate for an abstract slot.
-///
-/// Deterministic non-recursive preference: the descendant with the FEWEST
-/// mandatory class-typed attributes (ELEMENT over CLUSTER for an ITEM slot), so
-/// mandatory recursion terminates.
+/// The concrete descendant for an abstract slot: the one with the fewest
+/// mandatory class-typed attributes, so recursion terminates.
 fn cheapest_descendant(descendants: &[&'static str]) -> Option<&'static str> {
     descendants
         .iter()
@@ -328,14 +286,8 @@ fn dropped_mandatory_attributes_are_refused() {
         mutations > 300,
         "expected the full mandatory set, saw {mutations}"
     );
-    // The honest register: every entry is a mandatory attribute whose omission
-    // the dispatcher does not surface structurally, each with its adjudicated
-    // reason in the file itself. Type-reach entries are gone — the generated
-    // structural dispatch decodes every emitted class — so what remains is only
-    // where the codec deliberately ACCEPTS the omission (an absent 1..*
-    // container reads as an empty `Vec`; an `Interval` boundary flag reads from
-    // its literal default). It may only SHRINK (a fix) or grow with an
-    // adjudicated reason — never grow silently (the assert names each newcomer).
+    // The register of mandatory attributes whose omission the codec accepts, each
+    // with its reason; a newcomer fails by name.
     let expected: BTreeSet<String> = include_str!("model_walkgen_register.txt")
         .lines()
         .map(str::trim)
@@ -348,9 +300,7 @@ fn dropped_mandatory_attributes_are_refused() {
     );
 }
 
-/// The model-driven mandatory-container lower bound (#1461): a CLUSTER whose
-/// RM-mandatory 1..* `items` is absent or empty is refused; a populated one is
-/// clean of that violation (RM `data_structures`
+/// A CLUSTER whose mandatory `items` is absent or empty is refused (RM
 /// `org.openehr.rm.data_structures.cluster.adoc` §Attributes).
 #[test]
 fn mandatory_container_lower_bound_is_enforced() {
@@ -385,10 +335,8 @@ fn mandatory_container_lower_bound_is_enforced() {
     );
 }
 
-/// The wire-reachable representative fixture of the family: the CKM
-/// lab-result example with the specimen CLUSTER's items deleted (the CNF
-/// `create_composition-cluster_no_items` case's payload) is refused by the
-/// full walk.
+/// The CKM lab-result example with the specimen CLUSTER's items deleted is
+/// refused by the full walk.
 #[test]
 fn cluster_no_items_fixture_is_refused() {
     let text = std::fs::read_to_string(
