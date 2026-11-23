@@ -1569,8 +1569,7 @@ mod tests {
 
     #[test]
     fn general_comparison_predicate_parses() {
-        // BASE master11-paths §"Other Predicates" — the spec's own example
-        // form is part of the path grammar (previously rejected).
+        // BASE master11-paths §"Other Predicates", the spec's own example.
         let p = "/data/events[at0007 and time >= '2005-06-24T09:30:00']"
             .parse::<RmPath>()
             .unwrap();

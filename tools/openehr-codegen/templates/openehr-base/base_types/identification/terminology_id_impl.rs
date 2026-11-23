@@ -102,8 +102,7 @@ mod tests {
         assert_eq!(dotted.name(), "snomed_ct");
         assert_eq!(dotted.version_id(), "3.1");
 
-        // An interior space is a name like any other now that nothing
-        // constrains the value.
+        // Nothing constrains the value, so an interior space is a name.
         let spaced = tid("SNOMED CT");
         assert_eq!(spaced.name(), "SNOMED CT");
         assert_eq!(spaced.version_id(), "");

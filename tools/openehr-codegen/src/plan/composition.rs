@@ -30,7 +30,7 @@ pub(crate) const BASE_BMM: &str = "components/BASE/json/openehr_base_1.3.0.bmm.j
 pub(crate) const BASE12_BMM: &str = "components/BASE/json/openehr_base_1.2.0.bmm.json";
 pub(crate) const RM_BMM: &str = "components/RM/json/openehr_rm_1.2.0.bmm.json";
 /// RM's latest RELEASED generation (1.1.0, 29-Sep-2020); its BMM `includes`
-/// names `openehr_base_1.2.0` — the released pairing, first-hand.
+/// names `openehr_base_1.2.0`.
 pub(crate) const RM11_BMM: &str = "components/RM/json/openehr_rm_1.1.0.bmm.json";
 pub(crate) const TERM_BMM: &str = "components/TERM/json/openehr_term_3.1.0.bmm.json";
 pub(crate) const AM14_BMM: &str = "components/AM/json/openehr_am_1.4.0.bmm.json";

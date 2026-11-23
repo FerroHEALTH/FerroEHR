@@ -1,13 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The locals a bound-dependent default reads.
-//!
-//! An `Interval` flag the wire omits follows its bound
-//! ([`crate::plan::overrides::FIELD_DEFAULTS`]): its default is the expression
-//! `__present_<bound>` or `!__present_<bound>`. Each reader binds that local
-//! from the bound's slot before it builds the value, because the struct
-//! literal moves the bound out of its slot before the flag's default runs.
+//! The `__present_<bound>` locals an omitted `Interval` flag's default reads
+//! ([`crate::plan::overrides::FIELD_DEFAULTS`]), bound before the struct
+//! literal moves the bound.
 
 use crate::plan::{JsonField, XmlField};
 

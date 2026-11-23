@@ -1260,7 +1260,7 @@ pub fn field_exists(class: &str, field: &str) -> Result<bool, Error> {
 /// Returns an error if the composition's BMM files cannot be loaded.
 pub fn declared_attributes(key: &str, class: &str) -> Result<Option<BTreeSet<String>>, Error> {
     let c = compose(key)?;
-    // Newest generation first (the retired merged-view semantics).
+    // Newest generation first.
     Ok(c.generations
         .iter()
         .rev()
