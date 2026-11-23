@@ -3,13 +3,6 @@
 
 //! The seed: EHRs in chunks, each EHR a clone of the prototype EHR holding
 //! clones of the prototype compositions.
-//!
-//! An EHR's composition count is spread around the mean the target sets
-//! (one to twice the mean less one, by a fixed hash of the EHR's place), and
-//! each composition takes the prototype a second hash picks, so an EHR holds
-//! different variants and the store holds every variant equally often. Every
-//! 997th composition, and the first of each chunk, is recorded in
-//! `scaleseed.sample` for the check.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;

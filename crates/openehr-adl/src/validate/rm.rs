@@ -57,8 +57,6 @@ pub struct RmAttr {
 
 /// The declared literal set of an RM enumeration type (`master04.2`
 /// §Constraints on Enumeration Types), as reported by a [`RmModel`].
-///
-/// The underlying primitive determines which of the value sets is populated.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RmEnum {
     /// The underlying primitive type of the enumeration.
@@ -178,10 +176,6 @@ pub(crate) fn normalise_type_name(rm_type: &str) -> String {
 
 /// Whether a stated object type `child` conforms to the declared RM type
 /// `declared`, covariantly on generic arguments (`master04.2` §`Rm_type_name`).
-///
-/// `Some(false)` only on a positive non-conformance of the base type or an
-/// argument; `None` when the model cannot decide. Missing or differing argument
-/// lists constrain nothing.
 #[must_use]
 pub(crate) fn type_conforms(rm: &dyn RmModel, child: &str, declared: &str) -> Option<bool> {
     match rm.conforms(child, declared) {
@@ -205,9 +199,6 @@ pub(crate) fn type_conforms(rm: &dyn RmModel, child: &str, declared: &str) -> Op
 }
 
 /// The openEHR RM 1.2.0 reference model, the generated `openehr_rm::v1_2::model`.
-///
-/// It makes VCAEX, VCAM, VCACA and VCORMT's argument half exact. A container the
-/// BMM leaves without cardinality reads as `{0..*}`.
 ///
 /// NOTE: VCORMT matches a stated generic argument against the parameter's bound
 /// (`master04.2` §`Rm_type_name`), an approximation that never fires falsely.
@@ -608,9 +599,6 @@ impl RmScan<'_> {
     /// VUNT: the type named in a `use_node` must be the referenced node's RM type
     /// or a super-type of it (`AOM2/master04.5` §Validity Rules:
     /// `C_COMPLEX_OBJECT_PROXY`; `ADL1.4/master05-cadl.adoc` §Internal References).
-    ///
-    /// Deciding super-type needs [`RmModel::conforms`], so it runs in this pass. An
-    /// unresolvable path is VUNP's.
     fn check_proxy_type(&mut self, path: &str, proxy: &CComplexObjectProxy) {
         let declared = normalise_type_name(&proxy.rm_type_name);
         if declared.is_empty() {

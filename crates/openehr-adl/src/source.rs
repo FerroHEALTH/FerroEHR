@@ -4,8 +4,6 @@
 //! The outer ADL artefact parser (`vendor/grammar/adl2.g4` plus the spec-text
 //! section extensions): kind, identification, ODIN sections, and the cADL
 //! `definition` and `rules` bodies as raw spans.
-//!
-//! A section keyword is a header only at column 0 (`adl_keywords.g4`).
 
 use openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
 
@@ -93,9 +91,6 @@ pub struct SourceArtefact {
     pub component_terminologies: Option<openehr_lang::v1_1::odin::OdinValue>,
     /// The ADL 1.4 `revision_history` section (`ADL1.4/master08-adl` §Revision
     /// History Section).
-    ///
-    /// NOTE: ADL2 removed the section (`ADL2/master01-preface`; SPECAM-61), so it
-    /// stays at the 1.4 source level.
     pub revision_history: Option<openehr_lang::v1_1::odin::OdinValue>,
     /// The `definition` (cADL) body as a raw span.
     pub definition: Option<RawSpan>,

@@ -14,9 +14,6 @@ use crate::adl14::walk::walk_constraints;
 
 /// The highest ac-number the source already uses, across its terminology
 /// entries and its bare constraint refs.
-///
-/// Synthesised and minted acs must allocate ABOVE the shifted range, so a
-/// fresh `acN` never collides with an existing `ac000(N-1)` → `acN`.
 pub(super) fn highest_ac_number(
     definition: &CComplexObject,
     terminology: &ArchetypeTerminology,

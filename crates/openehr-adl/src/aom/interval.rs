@@ -170,10 +170,6 @@ impl<T: Copy> IntervalFields<T> {
 /// The single integer value an interval denotes, or `None`: both sides bounded,
 /// included, present and equal, whatever the subtype tag (`AOM2/master04.2`
 /// §Primitive Types; `ADL2/master04.5` §Constraints on Ordered Types).
-///
-/// NOTE: `Proper_interval`'s `Inv_not_point` is read as not forbidding equal
-/// bounds, since BASE's `Multiplicity_interval` inherits it yet defines
-/// `is_mandatory()` as `{1..1}`.
 pub(crate) fn point_value_i32(iv: &Interval<i32>) -> Option<i32> {
     let f = IntervalFields::read(iv);
     if !f.is_closed_bounded() {

@@ -47,9 +47,6 @@ pub(super) fn convert_meta_data(
 }
 
 /// Apply the whole 1.4→2 `description` transform in place.
-///
-/// `original_language` is the archetype's original language code, whose
-/// description item carries the copyright the whole archetype takes.
 fn transform_description(desc: &mut ResourceDescription, original_language: &str) {
     // NOTE: every 1.4 lifecycle state converts to `unmanaged`, matching the
     // vendored `upgrade_from_14` expected `.adls`; no openEHR spec governs
