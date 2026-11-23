@@ -914,6 +914,7 @@ pub struct AuditSearchFilter {
     /// The criteria, each of which a record must match.
     pub criteria: Vec<AuditCriterion>,
     /// What the page statement carries beside its records (#6320).
+    #[cfg(feature = "fhir")]
     pub carried: carried::Carried,
     /// `_count` — page size (default 50, capped at 1000).
     pub count: i64,
