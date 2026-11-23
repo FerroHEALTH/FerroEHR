@@ -20,9 +20,10 @@ pub fn parse_hrid(s: &str) -> Result<ArchetypeHrid, String> {
     s.parse().map_err(|e: HridError| e.to_string())
 }
 
-/// The `publisher-package-class.concept` lookup key of an [`ArchetypeHrid`],
-/// ASCII-lowercased, since archetype-id matching is case-insensitive on the RM
-/// entity names (`ADL2/master07.05`; `master03` §Lexical Conventions).
+/// The `publisher-package-class.concept` lookup key of an [`ArchetypeHrid`].
+///
+/// ASCII-lowercased: archetype-id matching is case-insensitive on the RM entity
+/// names (`ADL2/master07.05`; `master03` §Lexical Conventions).
 #[must_use]
 pub fn hrid_lookup_key(h: &ArchetypeHrid) -> String {
     format!(

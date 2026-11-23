@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL2 `rules` section and the structured slot-assertion parser: a
-//! [`BelBuilder`] over [`openehr_lang::v1_1::bel::parse_statements_with`] that
-//! adds the AOM leaves (`AOM2` master05): a path becomes `EXPR_ARCHETYPE_REF`,
+//! The ADL2 `rules` section and the structured slot-assertion parser.
+//!
+//! A [`BelBuilder`] over [`openehr_lang::v1_1::bel::parse_statements_with`] adds
+//! the AOM leaves (`AOM2` master05): a path becomes `EXPR_ARCHETYPE_REF`,
 //! `matches { primitive }` an `EXPR_CONSTRAINT`, and in a slot `matches { /regex/ }`
 //! an `EXPR_ARCHETYPE_ID_CONSTRAINT` (`master04.3` §Archetype Slots).
 

@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Reference-model validation of ADL2 archetypes (`AOM2/master08-validation.adoc`
-//! §Phase 2 → Validate Against Reference Model): VCORM, VCORMT, VCARM, VCAEX,
-//! VCACA and VCAM, with VACSO and the interior-node half of VATID, which hinge on
-//! the RM's single/multiple determination.
+//! Reference-model validation of ADL2 archetypes.
+//!
+//! `AOM2/master08-validation.adoc` §Phase 2 → Validate Against Reference Model:
+//! VCORM, VCORMT, VCARM, VCAEX, VCACA and VCAM, with VACSO and the interior-node
+//! half of VATID, which hinge on the RM's single/multiple determination.
 //!
 //! The checks are generic over a [`RmModel`] (`master11-rm_adaptation.adoc`):
 //! [`ProductionRmModel`] for openEHR RM 1.2.0, or a BMM-loaded model. Type names
@@ -203,9 +204,10 @@ pub(crate) fn type_conforms(rm: &dyn RmModel, child: &str, declared: &str) -> Op
     Some(true)
 }
 
-/// The openEHR RM 1.2.0 reference model, the generated `openehr_rm::v1_2::model`
-/// table, which makes VCAEX, VCAM, VCACA and VCORMT's argument half exact. A
-/// container the BMM leaves without cardinality reads as `{0..*}`.
+/// The openEHR RM 1.2.0 reference model, the generated `openehr_rm::v1_2::model`.
+///
+/// It makes VCAEX, VCAM, VCACA and VCORMT's argument half exact. A container the
+/// BMM leaves without cardinality reads as `{0..*}`.
 ///
 /// NOTE: VCORMT matches a stated generic argument against the parameter's bound
 /// (`master04.2` §`Rm_type_name`), an approximation that never fires falsely.

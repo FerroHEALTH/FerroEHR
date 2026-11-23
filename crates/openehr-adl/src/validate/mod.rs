@@ -199,9 +199,10 @@ pub fn validate_source_integrity(
     Ok(issues)
 }
 
-/// Parses an ADL 1.4 source and validates it against the full 1.4 catalogue:
-/// the 1.4 basic-integrity pass plus VUNT (`ADL1.4/master05-cadl.adoc` §Internal
-/// References), which runs only after an error-free integrity pass.
+/// Parses an ADL 1.4 source and validates it against the full 1.4 catalogue.
+///
+/// The 1.4 basic-integrity pass, then VUNT (`ADL1.4/master05-cadl.adoc` §Internal
+/// References) after an error-free integrity pass.
 ///
 /// # Errors
 /// Returns the parse [`SyntaxError`]s if `src` does not parse as ADL 1.4;

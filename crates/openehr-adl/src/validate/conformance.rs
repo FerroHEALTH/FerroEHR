@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The validator's reading of the AOM2 conformance functions, which live on the
-//! generated classes (`AOM2/master04.5` §Conformance Semantics): tri-state
-//! verdicts, VSONCO collective occurrences, the VSONT meta-type rule and the
-//! ADL 1.4 effective-value accessors. Context the spec reads through `parent`
-//! back-references, which the assembler leaves unset, is passed explicitly.
+//! The validator's reading of the AOM2 conformance functions.
+//!
+//! The functions live on the generated classes (`AOM2/master04.5` §Conformance
+//! Semantics); this adds tri-state verdicts, VSONCO collective occurrences, the
+//! VSONT meta-type rule and the ADL 1.4 effective-value accessors, with the
+//! `parent` context passed explicitly.
 
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
 use openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple;

@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Interval and multiplicity arithmetic for the AOM2 validity rules, the
-//! flattener and the cADL domain lowering: `MULTIPLICITY_INTERVAL` through
-//! [`Bounds`] (BASE `master05-interval.adoc`; `AOM2/master04.5` §`C_ATTRIBUTE`)
-//! and the generic `INTERVAL<T>` of a primitive constraint.
+//! Interval and multiplicity arithmetic.
+//!
+//! For the AOM2 validity rules, the flattener and the cADL domain lowering:
+//! `MULTIPLICITY_INTERVAL` through [`Bounds`] (BASE `master05-interval.adoc`;
+//! `AOM2/master04.5` §`C_ATTRIBUTE`) and the generic `INTERVAL<T>`.
 
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
 use openehr_base::prelude::{Interval, MultiplicityInterval, ProperInterval};

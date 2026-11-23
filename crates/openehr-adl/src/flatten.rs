@@ -107,9 +107,11 @@ pub fn flatten(
     Ok(rebuild_flat(child, flat_def, flat_term))
 }
 
-/// The flat form of `archetype`, flattening its lineage top-down (`master08`
-/// §Flattening: "process each parent in order from the top"), memoised per call.
-/// A non-specialised or ADL 1.4 archetype is its own flat form.
+/// The flat form of `archetype`, flattening its lineage top-down.
+///
+/// `master08` §Flattening: "process each parent in order from the top";
+/// memoised per call. A non-specialised or ADL 1.4 archetype is its own flat
+/// form.
 ///
 /// # Errors
 /// [`FlattenError::ParentNotFound`] if a lineage parent is absent from `repo`,

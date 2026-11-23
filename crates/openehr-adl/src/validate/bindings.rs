@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Terminology bindings: the local binding keys (VTTBK, VTCBK; `AOM2/master07`
-//! §Validity Rules) and the [`TerminologyResolver`] seam that answers VETDF
-//! (`master03` §Validity Rules: "subject to tool accessibility").
+//! Terminology bindings and the external terminology seam.
+//!
+//! The local binding keys (VTTBK, VTCBK; `AOM2/master07` §Validity Rules) and the
+//! [`TerminologyResolver`] that answers VETDF (`master03` §Validity Rules:
+//! "subject to tool accessibility"). Without a resolver VETDF is not raised.
 //!
 //! Without a resolver VETDF is not raised; the resolver receives each binding
 //! target as authored.

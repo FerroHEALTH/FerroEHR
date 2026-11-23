@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `ARCHETYPE_SLOT` redefinition and filling (`AOM2/master04.5` §Validity Rules:
-//! `ARCHETYPE_SLOT`, `C_ARCHETYPE_ROOT`), and the repository-dependent filler
-//! checks of [`validate_fillers`]: VTPL for templates (`master03` §Validity Rules;
-//! `OPT2/master03` §Terminology) and VARXR (`master08` §Phase 2), over the
-//! flattened artefact.
+//! `ARCHETYPE_SLOT` redefinition and filling.
+//!
+//! `AOM2/master04.5` §Validity Rules: `ARCHETYPE_SLOT`, `C_ARCHETYPE_ROOT`; and
+//! the repository-dependent filler checks of [`validate_fillers`]: VTPL for
+//! templates (`master03`; `OPT2/master03` §Terminology) and VARXR (`master08`
+//! §Phase 2), over the flattened artefact.
 
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::constraint_model::archetype_slot::ArchetypeSlot;
@@ -303,9 +304,10 @@ fn assertion_regex(a: &Assertion) -> Option<String> {
 
 // ── template / external-reference fillers (VTPL + VARXR) ──────────────────
 
-/// Validates an archetype's `use_archetype` fillers against `repo`: VARXR, and
-/// VTPL for templates, whose `template_overlay` sections are local constituents
-/// (`ADL2/master10-templates.adoc`). A flatten failure yields no issues here.
+/// Validates an archetype's `use_archetype` fillers against `repo`.
+///
+/// VARXR, and VTPL for templates, whose `template_overlay` sections are local
+/// constituents (`ADL2/master10-templates.adoc`). A flatten failure yields none.
 #[must_use]
 pub fn validate_fillers(archetype: &Archetype, repo: &ArchetypeRepository) -> Vec<ValidationIssue> {
     let overlays = crate::opt::root_overlays(archetype);
