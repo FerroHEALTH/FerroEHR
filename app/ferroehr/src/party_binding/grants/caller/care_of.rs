@@ -352,9 +352,6 @@ fn basis<'a, T: Tree<'a>>(body: T) -> Result<bool, String> {
 
 /// One care relationship of a subject: its carer, the dates its
 /// `time_validity` holds, its `care_role` and its provider.
-///
-/// The evaluator reads a subject's from
-/// [`crate::party_binding::grants::live::LiveGrants::under_care_of`].
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CareOf {
     carer: Uuid,

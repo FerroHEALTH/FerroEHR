@@ -26,15 +26,6 @@
 //! paths** — the ones every openEHR client has, as opposed to the CDR's admin
 //! extension (covered by `e2e_admin_ops`):
 //!
-//! - **client-supplied EHR id**: creating an EHR at an id the operator chooses
-//!   (`PUT /ehr/{ehr_id}`), and the CDR's refusal when that id is already used;
-//! - **a subject-bound EHR**: creating one through the viewer's OWN form, and
-//!   the subject identity then rendering on the EHR the viewer navigated to —
-//!   the whole path is the viewer's, so nothing here seeds an EHR over REST;
-//! - **composition logical delete**: deleting the latest version of a
-//!   composition from the viewer (`DELETE` with `If-Match`), after which the
-//!   EHR's composition list no longer offers it.
-//!
 //! Isolation: both journeys create their OWN data over ITS-REST or through the
 //! UI (a fresh UUID per run, a fresh EHR + composition), so neither touches the
 //! seeded fixtures the other journeys and the documentation-screenshot pass

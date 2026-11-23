@@ -2,16 +2,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Prelude: re-exports every generated spec type of ONE generation.
+//! Prelude: re-exports every generated spec type of one generation.
 //!
-//! Per-file imports are precise;
-//! downstream crates and hand-written code may `use <path>::*`.
-//!
-//! The crate-level prelude re-exports the CURRENT generation only (the
-//! composition table's `current` marker); every generation module also
-//! carries its own `prelude`. An older generation's types are reached
-//! through its generation module (its prelude or full module paths) —
-//! no cross-generation collision resolution exists anywhere.
+//! The crate-level prelude re-exports the current generation; every
+//! generation module carries its own.
 
 pub use crate::v2_4::aom2::archetype::archetype::Archetype;
 pub use crate::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;

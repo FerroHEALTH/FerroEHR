@@ -152,11 +152,6 @@ where
 
 /// Render a read body of the spec-typed RM object `T`, honouring `Accept` as
 /// [`respond_rm`] does, without a parse the format does not need.
-///
-/// The stored canonical text is served verbatim for canonical JSON, and read
-/// straight into `T` for canonical XML; a parsed value renders as
-/// [`respond_rm`] renders it. The stored text is the compact serialization of
-/// the canonical value, so the JSON bytes are the ones a re-render would write.
 pub(crate) fn respond_read<T>(
     headers: &HeaderMap,
     status: StatusCode,

@@ -166,14 +166,9 @@ YAML
   printf '%s' "$out"
 }
 
-# Key rotation: #2122's acceptance criteria, driven live.
-#
-# #2122 recorded that rotating a PGP key made every previously-signed version
-# fail verification — a 5xx while reading intact historical clinical data — and
-# was closed by adding a verification keyring (`retired_key_paths`). These
-# probes check the SHIPPED FIX rather than the original defect, and they check
-# both halves of it: history keeps verifying, AND verification did not simply
-# become permissive.
+# Key rotation (#2122): history signed under a retired key keeps verifying
+# through the verification keyring (`retired_key_paths`), AND verification
+# does not become permissive.
 probes_signing_rotation() {
   bold "VERSION signing — key rotation (the #2122 keyring)"
 

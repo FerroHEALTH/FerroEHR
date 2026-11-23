@@ -2,38 +2,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions of `VERSION`.
+//! The `VERSION` functions: `canonical_form()` over a serialised version, and
+//! the subtype dispatch of `uid`, `owner_id`, `is_branch`,
+//! `preceding_version_uid`, `lifecycle_state` and `data`.
 //!
-//! The surface is `canonical_form()` over an already-serialised Version value,
-//! plus the subtype-dispatching `uid()` / `owner_id()` / `is_branch()` /
-//! `preceding_version_uid()` / `lifecycle_state()` / `data()` on the closed
-//! `VERSION` subtype set.
-//!
-//! Spec authority:
-//! - RM common §"Digital Signature"
-//!   (`docs/specs/openehr/RM/docs/common/master06-change_control_package.adoc`):
-//!   "a Version object (an `ORIGINAL_VERSION` or `IMPORTED_VERSION`) is
-//!   serialised into canonical form which is then hashed to produce a digest …
-//!   note that the signature attribute will be Void at this point". For an
-//!   `IMPORTED_VERSION` "all attributes of the object are serialised".
-//! - `VERSION.canonical_form()`
-//!   (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.version.adoc`):
-//!   "A canonical serial form of this Version, created by serialising all
-//!   attributes except signature, suitable for generating reliable hashes and
-//!   signatures."
-//!
-//! NOTE: the spec leaves the exact serialization `[.tbd]`, so the signed
-//! bytes are OUR OWN extension: canonical openEHR JSON with the top-level
-//! `signature` removed, canonicalised per RFC 8785 (`canonical_form_impl`) so
-//! the bytes are deterministic — the single source for both signing and verification;
-//! the adjudication (including RFC 8785 over the ODIN the spec speculates
-//! about) is recorded on the tracker.
-//!
-//! The signed input is always assembled as a `serde_json::Value` (the shape the
-//! versioning service and the wire boundary already hold), so this module works
-//! purely on a `Value` — the canonical-JSON serialization of a *typed* Version
-//! is a wire-boundary concern that lives with the codec in `openehr-its`, not
-//! here.
+//! NOTE: RM `master06-change_control_package.adoc` §Digital Signature leaves the
+//! serialization `[.tbd]`; ours is canonical JSON without `signature`, under
+//! RFC 8785.
 
 #![expect(
     clippy::disallowed_types,
@@ -49,13 +24,7 @@ use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_base::v1_3::prelude::{HierObjectId, ObjectVersionId};
 
 impl<T> Version<T> {
-    /// `VERSION.uid`: the version's own three-part identifier.
-    ///
-    /// `VERSION` declares this abstract; each subtype effects it — an
-    /// `ORIGINAL_VERSION` stores it, and an `IMPORTED_VERSION` derives it from
-    /// the version it wraps (`Post: Result = item.uid`, RM
-    /// `UML/classes/org.openehr.rm.common.imported_version.adoc` §Functions).
-    /// This is that dispatch.
+    /// `VERSION.uid`: stored by an original, `item.uid` for an import.
     #[must_use]
     pub fn uid(&self) -> &ObjectVersionId {
         match self {
@@ -64,42 +33,20 @@ impl<T> Version<T> {
         }
     }
 
-    /// `VERSION.owner_id`: "Copy of the owning `VERSIONED_OBJECT._uid_` value;
-    /// extracted from the local `_uid_` property's `_object_id_`"
-    /// (`Post: Result.value.is_equal (uid.object_id.value)`; the same equality
-    /// is the class's `Owner_id_valid` invariant).
-    ///
-    /// The extraction is the BASE accessor `OBJECT_VERSION_ID.object_id()`, so
-    /// there is one lexical decoder for the three-part form rather than a
-    /// second one here.
+    /// `VERSION.owner_id`: the `object_id` of `uid` (`Owner_id_valid`).
     #[must_use]
     pub fn owner_id(&self) -> HierObjectId {
         HierObjectId::from(self.uid().object_id())
     }
 
-    /// `VERSION.is_branch`: "True if this Version represents a branch. Derived
-    /// from `_uid_` attribute" — delegated to
-    /// `OBJECT_VERSION_ID.is_branch()`, which is itself
-    /// `version_tree_id.is_branch` (BASE
-    /// `UML/classes/org.openehr.base.base_types.version_tree_id.adoc`
-    /// §Functions: "has `_branch_number()_` and `_branch_version()_` parts").
+    /// `VERSION.is_branch`: `uid`'s `version_tree_id.is_branch`.
     #[must_use]
     pub fn is_branch(&self) -> bool {
         self.uid().is_branch()
     }
 
-    /// `VERSION.preceding_version_uid`: the identifier of the version this one
-    /// succeeds, or `None` when this is the first version.
-    ///
-    /// `VERSION` declares this abstract and each subtype effects it: an
-    /// `ORIGINAL_VERSION` stores it (`0..1`,
-    /// `UML/classes/org.openehr.rm.common.original_version.adoc` §Attributes),
-    /// an `IMPORTED_VERSION` derives it from the version it wraps
-    /// (`Post: Result = item.preceding_version_uid`,
-    /// `UML/classes/org.openehr.rm.common.imported_version.adoc` §Functions).
-    /// The absent case is the spec's own: `VERSION.preceding_version_uid` is
-    /// documented "Void if this is the first version"
-    /// (`UML/classes/org.openehr.rm.common.version.adoc` §Functions).
+    /// `VERSION.preceding_version_uid`, `None` for a first version ("Void if this
+    /// is the first version").
     #[must_use]
     pub fn preceding_version_uid(&self) -> Option<&ObjectVersionId> {
         match self {
@@ -108,12 +55,7 @@ impl<T> Version<T> {
         }
     }
 
-    /// `VERSION.lifecycle_state`: the lifecycle state of the content item in
-    /// this version.
-    ///
-    /// The same dispatch: stored by an `ORIGINAL_VERSION`, derived as
-    /// `item.lifecycle_state` by an `IMPORTED_VERSION`
-    /// (`UML/classes/org.openehr.rm.common.imported_version.adoc` §Functions).
+    /// `VERSION.lifecycle_state`, through the same dispatch.
     #[must_use]
     pub fn lifecycle_state(&self) -> &DvCodedText {
         match self {
@@ -122,15 +64,8 @@ impl<T> Version<T> {
         }
     }
 
-    /// `VERSION.data`: the content of this version, or `None` when it carries
-    /// none.
-    ///
-    /// The same dispatch, over `ORIGINAL_VERSION.data`, which the spec
-    /// declares `0..1`. The absent case is a real version state rather than a
-    /// missing value: a logical delete commits "a new `ORIGINAL_VERSION` whose
-    /// data attribute is set to Void"
-    /// (`docs/specs/openehr/RM/docs/common/master06-change_control_package.adoc`
-    /// §Contributions).
+    /// `VERSION.data`, `None` for a logical delete, whose data "is set to Void"
+    /// (`master06` §Contributions).
     #[must_use]
     pub fn data(&self) -> Option<&T> {
         match self {
@@ -148,20 +83,8 @@ pub enum CanonicalFormError {
     Canonicalize(#[source] serde_json::Error),
 }
 
-/// Produces the spec `canonical_form` of a serialised Version JSON value.
-///
-/// The top-level `signature` attribute is dropped (Void during serialisation
-/// per RM common §"Digital Signature") and the RFC 8785 (JCS) canonical string
-/// is emitted.
-///
-/// The application service assembles the Version as a `serde_json::Value` before
-/// persistence and calls this, so signing and verification share one source of
-/// the signed bytes.
-///
-/// Spec authority: RM common §"Digital Signature"
-/// (`docs/specs/openehr/RM/docs/common/master06-change_control_package.adoc`) and
-/// `VERSION.canonical_form()`
-/// (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.version.adoc`).
+/// Produces the `canonical_form` of a serialised Version: RFC 8785 without the
+/// top-level `signature` (RM common §"Digital Signature").
 ///
 /// # Errors
 /// Returns [`CanonicalFormError::Canonicalize`] if RFC 8785 canonicalisation
@@ -180,14 +103,8 @@ pub fn canonical_form_of_json(value: &Value) -> Result<String, CanonicalFormErro
     .map_err(CanonicalFormError::Canonicalize)
 }
 
-/// Produces the spec `canonical_form` of a serialised Version JSON value whose
-/// `data` attribute joins by reference.
-///
-/// Byte-identical to [`canonical_form_of_json`] over the fully-assembled value
-/// (RFC 8785 orders keys), without deep-copying the — potentially large —
-/// `data` subtree into the envelope. A JSON-null `data` stays absent, matching
-/// a Version with Void data (RM common §"Logical Deletion"); a `signature` on
-/// the envelope is dropped exactly as [`canonical_form_of_json`] drops it.
+/// [`canonical_form_of_json`] with `data` joined by reference; a JSON-null
+/// `data` stays absent.
 ///
 /// # Errors
 /// Returns [`CanonicalFormError::Canonicalize`] if RFC 8785 canonicalisation
@@ -222,9 +139,7 @@ mod tests {
     use openehr_base::v1_3::prelude::{ObjectId, ObjectRef, ObjectRefData, TerminologyId};
     use openehr_term::codes::{AuditChangeType, VersionLifecycleState};
 
-    // The corpus-backed `canonical_form_of_json` tests are integration tests
-    // (`tests/it/version_canonical_form.rs`): their fixture lives outside this
-    // crate's published package, which a `src/` test cannot read.
+    // The corpus-backed tests are in `tests/it/version_canonical_form.rs`.
 
     /// A plain `ORIGINAL_VERSION` whose `uid` is `value`, to exercise the
     /// identity-derived functions of `VERSION`.
@@ -307,9 +222,7 @@ mod tests {
         );
     }
 
-    /// "True if this Version represents a branch. Derived from `uid` attribute"
-    /// — a bare trunk version id is not a branch, a three-part
-    /// `VERSION_TREE_ID` is.
+    /// A trunk version id is not a branch; a three-part one is.
     #[test]
     fn is_branch_follows_the_version_tree_id() {
         assert!(
@@ -321,9 +234,7 @@ mod tests {
         );
     }
 
-    /// The `IMPORTED_VERSION` arm of the same dispatch: the wrapper reports the
-    /// WRAPPED original's identity, so both derived functions read the foreign
-    /// version id (`Post: Result = item.uid`).
+    /// An `IMPORTED_VERSION` reports the wrapped original's identity.
     #[test]
     fn an_imported_version_derives_its_identity_from_the_wrapped_original() {
         let item = typed_original("8849182c-82ad-4088-a07f-48ead4180515::remote.example::3.2.1");
@@ -392,9 +303,7 @@ mod tests {
         assert_eq!(version.data(), Some(&"content".to_owned()));
     }
 
-    /// "Void if this is the first version" — a first version reports no
-    /// predecessor, and a logically deleted version reports no data
-    /// (master06 §Contributions).
+    /// A first version has no predecessor; a deleted one has no data.
     #[test]
     fn the_absent_cases_are_version_states_not_missing_values() {
         let mut original =

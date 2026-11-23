@@ -5,9 +5,6 @@
 //! [`ServiceError`] variant is the HTTP class of its refusal (ITS-REST overview
 //! `Requests_and_responses.md` §HTTP status codes), and a server fault answers
 //! with the curated internal message, its diagnosis on the trace record.
-//!
-//! A free function rather than `impl From<ServiceError> for ApiError`, because
-//! both types are foreign to this crate and the orphan rule forbids that impl.
 
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{ArchiveDefect, Malformed};

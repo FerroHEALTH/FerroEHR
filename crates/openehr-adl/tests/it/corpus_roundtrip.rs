@@ -1,15 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Corpus round-trip gate: for every corpus `.adls` that fully
-//! assembles, `parse_artefact → print → parse_artefact` must reconstruct a
-//! **structurally equal** [`openehr_adl::assemble`] `Archetype`.
-//!
-//! The generated `v2_4` model derives `PartialEq`, so the two artefacts are
-//! compared directly. The inclusion set mirrors the definition-parse gate: a
-//! file whose intended failure is a cADL-syntax fixture (or a semantic
-//! `V*`-code file whose *assembly* legitimately errors) is excluded with a
-//! reason; there are no silent skips.
+//! For every corpus `.adls` that assembles, `parse_artefact → print →
+//! parse_artefact` yields an equal `Archetype`; exclusions carry a reason.
 
 #![allow(
     clippy::print_stdout,

@@ -1,29 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 → ADL 2 converter core.
+//! The ADL 1.4 → ADL 2 converter core: code planning, renumbering, terminology
+//! rebuild and constraint conversion.
 //!
-//! NOTE: no openEHR spec governs 1.4→2 conversion — the whole `adl14` module is
-//! our own design (see the [`crate::adl14`] flag). The conversion HEURISTICS
-//! are pinned by the paired `upgrade_from_14` corpus fixtures, never by a
-//! spec clause; where a comment cites an AOM2/ADL2 section, it pins the
-//! validity of the ADL2 OUTPUT form (which is spec-governed), not the
-//! conversion procedure.
-//!
-//! The exceptions are meta-data: the standardised `description/other_details`
-//! mapping (`build_uid` + the `RESOURCE_DESCRIPTION` governance items), which
-//! `ADL1.4/masterAppB-extended_metadata.adoc` §Standardised Items governs
-//! directly — those items are "intended to be implemented by any ADL 1.4 =>
-//! ADL 2 conversion tool" — and the translator, copyright and conversion-record
-//! rules of `AOM2/master01-preface.adoc` §Release 2.3 changes. Both are applied
-//! by `crate::adl14::metadata`.
-//!
-//! This module owns the code spaces (planning, renumbering, terminology
-//! rebuild) and the constraint conversion; the three stages that need no
-//! converter state are siblings — `crate::adl14::walk` (the read-only
-//! definition traversals + the shared complex-object accessor),
-//! `crate::adl14::multiplicity` (the occurrences/cardinality reconciliation)
-//! and `crate::adl14::metadata` (description / meta-data / version).
+//! NOTE: no openEHR spec governs 1.4→2 conversion: our own design, pinned by the
+//! `upgrade_from_14` corpus fixtures; a cited AOM2/ADL2 section pins the output
+//! form. The meta-data mapping follows `ADL1.4/masterAppB-extended_metadata.adoc`
+//! §Standardised Items and `AOM2/master01-preface.adoc`, in
+//! `crate::adl14::metadata`.
 
 use std::collections::BTreeMap;
 
@@ -62,18 +47,9 @@ pub struct ConvertConfig {
     /// flagged fabricated fallback (`urn:adl14:<terminology>:<code>`).
     pub binding_uri_templates: BTreeMap<String, String>,
     /// Collapse specialised (dotted) codes to top level, producing a depth-0
-    /// archetype. For a `-`-specialised root inlined standalone by a
-    /// flattened OPT the differential lineage is unresolvable — the spec
-    /// defines differential-form semantics only relative to a resolvable
-    /// parent (`ADL2/master09.02` §Specialisation concepts), a specialised
-    /// archetype must declare that parent (`AOM2/master03` §Validity Rules
-    /// VASID/VACSD), and deriving the parent id from the 1.4 `-` naming is
-    /// endorsed nowhere — so the standalone source is emitted UNSPECIALISED:
-    /// every dotted node/value/constraint code is renumbered into the flat
-    /// code space (terminology keys follow), satisfying VARCN/VATCD at depth
-    /// 0. Off for plain ADL-source conversion, where the `specialise` clause
-    /// carries the lineage. No openEHR spec governs 1.4→2 conversion — our
-    /// own design/extension.
+    /// archetype, for a `-`-specialised root inlined standalone by a flattened OPT,
+    /// whose lineage cannot be resolved (`ADL2/master09.02`; `AOM2/master03` VASID,
+    /// VACSD). Off for plain source conversion. Our own design.
     pub collapse_specialised_codes: bool,
     /// The `"source_model"` the conversion record names; `None` names the
     /// source archetype's own identifier (an OPT root names its template).
@@ -149,13 +125,9 @@ pub fn parse_and_convert(
     convert(&art, cfg, log)
 }
 
-/// Convert a 1.4-shaped [`Archetype`] (from
-/// [`crate::assemble::parse_artefact`] in [`crate::parse::Dialect::Adl14`])
-/// into a spec-valid ADL2 archetype.
-///
-/// For a specialised source, this performs the base conversion (renumbering
-/// against the child's own codes); re-differentialisation against the
-/// converted+flattened parent is [`crate::adl14::differ::differentiate`].
+/// Convert a 1.4-shaped [`Archetype`] into a spec-valid ADL2 archetype; a
+/// specialised source is re-differentialised by
+/// [`crate::adl14::differ::differentiate`].
 ///
 /// # Errors
 /// [`ConvertError::Unsupported`] for a non-archetype artefact kind.
@@ -285,12 +257,8 @@ impl<'a> Converter<'a> {
         }
     }
 
-    /// Maps every existing node at-code to its shifted id-code, returning the
-    /// highest id-number reached and the codes deferred by the collapse.
-    ///
-    /// Under collapse, dotted (specialised) codes are deferred: they get fresh
-    /// flat ids above the max, in document order (the root always takes `id1`
-    /// — VARCN's depth-0 root form).
+    /// Maps every node at-code to its shifted id-code, returning the highest
+    /// id-number and the dotted codes the collapse defers (the root takes `id1`).
     fn plan_node_codes(&mut self, data: &AuthoredArchetypeData) -> (i64, Vec<String>) {
         let collapse = self.cfg.collapse_specialised_codes;
         let root_code = match &data.definition {
@@ -320,13 +288,8 @@ impl<'a> Converter<'a> {
         (max_id, deferred)
     }
 
-    /// Gives a 1.4 slot that redefines a parent slot (`at0004.1`) the node id
-    /// of the slot it redefines (`id5`): AOM 2 VDSSID, "a slot node in a
-    /// specialised archetype that redefines a slot node in the flat parent must
-    /// have an identical node id" (`AOM2/master04.5-constraint_model-class_definitions.adoc`).
-    ///
-    /// A new slot (`at0.5`) keeps its own code, and the standalone collapse
-    /// has no parent to keep an id of.
+    /// Gives a 1.4 slot that redefines a parent slot the node id of that slot
+    /// (`AOM2/master04.5` VDSSID: "must have an identical node id").
     fn plan_redefined_slots(&mut self, data: &AuthoredArchetypeData) {
         if self.cfg.collapse_specialised_codes {
             return;
@@ -445,12 +408,8 @@ impl<'a> Converter<'a> {
         }
     }
 
-    /// The renumbered `term_definitions`, per language.
-    ///
-    /// `@ internal @` node terms are dropped in every language (the marker is
-    /// authored in the original language; translations carry the openEHR
-    /// untranslated form `*@ internal @(<lang>)`), so the internal node set is
-    /// determined once, from the original language.
+    /// The renumbered `term_definitions`, per language; `@ internal @` node terms,
+    /// found in the original language, are dropped in every language.
     fn rebuild_term_definitions(
         &mut self,
         old: &ArchetypeTerminology,
@@ -489,14 +448,9 @@ impl<'a> Converter<'a> {
 
     /// Renumbers one 1.4 term definition into its ADL2 entries.
     ///
-    /// An ac-code (a merged 1.4 `constraint_definitions` entry — ADL2 merges
-    /// that section into `term_definitions`, `master07.13` §Terminology
-    /// section) keeps its ac prefix, shifted like every other code so the
-    /// converted `C_TERMINOLOGY_CODE` ac constraints still resolve (VACDF). A
-    /// 1.4 at-code used as a value (`[local::atX]`) always yields an at-code
-    /// term; used as a node id it yields an id-code term, and a code that is
-    /// both splits into both entries. An `@ internal @` node term is dropped
-    /// (reference-converter behaviour; validates clean).
+    /// An ac-code keeps its prefix (`master07.13` §Terminology section); a value
+    /// at-code yields an at-code term, a node at-code an id-code term, and a code
+    /// used both ways both. An `@ internal @` node term is dropped.
     fn rebuild_term(
         &mut self,
         code: &str,
@@ -609,13 +563,8 @@ impl<'a> Converter<'a> {
             .unwrap_or_else(|| data.archetype_id.semantic_id());
         set_release_version(&mut data.archetype_id, &version);
 
-        // `other_details["build_uid"]` → the archetype's `build_uid`
-        // (`ADL1.4/masterAppB-extended_metadata.adoc` §Standardised Items:
-        // "Guid string … See AOM2 spec, Machine Identifiers section"). Only a
-        // well-formed GUID is consumed — a value violating the stated syntax
-        // stays in `other_details` verbatim rather than being guessed at — and
-        // an already-populated `build_uid` (a 1.4 header `build_uid=` meta
-        // item) is never overwritten by the meta-data section.
+        // `other_details["build_uid"]` → `build_uid` (`ADL1.4/masterAppB-extended_metadata.adoc`
+        // §Standardised Items), only for a well-formed GUID and an unset `build_uid`.
         if data.build_uid.value().is_nil()
             && let Some(other) = data
                 .description
@@ -748,10 +697,8 @@ impl CollapseMaps {
 }
 
 impl CodeSpace for CollapseMaps {
-    /// The at-code for a value or terminology entry under the collapse: a
-    /// dotted code with no planned remap yet (an UNUSED flattened-ontology
-    /// entry — VTSD covers defined codes, not only used ones) mints a fresh
-    /// flat at-code on first sight; everything else follows
+    /// The at-code for a value or terminology entry under the collapse: an unused
+    /// dotted code mints a fresh flat at-code, everything else follows
     /// [`CollapseMaps::value_at`].
     fn value_code(&mut self, minter: &mut TermMinter<'_>, code: &str) -> String {
         if self.collapse && code.contains('.') && !self.value_map.contains_key(code) {

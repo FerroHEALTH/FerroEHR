@@ -2,14 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariant + functions for `DV_URI`.
-//!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_uri.adoc`:
-//! - `Value_valid`: the URI value must be non-empty.
-//! - `scheme()` / `path()` / `query()` / `fragment_id()` accessor functions
-//!   (RFC-3986 generic-syntax decomposition; each returns the empty string
-//!   when the component is absent, matching the spec's `String` returns).
+//! `DV_URI` (RM 1.2.0 `org.openehr.rm.data_types.dv_uri.adoc`): `Value_valid`
+//! and the RFC 3986 accessors, each empty when the component is absent.
 
 use crate::v1_2::data_types::uri::dv_uri::DvUriData;
 use openehr_base::validate::{InvariantViolation, Validate};
@@ -22,13 +16,10 @@ fn is_scheme(s: &str) -> bool {
         && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
 }
 
-/// The DV_URI `Value_valid` core over the projected value — one source for the
-/// typed impl and the value-level fast path (`validate::fast`), mirroring the
-/// DV_EHR_URI sibling (`dv_ehr_uri_impl::push_dv_ehr_uri_invariants`).
+/// The `Value_valid` core shared by the typed impl and `validate::fast`.
 pub(crate) fn push_dv_uri_invariants(value: &str, out: &mut Vec<InvariantViolation>) {
-    // NOTE: `dv_uri.adoc` §Invariants + `master10-uri_package.adoc` §Design —
-    // the only invariant is non-emptiness, and plain-text (scheme-less) URIs
-    // are explicitly allowed, so no lexical-form refusal exists.
+    // NOTE: `dv_uri.adoc` §Invariants, `master10-uri_package.adoc` §Design: the
+    // only invariant is non-emptiness; plain-text URIs are allowed.
     crate::v1_2::validate::generated::dv_uri_core(value, out);
 }
 
@@ -43,9 +34,8 @@ impl DvUriData {
         }
     }
 
-    /// RM `DV_URI.path()`: the location part in scheme-space — the value
-    /// after `scheme:` and any `//authority`, up to any `?query` or
-    /// `#fragment`.
+    /// RM `DV_URI.path()`: after `scheme:` and any `//authority`, up to `?` or
+    /// `#`.
     #[must_use]
     pub fn path(&self) -> &str {
         let mut rest = self.value.as_str();
@@ -116,11 +106,7 @@ mod tests {
         assert!(messages("").contains(&"Invariant Value_valid failed on type DV_URI".to_owned()));
     }
 
-    /// `dv_uri.adoc` §Description binds `value` to "the Universal Resource
-    /// Identifier (URI) RFC-3986 standard", whose §3 `URI` production requires a
-    /// scheme — a scheme-less string is a `relative-ref`, which it does not
-    /// admit. The refusal is reported under `Value_valid`, the class's only
-    /// declared invariant.
+    /// An empty value fails `Value_valid`.
     #[test]
     fn scheme_less_and_plain_text_values_are_accepted() {
         // Absolute references are accepted.
@@ -132,10 +118,7 @@ mod tests {
             uri("mailto:someone@example.org").invariants(),
             Vec::<InvariantViolation>::new()
         );
-        // Plain-text URIs (RFC-3986-forbidden characters such as spaces) and
-        // scheme-less relative references are all admitted: the class's only
-        // invariant is non-emptiness, and the §Design plain-text allowance
-        // covers exactly these forms.
+        // Plain-text and scheme-less URIs are admitted (§Design).
         assert_eq!(
             uri("http://example.org/a b").invariants(),
             Vec::<InvariantViolation>::new()

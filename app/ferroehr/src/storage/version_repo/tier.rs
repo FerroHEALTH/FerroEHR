@@ -33,9 +33,6 @@ use crate::storage::error::StorageError;
 /// together. Objects already cold match nothing and are silently skipped, so
 /// re-archiving is idempotent.
 ///
-/// The attestation rows follow through their foreign key's `ON UPDATE
-/// CASCADE`; the node rows, which have none, move in the same statement.
-///
 /// # Errors
 /// Returns [`StorageError::Database`] on any driver/statement failure.
 pub async fn freeze(
@@ -91,9 +88,6 @@ pub async fn thaw(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), StorageE
 }
 
 /// Whether each of `vo_ids` is currently archived, as a parallel answer set.
-///
-/// One primary-key probe per object on the head row, which is also where the
-/// archive marker lives.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.

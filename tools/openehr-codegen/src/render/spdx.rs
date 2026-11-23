@@ -1,41 +1,21 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The SPDX licensing header every emitted file carries (REUSE Specification
-//! 3.3, <https://reuse.software/spec-3.3/>).
-//!
-//! The repository's bulk `REUSE.toml` glob declaration does not travel with a
-//! file that is copied out, and the specification asks that licensing "is
-//! preserved when the file is copied and reused by third parties", which only an
-//! in-file header achieves.
-//!
-//! The header follows the `// @generated … DO NOT EDIT.` banner rather than
-//! preceding it: that banner's presence on the FIRST line is what the purge, the
-//! sibling-impl loader and the comment-style guard key on.
+//! The SPDX header every emitted file carries below its `@generated` banner
+//! (REUSE Specification 3.3, <https://reuse.software/spec-3.3/>), so licensing
+//! "is preserved when the file is copied and reused by third parties".
 
-// Everything below WRITES SPDX tags rather than carrying them, and `reuse
-// lint` reads a tag wherever it appears — the specification's own remedy for a
-// file that quotes the syntax it produces.
+// This module writes SPDX tags, so REUSE must not read them as its own.
 // REUSE-IgnoreStart
 
-/// This project's own copyright holder, spelled as the repository's
-/// `REUSE.toml` spells it, so a header and the glob declaration covering the
-/// same file cannot disagree.
+/// This project's copyright holder, as `REUSE.toml` spells it.
 pub(crate) const PROJECT_COPYRIGHT: &str = "Cadasto B.V.";
 
-/// The copyright holder of the openEHR material a published spec crate carries
-/// — the specification documentation text propagated into the emitted doc
-/// comments, the terminology assets and the schemas.
+/// The copyright holder of the openEHR material a spec crate carries.
 pub(crate) const OPENEHR_COPYRIGHT: &str = "openEHR Foundation";
 
-/// The generated crates whose emitted files are Apache-2.0 and carry
-/// openEHR's copyright line beside the project's own.
-///
-/// The five model crates are the openEHR model generated from Apache-2.0
-/// inputs and embed specification text; `openehr-its` is the ITS wire layer
-/// generated from the Apache-2.0 XSD, OpenAPI and BMM artifacts. Their headers
-/// name the openEHR Foundation as a second holder and keep the inputs' licence
-/// (owner decisions 2026-09-03 and 2026-09-24).
+/// The generated crates whose files are Apache-2.0 and name the openEHR
+/// Foundation as a second holder (owner decisions 2026-09-03 and 2026-09-24).
 pub(crate) const DUAL_LICENSED_CRATES: &[&str] = &[
     "openehr-am",
     "openehr-base",
@@ -70,12 +50,8 @@ pub(crate) fn header(crate_name: &str) -> String {
     }
 }
 
-/// Returns `body` with the SPDX header of `crate_name` inserted below its
-/// generated banner.
-///
-/// A body whose first line is not a banner takes the header at the very top
-/// instead; a body that already carries a licence identifier is returned
-/// unchanged, so stamping is idempotent.
+/// Returns `body` with `crate_name`'s SPDX header below its banner, or at the
+/// top without one; a body already carrying a licence is unchanged.
 pub(crate) fn stamp(crate_name: &str, body: &str) -> String {
     if body
         .lines()
@@ -92,10 +68,6 @@ pub(crate) fn stamp(crate_name: &str, body: &str) -> String {
 }
 
 /// Returns `text` without a leading SPDX header block.
-///
-/// A generation-twin template source carries the header of the crate it is
-/// stamped INTO; the stamped copy gets its header from [`stamp`] at write time,
-/// so the source's copy is removed first and one authority remains.
 pub(crate) fn strip_leading_header(text: &str) -> &str {
     let mut rest = text;
     let mut stripped = false;

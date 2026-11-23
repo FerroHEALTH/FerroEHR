@@ -14,11 +14,6 @@
 //! COHORT_BENCH_N=100000 cargo nextest run -p ferroehr \
 //!     -E 'test(cohort_bench)' --run-ignored all --no-capture
 //! ```
-//!
-//! The corpus nests: every person matches `c100000`, the first 10 000 also
-//! match `c10000`, the first 1 000 also `c1000`, the first 100 also `c100`. So
-//! the four cohorts are 100 / 1 000 / 10 000 / N EHRs out of the same corpus,
-//! and the four measurements differ only in how wide the crossing is.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -67,12 +62,6 @@ fn bench_config(n: usize) -> CohortConfig {
 
 /// A PERSON whose address CLUSTER carries one `at0012` city ELEMENT per cohort
 /// the person belongs to.
-///
-/// One ELEMENT per membership is what makes the four cohorts genuinely nest
-/// under a single equality predicate: `city = c1000` reaches every person in
-/// the first thousand, `city = c100` the first hundred of those, and the
-/// measured sizes are exactly 100 / 1 000 / 10 000 / N rather than the
-/// disjoint bands a one-value-per-person corpus would give.
 fn person(name: &str, cities: &[String]) -> Value {
     json!({
         "_type": "PERSON",
@@ -141,10 +130,6 @@ fn cohort_values(index: usize, n: usize) -> Vec<String> {
 }
 
 /// The summarised top plan node of an `EXPLAIN (ANALYZE, FORMAT JSON)` run.
-///
-/// Whole plans are hundreds of lines and go stale as noise; what a reader of
-/// the record needs is the shape (which node type), the time, the row count and
-/// which indexes the planner reached for.
 fn summarise_plan(explain: &Value) -> Value {
     let plan = explain
         .get(0)
@@ -175,10 +160,6 @@ fn collect_indexes(node: &Value, out: &mut Vec<String>) {
 }
 
 /// The p50 and p95 of a set of millisecond samples, nearest-rank.
-///
-/// The rank is computed in integers (`ceil(pct * n / 100)`) rather than through
-/// a float quantile: with twenty samples the two differ at the boundary, and a
-/// published percentile should not depend on a rounding mode.
 fn percentiles(mut samples: Vec<f64>) -> (f64, f64) {
     samples.sort_by(f64::total_cmp);
     let at = |pct: usize| {
@@ -189,10 +170,6 @@ fn percentiles(mut samples: Vec<f64>) -> (f64, f64) {
 }
 
 /// Seed `n` parties, each with its own EHR, mapping and composition.
-///
-/// Concurrent because the work is I/O-bound on `PostgreSQL`: the width keeps the
-/// pool busy rather than the CPU. Returns the EHR ids in completion order,
-/// which is all the clinical `EXPLAIN` needs.
 async fn seed_corpus(svc: &Arc<FerroEhrService>, n: usize) -> Vec<EhrId> {
     let start = Instant::now();
     let seeded: Vec<EhrId> = futures::stream::iter(0..n)
@@ -279,8 +256,6 @@ async fn measure(
 }
 
 /// Seed the corpus and measure each cohort, writing the record.
-///
-/// Ignored by default: it seeds a six-figure corpus and takes minutes.
 #[tokio::test]
 #[ignore = "a measurement, not a gate: seeds a six-figure corpus (COHORT_BENCH_N)"]
 async fn cohort_bench() {

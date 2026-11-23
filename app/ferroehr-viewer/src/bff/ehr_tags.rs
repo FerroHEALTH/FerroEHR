@@ -14,9 +14,6 @@
 //! still reports them, so the browser resolves and links a directory target
 //! without offering to edit it.
 //!
-//! Four wire facts this module is built around, each verified against the
-//! released operation files:
-//!
 //! 1. **No tag route is conditional.** The three write operations declare
 //!    `Prefer` and the two content headers and NOTHING else — no `If-Match` —
 //!    and a tag collection carries neither `ETag` nor `Last-Modified`, which
@@ -39,9 +36,6 @@
 //!    "This will return an empty list when there is no matching `ITEM_TAG`"
 //!    (`operations/ehr_tags_get.yaml`); a `404` means the EHR itself is unknown.
 //!
-//! The tag client is the shared one ([`crate::bff::item_tags`]), working on
-//! the paths this module builds; every path segment is percent-encoded.
-//!
 //! No openEHR spec governs the viewer — our own design / product extension.
 
 #![expect(
@@ -55,11 +49,6 @@ use crate::locale::{Msg, tr, tr_served};
 use crate::uid::container_uid_of;
 
 /// Which EHR-side object an `ITEM_TAG` target turned out to be.
-///
-/// The three taggable kinds inside an EHR. Two of them —
-/// [`Composition`](Self::Composition) and [`EhrStatus`](Self::EhrStatus) — have
-/// the released tag route trios; [`Directory`](Self::Directory) has none (fact
-/// 1 in the module docs), so it is a navigation answer only.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EhrTargetKind {
     /// A COMPOSITION or its `VERSIONED_COMPOSITION`.
@@ -72,9 +61,6 @@ pub enum EhrTargetKind {
 
 impl EhrTargetKind {
     /// The viewer screen that owns an object of this kind.
-    ///
-    /// A composition has its own route; the status and the directory are tabs
-    /// of the EHR detail screen. Every id is percent-encoded.
     #[must_use]
     pub fn href(self, ehr_id: &str, container: &str) -> String {
         let ehr = urlencoding::encode(ehr_id);
@@ -91,9 +77,6 @@ impl EhrTargetKind {
 
 /// The path of the tag collection of composition `uid` inside `ehr_id`
 /// (`ehr/{ehr_id}/composition/{uid_based_id}/tags`, `composition_tags_*`).
-///
-/// `uid` addresses either the version container or one VERSION, two disjoint
-/// collections (module docs fact 2).
 #[must_use]
 pub fn composition_tags_path(ehr_id: &str, uid: &str) -> String {
     format!(
@@ -116,17 +99,10 @@ pub fn ehr_tags_path(ehr_id: &str, key: &str, value: &str) -> String {
 
 /// Which object inside `ehr_id` holds `uid`, or `None` when none does.
 ///
-/// An aggregate tag row reports its target as a bare `UID_BASED_ID` with no RM
-/// type attached (module docs fact 3), so the only honest way to open a row is
-/// to ask the CDR.
-///
-/// Three steps, and the ORDER is load-bearing: the two IDENTITY comparisons run
-/// first — the EHR resource's own `ehr_status` reference, then the directory's
-/// `uid` — because each names its object exactly. Only then is the COMPOSITION
-/// resource read, the one step that infers a kind from a route answering at
-/// all, since inference would otherwise claim every id that route happens to
-/// serve. Any answer other than `404` from that read is raised rather than read
-/// as "not a composition".
+/// The order matters: the two identity comparisons (the EHR's `ehr_status`
+/// reference, then the directory's `uid`) run before the composition read,
+/// which infers a kind from the route answering at all. Any answer other than
+/// `404` from that read is raised.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -176,9 +152,6 @@ pub async fn resolve_ehr_target(
 /// `OBJECT_REF` whose `id` addresses the CURRENT `EHR_STATUS` version (RM
 /// `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr.ehr.adoc`), so
 /// its container part is the versioned object the panel edits.
-///
-/// This is a second WINDOW of the endpoint the EHR-detail header already reads,
-/// for an identifier rather than for a fact the screen shows.
 ///
 /// # Errors
 /// CDR transport errors pass through; a non-2xx answer normalizes via

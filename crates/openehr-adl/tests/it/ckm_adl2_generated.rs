@@ -2,14 +2,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Gate over CKM's generated ADL 2 export (`corpus/archetypes/ckm/adl2-generated/`,
-//! CKM Release 1.22.0, #4973; every lifecycle state since #5451).
+//! CKM Release 1.22.0), which measures CKM's conversion, not FerroEHR's.
 //!
-//! Every file is CKM's own 1.4->2 conversion, so this measures that conversion
-//! and the CKM sources, never FerroEHR's converter. Each file parses or is an
-//! adjudicated parse refusal, and validates as an ADL 2 upload is validated
-//! (parents first, the production RM) or is refused on its adjudicated code.
-//! Each reason opens with what causes it: `conversion:` (CKM's converter),
-//! `source:` (the CKM archetype) or `parent:` (a refused parent).
+//! Each file parses and validates (parents first, production RM) or is refused
+//! on its adjudicated code; each reason opens with `conversion:`, `source:` or
+//! `parent:`.
 #![allow(
     clippy::expect_used,
     clippy::panic,
@@ -33,11 +30,8 @@ fn pack() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/archetypes/ckm/adl2-generated")
 }
 
-/// The files of the export that do not parse: CKM writes the 1.4 `[local::]`
-/// (a terminology constraint with no codes) as `defining_code matches {}`, an
-/// empty block ADL 2 has no production for (openEHR/archie#896, the shape
-/// whose `[openEHR::]` twin CKM exports empty). Each refuses with SCAS. All
-/// but `exclusion_symptom_sign` are REJECTED in CKM.
+/// The files CKM exports with `defining_code matches {}`, which ADL 2 has no
+/// production for; each refuses with SCAS.
 const PARSE_REFUSALS: &[&str] = &[
     "openEHR-EHR-CLUSTER.coordination.v1.adls",
     "openEHR-EHR-CLUSTER.cranial_nerves.v1.adls",

@@ -1,28 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `validity/templates` corpus harness — VTPL + VARXR filler validation.
-//!
-//! Oracle: `docs/specs/openehr/AM/docs/AOM2/master03-archetype_package.adoc`
-//! §Validity Rules (VTPL — template/filler language consistency) and
-//! `master08-validation.adoc` §Phase 2 (VARXR — external reference resolution),
-//! resolved against the flattened fillers by
-//! [`openehr_adl::validate::slots::validate_fillers`].
-//!
-//! Every file under `tests/corpus/adl2-reference/validity/templates` is claimed
-//! here with its expected outcome (the in-file `regression` tag is the oracle,
-//! INVENTORY.md):
-//!
-//! * `template_fail_VTPL` (tag `VTPL`) — its parent's filler is a mono-lingual
-//!   (`de`-only) archetype, so the `en` template cannot flatten a common
-//!   language → VTPL fires.
-//! * `template_pass_VTPL` (tag `PASS`) — its filler carries `de` + `en` → clean.
-//! * `t_non_existent_ext_ref` (tag `VARXR`) — a lexically-legal reference to a
-//!   non-existent archetype → VARXR fires.
-//! * the support archetypes (`good_include`, `bad_include`, `de_en_lang_arch`,
-//!   `de_lang_arch`) — parse-only inputs; a plain archetype is exempt from VTPL
-//!   (only a template's fillers must share its language), so they raise no
-//!   filler issue.
+//! The `validity/templates` corpus: VTPL and VARXR over the flattened fillers
+//! (`AOM2/master03` §Validity Rules; `master08` §Phase 2), each file against its
+//! `regression` tag. A plain archetype is exempt from VTPL.
 
 #![allow(
     clippy::expect_used,

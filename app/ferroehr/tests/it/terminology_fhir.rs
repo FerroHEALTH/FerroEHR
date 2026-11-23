@@ -5,11 +5,6 @@
 //! driven by `wiremock` — a hermetic FHIR R4B terminology server: canned
 //! `$validate-code`/`$expand`/`$subsumes`/`$lookup` responses + fault injection
 //! (timeout, `5xx`, malformed). No network.
-//!
-//! Every operation arrives as a `POST` of a `Parameters` body
-//! (`crate::terminology_wire`); the answers are read through the R4B
-//! operation contracts of `ferrobridge-term`, so a body that does not fit them
-//! is a fault, never a partial read.
 
 use std::time::Duration;
 

@@ -2,9 +2,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! ITS-REST contract for the `admin` API group: DTOs, per-operation
-//! param structs, per-response headers structs, the `server` and
-//! `client` halves, and the route table.
+//! ITS-REST contract for the `admin` API group.
 
 #![allow(
     clippy::all,
@@ -106,10 +104,7 @@ impl AdminEhrDeleteAllParams {
     }
 }
 
-/// The server half of the `admin` API group (ITS-REST): the `AdminApi`
-/// trait an implementation provides, one success-answer enum per operation,
-/// and `router`, which binds every operation of the route table to its
-/// trait method over axum.
+/// The server half of the `admin` API group (ITS-REST).
 #[cfg(feature = "rest-server")]
 pub mod server {
     use super::*;
@@ -136,12 +131,8 @@ pub mod server {
 
     /// Server contract for the `admin` API group (ITS-REST).
     ///
-    /// Every method defaults to refusing with `ApiError::NotImplemented` (`501`),
-    /// so an implementor overrides only the operations it supports; `router`
-    /// serves an implementation over axum. A method refuses with a
-    /// [`crate::rest::runtime::Refusal`]: `?` turns an `ApiError` into one,
-    /// and `Refusal::with_headers` adds the headers the OAS declares for the
-    /// answer (the `ETag` of a `412`, for one).
+    /// Every method defaults to `ApiError::NotImplemented` (`501`), and refuses
+    /// with a [`crate::rest::runtime::Refusal`].
     #[async_trait::async_trait]
     pub trait AdminApi {
         /// `DELETE /admin/ehr/{ehr_id}`
@@ -162,24 +153,10 @@ pub mod server {
 
     /// The axum router serving every operation of the `admin` group over `api`.
     ///
-    /// Each route is bound at its OAS path relative to the API base (an RFC 6570
-    /// query expansion dropped, path captures named by segment position). A
-    /// handler decodes the request into the operation's params struct and body
-    /// — a missing or unparseable parameter answers `400` naming it, a
-    /// canonical-JSON body sent as another `Content-Type` answers `415` — and
-    /// encodes the trait method's answer, or its `Refusal` as the ITS-REST
-    /// `Error` body with the refusal's headers. Mount it under the base path
-    /// with `axum::Router::nest`.
-    ///
-    /// The router carries no fallback, so group routers merge freely (axum
-    /// refuses to merge two routers that both carry one); finish the merged
-    /// router with `crate::rest::server::with_fallbacks` for the `404` and `405`
-    /// answers, or take `crate::rest::server::router`, which does both.
-    ///
-    /// The typed bodies are canonical JSON only: a server that also serves
-    /// canonical XML or a Simplified Format routes those requests itself, and
-    /// the `accept` parameter reaches the trait method, which answers
-    /// `ApiError::NotAcceptable` for a representation it does not serve.
+    /// Routes are relative to the API base; mount it with `axum::Router::nest`.
+    /// It carries no fallback, so group routers merge (axum refuses two
+    /// fallbacks); `crate::rest::server::with_fallbacks` adds the `404` and `405`.
+    /// The typed bodies are canonical JSON only.
     pub fn router<S>(api: std::sync::Arc<S>) -> axum::Router
     where
         S: AdminApi + Send + Sync + 'static,
@@ -256,9 +233,7 @@ pub mod server {
     }
 }
 
-/// The client half of the `admin` API group (ITS-REST): one method per
-/// operation over a [`crate::rest::client::Client`], answering an outcome
-/// enum with one variant per status the OAS documents for it.
+/// The client half of the `admin` API group (ITS-REST).
 #[cfg(feature = "rest-client")]
 pub mod client {
     use super::*;
@@ -326,9 +301,8 @@ pub mod client {
         /// `DELETE /admin/ehr/{ehr_id}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn admin_ehr_delete(
             &self,
             params: &AdminEhrDeleteParams,
@@ -355,9 +329,8 @@ pub mod client {
         /// `DELETE /admin/ehr/all{?ehr_id*}`
         ///
         /// # Errors
-        /// A status the OAS does not document for this operation, a refused
-        /// credential, a service failure, an undecodable body, or a request
-        /// that could not be sent — see [`crate::rest::client::ClientError`].
+        /// A [`crate::rest::client::ClientError`] for an undocumented status, a
+        /// refused credential, a service failure, an undecodable body or a send failure.
         pub async fn admin_ehr_delete_all(
             &self,
             params: &AdminEhrDeleteAllParams,
@@ -388,8 +361,7 @@ pub mod client {
     }
 }
 /// The operations of this group as `(method, path, operation_id)`, in OAS
-/// document order: `server::router` binds each to its trait method, and
-/// `crate::rest::routes::lookup` matches a request path against them.
+/// document order.
 pub const ROUTES: &[(&str, &str, &str)] = &[
     ("DELETE", "/admin/ehr/{ehr_id}", "admin_ehr_delete"),
     ("DELETE", "/admin/ehr/all{?ehr_id*}", "admin_ehr_delete_all"),

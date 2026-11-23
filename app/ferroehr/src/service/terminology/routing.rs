@@ -4,11 +4,6 @@
 //! The terminology lookup and validation calls on [`FerroEhrService`],
 //! answered by the in-process bundle or the one terminology server (see the
 //! module docs in [`super`]).
-//!
-//! Enumeration is the bundle's own ([`super::bundle`]); lookup and
-//! validation go to the bundle when it knows the terminology, else to the
-//! configured terminology server, else fall through to the bundle's
-//! unknown-terminology `NotFound`.
 
 use std::collections::BTreeMap;
 

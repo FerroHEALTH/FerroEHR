@@ -64,10 +64,6 @@ pub fn init_console(section: &TelemetrySection) -> Result<Arc<Telemetry>, Teleme
 }
 
 /// Returns what the viewer decides inside the family stack.
-///
-/// The request log carries the query parameters `[telemetry]` lets through,
-/// the HTTP server metrics on `telemetry`'s meter and the scheme the listener
-/// serves, and the same meter records the admission's waits and refusals.
 #[must_use]
 pub fn stack_policy(config: &ViewerConfig, telemetry: &Telemetry) -> StackPolicy {
     let meter = telemetry.meter(SCOPE);

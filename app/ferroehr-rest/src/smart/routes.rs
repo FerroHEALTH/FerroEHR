@@ -372,14 +372,6 @@ pub(crate) fn target_ehr(
 /// patient's EHR"). SMART App Launch requires the server to hold the patient
 /// context and names no layer, so the evaluator holding it is our own design.
 ///
-/// Which EHR a representative reaches is the access evaluator's decision as
-/// well, on the EHR whose `EHR_STATUS` names the subject it represents
-/// (`refused-not-represented`, #5609).
-///
-/// A read under a federation agreement whose `consent` condition applies,
-/// and which carries no consent decision reference, is the access
-/// evaluator's refusal (`refused-consent-reference-missing`, #5614).
-///
 /// # Errors
 /// The reason the debug log records: the grants do not meet the requirement.
 pub(crate) fn check(requirement: &Requirement, principal: &Principal) -> Result<(), &'static str> {

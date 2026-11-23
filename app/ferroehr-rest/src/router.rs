@@ -357,10 +357,6 @@ pub fn stack_policy(observability: &Observability, fhir: FhirBase) -> StackPolic
 
 /// Renders a panicked handler as a `500` problem with the curated opaque
 /// detail; the panic payload never reaches the body or the log.
-///
-/// The `instance` names the server's request id, as every refusal a FerroEHR
-/// handler writes does ([`problem::finish`]), so one id finds the exchange in
-/// the request log whichever layer answered.
 fn panic_body(fhir: FhirBase) -> PanicBody {
     Arc::new(move |uri, ids: RequestIds<'_>| {
         problem::stack_answer(
@@ -443,10 +439,9 @@ fn mount_public_surface(
         AccessLevel::Off => {}
         AccessLevel::Public => inner = inner.merge(openapi::swagger_router(cfg)),
         level @ (AccessLevel::Private | AccessLevel::AdminOnly) => {
-            // `route_layer`, never `layer`: a layer also wraps the router's
-            // fallback, so after the merge every unmatched path outside the
-            // API (a SMART discovery document that is switched off, a typo)
-            // answered the guard's `401` instead of `404`.
+            // `route_layer`, never `layer`: a layer also wraps the fallback, so
+            // every unmatched path outside the API would answer the guard's
+            // `401` instead of `404`.
             inner = inner.merge(openapi::swagger_router(cfg).route_layer(from_fn_with_state(
                 management::guard::AccessGuard {
                     authenticator: Arc::clone(authenticator),
@@ -475,10 +470,6 @@ fn management_rbac(state: &AppState) -> ferroehr::config::authz::RbacConfig {
 }
 
 /// Builds the standalone management application for separate-port mode.
-///
-/// The binary serves it on the management listener when `management.listen` is
-/// set: the management routes inside the family stack, with the same health
-/// routes.
 pub fn management_router(state: &AppState, authenticator: Arc<Authenticator>) -> Router {
     let observability = state.observability();
     let health = Health::new(

@@ -5,21 +5,11 @@
 //! read once at admission for the `attested` care path.
 //!
 //! The draft access control decision procedure (Holding a Care Relationship)
-//! admits a care relationship that is never stored: the caller's verified
-//! credential, issued under an agreement `ACCESS_POLICY.attested_care`
-//! names, attests a treatment context for the subject that is current at the
-//! access. Which claims carry it is the deployment's data: the issuer's
-//! `[auth.issuer.<name>.federation]` table maps them to `patient.id` (the patient, as
-//! `system|value`), `trc.id` (the assertion), `trc.not_before` and
-//! `trc.not_on_or_after` (its window, in seconds since the epoch) and,
-//! optionally, `assertion.issuer` and `trc.care_role` (the care role it
-//! attests, one code with its code system). The patient is resolved to the EHRs whose
-//! subject its identifier names, one read of the party store, and only when
-//! the policy in force names an agreement at all; the decision checks the
-//! agreement, the window and the subject on every access
-//! (`ferroehr::access_eval::condition::RequestAccess::attested_on`). A
-//! credential that carries no complete treatment context attests none. Our
-//! own design (#6078).
+//! admits a care relationship that is never stored: a verified credential,
+//! issued under an agreement `ACCESS_POLICY.attested_care` names, attests a
+//! treatment context for the subject that is current at the access. The
+//! issuer's `[auth.issuer.<name>.federation]` table maps the claims, and a
+//! credential without a complete context attests none. Our own design (#6078).
 
 use std::sync::Arc;
 

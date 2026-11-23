@@ -23,15 +23,6 @@
 //! End-to-end journeys over Parties: the openEHR Demographic API plus this
 //! CDR's `PARTY_RELATIONSHIP` extension.
 //!
-//! - the party lifecycle: New party, the party's page, Edit committing a
-//!   second version, and both versions on the Versions tab;
-//! - relating two parties from the PERSON's Relationships tab, with both ends
-//!   linked from the relationship's page;
-//! - tags: setting and removing a party tag, and finding it in the tag index
-//!   on Parties;
-//! - the no-WebAssembly contract: Open as a plain GET form, and an unknown
-//!   kind answered as a not-found page.
-//!
 //! Isolation: every journey creates its OWN parties (over the viewer for the
 //! lifecycle one, over ITS-REST for the others), so none touches the fixtures
 //! the other journeys or the documentation-screenshot pass depend on.
@@ -62,12 +53,6 @@ fn basic_credentials() -> (String, String) {
 
 /// A minimal RM-valid party body for `rm_type`, carrying `label` as its
 /// identity's one ELEMENT value.
-///
-/// The shape is the one the CDR's own demographic corpus fixture uses
-/// (`corpus/fixtures/demographic/person.v1.json`):
-/// the ARCHETYPED block `PARTY`'s `Is_archetype_root` invariant requires, a root
-/// `archetype_node_id` equal to the stringified `archetype_id`, and one
-/// `PARTY_IDENTITY`.
 fn party_body(rm_type: &str, segment: &str, label: &str) -> serde_json::Value {
     let archetype_id = format!("openEHR-DEMOGRAPHIC-{rm_type}.{segment}.v1");
     serde_json::json!({
@@ -479,10 +464,6 @@ async fn lookup_and_unknown_kind_work_without_javascript() {
 
 /// A run-unique suffix for the fixtures a journey creates, so a shared stack
 /// can hold several runs' parties and tags without collision.
-///
-/// The process id distinguishes runs and the counter distinguishes calls within
-/// one — the harness needs distinctness, not entropy, and no clock (the
-/// wall-clock reads a `disallowed-methods` ban anyway).
 fn jitter() -> String {
     static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
     let seq = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);

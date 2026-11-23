@@ -1,33 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! ADL 1.4 → ADL 2 conversion, exercised across the whole real-world corpus.
+//! Every ADL 1.4 archetype of the live CKM and the paired export survives
+//! convert → print as ADL 2 → re-parse, or is adjudicated.
 //!
-//! `adl14_conversion.rs` is the DEEP gate: a handful of paired fixtures whose
-//! converted output is compared structurally against an expected `.adls`. This
-//! is the BREADTH gate over the same converter: every ADL 1.4 archetype openEHR
-//! actually publishes — 944 from the live CKM plus the 330 ADL 1.4 twins of
-//! upstream's paired export — must survive the full pipeline
-//!
-//! ```text
-//! 1.4 source → convert → print as ADL 2 → re-parse in the ADL 2 dialect
-//! ```
-//!
-//! without error. The re-parse is what makes the claim meaningful: a converter
-//! that emits something its own reader cannot read has produced nothing usable,
-//! and printing is where a half-converted node code or a dangling terminology
-//! reference actually surfaces.
-//!
-//! NOTE: no openEHR spec governs 1.4→2 conversion — the whole `adl14` pipeline
-//! is our own design (archie is prior art only), so the claim asserted here is
-//! self-consistency (convert → print → re-read), not conformance to a spec
-//! clause. Structural comparison against upstream's own `.adls` conversion of
-//! the same archetypes is a separate, stronger claim and is NOT made here (see
-//! the pack provenance).
-//!
-//! Corpus discipline: 100% exercised, adjudicated failures only. A source the
-//! pipeline cannot carry is listed in `ADJUDICATED` with the reason, and the
-//! gate asserts it still fails — a negative test, not a skip.
+//! NOTE: no openEHR spec governs 1.4→2 conversion: the claim is self-consistency.
 #![allow(
     clippy::expect_used,
     clippy::panic,
@@ -42,12 +19,8 @@ use openehr_adl::assemble::parse_artefact;
 use openehr_adl::parse::Dialect;
 use openehr_adl::print::print;
 
-/// Sources that cannot reach the end of the pipeline, with the reason.
-///
-/// The 13 archetypes that do not PARSE as 1.4 are excluded structurally rather
-/// than listed here — they are adjudicated (with their expected refusal codes)
-/// in `ckm_archetype_packs.rs`, and a source that never parses cannot be
-/// converted. Listing them twice would double-book one adjudication.
+/// Sources that cannot reach the end of the pipeline, with the reason; sources
+/// that do not parse are adjudicated in `ckm_archetype_packs.rs`.
 const ADJUDICATED: &[(&str, &str)] = &[];
 
 fn packs() -> Vec<(&'static str, PathBuf)> {
@@ -183,15 +156,9 @@ fn every_parseable_real_world_archetype_converts_and_round_trips() {
     );
 }
 
-/// The #1466 partition shape, pinned structurally on the hand-written fixture
-/// (`tests/corpus/adl14-cadl/openEHR-EHR-CLUSTER.heterogeneous_quantity_rows.v1.adl`,
-/// the live `range_of_motion` shape): `list` rows constraining DIFFERENT
-/// member sets partition into one `DV_QUANTITY` alternative per set —
-/// ADL 2 documents tuple rows only with a constraint in every member
-/// (`ADL2/master04.4` §Tuple Constraints), so the union-with-holes tuple the
-/// converter used to emit (`[{"mm"}, {}]`) has no spec form. The printed text
-/// must re-parse, carry no empty tuple item, and keep the `deg`↔range pairing
-/// and the row-1-only `assumed_value` inside the tuple alternative.
+/// `list` rows constraining different member sets partition into one
+/// `DV_QUANTITY` alternative per set (`ADL2/master04.4` §Tuple Constraints): the
+/// output re-parses with no empty tuple item and keeps the row pairings.
 #[test]
 fn heterogeneous_rows_partition_into_alternatives() {
     let src = std::fs::read_to_string(

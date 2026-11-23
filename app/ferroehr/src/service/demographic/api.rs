@@ -4,10 +4,6 @@
 //! The public DEMOGRAPHIC seam on [`FerroEhrService`] — the typed party and
 //! relationship operations plus the wire-shaped party / relationship /
 //! contribution / tag calls the ITS-REST adapter (`ferroehr-rest`) invokes.
-//!
-//! Thin adapters that parse the (kind + string) arguments the wire seams supply
-//! and delegate to the sibling demographic domain modules. Party / relationship
-//! ids parse through the shared BASE decoder in [`crate::versioning`].
 
 #![expect(
     clippy::disallowed_types,

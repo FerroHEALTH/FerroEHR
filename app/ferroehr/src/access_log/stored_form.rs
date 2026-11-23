@@ -100,9 +100,6 @@ const NODE: &str = "archetype_node_id";
 
 /// An entry as it is stored, as JSON values: its row part, and its shared
 /// part when it has one.
-///
-/// The split over the JSON value is the reference [`parts::parts`] is held
-/// to (#5849), which is how the server writes the parts.
 #[cfg(test)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct StoredForm {
@@ -265,12 +262,6 @@ pub(super) fn instant_text(at: jiff::Timestamp) -> Option<String> {
 #[cfg(test)]
 /// The record `row` and `shared` store, joined back into its canonical form's
 /// object.
-///
-/// The shared members go beside the row's, and the access details of both
-/// merge in the order of their codes, which is the order the entry was
-/// written in ([`crate::access_log::details::DetailsWriter::finish`]).
-/// `audit.access_log_document` is the reader; this is the reference the
-/// split is held to.
 #[cfg(test)]
 #[must_use]
 pub fn join(row: Value, shared: Option<Value>) -> Value {

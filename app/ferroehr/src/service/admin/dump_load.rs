@@ -101,12 +101,8 @@ const DELETED_LIFECYCLE: &str = crate::versioning::lifecycle::state::DELETED;
 
 /// The lowest `archive_version` this server can read.
 ///
-/// The storage rewrite changed what a version record carries: validity is
-/// derived from the commit instant rather than stored as an interval, so a
-/// first-generation archive (`1`/`2`) has no `committed_at` to load and would
-/// otherwise fail as a NOT NULL violation on a column the operator never heard
-/// of. It is refused by version instead, naming the remedy — the same shape as
-/// the boot refusal of a first-generation database.
+/// Archives `1` and `2` carry a validity interval and no `committed_at`, so
+/// they are refused by version, naming the remedy.
 const ARCHIVE_VERSION_FLOOR: u32 = 3;
 
 /// The archive manifest (`manifest.json`) — enough to read the segments back.
@@ -119,12 +115,9 @@ struct Manifest {
     format: String,
     /// Archive schema version (this module's on-disk contract).
     ///
-    /// `1`/`2` are first-generation archives, whose version records carry a
-    /// validity interval; `3`/`4` are generation-2 archives, whose version
-    /// records carry the commit instant the append-only store derives validity
-    /// from. The even member of each pair is the blob-carrying variant. A
-    /// first-generation archive is refused by [`ARCHIVE_VERSION_FLOOR`] rather
-    /// than half-loaded.
+    /// `1` and `2` carry a validity interval and are refused
+    /// ([`ARCHIVE_VERSION_FLOOR`]); `3` and `4` carry the commit instant. The
+    /// even member of each pair carries blobs.
     archive_version: u32,
     /// The requested segment split size in kb.
     segment_split_size_kb: i32,
@@ -203,8 +196,6 @@ struct EhrRecord {
 /// contiguous index ranges, each staying at or under `limit_bytes` unless a
 /// single record already exceeds it (then it is its own segment). Records keep
 /// their order; every record lands in exactly one segment.
-///
-/// A pure function so the segmenting policy is unit-testable without a database.
 fn plan_segments(sizes: &[usize], limit_bytes: usize) -> Vec<std::ops::Range<usize>> {
     let mut segments = Vec::new();
     let mut start = 0usize;
@@ -226,17 +217,11 @@ fn plan_segments(sizes: &[usize], limit_bytes: usize) -> Vec<std::ops::Range<usi
 }
 
 /// The wire message of every filesystem-access failure of these operations.
-///
-/// Deliberately opaque: the configured `file_sys_loc` is server deployment
-/// layout and the OS error names the same path, so both go to the trace record
-/// instead of the response body.
 const LOCATION_MESSAGE: &str =
     "the configured archive location could not be read or written; see the server log";
 
 /// Build a `file_not_writable` [`ServiceError`] for a failed filesystem access to
 /// `path`.
-///
-/// The body carries [`LOCATION_MESSAGE`]; `path` + `err` are traced.
 fn file_not_writable(path: &Path, err: &std::io::Error) -> ServiceError {
     tracing::error!(
         path = %path.display(),
@@ -947,11 +932,8 @@ fn resolve_versions(
 impl FerroEhrService {
     /// Exports every EHR to an archive under `file_sys_loc`.
     ///
-    /// Returns a per-entity report carrying only failures, so an empty list
-    /// means every EHR was dumped. Both enumerations are served in full:
-    /// `COMPRESSION_FORMAT` absent (loose files), `zip` or `7z`, and
-    /// `EXPORT_FORMAT` `openehr_canonical_json` (the default when
-    /// `logical_format` is absent) or `openehr_canonical_xml`.
+    /// Returns a report of the failures alone, so an empty list means every EHR
+    /// was dumped.
     ///
     /// # Errors
     /// - `precondition_violation` (`400`) — a non-positive
@@ -1084,12 +1066,9 @@ impl FerroEhrService {
 
     /// Populates the repository from an archive under `file_sys_loc`.
     ///
-    /// A duplicate EHR id, a subject this repository already holds under
-    /// another EHR, and a record whose externalized version payload will not
-    /// read are reported (`dump_status = false`) and skipped; all other EHRs
-    /// are re-persisted verbatim. The operation is passed no format, so the
-    /// container and the payload form both
-    /// come from the archive itself.
+    /// A duplicate EHR id, a subject already held under another EHR, and a
+    /// version payload that does not read are reported and skipped. The
+    /// container and the payload form are detected from the archive.
     ///
     /// # Errors
     /// - `file_not_writable` — `file_sys_loc` holds no archive container, or

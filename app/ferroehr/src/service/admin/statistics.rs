@@ -21,12 +21,6 @@ use crate::storage::statistics::{self, CompositionCount, ContributionScope};
 /// The contributions a [`PlatformService`] holds: the EHR-scoped ones, the
 /// ehr-less ones, or none when the service is not a versioned-content service
 /// (statistics are then trivially empty/0).
-///
-/// `a_service` names a versioned-content service. Only `Ehr` (EHR-scoped) and
-/// `Demographic` (ehr-less) hold contributions in this CDR; the remaining
-/// members (`Admin`/`Definitions`/`Ehr_index`/`Message`/`Query`/`System_log`)
-/// are not versioned-content services and yield nothing — a defensible reading,
-/// not a gap.
 fn contribution_scope(service: PlatformService) -> Option<ContributionScope> {
     match service {
         PlatformService::Ehr => Some(ContributionScope::Ehr),

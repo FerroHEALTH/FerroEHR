@@ -18,12 +18,6 @@ fn now() -> jiff::Timestamp {
 /// returning the canonical form the store and the wire carry. A payload
 /// the generated type refuses is the 400 the CONTRIBUTION door answers
 /// ([`crate::versioning::contribution::decode_new_contribution`]).
-///
-/// The fixture states the change type and committer every
-/// `UPDATE_ATTESTATION` requires (`PARTY_IDENTIFIED` with a name satisfies
-/// `Basic_validity` + `Name_valid`), so each test exercises only the
-/// attribute it names; [`missing_committer_is_refused`] pins the refusal
-/// of a partial without one.
 fn complete(partial: &Value) -> Result<Value, ServiceError> {
     let mut stated = json!({
         "change_type": { "value": "attestation", "defining_code": {
@@ -337,10 +331,8 @@ fn null_items_is_absent_not_invalid() {
 /// `schemas/common/UpdateAudit.yaml` `$ref`s `DvCodedText` for it, and the
 /// ITS-REST docs text is silent on the member's shape, so that released
 /// schema (`change_type: $ref: ../data_types/DvCodedText.yaml`) grounds it.
-/// The `CODE_PHRASE` shape `{terminology_id, code_string}`
-/// this fixture used to send is not that shape — see
-/// [`flat_terminology_code_change_type_is_refused`] for the twin that
-/// pins its refusal.
+/// A `CODE_PHRASE` `{terminology_id, code_string}` is not that shape;
+/// [`flat_terminology_code_change_type_is_refused`] pins its refusal.
 fn update_attestation(body: &Value) -> openehr_its::rest::generated::common::UpdateAttestation {
     let mut wire = json!({
         "change_type": {

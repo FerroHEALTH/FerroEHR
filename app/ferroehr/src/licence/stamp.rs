@@ -45,9 +45,6 @@ pub const STAMP_BITS: u32 = 16;
 pub struct NotVersion7(pub Uuid);
 
 /// A precomputed stamp key.
-///
-/// Construct once, clone freely: cloning copies two SHA-256 states, and the
-/// per-identifier work is one short HMAC.
 #[derive(Clone)]
 pub struct StampKey {
     mac: Hmac<Sha256>,

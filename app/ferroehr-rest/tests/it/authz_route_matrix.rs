@@ -4,23 +4,12 @@
 //! The exhaustive **role × route** authorization matrix over the assembled
 //! router.
 //!
-//! `rbac_e2e` proves the gate's mechanics on one representative operation per
-//! class. This module proves the CLASSIFICATION of every route: the route set
-//! is enumerated from the router itself (`extensions_document`, built from the
-//! same `utoipa-axum` composition that mounts the routes, so it cannot drift
-//! from what is served) and matched against the explicit tables below. A route
-//! added to the router and left out of a table fails
-//! [`every_mounted_route_carries_a_declared_authorization_class`] — which is
-//! the point: `RbacGate::class_for` classifies an unmapped template `Admin`
-//! only under `/admin/` and `Clinical` everywhere else, so an admin-grade route
-//! mounted outside that prefix would otherwise be gated as clinical with
-//! nothing to notice.
-//!
-//! The decision matrix itself is asserted on the wire: every gated route is
-//! driven with a roleless, an ordinary, an admin, and a read-only principal,
-//! and the refusal is identified by the reason the gate renders
-//! (`extensions::access::authz::roles`), so a `403` from any OTHER gate is
-//! never mistaken for an RBAC decision.
+//! A route left out of the tables below fails
+//! [`every_mounted_route_carries_a_declared_authorization_class`], since the
+//! coarse gate would classify an admin-grade route outside `/admin/` as
+//! clinical. Every gated route is driven with a roleless, an ordinary, an admin
+//! and a read-only principal, and a refusal is identified by the reason the
+//! RBAC gate renders.
 //!
 //! The shape follows the OWASP **Authorization Testing Automation** Cheat
 //! Sheet's data-driven matrix
@@ -89,11 +78,6 @@ enum Effect {
 /// discovery, the OAS/Swagger pair (mounted only when `api.openapi_ui` is
 /// on) and the System `OPTIONS` manifest, which the router mounts on the outer
 /// router above the CORS layer and therefore above authentication too.
-///
-/// This is the inventory of everything reachable without a credential (#3671):
-/// each row names why it is public, and
-/// [`every_route_outside_the_public_inventory_needs_a_credential`] proves that
-/// nothing else is.
 const PUBLIC: &[(&str, &str, &str)] = &[
     (
         "GET",
@@ -489,11 +473,9 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     ("DELETE", "/admin/template/{template_id}"),
     // The physical party delete: the demographic counterpart of the EHR one.
     ("DELETE", "/admin/party/{party_id}"),
-    // The other two destructive shared-definition routes. They do not sit under
-    // /admin/, and they used to take Clinical from that fallback — so the
-    // privilege depended on the path prefix rather than on the blast radius
-    // (issue #2071). Removing an archetype and removing a template have the
-    // same blast radius, so the three must match.
+    // The other two destructive shared-definition routes, outside `/admin/`:
+    // removing an archetype or a template has the blast radius of the third, so
+    // the three match (#2071).
     ("DELETE", "/definition/archetype/adl1.4/{archetype_id}"),
     ("DELETE", "/definition/artefact/adl2/{artefact_id}"),
     ("DELETE", "/admin/query/{qualified_query_name}/{version}"),
@@ -815,11 +797,6 @@ fn reason_of(body: &[u8]) -> Option<Refusal> {
 
 /// Every route the router mounts is classified in one of the tables above, and
 /// no table row names a route the router does not mount.
-///
-/// This is the property the one-per-class coverage could not give: a new route
-/// — anywhere, including outside `/admin/` where the coarse gate's fallback
-/// would silently make it clinical — has to be classified deliberately or this
-/// test fails.
 #[test]
 fn every_mounted_route_carries_a_declared_authorization_class() {
     let cfg = matrix_config();
@@ -858,11 +835,6 @@ fn every_mounted_route_carries_a_declared_authorization_class() {
 /// | `Admin` read | refused (needs `ADMIN`) | refused (needs `ADMIN`) | allowed | allowed |
 /// | `Admin` write | refused (needs `ADMIN`) | refused (needs `ADMIN`) | allowed | refused (read-only) |
 /// | `HandlerAdmin` read | refused (needs a role) | refused (needs `ADMIN`) | allowed | allowed |
-///
-/// "Allowed" means the authorization layer did not refuse — the concrete
-/// post-gate status is real-backend behaviour (`rbac_e2e`'s doctrine), not the
-/// gate's, so pinning it here would couple authorization to unrelated handler
-/// outcomes.
 #[tokio::test]
 async fn the_role_matrix_holds_for_every_gated_route() {
     let (_pg, app) = app().await;
@@ -967,10 +939,6 @@ async fn the_public_family_needs_no_credential_and_the_gated_surface_does() {
 /// The public inventory is closed (#3671): every mounted route, driven with no
 /// `Authorization` header, is reachable only if [`PUBLIC`] declares it, and
 /// every other route answers `401` (ITS-REST overview `Requests_and_responses.md`).
-///
-/// The management surface keeps its own per-endpoint gate
-/// (`management::private_endpoint_401_then_200` and siblings); its endpoints
-/// are not mounted here, so they must not answer at all.
 #[tokio::test]
 async fn every_route_outside_the_public_inventory_needs_a_credential() {
     let (_pg, app) = app().await;

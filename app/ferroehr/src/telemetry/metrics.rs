@@ -6,10 +6,6 @@
 //!
 //! **No openEHR spec governs metrics — our own design/extension.**
 //!
-//! The provider is the family's: Prometheus reads it and, with
-//! `[telemetry.otlp]`, OTLP pushes it, so every instrument reaches both. The
-//! HTTP server metrics are the request log's `http.server.request.duration`.
-//!
 //! # Naming
 //!
 //! Instrument names carry NO Prometheus suffix, and units are declared instead:
@@ -147,10 +143,6 @@ fn seconds(
 }
 
 /// The instruments, built once and reachable from every emitting site.
-///
-/// A struct of typed handles rather than macro call sites: an instrument is
-/// created once and recorded through a real type, so a misspelled metric name
-/// is a compile error instead of a silently-new time series.
 #[derive(Debug)]
 pub struct Metrics {
     /// Authentication failures.
@@ -205,10 +197,6 @@ pub struct Metrics {
 
 impl Metrics {
     /// Create every instrument on `meter`.
-    ///
-    /// One flat struct literal on purpose: the whole instrument set is visible
-    /// in one place, which is what makes an omission obvious. Splitting it into
-    /// themed halves would hide exactly that.
     #[must_use]
     #[expect(
         clippy::too_many_lines,
@@ -362,9 +350,6 @@ pub fn init(meter: &Meter) -> &'static Metrics {
 }
 
 /// Record the always-`1` build-identity gauge and the process start time.
-///
-/// Both are observable gauges: their value is a fact about the process rather
-/// than an event, so they are read at collection time instead of pushed.
 pub fn register_static_gauges(meter: &Meter, build: &BuildInfo) {
     let labels = [
         KeyValue::new("version", build.version),

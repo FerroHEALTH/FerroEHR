@@ -11,15 +11,6 @@
 //! `persistent` member. The wire form of the category is its **numeric group
 //! code** (`431`, not the rubric `persistent`); the rubric is resolved from the
 //! `openehr-term` bundle at the render edge, never hardcoded.
-//!
-//! This module is the composition-side sibling of
-//! [`crate::versioning::lifecycle::state`]: membership questions still go
-//! through the bundle (which is the authority), and the constants exist so no
-//! read or write path ever spells a category code as a bare string literal.
-//! `tests::category_group_is_the_expected_four_members` is the completeness
-//! guard the `audit_change_type` and `version_lifecycle_state` constant sets
-//! also carry — it fails if the TERM bundle's group ever gains or loses a
-//! member, which is when this module needs a new constant.
 
 /// The `composition_category` group members this chapter names.
 pub(crate) mod code {

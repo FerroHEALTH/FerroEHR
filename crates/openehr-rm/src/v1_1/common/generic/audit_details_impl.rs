@@ -2,17 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariant for `AUDIT_DETAILS`.
-//!
-//! Spec: RM `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.audit_details.adoc`
-//! §Invariants declares two:
-//!
-//! - `System_id_valid`: `not system_id.is_empty` — realized here.
-//! - `Change_type_valid`: `terminology (Terminology_id_openehr)
-//!   .has_code_for_group_id (Group_id_audit_change_type,
-//!   change_type.defining_code)` — terminology-bound, so it needs a bundle
-//!   lookup rather than a typed-node property; realized by the binding table in
-//!   [`crate::v1_1::validate::terminology`] against the `openehr-term` bundle.
+//! `AUDIT_DETAILS` invariants (`org.openehr.rm.common.audit_details.adoc`):
+//! `System_id_valid` here, `Change_type_valid` in
+//! [`crate::v1_1::validate::terminology`].
 
 use crate::v1_1::common::generic::audit_details::AuditDetailsData;
 use openehr_base::validate::{InvariantViolation, Validate};

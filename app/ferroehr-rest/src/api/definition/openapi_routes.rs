@@ -8,13 +8,9 @@
 //! (`docs/specs/openehr/ITS-REST`); no openEHR spec governs the OAS layout. Each
 //! handler calls its operation's handler through [`guarded_dispatch`](crate::api::guarded_dispatch).
 //!
-//! NOTE (operation ids): a few released operation ids carry `.` (e.g.
-//! `definition_template_adl1.4_list`, `definition_query_store.yaml`) — invalid
-//! Rust identifiers, so the handler fn names sanitise `.` to `_`, while the
-//! served `operationId` (`operation_id = …`) and the op string passed to the
-//! dispatcher are the verbatim released id.
-//!
-//! ## Prose-vs-OAS reconciliations (documented real wire, per handler)
+//! NOTE: a released operation id carrying `.`
+//! (`definition_template_adl1.4_list`) names its handler with `_`; the served
+//! `operationId` stays verbatim.
 //!
 //! - **ADL 2 upload** (`definition_template_adl2_upload.yaml`): the OAS declares
 //!   `201/400/409`; the REST adapter emits the `409` on a duplicate HRID and the `400`

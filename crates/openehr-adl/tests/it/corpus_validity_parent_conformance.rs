@@ -1,22 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Phase-2 specialisation validation corpus harness.
-//!
-//! Walks the `validity/specialisation/**` corpus (plus the four slot-
-//! specialisation fixtures under `validity/slots/`) and asserts the phase-2
-//! validator's behaviour against each file's authoritative `regression` tag
-//! (the oracle per `tests/corpus/INVENTORY.md`, never the filename).
-//!
-//! The full gated pipeline (`validate_source`: phase 1 → RM → phase-2
-//! specialisation) runs with a repository built over the whole corpus so the
-//! flat parent and external references resolve. A level-0 parent is its own flat
-//! form (`ADL2/master09.02` §Differential and Flat Forms); a specialised parent
-//! needs the flattener and is adjudicated ([`FlatParent::NeedsFlattener`]).
-//!
-//! Spec oracle for the codes:
-//! `docs/specs/openehr/AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
-//! §Validity Rules + `master08-validation.adoc` §Phase 2.
+//! Phase-2 specialisation validation over `validity/specialisation/**` and the
+//! slot-specialisation fixtures, against each file's `regression` tag, through
+//! `validate_source` with a whole-corpus repository (`AOM2/master04.5` §Validity
+//! Rules; `master08` §Phase 2).
 
 // A test harness: vendored-fixture reads/parses are asserted to succeed.
 #![allow(
@@ -113,13 +101,9 @@ struct Counts {
     non_specialised: usize,
 }
 
-/// The upstream tuple-narrowing pair under `features/specialisation` is
-/// PASS-tagged, so the second-order tuple conformance functions (`master04.5`
-/// §`C_SECOND_ORDER`) must accept both: dropping a tuple row and narrowing the
-/// surviving rows are the sanctioned redefinitions (`ADL2/master09.05` §Tuple
-/// Redefinition). The corpus carries no VTPNC/VTPIN fixture of its own
-/// (`tests/corpus/INVENTORY.md`); the refusals are pinned by the unit twins in
-/// `validate::specialisation`.
+/// The PASS-tagged tuple-narrowing pair is accepted: dropping and narrowing
+/// tuple rows are sanctioned (`master04.5` §`C_SECOND_ORDER`; `ADL2/master09.05`
+/// §Tuple Redefinition).
 #[test]
 fn corpus_tuple_narrowing_raises_no_tuple_code() {
     let repo = build_repository();

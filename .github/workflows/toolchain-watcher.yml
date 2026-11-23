@@ -10,10 +10,7 @@
 # version with an automated job that creates a PR to upgrade the toolchain on
 # new releases." We already pin; this lane is the second half.
 #
-# It is a PR, never a push. The point is that a human sees the new lints — the
-# 1.96 -> 1.97.1 move introduced two pedantic lints that fail instantly under
-# -D warnings, which is fine on a dedicated PR and not fine as a surprise on
-# somebody else's.
+# It is a PR, never a push, so a human sees the new lints on a dedicated PR.
 #
 # THE DIGEST IS RE-RESOLVED, NEVER COPIED. Bumping the `rust:X-<variant>` tag
 # while keeping the previous @sha256 pin silently keeps the OLD toolchain in
@@ -48,11 +45,8 @@ name: Toolchain watcher
 
 on:
   schedule:
-    # Mondays 07:43 UTC — off the hour (GitHub delays on-the-hour runs under
-    # load) and in a slot of its own. The enumeration that used to sit here
-    # claimed clearance while omitting the base-image watcher, which shared this
-    # exact slot until #2778 moved it to 08:13; a list of other lanes rots the
-    # moment one moves, so read the estate's slots with
+    # Mondays 07:43 UTC, off the hour (GitHub delays on-the-hour runs under
+    # load) and in a slot of its own (#2778). Read the estate's slots with
     # `grep -rE '^ +- cron:' .github/workflows/`.
     - cron: "43 7 * * 1"
   workflow_dispatch:

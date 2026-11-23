@@ -3,9 +3,8 @@
 
 //! The optional-integration extensions of FerroEHR.
 //!
-//! Multimedia is carved out of the platform library behind the additive
-//! `multimedia` cargo feature (tracker #1890; no openEHR spec governs this
-//! surface — our own design/extension).
+//! Multimedia sits behind the `multimedia` cargo feature. No openEHR spec
+//! governs this surface: our own design.
 
 #[cfg(feature = "multimedia")]
 pub mod multimedia;

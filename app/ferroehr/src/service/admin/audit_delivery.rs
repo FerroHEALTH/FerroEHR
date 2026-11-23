@@ -3,10 +3,6 @@
 
 //! The operator's view and acts on the delivery of the audit records (#6242).
 //!
-//! The view lists each sink's cursors, how far each is behind, and the
-//! records it parked; the acts are a retry or a dismissal of a parked record
-//! and the forgetting of a sink taken out of the configuration.
-//!
 //! The request that acts is recorded in the system log as an application
 //! activity naming its operator, as every admin request is. No openEHR spec
 //! governs audit delivery: our own design.

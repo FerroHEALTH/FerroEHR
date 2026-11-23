@@ -3,15 +3,8 @@
 
 //! `RESULT_SET` export over a native `<form method="post">` download.
 //!
-//! A plain BFF axum route: each export of the results pane is a submit of the
-//! query's own form with `formaction`, so the download needs no script.
-//!
-//! The session guard admits only a request with a viewer session, and the
-//! route runs the AQL through the same CDR client as every page.
-//!
-//! The query is sent to the CDR as-is (no `fetch`/`offset` paging): a
-//! query carrying its own `LIMIT` exports that window, and an unbounded
-//! query is capped by the CDR's server-side default fetch limit.
+//! The query goes to the CDR unpaged: its own `LIMIT` sets the window, else the
+//! CDR's default fetch limit.
 
 #![expect(
     clippy::disallowed_types,
@@ -43,10 +36,8 @@ pub struct ExportForm {
 /// `POST /export/aql/{format}`: run the query and answer with a file
 /// download in `format`, `csv` or `json`.
 ///
-/// The session guard ([`crate::server::login_guard`]) sends a request without
-/// a viewer session to sign in before this runs and hands the session over.
-/// A CDR-side refusal of the session's credential answers `502`, so the
-/// download never navigates away on a mid-flight CDR `401`.
+/// A CDR refusal of the session's credential answers `502`, so the download
+/// never navigates away.
 pub async fn export_aql(
     axum::Extension(state): axum::Extension<crate::state::AppState>,
     axum::Extension(viewer): axum::Extension<ferrohealth_session::record::Session>,

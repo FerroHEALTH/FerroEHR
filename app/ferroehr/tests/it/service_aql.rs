@@ -381,17 +381,6 @@ async fn aql_acceptance_set() {
 }
 
 /// The whole-object result-assembly N+1 fix.
-///
-/// A dashboard-sized multi-row whole-COMPOSITION projection must reassemble
-/// **every** row's composition byte-identically to a direct
-/// `get_composition_latest`. The executor now collects one subtree anchor per
-/// whole-object cell across the whole page and loads them in a SINGLE statement
-/// (`storage::node_repo::read_subtrees_canonical`) instead of one follow-up
-/// SELECT per candidate row. No countable per-statement seam exists in the
-/// harness (no `pg_stat_statements`), so equivalence over a realistic page — plus
-/// the mixed scalar+whole-object columns and the duplicate-anchor projection
-/// below — is the oracle; correctness is byte-identical, the shape change is the
-/// batched loader documented on that function.
 #[tokio::test]
 async fn whole_object_projection_batches_over_a_multi_row_page() {
     let db = testkit::db().await.expect("testkit database");
@@ -1008,8 +997,7 @@ async fn latest_versus_all_versions() {
     let vo_uuid: ferroehr::ids::VoId = vo_id.parse().expect("vo_id uuid");
     let mut current = ovid.clone();
     for magnitude in [20.0, 30.0] {
-        // NOTE: `update_composition` returns the new
-        // `version_uid` directly (the old `.meta.uid`).
+        // `update_composition` returns the new `version_uid` directly.
         current = svc
             .update_composition(
                 ehr_uuid,
@@ -1100,13 +1088,6 @@ async fn latest_versus_all_versions() {
 /// The query-population gate, for both `execute_stored_query` and
 /// `execute_ad_hoc_query`. RM `org.openehr.rm.ehr.ehr_status.adoc`,
 /// `is_queryable`, reads (verbatim):
-///
-/// > True if this EHR should be included in population queries, i.e. if this
-/// > EHR is considered active in the population.
-///
-/// So an ad-hoc population query (no `ehr_id` scope) must include EHRs whose
-/// current `EHR_STATUS` is queryable and exclude those whose current `EHR_STATUS`
-/// has `is_queryable = False`.
 #[tokio::test]
 async fn population_query_excludes_not_queryable_ehrs() {
     let db = testkit::db().await.expect("testkit database");
@@ -2620,9 +2601,9 @@ async fn whole_object_root_predicate_serves_null_for_non_matches() {
     );
 }
 
-/// An uncoercible client binding is the CALLER's 400, never a 500 (#2593):
-/// measured live, `"not-a-date"` against a temporal predicate reached the
-/// driver as sqlstate 22007 and answered the opaque internal error.
+/// An uncoercible client binding is the caller's 400, never a 500 (#2593):
+/// `"not-a-date"` against a temporal predicate reaches the driver as sqlstate
+/// 22007.
 #[tokio::test]
 async fn an_uncoercible_temporal_binding_is_the_callers_400() {
     let (_db, svc) = crate::fixtures::service().await;
@@ -3770,15 +3751,6 @@ async fn aggregate_edge_cases() {
 /// operators): a row is kept when SOME assignment of the clause's step
 /// bindings makes it true under three-valued logic (our own grain design;
 /// §WHERE is silent on paths that reach several nodes).
-///
-/// * `NOT (sys > 140)` over systolics 120 and 150 holds (the 120 event fails
-///   `sys > 140`); over a path that reaches nothing it is NULL, and the row is
-///   dropped.
-/// * `AND` narrows: `EXISTS time AND NOT (sys >= 140)` returns a subset of
-///   `NOT (sys >= 140)`.
-/// * De Morgan: `NOT (sys >= 140 OR dia >= 90)` and
-///   `NOT (sys >= 140) AND NOT (dia >= 90)` return the same rows, on the
-///   readings and on an observation without the events.
 #[tokio::test]
 async fn where_keeps_the_boolean_laws() {
     let (_db, svc) = crate::fixtures::service().await;

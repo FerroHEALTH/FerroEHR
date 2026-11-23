@@ -5,10 +5,8 @@
 //! entries and a load puts back. No openEHR spec governs the archive or
 //! multimedia offload: our own design.
 //!
-//! An export streams each blob from the store into its entry, proving the
-//! bytes against their key on the way. A load writes each entry back through
-//! the store, which refuses an entry whose bytes are not the ones its name
-//! says, so a tampered archive cannot plant content under a key.
+//! A load writes each entry back through the store, which refuses bytes that do
+//! not match their key, so a tampered archive cannot plant content.
 
 use std::fs::File;
 use std::io::{BufWriter, Write as _};
@@ -144,13 +142,6 @@ impl FerroEhrService {
     /// reference into a `blobs/<key>` archive entry, returning the keys
     /// written (empty when no store is configured).
     ///
-    /// The keys come from `blob_ref`, the reference index the node write path
-    /// maintains in the same transaction as the nodes it describes, so the
-    /// export reads one index per domain instead of walking every exported
-    /// body in process. An exported version that references no blob contributes
-    /// no row, and an archived version's references moved to the cold tier with
-    /// it, so both tiers answer from the same relation.
-    ///
     /// # Errors
     /// [`ServiceError`] when a reference read, a blob read or proof, or an
     /// archive write fails.
@@ -202,10 +193,6 @@ impl FerroEhrService {
     }
 
     /// The blob URIs `blob_ref` records for the given versions, in one domain.
-    ///
-    /// Keyed on `(vo_id, sys_version)` without a tier predicate, so a version
-    /// the export read from the cold partition answers from the reference rows
-    /// its foreign key carried there. Our own extension.
     ///
     /// # Errors
     /// [`ServiceError::Database`] when the read fails.

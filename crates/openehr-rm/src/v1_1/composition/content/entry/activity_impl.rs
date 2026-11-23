@@ -2,13 +2,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `ACTIVITY`.
-//!
-//! - `Action_archetype_id_valid` (`not action_archetype_id.is_empty`) —
-//!   `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.composition.activity.adoc`
-//!   §Invariants.
-//! - `Archetype_node_id_valid` — the inherited LOCATABLE invariant
-//!   (`…org.openehr.rm.common.locatable.adoc` §Invariants).
+//! `ACTIVITY` invariants: `Action_archetype_id_valid`
+//! (`org.openehr.rm.composition.activity.adoc`) and the inherited
+//! `Archetype_node_id_valid`.
 
 use crate::v1_1::composition::content::entry::activity::Activity;
 use openehr_base::validate::{InvariantViolation, Validate};

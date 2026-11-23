@@ -2,10 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The chain check: embedded master key → its signature → licence window.
-//!
-//! Every step is a typed refusal. A caller that only wants "licensed or not"
-//! maps the whole error enum to "not"; a caller that logs gets the exact
-//! reason without string matching.
 
 use jiff::civil::Date;
 use pgp::composed::SignedPublicKey;
@@ -195,9 +191,6 @@ fn signed_by(primary: &PublicKey, signature: &Signature) -> Result<(), VerifyErr
 /// The primary's newest self-signature that can carry its key flags and
 /// expiry: a direct-key signature or a user id certification (RFC 9580
 /// §5.2.3.10).
-///
-/// Called on a trusted anchor after its bindings verified, so every
-/// candidate is the primary's own.
 fn newest_self_signature(certificate: &SignedPublicKey) -> Option<&Signature> {
     let users = certificate
         .details

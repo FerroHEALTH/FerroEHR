@@ -3,20 +3,13 @@
 
 //! ADL2 template identity, links, and REST paths — component-free.
 //!
-//! The viewer's Template Manager serves two families: the ADL 1.4
-//! operational templates and the ADL2 ones, switched by `?family=` on
-//! `/templates`. An ADL2 artefact is keyed by its AOM2 archetype HRID
-//! (`openEHR-EHR-COMPOSITION.concept.v1.0.0`), whose trailing `.v{semver}`
-//! carries the release version, and the ITS-REST Definition API exposes a
-//! version segment beside it (`specifications/operations/
-//! definition_template_adl2_version_get.yaml` under
-//! `docs/specs/openehr/ITS-REST/`). Every derivation the two screens need
-//! from those facts — the family stem, the release version, the versions one
-//! listing holds for a family, the wire paths — lives
-//! here as pure functions with unit tests, so the views stay thin.
+//! The Template Manager serves the ADL 1.4 and the ADL2 templates, switched by
+//! `?family=` on `/templates`. An ADL2 artefact is keyed by its AOM2 archetype
+//! HRID, whose trailing `.v{semver}` carries the release version (ITS-REST
+//! `specifications/operations/definition_template_adl2_version_get.yaml`).
 //!
-//! NOTE: no openEHR spec governs the viewer's routes or family switch — our
-//! own design / product extension; only the wire paths are spec-bound.
+//! NOTE: no openEHR spec governs the viewer's routes or family switch: our own
+//! design; only the wire paths are spec-bound.
 
 use crate::example_options::{ExampleDetail, ExampleType};
 use crate::locale::Msg;
@@ -52,10 +45,6 @@ impl TemplateFamily {
     }
 
     /// Read the family out of a `?family=` value.
-    ///
-    /// Anything other than `adl2` is the ADL 1.4 default: the parameter is
-    /// user input, so a typo lands on the screen's normal view rather than on
-    /// an error.
     #[must_use]
     pub fn from_query(value: &str) -> Self {
         if value.eq_ignore_ascii_case("adl2") {
@@ -89,11 +78,6 @@ pub fn split_hrid(hrid: &str) -> (&str, Option<&str>) {
 
 /// The release versions one listing holds for the HRID family `stem`, ordered
 /// oldest first and de-duplicated.
-///
-/// Ordering is by the numeric `major.minor.patch` triple, with the literal
-/// string as the tie-break, so `1.10.0` sorts after `1.9.0`. A component that
-/// is not a plain integer counts as `0` — the viewer orders what the CDR
-/// listed, it does not validate SEMVER.
 #[must_use]
 pub fn family_versions(template_ids: &[String], stem: &str) -> Vec<String> {
     let mut versions = Vec::new();
@@ -158,9 +142,6 @@ pub fn template_path(template_id: &str, version: Option<&str>) -> String {
 /// that DELETES one. NOTE: the released ITS-REST Definition API declares no
 /// artefact route at all, so this is the CDR's own extension, whose unknown
 /// artefact is the `404`.
-///
-/// The id is percent-encoded with the `urlencoding` crate — an HRID is
-/// CDR-supplied text.
 #[must_use]
 pub fn artefact_path(artefact_id: &str) -> String {
     format!(
@@ -171,12 +152,6 @@ pub fn artefact_path(artefact_id: &str) -> String {
 
 /// The ITS-REST path of the CDR-generated example composition for one stored
 /// ADL2 template, at `detail` and `kind`.
-///
-/// The Definition API declares no versioned example resource, so the artefact
-/// the example is generated from is the one `template_id` itself resolves to.
-/// The two example options ride the query string
-/// ([`crate::example_options::example_query`]); the id is percent-encoded with
-/// the `urlencoding` crate.
 #[must_use]
 pub fn example_path(template_id: &str, detail: ExampleDetail, kind: ExampleType) -> String {
     format!(

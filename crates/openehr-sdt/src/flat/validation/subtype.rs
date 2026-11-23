@@ -1,32 +1,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! RM subtype relation for type-conformance checks.
-//!
-//! Backed by the BMM-generated static RM model ([`openehr_rm::v1_2::model`]) —
-//! the spec-pinned type hierarchy, regenerated on any spec bump. [`conforms`] is
-//! the single seam the validator walk calls.
-//!
-//! Conformance is spec-correct where both types are known to the model and stays
-//! PERMISSIVE where the CONSTRAINT type is unknown, so a future or foreign
-//! constraint type cannot cause a false positive. A known constraint type paired
-//! with an unknown instance type IS rejected: a known concrete slot must be
-//! filled by a known conforming type.
+//! RM subtype relation for type-conformance checks, over
+//! [`openehr_rm::v1_2::model`].
 
 /// Strip a generic argument (`DV_INTERVAL<DV_QUANTITY>` → `DV_INTERVAL`).
 pub(crate) fn base(t: &str) -> &str {
     t.split('<').next().unwrap_or(t).trim()
 }
 
-/// Whether an instance's concrete RM type conforms to a `WebTemplate` constraint
-/// type (the instance type is the constraint type or a spec descendant of it).
+/// Whether an instance's RM type conforms to a `WebTemplate` constraint type.
 ///
-/// - Equal (modulo generics) always conforms.
-/// - When the constraint type is **known** to the RM model, the model decides:
-///   a known instance type conforms iff [`openehr_rm::v1_2::model::is_a`] holds; an
-///   unknown/bogus instance type is rejected (a known slot needs a known filler).
-/// - When the constraint type is **unknown** to the RM model, stay permissive
-///   (never over-reject on a type the spec model does not carry).
+/// A known constraint type admits only known conforming types
+/// ([`openehr_rm::v1_2::model::is_a`]); an unknown constraint type admits any.
 #[must_use]
 pub(crate) fn conforms(instance_type: &str, wt_type: &str) -> bool {
     let (inst, wt) = (base(instance_type), base(wt_type));

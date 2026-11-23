@@ -142,11 +142,6 @@ pub(crate) const H_VERSION_ITEM_TAG: &str = "openehr-version-item-tag";
 /// optional `value`, and an optional `target_path`. Multiple `ITEM_TAGs` may
 /// target one resource, uniquely identified by their `key`+`target_path` pair
 /// (overview §"openehr-item-tag and openehr-version-item-tag").
-///
-/// `value` is `Option` because `ITEM_TAG.value` is `0..1` and
-/// `Inv_value_valid` forbids a set-but-empty one: a header entry spelling
-/// `value=""` normalizes to absent on the way in, and the echo renders no
-/// `value` token on the way out.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ItemTagHeaderEntry {
     /// The tag key.
@@ -255,13 +250,6 @@ pub(crate) fn parse_item_tag_header(
 
 /// Judges parsed wrapper-header entries against the RM `ITEM_TAG` invariants,
 /// before the request's content is committed.
-///
-/// The invariants are evaluated through `openehr_rm`'s own predicates
-/// ([`ItemTag::key_valid`] / [`ItemTag::value_valid`]), which the `Validate` impl
-/// for `ItemTag` is written in terms of, so this check and the service seam that
-/// writes the tags cannot disagree. They are reached as predicates rather than
-/// through `Validate` because the version the tag's `target` names is not minted
-/// yet, so no `ITEM_TAG` instance exists.
 ///
 /// # Errors
 /// [`ApiError::Unprocessable`] naming the offending entry and the invariant it
@@ -624,10 +612,8 @@ mod tests {
 
     #[test]
     fn a_quoted_semicolon_does_not_split_the_entry() {
-        // A `target_path` is an AQL or RM path (RM `item_tag.adoc`
-        // `target_path`), and an AQL predicate may carry a `;` inside a quoted
-        // string. Splitting on the raw `;` shattered such an entry into
-        // fragments that then parsed as garbage.
+        // A `target_path` is an AQL or RM path, and an AQL predicate may carry
+        // a `;` inside a quoted string.
         let mut h = HeaderMap::new();
         h.insert(
             H_ITEM_TAG,

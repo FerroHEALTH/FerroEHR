@@ -79,20 +79,6 @@ fn cohort_config(small_cell_threshold: u32) -> CohortConfig {
 }
 
 /// A PERSON carrying the four selectable leaves.
-///
-/// Three ancestor shapes on purpose. The party's `details` `ITEM_TREE` carries
-/// a plain at-code, so the `sex` and birth-date ELEMENTs' nearest archetyped
-/// ancestor row is the PERSON root; the postcode sits under a CLUSTER carrying
-/// a full archetype HRID, so its ancestor is that CLUSTER; the city sits in the
-/// `details` of an archetyped `ADDRESS` under `contacts`, so its ancestor is
-/// the ADDRESS row. All three are what the predicate statement joins on
-/// (the nested-set interval of the ancestor row carrying the archetype id,
-/// `ferroehr::storage::codec`), and the third only exists because the
-/// demographic containers are decomposed into rows of their own.
-///
-/// RM shapes: `PERSON` (`identities` 1..*, `contacts`, `details`), `CONTACT`
-/// (`addresses` 1..*), `ADDRESS` (`details`), `ITEM_TREE` (`items`), `CLUSTER`
-/// (`items`), `ELEMENT` (`value`) — `openehr_rm::v1_2`.
 fn person(name: &str, city: &str, postcode: &str, sex: &str, born: &str) -> Value {
     json!({
         "_type": "PERSON",
@@ -667,10 +653,6 @@ fn the_two_statements_never_cross_the_boundary() {
 
 /// The whole crossing runs with each domain on its OWN login role, none of
 /// which can reach another's schema.
-///
-/// The separation is what makes the cohort surface safe to have at all: if one
-/// credential could run both the demographic and the clinical statements, the
-/// boundary would be a naming convention rather than a database fact.
 #[tokio::test]
 async fn the_crossing_runs_on_separated_credentials() {
     use ferroehr::db::DbConfig;

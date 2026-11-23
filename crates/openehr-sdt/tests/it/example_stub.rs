@@ -2,25 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
-//! Example-COMPOSITION synthesis of RM-mandatory ENTRY structural attributes.
-//!
-//! Regression coverage for the defect where the FLAT composition builder
-//! synthesised a blind `at0001` placeholder for a *constrained* structural
-//! attribute the simplified form carried no content under (e.g. the CKM
-//! "International Patient Summary" `ACTION.medication` whose `description` the
-//! template constrains to `ITEM_TREE[at0017]`), producing a COMPOSITION the
-//! validator then rejected with "unexpected node 'at0001' under 'description'".
-//!
-//! Oracle: the vendored `ips.v0.opt` (SDK corpus) reproduces the case exactly —
-//! its single `ACTION` constrains `description` to `ITEM_TREE[at0017]` with no
-//! leaf content, so the attribute is synthesised. The builder now records the
-//! constrained node id/type/name as a structural stub and the composition builder
-//! stamps it, per AOM 1.4
-//! `AM/docs/AOM1.4/master04-constraint_model_package.adoc` §`Valid_value` (a
-//! constrained attribute must be filled by a conforming value). Where an attribute
-//! is *unconstrained*, the spec-legal `at0001` "Any" placeholder is kept (ADL 1.4
-//! `AM/docs/ADL1.4/master05-cadl.adoc` §"Any" Constraints; CNF
-//! `master15-content_tc_composition.adoc` L38).
+//! A constrained structural attribute with no content is synthesised with its
+//! constrained node (AOM 1.4 `master04-constraint_model_package.adoc`
+//! §`Valid_value`); an unconstrained one keeps the `at0001` "Any" placeholder
+//! (ADL 1.4 `master05-cadl.adoc` §"Any" Constraints). Oracle: `ips.v0.opt`.
 
 use std::path::{Path, PathBuf};
 
@@ -74,10 +59,8 @@ fn edit_tree(node: &mut WebTemplateNode, f: &impl Fn(&mut WebTemplateNode)) {
     }
 }
 
-/// The vendored template constrains `ACTION.description` to `ITEM_TREE[at0017]`
-/// with no content, so the attribute is synthesised: it must carry the
-/// constrained node id (`at0017`) with the term-definition name — never the
-/// blind `at0001` placeholder — and the composition must validate clean.
+/// A synthesised `ACTION.description` carries the constrained `at0017` and its
+/// name, and the composition validates clean.
 #[test]
 fn constrained_action_description_synthesises_the_constrained_node_id() {
     let wt = web_template("../../../openehr-its/tests/fixtures/sdk/ips.v0.opt");
@@ -113,17 +96,11 @@ fn constrained_action_description_synthesises_the_constrained_node_id() {
     );
 }
 
-/// The defect's mechanism, pinned both ways on the one real fixture: with the
-/// structural stub cleared but the closed-archetype constraint kept, the
-/// synthesised `at0001` placeholder is (correctly) rejected — proving the
-/// validator is spec-right and the stub is load-bearing.
+/// Without the structural stub the synthesised `at0001` placeholder is refused.
 #[test]
 fn clearing_the_stub_reintroduces_the_rejected_placeholder() {
     let mut wt = web_template("../../../openehr-its/tests/fixtures/sdk/ips.v0.opt");
-    // Simulate the pre-fix builder: drop the structural stubs (the constrained
-    // identity is lost) but keep the closed-archetype constraint that admits only
-    // at0017. The existence constraints go too, so the example walk does not
-    // reach `description` through its optional item and the build's fallback runs.
+    // Drop the stubs and existence constraints, keeping the closed-archetype one.
     edit_tree(&mut wt.tree, &|n| {
         n.structural_stubs.clear();
         n.existence.clear();
@@ -177,42 +154,17 @@ fn unconstrained_structural_attribute_keeps_the_any_placeholder() {
     );
 }
 
-/// Vendored corpus OPTs whose OWN constraints are spec-contradictory, so no
-/// committable example can validate clean — the vendored openEHR specs are the
-/// authority and a fixture OPT can itself be defective (owner ruling
-/// 2026-07-20). These are adjudicated (`.claude/rules/testing.md`: genuine corpus
-/// defects go through skip-with-reason, never by weakening a check) and pinned
-/// below (the full-validation bar asserts they STILL fail, so if the underlying
-/// defect is ever resolved this entry must be removed). They are NOT
-/// example-generator gaps — the generator emits the maximal spec-valid structure;
-/// the residual violation is intrinsic to the OPT constraint named:
+/// Corpus OPTs whose own constraints contradict, so no committable example
+/// validates; pinned as still failing. `None` means every committable level.
 ///
-/// * `section_cardinality.opt` — `COMPOSITION.content` cardinality is `1..1`
-///   (OPT `C_MULTIPLE_ATTRIBUTE.cardinality`), yet the six name-differentiated
-///   `SECTION` alternatives carry occurrences summing to ≥8 (test #4/#5 are
-///   `3..`). No instance can hold ≥8 members in a 1-member container (AOM 1.4
-///   `master04-constraint_model_package.adoc` §cardinality vs §occurrences).
-///
-/// (`Falls care plan.opt` was here too — an archetyped `EVENT_CONTEXT` the walk
-/// wrongly required an `archetype_node_id` on; that was OUR validator defect, now
-/// fixed by matching non-`LOCATABLE` nodes structurally, so it validates clean.
-/// `Testing.opt` @ Medium was here too — its `C_STRING` pattern `abcdef` on a
-/// mandatory `DV_URI.value` collided with OUR invented RFC-3986 scheme floor;
-/// the class's only invariant is non-emptiness and master10 §Design allows
-/// plain-text URIs, so with the floor removed it validates clean.)
-///
-/// (fixture, level) pairs: `None` = contradictory at every committable level.
+/// `section_cardinality.opt`: `COMPOSITION.content` cardinality `1..1` against
+/// SECTION occurrences summing to at least 8 (AOM 1.4
+/// `master04-constraint_model_package.adoc` §cardinality, §occurrences).
 const CONTRADICTORY_FIXTURES: &[(&str, Option<DetailLevel>)] = &[("section_cardinality.opt", None)];
 
-/// The full-validation bar: the committable levels (`Required` and `Medium`) of
-/// every vendored template produce a **fully valid** COMPOSITION —
-/// [`validate_composition`] (RM invariants + RM-mandated terminology + archetype
-/// conformance) reports NOTHING — proving the synthesised values and structure
-/// conform across the whole corpus at the mandatory skeleton *and* with every
-/// optional branch populated (issue #94: the generator no longer emits a skeleton
-/// that deep validation rejects). (`Complete` is documented as "not necessarily
-/// committable", so is not asserted here.) The adjudicated
-/// [`CONTRADICTORY_FIXTURES`] are pinned as still-failing.
+/// The `Required` and `Medium` examples of every vendored template pass
+/// [`validate_composition`] with no message; [`CONTRADICTORY_FIXTURES`] still
+/// fail.
 #[test]
 fn committable_example_of_every_fixture_fully_validates() {
     let mut opts = Vec::new();
@@ -265,12 +217,7 @@ fn committable_example_of_every_fixture_fully_validates() {
     assert!(checked > 40, "checked {checked} templates");
 }
 
-/// Issue #94 regression: the example generator emitted only the mandatory
-/// skeleton, so a **multi-archetype** template's `Medium` example failed deep
-/// validation (a placeholder magnitude/unit here, a wrong structural type there).
-/// A representative multi-archetype template (SECTIONs over several OBSERVATION /
-/// ACTION / CLUSTER archetypes) now fully validates at `Medium` — no synthesis
-/// gaps across archetype boundaries.
+/// A multi-archetype template's `Medium` example validates.
 #[test]
 fn issue_94_multi_archetype_medium_validates_fully() {
     let wt = web_template("better/ZN - Vital Functions Encounter.opt");

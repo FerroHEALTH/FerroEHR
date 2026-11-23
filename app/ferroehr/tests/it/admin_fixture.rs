@@ -4,11 +4,6 @@
 //! Shared fixtures for the service suites that drive a whole repository
 //! (`service_admin`, `service_dump_load`, `service_relationship_index`,
 //! `service_ehr_index_conflicts`, `service_message_audit`).
-//!
-//! They all start from the same shape — a fresh migrated database from the
-//! shared `testkit` harness, an EHR carrying several versioned-object kinds,
-//! and the `UPDATE_VERSION` commit envelope — so the seeds and probes live
-//! here once rather than once per suite.
 
 use ferroehr::service::ehr::object::EhrObject;
 use serde_json::{Value, json};
@@ -22,9 +17,6 @@ use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use crate::fixtures::{uid, uv, vo_of};
 
 /// Returns a fresh migrated database, its pool, and a service over it.
-///
-/// Hold the returned [`testkit::TestDb`] guard for the test's lifetime —
-/// dropping it releases the template clone.
 pub(crate) async fn repository() -> (testkit::TestDb, PgPool, FerroEhrService) {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
@@ -35,12 +27,6 @@ pub(crate) async fn repository() -> (testkit::TestDb, PgPool, FerroEhrService) {
 
 /// Returns the `uid.value` (`OBJECT_VERSION_ID`) of a versioned-object body.
 /// Seeds an EHR carrying multiple versioned-object kinds and versions.
-///
-/// `EHR_STATUS` (create → update = two versions) plus the `EHR_ACCESS` minted at
-/// creation, an item tag on the `EHR_STATUS`, and a directory `FOLDER` — enough
-/// to populate every `version`/`node`/`contribution`/`audit`/`item_tag`
-/// relation. COMPOSITION is deliberately absent: it would need a template the
-/// shared fixtures do not supply, and adds no relation the kinds above miss.
 ///
 /// The deactivating `EHR_STATUS` version lands LAST: content writes on an EHR
 /// whose `EHR_STATUS.is_modifiable` is `false` are refused (RM ehr master04
@@ -142,9 +128,6 @@ pub(crate) async fn count_for_ehr(pool: &PgPool, sql: &'static str, ehr_id: Uuid
 }
 
 /// Returns a unique temporary directory path for one archive.
-///
-/// Best-effort cleaned up by the OS temp directory; no round trip depends on
-/// removal.
 pub(crate) fn archive_dir() -> String {
     std::env::temp_dir()
         .join(format!("ferroehr-dumpload-{}", Uuid::now_v7()))
@@ -153,9 +136,6 @@ pub(crate) fn archive_dir() -> String {
 }
 
 /// Truncates `path` to its first half — readable bytes, unparseable content.
-///
-/// The remainder the division drops is irrelevant: any prefix shorter than the
-/// whole document is corrupt, which is the fixture's only requirement.
 #[expect(clippy::integer_division, reason = "a deliberate midpoint truncation")]
 pub(crate) fn truncate_to_half(path: &std::path::Path) {
     let bytes = std::fs::read(path)

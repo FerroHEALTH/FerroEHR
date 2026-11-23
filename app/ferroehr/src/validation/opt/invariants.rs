@@ -287,9 +287,8 @@ pub(super) fn check_code_list(code_list: &[String], node_id: &str) -> Vec<RuleVi
         if code.is_empty() {
             continue;
         }
-        // Every duplicated code is reported, once each however many times it
-        // repeats: a list with seventeen of them used to cost seventeen uploads
-        // to find (#3129), and a code repeated three times is still one defect.
+        // Every duplicated code is reported once, however many times it repeats
+        // (#3129).
         if !seen.insert(code) && reported.insert(code) {
             violations.push(RuleViolation::new(
                 "STCDC",
@@ -304,9 +303,7 @@ pub(super) fn check_code_list(code_list: &[String], node_id: &str) -> Vec<RuleVi
 mod tests {
     use super::check_code_list;
 
-    /// The reported case (#3129): one template held seventeen duplicated codes
-    /// and the refusal named the first, so finding them all took seventeen
-    /// uploads. Every duplicate is reported now.
+    /// Every duplicated code is reported (#3129).
     #[test]
     fn every_duplicated_code_is_reported_not_just_the_first() {
         let list: Vec<String> = ["a", "b", "a", "c", "b", "d", "e", "e"]

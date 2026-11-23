@@ -182,8 +182,6 @@ pub struct ReverseRelationship {
 /// walk of a source's versions. A source under restriction of processing is
 /// left out, as every read path leaves it out (`vo_head.restricted_at`).
 ///
-/// Each row carries what tells it from its siblings in that list.
-///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
 pub async fn reverse_of(

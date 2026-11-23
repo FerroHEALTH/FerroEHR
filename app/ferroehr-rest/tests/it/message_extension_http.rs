@@ -375,9 +375,8 @@ async fn import_ehr_with_an_unstorable_version_uid_is_bad_request() {
 
 // ── Removed routes ───────────────────────────────────────────────────────────
 
-/// The Template Data Document import routes were removed (#4199), so each
-/// former path is no route at all: `404`, even for an EHR that exists and a
-/// body the old route would have read.
+/// The Template Data Document import paths are no routes (#4199): `404`, even
+/// for an EHR that exists.
 #[tokio::test]
 async fn the_former_tdd_routes_are_not_found() {
     let (_pg, app) = common::test_router().await;

@@ -5,28 +5,9 @@
 //! `docs/specs/openehr/ITS-REST/specifications/docs/admin/` + the
 //! `admin-*.openapi.yaml` OAS group (generated into `openehr_its::rest`).
 //!
-//! `operations` implements the generated operation contract over the
-//! `FerroEhrService` methods it calls.
-//!
-//! Four further groups sit beside it under the same `/admin/` prefix and the
-//! same gates — **our own extensions, governed by no ITS-REST operation**.
-//! They are [`archive`] (archival storage), [`report`] (the four activity
-//! statistics) and [`dump_load`] (file-system export and load), and
-//! [`integrity`], which sweeps the storage's two content copies
-//! for disagreement, and no openEHR spec governs storage mechanics.
-//! [`access_log`] seals, verifies and exports the access log (#5129). Beside
-//! them, [`marks`] keeps the legal marks, [`access_delay`] the EHDS Art. 3(3)
-//! delay of the person's own access, [`ehr_access`] the controller's commit
-//! and read of an EHR's `EHR_ACCESS` settings, which hold the EHDS Art. 8
-//! restriction and the Art. 10 opt-out as directives, [`access_log_erasure`] the
-//! erasure of an access-log entry a law orders, [`binding_key`] the re-key of a
-//! `PERSON`'s binding key, [`pmir_messages`] the retry and settlement of a
-//! refused PMIR feed message, and [`outbox`] the feed of
-//! commit events to the readers the `read_change_feed` grants name, and
-//! [`registers`] the operational-policy registers (the audit category map and
-//! the access delay), and [`access_policy`] the
-//! controller's versioned `ACCESS_POLICY`. Each carries its own
-//! spec-silence flag and register citation.
+//! Further groups under the same `/admin/` prefix and gates are our own
+//! extensions, governed by no ITS-REST operation; each module carries its own
+//! spec-silence flag.
 
 pub mod access_delay;
 pub mod access_log;

@@ -13,8 +13,6 @@
 //! below follow that text wherever it conflicts with the released OAS, which
 //! grounds only what the docs text leaves silent.
 //!
-//! ## Prose-vs-OAS reconciliations (documented real wire)
-//!
 //! - **`ehr_id` scope** (`docs/query/Request.md` §About the `ehr_id`
 //!   parameter): every operation — `GET` and `POST` alike — accepts the EHR
 //!   scope as the `ehr_id` query parameter OR the `openehr-ehr-id` request
@@ -93,17 +91,12 @@ pub(crate) fn cohort_routes() -> OpenApiRouter<AppState> {
 guarded_handler! {
     /// Execute an ad-hoc AQL query from the query string (`GET /query/aql`).
     ///
-    /// An ad-hoc query carries its own definition: it has no stored identifier and
-    /// is "executed as-is, as part of the request body or as a query parameter"
-    /// (`docs/query/Query_types.md` §Ad-hoc queries). This is the query-string form;
-    /// the request-body form is the sibling `POST` on the same path, which
-    /// `Request.md` §"GET vs POST" recommends for anything long: "Requests based on
-    /// the `GET` method have URI length restriction, or some characters might not be
-    /// allowed and have to be encoded. Long queries in the `q` parameter and having
-    /// a long list of `query_parameters` may add up to reach that limit, thus we
-    /// recommend clients using the `POST` method instead of `GET`." That is a
-    /// CLIENT-side recommendation about URI limits — this server imposes no
-    /// preference and both forms execute identically.
+    /// An ad-hoc query carries its own definition and is "executed as-is, as
+    /// part of the request body or as a query parameter"
+    /// (`docs/query/Query_types.md` §Ad-hoc queries). This is the query-string
+    /// form; the request-body form is the sibling `POST`, which `Request.md`
+    /// §"GET vs POST" recommends for long queries. Both forms execute
+    /// identically.
     #[utoipa::path(
         get, path = "/query/aql", tag = "Query",
         params(
@@ -384,22 +377,12 @@ guarded_handler! {
 guarded_handler! {
     /// Execute an ad-hoc AQL query from the request body (`POST /query/aql`).
     ///
-    /// The body form of the same ad-hoc operation, and the one `Request.md`
-    /// §"GET vs POST" recommends to clients: "Requests based on the `GET` method
-    /// have URI length restriction, or some characters might not be allowed and
-    /// have to be encoded. Long queries in the `q` parameter and having a long list
-    /// of `query_parameters` may add up to reach that limit, thus we recommend
-    /// clients using the `POST` method instead of `GET`." That is a client-side
-    /// recommendation about URI limits only — the two forms execute identically
-    /// here.
-    ///
-    /// `Request.md`'s parameter list is headed "All query execution requests SHOULD
-    /// support at least the following parameters" and draws no `GET`/`POST`
-    /// distinction, so this operation ALSO accepts `offset`, `fetch` and named
-    /// `$parameter` binds from the query string. When a value arrives both in the
-    /// URL and in the body, equal values are accepted and conflicting ones are a
-    /// `400` — the released text assigns no precedence, so that is OUR OWN handling,
-    /// the same rule the two `ehr_id` carriers follow.
+    /// The body form of the same ad-hoc operation, which `Request.md` §"GET vs
+    /// POST" recommends for long queries; both forms execute identically. It
+    /// also accepts `offset`, `fetch` and named `$parameter` binds from the
+    /// query string, since `Request.md` draws no `GET`/`POST` distinction:
+    /// equal values in the URL and the body are accepted, and conflicting ones
+    /// are a `400` (our own handling).
     #[utoipa::path(
         post, path = "/query/aql", tag = "Query",
         params(
@@ -883,19 +866,13 @@ guarded_handler! {
     /// Execute a named stored query, latest version, from the request body
     /// (`POST /query/{qualified_query_name}`).
     ///
-    /// The body form of the latest-version stored execution: the client sends no
-    /// AQL (the definition is stored — `docs/query/Query_types.md` §Stored queries),
-    /// only the paging window and the `$parameter` binds. Every `Query` member is
-    /// OPTIONAL on this wire: the released schema's
-    /// `required: [offset, fetch, query_parameters]` cannot stand against the docs
-    /// text that gives `offset` a default of `0` and leaves `fetch`
-    /// implementation-defined (`Request.md` §Common Headers and Query Parameters) —
-    /// a required member cannot default — so `{}` is a valid body and executes a
-    /// parameterless stored query. `Request.md`'s parameter list is likewise headed
-    /// "All query execution requests" with no `GET`/`POST` distinction, so this
-    /// operation also accepts `offset`/`fetch`/named binds from the query string;
-    /// a value supplied in both carriers must agree, else `400` (OUR OWN handling of
-    /// the unassigned precedence, the same rule `ehr_id` follows).
+    /// The body form of the latest-version stored execution: the client sends
+    /// only the paging window and the `$parameter` binds. Every `Query` member
+    /// is optional, since `Request.md` gives `offset` a default of `0` and
+    /// leaves `fetch` implementation-defined, so `{}` executes a parameterless
+    /// stored query. `offset`, `fetch` and named binds are also accepted from
+    /// the query string; a value supplied in both must agree, else `400` (our
+    /// own handling).
     #[utoipa::path(
         post, path = "/query/{qualified_query_name}", tag = "Query",
         params(
@@ -1412,13 +1389,10 @@ guarded_handler! {
     /// … the system must use the latest `version` with the supplied prefix - i.e.
     /// if only `major` or `major.minor` is used, then the latest query version
     /// matching supplied prefix will be used" (`docs/query/Qualified_query_name.md`).
-    /// As on the sibling `POST`, every `Query` body member is OPTIONAL (the docs
-    /// text's `offset` default of `0` and implementation-defined `fetch` cannot
-    /// coexist with the released schema's `required` list, and the docs text wins),
-    /// so `{}` executes the addressed version with no binds; and `offset`, `fetch`
-    /// and named `$parameter` binds are equally accepted from the query string,
-    /// conflicting values across the two carriers being a `400` (OUR OWN handling of
-    /// the unassigned precedence).
+    /// As on the sibling `POST`, every `Query` body member is optional, so `{}`
+    /// executes the addressed version with no binds, and `offset`, `fetch` and
+    /// named `$parameter` binds are also accepted from the query string;
+    /// conflicting values across the two are a `400` (our own handling).
     #[utoipa::path(
         post, path = "/query/{qualified_query_name}/{version}", tag = "Query",
         params(
@@ -1703,16 +1677,12 @@ guarded_handler! {
     /// Execute an AQL query over a cohort selected in the demographic domain
     /// (`POST /query/cohort`).
     ///
-    /// OUR OWN EXTENSION — no openEHR spec governs this operation. ITS-REST 1.1.0
-    /// publishes an ad-hoc and a stored query and nothing else, and AQL is defined
-    /// over the clinical domain alone (QUERY `master03-syntax.adoc`), with no
-    /// demographic source. The operation runs in three steps: a predicate from the
-    /// deployment's `[privacy.cohort.predicates]` allow-list selects parties on the
-    /// demographic credential; the clinical domain resolves them to the EHRs whose
-    /// `EHR_STATUS.subject` names one of them and runs the AQL over exactly those
-    /// EHRs, both on the clinical credential. Only identifiers cross between the
-    /// steps — no name, address or national identifier leaves the demographic
-    /// domain, and the caller never receives a party id.
+    /// Our own extension: no openEHR spec governs this operation. A predicate
+    /// from the deployment's `[privacy.cohort.predicates]` allow-list selects
+    /// parties in the demographic domain; the clinical domain resolves them to
+    /// the EHRs whose `EHR_STATUS.subject` names one of them and runs the AQL
+    /// over exactly those EHRs. Only identifiers cross between the steps, and
+    /// the caller never receives a party id.
     ///
     /// The result set carries a `meta.cohort` object with the cohort size, the
     /// number of EHRs served, whether small-cell suppression withheld the rows, and

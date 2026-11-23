@@ -1,17 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Specialisation-flattener conformance harness.
-//!
-//! Flattens each `tests/corpus/flattener/{specexamples,siblingorder}` child
-//! against its parent and asserts against HAND-AUTHORED expectations derived
-//! from the vendored spec text (`docs/specs/openehr/AM/docs/AOM2/master08`
-//! §Flattening + `ADL2/master09.02`–`master09.10`). No flat golden is vendored
-//! (the archie fixtures keep expected flats in Java test code); every assertion
-//! below cites the master09.x section it encodes. The `siblingorder` fixtures
-//! carry their expected order in a `--resulting order:` comment authored by
-//! openEHR; those orders are reproduced here and cross-checked against the
-//! `master09.04` §Ordering of Sibling Nodes rules.
+//! Specialisation-flattener conformance against hand-authored expectations
+//! (`AOM2/master08` §Flattening; `ADL2/master09.02` to `master09.10`), with the
+//! `siblingorder` fixtures' own `--resulting order:` comments.
 
 #![allow(
     clippy::expect_used,
@@ -153,12 +145,9 @@ fn occurrences_prohibited(obj: &CObject) -> bool {
 
 // ── siblingorder: exact order (master09.04 §Ordering of Sibling Nodes) ────────
 //
-// order-parent items = [id2, id3, id4, id5] (id2, id3 occurrences {*}; id4
-// {0..1}; id5 default). Each expected order is the fixture's own `--resulting
-// order:` comment, cross-checked against master09.04: a marker anchors the run
-// of nodes following it until the next marker; `before [X]` inserts before the
-// first node conforming to X, `after [X]` after the last; a redefinition with
-// no marker replaces its parent in place; extensions with no marker go last.
+// order-parent items = [id2, id3, id4, id5]. A marker anchors the run after it;
+// `before [X]` inserts before the first node conforming to X, `after [X]` after
+// the last; an unmarked redefinition replaces in place; extensions go last.
 
 const SO: &str = "siblingorder";
 
@@ -184,10 +173,7 @@ fn siblingorder_test_anchoring() {
 
 #[test]
 fn siblingorder_redefinition_at_same_place() {
-    // No markers: id2.1 replaces id2 in place; id3 is multiple-occurrence and is
-    // cloned (kept) with id3.1, id3.2 added (master09.05 §Single and Multiple
-    // Specialisation — clone_not_needed is false: parent max occ > 1, not a sole
-    // max-1 redef); id0.6 appended at end.
+    // id3 is multiple-occurrence, so it is cloned (master09.05).
     // → id2.1, id3, id3.1, id3.2, id4, id5, id0.6
     let flat = flatten(
         SO,
@@ -376,11 +362,8 @@ fn specexample_type_refinement_replaces_single_node() {
 
 #[test]
 fn specexample_cardinality_clones_multiple_occurrence_node() {
-    // cardinality_parent has ELEMENT[id12] occurrences {0..*} (multiple). The
-    // child splits it into id12.1..id12.10 — a multiple-occurrence parent redefined
-    // by more than one child is CLONED (master09.05 §Single and Multiple
-    // Specialisation): the parent id12 is retained and the ten clones added. The
-    // child also restates the container cardinality to {3..10}.
+    // A multiple-occurrence parent redefined ten times is cloned (master09.05), and
+    // the child restates the cardinality to {3..10}.
     let flat = flatten(
         SX,
         "openEHR-EHR-CLUSTER.cardinality_specialized.v1.0.0.adls",
@@ -398,10 +381,7 @@ fn specexample_cardinality_clones_multiple_occurrence_node() {
 
 #[test]
 fn specexample_reference_redefinition_expands_proxy_inline() {
-    // reference_redefinition_parent data = { CLUSTER[id2]{items{ELEMENT[id4]}},
-    // use_node CLUSTER[id3] /data[id2] }. The child overrides through the proxy
-    // path (/data[id3]/items) adding ELEMENT[id0.1]; the proxy is expanded inline
-    // to a copy of its target, then the addition is overlaid (master09.05
+    // The proxy is expanded inline, then the addition overlaid (master09.05
     // §Internal Reference (Proxy Object) Redefinition).
     let flat = flatten(
         SX,
@@ -442,11 +422,8 @@ fn specexample_reference_redefinition_no_replacement_keeps_proxy() {
 
 #[test]
 fn specexample_diagnosis_adds_and_orders_status_nodes() {
-    // The AOM2 worked example (diagnosis → problem). The child redefines
-    // /data[id2]/items[id3]/value's DV_TEXT to DV_CODED_TEXT[id4], and under
-    // /data/items inserts new nodes: id0.32 before id5, and id0.35/id0.37 after
-    // id31 (master09.04 sibling order; master09.05 object redefinition). The
-    // ac0.1 value set is added to the flat terminology (master09.09).
+    // The AOM2 worked example (diagnosis → problem): a retype, inserted siblings
+    // and an added value set (master09.04, master09.05, master09.09).
     let flat = flatten(SX, "diagnosis.adls");
     assert_eq!(root_node_id(&flat), "id1.1");
     let items = ids(&flat, "data[id2]", "items");
@@ -563,9 +540,8 @@ fn flat_form_reprints_and_reparses() {
 
 // ── tuple overlay: merge by member-attribute group ──────────────────────────
 //
-// NOTE: no released text states whether a child node's `C_ATTRIBUTE_TUPLE` set
-// replaces or merges with the flat parent's (`AOM2/master08` §Flattening names
-// no second-order case) — group-keyed merge is our own design.
+// NOTE: `AOM2/master08` §Flattening names no second-order case: group-keyed
+// merge is our own design.
 
 /// A level-0 `ELEMENT` whose `DV_QUANTITY` value carries two tuples over
 /// disjoint member-attribute groups.

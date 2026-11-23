@@ -2,26 +2,11 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written validating construction + RM class invariants for `ITEM_TAG`.
+//! Validating construction and invariants for `ITEM_TAG`.
 //!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.item_tag.adoc`:
-//! - `Inv_key_valid`: `not key.is_empty and key.is_justified` (no leading or
-//!   trailing whitespace).
-//! - `Inv_value_valid`: `value /= Void implies not value.is_empty`.
-//!
-//! Both invariants are stated over `ITEM_TAG`'s OWN fields and are decidable
-//! from them alone, so they are enforced at the construction door: the generated
-//! struct's fields are `pub(crate)` (the emitter's construction-door scheme,
-//! `plan::construction`), and [`ItemTag::new`] is the only way to obtain the
-//! type outside `openehr-rm`. The canonical-JSON and canonical-XML readers build
-//! through the same door, so a violating payload refuses at PARSE, path-named,
-//! in every document position — an `ITEM_TAG` can no longer exist in violation
-//! of its own invariants.
-//!
-//! What stays OUTSIDE the door: whether `target` names an existing versioned
-//! object and whether `target_path` resolves inside it. Those read state the
-//! instance does not carry, so they remain service-layer checks.
+//! RM 1.2.0 `org.openehr.rm.common.item_tag.adoc`: `Inv_key_valid` and
+//! `Inv_value_valid`, enforced at [`ItemTag::new`]. Whether `target` exists
+//! stays a service-layer check.
 
 use crate::v1_2::common::tags::item_tag::ItemTag;
 use openehr_base::v1_3::prelude::{ObjectRef, UidBasedId};
@@ -42,12 +27,7 @@ pub enum ItemTagError {
 }
 
 impl ItemTag {
-    /// Build an `ITEM_TAG`, checking the two released §Invariants over its own
-    /// fields.
-    ///
-    /// This is THE door: the generated fields are `pub(crate)`, so outside
-    /// `openehr-rm` no other construction exists, and the generated codecs route
-    /// through here.
+    /// Builds an `ITEM_TAG`, checking its two §Invariants.
     ///
     /// # Errors
     /// [`ItemTagError::KeyInvalid`] when `key` violates `Inv_key_valid`, and
@@ -76,28 +56,17 @@ impl ItemTag {
 }
 
 impl ItemTag {
-    /// `Inv_key_valid` as a predicate on a candidate key: `not key.is_empty and
+    /// `Inv_key_valid` on a candidate key: `not key.is_empty and
     /// key.is_justified`.
     ///
-    /// This is the ONE implementation of the invariant. [`Validate`] evaluates
-    /// it on a whole instance, and a caller that must judge a key *before* an
-    /// `ITEM_TAG` can be constructed — a wire payload whose `target`/`owner_id`
-    /// the server has not yet assigned — evaluates the same function rather
-    /// than restating the rule.
-    ///
-    /// NOTE: `is_justified` is defined in no released BASE section (`String`
-    /// declares no such function), so the Meaning column of
-    /// `org.openehr.rm.common.item_tag.adoc` is the only text that says what it
-    /// means: "May not be empty or contain leading or trailing whitespace".
-    /// That sentence is what this predicate implements.
+    /// NOTE: no BASE section defines `is_justified`; `item_tag.adoc` says "May not
+    /// be empty or contain leading or trailing whitespace".
     #[must_use]
     pub fn key_valid(key: &str) -> bool {
         !key.is_empty() && key.trim() == key
     }
 
-    /// `Inv_value_valid` as a predicate on a candidate value:
-    /// `value /= Void implies not value.is_empty`. The ONE implementation, for
-    /// the same reason as [`ItemTag::key_valid`].
+    /// `Inv_value_valid` on a candidate value.
     #[must_use]
     pub fn value_valid(value: Option<&str>) -> bool {
         value != Some("")
@@ -146,9 +115,7 @@ mod tests {
         }
     }
 
-    /// The door REFUSES what `Inv_key_valid` forbids, so an `ITEM_TAG` in
-    /// violation of it cannot be constructed at all — the structural half of
-    /// the `key_must_be_non_empty_and_justified` validation test below.
+    /// The door refuses what `Inv_key_valid` forbids.
     #[test]
     fn the_door_refuses_an_invalid_key() {
         let t = tag("ok", None);
@@ -238,9 +205,7 @@ mod tests {
 
     #[test]
     fn the_predicates_and_the_instance_check_agree() {
-        // The predicates ARE the invariant bodies, so a caller that can only
-        // reach the predicates (a wire payload with no target/owner_id yet)
-        // gets exactly the verdict `Validate` would give on the instance.
+        // The predicates give the verdict `Validate` gives on an instance.
         for key in ["", " padded", "padded ", " both ", "ok"] {
             assert_eq!(
                 ItemTag::key_valid(key),

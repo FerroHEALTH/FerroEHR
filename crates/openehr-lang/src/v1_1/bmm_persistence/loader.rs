@@ -12,10 +12,6 @@
 //! [`crate::v1_1::bmm_persistence::reader::read_schema`] →
 //! [`crate::v1_1::bmm_persistence::include_resolution::resolve_includes`] →
 //! [`crate::v1_1::bmm_persistence::create_model::create_bmm_model`].
-//!
-//! It takes SOURCE TEXT, never paths: locating `.bmm` files on disk is a
-//! repository concern, not a schema-reading one, and keeping it out of this
-//! module keeps the whole pipeline testable from string literals.
 
 use std::collections::BTreeMap;
 
@@ -28,13 +24,6 @@ use crate::v1_1::bmm_persistence::reader::read_schema;
 
 /// Load the `BMM_MODEL` of `root_src`, resolving its inclusions against
 /// `includes`.
-///
-/// `includes` maps a caller-side label (conventionally the schema id) to that
-/// schema's ODIN text. Resolution keys on each parsed schema's OWN
-/// [`PBmmSchema::schema_id`], so a mislabelled entry still resolves correctly
-/// and a duplicate id is refused rather than silently shadowed. Supplying more
-/// schemas than `root_src` needs is harmless; the unused ones are read (and so
-/// validated) but not merged.
 ///
 /// # Errors
 /// Returns any [`PBmmReadError`] the three stages raise: an ODIN or schema-shape

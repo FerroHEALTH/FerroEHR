@@ -5,10 +5,6 @@
 //! the `VERSIONED_COMPOSITION` cross-version invariants, the resolvability of
 //! a `FOLDER`'s local item references, and the template a COMPOSITION
 //! declares.
-//!
-//! The service's direct write paths and the CONTRIBUTION path in
-//! [`crate::service::contribution`] run them inside their own commit
-//! transactions.
 
 #![expect(
     clippy::disallowed_types,
@@ -34,11 +30,6 @@ use crate::validation::category::code;
 /// - `Persistent_validity`: every version's `is_persistent` equals the first
 ///   version's — the persistence category (`431|persistent|`) is fixed for
 ///   the container's life.
-///
-/// A violating modification is a `422` naming the invariant; the first-version
-/// root read goes through `crate::storage::node_repo`. Both write flows run
-/// this, the direct composition update inline and the CONTRIBUTION path from
-/// [`crate::service::contribution`], each in its own commit transaction.
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] naming the violated invariant (→ 422);

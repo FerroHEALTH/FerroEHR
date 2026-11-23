@@ -35,11 +35,9 @@ pub mod v1_3;
 /// The BMM generations this crate emits, one variant per version module,
 /// oldest first.
 ///
-/// Generated from the openehr-codegen composition table — the single
-/// authority for which generations exist. [`std::fmt::Display`] and
-/// [`std::str::FromStr`] round-trip the generation-module name (`"v1_2"`). `Generation::default()` is the crate's CURRENT generation — the
-/// one `crate::prelude` re-exports (the composition table's `current`
-/// marker, via the std `#[default]` variant attribute).
+/// [`std::fmt::Display`] and [`std::str::FromStr`] round-trip the
+/// generation-module name (`"v1_2"`). `Generation::default()` is the generation `crate::prelude`
+/// re-exports.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Generation {
     /// The `v1_2` generation — openEHR specification version 1.2.0.

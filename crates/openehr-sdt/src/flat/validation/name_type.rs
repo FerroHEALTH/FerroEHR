@@ -10,12 +10,9 @@ use crate::flat::webtemplate::model::WebTemplateNode;
 use crate::rm_instance::ValidationKind;
 
 impl Validator {
-    /// Refuses a `name` whose RM type does not conform to the type the
-    /// template constrains it to, such as a `DV_TEXT` where the template asks
-    /// for a `DV_CODED_TEXT` (AOM 1.4 `master04-constraint_model_package.adoc`:
-    /// a `C_COMPLEX_OBJECT` constrains an object of its `rm_type_name`, and
-    /// `valid_value` tests the object for conformance). `holder` is the
-    /// LOCATABLE the name belongs to, at `path`.
+    /// Refuses a `name` whose RM type does not conform to the type the template
+    /// constrains it to (AOM 1.4 `master04-constraint_model_package.adoc`
+    /// `valid_value`). `holder` is the LOCATABLE at `path`.
     pub(super) fn check_name_type<'i, I: Instance<'i>>(
         &mut self,
         holder: I,

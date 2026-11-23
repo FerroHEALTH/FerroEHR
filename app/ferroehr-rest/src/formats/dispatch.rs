@@ -4,11 +4,6 @@
 //! The Simplified-Formats payload adapter (ITS-REST
 //! `docs/specs/openehr/ITS-REST/docs/simplified_formats/`, STABLE).
 //!
-//! The wire seam between the negotiation core
-//! ([`crate::overview::negotiate`], which classifies the media type) and the
-//! `openehr_sdt::flat` conversion engine, in both directions for the FLAT and
-//! STRUCTURED representations of a versioned object.
-//!
 //! On a request it parses the simplified body per its media type, resolves the
 //! template id from the `openehr-template-id` request header — the mechanism for
 //! a simplified COMPOSITION commit, since the payload carries no

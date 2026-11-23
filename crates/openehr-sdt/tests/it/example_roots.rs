@@ -1,14 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The example generator answers a COMPOSITION only for a COMPOSITION-rooted
-//! template (#3780).
-//!
-//! The ITS-REST example operation answers an instance of a versioned-object
-//! class (`responses/200_Template_example_retrieved.yaml`: COMPOSITION,
-//! `EHR_STATUS`, FOLDER and the five parties). A template rooted at an ENTRY or a
-//! SECTION admits none of them, so the generator refuses it with the root named
-//! instead of writing COMPOSITION members onto an OBSERVATION or a SECTION.
+//! The example generator refuses a template not rooted in a versioned-object
+//! class (`responses/200_Template_example_retrieved.yaml`), naming the root.
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
 
 use std::path::Path;

@@ -1,14 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `OpenAPI` (OAS) reader for the REST codegen.
-//!
-//! Loads a vendored `*-codegen.openapi.yaml` bundle into a `serde_json::Value`
-//! (via `serde_norway`) and exposes the pieces the emitter needs: the component
-//! schemas, and each operation's method/path/params/request/response with local
-//! `$ref`s resolved. The OAS is the source of truth; RM payload schemas are
-//! recognized by name and resolved to the generated RM/BASE crates rather than
-//! re-emitted.
+//! `OpenAPI` reader for the REST codegen: loads a vendored
+//! `*-codegen.openapi.yaml` bundle and exposes its component schemas and each
+//! operation with local `$ref`s resolved.
 
 #![expect(
     clippy::disallowed_types,
@@ -36,20 +31,15 @@ pub(crate) struct Operation<'a> {
     pub parameters: Vec<Param>,
     /// The request body schema (resolved `Value`) + whether it is required.
     pub request_body: Option<(Value, bool)>,
-    /// The media types the request body content declares, in document order
-    /// (`application/json` for a canonical-JSON body, `application/xml` for an
-    /// OPT 1.4 upload, …); empty when the operation takes no body.
+    /// The media types the request body declares, in document order; empty
+    /// without a body.
     pub request_media: Vec<String>,
-    /// Every documented response, in ascending status order — the client
-    /// half's outcome variants. The `default` response key is not a status
-    /// and is left out.
+    /// Every documented response in ascending status order, `default` excluded.
     pub responses: Vec<Response>,
 }
 
-/// One documented response of an operation: a status, the
-/// `#/components/responses` entry it references, the media types its content
-/// declares with their schemas (verbatim — a `$ref` keeps its name), and the
-/// response headers it declares, in document order.
+/// One documented response: status, referenced component, content schemas
+/// verbatim and declared headers, in document order.
 pub(crate) struct Response {
     pub status: http::StatusCode,
     /// The `#/components/responses/<name>` component the operation references,
@@ -77,7 +67,7 @@ pub(crate) struct Param {
 }
 
 impl Oas {
-    /// Parse an OAS YAML bundle.
+    /// Parses an OAS YAML bundle.
     ///
     /// # Errors
     /// Returns an error if the file cannot be read or parsed.
@@ -89,19 +79,8 @@ impl Oas {
         Ok(Self { root })
     }
 
-    /// A synthetic bundle carrying the FIRST declarer's copy of each `keep`
-    /// schema across `bundles` — the shared-module fallback when no single
-    /// bundle declares every hoisted schema (the copies are identical by the
-    /// hoist analysis, so first-declarer is deterministic and lossless).
-    ///
-    /// **The `allOf` base closure comes with them.** A kept schema that composes
-    /// `allOf: [{$ref: Base}]` is only half a schema without `Base`: the emitter
-    /// resolves that `$ref` through this same document to flatten the inherited
-    /// members, and a document holding `keep` alone leaves the ref dangling, so
-    /// the emitted struct silently carries only the schema's OWN `properties`.
-    /// The closure is transitive (a base may compose a base of its own) and
-    /// carries the bases as ordinary schemas — being reachable does not make a
-    /// base hoisted, so `keep` itself is unchanged.
+    /// A synthetic bundle carrying the first declarer's copy of each `keep` schema
+    /// and the transitive `allOf` bases they compose, for the shared module.
     #[must_use]
     pub(crate) fn merged_schemas(
         bundles: &[(&str, Oas)],
@@ -132,10 +111,8 @@ impl Oas {
         wanted
     }
 
-    /// Adds every `allOf` base of the currently-wanted schemas across all
-    /// bundles — one round of [`Self::base_closure`]'s fixpoint.
-    ///
-    /// Returns whether `wanted` grew; `false` is the fixpoint.
+    /// Adds every `allOf` base of the wanted schemas, returning whether `wanted`
+    /// grew.
     fn add_allof_bases(
         bundles: &[(&str, Oas)],
         wanted: &mut std::collections::BTreeSet<String>,
@@ -226,13 +203,8 @@ impl Oas {
     /// All operations across all paths.
     #[must_use]
     pub(crate) fn operations(&self) -> Vec<Operation<'_>> {
-        // Every HTTP method OAS 3.0 lets a Path Item Object declare
-        // (<https://spec.openapis.org/oas/v3.0.3#path-item-object>), minus
-        // `trace`, which the released ITS-REST bundles never use. `options` is
-        // NOT optional here: the STABLE System API declares exactly one
-        // operation and it is `OPTIONS /` (`system-codegen.openapi.yaml`,
-        // operationId `options`), and the overview's HTTP-methods table lists
-        // OPTIONS as a method the API uses.
+        // The Path Item methods (<https://spec.openapis.org/oas/v3.0.3#path-item-object>)
+        // minus `trace`; the System API declares `OPTIONS /`.
         const METHODS: &[&str] = &["get", "put", "post", "delete", "patch", "head", "options"];
         let mut out = Vec::new();
         let Some(paths) = self.root.get("paths").and_then(Value::as_object) else {
@@ -288,9 +260,7 @@ impl Oas {
                 required: p.get("required").and_then(Value::as_bool).unwrap_or(false),
                 style: p.get("style").and_then(Value::as_str).map(str::to_string),
                 explode: p.get("explode").and_then(Value::as_bool),
-                // Kept VERBATIM (a `$ref` keeps its name); the
-                // emitter's parameter mapper resolves structurally only where
-                // the name binds to nothing.
+                // Kept verbatim, so a `$ref` keeps its name.
                 schema: p.get("schema").cloned().unwrap_or(Value::Null),
             });
         }
@@ -321,9 +291,8 @@ impl Oas {
         let mut out: Vec<Response> = responses
             .iter()
             .filter_map(|(code, resp)| {
-                // NOTE: OAS 3.0 §Responses Object keys a response by a status
-                // code or `default`; a non-numeric key is legitimately not a
-                // status, not a defect.
+                // NOTE: OAS 3.0 §Responses Object also keys a response by `default`, which is
+                // not a status.
                 let status = http::StatusCode::from_u16(code.parse::<u16>().ok()?).ok()?;
                 let component = resp
                     .get("$ref")
@@ -358,14 +327,8 @@ impl Oas {
         out
     }
 
-    /// The `application/json` (or first) content schema of a requestBody/response.
-    ///
-    /// The schema is returned VERBATIM — a `$ref` keeps its name, so the
-    /// emitter's type mapper can bind it to the named DTO or spec type instead
-    /// of degrading a pre-resolved anonymous shape to `serde_json::Value`
-    /// (the same discipline `rust_type` applies to array items).
-    /// Container-level refs (the response/requestBody objects themselves) are
-    /// still resolved by the callers before reaching here.
+    /// The `application/json` (or first) content schema of a request body or
+    /// response, verbatim.
     fn first_json_schema(container: &Value) -> Option<Value> {
         let content = container.get("content")?.as_object()?;
         let media = content

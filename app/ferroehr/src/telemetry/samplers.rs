@@ -4,13 +4,6 @@
 //! Background metric samplers: the DB pool gauges, the tokio runtime gauges
 //! (stable `Handle::metrics()` subset), and the periodic Prometheus recorder
 //! upkeep.
-//!
-//! When OTLP metrics push is enabled the same gauge values are additionally
-//! recorded through the `OTel` meter (dual path).
-//!
-//! A single background task samples on a fixed interval and is aborted by the
-//! [`TelemetryGuard`](super::TelemetryGuard) on shutdown, on the same path the
-//! ATNA sender drains on.
 
 use std::time::Duration;
 

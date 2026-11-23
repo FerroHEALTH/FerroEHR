@@ -1,11 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The engine's nesting bound as a typed refusal at every recursive seam:
-//! the cADL parser, the flattener (lineage length and composed depth) and
-//! the OPT transform (inlined depth and filler cycles). Native recursion past
-//! a thread's stack aborts the process, which no caller can catch; each of
-//! these walks refuses instead.
+//! The engine's nesting bound is a typed refusal at every recursive seam (the
+//! cADL parser, the flattener and the OPT transform), never a stack overflow.
 
 #![allow(
     clippy::expect_used,

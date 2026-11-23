@@ -9,12 +9,6 @@
 //! exactly the same judgement, the same target resolution and the same echo as
 //! every other group: one implementation lives here, and the EHR and demographic
 //! dispatchers consume it.
-//!
-//! The request half is [`pending`] (parse + RM-invariant judgement, run BEFORE
-//! any content is committed), the write half is [`persist`] (run AFTER the
-//! commit that mints the target version), and the response half is [`echo`].
-//! The dedicated `PUT` operations the headers wrap decode their body with
-//! [`crate::overview::negotiate::decode::typed_json`] over `UpdateItemTag`.
 
 use axum::response::Response;
 use http::{HeaderMap, HeaderName, StatusCode};
@@ -104,11 +98,8 @@ impl StoredItemTags {
 
 /// Parses and validates both wrapper headers before the content write.
 ///
-/// The release gives the wrapper headers no atomicity semantics, so the ordering
-/// is ours: a header defect the server can detect without touching storage
-/// rejects the whole request while nothing has been committed, because failing
-/// after the commit would answer 4xx for a request whose VERSION is already
-/// durable and whose response carries no `ETag`/`Location`.
+/// A header defect rejects the request before anything is committed, since
+/// failing after the commit would answer 4xx for a VERSION already durable.
 ///
 /// The tag write itself stays after the commit and must: the tags target the
 /// version the commit mints, and RM common `master07-tags.adoc` forbids a tag
@@ -161,15 +152,6 @@ fn validated_entries(
 /// §Usage in Requests): the provided tag list **replaces** the target's
 /// `ITEM_TAG` list, and "providing an empty value for this header will
 /// effectively remove all `ITEM_TAGs` associated with the given target".
-///
-/// This is the WRITE half only: the headers were already parsed and
-/// invariant-checked by [`pending`], BEFORE the content commit, so by the time
-/// this runs the only failure left is a storage one. The write stays after the
-/// commit because the tags target the version the commit mints, and a tag must
-/// not re-version the content it annotates. The entries are folded onto the
-/// existing uid-keyed replace seam the dedicated `*_tags_*` operations use, as
-/// the release's own "convenient wrappers around the dedicated `ITEM_TAG`
-/// operations" requires.
 ///
 /// Returns the stored list **per header**, because the two headers address
 /// distinct targets ([`StoredItemTags`]); a header the request did not carry
@@ -281,11 +263,6 @@ pub(crate) async fn replace(
 /// confirm the actual list of `ITEM_TAGs` stored on the server side"
 /// (`Requests_and_responses.md` §Usage in Responses), which the same section
 /// extends to `GET` ("the server MAY also add these headers to the response").
-///
-/// Each header carries its own target's collection and nothing else, so a
-/// response never repeats one target's tags under the other target's name; a
-/// collection the caller passes as `None` is not echoed at all, and an empty
-/// list confirms a clear.
 ///
 /// A list that cannot be rendered as an HTTP field value — a tag carrying a
 /// control character, which nothing in the RM bars from a key — omits the header

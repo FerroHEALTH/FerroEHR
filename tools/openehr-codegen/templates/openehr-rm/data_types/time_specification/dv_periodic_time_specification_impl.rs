@@ -2,12 +2,9 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariants for `DV_PERIODIC_TIME_SPECIFICATION`.
-//!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_periodic_time_specification.adoc`
-//! — `Value_valid: value.formalism.is_equal("HL7:PIVL") or
-//! value.formalism.is_equal("HL7:EIVL")`.
+//! `DV_PERIODIC_TIME_SPECIFICATION` (RM 1.2.0
+//! `org.openehr.rm.data_types.dv_periodic_time_specification.adoc`):
+//! `Value_valid` (`HL7:PIVL` or `HL7:EIVL`) and the extraction functions.
 
 use crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration;
 use crate::v1_2::data_types::time_specification::dv_periodic_time_specification::DvPeriodicTimeSpecification;
@@ -15,22 +12,9 @@ use crate::v1_2::validate::valid_iso8601_duration;
 use openehr_base::validate::{InvariantViolation, Validate};
 
 impl DvPeriodicTimeSpecification {
-    /// The period of the repetition, or `None` for a specification that states
-    /// none.
-    ///
-    /// Spec: `dv_periodic_time_specification.adoc` §Functions `period` — "The
-    /// period of the repetition, computationally derived from the syntax
-    /// representation. Extracted from the `value` attribute", over the
-    /// phase-linked grammar of `master08-time_specification_package.adoc`
-    /// §Phase-linked Time Specification Syntax: `phase = interval "/" "("
-    /// difference ")"`.
-    ///
-    /// The class types this `1..1`, but only the phase-linked (`HL7:PIVL`)
-    /// grammar has a `difference` production at all: the event-linked
-    /// (`HL7:EIVL`) one is `event [ offset ]`, an offset from a real-world
-    /// event rather than a period. An event-linked specification therefore has
-    /// no period to return, and saying so is more honest than manufacturing
-    /// one.
+    /// The repetition period (`period`), from the phase-linked `difference`
+    /// (`master08` §Phase-linked Time Specification Syntax); `None` for an
+    /// event-linked specification, which has none.
     #[must_use]
     pub fn period(&self) -> Option<DvDuration> {
         let value = self.phase_linked()?;
@@ -50,14 +34,8 @@ impl DvPeriodicTimeSpecification {
         })
     }
 
-    /// Calendar alignment extracted from `value`, or `None` when none is
-    /// stated.
-    ///
-    /// Spec: `dv_periodic_time_specification.adoc` §Functions
-    /// `calendar_alignment`, over `pure_phase_linked_time_spec = phase [ "@"
-    /// alignment ]` — the alignment is a term from the `HL7::CalendarCycle`
-    /// domain (`DW` = day of week, `DM` = day of month, …), and the production
-    /// makes it optional.
+    /// The `HL7::CalendarCycle` alignment after `@` (`calendar_alignment`), or
+    /// `None`.
     #[must_use]
     pub fn calendar_alignment(&self) -> Option<String> {
         let value = self.phase_linked()?;
@@ -68,13 +46,7 @@ impl DvPeriodicTimeSpecification {
         (!alignment.is_empty()).then(|| alignment.to_owned())
     }
 
-    /// Event alignment extracted from `value`, or `None` when none is stated.
-    ///
-    /// Spec: `dv_periodic_time_specification.adoc` §Functions
-    /// `event_alignment`, over `event_linked_time_spec = event | event offset`
-    /// — the event is a term from the `HL7::TimingEvent` domain (`PC` = after
-    /// meal, `HS` = bedtime, …), and it is the leading token, before any `+`
-    /// or `-` offset.
+    /// The leading `HL7::TimingEvent` term (`event_alignment`), or `None`.
     #[must_use]
     pub fn event_alignment(&self) -> Option<String> {
         let value = self.event_linked()?;
@@ -82,13 +54,7 @@ impl DvPeriodicTimeSpecification {
         (!event.is_empty()).then(|| event.to_owned())
     }
 
-    /// Whether the timing is institution-specified.
-    ///
-    /// Spec: `dv_periodic_time_specification.adoc` §Functions
-    /// `institution_specified` — "Extracted from value", over
-    /// `phase_linked_time_spec = pure_phase_linked_time_spec [ "IST" ]`. The
-    /// flag exists only in the phase-linked grammar, so its absence — including
-    /// on every event-linked specification — is `false`.
+    /// Whether the phase-linked value carries `IST` (`institution_specified`).
     #[must_use]
     pub fn institution_specified(&self) -> bool {
         self.phase_linked()
@@ -115,13 +81,8 @@ const EVENT_LINKED: &str = "HL7:EIVL";
 /// The trailing flag marking a phase-linked timing as institution-specified.
 const INSTITUTION_SPECIFIED: &str = "IST";
 
-/// A syntax `difference` as an ISO-8601 duration value.
-///
-/// The vendored grammar annotates `difference` as "ISO 8601 for time
-/// difference", while the spec's own examples in the same section spell it
-/// `7d` and `1mo`. Both are accepted: refusing the second would refuse the
-/// specification's own worked examples, and inventing a third form would serve
-/// nobody. A difference in neither form has no duration.
+/// A syntax `difference` as an ISO 8601 duration; the section's own `7d` and
+/// `1mo` spellings are accepted too.
 fn iso_duration(difference: &str) -> Option<String> {
     let difference = difference.trim();
     if valid_iso8601_duration(difference) {
@@ -260,9 +221,7 @@ mod tests {
         assert!(!parsable("HL7:PIVL", "[;]/(7d)@DW").institution_specified());
     }
 
-    /// The section's event-linked examples: "PC+[1h;1h]" = one hour after meal,
-    /// "HS-[50min;1h]" = one hour before bedtime. The event is the leading term
-    /// and there is no period — the event-linked grammar has no `difference`.
+    /// The section's event-linked examples have an event and no period.
     #[test]
     fn the_specs_event_linked_examples_parse() {
         let after_meal = parsable("HL7:EIVL", "PC+[1h;1h]");

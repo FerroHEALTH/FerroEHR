@@ -89,15 +89,9 @@ const ANY_ELEMENT_VALUE_TYPES: [&str; 17] = [
     "DV_DATE",
 ];
 
-/// The `value` attribute an `ELEMENT` that leaves its value unconstrained
-/// stands for: one open alternative per concrete `DATA_VALUE` type.
-///
-/// An `ELEMENT` with no `value` constraint, or with `value matches {*}`, admits
-/// any value the RM permits (AOM 1.4 `C_COMPLEX_OBJECT.any_allowed`, ADL 1.4
-/// `master05-cadl.adoc` §"Any" Constraints), so it keeps a node in the web
-/// template and its FLAT keys name the chosen type (`…/test_method/text_value`,
-/// ITS-REST `simplified_formats/master05-rm_mapping.adoc` §CLUSTER). Returns
-/// `None` for every other node, and for a `value` the template prohibits.
+/// The `value` attribute of an `ELEMENT` that leaves it unconstrained: one open
+/// alternative per concrete `DATA_VALUE` type (ADL 1.4 `master05-cadl.adoc` §"Any"
+/// Constraints; master05 §CLUSTER). `None` otherwise, or when prohibited.
 pub(super) fn any_element_value(co: &CObject, rm_type: &str) -> Option<CAttribute> {
     if rm_type != "ELEMENT" {
         return None;
@@ -133,14 +127,9 @@ pub(super) fn any_element_value(co: &CObject, rm_type: &str) -> Option<CAttribut
     }))
 }
 
-/// The `lower` and `upper` attributes of an OPT 1.4 `DV_INTERVAL<T>` node that
-/// its template leaves unconstrained, each holding an open `T`.
-///
-/// A `DV_INTERVAL` has both parts whatever the template constrains (RM
-/// `data_types` §`DV_INTERVAL`), and its FLAT form reaches them as `/lower` and
-/// `/upper` (ITS-REST `simplified_formats/master05-rm_mapping.adoc`
-/// §`DV_INTERVAL`), so the Web Template names both. A part the template
-/// constrains, or prohibits with existence `0..0`, yields none.
+/// The unconstrained `lower` and `upper` of an OPT 1.4 `DV_INTERVAL<T>` node,
+/// each an open `T` (master05 §`DV_INTERVAL`). A constrained or prohibited part
+/// yields none.
 pub(super) fn interval_parts_v1_4(co: &CObject, rm_type: &str) -> Vec<CAttribute> {
     let Some(parameter) = interval_parameter(rm_type) else {
         return Vec::new();

@@ -206,12 +206,6 @@ pub(crate) fn document_tokens(
 /// The search tokens of `resource`, the rendering of `event`: the tokens
 /// `document_tokens` reads from the resource's JSON document, read from the
 /// typed resource with no document written (#6005).
-///
-/// Each element's nodes are the ones [`AuditElement::nodes`] reaches in the
-/// document: `agent.who.identifier`, the `what.identifier` of an entity whose
-/// role is the patient's (object-role `1`), `entity.what.identifier`,
-/// `source.observer.identifier`, `entity.type`, `entity.role`, `type` and
-/// `subtype`, and each `agent.network.address`.
 #[must_use]
 pub(crate) fn resource_tokens(
     resource: &fhir_types::r4::audit_event::AuditEvent,

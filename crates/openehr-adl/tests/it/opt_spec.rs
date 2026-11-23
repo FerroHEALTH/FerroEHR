@@ -1,22 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! OPT2 acceptance harness — the master10 worked example, transcribed inline.
-//!
-//! Oracle: `docs/specs/openehr/AM/docs/ADL2/master10-templates.adoc` (the
-//! `discharge` COMPOSITION → `t_clinical_info_ds_sf` template → operational
-//! template worked example) and `docs/specs/openehr/AM/docs/OPT2/master02-04`
-//! (the OPT checklist + profiled processing).
-//!
-//! The master10 listing of the resulting operational template is heavily elided
-//! (`--- etc ---` throughout), so a byte-for-byte reproduction of its printed
-//! form is not possible from the vendored text. Instead the template, its
-//! overlays, and the referenced archetypes are authored inline reproducing the
-//! master10 mechanics (a COMPOSITION with a filled slot, an overlay filler that
-//! removes nodes via `occurrences {0}`, a `use_node` proxy, a `closed` slot, and
-//! a `category existence {0}` deletion), and `create_opt` is asserted against
-//! every master02 checklist bullet, then round-tripped through the printer and
-//! parser.
+//! OPT2 acceptance against the `ADL2/master10-templates.adoc` worked example,
+//! authored inline because the listing is elided, and every `OPT2/master02`
+//! checklist bullet, then a print and parse round trip.
 
 #![allow(
     clippy::expect_used,

@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The SCIM error response (RFC 7644 §3.12).
-//!
-//! A [`ScimError`] is the refusal the layer returns: an HTTP status, the
-//! `scimType` keyword of Table 9 where one applies, and a human-readable
-//! detail. [`ScimError::body`] is its wire form, the `Error` message whose
-//! `status` is the code "expressed as a JSON string".
 
 use std::fmt;
 

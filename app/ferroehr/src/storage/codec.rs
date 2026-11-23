@@ -34,11 +34,6 @@ use crate::storage::structure::{is_structure_type, is_versioned_root_type};
 /// In each structure node, the members that stay in its fragment come first,
 /// in written order, then its structure children, in written order.
 ///
-/// The commit decomposes a body into rows ([`crate::storage::render`]) and a
-/// read reassembles them ([`reassemble`]), which attaches each structure child
-/// after the members its parent's fragment kept; the EHR Extract import
-/// stores this order as the body it serves.
-///
 /// # Errors
 /// [`StorageError::NotAStructureRoot`] when the root has no versioned-root
 /// `_type`, and [`StorageError::MixedArray`] for an array that mixes structure
@@ -149,10 +144,6 @@ pub(crate) fn decompose(root: Value) -> Result<Vec<crate::storage::row::NodeRow>
 
 /// Reassembles the canonical JSON from node rows (sorted or not — rows are
 /// ordered by `num` internally).
-///
-/// Lossless inverse of the decomposition ([`crate::storage::render`]) over
-/// rows whose fragments are whole again: the lean
-/// [`crate::storage::row::ReadRow`] the repository fetches back.
 ///
 /// # Errors
 ///

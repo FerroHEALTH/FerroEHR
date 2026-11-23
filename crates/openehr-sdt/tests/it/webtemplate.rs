@@ -2,19 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
-//! `WebTemplate` builder tests.
-//!
-//! * **smoke gate** — every `.opt` in the 91-file service corpus AND the full
-//!   vendored Better `web-template-tests` set (63 templates) is exercised: each
-//!   that the `openehr_its::opt14` parser can read MUST build a `WebTemplate`
-//!   without panicking, and the tree root's `rmType` must round-trip the OPT's
-//!   own root type. Templates that `opt14` cannot yet parse are reported as
-//!   pre-existing parser gaps (not a WebTemplate-builder failure).
-//! * **insta goldens** — deterministic snapshots for representative templates.
-//! * **targeted assertions** — ports of Better `BuilderTest`/`CodedTextTest`/
-//!   `OrdinalWebTemplateInputBuilder`-style checks (coded-text `|code` + list,
-//!   quantity `|magnitude`+`|unit`, ordinal integers, min/max, snake-cased ids,
-//!   archetype/`atNNNN` predicates, sibling-id de-duplication).
+//! `WebTemplate` builder tests: a smoke gate over every service and Better
+//! `web-template-tests` OPT, insta goldens and targeted assertions.
 
 use std::path::{Path, PathBuf};
 
@@ -317,17 +306,9 @@ fn ids_are_deduplicated_within_a_parent() {
 
 // ── existence ∧ occurrences (ADL 1.4 master05-cadl §Occurrences) ─────────────
 
-/// A child of an OPTIONAL single attribute is optional whatever occurrences the
-/// constraint object carries.
-///
-/// ADL 1.4 `AM/docs/ADL1.4/master05-cadl.adoc` §Occurrences: for the value of a
-/// single-valued attribute the occurrences "can only be `0..1` or `1..1`, and
-/// this is already defined by the attribute `existence`". `action test.opt`
-/// carries the canonical shape — `ISM_TRANSITION.careflow_step` with
-/// `existence {0..1}` over a `DV_CODED_TEXT` with `occurrences {1..1}` — and RM
-/// declares that attribute `0..1`
-/// (`RM/docs/UML/classes/org.openehr.rm.composition.ism_transition.adoc`;
-/// Simplified Formats `master05-rm_mapping.adoc` §`ISM_TRANSITION` Required "no").
+/// A child of an optional single attribute is optional whatever its occurrences
+/// (ADL 1.4 `master05-cadl.adoc` §Occurrences), as `ISM_TRANSITION.careflow_step`
+/// in `action test.opt` shows.
 #[test]
 fn optional_single_attribute_never_yields_a_mandatory_child() {
     let wt =
@@ -366,10 +347,7 @@ fn optional_single_attribute_never_yields_a_mandatory_child() {
 
 #[test]
 fn ontology_term_bindings_populate_node_and_coded_value_bindings() {
-    // A template whose archetype ontology carries `<term_bindings>` yields
-    // Better-shaped `termBindings` both on nodes (matched by the node's
-    // constraint node id — `WebTemplateBuilder.setTermBindings`) and on coded
-    // values (matched by the option code — `CodePhraseWebTemplateInputBuilder`).
+    // Term bindings land on nodes and on coded values.
     let wt = build_from_file(&better_fixtures_dir().join("Across - Visual Acuity Report.opt"))
         .expect("build Across - Visual Acuity Report");
 
@@ -461,10 +439,7 @@ fn assert_every_binding_well_formed(wt: &openehr_sdt::flat::webtemplate::model::
 
 #[test]
 fn multiple_coded_text_alternatives_compact_to_one_node() {
-    // `action test.opt` constrains an ELEMENT value with two `DV_CODED_TEXT`
-    // alternatives (a local coded list + an unconstrained one). Better's
-    // `compactMultipleCodedTexts` merges them into ONE coded node carrying the
-    // union of the coded values — not two polymorphic `value`/`value2` siblings.
+    // Two `DV_CODED_TEXT` alternatives merge into one coded node.
     let wt =
         build_from_file(&better_fixtures_dir().join("action test.opt")).expect("build action test");
 
@@ -516,14 +491,8 @@ fn party_suffixes(node: &WebTemplateNode) -> Vec<&str> {
         .collect()
 }
 
-/// A slot an OPT narrows to `PARTY_RELATED` is a party LEAF, exactly like one
-/// left at `PARTY_PROXY`/`PARTY_IDENTIFIED`: master05 gives all three subtypes
-/// their own mapping table and they share the party suffix rows. The subtype's
-/// extra `relationship` is a `DV_CODED_TEXT` SUB-PATH (master05 §"`PARTY_RELATED`
-/// performer": "the `relationship` attribute is emitted as a sub-path under the
-/// participation, with the standard `DV_CODED_TEXT` suffixes"), so it is a CHILD
-/// of the party node — never a reason to demote the party to an inputless
-/// container, which is the divergence this asserts against.
+/// A slot narrowed to `PARTY_RELATED` is a party leaf with `relationship` as a
+/// child (master05 §"`PARTY_RELATED` performer").
 #[test]
 fn party_related_narrowing_is_a_party_leaf_with_a_relationship_child() {
     let wt = build_from_file(&better_fixtures_dir().join("Test constrained subject.opt"))
@@ -563,10 +532,7 @@ fn party_related_narrowing_is_a_party_leaf_with_a_relationship_child() {
     );
 }
 
-/// The same rule as a standing invariant over every readable OPT in both
-/// corpora: no node of the `PARTY_PROXY` family may come out inputless.
-/// Constraining an attribute of a party — which is exactly what a
-/// `PARTY_RELATED` narrowing does — must not cost the node its own suffixes.
+/// No node of the `PARTY_PROXY` family comes out inputless in either corpus.
 #[test]
 fn no_party_node_is_inputless() {
     let mut checked = 0_usize;
@@ -604,12 +570,8 @@ fn no_party_node_is_inputless() {
     );
 }
 
-/// Every OPT 1.4 constraint the archetype-conformance walk cannot evaluate is
-/// REPORTED rather than dropped: the deployed corpus constrains computed RM
-/// FUNCTIONS as if they were stored members (`EVENT.offset`,
-/// `DV_PROPORTION.is_integral`) and misspells `null_flavour`, none of which a
-/// conformant instance can carry. The skip is a template property, so it is
-/// enumerable from the template alone.
+/// Every OPT 1.4 constraint the walk cannot evaluate is reported, enumerable
+/// from the template alone.
 #[test]
 fn unenforceable_constraints_are_reported_not_dropped() {
     use openehr_sdt::flat::validation::{UnenforceableReason, unenforceable_existence_constraints};
@@ -652,14 +614,9 @@ fn unenforceable_constraints_are_reported_not_dropped() {
     }
 }
 
-/// The slot-pattern probe reads the assertion's EXPRESSION TREE, not its string
-/// form: `ASSERTION.expression` is the "Root of expression tree" while
-/// `string_expression` is only its optional "String form of expression"
-/// (`AM UML/classes/org.openehr.am.aom14.assertion.adoc` §ASSERTION Class).
-///
-/// `IDCR Problem List.v1.opt` is the pin because none of its nine `<includes>`
-/// carries a `string_expression` at all — a source-text scan sees zero of them
-/// and leaves every slot open to any archetype.
+/// The slot-pattern probe reads the assertion's expression tree
+/// (`aom14.assertion.adoc`); none of `IDCR Problem List.v1.opt`'s includes has a
+/// `string_expression`.
 #[test]
 fn opt14_slot_patterns_come_from_the_assertion_tree() {
     let path = corpus_dir().join("knowledge/IDCR Problem List.v1.opt");

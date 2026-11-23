@@ -4,21 +4,8 @@
 //! Lifting stored AQL back into [`BuilderQuery`] — the exact inverse of
 //! [`crate::builder::lower`], and nothing more.
 //!
-//! The builder emits ONE query shape (`SELECT … FROM EHR e CONTAINS
-//! COMPOSITION c …` with a typed criterion tree). This module recognizes
-//! exactly that shape and REFUSES everything else with a typed
-//! [`LiftError`] naming what it could not express — a query outside the
-//! envelope belongs in the raw editor, never in a lossy half-lift.
-//!
-//! Recognition runs on the real AQL syntax tree (`openehr_query::parser`, the
-//! same grammar `lower` renders through), so there is no second grammar to keep
-//! in step. The refusal is then made total by a **round trip**: the lifted state
-//! is lowered again, re-parsed, and compared with the original parse. Anything
-//! that would come back different is refused, so an accepted lift is provably
-//! equivalent to the stored definition. String escaping is symmetric by the
-//! query crate's own contract: the parser decodes a literal's escapes into the
-//! AST, and `openehr_query::printer` re-encodes them at emission — the AST
-//! (and therefore the builder state) always holds the decoded value.
+//! A lift is accepted only when lowering it again re-parses to the original
+//! tree, so it is provably equivalent to the stored query.
 
 use openehr_query::ast::{
     AggregateCall, ClassExprOperand, ColumnExpr, CompareOperand, ContainsExpr, IdentifiedExpr,
@@ -47,10 +34,6 @@ const EHR_ID_ALIAS: &str = "ehr_id";
 const TEMPLATE_PATH: &str = "/archetype_details/template_id/value";
 
 /// Why a stored query cannot be opened in the point-and-click builder.
-///
-/// Every variant names a property of the QUERY, so the notice the screen renders
-/// tells the reader what to do about it (edit it as raw AQL, or run it on the
-/// stored-query runner). The lift is pure.
 ///
 /// NOTE: `NotAql` carries the parse failure as text because the refusal is
 /// compared, so the type must be `Clone + Eq`, which the parser's error is not.
@@ -107,10 +90,6 @@ pub enum LiftError {
 }
 
 /// Lift stored AQL into a builder state, or refuse it.
-///
-/// Success is round-trip-proven: `lower(from_aql(aql))` re-parses to exactly the
-/// tree `aql` parses to, so opening the query in the builder and saving it
-/// unchanged rewrites the same query.
 ///
 /// # Errors
 /// A [`LiftError`] naming the property of `aql` the builder cannot express.
@@ -818,9 +797,6 @@ fn leaf(aql_path: String, kind: CriterionKind) -> Criterion {
 /// variable, `/`-prefixed — the form the Web Template's `aqlPath` (and hence
 /// [`crate::builder::catalog::CatalogNode::aql_path`]) uses, so a lifted
 /// criterion keys straight into the builder's catalog metadata.
-///
-/// `None` for a path rooted elsewhere, one carrying a root predicate, or a bare
-/// variable.
 fn relative_path(path: &IdentifiedPath, variable: &str) -> Option<String> {
     if path.root != variable || path.predicate.is_some() {
         return None;

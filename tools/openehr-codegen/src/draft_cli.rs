@@ -10,7 +10,7 @@ use crate::cli::{rustfmt, write_emitted};
 use crate::generated_tree::{declare_hand_written_modules, remove_generated_files};
 use crate::render::emit_drafts::{draft_roots, render_draft_files, workspace_root};
 
-/// Regenerate every draft module of `plan::drafts::DRAFTS`.
+/// Regenerates every draft module of `plan::drafts::DRAFTS`.
 ///
 /// # Errors
 /// Returns an error if a draft does not compose, or a file cannot be removed,

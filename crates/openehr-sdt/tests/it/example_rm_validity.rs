@@ -1,13 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Regression: generated examples must be RM-valid — an `ELEMENT.value`
-//! carries a `DATA_VALUE`, never a structure (RM `data_structures`
-//! `ELEMENT.value: DATA_VALUE [0..1]`). The CKM `CCTA report` OPT (vendored
-//! in the CNF runner's journey template pack) exposed a generator defect
-//! where a deep `protocol` subtree produced `ELEMENT.value` = `ITEM_TREE`,
-//! which conformant validation rejects (422 against the platform's own
-//! commit surface).
+//! Generated examples are RM-valid: an `ELEMENT.value` carries a `DATA_VALUE`,
+//! never a structure (RM `data_structures` `ELEMENT.value`).
 
 use openehr_its::opt14;
 use openehr_sdt::flat::example::{DetailLevel, example_composition};
@@ -46,10 +41,8 @@ fn assert_elements_carry_data_values(node: &Value, path: &str, findings: &mut Ve
     }
 }
 
-/// Every template of the CNF runner's vendored CKM journey pack generates
-/// RM-shape-valid examples at every detail level (the pack is the measured
-/// workload's committed payload ground — an invalid example poisons the
-/// instrument).
+/// Every template of the CNF runner's CKM journey pack generates RM-valid
+/// examples at every detail level.
 #[test]
 fn ckm_pack_examples_are_rm_shape_valid() {
     let pack = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/templates/ckm");

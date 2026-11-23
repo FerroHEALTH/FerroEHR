@@ -4,12 +4,8 @@
 //! The shared DDL template both pseudonymisation domains are rendered from.
 //!
 //! The clinical and party domains carry the same change-control and node
-//! relations. The first storage generation built the second domain with
-//! `CREATE TABLE … (LIKE …)`, which copies checks but neither unique indexes
-//! nor foreign keys, so the twin silently lacked invariants the original had
-//! and a column added later never reached it. Here one template renders both
-//! migration files instead, and a test refuses any difference between the
-//! rendered text and the committed files.
+//! relations, so one template renders both migration files, and a test refuses
+//! any difference between the rendered text and the committed files.
 //!
 //! No openEHR spec governs storage layout — our own design/extension. What the
 //! separation realizes is GDPR Art. 4(5) and Art. 32(1)(a)

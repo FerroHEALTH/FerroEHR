@@ -3,12 +3,7 @@
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
 //! An ordinal symbol matches a constrained entry only by its whole code phrase
-//! (#5914).
-//!
-//! The symbol is a `DV_CODED_TEXT` whose `defining_code` is a `CODE_PHRASE`,
-//! whose `code_string` means something only inside its `terminology_id` (RM
-//! `data_types` §`CODE_PHRASE`), so `external::at0003` is not the `local::at0003`
-//! the template's `C_DV_ORDINAL` lists (AOM 1.4 §ORDINAL).
+//! (RM `data_types` §`CODE_PHRASE`; AOM 1.4 §ORDINAL).
 
 use std::path::Path;
 

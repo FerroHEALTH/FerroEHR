@@ -10,10 +10,6 @@
 //! `type` ∈ {input, output} (default `input`), described in
 //! `…/parameters/query/example_detail_level.yaml` and
 //! `…/parameters/query/example_type.yaml`.
-//!
-//! Component-free: the query string a pane sends is a pure, unit-tested
-//! function of the controls the operator picked, so both template families
-//! ask the CDR the same way.
 
 use crate::format::ReprFormat;
 use crate::locale::Msg;
@@ -118,11 +114,6 @@ impl ExampleType {
 }
 
 /// The query string an example request carries, `?` included.
-///
-/// Both parameters are always spelled, defaults included, so the request the
-/// viewer sends states exactly what the pane's controls show. Every value is
-/// a fixed token of the two enums above, so nothing here is user input to
-/// encode.
 #[must_use]
 pub fn example_query(detail: ExampleDetail, kind: ExampleType) -> String {
     format!(
