@@ -265,7 +265,7 @@ pub(crate) fn observe_revisions(row: &sqlx::postgres::PgRow) -> Result<(), sqlx:
     }
     // Outside a ride no statement selects them, and a missing column's error is an allocation.
     let party = if crate::party_binding::request::riding() {
-        match row.try_get::<Option<(i64, i64, i64)>, _>(PARTY_REVISIONS) {
+        match row.try_get::<Option<(i64, bool, i64)>, _>(PARTY_REVISIONS) {
             Ok(party) => party,
             // NOTE: sqlx Error::ColumnNotFound, only a ride's statement reads the party revisions.
             Err(sqlx::Error::ColumnNotFound(_)) => None,
@@ -274,20 +274,14 @@ pub(crate) fn observe_revisions(row: &sqlx::postgres::PgRow) -> Result<(), sqlx:
     } else {
         None
     };
-    if let Some((grants, facts, bindings)) = party {
-        crate::party_binding::request::observe(
-            crate::party_binding::grants::live::revisions::Revisions {
-                grants,
-                facts,
-                bindings,
-            },
-        );
+    if let Some((grants, facts_behind, bindings)) = party {
+        crate::party_binding::request::observe_door(grants, facts_behind, bindings);
     }
     Ok(())
 }
 
-/// The column a ride's statement reads the party store's grant, facts and
-/// binding revisions into ([`party_revisions!`], #6320).
+/// The column a ride's statement reads the party store's grant and binding
+/// revisions and its facts flag into ([`party_revisions!`], #6320).
 const PARTY_REVISIONS: &str = "party_revisions";
 
 /// The column a party statement reads the policy and definition revisions

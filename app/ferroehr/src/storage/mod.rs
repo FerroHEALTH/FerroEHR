@@ -94,24 +94,35 @@ macro_rules! access_revision {
 }
 
 /// The select-list item that reads, as `party_revisions`, the party store's
-/// grant, facts and binding revisions through `party_door.party_revisions()`,
-/// the one function of the party domain the clinical roles may run, where
-/// the two domains share a database (`party/0009`). One record, so a column
-/// of another type joins it as one more field. Only a ride that has not read
-/// them yet selects it (`party_binding::request::reads_door`, #6320).
+/// grant and binding revisions and whether a caller facts stamp exists that
+/// the snapshot bound at the placeholder `$held` did not see, through
+/// `party_door.party_revisions(held)`, the one function of the party domain
+/// the clinical roles may run, where the two domains share a database
+/// (`party/0009`). One record, so a column of another type joins it as one
+/// more field. Only a ride that has not read them yet selects it
+/// (`party_binding::request::reads_door`, #6320), binding
+/// `party_binding::request::door` (#6074).
 macro_rules! party_revisions {
-    () => {
-        "(SELECT ROW(pr.grants, pr.facts, pr.bindings) FROM party_door.party_revisions() pr) \
-         AS party_revisions, "
+    ($held:literal) => {
+        concat!(
+            "(SELECT ROW(pr.grants, pr.facts_behind, pr.bindings) ",
+            "FROM party_door.party_revisions(",
+            $held,
+            "::pg_snapshot) pr) AS party_revisions, "
+        )
     };
 }
 
 /// [`party_revisions!`] for a statement the party pool runs, which reads the
 /// party store's revisions from their own table, with no door call (#6320).
 macro_rules! party_revisions_here {
-    () => {
-        "(SELECT ROW(r.revision, r.facts_revision, r.binding_revision) \
-         FROM party.binding_grant_revision r) AS party_revisions, "
+    ($held:literal) => {
+        concat!(
+            "(SELECT ROW(r.revision, party.facts_behind(",
+            $held,
+            "::pg_snapshot), r.binding_revision) FROM party.binding_grant_revision r) \
+             AS party_revisions, "
+        )
     };
 }
 

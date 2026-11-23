@@ -341,18 +341,18 @@ COMMENT ON COLUMN access_care.provider_id IS 'The id of the provider DV_IDENTIFI
 COMMENT ON COLUMN access_care.writer_id IS 'The PERSON or client ACTOR that wrote the relationship, by its container; NULL when its committer names none. Our own design.';
 COMMENT ON COLUMN access_care.self_declared IS 'Whether the relationship''s basis is self_declared. Our own design.';
 
--- The facts revision of the party domain the rows reflect, and the check
+-- The snapshot of the party domain the rows were read under, and the check
 -- digest of the key they were digested under; NULL before the first run.
 CREATE TABLE access_care_state (
     singleton boolean     NOT NULL DEFAULT true,
-    revision  bigint,
+    snapshot  pg_snapshot,
     key_check bytea,
     updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_access_care_state PRIMARY KEY (singleton),
     CONSTRAINT ck_access_care_state_singleton CHECK (singleton)
 );
 INSERT INTO access_care_state (singleton) VALUES (true);
-COMMENT ON TABLE access_care_state IS 'The party facts revision the care projection reflects and the check digest of its key. Our own design.';
+COMMENT ON TABLE access_care_state IS 'The party snapshot the care projection was read under and the check digest of its key. Our own design.';
 COMMENT ON COLUMN access_care_state.key_check IS 'The check value of the digest form the rows were taken in; a different value makes the projector rebuild them. Our own design.';
 
 CREATE FUNCTION access_class_unknown(ehr uuid) RETURNS boolean

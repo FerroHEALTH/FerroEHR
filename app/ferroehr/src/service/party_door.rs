@@ -5,7 +5,7 @@
 //! party statement the policy and definition revisions (#6320).
 //!
 //! Where the party domain shares the clinical database, the party migrations
-//! open one door into it, `party_door.party_revisions()`, which the clinical
+//! open one door into it, `party_door.party_revisions(held)`, which the clinical
 //! roles may run, so a read confirms its party copies in its own clinical
 //! statement (`party_binding::request::ride`), and the clinical migrations
 //! open the other, `clinical_door.policy_revisions()`, which the party roles
@@ -29,13 +29,13 @@ const DATABASE_SQL: &str =
 /// The database a pool serves, and on the clinical pool whether its role may
 /// run the door.
 const WHERE_SQL: &str = "SELECT s.system_identifier::text, current_database()::text, \
-     COALESCE(has_function_privilege(to_regprocedure('party_door.party_revisions()'), 'EXECUTE'), \
+     COALESCE(has_function_privilege(to_regprocedure('party_door.party_revisions(pg_snapshot)'), 'EXECUTE'), \
      false) FROM pg_control_system() s";
 
 impl FerroEhrService {
     /// Whether this service's clinical statements can read the party store's
     /// revisions: the clinical and party pools serve one database, and the
-    /// clinical role may run `party_door.party_revisions()`. Read once; a
+    /// clinical role may run `party_door.party_revisions(held)`. Read once; a
     /// failed read is not kept.
     ///
     /// # Errors

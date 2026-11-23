@@ -47,6 +47,8 @@ pub(super) enum Live {
     PinnedEhr,
     /// The revision its verdict was judged on.
     PinnedRevision,
+    /// The snapshot a ride's door read binds as `held`.
+    HeldSnapshot,
     /// The text of the EHR-id parameter at this index of
     /// [`super::Shapes::live_params`].
     ParamText(usize),
@@ -74,6 +76,7 @@ impl Live {
             Self::Confined,
             Self::PinnedEhr,
             Self::PinnedRevision,
+            Self::HeldSnapshot,
         ];
         every.extend((0..params).flat_map(|at| [Self::ParamText(at), Self::ParamId(at)]));
         every
@@ -141,6 +144,9 @@ impl Live {
                 .map(|ehrs| Value::from(ehrs.to_vec())),
             Self::PinnedEhr => pinned.map(|pinned| Value::from(pinned.ehr)),
             Self::PinnedRevision => pinned.map(|pinned| Value::from(pinned.revision_json())),
+            Self::HeldSnapshot => {
+                crate::party_binding::request::reads_door().then(super::held_snapshot)
+            }
             Self::ParamText(at) => {
                 text(live_params, at, params).map(|text| Value::from(text.to_owned()))
             }

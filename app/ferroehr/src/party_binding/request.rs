@@ -14,7 +14,9 @@
 //!
 //! A request may instead [`ride`] (#6320): where the party domain shares the
 //! clinical database, its clinical statement reads the store's revisions
-//! through the one function `party_door.party_revisions()`, so the request is
+//! through the one function `party_door.party_revisions(held)`, which judges
+//! the caller facts against the snapshot the facts copy held when the ride
+//! began (`party.facts_behind`, #6074), so the request is
 //! decided on the copies as they stand, each copy noting what it holds
 //! (`held`, `held_binding`), and its answer leaves only once those cover
 //! the revisions a statement read (`observe`), or, when none read them, one
@@ -28,8 +30,11 @@ use std::future::Future;
 use sqlx::PgPool;
 use tokio::sync::OnceCell;
 
+use std::sync::Arc;
+
 use crate::db::acquire::acquire;
-use crate::party_binding::grants::live::revisions::Revisions;
+use crate::db::snapshot::Snapshot;
+use crate::party_binding::grants::live::revisions::{FactsRead, HeldSnapshot, Revisions};
 use crate::party_binding::grants::store;
 use crate::storage::error::StorageError;
 
@@ -47,19 +52,22 @@ type Deferred = Box<dyn FnOnce() + Send>;
 /// What one ride's run left.
 #[derive(Default)]
 struct Ride {
-    held: Cell<Held>,
-    observed: Cell<Option<Revisions>>,
-    read: Cell<Option<Revisions>>,
+    held: RefCell<Held>,
+    observed: RefCell<Option<Revisions>>,
+    read: RefCell<Option<Revisions>>,
+    /// The snapshot the facts copy held when the ride began, which its door
+    /// reads judge the caller facts against.
+    door: Option<HeldSnapshot>,
     op: Cell<Option<&'static str>>,
     deferred: RefCell<Vec<Deferred>>,
 }
 
 /// The least revisions the copies a ride decided on held; `None` where it
 /// took no copy.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default)]
 struct Held {
     grants: Option<i64>,
-    facts: Option<i64>,
+    facts: Option<HeldSnapshot>,
     bindings: Option<i64>,
 }
 
@@ -70,15 +78,40 @@ fn least(held: Option<i64>, at: i64) -> i64 {
 
 impl Held {
     /// Whether the copies held every change up to `store`.
-    fn covers(self, store: Revisions) -> bool {
+    fn covers(&self, store: &Revisions) -> bool {
         self.grants.is_none_or(|held| held >= store.grants)
-            && self.facts.is_none_or(|held| held >= store.facts)
+            && self
+                .facts
+                .as_ref()
+                .is_none_or(|held| held.holds(&store.facts))
             && self.bindings.is_none_or(|held| held >= store.bindings)
     }
 
     /// Whether the run took any copy.
-    fn any(self) -> bool {
+    fn any(&self) -> bool {
         self.grants.is_some() || self.facts.is_some() || self.bindings.is_some()
+    }
+}
+
+/// What a door read found against the ride's starting install `door`.
+fn door_read(door: Option<&HeldSnapshot>, behind: bool) -> FactsRead {
+    door.map_or(FactsRead::Behind { after: None }, |door| door.found(behind))
+}
+
+/// What two reads of the facts within one ride require together. Every
+/// door read is judged against the install the ride began at, which every
+/// copy it decided on is no older than, so one that found a stamp unseen
+/// decides, and of two such, the later.
+fn newer(seen: FactsRead, store: FactsRead) -> FactsRead {
+    match (seen, store) {
+        (FactsRead::Seen { generation: a }, FactsRead::Seen { generation: b }) => FactsRead::Seen {
+            generation: a.max(b),
+        },
+        (FactsRead::Behind { after: a }, FactsRead::Behind { after: b }) => FactsRead::Behind {
+            after: a.zip(b).map(|(a, b)| a.max(b)),
+        },
+        (behind @ FactsRead::Behind { .. }, FactsRead::Seen { .. })
+        | (FactsRead::Seen { .. }, behind @ FactsRead::Behind { .. }) => behind,
     }
 }
 
@@ -110,18 +143,18 @@ impl Ridden {
     ///
     /// # Errors
     /// [`StorageError`] when the party store does not answer that read.
-    pub async fn held(self, pool: &PgPool) -> Result<bool, StorageError> {
+    pub async fn held(mut self, pool: &PgPool) -> Result<bool, StorageError> {
         if !self.held.any() {
             self.count();
             return Ok(true);
         }
-        let store = if let Some(store) = self.reference {
+        let store = if let Some(store) = self.reference.take() {
             store
         } else {
             let mut conn = acquire(pool).await?;
-            store::revisions(&mut conn).await?
+            store::revisions(&mut conn, self.held.facts.as_ref()).await?
         };
-        let held = self.held.covers(store);
+        let held = self.held.covers(&store);
         if held {
             self.count();
         }
@@ -142,23 +175,26 @@ impl Ridden {
     }
 }
 
-/// Runs `fut` as a ride: the copies decide as they stand, and the store's
-/// revisions are taken from the statements that read them. Inside a
-/// [`scope`] only.
-pub async fn ride<F: Future>(fut: F) -> (F::Output, Ridden) {
+/// Runs `fut` as a ride: the copies decide as they stand.
+///
+/// The store's revisions are taken from the statements that read them, the
+/// caller facts judged against `door`, the snapshot the facts copy holds as
+/// it begins. Inside a [`scope`] only.
+pub async fn ride<F: Future>(door: Option<HeldSnapshot>, fut: F) -> (F::Output, Ridden) {
     // NOTE: our own design (#6320), revisions the request read before its ride (the token's
     // standing) are what its copies are judged by, and no statement of the ride reads them again.
     let ride = Ride {
-        read: Cell::new(READ.try_with(|held| held.get().copied()).ok().flatten()),
+        read: RefCell::new(READ.try_with(|read| read.get().cloned()).ok().flatten()),
+        door,
         ..Ride::default()
     };
     RIDE.scope(ride, async move {
         let output = fut.await;
         let ridden = RIDE.with(|ride| {
-            let observed = ride.observed.get();
+            let observed = ride.observed.take();
             Ridden {
-                held: ride.held.get(),
-                reference: observed.or(ride.read.get()),
+                held: ride.held.take(),
+                reference: observed.or_else(|| ride.read.take()),
                 op: ride.op.get(),
                 deferred: ride.deferred.take(),
             }
@@ -169,32 +205,44 @@ pub async fn ride<F: Future>(fut: F) -> (F::Output, Ridden) {
 }
 
 /// Whether the running request rides, so its clinical statement reads the
-/// party store's revisions through `party_door.party_revisions()`.
+/// party store's revisions through `party_door.party_revisions(held)`.
 #[must_use]
 pub fn riding() -> bool {
     RIDE.try_with(|_| ()).is_ok()
 }
 
 /// Whether a statement of the running request selects the party store's
-/// revisions through `party_door.party_revisions()`: it rides and has not
+/// revisions through `party_door.party_revisions(held)`: it rides and has not
 /// read them yet.
 #[must_use]
 pub fn reads_door() -> bool {
-    RIDE.try_with(|ride| ride.read.get().is_none())
+    RIDE.try_with(|ride| ride.read.borrow().is_none())
         .unwrap_or(false)
+}
+
+/// The snapshot a door read of the running ride binds as `held`; `None`
+/// outside a ride or before the facts copy's first read.
+#[must_use]
+pub fn door() -> Option<Arc<Snapshot>> {
+    RIDE.try_with(|ride| ride.door.as_ref().and_then(|door| door.snapshot.clone()))
+        .ok()
+        .flatten()
 }
 
 /// Notes that the running ride decided on the grants copy at `grants` and
 /// the facts copy at `facts`.
-pub(crate) fn held(grants: i64, facts: i64) {
+pub(crate) fn held(grants: i64, facts: &HeldSnapshot) {
     // NOTE: tokio LocalKey::try_with, outside a ride every copy is confirmed by its read.
     let _outside = RIDE.try_with(|ride| {
-        let held = ride.held.get();
-        ride.held.set(Held {
-            grants: Some(least(held.grants, grants)),
-            facts: Some(least(held.facts, facts)),
-            ..held
-        });
+        let mut held = ride.held.borrow_mut();
+        held.grants = Some(least(held.grants, grants));
+        if held
+            .facts
+            .as_ref()
+            .is_none_or(|older| older.generation > facts.generation)
+        {
+            held.facts = Some(facts.clone());
+        }
     });
 }
 
@@ -202,28 +250,32 @@ pub(crate) fn held(grants: i64, facts: i64) {
 pub(crate) fn held_binding(at: i64) {
     // NOTE: tokio LocalKey::try_with, outside a ride every copy is confirmed by its read.
     let _outside = RIDE.try_with(|ride| {
-        let held = ride.held.get();
-        ride.held.set(Held {
-            bindings: Some(least(held.bindings, at)),
-            ..held
-        });
+        let mut held = ride.held.borrow_mut();
+        held.bindings = Some(least(held.bindings, at));
     });
 }
 
-/// Notes the party store's revisions a statement of the running ride read;
-/// the newest read stands.
-pub(crate) fn observe(store: Revisions) {
+/// Notes the party store's grant and binding revisions a statement of the
+/// running ride read through its door, and whether it found a caller facts
+/// stamp the ride's door snapshot did not see; the newest read stands.
+pub(crate) fn observe_door(grants: i64, facts_behind: bool, bindings: i64) {
     // NOTE: tokio LocalKey::try_with, outside a ride no statement reads them.
     let _outside = RIDE.try_with(|ride| {
-        let next = match ride.observed.get() {
+        let store = Revisions {
+            grants,
+            facts: door_read(ride.door.as_ref(), facts_behind),
+            bindings,
+        };
+        let mut observed = ride.observed.borrow_mut();
+        let next = match observed.take() {
             Some(seen) => Revisions {
                 grants: seen.grants.max(store.grants),
-                facts: seen.facts.max(store.facts),
+                facts: newer(seen.facts, store.facts),
                 bindings: seen.bindings.max(store.bindings),
             },
             None => store,
         };
-        ride.observed.set(Some(next));
+        *observed = Some(next);
     });
 }
 
@@ -253,48 +305,53 @@ pub fn scope<F: Future>(fut: F) -> impl Future<Output = F::Output> {
     READ.scope(OnceCell::new(), fut)
 }
 
-/// The revisions in force in the party store: the ones the running request
-/// read, or one indexed read on a connection of `pool` that is given back
-/// before this returns.
+/// The revisions in force in the party store, the caller facts judged
+/// against `held`, the snapshot the facts copy holds: the ones the running
+/// request read, or one indexed read on a connection of `pool` that is given
+/// back before this returns.
 ///
 /// # Errors
 /// [`StorageError`] when the party store does not answer; a failed read is
 /// not kept, and the next caller reads again.
-pub(crate) async fn revisions(pool: &PgPool) -> Result<Revisions, StorageError> {
+pub(crate) async fn revisions(
+    pool: &PgPool,
+    held: Option<&HeldSnapshot>,
+) -> Result<Revisions, StorageError> {
     let read = || async {
         let mut conn = acquire(pool).await?;
-        store::revisions(&mut conn).await
+        store::revisions(&mut conn, held).await
     };
     // NOTE: tokio LocalKey::try_with, outside a request (a background task, a
     // test of a service) there is nothing to share the read with.
-    let Ok(held) = READ.try_with(|held| held.get().copied()) else {
+    let Ok(read_before) = READ.try_with(|read| read.get().cloned()) else {
         return read().await;
     };
-    if let Some(held) = held {
-        noted_read(held);
-        return Ok(held);
+    if let Some(read_before) = read_before {
+        noted_read(&read_before);
+        return Ok(read_before);
     }
     let fresh = read().await?;
-    noted_read(fresh);
+    noted_read(&fresh);
     // NOTE: tokio OnceCell::set, a read a sibling future of the request
     // finished first stands, and both are revisions the store held.
     Ok(READ
-        .try_with(|held| {
-            match held.set(fresh) {
+        .try_with(|read| {
+            match read.set(fresh.clone()) {
                 Ok(()) | Err(_) => {}
             }
-            held.get().copied().unwrap_or(fresh)
+            read.get().cloned().unwrap_or_else(|| fresh.clone())
         })
         .unwrap_or(fresh))
 }
 
 /// Notes that the running ride read the store's revisions as `store`, which
 /// its copies are then judged against when no statement read them.
-fn noted_read(store: Revisions) {
+fn noted_read(store: &Revisions) {
     // NOTE: tokio LocalKey::try_with, outside a ride the read confirms the copies at once.
     let _outside = RIDE.try_with(|ride| {
-        if ride.read.get().is_none() {
-            ride.read.set(Some(store));
+        let mut read = ride.read.borrow_mut();
+        if read.is_none() {
+            *read = Some(store.clone());
         }
     });
 }

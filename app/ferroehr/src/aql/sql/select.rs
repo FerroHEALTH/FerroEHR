@@ -121,12 +121,11 @@ impl Builder<'_> {
     /// that confirms its policy copies after it ran checks them against the
     /// revisions in force beside the rows it was served (#6320). In a ride
     /// (`ride`), the party store's revisions beside them, through
-    /// `party_door.party_revisions()`. Only the first row served carries them
+    /// `party_door.party_revisions(held)`. Only the first row served carries them
     /// ([`Self::first_served_row`]); every row carries them where it cannot.
     pub(super) fn build_revision_columns(&mut self, ride: bool, order: &WindowStatement) {
         let first = self.first_served_row(order);
-        let mut column = |read: &str, alias: &str| {
-            let read = Expr::cust(read.to_owned());
+        let mut column = |read: Expr, alias: &str| {
             let cell = match &first {
                 Some(first) => Expr::case(first.clone(), read).into(),
                 None => read,
@@ -134,17 +133,20 @@ impl Builder<'_> {
             self.q.expr_as(cell, Alias::new(alias));
         };
         column(
-            "(SELECT rr.policy FROM request_revisions rr)",
+            Expr::cust("(SELECT rr.policy FROM request_revisions rr)"),
             super::POLICY_REVISION_COL,
         );
         column(
-            "(SELECT rr.definitions FROM request_revisions rr)",
+            Expr::cust("(SELECT rr.definitions FROM request_revisions rr)"),
             super::DEFINITION_REVISION_COL,
         );
         if ride {
             column(
-                "(SELECT ROW(pr.grants, pr.facts, pr.bindings) \
-                 FROM party_door.party_revisions() pr)",
+                Expr::cust_with_values(
+                    "(SELECT ROW(pr.grants, pr.facts_behind, pr.bindings) \
+                     FROM party_door.party_revisions($1::pg_snapshot) pr)",
+                    [super::shape::held_snapshot()],
+                ),
                 super::PARTY_REVISIONS_COL,
             );
         }

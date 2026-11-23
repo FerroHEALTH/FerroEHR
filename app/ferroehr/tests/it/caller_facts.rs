@@ -688,8 +688,8 @@ async fn one_indexed_read_returns_the_facts_of_the_parties_that_changed() {
     let pool = db.pool();
     sqlx::query(
         "WITH p AS (SELECT uuidv7() AS id, n FROM generate_series(1, 20000) AS n), \
-         s AS (INSERT INTO party.binding_caller_fact_party (party_id, revision) \
-               SELECT id, n FROM p) \
+         s AS (INSERT INTO party.binding_caller_fact_party (party_id, stamped_xid) \
+               SELECT id, n::text::xid8 FROM p) \
          INSERT INTO party.binding_caller_fact \
              (holder_id, ordinal, kind, party_id, target_id, lifecycle_state, role_validity, \
               validity) \
@@ -712,13 +712,13 @@ async fn one_indexed_read_returns_the_facts_of_the_parties_that_changed() {
         ferroehr::party_binding::grants::caller::store::FACTS
     );
     let plan: Value = sqlx::query_scalar(sqlx::AssertSqlSafe(explain))
-        .bind(19_990_i64)
+        .bind("19991:19991:")
         .fetch_one(&mut *conn)
         .await
         .expect("the plan");
     let text = plan.to_string();
     assert!(
-        text.contains("ix_binding_caller_fact_party_revision")
+        text.contains("ix_binding_caller_fact_party_stamped")
             && text.contains("ix_binding_caller_fact_party\""),
         "the facts read is not answered from the stamp and party indexes: {text}"
     );
@@ -727,7 +727,7 @@ async fn one_indexed_read_returns_the_facts_of_the_parties_that_changed() {
         "the facts read scans a table: {text}"
     );
     let read = sqlx::query(ferroehr::party_binding::grants::caller::store::FACTS)
-        .bind(19_990_i64)
+        .bind("19991:19991:")
         .fetch_all(&mut *conn)
         .await
         .expect("the facts read");

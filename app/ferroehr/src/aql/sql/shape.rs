@@ -339,5 +339,11 @@ impl Shape {
     }
 }
 
+/// The snapshot a ride's door read binds as `held`: the facts copy's, or
+/// `NULL` before its first read (`party_binding::request::door`, #6074).
+pub(super) fn held_snapshot() -> Value {
+    Value::from(crate::party_binding::request::door().map(|door| door.text().to_owned()))
+}
+
 #[cfg(test)]
 mod tests;

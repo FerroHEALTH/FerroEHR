@@ -166,12 +166,16 @@ async fn riding(layer: AuthLayer, req: Request, kept: Option<Bytes>, mut next: N
     // The rerun keeps the request's extensions (its matched route and request id) and an AQL
     // POST's body, the same bytes.
     let again = parts.clone();
-    let (resp, ridden) = ferroehr::party_binding::request::ride(Box::pin(decided(
-        &layer,
-        access.clone(),
-        Request::from_parts(parts, body),
-        &mut next,
-    )))
+    let door = Some(layer.service.grants().held_snapshot());
+    let (resp, ridden) = ferroehr::party_binding::request::ride(
+        door,
+        Box::pin(decided(
+            &layer,
+            access.clone(),
+            Request::from_parts(parts, body),
+            &mut next,
+        )),
+    )
     .await;
     let op = ridden.op().unwrap_or("unnamed");
     if matches!(Box::pin(layer.service.ride_held(ridden)).await, Ok(true)) {

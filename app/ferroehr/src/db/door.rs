@@ -5,7 +5,7 @@
 //!
 //! Where the two domains share a database, a statement of one confirms the
 //! copies its decision rests on by reading the other's revisions: a clinical
-//! statement the party store's through `party_door.party_revisions()`, a party
+//! statement the party store's through `party_door.party_revisions(held)`, a party
 //! statement the policy and definition revisions through
 //! `clinical_door.policy_revisions()`. Each door is a schema the other
 //! domain's roles may enter, so the boot gate holds it to its one function,
@@ -26,8 +26,8 @@ pub(super) const PARTY_DOOR: &str = "party_door";
 pub(super) const CLINICAL_DOOR: &str = "clinical_door";
 
 /// The first object of the door schema `$1` that is not its one function
-/// `$2()`, running as its owner with a fixed `search_path`, and what is
-/// wrong with it.
+/// `$2`, taking the argument types `$3`, running as its owner with a fixed
+/// `search_path`, and what is wrong with it.
 const BREACH_SQL: &str = "SELECT object, problem FROM (
          SELECT $1 || '.' || c.relname AS object, 'is a relation' AS problem
          FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -35,7 +35,7 @@ const BREACH_SQL: &str = "SELECT object, problem FROM (
          UNION ALL
          SELECT $1 || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
                 CASE
-                    WHEN p.proname <> $2 OR p.pronargs <> 0
+                    WHEN p.proname <> $2 OR oidvectortypes(p.proargtypes) <> $3
                         THEN 'is not the door''s function'
                     WHEN NOT p.prosecdef THEN 'does not run as its owner'
                     WHEN NOT EXISTS (
@@ -56,7 +56,8 @@ const BREACH_SQL: &str = "SELECT object, problem FROM (
      LIMIT 1";
 
 /// The exceptions to the grant sweep: the schema `party_door`, which the
-/// clinical roles may enter, holds exactly the function `party_revisions()`,
+/// clinical roles may enter, holds exactly the function
+/// `party_revisions(pg_snapshot)`,
 /// and the schema `clinical_door`, which the party roles may enter, exactly
 /// `policy_revisions()`, each running as its owner with a fixed
 /// `search_path`, and nothing else. A database without a door passes.
@@ -65,25 +66,29 @@ const BREACH_SQL: &str = "SELECT object, problem FROM (
 /// [`DbError::PartyDoorBreached`] or [`DbError::ClinicalDoorBreached`] naming
 /// the object, or [`DbError::Sqlx`] when a catalog read fails.
 pub(super) async fn verify_doors(pool: &PgPool) -> Result<(), DbError> {
-    if let Some((object, problem)) = breach(pool, PARTY_DOOR, "party_revisions").await? {
+    if let Some((object, problem)) =
+        breach(pool, PARTY_DOOR, "party_revisions", "pg_snapshot").await?
+    {
         return Err(DbError::PartyDoorBreached { object, problem });
     }
-    if let Some((object, problem)) = breach(pool, CLINICAL_DOOR, "policy_revisions").await? {
+    if let Some((object, problem)) = breach(pool, CLINICAL_DOOR, "policy_revisions", "").await? {
         return Err(DbError::ClinicalDoorBreached { object, problem });
     }
     Ok(())
 }
 
-/// The first object of the door `schema` that is not its one `function`,
-/// and what is wrong with it.
+/// The first object of the door `schema` that is not its one `function`
+/// taking `arguments`, and what is wrong with it.
 async fn breach(
     pool: &PgPool,
     schema: &str,
     function: &str,
+    arguments: &str,
 ) -> Result<Option<(String, &'static str)>, DbError> {
     let breach: Option<(String, String)> = sqlx::query_as(BREACH_SQL)
         .bind(schema)
         .bind(function)
+        .bind(arguments)
         .fetch_optional(&mut *acquire(pool).await?)
         .await?;
     Ok(breach.map(|(object, problem)| {
