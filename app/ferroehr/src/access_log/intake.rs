@@ -160,7 +160,7 @@ impl IntakeEntry {
 }
 
 /// The intake rows of a batch, one element per entry, as the `unnest` of
-/// [`INTAKE`] reads them, borrowed from the entries.
+/// [`PLAIN`] reads them, borrowed from the entries.
 #[derive(Debug, Default)]
 struct Columns<'e> {
     record_types: Vec<Option<&'e str>>,
