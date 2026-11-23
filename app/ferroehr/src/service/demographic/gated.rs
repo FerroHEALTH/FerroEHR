@@ -233,7 +233,7 @@ impl FerroEhrService {
             outbox: None,
             reservation: None,
             status: None,
-            folder: false,
+            folder: None,
             party: Some(Box::new(PartySync {
                 key_space: !self.binding.is_empty(),
                 reverse: None,
