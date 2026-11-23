@@ -173,20 +173,22 @@ async fn served(
             return Err(anyhow!("the served envelope of {clone_uid} differs"));
         }
     }
-    let latest = |body: ReadBody| match body {
-        ReadBody::Value(value) => value.to_string(),
-        ReadBody::RawJson(text) => text.to_string(),
+    let latest = |body: ReadBody| -> anyhow::Result<String> {
+        Ok(match body {
+            ReadBody::Value(value) => value.to_string(),
+            ReadBody::RawJson(text) => text.text()?.to_owned(),
+        })
     };
     let clone = latest(
         svc.read_composition_raw(EhrId(ehr), VoId(vo), None)
             .await?
             .body,
-    );
+    )?;
     let expected = latest(
         svc.read_composition_raw(EhrId(proto_ehr), VoId(proto), None)
             .await?
             .body,
-    );
+    )?;
     if clone != swap(expected) {
         return Err(anyhow!("the served composition differs"));
     }

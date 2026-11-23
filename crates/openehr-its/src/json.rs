@@ -235,20 +235,31 @@ pub fn from_canonical_json<T: DeserializeOwned>(json: &str) -> Result<T, JsonPar
     crate::conversion::record::<T>("from_canonical_json");
     // The happy path skips the costly path tracker; a failed read re-runs the
     // deterministic decode with it to build the diagnostic.
-    match serde_json::from_str::<T>(json) {
-        Ok(value) => Ok(value),
-        Err(plain) => Err(located_in_str::<T>(json, &plain)),
-    }
+    serde_json::from_str::<T>(json)
+        .map_err(|plain| located::<_, T>(&mut serde_json::Deserializer::from_str(json), &plain))
 }
 
-/// Re-read `json` with the path tracker so a refusal names the offending node.
-fn located_in_str<T: DeserializeOwned>(json: &str, plain: &serde_json::Error) -> JsonParseError {
-    let mut deserializer = serde_json::Deserializer::from_str(json);
-    match serde_path_to_error::deserialize::<_, T>(&mut deserializer) {
+/// Deserialize an RM value from canonical JSON bytes, checking their UTF-8
+/// as it reads them.
+///
+/// # Errors
+/// As [`from_canonical_json`].
+pub fn from_canonical_slice<T: DeserializeOwned>(json: &[u8]) -> Result<T, JsonParseError> {
+    crate::conversion::record::<T>("from_canonical_json");
+    serde_json::from_slice::<T>(json)
+        .map_err(|plain| located::<_, T>(&mut serde_json::Deserializer::from_slice(json), &plain))
+}
+
+/// Re-read with the path tracker so a refusal names the offending node.
+fn located<'de, R: serde_json::de::Read<'de>, T: DeserializeOwned>(
+    deserializer: &mut serde_json::Deserializer<R>,
+    plain: &serde_json::Error,
+) -> JsonParseError {
+    match serde_path_to_error::deserialize::<_, T>(deserializer) {
         Err(located) => from_path_error(&located),
         // A deterministic re-read of the same bytes cannot succeed where the
         // first read failed; if it ever does, the original diagnostic still
-        // describes the failure — just without its path.
+        // describes the failure, without its path.
         Ok(_) => JsonParseError::custom(plain.to_string()),
     }
 }
