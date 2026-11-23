@@ -22,12 +22,14 @@ const FACTS_TAG: &str = "ferroehr.access_log.facts.v1";
 ///
 /// The facts are the form, the columns, the shared part's digest (lower-case
 /// hex) and the row part, each written as its length, a colon and its text on
-/// a line of its own, an absent one as `-`. The seal covers this digest, so a
-/// rendering of the entry is never what is sealed.
+/// a line of its own, an absent one as `-`. The time is the column's
+/// microsecond count, or `-` when the row part keeps the time's own text,
+/// which its column then only approximates. The seal covers this digest, so
+/// a rendering of the entry is never what is sealed.
 ///
 /// # Errors
-/// A [`serde_json::Error`] when the time recorded is finer than the
-/// microsecond its column keeps.
+/// A [`serde_json::Error`] when the row part leaves the time to a column
+/// finer than the microsecond it keeps.
 pub fn facts_digest(
     form: i16,
     row: &str,
@@ -36,7 +38,9 @@ pub fn facts_digest(
 ) -> Result<[u8; 32], serde_json::Error> {
     use sha2::Digest as _;
     let at = columns.time_recorded;
-    if at.subsec_nanosecond().rem_euclid(1000) != 0 {
+    let on_row = super::Members::of(row)
+        .is_some_and(|mut members| members.any(|(name, _)| super::is_name(name, "time_recorded")));
+    if !on_row && at.subsec_nanosecond().rem_euclid(1000) != 0 {
         return Err(serde::ser::Error::custom(
             "a stored time is kept to the microsecond",
         ));
@@ -65,7 +69,7 @@ pub fn facts_digest(
     field(Some(
         columns.uid.hyphenated().encode_lower(&mut uid).as_bytes(),
     ));
-    field(Some(at_text.bytes()));
+    field((!on_row).then(|| at_text.bytes()));
     field(
         columns
             .ehr_id
@@ -100,5 +104,38 @@ impl Line {
     /// The written digits.
     fn bytes(&self) -> &[u8] {
         self.buffer.get(..self.length).unwrap_or_default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{FORM, facts_digest};
+    use crate::access_log::stored_form::parts::assemble::RowColumns;
+    use crate::access_log::stored_form::parts::index::IndexColumns;
+
+    /// The columns of an entry recorded at `at`.
+    fn columns(at: &str) -> RowColumns<'static> {
+        RowColumns {
+            record_type: "ACCESS_LOG_ENTRY",
+            uid: uuid::Uuid::nil(),
+            time_recorded: at.parse().expect("an instant"),
+            ehr_id: None,
+            index: IndexColumns {
+                request_id: None,
+                resource_id: None,
+            },
+        }
+    }
+
+    /// A time finer than the microsecond, which the row part keeps as its own
+    /// text, is digested by that text alone; one the row part leaves to its
+    /// column must be whole microseconds.
+    #[test]
+    fn a_time_the_row_keeps_is_digested_by_its_text() {
+        let fine = columns("2026-11-23T06:41:44.123456789Z");
+        let kept = r#"{"time_recorded":{"_type":"DV_DATE_TIME","value":"2026-11-23T06:41:44.123456789Z"}}"#;
+        assert!(facts_digest(FORM, kept, None, &fine).is_ok());
+        assert!(facts_digest(FORM, "{}", None, &fine).is_err());
+        assert!(facts_digest(FORM, "{}", None, &columns("2026-11-23T06:41:44.123456Z")).is_ok());
     }
 }
