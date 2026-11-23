@@ -24,8 +24,12 @@
 //! one, and the server records the changes it makes itself
 //! (`ferroehr::telemetry::conversion`). The allocations are counted on the
 //! thread that polls the request, so the audit runtime's threads do not
-//! count; the peak is the most the request held at once. Both are judged on
-//! the lower-quartile request of the measured ones ([`Measure::low`]).
+//! count; the peak is the most the request held at once. The allocations
+//! are judged per request over the measured window
+//! ([`Measure::per_request`]), the peak on the lower-quartile request
+//! ([`Measure::low`]). The domain pools hold one warm connection each and
+//! every request starts past the caches' upkeep interval ([`settle`]), so
+//! each request meets the same state.
 //!
 //! The bytes a request moves over the database wire are counted on their own
 //! run, through a relay that splits the protocol messages by statement
@@ -55,6 +59,8 @@ use tracing::field::{Field, Visit};
 use tracing_subscriber::layer::{Context, SubscriberExt as _};
 use tracing_subscriber::registry::LookupSpan;
 
+use ferroehr::db::domain::{Domain, DomainPools};
+
 use super::{CHAINER_RELEASE, calls, counted, drained};
 use crate::access_evaluator_http::{credential, ehr_with_composition};
 use crate::common::{self, BASE, FHIR};
@@ -67,6 +73,16 @@ pub(super) const WARM: u64 = 3;
 
 /// The EHRs the paths spread over, each with one IPS composition.
 const EHRS: usize = 5;
+
+/// The pages [`World::page`] reads before the records [`Path::Iti81`] serves
+/// end, each writing one of them.
+const PAGE_OWN: usize = 10;
+
+/// The pause before each measured request, past the 300 ms after which a
+/// `moka` cache runs its pending tasks on its next read (moka 0.12
+/// `LOG_SYNC_INTERVAL_MILLIS`), so every request meets each cache in that
+/// one state.
+const SETTLE: std::time::Duration = std::time::Duration::from_millis(400);
 
 /// The span each measured request runs in.
 const PATH_SPAN: &str = "hot_path_budget_request";
@@ -1058,8 +1074,11 @@ pub(super) struct World {
     person: String,
     /// The PERSON with two ordinals and two scales in its details.
     scored: String,
-    /// An instant after every fixture commit.
+    /// An instant after every fixture commit, at microsecond width.
     at: String,
+    /// The instant the records [`Path::Iti81`] pages through end at, set
+    /// right before its requests ([`Self::page`]).
+    page_at: Mutex<String>,
     /// The `EHR_STATUS` a status commit writes, without its `uid`.
     status: String,
     /// The current `EHR_STATUS` version uid of each EHR, which the next status
@@ -1178,7 +1197,7 @@ impl World {
             party: object_id(&headers),
             scored: scored(&person),
             person,
-            at: jiff::Timestamp::now().to_string(),
+            at: ferroehr::system_log::content_digest::instant(jiff::Timestamp::now()),
             update_uids: Mutex::new(
                 ehrs.iter()
                     .map(|(_, vo)| format!("{vo}::{}::1", system_id(&status_uids)))
@@ -1188,6 +1207,7 @@ impl World {
             status: status_body,
             status_uids: Mutex::new(status_uids),
             judged: Mutex::new(Vec::new()),
+            page_at: Mutex::new(String::new()),
             deletable: Mutex::new(Vec::new()),
             directories: Mutex::new(Vec::new()),
             parties: Mutex::new(Vec::new()),
@@ -1271,6 +1291,7 @@ impl World {
         path: Path,
     ) {
         match path {
+            Path::Iti81 => self.page(app).await,
             Path::ReadVersion => self.judge_on_objects(app, svc).await,
             Path::CommitDelete => self.deletable(app).await,
             Path::DirectoryCreate => self.directories(app).await,
@@ -1286,6 +1307,31 @@ impl World {
             let (status, headers, body) = plain(app, &self.call(path, n)).await;
             assert!(status.is_success(), "{}: {status} {body}", path.name());
             self.observe(path, n, &headers);
+        }
+    }
+
+    /// Writes the records of [`PAGE_OWN`] pages, and ends the records
+    /// [`Path::Iti81`] serves there: its own ten and the population query's
+    /// ten newest, the same twenty on every request.
+    async fn page(&self, app: &Router) {
+        for _ in 0..PAGE_OWN {
+            let (status, _, body) = plain(app, &Self::iti81(None)).await;
+            assert_eq!(status, StatusCode::OK, "a page: {body}");
+        }
+        *self.page_at.lock().unwrap() =
+            ferroehr::system_log::content_digest::instant(jiff::Timestamp::now());
+    }
+
+    /// An ITI-81 page of the records up to `upto`, or of every record.
+    fn iti81(upto: Option<&str>) -> Call {
+        let upto = upto.map_or_else(String::new, |at| format!("&date=le{at}"));
+        Call {
+            method: "GET",
+            uri: format!("{FHIR}/AuditEvent?date=ge2026-01-01{upto}&_count=20"),
+            user: "root",
+            accept: "application/fhir+json",
+            headers: Vec::new(),
+            body: None,
         }
     }
 
@@ -1337,7 +1383,7 @@ impl World {
     /// Builds the EHRs of [`Path::ReadVersion`]: each restricts an object it
     /// does not hold, so its settings name an object and a read of its
     /// composition by version id is judged on the object's own row (#5959)
-    /// and read from the version copy (#5778).
+    /// and read from the version copy (#5778), which one read of each fills.
     async fn judge_on_objects(&self, app: &Router, svc: &ferroehr::service::FerroEhrService) {
         let mut judged = Vec::new();
         for _ in 0..EHRS {
@@ -1354,6 +1400,10 @@ impl World {
             judged.push((ehr, version));
         }
         *self.judged.lock().unwrap() = judged;
+        for n in 0..EHRS {
+            let (status, _, body) = plain(app, &self.read_version(n)).await;
+            assert_eq!(status, StatusCode::OK, "a read that fills the copy: {body}");
+        }
     }
 
     /// The system id the server stamps into the version uids it writes.
@@ -1523,11 +1573,7 @@ impl World {
             Path::AqlParty => aql(serde_json::json!({
                 "q": "SELECT p/uid/value, p/name/value FROM PERSON p LIMIT 20",
             })),
-            Path::Iti81 => get(
-                format!("{FHIR}/AuditEvent?date=ge2026-01-01&_count=20"),
-                "root",
-                "application/fhir+json",
-            ),
+            Path::Iti81 => Self::iti81(Some(&self.page_at.lock().unwrap())),
             Path::PartyRead => get(
                 format!("{BASE}/demographic/person/{}", self.party),
                 "root",
@@ -1683,6 +1729,16 @@ struct Measure {
 }
 
 impl Measure {
+    /// The window's `figure` per request: a buffer or block one request
+    /// grows serves the next, so the window's sum is what each request owes.
+    fn per_request(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
+        self.each
+            .iter()
+            .map(figure)
+            .sum::<u64>()
+            .div_euclid(REQUESTS)
+    }
+
     /// The lower-quartile request's `figure`, the third smallest of ten.
     ///
     /// A request handed a pool connection whose buffers have not grown to
@@ -1836,10 +1892,26 @@ async fn updates_in_place(pool: &PgPool, from: &str, to: &str) -> u64 {
     u64::try_from(updates).expect("a count")
 }
 
+/// Waits [`SETTLE`], then takes and returns the connection of each domain
+/// pool, so the measured request meets it idle for less than the pool's
+/// idle probe (`ferroehr::db::pool::IDLE_PROBE`) and sends no probe of its
+/// own.
+async fn settle(pools: &DomainPools) {
+    tokio::time::sleep(SETTLE).await;
+    for domain in Domain::ALL {
+        drop(
+            ferroehr::db::acquire::acquire(pools.get(domain))
+                .await
+                .expect("the kept connection"),
+        );
+    }
+}
+
 /// Measures [`REQUESTS`] requests of `path`.
 async fn measure(
     app: &Router,
     pool: &PgPool,
+    pools: &DomainPools,
     wire: Option<&super::wire::Wire>,
     world: &World,
     counter: &Counter,
@@ -1859,6 +1931,7 @@ async fn measure(
     for n in 0..REQUESTS {
         let n = usize::try_from(WARM + n).unwrap();
         let call = world.call(path, n);
+        settle(pools).await;
         let mut allocated = Allocated::default();
         let (status, headers, body) = Measured {
             inner: Box::pin(
@@ -2003,6 +2076,7 @@ fn judged_allocations(measured: u64, ceiling: u64) -> (bool, String) {
 async fn measure_all(
     app: &Router,
     pool: &PgPool,
+    pools: &DomainPools,
     svc: &ferroehr::service::FerroEhrService,
     wire: Option<&super::wire::Wire>,
     counter: &Counter,
@@ -2021,7 +2095,7 @@ async fn measure_all(
     for budget in &BUDGETS {
         let path = budget.path;
         world.prepare(app, svc, path).await;
-        let m = Box::pin(measure(app, pool, wire, &world, counter, path)).await;
+        let m = Box::pin(measure(app, pool, pools, wire, &world, counter, path)).await;
         measured.push((budget, m));
     }
     measured
@@ -2036,8 +2110,8 @@ async fn every_hot_path_stays_within_its_budget() {
         tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
     // The budgets count what a release build does, without the debug reference cells.
     ferroehr::aql::sql::without_reference_cells();
-    let (_db, pool, svc, app) = Box::pin(super::served()).await;
-    let measured = Box::pin(measure_all(&app, &pool, &svc, None, &counter)).await;
+    let (_db, pool, svc, app, pools) = Box::pin(super::steady()).await;
+    let measured = Box::pin(measure_all(&app, &pool, &pools, &svc, None, &counter)).await;
     let mut report = String::from(
         "path | conversions | audit renders | allocations | alloc KiB | peak KiB | round trips | nested | notifies | WAL B\n",
     );
@@ -2046,8 +2120,8 @@ async fn every_hot_path_stays_within_its_budget() {
     let mut over = Vec::new();
     for (budget, m) in &measured {
         let path = budget.path;
-        let allocations = m.low(|a| a.count);
-        let kib = m.low(|a| a.bytes).div_euclid(1024);
+        let allocations = m.per_request(|a| a.count);
+        let kib = m.per_request(|a| a.bytes).div_euclid(1024);
         let peak = m.low(|a| u64::try_from(a.peak.max(0)).unwrap());
         let cells = [
             ("conversions", judged(m.conversions(), budget.conversions)),
@@ -2121,8 +2195,16 @@ async fn every_hot_path_stays_within_its_wire_budget() {
     let _guard =
         tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
     ferroehr::aql::sql::without_reference_cells();
-    let (_db, pool, svc, app, wire) = Box::pin(super::wired()).await;
-    let measured = Box::pin(measure_all(&app, &pool, &svc, Some(&wire), &counter)).await;
+    let (_db, pool, svc, app, pools, wire) = Box::pin(super::wired()).await;
+    let measured = Box::pin(measure_all(
+        &app,
+        &pool,
+        &pools,
+        &svc,
+        Some(&wire),
+        &counter,
+    ))
+    .await;
     let mut report = String::from("path | wire B | sent B | received B\n");
     let mut ledgers = String::new();
     let mut over = Vec::new();
