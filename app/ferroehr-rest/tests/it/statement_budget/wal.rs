@@ -38,12 +38,14 @@ const REQUESTS: u64 = 20;
 /// only item holds repeated, its categories in the shared part, no empty
 /// details tree, its stored form's version) measured 815, 915, 833 and 1028
 /// against 1407, 1071, 857 and 1340 beside the merge base, and each ceiling
-/// fell by its drop.
+/// fell by its drop. The search tokens rendered by the frontier round into
+/// the search index (#6322) measured 775, 879, 793 and 990 against 815, 915,
+/// 833 and 1028, and each ceiling fell by its drop.
 const CEILINGS: [(Kind, u64); 4] = [
-    (Kind::Read, 886),
-    (Kind::Single, 963),
-    (Kind::Population, 871),
-    (Kind::Write, 1135),
+    (Kind::Read, 846),
+    (Kind::Single, 927),
+    (Kind::Population, 831),
+    (Kind::Write, 1097),
 ];
 
 /// A kind of request, and how to send one.

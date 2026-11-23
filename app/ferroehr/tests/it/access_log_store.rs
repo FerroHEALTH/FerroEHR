@@ -94,7 +94,7 @@ async fn tamper(pool: &PgPool, statements: &[&str]) {
             .fetch_one(pool)
             .await
             .expect("the seal state");
-    ferroehr::system_log::store::AuditStore::new(pool.clone())
+    AuditStore::new(pool.clone())
         .index_access_log(sealed)
         .await
         .expect("indexed before the change");

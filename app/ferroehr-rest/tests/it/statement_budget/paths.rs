@@ -455,6 +455,12 @@ struct Budget {
 /// composition commit's by at most its entry's 312. A read allocates 9 times
 /// fewer and the ITI-81 page 13 fewer, no longer reading four digest columns
 /// nothing used, and those allocation ceilings fell by as much.
+/// The request has since rendered no projection of its entries, their search
+/// tokens rendered by the frontier round from the stored entries (#6322):
+/// each path that writes an entry allocates 252 to 347 times fewer for it,
+/// and the matches query 1,836 fewer, and writes about 40 WAL bytes fewer
+/// for each entry, the search tokens no longer on its row, measured beside
+/// the merge base; each ceiling fell by its path's figure.
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
@@ -664,7 +670,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 4,
         nested: 0,
         notifies: 0,
-        wal: 186_746,
+        wal: 186_756,
     },
     Budget {
         path: Path::CommitDelete,
@@ -808,6 +814,9 @@ const BUDGETS: [Budget; 31] = [
 /// every path that writes or reads one: 2,102 on the ITI-81 page, 1,547 on the
 /// matches query and 587 on a read, measured beside the merge base, and each
 /// of those ceilings fell by its path's figure.
+/// The entry's write has since carried no search token (#6322): 52 to 135
+/// bytes fewer on each path that writes one, measured beside the merge base,
+/// and each ceiling fell by its path's figure.
 const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitJson, 201_780),
     (Path::CommitXml, 201_924),

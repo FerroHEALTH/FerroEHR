@@ -22,8 +22,11 @@ const ENTRIES: u64 = 50;
 
 /// The most allocations one entry may cost, measured when the search tokens
 /// came from the typed BALP resource and the parts were cut without a JSON
-/// value (#6005), 2% above. Before, an entry cost 685.
-const CEILING: u64 = 286;
+/// value (#6005), 2% above. Before, an entry cost 685. The search tokens
+/// have since been rendered by the frontier round from the stored entry
+/// (#6322): an entry measured 145 against 279 beside the merge base, and the
+/// ceiling fell by the drop.
+const CEILING: u64 = 152;
 
 /// A future whose every poll is counted into `count`.
 struct Counted<'a, F> {
