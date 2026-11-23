@@ -392,7 +392,7 @@ pub async fn has_version_tree(
 /// The import and archive-load paths write many versions of a container at
 /// once, so they recompute the head once per object; the head is a pure
 /// function of the stored versions. A COMPOSITION's episodes are read off its
-/// trunk head's body: the SQL form of [`crate::versioning::episode::placed`]
+/// trunk head's body: the SQL form of the commit's placement rule
 /// over a body that rule admitted, SHA-256 of each `episode` element's
 /// `issuer`, `0x00` and `id`, distinct and sorted.
 ///
