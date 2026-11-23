@@ -41,9 +41,7 @@ struct RetiredSet {
 /// read: a database that carries one is refused at boot with the way forward
 /// rather than half-adopted.
 ///
-/// Neither retirement is upgraded in place. The storage rewrite replaced the
-/// first generation outright, and v6.0.0 replaced the v5 history with one
-/// baseline per schema (owner decision 2026-11-20, #6139).
+/// Neither retired set is upgraded in place (owner decision 2026-11-20, #6139).
 ///
 /// Where a schema NAME survives (`ext`, `audit`, `clinical`, `party`), the
 /// signature cannot be the bookkeeping's existence; it is which migration ran
@@ -117,13 +115,9 @@ const RETIRED_SETS: &[RetiredSet] = &[
 
 /// Refuse a database that carries a retired migration set.
 ///
-/// Neither retirement upgrades anything in place: the storage rewrite replaced
-/// the first generation's sets outright, and v6.0.0 replaced the v5 history
-/// with one baseline per schema. Left to itself the sequence would create
-/// this build's schemas beside the old ones, or apply its baseline over a v5
-/// schema, and serve an empty or broken repository with the operator's data
-/// sitting unreachable in the same database. That is the one outcome worse
-/// than refusing.
+/// Left to itself the sequence would create this build's schemas beside the old
+/// ones, or apply its baseline over a v5 schema, and serve an empty or broken
+/// repository with the operator's data unreachable in the same database.
 ///
 /// The signature is [`RETIRED_SETS`]: bookkeeping in a schema this build owns
 /// no set for, or bookkeeping whose version 1 names the file a retired set
