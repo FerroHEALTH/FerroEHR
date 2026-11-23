@@ -135,7 +135,7 @@ fn at(value: &str) -> DvDateTime {
 /// An entry is stored as its row part and the shared part its caller's
 /// entries name once, which join back into its canonical form; it is read
 /// back as it was written, and its content digest is the SHA-256 of its
-/// whole canonical form (#5703).
+/// stored facts, never of the canonical form a reader renders (#5703, #6322).
 #[tokio::test]
 async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
     let testdb = testkit::db().await.expect("testkit database");
@@ -152,7 +152,12 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
         .fetch_one(&pool)
         .await
         .expect("the content digest");
-        assert_eq!(content_digest, sha256_hex(&canonical));
+        assert_eq!(content_digest, facts_digest(&pool, expected).await);
+        assert_ne!(
+            content_digest,
+            sha256_hex(&canonical),
+            "the seal covers the stored facts, never the rendering"
+        );
 
         let read = store.read(entry.uid.value()).await.expect("read");
         assert_eq!(read, Some(AccessLogRecord::AccessLogEntry(entry.clone())));
@@ -230,17 +235,16 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
     );
 }
 
-/// The content digests of the same entries are the same bytes whatever form
-/// the log stores them in (#5784): the log that keeps each entry's index on
-/// the entry's row writes the digests below and reads them back from its
-/// rows. They are the digests of the example entries with their action coded
-/// under `HL7_AuditEventAction` (#6070).
+/// The content digests of the same entries are the same bytes under one
+/// stored form (#5784, #6322): the digests below are the facts digests of
+/// the example entries with their action coded under `HL7_AuditEventAction`
+/// (#6070), stored in form 1, and the log reads them back from its rows.
 #[tokio::test]
 async fn the_content_digests_of_the_same_entries_are_unchanged_by_the_stored_form() {
     const DIGESTS: [&str; 3] = [
-        "803a53ebc5048817e288f537c1249449b121d7590673ce95c3e444a435ad4e22",
-        "7afcfd46fe334088b483a8c9306b3021f63c1be3ecedffcb91a178c27068243a",
-        "f4db7ed8df765d04c53a4adeb4a44a996c301079e4b29b92951c55f0675b9af5",
+        "01798f8f00165796e0b3834b28bbc0a36ece0283566b9618909a9989079ee0d5",
+        "77cb7f85cce51dd543e42ec0adf93c97efc1dbd414980b2be4f0d4118be5d7dc",
+        "af8c09a6c0415f623b691dfdf9f4ace04f6adaf8386a92f13fc82bbac2920189",
     ];
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
@@ -257,6 +261,38 @@ async fn the_content_digests_of_the_same_entries_are_unchanged_by_the_stored_for
         assert_eq!(stored, *content_digest);
     }
     assert_eq!(findings(&pool).await, Vec::new(), "the log verifies clean");
+}
+
+/// The facts digest of the entry `id`, computed from its row as the verifier
+/// computes it.
+async fn facts_digest(pool: &PgPool, id: i64) -> String {
+    let row = sqlx::query(
+        "SELECT content, encode(shared, 'hex') AS shared, record_type, uid, time_recorded, \
+                ehr_id, request_id, resource_id, form FROM audit.access_log_entry WHERE id = $1",
+    )
+    .bind(id)
+    .fetch_one(pool)
+    .await
+    .expect("the entry's row");
+    let columns = ferroehr::access_log::stored_form::parts::RowColumns {
+        record_type: row.get("record_type"),
+        uid: row.get("uid"),
+        time_recorded: row
+            .get::<jiff_sqlx::Timestamp, _>("time_recorded")
+            .to_jiff(),
+        ehr_id: row.get("ehr_id"),
+        index: ferroehr::access_log::stored_form::parts::index::IndexColumns {
+            request_id: row.get("request_id"),
+            resource_id: row.get("resource_id"),
+        },
+    };
+    hex(&ferroehr::access_log::stored_form::parts::facts_digest(
+        row.get("form"),
+        row.get("content"),
+        row.get("shared"),
+        &columns,
+    )
+    .expect("the facts digest"))
 }
 
 /// An entry that breaks an invariant of the draft leaves no record.
@@ -358,7 +394,7 @@ const INSERTED: &[&str] = &[
          'id', 2, 'content', c.content, \
          'record_type', c.record_type, 'uid', c.uid, 'time_recorded', c.time_recorded, \
          'ehr_id', c.ehr_id, \
-         'content_digest', '\\x' || audit.access_log_content_digest(c.content), \
+         'content_digest', sha256(convert_to(c.content, 'UTF8')), 'form', 1, \
          'shared', '\\x' || encode(c.shared, 'hex'))) AS forged \
          FROM (SELECT replace(content, '000000000003', '0000000000ff') AS content, shared, \
                       record_type, replace(uid::text, '000000000003', '0000000000ff') AS uid, \

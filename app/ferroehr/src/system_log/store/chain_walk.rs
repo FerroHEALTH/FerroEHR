@@ -16,7 +16,6 @@
 use std::time::{Duration, Instant};
 
 use jiff_sqlx::Timestamp;
-use sha2::{Digest as _, Sha256};
 
 use crate::access_log::stored_form::parts::{Cut, Derived};
 use sqlx::Row;
@@ -367,7 +366,7 @@ pub(crate) async fn modified_between(
         let rows = sqlx::query(concat!(
             "SELECT r.chain_seq, ",
             crate::access_log::store::entry_parts!(),
-            ", r.content_digest, r.action_terminology, r.action_code, r.result_terminology, \
+            ", r.content_digest, encode(r.shared, 'hex') AS shared_hex, r.action_terminology, r.action_code, r.result_terminology, \
              r.result_code, r.party_id, r.retain_until, r.time_removed, r.fold_after, \
              (r.chain_seq > (SELECT x.last_id FROM audit.access_log_index_state x WHERE x.singleton) \
               OR EXISTS (SELECT 1 FROM audit.access_log_index i WHERE i.entry_id = r.chain_seq)) \
@@ -416,10 +415,25 @@ fn record_intact(row: &PgRow) -> Result<bool, AuditError> {
         Err(crate::access_log::store::AccessLogError::Unreadable { .. }) => return Ok(false),
         Err(other) => return Err(other.into()),
     };
+    // NOTE: our own design (#6322), the facts digest names the shared part by its key, so the
+    // part's content must still hash to that key.
+    let shared_hex: Option<String> = row.try_get("shared_hex")?;
+    let shared_part: Option<&str> = row.try_get("shared_part")?;
+    if shared_part.map(crate::digest::sha256_hex) != shared_hex {
+        return Ok(false);
+    }
     let record_type: &str = row.try_get("entry_type")?;
     if record_type == "ACCESS_LOG_ENTRY" {
         let recorded: Vec<u8> = row.try_get("content_digest")?;
-        if Sha256::digest(document.as_bytes()).as_slice() != recorded.as_slice() {
+        let Ok(facts) = crate::access_log::stored_form::parts::facts_digest(
+            row.try_get("stored_form")?,
+            row.try_get("row_part")?,
+            shared_hex.as_deref(),
+            &crate::access_log::store::row_columns(row)?,
+        ) else {
+            return Ok(false);
+        };
+        if facts.as_slice() != recorded.as_slice() {
             return Ok(false);
         }
     }

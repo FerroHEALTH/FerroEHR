@@ -112,6 +112,10 @@ fn golden(
 /// Every document a reader gets from a stored entry is the golden written
 /// before the entry was stored as compact facts.
 #[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test switch that rewrites the committed goldens, no server configuration"
+)]
 fn a_stored_entry_renders_its_goldens() {
     let policy = policy();
     let projection = Projection {

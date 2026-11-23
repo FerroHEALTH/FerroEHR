@@ -423,12 +423,19 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `query` in the shared part, the row keeping only the delivered count and
   the rows (#5714); the search columns
   its insert trigger derives from both; and its content digest over the
-  whole canonical form, which the writer computes (`access_log::stored_form`)
-  and the verifier recomputes from the joined parts with every derived column
-  (#6242, `audit/0004_baseline_access_log.sql`). An access detail the core states as the record holds it
+  stored facts (its `form`, uid, time, EHR, request and resource ids, shared
+  part digest and row part, `access_log::stored_form::parts::facts_digest`),
+  which the writer computes and the verifier recomputes from the row, never
+  over a rendering (#6242, #6322, `audit/0004_baseline_access_log.sql`). The
+  canonical form and every projection of it (the BALP `AuditEvent`, the DICOM
+  message, the EHDS access record) are rendered at read time by the
+  deterministic renderer of the row's `form`, which the reader refuses when
+  it has none for it; an only item's categories are kept in the shared part
+  beside the category content they are classified from (#6322). An access detail the core states as the record holds it
   (the principal and issuer the credential names, the count the outcome
   delivered, the action and outcome the core codes) is not written
-  (`access_log::recorded::Core`). A tombstone keeps no shared part, and a
+  (`access_log::recorded::Core`), nor are the origins an only item holds
+  (#6322). A tombstone keeps no shared part, and a
   shared part leaves with the last row that named it.
   The access log and the system records (`audit_event`, named the system
   chain) are kept apart (#5573, our own design): each has its own id

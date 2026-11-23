@@ -12,11 +12,14 @@
 //! `audit.access_log_shared`, keyed by the SHA-256 of its canonical form, and
 //! each row of `audit.access_log_entry` keeps the rest: its uid, time, EHR,
 //! items, outcome, request and query, and the access details that differ per
-//! EHR. The entry stays one logical record with its own link:
-//! `content_digest` is the SHA-256 of the whole canonical form, computed when
-//! the entry is written, and a reader joins the two parts back into exactly
-//! that form, so the chain covers every byte. A tombstone replaces one row
-//! and keeps no shared part. The draft fixes the entry and its canonical
+//! EHR, and its only item's categories, which the category map classified
+//! from the shared category content (#6322). The entry stays one logical
+//! record: a reader joins the two parts and the row's columns back into its
+//! canonical form by the renderer of the row's stored form (`form`), and
+//! `content_digest` is the SHA-256 of those stored facts
+//! ([`parts::facts_digest`]), computed when the entry is written, so the
+//! chain covers every stored byte and no rendering. A tombstone replaces one
+//! row and keeps no shared part. The draft fixes the entry and its canonical
 //! form; how they are stored is our own design, and no openEHR spec governs
 //! it.
 
@@ -80,6 +83,14 @@ const SHARED_DETAILS: [&str; 19] = [
 /// what repeats, the row the attributes named here, which count one access.
 const SPLIT: [(&str, &[&str]); 2] = [("outcome", &["delivered"]), ("query", &["rows"])];
 
+/// The member holding the accessed items.
+const ACCESSED: &str = "items";
+
+/// The member of an only accessed item the shared part keeps (#6322): its
+/// categories, which the category map classified from what the shared
+/// part's category content (`id31`) holds, so they repeat wherever it does.
+const ITEM_SHARED: &str = "categories";
+
 /// The member holding the access details.
 const DETAILS: &str = "other_details";
 /// The member of the details tree holding its elements.
@@ -110,6 +121,12 @@ fn shared_detail(item: &Value) -> bool {
         .is_some_and(|code| SHARED_DETAILS.contains(&code))
 }
 
+/// Whether `items` is one item that holds [`ITEM_SHARED`].
+#[cfg(test)]
+fn one_item_shares(items: &[Value]) -> bool {
+    matches!(items, [Value::Object(item)] if item.contains_key(ITEM_SHARED))
+}
+
 /// The stored form of the entry whose canonical form, without its link, is
 /// the object `members`, its members moved into the part that keeps them.
 #[cfg(test)]
@@ -135,13 +152,28 @@ pub fn split(members: Map<String, Value>) -> StoredForm {
             }
             (_, member) => member,
         };
+        let member = match member {
+            Value::Array(mut items) if name == ACCESSED && one_item_shares(&items) => {
+                let mut common = Map::new();
+                if let Some(Value::Object(item)) = items.first_mut()
+                    && let Some(categories) = item.remove(ITEM_SHARED)
+                {
+                    common.insert(ITEM_SHARED.to_owned(), categories);
+                }
+                shared.insert(name.clone(), Value::Array(vec![Value::Object(common)]));
+                Value::Array(items)
+            }
+            member => member,
+        };
         match member {
             Value::Object(tree) if name == DETAILS => {
                 let (envelope, own) = split_details(tree);
                 shared.insert(DETAILS.to_owned(), Value::Object(envelope));
-                let mut kept = Map::new();
-                kept.insert(ITEMS.to_owned(), Value::Array(own));
-                row.insert(DETAILS.to_owned(), Value::Object(kept));
+                if !own.is_empty() {
+                    let mut kept = Map::new();
+                    kept.insert(ITEMS.to_owned(), Value::Array(own));
+                    row.insert(DETAILS.to_owned(), Value::Object(kept));
+                }
             }
             member => {
                 row.insert(name, member);
@@ -251,6 +283,18 @@ pub fn join(row: Value, shared: Option<Value>) -> Value {
     for (name, member) in common {
         if name == DETAILS {
             members.insert(name, joined_details(member, own_details.take()));
+            continue;
+        }
+        if name == ACCESSED
+            && let (Some(Value::Array(mut own)), Value::Array(common)) =
+                (members.remove(&name), member.clone())
+        {
+            if let (Some(Value::Object(item)), Some(Value::Object(shared_item))) =
+                (own.first_mut(), common.into_iter().next())
+            {
+                item.extend(shared_item);
+            }
+            members.insert(name, Value::Array(own));
             continue;
         }
         match (members.remove(&name), member) {

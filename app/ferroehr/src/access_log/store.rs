@@ -6,7 +6,9 @@
 //! tombstone (#5125, #6242).
 //!
 //! The canonical form of a record is its ITS-JSON serialisation canonicalised
-//! by RFC 8785, and `content_digest` the SHA-256 of that form. An entry is
+//! by RFC 8785, rendered from its stored parts by the renderer of its stored
+//! form, and `content_digest` the SHA-256 of those stored facts
+//! ([`stored_form::parts::facts_digest`], #6322). An entry is
 //! written by its request ([`crate::access_log::intake`]) and sealed in a
 //! window ([`crate::access_log::seal`]). The retention rules let an entry be
 //! replaced by a tombstone that keeps its uid, `system_id`, `time_recorded`
@@ -116,7 +118,7 @@ macro_rules! entry_parts {
     () => {
         "r.content AS row_part, sh.content AS shared_part, r.record_type AS entry_type, \
          r.uid AS entry_uid, r.time_recorded AS recorded_at, r.ehr_id AS entry_ehr, \
-         r.request_id, r.resource_id"
+         r.request_id, r.resource_id, r.form AS stored_form"
     };
 }
 pub(crate) use entry_parts;
@@ -229,8 +231,9 @@ impl AccessLogStore {
             .collect())
     }
 
-    /// The records whose `ehr_id` is `ehr_id`, in id order, each with its
-    /// stored content digest, which a tombstone keeps from its entry.
+    /// The records whose `ehr_id` is `ehr_id`, in id order, each with the
+    /// SHA-256 of an entry's canonical form, or the content digest a
+    /// tombstone keeps from its entry.
     ///
     /// # Errors
     /// As [`Self::of_ehr`].
@@ -261,7 +264,17 @@ impl AccessLogStore {
             }
         };
         rows.iter()
-            .map(|row| Ok((stored(row)?, row.try_get::<String, _>("content_digest")?)))
+            .map(|row| {
+                let document = document_of(row, row.try_get("shared_part")?)?;
+                let record: AccessLogRecord = read_document(row, &document)?;
+                // NOTE: our own design (#6322), the bundle names an entry by its canonical form's
+                // digest, which the importing system recomputes; a tombstone keeps its entry's.
+                let digest = match record {
+                    AccessLogRecord::AccessLogEntry(_) => crate::digest::sha256_hex(&document),
+                    AccessLogRecord::AccessLogTombstone(_) => row.try_get("content_digest")?,
+                };
+                Ok((record, digest))
+            })
             .collect()
     }
 
@@ -532,9 +545,28 @@ pub(crate) fn stored_with<T: serde::de::DeserializeOwned>(
 /// errors when a column does not read.
 pub(crate) fn document_of(row: &PgRow, shared: Option<&str>) -> Result<String, AccessLogError> {
     let chain_seq: i64 = row.try_get("chain_seq")?;
-    let record_type: &str = row.try_get("entry_type")?;
-    let columns = stored_form::parts::RowColumns {
-        record_type,
+    let columns = row_columns(row)?;
+    let form: i16 = row.try_get("stored_form")?;
+    if form != stored_form::parts::FORM {
+        return Err(AccessLogError::Unreadable {
+            chain_seq,
+            source: serde::de::Error::custom(format!("no renderer reads stored form {form}")),
+        });
+    }
+    stored_form::parts::whole(row.try_get("row_part")?, shared, &columns)
+        .map_err(|source| AccessLogError::Unreadable { chain_seq, source })
+}
+
+/// The columns of the record `row` holds that its renderer joins its stored
+/// parts with, from the columns of [`entry_parts`].
+///
+/// # Errors
+/// The store errors when a column does not read.
+pub(crate) fn row_columns(
+    row: &PgRow,
+) -> Result<stored_form::parts::RowColumns<'_>, AccessLogError> {
+    Ok(stored_form::parts::RowColumns {
+        record_type: row.try_get("entry_type")?,
         uid: row.try_get("entry_uid")?,
         time_recorded: row
             .try_get::<jiff_sqlx::Timestamp, _>("recorded_at")?
@@ -544,9 +576,7 @@ pub(crate) fn document_of(row: &PgRow, shared: Option<&str>) -> Result<String, A
             request_id: row.try_get("request_id")?,
             resource_id: row.try_get("resource_id")?,
         },
-    };
-    stored_form::parts::whole(row.try_get("row_part")?, shared, &columns)
-        .map_err(|source| AccessLogError::Unreadable { chain_seq, source })
+    })
 }
 
 /// The record whose canonical form is `document`, read as a `T` with no
