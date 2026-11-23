@@ -352,8 +352,11 @@ pub async fn system_modified_between(
 
 /// The positions in `(after, upto]` whose record was changed after it was
 /// written, read a page at a time: an entry that no longer digests to its
-/// link's `content_digest`, and an entry or tombstone whose derived columns
-/// are not those its content decides (#6005).
+/// link's `content_digest`, an entry or tombstone whose derived columns are
+/// not those its content decides (#6005), and one under the search index's
+/// cursor whose index row is missing or holds other columns than its own row
+/// (#6319). The rows are read from
+/// `access_log_entry` itself, which the index row is checked against.
 pub(crate) async fn modified_between(
     conn: &mut PgConnection,
     mut after: i64,
@@ -365,8 +368,17 @@ pub(crate) async fn modified_between(
             "SELECT r.chain_seq, ",
             crate::access_log::store::entry_parts!(),
             ", r.content_digest, r.action_terminology, r.action_code, r.result_terminology, \
-             r.result_code, r.party_id, r.retain_until, r.time_removed, r.fold_after \
-             FROM audit.access_log_record r \
+             r.result_code, r.party_id, r.retain_until, r.time_removed, r.fold_after, \
+             (r.chain_seq > (SELECT x.last_id FROM audit.access_log_index_state x WHERE x.singleton) \
+              OR EXISTS (SELECT 1 FROM audit.access_log_index i WHERE i.entry_id = r.chain_seq)) \
+             AND NOT EXISTS (SELECT 1 FROM audit.access_log_index i WHERE i.entry_id = r.chain_seq \
+                AND (i.time_recorded, i.ehr_id, i.party_id, i.retain_until, \
+                     i.render_policy_id, i.patient_id, i.principal, i.search_keys) \
+                    IS DISTINCT FROM (r.time_recorded, r.ehr_id, r.party_id, r.retain_until, \
+                     r.render_policy_id, r.patient_id, r.principal, \
+                     audit.search_keys(r.search_tokens, r.request_id, r.resource_id))) AS index_holds \
+             FROM (SELECT e.id AS chain_seq, e.* FROM audit.access_log_entry e \
+                    WHERE NOT EXISTS (SELECT 1 FROM audit.access_log_hold h WHERE h.entry_id = e.id)) r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
              WHERE r.chain_seq > $1 AND r.chain_seq <= $2 ORDER BY r.chain_seq LIMIT $3"
         ))
@@ -390,9 +402,13 @@ pub(crate) async fn modified_between(
 /// Whether the record `row` holds is as it was written: its stored parts
 /// join into a canonical form without a link, an entry's digests to its
 /// `content_digest`, and every column the log derives from the content
-/// holds what the content decides. A record whose parts no longer join was
-/// changed after it was written.
+/// holds what the content decides, and its search index row, when it has one,
+/// holds its row's columns. A record whose parts no longer join was changed
+/// after it was written.
 fn record_intact(row: &PgRow) -> Result<bool, AuditError> {
+    if !row.try_get::<bool, _>("index_holds")? {
+        return Ok(false);
+    }
     // NOTE: our own design (#6005); a record whose parts no longer join was changed after it was
     // written.
     let document = match crate::access_log::store::document_of(row, row.try_get("shared_part")?) {
