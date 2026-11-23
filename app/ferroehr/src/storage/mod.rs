@@ -169,6 +169,7 @@ pub mod shared;
 pub mod slim;
 pub mod statistics;
 pub mod stored_query_repo;
+pub mod stored_text;
 pub mod structure;
 pub mod subject_ehrs;
 pub mod tag_repo;
