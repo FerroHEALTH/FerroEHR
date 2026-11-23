@@ -303,7 +303,7 @@ const BUDGETS: [Budget; 31] = [
         round_trips: 1,
         nested: 1,
         notifies: 0,
-        wal: 577,
+        wal: 567,
     },
     Budget {
         path: Path::PartyRead,
@@ -534,7 +534,7 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::EhrRead, 1743),
     (Path::AqlSingle, 4750),
     (Path::AqlPopulation, 6259),
-    (Path::Iti81, 27_385),
+    (Path::Iti81, 27_292),
     (Path::PartyRead, 5524),
     (Path::CommitContribution, 202_739),
     (Path::ReadAtTime, 131_053),
