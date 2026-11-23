@@ -60,7 +60,8 @@ pub struct DirectorySlot {
     pub highest: i32,
     /// The slot's object and its head ordinal, required unchanged: a write
     /// that brought a deleted directory back moved it (#6337); `None` when
-    /// the EHR has no hierarchy.
+    /// the EHR has no hierarchy, or when the write's own target is the slot,
+    /// whose head [`Guard::expected_head`] already requires.
     pub tip: Option<(uuid::Uuid, Option<i32>)>,
     /// Whether the version is a new hierarchy, which joins `EHR.folders` in
     /// the same statement at the rank after `highest` (#6257, #6318).

@@ -196,7 +196,8 @@ impl FerroEhrService {
                         audit,
                     )
                     .guarded(Guard {
-                        directory: Some(slot_of(&gate, Some(&target), false)),
+                        // The target is the slot, whose head the tip requirement holds.
+                        directory: Some(slot_of(&gate, None, false)),
                         ..guard_of(&gate, target.head)
                     })
                     .placed(target.placement)
@@ -302,7 +303,8 @@ fn directory_target(gate: &mut Gate, ehr_id: EhrId) -> Result<(Target, String), 
 }
 
 /// What a directory write's statement requires of the slot its gate read
-/// found at `slot`, and whether it adds a hierarchy (`new`): the slot is
+/// found at `slot` (`None` when the EHR has none, or when the write's own
+/// target is the slot), and whether it adds a hierarchy (`new`): the slot is
 /// whichever hierarchy is the lowest-rank live one, so a hierarchy added
 /// since or a deleted one brought back moves it, and the write is judged
 /// again (#6337). No openEHR spec governs how a commit runs against the
