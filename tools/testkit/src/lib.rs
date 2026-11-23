@@ -905,9 +905,18 @@ async fn sweep(admin: &mut PgConnection) -> SweepReport {
         report.candidates += 1;
         // No `WITH (FORCE)`: a clone with live sessions belongs to a running
         // test process.
-        match statements::drop_database(admin, &name).await {
+        let dropped = if has_sessions(admin, &name).await {
+            Err(None)
+        } else {
+            statements::drop_database(admin, &name).await.map_err(Some)
+        };
+        match dropped {
             Ok(()) => report.dropped += 1,
-            Err(error) => {
+            Err(None) => {
+                report.in_use += 1;
+                tracing::debug!("testkit sweep: {name} has sessions, skipped");
+            }
+            Err(Some(error)) => {
                 if refusal_is_benign(sqlstate(&error).as_deref()) {
                     report.in_use += 1;
                     tracing::debug!("testkit sweep: {name} is in use, skipped");
@@ -948,6 +957,21 @@ async fn sweep(admin: &mut PgConnection) -> SweepReport {
     }
 
     report
+}
+
+/// Whether database `name` has a session, so a drop would wait for it and
+/// then be refused (`PostgreSQL` docs § DROP DATABASE). A failed read counts
+/// as a session, so the sweep leaves the clone to a later pass.
+async fn has_sessions(admin: &mut PgConnection, name: &str) -> bool {
+    let sessions: Result<bool, sqlx::Error> =
+        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname = $1)")
+            .bind(name)
+            .fetch_one(&mut *admin)
+            .await;
+    sessions.unwrap_or_else(|error| {
+        tracing::warn!("testkit sweep: reading the sessions of {name} failed: {error}");
+        true
+    })
 }
 
 /// Whether the lease `key` names is free, taking it when it is: the process
