@@ -297,7 +297,8 @@ pub struct Layout {
     pub access_version_cols: Vec<(String, String)>,
     /// Whether the statement selects the policy and definition revisions as
     /// [`POLICY_REVISION_COL`] and [`DEFINITION_REVISION_COL`] (#6320): a
-    /// clinical query a request judges.
+    /// clinical query a request judges whose served versions are not read
+    /// after it, a read that selects them itself.
     pub revisions: bool,
 }
 
@@ -708,7 +709,10 @@ impl Builder<'_> {
             (Vec::new(), Vec::new())
         };
         let access_version_cols = b.build_access_version_columns(ir);
-        let revisions = clinical && ctx.ehr_access.groups().is_some();
+        // NOTE: our own design (#6320), a statement whose served versions are read after it
+        // leaves the revisions to that one-row read, so no row of its own carries them.
+        let revisions =
+            clinical && ctx.ehr_access.groups().is_some() && access_version_cols.is_empty();
         if revisions {
             b.build_revision_columns();
         }
