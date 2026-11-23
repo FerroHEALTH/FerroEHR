@@ -354,6 +354,7 @@ impl Object<'_, '_> {
         }
         own.sort_by(|a, b| utf16_order(name(a), name(b)));
         scratch.clear();
+        scratch.reserve(out.len().saturating_sub(self.start));
         scratch.push('{');
         let mut written = 0_usize;
         for (index, member) in own.iter().enumerate() {

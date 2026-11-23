@@ -316,31 +316,55 @@ impl Rendered {
     /// A [`serde_json::Error`] for a number with no finite IEEE 754 double
     /// form (RFC 8785 §3.2.2.3).
     pub fn write_canonical(&self, id: NodeId, out: &mut String) -> Result<(), serde_json::Error> {
+        self.canonical_into(id, out, &mut Vec::new())
+    }
+
+    /// [`Self::write_canonical`] with `order`, the stack the members of the
+    /// open objects are sorted on.
+    fn canonical_into<'a>(
+        &'a self,
+        id: NodeId,
+        out: &mut String,
+        order: &mut Vec<(Cow<'a, str>, NodeId)>,
+    ) -> Result<(), serde_json::Error> {
         use openehr_rm::v1_2::common::change_control::canonical_form_impl::{
             utf16_order, write_number, write_string,
         };
         match self.kind(id) {
             Some(Kind::Object) => {
-                let mut members: Vec<(Cow<'_, str>, NodeId)> = self
-                    .members(id)
-                    .iter()
-                    .map(|m| (self.name(m), m.value))
-                    .collect();
-                members.sort_by(|(a, _), (b, _)| utf16_order(a, b));
+                let from = order.len();
+                order.extend(self.members(id).iter().map(|m| (self.name(m), m.value)));
+                if let Some(own) = order.get_mut(from..) {
+                    own.sort_by(|(a, _), (b, _)| utf16_order(a, b));
+                }
                 out.push('{');
                 let mut written = false;
-                for (at, (name, value)) in members.iter().enumerate() {
-                    if members.get(at + 1).is_some_and(|(next, _)| next == name) {
+                for at in from..order.len() {
+                    let (Some((name, value)), next) = (order.get(at), order.get(at + 1)) else {
+                        break;
+                    };
+                    if next.is_some_and(|(next, _)| next == name) {
                         continue;
                     }
                     if written {
                         out.push(',');
                     }
                     written = true;
-                    write_string(name, out);
+                    match name {
+                        // NOTE: RFC 8785 §3.2.2.2, a name serde_json wrote without a
+                        // backslash holds nothing to escape.
+                        Cow::Borrowed(plain) => {
+                            out.push('"');
+                            out.push_str(plain);
+                            out.push('"');
+                        }
+                        Cow::Owned(escaped) => write_string(escaped, out),
+                    }
                     out.push(':');
-                    self.write_canonical(*value, out)?;
+                    let value = *value;
+                    self.canonical_into(value, out, order)?;
                 }
+                order.truncate(from);
                 out.push('}');
             }
             Some(Kind::Array) => {
@@ -349,7 +373,7 @@ impl Rendered {
                     if at > 0 {
                         out.push(',');
                     }
-                    self.write_canonical(*item, out)?;
+                    self.canonical_into(*item, out, order)?;
                 }
                 out.push(']');
             }
