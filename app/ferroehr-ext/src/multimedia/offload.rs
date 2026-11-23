@@ -5,10 +5,9 @@
 //! `DV_MULTIMEDIA.data` on the commit path and re-inlining externalized blobs
 //! on the read path.
 //!
-//! Synchronous functions over `serde_json::Value`; the blob I/O is driven by
-//! [`MultimediaEngine`](super::MultimediaEngine). No openEHR spec governs the
-//! blob-storage mechanism (our own design), but the shape being rewritten is
-//! RM data types, so the rewrite honours their invariants.
+//! Synchronous functions over `serde_json::Value`;
+//! [`MultimediaEngine`](super::MultimediaEngine) drives the blob I/O. No
+//! openEHR spec governs the blob-storage mechanism: our own design.
 //!
 //! Per RM 1.2.0 `DV_MULTIMEDIA`
 //! (`RM/docs/UML/classes/org.openehr.rm.data_types.dv_multimedia.adoc`), an
@@ -19,9 +18,8 @@
 //! `Integrity_check_algorithm_validity`, `Size_valid`). The algorithm code is
 //! `SHA-256`.
 //!
-//! The inline `data` is base64 in the request body. It is decoded in fixed
-//! windows, never into one buffer the size of the blob: once to hash it and
-//! once more as the upload streams.
+//! The inline base64 `data` is decoded in fixed windows, never into one buffer
+//! the size of the blob.
 
 #![expect(
     clippy::doc_markdown,
@@ -225,13 +223,12 @@ fn digest_of(data: &str) -> Result<([u8; 32], u64), MultimediaError> {
     Ok((hasher.finalize().into(), size))
 }
 
-/// Rewrite one `DV_MULTIMEDIA` map for externalization, returning the blob to
-/// upload, or `None` if it does not qualify.
+/// Rewrites one `DV_MULTIMEDIA` map for externalization and returns the blob to
+/// upload, or `None` when it does not qualify.
 ///
-/// Qualifies only when the value is purely inline (`data` present, `uri`
-/// absent) and its **decoded** length strictly exceeds `threshold`. A value
-/// that already carries a `uri` (client-managed external media) is stored
-/// verbatim; a small inline value is left untouched (the zero-drift gate).
+/// It qualifies only when purely inline (`data` present, `uri` absent) with a
+/// decoded length above `threshold`. A value carrying a `uri` is client-managed
+/// and stored verbatim.
 fn offload_one(
     map: &mut Map<String, Value>,
     threshold: usize,
@@ -274,12 +271,9 @@ fn offload_one(
     Ok(Some(Pending { key, size, data }))
 }
 
-/// Walk `root`, externalizing every qualifying inline `DV_MULTIMEDIA` in place,
-/// and return the blobs the caller must upload.
-///
-/// The tree is fully rewritten synchronously; the uploads are the caller's
-/// second phase, so a failed upload aborts the commit before anything is
-/// stored.
+/// Externalizes every qualifying inline `DV_MULTIMEDIA` under `root` in place
+/// and returns the blobs the caller must upload, so a failed upload aborts the
+/// commit before anything is stored.
 pub(super) fn plan_offload(
     root: &mut Value,
     threshold: usize,
@@ -427,10 +421,10 @@ pub(super) struct Fetched {
     pub(super) size: u64,
 }
 
-/// Re-inline externalized `DV_MULTIMEDIA` values in place from the verified
-/// blobs the caller fetched. The `uri` and integrity fields are kept (the value
-/// is now *expanded*: `is_inline` and `is_external` both true, which the RM
-/// allows), so a later commit of the same body stores it verbatim.
+/// Re-inlines externalized `DV_MULTIMEDIA` values in place from the verified
+/// blobs the caller fetched. The `uri` and integrity fields are kept (both
+/// `is_inline` and `is_external`, which the RM allows), so a later commit of
+/// the same body stores it verbatim.
 ///
 /// # Errors
 /// [`MultimediaError::Size`] when a value's declared `size` is not the length
