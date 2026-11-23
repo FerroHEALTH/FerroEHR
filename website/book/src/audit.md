@@ -1073,7 +1073,11 @@ entries hands them to a small set of writers. Each writer writes everything
 waiting in one statement that commits on its own, with the entries' search
 tokens, and answers each request once that commit is durable, so under load
 one commit serves many requests. An entry is in every read of the log from
-that commit on.
+that commit on. The commit writes the entry's row and its key only: about
+once a second the audit task copies the columns the searches filter and
+order on into `audit.access_log_index` in one batch, and every read takes
+the entries the index does not cover yet from their rows by key, so a
+search finds an entry from its commit on as before.
 
 A system record is written the same way, once, into `audit.audit_event`,
 by one statement per batch, and is in every read from its commit on.
@@ -1391,8 +1395,8 @@ parameter on an element of the document (`address` and the `.identifier`,
 search tokens the store takes from the record's rendered document when it
 writes the record (`audit.audit_search_token`, `audit.audit_search_set` and
 the record's `search_tokens`, for an entry a column of its own row in
-`audit.access_log_entry`, which goes with the entry's content when a
-tombstone replaces it), so the search finds what the served document
+`audit.access_log_entry`, copied into `audit.access_log_index`, which go
+with the entry's content when a tombstone replaces it), so the search finds what the served document
 says and renders only the page it serves. An `entity.identifier` that carries
 the record's request id or the object it names (the version uid of a create)
 is read from the record's own column instead, so a request adds no row to

@@ -49,8 +49,20 @@ CREATE FUNCTION audit.access_event_code(p_class text, p_action text) RETURNS tex
 $$;
 
 -- The entry id joins the index of the entries (#6000). A page and the total
--- read the entries no write holds, each named by its id (#6242).
+-- read the entries no write holds, each named by its id (#6242): the indexed
+-- entries through access_log_index, whose columns the search's conditions and
+-- order reach, and the entries past its cursor by key (#6319). The join to the
+-- row is a left join on its key, so a total that names the index's columns
+-- alone reads no row.
 CREATE VIEW access_log_search AS
+    SELECT i.entry_id AS chain_seq, i.time_recorded AS recorded_at, e.event_action AS action,
+           e.event_outcome AS outcome, i.principal, i.patient_id, e.resource_id,
+           e.request_id, e.client_ip, e.classified_ehr_id AS ehr_id, e.search_tokens,
+           i.search_keys, i.entry_id
+      FROM access_log_index i
+      LEFT JOIN access_log_entry e ON e.id = i.entry_id
+     WHERE i.render_policy_id IS NOT NULL
+    UNION ALL
     SELECT e.id AS chain_seq, e.time_recorded AS recorded_at, e.event_action AS action,
            e.event_outcome AS outcome, e.principal, e.patient_id, e.resource_id,
            e.request_id, e.client_ip, e.classified_ehr_id AS ehr_id, e.search_tokens,
@@ -58,9 +70,10 @@ CREATE VIEW access_log_search AS
            e.id AS entry_id
       FROM access_log_entry e
      WHERE e.render_policy_id IS NOT NULL
+       AND e.id > (SELECT x.last_id FROM access_log_index_state x WHERE x.singleton)
        AND NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id);
 COMMENT ON VIEW access_log_search IS
-    'The ITI-81 index of the access-log entries no write holds: what the search filters on, read from the entry''s row (search_keys through its index), and the entry''s id, which names it. A tombstone is not in it.';
+    'The ITI-81 index of the access-log entries no write holds: what the search filters on, read through access_log_index for the indexed entries and from the entry''s row past its cursor, and the entry''s id, which names it. A tombstone is not in it.';
 
 -- The ITI-81 index of the system records no write holds (#6203, #6242): what
 -- the search filters on, read from the records, and each record's position.

@@ -175,7 +175,7 @@ impl Checkpoints {
             }
             let marker = format!("access-log-bundle:{bundle}:{records}");
             let recorded: bool = sqlx::query_scalar(
-                "SELECT EXISTS (SELECT 1 FROM audit.access_log_entry e \
+                "SELECT EXISTS (SELECT 1 FROM audit.access_log_record e \
                  WHERE e.uid = $1 AND e.record_type = 'ACCESS_LOG_ENTRY' \
                    AND strpos(e.content, $2) > 0)",
             )

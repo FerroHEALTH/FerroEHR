@@ -31,12 +31,15 @@ const REQUESTS: u64 = 20;
 /// the write taking no row lock on a shared part (#6241) 2580, 2033, 1759
 /// and 2543, each ceiling falling by its drop. The entry written once with no
 /// intake row or link (#6242) measured 2021, 1606, 1420 and 1987, and each
-/// ceiling fell by its drop.
+/// ceiling fell by its drop. The search columns copied off the request's
+/// commit into the search index (#6319) measured 1407, 1071, 857 and 1340
+/// against 2021, 1606, 1420 and 1933 beside the merge base, and each ceiling
+/// fell by its drop.
 const CEILINGS: [(Kind, u64); 4] = [
-    (Kind::Read, 2092),
-    (Kind::Single, 1654),
-    (Kind::Population, 1458),
-    (Kind::Write, 2040),
+    (Kind::Read, 1478),
+    (Kind::Single, 1119),
+    (Kind::Population, 895),
+    (Kind::Write, 1447),
 ];
 
 /// A kind of request, and how to send one.
@@ -234,9 +237,14 @@ fn entry_relation(relation: &str) -> bool {
 }
 
 /// Whether `relation` is the sealer's or the frontier's, written about once a
-/// minute and once a second whatever the entries.
+/// minute and once a second whatever the entries: the seals, the delivery
+/// frontier and the access log's search index, which the frontier round
+/// copies off the request's commit (#6319).
 pub(super) fn pass_relation(relation: &str) -> bool {
-    relation.starts_with("access_log_seal")
+    relation.starts_with("access_log_index")
+        || relation.starts_with("ix_access_log_index")
+        || relation.starts_with("pk_access_log_index")
+        || relation.starts_with("access_log_seal")
         || relation.starts_with("pk_access_log_seal")
         || relation.starts_with("uq_access_log_seal")
         || relation.starts_with("delivery_frontier")

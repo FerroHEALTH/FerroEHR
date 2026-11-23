@@ -80,10 +80,12 @@ fn read(n: u32) -> AuditEvent {
     event
 }
 
-/// The relations an entry takes room in: its row, its shared part, its
-/// search tokens and their sets, and the seals of its windows.
-const RELATIONS: [&str; 5] = [
+/// The relations an entry takes room in: its row, its search index row, its
+/// shared part, its search tokens and their sets, and the seals of its
+/// windows.
+const RELATIONS: [&str; 6] = [
     "access_log_entry",
+    "access_log_index",
     "access_log_shared",
     "audit_search_token",
     "audit_search_set",
@@ -194,15 +196,30 @@ async fn plan(pool: &sqlx::PgPool, count: &str) -> String {
     plan.to_string()
 }
 
-/// The ITI-81 total of the access log, the whole log and a date window, is
-/// counted from the time index alone, which carries whether an entry is
-/// indexed, so it reads no entry's row; the entries a write holds are left
-/// out by their key (#5784, #5968, #6242).
+/// The ITI-81 total of the access log, the whole log and a date window,
+/// reads no indexed entry's row: each is counted from the search index's time
+/// index alone, which carries whether an entry is indexed, or from the
+/// index's own narrow rows. The entries
+/// past the index's cursor are read by a key range of their rows, and the
+/// entries a write holds are left out by their key (#5784, #5968, #6242,
+/// #6319).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_iti81_total_is_counted_from_the_time_index() {
     let seeded = seed(ENTRIES).await;
     let pool = seeded.db.pool();
+    let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
+        .fetch_one(&pool)
+        .await
+        .expect("the last entry id reads");
+    seeded
+        .checkpoints
+        .store()
+        .index_to(last)
+        .await
+        .expect("the index moves");
     vacuum(&pool).await;
+    // NOTE: our own design (#6319), where the count takes most of the index the planner may read
+    // its narrow rows in place of its time index; neither reads an entry's row.
     for count in [
         "SELECT count(*) FROM audit.access_log_search",
         "SELECT count(*) FROM audit.access_log_search \
@@ -210,15 +227,21 @@ async fn the_iti81_total_is_counted_from_the_time_index() {
     ] {
         let plan = plan(&pool, count).await;
         let nodes = plan_nodes(&serde_json::from_str(&plan).expect("a plan"));
+        let indexed = |kind: &str, index: &str| {
+            (kind == "Index Only Scan" && index == "ix_access_log_index_time") || kind == "Seq Scan"
+        };
         assert!(
             nodes
                 .iter()
-                .any(|(kind, _, index)| kind == "Index Only Scan"
-                    && index == "ix_access_log_entry_time")
+                .any(|(kind, read, index)| read == "access_log_index" && indexed(kind, index))
                 && nodes
                     .iter()
-                    .all(|(kind, read, _)| read != "access_log_entry" || kind == "Index Only Scan"),
-            "`{count}` is counted from the time index alone: {plan}"
+                    .all(|(kind, read, index)| read != "access_log_index" || indexed(kind, index))
+                && nodes
+                    .iter()
+                    .all(|(kind, read, index)| read != "access_log_entry"
+                        || (kind.starts_with("Index") && index == "pk_access_log_entry")),
+            "`{count}` reads no indexed entry's row, and past the cursor reads by key: {plan}"
         );
     }
 }
@@ -419,4 +442,129 @@ async fn the_seeded_log_verifies_searches_reads_and_erases() {
         findings.is_empty(),
         "the log verifies over the tombstone: {findings:?}"
     );
+}
+
+/// What the readers of the seeded log answer: the ITI-81 totals of a
+/// patient, an agent, an address and the whole log, its newest page, one
+/// EHR's log and one entry read by its uid.
+async fn answers(seeded: &Seeded) -> String {
+    let mut answers = Vec::new();
+    for criteria in [
+        vec![AuditCriterion::Patient(vec![
+            "patient-000000000007".to_owned(),
+        ])],
+        vec![AuditCriterion::Agent(vec!["user-3".to_owned()])],
+        vec![AuditCriterion::Address(vec!["10.0.2.9".to_owned()])],
+        Vec::new(),
+    ] {
+        answers.push(found(seeded, criteria).await.to_string());
+    }
+    let page = seeded
+        .sender
+        .store()
+        .search(&AuditSearchFilter {
+            count: 50,
+            total: true,
+            ..AuditSearchFilter::default()
+        })
+        .await
+        .expect("the ITI-81 page answers");
+    answers.push(format!(
+        "{:?} {} {:?}",
+        page.total, page.more, page.documents
+    ));
+    let log = seeded.checkpoints.store();
+    let own = log
+        .search(&LogQuery {
+            ehr_id: Some(ehr(7)),
+            ..LogQuery::default()
+        })
+        .await
+        .expect("the EHR's log is read");
+    answers.push(format!("{own:?}"));
+    let Some(AccessLogRecord::AccessLogEntry(first)) = own.first() else {
+        panic!("the EHR's log holds entries: {own:?}");
+    };
+    let read = log.read(first.uid.value()).await.expect("the entry reads");
+    answers.push(format!("{read:?}"));
+    answers.join("\n")
+}
+
+/// The rows of the search index, as text, in entry order.
+async fn index_rows(pool: &sqlx::PgPool) -> String {
+    sqlx::query_scalar(
+        "SELECT coalesce(string_agg(i::text, E'\\n' ORDER BY i.entry_id), '') \
+         FROM audit.access_log_index i",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("the index is read")
+}
+
+/// The search index lags the entries by up to a frontier round, and a round a
+/// crash loses leaves its cursor behind (#6319): with the cursor anywhere,
+/// every reader answers as with every entry indexed, and the next round
+/// copies the same rows again.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test holds the indexing lock on a raw pool connection, outside any request"
+)]
+async fn every_entry_is_found_wherever_the_index_cursor_stands() {
+    const SEEDED: u32 = 400;
+    let seeded = seed(SEEDED).await;
+    let pool = seeded.db.pool();
+    let log = seeded.checkpoints.store();
+    let last: i64 = sqlx::query_scalar("SELECT max(id) FROM audit.access_log_entry")
+        .fetch_one(&pool)
+        .await
+        .expect("the last entry id reads");
+    assert_eq!(
+        log.index_to(last).await.expect("the index moves"),
+        last,
+        "every entry is indexed"
+    );
+    let indexed = answers(&seeded).await;
+    let rows = index_rows(&pool).await;
+    assert_eq!(
+        i64::try_from(rows.lines().count()).expect("a count"),
+        i64::from(SEEDED),
+        "one index row per entry"
+    );
+
+    // The indexing round is held off, as by a crash, while the cursor stands behind.
+    let mut held = pool.acquire().await.expect("a connection");
+    sqlx::query("SELECT pg_advisory_lock(hashtext('audit.access_log_index'), 0)")
+        .execute(&mut *held)
+        .await
+        .expect("the indexing lock is held");
+    for cursor in [last.div_euclid(2), 0] {
+        sqlx::query("DELETE FROM audit.access_log_index WHERE entry_id > $1")
+            .bind(cursor)
+            .execute(&pool)
+            .await
+            .expect("the lost round's rows are gone");
+        sqlx::query("UPDATE audit.access_log_index_state SET last_id = $1")
+            .bind(cursor)
+            .execute(&pool)
+            .await
+            .expect("the cursor stands behind");
+        assert_eq!(
+            answers(&seeded).await,
+            indexed,
+            "the readers answer the same with the cursor at {cursor}"
+        );
+    }
+    sqlx::query("SELECT pg_advisory_unlock(hashtext('audit.access_log_index'), 0)")
+        .execute(&mut *held)
+        .await
+        .expect("the indexing lock is released");
+    drop(held);
+    assert_eq!(log.index_to(last).await.expect("the index moves"), last);
+    assert_eq!(
+        index_rows(&pool).await,
+        rows,
+        "the next round copies the same rows"
+    );
+    assert_eq!(answers(&seeded).await, indexed);
 }

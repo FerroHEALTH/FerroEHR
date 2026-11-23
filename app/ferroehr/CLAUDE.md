@@ -163,7 +163,10 @@ module.**
   records (#5573, #5968); `audit.access_log_record` is the view of the
   entries no write still holds, which every reader reads; `frontier` and
   `seal` seal windows of entries up to the frontier, each seal following
-  the one before (#6242); and
+  the one before (#6242); `index` copies the columns the readers filter on
+  into `audit.access_log_index` each frontier round, off the request's
+  commit, and both views read it plus the entries past its cursor by key
+  (#6319); and
   an entry changes only by its replacement with its own tombstone, which
   empties the ITI-81 index columns on the same row (one row per entry,
   `access_log_search` is their view, #5784); every reader of an entry goes

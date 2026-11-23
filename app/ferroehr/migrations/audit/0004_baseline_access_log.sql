@@ -137,10 +137,11 @@ COMMENT ON COLUMN access_log_shared.retain_until IS
 -- The openEHR access log's records (draft org.openehr.rm.access_log 0.1.0):
 -- each an ACCESS_LOG_ENTRY, or the ACCESS_LOG_TOMBSTONE that replaced one.
 -- The request that made the access writes the entry here once, its only row,
--- with every column and index it keeps, and every reader, the sealer and the
--- delivery read it here (#6242); access_log_record is the view of the entries
--- no write holds. Append-only except the replacement of an entry by its
--- tombstone.
+-- and every reader, the sealer and the delivery read it here (#6242);
+-- access_log_record is the view of the entries no write holds. The row keeps
+-- only its key on the request's commit: the columns the searches filter on
+-- are copied into access_log_index each frontier round (#6319). Append-only
+-- except the replacement of an entry by its tombstone.
 --
 -- The derived columns are read from content by the writer and checked again
 -- by the verifier (audit.access_log_entry_derive). Every column a row keeps is
@@ -186,6 +187,8 @@ CREATE TABLE access_log_entry (
     -- The number the seals, holds and delivery cursors name the entry by.
     id                 bigint      NOT NULL GENERATED ALWAYS AS IDENTITY,
     CONSTRAINT pk_access_log_entry PRIMARY KEY (id),
+    -- The one index the request's commit reads besides the key: a uid is
+    -- written once, so an erased entry's uid never comes back (#6319).
     CONSTRAINT uq_access_log_entry_uid UNIQUE (uid),
     CONSTRAINT ck_access_log_entry_type
         CHECK (record_type IN ('ACCESS_LOG_ENTRY', 'ACCESS_LOG_TOMBSTONE')),
@@ -204,32 +207,11 @@ CREATE TABLE access_log_entry (
                                     client_ip, classified_ehr_id) = 0)
                AND (render_policy_id IS NULL OR record_type = 'ACCESS_LOG_ENTRY'))
 ) WITH (toast_tuple_target = 128);
--- A person's lookup by time reads this index in its order, the entry id breaking a
--- tie, as the chain position did.
-CREATE INDEX ix_access_log_entry_ehr ON access_log_entry (ehr_id, time_recorded, id)
-    WHERE ehr_id IS NOT NULL;
-CREATE INDEX ix_access_log_entry_time ON access_log_entry (time_recorded)
-    INCLUDE (render_policy_id, id);
+-- The fold reads the tombstones past their end; an entry, whose fold_after is
+-- NULL, adds nothing to it. Every other read of an entry by a column goes
+-- through access_log_index (#6319).
 CREATE INDEX ix_access_log_entry_fold_after ON access_log_entry (fold_after)
     WHERE fold_after IS NOT NULL;
--- Each index serves a read (#6202): ehr the person's trail and an AQL
--- condition on the EHR; time the ITI-81 page and total and the trail across
--- EHRs; fold_after the fold and retain_until the retention sweep; party the
--- party filter of the ITS-REST log and an AQL condition on the accessing
--- party; patient and principal the ITI-81 patient and agent, newest first;
--- tokens the ITI-81 token parameters, address, entity and an
--- entity.identifier answered from the request or resource id
--- (audit.search_keys), and the token retention.
-CREATE INDEX ix_access_log_entry_party ON access_log_entry (party_id, time_recorded)
-    WHERE party_id IS NOT NULL;
-CREATE INDEX ix_access_log_entry_retain_until ON access_log_entry (retain_until)
-    WHERE retain_until IS NOT NULL;
-CREATE INDEX ix_access_log_entry_patient ON access_log_entry (patient_id, time_recorded)
-    WHERE patient_id IS NOT NULL;
-CREATE INDEX ix_access_log_entry_principal ON access_log_entry (principal, time_recorded)
-    WHERE principal IS NOT NULL;
-CREATE INDEX ix_access_log_entry_tokens
-    ON access_log_entry USING gin (audit.search_keys(search_tokens, request_id, resource_id));
 CREATE TRIGGER access_log_entry_tombstone_only
     BEFORE UPDATE ON access_log_entry
     FOR EACH ROW EXECUTE FUNCTION audit.access_log_entry_tombstone_only();
@@ -306,6 +288,97 @@ CREATE TABLE access_log_hold (
 CREATE INDEX ix_access_log_hold_reserved ON access_log_hold (reserved_by);
 COMMENT ON TABLE access_log_hold IS
     'The access-log entries a write holds until its commit is confirmed (#5762); removed by the release, or with its entries by the discard.';
+
+-- ── the search index ─────────────────────────────────────────────────────────
+-- The columns the readers of the log filter and order on, one row per entry,
+-- copied from access_log_entry by the chainer's frontier round in one batch
+-- (access_log::index, #6319), so the request that writes an entry
+-- maintains no index but the entry's key. A reader reads the indexed entries
+-- through this table and the entries past its cursor by a key range of
+-- access_log_entry, both in one statement and so in one snapshot: the cursor
+-- commits with the rows it covers, so every committed entry is in one of the
+-- two (access_log_record, access_log_search). The table holds nothing an
+-- entry's row does not, so a round lost to a crash is copied again from the
+-- cursor; the round commits without waiting for its flush.
+--
+-- No openEHR spec governs audit storage: our own design.
+CREATE TABLE access_log_index (
+    entry_id         bigint      NOT NULL,
+    time_recorded    timestamptz NOT NULL,
+    ehr_id           uuid,
+    party_id         text,
+    retain_until     date,
+    render_policy_id integer,
+    patient_id       text,
+    principal        text,
+    -- audit.search_keys of the entry's search tokens, request id and resource id.
+    search_keys      bigint[]    NOT NULL,
+    CONSTRAINT pk_access_log_index PRIMARY KEY (entry_id)
+);
+-- Each index serves a read (#6202, #6319): ehr the person's trail and an AQL
+-- condition on the EHR; time the ITI-81 page and total and the trail across
+-- EHRs; party the party filter of the ITS-REST log and an AQL condition on the accessing party; retain_until
+-- the retention sweep and the shared-part collection; patient and principal
+-- the ITI-81 patient and agent, newest first; search_keys the ITI-81 token
+-- parameters, address, entity and an entity.identifier answered from the
+-- request or resource id, and the token retention.
+CREATE INDEX ix_access_log_index_ehr ON access_log_index (ehr_id, time_recorded, entry_id)
+    WHERE ehr_id IS NOT NULL;
+CREATE INDEX ix_access_log_index_time ON access_log_index (time_recorded)
+    INCLUDE (render_policy_id, entry_id);
+CREATE INDEX ix_access_log_index_party ON access_log_index (party_id, time_recorded)
+    WHERE party_id IS NOT NULL;
+CREATE INDEX ix_access_log_index_retain_until ON access_log_index (retain_until)
+    WHERE retain_until IS NOT NULL;
+CREATE INDEX ix_access_log_index_patient ON access_log_index (patient_id, time_recorded)
+    WHERE patient_id IS NOT NULL;
+CREATE INDEX ix_access_log_index_principal ON access_log_index (principal, time_recorded)
+    WHERE principal IS NOT NULL;
+CREATE INDEX ix_access_log_index_search_keys ON access_log_index USING gin (search_keys);
+COMMENT ON TABLE access_log_index IS
+    'The search columns of the access-log entries up to access_log_index_state.last_id, copied from access_log_entry in one batch each frontier round (access_log::index) and kept equal to it by access_log_entry_indexed when an entry is replaced by its tombstone or a tombstone folds (#6319).';
+
+-- The last entry id access_log_index covers. Moved only with the rows it
+-- covers, in the same transaction.
+CREATE TABLE access_log_index_state (
+    singleton boolean NOT NULL DEFAULT true,
+    last_id   bigint  NOT NULL DEFAULT 0,
+    CONSTRAINT pk_access_log_index_state PRIMARY KEY (singleton),
+    CONSTRAINT ck_access_log_index_state_singleton CHECK (singleton)
+);
+INSERT INTO access_log_index_state (singleton, last_id) VALUES (true, 0);
+COMMENT ON TABLE access_log_index_state IS
+    'The last entry id access_log_index covers; the entries past it are read from access_log_entry by key.';
+
+-- Keeps an indexed entry's row in access_log_index equal to the entry when
+-- the entry is replaced by its tombstone, and removes it when the fold
+-- removes the tombstone. The shared lock orders it with the indexing round,
+-- which holds the lock exclusively: a round that copied the entry before
+-- this change committed is seen here, and one that starts after it copies
+-- the changed entry.
+CREATE FUNCTION audit.access_log_entry_indexed() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path = audit, pg_catalog
+    AS $$
+BEGIN
+    PERFORM pg_advisory_xact_lock_shared(hashtext('audit.access_log_index'), 0);
+    IF TG_OP = 'DELETE' THEN
+        DELETE FROM audit.access_log_index i WHERE i.entry_id = OLD.id;
+        RETURN OLD;
+    END IF;
+    UPDATE audit.access_log_index i
+       SET time_recorded = NEW.time_recorded, ehr_id = NEW.ehr_id,
+           party_id = NEW.party_id, retain_until = NEW.retain_until,
+           render_policy_id = NEW.render_policy_id, patient_id = NEW.patient_id,
+           principal = NEW.principal,
+           search_keys = audit.search_keys(NEW.search_tokens, NEW.request_id, NEW.resource_id)
+     WHERE i.entry_id = NEW.id;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER access_log_entry_indexed
+    AFTER UPDATE OR DELETE ON access_log_entry
+    FOR EACH ROW EXECUTE FUNCTION audit.access_log_entry_indexed();
 
 -- ── the seals ────────────────────────────────────────────────────────────────
 -- One row per sealed window: every entry id from first_id to last_id, the
@@ -388,8 +461,20 @@ COMMENT ON TABLE access_log_seal_verified IS
     'The newest window a verification found intact with every window before it: where an incremental verification starts.';
 
 -- The entries no write holds, as every reader of the log reads them; an
--- entry is named by its id.
+-- entry is named by its id. The indexed entries are read through
+-- access_log_index, whose columns a condition then reaches, and the entries
+-- past its cursor by key (#6319). An indexed entry is held by no write: the
+-- cursor stays below every hold.
 CREATE VIEW access_log_record AS
+    SELECT i.entry_id AS chain_seq, e.record_type, e.uid, i.time_recorded, e.content,
+           e.content_digest, i.ehr_id, i.party_id,
+           i.retain_until, e.time_removed, e.fold_after, e.action_terminology, e.action_code,
+           e.result_terminology, e.result_code, e.shared, e.event_action, e.event_outcome,
+           i.principal, i.patient_id, e.resource_id, e.request_id, e.client_ip,
+           e.classified_ehr_id, e.search_tokens, i.render_policy_id, i.entry_id
+      FROM access_log_index i
+      JOIN access_log_entry e ON e.id = i.entry_id
+    UNION ALL
     SELECT e.id AS chain_seq, e.record_type, e.uid, e.time_recorded, e.content,
            e.content_digest, e.ehr_id, e.party_id,
            e.retain_until, e.time_removed, e.fold_after, e.action_terminology, e.action_code,
@@ -397,7 +482,8 @@ CREATE VIEW access_log_record AS
            e.principal, e.patient_id, e.resource_id, e.request_id, e.client_ip,
            e.classified_ehr_id, e.search_tokens, e.render_policy_id, e.id AS entry_id
       FROM access_log_entry e
-     WHERE NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id);
+     WHERE e.id > (SELECT x.last_id FROM access_log_index_state x WHERE x.singleton)
+       AND NOT EXISTS (SELECT 1 FROM access_log_hold h WHERE h.entry_id = e.id);
 COMMENT ON VIEW access_log_record IS
     'The openEHR access log (draft org.openehr.rm.access_log 0.1.0): every ACCESS_LOG_ENTRY or ACCESS_LOG_TOMBSTONE no write holds, named by its id. Every reader of the log reads it here.';
 
@@ -629,7 +715,8 @@ COMMENT ON FUNCTION access_log_entry_derive(audit.access_log_entry) IS
 -- before p_today and the database's own date and that no entry names. An
 -- entry that names a part has a retain_until at or before the part's, or the
 -- part's is infinity, so the check reads only the entries the retention sweep
--- has not tombstoned yet, through the retain_until index. The intake keeps a
+-- has not tombstoned yet, through the retain_until index of access_log_index
+-- and by key past its cursor, held entries included. The intake keeps a
 -- part it names until at least its own date and takes no lock on it (#6241):
 -- the day of grace covers an intake statement that saw the part before
 -- midnight and commits after it, and an intake that has to raise a part this
@@ -650,8 +737,13 @@ CREATE FUNCTION audit.access_log_shared_collect(p_today date, p_limit integer) R
         DELETE FROM audit.access_log_shared s
          USING due d
          WHERE s.digest = d.digest
+           AND NOT EXISTS (SELECT 1 FROM audit.access_log_index i
+                             JOIN audit.access_log_entry e ON e.id = i.entry_id
+                            WHERE i.retain_until <= d.retain_until AND e.shared = d.digest)
            AND NOT EXISTS (SELECT 1 FROM audit.access_log_entry e
-                            WHERE e.retain_until <= d.retain_until AND e.shared = d.digest)
+                            WHERE e.id > (SELECT x.last_id FROM audit.access_log_index_state x
+                                           WHERE x.singleton)
+                              AND e.retain_until <= d.retain_until AND e.shared = d.digest)
         RETURNING 1
     )
     SELECT count(*) FROM gone
