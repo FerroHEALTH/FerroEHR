@@ -308,7 +308,6 @@ fn any_series_plottable(series_count: usize, points: &[ChartRow]) -> bool {
     })
 }
 
-
 /// Seconds since the Unix epoch for an ISO 8601 date or date/time, or `None`
 /// for anything else (a number, a partial date, junk).
 ///
