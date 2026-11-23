@@ -392,6 +392,50 @@ async fn the_decision_runs_the_read_beside_its_party_read() {
     assert_eq!(handed.served, Some(true), "{handed:?}");
 }
 
+/// The care-decided read runs on a thread of 1 MiB, half a test thread's
+/// default: the request's scopes wrap its future once each (#6428).
+#[test]
+fn the_decision_runs_the_read_beside_its_party_read_on_a_1_mib_stack() {
+    let run = || {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("a runtime");
+        runtime.block_on(async {
+            let ward = Box::pin(Ward::new()).await;
+            let handed = ward.handed_on_two(true, alongside::Use::Admitted).await;
+            assert!(matches!(handed.admitted, Ok(true)), "{handed:?}");
+            assert!(handed.ran_in_decision, "{handed:?}");
+        });
+    };
+    std::thread::Builder::new()
+        .stack_size(1024 * 1024)
+        .spawn(run)
+        .expect("a thread")
+        .join()
+        .expect("the read runs within the stack");
+}
+
+/// A request's scopes add only their task-local values to the future they
+/// run, never a second copy of it (#6428).
+#[tokio::test]
+async fn the_request_scopes_hold_one_copy_of_their_body() {
+    let ward = Box::pin(Ward::new()).await;
+    let access = ward.request_on_two_under(true).await;
+    let body = async {
+        let held = [0_u8; 8 * 1024];
+        tokio::task::yield_now().await;
+        held.len()
+    };
+    let body_size = size_of_val(&body);
+    let scoped = request_scope(alongside::scope(with_request_access(access, body)));
+    assert!(
+        size_of_val(&scoped) < body_size + 1024,
+        "{} bytes around a body of {body_size}",
+        size_of_val(&scoped)
+    );
+}
+
 /// A care relationship that ended refuses the lagging replica's request even
 /// though its read already ran beside the decision, and nothing of the read
 /// is served (#5959).

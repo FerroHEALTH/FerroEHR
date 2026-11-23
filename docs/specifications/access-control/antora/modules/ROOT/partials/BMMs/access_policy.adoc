@@ -123,6 +123,19 @@
       "documentation": "Whether a query may be narrowed to the caller's caseload and the caseload resource answers. Void means true.",
       "type": "Boolean"
     },
+    "episode_shared": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "episode_shared",
+      "documentation": "The data every live care relationship of the controller covers whatever episode the relationship or the data name: the categories a professional reads across episodes, such as the patient summary. Void means none: placed data are covered only by a relationship of their episode or of none.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_DATA_SCOPE"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
     "conflict_rules": {
       "_type": "P_BMM_CONTAINER_PROPERTY",
       "name": "conflict_rules",
@@ -237,6 +250,7 @@
     "Team_targets_valid": "team_targets /= Void implies (not team_targets.is_empty and team_targets.for_all (t | t.type.is_equal (\"ORGANISATION\")))",
     "Self_declared_valid": "self_declared_care /= Void implies self_declared_care.magnitude > 0",
     "Attested_care_valid": "attested_care /= Void implies not attested_care.is_empty",
+    "Episode_shared_valid": "episode_shared /= Void implies not episode_shared.is_empty",
     "Conflict_rules_valid": "conflict_rules /= Void implies not conflict_rules.is_empty",
     "Concealed_valid": "concealed_confidentialities /= Void implies (not concealed_confidentialities.is_empty and concealed_confidentialities.for_all (c | c.defining_code.terminology_id.value.is_equal (Terminology_id_confidentiality)))",
     "Value_sets_valid": "value_sets /= Void implies not value_sets.is_empty"

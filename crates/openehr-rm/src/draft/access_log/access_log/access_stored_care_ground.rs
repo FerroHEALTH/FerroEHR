@@ -11,7 +11,9 @@ use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
 
-/// A stored care relationship an access rested on: its carer, the version that holds it, whether the grace after its end admitted the access, the carer it covers for and the provider in whose care it is.
+/// The openEHR `ACCESS_STORED_CARE_GROUND` class.
+///
+/// A stored care relationship an access rested on: its carer, the version that holds it, whether the grace after its end admitted the access, the carer it covers for, the provider in whose care it is and the episode it is scoped to.
 #[doc(alias = "ACCESS_STORED_CARE_GROUND")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessStoredCareGround {
@@ -30,4 +32,6 @@ pub struct AccessStoredCareGround {
     pub covers_for: Option<DvIdentifier>,
     /// The healthcare provider in whose care the relationship is, as its `provider` element names it.
     pub provider: DvIdentifier,
+    /// The episode of care the relationship is scoped to, as its `episode` element names it. Void when it names none.
+    pub episode: Option<DvIdentifier>,
 }

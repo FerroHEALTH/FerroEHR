@@ -6,6 +6,7 @@
 //! The openEHR `ACCESS_DATA_SCOPE` spec class, generated from the vendored BMM
 //! meta-model.
 
+use crate::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 use crate::v1_2::data_types::quantity::dv_interval::DvInterval;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
@@ -30,6 +31,8 @@ pub struct AccessDataScope {
     pub confidentialities: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
     /// The systems the data came from, as `FEEDER_AUDIT_DETAILS._system_id_` or the committing system's `_system_id_` records them.
     pub origins: Option<openehr_base::containers::NonEmptyVec<String>>,
+    /// The episodes of care the data are placed in, each the `DV_IDENTIFIER` (`_issuer_` and `_id_`) of an `episode` element in the `_other_context_` of a composition's `EVENT_CONTEXT`, compared by issuer and id. Data placed in no episode match no entry.
+    pub episodes: Option<openehr_base::containers::NonEmptyVec<DvIdentifier>>,
     /// When the data were committed.
     pub recorded: Option<DvInterval<DvDateTime>>,
 }

@@ -16,8 +16,15 @@
 //! Formats). The exchanges of a connection are settled when a
 //! `ReadyForQuery` reports it idle, one transaction at a time, and a
 //! transaction that runs a statement no request sends (the session setup,
-//! the sealer) is kept apart from the requests' bytes. No openEHR spec governs the bytes a request moves: our own
-//! design.
+//! the frontier round, the sealer) is kept apart from the requests' bytes.
+//!
+//! What a request moves depends on the connection the pool hands it, so what
+//! a connection does once is kept apart too: the preparation of a named
+//! statement and the close of one its cache evicts, and the probe of a
+//! connection that sat idle (the lone `Sync` of `PgPoolOptions::before_acquire`).
+//! An instant is counted at its full microsecond width: the server writes
+//! its fraction without the trailing zeros, so its width moves with the
+//! clock. No openEHR spec governs the bytes a request moves: our own design.
 
 use std::collections::{BTreeMap, VecDeque};
 use std::net::SocketAddr;
@@ -58,16 +65,30 @@ impl Tally {
     }
 }
 
+/// The group of a named statement's preparation, before its text.
+const PREPARE: &str = "(prepare) ";
+
+/// The group of a `Close` outside a statement's group: the close of a
+/// statement the connection's cache evicted.
+const CLOSE: &str = "(close)";
+
+/// The group of a `Sync` outside a statement's group.
+const SYNC: &str = "(sync)";
+
+/// The line a unit of lone `Sync` messages, the pool's probe of an idle
+/// connection, is charged to.
+const PROBE: &str = "(idle probe)";
+
 /// The openings of the statements a request does not send: a new
-/// connection's startup and session setup, the store's sealer, which seals
-/// windows of the audit logs on its own schedule, and the frontier round's
-/// copy of the access log's search index, which renders the entries' search
-/// tokens (#6322). A transaction (or a
-/// statement outside one) that runs any of them falls into a request's window
-/// by timing, so its bytes are kept apart from the requests' own
-/// ([`Ledger::background`]).
+/// connection's startup and session setup, the chainer's frontier round,
+/// which copies the access log's search columns, and the store's sealer,
+/// which seals windows of the audit logs, each on its own schedule. A
+/// transaction (or a statement outside one) that runs any of them falls into
+/// a request's window by timing, so its bytes are kept apart from the
+/// requests' own ([`Ledger::background`]).
 const BACKGROUND: [&str; 16] = [
     STARTUP,
+    "SELECT pg_advisory_xact_lock(hashtext('audit.access_log_index'), 0)",
     "SET search_path ",
     "SET statement_timeout ",
     "SET client_connection_check_interval ",
@@ -80,7 +101,6 @@ const BACKGROUND: [&str; 16] = [
     "WITH x AS MATERIALIZED (SELECT pg_sequence_last_value(",
     "SELECT id, encode(content_digest, 'hex') FROM audit.access_log_entry WHERE id > ",
     "SELECT seq, encode(content_digest, 'hex') FROM audit.audit_event WHERE seq > ",
-    "SELECT pg_advisory_xact_lock(hashtext('audit.access_log_index')",
     "SELECT s.last_id FROM audit.access_log_index_state ",
     "SELECT DISTINCT p.digest FROM audit.access_log_entry ",
 ];
@@ -120,19 +140,25 @@ impl Ledger {
 
     /// Charges `unit`, the exchanges of one transaction or of one statement
     /// outside a transaction, to the requests' own bytes or, when it ran a
-    /// [`BACKGROUND`] statement, apart from them.
+    /// [`BACKGROUND`] statement or only probed the connection, apart from
+    /// them; a statement's preparation and an evicted statement's close go
+    /// apart wherever they fall.
     fn settle(&mut self, unit: Vec<(String, Tally)>) {
         let apart = unit.iter().any(|(statement, _)| {
             BACKGROUND
                 .iter()
                 .any(|opening| statement.starts_with(opening))
         });
-        let into = if apart {
-            &mut self.background
-        } else {
-            &mut self.own
-        };
+        let probe = unit.iter().all(|(statement, _)| statement == SYNC);
         for (statement, tally) in unit {
+            let once = statement.starts_with(PREPARE) || statement == CLOSE;
+            let (into, statement) = if probe {
+                (&mut self.background, PROBE.to_owned())
+            } else if apart || once {
+                (&mut self.background, statement)
+            } else {
+                (&mut self.own, statement)
+            };
             into.entry(statement).or_default().add(tally);
         }
     }
@@ -156,6 +182,7 @@ impl Wire {
         let target = (upstream.get_host().to_owned(), upstream.get_port());
         let ledger = Arc::new(Mutex::new(Ledger::default()));
         let shared = Arc::clone(&ledger);
+        let since = jiff::Timestamp::now().strftime("%Y-%m-%d").to_string();
         tokio::spawn(async move {
             while let Ok((client, _)) = listener.accept().await {
                 let server = TcpStream::connect((target.0.as_str(), target.1))
@@ -166,12 +193,18 @@ impl Wire {
                 let (client_read, client_write) = client.into_split();
                 let (server_read, server_write) = server.into_split();
                 let conn = Arc::new(Mutex::new(Conn::default()));
-                tokio::spawn(frontend(client_read, server_write, Arc::clone(&conn)));
+                tokio::spawn(frontend(
+                    client_read,
+                    server_write,
+                    Arc::clone(&conn),
+                    since.clone(),
+                ));
                 tokio::spawn(backend(
                     server_read,
                     client_write,
                     conn,
                     Arc::clone(&shared),
+                    since.clone(),
                 ));
             }
         });
@@ -244,9 +277,75 @@ fn declared(buf: &[u8], at: usize) -> Option<usize> {
     usize::try_from(u32::from_be_bytes(bytes)).ok()
 }
 
+/// The bytes of the statement and portal names the frontend message `kind`
+/// with `body` carries: a connection numbers the statements it prepares in
+/// its own order, so a name's width depends on the connection and is not
+/// counted.
+fn names(kind: u8, body: &[u8]) -> u64 {
+    let width = |name: String| u64::try_from(name.len()).expect("a name length");
+    match kind {
+        b'P' | b'E' => width(cstr(body).0),
+        b'B' => {
+            let (portal, rest) = cstr(body);
+            width(portal) + width(cstr(rest).0)
+        }
+        b'D' | b'C' => width(cstr(body.get(1..).unwrap_or_default()).0),
+        _ => 0,
+    }
+}
+
+/// The digits the instants in `bytes` leave out of their microseconds: each
+/// UTC instant dated `since` or later, `YYYY-MM-DD` and `hh:mm:ss` joined by
+/// `T` or a space and followed by `Z` or `+00`, counts as if its fraction
+/// carried all six. An instant dated before `since` is a fixture's, the same
+/// on every run.
+fn narrowed(bytes: &[u8], since: &str) -> u64 {
+    let digit = |at: usize| bytes.get(at).is_some_and(u8::is_ascii_digit);
+    let is = |at: usize, byte: u8| bytes.get(at) == Some(&byte);
+    let mut left_out = 0;
+    let mut at = 0;
+    while at + 19 <= bytes.len() {
+        let shaped = [0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18]
+            .iter()
+            .all(|offset| digit(at + offset))
+            && is(at + 4, b'-')
+            && is(at + 7, b'-')
+            && (is(at + 10, b'T') || is(at + 10, b' '))
+            && is(at + 13, b':')
+            && is(at + 16, b':');
+        if !shaped {
+            at += 1;
+            continue;
+        }
+        let mut end = at + 19;
+        let mut digits = 0;
+        if is(end, b'.') {
+            end += 1;
+            while digit(end) {
+                digits += 1;
+                end += 1;
+            }
+        }
+        let utc = is(end, b'Z') || (is(end, b'+') && is(end + 1, b'0') && is(end + 2, b'0'));
+        let stamped = bytes
+            .get(at..at + 10)
+            .is_some_and(|date| date >= since.as_bytes());
+        if utc && stamped && digits < 6 {
+            left_out += if digits == 0 { 7 } else { 6 - digits };
+        }
+        at = end;
+    }
+    left_out
+}
+
 /// Relays the client's bytes to the database, adding each message to the
 /// connection's exchanges.
-async fn frontend(mut from: OwnedReadHalf, mut to: OwnedWriteHalf, conn: Arc<Mutex<Conn>>) {
+async fn frontend(
+    mut from: OwnedReadHalf,
+    mut to: OwnedWriteHalf,
+    conn: Arc<Mutex<Conn>>,
+    since: String,
+) {
     let mut buf = Vec::new();
     let mut started = false;
     let mut chunk = vec![0u8; 64 * 1024];
@@ -283,7 +382,7 @@ async fn frontend(mut from: OwnedReadHalf, mut to: OwnedWriteHalf, conn: Arc<Mut
                 break;
             }
             let message: Vec<u8> = buf.drain(..=len).collect();
-            sent(&message, &mut conn.lock().unwrap());
+            sent(&message, &mut conn.lock().unwrap(), &since);
         }
         if to
             .write_all(chunk.get(..n).unwrap_or_default())
@@ -297,10 +396,12 @@ async fn frontend(mut from: OwnedReadHalf, mut to: OwnedWriteHalf, conn: Arc<Mut
 
 /// Adds the frontend message `message` (its type byte first) to the
 /// connection's exchanges.
-fn sent(message: &[u8], conn: &mut Conn) {
-    let bytes = u64::try_from(message.len()).expect("a message length");
+fn sent(message: &[u8], conn: &mut Conn, since: &str) {
     let kind = message.first().copied().unwrap_or_default();
     let body = message.get(5..).unwrap_or_default();
+    let bytes = (u64::try_from(message.len()).expect("a message length")
+        + narrowed(message, since))
+    .saturating_sub(names(kind, body));
     match kind {
         b'p' => conn.unit.push((
             STARTUP.to_owned(),
@@ -324,7 +425,7 @@ fn sent(message: &[u8], conn: &mut Conn) {
         }
         b'S' => {
             conn.sent.sent += bytes;
-            let group = conn.group.take().unwrap_or_else(|| "(sync)".to_owned());
+            let group = conn.group.take().unwrap_or_else(|| SYNC.to_owned());
             let tally = std::mem::take(&mut conn.sent);
             conn.unit.push((group.clone(), tally));
             conn.waiting.push_back(group);
@@ -337,10 +438,11 @@ fn sent(message: &[u8], conn: &mut Conn) {
                     let query = collapsed(&query);
                     if name.is_empty() {
                         conn.unnamed.clone_from(&query);
+                        conn.group = Some(query);
                     } else {
                         conn.named.insert(name, query.clone());
+                        conn.group = Some(format!("{PREPARE}{query}"));
                     }
-                    conn.group = Some(query);
                 }
                 b'B' => {
                     let (_, rest) = cstr(body);
@@ -352,7 +454,7 @@ fn sent(message: &[u8], conn: &mut Conn) {
                     };
                     conn.group = Some(query);
                 }
-                b'C' if conn.group.is_none() => conn.group = Some("(close)".to_owned()),
+                b'C' if conn.group.is_none() => conn.group = Some(CLOSE.to_owned()),
                 b'E' => conn.sent.calls += 1,
                 _ => {}
             }
@@ -367,6 +469,7 @@ async fn backend(
     mut to: OwnedWriteHalf,
     conn: Arc<Mutex<Conn>>,
     ledger: Arc<Mutex<Ledger>>,
+    since: String,
 ) {
     let mut buf = Vec::new();
     let mut chunk = vec![0u8; 64 * 1024];
@@ -387,9 +490,10 @@ async fn backend(
             // NOTE: PostgreSQL Frontend/Backend Protocol §ReadyForQuery, its one byte `I` says
             // the connection is idle, in no transaction.
             let idle = kind == b'Z' && buf.get(5) == Some(&b'I');
-            buf.drain(..=len);
+            let message: Vec<u8> = buf.drain(..=len).collect();
             let tally = Tally {
-                received: u64::try_from(len).expect("a message length") + 1,
+                received: u64::try_from(message.len()).expect("a message length")
+                    + narrowed(&message, &since),
                 ..Tally::default()
             };
             let mut ledger = ledger.lock().unwrap();
