@@ -65,6 +65,10 @@ pub(super) const REQUESTS: u64 = 10;
 /// The requests of each path sent before the measured ones.
 pub(super) const WARM: u64 = 3;
 
+/// The requests of each path that write a fixture of their own, the warm
+/// ones with the measured ones of either window ([`super::planning`]).
+const FIXTURES: u64 = WARM + super::planning::REQUESTS;
+
 /// The EHRs the paths spread over, each with one IPS composition.
 const EHRS: usize = 5;
 
@@ -629,7 +633,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        allocations: 1713,
+        allocations: 1710,
         peak_bytes: 125_972,
         round_trips: 14,
         nested: 10,
@@ -659,7 +663,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        allocations: 2200,
+        allocations: 2196,
         peak_bytes: 140_901,
         round_trips: 14,
         nested: 11,
@@ -749,7 +753,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitOrganisation,
         conversions: 8,
-        allocations: 1566,
+        allocations: 1563,
         peak_bytes: 126_183,
         round_trips: 10,
         nested: 1,
@@ -759,7 +763,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitGroup,
         conversions: 8,
-        allocations: 1565,
+        allocations: 1562,
         peak_bytes: 126_027,
         round_trips: 10,
         nested: 1,
@@ -769,7 +773,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        allocations: 2139,
+        allocations: 2136,
         peak_bytes: 126_256,
         round_trips: 19,
         nested: 6,
@@ -779,7 +783,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitAgent,
         conversions: 8,
-        allocations: 1550,
+        allocations: 1547,
         peak_bytes: 126_026,
         round_trips: 10,
         nested: 1,
@@ -835,9 +839,9 @@ pub(super) fn order() -> impl Iterator<Item = Path> {
 /// matches query and 587 on a read, measured beside the merge base, and each
 /// of those ceilings fell by its path's figure.
 const WIRE_BUDGETS: [(Path, u64); 31] = [
-    (Path::CommitJson, 201_836),
-    (Path::CommitXml, 201_979),
-    (Path::CommitFlat, 201_974),
+    (Path::CommitJson, 201_751),
+    (Path::CommitXml, 201_895),
+    (Path::CommitFlat, 201_889),
     (Path::ReadJson, 131_081),
     (Path::ReadXml, 131_081),
     (Path::ReadFlat, 131_081),
@@ -846,26 +850,26 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::AqlPopulation, 6391),
     (Path::Iti81, 27_438),
     (Path::PartyRead, 5524),
-    (Path::CommitContribution, 202_796),
+    (Path::CommitContribution, 202_681),
     (Path::ReadAtTime, 131_111),
-    (Path::CommitStatus, 5543),
+    (Path::CommitStatus, 5529),
     (Path::ReadStatus, 3113),
-    (Path::CommitParty, 8513),
+    (Path::CommitParty, 8419),
     (Path::AqlMatches, 15_992),
     (Path::AqlParty, 11_509),
-    (Path::CommitPartyScored, 10_861),
+    (Path::CommitPartyScored, 10_765),
     (Path::ReadVersion, 2748),
-    (Path::CommitUpdate, 202_260),
-    (Path::CommitDelete, 4563),
-    (Path::DirectoryCreate, 4955),
-    (Path::DirectoryUpdate, 4765),
-    (Path::DirectoryDelete, 4122),
+    (Path::CommitUpdate, 202_242),
+    (Path::CommitDelete, 4544),
+    (Path::DirectoryCreate, 4939),
+    (Path::DirectoryUpdate, 4751),
+    (Path::DirectoryDelete, 4108),
     (Path::PartyUpdate, 9406),
     (Path::PartyDelete, 7957),
-    (Path::CommitOrganisation, 7778),
-    (Path::CommitGroup, 7608),
-    (Path::CommitRole, 11_481),
-    (Path::CommitAgent, 7586),
+    (Path::CommitOrganisation, 7681),
+    (Path::CommitGroup, 7511),
+    (Path::CommitRole, 11_383),
+    (Path::CommitAgent, 7489),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
@@ -1198,7 +1202,7 @@ impl World {
     /// [`Path::PartyDelete`] then deletes, one per request.
     async fn parties(&self, app: &Router) {
         let mut parties = Vec::new();
-        for _ in 0..WARM + REQUESTS {
+        for _ in 0..FIXTURES {
             let (status, headers, body) =
                 plain(app, &Self::party_commit(self.person.clone())).await;
             assert_eq!(status, StatusCode::CREATED, "a person to update: {body}");
@@ -1293,7 +1297,7 @@ impl World {
     /// composition its FOLDER references.
     async fn directories(&self, app: &Router) {
         let mut directories = Vec::new();
-        for _ in 0..WARM + REQUESTS {
+        for _ in 0..FIXTURES {
             let (ehr, vo) = ehr_with_composition(app).await;
             directories.push((ehr, vo, String::new()));
         }
@@ -1365,7 +1369,7 @@ impl World {
     /// request, spread over the EHRs.
     async fn deletable(&self, app: &Router) {
         let mut deletable = Vec::new();
-        for n in 0..usize::try_from(WARM + REQUESTS).unwrap() {
+        for n in 0..usize::try_from(FIXTURES).unwrap() {
             let (ehr, _) = &self.ehrs[n % self.ehrs.len()];
             let (status, headers, body) = plain(
                 app,

@@ -172,3 +172,21 @@ pub enum StatementsEvicted {
         now: i64,
     },
 }
+
+/// Makes `pg_stat_statements` count the plans of each statement
+/// (`pg_stat_statements.track_planning`) in the sessions that connect to
+/// `pool`'s database from now on.
+///
+/// # Errors
+///
+/// The [`sqlx::Error`] of the statement, when the role may not set the
+/// parameter on the database.
+pub async fn track_planning(pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::raw_sql(
+        "DO $$ BEGIN EXECUTE format('ALTER DATABASE %I SET pg_stat_statements.track_planning = on', \
+         current_database()); END $$",
+    )
+    .execute(pool)
+    .await
+    .map(drop)
+}

@@ -41,6 +41,7 @@ mod cpu;
 mod entry;
 mod intake;
 mod paths;
+mod planning;
 mod settings;
 mod wal;
 mod wire;

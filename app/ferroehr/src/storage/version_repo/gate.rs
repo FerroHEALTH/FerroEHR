@@ -11,11 +11,12 @@
 //! ordinal and its own restriction mark. An update reads beside them the
 //! stored template and the first content version's root fields, a delete the
 //! content identity of the version it deletes, and a create of a persistent
-//! COMPOSITION whether a live one of its template exists. Leading
-//! data-modifying CTEs bring an archived target back to the hot tier first,
-//! as the placement read does. No openEHR spec governs the SQL: our own
-//! design; the guarded concepts are RM ehr master04 §EHR Creation and §EHR
-//! Active Status and RM common master06 §The 'Virtual Version Tree'.
+//! COMPOSITION whether a live one of its template exists. A target whose tip
+//! the read finds archived is brought back to the hot tier by a statement of
+//! its own, so every shape's read settles on a generic plan (#6392). No
+//! openEHR spec governs the SQL: our own design; the guarded concepts are RM
+//! ehr master04 §EHR Creation and §EHR Active Status and RM common master06
+//! §The 'Virtual Version Tree'.
 
 use std::sync::LazyLock;
 
@@ -51,6 +52,16 @@ pub enum Shape {
 }
 
 impl Shape {
+    /// Every shape, in the order of [`Form::index`].
+    const ALL: [Self; 6] = [
+        Self::Plain,
+        Self::Update,
+        Self::Delete,
+        Self::Members,
+        Self::Status,
+        Self::Directory,
+    ];
+
     /// Whether the read carries the update facts.
     fn updates(self) -> bool {
         matches!(self, Self::Update | Self::Members)
@@ -152,13 +163,81 @@ pub struct Target {
     pub addressed_template: Option<String>,
 }
 
-/// The statement text of `shape`.
+/// How a gate read's statement takes its targets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Count {
+    /// None: the statement reads no tip.
+    None,
+    /// One, bound as a scalar, or found by the statement itself.
+    One,
+    /// Several, bound as an array.
+    Many,
+}
+
+/// One statement of the gate read: the shape, whether it reads a persistent
+/// sibling, and how it takes its targets.
+#[derive(Debug, Clone, Copy)]
+struct Form {
+    shape: Shape,
+    persistent: bool,
+    count: Count,
+}
+
+impl Form {
+    /// Every form, in the order of [`Self::index`].
+    fn all() -> impl Iterator<Item = Self> {
+        Shape::ALL.into_iter().flat_map(|shape| {
+            [false, true].into_iter().flat_map(move |persistent| {
+                [Count::None, Count::One, Count::Many].map(|count| Self {
+                    shape,
+                    persistent,
+                    count,
+                })
+            })
+        })
+    }
+
+    /// The position of the form in [`Self::all`].
+    fn index(self) -> usize {
+        let shape = match self.shape {
+            Shape::Plain => 0,
+            Shape::Update => 1,
+            Shape::Delete => 2,
+            Shape::Members => 3,
+            Shape::Status => 4,
+            Shape::Directory => 5,
+        };
+        let count = match self.count {
+            Count::None => 0,
+            Count::One => 1,
+            Count::Many => 2,
+        };
+        shape * 6 + usize::from(self.persistent) * 3 + count
+    }
+
+    /// The form of `ask`: a shape that finds its own target takes one.
+    fn of(ask: &Ask<'_>) -> Self {
+        let count = match (ask.shape, ask.targets.len()) {
+            (Shape::Status | Shape::Directory, _) | (_, 1) => Count::One,
+            (_, 0) => Count::None,
+            _ => Count::Many,
+        };
+        Self {
+            shape: ask.shape,
+            persistent: ask.persistent.is_some(),
+            count,
+        }
+    }
+}
+
+/// The statement text of `form`.
 ///
-/// `$1` the EHR, `$2` the targets, `$3` the persistent template, `$4` the
-/// persistent category code, `$5` the deleted lifecycle state, `$6` to
-/// `$8` the tree id of the version a delete addresses and `$9` the items a
-/// FOLDER references.
-fn statement(shape: Shape) -> String {
+/// `$1` the EHR, `$2` the target (an array of targets in a form that binds
+/// several, unread in a form that reads none), `$3` the persistent template, `$4` the persistent category code,
+/// `$5` the deleted lifecycle state, `$6` to `$8` the tree id of the version a
+/// delete addresses and `$9` the items a FOLDER references.
+fn statement(form: Form) -> String {
+    let shape = form.shape;
     let update = if shape.updates() {
         concat!(
             ", tb.stored_template, fv.found AS first_found, fv.ani AS first_ani, ",
@@ -205,19 +284,34 @@ fn statement(shape: Shape) -> String {
     } else {
         ""
     };
-    format!(
+    let persistent = if form.persistent {
         concat!(
-            "{warm} ",
-            "SELECT e.is_modifiable, e.restricted_at IS NOT NULL AS restricted, ",
-            access_revision!("e.id"),
-            ", now() AS ts, ",
-            "$3::text IS NOT NULL AND EXISTS (SELECT 1 FROM version pv ",
+            "EXISTS (SELECT 1 FROM version pv ",
             "    JOIN vo_head ph ON ph.vo_id = pv.vo_id ",
             "                   AND ph.trunk_head_sys_version = pv.sys_version ",
             "    WHERE pv.ehr_id = $1 AND pv.kind = 'COMPOSITION' AND pv.lifecycle_state <> $5 ",
             "      AND pv.template_id = $3 ",
-            "      AND (pv.body)::jsonb #>> '{{category,defining_code,code_string}}' = $4) ",
-            "    AS persistent_exists, ",
+            "      AND (pv.body)::jsonb #>> '{category,defining_code,code_string}' = $4)"
+        )
+    } else {
+        "false"
+    };
+    if form.count == Count::None {
+        return format!(
+            concat!(
+                "SELECT e.is_modifiable, e.restricted_at IS NOT NULL AS restricted, ",
+                access_revision!("e.id"),
+                ", now() AS ts, {} AS persistent_exists, NULL::uuid AS target ",
+                "FROM (VALUES (1)) AS one (x) LEFT JOIN ehr e ON e.id = $1"
+            ),
+            persistent
+        );
+    }
+    format!(
+        concat!(
+            "SELECT e.is_modifiable, e.restricted_at IS NOT NULL AS restricted, ",
+            access_revision!("e.id"),
+            ", now() AS ts, {persistent} AS persistent_exists, ",
             "{tip_columns}{}{}{}{} ",
             "FROM (VALUES (1)) AS one (x) ",
             "LEFT JOIN ehr e ON e.id = $1 ",
@@ -230,22 +324,27 @@ fn statement(shape: Shape) -> String {
         known_items(shape),
         update_join,
         delete_join,
-        warm = warm(targets(shape)),
+        persistent = persistent,
         tip_columns = TIP_COLUMNS,
-        tip_join = tip_join(targets(shape)),
+        tip_join = tip_join(&targets(form)),
     )
 }
 
-/// The leading data-modifying CTEs of a gate read that bring an archived
-/// target of `targets` back to the hot tier first, as the placement read does.
-fn warm(targets: &str) -> String {
-    format!(
-        "WITH tv AS (UPDATE version SET tier = 'hot' \
-                     WHERE vo_id = ANY({targets}) AND tier = 'cold'), \
-         tn AS (UPDATE node SET tier = 'hot' WHERE tier = 'cold' AND vo_id = ANY({targets})), \
-         th AS (UPDATE vo_head SET tier = 'hot', archived_at = NULL, archive_reason = NULL \
-                WHERE vo_id = ANY({targets}) AND tier = 'cold')"
+/// Brings the archived `targets` a gate read found back to the hot tier,
+/// before a write lands on them: the attestation rows follow their version
+/// rows through the foreign key's `ON UPDATE CASCADE`, and the node rows are
+/// moved by name.
+async fn promote(conn: &mut PgConnection, targets: &[Uuid]) -> Result<(), StorageError> {
+    sqlx::query(
+        "WITH tv AS (UPDATE version SET tier = 'hot' WHERE vo_id = ANY($1) AND tier = 'cold'), \
+         tn AS (UPDATE node SET tier = 'hot' WHERE tier = 'cold' AND vo_id = ANY($1)) \
+         UPDATE vo_head SET tier = 'hot', archived_at = NULL, archive_reason = NULL \
+         WHERE vo_id = ANY($1) AND tier = 'cold'",
     )
+    .bind(targets)
+    .execute(conn)
+    .await?;
+    Ok(())
 }
 
 /// The columns of a gate read's target `t` and its trunk tip `tip`.
@@ -259,15 +358,15 @@ const TIP_COLUMNS: &str = concat!(
     "tip.ehr_id, tip.kind, tip.sys_version, tip.trunk_version, tip.branch_number, ",
     "tip.branch_version, tip.creating_system_id, tip.lifecycle_state, ",
     "tip.committed_at AS tip_committed_at, tip.content_digest, tip.content_key, ",
-    "true AS open"
+    "tip.tier = 'cold' AS tip_cold, true AS open"
 );
 
-/// The joins of a gate read's targets `t` from `targets` and the trunk tip
-/// `tip` of each.
+/// The joins of a gate read's targets `t` from the relation `targets` and the
+/// trunk tip `tip` of each.
 fn tip_join(targets: &str) -> String {
     format!(
         concat!(
-            "LEFT JOIN LATERAL unnest({}) WITH ORDINALITY AS t (vo_id, ord) ON true ",
+            "LEFT JOIN LATERAL {} ON true ",
             // The trunk tip is the newest ordinal on branch 0, which no later
             // ordinal of its own branch supersedes, so it is open by definition.
             "LEFT JOIN LATERAL ( ",
@@ -314,13 +413,19 @@ fn known_items(shape: Shape) -> &'static str {
     }
 }
 
-/// The targets of `shape`'s statement: `$2`, the EHR's current `EHR_STATUS`
-/// found by its kind ([`Shape::Status`]), as `meta::current_vo` finds it, or
-/// its directory found by its slot ([`Shape::Directory`]), the lowest-rank
-/// live hierarchy, else the lowest-rank one, as `ehr_repo::directory_vo`
-/// finds it.
-fn targets(shape: Shape) -> &'static str {
-    match shape {
+/// The targets `t (vo_id, ord)` of `form`'s statement: the EHR's current
+/// `EHR_STATUS` found by its kind ([`Shape::Status`]), as `meta::current_vo`
+/// finds it, its directory found by its slot ([`Shape::Directory`]), the
+/// lowest-rank live hierarchy, else the lowest-rank one, as
+/// `ehr_repo::directory_vo` finds it, the array `$2` of several, or the one
+/// target `$2`, none when it is `NULL`.
+///
+/// A custom plan knows the length of a bound array and an `unnest` of it,
+/// which makes it cheaper than the generic plan and keeps the plan cache
+/// planning every call; a scalar and `generate_subscripts` give both plans
+/// one estimate.
+fn targets(form: Form) -> String {
+    let found = match form.shape {
         Shape::Status => concat!(
             "ARRAY(SELECT sv.vo_id FROM version sv JOIN vo_head sh ON sh.vo_id = sv.vo_id ",
             "AND sh.trunk_head_sys_version = sv.sys_version ",
@@ -332,33 +437,44 @@ fn targets(shape: Shape) -> &'static str {
             "JOIN vo_head dh ON dh.vo_id = dv.vo_id AND dh.trunk_head_sys_version = dv.sys_version ",
             "WHERE df.ehr_id = $1 ORDER BY (dv.lifecycle_state = '523'), df.rank LIMIT 1)"
         ),
-        _ => "$2::uuid[]",
-    }
+        _ if form.count == Count::Many => {
+            return "(SELECT ($2::uuid[])[i] AS vo_id, i AS ord \
+                    FROM generate_subscripts($2::uuid[], 1) AS g (i)) t"
+                .to_owned();
+        }
+        _ => return ONE_TARGET.replace("{target}", "$2"),
+    };
+    format!("unnest({found}) WITH ORDINALITY AS t (vo_id, ord)")
 }
+
+/// The one target `{target}` of a statement as its targets `t (vo_id, ord)`,
+/// none when it is `NULL`.
+const ONE_TARGET: &str =
+    "(SELECT {target}::uuid AS vo_id, 1 AS ord WHERE {target}::uuid IS NOT NULL) t";
 
 /// Runs one gate read ([`Ask`]) on `conn`.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
 pub async fn read(conn: &mut PgConnection, ask: Ask<'_>) -> Result<Gate, StorageError> {
-    static PLAIN: LazyLock<String> = LazyLock::new(|| statement(Shape::Plain));
-    static UPDATE: LazyLock<String> = LazyLock::new(|| statement(Shape::Update));
-    static DELETE: LazyLock<String> = LazyLock::new(|| statement(Shape::Delete));
-    static MEMBERS: LazyLock<String> = LazyLock::new(|| statement(Shape::Members));
-    static STATUS: LazyLock<String> = LazyLock::new(|| statement(Shape::Status));
-    static DIRECTORY: LazyLock<String> = LazyLock::new(|| statement(Shape::Directory));
-    let sql = match ask.shape {
-        Shape::Plain => &PLAIN,
-        Shape::Update => &UPDATE,
-        Shape::Delete => &DELETE,
-        Shape::Members => &MEMBERS,
-        Shape::Status => &STATUS,
-        Shape::Directory => &DIRECTORY,
+    static STATEMENTS: LazyLock<Vec<String>> =
+        LazyLock::new(|| Form::all().map(statement).collect());
+    let form = Form::of(&ask);
+    let sql = STATEMENTS
+        .get(form.index())
+        .ok_or_else(|| StorageError::InvalidRows("no gate read of this form".to_owned()))?;
+    let query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str())).bind(ask.ehr_id);
+    let query = if form.count == Count::Many {
+        query.bind(
+            ask.targets
+                .iter()
+                .map(|vo_id| vo_id.0)
+                .collect::<Vec<Uuid>>(),
+        )
+    } else {
+        query.bind(ask.targets.first().map(|vo_id| vo_id.0))
     };
-    let targets: Vec<Uuid> = ask.targets.iter().map(|vo_id| vo_id.0).collect();
-    let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
-        .bind(ask.ehr_id)
-        .bind(&targets)
+    let rows = query
         .bind(ask.persistent.map(|p| p.template_id))
         .bind(ask.persistent.map(|p| p.category_code))
         .bind(ask.persistent.map(|p| p.deleted_state))
@@ -381,11 +497,18 @@ pub async fn read(conn: &mut PgConnection, ask: Ask<'_>) -> Result<Gate, Storage
     };
     let now = first.try_get::<jiff_sqlx::Timestamp, _>("ts")?.to_jiff();
     let mut found = Vec::with_capacity(rows.len());
+    let mut cold = Vec::new();
     for row in &rows {
         let Some(vo_id) = row.try_get::<Option<Uuid>, _>("target")? else {
             continue;
         };
+        if archived(row)? {
+            cold.push(vo_id);
+        }
         found.push(target(row, VoId(vo_id), now, ask.shape)?);
+    }
+    if !cold.is_empty() {
+        promote(conn, &cold).await?;
     }
     Ok(Gate {
         is_modifiable,
@@ -406,6 +529,11 @@ pub async fn read(conn: &mut PgConnection, ask: Ask<'_>) -> Result<Gate, Storage
         },
         targets: found,
     })
+}
+
+/// Whether the tip on a gate read's row sits in the cold tier.
+fn archived(row: &sqlx::postgres::PgRow) -> Result<bool, StorageError> {
+    Ok(row.try_get::<Option<bool>, _>("tip_cold")? == Some(true))
 }
 
 /// One target's facts off its row of a gate read.
@@ -524,11 +652,14 @@ impl PartyGate {
     }
 }
 
-/// The statement of [`party`]: `$1` the target, `NULL` for a create.
+/// The statement of [`party`] for a create, which reads no target.
+const PARTY_CREATE: &str = "SELECT now() AS ts, NULL::uuid AS target";
+
+/// The statement of [`party`] for an existing target `$1`.
 static PARTY: LazyLock<String> = LazyLock::new(|| {
     format!(
         concat!(
-            "{warm} SELECT now() AS ts, {tip_columns}, ",
+            "SELECT now() AS ts, {tip_columns}, ",
             "(SELECT n.body IS NOT NULL FROM version n WHERE n.vo_id = t.vo_id ",
             " ORDER BY n.sys_version DESC LIMIT 1) AS newest_held, ",
             "(SELECT h.lifecycle_state FROM vo_head h WHERE h.vo_id = t.vo_id) AS head_lifecycle, ",
@@ -543,14 +674,10 @@ static PARTY: LazyLock<String> = LazyLock::new(|| {
             "    ORDER BY b.sys_version DESC LIMIT 1 ",
             ") lb ON true"
         ),
-        warm = warm(PARTY_TARGETS),
         tip_columns = TIP_COLUMNS,
-        tip_join = tip_join(PARTY_TARGETS),
+        tip_join = tip_join(&ONE_TARGET.replace("{target}", "$1")),
     )
 });
-
-/// The targets of [`PARTY`]: the one target, none for a create.
-const PARTY_TARGETS: &str = "ARRAY_REMOVE(ARRAY[$1::uuid], NULL)";
 
 /// Runs the gate read of a party write of `target` on `conn` ([`PartyGate`]).
 ///
@@ -560,14 +687,22 @@ pub async fn party(
     conn: &mut PgConnection,
     target: Option<VoId>,
 ) -> Result<PartyGate, StorageError> {
-    let row = sqlx::query(sqlx::AssertSqlSafe(PARTY.as_str()))
-        .bind(target)
-        .fetch_one(&mut *conn)
-        .await?;
+    let row = match target {
+        None => sqlx::query(PARTY_CREATE).fetch_one(&mut *conn).await?,
+        Some(vo_id) => {
+            sqlx::query(sqlx::AssertSqlSafe(PARTY.as_str()))
+                .bind(vo_id)
+                .fetch_one(&mut *conn)
+                .await?
+        }
+    };
     let now = row.try_get::<jiff_sqlx::Timestamp, _>("ts")?.to_jiff();
     let target = match row.try_get::<Option<Uuid>, _>("target")? {
         None => None,
         Some(vo_id) => {
+            if archived(&row)? {
+                promote(conn, &[vo_id]).await?;
+            }
             let last_body = match row.try_get::<Option<i32>, _>("last_body_version")? {
                 Some(version) => Some((
                     version,
