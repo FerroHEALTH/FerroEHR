@@ -571,7 +571,6 @@ fn a_paged_query_of_ehr_rows_binds_its_first_row_from_the_offset() {
             ),
             &lineage,
         );
-        ctx.limit = Some(20);
         ctx.offset = Some(20 * round);
         let bound = prepared(&shapes, &ir, &Params::default(), &ctx);
         assert!(

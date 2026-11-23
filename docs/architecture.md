@@ -1972,7 +1972,11 @@ confirm after they ran the same way (#6320): the version read of the EHR
 object selects the revisions, and a clinical query a request judges reads
 them on the one-row read of the versions it served, or, when it serves none,
 as two hidden columns of its own statement (`aql::sql::Layout::revisions`); a
-query that served no row reads them once after it ran. An ITI-81 page does
+query that served no row reads them once after it ran. Only the first row a
+query serves carries those columns, guarded by `row_number()` over the
+query's own order, so the plan gains one `WindowAgg` and no sort; a
+`DISTINCT`, an aggregate and an ordered query with a `LIMIT`, whose bounded
+sort a window would make whole, carry them on every row. An ITI-81 page does
 the same where the audit store shares the clinical database and its role may
 read `clinical.request_revisions`: the page statement selects them beside its
 records, and elsewhere the search reads them in a statement of their own. A party read and a

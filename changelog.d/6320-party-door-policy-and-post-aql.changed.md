@@ -9,3 +9,5 @@
   place of a read of the policy revision on the clinical pool. The boot gate
   refuses a `clinical_door` schema holding anything but that function, and an
   erasure drops it with the clinical schema.
+- An AQL query whose served versions are not read after it carries the
+  policy revisions on the first row it serves alone, in place of every row.
