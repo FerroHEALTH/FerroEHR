@@ -168,9 +168,6 @@ pub(crate) enum ValueConformance {
 /// The tri-state reading of `C_PRIMITIVE_OBJECT.c_value_conforms_to` for two
 /// leaves, with [`CPrimitiveObject::c_value_congruent_to`] admitting the equal
 /// case (`master04.5`).
-///
-/// Different primitive types (a VSONT question) and an unconstrained child under
-/// a constraining parent are undecidable here.
 #[must_use]
 fn value_conformance(child: &CPrimitiveObject, parent: &CPrimitiveObject) -> ValueConformance {
     if child.constrained_typename() != parent.constrained_typename() {
@@ -261,9 +258,6 @@ pub(crate) fn tuple_member_names(tuple: &CAttributeTuple) -> Vec<&str> {
 
 /// `c_conforms_to` for a `C_ATTRIBUTE_TUPLE` against the flat parent's tuples
 /// (`master04.5` §`C_SECOND_ORDER`), members paired by attribute name.
-///
-/// Every child row must conform to some parent row; an undecidable member
-/// leaves the row unrefuted, and a tuple over a new group conforms.
 #[must_use]
 pub(crate) fn tuple_conforms_to(
     child: &CAttributeTuple,

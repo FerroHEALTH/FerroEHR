@@ -78,14 +78,9 @@ pub(super) fn check_identification(
         ));
     }
 
-    // VARAV / VARRV: adl_version / rm_release 3-part version formats (master03
-    // §Validity Rules). AOM2-only: an ADL 1.4 artefact carries a `1.4`-form
-    // `adl_version` (two-part, optional metadata) and NO `rm_release`, and AOM
-    // 1.4 defines no 3-part-version rule for either (ADL1.4 master08 §Syntax
-    // Specification, `arch_identification` meta-data; AOM1.4 master03 ARCHETYPE
-    // §Invariants — version validity is only `version = archetype_id.version_id`).
-    // So both are suppressed in the 1.4 dialect: applying the AOM2 rule would
-    // reject every valid 1.4 archetype.
+    // VARAV / VARRV (master03 §Validity Rules) are AOM2-only: ADL 1.4 has a
+    // two-part `adl_version` and no `rm_release` (ADL1.4 master08, AOM1.4
+    // master03 ARCHETYPE §Invariants).
     if !is_overlay && dialect == Dialect::Adl2 {
         check_version_formats(v, out);
     }
@@ -151,15 +146,6 @@ fn check_version_formats(v: &ArchetypeView<'_>, out: &mut Vec<ValidationIssue>) 
 /// VARCN: "archetype concept validity. The archetype must have an archetype
 /// term value in the concept section. The term must exist in the archetype
 /// ontology."
-///
-/// The FORM half (a root code well-formed for the specialisation depth) is
-/// checked for every dialect in [`check_identification`]; this half needs the
-/// parsed 1.4 `concept` clause, which only the source-level entry points carry
-/// (ADL2 has no concept section — `ADL2/master07.09`). A concept term is judged
-/// defined when any language's `term_definitions` bucket carries it, matching
-/// the definedness union [`check_terminology`](super::terminology::check_terminology)
-/// uses. An ABSENT concept section
-/// is refused earlier, at assembly ([`crate::error::SyntaxErrorCode::Saco`]).
 pub(super) fn check_concept_term_adl14(
     v: &ArchetypeView<'_>,
     source: &SourceArtefact,

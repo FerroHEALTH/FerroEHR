@@ -6,9 +6,6 @@
 //! The local binding keys (VTTBK, VTCBK; `AOM2/master07` §Validity Rules) and the
 //! [`TerminologyResolver`] that answers VETDF (`master03` §Validity Rules:
 //! "subject to tool accessibility"). Without a resolver VETDF is not raised.
-//!
-//! Without a resolver VETDF is not raised; the resolver receives each binding
-//! target as authored.
 
 use std::collections::BTreeSet;
 

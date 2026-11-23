@@ -375,10 +375,8 @@ impl StructureScan<'_> {
         let inc_any = !inc_empty && slot.includes.iter().flatten().all(is_any_assertion);
         let exc_any = !exc_empty && slot.excludes.iter().flatten().all(is_any_assertion);
 
-        // A real slot always carries an `include`, so only the include-side
-        // branches of the spec table are reachable (see the NOTE above): a
-        // violation is reported as VDSEV whether the offending pairing is an
-        // any-include/any-exclude or a specific-include/specific-exclude.
+        // Only the include-side branches are reachable (NOTE above), so every
+        // violation reports as VDSEV.
         if !inc_empty {
             let contradictory = if inc_any {
                 exc_non_any_and_any(exc_empty, exc_any)

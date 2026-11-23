@@ -3,12 +3,6 @@
 
 //! Read-only definition traversals shared by the 1.4→2 conversion stages.
 //!
-//! The collectors here feed [`crate::adl14::convert`]'s code planning; the
-//! mutable rewrites that consume their results stay in that module (they need
-//! the converter state), and the multiplicity rewrites live in
-//! `crate::adl14::multiplicity`. The one mutable helper here is
-//! [`cco_data_mut`], the complex-object accessor every stage shares.
-//!
 //! NOTE: no openEHR spec governs 1.4→2 conversion — the whole `adl14` module is
 //! our own design (see the [`crate::adl14`] flag).
 
@@ -114,10 +108,6 @@ pub(super) fn walk_constraints(def: &CComplexObject, f: &mut impl FnMut(&str, &s
 
 /// Visits the terminology codes of one attribute tuple: its members' children,
 /// and its ROWS.
-///
-/// Tuple rows carry the actual primitive constraints (e.g. ordinal
-/// `[value, symbol]` symbol codes), so their terminology codes are visited too
-/// and value at-codes get planned and converted like attribute ones.
 fn walk_tuple_constraints(
     tuple: &openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple,
     f: &mut impl FnMut(&str, &str),

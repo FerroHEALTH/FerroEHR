@@ -18,9 +18,6 @@
 //! prototype's served version envelope with the identifiers substituted, by
 //! the crates' own canonical form and digest signer, so a read of a clone
 //! verifies as a read of the prototype does.
-//!
-//! Each chunk of EHRs is one transaction that also records the chunk, so a
-//! seed stopped at any point resumes at the first chunk not recorded.
 
 use std::collections::BTreeMap;
 

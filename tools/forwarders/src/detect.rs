@@ -3,15 +3,6 @@
 
 //! The forwarder test over one parsed file.
 //!
-//! A forwarder is a free function or an inherent method whose body is one
-//! call, wrapped at most in `.await`, `?`, `Ok(..)`, `Some(..)`, `.into()` or
-//! a `.map_err` that only converts the error. The call is to a function or to
-//! a method of `self`, and its arguments are ones a caller could pass itself:
-//! the parameters, literals and constants, and references, dereferences,
-//! borrows and clones of those. A call that reads a field of `self`, or a
-//! method of a field or a parameter, reaches what the caller cannot, so it is
-//! an accessor and never reported.
-//!
 //! No specification governs this: our own design (#4663).
 
 use proc_macro2::{Delimiter, TokenStream, TokenTree};

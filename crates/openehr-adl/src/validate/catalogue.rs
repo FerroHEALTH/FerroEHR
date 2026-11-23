@@ -6,9 +6,6 @@
 
 /// The severity of a [`ValidationIssue`](super::ValidationIssue): the
 /// `W`-prefixed codes are warnings.
-///
-/// NOTE: `master08` assigns no severity; the `W` convention is inferred from the
-/// naming (`master04.5` WACMCL "should be" vs VACMCU "must").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Severity {
     /// A validity error — the archetype is invalid.

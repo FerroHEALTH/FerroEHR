@@ -18,10 +18,6 @@ use crate::paths::{Resolution, has_node_id_predicate, resolve};
 
 /// VRANP: each annotation path must be a valid archetype path or an RM path
 /// valid for the root class (master03 §Validity Rules).
-///
-/// NOTE: only paths carrying a node-id predicate are resolved against the
-/// archetype here; a pure reference-model path (no `[id…]` predicate) is a
-/// reference-model question (`super::rm`).
 pub(super) fn check_annotations(v: &ArchetypeView<'_>, issues: &mut Vec<ValidationIssue>) {
     let Some(annotations) = v.annotations else {
         return;
@@ -44,9 +40,6 @@ pub(super) fn check_annotations(v: &ArchetypeView<'_>, issues: &mut Vec<Validati
 /// VRMVP / VRMVAV: `rm_overlay` visibility path + alias validity (master06
 /// §Validity). The path's node-id-predicated part must resolve; the alias must
 /// be a defined at-code.
-///
-/// NOTE: the pure-RM tail of a visibility path is a reference-model concern
-/// (`super::rm`).
 pub(super) fn check_rm_overlay(v: &ArchetypeView<'_>, issues: &mut Vec<ValidationIssue>) {
     let Some(overlay) = v.rm_overlay else {
         return;
