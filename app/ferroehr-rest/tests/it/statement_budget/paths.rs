@@ -817,6 +817,14 @@ const BUDGETS: [Budget; 31] = [
 /// and the delete, and 152, 76 and 159 on the ORGANISATION, GROUP and ROLE
 /// creates, measured beside the merge base, and each of those ceilings fell
 /// by its path's figure.
+/// A request's one read of the party store's revisions has since bound the
+/// snapshot its caller facts copy holds, which `party.facts_behind` judges
+/// the stamps against, in place of reading `facts_revision`, so a care
+/// relationship commit moves no shared row and sends no `pg_notify` (#6074):
+/// 35 bytes more sent and 8 fewer received on every path, measured beside
+/// the merge base. Only the three directory ceilings, whose margin was 18
+/// bytes, rose, by the 27 bytes measured, approved by the orchestrator on
+/// #6074.
 const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::CommitJson, 202_143),
     (Path::CommitXml, 202_289),
@@ -840,9 +848,9 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::ReadVersion, 3336),
     (Path::CommitUpdate, 202_571),
     (Path::CommitDelete, 4875),
-    (Path::DirectoryCreate, 4985),
-    (Path::DirectoryUpdate, 4795),
-    (Path::DirectoryDelete, 4152),
+    (Path::DirectoryCreate, 5012),
+    (Path::DirectoryUpdate, 4822),
+    (Path::DirectoryDelete, 4179),
     (Path::PartyUpdate, 9406),
     (Path::PartyDelete, 7957),
     (Path::CommitOrganisation, 7778),

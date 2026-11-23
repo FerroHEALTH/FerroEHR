@@ -186,10 +186,11 @@ impl Ridden {
     }
 }
 
-/// Runs `fut` as a ride: the copies decide as they stand, and the store's
-/// revisions are taken from the statements that read them, the caller facts
-/// judged against `door`, the snapshot the facts copy holds as it begins.
-/// Inside a [`scope`] only.
+/// Runs `fut` as a ride: the copies decide as they stand.
+///
+/// The store's revisions are taken from the statements that read them, the
+/// caller facts judged against `door`, the snapshot the facts copy holds as
+/// it begins. Inside a [`scope`] only.
 pub async fn ride<F: Future>(door: Option<HeldSnapshot>, fut: F) -> (F::Output, Ridden) {
     // NOTE: our own design (#6320), revisions the request read before its ride (the token's
     // standing) are what its copies are judged by, and no statement of the ride reads them again.

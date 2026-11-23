@@ -33,14 +33,22 @@ pub struct Snapshot {
 
 /// A snapshot text that is not `xmin:xmax:xip_list`.
 #[derive(Debug, thiserror::Error)]
-#[error("{0:?} is not a pg_snapshot")]
-pub struct NotASnapshot(String);
+#[error("{text:?} is not a pg_snapshot")]
+pub struct NotASnapshot {
+    text: String,
+    /// The xid that does not read, when one does not.
+    #[source]
+    xid: Option<std::num::ParseIntError>,
+}
 
 impl std::str::FromStr for Snapshot {
     type Err = NotASnapshot;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
-        let refused = || NotASnapshot(text.to_owned());
+        let refused = || NotASnapshot {
+            text: text.to_owned(),
+            xid: None,
+        };
         let mut parts = text.splitn(3, ':');
         let mut next = || {
             parts
@@ -50,7 +58,12 @@ impl std::str::FromStr for Snapshot {
                 .map(str::to_owned)
         };
         let (xmin, xmax, xip) = (next()?, next()?, next()?);
-        let xid = |part: &str| part.parse::<u64>().map_err(|_| refused());
+        let xid = |part: &str| {
+            part.parse::<u64>().map_err(|xid| NotASnapshot {
+                text: text.to_owned(),
+                xid: Some(xid),
+            })
+        };
         let mut xip = xip
             .split(',')
             .filter(|part| !part.is_empty())
