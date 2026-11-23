@@ -3,14 +3,6 @@
 
 //! Pure readings of AQL **text** the query screens need before they can run a
 //! query.
-//!
-//! Which `$placeholders` it declares, whether it carries its own row window,
-//! and how typed parameter values become the `query_parameters` JSON object.
-//! Component-free plain Rust with ordinary unit tests.
-//!
-//! The readings go through the real AQL lexer (`openehr_query::lexer`) rather
-//! than a hand-rolled scan, so a `$name` inside a string literal is never
-//! mistaken for a parameter.
 
 #![expect(
     clippy::disallowed_types,
@@ -29,10 +21,6 @@ use std::collections::BTreeMap;
 /// the prefix" (ITS-REST `specifications/docs/query/Request.md` §Common Headers
 /// and Query Parameters / Query parameters). The names returned here are
 /// therefore exactly the JSON keys a run must send.
-///
-/// Text the lexer cannot tokenize yields NO names rather than a guess: such a
-/// query cannot be executed either, and the run surfaces the CDR's own
-/// diagnostic instead of a half-read parameter list.
 #[must_use]
 pub fn placeholders(aql: &str) -> Vec<String> {
     let Ok(tokens) = openehr_query::lexer::lex(aql) else {
@@ -58,10 +46,6 @@ pub fn placeholders(aql: &str) -> Vec<String> {
 /// `specifications/docs/query/Request.md` §Common Headers and Query
 /// Parameters). A query that windows itself is therefore executed bare, without
 /// `fetch`/`offset`.
-///
-/// Text that does not parse is treated as carrying no window: the request then
-/// looks exactly like every other paged run, and the CDR reports the real
-/// problem with the query.
 #[must_use]
 pub fn carries_own_window(aql: &str) -> bool {
     openehr_query::parser::parse_str(aql)
@@ -78,10 +62,6 @@ pub fn carries_own_window(aql: &str) -> bool {
 /// not valid JSON binds as text, so `at0037`, `2026-07-01` and `1.0.0` need no
 /// quoting; a value that must stay text despite looking numeric can be written
 /// as a JSON string (`"0123"`).
-///
-/// A binding whose text is blank is OMITTED: an empty string is almost never
-/// the value a query wants, and leaving the name out lets the CDR apply its own
-/// default or say what is missing.
 ///
 /// NOTE: the JSON-first reading is our own input convention — no openEHR spec
 /// governs how the viewer collects a parameter value; only the resulting

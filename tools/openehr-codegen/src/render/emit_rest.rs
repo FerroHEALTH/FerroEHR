@@ -1,23 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! REST emitter: OAS → the Rust *contract* for one API group, into
-//! `openehr-its/src/rest/generated/`.
+//! REST emitter: the vendored `-codegen` OAS → the Rust contract for one API
+//! group, into `openehr-its/src/rest/generated/`.
 //!
-//! Spec-first: the vendored `-codegen` OAS is the source of truth. For each API
-//! group this emits the transport DTOs (the non-RM component schemas), a param
-//! struct per operation, a headers struct per documented response that
-//! declares headers, a route table `(method, path, operationId)` with the
-//! index-aligned table of each operation's declared parameters (every param
-//! struct's own `PARAMS`, emitted from the same parameter list as its fields),
-//! and the two halves of the same contract. The SERVER half (`mod server`) carries an
-//! `#[async_trait]` trait (one typed method per operation, answering a
-//! success-answer enum), and an axum `router` that binds every route to its
-//! trait method. The CLIENT half (`mod client`) carries one method per
-//! operation over a `rest::client::Client`, answering an outcome enum with one
-//! variant per status the OAS documents. RM payload schemas resolve to the
-//! generated `openehr_rm`/`openehr_base` crates rather than being re-emitted.
-//! Both halves come from one OAS read, so they cannot drift from each other.
+//! Per group it emits the transport DTOs, the param and headers structs, the
+//! route table, the `server` half (an `#[async_trait]` trait and an axum
+//! `router`) and the `client` half, both from one OAS read. RM payload schemas
+//! resolve to the generated `openehr_rm`/`openehr_base` types.
 
 #![expect(
     clippy::disallowed_types,
@@ -47,11 +37,9 @@ fn clean(raw: &str) -> String {
         .collect()
 }
 
-/// A proper `snake_case` Rust field ident for an OAS property/param name, then
-/// keyword-escaped. Handles camelCase (`minOp` → `min_op`), acronym runs
-/// (`SNOMED-CT` → `snomed_ct`), and separators (`Content-Type` → `content_type`,
-/// `view:pass_through` → `view_pass_through`). A leading `_` (metadata keys like
-/// `_type`) is preserved. Pair with a `#[serde(rename)]` to keep the wire name.
+/// The `snake_case`, keyword-escaped Rust field ident for an OAS property or
+/// param name (`minOp` → `min_op`, `Content-Type` → `content_type`); a leading
+/// `_` is kept.
 pub(super) fn field_id(raw: &str) -> String {
     let leading_us = raw.starts_with('_');
     let mut out = String::new();
@@ -92,10 +80,8 @@ fn type_id(raw: &str) -> String {
     naming::type_name(&clean(raw))
 }
 
-/// The Rust type name for an OAS DTO schema key. Keys are authored in
-/// `PascalCase` (`ResultSet`, `OperationalTemplateV2`) and kept verbatim; an
-/// all-uppercase acronym (`AQL`, `SNOMEDCT`) is title-cased (`Aql`, `Snomedct`)
-/// so it is idiomatic Rust.
+/// The Rust type name for an OAS DTO schema key; an all-uppercase acronym is
+/// title-cased (`AQL` → `Aql`).
 fn dto_type(raw: &str) -> String {
     let c = clean(raw);
     let alpha: String = c.chars().filter(char::is_ascii_alphabetic).collect();
@@ -109,32 +95,19 @@ fn dto_type(raw: &str) -> String {
 /// The serde attribute every `Option` field of a generated REST DTO or param
 /// struct carries.
 ///
-/// An OAS property that is not in the schema's `required` list and does not set
-/// `nullable: true` admits its declared type and nothing else — `null` is not a
-/// member of `type: string` (or of a `$ref` to a string alias) under OpenAPI
-/// 3.0 (<https://spec.openapis.org/oas/v3.0.3#schema-object>: "nullable …
-/// Default value is false", and the Schema Object is a JSON Schema subset). No
-/// component schema in the vendored ITS-REST bundles
-/// (`crates/openehr-its/vendor/rest-oas/`) sets `nullable`, so an absent
-/// optional property is **omitted** on the wire, never serialized as `null`.
+/// No vendored component schema sets `nullable`, so an absent optional
+/// property is omitted on the wire, never `null`
+/// (<https://spec.openapis.org/oas/v3.0.3#schema-object>).
 const SKIP_NONE_ATTR: &str = "    #[serde(skip_serializing_if = \"Option::is_none\")]\n";
 
 /// The generated field name for an OAS `additionalProperties` extension map.
 const ADDITIONAL_PROPERTIES_FIELD: &str = "additional_properties";
 
-/// Emit the flattened extension map for a DTO whose OAS schema leaves the
+/// Emits the flattened extension map for a DTO whose OAS schema leaves the
 /// object open, or nothing when it declares `additionalProperties: false`.
 ///
-/// An absent keyword is an open object: OpenAPI 3.0.3 §Schema Object says
-/// "Consistent with JSON Schema, `additionalProperties` defaults to `true`",
-/// and every vendored bundle is `openapi: 3.0.3`. So an absent keyword and
-/// `additionalProperties: true` both carry arbitrary JSON values, and an
-/// `additionalProperties: <schema>` form carries that schema's Rust type. A
-/// `BTreeMap` keeps the emitted order deterministic, and `#[serde(flatten)]`
-/// puts the entries at the object's own level — which is what "additional
-/// properties" means in JSON Schema — while collecting every undeclared key on
-/// the way in. An empty map serializes to nothing, so a DTO with no extensions
-/// is byte-identical to one emitted before this field existed.
+/// An absent keyword is an open object: "`additionalProperties` defaults to
+/// `true`" (OpenAPI 3.0.3 §Schema Object).
 fn emit_additional_properties(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
     let value_ty = match schema.get("additionalProperties") {
         None | Some(Value::Bool(true)) => "serde_json::Value".to_string(),
@@ -164,24 +137,21 @@ pub(crate) struct RmNames {
 }
 
 /// Component schemas the OAS declares once per group, identical but for one
-/// discriminator-typed field. The one live case is `UPDATE_VERSION`: ITS-REST
-/// `schemas/demographic/UpdateVersion.yaml` is a "copy of same schema from
-/// `ehr`, as we need to redefine to use only demographic types", so only its
-/// `data` ref differs from `schemas/ehr/UpdateVersion.yaml`. The hoisted shared
-/// module emits the struct generic over that field; each group aliases it at
-/// its own `Versionable`.
+/// discriminator-typed field; the shared module emits them generic over it.
+///
+/// ITS-REST `schemas/demographic/UpdateVersion.yaml` is a "copy of same schema
+/// from `ehr`, as we need to redefine to use only demographic types".
 const GENERIC_OVER: &[(&str, &str)] = &[ENVELOPE];
 
 /// The one [`GENERIC_OVER`] envelope and its generic field.
 const ENVELOPE: (&str, &str) = ("UpdateVersion", "data");
 
 /// Component schemas whose list field carries the [`GENERIC_OVER`] envelope,
-/// and so take its type parameter: `NewContribution.versions`. Under a
-/// Simplified Formats `Content-Type` "the CONTRIBUTION envelope itself remains
-/// canonical JSON" and only "each `versions[i].data`" is FLAT or STRUCTURED
-/// (ITS-REST `operations/contribution_create.yaml` §Simplified Formats). The
-/// parameter defaults to the group's own content union, so the bare name keeps
-/// meaning the canonical body.
+/// and so take its type parameter.
+///
+/// "the CONTRIBUTION envelope itself remains canonical JSON" and only "each
+/// `versions[i].data`" is FLAT or STRUCTURED (ITS-REST
+/// `operations/contribution_create.yaml` §Simplified Formats).
 const GENERIC_CARRIERS: &[(&str, &str)] = &[("NewContribution", "versions")];
 
 /// How a DTO struct carries the [`GENERIC_OVER`] type parameter.
@@ -224,10 +194,8 @@ fn ref_names_of(name: &str, schema: &Value, out: &mut BTreeSet<String>) {
     walk_refs(schema, skip, out);
 }
 
-/// Walks a schema value collecting every `$ref` target name.
-///
-/// `skip_field` is dropped only at the `properties` level, so the marker is
-/// passed exactly one level below `properties` and nowhere else.
+/// Walks a schema value collecting every `$ref` target name, skipping
+/// `skip_field` one level below `properties`.
 fn walk_refs(v: &Value, skip_field: Option<&str>, out: &mut BTreeSet<String>) {
     match v {
         Value::Object(m) => {
@@ -288,13 +256,8 @@ fn stable_repr(v: &Value) -> String {
     sort(v).to_string()
 }
 
-/// The cross-group HOIST set: component schemas that appear in more than one
-/// group bundle with byte-identical definitions (key-order-independent), are
-/// not RM/BASE-resolved, and whose transitive `$ref` closure (minus a
-/// genericized field) stays inside {RM, BASE, the hoist set} — so the shared
-/// module is self-contained. Everything else keeps per-group emission (a
-/// schema like `Versionable` is textually shared but semantically per-group:
-/// its discriminator mapping differs).
+/// The component schemas shared byte-identically by more than one group, not
+/// RM/BASE-resolved, whose `$ref` closure stays inside RM, BASE and this set.
 pub(crate) fn hoist_set(bundles: &[(&str, Oas)], names: &RmNames) -> BTreeSet<String> {
     use std::collections::BTreeMap;
     let mut reprs: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
@@ -343,11 +306,8 @@ pub(crate) fn hoist_set(bundles: &[(&str, Oas)], names: &RmNames) -> BTreeSet<St
     hoisted
 }
 
-/// Emit the shared `common` module: the cross-group hoisted DTOs (byte-identical
-/// component schemas whose ref closure is self-contained — [`hoist_set`]), each
-/// emitted exactly once. The one genericized schema ([`GENERIC_OVER`]) emits
-/// with its generic parameter; the groups alias it at their own type
-/// argument.
+/// Emits the shared `common` module: each [`hoist_set`] DTO once, the
+/// [`GENERIC_OVER`] schema with its type parameter.
 #[must_use]
 pub(crate) fn emit_common(oas: &Oas, names: &RmNames, hoisted: &BTreeSet<String>) -> String {
     let no_unions = BTreeMap::new();
@@ -363,10 +323,7 @@ pub(crate) fn emit_common(oas: &Oas, names: &RmNames, hoisted: &BTreeSet<String>
     let _ = write!(
         b,
         "// @generated by openehr-codegen (emit-rest) — DO NOT EDIT.\n\
-         //! ITS-REST contract, shared component schemas: DTOs that appear in more\n\
-         //! than one API group's OAS bundle with identical definitions, hoisted so\n\
-         //! one Rust type serves every group (the per-group bundles duplicate\n\
-         //! shared schemas verbatim).\n\n\
+         //! ITS-REST contract: the component schemas several API groups share.\n\n\
          #![allow(\n    \
          clippy::all,\n    \
          clippy::pedantic,\n    \
@@ -441,9 +398,7 @@ pub(crate) fn emit_group(
     let _ = write!(
         b,
         "// @generated by openehr-codegen (emit-rest) — DO NOT EDIT.\n\
-         //! ITS-REST contract for the `{group}` API group: DTOs, per-operation\n\
-         //! param structs, per-response headers structs, the `server` and\n\
-         //! `client` halves, and the route table.\n\n\
+         //! ITS-REST contract for the `{group}` API group.\n\n\
          #![allow(\n    \
          clippy::all,\n    \
          clippy::pedantic,\n    \
@@ -465,10 +420,8 @@ pub(crate) fn emit_group(
             continue;
         }
         if ctx.hoisted.contains(&name) {
-            // Hoisted into `common`; a GENERIC-over schema gets a group-local
-            // alias binding the group's own type argument (the flattened
-            // `data` ref — e.g. this group's `Versionable`), so group refs
-            // keep using the bare name.
+            // Hoisted into `common`; a generic schema gets a group-local alias at the
+            // group's own type argument.
             if let Some((_, field)) = GENERIC_OVER.iter().find(|(n, _)| *n == name) {
                 let arg = ctx
                     .oas
@@ -528,8 +481,7 @@ pub(crate) fn emit_group(
     let _ = write!(
         b,
         "/// The operations of this group as `(method, path, operation_id)`, in OAS\n\
-         /// document order: `server::router` binds each to its trait method, and\n\
-         /// `crate::rest::routes::lookup` matches a request path against them.\n\
+         /// document order.\n\
          pub const ROUTES: &[(&str, &str, &str)] = &[\n"
     );
     for op in &ops {
@@ -592,10 +544,8 @@ struct Ctx<'a> {
     dtos: &'a BTreeSet<String>,
     /// The cross-group hoisted schema names ([`hoist_set`]).
     hoisted: &'a BTreeSet<String>,
-    /// Whether we are emitting the shared `common` module itself (hoisted
-    /// names render bare) or a group module (hoisted names render
-    /// `super::common::…`, except a [`GENERIC_OVER`] name, which the group
-    /// aliases locally).
+    /// Whether this renders the shared `common` module, where hoisted names render
+    /// bare, or a group module, where they render `super::common::…`.
     in_common: bool,
     /// The group's response unions ([`response_unions`]): the stable form of
     /// each typed inline `oneOf` schema → its emitted enum name.
@@ -603,23 +553,12 @@ struct Ctx<'a> {
 }
 
 impl Ctx<'_> {
-    /// Map a `$ref` schema to its Rust type.
+    /// Maps a `$ref` schema to its Rust type.
     ///
-    /// A schema whose KEY does not match its class — the released bundles
-    /// rename `CLUSTER` to `Clstr` and give every generic INSTANTIATION its own
-    /// flat key — is resolved through the monomorphization map read from each
-    /// schema's own `title` (see `plan::overrides::OAS_MONOMORPHIZATIONS`);
-    /// without it these emit as `allOf`-truncated DTOs that drop their
-    /// inherited members and the spec type's strict reader.
-    ///
-    /// RM/BASE spec types resolve to the TYPED spec structs: since the
-    /// foundation rewrite every spec type carries emitted manual
-    /// `serde::Serialize`/`Deserialize` impls (its crate's `json_serde.rs`),
-    /// and those impls ARE the strict canonical-JSON reader — so a typed field
-    /// is strict by construction where an untyped `Value` silently accepted
-    /// anything. A GENERIC-over hoisted schema has a group-local alias
-    /// (bare name); every other hoisted schema lives in `super::common`. A ref
-    /// to something emitted nowhere is resolved and mapped structurally.
+    /// A key that differs from its class (`Clstr`, generic instantiations) is
+    /// resolved through `plan::overrides::OAS_MONOMORPHIZATIONS`. RM/BASE types
+    /// resolve to the typed spec structs, whose serde impls are the strict
+    /// canonical-JSON reader.
     fn ref_type(&self, name: &str, schema: &Value) -> String {
         if let Some(spec) = oas_monomorphization(name) {
             return spec.to_string();
@@ -642,9 +581,8 @@ impl Ctx<'_> {
         self.rust_type(self.oas.resolve(schema))
     }
 
-    /// Map an OAS schema to a Rust type. RM `$ref`s resolve to the spec crate
-    /// preludes; local DTO refs to the bare name; unknown/complex shapes degrade
-    /// to `serde_json::Value` (the same honest fallback the BMM emitter uses).
+    /// Maps an OAS schema to a Rust type; an unknown or complex shape is
+    /// `serde_json::Value`.
     fn rust_type(&self, schema: &Value) -> String {
         if let Some(name) = Oas::ref_name(schema) {
             return self.ref_type(&name, schema);
@@ -671,25 +609,15 @@ impl Ctx<'_> {
                 );
             }
         }
-        // `allOf` COMPOSITION. A schema whose only structural content is a
-        // single-`$ref` `allOf` is a pure alias for its referent — OAS 3.0
-        // composes independently-validated definitions
-        // (<https://spec.openapis.org/oas/v3.0.3#composition-and-inheritance-polymorphism>),
-        // so an empty own-contribution leaves exactly the referent's shape. The
-        // released OAS uses it to give one `ITEM_TAG` schema a per-resource name.
-        // A schema that ALSO declares `properties` is a genuine extension and
-        // reaches the object branch instead.
+        // A single-`$ref` `allOf` with no own `properties` is an alias for its
+        // referent (<https://spec.openapis.org/oas/v3.0.3#composition-and-inheritance-polymorphism>).
         if schema.get("properties").is_none()
             && let Some(members) = schema.get("allOf").and_then(Value::as_array)
         {
             match members.as_slice() {
                 [only] => return self.rust_type(only),
-                // A multi-member `allOf` composes several schemas into one
-                // object, which needs a MERGED struct this emitter does not
-                // build. The released OAS contains none (every `allOf` in the
-                // vendored bundles has exactly one member), so this arm is
-                // unreachable today and carries the payload untyped rather
-                // than picking one member and silently losing the others.
+                // A multi-member `allOf` needs a merged struct; the vendored OAS has none, so
+                // the payload stays untyped rather than losing members.
                 _ => return "serde_json::Value".to_string(),
             }
         }
@@ -705,14 +633,7 @@ impl Ctx<'_> {
                         if i.as_object().is_some_and(serde_json::Map::is_empty) {
                             "serde_json::Value".to_string()
                         } else {
-                            // The item schema goes through `rust_type` VERBATIM
-                            // (never pre-resolved): a `$ref` item must keep its
-                            // name so `items: {$ref: ResultSetColumn}` emits
-                            // `Vec<ResultSetColumn>`. Resolving first discards
-                            // the name and the item degrades to an untyped
-                            // `serde_json::Value`. The `$ref` arm above still
-                            // resolves structurally when the name is not one
-                            // this emitter binds.
+                            // The item schema keeps its `$ref` name so it emits `Vec<ResultSetColumn>`.
                             self.rust_type(i)
                         }
                     },
@@ -734,23 +655,12 @@ impl Ctx<'_> {
         }
     }
 
-    /// The `allOf`-flattened object shape of a component schema: the members it
-    /// accepts (ancestors first, then its own, in document order) and the union
-    /// of every `required` list on the chain.
+    /// The `allOf`-flattened object shape of a component schema: its members,
+    /// ancestors first, and the union of every `required` list on the chain.
     ///
-    /// OAS 3.0 models inheritance as `allOf` composition — a derived schema is
-    /// "validated against all the schemas" it composes plus its own definition,
-    /// and `discriminator` "can be used to aid in serialization,
-    /// deserialization, and validation" of exactly that construct
+    /// OAS 3.0 models inheritance as `allOf` composition
     /// (<https://spec.openapis.org/oas/v3.0.3#composition-and-inheritance-polymorphism>).
-    /// The released ITS-REST bundles use it for the whole RM subtype chain and
-    /// for `UpdateAttestation` extending `UpdateAudit`, so a DTO emitted from
-    /// its OWN `properties` alone silently loses every inherited member (an
-    /// `UPDATE_ATTESTATION` without `change_type`/`committer`).
-    ///
-    /// A member redeclared by a descendant (the `_type` enum narrowing) keeps
-    /// the ancestor's position and takes the descendant's schema, so the
-    /// emitted field order stays deterministic.
+    /// A member a descendant redeclares keeps the ancestor's position.
     fn merged_object(&self, schema: &Value) -> (Vec<(String, Value)>, BTreeSet<String>) {
         let mut props: Vec<(String, Value)> = Vec::new();
         let mut required: BTreeSet<String> = BTreeSet::new();
@@ -759,8 +669,7 @@ impl Ctx<'_> {
         (props, required)
     }
 
-    /// Accumulate one link of the [`Ctx::merged_object`] chain: ancestors first
-    /// (depth-first through `allOf`), then this schema's own contribution.
+    /// Accumulates one link of the [`Ctx::merged_object`] chain, ancestors first;
     /// `seen` breaks a cyclic or diamond `$ref` chain.
     fn collect_object(
         &self,
@@ -799,15 +708,12 @@ impl Ctx<'_> {
         );
     }
 
-    /// Map an OAS **parameter** to a Rust type: the grammar type
+    /// Maps an OAS parameter to a Rust type: the grammar type
     /// [`crate::plan::rest_text_types`] records for its component, else its schema's.
     ///
-    /// A parameter is transported as TEXT, not as JSON: its wire form is fixed by
-    /// its `style`/`explode` rules (<https://spec.openapis.org/oas/v3.0.3#style-values>;
-    /// the `openehr-item-tag` header, `style: simple, explode: true`, reads
-    /// `key="flag",value="follow-up"`). So an array of structured items carries the
-    /// raw values (one `String` per occurrence) for the handler to decode; only
-    /// primitive items keep their mapped type, which a text value can be coerced to.
+    /// A parameter is text under its `style`/`explode` rules
+    /// (<https://spec.openapis.org/oas/v3.0.3#style-values>), so an array of
+    /// structured items carries one raw `String` per occurrence.
     fn param_rust_type(&self, op: &Operation, p: &Param) -> String {
         let schema = &p.schema;
         if let Some(typed) =
@@ -829,22 +735,14 @@ impl Ctx<'_> {
 
 fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
     let schema = ctx.oas.resolve(schema);
-    // A `discriminator.mapping` schema is OAS polymorphism over the canonical
-    // `_type` (every released mapping uses `propertyName: _type`): it emits a
-    // real enum over the mapping's targets, dispatched by the same strict
-    // tag-anywhere machinery the spec crates' own emitted impls use — never an
-    // untyped alias (`Versionable` was `pub type … =
-    // serde_json::Value`).
+    // A `discriminator.mapping` over `_type` emits an enum over its targets.
     if let Some(mapping) = schema
         .get("discriminator")
         .and_then(|d| d.get("mapping"))
         .and_then(Value::as_object)
     {
-        // A base carrying `x-discriminator-value` is INSTANTIABLE in its own
-        // right — the extension names the `_type` an instance of the base itself
-        // sends — so its members survive: it emits as a `…Data` struct and joins
-        // the enum as one more variant. A base WITHOUT it is abstract and stays
-        // a pure union over its mapping.
+        // A base carrying `x-discriminator-value` is instantiable: it emits as a
+        // `…Data` struct and joins the enum as one more variant.
         let base_tag = schema
             .get("x-discriminator-value")
             .and_then(Value::as_str)
@@ -903,9 +801,7 @@ fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
     {
         let ty_name = dto_type(name);
         let (props, required) = ctx.merged_object(schema);
-        // The generic hoisted schema ([`GENERIC_OVER`]) emits with its real
-        // type parameter in the shared module; the flattened field types as
-        // `T` and each group binds it via a local alias.
+        // The generic hoisted schema types its flattened field as `T`.
         let generic = if ctx.in_common {
             GENERIC_OVER
                 .iter()
@@ -939,10 +835,7 @@ fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
     }
 }
 
-/// Emit one transport-DTO struct: `props`/`required` are the `allOf`-flattened
-/// shape ([`Ctx::merged_object`]), `generic` says how the struct carries the
-/// [`GENERIC_OVER`] type parameter `T`, and `schema` is the declaring schema,
-/// read for its `additionalProperties` policy.
+/// Emits one transport-DTO struct from its `allOf`-flattened shape.
 #[expect(
     clippy::too_many_arguments,
     reason = "one emission site each for the schema's identity, its Rust name, the generic binding, the flattened shape and the declaring schema — bundling them into a struct would only rename the same arguments"
@@ -957,19 +850,13 @@ fn emit_struct(
     schema: &Value,
     ctx: &Ctx,
 ) {
-    // The vendored OAS `required` list, minus the docs-text-wins corrections
-    // (`plan::overrides::REST_OPTIONAL_OVERRIDES`): where the ITS-REST docs
-    // text contradicts the OAS shape, the field is emitted optional.
+    // The OAS `required` list minus `plan::overrides::REST_OPTIONAL_OVERRIDES`.
     let required: BTreeSet<&str> = all_required
         .iter()
         .map(String::as_str)
         .filter(|f| crate::plan::overrides::rest_optional_override(ty_name, f).is_none())
         .collect();
-    // A schema declaring `additionalProperties: false` is CLOSED by the released
-    // OAS, so the DTO must refuse an undeclared member rather than accept what
-    // the specification's own computable artifact rejects. serde's
-    // `deny_unknown_fields` is the exact realization, and it is mutually
-    // exclusive with the flatten extension map by construction.
+    // `additionalProperties: false` is a closed object: `deny_unknown_fields`.
     let closed = schema.get("additionalProperties") == Some(&Value::Bool(false));
     let (deny_doc, deny_attr) = if closed {
         (
@@ -1103,23 +990,11 @@ struct TaggedEnum<'a> {
     base: Option<&'a (String, String)>,
 }
 
-/// Emit a `_type`-dispatched enum.
+/// Emits a `_type`-dispatched enum, one variant per member in document order.
 ///
-/// One variant per member, in document order; each carries the target's Rust
-/// type (an RM/BASE spec type or a local DTO, through [`Ctx::rust_type`]).
-/// Serialization delegates to the inner value (whose emitted impl writes its
-/// own `_type`); deserialization dispatches on the member tags with the shared
-/// strict tag-anywhere runtime (`openehr_base::serde_support`) — an unknown
-/// `_type` is refused naming the legal set, exactly like the spec crates' own
-/// closed-set enums.
-///
-/// `base` is `Some((tag, data_type))` when a discriminator schema is
-/// INSTANTIABLE ITSELF (it carries `x-discriminator-value`): the base joins the
-/// union as a final variant over its own `…Data` struct, and — because the OAS
-/// leaves `_type` out of such a base's `required` list and gives it a
-/// `default` — an object with NO discriminator reads as that base variant
-/// instead of being refused. Without a base a missing `_type` is an error:
-/// nothing could be constructed from it.
+/// An unknown `_type` is refused naming the legal set. With `base`, the
+/// schema's own `x-discriminator-value` form is a final variant and an object
+/// with no `_type` reads as it; without one, a missing `_type` is an error.
 fn emit_tagged_enum(b: &mut String, e: &TaggedEnum<'_>) {
     let name = e.label;
     let ty_name = e.ty_name;
@@ -1210,9 +1085,7 @@ fn emit_tagged_enum(b: &mut String, e: &TaggedEnum<'_>) {
             );
         }
     }
-    // An object with no `_type` at all: the concrete base's own form when the
-    // schema declares one, otherwise a refusal (an abstract slot cannot pick a
-    // variant without its discriminator).
+    // No `_type`: the concrete base's form when declared, otherwise a refusal.
     let none_arm = base.map_or_else(
         || {
             format!(
@@ -1264,14 +1137,8 @@ struct ResponseUnion {
 /// response component, in first-use order.
 ///
 /// A `oneOf` without a `discriminator` qualifies when every member is a `$ref`
-/// to a schema whose own `_type` property is a single-valued `enum` (the RM
-/// class name the canonical JSON carries) and the tags are distinct: OAS 3.0
-/// §Discriminator Object says that without a discriminator "inline or
-/// referenced schema MUST be validated against all oneOf members"
-/// (<https://spec.openapis.org/oas/v3.0.3#discriminator-object>), and each
-/// member's closed `_type` enum makes the members mutually exclusive, so
-/// dispatching on `_type` selects the single member a valid body matches. A
-/// `oneOf` with `Identifier` is the `Prefer` [`Ctx::rust_type`] form instead.
+/// with its own distinct single-valued `_type` enum, which makes the members
+/// mutually exclusive (<https://spec.openapis.org/oas/v3.0.3#discriminator-object>).
 fn response_unions(ops: &[Operation], ctx: &Ctx) -> Vec<ResponseUnion> {
     let mut out: Vec<ResponseUnion> = Vec::new();
     for resp in ops.iter().flat_map(|op| op.responses.iter()) {
@@ -1294,9 +1161,8 @@ fn response_unions(ops: &[Operation], ctx: &Ctx) -> Vec<ResponseUnion> {
     out
 }
 
-/// The `(tag, variant, rust type)` members of a discriminator-less `oneOf`
-/// whose members all carry their own single `_type` tag, or `None` when the
-/// schema is not such a union ([`response_unions`]).
+/// The `(tag, variant, rust type)` members of a [`response_unions`] `oneOf`,
+/// or `None` when the schema is not one.
 fn union_variants(schema: &Value, ctx: &Ctx) -> Option<Vec<(String, String, String)>> {
     if schema.get("$ref").is_some() || schema.get("discriminator").is_some() {
         return None;
@@ -1391,9 +1257,8 @@ fn emit_params_struct(b: &mut String, op: &Operation, ctx: &Ctx) {
     b.push_str("}\n\n");
 }
 
-/// The public request-body decoder of `op`, `{operation}_request_body`: the
-/// decoding the generated handler runs, from the request's `Content-Type` and
-/// body bytes to the type the server trait receives.
+/// Emits `{operation}_request_body`, the public request-body decoder the
+/// generated handler runs.
 fn emit_request_body_decoder(b: &mut String, op: &Operation, ctx: &Ctx) {
     let Some((schema, required)) = &op.request_body else {
         return;
@@ -1445,9 +1310,7 @@ fn emit_request_body_decoder(b: &mut String, op: &Operation, ctx: &Ctx) {
     );
 }
 
-/// The `from_request` constructor of `op`'s param struct, the public form of
-/// the decoding the generated handler runs, and `from_parts`, the decoding
-/// itself, which both share.
+/// Emits the `from_request` and `from_parts` decoders of `op`'s param struct.
 fn emit_params_decoders(b: &mut String, op: &Operation, ctx: &Ctx) {
     let has = |location: &str| op.parameters.iter().any(|p| p.location == location);
     let (path, query, header) = (has("path"), has("query"), has("header"));
@@ -1538,9 +1401,8 @@ fn param_entry(oas: &Oas, p: &Param) -> String {
     )
 }
 
-/// The `Option<crate::rest::routes::IdentifierClass>` expression of `p`: the
-/// class [`crate::plan::overrides::REST_PATH_IDENTIFIERS`] records for a path
-/// parameter's component, `None` for any other parameter.
+/// The `Option<crate::rest::routes::IdentifierClass>` expression of `p`, from
+/// [`crate::plan::overrides::REST_PATH_IDENTIFIERS`] for a path parameter.
 fn param_identifier(p: &Param) -> String {
     if p.location != "path" {
         return "None".to_string();
@@ -1566,9 +1428,8 @@ fn param_identifier(p: &Param) -> String {
     }
 }
 
-/// Whether `p` explodes: its declared `explode`, else the OAS 3.0.3 default
-/// (§Parameter Object, `explode`) — `true` under the `form` style, which is the
-/// default style of a query or cookie parameter.
+/// Whether `p` explodes: its declared `explode`, else `true` under the `form`
+/// style (OAS 3.0.3 §Parameter Object).
 fn param_explode(p: &Param) -> bool {
     let default_style = match p.location.as_str() {
         "query" | "cookie" => "form",
@@ -1631,9 +1492,8 @@ fn param_kind(oas: &Oas, schema: &Value) -> String {
     format!("{ROUTES_MODULE}::ParamKind::{kind}")
 }
 
-/// Appends to `op` the request headers the ITS-REST docs text defines for it
-/// beyond the OAS parameters (`plan::overrides::REST_DOCS_TEXT_HEADERS`), each
-/// as an optional header parameter after the declared ones.
+/// Appends `op`'s `plan::overrides::REST_DOCS_TEXT_HEADERS` as optional header
+/// parameters.
 fn append_docs_text_headers(op: &mut Operation<'_>) {
     for h in rest_docs_text_headers(&op.operation_id) {
         if op.parameters.iter().any(|p| p.name == h.name) {
@@ -1663,15 +1523,11 @@ fn json_request(op: &Operation) -> bool {
 }
 
 /// The media types `op`'s request body is admitted in: its `requestBody.content`
-/// keys, then any further type its `Content-Type` parameter enum declares, in
-/// document order.
+/// keys, then any further type its `Content-Type` parameter enum declares.
 ///
-/// The released OAS lists only `application/json` under `requestBody.content`
-/// for the operations whose `Content-Type` parameter and docs text also admit
-/// XML and the Simplified Formats ("in addition to the canonical
-/// `application/json` / `application/xml`", ITS-REST
-/// `operations/contribution_create.yaml` §Simplified Formats); the docs text
-/// wins.
+/// The docs text admits XML and the Simplified Formats where the OAS lists
+/// only JSON (ITS-REST `operations/contribution_create.yaml` §Simplified
+/// Formats).
 fn admitted_request_media(op: &Operation, oas: &Oas) -> Vec<String> {
     let mut media = op.request_media.clone();
     let declared = op
@@ -1697,8 +1553,7 @@ const SIMPLIFIED_MEDIA: [&str; 2] = [
 ];
 
 /// Whether `op` takes a canonical-JSON body whose `Content-Type` parameter
-/// admits both Simplified Formats: its server body is then a
-/// `crate::rest::runtime::Payload`.
+/// admits both Simplified Formats.
 fn simplified_request(op: &Operation, ctx: &Ctx) -> bool {
     json_request(op)
         && op.parameters.iter().any(|p| {
@@ -1717,9 +1572,8 @@ fn simplified_request(op: &Operation, ctx: &Ctx) -> bool {
         })
 }
 
-/// The server body type of `op`: its canonical type, or a `Payload` over the
-/// canonical type and its Simplified Formats form (a [`GENERIC_CARRIERS`]
-/// envelope over raw JSON content, any other body raw JSON).
+/// The server body type of `op`: its canonical type, or a `Payload` over it
+/// and its Simplified Formats form.
 fn server_body_type(op: &Operation, schema: &Value, ctx: &Ctx) -> String {
     let canonical = ctx.rust_type(schema);
     if !simplified_request(op, ctx) {
@@ -1795,11 +1649,9 @@ fn server_response_name(op: &Operation) -> String {
 /// The axum path for `op` plus the positional capture name of every path
 /// parameter.
 ///
-/// An RFC 6570 query expansion (`{?name*}`) is dropped, and every `{name}`
-/// segment becomes `{p<segment index>}`: axum's matcher refuses two routes
-/// that name different captures at one position (`/ehr/{ehr_id}/ehr_status/
-/// {version_uid}` beside `…/{uid_based_id}/tags`), and a positional name is
-/// the same for every route of the group.
+/// The RFC 6570 query expansion is dropped and each `{name}` becomes
+/// `{p<segment index>}`: axum refuses two routes naming different captures at
+/// one position.
 fn axum_path(op: &Operation) -> (String, BTreeMap<String, String>) {
     let template = op.path.split("{?").next().unwrap_or(op.path);
     let mut captures = BTreeMap::new();
@@ -1823,10 +1675,8 @@ fn axum_path(op: &Operation) -> (String, BTreeMap<String, String>) {
     (segments.join("/"), captures)
 }
 
-/// The server half of one API group: an inline `server` module carrying, per
-/// operation, the success-answer enum, the trait method, and the axum handler
-/// that decodes a request into the method's arguments and encodes its answer;
-/// plus the `router` binding every route to its handler.
+/// Emits the `server` module of one API group: per operation the success
+/// enum, trait method and handler, plus the `router`.
 fn emit_server_module(out: &mut String, group: &str, ops: &[Operation], ctx: &Ctx) {
     let trait_name = format!("{}Api", naming::type_name(group));
     // Rendered into its own buffer, one module level below the group, like
@@ -1835,10 +1685,7 @@ fn emit_server_module(out: &mut String, group: &str, ops: &[Operation], ctx: &Ct
     let b = &mut b;
     let _ = write!(
         b,
-        "/// The server half of the `{group}` API group (ITS-REST): the `{trait_name}`\n\
-         /// trait an implementation provides, one success-answer enum per operation,\n\
-         /// and `router`, which binds every operation of the route table to its\n\
-         /// trait method over axum.\n\
+        "/// The server half of the `{group}` API group (ITS-REST).\n\
          #[cfg(feature = \"rest-server\")]\n\
          pub mod server {{\n    \
          use super::*;\n\n"
@@ -1850,12 +1697,8 @@ fn emit_server_module(out: &mut String, group: &str, ops: &[Operation], ctx: &Ct
         b,
         "    /// Server contract for the `{group}` API group (ITS-REST).\n    \
          ///\n    \
-         /// Every method defaults to refusing with `ApiError::NotImplemented` (`501`),\n    \
-         /// so an implementor overrides only the operations it supports; `router`\n    \
-         /// serves an implementation over axum. A method refuses with a\n    \
-         /// [`crate::rest::runtime::Refusal`]: `?` turns an `ApiError` into one,\n    \
-         /// and `Refusal::with_headers` adds the headers the OAS declares for the\n    \
-         /// answer (the `ETag` of a `412`, for one).\n    \
+         /// Every method defaults to `ApiError::NotImplemented` (`501`), and refuses\n    \
+         /// with a [`crate::rest::runtime::Refusal`].\n    \
          #[async_trait::async_trait]\n    \
          pub trait {trait_name} {{\n"
     );
@@ -1867,24 +1710,10 @@ fn emit_server_module(out: &mut String, group: &str, ops: &[Operation], ctx: &Ct
         b,
         "    /// The axum router serving every operation of the `{group}` group over `api`.\n    \
          ///\n    \
-         /// Each route is bound at its OAS path relative to the API base (an RFC 6570\n    \
-         /// query expansion dropped, path captures named by segment position). A\n    \
-         /// handler decodes the request into the operation's params struct and body\n    \
-         /// — a missing or unparseable parameter answers `400` naming it, a\n    \
-         /// canonical-JSON body sent as another `Content-Type` answers `415` — and\n    \
-         /// encodes the trait method's answer, or its `Refusal` as the ITS-REST\n    \
-         /// `Error` body with the refusal's headers. Mount it under the base path\n    \
-         /// with `axum::Router::nest`.\n    \
-         ///\n    \
-         /// The router carries no fallback, so group routers merge freely (axum\n    \
-         /// refuses to merge two routers that both carry one); finish the merged\n    \
-         /// router with `crate::rest::server::with_fallbacks` for the `404` and `405`\n    \
-         /// answers, or take `crate::rest::server::router`, which does both.\n    \
-         ///\n    \
-         /// The typed bodies are canonical JSON only: a server that also serves\n    \
-         /// canonical XML or a Simplified Format routes those requests itself, and\n    \
-         /// the `accept` parameter reaches the trait method, which answers\n    \
-         /// `ApiError::NotAcceptable` for a representation it does not serve.\n    \
+         /// Routes are relative to the API base; mount it with `axum::Router::nest`.\n    \
+         /// It carries no fallback, so group routers merge (axum refuses two\n    \
+         /// fallbacks); `crate::rest::server::with_fallbacks` adds the `404` and `405`.\n    \
+         /// The typed bodies are canonical JSON only.\n    \
          pub fn router<S>(api: std::sync::Arc<S>) -> axum::Router\n    \
          where\n        \
          S: {trait_name} + Send + Sync + 'static,\n    \
@@ -1909,9 +1738,8 @@ fn emit_server_module(out: &mut String, group: &str, ops: &[Operation], ctx: &Ct
     out.push_str(&b.replace("super::common::", "super::super::common::"));
 }
 
-/// The success-answer enum of one operation: one variant per documented `2xx`
-/// or `3xx` status, carrying the body as the client types it and the headers
-/// struct when the OAS declares headers.
+/// Emits the success-answer enum of one operation, one variant per documented
+/// `2xx` or `3xx` status.
 fn emit_server_response(b: &mut String, op: &Operation, ctx: &Ctx) {
     let name = server_response_name(op);
     let _ = write!(
@@ -1962,10 +1790,7 @@ fn emit_server_response(b: &mut String, op: &Operation, ctx: &Ctx) {
     b.push_str("    }\n\n");
 }
 
-/// The trait method of one operation: the params struct, the body (canonical
-/// JSON decoded into its type, any other media as text), and the
-/// success-answer enum. The default body answers `NotImplemented`, so an
-/// implementor overrides only the operations it supports.
+/// Emits the trait method of one operation, defaulting to `NotImplemented`.
 fn emit_trait_method(b: &mut String, op: &Operation, ctx: &Ctx) {
     let method = field_id(&op.operation_id);
     let mut args = String::from("&self");
@@ -2058,9 +1883,7 @@ fn param_extraction(op: &Operation, p: &Param, ctx: &Ctx) -> String {
     }
 }
 
-/// The axum handler of one operation: decode the path captures, the query
-/// pairs, the headers and the body into the trait method's arguments, call
-/// it, and encode its answer.
+/// Emits the axum handler of one operation.
 fn emit_server_handler(b: &mut String, op: &Operation, trait_name: &str, ctx: &Ctx) {
     let method = field_id(&op.operation_id);
     let response = server_response_name(op);
@@ -2196,31 +2019,19 @@ fn emit_server_handler(b: &mut String, op: &Operation, trait_name: &str, ctx: &C
     );
 }
 
-/// The client half of one API group: an inline `client` module carrying, per
-/// operation, the outcome enum (one variant per documented status), a headers
-/// struct per response that declares headers, and one method on the group's
-/// client type over the hand-written `crate::rest::client::Client`.
+/// Emits the `client` module of one API group: per operation the outcome
+/// enum, the headers structs and one client method.
 ///
-/// Every request is built from the operation's OAS declaration: path
-/// parameters substitute their `{name}` template (percent-encoded), query
-/// parameters go on the query string (`style: form`, one pair per array
-/// item, one pair per member of an object), header parameters become request
-/// headers (one field per array item), and the body is canonical JSON when
-/// the request content declares `application/json`, raw text otherwise. The
-/// response is matched on its status against the documented set; a status the
-/// OAS does not document is a typed error, never an outcome.
+/// A status the OAS does not document is a typed error, never an outcome.
 fn emit_client_module(out: &mut String, group: &str, ops: &[Operation], ctx: &Ctx) {
     let client_ty = format!("{}Client", naming::type_name(group));
-    // Rendered into its own buffer: the module sits one level below the group
-    // module, so a hoisted `super::common::…` reference the shared type mapper
-    // produces needs one more `super` here.
+    // Its own buffer: one module deeper, so a hoisted reference needs one more
+    // `super`.
     let mut b = String::new();
     let b = &mut b;
     let _ = write!(
         b,
-        "/// The client half of the `{group}` API group (ITS-REST): one method per\n\
-         /// operation over a [`crate::rest::client::Client`], answering an outcome\n\
-         /// enum with one variant per status the OAS documents for it.\n\
+        "/// The client half of the `{group}` API group (ITS-REST).\n\
          #[cfg(feature = \"rest-client\")]\n\
          pub mod client {{\n    \
          use super::*;\n\n"
@@ -2260,11 +2071,9 @@ fn emit_client_module(out: &mut String, group: &str, ops: &[Operation], ctx: &Ct
     out.push_str(&b.replace("super::common::", "super::super::common::"));
 }
 
-/// The `PascalCase` variant name and the `http::StatusCode` constant path for
-/// one documented status, both derived from the `http` crate's registry
-/// (`canonical_reason`). A status the registry does not name emits a name
-/// and a constant that do not exist, so the generated crate fails to compile
-/// naming the status rather than the emitter skipping a documented outcome.
+/// The `PascalCase` variant name and `http::StatusCode` constant path for one
+/// status, from `canonical_reason`; an unnamed status fails the generated
+/// crate's compile.
 fn status_variant(status: http::StatusCode) -> (String, String) {
     let Some(reason) = status.canonical_reason() else {
         return (
@@ -2297,13 +2106,11 @@ fn status_variant(status: http::StatusCode) -> (String, String) {
     (name, format!("http::StatusCode::{constant}"))
 }
 
-/// The responses the client matches for `op`: the OAS set, plus the docs-text
-/// correction the ITS-REST overview makes to every create operation.
+/// The responses the client matches for `op`: the OAS set, plus `204` on every
+/// create operation.
 ///
-/// NOTE: `ITS-REST/specifications/docs/overview/Requests_and_responses.md`
-/// §Prefer header: under `return=minimal` "If no response body is returned,
-/// the service SHOULD use `204 No Content`" — the docs text wins over the OAS,
-/// which lists `201` alone for the create operations.
+/// NOTE: ITS-REST `overview/Requests_and_responses.md` §Prefer header: "If no
+/// response body is returned, the service SHOULD use `204 No Content`".
 fn client_responses(op: &Operation) -> Vec<Response> {
     let has_prefer = op.parameters.iter().any(|p| p.name == "Prefer");
     let mut out: Vec<Response> = op
@@ -2333,12 +2140,10 @@ fn client_responses(op: &Operation) -> Vec<Response> {
     out
 }
 
-/// The response headers the docs text defines as LISTS, so a repeated field
-/// carries every value rather than the first.
+/// The response headers carried as lists.
 ///
-/// NOTE: `ITS-REST/specifications/docs/overview/Requests_and_responses.md`
-/// §openehr-item-tag and openehr-version-item-tag: "The list of all `ITEM_TAG`"
-/// (the OAS types the header `string`, one field line per tag).
+/// NOTE: ITS-REST `overview/Requests_and_responses.md` §openehr-item-tag: "The
+/// list of all `ITEM_TAG`".
 pub(super) const LIST_HEADERS: &[&str] = &["openehr-item-tag", "openehr-version-item-tag"];
 
 /// The client's typing of one documented response body.
@@ -2351,22 +2156,15 @@ enum ClientBody {
     /// Exactly one media type, `application/json`: decoded into the mapped
     /// Rust type; `optional` when the OAS lets the body be empty.
     Json { ty: String, optional: bool },
-    /// Several media types, or a non-JSON one: the body as received — the
-    /// request `Accept` selected its form and the response `Content-Type`
-    /// header names it.
+    /// Several media types, or a non-JSON one: the body as received.
     Raw,
 }
 
 /// How the client types the body of `resp` for `op`.
 ///
-/// A `2xx` JSON body is present by the OAS unless the operation takes a
-/// `Prefer` parameter and answers `201` (ITS-REST: "If the `Prefer` header is
-/// missing or set to `return=minimal`, the body is empty" — every `201_*`
-/// response component), so that one is `Option`. Every `4xx` answer carries
-/// the error body as received, whether or not the OAS attaches a schema to
-/// that status: "The response body MAY contain error details" (the `400`
-/// response component), and the only schema the OAS ever attaches to a `4xx`
-/// is `Error`.
+/// A `201` of an operation taking `Prefer` is `Option` ("If the `Prefer` header
+/// is missing or set to `return=minimal`, the body is empty"); every `4xx`
+/// carries the error body as received.
 fn client_body(op: &Operation, resp: &Response, ctx: &Ctx) -> ClientBody {
     if resp.status.is_client_error() {
         return ClientBody::Error;
@@ -2460,9 +2258,8 @@ fn emit_outcome(b: &mut String, op: &Operation, ctx: &Ctx) {
     b.push_str("    }\n\n");
 }
 
-/// The request-path expression for `op`: its OAS path with every `{name}`
-/// substituted by the percent-encoded path parameter, and an RFC 6570 query
-/// expansion (`{?name*}`) dropped — the query parameters carry it.
+/// The request-path expression for `op`, each `{name}` percent-encoded and the
+/// RFC 6570 query expansion dropped.
 fn path_format(op: &Operation) -> String {
     let mut template = String::new();
     let mut args: Vec<String> = Vec::new();
@@ -2519,9 +2316,8 @@ fn emit_client_method(b: &mut String, op: &Operation, ctx: &Ctx) {
         "        /// `{} {}`\n        \
          ///\n        \
          /// # Errors\n        \
-         /// A status the OAS does not document for this operation, a refused\n        \
-         /// credential, a service failure, an undecodable body, or a request\n        \
-         /// that could not be sent — see [`crate::rest::client::ClientError`].\n        \
+         /// A [`crate::rest::client::ClientError`] for an undocumented status, a\n        \
+         /// refused credential, a service failure, an undecodable body or a send failure.\n        \
          pub async fn {method}({args}) -> Result<{outcome}, crate::rest::client::ClientError> {{\n            \
          let mut request = crate::rest::client::Request::new(http::Method::{}, {});\n",
         op.method.to_uppercase(),
@@ -2629,9 +2425,8 @@ fn emit_client_arm(b: &mut String, op: &Operation, resp: &Response, ctx: &Ctx, o
     }
 }
 
-/// One query parameter onto the request: a scalar as one pair, an array as
-/// one pair per item, an object (`style: form, explode: true`) as one pair per
-/// member.
+/// Emits one query parameter: a scalar as one pair, an array as one pair per
+/// item, an object as one pair per member.
 fn emit_query_param(b: &mut String, name: &str, ident: &str, ty: &str, required: bool) {
     let inner = ty
         .strip_prefix("Option<")

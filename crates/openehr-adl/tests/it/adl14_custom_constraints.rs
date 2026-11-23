@@ -1,32 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 custom constraint forms of
-//! `docs/specs/openehr/AM/docs/ADL1.4/master09-customising_adl.adoc`
-//! ("Customising ADL") — the two spellings openEHR profiled onto standard ADL,
-//! and the boundary where neither is defined.
+//! The ADL 1.4 custom constraint forms of `ADL1.4/master09-customising_adl.adoc`.
 //!
-//! 1. **The inline dADL section.** §Introduction admits any `C_DOMAIN_TYPE`
-//!    descendant as a typed dADL block inside the `{}` where its standard-ADL
-//!    equivalent would stand; §Custom Syntax works `C_CODE_PHRASE` through in
-//!    full and states that the block and the compact `[local:: at0039, at0040]`
-//!    form "express exactly the same constraint" — so the two must lower to the
-//!    same constraint object, which is what these tests pin structurally.
-//! 2. **The pipe-ordinal shorthand.** `ADL2/master04.4-cadl_second_order.adoc`
-//!    §Tuple Constraints records `0|[local::at1], 1|[local::at2]` as the
-//!    deprecated openEHR-profiled 1.4 syntax and names the generic
-//!    `DV_ORDINAL` `[value, symbol]` tuple as its replacement ("This hides the
-//!    `DV_ORDINAL` type altogether"). It is accepted in the 1.4 dialect and
-//!    lowered to exactly that replacement; ADL 2, which removed it, still
-//!    refuses it — both twins are pinned here.
-//! 3. **The refusals.** A domain constrainer with no vendored shape
-//!    (`C_DV_STATE`) and a malformed `C_CODE_PHRASE` block are typed refusals,
-//!    never a silent guess.
-//!
-//! The grammar productions cited (`c_ordinal`, `ordinal_term`,
-//! `assumed_ordinal_value`, `domain_specific_extension`, `c_terminology_code`)
-//! are the vendored normative ANTLR set at `vendor/grammar/v1_4/cadl14.g4` +
-//! `cadl14_primitives.g4`.
+//! The inline dADL block and the compact `[local:: at0039, at0040]` form lower
+//! to the same constraint; the pipe-ordinal shorthand lowers to the `DV_ORDINAL`
+//! tuple `ADL2/master04.4` §Tuple Constraints names, refused in ADL 2; an
+//! unmodelled domain type and a malformed block are typed refusals.
 
 #![allow(
     clippy::expect_used,

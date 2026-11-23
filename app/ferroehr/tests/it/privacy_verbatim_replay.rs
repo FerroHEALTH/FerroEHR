@@ -6,11 +6,6 @@
 //! load. Both store a record exactly as received, so a body identifying its
 //! subject can only be REFUSED, never rewritten; these tests prove the
 //! refusal, and that nothing of the refused record lands.
-//!
-//! The source repository runs the identified-party opt-in, so it will hold a
-//! COMPOSITION whose composer is the subject by name; the target runs the
-//! configuration default, which refuses it. The library default is the
-//! refusing posture (#3243), so the permissive side has to say so.
 
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Invalid;

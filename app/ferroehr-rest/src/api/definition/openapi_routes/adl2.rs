@@ -522,16 +522,10 @@ guarded_handler! {
     /// Retrieve one ADL 2 template at a specific version
     /// (`GET /definition/template/adl2/{template_id}/{version}`).
     ///
-    /// DEPRECATED in the released spec but served: the operation file carries
-    /// `deprecated: true`
-    /// (`specifications/operations/definition_template_adl2_version_get.yaml`) under
-    /// amendment SPECITS-87, "Deprecate ADL2 'Get template at version' and the
-    /// version query parameter from upload template"
-    /// (`specifications/docs/overview/Amendment_record.md`) — the only operation in
-    /// this group so marked, and the only declaration here that carries
-    /// `deprecated`. It is still released text, so it is still served; the release
-    /// defines no `Deprecation`/`Sunset` signalling for a deprecated operation, so
-    /// none is emitted (silence, registered as a conformance boundary).
+    /// Deprecated in the released spec (SPECITS-87,
+    /// `specifications/docs/overview/Amendment_record.md`) and served; the
+    /// release defines no `Deprecation` or `Sunset` signalling, so none is
+    /// emitted.
     ///
     /// It resolves `template_id` + the SEMVER `version` (exact or
     /// `{major}[.{minor}]` prefix → highest match) and returns the same

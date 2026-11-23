@@ -3,28 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! The per-language reclassification tables.
-//!
-//! [`reclassify`] answers exactly one question: *given a token the shared DFA
-//! produced for the source slice `slice`, what would `language`'s own lexer
-//! have produced for that same slice?* — `Some(token)` when the language
-//! admits the slice as one token (possibly re-tagged), `None` when it does
-//! not. `None` sends the caller into [`super::narrow`], which retries shorter
-//! prefixes; a slice no prefix of which the language admits is that language's
-//! lexical error.
-//!
-//! Because the shared DFA is the UNION of the four lexical layers, a `None`
-//! here is never "unsupported": it is always the statement that the language's
-//! own production set does not reach this text, which is precisely what its
-//! stand-alone lexer expressed by not having the rule.
 
 use super::Language;
 use super::token::Token;
 
 /// What `language`'s own lexer would produce for `slice`, or `None` when it
 /// admits no single token spanning exactly `slice`.
-///
-/// `src`/`start` locate the slice in the original source; only the ODIN string
-/// reading needs them (the multi-line leader budget is a column measurement).
 #[expect(
     clippy::too_many_lines,
     reason = "one exhaustive match over the whole token superset; splitting it would forfeit the compiler's proof that every token has a per-language reading"
@@ -153,11 +137,8 @@ pub(super) fn reclassify(
         | Token::SymBefore
         | Token::SymClosed => match language {
             Language::Adl => Some(token.clone()),
-            // EL reserves only what `ElLexer.g4` itself declares. These are
-            // cADL constraint keywords, reachable in EL only inside the
-            // `matches { … }` block `ElParser.g4` delegates to `Cadl2Parser` —
-            // which this reader captures verbatim — so in EL expression
-            // position each is an ordinary feature name.
+            // EL reserves only what `ElLexer.g4` declares; these cADL keywords
+            // reach EL only inside a captured `matches { … }` block.
             Language::Odin | Language::Bel | Language::El => demote_word(language, slice),
         },
         // `ElLexer.g4` re-declares `SYM_THEN : 'then' | 'THEN'`, so EL takes
@@ -229,11 +210,8 @@ pub(super) fn reclassify(
             Language::Adl | Language::Bel | Language::El => Some(token.clone()),
             Language::Odin => None,
         },
-        // A qualified term code is a cADL primitive, an ODIN leaf value, AND
-        // a BEL literal: `LANG/docs/BEL/master03-language.adoc` §Literals
-        // lists `Terminology_code` among the BEL primitive literal types, and
-        // the BEL grammar reaches `TERM_CODE_REF` through its `odin_values`
-        // import (`constant_declaration`'s `primitive_object`).
+        // A qualified term code is a cADL primitive, an ODIN leaf value and a
+        // BEL literal (`LANG/docs/BEL/master03-language.adoc` §Literals).
         Token::TermCodeRef(_) => Some(token.clone()),
         // An embedded URI has no `base_expressions.g4` production and the
         // §Literals `Uri` row shows a BARE URI (lexically unproductive in
@@ -249,11 +227,10 @@ pub(super) fn reclassify(
             Language::El => is_local_term_code(slice).then(|| token.clone()),
             Language::Adl | Language::Bel => None,
         },
-        // `<# … #>` is the ODIN plug-in-syntax block
-        // (`LANG/docs/odin/master09-plug_in_syntaxes`) and the block of the
-        // ADL `INCLUDED_LANGUAGE_FRAGMENT` a `_default` takes (`base_lexer.g4`
-        // at adl-antlr `d64ffeb6f`); the BEL and EL grammars have no `#`
-        // production, so both refuse it.
+        // `<# … #>` is the ODIN plug-in block
+        // (`LANG/docs/odin/master09-plug_in_syntaxes`) and the ADL
+        // `INCLUDED_LANGUAGE_FRAGMENT` block; BEL and EL have no `#`
+        // production.
         Token::PlugInBlock(_) => match language {
             Language::Odin | Language::Adl => Some(token.clone()),
             Language::Bel | Language::El => None,
@@ -320,11 +297,9 @@ pub(super) fn reclassify(
                 Language::Odin => None,
             }
         }
-        // `@` opens the optional document prefix `schema_identifier ::= '@'
-        // schema '=' URI` (`LANG/docs/odin/master04-odin_artefacts` intro),
-        // so the ODIN reading admits it — a misplaced `@` is the parser's
-        // refusal, not the lexer's. (The vendored `odin.g4` start rule lacks
-        // the production; the docs text wins.)
+        // `@` opens the ODIN schema identifier
+        // (`LANG/docs/odin/master04-odin_artefacts`; the docs text wins over
+        // `odin.g4`); a misplaced `@` is the parser's refusal.
         Token::SymAt => Some(token.clone()),
         // `<>` is the ADL 1.4 assertion spelling of `SYM_NE` and is admitted
         // only by BEL; under cADL and ODIN the two characters are the separate
@@ -459,14 +434,6 @@ fn iso_date_time(language: Language, text: &str) -> Option<Token> {
 /// Whether `text` is a `DATE_TIME_CONSTRAINT_PATTERN`
 /// (`ADL1.4/master05-cadl.adoc` §Symbols L1422, with the literal-field,
 /// ASCII-timezone and `[T ]`-separator widenings the chapter grants).
-///
-/// NOTE: This is the LEXICAL shape only — the token's regex, needed here
-/// because the space-separated ODIN date-time widening overlaps it and the
-/// cADL reading must recover the pattern token at the same span. It is not a
-/// second home for pattern VALIDITY: the `master04.5` valid-pattern tables
-/// (field degradation `??` → `XX`, designator order, where a timezone
-/// modifier is admitted) are a parser-level check that raises `S*` codes, and
-/// they stay in the cADL parser.
 fn is_date_time_constraint_pattern(text: &str) -> bool {
     let mut rest = text;
     let fields: [&[&str]; 6] = [
@@ -541,9 +508,6 @@ fn timezone_suffix_is_pattern(rest: &str) -> bool {
 
 /// Read `slice` back as the identifier the language's own lexer would have
 /// produced, or `None` when it is not an identifier there.
-///
-/// `base_expressions.g4` has no `ALPHA_UNDERSCORE_ID`, so a `_`-initial word
-/// is not a BEL token at all.
 fn demote_word(language: Language, slice: &str) -> Option<Token> {
     let mut chars = slice.chars();
     let head = chars.next()?;
@@ -585,14 +549,9 @@ fn path(language: Language, text: &str) -> bool {
                 && ((shape.leading_slashes == 1 && shape.segments >= 1)
                     || (shape.leading_slashes == 0 && shape.segments >= 2))
         }
-        // The ODIN reading takes either case on the segment head — a
-        // docs-text-grounded widening over `base_lexer.g4`'s lower-case-only
-        // `ADL_PATH_SEGMENT`: ODIN object keys may be upper-case or `_`-initial
-        // identifiers (`odin.g4` `odin_object_key`), and every node is reachable
-        // by a path (`LANG/docs/odin/master02-overview`), so a path must be able
-        // to name an upper-case-keyed attribute. (`_`-initial segment HEADS
-        // remain un-lexable in every language — a spec-internal gap between the
-        // object-key and path-segment grammars.)
+        // ODIN takes either case on a segment head: object keys may be
+        // upper-case (`odin.g4` `odin_object_key`) and every node is reachable
+        // by a path (`LANG/docs/odin/master02-overview`).
         Language::Odin => {
             (shape.leading_slashes == 1 && shape.segments >= 1)
                 || (shape.leading_slashes == 0 && shape.segments >= 2)
@@ -697,11 +656,6 @@ fn leader_budget(src: &str, start: usize) -> usize {
 /// Remove up to `budget` leading white-space characters from every line of
 /// `raw` after the first (see [`leader_budget`]). Single-line strings are
 /// returned untouched.
-///
-/// NOTE: The stripping runs AFTER the shared lexer has validated the raw
-/// literal's `master03` escapes, and cannot change that verdict: the removed
-/// run always begins immediately after a newline, so the character preceding
-/// it is never a backslash and no escape sequence can be created or destroyed.
 fn strip_line_leaders(raw: &str, budget: usize) -> String {
     if !raw.contains('\n') {
         return raw.to_owned();

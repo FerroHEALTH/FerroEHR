@@ -2,11 +2,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written RM class invariants for `DV_TIME`.
-//!
-//! `Value_valid`: `value` is a valid (possibly partial) ISO-8601 time. Plus the
-//! inherited DV_QUANTIFIED `Magnitude_status_valid`. See `dv_date_impl` for the
-//! NOTE on why this is an explicit invariant.
+//! `DV_TIME` invariants: `Value_valid` and the inherited
+//! `Magnitude_status_valid`.
 
 use crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration;
 use crate::v1_2::data_types::quantity::date_time::dv_time::DvTime;
@@ -22,30 +19,21 @@ use openehr_base::v1_3::foundation_types::time::iso8601_time::Iso8601Time;
 use openehr_base::validate::{InvariantViolation, Validate};
 
 impl DvTime {
-    /// Addition of a duration to this time, or `None` when either value is not
-    /// a valid ISO-8601 string.
-    ///
-    /// Spec: `dv_time.adoc` §Functions `add` — "Addition of a Duration to this
-    /// Time" — effecting `dv_absolute_quantity.adoc`'s abstract `add`, whose
-    /// accuracy rule is realized by [`displaced_accuracy`].
+    /// This time plus a duration (`dv_time.adoc` `add`), the accuracy by
+    /// [`displaced_accuracy`]; `None` when either value is not valid ISO 8601.
     #[must_use]
     pub fn add(&self, a_diff: &DvDuration) -> Option<Self> {
         Some(self.displaced(self.iso().add(&duration_of(a_diff))?, a_diff))
     }
 
-    /// Subtraction of a duration from this time, under the same conditions as
+    /// This time minus a duration (`subtract`), under the conditions of
     /// [`Self::add`].
-    ///
-    /// Spec: `dv_time.adoc` §Functions `subtract`.
     #[must_use]
     pub fn subtract(&self, a_diff: &DvDuration) -> Option<Self> {
         Some(self.displaced(self.iso().subtract(&duration_of(a_diff))?, a_diff))
     }
 
-    /// Difference between this time and `other`, as a duration.
-    ///
-    /// Spec: `dv_time.adoc` §Functions `diff` — "Difference between this Time
-    /// and `other`."
+    /// The duration between this time and `other` (`diff`).
     #[must_use]
     pub fn diff(&self, other: &Self) -> Option<DvDuration> {
         let difference = self.iso().diff(&other.iso())?;

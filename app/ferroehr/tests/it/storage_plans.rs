@@ -17,12 +17,6 @@
 //! Every statement below therefore runs inside a transaction that is rolled
 //! back.
 //!
-//! What each test explains is the statement the read path itself emits: the
-//! point reads and the metadata reads expose their statement as a named
-//! constant in `ferroehr::storage::version_repo`, and the AQL statements come
-//! out of `ferroehr::aql::sql::build`, so no copy of any statement lives here
-//! to drift away from the one that runs in production.
-//!
 //! Sequential scans are discouraged for the duration of each explain
 //! transaction. The seeded corpus is a few hundred rows, where a sequential
 //! scan is genuinely the cheaper plan and the planner is right to choose it, so
@@ -70,11 +64,6 @@ struct Seeded {
 
 /// A repository with content in both tiers: several EHRs of live content, and
 /// one EHR archived so the `cold` partitions are populated rather than empty.
-///
-/// A plan over an empty partition proves nothing about pruning — `EXPLAIN
-/// ANALYZE` would report the same "never executed" node whether the planner
-/// pruned the partition or merely found nothing in it — so the archived EHR is
-/// part of the fixture, not decoration.
 async fn seed(svc: &FerroEhrService, pool: &PgPool) -> Seeded {
     seed_with_history(svc, pool, 2).await
 }
@@ -312,11 +301,6 @@ fn partitions<'a>(scans: &'a [Scan], relation: &str) -> Vec<&'a str> {
 }
 
 /// Assert that no plan node carries a row-security qualifier.
-///
-/// H9: the instance is single-tenant, so no policy exists to attach a qual or
-/// an `InitPlan` to any scan. The whole plan is searched as text because a policy
-/// qual can surface as a `Filter`, an `Index Cond` or a subplan, and any of the
-/// three would be a regression.
 fn assert_no_policy_qual(plan: &Value, scans: &[Scan]) {
     let text = plan.to_string();
     for token in ["tenant", "current_setting"] {
@@ -1161,14 +1145,6 @@ async fn a_population_count_of_whole_objects_reads_no_node() {
 
 /// The `LATEST_VERSION` binding under `CONTAINS` costs one key probe per
 /// object, not a walk of its trunk (#3453).
-///
-/// The head row is reached by `pk_vo_head`, and the version row by a key
-/// probe, never through the at-time index, which made the planner read every
-/// trunk version of the object per node row (75 601 of 93 255 buffers in the
-/// class-`s` population `CONTAINS` recorded on #3350).
-/// A probe of a row by a three-column key touches the index's root and leaf
-/// and the heap page: a ceiling of eight buffers a loop holds that reading
-/// and fails the walk, whose per-loop cost was about twenty-two.
 fn assert_head_join_by_key(scans: &[Scan]) {
     let heads = on(scans, "vo_head");
     assert!(
@@ -1197,10 +1173,6 @@ fn assert_head_join_by_key(scans: &[Scan]) {
 
 /// The version row of each head is probed with its object's `vo_id` bound
 /// (#3453, #5464).
-///
-/// [`assert_head_join_by_key`] prices a probe at eight buffers a loop, so the
-/// scan it prices must be one: a scan of the partition, run once, costs per
-/// loop the partition's size, which no key lookup decides.
 fn assert_version_probed_per_object(scans: &[Scan]) {
     let versions = on(scans, "version_hot");
     assert!(
@@ -1250,11 +1222,6 @@ fn dated_composition(name: &str, start: &str) -> Value {
 /// A population-wide ordered page reads the compositions in start-time order
 /// from `idx_node_hot_composition_start` and stops at the limit, so its cost
 /// does not grow with the number of compositions (#4090).
-///
-/// The compositions carry distinct start times and outnumber the page, and the
-/// statistics are taken after they land, so the plan is the one the
-/// statistics choose over a sort of every root rather than a near tie on a
-/// store no larger than the page (#4946).
 #[tokio::test]
 async fn the_newest_compositions_page_reads_the_start_time_index() {
     let db = testkit::db().await.expect("testkit database");
@@ -1351,14 +1318,6 @@ async fn explain_ordered_page(pool: &PgPool, aql: &str, extra: Option<&str>) -> 
 
 /// A population page ordered by the version uid runs in one backend, and
 /// `idx_version_hot_uid` hands the versions over in that order (#4429).
-///
-/// Without the index the only plan that sorted the version rows before the
-/// joins was a `Gather Merge`, which a pruned partition is offered however
-/// small it is, so such a query started a parallel worker on every call or,
-/// when the statistics tipped the other way, sorted the whole join. Over this
-/// small seed a sort of a sequential scan is as good a serial plan, so the
-/// index is read with sorting disabled, which only an index matching the
-/// engine's uid expression can satisfy.
 #[tokio::test]
 async fn a_page_ordered_by_the_version_uid_reads_the_uid_index_serially() {
     let db = testkit::db().await.expect("testkit database");
@@ -1768,17 +1727,6 @@ async fn explain_after(
 /// A projection over the EHRs its caller named reads those EHRs' objects
 /// first and each object's own nodes after them, whatever the archetype
 /// statistics say (#4487).
-///
-/// When an archetype's rows fall out of the most-common-value list of
-/// `st_node_hot_archetype`, as the storage bench's commit group made them do
-/// in some rounds by diluting the sample, the planner estimates them at one
-/// row. A contained node that was a plain FROM item then led the join through
-/// `idx_node_hot_arch_subsume` over the whole population and ran every path
-/// binding of the projection for each of those rows before the EHR filter:
-/// the bench's wide projection over one EHR read about 10 000 pages per call
-/// in those rounds and 1 200 in the others. The statement now fences the
-/// contained node inside its parent, so the plan is the same with the list
-/// cut to one entry and with it whole.
 #[tokio::test]
 async fn a_projection_over_named_ehrs_holds_its_plan_whatever_the_archetype_statistics() {
     let db = testkit::db().await.expect("testkit database");
@@ -2009,14 +1957,6 @@ pub(crate) fn assert_lookup_through(name: &str, plan: &Value, population: u32, i
 }
 
 /// A lookup of a person by an identifier value reads the one person (#4437).
-///
-/// A path binding is a correlated subquery, so the lookup read every
-/// `person_identifier` CLUSTER of the store, probed its version, head and root
-/// and tested the value last: 16 buffers a person, 350 ms at 50 000 persons.
-/// The engine now anchors such an equality on the ELEMENT rows of the same
-/// version by their search text (`ext.node_search_text`), which
-/// `idx_node_hot_value_search` serves, on the flat shape and on the
-/// streaming one (a LIMIT without an ORDER BY) alike.
 #[tokio::test]
 async fn a_lookup_by_a_person_identifier_reads_the_one_person() {
     const PERSONS: u32 = 200;
@@ -2108,9 +2048,6 @@ fn relationship_with_identifier(person: VoId, index: u32) -> Value {
 /// abstract and the standalone `PARTY_RELATIONSHIP`, reads the one object
 /// through `idx_node_hot_value_search` (#5474), for an administrator and,
 /// under the policy filter, for any other caller.
-///
-/// The store holds fifty objects of each class, numbered apart, and the
-/// statistics are taken after they land, so the plan is the one they choose.
 #[tokio::test]
 async fn a_lookup_under_every_demographic_root_reads_the_one_object() {
     use ferroehr::aql::sql::readers::PolicyParties;
@@ -2342,11 +2279,6 @@ const READS_BY_VO_ID: [(&str, &str); 2] = [
 /// its seed, beside one four-version object committed since: the state in
 /// which the storage bench's reads walked `pk_commit_audit` (#4438). Returns
 /// that object.
-///
-/// The partitions carry the statistics autovacuum takes of them; `version`
-/// itself keeps the seed's highest commit audit id, which the planner reads as
-/// the highest there is, so a merge join over the audit index looks as if it
-/// stops after the seed's rows.
 async fn seed_stale_parent_statistics(svc: &FerroEhrService, pool: &PgPool) -> VoId {
     // The storage bench's seed, analyzed whole once seeded.
     let body = composition("parent statistics");
@@ -2461,11 +2393,6 @@ async fn a_read_by_vo_id_probes_each_commit_audit_by_key() {
 
 /// A read by `vo_id` probes each version's commit audit by key while the
 /// parents' statistics are stale, as they are between two refreshes (#4438).
-///
-/// With a plain join this state walked the whole audit index in a merge join:
-/// 1 318 buffers for the history of a four-version object beside 1 300
-/// others, against 21. The lateral audit probe leaves the planner no join to
-/// choose.
 #[tokio::test]
 async fn a_read_by_vo_id_probes_each_commit_audit_by_key_over_stale_parent_statistics() {
     let db = testkit::db().await.expect("testkit database");
@@ -2484,10 +2411,6 @@ async fn a_read_by_vo_id_probes_each_commit_audit_by_key_over_stale_parent_stati
 
 /// The population `CONTAINS` of the storage bench's `contains_exists` enters
 /// through the archetype index once the parents carry statistics (#4453).
-///
-/// With the partitions analyzed and the parents not, the planner estimated
-/// the head join from no statistics at all and drove from every COMPOSITION
-/// root, reading all of its nodes (3 703 buffers on this seed, against 1 745).
 #[tokio::test]
 #[expect(
     clippy::disallowed_methods,
@@ -2660,12 +2583,6 @@ async fn the_serving_roles_may_analyze_the_partitioned_parents() {
 /// An ordered query pinned to one EHR by its WHERE clause walks that EHR's
 /// versions through the `ehr_id` index and reads each object's nodes by key
 /// (#5076).
-///
-/// The flat shape gave the planner a join search over every node binding: on
-/// a store of 100 000 compositions it planned in 40 to 60 ms against a 1 ms
-/// execution. The streaming shape fixes the join order, and the spine finds
-/// the pinned EHR's versions only when the planner carries the `ehr.id`
-/// equality across the spine's `ehr_id` join, which this plan pins.
 #[tokio::test]
 async fn an_ordered_query_pinned_to_one_ehr_walks_its_versions_by_the_ehr_index() {
     let db = testkit::db().await.expect("testkit database");

@@ -2,52 +2,25 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written spec functions of `IMPORTED_VERSION` (hand-written spec
-//! behaviour).
+//! The `IMPORTED_VERSION` functions, delegations to the wrapped
+//! `ORIGINAL_VERSION` (`org.openehr.rm.common.imported_version.adoc`
+//! §Functions), returned by borrow.
 //!
-//! Spec: RM
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.imported_version.adoc`
-//! §Functions. `IMPORTED_VERSION` "acts as a wrapper of an `ORIGINAL_VERSION`
-//! … Its `_uid_` and `_preceding_version_` are defined as functions, returning
-//! the corresponding attribute values from the wrapped `ORIGINAL_VERSION`
-//! object" (RM common `master06-change_control_package.adoc` §Version and its
-//! Subtypes), and the class table effects four of `VERSION`'s abstract
-//! functions as delegations over `item`:
-//!
-//! - `uid ()` — `Post: Result = item.uid`;
-//! - `preceding_version_uid ()` — `Post: Result = item.preceding_version_uid`;
-//! - `lifecycle_state ()` — "derived as `_item.lifecycle_state_`";
-//! - `data ()` — "Original content of this Version".
-//!
-//! Each is a pure read of the wrapped original, so each is realized here as a
-//! borrow rather than a clone: the delegation is identity, and a caller that
-//! needs an owned value clones at its own site.
-//!
-//! NOTE: two functions the class table types `1..1` delegate to
-//! `ORIGINAL_VERSION` attributes the same spec declares `0..1`
-//! (`…original_version.adoc` §Attributes; "Void if this is the first
-//! version"; a deleted version's data "set to Void", master06
-//! §Contributions) — so both return `Option`, reporting the Void the wrapped
-//! original may genuinely hold instead of fabricating a value.
+//! NOTE: `preceding_version_uid` and `data` are typed `1..1` but delegate to
+//! `0..1` attributes (`original_version.adoc`), so both return `Option`.
 
 use crate::v1_1::common::change_control::imported_version::ImportedVersion;
 use crate::v1_1::data_types::text::dv_coded_text::DvCodedText;
 use openehr_base::v1_2::prelude::ObjectVersionId;
 
 impl<T> ImportedVersion<T> {
-    /// `IMPORTED_VERSION.uid`: the wrapped original's own version identifier —
-    /// an imported version "does not have its own version identifier distinct
-    /// from the version it is wrapping" (`Post: Result = item.uid`).
+    /// `IMPORTED_VERSION.uid`: `Post: Result = item.uid`.
     #[must_use]
     pub fn uid(&self) -> &ObjectVersionId {
         &self.item.uid
     }
 
-    /// `IMPORTED_VERSION.preceding_version_uid`: the wrapped original's
-    /// predecessor (`Post: Result = item.preceding_version_uid`).
-    ///
-    /// `None` when the wrapped original is a first version (see the module
-    /// docs).
+    /// `IMPORTED_VERSION.preceding_version_uid`, `None` for a first version.
     #[must_use]
     pub fn preceding_version_uid(&self) -> Option<&ObjectVersionId> {
         self.item.preceding_version_uid.as_ref()
@@ -60,11 +33,7 @@ impl<T> ImportedVersion<T> {
         &self.item.lifecycle_state
     }
 
-    /// `IMPORTED_VERSION.data`: the original content of this Version — the
-    /// wrapped original's own data.
-    ///
-    /// `None` for a logically deleted wrapped original, whose data is Void (see
-    /// the module docs).
+    /// `IMPORTED_VERSION.data`, `None` for a logically deleted original.
     #[must_use]
     pub fn data(&self) -> Option<&T> {
         self.item.data.as_ref()

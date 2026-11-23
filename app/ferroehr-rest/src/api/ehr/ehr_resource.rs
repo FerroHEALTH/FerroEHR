@@ -156,10 +156,6 @@ pub(crate) async fn tags_get(state: AppState, parts: RequestParts) -> Result<Res
 /// is provided it MUST be merged with the default VERSION and
 /// `VERSION.audit_details` attributes on commit runtime").
 ///
-/// The merge starts from the authenticated principal as the committer, so an
-/// unsupplied `committer` keeps the server default instead of being
-/// overwritten.
-///
 /// # Errors
 /// [`ApiError::BadRequest`] when a committal header carries a malformed
 /// identifier.

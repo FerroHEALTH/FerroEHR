@@ -133,9 +133,6 @@ pub struct Principal {
 impl Principal {
     /// Returns the principal of the caller the gate admitted with `access`,
     /// holding `roles` and honoured as `honoured`.
-    ///
-    /// An open surface admits no caller, so it yields an empty, unattributed
-    /// principal; the middleware never builds one there.
     #[must_use]
     pub fn new(access: Access, roles: Vec<String>, honoured: Honoured) -> Self {
         let (subject, scopes, claims, method) = match access.caller() {
@@ -586,10 +583,6 @@ tokio::task_local! {
 }
 
 /// Returns the authenticated principal for the current request, if any.
-///
-/// Set by `middleware` for the duration of request handling, so downstream
-/// layers read it without the principal being threaded through the generated
-/// trait signatures. `None` when unauthenticated or called outside a request.
 #[must_use]
 pub fn current_principal() -> Option<Arc<Principal>> {
     REQUEST_PRINCIPAL.try_with(Clone::clone).ok().flatten()
@@ -1090,8 +1083,8 @@ mod tests {
         );
     }
 
-    /// One invalid token of every kind the old validator classified: each is
-    /// refused, and none differs from another on the wire.
+    /// One invalid token of every kind: each is refused, and none differs from
+    /// another on the wire.
     fn invalid_tokens() -> Vec<(&'static str, String)> {
         let base = test_support::claims("alice", "user/composition-*.r");
         let without = |claim: &str| {

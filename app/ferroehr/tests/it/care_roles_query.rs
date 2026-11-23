@@ -6,11 +6,6 @@
 //! on, through the service and the store against a real `PostgreSQL` 18
 //! (shared testkit harness), with the caller's care read from the census and
 //! from the clinical care projection (#6075).
-//!
-//! The rule is the draft package's "only the responsible practitioner": a
-//! deny rule whose permit exception names the care role `RESP` and the path
-//! `direct` (draft access control decision procedure, Holding a Care
-//! Relationship; Appendix, Who Sees What).
 
 use std::sync::Arc;
 

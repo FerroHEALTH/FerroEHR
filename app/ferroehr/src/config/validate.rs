@@ -550,10 +550,8 @@ const fn is_unreserved(c: char) -> bool {
 
 /// The `record.multimedia.s3.url` semantic checks of an enabled integration.
 ///
-/// An enabled integration with a blank or scheme-less endpoint would boot clean
-/// and then fail on the first `DV_MULTIMEDIA` commit. A `${VAR:-}` compose
-/// pass-through and an empty Helm value both produce exactly that, so it is
-/// refused at boot where an operator can still act.
+/// A blank or scheme-less endpoint would boot clean and fail on the first
+/// `DV_MULTIMEDIA` commit, so it is refused at boot.
 fn multimedia_endpoint_errors(
     config: &crate::extensions::multimedia::config::MultimediaConfig,
 ) -> Vec<ConfigError> {

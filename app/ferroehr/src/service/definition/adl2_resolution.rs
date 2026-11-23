@@ -17,10 +17,7 @@ use openehr_adl::parse::Dialect;
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
 
-/// One stored ADL2 source, parsed, or `None` when it no longer parses.
-///
-/// NOTE: a stored row that no longer parses is left out, as the engine
-/// repository always left it out; it was engine-valid at its upload.
+/// One stored ADL2 source, parsed, or `None` when it does not parse.
 pub(super) fn parse_stored(adl: &str) -> Option<Archetype> {
     parse_artefact(adl, Dialect::Adl2).ok()
 }
@@ -55,9 +52,6 @@ pub(super) fn wire_reference(template_id: &str, version: Option<&str>) -> String
 /// engine's rule ([`resolve_hrid`], BASE Artefact Identification
 /// `master07-referencing.adoc` §Referencing): a release outranks its
 /// pre-releases, and a pre-release is read only by its full identifier.
-///
-/// NOTE: a stored HRID that no longer parses is left out, as
-/// [`parse_stored`] leaves out a stored source; it parsed at its upload.
 pub(super) fn resolve_stored(reference: &str, stored: Vec<String>) -> Option<String> {
     let any_namespace = !reference.contains("::");
     let held: Vec<(ArchetypeHrid, String)> = stored

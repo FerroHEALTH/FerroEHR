@@ -1,32 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Dialect-neutral Web-Template tree shaping.
-//!
-//! Everything here operates on the already-built [`WebTemplateNode`] tree, so it
-//! is independent of the source dialect: both [`super::builder`] and
-//! [`super::builder_v2_4`] produce the same tree and hand it to these passes,
-//! and the semantics are written once.
-//!
-//! The three passes, in the order the front ends run them:
-//!
-//! 1. [`compact`] — master04 §"Level Removal": elide container attribute names,
-//!    collapse the always-collapsed wrapper types (`ITEM_*`/`ITEM_STRUCTURE`/
-//!    `HISTORY`) and a conditionally-collapsed single `EVENT`, promote an
-//!    `ELEMENT`/`DATA_VALUE` single child, and drop empties.
-//! 2. [`super::in_context::synthesize_in_context`] — master04 §"Web Template Metadata": inject the
-//!    RM-mandatory in-context children (`context`/`category`/… on COMPOSITION,
-//!    `language`/`encoding`/`subject` on ENTRY, `time` on EVENT) an OPT commonly
-//!    leaves unconstrained, so the simplified path keys resolve.
-//! 3. [`post_process`] — per-RM-type node fix-ups (called during the build, once
-//!    per node, before compaction: the ELEMENT coded/`other` merge, the
-//!    COMPOSITION `category` reorder, the OBSERVATION `depends_on`).
-//!
-//! [`merge_alternatives`] is the fourth shared pass, applied by each front end
-//! while it builds an attribute's children.
-//!
-//! `ITS-REST simplified_formats master04-basic_concepts.adoc` is the wire oracle
-//! (§"Web Template Metadata", §"Level Removal").
+//! Dialect-neutral Web-Template tree shaping over a built [`WebTemplateNode`]
+//! tree, shared by [`super::builder`] and [`super::builder_v2_4`]
+//! (`simplified_formats master04-basic_concepts.adoc` §"Web Template Metadata",
+//! §"Level Removal").
 
 use indexmap::IndexMap;
 
@@ -81,14 +59,8 @@ fn tree_placeholder() -> WebTemplateNode {
 
 /// The passes both front ends run on a built tree, in order: compaction
 /// (master04 §"Level Removal"), the in-context RM children, the node ids, and
-/// the validation walk plan.
-///
-/// The in-context children (COMPOSITION context, category, language, territory
-/// and composer; per-ENTRY language, encoding and subject; per-EVENT time)
-/// that the master04 example carries and an OPT commonly leaves unconstrained
-/// are synthesized BEFORE id assignment, so their ids go through the sibling
-/// uniqueness of [`super::id`]. The walk plan parses the template-static
-/// constraint paths once, so a commit is walked without re-parsing them.
+/// the validation walk plan. The in-context children are synthesized before id
+/// assignment, so their ids go through the sibling uniqueness of [`super::id`].
 pub(super) fn finish(tree: WebTemplateNode) -> WebTemplateNode {
     let mut tree = compact(tree, 1).unwrap_or_else(tree_placeholder);
     super::in_context::synthesize_in_context(&mut tree);
@@ -114,13 +86,10 @@ pub(super) fn post_process(node: &mut WebTemplateNode) {
 /// master05 §ELEMENT addresses as `/_null_flavour` and `/_null_reason`.
 const NULL_ATTRIBUTES: [&str; 2] = ["null_flavour", "null_reason"];
 
-/// Moves an ELEMENT's `null_flavour` and `null_reason` constraints out of its
-/// children into [`WebTemplateNode::null_constraints`], so only the `value`
-/// constraints are value alternatives and a single one is promoted (master04
-/// §"Level Removal"; master05 §ELEMENT: "no difference between an ELEMENT and
-/// its value"). Then merges the coded-text and text alternatives for ONE
-/// attribute into a coded text with `other` (master04 §"Open Value-Sets and the
-/// `|other` Suffix"), keeping the text node in the coded node's `alternatives`.
+/// Moves an ELEMENT's `null_flavour` and `null_reason` constraints into
+/// [`WebTemplateNode::null_constraints`] (master05 §ELEMENT), then merges the
+/// coded-text and text alternatives of one attribute into a coded text with
+/// `other` (master04 §"Open Value-Sets and the `|other` Suffix").
 fn post_process_element(node: &mut WebTemplateNode) {
     let element_path = node.aql_path.clone();
     let (null_constraints, values): (Vec<_>, Vec<_>) = std::mem::take(&mut node.children)
@@ -180,9 +149,7 @@ fn compact_to_coded_with_other(node: &mut WebTemplateNode, coded: usize, text: u
 }
 
 /// Records a folded sibling on the node that absorbed it, so the validation
-/// walk still accepts what the folded constraint allows.
-///
-/// `kept` and `dropped` are the two indices before `dropped` was removed.
+/// walk still accepts it. `kept` and `dropped` are indices before removal.
 fn keep_as_alternative(
     children: &mut [WebTemplateNode],
     kept: usize,
@@ -242,25 +209,16 @@ pub(super) enum Identity {
 
 /// The RM attribute whose sibling constraint objects merge into one node.
 ///
-/// `ACTION.ism_transition` is `1..1` (RM
-/// `UML/classes/org.openehr.rm.composition.action.adoc`), so an ACTION instance
-/// carries exactly one `ISM_TRANSITION`, while an archetype constrains the
-/// attribute once per careflow step. `ITS-REST simplified_formats
-/// master05-rm_mapping.adoc` §ACTION maps the whole transition to one
-/// `/ism_transition` row, and §ISM_TRANSITION gives that node its
-/// `/current_state`, `/transition`, `/careflow_step` children — one node, three
-/// coded children, never one node per state.
+/// `ACTION.ism_transition` is `1..1` (RM `org.openehr.rm.composition.action.adoc`)
+/// while an archetype constrains it once per careflow step; master05 §ACTION and
+/// §ISM_TRANSITION map one `/ism_transition` node.
 pub(super) const MERGED_ATTRIBUTE: &str = "ism_transition";
 
 /// Fold the constraint alternatives of [`MERGED_ATTRIBUTE`] into the single
 /// node master05 §ISM_TRANSITION maps.
 ///
-/// Each front end builds the alternatives **without** their careflow at-code
-/// identity, so all of them already share one `aqlPath` and no path is
-/// rewritten here. The fold is pairwise: children match by `(aqlPath, rmType)`,
-/// a coded leaf takes the union of the alternatives' options in first-seen
-/// order, and a child that only some alternatives carry becomes optional — so
-/// an instance conforming to any one alternative conforms to the merged node.
+/// Children match by `(aqlPath, rmType)`, a coded leaf takes the union of the
+/// options, and a child only some alternatives carry becomes optional.
 pub(super) fn merge_alternatives(nodes: Vec<WebTemplateNode>) -> Option<WebTemplateNode> {
     nodes.into_iter().reduce(|mut acc, other| {
         merge_into(&mut acc, other);
@@ -383,9 +341,7 @@ fn extend_by_key<T, K: PartialEq>(acc: &mut Vec<T>, extra: Vec<T>, key: impl Fn(
 // ── compaction (master04 §"Level Removal") ───────────────────────────────────
 
 /// Compact `node`'s subtree per master04 §"Level Removal" (`depth` is 1 at the
-/// root). Hoists the always-/single-compactable wrapper children into `node`,
-/// recurses, and then applies the child-level fix-ups; returns `None` when the
-/// node itself collapses out.
+/// root); `None` when the node itself collapses out.
 pub(super) fn compact(mut node: WebTemplateNode, depth: usize) -> Option<WebTemplateNode> {
     // Medium: hoist ALWAYS/SINGLE-compactable wrapper children into this node.
     let children = std::mem::take(&mut node.children);
@@ -435,10 +391,8 @@ fn get_compacted(children: Vec<WebTemplateNode>, parent: &mut Hoisted) -> Vec<We
             parent
                 .cardinalities
                 .append(&mut child.cardinalities.clone());
-            // A hoisted wrapper's existence/cardinality constraints (on its own
-            // attributes, e.g. HISTORY.events) reference absolute archetype
-            // paths, so they stay valid when re-homed on the parent — the walk
-            // still enforces them.
+            // A hoisted wrapper's constraints use absolute paths, so they stay valid on
+            // the parent.
             parent
                 .existence
                 .append(&mut std::mem::take(&mut child.existence));
@@ -452,11 +406,8 @@ fn get_compacted(children: Vec<WebTemplateNode>, parent: &mut Hoisted) -> Vec<We
             parent
                 .structural_stubs
                 .append(&mut std::mem::take(&mut child.structural_stubs));
-            // The hoisted wrapper's own RM type is an archetype constraint the
-            // compacted tree would otherwise lose: record it as a slot so the
-            // walk still rejects a sibling subtype in a narrowed
-            // ITEM_STRUCTURE/EVENT slot (AOM 1.4 type conformance,
-            // master16 §ITEM_STRUCTURE/§EVENT "Class not allowed").
+            // The hoisted wrapper's RM type is kept as a slot (master16
+            // §ITEM_STRUCTURE/§EVENT "Class not allowed").
             parent.slots.push(WebTemplateSlot {
                 path: child.aql_path.clone(),
                 rm_type: child.rm_type.clone(),
@@ -507,19 +458,13 @@ fn process_children(mut node: WebTemplateNode, depth: usize) -> Option<WebTempla
 }
 
 fn is_skippable(rm_type: &str) -> bool {
-    // A DV_INTERVAL wrapper is NEVER promoted away: its bounds are FLAT
-    // sub-paths of the interval node (ITS-REST simplified_formats master05
-    // §DV_INTERVAL — `/lower`, `/upper` each carrying the bound type's own
-    // suffixes), so collapsing the wrapper onto a single constrained bound
-    // loses the interval identity and mis-shapes the built RM (an
-    // ELEMENT.value must stay the interval, RM data_types §DV_INTERVAL).
+    // A DV_INTERVAL wrapper is never promoted: its bounds are FLAT sub-paths of
+    // the interval node (master05 §DV_INTERVAL).
     (rm_type.starts_with("DV_") && !rm_type.starts_with("DV_INTERVAL")) || rm_type == "ELEMENT"
 }
 
-/// Merge a two-child `DV_CODED_TEXT` + `DV_TEXT` pair with equal paths into a
-/// coded-text-with-`other` — the open-value-set discriminator of master04
-/// §"Open Value-Sets and the `|other` Suffix" (`listOpen: true` plus an `other`
-/// free-text input), keeping the text node in the coded node's `alternatives`.
+/// Merge a same-path `DV_CODED_TEXT` + `DV_TEXT` pair into a coded text with
+/// `other` (master04 §"Open Value-Sets and the `|other` Suffix").
 fn compact_coded_text_with_other(children: &mut Vec<WebTemplateNode>) {
     let [first, second] = children.as_slice() else {
         return;
@@ -546,23 +491,12 @@ fn compact_coded_text_with_other(children: &mut Vec<WebTemplateNode>) {
     }
 }
 
-/// Merge multiple sibling coded-text alternatives that share an aql path into a
-/// single coded node: when an ELEMENT `value` is a choice of coded texts, one
-/// node carries the union of the alternatives' coded values rather than several
-/// sibling nodes with polymorphic (`value`/`value2`) ids. No openEHR spec governs
-/// how a choice of coded texts is presented as a single `inputs[].list` — our own
-/// design/extension.
+/// Merge two same-path coded-text siblings into one coded node: a
+/// validation-constrained one wins, else the code lists are unioned. The dropped
+/// node moves to the kept node's `alternatives`.
 ///
-/// The rule: children are grouped by path; a group of exactly two coded-text
-/// nodes is compacted — if one carries a validation-constrained input and the
-/// other does not, the constrained one is kept and the other dropped; otherwise
-/// the two coded lists are unioned (dedup by code, order preserved) onto the
-/// first node and the second is dropped. A dropped node moves to the kept
-/// node's `alternatives`, which the validation walk still accepts.
-///
-/// Our coded-text nodes fold `defining_code` into the node's `inputs`, so the
-/// qualifying pair is two same-path `DV_CODED_TEXT`/`CODE_PHRASE` siblings and the
-/// coded lists are unioned directly.
+/// NOTE: no openEHR spec governs presenting a choice of coded texts as one
+/// `inputs[].list`: our own design.
 #[expect(
     clippy::indexing_slicing,
     reason = "`groups` holds `enumerate()` indices into `children` and nothing is removed before the indexed accesses (the `to_remove` list is applied after), so every index is in bounds by construction"
@@ -689,11 +623,7 @@ fn copy_values(from: &WebTemplateNode, to: &mut WebTemplateNode) {
     // constraints move with it (master05 §ELEMENT `/_null_flavour`).
     to.null_constraints
         .extend(from.null_constraints.iter().cloned());
-    // A collapsed wrapper may itself have carried the `CONSTRAINT_REF` proxy
-    // (an ELEMENT whose `value` IS the ac-code reference), so its constraint
-    // bindings move to the survivor rather than being dropped. Deduplicated —
-    // both nodes can name the same ac-code binding, and one check per binding
-    // is enough.
+    // A collapsed wrapper's constraint bindings move to the survivor, deduplicated.
     for binding in &from.constraint_bindings {
         if !to.constraint_bindings.contains(binding) {
             to.constraint_bindings.push(binding.clone());

@@ -6,19 +6,12 @@
 //! rule, as the write path enforces them, and the clinical values neither
 //! rule reads.
 //!
-//! The write path is the single enforcement point. Neither rule is a
-//! structural invariant of the schema — each varies with configuration — so
-//! none is a database constraint.
-//!
 //! No openEHR spec governs the policy — our own design/extension (GDPR
 //! Art. 4(5) + Art. 25(2), <https://eur-lex.europa.eu/eli/reg/2016/679/oj>).
 //! The wire outcome IS spec-governed: a well-formed body refused for a
 //! semantic reason is `422` (ITS-REST
 //! `specifications/docs/overview/Requests_and_responses.md` §HTTP status
 //! codes), which the service reports as the `content_invalid` status.
-//!
-//! Every identifier here is synthetic, constructed by running a published
-//! algorithm forward over a chosen prefix. None is issued to anyone.
 
 use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;

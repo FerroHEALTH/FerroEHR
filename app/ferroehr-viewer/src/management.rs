@@ -3,35 +3,11 @@
 
 //! The CDR's **operational surfaces** the viewer consumes.
 //!
-//! The CDR's dependency health (`/management/health`, or the public
-//! `/health/readiness` statuses when that endpoint is not offered) and its
-//! management surface (build info, metric views, the redacted effective
-//! config, the live log-filter control).
-//!
 //! NOTE: no openEHR spec governs any of this — our own operational surface /
 //! product extension. The vendored ITS-REST System API defines exactly one
 //! operation (`OPTIONS {base_path}`, the conformance manifest —
 //! `docs/specs/openehr/ITS-REST/specifications/docs/system/`) and no health,
 //! metrics, config or logging resource at all.
-//!
-//! **Two health readers would be one too many.** The application shell's status
-//! pill polls the product status document (`{rest root}/status`); this module
-//! reads the *other* health contract, the dependency indicators, and nothing
-//! else re-reads either claim. The CDR serves the indicators twice: each one's
-//! status on the public `/health/readiness`, and with its detail on the
-//! authenticated `/management/health`. [`fetch_readiness`] reads the detailed
-//! one and falls back to the statuses only when it is not offered.
-//!
-//! **Probe-and-hide.** The management surface is off by default and each of its
-//! endpoints is independently opt-in, so the viewer discovers it
-//! ([`probe_management_api`]) before offering any of it, exactly as
-//! [`crate::admin`] discovers the CDR's admin group. Capability is not
-//! authorization: a mounted-but-refused endpoint (`401`/`403`) still counts as
-//! present, and the refusal surfaces on the screen that asked.
-//!
-//! Every read guards with
-//! [`require_session`](crate::session::require_session) first and keeps the
-//! CDR credential server-side.
 
 #![expect(
     clippy::disallowed_types,
@@ -50,10 +26,8 @@ type HeadlineMetric = (&'static str, Msg, Option<(&'static str, &'static str)>);
 
 /// The headline metric tiles, in display order.
 ///
-/// Each is a counter or gauge the CDR registers
-/// (`ferroehr::telemetry::metrics`); a histogram is deliberately absent, because
-/// the CDR's detail view folds a histogram's `_bucket`/`_sum`/`_count` lines
-/// into one sample list and summing it would report a meaningless number.
+/// No histogram: summing its folded `_bucket`/`_sum`/`_count` lines would
+/// report a meaningless number.
 // NOTE: these are the Prometheus exporter's RENDERED names — `_total` is derived
 // from the counter kind, never written on the instrument — and the correspondence
 // is pinned by the CDR's `exporter_renders_the_viewer_metric_names` test.
@@ -91,11 +65,6 @@ impl ManagementAvailability {
 }
 
 /// Classify the probe's HTTP status: only a `404` means "not mounted".
-///
-/// A `401`/`403` is a mounted endpoint refusing THIS session (the access level
-/// is `Private`/`AdminOnly`), and a `503` is a mounted endpoint whose telemetry
-/// facility is absent — both are the surface existing, which is what the panel
-/// gate asks about.
 #[must_use]
 pub fn availability_of_status(status: http::StatusCode) -> ManagementAvailability {
     if status == http::StatusCode::NOT_FOUND {
@@ -107,9 +76,6 @@ pub fn availability_of_status(status: http::StatusCode) -> ManagementAvailabilit
 
 /// The single predicate every management-gated affordance uses: render only
 /// for a probe that succeeded and found the surface mounted.
-///
-/// A failed probe (CDR or management listener unreachable, expired session)
-/// hides it — never offer a screen that cannot work.
 #[must_use]
 pub fn renders_management_ops(probe: &Result<ManagementAvailability, ViewerError>) -> bool {
     probe
@@ -132,10 +98,6 @@ pub struct ReadinessView {
 
 /// Reads a `/management/health` or `/health/readiness` body into a
 /// [`ReadinessView`].
-///
-/// Both carry the family readiness document; only the management body adds
-/// each indicator's `detail`. The indicators are sorted by name so every draw
-/// agrees.
 ///
 /// # Errors
 /// The parse error when `body` is not the readiness document.
@@ -160,13 +122,9 @@ pub fn falls_back_to_public_readiness(status: http::StatusCode) -> bool {
 
 /// Read the CDR's dependency health.
 ///
-/// `GET /management/health` with the session's credential serves every
-/// indicator with its detail. Where that endpoint is not mounted or refuses
-/// this session's role ([`falls_back_to_public_readiness`]), the public
-/// `GET /health/readiness` on the CDR's API origin still gives each
-/// indicator's status, without detail. On either, `503` is the DOWN state,
-/// not a failure: the body carries the indicators that explain it, which is
-/// exactly what the panel renders.
+/// Falls back to the public `GET /health/readiness`, statuses only, where
+/// [`falls_back_to_public_readiness`] says so. A `503` is the DOWN state, not a
+/// failure.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -195,13 +153,6 @@ pub async fn fetch_readiness() -> Result<ReadinessView, ViewerError> {
 // ── Management: the probe ───────────────────────────────────────────────────
 
 /// Probe the CDR's management surface.
-///
-/// `GET {management}/info` is the cheapest management operation (no I/O behind
-/// it — the build facts are captured at boot), so it is the availability
-/// signal: a `404` means the surface is not mounted for this deployment, any
-/// other answer means it is. A deployment that mounts other management
-/// endpoints while leaving `info` at `Off` therefore hides the whole panel, so
-/// the panel's presence rests on one cheap, stable answer.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -285,8 +236,7 @@ fn leaf_text(value: &serde_json::Value) -> String {
 
 /// Read the CDR's build + spec provenance (`GET /management/info`).
 ///
-/// `Ok(None)` is the first-class "not mounted" state (the CDR answered `404`),
-/// not an error.
+/// `Ok(None)` when the endpoint is not mounted (`404`).
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -446,9 +396,7 @@ pub async fn fetch_metric_names() -> Result<Option<Vec<String>>, ViewerError> {
 
 /// Read one metric's current samples (`GET /management/metrics/{name}`).
 ///
-/// The name is a CDR-supplied string, so the path segment is percent-encoded
-/// with the `urlencoding` crate. `Ok(None)` = no such metric, or the endpoint is
-/// not mounted — both a `404`, both a first-class rendered state.
+/// `Ok(None)` when the metric or the endpoint is absent (`404`).
 ///
 /// # Errors
 /// [`ViewerError::Invalid`] for an empty name; otherwise as
@@ -470,10 +418,6 @@ pub async fn fetch_metric_detail(
 }
 
 /// The headline metric tiles.
-///
-/// The registry's names, then one detail read per `HEADLINE_METRICS` entry
-/// the CDR actually registers (so a tile never provokes a `404`, and a
-/// metric the deployment does not record renders `—`).
 ///
 /// `Ok(None)` = the metrics endpoint is not mounted.
 ///
@@ -549,10 +493,8 @@ pub async fn fetch_loggers() -> Result<Option<LoggerView>, ViewerError> {
 /// Swap the CDR's live log filter (`POST /management/loggers`,
 /// `{"filter": "…"}`).
 ///
-/// A mutation, so a `404` here IS an error: the affordance renders only after
-/// [`fetch_loggers`] found the endpoint, so an absent route means the surface
-/// changed underneath the screen. The CDR's `400` (unparseable directives)
-/// carries its own diagnostic verbatim.
+/// A `404` here is an error, since the affordance renders only after
+/// [`fetch_loggers`] found the endpoint.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
@@ -598,9 +540,6 @@ pub async fn reset_log_filter() -> Result<LoggerView, ViewerError> {
 /// GET one management endpoint as the session's credential, mapping the CDR's
 /// `404` to `Ok(None)` — the "endpoint not mounted" state every management read
 /// renders as a first-class absence rather than an error.
-///
-/// Guards the viewer session first: the pages reading through the reads
-/// above are publicly reachable endpoints, and this is the one place their CDR call is made.
 async fn management_get(path: &str) -> Result<Option<String>, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let url = cdr.management_url(path);

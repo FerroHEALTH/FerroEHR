@@ -1,40 +1,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! **Archetype-conformance validation** — the template-driven pass, plus the
+//! Archetype-conformance validation against an operational template, plus the
 //! Simplified-Formats input checks.
 //!
-//! [`validate_archetype_conformance`] walks a canonical-JSON instance guided by
-//! its operational template (as a flattened [`WebTemplate`]), matching by
-//! `aql_path` + `archetype_node_id`, and checks type conformance, occurrences,
-//! cardinality, and leaf domain constraints (coded lists / numeric ranges /
-//! string patterns), collecting *all* violations (not fail-fast). Paths are the
-//! archetype `aqlPath` of the constraining node.
-//!
-//! Everything here needs a template. The template-independent passes live in
-//! [`crate::rm_instance`], which also owns the shared [`ValidationMessage`]
-//! shape and the composed [`crate::rm_instance::validate_composition`] entry
-//! point.
-//!
-//! Two of the Simplified-Formats input rules
-//! (`simplified_formats/master04-basic_concepts.adoc` §Validation) are
-//! properties of the FLAT input rather than of the RM tree, so they are checked
-//! before conversion: [`validate_flat_other`] for the `|other` open-value-set
-//! rules and [`validate_context`] for the mandatory `ctx/language` +
-//! `ctx/territory` fields.
+//! The template-independent passes live in [`crate::rm_instance`].
 //!
 //! # Fidelity
 //!
-//! The instance-validation algorithm is spec-underdetermined: the AOM 1.4
-//! constraint model defines a positive-only `Valid_value` cascade over the
-//! archetype constraint tree and is silent on unmatched instance nodes. The walk
-//! here approximates it over the COMPACTED `WebTemplate` — the wrapper nodes the
-//! AOM tree carries are folded into a child's `aqlPath`, so the instance is
-//! navigated by the RM-attribute + `[archetype_node_id]` chain that separates a
-//! child from its compacted parent, counting occurrences per intermediate
-//! container. `C_DV_*` leaf semantics are approximated from the `WebTemplate`
-//! `inputs`. A check that cannot be made reliably is skipped rather than
-//! over-rejected, so only confident violations are reported.
+//! The AOM 1.4 `Valid_value` cascade is positive-only and silent on unmatched
+//! instance nodes. The walk approximates it over the compacted `WebTemplate`
+//! and skips any check it cannot make reliably, so only confident violations are
+//! reported.
 
 #![expect(
     clippy::disallowed_types,
@@ -67,12 +44,7 @@ use declared::rm_declares_attribute;
 use plan::{ChildGroup, NodeWalk};
 
 /// Validate only the archetype-conformance pass against a resolved
-/// [`WebTemplate`] (type conformance, occurrences, cardinality, and leaf
-/// domain constraints).
-///
-/// Callers run [`crate::rm_instance::validate_rm_and_terminology`] separately
-/// for the template-independent checks, so this is the additional pass a
-/// *declared* template contributes.
+/// [`WebTemplate`].
 #[must_use]
 pub fn validate_archetype_conformance(
     composition: &Value,
@@ -81,9 +53,7 @@ pub fn validate_archetype_conformance(
     node_ids::run(Validator::default(), composition, wt).out
 }
 
-/// [`validate_archetype_conformance`] over a typed RM resource: the same
-/// walk and the same messages, read through the reflective accessor with no
-/// canonical-JSON value (#6002).
+/// [`validate_archetype_conformance`] over a typed RM resource.
 #[must_use]
 pub fn validate_archetype_conformance_typed<T: openehr_rm::v1_2::access::AsRm + ?Sized>(
     root: &T,
@@ -96,15 +66,9 @@ pub fn validate_archetype_conformance_typed<T: openehr_rm::v1_2::access::AsRm + 
 
 /// Archetype-conformance pass for a `553|incomplete|` commit.
 ///
-/// Identical to
-/// [`validate_archetype_conformance`] but with existence/occurrences/cardinality
-/// **lower** limits treated as zero (RM common master06 §"Incomplete Content":
-/// "in an `incomplete` commit, data may be missing, but it may not be wrong …
-/// all existence and cardinality lower limits set to zero"). Type conformance,
-/// upper limits, and every leaf/value constraint are still enforced — the
-/// relaxation tolerates *missing* data, not *wrong* data. The caller must run
-/// the RM-invariant + terminology passes at full strictness regardless
-/// (they are properties of the instance, not archetype lower bounds).
+/// Lower existence, occurrences and cardinality limits are treated as zero (RM
+/// common master06 §"Incomplete Content": "data may be missing, but it may not
+/// be wrong"); every other constraint is enforced.
 #[must_use]
 pub fn validate_archetype_conformance_incomplete(
     composition: &Value,
@@ -117,17 +81,13 @@ pub fn validate_archetype_conformance_incomplete(
     node_ids::run(v, composition, wt).out
 }
 
-/// One terminology-server question the template's archetype **constraint
-/// bindings** raise about a coded value in this instance.
+/// One terminology-server question the template's archetype constraint
+/// bindings raise about a coded value in this instance.
 ///
-/// A `CONSTRAINT_REF` bound to an external terminology query names a value set
-/// the instance's code must belong to (BASE
-/// `architecture_overview/master12-terminology.adoc` §"Binding Terminology
-/// Value-sets to Archetypes": the ac-code "is bound to queries to one or more
-/// external terminologies, whose result would be a … value set from that
-/// terminology"). The query lives in a "terminology query server", which this
-/// crate has no access to — so the walk collects the questions and a caller
-/// that owns a terminology service answers them.
+/// A `CONSTRAINT_REF` bound to an external query names a value set the code
+/// must belong to (BASE `architecture_overview/master12-terminology.adoc`
+/// §"Binding Terminology Value-sets to Archetypes"); the caller that owns a
+/// terminology service answers it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConstraintBindingCheck {
     /// The archetype `aqlPath` of the constrained node (the path a resulting
@@ -148,12 +108,7 @@ pub struct ConstraintBindingCheck {
 }
 
 /// Collects the [`ConstraintBindingCheck`]s a template's bindings raise for an
-/// instance.
-///
-/// The checks are gathered by the same archetype-conformance walk
-/// [`validate_archetype_conformance`] performs (so a check is raised only for a
-/// node the template actually matched). Pure: no violation is decided here —
-/// the caller resolves each query against its terminology service.
+/// instance, through the same walk as [`validate_archetype_conformance`].
 #[must_use]
 pub fn collect_constraint_binding_checks(
     composition: &Value,
@@ -181,24 +136,13 @@ pub fn collect_constraint_binding_checks_typed<T: openehr_rm::v1_2::access::AsRm
     node_ids::run(v, root, wt).bindings
 }
 
-/// Validate the `|other` open-value-set rules on a **FLAT input** map, before
-/// conversion to RM (ITS-REST `simplified_formats/master04-basic_concepts.adoc`
-/// §"Open Value-Sets and the `|other` Suffix"):
+/// Validate the `|other` open-value-set rules on a FLAT input map, before
+/// conversion (`simplified_formats/master04-basic_concepts.adoc` §"Open
+/// Value-Sets and the `|other` Suffix").
 ///
-/// * `|other` MUST NOT co-occur with `|code`/`|value`/`|terminology`/
-///   `|preferred_term` on the same leaf path;
-/// * `|other` MUST be rejected when the leaf's WT constraint is a **closed**
-///   coded list (`listOpen: false`).
-///
-/// This is the validation-**report** form of the same two rules the conversion
-/// path enforces as hard rejections: `crate::flat::map::build_leaf` returns
-/// [`crate::flat::error::FlatError::OtherSuffixConflict`] /
-/// [`crate::flat::error::FlatError::OtherOnClosedValueSet`] when it hits them during a
-/// build, so a converter fails fast. This function instead collects them as
-/// [`ValidationMessage`]s (validators report, converters reject), for a caller
-/// that wants to surface every violation on the raw FLAT input without running a
-/// conversion. An empty result means the input satisfies the `|other` rules this
-/// check covers.
+/// `|other` must not co-occur with `|code`, `|value`, `|terminology` or
+/// `|preferred_term` on one leaf, and is refused on a closed coded list. The
+/// converter rejects the same inputs; this reports every one.
 #[must_use]
 pub fn validate_flat_other(doc: &Map<String, Value>, wt: &WebTemplate) -> Vec<ValidationMessage> {
     const EXCLUSIVE: &[&str] = &["code", "value", "terminology", "preferred_term"];
@@ -267,15 +211,9 @@ struct LeafGroup {
     suffixes: Vec<String>,
 }
 
-/// The `(path, code)` of every FLAT leaf whose `|code` names a code outside
-/// its closed web-template value set while no `|value` suffix supplies the
-/// text.
-///
-/// Such a datum cannot be resolved to a valid coded value (master04
-/// §Validation: "Terminology bindings are valid"); the closed-set predicate
-/// and the terminology-scope bias mirror the archetype pass's
-/// `check_code_membership` (confident violations only — an explicit
-/// differently-scoped `|terminology` is left to the terminology pass).
+/// The `(path, code)` of every FLAT leaf whose `|code` is outside its closed
+/// web-template value set while no `|value` supplies the text (master04
+/// §Validation: "Terminology bindings are valid").
 #[must_use]
 pub fn unresolvable_coded_leaves(doc: &SimDocument, wt: &WebTemplate) -> Vec<(String, String)> {
     let mut out = Vec::new();
@@ -291,9 +229,8 @@ pub fn unresolvable_coded_leaves(doc: &SimDocument, wt: &WebTemplate) -> Vec<(St
     out
 }
 
-/// Calls `f` with the FLAT path and the node of every non-empty occurrence of
-/// the child `name` under `parent`, the index printed as the FLAT form
-/// prints it (`master04 §Instance Indexing`).
+/// Calls `f` with the FLAT path and node of every non-empty occurrence of the
+/// child `name` under `parent` (`master04 §Instance Indexing`).
 fn for_each_occurrence(
     name: &str,
     child: &crate::flat::sim::SimChild,
@@ -359,18 +296,12 @@ fn coded_leaves_under(
     }
 }
 
-/// Validates that the **mandatory context fields** are present.
+/// Validates that the mandatory context fields are present.
 ///
-/// The fields are checked on a parsed simplified document (ITS-REST
-/// `simplified_formats/master04-basic_concepts.adoc`
-/// §Validation: "Mandatory context fields (language, territory) are present";
-/// §Context: "Mandatory: language, territory").
-///
-/// A field counts as present when the `ctx/` node carries it with a non-empty
-/// bare value, or — because master05 §COMPOSITION also permits the root-level
-/// path spelling (`<root>/language|code`, `<root>/territory|code`) — when a
-/// non-`ctx` data root carries a child of that name. Returns one
-/// [`ValidationMessage`] (`Required`, keyed `ctx/<field>`) per absent field.
+/// `simplified_formats/master04-basic_concepts.adoc` §Validation: "Mandatory
+/// context fields (language, territory) are present". master05 §COMPOSITION
+/// also permits the root-level spelling (`<root>/language|code`), so either
+/// counts. Returns one `Required` message per absent field.
 #[must_use]
 pub fn validate_context(doc: &SimDocument) -> Vec<ValidationMessage> {
     let mut out = Vec::new();
@@ -403,10 +334,8 @@ pub fn validate_context(doc: &SimDocument) -> Vec<ValidationMessage> {
     out
 }
 
-/// Resolve the [`WebTemplateNode`] a FLAT leaf's parsed `segments` address by
-/// descending the WT tree on json-id segments (indices ignored, the leading root
-/// id checked). Returns `None` for an unknown path or a `_`-prefixed RM-attribute
-/// segment (which addresses no template node).
+/// Resolve the [`WebTemplateNode`] a FLAT leaf's parsed `segments` address, or
+/// `None` for an unknown path or a `_`-prefixed RM-attribute segment.
 fn find_node_by_segments<'a>(
     wt: &'a WebTemplate,
     segments: &[path::Segment],
@@ -432,37 +361,21 @@ fn find_node_by_segments<'a>(
 
 /// Name-based routing for same-archetype-id sibling constraints.
 ///
-/// Maps each identity `(attribute, archetype_node_id)` that the template repeats
-/// across more than one distinct sibling path (relative to `parent_aql`) — i.e.
-/// the template differentiates same-`archetype_node_id` siblings by their
-/// runtime `name` (RM common `master03-archetyped_package.adoc` §"The
-/// `LOCATABLE` class" L33-35; AOM 1.4 `master04-constraint_model_package.adoc`
-/// §`node_id` L41) — to the set of explicit `name/value` `C_STRING` constraints
-/// its *name-qualified* siblings carry.
-///
-/// A present key marks the identity as name-differentiated, which routing uses
-/// two ways ([`select_group_children`]): a name-qualified sibling
-/// matches strictly (id + name, no id-only fallback), and the one *unqualified*
-/// sibling (whose `name` is unconstrained) admits every same-id instance
-/// **except** those bearing a name a name-qualified sibling claims.
+/// Maps each `(attribute, archetype_node_id)` the template repeats across
+/// sibling paths to the `name/value` constraints its name-qualified siblings
+/// carry (RM common `master03-archetyped_package.adoc` §"The `LOCATABLE`
+/// class"; AOM 1.4 `master04-constraint_model_package.adoc` §`node_id`). The
+/// unqualified sibling admits every same-id instance except those names.
 pub(crate) type SiblingNameIndex = std::collections::HashMap<(String, String), Vec<String>>;
 
 #[derive(Default)]
 struct Validator {
     out: Vec<ValidationMessage>,
-    /// When set, existence/occurrences/cardinality **lower** limits are treated
-    /// as zero (missing/empty is tolerated), realizing the RM common master06
-    /// §"Incomplete Content" relaxation for a `553|incomplete|` commit: "in an
-    /// `incomplete` commit, data may be missing, but it may not be wrong … all
-    /// existence and cardinality lower limits set to zero". Upper limits, type
-    /// conformance, and every leaf/value constraint (`RangeError`,
-    /// `PatternError`, `CodedValue`, `WrongType`) are still enforced — only the
-    /// "not enough / absent" violations are suppressed.
+    /// When set, lower existence, occurrences and cardinality limits are zero (RM
+    /// common master06 §"Incomplete Content").
     relax_lower_bounds: bool,
-    /// When set, the archetype-conformance walk records the terminology
-    /// questions the matched nodes' constraint bindings raise into
-    /// [`Self::bindings`] (see [`collect_constraint_binding_checks`]). Off for
-    /// the ordinary validation passes, which decide nothing about bindings.
+    /// When set, the walk records the constraint-binding questions into
+    /// [`Self::bindings`].
     collect_bindings: bool,
     /// The collected constraint-binding checks (empty unless
     /// [`Self::collect_bindings`]).
@@ -475,25 +388,17 @@ struct Validator {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnenforceableReason {
     /// The constrained attribute is declared by no RM class, so no conformant
-    /// instance can carry it as a stored member.
+    /// instance can carry it.
     ///
-    /// Two shapes reach this in the deployed OPT 1.4 corpus: a constraint on a
-    /// computed FUNCTION written as if it were stored (`EVENT.offset`,
-    /// `DV_PROPORTION.is_integral` — RM
-    /// `UML/classes/org.openehr.rm.data_structures.event.adoc` §Functions and
-    /// `UML/classes/org.openehr.rm.data_types.dv_proportion.adoc`
-    /// §Functions declare them as functions, not attributes), and the US
-    /// spelling `null_flavor` for the RM's `null_flavour`.
+    /// Seen for a constraint on a computed function (`EVENT.offset`,
+    /// `DV_PROPORTION.is_integral`, RM `event.adoc` and `dv_proportion.adoc`
+    /// §Functions) and the US spelling `null_flavor`.
     AttributeNotInRmModel,
 }
 
 /// A template constraint the archetype-conformance walk cannot evaluate.
 ///
-/// Enforcing one would demand an instance member the canonical reader refuses,
-/// so the walk skips it. The skip is reported rather than dropped: template
-/// content that can never be checked is a property of the template a caller is
-/// entitled to see. These are NOT validation failures — a conformant instance
-/// is unaffected, and nothing here rejects a commit.
+/// Reported, never a validation failure.
 #[derive(Debug, Clone)]
 pub struct UnenforceableConstraint {
     /// Absolute archetype path of the constrained attribute.
@@ -505,11 +410,7 @@ pub struct UnenforceableConstraint {
 }
 
 /// Reports every existence constraint in `wt` that the conformance walk cannot
-/// evaluate.
-///
-/// A template-level property: the answer depends only on the template, so it is
-/// computed once per template rather than per commit. Pair it with
-/// [`validate_archetype_conformance`], which skips exactly these constraints.
+/// evaluate; [`validate_archetype_conformance`] skips exactly these.
 ///
 /// # Examples
 ///
@@ -575,15 +476,10 @@ impl Validator {
 
     // ── Pass 3: WebTemplate archetype-conformance walk ────────────────────────
 
-    /// Visit an instance node matched to a `WebTemplate` node: check type
-    /// conformance, leaf domain constraints, then descend into the `WebTemplate`
-    /// children and container cardinalities.
-    /// Record the terminology questions this matched node's constraint
-    /// bindings raise about the instance's coded value. The `CODE_PHRASE` is
-    /// read from the binding's `attr` (`defining_code` for a `DV_CODED_TEXT`);
-    /// an empty `attr` means the node itself IS the `CODE_PHRASE`. A node the
-    /// instance leaves uncoded raises no question — the binding constrains a
-    /// value that is not there.
+    /// Records the terminology questions this node's constraint bindings raise.
+    ///
+    /// The `CODE_PHRASE` is read from the binding's `attr`; an empty `attr` means
+    /// the node itself is the `CODE_PHRASE`. An uncoded node raises none.
     fn collect_node_bindings<'i, I: Instance<'i>>(&mut self, instance: I, wt: &WebTemplateNode) {
         for binding in &wt.constraint_bindings {
             let code_phrase = if binding.attr.is_empty() {
@@ -656,19 +552,11 @@ impl Validator {
             self.collect_node_bindings(instance, wt);
         }
 
-        // An ELEMENT kept as a choice carries its own null constraints; a
-        // promoted ELEMENT's are checked by `check_group`, which holds the
-        // ELEMENT instance.
+        // A promoted ELEMENT's null constraints are checked by `check_group`.
         if wt.rm_type == "ELEMENT" {
             self.check_null_constraints(instance, &wt.null_constraints);
         }
 
-        // The archetype-conformance walk is driven by the node's pre-parsed
-        // [`NodeWalk`]: child sibling groups (polymorphic type choices resolved
-        // together, never each flagged), the name-routing index, and the parsed
-        // constraint paths, all computed ONCE at build time. A hand-built node
-        // with no cached plan builds one on the fly (identical result), so every
-        // check reads exactly one code path.
         let built;
         let plan: &NodeWalk = if let Some(p) = &wt.walk {
             p
@@ -687,21 +575,12 @@ impl Validator {
         self.check_closure(instance, wt, plan);
     }
 
-    /// Closed-archetype walk. Under each constrained
-    /// attribute this node records (an attribute with fixed archetype-node
-    /// alternatives and/or open `ARCHETYPE_SLOT`s), an instance child bearing an
-    /// `archetype_node_id` (i.e. a LOCATABLE — the archetyped-content
-    /// discriminator; no RM metadata value carries one) must match a fixed
-    /// sibling identity **or** an open slot; any other archetyped child is an
-    /// "unexpected node". RM-permitted unconstrained metadata attributes and
-    /// wholly-unconstrained attributes are never recorded, so stay open (closed-world capture
-    /// rule 2). A rejected node is not descended into (the walk already skips it).
+    /// Closed-archetype walk: an archetyped child under a constrained attribute
+    /// must match a fixed sibling identity or an open slot, else it is an
+    /// "unexpected node".
     ///
-    /// NOTE: AOM 1.4 `valid_value`
-    /// (`AM/docs/AOM1.4/master04-constraint_model_package.adoc` §`Valid_value`
-    /// L60-62) is a positive-only cascade, silent on unmatched instance nodes;
-    /// closed-world rejection follows the AOM2 direction + de-facto CDR behaviour
-    /// and lands only behind the ECC zero-drift gate.
+    /// NOTE: AOM 1.4 `Valid_value` (`master04-constraint_model_package.adoc`) is
+    /// positive-only; closed-world rejection follows the AOM2 direction.
     fn check_closure<'i, I: Instance<'i>>(
         &mut self,
         instance: I,
@@ -724,16 +603,11 @@ impl Validator {
         }
     }
 
-    /// Matches every child under one closed attribute against its fixed
-    /// sibling alternatives and its slots, recording an "unexpected node" for
-    /// each child neither admits, and returns the per-slot filler counts.
+    /// Matches every child under one closed attribute against its sibling
+    /// alternatives and slots, and returns the per-slot filler counts.
     ///
-    /// A child with no `archetype_node_id` is not a LOCATABLE (RM metadata /
-    /// PATHABLE value) and is not subject to sibling closure.
-    ///
-    /// NOTE: an unmatched archetype-rooted child is admitted where the
-    /// attribute declares no ARCHETYPE_SLOT, OPT 1.4 flattening not
-    /// enumerating the slot-fill universe; slots still gate.
+    /// NOTE: an unmatched archetype-rooted child is admitted where the attribute
+    /// declares no ARCHETYPE_SLOT, since OPT 1.4 does not enumerate slot fills.
     #[expect(
         clippy::indexing_slicing,
         reason = "`counts` is sized `ca.slots.len()` and the index is a `position` over those same slots, so it is in bounds by construction"
@@ -830,13 +704,8 @@ impl Validator {
         }
     }
 
-    /// Type-conformance check for wrapper constraints the compactor hoisted
-    /// away (`ITEM_*` / `HISTORY` / single `EVENT` — AOM 1.4 type conformance;
-    /// master16 §`ITEM_STRUCTURE`/§EVENT "Class not allowed"): an instance node
-    /// matched at a recorded slot path must conform to one of the RM types the
-    /// same-path slot alternatives allow. An abstract recorded type
-    /// (`ITEM_STRUCTURE`, `EVENT`) admits every concrete subtype via
-    /// [`subtype::conforms`].
+    /// Type conformance for the wrapper constraints the compactor hoisted away
+    /// (`ITEM_*`, `HISTORY`, single `EVENT`; master16 "Class not allowed").
     fn check_slots<'i, I: Instance<'i>>(&mut self, instance: I, plan: &NodeWalk) {
         for sg in &plan.slot_groups {
             let Some((last, intermediate)) = sg.segments.split_last() else {
@@ -864,14 +733,8 @@ impl Validator {
         }
     }
 
-    /// AOM 1.4 `C_ATTRIBUTE.existence` check: for each mandatory plain
-    /// RM attribute constrained on this node, verify the attribute *field* is
-    /// present on the matched instance. Existence is distinct from occurrences
-    /// (archetype-node-identified children) and cardinality (container
-    /// membership) — it governs whether the attribute field is there at all — so
-    /// this fills the gap for plain structural attributes the occurrence check
-    /// deliberately skips. Only the lower bound (mandatory presence) is enforced;
-    /// the upper bound is governed by RM single-valuedness / cardinality.
+    /// AOM 1.4 `C_ATTRIBUTE.existence` lower bound for the plain RM attributes
+    /// constrained on this node.
     fn check_existence<'i, I: Instance<'i>>(
         &mut self,
         instance: I,
@@ -893,12 +756,8 @@ impl Validator {
             let Some((last, intermediate)) = segments.split_last() else {
                 continue;
             };
-            // An existence constraint on an attribute no RM class declares cannot
-            // be satisfied by a conformant instance — enforcing it would demand a
-            // member the canonical reader refuses. Skipped here and REPORTED by
-            // `unenforceable_existence_constraints`, which shares this predicate;
-            // see `UnenforceableReason::AttributeNotInRmModel` for the shapes and
-            // their RM citations.
+            // An attribute no RM class declares cannot be present; reported by
+            // `unenforceable_existence_constraints` instead.
             if !rm_declares_attribute(&last.attribute) {
                 continue;
             }
@@ -920,10 +779,8 @@ impl Validator {
         }
     }
 
-    /// Resolve a group of `WebTemplate` children sharing an aql path (a single
-    /// node, or a set of polymorphic type alternatives) against the instance:
-    /// occurrence-check the group, then recurse into each matched instance,
-    /// routing it to the conforming alternative.
+    /// Resolve a group of children sharing an aql path against the instance:
+    /// occurrence-check it, then recurse into each matched instance.
     #[expect(
         clippy::indexing_slicing,
         reason = "`group.members` holds indices into `wt_parent.children` recorded by `NodeWalk::build` over that same child vector, `members` is non-empty for any recorded group (so `members[0]` exists), and `identity_idx` is an `rposition`/`len() - 1` over `segments` (returned early when empty), so every index and range here is in bounds by construction"
@@ -936,10 +793,7 @@ impl Validator {
         names: &SiblingNameIndex,
         name_fallback: &rmpath::NameFallback,
     ) {
-        // Segments were parsed once at build time; an empty slice means the child
-        // path is not a strict extension of the parent's (or equals it) — the
-        // `strip_prefix … else return` / `segments.is_empty()` early-outs, both
-        // preserved here.
+        // An empty slice means the child path does not extend the parent's.
         let segments = &group.segments;
         if segments.is_empty() {
             return;
@@ -951,9 +805,6 @@ impl Validator {
             .collect();
         let first = members[0];
         let identity_idx = identity_index(segments);
-        // Only the TERMINAL-identity case reads `first.rm_type`: with a trailing
-        // plain attribute the identity node is the archetyped `LOCATABLE`
-        // intermediate.
         let raw_id_seg = &segments[identity_idx];
         let trailing = &segments[identity_idx + 1..];
         let identity_is_locatable = !trailing.is_empty() || is_locatable(&first.rm_type);
@@ -964,13 +815,8 @@ impl Validator {
         let containers =
             rmpath::navigate_matched(&[parent], &segments[..identity_idx], name_fallback);
 
-        // Occurrences are an *archetype-node* constraint: only checked when the
-        // matched node is identified by an archetype-node predicate (at-code /
-        // archetype id) on a `LOCATABLE` node that can bear one. Plain RM
-        // structural attributes (`context`, `value`, `ism_transition`, …),
-        // non-`LOCATABLE` nodes (`EVENT_CONTEXT`, matched structurally above) and
-        // `in_context` nodes are governed by RM cardinality/invariants, not
-        // archetype occurrences, so they are not occurrence-checked here.
+        // Occurrences apply only to an archetype-node-identified LOCATABLE; plain
+        // RM attributes follow RM cardinality.
         let occ_applies = identity_is_locatable
             && id_seg.predicate.archetype_node_id.is_some()
             && !members.iter().any(|c| c.in_context == Some(true));
@@ -983,9 +829,6 @@ impl Validator {
             }
             for node in matched {
                 self.walk_group_targets(node, trailing, &members, name_fallback);
-                // A member promoted from an ELEMENT (`…/items[atNNNN]/value`)
-                // reaches the ELEMENT itself here, the owner of its null
-                // constraints (RM data_structures §ELEMENT).
                 if let [value] = trailing
                     && value.attribute == "value"
                     && value.predicate.is_empty()
@@ -1002,10 +845,8 @@ impl Validator {
         }
     }
 
-    /// Checks the `null_flavour` and `null_reason` an ELEMENT instance carries
-    /// against the template's constraints on them (RM `data_structures`
-    /// §ELEMENT; AOM 1.4 `C_ATTRIBUTE`: the constraint applies to the
-    /// attribute's value).
+    /// Checks an ELEMENT's `null_flavour` and `null_reason` against the template
+    /// (RM `data_structures` §ELEMENT).
     fn check_null_constraints<'i, I: Instance<'i>>(
         &mut self,
         element: I,
@@ -1020,9 +861,7 @@ impl Validator {
     }
 
     /// Checks the mandatory existence of the attributes of an ELEMENT promoted to
-    /// its value (AOM 1.4 `master04-constraint_model_package.adoc` §existence),
-    /// which the value node's own walk cannot reach: `value` and `null_flavour`
-    /// are attributes of the ELEMENT, the parent of the promoted node.
+    /// its value (AOM 1.4 `master04-constraint_model_package.adoc` §existence).
     fn check_element_existence<'i, I: Instance<'i>>(
         &mut self,
         element: I,
@@ -1057,9 +896,6 @@ impl Validator {
     }
 
     /// Walks every target the trailing segments reach under one matched node.
-    ///
-    /// A single-member group walks its one template node; a choice group is
-    /// dispatched to [`Self::visit_choice`].
     fn walk_group_targets<'i, I: Instance<'i>>(
         &mut self,
         node: I,
@@ -1075,16 +911,10 @@ impl Validator {
         }
     }
 
-    /// Validate a matched instance node against a set of alternative object
-    /// constraints on one single-valued attribute: the group members and the
-    /// alternatives folded into each.
-    ///
-    /// The instance is valid when it matches any one alternative whose RM type
-    /// it conforms to, tried with an exact type match first. When none matches,
-    /// the refusal names every alternative and keeps each one's findings.
-    // NOTE: ADL 1.4 `master05-cadl.adoc` §"Single-valued Attributes": alternative
-    // constraints, "only one of which needs to be matched by the data" (AOM 1.4
-    // `C_SINGLE_ATTRIBUTE.children`).
+    /// Validate a matched node against the alternative constraints on one
+    /// single-valued attribute, exact type match first.
+    // NOTE: ADL 1.4 `master05-cadl.adoc` §"Single-valued Attributes": "only one of
+    // which needs to be matched by the data".
     fn visit_choice<'i, I: Instance<'i>>(&mut self, target: I, group: &[&WebTemplateNode]) {
         let mut candidates: Vec<&WebTemplateNode> = Vec::new();
         for member in group {
@@ -1153,16 +983,9 @@ impl Validator {
         }
     }
 
-    /// Emit occurrence violations for a matched-node `count` against `[min, max]`
-    /// (`max == -1` is unbounded).
-    // NOTE: evaluation uses the WebTemplate's flattened `(min, max)` integers
-    // (`-1` unbounded) — equivalent to `Multiplicity_interval.has(count)` (BASE
-    // `…foundation_types.multiplicity_interval.adoc`) for OPT 1.4's closed bounds.
+    /// Emit occurrence violations for `count` against `[min, max]` (`-1` unbounded).
     fn emit_occurrences(&mut self, aql_path: &str, min: i32, max: i32, count: usize) {
         let count_i = i32::try_from(count).unwrap_or(i32::MAX);
-        // The lower-bound occurrences checks (absent / too-few) are relaxed away
-        // for a `553|incomplete|` commit; the upper bound still applies
-        // (master06 §"Incomplete Content": lower limits set to zero).
         if !self.relax_lower_bounds {
             if count == 0 {
                 if min >= 1 {
@@ -1189,11 +1012,8 @@ impl Validator {
         }
     }
 
-    /// Container-cardinality check: for each constraining cardinality on this
-    /// node, count the children under the constrained attribute path and compare
-    /// to `min`/`max`, and refuse two value-equal members under `unique`. Iterates [`WebTemplateNode::card_all`] — the full AOM 1.4
-    /// §cardinality set (`0..1`/`1..1`/`1..*` included), a superset of the
-    /// serialized `cardinalities` (which the metadata document filters).
+    /// Container-cardinality check over [`WebTemplateNode::card_all`], the full
+    /// AOM 1.4 §cardinality set, with `unique` refusing value-equal members.
     fn check_cardinalities<'i, I: Instance<'i>>(
         &mut self,
         instance: I,
@@ -1207,14 +1027,8 @@ impl Validator {
             let Some((last, intermediate)) = segments.split_last() else {
                 continue;
             };
-            // Navigate all but the last segment to the container, then count the
-            // last attribute's children (cardinality is over the whole set).
-            //
-            // AOM 1.4 §cardinality constrains the container's membership only WHEN
-            // the attribute is present; absence is C_ATTRIBUTE.existence's business
-            // (the vendored Multi_list template pairs `content` cardinality 1..*
-            // with existence 0..1), so an absent or null attribute is no cardinality
-            // violation, while a present `[]` is a container of zero members.
+            // AOM 1.4 §cardinality applies only when the attribute is present; absence is
+            // `C_ATTRIBUTE.existence`'s concern.
             let containers =
                 rmpath::navigate_matched(&[instance], intermediate, &plan.name_fallback);
             for container in &containers {
@@ -1236,10 +1050,6 @@ impl Validator {
                 }
                 let count = i32::try_from(members.len()).unwrap_or(i32::MAX);
                 let min = card.min.unwrap_or(0).max(0);
-                // The cardinality lower bound is relaxed away for a
-                // `553|incomplete|` commit (master06 §"Incomplete Content": "all
-                // existence and cardinality lower limits set to zero"); the upper
-                // bound still applies.
                 if count < min && !self.relax_lower_bounds {
                     self.push(
                         card.path.clone(),
@@ -1264,35 +1074,18 @@ impl Validator {
 
 // ── path navigation ───────────────────────────────────────────────────────────
 //
-// RM-path parsing (`[atNNNN]` / `[archetype-id]` / `[atNNNN,'name']` predicates)
-// and per-step navigation over the canonical-JSON tree are the single
-// implementation in [`openehr_rm::v1_2::paths`], reached here via [`crate::flat::rmpath`]
-// (`parse` / `navigate` / `select_children`). Only the checks below —
-// attribute-presence for the existence rule and RM instance-path
-// normalisation — are validation-specific.
+// RM-path parsing and navigation are [`openehr_rm::v1_2::paths`], reached via
+// [`crate::flat::rmpath`]; only the validation-specific checks live here.
 
-/// Select the instance children a WebTemplate sibling group claims from
-/// `container`, applying the name discriminator for same-`archetype_node_id`
-/// siblings so an instance is routed to exactly the sibling whose name
-/// constraint it satisfies (RM common `master03-archetyped_package.adoc`
-/// §"The `LOCATABLE` class": the runtime `name` distinguishes sibling nodes
-/// that share an `archetype_node_id`; BASE
-/// `architecture_overview/master11-paths.adoc` §"Using a Name-based Predicate").
+/// Select the instance children a sibling group claims from `container`,
+/// routing same-`archetype_node_id` siblings by `name` (RM common
+/// `master03-archetyped_package.adoc` §"The `LOCATABLE` class"; BASE
+/// `master11-paths.adoc` §"Using a Name-based Predicate").
 ///
-/// `names` is the [`SiblingNameIndex`] computed once per parent from the sibling
-/// paths. Three cases on the group's identity segment `id_seg`:
-///
-/// * **name-qualified, name-differentiated** (`Some` name, identity in `names`):
-///   strict `(archetype_node_id, name)` match with the id-only fallback OFF —
-///   the sibling set relies on the name, so widening to id-only would claim a
-///   sibling's instances.
-/// * **unqualified, name-differentiated** (no name, identity in `names`): match
-///   by `archetype_node_id` minus the instances the name-qualified siblings
-///   claim ([`rmpath::select_children_excluding_names`]) — the residual arm.
-/// * **not name-differentiated** (identity absent from `names`): strict match
-///   with the id-only fallback ON, tolerating a runtime-renamed instance when
-///   the archetype does not constrain the name (master03 §"The `LOCATABLE`
-///   class" L35).
+/// A name-qualified sibling of a name-differentiated identity matches strictly,
+/// the unqualified one takes the residue
+/// ([`rmpath::select_children_excluding_names`]), and an identity absent from
+/// `names` matches with the id-only fallback on.
 fn select_group_children<'i, I: Instance<'i>>(
     container: I,
     id_seg: &PathSegment,
@@ -1312,10 +1105,8 @@ fn select_group_children<'i, I: Instance<'i>>(
     }
 }
 
-/// The index of the group's identity segment.
-///
-/// That is the last segment carrying a predicate; if none carries one, the last
-/// segment (a plain single-valued attribute).
+/// The index of the group's identity segment: the last segment carrying a
+/// predicate, else the last segment.
 fn identity_index(segments: &[PathSegment]) -> usize {
     segments
         .iter()
@@ -1323,15 +1114,9 @@ fn identity_index(segments: &[PathSegment]) -> usize {
         .unwrap_or(segments.len() - 1)
 }
 
-/// The predicate-stripped identity segment for a structurally-matched node.
-///
-/// A node whose RM type does NOT inherit `LOCATABLE` carries no
-/// `archetype_node_id` in canonical JSON (only `LOCATABLE` adds it — RM common
-/// `UML/classes/org.openehr.rm.common.locatable.adoc`; `EVENT_CONTEXT` inherits
-/// `PATHABLE` directly — RM
-/// `UML/classes/org.openehr.rm.composition.event_context.adoc` §Inherit), so it
-/// is matched by attribute position instead. [`None`] means the raw segment
-/// applies unchanged.
+/// The predicate-stripped identity segment for a node matched by attribute
+/// position, since only `LOCATABLE` carries `archetype_node_id` (RM
+/// `org.openehr.rm.common.locatable.adoc`). [`None`] means the raw segment applies.
 fn structural_identity(
     raw_id_seg: &PathSegment,
     identity_is_locatable: bool,
@@ -1360,13 +1145,9 @@ fn group_occurrences(members: &[&WebTemplateNode]) -> (i32, i32) {
     (min, max)
 }
 
-/// Whether an RM type inherits `LOCATABLE` and therefore carries an
-/// `archetype_node_id` (and `name`) in canonical JSON (RM common
-/// `UML/classes/org.openehr.rm.common.locatable.adoc`). Backed by the
-/// BMM-generated RM inheritance graph ([`openehr_rm::v1_2::model::is_a`]). A type the
-/// model does not recognise is treated as `LOCATABLE` (the historic default —
-/// stay strict rather than silently widen matching for an unknown type). Generic
-/// arguments are stripped first.
+/// Whether an RM type inherits `LOCATABLE` ([`openehr_rm::v1_2::model::is_a`]),
+/// generic arguments stripped. An unknown type counts as `LOCATABLE`, keeping
+/// matching strict.
 fn is_locatable(rm_type: &str) -> bool {
     let base = rm_type.split('<').next().unwrap_or(rm_type).trim();
     openehr_rm::v1_2::model::class(base).is_none()
@@ -1375,10 +1156,8 @@ fn is_locatable(rm_type: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    //! Per-rule unit tests for the composition validator, built on hand-shaped
-    //! `WebTemplate` nodes + minimal instances (no OPT parsing) so each rule is
-    //! exercised in isolation through the private [`Validator`] walk. End-to-end
-    //! corpus + public-seam tests live in `tests/validation.rs`.
+    //! Per-rule unit tests for the composition validator over hand-shaped
+    //! `WebTemplate` nodes.
 
     use serde_json::{Value, json};
 
@@ -1685,9 +1464,7 @@ mod tests {
     }
 
     // ── DV_IDENTIFIER mandatory (existence 1..1) constrained sub-attribute ────
-    // RM `data_types` §DV_IDENTIFIER; AOM 1.4 §existence + §C_STRING. An OPT that
-    // constrains and mandates `issuer` rejects a value that omits it (the `id`
-    // absence is caught separately by the RM invariant).
+    // RM `data_types` §DV_IDENTIFIER; AOM 1.4 §existence + §C_STRING.
 
     #[test]
     fn dv_identifier_mandatory_issuer_enforced() {
@@ -1716,9 +1493,8 @@ mod tests {
     }
 
     // ── DV_SCALE generic (C_REAL value list + symbol C_CODE_PHRASE) ───────────
-    // AOM 1.4 has no C_DV_SCALE, so DV_SCALE constrains `symbol.defining_code`
-    // as a C_CODE_PHRASE code_list (AOM 1.4 §C_CODE_PHRASE; RM §DV_SCALE): a
-    // symbol not in the list is rejected, with no (symbol, value) pair check.
+    // AOM 1.4 has no C_DV_SCALE, so `symbol.defining_code` is a C_CODE_PHRASE
+    // code_list (AOM 1.4 §C_CODE_PHRASE; RM §DV_SCALE).
 
     #[test]
     fn dv_scale_generic_symbol_membership_enforced() {
@@ -1751,9 +1527,8 @@ mod tests {
         assert!(walk_only(&ok, &n).is_empty(), "{:?}", walk_only(&ok, &n));
     }
 
-    // ── DV_TIME partial value vs C_TIME pattern (over-rejection fix) ──────────
-    // ADL 1.4 `master05-cadl.adoc` §"Date, Time and Date/Time" Patterns: `?` =
-    // optional field, `X` = disallowed field; an hour-only value "10" satisfies
+    // ── DV_TIME partial value vs C_TIME pattern ──────────────────────────────
+    // ADL 1.4 `master05-cadl.adoc` §"Date, Time and Date/Time": "10" satisfies
     // both "HH:??:??" and "HH:XX:XX".
 
     fn time_node(pattern: &str) -> WebTemplateNode {
@@ -1933,9 +1708,8 @@ mod tests {
         );
     }
 
-    // AOM 1.4 `master04-constraint_model_package.adoc` (`C_MULTIPLE_ATTRIBUTE`):
-    // existence says whether the container is there, cardinality how many
-    // members it holds (#5909).
+    // AOM 1.4 `C_MULTIPLE_ATTRIBUTE`: existence says whether the container is
+    // there, cardinality how many members it holds.
     #[test]
     fn existence_empty_array_counts_as_present() {
         let mut n = node("COMPOSITION", "");
@@ -2105,10 +1879,8 @@ mod tests {
         assert_eq!(walk_only(&good, &prop), Vec::<ValidationMessage>::new());
     }
 
-    /// `C_QUANTITY_ITEM.precision` (`OpenehrProfile.xsd`, surfaced as
-    /// `inputs[].validation.precision`): the instance's `DV_QUANTITY.precision`
-    /// must lie in the interval; an absent instance precision violates
-    /// nothing (#3027).
+    /// `C_QUANTITY_ITEM.precision` bounds the instance's `DV_QUANTITY.precision`;
+    /// an absent precision violates nothing.
     #[test]
     fn quantity_precision_interval() {
         let mut q = node("DV_QUANTITY", "/q");
@@ -2326,9 +2098,7 @@ mod tests {
             {"_type": "OBSERVATION", "archetype_node_id": "openEHR-EHR-OBSERVATION.foreign.v1",
              "name": {"_type": "DV_TEXT", "value": "o"}}
         ]});
-        // The closed-world admission rule: an unmatched *archetype-rooted* child is
-        // tolerated (the flat OPT does not enumerate the full slot-fill universe;
-        // the CNF corpus itself commits such ENTRYs).
+        // An unmatched archetype-rooted child is tolerated.
         let msgs = walk_only(&inst, &root);
         assert!(
             msgs.is_empty(),
@@ -2355,9 +2125,7 @@ mod tests {
         );
     }
 
-    /// A metadata value (no `archetype_node_id`, i.e. non-LOCATABLE) under a closed
-    /// attribute is never flagged (closed-world rule 2 — the `archetype_node_id`
-    /// discriminator).
+    /// A non-LOCATABLE metadata value under a closed attribute is never flagged.
     #[test]
     fn closed_world_ignores_metadata_values() {
         let mut root = node("ELEMENT", "/items[at0001]");
@@ -2607,16 +2375,11 @@ mod tests {
 
     // ── name-differentiated same-archetype-id siblings ────────────────────────
     //
-    // A template may fill the same archetype twice under one container, the fills
-    // differentiated by their runtime `name` (RM common
-    // `master03-archetyped_package.adoc` §"The `LOCATABLE` class"; AOM 1.4
-    // `master04-constraint_model_package.adoc` §`node_id`). Templates fix
-    // `name/value` on all-but-one sibling, so the one *unqualified* sibling admits
-    // only the instances no name-qualified sibling claims.
+    // RM common `master03-archetyped_package.adoc` §"The `LOCATABLE` class"; AOM
+    // 1.4 `master04-constraint_model_package.adoc` §`node_id`.
 
-    /// Two same-archetype siblings under `items`, one unqualified (name "A", inner
-    /// `items` closed to `at0004`) and one name-qualified ('B', inner `items`
-    /// closed to `at0013`).
+    /// Two same-archetype siblings under `items`: unqualified "A" closed to
+    /// `at0004`, name-qualified 'B' closed to `at0013`.
     fn name_diff_parent() -> WebTemplateNode {
         let mut root = node("CLUSTER", "");
         let sib_a = {
@@ -2705,10 +2468,7 @@ mod tests {
     #[test]
     fn unqualified_sibling_admits_a_runtime_named_residual_instance() {
         let root = name_diff_parent();
-        // An instance whose name matches NO name-qualified sibling ("other") routes
-        // to the unqualified (residual) sibling — its `name` being unconstrained,
-        // master03 §"The `LOCATABLE` class" L35. Its own overlay child (`at0004`)
-        // therefore validates clean…
+        // A name no qualified sibling claims routes to the unqualified sibling.
         let ok = json!({
             "_type": "CLUSTER", "archetype_node_id": "x",
             "name": {"_type": "DV_TEXT", "value": "root"},

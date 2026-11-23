@@ -1,34 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Breadth gate over the vendored real-world archetype packs — both dialects.
+//! Every file of the vendored archetype packs parses in its own dialect: the
+//! live CKM in ADL 1.4 (`corpus/archetypes/ckm/adl14/`) and the 2013 export in
+//! ADL 2 (`corpus/archetypes/adl2/ckm-2013-12-09/`), or is an adjudicated refusal.
 //!
-//! Two packs, two sources, because the two dialects are published in
-//! different places (`.claude/rules/vendored-corpora.md`):
-//!
-//! - `corpus/archetypes/ckm/adl14/` — every
-//!   archetype the public openEHR CKM publishes, as **ADL 1.4**
-//!   (`scripts/vendor/ckm-archetypes.sh`). CKM publishes no ADL 2 export.
-//! - `corpus/archetypes/adl2/ckm-2013-12-09/` —
-//!   upstream's own CKM export carrying `*.adls` (**ADL 2**) beside `*.adl`
-//!   (ADL 1.4) twins of the same archetypes, pinned by commit
-//!   (`scripts/vendor/adl2-archetypes.sh`).
-//!
-//! The claim here is deliberately narrow and total: every file in both packs
-//! PARSES in its own dialect. That is the breadth net the hand-written
-//! `adl14-cadl`/`adl14-dadl` trees cannot provide — real clinical archetypes
-//! carry constraint spellings, translation blocks and terminology sections no
-//! authored fixture reproduces. Deeper claims (phase-1 validation, flattening)
-//! stay with the rule-code-keyed `adl2-reference` corpus, whose file names
-//! encode the expected outcome.
-//!
-//! NOTE: no openEHR spec governs 1.4 tolerance — our own design
-//! ([`openehr_adl::adl14`]). Outcomes here are pinned by the packs themselves.
-//!
-//! Corpus discipline: 100% exercised, adjudicated refusals only. A file our
-//! reader rejects is listed in the pack's `ADJUDICATED` table with the reason;
-//! it stays vendored so the refusal is pinned, and a reader that starts
-//! accepting it fails this gate.
+//! NOTE: no openEHR spec governs 1.4 tolerance: our own design.
 #![allow(
     clippy::expect_used,
     clippy::panic,
@@ -46,27 +23,13 @@ use openehr_adl::validate::catalogue::{Severity, ValidationCode};
 use openehr_adl::validate::rm::{ProductionRmModel, production_model_governs};
 use openehr_adl::validate::{validate_source, validate_source_integrity};
 
-/// Archetypes the conformant reader MUST refuse, with the syntax code the
-/// refusal must carry and the adjudication behind it.
-///
-/// These are NEGATIVE tests, not a skip list: the gate asserts the refusal
-/// happens AND carries the stated code. A file that starts parsing, or that
-/// refuses with a different code, fails the gate — so a silently loosened
-/// reader cannot hide here, and neither can a mis-coded error.
+/// An archetype the reader must refuse, with the syntax code and adjudication;
+/// a file that parses or refuses otherwise fails the gate.
 type Refusal = (&'static str, SyntaxErrorCode, &'static str);
 
-/// One adjudicated defect family in the live CKM library.
-///
-/// A duplicate sibling container key in the terminology ODIN — incomplete
-/// authoring, not a language feature. `LANG` ODIN `master05-content.adoc`
-/// §VDOBU: "object identifier uniqueness: sibling objects occurring within a
-/// container attribute must be uniquely identified with respect to each
-/// other."
-///
-/// (The former second family — EMPTY inline dADL domain blocks, 9 files — was
-/// re-adjudicated to ACCEPTANCE under #1465: the dADL chapter's own grammar
-/// admits the empty block and §Empty Sections allows it anywhere, so it lowers
-/// to the open constraint; see `adl14/domain.rs` `lower_adl14_domain`.)
+/// The adjudicated defect family in the live CKM library: a duplicate sibling
+/// container key in the terminology ODIN (`LANG` ODIN `master05-content.adoc`
+/// §VDOBU).
 const ADJUDICATED_CKM_ADL14: &[Refusal] = &[
     // ── duplicate sibling container key in terminology ODIN (VDOBU) ───────
     (
@@ -314,14 +277,8 @@ fn upstream_adl14_twins_parse() {
     );
 }
 
-/// The RM resource-meta rows over the whole CKM 1.4 pack.
-///
-/// Enforcement of the RM common ch.8 invariants on 1.4 sources
-/// (`validate::resource_meta`) was audited clean against the vendored
-/// real-world library first, so it newly rejects no previously-accepted
-/// archetype — this sweep IS that record. Only the resource-meta codes are
-/// asserted: other validity findings on real-world content are the
-/// rule-code-keyed corpus' territory.
+/// The RM resource-meta rows over the whole CKM 1.4 pack (RM common ch.8
+/// invariants).
 #[test]
 fn ckm_adl14_pack_is_resource_meta_clean() {
     let resource_codes = [
@@ -386,13 +343,8 @@ fn ckm_adl14_pack_is_resource_meta_clean() {
     );
 }
 
-/// A vendored ADL 2 archetype the AOM2 validator MUST refuse, with the
-/// validity code the refusal must carry and the adjudication behind it.
-///
-/// The validation-level twin of [`Refusal`]: these files parse, and the CDR's
-/// own upload path (`POST /definition/template/adl2`) refuses them with `400`
-/// on exactly these codes, so the sandbox seed's pinned accepted/refused split
-/// has this table as its authority.
+/// A vendored ADL 2 archetype the validator must refuse, with the code and the
+/// adjudication; the sandbox seed's accepted/refused split follows this table.
 pub(crate) type ValidityRefusal = (&'static str, ValidationCode, &'static str);
 
 /// The adjudicated validity refusals over the 2013 CKM ADL 2 export.
@@ -870,12 +822,8 @@ fn parents_first(files: &[PathBuf]) -> Vec<PathBuf> {
     ordered
 }
 
-/// Validate every parseable `.adls` of the pack exactly as the CDR does on
-/// upload, in upload order: the full AOM2 catalogue against the production RM
-/// for an openEHR RM archetype, the integrity pass alone otherwise, each over a
-/// repository holding only the archetypes ACCEPTED so far — a refused parent is
-/// never a flat parent, and a child whose parent is absent is VASID. External
-/// term bindings (VETDF) are asked of `resolver`.
+/// Validate every parseable `.adls` of the pack as the CDR does on upload, in
+/// upload order, over the archetypes accepted so far; VETDF asks `resolver`.
 pub(crate) fn validate_all(
     files: &[PathBuf],
     adjudicated: &[ValidityRefusal],
@@ -1026,13 +974,8 @@ fn manifest_count(library: &serde_json::Value, key: &str) -> usize {
         .unwrap_or_else(|| panic!("the manifest's archetype library carries no `{key}` count"))
 }
 
-/// The sandbox seed's archetype-library pin (`scripts/sandbox/seed/manifest.json`,
-/// checked by `scripts/sandbox/reseed.sh`) is the split these tables predict.
-///
-/// With LOINC served, the pin holds exactly. Without it, VETDF cannot verify a
-/// LOINC binding and only warns ("subject to tool accessibility", master03
-/// VETDF), so the files the manifest names as refused when LOINC is served
-/// are stored instead, and the split moves by their number (#4278).
+/// The sandbox seed's archetype-library pin is the split these tables predict;
+/// without LOINC served, VETDF only warns (master03 VETDF) and the split moves.
 #[test]
 fn sandbox_seed_pin_is_the_adjudicated_split() {
     let repo_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");

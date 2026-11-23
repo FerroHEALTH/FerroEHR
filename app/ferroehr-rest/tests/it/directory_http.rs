@@ -759,13 +759,10 @@ async fn version_at_time_without_offset_resolves_in_the_local_timezone() {
     let (_s, h, _b) = create_directory(&app, &ehr, &folder_json("dir-v1", vec![]), None).await;
     let v1 = etag_uid(&h);
 
-    // The probe instant is v1's OWN commit instant, read back from the database
-    // rather than sampled from a clock (#3119). `committed_at` is stamped by
-    // PostgreSQL, whose container clock need not agree with this process's, and
-    // the margins this test used to sleep around were eaten under full-suite
-    // load. A version is in force AT its own commit instant, so the version
-    // extant at exactly that instant is v1 by construction, with no margin to
-    // lose.
+    // The probe instant is v1's own commit instant, read back from the database
+    // (#3119): PostgreSQL stamps `committed_at` on its own clock, and a version
+    // is in force at its own commit instant, so the version extant then is v1
+    // by construction.
     let between: jiff_sqlx::Timestamp = sqlx::query_scalar(
         "SELECT committed_at FROM version \
          WHERE kind = 'FOLDER' AND sys_version = 1 AND ehr_id = $1",

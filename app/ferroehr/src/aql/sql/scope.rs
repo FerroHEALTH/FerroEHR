@@ -79,15 +79,12 @@ impl Builder<'_> {
     /// root's and every EHR source's, and under a condition that probes the
     /// settings row only those no head predicate already decides.
     ///
-    /// Under such a condition, a root linked to an EHR source has the
-    /// source's id as its EHR id, so the source decides it; and a source with
-    /// a linked root contributes only rows whose head the condition admits
-    /// ([`super::access::on_head`]), and an admitted item is one the EHR
-    /// reaches ([`super::access::on_ehr_id`] holds wherever `on_head` does).
-    /// Each repeat was one more probe of the settings row per candidate row.
-    /// A pinned condition keeps every one: it is an equality on a constant,
-    /// which the planner reads as an index condition. No openEHR spec governs
-    /// this: our own design (#5782).
+    /// Under such a condition, a root linked to an EHR source has the source's
+    /// id as its EHR id, so the source decides it; and a source with a linked
+    /// root contributes only rows whose head the condition admits
+    /// ([`super::access::on_head`]). A pinned condition keeps every one: it is
+    /// an equality on a constant, which the planner reads as an index
+    /// condition. No openEHR spec governs this: our own design (#5782).
     fn accessed_ehr_ids(&self) -> Vec<Expr> {
         let probes = self.ctx.ehr_access.pinned().is_none();
         let roots = self
@@ -169,11 +166,6 @@ impl Builder<'_> {
     }
 
     /// The EHR-scoped restriction mark on a population query.
-    ///
-    /// The per-object predicate (`head::bind_head`) already removes every
-    /// restricted object; this removes an EHR restricted as a whole, whose
-    /// objects carry the mark too but whose `ehr` row is the cheaper place to
-    /// decide it once the population gate has already joined it.
     fn gate_ehr_marks(&mut self, alias: &str) {
         self.q.and_where(col(alias, Ehr::RestrictedAt).is_null());
         self.q.and_where(research_objection_clear(alias));
@@ -184,11 +176,9 @@ impl Builder<'_> {
     /// [`is_queryable`](crate::db::iden::Ehr::IsQueryable) column. The flag is a
     /// scalar attribute of the current `EHR_STATUS` (RM ehr master04 §EHR Status,
     /// `EHR_STATUS.is_queryable` 1..1 Boolean), promoted onto the `ehr` row and
-    /// kept in lockstep by the status write path, so the gate is a boolean-column
-    /// filter over a PK join instead of a per-query `EXISTS` that index-scanned
-    /// every current `EHR_STATUS` root. A full-population
-    /// query runs over every EHR whose status has `is_queryable` set. No openEHR
-    /// spec governs the join mechanics — our own storage design.
+    /// kept in lockstep by the status write path, so the gate is a
+    /// boolean-column filter over a PK join. No openEHR spec governs the join
+    /// mechanics: our own storage design.
     fn gate_vo_root(&mut self, root: &str) {
         let alias = format!("qg{}", self.next_ctr());
         let link = col(&alias, Ehr::Id).eq(col(root, Node::EhrId));

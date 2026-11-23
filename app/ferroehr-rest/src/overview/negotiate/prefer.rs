@@ -160,13 +160,6 @@ fn identifier_status(minimal_status: StatusCode, repr_status: StatusCode) -> Sta
 
 /// The single `Prefer` seam for a create/update response: resolve the
 /// preference the write can apply, render its body, and declare it.
-///
-/// `representation` renders the full body at the status it is handed; it is
-/// only called when `return=representation` is applied. The identifier body is
-/// rendered by [`identifier_response`] at [`identifier_status`] — structurally
-/// never `204`, because the branch is reachable only with an identifier in
-/// hand. Resource headers (`ETag`/`Last-Modified`/`Location`) are the caller's
-/// business; this seam owns the body + `Preference-Applied` only.
 pub(crate) fn write_negotiated(
     headers: &HeaderMap,
     minimal_status: StatusCode,
@@ -219,11 +212,6 @@ fn xml_escape(s: &str) -> String {
 /// collection at `repr_status` on `Prefer: return=representation` or
 /// `return=identifier`, otherwise the empty `minimal_status` body, and the
 /// applied preference declared either way.
-///
-/// The collection is not a `uid`-versioned resource of its own, so its stored
-/// list is the identifier-level answer: each tag is identified by its key
-/// within the target. No `ETag`/`Location`: the collection write mints no new
-/// resource.
 // NOTE: the release is silent on a tag write's `return=identifier` answer, and RFC 7240 §4.2
 // lets the server pick it; by owner decision (#4475) it is the stored tag list.
 pub(crate) fn write_collection(

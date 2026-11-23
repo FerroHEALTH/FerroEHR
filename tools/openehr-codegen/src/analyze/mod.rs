@@ -1,16 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Stage 2 — ANALYZE. Model analysis over the loaded BMM meta-model.
-//!
-//! Consumes the loaded [`crate::load::bmm`] schemas and produces the semantic
-//! facts the later stages need: the merged include-closure ([`Model`]), the
-//! polymorphic seams, the ownership graph and the back-reference edges that
-//! break its cycles, the constructibility proof, and the cross-schema
-//! re-emission closure.
-//!
-//! [`Model`]'s type resolution splits across stages: the graph facts are here,
-//! while the Rust type TEXT they feed is a second `impl` block in
+//! Stage 2, analyze: the include-closure [`Model`], polymorphic seams,
+//! ownership graph and back-references, the constructibility proof and the
+//! cross-schema re-emission closure. The Rust type text is in
 //! [`crate::render::model_types`].
 
 use crate::load::bmm::{BmmClass, BmmPropKind, BmmSchema, BmmType};
@@ -37,33 +30,19 @@ pub(crate) struct Model {
     layout: crate::plan::layout::LayoutMemo,
 }
 
-/// Spec types provided by *dependency* crates. When a schema references a type
-/// it does not emit itself but a dependency does, the emitter resolves it to
-/// that dependency GENERATION's defining module by full path (e.g.
-/// `openehr_base::v1_3::base_types::identification::uid`) instead of degrading
-/// to `serde_json::Value`. Full generation-module paths — never a crate
-/// prelude — so a generation binds exactly the dependency generation its
-/// composition pairs it with (RM `v1_1` resolves against BASE `v1_2`, not
-/// whatever the dependency crate's current prelude re-exports).
+/// Spec types provided by dependency crates, resolved to the paired dependency
+/// generation's defining module by full path.
 #[derive(Default)]
 pub(crate) struct External {
-    /// Each entry: spec class name → the full Rust module path of the
-    /// dependency generation's defining module (the type ident is appended by
-    /// the caller). Entries are consulted in registration order — the FIRST
-    /// map containing a spec name wins, so a composition listing two
-    /// generations of one dependency crate decides collisions by list order.
+    /// Spec class name → full module path of the dependency generation's defining
+    /// module, first map wins.
     deps: Vec<BTreeMap<String, String>>,
-    /// Path to the hand-written container-shape module
-    /// (`openehr_base::containers`, or `crate::containers` inside
-    /// `openehr-base` itself). `NonEmptyVec` — the emission shape of a `1..*`
-    /// container — is named from here.
+    /// Path to the container-shape module that names `NonEmptyVec`.
     containers: String,
 }
 
 impl External {
-    /// Point the container-shape path at the crate being emitted: within
-    /// `openehr-base` the module is `crate::containers`, elsewhere it is
-    /// reached through the `openehr_base` dependency.
+    /// Points the container-shape path at the crate being emitted.
     pub(crate) fn in_crate(mut self, crate_name: &str) -> Self {
         self.containers = if crate_name == "openehr-base" {
             "crate::containers".to_string()
@@ -160,10 +139,7 @@ impl Model {
         self.classes.iter()
     }
 
-    /// Whether `name` is a generic parameter declared on `class` or any of its
-    /// (transitive) ancestors — e.g. `T` for `INTERVAL_EVENT` (declared on the
-    /// ancestor `EVENT<T>`). Used to resolve a bare-parameter attribute type to
-    /// its bound in the concrete class's scope.
+    /// Whether `name` is a generic parameter declared on `class` or an ancestor.
     pub(crate) fn is_generic_param(&self, class: &str, name: &str) -> bool {
         let Some(c) = self.get(class) else {
             return false;
@@ -178,14 +154,8 @@ impl Model {
         primitive(name).is_some() || is_mapped_class(name)
     }
 
-    /// Does `class` inherit from `target` (transitively)?
-    ///
-    /// The declared `ancestors` plus the additional edges
-    /// [`crate::plan::overrides::SUBTYPE_EXTENSIONS`] declares, so a subtype
-    /// seam the vendored BMM under-declares participates in the
-    /// descendant/variant computation exactly like a declared ancestor. Property
-    /// flattening ([`Model::flattened_props`]) reads `ancestors` directly and is
-    /// therefore untouched by an extension edge.
+    /// Whether `class` inherits from `target` transitively, through the declared
+    /// `ancestors` and [`crate::plan::overrides::SUBTYPE_EXTENSIONS`].
     pub(crate) fn inherits(&self, class: &str, target: &str) -> bool {
         let Some(c) = self.get(class) else {
             return false;
@@ -195,9 +165,8 @@ impl Model {
                 return true;
             }
         }
-        // The declared edges are walked first (the common case); the extension
-        // edges are a separate loop because their `&'static str` items would
-        // otherwise force the borrow of `self` above to `'static`.
+        // A separate loop: the `&'static str` items would force `self`'s borrow to
+        // `'static`.
         for a in subtype_extension_parents(class) {
             if a == target || self.inherits(a, target) {
                 return true;
@@ -206,9 +175,8 @@ impl Model {
         false
     }
 
-    /// Can `from` transitively reach `target` through **`Single`** (non-`Vec`)
-    /// field types? Used to detect struct-sizing cycles that need boxing
-    /// (`Vec`/`Box` already break a cycle; `Option<T>` and plain `T` do not).
+    /// Whether `from` reaches `target` through single-valued field types, a cycle
+    /// that needs boxing.
     pub(crate) fn reaches(&self, from: &str, target: &str, seen: &mut BTreeSet<String>) -> bool {
         if from == target {
             return true;
@@ -219,9 +187,7 @@ impl Model {
         let Some(class) = self.get(from) else {
             return false;
         };
-        // An abstract class is emitted as an untagged enum; a cycle can run
-        // through its variants (e.g. ARCHETYPE_CONSTRAINT ↔ ARCHETYPE_SLOT,
-        // EXPR_ITEM ↔ EXPR_BINARY_OPERATOR). Traverse them too.
+        // An abstract class is an enum, so a cycle can run through its variants.
         if class.is_abstract {
             return self
                 .enum_variants(from)
@@ -237,15 +203,10 @@ impl Model {
         })
     }
 
-    /// The *immediate* concrete, emittable subtypes of `name` — the variants of
-    /// its untagged enum. Generic descendants are included (the enum is emitted
-    /// generic over the class's own params, `Event<T> { PointEvent(PointEvent<T>) }`).
+    /// The immediate concrete subtypes of `name`, the variants of its enum.
     ///
-    /// A descendant `D` is dropped when another concrete descendant `C` sits
-    /// between `name` and `D`, because `C` is itself emitted as an enum that
-    /// covers `D` — so the enums nest by the type hierarchy (`DATA_VALUE ⊇ DvText`,
-    /// `DvText ⊇ DvCodedText`) instead of `DATA_VALUE` flatly listing both
-    /// `DV_TEXT` and `DV_CODED_TEXT` (which would double-match on the wire).
+    /// A descendant below another concrete descendant is covered by that one's
+    /// enum, so the enums nest (`DATA_VALUE ⊇ DvText ⊇ DvCodedText`).
     pub(crate) fn enum_variants(&self, name: &str) -> Vec<String> {
         let all: Vec<String> = self
             .classes
@@ -267,10 +228,7 @@ impl Model {
             .collect()
     }
 
-    /// The class-name roots this class references through its own (flattened)
-    /// **field** types — i.e. what its emitted struct/enum *contains* (not the
-    /// subtype payloads of a polymorphic parent). Used to grow the cross-schema
-    /// re-emit closure ([`reemit::cross_schema_reemit`]).
+    /// The class names this class's flattened field types reference.
     fn field_roots(&self, name: &str) -> BTreeSet<String> {
         let mut out = BTreeSet::new();
         if let Some(class) = self.get(name) {
@@ -335,12 +293,8 @@ impl Model {
 
     // ── generic-parameter + type-graph resolution ───────────────────────────
 
-    /// The generic params a class *actually uses* in its (flattened) fields —
-    /// those referenced explicitly as the bare param type. A declared param
-    /// whose only occurrences are inside auto-filled bare generic references
-    /// (which resolve to bounds, not the param) is dropped, so the emitted
-    /// struct is not generic over an unused `T` (which Rust rejects). Returns
-    /// `(name, bound)` pairs in declaration order.
+    /// The generic params a class's flattened fields use as a bare param type, as
+    /// `(name, bound)` in declaration order.
     pub(crate) fn used_generic_params(&self, name: &str) -> Vec<(String, Option<String>)> {
         let Some(class) = self.get(name) else {
             return Vec::new();
@@ -348,11 +302,8 @@ impl Model {
         if class.generic_params.is_empty() {
             return Vec::new();
         }
-        // An abstract class is emitted as an untagged enum generic over the
-        // declared params any *concrete variant* uses — a subtype family whose
-        // parameter is exposed only by descendants (`VERSION<T>` carries `T`
-        // only through `ORIGINAL_VERSION.data: T`) still needs `Version<T>`, and
-        // a bare reference to it must resolve to the same arity.
+        // An abstract class's enum is generic over the params any concrete variant
+        // uses (`ORIGINAL_VERSION.data: T`).
         if class.is_abstract {
             let variants = self.enum_variants(name);
             return class
@@ -373,9 +324,8 @@ impl Model {
             .iter()
             .map(|g| g.name.as_str())
             .collect();
-        // NOTE: an argument the BMM drops (`IMPORTED_VERSION.item: ORIGINAL_VERSION`) is
-        // restored at load from the cited `plan::elided_arguments::ELIDED_ARGUMENTS`,
-        // so a parameter is used only where it appears literally.
+        // NOTE: `plan::elided_arguments::ELIDED_ARGUMENTS` restores the arguments the
+        // BMM drops, so a parameter counts only where it appears literally.
         let mut used = BTreeSet::new();
         for rp in self.flattened_props(class) {
             match &rp.prop.kind {
@@ -392,11 +342,8 @@ impl Model {
             .collect()
     }
 
-    /// The `conforms_to` bound of generic parameter `param` on `class`, resolved
-    /// up the ancestor chain. A subclass may redeclare an inherited parameter
-    /// without repeating its bound (`INTERVAL_EVENT<T>` re-lists `T` but the
-    /// `T: ITEM_STRUCTURE` bound lives on `EVENT<T>`); the bound is inherited by
-    /// parameter name, since the family reuses the same name down the hierarchy.
+    /// The `conforms_to` bound of `param` on `class`, inherited by parameter name
+    /// up the ancestor chain.
     pub(crate) fn resolved_param_bound(&self, class_name: &str, param: &str) -> Option<String> {
         let class = self.get(class_name)?;
         if let Some(g) = class.generic_params.iter().find(|g| g.name == param)
@@ -410,9 +357,8 @@ impl Model {
             .find_map(|anc| self.resolved_param_bound(anc, param))
     }
 
-    /// The bounds to auto-fill for a bare reference to a generic class, or
-    /// `None` if the class has no *used* generic params (so a bare reference
-    /// stays bare). Consistent with [`Self::used_generic_params`].
+    /// The bounds to auto-fill for a bare reference to a generic class, or `None`
+    /// when it uses no generic params.
     pub(crate) fn generic_param_bounds(&self, name: &str) -> Option<Vec<Option<String>>> {
         let used = self.used_generic_params(name);
         if used.is_empty() {
@@ -422,10 +368,8 @@ impl Model {
         }
     }
 
-    /// Every spec class name the *rendered* type of `t` embeds by value — its
-    /// root, explicit generic args, and (for a bare generic-class reference) the
-    /// auto-filled parameter bounds. Used for both imports and cycle detection
-    /// so they stay consistent with [`Self::render_type`].
+    /// Every spec class name the rendered type of `t` embeds by value, as
+    /// [`Self::render_type`] renders it.
     pub(crate) fn effective_roots(&self, t: &BmmType, out: &mut BTreeSet<String>) {
         match t {
             BmmType::Simple(n) => {
@@ -438,11 +382,7 @@ impl Model {
             }
             BmmType::Generic { root, params } => {
                 out.insert(root.clone());
-                // Only recurse into the args that survive rendering: a container
-                // (`List<T>` → `Vec<T>`) keeps them, but a spec class whose sole
-                // param was unused is monomorphized (`BMM_LITERAL_VALUE<BMM_TYPE>`
-                // → `BmmLiteralValue`), dropping the args — mirror `render_type`
-                // so imports/cycle detection do not see a phantom arg.
+                // A monomorphized spec class drops its args, as `render_type` does.
                 let keeps_args = matches!(root.as_str(), "List" | "Array" | "Set" | "Hash")
                     || self.generic_param_bounds(root).is_some();
                 if keeps_args {
@@ -454,24 +394,17 @@ impl Model {
         }
     }
 
-    /// The set of class names that are **constructible** — a finite value
-    /// exists. Computed as a least fixpoint: a mapped/primitive type is
-    /// constructible; an abstract (untagged-enum) class is constructible if any
-    /// variant is; a concrete class is constructible iff every *mandatory
-    /// single-valued* field's type is constructible. Container (`Vec`/map) and
-    /// optional (`Option`) fields never block construction (they can be
-    /// empty/`None`), and a designated owner/parent [`back_reference`] is omitted
-    /// from the struct entirely, so it never blocks either.
+    /// The constructible class names, as a least fixpoint: an abstract class if
+    /// any variant is, a concrete class if every mandatory single-valued field
+    /// type is.
     fn constructible_classes(&self) -> BTreeSet<String> {
         let mut ok: BTreeSet<String> = BTreeSet::new();
         while self.mark_constructible_round(&mut ok) {}
         ok
     }
 
-    /// Runs one round of the constructibility fixpoint, marking every class the
-    /// already-known set now permits construction of.
-    ///
-    /// Returns whether `ok` grew — `false` is the fixpoint.
+    /// Runs one round of the constructibility fixpoint, returning whether `ok`
+    /// grew.
     fn mark_constructible_round(&self, ok: &mut BTreeSet<String>) -> bool {
         let mut changed = false;
         for (name, class) in &self.classes {
@@ -487,9 +420,6 @@ impl Model {
     }
 
     /// Whether one class is constructible given the classes already known to be.
-    ///
-    /// An abstract (untagged-enum) class is constructible if any variant is; a
-    /// concrete one iff every mandatory single-valued field's type is.
     fn class_is_constructible(&self, name: &str, class: &BmmClass, ok: &BTreeSet<String>) -> bool {
         if class.is_abstract {
             return self
@@ -502,18 +432,9 @@ impl Model {
             .all(|rp| self.prop_allows_construction(rp, ok))
     }
 
-    /// Whether one property leaves its owner constructible, given the classes
-    /// already known constructible.
-    ///
-    /// Only a mandatory, single-valued, non-back-reference field can force
-    /// construction of another value. A single-valued property whose type is a
-    /// container generic (`List`/`Array`/`Set`/`Hash` → `Vec`/`BTreeMap`)
-    /// renders as an indirection that can be empty, so it never blocks
-    /// construction (mirroring `field_type`'s `already_indirect`). Of the
-    /// remaining roots, one blocks only if it is a *defined model class* not
-    /// yet known constructible: a generic parameter (`EVENT.data: T`), `Any`,
-    /// or a cross-schema type (rendered as `serde_json::Value`) is not a model
-    /// class here — it is caller-filled/mapped and never blocks.
+    /// Whether one property leaves its owner constructible: only a mandatory,
+    /// single-valued, non-back-reference field of a defined model class not yet
+    /// known constructible blocks.
     fn prop_allows_construction(&self, rp: &ResolvedProp<'_>, ok: &BTreeSet<String>) -> bool {
         if !rp.prop.is_mandatory || back_reference(&rp.owner, &rp.prop.name).is_some() {
             return true;
@@ -533,16 +454,8 @@ impl Model {
             .all(|r| Self::is_mapped(r) || self.get(r).is_none() || ok.contains(r))
     }
 
-    /// The concrete emittable classes of `schema` that are **not**
-    /// constructible — an unbroken mandatory single-valued construction cycle
-    /// (sorted). Empty is the required state. This is the general ownership-cycle
-    /// analysis (orchestrator ruling 2026-07-19): a mandatory single-valued
-    /// construction cycle yields a non-constructible infinite-value type in Rust,
-    /// so it MUST be broken — and only ever at a designated owner/parent
-    /// [`back_reference`] edge, never by relaxing a forward composition. The fix
-    /// for any offender is a spec-cited `back_reference` entry naming the
-    /// offending back-reference property, never making a real data field
-    /// `Option`.
+    /// The concrete emittable classes of `schema` that are not constructible,
+    /// sorted; each must be broken at a spec-cited [`back_reference`].
     #[must_use]
     pub(crate) fn constructibility_violations(&self, schema: &BmmSchema) -> Vec<String> {
         let ok = self.constructible_classes();
@@ -557,10 +470,7 @@ impl Model {
         bad
     }
 
-    /// Prove every concrete emittable class in `schema` is constructible; panic
-    /// otherwise (the loud safeguard on the emit path — see
-    /// [`Self::constructibility_violations`] for the pure analysis the invariant
-    /// test consumes).
+    /// Panics unless every concrete emittable class in `schema` is constructible.
     pub(crate) fn assert_constructible(&self, schema: &BmmSchema) {
         let bad = self.constructibility_violations(schema);
         assert!(
@@ -632,14 +542,8 @@ pub(crate) fn class_paths(schema: &BmmSchema) -> BTreeMap<String, String> {
 }
 
 /// The attribute named by a `x /= Void implies not x.is_empty` assertion,
-/// including the BMM's variant spellings of the same predicate.
-///
-/// `Void` is matched case-insensitively (`DV_TEXT.Mappings_valid` uses
-/// lowercase `void`), `.empty` is accepted beside `.is_empty`
-/// (`ROLE.Capabilities_valid` uses the Eiffel spelling), and a parenthesized
-/// conjunction whose FIRST conjunct is the non-empty predicate matches too
-/// (`PARTY.Relationships_validity`) — the remaining conjuncts stay the
-/// responsibility of their classified venue.
+/// accepting `void`, `.empty` and a leading conjunct
+/// (`PARTY.Relationships_validity`).
 pub(crate) fn nonempty_list_attribute(expression: &str) -> Option<String> {
     let normalized = expression.split_whitespace().collect::<Vec<_>>().join(" ");
     let (lhs, rhs) = normalized.split_once(" implies ")?;
@@ -665,9 +569,8 @@ pub(crate) fn nonempty_list_attribute(expression: &str) -> Option<String> {
     Some(attribute.to_owned())
 }
 
-/// The `(declaring class, attribute)` pairs of every OPTIONAL container
-/// attribute carrying a present-implies-non-empty class invariant — emitted
-/// `Option<NonEmptyVec<T>>` so present-but-empty is unrepresentable.
+/// The `(declaring class, attribute)` pairs of every optional container
+/// under a present-implies-non-empty invariant.
 pub(crate) fn nonempty_optional_lists_cached(model: &Model) -> &BTreeSet<(String, String)> {
     model
         .nonempty_memo

@@ -11,12 +11,8 @@
 //! the body gives. No openEHR ITS-REST operation governs this route, and no
 //! openEHR specification defines an access log.
 //!
-//! Gating: mounted under `/admin/`, so the route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
-//! (`405` with an empty `Allow` when off). The erasure writes its access record
-//! (`ferroehr::service::admin::access_log_erasure`) with the tombstone and emits
-//! it to the forwarding sinks, so the response of a done erasure is marked
-//! written and the audit middleware adds no record of its own.
+//! The erasure writes its own access record with the tombstone, so the audit
+//! middleware adds none.
 
 use axum::response::Response;
 use ferroehr::system_log::event::EntryScope;

@@ -1,12 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The archetype-conformance pass over typed RM reports what the
-//! canonical-JSON pass reports on the canonical form of the same value, for
-//! the examples of every operational template in the repository and for
-//! defective variants of each (#6002).
-//!
-//! The comparison is of the two reports as multisets.
+//! The archetype-conformance pass over typed RM reports the same multiset as
+//! the canonical-JSON pass, on every template example and defective variants.
 
 use openehr_its::opt14;
 use openehr_rm::prelude::Composition;

@@ -193,10 +193,8 @@ pub(crate) struct AuditInput {
     /// `AUDIT_DETAILS` subtype RM 1.2.0 declares, so presence IS the concrete
     /// class.
     ///
-    /// Boxed because it is the rare case and by far the widest: it carries a
-    /// `DV_MULTIMEDIA` (`attested_view`), which would otherwise put hundreds of
-    /// bytes of attestation payload on the stack of every commit — including
-    /// the overwhelming majority that are plain `AUDIT_DETAILS`.
+    /// Boxed: the rare case, and the widest, since it carries a
+    /// `DV_MULTIMEDIA`.
     pub(crate) attestation: Option<Box<AttestationParts>>,
 }
 
@@ -343,9 +341,6 @@ impl AuditInput {
     /// numeric `audit_change_type` group code; the `DV_CODED_TEXT` carries it as
     /// `defining_code.code_string` (`AUDIT_DETAILS.Change_type_valid`) with the
     /// group rubric — resolved from the `openehr-term` bundle — as its `value`.
-    ///
-    /// Infallible: every attribute is already the RM value it will be served
-    /// as, so building the `AUDIT_DETAILS` is a move, never a decode.
     pub(crate) fn typed(&self, time_committed: &jiff::Timestamp) -> AuditDetails {
         let system_id = self.system_id.clone();
         let time_committed = dv_date_time(time_committed);
@@ -508,10 +503,6 @@ pub(crate) fn dv_text(value: &str) -> DvText {
 
 /// Decode a stored/assembled canonical `PARTY_PROXY` value into its RM type.
 ///
-/// The committer travels between the service layer and storage as canonical
-/// JSON (an `audit.committer` jsonb column), so the typed builders below must
-/// read it back to place it in an `AUDIT_DETAILS`.
-///
 /// # Errors
 /// [`ServiceError::Unprocessable`] when the value is not a canonical
 /// `PARTY_PROXY` (`AUDIT_DETAILS.committer` is 1..1 — RM common
@@ -627,24 +618,12 @@ pub(crate) fn check_committer(committer: &PartyProxy) -> Result<PartyProxy, Serv
 /// (`…org.openehr.rm.common.party_related.adoc` §Invariants), and the
 /// structural conformance of the concrete `PARTY_PROXY` subtype.
 ///
-/// The rules are not restated here: the typed committer goes through
-/// [`openehr_rm::v1_2::validate::tree::validate_node`], which runs the class
-/// invariants and the terminology-backed invariants the unified dispatcher
-/// [`openehr_its::wire_validate::validate_rm_value`] runs on its canonical
-/// JSON, and renders nothing (#6038). The structural check and the
-/// mandatory-container bounds of that dispatcher are what the reader already
-/// refused when it read the committer.
-///
-/// What the committer holds, its `external_ref`, its `identifiers` and every
-/// value below them, is judged too, by the passes a committed body gets
-/// ([`openehr_rm::v1_2::validate::tree::validate_below`]), each violation
-/// under its path from the committer (#6044): an audit is an RM instance as
-/// its version's data is (RM common `AUDIT_DETAILS.committer`).
-///
-/// It is invoked explicitly because a commit audit is not part of any committed
-/// RM document: the `AUDIT_DETAILS` is written to its own row and never walked
-/// by the content pass, so without this call the committer would be the one
-/// `PARTY_PROXY` reaching storage unvalidated.
+/// The typed committer goes through
+/// [`openehr_rm::v1_2::validate::tree::validate_node`] (#6038) and what it
+/// holds through [`openehr_rm::v1_2::validate::tree::validate_below`] (#6044),
+/// each violation under its path from the committer. A commit audit is written
+/// to its own row and never walked by the content pass, so without this call
+/// the committer would reach storage unvalidated.
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] carrying the dispatcher's violations.
@@ -673,10 +652,6 @@ pub(crate) fn validate_committer(committer: &PartyProxy) -> Result<(), ServiceEr
 }
 /// The `UPDATE_AUDIT`-declared attributes of a commit audit, whichever
 /// concrete form the wire carried.
-///
-/// The OAS models `UPDATE_ATTESTATION` as an `allOf` extension of
-/// `UPDATE_AUDIT`, so both forms carry these four members; this borrow lets a
-/// commit path read them without caring which arrived.
 #[derive(Debug)]
 pub struct AuditBase<'a> {
     /// `AUDIT_DETAILS.change_type` (1..1), coded from the openEHR *audit

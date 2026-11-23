@@ -1,15 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! VCARM on `DV_QUANTITY.property` (#4964): refused, with a message naming
-//! the ADL 1.4 route.
-//!
-//! VCARM (`AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`):
-//! an attribute "must be defined in the underlying information model". No RM
-//! release defines `DV_QUANTITY.property`
-//! (`RM/docs/UML/classes/org.openehr.rm.data_types.dv_quantity.adoc`); it is
-//! the AOM 1.4 archetype-profile attribute
-//! (`AM/docs/UML/classes/org.openehr.am.aom14.c_quantity.adoc`).
+//! VCARM refuses `DV_QUANTITY.property`, naming the ADL 1.4 route: no RM release
+//! defines it (`AOM2/master04.5`; `rm.data_types.dv_quantity.adoc`), only the AOM
+//! 1.4 profile (`aom14.c_quantity.adoc`).
 #![allow(
     clippy::expect_used,
     reason = "integration-test fixture plumbing outside #[test] fns, which the clippy.toml allow-*-in-tests scoping does not reach"

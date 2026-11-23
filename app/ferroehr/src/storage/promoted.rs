@@ -11,15 +11,8 @@
 //! openEHR defines the language (QUERY master03), not how a leaf is physically
 //! materialized.
 //!
-//! One registry drives both directions, so the write side and the read side can
-//! never disagree on the mapping:
-//! - **Write** ([`crate::storage::render::nodes`]): at decomposition time,
-//!   for a versioned-object root, the raw leaf text is captured onto the row and
-//!   written into the column ([`crate::storage::node_write::write_nodes`]).
-//! - **Read** (`crate::aql::sql::value`): a lowered `LeafPath` whose flattened
-//!   attribute path equals a registry entry's `path` (and whose source is the
-//!   matching versioned-object root) substitutes `node.<column>` for the
-//!   correlated-subquery lowering.
+//! One registry drives the write ([`crate::storage::render::nodes`]) and the
+//! read (`crate::aql::sql::value`), so the two never disagree on the mapping.
 //!
 //! ## Invariant on `rm_type`
 //!
@@ -31,10 +24,6 @@
 //! so a `FOLDER` leaf would need an explicit `num = 0` guard on the read side.
 
 /// The physical type a promoted column carries.
-///
-/// It selects the write-time SQL conversion ([`crate::storage::node_repo`]) and
-/// the read-time coercion the column may substitute for
-/// (`crate::aql::sql::value`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PromotedKind {
     /// An ISO-8601 date-time leaf. The column is `timestamptz`, populated via

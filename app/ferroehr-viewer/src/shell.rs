@@ -5,13 +5,6 @@
 //! the sandbox band, the page, its docked decision bar, the toasts and the
 //! footer.
 //!
-//! The parts are FerroUI's (`view::shell`, `view::nav`, `view::menu`,
-//! `view::status`, `view::search`, `view::toast`): the top bar carries the
-//! search, the CDR's status pill and the user menu, and no theme control
-//! (family rule 5). The navigation follows the approved information
-//! architecture of the viewer's mockup (FerroUI `design/consoles/ferroehr/`):
-//! Overview, Records, Definitions, Queries and the Console group.
-//!
 //! Every page handler draws the shell around its page, with the page at the
 //! request's path marked (FerroUI `docs/consoles.md`, "How a console
 //! builds", step 2). The session is read from the sealed cookie with no CDR

@@ -21,14 +21,6 @@
 //! RESTful-ATNA ITI-81 retrieval. Driven by `scripts/ui-e2e.sh`; each test
 //! owns its own [`Harness`] and skips with a printed reason when the harness
 //! environment is absent.
-//!
-//! The composed CDR audits every request by default (the local Audit Record
-//! Repository is on out of the box), so by the time these journeys run the
-//! stack's own activity has populated the trail. The audit surface is
-//! admin-only under RBAC: the journeys log in as the quickstart
-//! `ferroehr-admin` Basic user (`UI_E2E_ADMIN_USER`/`UI_E2E_ADMIN_PASS`
-//! override), and one journey proves the operator gate by visiting as the
-//! plain `ferroehr` user.
 
 use crate::common;
 

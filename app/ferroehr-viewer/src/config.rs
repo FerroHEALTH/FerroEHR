@@ -255,9 +255,6 @@ impl From<ferrohealth_session::config::ConfigError> for ConfigError {
 /// defaults for `[server]` under the operator's values and `RUST_LOG` as the
 /// fallback of `telemetry.filter`, as the CDR reads it.
 ///
-/// The Compose parameters `FERROEHR_VIEWER_PORT` and `FERROEHR_VIEWER_IMAGE`
-/// can reach the container environment, so the sweep passes them.
-///
 /// # Errors
 /// [`ConfigError::Load`] if the prefix is refused, which it never is.
 pub fn loader() -> Result<Loader, ConfigError> {

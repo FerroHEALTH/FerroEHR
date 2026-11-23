@@ -19,13 +19,9 @@ pub struct InternetId {
 
 /// Read access to the `pub(crate)` fields of [`InternetId`].
 ///
-/// The fields are not `pub`: the release states a **constraint over this
-/// class's own field values** (a lexical form, or a class invariant), so
-/// construction checks it and is the only door — docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc §Syntaxes: `internet_id = subdomain`, `subdomain = label | subdomain, '.', label`.
-///
-/// The validating constructor lives in the hand-written `*_impl.rs` sibling
-/// (the generator never writes into it); every generated codec builds this
-/// type through that constructor.
+/// The fields are not `pub` because the release constrains their values,
+/// so the validating constructor in the `*_impl.rs` sibling is the only
+/// way in: docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc §Syntaxes: `internet_id = subdomain`, `subdomain = label | subdomain, '.', label`.
 impl InternetId {
     /// The `value` this instance was constructed with, checked at the door.
     #[must_use]

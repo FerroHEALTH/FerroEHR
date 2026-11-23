@@ -9,13 +9,9 @@ use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use super::builder_v2_4::{attr_children, cstring_under};
 use super::model::WebTemplateNode;
 
-/// The data path of a node below `parent`. An `[idN]` predicate stands
-/// for `[@archetype_node_id = 'idN']` (ADL2 `master05-paths.adoc` §"Relationship
-/// with W3C Xpath"), which a `DATA_VALUE` lacks, being no `LOCATABLE` (RM
-/// `data_types`; RM `common` §Archetyped Package), so no data-value step takes
-/// one: `COMPOSITION.category` reads `/category`, and a `DV_INTERVAL`'s parts
-/// read `/lower` and `/upper` (ITS-REST
-/// `simplified_formats/master05-rm_mapping.adoc` §DV_INTERVAL).
+/// The data path of a node below `parent`; a `DATA_VALUE` is no `LOCATABLE`, so
+/// its step takes no `[idN]` predicate (ADL2 `master05-paths.adoc`; master05
+/// §DV_INTERVAL).
 pub(super) fn build_path(
     parent: Option<&WebTemplateNode>,
     attr: Option<&str>,
@@ -37,14 +33,8 @@ pub(super) fn build_path(
 }
 
 /// The single fixed name a node's `name` constraint gives it, for the
-/// `[id,'Name']` path predicate: a `name/value` `C_STRING` holding one literal.
-///
-/// Sibling archetype roots of one archetype carry the same
-/// `archetype_node_id` in data (RM common `master03-archetyped_package.adoc`
-/// §"The `LOCATABLE` class": at a root point it is the archetype id), so the
-/// runtime name is what tells them apart (BASE
-/// `architecture_overview/master11-paths.adoc` §"Using a Name-based
-/// Predicate"); the twin of the OPT 1.4 builder's `name_constraint`.
+/// `[id,'Name']` predicate (BASE `master11-paths.adoc` §"Using a Name-based
+/// Predicate").
 pub(super) fn name_constraint(co: &CObject) -> Option<String> {
     attr_children(co, "name").find_map(|name| {
         let value = cstring_under(name, "value")?;
@@ -55,10 +45,8 @@ pub(super) fn name_constraint(co: &CObject) -> Option<String> {
     })
 }
 
-/// The OPT path of an object with `node_id` under the attribute at
-/// `attr_path`: `attr_path[node_id]`, or `attr_path` for an object with no node
-/// id (ADL2 `master05-paths.adoc` §Overview), the form
-/// `openehr_adl::opt::RawOpt` writes its prohibited attributes in.
+/// The OPT path of an object with `node_id` under `attr_path` (ADL2
+/// `master05-paths.adoc` §Overview).
 pub(super) fn object_path(attr_path: &str, node_id: &str) -> String {
     if node_id.is_empty() {
         attr_path.to_owned()

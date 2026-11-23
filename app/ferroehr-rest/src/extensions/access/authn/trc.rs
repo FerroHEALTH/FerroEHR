@@ -87,9 +87,6 @@ impl Shape {
 /// or a `patients` issuer, to the EHR of its subject, and the person
 /// themself to their own `PERSON` ([`super::portal::bound`]); the refusal of
 /// any, before any patient lookup of the request itself.
-///
-/// What it reads of `req` is read before it awaits anything, so the future
-/// holds no borrow of the request.
 pub(super) fn patient_context<'a>(
     layer: &'a AuthLayer,
     principal: &'a mut Principal,

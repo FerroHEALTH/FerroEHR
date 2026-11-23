@@ -17,12 +17,6 @@
 //! `master05-directory_package`. Every read below authenticates the
 //! viewer session first and the CDR credential never reaches client-visible
 //! state.
-//!
-//! This module owns the DIRECTORY reads and writes, the shared wire types, and
-//! the `directory_section` orchestrator; the view is split across
-//! `tree` (the structured editor), `panels` (history / time / path /
-//! delete), `create` (the empty-directory create flow), and the pure
-//! [`edit`] helpers.
 
 #![expect(
     clippy::disallowed_types,
@@ -82,9 +76,6 @@ pub struct DirectoryVersion {
 
 /// One window of the directory's version history: the rows the panel shows
 /// plus whether older versions remain beyond them.
-///
-/// The default is the empty history (no rows, nothing older), which is what an
-/// unopened panel and an EHR without a directory both read as.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DirectoryHistory {
     /// The fetched versions, newest first.
@@ -333,9 +324,6 @@ pub async fn delete_directory(
 /// ([`FANOUT_CONCURRENCY`](crate::cdr::FANOUT_CONCURRENCY)) and truncated at
 /// the first `404`. An empty list means the EHR has no directory.
 ///
-/// The request count is therefore `1 + min(window, N)` regardless of how deep
-/// the history runs; the rest is reached by asking for a wider window.
-///
 /// NOTE: ITS-REST 1.1.0 exposes no `VERSIONED_FOLDER` revision history (register
 /// AMB-24, upstream report #1490), so the uid list is synthesized from the
 /// latest version number rather than read from the CDR.
@@ -421,9 +409,6 @@ fn version_window(latest_n: i32, window: u32) -> Vec<i32> {
 /// /ehr/{ehr_id}/directory?version_at_time=…`, ITS-REST
 /// `specifications/operations/directory_get_at_time.yaml`).
 ///
-/// `200` → [`DirectoryAtTime::Present`], `204` →
-/// [`DirectoryAtTime::DeletedAtTime`], `404` → [`DirectoryAtTime::NoneAtTime`].
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] on an empty time; any other non-2xx answer
@@ -457,8 +442,6 @@ pub async fn fetch_directory_at_time(
 /// Read the sub-FOLDER at `path` of the current directory
 /// (`GET /ehr/{ehr_id}/directory?path=…`, ITS-REST
 /// `specifications/operations/directory_get_at_time.yaml` `path` parameter).
-///
-/// `200` → [`DirectorySubtree::Found`], `404` → [`DirectorySubtree::Missing`].
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr));

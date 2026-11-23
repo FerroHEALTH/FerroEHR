@@ -23,9 +23,6 @@ pub(super) fn unreadable_issuer(issuer: &str, error: &ResourceError) -> String {
 /// repeated member name (RFC 8259 §4); `ResourceServer::with_metadata` then
 /// refuses another issuer (RFC 8414 §3.3).
 ///
-/// A document that does not parse is named by the crate's refusal, its JSON
-/// failure class and position, which quotes no part of the input.
-///
 /// # Errors
 /// A message naming the file that could not be read or parsed.
 pub(super) async fn issuer_metadata(path: &str) -> Result<ServerMetadata, String> {

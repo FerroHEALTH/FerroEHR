@@ -20,10 +20,8 @@ pub enum ConstraintStatus {
     Example,
     /// A value outside the `CONSTRAINT_STATUS` constant set.
     ///
-    /// NOTE: no openEHR spec governs an out-of-set value — our own
-    /// tolerance-preserving design (`BMM_ENUMERATION` defines only the listed
-    /// constants), retained so this enum's wire form stays byte-identical to
-    /// the bare `i32` it replaces.
+    /// NOTE: no openEHR spec governs an out-of-set value: our own design, kept
+    /// so the wire form equals the bare `i32`.
     Other(i32),
 }
 

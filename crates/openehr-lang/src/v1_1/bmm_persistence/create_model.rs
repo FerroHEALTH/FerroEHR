@@ -207,9 +207,6 @@ pub(super) struct ClassEntry<'a> {
 /// The resolution indexes the transform needs, all derived from the schema
 /// before any `BMM_*` value is built.
 ///
-/// Every class index is keyed by the UPPER-CASED class name, and every
-/// name-based lookup upper-cases its argument.
-///
 /// NOTE: class names in a BMM schema are case-flexible
 /// (`master04-syntax.adoc` §Non-primitive Classes: "any capitalisation can be
 /// used"), and the model itself keys upper-case "for guaranteed matching"

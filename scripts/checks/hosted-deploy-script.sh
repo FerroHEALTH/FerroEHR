@@ -250,9 +250,9 @@ if [[ "${1:-}" == "--self-test" ]]; then
   fi
   extract "$CLOUD_INIT" > "$scratch/committed.sh"
   verb_contract "$scratch/committed.sh" "${VERB_CALLERS[@]}" >/dev/null
-  # The identities verb as it stood before #5409: it read a configuration key
-  # the 5.7.0 CDR no longer has, answered `provider local`, and the seed named
-  # its subjects outside every pseudonym namespace.
+  # An identities verb of an older release (#5409): it reads a configuration key
+  # the CDR does not have, answers `provider local`, and names the seed's
+  # subjects outside every pseudonym namespace.
   cat > "$scratch/local-branch" <<'EOF'
   if ! grep -qE '^provider = "ihe"' ferroehr.sandbox.toml; then echo "provider local"; exit 0; fi
 EOF

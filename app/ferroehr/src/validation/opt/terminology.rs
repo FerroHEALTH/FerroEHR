@@ -14,9 +14,6 @@
 //!   (master07 line 80).
 //! - **VTLC** — all term/constraint codes exist in all languages
 //!   (master07 line 74).
-//!
-//! This module also owns the global code-collection helpers and the flattened
-//! ontology / nested-root accessors the whole pass shares.
 
 use std::collections::HashSet;
 

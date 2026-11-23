@@ -16,15 +16,6 @@
     reason = "the shared `common` harness is compiled into every journey binary; each one drives a different subset of it"
 )]
 //! End-to-end journeys over a session that ends mid-visit.
-//!
-//! The session is ended the way a revocation ends it: the sealed cookie is
-//! replaced by one the viewer cannot open, which is observable in seconds,
-//! while waiting out the configured idle window is not. Every page is drawn on
-//! the server, so the next request is where the viewer notices: it answers
-//! with the sign-in page at `/sign-in?expired=1&next=…`, which says the session
-//! ended and returns to `next` once signed in again. FerroUI's session watch
-//! on every signed-in page notices without a request: it warns before the idle
-//! timeout and leaves for the same sign-in page, naming the page as `return`.
 
 use crate::common;
 

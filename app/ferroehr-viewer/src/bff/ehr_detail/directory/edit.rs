@@ -3,13 +3,6 @@
 
 //! Pure, component-free helpers for the structured directory tree editor.
 //!
-//! Navigation and mutation of a canonical `FOLDER` tree held as
-//! `serde_json::Value`, `OBJECT_REF` construction, and tree statistics. Kept
-//! out of the view code so the editing logic is unit-tested directly
-//! (business logic lives in plain types). The time-travel panel's
-//! `version_at_time` value goes through the viewer's one normalizer,
-//! [`crate::format::datetime_local_to_rfc3339`].
-//!
 //! The FOLDER shape these operate on IS spec-bound (ITS-REST
 //! `specifications/schemas/ehr/Folder.yaml`; RM common
 //! `master05-directory_package`): a FOLDER carries `folders` (child FOLDERs)
@@ -18,19 +11,11 @@
 //! (`[]` = the root FOLDER, `[0]` = its first child, `[0,1]` = that child's
 //! second child).
 //!
-//! ## Ephemeral node identity (`_key`)
-//!
-//! A posted rename, move or delete MUST name its folder by a stable, unique,
-//! data-derived identity — never a positional path or index — or a sibling that
-//! shifts into a deleted slot receives the change meant for the vacated row. The working copy therefore stamps every
-//! FOLDER object **and every `items` `OBJECT_REF`** with a `_key` string
-//! (`stamp_keys`), all drawn from one counter so folder and item keys can never
-//! collide. It is a **client-only artifact of the in-memory editing tree**,
-//! STRIPPED (`strip_keys`) from every body serialized for the CDR and from the
-//! advanced-JSON view — it never appears on the wire, and no openEHR spec governs
-//! it (our own design/extension). Positions are re-derived from the `_key` on
-//! demand (`find_path_by_key`, `find_item_by_key`), so mutations keep targeting
-//! the `&[usize]` path + index pair after siblings shift.
+//! A posted rename, move or delete names its folder by a `_key` stamped on
+//! every FOLDER and every `items` `OBJECT_REF` (`stamp_keys`), never by
+//! position, or a sibling that shifts into a deleted slot would receive the
+//! change. The key is stripped (`strip_keys`) from every body sent to the CDR;
+//! no openEHR spec governs it: our own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -42,17 +27,11 @@ use serde_json::{Value, json};
 
 use crate::bff::ehr_detail::directory::{FOLDER_NODE_ID, folder_json};
 
-/// Stamp every node in `tree` — the root FOLDER, every descendant FOLDER, and
-/// every `items` `OBJECT_REF` — with an ephemeral, client-only `_key` identity
-/// string (`"n0"`, `"n1"`, …) drawn from `counter`, inserting one only where
-/// absent — so it is idempotent and preserves the keys already carried by
-/// surviving nodes. The key is the stable, data-derived node identity that
-/// a posted change names a folder or item by; folders and items draw from
-/// the same `counter`, so no item can ever be handed a folder's key. It is a
-/// viewer-local artifact of the working copy: never persisted to the CDR (see
-/// [`strip_keys`]), never rendered, and no openEHR spec governs it (our own
-/// design/extension). The counter is a plain monotonic one, no randomness or
-/// clock.
+/// Stamps the root FOLDER, every descendant FOLDER and every `items`
+/// `OBJECT_REF` with a client-only `_key` (`"n0"`, `"n1"`, …) from `counter`,
+/// only where absent, so it is idempotent. Folders and items share the counter,
+/// so their keys never collide; [`strip_keys`] removes them before anything
+/// reaches the CDR.
 pub(crate) fn stamp_keys(tree: &mut Value, counter: &mut u64) {
     if let Some(obj) = tree.as_object_mut() {
         if !obj.contains_key("_key") {

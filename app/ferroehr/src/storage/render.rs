@@ -3,9 +3,6 @@
 
 //! The one rendering of a commit body and what is read off it (#6003).
 //!
-//! The `version.body` text, its content digest, the node rows, the feeder
-//! origins and the external blob references, with no canonical value built.
-//!
 //! The text is `serde_json`'s compact output, so it carries no insignificant
 //! whitespace, and a scan that knows strings and nesting finds a member's
 //! bytes exactly. No openEHR spec governs storage: our own design.
@@ -120,8 +117,6 @@ pub fn blob_uris(body: &Rendered) -> Vec<String> {
 /// The two slices of `text` around the member at `span`, with the comma that
 /// joined it to a neighbour taken out as well, so their concatenation is the
 /// object without that member.
-///
-/// The span is the member's own ([`index::Rendered::member_span`]).
 #[must_use]
 pub fn without_member(text: &[u8], span: Range<usize>) -> (&[u8], &[u8]) {
     let (start, end) = if span.start > 1 && text.get(span.start - 1) == Some(&b',') {
@@ -148,8 +143,8 @@ mod tests {
     use super::content_digest;
     use super::index::render;
 
-    /// The digest of the one rendering, as the two passes it replaced wrote
-    /// it: SHA-256 of the compact text with the root `uid` taken out.
+    /// The digest of the one rendering: SHA-256 of the compact text with the
+    /// root `uid` taken out.
     #[test]
     fn the_digest_leaves_out_the_root_uid_and_nothing_else() {
         use sha2::Digest as _;

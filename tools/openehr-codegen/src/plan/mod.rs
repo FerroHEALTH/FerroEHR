@@ -1,17 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Stage 3 — PLAN. The emission-decision layer: for every analysed class,
-//! decide the Rust shape it emits as (struct / closed enum / polymorphic enum /
-//! enumeration literals / transparent newtype / skip) and the XML shape it
-//! classifies as. The decision *data* — the class bindings, back-references,
-//! type overrides, field defaults, the primitive/mapped-class tables, and the
-//! emit-xml BMM-only allowlist — lives as declarative const tables in
-//! [`overrides`], each entry carrying its spec citation; the crate → schema
-//! merge table lives in [`composition`]. This stage makes decisions only — the
-//! text is produced in [`crate::render`]. The construction-door decisions (which
-//! classes hide their fields behind a validating constructor) live in
-//! [`construction`], on the same declarative, spec-cited pattern.
+//! Stage 3, plan: decides the Rust shape each analysed class emits as and the
+//! XML shape it classifies as. The decision data lives in [`overrides`],
+//! [`composition`] and [`construction`]; [`crate::render`] writes the text.
 
 pub(crate) mod composition;
 pub(crate) mod construction;
@@ -40,19 +32,13 @@ pub(crate) enum Emission<'a> {
     /// Untagged enum for an *abstract* polymorphic slot: one variant per
     /// immediate concrete subtype (the abstract class itself is not instantiable).
     Enum(Vec<String>),
-    /// Untagged enum for a *concrete* class that also has subtypes
-    /// (`DV_TEXT` → `DV_CODED_TEXT`): a field typed as the parent accepts either.
-    /// Emits a `{Name}Data` struct for the class's own instances plus a `{Name}`
-    /// enum over `{Name}Data` and each immediate concrete subtype.
+    /// A concrete class with subtypes (`DV_TEXT` → `DV_CODED_TEXT`): a
+    /// `{Name}Data` struct plus a `{Name}` enum over it and each concrete subtype.
     PolyEnum(Vec<String>),
-    /// A BMM enumeration class (`BMM_ENUMERATION`) — a real Rust enum over its
-    /// named constants plus a tolerance-preserving `Other(String|i32)` catch-all,
-    /// with hand-written serde byte-identical to the bare primitive it replaces.
+    /// A BMM enumeration class: a Rust enum over its constants plus an `Other`
+    /// catch-all.
     EnumLiterals(&'a BmmEnumeration),
-    /// Transparent newtype over a Rust primitive (a genuine primitive alias).
-    /// After enumeration classes route to [`Emission::EnumLiterals`] this arm is
-    /// the fallback for a 0-field concrete leaf over a primitive that carries no
-    /// enumeration facet (none exist in the current vendored BMM).
+    /// A transparent newtype over a Rust primitive.
     Newtype(&'a str),
     Skip,
 }
@@ -66,41 +52,26 @@ pub(crate) fn decide<'a>(
     if Model::is_mapped(&class.name) {
         return Emission::Skip;
     }
-    // A BMM enumeration is a typed literal set on the wire, regardless of how the
-    // rest of the BMM shapes the class. This preempts BOTH the transparent-newtype
-    // path (`VALIDITY_KIND`) AND the polymorphic-enum path that `PROPORTION_KIND`
-    // wrongly fell into — the RM BMM lists `PROPORTION_KIND` in
-    // `DV_PROPORTION.ancestors`, so `enum_variants` is non-empty and the concrete
-    // branch below would emit a nonsense `ProportionKind`/`ProportionKindData`
-    // poly enum. The enumeration facet is authoritative, so it wins first.
+    // The enumeration facet wins first: the RM BMM lists `PROPORTION_KIND` among
+    // `DV_PROPORTION.ancestors`.
     if let Some(enumeration) = &class.enumeration {
         return Emission::EnumLiterals(enumeration);
     }
     if class.is_abstract {
         let variants = model.enum_variants(&class.name);
         if !variants.is_empty() {
-            // A closed polymorphic slot. Emit the untagged enum whenever the
-            // class has concrete descendants — even if *this* schema never uses
-            // it as a field type, because a downstream crate may (e.g. `Interval`
-            // is a BASE foundation type referenced by AM's `Interval<Integer>`).
+            // Emitted whenever there are concrete descendants: a downstream crate may
+            // use it as a field type.
             Emission::Enum(variants)
         } else if used.contains(&class.name) {
-            // Abstract, referenced as a field type, but no concrete descendants
-            // in this schema (e.g. `AUTHORED_RESOURCE` in BASE — its concretes
-            // live in AM). Emit its own fields as a struct so the reference
-            // resolves; a cross-schema pass can promote it to an enum later.
-            //
-            // NOTE: when such a class also declares NO attributes the emission
-            // is an instantiable EMPTY struct, so abstractness is not encoded —
-            // no better shape exists without forking the vendored model.
+            // Abstract and referenced, with its concretes in another schema
+            // (`AUTHORED_RESOURCE` in BASE): its own fields as a struct.
             Emission::Struct
         } else {
             Emission::Skip
         }
     } else {
-        // Concrete but with its own concrete subtypes: a field typed as this
-        // class accepts the subtype too (`DV_TEXT` holds a `DV_CODED_TEXT`, a
-        // coded name), so emit a polymorphic enum plus the `{Name}Data` struct.
+        // A field typed as this class also accepts its subtypes.
         let variants = model.enum_variants(&class.name);
         if !variants.is_empty() {
             return Emission::PolyEnum(variants);
@@ -118,39 +89,25 @@ pub(crate) fn decide<'a>(
     }
 }
 
-// ── XML codegen support ─────────────────────────────────────────────
-// A thin, semantic view of the generated types for the XML emitter (`emit_xml`).
-// The XML wire *shape* (element order, attribute-vs-element, xsi:type) comes from
-// the XSD reader; this supplies the matching Rust facts (field idents, Option/Vec,
-// enum variants, generics) so the generated impls compile against the emitted
-// structs. Boxing is transparent to `.write_xml()`, so it is deliberately ignored.
+// XML view of the generated types for `emit_xml`; the wire shape comes from
+// the XSD reader.
 
-/// One field of an instantiable type. The XML element/attribute name is the
-/// openEHR property name (`wire_name`); the Rust accessor is `rust_name`.
-/// `target` is the spec type of the value (item type for containers), passed as
-/// the declared type so a polymorphic value emits `xsi:type`.
+/// One field of an instantiable type: `wire_name` is the openEHR property
+/// name, `rust_name` the accessor, `target` the value's spec type.
 pub(crate) struct XmlField {
     pub wire_name: String,
     pub rust_name: String,
-    /// The Rust field is wrapped in `Option<…>`. Orthogonal to
-    /// [`XmlField::multiple`]: an optional container is `Option<Vec<T>>`, so
-    /// both flags are set.
+    /// The Rust field is `Option<…>`; an optional container also sets
+    /// [`XmlField::multiple`].
     pub optional: bool,
     pub multiple: bool,
-    /// The container is `NonEmptyVec<T>` — a `1..*` bound, or an optional
-    /// container carrying a present-implies-non-empty invariant
-    /// (`Option<NonEmptyVec<T>>`): the reader builds it through the
-    /// type's fallible constructor.
+    /// The container is `NonEmptyVec<T>`, read through its fallible constructor.
     pub nonempty: bool,
     pub target: String,
-    /// For a `Hash<String, V>` field (`target == "Hash"`), the value type's spec
-    /// name (`V`); `None` otherwise. `Some("String")` is serialized inline as the
-    /// openEHR `StringDictionaryItem` shape.
+    /// For a `Hash<String, V>` field, the value type's spec name.
     pub map_value: Option<String>,
-    /// The field's default expression ([`field_default`]); the reader uses it
-    /// for a mandatory field whose element is absent (the `Interval`
-    /// inclusivity/boundedness flags archie omits). An enumeration constant is
-    /// a `@SPEC::Variant` marker resolved by the emitter. `None` = no default.
+    /// The field's default expression ([`field_default`]) for an absent mandatory
+    /// element.
     pub default: Option<String>,
 }
 
@@ -177,20 +134,14 @@ pub(crate) enum XmlType {
         rust: String,
         generics: Vec<String>,
         variants: Vec<XmlVariant>,
-        /// xsi:type deserialization map: every concrete descendant spec (and the
-        /// enum's own spec, if concrete) → the direct variant ident it routes
-        /// into. A deep type (`DV_CODED_TEXT` in a `DATA_VALUE` slot) routes into
-        /// the intermediate variant (`DvText`), which recurses.
+        /// `xsi:type` dispatch: every concrete descendant spec → the direct variant
+        /// it routes into.
         dispatch: Vec<(String, String)>,
     },
-    /// A transparent newtype over a primitive — writes its inner value as
-    /// element text. No enumeration class emits as a newtype anymore (they route
-    /// to [`XmlType::EnumLiterals`]); kept for a future genuine primitive alias.
+    /// A transparent newtype over a primitive, written as element text.
     Newtype { spec: String, rust: String },
-    /// A BMM enumeration emitted as a typed enum (`VALIDITY_KIND`,
-    /// `PROPORTION_KIND`) — writes its wire token (`as_str`) or integer (`value`)
-    /// as element text; reads the bare primitive back through `from_wire`/
-    /// `from_value`.
+    /// A BMM enumeration emitted as a typed enum, written as its wire token or
+    /// integer.
     EnumLiterals {
         spec: String,
         rust: String,
@@ -200,52 +151,35 @@ pub(crate) enum XmlType {
     },
 }
 
-// ── JSON codegen support ─────────────────────────────────────────────
-// A thin, semantic view of the generated types for the canonical-JSON emitter
-// (`emit_json`). The JSON wire shape is entirely BMM-driven — field order =
-// declaration order, `_type` first, `None`/empty-`Vec` omitted — so unlike the
-// XML view there is no XSD input; this view only needs each field's wire name,
-// Rust accessor, and omission kind. It must reproduce, byte-for-byte, the
-// `#[derive(OpenEhrType)]` serde `Serialize` (`openehr-derive`).
+// JSON view of the generated types for `emit_json`: wire name, accessor and
+// omission kind.
 
-/// One field of an instantiable type on the canonical-JSON wire. `wire_name` is
-/// the JSON key (the openEHR property name, which the derive's rename logic
-/// always resolves back to), `rust_name` the Rust accessor.
+/// One field of an instantiable type on the canonical-JSON wire.
 pub(crate) struct JsonField {
     pub wire_name: String,
     pub rust_name: String,
     pub kind: JsonFieldKind,
-    /// The field's default expression ([`field_default`]); for a mandatory
-    /// (`Plain`) field the wire may omit (the `Interval` `*_included`/
-    /// `*_unbounded` flags) a missing key deserializes to it instead of
-    /// erroring. An enumeration constant is a `@SPEC::Variant` marker resolved
-    /// by the emitter. `None` = no default.
+    /// The field's default expression ([`field_default`]) for an omitted
+    /// mandatory field.
     pub default: Option<String>,
     /// An [`JsonFieldKind::OptionalContainer`] whose present-but-empty array
     /// the reader refuses ([`its_json_bounds::ITS_JSON_MIN_ITEMS`]).
     pub refuses_empty: bool,
 }
 
-/// How a field is written on serialize — matching the derive's classification by
-/// Rust type head (`Option` → omit when `None`; `Vec` → omit when empty; else
-/// always present).
+/// How a field is written on serialize.
 pub(crate) enum JsonFieldKind {
     /// `Option<T>` — omitted when `None`.
     Optional,
-    /// `Vec<T>` (a mandatory container), or the `BTreeMap` of a mandatory
-    /// `Hash` under an adjudicated existence contradiction
-    /// ([`crate::plan::overrides::contradicted`]) — read as empty when
-    /// absent, omitted when empty.
+    /// A mandatory container (`Vec<T>`, or an adjudicated `Hash`): read as empty
+    /// when absent, omitted when empty.
     Container,
-    /// `NonEmptyVec<T>` (a mandatory `1..*` container) — always present, and
-    /// read through the type's own fallible constructor, so an absent or empty
-    /// array is refused at parse rather than validated later.
+    /// `NonEmptyVec<T>`: always present, an absent or empty array refused at
+    /// parse.
     NonEmptyContainer,
-    /// `Option<Vec<T>>` (an optional container) — omitted when `None` **and**
-    /// when `Some` but empty, per
-    /// `docs/specs/openehr/ITS-REST/specifications/docs/overview/Resources.md`
-    /// §JSON Format; read back as `None` when absent and `Some(vec![])` when
-    /// present-but-empty.
+    /// `Option<Vec<T>>`: omitted when `None` or empty
+    /// (`overview/Resources.md` §JSON Format), read back as `None` or
+    /// `Some(vec![])`.
     OptionalContainer,
     /// Anything else (including a mandatory `Box<T>`, a `BTreeMap`, or a
     /// `#[openehr(default)]` flag) — always emitted.
@@ -263,9 +197,7 @@ pub(crate) enum JsonType {
         generics: Vec<String>,
         fields: Vec<JsonField>,
     },
-    /// An untagged enum (abstract slot or polymorphic-concrete). Serialize
-    /// forwards to the active variant's payload (`_type` comes from the payload);
-    /// deserialize dispatches per [`JsonEnumDispatch`].
+    /// An untagged enum, dispatched per [`JsonEnumDispatch`].
     Enum {
         spec: String,
         rust: String,
@@ -287,16 +219,11 @@ pub(crate) enum JsonType {
     },
 }
 
-/// How a [`JsonType::Enum`] selects a variant on deserialize — the exact split
-/// `emit_enum` makes for the serde reader (`_type` dispatch vs structural
-/// `#[serde(untagged)]`), projected for the native `FromJson`.
+/// How a [`JsonType::Enum`] selects a variant on deserialize.
 pub(crate) enum JsonEnumDispatch {
-    /// `_type`-keyed dispatch (every concrete target carries a `_type`). `arms`
-    /// maps each concrete descendant spec → its direct variant ident (deep
-    /// descendants collapse onto their intermediate variant, which recurses).
-    /// `self_ident` is `Some` for a concrete polymorphic slot (a `_type`-less
-    /// value defaults to it) and `None` for an abstract slot (a `_type`-less value
-    /// is rejected). `spec_name` + `expected` build the error messages.
+    /// `_type`-keyed dispatch: `arms` maps each concrete descendant to its direct
+    /// variant; `self_ident` is the default for a `_type`-less value on a concrete
+    /// slot.
     ByType {
         arms: Vec<(String, String)>,
         self_ident: Option<String>,
@@ -309,11 +236,8 @@ pub(crate) enum JsonEnumDispatch {
 }
 
 impl Model {
-    /// The flattened fields of a concrete class for canonical-JSON emission —
-    /// same order and flattening as struct emission, with the same designated
-    /// back-reference fields omitted (they are not emitted as struct fields, so
-    /// the codec must not name them). The omission kind mirrors the derive's
-    /// classification by Rust type head.
+    /// The flattened fields of a concrete class for canonical JSON, in struct
+    /// order, back-references omitted.
     #[must_use]
     pub(crate) fn json_fields(&self, class_name: &str) -> Vec<JsonField> {
         let Some(class) = self.get(class_name) else {
@@ -324,9 +248,7 @@ impl Model {
             .filter(|rp| back_reference(&rp.owner, &rp.prop.name).is_none())
             .map(|rp| {
                 let p = rp.prop;
-                // A byte buffer (`Array<Octet>`) renders as a `String`/`Option<
-                // String>`, not a `Vec` — so it is never a Container; every other
-                // container is a `Vec<T>`.
+                // A byte buffer is a `String`, never a container.
                 let octet = matches!(&p.kind,
                     BmmPropKind::Container { item, .. } if item.root_name() == "Octet");
                 let multiple = matches!(&p.kind, BmmPropKind::Container { .. }) && !octet;
@@ -343,9 +265,7 @@ impl Model {
                 } else if p.is_mandatory
                     && contradicted(&rp.owner, &p.name, ContradictionKind::Existence)
                 {
-                    // A `1..1` `Hash` whose existence the syntax chapter
-                    // contradicts takes the mandatory-container door: absent
-                    // reads as empty, empty is omitted on write.
+                    // A contradicted `1..1` `Hash`: absent reads as empty, empty is omitted.
                     JsonFieldKind::Container
                 } else if p.is_mandatory {
                     JsonFieldKind::Plain
@@ -363,8 +283,7 @@ impl Model {
             .collect()
     }
 
-    /// The instantiable canonical-JSON types of a schema, in class order (the
-    /// same decisions [`Model::xml_types`] makes, projected to the JSON view).
+    /// The instantiable canonical-JSON types of a schema, in class order.
     ///
     #[must_use]
     pub(crate) fn json_types(&self, schema: &BmmSchema) -> Vec<JsonType> {
@@ -433,11 +352,8 @@ impl Model {
         out
     }
 
-    /// Decide how a canonical-JSON enum deserializes, reproducing exactly the
-    /// split `emit_enum` makes for the serde reader: `_type` dispatch when every
-    /// concrete target carries a `_type`, else the structural `#[serde(untagged)]`
-    /// fallback. `variant_idents` are the ToJson-order variant idents used by the
-    /// structural path.
+    /// Decides how a canonical-JSON enum deserializes: `_type` dispatch when every
+    /// concrete target carries a `_type`, else the structural fallback.
     fn json_enum_dispatch(
         &self,
         spec: &str,
@@ -481,13 +397,7 @@ impl Model {
         };
         self.flattened_props(class)
             .iter()
-            // A designated owner/parent back-reference is omitted from the
-            // emitted struct (see `back_reference` / `render_struct_def`), so it
-            // must be omitted from the canonical-XML codec too — otherwise
-            // `ToXml`/`FromXml` would name a struct field that no longer exists.
-            // On the wire these fields are XSD-`minOccurs=0` (optional), so
-            // omitting them keeps the XML schema-valid; the XSD element becomes a
-            // skipped "XSD-only" slot on write and a `skip_element` on read.
+            // A back-reference is not a struct field; its XSD element is `minOccurs=0`.
             .filter(|rp| back_reference(&rp.owner, &rp.prop.name).is_none())
             .map(|rp| {
                 let p = rp.prop;
@@ -516,14 +426,8 @@ impl Model {
                                 BmmPropKind::Container { cardinality, .. }
                                     if cardinality.as_ref().is_some_and(|c| c.lower >= 1))
                             && !contradicted(&rp.owner, &p.name, ContradictionKind::LowerBound))
-                            // An OPTIONAL container carrying a
-                            // present-implies-non-empty invariant emits
-                            // `Option<NonEmptyVec<T>>`, so its reader
-                            // builds through the same fallible constructor.
-                            // The invariant's declaring class may be an
-                            // ANCESTOR of the flattened property's owner (a
-                            // subclass overriding the attribute to narrow its
-                            // type keeps the inherited rule).
+                            // An optional container under a present-implies-non-empty invariant,
+                            // possibly declared on an ancestor.
                             || (!p.is_mandatory
                                 && crate::analyze::nonempty_optional_lists_cached(self)
                                     .iter()
@@ -540,10 +444,8 @@ impl Model {
             .collect()
     }
 
-    /// The xsi:type deserialization map for an enum: every concrete descendant
-    /// spec (and the enum's own spec, if concrete) → the direct variant ident it
-    /// routes into. `direct` is the enum's immediate variant specs. A deep type
-    /// routes into its intermediate direct variant, which recurses.
+    /// The `xsi:type` dispatch map for an enum: every concrete descendant spec →
+    /// the direct variant it routes into.
     pub(crate) fn xsi_dispatch(&self, enum_spec: &str, direct: &[String]) -> Vec<(String, String)> {
         let mut out = Vec::new();
         for (name, class) in &self.classes {
@@ -568,21 +470,13 @@ impl Model {
         out
     }
 
-    /// Does a *concrete* class carry a `_type` discriminator on the
-    /// canonical-JSON wire? A `Struct` or `PolyEnum` does (it derives
-    /// `OpenEhrType`, which emits `_type` first); a transparent enumeration
-    /// `Newtype` (`VALIDITY_KIND` → a bare JSON string) does not. Used to decide
-    /// whether an enum's variants can be dispatched on `_type`:
-    /// `_type` dispatch is only valid when every concrete target carries one.
+    /// Whether a concrete class carries a `_type` on the canonical-JSON wire.
     pub(crate) fn concrete_carries_type(&self, name: &str) -> bool {
         let Some(class) = self.get(name) else {
             return false;
         };
-        // A BMM enumeration is a bare scalar on the wire (string/int), never a
-        // `_type`-tagged object — so it is never a `_type`-dispatch target. This
-        // must precede the `enum_variants` check below: `PROPORTION_KIND` has a
-        // spurious concrete descendant (`DV_PROPORTION` inherits it in the RM
-        // BMM), which would otherwise report `true`.
+        // An enumeration is a bare scalar; checked first, since `PROPORTION_KIND` has
+        // a concrete descendant in the RM BMM.
         if class.enumeration.is_some() {
             return false;
         }

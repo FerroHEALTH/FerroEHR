@@ -2,20 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Re-differentialisation of a converted specialised 1.4 child against its
-//! converted+flattened parent.
+//! converted and flattened parent: inherited-unchanged nodes are stripped
+//! (`ADL2/master09.02` §Differential authoring).
 //!
-//! NOTE: no openEHR spec governs 1.4→2 conversion — our own design (see the
-//! [`crate::adl14`] flag). The *target* of the differ (a differential child
-//! whose nodes are the differences vs the flat parent) is defined by
-//! `docs/specs/openehr/AM/docs/ADL2/master09.02` §Differential authoring; the
-//! 1.4-conversion *use* of it is ours.
-//!
-//! A 1.4 specialised source is authored *flat* (it repeats every inherited
-//! node). After the base conversion renumbers it against the flat parent's
-//! codes, the differ strips every child node that is inherited-unchanged —
-//! structurally identical to the same-path node in the flat parent — leaving
-//! only the genuine differences (`master09.02`: "child differences are vs the
-//! flat parent").
+//! NOTE: no openEHR spec governs 1.4→2 conversion: our own design.
 
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::authored_archetype::{
@@ -40,14 +30,9 @@ fn flat_definition(parent: &Archetype) -> Option<&CComplexObject> {
     }
 }
 
-/// Strip inherited-unchanged nodes from a converted specialised `child`,
-/// re-differentialising it against the flat `parent`.
-///
-/// The minimal-correct rule (`master09.02` §Differential): a child object node
-/// whose specialisation depth is 0 (an inherited node id, not a `.N`-redefined
-/// or new node) and which is structurally equal to the same node in the flat
-/// parent is inherited-unchanged and removed; an attribute left with no
-/// children after stripping is removed; the root is always kept.
+/// Strip inherited-unchanged nodes from a converted specialised `child` against
+/// the flat `parent`: a depth-0 node equal to the parent's is removed, then any
+/// attribute left empty; the root stays.
 pub fn differentiate(child: &mut Archetype, parent: &Archetype) {
     let Some(parent_def) = flat_definition(parent) else {
         return;
@@ -75,12 +60,8 @@ fn strip_inherited(child: &mut CComplexObject, parent: &CComplexObject) {
     if let Some(attributes) = cd.attributes.as_mut() {
         attributes.retain(|a| !attr_is_empty_inherited(a));
     }
-    // Stripping every attribute makes the object's attribute list ABSENT, not
-    // present-and-empty: ADL 2 writes a member list by writing its members
-    // (`docs/specs/openehr/AM/docs/ADL2/master04-syntax.adoc` §Structure — a
-    // `matches {…}` block is written only when it carries content), so an
-    // object with nothing left states no block at all. Parsing the reference
-    // differential form back yields `None`, and the two must agree.
+    // An object with nothing left writes no `matches {…}` block, so its attribute
+    // list is absent (`ADL2/master04-syntax.adoc` §Structure).
     cd.attributes = cd
         .attributes
         .take()

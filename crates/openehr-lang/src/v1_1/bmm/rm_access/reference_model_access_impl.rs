@@ -13,12 +13,6 @@
 //! §Functions (`initialise_with_load_list`, `initialise_all`,
 //! `reload_schemas`).
 //!
-//! Initialisation runs the descriptor lifecycle
-//! ([`crate::v1_1::bmm::rm_access::schema_descriptor`]) over every `.bmm` file found in
-//! `schema_directories`: describe → select → `load` → `validate` +
-//! `validate_includes` → `create_schema` for each top-level schema, whose
-//! `BMM_MODEL` lands in `valid_models`.
-//!
 //! This is the layer that touches the filesystem, which is why the spec puts it
 //! here: `schema_directories` is part of the class.
 

@@ -336,11 +336,8 @@ impl FhirTerminologyProvider {
     /// [`TerminologyExtract`] (the `display` becomes the term text). `at_date`
     /// → the FHIR `date` parameter.
     ///
-    /// NOTE (attributes): the `attributes` allow-list filters
-    /// the meta-model attributes returned. `$lookup` returns only the concept
-    /// `display` (mapped to the term text), so there is nothing further to
-    /// filter; `attributes` is accepted and has no effect on the returned
-    /// extract.
+    /// `attributes` has no effect: `$lookup` returns only the `display`, so
+    /// there is nothing to filter.
     ///
     /// # Errors
     ///

@@ -3,13 +3,6 @@
 
 //! An AQL expression at the parser's depth bound runs end to end, and one
 //! level beyond it is a `400` before any recursive pass sees it (#4284).
-//!
-//! The query at the bound goes through every recursive pass the server runs
-//! (parse, lowering, SQL generation) and through PostgreSQL's own parser,
-//! so the bound is proven to sit below every limit behind it. It runs on a
-//! thread with the stack the server gives every runtime thread (16 MiB,
-//! `ferroehr-server`'s `RUNTIME_THREAD_STACK_BYTES`), which is the stack the
-//! passes have in production.
 
 use openehr_query::parser::MAX_EXPRESSION_DEPTH;
 

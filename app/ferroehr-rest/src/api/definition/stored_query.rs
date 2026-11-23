@@ -72,12 +72,6 @@ pub(super) async fn list_all(
 
 /// Stores or upserts a query at a server-assigned SEMVER
 /// (`PUT …/definition/query/{qualified_query_name}`).
-///
-/// The `query_type` query parameter (default `AQL`,
-/// `parameters/query/query_type.yaml`) is threaded to the store, which persists
-/// the declared formalism; per `QUERY_DESCRIPTOR.formalism` ("may be any other
-/// string value") an unsupported non-AQL formalism gets an honest
-/// unsupported-formalism reject rather than a blanket "invalid AQL" 400.
 pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p = parts.decode(
@@ -138,8 +132,6 @@ pub(super) async fn version_get(
 /// `PUT …/definition/query/{qualified_query_name}/{version}` — store a query at
 /// a specified SEMVER (an exact `major.minor.patch`; a prefix or malformed
 /// segment is the released `400` branch); `409` on an existing `(name, version)`.
-///
-/// as [`store`], the `query_type` parameter is read and threaded through.
 pub(super) async fn version_store(
     state: &AppState,
     parts: &RequestParts,
@@ -157,11 +149,8 @@ pub(super) async fn version_store(
     // §format rules MUST).
     negotiate::decode::require_text_plain(h)?;
     let body = negotiate::decode::text_body(&parts.body)?;
-    // As in `store`, the `query_store` impl honours `query_type`: the AQL
-    // syntactic check runs only for the AQL formalism, and an unsupported
-    // non-AQL formalism is an honest unsupported-formalism reject. The
-    // returned SEMVER is the exact path version (the store requires an exact
-    // `major.minor.patch`; a prefix or malformed value is its `400`).
+    // As in `store`: `query_type` selects the formalism check, and the returned
+    // SEMVER is the exact path version.
     let stored = state
         .backend()
         .query_store(name, Some(p.version), query_type, body)

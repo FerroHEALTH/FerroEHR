@@ -89,9 +89,6 @@ pub struct PathError(pub String);
 impl AttrPath {
     /// Parses `text` as an attribute path.
     ///
-    /// The schema URI is everything before the last `:`, since an attribute
-    /// name holds no colon and a schema URN holds several.
-    ///
     /// # Errors
     ///
     /// Returns [`PathError`] when `text` is not `[URI ":"] ATTRNAME *1subAttr`.

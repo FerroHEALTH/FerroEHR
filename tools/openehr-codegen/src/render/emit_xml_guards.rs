@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The guards `emit-xml` runs over every emitted type: each records what would
-//! make the generated canonical-XML codec wrong, and the generation fails with
+//! The guards `emit-xml` runs over every emitted type; generation fails with
 //! the complete list.
 
 use crate::load::xsd::XsdModel;
@@ -88,13 +87,8 @@ impl Guards {
     }
 }
 
-/// The LOCATABLE-attribute guard: any emitted struct carrying an
-/// `archetype_node_id` field (per the BMM, a LOCATABLE subtype) must have that
-/// field classified as an XML **attribute** by the driving XSD. `LOCATABLE`
-/// declares `archetype_node_id`
-/// `use="required"` (an attribute); a type whose XSD closure is missing falls
-/// back to attribute-less BMM field order and would emit it as a child element —
-/// invalid canonical XML. Record the violation so codegen fails loudly.
+/// Records an `archetype_node_id` field the XSD does not classify as an
+/// attribute, which LOCATABLE requires (`use="required"`).
 fn check_locatable_attr(ty: &XmlType, xsd: &XsdModel, violations: &mut Vec<String>) {
     if let XmlType::Struct { spec, fields, .. } = ty {
         let has_archetype_node_id = fields.iter().any(|f| f.wire_name == "archetype_node_id");
@@ -104,13 +98,8 @@ fn check_locatable_attr(ty: &XmlType, xsd: &XsdModel, violations: &mut Vec<Strin
     }
 }
 
-/// The BMM-field-coverage guard: for every emitted XSD-covered struct, any BMM
-/// field with no XSD slot must be on the
-/// [`crate::plan::xml_overrides::XML_BMM_ONLY_ALLOWLIST`]. An un-allowlisted field
-/// would be dropped by the XSD-driven `ToXml` while still read by the BMM-driven
-/// `FromXml` (a silent JSON/XML divergence no round-trip gate can see, because
-/// both serializations omit it). Record every such field so codegen fails with
-/// the complete reconciliation list — the mirror of [`check_locatable_attr`].
+/// Records every BMM field of an XSD-covered struct with no XSD slot and no
+/// [`crate::plan::xml_overrides::XML_BMM_ONLY_ALLOWLIST`] entry.
 fn check_bmm_field_coverage(ty: &XmlType, xsd: &XsdModel, violations: &mut Vec<String>) {
     if let XmlType::Struct { spec, fields, .. } = ty {
         // An ancestor-shaped class appends its own fields by the override's design.

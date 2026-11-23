@@ -18,13 +18,9 @@ pub struct VersionTreeId {
 
 /// Read access to the `pub(crate)` fields of [`VersionTreeId`].
 ///
-/// The fields are not `pub`: the release states a **constraint over this
-/// class's own field values** (a lexical form, or a class invariant), so
-/// construction checks it and is the only door — docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc §Syntaxes: `version_tree_id = trunk_version, [ '.', branch_number, '.', branch_version ]`, each part a `number`; RM common master06-change_control_package.adoc §“The 'Virtual Version Tree'” starts every part at 1 (`VERSION_TREE_ID.Trunk_version_valid` / `.Branch_validity`).
-///
-/// The validating constructor lives in the hand-written `*_impl.rs` sibling
-/// (the generator never writes into it); every generated codec builds this
-/// type through that constructor.
+/// The fields are not `pub` because the release constrains their values,
+/// so the validating constructor in the `*_impl.rs` sibling is the only
+/// way in: docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc §Syntaxes: `version_tree_id = trunk_version, [ '.', branch_number, '.', branch_version ]`, each part a `number`; RM common master06-change_control_package.adoc §“The 'Virtual Version Tree'” starts every part at 1 (`VERSION_TREE_ID.Trunk_version_valid` / `.Branch_validity`).
 impl VersionTreeId {
     /// The `value` this instance was constructed with, checked at the door.
     #[must_use]

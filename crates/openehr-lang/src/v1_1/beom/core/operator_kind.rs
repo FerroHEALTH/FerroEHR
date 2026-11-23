@@ -52,10 +52,8 @@ pub enum OperatorKind {
     Exponent,
     /// A value outside the `OPERATOR_KIND` constant set.
     ///
-    /// NOTE: no openEHR spec governs an out-of-set value — our own
-    /// tolerance-preserving design (`BMM_ENUMERATION` defines only the listed
-    /// constants), retained so this enum's wire form stays byte-identical to
-    /// the bare `String` it replaces.
+    /// NOTE: no openEHR spec governs an out-of-set value: our own design, kept
+    /// so the wire form equals the bare `String`.
     Other(String),
 }
 

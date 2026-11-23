@@ -4,8 +4,6 @@
 //! Namespace-derived stored-query grouping: the pure rules the `/queries`
 //! screen, the dashboard tiles, and both save flows share.
 //!
-//! Component-free plain Rust with ordinary unit tests.
-//!
 //! A stored query's group **is** the namespace of its qualified name. ITS-REST
 //! defines the stored-query identifier as `[{namespace}::]{query-name}`, with
 //! the namespace optional and, when present, "in a form of a reverse domain
@@ -71,9 +69,6 @@ pub fn bare_name_of(qualified_name: &str) -> &str {
 
 /// Split a qualified name into the viewer's two save fields: `(namespace,
 /// bare name)`, with an empty namespace for an unqualified name.
-///
-/// This is what pre-fills the save form when a stored query is opened in the
-/// editor.
 #[must_use]
 pub fn split_qualified(qualified_name: &str) -> (String, String) {
     (

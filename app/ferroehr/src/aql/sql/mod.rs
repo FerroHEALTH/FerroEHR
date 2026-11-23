@@ -3,36 +3,12 @@
 
 //! IR to SQL lowering.
 //!
-//! Turns a typed [`QueryIr`] into one `SELECT` over the greenfield
-//! `node`/`version`/`ehr`/`audit` store, built entirely with `sea-query`'s
-//! typed expression API and `sea-query-sqlx`, with no string-concatenated SQL.
-//! Every table and column reference is an [`sea_query::Expr::col`], every
-//! literal binds through `Expr::val`, and the PostgreSQL-specific pieces use the
-//! sanctioned typed escape hatches: [`sea_query::Func::cust`] for functions
-//! sea-query does not model (`jsonb_path_query_first`, `to_jsonb`, `upper_inf`,
-//! `openehr_magnitude`), the typed Postgres operators from
-//! [`sea_query::extension::postgres::PgExpr`], the built-in aggregates, and
-//! `cast_as` for casts. The only string-operator escapes are the sanctioned
-//! [`sea_query::BinOper::Custom`] set (`#>>`, `->>`). Runtime functions resolve
-//! unqualified (the domain's own `search_path`, which ends in `ext, public`).
-//!
 //! No openEHR spec governs the execution: openEHR defines the language, not its
 //! lowering, so the SQL shapes are our own design. The construct-by-construct
 //! mapping to QUERY master03 lives in each submodule: `from` (FROM, containment
 //! and scope gates), `stream` (the LIMIT-streaming FROM shape), `select` (SELECT and aggregates), `predicate` (WHERE and
 //! functions), `value` (the path split and coercions), and `expr` (the typed
 //! building blocks and the `LIKE`/archetype translations).
-//!
-//! ## Coupling to the storage schema
-//!
-//! The builder references the `node`/`version`/`ehr`/`audit` column
-//! vocabulary directly and encodes the nested-set, tier and
-//! `branch_number` semantics of the greenfield store;
-//! the planner's structure-root notion is the node codec's own
-//! ([`crate::storage::structure::is_structure_type`]: the RM model's
-//! composition-content set, kept in lockstep with the vendored BMM by the
-//! `emit-rm-model` generator, plus the demographic party roots and the
-//! containers nested in them).
 //!
 //! A demographic query ([`QueryDomain::Demographic`]) runs the same SQL on the
 //! party pool, whose `search_path` names the `party` schema rendered from the
@@ -43,11 +19,6 @@
 //! administrator (`gates`) and `LATEST_VERSION` ride the head join as for
 //! every root. No openEHR spec governs AQL over a demographic repository:
 //! our own design.
-//!
-//! Every column is named through the schema catalog ([`crate::db::iden`]),
-//! whose own tests pin each name against the clinical migration set and refuse
-//! a column spelled as a string here, so a schema rename surfaces as a failing
-//! test rather than a runtime SQL error.
 
 mod access;
 mod anchor;
@@ -680,10 +651,9 @@ impl Builder<'_> {
             )
             .into());
         }
-        // A query aimed at named EHRs, or pinned to one by its own text, reads only
-        // those EHRs' versions, which the spine enters through the `ehr_id` index,
-        // so it streams whatever its clauses: the flat shape left the planner a
-        // join search that cost 40 to 60 ms against a 1 ms execution (#5076).
+        // A query aimed at named EHRs, or pinned to one by its own text, reads
+        // only those EHRs' versions, which the spine enters through the
+        // `ehr_id` index, so it streams whatever its clauses (#5076).
         let plan = stream::streaming_plan(ir).filter(|plan| {
             stream::streaming_eligible(ir, ctx)
                 || ctx.names_ehrs()

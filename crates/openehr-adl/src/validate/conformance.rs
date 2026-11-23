@@ -3,18 +3,10 @@
 
 //! The validator's reading of the AOM2 conformance functions.
 //!
-//! The conformance functions themselves are AOM2 spec functions and live on the
-//! generated classes (`openehr_am::v2_4::aom2::constraint_model`, realized from
-//! `docs/specs/openehr/AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
-//! §Conformance Semantics). This module is what the phase-2 specialisation
-//! validator adds on top of them: the tri-state
-//! `ValueConformance`/`TupleConformance` verdicts its issue codes need, the
-//! VSONCO collective-occurrences computation, the VSONT meta-type rule, and the
-//! ADL 1.4 effective-value accessors.
-//!
-//! Context the spec functions read through the model's `parent` back-references
-//! is passed explicitly (owning attribute, grand-parent RM type), because the
-//! assembler leaves those unset.
+//! The functions live on the generated classes (`AOM2/master04.5` §Conformance
+//! Semantics); this adds tri-state verdicts, VSONCO collective occurrences, the
+//! VSONT meta-type rule and the ADL 1.4 effective-value accessors, with the
+//! `parent` context passed explicitly.
 
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
 use openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple;
@@ -46,14 +38,9 @@ pub(crate) fn object_multiplicity(rm: &dyn RmModel, rm_type: &str, attr: &str) -
     }
 }
 
-/// The [`Bounds`] reading of `C_OBJECT.effective_occurrences` for `obj`.
-///
-/// The spec function is
-/// [`CObject::effective_occurrences`]; this supplies its two pieces of context —
-/// `owning_attr` (the Eiffel `parent`) and `grandparent_rm_type` (the Eiffel
-/// `parent.parent.rm_type_name`, empty when unknown) — and its `rm_prop_mult`
-/// lambda, which `master04.5` §Occurrences inferencing rules places in the
-/// reference-model schema rather than in the AOM ([`object_multiplicity`]).
+/// The [`Bounds`] of [`CObject::effective_occurrences`] for `obj`, supplying its
+/// `parent` context and the RM multiplicity [`object_multiplicity`]
+/// (`master04.5` §Occurrences inferencing rules).
 #[must_use]
 pub(crate) fn effective_occurrences(
     obj: &CObject,
@@ -69,17 +56,10 @@ pub(crate) fn effective_occurrences(
     )
 }
 
-/// `collective_occurrences_of` (`master04.5` §Conformance Semantics: `C_ATTRIBUTE`,
-/// L82-118 + VSONCO L359-379): the collective occurrences of all object nodes
-/// under `attr` that redefine the parent node identified by `parent_node_id`.
-///
-/// - lower = Σ of member lowers;
-/// - upper = min(Σ of member uppers [unbounded if any member is unbounded],
-///   the owning attribute's flattened cardinality upper).
-///
-/// A member with no local `occurrences` override inherits the redefined parent
-/// node's occurrences (`parent_occ`). `flattened_card_upper` is the finite upper
-/// bound of the owning attribute's flattened cardinality (`None` = unbounded).
+/// The collective occurrences of the nodes under `attr` redefining
+/// `parent_node_id` (`master04.5` §Conformance Semantics: `C_ATTRIBUTE`, VSONCO):
+/// the summed lowers, and the summed uppers capped by `flattened_card_upper`.
+/// A member without occurrences inherits `parent_occ`.
 #[must_use]
 pub(crate) fn collective_occurrences_of(
     attr: &CAttribute,
@@ -116,35 +96,17 @@ pub(crate) fn collective_occurrences_of(
     )
 }
 
-/// The EFFECTIVE `existence` of an attribute in an **ADL 1.4** text: the stated
-/// `existence` if there is one, else the 1.4 default `{1..1}`.
-///
-/// `ADL1.4/master05-cadl.adoc` §Existence L210: "The default existence
-/// constraint, if none is shown, is {1..1}." ADL 1.4 states the default in the
-/// formalism itself, so it is supplied as an ACCESSOR over the parsed model — the
-/// parsed structure is never rewritten, and an absent `existence` stays absent in
-/// the AOM (which is what the 1.4→2 converter and the printer must see).
+/// The effective `existence` of an ADL 1.4 attribute, the stated one or `{1..1}`
+/// (`ADL1.4/master05-cadl.adoc` §Existence L210), read without rewriting the
+/// model.
 #[must_use]
 pub fn effective_existence_adl14(attr: &CAttribute) -> Bounds {
     attr.existence.as_ref().map_or(BOUNDS_ONE, bounds)
 }
 
-/// The EFFECTIVE `occurrences` of an object node in an **ADL 1.4** text.
-///
-/// - A stated `occurrences` wins.
-/// - A `use_node` internal reference with none takes the referenced node's:
-///   `ADL1.4/master05-cadl.adoc` §Internal References L515 — "Unlike other node
-///   types, if no `occurrences` is mentioned, the value of the `occurrences` is
-///   set to that of the referenced node (which if not explicitly mentioned will be
-///   the default occurrences)". `root` is the archetype's definition root, against
-///   which the proxy's target path resolves; a non-specialised 1.4 archetype is
-///   its own flat form, so the path resolves locally.
-/// - Otherwise the 1.4 default `{1..1}`: `ADL1.4/master05-cadl.adoc`
-///   §Occurrences L316 — "The default occurrences, if none is mentioned, is
-///   `{1..1}`".
-///
-/// As with [`effective_existence_adl14`], this is an accessor: nothing is written
-/// back into the parsed model.
+/// The effective `occurrences` of an ADL 1.4 object node: the stated one, a
+/// `use_node`'s target's (`ADL1.4/master05-cadl.adoc` §Internal References L515),
+/// else `{1..1}` (§Occurrences L316). `root` resolves the proxy's path.
 #[must_use]
 pub(crate) fn effective_occurrences_adl14(root: &CComplexObject, obj: &CObject) -> Bounds {
     if let Some(occ) = child_occurrences(obj) {
@@ -166,11 +128,10 @@ const BOUNDS_ONE: Bounds = Bounds {
     upper: Some(1),
 };
 
-/// VSONT meta-type conformance (`master04.5` §Validity Rules: `C_OBJECT`, VSONT
-/// L342): the child meta-type must equal the parent's, with three exceptions —
-/// a childless `C_COMPLEX_OBJECT` parent admits any non-primitive; a
-/// `C_COMPLEX_OBJECT_PROXY` parent admits a `C_COMPLEX_OBJECT`; an
-/// `ARCHETYPE_SLOT` parent admits a `C_ARCHETYPE_ROOT` (slot filling).
+/// VSONT meta-type conformance (`master04.5` §Validity Rules: `C_OBJECT`): equal
+/// meta-types, except that a childless `C_COMPLEX_OBJECT` admits any
+/// non-primitive, a proxy admits a `C_COMPLEX_OBJECT`, and a slot admits a
+/// `C_ARCHETYPE_ROOT`.
 #[must_use]
 pub(crate) fn meta_type_conforms(child: &CObject, parent: &CObject) -> bool {
     let (ct, pt) = (aom_type(child), aom_type(parent));
@@ -204,21 +165,12 @@ pub(crate) enum ValueConformance {
     Unknown,
 }
 
-/// The validator's tri-state reading of `C_PRIMITIVE_OBJECT.c_value_conforms_to`
-/// for two leaf nodes.
+/// The tri-state reading of `C_PRIMITIVE_OBJECT.c_value_conforms_to` for two
+/// leaves, with [`CPrimitiveObject::c_value_congruent_to`] admitting the equal
+/// case (`master04.5`).
 ///
-/// The comparison itself is the spec function
-/// ([`CPrimitiveObject::c_value_conforms_to`], with
-/// [`CPrimitiveObject::c_value_congruent_to`] restoring the "same as OR narrower
-/// than" reading the specialisation rules need — `master04.5` states
-/// `c_value_conforms_to` as a STRICT narrowing and treats the equal case as
-/// congruence). Two decidability gates sit in front of it, because a `False`
-/// from a vacuous test is not evidence of a violation:
-///
-/// - different primitive AOM types are a meta-type question (VSONT), not a
-///   value one;
-/// - a child that states no constraint against a constraining parent satisfies
-///   the strict-subset test vacuously, which says nothing about the value space.
+/// Different primitive types (a VSONT question) and an unconstrained child under
+/// a constraining parent are undecidable here.
 #[must_use]
 fn value_conformance(child: &CPrimitiveObject, parent: &CPrimitiveObject) -> ValueConformance {
     if child.constrained_typename() != parent.constrained_typename() {
@@ -307,20 +259,11 @@ pub(crate) fn tuple_member_names(tuple: &CAttributeTuple) -> Vec<&str> {
         .collect()
 }
 
-/// `c_conforms_to` for a `C_ATTRIBUTE_TUPLE` against the tuple set of the
-/// corresponding flat-parent node (`master04.5` §`C_SECOND_ORDER`, L756-804).
+/// `c_conforms_to` for a `C_ATTRIBUTE_TUPLE` against the flat parent's tuples
+/// (`master04.5` §`C_SECOND_ORDER`), members paired by attribute name.
 ///
-/// The counterpart is the parent tuple constraining the same member-attribute
-/// group; declaration order may differ, so members are paired by attribute
-/// name. A child tuple sharing no attribute with any parent tuple is a new
-/// second-order constraint and conforms.
-///
-/// `C_ATTRIBUTE_TUPLE.c_conforms_to` requires every child row to conform to
-/// some parent row (the second `c_congruent_to` disjunct is subsumed: a
-/// congruent row conforms); `C_PRIMITIVE_TUPLE.c_conforms_to` requires equal
-/// member counts and, position-wise, `same_type` plus member value conformance.
-/// A member pair whose value conformance is undecidable
-/// ([`ValueConformance::Unknown`]) leaves the row unrefuted.
+/// Every child row must conform to some parent row; an undecidable member
+/// leaves the row unrefuted, and a tuple over a new group conforms.
 #[must_use]
 pub(crate) fn tuple_conforms_to(
     child: &CAttributeTuple,
@@ -516,11 +459,8 @@ mod tests {
         }
     }
 
-    /// The ADL 1.4 defaults are EFFECTIVE values, applied by the accessor and
-    /// never written back: `ADL1.4/master05-cadl.adoc` §Existence L210 ("The
-    /// default existence constraint, if none is shown, is {1..1}") and
-    /// §Occurrences L316 ("The default occurrences, if none is mentioned, is
-    /// `{1..1}`").
+    /// The ADL 1.4 existence and occurrences defaults are effective values, never
+    /// written back (`ADL1.4/master05-cadl.adoc` §Existence, §Occurrences).
     #[test]
     fn adl14_effective_defaults_are_one_to_one() {
         let root = definition_of_adl14(ADL14_USE_NODE_SRC);
@@ -810,14 +750,9 @@ terminology
         );
     }
 
-    /// The temporal pattern rules, through `C_TEMPORAL.c_value_conforms_to` and
-    /// the `C_DATE` replacement table (`c_temporal_definitions.adoc`
-    /// §Attributes).
-    ///
-    /// The last case is a child stating a date RANGE under a parent stating only
-    /// a PATTERN: `C_TEMPORAL.any_allowed` is False for a patterned parent, so
-    /// the `C_ORDERED` precursor finds no parent interval containing the child's
-    /// and the spec answer is a violation.
+    /// The temporal pattern rules through `C_TEMPORAL.c_value_conforms_to`
+    /// (`c_temporal_definitions.adoc`): a child date range under a patterned parent
+    /// is a violation.
     #[test]
     fn temporal_pattern_replacement() {
         // Parent `yyyy-??-??` (month/day optional): child `yyyy-mm-dd` narrows

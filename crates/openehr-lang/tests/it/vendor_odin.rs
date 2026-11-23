@@ -417,20 +417,10 @@ fn typed_casts_and_generic_types() {
     assert_eq!(as_str(field(value, "bmmType")), "CODED_TEXT");
 }
 
-/// The INVALID twin of [`referencing_document_parses`]: the vendored fixture
-/// itself, which declares the top-level attribute `people` twice (once with
-/// integer keys, once with string keys — archie's fixture concatenates the two
-/// container examples of `AM/docs/ADL1.4/master04-dadl` §Container Objects
-/// under the same attribute name).
-///
-/// This assertion was MOVED TOWARD THE SPEC: it previously pinned a
-/// last-one-wins overwrite (6 surviving attributes). Sibling attribute names
-/// must be unique — `LANG/docs/odin/master05-content` §General Structure rule
-/// *VDATU*, and the principle "Sibling attribute names must be unique" of
-/// `AM/docs/ADL1.4/master04-dadl` §General Form — so the document is
-/// spec-invalid and the reader now refuses it with the typed error naming the
-/// repeated attribute. The vendored fixture is unchanged; only the expectation
-/// moved, from an implementation behaviour to the spec rule.
+/// The invalid twin of [`referencing_document_parses`]: the vendored fixture
+/// declares the top-level attribute `people` twice, which `LANG/docs/odin/master05-content`
+/// §General Structure *VDATU* forbids, so the reader refuses it naming the
+/// repeated attribute.
 #[test]
 fn referencing_document_is_refused_for_duplicate_attribute() {
     let err = parse(&read("odin/odin/odin_test.txt")).expect_err("duplicate `people` must refuse");
@@ -632,14 +622,9 @@ fn anonymous_document_placeholder_leaf_is_refused() {
 
 #[test]
 fn identified_document_placeholder_ellipsis_is_refused() {
-    // Adjudication (re-grounded by the #854 ch.4 audit / #1374): the
-    // Identified Object Document FORM — top-level `["id"] = <…>` keyed
-    // objects — is normative (`LANG/docs/odin/master04-odin_artefacts`
-    // §Identified Object Document) and parses since #1374; its materialized
-    // twin is pinned in `odin_spec_examples.rs`. What keeps THIS fixture
-    // refused is only the illustrative bare `...` ellipsis line standing
-    // BETWEEN two keyed objects at the top level, which no production
-    // admits. archie has no test referencing it.
+    // The Identified Object Document form parses (`LANG/docs/odin/master04-odin_artefacts`
+    // §Identified Object Document; `odin_spec_examples.rs`); this fixture is refused
+    // for the bare `...` line between two keyed objects, which no production admits.
     let err = parse(&read("odin/odin/identified_object_document.txt"))
         .expect_err("a bare top-level `...` between keyed objects is invalid");
     assert!(err.line >= 1 && err.column >= 1);

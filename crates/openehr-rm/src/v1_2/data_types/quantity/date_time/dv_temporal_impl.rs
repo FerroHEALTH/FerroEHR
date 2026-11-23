@@ -2,30 +2,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for `DV_TEMPORAL`.
-//!
-//! `DV_TEMPORAL` is abstract, so the generated `DvTemporal` is the closed
-//! subtype enum over `DV_DATE` / `DV_TIME` / `DV_DATE_TIME`, and the three
-//! functions it declares are realized here as the dispatch across it. The
-//! arithmetic itself is not re-derived: each concrete type already effects
-//! `add` / `subtract` / `diff` over the BASE ISO-8601 calendar, including the
-//! accuracy rule `DV_ABSOLUTE_QUANTITY` states.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_temporal.adoc`
-//! §Functions — the class "whose diff type is `DV_DURATION`", which is what
-//! narrows its inherited `DV_ABSOLUTE_QUANTITY` signatures from any
-//! `DV_AMOUNT` to a duration.
+//! The `DV_TEMPORAL` functions (`org.openehr.rm.data_types.dv_temporal.adoc`),
+//! dispatched to `DV_DATE`, `DV_TIME` and `DV_DATE_TIME`.
 
 use crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration;
 use crate::v1_2::data_types::quantity::date_time::dv_temporal::DvTemporal;
 
 impl DvTemporal {
-    /// Returns this temporal value displaced forward by `a_diff`, or `None`
-    /// when the value or the duration is not a readable ISO-8601 string.
-    ///
-    /// Spec: `org.openehr.rm.data_types.dv_temporal.adoc` §Functions `add`
-    /// (alias `+`) — "Addition of a Duration to this temporal entity."
+    /// This value plus `a_diff` (`add`), or `None` when either is unreadable.
     #[must_use]
     pub fn add(&self, a_diff: &DvDuration) -> Option<Self> {
         match self {
@@ -35,12 +19,8 @@ impl DvTemporal {
         }
     }
 
-    /// Returns this temporal value displaced backward by `a_diff`, under the
-    /// same conditions as [`Self::add`].
-    ///
-    /// Spec: `org.openehr.rm.data_types.dv_temporal.adoc` §Functions
-    /// `subtract` (alias `-`) — "Subtract a Duration from this temporal
-    /// entity."
+    /// This value minus `a_diff` (`subtract`), under the conditions of
+    /// [`Self::add`].
     #[must_use]
     pub fn subtract(&self, a_diff: &DvDuration) -> Option<Self> {
         match self {
@@ -50,16 +30,8 @@ impl DvTemporal {
         }
     }
 
-    /// Returns the duration between this temporal value and `other`, or `None`
-    /// when the two are not the same concrete type or a value is unreadable.
-    ///
-    /// Spec: `org.openehr.rm.data_types.dv_temporal.adoc` §Functions `diff`
-    /// (alias `-`) — "Difference between this temporal entity and `other`."
-    /// Only two values of the same concrete type have one: the difference
-    /// between a date and a time of day is not a duration, which is why the
-    /// mixed pairs answer `None` rather than a number
-    /// (`org.openehr.rm.data_types.dv_absolute_quantity.adoc` §Functions
-    /// `diff`, "Difference of two quantities").
+    /// The duration between this value and `other` (`diff`), or `None` when they
+    /// differ in concrete type or a value is unreadable.
     #[must_use]
     pub fn diff(&self, other: &Self) -> Option<DvDuration> {
         match (self, other) {

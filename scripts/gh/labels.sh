@@ -11,15 +11,11 @@
 #     set, the upstream-report pair, and the product areas;
 #   * the workflow labels and the pull-request escape hatches CI reads.
 # The type of an issue (Bug, Feature, Task) and its priority (Urgent, High,
-# Medium, Low) are NOT labels since 2026-10-02: they are GitHub's native issue
-# type and the organisation's Priority issue field, set with
-# scripts/gh/fields.sh. The six labels that carried them before (bug,
-# enhancement, P0 to P3) are deleted here, so a re-run converges a repository
-# that still has them. Run scripts/gh/migrate-fields.sh first on a repository
-# whose open issues still carry them, or the old values are lost with the
-# labels. GitHub's default labels (duplicate, invalid, question, ...) and the
-# ones Dependabot applies (dependencies, github_actions, rust, docker) are
-# left as they are.
+# Medium, Low) are GitHub's native issue type and the organisation's Priority
+# issue field, set with scripts/gh/fields.sh, never labels; the six labels
+# that carried them (bug, enhancement, P0 to P3) are deleted here. GitHub's
+# default labels (duplicate, invalid, question, ...) and the ones Dependabot
+# applies (dependencies, github_actions, rust, docker) are left as they are.
 #
 # `gh label create --force` updates an existing label in place, so re-running
 # this is safe and converges the colours and descriptions to the values below.

@@ -4,20 +4,6 @@
 
 //! The shared token superset: one `logos` DFA, read in this generation under
 //! the single Release-1.0.0 ODIN lexical layer.
-//!
-//! The DFA is the WORKSPACE token superset, kept structurally identical to
-//! the v1_1 generation's union (which reads it under four languages) so the
-//! union/narrow machinery behaves the same everywhere; foreign families —
-//! cADL/BEL/EL keywords, ADL codes, constraint patterns — cite the
-//! 1.1.0-line grammars that contribute them. Which tokens the ODIN reading
-//! actually produces is decided by [`super::reclassify()`], not here — every
-//! foreign family is demoted or refused there, each arm with its citation.
-//!
-//! The ODIN-relevant patterns follow the Release-1.0.0 set
-//! (`vendor/grammar/v1_0/{odin.g4, odin_values.g4, base_patterns.g4,
-//! base_lexer.g4}`); where 1.0.0 differs lexically from the 1.1.0 line —
-//! `,`-only fractional seconds on times, `.`-only on durations — the token
-//! carries a `NOTE` with the 1.0.0 citation.
 
 use logos::Logos;
 
@@ -33,11 +19,6 @@ use crate::v1_1::lexer::token::scan::{
 /// [`Token::String`] under the ODIN reading, whose payload has the multi-line
 /// white-space leaders removed (`LANG/docs/odin/master07-leaf_data` §String
 /// Data) — that transform is applied by the ODIN reclassification pass.
-///
-/// Keyword variants are UNIT variants. A language that does not reserve a
-/// keyword does not get a differently-shaped token: the reclassification pass
-/// re-tags the token to the identifier variant its own lexer would have
-/// produced, reading the spelling back out of the source at the token's span.
 #[derive(Logos, Debug, Clone, PartialEq)]
 #[logos(skip r"[ \t\r\n]+")] // WS / LINE (base_lexer.g4)
 #[logos(skip("--", scan::comment))] // CMT_LINE `-- … EOL` incl. the `----…` overlay separator (base_lexer.g4)
@@ -52,11 +33,8 @@ pub enum Token {
     #[token("\u{feff}")]
     Bom,
 
-    // ── foreign keywords of the shared superset (the 1.1.0-line
-    //    adl_keywords.g4 / base_expressions.g4 / ElLexer.g4 families); text +
-    //    unicode symbol forms fold to one variant. Exact-literal `#[token]`s
-    //    outrank the ALPHA_*_ID regexes by logos priority, so keywords beat
-    //    identifiers — and the ODIN pass demotes every one of them. ──
+    // ── foreign keywords of the shared superset: exact literals outrank the
+    // identifier regexes by logos priority, and the ODIN pass demotes each ──
     /// `matches` / `is_in` / `∈` (`SYM_MATCHES`).
     #[token("matches", ignore(case))]
     #[token("is_in", ignore(case))]
@@ -111,9 +89,6 @@ pub enum Token {
     #[token("\u{2200}")]
     SymForAll,
     /// `exists` / `□` (`SYM_EXISTS`).
-    ///
-    /// EL admits the modal-logic box as the non-null assertion operator
-    /// (`ElLexer.g4` `SYM_EXISTS : 'exists' | '□'`); no other reading has it.
     #[token("exists", ignore(case))]
     #[token("\u{25A1}")]
     SymExists,
@@ -247,14 +222,9 @@ pub enum Token {
     #[regex(r"[0-9a-fA-F]+-[0-9a-fA-F]+-[0-9a-fA-F]+-[0-9a-fA-F]+-[0-9a-fA-F]+", |lex| lex.slice().to_owned())]
     Guid(String),
 
-    // ── ISO8601 date/time/duration VALUES (base_lexer.g4) ──
-    //
-    // The three date/time VALUE tokens carry an explicit high priority so they
-    // win every tie against the constraint-PATTERN tokens below, whose fields
-    // admit literal date/time numbers (`ADL1.4/master05-cadl.adoc` §Patterns).
-    // Where a text is BOTH a legal value and a legal all-literal pattern
-    // (`1995-??-??`), the value reading wins; the pattern tokens keep the shapes
-    // only they match (`1995-??-XX`, `1995-mm-dd`).
+    // ── ISO8601 VALUES (base_lexer.g4): the high priority makes a value win
+    // every tie against an all-literal constraint pattern
+    // (`ADL1.4/master05-cadl.adoc` §Patterns) ──
     /// `ISO8601_DATE_TIME` (with optional partial `??` fields / timezone),
     /// fractional seconds `,`-separated (see [`Token::Iso8601Time`]).
     ///
@@ -272,14 +242,8 @@ pub enum Token {
         |lex| lex.slice().to_owned(),
         priority = 30
     )]
-    // The space-separated date/time form of the `AM/docs/ADL1.4/master08-adl`
-    // §Revision History Section example (`time_committed = <2004-11-02
-    // 09:31:04+1000>`). That example contradicts its own chapter set —
-    // `master04-dadl` §Complete Date/Times mandates the ISO 8601 extended form
-    // with the `T` designator, and neither the dADL lex rules nor
-    // `base_lexer.g4` `ISO8601_DATE_TIME` admit a space — so the form is a
-    // deliberate ODIN-only widening: the ODIN pass normalises it to the `T`
-    // form on read.
+    // The space form of the `AM/docs/ADL1.4/master08-adl` §Revision History
+    // example, an ODIN-only widening the ODIN pass normalises to the `T` form.
     #[regex(
         r"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}(:[0-9]{2}(,[0-9]+)?)?(Z|[+\-][0-9]{4})?",
         |lex| lex.slice().to_owned(),
@@ -294,11 +258,6 @@ pub enum Token {
     )]
     Iso8601Date(String),
     /// `ISO8601_TIME` (with optional partial `??` fields / timezone).
-    ///
-    /// NOTE: fractional seconds take `,` alone — the Release-1.0.0
-    /// `base_lexer.g4` `ISO8601_TIME` spells `SYM_COMMA INTEGER`, and the
-    /// `master07-leaf_data` example `16:35:04,5` agrees; the `.` alternative
-    /// postdates this generation.
     #[regex(
         r"[0-9]{2}:([0-9]{2}(:([0-9]{2}(,[0-9]+)?|\?\?))?|\?\?:\?\?)(Z|[+\-][0-9]{4})?",
         |lex| lex.slice().to_owned(),
@@ -306,26 +265,18 @@ pub enum Token {
     )]
     Iso8601Time(String),
     /// `ISO8601_DURATION`, requiring at least one component (never bare `P`).
-    ///
-    /// NOTE: fractional seconds take `.` alone — the Release-1.0.0
-    /// `base_lexer.g4` `ISO8601_DURATION` spells `('.' DIGIT+)?`; the `,`
-    /// alternative postdates this generation.
     #[regex(
         r"-?P([0-9]+[YyMmWwDd])+(T([0-9]+[HhMm])*[0-9]+(\.[0-9]+)?[Ss]|T([0-9]+[Hh])?([0-9]+[Mm])?([0-9]+(\.[0-9]+)?[Ss])?)?|-?PT([0-9]+[HhMm])*[0-9]+(\.[0-9]+)?[Ss]|-?PT([0-9]+[Hh])([0-9]+[Mm])?|-?PT[0-9]+[Mm]",
         |lex| lex.slice().to_owned()
     )]
     Iso8601Duration(String),
 
-    // ── constraint PATTERNS (base_lexer.g4 + `ADL1.4/master05-cadl.adoc`
-    //    §Symbols L1415-1426) ──
+    // ── constraint PATTERNS (base_lexer.g4, `ADL1.4/master05-cadl.adoc`
+    // §Symbols), widened to literal date/time numbers, ASCII `+`/`-` zones and
+    // a `[T ]` separator ──
     //
-    // Three spec-grounded widenings over `base_lexer.g4`'s transcription, all
-    // supersets: every field also admits a LITERAL date/time number (master05
-    // L894); the timezone modifier admits the ASCII `+`/`-` forms, not only `±`
-    // (§Patterns L852 + the timezone table L900-906); and the date/time
-    // separator is `[T ]` per `V_ISO8601_DATE_TIME_CONSTRAINT_PATTERN` (L1422).
-    // NOTE: the explicit low priority keeps the date/time VALUE tokens above
-    // winning every equal-length tie.
+    // NOTE: the low priority lets the VALUE tokens above win every equal-length
+    // tie.
     /// `DATE_TIME_CONSTRAINT_PATTERN` — e.g. `yyyy-mm-ddThh:mm:ss`.
     #[regex(
         r"(yyyy|YYYY|yyy|YYY|[0-9]{4})-(mm|MM|\?\?|XX|xx|[0-9]{2})-(dd|DD|\?\?|XX|xx|[0-9]{2})[T ](hh|HH|\?\?|XX|xx|[0-9]{2}):(mm|MM|\?\?|XX|xx|[0-9]{2}):(ss|SS|\?\?|XX|xx|[0-9]{2})([+\-\u{00B1}](hh|HH)(:?(mm|MM))?|Z)?",
@@ -348,11 +299,6 @@ pub enum Token {
     )]
     TimeConstraintPattern(String),
     /// `DURATION_CONSTRAINT_PATTERN` — letters only, e.g. `PYMD`, `PWD`, `PT`.
-    ///
-    /// Can be identical to an uppercase identifier (`PWD`); the higher token
-    /// priority classifies the real pattern while longer type names
-    /// (`POINT_EVENT`) win by length. Date/time constraint patterns contain
-    /// `-`/`:` and never collide.
     #[regex(
         r"P([Yy][Mm]?[Ww]?[Dd]?|[Mm][Ww]?[Dd]?|[Ww][Dd]?|[Dd])(T([Hh][Mm]?[Ss]?|[Mm][Ss]?|[Ss]))?|PT([Hh][Mm]?[Ss]?|[Mm][Ss]?|[Ss])",
         |lex| lex.slice().to_owned(),
@@ -363,9 +309,6 @@ pub enum Token {
     // ── composed primitives (base_lexer.g4) ──
     /// A delimited contained regexp `{ /re/ }` / `{ ^re^ }` with optional
     /// `;"assumed"` (`CONTAINED_REGEXP`).
-    ///
-    /// The DFA matches only the `{`, and the `{` callback scans the rest in a
-    /// loop, so its length costs no stack.
     ContainedRegexp(String),
     /// A term-code reference `[terminology(ver)?::code]` (`TERM_CODE_REF`).
     #[regex(r"\[[a-zA-Z0-9._\-]+(\([a-zA-Z0-9._\-]+\))?::[a-zA-Z0-9._\-]+\]", |lex| lex.slice().to_owned())]
@@ -383,11 +326,6 @@ pub enum Token {
     /// beside `"en", ...`, and `LANG/docs/odin/master07-leaf_data` §Lists of
     /// Built-in Types repeats that example verbatim. Two normative passages
     /// against one production rule: the local code is read as a leaf value.
-    ///
-    /// The pattern deliberately requires an ALPHA first character (narrower
-    /// than the 1.4 `ALPHANUM`) so that the container keys `[1]`, `[01234]`
-    /// and `[2004-06-11]` keep lexing as `'[' key ']'`, which the 1.4 lex rule
-    /// would otherwise swallow whole.
     #[regex(r"\[[a-zA-Z][a-zA-Z0-9._\-]*\]", |lex| lex.slice().to_owned())]
     LocalTermCodeRef(String),
     /// A plug-in-syntax object block `<# … #>`, captured verbatim including
@@ -396,9 +334,6 @@ pub enum Token {
     /// the delimiters are reserved by `master03-basics` §Reserved
     /// Characters). The body is raw foreign text ("expressed in some other
     /// syntax"), never lexed.
-    ///
-    /// The DFA matches only the `<`, and the `<` callback scans the rest in a
-    /// loop, so its length costs no stack.
     PlugInBlock(String),
     /// An embedded URI `<scheme:…>` (`EMBEDDED_URI`).
     ///
@@ -409,17 +344,9 @@ pub enum Token {
     /// the lexical layer: refusing here would punish real-world authored
     /// data, and URI validity is the consuming model's typed concern
     /// (adjudicated against §7.3).
-    ///
-    /// The DFA matches only the `<`, and the `<` callback scans the rest in a
-    /// loop, so its length costs no stack.
     EmbeddedUri(String),
     /// An ADL path (`base_lexer.g4 ADL_PATH`), each segment
     /// `ALPHA_LC_ID ('[' predicate ']')?`.
-    ///
-    /// The union pattern admits either-case segment heads and the 1.1.0-line
-    /// movable/single-segment forms; the ODIN pass keeps only the
-    /// Release-1.0.0 shapes — lower-case heads, absolute `(/seg)+` or
-    /// relative `seg(/seg)+` (`base_lexer.g4` `PATH_SEGMENT`).
     #[regex(
         r"(/[a-zA-Z][a-zA-Z0-9_]*(\[[^\]\r\n]*\])?)+|[a-zA-Z][a-zA-Z0-9_]*(\[[^\]\r\n]*\])?(/[a-zA-Z][a-zA-Z0-9_]*(\[[^\]\r\n]*\])?)+",
         |lex| lex.slice().to_owned()
@@ -441,9 +368,6 @@ pub enum Token {
     Integer(String),
     /// A double-quoted `STRING` (may span lines); escapes validated per
     /// `master03` (`\r \n \t \\ \" \'` + `\uHHHH`/`\uHHHHHHHH`).
-    ///
-    /// The DFA matches only the opening `"`, and a callback finishes the
-    /// literal in a loop, so its length costs no stack.
     #[token("\"", |lex| scan::string(lex).and_then(|()| validate_string(lex)))]
     String(String),
     /// A single-quoted `CHARACTER`. An escaped character must be one of the
@@ -585,12 +509,6 @@ pub enum Token {
 
 /// Validate a `CHARACTER` token's escape and return the raw slice
 /// (delimiters retained; the parser decodes).
-///
-/// The escape rules are [`crate::v1_0::escape`]'s — the ONE `master03`
-/// implementation the whole workspace shares — so an illegal escape fails the
-/// lex here rather than being judged a second time against a drifting local
-/// copy of the same rules. A `\uHHHH` form cannot fit the single-character
-/// token, and the shared decoder refuses it as a malformed unicode escape.
 fn validate_char(lex: &logos::Lexer<Token>) -> Result<String, ()> {
     let raw = lex.slice();
     crate::v1_0::escape::validate(raw).map_err(|_defect| ())?;

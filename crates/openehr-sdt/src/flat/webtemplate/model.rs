@@ -1,30 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The Web Template JSON model.
+//! The Web Template JSON model (`simplified_formats master04-basic_concepts.adoc`
+//! §"Web Template Metadata"), served as `application/openehr.wt+json`.
 //!
-//! The wire shape is the Web Template metadata document of `ITS-REST
-//! simplified_formats master04-basic_concepts.adoc` §"Web Template Metadata"
-//! (`templateId`/`semVer`/`version`/`defaultLanguage`/`languages`/`tree`, each
-//! node carrying `id`/`name`/`localizedName`/`rmType`/`nodeId`/`min`/`max`/
-//! `aqlPath`/`inputs`/`children`/`inContext`/`termBindings`/`annotations`/…).
-//! It is served as `application/openehr.wt+json`, so the `#[serde(rename = ...)]`
-//! names, field order, and `skip_serializing_if` guards are a fixed wire contract
-//! and must not change.
+//! The serde names, field order and `skip_serializing_if` guards are a fixed
+//! wire contract. `#[serde(skip)]` fields are build-time scratch and
+//! validation-only constraints.
 //!
-//! A [`WebTemplateNode`] doubles as the mutable tree the builder shapes: fields
-//! marked `#[serde(skip)]` are build-time scratch (the full dedup id chain, the
-//! polymorphic alternate id, the cardinality RM path) and captured constraints
-//! for validation — never serialized.
-//!
-//! The normative `schemas/web_template/*.yaml` describe a SUBSET of the metadata
-//! document. The model carries additive fields those schemas do not list
-//! (`cardinalities`, `proportionTypes`, `dependsOn`; `listOpen`, `terminology`
-//! on inputs; `ordinal`/`scale`/`termBindings` on coded values; `otherDetails`
-//! on the root) — no openEHR spec governs them, so they are our own
-//! design/extension, schema-legal because those schemas set no
-//! `additionalProperties: false`. The one place the schema is STRICTER is its
-//! `Tree.required` list, which `super::root::serialize_root` satisfies.
+//! NOTE: the fields `schemas/web_template/*.yaml` does not list (`cardinalities`,
+//! `proportionTypes`, `dependsOn`, `listOpen`, `otherDetails` and others) are our
+//! own design, legal since those schemas set no `additionalProperties: false`.
 
 #![expect(
     clippy::disallowed_types,
@@ -43,13 +29,9 @@ use super::constraint::{
     WebTemplateExistence, WebTemplateSlot, WebTemplateStructuralStub,
 };
 
-/// A single Web Template metadata document (`ITS-REST simplified_formats
-/// master04 §"Web Template Metadata"`).
+/// A single Web Template metadata document (master04 §"Web Template Metadata").
 ///
-/// Member order `templateId, semVer, version, defaultLanguage, languages, tree,
-/// otherDetails`; empty members are omitted. `version` is the **format** version
-/// string, not the template version (`otherDetails` is an additive field — no
-/// openEHR spec governs it; our own design/extension).
+/// `version` is the format version string, not the template version.
 #[derive(Debug, Clone, Serialize)]
 pub struct WebTemplate {
     /// The template id this document describes (wire member `templateId`).
@@ -72,52 +54,31 @@ pub struct WebTemplate {
     /// Additive template metadata — no openEHR spec governs this member; our own design/extension (wire member `otherDetails`).
     #[serde(rename = "otherDetails", skip_serializing_if = "IndexMap::is_empty")]
     pub other_details: IndexMap<String, String>,
-    /// For an OPT2, every archetype reference it inlined mapped to the interface
-    /// id its root's `nodeId` carries, so an instance recording the complete
-    /// identifier (BASE `artefact_identification` `master07-referencing.adoc`
-    /// §Reconstitutability) matches its node; an OPT2 inlines every slot
-    /// filler (AM OPT2 `master03-opt_raw.adoc` §Flattening), so an unmatched
-    /// archetype root is a node the template does not define. `None` for an
-    /// OPT 1.4. Read by the archetype-conformance pass and the FLAT and
-    /// STRUCTURED read; `#[serde(skip)]`.
+    /// For an OPT2, every archetype reference it inlined mapped to the interface id
+    /// its root's `nodeId` carries (BASE `master07-referencing.adoc`
+    /// §Reconstitutability); `None` for an OPT 1.4.
     #[serde(skip)]
     pub archetype_refs: Option<BTreeMap<String, String>>,
 }
 
-/// The `defining_code` a coded-name node must carry.
-///
-/// A node whose runtime `name` is constrained as a `DV_CODED_TEXT` carries the
-/// constrained terminology + code the
-/// composition builder stamps so the instance name is a coded name, not a
-/// plain `DV_TEXT` (RM common `master03-archetyped_package.adoc` §"The
-/// `LOCATABLE` class" — a `LOCATABLE.name` is `DV_TEXT` *or* `DV_CODED_TEXT`;
-/// AOM 1.4 `master04-constraint_model_package.adoc` — a `C_ATTRIBUTE` on `name`
-/// constrains the whole coded name). The display value is the node's
-/// [`WebTemplateNode::name`].
+/// The `defining_code` a coded-name node must carry (RM common
+/// `master03-archetyped_package.adoc` §"The `LOCATABLE` class"); the display
+/// value is [`WebTemplateNode::name`].
 #[derive(Debug, Clone)]
 pub struct CodedName {
     /// The `defining_code` terminology id (e.g. `local`, `openehr`).
     pub terminology: String,
     /// The `defining_code` code string (an `atNNNN` / openEHR code).
     pub code: String,
-    /// Whether the constraint is display/rubric-**incoherent**: the template
-    /// fixes a `name/value` that equals NO listed code's archetype rubric, so
-    /// any conforming instance pairs a display value with a code whose rubric
-    /// says something else. Spec-legal on our reading (a name constraint may
-    /// rename; RM common master03 §LOCATABLE), but the reference
-    /// implementation enforces value ≡ local-code rubric and rejects every
-    /// form of such a node (verified empirically) — the example generator
-    /// omits OPTIONAL incoherent nodes so a shared payload exists.
+    /// Whether the template fixes a `name/value` equal to no listed code's rubric.
+    /// The example generator omits optional incoherent nodes.
     pub incoherent: bool,
 }
 
-/// One node of the Web Template tree (`ITS-REST simplified_formats master04
-/// §"Web Template Metadata"`, the `tree`/`children` shape).
+/// One node of the Web Template tree (master04 §"Web Template Metadata").
 ///
-/// Null members are omitted, as are empty collection members. `id` is the
-/// **local** json-id segment (not the full path; master04 §"Node ID Generation
-/// Rules"); `aqlPath` is the archetype path root→node. `max == -1` means
-/// unbounded.
+/// `id` is the local json-id segment (master04 §"Node ID Generation Rules"),
+/// `aqlPath` the archetype path root to node, and `max == -1` unbounded.
 #[derive(Debug, Clone, Serialize)]
 pub struct WebTemplateNode {
     /// The local json-id segment, serialized as `id` (master04 §"Node ID
@@ -184,19 +145,13 @@ pub struct WebTemplateNode {
     #[serde(skip)]
     pub existence: Vec<WebTemplateExistence>,
 
-    /// **Every** constraining `C_MULTIPLE_ATTRIBUTE.cardinality` on this node
-    /// (AOM 1.4 `master04-constraint_model_package.adoc` §cardinality) — a
-    /// superset of the serialized `cardinalities`, which keeps only the intervals
-    /// surfaced in the metadata document. The validation walk enforces this set
-    /// so `0..1`/`1..1`/`1..*` container bounds are checked too. `#[serde(skip)]`
-    /// — validation-only.
+    /// Every constraining `C_MULTIPLE_ATTRIBUTE.cardinality` on this node (AOM 1.4
+    /// §cardinality), a superset of the serialized `cardinalities`.
     #[serde(skip)]
     pub card_all: Vec<WebTemplateCardinality>,
 
-    /// RM-type narrowings of wrapper constraints the compactor hoisted away
-    /// (`ITEM_*`/`HISTORY`/single `EVENT`): an instance node matched at `path`
-    /// must conform to one of the recorded types (AOM 1.4 type conformance —
-    /// "Class not allowed"). `#[serde(skip)]` — validation-only.
+    /// RM-type narrowings of the wrapper constraints the compactor hoisted away; an
+    /// instance node at `path` must conform to one of them.
     #[serde(skip)]
     pub slots: Vec<WebTemplateSlot>,
     /// Built for an RM attribute the template leaves implicit. Example-only.
@@ -209,10 +164,8 @@ pub struct WebTemplateNode {
     #[serde(skip)]
     pub numeric_lists: Vec<(String, Vec<f64>)>,
 
-    /// `C_INTEGER`/`C_REAL` ranges on a leaf's numeric datum the `inputs` do not
-    /// carry, keyed by RM attribute name: `DV_MULTIMEDIA.size` (RM `data_types`)
-    /// and an ADL 2 union of ranges (AOM2 `master04.5` §C_ORDERED), the datum
-    /// lying in one of the ranges given for it. Validation-only.
+    /// `C_INTEGER`/`C_REAL` ranges the `inputs` do not carry, keyed by RM attribute:
+    /// `DV_MULTIMEDIA.size` and an ADL 2 union of ranges (AOM2 `master04.5` §C_ORDERED).
     #[serde(skip)]
     pub numeric_ranges: Vec<(String, WebTemplateRange)>,
 
@@ -222,36 +175,20 @@ pub struct WebTemplateNode {
     #[serde(skip)]
     pub duration_range: Option<WebTemplateRange>,
 
-    /// `C_TIME.timezone_validity` / `C_DATE_TIME.timezone_validity`
-    /// (`VALIDITY_KIND`; OPT 1.4 XSD encodes `1001` = mandatory, `1002` =
-    /// optional, `1003` = disallowed) on a temporal leaf's `value` — governs
-    /// whether the instance's timezone designator must be present, may be
-    /// present, or must be absent (AOM 1.4
-    /// `AM/docs/UML/classes/org.openehr.am.aom14.c_time.adoc`/`…c_date_time.adoc`).
-    /// Validation-only; `C_DATE` has no timezone. `#[serde(skip)]`.
+    /// `C_TIME`/`C_DATE_TIME.timezone_validity` on a temporal leaf's `value`
+    /// (`org.openehr.am.aom14.c_time.adoc`; OPT 1.4 encodes `1001` mandatory,
+    /// `1002` optional, `1003` disallowed).
     #[serde(skip)]
     pub tz_validity: Option<i32>,
 
-    /// `C_QUANTITY.property` openEHR `property`-group code (e.g. `"122"` =
-    /// Length) on a `DV_QUANTITY` leaf whose constraint carries a `property` but
-    /// no enumerated `C_QUANTITY_ITEM` unit list. The instance's `units` must
-    /// then belong to that property's unit set — resolved against the openEHR
-    /// `PropertyUnitData.xml` property↔unit table (`openehr_term::bundle`).
-    /// Validation-only; `#[serde(skip)]`.
+    /// `C_QUANTITY.property` code on a `DV_QUANTITY` leaf with no unit list; the
+    /// instance's `units` must belong to the property's unit set (`openehr_term::bundle`).
     #[serde(skip)]
     pub quantity_property: Option<String>,
 
-    /// True when this leaf's coded constraint (a `DV_CODED_TEXT` `defining_code`
-    /// or a bare `CODE_PHRASE`) is a `C_CODE_PHRASE` that **explicitly** names
-    /// the archetype-`local` terminology with a non-empty closed `code_list`.
-    /// The builder strips the implicit/default `local` from
-    /// [`WebTemplateInput::terminology`] (so it never reaches the wt+json
-    /// document), losing the distinction between "explicitly local" and "no
-    /// terminology named"; this flag preserves the explicit-local signal so the
-    /// validator can reject a foreign-terminology instance code
-    /// (`AM/docs/UML/classes/org.openehr.am.aom14.c_coded_text.adoc`
-    /// §C_CODED_TEXT: the `code_list` is scoped to the named terminology).
-    /// Validation-only; `#[serde(skip)]`.
+    /// Whether this leaf's `C_CODE_PHRASE` explicitly names the `local` terminology
+    /// with a closed `code_list`, which the `inputs` lose
+    /// (`org.openehr.am.aom14.c_coded_text.adoc` §C_CODED_TEXT).
     #[serde(skip)]
     pub coded_terminology_local: bool,
 
@@ -261,79 +198,40 @@ pub struct WebTemplateNode {
     #[serde(skip)]
     pub code_lists: Vec<WebTemplateCodeList>,
 
-    /// Archetype **constraint bindings** in force on this node: an `ac`-code
-    /// `CONSTRAINT_REF` under a coded attribute whose ac-code the OPT ontology
-    /// binds to an external terminology query
-    /// (`AM/docs/ADL1.4/master08-adl.adoc` §Constraint_bindings). BASE
-    /// `architecture_overview/master12-terminology.adoc` §"Binding Terminology
-    /// Value-sets to Archetypes": "an internal code is defined, in this case an
-    /// 'ac' code … and this is bound to queries to one or more external
-    /// terminologies, whose result would be a (possibly structured) value set
-    /// from that terminology"; the query itself "is defined within a
-    /// 'terminology query server'". The binding is therefore NOT resolvable
-    /// inside this crate — the checks it implies are surfaced by
-    /// [`crate::flat::validation::collect_constraint_binding_checks`] for a
-    /// caller that owns a terminology service. Validation-only; `#[serde(skip)]`.
+    /// Archetype constraint bindings in force on this node
+    /// (`AM/docs/ADL1.4/master08-adl.adoc` §Constraint_bindings), resolvable only by
+    /// a terminology service: see
+    /// [`crate::flat::validation::collect_constraint_binding_checks`].
     #[serde(skip)]
     pub constraint_bindings: Vec<WebTemplateConstraintBinding>,
 
-    /// Closed-archetype constraints: per
-    /// constrained attribute that carries archetype-node-identified alternatives
-    /// and/or open `ARCHETYPE_SLOT`s, the admissible child identities. The walk
-    /// rejects an instance child under such an attribute whose `archetype_node_id`
-    /// matches neither a fixed sibling alternative nor an open slot. Captured at
-    /// **build time** from the OPT (before compaction, so no alternative is lost)
-    /// and re-homed on the parent by absolute path when a wrapper is hoisted.
-    /// Validation-only; `#[serde(skip)]`.
+    /// Closed-archetype constraints: per constrained attribute, the admissible
+    /// child identities, re-homed on the parent when a wrapper is hoisted.
     #[serde(skip)]
     pub closed_attributes: Vec<WebTemplateClosedAttribute>,
 
-    /// The RM attributes of this node the template prohibits: a constraint
-    /// attribute with existence `0..0`, or one whose every constraint object has
-    /// occurrences `0..0` (AOM 1.4 `master04-constraint_model_package.adoc`
-    /// §existence). The in-context synthesis reads it,
-    /// so a COMPOSITION whose template prohibits `context` gets no `/context`
-    /// node. Build-time only (`#[serde(skip)]`).
+    /// The RM attributes of this node the template prohibits (existence `0..0`, or
+    /// every constraint object at occurrences `0..0`; AOM 1.4 §existence).
     #[serde(skip)]
     pub prohibited_attributes: Vec<String>,
 
-    /// Structural stubs for the structural attributes (`data`, `description`,
-    /// `protocol`, `state`) of an ENTRY, EVENT or ACTIVITY node that the
-    /// template **does** constrain with a node-identified structural child
-    /// (`ITEM_TREE[at0017]`, a `HISTORY`, …) which does not survive as a
-    /// web-template tree child because it carries no leaf content and the
-    /// compactor drops it. Recorded so the FLAT composition builder and the
-    /// example generator can synthesise the empty attribute with the
-    /// *constrained* node id/type/name rather than a blind `at0001` placeholder —
-    /// the constrained attribute must be filled by a conforming value (AOM 1.4
-    /// `AM/docs/AOM1.4/master04-constraint_model_package.adoc` §`Valid_value`).
-    /// Captured at build time from the OPT constraint object and re-homed on the
-    /// parent by absolute path when a wrapper is hoisted. Validation-only;
-    /// `#[serde(skip)]`.
+    /// Structural stubs for the constrained `data`, `description`, `protocol` and
+    /// `state` attributes the compactor dropped, so the builder fills them with the
+    /// constrained identity (AOM 1.4 `master04-constraint_model_package.adoc`
+    /// §`Valid_value`).
     #[serde(skip)]
     pub structural_stubs: Vec<WebTemplateStructuralStub>,
 
     /// The other object constraints on this node's attribute that the builder
-    /// folded into it: the `DV_TEXT` beside a `DV_CODED_TEXT` that the node
-    /// presents as an open value-set with `|other` (ITS-REST
-    /// `simplified_formats` master04 §"Open Value-Sets and the `|other`
-    /// Suffix"), or a coded sibling the compactor dropped. They stay out of
-    /// the metadata document, and the validation walk accepts an instance
-    /// that matches this node or any one of them (ADL 1.4 `master05-cadl.adoc`
-    /// §"Single-valued Attributes": "only one of which needs to be matched by
-    /// the data"). Validation-only; `#[serde(skip)]`.
+    /// folded into it; an instance may match any one (ADL 1.4 `master05-cadl.adoc`
+    /// §"Single-valued Attributes"; master04 §"Open Value-Sets and the `|other`
+    /// Suffix").
     #[serde(skip)]
     pub alternatives: Vec<WebTemplateNode>,
 
-    /// The template's constraints on the `null_flavour` and `null_reason` of
-    /// the ELEMENT this node presents (the ELEMENT itself, or the value it was
-    /// promoted to), each with the id of its FLAT attribute (`_null_flavour`,
-    /// `_null_reason`). RM `data_structures` §ELEMENT makes both attributes of
-    /// the ELEMENT beside `value`, never a value alternative, and ITS-REST
-    /// `simplified_formats` master05 §ELEMENT addresses them with the `_`
-    /// prefix, so they stay out of [`Self::children`] and the metadata
-    /// document. The validation walk checks a stored null flavour against
-    /// them. Validation-only; `#[serde(skip)]`.
+    /// The template's constraints on the ELEMENT's `null_flavour` and `null_reason`,
+    /// each with its FLAT attribute id (RM `data_structures` §ELEMENT; master05
+    /// §ELEMENT).
     #[serde(skip)]
     pub null_constraints: Vec<WebTemplateNode>,
 
@@ -342,18 +240,14 @@ pub struct WebTemplateNode {
     #[serde(skip)]
     pub full_id: String,
     /// Polymorphic alternate json-id (`value`/`value2`) for a choice ELEMENT's
-    /// alternative `DV_*` children. No openEHR spec governs choice-ELEMENT ids —
-    /// our own design/extension; consumed by the FLAT converters and the
-    /// validation walk.
+    /// alternatives (no openEHR spec governs choice-ELEMENT ids: our own design).
     #[serde(skip)]
     pub alt_json_id: Option<String>,
     /// The RM name-constraint code, when the node is name-constrained.
     #[serde(skip)]
     pub name_code: Option<String>,
-    /// When the node's runtime `name` is constrained as a `DV_CODED_TEXT`, the
-    /// `(terminology, code)` the composition builder stamps as the coded name's
-    /// `defining_code` (the display value is [`Self::name`]). `None` for a plain
-    /// `DV_TEXT` name. Build-time only (`#[serde(skip)]`); see [`CodedName`].
+    /// The `(terminology, code)` of a `DV_CODED_TEXT` name constraint; see
+    /// [`CodedName`].
     #[serde(skip)]
     pub name_coded: Option<CodedName>,
     /// The RM type the template constrains the node's `name` to, when it
@@ -361,24 +255,17 @@ pub struct WebTemplateNode {
     /// `rm_type_name`). Build-time only (`#[serde(skip)]`).
     #[serde(skip)]
     pub name_rm_type: Option<String>,
-    /// The `C_STRING` a template puts on an RM String attribute that is not a
-    /// data value, such as `ACTIVITY.action_archetype_id` (AOM 1.4
-    /// `C_PRIMITIVE_OBJECT`), as the input that carries its pattern or list.
-    /// Build-time only (`#[serde(skip)]`), so the Web Template is unchanged.
+    /// The `C_STRING` a template puts on a non-data RM String attribute such as
+    /// `ACTIVITY.action_archetype_id`, as the input carrying its pattern or list.
     #[serde(skip)]
     pub string_constraint: Option<Box<WebTemplateInput>>,
-    /// For an archetype root of an OPT2, the complete identifier the template
-    /// inlined it by, which data records in its `archetype_node_id` and
-    /// `archetype_details.archetype_id` (BASE `artefact_identification`
-    /// `master07-referencing.adoc` §Reconstitutability), where [`Self::node_id`]
-    /// carries the interface form. `None` for an OPT 1.4. Build-time only
-    /// (`#[serde(skip)]`).
+    /// For an OPT2 archetype root, the complete identifier data records (BASE
+    /// `master07-referencing.adoc` §Reconstitutability); [`Self::node_id`] is the
+    /// interface form.
     #[serde(skip)]
     pub archetype_ref: Option<String>,
-    /// On the root of an OPT2's tree, the template's `rm_release` (AOM2
-    /// `master03-archetype_package.adoc`), the release a composition built to
-    /// it records as `ARCHETYPED.rm_version`. `None` for an OPT 1.4.
-    /// Build-time only (`#[serde(skip)]`).
+    /// On an OPT2 root, the template's `rm_release`, recorded as
+    /// `ARCHETYPED.rm_version`.
     #[serde(skip)]
     pub rm_release: Option<String>,
     /// What the operational template states about this node that the
@@ -386,13 +273,8 @@ pub struct WebTemplateNode {
     #[serde(skip)]
     pub facts: super::facts::WebTemplateNodeFacts,
 
-    /// Pre-parsed archetype-conformance walk plan: the constraint
-    /// paths and sibling groups this node's validation walk needs, parsed ONCE at
-    /// build time ([`crate::flat::webtemplate::builder::build_web_template`] calls `prepare_walk`) instead of
-    /// re-parsing every constraint path on every instance-node visit. A hand-built
-    /// node with no plan is handled by the walk building the plan on the fly.
-    /// Validation-only (`#[serde(skip)]`) — no openEHR spec governs the
-    /// WebTemplate model (our own design/extension).
+    /// The pre-parsed archetype-conformance walk plan, built once by
+    /// [`crate::flat::webtemplate::builder::build_web_template`].
     #[serde(skip)]
     pub(crate) walk: Option<Box<crate::flat::validation::plan::NodeWalk>>,
 }
@@ -495,11 +377,7 @@ pub enum WebTemplateInputType {
 
 /// A leaf input descriptor (master04 §"Web Template Metadata": `inputs[]`).
 ///
-/// Member order `suffix, type`; empty members omitted. `listOpen`,
-/// `terminology`, and `defaultValue` are additive fields the master04 example
-/// does not list — no openEHR spec governs them; our own design/extension
-/// (`listOpen` also drives the master04 §"Open Value-Sets and the `|other`
-/// Suffix" behaviour).
+/// NOTE: `listOpen`, `terminology` and `defaultValue` are our own design.
 #[derive(Debug, Clone, Serialize)]
 pub struct WebTemplateInput {
     /// The FLAT key suffix this input fills (`magnitude`, `unit`, `code`, …), or `None` for the node's bare value.
@@ -541,14 +419,9 @@ impl WebTemplateInput {
     }
 }
 
-/// A coded option (master04 §"Web Template Metadata": an `inputs[].list[]`
-/// entry).
+/// A coded option (master04 §"Web Template Metadata": `inputs[].list[]`).
 ///
-/// Null members omitted, member order `value, label, localizedLabels,
-/// localizedDescriptions, termBindings, validation, ordinal|scale`. `ordinal`
-/// (for `DV_ORDINAL`) and `scale` (for `DV_SCALE`) are optional fields,
-/// omitted when absent — no openEHR spec governs them here; our own
-/// design/extension.
+/// NOTE: `ordinal` and `scale` are our own design.
 #[derive(Debug, Clone, Serialize)]
 pub struct WebTemplateCodedValue {
     /// The option's code string.
@@ -631,11 +504,8 @@ impl WebTemplateValidation {
     }
 }
 
-/// A validation range (master04 §"Web Template Metadata": the
-/// `range`/`precision` object): `minOp, min, maxOp, max`.
-///
-/// Serves integer, decimal, and temporal ranges alike — `min`/`max` are
-/// numbers or ISO strings, so they are held as [`serde_json::Value`].
+/// A validation range (master04 §"Web Template Metadata"); `min` and `max` are
+/// numbers or ISO strings.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct WebTemplateRange {
     /// The lower-bound comparison operator (wire member `minOp`).
@@ -667,10 +537,8 @@ pub struct WebTemplateCardinality {
     /// Build-time scratch: the archetype path used to resolve `ids` from child json-ids (never serialized).
     #[serde(skip)]
     pub path: String,
-    /// Whether the cardinality is `unique`: no two members of the container
-    /// may be equal by value (ADL 1.4 `master05-cadl.adoc` and ADL2
-    /// `master04.3-cadl_complex_types.adoc` §Container attributes). Validation
-    /// only, never serialized.
+    /// Whether no two container members may be equal by value (ADL 1.4
+    /// `master05-cadl.adoc`, ADL2 `master04.3` §Container attributes).
     #[serde(skip)]
     pub unique: bool,
 }

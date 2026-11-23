@@ -5,13 +5,9 @@
 //! (`POST /admin/integrity/verify`) — **our own extension**; no ITS-REST
 //! operation governs it.
 //!
-//! What the streaming half proves is a property of the MIDDLEWARE, so it is
-//! asserted against the middleware rather than argued: `tower_http`'s
-//! `TimeoutLayer` races the inner service's response FUTURE, so a handler that
-//! computes its whole answer before returning is bounded by it and a handler
-//! that returns a head immediately is not. Each test therefore wraps the
-//! assembled router in a `TimeoutLayer` whose budget is deliberately far too
-//! short, which is the same layer production applies at 30 s.
+//! Each test wraps the router in a `TimeoutLayer` far too short for the sweep,
+//! the layer production applies at 30 s, so a streamed answer is shown to
+//! outlive it.
 use ferroehr::service::version_update::WriteRequest;
 use std::time::Duration;
 

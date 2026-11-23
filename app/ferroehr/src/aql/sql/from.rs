@@ -173,11 +173,9 @@ pub(super) fn strict_descendant(child: &str, parent: &str) -> Expr {
 /// [`Builder::emit_rm`].
 ///
 /// The root's interval holds its whole tree, so a strict descendant is any
-/// other row of the same `(vo_id, sys_version)`: `num > 0`. The planner prices
-/// that restriction from the `num` histogram, where it priced the interval
-/// join at a tenth of its rows, and that estimate cost the flat population
-/// read its `LIMIT` early stop (#4944). No openEHR spec governs the SQL form
-/// of containment: our own design.
+/// other row of the same `(vo_id, sys_version)`: `num > 0`, which the planner
+/// prices from the `num` histogram (#4944). No openEHR spec governs the SQL
+/// form of containment: our own design.
 fn descendant_in_from(child: &str, parent: &str, parent_types: &crate::aql::ir::TypeSet) -> Expr {
     if !is_root_only(parent_types) {
         return strict_descendant(child, parent);
@@ -375,13 +373,6 @@ impl Builder<'_> {
     /// Lowers OR-containment (QUERY master03 §Containment — "Logical operators
     /// AND and OR").
     ///
-    /// The enclosing object satisfies either branch's containment, so each
-    /// branch lowers to a correlated `EXISTS` over the shared anchor (an
-    /// enclosing versioned object, else the EHR), combined with `OR`. A branch
-    /// variable an identified path reads is then left-bound under the anchor
-    /// ([`Self::bind_branch`], the row shape the module documentation states);
-    /// a branch nobody reads stays a filter.
-    ///
     /// # Errors
     /// [`SqlError::Unsupported`] for a top-level `OR` with no enclosing object
     /// (there is no row scope to correlate to); plus the branch lowerings.
@@ -414,17 +405,6 @@ impl Builder<'_> {
 
     /// Left-binds every operand of the `OR` branch `tree` whose subtree holds
     /// a variable an identified path reads, under the branch's `parent`.
-    ///
-    /// A bound operand yields one row per node that matches it, its own nested
-    /// containment and `siblings` (the other halves of an enclosing `AND`
-    /// inside the branch, correlated to the parent), and one `NULL` row where
-    /// none does: a value never comes from a branch that did not hold. Its
-    /// node alias then serves paths exactly as a joined variable's does. An
-    /// operand that is a node inside the parent's own tree binds through
-    /// [`Self::left_bind`]; one that is a versioned object of its own (any
-    /// operand under an EHR, a `FOLDER` reference) through
-    /// [`Self::bind_versioned_branch`]. `ehr` is the enclosing EHR alias, if
-    /// any.
     ///
     /// # Errors
     /// [`SqlError::Unsupported`] for an operand that is no RM class, plus the
@@ -632,9 +612,6 @@ impl Builder<'_> {
     /// Left-binds the rows of `table` that meet every condition `conds` builds
     /// over the inner alias it is handed, and returns the alias whose columns
     /// are those of `table`.
-    ///
-    /// One row per admitted row, and a single all-`NULL` row when none is
-    /// admitted, in the two shapes [`Self::left_bind`] describes.
     ///
     /// # Errors
     /// Whatever `conds` returns.
@@ -1166,11 +1143,6 @@ impl Builder<'_> {
 /// versioned objects), decided from the storage domain itself
 /// ([`crate::versioning::Kind`], the `version.kind` discriminants) rather
 /// than a restated list — a kind added there is a VO root here.
-///
-/// The demographic kinds are included: a served demographic root opens its own
-/// version group exactly as a clinical root does, and one nested under another
-/// class is refused before any SQL is built
-/// ([`crate::aql::error::AqlFeatureError::DemographicRootPlacement`]).
 pub(super) fn is_vo_root_type(t: &str) -> bool {
     crate::versioning::Kind::from_type(t).is_some()
 }
@@ -1181,16 +1153,12 @@ pub(super) fn is_vo_root_type(t: &str) -> bool {
 /// `inner` is the alias `on` is written over; `node` rows come in document
 /// order.
 ///
-/// The planner estimates the rows of a subquery from its own plan, about one
-/// per probe of a node's children, where a set-returning function over an
-/// array it cannot see into is estimated at ten rows: a chain of such
-/// bindings multiplied the estimate tenfold per step, which chose the join
-/// order and, where `jit` is on (off by default since PostgreSQL 19),
-/// switched on JIT compilation from the inflated total cost
-/// (PostgreSQL 19 §30.2 When to JIT?, #4430, #4431). sea-query builds a
-/// `LATERAL` subquery only as a join, which a comma-separated item cannot be,
-/// so the item is written as a call of `LATERAL` on the parenthesized
-/// subquery, which PostgreSQL's grammar reads as `LATERAL select_with_parens`.
+/// The planner estimates a subquery's rows from its own plan, about one per
+/// probe of a node's children, where a set-returning function over an array is
+/// estimated at ten rows, which multiplied a chain of bindings tenfold per step
+/// (#4430, #4431). sea-query builds a `LATERAL` subquery only as a join, so the
+/// item is written as a call of `LATERAL` on the parenthesized subquery, which
+/// PostgreSQL reads as `LATERAL select_with_parens`.
 pub(super) fn binding_rows(
     table: BoundTable,
     alias: &str,

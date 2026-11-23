@@ -5,11 +5,6 @@
 //! when the stack isn't up), step screenshots, explicit waits, and the
 //! standing browser-console gate — every journey fails on any console
 //! error (the cheapest script-defect detector).
-//!
-//! Two lanes drive this harness, and they are not equals. The IMAGE lane is
-//! the authoritative one: it runs the shipped OCI artifact, a release build.
-//! The HOST lane runs a debug build, trading render speed for compile speed
-//! so a change can be driven in seconds.
 
 #![allow(
     clippy::panic,
@@ -38,10 +33,8 @@ const WAIT: Duration = Duration::from_secs(15);
 
 /// The budget one steady-state `WebDriver` command gets ([`bounded`]).
 ///
-/// Two thirds of [`WAIT`], so a command that never answers fails INSIDE the
-/// poll loop that issued it and still leaves that loop a third of its budget
-/// to report the failure — instead of running out thirtyfour's 120 s
-/// per-request default and inflating the whole journey.
+/// Two thirds of [`WAIT`], so a command that never answers fails inside the
+/// poll loop that issued it.
 const COMMAND_BUDGET: Duration = Duration::from_secs(10);
 
 /// The interval every poll loop here re-reads its condition at.
@@ -66,9 +59,9 @@ return e.tagName.toLowerCase() + id + cls + ' “' + text + '” (in main: '
   + !!e.closest('main') + ', document focused: ' + document.hasFocus() + ') at ' + at;
 ";
 
-/// The budget [`Harness::wait_scripts`] allows, four times [`WAIT`]: the
-/// loader imports every module the page marks before it marks the root, on a
-/// debug server in the host lane (module docs).
+/// The budget [`Harness::wait_scripts`] allows, four times [`WAIT`]: the loader
+/// imports every module the page marks before it marks the root, on a debug
+/// server in the host lane.
 const SCRIPTS_WAIT: Duration = Duration::from_mins(1);
 
 /// The words [`Harness::mark_document`] leaves on the window.
@@ -430,7 +423,7 @@ impl Harness {
     ///
     /// # Panics
     /// When a toast is still visible after 15 s, or when the `WebDriver` stops
-    /// answering — a stalled driver used to look exactly like a cleared screen.
+    /// answering.
     pub(crate) async fn wait_toasts_cleared(&self) {
         let cleared = poll_until(async || count_matching(self, TOAST_CARD).await == 0).await;
         assert!(
@@ -444,9 +437,6 @@ impl Harness {
     /// `ferrohealth_ui::script::MARK`).
     /// Required before driving any control a module enhances: a click or
     /// file selection landing earlier is the browser's own (#2285).
-    ///
-    /// This one wait gets [`SCRIPTS_WAIT`] rather than [`WAIT`] (module
-    /// docs).
     pub(crate) async fn wait_scripts(&self) {
         self.wait_css_for("html[data-fui-script]", SCRIPTS_WAIT)
             .await;
@@ -793,14 +783,8 @@ const TEARDOWN_BUDGET: Duration = Duration::from_secs(10);
 
 /// A journey that fails ends its browser session within [`TEARDOWN_BUDGET`].
 ///
-/// A panicking journey drops the `WebDriver` unquit, and thirtyfour's own
-/// fallback then ends the session synchronously under its 120 s request
-/// timeout, so a browser that stopped answering held the failed job for two
-/// minutes after the assertion had already failed (#4315). The session is
-/// leaked from thirtyfour instead, and ended here with one bounded
-/// `DELETE /session/{id}` on a runtime of its own (the journey's runtime is
-/// the one unwinding). The panic stays the assertion's own: nothing here
-/// panics, and a teardown that does not answer is only reported.
+/// A panicking journey's session is ended with one bounded `DELETE
+/// /session/{id}` on a runtime of its own (#4315).
 impl Drop for Harness {
     fn drop(&mut self) {
         if !std::thread::panicking() {
@@ -849,17 +833,8 @@ impl Drop for Harness {
 
 /// One element handle, together with the selector that found it.
 ///
-/// A journey never holds a raw `WebElement`: every element command it can
-/// issue goes through this type, which bounds the request ([`bounded`]) and
-/// names the selector in its failure — the type-level form of the private
-/// `driver` field on [`Harness`]. Nothing outside this module can build one,
-/// so the guarantee cannot be routed around.
-///
-/// Two tiers. The assertive methods panic on anything but success, because a
-/// journey that asked for a click either got an answer or it did not, and a
-/// driver that stalled is never "the button was inert". The `read_*` probes
-/// exist for a poll loop or a branch a journey takes either way, and collapse
-/// ONLY an absence ([`is_absence`]) to `None`.
+/// Its assertive methods panic on anything but success; its `read_*` probes
+/// collapse only an absence ([`is_absence`]) to `None`.
 pub(crate) struct Element {
     inner: WebElement,
     /// The selector this handle was found by, which IS the failure message —
@@ -898,10 +873,6 @@ impl Element {
 
     /// Clear it with `WebDriver`'s own element-clear command.
     ///
-    /// [`clear_field`] is the one to reach for on a field whose value the
-    /// viewer binds — this command moves the DOM value without firing the
-    /// events that binding listens for.
-    ///
     /// # Panics
     /// When the `WebDriver` answers with anything but success.
     pub(crate) async fn clear(&self) {
@@ -912,13 +883,8 @@ impl Element {
     /// and the docked decision bar. A control in an open modal dialog stays
     /// where it is.
     ///
-    /// A modal dialog sits in the top layer, which the page's scroll never
-    /// brings into view. A popover form is one, placed against its trigger
-    /// by CSS anchor positioning, and the browser moves it with a scrolled
-    /// anchor only at its next rendering update (CSS Anchor Positioning,
-    /// "Taking Scroll Into Account"). Until then its controls still report
-    /// their place before the scroll, and a click aimed there lands outside
-    /// the dialog, which closes it as a press outside does and posts nothing
+    /// A popover moves with its scrolled anchor only at the next rendering
+    /// update, so a click aimed sooner lands outside the dialog and closes it
     /// (#5503).
     ///
     /// # Panics
@@ -944,10 +910,6 @@ impl Element {
 
     /// Replace its value with `text` as a paste does: one `input` event of
     /// type `insertFromPaste` carrying the whole text.
-    ///
-    /// [`Self::send_keys`] fires a key and an `input` event per character,
-    /// and the code editor reworks its whole text on each, so a document of
-    /// a few kilobytes costs time quadratic in its length on the debug build.
     ///
     /// # Panics
     /// When the `WebDriver` answers with anything but success.
@@ -980,12 +942,6 @@ impl Element {
     }
 
     /// The value of its `name` ATTRIBUTE — what the markup carries.
-    ///
-    /// An absent attribute is a defect here, not an empty string: a journey
-    /// asking for `data-visible` is asserting about a hook the viewer is
-    /// supposed to render, and `""` would let a missing hook pass as a value.
-    /// [`Self::read_attr`] is the probe for an attribute that legitimately
-    /// may not be there.
     ///
     /// # Panics
     /// When the `WebDriver` does not answer, or the attribute is absent.
@@ -1053,11 +1009,6 @@ impl Element {
 
     /// Select the `<option>` whose value is `value`.
     ///
-    /// thirtyfour's `SelectElement` issues its own requests — building one
-    /// reads the tag name, and each selection reads the options and clicks —
-    /// so it is wrapped here rather than handed to a journey: outside this
-    /// type those requests would carry thirtyfour's 120 s default alone.
-    ///
     /// # Panics
     /// When the element is not a `<select>`, or the option cannot be chosen.
     pub(crate) async fn select_by_value(&self, value: &str) {
@@ -1074,14 +1025,6 @@ impl Element {
     }
 
     /// Its rendered text, or `None` when the handle went stale.
-    ///
-    /// The probe tier's one collapse, reasoned here for all four `read_*`
-    /// methods: the handle was found a moment ago, so the only "not there"
-    /// this read can meet is a subtree that re-rendered between the find and
-    /// the read, which `WebDriver` reports as `stale element reference`
-    /// ([`is_absence`]) and a poll loop must treat as "not yet". Every other
-    /// failure is the driver not ANSWERING, and stays a panic — a probe that
-    /// swallowed it would spend its whole budget reporting an empty page.
     pub(crate) async fn read_text(&self) -> Option<String> {
         element_probe(&format!("text({})", self.what), self.inner.text()).await
     }
@@ -1132,9 +1075,6 @@ impl Element {
 /// The assertive tier's one implementation: run `command` under
 /// [`COMMAND_BUDGET`] and panic on anything but success, naming the selector.
 ///
-/// A free function rather than a method, so a plain unit test can prove the
-/// tier's decision without a browser session.
-///
 /// # Panics
 /// On any `WebDriver` failure, an absence included.
 async fn element_command<T>(label: &str, command: impl Future<Output = WebDriverResult<T>>) -> T {
@@ -1163,23 +1103,9 @@ async fn element_probe<T>(
 
 /// Run one steady-state `WebDriver` command under [`COMMAND_BUDGET`].
 ///
-/// thirtyfour bounds a request only by its 120 s per-request default, which
-/// outlasts every poll loop here: a driver that never answers reads as a page
-/// that never changed, and the journey reports an inflated run time instead of
-/// the stall. Bounding the await is ours to do — the transport cannot be
-/// bounded instead, because thirtyfour's `request_timeout` covers the
-/// `NewSession` request too, has no post-build setter, and a budget short
-/// enough for a steady-state command is exceeded by session creation under
-/// nextest parallelism (that is why [`Harness::start`] keeps the default).
-///
-/// A stall is reported as an ordinary command failure — a
-/// `WebDriverErrorInner::Timeout` naming the command and the budget — so every
-/// caller keeps the error path it already had: [`is_absence`] refuses it (a
-/// stall is never an absence) and the panic names the command, while an
-/// `expect`-based call site prints it verbatim.
-///
-/// A free function rather than a method: it needs nothing from the harness,
-/// and a plain unit test can then prove the bound without a browser session.
+/// thirtyfour bounds a request only by its 120 s default, which outlasts every
+/// poll loop here; a stall reads as an ordinary command failure naming the
+/// command.
 async fn bounded<T>(
     what: &str,
     command: impl Future<Output = WebDriverResult<T>>,
@@ -1188,11 +1114,6 @@ async fn bounded<T>(
 }
 
 /// [`bounded`] with an explicit budget, for thirtyfour's OWN polling queries.
-///
-/// `ElementQuery::wait` is a poll loop, not one command, so it is given its own
-/// budget plus [`COMMAND_BUDGET`]: the loop is designed to finish within its
-/// budget, and the grace is the one command it may be inside when the driver
-/// stops answering.
 async fn bounded_for<T>(
     what: &str,
     budget: Duration,
@@ -1214,12 +1135,6 @@ async fn bounded_for<T>(
 
 /// Whether a `WebDriver` error means the element is simply NOT THERE — the
 /// only answer a polling probe may read as "not yet".
-///
-/// `no such element` is genuine absence, and a stale handle is a re-rendering
-/// subtree detaching the element between the find and the read. Everything
-/// else — a request that never came back, a dead session, a rejected
-/// selector — is the driver failing to ANSWER the question, and a probe that
-/// swallows it spends its whole budget reporting an empty page.
 fn is_absence(error: &WebDriverError) -> bool {
     matches!(
         error.as_inner(),
@@ -1229,10 +1144,6 @@ fn is_absence(error: &WebDriverError) -> bool {
 
 /// The first element matching `by`, labelled `what`, or `None` when nothing
 /// matches.
-///
-/// The one find every CSS-keyed helper below goes through, so each command
-/// has a single implementation and every failure names the selector the
-/// caller passed rather than `By`'s `Debug` form.
 ///
 /// # Panics
 /// When the `WebDriver` answers with anything but an absence ([`is_absence`]).
@@ -1273,9 +1184,6 @@ pub(crate) async fn is_present(h: &Harness, css: &str) -> bool {
 
 /// Whether `css` matches a currently VISIBLE element.
 ///
-/// FerroUI's dialog is never removed from the DOM: a closed `<dialog>` is
-/// still findable. Openness is therefore visibility, never mere presence.
-///
 /// # Panics
 /// When the `WebDriver` answers with anything but an absence ([`is_absence`]).
 pub(crate) async fn is_visible(h: &Harness, css: &str) -> bool {
@@ -1286,11 +1194,6 @@ pub(crate) async fn is_visible(h: &Harness, css: &str) -> bool {
 }
 
 /// Whether ANY element matching `css` is displayed.
-///
-/// [`is_visible`] answers for the FIRST match, which is the wrong question
-/// about a dialog: a page holds one `<dialog>` per dialog, closed ones ahead
-/// of an open one in document order. "Is a modal up" has to look at all of
-/// them or it answers about the wrong one.
 pub(crate) async fn is_any_visible(h: &Harness, css: &str) -> bool {
     for element in find_all(h, css).await {
         if element.read_displayed().await == Some(true) {
@@ -1312,13 +1215,6 @@ const DIALOG_SURFACE: &str = "dialog.fui-dialog[open]";
 /// Establish the precondition every page-level click has: nothing is covering
 /// the page.
 ///
-/// A modal's backdrop spans the viewport, so a click issued while one is up
-/// lands on it instead of the control and `WebDriver` reports
-/// `ElementClickIntercepted`. A dialog can be deliberately still open because
-/// the CDR refused what it sent (the upload dialog keeps its diagnostic beside
-/// the input that caused it), so an open dialog is dismissed through its own
-/// Escape path — the same exit a person takes — and the wait covers the close.
-///
 /// # Panics
 /// When a backdrop is still up after 15 s.
 pub(crate) async fn clear_dialog_overlay(h: &Harness) {
@@ -1335,10 +1231,6 @@ pub(crate) async fn clear_dialog_overlay(h: &Harness) {
 }
 
 /// Wait until the dialog holding `control_css` is open: that control visible.
-///
-/// Takes a control INSIDE the target dialog rather than matching the dialog
-/// element, because a page holds one `<dialog>` per dialog, and a bare match
-/// answers for whichever comes first — which can be a CLOSED one.
 ///
 /// # Panics
 /// When the dialog is not open and settled within 15 s.
@@ -1361,10 +1253,6 @@ const TOAST_CARD: &str = ".fui-toast-text";
 /// Upload the file at `path` as a template of `family` (`adl14` or `adl2`)
 /// through Upload a template: FerroUI's upload module reads the file into
 /// the source editor, and the dock's primary button posts it.
-///
-/// Leaves the browser on the page that answers the post: the template's own
-/// page when the CDR took it, the upload page with the CDR's diagnostic when
-/// it refused.
 ///
 /// # Panics
 /// When the file never reaches the editor or no page answers the post.
@@ -1418,9 +1306,6 @@ async fn find_all_labelled(h: &Harness, by: By, what: &str) -> Vec<Element> {
 /// Every element matching `css`, empty when nothing matches — the ordinary
 /// "every match on the page" read.
 ///
-/// A query that was never ANSWERED is not an empty page, which is why the
-/// panic below is not an empty vector.
-///
 /// # Panics
 /// When the `WebDriver` answers with anything but an absence ([`is_absence`]).
 pub(crate) async fn find_all(h: &Harness, css: &str) -> Vec<Element> {
@@ -1429,9 +1314,6 @@ pub(crate) async fn find_all(h: &Harness, css: &str) -> Vec<Element> {
 
 /// The DOM property `property` of the first element matching `css`, or `None`
 /// when nothing matches.
-///
-/// A control's LIVE value is a property; [`read_attr`] answers about the
-/// attribute the server rendered, which a typed-in value never moves.
 ///
 /// # Panics
 /// When the `WebDriver` answers with anything but an absence ([`is_absence`]).
@@ -1449,14 +1331,6 @@ pub(crate) async fn count_matching(h: &Harness, css: &str) -> usize {
 
 /// Poll `condition` every [`POLL_STEP`] until it holds, for at most `budget`;
 /// returns whether it did.
-///
-/// The budget is wall-clock time, the condition's own commands counted, so a
-/// slow driver ends the wait at its budget instead of stretching it by the
-/// time each command takes.
-///
-/// The one poll loop every journey condition is written over, so a journey
-/// file needs no timer of its own — which is what lets
-/// `scripts/checks/e2e-waits.sh` refuse `sleep` there outright.
 pub(crate) async fn poll_until_for(
     budget: Duration,
     mut condition: impl AsyncFnMut() -> bool,
@@ -1480,16 +1354,13 @@ pub(crate) async fn poll_until(condition: impl AsyncFnMut() -> bool) -> bool {
 
 /// Poll until the control at `css` is present, ENABLED and not read-only.
 ///
-/// The viewer keeps an edit form inert until the document it edits has been
-/// seeded into it, so this is the condition that makes typing (or saving) safe:
-/// input accepted earlier would be replaced by the seed and the save would then
-/// commit the pre-seed draft. FerroUI's code editor writes its text area
-/// read-only (not disabled) while its form is not editable, so both
+/// The viewer keeps an edit form inert until its document is seeded, and the
+/// code editor's text area is read-only rather than disabled, so both
 /// properties are read.
 ///
 /// # Panics
 /// When it never becomes enabled within 15 s, or when the `WebDriver` stops
-/// answering — a stalled driver used to look exactly like an unseeded form.
+/// answering.
 pub(crate) async fn wait_enabled(h: &Harness, css: &str) {
     for _ in 0..75 {
         if read_enabled(h, css).await == Some(true)
@@ -1571,9 +1442,6 @@ pub(crate) async fn wait_hidden(h: &Harness, css: &str) {
 
 /// Poll until `css` is VISIBLE — the mirror of [`wait_hidden`].
 ///
-/// A closed `<dialog>` stays in the DOM, so "the dialog opened" is a
-/// visibility condition and never mere presence ([`is_visible`]).
-///
 /// # Panics
 /// When it is still not visible after 15 s.
 pub(crate) async fn wait_visible(h: &Harness, css: &str) {
@@ -1591,10 +1459,6 @@ pub(crate) async fn wait_visible(h: &Harness, css: &str) {
 
 /// One attempt at reading `attribute` off the first element matching `css`,
 /// or `None`.
-///
-/// `None` covers both "nothing matches yet" and a STALE element handle: a
-/// re-rendering table detaches the handle between the find and the read, and
-/// `attr` then answers `stale element reference` — a retry, never a failure.
 pub(crate) async fn read_attr(h: &Harness, css: &str, attribute: &str) -> Option<String> {
     find_css(h, css).await?.read_attr(attribute).await
 }
@@ -1730,15 +1594,6 @@ async fn page_reads(h: &Harness) -> u64 {
 
 /// Mark the page, run `action`, and wait for the page that answers it: a
 /// new document, or a page the router drew after it, with its `main` drawn.
-///
-/// The mark sits on the root element, which only a new document replaces.
-/// A page the router draws in the same document asks the server for its
-/// visit and its model first ([`PAGE_READS`]), which the browser's resource
-/// timing counts, so a page drawn over the old one in place is seen too. A
-/// probe that runs before the new page arrives can find an element in the
-/// old one and read it after the browser replaced it, which Chrome answers
-/// with "Node with given id does not belong to the document", an error
-/// [`is_absence`] rightly refuses.
 ///
 /// # Panics
 /// When the mark cannot be set or no page answers within 15 s.

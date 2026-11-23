@@ -2,10 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The words of the overview group, in the catalogs under `locales/overview/`.
-//!
-//! Only code of the overview group looks them up, so their catalog travels
-//! with that code: the browser loads it with the group's chunks, never with
-//! the entry WebAssembly (`crate::locale`).
 
 crate::locale::messages! {
     /// A string the overview group draws, by its message in its catalog.

@@ -23,10 +23,6 @@ use crate::opt14::types::{
 };
 
 /// Checks that the leaf `given` admits no value `archetype` does not.
-///
-/// Only the leaf kinds that carry a value constraint are checked: a primitive
-/// object, a `C_CODE_PHRASE`, a `C_DV_QUANTITY` and a `C_DV_ORDINAL`. Over
-/// one of those, `given` must be the same kind.
 pub(super) fn narrows(
     archetype: &CObject,
     given: &CObject,

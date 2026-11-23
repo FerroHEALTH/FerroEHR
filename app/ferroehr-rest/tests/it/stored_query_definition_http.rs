@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end HTTP tests for the stored-query DEFINITION wire (group-11 audit):
+//! End-to-end HTTP tests for the stored-query DEFINITION wire:
 //! the version-less `PUT /definition/query/{name}`
 //! (whose `Location` names exactly the version the store wrote — never a
 //! neighbouring one, `headers/Location_Query.yaml`) and the versioned

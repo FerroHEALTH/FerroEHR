@@ -3,18 +3,11 @@
 
 //! The controller's `ACCESS_POLICY` in force on this replica.
 //!
-//! The policy is the one `VERSIONED_ACCESS_POLICY` of the instance
-//! ([`crate::storage::access_policy`]): which kinds of data carry which
-//! sensitivity, whether clinical access needs a care relationship and a
-//! declared purpose, and the catalogue of named directives a subject accepts
-//! by reference. Each replica holds the newest version in memory and listens
-//! on [`CHANNEL`]; a write notifies it when it commits, and the next request
-//! reads the newest version again ([`LivePolicy::refresh_if_stale`]). While
-//! the listener is down every request reads, so a lost notification never
-//! leaves an outdated policy in force, and with nothing stale a request
-//! touches no database. With no version committed nothing is tightened: no
-//! classification, no care relationship or purpose required, an empty
-//! catalogue.
+//! Each replica holds the newest version in memory and listens on [`CHANNEL`];
+//! a commit notifies it, and the next request reads the newest version again
+//! ([`LivePolicy::refresh_if_stale`]). While the listener is down every request
+//! reads, so a lost notification never leaves an outdated policy in force. With
+//! no version committed nothing is tightened.
 //!
 //! `ACCESS_POLICY` is a class of FerroEHR's draft access control package and
 //! ITS-REST defines no resource for it, so the store, the copy and its

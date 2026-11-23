@@ -3,12 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! The delimited free-text tokens lex in bounded stack whatever their length.
-//!
-//! Each case lexes one token of at least 1 MiB on a thread with a 256 KiB
-//! stack. In a debug build the `logos` tail-call rendering of the DFA pushed
-//! one frame per state transition its fast self-loop did not absorb (each
-//! multi-byte character, each escape), so every one of these tokens
-//! overflowed that stack before their text was scanned in a loop (#4961).
 
 #![allow(
     clippy::unwrap_used,

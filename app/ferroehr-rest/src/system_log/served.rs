@@ -62,9 +62,6 @@ pub struct AuditServedEhrs {
 
 /// The parties a read disclosed beside the one it addressed: the source
 /// parties named by a target party's `reverse_relationships`.
-///
-/// A response extension the party read sets and the audit middleware reads,
-/// one access record per party, for the reason [`AuditServedEhrs`] gives.
 #[derive(Debug, Clone)]
 pub struct AuditServedParties {
     /// The disclosed party container ids, in first-served order.

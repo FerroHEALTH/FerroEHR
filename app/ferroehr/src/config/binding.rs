@@ -463,10 +463,6 @@ pub fn portal_issuers(resolved: &Resolved) -> Vec<String> {
 
 /// The person mapping the server derives the side table under (#5622).
 ///
-/// It compiles `sections` for the administrator role `admin_role` with the
-/// key selectors held to the [`key_issuers`] of `resolved`, and a key under
-/// one of its [`portal_issuers`] held as a portal login.
-///
 /// # Errors
 /// [`crate::party_binding::SelectorError`] when a selector path does not compile, which
 /// the configuration check reports first.
@@ -512,10 +508,6 @@ pub(crate) fn one_provider() -> Providers {
 
 /// What the party binding binds, as the boot line and `/management/info`
 /// state it.
-///
-/// It carries the issuers with their kind and identifier issuer, the
-/// provider, and every federation agreement in force with its accessor and
-/// legal ground, which `/management/info` reads from the CDR on each request.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BindingPosture {
     /// Every trusted issuer.

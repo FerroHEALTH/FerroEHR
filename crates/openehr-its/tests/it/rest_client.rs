@@ -172,11 +172,6 @@ fn result_set(q: &str) -> query::ResultSet {
 // ── ehr ─────────────────────────────────────────────────────────────────────
 
 /// `ehr_create` under `Prefer: return=minimal` answers `201` with no body.
-///
-/// OAS `ehr-codegen` `ehr_create` `201` (the `201_EHR` response component)
-/// declares the `ETag` and `Location` headers and carries a body only under
-/// `return=representation` or `return=identifier`, so a minimal `201` decodes
-/// to `None`.
 #[tokio::test]
 async fn ehr_create_minimal_answers_created_with_etag_and_location() -> TestResult {
     let server = MockServer::start().await;
@@ -215,8 +210,6 @@ async fn ehr_create_minimal_answers_created_with_etag_and_location() -> TestResu
 }
 
 /// `ehr_get_by_id` `200` decodes the canonical-JSON `EHR` into the typed model.
-///
-/// OAS `ehr-codegen` `ehr_get_by_id` `200`: an `EHR` body with `Content-Type`.
 #[tokio::test]
 async fn ehr_get_by_id_decodes_the_typed_ehr() -> TestResult {
     let server = MockServer::start().await;
@@ -243,8 +236,6 @@ async fn ehr_get_by_id_decodes_the_typed_ehr() -> TestResult {
 }
 
 /// `ehr_get_by_id` `404` is the `NotFound` outcome, not an error.
-///
-/// OAS `ehr-codegen` `ehr_get_by_id` documents `404`.
 #[tokio::test]
 async fn ehr_get_by_id_not_found_is_an_outcome() -> TestResult {
     let server = MockServer::start().await;
@@ -314,8 +305,6 @@ async fn composition_update_sends_if_match_and_reads_the_412_etag() -> TestResul
 }
 
 /// `composition_update` puts the canonical JSON of the typed body on the wire.
-///
-/// OAS `ehr-codegen` `composition_update` request body: `application/json`.
 #[tokio::test]
 async fn composition_update_sends_the_canonical_json_body() -> TestResult {
     let server = MockServer::start().await;
@@ -356,8 +345,6 @@ async fn composition_update_sends_the_canonical_json_body() -> TestResult {
 }
 
 /// `contribution_create` `409` is the `Conflict` outcome.
-///
-/// OAS `ehr-codegen` `contribution_create` documents `409`.
 #[tokio::test]
 async fn contribution_create_conflict_is_an_outcome() -> TestResult {
     let server = MockServer::start().await;
@@ -387,10 +374,6 @@ async fn contribution_create_conflict_is_an_outcome() -> TestResult {
 }
 
 /// `contribution_create` `400` decodes the `Error` body.
-///
-/// OAS `ehr-codegen` `contribution_create` `400` references the `Error`
-/// schema; the `400` response component says the body MAY carry error details,
-/// so the outcome carries the body as received and its decoded form.
 #[tokio::test]
 async fn contribution_create_bad_request_decodes_the_error_body() -> TestResult {
     let server = MockServer::start().await;
@@ -424,11 +407,6 @@ async fn contribution_create_bad_request_decodes_the_error_body() -> TestResult 
 }
 
 /// A `400` whose body carries `message` alone still decodes as the `Error`.
-///
-/// OAS `Error` lists `validationErrors` as required, but the `400` response
-/// component makes the whole body a MAY; a service that sends the message
-/// without the list still sends its diagnostics, and the client reads them
-/// with an empty list rather than refusing the documented answer.
 #[tokio::test]
 async fn a_prose_bad_request_decodes_as_the_error() -> TestResult {
     let server = MockServer::start().await;
@@ -535,11 +513,6 @@ async fn composition_create_sends_the_commit_headers() -> TestResult {
 
 /// `composition_update` `422` carries the `Error` body with its
 /// `validationErrors`, although the OAS attaches no schema to that status.
-///
-/// OAS `ehr-codegen` `composition_update` documents `422` with no content; the
-/// `400` response component's "MAY contain error details" is the only body
-/// the docs text describes for an error, and a service that sends one under
-/// `422` is read the same way.
 #[tokio::test]
 async fn composition_update_unprocessable_carries_the_error_body() -> TestResult {
     let server = MockServer::start().await;
@@ -633,10 +606,6 @@ async fn composition_tags_get_decodes_the_typed_tags() -> TestResult {
 // ── query ───────────────────────────────────────────────────────────────────
 
 /// `query_execute_adhoc_query` sends every parameter as a query pair.
-///
-/// OAS `query-codegen` `query_execute_adhoc_query`: `q` and `fetch` are query
-/// parameters and `query_parameters` is a `style: form, explode: true` object,
-/// so each member is its own pair; `200` answers a `ResultSet`.
 #[tokio::test]
 async fn adhoc_query_get_sends_every_parameter_as_a_query_pair() -> TestResult {
     let server = MockServer::start().await;
@@ -682,8 +651,6 @@ async fn adhoc_query_get_sends_every_parameter_as_a_query_pair() -> TestResult {
 }
 
 /// `query_execute_adhoc_query` `408` is the `RequestTimeout` outcome.
-///
-/// OAS `query-codegen` `query_execute_adhoc_query` documents `408`.
 #[tokio::test]
 async fn adhoc_query_request_timeout_is_an_outcome() -> TestResult {
     let server = MockServer::start().await;
@@ -716,9 +683,6 @@ async fn adhoc_query_request_timeout_is_an_outcome() -> TestResult {
 }
 
 /// `query_execute_adhoc_query_body` posts the query as canonical JSON.
-///
-/// OAS `query-codegen` `query_execute_adhoc_query_body`: an
-/// `application/json` `AdhocQueryExecute` request body, `200` a `ResultSet`.
 #[tokio::test]
 async fn adhoc_query_post_sends_the_json_body() -> TestResult {
     let server = MockServer::start().await;
@@ -756,10 +720,6 @@ async fn adhoc_query_post_sends_the_json_body() -> TestResult {
 // ── definition ──────────────────────────────────────────────────────────────
 
 /// `definition_template_adl1.4_upload` sends the OPT 1.4 XML verbatim.
-///
-/// OAS `definition-codegen` `definition_template_adl1.4_upload`: an
-/// `application/xml` request body; `201` declares `Location`, `ETag` and
-/// `Content-Type`, and its body is returned as received.
 #[tokio::test]
 async fn template_upload_sends_the_xml_verbatim() -> TestResult {
     let server = MockServer::start().await;
@@ -802,9 +762,6 @@ async fn template_upload_sends_the_xml_verbatim() -> TestResult {
 }
 
 /// `definition_template_adl1.4_list` `200` decodes the typed `TemplateList`.
-///
-/// OAS `definition-codegen` `definition_template_adl1.4_list` `200`: a
-/// `TemplateList` body.
 #[tokio::test]
 async fn template_list_decodes_the_typed_list() -> TestResult {
     let server = MockServer::start().await;
@@ -845,8 +802,6 @@ async fn template_list_decodes_the_typed_list() -> TestResult {
 // ── demographic ─────────────────────────────────────────────────────────────
 
 /// `person_create` `422` is the `UnprocessableEntity` outcome.
-///
-/// OAS `demographic-codegen` `person_create` documents `422`.
 #[tokio::test]
 async fn person_create_unprocessable_is_an_outcome() -> TestResult {
     let server = MockServer::start().await;
@@ -882,8 +837,6 @@ async fn person_create_unprocessable_is_an_outcome() -> TestResult {
 }
 
 /// `person_get` `204` is the `NoContent` outcome.
-///
-/// OAS `demographic-codegen` `person_get` documents `204`.
 #[tokio::test]
 async fn person_get_no_content_is_an_outcome() -> TestResult {
     let server = MockServer::start().await;
@@ -912,8 +865,6 @@ async fn person_get_no_content_is_an_outcome() -> TestResult {
 // ── admin ───────────────────────────────────────────────────────────────────
 
 /// `admin_ehr_delete` `204` is the `NoContent` outcome.
-///
-/// OAS `admin-codegen` `admin_ehr_delete` documents `204`.
 #[tokio::test]
 async fn admin_ehr_delete_no_content_is_an_outcome() -> TestResult {
     let server = MockServer::start().await;
@@ -940,9 +891,6 @@ async fn admin_ehr_delete_no_content_is_an_outcome() -> TestResult {
 // ── system ──────────────────────────────────────────────────────────────────
 
 /// `options` sends `OPTIONS /` and captures the `Allow` header.
-///
-/// OAS `system-codegen` `options` `200` declares `Allow` and an `Options`
-/// body.
 #[tokio::test]
 async fn options_captures_the_allow_header() -> TestResult {
     let server = MockServer::start().await;
@@ -1173,9 +1121,6 @@ async fn a_post_is_never_retried() -> TestResult {
 }
 
 /// A request that times out in the engine is a retryable `Transport` error.
-///
-/// The engine's timeout is a failure that reached no answer, so an idempotent
-/// request is sent again within the budget before the error surfaces.
 #[tokio::test]
 async fn an_engine_timeout_is_a_retried_transport_error() -> TestResult {
     let server = MockServer::start().await;
@@ -1232,8 +1177,6 @@ async fn accept_defaults_to_canonical_json() -> TestResult {
 }
 
 /// An `Accept` the params set replaces the default.
-///
-/// OAS `ehr-codegen` `ehr_get_by_id` declares `Accept` as a header parameter.
 #[tokio::test]
 async fn an_explicit_accept_replaces_the_default() -> TestResult {
     let server = MockServer::start().await;
@@ -1360,9 +1303,6 @@ async fn a_base_path_is_kept_without_doubling_the_slash() -> TestResult {
 }
 
 /// A body that is not the documented shape is a `Body` error naming the path.
-///
-/// OAS `system-codegen` `Options.endpoints` is an array of strings; the error's
-/// source is the `serde_path_to_error` report that locates the defect.
 #[tokio::test]
 async fn an_undocumented_body_shape_is_a_body_error() -> TestResult {
     let server = MockServer::start().await;

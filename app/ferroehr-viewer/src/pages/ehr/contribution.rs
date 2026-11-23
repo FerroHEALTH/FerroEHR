@@ -9,12 +9,9 @@
 //! `contribution_list`). A contribution's page reads its audit, the versions
 //! it made and the record as the CDR holds it (`contribution_get`).
 //!
-//! New contribution stages several changes and commits them as one
-//! `CONTRIBUTION`: all of them or none (ITS-REST `contribution_create`). The
-//! staged changes live in the form, so staging, removing and changing what a
-//! change is are plain posts the server answers with the form drawn again;
-//! nothing is kept between requests. No openEHR spec governs the viewer's
-//! pages: our own design.
+//! New contribution stages changes in the form and commits them as one
+//! `CONTRIBUTION`, all or none (ITS-REST `contribution_create`). No openEHR
+//! spec governs the viewer's pages: our own design.
 
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;

@@ -1,17 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The reflective RM accessor (`openehr-rm` `<current generation>/access/generated.rs`):
-//! `RmObject`, `AsRm` and `FromRm` for every RM and BASE struct, `AsRm` and
-//! `FromRm` for every enum, and the attribute table `construct` lays a
-//! `Partial` out by (#6002).
-//!
-//! Every field is read, written and finished by its BMM declaration: a
-//! single object, a container of objects, a primitive, or a value the
-//! reflective view does not carry (a map, a free-form value). The struct
-//! itself is never changed. Writing an object into a field goes through
-//! `FromRm`, whose target type the field infers, so a box or an enum variant
-//! needs no name here. A class with a validating constructor is read-only.
+//! The reflective RM accessor (`openehr-rm` `access/generated.rs`, #6002):
+//! `RmObject`, `AsRm` and `FromRm`, and the attribute table `construct` lays
+//! a `Partial` out by. A class with a validating constructor is read-only.
 //! No openEHR specification governs this access: our own design.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -636,9 +628,8 @@ fn declared_list(fields: &[Field]) -> String {
         .join(", ")
 }
 
-/// Whether every generic argument of a rendered type, at any depth, is an RM
-/// object, a wrapper of one, or a generic parameter: `XVersionedObject<Value>`
-/// holds a free-form value, which the reflective view does not carry.
+/// Whether every generic argument of a type is an RM object, a wrapper of one
+/// or a parameter.
 fn args_hold_objects(ty: &Ty, walk: &BTreeSet<String>, generics: &[String]) -> bool {
     ty.args.iter().all(|a| {
         matches!(a.head.as_str(), "Option" | "Box" | "Vec" | "NonEmptyVec")

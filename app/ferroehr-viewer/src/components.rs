@@ -4,14 +4,6 @@
 //! The parts of a page the viewer composes from FerroUI's components with
 //! its own data (FerroUI `docs/consoles.md`, "What the console owns").
 //!
-//! - [`subject_reveal`]: an EHR's masked subject id (R13), whose Reveal
-//!   leads to the EHR's page drawn with the id revealed for the reader's
-//!   seconds.
-//! - [`code_editor`]: the code editor (B2) of a document a form posts, with
-//!   the CDR's diagnostics beside it in step with the cursor (B3).
-//! - [`source_upload`]: the upload field of a template source, whose file is
-//!   read into the text area the form posts.
-//!
 //! Each works with no script: Reveal is a link, and the text areas post with
 //! their forms. No openEHR spec governs the viewer: our own design.
 
@@ -29,10 +21,6 @@ use ferrohealth_ui::view::upload::{Sending, Upload, UploadWords, upload_field};
 use crate::markup::{h, t};
 
 /// The masked subject id of an EHR and its Reveal (R13).
-///
-/// In the state `state`: masked, its Reveal a link to `fallback`, the EHR's
-/// page drawn with the id shown; or shown, counting down its seconds; or
-/// refused.
 #[must_use]
 pub fn subject_reveal(id: String, masked: Masked, state: Reveal, fallback: String) -> Html {
     identifier(Identifier {
@@ -122,10 +110,6 @@ pub struct EditorSetup {
 }
 
 /// The code editor (B2) of a document a form posts.
-///
-/// F8's toolbar, the editor with its gutter marks and the status line, and
-/// the CDR's diagnostics beside it in step with the cursor when it refused
-/// the document (B3).
 #[must_use]
 pub fn code_editor(setup: EditorSetup) -> Html {
     let EditorSetup {

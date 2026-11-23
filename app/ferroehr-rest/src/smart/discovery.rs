@@ -164,10 +164,6 @@ fn scopes_supported(cfg: &AppConfig, patient_context: bool) -> Vec<String> {
 
 /// The `.well-known/smart-configuration` path, relative to the SMART Platform
 /// base (master04 §Service Discovery ¶3-4).
-///
-/// `platform_base_url` overrides the default (`rest_root`, e.g.
-/// `/ferroehr/rest`); a base with a path segment is honoured (`/gateway/v1` →
-/// `/gateway/v1/.well-known/smart-configuration`).
 #[must_use]
 pub fn discovery_path(cfg: &SmartConfig, rest_root: &str) -> String {
     let base = cfg
@@ -209,15 +205,9 @@ const NO_TOKEN_ENDPOINT: &str = "issuer-metadata-incomplete";
 
 /// Build the pre-auth discovery router.
 ///
-/// Returns an empty router when `smart.enabled` is off or no issuer is
-/// described, so a merge is a no-op and the path is absent (a `404`), the
-/// extension-group `404`-when-off convention. The document is a pure function
-/// of the described issuer's metadata and of static configuration, so it is
-/// serialized once, on the first request after that issuer is read; until
-/// then the route answers `503` (`issuer-unread`).
-///
-/// Mount it in `crate::router::router` beside `overview::status::router`,
-/// outside the auth layer (the document is unauthenticated, master04).
+/// An empty router when `smart.enabled` is off or no issuer is described, so
+/// the path answers `404`; until the issuer is read the route answers `503`
+/// (`issuer-unread`).
 pub fn router(
     cfg: &AppConfig,
     rest_root: &str,

@@ -100,9 +100,8 @@ CREATE VIEW audit_record AS
            e.render_policy, e.token_attributes, e.search_tokens,
            audit.search_keys(e.search_tokens, e.request_id, e.resource_id) AS search_keys,
            NULL::text AS row_part, NULL::text AS shared_part, NULL::text AS entry_type,
-           NULL::uuid AS entry_uid, NULL::uuid AS entry_ehr,
-           NULL::text AS algorithm, NULL::text AS previous_digest,
-           NULL::text AS content_digest, NULL::text AS digest, NULL::bytea AS shared_digest,
+           NULL::uuid AS entry_uid, NULL::uuid AS entry_ehr, NULL::smallint AS stored_form,
+           NULL::bytea AS shared_digest,
            'system'::text AS chain
       FROM audit_event e
      WHERE NOT EXISTS (SELECT 1 FROM audit_event_hold h WHERE h.seq = e.seq)
@@ -116,14 +115,14 @@ CREATE VIEW audit_record AS
            NULL::text, false, NULL::text, NULL::jsonb,
            p.digest, NULL::jsonb, r.search_tokens,
            audit.search_keys(r.search_tokens, r.request_id, r.resource_id),
-           r.content, sh.content, r.record_type, r.uid, r.ehr_id,
-           NULL::text, NULL::text, encode(r.content_digest, 'hex'), NULL::text, r.shared,
+           r.content, sh.content, r.record_type, r.uid, r.ehr_id, r.form,
+           r.shared,
            'access_log'::text
       FROM access_log_record r
       JOIN audit_render_policy p ON p.id = r.render_policy_id
       LEFT JOIN access_log_shared sh ON sh.digest = r.shared;
 COMMENT ON VIEW audit_record IS
-    'Every record the ITI-81 search, the person''s own trail and the FHIR Feed read: an audit_event record no write holds by its columns and its position, an access-log entry by its stored parts, the digest of its shared part (which a page reads once for every entry naming it), the columns its row part leaves out (recorded_at is its time_recorded) and its content digest, from which the server renders it. A record is named by its chain and position.';
+    'Every record the ITI-81 search, the person''s own trail and the FHIR Feed read: an audit_event record no write holds by its columns and its position, an access-log entry by its stored parts, the digest of its shared part (which a page reads once for every entry naming it), the columns its row part leaves out (recorded_at is its time_recorded) and the version of its stored form, from which the server renders it. A record is named by its chain and position.';
 
 -- The person's access trail, with the index columns the row part leaves
 -- members to.
@@ -175,8 +174,13 @@ CREATE VIEW access_trail AS
                     (t.doc #>> '{query,rows}')::bigint),
            t.doc #>> '{channel,request_id}',
            CASE WHEN t.principal IS NULL AND t.roles = '[]'::jsonb THEN NULL ELSE t.roles END,
-           audit.access_details(t.doc, 'id28'),
-           (audit.access_detail(t.doc, 'id29') ->> 'magnitude')::bigint,
+           coalesce(audit.access_details(t.doc, 'id28'),
+                    nullif(jsonb_path_query_array(t.doc, '$.items[0].origins[*].system_id'),
+                           '[]'::jsonb)),
+           coalesce((audit.access_detail(t.doc, 'id29') ->> 'magnitude')::bigint,
+                    CASE WHEN audit.access_details(t.doc, 'id28') IS NULL
+                         THEN nullif(jsonb_array_length(coalesce(t.doc #> '{items,0,origins}',
+                                                                 '[]'::jsonb)), 0)::bigint END),
            NULL::jsonb, NULL::text, NULL::jsonb,
            audit.access_detail(t.doc, 'id30') ->> 'value',
            audit.access_detail(t.doc, 'id32') ->> 'value',

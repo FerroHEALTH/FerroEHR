@@ -14,11 +14,6 @@ use fhir_types::r4::operation_outcome::OperationOutcome;
 use super::CdrResponse;
 
 /// The `errors` entries of a problem, one `path: detail` line each.
-///
-/// FerroEHR's `validation-failed` problem lists every violation as
-/// `{path, detail}` in its `errors` member, the additional detail a request
-/// with `Prefer: return=representation` receives, so a `422` can name every
-/// offending path instead of one generic line.
 fn problem_errors(value: &serde_json::Value) -> Vec<String> {
     value
         .get("errors")

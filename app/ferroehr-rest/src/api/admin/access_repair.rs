@@ -9,12 +9,6 @@
 //! CONTRIBUTION that would replace its settings included, so the EHR is named
 //! in the body here. No openEHR ITS-REST operation governs this route, and no
 //! openEHR specification governs FerroEHR's access-control scheme.
-//!
-//! Gating: mounted under `/admin/`, so the route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
-//! (`405` with an empty `Allow` when off). The repair commits a new
-//! `EHR_ACCESS` version with its commit audit and writes an access record
-//! (`ferroehr::service::admin::access_repair`).
 
 #![expect(
     clippy::disallowed_types,

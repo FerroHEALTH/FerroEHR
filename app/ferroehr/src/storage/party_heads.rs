@@ -13,8 +13,6 @@ use crate::storage::error::StorageError;
 /// The stored kind of each of `vo_ids` this store holds, read on `conn` (a
 /// commit's transaction sees the objects it has written itself).
 ///
-/// One probe of `vo_head` by its key.
-///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
 pub async fn kinds(

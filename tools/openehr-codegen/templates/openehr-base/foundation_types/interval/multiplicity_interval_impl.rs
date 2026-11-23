@@ -2,20 +2,9 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written BASE `Multiplicity_interval` spec functions + invariants.
+//! The BASE `Multiplicity_interval` functions and invariants.
 //!
-//! `Multiplicity_interval` is an `Interval<Integer>` used to express
-//! multiplicity, cardinality and optionality in models (it is the interval the
-//! AM occurrence/existence/cardinality validator interrogates). It inherits the
-//! `Interval` boundary algebra (`has`/`intersects`/`contains`, reused here via
-//! the shared `BoundaryView`) and adds the classification predicates
-//! `is_open`/`is_optional`/`is_mandatory`/`is_prohibited`.
-//!
-//! Spec sources (vendored):
-//! - `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.foundation_types.multiplicity_interval.adoc`
-//!   §Functions (the four classification functions).
-//! - `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.foundation_types.interval.adoc`
-//!   §Functions + §Invariants (inherited `has`/`intersects`/`contains`).
+//! `org.openehr.base.foundation_types.multiplicity_interval.adoc`, `interval.adoc`.
 
 use super::interval_impl::BoundaryView;
 use super::multiplicity_interval::MultiplicityInterval;
@@ -85,10 +74,8 @@ impl MultiplicityInterval {
     }
 }
 
-// The inherited `Interval` invariants (`interval.adoc` §Invariants), reported
-// under `INTERVAL` — the class that declares them. `Inv_not_point` and
-// `Limits_comparable` are not enforced; see `proper_interval_impl.rs` for the
-// two adjudications, the first of which turns on this very class.
+// The inherited `Interval` invariants, reported under `INTERVAL`;
+// `proper_interval_impl.rs` says why two are not enforced.
 impl Validate for MultiplicityInterval {
     fn validate_invariants(&self, out: &mut Vec<InvariantViolation>) {
         // Lower_included_valid: an unbounded lower boundary is not included.

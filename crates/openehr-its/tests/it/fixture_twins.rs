@@ -11,18 +11,6 @@
 //! refusal; an identifier is built through the BASE grammar) each one is
 //! refused — correctly. The owner's twins rule then applies: a spec-correct
 //! refusal keeps BOTH halves, so this module pins
-//!
-//! * the **invalid twin** — the vendored file, kept byte-verbatim (a vendored
-//!   corpus is never hand-edited; it is external ground truth), with an
-//!   asserted refusal naming the path and the offending member, so a reader
-//!   that silently loosened would fail here; and
-//! * the **valid twin** — a repo-authored correction under
-//!   `tests/fixtures/twins/`, which must read AND round-trip, so the defect is
-//!   proven to be the fixture's rather than the model's.
-//!
-//! The vendored halves are listed in `common::excluded` (the corpus gates'
-//! single documented exclusion list) so the exclusion is auditable rather than
-//! silent.
 
 use openehr_its::json::from_canonical_json;
 use openehr_rm::prelude::{Composition, DvQuantity};
@@ -43,13 +31,6 @@ fn twin(name: &str) -> PathBuf {
 }
 
 /// A half of the repeated-member pair (under `tests/fixtures/repeated_member/`).
-///
-/// Deliberately NOT under `tests/fixtures/twins/`: that directory has a
-/// documented contract (`common::corpus_files` walks it as corpus — it holds
-/// the repo-authored VALID half of an adjudicated defective VENDORED document,
-/// and every member must be a canonical RM root). This pair is repo-authored on
-/// BOTH halves and is a `DV_QUANTITY` fragment, so it lives beside the corpus
-/// rather than inside it, and is asserted only here.
 fn repeated(name: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures/repeated_member")
@@ -57,9 +38,6 @@ fn repeated(name: &str) -> PathBuf {
 }
 
 /// Read a fixture, or fail loudly naming it.
-///
-/// Not inside a `#[test]` fn, so the `clippy.toml` test scoping does not reach
-/// it; the escape is scoped here with its reason instead.
 #[expect(
     clippy::expect_used,
     reason = "both halves of every twin are committed in-tree beside this test \
@@ -173,10 +151,6 @@ fn corrected_alternative_types_twin_reads_and_round_trips() {
 /// §JSON Format) — so a repeated member is not a shape any conformant producer
 /// can have meant. The reader refuses it rather than silently letting one
 /// occurrence win, which is the never-lax reading of an undefined behaviour.
-///
-/// Unlike the two vendored twins above, BOTH halves of this pair are
-/// repo-authored (`tests/fixtures/repeated_member/`): the refusal is ours to
-/// introduce, so there is no external document to keep verbatim.
 #[test]
 fn a_repeated_member_is_refused() {
     let src = read(&repeated("duplicate_member.invalid.json"));

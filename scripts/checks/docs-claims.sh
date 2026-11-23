@@ -3,15 +3,9 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Docs-claim guard: a documented KEY must exist in the thing it documents.
 #
-# The v3.17.4 book sweep found five substantive defects that had shipped to the
-# published site — a fabricated Helm values table, a page asserting endpoints did
-# not exist when six did, a `SPEC_VERSION` constant taught for crates that have
-# none. None was caught by a gate: `mdbook-lint` checks style, `lychee` checks
-# link reachability, and both pass happily on a page whose every technical claim
-# is false. The same-PR docs rule depended entirely on an author noticing.
-#
-# This guard checks the claims that have a machine-readable authority to check
-# against, and nothing else. Three of them:
+# Style and link checks pass a page whose every technical claim is false. This
+# guard checks the claims that have a machine-readable authority, and nothing
+# else. Three of them:
 #
 #   1. Every `FERROEHR__…` environment form a page shows resolves to a real key
 #      in `app/ferroehr/assets/ferroehr.default.toml`.
@@ -281,18 +275,13 @@ for f in $files; do
 done
 
 # ── 3. chart/app version literals (chart pages only) ────────────────────────
-# Both went stale on the published site (`--version 5.0.1` against a 6.x chart,
-# `image.tag=3.17.3` against a 3.17.5 appVersion — #2348), so a literal that
-# disagrees with its authority fails here.
+# Both went stale on the published site (#2348), so a literal that disagrees
+# with its authority fails here.
 #
-# TWO authorities, not one (#2779). The CHART version is Chart.yaml's own
-# `version` — the chart's independent SemVer line, still committed and still
-# hand-bumped. The APPLICATION version is the WORKSPACE version in Cargo.toml,
-# no longer Chart.yaml's `appVersion`: the publish lane now injects the released
-# version into the packaged chart (`helm package --app-version`), so the
-# committed appVersion is a between-releases default that may legitimately lag,
-# while a book page teaches the tag an operator can actually pull from the
-# newest release — which is the workspace version.
+# TWO authorities (#2779): the CHART version is Chart.yaml's own `version`, the
+# chart's independent SemVer line, hand-bumped; the APPLICATION version is the
+# WORKSPACE version in Cargo.toml, since the publish lane injects the released
+# version into the packaged chart and the committed appVersion may lag.
 CHART_YAML=deploy/helm/ferroehr/Chart.yaml
 chart_version=$(awk '$1=="version:"{print $2; exit}' "$CHART_YAML")
 app_version=$(sed -nE 's/^version = "(.*)"$/\1/p' Cargo.toml | sed -n 1p)
@@ -318,9 +307,8 @@ for f in $files; do
   done < <(grep -ohE '(ferroehr(-viewer)?:|image\.tag=)[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?' "$f" \
     | sed -E 's/^.*[:=]//' | sort -u)
 done
-# The root README is not a book page, so the loop above never reads it, and its
-# `helm install … --version` pin sat two chart versions stale until #3305
-# corrected it by hand (#3327). The same two literal checks, over that one file.
+# The root README is not a book page, so the loop above never reads it; the
+# same two literal checks run over that one file (#3327).
 f=README.md
 if [[ -f "$f" ]]; then
   while read -r v; do
@@ -430,13 +418,9 @@ fi
 # tree is searched too. Searching only the pages reported a chart as orphaned when
 # it was in fact published, which is the failure mode that gets a guard ignored.
 #
-# And `website/book/generated/` is a BUILD ARTIFACT: it is not committed and does
-# not exist in a fresh checkout, so on its own it never matches and a figure
-# published only through an include is reported as orphaned regardless — measured
-# on a stress-curve figure its render script both rendered AND embedded, while
-# this guard called it unpublished. The durable reference for
-# generated markdown is therefore the GENERATOR, so the render scripts are the
-# third haystack.
+# And `website/book/generated/` is a BUILD ARTIFACT, absent from a fresh
+# checkout, so the durable reference for generated markdown is the GENERATOR:
+# the render scripts are the third haystack.
 while read -r svg; do
   [[ -n "$svg" ]] || continue
   base=${svg##*/}
@@ -451,7 +435,7 @@ if [[ "$failures" -gt 0 ]]; then
   echo "  source if the page is describing what the software should do." >&2
   exit 1
 fi
-# The examined-page count is part of the verdict: "OK over 0 pages" is how
-# the old diff-scoped default passed vacuously on uncommitted work (#3010).
+# The examined-page count is part of the verdict, so "OK over 0 pages" never
+# passes vacuously (#3010).
 page_count=$(printf '%s\n' "$files" | grep -c . || true)
 echo "docs-claims: OK ($page_count pages examined)."

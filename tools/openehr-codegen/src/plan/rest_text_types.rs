@@ -1,12 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ITS-REST text values `emit-rest` types with a hand-written grammar.
-//!
-//! The OAS gives these as `type: string`, while the ITS-REST docs text gives
-//! each a grammar, so the generated contract carries the type that reads it
-//! (`openehr_its::rest::stored_query`) and a value outside it is refused where
-//! it enters.
+//! The ITS-REST text values typed with a hand-written grammar, which the docs
+//! text gives where the OAS says `type: string`.
 
 /// One text value and the type that reads it.
 pub(crate) struct RestTextType {
@@ -39,12 +35,9 @@ pub(crate) const REST_TEXT_SCHEMAS: &[RestTextType] = &[
     },
 ];
 
-/// The parameter components typed by a grammar, in the operations named.
-///
-/// The `version` path parameter also addresses an ADL 2 template, whose
-/// version carries a pre-release modifier (ADL 2
-/// `master07.05-adl_identification.adoc` §Version Identifiers), so only the
-/// stored-query operations read it as a query version pattern.
+/// The parameter components typed by a grammar; `version` only in the
+/// stored-query operations, since an ADL 2 template version carries a
+/// modifier (`master07.05-adl_identification.adoc`).
 pub(crate) const REST_TEXT_PARAMETERS: &[RestTextType] = &[
     RestTextType {
         component: "qualified_query_name",

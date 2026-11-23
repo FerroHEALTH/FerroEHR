@@ -528,10 +528,6 @@ group! {
 
 group! {
     /// The element of a `PERSON`'s `details` naming an EHR subject reference.
-    ///
-    /// The reference is one the `PERSON` stands for, such as a pseudonym an
-    /// identity source issued: the element's value is a `DV_IDENTIFIER` whose
-    /// `issuer` is the reference's namespace and whose `id` is its id.
     RecordSubject in RecordSubject {
         /// The element naming an `EHR_STATUS` subject reference.
         RecordSubject => "record_subject",
@@ -622,9 +618,6 @@ impl Refusal {
 
 /// A confidentiality level of [`TERMINOLOGY_ID_CONFIDENTIALITY`], in the
 /// package's order `N` < `R` < `V`.
-///
-/// The code system's `U`, `L` and `M` read as `N`, as the package fixes
-/// (draft access control Terminology, Codes from Other Terminologies).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Confidentiality {
     /// `N`, normal, and the `U`, `L` and `M` that read as it.

@@ -359,9 +359,6 @@ impl Builder<'_> {
     /// The deepest node bound for `leaf`'s anchor prefix, and the anchor steps
     /// left below it.
     ///
-    /// The start is the leaf's source node when nothing of its anchor is
-    /// bound.
-    ///
     /// # Errors
     /// [`SqlError::Unsupported`] when the leaf's source has no node alias.
     pub(super) fn walk_start<'l>(
