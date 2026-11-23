@@ -175,9 +175,6 @@ impl Parser<'_> {
     /// The `'[' ID_CODE [',' archetype_ref] ']'` node bracket, if present; the
     /// two-part form is the OPT-inlined `C_ARCHETYPE_ROOT` (OPT2 master03).
     ///
-    /// NOTE: a missing node id is VCOID (`AOM2/master08`), not a syntax error, so it
-    /// yields an empty id.
-    ///
     /// # Errors
     /// A malformed bracket — a missing archetype id after `,`, or a missing
     /// closing `]`.
@@ -698,10 +695,8 @@ impl Parser<'_> {
         if self.dialect == Dialect::Adl14 && self.is_adl14_qualified_code_start() {
             return Ok(Some(vec![self.parse_adl14_term_object()?]));
         }
-        // The 1.4 ordinal shorthand OPENS with a number, so it would otherwise
-        // be swallowed by the inline-primitive path as an integer/real
-        // constraint and then trip over the `|`. It keeps precedence here (as
-        // it always had) and is dispatched per-sibling by the caller's loop.
+        // The 1.4 ordinal shorthand opens with a number, so it takes precedence
+        // over the inline-primitive path.
         let at_adl14_ordinal = self.dialect == Dialect::Adl14 && self.is_adl14_ordinal_start();
         if self.is_inline_primitive_start() && !at_adl14_ordinal {
             return Ok(Some(vec![self.parse_c_inline_primitive(

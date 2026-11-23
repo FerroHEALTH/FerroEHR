@@ -340,8 +340,6 @@ const RECLAIMED: &[&str] = &[
 ];
 
 /// The reference-model verdict for one corpus fixture.
-///
-/// A `Violation` carries the message tail; the caller prefixes the file name.
 enum RmOutcome {
     /// The tagged RM code was raised.
     ExactCode,
@@ -391,9 +389,6 @@ fn judge_rm_fixture(
 }
 
 /// The verdict for a fixture whose RM codes have been collected.
-///
-/// `gated` is the full gated pass's error set (what a `PASS` tag is judged
-/// against); `codes` is the RM-pass set the firing assertions read.
 fn judge_rm_codes(tag: Option<&str>, gated: &[String], codes: &[String]) -> RmOutcome {
     match tag {
         None | Some("PASS") => {
