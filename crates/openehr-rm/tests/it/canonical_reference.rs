@@ -20,7 +20,7 @@ use std::fmt::Write as _;
 
 use serde_json::Value;
 
-/// The canonical form of `value` as the writer before #5682 wrote it.
+/// The canonical form of `value` by the reference writer these tests compare against.
 pub(crate) fn canonical(value: &Value) -> String {
     let mut out = String::new();
     value_to(value, &mut out);
