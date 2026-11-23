@@ -56,11 +56,9 @@ const READ: Ceiling = Ceiling {
     wal: 0,
 };
 
-/// A query narrowed to the caller's caseload, measured over three runs
-/// (#6074): the bound and the care probe ride in its one clinical
-/// statement.
+/// A query narrowed to the caller's caseload (#6074, #6320).
 const CASELOAD: Ceiling = Ceiling {
-    round_trips: 5,
+    round_trips: 4,
     nested: 0,
     notifies: 0,
     wal: 0,
@@ -82,18 +80,11 @@ const COMMIT: Ceiling = Ceiling {
     wal: 7924,
 };
 
-/// A care relationship's commit to Dr Jansen's team followed by her
-/// caseload query, measured as one pair (#6074). While the commit dropped
-/// the team's caseload copy the pair took 52 round trips, the query reading
-/// the team's census and its patients' record subjects again; the commit
-/// now applies the stamped parties' facts it reads anyway to the copy, with
-/// the care relationships read in place of the stamped teams, so the pair
-/// takes 50. The other counts are the commit's. With the commit judged on
-/// one gate read and committed behind one guarded statement (#6257), the
-/// pair takes 35, measured twice.
+/// A care relationship's commit to a team followed by its caseload query,
+/// whose door read is one nested statement (#6074, #6320).
 const RECARE: Ceiling = Ceiling {
-    round_trips: 35,
-    nested: COMMIT.nested + CASELOAD.nested,
+    round_trips: 34,
+    nested: COMMIT.nested + CASELOAD.nested + 1,
     notifies: COMMIT.notifies + CASELOAD.notifies,
     wal: COMMIT.wal + CASELOAD.wal,
 };

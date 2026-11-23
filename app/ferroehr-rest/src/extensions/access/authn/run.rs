@@ -127,13 +127,15 @@ async fn riding_post(layer: AuthLayer, req: Request, next: Next) -> Response {
 /// `body` as the bytes `crate::limits::middleware` buffered it into, one
 /// chunk taken back by its reference count, so nothing is copied.
 async fn buffered(body: Body) -> Result<Bytes, Box<Response>> {
-    axum::body::to_bytes(body, usize::MAX).await.map_err(|_unreadable| {
-        // NOTE: RFC 9110 §15.5.1, as the body limit answers a body it cannot read.
-        Box::new(crate::overview::error::status_error_response(
-            http::StatusCode::BAD_REQUEST,
-            "request body cannot be read",
-        ))
-    })
+    axum::body::to_bytes(body, usize::MAX)
+        .await
+        .map_err(|_unreadable| {
+            // NOTE: RFC 9110 §15.5.1, as the body limit answers a body it cannot read.
+            Box::new(crate::overview::error::status_error_response(
+                http::StatusCode::BAD_REQUEST,
+                "request body cannot be read",
+            ))
+        })
 }
 
 /// The bodiless `GET` or the AQL `POST` `req`, whose body `kept` holds,
