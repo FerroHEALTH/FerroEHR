@@ -880,8 +880,10 @@ const WIRE_BUDGETS: [(Path, u64); 31] = [
     (Path::DirectoryCreate, 4839),
     (Path::DirectoryUpdate, 4650),
     (Path::DirectoryDelete, 4007),
-    (Path::PartyUpdate, 9179),
-    (Path::PartyDelete, 7730),
+    // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
+    (Path::PartyUpdate, 9184),
+    // NOTE: #6392, the party gate returns the tip_cold flag its own promotion reads.
+    (Path::PartyDelete, 7735),
     (Path::CommitOrganisation, 7569),
     (Path::CommitGroup, 7398),
     (Path::CommitRole, 11_193),
