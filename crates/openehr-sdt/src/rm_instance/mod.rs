@@ -159,7 +159,8 @@ pub fn validate_party(party: &Value, wt: &WebTemplate) -> Vec<ValidationMessage>
     out
 }
 
-/// Validate only the template-independent passes: RM class invariants and the
+/// Validate only the template-independent passes: RM class invariants
+/// (`RM/docs/UML/classes/org.openehr.rm.common.*.adoc` §Invariants) and the
 /// RM-mandated openEHR terminology, for every commit kind.
 ///
 /// `declared` is the root's RM type when its `_type` is absent; a tagged root
