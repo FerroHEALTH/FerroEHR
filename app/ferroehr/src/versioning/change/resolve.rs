@@ -303,7 +303,7 @@ pub(super) async fn resolve_create(
     if let committer::composer::Settled::UnlessUnchanged(_) =
         committer::composer::settle(content.kind, &mut content.body)?
     {
-        return Err(committer::composer::refused());
+        return Err(ServiceError::not_permitted(committer::composer::REFUSAL));
     }
     system::admit_content(content.kind, &content.body)?;
     external::admit_content(content.kind, &content.body, content.template_id.as_deref())?;
