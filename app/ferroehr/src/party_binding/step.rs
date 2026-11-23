@@ -167,16 +167,22 @@ impl<'q> Step<'q> {
 }
 
 /// Runs `steps` as the CTEs of one statement on `tx`, returning the rows of
-/// the tagged ones; nothing is sent when no step may write a row.
+/// the tagged ones; nothing is sent when no step may write a row, and a lone
+/// step is sent as it is written.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub(crate) async fn batch(
     tx: &mut PgConnection,
-    steps: Vec<Step<'_>>,
+    mut steps: Vec<Step<'_>>,
 ) -> Result<Vec<Returned>, StorageError> {
     if !steps.iter().any(|step| step.writes) {
         return Ok(Vec::new());
+    }
+    if steps.len() == 1
+        && let Some(step) = steps.pop()
+    {
+        return step.run(tx).await;
     }
     let mut sql = String::with_capacity(
         steps

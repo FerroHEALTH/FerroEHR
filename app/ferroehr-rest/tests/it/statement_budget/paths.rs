@@ -432,6 +432,11 @@ struct Budget {
 /// ceilings fell by its path's figure. The AGENT create, which settles no
 /// row, sends 10 as before and made 5 to 12 allocations more, and its
 /// ceilings stay. No path's WAL, median peak or notifies moved.
+/// A settle has since built no insert step that writes no row, and sends a
+/// statement of one step as it is written (#6257): the AGENT create makes 4
+/// fewer allocations, the PERSON create, update and delete and the
+/// ORGANISATION create 2 fewer, the GROUP and ROLE creates 1, measured twice
+/// beside the merge base, and each allocation ceiling fell by that figure.
 const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitJson,
@@ -586,7 +591,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitParty,
         conversions: 8,
-        allocations: 1715,
+        allocations: 1713,
         peak_bytes: 125_972,
         round_trips: 14,
         nested: 10,
@@ -616,7 +621,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitPartyScored,
         conversions: 8,
-        allocations: 2202,
+        allocations: 2200,
         peak_bytes: 140_901,
         round_trips: 14,
         nested: 11,
@@ -686,7 +691,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyUpdate,
         conversions: 8,
-        allocations: 1956,
+        allocations: 1954,
         peak_bytes: 129_641,
         round_trips: 12,
         nested: 4,
@@ -696,7 +701,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::PartyDelete,
         conversions: 2,
-        allocations: 1570,
+        allocations: 1568,
         peak_bytes: 112_950,
         round_trips: 12,
         nested: 4,
@@ -706,7 +711,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitOrganisation,
         conversions: 8,
-        allocations: 1568,
+        allocations: 1566,
         peak_bytes: 126_183,
         round_trips: 10,
         nested: 1,
@@ -716,7 +721,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitGroup,
         conversions: 8,
-        allocations: 1566,
+        allocations: 1565,
         peak_bytes: 126_027,
         round_trips: 10,
         nested: 1,
@@ -726,7 +731,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitRole,
         conversions: 9,
-        allocations: 2140,
+        allocations: 2139,
         peak_bytes: 126_256,
         round_trips: 19,
         nested: 6,
@@ -736,7 +741,7 @@ const BUDGETS: [Budget; 31] = [
     Budget {
         path: Path::CommitAgent,
         conversions: 8,
-        allocations: 1554,
+        allocations: 1550,
         peak_bytes: 126_026,
         round_trips: 10,
         nested: 1,
