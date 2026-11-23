@@ -327,11 +327,11 @@ mod tests {
             posts += 1;
             let op = post.operation_id.as_deref().unwrap_or_default();
             assert_eq!(
-                rides.admits(Some(path)),
+                rides.admits(Some(path.as_str())),
                 POST_RIDES.contains(&op),
                 "POST {path} ({op})"
             );
-            if rides.admits(Some(path)) {
+            if rides.admits(Some(path.as_str())) {
                 riding.push(op);
             }
         }

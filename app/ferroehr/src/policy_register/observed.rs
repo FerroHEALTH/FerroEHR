@@ -72,7 +72,7 @@ pub async fn through_clinical_door<F: Future>(open: bool, fut: F) -> F::Output {
 /// confirms the copies after it ran.
 #[must_use]
 pub fn reads_clinical_door() -> bool {
-    DOOR.try_with(|()| ()).is_ok() && SEEN.try_with(|_| ()).is_ok()
+    DOOR.try_with(|_| ()).is_ok() && SEEN.try_with(|_| ()).is_ok()
 }
 
 /// The newest revisions the running request's statements read so far;
