@@ -419,6 +419,7 @@ pub(crate) fn insert_standalone(container: Uuid, row: Option<&RepresentationRow>
     Step::new("sn", insert, None, move |query| {
         columns.bind_owned(query.bind(container))
     })
+    .writing(row.is_some())
 }
 
 /// The column arrays of some representation rows.
