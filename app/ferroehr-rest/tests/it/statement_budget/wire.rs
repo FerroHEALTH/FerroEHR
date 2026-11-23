@@ -59,12 +59,14 @@ impl Tally {
 }
 
 /// The openings of the statements a request does not send: a new
-/// connection's startup and session setup, and the store's sealer, which
-/// seals windows of the audit logs on its own schedule. A transaction (or a
+/// connection's startup and session setup, the store's sealer, which seals
+/// windows of the audit logs on its own schedule, and the frontier round's
+/// copy of the access log's search index, which renders the entries' search
+/// tokens (#6322). A transaction (or a
 /// statement outside one) that runs any of them falls into a request's window
 /// by timing, so its bytes are kept apart from the requests' own
 /// ([`Ledger::background`]).
-const BACKGROUND: [&str; 13] = [
+const BACKGROUND: [&str; 16] = [
     STARTUP,
     "SET search_path ",
     "SET statement_timeout ",
@@ -78,6 +80,9 @@ const BACKGROUND: [&str; 13] = [
     "WITH x AS MATERIALIZED (SELECT pg_sequence_last_value(",
     "SELECT id, encode(content_digest, 'hex') FROM audit.access_log_entry WHERE id > ",
     "SELECT seq, encode(content_digest, 'hex') FROM audit.audit_event WHERE seq > ",
+    "SELECT pg_advisory_xact_lock(hashtext('audit.access_log_index')",
+    "SELECT s.last_id FROM audit.access_log_index_state ",
+    "SELECT DISTINCT p.digest FROM audit.access_log_entry ",
 ];
 
 /// What the relay moved, by the statement's text, its whitespace collapsed:
