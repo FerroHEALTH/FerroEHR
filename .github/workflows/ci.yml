@@ -1747,7 +1747,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # The optimised test binary took 23 minutes on a cold cache and passed 45
+    # on a busy runner (#6321).
+    timeout-minutes: 75
     permissions:
       contents: read
     services:
