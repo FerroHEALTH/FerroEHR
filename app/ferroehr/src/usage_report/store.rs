@@ -4,10 +4,6 @@
 //! The usage report's database state: `ferrohealth-usage-report`'s [`Store`]
 //! over the clinical pool every replica shares.
 //!
-//! It holds the installation id, the start and daily claims, and the counts
-//! of every replica since the last daily report (`usage_report_instance`,
-//! `usage_report_window`, `usage_report_counter`).
-//!
 //! No openEHR spec governs this: our own design. Every decision that must hold
 //! across replicas is one conditional `UPDATE` on the single instance row, which
 //! `PostgreSQL` serializes by its row lock (PostgreSQL 18, "UPDATE", and

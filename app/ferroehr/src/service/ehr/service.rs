@@ -546,10 +546,6 @@ impl FerroEhrService {
     /// the created EHR's [`ResourceMeta`] (the `ETag`/`Location` id + the
     /// creation instant).
     ///
-    /// `request` carries the optional `EHR_STATUS` and the `POST /ehr`
-    /// request's `openehr-version` / `openehr-audit-details` metadata (see
-    /// `Self::commit_new_ehr`).
-    ///
     /// # Errors
     /// [`ServiceError`] when the status is structurally invalid (422-equivalent),
     /// a committal `change_type`/`lifecycle_state` is illegal for a creation
@@ -567,10 +563,6 @@ impl FerroEhrService {
     /// Create an EHR under the caller-supplied id (`PUT /ehr/{ehr_id}`) with
     /// the given (or default) `EHR_STATUS`, returning the created EHR's
     /// [`ResourceMeta`].
-    ///
-    /// `request` carries the optional `EHR_STATUS` and the `PUT /ehr/{ehr_id}`
-    /// request's `openehr-version` / `openehr-audit-details` metadata (see
-    /// `Self::commit_new_ehr`).
     ///
     /// # Errors
     /// [`ServiceError`] when the EHR already exists (409-equivalent), the status is

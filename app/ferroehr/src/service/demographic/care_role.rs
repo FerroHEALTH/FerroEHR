@@ -45,15 +45,9 @@ impl FerroEhrService {
     /// `HL7_ParticipationType`. A relationship with no readable role is left
     /// to the commit, which refuses it naming why.
     ///
-    /// The policy in force is first confirmed on the one indexed read of the
-    /// policy heads ([`Self::confirm_policy`]), before the commit holds a
-    /// party connection, so the commit's bounds on the relationship
-    /// ([`crate::party_binding::grants::caller::bounds`]) read the version
-    /// that read found and name it.
-    ///
-    /// A care relationship's writer is then judged at the confidentiality of
-    /// the subject's record ([`Self::care_writer_check`]), both reads given
-    /// back before the commit takes its party connection.
+    /// The policy in force is confirmed ([`Self::confirm_policy`]) and the
+    /// writer judged ([`Self::care_writer_check`]) before the commit takes its
+    /// party connection.
     ///
     /// # Errors
     /// [`ServiceError::ValidationFailed`] (`422`) naming the element; the

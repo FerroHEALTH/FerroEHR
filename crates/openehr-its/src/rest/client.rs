@@ -35,9 +35,6 @@ const CANONICAL_JSON: &str = "application/json";
 
 /// The time a request has left before its deadline, carried in the
 /// `http::Request` extensions the client hands a [`Transport`].
-///
-/// An engine honours it as the request's timeout, the shorter of it and its
-/// own; [`ReqwestTransport`] does. A request without a deadline carries none.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RequestTimeout(pub Duration);
 
@@ -53,14 +50,6 @@ pub struct RequestTimeout(pub Duration);
 /// The client itself sends a request again only within its [`RetryPolicy`]
 /// and, under [`Credentials::Dpop`] with a [`DpopProver`], once more to the
 /// same URL to answer a `use_dpop_nonce` challenge (RFC 9449 §8 and §9).
-///
-/// The client checks the call's deadline before every send it hands an
-/// engine. A deadline that passed before the first send is
-/// [`ClientError::DeadlineElapsed`] with `sent: false`, and nothing reached
-/// the engine; one that passed before a retry or the nonce re-send carries
-/// `sent: true`, because an earlier send went out. An engine timeout inside
-/// [`Transport::send`] is a [`TransportError::Timeout`], which the client
-/// returns as [`ClientError::Transport`].
 ///
 /// An engine that wraps another may add request headers. A DPoP client
 /// without a [`DpopProver`] adds its `DPoP` proof this way: the request it
@@ -99,10 +88,6 @@ pub enum TransportError {
     },
     /// The service answered, but the answer body is longer than the engine's
     /// limit, so it was not read whole.
-    ///
-    /// The request reached the service and was answered with `status`; only the
-    /// body was refused, unread when its declared length is already past
-    /// `limit`, cut off as soon as it passed `limit` otherwise.
     #[error("the {status} answer is longer than the {limit}-byte limit")]
     BodyTooLarge {
         /// The status the service answered with.
@@ -113,16 +98,6 @@ pub enum TransportError {
 }
 
 /// The `reqwest` engine: a shared connection pool with rustls TLS.
-///
-/// The engine never follows a redirect: every constructor builds its client
-/// with `reqwest::redirect::Policy::none()`, so a `3xx` reaches the caller as
-/// received and nothing is re-sent to the host its `Location` names. That is
-/// why the constructors take a `reqwest::ClientBuilder` rather than a built
-/// client, whose redirect policy can be neither read nor changed.
-///
-/// An engine reads every answer body whole unless it carries a limit
-/// ([`ReqwestTransport::with_max_body`]); a caller that cannot trust the size
-/// of what a service sends sets one.
 #[derive(Debug, Clone)]
 pub struct ReqwestTransport {
     client: reqwest::Client,
@@ -136,10 +111,6 @@ pub struct ReqwestTransport {
 impl ReqwestTransport {
     /// An engine over a `reqwest` client the caller configures (TLS roots,
     /// proxies), built here with redirects off.
-    ///
-    /// A request that carries a [`RequestTimeout`] runs under that timeout;
-    /// use [`ReqwestTransport::with_builder_timeout`] for a per-request
-    /// timeout of the engine's own, which a deadline only ever shortens.
     ///
     /// # Errors
     /// Returns the `reqwest` error when the client cannot be built (the TLS
@@ -186,15 +157,6 @@ impl ReqwestTransport {
 
     /// Returns this engine with a limit of `limit` bytes on the body it reads
     /// of one answer.
-    ///
-    /// An answer whose body length is known and past `limit` is refused
-    /// without reading it; a body of unknown length (chunked, or decompressed
-    /// on the fly) is read chunk by chunk and refused as soon as it passes
-    /// `limit`. The refusal is [`TransportError::BodyTooLarge`], carrying the
-    /// answer's status, which the client returns as
-    /// [`ClientError::AnswerTooLarge`]. The limit counts the body as handed
-    /// over, after any content decoding, so a compressed body cannot expand
-    /// past it either.
     #[must_use]
     pub fn with_max_body(mut self, limit: usize) -> Self {
         self.max_body = Some(limit);
@@ -291,10 +253,6 @@ pub enum Credentials {
     Bearer(SecretString),
     /// A DPoP-bound access token (RFC 9449), sent verbatim after `DPoP `
     /// (§7.1).
-    ///
-    /// Every request also needs a `DPoP` proof header: the client asks the
-    /// [`DpopProver`] it was given ([`Client::with_dpop_prover`]) for one, or a
-    /// wrapping [`Transport`] adds it.
     Dpop(SecretString),
 }
 
@@ -402,8 +360,6 @@ fn is_b64token(token: &str) -> bool {
 }
 
 /// Why [`Credentials`] cannot form an `Authorization` value.
-///
-/// No variant carries the secret, so the error is safe to log.
 #[derive(Debug, thiserror::Error)]
 pub enum InvalidCredentials {
     /// A basic user-id contains a colon, which RFC 7617 §2 makes invalid: the
@@ -462,9 +418,6 @@ pub trait CredentialsProvider: Send + Sync + fmt::Debug {
 
     /// Reports that the service answered `401` to an attempt that carried the
     /// last credential, so a caching provider can drop it.
-    ///
-    /// Called on the answering task; it must not block. The default does
-    /// nothing.
     fn refused(&self) {}
 }
 
@@ -520,15 +473,6 @@ const DPOP_NONCE: HeaderName = HeaderName::from_static("dpop-nonce");
 /// prover owns the key pair and the claims: `htm` from the method, `htu` from
 /// the URI without its query and fragment (§4.2), `ath` from the access token,
 /// a fresh `jti` and `iat`, and the latest nonce it was given.
-///
-/// When the call's deadline passes before the first send, the call fails with
-/// [`ClientError::DeadlineElapsed`] and `sent: false`. When it passes after a
-/// `use_dpop_nonce` challenge and before the re-send (the prover's second
-/// proof included), the call fails with the same variant and `sent: true`:
-/// the service received the first send and may have acted on it. A prover
-/// failure is reported the same way: [`ClientError::DpopProof`] carries
-/// `sent: false` when the first proof failed and `sent: true` when the proof
-/// for a retry or the nonce re-send did.
 #[async_trait::async_trait]
 pub trait DpopProver: Send + Sync + fmt::Debug {
     /// The compact-serialized proof JWT for one request.
@@ -541,10 +485,6 @@ pub trait DpopProver: Send + Sync + fmt::Debug {
 
     /// Records the nonce the service supplied in a `DPoP-Nonce` header, which
     /// every later proof carries as its `nonce` claim (RFC 9449 §8 and §9).
-    ///
-    /// Called on the answering task for every answer that carries one, before
-    /// the client re-sends a request the service refused with
-    /// `use_dpop_nonce`; it must not block.
     fn nonce(&self, nonce: &str);
 }
 
@@ -616,14 +556,6 @@ struct OAuthErrorBody {
 }
 
 /// Per-call options: a deadline and extra request headers.
-///
-/// A generated group client applies its options to every call
-/// (`with_options`); a raw [`Request`] takes them through
-/// [`Request::apply_options`]. An option header replaces every field line of
-/// the same name the call would otherwise send (the request id or the
-/// conveyed client identity, set per call); the client's configured
-/// credentials still set `Authorization`. `Debug` prints the header values
-/// except those marked sensitive (`Authorization`, `Proxy-Authorization`).
 #[derive(Debug, Clone, Default)]
 pub struct CallOptions {
     deadline: Option<Instant>,
@@ -762,9 +694,6 @@ impl<T: Transport> Client<T> {
 
     /// This client asking `provider` for the credentials of every attempt
     /// and telling it when the service refused them (`401`).
-    ///
-    /// An `Arc<P>` is a provider too, so one provider can serve several
-    /// clients.
     #[must_use]
     pub fn with_credentials_provider(
         mut self,
@@ -778,8 +707,6 @@ impl<T: Transport> Client<T> {
     /// under [`Credentials::Dpop`], and answering a `use_dpop_nonce`
     /// challenge with one re-send carrying a proof over the supplied nonce
     /// (RFC 9449 §8 and §9).
-    ///
-    /// Under other credentials the prover is never asked.
     #[must_use]
     pub fn with_dpop_prover(mut self, prover: impl DpopProver + 'static) -> Self {
         self.dpop = Some(Arc::new(prover));
@@ -813,13 +740,6 @@ impl<T: Transport> Client<T> {
 
     /// Sends `request` under the base URL and reads the whole answer, retrying
     /// an idempotent request within the budget.
-    ///
-    /// The `Accept` header defaults to `application/json` when the request set
-    /// none; the credentials, when configured, are resolved and sent on every
-    /// attempt. A request deadline bounds the whole call: no attempt starts
-    /// after it, each attempt's engine timeout is the time left, and a retry
-    /// whose backoff would end after it is not made — the last failure is
-    /// returned instead.
     ///
     /// # Errors
     /// Returns [`ClientError::Unauthorized`], [`ClientError::Forbidden`] and
@@ -907,11 +827,6 @@ impl<T: Transport> Client<T> {
     /// [`DpopProver`]), and `Accept` defaults to
     /// `application/json` when absent. Stripping hop-by-hop fields (RFC 9110
     /// §7.6.1) is the caller's.
-    ///
-    /// `sent` says whether an earlier attempt of the same call already went
-    /// out, which the [`ClientError::DeadlineElapsed`] and
-    /// [`ClientError::DpopProof`] it may return carry; a caller passing a
-    /// request through for the first time passes `false`.
     ///
     /// # Errors
     /// Returns [`ClientError::Transport`] when the request did not complete,
@@ -1430,10 +1345,6 @@ impl Request {
     /// Sets `body` serialized as canonical JSON, with `Content-Type:
     /// application/json`.
     ///
-    /// The typed surface speaks canonical JSON only: `content_type` may name
-    /// `application/json` or nothing. A Simplified Formats body is a raw
-    /// request through [`Request::text_body`].
-    ///
     /// # Errors
     /// Returns [`ClientError::UnsupportedMediaType`] for any other
     /// `content_type` and [`ClientError::Serialize`] when `body` does not
@@ -1580,13 +1491,6 @@ impl Answer {
 }
 
 /// A call that did not reach a documented answer.
-///
-/// A status the operation documents is an outcome variant of that call,
-/// never an error; everything here is the other half. An error names the
-/// method and operation path, never the query (which can name a subject) and
-/// never the request body (which can be clinical content); a status error
-/// carries the service's own answer body as an [`ErrorBody`], and the
-/// message text stays free of it.
 #[derive(Debug, thiserror::Error)]
 pub enum ClientError {
     /// The base URL cannot carry an operation path.
@@ -1596,11 +1500,6 @@ pub enum ClientError {
         base: url::Url,
     },
     /// The call's deadline passed before an attempt could start.
-    ///
-    /// `sent` tells the two cases apart: `false` when nothing of the call left
-    /// the process, `true` when an earlier send went out first — a retried
-    /// attempt, or the re-send answering a DPoP `use_dpop_nonce` challenge —,
-    /// so the service may have received, and acted on, the request.
     #[error(
         "the deadline of {method} {path} passed before the request was sent (an earlier send went out: {sent})"
     )]
@@ -1615,11 +1514,6 @@ pub enum ClientError {
     },
     /// The DPoP prover produced no proof for the request, so this send did not
     /// go out.
-    ///
-    /// `sent` tells the two cases apart: `false` when the first proof failed
-    /// and nothing of the call left the process, `true` when the proof for a
-    /// retried attempt or for the re-send answering a DPoP `use_dpop_nonce`
-    /// challenge failed, after the service had received an earlier send.
     #[error("no DPoP proof could be made for {method} {path} (an earlier send went out: {sent})")]
     DpopProof {
         /// The HTTP method.
@@ -1657,10 +1551,6 @@ pub enum ClientError {
     },
     /// The service answered, but the body is longer than the engine's limit
     /// ([`ReqwestTransport::with_max_body`]); it is never retried.
-    ///
-    /// Unlike [`ClientError::Transport`], the request reached the service and
-    /// was answered with `status`, so a non-idempotent request may have been
-    /// acted on.
     #[error("the {status} answer to {method} {path} is longer than the {limit}-byte limit")]
     AnswerTooLarge {
         /// The HTTP method.

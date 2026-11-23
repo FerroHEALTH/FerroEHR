@@ -1,22 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! RM-path parsing + navigation shared by the RM ⇄ simplified walkers and the
-//! composition validator.
+//! RM-path parsing and navigation for the RM ⇄ simplified walkers and the
+//! composition validator, over [`openehr_rm::v1_2::paths`] (BASE
+//! `master11-paths`).
 //!
-//! This is a thin, FLAT-local layer over the canonical single implementation in
-//! [`openehr_rm::v1_2::paths`] (the BASE `master11-paths` parser + `PATHABLE`
-//! navigation over canonical-JSON RM trees). It adds only the two conveniences
-//! the SDT pipeline needs and the RM primitive does not carry: taking the
-//! *relative* path between a parent and child [`WebTemplateNode`](crate::flat::webtemplate::model::WebTemplateNode)
-//! `aqlPath`, and multi-root navigation over a slice of parsed segments.
-//!
-//! A `WebTemplateNode`'s `aqlPath` is the full RM path from the versioned-object
-//! root (compacted intermediates kept), so the path between a parent web-template
-//! node and one of its children is the sequence of RM attribute steps
-//! (`/attr[predicate]`) that locates the child's RM value inside the parent's,
-//! including the structural nodes (`HISTORY`, `ITEM_TREE`, a single `EVENT`, the
-//! `ELEMENT` wrapper) the web-template compacted away.
+//! It adds the relative path between a parent and child `aqlPath`, which
+//! includes the structural nodes the web template compacted away, and
+//! multi-root navigation.
 #![allow(
     dead_code,
     reason = "consumed by the RM ⇄ sim walkers landing in this same rewrite; drop this allow with their arrival"
@@ -25,12 +16,8 @@
 use crate::flat::instance::{Instance, select_children};
 use openehr_rm::v1_2::paths::{PathSegment, RmPath};
 
-/// Parse a relative RM path (`/attr[pred]/attr2/…`) into its segments.
-///
-/// The `aqlPath`s fed here are template-derived and always well-formed; a parse
-/// error (an unterminated predicate, or a general-comparison predicate that
-/// belongs to AQL rather than a `PATHABLE` path) resolves to no segments — the
-/// caller then treats the path as locating nothing, never panicking.
+/// Parse a relative RM path (`/attr[pred]/attr2/…`) into its segments; a parse
+/// error yields no segments, so the path locates nothing.
 pub(crate) fn parse(rel: &str) -> Vec<PathSegment> {
     rel.parse::<RmPath>()
         .map(|p| p.segments)
@@ -38,9 +25,8 @@ pub(crate) fn parse(rel: &str) -> Vec<PathSegment> {
 }
 
 /// The segments from `parent_aql` to `child_aql`, compared step by step as
-/// [`crate::flat::navigate::relative`] compares them. When `child_aql` does not
-/// extend `parent_aql` the whole child path is returned (the prior FLAT
-/// behaviour).
+/// [`crate::flat::navigate::relative`] does; the whole child path when it does
+/// not extend the parent's.
 pub(crate) fn relative(parent_aql: &str, child_aql: &str) -> Vec<PathSegment> {
     let parent = parse(parent_aql);
     let child = parse(child_aql);
@@ -68,9 +54,7 @@ pub(crate) fn child_segments<'a>(
 }
 
 /// Follow `segs` from each of `roots`, returning the reached nodes in document
-/// order. Each step is [`openehr_rm::v1_2::paths::select_children`], so array
-/// attributes branch (filtered by the segment predicate) and single-valued
-/// attributes descend (predicate re-checked, per BASE `master11-paths`).
+/// order ([`openehr_rm::v1_2::paths::select_children`] per step).
 ///
 pub(crate) fn navigate<'a, I: Instance<'a>>(roots: &[I], segs: &[PathSegment]) -> Vec<I> {
     let mut current: Vec<I> = roots.to_vec();
@@ -85,13 +69,9 @@ pub(crate) fn navigate<'a, I: Instance<'a>>(roots: &[I], segs: &[PathSegment]) -
 
 /// One template-path step with a conditional name fallback.
 ///
-/// NOTE: a template-derived `[atNNNN,'name']` conjunct carries the TEMPLATE's
-/// term text while an instance may legitimately redefine `LOCATABLE.name`
-/// (RM common), so the strict BASE `master11-paths` match can locate nothing;
-/// the id-only fallback is sound only when the name is REDUNDANT — the id
-/// unique among the matched siblings (`allow_name_fallback`, caller-computed)
-/// — and must stay off where a template distinguishes same-id siblings by
-/// name.
+/// NOTE: an instance may redefine `LOCATABLE.name` (RM common), so the id-only
+/// fallback applies when the name is redundant among the siblings
+/// (`allow_name_fallback`).
 pub(crate) fn select_children_matched<'a, I: Instance<'a>>(
     container: I,
     seg: &PathSegment,
@@ -106,22 +86,11 @@ pub(crate) fn select_children_matched<'a, I: Instance<'a>>(
     strict
 }
 
-/// Select the children matching an **unqualified** identity segment (one with an
-/// `archetype_node_id` but no `name/value` conjunct) that shares its
-/// `archetype_node_id` with one or more *name-qualified* sibling constraints,
-/// excluding the instances those siblings claim.
-///
-/// This is the residual/catch-all arm of name-based sibling differentiation
-/// (RM common `master03-archetyped_package.adoc` §"The `LOCATABLE` class": a
-/// runtime `name` distinguishes sibling nodes that share an `archetype_node_id`;
-/// AOM 1.4 `master04-constraint_model_package.adoc` §`node_id` — node ids
-/// "guarantee sibling node unique identification", which templates realise for
-/// repeated same-archetype fills via a fixed `name/value` `C_STRING` on all but
-/// one sibling). The unqualified sibling carries no name constraint, so its
-/// `LOCATABLE.name` is unconstrained (redefinable at runtime, master03 §"The
-/// `LOCATABLE` class" L35); it therefore admits every instance of the shared
-/// `archetype_node_id` **except** those whose `name/value` matches a
-/// name-qualified sibling — those belong to that sibling, never here.
+/// Select the children matching an unqualified identity segment that shares its
+/// `archetype_node_id` with name-qualified siblings, excluding the instances
+/// those siblings claim (RM common `master03-archetyped_package.adoc` §"The
+/// `LOCATABLE` class"; AOM 1.4 `master04-constraint_model_package.adoc`
+/// §`node_id`).
 pub(crate) fn select_children_excluding_names<'a, I: Instance<'a>>(
     container: I,
     seg: &PathSegment,
@@ -138,22 +107,11 @@ pub(crate) fn select_children_excluding_names<'a, I: Instance<'a>>(
 }
 
 /// Per-parent decision table for the id-only name fallback of
-/// [`select_children_matched`], built from the template paths that share one
-/// parent node.
+/// [`select_children_matched`].
 ///
-/// A template-derived `[atNNNN,'Name']` conjunct spells the name the ARCHETYPE
-/// constrains, while a stored instance may carry a different `LOCATABLE.name`
-/// (RM common `master03-archetyped_package.adoc` §"The `LOCATABLE` class": the
-/// runtime name distinguishes sibling nodes sharing an `archetype_node_id`).
-/// Dropping the conjunct is sound exactly when the name is REDUNDANT for
-/// identification — when every template path under the same parent spells the
-/// same name for that `(attribute, archetype_node_id)`. If two sibling paths
-/// spell different names, or one spells none, the name is a discriminator and
-/// the fallback would let one sibling claim another's instances.
-///
-/// The value is `Some(name)` for an identity every path spells identically and
-/// `None` for a discriminating identity. An identity absent from the map was
-/// never seen and takes no fallback.
+/// `Some(name)` for an identity every template path under the parent spells
+/// identically, where dropping the name conjunct is sound; `None` for a
+/// discriminating identity. An absent identity takes no fallback.
 pub(crate) type NameFallback = std::collections::HashMap<(String, String), Option<String>>;
 
 /// Build the [`NameFallback`] table from every predicate-bearing segment of a
@@ -206,12 +164,7 @@ pub(crate) fn fallback_allowed(table: &NameFallback, seg: &PathSegment) -> bool 
 }
 
 /// [`navigate`] with the id-only name fallback of [`select_children_matched`]
-/// enabled per step, as `table` permits.
-///
-/// This is what keeps a renamed instance node addressable: without it a step
-/// whose template name conjunct the instance does not match locates nothing,
-/// and every constraint and every datum below that step silently disappears —
-/// from the validation walk as much as from the simplified projection.
+/// per step, as `table` permits, so a renamed instance node stays addressable.
 pub(crate) fn navigate_matched<'a, I: Instance<'a>>(
     roots: &[I],
     segs: &[PathSegment],
@@ -286,10 +239,8 @@ mod tests {
 
     #[test]
     fn matched_step_falls_back_to_id_only_for_renamed_instances() {
-        // Template step names the node 'Template Name'; the instance renamed it
-        // (LOCATABLE.name is runtime-redefinable when unconstrained) — with the
-        // fallback allowed (id unambiguous among siblings) the step still
-        // locates the node by its archetype_node_id.
+        // The instance renamed the node; the fallback still locates it by
+        // archetype_node_id.
         let rm = serde_json::json!({
             "content": [
                 {"archetype_node_id": "openEHR-EHR-EVALUATION.a.v1",

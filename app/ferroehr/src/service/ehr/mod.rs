@@ -3,8 +3,6 @@
 
 //! The EHR service (`service/ehr/`), behind the ITS-REST EHR API.
 //!
-//! Concrete `FerroEhrService` methods, our own design.
-//!
 //! Layout, one file per concern (arch-overview
 //! `master06-design_of_the_ehr.adoc`):
 //!
@@ -28,8 +26,6 @@
 //! The versioned-object mechanics are delegated to [`crate::versioning`]
 //! (change control, RM common master06) and [`crate::storage`] (row I/O — no
 //! openEHR spec governs the SQL).
-//!
-//! # Integration seams
 //!
 //! The CONTRIBUTION commit (`crate::service::contribution`) calls
 //! this chapter and storage directly: the EHR-existence gate is

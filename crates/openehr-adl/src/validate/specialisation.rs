@@ -1,28 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Specialisation topic: a differential child archetype against its flat
-//! parent, plus the two basic-integrity header checks that need the parent
-//! (VACSD/VASID specialisation depth + parent id, VALC language conformance).
+//! A differential child archetype against its flat parent, plus the header
+//! checks that need the parent (VACSD, VASID, VALC).
 //!
-//! Orchestration follows
-//! `docs/specs/openehr/AM/docs/AOM2/master08-validation.adoc` §Phase 2 →
-//! Validate Specialised Definition; the rule texts are in
-//! `master04.5-constraint_model-class_definitions.adoc` §Validity Rules and the
-//! conformance machinery is [`super::conformance`]. Node correspondence uses
-//! path congruence (`ADL2/master09.02` §Path Congruence): a child node id
-//! matches by `codes_conformant`, so a differential path resolves against the
-//! flat parent without a separate id-reduction step.
-//!
-//! The caller ([`super::run_parent_conformance`]) only invokes this with an
-//! available flat parent. The slot- and filler-redefinition half of the walk
-//! lives in [`super::slots`], beside the template-filler checks it shares its
-//! rule texts with.
-//!
-//! `Vunt` (`use_node` RM type validity, `master04.5` §`C_COMPLEX_OBJECT_PROXY`
-//! VUNT L479-480) is NOT raised here: the rule is "according to the reference
-//! model", so it lives in the RM pass ([`super::rm`]) where an [`RmModel`] decides
-//! super-type-hood, exactly as VACSO does.
+//! `AOM2/master08-validation.adoc` §Phase 2 → Validate Specialised Definition,
+//! over [`super::conformance`]. Nodes correspond by path congruence
+//! (`ADL2/master09.02` §Path Congruence). Slots live in [`super::slots`], and
+//! VUNT in [`super::rm`], since an [`RmModel`] decides it.
 
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
@@ -127,13 +112,11 @@ impl<'a> ParentScan<'a> {
         }
     }
 
-    /// VTPNC / VTPIN: second-order tuple conformance of a child node's
-    /// `C_ATTRIBUTE_TUPLE`s to the corresponding flat-parent node's
-    /// ([`tuple_conforms_to`], `master04.5` §`C_SECOND_ORDER` L729-804).
+    /// VTPNC / VTPIN: second-order tuple conformance to the flat parent
+    /// ([`tuple_conforms_to`], `master04.5` §`C_SECOND_ORDER`).
     ///
-    /// NOTE: `master08` §Phase 2 glosses neither code, so the split is ours —
-    /// VTPIN for a tuple the conformance functions cannot compare, VTPNC for a
-    /// comparable tuple they refuse.
+    /// NOTE: `master08` §Phase 2 glosses neither code: our own split, VTPIN for an
+    /// incomparable tuple, VTPNC for a comparable one refused.
     fn check_attribute_tuples(
         &mut self,
         child_obj: &'a CComplexObject,
@@ -211,13 +194,8 @@ impl<'a> ParentScan<'a> {
         self.check_redefined_children(attr, parent_attr, &owner_rm, &attr_path);
     }
 
-    /// Resolve the parent object a child attribute redefines within, together
-    /// with its reference-model type name.
-    ///
-    /// The owner is the current parent object, or the object a differential
-    /// path reaches from it (AOM2 `C_ATTRIBUTE.path` is relative to the owning
-    /// `C_OBJECT`). `None` records VDIFP — a differential path must exist in
-    /// the flat parent (`master04.5` §`C_ATTRIBUTE`, VDIFP L139-140).
+    /// Resolve the parent object a child attribute redefines within, with its RM
+    /// type; `None` records VDIFP (`master04.5` §`C_ATTRIBUTE`).
     fn resolve_owner(
         &mut self,
         attr: &'a CAttribute,
@@ -243,11 +221,8 @@ impl<'a> ParentScan<'a> {
         None
     }
 
-    /// Check a child attribute the flat parent's owning object does not declare.
-    ///
-    /// A differential path whose leaf attribute is absent is VDIFP; otherwise
-    /// the attribute is a brand-new one (ADD), so every child object is a new
-    /// node.
+    /// Check a child attribute the flat parent's owning object does not declare:
+    /// VDIFP for a differential path, else a new attribute of new nodes.
     fn check_absent_parent_attribute(&mut self, attr: &'a CAttribute, attr_path: &str) {
         if attr.differential_path.is_some() {
             push_issue(
@@ -266,11 +241,8 @@ impl<'a> ParentScan<'a> {
         }
     }
 
-    /// Pair each child object of a redefined attribute with its flat-parent node.
-    ///
-    /// A child matches a congruent parent node — or, for a primitive leaf with
-    /// no node id, the parent attribute's same-type leaf; anything unmatched is
-    /// a newly added node.
+    /// Pair each child object of a redefined attribute with its congruent parent
+    /// node (or same-type primitive leaf); the rest are new nodes.
     fn check_redefined_children(
         &mut self,
         attr: &'a CAttribute,
@@ -297,14 +269,11 @@ impl<'a> ParentScan<'a> {
         parent_attr: &'a CAttribute,
         child_path: &str,
     ) {
-        // VSONIF: a new object node added to a container attribute that already
-        // carries identified flattened siblings must itself be identified, so it
-        // is distinguishable from those siblings (`master04.5` §`C_OBJECT`,
-        // VSONIF L356-357).
+        // VSONIF (`master04.5` §`C_OBJECT`): a new node beside identified siblings must
+        // be identified.
         //
-        // NOTE: master04.5 defers VSONIF's detailed rule to VACMI, which no
-        // vendored spec text defines; the decidable identification requirement
-        // is what this implements.
+        // NOTE: master04.5 defers VSONIF to VACMI, which no vendored text defines; the
+        // identification requirement is what this implements.
         if object_node_id(child).is_empty()
             && !aom_type(child).is_primitive()
             && parent_attr
@@ -323,13 +292,8 @@ impl<'a> ParentScan<'a> {
         self.check_new_object(child, child_path);
     }
 
-    /// The existence, cardinality and multiplicity conformance of a redefined
-    /// attribute to its flat parent (`master04.5` §`C_ATTRIBUTE`: VSANCE
-    /// L142-143, VSANCC L171-172, VSAM L145-146).
-    ///
-    /// A restated cardinality makes the attribute a container, so a
-    /// single-valued reference-model attribute given one is a multiplicity
-    /// mismatch.
+    /// Existence, cardinality and multiplicity conformance of a redefined
+    /// attribute (`master04.5` §`C_ATTRIBUTE`: VSANCE, VSANCC, VSAM).
     fn check_attribute_multiplicity(
         &mut self,
         attr: &CAttribute,
@@ -366,12 +330,8 @@ impl<'a> ParentScan<'a> {
         }
     }
 
-    /// The prohibition (`occurrences {0}`) rules — `master04.5` §`C_OBJECT`
-    /// VSONPT L382 / VSONPI L385.
-    ///
-    /// VSONPT: a prohibition is only valid where the matching parent node is
-    /// the same AOM type. VSONPI: a prohibited redefinition must carry exactly
-    /// the parent node id.
+    /// The prohibition rules (`master04.5` §`C_OBJECT`): VSONPT needs the same AOM
+    /// type, VSONPI exactly the parent node id.
     fn check_prohibited_redefinition(&mut self, child: &CObject, parent: &CObject, path: &str) {
         if aom_type(child) != aom_type(parent) {
             push_issue(
@@ -417,12 +377,8 @@ impl<'a> ParentScan<'a> {
             return;
         }
 
-        // VCORMT (`master04.5` §`C_OBJECT` L327-328): a `C_TERMINOLOGY_CODE` parent
-        // leaf is a CODE_PHRASE-typed node; it cannot be redefined by a
-        // non-terminology primitive (a C_STRING/C_INTEGER/… constrains a foundation
-        // type that cannot conform to CODE_PHRASE). This is a reference-model type
-        // non-conformance (VCORMT), more fundamental than the meta-type change the
-        // shape would otherwise read as (VSONT), so it is checked first.
+        // VCORMT (`master04.5` §`C_OBJECT`): a CODE_PHRASE leaf cannot become a
+        // non-terminology primitive; checked before VSONT.
         if matches!(parent, CObject::CTerminologyCode(_))
             && aom_type(child).is_primitive()
             && !matches!(child, CObject::CTerminologyCode(_))
@@ -480,12 +436,8 @@ impl<'a> ParentScan<'a> {
         }
     }
 
-    /// Leaf value redefinition (VPOV / VUNK) for a primitive node pair.
-    ///
-    /// A terminology-code leaf pair is compared with value-set expansion
-    /// against the flattened terminologies (`master04.5` §`C_TERMINOLOGY_NODE`
-    /// L663-699), which `c_value_conforms_to` cannot see; every other
-    /// primitive leaf uses the terminology-agnostic conformance.
+    /// Leaf value redefinition (VPOV / VUNK) for a primitive node pair; terminology
+    /// codes compare with value-set expansion (`master04.5` §`C_TERMINOLOGY_NODE`).
     fn check_leaf_value_redefinition(&mut self, child: &CObject, parent: &CObject, path: &str) {
         if let (CObject::CTerminologyCode(c), CObject::CTerminologyCode(p)) = (child, parent) {
             self.check_terminology_leaf(c, p, path);
@@ -509,18 +461,11 @@ impl<'a> ParentScan<'a> {
     }
 
     /// VPOV: `C_TERMINOLOGY_CODE` leaf value conformance with value-set expansion
-    /// against the flattened terminologies (`master04.5` §`C_TERMINOLOGY_NODE`
-    /// `c_value_conforms_to` L663-699):
+    /// (`master04.5` §`C_TERMINOLOGY_NODE` `c_value_conforms_to`).
     ///
-    /// * parent `any_allowed` (empty constraint) ⇒ conforms;
-    /// * `constraint_status` ordering: child status must be ≤ parent status
-    ///   (required 0 < extensible 1 < preferred 2 < example 3);
-    /// * a non-required parent (status > 0) imposes no real constraint ⇒ conforms;
-    /// * both required: lexical `codes_conformant` AND — when the parent code is a
-    ///   value-set (`ac-code`) with a non-empty expansion — every child value-set
-    ///   member must be a member of the parent value-set (`value_set_expanded`
-    ///   subset). A value-set that adds a member absent from the parent's expansion
-    ///   is a VPOV.
+    /// A child's status must not exceed the parent's; a non-required parent
+    /// constrains nothing; two required codes must be `codes_conformant`, and a
+    /// child value set must be a subset of the parent's expansion.
     fn check_terminology_leaf(
         &mut self,
         child: &CTerminologyCode,
@@ -592,13 +537,8 @@ impl<'a> ParentScan<'a> {
         vec![code.to_owned()]
     }
 
-    /// VCORMT / VSONCT: the RM type of a redefined object node.
-    ///
-    /// VCORMT (`master04.5` §`C_OBJECT` L327-328): the object type must conform to
-    /// the type stated in the RM of its owning attribute. VSONCT (§`C_OBJECT`
-    /// VSONCT L344-345): the object type must conform to the parent node's
-    /// (possibly-narrowed) RM type. VCORMT is the more fundamental failure and is
-    /// checked first.
+    /// VCORMT, then VSONCT: the redefined node's type conforms to its attribute's
+    /// RM type and to the parent node's type (`master04.5` §`C_OBJECT`).
     fn check_rm_type_conformance(
         &mut self,
         child: &'a CObject,
@@ -743,13 +683,8 @@ impl<'a> ParentScan<'a> {
         }
     }
 
-    /// A brand-new child node (no congruent parent) — `master04.5` §`C_OBJECT`
-    /// VSONIN L354 / VSONPO L388.
-    ///
-    /// Primitive leaf nodes (`C_PRIMITIVE_OBJECT` descendants) carry synthetic
-    /// node ids, not the real object-node identifiers VSONIN/VSONPO govern, so
-    /// they are exempt — a retyped node (e.g. `DV_TEXT`→`DV_CODED_TEXT`) may add
-    /// value-constraint leaves that have no parent counterpart.
+    /// A new child node (`master04.5` §`C_OBJECT` VSONIN, VSONPO); primitive leaves,
+    /// whose node ids are synthetic, are exempt.
     fn check_new_object(&mut self, child: &'a CObject, path: &str) {
         if aom_type(child).is_primitive() {
             return;
@@ -853,11 +788,8 @@ fn pair_primitive_leaf<'a>(parent_attr: &'a CAttribute, child: &CObject) -> Opti
     {
         return Some(same);
     }
-    // No same-type parent leaf: a *type-changing* leaf redefinition (e.g. a
-    // C_STRING replacing a parent C_TERMINOLOGY_CODE). Pair with the parent
-    // attribute's sole primitive leaf (a single-valued primitive attribute holds
-    // exactly one), so the type mismatch is detected (VCORMT / VSONT) rather than
-    // mistaken for a brand-new node.
+    // A type-changing leaf redefinition pairs with the parent attribute's sole
+    // primitive leaf, so VCORMT / VSONT fire.
     let mut prims = parent_attr
         .children
         .iter()
@@ -891,11 +823,8 @@ fn full_attr_path(base: &str, diff: &str, name: &str) -> String {
 
 // ── the parent-dependent phase-1 header checks (VACSD / VASID / VALC) ─────
 
-/// VACSD: the specialisation depth of the archetype must be one greater than
-/// the parent's (master03 §Validity Rules). A non-specialised archetype must be
-/// at depth 0; a specialised one needs its parent's depth (via `repo`).
-/// VASID: the parent id in the `specialise` clause must be the immediate
-/// parent's id (master03 §Validity Rules).
+/// VACSD: the specialisation depth is one more than the parent's; VASID: the
+/// `specialise` id is the immediate parent's (master03 §Validity Rules).
 pub(super) fn check_specialisation_depth(
     v: &ArchetypeView<'_>,
     repo: Option<&ArchetypeRepository>,
@@ -965,17 +894,10 @@ pub(super) fn check_specialisation_depth(
     }
 }
 
-/// VALC: the languages of a specialised archetype must be the same as or a
-/// subset of the flat parent's (master03 §Validity Rules).
+/// VALC: a specialised archetype's languages are a subset of the flat parent's
+/// (master03 §Validity Rules; `ADL2/master09.02` §Differential and Flat Forms).
 ///
-/// The reference is the **flattened** parent's language set (`ADL2/master09.02`
-/// §Differential and Flat Forms — a specialised archetype conforms to its flat
-/// parent, which accumulates the whole lineage's languages). Using the parent's
-/// own (un-flattened) languages would false-reject a child language inherited by
-/// the parent from further up the lineage; flattening the parent avoids that.
-/// The flat parent is obtained via [`crate::flatten::flat_form`]; if it cannot
-/// be built (a lineage parent is missing), the check falls back to the declared
-/// parent's own languages (never firing on an inherited language it cannot see).
+/// Without a buildable flat parent the declared parent's own languages are used.
 pub(super) fn check_language_conformance(
     v: &ArchetypeView<'_>,
     repo: Option<&ArchetypeRepository>,
@@ -1009,13 +931,7 @@ mod tests {
     use crate::parse::Dialect;
     use crate::validate::rm::ProductionRmModel;
 
-    /// The parent CLUSTER for the hand-written specialisation cases (level 0 —
-    /// its own flat form). It carries: `id2` a single-occurrence `ELEMENT` whose
-    /// `value` is a `DV_QUANTITY`; `id4` a multiple-occurrence `ELEMENT` with a
-    /// `DV_TEXT` value-list leaf; an open slot `id6` whose one `include` is a
-    /// readable archetype-id regex; an open slot `id9` whose `include` is a
-    /// literal-value constraint the regex reading cannot express; and a closed
-    /// slot `id8`.
+    /// The level-0 parent CLUSTER for the hand-written specialisation cases.
     const PARENT: &str = "\
 archetype (adl_version=2.0.5; rm_release=1.0.2)
 \topenEHR-EHR-CLUSTER.p2_parent.v1.0.0
@@ -1225,11 +1141,8 @@ terminology
 
     #[test]
     fn vdssm_widening_literal_after_a_non_regex_include_is_still_caught() {
-        // A slot's admitted set is the union over its `include` assertions
-        // (`ADL2/master04.3` §Archetype Slots), so each is judged on its own: the
-        // first include's constraint is a literal value the regex reading cannot
-        // express (undecidable, skipped), and the second still widens the parent
-        // slot (`master04.5` §`ARCHETYPE_SLOT`, VDSSM).
+        // A slot admits the union of its includes (`ADL2/master04.3` §Archetype
+        // Slots); the second include widens the parent (VDSSM).
         assert_raises(
             "\t\t/items matches { allow_archetype CLUSTER[id6] matches {\n\
              \t\t\tinclude\n\t\t\t\tarchetype_id/value matches {\"openEHR-EHR-CLUSTER.qux.v1\"}\n\
@@ -1327,9 +1240,7 @@ terminology
 
     // ── second-order tuple conformance (master04.5 §C_SECOND_ORDER) ───────
     //
-    // The vendored ADL2 regression corpus carries no VTPNC/VTPIN case
-    // (`tests/corpus/INVENTORY.md` lists both as uncovered), so these
-    // hand-written fixtures are the coverage for the two codes.
+    // The vendored corpus has no VTPNC/VTPIN case, so these fixtures cover them.
 
     /// The tuple parent: `ELEMENT[id2]`'s `DV_QUANTITY[id3]` carries the
     /// two-row `[magnitude, units]` tuple of `ADL2/master09.05` §Tuple
@@ -1417,11 +1328,8 @@ terminology
 
     #[test]
     fn tuple_over_an_unconstrained_parent_node_conforms() {
-        // `DV_QUANTITY[id5]` carries no tuple, so a child tuple there is a new
-        // second-order constraint. `master04.5` §`C_SECOND_ORDER` defines
-        // conformance only against a corresponding parent tuple and no released
-        // text condemns adding one — this is an accepted boundary, not a
-        // refusal.
+        // A child tuple where the parent has none is a new constraint, which
+        // `master04.5` §`C_SECOND_ORDER` does not condemn.
         let raised = tuple_codes(
             "\t\t/items[id4]/value matches { DV_QUANTITY[id5] matches {\n\
              \t\t\t[magnitude, units] matches { [{|>=1.0|}, {\"mm\"}] }\n\t\t} }",

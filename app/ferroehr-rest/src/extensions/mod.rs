@@ -29,8 +29,6 @@
 //! - [`terminology`] — the `/terminology` wire over TERM; ITS-REST defines no
 //!   terminology API, so the operations and the wire shape are our own.
 //! - [`fhir`] — the RESTful-ATNA ITI-81 `AuditEvent` retrieval (IHE ITI-81).
-//!
-//! The ATNA audit middleware is NOT here — it lives at [`crate::system_log`].
 
 pub mod access;
 #[cfg(feature = "fhir")]

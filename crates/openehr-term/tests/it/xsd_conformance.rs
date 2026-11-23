@@ -279,12 +279,8 @@ fn external_terminologies_conform_to_their_xsd() {
 
 #[test]
 fn property_unit_data_conforms_to_property_units_xsd() {
-    // assets/schema/PropertyUnitData.xsd: root PropertyUnits in the
-    // http://tempuri.org/PropertyUnits.xsd namespace; a sequence of
-    // Property* then Unit*; PropertyType requires id (xs:int), Text,
-    // openEHR (xs:int); UnitType requires property_id (xs:int) and Text,
-    // with optional name, conversion (xs:float), coefficient (xs:int),
-    // primary (xs:boolean), UCUM.
+    // The shape `assets/schema/PropertyUnitData.xsd` requires: Property* then
+    // Unit*, with their typed members.
     let doc = roxmltree::Document::parse(PROPERTY_UNITS_XML).expect("well-formed XML");
     let root = doc.root_element();
     assert_eq!(root.tag_name().name(), "PropertyUnits");

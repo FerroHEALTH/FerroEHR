@@ -15,10 +15,6 @@ use crate::{ReportEvent, load_licence};
 
 /// `ferroehr usage-report --print`: assembles the report this instance would
 /// send and prints its exact JSON body to stdout, sending nothing.
-///
-/// Telemetry is not initialised, so stdout carries the JSON alone; the notes
-/// an operator needs go to stderr. The database is read, never written: a
-/// start report on a database with no stored instance id shows a sample id.
 #[expect(
     clippy::print_stdout,
     clippy::print_stderr,

@@ -4,11 +4,6 @@
 //! The DEFINITION component of the platform crate, behind the ITS-REST
 //! Definition API.
 //!
-//! Our own design.
-//!
-//! One file per interface, each carrying its domain logic **and** its
-//! concrete `FerroEhrService` catalog methods:
-//!
 //! - `adl14` — ADL 1.4 source archetypes (keyed by `ARCHETYPE_ID`) and their
 //!   conversion to ADL 2.
 //! - `opt14` — OPT 1.4 operational templates (keyed by `template_id`) and the

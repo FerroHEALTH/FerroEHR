@@ -1,16 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! One repository holding several versions of one archetype, under two major
-//! versions and two namespaces, each reference resolving to its own.
-//!
-//! Oracle: BASE `artefact_identification` `master07-referencing.adoc`
-//! §Referencing. Two major versions of one archetype "denote different
-//! logical archetypes"; an interface reference "will match the latest release
-//! available of that major version"; "a pre-release version is referenced by
-//! its full identifier"; and "a namespace is never a wildcard", a reference
-//! without one denoting "an artefact in the same namespace as the referencing
-//! artefact".
+//! One repository holding several versions of one archetype, each reference
+//! resolving to its own (BASE `master07-referencing.adoc` §Referencing).
 
 #![allow(
     clippy::expect_used,

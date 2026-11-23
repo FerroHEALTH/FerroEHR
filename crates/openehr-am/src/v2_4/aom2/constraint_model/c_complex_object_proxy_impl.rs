@@ -31,10 +31,6 @@ impl CComplexObjectProxy {
     /// since if occurrences defined on proxy node, it is an override of the
     /// occurrences on the target"; against another proxy "normal occurrences
     /// apply", i.e. the `C_OBJECT` rule.
-    ///
-    /// NOTE: that page spells the second case `C_COMPLEX_OBJECT` too, which
-    /// would make both branches the same test; the proxy reading is the one
-    /// its own sentence ("the override is of another use_node") requires.
     #[must_use]
     pub fn occurrences_conforms_to(&self, other: &CObject) -> bool {
         let CObject::CComplexObjectProxy(target) = other else {

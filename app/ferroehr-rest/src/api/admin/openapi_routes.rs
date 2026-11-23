@@ -4,9 +4,6 @@
 //! Native `utoipa-axum` routing for the **Admin API group** — the two released
 //! ITS-REST admin operations plus four of our own extension routes.
 //!
-//! Each `#[utoipa::path]` handler single-sources its route and its `OpenAPI`
-//! path, then calls its operation's handler through [`guarded_dispatch`](crate::api::guarded_dispatch).
-//!
 //! The Admin API is `DEVELOPMENT`-state within ITS-REST Release-1.1.0
 //! (`docs/admin/Description.md` §Status). That is a reporting qualifier only:
 //! the BCP-14 requirement force of the released text is not state-qualified, so
@@ -16,8 +13,6 @@
 //! /admin/ehr/{ehr_id}` and `DELETE /admin/ehr/all{?ehr_id*}`. The other four
 //! routes below are our own extension, governed by no ITS-REST operation and
 //! excluded from any conformance-profile claim.
-//!
-//! What the released responses declare shapes three properties here:
 //!
 //! - No released admin response carries a `headers:` block at all, so none is
 //!   declared. The one response header this group emits is the `Allow` on the
@@ -42,17 +37,9 @@
 //! `Allow` (RFC 9110 §15.5.6) is set explicitly, with the empty field value
 //! §10.2.1 defines for a resource "temporarily disabled by configuration".
 //!
-//! Every released admin operation carries `security: []` and declares no
-//! `401`/`403`, so the branches declared on all six routes are our own design:
-//! everything under `/admin/` is `OperationClass::Admin` to the RBAC gate
-//! ([`crate::extensions::access::authz`]), which runs before the config gate, so
-//! an unauthenticated caller sees `401` and a non-admin principal `403` whether
-//! or not the group is enabled.
-//!
 //! `parameters/query/ehr_id_Admin.yaml` is `explode: true` and optional, so an
-//! absent or empty list means "delete ALL EHRs"; both the repeated form and a
-//! comma-separated single value are accepted, read from the raw query string for
-//! the reason `admin/dispatch.rs` gives.
+//! absent or empty list deletes every EHR; the repeated and the comma-separated
+//! forms are both read from the raw query string.
 //!
 //! NOTE: the generated `admin_ehr_delete_all` route carries an RFC 6570
 //! query-expansion suffix that is not part of the resource path, so the mounted
@@ -92,19 +79,12 @@ pub(crate) fn extension_routes() -> OpenApiRouter<AppState> {
 guarded_handler! {
     /// The redacted effective configuration as a JSON tree (`GET /admin/config`).
     ///
-    /// **Our own extension — no ITS-REST operation governs this.** The released
-    /// Admin API (`specifications/admin.openapi.yaml`) defines exactly two
-    /// operations, both EHR deletes, and no openEHR specification models server
-    /// configuration at all; this route is excluded from any conformance-profile
-    /// claim. Same admin gate as the sibling deletes (`AppConfig::api.admin` →
-    /// `405` when off; RBAC Admin class by the `/admin/` path → `401`
-    /// unauthenticated / `403` non-admin).
+    /// Our own extension: no ITS-REST operation governs this. It is served
+    /// behind the admin gate (`405` when off, `401` or `403` for a caller who
+    /// is not an administrator).
     ///
-    /// Every secret-bearing leaf is redacted STRUCTURALLY by its `Secret` /
-    /// `SecretUrl` type before it ever reaches this handler — the binary builds the
-    /// snapshot once at boot with
-    /// [`ferroehr::config::FerroEhrConfig::to_redacted_json`], so no secret substring
-    /// is present here to leak.
+    /// Every secret-bearing leaf is redacted by its type before the snapshot is
+    /// built.
     #[utoipa::path(
         get, path = "/admin/config", tag = "ADMIN",
         params(
@@ -196,21 +176,10 @@ guarded_handler! {
     /// with applicable data protection regulations (e.g., the GDPR in the European
     /// Union)."
     ///
-    /// "The server may execute this operation asynchronously (e.g. in batches), in
-    /// which case returns status `202 Accepted`. If the deletion is processed
-    /// synchronously and completes successfully, the server returns status `204 No
-    /// Content`." — this server is SYNCHRONOUS, so `204` is the only success and
-    /// the `202` branch is never produced (hence not declared; see the module
-    /// docs).
-    ///
-    /// The released generic `404` (`responses/404.yaml`: "`404 Not Found` is
-    /// returned when, based on the request parameters, the server did not find a
-    /// current representation of a target resource, or is not willing to disclose
-    /// that one exists.") is UNREACHABLE on this server, and is therefore NOT
-    /// declared: the released text defines no trigger for it on a mixed list, and
-    /// the shipped semantics are delete-what-exists → `204` (an id that names no
-    /// EHR deletes nothing and is not an error), with a malformed id rejected `400`
-    /// before any deletion runs.
+    /// This server is SYNCHRONOUS: `204` is the only success, and the released
+    /// asynchronous `202 Accepted` branch is never produced. The generic `404`
+    /// (`responses/404.yaml`) is UNREACHABLE: an id that names no EHR deletes
+    /// nothing, and a malformed id is a `400` before any deletion runs.
     #[utoipa::path(
         delete, path = "/admin/ehr/all", tag = "EHR",
         params(
@@ -312,18 +281,9 @@ guarded_handler! {
     /// with applicable data protection regulations (e.g., the GDPR in the European
     /// Union)."
     ///
-    /// "The server may execute this operation asynchronously (e.g. in batches), in
-    /// which case returns status `202 Accepted`. If the deletion is processed
-    /// synchronously and completes successfully, the server returns status `204 No
-    /// Content`." — this server is SYNCHRONOUS, so `204` is the only success and
-    /// the `202` branch is never produced (hence not declared; see the module
-    /// docs).
-    ///
-    /// An unknown EHR is `ehr_id_does_not_exist`. Note that the
-    /// released operation does NOT carry the bulk route's development/testing NOTE
-    /// and does NOT enumerate `405`: this single-EHR delete is not declared
-    /// disable-in-production by the released text, so the group's config gate
-    /// grounds its `405` on the overview §"HTTP Methods" rule instead.
+    /// This server is SYNCHRONOUS: `204` is the only success, and the released
+    /// asynchronous `202 Accepted` branch is never produced. An unknown EHR is
+    /// `ehr_id_does_not_exist`.
     #[utoipa::path(
         delete, path = "/admin/ehr/{ehr_id}", tag = "EHR",
         params(
@@ -417,20 +377,13 @@ guarded_handler! {
     /// Physically delete one operational template by its `template_id`
     /// (`DELETE /admin/template/{template_id}`).
     ///
-    /// **Our own extension — no ITS-REST operation governs this.** The released
-    /// Admin API (`specifications/admin.openapi.yaml`) defines exactly two
-    /// operations, both EHR deletes; there is no `DELETE` on any
-    /// `/definition/template/adl1.4*` path either. This route is excluded from any
-    /// conformance-profile claim.
+    /// Our own extension: no ITS-REST operation governs this.
     ///
     /// The route is addressed by the wire `template_id` (matched
     /// case-insensitively, overview §"Composite Identifiers and Case").
     ///
-    /// The delete is guarded: it refuses with `409` while any committed version
-    /// still references the template, so a physical delete can never orphan
-    /// committed clinical data (the `version.template_id` foreign key is the
-    /// underlying integrity guard). No openEHR spec governs that guard — our own
-    /// design.
+    /// It refuses with `409` while any committed version references the
+    /// template, so a physical delete never orphans committed clinical data.
     #[utoipa::path(
         delete, path = "/admin/template/{template_id}", tag = "ADMIN",
         params(
@@ -519,11 +472,8 @@ guarded_handler! {
     /// Physically delete one demographic `PARTY` and the `PARTY_RELATIONSHIP`s
     /// that name it (`DELETE /admin/party/{party_id}`).
     ///
-    /// **Our own extension — no ITS-REST operation governs this.** The released
-    /// Admin API (`specifications/admin.openapi.yaml`) defines exactly two
-    /// operations, both EHR deletes; the released Demographic API's `DELETE`s are
-    /// logical (they add a deleted version). This route is excluded from any
-    /// conformance-profile claim.
+    /// Our own extension: no ITS-REST operation governs this; the released
+    /// Demographic API's deletes are logical.
     ///
     /// It physically deletes the party along with its relationships; an unknown
     /// party is `party_id_does_not_exist`. Every version of the party and of each
@@ -610,11 +560,7 @@ guarded_handler! {
     /// Physically delete one stored-query version — a single `(name, version)` row
     /// (`DELETE /admin/query/{qualified_query_name}/{version}`).
     ///
-    /// **Our own extension — no ITS-REST operation governs this.** The released
-    /// Admin API (`specifications/admin.openapi.yaml`) defines exactly two
-    /// operations, both EHR deletes, and the released Definition API has no
-    /// `DELETE` on `/definition/query/…` either. This route is excluded from any
-    /// conformance-profile claim.
+    /// Our own extension: no ITS-REST operation governs this.
     ///
     /// This route removes exactly one `(name, version)` row and leaves the query's
     /// other versions in place.

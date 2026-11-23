@@ -2,21 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Shared application state.
-//!
-//! [`AppState`] is the router state every operation handler in [`crate::api`]
-//! receives. It holds the concrete platform service (`FerroEhrService`)
-//! (no trait objects, no stub backend — the binary monomorphizes it
-//! over the DB-backed `FerroEhrService`). It is cheap to
-//! clone (an `Arc` inside) and carries the configuration, the service `S` the
-//! handlers call into, the optional authorization handle, and the
-//! [`Observability`] bundle (management surface + telemetry handles + health
-//! registry) — which defaults to fully off, so a server without observability
-//! is the clean default. ATNA auditing lives in the platform service `S` (its
-//! `SystemLog` component), reached through `AppState::backend`.
-//!
-//! The REST layer holds **no caches of its own** — in particular, `WebTemplate`
-//! resolution is a single service-owned concern reached through
-//! `ferroehr::service::WebTemplateService`.
 
 use std::sync::Arc;
 
@@ -100,10 +85,8 @@ impl AppState {
 
     /// An owned handle on the service, for work that outlives the handler.
     ///
-    /// A handler that answers with a STREAM returns its response head while
-    /// the work behind the body is still running, so that work cannot borrow
-    /// the state it was called with. Every other dispatcher takes
-    /// [`Self::backend`] instead.
+    /// A stream handler returns its head while the work behind the body still
+    /// runs, so that work cannot borrow the state.
     pub(crate) fn backend_handle(&self) -> Arc<FerroEhrService> {
         Arc::clone(&self.inner.backend)
     }

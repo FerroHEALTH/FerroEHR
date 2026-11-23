@@ -3,10 +3,6 @@
 
 //! A write of a SCIM Group after its creation, and its logical deletion.
 //!
-//! A rename or a change of its `externalId` is one new version of its
-//! `GROUP`, and a change of its members one new version of each member's
-//! `PERSON`.
-//!
 //! "A Version of a `PARTY` includes all the compositional parts, such as
 //! identities, contacts, Party relationships of which it is the source" (RM
 //! demographic `master02-demographic_package.adoc` §Versioning Semantics),

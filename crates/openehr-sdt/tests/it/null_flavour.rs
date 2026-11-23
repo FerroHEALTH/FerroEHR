@@ -3,18 +3,9 @@
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics/fixtures")]
 //! An ELEMENT's `null_flavour` constraint is an attribute of the ELEMENT, never
-//! a value alternative (#5769).
+//! a value alternative (RM `data_structures` §ELEMENT; master05 §ELEMENT).
 //!
-//! RM `data_structures` §ELEMENT gives the ELEMENT `value` and `null_flavour`
-//! as separate attributes (`Inv_null_flavour_indicated`: `is_null() xor
-//! null_flavour = Void`). ITS-REST `simplified_formats` master05 §ELEMENT
-//! addresses the null flavour as `/_null_flavour`, and master04 §"Flat
-//! format" makes an ELEMENT its value ("elements ARE their values"), so an
-//! ELEMENT with one `value` type is promoted to it whatever its `null_flavour`
-//! constraint says. The carrier is `Demonstration.v1`, whose "Boolean"
-//! (`at0016`) constrains `value` to `DV_BOOLEAN` and `null_flavour` to four
-//! openEHR codes, and whose "Choice" (`at0025`) allows `DV_QUANTITY` or
-//! `DV_CODED_TEXT`.
+//! Carrier: `Demonstration.v1`, "Boolean" (`at0016`) and "Choice" (`at0025`).
 
 use openehr_its::opt14;
 use openehr_rm::prelude::Composition;

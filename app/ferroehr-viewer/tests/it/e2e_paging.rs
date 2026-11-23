@@ -121,10 +121,8 @@ async fn create_ehr(http: &reqwest::Client, v1: &str, user: &str, pass: &str) ->
 /// Commit the CDR's own example composition with `composer` and `start_time`
 /// rewritten.
 ///
-/// Every fixture gets a DISTINCT start time on purpose: the tab orders by
-/// `c/context/start_time/value DESC`, and a page window over tied sort keys is
-/// not a stable order — the rows could reshuffle between offsets and the
-/// window-moved assertion would be measuring the database's whim.
+/// Every fixture gets a distinct start time, since a page window over tied sort
+/// keys has no stable order.
 ///
 /// # Panics
 /// When the template has no example or the CDR refuses the commit.

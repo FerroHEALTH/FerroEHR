@@ -1,17 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The typed RM-instance walk (`openehr-rm` `<generation>/validate/tree_generated.rs`):
-//! one `Walk` impl per RM and BASE class, so the template-independent
-//! validation passes of `validate::tree` run over typed RM with no
-//! canonical-JSON value (#6002).
-//!
-//! A struct reports itself as one node (its RM class, its `archetype_node_id`
-//! and `archetype_details` when it is a LOCATABLE, and its coded attributes for
-//! the terminology slots), then visits every attribute that holds an RM or
-//! BASE object, in BMM declaration order, under its wire name. An enum is
-//! transparent: its payload is the node. No
-//! openEHR specification governs the walk: our own design.
+//! The typed RM-instance walk (`validate/tree_generated.rs`, #6002): one
+//! `Walk` impl per RM and BASE class, visiting object attributes in BMM order;
+//! an enum is transparent. No openEHR specification governs the walk: our own
+//! design.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;

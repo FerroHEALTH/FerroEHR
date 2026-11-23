@@ -41,8 +41,6 @@ pub(crate) fn token_attributes(principal: &Principal) -> Option<TokenAttributes>
 /// use the access token, which states purposes, does not state; `None` when
 /// the token states none, the header is absent, or the token states the
 /// header's.
-///
-/// The refusal names the caller, so its failed-authentication record does.
 pub(super) fn mismatch(
     layer: &AuthLayer,
     principal: &Principal,

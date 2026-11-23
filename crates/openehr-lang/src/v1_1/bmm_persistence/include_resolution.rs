@@ -37,17 +37,6 @@ use crate::v1_1::bmm_persistence::p_bmm_schema::PBmmSchema;
 /// Resolve `root`'s inclusions against `loaded`, returning one self-contained
 /// schema.
 ///
-/// `loaded` supplies every schema that may be included. Its map KEY is only a
-/// caller-side label: resolution indexes each value by its own
-/// [`PBmmSchema::schema_id`], which renders lower-cased, and matches a
-/// `BMM_INCLUDE_SPEC.id` against it lower-cased too — the vendored schemas write
-/// include ids in either case. Resolution is transitive (an included schema's own
-/// includes are resolved first) and cycle-safe.
-///
-/// The returned schema keeps `root`'s header attributes and its `includes`
-/// record verbatim: `includes` is a persisted attribute stating what the root
-/// schema declares, not a work list to be consumed.
-///
 /// # Errors
 /// Returns [`PBmmReadError::MissingInclude`] when a declared include is not in
 /// `loaded`, [`PBmmReadError::IncludeCycle`] when the inclusion graph is cyclic,

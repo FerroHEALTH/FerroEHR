@@ -28,13 +28,6 @@ fn is_outage(error: &AcquireError) -> bool {
 
 /// A loopback port that stands for a database which is down until the
 /// returned switch is set, and up from then on, with the task holding it.
-///
-/// While the switch is clear, every connection is accepted and reset at once
-/// (`SO_LINGER` 0), which every platform reports to the client as a reset; a
-/// bound socket that does not listen is refused on Linux but left unanswered
-/// on macOS. Once the switch is set, every connection is forwarded to the
-/// database at `target`. The listener holds the port throughout, so no
-/// parallel test's server can take it between the outage and the return.
 async fn outage_port(target: String) -> (Arc<AtomicBool>, JoinHandle<()>, u16) {
     let listener = TcpListener::bind("127.0.0.1:0")
         .await

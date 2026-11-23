@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Ingress overload-shedding tests, driven through the fully assembled router
-//! over the **real** `FerroEhrService` (the scripted `Mock`/parking
-//! hook is gone).
+//! over the real `FerroEhrService`.
 //!
 //! No openEHR spec governs server overload — this is our own design (RFC 9110
 //! §15.6.4 for the `503` status). These tests exercise the real router stack
@@ -11,22 +10,10 @@
 //! max_concurrent_requests`) over every FerroEHR route, never the health
 //! routes.
 //!
-//! Reproducing real contention without the removed in-handler hook: a request
-//! whose handler buffers a **never-ending request body**
-//! (`futures::stream::pending`) parks inside the API permit (the body is read
-//! while the concurrency permit is held), so a further request to the **same
-//! route** is shed. (The parked requests and the shed probe target the same
-//! operation, `POST …/composition`, whose handler reads the body.) The per-request timeout
-//! (30 s) is far longer than the probe window, and the parked tasks are aborted
-//! at the end of each test, so no permit leaks.
-//!
-//! * beyond the `max_concurrent_requests` bound, an API request waits at
-//!   most `admission_wait` (100 ms) for a slot, then is shed with
-//!   `503 Service Unavailable` + `Retry-After: 1` and the problem details;
-//! * with the defaults the bound is on at 256: the request past it is shed,
-//!   so what the server holds stays bounded;
-//! * the health routes are outside the bound and are never shed, even while
-//!   the bound is fully taken.
+//! A request whose handler buffers a never-ending body
+//! (`futures::stream::pending`) parks inside the permit, so a further request
+//! to the same route is shed; the parked tasks are aborted at the end of each
+//! test.
 use std::num::NonZeroUsize;
 use std::time::Duration;
 

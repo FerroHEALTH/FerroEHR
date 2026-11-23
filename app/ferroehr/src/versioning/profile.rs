@@ -26,10 +26,6 @@ use crate::versioning::Kind;
 
 /// Reads `canonical` with the RELEASED (`stable` profile) generation's strict
 /// reader, returning its refusal.
-///
-/// `Ok(())` means the released generations can express the stored body. The
-/// released and development generations differ only in the surface each
-/// declares, so this is exactly the question the profile boundary asks.
 fn read_as_released(
     kind: Kind,
     canonical: &Value,
@@ -112,12 +108,9 @@ fn refuse(
 /// The read-time profile gate: refuses a stored version body the ACTIVE profile
 /// cannot express, and passes everything else through untouched.
 ///
-/// `stamp` is the stored `version.stable_compatible`: `Some` from the
-/// commit-time assessment, `None` for a row nothing stamped (committed before
-/// the column existed, or written by a verbatim-replay path — the EHR-Extract
-/// import and the archive load). A `None` row is assessed on the fly with the
-/// same reader, without writing the answer back: a read stays a read, and the
-/// cost lands only on pre-stamp rows under the non-default profile.
+/// `stamp` is the stored `version.stable_compatible`, `None` for a row a
+/// verbatim-replay path wrote (the EHR-Extract import and the archive load),
+/// which is assessed on the fly without writing the answer back.
 ///
 /// # Errors
 /// A `409`-class [`ServiceError::Conflict`] naming the profile, the version and
@@ -158,11 +151,6 @@ pub(crate) fn gate(
 /// Scalar and leaf cells are not gated: they serve data values over paths the
 /// planning gate already bounded to the active generation's declared surface
 /// (`crate::aql::analyze`).
-///
-/// Cost under the default `development` profile is zero, the first line
-/// returning. Under `stable` it is one key-lookup statement over the page's
-/// distinct `(vo_id, sys_version)` pairs returning only versions not stamped
-/// compatible, plus one batched body load for any it returns.
 ///
 /// # Errors
 /// The `409`-class [`ServiceError::Conflict`] of [`refuse`], naming the first
@@ -421,8 +409,7 @@ mod tests {
         assert!(err.message.contains("development"), "{}", err.message);
     }
 
-    /// An unstamped (`NULL`) legacy row is assessed on the fly, in both
-    /// directions.
+    /// An unstamped (`NULL`) row is assessed on the fly, in both directions.
     #[test]
     fn a_null_stamp_is_assessed_on_the_fly() -> Result<(), ServiceError> {
         gate(

@@ -11,12 +11,6 @@
 //! Spec grounding: ITS-REST `operations/admin_ehr_delete.yaml` and the CNF Robot
 //! prior art (`CNF/tests/platform/robot/I_ADMIN_SERVICE/001-EHR.robot`:
 //! `DELETE /admin/ehr/{ehr_id}` → `204`).
-//!
-//! The former `Mock` backend's call-counter/recorder assertions (proving the
-//! backend was/was-not consulted) are re-targeted to real observation: the EHRs
-//! are created through the wire and their subsequent existence (`GET /ehr/{id}`
-//! → `200` vs `404`) proves whether the delete reached the backend and took
-//! effect.
 use axum::Router;
 use http::{StatusCode, header};
 
@@ -143,10 +137,8 @@ async fn enabled_delete_all_is_204_bodyless() {
 
 #[tokio::test]
 async fn enabled_delete_all_repeated_param_reaches_backend_with_both_ids() {
-    // The repeated `?ehr_id=` form is surfaced from the raw query (the generated
-    // Option<String> param would otherwise keep only the first). RE-TARGET (was
-    // a recorder of the ids handed to the mock): both EHRs being deleted proves
-    // the RFC 6570 `{?ehr_id*}` list handling passed both ids to the backend.
+    // The repeated `?ehr_id=` form is read from the raw query, so both EHRs
+    // being deleted proves the RFC 6570 `{?ehr_id*}` list reached the backend.
     let (_pg, app) = common::app(common::api_config(true)).await;
     let a = common::create_ehr(&app).await;
     let b = common::create_ehr(&app).await;

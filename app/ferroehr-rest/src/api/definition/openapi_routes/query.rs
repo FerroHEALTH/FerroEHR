@@ -10,16 +10,10 @@ use crate::api::guarded_handler;
 guarded_handler! {
     /// List every stored query (`GET /definition/query`).
     ///
-    /// OUR OWN EXTENSION — no openEHR spec governs this bare form. The release
-    /// defines exactly one stored-query list operation,
-    /// `GET /definition/query/{qualified_query_name}`
-    /// (`specifications/operations/definition_query_list.yaml`), whose path
-    /// parameter is `required: true`
-    /// (`specifications/parameters/path/qualified_query_name.yaml`) — so that
-    /// operation's "when is empty, it will be treated as 'wildcard' in the search"
-    /// clause has no addressable form on the released wire. This route serves the
-    /// empty-prefix case as a convenience extension; it answers exactly what the
-    /// released list answers for the empty prefix.
+    /// Our own extension: the released list operation
+    /// (`specifications/operations/definition_query_list.yaml`) requires its
+    /// path parameter, so this route serves its empty-prefix case and answers
+    /// what that list would.
     #[utoipa::path(
         get, path = "/definition/query", tag = "Query",
         params(
@@ -91,8 +85,8 @@ guarded_handler! {
     /// (`GET /definition/query/{qualified_query_name}`).
     ///
     /// The name is a pattern (`[{namespace}::]{query-name}`, an empty part a
-    /// wildcard, a bare name a prefix), so an unmatched
-    /// name yields an empty `200` list, never `404` (see the module doc).
+    /// wildcard, a bare name a prefix), so an unmatched name yields an empty
+    /// `200` list, never `404`.
     #[utoipa::path(
         get, path = "/definition/query/{qualified_query_name}", tag = "Query",
         params(

@@ -7,14 +7,12 @@
 # (issue #1886; procedure: .claude/rules/changelog.md §Publishing the
 # openehr-* crates).
 #
-# DISPATCH ONLY, and no longer the primary path (#2836). A release publishes the
-# crates as an approval-gated `needs`-ordered leg of release.yml, which owns the
-# `v*` tag end to end — that is what stops a cut from shipping with the spec
-# crates stepped and unpublished, which is what happened to v4.0.6 while this
-# lane was the only route. This file remains the BETWEEN-RELEASES lane: the
-# dry run that rehearses a publish against the current tree, and the recovery
-# path when a release's crates leg fails (re-running it here finishes the set,
-# because "already exists" counts as done).
+# DISPATCH ONLY (#2836). A release publishes the crates as an
+# approval-gated `needs`-ordered leg of release.yml, which owns the `v*` tag
+# end to end. This file is the BETWEEN-RELEASES lane: the dry run that
+# rehearses a publish against the current tree, and the recovery path when a
+# release's crates leg fails (re-running it here finishes the set, because
+# "already exists" counts as done).
 #
 #   - The lockstep version is set HERE, never in a pull request (#4555):
 #     `publish-crates.sh plan` reads crates.io and the commit its newest

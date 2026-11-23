@@ -4,9 +4,6 @@
 //! The coarse authorization class of an operation, as the operation table
 //! (`crate::api::operation`) records it per id.
 //!
-//! Every generated operation is explicitly classified; one without a row fails
-//! the total-coverage guard tests below.
-//!
 //! Only the two `admin_*` operations are [`OperationClass::Admin`]; every other
 //! generated route is [`OperationClass::Clinical`], requiring any authenticated
 //! principal with a role. [`OperationClass::Public`] classifies the non-generated

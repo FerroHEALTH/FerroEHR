@@ -1,24 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Builder-capture tests for the leaf content constraints the `WebTemplate`
-//! validation walk enforces at commit time, exercised end-to-end from the
-//! vendored CNF content-constraint OPTs (`corpus/
-//! templates/`): parse the OPT (`openehr_its::opt14`) → build the `WebTemplate`
-//! → assert the leaf node carries the validation-only constraint the walk needs.
-//!
-//! These pin the builder half of three enforcement rules whose leaf-logic half
-//! is unit-tested in `validation_rules.rs`:
-//!
-//! * `C_DV_QUANTITY.property` (AOM 1.4
-//!   `AM/docs/UML/classes/org.openehr.am.aom14.c_quantity.adoc` §`C_QUANTITY`)
-//!   → [`WebTemplateNode::quantity_property`];
-//! * an explicit-`local` closed `C_CODE_PHRASE` (AOM 1.4
-//!   `AM/docs/UML/classes/org.openehr.am.aom14.c_coded_text.adoc`
-//!   §`C_CODED_TEXT`) → [`WebTemplateNode::coded_terminology_local`];
-//! * a `CONSTRAINT_REF` with no local binding constrains nothing enforceable at
-//!   commit time (`AM/docs/AOM1.4/master04-constraint_model_package.adoc`
-//!   §Reference Objects) → NO leaf constraint captured.
+//! The `WebTemplate` builder captures the leaf content constraints the
+//! validation walk enforces: `C_DV_QUANTITY.property`, an explicit-`local`
+//! closed `C_CODE_PHRASE`, and nothing for an unbound `CONSTRAINT_REF` (AOM 1.4
+//! `c_quantity.adoc`, `c_coded_text.adoc`, §Reference Objects).
 
 #![expect(clippy::panic, reason = "test assertions/diagnostics")]
 
@@ -74,10 +60,7 @@ fn c_dv_quantity_property_captured() {
 
 #[test]
 fn c_code_phrase_explicit_local_captured() {
-    // `dt_coded_text_c_code_phrase.opt` carries two C_CODE_PHRASE constraints:
-    // the COMPOSITION `category` (terminology=openehr, code_list=[433]) and the
-    // content ELEMENT value (terminology=local, code_list=[ABC,OPQ]). Only the
-    // explicit-local one must flag `coded_terminology_local`.
+    // Only the explicit-local C_CODE_PHRASE flags `coded_terminology_local`.
     let tree = build("dt_coded_text_c_code_phrase.opt");
     let mut coded = Vec::new();
     all_by_rm(&tree, "DV_CODED_TEXT", &mut coded);
@@ -100,11 +83,7 @@ fn c_code_phrase_explicit_local_captured() {
 
 #[test]
 fn constraint_ref_captures_no_leaf_constraint() {
-    // `dt_coded_text_constraint_ref.opt`: CONSTRAINT_REF ac0001 with no
-    // constraint_binding. AOM 1.4 defines no accept/reject rule for an unbound
-    // CONSTRAINT_REF at data-validation time, and it resolves to an external
-    // terminology query, not a local list — so no leaf constraint is captured
-    // and any well-formed CODE_PHRASE is admitted (documented no-op).
+    // An unbound CONSTRAINT_REF captures no leaf constraint.
     let tree = build("dt_coded_text_constraint_ref.opt");
     let mut coded = Vec::new();
     all_by_rm(&tree, "DV_CODED_TEXT", &mut coded);

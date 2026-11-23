@@ -5,12 +5,6 @@
 //! The RM readers' one nesting limit (#5997), on the smallest stack an
 //! RM-reading thread runs on.
 //!
-//! A document nested exactly [`MAX_RM_NESTING`] RM objects deep reads on a
-//! thread of [`MIN_RM_READ_STACK_BYTES`], in canonical JSON and canonical XML,
-//! and one more level is refused with the nesting diagnostic. The test runs
-//! in whichever profile the suite is built in, so a release build and a debug
-//! build each prove the limit fits that stack.
-//!
 //! No openEHR spec bounds document nesting: our own design.
 
 #![expect(

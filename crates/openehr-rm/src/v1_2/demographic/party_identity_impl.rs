@@ -2,23 +2,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM spec functions for `PARTY_IDENTITY`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party_identity.adoc`
-//! §Functions + §Invariants.
+//! `PARTY_IDENTITY.purpose` (`org.openehr.rm.demographic.party_identity.adoc`).
 
 use crate::v1_2::data_types::text::dv_text::DvText;
 use crate::v1_2::demographic::party_identity::PartyIdentity;
 
 impl PartyIdentity {
-    /// Returns the purpose of this identity, e.g. legal name or nickname.
-    ///
-    /// Spec: `org.openehr.rm.demographic.party_identity.adoc` §Functions
-    /// `purpose` — "Purpose of identity, e.g. legal, stagename, nickname,
-    /// tribal name, trading name. Taken from value of inherited `name`
-    /// attribute", with §Invariants `Purpose_valid: purpose = name` making the
-    /// identity exact.
+    /// The purpose of this identity: its `name` (`Purpose_valid: purpose = name`).
     #[must_use]
     pub fn purpose(&self) -> &DvText {
         &self.name

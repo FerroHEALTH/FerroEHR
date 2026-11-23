@@ -3,51 +3,14 @@
 
 //! The master05 table-by-table battery: one semantic assertion per mapping-table row.
 //!
-//! Oracle: `docs/specs/openehr/ITS-REST/docs/simplified_formats/master05-rm_mapping.adoc`
-//! (STABLE) — 45 sections, 43 of which carry a five-column mapping table
-//! (`Flat Path` | `Flat type` | `RM Path` | `Required` | `Note`), 236 rows in
-//! total. `master04-basic_concepts.adoc` supplies the surrounding syntax
-//! (field identifiers, `_`-prefixed RM attributes, `|other`, level removal)
-//! and `master06-context_information.adoc` the `ctx/` vocabulary.
+//! Oracle: `ITS-REST/docs/simplified_formats/master05-rm_mapping.adoc`. Each row
+//! builds a minimal RM value, flattens it through
+//! [`openehr_sdt::flat::convert::composition_to_flat`], and asserts the row's
+//! Flat Path carries a datum of its Flat type.
 //!
-//! **What this file adds over `spec_vectors.rs`.** That file checks the spec's
-//! example blocks for *syntax* and FLAT⇄STRUCTURED stability: it never builds
-//! an RM value, so it cannot see whether a row's `RM Path` is actually wired
-//! to its `Flat Path`, nor whether the emitted datum has the row's `Flat type`.
-//! This battery does exactly that, per row: it constructs a minimal
-//! canonical-JSON RM value carrying the row's RM attribute, runs the real
-//! template-driven flattener through the public
-//! [`openehr_sdt::flat::convert::composition_to_flat`] seam, and asserts the
-//! row's Flat Path appears carrying a datum of the row's Flat type.
-//!
-//! Two divergences it was written to catch (both would fail against the
-//! pre-fix code, and neither is visible to a syntax-only gate):
-//!
-//! * master05 §INSTRUCTION_DETAILS — the three flat suffixes are `|path`,
-//!   `|composition_uid` and `|activity_id` **on the `_instruction_details`
-//!   node itself**. The emitter previously produced a nested `instruction_id`
-//!   child carrying OBJECT_REF suffixes, so `|composition_uid` never existed
-//!   and `|path` sat a level too deep.
-//! * master05 §INTERVAL_EVENT — `|sample_count` (INTEGER) was neither emitted
-//!   nor consumed.
-//!
-//! **Honesty rules for this file** (a row is never quietly dropped):
-//!
-//! * [`Check::At`] — the row is emitted at its table path; assert key + type.
-//! * [`Check::Elsewhere`] — the datum is emitted at a *different* FLAT key for
-//!   a spec-cited reason (the master06 `ctx/` shortcut, or a spelling the
-//!   section's own example block fixes). Assert the table path is absent and
-//!   the real key present.
-//! * [`Check::Absent`] — the datum has no FLAT surface at all: a spec-declared
-//!   hole, an editorial defect naming an RM attribute that does not exist, or
-//!   an implementation gap carrying a `TODO` at its use site. Assert the
-//!   absence, so the record fails loudly the day the datum starts emitting.
-//! * Every row records its `Required` column verbatim; a required row MUST
-//!   also say where the requirement is enforced (the flat build rejects, an
-//!   RM-mandatory fill supplies it, or nothing can enforce it). That is
-//!   asserted structurally in [`check`] — a new required row cannot be added
-//!   without stating its enforcement. Where the flat build genuinely rejects,
-//!   the section test carries the negative assertion as well.
+//! [`Check::At`] asserts the table path; [`Check::Elsewhere`] a spec-cited other
+//! key; [`Check::Absent`] no FLAT surface. A required row states where the
+//! requirement is enforced, checked in [`check`].
 #![expect(
     clippy::panic,
     clippy::expect_used,
@@ -93,10 +56,8 @@ enum FlatType {
     Real,
     /// `Boolean` / `BOOLEAN` — a JSON boolean datum.
     Bool,
-    /// A composite Flat type (`<<DV_TEXT,DV_TEXT>>`, …): the row's path names a
-    /// sub-tree governed by that type's own master05 table. The payload is the
-    /// witness suffix / sub-path taken from that table (normally its required
-    /// row), appended to this row's path; the datum found there is a string.
+    /// A composite Flat type: the row's path names a sub-tree governed by that
+    /// type's own master05 table, probed at its witness suffix or sub-path.
     Sub(&'static str),
     /// [`FlatType::Sub`] whose witness datum is a number.
     SubNum(&'static str),
@@ -550,10 +511,8 @@ fn flat_entry_with(
         .expect("composition_to_flat")
 }
 
-/// The web template an ENTRY-family fixture flattens against: the root
-/// COMPOSITION carrying a single `entry` child of `rm_type` with `children`.
-/// Exposed separately so a test can drive the build direction against the very
-/// same tree.
+/// The web template an ENTRY-family fixture flattens against: a COMPOSITION
+/// with one `entry` child of `rm_type`.
 fn entry_web_template(rm_type: &str, children: Vec<WebTemplateNode>) -> WebTemplate {
     let mut node = container(rm_type, &entry_aql(rm_type), "entry");
     node.node_id = Some(entry_archetype(rm_type));
@@ -857,13 +816,9 @@ fn entry_shared_rows() -> Vec<Row> {
     ]
 }
 
-/// The `/encoding` editorial hole: RM ehr §ENTRY makes `encoding` (CODE_PHRASE)
-/// 1..1, and the master05 §COMPOSITION example block emits
-/// `…/conformance_observation/encoding|code` — yet no ENTRY table carries an
-/// `/encoding` row. Our flattener routes it the same way as `/language`
-/// (master06 §"Language and Territory"), so no `…/encoding` path key is
-/// emitted; the value is restored by the builder's ENTRY defaults
-/// (`IANA_character-sets` `UTF-8`).
+/// The `/encoding` editorial hole: RM ehr §ENTRY makes `encoding` 1..1 but no
+/// master05 ENTRY table has a row, so no `…/encoding` key is emitted and the
+/// builder restores `UTF-8`.
 fn assert_entry_encoding_hole(flat: &Map<String, Value>) {
     assert!(
         !addressed(flat, &format!("{ENTRY}/encoding")),
@@ -1051,10 +1006,8 @@ fn master05_observation() {
 /// is `party` — the fixture behind the master05 ENTRY `/subject` row (typed
 /// `PARTY_PROXY`, so each of the three subtype tables reaches it).
 fn entry_subject_case(party: Value) -> (WebTemplate, Map<String, Value>) {
-    // One leaf datum keeps the ENTRY representable on the wire: FLAT structure
-    // is rebuilt from datum paths (master04 §Building the RM composition), so
-    // an ENTRY whose only content is the OFF-WIRE PARTY_SELF default would
-    // have no keys at all and, correctly, never rebuild.
+    // One leaf datum keeps the ENTRY on the wire (master04 §Building the RM
+    // composition).
     let mut children = entry_in_context("EVALUATION");
     children.push(element_leaf_node("DV_TEXT"));
     let wt = entry_web_template("EVALUATION", children);
@@ -1085,11 +1038,8 @@ fn built_subject(wt: &WebTemplate, flat: &Map<String, Value>) -> Value {
         .expect("the built ENTRY carries a `subject`")
 }
 
-/// master05 ENTRY `/subject` (PARTY_PROXY) in both directions, once per
-/// concrete subtype the section dispatches to (master05 §PARTY_PROXY: "See
-/// PARTY_SELF, PARTY_IDENTIFIED and PARTY_RELATED"). Each subtype must survive
-/// RM → FLAT → RM unchanged; the row's Note ("will be set to PARTY_SELF if not
-/// explicitly set") governs the default, which stays off the wire.
+/// master05 ENTRY `/subject` round-trips for each PARTY_PROXY subtype; the
+/// PARTY_SELF default stays off the wire.
 #[test]
 fn master05_entry_subject_round_trips_every_party_subtype() {
     // PARTY_IDENTIFIED — the `|name`/`|id`/`|id_scheme`/`|id_namespace` rows.
@@ -1158,12 +1108,8 @@ fn master05_entry_subject_round_trips_every_party_subtype() {
 // master05 — structure classes
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// master05 §ELEMENT — 5 rows, over an element carrying every one of them at
-/// once. The `_null_flavour`/`_null_reason` rows sit here beside a `value`,
-/// which RM data_structures §ELEMENT forbids (`Inv_null_flavour_indicated`) —
-/// the combination isolates the five rows in one fixture; the shape the RM
-/// actually admits (null flavour, no value) is asserted in both directions by
-/// [`master05_element_null_flavoured_without_value`].
+/// master05 §ELEMENT, all 5 rows on one element; the RM-admissible value-less
+/// shape is [`master05_element_null_flavoured_without_value`].
 #[test]
 fn master05_element() {
     let mut el = element(dv_text("value"));
@@ -1196,12 +1142,8 @@ fn master05_element() {
     );
 }
 
-/// master05 §ELEMENT `/_null_flavour` + `/_null_reason` on the shape the RM
-/// admits: a **value-less** ELEMENT. RM data_structures §ELEMENT
-/// (`Inv_null_flavour_indicated`: `is_null() xor null_flavour = Void`) makes
-/// `value` and `null_flavour` mutually exclusive, so this — not the
-/// value-bearing probe above — is how a real null flavour reaches the wire.
-/// The section's third example block spells exactly this document.
+/// master05 §ELEMENT `/_null_flavour` and `/_null_reason` on a value-less
+/// ELEMENT (RM `Inv_null_flavour_indicated`), the section's third example.
 #[test]
 fn master05_element_null_flavoured_without_value() {
     let el = json!({
@@ -1323,10 +1265,7 @@ fn master05_link() {
     );
 }
 
-/// master05 §FEEDER_AUDIT — 6 rows.
-///
-/// `/original_content` and `/original_content_multimedia` map the same RM
-/// attribute ("one one of … can be set"), so they are probed with two
+/// master05 §FEEDER_AUDIT, 6 rows; the two `original_content` rows need two
 /// fixtures.
 #[test]
 fn master05_feeder_audit() {
@@ -1510,12 +1449,7 @@ fn master05_ism_transition() {
     );
 }
 
-/// master05 §INSTRUCTION_DETAILS — 3 rows.
-///
-/// The table and the section's example block agree: three STRING suffixes on
-/// the `_instruction_details` node itself. This test fails against an emitter
-/// that nests an `instruction_id` OBJECT_REF child (no `|composition_uid`
-/// exists there, and `|path` sits one level too deep).
+/// master05 §INSTRUCTION_DETAILS, 3 rows on the `_instruction_details` node.
 #[test]
 fn master05_instruction_details() {
     let flat = flat_entry(
@@ -1653,11 +1587,8 @@ fn master05_event_context() {
         json!("238")
     );
 
-    // …and the table's own PATH spellings are honoured on input, not ignored:
-    // the Web-Template context node always carries synthesized
-    // `start_time`/`setting` children, which used to make the builder treat
-    // the path keys as "already handled" and silently drop them in favour of
-    // the `ctx/` defaults — the one outcome master04 §Validation forbids.
+    // The table's path spellings are honoured on input over the `ctx/` defaults
+    // (master04 §Validation).
     let built = composition_from_flat(
         &flat_of(&[
             (
@@ -1682,10 +1613,8 @@ fn master05_event_context() {
     );
     assert_eq!(built["context"]["setting"]["value"], json!("other care"));
 
-    // The `/setting` row's Note binds it to a ValueSet ("openEHR `setting`
-    // group"), so a bare `|code` resolves its rubric from that group exactly
-    // as `ctx/setting` does (master06 §setting) rather than standing as a
-    // `local` code.
+    // `/setting` resolves a bare `|code` from the openEHR `setting` group (master06
+    // §setting).
     let built = composition_from_flat(
         &flat_of(&[("test/context/setting|code", json!("238"))]),
         &web_template(root_node(vec![])),
@@ -1818,11 +1747,7 @@ fn master05_object_ref() {
 // master05 — the EVENT family
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// master05 §INTERVAL_EVENT — 3 rows.
-///
-/// `|sample_count` is a datum suffix on the event node itself (the section's
-/// second example block: `…/any_event:0|sample_count: 5`), so this test fails
-/// against an implementation that does not emit it.
+/// master05 §INTERVAL_EVENT, 3 rows; `|sample_count` sits on the event node.
 #[test]
 fn master05_interval_event() {
     let flat = flat_event(
@@ -1871,10 +1796,8 @@ fn master05_interval_event() {
     assert_eq!(event["width"]["value"], json!("P30D"));
 }
 
-/// An abstract `EVENT` node builds as the `INTERVAL_EVENT` its input asks
-/// for when it names the width (RM data_structures
-/// `master06-history_package.adoc` §EVENT; master05 §INTERVAL_EVENT), and as
-/// a `POINT_EVENT` otherwise.
+/// An abstract `EVENT` builds as `INTERVAL_EVENT` when the input names a width,
+/// else as `POINT_EVENT` (RM `master06-history_package.adoc` §EVENT).
 #[test]
 fn an_abstract_event_with_a_width_builds_as_an_interval_event() {
     let events_aql = format!("{}/data[at0001]/events[at0002]", entry_aql("OBSERVATION"));
@@ -2071,12 +1994,8 @@ fn master05_party_related() {
             row("|id_scheme", At(Str), "no", ""),
             row("|id_namespace", At(Str), "(yes)", ""),
             row("/_identifier:0", At(Sub("|id")), "no", ""),
-            // The table's Flat Path column reads `/_relationship`, but both
-            // example blocks of the SAME section (and the §"PARTY_RELATED
-            // performer" table + example) spell it `…/relationship|code` —
-            // the example form is the emitted one. The table spelling is
-            // accepted on INPUT as an alias; that direction is pinned by
-            // `master05_party_related_table_spelling_is_an_input_alias`.
+            // The table says `/_relationship`, the examples `…/relationship|code`; the
+            // example form is emitted.
             row(
                 "/_relationship",
                 Elsewhere(
@@ -2089,14 +2008,8 @@ fn master05_party_related() {
     );
 }
 
-/// master05 §PARTY_RELATED gives the relationship sub-path two spellings: the
-/// mapping table's Flat Path column reads `/_relationship`, while both example
-/// blocks of the same section write `"…/composer/relationship|code": "10"`
-/// (and the §"PARTY_RELATED performer" table + example agree with the
-/// examples). The emitted form is the example one — pinned by the
-/// `Elsewhere` row above and re-asserted here — and the table spelling is
-/// accepted on **input** as an alias, so a producer that followed the table
-/// row is not rejected with an unknown-path error.
+/// The master05 §PARTY_RELATED table spelling `/_relationship` is accepted on
+/// input as an alias of the emitted `/relationship`.
 #[test]
 fn master05_party_related_table_spelling_is_an_input_alias() {
     let mut subject = party_identified("Susan Doe", "199");
@@ -2216,11 +2129,7 @@ fn master05_dv_text() {
     assert!(matches!(err, FlatError::InvalidValue { .. }), "got {err:?}");
 }
 
-/// master05 §CODE_PHRASE — 3 rows.
-///
-/// A CODE_PHRASE is not a `DATA_VALUE`, so it never wraps in an ELEMENT: the
-/// carrier here is the master05 §DV_TEXT `/_language` row, which types its
-/// sub-node CODE_PHRASE.
+/// master05 §CODE_PHRASE, 3 rows, carried by the §DV_TEXT `/_language` row.
 #[test]
 fn master05_code_phrase() {
     let mut language = code_phrase("ISO_639-1", "en");
@@ -2738,11 +2647,7 @@ fn master05_dv_duration() {
     check(&flat, LEAF, &rows);
 }
 
-/// master05 §REFERENCE_RANGE — 7 rows.
-///
-/// The four boundary flags are "only in output if" they differ from their
-/// default (master05 §DV_INTERVAL), so the bounded range (`:0`) carries the
-/// bounds + meaning and the unbounded one (`:1`) carries the flags.
+/// master05 §REFERENCE_RANGE, 7 rows; flags emit only when non-default.
 #[test]
 fn master05_reference_range() {
     let mut value = quantity(65.9);
@@ -2860,10 +2765,7 @@ fn master05_dv_multimedia() {
     );
 }
 
-/// master05 §DV_INTERVAL — 6 rows.
-///
-/// As with §REFERENCE_RANGE, the boundary flags are emitted only when they
-/// differ from their defaults, so two fixtures are needed.
+/// master05 §DV_INTERVAL, 6 rows; flags emit only when non-default.
 #[test]
 fn master05_dv_interval() {
     let value_aql = format!(

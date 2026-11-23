@@ -216,10 +216,6 @@ pub enum VersionIdError {
 impl VersionIdError {
     /// Renders the client-visible refusal: the variant's message followed by
     /// the lexical rule that rejected the value.
-    ///
-    /// The BASE lexical error is the fact a client acts on, so the wire text
-    /// walks the cause chain rather than stopping at the variant's own
-    /// `Display`.
     fn wire_message(&self) -> String {
         ErrorChain::new(self).to_string()
     }
@@ -293,9 +289,6 @@ pub(crate) fn parse_object_version_id(raw: &str) -> Result<(Uuid, String, TreeId
 /// Decompose an already-validated [`ObjectVersionId`] into this CDR's storage
 /// typing. `raw` is the wire spelling the errors echo (it equals
 /// `ovid.value()`; the callers already hold it).
-///
-/// The ONE decomposition every caller shares, so a version id can never be
-/// decomposed two different ways.
 fn components_of(
     ovid: &ObjectVersionId,
     raw: &str,
@@ -326,12 +319,6 @@ pub(crate) fn components(ovid: &ObjectVersionId) -> Result<(VoId, TreeId), Versi
 /// value carried one (BASE `base_types` master05 §Syntaxes — a bare
 /// `HIER_OBJECT_ID` addresses the container, a three-part
 /// `OBJECT_VERSION_ID` addresses one version of it).
-///
-/// Produced by [`parse_uid_based_id`], the ONE decoder for this wire shape:
-/// the platform library owns the policy (this CDR keys versioned objects by
-/// UUID, and a version resolves to a [`TreeId`] storage position), so the
-/// protocol adapter reads a path segment through this type rather than
-/// re-deriving the same rules at the edge.
 #[derive(Debug, Clone)]
 pub struct UidAddress {
     /// The versioned-object UUID key (the id's `object_id`).
@@ -402,10 +389,6 @@ pub fn parse_uid_based_id(raw: &str) -> Result<UidAddress, VersionIdError> {
 /// `openehr_its::rest::etag::EntityTag`; or the field as written, without
 /// surrounding whitespace, when it is no entity tag (the RFC 9110 §13.1.1 `*`,
 /// a bare trunk number, an unquoted id).
-///
-/// The protocol adapter and the versioning core both read the field here, so
-/// the demographic precondition comparison and the version-tree extraction
-/// (`expected_from_if_match`) always judge the same value.
 #[must_use]
 pub fn entity_tag_value(field: &str) -> Cow<'_, str> {
     let field = field.trim();

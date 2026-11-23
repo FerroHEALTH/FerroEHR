@@ -3,15 +3,12 @@
 
 //! A repeated member of a version's node fragments, stored once (#6229).
 //!
-//! The entries of one composition often carry the same non-structure member:
-//! a FLAT commit copies the context's participations into every entry's
-//! `other_participations`, 38 copies of 1,027 bytes on the IPS composition.
-//! The writer keeps such a member verbatim on the first row of the version
+//! The writer keeps a repeated member verbatim on the first row of the version
 //! that carries it (the holder) and leaves it out of every later row whose
-//! member is byte-identical, which records the holder's `num` under the
-//! member's key in its `shared` column. Every reader reads the stored rows
-//! through [`member_data`] or [`resolved_data`], which put the member back
-//! from the holder, so a fragment reads back exactly as it was written.
+//! member is byte-identical, recording the holder's `num` under the member's
+//! key in its `shared` column. Every reader puts it back through
+//! [`member_data`] or [`resolved_data`], so a fragment reads back exactly as
+//! written.
 //!
 //! The rule, in [`Sharing::take`]: a member is shared when its value is at
 //! least [`MIN_BYTES`] bytes, is byte-identical to the same key's value on an
@@ -36,11 +33,8 @@ pub const UNSHARED: [&str; 3] = ["value", "time", "origin"];
 
 /// The smallest member value, in bytes of its JSON text, that is shared.
 ///
-/// A reader of a shared member pays a function call and a probe of its
-/// holder, so only a member whose copies cost more than that is shared: the
-/// participation list a FLAT commit copies into every entry (1,027 bytes on
-/// the IPS composition) is, and an `ism_transition` (about 220 bytes), one of
-/// the commonest predicate targets, is not (#6229).
+/// A reader of a shared member pays a function call and a probe of its holder,
+/// so only a member larger than that is shared (#6229).
 pub const MIN_BYTES: usize = 512;
 
 /// The holders of one version's shared members, as the writer meets its
@@ -135,8 +129,6 @@ pub fn member_data(alias: &str, key: &str) -> String {
 
 /// The whole `data` of the row `alias`, every shared member put back from its
 /// holder by the domain's `node_shared` (an SQL expression).
-///
-/// A row that shares nothing reads its own `data` with no further read.
 #[must_use]
 pub fn resolved_data(alias: &str) -> String {
     format!(

@@ -2,62 +2,34 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariants for `DV_MULTIMEDIA`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.dv_multimedia.adoc`
-//! §Invariants. Enforced here — the three that need no code set:
-//! - `Not_empty` (`is_inline or is_external`): `is_inline` is "computed from the
-//!   value of the data attribute" and `is_external` from `uri` (§Functions), so
-//!   at least one of `data` / `uri` must be present.
-//! - `Integrity_check_validity` (`integrity_check /= Void implies
-//!   integrity_check_algorithm /= Void`).
-//! - `Size_valid` (`size >= 0`), which admits `size = 0`.
-//!
-//! The five code-set-bound invariants — `Media_type_valid`,
-//! `Compression_algorithm_validity`, `Integrity_check_algorithm_validity`, and
-//! DV_ENCAPSULATED's `Charset_valid` / `Language_valid` — cannot be decided in
-//! this crate, which has no terminology dependency; they are enforced in the
-//! terminology-aware path (`validate::terminology`, the `DV_MULTIMEDIA` slots)
-//! against the `openehr-term` bundle.
+//! `DV_MULTIMEDIA` invariants (`org.openehr.rm.data_types.dv_multimedia.adoc`):
+//! `Not_empty`, `Integrity_check_validity` and `Size_valid` here; the five
+//! code-set invariants in `validate::terminology`.
 
 use crate::v1_2::data_types::encapsulated::dv_multimedia::DvMultimedia;
 use openehr_base::validate::{InvariantViolation, Validate};
 
 impl DvMultimedia {
-    /// Returns `true` when the data is stored in expanded form, within the EHR
-    /// itself.
-    ///
-    /// Spec: `dv_multimedia.adoc` §Functions — "Computed from the value of the
-    /// data attribute."
+    /// Whether the data is inline: `data` is present (`is_inline`).
     #[must_use]
     pub const fn is_inline(&self) -> bool {
         self.data.is_some()
     }
 
-    /// Returns `true` when the data is stored externally to the record.
-    ///
-    /// Spec: `dv_multimedia.adoc` §Functions — "Computed from the value of the
-    /// `uri` attribute". Inline and external are not exclusive: the invariant
-    /// is `is_inline or is_external`, and a copy may be held both ways.
+    /// Whether the data is external: `uri` is present (`is_external`); inline and
+    /// external are not exclusive.
     #[must_use]
     pub const fn is_external(&self) -> bool {
         self.uri.is_some()
     }
 
-    /// Returns `true` when the data is stored in compressed form.
-    ///
-    /// Spec: `dv_multimedia.adoc` §Functions — "Computed from the value of the
-    /// `compression_algorithm` attribute."
+    /// Whether `compression_algorithm` is present (`is_compressed`).
     #[must_use]
     pub const fn is_compressed(&self) -> bool {
         self.compression_algorithm.is_some()
     }
 
-    /// Returns `true` when an integrity check has been computed.
-    ///
-    /// Spec: `dv_multimedia.adoc` §Functions — "Computed from the value of the
-    /// `integrity_check_algorithm` attribute."
+    /// Whether `integrity_check_algorithm` is present (`has_integrity_check`).
     #[must_use]
     pub const fn has_integrity_check(&self) -> bool {
         self.integrity_check_algorithm.is_some()
@@ -162,14 +134,7 @@ mod tests {
         assert_eq!(m.invariants(), Vec::<InvariantViolation>::new());
     }
 
-    /// The four §Functions predicates, each "computed from the value of" one
-    /// attribute.
-    ///
-    /// `is_inline` and `is_external` are asserted TOGETHER on one value that
-    /// carries both: the invariant is `is_inline or is_external`, an OR, so a
-    /// value held inline AND externally is valid and both must answer true.
-    /// Testing them apart would pass on an implementation that treated them as
-    /// exclusive.
+    /// The four predicates, `is_inline` and `is_external` both true on one value.
     #[test]
     fn the_computed_predicates_follow_their_attributes() {
         let mut m = valid();

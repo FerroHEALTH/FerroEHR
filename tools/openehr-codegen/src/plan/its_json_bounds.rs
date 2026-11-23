@@ -1,20 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The optional container attributes whose published ITS-JSON schema refuses
-//! an empty array (`minItems: 1`) where the BMM lets the list be empty, and
-//! the canonical-JSON reader decision they drive.
-//!
-//! The model keeps the BMM shape (`Option<Vec<T>>`, an empty list stays
-//! representable); only the canonical-JSON reader refuses a present-but-empty
-//! array, so the refusal is a parse failure the ITS-JSON schema shares
-//! (ITS-REST `overview/Resources.md` §JSON Format: a canonical JSON payload
-//! SHOULD be valid against the ITS-JSON schemas). The serializer already omits
-//! an empty list, so a served document never carries one.
-//!
-//! `tests/emitter_invariants.rs` checks every entry against the loaded BMM
-//! and the vendored ITS-JSON schema through
-//! [`crate::testsupport::decision_checks`].
+//! The optional containers whose ITS-JSON schema states `minItems: 1` where
+//! the BMM allows empty: the model keeps `Option<Vec<T>>` and the reader
+//! refuses `[]` (ITS-REST `overview/Resources.md` §JSON Format).
 
 /// One optional container attribute the canonical-JSON reader refuses empty.
 pub(crate) struct ItsJsonMinItems {
@@ -29,12 +18,8 @@ pub(crate) struct ItsJsonMinItems {
     pub citation: &'static str,
 }
 
-/// Every attribute whose present-but-empty canonical-JSON array is refused at
-/// parse.
-///
-/// An attribute whose BMM already carries a present-implies-non-empty
-/// invariant needs no entry: it emits `Option<NonEmptyVec<T>>`
-/// (`analyze::nonempty_optional_lists`).
+/// Every attribute whose present-but-empty array is refused at parse; one
+/// under a present-implies-non-empty invariant needs no entry.
 pub(crate) const ITS_JSON_MIN_ITEMS: &[ItsJsonMinItems] = &[
     ItsJsonMinItems {
         owner: "FOLDER",

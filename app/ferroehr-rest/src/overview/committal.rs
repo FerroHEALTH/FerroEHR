@@ -61,10 +61,6 @@ const H_AUDIT_DETAILS: &str = "openehr-audit-details";
 /// §"Deprecated headers".
 const H_DEP_LIFECYCLE: &str = "openEHR-VERSION.lifecycle_state";
 /// The bare deprecated header name from the §"Deprecated headers" table.
-///
-/// It is distinct from the new name after lowercasing (`openehr-audit_details`
-/// against `openehr-audit-details`), so it needs its own lookup; its value
-/// grammar is the attribute-path-in-value form of the new header.
 const H_DEP_AUDIT_DETAILS_BARE: &str = "openEHR-AUDIT_DETAILS";
 const H_DEP_CHANGE_TYPE: &str = "openEHR-AUDIT_DETAILS.change_type";
 const H_DEP_DESCRIPTION: &str = "openEHR-AUDIT_DETAILS.description";
@@ -107,11 +103,6 @@ pub(crate) fn write_request<T>(
 
 /// Overlays already-collected committal attributes onto the two halves of a
 /// commit envelope.
-///
-/// Split from the header collection so a caller that needs to know whether any
-/// attribute was supplied parses the headers once. It touches nothing but the
-/// VERSION `lifecycle_state` and the `UPDATE_AUDIT` attributes, which is why it
-/// is independent of the envelope's content type.
 fn apply_attrs(
     lifecycle_state: &mut DvCodedText,
     commit_audit: &mut UpdateAudit,

@@ -4,13 +4,6 @@
 //! End-to-end HTTP tests: routing, authentication (401/403), and content
 //! negotiation, exercised through the assembled router over a **real**
 //! `FerroEhrService` on a real `PostgreSQL` (the `common` fixture).
-//!
-//! All API groups are mounted; these tests exercise routing, auth, and
-//! negotiation across representative operations. The former `Mock` backend's
-//! blanket `501 Not Implemented` default is gone — every group is now a real
-//! implementation, so the old "reaches the stub → 501" probes are re-targeted
-//! to the real server's behaviour for a fresh, empty database (a missing EHR is
-//! a `404`, an invalid AQL a `400`, an empty template list a `200 []`).
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
@@ -176,8 +169,8 @@ async fn health_endpoint_is_public() {
 /// `/health` and `/health/liveness` answer the family summary `{"state":"up"}`;
 /// `/health/readiness` renders the family readiness document (empty registry in
 /// a test build → `up`).
-/// This family is also the ONLY health surface — the retired REST-root
-/// `/ferroehr/rest/status/health` name answers `404`.
+/// This family is the only health surface: `/ferroehr/rest/status/health`
+/// answers `404`.
 #[tokio::test]
 async fn health_family_is_public_without_the_management_surface() {
     let (_pg, app) = app(true).await;
@@ -200,17 +193,15 @@ async fn health_family_is_public_without_the_management_surface() {
     // The probe body is the state, the phase and the indicators, nothing else.
     assert_eq!(v.as_object().unwrap().len(), 3, "readiness body: {body}");
 
-    // There is no second name for health under the REST root: the retired
-    // `/ferroehr/rest/status/health` alias is not routed at all.
+    // There is no second name for health under the REST root.
     let (status, _h, _body) = send(&app, get("/ferroehr/rest/status/health")).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
 async fn valid_basic_reaches_handler() {
-    // RE-TARGET: the old Mock backend answered a blanket `501`; the real EHR
-    // service answers `404` for a syntactically valid but non-existent EHR —
-    // which still proves the authenticated request reached the real handler.
+    // The EHR service answers `404` for a syntactically valid but non-existent
+    // EHR, which proves the authenticated request reached the handler.
     let (_pg, app) = app(true).await;
     let req = common::req("GET", format!("{BASE}/ehr/{EHR}"))
         .auth(basic("alice", "pw"))
@@ -266,12 +257,9 @@ async fn a_bearer_without_a_resource_scope_is_403() {
 
 #[tokio::test]
 async fn admin_route_reachable_without_rbac() {
-    // The legacy path-string `admin_scope` gate was removed; this harness builds
-    // without an RBAC handle, so an authenticated caller reaches the admin
-    // dispatcher regardless of scope. RE-TARGET: was a Mock `501`; the real
-    // admin delete physically removes a real EHR → `204`, proving the route is
-    // reachable and not RBAC-gated. The role-based admin gate is exercised
-    // end-to-end in `rbac_e2e`.
+    // This harness builds without an RBAC handle, so an authenticated caller
+    // reaches the admin dispatcher, and the delete of a real EHR answers `204`.
+    // The role-based admin gate is exercised in `rbac_e2e`.
     let (_pg, app) = app(true).await;
 
     // Create a real EHR (authenticated), then physically delete it via admin.
@@ -300,11 +288,9 @@ async fn json_composition_body_is_accepted_and_reaches_handler() {
     // The JSON body is decoded into the RM type and the handler is reached:
     // the EHR does not exist, so the real service answers `404` — not a
     // negotiation error, which is what "reaches the handler" asserts. The body
-    // must therefore be a COMPLETE COMPOSITION: a `{"_type":"COMPOSITION"}`
-    // stub carries none of the class's mandatory attributes, and since the
-    // typed commit seam the strict reader refuses that at the door (`400`,
-    // pinned by `bare_type_composition_stub_is_400` below) — which would prove
-    // nothing about the handler.
+    // must therefore be a complete COMPOSITION: a `{"_type":"COMPOSITION"}`
+    // stub is refused at the door (`400`, `bare_type_composition_stub_is_400`),
+    // which would prove nothing about the handler.
     let (_pg, app) = app(true).await;
     let req = common::req("POST", format!("{BASE}/ehr/{EHR}/composition"))
         .auth(basic("alice", "pw"))
@@ -634,9 +620,8 @@ async fn query_group_is_mounted_and_authenticated() {
         .auth(basic("alice", "pw"))
         .build();
     let (status, _h, _b) = send(&app, req).await;
-    // RE-TARGET: was a Mock `501`. The real query engine parses the AQL; the
-    // incomplete `SELECT c` fails to parse → `400` (PreconditionViolation),
-    // which still proves the authenticated request reached the real handler.
+    // The incomplete `SELECT c` fails to parse (`400`), which proves the
+    // authenticated request reached the query handler.
     assert_eq!(status, StatusCode::BAD_REQUEST);
 }
 
@@ -654,10 +639,8 @@ async fn demographic_group_is_mounted() {
 
 #[tokio::test]
 async fn implemented_groups_are_reachable() {
-    // The demographic / query / admin groups are real implementations, so this
-    // probes their per-endpoint behaviour on a fresh database rather than a
-    // uniform status: a missing agent → 404, an invalid AQL → 400, a missing
-    // admin EHR → 404.
+    // Each group answers its own status on a fresh database: a missing agent
+    // `404`, an invalid AQL `400`, a missing admin EHR `404`.
     // The POST case carries a well-formed JSON body so body deserialization
     // (which runs before dispatch) does not short-circuit to a 400.
     let cases: [(&str, String, &str, Option<&str>, StatusCode); 3] = [
@@ -697,7 +680,7 @@ async fn implemented_groups_are_reachable() {
             .unwrap();
         let (status, _headers, _body) = send(&app, req).await;
         assert_eq!(status, expected, "{method} {uri}");
-        // None of these reach the retired not-implemented default.
+        // None of these answers `501`.
         assert_ne!(status, StatusCode::NOT_IMPLEMENTED, "{method} {uri}");
     }
 }
@@ -705,8 +688,8 @@ async fn implemented_groups_are_reachable() {
 #[tokio::test]
 async fn definition_group_is_mounted_with_dotted_route() {
     // Exercises the dotted path segment (`adl1.4`) and dotted operation id.
-    // RE-TARGET: was a Mock `501`; the real definition service lists the stored
-    // OPT 1.4 templates → `200` with an empty JSON array on a fresh database.
+    // The definition service lists the stored OPT 1.4 templates: `200` with an
+    // empty array on a fresh database.
     let (_pg, app) = app(true).await;
     let req = common::req("GET", format!("{BASE}/definition/template/adl1.4"))
         .auth(basic("alice", "pw"))
@@ -915,12 +898,6 @@ async fn app_with_swagger() -> (testkit::TestDb, Router) {
 }
 
 /// Swagger UI must get a policy it can actually run under.
-///
-/// The API's `default-src 'none'` is right for JSON and fatal for the one surface
-/// on this origin that is rendered: the vendored bundle's own same-origin scripts
-/// and styles would be blocked and the page would come up blank. Under the
-/// default configuration `openapi_ui` is ON, so this was a shipped regression
-/// waiting to be reported as "the docs are broken".
 #[tokio::test]
 async fn swagger_ui_gets_a_policy_it_can_run_under() {
     let (_pg, app) = app_with_swagger().await;
@@ -942,12 +919,6 @@ async fn swagger_ui_gets_a_policy_it_can_run_under() {
 }
 
 /// The Swagger CSP carries NO inline allowance, and the served page needs none.
-///
-/// This asserts both halves, because the second is what makes the first safe: if
-/// the vendored distribution ever starts inlining a script or a style, this test
-/// fails and says so — rather than the page silently coming up blank in a
-/// CSP-enforcing browser, which is the failure mode that gets "fixed" by adding
-/// `'unsafe-inline'` back.
 #[tokio::test]
 async fn the_swagger_page_needs_no_inline_allowance() {
     let (_pg, app) = app_with_swagger().await;
@@ -1045,10 +1016,8 @@ async fn hsts_is_deliberately_absent() {
 
 // ── Request-body limits (issue #2019; the chunked defect is issue #2045) ─────
 
-/// A body over the limit with NO `Content-Length` — a chunked upload — must be
-/// refused `413`. It used to reach the dispatcher as a silently emptied body and
-/// answer `400`, because the collector turned the limit error into a default
-/// value (issue #2045).
+/// A body over the limit with no `Content-Length`, a chunked upload, is refused
+/// `413` (#2045).
 #[tokio::test]
 async fn an_over_limit_chunked_body_is_413_not_400() {
     let (pg, service) = common::test_service().await;
@@ -1264,10 +1233,6 @@ async fn subject_lookup_by_query_parameter_still_answers() {
 
 /// Under the DEFAULT configuration — Swagger off, SMART off — the served
 /// document must not advertise the paths those features would have mounted.
-///
-/// This is the property the whole "serve only what we generate" rule exists for:
-/// a client generated from the document must not receive endpoints that answer
-/// `404`. It was broken inside the generator itself.
 #[tokio::test]
 async fn the_served_document_omits_paths_whose_features_are_off() {
     let (pg, service) = common::test_service().await;

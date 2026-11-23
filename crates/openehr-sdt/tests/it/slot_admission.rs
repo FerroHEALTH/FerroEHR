@@ -1,11 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The public slot admission decision, `WebTemplateArchetypeSlot::admits`
-//! (AOM 1.4 `ARCHETYPE_SLOT`, `includes` and `excludes`), on hand-made slots
-//! and on the slot a real template leaves open. A slot that cannot be
-//! evaluated is refused when the template loads, and `admits` fails closed on
-//! one that bypassed that check (#5837).
+//! The public slot admission decision, `WebTemplateArchetypeSlot::admits` (AOM
+//! 1.4 `ARCHETYPE_SLOT`), failing closed on a slot that cannot be evaluated.
 
 #![expect(
     clippy::expect_used,

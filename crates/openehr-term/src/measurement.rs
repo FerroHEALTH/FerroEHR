@@ -12,10 +12,6 @@
 //! A SYNTAX validator over the UCUM term grammar (unitsofmeasure.org §2.2
 //! "Syntax and Semantics"): it carries no UCUM atom table, so it validates the
 //! shape, not whether an atom is a registered unit.
-//!
-//! NOTE: RM data_types master06 declares no `Units_valid` invariant on
-//! `DV_QUANTITY`, so commit-time rejection of non-UCUM units is not wired;
-//! template-declared unit constraints go through the conformance walker.
 
 /// `MEASUREMENT_SERVICE.is_valid_units_string`: UCUM syntax validity
 /// (case-sensitive form).
@@ -87,9 +83,6 @@ fn parse_atom_or_factor(b: &[u8], mut pos: usize) -> Option<usize> {
 }
 
 /// One balanced `[...]` segment of an atom, entered on its opening bracket.
-///
-/// Returns the position after the closing `]`, or `None` for an unbalanced or
-/// non-printable segment.
 fn parse_bracket_segment(b: &[u8], mut pos: usize) -> Option<usize> {
     pos += 1;
     while let Some(&inner) = b.get(pos) {

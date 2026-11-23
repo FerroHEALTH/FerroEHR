@@ -15,9 +15,7 @@
 #                       cargo build, the shipped-artifact battery.
 #                       Its caller is the weekly
 #                       .github/workflows/ui-e2e-published.yml lane, which
-#                       drives the latest release's published images; measured
-#                       2026-08-28 at 139 journeys in 256s (7m17s for the whole
-#                       battery once the images exist).
+#                       drives the latest release's published images.
 #   UI_E2E_IMAGE_REF    with UI_E2E_IMAGE: use this exact (already published)
 #                       image reference instead of building — the weekly lane
 #                       verifies the very artifact the release pushed.
@@ -32,8 +30,6 @@
 #                       a layer cache exported to GHCR and sets this, so the
 #                       cold runner does not pay the full compile.
 #   UI_E2E_PREBUILT_VIEWER
-#                       (was UI_E2E_PREBUILT_CONSOLE before the product was
-#                       named FerroEHR Viewer; the CI job sets the new name)
 #                       if set, skip the host cargo build and run the viewer
 #                       binary already at target/debug/ferroehr-viewer (CI
 #                       builds it in a parallel job and downloads the
@@ -58,7 +54,7 @@
 #                          overlay; a caller with UI_E2E_NO_COMPOSE sets it
 #   UI_E2E_SHOTS_DIR       screenshot output dir (set by this script)
 # and skip-with-reason when unset, so a plain `cargo nextest run --workspace`
-# without Docker stays green (the B4 --tx-server-url precedent).
+# without Docker stays green.
 set -Eeuo pipefail
 
 FILTER="${1:-}"
@@ -70,15 +66,12 @@ cd "$ROOT"
 # `down -v` teardown — to `ferroehr-e2e`, so it can never wipe a running dev
 # (`ferroehr`) or conformance (`ferroehr-cnf`) stack (issue #282 D3/F7).
 export COMPOSE_PROJECT_NAME=ferroehr-e2e
-# Profiles are exported, never passed per-invocation: a service in a profile is
-# excluded from the compose model of every call that does not enable it
-# (docs.docker.com/compose/how-tos/profiles), so an inline `--profile keycloak`
-# on the `up` left the trap's `down -v` blind to keycloak and leaked the
-# container on every run. COMPOSE_PROFILES scopes EVERY compose call below —
-# `up`, `stop` and the teardown alike. Comma-separate any profile added here.
-# `viewer` is here because the viewer service now carries that profile: the
-# export is what keeps the image mode's `stop ferroehr-viewer` cleanup and
-# the trap's `down -v` able to see the container at all.
+# Profiles are exported, never passed per-invocation: a service in a profile
+# is excluded from the compose model of every call that does not enable it
+# (docs.docker.com/compose/how-tos/profiles), so COMPOSE_PROFILES scopes
+# EVERY compose call below, `up`, `stop` and the teardown alike.
+# Comma-separate any profile added here; `viewer` is here because the viewer
+# service carries that profile.
 export COMPOSE_PROFILES=keycloak,viewer
 # A test instance sends no usage report (the compose files read this switch).
 export FERROEHR__USAGE_REPORT__ENABLED=false
@@ -142,8 +135,8 @@ cleanup() {
   fi
   [[ -n "$DRIVER_PID" ]] && kill "$DRIVER_PID" 2>/dev/null || true
   if [[ -z "${UI_E2E_NO_COMPOSE:-}" ]] && [[ -z "${UI_E2E_KEEP_UP:-}" ]]; then
-    # --remove-orphans: belt-and-braces against a future profiled/renamed
-    # service surviving the teardown the way keycloak used to.
+    # --remove-orphans: belt-and-braces against a profiled or renamed service
+    # surviving the teardown.
     docker compose down -v --remove-orphans >/dev/null 2>&1 || true
   fi
 }

@@ -4,10 +4,6 @@
 
 //! Hand-written spec functions of the BMM **v3** `BMM_CLASS` family.
 //!
-//! This is the class-side surface of the v3 (`org.openehr.lang.bmm3`)
-//! generation: the shared-attribute accessors, the inheritance walks, the
-//! class→type generators and the enumeration name map.
-//!
 //! Spec: `LANG/docs/bmm3/master07-core-classes.adoc` (§Overview, §Simple
 //! Classes, §Generic Classes, §Range-Constrained Classes, §Inheritance) plus the
 //! class definitions under `LANG/docs/UML/classes/`:

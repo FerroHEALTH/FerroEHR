@@ -3,18 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Read-fidelity gate against real EHRbase XML fixtures.
-//!
-//! `FromXml` must parse stock EHRbase-authored XML into the RM types, and the
-//! parsed value must round-trip (RM → XML → RM → XML stable). These fixtures are
-//! real EHRbase test data — full compositions with `xsi:type` polymorphism,
-//! namespace prefixes, indentation, and archie-omitted `Interval` flags — so
-//! this proves real-world read robustness end to end.
-//!
-//! They are hand-authored test *inputs* (varying namespace conventions,
-//! whitespace), not archie-canonical *output*, so a byte-for-byte C14N compare
-//! against the fixture is not the bar here; that awaits archie-canonical vectors
-//! / the live parity harness (Stage-1 acceptance). Round-trip stability of our
-//! own canonical output is the invariant this gate enforces.
 
 use openehr_its::xml::runtime::to_xml;
 use openehr_its::xml::runtime::{FromXml, ToXml, from_xml};
@@ -68,11 +56,8 @@ fn ferroehr_xml_fixtures_read_and_round_trip() {
         failures.join("\n")
     );
 
-    // EXCLUDED: `RIPPLE_conformanceTesting_RAW.xml` is a raw-DB export shape
-    // (decomposed row-per-locatable form) whose LOCATABLEs omit the canonical
-    // `name` element — the same non-canonical form the JSON gate excludes as
-    // `rawdb_*`, not ITS-XML canonical input. Assert it exists so a rename does
-    // not silently drop the exclusion.
+    // `RIPPLE_conformanceTesting_RAW.xml` is a raw-DB export, not canonical
+    // ITS-XML; asserting it exists keeps the exclusion from going stale.
     assert!(
         samples_dir()
             .join("RIPPLE_conformanceTesting_RAW.xml")

@@ -14,12 +14,6 @@
 //! `Interval<Integer>`, the very interval the occurrence/cardinality validator
 //! interrogates) and `Real` membership to [`ProperIntervalData::has`], so the
 //! boundary algebra is written once, in the spec crate.
-//!
-//! The `opt14` XSD models an interval as six independent components
-//! (`lower`/`upper` optional, `lower_unbounded`/`upper_unbounded` flags,
-//! `lower_included`/`upper_included` optional flags). The two bound accessors
-//! [`iv_lower`]/[`iv_upper`] read those components directly (they surface the
-//! numeric bounds the AOM invariants compare, not a membership decision).
 
 use openehr_base::prelude::{MultiplicityInterval, ProperIntervalData};
 use openehr_its::opt14::types::{Intervalofinteger, Intervalofreal};

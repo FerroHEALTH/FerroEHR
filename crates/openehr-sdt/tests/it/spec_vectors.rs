@@ -1,38 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Spec-example vector suite for the Simplified Formats.
+//! Spec-example vector suite for the Simplified Formats: every JSON example of
+//! `simplified_formats/` master04, master05 and master06 as a test vector.
 //!
-//! Every JSON example block in the STABLE ITS-REST Simplified Formats
-//! chapters is checked in here as a test vector, each test citing the spec
-//! file + section it encodes:
-//!
-//! - `docs/specs/openehr/ITS-REST/docs/simplified_formats/master04-basic_concepts.adoc`
-//!   — the FLAT / STRUCTURED examples, the field-identifier / node-id
-//!   examples, the `_normal_range`/`_link` RM-attribute examples, `|raw`,
-//!   the Level-Removal worked example, and the Open Value-Sets `|other`
-//!   rules.
-//! - `master05-rm_mapping.adoc` — the per-RM-type example blocks.
-//! - `master06-context_information.adoc` — the `ctx/` vocabulary examples.
-//!
-//! What is asserted at the public seam (no template needed for the bulk):
-//!
-//! - **FlatKey parse/print** (`openehr_sdt::flat::path::FlatKey`) round-trips
-//!   every key that appears in the examples (master04 §Field Identifiers).
-//! - **FLAT parse/emit is lossless & stable** and **FLAT⇄STRUCTURED is a
-//!   stable normal form** for each example (master04 §Flat format,
-//!   §Structured format, §Conversion Between Formats), via
-//!   `openehr_sdt::flat::convert::{flat_to_structured, structured_to_flat}` and
-//!   `openehr_sdt::flat::sim::flat::{parse_flat, emit_flat}`.
-//! - **Reject rules** via `openehr_sdt::flat::convert::composition_from_flat`
-//!   against a minimal hand-built Web Template (unknown path/suffix,
-//!   malformed keys, `|raw` without `_type`, `|other` conflicts/closed set).
-//! - **Mandatory context** via `openehr_sdt::flat::validation::validate_context`
-//!   (master04 §Validation, §Context).
-//!
-//! Values are transcribed byte-identical to the spec (incl. `°C`, big
-//! numbers, and timestamps). Tests are deterministic — the one building
-//! direction uses a fixed `NOW`.
+//! The vectors check FLAT key parse and print, lossless FLAT parse and emit,
+//! the FLAT ⇄ STRUCTURED fixed point, the reject rules and the mandatory
+//! context. Values are transcribed byte-identical to the spec.
 #![expect(
     clippy::panic,
     clippy::expect_used,
@@ -76,14 +50,9 @@ fn json_of(json: &str) -> Value {
 
 // ── shared assertions ────────────────────────────────────────────────────────
 
-/// A FLAT-example vector (master04 §Flat format, §Conversion Between Formats):
-///
-/// 1. every key is a syntactically valid [`FlatKey`] whose `Display` reproduces
-///    it byte-for-byte (master04 §Field Identifiers);
-/// 2. FLAT parse→emit is lossless and stable (no key added, dropped, or
-///    re-spelled — comparison is order-independent `Map` equality);
-/// 3. FLAT→STRUCTURED→FLAT→STRUCTURED reaches a stable STRUCTURED normal form
-///    (the two §Conversion algorithms compose to a fixed point).
+/// A FLAT-example vector: every key parses and prints verbatim, FLAT parse and
+/// emit is lossless, and FLAT ⇄ STRUCTURED reaches a fixed point (master04 §Flat
+/// format, §Conversion Between Formats).
 fn assert_flat_vector(json: &str) {
     let flat = flat_of(json);
     for key in flat.keys() {
@@ -116,11 +85,8 @@ fn assert_structured_vector(json: &str) {
 
 // ── minimal Web Template for the reject-path vectors ─────────────────────────
 
-/// A minimal Web Template: a `COMPOSITION` root (`id = "test"`) with a single
-/// `DV_CODED_TEXT` leaf child (`id = "coded"`) whose input carries a coded
-/// `list` and the given `listOpen` flag. Enough to drive the master04
-/// §Validation / §Open Value-Sets reject paths through the public
-/// `composition_from_flat` seam without a full OPT.
+/// A minimal Web Template with one `DV_CODED_TEXT` leaf whose list carries the
+/// given `listOpen`.
 fn coded_leaf_wt(list_open: bool) -> WebTemplate {
     let mut root = WebTemplateNode::new("COMPOSITION".to_owned(), String::new());
     "test".clone_into(&mut root.id);
@@ -272,11 +238,8 @@ fn master04_field_identifier_structure() {
     assert_eq!(k.suffixes[0].name, "magnitude");
 }
 
-/// master04 §Node ID Generation Rules — every generated node id in the worked
-/// table is a legal single-segment FLAT key that Displays back verbatim (the
-/// syntactic contract between the node-id generator and the path layer). The
-/// generation *algorithm* itself is exercised by `webtemplate::id`'s own tests
-/// (the generator is `pub(crate)` — see the seam-gap note in the task report).
+/// Every node id of the master04 §Node ID Generation Rules table is a legal
+/// single-segment FLAT key that prints back verbatim.
 #[test]
 fn master04_node_id_table_ids_are_legal_flat_segments() {
     for id in [
@@ -343,10 +306,8 @@ fn master04_rm_attr_normal_range_example() {
     );
 }
 
-/// master04 §Raw canonical JSON — the `|raw` bypass round-trips as a pure
-/// transform (the embedded canonical-JSON object is carried verbatim through
-/// FLAT⇄STRUCTURED). The *building* semantics of `|raw` (must carry `_type`)
-/// are covered by `rejects_raw_without_type`.
+/// The `|raw` value is carried verbatim through FLAT ⇄ STRUCTURED (master04 §Raw
+/// canonical JSON).
 #[test]
 fn master04_raw_canonical_json_example() {
     assert_flat_vector(
@@ -364,11 +325,7 @@ fn master04_raw_canonical_json_example() {
     );
 }
 
-/// master04 §Level Removal — the worked FLAT key (a lab-panel result magnitude)
-/// parses to the collapsed segment shape the chapter describes (container
-/// attributes and wrapper node-ids elided; `ELEMENT.value` → `|magnitude`; the
-/// inner CLUSTER repeats, hence `:0`). The canonical-RM-path ↔ FLAT-key
-/// *collapse* itself is template-driven (see the seam-gap note in the report).
+/// The master04 §Level Removal worked key parses to the collapsed segment shape.
 #[test]
 fn master04_level_removal_flat_key() {
     let k = FlatKey::parse(
@@ -480,10 +437,8 @@ fn rejects_malformed_keys() {
     );
 }
 
-/// master04 §Open Value-Sets and the `|other` Suffix ("`|other` is mutually
-/// exclusive with `|code`, `|value` and `|terminology` … servers MUST reject
-/// combinations") — asserted both as a hard `composition_from_flat` error and
-/// as a `validate_flat_other` diagnostic.
+/// `|other` with `|code`, `|value` or `|terminology` is refused by the build and
+/// reported by `validate_flat_other` (master04 §Open Value-Sets).
 #[test]
 fn rejects_other_combined_with_code() {
     let wt = coded_leaf_wt(true);
@@ -521,10 +476,8 @@ fn rejects_other_on_closed_value_set() {
     );
 }
 
-/// master04 §Validation ("Mandatory context fields (language, territory) are
-/// present") — the submission seam refuses a buildable FLAT document missing
-/// `ctx/territory`, while the plain projection stays permissive for
-/// fragments and round-trips.
+/// The submission seam refuses a FLAT document missing `ctx/territory` (master04
+/// §Validation); the plain projection does not.
 #[test]
 fn submission_rejects_missing_mandatory_context() {
     let wt = coded_leaf_wt(true);
@@ -537,10 +490,8 @@ fn submission_rejects_missing_mandatory_context() {
     assert!(composition_from_flat(&doc, &wt, NOW).is_ok());
 }
 
-/// master04 §Validation ("Terminology bindings are valid") — a `|code`
-/// outside a CLOSED value set with no `|value` cannot resolve to a coded
-/// value: the submission seam names the cause instead of emitting a
-/// value-less `DV_CODED_TEXT` for the strict reader to refuse downstream.
+/// A `|code` outside a closed value set with no `|value` is refused with its
+/// cause (master04 §Validation).
 #[test]
 fn submission_rejects_code_outside_closed_value_set() {
     let doc =

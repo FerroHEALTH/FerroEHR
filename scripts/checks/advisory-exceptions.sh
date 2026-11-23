@@ -4,13 +4,10 @@
 # The resolved-exception gate: no `[advisories].ignore` entry in `deny.toml` may
 # outlive the finding it describes.
 #
-# `deny.toml`'s header states the rule in both directions, and this is the half
-# no amount of reading keeps true: a dependency upgrade resolves an advisory, the
-# ignore goes on passing because there is nothing left to ignore, and the
-# published VEX justification keeps describing a dependency graph that no longer
-# exists. That happened here — two quick-xml advisories accepted "via
-# object_store, which pins ^0.40" stayed accepted after object_store moved to the
-# patched 0.41.
+# `deny.toml`'s header states the rule in both directions, and this is the
+# half reading does not keep true: a dependency upgrade resolves an advisory,
+# the ignore keeps passing, and the published VEX justification goes on
+# describing a dependency graph that does not exist.
 #
 # cargo-deny already detects the condition: `advisory-not-detected` fires for an
 # `ignore` entry that no crate in the graph matches

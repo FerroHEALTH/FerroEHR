@@ -348,12 +348,8 @@ async fn a_representation_not_recorded_or_ended_is_refused() {
 /// representation is deleted, both paths refuse them, while the patient's own login is still
 /// the patient.
 ///
-/// A representative of another subject only, who never represented this one,
-/// is refused too. The owner's decision on #5622 (2026-11-14) holds a login a
-/// `PERSON` carries to that `PERSON`: when the CDR knows who signs in, its
-/// facts decide, not the issuer's claim of the EHR. This test once expected
-/// that login to be admitted as the patient, a defect the earlier rule
-/// pinned.
+/// A representative of another subject only is refused too: a login a `PERSON`
+/// carries is held to that `PERSON` (#5622).
 #[tokio::test]
 async fn a_deleted_representation_never_leaves_the_patient_behind() {
     let (_db, svc) = service().await;

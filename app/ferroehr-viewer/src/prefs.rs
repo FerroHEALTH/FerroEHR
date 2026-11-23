@@ -165,9 +165,6 @@ fn redirect_with(location: &str, cookies: &[String]) -> Response {
 
 /// Keeps the one preference a plain form post chose in its cookie and sends
 /// the browser back to the page it came from.
-///
-/// The post carries `back` and one preference under its cookie's name; a
-/// switch posts `off` before its `on`, and the last value wins.
 pub async fn choose_preference(
     axum::Extension(state): axum::Extension<crate::state::AppState>,
     Form(fields): Form<Vec<(String, String)>>,

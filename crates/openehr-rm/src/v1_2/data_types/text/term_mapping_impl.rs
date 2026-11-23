@@ -2,21 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariant for `TERM_MAPPING`.
-//!
-//! Spec:
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.term_mapping.adoc`
-//! §Invariants + §Functions.
-//!
-//! `Match_valid` (`is_valid_match_code (match)`) is enforced here. The sibling
-//! `Purpose_valid` — `purpose /= Void implies terminology
-//! (Terminology_id_openehr).has_code_for_group_id
-//! (Group_id_term_mapping_purpose, purpose.defining_code)` — is terminology-bound
-//! and cannot be decided in this crate, which has no terminology dependency; it
-//! is enforced in the terminology-aware path (`validate::terminology`, the
-//! `TERM_MAPPING` slot) against the `openehr-term` bundle. The clause's typing
-//! half ("purpose is a `DV_CODED_TEXT`") is structural here
-//! (`purpose: Option<DvCodedText>`).
+//! `TERM_MAPPING` invariants (`org.openehr.rm.data_types.term_mapping.adoc`):
+//! `Match_valid` here, `Purpose_valid` in `validate::terminology`.
 
 use crate::v1_2::data_types::text::term_mapping::TermMapping;
 use openehr_base::validate::{InvariantViolation, Validate};

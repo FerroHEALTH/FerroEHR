@@ -19,12 +19,6 @@
 //! groups them under the newest, the template's header names its release and
 //! switches to another with FerroUI's scripts loaded and refused, and Compare
 //! names the paths one release adds to the other.
-//!
-//! The pair is the corpus's two releases of `test_versioned` (ADL 1.4,
-//! `corpus/fixtures/opt/valid/versioned.v1.opt` and `versioned.v2.opt`),
-//! the second adding one element. Every scene is SEED-AND-CLEAN over the
-//! CDR's REST API: it uploads the pair when absent and removes it at scene
-//! end as the ADMIN dev user, so a shared stack is left as it was found.
 
 use crate::common;
 

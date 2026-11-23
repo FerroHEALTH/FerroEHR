@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `TERMINOLOGY('expand', …)` `matches`-operand expansion (B4 stage (a)).
+//! `TERMINOLOGY('expand', …)` `matches`-operand expansion.
 //!
 //! master03 §TERMINOLOGY (`docs/specs/openehr/QUERY/docs/AQL/master03-syntax.adoc`
 //! lines 748–767) allows a `TERMINOLOGY()` call as — or *inside* — the
@@ -30,9 +30,6 @@
 //!   truth value;
 //! * the terminology-URI operand (`matches { terminology://… }`, master03
 //!   §matches/URI), expanded through the same seam into an explicit value list.
-//!
-//! Operations with no defined comparison semantics in AQL (`lookup`, `map`)
-//! remain typed rejects at the seam implementation.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -53,8 +50,6 @@ const EXPAND: &str = "expand";
 /// The resolver seam for `TERMINOLOGY('expand', …)`: turns a `(service_api,
 /// params_uri)` pair into the explicit list of codes of the referenced value
 /// set.
-///
-/// Implemented by the application service over the terminology providers.
 #[async_trait]
 pub trait TerminologyExpander: Send + Sync {
     /// Expand the value set identified by `params_uri` via the terminology
@@ -95,12 +90,6 @@ pub trait TerminologyExpander: Send + Sync {
 /// Resolve and merge every `TERMINOLOGY('expand', …)` used as (or inside) a
 /// `matches` operand in `query`'s `WHERE` clause, rewriting the value lists
 /// in place to explicit string codes.
-///
-/// A no-op when the query has no `WHERE` clause or no `expand` operand.
-///
-/// Each distinct `(service_api, params_uri)` is resolved exactly once. Non-
-/// `expand` `TERMINOLOGY()` operands are left untouched (the planner rejects
-/// them).
 ///
 /// Returns `true` when at least one terminology operand was resolved and
 /// spliced into the AST — i.e. the lowered plan now embeds a terminology

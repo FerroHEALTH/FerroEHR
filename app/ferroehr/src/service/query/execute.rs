@@ -537,22 +537,6 @@ fn map_plan_error(e: AqlError) -> ServiceError {
     }
 }
 
-/// Map an execution error: an assembly/terminology failure is the server's
-/// fault (`500`); a SQL-lowering failure that surfaces here is still a bad
-/// query (`400`); a raw driver failure is CLASSIFIED like every other database
-/// leg (`crate::storage::error::classify_sqlx`), so a pool-acquire timeout on
-/// the query path sheds as `503 service-overloaded` exactly as it does on the
-/// write paths instead of reporting a blanket `500`.
-///
-/// The `500` legs carry the curated opaque message: a driver string names the
-/// schema objects the generated SQL touched, an assembly failure names the
-/// internal node-row shape, and a missing column alias names a generated SQL
-/// alias — server-internal detail that goes to `tracing` instead
-/// ([`ServiceError::internal`]).
-/// The refusal of a value the query compares that the database cannot cast to
-/// the type of the path it is compared with. The driver error does not say
-/// whether the value was written in the query or bound from
-/// `query_parameters`, so the message names neither.
 const CAST_REFUSAL: &str = "a value in the query cannot be coerced to the type its predicate \
                             compares against (an invalid date/time or text representation); \
                             correct the value";
@@ -562,6 +546,10 @@ const CAST_REFUSAL: &str = "a value in the query cannot be coerced to the type i
 const NOT_AN_AMOUNT: &str = "SUM and AVG add numbers and amounts (DV_QUANTITY, DV_COUNT, \
                              DV_PROPORTION, DV_DURATION); the path selects another data value";
 
+/// Maps an execution error: an assembly or terminology failure is a `500`
+/// with the curated opaque message, a SQL-lowering failure a `400`, and a
+/// driver failure is classified like every database leg
+/// (`crate::storage::error::classify_sqlx`).
 fn map_exec_error(e: AqlError) -> ServiceError {
     match e {
         // A data-exception the DRIVER raises here is a value of the query (a

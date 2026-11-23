@@ -5,13 +5,8 @@
 //! `ServiceProviderConfig` (RFC 7643 §5), `ResourceTypes` (§6) and `Schemas`
 //! (§7).
 //!
-//! A [`DiscoveryConfig`] names the resource types a provider serves, each
-//! with a [`SchemaSelection`] of the attributes it maps; [`Discovery::build`]
-//! checks it and builds every document once, so `/Schemas` advertises
-//! exactly the selected attributes and every request is read against the
-//! same [`ResourceSchema`]. Bulk, sort and password change are features this
-//! layer does not implement, so the configuration has no switch for them and
-//! the documents declare them unsupported.
+//! Bulk, sort and password change are unimplemented, so the documents declare
+//! them unsupported.
 
 use serde::{Deserialize, Serialize};
 

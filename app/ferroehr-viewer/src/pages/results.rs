@@ -3,10 +3,6 @@
 
 //! The results of a query run.
 //!
-//! As Query and a stored query's Run tab draw them (FerroUI
-//! `design/consoles/ferroehr/`, the results pane E7): the window line, the rows as a table or, when the result set has numbers to
-//! draw, as a line chart, and the Export menu.
-//!
 //! A run is a form post, and its results exist only in the page that answers
 //! it: the viewer keeps no store between requests. So FerroUI's pane rides
 //! the page's own form: Table and Chart are submits of it that run the query

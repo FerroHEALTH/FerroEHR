@@ -19,9 +19,6 @@ use crate::locale::tr;
 use serde::Deserialize;
 
 /// The CDR status document, typed over the fields the shell reads.
-///
-/// Unknown fields are ignored: the document carries more (the licence, the
-/// versions, a timestamp) and a newer server may add to it.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct StatusDocument {
     /// `UP` when the server answers at all.

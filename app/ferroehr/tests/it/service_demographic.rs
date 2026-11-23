@@ -460,14 +460,12 @@ async fn person_lifecycle_end_to_end() {
     assert!(after.is_empty(), "deleted current read is 204 (Null body)");
 }
 
-/// Party write-path fix: the create/update representation is now
-/// built **from the commit result** (never a post-commit re-read). It must be
-/// byte-identical to a fresh read — the served body is
-/// `inject_uid(reassemble(decompose(body)))` and the node codec round-trips
-/// losslessly (RM common master06 §Committal and Audits: the written version
-/// identity + content). Mirrors the EHR/DIRECTORY `write_responses_match_a_fresh_read`
-/// gate; covers PERSON and the ORGANISATION sibling (same path, keyed by
-/// `PartyKind`).
+/// The party create/update representation is built from the commit result,
+/// never a post-commit re-read, and is byte-identical to a fresh read: the
+/// served body is `inject_uid(reassemble(decompose(body)))` and the node codec
+/// round-trips losslessly (RM common master06 §Committal and Audits). Mirrors
+/// the EHR/DIRECTORY `write_responses_match_a_fresh_read` gate; covers PERSON
+/// and the ORGANISATION sibling (same path, keyed by `PartyKind`).
 #[tokio::test]
 async fn party_write_responses_match_a_fresh_read() {
     let (_db, svc) = crate::fixtures::service().await;
@@ -1128,11 +1126,6 @@ async fn party_update_if_match_is_case_insensitive_and_quote_tolerant() {
 /// (L48) versions it with the party: "A Version of a `PARTY` includes all the
 /// compositional parts, such as identities, contacts, Party relationships of
 /// which it is the source."
-///
-/// This server also keeps each relationship in its OWN version container, on
-/// its `versioned_party_relationship` surface. The two
-/// representations are DISJOINT — committing this party mints no relationship
-/// container, and no container write edits this list.
 #[tokio::test]
 async fn inline_relationships_are_stored_and_served_verbatim() {
     let db = testkit::db().await.expect("testkit database");

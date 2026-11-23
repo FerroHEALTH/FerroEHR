@@ -7,9 +7,9 @@
 //!
 //! Each register is read, written whole over the version `If-Match` names and
 //! listed by version, by `admin_role` only, and a change decides the next
-//! request on every replica, with no restart. The Cedar policy register is
-//! gone (#5515) and answers as any unknown register does. No openEHR spec
-//! governs operational policy: our own design/extension.
+//! request on every replica, with no restart. An unknown register, `cedar`
+//! among them (#5515), answers as unknown. No openEHR spec governs operational
+//! policy: our own design/extension.
 
 use std::sync::Arc;
 use std::time::Duration;

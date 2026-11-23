@@ -1,25 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! XSD reader for the XML codegen.
-//!
-//! Parses the vendored openEHR ITS-XML schemas into a small structural model
-//! the XML emitter needs and BMM does not encode: for each `xs:complexType`,
-//! which properties are XML **attributes** vs child **elements**, the child
-//! **order** (canonical XML is order-sensitive), the inheritance `base`, and the
-//! `abstract` flag. From these it derives a subtype index for `xsi:type`
-//! polymorphic dispatch. Named `xs:simpleType` definitions are read alongside
-//! them, carrying the `xs:enumeration` facets that fix a closed value space.
-//!
-//! Each caller curates its own conflict-free file set (the constants at the
-//! bottom of this module): the constraint schemas redefine RM type names
-//! (`ELEMENT`, `CODE_PHRASE`) for the archetype world and would collide in a
-//! single merged model.
-//!
-//! Named `xs:group` / `xs:attributeGroup` definitions are expanded in place, so
-//! a complexType whose content is `<xs:group ref="…"/>` carries the group's
-//! elements as if declared inline — the AOM2 archetype schemas put the whole
-//! archetype body behind that idiom.
+//! XSD reader for the XML codegen: per `xs:complexType`, attributes versus
+//! child elements, child order, `base` and `abstract`, plus the
+//! `xs:enumeration` facets of named simple types. `xs:group` references expand
+//! in place. Each caller curates a conflict-free file set (the constants
+//! below).
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -33,13 +19,8 @@ pub(crate) struct XsdModel {
     pub simple_types: BTreeMap<String, XsdSimpleType>,
 }
 
-/// One named `xs:simpleType` — its `xs:restriction` base and the
-/// `xs:enumeration` facets that restriction declares.
-///
-/// Only the enumeration facets are carried, because they are the ones that fix
-/// a CLOSED value space the emitter can turn into a Rust enum; the lexical
-/// facets the same schemas use (`xs:pattern` on `Iso8601Date`,
-/// `DateConstraintPattern`, …) restrict a text space that stays text.
+/// One named `xs:simpleType`: its restriction base and its `xs:enumeration`
+/// facets.
 pub(crate) struct XsdSimpleType {
     pub name: String,
     /// The `xs:restriction` `base` (`xs:integer`, `xs:string`, …), empty when
@@ -53,9 +34,7 @@ pub(crate) struct XsdSimpleType {
 pub(crate) struct XsdEnumFacet {
     /// The facet's `value` — the lexical form a document carries.
     pub value: String,
-    /// The facet's `id` attribute. The openEHR schemas annotate every
-    /// enumeration facet with one (`<xs:enumeration value="2001" id="equal"/>`),
-    /// which names the value in the schema's own vocabulary.
+    /// The facet's `id` annotation (`<xs:enumeration value="2001" id="equal"/>`).
     pub id: Option<String>,
 }
 
@@ -76,10 +55,6 @@ pub(crate) struct XsdType {
 pub(crate) struct XsdAttr {
     pub name: String,
     /// The declared `type` of the XSD attribute.
-    ///
-    /// The emitters type an attribute from the BMM property it corresponds to
-    /// rather than from the schema; this is read by the closure invariants,
-    /// which ask what a slot's declared type is.
     pub type_name: String,
     pub required: bool,
 }
@@ -92,12 +67,8 @@ pub(crate) struct XsdElem {
     pub multiple: bool,
 }
 
-/// Collects one document's named `group` / `attributeGroup` definitions.
-///
-/// A group may be declared in one file of an `xs:include` chain and referenced
-/// from another, so the caller scans every file before resolving any
-/// complexType. First declaration wins (the caller curates a conflict-free
-/// set).
+/// Collects one document's named `group` / `attributeGroup` definitions; first
+/// declaration wins.
 fn collect_groups(doc: &roxmltree::Document<'_>, groups: &mut XsdGroups) {
     for node in doc
         .root_element()
@@ -157,15 +128,12 @@ fn collect_types(
 }
 
 impl XsdModel {
-    /// Parse a curated set of XSD files into one merged model. Later files do
-    /// not override types already seen (the caller curates a conflict-free set).
+    /// Parses a curated set of XSD files into one model, first declaration wins.
     ///
     /// # Errors
     /// Returns an error if a file cannot be read or parsed as XML.
     pub(crate) fn parse_files(paths: &[std::path::PathBuf]) -> Result<Self, String> {
-        // Pass 1: the named group definitions of the whole closure. A group may be
-        // declared in one file of an `xs:include` chain and referenced from
-        // another, so every file is scanned before any complexType is resolved.
+        // Groups first: one may be referenced from another file of the include chain.
         let mut groups = XsdGroups::default();
         for path in paths {
             let text = std::fs::read_to_string(path)
@@ -201,10 +169,8 @@ impl XsdModel {
         })
     }
 
-    /// The flattened (ancestor-first) attributes + elements for a concrete type,
-    /// walking the `base` chain. Attributes precede elements on the wire; within
-    /// each, ancestors come first (matching the flattened generated struct
-    /// field order).
+    /// The flattened attributes and elements of a concrete type, ancestors first
+    /// within each.
     #[must_use]
     pub(crate) fn flattened(&self, name: &str) -> (Vec<XsdAttr>, Vec<XsdElem>) {
         // Collect the chain root→…→self, then concatenate in that order.
@@ -253,9 +219,7 @@ impl XsdModel {
 enum Particle {
     /// A named `xs:element` declaration.
     Element(XsdElem),
-    /// `<xs:group ref="NAME"/>`, expanded in place. The flag records whether the
-    /// *reference* is itself repeatable (`maxOccurs` > 1), which makes every
-    /// element the group contributes repeatable.
+    /// `<xs:group ref="NAME"/>`, with whether the reference repeats.
     GroupRef(String, bool),
 }
 
@@ -277,11 +241,8 @@ struct XsdGroups {
 }
 
 impl XsdGroups {
-    /// Flatten `items` into `out`, expanding every `xs:group` reference.
-    ///
-    /// `repeat` propagates a repeatable group reference onto the elements it
-    /// contributes. `visiting` is the expansion stack, so a group cycle is
-    /// reported rather than recursed into.
+    /// Flattens `items` into `out`, expanding every `xs:group` reference and
+    /// reporting a group cycle.
     fn expand_elements(
         &self,
         items: &[Particle],
@@ -391,12 +352,8 @@ fn parse_complex_type(
     Ok(Some(ty))
 }
 
-/// Parse one named `xs:simpleType`: its `xs:restriction` base and the
-/// `xs:enumeration` facets declared under it.
-///
-/// An `xs:union`/`xs:list` definition has no restriction, so it yields an empty
-/// base and no facets — it is still recorded, because the name exists in the
-/// closure and a slot may reference it.
+/// Parses one named `xs:simpleType`; a union or list yields an empty base and
+/// no facets.
 fn parse_simple_type(node: roxmltree::Node) -> Option<XsdSimpleType> {
     let name = node.attribute("name")?;
     let restriction = node
@@ -459,9 +416,7 @@ fn collect_particle_item(
     }
 }
 
-/// Recurse a particle (sequence/choice/all), collecting `xs:element`s and
-/// `xs:group` references in order. Does not descend into an element's own inline
-/// `complexType`.
+/// Collects a particle's `xs:element`s and `xs:group` references in order.
 fn collect_particle(particle: roxmltree::Node, out: &mut Vec<Particle>) {
     for child in particle.children().filter(roxmltree::Node::is_element) {
         match local(&child) {
@@ -527,16 +482,10 @@ pub(crate) fn v1_files(all_dir: &Path) -> Vec<std::path::PathBuf> {
     RM_FILES_V1.iter().map(|f| all_dir.join(f)).collect()
 }
 
-/// The v1 `ALL/` files that supply the **served** RM-instance closure. Merged
-/// first so shared/served types (COMPOSITION, SECTION, LOCATABLE, ENTRY, …) keep
-/// their v1 shape via [`XsdModel::parse_files`]'s first-wins `.or_insert`.
+/// The v1 `ALL/` files of the served RM closure, merged first.
 ///
-/// `Extract.xsd` is intentionally **excluded**: the v1 `ALL/` bundle carries the
-/// stale RM-1.0.2 EXTRACT model, whose `EXTRACT_ITEM` does **not** extend
-/// `LOCATABLE` — contradicting the RM-1.2.0 BMM (where `EXTRACT_ITEM` is a
-/// `LOCATABLE` subtype). The extract family is drawn from the v2 `EhrExtract.xsd`
-/// (see [`RM_FILES_V2_SUPPLEMENT`]) so its LOCATABLE ancestry — and the
-/// `archetype_node_id` **attribute** — resolves correctly.
+/// `Extract.xsd` is excluded: its RM 1.0.2 `EXTRACT_ITEM` does not extend
+/// `LOCATABLE`, so the extract family comes from [`RM_FILES_V2_SUPPLEMENT`].
 pub(crate) const RM_FILES_V1_SERVED: &[&str] = &[
     "BaseTypes.xsd",
     "Structure.xsd",
@@ -546,27 +495,15 @@ pub(crate) const RM_FILES_V1_SERVED: &[&str] = &[
     "Resource.xsd",
 ];
 
-/// The v2 (RM 1.1.0) schemas that supply the RM-instance types the v1 `ALL/`
-/// bundle **lacks** (EHR + demographic) or carries **stale** (extract). Merged
-/// *after* the v1 served core so already-present served types keep their v1
-/// definition; only the missing types are added (via first-wins `.or_insert`).
-///
-/// The RM-instance wire shape is identical across the v1/v2 lineages bar the root
-/// `xmlns` (see the `main.rs` rationale), so the v1 `LOCATABLE` — base of all
-/// these types via the flatten walk — supplies the `archetype_node_id` attribute
-/// and canonical element order for `EHR_STATUS`/`EHR_ACCESS`, the demographic
-/// PARTY hierarchy, and the extract LOCATABLE subtypes — satisfying the
-/// emit-xml LOCATABLE-attribute guard for those types.
+/// The v2 (RM 1.1.0) schemas for the types the v1 `ALL/` bundle lacks (EHR,
+/// demographic) or carries stale (extract), merged after the v1 core.
 pub(crate) const RM_FILES_V2_SUPPLEMENT: &[&str] = &[
     "RM/Release-1.1.0/Ehr.xsd",
     "RM/Release-1.1.0/Demographic.xsd",
     "RM/Release-1.1.0/EhrExtract.xsd",
 ];
 
-/// Resolve the merged emit-xml XSD input: the v1 served core under `v1_all_dir`
-/// (the `its-xml-1.0.2-nsv1/ALL` bundle) followed by the v2 EHR/demographic/
-/// extract supplement under `v2_root` (the `its-xml-2.0.0-nsv2` root). Order is
-/// load-bearing — v1 first so served types win (`.or_insert`).
+/// The merged emit-xml XSD input: the v1 core, then the v2 supplement.
 #[must_use]
 pub(crate) fn xml_emit_files(v1_all_dir: &Path, v2_root: &Path) -> Vec<std::path::PathBuf> {
     RM_FILES_V1_SERVED
@@ -576,12 +513,8 @@ pub(crate) fn xml_emit_files(v1_all_dir: &Path, v2_root: &Path) -> Vec<std::path
         .collect()
 }
 
-/// The AM/OPT 1.4 constraint-schema closure (`Template.xsd` and its `xs:include`
-/// chain), for the `emit-opt` OPT generator. Order = merge order;
-/// `Template.xsd` first so the OPT-specific types (`OPERATIONAL_TEMPLATE`,
-/// `C_ARCHETYPE_ROOT`, …) win. `Resource.xsd` + `BaseTypes.xsd` overlap the
-/// RM-instance set — those types resolve to the already-generated `openehr-rm`/
-/// `openehr-base` XML impls; the AOM/OPT constraint types are generated fresh.
+/// The AM/OPT 1.4 closure (`Template.xsd` and its includes), `Template.xsd`
+/// first.
 pub(crate) const AM_FILES_V1: &[&str] = &[
     "Template.xsd",
     "OpenehrProfile.xsd",
@@ -596,23 +529,11 @@ pub(crate) fn am_files_v1(all_dir: &Path) -> Vec<std::path::PathBuf> {
     AM_FILES_V1.iter().map(|f| all_dir.join(f)).collect()
 }
 
-/// The AOM2 **persistent-form** archetype-schema closure, for the `emit-aom2`
-/// generator: `P_Archetype.xsd` and its `xs:include` chain.
+/// The AOM2 persistent-form closure (`P_Archetype.xsd` and its includes), the
+/// form the bundle's `examples/*.xml` use.
 ///
-/// This is the serialization with a vendored corpus behind it — the bundle's own
-/// `examples/*.xml` all declare
-/// `xsi:schemaLocation="… ../P_Archetype.xsd"` and root element `<archetype>` of
-/// type `P_AUTHORED_ARCHETYPE` (`P_C_COMPLEX_OBJECT`, `P_C_ATTRIBUTE`, …), so it
-/// is the shape a real AOM2 XML document actually takes.
-///
-/// NOTE: the bundle's `Archetype.xsd` (the AOM2 model form) is a SECOND
-/// independent serialization with its own closure ([`AOM2_MODEL_FILES`]) and
-/// emitted module — both declare the top-level element `archetype` with
-/// DIFFERENT root types, so merging them into one `XsdModel` resolves
-/// abstract slots inconsistently.
-///
-/// `Resource.xsd` / `BaseTypes.xsd` overlap the RM-instance set and resolve to
-/// the already-generated `openehr-base`/`openehr-rm` XML impls.
+/// NOTE: `Archetype.xsd` declares `archetype` with a different root type, so it
+/// is a separate closure ([`AOM2_MODEL_FILES`]).
 pub(crate) const AOM2_FILES: &[&str] = &[
     "P_Archetype.xsd",
     "ArchetypeCommon.xsd",
@@ -627,31 +548,10 @@ pub(crate) fn aom2_files(aom2_dir: &Path) -> Vec<std::path::PathBuf> {
     AOM2_FILES.iter().map(|f| aom2_dir.join(f)).collect()
 }
 
-/// The AOM2 **model-form** archetype-schema closure, for the `emit-aom2`
-/// generator's second module: `Archetype.xsd` and its `xs:include` chain.
+/// The AOM2 model-form closure (`Archetype.xsd` and its includes).
 ///
-/// This is the AOM2 model serialization — the AOM classes themselves
-/// (`ARCHETYPE`, `C_COMPLEX_OBJECT`, `C_ATTRIBUTE`, `ARCHETYPE_TERMINOLOGY`,
-/// `MultiplicityInterval`), as opposed to the space-efficient persistent form of
-/// [`AOM2_FILES`] (the schema's own opening comment: "openEHR Archetype 2.0.6 XML
-/// schema - uses AOM-like types - not space-efficient", against
-/// `P_Archetype.xsd`'s "uses `P_AOM` types - much more space efficient").
-///
-/// It is a SEPARATE closure from [`AOM2_FILES`], not a merge, for the reason
-/// recorded there: both schemas declare the top-level element `archetype`, with
-/// different root types, and both define same-named supporting types.
-///
-/// The declared root type is itself unusable as written —
-/// `<xs:element name="archetype" type="ARCHETYPE"/>` names an
-/// `abstract="true"` complexType that NOTHING in the closure derives from
-/// (`AUTHORED_ARCHETYPE` extends `AUTHORED_RESOURCE` and re-uses the archetype
-/// body via `<xs:group ref="ARCHETYPE"/>` rather than extending `ARCHETYPE`). So
-/// `AUTHORED_ARCHETYPE` is the only instantiable archetype root the schema
-/// offers, and the emitted entry points are typed to it.
-///
-/// `Resource.xsd` / `BaseTypes.xsd` overlap the RM-instance set the same way
-/// [`AOM2_FILES`] does and resolve to the generated `openehr-base`/`openehr-rm`
-/// XML impls.
+/// Its declared root `ARCHETYPE` is abstract and nothing derives from it, so
+/// the entry points are typed to `AUTHORED_ARCHETYPE`.
 pub(crate) const AOM2_MODEL_FILES: &[&str] = &[
     "Archetype.xsd",
     "ArchetypeCommon.xsd",
@@ -666,6 +566,4 @@ pub(crate) fn aom2_model_files(aom2_dir: &Path) -> Vec<std::path::PathBuf> {
     AOM2_MODEL_FILES.iter().map(|f| aom2_dir.join(f)).collect()
 }
 
-// NOTE: there is no whole-bundle v2 file list — the two published ITS-XML
-// lineages differ only in target namespace, so ONE emitted codec serves both
-// and the emit-xml input is the v1 `ALL/` bundle plus the named v2 supplement.
+// The two ITS-XML lineages differ only in target namespace.

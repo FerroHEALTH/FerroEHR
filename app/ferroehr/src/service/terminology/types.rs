@@ -62,9 +62,6 @@ pub struct DefinedTerm {
 
 /// A `Terminology_extract._terms_` value: either a bare `Term_code` or a
 /// fully defined `Defined_term`.
-///
-/// Each term is a bare code or carries displayable text, and this closed enum
-/// is that choice.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum TermEntry {

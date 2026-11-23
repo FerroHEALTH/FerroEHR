@@ -1,16 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Corpus outer-parse gate: every well-formed ADL2 source (`*.adls`) in the
-//! vendored openEHR ADL2 reference library must outer-parse into a
-//! [`openehr_adl::source::SourceArtefact`] — the sections split, the HRID
-//! parsed, the ODIN sections parsed.
-//!
-//! Semantic (V-code) failures in the corpus still parse (the outer parser does no
-//! semantic validation), so they stay included. Only *lexer/parser-level*
-//! intentional-fail fixtures are excluded, each named with its reason in
-//! `EXCLUSIONS` — these are files whose outer structure the parser correctly
-//! rejects (missing/empty required section, malformed HRID, malformed ODIN).
+//! Every well-formed ADL2 source of the vendored reference library outer-parses
+//! into a [`openehr_adl::source::SourceArtefact`]; only the outer-structure FAIL
+//! fixtures in `EXCLUSIONS` are excluded.
 
 // A corpus test reports its pass counts on stdout for the developer running it.
 #![allow(

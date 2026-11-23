@@ -2,18 +2,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written `DV_ABSOLUTE_QUANTITY` spec behaviour, shared by its
-//! descendants.
-//!
-//! `DV_ABSOLUTE_QUANTITY` is abstract, so the generated `DvAbsoluteQuantity` is
-//! a subtype enum and the accuracy rule its `add`/`subtract`/`diff` declare has
-//! no single struct to live on. It is realized once here and called by
-//! `DV_DATE`, `DV_TIME` and `DV_DATE_TIME`.
-//!
-//! The rule differs from `DV_AMOUNT`'s in what it operates on rather than in
-//! what it says: accuracy here is redefined as a `DV_AMOUNT` — a `DV_DURATION`
-//! for the three temporal descendants — so the "sum of the accuracies" is a
-//! duration sum, not a real one.
+//! The `DV_ABSOLUTE_QUANTITY` accuracy rule, shared by `DV_DATE`, `DV_TIME` and
+//! `DV_DATE_TIME`, whose accuracy is a `DV_DURATION`.
 
 use crate::v1_1::data_types::quantity::date_time::dv_duration::DvDuration;
 use crate::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity;
@@ -22,17 +12,10 @@ use crate::v1_1::data_types::quantity::dv_amount_impl::AmountAccuracy;
 use crate::v1_1::data_types::quantity::dv_amount_impl::{CombinedAccuracy, combine};
 use openehr_base::v1_2::foundation_types::time::iso8601_duration::Iso8601Duration;
 
-/// The accuracy of an absolute quantity displaced by a differential amount.
+/// The accuracy of a quantity displaced by a differential amount.
 ///
-/// Spec: `dv_absolute_quantity.adoc` §Functions `add`/`subtract` — "the sum of
-/// the accuracies of the operands, if both present, or unknown, if either or
-/// both operand accuracies are unknown."
-///
-/// The two operands measure their accuracy differently: this quantity's is
-/// already a duration, while the differential amount's is a `Real` half-range
-/// over its own magnitude. The amount's is converted into a duration of that
-/// many seconds — `DV_DURATION.magnitude` is seconds by definition — and the
-/// two durations are then added by BASE.
+/// "the sum of the accuracies of the operands, if both present, or unknown"
+/// (`dv_absolute_quantity.adoc` `add`); the amount's half-range counts as seconds.
 #[must_use]
 pub fn displaced_accuracy(
     accuracy: Option<&DvDuration>,
@@ -55,11 +38,8 @@ pub fn displaced_accuracy(
     })
 }
 
-/// The accuracy of the difference between two absolute quantities.
-///
-/// Spec: `dv_absolute_quantity.adoc` §Functions `diff` — same rule, but the
-/// result is a `DV_AMOUNT`, so the summed duration is reported as that amount's
-/// own `Real` accuracy in seconds.
+/// The accuracy of the difference of two quantities (`diff`), as `Real`
+/// seconds.
 #[must_use]
 pub fn difference_accuracy(
     left: Option<&DvDuration>,
@@ -71,9 +51,7 @@ pub fn difference_accuracy(
     let (Some(left_seconds), Some(right_seconds)) = (left.magnitude(), right.magnitude()) else {
         return CombinedAccuracy::Unrepresentable;
     };
-    // Both half-ranges are already absolute values in seconds, so the
-    // `DV_AMOUNT` rule reduces to adding them — routed through it anyway so the
-    // finiteness and zero-form checks stay in one place.
+    // Through the `DV_AMOUNT` rule, for its finiteness and zero-form checks.
     combine(
         AmountAccuracy::measured(left_seconds, Some(left_seconds), Some(false)),
         AmountAccuracy::measured(right_seconds, Some(right_seconds), Some(false)),
@@ -98,16 +76,9 @@ fn seconds_as_duration(seconds: f64) -> Iso8601Duration {
 }
 
 impl DvAbsoluteQuantity {
-    /// Addition of a differential amount to this quantity, or `None` when the
-    /// amount is not one this quantity can be displaced by.
-    ///
-    /// Spec: `dv_absolute_quantity.adoc` §Functions `add` — "Addition of a
-    /// differential amount to this quantity."
-    ///
-    /// The spec types the differential as any `DV_AMOUNT`, but each concrete
-    /// descendant narrows it: all three temporal ones effect `add` with a
-    /// `DV_DURATION` parameter, because a date displaced by a count or a
-    /// proportion is not a date. Anything else is refused here.
+    /// This quantity plus a differential amount (`add`), or `None` for an
+    /// amount that is not a `DV_DURATION`, the type each temporal descendant
+    /// takes.
     #[must_use]
     pub fn add(&self, a_diff: &DvAmount) -> Option<Self> {
         let DvAmount::DvDuration(a_diff) = a_diff else {
@@ -120,10 +91,8 @@ impl DvAbsoluteQuantity {
         }
     }
 
-    /// Subtraction of a differential amount from this quantity, under the same
-    /// conditions as [`Self::add`].
-    ///
-    /// Spec: `dv_absolute_quantity.adoc` §Functions `subtract`.
+    /// This quantity minus a differential amount (`subtract`), under the
+    /// conditions of [`Self::add`].
     #[must_use]
     pub fn subtract(&self, a_diff: &DvAmount) -> Option<Self> {
         let DvAmount::DvDuration(a_diff) = a_diff else {
@@ -136,11 +105,8 @@ impl DvAbsoluteQuantity {
         }
     }
 
-    /// Difference of two quantities, as the differential amount between them.
-    ///
-    /// Spec: `dv_absolute_quantity.adoc` §Functions `diff` — "Difference of two
-    /// quantities." Only two quantities of the same concrete type have one: the
-    /// difference between a date and a time of day is not a duration.
+    /// The differential amount between two quantities of one concrete type
+    /// (`diff`).
     #[must_use]
     pub fn diff(&self, other: &Self) -> Option<DvAmount> {
         match (self, other) {
@@ -152,14 +118,8 @@ impl DvAbsoluteQuantity {
         .map(DvAmount::DvDuration)
     }
 
-    /// Returns `true` when this quantity's accuracy was not recorded.
-    ///
-    /// Spec: `dv_quantified.adoc` §Functions `accuracy_unknown`, effected for
-    /// `DV_ABSOLUTE_QUANTITY` by `master06-quantity_package.adoc` §Accuracy and
-    /// Uncertainty — "in the `DV_ABSOLUTE_QUANTITY` class, `accuracy_unknown`
-    /// is represented by a Void (i.e. null) value for the accuracy attribute."
-    /// There is no `-1` sentinel here: the attribute is a `DV_AMOUNT`, so its
-    /// absence IS the unknown.
+    /// Whether the accuracy is Void (`accuracy_unknown`; `master06-quantity_package.adoc`
+    /// §Accuracy and Uncertainty).
     #[must_use]
     pub fn accuracy_unknown(&self) -> bool {
         match self {
@@ -186,9 +146,7 @@ mod tests {
         }
     }
 
-    /// "The sum of the accuracies of the operands, if both present" — the
-    /// differential amount's `Real` half-range becomes that many seconds of
-    /// duration before the two are added.
+    /// The amount's half-range becomes seconds of duration before the sum.
     #[test]
     fn a_displaced_accuracy_sums_both_operands() {
         let mut amount = duration("P1D");

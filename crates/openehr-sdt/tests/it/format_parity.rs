@@ -4,16 +4,9 @@
 #![expect(clippy::expect_used, reason = "test assertions/diagnostics/fixtures")]
 //! Canonical JSON and canonical XML get the same conformance answer.
 //!
-//! ITS-REST overview `Resources.md` §"Data representation": "Services MUST
-//! support at least one of the openEHR **XML** or **JSON** canonical
-//! formats" — the FORMAT is negotiable, the semantics are not. The #1431
-//! escape presented exactly the forbidden split (the same invariant-violating
-//! COMPOSITION was refused over XML and committed over JSON), so this suite
-//! pins the property at the validation seam: for every instance expressible
-//! in both canonical formats, the RM-invariant + terminology verdict set is
-//! IDENTICAL whether the instance arrived as raw canonical JSON or through
-//! the canonical-XML round-trip (typed decode → `ToXml` → `FromXml` → the
-//! canonical value the XML wire arm validates).
+//! ITS-REST `Resources.md` §"Data representation": the format is negotiable,
+//! the semantics are not. Every instance expressible in both gets one verdict
+//! set, raw JSON or through the canonical-XML round trip.
 
 use openehr_rm::v1_2::composition::composition::Composition;
 use openehr_sdt::rm_instance::validate_rm_and_terminology;
@@ -26,13 +19,8 @@ fn json_route(doc: &Value) -> Vec<String> {
     render(validate_rm_and_terminology(doc, "COMPOSITION"))
 }
 
-/// The rendered verdict set for canonical-XML arrival: the document is decoded
-/// typed, serialized to canonical XML, parsed back, and re-rendered as the
-/// canonical value the XML wire arm hands to validation. `None` when the
-/// instance is not expressible in XML at all (it does not deserialize into the
-/// typed `COMPOSITION` — e.g. a structurally invalid fixture whose defect IS
-/// the missing mandatory attribute), which the caller records rather than
-/// skips silently.
+/// The verdict set for canonical-XML arrival, or `None` when the instance does
+/// not decode into the typed `COMPOSITION` and so has no XML form.
 fn xml_route(doc: &Value) -> Option<Vec<String>> {
     let typed: Composition = openehr_its::json::from_canonical_value(doc).ok()?;
     let xml = openehr_its::xml::runtime::to_xml(
@@ -71,10 +59,8 @@ fn corpus_verdicts_agree_across_canonical_formats() {
             continue;
         }
         let Some(via_xml) = xml_route(&doc) else {
-            // The vendored SDK corpus deliberately carries a few structurally
-            // defective documents (a missing mandatory attribute cannot exist
-            // in XML — the typed decode is the XML arm's first step). Parity
-            // for those means the JSON route REFUSES them too.
+            // A structurally defective document has no XML form, so the JSON route must
+            // refuse it too.
             assert!(
                 !json_route(&doc).is_empty(),
                 "typed-undecodable corpus document produced no violation on \
@@ -93,13 +79,9 @@ fn corpus_verdicts_agree_across_canonical_formats() {
         checked += 1;
     }
     assert!(checked > 20, "expected a real corpus, checked {checked}");
-    // The adjudicated typed-undecodable set, named EXACTLY rather than counted:
-    // growth means a decode regression, shrinkage means a fixture started
-    // decoding and needs re-adjudication. Every entry is refused on BOTH routes
-    // (asserted above), which is what parity means here. The `feeder_audit` /
-    // placeholder-`OBJECT_VERSION_ID` / FHIR-reference / bare-UUID entries are
-    // the defective vendored halves of the fixture twins (`common::excluded`
-    // carries the per-file adjudication with its spec citation).
+    // The typed-undecodable set, named exactly; each is refused on both routes,
+    // and the defective vendored twins carry their adjudication in
+    // `common::excluded`.
     inexpressible.sort();
     let expected: Vec<String> = [
         "openehr_sdk/composition/canonical_json/all_types_systematic_tests_feeder_audit.json",
@@ -131,13 +113,8 @@ fn corpus_verdicts_agree_across_canonical_formats() {
     );
 }
 
-/// **Parity over the invalid CNF fixtures:** every composition fixture the
-/// catalogue adjudicates `invalid` that is still typed-decodable (its defect
-/// is semantic, not structural) yields the identical NON-EMPTY verdict set on
-/// both routes — the refusal happens in both formats, for the same reasons.
-/// Structurally undecodable fixtures are counted (their defect cannot exist
-/// in XML: the typed decode is the XML arm's first step), never silently
-/// skipped.
+/// Every typed-decodable invalid CNF composition fixture yields the same
+/// non-empty verdict set on both routes; undecodable ones are counted.
 #[test]
 fn invalid_fixture_verdicts_agree_across_canonical_formats() {
     let dir =

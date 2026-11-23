@@ -2,25 +2,9 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written BASE `Interval<T>` constraint-evaluation primitives.
+//! The BASE `Interval<T>` functions and boundary accessors.
 //!
-//! Implements the spec functions of the abstract `Interval<T>` class —
-//! `has`, `intersects`, `contains`, `is_equal` — plus boundary accessors, on
-//! the generated enum `Interval<T>` and on both concrete variants
-//! (`Point_interval<T>` → [`PointInterval`], `Proper_interval<T>` →
-//! [`ProperIntervalData`]). These are the primitives AM constraint evaluation
-//! interrogates when checking a value against an interval constraint.
-//!
-//! Spec sources (vendored):
-//! - `BASE/docs/UML/classes/org.openehr.base.foundation_types.interval.adoc`
-//!   (the `Interval<T>` class: attributes, `has`/`intersects`/`contains`/
-//!   `is_equal`, invariants).
-//! - `BASE/docs/foundation_types/master05-interval.adoc` (prose: open/closed
-//!   boundaries, unbounded = ±infinity).
-//!
-//! The truth tables are derived from the `has` post-condition and the
-//! open/closed-boundary prose; `intersects`/`contains` follow the standard
-//! boundary-aware interval algebra consistent with `has` (see the NOTEs).
+//! `org.openehr.base.foundation_types.interval.adoc`, `master05-interval.adoc`.
 
 use std::cmp::Ordering;
 

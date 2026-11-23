@@ -3,9 +3,6 @@
 
 //! Access control for the ITS-REST surface.
 //!
-//! **Authentication** (who the caller is) and **authorization** (what they
-//! may do), unified under one module.
-//!
 //! Spec grounding (`docs/specs/openehr/ITS-REST/.../Requests_and_responses.md`
 //! §"Authentication and authorization"; CNF `profiles/master03-profiles.adoc`):
 //!

@@ -2,47 +2,23 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Hand-written RM class invariant + functions for `REFERENCE_RANGE`.
-//!
-//! Spec: RM 1.2.0
-//! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.data_types.reference_range.adoc`.
-//!
-//! - `Range_is_simple` (invariant): each present, bounded limit of the `range`
-//!   must be a *simple* `DV_ORDERED` — one that itself carries no
-//!   `normal_range` and no `other_reference_ranges` (so reference ranges do
-//!   not nest).
-//! - `is_in_range(v)` (function): whether `v` lies inside `range`, via the
-//!   base `Interval.has` semantics over openEHR ordered magnitudes
-//!   (`dv_interval_impl` / `dv_ordered_impl`). `None` when the comparison is
-//!   undecidable (incomparable types/units or unavailable magnitude).
-//!
-//! The class is generic over its limit type `T` as `REFERENCE_RANGE<T>`
-//! declares, with `range: DV_INTERVAL<T>` restored by the generator (the class
-//! table leaves `T` unused, tracker issue #5196); `ReferenceRange<DvQuantity>`
-//! is the range of a `DV_QUANTITY`, `ReferenceRange<DvOrdered>` the open form.
+//! `REFERENCE_RANGE<T>` (RM 1.2.0 `org.openehr.rm.data_types.reference_range.adoc`):
+//! `Range_is_simple` and `is_in_range`. `range: DV_INTERVAL<T>` is restored by
+//! the generator (#5196).
 
 use crate::v1_2::data_types::quantity::dv_ordered_impl::OrderedLimit;
 use crate::v1_2::data_types::quantity::reference_range::ReferenceRange;
 use openehr_base::validate::{InvariantViolation, Validate};
 
-/// One side of `Range_is_simple`, whose clause is
-/// `range.lower_unbounded **or else** range.lower.is_simple`.
-///
-/// An absent bound makes the right operand unevaluable, so the clause is
-/// undecidable rather than false — and undecidable raises nothing, the same
-/// reading `DV_INTERVAL` applies to the interval this constrains. BASE
-/// `interval.adoc` §Attributes declares `lower`/`upper` `0..1` and requires no
-/// value when the flag is false, so demanding one here refused a range
-/// `DV_INTERVAL` itself accepts.
-/// A limit whose simplicity is undecidable (`OrderedLimit::is_simple` gives
-/// `None`) raises nothing, by the same reading.
+/// One side of `Range_is_simple` (`range.lower_unbounded or else
+/// range.lower.is_simple`); an absent bound or an undecidable limit raises
+/// nothing.
 fn limit_ok<T: OrderedLimit>(unbounded: bool, limit: Option<&T>) -> bool {
     unbounded || limit.is_none_or(|l| l.is_simple() != Some(false))
 }
 
 impl<T: OrderedLimit> ReferenceRange<T> {
-    /// RM `REFERENCE_RANGE.is_in_range(v)`: `true` when `v` is inside `range`.
-    /// `None` when `v` is not strictly comparable to the range limits or a
+    /// RM `REFERENCE_RANGE.is_in_range(v)`, or `None` when not comparable or a
     /// magnitude is unavailable.
     #[must_use]
     pub fn is_in_range(&self, v: &T) -> Option<bool> {

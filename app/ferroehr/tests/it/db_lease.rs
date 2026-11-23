@@ -3,11 +3,6 @@
 
 //! A statement whose request is abandoned frees its pool connection at once
 //! and stops in PostgreSQL within the client-connection check (#4285).
-//!
-//! Dropping a request future drops the driver's future, which sends the
-//! server nothing; the lease closes the connection instead of returning it,
-//! and the session's `client_connection_check_interval` makes the backend
-//! notice the closed socket and stop the statement.
 
 use std::time::{Duration, Instant};
 

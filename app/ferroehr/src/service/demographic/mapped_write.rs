@@ -429,12 +429,6 @@ fn node(wt: &WebTemplateNode) -> Value {
 /// Sets `value` as the data value of the `ELEMENT` at `path` in `body`,
 /// creating each missing node.
 ///
-/// A web template draws an `ELEMENT` as its value node and leaves out the
-/// structures between, so a missing node takes the class its RM attribute
-/// holds (RM demographic: `details` an `ITEM_TREE`, `identities` a
-/// `PARTY_IDENTITY`; an item an `ELEMENT` at the end of the path and a
-/// `CLUSTER` before it) and the name the template gives it, else its node id.
-///
 /// A `DV_IDENTIFIER` replaces only the identifier of its own `type` and
 /// `issuer` at the path, and is added beside the others when there is none.
 fn set(body: &mut Value, wt: &WebTemplate, path: &str, value: Value) -> Result<(), ServiceError> {

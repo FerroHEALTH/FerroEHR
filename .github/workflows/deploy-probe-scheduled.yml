@@ -12,9 +12,8 @@
 # database images built from the tree they check out, packaged the way ci.yml's
 # deploy-probe job packages them, so the scripts and the images are one
 # generation. A completed Containers run on main probes the server and
-# postgres images that run published, each pinned by digest. The mutable
-# `:main` tag named whatever was last published, and a probe of an image older
-# than its tree read the tree's new grant terminology as no grant (#5673).
+# generation. A completed Containers run on main probes the server and
+# postgres images that run published, each pinned by digest (#5673).
 #
 # WHAT IT CHECKS OUT. Every event checks out the commit GitHub hands the run,
 # which for a `workflow_run` is main's newest commit, and never a ref read
@@ -131,8 +130,8 @@ jobs:
       !cancelled() &&
       (needs.binary.result == 'success' || needs.published-images.outputs.server != '')
     runs-on: ubuntu-latest
-    # The required deploy-probe job's run, measured there (ci.yml, #5642):
-    # about 17 minutes; a pull of the published images adds a few.
+    # The required deploy-probe job runs about 17 minutes (ci.yml, #5642); a
+    # pull of the published images adds a few.
     timeout-minutes: 45
     permissions:
       contents: read

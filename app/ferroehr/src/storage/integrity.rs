@@ -16,10 +16,7 @@ use crate::storage::error::StorageError;
 
 /// Which stored versions a sweep covers.
 ///
-/// A sweep reads every byte of the versions it covers, so an operator
-/// verifying one record, one object, or everything committed since an
-/// incident, should not have to read the whole repository to do it. Every
-/// bound is optional and they compose; the default covers everything.
+/// Every bound is optional and they compose; the default covers everything.
 ///
 /// No openEHR spec governs storage mechanics — our own design/extension.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

@@ -3,34 +3,14 @@
 
 //! OPT 1.4 → Web Template walk.
 //!
-//! Walks the OPT 1.4 constraint tree ([`openehr_its::opt14`]) into the Web
-//! Template metadata document (`ITS-REST simplified_formats master04
-//! §"Web Template Metadata"`):
+//! ITS-REST simplified_formats master04 §"Web Template Metadata": build a node
+//! per constraint object, compact per §"Level Removal", then assign ids per
+//! §"Node ID Generation Rules".
 //!
-//! 1. **build** a node per constraint object (rm type, node id, aql path,
-//!    occurrences, rubric names, term bindings), giving `DATA_VALUE`/PARTY leaves
-//!    their `inputs` and running the per-rm post-processors;
-//! 2. **compact** the tree per master04 §"Level Removal": elide the container
-//!    attribute names, collapse the always-collapsed wrapper types
-//!    (`ITEM_*`/`ITEM_STRUCTURE`/`HISTORY`) and a conditionally-collapsed single
-//!    `EVENT`, promote an `ELEMENT`/`DATA_VALUE` single child, and drop empties;
-//! 3. **assign ids** (see `id`, master04 §"Node ID Generation Rules").
-//!
-//! The web template mirrors the CONSTRAINT tree of the OPT, so RM structure the
-//! operational template does not constrain is not synthesized here. Three
-//! boundaries follow from that:
-//!
-//! * RM-mandatory attributes the OPT leaves unconstrained are not injected as
-//!   nodes. The FLAT composition builder fills them on `RM ← FLAT` and
-//!   [`crate::flat::validation`] enforces existence and occurrences, so the
-//!   produced COMPOSITION is RM-valid without the builder duplicating the
-//!   structure (cardinalities: openEHR RM `common` / `composition` /
-//!   `data_structures`).
-//! * An ELEMENT with no value constraint is emitted without an enumerated
-//!   per-`DATA_VALUE` `inputs` expansion. No openEHR spec governs the shape of
-//!   an unconstrained value node — our own design/extension.
-//! * An archetype internal reference (`use_node`) is emitted as its own node
-//!   rather than resolved to its target subtree.
+//! The web template mirrors the OPT's constraint tree, so RM-mandatory
+//! attributes the OPT leaves unconstrained are not injected, and an internal
+//! reference (`use_node`) is emitted as its own node. No openEHR spec governs
+//! the shape of an unconstrained ELEMENT value: our own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -81,11 +61,9 @@ type ConstraintBindings = HashMap<String, Vec<Constraintbindingset>>;
 
 /// The ontology scope of one `C_ARCHETYPE_ROOT` instance in the walk.
 ///
-/// A template may fill the same archetype at several places, each fill an
-/// overlay with its own terminology (AOM 2 `master10-templates.adoc`
-/// §Overview, §Template Identifiers), so the inline `term_definitions` of an
-/// OPT 1.4 archetype root belong to that root instance, never to its archetype
-/// id; the bindings stay keyed by archetype id.
+/// Each fill of an archetype is an overlay with its own terminology (AOM 2
+/// `master10-templates.adoc` §Overview), so inline `term_definitions` belong to
+/// the root instance; the bindings stay keyed by archetype id.
 #[derive(Clone, Copy)]
 struct Scope<'a> {
     archetype_id: &'a str,
@@ -121,11 +99,8 @@ impl Ctx {
         self.rubric(scope, lang, code).and_then(|r| r.text.clone())
     }
 
-    /// The external term bindings for `code` within the scope's archetype
-    /// (master04 §"Web Template Metadata": a node/coded-value `termBindings` map):
-    /// for every terminology whose binding set has an item matching `code`, the
-    /// bound code phrase as a `{value, terminologyId}`. Keyed by terminology,
-    /// first match per terminology wins, in binding-set order.
+    /// The external term bindings for `code` within the scope's archetype, keyed by
+    /// terminology, first match per terminology (master04 §"Web Template Metadata").
     fn term_bindings_for(
         &self,
         scope: Scope<'_>,
@@ -151,12 +126,9 @@ impl Ctx {
         out
     }
 
-    /// The external constraint bindings of `ac_code` within the scope's
-    /// archetype: one entry per terminology whose `ConstraintBindingSet` binds
-    /// the ac-code to a query URI (`AM/docs/ADL1.4/master08-adl.adoc`
-    /// §Constraint_bindings). `attr` is the RM attribute of the leaf carrying
-    /// the constrained code. An empty query URI is dropped — an unbound
-    /// ac-code constrains nothing resolvable.
+    /// The external constraint bindings of `ac_code` within the scope's archetype,
+    /// one per terminology (`AM/docs/ADL1.4/master08-adl.adoc` §Constraint_bindings).
+    /// An empty query URI is dropped.
     fn constraint_bindings_for(
         &self,
         scope: Scope<'_>,
@@ -188,11 +160,9 @@ impl Ctx {
     }
 }
 
-/// Every `CONSTRAINT_REF` (`ac`-code proxy) in force on `co`, resolved against
-/// the archetype ontology's `constraint_bindings`: the node itself when it IS a
-/// `CONSTRAINT_REF` (a bare `CODE_PHRASE` proxy), plus one per coded attribute
-/// (`defining_code`, …) whose child is a `CONSTRAINT_REF`. AOM 1.4
-/// `master04-constraint_model_package.adoc` §Reference Objects.
+/// Every `CONSTRAINT_REF` in force on `co`, on the node itself or a coded
+/// attribute, resolved against the ontology's `constraint_bindings` (AOM 1.4
+/// `master04-constraint_model_package.adoc` §Reference Objects).
 fn constraint_bindings_of(
     ctx: &Ctx,
     co: &CObject,
@@ -213,10 +183,8 @@ fn constraint_bindings_of(
     out
 }
 
-/// The bound code phrase's code string with its terminology id (falling back to
-/// the binding item's own code when the code phrase carries no terminology).
-/// `None` when the bound code string is blank. Feeds the `termBindings` map of
-/// master04 §"Web Template Metadata".
+/// The bound code phrase as a `termBindings` value, `None` when its code is
+/// blank.
 fn binding_coded_value(item: &TermBindingItem) -> Option<WebTemplateBindingCodedValue> {
     let code_phrase = &item.value;
     if code_phrase.code_string.trim().is_empty() {
@@ -241,11 +209,7 @@ struct ArchetypeLabels<'a> {
 
 impl Labels for ArchetypeLabels<'_> {
     fn text(&self, terminology: &str, code: &str) -> Option<String> {
-        // An EXTERNAL code's rubric is keyed by the qualified
-        // `TERMINOLOGY::code` form in the OPT ontology (OPT 1.4
-        // `term_definitions code="SNOMED-CT::…"`); the bare-code key serves
-        // the local at-codes. Try bare first (the overwhelmingly common
-        // case), then qualified.
+        // An external code's rubric is keyed `TERMINOLOGY::code` in the OPT ontology.
         self.ctx
             .text(self.scope, code, &self.ctx.default_language)
             .or_else(|| {
@@ -275,12 +239,8 @@ impl Labels for ArchetypeLabels<'_> {
     }
 }
 
-/// Build a [`WebTemplate`] from a parsed OPT 1.4 operational template.
-///
-/// The document shape (field names, `tree`/`children`, `inputs`, `aqlPath`), the
-/// node-id derivation, and the compaction are governed by `ITS-REST
-/// simplified_formats master04-basic_concepts.adoc` (§"Web Template Metadata",
-/// §"Node ID Generation Rules", §"Level Removal"). `version` is the format
+/// Build a [`WebTemplate`] from a parsed OPT 1.4 operational template
+/// (`simplified_formats master04-basic_concepts.adoc`). `version` is the format
 /// version string.
 ///
 /// # Errors
@@ -402,10 +362,8 @@ fn create_node(
     node.max = max;
 
     let name_code = if archetyped { object_node_id(co) } else { "" };
-    // A `DV_CODED_TEXT` name constraint (RM common master03 §LOCATABLE — the
-    // name is `DV_TEXT` *or* `DV_CODED_TEXT`) fixes both the display value and
-    // the `defining_code` the composition builder must stamp; it takes
-    // precedence over the plain `name/value` and node-rubric name.
+    // A `DV_CODED_TEXT` name constraint (RM common master03 §LOCATABLE) fixes the
+    // display value and the `defining_code`, and wins over a plain name.
     let coded_name = archetyped
         .then(|| coded_name_constraint(co, ctx, scope, name_constraint.as_deref()))
         .flatten();
@@ -424,11 +382,9 @@ fn create_node(
     // whose item code matches this node's constraint node id (master04
     // §"Web Template Metadata": the node-level `termBindings` map).
     node.term_bindings = ctx.term_bindings_for(scope, name_code);
-    // Archetype constraint bindings (ac-code → external terminology query) in
-    // force on this node's coded value — resolvable only by a terminology
-    // service, so recorded rather than checked here (BASE
-    // `architecture_overview/master12-terminology.adoc` §"Binding Terminology
-    // Value-sets to Archetypes").
+    // Constraint bindings need a terminology service, so they are recorded here
+    // (BASE `master12-terminology.adoc` §"Binding Terminology Value-sets to
+    // Archetypes").
     node.constraint_bindings = constraint_bindings_of(ctx, co, scope);
     node
 }
@@ -487,11 +443,8 @@ fn apply_localized_rubrics(
 /// Builds the child nodes of one constraint attribute into `children`.
 ///
 /// The careflow-state alternatives of `ism_transition` collapse into the one
-/// transition node master05 §ISM_TRANSITION maps, so they are built without
-/// their at-code identity (see [`shape::MERGED_ATTRIBUTE`]) and the merged
-/// node takes the ATTRIBUTE's occurrences — one required transition per ACTION
-/// instance, not one per careflow state. An unfilled slot or a constraint ref
-/// yields no node.
+/// transition node master05 §ISM_TRANSITION maps, taking the attribute's
+/// occurrences. An unfilled slot or a constraint ref yields no node.
 fn build_attribute_children(
     ctx: &Ctx,
     attr: &openehr_its::opt14::types::CAttribute,
@@ -570,13 +523,8 @@ fn build_children(
             .for_each(|c| c.implicit = true);
     }
 
-    // A party node keeps its inputs even when it HAS children: master05's three
-    // PARTY_PROXY tables put the `|name`/`|id`/`|id_scheme`/`|id_namespace`
-    // suffixes and the `/relationship` + `/_identifier:i` SUB-PATHS on the same
-    // node, so a template that narrows a party and constrains `relationship`
-    // (the shape the vendored `Test constrained subject` / `MED - Perinatal
-    // history Summary` templates use) still owns every party suffix. For every
-    // other leaf family a child means the node is a container, not a datum.
+    // A party node keeps its inputs with children: master05's PARTY_PROXY tables
+    // put the suffixes and the `/relationship` sub-path on the same node.
     if has_inputs(&node.rm_type) && (children.is_empty() || is_party(&node.rm_type)) {
         let labels = ArchetypeLabels { ctx, scope };
         let (built, ptypes) = inputs::build_inputs(&node.rm_type, co, &labels, group);
@@ -601,19 +549,10 @@ fn build_children(
     shape::post_process(node);
 }
 
-/// Whether a node of this RM type is a web-template LEAF — one that carries
-/// `inputs` rather than child nodes.
+/// Whether a node of this RM type is a web-template leaf carrying `inputs`.
 ///
-/// The PARTY arm covers all three concrete `PARTY_PROXY` subtypes the
-/// Simplified Formats spec gives their own mapping table: master05
-/// §§PARTY_SELF, PARTY_IDENTIFIED, PARTY_RELATED share the
-/// `|id`/`|id_scheme`/`|id_namespace` rows and the latter two add `|name`, so a
-/// slot an OPT narrows to `PARTY_RELATED` is the same party leaf as one left at
-/// `PARTY_IDENTIFIED` — its extra `relationship` is a DV_CODED_TEXT SUB-PATH
-/// (master05 §"PARTY_RELATED performer": "the `relationship` attribute is
-/// emitted as a sub-path under the participation, with the standard
-/// DV_CODED_TEXT suffixes"), not a reason to demote the party itself to a
-/// container.
+/// All three `PARTY_PROXY` subtypes are leaves (master05 §§PARTY_SELF,
+/// PARTY_IDENTIFIED, PARTY_RELATED); `relationship` is a sub-path.
 fn has_inputs(rm_type: &str) -> bool {
     rm_type.starts_with("DV_") || is_party(rm_type) || rm_type == "CODE_PHRASE"
 }
@@ -649,13 +588,9 @@ fn cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinality> {
     out
 }
 
-/// Capture **every** constraining multiple-attribute cardinality for the
-/// validation walk (AOM 1.4 `master04-constraint_model_package.adoc`
-/// §cardinality): any interval with a lower bound `>= 1` or a bounded upper
-/// bound constrains the container, and so does `unique`. This is the superset of the serialized
-/// [`requires_cardinality`] selection, which drops `0..1`/`1..1`/`1..*` — those
-/// intervals are still real archetype constraints (master15/16 truth tables)
-/// and are enforced from [`WebTemplateNode::card_all`], never serialized.
+/// Every constraining multiple-attribute cardinality, for the validation walk
+/// (AOM 1.4 `master04-constraint_model_package.adoc` §cardinality). A superset
+/// of the serialized [`requires_cardinality`] selection.
 fn all_cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinality> {
     let mut out = Vec::new();
     for attr in inputs::attributes(co) {
@@ -676,16 +611,10 @@ fn all_cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinalit
     out
 }
 
-/// Capture the leaf value constraints the `inputs` mapping does not carry, onto
-/// the node's validation-only fields:
-///
-/// - `C_INTEGER.list` / `C_REAL.list` on a numeric datum (`magnitude`, `value`)
-///   → [`WebTemplateNode::numeric_lists`] (AOM 1.4 §`C_INTEGER/§C_REAL`);
-/// - `C_DURATION.range` on `value` → [`WebTemplateNode::duration_range`]
-///   (AOM 1.4 §`C_DURATION`);
-/// - `C_CODE_PHRASE` code lists on coded attributes other than
-///   `defining_code` (e.g. `DV_MULTIMEDIA.media_type`) →
-///   [`WebTemplateNode::code_lists`] (AOM 1.4 §`C_CODE_PHRASE`).
+/// Capture the leaf value constraints the `inputs` mapping does not carry:
+/// numeric lists, a `C_DURATION` range and the code lists of coded attributes
+/// other than `defining_code` (AOM 1.4 §`C_INTEGER`, §`C_REAL`, §`C_DURATION`,
+/// §`C_CODE_PHRASE`).
 fn capture_leaf_constraints(co: &CObject, node: &mut WebTemplateNode) {
     // `size` covers `DV_MULTIMEDIA.size` (RM `data_types` §`DV_MULTIMEDIA`,
     // `size: Integer`), whose `C_INTEGER` list/range the `inputs` builder does
@@ -719,11 +648,7 @@ fn capture_leaf_constraints(co: &CObject, node: &mut WebTemplateNode) {
 }
 
 /// `C_DURATION.range` on `value` → [`WebTemplateNode::duration_range`] (AOM 1.4
-/// §`C_DURATION`).
-///
-/// Inclusivity comes from the AOM interval flags (BASE `foundation_types`
-/// Interval: `lower_included`/`upper_included`) — an exclusive bound
-/// (`> PT0S`) must not degrade to `>=`.
+/// §`C_DURATION`), keeping each bound's inclusivity.
 fn capture_duration_range(co: &CObject, node: &mut WebTemplateNode) {
     let Some(CPrimitive::CDuration(d)) = inputs::primitive_under(co, "value") else {
         return;
@@ -756,15 +681,10 @@ fn capture_duration_range(co: &CObject, node: &mut WebTemplateNode) {
     });
 }
 
-/// `C_QUANTITY.property` (an openEHR `property`-group code), captured so the
-/// instance's `units` can be checked against the property's unit set
-/// (`AM/docs/UML/classes/org.openehr.am.aom14.c_quantity.adoc` §C_QUANTITY:
-/// `property` = "Name of physical property for Quantities being
-/// constrained").
+/// `C_QUANTITY.property`, so the instance's `units` can be checked against the
+/// property's unit set (`org.openehr.am.aom14.c_quantity.adoc` §C_QUANTITY).
 ///
-/// Only the openEHR-terminology property code is meaningful, and the
-/// placeholder "0" (Ocean Template Designer's unconstrained property) is
-/// treated as no constraint, matching the OPT-side `C_DV_QUANTITY` check.
+/// Only an openEHR-terminology code counts; the placeholder "0" is no constraint.
 fn capture_quantity_property(co: &CObject, node: &mut WebTemplateNode) {
     if let CObject::CDvQuantity(q) = co
         && let Some(property) = &q.property
@@ -780,21 +700,11 @@ fn capture_quantity_property(co: &CObject, node: &mut WebTemplateNode) {
 }
 
 /// The `C_CODE_PHRASE` code lists the `inputs` mapping does not carry: the
-/// explicit `local` scoping of `defining_code`, and the lists on every other
-/// coded attribute (e.g. `DV_MULTIMEDIA.media_type`) → AOM 1.4
-/// §`C_CODE_PHRASE`.
+/// explicit `local` scoping of `defining_code` and the lists on every other
+/// coded attribute (AOM 1.4 §`C_CODE_PHRASE`; `aom14.c_coded_text.adoc`).
 ///
-/// An explicitly `local`-scoped closed code list admits ONLY local codes, so a
-/// foreign-terminology instance code violates it
-/// (`AM/docs/UML/classes/org.openehr.am.aom14.c_coded_text.adoc`
-/// §C_CODED_TEXT: `code_list` is "a list of codes FROM the terminology"). The
-/// `wt+json` `inputs` mapping strips the implicit `local`, so the explicit
-/// scoping is recorded on the node instead (validation-only); a
-/// `C_CODE_PHRASE` naming no terminology is not flagged.
-///
-/// NOTE: `AM/docs/AOM1.4/master04-constraint_model_package.adoc` §Reference
-/// Objects resolves a CONSTRAINT_REF through an external terminology query,
-/// not a local code list, so it is not captured as a leaf constraint.
+/// NOTE: `master04-constraint_model_package.adoc` §Reference Objects resolves a
+/// CONSTRAINT_REF through an external query, so it is not captured here.
 fn capture_code_lists(co: &CObject, node: &mut WebTemplateNode) {
     let defining_cp = match co {
         CObject::CCodePhrase(cp) => Some(cp),
@@ -835,12 +745,8 @@ fn capture_code_lists(co: &CObject, node: &mut WebTemplateNode) {
     }
 }
 
-/// `DV_MULTIMEDIA.size` against a `C_INTEGER.range` (AOM 1.4
-/// `master04-constraint_model_package.adoc` §`C_INTEGER`): the instance's `size`
-/// must lie within the declared `IntervalOfInteger`. The other numeric data
-/// (`magnitude`/`numerator`/…) already carry their range through the `inputs`
-/// builders (`count_input`, `quantity_inputs`, `proportion_part`), so only `size`
-/// needs a validation-only range captured here.
+/// `DV_MULTIMEDIA.size` against a `C_INTEGER.range` (AOM 1.4 §`C_INTEGER`); the
+/// other numeric data carry their range through `inputs`.
 fn capture_size_range(co: &CObject, node: &mut WebTemplateNode) {
     let Some(CPrimitive::CInteger(ci)) = inputs::primitive_under(co, "size") else {
         return;
@@ -864,21 +770,11 @@ fn capture_size_range(co: &CObject, node: &mut WebTemplateNode) {
     ));
 }
 
-/// AOM 1.4 `C_ATTRIBUTE.existence` on a DV leaf's directly-navigable data
-/// attributes (`master04-constraint_model_package.adoc` §existence): an OPT may
-/// narrow an RM-optional leaf attribute (e.g. `DV_IDENTIFIER.issuer`,
-/// `.assigner`, `.type` — RM `data_types` §`DV_IDENTIFIER`) to mandatory
-/// (existence lower `>= 1`), so a committed value missing that attribute must be
-/// rejected. The structural [`existence_constraints`] pass runs only for
-/// attribute-recursing nodes, and its primitive-child carve-out excludes exactly
-/// these string data attributes.
+/// AOM 1.4 `C_ATTRIBUTE.existence` on a DV leaf's data attributes (e.g.
+/// `DV_IDENTIFIER.issuer`) that the OPT both mandates and constrains.
 ///
-/// Captured **only** when the OPT actually CONSTRAINS the sub-attribute (a
-/// `C_STRING` closed list or pattern, surfaced on the matching leaf input) as
-/// well as mandating it — an attribute carrying only the tooling-default
-/// existence (`{1..1}` serialised for every attribute; see the NOTE on
-/// [`existence_constraints`]) with no value constraint is left unenforced, so a
-/// real template's optional-in-intent identifier field is not over-rejected.
+/// An attribute carrying only the tooling-default `{1..1}` existence with no
+/// value constraint is left unenforced (see the NOTE on [`existence_constraints`]).
 fn capture_leaf_existence(co: &CObject, node: &mut WebTemplateNode) {
     for attr in inputs::attributes(co) {
         let openehr_its::opt14::types::CAttribute::CSingleAttribute(s) = attr else {
@@ -908,20 +804,12 @@ fn capture_leaf_existence(co: &CObject, node: &mut WebTemplateNode) {
 
 // ── closed-archetype constraints (AOM2 closed-world direction) ────────────────
 
-/// Capture the closed-archetype constraints for the walk: per
-/// attribute of `co` that carries **archetype-node-identified** child
-/// alternatives (a fixed at-code / archetype-id sibling set) and/or open
-/// `ARCHETYPE_SLOT`s, record the admissible child identities keyed by the
-/// attribute's absolute archetype path. Captured from the raw OPT `co` (before
-/// the tree build drops slots and before compaction hoists wrappers), so no
-/// alternative is lost.
+/// Capture the closed-archetype constraints: per attribute of `co` with
+/// node-identified child alternatives or open slots, the admissible child
+/// identities keyed by absolute archetype path.
 ///
-/// An attribute whose constraint children carry **no** `node_id` and has no slot
-/// is left OPEN — AOM 1.4 (`master04-constraint_model_package.adoc` §`node_id`
-/// L44: a near-leaf with no same-attribute siblings "can safely have no
-/// `node_id`") — matching the RM-metadata / plain-attribute carve-out (closed-world capture
-/// rule 2): `name`/`value`/`category`/`context` etc. hold non-LOCATABLE values
-/// that carry no `archetype_node_id` and so are never subject to sibling closure.
+/// An attribute whose children carry no `node_id` and has no slot stays open
+/// (AOM 1.4 `master04-constraint_model_package.adoc` §`node_id`).
 fn closed_attributes(co: &CObject, node_path: &str) -> Vec<WebTemplateClosedAttribute> {
     inputs::attributes(co)
         .iter()
@@ -929,14 +817,9 @@ fn closed_attributes(co: &CObject, node_path: &str) -> Vec<WebTemplateClosedAttr
         .collect()
 }
 
-/// The closure record for one constraint attribute, or [`None`] when the
-/// attribute stays open.
-///
-/// An attribute stays open when it is the predicate-matched `name` (master04
-/// §"Field Identifiers"), when an unresolved internal-ref / constraint-ref makes
-/// the admissible set uncertain (target resolution is a documented builder scope
-/// gap — leave it open rather than risk over-rejecting), or when it constrains
-/// no node-id alternative and no slot.
+/// The closure record for one constraint attribute, or [`None`] when it stays
+/// open: the predicate-matched `name`, an unresolved reference, or no
+/// node-id alternative and no slot.
 fn closed_attribute(
     attr: &openehr_its::opt14::types::CAttribute,
     node_path: &str,
@@ -988,31 +871,17 @@ fn admissible_children(
 
 // ── structural stubs (constrained-but-content-less structural attrs) ─────────
 
-/// The structural attributes whose value the FLAT composition builder and the
-/// example generator synthesise when the simplified form carries no content under
-/// them: the ENTRY `data`/`state`/`protocol`, `ACTION.description` (existence
-/// `1..1`, `RM/docs/UML/classes/org.openehr.rm.composition.action.adoc`), the
-/// EVENT `data`/`state` and `ACTIVITY.description`
-/// (`RM/docs/UML/classes/org.openehr.rm.data_structures.event.adoc`,
-/// `…org.openehr.rm.composition.activity.adoc`).
+/// The structural attributes the FLAT builder and the example generator
+/// synthesise when empty (`org.openehr.rm.composition.action.adoc`,
+/// `org.openehr.rm.data_structures.event.adoc`, `…composition.activity.adoc`).
 const STRUCTURAL_ATTRS: [&str; 4] = ["data", "description", "protocol", "state"];
 
 /// Captures the [`WebTemplateStructuralStub`]s of a structural node.
 ///
-/// For each structural attribute (`data`/`description`/`protocol`/`state`) the
-/// OPT constrains with a node-identified structural child, the stub records its
-/// absolute attribute path (under `node_path`), RM type, archetype node id and
-/// rubric name. When the attribute has no leaf content the
-/// compactor drops the wrapper, so this is the only surviving record of the
-/// *constrained* identity — the composition builder synthesises the empty
-/// attribute from it (AOM 1.4 `master04-constraint_model_package.adoc`
-/// §`Valid_value`: a constrained attribute must be filled by a conforming value),
-/// instead of a blind `at0001` placeholder that a closed-archetype walk rejects.
-///
-/// The first node-identified, resolvable structural child per attribute is
-/// recorded; unresolved refs / slots yield no stub (the attribute then keeps its
-/// spec-legal `at0001` "Any" placeholder — ADL 1.4 `master05-cadl.adoc` §"Any"
-/// Constraints).
+/// The compactor drops an empty wrapper, so the stub keeps the constrained
+/// identity the builder fills the attribute with (AOM 1.4
+/// `master04-constraint_model_package.adoc` §`Valid_value`). Without a stub the
+/// attribute keeps the `at0001` "Any" placeholder (ADL 1.4 `master05-cadl.adoc`).
 fn structural_stubs(
     ctx: &Ctx,
     co: &CObject,
@@ -1068,27 +937,16 @@ fn archetype_slot(s: &openehr_its::opt14::types::ArchetypeSlot) -> WebTemplateAr
 }
 
 /// The archetype-id regex of an OPT-1.4 slot `ASSERTION`, read from its
-/// EXPRESSION TREE, falling back to the string form.
+/// expression tree, else the string form.
 ///
-/// `ASSERTION.expression` is the "Root of expression tree" and carries the
-/// constraint; `string_expression` is only its optional "String form of
-/// expression" (`AM UML/classes/org.openehr.am.aom14.assertion.adoc`
-/// §ASSERTION Class), so the tree is both the authority and the only datum
-/// present in most templates. The slot form is
-/// `archetype_id/value matches {/<regex>/}` (ADL 1.4 `master05-cadl.adoc`
-/// §Defining Slots on the basis of Archetype Identifiers and Concepts), whose
-/// right operand carries the regex in `C_STRING.pattern`
-/// (`…aom14.c_string.adoc` §C_STRING Class). Any other assertion — a different
-/// reference, a literal-value list, the §Using Other Constraints in Slots form —
-/// yields `None` rather than an invented archetype-id regex.
+/// The tree is the authority (`org.openehr.am.aom14.assertion.adoc`); the slot
+/// form is `archetype_id/value matches {/<regex>/}` (ADL 1.4 `master05-cadl.adoc`
+/// §Defining Slots). Any other assertion yields `None`.
 fn slot_pattern(a: &Assertion) -> Option<String> {
     expression_pattern(a).or_else(|| string_expression_pattern(a))
 }
 
-/// The `VALIDITY_KIND` facet value as the integer the Web Template carries.
-///
-/// The Web Template `tz_validity` field is a number on its own wire, while the
-/// OPT-1.4 XML encodes the same fact as the `xs:enumeration` facet value
+/// The `VALIDITY_KIND` facet value as the integer the Web Template carries
 /// (ITS-XML `ALL/Archetype.xsd` §`VALIDITY_KIND`).
 fn validity_code(kind: ValidityKind) -> i32 {
     match kind {
@@ -1121,12 +979,8 @@ fn expression_pattern(a: &Assertion) -> Option<String> {
     (!pattern.is_empty()).then(|| pattern.to_owned())
 }
 
-/// The archetype-id regex parsed out of an assertion's `string_expression`.
-///
-/// The surface form is `archetype_id/value matches {/<regex>/}` (ADL 1.4
-/// `master05-cadl.adoc` §Defining Slots on the basis of Archetype Identifiers
-/// and Concepts); archetype ids contain no `/`, so the last `/}` delimits the
-/// regex.
+/// The archetype-id regex parsed out of an assertion's `string_expression`;
+/// archetype ids contain no `/`, so the last `/}` delimits it.
 fn string_expression_pattern(a: &Assertion) -> Option<String> {
     let s = a.string_expression.as_deref()?;
     if !is_archetype_id_reference(s) {
@@ -1137,11 +991,8 @@ fn string_expression_pattern(a: &Assertion) -> Option<String> {
     Some(rest.get(..end)?.to_owned())
 }
 
-/// Whether an assertion operand references the filler archetype's identifier
-/// rather than another `ARCHETYPE` property or an archetype path (ADL 1.4
-/// `master05-cadl.adoc` §Archetype Slots lists `archetype_id`,
-/// `parent_archetype_id`, `short_concept_name` and definition paths as the
-/// admissible references).
+/// Whether an assertion operand references the filler's `archetype_id` (ADL 1.4
+/// `master05-cadl.adoc` §Archetype Slots).
 fn is_archetype_id_reference(operand: &str) -> bool {
     let operand = operand.trim();
     operand == "archetype_id"
@@ -1150,14 +1001,8 @@ fn is_archetype_id_reference(operand: &str) -> bool {
             .is_some_and(|rest| rest.starts_with('/'))
 }
 
-/// The `C_STRING` constraint of a `matches` right operand.
-///
-/// `EXPR_LEAF.item` is typed `Any` — "for the right-hand side of a 'matches'
-/// node, a constraint, often a `C_PRIMITIVE_OBJECT`"
-/// (`AM UML/classes/org.openehr.am.aom14.expr_leaf.adoc` §EXPR_LEAF Class), and
-/// `C_PRIMITIVE_OBJECT.item` is the `C_PRIMITIVE` "actually defining the
-/// constraint" (`…aom14.c_primitive_object.adoc` §C_PRIMITIVE_OBJECT Class), so
-/// both the direct and the wrapped spelling resolve here.
+/// The `C_STRING` constraint of a `matches` right operand, direct or wrapped in
+/// a `C_PRIMITIVE_OBJECT` (`aom14.expr_leaf.adoc`, `aom14.c_primitive_object.adoc`).
 fn c_string_constraint(
     item: &openehr_its::xml::runtime::XmlAny,
 ) -> Option<&openehr_its::xml::runtime::XmlAny> {
@@ -1256,10 +1101,8 @@ fn collect_nested_roots<'a>(co: &'a CObject, out: &mut Vec<&'a CArchetypeRoot>) 
     }
 }
 
-/// Collect every archetype root's inline `term_bindings`, keyed by archetype id
-/// (a node inherits its owning archetype root's bindings, surfaced as the
-/// `termBindings` map of master04 §"Web Template Metadata"). First root wins for a
-/// repeated archetype id.
+/// Collect every archetype root's inline `term_bindings`, keyed by archetype id;
+/// the first root wins.
 fn collect_term_bindings(opt: &OperationalTemplate) -> TermBindings {
     let mut out: TermBindings = HashMap::new();
     collect_root_bindings(&opt.definition, &mut out);
@@ -1283,11 +1126,8 @@ fn collect_root_bindings(root: &CArchetypeRoot, out: &mut TermBindings) {
     }
 }
 
-/// Collect the flat ontologies' `constraint_bindings`, keyed by archetype id —
-/// the ac-code → terminology-query URI map a `CONSTRAINT_REF` resolves through
-/// (`AM/docs/ADL1.4/master08-adl.adoc` §Constraint_bindings). The root
-/// `ontology` and every `component_ontologies` entry carries its own
-/// `archetype_id`.
+/// Collect the ontologies' `constraint_bindings`, keyed by archetype id
+/// (`AM/docs/ADL1.4/master08-adl.adoc` §Constraint_bindings).
 fn collect_constraint_bindings(opt: &OperationalTemplate) -> ConstraintBindings {
     let mut out: ConstraintBindings = HashMap::new();
     for onto in opt.ontology.iter().chain(opt.component_ontologies.iter()) {
@@ -1387,25 +1227,12 @@ pub(super) fn object_occurrences(co: &CObject) -> &Intervalofinteger {
     }
 }
 
-/// The node's effective `min`: its own occurrences lower bound met with the
-/// owning SINGLE attribute's `C_ATTRIBUTE.existence` lower bound.
+/// The node's effective `min`: its occurrences lower bound met with the owning
+/// single attribute's existence lower bound.
 ///
-/// ADL 1.4 `AM/docs/ADL1.4/master05-cadl.adoc` §Occurrences: occurrences "only
-/// has significance for objects which are children of a container attribute,
-/// since by definition, the occurrences of an object which is the value of a
-/// single valued attribute can only be `0..1` or `1..1`, and this is already
-/// defined by the attribute `existence`". Existence and occurrences are
-/// orthogonal (AOM 1.4 `master04-constraint_model_package.adoc` §"Attribute Node
-/// Types": existence "indicates whether an object will be found in a given
-/// attribute field"), so an optional single attribute (`existence {0..1}`)
-/// carrying a `1..1`-occurrences constraint — the shape OPT tooling emits for
-/// `ISM_TRANSITION.careflow_step`, whose `master05-rm_mapping.adoc`
-/// §`ISM_TRANSITION` row is Required "no" — yields an OPTIONAL child, not a
-/// mandatory one.
-///
-/// A container attribute is left alone: there occurrences is the significant
-/// constraint, and the attribute's own existence is reported separately by
-/// [`existence_constraints`].
+/// ADL 1.4 `master05-cadl.adoc` §Occurrences: the occurrences of a single-valued
+/// attribute's value "is already defined by the attribute `existence`". A
+/// container attribute is left alone.
 fn meet_single_existence(
     occurrences_min: Option<i32>,
     owner: Option<&openehr_its::opt14::types::CAttribute>,
@@ -1417,16 +1244,8 @@ fn meet_single_existence(
     occurrences_min.map(|m| m.min(existence_min))
 }
 
-/// The node's effective `max`: its own occurrences upper bound capped at `1`
-/// under a SINGLE attribute.
-///
-/// The same ADL 1.4 `master05-cadl.adoc` §Occurrences text as
-/// [`meet_single_existence`]: the value of a single-valued attribute "can only
-/// be `0..1` or `1..1`", and stating a wider occurrences "is not illegal". An
-/// attribute without a cardinality is single-valued even where the RM declares
-/// a container (`master05-cadl.adoc` §Cardinality: "this holds even for smarter
-/// parsers that can access the reference model"), so the deployed `ROLE`
-/// templates that constrain `capabilities` this way admit one `CAPABILITY`.
+/// The node's effective `max`: its occurrences upper bound capped at `1` under
+/// a single attribute (ADL 1.4 `master05-cadl.adoc` §Occurrences, §Cardinality).
 fn cap_single_upper(
     occurrences_max: i32,
     owner: Option<&openehr_its::opt14::types::CAttribute>,
@@ -1461,21 +1280,12 @@ fn name_constraint(co: &CObject) -> Option<String> {
     None
 }
 
-/// The `DV_CODED_TEXT` name constraint on `co`'s `name` attribute, when the
-/// template constrains the runtime `LOCATABLE.name` as a coded text: the display
-/// value plus the `defining_code` `(terminology, code)` the composition builder
-/// must stamp. Returns `None` for an unconstrained name or a plain `DV_TEXT`
-/// name constraint. Spec: RM common `master03-archetyped_package.adoc` §"The
-/// `LOCATABLE` class" (name is `DV_TEXT` or `DV_CODED_TEXT`); AOM 1.4
-/// `master04-constraint_model_package.adoc` (a `C_ATTRIBUTE` on `name`
-/// constrains the whole coded name — `defining_code` + optional `value`).
+/// The `DV_CODED_TEXT` name constraint on `co`'s `name` attribute: display
+/// value plus `defining_code`, or `None` for an unconstrained or plain name (RM
+/// common `master03-archetyped_package.adoc` §"The `LOCATABLE` class").
 ///
-/// `explicit` is the fixed `name/value` `C_STRING` value (from
-/// [`name_constraint`]) when the template also narrows the coded name's text.
-/// The code is chosen as the `code_list` member whose archetype rubric equals
-/// `explicit` (so a name-differentiated sibling keeps its intended code), else
-/// the sole member of a single-code list, else the first candidate. The display
-/// value is `explicit` when present, else the chosen code's archetype rubric.
+/// With `explicit` the code is the `code_list` member whose rubric equals it,
+/// else the sole member, else the first.
 fn coded_name_constraint(
     co: &CObject,
     ctx: &Ctx,

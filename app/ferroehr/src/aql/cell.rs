@@ -4,12 +4,12 @@
 //! One `RESULT_SET` cell, rendered once as JSON text, and the renderings of
 //! the typed SQL values a cell is read from.
 //!
-//! A cell is written exactly as PostgreSQL's `to_jsonb` of the same value
-//! read back through `serde_json` used to serve it: a text as a JSON string,
-//! a number as the `serde_json` number of its decimal text, a `jsonb` column
-//! with its keys in jsonb order, and a `timestamptz` in the XSD form
-//! `to_jsonb` writes in the session's time zone. No openEHR spec governs the
-//! rendering mechanics: our own design.
+//! A cell is written exactly as PostgreSQL's `to_jsonb` of the same value, read
+//! through `serde_json`, would be: a text as a JSON string, a number as the
+//! `serde_json` number of its decimal text, a `jsonb` column with its keys in
+//! jsonb order, and a `timestamptz` in the XSD form `to_jsonb` writes in the
+//! session's time zone. No openEHR spec governs the rendering mechanics: our
+//! own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -127,10 +127,6 @@ pub fn numeric(text: &str) -> Cell {
 }
 
 /// Writes the typed value of an `ELEMENT` row from its columns.
-///
-/// The text is the object `crate::storage::slim::rebuild_value` builds from
-/// the same columns, its keys in jsonb order; `None` when the number is no
-/// JSON number.
 #[must_use]
 pub fn write_typed_value(
     out: &mut String,

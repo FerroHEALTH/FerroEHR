@@ -3,17 +3,6 @@
 
 //! The locale the viewer renders in, and the catalogs of its own words.
 //!
-//! The viewer's words are messages of Fluent catalogs under the crate's
-//! `locales/` directory, one catalog for each part of the viewer that looks
-//! them up (`locales/<part>/<tag>/<part>.ftl`), embedded at build time by
-//! `fluent_templates::static_loader!`, the mechanism FerroUI catalogs its own
-//! words with. [`Msg`] holds the words of the shell and of more than one
-//! group; each route group (`crate::routes`) has its own message type and
-//! catalog in a submodule, and so do the words only the server draws.
-//! English is the one language that ships and the one every lookup falls
-//! back to; a language joins as one catalog file in each part's directory
-//! and no code change.
-//!
 //! The server chooses the locale once per request: the best language of the
 //! request's `Accept-Language` the catalog holds, else the configured
 //! `[ui] locale`, and holds it in the request's scope ([`crate::scope`]). The

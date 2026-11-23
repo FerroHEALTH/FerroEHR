@@ -3,10 +3,6 @@
 
 //! Terminology: what the CDR can answer about the code sets it serves.
 //!
-//! Four tabs, Terminologies, Look up, Value sets and Hierarchy, and one
-//! terminology's descriptor (FerroUI `design/consoles/ferroehr/`, pages 17.1
-//! to 17.7).
-//!
 //! The operations are the terminology calls the CDR serves under
 //! `terminology` ([`crate::terminology`]); a CDR with
 //! the terminology API off answers `404`, and the page says so once. Every

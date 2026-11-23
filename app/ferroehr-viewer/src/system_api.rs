@@ -11,13 +11,6 @@
 //! Its `endpoints` array is the server's live mounted-group set, which is how
 //! the viewer discovers optional API groups instead of poking one of their
 //! operations.
-//!
-//! Shared, not screen-local: the manifest also carries the CDR's identity and
-//! conformance profile, which more than one screen wants.
-//!
-//! The manifest is served above CORS and outside authentication (`security:
-//! []`), so the fetch carries no CDR credential — but the read still guards
-//! the viewer session first, as every read of the viewer does.
 
 use serde::Deserialize;
 
@@ -27,10 +20,8 @@ use crate::locale::tr_served;
 
 /// The System API conformance manifest — the `Options` schema, field for field.
 ///
-/// Every member is optional-tolerant: `Options.yaml` declares no `required`
-/// list at all, so a conformant peer may omit any of them and the reader fills
-/// the gap from [`Default`] rather than failing the whole manifest — which
-/// would hide every affordance the `endpoints` list gates.
+/// Every member is optional, since `Options.yaml` requires none; a gap reads as
+/// [`Default`] instead of failing the manifest.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 #[serde(default)]
 pub struct ConformanceManifest {
@@ -66,10 +57,6 @@ impl ConformanceManifest {
 }
 
 /// Fetch the CDR's System API conformance manifest.
-///
-/// The manifest reports what the server MOUNTS, never what the caller may DO:
-/// authorization stays a per-request answer (`401`/`403`) the calling screen
-/// surfaces.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); [`ViewerError::Cdr`]

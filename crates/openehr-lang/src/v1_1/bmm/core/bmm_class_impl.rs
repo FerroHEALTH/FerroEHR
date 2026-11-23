@@ -241,13 +241,6 @@ impl BmmClass {
     /// `BMM_CLASS.supplier_closure`: "List of names of all classes in full
     /// supplier closure, including concrete generic parameters. This list
     /// includes primitive types." (class doc §Functions).
-    ///
-    /// The transitive closure of [`Self::suppliers`], each supplier name
-    /// resolved through [`BmmModel::class_definition`]. A name with no
-    /// definition in `model` (a type supplied by an included schema that is not
-    /// part of this model) terminates that branch. Cycle-safe: a class already
-    /// in the closure is never expanded twice, which is what makes the function
-    /// total on the recursive type graphs the RM is full of.
     #[must_use]
     pub fn supplier_closure(&self, model: &BmmModel) -> Vec<String> {
         let mut seen: BTreeSet<String> = BTreeSet::new();
@@ -320,11 +313,6 @@ impl BmmClass {
     /// *effective* (flat) set, "the result of evaluating these lists of
     /// properties down the inheritance hierarchy" (`master05-core.adoc`
     /// §Classes and Properties).
-    ///
-    /// Ancestors are merged first (recursively, so the deepest ancestor lands
-    /// first) and this class's own differential properties last, so a
-    /// redefinition in a nearer class wins over the same property name in a
-    /// farther one.
     #[must_use]
     pub fn flat_properties(&self) -> BTreeMap<&str, &BmmProperty<BmmType>> {
         let mut out = BTreeMap::new();
@@ -349,12 +337,6 @@ impl BmmClass {
     /// classes it will be generic name such as `List<T>`, `Interval<T>`";
     /// `org.openehr.lang.bmm3.bmm_class.adoc` §Description: "Use `type_name()`
     /// to obtain the qualified type name").
-    ///
-    /// NOTE: the persisted `generic_parameters` is a keyed map, so the formal
-    /// declaration order the class doc mandates is not recoverable here —
-    /// parameters render in sorted key order, which `Inv_generic_name`
-    /// (single upper-case letters) keeps stable and, for conventional
-    /// `T`/`U`/`V` naming, identical to declaration order.
     #[must_use]
     pub fn type_name(&self) -> String {
         self.generic_form(|parameter| parameter.name.clone())

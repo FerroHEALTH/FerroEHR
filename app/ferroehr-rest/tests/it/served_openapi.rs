@@ -137,13 +137,9 @@ async fn every_operation_is_described_with_a_success_outcome() {
         let responses = op.get("responses").and_then(Value::as_object);
         let has_success = responses.is_some_and(|r| {
             r.iter().any(|(code, body)| {
-                // A 501-only operation (declared, not yet implemented — e.g.
-                // the deferred ADL2 projections) documents its whole real
-                // contract; a described 501 satisfies the rule. So does a 3xx:
-                // for an operation whose whole contract IS a redirect (the
-                // Swagger UI mount path), the redirect is the success outcome,
-                // and requiring a 2xx there would only invite documenting a
-                // response the route never sends.
+                // A described 501 satisfies the rule, and so does a 3xx for an
+                // operation whose whole contract is a redirect (the Swagger UI
+                // mount path).
                 (code.starts_with('2') || code.starts_with('3') || code == "501")
                     && body
                         .get("description")
@@ -1400,9 +1396,8 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         label: "the ops-introspection management surface",
         prefixes: &["/management"],
         flag: "no openehr spec governs this",
-        // 8 + /management/flamegraph (PR #1864, the on-demand CPU profiler)
-        // + /management/health and /management/status (#3671, the detail the
-        // public probes no longer carry).
+        // 8 + /management/flamegraph + /management/health and
+        // /management/status (#3671).
         operations: 11,
     },
     NonSpecFamily {
@@ -1673,17 +1668,6 @@ async fn the_document_declares_its_own_identity() {
 
 /// `expand_multimedia` is declared on exactly the reads whose handlers honour
 /// it — no more, no less.
-///
-/// The defect this pins was live: externalization is applied by the generic
-/// versioning path, so a `DV_MULTIMEDIA` leaves the database from a
-/// COMPOSITION, an `EHR_STATUS` or a FOLDER alike, while re-inlining was wired to
-/// the COMPOSITION read alone. Content committed inside an `EHR_STATUS` therefore
-/// sat in the object store with no API that returned it, and the parameter that
-/// should have fetched it was silently ignored as undeclared.
-///
-/// A declaration list is the only half a document can check. It catches the
-/// direction that actually bit — a handler honouring a parameter nobody
-/// documented, or a document promising one no handler reads.
 #[tokio::test]
 async fn expand_multimedia_is_declared_on_every_read_that_can_serve_externalized_media() {
     // Every read that can return externalized content: the bare resources and

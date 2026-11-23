@@ -153,8 +153,6 @@ pub async fn list_tag_sets(
 /// STORED collection in the `list_tags` order — the write path never re-reads
 /// what it just wrote.
 ///
-/// Runs on the caller's transaction.
-///
 /// A tag that survives the replace keeps its original `created_at`. An
 /// `ITEM_TAG` identity, the (`key`, `target_path`) pair within one target
 /// (ITS-REST overview `Requests_and_responses.md` §item-tag headers), appearing

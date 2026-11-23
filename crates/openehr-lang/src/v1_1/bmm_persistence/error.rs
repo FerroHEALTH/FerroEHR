@@ -4,9 +4,6 @@
 
 //! The typed failures of the P_BMM schema reader, include resolver and
 //! `BMM_MODEL` transform.
-//!
-//! Every variant is a discriminant a caller can branch on; the display text is
-//! never a decision input. Spec anchors are named per variant.
 
 /// A P_BMM schema could not be read, its inclusions could not be resolved, or
 /// the in-memory `BMM_MODEL` could not be materialised from it.
@@ -19,10 +16,6 @@
 /// resolve the schema inclusions and ultimately `BMM_*` object instantiations
 /// to obtain the in-memory form of the model"
 /// (`LANG/docs/bmm_persistence/master02-overview.adoc` §Conceptual Approach).
-///
-/// `path`-carrying variants name the ODIN location as a `/`-joined attribute
-/// path (`class_definitions/ELEMENT/properties/items/type_def`); `context`
-/// carrying variants name the model element being materialised.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum PBmmReadError {
@@ -191,11 +184,6 @@ pub enum PBmmReadError {
 
     /// A type reference names a class no class definition in the schema
     /// declares.
-    ///
-    /// Every `BMM_TYPE` form roots in a `BMM_CLASS` (`BMM_SIMPLE_TYPE.base_class`,
-    /// `BMM_GENERIC_TYPE.base_class`, `BMM_CONTAINER_TYPE.container_type`), so
-    /// an unresolvable name cannot be materialised without inventing a class
-    /// the schema does not declare.
     #[error("{context}: type `{type_name}` is not defined by any class in the schema")]
     UnknownType {
         /// The model element being materialised.

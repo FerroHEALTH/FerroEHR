@@ -1,14 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The pre-parsed archetype-conformance walk plan.
-//!
-//! The archetype-conformance walk ([`super::validate_archetype_conformance`])
-//! is guided by the constraint paths a [`WebTemplateNode`] carries, which are
-//! template-static: [`prepare_walk`] parses them once at build time into the
-//! cached [`WebTemplateNode::walk`]; a node without a cached plan gets an
-//! identical [`NodeWalk`] built per visit, so there is one code path. No
-//! openEHR spec governs the WebTemplate model or this plan: our own design.
+//! The archetype-conformance walk plan: the template-static constraint paths
+//! parsed once by [`prepare_walk`]. No openEHR spec governs it: our own design.
 
 use openehr_rm::v1_2::paths::PathSegment;
 
@@ -16,11 +10,8 @@ use super::SiblingNameIndex;
 use crate::flat::rmpath;
 use crate::flat::webtemplate::model::WebTemplateNode;
 
-/// A pre-parsed archetype-conformance walk plan for one [`WebTemplateNode`].
-///
-/// Every `Vec` is index-aligned with the corresponding node constraint vector so
-/// the walk can zip them; `None` marks a constraint path that is not an
-/// extension of the node's own `aqlPath`.
+/// A pre-parsed walk plan for one [`WebTemplateNode`], each `Vec` index-aligned
+/// with its constraint vector; `None` marks a path not under the node's own.
 #[derive(Debug, Clone)]
 pub(crate) struct NodeWalk {
     /// Child sibling groups, in first-seen order (grouping the node's `children`
@@ -232,13 +223,9 @@ impl NodeWalk {
     }
 }
 
-/// Build the name-based sibling routing index from a set of already-parsed
-/// relative sibling paths (one per distinct child/slot `aqlPath`).
-///
-/// Per identity `(attribute, archetype_node_id)`, count the distinct sibling
-/// paths carrying it and collect the explicit `name/value` constraints; keep only
-/// identities carried by more than one sibling. A path with no predicate-bearing
-/// segment, or no `archetype_node_id`, is skipped.
+/// Build the name-based sibling routing index from parsed relative sibling
+/// paths: identities carried by more than one sibling, with their explicit
+/// `name/value` constraints.
 fn sibling_index_from_segments<'a>(
     groups: impl Iterator<Item = &'a [PathSegment]>,
 ) -> SiblingNameIndex {
@@ -267,10 +254,7 @@ fn sibling_index_from_segments<'a>(
         .collect()
 }
 
-/// Populate the archetype-conformance walk plan on `node` and, recursively, every
-/// descendant — called once by [`crate::flat::webtemplate::builder::build_web_template`] on the
-/// finalized tree so the validation walk never re-parses a template-static
-/// constraint path.
+/// Populate the walk plan on `node` and every descendant.
 pub(crate) fn prepare_walk(node: &mut WebTemplateNode) {
     let mut slots = Vec::new();
     crate::flat::build::collect_slot_types(node, &mut slots);

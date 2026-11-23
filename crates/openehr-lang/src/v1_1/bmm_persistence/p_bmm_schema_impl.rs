@@ -58,11 +58,6 @@ impl PBmmSchema {
     /// the schema must already be inclusion-resolved with
     /// [`resolve_includes`](crate::v1_1::bmm_persistence::include_resolution::resolve_includes).
     ///
-    /// NOTE: the class doc types the function `void`, writing its result into
-    /// the schema object's own state; the persisted shapes here carry no such
-    /// state, so the materialised model is RETURNED — the same value, without a
-    /// mutable back-reference the generated form does not have.
-    ///
     /// # Errors
     /// Every failure [`create_bmm_model`] reports: a symbolic reference the
     /// transform cannot resolve to the object reference the `BMM_*` shapes

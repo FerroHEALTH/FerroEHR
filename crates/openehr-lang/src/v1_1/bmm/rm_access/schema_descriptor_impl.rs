@@ -14,12 +14,6 @@
 //! `LANG/docs/bmm/master04-rm_access.adoc` §Overview: the package "provides an
 //! interface for the application to load and access BMM schemas".
 //!
-//! The behaviour is realized ON the generated data classes (this file's
-//! `*_impl.rs` sibling
-//! [`crate::v1_1::bmm::rm_access::schema_descriptor::SchemaDescriptor`]), which already
-//! carry every attribute the class doc declares — including `meta_data`'s
-//! `schema_path`, which is where the file to (re)read is remembered.
-//!
 //! Two signature deviations from the class doc, both because the pinned
 //! `SCHEMA_DESCRIPTOR` declares no attribute the zero-argument forms could read
 //! (§Attributes lists exactly `p_schema`, `schema`, `schema_id`, `meta_data`,
@@ -108,12 +102,6 @@ macro_rules! descriptor {
 impl SchemaDescriptor {
     /// Describe the schema file at `path` from a metadata read of its header.
     ///
-    /// This is the "meta-data table of attributes obtained from a mini-ODIN
-    /// parse of the schema file" the class doc describes: the returned
-    /// descriptor carries `schema_id`, `meta_data` and `includes`, and NOTHING
-    /// of the model itself — populating `p_schema` is [`SchemaDescriptor::load`]'s
-    /// job, the next step of the lifecycle.
-    ///
     /// NOTE (adjudicated): the P_BMM reader is whole-document
     /// ([`crate::v1_1::bmm_persistence::reader::read_schema`]), and the pinned syntax
     /// offers no partial-parse entry point — `master04-syntax.adoc`
@@ -187,10 +175,6 @@ impl SchemaDescriptor {
 
     /// `SCHEMA_DESCRIPTOR.p_schema`: "Persistent form of model" (class doc
     /// §Attributes) — `None` until [`SchemaDescriptor::load`] has run.
-    ///
-    /// `P_BMM_SCHEMA_DESCRIPTOR.bmm_schema` re-declares the same attribute with
-    /// the same meaning, so it is read as a fallback (see
-    /// [`SchemaDescriptor::from_schema_file`]).
     #[must_use]
     pub fn p_schema(&self) -> Option<&PBmmSchema> {
         match self {
@@ -210,14 +194,6 @@ impl SchemaDescriptor {
 
     /// `SCHEMA_DESCRIPTOR.is_top_level`: "True if this is a top-level schema,
     /// i.e. not included by some other schema" (class doc §Functions).
-    ///
-    /// `all_schemas` is the candidate set — conventionally
-    /// [`crate::v1_1::bmm::rm_access::reference_model_access::ReferenceModelAccess::all_schemas`]
-    /// — matched case-insensitively, because the vendored schemas write include
-    /// ids in either case and
-    /// [`crate::v1_1::bmm_persistence::include_resolution::resolve_includes`] matches
-    /// them lower-cased. A schema that includes ITSELF does not thereby stop
-    /// being top-level.
     #[must_use]
     pub fn is_top_level(&self, all_schemas: &BTreeMap<String, SchemaDescriptor>) -> bool {
         let own = self.schema_id().to_lowercase();
@@ -230,10 +206,6 @@ impl SchemaDescriptor {
     /// `SCHEMA_DESCRIPTOR.is_bmm_compatible`: "True if the BMM version found in
     /// the schema (or assumed, if none) is compatible with that in this
     /// software" (class doc §Functions).
-    ///
-    /// Compared on the major version only, against [`P_BMM_GENERATION`] (see its
-    /// adjudication). A descriptor whose `meta_data` states no `bmm_version` is
-    /// compatible — the class doc's "or assumed, if none".
     #[must_use]
     pub fn is_bmm_compatible(&self) -> bool {
         match self.meta_data().get(META_BMM_VERSION) {
@@ -246,11 +218,6 @@ impl SchemaDescriptor {
     /// §Functions) — reads the file named by
     /// the [`META_SCHEMA_PATH`] entry of `meta_data`
     /// into `p_schema`.
-    ///
-    /// Re-reads from disk on every call, which is what makes
-    /// [`crate::v1_1::bmm::rm_access::reference_model_access::ReferenceModelAccess::reload_schemas`]
-    /// ("Reload all schemas") pick up an edited file. Any previously computed
-    /// `schema` is dropped, because it was materialised from the old text.
     ///
     /// # Errors
     /// Returns [`RmAccessError::NoSchemaPath`] when the descriptor names no
@@ -337,9 +304,6 @@ impl SchemaDescriptor {
     /// `SCHEMA_DESCRIPTOR.validate_includes`: "Validate includes list for this
     /// schema, to see if each mentioned schema exists in read schemas" (class
     /// doc §Functions).
-    ///
-    /// Matched case-insensitively, as
-    /// [`crate::v1_1::bmm_persistence::include_resolution::resolve_includes`] does.
     ///
     /// # Errors
     /// Returns [`RmAccessError::MissingInclude`] naming the first include that

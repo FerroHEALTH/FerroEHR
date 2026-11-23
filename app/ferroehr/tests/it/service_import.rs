@@ -673,12 +673,6 @@ async fn import_ehr_extract_adds_a_versioned_object_and_rejects_re_import() {
 /// "Both the contribution and `commit_audit` of the latter object correspond to
 /// the local act of committal, while the knowledge of the original Contribution
 /// and committal are retained inside the wrapped `ORIGINAL_VERSION` instance."
-///
-/// So the VERSION resource of an imported version serves an `IMPORTED_VERSION`
-/// whose own contribution/audit are LOCAL and whose `item` is the received
-/// `ORIGINAL_VERSION`, foreign contribution and commit audit intact. Regression
-/// for #1679, where the wrapper never materialised: the foreign audit was
-/// written as the row's own and the foreign contribution reference was dropped.
 #[tokio::test]
 async fn an_imported_version_serves_the_wrapper_and_wrapped_split() {
     let (_source_db, source) = crate::fixtures::service().await;
@@ -874,12 +868,6 @@ async fn a_re_export_reproduces_the_wrapped_original_verbatim() {
 /// that the `IMPORTED_VERSION` instance will carry its own signature which
 /// signifies the act of importing and making available locally an
 /// `ORIGINAL_VERSION` from another system."
-///
-/// So a deployment with signing on signs the wrapper it creates, and the
-/// signature must verify against the wrapper the READ path rebuilds — under
-/// `verify_on_read = strict` a byte drift between the two is a 5xx, which is
-/// exactly what makes this test the proof. The wrapped original's own foreign
-/// signature is stored verbatim and never re-verified.
 #[tokio::test]
 async fn a_signed_import_signs_the_wrapper_and_the_read_verifies_it() {
     let (_source_db, source) = crate::fixtures::service().await;
@@ -957,11 +945,6 @@ async fn a_signed_import_signs_the_wrapper_and_the_read_verifies_it() {
 /// says the same of the id half — "the newly created EHR should re-use the EHR
 /// identifier from the source system. This establishes the new EHR as an
 /// intentional clone."
-///
-/// The two routes are the EHR-Extract import and the released
-/// client-supplied-id creation (the only released affordance for the clone),
-/// and the source here runs under a DIFFERENT system id, so a regression that
-/// copied the source's value would be visible rather than accidentally equal.
 #[tokio::test]
 async fn a_cloned_ehr_keeps_the_source_ehr_id_but_takes_the_local_system_id() {
     const SOURCE_SYSTEM: &str = "sysA.example.org";
@@ -1031,12 +1014,6 @@ async fn a_cloned_ehr_keeps_the_source_ehr_id_but_takes_the_local_system_id() {
 /// Versions were there earlier than the time of local committal (as would occur
 /// if the original commit time of the `ORIGINAL_VERSION` object was used for
 /// comparison purposes in such queries)."
-///
-/// So an as-of read at an instant BEFORE the local import must not see the
-/// imported version, even though the wrapped original's own commit audit
-/// records an earlier instant — which it still does, and this test asserts
-/// both halves so a server that simply discarded the source chronology would
-/// fail it too.
 #[tokio::test]
 async fn an_as_of_read_before_the_import_does_not_see_the_imported_version() {
     let (_source_db, source) = crate::fixtures::service().await;
@@ -1112,10 +1089,6 @@ async fn an_as_of_read_before_the_import_does_not_see_the_imported_version() {
 /// copy of its original, no matter how many systems it may be copied through",
 /// and each receiving system commits its own `IMPORTED_VERSION` wrapper whose
 /// `commit_audit`/`contribution` "record the local act of committal".
-///
-/// Two hops therefore produce TWO distinct local wrappers over ONE unchanged
-/// original — never a wrapper wrapping a wrapper, and never a third rewriting
-/// of the original.
 #[tokio::test]
 async fn a_two_hop_copy_wraps_at_each_system_over_one_unchanged_original() {
     let db_a = testkit::db().await.expect("testkit database");

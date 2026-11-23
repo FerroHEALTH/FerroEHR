@@ -1,19 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end HTTP tests for the MUST-level ITS-REST protocol tail (B6 cluster
-//! 4): the `openEHR-VERSION.*` / `openEHR-AUDIT_DETAILS.*` committal request
-//! headers (parse + merge), `If-Match` hardening (malformed → 400), the
-//! `OPTIONS /` System-Options-and-Conformance endpoint, and canonical-XML
-//! responses for the VERSION family. Driven through the assembled
-//! router over a **real** `FerroEhrService` on a real `PostgreSQL`.
-//!
-//! The committal-header merge is now verified end-to-end: the update is
-//! committed and the persisted `ORIGINAL_VERSION` is read back to confirm the
-//! header-supplied lifecycle/audit values were merged (replacing the former
-//! `Mock` hook that captured the `UpdateVersion` in-process). The signed-version
-//! XML asserts the real server-side digest signature (the default `FerroEhrService`
-//! signer is enabled), not the Mock's injected fixture.
+//! End-to-end HTTP tests for the MUST-level ITS-REST protocol tail: the
+//! `openEHR-VERSION.*` / `openEHR-AUDIT_DETAILS.*` committal request headers
+//! (parse and merge), `If-Match` hardening (malformed → 400), the `OPTIONS /`
+//! System-Options-and-Conformance endpoint, and canonical-XML responses for the
+//! VERSION family. Driven through the assembled router over a real
+//! `FerroEhrService` on a real `PostgreSQL`.
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
@@ -94,9 +87,8 @@ async fn commit_ips_composition(app: &Router) -> (String, String) {
 #[tokio::test]
 async fn options_root_is_system_options_and_conformance() {
     let (_pg, app) = common::app(common::api_config(false)).await;
-    // The System API mounts at the API base-path root ONLY
-    // (`system.openapi.yaml` servers `{baseUrl}/v1`, path `/`); the former
-    // bare-`/` alias was our own duplication and is gone.
+    // The System API mounts at the API base-path root only
+    // (`system.openapi.yaml` servers `{baseUrl}/v1`, path `/`).
     let req = common::req("OPTIONS", BASE).build();
     let (status, h, body) = send(&app, req).await;
 
@@ -179,13 +171,11 @@ async fn committal_headers_merge_into_the_commit() {
     assert_eq!(status, StatusCode::OK, "version read: {body}");
     let ver: Value = serde_json::from_str(&body).expect("original_version json");
     assert_eq!(ver["_type"], "ORIGINAL_VERSION");
-    // Spec MUST (ITS-REST overview §"openehr-version and openehr-audit-details"):
-    // "whatever is provided [in the committal headers] MUST be merged with the
-    // default VERSION and VERSION.audit_details attributes on commit runtime."
-    // The former `Mock` hook only captured the dispatcher-built `UpdateVersion`
-    // (which is correct — see committal.rs unit tests); with the real service the
-    // *persisted* ORIGINAL_VERSION must reflect the merged values. These
-    // assertions verify the end-to-end MUST.
+    // Spec MUST (ITS-REST overview §"openehr-version and
+    // openehr-audit-details"): "whatever is provided [in the committal headers]
+    // MUST be merged with the default VERSION and VERSION.audit_details
+    // attributes on commit runtime", so the persisted ORIGINAL_VERSION must
+    // carry the merged values.
     assert_eq!(
         ver["lifecycle_state"]["defining_code"]["code_string"], "800",
         "openEHR-VERSION.lifecycle_state merged: {ver}"

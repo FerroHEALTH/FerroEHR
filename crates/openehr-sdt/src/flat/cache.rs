@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! An async cache of built [`WebTemplate`]s, keyed by template id.
-//!
-//! `WebTemplate` construction is deterministic and moderately expensive (a full
-//! OPT walk + compaction); the REST `wt+json` endpoint builds each template once
-//! and serves the shared [`Arc`] thereafter. Mirrors the `moka::future::Cache`
-//! usage in `ferroehr-rest`'s JWKS cache.
 
 use std::sync::Arc;
 
@@ -74,10 +69,8 @@ impl WebTemplateCache {
         }
     }
 
-    /// Return the cached template for `template_id`, or build it with `build`
-    /// (run at most once per key under contention) and cache the result. A
-    /// template the cap evicted is built again from its source, so the cap
-    /// changes no answer.
+    /// The cached template for `template_id`, or `build`'s, run at most once per
+    /// key; an evicted template is built again.
     ///
     /// # Errors
     /// Propagates the `build` error (shared across concurrent callers).
@@ -95,11 +88,8 @@ impl WebTemplateCache {
             .map(|kept| kept.template)
     }
 
-    /// The cached template for `template_id` **without** building it — the fast
-    /// path for callers that must avoid the backing-store round-trip on a hit
-    /// (e.g. the per-commit validation path). Counts as an access for the
-    /// cache's recency policy, so hot templates stay resident. Returns `None`
-    /// on a miss; the caller then loads + [`get_or_build`](Self::get_or_build)s.
+    /// The cached template for `template_id` without building it; `None` on a
+    /// miss. Counts as an access.
     #[must_use]
     pub async fn get(&self, template_id: &str) -> Option<Arc<WebTemplate>> {
         self.inner.get(template_id).await.map(|kept| kept.template)
@@ -110,9 +100,7 @@ impl WebTemplateCache {
         self.inner.invalidate(template_id).await;
     }
 
-    /// How many templates the cache holds, and their bytes: each template's
-    /// JSON text, its id and the cache's bookkeeping per entry. An estimate
-    /// that leaves out the allocator's rounding.
+    /// How many templates the cache holds, and an estimate of their bytes.
     #[must_use]
     pub fn held(&self) -> (u64, u64) {
         self.inner

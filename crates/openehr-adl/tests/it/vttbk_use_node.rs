@@ -6,16 +6,9 @@
     clippy::panic,
     reason = "test assertions and fixture plumbing"
 )]
-//! VTTBK over term-binding paths that run through a `use_node` (#5457).
-//!
-//! Oracle: AOM2 `master07-terminology_package.adoc` §Validity Rules, VTTBK
-//! ("a path that is valid in the flat archetype"); AOM2
-//! `master03-archetype_package.adoc` §Structural Variants (flattening replaces
-//! each `use_node` by a copy of the subtree it points to); ADL2
-//! `master04.3-cadl_complex_types.adoc` §Paths and Proxy Objects (a path
-//! through a proxy that is not a sibling of its target uses the target's node
-//! id). ADL2 `master07.13-adl_terminology.adoc` §Term bindings quotes the
-//! reference archetype `term_bindings_paths_use_refs` read here.
+//! VTTBK over term-binding paths through a `use_node` (`AOM2/master07` §Validity
+//! Rules; `master03` §Structural Variants; `ADL2/master04.3` §Paths and Proxy
+//! Objects), on the reference archetype `term_bindings_paths_use_refs`.
 
 use std::path::{Path, PathBuf};
 

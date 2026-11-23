@@ -2,24 +2,13 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hand-written BASE `Cardinality` spec functions.
-//!
-//! `Cardinality` expresses constraints on the cardinality of container objects
-//! (the values of multiply-valued attributes), including uniqueness and
-//! ordering, so a container can be stated to behave as a list, set or bag —
-//! the classification the AM container-attribute validator interrogates.
-//!
-//! Spec source (vendored):
-//! `BASE/docs/UML/classes/org.openehr.base.foundation_types.cardinality.adoc`
-//! (`is_bag`/`is_list`/`is_set`, defined over the `is_ordered`/`is_unique`
-//! attribute pair).
+//! The BASE `Cardinality` functions `is_bag`, `is_list` and `is_set`
+//! (`org.openehr.base.foundation_types.cardinality.adoc`).
 
 use super::cardinality::Cardinality;
 
 impl Cardinality {
-    /// `is_bag` (`cardinality.adoc`): true if the semantics represent a bag,
-    /// i.e. unordered, non-unique membership (`not is_ordered and not
-    /// is_unique`).
+    /// `is_bag`: unordered and non-unique.
     #[must_use]
     pub fn is_bag(&self) -> bool {
         !self.is_ordered && !self.is_unique

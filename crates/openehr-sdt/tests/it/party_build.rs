@@ -2,15 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The party build (`flat::build::build_party`) and the caller-chosen
-//! `ARCHETYPED.rm_version` of the builders.
-//!
-//! A party template (a `PERSON`, `ORGANISATION` or `ROLE` root, RM demographic
-//! `master02-demographic_package.adoc`) builds a party that decodes as its root
-//! class, with `identities` as the `List<PARTY_IDENTITY>` the RM declares, no
-//! composition attribute, a compacted structure named by its term definition,
-//! and a refusal for a `ctx/` key. The templates are synthetic, generated here,
-//! beside the deployed `Role.v2` from `corpus/fixtures/opt/valid`. A party
-//! template's example is a party of its class (`flat::example::example_party`).
+//! `ARCHETYPED.rm_version` of the builders (RM demographic
+//! `master02-demographic_package.adoc`).
 #![expect(
     clippy::expect_used,
     clippy::panic,
@@ -106,10 +99,8 @@ fn text_element(node_id: &str) -> String {
     )
 }
 
-/// A synthetic party OPT: a `class` root (`openEHR-DEMOGRAPHIC-<class>.synthetic.v1`)
-/// with one `PARTY_IDENTITY` (at0003) whose `ITEM_TREE` (at0004, "Identity
-/// details") holds one `DV_TEXT` element (at0005, "Name"), and a details tree
-/// (at0001) with one `DV_TEXT` element (at0002, "Note").
+/// A synthetic party OPT of root `class` with one identity and one details
+/// element.
 fn party_template(class: &str) -> WebTemplate {
     party_template_with(class, 1)
 }
@@ -573,10 +564,8 @@ fn a_party_template_has_an_example_party_at_every_level() {
     .expect("decodes as ORGANISATION");
 }
 
-/// RM demographic §PARTY declares `identities` 1..1 with `Identities_valid`
-/// (`not identities.is_empty`), so a template that marks its identity
-/// optional still gets an example party carrying one identity at every
-/// level, `required` included (`org.openehr.rm.demographic.party.adoc`).
+/// An optional identity still yields one in every example level (RM
+/// `org.openehr.rm.demographic.party.adoc` `Identities_valid`).
 #[test]
 fn an_optional_identity_is_still_in_every_example_party() {
     for class in ["PERSON", "ORGANISATION", "GROUP", "AGENT", "ROLE"] {
@@ -611,11 +600,8 @@ fn an_example_role_carries_a_performer() {
     assert_eq!(party["performer"]["namespace"], "demographic");
 }
 
-/// `Role.v2` constrains `capabilities` and `credentials` as single attributes
-/// whose children state `0..*`; ADL 1.4 `master05-cadl.adoc` §Occurrences caps
-/// such a child at one, so the Web Template says `max` 1 and even the
-/// `complete` example (which repeats every repeating node) holds one
-/// CAPABILITY with one `credentials` structure.
+/// `Role.v2`'s single attributes cap their `0..*` children at one (ADL 1.4
+/// `master05-cadl.adoc` §Occurrences), even in the `complete` example.
 #[test]
 fn the_role_v2_example_keeps_its_single_attributes_single() {
     let wt = role_v2_template();

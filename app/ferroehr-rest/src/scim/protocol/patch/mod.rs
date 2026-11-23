@@ -3,11 +3,6 @@
 
 //! The PATCH request (RFC 7644 §3.5.2): the `PatchOp` message, its `add`,
 //! `remove` and `replace` operations, and their application to a resource.
-//!
-//! [`PatchRequest::parse`] checks the message; [`PatchRequest::apply`] runs
-//! the operations in order on a copy of the resource and returns the copy
-//! only when every operation succeeds, since a PATCH "SHALL be treated as
-//! atomic".
 
 mod apply;
 

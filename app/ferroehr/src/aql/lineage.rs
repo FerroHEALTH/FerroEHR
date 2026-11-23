@@ -15,12 +15,6 @@
 //! for AOM2-era identifiers ("the level of specialisation can no longer be
 //! determined from the identifier"), so their lineage is only what the stored
 //! artefacts declare.
-//!
-//! This module is the read-only side of that: a resolved child-to-parent graph
-//! over the stored ADL2 and OPT2 family, inverted into parent-to-children, which
-//! answers which stored archetypes descend from the one a query names. Loading
-//! and caching it is the definition service's `lineage` module; the planner
-//! consumes it through [`crate::aql::sql::SqlCtx`].
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -166,13 +160,6 @@ pub struct QueriedArchetype {
 }
 
 /// Decomposes an archetype HRID in either era's form.
-///
-/// This is the ONE reading of an archetype identifier in the query path: the
-/// lineage index and the SQL predicate both go through it, so a form one of
-/// them accepts cannot be a form the other silently declines. The version form
-/// comes from the identifier's own text, since `parse_hrid` normalises every
-/// version to `major.minor.patch`; a version-status suffix (`-rc.1`) is not
-/// part of the numeric release.
 ///
 /// `None` when the text is not an archetype HRID at all (an at/id-code, an
 /// arbitrary string).

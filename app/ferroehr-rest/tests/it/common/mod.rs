@@ -6,11 +6,8 @@
 //! one migrated template database, one `CREATE DATABASE … TEMPLATE` clone
 //! per call — see `tools/testkit`).
 //!
-//! These HTTP tests exercise the same concrete service the binary ships, so
-//! every scenario is set up through the real API (upload a template, create
-//! an EHR, …) and every assertion observes real behaviour. Hold the returned
-//! [`testkit::TestDb`] guard for the test's lifetime — dropping it releases
-//! the clone.
+//! Hold the returned [`testkit::TestDb`] guard for the test's lifetime;
+//! dropping it releases the clone.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -261,9 +258,6 @@ pub(crate) fn jwks_file() -> PathBuf {
 /// The client every test token names unless it names its own.
 pub(crate) const TEST_CLIENT: &str = "ferroehr-test-client";
 
-/// The `[auth.issuer.<name>]` table of a `persons` issuer at `issuer` for
-/// `audience`, whose first-party client [`TEST_CLIENT`] is a grant in the
-/// CDR ([`first_party`]).
 /// The `[auth.issuer.<name>]` name the tests give the issuer `issuer`: its
 /// identifier in lower case with every other character `_`, after `i_`, the
 /// last 62 characters kept, the name form `ferrohealth-smart` holds a table
@@ -1399,10 +1393,6 @@ pub(crate) fn demo_vitals_opt_xml() -> String {
 }
 
 /// The vendored IPS composition (canonical JSON) the template above validates.
-///
-/// The pair is driven end to end through the real `FerroEhrService` (upload →
-/// create-EHR → commit) by the platform crate's validation suite, so it commits
-/// cleanly over the wire too.
 pub(crate) fn ips_canonical_composition() -> Value {
     let text = std::fs::read_to_string(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(

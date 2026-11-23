@@ -3,10 +3,6 @@
 
 //! The Groups of a SCIM client as the demographic store holds them.
 //!
-//! Each is a `GROUP` of the mapped group template, and each member holds an
-//! inline `PARTY_RELATIONSHIP` of the mapped membership archetype from its
-//! `PERSON` to the `GROUP`.
-//!
 //! A Group's `displayName` is its `PARTY_IDENTITY` and its `externalId` a
 //! `DV_IDENTIFIER` in `details` under the client's group issuer (RM
 //! demographic `master02-demographic_package.adoc` §Names and Addresses,

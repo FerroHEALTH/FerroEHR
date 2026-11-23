@@ -473,11 +473,7 @@ pub(crate) fn aql_like_to_sql(pattern: &str) -> String {
 /// the typed `PgExpr::concatenate` `||` operator; the tree id renders
 /// `trunk[.branch.version]`.
 ///
-/// `audit` summons the audit-table join LAZILY: only the commit-audit
-/// fields read it, so a `uid`/`contribution_id`/`lifecycle_state` path
-/// never pays the join (the same pay-per-use rule as `ensure_audit`'s
-/// doc — the first live plan autopsy found the ward query joining `audit`
-/// it never projected).
+/// `audit` joins the audit table lazily: only the commit-audit fields read it.
 pub(super) fn version_field_expr(
     voa: &str,
     audit: impl FnOnce() -> String,

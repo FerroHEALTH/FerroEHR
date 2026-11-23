@@ -25,16 +25,6 @@
 //! builds from that JSON, the CDR-generated example composition, the
 //! releases grouped in the listing and named in the header over the
 //! versioned get, and the per-row delete over the artefact resource.
-//!
-//! Fixtures are the repository's own authored ADL2 corpus
-//! (`corpus/fixtures/adl2/opt`), read repo-relative
-//! so the `WebDriver` file-upload `send_keys` receives a real host path. Every
-//! scene is SEED-AND-CLEAN: it uploads what it needs (upload-if-absent, so a
-//! stack a sibling scene already filled is never re-POSTed into a `409`) and
-//! removes exactly those artefacts at scene end over
-//! `DELETE definition/artefact/adl2/{artefact_id}`, so a shared stack is left
-//! as it was found. The cleanup runs as the ADMIN dev user: that route is
-//! Admin-classed by the CDR's coarse RBAC.
 
 use crate::common;
 
@@ -75,9 +65,6 @@ fn admin_credentials() -> (String, String) {
 /// Remove the artefacts a scene seeded, over the same route the viewer's
 /// delete affordance drives (`204` deleted, `404` already gone).
 ///
-/// Without `UI_E2E_CDR_URL` the scene has no way to reach the CDR directly and
-/// says so rather than failing: the assertions above it have already run.
-///
 /// # Panics
 /// On any answer other than `204`/`404`.
 async fn remove_adl2_artefacts(hrids: &[&str]) {
@@ -107,9 +94,6 @@ async fn remove_adl2_artefacts(hrids: &[&str]) {
 /// Remove one ADL2 artefact's row from the stack's database, the state the
 /// artefact route refuses to make while a stored template needs it. Returns
 /// whether it ran.
-///
-/// Without `UI_E2E_DB_URL` the scene cannot reach the database and says so
-/// rather than failing.
 ///
 /// # Panics
 /// When the database refuses the connection or the statement.
@@ -370,12 +354,6 @@ async fn an_adl2_artefact_is_deleted_from_the_listing() {
 /// A template the CDR holds without one of its constituent archetypes says
 /// so on every tab, names the archetype and offers its upload, and never
 /// draws the CDR's raw refusal.
-///
-/// The upload of such a template is refused, naming the rule (AOM2 VARXR)
-/// and the archetype on the upload page, and the CDR refuses
-/// to delete an archetype a stored template needs, so the scene stores the
-/// archetype and the template and then removes the archetype's row in SQL,
-/// standing for a store written before that guard.
 #[tokio::test]
 async fn a_template_missing_a_constituent_says_so_on_every_tab() {
     let Some(h) = Harness::start("adl2-missing-constituent").await else {
