@@ -107,6 +107,37 @@ impl IntakeEntry {
     }
 }
 
+#[cfg(test)]
+impl IntakeEntry {
+    /// The canonical form a reader joins back from `entry`'s stored parts
+    /// and columns, stored with `index`.
+    pub(crate) fn read_back(
+        entry: &AccessLogEntry,
+        index: IndexRow,
+    ) -> Result<String, AccessLogError> {
+        let stored = Self::stored(entry, Some(index))?;
+        let derived = &stored.derived;
+        let text = |value: &Option<String>| value.clone().unwrap_or_default();
+        let index = stored.index.as_ref();
+        let columns = stored_form::parts::RowColumns {
+            record_type: derived.record_type.as_deref().unwrap_or_default(),
+            uid: uuid::Uuid::parse_str(&text(&derived.uid)).map_err(|_| {
+                AccessLogError::Canonical(serde::ser::Error::custom("the uid is no UUID"))
+            })?,
+            time_recorded: text(&derived.time_recorded).parse().map_err(|_| {
+                AccessLogError::Canonical(serde::ser::Error::custom("the time does not read"))
+            })?,
+            ehr_id: derived.ehr_id.as_deref().and_then(stored_form::column_uuid),
+            index: stored_form::parts::index::IndexColumns {
+                request_id: index.and_then(|index| index.request_id.as_deref()),
+                resource_id: index.and_then(|index| index.resource_id.as_deref()),
+            },
+        };
+        let shared = stored.shared.as_ref().map(|(_, text)| text.as_str());
+        stored_form::parts::whole(&stored.row, shared, &columns).map_err(AccessLogError::Canonical)
+    }
+}
+
 /// The intake rows of a batch, one element per entry, as the `unnest` of
 /// [`INTAKE`] reads them, borrowed from the entries.
 #[derive(Debug, Default)]
