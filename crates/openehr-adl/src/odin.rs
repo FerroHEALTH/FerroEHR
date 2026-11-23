@@ -526,7 +526,8 @@ fn class_name(rm_type: &str) -> &str {
 // ── `master03` lexical decoding ───────────────────────────────────────────
 
 /// Decode a double-quoted `master03` string literal, delimiters included, over
-/// [`openehr_lang::v1_1::escape`].
+/// [`openehr_lang::v1_1::escape`] (`ADL2/master03-file_encoding.adoc` §Special
+/// Character Sequences).
 ///
 /// # Errors
 /// [`openehr_lang::v1_1::escape::EscapeError`] for a `\u` escape that denotes no

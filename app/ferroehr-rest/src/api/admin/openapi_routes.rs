@@ -176,9 +176,10 @@ guarded_handler! {
     /// with applicable data protection regulations (e.g., the GDPR in the European
     /// Union)."
     ///
-    /// This server deletes synchronously, so `204` is the only success. An id
-    /// that names no EHR deletes nothing, and a malformed id is a `400` before
-    /// any deletion runs.
+    /// This server is SYNCHRONOUS: `204` is the only success, and the released
+    /// asynchronous `202 Accepted` branch is never produced. The generic `404`
+    /// (`responses/404.yaml`) is UNREACHABLE: an id that names no EHR deletes
+    /// nothing, and a malformed id is a `400` before any deletion runs.
     #[utoipa::path(
         delete, path = "/admin/ehr/all", tag = "EHR",
         params(
@@ -280,8 +281,9 @@ guarded_handler! {
     /// with applicable data protection regulations (e.g., the GDPR in the European
     /// Union)."
     ///
-    /// This server deletes synchronously, so `204` is the only success. An
-    /// unknown EHR is `ehr_id_does_not_exist`.
+    /// This server is SYNCHRONOUS: `204` is the only success, and the released
+    /// asynchronous `202 Accepted` branch is never produced. An unknown EHR is
+    /// `ehr_id_does_not_exist`.
     #[utoipa::path(
         delete, path = "/admin/ehr/{ehr_id}", tag = "EHR",
         params(
