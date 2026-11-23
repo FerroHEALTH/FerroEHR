@@ -27,6 +27,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use ferrohealth_smart::party::source::{Lookup, PartyRecord};
 use ferrohealth_smart::party::{Membership, PartyRef, Represented};
 use moka::future::Cache;
+use moka::ops::compute::{CompResult, Op};
 use opentelemetry::KeyValue;
 use uuid::Uuid;
 
@@ -266,6 +267,8 @@ impl LiveBindings {
     /// change of the side table whose notification has not arrived, and is
     /// read again (#6048). With no `revision`, a ride's, any held lookup is
     /// taken and the revision it was read at noted for the ride (#6320).
+    /// Concurrent misses of one key wait for one read, and each reads on its
+    /// own only when that read failed (#6374).
     ///
     /// # Errors
     /// The error of `read`, which is never held.
@@ -275,8 +278,9 @@ impl LiveBindings {
         revision: Option<i64>,
         read: impl Future<Output = Result<(Lookup, i64), E>>,
     ) -> Result<Lookup, E> {
+        let current = |at: i64| revision.is_none_or(|revision| at >= revision);
         match self.copy.lookups.get(&key).await {
-            Some((held, at)) if revision.is_none_or(|revision| at >= revision) => {
+            Some((held, at)) if current(at) => {
                 crate::party_binding::request::held_binding(at);
                 looked_up(LOOKUPS, "hit");
                 return Ok(held);
@@ -285,17 +289,45 @@ impl LiveBindings {
             None => looked_up(LOOKUPS, "miss"),
         }
         let seen = self.copy.drops.load(Ordering::Acquire);
-        let read = read.await;
-        refilled(LOOKUPS, read.is_ok());
-        let (lookup, at) = read?;
-        crate::party_binding::request::held_binding(at);
-        self.copy
-            .lookups
-            .insert(key.clone(), (lookup.clone(), at))
-            .await;
-        if self.copy.drops.load(Ordering::Acquire) != seen {
-            self.copy.lookups.invalidate(&key).await;
+        let mut outcome = None;
+        let mut reads = false;
+        let (outcome_at, reads_at) = (&mut outcome, &mut reads);
+        // NOTE: moka 0.12 `Entry::and_compute_with`, calls on one key run one at a time, so a
+        // miss queued behind another's read finds its lookup. Boxed: moka's future is large.
+        let computed = Box::pin(self.copy.lookups.entry(key.clone()).and_compute_with(
+            move |entry| async move {
+                if let Some(entry) = entry.filter(|entry| current(entry.value().1)) {
+                    *outcome_at = Some(Ok(entry.into_value()));
+                    return Op::Nop;
+                }
+                *reads_at = true;
+                let read = read.await;
+                let op = match &read {
+                    Ok(held) => Op::Put(held.clone()),
+                    Err(_) => Op::Nop,
+                };
+                *outcome_at = Some(read);
+                op
+            },
+        ))
+        .await;
+        if reads {
+            refilled(LOOKUPS, matches!(outcome, Some(Ok(_))));
+            if matches!(
+                computed,
+                CompResult::Inserted(_) | CompResult::ReplacedWith(_)
+            ) && self.copy.drops.load(Ordering::Acquire) != seen
+            {
+                self.copy.lookups.invalidate(&key).await;
+            }
         }
+        #[expect(
+            clippy::expect_used,
+            reason = "moka's compute_with_hash_and_fun calls the closure once on every path, and \
+                      the closure sets the outcome on each of its returns"
+        )]
+        let (lookup, at) = outcome.expect("the compute closure should have run")?;
+        crate::party_binding::request::held_binding(at);
         Ok(lookup)
     }
 

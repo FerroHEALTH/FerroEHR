@@ -3,7 +3,8 @@
 
 //! The binding copy holds at most its capacity of lookups and of names, and
 //! a lookup or a name the cap evicted is read again with the store's
-//! answer, so the cap changes no answer (#5926).
+//! answer, so the cap changes no answer (#5926). Concurrent misses of one
+//! login share one store read (#6374).
 
 use std::convert::Infallible;
 use std::sync::Arc;
@@ -152,4 +153,66 @@ async fn the_names_stay_under_the_cap_and_an_evicted_one_reads_the_store() {
         reads.load(Ordering::Relaxed) > KEYS,
         "the evicted names were read again"
     );
+}
+
+/// What `misses` concurrent lookups of login 1 at `revision` answer, and how
+/// many store reads they made, each read answering `answer` after a pause.
+async fn concurrent<E: Clone>(
+    bindings: &LiveBindings,
+    misses: usize,
+    revision: i64,
+    answer: Result<(Lookup, i64), E>,
+) -> (Vec<Result<Lookup, E>>, usize) {
+    let reads = AtomicUsize::new(0);
+    let lookups = (0..misses).map(|_| {
+        let read = async {
+            reads.fetch_add(1, Ordering::Relaxed);
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            answer.clone()
+        };
+        bindings.lookup(key(1), Some(revision), read)
+    });
+    let answers = futures::future::join_all(lookups).await;
+    (answers, reads.load(Ordering::Relaxed))
+}
+
+/// Concurrent misses of one login on a cold copy share one store read and
+/// are all answered what the store holds (#6374).
+#[tokio::test]
+async fn concurrent_misses_of_one_login_make_one_store_read() {
+    let bindings = listening().await;
+    let (answers, reads) = concurrent(&bindings, 16, 0, Ok::<_, Infallible>((found(1), 0))).await;
+    for answer in answers {
+        assert_eq!(answer.expect("the read succeeds"), found(1));
+    }
+    assert_eq!(reads, 1, "one store read");
+}
+
+/// A failed read holds nothing, so each waiter behind it reads on its own.
+#[tokio::test]
+async fn a_failed_read_leaves_each_miss_to_read_on_its_own() {
+    let bindings = listening().await;
+    let (answers, reads) = concurrent(&bindings, 4, 0, Err::<(Lookup, i64), _>("down")).await;
+    for answer in answers {
+        assert_eq!(answer, Err("down"));
+    }
+    assert_eq!(reads, 4, "each miss read the store");
+    assert!(
+        bindings.copy.lookups.get(&key(1)).await.is_none(),
+        "nothing held"
+    );
+}
+
+/// Concurrent lookups that find the held lookup behind the store's revision
+/// share one read of it.
+#[tokio::test]
+async fn concurrent_lookups_behind_the_store_make_one_store_read() {
+    let bindings = listening().await;
+    let (_, reads) = concurrent(&bindings, 1, 1, Ok::<_, Infallible>((found(1), 1))).await;
+    assert_eq!(reads, 1, "the first read");
+    let (answers, reads) = concurrent(&bindings, 16, 2, Ok::<_, Infallible>((found(2), 2))).await;
+    for answer in answers {
+        assert_eq!(answer.expect("the read succeeds"), found(2));
+    }
+    assert_eq!(reads, 1, "one read past the held revision");
 }
