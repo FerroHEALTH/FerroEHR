@@ -75,10 +75,6 @@ fn judged(aql: &str, limit: Option<i64>, offset: Option<i64>) -> PreparedQuery {
 }
 
 /// Each served row's first cell and whether it carries both revisions.
-#[expect(
-    clippy::disallowed_methods,
-    reason = "a test reads the database on a raw pool connection, outside any request"
-)]
 async fn served(pool: &sqlx::PgPool, prepared: PreparedQuery) -> Vec<(String, bool)> {
     let rows = sqlx::query_with(sqlx::AssertSqlSafe(prepared.sql), prepared.values)
         .fetch_all(pool)

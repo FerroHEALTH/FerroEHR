@@ -561,7 +561,7 @@ fn a_paged_query_of_ehr_rows_binds_its_first_row_from_the_offset() {
     let ir = plan("SELECT e/ehr_id/value FROM EHR e ORDER BY e/ehr_id/value");
     let shapes = Shapes::new(&ir);
     let lineage = Arc::new(ArchetypeLineage::default());
-    for round in 0..5 {
+    for round in 1..=5_i64 {
         let mut ctx = ctx(
             classes(
                 jiff::Timestamp::now(),
@@ -572,7 +572,7 @@ fn a_paged_query_of_ehr_rows_binds_its_first_row_from_the_offset() {
             &lineage,
         );
         ctx.limit = Some(20);
-        ctx.offset = Some(20 * i64::try_from(round + 1).expect("a small round"));
+        ctx.offset = Some(20 * round);
         let bound = prepared(&shapes, &ir, &Params::default(), &ctx);
         assert!(
             bound
