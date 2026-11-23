@@ -1485,6 +1485,8 @@ fn every_enumeration_facet_set_emits_a_typed_enum() {
     );
 }
 
+/// Reading `xsi:type` variants as concrete descendants only keeps every concrete
+/// type below an abstract slot type as a variant.
 #[test]
 fn the_concrete_only_variant_reading_loses_no_document_shape() {
     let lost = testsupport::lost_dispatch_variants().expect("closures readable");
