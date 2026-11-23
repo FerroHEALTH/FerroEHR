@@ -563,31 +563,10 @@ struct ResolvedWrite {
     time_committed: jiff::Timestamp,
 }
 
-/// The core write path shared by single-object writes and CONTRIBUTION commits:
-/// resolve one [`Change`] to its version-tree placement + content and commit it
-/// under the supplied [`ContributionCtx`], signing the assembled
-/// `ORIGINAL_VERSION` (RM common master06 §Digital Signature) and rejecting an
-/// illegal lifecycle transition. Returns the [`Committed`] outcome and the
-/// enclosing `contribution_id` (for the caller's event-outbox envelope).
+/// Parses the version's own `OBJECT_VERSION_ID` for the commit to stamp into
+/// the body's root `uid`.
 ///
-/// The cross-area hooks run AROUND this write, driven by the CONTRIBUTION
-/// commit ([`crate::service::contribution::commit_version_set`]) and by the
-/// direct write paths: `check_versioned_composition_invariants` for the
-/// `VERSIONED_COMPOSITION` cross-version invariants before a COMPOSITION modify,
-/// `FerroEhrService::sync_ehr_subject` for the EHR promoted-subject-column sync
-/// after an `EHR_STATUS` version, and [`meter_committed`] for the
-/// `compositions_committed_total` metric, which must count only work that
-/// actually committed.
-///
-/// # Errors
-/// The [`next_version`] placement errors (`NotFound` / `VersionConflict`) on
-/// modify/delete; [`ServiceError::Unprocessable`] for an out-of-group or
-/// illegal lifecycle transition, or a `523|deleted|` state on a data-carrying
-/// commit ([`reject_deleted_with_data`]); [`ServiceError::Internal`] on a
-/// multimedia offload failure; plus the storage/signing errors of
-/// [`commit_resolved`].
-/// The version's own `OBJECT_VERSION_ID`, parsed for the commit to stamp into
-/// the body's root `uid` before decompose and sign, so the stored, signed and
+/// It is stamped before decompose and sign, so the stored, signed and
 /// served bytes all carry it (RM common `master03-archetyped_package.adoc` §Unique Node Identification;
 /// ITS-REST `Resources.md` §Identifier types). The full three-part form is BASE
 /// `architecture_overview` master09 §Levels of Identification, "populated with a
@@ -777,6 +756,19 @@ async fn resolve_change(
     Ok((resolved, access))
 }
 
+/// The core write path shared by single-object writes and CONTRIBUTION
+/// commits: resolves one [`Change`] to its version-tree placement and content,
+/// signs the assembled `ORIGINAL_VERSION` (RM common master06 §Digital
+/// Signature) and commits it under the supplied [`ContributionCtx`], returning
+/// the [`Committed`] outcome and the enclosing `contribution_id`.
+///
+/// # Errors
+/// The [`next_version`] placement errors (`NotFound` / `VersionConflict`) on
+/// modify/delete; [`ServiceError::Unprocessable`] for an out-of-group or
+/// illegal lifecycle transition, or a `523|deleted|` state on a data-carrying
+/// commit ([`reject_deleted_with_data`]); [`ServiceError::Internal`] on a
+/// multimedia offload failure; plus the storage/signing errors of
+/// [`commit_resolved`].
 async fn apply_change(
     tx: &mut PgConnection,
     scope: CommitScope<'_>,

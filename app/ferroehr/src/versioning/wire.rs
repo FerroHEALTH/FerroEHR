@@ -48,12 +48,6 @@ use crate::versioning::signature::signer::Signer;
 /// "there will always be at least one commit audit … there may also be further
 /// attestations").
 ///
-/// The body is constructed as the generated [`RevisionHistory`] and serialized
-/// through the native codec, so it carries `_type` first and the BMM's own
-/// attribute order. Stored attestations are decoded back into `AUDIT_DETAILS`
-/// (the `ATTESTATION` subtype dispatches on `_type`) rather than spliced in as
-/// opaque fragments.
-///
 /// # Errors
 /// [`ServiceError::NotFound`] when the object has no stored version or is not
 /// owned by `ehr_id`; the storage read errors of the metadata / attestation
@@ -171,10 +165,6 @@ fn stored_attestation(stored: &Value) -> Result<AuditDetails, ServiceError> {
 /// pins the discriminator to the concrete class) and the mandatory
 /// `time_created`, the commit time of the object's first version (RM common
 /// master06 §Versioned Objects).
-///
-/// The body is constructed as the generated [`VersionedObject`] subtype and
-/// serialized through the native codec, so it carries `_type` first and the
-/// BMM's own attribute order.
 ///
 /// NOTE: the earliest HELD version supplies `time_created` rather than a
 /// hardcoded `sys_version = 1`, a latest-only clone (master06 §Copying)
